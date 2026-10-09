@@ -4,6 +4,7 @@ import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { FieldError } from '@/components/forms/field-error';
+import { FormCard, FormCardBody } from '@/components/forms/form-card';
 import { FormActionBar } from '@/components/forms/form-action-bar';
 import { FormField } from '@/components/forms/form-field';
 import { FormCell, FormGrid } from '@/components/forms/form-grid';
@@ -90,7 +91,7 @@ function DaysRow({ id, label, days, onSave }: { id: string; label: string; days:
       <div className="flex shrink-0 items-start gap-2">
         <NothingChanged show={nothing} />
         <div className="w-24">
-          <input id={id} name={id} type="number" min={0} max={365} step={1} value={text} disabled={pending} aria-invalid={showError || undefined} aria-describedby={showError ? `${id}-error` : undefined} onChange={(e) => setText(e.target.value)} className={`h-9 w-24 rounded-md border bg-surface px-2.5 text-[14px] text-ink ${showError ? 'border-error' : 'border-line'}`} />
+          <Input id={id} name={id} type="number" min={0} max={365} step={1} value={text} disabled={pending} aria-invalid={showError || undefined} aria-describedby={showError ? `${id}-error` : undefined} onChange={(e) => setText(e.target.value)} className="w-24" />
           <FieldError id={`${id}-error`} message={showError ? tLimits('daysFormat') : undefined} />
         </div>
         <Button
@@ -215,8 +216,8 @@ function BoardRemunerationForm({ allowed, basisText, validFrom }: { allowed: boo
     if (result.status === 'success') router.refresh();
   };
   return (
-    <div className="overflow-hidden rounded-md border border-line bg-surface" data-testid="board-remuneration">
-      <div className="p-5">
+    <FormCard data-testid="board-remuneration">
+      <FormCardBody>
         <FormGrid>
           {/* Ein Haken, kein Schalter: Er gilt erst mit „Speichern“, zusammen mit Grundlage und Datum. */}
           <FormField id="tax-board-remuneration" label={t('boardRemuneration.switch')} size="full" toggle>
@@ -229,7 +230,7 @@ function BoardRemunerationForm({ allowed, basisText, validFrom }: { allowed: boo
             <Input id="tax-board-remuneration-valid-from" type="date" value={date} disabled={pending} onChange={(e) => setDate(e.target.value)} />
           </FormField>
         </FormGrid>
-      </div>
+      </FormCardBody>
       <FormActionBar
         count={changed}
         pending={pending}
@@ -243,7 +244,7 @@ function BoardRemunerationForm({ allowed, basisText, validFrom }: { allowed: boo
         }}
         onSave={() => void save()}
       />
-    </div>
+    </FormCard>
   );
 }
 

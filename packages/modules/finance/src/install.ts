@@ -57,7 +57,7 @@ export function installFinance(tx: DbOrTx, deps: Deps, ctx: CallContext): void {
         const existing = documentTypeFor(tx, type.key);
         if (!existing || existing.protectionArea !== null) return 'skipped';
         tx.update(documentTypes).set({ protectionArea: 'finance' }).where(eq(documentTypes.key, type.key)).run();
-        financeAudit(tx, deps, ctx, { action: 'finance.setup.documentTypeProtectionArea', entity: 'financeSetup', id: type.key, after: { key: type.key, applied: true }, summary: `Schutzbereich „finance“ am vorhandenen Kontoauszug nachgetragen` });
+        financeAudit(tx, deps, ctx, { action: 'finance.setup.documentTypeProtectionArea', entity: 'financeSetup', id: type.key, after: { key: type.key, applied: true } });
         return 'created';
       });
     }

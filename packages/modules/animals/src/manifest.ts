@@ -23,6 +23,20 @@ export const animalsModule: ModuleManifest = defineModule({
   documentTemplates: [animalProfileTemplate],
   // Führt eine Installation eigene Basen, meldet `documentBaseGaps`, wenn diese fehlt.
   documentBases: [PROFILE_BASE],
+  /** Aktionen des Änderungsprotokolls (Spec Protokoll § 3); der Name des Hundes ist Nutzdatum. */
+  auditActions: {
+    'animals.create': { params: ['name'] },
+    'animals.update': { params: ['name'] },
+    'animals.setStatus': { params: ['name', 'status'] },
+    'animals.setPhotos': { params: ['name'] },
+    'animals.setStory': { params: ['name'] },
+    'animals.publish': { params: ['name'] },
+    'animals.unpublish': { params: ['name'] },
+    /** `viaMcp`: beim Schreiben über MCP von selbst vorgemerkt, sonst von Hand angefordert. */
+    'animals.requestReview': { params: ['name', 'viaMcp'] },
+    'animals.confirmReview': { params: ['name'] },
+    'animals.delete': { params: ['name'] },
+  },
   deletionRules: [
     {
       entity: 'animal',

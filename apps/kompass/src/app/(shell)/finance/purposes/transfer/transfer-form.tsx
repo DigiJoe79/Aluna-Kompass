@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import { DocumentPicker } from '@/app/(shell)/dms/document-picker';
 import type { PickedDocument } from '@/app/(shell)/dms/search-action';
 import { ReceiptDrop } from '@/components/finance/receipt-drop';
+import { FormCard } from '@/components/forms/form-card';
 import { FormActionBar } from '@/components/forms/form-action-bar';
 import { FormField } from '@/components/forms/form-field';
 import { FormCell, FormGrid } from '@/components/forms/form-grid';
@@ -15,6 +16,7 @@ import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import type { ActionState } from '@/lib/actions';
+import { countChangedValues } from '@/lib/form-dirty';
 import { formatAmount, formatEuro, parseAmount } from '@/lib/finance/amount';
 import { requestPurposeTransferAction, requestPurposeTransferUploadAction } from '../actions';
 
@@ -48,6 +50,21 @@ export function TransferForm({ purposes, defaultFromId, today, approverNames }: 
   const [refusal, setRefusal] = useState<ActionState | null>(null);
   // Eine Ablehnung, ob vom Formular (was fehlt) oder vom Dienst, steht mit demselben Titel über der Leiste.
   const refuse = (message: string): void => setRefusal({ status: 'error', message, title: t('refuseTitle'), fieldErrors: {} });
+
+  // Verborgen gezählt (Befund 41): Links steht, wer freigeben kann; die Rückfrage beim Verlassen kommt nur nach einer Eingabe.
+  const loaded = { fromId: defaultFromId ?? '', toId: '', amountText: '', date: today, reason: '', document: null as PickedDocument | null, file: null as File | null };
+  const current = { fromId, toId, amountText, date, reason, document, file: file ? `${file.name}:${file.size}` : null };
+  const changed = countChangedValues(loaded, current);
+  const discard = () => {
+    setFromId(loaded.fromId);
+    setToId(loaded.toId);
+    setAmountText(loaded.amountText);
+    setDate(loaded.date);
+    setReason(loaded.reason);
+    setDocument(loaded.document);
+    setFile(loaded.file);
+    setRefusal(null);
+  };
 
   const amountCents = amountText.trim() === '' ? null : parseAmount(amountText);
   const option = (p: TransferPurposeOption) => t('fromOption', { name: p.name, balance: formatEuro(p.balanceCents) });
@@ -95,7 +112,7 @@ export function TransferForm({ purposes, defaultFromId, today, approverNames }: 
   };
 
   return (
-    <div className="overflow-hidden rounded-lg border border-line bg-surface" data-testid="transfer-form">
+    <FormCard data-testid="transfer-form">
       <section className="p-5">
         <FormGrid>
           <FormField id="transfer-from" label={t('from')} required>
@@ -178,12 +195,15 @@ export function TransferForm({ purposes, defaultFromId, today, approverNames }: 
         testId="transfer-footer"
         saveTestId="transfer-save"
         back={{ href: '/finance/purposes', label: t('cancel') }}
+        count={changed}
+        countHidden
+        onDiscard={discard}
         note={<span data-testid="transfer-approvers">{approverNames.length > 0 ? t('hint', { names: approverNames.join(' · ') }) : t('noApprover')}</span>}
         saveLabel={t('submit')}
         onSave={() => void submit()}
         pending={pending}
         state={refusal ?? undefined}
       />
-    </div>
+    </FormCard>
   );
 }

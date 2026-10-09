@@ -2,22 +2,24 @@
 
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
-import { DangerSection } from '@/components/forms/danger-section';
+import { useRef, useState } from 'react';
 import { DeleteRecordDialog } from '@/components/forms/delete-record-dialog';
+import { RecordActions } from '@/components/record-actions';
 import { animalDeletionPreviewAction, deleteAnimalAction, setAnimalPublishedAction } from './actions';
 
-export function DeleteAnimal({ id, name }: { id: string; name: string }) {
+/** Seltene Aktionen am Tier im Seitenkopf (MUSTER § C), als letztes Element nach „Als PDF“ und dem Blättern. */
+export function AnimalActions({ id, name }: { id: string; name: string }) {
   const t = useTranslations('animals.delete');
-  const c = useTranslations('common');
   const router = useRouter();
+  const trigger = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);
   return (
     <>
-      <DangerSection title={c('danger.delete')} text={t('hint')} actionLabel={t('button')} onAction={() => setOpen(true)} testId="delete-record-trigger" />
+      <RecordActions triggerRef={trigger} actions={[{ key: 'delete', label: t('button'), kind: 'delete', onSelect: () => setOpen(true), testId: 'delete-record-trigger' }]} />
       <DeleteRecordDialog
         open={open}
         onOpenChange={setOpen}
+        finalFocus={trigger}
         title={t('title', { name })}
         loadPreview={() => animalDeletionPreviewAction(id)}
         unpublish={() => setAnimalPublishedAction(id, false)}

@@ -8,6 +8,7 @@ import { FormActionBar } from '@/components/forms/form-action-bar';
 import { FormField } from '@/components/forms/form-field';
 import { FormCell, FormGrid } from '@/components/forms/form-grid';
 import { useActionFeedback } from '@/components/forms/use-action-feedback';
+import { Segmented } from '@/components/ui/segmented';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -72,19 +73,12 @@ export function MoveDialog({ cashId, bankAccounts, today }: { cashId: string; ba
           <DialogTitle>{t('trigger')}</DialogTitle>
           <FormGrid>
             <FormCell size="m">
-              <div role="group" aria-label={t('directionGroup')} className="inline-flex h-[var(--field-h)] overflow-hidden rounded-md border border-line-strong">
-                {(['toBank', 'toCash'] as const).map((d) => (
-                  <button
-                    key={d}
-                    type="button"
-                    aria-pressed={direction === d}
-                    onClick={() => setDirection(d)}
-                    className={direction === d ? 'bg-selected px-3 text-[13px] font-semibold text-selected-ink' : 'bg-surface-2 px-3 text-[13px] text-ink-2'}
-                  >
-                    {t(`direction.${d}`)}
-                  </button>
-                ))}
-              </div>
+              <Segmented
+                aria-label={t('directionGroup')}
+                options={(['toBank', 'toCash'] as const).map((d) => ({ value: d, label: t(`direction.${d}`) }))}
+                value={direction}
+                onValueChange={setDirection}
+              />
             </FormCell>
             <FormField id="moveBankAccount" label={t('bankAccount')}>
               <Select id="moveBankAccount" value={bankAccountId} onChange={(e) => setBankAccountId(e.target.value)}>

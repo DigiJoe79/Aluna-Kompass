@@ -56,7 +56,7 @@ describe('Q Rest: Zweck im Minus bei der Freigabe einer Auslage', () => {
   it('beim Verzicht steht die Begründung an der Buchung der Aufwandsspende, wie beim Festschreiben', async () => {
     const f = await fixture();
     enableExpenseWaivers(f);
-    f.deps.db.transaction((tx) => writeSettingInternal(tx, f.deps, systemContext(), 'finance.expenseWaiverBasisText', 'Satzung § 7 Abs. 2', 'test'));
+    f.deps.db.transaction((tx) => writeSettingInternal(tx, f.deps, systemContext(), 'finance.expenseWaiverBasisText', 'Satzung § 7 Abs. 2'));
     await f.finalEntry();
     const claim = await expenseSubmitted(f, f.hanna, { iban: null, waiver: true });
     unwrap(await createWaiverDeclaration(f.deps, approverCtx(f), { claimId: claim.id, declaredOn: '2026-09-05' }));

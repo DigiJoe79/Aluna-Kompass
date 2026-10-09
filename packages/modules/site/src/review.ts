@@ -126,7 +126,6 @@ export function settleTemplateAfterImport(
       entityType: 'siteTemplate',
       entityId: 'current',
       after: { digest: jetzt },
-      summary: 'Template nach Import unverändert übernommen',
     });
   });
   return ok('unchanged');

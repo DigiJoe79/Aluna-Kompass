@@ -3,6 +3,7 @@
 import { FileText, FileUp } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useRef } from 'react';
+import { Notice } from '@/components/notice';
 import { Button } from '@/components/ui/button';
 import { formatFileSize, type Device } from '@/lib/finance/expenses';
 import { DeviceHint } from './device-hint';
@@ -79,17 +80,14 @@ export function PdfField({
         }}
       />
       {error ? (
-        <div role="alert" className="rounded-md border border-error bg-error-bg p-2.5 text-[13px]">
-          {error.kind === 'server' ? (
-            <p className="text-ink">{error.detail}</p>
-          ) : (
-            <>
-              <p className="font-semibold text-ink">{error.kind === 'tooLarge' ? t('tooLarge', { limit: formatFileSize(maxBytes) }) : t(error.kind)}</p>
-              <p className="text-ink-2">{t('file', { name: error.fileName })}</p>
-              <p className="text-ink-2">{t('keep')}</p>
-            </>
-          )}
-        </div>
+        error.kind === 'server' ? (
+          <Notice level="refuse">{error.detail}</Notice>
+        ) : (
+          <Notice level="refuse" title={error.kind === 'tooLarge' ? t('tooLarge', { limit: formatFileSize(maxBytes) }) : t(error.kind)}>
+            <p>{t('file', { name: error.fileName })}</p>
+            <p>{t('keep')}</p>
+          </Notice>
+        )
       ) : null}
       {filed ? null : <DeviceHint device={device} />}
     </div>

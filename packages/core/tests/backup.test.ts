@@ -75,8 +75,8 @@ describe('backup', () => {
     expect(readSetting(target, 'system.lastImportAt')).not.toBeNull();
     const last = target.db.select().from(auditLog).all().filter((e) => e.action === 'backup.import').at(-1)!;
     expect(last).toMatchObject({ action: 'backup.import', channel: 'system', userId: null });
-    // K10: Datum und Uhrzeit des Backups stehen im Protokoll wie in der Anzeige (Uhrzeit des Vereins), nicht als roher Zeitstempel.
-    expect(last.summary).toMatch(/^Bestand aus Backup \(test, 15\.07\.2026, 00:30\) importiert durch /);
+    // Herkunft und Zeit des Backups als Werte; wer importierte, steht nicht mehr darin (Spec Protokoll § 2).
+    expect(JSON.parse(last.params!)).toEqual({ environment: 'test', createdAt: expect.stringMatching(/^2026-07-14T22:30/) });
     target.close();
   });
 

@@ -35,6 +35,8 @@ function renderList(shown: number, total: number, canMove = false) {
       <DocumentList
         documents={Array.from({ length: shown }, (_, i) => doc(i))}
         total={total}
+        unfiltered={total}
+        readableOnly={false}
         currentFolder="behoerden"
         types={[]}
         folders={[]}
@@ -73,7 +75,7 @@ describe('DocumentList: Live-Region der Auswahlleiste', () => {
     render(
       <NextIntlClientProvider locale="de" messages={messages} timeZone="Europe/Berlin">
         <DocumentMovesContext value={{ placed: {}, remember: vi.fn(), requestMove: vi.fn() }}>
-          <DocumentList documents={[doc(1), doc(2)]} total={2} currentFolder="behoerden" types={[]} folders={[]} inboxCount={0} today="2026-10-01" canMove />
+          <DocumentList documents={[doc(1), doc(2)]} total={2} unfiltered={2} readableOnly={false} currentFolder="behoerden" types={[]} folders={[]} inboxCount={0} today="2026-10-01" canMove />
         </DocumentMovesContext>
       </NextIntlClientProvider>
     );

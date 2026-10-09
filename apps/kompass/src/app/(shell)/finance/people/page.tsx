@@ -1,6 +1,7 @@
 import { hasPermission, todayIn, listUserNamesWithPermission, userNamesFor } from '@kompass/core';
 import { listFiscalYears, personYearOverview, relatedPartyPayments, valueAt } from '@kompass/module-finance';
 import { getTranslations } from 'next-intl/server';
+import { EmptyState } from '@/components/empty-state';
 import Link from 'next/link';
 import { BlockedState } from '@/components/blocked-state';
 import { Notice } from '@/components/notice';
@@ -10,6 +11,7 @@ import { dateFormatOf } from '@/lib/date-format';
 import { requireSession } from '@/lib/request-context';
 import { PersonCard } from './person-card';
 import { RelatedPartyTable } from './related-party-table';
+import { PeopleYearFilter } from './year-filter';
 
 /**
  * D4 Personenübersicht (F8b Task 6b, Designer-README 4f, Annahme 9, 10):
@@ -68,25 +70,13 @@ export default async function PeoplePage({ searchParams }: { searchParams: Promi
             </Notice>
           </div>
         ) : null}
-        <nav aria-label={t('yearChoice')} className="flex flex-wrap items-center gap-1.5" data-testid="people-year">
-          <span className="text-[13px] text-muted-ink">{t('yearChoice')}:</span>
-          {choices.map((y) => (
-            <Link
-              key={y}
-              href={`/finance/people?year=${y}`}
-              aria-current={y === year ? 'page' : undefined}
-              className={`rounded-sm px-2 py-1 font-mono text-[13px] ${y === year ? 'bg-surface-2 font-semibold text-ink' : 'text-ink-2 hover:bg-surface-2'}`}
-            >
-              {y}
-            </Link>
-          ))}
-        </nav>
+        <PeopleYearFilter years={choices} year={year} count={overview.rows.length} />
 
         <h2 className="font-heading text-[18px] text-ink" data-testid="people-allowances-heading">
           {sameYear ? t('allowancesHeading') : t('allowancesHeadingCalendar', { year })}
         </h2>
         {overview.rows.length === 0 ? (
-          <p className="rounded-md border border-line bg-surface p-4 text-[14px] text-ink-2">{t('empty')}</p>
+          <EmptyState title={t('emptyTitle')} text={t('empty')} />
         ) : (
           <div className="grid gap-3 md:grid-cols-2">
             {overview.rows.map((person) => (
@@ -94,7 +84,7 @@ export default async function PeoplePage({ searchParams }: { searchParams: Promi
             ))}
           </div>
         )}
-        {overview.linesWithoutPersonCount > 0 ? <p className="text-[13px] text-warning-ink" data-testid="people-without-person">{t('withoutPerson', { count: overview.linesWithoutPersonCount })}</p> : null}
+        {overview.linesWithoutPersonCount > 0 ? <p className="text-[13px] text-warning" data-testid="people-without-person">{t('withoutPerson', { count: overview.linesWithoutPersonCount })}</p> : null}
 
         <section className="space-y-2">
           <h2 className="font-heading text-[18px] text-ink" data-testid="people-related-heading">

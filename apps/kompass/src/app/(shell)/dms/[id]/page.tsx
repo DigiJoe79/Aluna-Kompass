@@ -14,6 +14,7 @@ import { Page } from '@/components/page';
 import { PageHeader } from '@/components/page-header';
 import { buttonVariants } from '@/components/ui/button';
 import { requireSession } from '@/lib/request-context';
+import { DocumentActions } from './document-actions';
 import { DocumentDetail } from './document-detail';
 import { resolveLinks } from './links';
 
@@ -137,11 +138,14 @@ export default async function DocumentDetailPage(props: {
           title={doc.subject}
           back={{ href: '/dms', label: tCommon('backToList') }}
           actions={
-            canMakeEntry ? (
-              <Link href={`/finance/entries/new?voucher=${doc.id}`} className={buttonVariants({ size: 'sm' })}>
-                {tWork('toEntry')}
-              </Link>
-            ) : undefined
+            <>
+              {canMakeEntry ? (
+                <Link href={`/finance/entries/new?voucher=${doc.id}`} className={buttonVariants({ size: 'sm' })}>
+                  {tWork('toEntry')}
+                </Link>
+              ) : null}
+              <DocumentActions documentId={doc.id} phase={doc.phase} status={doc.status} permissions={permissions} retention={retentionInfo} />
+            </>
           }
         />
       }

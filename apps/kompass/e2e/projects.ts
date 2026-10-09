@@ -111,3 +111,29 @@ export function scopeFromPaths(files: readonly string[], modules: readonly strin
   if (!anything) return { kind: 'none' };
   return { kind: 'modules', modules: [...touched].sort() };
 }
+
+/** Die Argumente von `pnpm verify:modul` (`scripts/verify-modul.mts`). */
+export type VerifyArgs = { dryRun: boolean; all: boolean; since: string | undefined; modules: string[] };
+
+/**
+ * `[-n] [--alles | --seit <ref> | modul …]`. Ohne Auswahl prüft der Lauf die Änderungen des Arbeitsbaums und,
+ * ist der sauber, alles seit dem Abzweig von `main` — so prüft der letzte Schritt eines Plans, was der Branch
+ * geändert hat, statt „nichts zu prüfen“ zu melden (Befund 14 in 0.2.9, Joe 2026-10-08).
+ */
+export function parseVerifyArgs(argv: readonly string[]): VerifyArgs {
+  const parsed: VerifyArgs = { dryRun: false, all: false, since: undefined, modules: [] };
+  for (let i = 0; i < argv.length; i += 1) {
+    const arg = argv[i]!;
+    if (arg === '-n') parsed.dryRun = true;
+    else if (arg === '--alles') parsed.all = true;
+    else if (arg === '--seit') {
+      const ref = argv[i + 1];
+      if (!ref || ref.startsWith('-')) throw new Error('--seit braucht einen Git-Ref, z. B. --seit v0.2.8');
+      parsed.since = ref;
+      i += 1;
+    } else parsed.modules.push(arg);
+  }
+  if ([parsed.all, parsed.since !== undefined, parsed.modules.length > 0].filter(Boolean).length > 1)
+    throw new Error('--alles, --seit und Module schließen sich aus');
+  return parsed;
+}

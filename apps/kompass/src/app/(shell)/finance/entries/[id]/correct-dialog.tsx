@@ -21,10 +21,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { formatEuro } from '@/lib/finance/amount';
 import { changesOf, correctionPath, selectableLines, type CorrectableLine } from '@/lib/finance/correction';
 import { VoidForm } from '@/app/(shell)/finance/donations/void-dialog';
-import { reverseEntryAction, requestCorrectionAction, uploadCorrectionProofAction } from '../actions';
+import { requestCorrectionAction, uploadCorrectionProofAction } from '../actions';
+import { useOpenReverse } from './entry-actions';
 
 type PartyGroup = { contact: boolean; project: boolean; purpose: boolean; abroad: boolean };
-type NumberGroup = { amount: boolean; date: boolean; account: boolean; category: boolean; vat: boolean };
 
 export interface CorrectDialogEntry {
   id: string;
@@ -50,19 +50,16 @@ export function CorrectDialog({
   canVoidConfirmation?: boolean;
 }) {
   const t = useTranslations('finance.entryView.correct');
+  const openReverse = useOpenReverse();
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [pickedLineId, setPickedLineId] = useState<string | null>(null);
   const [party, setParty] = useState<PartyGroup>({ contact: false, project: false, purpose: false, abroad: false });
-  const [numbers, setNumbers] = useState<NumberGroup>({ amount: false, date: false, account: false, category: false, vat: false });
   const [note, setNote] = useState('');
   const [contact, setContact] = useState<PickedContact | null>(null);
   const [projectId, setProjectId] = useState('');
   const [purposeId, setPurposeId] = useState('');
   const [abroad, setAbroad] = useState(false);
-  const [withCorrectionDraft, setWithCorrectionDraft] = useState(true);
-  const [cashReason, setCashReason] = useState<string | null>(null);
-  const [cashReasonText, setCashReasonText] = useState('');
   // F3a-N Task 2: die zwei Lagen, auf die `requestAllocationCorrection` mit einem Konflikt statt einem Feldfehler antwortet.
   const [serverCode, setServerCode] = useState<string | null>(null);
   const [proofDocumentId, setProofDocumentId] = useState<string | null>(null);
@@ -84,8 +81,9 @@ export function CorrectDialog({
   const selectableIds = new Set(selectableLines(entry.allocationLines).map((l) => l.id));
 
   const allocationKeys = (Object.keys(party) as (keyof PartyGroup)[]).filter((k) => party[k]);
-  const numberKeys = (Object.keys(numbers) as (keyof NumberGroup)[]).filter((k) => numbers[k]);
-  const path = correctionPath({ allocation: allocationKeys, numbers: numberKeys });
+  // Zahlen (Betrag, Datum, Konto, Kategorie, Umsatzsteuer) korrigiert man nicht hier, sondern über „Zurücknehmen …“ unter
+  // „Weitere Aktionen“ (Spec Seitenkopf § 3.5) — der Dialog kennt nur noch das Umbuchen.
+  const path = correctionPath({ allocation: allocationKeys, numbers: [] });
 
   const edited = pickedLine
     ? {
@@ -102,13 +100,11 @@ export function CorrectDialog({
     setOpen(false);
     setPickedLineId(null);
     setParty({ contact: false, project: false, purpose: false, abroad: false });
-    setNumbers({ amount: false, date: false, account: false, category: false, vat: false });
     setNote('');
     setContact(null);
     setProjectId('');
     setPurposeId('');
     setAbroad(false);
-    setCashReason(null);
     setServerCode(null);
     setProofDocumentId(null);
     setProofArchiveOpen(false);
@@ -163,24 +159,6 @@ export function CorrectDialog({
     setProofDocumentId(documentId);
     setProofArchiveOpen(false);
     await runCorrection(documentId, acknowledgeSection153 || undefined);
-  };
-
-  const submitReversal = async (reason?: string) => {
-    setPending(true);
-    const result = await feedback.run(() => reverseEntryAction(entry.id, withCorrectionDraft, reason), { retry: () => void submitReversal(reason) });
-    setPending(false);
-    if (result.status === 'error') {
-      if (result.code === 'cashNegativeNeedsReason') {
-        feedback.reset();
-        setCashReason(result.detail ?? result.message);
-      }
-      return;
-    }
-    if (result.status !== 'success') return;
-    close();
-    const data = result.data as { reversal: { id: string }; correctionDraft: { id: string } | null };
-    if (data.correctionDraft) router.push(`/finance/entries/${data.correctionDraft.id}/edit`);
-    else router.push(`/finance/entries/${data.reversal.id}`);
   };
 
   const lineLabel = (line: CorrectableLine & { categoryId?: string; amountCents?: number }): string => {
@@ -283,20 +261,20 @@ export function CorrectDialog({
                 </div>
               </section>
 
-              <section className="border-t border-line pt-5">
-                <h3 id="correct-group-numbers" className="text-[15px] font-semibold">{t('groupNumbers')}</h3>
-                <div role="group" aria-labelledby="correct-group-numbers" className="mt-3">
-                  <FormGrid>
-                    {(['amount', 'date', 'account', 'category', 'vat'] as const).map((key) => (
-                      <FormField key={key} id={`correct-numbers-${key}`} label={t(`numbers.${key}`)} toggle>
-                        <Checkbox id={`correct-numbers-${key}`} checked={numbers[key]} onCheckedChange={(next) => setNumbers((n) => ({ ...n, [key]: next === true }))} />
-                      </FormField>
-                    ))}
-                  </FormGrid>
-                </div>
-              </section>
+              <p className="text-[13px] text-ink-2">
+                {t.rich('numbersElsewhere', {
+                  reverse: (chunks) =>
+                    openReverse ? (
+                      <Button type="button" variant="link" className="h-auto p-0 text-[13px]" onClick={() => { setOpen(false); openReverse(); }}>
+                        {chunks}
+                      </Button>
+                    ) : (
+                      chunks
+                    ),
+                })}
+              </p>
 
-              {path ? <p className="text-[13px] font-semibold text-ink">{t(path === 'reverse' ? 'pathReverse' : 'pathAllocation')}</p> : null}
+              {path ? <p className="text-[13px] font-semibold text-ink">{t('pathAllocation')}</p> : null}
 
               {path === 'allocation' ? (
                 <section className="space-y-3 border-t border-line pt-5">
@@ -382,26 +360,6 @@ export function CorrectDialog({
                 </section>
               ) : null}
 
-              {path === 'reverse' ? (
-                <section className="space-y-3 border-t border-line pt-5">
-                  <h3 className="text-[15px] font-semibold">{t('groupReverse')}</h3>
-                  <ol className="list-decimal space-y-1 pl-5 text-[13px] text-ink-2">
-                    <li>{t('reverse.step1')}</li>
-                    <li>{t('reverse.step2')}</li>
-                    <li>{t('reverse.step3')}</li>
-                  </ol>
-                  <FormGrid>
-                    <FormField id="correct-with-draft" label={t('reverse.withDraft')} toggle>
-                      <Switch id="correct-with-draft" checked={withCorrectionDraft} onCheckedChange={(c) => setWithCorrectionDraft(c === true)} />
-                    </FormField>
-                  </FormGrid>
-                  {cashReason ? (
-                    <Notice level="warn" reason={{ name: 'cashReason', value: cashReasonText, onChange: setCashReasonText, label: t('reverse.cashReasonLabel') }}>
-                      {cashReason}
-                    </Notice>
-                  ) : null}
-                </section>
-              ) : null}
             </>
           ) : null}
 
@@ -410,9 +368,9 @@ export function CorrectDialog({
               placement="dialog"
               cancel={close}
               pending={pending}
-              saveLabel={path === 'reverse' ? t('submitReverse') : t('submitAllocation')}
-              saveDisabled={path === 'allocation' ? note.trim().length === 0 || nothingChanged || (purposeDetail !== null && purposeReason.trim().length === 0) : path === 'reverse' ? cashReason !== null && cashReasonText.trim().length === 0 : true}
-              onSave={() => (path === 'reverse' ? void submitReversal(cashReason ? cashReasonText : undefined) : submitAllocation())}
+              saveLabel={t('submitAllocation')}
+              saveDisabled={path === 'allocation' ? note.trim().length === 0 || nothingChanged || (purposeDetail !== null && purposeReason.trim().length === 0) : true}
+              onSave={submitAllocation}
               state={feedback.state}
             />
           ) : (

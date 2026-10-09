@@ -2,11 +2,12 @@
 
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
-import Link from 'next/link';
 import { useDateFormat } from '@/components/date-format-provider';
 import { EmptyState } from '@/components/empty-state';
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
+import { ListPager } from '@/components/list-pager';
+import { ViewTabs } from '@/components/view-tabs';
 import { RowLink, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { formatEuro } from '@/lib/finance/amount';
 import { formatDateOrDash } from '@/lib/finance/dates';
@@ -32,9 +33,12 @@ export interface OpenItemRow {
  * öffnet das Detail als Sheet (`?item=`), „überfällig“ steht als Wort im
  * Zustand und färbt das Datum.
  */
-export function OpenItemsList({ rows, tab, canWrite, canCreateContact, today }: {
+export function OpenItemsList({ rows, tab, page, total, pageSize, canWrite, canCreateContact, today }: {
   rows: OpenItemRow[];
   tab: 'receivable' | 'payable';
+  page: number;
+  total: number;
+  pageSize: number;
   canWrite: boolean;
   canCreateContact: boolean;
   today: string;
@@ -44,6 +48,7 @@ export function OpenItemsList({ rows, tab, canWrite, canCreateContact, today }: 
   const [newOpen, setNewOpen] = useState(false);
 
   const tabHref = (next: 'receivable' | 'payable') => `/finance/open-items?tab=${next}`;
+  const pageHref = (n: number) => (n > 1 ? `/finance/open-items?tab=${tab}&page=${n}` : `/finance/open-items?tab=${tab}`);
 
   return (
     <div className="space-y-4">
@@ -58,19 +63,7 @@ export function OpenItemsList({ rows, tab, canWrite, canCreateContact, today }: 
         }
       />
 
-      <div role="tablist" aria-label={t('tabsGroup')} className="inline-flex h-[var(--field-h)] overflow-hidden rounded-md border border-line-strong">
-        {(['payable', 'receivable'] as const).map((k) => (
-          <Link
-            key={k}
-            href={tabHref(k)}
-            role="tab"
-            aria-selected={tab === k}
-            className={tab === k ? 'bg-selected px-3 py-1.5 text-[13px] font-semibold text-selected-ink' : 'bg-surface-2 px-3 py-1.5 text-[13px] text-ink-2'}
-          >
-            {t(`tabs.${k}`)}
-          </Link>
-        ))}
-      </div>
+      <ViewTabs label={t('tabsGroup')} current={tab} tabs={(['payable', 'receivable'] as const).map((k) => ({ key: k, label: t(`tabs.${k}`), href: tabHref(k) }))} />
 
       {rows.length === 0 ? (
         <EmptyState title={t('empty.title')} text={t('empty.text')} />
@@ -92,7 +85,7 @@ export function OpenItemsList({ rows, tab, canWrite, canCreateContact, today }: 
               {rows.map((row) => (
                 <TableRow key={row.id}>
                   <TableCell>
-                    <RowLink href={`/finance/open-items?tab=${tab}&item=${row.id}`} className={row.overdue ? 'text-error' : 'text-ink'}>
+                    <RowLink href={`${pageHref(page)}&item=${row.id}`} className={row.overdue ? 'text-error' : 'text-ink'}>
                       {formatDateOrDash(date, row.dueOn)}
                     </RowLink>
                   </TableCell>
@@ -109,6 +102,7 @@ export function OpenItemsList({ rows, tab, canWrite, canCreateContact, today }: 
               ))}
             </TableBody>
           </Table>
+          <ListPager total={total} offset={(page - 1) * pageSize} pageSize={pageSize} hrefFor={(next) => pageHref(Math.floor(next / pageSize) + 1)} footer testId="open-items-pager" />
         </div>
       )}
 

@@ -5,6 +5,8 @@ import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
+import { Textarea } from '@/components/ui/textarea';
+import { FormField } from '@/components/forms/form-field';
 import { ReceiptDrop } from '@/components/finance/receipt-drop';
 import { ReceiptList, type ReceiptListItem } from '@/components/finance/receipt-list';
 import { ConfirmDialog } from '@/components/forms/confirm-dialog';
@@ -99,10 +101,11 @@ export function EntryVouchers({
           return result;
         }}
       >
-        <label className="mt-2 block space-y-1 text-[13px]">
-          <span className="font-semibold">{t('revoke.noteLabel')}</span>
-          <textarea required value={note} onChange={(e) => setNote(e.target.value)} className="w-full rounded-sm border border-line-strong bg-field px-2.5 py-1.5 text-[13px]" rows={2} />
-        </label>
+        <div className="mt-2">
+          <FormField id="voucher-revoke-note" label={t('revoke.noteLabel')}>
+            <Textarea id="voucher-revoke-note" required value={note} onChange={(e) => setNote(e.target.value)} rows={2} />
+          </FormField>
+        </div>
       </ConfirmDialog>
     </section>
   );

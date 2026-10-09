@@ -20,12 +20,16 @@ test('exports a backup and imports it back, ending all sessions', async ({ page,
   await confirm.getByLabel('Tippen Sie zur Bestätigung den Umgebungsnamen').fill('test');
   await confirm.getByRole('button', { name: 'Bestand überschreiben' }).click();
   await expect(page).toHaveURL(/\/login\?imported=1/);
-  await expect(page.getByText('Import abgeschlossen')).toBeVisible();
+  // Der Toast sagt das Ergebnis an, der Kasten im Formular trägt die Details (MUSTER § A).
+  await expect(page.getByRole('region', { name: /Notifications/ }).getByText('Import abgeschlossen')).toBeVisible();
+  await expect(page.locator('form').getByText('Import abgeschlossen')).toBeVisible();
+  // Die Weiterleitung ist kein Netzfehler; „Erneut versuchen“ hätte den Import wiederholt (Befund 19 in 0.2.9).
+  await expect(page.getByRole('region', { name: /Notifications/ }).getByText('Die Verbindung zum Server ist abgebrochen')).toHaveCount(0);
 
   await loginAsAdmin(page);
   await page.goto('/admin/audit');
-  // Neueste zuerst: über dem backup.import steht der erneute Login (auth.login) nach dem Import.
-  await expect(page.getByRole('table')).toContainText('backup.import');
+  // Neueste zuerst: über dem Import steht der erneute Login nach dem Import. Die Aktion steht als Satz (Spec Protokoll § 4).
+  await expect(page.getByRole('table')).toContainText(/Sicherung vom \d/);
   const health = await request.get('/api/health');
   expect(health.ok()).toBe(true);
 });

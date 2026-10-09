@@ -110,7 +110,7 @@ export async function saveSigner(deps: Deps, ctx: CallContext, input: unknown): 
     if (before) tx.update(financeSigners).set(fields).where(eq(financeSigners.id, id)).run();
     else tx.insert(financeSigners).values({ id, ...fields, facsimileKey: null, facsimileChecksum: null, createdAt: now, createdByUserId: ctx.userId ?? 'system' }).run();
     const after = tx.select().from(financeSigners).where(eq(financeSigners.id, id)).get()!;
-    financeAudit(tx, deps, ctx, { action: 'finance.signer.save', entity: 'financeSigner', id, before: before ? auditFields(before) : undefined, after: auditFields(after), summary: `Unterzeichner ${id} ${before ? 'geändert' : 'angelegt'}` });
+    financeAudit(tx, deps, ctx, { action: 'finance.signer.save', entity: 'financeSigner', id, before: before ? auditFields(before) : undefined, after: auditFields(after), params: { created: !before } });
     return ok(toView(after, todayIn(deps)));
   });
 }
@@ -153,7 +153,7 @@ export async function uploadFacsimile(deps: Deps, ctx: CallContext, input: unkno
   try {
     after = deps.db.transaction((tx: DbOrTx) => {
       tx.update(financeSigners).set({ facsimileKey: key, facsimileChecksum: checksum, updatedAt: isoNow(deps.clock) }).where(eq(financeSigners.id, before.id)).run();
-      financeAudit(tx, deps, ctx, { action: 'finance.signer.facsimile', entity: 'financeSigner', id: before.id, after: { hasFacsimile: true }, summary: `Faksimile für Unterzeichner ${before.id} hinterlegt` });
+      financeAudit(tx, deps, ctx, { action: 'finance.signer.facsimile', entity: 'financeSigner', id: before.id, after: { hasFacsimile: true } });
       return tx.select().from(financeSigners).where(eq(financeSigners.id, before.id)).get()!;
     });
   } catch (error) {

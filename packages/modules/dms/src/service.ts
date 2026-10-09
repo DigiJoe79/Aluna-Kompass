@@ -306,7 +306,7 @@ export async function checkDocumentFile(
         entityId: row.id,
         before: { checksum: row.fileChecksum },
         after: { expected: row.fileChecksum, actual },
-        summary: `Datei von Dokument ${row.number} stimmt nicht mehr mit der Prüfsumme überein`,
+        params: { number: row.number },
       });
     });
   }
@@ -394,7 +394,7 @@ export function voidDocumentInternal(tx: DbOrTx, deps: Deps, ctx: CallContext, i
   if (row.phase !== 'issued') return conflict('documentIsDraft', 'Ein Entwurf kann nicht storniert werden — nur verworfen');
   if (row.status === 'voided') return conflict('documentAlreadyVoided', `Dokument ${row.number} ist bereits storniert`);
   tx.update(documents).set({ status: 'voided', voidedAt: isoNow(deps.clock), voidedByUserId: ctx.userId, voidReason: input.reason }).where(eq(documents.id, row.id)).run();
-  recordAudit(tx, deps, ctx, { action: 'dms.void', entityType: 'document', entityId: row.id, before: { status: 'issued' }, after: { status: 'voided' }, summary: `Dokument ${row.number} storniert` });
+  recordAudit(tx, deps, ctx, { action: 'dms.void', entityType: 'document', entityId: row.id, before: { status: 'issued' }, after: { status: 'voided' }, params: { number: row.number } });
   return ok({ id: row.id, number: row.number });
 }
 
@@ -426,7 +426,7 @@ export async function voidDocument(deps: Deps, ctx: CallContext, input: unknown)
       entityId: row.id,
       before: { status: 'issued' },
       after: ref.hidden ? { status: 'voided' } : { status: 'voided', reason: parsed.value.reason },
-      summary: ref.hidden ? `Dokument ${row.number} storniert` : `Dokument ${row.number} storniert: ${parsed.value.reason}`,
+      params: { number: row.number },
     });
     return ok(toRecord(deps, ctx, after));
   });
@@ -492,7 +492,7 @@ function applyMove(tx: DbOrTx, deps: Deps, ctx: CallContext, { doc, target }: Pr
     entityId: doc.id,
     before: { folder: doc.folder },
     after: { folder: target },
-    summary: `Dokument ${ref.hidden ? ref.name : (doc.number ?? doc.subject)} nach „${target ?? 'Eingangskorb'}“ verschoben`,
+    params: { number: ref.number, folder: target ?? '', toInbox: target === null },
   });
 }
 
@@ -612,7 +612,7 @@ export async function linkDocument(
           ...(ref.hidden ? {} : { entityId: parsed.value.entityId }),
           role: parsed.value.role,
         },
-        summary: ref.hidden ? `Bezug an ${ref.name} angelegt` : `Bezug zu ${parsed.value.entityType}:${parsed.value.entityId} angelegt`,
+        params: { number: ref.number },
       });
 
       const row = tx.select().from(documentLinks).where(eq(documentLinks.id, id)).get()!;
@@ -666,7 +666,6 @@ export async function unlinkDocument(
         ...(ref?.hidden ? {} : { entityId: link.entityId }),
         role: link.role,
       },
-      summary: `Bezug ${link.id} gelöscht`,
     });
 
     return ok(null);
@@ -739,14 +738,13 @@ export async function deleteDocument(
       before: {
         id: doc.id,
         number: doc.number,
-        ...ref.subject,
         typeKey: doc.typeKey,
         documentDate: doc.documentDate,
         folder: doc.folder,
         fileChecksum: doc.fileChecksum,
         removed,
       },
-      summary: `Dokument ${ref.hidden ? ref.name : (doc.number ?? doc.subject)} gelöscht`,
+      params: { number: ref.number },
     });
 
     tx.delete(documentLinks).where(eq(documentLinks.documentId, doc.id)).run();

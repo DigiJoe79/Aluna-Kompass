@@ -7,6 +7,7 @@ import { getTranslations } from 'next-intl/server';
 import { ForbiddenCard } from '@/components/forbidden-card';
 import { Page } from '@/components/page';
 import { PageHeader } from '@/components/page-header';
+import { readAllPages } from '@/lib/read-all-pages';
 import { requireSession } from '@/lib/request-context';
 import { formatAmount } from '@/lib/finance/amount';
 import { emptyForm, type EntryFormState, type EntryTemplate } from '@/lib/finance/entry-form';
@@ -26,7 +27,8 @@ export default async function NewFinanceEntryPage({ searchParams }: { searchPara
     listCategories(deps, ctx, {}),
     listPurposes(deps, ctx, {}),
     listProjects(deps, ctx),
-    listOpenItems(deps, ctx, { state: 'open', limit: 200 }),
+    // Alle offenen Posten: Die Auswahl „Ausgleich“ sucht auf dem Rechner und muss jeden anbieten (keine stille Grenze).
+    readAllPages((page) => listOpenItems(deps, ctx, { state: 'open', ...page }), (v) => v.items),
   ]);
 
   const accounts = (balancesRes.ok ? balancesRes.value.accounts : []).map((a) => ({ id: a.accountId, name: a.name, kind: a.kind, balanceCents: a.balanceCents }));
@@ -38,7 +40,7 @@ export default async function NewFinanceEntryPage({ searchParams }: { searchPara
   const projects = (projectsRes.ok ? projectsRes.value : []).map((p) => ({ id: p.id, name: (p.name as LocalizedText)[leading] || p.slug }));
   const showTax = readSetting<boolean>(deps, 'finance.isEntrepreneurOrHasVatId');
   const t = await getTranslations('finance.entryForm');
-  const openItems = (openItemsRes.ok ? openItemsRes.value.items : []).map((i) => ({ id: i.id, kind: i.kind as 'receivable' | 'payable', label: i.paymentReference ?? t('settlement.unnamed', { date: i.itemDate }), openCents: i.openCents }));
+  const openItems = (openItemsRes.ok ? openItemsRes.value : []).map((i) => ({ id: i.id, kind: i.kind as 'receivable' | 'payable', label: i.paymentReference ?? t('settlement.unnamed', { date: i.itemDate }), openCents: i.openCents }));
 
   // `?account=` belegt das Konto der ersten Geldzeile vor — von der Barkasse aus „Bar bezahlt“ (F3b Task 2).
   let initial: EntryFormState = emptyForm(template, today);

@@ -228,13 +228,6 @@ export function claimSentence(claim: ClaimDates): { key: ClaimStateKey; date: st
   }
 }
 
-const DONE: ReadonlySet<ClaimStateKey> = new Set(['paid', 'rejected']);
-
-/** Gruppen „Offen“ (Entwurf, eingereicht, freigegeben) und „Erledigt“ (ausgezahlt, abgelehnt); die Reihenfolge des Dienstes bleibt. */
-export function groupClaims<T extends Pick<ExpenseClaimView, 'stateLabelKey'>>(items: readonly T[]): { open: T[]; done: T[] } {
-  return { open: items.filter((c) => !DONE.has(c.stateLabelKey)), done: items.filter((c) => DONE.has(c.stateLabelKey)) };
-}
-
 /** Ein Entwurf öffnet das Formular, alles andere die Ansicht des Antrags. */
 export function claimHref(claim: Pick<ExpenseClaimView, 'id' | 'state'>): string {
   return claim.state === 'draft' ? `/finance/expenses/new?id=${claim.id}` : `/finance/expenses/${claim.id}`;

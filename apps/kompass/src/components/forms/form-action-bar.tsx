@@ -4,52 +4,20 @@ import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { BeforeAfter } from '@/components/before-after';
+import { ConfirmDialog } from '@/components/forms/confirm-dialog';
 import { RefusalNotice } from '@/components/forms/refusal-notice';
 import { Notice } from '@/components/notice';
+import { RecordActions, type RecordAction } from '@/components/record-actions';
 import { SaveStatus, type SaveState } from '@/components/forms/save-status';
 import { SubmitButton } from '@/components/forms/submit-button';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { isRefusal, type ActionState } from '@/lib/actions';
 import { conflictRemedies, stashInputs, takeStash, type StashedInput } from '@/lib/conflict-remedies';
 import { countChanged, rebaseSnapshot, snapshotOf, type Snapshot } from '@/lib/form-dirty';
+import { leavingLink } from '@/lib/leave-guard';
 import { cn } from '@/lib/utils';
 
-/**
- * Die Speicherleiste für Formularseiten, wie im Handover beschrieben: sticky,
- * nennt die Anzahl geänderter Felder, „Verwerfen“ setzt auf den geladenen Stand
- * zurück.
- *
- * Dazu ein Ausgang. „Verwerfen“ und „Abbrechen“ sind nicht dasselbe: Das eine
- * nimmt die Eingaben zurück und lässt einen auf der Seite, das andere führt
- * weg. Wer ein Tier anlegt und es sich anders überlegt, will das zweite.
- *
- * Gehört **in** das `<form>`; den Stand liest sie von dort, nicht aus Props.
- */
-export function FormActionBar({
-  back,
-  cancel,
-  state,
-  status,
-  placement: placementProp,
-  mode = 'edit',
-  onSave,
-  pending,
-  destructive,
-  testId,
-  saveTestId,
-  saveLabel,
-  saveLabelChanged,
-  saveDisabled,
-  saveName,
-  saveValue,
-  count,
-  baseline,
-  loadedVersion,
-  onChangedCount,
-  onDiscard,
-  note,
-  extraActions,
-}: {
+type BaseProps = {
   /**
    * Fehlt, wenn die Seite selbst in der Navigation hängt: Dort ist man schon
    * oben, und „Abbrechen“ führte nirgendwohin. „Verwerfen“ bleibt.
@@ -64,13 +32,6 @@ export function FormActionBar({
   state?: ActionState;
   /** Zwischenstand laufend gesicherter Masken („Zwischenstand gespeichert · 21:14“) in der linken Zeile. */
   status?: { state: SaveState; pending: boolean };
-  /**
-   * `page`: klebt am unteren Rand. `dialog`: klebt nichts — der Dialog steht
-   * fest und ist selbst verschoben, eine klebende Leiste darin rechnet gegen
-   * das Fenster und landet mitten im Formular. Ohne Angabe `dialog`, sobald
-   * `cancel` gesetzt ist.
-   */
-  placement?: 'page' | 'dialog';
   /**
    * `edit` (Standard): ohne Änderung schickt Speichern nicht ab, sondern sagt
    * „Nichts geändert“. `create`: schickt immer ab, der Dienst nennt die
@@ -112,6 +73,12 @@ export function FormActionBar({
    */
   count?: number;
   /**
+   * Zählt mit, zeigt die Zahl aber nicht: Der Satz in `note` bleibt links stehen, statt dem Zähler zu weichen
+   * („Neue Buchung“, „Umwidmung“ — Befund 41). Verwerfen und die Rückfrage beim Verlassen richten sich weiter
+   * nach dem Zähler, gefragt wird also nur mit Eingaben.
+   */
+  countHidden?: boolean;
+  /**
    * Zählt neu ab hier. Formulare, die auf ihrem Bildschirm bleiben, erhöhen den
    * Wert nach jedem erfolgreichen Speichern — sonst stünde dort für immer
    * „geändert“, obwohl längst alles gespeichert ist.
@@ -147,7 +114,67 @@ export function FormActionBar({
    * einer primären Aktion — diese Knöpfe sind sekundär.
    */
   extraActions?: ReactNode;
-}) {
+};
+
+/**
+ * Aktionen am ganzen Datensatz links im Fuß (Spec Seitenkopf § 3.3, Freigabe Designer 2026-10-08) — nur, wo der Fuß
+ * nicht klebt: in Dialog und Seitenfenster, die keinen Seitenkopf haben. Auf einer Seite gehören sie in den Kopf
+ * (`RecordActions`); dort ist die Prop im Typ ausgeschlossen, und der Wächter `record-action-placement` prüft es
+ * zusätzlich. Ein Eintrag wird ein `ghost`-Knopf, zwei oder mehr das Menü ⋯.
+ */
+type RecordActionProp =
+  | { placement: 'dialog'; recordAction?: RecordAction | readonly RecordAction[] }
+  | {
+      /*
+       * `page`: klebt am unteren Rand. `dialog`: klebt nichts — der Dialog steht
+       * fest und ist selbst verschoben, eine klebende Leiste darin rechnet gegen
+       * das Fenster und landet mitten im Formular. Ohne Angabe `dialog`, sobald
+       * `cancel` gesetzt ist.
+       */
+      placement?: 'page';
+      recordAction?: never;
+    };
+
+type FormActionBarProps = BaseProps & RecordActionProp;
+
+/**
+ * Die Speicherleiste für Formularseiten, wie im Handover beschrieben: sticky,
+ * nennt die Anzahl geänderter Felder, „Verwerfen“ setzt auf den geladenen Stand
+ * zurück.
+ *
+ * Dazu ein Ausgang. „Verwerfen“ und „Abbrechen“ sind nicht dasselbe: Das eine
+ * nimmt die Eingaben zurück und lässt einen auf der Seite, das andere führt
+ * weg. Wer ein Tier anlegt und es sich anders überlegt, will das zweite.
+ *
+ * Gehört **in** das `<form>`; den Stand liest sie von dort, nicht aus Props.
+ */
+export function FormActionBar({
+  back,
+  cancel,
+  state,
+  status,
+  placement: placementProp,
+  mode = 'edit',
+  onSave,
+  pending,
+  destructive,
+  testId,
+  saveTestId,
+  saveLabel,
+  saveLabelChanged,
+  saveDisabled,
+  saveName,
+  saveValue,
+  count,
+  countHidden,
+  baseline,
+  loadedVersion,
+  onChangedCount,
+  onDiscard,
+  note,
+  extraActions,
+  recordAction,
+}: FormActionBarProps) {
   const t = useTranslations('common');
   const anchor = useRef<HTMLDivElement>(null);
   const initial = useRef<Snapshot | null>(null);
@@ -162,10 +189,19 @@ export function FormActionBar({
   onChanged.current = onChangedCount;
   const changed = count ?? fromDom;
   const placement = placementProp ?? (cancel ? 'dialog' : 'page');
+  const recordActions: readonly RecordAction[] = recordAction ? (Array.isArray(recordAction) ? recordAction : [recordAction as RecordAction]) : [];
   const [nothing, setNothing] = useState(false);
   // Eigene Eingaben aus einem Versionskonflikt (Neuladen mit „neben den neuen Stand legen“), gegen den jetzt gespeicherten Stand.
   const [compare, setCompare] = useState<{ label: string; yours: string; current: string }[] | null>(null);
   const blocks = mode === 'edit' && placement === 'page' && changed === 0;
+  // Ob die Leiste gerade klebt — nur dann trägt sie einen Schatten (Designer 2026-10-08).
+  const [stuck, setStuck] = useState(false);
+  // Rückfrage beim Verlassen: nur auf einer Seite, nur mit Ungespeichertem. Ausführen hat nichts zu verlieren, eine
+  // laufend gesicherte Maske (`status`) hat es schon gesichert, ein Dialog führt mit „Abbrechen“ nirgendwohin.
+  const guarded = placement === 'page' && mode !== 'run' && !status && changed > 0;
+  const [leaveTo, setLeaveTo] = useState<HTMLAnchorElement | null>(null);
+  // Der eigene Weg hinaus (Verwerfen lädt neu, der Konflikt auch, „Seite verlassen“ klickt den Link) fragt nicht.
+  const leaving = useRef(false);
 
   // „Nichts geändert“ verschwindet nach drei Sekunden von selbst.
   useEffect(() => {
@@ -188,6 +224,53 @@ export function FormActionBar({
       }),
     );
   }, []);
+
+  // Klebt sie? Die Marke am Ende der `FormCard` sagt es: Liegt sie unter dem Fenster, steht die Leiste am unteren
+  // Rand statt an ihrem Platz. Ob sie überhaupt klebt (ab 640 × 600 px), entscheidet die Variante `stickybar` im CSS.
+  useEffect(() => {
+    if (placement !== 'page' || typeof IntersectionObserver === 'undefined') return;
+    const card = anchor.current?.closest('[data-slot="form-card"]');
+    const end = card ? Array.from(card.children).find((el) => el instanceof HTMLElement && el.dataset.slot === 'form-card-end') : undefined;
+    if (!end) return;
+    const observer = new IntersectionObserver(([entry]) => {
+      if (!entry) return;
+      const bottom = entry.rootBounds?.bottom ?? window.innerHeight;
+      setStuck(!entry.isIntersecting && entry.boundingClientRect.top >= bottom);
+    });
+    observer.observe(end);
+    return () => observer.disconnect();
+  }, [placement]);
+
+  useEffect(() => {
+    if (!guarded) return;
+    const onBeforeUnload = (event: BeforeUnloadEvent) => {
+      if (leaving.current) return;
+      event.preventDefault();
+      // Ältere Browser fragen nur mit gesetztem `returnValue`.
+      event.returnValue = '';
+    };
+    // In der Einfangphase am Dokument: vor dem Router (`next/link` horcht an der React-Wurzel).
+    const onClick = (event: MouseEvent) => {
+      if (leaving.current) return;
+      const link = leavingLink(event, window.location, anchor.current?.closest('[data-slot="form-card"]') ?? anchor.current?.closest('form'));
+      if (!link) return;
+      event.preventDefault();
+      // Auch andere Leisten derselben Seite fragen nicht ein zweites Mal.
+      event.stopImmediatePropagation();
+      setLeaveTo(link);
+    };
+    window.addEventListener('beforeunload', onBeforeUnload);
+    document.addEventListener('click', onClick, true);
+    return () => {
+      window.removeEventListener('beforeunload', onBeforeUnload);
+      document.removeEventListener('click', onClick, true);
+    };
+  }, [guarded]);
+
+  const reload = () => {
+    leaving.current = true;
+    window.location.reload();
+  };
 
   // Die Legende erklärt das Sternchen an den Feldern — nur dort, wo eines steht.
   useEffect(() => {
@@ -262,21 +345,25 @@ export function FormActionBar({
                   }
                   stashInputs(window.location.pathname, entries);
                 }
-                window.location.reload();
+                reload();
               },
-              reload: () => window.location.reload(),
+              reload,
             },
             t,
           ).filter((_, index) => placement === 'page' || index === 1),
         }
       : state;
 
+  const showDiscard = !(cancel || mode === 'run' || (onSave && !onDiscard && count === undefined));
+  // Nur einer der beiden Nebenknöpfe: Am Telefon nimmt er die ganze Zeile.
+  const lone = Number(showDiscard) + Number(!!(cancel || back)) === 1;
+
   const line =
     nothing ? (
       <span aria-live="polite" className="text-[13px] text-ink-2">
         {t('nothingChanged')}
       </span>
-    ) : mode !== 'run' && changed > 0 ? (
+    ) : mode !== 'run' && changed > 0 && !countHidden ? (
       <span aria-live="polite" className="text-[13px] font-semibold text-warning">
         {t('changesPending', { count: changed })}
       </span>
@@ -290,12 +377,17 @@ export function FormActionBar({
 
   return (
     // `px-5` wie das Polster von Formularkarte und Dialog (20 px, docs/MUSTER.md § I): Zähler und „Speichern“
-    // stehen bündig mit den Feldern darüber.
+    // stehen bündig mit den Feldern darüber. Auf einer Seite klebt sie erst ab 640 × 600 px (`stickybar`, MUSTER
+    // § B); im Telefon oder einem niedrigen Fenster nähme sie sonst ein Drittel der Höhe.
     <div
       ref={anchor}
       data-slot="form-action-bar"
       data-testid={testId}
-      className={cn('border-t border-line bg-surface-2 px-5 py-3', placement === 'page' ? 'sticky bottom-0 rounded-b-lg' : 'mx-[calc(var(--dialog-pad,0px)*-1)] mb-[calc(var(--dialog-pad,0px)*-1)] rounded-b-xl')}
+      data-stuck={placement === 'page' && stuck ? '' : undefined}
+      className={cn(
+        'border-t border-line bg-surface-2 px-5 py-3',
+        placement === 'page' ? 'rounded-b-lg stickybar:sticky stickybar:bottom-0 stickybar:data-[stuck]:shadow-md' : 'mx-[calc(var(--dialog-pad,0px)*-1)] mb-[calc(var(--dialog-pad,0px)*-1)] rounded-b-xl',
+      )}
     >
       {compare ? (
         <div className="mb-3">
@@ -315,15 +407,25 @@ export function FormActionBar({
         </div>
       ) : null}
       <div className="flex items-center gap-3 max-sm:flex-col max-sm:items-stretch">
+        {recordActions.length > 0 ? (
+          // Telefon: die Aktion als letzte Zeile, durch Leerraum von den Knöpfen abgesetzt (Board § K, Ziel 3b).
+          <div className="max-sm:order-last max-sm:mt-3">
+            <RecordActions actions={recordActions} single="button" />
+          </div>
+        ) : null}
         {line}
-        <div className="ml-auto flex items-center gap-2 max-sm:ml-0 max-sm:flex-col-reverse max-sm:[&>*]:w-full">
-          {extraActions}
+        {/*
+          Telefon (Designer 2026-10-08): „Speichern“ über die volle Breite zuerst, weitere Speicherwege darunter,
+          dann „Verwerfen“ und „Abbrechen“ nebeneinander — steht nur einer da, nimmt er die Zeile.
+        */}
+        <div className="ml-auto flex items-center gap-2 max-sm:ml-0 max-sm:grid max-sm:grid-cols-2 max-sm:[&>*]:w-full">
+          {extraActions ? <div className="contents max-sm:[&>*]:order-2 max-sm:[&>*]:col-span-2 max-sm:[&>*]:w-full">{extraActions}</div> : null}
           {cancel ? (
-            <Button type="button" variant="ghost" onClick={cancel}>
+            <Button type="button" variant="ghost" className={cn('max-sm:order-4', lone && 'max-sm:col-span-2')} onClick={cancel}>
               {t('cancel')}
             </Button>
           ) : back ? (
-            <Link href={back.href} className={buttonVariants({ variant: 'ghost' })}>
+            <Link href={back.href} className={cn(buttonVariants({ variant: 'ghost' }), 'max-sm:order-4', lone && 'max-sm:col-span-2')}>
               {t('cancel')}
             </Link>
           ) : null}
@@ -333,13 +435,14 @@ export function FormActionBar({
             viel. Auf Seiten sind die beiden verschiedene Dinge — das eine nimmt
             die Eingaben zurück, das andere führt weg.
           */}
-          {cancel || mode === 'run' || (onSave && !onDiscard && count === undefined) ? null : (
+          {!showDiscard ? null : (
             <Button
               type="button"
               variant="ghost"
+              className={cn('max-sm:order-3', lone && 'max-sm:col-span-2')}
               // Ohne Änderungen wäre der Knopf ein Versprechen, das ins Leere greift.
               disabled={changed === 0}
-              onClick={() => (onDiscard ? onDiscard() : window.location.reload())}
+              onClick={() => (onDiscard ? onDiscard() : reload())}
             >
               {t('discard')}
             </Button>
@@ -348,6 +451,7 @@ export function FormActionBar({
             <Button
               type="button"
               variant={destructive ? 'destructive' : 'default'}
+              className="max-sm:order-1 max-sm:col-span-2"
               disabled={pending || saveDisabled}
               aria-busy={pending}
               data-testid={saveTestId}
@@ -364,6 +468,7 @@ export function FormActionBar({
               name={saveName}
               value={saveValue}
               variant={destructive ? 'destructive' : 'default'}
+              className="max-sm:order-1 max-sm:col-span-2"
               data-testid={saveTestId}
               onClick={(event) => {
                 if (!blocks) return;
@@ -376,6 +481,24 @@ export function FormActionBar({
           )}
         </div>
       </div>
+      {placement === 'page' ? (
+        <ConfirmDialog
+          open={leaveTo !== null}
+          onOpenChange={(open) => {
+            if (!open) setLeaveTo(null);
+          }}
+          title={t('leave.title')}
+          description={t('leave.description', { count: changed })}
+          confirmLabel={t('leave.confirm')}
+          destructive
+          action={async () => {
+            // Den Link selbst noch einmal klicken: So führt der Router wie gewohnt — Vorabladen, Scrollen, Verlauf.
+            leaving.current = true;
+            leaveTo?.click();
+            return { status: 'success' };
+          }}
+        />
+      ) : null}
     </div>
   );
 }

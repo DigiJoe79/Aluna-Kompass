@@ -29,7 +29,7 @@ function setupWithProbe() {
   const userId = insertUser(deps, { name: 'Test', email: 'test@kompass.local' });
   const ctx = ctxWith([...ALL_DMS, 'contacts.manage', 'settings.manage'], userId);
   deps.db.transaction((tx) => {
-    writeSettingInternal(tx, deps, ctx, 'modules.enabled', ['dms', 'probe'], 'test.enable');
+    writeSettingInternal(tx, deps, ctx, 'modules.enabled', ['dms', 'probe']);
   });
   return { deps, ctx, userId };
 }
@@ -132,7 +132,7 @@ describe('deleteDocument', () => {
     const doc = await expiredDocument(deps, ctx, 'gehalten');
     const held = await deleteDocument(deps, ctx, { id: doc.id });
     expect(!held.ok && held.error.type === 'conflict' && held.error.message).toBe('Noch gehalten von: Buchung 2026-0042 (bis 31.12.2099)');
-    deps.db.transaction((tx) => writeSettingInternal(tx, deps, ctx, 'ui.dateFormat', 'iso', 'test.dateFormat'));
+    deps.db.transaction((tx) => writeSettingInternal(tx, deps, ctx, 'ui.dateFormat', 'iso'));
     const iso = await deleteDocument(deps, ctx, { id: doc.id });
     expect(!iso.ok && iso.error.type === 'conflict' && iso.error.message).toBe('Noch gehalten von: Buchung 2026-0042 (bis 2099-12-31)');
   });

@@ -212,7 +212,7 @@ export async function justifyUndocumentedEntry(deps: Deps, ctx: CallContext, inp
       .values({ entryId: entry.id, note: parsed.value.note, byUserId: ctx.userId ?? 'system', at: now })
       .onConflictDoUpdate({ target: financeEntryJustifications.entryId, set: { note: parsed.value.note, byUserId: ctx.userId ?? 'system', at: now } })
       .run();
-    financeAudit(tx, deps, ctx, { action: 'finance.entry.justify', entity: 'financeEntryJustification', id: entry.id, after: { entryId: entry.id }, summary: `Buchung ${entry.number ?? entry.id} ohne Beleg begründet` });
+    financeAudit(tx, deps, ctx, { action: 'finance.entry.justify', entity: 'financeEntryJustification', id: entry.id, after: { entryId: entry.id }, params: { number: entry.number ?? null } });
     return ok({ entryId: entry.id });
   });
 }
@@ -252,7 +252,7 @@ export async function closeFiscalYear(deps: Deps, ctx: CallContext, input: unkno
     tx.insert(financePeriodEvents).values({ id: eventId, fiscalYearId: year.id, kind: 'closed', at: now, byUserId: ctx.userId ?? 'system', reason: null }).run();
     const nextYear = ensureFiscalYearFor(tx, deps, ctx, dayAfter(year.endsOn));
     void nextYear; // fehlschlagen darf hier nicht: der Nachfolger ist immer im gültigen Bereich.
-    financeAudit(tx, deps, ctx, { action: 'finance.period.close', entity: 'financePeriodEvent', id: eventId, after: { fiscalYearId: year.id, kind: 'closed' }, summary: `Geschäftsjahr ${year.designation} abgeschlossen` });
+    financeAudit(tx, deps, ctx, { action: 'finance.period.close', entity: 'financePeriodEvent', id: eventId, after: { fiscalYearId: year.id, kind: 'closed' }, params: { designation: year.designation } });
     return ok({ ...year, status: 'closed' as const, isShortYear: isShortFiscalYear(year) });
   });
 }
@@ -302,7 +302,7 @@ export function reopenInternal(tx: DbOrTx, deps: Deps, ctx: CallContext, input: 
   const now = isoNow(deps.clock);
   const eventId = newId();
   tx.insert(financePeriodEvents).values({ id: eventId, fiscalYearId: year.id, kind: 'reopened', at: now, byUserId: ctx.userId ?? 'system', reason: input.note }).run();
-  financeAudit(tx, deps, ctx, { action: 'finance.period.reopen', entity: 'financePeriodEvent', id: eventId, after: { fiscalYearId: year.id, kind: 'reopened', guardCount: guards.length }, summary: `Geschäftsjahr ${year.designation} wieder geöffnet` });
+  financeAudit(tx, deps, ctx, { action: 'finance.period.reopen', entity: 'financePeriodEvent', id: eventId, after: { fiscalYearId: year.id, kind: 'reopened', guardCount: guards.length }, params: { designation: year.designation } });
   return ok({ ...year, status: 'open' as const, isShortYear: isShortFiscalYear(year) });
 }
 

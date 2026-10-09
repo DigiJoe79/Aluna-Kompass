@@ -4,6 +4,7 @@ import type { Locator, Page } from '@playwright/test';
 import { expect, test } from './fixtures';
 import { callTool, mcpClient, switchTo, switchToJonas } from './expense-helpers';
 import { loginAsAdmin, resetDatabase, setE2ESetting } from './helpers';
+import { story } from './story-year';
 
 const login = loginAsAdmin;
 const FIXTURE_PDF = path.resolve(import.meta.dirname, 'fixtures/brief-digital.pdf');
@@ -104,12 +105,12 @@ test.describe('dms', () => {
     await login(page);
     await page.goto('/dms');
     const row = page.getByRole('row').filter({ hasText: 'Einladung zur ordentlichen Mitgliederversammlung' });
-    await expect(row).toContainText('10.02.2026');
+    await expect(row).toContainText(story('10.02.2026'));
     await setE2ESetting(page, 'ui.dateFormat', 'iso');
     await page.goto('/dms');
-    await expect(row).toContainText('2026-02-10');
+    await expect(row).toContainText(story('2026-02-10'));
     await row.getByRole('link', { name: 'Einladung zur ordentlichen Mitgliederversammlung' }).click();
-    await expect(page.getByTestId('dispatch-panel')).toContainText('2026-02-12');
+    await expect(page.getByTestId('dispatch-panel')).toContainText(story('2026-02-12'));
   });
 
   test('zeigt die Akte mit Eingangskorb', async ({ page }) => {
@@ -491,7 +492,8 @@ test.describe('dms', () => {
     await expect(page.getByRole('heading', { name: 'Dokumente' })).toBeVisible();
     await page.getByRole('link', { name: /Dokument RCH-/ }).click();
 
-    await page.getByRole('button', { name: 'Endgültig löschen' }).click();
+    await page.getByRole('button', { name: 'Weitere Aktionen' }).click();
+    await page.getByRole('menuitem', { name: 'Löschen …' }).click();
     await page.getByRole('button', { name: 'Löschung bestätigen' }).click();
     await expect(page).toHaveURL(/\/dms$/);
     await expect(page.getByText('Abgelaufene Rechnung')).toHaveCount(0);
@@ -507,7 +509,29 @@ test.describe('dms', () => {
     await dialog.getByLabel('Betreff').fill('Laufende Rechnung');
     await expect(dialog.getByLabel('Betreff')).toHaveValue('Laufende Rechnung');
     await dialog.getByRole('button', { name: 'Ablegen' }).click();
-    await expect(page.getByRole('button', { name: 'Endgültig löschen' })).toBeDisabled();
+    await expect(page).toHaveURL(/\/dms\/[0-9A-Z]{26}$/);
+    // Keine Sperre ohne Grund: Der Eintrag steht im Menü, der Dialog nennt die Frist und bietet nur „Schließen“.
+    await page.getByRole('button', { name: 'Weitere Aktionen' }).click();
+    await page.getByRole('menuitem', { name: 'Löschen …' }).click();
+    const refusal = page.getByRole('alertdialog', { name: 'Dokument endgültig löschen?' });
+    await expect(refusal).toContainText('Löschen ist erst nach Ablauf der Aufbewahrung möglich: bis');
+    await expect(refusal.getByRole('button', { name: 'Löschung bestätigen' })).toHaveCount(0);
+    await refusal.getByRole('button', { name: 'Schließen' }).click();
+    await expect(refusal).toBeHidden();
+  });
+
+  test('löscht einen Entwurf über „Weitere Aktionen“', async ({ page }) => {
+    await login(page);
+    await page.goto('/dms/new');
+    await page.getByLabel('Betreff').fill('Verworfener Entwurf');
+    await page.getByLabel('Text').fill('Text');
+    await page.getByRole('button', { name: 'Entwurf speichern' }).click();
+    await page.getByRole('link', { name: 'Zurück zum Dokument' }).click();
+    await page.getByRole('button', { name: 'Weitere Aktionen' }).click();
+    await page.getByRole('menuitem', { name: 'Entwurf löschen …' }).click();
+    await page.getByRole('alertdialog', { name: 'Entwurf verwerfen' }).getByRole('button', { name: 'Entwurf löschen' }).click();
+    await expect(page).toHaveURL(/\/dms$/);
+    await expect(page.getByText('Verworfener Entwurf')).toHaveCount(0);
   });
 
   test('verwaltet Dokumentarten und Regeln', async ({ page }) => {
@@ -666,7 +690,7 @@ test.describe('dms', () => {
 
     // Datum wie Nummer: Zahlen, die man untereinander vergleicht, stehen in
     // Monospace — das ist der Zweck der Spalte.
-    const date = page.getByRole('cell', { name: '15.02.2026' });
+    const date = page.getByRole('cell', { name: story('15.02.2026') });
     expect(await date.evaluate((el) => getComputedStyle(el).fontFamily)).toContain('Plex');
 
     // Die ganze Zeile führt zum Dokument; ein fester Unterstrich am Betreff
@@ -1277,7 +1301,7 @@ test.describe('dms', () => {
     await page.goto(`/dms/${source.id}`);
     await page.getByRole('button', { name: 'Antworten' }).click();
     await expect(page).toHaveURL(/\/dms\/[0-9A-Z]{26}\/edit$/);
-    await expect(page.locator('#subject')).toHaveValue('Ihr Schreiben vom 15.02.2026: Freistellungsbescheid');
+    await expect(page.locator('#subject')).toHaveValue(story('Ihr Schreiben vom 15.02.2026: Freistellungsbescheid'));
     await expectFolder(page.locator('body'), 'behoerden/finanzamt', 'behoerden › finanzamt');
     await expect(page.getByRole('combobox', { name: 'Empfänger' })).toHaveValue('Mira Sandberg');
 
@@ -1300,7 +1324,8 @@ test.describe('dms', () => {
     await page.getByRole('link', { name: 'Dankschreiben an die Tierarztpraxis' }).click();
     await page.getByRole('button', { name: 'Als versandt vermerken' }).click();
     const dialog = page.getByRole('dialog', { name: 'Als versandt vermerken' });
-    await dialog.getByLabel('Versandt am').fill('2026-09-06');
+    // Nach dem Brief (story('03-02')) und nicht in der Zukunft — beides prüft der Dienst (dispatch.ts).
+    await dialog.getByLabel('Versandt am').fill(story('2026-09-06'));
     await dialog.getByLabel('Weg').selectOption('email');
     await dialog.getByRole('button', { name: 'Vermerken' }).click();
     const panel = page.getByTestId('dispatch-panel');
@@ -1346,7 +1371,8 @@ test.describe('dms', () => {
     await login(page);
     await page.goto('/dms');
     await page.getByRole('link', { name: 'Einladung zur ordentlichen Mitgliederversammlung' }).click();
-    await page.getByRole('button', { name: 'Stornieren' }).click();
+    await page.getByRole('button', { name: 'Weitere Aktionen' }).click();
+    await page.getByRole('menuitem', { name: 'Stornieren …' }).click();
     const dialog = page.getByRole('dialog');
     // Der Grund ist Pflicht und sagt es; die Checkbox hat einen Namen.
     await expect(dialog.getByText('* Pflichtfeld')).toBeVisible();
@@ -1420,6 +1446,8 @@ test.describe('dms', () => {
     await expect(page.getByRole('row').filter({ hasText: 'nicht versandt' }).first()).toBeVisible();
     await expect(page.getByRole('row').filter({ hasText: 'Wiedervorlage' }).first()).toBeVisible();
 
+    // Versand und Wiedervorlage stehen unter „Weitere Filter“ (Spec Filterleisten § 4); gesetzt zeigt sie ein Chip.
+    await page.getByRole('button', { name: 'Weitere Filter' }).click();
     await page.getByLabel('Wiedervorlage', { exact: true }).selectOption('open');
     await expect(page).toHaveURL(/followUp=open/);
     const rows = page.getByRole('row');
@@ -1427,6 +1455,11 @@ test.describe('dms', () => {
 
     await page.getByLabel('Versand', { exact: true }).selectOption('unsent');
     await expect(page).toHaveURL(/unsent=1/);
+    await page.keyboard.press('Escape');
+    const chips = page.getByTestId('filter-chips');
+    await expect(chips.getByRole('button', { name: 'Filter „Wiedervorlage: offen“ entfernen' })).toBeVisible();
+    await chips.getByRole('button', { name: 'Filter „Versand: Nicht versandt“ entfernen' }).click();
+    await expect(page).not.toHaveURL(/unsent=1/);
   });
 
   test('legt Post als Antwort auf einen Brief ab', async ({ page }) => {
@@ -1600,7 +1633,7 @@ test('ein ausgetauschtes Dokument wird nicht angezeigt, sondern gemeldet', async
 
     // Und der Befund steht in der Akte des Vereins, nicht nur auf dem Bildschirm.
     await page.goto('/admin/audit');
-    await expect(page.getByRole('cell', { name: 'dms.checksumMismatch' }).first()).toBeVisible();
+    await expect(page.getByRole('cell', { name: /^Abweichende Prüfsumme an Dokument „/ }).first()).toBeVisible();
   } finally {
     writeFileSync(datei, original);
   }
@@ -2007,7 +2040,7 @@ test.describe('Mehrfachauswahl', () => {
     await expect(rowOf(page, id)).toContainText('Kein Ordner');
 
     await moved.getByRole('button', { name: 'Rückgängig' }).click();
-    await expect(toastWith(page, '„Einladung zur ordentlichen Mitgliederversammlung“ liegt wieder in vereinsregister-2026')).toBeVisible();
+    await expect(toastWith(page, story('„Einladung zur ordentlichen Mitgliederversammlung“ liegt wieder in vereinsregister-2026'))).toBeVisible();
   });
 
   /**
@@ -2055,7 +2088,7 @@ test.describe('Mehrfachauswahl', () => {
     }, id);
     expect(state).toContain('blocked|');
     expect(state).toContain('In den Eingangskorb kommt nur eingegangene Post.');
-    await expect(rowOf(page, id)).toContainText('vereinsregister-2026');
+    await expect(rowOf(page, id)).toContainText(story('vereinsregister-2026'));
     await expect(page.locator('[data-sonner-toast]')).toHaveCount(0);
   });
 });
@@ -2088,12 +2121,12 @@ test.describe('Weg und Teilbaum', () => {
     expect(total).toBeGreaterThan(0);
     await expect(rows(page)).toHaveCount(total);
     const deep = rows(page).filter({ hasText: 'Einladung zur ordentlichen Mitgliederversammlung' });
-    await expect(deep.locator('[data-folder-cell]')).toHaveText('amtsgericht › vereinsregister-2026');
+    await expect(deep.locator('[data-folder-cell]')).toHaveText(story('amtsgericht › vereinsregister-2026'));
 
-    // Über der Liste: Titel und Anzahl, kein „davon … direkt“; oben im Baum kein Weg davor.
+    // Über der Liste nur der Titel; die Zahl steht einmal, in der Zählzeile der Leiste (Spec Filterleisten § 4).
     await expect(heading(page).getByRole('heading', { name: 'behoerden' })).toBeVisible();
-    await expect(heading(page)).toContainText(total === 1 ? '1 Dokument' : `${total} Dokumente`);
-    await expect(heading(page)).not.toContainText('direkt');
+    await expect(page.getByText(total === 1 ? '1 Dokument' : `${total} Dokumente`, { exact: true })).toBeVisible();
+    await expect(heading(page)).not.toContainText(/\d+ Dokument/);
     await expect(heading(page).getByRole('navigation', { name: 'Weg' })).toHaveCount(0);
 
     // Eine Ebene tiefer: der Weg als Links, der Ordner als Titel.
@@ -2103,11 +2136,11 @@ test.describe('Weg und Teilbaum', () => {
     const path = heading(page).getByRole('navigation', { name: 'Weg' });
     await expect(path.getByRole('link', { name: 'behoerden' })).toHaveAttribute('href', '/dms?folder=behoerden');
     await expect(heading(page).getByRole('heading', { name: 'amtsgericht' })).toBeVisible();
-    await expect(deep.locator('[data-folder-cell]')).toHaveText('vereinsregister-2026');
+    await expect(deep.locator('[data-folder-cell]')).toHaveText(story('vereinsregister-2026'));
 
     // Wo das Dokument selbst liegt, bleibt die Spalte leer.
-    await page.goto('/dms?folder=behoerden%2Famtsgericht%2Fvereinsregister-2026');
-    await expect(heading(page).getByRole('heading', { name: 'vereinsregister-2026' })).toBeVisible();
+    await page.goto(story('/dms?folder=behoerden%2Famtsgericht%2Fvereinsregister-2026'));
+    await expect(heading(page).getByRole('heading', { name: story('vereinsregister-2026') })).toBeVisible();
     await expect(heading(page).getByRole('navigation', { name: 'Weg' }).getByRole('link')).toHaveText(['behoerden', 'amtsgericht']);
     await expect(deep.locator('[data-folder-cell]')).toHaveText('');
   });
@@ -2146,18 +2179,41 @@ test.describe('Weg und Teilbaum', () => {
     await expect(page).toHaveURL(/\/dms$/);
   });
 
-  test('am Telefon nennt der Ortsknopf dieselbe Zahl wie die Liste, auch mit Filter', async ({ page }) => {
+  test('am Telefon nennt die Zählzeile die Treffer, der Ortsknopf die Summe des Orts', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await login(page);
-    await page.goto('/dms?direction=incoming');
-    const filtered = await rows(page).count();
-    expect(filtered).toBeGreaterThan(0);
     await page.goto('/dms');
     const all = await rows(page).count();
-    // Der Filter muss etwas wegnehmen, sonst beweist der Vergleich nichts.
-    expect(filtered).toBeLessThan(all);
+    await expect(page.getByText(`${all} Dokumente`, { exact: true })).toBeVisible();
     await page.goto('/dms?direction=incoming');
-    await expect(page.getByTestId('folder-sheet-count')).toHaveText(String(filtered));
+    const filtered = await rows(page).count();
+    // Der Filter muss etwas wegnehmen, sonst beweist der Vergleich nichts.
+    expect(filtered).toBeGreaterThan(0);
+    expect(filtered).toBeLessThan(all);
+    await expect(page.getByText(`${filtered} von ${all} Dokumenten`, { exact: true })).toBeVisible();
+    await expect(page.getByTestId('folder-sheet-count')).toHaveText(String(all));
+  });
+
+  /** Spec Filterleisten § 3, Review Focus 2: Ordner sind Ort, keine Filter — ein Ordnerklick behält die Suche. */
+  test('Ordnerklick behält die Suche, die Zählzeile zählt neu', async ({ page }) => {
+    await login(page);
+    await page.goto('/dms');
+    const search = page.getByRole('searchbox', { name: 'Suchen' });
+    await search.fill('Kastration');
+    await expect(page).toHaveURL(/text=Kastration/);
+    await expect(rows(page).first()).toContainText('Kastration');
+    const everywhere = await rows(page).count();
+    await expect(page.getByText(new RegExp(`^${everywhere} von \\d+ Dokumenten$`))).toBeVisible();
+
+    await treeRow(page, 'protokolle').click();
+    await expect(page).toHaveURL(/text=Kastration&folder=protokolle$/);
+    await expect(search).toHaveValue('Kastration');
+    await expect(page.getByText(/^0 von \d+ Dokumenten$/)).toBeVisible();
+    await expect(page.getByText('Kein Dokument passt zu diesen Filtern.')).toBeVisible();
+
+    await page.getByRole('link', { name: /^Alle Dokumente/ }).click();
+    await expect(page).toHaveURL(/\/dms\?text=Kastration$/);
+    await expect(rows(page)).toHaveCount(everywhere);
   });
 
   test('am Telefon öffnet der Ortsknopf den Baum im Sheet; ein Name öffnet den Ordner und schließt es', async ({ page }) => {

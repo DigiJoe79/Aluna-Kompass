@@ -55,7 +55,7 @@ export function ensureFiscalYearFor(tx: DbOrTx, deps: Deps, ctx: CallContext, da
   if (tx.select({ id: financeFiscalYears.id }).from(financeFiscalYears).where(eq(financeFiscalYears.designation, designation)).get()) designation = `${designation}-2`;
   const row: FinanceFiscalYearRow = { id: newId(), startsOn, endsOn, designation, taxReturnFiledOn: null, createdAt: now, updatedAt: now };
   tx.insert(financeFiscalYears).values(row).run();
-  financeAudit(tx, deps, ctx, { action: 'finance.fiscalYear.autoCreate', entity: 'financeFiscalYear', id: row.id, after: row, summary: `Geschäftsjahr ${row.designation} als Nachfolger angelegt` });
+  financeAudit(tx, deps, ctx, { action: 'finance.fiscalYear.autoCreate', entity: 'financeFiscalYear', id: row.id, after: row, params: { designation: row.designation } });
   return ok(row);
 }
 
@@ -115,7 +115,7 @@ export async function createFirstFiscalYear(deps: Deps, ctx: CallContext, input:
     const now = isoNow(deps.clock);
     const row: FinanceFiscalYearRow = { id: newId(), startsOn: parsed.value.startsOn, endsOn: parsed.value.endsOn, designation: designationOf(parsed.value.startsOn), taxReturnFiledOn: null, createdAt: now, updatedAt: now };
     tx.insert(financeFiscalYears).values(row).run();
-    financeAudit(tx, deps, ctx, { action: 'finance.fiscalYear.create', entity: 'financeFiscalYear', id: row.id, after: row, summary: `Geschäftsjahr ${row.designation} angelegt` });
+    financeAudit(tx, deps, ctx, { action: 'finance.fiscalYear.create', entity: 'financeFiscalYear', id: row.id, after: row, params: { designation: row.designation } });
     return ok({ ...row, status: 'open' as const, isShortYear: isShortFiscalYear(row) });
   });
 }
@@ -147,7 +147,7 @@ export async function updateFiscalYear(deps: Deps, ctx: CallContext, input: unkn
       updatedAt: isoNow(deps.clock),
     };
     tx.update(financeFiscalYears).set(after).where(eq(financeFiscalYears.id, before.id)).run();
-    financeAudit(tx, deps, ctx, { action: 'finance.fiscalYear.update', entity: 'financeFiscalYear', id: before.id, before, after, summary: `Geschäftsjahr ${after.designation} geändert` });
+    financeAudit(tx, deps, ctx, { action: 'finance.fiscalYear.update', entity: 'financeFiscalYear', id: before.id, before, after, params: { designation: after.designation } });
     return ok({ ...after, status: fiscalYearStatusInternal(tx, before.id), isShortYear: isShortFiscalYear(after) });
   });
 }

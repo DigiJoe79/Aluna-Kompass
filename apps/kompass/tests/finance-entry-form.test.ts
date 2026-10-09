@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { applyTemplate, emptyForm, fromEntryView, remainderCents, restInto, toServiceInput, type EntryFormState } from '@/lib/finance/entry-form';
+import { applyTemplate, countEntryChanges, emptyForm, fromEntryView, remainderCents, restInto, toServiceInput, type EntryFormState } from '@/lib/finance/entry-form';
 
 const withSplitRow = (state: EntryFormState, key: string, categoryId: string, amountText: string): EntryFormState => ({
   ...state,
@@ -181,5 +181,20 @@ describe('toServiceInput: settlements at a money row (Befund aus Teil 1)', () =>
     const result = toServiceInput(state);
     if (!result.ok) throw new Error('expected ok');
     expect(result.input.moneyLines[0]!.settlements).toEqual([{ openItemId: 'OI1', amountCents: 6000 }, { openItemId: 'OI2', amountCents: 4000 }]);
+  });
+});
+
+/** Befund 41: Die Speicherleiste zählt verborgen mit, damit die Seite beim Verlassen nur mit Eingaben nachfragt. */
+describe('countEntryChanges', () => {
+  it('counts nothing for an untouched form, and each changed field once', () => {
+    const loaded = emptyForm('expense', '2026-03-01');
+    expect(countEntryChanges(loaded, loaded)).toBe(0);
+    expect(countEntryChanges(loaded, { ...loaded, text: 'Futter' })).toBe(1);
+    expect(countEntryChanges(loaded, withSplitRow({ ...loaded, text: 'Futter' }, 's1', 'cat-1', '12,00'))).toBe(2);
+  });
+
+  it('ignores what the service sets: id and version after an automatic draft, the kind of a requested reason', () => {
+    const loaded = emptyForm('expense', '2026-03-01');
+    expect(countEntryChanges(loaded, { ...loaded, id: 'E1', expectedVersion: 'v1', reasonKind: 'purpose' })).toBe(0);
   });
 });

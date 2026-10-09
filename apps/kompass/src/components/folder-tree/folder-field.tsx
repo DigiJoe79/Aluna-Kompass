@@ -116,7 +116,7 @@ export function FolderField({
           className={cn(
             'flex min-w-0 flex-1 flex-wrap items-center gap-x-1 text-sm',
             field && 'min-h-[var(--field-h)] rounded-md border bg-field px-2.5 py-1 text-[length:var(--field-font)] text-ink',
-            field && (suggested ? 'border-info' : 'border-line-strong')
+            field && (suggested ? 'border-agent' : 'border-line-strong')
           )}
         >
           {parts.length === 0

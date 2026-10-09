@@ -259,7 +259,7 @@ describe('documentation of an entry', () => {
 
   it('warns about an expense above the limit that rests on the statement alone', async () => {
     const f = await ledgerFixture();
-    f.deps.db.transaction((tx) => writeSettingInternal(tx, f.deps, systemContext(), 'finance.statementSufficesBelowCents', 5000, 'test.setLimit'));
+    f.deps.db.transaction((tx) => writeSettingInternal(tx, f.deps, systemContext(), 'finance.statementSufficesBelowCents', 5000));
 
     const high = unwrap(await saveDraft(f.deps, f.ctx, { entryDate: '2026-03-01', text: 'Gebühr hoch', moneyLines: [{ accountId: f.bank.id, amountCents: -6000 }], allocationLines: [{ categoryId: f.fees.id, amountCents: -6000 }] }));
     f.deps.db.update(financeMoneyLines).set({ rawTransactionId: 'R4' }).where(eq(financeMoneyLines.entryId, high.id)).run();
@@ -269,7 +269,7 @@ describe('documentation of an entry', () => {
     f.deps.db.update(financeMoneyLines).set({ rawTransactionId: 'R5' }).where(eq(financeMoneyLines.entryId, low.id)).run();
     expect(unwrap(await getEntry(f.deps, f.ctx, { id: low.id })).documentation).toMatchObject({ state: 'statementSuffices', warnExpenseAboveLimit: false });
 
-    f.deps.db.transaction((tx) => writeSettingInternal(tx, f.deps, systemContext(), 'finance.statementSufficesBelowCents', 0, 'test.setLimit'));
+    f.deps.db.transaction((tx) => writeSettingInternal(tx, f.deps, systemContext(), 'finance.statementSufficesBelowCents', 0));
     expect(unwrap(await getEntry(f.deps, f.ctx, { id: high.id })).documentation).toMatchObject({ warnExpenseAboveLimit: false });
   });
 

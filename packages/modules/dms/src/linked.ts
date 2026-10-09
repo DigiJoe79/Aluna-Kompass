@@ -73,9 +73,10 @@ const uploadSchema = z.object({
  * Eingang im Namen eines Vorgangs: die Helferin legt den Beleg zu ihrer Auslage
  * ab, ohne die Akte zu kennen. Abgelegt wird unter dem `receivePermission`
  * jedes angemeldeten Bezugs; mindestens einer muss dabei sein. Der Betreff
- * nennt keine Person (Regel des Aufrufers) und steht nicht im Protokoll.
+ * nennt keine Person (Regel des Aufrufers) und steht nicht im Protokoll. `recordNumber`: die Nummer des Vorgangs
+ * (Auslage, Buchung …), wo er eine hat — das Protokoll nennt sie (Designer 2026-10-09).
  */
-export async function receiveGeneratedUpload<T = undefined>(deps: Deps, ctx: CallContext, input: z.input<typeof uploadSchema> & { afterReceive?: (tx: DbOrTx, doc: ReceivedDocument) => T }): Promise<Result<{ document: ReceivedDocument; after: T | undefined }>> {
+export async function receiveGeneratedUpload<T = undefined>(deps: Deps, ctx: CallContext, input: z.input<typeof uploadSchema> & { afterReceive?: (tx: DbOrTx, doc: ReceivedDocument) => T; recordNumber?: string | null }): Promise<Result<{ document: ReceivedDocument; after: T | undefined }>> {
   const parsed = validate(deps, uploadSchema, { bytes: input.bytes, typeKey: input.typeKey, subject: input.subject, documentDate: input.documentDate, folder: input.folder, links: input.links });
   if (!parsed.ok) return parsed;
 
@@ -95,7 +96,7 @@ export async function receiveGeneratedUpload<T = undefined>(deps: Deps, ctx: Cal
   try {
     return await storeIncoming(
       deps, ctx, parsed.value.bytes,
-      { docType, subject: parsed.value.subject, documentDate: parsed.value.documentDate, folder: folderRes.value, links: parsed.value.links, relations: [], audit: { after: {}, summary: (number) => `Dokument ${number} im Namen eines Vorgangs abgelegt` } },
+      { docType, subject: parsed.value.subject, documentDate: parsed.value.documentDate, folder: folderRes.value, links: parsed.value.links, relations: [], audit: { after: {}, via: input.recordNumber ? 'recordWithNumber' : 'record', recordNumber: input.recordNumber ?? '' } },
       (tx, doc) => ({ document: doc, after: input.afterReceive?.(tx, doc) }),
     );
   } catch (error) {

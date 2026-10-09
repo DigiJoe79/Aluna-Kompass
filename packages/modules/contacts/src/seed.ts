@@ -25,53 +25,58 @@ interface ExampleContact {
   channel: { kind: 'email' | 'phone' | 'web'; value: string; isPrimary: boolean };
 }
 
-/** Die Beispiele aus 0.1 mit festen Daten — Fristen, Rollenfilter und Telefonsuche der Tests hängen daran. */
-const EXAMPLE_CONTACTS: ExampleContact[] = [
-  {
-    kind: 'person',
-    salutation: 'Frau',
-    firstName: 'Mira',
-    lastName: 'Sandberg',
-    street: 'Ahornweg 4',
-    postalCode: '12345',
-    city: 'Musterstadt',
-    roles: [{ role: 'interested', since: '2026-01-01' }],
-    channel: { kind: 'email', value: 'mira.sandberg@example.org', isPrimary: true },
-  },
-  {
-    kind: 'person',
-    salutation: 'Herr',
-    firstName: 'Tomas',
-    lastName: 'Leitner',
-    street: 'Birkengasse 11',
-    postalCode: '12345',
-    city: 'Musterstadt',
-    roles: [{ role: 'partner', since: '2026-01-01' }],
-    channel: { kind: 'phone', value: '+49 123 456789', isPrimary: true },
-  },
-  {
-    kind: 'organization',
-    name: 'Amtsgericht Musterstadt',
-    street: 'Gerichtsplatz 1',
-    postalCode: '12345',
-    city: 'Musterstadt',
-    roles: [{ role: 'authority', since: '2026-01-01' }],
-    channel: { kind: 'web', value: 'https://amtsgericht-musterstadt.example.org', isPrimary: true },
-  },
-  {
-    kind: 'person',
-    salutation: 'Frau',
-    firstName: 'Lena',
-    lastName: 'Vogt',
-    street: 'Lindenallee 8',
-    postalCode: '12345',
-    city: 'Musterstadt',
-    // Interessentin, aus der nichts wurde: Rolle 2023 beendet, Einwilligungsfrist
-    // (24 Monate ab Jahresende) am 2025-12-31 abgelaufen — löschfällig.
-    roles: [{ role: 'interested', since: '2023-01-15', until: '2023-09-30' }],
-    channel: { kind: 'email', value: 'lena.vogt@example.org', isPrimary: true },
-  },
-];
+/**
+ * Die Beispiele aus 0.1 — Fristen, Rollenfilter und Telefonsuche der Tests hängen daran. Daten relativ
+ * zum Stichjahr `y` wie in `storyContacts`, nie auf einer festen Jahreszahl (Befund 0.2.8/20).
+ */
+function exampleContacts(y: number): ExampleContact[] {
+  return [
+    {
+      kind: 'person',
+      salutation: 'Frau',
+      firstName: 'Mira',
+      lastName: 'Sandberg',
+      street: 'Ahornweg 4',
+      postalCode: '12345',
+      city: 'Musterstadt',
+      roles: [{ role: 'interested', since: `${y}-01-01` }],
+      channel: { kind: 'email', value: 'mira.sandberg@example.org', isPrimary: true },
+    },
+    {
+      kind: 'person',
+      salutation: 'Herr',
+      firstName: 'Tomas',
+      lastName: 'Leitner',
+      street: 'Birkengasse 11',
+      postalCode: '12345',
+      city: 'Musterstadt',
+      roles: [{ role: 'partner', since: `${y}-01-01` }],
+      channel: { kind: 'phone', value: '+49 123 456789', isPrimary: true },
+    },
+    {
+      kind: 'organization',
+      name: 'Amtsgericht Musterstadt',
+      street: 'Gerichtsplatz 1',
+      postalCode: '12345',
+      city: 'Musterstadt',
+      roles: [{ role: 'authority', since: `${y}-01-01` }],
+      channel: { kind: 'web', value: 'https://amtsgericht-musterstadt.example.org', isPrimary: true },
+    },
+    {
+      kind: 'person',
+      salutation: 'Frau',
+      firstName: 'Lena',
+      lastName: 'Vogt',
+      street: 'Lindenallee 8',
+      postalCode: '12345',
+      city: 'Musterstadt',
+      // Interessentin, aus der nichts wurde: Rolle drei Jahre vor dem Stichjahr beendet, Einwilligungsfrist
+      // (24 Monate ab Jahresende) am Ende des Vorjahrs abgelaufen — löschfällig.
+      roles: [{ role: 'interested', since: `${y - 3}-01-15`, until: `${y - 3}-09-30` }],
+      channel: { kind: 'email', value: 'lena.vogt@example.org', isPrimary: true },
+    },
+  ];
+}
 
 /**
  * Der Verein nach einem Jahr (Spec 2026-10-06 § 4): Finanzamt, Tierarztpraxis,
@@ -181,13 +186,13 @@ async function seedUserLink(deps: Deps, ctx: CallContext): Promise<void> {
   const account = deps.db.select({ id: schema.users.id }).from(schema.users).where(eq(schema.users.email, 'peter@kompass.local')).get();
   if (!account || hasLinkHistoryInternal(deps.db, account.id)) return;
   const contact = unwrap(await createContact(deps, ctx, { kind: 'person', salutation: 'Herr', firstName: 'Peter', lastName: 'Lang', street: 'Kastanienweg 2', postalCode: '12345', city: 'Musterstadt' }));
-  unwrap(await addContactRole(deps, ctx, { id: contact.id, role: 'service', since: '2026-01-01' }));
+  unwrap(await addContactRole(deps, ctx, { id: contact.id, role: 'service', since: `${seedStoryYear(todayIn(deps))}-01-01` }));
   unwrap(await linkUserToContact(deps, ctx, { userId: account.id, contactId: contact.id }));
 }
 
 async function seedExampleContacts(deps: Deps, ctx: CallContext): Promise<void> {
   const y = seedStoryYear(todayIn(deps));
-  for (const c of [...EXAMPLE_CONTACTS, ...storyContacts(y)]) {
+  for (const c of [...exampleContacts(y), ...storyContacts(y)]) {
     const input =
       c.kind === 'organization'
         ? { kind: 'organization' as const, name: c.name, street: c.street, postalCode: c.postalCode, city: c.city }

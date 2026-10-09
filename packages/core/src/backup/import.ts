@@ -10,8 +10,6 @@ import { requirePermission } from '../permissions/check';
 import { conflict, invalid, ok, type Result } from '../result';
 import { writeSettingInternal } from '../settings/service';
 import { isSetupRequired } from '../setup/service';
-import { loadUserSummary } from '../users/service';
-import { messageDateTime } from '../message-date';
 import { validate } from '../validate';
 import { extractBackup } from './archive';
 import { DB_RELATIVE } from './export';
@@ -44,7 +42,7 @@ async function applyBackup(
   deps: AppDeps,
   dir: string,
   manifest: BackupManifest,
-  opts: { archiveName: string; ctx: CallContext; importerEmail: string | null; onlyWhileSetupPending: boolean },
+  opts: { archiveName: string; ctx: CallContext; onlyWhileSetupPending: boolean },
 ): Promise<Result<{ manifest: BackupManifest }>> {
   // Unmittelbar vor dem Austausch, nicht am Anfang: dazwischen soll
   // moeglichst nichts liegen.
@@ -84,7 +82,7 @@ async function applyBackup(
       entityType: 'backup',
       entityId: opts.archiveName,
       after: manifest,
-      summary: `Bestand aus Backup (${manifest.environment}, ${messageDateTime(deps, manifest.createdAt)}) importiert durch ${opts.importerEmail ?? 'unbekannt'}`,
+      params: { environment: manifest.environment, createdAt: manifest.createdAt },
     });
   });
   return ok({ manifest });
@@ -109,11 +107,9 @@ export async function importBackup(deps: AppDeps, ctx: CallContext, input: unkno
     probe.close();
     if (integrity !== 'ok') return invalid([{ path: 'archive', message: 'backupCorrupt' }]);
 
-    const importer = ctx.userId ? loadUserSummary(deps.db, ctx.userId) : null;
     return await applyBackup(deps, dir, manifest.value, {
       archiveName: path.basename(archivePath),
       ctx,
-      importerEmail: importer?.email ?? null,
       onlyWhileSetupPending: false,
     });
   } finally {
@@ -151,7 +147,6 @@ export async function importBackupForSetup(deps: AppDeps, input: unknown): Promi
     return await applyBackup(deps, dir, manifest.value, {
       archiveName: path.basename(archivePath),
       ctx: systemContext(),
-      importerEmail: null,
       onlyWhileSetupPending: true,
     });
   } finally {

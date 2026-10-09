@@ -50,6 +50,7 @@ export async function uploadVoucher(deps: Deps, ctx: CallContext, input: unknown
     bytes: v.bytes,
     typeKey: v.typeKey,
     subject,
+    recordNumber: entry.number ?? null,
     documentDate: v.documentDate,
     links: [{ entityType: 'financeEntry', entityId: v.entryId }],
     afterReceive: (tx, doc) => {
@@ -145,7 +146,7 @@ export async function revokeVoucher(deps: Deps, ctx: CallContext, input: unknown
     }
     const now = isoNow(deps.clock);
     tx.update(financeEntryDocuments).set({ revokedAt: now, revokedByUserId: ctx.userId, revokeNote: v.note, replacedByLinkId: replacementLinkId }).where(eq(financeEntryDocuments.id, v.linkId)).run();
-    financeAudit(tx, deps, ctx, { action: 'finance.entry.documentRevoke', entity: 'financeEntryDocument', id: v.linkId, after: { entryId: link.entryId, documentId: link.documentId, withReplacement: replacementLinkId !== null }, summary: `Beleg an Buchung ${link.entryId} widerrufen` });
+    financeAudit(tx, deps, ctx, { action: 'finance.entry.documentRevoke', entity: 'financeEntryDocument', id: v.linkId, after: { entryId: link.entryId, documentId: link.documentId, withReplacement: replacementLinkId !== null } });
     return ok({ linkId: v.linkId, replacementLinkId });
   });
 }
@@ -179,7 +180,7 @@ export function writeVoucherLink(tx: DbOrTx, deps: Deps, ctx: CallContext, input
       addedAt: now, addedByUserId: ctx.userId ?? 'system', revokedAt: null, revokedByUserId: null, revokeNote: null, replacedByLinkId: null,
     })
     .run();
-  financeAudit(tx, deps, ctx, { action: 'finance.entry.documentAdd', entity: 'financeEntryDocument', id: linkId, after: { entryId: input.entryId, documentId: input.documentId, viaUpload: input.viaUpload }, summary: `Beleg an Buchung ${input.entryId} abgelegt` });
+  financeAudit(tx, deps, ctx, { action: 'finance.entry.documentAdd', entity: 'financeEntryDocument', id: linkId, after: { entryId: input.entryId, documentId: input.documentId, viaUpload: input.viaUpload } });
   return { linkId, documentId: input.documentId, documentNumber: input.documentNumber };
 }
 

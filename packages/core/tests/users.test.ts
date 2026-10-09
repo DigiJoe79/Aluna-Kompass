@@ -60,9 +60,28 @@ describe('users service', () => {
     const updated = unwrap(await updateUser(deps, admin, { id, name: 'Neu', email: 'neu@example.org' }));
     expect(updated).toMatchObject({ name: 'Neu', email: 'neu@example.org' });
     const entry = deps.db.select().from(auditLog).all().at(-1);
-    expect(entry).toMatchObject({ action: 'users.update', entityId: id });
-    expect(JSON.parse(entry!.before!)).toMatchObject({ name: 'Alt' });
-    expect(JSON.parse(entry!.after!)).toMatchObject({ name: 'Neu' });
+    expect(entry).toMatchObject({ action: 'users.update', entityId: id, before: null });
+    // Wie bei den Kontakten: nur welche Felder, nie ihr Inhalt (Spec Protokoll § 2).
+    expect(JSON.parse(entry!.after!)).toEqual({ changedFields: ['name', 'email'] });
+    unwrap(await updateUser(deps, admin, { id, name: 'Neu', email: 'neu2@example.org' }));
+    expect(JSON.parse(deps.db.select().from(auditLog).all().at(-1)!.after!)).toEqual({ changedFields: ['email'] });
+  });
+
+  it('keeps names and email addresses out of every audit entry about users', async () => {
+    const deps = createTestDeps();
+    const role = unwrap(await createRole(deps, admin, { name: 'Kassenprüfer' }));
+    const { user } = unwrap(await createUser(deps, admin, { name: 'Peter Lang', email: 'peter.lang@example.org', roleIds: [role.id] }));
+    unwrap(await updateUser(deps, admin, { id: user.id, name: 'Petra Lang', email: 'petra.lang@example.org' }));
+    unwrap(await setUserActive(deps, admin, { id: user.id, isActive: false }));
+    unwrap(await setUserActive(deps, admin, { id: user.id, isActive: true }));
+    const rows = deps.db.select().from(auditLog).all().filter((r) => r.entityType === 'user');
+    expect(rows.map((r) => r.action)).toEqual(expect.arrayContaining(['users.create', 'users.update', 'users.deactivate', 'users.activate']));
+    for (const row of rows) {
+      const stored = JSON.stringify([row.before, row.after, row.params]);
+      expect(stored, row.action).not.toMatch(/Lang|example\.org/);
+    }
+    expect(JSON.parse(auditEntry(deps, 'users.create').after!)).toEqual({ changedFields: ['name', 'email', 'roles'] });
+    expect(auditEntry(deps, 'users.deactivate')).toMatchObject({ before: '{"isActive":true}', after: '{"isActive":false}' });
   });
 
   it('deactivation revokes sessions and refuses for the last active administrator', async () => {

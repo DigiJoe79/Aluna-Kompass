@@ -1,12 +1,14 @@
 import { execFileSync, spawnSync } from 'node:child_process';
 import path from 'node:path';
-import { installedModuleKeys, scopeFromPaths, type Scope } from '../e2e/projects';
+import { installedModuleKeys, parseVerifyArgs, scopeFromPaths, type Scope } from '../e2e/projects';
 
 /**
- * `pnpm verify:modul [-n] [modul ...]` — der Prüflauf je Task.
+ * `pnpm verify:modul [-n] [--alles | --seit <ref> | modul ...]` — der Prüflauf je Task.
  *
- * Ohne Modul liest er die Änderungen des Arbeitsbaums gegen HEAD (und ohne
- * solche den letzten Commit) und leitet daraus ab, was zu prüfen ist
+ * Ohne Auswahl liest er die Änderungen des Arbeitsbaums gegen HEAD und — ist
+ * der sauber, etwa nach dem letzten Commit eines Plans — alles seit dem
+ * Abzweig von `main` (`git merge-base HEAD main`); `--seit <ref>` nimmt einen
+ * anderen Ausgangspunkt, `--alles` die volle Dev-Suite. Daraus leitet er ab, was zu prüfen ist
  * (`scopeFromPaths`): die Unit-Tests und der Typecheck der betroffenen Pakete
  * samt allem, was von ihnen abhängt, dazu die E2E-Projekte der Module plus
  * `kern`. Berührt die Änderung Geteiltes, läuft die volle Dev-Suite. Mit
@@ -32,10 +34,17 @@ function git(...args: string[]): string[] {
     .filter(Boolean);
 }
 
-function changedFiles(): { files: string[]; source: string } {
-  const workTree = [...git('diff', '--name-only', 'HEAD'), ...git('ls-files', '--others', '--exclude-standard')];
-  if (workTree.length > 0) return { files: [...new Set(workTree)], source: 'Arbeitsbaum gegen HEAD' };
-  return { files: git('diff', '--name-only', 'HEAD~1', 'HEAD'), source: 'letzter Commit' };
+function workTreeFiles(): string[] {
+  return [...new Set([...git('diff', '--name-only', 'HEAD'), ...git('ls-files', '--others', '--exclude-standard')])];
+}
+
+function changedFiles(since: string | undefined): { files: string[]; source: string } {
+  const workTree = workTreeFiles();
+  if (since === undefined && workTree.length > 0) return { files: workTree, source: 'Arbeitsbaum gegen HEAD' };
+  const base = since ?? git('merge-base', 'HEAD', 'main')[0]!;
+  const committed = git('diff', '--name-only', `${base}...HEAD`);
+  const label = since === undefined ? `Abzweig von main (${base.slice(0, 8)})` : `seit ${since}`;
+  return { files: [...new Set([...committed, ...workTree])], source: label };
 }
 
 function plan(scope: Scope): { label: string; steps: string[][] } {
@@ -70,14 +79,22 @@ function plan(scope: Scope): { label: string; steps: string[][] } {
   };
 }
 
-const args = process.argv.slice(2);
-const dryRun = args.includes('-n');
-const requested = args.filter((arg) => arg !== '-n');
+let args: ReturnType<typeof parseVerifyArgs>;
+try {
+  args = parseVerifyArgs(process.argv.slice(2));
+} catch (error) {
+  console.error(`[verify:modul] ${(error as Error).message}`);
+  process.exit(2);
+}
+const { dryRun, modules: requested } = args;
 const modules = installedModuleKeys(APP);
 
 let scope: Scope;
 let origin: string;
-if (requested.length > 0) {
+if (args.all) {
+  scope = { kind: 'full' };
+  origin = '--alles';
+} else if (requested.length > 0) {
   const unknown = requested.filter((key) => !modules.includes(key));
   if (unknown.length > 0) {
     console.error(`Unbekannte Module: ${unknown.join(', ')}. Bekannt: ${modules.join(', ')}`);
@@ -86,7 +103,7 @@ if (requested.length > 0) {
   scope = { kind: 'modules', modules: [...new Set(requested)].sort() };
   origin = 'Argument';
 } else {
-  const changed = changedFiles();
+  const changed = changedFiles(args.since);
   scope = scopeFromPaths(changed.files, modules);
   origin = `${changed.source}, ${changed.files.length} Dateien`;
 }

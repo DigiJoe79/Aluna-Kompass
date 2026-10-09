@@ -78,9 +78,9 @@ function Localized({ path, field, value, errors, locales, onChange, span }: Fiel
     <FormCell as="fieldset" size={span} className="flex min-w-0 flex-col gap-2">
       <legend className="text-[13px] font-semibold text-ink-2">{labelOf(field, path)}</legend>
       {tabbed ? (
-        <div className="flex flex-wrap gap-1 border-b border-subtle pb-1">
+        <div className="flex flex-wrap gap-1 border-b border-line pb-1">
           {locales.map((l) => (
-            <button key={l} type="button" onClick={() => setActive(l)} className={cn('rounded-sm px-2 py-1 font-mono text-[10px] uppercase', active === l ? 'bg-panel-selected font-semibold text-ink' : 'text-muted-ink')}>
+            <button key={l} type="button" onClick={() => setActive(l)} className={cn('rounded-sm px-2 py-1 font-mono text-[10px] uppercase', active === l ? 'bg-selected font-semibold text-ink' : 'text-muted-ink')}>
               {l}
             </button>
           ))}

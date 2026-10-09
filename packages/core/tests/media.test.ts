@@ -154,7 +154,7 @@ describe('Assets unter dem Recht eines Moduls', () => {
   it('liefert es nur an jemanden mit diesem Recht aus', async () => {
     const deps = createTestDeps({ manifests: [coreModule, guarded] });
     deps.db.transaction((tx) => {
-      writeSettingInternal(tx, deps, ctxWith(['settings.manage']), 'modules.enabled', ['guard'], 'test.enable');
+      writeSettingInternal(tx, deps, ctxWith(['settings.manage']), 'modules.enabled', ['guard']);
     });
     const uploader = ctxWith(['media.upload', 'guard.view'], insertUser(deps, {}));
     const record = unwrap(await storeMediaAsset(deps, uploader, { originalName: 'a.png', bytes: PNG }));

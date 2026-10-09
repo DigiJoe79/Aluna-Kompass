@@ -37,11 +37,12 @@ Zahlung. Dazu kommen, wenn vorhanden, der Registernachweis und eine
 Rahmenvereinbarung aus der Akte. Auf breitem Bildschirm stehen die Angaben
 links, Bescheide und Zahlungen rechts.
 
-Ganz unten auf der Seite steht der Abschnitt **Löschen** oder **Archivieren**:
-Solange weder Zahlungen noch Bescheide am Partner hängen, lässt er sich
-löschen. Danach bleibt nur das Archivieren — der Partner wird als inaktiv
-geführt und behält alles, was an ihm hängt; hier lässt er sich auch wieder
-aktivieren.
+Oben rechts im Menü **Weitere Aktionen** (⋯) stehen **Archivieren** und
+**Löschen …**. Löschen geht nur, solange weder Zahlungen noch Bescheide am
+Partner hängen; sonst nennt der Dialog den Grund. Archivieren geht ohne
+Rückfrage — der Partner wird als inaktiv geführt und behält alles, was an ihm
+hängt. Der Hinweis unten bietet kurz „Rückgängig“; danach steht neben dem
+Namen „Archiviert“ und oben der Knopf **Wieder aktivieren**.
 
 ## Bescheide des Partners
 

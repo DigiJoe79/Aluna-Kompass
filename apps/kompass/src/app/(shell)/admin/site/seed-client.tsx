@@ -34,7 +34,7 @@ export function SeedClient() {
       <RefusalNotice action state={state.status === 'error' ? { status: 'error', message: state.message, fieldErrors: {} } : { status: 'idle' }} />
 
       {report ? (
-        <section className="flex flex-col gap-3 border-t border-subtle pt-4">
+        <section className="flex flex-col gap-3 border-t border-line pt-4">
           <p className="max-w-prose text-[13px] text-ink-2">
             {t('report', { variables: report.variables, entries: report.entries, assets: report.assets })}
           </p>

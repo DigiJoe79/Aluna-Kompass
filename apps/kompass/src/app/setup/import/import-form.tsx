@@ -2,8 +2,13 @@
 
 import { useTranslations } from 'next-intl';
 import { useActionState, useState } from 'react';
+import { FileDropzone } from '@/app/(shell)/dms/receive/file-dropzone';
+import { FormField } from '@/components/forms/form-field';
+import { RefusalNotice } from '@/components/forms/refusal-notice';
 import { Button } from '@/components/ui/button';
+import { useDateFormat } from '@/components/date-format-provider';
 import { idleState } from '@/lib/actions';
+import { withUnplacedFieldErrors } from '@/lib/feedback';
 import { importForSetupAction } from './actions';
 
 interface Manifest {
@@ -14,6 +19,7 @@ interface Manifest {
 
 export function ImportForm() {
   const t = useTranslations('auth.setupImport');
+  const fmt = useDateFormat();
   const [state, submit, pending] = useActionState(importForSetupAction, idleState);
   const [handle, setHandle] = useState<string | null>(null);
   const [manifest, setManifest] = useState<Manifest | null>(null);
@@ -47,24 +53,18 @@ export function ImportForm() {
     <div className="flex flex-col gap-4">
       <p className="text-[14px] leading-[1.55] text-ink-2">{t('intro')}</p>
 
-      <label className="flex flex-col gap-1 text-[13px]">
-        <span>{t('file')}</span>
-        <input
-          type="file"
+      <FormField id="archive" label={t('file')} error={problem ?? undefined}>
+        <FileDropzone
+          id="archive"
+          name="archive"
           accept=".gz,.tgz,application/gzip"
-          disabled={busy || pending}
-          onChange={(event) => {
-            const file = event.target.files?.[0];
-            if (file) void upload(file);
+          hint={t('fileHint')}
+          onFile={(file) => {
+            if (file && !busy && !pending) void upload(file);
           }}
         />
-      </label>
+      </FormField>
       {busy && <p className="text-[13px] text-muted-ink">{t('uploading')}</p>}
-      {problem && (
-        <p role="alert" className="text-[13px] text-danger">
-          {problem}
-        </p>
-      )}
 
       {manifest && handle && (
         <form action={submit} className="flex flex-col gap-3 rounded-lg border border-line p-4">
@@ -74,7 +74,7 @@ export function ImportForm() {
             <dt className="text-muted-ink">{t('environment')}</dt>
             <dd className="font-mono">{manifest.environment}</dd>
             <dt className="text-muted-ink">{t('createdAt')}</dt>
-            <dd className="font-mono">{manifest.createdAt}</dd>
+            <dd className="font-mono">{fmt.dateTime(manifest.createdAt)}</dd>
             <dt className="text-muted-ink">{t('users')}</dt>
             <dd className="font-mono">{manifest.counts.users}</dd>
             <dt className="text-muted-ink">{t('documents')}</dt>
@@ -83,11 +83,7 @@ export function ImportForm() {
             <dd className="font-mono">{manifest.counts.mediaAssets}</dd>
           </dl>
           <p className="text-[13px] text-ink-2">{t('credentialWarning')}</p>
-          {state.status === 'error' && (
-            <p role="alert" className="text-[13px] text-danger">
-              {state.message}
-            </p>
-          )}
+          <RefusalNotice state={withUnplacedFieldErrors(state, [])} />
           <Button type="submit" disabled={pending}>
             {pending ? t('running') : t('confirm')}
           </Button>

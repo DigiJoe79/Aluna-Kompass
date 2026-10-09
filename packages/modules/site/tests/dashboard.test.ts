@@ -61,7 +61,7 @@ describe('site tile', () => {
   it('warnt zuerst vor einem ungeprüften Template nach einem Import', async () => {
     const deps = setup();
     publish(deps, '2026-09-12T10:00:00.000Z', 'failed');
-    deps.db.transaction((tx) => writeSettingInternal(tx, deps, systemContext(), 'system.lastImportAt', '2026-09-15T00:00:00.000Z', 'test'));
+    deps.db.transaction((tx) => writeSettingInternal(tx, deps, systemContext(), 'system.lastImportAt', '2026-09-15T00:00:00.000Z'));
     expect(await tile.load(deps, ctx, {})).toEqual({ kind: 'status', tone: 'warning', messageKey: 'templateUnreviewed', href: '/site/publish' });
   });
 

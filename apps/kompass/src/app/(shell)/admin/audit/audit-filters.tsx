@@ -2,112 +2,110 @@
 
 import { useTranslations } from 'next-intl';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useDateFormat } from '@/components/date-format-provider';
+import { FilterBar, filterControlClass, selectFilter, type FilterSlot } from '@/components/filter-bar';
+import { SearchField } from '@/components/search-field';
 import { Input } from '@/components/ui/input';
-import { Select } from '@/components/ui/select';
 import { useUrlFilters } from '@/lib/use-url-filters';
 
+/** Was „Filter zurücksetzen“ nimmt; mit jedem Filterwechsel gehen auch Seite und gewählter Eintrag. */
+const FILTER_KEYS = ['text', 'userId', 'action', 'from', 'to', 'channel'] as const;
+
+/** Von und Bis als ein Filter „Zeitraum“ (Spec Filterleisten § 4); im Telefon-Sheet als „von|bis“ im Entwurf. */
+function PeriodFields({ from, to, onChange, idPrefix }: { from: string; to: string; onChange: (from: string, to: string) => void; idPrefix: string }) {
+  const t = useTranslations('audit.filters');
+  return (
+    <div role="group" aria-label={t('period')} className="flex items-center gap-1.5">
+      <Input id={`${idPrefix}-from`} aria-label={t('from')} type="date" value={from} onChange={(e) => onChange(e.target.value, to)} className={`w-[150px] font-mono ${filterControlClass(from !== '')}`} />
+      <span aria-hidden className="text-muted-ink">
+        –
+      </span>
+      <Input id={`${idPrefix}-to`} aria-label={t('to')} type="date" value={to} onChange={(e) => onChange(from, e.target.value)} className={`w-[150px] font-mono ${filterControlClass(to !== '')}`} />
+    </div>
+  );
+}
+
+/**
+ * Filterleiste des Protokolls (Spec Filterleisten § 4): Suche (gilt nach kurzer Pause), Nutzer, Aktion in Worten,
+ * Zeitraum; Kanal unter „Weitere Filter“. Die Auswahlfelder lesen die Adresse direkt.
+ */
 export function AuditFilters({
   users,
   actions,
-  total,
+  count,
 }: {
   users: { id: string; name: string }[];
-  actions: string[];
-  total: number;
+  /** Alle vorkommenden Aktionen mit Klartext, sortiert. */
+  actions: { value: string; label: string }[];
+  count: { shown: number; total: number };
 }) {
   const t = useTranslations('audit.filters');
+  const fmt = useDateFormat();
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
-  const update = (key: string, value: string) => {
+  // Such- und Datumsfelder folgen der Adresse, wenn sie von außen wechselt (Seitenleiste, Zurück).
+  const [filters, setFilters] = useUrlFilters({ text: params.get('text') ?? '', from: params.get('from') ?? '', to: params.get('to') ?? '' });
+
+  const update = (patch: Record<string, string>) => {
+    if ('text' in patch || 'from' in patch || 'to' in patch) setFilters({ ...filters, ...patch });
     const next = new URLSearchParams(params.toString());
-    if (value) next.set(key, value);
-    else next.delete(key);
+    for (const [key, value] of Object.entries(patch)) {
+      if (value.trim()) next.set(key, value.trim());
+      else next.delete(key);
+    }
     next.delete('entry');
     next.delete('offset');
-    router.replace(`${pathname}?${next.toString()}`);
+    router.replace(next.toString() ? `${pathname}?${next.toString()}` : pathname);
   };
-  // Such- und Datumsfelder brauchen eigenen Zustand und folgen der Adresse, wenn sie von außen wechselt
-  // (Seitenleiste, Zurück). Die Auswahlfelder lesen die Adresse direkt.
-  const [filters, setFilters] = useUrlFilters({ text: params.get('text') ?? '', from: params.get('from') ?? '', to: params.get('to') ?? '' });
-  // Der Suchtext gilt erst mit Enter oder beim Verlassen des Felds; bis dahin ist er ein Entwurf.
-  const [draft, setDraft] = useState(filters.text);
-  useEffect(() => setDraft(filters.text), [filters.text]);
-  const commitText = (value: string) => {
-    if (value === filters.text) return;
-    setFilters({ ...filters, text: value });
-    update('text', value);
+  const value = (key: string) => params.get(key) ?? '';
+
+  const periodChip = filters.from && filters.to ? t('periodBoth', { from: fmt.date(filters.from), to: fmt.date(filters.to) }) : filters.from ? t('periodFrom', { from: fmt.date(filters.from) }) : t('periodTo', { to: fmt.date(filters.to) });
+  const period: FilterSlot = {
+    key: 'period',
+    label: t('period'),
+    active: Boolean(filters.from || filters.to),
+    chip: periodChip,
+    onClear: () => update({ from: '', to: '' }),
+    control: <PeriodFields idPrefix="audit" from={filters.from} to={filters.to} onChange={(from, to) => update({ from, to })} />,
+    sheet: {
+      value: `${filters.from}|${filters.to}`,
+      render: (draft, onChange) => {
+        const [from = '', to = ''] = draft.split('|');
+        return <PeriodFields idPrefix="audit-sheet" from={from} to={to} onChange={(f, tt) => onChange(`${f}|${tt}`)} />;
+      },
+      apply: (draft) => {
+        const [from = '', to = ''] = draft.split('|');
+        update({ from, to });
+      },
+    },
   };
-  const changeDate = (key: 'from' | 'to', value: string) => {
-    setFilters({ ...filters, [key]: value });
-    update(key, value);
-  };
+
   return (
-    <div className="flex flex-wrap items-center gap-3 border-b border-line bg-surface px-5 py-4">
-      <Input
-        aria-label={t('text')}
-        placeholder={t('text')}
-        value={draft}
-        onChange={(e) => setDraft(e.target.value)}
-        onBlur={(e) => commitText(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter') commitText((e.target as HTMLInputElement).value);
-        }}
-        className="w-[200px]"
-      />
-      <Select
-        aria-label={t('user')}
-        className="w-auto"
-        value={params.get('userId') ?? ''}
-        onChange={(e) => update('userId', e.target.value)}
-      >
-        <option value="">{t('allUsers')}</option>
-        {users.map((u) => (
-          <option key={u.id} value={u.id}>
-            {u.name}
-          </option>
-        ))}
-      </Select>
-      <Select
-        aria-label={t('channel')}
-        className="w-auto"
-        value={params.get('channel') ?? ''}
-        onChange={(e) => update('channel', e.target.value)}
-      >
-        <option value="">{t('allChannels')}</option>
-        <option value="ui">{t('channels.ui')}</option>
-        <option value="mcp">{t('channels.mcp')}</option>
-        <option value="system">{t('channels.system')}</option>
-      </Select>
-      <Select
-        aria-label={t('action')}
-        className="w-auto"
-        value={params.get('action') ?? ''}
-        onChange={(e) => update('action', e.target.value)}
-      >
-        <option value="">{t('allActions')}</option>
-        {actions.map((a) => (
-          <option key={a} value={a}>
-            {a}
-          </option>
-        ))}
-      </Select>
-      <Input
-        aria-label={t('from')}
-        type="date"
-        value={filters.from}
-        onChange={(e) => changeDate('from', e.target.value)}
-        className="w-[150px] font-mono"
-      />
-      <Input
-        aria-label={t('to')}
-        type="date"
-        value={filters.to}
-        onChange={(e) => changeDate('to', e.target.value)}
-        className="w-[150px] font-mono"
-      />
-      <span className="ml-auto text-[13px] text-muted-ink">{t('count', { count: total })}</span>
-    </div>
+    <FilterBar
+      search={<SearchField value={filters.text} onChange={(text) => update({ text })} placeholder={t('searchPlaceholder')} />}
+      searchActive={filters.text.trim() ? { chip: filters.text.trim(), onClear: () => update({ text: '' }) } : undefined}
+      filters={[
+        selectFilter({ key: 'userId', label: t('user'), value: value('userId'), options: users.map((u) => ({ value: u.id, label: u.name })), onChange: (userId) => update({ userId }) }),
+        selectFilter({ key: 'action', label: t('action'), value: value('action'), options: actions, onChange: (action) => update({ action }) }),
+        period,
+      ]}
+      more={[
+        selectFilter({
+          key: 'channel',
+          label: t('channel'),
+          value: value('channel'),
+          options: (['ui', 'mcp', 'system'] as const).map((c) => ({ value: c, label: t(`channels.${c}`) })),
+          onChange: (channel) => update({ channel }),
+        }),
+      ]}
+      onApply={(values) => {
+        const { period: draft, ...rest } = values;
+        const [from = '', to = ''] = draft === undefined ? [filters.from, filters.to] : draft.split('|');
+        update({ ...rest, ...(draft === undefined ? {} : { from, to }) });
+      }}
+      count={{ ...count, noun: { one: t('nounOne'), other: t('nounOther'), dative: t('nounDative') } }}
+      onReset={() => update(Object.fromEntries(FILTER_KEYS.map((key) => [key, ''])))}
+    />
   );
 }

@@ -294,7 +294,7 @@ describe('finance to-do tile — notices (F6a)', () => {
     f.deps.clock.set('2026-04-01T10:00:00.000Z');
     expect(await noticeLines()).toEqual([{ date: '2026-09-15', titleKey: 'noticeExpiring', values: { kind: 'section60a', months: 5 }, href: '/finance/donations/notices' }]);
 
-    f.deps.db.transaction((tx) => writeSettingInternal(tx, f.deps, systemContext(), 'finance.noticeExpiryWarnMonths', 3, 'test'));
+    f.deps.db.transaction((tx) => writeSettingInternal(tx, f.deps, systemContext(), 'finance.noticeExpiryWarnMonths', 3));
     expect(await noticeLines()).toEqual([]);
 
     // Abgelaufen: dann fehlt wieder ein Bescheid.

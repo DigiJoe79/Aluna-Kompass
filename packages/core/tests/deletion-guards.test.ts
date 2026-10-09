@@ -24,7 +24,7 @@ const probe = defineModule({
 function setup() {
   const deps = createTestDeps({ manifests: [coreModule, probe], now: '2026-09-17T08:00:00.000Z' });
   deps.db.transaction((tx) => {
-    writeSettingInternal(tx, deps, ctxWith(['settings.manage']), 'modules.enabled', ['probe'], 'test.enable');
+    writeSettingInternal(tx, deps, ctxWith(['settings.manage']), 'modules.enabled', ['probe']);
   });
   return deps;
 }
@@ -67,7 +67,7 @@ describe('buildDeletionPreview and deletionConflict', () => {
 
   it('folgt ui.dateFormat = iso', () => {
     const deps = setup();
-    deps.db.transaction((tx) => writeSettingInternal(tx, deps, ctxWith(['settings.manage']), 'ui.dateFormat', 'iso', 'test.dateFormat'));
+    deps.db.transaction((tx) => writeSettingInternal(tx, deps, ctxWith(['settings.manage']), 'ui.dateFormat', 'iso'));
     const failure = deletionConflict(deps, buildDeletionPreview(deps, subject('A-RUNNING')));
     expect(failure!.error.type === 'conflict' && failure!.error.message).toBe('Noch gehalten von: Vertrag V-1 (bis 2036-12-31)');
   });

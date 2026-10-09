@@ -64,13 +64,14 @@ export function LocaleInput({ locale, invalid, ...props }: ComponentProps<'input
       className={cn(
         'flex h-[var(--field-h)] min-w-0 items-stretch overflow-hidden rounded-md border bg-field transition-colors',
         'has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-focus',
-        invalid ? 'border-error' : 'border-line-strong',
+        // Feldrahmen im Fehlerzustand wie `ui/input`: aus `aria-invalid` am Feld, nicht aus einer eigenen Bedingung.
+        'border-line-strong has-[[aria-invalid=true]]:border-error',
       )}
     >
       <span aria-hidden="true" className={cn('flex min-w-12 shrink-0 items-center justify-center border-r border-line px-1.5', LOCALE_CODE)}>
         {locale.toUpperCase()}
       </span>
-      <input type="text" {...props} className="w-full min-w-0 flex-1 bg-transparent px-2.5 text-[length:var(--field-font)] text-ink outline-none" />
+      <input type="text" aria-invalid={invalid || undefined} {...props} className="w-full min-w-0 flex-1 bg-transparent px-2.5 text-[length:var(--field-font)] text-ink outline-none" />
     </div>
   );
 }
@@ -164,7 +165,7 @@ export function LocalizedField({
         ) : null}
       </span>
       {locales.length >= 4 ? (
-        <div className="flex flex-wrap gap-1 border-b border-subtle pb-1">
+        <div className="flex flex-wrap gap-1 border-b border-line pb-1">
           {locales.map((l) => {
             const isUntranslated = l !== leading && (text[leading] ?? '').length > 0 && (text[l] ?? '').length === 0;
             return (
@@ -174,7 +175,7 @@ export function LocalizedField({
                 onClick={() => setActiveTab(l)}
                 className={cn(
                   'flex items-center gap-1.5 rounded-sm px-2.5 py-1 text-[12px] font-medium transition-colors',
-                  activeTab === l ? 'bg-panel-selected font-semibold text-ink' : 'text-muted-ink hover:text-ink',
+                  activeTab === l ? 'bg-selected font-semibold text-ink' : 'text-muted-ink hover:text-ink',
                 )}
               >
                 <span className="font-mono text-[10px] uppercase">{l}</span>

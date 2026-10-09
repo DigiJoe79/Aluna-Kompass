@@ -1,10 +1,10 @@
 # Publizieren
 
-Publizieren baut die Seite aus Template und Inhalten und lädt die fertigen
+Publizieren baut die Seite aus Vorlage und Inhalten und lädt die fertigen
 Dateien auf den Webspace des Vereins. Die Seite führt in zwei Schritten: erst
 die Vorschau, die alle Inhalte prüft und zeigt, was sich ändert, dann das
 Publizieren genau dieses Stands. Publiziert wird nur aus der Prod-Instanz und
-aus der Test-Instanz auf Staging. Ist noch kein Template eingelesen, zeigt
+aus der Test-Instanz auf Staging. Ist noch keine Vorlage eingelesen, zeigt
 die Seite einen Hinweis mit Link in die Einstellungen.
 
 ## Ziel
@@ -41,9 +41,9 @@ die **Hinweise**, wenn es welche gibt:
 
 - **Übersetzungslücken** — Felder, die in einer eingerichteten Sprache leer
   sind. Die Seite erscheint, aber an dieser Stelle in der Leitsprache oder
-  leer, je nach Template.
+  leer, je nach Vorlage.
 - **Veraltete Verweise** — eine Variable zeigt auf einen Datensatz, der nicht
-  mehr veröffentlicht ist. Das Feld wird leer ausgeliefert, das Template
+  mehr veröffentlicht ist. Das Feld wird leer ausgeliefert, die Vorlage
   nimmt seinen Vorschlag.
 - **Noch zu prüfen** — veröffentlichte Einträge, die seit ihrer letzten
   Änderung kein Mensch geprüft hat, heute die [Tierprofile](../tiere.md), die
@@ -84,9 +84,9 @@ Publiziert wird der Stand der gezeigten Vorschau. Die Übertragung legt alle
 Dateien erst in einem Zwischenverzeichnis ab und tauscht sie am Ende auf
 einmal um — ein Abbruch mittendrin lässt keine halb alte, halb neue Seite
 stehen. Der Publish steht mit Datum, Prüfsumme und Ergebnis im
-Änderungsprotokoll. Kompass verweigert ihn auch, wenn das Template im
+Änderungsprotokoll. Kompass verweigert ihn auch, wenn die Vorlage im
 Verzeichnis geändert, aber nicht neu [eingelesen](template-einlesen.md)
-wurde, oder wenn das Template ein Modul braucht, das unter Einstellungen →
+wurde, oder wenn die Vorlage ein Modul braucht, das unter Einstellungen →
 Module ausgeschaltet ist.
 
 ## Laufanzeige und Abbrechen

@@ -9,7 +9,7 @@ import { FormGrid } from '@/components/forms/form-grid';
 import { useActionFeedback } from '@/components/forms/use-action-feedback';
 import { ConsequenceList } from '@/components/consequence-list';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { voidConfirmationAction } from './actions';
@@ -98,6 +98,7 @@ export function VoidDialog({ open, onOpenChange, confirmation }: { open: boolean
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent size="md" className="bg-surface shadow-md">
         <DialogTitle>{t('title', { number: confirmation.number })}</DialogTitle>
+        <DialogDescription tone="body">{t('description')}</DialogDescription>
         <VoidForm confirmation={confirmation} onDone={() => onOpenChange(false)} onCancel={() => onOpenChange(false)} />
       </DialogContent>
     </Dialog>

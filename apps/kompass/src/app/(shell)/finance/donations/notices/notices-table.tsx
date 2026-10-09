@@ -1,6 +1,7 @@
 'use client';
 
 import type { NoticeView } from '@kompass/module-finance';
+import { MoreHorizontal } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
@@ -13,7 +14,8 @@ import { FormCell, FormGrid } from '@/components/forms/form-grid';
 import { useActionFeedback } from '@/components/forms/use-action-feedback';
 import { StatusBadge } from '@/components/status-badge';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Textarea } from '@/components/ui/textarea';
@@ -30,8 +32,9 @@ const TONE = { valid: 'success', endsOn: 'warning', expired: 'neutral', supersed
  * damit sie auf einer `standard`-Seite nicht waagerecht scrollt: Bescheid (Art
  * in Alltagssprache, darunter Finanzamt · Steuernummer) · vom · gilt (Befreiung
  * ab – gültig bis, taggenau; darunter der Veranlagungszeitraum) · Dokument ·
- * Zustand. Handeln mit `finance.donationsIssue`: aufgehoben oder
- * ersetzt am …, irrtümlich erfasst, Dokument nachreichen.
+ * Zustand. Handeln mit `finance.donationsIssue` über das Zeilenmenü wie bei den
+ * Rücklagen (Backlog 36: drei Knöpfe untereinander machten die Zeile hoch):
+ * Dokument nachreichen, aufgehoben oder ersetzt am …, irrtümlich erfasst.
  */
 export function NoticesTable({ rows, canIssue, canPickDocument }: { rows: NoticeRow[]; canIssue: boolean; canPickDocument: boolean }) {
   const t = useTranslations('finance.donations.notices');
@@ -79,11 +82,22 @@ export function NoticesTable({ rows, canIssue, canPickDocument }: { rows: Notice
                 </TableCell>
                 {canIssue ? (
                   <TableCell className="text-right">
-                    <div className="flex flex-wrap justify-end gap-1.5">
-                      {actions.attach ? <Button type="button" size="sm" variant="outline" onClick={() => setAttach(row)}>{t('actions.attach')}</Button> : null}
-                      {actions.supersede ? <Button type="button" size="sm" variant="outline" onClick={() => setSupersede(row)}>{t('actions.supersede')}</Button> : null}
-                      {actions.void ? <Button type="button" size="sm" variant="ghost" onClick={() => setVoiding(row)}>{t('actions.void')}</Button> : null}
-                    </div>
+                    {actions.attach || actions.supersede || actions.void ? (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger
+                          render={
+                            <Button variant="ghost" size="icon" aria-label={t('actions.menu', { name: tk(row.kind) })} data-testid="notice-menu">
+                              <MoreHorizontal className="size-4" />
+                            </Button>
+                          }
+                        />
+                        <DropdownMenuContent align="end" className="w-auto bg-surface shadow-md">
+                          {actions.attach ? <DropdownMenuItem onSelect={() => setAttach(row)}>{t('actions.attach')}</DropdownMenuItem> : null}
+                          {actions.supersede ? <DropdownMenuItem onSelect={() => setSupersede(row)}>{t('actions.supersede')}</DropdownMenuItem> : null}
+                          {actions.void ? <DropdownMenuItem onSelect={() => setVoiding(row)}>{t('actions.void')}</DropdownMenuItem> : null}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    ) : null}
                   </TableCell>
                 ) : null}
               </TableRow>
@@ -158,7 +172,7 @@ function VoidNoticeDialog({ notice, onClose }: { notice: NoticeRow; onClose: () 
     <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
       <DialogContent size="md" className="bg-surface shadow-md">
         <DialogTitle>{tv('title')}</DialogTitle>
-        <p className="text-[13px] text-ink-2">{tv('hint')}</p>
+        <DialogDescription tone="body">{tv('hint')}</DialogDescription>
         <FormGrid>
           <FormField id="notice-void-note" label={tv('reason')} required size="l">
             <Textarea id="notice-void-note" rows={2} value={note} onChange={(e) => setNote(e.target.value)} />

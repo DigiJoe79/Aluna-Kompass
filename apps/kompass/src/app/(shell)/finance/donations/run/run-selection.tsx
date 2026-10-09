@@ -162,9 +162,9 @@ export function RunSelection(props: RunSelectionProps) {
             {excluded.map((c) => (
               <span key={c.id} className="inline-flex items-center gap-1 rounded-sm border border-line bg-surface-2 py-0.5 pr-1 pl-2">
                 {c.name}
-                <button type="button" aria-label={t('selection.include', { name: c.name })} className="rounded-sm p-0.5 text-muted-ink hover:bg-surface hover:text-ink" onClick={() => include(c.id)}>
-                  <X className="size-3.5" aria-hidden />
-                </button>
+                <Button type="button" variant="ghost" size="icon-xs" aria-label={t('selection.include', { name: c.name })} onClick={() => include(c.id)}>
+                  <X aria-hidden />
+                </Button>
               </span>
             ))}
           </div>

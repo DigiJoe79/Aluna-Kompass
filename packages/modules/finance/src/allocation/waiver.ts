@@ -163,7 +163,7 @@ export async function createWaiverDeclaration(deps: Deps, ctx: CallContext, inpu
         .where(and(eq(financeExpenseClaims.id, claim.id), eq(financeExpenseClaims.state, 'submitted')))
         .run().changes;
       if (changed !== 1) abortIssue(financeConflict('expenseNotSubmitted'));
-      financeAudit(tx, deps, ctx, { action: 'finance.expenseClaim.waiverDeclaration', entity: 'financeExpenseClaim', id: claim.id, after: { state: claim.state, number: claim.number }, summary: `Verzichtserklärung ${doc.number} zu Antrag ${claim.number} erzeugt` });
+      financeAudit(tx, deps, ctx, { action: 'finance.expenseClaim.waiverDeclaration', entity: 'financeExpenseClaim', id: claim.id, after: { state: claim.state, number: claim.number }, params: { documentNumber: doc.number, number: claim.number } });
       return null;
     },
   });
@@ -193,6 +193,7 @@ export async function attachSignedWaiver(deps: Deps, ctx: CallContext, input: un
     bytes: parsed.value.bytes,
     typeKey: WAIVER_SIGNED_DOCUMENT_TYPE,
     subject: `Verzichtserklärung zu Antrag ${claim.number} unterschrieben`,
+    recordNumber: claim.number,
     documentDate: todayIn(deps),
     links: [{ entityType: 'financeExpenseClaim', entityId: claim.id }],
     afterReceive: (tx, doc) => {
@@ -204,7 +205,7 @@ export async function attachSignedWaiver(deps: Deps, ctx: CallContext, input: un
         .where(and(eq(financeExpenseClaims.id, claim.id), isNull(financeExpenseClaims.waiverSignedDocumentId)))
         .run().changes;
       if (changed !== 1) abortReceive(financeConflict('waiverSignedAlready'));
-      financeAudit(tx, deps, ctx, { action: 'finance.expenseClaim.waiverSigned', entity: 'financeExpenseClaim', id: claim.id, after: { state: claim.state, number: claim.number }, summary: `Unterschriebene Verzichtserklärung ${doc.number} zu Antrag ${claim.number} abgelegt` });
+      financeAudit(tx, deps, ctx, { action: 'finance.expenseClaim.waiverSigned', entity: 'financeExpenseClaim', id: claim.id, after: { state: claim.state, number: claim.number }, params: { documentNumber: doc.number, number: claim.number } });
       return null;
     },
   });
@@ -235,7 +236,7 @@ export async function saveContactWaiverTerms(deps: Deps, ctx: CallContext, input
     const id = before?.id ?? newId();
     if (before) tx.update(financeContactWaiverTerms).set(fields).where(eq(financeContactWaiverTerms.id, id)).run();
     else tx.insert(financeContactWaiverTerms).values({ id, contactId: v.contactId, ...fields }).run();
-    financeAudit(tx, deps, ctx, { action: 'finance.contactWaiverTerms.save', entity: 'financeContactWaiverTerms', id, before: before ? { agreedOn: before.agreedOn } : undefined, after: { agreedOn: v.agreedOn }, summary: `Anspruchsgrundlage ${id} gespeichert` });
+    financeAudit(tx, deps, ctx, { action: 'finance.contactWaiverTerms.save', entity: 'financeContactWaiverTerms', id, before: before ? { agreedOn: before.agreedOn } : undefined, after: { agreedOn: v.agreedOn } });
     return ok(tx.select().from(financeContactWaiverTerms).where(eq(financeContactWaiverTerms.id, id)).get()!);
   });
 }

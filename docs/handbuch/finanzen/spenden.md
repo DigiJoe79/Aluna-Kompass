@@ -264,8 +264,9 @@ Korrigiert wird, indem Sie die Bestätigung zurücknehmen und neu ausstellen.
 Der Reiter **Noch nicht bestätigt** listet festgeschriebene Spenden ohne
 gültige Bestätigung, gruppiert je Spender mit Summe. Fehlt die Anschrift,
 steht an der Gruppe „Anschrift fehlt“ mit dem Link zum Kontakt. Der Filter
-**Spenden ab … ohne Bestätigung** zeigt nur Spender, deren Summe mindestens
-diesen Betrag erreicht; **Alle zeigen** hebt ihn wieder auf. Eine Zeile mit dem
+**Ab Betrag** zeigt nur Spender, deren Summe mindestens diesen Betrag erreicht;
+er gilt mit Enter oder beim Verlassen des Felds, **Filter zurücksetzen** hebt ihn
+wieder auf. Eine Zeile mit dem
 Hinweis „möglicher Rückläufer, Bezug fehlt“ lässt sich nicht bestätigen: Nach
 der Spende ging eine Auszahlung an denselben Kontakt, höchstens so hoch wie
 die Spende und mit keiner Spende verknüpft — etwa eine von Hand gebuchte

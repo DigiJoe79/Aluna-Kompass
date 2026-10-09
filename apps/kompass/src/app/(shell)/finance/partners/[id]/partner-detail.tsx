@@ -9,7 +9,6 @@ import { DocumentPicker } from '@/app/(shell)/dms/document-picker';
 import type { PickedDocument } from '@/app/(shell)/dms/search-action';
 import { useDateFormat } from '@/components/date-format-provider';
 import { ConfirmDialog } from '@/components/forms/confirm-dialog';
-import { DangerSection } from '@/components/forms/danger-section';
 import { RefusalNotice } from '@/components/forms/refusal-notice';
 import { useActionFeedback } from '@/components/forms/use-action-feedback';
 import { ChoiceCards } from '@/components/choice-cards';
@@ -20,7 +19,7 @@ import { Select } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Textarea } from '@/components/ui/textarea';
 import { formatEuro } from '@/lib/finance/amount';
-import { deletePartnerProfileAction, savePartnerNoticeAction, savePartnerPaymentDraftAction, savePartnerProfileAction, setPartnerActiveAction, voidPartnerNoticeAction } from '../actions';
+import { savePartnerNoticeAction, savePartnerPaymentDraftAction, savePartnerProfileAction, voidPartnerNoticeAction } from '../actions';
 import { FormField } from '@/components/forms/form-field';
 import { FormCell, FormGrid } from '@/components/forms/form-grid';
 
@@ -125,49 +124,6 @@ export function PartnerDetail({ partner, notices, payments, registerDocument, ag
           </section>
         </div>
       </div>
-      {canWrite ? <PartnerDanger partner={partner} deletable={payments.length === 0 && notices.length === 0} router={router} t={t} /> : null}
-    </>
-  );
-}
-
-/**
- * Löschen oder Archivieren als letzter Abschnitt der Seite (MUSTER.md § C). Löschen geht nur,
- * solange weder Zahlungen noch Bescheide am Partner hängen (der Dienst prüft es ohnehin);
- * sonst bleibt das Archivieren, also das Deaktivieren, und beim inaktiven Partner das Aktivieren.
- */
-function PartnerDanger({ partner, deletable, router, t }: { partner: PartnerView; deletable: boolean; router: ReturnType<typeof useRouter>; t: ReturnType<typeof useTranslations> }) {
-  const c = useTranslations('common');
-  const [deleteOpen, setDeleteOpen] = useState(false);
-  const activeFb = useActionFeedback();
-  const toggleActive = async () => {
-    const result = await activeFb.run(() => setPartnerActiveAction(partner.id, !partner.isActive));
-    if (result.status === 'success') router.refresh();
-  };
-  return (
-    <>
-      <div className="mt-6">
-        <RefusalNotice action state={activeFb.state} />
-      </div>
-      {deletable ? (
-        <DangerSection title={c('danger.delete')} text={t('danger.deleteText')} actionLabel={t('profile.delete')} onAction={() => setDeleteOpen(true)} testId="partner-delete-trigger" />
-      ) : partner.isActive ? (
-        <DangerSection title={c('danger.archive')} text={t('danger.archiveText')} actionLabel={t('profile.deactivate')} onAction={() => void toggleActive()} testId="partner-archive-trigger" />
-      ) : (
-        <DangerSection title={t('danger.activateTitle')} text={t('danger.activateText')} actionLabel={t('profile.activate')} onAction={() => void toggleActive()} testId="partner-activate-trigger" />
-      )}
-      <ConfirmDialog
-        open={deleteOpen}
-        onOpenChange={setDeleteOpen}
-        title={t('profile.deleteConfirmTitle')}
-        description={t('profile.deleteConfirmDescription')}
-        confirmLabel={t('profile.delete')}
-        destructive
-        action={async () => {
-          const result = await deletePartnerProfileAction(partner.id);
-          if (result.status === 'success') router.push('/finance/partners');
-          return result;
-        }}
-      />
     </>
   );
 }
@@ -335,7 +291,6 @@ function NoticesSection({ partnerId, abroad, notices, canWrite, t, router }: { p
   const [voidNote, setVoidNote] = useState('');
   const [pending, setPending] = useState(false);
   const saveFb = useActionFeedback();
-  const voidFb = useActionFeedback();
 
   const save = async () => {
     if (!document) return;
@@ -418,36 +373,9 @@ function NoticesSection({ partnerId, abroad, notices, canWrite, t, router }: { p
                   {kindLabel(n.kind)}
                   <span className="block text-[12px] text-muted-ink">{t('notices.dated', { date: fmt.date(n.noticeDate) })}</span>
                   {canWrite && n.state !== 'voided' ? (
-                    voiding === n.id ? (
-                      <span className="mt-2 block space-y-2">
-                        <Textarea rows={2} aria-label={t('notices.voidNote')} placeholder={t('notices.voidNote')} value={voidNote} onChange={(e) => setVoidNote(e.target.value)} />
-                        <RefusalNotice state={voidFb.state} />
-                        <span className="flex justify-end gap-2">
-                          <Button type="button" variant="ghost" size="sm" onClick={() => setVoiding(null)}>
-                            {t('notices.cancel')}
-                          </Button>
-                          <Button
-                            type="button"
-                            variant="secondary"
-                            size="sm"
-                            disabled={!voidNote.trim()}
-                            onClick={async () => {
-                              const result = await voidFb.run(() => voidPartnerNoticeAction(n.id, voidNote));
-                              if (result.status !== 'success') return;
-                              setVoiding(null);
-                              setVoidNote('');
-                              router.refresh();
-                            }}
-                          >
-                            {t('notices.void')}
-                          </Button>
-                        </span>
-                      </span>
-                    ) : (
-                      <button type="button" className="mt-1 block text-[12px] text-link underline" onClick={() => setVoiding(n.id)}>
-                        {t('notices.void')}
-                      </button>
-                    )
+                    <Button type="button" variant="link" size="xs" className="mt-1 flex px-0" onClick={() => setVoiding(n.id)}>
+                      {t('notices.voidItem')}
+                    </Button>
                   ) : null}
                 </TableCell>
                 <TableCell className="font-mono tabular-nums">{fmt.date(n.validUntil)}</TableCell>
@@ -458,6 +386,33 @@ function NoticesSection({ partnerId, abroad, notices, canWrite, t, router }: { p
           </TableBody>
         </Table>
       )}
+      {/* Unumkehrbar: Rückfrage mit der Folge als Beschreibung und der Begründung als Feld (Spec Seitenkopf § 3.6). */}
+      <ConfirmDialog
+        open={voiding !== null}
+        onOpenChange={(open) => {
+          if (open) return;
+          setVoiding(null);
+          setVoidNote('');
+        }}
+        title={t('notices.voidTitle')}
+        description={t('notices.voidDescription')}
+        confirmLabel={t('notices.void')}
+        destructive
+        confirmDisabled={!voidNote.trim()}
+        action={async () => {
+          if (!voiding) return { status: 'idle' };
+          const result = await voidPartnerNoticeAction(voiding, voidNote);
+          if (result.status === 'success') {
+            setVoidNote('');
+            router.refresh();
+          }
+          return result;
+        }}
+      >
+        <FormField id="partner-notice-void-note" label={t('notices.voidNote')} required>
+          <Textarea id="partner-notice-void-note" rows={2} value={voidNote} onChange={(e) => setVoidNote(e.target.value)} />
+        </FormField>
+      </ConfirmDialog>
     </section>
   );
 }

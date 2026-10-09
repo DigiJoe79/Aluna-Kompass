@@ -22,7 +22,7 @@ test.describe('contacts', () => {
     await dialog.getByRole('button', { name: 'Anlegen' }).click();
 
     await expect(page.getByRole('row', { name: /Anna Berger/ })).toBeVisible();
-    await page.getByLabel('Suche').fill('berger');
+    await page.getByRole('searchbox', { name: 'Suchen' }).fill('berger');
     await expect(page.getByRole('row', { name: /Anna Berger/ })).toBeVisible();
   });
 
@@ -30,14 +30,25 @@ test.describe('contacts', () => {
     await page.goto('/contacts');
 
     // Die Beispieldaten: Tomas Leitner (partner, Telefon), Mira Sandberg (interested).
-    await page.getByLabel('Suche').fill('123 456789');
+    await page.getByRole('searchbox', { name: 'Suchen' }).fill('123 456789');
     await expect(page.getByRole('row', { name: /Leitner/ })).toBeVisible();
     await expect(page.getByRole('row', { name: /Sandberg/ })).toHaveCount(0);
 
-    await page.getByLabel('Suche').fill('');
+    await page.getByRole('searchbox', { name: 'Suchen' }).fill('');
     await page.getByLabel('Rolle').selectOption('interested');
     await expect(page.getByRole('row', { name: /Sandberg/ })).toBeVisible();
     await expect(page.getByRole('row', { name: /Leitner/ })).toHaveCount(0);
+  });
+
+  test('ohne Treffer: „Kein Kontakt passt zu diesen Filtern.“, Zurücksetzen zeigt wieder alle', async ({ page }) => {
+    await page.goto('/contacts?text=zzz');
+    await expect(page.getByText('Kein Kontakt passt zu diesen Filtern.')).toBeVisible();
+    await expect(page.getByRole('table')).toHaveCount(0);
+    await expect(page.getByText(/^0 von \d+ Kontakten$/)).toBeVisible();
+    await page.getByRole('button', { name: 'Filter zurücksetzen' }).last().click();
+    await expect(page).toHaveURL(/\/contacts$/);
+    await expect(page.getByRole('searchbox', { name: 'Suchen' })).toHaveValue('');
+    await expect(page.getByRole('table')).toBeVisible();
   });
 
   /** Wie in der Tierliste (Befund Joe, 2026-09-30): Die Felder lasen die Adresse nur beim ersten Rendern. */
@@ -48,6 +59,21 @@ test.describe('contacts', () => {
     await page.getByRole('navigation').getByRole('link', { name: 'Kontakte' }).first().click();
     await expect(page).toHaveURL(/\/contacts$/);
     await expect(page.getByLabel('Rolle')).toHaveValue('');
+  });
+
+  /** Spec Filterleisten Review Focus 1: Filter setzen, Kontakt öffnen, zurück — Leiste und Liste zeigen dieselben Filter. */
+  test('„Auch archivierte“ ist eine Checkbox; Filter überleben Detail und Zurück', async ({ page }) => {
+    await page.goto('/contacts');
+    await page.getByRole('checkbox', { name: 'Auch archivierte' }).click();
+    await page.getByLabel('Rolle').selectOption('interested');
+    await expect(page).toHaveURL(/role=interested&archived=1/);
+    await expect(page.getByText(/^\d+ von \d+ Kontakten$/)).toBeVisible();
+    await page.getByRole('link', { name: /Sandberg/ }).click();
+    await expect(page).toHaveURL(/\/contacts\/[A-Z0-9]+$/);
+    await page.goBack();
+    await expect(page.getByLabel('Rolle')).toHaveValue('interested');
+    await expect(page.getByRole('checkbox', { name: 'Auch archivierte' })).toBeChecked();
+    await expect(page.getByRole('link', { name: /Leitner/ })).toHaveCount(0);
   });
 
   test('gives a role, shows the address block and blocks deletion while a hold runs', async ({ page }) => {
@@ -72,10 +98,18 @@ test.describe('contacts', () => {
     await page.getByRole('dialog').getByRole('button', { name: 'Übernehmen' }).click();
     await expect(page.getByRole('listitem').filter({ hasText: 'Interessiert' })).toBeVisible();
 
-    // Solange die Rolle läuft, hält sie den Kontakt — der Löschknopf ist aus und sagt warum.
-    await expect(page.getByRole('button', { name: 'Kontakt löschen' })).toBeDisabled();
+    // Solange die Rolle läuft, hält sie den Kontakt — „Kontakt löschen …“ bleibt im Menü, der Dialog nennt die Frist
+    // und bietet nur „Schließen“ (keine Sperre ohne Grund, Spec Seitenkopf § 3.4).
     await expect(page.getByTestId('retention-holds')).toContainText('Rolle Interessiert');
     await expect(page.getByTestId('retention-holds')).toContainText(`31.12.${associationYear() + 2}`); // läuft die Rolle noch, zählt die Frist ab heute
+    await page.getByRole('button', { name: 'Weitere Aktionen' }).click();
+    await page.getByRole('menuitem', { name: 'Kontakt löschen …' }).click();
+    const refusal = page.getByRole('alertdialog', { name: 'Kontakt löschen?' });
+    await expect(refusal).toContainText(`bis 31.12.${associationYear() + 2}`);
+    await expect(refusal.getByRole('button', { name: 'Kontakt löschen' })).toHaveCount(0);
+    await expect(refusal.getByRole('button', { name: 'Schließen' })).toBeFocused();
+    await refusal.getByRole('button', { name: 'Schließen' }).click();
+    await expect(refusal).toBeHidden();
   });
 
   test('bearbeitet einen Kontakt: Anschrift ergänzen, und ein veralteter Stand wird abgewiesen', async ({ page, context }) => {

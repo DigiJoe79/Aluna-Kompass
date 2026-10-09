@@ -303,7 +303,7 @@ test.describe('finance approvals (D3)', () => {
     await expect(page.getByRole('button', { name: 'Neu einreichen' })).toBeVisible();
   });
 
-  test('Freigeben auf 390 px mit klebender Fußleiste', async ({ page, baseURL }) => {
+  test('Freigeben auf 390 px, die Fußleiste steht am Ende', async ({ page, baseURL }) => {
     const client = await mcpClient(page, baseURL);
     const claim = await submitClaim(client, { purpose: 'Briefmarken', amountCents: 1250, trip: true });
     await client.close();
@@ -319,8 +319,9 @@ test.describe('finance approvals (D3)', () => {
     await expect(queue(page)).toBeHidden();
     await expect(detail(page).getByRole('link', { name: 'Beleg ansehen' })).toBeVisible();
 
-    // Die Fußleiste klebt: ganz oben auf der Seite ist sie schon zu sehen.
-    await page.evaluate(() => window.scrollTo(0, 0));
+    // Am Telefon klebt die Fußleiste nicht (Designer 2026-10-08, Befund 39): Sie steht am Ende des Details.
+    await expect(footer(page)).toHaveCSS('position', 'static');
+    await footer(page).scrollIntoViewIfNeeded();
     await expect(footer(page)).toBeInViewport();
     // Die Leiste ist die gemeinsame: Knöpfe untereinander, Hauptaktion oben, beide so hoch wie ein Feld (--field-h).
     const approveBox = (await footer(page).getByRole('button', { name: 'Freigeben' }).boundingBox())!;

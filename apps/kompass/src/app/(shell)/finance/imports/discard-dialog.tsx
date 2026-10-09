@@ -12,7 +12,7 @@ import { FormField } from '@/components/forms/form-field';
 import { FormGrid } from '@/components/forms/form-grid';
 import { useActionFeedback } from '@/components/forms/use-action-feedback';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogFooter, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogTitle } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { formatEuro } from '@/lib/finance/amount';
 import { discardRunAction, previewDiscardRunAction } from './actions';
@@ -54,6 +54,7 @@ export function DiscardRunDialog({ open, onOpenChange, run }: { open: boolean; o
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent size="sm" role="alertdialog" className="bg-surface shadow-md">
         <DialogTitle>{t('title')}</DialogTitle>
+        <DialogDescription tone="body">{t('description')}</DialogDescription>
 
         {loaded.state === 'loading' ? <p className="text-[14px] text-ink-2">{tCommon('loading')}</p> : null}
         {loaded.state === 'failed' ? <p className="text-[14px] text-ink-2">{t('failed')}</p> : null}

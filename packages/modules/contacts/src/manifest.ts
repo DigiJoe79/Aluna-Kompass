@@ -27,6 +27,20 @@ export const contactsModule: ModuleManifest = defineModule({
   recordLabels: contactsRecordLabels,
   retentionHolds: contactsRetentionHolds,
   retentionDue: contactsRetentionDue,
+  /** Aktionen des Änderungsprotokolls (Spec Protokoll § 3): nie Name oder Anschrift, Personen nur als ID. */
+  auditActions: {
+    'contacts.create': { params: [] },
+    /** `scope`: `name`, `address` oder `other` — was die Änderung betraf, ohne Werte. */
+    'contacts.update': { params: ['scope'] },
+    'contacts.setStatus': { params: ['archived'] },
+    'contacts.setChannels': { params: [] },
+    /** `role`: Schlüssel der Kontaktrolle aus `contactRoles`. */
+    'contacts.addRole': { params: ['role'] },
+    'contacts.endRole': { params: ['role'] },
+    'contacts.delete': { params: [] },
+    'contacts.userLink.create': { params: ['targetUserId', 'contactId'] },
+    'contacts.userLink.end': { params: ['targetUserId', 'contactId'] },
+  },
   deletionRules: [
     {
       entity: 'contact',

@@ -3,12 +3,13 @@
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { useTransition } from 'react';
+import { Notice } from '@/components/notice';
 import { RefusalNotice } from '@/components/forms/refusal-notice';
 import { useActionFeedback } from '@/components/forms/use-action-feedback';
 import { StatusBadge } from '@/components/status-badge';
 import { Button } from '@/components/ui/button';
 import { Select } from '@/components/ui/select';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Table, TableBody, TableCell, TableGroupRow, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import type { TemplateRow } from '@/lib/document-template-rows';
 import { setDocumentBaseAction } from './actions';
 
@@ -61,15 +62,14 @@ export function BasesPanel({ bases, groups, gaps = [], canManage }: { bases: Bas
   return (
     <div className="flex flex-col gap-5">
       {gaps.length > 0 ? (
-        <div role="note" data-testid="base-gaps" className="rounded-lg border border-warning bg-warning-bg px-4 py-3 text-[13px] text-ink">
-          <p className="font-semibold">{t('gapsTitle')}</p>
-          <p className="mt-1 text-ink-2">{t('gapsText')}</p>
+        <Notice level="warn" title={t('gapsTitle')} testId="base-gaps">
+          <p>{t('gapsText')}</p>
           <ul className="mt-1 list-disc pl-5">
             {gaps.map((gap) => (
               <li key={`${gap.module}-${gap.base}`}>{t('gap', { label: gap.label, base: gap.base, module: gap.module })}</li>
             ))}
           </ul>
-        </div>
+        </Notice>
       ) : null}
 
       <section aria-labelledby="bases-heading" className="rounded-lg border border-line bg-surface">
@@ -125,12 +125,7 @@ export function BasesPanel({ bases, groups, gaps = [], canManage }: { bases: Bas
           </TableHeader>
           {groups.map((group) => (
             <TableBody key={group.module}>
-              {/* Gruppenzeile je Modul; ein eigener Baustein `TableGroupRow` ist für K10 Charge 2 vorgemerkt. */}
-              <TableRow className="bg-surface-2">
-                <TableHead colSpan={3} scope="colgroup" className="text-[12px] font-semibold text-ink-2">
-                  {group.moduleLabel}
-                </TableHead>
-              </TableRow>
+              <TableGroupRow colSpan={3}>{group.moduleLabel}</TableGroupRow>
               {group.rows.map((row) => (
                 <TableRow key={row.key}>
                   <TableCell>

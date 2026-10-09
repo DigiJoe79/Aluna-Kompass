@@ -1,12 +1,12 @@
 import { readSetting, timeZoneOf, type Deps } from '@kompass/core';
-import { formatDate, formatDateTime, type DateFormatMode } from '@/lib/dates';
+import { formatDate, formatDateTime, type DateFormatMode, type DateTimeOptions } from '@/lib/dates';
 
 /** Was `useDateFormat()` den Client-Bausteinen gibt — hier für Server-Seiten und -Bausteine. */
 export type DateFormatter = {
   mode: DateFormatMode;
   timeZone: string;
   date: (value: string | null | undefined) => string;
-  dateTime: (value: string | null | undefined) => string;
+  dateTime: (value: string | null | undefined, options?: DateTimeOptions) => string;
 };
 
 /**
@@ -16,5 +16,5 @@ export type DateFormatter = {
 export function dateFormatOf(deps: Deps): DateFormatter {
   const mode = readSetting<DateFormatMode>(deps, 'ui.dateFormat');
   const timeZone = timeZoneOf(deps);
-  return { mode, timeZone, date: (value) => formatDate(value, mode, timeZone), dateTime: (value) => formatDateTime(value, mode, timeZone) };
+  return { mode, timeZone, date: (value) => formatDate(value, mode, timeZone), dateTime: (value, options) => formatDateTime(value, mode, timeZone, undefined, options) };
 }

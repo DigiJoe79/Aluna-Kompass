@@ -2,6 +2,7 @@ import { getDashboardLayout, hasPermission, listDashboardTiles, readDashboard } 
 import { getTranslations } from 'next-intl/server';
 import { Page } from '@/components/page';
 import { PageHeader } from '@/components/page-header';
+import { dateFormatOf } from '@/lib/date-format';
 import { requireSession } from '@/lib/request-context';
 import { DashboardCustomize } from './dashboard/customize';
 import { TileCard } from './dashboard/tile-card';
@@ -19,6 +20,7 @@ export default async function HomePage() {
   const available = await listDashboardTiles(deps, ctx);
   const firstName = user.name.split(' ')[0] ?? user.name;
   const tiles = views.ok ? views.value : [];
+  const fmt = dateFormatOf(deps);
 
   return (
     <Page
@@ -41,7 +43,7 @@ export default async function HomePage() {
         // Screenshot-Pipeline sieht es.
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
           {tiles.map((view) => (
-            <TileCard key={`${view.module}.${view.key}`} view={view} canComplete={hasPermission(ctx, 'followUps.manage')} />
+            <TileCard key={`${view.module}.${view.key}`} view={view} canComplete={hasPermission(ctx, 'followUps.manage')} fmt={fmt} />
           ))}
         </div>
       )}

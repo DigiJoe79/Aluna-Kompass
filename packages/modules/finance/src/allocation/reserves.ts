@@ -122,7 +122,7 @@ export async function saveReserve(deps: Deps, ctx: CallContext, input: unknown):
         afterReceive: (tx: DbOrTx, doc: ReceivedDocument) => {
           tx.insert(financeReserves).values({ id, ...fields, carryForwardDocumentId: null, resolutionDocumentId: doc.id, createdByUserId: ctx.userId ?? 'system', createdAt: now, updatedAt: now }).run();
           const after = tx.select().from(financeReserves).where(eq(financeReserves.id, id)).get()!;
-          financeAudit(tx, deps, ctx, { action: 'finance.reserve.save', entity: 'financeReserve', id, after: auditFields(after), summary: `Zurückgelegtes Geld ${id} angelegt` });
+          financeAudit(tx, deps, ctx, { action: 'finance.reserve.save', entity: 'financeReserve', id, after: auditFields(after), params: { created: true } });
           return after;
         },
       });
@@ -144,7 +144,7 @@ export async function saveReserve(deps: Deps, ctx: CallContext, input: unknown):
       linkDocumentInternal(tx, deps, { documentId: v.resolutionDocumentId!, entityType: 'financeReserve', entityId: id });
     }
     const after = tx.select().from(financeReserves).where(eq(financeReserves.id, id)).get()!;
-    financeAudit(tx, deps, ctx, { action: 'finance.reserve.save', entity: 'financeReserve', id, before: before ? auditFields(before) : undefined, after: auditFields(after), summary: `Zurückgelegtes Geld ${id} ${before ? 'geändert' : 'angelegt'}` });
+    financeAudit(tx, deps, ctx, { action: 'finance.reserve.save', entity: 'financeReserve', id, before: before ? auditFields(before) : undefined, after: auditFields(after), params: { created: !before } });
     return ok(toView(tx, after, todayIn(deps)));
   });
 }
@@ -169,7 +169,7 @@ export async function linkResolution(deps: Deps, ctx: CallContext, input: unknow
     tx.update(financeReserves).set({ ...column, updatedAt: now }).where(eq(financeReserves.id, before.id)).run();
     linkDocumentInternal(tx, deps, { documentId: parsed.value.documentId, entityType: 'financeReserve', entityId: before.id });
     const after = tx.select().from(financeReserves).where(eq(financeReserves.id, before.id)).get()!;
-    financeAudit(tx, deps, ctx, { action: 'finance.reserve.linkResolution', entity: 'financeReserve', id: before.id, before: auditFields(before), after: auditFields(after), summary: `Beschluss von zurückgelegtem Geld ${before.id} verknüpft` });
+    financeAudit(tx, deps, ctx, { action: 'finance.reserve.linkResolution', entity: 'financeReserve', id: before.id, before: auditFields(before), after: auditFields(after) });
     return ok(toView(tx, after, todayIn(deps)));
   });
 }
@@ -209,7 +209,7 @@ export async function uploadResolution(deps: Deps, ctx: CallContext, input: unkn
       const column = v.field === 'resolution' ? { resolutionDocumentId: doc.id } : { carryForwardDocumentId: doc.id };
       tx.update(financeReserves).set({ ...column, updatedAt: isoNow(deps.clock) }).where(eq(financeReserves.id, before.id)).run();
       const after = tx.select().from(financeReserves).where(eq(financeReserves.id, before.id)).get()!;
-      financeAudit(tx, deps, ctx, { action: 'finance.reserve.uploadResolution', entity: 'financeReserve', id: before.id, before: auditFields(before), after: auditFields(after), summary: `Beschluss ${doc.number} für zurückgelegtes Geld ${before.id} hochgeladen` });
+      financeAudit(tx, deps, ctx, { action: 'finance.reserve.uploadResolution', entity: 'financeReserve', id: before.id, before: auditFields(before), after: auditFields(after), params: { documentNumber: doc.number } });
       return after;
     },
   });
@@ -252,7 +252,7 @@ export async function recordReserveCarryForward(deps: Deps, ctx: CallContext, in
     const fields = { carryForwardCents: v.carryForwardCents, carryForwardDate: v.carryForwardDate, ...(documentId ? { carryForwardDocumentId: documentId } : {}), updatedAt: nextVersion(deps, before.updatedAt) };
     tx.update(financeReserves).set(fields).where(eq(financeReserves.id, before.id)).run();
     const after = tx.select().from(financeReserves).where(eq(financeReserves.id, before.id)).get()!;
-    financeAudit(tx, deps, ctx, { action: 'finance.reserve.carryForward', entity: 'financeReserve', id: before.id, before: auditFields(before), after: auditFields(after), summary: `Vortrag von zurückgelegtem Geld ${before.id} erfasst` });
+    financeAudit(tx, deps, ctx, { action: 'finance.reserve.carryForward', entity: 'financeReserve', id: before.id, before: auditFields(before), after: auditFields(after) });
     return after;
   };
 
@@ -300,7 +300,7 @@ export async function setReserveActive(deps: Deps, ctx: CallContext, input: unkn
     const now = isoNow(deps.clock);
     tx.update(financeReserves).set({ isActive: parsed.value.isActive, updatedAt: now }).where(eq(financeReserves.id, before.id)).run();
     const after = tx.select().from(financeReserves).where(eq(financeReserves.id, before.id)).get()!;
-    financeAudit(tx, deps, ctx, { action: 'finance.reserve.setActive', entity: 'financeReserve', id: before.id, before: auditFields(before), after: auditFields(after), summary: `Zurückgelegtes Geld ${before.id} ${after.isActive ? 'aktiviert' : 'stillgelegt'}` });
+    financeAudit(tx, deps, ctx, { action: 'finance.reserve.setActive', entity: 'financeReserve', id: before.id, before: auditFields(before), after: auditFields(after), params: { active: after.isActive } });
     return ok(toView(tx, after, todayIn(deps)));
   });
 }
@@ -319,7 +319,7 @@ export async function deleteReserve(deps: Deps, ctx: CallContext, input: unknown
   if (hasMovement || before.carryForwardCents !== null) return financeConflict('reserveInUse');
   return deps.db.transaction((tx: DbOrTx) => {
     tx.delete(financeReserves).where(eq(financeReserves.id, before.id)).run();
-    financeAudit(tx, deps, ctx, { action: 'finance.reserve.delete', entity: 'financeReserve', id: before.id, before: auditFields(before), summary: `Zurückgelegtes Geld ${before.id} gelöscht` });
+    financeAudit(tx, deps, ctx, { action: 'finance.reserve.delete', entity: 'financeReserve', id: before.id, before: auditFields(before) });
     return ok({ id: before.id });
   });
 }
@@ -399,7 +399,7 @@ function insertMovement(tx: DbOrTx, deps: Deps, ctx: CallContext, reserve: Finan
   tx.insert(financeReserveMovements).values({ id, reserveId: reserve.id, kind: v.kind, movementDate: v.movementDate, amountCents, forFiscalYearId, resolutionDocumentId, note: v.note ?? null, capReason: overrun ? v.capReason! : null, createdByUserId: ctx.userId ?? 'system', createdAt: now }).run();
   linkDocumentInternal(tx, deps, { documentId: resolutionDocumentId, entityType: 'financeReserveMovement', entityId: id });
   const after = tx.select().from(financeReserveMovements).where(eq(financeReserveMovements.id, id)).get()!;
-  financeAudit(tx, deps, ctx, { action: 'finance.reserveMovement.record', entity: 'financeReserveMovement', id, after: { reserveId: reserve.id, kind: v.kind, movementDate: v.movementDate, amountCents, forFiscalYearId }, summary: `Vorgang ${id} an zurückgelegtem Geld ${reserve.id} erfasst` });
+  financeAudit(tx, deps, ctx, { action: 'finance.reserveMovement.record', entity: 'financeReserveMovement', id, after: { reserveId: reserve.id, kind: v.kind, movementDate: v.movementDate, amountCents, forFiscalYearId } });
   const balanceAfterCents = reserveBalanceAt(reserve, [...existingMovements, after], v.movementDate);
   return ok({ ...after, balanceAfterCents });
 }

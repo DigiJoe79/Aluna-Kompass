@@ -1,4 +1,5 @@
-import { unwrap } from '@kompass/core';
+import { siteModule } from '../src/manifest';
+import { coreModule, unwrap } from '@kompass/core';
 import { createTestDeps, ctxWith, insertUser } from '@kompass/core/testing';
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
@@ -13,7 +14,7 @@ const asJson = (s: unknown) => z.toJSONSchema(s as z.ZodType, { io: 'input' }) a
 const manage = ctxWith(['site.manage', 'site.view']);
 
 const withTemplate = (schema: Pick<TemplateSchema, 'variables' | 'collections'>) => {
-  const deps = createTestDeps({ locales: ['de', 'en'] });
+  const deps = createTestDeps({ locales: ['de', 'en'], manifests: [coreModule, siteModule] });
   insertUser(deps, { id: 'USER-TEST' });
   deps.db
     .insert(siteTemplateState)

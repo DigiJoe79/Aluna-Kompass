@@ -602,7 +602,7 @@ export async function saveDraft(deps: Deps, ctx: CallContext, input: unknown): P
     }
     writeLinesInternal(tx, id, lines);
     const after = entryViewInternal(tx, id, todayIn(deps))!;
-    financeAudit(tx, deps, ctx, { action: 'finance.entry.draftSave', entity: 'financeEntry', id, after: auditSnapshot(after, ctx), summary: `Buchungsentwurf ${id} gespeichert` });
+    financeAudit(tx, deps, ctx, { action: 'finance.entry.draftSave', entity: 'financeEntry', id, after: auditSnapshot(after, ctx) });
     return ok(after);
   });
 }
@@ -750,7 +750,7 @@ export function deleteDraftInternal(tx: DbOrTx, deps: Deps, ctx: CallContext, be
   tx.delete(financeAllocationLines).where(eq(financeAllocationLines.entryId, before.id)).run();
   tx.delete(financeMoneyLines).where(eq(financeMoneyLines.entryId, before.id)).run();
   tx.delete(financeEntries).where(eq(financeEntries.id, before.id)).run();
-  financeAudit(tx, deps, ctx, { action: 'finance.entry.draftDelete', entity: 'financeEntry', id: before.id, before: auditSnapshot(before, ctx), summary: `Buchungsentwurf ${before.id} gelöscht` });
+  financeAudit(tx, deps, ctx, { action: 'finance.entry.draftDelete', entity: 'financeEntry', id: before.id, before: auditSnapshot(before, ctx) });
 }
 
 /** `finance.entriesWrite`: ein Entwurf wird gelöscht, nicht storniert (Spec 5.4). */
@@ -794,7 +794,7 @@ export async function setReviewed(deps: Deps, ctx: CallContext, input: unknown):
       .where(eq(financeEntries.id, before.id))
       .run();
     const after = entryViewInternal(tx, before.id, todayIn(deps))!;
-    financeAudit(tx, deps, ctx, { action: 'finance.entry.review', entity: 'financeEntry', id: before.id, after: { ...auditSnapshot(after, ctx), reviewed: parsed.value.reviewed }, summary: `Buchungsentwurf ${before.id} ${parsed.value.reviewed ? 'geprüft' : 'Prüfung zurückgenommen'}` });
+    financeAudit(tx, deps, ctx, { action: 'finance.entry.review', entity: 'financeEntry', id: before.id, after: { ...auditSnapshot(after, ctx), reviewed: parsed.value.reviewed }, params: { reviewed: parsed.value.reviewed } });
     return ok(after);
   });
 }

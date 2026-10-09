@@ -257,30 +257,34 @@ export function sectionsFor(groups: NavGroup[], pathname: string): NavSection[] 
   return count < 2 ? [] : sections;
 }
 
+/** Ein Segment der Brotkrume: vordere ohne Ziel, das letzte mit Ziel, `current` nur auf genau dieser Seite. */
+export type Crumb = { label: string; href?: string; current: boolean };
+
 /**
- * Die Brotkrume der Kopfleiste. Das letzte Segment ist das `<h1>` der Seite.
- * Heißen Modul und Seite gleich (Kontakte / Kontakte), bleibt ein Segment.
+ * Die Brotkrume der Kopfleiste (`nav`). Sie endet bei der Liste; `current` nur, wenn die Route genau diese
+ * Seite ist (Spec Seitenkopf § 2.1) — auf einer Detailseite ist das letzte Segment ein Link zurück zur Liste.
+ * Heißen Modul und Seite gleich (Kontakte / Kontakte), bleibt ein Segment. Unter `/help` kommen Kapitel und
+ * Titel aus dem Inhaltsverzeichnis; die Seite ist dort der Artikel selbst.
  */
-/**
- * Die Brotkrume der Kopfleiste. Das letzte Segment ist das `<h1>` der Seite.
- * Heißen Modul und Seite gleich (Kontakte / Kontakte), bleibt ein Segment.
- * Unter `/help` kommen Kapitel und Titel aus dem Inhaltsverzeichnis.
- */
-export function crumbsFor(groups: NavGroup[], pathname: string, t: (key: string) => string, helpChapters: HandbookChapter[] = []): string[] {
-  if (pathname === '/') return [t('nav.home')];
-  if (matches('/profile', pathname)) return [t('nav.profile')];
+export function crumbsFor(groups: NavGroup[], pathname: string, t: (key: string) => string, helpChapters: HandbookChapter[] = []): Crumb[] {
+  if (pathname === '/') return [{ label: t('nav.home'), current: true }];
+  if (matches('/profile', pathname)) return [{ label: t('nav.profile'), href: '/profile', current: pathname === '/profile' }];
   if (matches('/help', pathname)) {
     const doc = pathname.slice('/help/'.length);
     for (const chapter of helpChapters) {
       const page = chapter.pages.find((p) => p.doc === doc);
-      if (page) return page.title === chapter.title ? [t('nav.help'), page.title] : [t('nav.help'), chapter.title, page.title];
+      if (!page) continue;
+      const before = page.title === chapter.title ? [t('nav.help')] : [t('nav.help'), chapter.title];
+      return [...before.map((label) => ({ label, current: false })), { label: page.title, current: true }];
     }
-    return [t('nav.help')];
+    return [{ label: t('nav.help'), current: true }];
   }
   const hit = locate(groups, pathname);
   if (!hit) return [];
   const page = hit.item.label ?? t(hit.item.labelKey);
   const area = t(hit.group.labelKey);
-  if (hit.area === 'settings') return [t('nav.settingsArea'), area, page];
-  return page === area ? [page] : [area, page];
+  const last: Crumb = { label: page, href: hit.item.href, current: pathname === hit.item.href };
+  const front = (label: string): Crumb => ({ label, current: false });
+  if (hit.area === 'settings') return [front(t('nav.settingsArea')), front(area), last];
+  return page === area ? [last] : [front(area), last];
 }

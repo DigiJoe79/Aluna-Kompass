@@ -11,7 +11,7 @@ import {
   localizedConflict,
 } from '@kompass/core';
 import { z } from 'zod';
-import { ensureModuleResolution, loadTemplate, type TemplateSchema } from './load';
+import { ensureModuleResolution, loadTemplate, templateChecksum, type TemplateSchema } from './load';
 import { checkReferenceFields } from './reference-fields';
 import { applyFindings } from './resync/apply';
 import { type Finding, type ResyncData, planResync } from './resync/plan';
@@ -155,7 +155,7 @@ export async function applyTemplateSync(deps: Deps, ctx: CallContext, input: unk
       entityId: STATE_ID,
       before: before ? { name: before.name, checksum: before.checksum } : null,
       after: { name: loaded.value.definition.name, checksum: loaded.value.checksum, findings: preview.findings },
-      summary: `Template „${loaded.value.definition.name}“ eingelesen`,
+      params: { templateName: loaded.value.definition.name },
     });
   });
 
@@ -166,6 +166,5 @@ export async function applyTemplateSync(deps: Deps, ctx: CallContext, input: unk
 export async function templateIsCurrent(deps: Deps, dir: string): Promise<boolean> {
   const state = readTemplateState(deps);
   if (!state) return false;
-  const loaded = await loadTemplate(dir);
-  return loaded.ok && loaded.value.checksum === state.checksum;
+  return (await templateChecksum(dir)) === state.checksum;
 }

@@ -80,7 +80,7 @@ export function AssetGrid({
                     </span>
                   ) : null}
                 </span>
-                <span className={`shrink-0 rounded-full px-1.5 py-0.5 text-[10px] ${it.used ? 'bg-neutral-badge text-neutral-badge-ink' : 'text-ink-2'}`}>
+                <span className={`shrink-0 rounded-full px-1.5 py-0.5 text-[10px] ${it.used ? 'bg-badge text-badge-ink' : 'text-ink-2'}`}>
                   {selected && isSelected ? t('chooser.selected') : it.used ? t('used') : t('unused')}
                 </span>
               </span>

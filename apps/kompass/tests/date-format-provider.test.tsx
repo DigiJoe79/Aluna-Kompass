@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen } from '@testing-library/react';
-import { afterEach, describe, expect, it } from 'vitest';
+import { act, cleanup, render, screen } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DateFormatProvider, useDateFormat } from '@/components/date-format-provider';
 import type { DateFormatMode } from '@/lib/dates';
 
@@ -36,5 +36,45 @@ describe('DateFormatProvider', () => {
 
   it('ein reiner Tag bleibt derselbe Tag', () => {
     expect(show('locale', 'America/New_York', '2026-09-12').date).toBe('12.09.2026');
+  });
+});
+
+function Clock({ value }: { value: string }) {
+  const fmt = useDateFormat();
+  return (
+    <p>
+      <span data-testid="time">{fmt.time(value)}</span>
+      <span data-testid="stamp">{fmt.stamp(value)}</span>
+      <span data-testid="seconds">{fmt.dateTime(value, { seconds: true })}</span>
+    </p>
+  );
+}
+
+describe('useDateFormat: Uhrzeit, Stempel, Sekunden', () => {
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => vi.useRealTimers());
+
+  const mount = (value: string) =>
+    render(
+      <DateFormatProvider mode="locale" timeZone="Europe/Berlin">
+        <Clock value={value} />
+      </DateFormatProvider>,
+    );
+
+  it('time und Sekunden in der Zone des Vereins', () => {
+    vi.setSystemTime(new Date('2026-09-12T16:00:00Z'));
+    mount('2026-09-12T15:35:07Z');
+    expect(screen.getByTestId('time').textContent).toBe('17:35');
+    expect(screen.getByTestId('seconds').textContent).toBe('12.09.2026, 17:35:07');
+  });
+
+  it('ein offener Entwurf zeigt nach Mitternacht das Datum, ohne Neuladen', () => {
+    vi.setSystemTime(new Date('2026-09-12T21:58:00Z')); // 23:58 Berlin
+    mount('2026-09-12T21:57:00Z');
+    expect(screen.getByTestId('stamp').textContent).toBe('23:57');
+    act(() => {
+      vi.advanceTimersByTime(3 * 60_000); // 00:01 am 13.09.
+    });
+    expect(screen.getByTestId('stamp').textContent).toBe('12.09.2026, 23:57');
   });
 });

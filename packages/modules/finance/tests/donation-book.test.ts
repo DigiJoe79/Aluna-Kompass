@@ -10,7 +10,7 @@ import { reverseEntry } from '../src/ledger/reverse';
 import { donationFixture, type DonationFixture } from './donation-fixture';
 
 const setSetting = (f: DonationFixture, key: string, value: unknown) =>
-  f.deps.db.transaction((tx) => writeSettingInternal(tx, f.deps, systemContext(), key, value, 'test.donationBook'));
+  f.deps.db.transaction((tx) => writeSettingInternal(tx, f.deps, systemContext(), key, value));
 
 const person = async (f: DonationFixture, firstName: string, lastName: string, address = true) =>
   unwrap(await createContact(f.deps, f.manage, { kind: 'person', firstName, lastName, ...(address ? { street: 'Probeweg 3', postalCode: '11111', city: 'Probestadt' } : {}) }));
@@ -70,6 +70,22 @@ describe('getDonationBook', () => {
     expect(book.membershipFeesCertifiable).toBe(false);
     expect(book.rows.map((r) => r.kind)).toEqual(['donation']);
     expect(book.sums).toEqual({ donation: 5000, membershipFee: 0, inKindDonation: 0, expenseWaiver: 0, total: 5000 });
+  });
+
+  it('filters anonymous lines before paging: total counts only them, the sums stay for the whole year', async () => {
+    const f = await donationFixture();
+    await f.donate({ date: '2026-01-15', cents: 5000 });
+    await f.donate({ date: '2026-02-01', cents: 2000, contactId: null });
+    await f.donate({ date: '2026-02-02', cents: 3000, contactId: null });
+
+    const book = unwrap(await getDonationBook(f.deps, f.ctx, { year: 2026, contact: 'anonymous', limit: 1 }));
+    expect(book.total).toBe(2);
+    expect(book.rows).toHaveLength(1);
+    expect(book.rows.every((r) => r.contactId === null)).toBe(true);
+    expect(book.sums.total).toBe(10000);
+    const second = unwrap(await getDonationBook(f.deps, f.ctx, { year: 2026, contact: 'anonymous', limit: 1, offset: 1 }));
+    expect(second.rows.map((r) => r.amountCents)).not.toEqual(book.rows.map((r) => r.amountCents));
+    expect(await getDonationBook(f.deps, f.ctx, { year: 2026, contact: 'someone' })).toMatchObject({ ok: false, error: { type: 'validation' } });
   });
 
   it('needs finance.read, validates the year and writes nothing to the audit log', async () => {

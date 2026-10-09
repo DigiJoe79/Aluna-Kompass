@@ -60,15 +60,27 @@ describe('the audit log and protected document types (Anhang A)', () => {
     const guarded = [...log.slice(0, before - 1), ...log.slice(before)];
     const text = JSON.stringify(guarded);
     for (const secret of [SUBJECT, CONTACT, ...FREE]) expect(text, secret).not.toContain(secret);
-    // … und nennt sie trotzdem: Nummer, oder bei Entwürfen ID und Art.
-    expect(text).toContain(filed.number);
-    expect(text).toContain(`Entwurf ${thrown.id} (secret)`);
+    // … und nennt sie trotzdem: die Nummer in den Werten; ein Entwurf über seine ID (`entityId`) und Art (`after`).
+    expect(guarded.some((e) => e.params && JSON.parse(e.params).number === filed.number)).toBe(true);
+    expect(guarded.find((e) => e.action === 'dms.draft.create' && e.entityId === thrown.id)).toMatchObject({ params: null, after: JSON.stringify({ typeKey: 'secret' }) });
     expect(guarded.map((e) => e.action)).toEqual(expect.arrayContaining(['dms.draft.create', 'dms.draft.update', 'dms.draft.preview', 'dms.draft.delete', 'dms.file', 'dms.dispatch', 'dms.dispatch.clear', 'dms.void', 'dms.link', 'dms.unlink', 'dms.note.add', 'dms.note.delete', 'dms.relate', 'dms.unrelate', 'dms.move', 'dms.reclassify', 'dms.delete']));
   });
 
-  it('leaves every entry of an unprotected document word for word as it was', async () => {
+  it('keeps the subject out of the log for unprotected documents too (Spec Protokoll § 2, 0.2.9)', async () => {
     const { deps, all } = await setupWithArea();
-    unwrap(await createDraft(deps, all, { typeKey: 'letter', subject: 'Offener Brief', body: '' }));
-    expect(deps.db.select().from(schema.auditLog).all().at(-1)).toMatchObject({ action: 'dms.draft.create', summary: 'Entwurf „Offener Brief“ angelegt' });
+    const OPEN = 'Brief an Frau Schmidt wegen Pflegestelle';
+    const draft = unwrap(await createDraft(deps, all, { typeKey: 'letter', subject: OPEN, body: '' }));
+    unwrap(await updateDraft(deps, all, { id: draft.id, subject: `${OPEN} 2`, body: 'y' }));
+    const thrown = unwrap(await createDraft(deps, all, { typeKey: 'letter', subject: OPEN, body: '' }));
+    unwrap(await deleteDraft(deps, all, { id: thrown.id }));
+    const incoming = unwrap(await receiveDocument(deps, all, { filename: 'o.pdf', typeKey: INCOMING_OPEN_TYPE, subject: OPEN, documentDate: '2026-09-01', folder: null, bytes: pdfBytes() }));
+    unwrap(await reclassifyDocument(deps, all, { id: incoming.id, typeKey: INCOMING_OPEN_TYPE, subject: `${OPEN} neu`, documentDate: '2026-09-01', expectedVersion: incoming.updatedAt }));
+    deps.db.update(documents).set({ documentDate: '2001-01-01' }).where(eq(documents.id, incoming.id)).run();
+    unwrap(await deleteDocument(deps, all, { id: incoming.id }));
+
+    const log = deps.db.select().from(schema.auditLog).all();
+    expect(JSON.stringify(log)).not.toContain('Schmidt');
+    // Was sich änderte, steht als Feldname wie bei Kontakten und Nutzern.
+    expect(JSON.parse(log.find((e) => e.action === 'dms.draft.update')!.after!)).toEqual({ changedFields: ['subject', 'body'] });
   });
 });

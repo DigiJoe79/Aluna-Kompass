@@ -290,14 +290,14 @@ export async function confirmSetupStep(deps: Deps, ctx: CallContext, input: unkn
   if (!parsed.ok) return parsed;
   return deps.db.transaction((tx: DbOrTx) => {
     const confirmedAt = isoNow(deps.clock);
-    const written = writeSettingInternal(tx, deps, ctx, STEP_SETTING[parsed.value.step], confirmedAt, 'finance.setup.confirm');
+    const written = writeSettingInternal(tx, deps, ctx, STEP_SETTING[parsed.value.step], confirmedAt, 'finance.setup.setting');
     if (!written.ok) return written;
     financeAudit(tx, deps, ctx, {
       action: 'finance.setup.confirm',
       entity: 'financeSetup',
       id: parsed.value.step,
       after: { step: parsed.value.step, confirmedAt },
-      summary: `Einrichtungsschritt ${parsed.value.step} bestätigt`,
+      params: { step: parsed.value.step },
     });
     return ok({ step: parsed.value.step, confirmedAt });
   });
@@ -315,19 +315,18 @@ export async function applyTaxDefaults(deps: Deps, ctx: CallContext): Promise<Re
     for (const key of TAX_DEFAULT_KEYS) {
       const def = deps.registry.settingDefinitions.get(key);
       if (!def) continue;
-      const written = writeSettingInternal(tx, deps, ctx, key, def.default, 'finance.setup.applyTaxDefaults');
+      const written = writeSettingInternal(tx, deps, ctx, key, def.default, 'finance.setup.setting');
       if (!written.ok) return written;
       applied.push(key);
     }
     const confirmedAt = isoNow(deps.clock);
-    const confirmed = writeSettingInternal(tx, deps, ctx, STEP_SETTING.tax, confirmedAt, 'finance.setup.confirm');
+    const confirmed = writeSettingInternal(tx, deps, ctx, STEP_SETTING.tax, confirmedAt, 'finance.setup.setting');
     if (!confirmed.ok) return confirmed;
     financeAudit(tx, deps, ctx, {
       action: 'finance.setup.applyTaxDefaults',
       entity: 'financeSetup',
       id: 'tax',
       after: { step: 'tax', confirmedAt, applied },
-      summary: 'Steuer-Vorgaben übernommen und Schritt bestätigt',
     });
     return ok({ applied });
   });
@@ -353,9 +352,9 @@ export async function setFinanceSwitch(deps: Deps, ctx: CallContext, input: unkn
   const def = deps.registry.settingDefinitions.get(parsed.value.key);
   if (def?.uiOnly && ctx.channel === 'mcp') return financeConflict('switchUiOnly');
   return deps.db.transaction((tx: DbOrTx) => {
-    const written = writeSettingInternal(tx, deps, ctx, parsed.value.key, parsed.value.value, 'finance.setup.switch');
+    const written = writeSettingInternal(tx, deps, ctx, parsed.value.key, parsed.value.value, 'finance.setup.setting');
     if (!written.ok) return written;
-    financeAudit(tx, deps, ctx, { action: 'finance.setup.switch', entity: 'financeSetup', id: parsed.value.key, after: { step: parsed.value.key, confirmedAt: isoNow(deps.clock) }, summary: `Schalter ${parsed.value.key} gesetzt` });
+    financeAudit(tx, deps, ctx, { action: 'finance.setup.switch', entity: 'financeSetup', id: parsed.value.key, after: { step: parsed.value.key, confirmedAt: isoNow(deps.clock) }, params: { key: parsed.value.key } });
     return ok({ key: parsed.value.key, value: parsed.value.value });
   });
 }
@@ -378,9 +377,9 @@ export async function setFinanceLimit(deps: Deps, ctx: CallContext, input: unkno
   const parsed = validate(deps, limitSchema, input);
   if (!parsed.ok) return parsed;
   return deps.db.transaction((tx: DbOrTx) => {
-    const written = writeSettingInternal(tx, deps, ctx, parsed.value.key, parsed.value.cents, 'finance.setup.limit');
+    const written = writeSettingInternal(tx, deps, ctx, parsed.value.key, parsed.value.cents, 'finance.setup.setting');
     if (!written.ok) return written;
-    financeAudit(tx, deps, ctx, { action: 'finance.setup.limit', entity: 'financeSetup', id: parsed.value.key, after: { key: parsed.value.key, cents: parsed.value.cents }, summary: `Grenze ${parsed.value.key} gesetzt` });
+    financeAudit(tx, deps, ctx, { action: 'finance.setup.limit', entity: 'financeSetup', id: parsed.value.key, after: { key: parsed.value.key, cents: parsed.value.cents }, params: { key: parsed.value.key } });
     return ok({ key: parsed.value.key, cents: parsed.value.cents });
   });
 }
@@ -404,11 +403,11 @@ export async function setExpenseWaiverBasisText(deps: Deps, ctx: CallContext, in
   if (!parsed.ok) return parsed;
   return deps.db.transaction((tx: DbOrTx) => {
     const agreedOn = parsed.value.text === '' ? null : (parsed.value.agreedOn ?? null);
-    const written = writeSettingInternal(tx, deps, ctx, 'finance.expenseWaiverBasisText', parsed.value.text, 'finance.setup.waiverBasis');
+    const written = writeSettingInternal(tx, deps, ctx, 'finance.expenseWaiverBasisText', parsed.value.text, 'finance.setup.setting');
     if (!written.ok) return written;
-    const writtenDate = writeSettingInternal(tx, deps, ctx, 'finance.expenseWaiverBasisAgreedOn', agreedOn, 'finance.setup.waiverBasis');
+    const writtenDate = writeSettingInternal(tx, deps, ctx, 'finance.expenseWaiverBasisAgreedOn', agreedOn, 'finance.setup.setting');
     if (!writtenDate.ok) return writtenDate;
-    financeAudit(tx, deps, ctx, { action: 'finance.setup.waiverBasis', entity: 'financeSetup', id: 'finance.expenseWaiverBasisText', after: { key: 'finance.expenseWaiverBasisText', agreedOn }, summary: 'Anspruchsgrundlage für Aufwandsspenden gesetzt' });
+    financeAudit(tx, deps, ctx, { action: 'finance.setup.waiverBasis', entity: 'financeSetup', id: 'finance.expenseWaiverBasisText', after: { key: 'finance.expenseWaiverBasisText', agreedOn } });
     return ok({ text: parsed.value.text, agreedOn });
   });
 }
@@ -442,16 +441,16 @@ export async function setBoardRemuneration(deps: Deps, ctx: CallContext, input: 
   }
   return deps.db.transaction((tx: DbOrTx) => {
     const documentId = parsed.value.documentId ?? null;
-    const w1 = writeSettingInternal(tx, deps, ctx, 'finance.boardRemunerationAllowed', parsed.value.allowed, 'finance.setup.boardRemuneration');
+    const w1 = writeSettingInternal(tx, deps, ctx, 'finance.boardRemunerationAllowed', parsed.value.allowed, 'finance.setup.setting');
     if (!w1.ok) return w1;
-    const w2 = writeSettingInternal(tx, deps, ctx, 'finance.boardRemunerationBasisText', parsed.value.basisText, 'finance.setup.boardRemuneration');
+    const w2 = writeSettingInternal(tx, deps, ctx, 'finance.boardRemunerationBasisText', parsed.value.basisText, 'finance.setup.setting');
     if (!w2.ok) return w2;
-    const w3 = writeSettingInternal(tx, deps, ctx, 'finance.boardRemunerationDocumentId', documentId, 'finance.setup.boardRemuneration');
+    const w3 = writeSettingInternal(tx, deps, ctx, 'finance.boardRemunerationDocumentId', documentId, 'finance.setup.setting');
     if (!w3.ok) return w3;
     const validFrom = parsed.value.allowed ? (parsed.value.validFrom ?? null) : null;
-    const w4 = writeSettingInternal(tx, deps, ctx, 'finance.boardRemunerationValidFrom', validFrom, 'finance.setup.boardRemuneration');
+    const w4 = writeSettingInternal(tx, deps, ctx, 'finance.boardRemunerationValidFrom', validFrom, 'finance.setup.setting');
     if (!w4.ok) return w4;
-    financeAudit(tx, deps, ctx, { action: 'finance.setup.boardRemuneration', entity: 'financeSetup', id: 'finance.boardRemunerationAllowed', after: { step: 'boardRemuneration', confirmedAt: isoNow(deps.clock), applied: parsed.value.allowed, validFrom }, summary: 'Einrichtungspunkt „Vergütung des Vorstands“ gesetzt' });
+    financeAudit(tx, deps, ctx, { action: 'finance.setup.boardRemuneration', entity: 'financeSetup', id: 'finance.boardRemunerationAllowed', after: { step: 'boardRemuneration', confirmedAt: isoNow(deps.clock), applied: parsed.value.allowed, validFrom } });
     return ok({ allowed: parsed.value.allowed, basisText: parsed.value.basisText, validFrom, documentId });
   });
 }

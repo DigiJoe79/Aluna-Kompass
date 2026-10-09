@@ -116,7 +116,7 @@ test.describe('finance donations', () => {
     await loginAsAdmin(page);
     await page.goto('/finance/donations');
     // Dazu (Task 9) Sina Krügers Aufwandsspende aus dem Serienlauf des Vorjahrs — auch sie ohne Unterschrift.
-    await expect(page.getByRole('tab', { name: 'Unterschrift fehlt (2)' })).toBeVisible();
+    await expect(page.getByRole('navigation', { name: 'Ansicht' }).getByRole('link', { name: 'Unterschrift fehlt 2' })).toBeVisible();
 
     const dialog = await openIssueDialog(page, 'Lukas Hofmann', '36,00 €');
     await expect(dialog.getByTestId('issue-signature-mode')).toHaveText('mit Unterschriftsfeld');
@@ -125,13 +125,13 @@ test.describe('finance donations', () => {
     await expect(page.getByText(/Bestätigung ZWB-\S+ ausgestellt/)).toBeVisible();
 
     await page.goto('/finance/donations?tab=needsSignature');
-    await expect(page.getByRole('tab', { name: 'Unterschrift fehlt (3)' })).toBeVisible();
+    await expect(page.getByRole('navigation', { name: 'Ansicht' }).getByRole('link', { name: 'Unterschrift fehlt 3' })).toBeVisible();
     const card = page.getByTestId('signature-steps').filter({ hasText: '36,00 €' });
     await expect(card.getByTestId('requirement-created')).toHaveAttribute('data-done', 'true');
     await expect(card.getByTestId('requirement-linked')).toHaveAttribute('data-done', 'false');
     await card.getByTestId('voucher-file-input').setInputFiles({ name: 'unterschrieben.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4\n1 0 obj<</Type/Catalog>>endobj\ntrailer<</Root 1 0 R>>\n%%EOF\n') });
     await expect(page.getByText(/Unterschriebene Fassung ZWU-\S+ abgelegt/)).toBeVisible();
-    await expect(page.getByRole('tab', { name: 'Unterschrift fehlt (2)' })).toBeVisible();
+    await expect(page.getByRole('navigation', { name: 'Ansicht' }).getByRole('link', { name: 'Unterschrift fehlt 2' })).toBeVisible();
     await expect(page.getByTestId('signature-steps').filter({ hasText: '36,00 €' })).toHaveCount(0);
   });
 
@@ -159,6 +159,29 @@ test.describe('finance donations', () => {
     const rows = issuedRow(page, 'Clara Neumann').filter({ hasText: '200,00 €' });
     await expect(rows).toHaveCount(1);
     await expect(rows).toContainText('Sache');
+  });
+
+  test('Noch nicht bestätigt: blendet der Mindestbetrag alles aus, heißt das nicht „Alles bestätigt“', async ({ page }) => {
+    await loginAsAdmin(page);
+    await page.goto('/finance/donations?tab=uncertified&min=99999999');
+    await expect(page.getByText('Keine Zuwendung passt zu diesen Filtern.')).toBeVisible();
+    await expect(page.getByText('Alles bestätigt')).toHaveCount(0);
+    await expect(page.getByText(/^0 von \d+ Personen$/)).toBeVisible();
+    await expect(page.getByLabel('Ab Betrag')).toHaveValue('999.999,99');
+    await page.getByRole('button', { name: 'Filter zurücksetzen' }).last().click();
+    await expect(page).toHaveURL(/tab=uncertified$/);
+    await expect(page.getByTestId('uncertified-group').first()).toBeVisible();
+  });
+
+  /** Spec Filterleisten § 4: Der Betrag gilt bei Enter, ohne Knopf „Anwenden“. */
+  test('Noch nicht bestätigt: „Ab Betrag“ gilt bei Enter', async ({ page }) => {
+    await loginAsAdmin(page);
+    await page.goto('/finance/donations?tab=uncertified');
+    await expect(page.getByRole('button', { name: 'Anwenden' })).toHaveCount(0);
+    await page.getByLabel('Ab Betrag').fill('99999');
+    await page.getByLabel('Ab Betrag').press('Enter');
+    await expect(page).toHaveURL(/tab=uncertified&min=9999900$/);
+    await expect(page.getByRole('button', { name: 'Filter zurücksetzen' }).first()).toBeVisible();
   });
 
   test('Zurücknehmen verlangt den Grund und die Rückholspur; die Zeile ist danach wieder bescheinigbar', async ({ page }) => {
@@ -233,7 +256,7 @@ test.describe('finance donations', () => {
     // Dazu (Task 9, Prüfstein 6) Nora Lehmanns Sammelbestätigung aus dem Serienlauf des Vorjahrs — ihre
     // Rücklastschrift zählt sie schon vor dem Ersetzen des Bescheids mit.
     // Befund E: dazu Henriks zurückgenommene Bestätigung mit offener Rückholspur.
-    await expect(page.getByRole('tab', { name: 'Zu korrigieren (3)' })).toBeVisible();
+    await expect(page.getByRole('navigation', { name: 'Ansicht' }).getByRole('link', { name: 'Zu korrigieren 3' })).toBeVisible();
     await expect(issuedRow(page, 'Greta Sommer')).toContainText('Bescheid aufgehoben oder ersetzt');
 
     const client = await mcpClient(page, baseURL);
@@ -248,7 +271,7 @@ test.describe('finance donations', () => {
     // zurückgenommenen Bestätigungen: Erika, Lukas, Clara und die drei des Serienlaufs — dazu Greta, die
     // schon vorher „zu korrigieren“ war; Henrik zählt nur wegen der offenen Rückholspur (zurückgenommen).
     await page.goto('/finance/donations?tab=toCorrect');
-    await expect(page.getByRole('tab', { name: 'Zu korrigieren (8)' })).toBeVisible();
+    await expect(page.getByRole('navigation', { name: 'Ansicht' }).getByRole('link', { name: 'Zu korrigieren 8' })).toBeVisible();
     await expect(page.getByTestId('confirmation-row')).toHaveCount(8);
     await expect(issuedRow(page, 'Erika Beispiel')).toContainText('Bescheid aufgehoben oder ersetzt');
   });
@@ -660,16 +683,18 @@ test.describe('finance donation notices', () => {
     const row = seededExemption(page);
 
     // Ab morgen: heute trägt er noch.
-    await row.getByRole('button', { name: 'Aufgehoben oder ersetzt am …' }).click();
+    await row.getByTestId('notice-menu').click();
+    await page.getByRole('menuitem', { name: 'Aufgehoben oder ersetzt am …' }).click();
     let dialog = page.getByRole('dialog');
     await dialog.getByLabel('Aufgehoben oder ersetzt am').fill(tomorrow);
     await dialog.getByRole('button', { name: 'Speichern' }).click();
     await expect(dialog).toBeHidden();
     await expect(row.getByTestId('notice-state')).toHaveText(`gültig — endet mit Ablauf des ${germanDay(today)}`);
-    await expect(row.getByRole('button', { name: 'Aufgehoben oder ersetzt am …' })).toHaveCount(0);
+    await row.getByTestId('notice-menu').click();
+    await expect(page.getByRole('menuitem', { name: 'Aufgehoben oder ersetzt am …' })).toHaveCount(0);
 
     // Irrtümlich erfasst: trug nie.
-    await row.getByRole('button', { name: 'Irrtümlich erfasst' }).click();
+    await page.getByRole('menuitem', { name: 'Irrtümlich erfasst' }).click();
     dialog = page.getByRole('dialog');
     await dialog.getByLabel('Grund').fill('Falsches Finanzamt übernommen');
     await dialog.getByRole('button', { name: 'Irrtümlich erfasst' }).click();

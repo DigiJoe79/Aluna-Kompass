@@ -72,7 +72,8 @@ export async function login(deps: Deps, input: unknown): Promise<Result<LoginRes
         action: 'auth.failed',
         entityType: 'user',
         entityId: user?.id ?? null,
-        summary: `Anmeldung als ${email} fehlgeschlagen`,
+        // Spec Protokoll § 2 Regel 4: zur vorhandenen Adresse nur die ID, die eingetippte Adresse nie.
+        params: { targetUserId: user?.id ?? null },
       });
       if (user && !isLocked) {
         if (failed >= MAX_FAILED_LOGINS) {
@@ -83,7 +84,7 @@ export async function login(deps: Deps, input: unknown): Promise<Result<LoginRes
             entityType: 'user',
             entityId: user.id,
             after: { lockedUntil },
-            summary: `Konto ${user.email} nach ${MAX_FAILED_LOGINS} Fehlversuchen gesperrt`,
+            params: { targetUserId: user.id, attempts: MAX_FAILED_LOGINS },
           });
         } else {
           tx.update(users).set({ failedLoginCount: failed, updatedAt: now }).where(eq(users.id, user.id)).run();
@@ -94,7 +95,7 @@ export async function login(deps: Deps, input: unknown): Promise<Result<LoginRes
           action: 'auth.throttled',
           entityType: 'auth',
           entityId: null,
-          summary: `Anmeldung nach ${MAX_FAILED_LOGINS_TOTAL} Fehlversuchen in ${LOCK_MINUTES} Minuten für alle pausiert`,
+          params: { attempts: MAX_FAILED_LOGINS_TOTAL, minutes: LOCK_MINUTES },
         });
       }
     });
@@ -108,7 +109,7 @@ export async function login(deps: Deps, input: unknown): Promise<Result<LoginRes
     tx.update(users).set({ failedLoginCount: 0, lockedUntil: null, lastLoginAt: now, updatedAt: now }).where(eq(users.id, user.id)).run();
     const session = createSession(tx, deps, user.id);
     const ctx: CallContext = { userId: user.id, permissions: new Set(), channel: 'ui', apiTokenId: null, ipAddress, requestId };
-    recordAudit(tx, deps, ctx, { action: 'auth.login', entityType: 'user', entityId: user.id, summary: `${user.email} angemeldet` });
+    recordAudit(tx, deps, ctx, { action: 'auth.login', entityType: 'user', entityId: user.id });
     return ok({ sessionId: session.id, expiresAt: session.expiresAt, userId: user.id, mustChangePassword: user.mustChangePassword });
   });
 }
@@ -126,7 +127,7 @@ export async function changeOwnPassword(deps: Deps, ctx: CallContext, sessionId:
   return deps.db.transaction((tx) => {
     tx.update(users).set({ passwordHash, mustChangePassword: false, updatedAt: isoNow(deps.clock) }).where(eq(users.id, user.id)).run();
     revokeUserSessions(tx, user.id, sessionId);
-    recordAudit(tx, deps, ctx, { action: 'auth.changePassword', entityType: 'user', entityId: user.id, summary: `${user.email} hat das Passwort geändert` });
+    recordAudit(tx, deps, ctx, { action: 'auth.changePassword', entityType: 'user', entityId: user.id });
     return ok(undefined);
   });
 }

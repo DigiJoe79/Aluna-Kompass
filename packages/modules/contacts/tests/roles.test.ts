@@ -23,7 +23,7 @@ const otherFinanceLike: ModuleManifest = defineModule({
 
 const enable = (deps: ReturnType<typeof createTestDeps>, keys: string[]) => {
   deps.db.transaction((tx) => {
-    writeSettingInternal(tx, deps, ctxWith(['settings.manage']), 'modules.enabled', keys, 'test.enable');
+    writeSettingInternal(tx, deps, ctxWith(['settings.manage']), 'modules.enabled', keys);
   });
 };
 

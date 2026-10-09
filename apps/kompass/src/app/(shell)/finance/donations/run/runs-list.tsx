@@ -3,13 +3,14 @@
 import type { RunSummary } from '@kompass/module-finance';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
+import type { ReactNode } from 'react';
 import { useDateFormat } from '@/components/date-format-provider';
 import { StatusBadge } from '@/components/status-badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { runProgress } from '@/lib/finance/run';
 
 /** Frühere Serienläufe unter der Seite (`listConfirmationRuns`), jüngste zuerst; „Öffnen“ zeigt Lauf oder Ergebnis. */
-export function RunsList({ runs, currentId }: { runs: RunSummary[]; currentId: string | null }) {
+export function RunsList({ runs, currentId, footer }: { runs: RunSummary[]; currentId: string | null; /** Fuß der Tabellenkarte: `ListPager footer`. */ footer?: ReactNode }) {
   const t = useTranslations('finance.donations.run.runs');
   const tv = useTranslations('finance.donations.sentVia');
   const { date } = useDateFormat();
@@ -58,6 +59,7 @@ export function RunsList({ runs, currentId }: { runs: RunSummary[]; currentId: s
               ))}
             </TableBody>
           </Table>
+          {footer}
         </div>
       )}
     </section>

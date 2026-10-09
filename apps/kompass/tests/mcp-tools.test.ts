@@ -213,6 +213,7 @@ const WITHOUT_TOOL: Record<string, string> = {
   'site.lastSiteJob': 'Rohform der Ergebnisdatei; site_job_result liest sie über siteJobResult gekürzt (Backlog 39).',
   'site.siteJobOverview': 'Takt der Oberfläche (alle drei Arten auf einmal); ein Agent liest mit site_job_result je Art, running steht dort mit drin.',
   'site.recordPublish': 'Innenleben von site_publish: schreibt den Verlaufseintrag, den der Lauf erzeugt.',
+  'site.countPublishes': 'Gesamtzahl unter „Letzte Publishes“ in der Oberfläche (keine stille Grenze); ein Agent liest mit site_publishes_list bis zu 200 Einträge.',
 
   // Kern. Seit dem 2026-09-15 mitgeprüft; was hier steht, ist entschieden.
   'core.buildContext': 'Baut den Aufrufkontext; kein Vorgang, sondern seine Voraussetzung.',

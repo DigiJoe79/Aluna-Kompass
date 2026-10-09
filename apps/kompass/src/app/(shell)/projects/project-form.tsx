@@ -9,6 +9,7 @@ import { FormField } from '@/components/forms/form-field';
 import { FormCell, FormGrid } from '@/components/forms/form-grid';
 import { LocalizedField } from '@/components/forms/localized-field';
 import { MediaPicker } from '@/components/forms/media-picker';
+import { FormCard, FormCardBody } from '@/components/forms/form-card';
 import { FormActionBar } from '@/components/forms/form-action-bar';
 import { FormErrorSummary } from '@/components/forms/form-error-summary';
 import { Input } from '@/components/ui/input';
@@ -34,34 +35,36 @@ export function ProjectForm({ project, locales }: { project: ProjectRecord | nul
   const errors = useMemo(() => (state.status === 'error' ? state.fieldErrors : {}), [state]);
   useEffect(() => { if (state.status === 'success') toast.success(state.message ?? ''); }, [state]);
   return (
-    <ActionForm action={action} state={state} className="overflow-hidden rounded-lg border border-line bg-surface">
-      {project ? <input type="hidden" name="id" value={project.id} /> : null}
-      {/* Ladestand: Hat inzwischen jemand anderes gespeichert, weist der Dienst ab (Backlog 20). */}
-      {project ? <input type="hidden" name="expectedVersion" value={project.updatedAt} /> : null}
-      <FormErrorSummary errors={errors} labels={labels} />
-      <div className="p-5">
-        <Section title={t('sections.display')}>
-          <FormGrid>
-            <FormField id="slug" label={c('slug')} hint={c('slugHint')} error={errors.slug} required><Input id="slug" name="slug" defaultValue={project?.slug ?? ''} required pattern="[a-z0-9][a-z0-9-]{0,80}" className="font-mono" /></FormField>
-            <FormField id="type" label={t('type')} size="s"><Select id="type" name="type" defaultValue={project?.type ?? 'ongoing'}><option value="ongoing">{t('types.ongoing')}</option><option value="shortTerm">{t('types.shortTerm')}</option></Select></FormField>
-            <FormField id="status" label={t('status')} size="s"><Select id="status" name="status" defaultValue={project?.status ?? 'active'}><option value="active">{t('statuses.active')}</option><option value="completed">{t('statuses.completed')}</option></Select></FormField>
-          </FormGrid>
-        </Section>
-        <Section title={t('sections.content')}>
-          <FormGrid>
-            <LocalizedField name="name" label={t('name')} value={project?.name ?? {}} required errors={errors} locales={locales} />
-            <LocalizedField name="summary" label={t('summary')} kind="textarea" rows={3} value={project?.summary ?? {}} errors={errors} locales={locales} />
-            <LocalizedField name="body" label={t('body')} kind="markdown" rows={12} value={project?.body ?? {}} errors={errors} locales={locales} />
-          </FormGrid>
-        </Section>
-        <Section title={t('sections.media')}>
-          <FormGrid>
-            <FormCell size="full"><MediaPicker name="imageAssetId" value={project?.imageAssetId ?? null} label={t('image')} /></FormCell>
-            <ExternalLinksField value={project?.externalLinks ?? []} errors={errors} />
-          </FormGrid>
-        </Section>
-      </div>
-      <FormActionBar state={state} mode={project ? 'edit' : 'create'} back={{ href: '/projects', label: tCommon('backToList') }} />
-    </ActionForm>
+    <FormCard>
+      <ActionForm action={action} state={state}>
+        {project ? <input type="hidden" name="id" value={project.id} /> : null}
+        {/* Ladestand: Hat inzwischen jemand anderes gespeichert, weist der Dienst ab (Backlog 20). */}
+        {project ? <input type="hidden" name="expectedVersion" value={project.updatedAt} /> : null}
+        <FormErrorSummary errors={errors} labels={labels} />
+        <FormCardBody>
+          <Section title={t('sections.display')}>
+            <FormGrid>
+              <FormField id="slug" label={c('slug')} hint={c('slugHint')} error={errors.slug} required><Input id="slug" name="slug" defaultValue={project?.slug ?? ''} required pattern="[a-z0-9][a-z0-9-]{0,80}" className="font-mono" /></FormField>
+              <FormField id="type" label={t('type')} size="s"><Select id="type" name="type" defaultValue={project?.type ?? 'ongoing'}><option value="ongoing">{t('types.ongoing')}</option><option value="shortTerm">{t('types.shortTerm')}</option></Select></FormField>
+              <FormField id="status" label={t('status')} size="s"><Select id="status" name="status" defaultValue={project?.status ?? 'active'}><option value="active">{t('statuses.active')}</option><option value="completed">{t('statuses.completed')}</option></Select></FormField>
+            </FormGrid>
+          </Section>
+          <Section title={t('sections.content')}>
+            <FormGrid>
+              <LocalizedField name="name" label={t('name')} value={project?.name ?? {}} required errors={errors} locales={locales} />
+              <LocalizedField name="summary" label={t('summary')} kind="textarea" rows={3} value={project?.summary ?? {}} errors={errors} locales={locales} />
+              <LocalizedField name="body" label={t('body')} kind="markdown" rows={12} value={project?.body ?? {}} errors={errors} locales={locales} />
+            </FormGrid>
+          </Section>
+          <Section title={t('sections.media')}>
+            <FormGrid>
+              <FormCell size="full"><MediaPicker name="imageAssetId" value={project?.imageAssetId ?? null} label={t('image')} /></FormCell>
+              <ExternalLinksField value={project?.externalLinks ?? []} errors={errors} />
+            </FormGrid>
+          </Section>
+        </FormCardBody>
+        <FormActionBar state={state} mode={project ? 'edit' : 'create'} back={{ href: '/projects', label: tCommon('backToList') }} />
+      </ActionForm>
+    </FormCard>
   );
 }

@@ -20,6 +20,7 @@ import { FolderColumn } from '@/components/folder-column';
 import { ExportDialog } from './export-dialog';
 import { ReceiveDialog } from './receive/receive-dialog';
 import { useFolderMoves, type DocumentMoveItem } from './use-folder-moves';
+import { folderHref } from './folder-href';
 
 /** Was ein Zug ins Fenster gebracht hat. */
 export interface Drop {
@@ -30,8 +31,6 @@ export interface Drop {
   /** Die Namen der Dateien, die keine PDFs waren und deshalb liegen blieben. */
   skippedNames: string[];
 }
-
-const folderHref = (path: string | null) => (path === null ? '/dms' : `/dms?folder=${encodeURIComponent(path)}`);
 
 const isPdf = (file: File) => file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
 
@@ -45,7 +44,6 @@ export function DmsWorkspace({
   folders,
   inboxCount,
   total,
-  listTotal,
   canCreate,
   canManage,
   areaOnly,
@@ -63,8 +61,6 @@ export function DmsWorkspace({
   folders: FolderEntry[];
   inboxCount: number;
   total: number;
-  /** Die Zahl über der Liste: mit allen Filtern, nicht die des Baums. */
-  listTotal: number;
   canCreate: boolean;
   /** Mit `dms.manage`: Ordner im Baum anlegen, umbenennen, verschieben, löschen. */
   canManage: boolean;
@@ -98,6 +94,7 @@ export function DmsWorkspace({
   const pathname = usePathname();
   const params = useSearchParams();
   const isInbox = params.get('inbox') === '1';
+  const hrefFor = (path: string | null) => folderHref(new URLSearchParams(params.toString()), { folder: path });
   // Die Adresse sofort (ein Klick markiert, bevor der Server antwortet), aber
   // nur, wenn es den Ordner gibt; sonst, was der Server stattdessen öffnet.
   const known = useMemo(() => new Set(folders.flatMap((f) => [...ancestorsOf(f.path), f.path])), [folders]);
@@ -106,7 +103,7 @@ export function DmsWorkspace({
   const { folders: shownFolders, selected: selectedFolder, saving, placed, moveFolder, renameFolder, deleteFolder, createFolder, moveDocuments } = useFolderMoves({
     folders,
     selected: openFolder,
-    hrefFor: folderHref,
+    hrefFor,
   });
   /** Der Ordner, für den „Verschieben nach…“ offen ist. */
   const [moving, setMoving] = useState<string | null>(null);
@@ -282,13 +279,13 @@ export function DmsWorkspace({
     mode: 'navigate',
     selected: selectedFolder,
     fixed: [
-      { key: 'all', label: t('allDocuments'), icon: Files, count: total, href: '/dms', dropTarget: false, folder: null, current: !isInbox && !selectedFolder },
+      { key: 'all', label: t('allDocuments'), icon: Files, count: total, href: hrefFor(null), dropTarget: false, folder: null, current: !isInbox && !selectedFolder },
       {
         key: 'inbox',
         label: t('inbox'),
         icon: Inbox,
         count: inboxCount,
-        href: '/dms?inbox=1',
+        href: folderHref(new URLSearchParams(params.toString()), { folder: null, inbox: true }),
         dropTarget: true,
         folder: null,
         current: isInbox,
@@ -297,7 +294,7 @@ export function DmsWorkspace({
           item.kind === 'documents' && item.ids.some((id) => rows.current.get(id)?.direction === 'outgoing') ? 'incomingOnly' : null,
       },
     ],
-    hrefFor: folderHref,
+    hrefFor,
     acceptsItems: DOCUMENTS_MIME,
     canManage,
     saving,
@@ -317,13 +314,17 @@ export function DmsWorkspace({
     storageKey: 'dmsTreeExpanded',
   } satisfies FolderTreeProps;
 
-  // Der Ortsknopf am Telefon nennt den Ort und dieselbe Zahl wie der Kopf über
-  // der Liste (`listTotal`, mit Filtern) — nicht die Summe des Baums.
+  // Der Ortsknopf am Telefon nennt, was die Spalte am Schreibtisch zeigt: Ort und Summe (wie die Mediathek). Die
+  // Zahl der Treffer steht in der Zählzeile der Leiste, auch am Telefon.
   const place = isInbox
-    ? { path: [], title: t('inbox'), count: listTotal }
+    ? { path: [], title: t('inbox'), count: inboxCount }
     : selectedFolder === null
-      ? { path: [], title: t('allDocuments'), count: listTotal }
-      : { path: ancestorsOf(selectedFolder).map(nameOf), title: nameOf(selectedFolder), count: listTotal };
+      ? { path: [], title: t('allDocuments'), count: total }
+      : {
+          path: ancestorsOf(selectedFolder).map(nameOf),
+          title: nameOf(selectedFolder),
+          count: shownFolders.filter((f) => isWithin(f.path, selectedFolder)).reduce((sum, f) => sum + f.count, 0),
+        };
 
   return (
     <DocumentMovesContext value={documentMoves}>

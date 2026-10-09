@@ -14,8 +14,10 @@ import {
 import {
   InputGroup,
   InputGroupAddon,
+  InputGroupButton,
 } from "@/components/ui/input-group"
-import { SearchIcon, CheckIcon } from "lucide-react"
+import { SearchIcon, CheckIcon, XIcon } from "lucide-react"
+import { useTranslations } from "next-intl"
 
 function Command({
   className,
@@ -71,6 +73,9 @@ function CommandInput({
   className,
   wrapperClassName,
   fieldClassName,
+  value,
+  onValueChange,
+  ref,
   ...props
 }: React.ComponentProps<typeof CommandPrimitive.Input> & {
   /** Der Rahmen um das Feld — die Palette setzt ihn eng, ein Formularfeld nicht. */
@@ -78,20 +83,55 @@ function CommandInput({
   /** Die Feldhülle selbst; sie trägt die Höhe, nicht das innere `input`. */
   fieldClassName?: string
 }) {
+  // ✕ „Suche leeren“ wie im `SearchField` (Board § L, HANDOFF § 8e.1). Ohne gesteuerten Wert (Palette) hält das
+  // Feld den Text selbst, damit ✕ ihn leeren kann; mit Wert (Kontakt-, Dokumentauswahl) leert es über den Aufrufer.
+  const t = useTranslations("common")
+  const [own, setOwn] = React.useState("")
+  const text = value ?? own
+  const input = React.useRef<HTMLInputElement | null>(null)
+  const setRef = (node: HTMLInputElement | null) => {
+    input.current = node
+    if (typeof ref === "function") ref(node)
+    else if (ref) ref.current = node
+  }
+  const change = (next: string) => {
+    if (value === undefined) setOwn(next)
+    onValueChange?.(next)
+  }
   return (
     <div data-slot="command-input-wrapper" className={cn("p-1 pb-0", wrapperClassName)}>
       <InputGroup className={cn("h-8 rounded-lg! border-line-strong bg-line-strong shadow-none! *:data-[slot=input-group-addon]:pl-2!", fieldClassName)}>
         <CommandPrimitive.Input
+          ref={setRef}
           data-slot="command-input"
           className={cn(
             "w-full text-sm outline-hidden disabled:cursor-not-allowed disabled:opacity-50",
             className
           )}
+          value={text}
+          onValueChange={change}
           {...props}
         />
         <InputGroupAddon>
           <SearchIcon className="size-4 shrink-0 opacity-50" />
         </InputGroupAddon>
+        {text ? (
+          <InputGroupAddon align="inline-end">
+            <InputGroupButton
+              size="icon-xs"
+              aria-label={t("clearSearch")}
+              // Das Drücken darf dem Feld den Fokus nicht nehmen: Kontakt- und Dokumentauswahl schließen sonst ihre Liste.
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => {
+                change("")
+                input.current?.focus()
+              }}
+              className="text-muted-ink"
+            >
+              <XIcon aria-hidden />
+            </InputGroupButton>
+          </InputGroupAddon>
+        ) : null}
       </InputGroup>
     </div>
   )

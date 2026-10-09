@@ -11,7 +11,7 @@ test('reads a template, fills a variable and keeps a collection entry', async ({
   await loginAsAdmin(page);
 
   await page.goto('/site/template');
-  await page.getByRole('button', { name: 'Template einlesen' }).click();
+  await page.getByRole('button', { name: 'Vorlage einlesen' }).click();
   await expect(page.getByRole('region', { name: 'Befunde' })).toBeVisible();
   await page.getByRole('button', { name: 'Übernehmen' }).click();
   await expect(page.getByRole('status')).toContainText('eingelesen');
@@ -35,11 +35,11 @@ test('shows no starting-content card when the template has no seed/', async ({ p
   await resetDatabase(page, 'seeded');
   await loginAsAdmin(page);
   await page.goto('/site/template');
-  await page.getByRole('button', { name: 'Template einlesen' }).click();
+  await page.getByRole('button', { name: 'Vorlage einlesen' }).click();
   await page.getByRole('button', { name: 'Übernehmen' }).click();
   await expect(page.getByRole('status')).toContainText('eingelesen');
   await page.reload();
-  await expect(page.getByText('Das Template bringt Startinhalte mit')).toHaveCount(0);
+  await expect(page.getByText('Die Vorlage der Webseite bringt Startinhalte mit')).toHaveCount(0);
   await expect(page.getByText('Startinhalte übernommen am')).toHaveCount(0);
 });
 
@@ -48,7 +48,7 @@ test('a reference variable is a choice, and a withdrawn record shows as stale un
   await loginAsAdmin(page);
 
   await page.goto('/site/template');
-  await page.getByRole('button', { name: 'Template einlesen' }).click();
+  await page.getByRole('button', { name: 'Vorlage einlesen' }).click();
   await page.getByRole('button', { name: 'Übernehmen' }).click();
   await expect(page.getByRole('status')).toContainText('eingelesen');
 
@@ -94,7 +94,7 @@ test('a variable of type asset is chosen from the library', async ({ page }) => 
   await expect(page.getByRole('row', { name: /startbild-/ })).toBeVisible();
 
   await page.goto('/site/template');
-  await page.getByRole('button', { name: 'Template einlesen' }).click();
+  await page.getByRole('button', { name: 'Vorlage einlesen' }).click();
   await page.getByRole('button', { name: 'Übernehmen' }).click();
   await expect(page.getByRole('status')).toContainText('eingelesen');
 
@@ -120,7 +120,7 @@ test('keeps its cards in a container that sets them apart', async ({ page }) => 
   await page.goto('/site/template');
 
   const card = page
-    .getByRole('button', { name: 'Template einlesen' })
+    .getByRole('button', { name: 'Vorlage einlesen' })
     .locator('xpath=ancestor::div[contains(@class,"rounded-lg")][1]');
   const gap = await card.evaluate((el) => {
     const style = getComputedStyle(el.parentElement!);

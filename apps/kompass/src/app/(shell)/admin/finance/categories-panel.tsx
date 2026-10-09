@@ -1,17 +1,21 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useTransition } from 'react';
 import { useTranslations } from 'next-intl';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { FormActionBar } from '@/components/forms/form-action-bar';
 import { RefusalNotice } from '@/components/forms/refusal-notice';
 import { useActionFeedback } from '@/components/forms/use-action-feedback';
 import { withUnplacedFieldErrors } from '@/lib/feedback';
 import { Disclosure } from '@/components/ui/disclosure';
+import { EmptyState } from '@/components/empty-state';
+import { FilterBar } from '@/components/filter-bar';
+import { SearchField } from '@/components/search-field';
 import { StatusBadge } from '@/components/status-badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogBody, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { useUrlFilters } from '@/lib/use-url-filters';
 import { Select } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useSavedVersions } from '@/lib/saved-versions';
@@ -56,15 +60,31 @@ export function CategoriesPanel({ categories, confirmedAt }: { categories: Categ
   const fmt = useDateFormat();
   const router = useRouter();
   const [editing, setEditing] = useState<CategoryRow | null | 'new'>(null);
-  const [search, setSearch] = useState('');
+  const pathname = usePathname();
+  const params = useSearchParams();
+  const [, startNavigation] = useTransition();
+  // Gefiltert wird im Browser; die Suche steht trotzdem in der Adresse (`?panel=categories&text=`, Spec § 3).
+  const [filters, setFilters] = useUrlFilters({ text: params.get('text') ?? '' });
+  const search = filters.text.trim();
+  const setSearch = (text: string) => {
+    setFilters({ text });
+    const next = new URLSearchParams(params.toString());
+    if (text.trim()) next.set('text', text.trim());
+    else next.delete('text');
+    startNavigation(() => router.replace(`${pathname}?${next.toString()}`));
+  };
   const [pending, setPending] = useState(false);
   const reviewFb = useActionFeedback();
   // Befund 43: Die Version aus der Speicher-Antwort gilt sofort (`useSavedVersions`).
   const versions = useSavedVersions();
   const openRow = (row: CategoryRow) => setEditing(versions.latest(row));
 
+  const matches = useMemo(
+    () => categories.filter((c) => c.name.toLowerCase().includes(search.toLowerCase()) || c.key.toLowerCase().includes(search.toLowerCase())),
+    [categories, search],
+  );
   const grouped = useMemo(() => {
-    const filtered = categories.filter((c) => c.name.toLowerCase().includes(search.toLowerCase()) || c.key.toLowerCase().includes(search.toLowerCase()));
+    const filtered = matches;
     const bySphere = new Map<string, CategoryRow[]>();
     for (const c of filtered) {
       const groupKey = c.direction === 'transit' ? 'transit' : (c.sphere ?? 'none');
@@ -72,7 +92,7 @@ export function CategoriesPanel({ categories, confirmedAt }: { categories: Categ
       bySphere.get(groupKey)!.push(c);
     }
     return bySphere;
-  }, [categories, search]);
+  }, [matches]);
 
   const confirmReviewed = async () => {
     setPending(true);
@@ -84,14 +104,21 @@ export function CategoriesPanel({ categories, confirmedAt }: { categories: Categ
 
   return (
     <section className="space-y-4" data-testid="categories-panel">
-      <div className="flex flex-wrap items-center justify-end gap-2">
-        <div className="flex items-center gap-2">
-          <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t('search')} className="w-52" />
-          <Button size="sm" onClick={() => setEditing('new')}>
-            {t('create')}
-          </Button>
+      <div className="flex flex-wrap items-start gap-2.5">
+        <div className="min-w-0 flex-1">
+          <FilterBar
+            search={<SearchField value={filters.text} onChange={setSearch} placeholder={t('searchPlaceholder')} />}
+            searchActive={search ? { chip: search, onClear: () => setSearch('') } : undefined}
+            filters={[]}
+            count={{ shown: matches.length, total: categories.length, noun: { one: t('nounOne'), other: t('nounOther') } }}
+            onReset={() => setSearch('')}
+          />
         </div>
+        <Button onClick={() => setEditing('new')}>{t('create')}</Button>
       </div>
+
+      {/* Befund 6: Ohne Treffer verschwand alles ohne Text. Ohne Kategorien überhaupt gibt es die Seite nicht (Grundausstattung). */}
+      {grouped.size === 0 && search ? <EmptyState filtered={{ noun: t('emptyNoun'), onReset: () => setSearch('') }} /> : null}
 
       {[...grouped.entries()].map(([sphere, rows]) => (
         <div key={sphere} className="space-y-2">

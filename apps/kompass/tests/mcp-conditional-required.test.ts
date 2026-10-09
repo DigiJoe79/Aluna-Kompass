@@ -26,7 +26,7 @@ function conditionalChecks(schema: z.ZodType, path: string, out: string[]): void
 describe('MCP-Werkzeugschemas ohne bedingte Pflicht (N5)', () => {
   it('kein Werkzeugschema prüft ein Feld abhängig von einem anderen — das tut der Dienst', () => {
     const deps = createTestDeps({ manifests: [coreModule, ...installedModules] });
-    deps.db.transaction((tx) => writeSettingInternal(tx, deps, systemContext(), 'modules.enabled', installedModules.map((m) => m.key), 'test'));
+    deps.db.transaction((tx) => writeSettingInternal(tx, deps, systemContext(), 'modules.enabled', installedModules.map((m) => m.key)));
     const tools = [...coreMcpTools, ...enabledManifests(deps).flatMap((m) => [...moduleMcpTools(deps, m)])];
     expect(tools.length).toBeGreaterThan(200);
     const offenders = tools.flatMap((t) => {

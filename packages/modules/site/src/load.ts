@@ -128,6 +128,22 @@ function toSchema(definition: TemplateDefinition): TemplateSchema {
 const isDefinition = (v: unknown): v is TemplateDefinition =>
   typeof v === 'object' && v !== null && typeof (v as TemplateDefinition).name === 'string' && Array.isArray((v as TemplateDefinition).locales) && typeof (v as TemplateDefinition).collections === 'object';
 
+/** Die Prüfsumme eines Templates: SHA-256 des Quelltexts von `kompass.template.ts`. */
+const checksumOf = (source: string): string => createHash('sha256').update(source).digest('hex');
+
+/**
+ * Die Prüfsumme der Template-Datei, ohne sie zu importieren — `null`, wenn sie fehlt. Für Fragen wie
+ * „ist das noch der eingelesene Stand?“, die bei jedem Export kommen: Jeder Import mit Zeitstempel ist für
+ * Node ein neues Modul und bliebe im Cache (Backlog 48), und Code aus einem Template läuft nur beim Einlesen.
+ */
+export async function templateChecksum(dir: string): Promise<string | null> {
+  try {
+    return checksumOf(await readFile(path.join(dir, TEMPLATE_FILE), 'utf8'));
+  } catch {
+    return null;
+  }
+}
+
 export async function loadTemplate(dir: string): Promise<Result<LoadedTemplate>> {
   const file = path.join(dir, TEMPLATE_FILE);
   let source: string;
@@ -154,5 +170,5 @@ export async function loadTemplate(dir: string): Promise<Result<LoadedTemplate>>
     return conflict('templateUnreadable', error instanceof Error ? error.message.slice(0, 500) : 'Unbekannter Fehler');
   }
   if (!isDefinition(loaded)) return conflict('templateInvalid', `${TEMPLATE_FILE} exportiert keine Template-Deklaration`);
-  return ok({ definition: loaded, schema: toSchema(loaded), checksum: createHash('sha256').update(source).digest('hex') });
+  return ok({ definition: loaded, schema: toSchema(loaded), checksum: checksumOf(source) });
 }

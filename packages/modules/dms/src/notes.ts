@@ -42,7 +42,7 @@ export async function addNote(deps: Deps, ctx: CallContext, input: unknown): Pro
     // Der Text der Notiz steht nicht im Protokoll: Sie ist Arbeitsmaterial,
     // und ihr Inhalt geht mit ihr (wie beim Entwurf, Entscheidung 4).
     const ref = auditDocumentRef(tx, doc);
-    recordAudit(tx, deps, ctx, { action: 'dms.note.add', entityType: 'documentNote', entityId: id, after: { documentId: doc.id }, summary: `Notiz an ${ref.hidden ? ref.name : (doc.number ?? doc.subject)} angefügt` });
+    recordAudit(tx, deps, ctx, { action: 'dms.note.add', entityType: 'documentNote', entityId: id, after: { documentId: doc.id }, params: { number: ref.number } });
     return ok(tx.select().from(documentNotes).where(eq(documentNotes.id, id)).get()!);
   });
 }
@@ -64,7 +64,7 @@ export async function deleteNote(deps: Deps, ctx: CallContext, input: unknown): 
 
   return deps.db.transaction((tx: DbOrTx) => {
     tx.delete(documentNotes).where(eq(documentNotes.id, row.id)).run();
-    recordAudit(tx, deps, ctx, { action: 'dms.note.delete', entityType: 'documentNote', entityId: row.id, before: { documentId: row.documentId, createdByUserId: row.createdByUserId }, summary: `Notiz ${row.id} gelöscht` });
+    recordAudit(tx, deps, ctx, { action: 'dms.note.delete', entityType: 'documentNote', entityId: row.id, before: { documentId: row.documentId, createdByUserId: row.createdByUserId } });
     return ok(null);
   });
 }

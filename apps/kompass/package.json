@@ -1,6 +1,6 @@
 {
   "name": "@kompass/app",
-  "version": "0.2.8",
+  "version": "0.2.9",
   "private": true,
   "type": "module",
   "scripts": {
@@ -53,6 +53,7 @@
     "zod": "^4.6.5"
   },
   "devDependencies": {
+    "@formatjs/icu-messageformat-parser": "3.5.17",
     "@modelcontextprotocol/client": "^2.2.0",
     "@playwright/test": "^1.63.0",
     "@tailwindcss/postcss": "^4.3.3",

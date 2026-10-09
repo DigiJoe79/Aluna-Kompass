@@ -76,7 +76,7 @@ export async function linkUserToContact(deps: Deps, ctx: CallContext, input: unk
 
     const id = newId();
     tx.insert(contactUserLinks).values({ id, userId, contactId, linkedAt: isoNow(deps.clock), linkedByUserId: ctx.userId ?? 'system', unlinkedAt: null, unlinkedByUserId: null }).run();
-    recordAudit(tx, deps, ctx, { action: 'contacts.userLink.create', entityType: 'contactUserLink', entityId: id, after: { userId, contactId, selfLinked: ctx.userId === userId }, summary: `Nutzerkonto ${userId} mit Kontakt ${contactId} verknüpft` });
+    recordAudit(tx, deps, ctx, { action: 'contacts.userLink.create', entityType: 'contactUserLink', entityId: id, after: { userId, contactId, selfLinked: ctx.userId === userId }, params: { targetUserId: userId, contactId } });
     return ok(tx.select().from(contactUserLinks).where(eq(contactUserLinks.id, id)).get()!);
   });
 }
@@ -93,7 +93,7 @@ export async function unlinkUser(deps: Deps, ctx: CallContext, input: unknown): 
     if (!open) return conflict('userNotLinked', 'Dieses Nutzerkonto ist mit keinem Kontakt verknüpft.');
     if (ctx.userId !== null && ctx.userId === userId) return conflict('ownLinkNeedsSecondPerson', SECOND_PERSON);
     tx.update(contactUserLinks).set({ unlinkedAt: isoNow(deps.clock), unlinkedByUserId: ctx.userId ?? 'system' }).where(eq(contactUserLinks.id, open.id)).run();
-    recordAudit(tx, deps, ctx, { action: 'contacts.userLink.end', entityType: 'contactUserLink', entityId: open.id, before: { userId, contactId: open.contactId }, summary: `Verknüpfung von Nutzerkonto ${userId} mit Kontakt ${open.contactId} gelöst` });
+    recordAudit(tx, deps, ctx, { action: 'contacts.userLink.end', entityType: 'contactUserLink', entityId: open.id, before: { userId, contactId: open.contactId }, params: { targetUserId: userId, contactId: open.contactId } });
     return ok(tx.select().from(contactUserLinks).where(eq(contactUserLinks.id, open.id)).get()!);
   });
 }

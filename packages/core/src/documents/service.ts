@@ -143,7 +143,6 @@ export async function exportDocument(deps: Deps, ctx: CallContext, input: unknow
       entityType: 'documentTemplate',
       entityId: template.key,
       after: { templateKey: template.key, base: baseId },
-      summary: `Auszug „${built.slots.title ?? template.key}“ aus Vorlage ${template.key} gezogen`,
     });
   });
   return ok({ bytes, filename, mimeType: 'application/pdf' });

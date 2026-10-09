@@ -31,9 +31,10 @@ Buchung), Buchungstext, Spender oder Empfänger, Betrag und Stand. Wer nur die
 Übersicht sehen darf, sieht Zweck, Ziel, Bestand und Zustand — keine
 Beschreibung, keinen Bezug, keine Bewegungen und keine Namen.
 
-**Als erfüllt kennzeichnen** darf, wer Finanzen einrichtet. Ist noch Geld
-übrig, fragt Kompass vorher nach. Ein erfüllter oder aufgelöster Zweck lässt
-sich über das Menü **Wieder öffnen …** zurückholen; die Begründung ist
+**Als erfüllt kennzeichnen** darf, wer Finanzen einrichtet; es steht im Menü
+**Weitere Aktionen** (⋯) des Zwecks. Ist noch Geld übrig, fragt Kompass vorher
+nach. Ein erfüllter oder aufgelöster Zweck lässt sich über dasselbe Menü mit
+**Wieder öffnen …** zurückholen; die Begründung ist
 Pflicht und steht am Zweck, nicht im Änderungsprotokoll.
 
 ## Zweck ändern (Umwidmung)

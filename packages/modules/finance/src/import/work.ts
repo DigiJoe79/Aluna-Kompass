@@ -69,6 +69,9 @@ const listSchema = z.object({
   offset: z.number().int().min(0).default(0),
 });
 
+/** Der Kontofilter der Leiste: Die Reiterzahlen zählen dann, was die Reiter für dieses Konto listen würden. */
+export const workCountsSchema = z.object({ accountId: z.string().min(1).optional() });
+
 const summaryOf = (s: SuggestionView): SuggestionSummary => ({ kind: s.kind, confidence: s.confidence, reasons: s.reasons, problems: s.problems, hints: s.hints });
 
 
@@ -136,11 +139,18 @@ export async function listWorkItems(deps: Deps, ctx: CallContext, input: unknown
   return ok({ items: all.slice(v.offset, v.offset + v.limit), total: all.length });
 }
 
-/** `finance.read`: die Zähl-Pillen der Reiter und die Hinweiszeile „zurückgehaltene Zeilen“. */
-export async function getWorkCounts(deps: Deps, ctx: CallContext): Promise<Result<WorkCounts>> {
+/**
+ * `finance.read`: die Zähl-Pillen der Reiter und die Hinweiszeile „zurückgehaltene Zeilen“. Mit `accountId` zählen
+ * Umsätze und Entwürfe wie `listWorkItems` für dieses Konto; fällige Zahlungen und zurückgehaltene Zeilen hängen an
+ * keinem Konto und bleiben gesamt.
+ */
+export async function getWorkCounts(deps: Deps, ctx: CallContext, input: unknown = {}): Promise<Result<WorkCounts>> {
   const denied = requireFinanceRead(ctx, 'read');
   if (denied) return denied;
-  const suggestions = openSuggestionsInternal(deps);
+  const parsed = validate(deps, workCountsSchema, input);
+  if (!parsed.ok) return parsed;
+  const { accountId } = parsed.value;
+  const suggestions = openSuggestionsInternal(deps).filter(({ raw }) => accountId === undefined || raw.accountId === accountId);
   const sure = suggestions.filter((s) => s.suggestion.confidence === 'sure').length;
   const heldCandidates = deps.db
     .select({ id: financeImportCandidates.id })
@@ -151,8 +161,8 @@ export async function getWorkCounts(deps: Deps, ctx: CallContext): Promise<Resul
   return ok({
     open: sure,
     unsure: suggestions.length - sure,
-    agent: entryItemsInternal(deps.db, 'agent').length,
-    reviewed: entryItemsInternal(deps.db, 'reviewed').length,
+    agent: entryItemsInternal(deps.db, 'agent', accountId).length,
+    reviewed: entryItemsInternal(deps.db, 'reviewed', accountId).length,
     due: dueItemsInternal(deps).length,
     heldCandidates,
   });

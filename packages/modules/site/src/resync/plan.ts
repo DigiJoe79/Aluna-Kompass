@@ -98,19 +98,24 @@ export function planResync(before: ResyncSchema, after: ResyncSchema, data: Resy
   const afterFields = byPath(flatten(after));
 
   // afterPfad → beforePfad für deklarierte Umbenennungen, plus die verbrauchten
-  // beforePfade, die dann kein `removed` mehr ergeben.
+  // beforePfade, die dann kein `removed` mehr ergeben. Eine Umbenennung gilt nur,
+  // solange `before` den alten Pfad noch führt und den neuen nicht: Ist sie schon
+  // erledigt, bleibt `renamedFrom` im Template stehen, und jedes Einlesen hätte
+  // sie sonst neu gemeldet (Backlog 51). Fehlen beide, ist das Feld neu.
   const renames = new Map<string, string>();
   const consumed = new Set<string>();
   for (const [path, desc] of afterFields) {
     const from = (desc.schema as { renamedFrom?: string }).renamedFrom;
-    if (from) {
-      const fromPath = siblingPath(path, from);
+    if (!from) continue;
+    const fromPath = siblingPath(path, from);
+    if (beforeFields.has(fromPath) && !beforeFields.has(path)) {
       renames.set(path, fromPath);
       consumed.add(fromPath);
     }
   }
+  const renamedCollection = (c: CollectionSchema) => c.renamedFrom !== undefined && before.collections?.[c.renamedFrom] !== undefined;
   for (const c of Object.values(after.collections ?? {})) {
-    if (c.renamedFrom) consumed.add(`collections.${c.renamedFrom}`);
+    if (renamedCollection(c)) consumed.add(`collections.${c.renamedFrom}`);
   }
 
   const findings: Finding[] = [];
@@ -126,7 +131,7 @@ export function planResync(before: ResyncSchema, after: ResyncSchema, data: Resy
   }
   for (const [collection, c] of Object.entries(after.collections ?? {})) {
     const path = `collections.${collection}`;
-    if (!before.collections?.[collection] && !c.renamedFrom) findings.push({ kind: 'added', path, label: c.label });
+    if (!before.collections?.[collection] && !renamedCollection(c)) findings.push({ kind: 'added', path, label: c.label });
   }
 
   // 2. Entfallene Felder und Sammlungen.

@@ -94,15 +94,21 @@ function validConfirmationsInternal(db: DbOrTx, lineIds: readonly string[]): Map
 }
 
 const yearSchema = z.number().int().min(2000).max(9999);
-const bookSchema = z.object({ year: yearSchema, limit: z.number().int().min(1).max(500).default(200), offset: z.number().int().min(0).default(0) });
+const bookSchema = z.object({
+  year: yearSchema,
+  /** Nur anonyme Zuwendungen (ohne Kontakt) — gefiltert vor dem Blättern, damit keine Grenze den Filter verschluckt. */
+  contact: z.literal('anonymous').optional(),
+  limit: z.number().int().min(1).max(500).default(200),
+  offset: z.number().int().min(0).default(0),
+});
 
-/** `finance.read`: das Spendenbuch eines Jahres — Zeilen mit Spender oder anonym, Summen je Art. */
+/** `finance.read`: das Spendenbuch eines Jahres — Zeilen mit Spender oder anonym, Summen je Art (immer über das ganze Jahr). */
 export async function getDonationBook(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<DonationBook>> {
   const denied = requireFinanceRead(ctx, 'read');
   if (denied) return denied;
   const parsed = validate(deps, bookSchema, input);
   if (!parsed.ok) return parsed;
-  const { year, limit, offset } = parsed.value;
+  const { year, contact, limit, offset } = parsed.value;
 
   const { lines, feesCertifiable } = bookLinesInternal(deps.db, deps, year);
   const sums: DonationBookSums = { donation: 0, membershipFee: 0, inKindDonation: 0, expenseWaiver: 0, total: 0 };
@@ -110,7 +116,8 @@ export async function getDonationBook(deps: Deps, ctx: CallContext, input: unkno
     sums[line.kind] += line.amountCents;
     sums.total += line.amountCents;
   }
-  const page = lines.slice(offset, offset + limit);
+  const listed = contact === 'anonymous' ? lines.filter((line) => line.contactId === null) : lines;
+  const page = listed.slice(offset, offset + limit);
   const confirmations = validConfirmationsInternal(deps.db, page.map((l) => l.lineId));
   const contactIds = [...new Set(page.map((l) => l.contactId).filter((id): id is string => id !== null))];
   const names = new Map((contactIds.length === 0 ? [] : deps.db.select().from(contacts).where(inArray(contacts.id, contactIds)).all()).map((c) => [c.id, displayName(c)] as const));
@@ -118,7 +125,7 @@ export async function getDonationBook(deps: Deps, ctx: CallContext, input: unkno
     const confirmation = confirmations.get(line.lineId);
     return { ...line, contactName: line.contactId ? (names.get(line.contactId) ?? '') : null, confirmation: confirmation ? { id: confirmation.id, number: confirmation.number, kind: confirmation.kind } : null };
   });
-  return ok({ rows, total: lines.length, sums, membershipFeesCertifiable: feesCertifiable });
+  return ok({ rows, total: listed.length, sums, membershipFeesCertifiable: feesCertifiable });
 }
 
 export type ReconciliationReasonKey = 'belowMinimum' | 'addressMissing' | 'inKindUndescribed' | 'expenseWaiverUnconfirmed' | 'anonymous' | 'other';

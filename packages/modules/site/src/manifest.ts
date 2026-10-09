@@ -58,6 +58,26 @@ export const siteModule: ModuleManifest = defineModule({
   // Die Sprachen des eingelesenen Templates: Ohne sie filtert der Export Inhalte stillschweigend weg.
   requiredLocales: (deps) => activeTemplate(deps)?.schema.locales ?? [],
   dashboardTiles: SITE_DASHBOARD_TILES,
+  /** Aktionen des Änderungsprotokolls (Spec Protokoll § 3); Sammlungen und Variablen heißen wie im Template. */
+  auditActions: {
+    'site.entry.create': { params: ['collection'] },
+    'site.entry.update': { params: ['collection'] },
+    'site.entry.delete': { params: ['collection'] },
+    'site.entry.reorder': { params: ['collection'] },
+    'site.entry.publish': { params: ['collection'] },
+    'site.entry.unpublish': { params: ['collection'] },
+    /** `variables`: die Schlüssel, durch Komma getrennt; die Anzeige setzt jeden in „…“. */
+    'site.values.update': { params: ['variables', 'variableCount'] },
+    'site.seed.apply': { params: ['variables', 'entries', 'assets'] },
+    'site.template.read': { params: ['templateName'] },
+    'site.template.settled': { params: [] },
+    /** `status`: `success`, `failed` oder `aborted`; die Gründe stehen in der Historie der Veröffentlichungen. */
+    'site.publish': { params: ['status', 'changed', 'added', 'removed'] },
+    /** `kind`: Art des Laufs (`SITE_JOB_KINDS`). */
+    'site.jobCancel': { params: ['kind'] },
+    'site.cacheClear': { params: ['fileCount'] },
+    'site.blockedTerms.set': { params: ['key'] },
+  },
   deletionRules: [
     {
       entity: 'sitePublish',

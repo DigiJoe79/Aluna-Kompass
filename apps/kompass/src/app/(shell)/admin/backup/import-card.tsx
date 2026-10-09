@@ -3,6 +3,9 @@
 import { AlertTriangle } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useActionState, useEffect, useState, useTransition } from 'react';
+import { FileDropzone } from '@/app/(shell)/dms/receive/file-dropzone';
+import { Notice } from '@/components/notice';
+import { StatusBadge } from '@/components/status-badge';
 import { FormField } from '@/components/forms/form-field';
 import { FormGrid } from '@/components/forms/form-grid';
 import { FormActionBar } from '@/components/forms/form-action-bar';
@@ -37,14 +40,14 @@ export function ImportCard({ environmentName }: { environmentName: string }) {
     await feedback.run(() => importBackupAction(idleState, fd), { retry: () => start(runImport) });
   };
   return (
-    <section className="rounded-lg border border-warning bg-surface p-5">
-      <div className="flex items-center gap-2"><h3 className="text-[15px] font-semibold">{t('title')}</h3><span className="rounded-sm bg-warning-bg px-2 py-0.5 text-[12px] font-semibold text-warning">{t('badge')}</span></div>
-      <p className="mt-3 flex gap-2 rounded-md border border-warning bg-warning-bg p-3 text-[13px] text-ink-2"><AlertTriangle className="mt-0.5 size-4 shrink-0 text-warning" aria-hidden /><span>{t('warning')}</span></p>
+    <section className="rounded-lg border border-line bg-surface p-5">
+      <div className="flex items-center gap-2"><h3 className="text-[15px] font-semibold">{t('title')}</h3><StatusBadge tone="warning">{t('badge')}</StatusBadge></div>
+      <div className="mt-3"><Notice level="warn">{t('warning')}</Notice></div>
       <form action={inspectAction} className="mt-4 flex flex-col gap-3">
         <FormGrid>
-          <FormField id="archive" label={t('file')} error={error ?? undefined} size="m"><input id="archive" name="archive" type="file" accept=".tar.gz,application/gzip" required className="text-[13px]" onChange={(e) => setFile(e.target.files?.[0] ?? null)} /></FormField>
+          <FormField id="archive" label={t('file')} error={error ?? undefined} size="m"><FileDropzone id="archive" name="archive" accept=".tar.gz,application/gzip" hint={t('fileHint')} required onFile={setFile} /></FormField>
         </FormGrid>
-        <div className="flex justify-end gap-2 border-t border-warning pt-3"><SubmitButton variant="secondary" className="bg-warning text-on-brand">{t('prepare')}</SubmitButton></div>
+        <div className="flex justify-end gap-2 border-t border-line pt-3"><SubmitButton variant="secondary" className="bg-warning text-on-brand">{t('prepare')}</SubmitButton></div>
       </form>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent role="alertdialog" size="md" className="bg-surface shadow-md">

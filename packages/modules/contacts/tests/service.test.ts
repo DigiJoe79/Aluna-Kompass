@@ -9,7 +9,7 @@ function setup() {
   const userId = insertUser(deps, {});
   const ctx = ctxWith(['contacts.view', 'contacts.manage', 'settings.manage'], userId);
   deps.db.transaction((tx) => {
-    writeSettingInternal(tx, deps, ctx, 'modules.enabled', ['contacts'], 'test.enable');
+    writeSettingInternal(tx, deps, ctx, 'modules.enabled', ['contacts']);
   });
   return { deps, ctx, userId };
 }
@@ -28,7 +28,7 @@ describe('contacts service', () => {
     const audit = deps.db.select().from(schema.auditLog).all().filter((e) => e.action === 'contacts.create');
     expect(audit).toHaveLength(1);
     // Das Protokoll ist unlöschbar: nur ID und Feldnamen, kein Name, keine Anschrift (Befund 48).
-    expect(audit[0]!.summary).toBe('Kontakt angelegt');
+    expect(audit[0]!.params).toBeNull();
     expect(JSON.parse(audit[0]!.after!)).toEqual({ kind: 'person', changedFields: ['salutation', 'firstName', 'lastName', 'street', 'postalCode', 'city'] });
     expect(JSON.stringify(audit[0])).not.toMatch(/Anna|Berger|Musterweg|Musterstadt|12345/);
   });
@@ -41,11 +41,11 @@ describe('contacts service', () => {
     unwrap(await setContactStatus(deps, ctx, { id: created.id, status: 'archived' }));
     const log = deps.db.select().from(schema.auditLog).all().filter((e) => e.entityId === created.id);
     const updates = log.filter((e) => e.action === 'contacts.update');
-    expect(updates.map((e) => [e.summary, e.before, JSON.parse(e.after!)])).toEqual([
-      ['Anschrift geändert', null, { changedFields: ['street', 'city'] }],
-      ['Kontakt geändert', null, { changedFields: ['firstName', 'notes'] }],
+    expect(updates.map((e) => [e.params, e.before, JSON.parse(e.after!)])).toEqual([
+      ['{"scope":"address"}', null, { changedFields: ['street', 'city'] }],
+      ['{"scope":"other"}', null, { changedFields: ['firstName', 'notes'] }],
     ]);
-    expect(log.find((e) => e.action === 'contacts.setStatus')!.summary).toBe('Kontakt archiviert');
+    expect(log.find((e) => e.action === 'contacts.setStatus')!.params).toBe('{"archived":true}');
     expect(JSON.stringify(log)).not.toMatch(/Anna|Berger|Musterweg|Musterstadt|Lindenallee|Neustadt|Ruft abends/);
   });
 
@@ -56,9 +56,9 @@ describe('contacts service', () => {
     unwrap(await updateContact(deps, ctx, { id: person.id, firstName: 'Annette', lastName: 'Bergmann' }));
     unwrap(await updateContact(deps, ctx, { id: org.id, name: 'Beispielhilfe Nord gGmbH' }));
     const updates = deps.db.select().from(schema.auditLog).all().filter((e) => e.action === 'contacts.update');
-    expect(updates.map((e) => [e.summary, JSON.parse(e.after!)])).toEqual([
-      ['Name geändert', { changedFields: ['firstName', 'lastName'] }],
-      ['Name geändert', { changedFields: ['name'] }],
+    expect(updates.map((e) => [e.params, JSON.parse(e.after!)])).toEqual([
+      ['{"scope":"name"}', { changedFields: ['firstName', 'lastName'] }],
+      ['{"scope":"name"}', { changedFields: ['name'] }],
     ]);
     expect(JSON.stringify(updates)).not.toMatch(/Annette|Bergmann|Beispielhilfe/);
   });

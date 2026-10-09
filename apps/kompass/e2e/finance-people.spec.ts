@@ -62,7 +62,10 @@ test.describe('finance people (F8b)', () => {
 
     await page.goto('/finance/people');
     // Design-Nachtrag Phase 4 (D4): Titel mit Jahr; Geschäftsjahr = Kalenderjahr → keine zwei Zeiträume.
-    await expect(page.getByRole('heading', { level: 2 }).first()).toHaveText(`Personenübersicht ${year()}`);
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText(`Personenübersicht ${year()}`);
+    // Spec Filterleisten § 4: Jahr ist ein Filter der Leiste, keine Links mehr.
+    await expect(page.getByTestId('people-year').getByRole('combobox', { name: 'Jahr' })).toHaveValue(String(year()));
+    await expect(page.getByTestId('people-year').getByRole('link')).toHaveCount(0);
     await expect(page.getByTestId('people-allowances-heading')).toHaveText('Pauschalen und Erstattungen');
     await expect(page.getByTestId('people-related-heading')).toHaveText('Zahlungen an Vorstand und nahestehende Personen');
     const card = page.getByTestId('person-card').filter({ hasText: 'Tomas Leitner' });

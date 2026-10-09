@@ -6,7 +6,9 @@ import { notFound } from 'next/navigation';
 import { ForbiddenCard } from '@/components/forbidden-card';
 import { Page } from '@/components/page';
 import { PageHeader } from '@/components/page-header';
+import { StatusBadge } from '@/components/status-badge';
 import { requireSession } from '@/lib/request-context';
+import { PartnerActions } from './partner-actions';
 import { PartnerDetail, type PartnerDocument } from './partner-detail';
 
 /**
@@ -37,12 +39,23 @@ export default async function PartnerDetailPage({ params }: { params: Promise<{ 
   };
   const [registerDocument, agreementDocument] = await Promise.all([document(partner.registerDocumentId), document(partner.agreementDocumentId)]);
 
+  const notices = noticesRes.ok ? noticesRes.value : [];
+  const payments = paymentsRes.ok ? paymentsRes.value : [];
+  const header = (
+    <PageHeader
+      title={partner.contactName}
+      back={{ href: '/finance/partners', label: t('back') }}
+      status={partner.isActive ? undefined : <StatusBadge tone="neutral">{t('actions.archived')}</StatusBadge>}
+      actions={canWrite ? <PartnerActions id={partner.id} isActive={partner.isActive} deletable={payments.length === 0 && notices.length === 0} /> : undefined}
+    />
+  );
+
   return (
-    <Page width="standard" header={<PageHeader title={partner.contactName} back={{ href: '/finance/partners', label: t('back') }} />}>
+    <Page width="standard" header={header}>
       <PartnerDetail
         partner={partner}
-        notices={noticesRes.ok ? noticesRes.value : []}
-        payments={(paymentsRes.ok ? paymentsRes.value : []).map((p) => ({ id: p.id, number: p.number, state: p.state, activeStep: p.activeStep, readyToAcknowledge: p.readyToAcknowledge, totalCents: p.totalCents, purposeText: p.purposeText, date: p.paidOn ?? p.approvedAt ?? p.submittedAt ?? p.createdAt }))}
+        notices={notices}
+        payments={payments.map((p) => ({ id: p.id, number: p.number, state: p.state, activeStep: p.activeStep, readyToAcknowledge: p.readyToAcknowledge, totalCents: p.totalCents, purposeText: p.purposeText, date: p.paidOn ?? p.approvedAt ?? p.submittedAt ?? p.createdAt }))}
         registerDocument={registerDocument}
         agreementDocument={agreementDocument}
         canWrite={canWrite}

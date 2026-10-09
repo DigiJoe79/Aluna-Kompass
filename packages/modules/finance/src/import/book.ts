@@ -170,7 +170,7 @@ export async function linkTransactionToEntry(deps: Deps, ctx: CallContext, input
     tx.update(financeMoneyLines).set({ rawTransactionId: raw.id }).where(eq(financeMoneyLines.id, free[0]!.id)).run();
     // Ein Entwurf hat sich geändert — seine Version rückt vor; eine festgeschriebene Buchung bleibt, wie sie ist.
     if (entry.status === 'draft') tx.update(financeEntries).set({ updatedAt: isoNow(deps.clock) }).where(eq(financeEntries.id, entry.id)).run();
-    financeAudit(tx, deps, ctx, { action: 'finance.entry.rawLink', entity: 'financeEntry', id: entry.id, after: { entryId: entry.id, linkCount: 1 }, summary: `Kontoumsatz an Buchung ${entry.number ?? entry.id} verknüpft` });
+    financeAudit(tx, deps, ctx, { action: 'finance.entry.rawLink', entity: 'financeEntry', id: entry.id, after: { entryId: entry.id, linkCount: 1 }, params: { number: entry.number ?? null } });
     return ok(entryViewInternal(tx, entry.id)!);
   });
 }

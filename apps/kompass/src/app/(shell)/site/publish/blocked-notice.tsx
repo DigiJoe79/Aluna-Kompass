@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import type { ReactNode } from 'react';
 import type { DetailView } from '@/lib/site-job-view';
+import { Notice } from '@/components/notice';
 import { panelHref } from '@/components/panel-nav';
 
 type Violation = NonNullable<DetailView['violations']>[number];
@@ -56,33 +57,38 @@ export function BlockedNotice({ violations, canManage }: { violations: NonNullab
   const shown = violations.slice(0, VISIBLE);
   const rest = violations.slice(VISIBLE);
   return (
-    <section aria-label={t('title')} className="flex flex-col gap-3 rounded-md border border-error bg-error-bg p-4">
-      <ul className="flex flex-col gap-3">
-        {shown.map((v, i) => (
-          <Hit key={i} v={v} />
-        ))}
-      </ul>
-      {rest.length > 0 ? (
-        <details className="text-[13px]">
-          <summary className="cursor-pointer font-medium">{t('more', { count: rest.length })}</summary>
-          <ul className="mt-3 flex flex-col gap-3">
-            {rest.map((v, i) => (
+    <section aria-label={t('title')}>
+      {/* Ohne Titel: Die Karte darüber heißt schon „Publizieren gesperrt“. */}
+      <Notice level="refuse">
+        <div className="flex flex-col gap-3">
+          <ul className="flex flex-col gap-3">
+            {shown.map((v, i) => (
               <Hit key={i} v={v} />
             ))}
           </ul>
-        </details>
-      ) : null}
-      <p className="text-[13px] text-ink-2">
-        {canManage
-          ? t.rich('manage', {
-              link: (chunks) => (
-                <Link href={panelHref('/admin/site', 'blockedTerms')} className="font-medium text-link underline">
-                  {chunks}
-                </Link>
-              ),
-            })
-          : t('noManage')}
-      </p>
+          {rest.length > 0 ? (
+            <details className="text-[13px]">
+              <summary className="cursor-pointer font-medium">{t('more', { count: rest.length })}</summary>
+              <ul className="mt-3 flex flex-col gap-3">
+                {rest.map((v, i) => (
+                  <Hit key={i} v={v} />
+                ))}
+              </ul>
+            </details>
+          ) : null}
+          <p className="text-[13px] text-ink-2">
+            {canManage
+              ? t.rich('manage', {
+                  link: (chunks) => (
+                    <Link href={panelHref('/admin/site', 'blockedTerms')} className="font-medium text-link underline">
+                      {chunks}
+                    </Link>
+                  ),
+                })
+              : t('noManage')}
+          </p>
+        </div>
+      </Notice>
     </section>
   );
 }

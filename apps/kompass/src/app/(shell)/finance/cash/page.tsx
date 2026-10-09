@@ -7,6 +7,7 @@ import { EmptyState } from '@/components/empty-state';
 import { ForbiddenCard } from '@/components/forbidden-card';
 import { Page } from '@/components/page';
 import { PageHeader } from '@/components/page-header';
+import { ViewTabs } from '@/components/view-tabs';
 import { panelHref } from '@/components/panel-nav';
 import { buttonVariants } from '@/components/ui/button';
 import { requireSession } from '@/lib/request-context';
@@ -68,17 +69,11 @@ export default async function FinanceCashPage({ searchParams }: { searchParams: 
       <div className="space-y-5">
 
         {cashAccounts.length > 1 ? (
-          <div className="flex gap-2">
-            {cashAccounts.map((a) => (
-              <Link
-                key={a.accountId}
-                href={`/finance/cash?account=${a.accountId}`}
-                className={a.accountId === selected.accountId ? 'rounded-sm bg-selected px-2.5 py-1 text-[13px] font-semibold text-selected-ink' : 'rounded-sm bg-surface-2 px-2.5 py-1 text-[13px] text-ink-2'}
-              >
-                {a.name}
-              </Link>
-            ))}
-          </div>
+          <ViewTabs
+            label={t('accountsGroup')}
+            current={selected.accountId}
+            tabs={cashAccounts.map((a) => ({ key: a.accountId, label: a.name, href: `/finance/cash?account=${a.accountId}` }))}
+          />
         ) : null}
 
         <div data-testid="cash-balance" className="rounded-lg border border-line bg-surface p-5">

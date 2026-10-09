@@ -1,8 +1,8 @@
 'use client';
 
-import { Info } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useEffect, useState } from 'react';
+import { Notice } from '@/components/notice';
 import { previewNumberAction } from '../actions';
 
 /**
@@ -29,16 +29,13 @@ export function NumberHint({ typeKey }: { typeKey: string }) {
   if (!preview) return null;
 
   return (
-    <p className="flex items-start gap-2 rounded-md bg-info-bg px-3.5 py-3 text-[13px] text-ink-2">
-      <Info className="mt-px size-4 shrink-0 text-info" aria-hidden />
-      <span>
-        {preview.number
-          ? t.rich('number.pending', {
-              number: preview.number,
-              mono: (chunks) => <span className="font-mono">{chunks}</span>,
-            })
-          : t('number.numberOnFiling')}
-      </span>
-    </p>
+    <Notice level="warn">
+      {preview.number
+        ? t.rich('number.pending', {
+            number: preview.number,
+            mono: (chunks) => <span className="font-mono">{chunks}</span>,
+          })
+        : t('number.numberOnFiling')}
+    </Notice>
   );
 }

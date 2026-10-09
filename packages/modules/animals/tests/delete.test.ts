@@ -32,7 +32,7 @@ async function setup() {
   insertUser(deps, { id: 'USER-TEST' });
   await setSetting(deps, ctxWith(['settings.manage']), { key: 'i18n.locales', value: ['de'] });
   deps.db.transaction((tx) => {
-    writeSettingInternal(tx, deps, ctxWith(['settings.manage']), 'modules.enabled', ['animals', 'probe'], 'test.enable');
+    writeSettingInternal(tx, deps, ctxWith(['settings.manage']), 'modules.enabled', ['animals', 'probe']);
   });
   return deps;
 }
@@ -64,7 +64,7 @@ describe('deleteAnimal', () => {
     expect(deps.db.select().from(animalPhotos).all()).toEqual([]);
     expect(deps.db.select().from(animalStories).all()).toEqual([]);
     const entry = auditEntry(deps, 'animals.delete');
-    expect(entry).toMatchObject({ entityType: 'animal', entityId: a.id, summary: 'Tier Rocky gelöscht' });
+    expect(entry).toMatchObject({ entityType: 'animal', entityId: a.id, params: '{"name":"Rocky"}' });
     const before = JSON.parse(entry.before!);
     expect(before).toMatchObject({ slug: expect.stringMatching(/^rocky-[0-9a-z]{4}$/), name: 'Rocky', story: { family: 'Familie Berger' } });
     expect(before.photos.map((p: { assetId: string }) => p.assetId)).toEqual([photo.id]);

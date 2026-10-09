@@ -1,18 +1,18 @@
 # Sammlungen
 
-Eine Sammlung ist eine Liste gleichartiger Einträge, die das Template
+Eine Sammlung ist eine Liste gleichartiger Einträge, die die Vorlage
 deklariert — Aktuelles, Team, Fragen und Antworten. Sie legen Einträge an,
-ordnen sie und nehmen sie wieder heraus; jeder Eintrag hat die Felder, die das
-Template dafür vorsieht.
+ordnen sie und nehmen sie wieder heraus; jeder Eintrag hat die Felder, die die
+Vorlage dafür vorsieht.
 
 ## Die Seiten
 
-Jede Sammlung ist eine eigene Seite unter Webseite, benannt, wie das Template
+Jede Sammlung ist eine eigene Seite unter Webseite, benannt, wie die Vorlage
 sie nennt. Die Liste zeigt alle Einträge; „Neu“ legt einen an, ein Klick auf
 einen Eintrag öffnet ihn. Die Felder sind dieselben Typen wie bei den
 [Variablen](variablen.md).
 
-## Was das Template je Sammlung festlegt
+## Was die Vorlage je Sammlung festlegt
 
 - **URL-Teil.** Hat die Sammlung Einträge mit eigener Seite — jede Meldung
   unter Aktuelles —, trägt jeder Eintrag einen URL-Teil („Slug“): klein, ohne
@@ -21,7 +21,7 @@ einen Eintrag öffnet ihn. Die Felder sind dieselben Typen wie bei den
   die andere verlinkt haben.
 - **Reihenfolge.** Bei einer sortierbaren Sammlung bestimmen Sie mit „Nach
   oben“ und „Nach unten“, wie die Einträge auf der Seite stehen. Sonst
-  ordnet das Template.
+  ordnet die Vorlage.
 - **Veröffentlicht.** Hat die Sammlung den Schalter, können Sie einen
   Eintrag vorbereiten, ohne dass er ausgeliefert wird. Ohne den Schalter ist
   jeder Eintrag beim nächsten Publish auf der Seite.
@@ -30,8 +30,8 @@ einen Eintrag öffnet ihn. Die Felder sind dieselben Typen wie bei den
 
 ## Einträge löschen
 
-Der Abschnitt „Löschen“ ganz unten auf der Seite des Eintrags — nicht mehr in
-der Liste — öffnet einen Dialog. In Sammlungen mit
+„Eintrag löschen …“ im Menü **Weitere Aktionen** (⋯) oben rechts auf der
+Seite des Eintrags — nicht in der Liste — öffnet einen Dialog. In Sammlungen mit
 Veröffentlicht-Schalter muss der Eintrag erst zurückgezogen sein; der Dialog
 bietet das an. Bilder, die nur dieser Eintrag verwendet, können Sie mitlöschen.
 

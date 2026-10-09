@@ -65,7 +65,7 @@ export async function expenseSubmitted(f: ExpenseFixture, who: ExpenseFixture['h
   return unwrap(await submitExpenseClaim(f.deps, who.ctx, { id: (await expenseReadyDraft(f, who, o)).id }));
 }
 
-export const enableExpenseWaivers = (f: ExpenseFixture, on = true) => f.deps.db.transaction((tx) => writeSettingInternal(tx, f.deps, systemContext(), 'finance.expenseWaiversEnabled', on, 'test'));
+export const enableExpenseWaivers = (f: ExpenseFixture, on = true) => f.deps.db.transaction((tx) => writeSettingInternal(tx, f.deps, systemContext(), 'finance.expenseWaiversEnabled', on));
 
 /** Freigeber ohne Buchungsrechte: nur `finance.approve` und `finance.read` — die Freigabe bucht im Namen des Vorgangs. */
 export const approverCtx = (f: ExpenseFixture) => ctxWith(['finance.approve', 'finance.read'], f.secondPersonId);

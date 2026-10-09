@@ -106,7 +106,7 @@ export async function issueGeneratedDocument<T = undefined>(deps: Deps, ctx: Cal
             tx.insert(documentLinks).values({ id: newId(), documentId: id, entityType: link.entityType, entityId: link.entityId, role: link.role ?? 'about', createdAt: now }).run();
           }
           // Nummer, Vorlage, Art — nie der Betreff und nie die Bezüge (Vorarbeiten-Spec, Regel 8).
-          recordAudit(tx, deps, ctx, { action: 'dms.issue', entityType: 'document', entityId: id, after: { number, templateKey: template.key, typeKey: docType.key }, summary: `Dokument ${number} ausgestellt` });
+          recordAudit(tx, deps, ctx, { action: 'dms.issue', entityType: 'document', entityId: id, after: { number, templateKey: template.key, typeKey: docType.key }, params: { number } });
           const after = input.afterIssue?.(tx, { id, number, fileChecksum: stored.value.fileChecksum });
           const row = tx.select().from(documents).where(eq(documents.id, id)).get()!;
           return ok({ document: toRecord(deps, ctx, row, tx), after });

@@ -1,4 +1,5 @@
 import type { z } from 'zod';
+import { validateAuditActions, type AuditActionDef } from '../audit/actions';
 import type { CallContext } from '../context';
 import type { IsoDay } from '../dates';
 import { dashboardOptionFields, type DashboardTile } from '../dashboard/types';
@@ -458,6 +459,8 @@ export interface ModuleManifest {
    * ab, die zwei Module regeln. Ein Modul regelt nur, was ihm gehört.
    */
   deletionRules?: readonly DeletionRule[];
+  /** Aktionen des Änderungsprotokolls mit ihren Werten (Spec Protokoll § 3); `recordAudit` prüft dagegen. */
+  auditActions?: Record<string, AuditActionDef>;
   /** Beispieldaten für die Entwicklungsumgebung. */
   seed?: (deps: Deps, ctx: CallContext) => Promise<void>;
   /**
@@ -501,6 +504,7 @@ export function defineModule(manifest: ModuleManifest): ModuleManifest {
     if (!TEMPLATE_TYPE.test(template.type)) throw new Error(`invalid document type: ${template.type}`);
   }
   validateDeletionRules(manifest.key, manifest.deletionRules ?? []);
+  validateAuditActions(manifest.auditActions ?? {});
   for (const role of manifest.contactRoles ?? []) {
     if (!ROLE_KEY.test(role.key)) throw new Error(`invalid contact role key: ${role.key}`);
     if (role.retention !== 'none' && !RETENTION_CLASSES.includes(role.retention)) throw new Error(`invalid contact role retention class: ${role.retention}`);

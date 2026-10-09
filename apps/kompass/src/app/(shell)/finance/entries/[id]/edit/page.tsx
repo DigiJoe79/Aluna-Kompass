@@ -8,6 +8,7 @@ import { ForbiddenCard } from '@/components/forbidden-card';
 import type { ReceiptListItem } from '@/components/finance/receipt-list';
 import { Page } from '@/components/page';
 import { PageHeader } from '@/components/page-header';
+import { readAllPages } from '@/lib/read-all-pages';
 import { requireSession } from '@/lib/request-context';
 import { fromEntryView } from '@/lib/finance/entry-form';
 import { EntryForm } from '../../entry-form';
@@ -28,7 +29,8 @@ export default async function EditFinanceEntryPage({ params }: { params: Promise
     listCategories(deps, ctx, {}),
     listPurposes(deps, ctx, {}),
     listProjects(deps, ctx),
-    listOpenItems(deps, ctx, { state: 'open', limit: 200 }),
+    // Alle offenen Posten: Die Auswahl „Ausgleich“ sucht auf dem Rechner und muss jeden anbieten (keine stille Grenze).
+    readAllPages((page) => listOpenItems(deps, ctx, { state: 'open', ...page }), (v) => v.items),
   ]);
 
   const accounts = (balancesRes.ok ? balancesRes.value.accounts : []).map((a) => ({ id: a.accountId, name: a.name, kind: a.kind, balanceCents: a.balanceCents }));
@@ -52,7 +54,7 @@ export default async function EditFinanceEntryPage({ params }: { params: Promise
   }));
 
   const t = await getTranslations('finance.entryForm');
-  const openItems = (openItemsRes.ok ? openItemsRes.value.items : []).map((i) => ({ id: i.id, kind: i.kind as 'receivable' | 'payable', label: i.paymentReference ?? t('settlement.unnamed', { date: i.itemDate }), openCents: i.openCents }));
+  const openItems = (openItemsRes.ok ? openItemsRes.value : []).map((i) => ({ id: i.id, kind: i.kind as 'receivable' | 'payable', label: i.paymentReference ?? t('settlement.unnamed', { date: i.itemDate }), openCents: i.openCents }));
 
   return (
     <Page width="standard" header={<PageHeader title={t('editTitle')} back={{ href: '/finance/entries', label: t('cancel') }} />}>

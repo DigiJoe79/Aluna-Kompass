@@ -34,7 +34,7 @@ test('refuses to remove a locale the active template needs and names the reason'
   await resetDatabase(page, 'seeded');
   await loginAsAdmin(page);
   await page.goto('/site/template');
-  await page.getByRole('button', { name: 'Template einlesen' }).click();
+  await page.getByRole('button', { name: 'Vorlage einlesen' }).click();
   await page.getByRole('button', { name: 'Übernehmen' }).click();
   await expect(page.getByRole('status')).toContainText('eingelesen');
 

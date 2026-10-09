@@ -174,7 +174,7 @@ export async function countCash(deps: Deps, ctx: CallContext, input: unknown): P
       financeAudit(tx, deps, ctx, {
         action: 'finance.cashCount.record', entity: 'financeCashCount', id: countId,
         after: { accountId: row.accountId, countedOn: row.countedOn, kind: freshKind, differenceCents: row.differenceCents, documentNumber: row.documentNumber, entryId: row.entryId },
-        summary: `Kassenzählung ${doc.number} erfasst`,
+        params: { documentNumber: doc.number },
       });
       return { count: cashCountView(row), entry: finalEntry, documentNumber: doc.number };
     },

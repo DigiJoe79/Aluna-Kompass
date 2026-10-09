@@ -1,7 +1,7 @@
 import { readdirSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { installedModuleKeys, scopeFromPaths, specProject, testMatchFor } from '../e2e/projects';
+import { installedModuleKeys, parseVerifyArgs, scopeFromPaths, specProject, testMatchFor } from '../e2e/projects';
 
 const ROOT = path.resolve(import.meta.dirname, '..');
 const modules = installedModuleKeys(ROOT);
@@ -58,6 +58,7 @@ describe('specProject', () => {
       'modules.spec.ts',
       'palette-and-errors.spec.ts',
       'profile.spec.ts',
+      'record-actions.spec.ts',
       'roles.spec.ts',
       'security-headers.spec.ts',
       'settings.spec.ts',
@@ -162,5 +163,23 @@ describe('scopeFromPaths', () => {
     expect(scopeFromPaths(['CHANGELOG.md', 'AGENTS.md', 'docs/intern/specs/x.md', '.github/workflows/ci.yml', 'docs/nordstern.md'], modules)).toEqual({
       kind: 'none',
     });
+  });
+});
+
+describe('parseVerifyArgs', () => {
+  it('ohne Argument: Arbeitsbaum, sonst Abzweig von main', () => {
+    expect(parseVerifyArgs([])).toEqual({ dryRun: false, all: false, since: undefined, modules: [] });
+  });
+
+  it('-n, Module, --alles und --seit <ref>', () => {
+    expect(parseVerifyArgs(['-n', 'finance', 'dms'])).toEqual({ dryRun: true, all: false, since: undefined, modules: ['finance', 'dms'] });
+    expect(parseVerifyArgs(['--alles'])).toEqual({ dryRun: false, all: true, since: undefined, modules: [] });
+    expect(parseVerifyArgs(['--seit', 'v0.2.8', '-n'])).toEqual({ dryRun: true, all: false, since: 'v0.2.8', modules: [] });
+  });
+
+  it('--seit ohne Ref und --alles mit Modulen sind Fehler', () => {
+    expect(() => parseVerifyArgs(['--seit'])).toThrow(/--seit braucht/);
+    expect(() => parseVerifyArgs(['--alles', 'finance'])).toThrow(/schließen sich aus/);
+    expect(() => parseVerifyArgs(['--alles', '--seit', 'main'])).toThrow(/schließen sich aus/);
   });
 });

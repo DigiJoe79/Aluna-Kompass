@@ -387,21 +387,46 @@ describe('crumbsFor', () => {
     })[key] ?? key;
 
   it('names home and profile with one segment', () => {
-    expect(crumbsFor(FIXTURE, '/', t)).toEqual(['Startseite']);
-    expect(crumbsFor(FIXTURE, '/profile/tokens', t)).toEqual(['Profil']);
+    expect(crumbsFor(FIXTURE, '/', t)).toEqual([{ label: 'Startseite', current: true }]);
+    expect(crumbsFor(FIXTURE, '/profile', t)).toEqual([{ label: 'Profil', href: '/profile', current: true }]);
+    expect(crumbsFor(FIXTURE, '/profile/tokens', t)).toEqual([{ label: 'Profil', href: '/profile', current: false }]);
   });
 
   it('names module and page, using the data label when there is one', () => {
-    expect(crumbsFor(FIXTURE, '/site/template', t)).toEqual(['Webseite', 'Template']);
-    expect(crumbsFor(FIXTURE, '/site/c/artikel', t)).toEqual(['Webseite', 'Artikel']);
+    expect(crumbsFor(FIXTURE, '/site/template', t)).toEqual([
+      { label: 'Webseite', current: false },
+      { label: 'Template', href: '/site/template', current: true },
+    ]);
+    expect(crumbsFor(FIXTURE, '/site/c/artikel', t)).toEqual([
+      { label: 'Webseite', current: false },
+      { label: 'Artikel', href: '/site/c/artikel', current: true },
+    ]);
+  });
+
+  it('auf der Listenseite ist das letzte Segment die aktuelle Seite', () => {
+    expect(crumbsFor(FIXTURE, '/site/c/artikel', t).at(-1)).toEqual({ label: 'Artikel', href: '/site/c/artikel', current: true });
+  });
+
+  it('auf einer Detailseite endet die Brotkrume bei der Liste, als Link und nicht aktuell', () => {
+    expect(crumbsFor(FIXTURE, '/site/c/artikel/abc', t).at(-1)).toEqual({ label: 'Artikel', href: '/site/c/artikel', current: false });
+  });
+
+  it('vordere Segmente haben kein Ziel', () => {
+    expect(crumbsFor(FIXTURE, '/site/c/artikel/abc', t)[0]).toEqual({ label: 'Webseite', current: false });
   });
 
   it('collapses module and page when they read the same', () => {
-    expect(crumbsFor(FIXTURE, '/dms/01J', t)).toEqual(['Akte']);
+    expect(crumbsFor(FIXTURE, '/dms/01J', t)).toEqual([{ label: 'Akte', href: '/dms', current: false }]);
+    expect(crumbsFor(FIXTURE, '/dms', t)).toEqual([{ label: 'Akte', href: '/dms', current: true }]);
   });
 
-  it('gives settings three segments', () => {
-    expect(crumbsFor(FIXTURE, '/admin/themes', t)).toEqual(['Einstellungen', 'Einrichtung', 'Erscheinungsbild']);
+  it('gives settings three segments, the last one current on its own page', () => {
+    expect(crumbsFor(FIXTURE, '/admin/themes', t)).toEqual([
+      { label: 'Einstellungen', current: false },
+      { label: 'Einrichtung', current: false },
+      { label: 'Erscheinungsbild', href: '/admin/themes', current: true },
+    ]);
+    expect(crumbsFor(FIXTURE, '/admin/settings', t).at(-1)).toEqual({ label: 'nav.settings', href: '/admin/settings', current: true });
   });
 
   it('is empty when nothing matches', () => {
@@ -415,9 +440,16 @@ describe('crumbsFor', () => {
 
   it('names help pages by chapter and title, collapsing a chapter that is its own page', () => {
     const th = (key: string) => (key === 'nav.help' ? 'Hilfe' : t(key));
-    expect(crumbsFor(FIXTURE, '/help', th, chapters)).toEqual(['Hilfe']);
-    expect(crumbsFor(FIXTURE, '/help/akte/post-ablegen', th, chapters)).toEqual(['Hilfe', 'Akte', 'Post ablegen']);
-    expect(crumbsFor(FIXTURE, '/help/mediathek', th, chapters)).toEqual(['Hilfe', 'Mediathek']);
-    expect(crumbsFor(FIXTURE, '/help/gibt-es-nicht', th, chapters)).toEqual(['Hilfe']);
+    expect(crumbsFor(FIXTURE, '/help', th, chapters)).toEqual([{ label: 'Hilfe', current: true }]);
+    expect(crumbsFor(FIXTURE, '/help/akte/post-ablegen', th, chapters)).toEqual([
+      { label: 'Hilfe', current: false },
+      { label: 'Akte', current: false },
+      { label: 'Post ablegen', current: true },
+    ]);
+    expect(crumbsFor(FIXTURE, '/help/mediathek', th, chapters)).toEqual([
+      { label: 'Hilfe', current: false },
+      { label: 'Mediathek', current: true },
+    ]);
+    expect(crumbsFor(FIXTURE, '/help/gibt-es-nicht', th, chapters)).toEqual([{ label: 'Hilfe', current: true }]);
   });
 });

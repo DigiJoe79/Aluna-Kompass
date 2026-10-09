@@ -333,7 +333,7 @@ describe('seedFinance', () => {
     insertUser(deps, { name: 'Jonas Feld', email: 'jonas@kompass.local' });
     deps.db.transaction((tx) => {
       for (const [key, value] of [['organization.name', 'Musterverein e.V.'], ['organization.street', 'Vereinsweg 1'], ['organization.postalCode', '12345'], ['organization.city', 'Musterstadt']] as const) {
-        writeSettingInternal(tx, deps, systemContext(), key, value, 'test.organization');
+        writeSettingInternal(tx, deps, systemContext(), key, value);
       }
       installFinance(tx, deps, systemContext());
     });
@@ -348,7 +348,7 @@ describe('seedFinance', () => {
       .filter((e) => e.action.startsWith('finance.') || e.action.startsWith('contacts.') || e.entityType === 'setting')
       .filter((e) => !(e.entityType === 'setting' && e.entityId?.startsWith('organization.')));
     expect(entries.some((e) => e.entityType === 'setting')).toBe(true);
-    const log = JSON.stringify(entries.map((e) => [e.before, e.after, e.summary]));
+    const log = JSON.stringify(entries.map((e) => [e.before, e.after, e.params]));
     expect(log.length).toBeGreaterThan(100);
     // Ausnahmen, je mit Grund: Wörter, die zugleich fester Wortlaut einer Protokoll-Zusammenfassung sind.
     const allowed = new Set([
@@ -539,7 +539,7 @@ describe('seedFinance', () => {
       // Die Vereinsanschrift kommt im echten Seed aus dem Kern (`seedDevelopment`); hier steht sie vorab.
       f.deps.db.transaction((tx) => {
         for (const [key, value] of [['organization.name', 'Musterverein e.V.'], ['organization.street', 'Vereinsweg 1'], ['organization.postalCode', '12345'], ['organization.city', 'Musterstadt']] as const) {
-          writeSettingInternal(tx, f.deps, systemContext(), key, value, 'test.organization');
+          writeSettingInternal(tx, f.deps, systemContext(), key, value);
         }
       });
       await seedFinance(f.deps, f.ctx);

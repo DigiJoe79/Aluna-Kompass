@@ -5,6 +5,7 @@ import type { ReactNode } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
 import messages from '../messages/de.json';
 import { Page } from '@/components/page';
+import { PageHeader } from '@/components/page-header';
 import { Section } from '@/components/section';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
@@ -28,10 +29,11 @@ describe('Section', () => {
     expect(levelOf('Allein')).toBe(2);
   });
 
-  it('steht in Page auf Ebene 3 (der Seitentitel ist h2), verschachtelt eins tiefer', () => {
-    render(<Page width="standard"><Section title="Außen"><Section title="Innen">x</Section></Section></Page>, { wrapper });
-    expect(levelOf('Außen')).toBe(3);
-    expect(levelOf('Innen')).toBe(4);
+  it('steht in Page auf Ebene 2 (der Seitentitel ist h1), verschachtelt eins tiefer', () => {
+    render(<Page width="standard" header={<PageHeader title="Seite" />}><Section title="Außen"><Section title="Innen">x</Section></Section></Page>, { wrapper });
+    expect(levelOf('Seite')).toBe(1);
+    expect(levelOf('Außen')).toBe(2);
+    expect(levelOf('Innen')).toBe(3);
   });
 
   it('steht im Dialog auf Ebene 3, auch wenn der Dialog in einer Page liegt (Review Focus 3)', () => {

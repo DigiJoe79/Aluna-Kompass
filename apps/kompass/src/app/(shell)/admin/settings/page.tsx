@@ -21,15 +21,13 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
   );
   return (
     <Page width="standard" header={<PageHeader title={t('title')} />}>
-      <div className="overflow-hidden rounded-lg border border-line bg-surface">
-        <SettingsForm
-          panel={panel}
-          initial={editable}
-          themes={listThemes(deps).themes.map((th) => ({ key: th.key, name: th.name }))}
-          lastSaved={null}
-          managed={Object.keys(managedSettings(deps))}
-        />
-      </div>
+      <SettingsForm
+        panel={panel}
+        initial={editable}
+        themes={listThemes(deps).themes.map((th) => ({ key: th.key, name: th.name }))}
+        lastSaved={null}
+        managed={Object.keys(managedSettings(deps))}
+      />
     </Page>
   );
 }

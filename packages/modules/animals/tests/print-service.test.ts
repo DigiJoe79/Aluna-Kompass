@@ -60,8 +60,7 @@ describe('exportAnimalProfiles', () => {
     const a = await dog(deps, ctx, { name: 'Anton' });
     expect(unwrap(await exportAnimalProfiles(deps, ctx, { ids: [a.id], labels: LABELS })).filename).toBe('Anton.pdf');
     const entry = auditEntry(deps, 'documents.export');
-    expect(entry.summary).toContain('animals-profile');
-    expect(entry.summary).not.toContain('Anton');
+    expect(JSON.stringify(entry)).not.toContain('Anton');
   });
 
   it('takes the primary photo as print variant and up to three more as thumbs', async () => {

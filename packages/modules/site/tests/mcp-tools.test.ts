@@ -35,7 +35,7 @@ const articles: TemplateSchema['collections'][string] = {
 };
 
 const withTemplate = (collections: TemplateSchema['collections'], variables: TemplateSchema['variables'] = {}) => {
-  const deps = createTestDeps({ locales: ['de'] });
+  const deps = createTestDeps({ locales: ['de'], manifests: [coreModule, siteModule] });
   deps.db
     .insert(siteTemplateState)
     .values({
@@ -55,7 +55,7 @@ const jsonSchema = (tool: { inputSchema: z.ZodType<unknown> }) =>
 
 describe('site mcp tools', () => {
   it('offers the fixed tools even without a template', () => {
-    const names = moduleMcpTools(createTestDeps(), siteModule).map((t) => t.name);
+    const names = moduleMcpTools(createTestDeps({ manifests: [coreModule, siteModule] }), siteModule).map((t) => t.name);
     expect(names).toEqual([
       'site_template_read',
       'site_template_sync',
@@ -86,7 +86,7 @@ describe('site mcp tools', () => {
   });
 
   it('pflegt die Sperrwörter mit site.publish (Backlog 23)', () => {
-    const tools = Object.fromEntries(moduleMcpTools(createTestDeps(), siteModule).map((t) => [t.name, t]));
+    const tools = Object.fromEntries(moduleMcpTools(createTestDeps({ manifests: [coreModule, siteModule] }), siteModule).map((t) => [t.name, t]));
     expect(tools.site_blocked_terms_set?.service).toBe(setBlockedTerms);
     expect(tools.site_blocked_terms_set?.description).toContain('site.publish');
     expect(tools.site_blocked_terms_get?.service).toBe(getBlockedTerms);
@@ -94,7 +94,7 @@ describe('site mcp tools', () => {
   });
 
   it('lässt den Verlauf lesen und nennt dafür seinen Service', () => {
-    const tool = moduleMcpTools(createTestDeps(), siteModule).find((t) => t.name === 'site_publishes')!;
+    const tool = moduleMcpTools(createTestDeps({ manifests: [coreModule, siteModule] }), siteModule).find((t) => t.name === 'site_publishes')!;
     expect(tool.service).toBe(listPublishes);
     expect(tool.description).toContain('site.view');
     expect(Object.keys(jsonSchema(tool).properties ?? {})).toEqual(expect.arrayContaining(['environment', 'limit']));
@@ -126,7 +126,7 @@ describe('site mcp tools', () => {
   });
 
   it('describes the deploy check as a connection test with checks, not a build', () => {
-    const tools = Object.fromEntries(moduleMcpTools(createTestDeps(), siteModule).map((t) => [t.name, t]));
+    const tools = Object.fromEntries(moduleMcpTools(createTestDeps({ manifests: [coreModule, siteModule] }), siteModule).map((t) => [t.name, t]));
     const description = tools.site_deploy_check?.description ?? '';
     expect(description).toContain('site.publish');
     expect(description).toMatch(/probe file/i);
@@ -135,7 +135,7 @@ describe('site mcp tools', () => {
   });
 
   it('starts check, preview and publish in the background and reads all three with one tool', () => {
-    const tools = Object.fromEntries(moduleMcpTools(createTestDeps(), siteModule).map((t) => [t.name, t]));
+    const tools = Object.fromEntries(moduleMcpTools(createTestDeps({ manifests: [coreModule, siteModule] }), siteModule).map((t) => [t.name, t]));
     expect(tools.site_deploy_check?.service).toBe(startDeployCheck);
     expect(tools.site_preview_build?.service).toBe(startPreview);
     expect(tools.site_publish?.service).toBe(startPublish);
@@ -148,7 +148,7 @@ describe('site mcp tools', () => {
   });
 
   it('cancels a run, reads one publish and demands the preview hash for a publish', () => {
-    const tools = Object.fromEntries(moduleMcpTools(createTestDeps(), siteModule).map((t) => [t.name, t]));
+    const tools = Object.fromEntries(moduleMcpTools(createTestDeps({ manifests: [coreModule, siteModule] }), siteModule).map((t) => [t.name, t]));
     expect(tools.site_job_cancel?.service).toBe(cancelSiteJob);
     expect(tools.site_job_cancel?.description).toContain('site.publish');
     expect(tools.site_publish_get?.service).toBe(getPublish);

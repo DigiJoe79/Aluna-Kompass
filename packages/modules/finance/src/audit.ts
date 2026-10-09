@@ -1,4 +1,4 @@
-import { recordAudit, type CallContext, type DbOrTx, type Deps } from '@kompass/core';
+import { recordAudit, type AuditParam, type CallContext, type DbOrTx, type Deps } from '@kompass/core';
 
 export type FinanceEntity = 'financeAccount' | 'financeCategory' | 'financePurpose' | 'financeFiscalYear' | 'financePeriodEvent' | 'financeDatedValue' | 'financeEntry' | 'financeEntryDocument' | 'financeOpenItem' | 'financeAllocationCorrection' | 'financeEntryJustification' | 'financeNotReturnMark' | 'financeProjectSettings' | 'financeCashCount' | 'financeSetup' | 'financeImportRun' | 'financeRawTransaction' | 'financeImportCandidate' | 'financeImportProfile' | 'financeImportRule' | 'financeContactBankAccount' | 'financeNotice' | 'financeConfirmation' | 'financeSigner' | 'financeInKindDetails' | 'financeConfirmationRun' | 'financeConfirmationRunItem' | 'financeExpenseClaim' | 'financeExpensePosition' | 'financeContactWaiverTerms' | 'financePartnerProfile' | 'financePartnerNotice' | 'financePartnerPayment' | 'financePartnerPaymentPosition' | 'financePartnerPaidLine' | 'financePartnerEvidence' | 'financeReserve' | 'financeReserveMovement' | 'financePurposeTransfer';
 
@@ -92,6 +92,12 @@ export const AUDIT_FIELDS: Record<FinanceEntity, readonly string[]> = {
 
 const pick = (entity: FinanceEntity, data?: Record<string, unknown>) => (data ? Object.fromEntries(Object.entries(data).filter(([field]) => AUDIT_FIELDS[entity].includes(field))) : undefined);
 
-export function financeAudit(tx: DbOrTx, deps: Deps, ctx: CallContext, entry: { action: `finance.${string}`; entity: FinanceEntity; id: string; before?: Record<string, unknown>; after?: Record<string, unknown>; summary: string }): void {
-  recordAudit(tx, deps, ctx, { action: entry.action, entityType: entry.entity, entityId: entry.id, before: pick(entry.entity, entry.before), after: pick(entry.entity, entry.after), summary: entry.summary });
+/**
+ * Wie `recordAudit`, aber strenger (Spec 10.3): `before`/`after` nur mit den Feldern aus `AUDIT_FIELDS`, und die
+ * Werte für den Satz (`params`, Spec Protokoll § 2) nennen nie einen Kontakt — auch nicht als ID.
+ */
+export function financeAudit(tx: DbOrTx, deps: Deps, ctx: CallContext, entry: { action: `finance.${string}`; entity: FinanceEntity; id: string; before?: Record<string, unknown>; after?: Record<string, unknown>; params?: Record<string, AuditParam> }): void {
+  const contact = Object.keys(entry.params ?? {}).find((key) => /(^c|C)ontactId$/.test(key));
+  if (contact) throw new Error(`finance audit ${entry.action}: param ${contact} names a contact (Spec 10.3)`);
+  recordAudit(tx, deps, ctx, { action: entry.action, entityType: entry.entity, entityId: entry.id, before: pick(entry.entity, entry.before), after: pick(entry.entity, entry.after), params: entry.params });
 }

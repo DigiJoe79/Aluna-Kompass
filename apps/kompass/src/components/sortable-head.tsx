@@ -21,6 +21,8 @@ export function SortableHead({ field, label, className }: { field: string; label
   const toggle = () => {
     const next = new URLSearchParams(params.toString());
     next.set('sort', field);
+    // Eine neue Reihenfolge fängt auf der ersten Seite an (`ListPager`).
+    next.delete('page');
     // Erster Klick: absteigend (wie die Vorgabe der Listen), zweiter: aufsteigend.
     next.set('dir', active && direction === 'desc' ? 'asc' : 'desc');
     startTransition(() => router.replace(`${pathname}?${next.toString()}`));

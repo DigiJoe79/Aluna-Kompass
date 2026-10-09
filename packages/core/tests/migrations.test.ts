@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import Database from 'better-sqlite3';
 import { readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -20,9 +21,9 @@ const rootVersion = (JSON.parse(readFileSync(path.join(__dirname, '../../../pack
  * Schlussabnahme werden sie zu einer zusammengelegt und hier eingetragen.
  * `0003_finance` ist die zusammengelegte Migration der Fassung 0.2.0,
  * `0004_finance_0_2_1` die der Fassung 0.2.1. `0005_animals_review` ist die eine Migration der Fassung 0.2.2
- * (nie zusammengelegt: Der Branch hatte nur diese).
+ * (nie zusammengelegt: Der Branch hatte nur diese). `0006_audit_params` ist die der Fassung 0.2.9 (Protokoll in Sätzen).
  */
-const RELEASED = ['0000_init.sql', '0001_dashboard_layouts.sql', '0002_document_former_numbers.sql', '0003_finance.sql', '0004_finance_0_2_1.sql', '0005_animals_review.sql'];
+const RELEASED = ['0000_init.sql', '0001_dashboard_layouts.sql', '0002_document_former_numbers.sql', '0003_finance.sql', '0004_finance_0_2_1.sql', '0005_animals_review.sql', '0006_audit_params.sql'];
 
 /**
  * Was eine Produktion schon ausgeführt hat, bleibt Byte für Byte, wie es war:
@@ -272,5 +273,32 @@ describe('the migrations of this version', () => {
     expect(sql).toContain('CREATE TABLE `dashboard_layouts`');
     expect(sql).toMatch(/`user_id` text PRIMARY KEY NOT NULL/);
     expect(sql).toMatch(/FOREIGN KEY \(`user_id`\) REFERENCES `users`\(`id`\)/);
+  });
+});
+
+/** Führt eine Migrationsdatei so aus, wie der Migrator sie liest: Stücke an `--> statement-breakpoint`. */
+const applyMigration = (db: Database.Database, file: string) => {
+  for (const part of readFileSync(path.join(MIGRATIONS_DIR, file), 'utf8').split('--> statement-breakpoint')) {
+    if (part.trim()) db.exec(part);
+  }
+};
+const applyMigrationsUpTo = (db: Database.Database, last: string) => {
+  for (const file of files.slice(0, files.indexOf(last) + 1)) applyMigration(db, file);
+};
+
+describe('migration 0006 (Protokoll in Sätzen)', () => {
+  it('0006 keeps old audit entries, drops summary, adds params, and keeps the log immutable', () => {
+    const db = new Database(':memory:');
+    applyMigrationsUpTo(db, '0005_animals_review.sql');
+    db.prepare(`INSERT INTO audit_log (id, occurred_at, user_id, channel, action, entity_type, entity_id, before, after, summary, api_token_id, ip_address, request_id, environment)
+      VALUES ('A1', '2026-10-01T12:00:00.000Z', NULL, 'system', 'animals.update', 'animal', 'X1', NULL, NULL, 'Tier „Bello“ geändert', NULL, NULL, 'R1', 'test')`).run();
+    applyMigration(db, '0006_audit_params.sql');
+    const columns = (db.prepare(`PRAGMA table_info(audit_log)`).all() as { name: string }[]).map((c) => c.name);
+    expect(columns).toContain('params');
+    expect(columns).not.toContain('summary');
+    expect(db.prepare(`SELECT action, params FROM audit_log WHERE id = 'A1'`).get()).toEqual({ action: 'animals.update', params: null });
+    expect(() => db.prepare(`UPDATE audit_log SET action = 'x' WHERE id = 'A1'`).run()).toThrow(/immutable/);
+    expect(() => db.prepare(`DELETE FROM audit_log WHERE id = 'A1'`).run()).toThrow(/immutable/);
+    db.close();
   });
 });

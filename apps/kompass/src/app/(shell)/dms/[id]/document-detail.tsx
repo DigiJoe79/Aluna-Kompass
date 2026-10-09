@@ -1,21 +1,17 @@
 'use client';
 
 import { pollTextStatus } from '@/lib/poll-text-status';
+import { Notice } from '@/components/notice';
 import { useDateFormat } from '@/components/date-format-provider';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState, useTransition, type ReactNode } from 'react';
-import { ConfirmDialog } from '@/components/forms/confirm-dialog';
-import { FormActionBar } from '@/components/forms/form-action-bar';
+import { useEffect, useTransition, type ReactNode } from 'react';
 import { RefusalNotice } from '@/components/forms/refusal-notice';
 import { useActionFeedback } from '@/components/forms/use-action-feedback';
 import { StatusBadge } from '@/components/status-badge';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Button, buttonVariants } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { createResponseDraftAction, deleteDocumentAction, deleteDraftAction, rereadDocumentAction, voidDocumentAction } from '../actions';
+import { createResponseDraftAction, rereadDocumentAction } from '../actions';
 import { FileDialog } from './file-dialog';
 import type { FolderEntry } from '@/lib/folder-tree-model';
 import { FolderPanel } from './folder-panel';
@@ -25,8 +21,6 @@ import { DispatchPanel } from './dispatch-panel';
 import { FollowUpsPanel, type FollowUpView } from './follow-ups-panel';
 import { NotesPanel, type NoteView } from './notes-panel';
 import { RelationsPanel, type RelationView } from './relations-panel';
-import { FormField } from '@/components/forms/form-field';
-import { FormGrid } from '@/components/forms/form-grid';
 
 export interface DocumentDetailProps {
   document: {
@@ -111,20 +105,8 @@ export function DocumentDetail({
   invoicePanel,
 }: DocumentDetailProps) {
   const t = useTranslations('dms');
-  const tCommon = useTranslations('common');
   const fmt = useDateFormat();
   const router = useRouter();
-  const [deleteOpen, setDeleteOpen] = useState(false);
-  const [voidOpen, setVoidOpen] = useState(false);
-  const voidFb = useActionFeedback();
-  const [voidBusy, setVoidBusy] = useState(false);
-  const resetVoid = voidFb.reset;
-  useEffect(() => {
-    if (!voidOpen) resetVoid();
-  }, [voidOpen, resetVoid]);
-  const [purgeOpen, setPurgeOpen] = useState(false);
-  const [voidReason, setVoidReason] = useState('');
-  const [withReplacement, setWithReplacement] = useState(false);
 
   // Die Erkennung fragt /dms/[id]/text-status ab, nicht den Router: Ein
   // `router.refresh()` im Sekundentakt staut sich unter Last in Nexts Warteschlange
@@ -180,27 +162,6 @@ export function DocumentDetail({
                 </Link>
               ) : null}
               {permissions.canFile ? <FileDialog documentId={doc.id} /> : null}
-              {permissions.canDeleteDraft ? (
-                <>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setDeleteOpen(true)}
-                  >
-                    {t('deleteDraft')}
-                  </Button>
-                  <ConfirmDialog
-                    open={deleteOpen}
-                    onOpenChange={setDeleteOpen}
-                    title={t('deleteDraftConfirmTitle')}
-                    description={t('deleteDraftConfirmDescription')}
-                    confirmLabel={t('deleteDraftConfirmSubmit')}
-                    destructive
-                    action={() => deleteDraftAction(doc.id)}
-                  />
-                </>
-              ) : null}
             </>
           ) : (
             <>
@@ -221,61 +182,6 @@ export function DocumentDetail({
                   types={reclassifyTypes}
                 />
               ) : null}
-              {doc.status !== 'voided' && permissions.canVoid ? (
-                <>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setVoidOpen(true)}
-                  >
-                    {t('void')}
-                  </Button>
-                  <Dialog open={voidOpen} onOpenChange={setVoidOpen}>
-                    <DialogContent size="sm" className="bg-surface shadow-md">
-                      <DialogTitle>{t('voidConfirmTitle')}</DialogTitle>
-                      <DialogDescription tone="body">
-                        {t('voidConfirmDescription')}
-                      </DialogDescription>
-                      <FormGrid>
-                        <FormField id="voidReason" label={t('fields.voidReason')} required>
-                          <Input
-                            id="voidReason"
-                            value={voidReason}
-                            onChange={(e) => setVoidReason(e.target.value)}
-                            placeholder={t('fields.voidReasonPlaceholder')}
-                          />
-                        </FormField>
-                        {permissions.canEdit ? (
-                          <FormField id="void-with-replacement" label={t('voidWithReplacement')} toggle>
-                            <Checkbox
-                              id="void-with-replacement"
-                              checked={withReplacement}
-                              onCheckedChange={(next) => setWithReplacement(next === true)}
-                            />
-                          </FormField>
-                        ) : null}
-                      </FormGrid>
-                      <FormActionBar
-                        placement="dialog"
-                        cancel={() => setVoidOpen(false)}
-                        destructive
-                        pending={voidBusy}
-                        saveDisabled={!voidReason.trim()}
-                        saveLabel={t('voidConfirmSubmit')}
-                        note={<span className="text-[12px] text-muted-ink">{tCommon('requiredLegend')}</span>}
-                        state={voidFb.state}
-                        onSave={async () => {
-                          setVoidBusy(true);
-                          const result = await voidFb.run(() => voidDocumentAction(doc.id, voidReason, withReplacement));
-                          setVoidBusy(false);
-                          if (result.status === 'success') setVoidOpen(false);
-                        }}
-                      />
-                    </DialogContent>
-                  </Dialog>
-                </>
-              ) : null}
             </>
           )}
         </div>
@@ -291,10 +197,9 @@ export function DocumentDetail({
              * Fließtext in einem leeren Rahmen — sichtbar, aber nicht als
              * Befund erkennbar. Und er holte die Datei ein zweites Mal.
              */
-            <div className="rounded-md border border-error bg-error-bg p-6" role="alert">
-              <p className="font-medium text-error">{t(fileState === 'altered' ? 'fileAltered.title' : 'fileMissing.title')}</p>
-              <p className="mt-2 text-sm text-muted-ink">{t(fileState === 'altered' ? 'fileAltered.body' : 'fileMissing.body')}</p>
-            </div>
+            <Notice level="refuse" title={t(fileState === 'altered' ? 'fileAltered.title' : 'fileMissing.title')}>
+              {t(fileState === 'altered' ? 'fileAltered.body' : 'fileMissing.body')}
+            </Notice>
           ) : (
             <div className="overflow-hidden rounded-md border border-line bg-surface shadow-xs">
               <iframe
@@ -331,9 +236,12 @@ export function DocumentDetail({
                 <dd className="font-medium text-ink">{t(`directions.${doc.direction}`)}</dd>
               </div>
               {doc.status === 'voided' ? (
-                <div className="rounded-md bg-error-bg p-3 text-error">
-                  <dt className="font-semibold">{t('voidReasonTitle')}</dt>
-                  <dd className="mt-1">{doc.voidReason}</dd>
+                <div>
+                  <dt className="text-muted-ink">{t('voidReasonTitle')}</dt>
+                  <dd className="flex flex-wrap items-baseline gap-2 font-medium text-ink">
+                    <StatusBadge tone="error">{t('statuses.voided')}</StatusBadge>
+                    <span>{doc.voidReason}</span>
+                  </dd>
                 </div>
               ) : null}
             </dl>
@@ -361,7 +269,7 @@ export function DocumentDetail({
             />
           ) : null}
 
-          {/* Retention panel */}
+          {/* Aufbewahrung: nur die Frist; Löschen steht im Seitenkopf unter „Weitere Aktionen“ (`document-actions.tsx`). */}
           {retentionInfo ? (
             <section className="rounded-md border border-line bg-surface p-5 shadow-xs">
               <h3 className="mb-3 text-[15px] font-semibold text-ink">{t('retentionTitle')}</h3>
@@ -373,33 +281,6 @@ export function DocumentDetail({
                     : t('retentionRunning')}
               </p>
 
-              {/* Die Frist ist abgelaufen — ein Mensch bestätigt die Löschung (Prinzip 3). */}
-              {permissions.canManage ? (
-                <div className="mt-4 flex flex-col gap-2 border-t border-line-2 pt-4">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    disabled={!retentionInfo.due}
-                    onClick={() => setPurgeOpen(true)}
-                    className="self-start"
-                  >
-                    {t('deleteDocument')}
-                  </Button>
-                  {!retentionInfo.due ? (
-                    <span className="text-[12px] text-muted-ink">{t('deleteDocumentBlocked')}</span>
-                  ) : null}
-                  <ConfirmDialog
-                    open={purgeOpen}
-                    onOpenChange={setPurgeOpen}
-                    title={t('deleteDocumentConfirmTitle')}
-                    description={t('deleteDocumentConfirmDescription')}
-                    confirmLabel={t('deleteDocumentConfirmSubmit')}
-                    destructive
-                    action={() => deleteDocumentAction(doc.id)}
-                  />
-                </div>
-              ) : null}
             </section>
           ) : null}
 

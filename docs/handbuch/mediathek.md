@@ -30,11 +30,12 @@ nicht vorgesehen.
 
 ## Suchen, filtern, ansehen
 
-Über den Dateien stehen das Suchfeld („Dateiname oder Verwendung“), „Typ“
-(Alle, Bilder, PDF) und „Sortierung“ (Neueste zuerst, Älteste zuerst, Name,
-Größe); „Filtern“ wendet sie an. Suche und Filter gelten im geöffneten Ordner.
-Darunter schalten Sie zwischen „Liste“ und „Grid“ um; die Wahl merkt sich der
-Browser.
+Über den Dateien steht die Filterleiste: das Suchfeld („Dateiname oder
+Verwendung“, gilt nach kurzer Pause), „Typ“ (Bilder, PDF), rechts die Zahl der
+Treffer, „Sortierung“ (Neueste zuerst, Älteste zuerst, Name, Größe) und der
+Umschalter zwischen „Liste“ und „Raster“; die Ansicht merkt sich der Browser.
+Suche und Filter gelten im geöffneten Ordner und bleiben beim Wechsel des
+Ordners stehen; „Filter zurücksetzen“ nimmt sie zurück.
 
 ## Ordner pflegen
 
@@ -66,7 +67,7 @@ Webseite finden ihre Bilder weiter.
 
 ## Dateien verschieben
 
-- **Ziehen** — in der Ansicht „Grid“ ziehen Sie eine Kachel auf einen Ordner
+- **Ziehen** — in der Ansicht „Raster“ ziehen Sie eine Kachel auf einen Ordner
   oder auf „Ohne Ordner“. Gezogen wird immer eine Datei.
 - **Im Detail** — ein Klick auf eine Datei öffnet ihre Angaben. Unter „Ordner“
   steht der Weg, daneben „Verschieben nach…“; dort wählen Sie den Ordner oder
@@ -93,7 +94,7 @@ mit Grund.
 
 Kompass erkennt eine Datei, die es schon gibt, am Inhalt — nicht am Namen —
 und sagt, wo sie liegt, statt sie ein zweites Mal zu speichern. Von Bildern
-erzeugt Kompass Vorschaubilder für Liste und Grid und, für die Webseite,
+erzeugt Kompass Vorschaubilder für Liste und Raster und, für die Webseite,
 mehrere Größen.
 
 ## Verwendung
@@ -101,7 +102,8 @@ mehrere Größen.
 Die Spalte „Verwendung“ sagt, ob eine Datei irgendwo benutzt wird; die
 Detailansicht nennt die Stellen mit Link: Tier „Rocky“, Projekt „Sommerfest“,
 Logo des Vereins, Variable der Webseite. Eine Datei, die verwendet wird,
-lässt sich nicht löschen — erst dort entfernen, dann hier. Eine nicht
+lässt sich nicht löschen — erst dort entfernen, dann hier; „Löschen …“ links
+unten im Detaildialog nennt dann, wo sie verwendet wird. Eine nicht
 verwendete Datei ist Arbeitsmaterial und darf gelöscht werden; der
 Löschvorgang steht im Änderungsprotokoll.
 

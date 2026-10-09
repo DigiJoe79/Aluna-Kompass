@@ -147,7 +147,7 @@ describe('checkConfirmable', () => {
 
     const fee = await f.donate({ categoryKey: 'membership-fees', cents: 3600 });
     expect(check(unwrap(await checkConfirmable(f.deps, f.ctx, { lineIds: [fee.line.id] })), 'certifiable').blocked).toBe(false);
-    f.deps.db.transaction((tx) => writeSettingInternal(tx, f.deps, systemContext(), 'finance.membershipFeesCertifiable', false, 'test'));
+    f.deps.db.transaction((tx) => writeSettingInternal(tx, f.deps, systemContext(), 'finance.membershipFeesCertifiable', false));
     expect(check(unwrap(await checkConfirmable(f.deps, f.ctx, { lineIds: [fee.line.id] })), 'certifiable')).toMatchObject({ blocked: true, detail: { category: 'Mitglieds- und Förderbeiträge' } });
   });
 
@@ -174,8 +174,8 @@ describe('checkConfirmable', () => {
     expect(check(unwrap(await checkConfirmable(f.deps, f.ctx, { lineIds: [line.id] })), 'organizationAddress')).toMatchObject({ applies: true, done: true, blocked: false, remedy: null });
 
     f.deps.db.transaction((tx) => {
-      writeSettingInternal(tx, f.deps, systemContext(), 'organization.street', '', 'test');
-      writeSettingInternal(tx, f.deps, systemContext(), 'organization.city', '', 'test');
+      writeSettingInternal(tx, f.deps, systemContext(), 'organization.street', '');
+      writeSettingInternal(tx, f.deps, systemContext(), 'organization.city', '');
     });
     const res = unwrap(await checkConfirmable(f.deps, f.ctx, { lineIds: [line.id] }));
     expect(res.ok).toBe(false);
@@ -264,7 +264,7 @@ describe('checkConfirmable', () => {
     const on = unwrap(await checkConfirmable(f.deps, f.ctx, { lineIds: [line.id] }));
     expect(on).toMatchObject({ ok: true, kind: 'money', expenseWaiver: true });
     expect(check(on, 'expenseWaiverEnabled')).toMatchObject({ applies: true, done: true });
-    f.deps.db.transaction((tx) => writeSettingInternal(tx, f.deps, systemContext(), 'finance.expenseWaiversEnabled', false, 'test'));
+    f.deps.db.transaction((tx) => writeSettingInternal(tx, f.deps, systemContext(), 'finance.expenseWaiversEnabled', false));
     expect(check(unwrap(await checkConfirmable(f.deps, f.ctx, { lineIds: [line.id] })), 'expenseWaiverEnabled')).toMatchObject({ blocked: true });
 
     f.deps.db.update(documentTypes).set({ isActive: false }).where(eq(documentTypes.key, 'finance-confirmation')).run();

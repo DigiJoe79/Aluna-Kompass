@@ -74,7 +74,8 @@ export async function createUser(deps: Deps, ctx: CallContext, input: unknown): 
     tx.insert(users).values({ id, name, email, passwordHash, mustChangePassword: true, isActive: true, createdAt: now, updatedAt: now }).run();
     if (roleIds.length > 0) tx.insert(userRoles).values(roleIds.map((roleId) => ({ userId: id, roleId }))).run();
     const user = loadUserSummary(tx, id) as UserSummary;
-    recordAudit(tx, deps, ctx, { action: 'users.create', entityType: 'user', entityId: id, after: user, summary: `Nutzer ${name} angelegt` });
+    // Name und E-Mail nie ins unveränderliche Protokoll (Spec Protokoll § 2): nur, welche Felder gesetzt wurden.
+    recordAudit(tx, deps, ctx, { action: 'users.create', entityType: 'user', entityId: id, after: { changedFields: roleIds.length > 0 ? ['name', 'email', 'roles'] : ['name', 'email'] }, params: { targetUserId: id } });
     return ok({ user, startPassword });
   });
 }
@@ -114,7 +115,9 @@ export async function updateUser(deps: Deps, ctx: CallContext, input: unknown): 
   return deps.db.transaction((tx) => {
     tx.update(users).set({ name, email, updatedAt: isoNow(deps.clock) }).where(eq(users.id, id)).run();
     const after = loadUserSummary(tx, id) as UserSummary;
-    recordAudit(tx, deps, ctx, { action: 'users.update', entityType: 'user', entityId: id, before, after, summary: `Nutzer ${after.name} geändert` });
+    // Wie bei den Kontakten: welche Felder, nie ihr Inhalt (Spec Protokoll § 2).
+    const changedFields = (['name', 'email'] as const).filter((field) => before[field] !== after[field]);
+    recordAudit(tx, deps, ctx, { action: 'users.update', entityType: 'user', entityId: id, after: { changedFields }, params: { targetUserId: id } });
     return ok(after);
   });
 }
@@ -138,7 +141,10 @@ export async function setUserActive(deps: Deps, ctx: CallContext, input: unknown
     tx.update(users).set({ isActive, updatedAt: isoNow(deps.clock) }).where(eq(users.id, id)).run();
     if (!isActive) tx.delete(sessions).where(eq(sessions.userId, id)).run();
     const after = loadUserSummary(tx, id) as UserSummary;
-    recordAudit(tx, deps, ctx, { action: isActive ? 'users.activate' : 'users.deactivate', entityType: 'user', entityId: id, before, after, summary: `Nutzer ${after.name} ${isActive ? 'aktiviert' : 'deaktiviert'}` });
+    // Die Aktion steht als fester Text im Aufruf (Wächter audit-actions), deshalb zwei Aufrufe.
+    const entry = { entityType: 'user', entityId: id, before: { isActive: before.isActive }, after: { isActive: after.isActive }, params: { targetUserId: id } };
+    if (isActive) recordAudit(tx, deps, ctx, { action: 'users.activate', ...entry });
+    else recordAudit(tx, deps, ctx, { action: 'users.deactivate', ...entry });
     return ok(after);
   });
 }
@@ -159,7 +165,7 @@ export async function resetStartPassword(deps: Deps, ctx: CallContext, input: un
   return deps.db.transaction((tx) => {
     tx.update(users).set({ passwordHash, mustChangePassword: true, failedLoginCount: 0, lockedUntil: null, updatedAt: isoNow(deps.clock) }).where(eq(users.id, user.id)).run();
     tx.delete(sessions).where(eq(sessions.userId, user.id)).run();
-    recordAudit(tx, deps, ctx, { action: 'users.resetStartPassword', entityType: 'user', entityId: user.id, summary: `Startpasswort für ${user.name} neu gesetzt` });
+    recordAudit(tx, deps, ctx, { action: 'users.resetStartPassword', entityType: 'user', entityId: user.id, params: { targetUserId: user.id } });
     return ok({ startPassword });
   });
 }

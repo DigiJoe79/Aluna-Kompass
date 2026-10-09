@@ -1,7 +1,8 @@
 'use client';
 
 import { Check, Circle, Minus } from 'lucide-react';
-import { useFormatter, useTranslations } from 'next-intl';
+import { useTranslations } from 'next-intl';
+import { useDateFormat } from '@/components/date-format-provider';
 import { useId, useState, type ReactNode, type Ref } from 'react';
 import { ConfirmDialog } from '@/components/forms/confirm-dialog';
 import { useSiteJobStatus } from '@/components/site/site-job-provider';
@@ -24,13 +25,13 @@ const clock = (ms: number) => {
  */
 export function RunCard({ embedded = false, notice, headingRef }: { embedded?: boolean; notice?: ReactNode; headingRef?: Ref<HTMLHeadingElement> }) {
   const t = useTranslations('site.publish');
-  const format = useFormatter();
+  const fmt = useDateFormat();
   const lockedId = useId();
   const { running, refresh } = useSiteJobStatus();
   const [confirm, setConfirm] = useState(false);
   if (!running) return null;
   const kind = t(`job.names.${running.kind}`);
-  const time = format.dateTime(new Date(running.startedAt), { timeStyle: 'short' });
+  const time = fmt.time(running.startedAt);
   const locked = !running.cancellable;
 
   return (

@@ -3,9 +3,10 @@
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useState, useTransition } from 'react';
 import { useDateFormat } from '@/components/date-format-provider';
 import { EmptyState } from '@/components/empty-state';
+import { FilterBar } from '@/components/filter-bar';
 import { AmountField } from '@/components/finance/amount-field';
 import { StatusBadge } from '@/components/status-badge';
 import { Button } from '@/components/ui/button';
@@ -26,7 +27,22 @@ export interface UncertifiedGroupRow {
  * Summe je Person). Fehlt die Anschrift, steht der Weg zum Kontakt da;
  * „Ausstellen“ je Zeile öffnet den Dialog — nur mit `finance.donationsIssue`.
  */
-export function UncertifiedList({ groups, minCents, canIssue, canDescribe, today }: { groups: UncertifiedGroupRow[]; minCents: number | null; canIssue: boolean; canDescribe: boolean; today: string }) {
+export function UncertifiedList({
+  groups,
+  minCents,
+  count,
+  canIssue,
+  canDescribe,
+  today,
+}: {
+  groups: UncertifiedGroupRow[];
+  minCents: number | null;
+  /** Personen mit dem Mindestbetrag und ohne — die Zählzeile. */
+  count: { shown: number; total: number };
+  canIssue: boolean;
+  canDescribe: boolean;
+  today: string;
+}) {
   const t = useTranslations('finance.donations.uncertified');
   const tk = useTranslations('finance.admin.categories.incomeKinds');
   const { date } = useDateFormat();
@@ -34,32 +50,64 @@ export function UncertifiedList({ groups, minCents, canIssue, canDescribe, today
   const [min, setMin] = useState(minCents !== null ? formatAmount(minCents) : '');
   const [issuing, setIssuing] = useState<string | null>(null);
 
-  const apply = () => {
-    const cents = parseAmount(min);
-    router.push(cents !== null && cents > 0 ? `/finance/donations?tab=uncertified&min=${cents}` : '/finance/donations?tab=uncertified');
+  const [, startNavigation] = useTransition();
+  // Der Betrag gilt bei Enter oder beim Verlassen des Felds — kein Knopf „Anwenden“ (Spec Filterleisten § 4).
+  const apply = (text: string) => {
+    const cents = parseAmount(text);
+    const next = cents !== null && cents > 0 ? cents : null;
+    if (next === minCents) return;
+    startNavigation(() => router.replace(next !== null ? `/finance/donations?tab=uncertified&min=${next}` : '/finance/donations?tab=uncertified'));
   };
+  const reset = () => {
+    setMin('');
+    apply('');
+  };
+  const field = (id: string, value: string, onChange: (text: string) => void) => (
+    <div className="flex items-center gap-2">
+      <label htmlFor={id} className="text-meta text-ink-2">
+        {t('filterMin')}
+      </label>
+      {/* 390 px: Das Feld nimmt am Telefon die volle Breite (Pipeline-Warnung fl-zuwendungen-offen; ohne Layout-Test). */}
+      <div className="w-36 max-sm:w-full">
+        <AmountField id={id} name="min" value={value} onChange={onChange} />
+      </div>
+    </div>
+  );
 
   return (
     <div className="space-y-4">
-      <form
-        className="flex flex-wrap items-center gap-2 text-[13px]"
-        onSubmit={(e) => {
-          e.preventDefault();
-          apply();
-        }}
-      >
-        <label htmlFor="uncertified-min" className="text-ink-2">{t('filterBefore')}</label>
-        <div className="w-36">
-          <AmountField id="uncertified-min" name="min" value={min} onChange={setMin} />
-        </div>
-        <span className="text-ink-2">{t('filterAfter')}</span>
-        <Button type="submit" variant="outline" size="sm">{t('apply')}</Button>
-        {minCents !== null ? (
-          <Link href="/finance/donations?tab=uncertified" className="text-link underline">{t('reset')}</Link>
-        ) : null}
-      </form>
+      <FilterBar
+        filters={[
+          {
+            key: 'min',
+            label: t('filterMin'),
+            active: minCents !== null,
+            chip: minCents !== null ? formatEuro(minCents) : undefined,
+            onClear: reset,
+            control: (
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  apply(min);
+                }}
+                onBlur={(e) => {
+                  if (e.target instanceof HTMLInputElement) apply(e.target.value);
+                }}
+              >
+                {field('uncertified-min', min, setMin)}
+              </form>
+            ),
+            sheet: { value: min, render: (value, onChange) => field('uncertified-min-sheet', value, onChange), apply },
+          },
+        ]}
+        count={{ ...count, noun: { one: t('nounOne'), other: t('nounOther'), dative: t('nounDative') } }}
+        onReset={reset}
+      />
 
-      {groups.length === 0 ? (
+      {groups.length === 0 && minCents !== null ? (
+        // Befund 11: Der Mindestbetrag blendet alles aus — das ist nicht „Alles bestätigt“.
+        <EmptyState filtered={{ noun: t('emptyFilteredNoun'), onReset: reset }} />
+      ) : groups.length === 0 ? (
         <EmptyState title={t('empty.title')} text={t('empty.text')} />
       ) : (
         <ul className="space-y-3">
@@ -81,8 +129,10 @@ export function UncertifiedList({ groups, minCents, canIssue, canDescribe, today
               </div>
               <ul className="mt-2 divide-y divide-line-2 text-[13px]">
                 {group.lines.map((line) => (
-                  <li key={line.lineId} data-testid="uncertified-line" className="flex items-center justify-between gap-3 py-1.5">
-                    <span className="flex items-center gap-3">
+                  // 390 px: Zeile und linke Gruppe brechen um, Betrag und Knopf rücken nach rechts (Pipeline-Warnung
+                  // fl-zuwendungen-offen, Überlauf 411 > 390; ohne Layout-Test, Projektregel).
+                  <li key={line.lineId} data-testid="uncertified-line" className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 py-1.5">
+                    <span className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
                       <Link href={`/finance/entries/${line.entryId}`} className="font-mono text-link underline">{line.entryNumber ?? line.entryId}</Link>
                       <span className="text-ink-2">{date(line.entryDate)}</span>
                       <span className="text-muted-ink">{line.incomeKind ? tk(line.incomeKind) : ''}</span>
@@ -91,8 +141,8 @@ export function UncertifiedList({ groups, minCents, canIssue, canDescribe, today
                       ) : null}
                       {line.warnings?.includes('returnDraftPending') ? <StatusBadge tone="warning">{t('returnDraftPending')}</StatusBadge> : null}
                     </span>
-                    <span className="flex items-center gap-3">
-                      <span className="font-mono tabular-nums">{formatEuro(line.netCents)}</span>
+                    <span className="ml-auto flex items-center gap-3">
+                      <span className="font-mono whitespace-nowrap tabular-nums">{formatEuro(line.netCents)}</span>
                       {/* Befund 59: Ein Datum nach heute ist noch nicht ausstellbar — der Hinweis statt des Knopfs. */}
                       {line.inFuture ? (
                         <span className="text-[12px] text-muted-ink">{t('inFuture')}</span>

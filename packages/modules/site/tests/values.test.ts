@@ -1,3 +1,4 @@
+import { siteModule } from '../src/manifest';
 import { coreModule, schema as core, unwrap } from '@kompass/core';
 import { animals, animalsModule, createAnimal, setAnimalPublished } from '@kompass/module-animals';
 import { eq } from 'drizzle-orm';
@@ -14,7 +15,7 @@ const slugOf = (deps: { db: any }, name: string) => deps.db.select().from(animal
 const asJson = (s: unknown) => z.toJSONSchema(s as z.ZodType, { io: 'input' }) as FieldSchema;
 
 const withUser = (locales: string[]) => {
-  const deps = createTestDeps({ locales });
+  const deps = createTestDeps({ locales, manifests: [coreModule, siteModule] });
   insertUser(deps, { id: 'USER-TEST' });
   return deps;
 };
@@ -90,7 +91,7 @@ describe('site values', () => {
 
 describe('reference values', () => {
   const withAnimals = async () => {
-    const deps = createTestDeps({ locales: ['de', 'en'], manifests: [coreModule, animalsModule] });
+    const deps = createTestDeps({ locales: ['de', 'en'], manifests: [coreModule, animalsModule, siteModule] });
     insertUser(deps, { id: 'USER-TEST' });
     const ctx = ctxWith(['animals.manage', 'animals.view']);
     const bruno = unwrap(await createAnimal(deps, ctx, { name: 'Bruno', sex: 'male', birthText: {}, sizeText: {}, summary: {}, body: {} }));

@@ -5,6 +5,7 @@ import { getTranslations } from 'next-intl/server';
 import type { ReactNode } from 'react';
 import { EmptyState } from '@/components/empty-state';
 import { ForbiddenCard } from '@/components/forbidden-card';
+import { ListPager } from '@/components/list-pager';
 import { Page } from '@/components/page';
 import { PageHeader } from '@/components/page-header';
 import { missingDonors, parseRunQuery, runQueryString, runStep } from '@/lib/finance/run';
@@ -21,7 +22,12 @@ export interface DonationRunQuery {
   exclude?: string;
   followUp?: string;
   run?: string;
+  /** Seite der früheren Läufe (`ListPager`). */
+  runsPage?: string;
 }
+
+/** Frühere Läufe je Seite (MUSTER § L) — bis 0.2.8 still die letzten 20. */
+const RUNS_PAGE_SIZE = 50;
 
 /** So weit zurück bietet die Auswahl Jahre an; ältere Jahre gehen über die Adresse. */
 const YEARS_BACK = 5;
@@ -38,13 +44,23 @@ export default async function DonationRunPage({ searchParams }: { searchParams: 
   const { deps, ctx } = await requireSession();
   if (!hasPermission(ctx, 'finance.read')) return <Page width="standard"><ForbiddenCard permission="finance.read" /></Page>;
   const t = await getTranslations('finance.donations.run');
-  const query = parseRunQuery(await searchParams);
+  const raw = await searchParams;
+  const query = parseRunQuery(raw);
   const canIssue = hasPermission(ctx, 'finance.donationsIssue');
   const today = todayIn(deps);
   const currentYear = Number(today.slice(0, 4));
 
-  const runsRes = await listConfirmationRuns(deps, ctx, { limit: 20 });
+  const runsPage = Math.max(1, Number(raw.runsPage) || 1);
+  const runsRes = await listConfirmationRuns(deps, ctx, { limit: RUNS_PAGE_SIZE, offset: (runsPage - 1) * RUNS_PAGE_SIZE });
   const runs = runsRes.ok ? runsRes.value.items : [];
+  // Blättern behält Auswahl und Lauf in der Adresse; nur die Seite der Läufe wechselt.
+  const runsHref = (next: number) => {
+    const params = new URLSearchParams(Object.entries(raw).filter((e): e is [string, string] => typeof e[1] === 'string' && e[0] !== 'runsPage'));
+    if (next > 0) params.set('runsPage', String(Math.floor(next / RUNS_PAGE_SIZE) + 1));
+    const qs = params.toString();
+    return qs ? `/finance/donations/run?${qs}` : '/finance/donations/run';
+  };
+  const runsPager = runsRes.ok ? <ListPager total={runsRes.value.total} offset={(runsPage - 1) * RUNS_PAGE_SIZE} pageSize={RUNS_PAGE_SIZE} hrefFor={runsHref} footer testId="runs-pager" /> : null;
 
   let run: RunView | null = null;
   if (query.runId) {
@@ -54,7 +70,7 @@ export default async function DonationRunPage({ searchParams }: { searchParams: 
         <Page width="standard" header={<PageHeader title={t('title')} description={t('description')} />}>
           <div className="space-y-4">
             <EmptyState title={t('empty.title')} text={t('empty.text')} />
-            <RunsList runs={runs} currentId={null} />
+            <RunsList runs={runs} currentId={null} footer={runsPager} />
           </div>
         </Page>
       );
@@ -130,7 +146,7 @@ export default async function DonationRunPage({ searchParams }: { searchParams: 
     <Page width="standard" header={<PageHeader title={t('title')} description={t('description')} />}>
       <div className="space-y-6">
         <div className="space-y-4">{body}</div>
-        <RunsList runs={runs} currentId={run?.id ?? null} />
+        <RunsList runs={runs} currentId={run?.id ?? null} footer={runsPager} />
       </div>
     </Page>
   );

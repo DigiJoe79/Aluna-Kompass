@@ -34,8 +34,8 @@ und wie es geschehen ist.
 
 ## Stornieren
 
-Ein Brief mit falschem Betrag, falschem Empfänger, falschem Datum: „Stornieren“
-verlangt einen Grund und setzt das Dokument auf „Storniert“. Es bleibt in
+Ein Brief mit falschem Betrag, falschem Empfänger, falschem Datum: „Stornieren …“
+im Menü **Weitere Aktionen** (⋯) oben rechts verlangt einen Grund und setzt das Dokument auf „Storniert“. Es bleibt in
 der Akte, mit seiner Nummer, lesbar und als storniert gekennzeichnet — so,
 wie eine Buchung storniert und nicht radiert wird. Das Häkchen „Ersatz als
 Entwurf anlegen“ öffnet gleich den Entwurf des neuen Briefs, verbunden mit

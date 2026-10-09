@@ -1,6 +1,12 @@
 @import "tailwindcss";
 
 /*
+ * Ab hier klebt die Speicherleiste einer Formularseite (docs/MUSTER.md § B, Designer 2026-10-08): breit genug für
+ * eine Zeile und hoch genug, dass sie nicht ein Drittel des Fensters nimmt — nicht im Telefon, auch nicht quer.
+ */
+@custom-variant stickybar (@media (min-width: 640px) and (min-height: 600px));
+
+/*
  * Tailwind-Standardpalette entfernen: es gibt keine bg-red-500 mehr.
  * Alle Utilities unten verweisen auf Theme-Tokens, die das Root-Layout
  * zur Laufzeit aus dem aktiven Theme in :root injiziert (siehe lib/theme-css.ts).

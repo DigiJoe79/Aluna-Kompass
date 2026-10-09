@@ -4,6 +4,7 @@ import { Copy } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { toast } from 'sonner';
+import { Notice } from '@/components/notice';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { copyToClipboard } from '@/lib/clipboard';
@@ -62,7 +63,7 @@ export function StartPasswordDialog({
             {copied ? c('copied') : t('copyBoth')}
           </Button>
         </div>
-        <p className="rounded-md border border-info bg-info-bg p-3 text-[13px] text-ink-2">{t('info', { name })}</p>
+        <Notice level="hint">{t('info', { name })}</Notice>
         <Button onClick={onClose}>{t('done')}</Button>
       </DialogContent>
     </Dialog>

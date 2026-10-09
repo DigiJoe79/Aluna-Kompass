@@ -209,7 +209,7 @@ function recordFailedRun(
     financeAudit(tx, deps, ctx, {
       action: 'finance.import.fail', entity: 'financeImportRun', id,
       after: { accountId: args.account.id, format: args.format, profileId: args.profile?.id ?? null, failureCode: args.failureCode, failureLine: args.failureLine },
-      summary: `Auszug für Konto ${args.account.id} nicht lesbar (${args.failureCode})`,
+      params: { failureCode: args.failureCode },
     });
   });
 }
@@ -265,7 +265,6 @@ function writeRun(
       countNew: counters.countNew, countKnown: counters.countKnown, countHeld: counters.countHeld, countPendingSkipped: counters.countPendingSkipped,
       gapFrom: gap?.from ?? null, gapTo: gap?.to ?? null,
     },
-    summary: `Kontoauszug für Konto ${accountId} importiert`,
   });
 
   return toRunView(tx, importRunRowInternal(tx, runId)!);
@@ -468,7 +467,6 @@ export async function setRunClosingBalance(deps: Deps, ctx: CallContext, input: 
       entity: 'financeImportRun',
       id: before.id,
       after: { openingCents, closingCents: v.closingBalanceCents },
-      summary: `Kontostand für Kontoauszug ${before.id} nachgetragen`,
     });
     return ok(toRunView(tx, importRunRowInternal(tx, before.id)!));
   });

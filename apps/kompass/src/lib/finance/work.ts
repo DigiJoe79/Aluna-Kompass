@@ -14,11 +14,12 @@ export function parseWorkTab(value: string | undefined): WorkTabKey {
   return (WORK_TABS as readonly string[]).includes(value ?? '') ? (value as WorkTabKey) : 'open';
 }
 
-/** Der Reiter steht in der Adresse (HANDOFF § 12.6) — ein Neuladen bleibt, wo man war. */
-export function workHref(query: { tab: WorkTabKey; account?: string | null; raw?: string | null }): string {
+/** Reiter, Konto, Seite und Auswahl stehen in der Adresse (HANDOFF § 12.6) — ein Neuladen bleibt, wo man war. */
+export function workHref(query: { tab: WorkTabKey; account?: string | null; raw?: string | null; page?: number }): string {
   const params = new URLSearchParams();
   if (query.tab !== 'open') params.set('tab', query.tab);
   if (query.account) params.set('account', query.account);
+  if (query.page && query.page > 1) params.set('page', String(query.page));
   if (query.raw) params.set('raw', query.raw);
   const search = params.toString();
   return search ? `/finance/work?${search}` : '/finance/work';

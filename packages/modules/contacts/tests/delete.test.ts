@@ -29,7 +29,7 @@ function setup(manifests: ModuleManifest[] = [coreModule, contactsModule, probe]
   const userId = insertUser(deps, {});
   const ctx = ctxWith(['contacts.view', 'contacts.manage', 'settings.manage'], userId);
   deps.db.transaction((tx) => {
-    writeSettingInternal(tx, deps, ctx, 'modules.enabled', enabled, 'test.enable');
+    writeSettingInternal(tx, deps, ctx, 'modules.enabled', enabled);
   });
   return { deps, ctx, userId };
 }
@@ -85,7 +85,7 @@ describe('contact retention and deletion', () => {
     unwrap(await addContactRole(deps, ctx, { id: c.id, role: 'interested', since: '2026-03-15' }));
     const res = await deleteContact(deps, ctx, { id: c.id });
     expect(!res.ok && res.error.type === 'conflict' && res.error.message).toMatch(/\(bis 31\.12\.2028\)/);
-    deps.db.transaction((tx) => writeSettingInternal(tx, deps, ctx, 'ui.dateFormat', 'iso', 'test.dateFormat'));
+    deps.db.transaction((tx) => writeSettingInternal(tx, deps, ctx, 'ui.dateFormat', 'iso'));
     const iso = await deleteContact(deps, ctx, { id: c.id });
     expect(!iso.ok && iso.error.type === 'conflict' && iso.error.message).toMatch(/\(bis 2028-12-31\)/);
   });
@@ -102,7 +102,7 @@ describe('contact retention and deletion', () => {
     expect(deps.db.select().from(contactRoles).all()).toHaveLength(0);
     expect(deps.db.select().from(contactChannels).all()).toHaveLength(0);
     const entry = deps.db.select().from(schema.auditLog).all().find((e) => e.action === 'contacts.delete');
-    expect(entry?.summary).toBe('Kontakt nach Fristablauf gelöscht');
+    expect(entry?.params).toBeNull();
     expect(JSON.stringify(entry)).not.toContain('Berger');
   });
 

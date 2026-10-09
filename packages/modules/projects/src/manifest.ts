@@ -17,6 +17,15 @@ export const projectsModule: ModuleManifest = defineModule({
   permissions: ['projects.view', 'projects.manage'],
   navigation: [{ key: 'projects.list', href: '/projects', icon: 'folder', group: 'projects', permission: 'projects.view' }],
   help: [{ href: '/projects', doc: 'projekte' }],
+  /** Aktionen des Änderungsprotokolls (Spec Protokoll § 3). */
+  auditActions: {
+    'projects.create': { params: ['name'] },
+    'projects.update': { params: ['name'] },
+    'projects.publish': { params: ['name'] },
+    'projects.unpublish': { params: ['name'] },
+    'projects.reorder': { params: [] },
+    'projects.delete': { params: ['name'] },
+  },
   deletionRules: [
     {
       entity: 'project',

@@ -1,4 +1,4 @@
-# Ein Template schreiben
+# Eine Vorlage (Template-Datei) schreiben
 
 Ein Template ist eine Astro-Seite mit einer Datei `kompass.template.ts`, die
 Kompass sagt, welche Variablen und Sammlungen es braucht und welche Sichten
@@ -47,7 +47,7 @@ export default defineTemplate({
 });
 ```
 
-- **`name`** erscheint in Kompass auf der Seite „Template“.
+- **`name`** erscheint in Kompass auf der Seite „Vorlage der Webseite“.
 - **`locales`** sind die Sprachen, die das Template ausliefert. Sie müssen in
   Kompass unter Einstellungen → Sprachen eingerichtet sein, sonst bricht das
   Einlesen ab. Pflegt der Verein mehr Sprachen, als das Template nennt,
@@ -82,7 +82,7 @@ Sprache, nicht als Bezeichner.
 veröffentlichten Projekte zur Auswahl und speichert deren `slug` (änderbar mit
 `key`); angezeigt wird `name` (änderbar mit `labelField`). `where` schränkt
 ein: `{ kind: 'dog' }` oder `{ image: { present: true } }`. Ein leerer Verweis
-heißt „das Template entscheidet“ — bauen Sie diesen Fall ein, meist als
+heißt „die Vorlage entscheidet“ — bauen Sie diesen Fall ein, meist als
 „erster Datensatz nach Sortierung“. Ein Wert, der die Bedingung nicht mehr
 erfüllt, kommt als `null` an.
 

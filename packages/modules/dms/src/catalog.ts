@@ -138,7 +138,7 @@ export async function createDocumentFolder(
       entityType: 'documentFolder',
       entityId: path,
       after: { path },
-      summary: `Ordner „${path}“ angelegt`,
+      params: { path },
     });
     const row = tx.select().from(documentFolders).where(eq(documentFolders.path, path)).get()!;
     return ok(row);
@@ -222,7 +222,7 @@ export async function moveDocumentFolder(
       entityId: from,
       before: { path: from },
       after: { path: to, folders, documents: documentCount, types, rules },
-      summary: `Ordner „${from}“ nach „${to}“ verschoben`,
+      params: { from, to },
     });
     return ok({ from, to, folders, documents: documentCount, types, rules });
   });
@@ -262,7 +262,7 @@ export async function deleteDocumentFolder(
       entityType: 'documentFolder',
       entityId: path,
       before: { path },
-      summary: `Ordner „${path}“ gelöscht`,
+      params: { path },
     });
     return ok(null);
   });
@@ -352,7 +352,7 @@ export async function createDocumentType(
       entityType: 'documentType',
       entityId: parsed.value.key,
       after: { key: parsed.value.key, label: parsed.value.label, prefix: parsed.value.prefix, ...(protectionArea ? { protectionArea } : {}) },
-      summary: `Dokumentart „${parsed.value.label}“ angelegt`,
+      params: { label: parsed.value.label },
     });
 
     const row = tx.select().from(documentTypes).where(eq(documentTypes.key, parsed.value.key)).get()!;
@@ -419,7 +419,7 @@ export async function updateDocumentType(
       entityId: existing.key,
       before: { label: existing.label, prefix: existing.prefix, isActive: existing.isActive, protectionArea: existing.protectionArea },
       after: { label: after.label, prefix: after.prefix, isActive: after.isActive, protectionArea: after.protectionArea },
-      summary: `Dokumentart „${after.label}“ geändert`,
+      params: { label: after.label },
     });
 
     return ok(after);
@@ -473,7 +473,7 @@ export async function deleteDocumentType(deps: Deps, ctx: CallContext, input: un
       entityType: 'documentType',
       entityId: existing.key,
       before: { key: existing.key, label: existing.label, prefix: existing.prefix },
-      summary: `Dokumentart „${existing.label}“ gelöscht`,
+      params: { label: existing.label },
     });
     return ok(null);
   });
@@ -577,7 +577,7 @@ export async function createDocumentRule(
         matchContains: parsed.value.matchContains,
         thenTypeKey: parsed.value.thenTypeKey,
       },
-      summary: `Einsortierregel für „${parsed.value.matchContains}“ angelegt`,
+      params: { matchContains: parsed.value.matchContains },
     });
 
     const row = tx.select().from(documentRules).where(eq(documentRules.id, id)).get()!;
@@ -624,7 +624,7 @@ export async function updateDocumentRule(
       entityId: existing.id,
       before: { matchContains: existing.matchContains, isActive: existing.isActive },
       after: { matchContains: after.matchContains, isActive: after.isActive },
-      summary: `Einsortierregel für „${after.matchContains}“ geändert`,
+      params: { matchContains: after.matchContains },
     });
 
     return ok(after);
@@ -653,7 +653,7 @@ export async function deleteDocumentRule(
       entityType: 'documentRule',
       entityId: existing.id,
       before: { matchContains: existing.matchContains, matchField: existing.matchField },
-      summary: `Einsortierregel für „${existing.matchContains}“ gelöscht`,
+      params: { matchContains: existing.matchContains },
     });
 
     return ok(null);

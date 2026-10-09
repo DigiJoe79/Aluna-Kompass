@@ -161,7 +161,7 @@ describe('deleteDocumentType (Task 4)', () => {
   it('refuses a default type', async () => {
     const { deps, ctx } = setupWithTypes();
     unwrap(await createDocumentType(deps, ctx, { key: 'memo', label: 'Vermerk', prefix: 'VMK', defaultDirection: 'outgoing', retentionClass: 'statutory6Y' }));
-    deps.db.transaction((tx) => writeSettingInternal(tx, deps, systemContext(), 'dms.defaultTypeOutgoing', 'memo', 'test.default'));
+    deps.db.transaction((tx) => writeSettingInternal(tx, deps, systemContext(), 'dms.defaultTypeOutgoing', 'memo'));
     const denied = await deleteDocumentType(deps, ctx, { key: 'memo' });
     expect(code(denied)).toBe('documentTypeIsDefault');
     expect(documentTypeFor(deps.db, 'memo')).not.toBeNull();

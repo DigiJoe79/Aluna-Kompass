@@ -20,14 +20,14 @@ export function pdfBytes(): Uint8Array {
 /** Das Modul ist **eingeschaltet** — sonst kennt der Kern weder seine Rollen noch seine Haken. */
 export function setupFinance(permissions: readonly string[] = FINANCE_PERMISSIONS) {
   const deps = createTestDeps({ manifests: [coreModule, contactsModule, dmsModule, projectsModule, financeModule] });
-  deps.db.transaction((tx) => writeSettingInternal(tx, deps, systemContext(), 'modules.enabled', ['contacts', 'dms', 'projects', 'finance'], 'test.enable'));
+  deps.db.transaction((tx) => writeSettingInternal(tx, deps, systemContext(), 'modules.enabled', ['contacts', 'dms', 'projects', 'finance']));
   const userId = insertUser(deps, { name: 'Test', email: 'test@kompass.local' });
   return { deps, ctx: ctxWith(permissions, userId), userId };
 }
 
 /** Für den Kanal `mcp`: `finance.mcpHumanOnlyAllowed` über die Oberfläche freigeben (E10). */
 export function allowHumanOnlyOverMcp(deps: ReturnType<typeof setupFinance>['deps']): void {
-  deps.db.transaction((tx) => writeSettingInternal(tx, deps, systemContext(), 'finance.mcpHumanOnlyAllowed', true, 'test.allowHumanOnlyOverMcp'));
+  deps.db.transaction((tx) => writeSettingInternal(tx, deps, systemContext(), 'finance.mcpHumanOnlyAllowed', true));
 }
 
 /**

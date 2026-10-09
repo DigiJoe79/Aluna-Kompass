@@ -52,7 +52,7 @@ function pairRow(db: DbOrTx, contactId: string, iban: string): FinanceContactBan
 function insertLinkInternal(tx: DbOrTx, deps: Deps, ctx: CallContext, contactId: string, iban: string, learnedFrom: ContactIbanSource): FinanceContactBankAccountRow {
   const row: FinanceContactBankAccountRow = { id: newId(), contactId, iban, createdAt: isoNow(deps.clock), createdByUserId: ctx.userId ?? 'system' };
   tx.insert(financeContactBankAccounts).values(row).run();
-  financeAudit(tx, deps, ctx, { action: 'finance.contactIban.link', entity: 'financeContactBankAccount', id: row.id, after: { learnedFrom }, summary: `Kontakt-IBAN ${row.id} verknüpft` });
+  financeAudit(tx, deps, ctx, { action: 'finance.contactIban.link', entity: 'financeContactBankAccount', id: row.id, after: { learnedFrom } });
   return row;
 }
 
@@ -120,7 +120,7 @@ export async function unlinkContactIban(deps: Deps, ctx: CallContext, input: unk
   if (!before) return notFound('financeContactBankAccount', parsed.value.id);
   return deps.db.transaction((tx: DbOrTx) => {
     tx.delete(financeContactBankAccounts).where(eq(financeContactBankAccounts.id, before.id)).run();
-    financeAudit(tx, deps, ctx, { action: 'finance.contactIban.delete', entity: 'financeContactBankAccount', id: before.id, summary: `Kontakt-IBAN ${before.id} gelöst` });
+    financeAudit(tx, deps, ctx, { action: 'finance.contactIban.delete', entity: 'financeContactBankAccount', id: before.id, params: { withContact: false } });
     return ok({ id: before.id });
   });
 }

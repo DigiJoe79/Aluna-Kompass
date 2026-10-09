@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl';
 import { useState, useTransition } from 'react';
 import { RefusalNotice } from '@/components/forms/refusal-notice';
 import { useActionFeedback } from '@/components/forms/use-action-feedback';
+import { Notice } from '@/components/notice';
 import { Button } from '@/components/ui/button';
 import { applySyncAction, previewSyncAction, type SyncPreviewState } from '@/app/(shell)/site/actions';
 
@@ -62,11 +63,11 @@ export function SyncClient({ name }: { name: string | null }) {
       <RefusalNotice action state={state.status === 'error' ? { status: 'error', message: state.message, fieldErrors: {} } : { status: 'idle' }} />
 
       {p ? (
-        <section aria-label={t('findings')} className="flex flex-col gap-3 border-t border-subtle pt-4">
+        <section aria-label={t('findings')} className="flex flex-col gap-3 border-t border-line pt-4">
           {p.localesMissing.length > 0 ? (
-            <p className="rounded-md border border-error bg-error-surface p-3 text-[13px] font-semibold text-error">
+            <Notice level="refuse" remedies={[{ label: t('localesMissingRemedy'), href: '/admin/locales' }]}>
               {t('localesMissing', { locales: p.localesMissing.join(', ') })}
-            </p>
+            </Notice>
           ) : null}
 
           {blocking.length > 0 ? (

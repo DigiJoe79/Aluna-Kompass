@@ -8,10 +8,10 @@ import { FormField } from '@/components/forms/form-field';
 import { FormCell, FormGrid, FormRowBreak } from '@/components/forms/form-grid';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Segmented } from '@/components/ui/segmented';
 import { Select } from '@/components/ui/select';
 import { formatEuro } from '@/lib/finance/amount';
 import { rateAt, tripCalculation, type Device, type MileageRate, type PositionForm } from '@/lib/finance/expenses';
-import { cn } from '@/lib/utils';
 import { PdfField, type PdfFieldError } from './pdf-field';
 
 export interface PositionCardProps {
@@ -23,7 +23,8 @@ export interface PositionCardProps {
   canRemove: boolean;
   onChange: (patch: Partial<PositionForm>) => void;
   onRemove: () => void;
-  firstFieldRef?: Ref<HTMLInputElement>;
+  /** Hülle des Umschalters Beleg/Fahrt; das Formular fokussiert darin die gewählte Option. */
+  firstFieldRef?: Ref<HTMLDivElement>;
   pdf: { uploading: boolean; error: PdfFieldError | null; device: Device; maxBytes: number; onPick: (file: File) => void };
 }
 
@@ -51,27 +52,14 @@ export function PositionCard({ position: p, n, rates, projects, errors, canRemov
 
       <FormGrid>
         <FormCell size="m">
-          <div role="radiogroup" aria-label={t('kind.group', { n })} className="flex gap-1 rounded-md border border-line-strong bg-surface-2 p-1">
-            {(['receipt', 'trip'] as const).map((kind) => (
-              <label
-                key={kind}
-                className={cn(
-                  'relative flex h-11 flex-1 cursor-pointer items-center justify-center rounded-sm text-[14px] font-semibold has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-focus',
-                  p.kind === kind ? 'bg-selected text-selected-ink' : 'text-ink-2',
-                )}
-              >
-                <input
-                  ref={kind === 'receipt' ? firstFieldRef : undefined}
-                  type="radio"
-                  name={id('kind')}
-                  value={kind}
-                  checked={p.kind === kind}
-                  onChange={() => onChange({ kind })}
-                  className="absolute inset-0 cursor-pointer opacity-0"
-                />
-                {t(`kind.${kind}`)}
-              </label>
-            ))}
+          {/* Die Hülle trägt den Ref: Das Formular setzt den Fokus auf die gewählte Option einer neuen Position. */}
+          <div ref={firstFieldRef}>
+            <Segmented
+              aria-label={t('kind.group', { n })}
+              options={(['receipt', 'trip'] as const).map((kind) => ({ value: kind, label: t(`kind.${kind}`) }))}
+              value={p.kind}
+              onValueChange={(kind) => onChange({ kind })}
+            />
           </div>
         </FormCell>
         <FormRowBreak />

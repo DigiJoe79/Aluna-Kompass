@@ -35,7 +35,7 @@ export function ensureDocumentType(tx: DbOrTx, deps: Deps, ctx: CallContext, typ
       if (documentTypeFor(tx, type.key)) throw new Error(`Dokumentart „${type.key}“ gibt es schon; das Modul ${type.module} braucht diesen Schlüssel`);
       if (holder) throw new Error(`Präfix ${type.prefix} trägt schon die Dokumentart „${holder.label}“; das Modul ${type.module} braucht es für „${type.label}“`);
     } else if (documentTypeFor(tx, type.key) || holder) {
-      recordAudit(tx, deps, ctx, { action: 'dms.type.provision', entityType: 'documentType', entityId: type.key, after: { key: type.key, outcome: 'skipped' }, summary: `Dokumentart „${type.label}“ nicht angelegt: Schlüssel oder Präfix vergeben` });
+      recordAudit(tx, deps, ctx, { action: 'dms.type.provision', entityType: 'documentType', entityId: type.key, after: { key: type.key, outcome: 'skipped' }, params: { label: type.label, module: type.module, created: false } });
       return 'skipped';
     }
     const last = tx.select({ sortOrder: documentTypes.sortOrder }).from(documentTypes).orderBy(asc(documentTypes.sortOrder)).all().at(-1)?.sortOrder ?? -1;
@@ -46,7 +46,7 @@ export function ensureDocumentType(tx: DbOrTx, deps: Deps, ctx: CallContext, typ
         ownerModule: type.owned ? type.module : null, protectionArea: type.protectionArea ?? null,
       })
       .run();
-    recordAudit(tx, deps, ctx, { action: 'dms.type.provision', entityType: 'documentType', entityId: type.key, after: { key: type.key, prefix: type.prefix, ownerModule: type.owned ? type.module : null, protectionArea: type.protectionArea ?? null }, summary: `Dokumentart „${type.label}“ von ${type.module} angelegt` });
+    recordAudit(tx, deps, ctx, { action: 'dms.type.provision', entityType: 'documentType', entityId: type.key, after: { key: type.key, prefix: type.prefix, ownerModule: type.owned ? type.module : null, protectionArea: type.protectionArea ?? null }, params: { label: type.label, module: type.module, created: true } });
     return 'created';
   });
 }

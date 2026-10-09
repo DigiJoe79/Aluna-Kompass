@@ -1,7 +1,8 @@
 import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { unwrap, writeSettingInternal, type CallContext } from '@kompass/core';
+import { siteModule } from '../src/manifest';
+import { coreModule, unwrap, writeSettingInternal, type CallContext } from '@kompass/core';
 import { auditEntry, createTestDeps, ctxWith, insertUser } from '@kompass/core/testing';
 import { describe, expect, it } from 'vitest';
 import { siteTemplateState } from '../src/schema';
@@ -20,7 +21,7 @@ import { settleTemplateAfterImport, templateNeedsReview } from '../src/review';
  * Zeitstempeln, die es ohnehin gibt: dem des Imports und dem des Einlesens.
  */
 const setup = () => {
-  const deps = createTestDeps();
+  const deps = createTestDeps({ manifests: [coreModule, siteModule] });
   const userId = insertUser(deps, {});
   return { deps, ctx: ctxWith(['site.manage'], userId) };
 };

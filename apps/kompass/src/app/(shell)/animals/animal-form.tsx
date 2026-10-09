@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import { FormField } from '@/components/forms/form-field';
 import { FormCell, FormGrid } from '@/components/forms/form-grid';
 import { LocalizedField } from '@/components/forms/localized-field';
+import { FormCard } from '@/components/forms/form-card';
 import { FormActionBar } from '@/components/forms/form-action-bar';
 import { SubmitButton } from '@/components/forms/submit-button';
 import { FormErrorSummary, TabInvalidDot } from '@/components/forms/form-error-summary';
@@ -134,113 +135,116 @@ export function AnimalForm({ animal, locales, queue, initialTab, backHref, photo
       ) : null}
       {animal?.reviewRequestedAt ? <ReviewBand requestedAt={animal.reviewRequestedAt} note={animal.reviewNote} canPublish={!animal.isPublished} formId={FORM_ID} /> : null}
       <FormErrorSummary errors={errors} labels={labels} />
-      <Tabs value={tab} onValueChange={(value) => changeTab(value as FormTab)} className="overflow-hidden rounded-lg border border-line bg-surface">
-        <TabsList variant="line" className={TAB_LIST}><TabsTrigger value="profile" className={TAB}>{t('tabs.profile')}{broken.has('profile') ? <TabInvalidDot label={tCommon('tabInvalid')} /> : null}</TabsTrigger><TabsTrigger value="content" className={TAB}>{t('tabs.content')}{broken.has('content') ? <TabInvalidDot label={tCommon('tabInvalid')} /> : null}</TabsTrigger><TabsTrigger value="story" disabled={!animal} className={TAB}>{t('tabs.story')}</TabsTrigger></TabsList>
-        {/*
-          Reiter und Ladestand reisen beim Abschicken mit, aber nicht als Felder: Die Speicherleiste zählte sonst
-          den Reiterwechsel als Änderung – und den neuen Ladestand nach „Status ändern“ ebenso.
-          Ladestand: Hat inzwischen jemand anderes gespeichert, weist der Dienst ab (Backlog 20).
-        */}
-        <ActionForm id={FORM_ID} action={(data) => { data.set('tab', tab); if (animal) data.set('expectedVersion', animal.updatedAt); action(data); }} state={state}>
-          {animal ? <input type="hidden" name="id" value={animal.id} /> : null}
-          {animal ? <input ref={hiddenField} type="hidden" name="photos" value={JSON.stringify(photos)} /> : null}
-          {animal ? <input type="hidden" name="isPublished" value={published ? '1' : '0'} /> : null}
-          {/* Der Nachfolger steht beim Rendern fest: Fällt dieser Hund mit dem Bestätigen aus dem Filter, stimmt das Ziel trotzdem. */}
-          {position ? <><input type="hidden" name="queue" value={queue?.query ?? ''} /><input type="hidden" name="nextId" value={position.nextId ?? ''} /></> : null}
-          <TabsContent keepMounted value="profile" className="p-5">
-            <section>
-              <h3 className="text-[15px] font-semibold">{t('sections.name')}</h3>
-              <div className="mt-3">
-                <FormGrid>
-                  {animal ? (
-                    // Fest seit dem Anlegen (Spec „Tier-Slug fest“): kein `name`, also reist er nicht mit dem Speichern.
-                    <FormField id="slug" label={c('slug')} hint={t('slugFixed')}><Input id="slug" value={animal.slug} readOnly className="font-mono" /></FormField>
-                  ) : null}
-                  <FormField id="name" label={t('name')} error={errors.name} required><Input id="name" name="name" defaultValue={animal?.name ?? ''} required /></FormField>
-                </FormGrid>
-              </div>
-            </section>
-            <section className="mt-5 border-t border-line pt-5">
-              <h3 className="text-[15px] font-semibold">{t('sections.traits')}</h3>
-              <div className="mt-3">
-                <FormGrid>
-                  <FormField id="sex" label={t('sex')} size="s"><Select id="sex" name="sex" defaultValue={animal?.sex ?? 'female'}><option value="female">{t('sexes.female')}</option><option value="male">{t('sexes.male')}</option></Select></FormField>
-                  <FormField id="sizeCm" label={t('sizeCm')} error={errors.sizeCm} size="s"><Input id="sizeCm" name="sizeCm" type="number" defaultValue={animal?.sizeCm ?? 0} className="font-mono" /></FormField>
-                  <LocalizedField name="sizeText" label={t('sizeText')} size="s" value={animal?.sizeText ?? {}} errors={errors} locales={locales} />
-                  <LocalizedField name="birthText" label={t('birthText')} size="s" value={animal?.birthText ?? {}} errors={errors} locales={locales} />
-                </FormGrid>
-              </div>
-            </section>
-            <section className="mt-5 border-t border-line pt-5">
-              <h3 className="text-[15px] font-semibold">{t('sections.stay')}</h3>
-              <div className="mt-3">
-                <FormGrid>
-                  <FormField id="location" label={t('location')} size="s"><Select id="location" name="location" defaultValue={animal?.location ?? 'shelter'}><option value="shelter">{t('locations.shelter')}</option><option value="germany">{t('locations.germany')}</option></Select></FormField>
-                  <FormField id="place" label={t('place')} size="s" error={errors.place}><Input id="place" name="place" placeholder={t('placePlaceholder')} defaultValue={animal?.place ?? ''} /></FormField>
-                  <FormField id="externalProfileUrl" label={t('externalProfileUrl')} hint={t('externalHint')} error={errors.externalProfileUrl}><Input id="externalProfileUrl" name="externalProfileUrl" defaultValue={animal?.externalProfileUrl ?? ''} /></FormField>
-                </FormGrid>
-              </div>
-            </section>
-            <section className="mt-5 border-t border-line pt-5">
-              <h3 className="text-[15px] font-semibold">{t('sections.flags')}</h3>
-              <div className="mt-3">
-                <FormGrid>
-                  <FormField id="isEmergency" label={t('isEmergency')} toggle><Checkbox id="isEmergency" name="isEmergency" defaultChecked={animal?.isEmergency ?? false} /></FormField>
-                  <FormField id="isSponsorable" label={t('isSponsorable')} toggle><Checkbox id="isSponsorable" name="isSponsorable" defaultChecked={animal?.isSponsorable ?? false} /></FormField>
-                </FormGrid>
-              </div>
-            </section>
-          </TabsContent>
+      {/* Die Karte trägt den Rahmen, nicht die Reiter: `overflow-hidden` am Reiter-Behälter hielt die Leiste fest (Befund 39). */}
+      <FormCard>
+        <Tabs value={tab} onValueChange={(value) => changeTab(value as FormTab)}>
+          <TabsList variant="line" className={TAB_LIST}><TabsTrigger value="profile" className={TAB}>{t('tabs.profile')}{broken.has('profile') ? <TabInvalidDot label={tCommon('tabInvalid')} /> : null}</TabsTrigger><TabsTrigger value="content" className={TAB}>{t('tabs.content')}{broken.has('content') ? <TabInvalidDot label={tCommon('tabInvalid')} /> : null}</TabsTrigger><TabsTrigger value="story" disabled={!animal} className={TAB}>{t('tabs.story')}</TabsTrigger></TabsList>
           {/*
-            Texte links, Fotos rechts: Wer prüft, sieht beides nebeneinander und speichert einmal. Eigenes Zwei-Block-
-            Layout nur für diesen Reiter (Plan K8/K9 T2b): ab 880 px Kartenbreite nebeneinander, je halbe Breite,
-            darunter untereinander. Jeder Block rastert in seinem eigenen `FormGrid`.
+            Reiter und Ladestand reisen beim Abschicken mit, aber nicht als Felder: Die Speicherleiste zählte sonst
+            den Reiterwechsel als Änderung – und den neuen Ladestand nach „Status ändern“ ebenso.
+            Ladestand: Hat inzwischen jemand anderes gespeichert, weist der Dienst ab (Backlog 20).
           */}
-          <TabsContent keepMounted value="content" className="p-5">
-            <div className="@container">
-              <div className="grid grid-cols-1 gap-x-5 gap-y-4 @[880px]:grid-cols-2">
-                {/* Der Texte-Block ist eine eigene Spalte (~570 px): Jedes Feld darin nimmt die volle Blockbreite,
-                    auch bei einer Sprache; mehrere Sprachen teilen sie sich (HANDOFF Konsistenz § 8c). */}
-                <section className="flex min-w-0 flex-col">
-                  <h3 className="text-[15px] font-semibold">{t('sections.texts')}</h3>
-                  <div className="mt-3">
-                    <FormGrid>
-                      <LocalizedField name="summary" label={t('summary')} size="full" kind="textarea" rows={2} value={animal?.summary ?? {}} errors={errors} locales={locales} />
-                      <LocalizedField name="body" label={t('body')} size="full" kind="markdown" rows={10} value={animal?.body ?? {}} errors={errors} locales={locales} />
-                      <LocalizedField name="traits__text" label={t('traits')} size="full" hint={t('traitsHint')} value={Object.fromEntries(locales.map((l) => [l, ((animal?.traits as Record<string, string[]> | undefined)?.[l] ?? []).join(', ')]))} locales={locales} />
-                    </FormGrid>
-                  </div>
-                </section>
-                <section className="flex min-w-0 flex-col">
-                  <h3 className="text-[15px] font-semibold">{t('sections.photos')}</h3>
-                  <div className="mt-3">
-                    <FormGrid>
-                      <FormCell size="full">
-                        {animal ? <PhotosEditor photos={photos} max={maxPhotos} error={errors.photos} onChange={changePhotos} onChoose={() => setChooserOpen(true)} frame={photoFrame} /> : <p className="h-fit rounded-md border border-line bg-surface-2 p-4 text-[13px] text-ink-2">{p('afterCreate')}</p>}
-                      </FormCell>
-                    </FormGrid>
-                  </div>
-                </section>
+          <ActionForm id={FORM_ID} action={(data) => { data.set('tab', tab); if (animal) data.set('expectedVersion', animal.updatedAt); action(data); }} state={state}>
+            {animal ? <input type="hidden" name="id" value={animal.id} /> : null}
+            {animal ? <input ref={hiddenField} type="hidden" name="photos" value={JSON.stringify(photos)} /> : null}
+            {animal ? <input type="hidden" name="isPublished" value={published ? '1' : '0'} /> : null}
+            {/* Der Nachfolger steht beim Rendern fest: Fällt dieser Hund mit dem Bestätigen aus dem Filter, stimmt das Ziel trotzdem. */}
+            {position ? <><input type="hidden" name="queue" value={queue?.query ?? ''} /><input type="hidden" name="nextId" value={position.nextId ?? ''} /></> : null}
+            <TabsContent keepMounted value="profile" className="p-5">
+              <section>
+                <h3 className="text-[15px] font-semibold">{t('sections.name')}</h3>
+                <div className="mt-3">
+                  <FormGrid>
+                    {animal ? (
+                      // Fest seit dem Anlegen (Spec „Tier-Slug fest“): kein `name`, also reist er nicht mit dem Speichern.
+                      <FormField id="slug" label={c('slug')} hint={t('slugFixed')}><Input id="slug" value={animal.slug} readOnly className="font-mono" /></FormField>
+                    ) : null}
+                    <FormField id="name" label={t('name')} error={errors.name} required><Input id="name" name="name" defaultValue={animal?.name ?? ''} required /></FormField>
+                  </FormGrid>
+                </div>
+              </section>
+              <section className="mt-5 border-t border-line pt-5">
+                <h3 className="text-[15px] font-semibold">{t('sections.traits')}</h3>
+                <div className="mt-3">
+                  <FormGrid>
+                    <FormField id="sex" label={t('sex')} size="s"><Select id="sex" name="sex" defaultValue={animal?.sex ?? 'female'}><option value="female">{t('sexes.female')}</option><option value="male">{t('sexes.male')}</option></Select></FormField>
+                    <FormField id="sizeCm" label={t('sizeCm')} error={errors.sizeCm} size="s"><Input id="sizeCm" name="sizeCm" type="number" defaultValue={animal?.sizeCm ?? 0} className="font-mono" /></FormField>
+                    <LocalizedField name="sizeText" label={t('sizeText')} size="s" value={animal?.sizeText ?? {}} errors={errors} locales={locales} />
+                    <LocalizedField name="birthText" label={t('birthText')} size="s" value={animal?.birthText ?? {}} errors={errors} locales={locales} />
+                  </FormGrid>
+                </div>
+              </section>
+              <section className="mt-5 border-t border-line pt-5">
+                <h3 className="text-[15px] font-semibold">{t('sections.stay')}</h3>
+                <div className="mt-3">
+                  <FormGrid>
+                    <FormField id="location" label={t('location')} size="s"><Select id="location" name="location" defaultValue={animal?.location ?? 'shelter'}><option value="shelter">{t('locations.shelter')}</option><option value="germany">{t('locations.germany')}</option></Select></FormField>
+                    <FormField id="place" label={t('place')} size="s" error={errors.place}><Input id="place" name="place" placeholder={t('placePlaceholder')} defaultValue={animal?.place ?? ''} /></FormField>
+                    <FormField id="externalProfileUrl" label={t('externalProfileUrl')} hint={t('externalHint')} error={errors.externalProfileUrl}><Input id="externalProfileUrl" name="externalProfileUrl" defaultValue={animal?.externalProfileUrl ?? ''} /></FormField>
+                  </FormGrid>
+                </div>
+              </section>
+              <section className="mt-5 border-t border-line pt-5">
+                <h3 className="text-[15px] font-semibold">{t('sections.flags')}</h3>
+                <div className="mt-3">
+                  <FormGrid>
+                    <FormField id="isEmergency" label={t('isEmergency')} toggle><Checkbox id="isEmergency" name="isEmergency" defaultChecked={animal?.isEmergency ?? false} /></FormField>
+                    <FormField id="isSponsorable" label={t('isSponsorable')} toggle><Checkbox id="isSponsorable" name="isSponsorable" defaultChecked={animal?.isSponsorable ?? false} /></FormField>
+                  </FormGrid>
+                </div>
+              </section>
+            </TabsContent>
+            {/*
+              Texte links, Fotos rechts: Wer prüft, sieht beides nebeneinander und speichert einmal. Eigenes Zwei-Block-
+              Layout nur für diesen Reiter (Plan K8/K9 T2b): ab 880 px Kartenbreite nebeneinander, je halbe Breite,
+              darunter untereinander. Jeder Block rastert in seinem eigenen `FormGrid`.
+            */}
+            <TabsContent keepMounted value="content" className="p-5">
+              <div className="@container">
+                <div className="grid grid-cols-1 gap-x-5 gap-y-4 @[880px]:grid-cols-2">
+                  {/* Der Texte-Block ist eine eigene Spalte (~570 px): Jedes Feld darin nimmt die volle Blockbreite,
+                      auch bei einer Sprache; mehrere Sprachen teilen sie sich (HANDOFF Konsistenz § 8c). */}
+                  <section className="flex min-w-0 flex-col">
+                    <h3 className="text-[15px] font-semibold">{t('sections.texts')}</h3>
+                    <div className="mt-3">
+                      <FormGrid>
+                        <LocalizedField name="summary" label={t('summary')} size="full" kind="textarea" rows={2} value={animal?.summary ?? {}} errors={errors} locales={locales} />
+                        <LocalizedField name="body" label={t('body')} size="full" kind="markdown" rows={10} value={animal?.body ?? {}} errors={errors} locales={locales} />
+                        <LocalizedField name="traits__text" label={t('traits')} size="full" hint={t('traitsHint')} value={Object.fromEntries(locales.map((l) => [l, ((animal?.traits as Record<string, string[]> | undefined)?.[l] ?? []).join(', ')]))} locales={locales} />
+                      </FormGrid>
+                    </div>
+                  </section>
+                  <section className="flex min-w-0 flex-col">
+                    <h3 className="text-[15px] font-semibold">{t('sections.photos')}</h3>
+                    <div className="mt-3">
+                      <FormGrid>
+                        <FormCell size="full">
+                          {animal ? <PhotosEditor photos={photos} max={maxPhotos} error={errors.photos} onChange={changePhotos} onChoose={() => setChooserOpen(true)} frame={photoFrame} /> : <p className="h-fit rounded-md border border-line bg-surface-2 p-4 text-[13px] text-ink-2">{p('afterCreate')}</p>}
+                        </FormCell>
+                      </FormGrid>
+                    </div>
+                  </section>
+                </div>
               </div>
-            </div>
-          </TabsContent>
-          <TabsContent keepMounted value="story" className="p-5">{animal ? <StoryFields animal={animal} locales={locales} errors={errors} onMediaChange={hiddenEdited} /> : null}</TabsContent>
-          {/* Eine Leiste für alle Reiter: Sie zählt und speichert, was auf irgendeinem von ihnen geändert wurde. */}
-          {/* „Speichern“ steht im DOM zuerst: Die Eingabetaste in einem Feld speichert nur, sie bestätigt nichts. */}
-          <FormActionBar
-            // Hat die Leiste einen Hauptweg über „Speichern und weiter“, geht der auch ohne Änderung weiter: nie „Nichts geändert“.
-            mode={animal && !primary ? 'edit' : 'create'}
-            state={state}
-            baseline={baseline}
-            loadedVersion={animal?.updatedAt}
-            back={{ href: backHref, label: tCommon('backToList') }}
-            saveName="intent"
-            saveValue={primary?.intent ?? 'save'}
-            saveLabel={primary?.label}
-            extraActions={primary ? <SubmitButton variant="secondary" name="intent" value="save">{tCommon('save')}</SubmitButton> : undefined}
-          />
-        </ActionForm>
-      </Tabs>
+            </TabsContent>
+            <TabsContent keepMounted value="story" className="p-5">{animal ? <StoryFields animal={animal} locales={locales} errors={errors} onMediaChange={hiddenEdited} /> : null}</TabsContent>
+            {/* Eine Leiste für alle Reiter: Sie zählt und speichert, was auf irgendeinem von ihnen geändert wurde. */}
+            {/* „Speichern“ steht im DOM zuerst: Die Eingabetaste in einem Feld speichert nur, sie bestätigt nichts. */}
+            <FormActionBar
+              // Hat die Leiste einen Hauptweg über „Speichern und weiter“, geht der auch ohne Änderung weiter: nie „Nichts geändert“.
+              mode={animal && !primary ? 'edit' : 'create'}
+              state={state}
+              baseline={baseline}
+              loadedVersion={animal?.updatedAt}
+              back={{ href: backHref, label: tCommon('backToList') }}
+              saveName="intent"
+              saveValue={primary?.intent ?? 'save'}
+              saveLabel={primary?.label}
+              extraActions={primary ? <SubmitButton variant="secondary" name="intent" value="save">{tCommon('save')}</SubmitButton> : undefined}
+            />
+          </ActionForm>
+        </Tabs>
+      </FormCard>
       {/* Außerhalb des Formulars: Ein Dialog ist ein React-Portal, und was darin geschieht, stiege sonst ins Formular auf. */}
       {animal ? <MediaChooserDialog open={chooserOpen} onOpenChange={setChooserOpen} kind="image" multiple max={maxPhotos} selected={photos.map((x) => x.assetId)} onConfirm={(ids) => changePhotos(mergePhotos(photos, ids))} /> : null}
     </div>

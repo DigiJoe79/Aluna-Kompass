@@ -4,6 +4,7 @@ import { useTranslations } from 'next-intl';
 import { useActionState, useEffect, useId, useState } from 'react';
 import { toast } from 'sonner';
 import { ActionForm } from '@/components/forms/action-form';
+import { FormCard } from '@/components/forms/form-card';
 import { FormActionBar } from '@/components/forms/form-action-bar';
 import { Textarea } from '@/components/ui/textarea';
 import { idleState } from '@/lib/actions';
@@ -33,7 +34,7 @@ export function BlockedTermsPanel({ terms, canPublish }: { terms: string[]; canP
 
   // Eine Karte, die Leiste ihr letztes Kind (MUSTER § B/E).
   return (
-    <section aria-labelledby={titleId} className="overflow-hidden rounded-lg border border-line bg-surface">
+    <FormCard as="section" aria-labelledby={titleId}>
       <ActionForm action={action} state={state}>
         <div className="flex flex-col gap-3 p-5">
           <h3 id={titleId} className="text-[15px] font-semibold">{t('title')}</h3>
@@ -49,6 +50,6 @@ export function BlockedTermsPanel({ terms, canPublish }: { terms: string[]; canP
         </div>
         {canPublish ? <FormActionBar baseline={saves} saveLabel={t('save')} state={withUnplacedFieldErrors(state, [])} /> : null}
       </ActionForm>
-    </section>
+    </FormCard>
   );
 }

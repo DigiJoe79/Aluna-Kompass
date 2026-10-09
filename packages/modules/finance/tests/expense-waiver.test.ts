@@ -37,7 +37,7 @@ const categorized = (f: ExpenseFixture, claim: { positions: { id: string }[] }) 
 /** Ein eingereichter Verzicht mit Anspruchsgrundlage des Vereins und 50,00 € auf dem Konto. */
 async function waiverClaim(f: ExpenseFixture, o: { recurring?: boolean; funds?: boolean } = {}) {
   enableExpenseWaivers(f);
-  f.deps.db.transaction((tx) => writeSettingInternal(tx, f.deps, systemContext(), 'finance.expenseWaiverBasisText', 'Satzung § 7 Abs. 2', 'test'));
+  f.deps.db.transaction((tx) => writeSettingInternal(tx, f.deps, systemContext(), 'finance.expenseWaiverBasisText', 'Satzung § 7 Abs. 2'));
   if (o.funds !== false) await f.finalEntry();
   return expenseSubmitted(f, f.hanna, { iban: null, waiver: true, recurring: o.recurring });
 }
@@ -49,7 +49,7 @@ async function waiverClaim(f: ExpenseFixture, o: { recurring?: boolean; funds?: 
  */
 async function legacyLateWaiverClaim(f: ExpenseFixture, agreedOn: string, o: { recurring?: boolean } = {}) {
   enableExpenseWaivers(f);
-  f.deps.db.transaction((tx) => writeSettingInternal(tx, f.deps, systemContext(), 'finance.expenseWaiverBasisText', 'Satzung § 7 Abs. 2', 'test'));
+  f.deps.db.transaction((tx) => writeSettingInternal(tx, f.deps, systemContext(), 'finance.expenseWaiverBasisText', 'Satzung § 7 Abs. 2'));
   await f.finalEntry();
   const draft = await expenseReadyDraft(f, f.hanna, { iban: null, waiver: true, recurring: o.recurring });
   f.deps.db.update(financeExpenseClaims).set({ state: 'submitted', number: 'KE-2026-901', submittedAt: '2026-09-01T10:00:00.000Z', submittedByUserId: f.hanna.ctx.userId!, waiverBasisText: 'Vereinbarung', waiverAgreedOn: agreedOn }).where(eq(financeExpenseClaims.id, draft.id)).run();
@@ -160,7 +160,7 @@ describe('waiverChecks and approveExpenseClaim with waiver', () => {
     const f = await expenseFixture();
     await waiverClaim(f);
     const check = async (agreedOn: string) => {
-      f.deps.db.transaction((tx) => writeSettingInternal(tx, f.deps, systemContext(), 'finance.expenseWaiverBasisAgreedOn', agreedOn, 'test'));
+      f.deps.db.transaction((tx) => writeSettingInternal(tx, f.deps, systemContext(), 'finance.expenseWaiverBasisAgreedOn', agreedOn));
       const claim = await expenseSubmitted(f, f.hanna, { iban: null, waiver: true });
       expect(claim.waiverAgreedOn).toBe(agreedOn);
       return unwrap(await waiverChecks(f.deps, approverCtx(f), { claimId: claim.id, declaredOn: '2026-09-05', claimAgreedConfirmed: true })).find((c) => c.key === 'claimAgreed');
@@ -172,7 +172,7 @@ describe('waiverChecks and approveExpenseClaim with waiver', () => {
   it('Prüfer-Fixrunde 28.09., Punkt 4: a draft whose basis is younger than its earliest position warns, submitting it as a waiver is refused, as a reimbursement it goes through', async () => {
     const f = await expenseFixture();
     await waiverClaim(f);
-    f.deps.db.transaction((tx) => writeSettingInternal(tx, f.deps, systemContext(), 'finance.expenseWaiverBasisAgreedOn', '2026-08-21', 'test'));
+    f.deps.db.transaction((tx) => writeSettingInternal(tx, f.deps, systemContext(), 'finance.expenseWaiverBasisAgreedOn', '2026-08-21'));
     const draft = await expenseReadyDraft(f, f.hanna, { iban: null, waiver: true });
     expect(draft.warnings).toContain('waiverAgreedAfterPosition');
     expect(unwrap(await getExpenseClaim(f.deps, f.hanna.ctx, { id: draft.id })).warnings).toContain('waiverAgreedAfterPosition');
@@ -186,7 +186,7 @@ describe('waiverChecks and approveExpenseClaim with waiver', () => {
   it('Prüfer-Fixrunde 28.09., Punkt 4, über MCP: dieselbe Warnung am Entwurf, dieselbe Ablehnung beim Einreichen', async () => {
     const f = await expenseFixture();
     await waiverClaim(f);
-    f.deps.db.transaction((tx) => writeSettingInternal(tx, f.deps, systemContext(), 'finance.expenseWaiverBasisAgreedOn', '2026-08-21', 'test'));
+    f.deps.db.transaction((tx) => writeSettingInternal(tx, f.deps, systemContext(), 'finance.expenseWaiverBasisAgreedOn', '2026-08-21'));
     const tool = (name: string) => FINANCE_MCP_TOOLS.find((x) => x.name === name)!;
     const agent = { ...f.hanna.ctx, channel: 'mcp' as const };
     const draft = await expenseReadyDraft(f, f.hanna, { iban: null, waiver: true });
@@ -224,7 +224,7 @@ describe('waiverChecks and approveExpenseClaim with waiver', () => {
   it('the expense donation line is confirmable through F6a with a signature field', async () => {
     const f = await expenseFixture();
     f.deps.db.transaction((tx) => {
-      for (const [key, value] of [['organization.name', 'Musterverein e.V.'], ['organization.street', 'Musterweg 1'], ['organization.postalCode', '12345'], ['organization.city', 'Musterstadt']] as const) writeSettingInternal(tx, f.deps, systemContext(), key, value, 'test');
+      for (const [key, value] of [['organization.name', 'Musterverein e.V.'], ['organization.street', 'Musterweg 1'], ['organization.postalCode', '12345'], ['organization.city', 'Musterstadt']] as const) writeSettingInternal(tx, f.deps, systemContext(), key, value);
     });
     f.deps.db.update(contacts).set({ street: 'Beispielstraße 7', postalCode: '54321', city: 'Beispielstadt' }).where(eq(contacts.id, f.hanna.contactId)).run();
     unwrap(await saveNotice(f.deps, f.ctx, EXEMPTION));

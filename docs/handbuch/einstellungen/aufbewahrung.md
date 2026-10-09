@@ -10,8 +10,9 @@ jede Löschung, und die Bestätigung steht im Änderungsprotokoll.
 Die Liste zeigt, gruppiert nach Art, was seine gesetzliche Aufbewahrung
 hinter sich hat: Kontakte, deren letzte Rolle und letzter Vorgang lange genug
 zurückliegen, später Dokumente. Je Zeile seit wann. Gelöscht wird nicht
-hier, sondern auf der Seite des Eintrags — dort steht, was verschwindet, und
-dort ist der Löschknopf frei, sobald nichts mehr hält.
+hier, sondern auf der Seite des Eintrags unter **Weitere Aktionen** (⋯) —
+dort steht, was verschwindet; solange noch etwas hält, nennt der Dialog die
+Frist.
 
 ## Die Fristen
 

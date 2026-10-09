@@ -9,7 +9,7 @@ function setup() {
   const userId = insertUser(deps, {});
   const ctx = ctxWith(['contacts.view', 'contacts.manage', 'settings.manage'], userId);
   deps.db.transaction((tx) => {
-    writeSettingInternal(tx, deps, ctx, 'modules.enabled', ['contacts'], 'test.enable');
+    writeSettingInternal(tx, deps, ctx, 'modules.enabled', ['contacts']);
   });
   return { deps, ctx, userId };
 }

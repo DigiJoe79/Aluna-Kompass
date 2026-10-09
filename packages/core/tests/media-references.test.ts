@@ -54,7 +54,7 @@ describe('findMediaReferencesFor', () => {
     });
     const deps = createTestDeps({ manifests: [coreModule, probe] });
     deps.db.transaction((tx) => {
-      writeSettingInternal(tx, deps, ctxWith(['settings.manage']), 'modules.enabled', ['probe'], 'test.enable');
+      writeSettingInternal(tx, deps, ctxWith(['settings.manage']), 'modules.enabled', ['probe']);
     });
 
     const found = findMediaReferencesFor(deps, ['A', 'B', 'C', 'A']);

@@ -1,7 +1,9 @@
 import { exportDocument, queryAudit, timeZoneOf } from '@kompass/core';
-import { getTranslations } from 'next-intl/server';
+import { getLocale, getTranslations } from 'next-intl/server';
+import { auditActionLabel } from '@/lib/audit-actions';
 import { auditEntityLabels } from '@/lib/audit-entities';
 import { auditExportEntries } from '@/lib/audit-export';
+import { auditSentences, labelsFrom, type SentenceTranslator } from '@/lib/audit-sentences';
 import { getDeps } from '@/lib/deps';
 import { optionalSession } from '@/lib/request-context';
 
@@ -25,6 +27,7 @@ export async function GET(request: Request): Promise<Response> {
   if (!query.ok) return new Response(null, { status: query.error.type === 'forbidden' ? 403 : 400 });
 
   const t = await getTranslations();
+  const a = await getTranslations('audit');
   const labels = t.raw('audit.filters') as Record<string, string>;
   const shown = Object.fromEntries(Object.entries(filters).map(([k, v]) => [labels[k] ?? k, String(v)]));
   const result = await exportDocument(deps, session.ctx, {
@@ -37,6 +40,9 @@ export async function GET(request: Request): Promise<Response> {
         channels: t.raw('audit.filters.channels') as Record<string, string>,
         labels: auditEntityLabels(deps, session.ctx, query.value.entries),
         deleted: (type) => t('audit.deletedRecord', { type }),
+        // Papier: Datumswerte im Satz fest TT.MM.JJJJ (MUSTER § Datum).
+        sentences: auditSentences(deps, session.ctx, a as unknown as SentenceTranslator, query.value.entries, { paper: true, label: labelsFrom(t), locale: await getLocale() }),
+        actionLabel: (action) => auditActionLabel(a, action),
       }),
     },
   });

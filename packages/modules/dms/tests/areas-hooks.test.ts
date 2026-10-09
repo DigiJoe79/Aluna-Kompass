@@ -55,6 +55,7 @@ describe('hooks and protected document types', () => {
     const log = JSON.stringify(deps.db.select().from(schema.auditLog).all().filter((e) => e.action.startsWith('followUps.')));
     expect(log).not.toContain('Müller');
     expect(log).not.toContain('Streng geheimer Betreff');
-    expect(log).toMatch(/Wiedervorlage zu GEH-\d{4}-001/);
+    // Statt des Titels die Nummer des Dokuments (Spec Protokoll § 2, `auditLabel`).
+    expect(log).toMatch(/\\"label\\":\\"GEH-\d{4}-001\\",\\"onRecord\\":true/);
   });
 });

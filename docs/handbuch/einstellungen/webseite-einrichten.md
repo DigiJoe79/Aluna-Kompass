@@ -1,19 +1,19 @@
 # Webseite einrichten
 
 Unter Einstellungen → Webseite richten Sie ein, woraus und wohin die
-Vereinsseite gebaut wird: das Template, die Verbindung zum Webspace, den
+Vereinsseite gebaut wird: die Vorlage, die Verbindung zum Webspace, den
 Cache der Bildvarianten und die Liste gesperrter Begriffe. Die Inhalte
 selbst pflegen Sie unter „Webseite“ in der Leiste; dort steht auch
-„Publizieren“, das ohne Template zuerst in diese Einstellungen führt.
+„Publizieren“, das ohne Vorlage zuerst in diese Einstellungen führt.
 
 Die Seite hat vier Reiter. Sie brauchen dafür das Recht „Webseite pflegen“.
 
-## Template
+## Vorlage
 
-Hier lesen Sie das Template des Vereins ein und übernehmen, falls es welche
+Hier lesen Sie die Vorlage des Vereins ein und übernehmen, falls sie welche
 mitbringt, die Startinhalte. Wie das geht und was die Befunde bedeuten,
-steht unter [Template einlesen](../webseite/template-einlesen.md). Die alte
-Adresse „Webseite → Template“ leitet auf diesen Reiter weiter.
+steht unter [Vorlage einlesen](../webseite/template-einlesen.md). Die alte
+Adresse „Webseite → Vorlage“ leitet auf diesen Reiter weiter.
 
 ## Verbindung
 

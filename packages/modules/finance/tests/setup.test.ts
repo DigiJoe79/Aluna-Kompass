@@ -54,20 +54,20 @@ describe('finance setup status', () => {
     const { deps, ctx } = setupFinance();
     expect(unwrap(await getSetupStatus(deps, ctx)).steps.map((s) => s.key)).not.toContain('waiverBasis');
 
-    await deps.db.transaction((tx) => writeSettingInternal(tx, deps, systemContext(), 'finance.expenseWaiversEnabled', true, 'test'));
+    await deps.db.transaction((tx) => writeSettingInternal(tx, deps, systemContext(), 'finance.expenseWaiversEnabled', true));
     const withWaivers = unwrap(await getSetupStatus(deps, ctx));
     const step = withWaivers.steps.find((s) => s.key === 'waiverBasis')!;
     expect(step).toBeDefined();
     expect(step.required).toBe(false);
     expect(step.done).toBe(false);
 
-    await deps.db.transaction((tx) => writeSettingInternal(tx, deps, systemContext(), 'finance.expenseWaiverBasisText', 'Satzung § 9', 'test'));
+    await deps.db.transaction((tx) => writeSettingInternal(tx, deps, systemContext(), 'finance.expenseWaiverBasisText', 'Satzung § 9'));
     // Befund J: eine Grundlage ohne Datum (Bestand von vor dem Datum) lässt den Schritt offen.
     expect(unwrap(await getSetupStatus(deps, ctx)).steps.find((s) => s.key === 'waiverBasis')!.done).toBe(false);
-    await deps.db.transaction((tx) => writeSettingInternal(tx, deps, systemContext(), 'finance.expenseWaiverBasisAgreedOn', '2026-01-01', 'test'));
+    await deps.db.transaction((tx) => writeSettingInternal(tx, deps, systemContext(), 'finance.expenseWaiverBasisAgreedOn', '2026-01-01'));
     expect(unwrap(await getSetupStatus(deps, ctx)).steps.find((s) => s.key === 'waiverBasis')!.done).toBe(true);
 
-    await deps.db.transaction((tx) => writeSettingInternal(tx, deps, systemContext(), 'finance.expenseWaiversEnabled', false, 'test'));
+    await deps.db.transaction((tx) => writeSettingInternal(tx, deps, systemContext(), 'finance.expenseWaiversEnabled', false));
     expect(unwrap(await getSetupStatus(deps, ctx)).steps.map((s) => s.key)).not.toContain('waiverBasis');
   });
 
@@ -81,7 +81,7 @@ describe('finance setup status', () => {
     unwrap(await setBoardRemuneration(deps, ctx, { allowed: true, basisText: 'Satzung § 12', validFrom: '2026-01-01' }));
     expect(unwrap(await getSetupStatus(deps, ctx)).steps.find((s) => s.key === 'boardRemuneration')!.done).toBe(true);
     // Befund AK: bestätigt ohne „gilt ab“ (Bestand) bleibt der Schritt offen.
-    await deps.db.transaction((tx) => writeSettingInternal(tx, deps, systemContext(), 'finance.boardRemunerationValidFrom', null, 'test'));
+    await deps.db.transaction((tx) => writeSettingInternal(tx, deps, systemContext(), 'finance.boardRemunerationValidFrom', null));
     expect(unwrap(await getSetupStatus(deps, ctx)).steps.find((s) => s.key === 'boardRemuneration')!.done).toBe(false);
   });
 
@@ -359,7 +359,7 @@ describe('finance setup status', () => {
     const entry = auditEntry(deps, 'finance.setup.waiverBasis');
     expect(entry.entityType).toBe('financeSetup');
     expect(entry.after).not.toContain('Satzung');
-    expect(entry.summary).not.toContain('Satzung');
+    expect(entry.params).toBeNull();
 
     // Leeren ist erlaubt — der Schritt der Checkliste ist dann wieder offen.
     unwrap(await setExpenseWaiverBasisText(deps, ctx, { text: '' }));
@@ -376,6 +376,6 @@ describe('finance setup status', () => {
     unwrap(await applyTaxDefaults(deps, ctx));
     const entry = auditEntry(deps, 'finance.setup.applyTaxDefaults');
     expect(Object.keys(JSON.parse(entry.after as string)).sort()).toEqual(['applied', 'confirmedAt', 'step']);
-    expect(entry.summary).not.toMatch(/Test/);
+    expect(entry.params).toBeNull();
   });
 });

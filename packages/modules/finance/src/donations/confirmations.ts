@@ -305,7 +305,7 @@ export async function issueConfirmation(deps: Deps, ctx: CallContext, input: unk
         const other = openConfirmationsForLinesInternal(tx, lineIds);
         return abortIssue(financeConflict('confirmationLineAlreadyConfirmed', { number: [...other.values()][0]?.number ?? '' }));
       }
-      financeAudit(tx, deps, ctx, { action: 'finance.confirmation.issue', entity: 'financeConfirmation', id: confirmationId, after: auditOfIssue(row, fresh.value.lines.length), summary: `Zuwendungsbestätigung ${doc.number} ausgestellt` });
+      financeAudit(tx, deps, ctx, { action: 'finance.confirmation.issue', entity: 'financeConfirmation', id: confirmationId, after: auditOfIssue(row, fresh.value.lines.length), params: { documentNumber: doc.number } });
       return confirmationId;
     },
   });
@@ -412,7 +412,7 @@ export async function voidConfirmation(deps: Deps, ctx: CallContext, input: unkn
       financeAudit(tx, deps, ctx, {
         action: 'finance.confirmation.void', entity: 'financeConfirmation', id: v.id,
         after: { voided: true, sentBeforeVoid: v.alreadySent, originalReturned: v.originalReturnedOn !== undefined, taxOfficeInformed: v.taxOfficeInformedOn !== undefined },
-        summary: `Zuwendungsbestätigung ${before.documentNumber} zurückgenommen`,
+        params: { documentNumber: before.documentNumber },
       });
       // Befund 24: Die Akte zeigt sonst weiter „ausgestellt“, und das PDF sähe gültig aus. Ein schon
       // storniertes Dokument (Altdaten, Handstorno) hindert die Rücknahme nicht; jeder andere Fehler
@@ -461,7 +461,7 @@ export async function recordConfirmationRecall(deps: Deps, ctx: CallContext, inp
     const originalReturnedOn = v.originalReturnedOn ?? before.originalReturnedOn;
     const taxOfficeInformedOn = v.taxOfficeInformedOn ?? before.taxOfficeInformedOn;
     tx.update(financeConfirmations).set({ originalReturnedOn, taxOfficeInformedOn }).where(eq(financeConfirmations.id, v.id)).run();
-    financeAudit(tx, deps, ctx, { action: 'finance.confirmation.recall', entity: 'financeConfirmation', id: v.id, after: { originalReturned: originalReturnedOn !== null, taxOfficeInformed: taxOfficeInformedOn !== null }, summary: `Rückholspur zu ${before.documentNumber} nachgetragen` });
+    financeAudit(tx, deps, ctx, { action: 'finance.confirmation.recall', entity: 'financeConfirmation', id: v.id, after: { originalReturned: originalReturnedOn !== null, taxOfficeInformed: taxOfficeInformedOn !== null }, params: { documentNumber: before.documentNumber } });
     return ok(viewInternal(tx, v.id)!);
   });
 }
@@ -510,7 +510,7 @@ export async function recordConfirmationDispatch(deps: Deps, ctx: CallContext, i
 export function recordDispatchInternal(tx: DbOrTx, deps: Deps, ctx: CallContext, row: Pick<FinanceConfirmationRow, 'id' | 'documentNumber'>, sentAt: string, sentVia: 'post' | 'email' | 'handed'): boolean {
   const changed = tx.update(financeConfirmations).set({ sentAt, sentVia }).where(and(eq(financeConfirmations.id, row.id), isNull(financeConfirmations.sentAt), isNull(financeConfirmations.voidedAt))).run().changes;
   if (changed !== 1) return false;
-  financeAudit(tx, deps, ctx, { action: 'finance.confirmation.dispatch', entity: 'financeConfirmation', id: row.id, after: { sentVia }, summary: `Versand von ${row.documentNumber} vermerkt` });
+  financeAudit(tx, deps, ctx, { action: 'finance.confirmation.dispatch', entity: 'financeConfirmation', id: row.id, after: { sentVia }, params: { documentNumber: row.documentNumber } });
   return true;
 }
 
@@ -543,12 +543,13 @@ export async function attachSignedConfirmation(deps: Deps, ctx: CallContext, inp
     bytes: v.bytes,
     typeKey: 'finance-confirmation-signed',
     subject: `Zuwendungsbestätigung ${row.documentNumber} unterschrieben`,
+    recordNumber: row.documentNumber,
     documentDate: todayIn(deps),
     links: [{ entityType: 'financeConfirmation', entityId: row.id }],
     afterReceive: (tx, doc) => {
       const changed = tx.update(financeConfirmations).set({ signedDocumentId: doc.id }).where(and(eq(financeConfirmations.id, row.id), isNull(financeConfirmations.signedDocumentId), isNull(financeConfirmations.voidedAt))).run().changes;
       if (changed !== 1) abortReceive(financeConflict('confirmationSignedAlready'));
-      financeAudit(tx, deps, ctx, { action: 'finance.confirmation.signed', entity: 'financeConfirmation', id: row.id, after: { signedDocumentId: doc.id }, summary: `Unterschriebene Fassung ${doc.number} zu ${row.documentNumber} abgelegt` });
+      financeAudit(tx, deps, ctx, { action: 'finance.confirmation.signed', entity: 'financeConfirmation', id: row.id, after: { signedDocumentId: doc.id }, params: { signedNumber: doc.number, documentNumber: row.documentNumber } });
       return null;
     },
   });

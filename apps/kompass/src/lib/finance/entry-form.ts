@@ -1,5 +1,6 @@
 import type { EntryLinesInput } from '@kompass/module-finance';
 import { formatAmount, parseAmount } from './amount';
+import { countChangedValues } from '../form-dirty';
 
 export type EntryTemplate = 'income' | 'expense' | 'transfer' | 'inKind';
 
@@ -77,6 +78,16 @@ const emptyMoneyRow = (key: string, direction: 'in' | 'out'): MoneyRow => ({ key
  * Kopplung nach, ohne die erste Zeile oder ihre eigenen Felder zu verlieren.
  * `income`/`expense`: eine Geldzeile mit der passenden Richtung.
  */
+/**
+ * Geänderte Felder seit dem Laden, für die Speicherleiste (Befund 41): Sie zählt verborgen mit und fragt beim
+ * Verlassen nur nach einer Eingabe. Was der Dienst setzt — ID und Version des automatisch gesicherten Entwurfs, die
+ * Art einer verlangten Begründung —, ist keine Eingabe.
+ */
+export function countEntryChanges(loaded: EntryFormState, current: EntryFormState): number {
+  const fields = ({ id: _id, expectedVersion: _version, reasonKind: _kind, ...rest }: EntryFormState) => rest;
+  return countChangedValues(fields(loaded), fields(current));
+}
+
 export function applyTemplate(state: EntryFormState, template: EntryTemplate): EntryFormState {
   if (template === 'transfer') {
     const keep = state.template === 'transfer' && state.moneyRows.length === 2 ? state.moneyRows : null;

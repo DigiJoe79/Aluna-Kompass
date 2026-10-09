@@ -6,7 +6,7 @@ test('ein bestehender Eintrag lässt sich speichern, danach verwerfen und erneut
   await resetDatabase(page, 'seeded');
   await loginAsAdmin(page);
   await page.goto('/site/template');
-  await page.getByRole('button', { name: 'Template einlesen' }).click();
+  await page.getByRole('button', { name: 'Vorlage einlesen' }).click();
   await page.getByRole('button', { name: 'Übernehmen' }).click();
   await expect(page.getByRole('status')).toContainText('eingelesen');
 
@@ -33,21 +33,22 @@ test('ein bestehender Eintrag lässt sich speichern, danach verwerfen und erneut
   await expect(page.locator('[name="title.de"]')).toHaveValue('Zweiter Stand');
 });
 
-test('ein Eintrag wird unten auf seiner Seite gelöscht, nicht in der Liste', async ({ page }) => {
+test('ein Eintrag wird auf seiner Seite gelöscht, unter „Weitere Aktionen“, nicht in der Liste', async ({ page }) => {
   await resetDatabase(page, 'seeded');
   await loginAsAdmin(page);
   await page.goto('/site/template');
-  await page.getByRole('button', { name: 'Template einlesen' }).click();
+  await page.getByRole('button', { name: 'Vorlage einlesen' }).click();
   await page.getByRole('button', { name: 'Übernehmen' }).click();
   await expect(page.getByRole('status')).toContainText('eingelesen');
 
   await page.goto('/site/c/news');
-  // Die Liste kennt keinen Löschen-Knopf mehr (MUSTER.md § C: Löschen ist der letzte Abschnitt der Detailseite).
+  // Die Liste kennt keinen Löschen-Knopf (MUSTER.md § C: Löschen steht im Seitenkopf der Detailseite).
   await expect(page.getByRole('button', { name: 'Löschen' })).toHaveCount(0);
   const before = await page.getByRole('row').count();
   await page.getByRole('row').first().getByRole('link').click();
   await waitForHydration(page, '[name="title.de"]');
-  await page.getByRole('button', { name: 'Löschen' }).click();
+  await page.getByRole('button', { name: 'Weitere Aktionen' }).click();
+  await page.getByRole('menuitem', { name: 'Eintrag löschen …' }).click();
   const dialog = page.getByRole('alertdialog');
   const withdraw = dialog.getByRole('button', { name: 'Zurückziehen' });
   const remove = dialog.getByRole('button', { name: 'Löschen' });
@@ -86,7 +87,7 @@ test('Leser sehen Sammlungen ohne Bearbeiten-Knöpfe, ohne Leserecht keine Vorsc
   await resetDatabase(page, 'seeded');
   await loginAsAdmin(page);
   await page.goto('/site/template');
-  await page.getByRole('button', { name: 'Template einlesen' }).click();
+  await page.getByRole('button', { name: 'Vorlage einlesen' }).click();
   await page.getByRole('button', { name: 'Übernehmen' }).click();
   await expect(page.getByRole('status')).toContainText('eingelesen');
 

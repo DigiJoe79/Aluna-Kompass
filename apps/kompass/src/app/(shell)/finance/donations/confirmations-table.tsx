@@ -4,7 +4,7 @@ import { PenLine } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Fragment, useState } from 'react';
+import { Fragment, useState, type ReactNode } from 'react';
 import { FormActionBar } from '@/components/forms/form-action-bar';
 import { useActionFeedback } from '@/components/forms/use-action-feedback';
 import { useDateFormat } from '@/components/date-format-provider';
@@ -50,7 +50,7 @@ export interface ConfirmationRow {
  * Fassung, Versand vermerken und „Bestätigung zurücknehmen“. Die beiden
  * letzten nur mit `finance.donationsIssue`.
  */
-export function ConfirmationsTable({ rows, canIssue, initialOpenId, today }: { rows: ConfirmationRow[]; canIssue: boolean; initialOpenId: string | null; today: string }) {
+export function ConfirmationsTable({ rows, canIssue, initialOpenId, today, footer }: { rows: ConfirmationRow[]; canIssue: boolean; initialOpenId: string | null; today: string; /** Fuß der Tabellenkarte: `ListPager footer`. */ footer?: ReactNode }) {
   const t = useTranslations('finance.donations');
   const { date } = useDateFormat();
   const [openId, setOpenId] = useState<string | null>(initialOpenId);
@@ -137,6 +137,7 @@ export function ConfirmationsTable({ rows, canIssue, initialOpenId, today }: { r
           ))}
         </TableBody>
       </Table>
+      {footer}
       {voiding ? (
         <VoidDialog
           open
@@ -199,7 +200,7 @@ function Detail({ row, canIssue, onVoid, onDispatch, onRecall }: { row: Confirma
           <Button type="button" variant="outline" size="sm" onClick={onDispatch}>{t('detail.dispatch')}</Button>
         ) : null}
         {canIssue && row.state === 'valid' ? (
-          <Button type="button" variant="destructive" size="sm" onClick={onVoid}>{t('detail.void')}</Button>
+          <Button type="button" variant="outline" size="sm" onClick={onVoid}>{t('detail.void')}</Button>
         ) : null}
         {canIssue && row.recall && (!row.recall.originalReturnedOn || !row.recall.taxOfficeInformedOn) ? (
           <Button type="button" variant="outline" size="sm" onClick={onRecall}>{t('detail.recall')}</Button>

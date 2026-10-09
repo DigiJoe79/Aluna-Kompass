@@ -27,8 +27,7 @@ describe('reclassifyDocument', () => {
     expect(after.formerNumbers).toEqual(['VER-2026-001']);
     const entry = auditEntry(deps, 'dms.reclassify');
     expect(entry).toMatchObject({ entityType: 'document', entityId: doc.id });
-    expect(entry.summary).toContain('VER-2026-001');
-    expect(entry.summary).toContain('BEH-2026-001');
+    expect(JSON.parse(entry.params!)).toEqual({ number: 'BEH-2026-001', previousNumber: 'VER-2026-001', retyped: true });
   });
 
   it('ändert nur Betreff und Datum, ohne die Nummer anzufassen', async () => {

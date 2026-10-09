@@ -2,7 +2,8 @@
 
 import type { PublishSource, PublishSummary } from '@kompass/module-site';
 import { Copy } from 'lucide-react';
-import { useFormatter, useTranslations } from 'next-intl';
+import { useTranslations } from 'next-intl';
+import { useDateFormat } from '@/components/date-format-provider';
 import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -64,7 +65,7 @@ export function LogDialog({ item, onClose }: { item: LogSubject | null; onClose(
   const t = useTranslations('site.publish.log');
   const tHistory = useTranslations('site.publish.history');
   const tCommon = useTranslations('common');
-  const format = useFormatter();
+  const fmt = useDateFormat();
   const [log, setLog] = useState<string | null>(null);
   const pre = useRef<HTMLPreElement>(null);
 
@@ -94,7 +95,7 @@ export function LogDialog({ item, onClose }: { item: LogSubject | null; onClose(
     <Dialog open={item !== null} onOpenChange={(open) => !open && onClose()}>
       <DialogContent size="lg" layout="fixed-footer" initialFocus={pre} className="bg-surface">
         <DialogHeader>
-          <DialogTitle>{item ? t('title', { when: format.dateTime(new Date(item.startedAt), { dateStyle: 'medium', timeStyle: 'short' }) }) : ''}</DialogTitle>
+          <DialogTitle>{item ? t('title', { when: fmt.dateTime(item.startedAt) }) : ''}</DialogTitle>
           {item ? (
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] text-ink-2">
               <StatusMark status={item.status} />

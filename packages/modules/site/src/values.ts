@@ -112,7 +112,8 @@ export async function setValues(deps: Deps, ctx: CallContext, raw: unknown): Pro
       entityId: 'variables',
       before,
       after: { ...before, ...(parsed.value as Record<string, unknown>) },
-      summary: `Variablen geändert: ${Object.keys(values).join(', ')}`,
+      // Die Schlüssel der Variablen (Nutzdaten des Templates), durch Komma getrennt.
+      params: { variables: Object.keys(values).join(', '), variableCount: Object.keys(values).length },
     });
   });
   return ok(readValues(deps));

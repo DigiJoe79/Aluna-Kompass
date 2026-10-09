@@ -102,7 +102,7 @@ function insertTransfer(tx: DbOrTx, deps: Deps, ctx: CallContext, v: z.infer<typ
     .run();
   linkDocumentInternal(tx, deps, { documentId, entityType: 'financePurposeTransfer', entityId: id });
   const after = tx.select().from(financePurposeTransfers).where(eq(financePurposeTransfers.id, id)).get()!;
-  financeAudit(tx, deps, ctx, { action: 'finance.purposeTransfer.request', entity: 'financePurposeTransfer', id, after: auditFields(after), summary: `Umwidmung ${number} angelegt` });
+  financeAudit(tx, deps, ctx, { action: 'finance.purposeTransfer.request', entity: 'financePurposeTransfer', id, after: auditFields(after), params: { number } });
   return ok(toView(tx, after));
 }
 
@@ -184,7 +184,7 @@ export async function approvePurposeTransfer(deps: Deps, ctx: CallContext, input
       .run().changes;
     if (changed !== 1) return financeConflict('transferNotSubmitted');
     const after = tx.select().from(financePurposeTransfers).where(eq(financePurposeTransfers.id, transfer.id)).get()!;
-    financeAudit(tx, deps, ctx, { action: 'finance.purposeTransfer.approve', entity: 'financePurposeTransfer', id: transfer.id, before: { state: 'submitted' }, after: auditFields(after), summary: `Umwidmung ${transfer.number} freigegeben` });
+    financeAudit(tx, deps, ctx, { action: 'finance.purposeTransfer.approve', entity: 'financePurposeTransfer', id: transfer.id, before: { state: 'submitted' }, after: auditFields(after), params: { number: transfer.number } });
     return ok(toView(tx, after));
   });
 }
@@ -208,7 +208,7 @@ export async function rejectPurposeTransfer(deps: Deps, ctx: CallContext, input:
       .run().changes;
     if (changed !== 1) return financeConflict('transferNotSubmitted');
     const after = tx.select().from(financePurposeTransfers).where(eq(financePurposeTransfers.id, transfer.id)).get()!;
-    financeAudit(tx, deps, ctx, { action: 'finance.purposeTransfer.reject', entity: 'financePurposeTransfer', id: transfer.id, before: { state: 'submitted' }, after: auditFields(after), summary: `Umwidmung ${transfer.number} abgelehnt` });
+    financeAudit(tx, deps, ctx, { action: 'finance.purposeTransfer.reject', entity: 'financePurposeTransfer', id: transfer.id, before: { state: 'submitted' }, after: auditFields(after), params: { number: transfer.number } });
     return ok(toView(tx, after));
   });
 }

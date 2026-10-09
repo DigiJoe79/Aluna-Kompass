@@ -22,4 +22,10 @@ describe('dateFormatOf — die Anzeige auf Server-Seiten', () => {
     set(deps, 'organization.timeZone', 'America/New_York');
     expect(dateFormatOf(deps).date('2026-09-12T22:30:00Z')).toBe('12.09.2026');
   });
+
+  it('dateTime mit Sekunden für das Protokoll', () => {
+    const deps = createTestDeps();
+    set(deps, 'ui.dateFormat', 'iso');
+    expect(dateFormatOf(deps).dateTime('2026-09-12T15:35:07.000Z', { seconds: true })).toBe('2026-09-12 17:35:07');
+  });
 });

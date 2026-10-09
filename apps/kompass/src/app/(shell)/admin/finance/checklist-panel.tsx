@@ -2,7 +2,9 @@
 
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
 import { RefusalNotice } from '@/components/forms/refusal-notice';
 import { useActionFeedback } from '@/components/forms/use-action-feedback';
 import { Notice } from '@/components/notice';
@@ -45,6 +47,14 @@ const STEP_HREF: Record<ChecklistStep['key'], string> = {
 /** H1 — Einstieg: erledigte Zeilen bleiben stehen, blockierte nennen ihre Abhängigkeit. */
 export function ChecklistPanel({ steps, complete }: { steps: ChecklistStep[]; complete: boolean }) {
   const t = useTranslations('finance.admin.checklist');
+  // „Die Einrichtung ist vollständig“ erscheint erst nach einer Handlung (letzter Schritt bestätigt, Vorgaben übernommen …)
+  // und hat als hint keine Rolle — der Toast sagt das Ergebnis an (MUSTER § A, Designer 2026-10-08). Nur beim Wechsel,
+  // nicht beim Laden einer schon vollständigen Einrichtung; die Kennung hält ihn einmalig.
+  const wasComplete = useRef(complete);
+  useEffect(() => {
+    if (complete && !wasComplete.current) toast.success(t('completeHint'), { id: 'setup-complete' });
+    wasComplete.current = complete;
+  }, [complete, t]);
   const router = useRouter();
   const [pending, setPending] = useState(false);
   // Je Schritt eine eigene Ablehnung, über dem Knopf des Schritts.
@@ -74,16 +84,16 @@ export function ChecklistPanel({ steps, complete }: { steps: ChecklistStep[]; co
       step.key === 'tax' && !step.done && canSelf ? (
         <div className="space-y-2">
           <RefusalNotice action state={taxFb.state} />
-          <button type="button" onClick={() => void applyDefaults()} disabled={pending} className="rounded-sm border border-line bg-surface px-3 py-1.5 text-[13px] font-semibold text-ink hover:bg-surface-2" data-testid="apply-tax-defaults">
+          <Button type="button" variant="outline" size="sm" onClick={() => void applyDefaults()} disabled={pending} data-testid="apply-tax-defaults">
             {t('applyTaxDefaults')}
-          </button>
+          </Button>
         </div>
       ) : step.key === 'categories' && !step.done && canSelf ? (
         <div className="space-y-2">
           <RefusalNotice action state={categoriesFb.state} />
-          <button type="button" onClick={() => void confirmCategories()} disabled={pending} className="rounded-sm border border-line bg-surface px-3 py-1.5 text-[13px] font-semibold text-ink hover:bg-surface-2" data-testid="confirm-categories">
+          <Button type="button" variant="outline" size="sm" onClick={() => void confirmCategories()} disabled={pending} data-testid="confirm-categories">
             {t('reviewCategories')}
-          </button>
+          </Button>
         </div>
       ) : undefined;
 

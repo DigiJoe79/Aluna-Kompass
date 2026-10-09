@@ -4,7 +4,7 @@ import { ArrowLeftRight, Banknote, FileCheck2, Link2, ListChecks, Undo2, UserRou
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useEffect, useRef, useState, useTransition } from 'react';
+import { useEffect, useRef, useState, useTransition, type ReactNode } from 'react';
 import { toast } from 'sonner';
 import type { SuggestionReason } from '@kompass/module-finance';
 import { useDateFormat } from '@/components/date-format-provider';
@@ -74,17 +74,23 @@ export function WorkTransactions({
   selectedId,
   tab,
   account,
+  page,
   canWrite,
   waitingCount,
   detail,
   form,
+  footer,
 }: {
   rows: WorkTransactionRow[];
   selectedId: string | null;
   tab: WorkTabKey;
   account: string | null;
+  /** Die Seite der Liste (`ListPager`) — eine Auswahl bleibt auf ihr. */
+  page: number;
   canWrite: boolean;
   waitingCount: number;
+  /** Fuß der Listenkarte: `ListPager footer` (Designer 2026-10-08). */
+  footer?: ReactNode;
   detail: WorkDetailData | null;
   form: WorkFormOptions;
 }) {
@@ -102,14 +108,14 @@ export function WorkTransactions({
   const select = (id: string | null) => {
     if (id === null || id === selected) return;
     setSelected(id);
-    router.replace(workHref({ tab, account, raw: id }), { scroll: false });
+    router.replace(workHref({ tab, account, raw: id, page }), { scroll: false });
   };
 
   const onDone = (removedId: string) => {
     setAnnounce(true);
     const next = afterRemoval(ids, removedId);
     setSelected(next);
-    router.replace(workHref({ tab, account, raw: next }), { scroll: false });
+    router.replace(workHref({ tab, account, raw: next, page }), { scroll: false });
   };
 
   useEffect(() => {
@@ -154,7 +160,7 @@ export function WorkTransactions({
                   role="option"
                   aria-selected={isSelected}
                   onClick={() => select(row.id)}
-                  className={cn('flex cursor-pointer items-start gap-3 border-l-4 px-3 py-2.5 text-[13px]', isSelected ? 'border-l-primary bg-selected/40' : 'border-l-transparent hover:bg-row-hover')}
+                  className={cn('flex cursor-pointer items-start gap-3 border-l-4 px-3 py-2.5 text-[13px]', isSelected ? 'border-l-brand bg-selected/40' : 'border-l-transparent hover:bg-row-hover')}
                 >
                   <span className="w-[84px] shrink-0 font-mono text-[12px] tabular-nums text-ink-2">{date(row.bookingDate)}</span>
                   <span className="min-w-0 flex-1 space-y-0.5">
@@ -184,6 +190,7 @@ export function WorkTransactions({
         <p data-testid="work-live" aria-live="polite" className="px-3 py-1 text-[12px] text-ink-2 empty:hidden">
           {announce ? t('live.waiting', { count: waitingCount }) : ''}
         </p>
+        {footer}
         {/* Die Liste scrollt in sich; die Tastenkürzel stehen darunter und bleiben so immer sichtbar (HANDOFF § 12.6). */}
         {canWrite && rows.length > 0 ? (
           <div data-testid="work-keys" aria-label={t('keys.label')} className="flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-line bg-surface-2 px-3 py-2 text-[12px] text-ink-2">
@@ -235,7 +242,7 @@ export interface WorkEntryRow {
 }
 
 /** Reiter „Vom Agenten vorbereitet“ und „Geprüft, nicht festgeschrieben“: Entwürfe, keine Umsätze (Annahme 11). */
-export function WorkEntries({ rows, tab, canWrite }: { rows: WorkEntryRow[]; tab: 'agent' | 'reviewed'; canWrite: boolean }) {
+export function WorkEntries({ rows, tab, canWrite, footer }: { rows: WorkEntryRow[]; tab: 'agent' | 'reviewed'; canWrite: boolean; footer?: ReactNode }) {
   const te = useTranslations('finance.work');
   const { date } = useDateFormat();
   const router = useRouter();
@@ -304,6 +311,7 @@ export function WorkEntries({ rows, tab, canWrite }: { rows: WorkEntryRow[]; tab
           return result;
         }}
       />
+      {footer}
     </section>
     </>
   );
@@ -319,7 +327,7 @@ export interface WorkOpenItemRow {
 }
 
 /** Reiter „Fällig“: überfällige offene Zahlungen beider Richtungen, je mit dem Weg zur offenen Zahlung (Annahme 12). */
-export function WorkOpenItems({ rows }: { rows: WorkOpenItemRow[] }) {
+export function WorkOpenItems({ rows, footer }: { rows: WorkOpenItemRow[]; footer?: ReactNode }) {
   const td = useTranslations('finance.work');
   const { date } = useDateFormat();
   if (rows.length === 0) return <EmptyState title={td('due.empty')} text={td('list.emptyText')} />;
@@ -341,6 +349,7 @@ export function WorkOpenItems({ rows }: { rows: WorkOpenItemRow[] }) {
           </Link>
         </div>
       ))}
+      {footer}
     </section>
   );
 }

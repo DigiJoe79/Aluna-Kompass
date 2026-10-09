@@ -103,7 +103,7 @@ test.describe('finance: Rechnungen mit ZUGFeRD', () => {
     await loginAsAdmin(page);
     // Die Büromaterial-Zeile wird zuerst ohne die Rechnung gebucht — wie beim Prüfer die Tierarztrechnung.
     await page.goto('/finance/work');
-    await page.getByLabel('Liste für Konto').selectOption({ label: 'Importkonto' });
+    await page.getByTestId('work-filter-bar').getByRole('combobox', { name: 'Konto' }).selectOption({ label: 'Importkonto' });
     await expect(page).toHaveURL(/account=/);
     await expect(option(page, 'Buerobedarf Muster GmbH')).toHaveAttribute('aria-selected', 'true');
     await page.getByTestId('work-detail').getByRole('button', { name: /Übernehmen und geprüft/ }).click();
@@ -145,7 +145,7 @@ test.describe('finance: Rechnungen mit ZUGFeRD', () => {
 
     // Auf den Kontoumsatz gezogen: ohne Rechnung kein Angebot — der Beleg wird abgelegt wie immer.
     await page.goto('/finance/work');
-    await page.getByLabel('Liste für Konto').selectOption({ label: 'Importkonto' });
+    await page.getByTestId('work-filter-bar').getByRole('combobox', { name: 'Konto' }).selectOption({ label: 'Importkonto' });
     await expect(page).toHaveURL(/account=/);
     await expect(option(page, 'Buerobedarf Muster GmbH')).toHaveAttribute('aria-selected', 'true');
     const detail = page.getByTestId('work-detail');
@@ -159,7 +159,7 @@ test.describe('finance: Rechnungen mit ZUGFeRD', () => {
   test('ein ZUGFeRD-PDF auf dem Kontoumsatz bietet an, die Angaben aus der Rechnung zu übernehmen', async ({ page }) => {
     await loginAsAdmin(page);
     await page.goto('/finance/work');
-    await page.getByLabel('Liste für Konto').selectOption({ label: 'Importkonto' });
+    await page.getByTestId('work-filter-bar').getByRole('combobox', { name: 'Konto' }).selectOption({ label: 'Importkonto' });
     await expect(page).toHaveURL(/account=/);
     await expect(option(page, 'Buerobedarf Muster GmbH')).toHaveAttribute('aria-selected', 'true');
     const detail = page.getByTestId('work-detail');

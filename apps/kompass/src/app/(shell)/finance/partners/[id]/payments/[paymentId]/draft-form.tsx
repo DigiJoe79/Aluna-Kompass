@@ -10,7 +10,6 @@ import { ChoiceCards } from '@/components/choice-cards';
 import type { PickedDocument } from '@/app/(shell)/dms/search-action';
 import { useDateFormat } from '@/components/date-format-provider';
 import { PartnerReasonPrompt } from '@/components/finance/partner-reason-prompt';
-import { ConfirmDialog } from '@/components/forms/confirm-dialog';
 import { FormActionBar } from '@/components/forms/form-action-bar';
 import { useAutosave, type SaveOutcome } from '@/components/forms/use-autosave';
 import { Notice } from '@/components/notice';
@@ -22,7 +21,7 @@ import { Textarea } from '@/components/ui/textarea';
 import type { ActionState } from '@/lib/actions';
 import { formatEuro, parseAmount } from '@/lib/finance/amount';
 import { evidenceKindLabelKey, proofDueDate, requiredEvidenceKinds, type PartnerBasis } from '@/lib/finance/partners';
-import { deletePartnerPaymentDraftAction, savePartnerPaymentDraftAction, submitPartnerPaymentAction } from '../../../actions';
+import { savePartnerPaymentDraftAction, submitPartnerPaymentAction } from '../../../actions';
 import { FormField } from '@/components/forms/form-field';
 import { FormCell, FormGrid } from '@/components/forms/form-grid';
 
@@ -109,7 +108,6 @@ export function DraftForm({
   const [overdueReason, setOverdueReason] = useState('');
   const [busy, setBusy] = useState(false);
   const [refusal, setRefusal] = useState<ActionState | null>(null);
-  const [confirmDelete, setConfirmDelete] = useState(false);
 
   const save = useCallback(
     async (current: DraftState): Promise<SaveOutcome<DraftState>> => {
@@ -365,14 +363,9 @@ export function DraftForm({
           saveTestId="payment-submit"
           status={{ state: saveState, pending }}
           extraActions={
-            <>
-              <Button type="button" variant="outline" data-testid="payment-delete-draft" onClick={() => setConfirmDelete(true)}>
-                {t('deleteDraft')}
-              </Button>
-              <Button type="button" variant="outline" disabled={busy} onClick={() => void keepDraft()} data-testid="payment-save">
-                {t('save')}
-              </Button>
-            </>
+            <Button type="button" variant="outline" disabled={busy} onClick={() => void keepDraft()} data-testid="payment-save">
+              {t('save')}
+            </Button>
           }
           saveLabel={t('submit')}
           onSave={() => void submit()}
@@ -380,19 +373,6 @@ export function DraftForm({
           state={refusal ?? undefined}
         />
       ) : null}
-      <ConfirmDialog
-        open={confirmDelete}
-        onOpenChange={setConfirmDelete}
-        title={t('deleteDraftConfirm.title')}
-        description={t('deleteDraftConfirm.description')}
-        confirmLabel={t('deleteDraft')}
-        destructive
-        action={async () => {
-          const result = await deletePartnerPaymentDraftAction(payment.id, payment.partnerId);
-          if (result.status !== 'error') router.push(`/finance/partners/${payment.partnerId}`);
-          return result;
-        }}
-      />
     </div>
   );
 }

@@ -1,11 +1,12 @@
 'use client';
 
-import { Info } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { useActionState } from 'react';
+import { useActionState, useEffect } from 'react';
+import { toast } from 'sonner';
 import { FormField } from '@/components/forms/form-field';
 import { FormGrid } from '@/components/forms/form-grid';
 import { SubmitButton } from '@/components/forms/submit-button';
+import { Notice } from '@/components/notice';
 import { Input } from '@/components/ui/input';
 import { idleState } from '@/lib/actions';
 import { loginAction } from './actions';
@@ -14,18 +15,20 @@ export function LoginForm({ imported }: { imported: boolean }) {
   const t = useTranslations('auth.login');
   const [state, action] = useActionState(loginAction, idleState);
   const invalid = state.status === 'error';
+  // Der Kasten erscheint erst nach dem Import und hat keine Rolle; die Ansage macht der Toast (Designer
+  // 2026-10-08, MUSTER § A). Die feste Kennung hält ihn einmalig, auch wenn der Effekt doppelt läuft.
+  useEffect(() => {
+    if (imported) toast.success(t('importedTitle'), { id: 'backup-imported' });
+  }, [imported, t]);
   return (
     <form action={action} className="flex flex-col gap-4">
       {imported ? (
-        <p role="status" className="rounded-md border border-info bg-info-bg p-3 text-[13px] text-ink-2">
-          <span className="font-semibold text-info">{t('importedTitle')}</span> {t('importedText')}
-        </p>
+        <Notice level="hint" title={t('importedTitle')}>
+          {t('importedText')}
+        </Notice>
       ) : null}
       {invalid ? (
-        <p role="alert" className="flex gap-2 rounded-md border border-error bg-error-bg p-3 text-[13px] text-ink-2">
-          <Info className="size-4 shrink-0 text-error" aria-hidden />
-          <span>{state.message}</span>
-        </p>
+        <Notice level="refuse">{state.message}</Notice>
       ) : null}
       <FormGrid>
         <FormField id="email" label={t('email')}>

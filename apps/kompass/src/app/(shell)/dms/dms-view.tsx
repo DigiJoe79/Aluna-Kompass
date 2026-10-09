@@ -10,6 +10,8 @@ import {
   requireDmsGate,
 } from '@kompass/module-dms';
 import { getTranslations } from 'next-intl/server';
+import { FiledAnnouncement } from './filed-announcement';
+import { Notice } from '@/components/notice';
 import { ForbiddenCard } from '@/components/forbidden-card';
 import { ancestorsOf, nameOf } from '@/lib/folder-tree-model';
 import { requireSession } from '@/lib/request-context';
@@ -111,6 +113,12 @@ export async function DmsView({ query, receive }: { query: DmsQuery; receive?: b
   });
 
   if (!docsRes.ok) return <ForbiddenCard permission="dms.view" />;
+  // „{Treffer} von {alle}“ in der Zählzeile: „alle“ meint den Ort (Ordner mit Teilbaum, Eingangskorb, alles) ohne Filter.
+  const filtered = Boolean(query.text || query.direction || query.type || query.phase || query.unsent === '1' || query.followUp === 'open');
+  const placeRes = filtered
+    ? await listDocuments(deps, ctx, { inbox: isInbox ? true : undefined, folder: currentFolder ?? undefined, includeSubfolders: currentFolder !== null, limit: 1 })
+    : docsRes;
+  const unfiltered = placeRes.ok ? placeRes.value.total : docsRes.value.total;
 
   const rows: DocumentListItem[] = docsRes.value.documents.map((d) => ({
     id: d.id,
@@ -160,7 +168,6 @@ export async function DmsView({ query, receive }: { query: DmsQuery; receive?: b
       folders={folders}
       inboxCount={inboxCount}
       total={total}
-      listTotal={docsRes.value.total}
       canCreate={canCreate}
       canManage={hasPermission(ctx, 'dms.manage')}
       areaOnly={!hasPermission(ctx, 'dms.view')}
@@ -175,28 +182,34 @@ export async function DmsView({ query, receive }: { query: DmsQuery; receive?: b
       receiveOpen={receive || Boolean(initialSender) || Boolean(initialAbout)}
     >
       {filedNumber ? (
-        <p data-testid="filed-protected" className="mb-3 rounded-md bg-info-bg px-3.5 py-3 text-[13px] text-ink-2">
-          {t('filedProtected', { number: filedNumber })}
-        </p>
+        <div className="mb-3">
+          <FiledAnnouncement message={t('filedToast', { number: filedNumber })} number={filedNumber} />
+          <Notice level="hint" testId="filed-protected">
+            {t('filedProtected', { number: filedNumber })}
+          </Notice>
+        </div>
       ) : null}
       {folderGone ? (
-        <p data-testid="folder-gone" className="mb-3 rounded-md bg-info-bg px-3.5 py-3 text-[13px] text-ink-2">
-          {currentFolder === null
-            ? t('folderGoneAll', { name: nameOf(requestedFolder) })
-            : t('folderGone', { name: nameOf(requestedFolder), target: nameOf(currentFolder) })}
-        </p>
+        <div className="mb-3">
+          <Notice level="hint" testId="folder-gone">
+            {currentFolder === null
+              ? t('folderGoneAll', { name: nameOf(requestedFolder) })
+              : t('folderGone', { name: nameOf(requestedFolder), target: nameOf(currentFolder) })}
+          </Notice>
+        </div>
       ) : null}
       <FolderHeading
         folder={currentFolder}
         inbox={isInbox}
-        count={docsRes.value.total}
-        readableOnly={!hasPermission(ctx, 'dms.view')}
+        keep={new URLSearchParams(Object.entries(query).filter((entry): entry is [string, string] => typeof entry[1] === 'string'))}
         className="max-sm:hidden"
       />
       <DocumentList
         documents={rows}
         currentFolder={currentFolder}
         total={docsRes.value.total}
+        unfiltered={unfiltered}
+        readableOnly={!hasPermission(ctx, 'dms.view')}
         types={types.map((type) => ({ key: type.key, label: type.label }))}
         folders={folderPaths}
         inboxCount={inboxCount}

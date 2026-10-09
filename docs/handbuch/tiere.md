@@ -67,8 +67,8 @@ Drei Reiter:
   die Grenze erreicht, lässt der Auswahldialog kein weiteres Foto zu — heben
   Sie dort erst eines auf oder nehmen Sie eines heraus.
 - **Geschichte** — erst nach der Vermittlung: Vorher- und Nachher-Bild mit
-  Unterschrift, ein Zitat der Familie, das Vermittlungsjahr. Daraus macht das
-  Template die „Glücklichen Vermittlungen“.
+  Unterschrift, ein Zitat der Familie, das Vermittlungsjahr. Daraus macht die
+  Vorlage der Webseite die „Glücklichen Vermittlungen“.
 
 Den URL-Teil (Slug) bildet Kompass beim Anlegen selbst: der Name, ein
 Bindestrich und eine kurze Kennung, etwa `luna-7k3f`. Er bleibt danach fest,
@@ -153,8 +153,8 @@ Sie neue Post mit dem Bezug an.
 
 Ein Tierprofil ist Webseiteninhalt und lässt sich löschen — etwa ein Hund des
 Partnervereins, der ein paar Tage auf der Seite stand und dort vermittelt
-wurde. Der Abschnitt „Löschen“ mit dem Knopf „Tierprofil löschen“ steht als
-letzte Karte ganz unten auf der Profilseite, nie neben „Speichern“.
+wurde. „Tierprofil löschen …“ steht oben rechts auf der Profilseite im Menü
+**Weitere Aktionen** (⋯), nie neben „Speichern“.
 
 Gelöscht wird in zwei Stufen. Ist das Profil veröffentlicht, bietet der Dialog
 zuerst „Zurückziehen“ an; erst danach wird „Löschen“ frei. So verschwindet

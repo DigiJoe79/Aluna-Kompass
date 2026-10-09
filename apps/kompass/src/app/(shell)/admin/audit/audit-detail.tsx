@@ -1,16 +1,21 @@
 'use client';
 
 import type { AuditEntry } from '@kompass/core';
-import { useFormatter, useTranslations } from 'next-intl';
+import { useTranslations } from 'next-intl';
+import { useDateFormat } from '@/components/date-format-provider';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { CopyButton } from '@/components/copy-button';
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
+import { auditActionLabel } from '@/lib/audit-actions';
 import { changedFieldsOf, diffFields } from '@/lib/audit-diff';
 
-export function AuditDetail({ entry }: { entry: AuditEntry }) {
+/** `sentence`: der Satz aus `auditSentences`; `null` (alter Eintrag, Aktion ohne Satz) → keine Zeile „Was geschah“. */
+export function AuditDetail({ entry, sentence }: { entry: AuditEntry; sentence: string | null }) {
   const t = useTranslations('audit.detail');
+  const a = useTranslations('audit');
   const f = useTranslations('audit.filters.channels');
   const fieldLabel = useTranslations('contacts.fields');
-  const format = useFormatter();
+  const fmt = useDateFormat();
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
@@ -21,8 +26,8 @@ export function AuditDetail({ entry }: { entry: AuditEntry }) {
   };
   const rows = diffFields(entry.before, entry.after);
   const changed = changedFieldsOf(entry.after);
-  // D7: Feldnamen mit der Beschriftung des Kontaktformulars, sonst der Schlüssel.
-  const labelOf = (key: string) => (fieldLabel.has(key) ? fieldLabel(key) : key);
+  // D7: Feldnamen mit eigener Beschriftung des Protokolls (Nutzer), sonst der des Kontaktformulars, sonst der Schlüssel.
+  const labelOf = (key: string) => (a.has(`fields.${key}`) ? a(`fields.${key}`) : fieldLabel.has(key) ? fieldLabel(key) : key);
   return (
     <Sheet
       open
@@ -32,9 +37,9 @@ export function AuditDetail({ entry }: { entry: AuditEntry }) {
     >
       <SheetContent side="right" size="md" className="gap-0 overflow-y-auto bg-surface shadow-md">
         <div className="p-5">
-          <SheetTitle>{entry.action}</SheetTitle>
+          <SheetTitle>{auditActionLabel(a, entry.action)}</SheetTitle>
           <p className="mt-1 font-mono text-[12px] text-muted-ink">
-            {format.dateTime(new Date(entry.occurredAt), { dateStyle: 'medium', timeStyle: 'medium' })}
+            {fmt.dateTime(entry.occurredAt, { seconds: true })}
           </p>
           <div className="mt-4 flex flex-col gap-2">
             {changed !== null ? (
@@ -74,8 +79,18 @@ export function AuditDetail({ entry }: { entry: AuditEntry }) {
             <dd className="font-mono">{entry.requestId}</dd>
             <dt className="text-muted-ink">{t('environment')}</dt>
             <dd>{entry.environment}</dd>
-            <dt className="text-muted-ink">{t('summary')}</dt>
-            <dd>{entry.summary}</dd>
+            {sentence !== null ? (
+              <>
+                <dt className="text-muted-ink">{t('summary')}</dt>
+                <dd>{sentence}</dd>
+              </>
+            ) : null}
+            {/* Nebeninformation für Vorstand und Kassenprüfung, deshalb am Ende (Designer 2026-10-09). */}
+            <dt className="text-muted-ink">{t('actionKey')}</dt>
+            <dd className="flex flex-wrap items-center gap-2">
+              <span className="font-mono">{entry.action}</span>
+              <CopyButton value={entry.action} label={t('actionKey')} />
+            </dd>
           </dl>
           <p className="mt-6 text-[12px] text-muted-ink">{t('immutable')}</p>
         </div>

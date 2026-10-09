@@ -120,7 +120,7 @@ export async function savePartnerProfile(deps: Deps, ctx: CallContext, input: un
     if (before) tx.update(financePartnerProfiles).set(fields).where(eq(financePartnerProfiles.id, id)).run();
     else tx.insert(financePartnerProfiles).values({ id, contactId, ...fields, createdAt: now, createdByUserId: ctx.userId ?? 'system' }).run();
     const after = tx.select().from(financePartnerProfiles).where(eq(financePartnerProfiles.id, id)).get()!;
-    financeAudit(tx, deps, ctx, { action: 'finance.partnerProfile.save', entity: 'financePartnerProfile', id, before: before ? auditFields(before) : undefined, after: auditFields(after), summary: `Angaben zum Partner ${id} ${before ? 'geändert' : 'angelegt'}` });
+    financeAudit(tx, deps, ctx, { action: 'finance.partnerProfile.save', entity: 'financePartnerProfile', id, before: before ? auditFields(before) : undefined, after: auditFields(after), params: { created: !before } });
     return ok(toPartnerView(deps, tx, after));
   });
 }
@@ -139,7 +139,7 @@ export async function setPartnerActive(deps: Deps, ctx: CallContext, input: unkn
     const now = isoNow(deps.clock);
     tx.update(financePartnerProfiles).set({ isActive: parsed.value.isActive, updatedAt: now }).where(eq(financePartnerProfiles.id, before.id)).run();
     const after = tx.select().from(financePartnerProfiles).where(eq(financePartnerProfiles.id, before.id)).get()!;
-    financeAudit(tx, deps, ctx, { action: 'finance.partnerProfile.setActive', entity: 'financePartnerProfile', id: before.id, before: auditFields(before), after: auditFields(after), summary: `Angaben zum Partner ${before.id} ${parsed.value.isActive ? 'aktiviert' : 'deaktiviert'}` });
+    financeAudit(tx, deps, ctx, { action: 'finance.partnerProfile.setActive', entity: 'financePartnerProfile', id: before.id, before: auditFields(before), after: auditFields(after), params: { active: parsed.value.isActive } });
     return ok(toPartnerView(deps, tx, after));
   });
 }
@@ -157,7 +157,7 @@ export async function deletePartnerProfile(deps: Deps, ctx: CallContext, input: 
   if (hasPayments || hasNotices) return financeConflict('partnerProfileInUse');
   return deps.db.transaction((tx: DbOrTx) => {
     tx.delete(financePartnerProfiles).where(eq(financePartnerProfiles.id, before.id)).run();
-    financeAudit(tx, deps, ctx, { action: 'finance.partnerProfile.delete', entity: 'financePartnerProfile', id: before.id, before: auditFields(before), summary: `Angaben zum Partner ${before.id} gelöscht` });
+    financeAudit(tx, deps, ctx, { action: 'finance.partnerProfile.delete', entity: 'financePartnerProfile', id: before.id, before: auditFields(before), params: { withContact: false } });
     return ok(null);
   });
 }
@@ -264,7 +264,7 @@ export async function savePartnerNotice(deps: Deps, ctx: CallContext, input: unk
     if (before) tx.update(financePartnerNotices).set(fields).where(eq(financePartnerNotices.id, id)).run();
     else tx.insert(financePartnerNotices).values({ id, partnerId, ...fields, createdAt: now, createdByUserId: ctx.userId ?? 'system' }).run();
     const after = tx.select().from(financePartnerNotices).where(eq(financePartnerNotices.id, id)).get()!;
-    financeAudit(tx, deps, ctx, { action: 'finance.partnerNotice.save', entity: 'financePartnerNotice', id, after: { partnerId, kind: after.kind, noticeDate: after.noticeDate, receivedOn: after.receivedOn, supersededOn: after.supersededOn, voided: false }, summary: `Bescheid des Partners ${id} ${before ? 'geändert' : 'erfasst'}` });
+    financeAudit(tx, deps, ctx, { action: 'finance.partnerNotice.save', entity: 'financePartnerNotice', id, after: { partnerId, kind: after.kind, noticeDate: after.noticeDate, receivedOn: after.receivedOn, supersededOn: after.supersededOn, voided: false }, params: { created: !before } });
     return ok(toNoticeView(after, todayIn(deps)));
   });
 }
@@ -284,7 +284,7 @@ export async function voidPartnerNotice(deps: Deps, ctx: CallContext, input: unk
     const now = isoNow(deps.clock);
     tx.update(financePartnerNotices).set({ voidedAt: now, voidedByUserId: ctx.userId ?? 'system', voidNote: parsed.value.note, updatedAt: now }).where(eq(financePartnerNotices.id, before.id)).run();
     const after = tx.select().from(financePartnerNotices).where(eq(financePartnerNotices.id, before.id)).get()!;
-    financeAudit(tx, deps, ctx, { action: 'finance.partnerNotice.void', entity: 'financePartnerNotice', id: before.id, after: { partnerId: before.partnerId, kind: before.kind, noticeDate: before.noticeDate, receivedOn: before.receivedOn, supersededOn: before.supersededOn, voided: true }, summary: `Bescheid des Partners ${before.id} als irrtümlich erfasst gekennzeichnet` });
+    financeAudit(tx, deps, ctx, { action: 'finance.partnerNotice.void', entity: 'financePartnerNotice', id: before.id, after: { partnerId: before.partnerId, kind: before.kind, noticeDate: before.noticeDate, receivedOn: before.receivedOn, supersededOn: before.supersededOn, voided: true } });
     return ok(toNoticeView(after, todayIn(deps)));
   });
 }

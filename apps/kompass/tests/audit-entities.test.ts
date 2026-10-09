@@ -14,7 +14,7 @@ describe('auditEntityLabels', () => {
     const deps = createTestDeps({ manifests: [coreModule, contactsModule] });
     const userId = insertUser(deps, {});
     const ctx = ctxWith(['contacts.view', 'contacts.manage', 'audit.view'], userId);
-    deps.db.transaction((tx) => writeSettingInternal(tx, deps, ctx, 'modules.enabled', ['contacts'], 'test.enable'));
+    deps.db.transaction((tx) => writeSettingInternal(tx, deps, ctx, 'modules.enabled', ['contacts']));
     const contact = await createContact(deps, ctx, { kind: 'person', firstName: 'Erika', lastName: 'Muster' });
     if (!contact.ok) throw new Error('setup');
 

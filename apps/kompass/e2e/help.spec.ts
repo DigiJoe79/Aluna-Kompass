@@ -26,8 +26,10 @@ test.describe('handbook and help', () => {
     await expect(toc.getByRole('link', { name: 'Brief schreiben' })).toHaveAttribute('aria-current', 'page');
     await expect(page.getByRole('heading', { level: 1 })).toHaveCount(1);
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('Brief schreiben');
-    await expect(page.getByRole('banner')).toContainText('Hilfe');
-    await expect(page.getByRole('banner')).toContainText('Akte');
+    const crumbs = page.getByRole('navigation', { name: 'Brotkrume' });
+    await expect(crumbs).toContainText('Hilfe');
+    await expect(crumbs).toContainText('Akte');
+    await expect(crumbs.getByText('Brief schreiben')).toHaveAttribute('aria-current', 'page');
   });
 
   test('the ? key opens the panel, but not inside a text field', async ({ page }) => {

@@ -6,7 +6,7 @@ import { ForbiddenCard } from '@/components/forbidden-card';
 import { Page } from '@/components/page';
 import { PageHeader } from '@/components/page-header';
 import { requireSession } from '@/lib/request-context';
-import { DeleteEntry } from '../delete-entry';
+import { EntryActions } from '../entry-actions';
 import { EntryForm } from '../entry-form';
 
 export const dynamic = 'force-dynamic';
@@ -36,7 +36,10 @@ export default async function EntryPage(props: { params: Promise<{ collection: s
   if (!result.ok) notFound();
 
   return (
-    <Page width="standard" header={<PageHeader title={col.label} back={back} />}>
+    <Page
+      width="standard"
+      header={<PageHeader title={col.label} back={back} actions={<EntryActions collection={collection} id={result.value.id} label={entryLabel(col, result.value, locales[0] ?? 'de')} publishable={col.publishable} />} />}
+    >
       <EntryForm
         collection={collection}
         fields={col.fields}
@@ -44,7 +47,6 @@ export default async function EntryPage(props: { params: Promise<{ collection: s
         entry={{ id: result.value.id, slug: result.value.slug, data: result.value.data as Record<string, unknown>, updatedAt: result.value.updatedAt }}
         locales={locales}
       />
-      <DeleteEntry collection={collection} id={result.value.id} label={entryLabel(col, result.value, locales[0] ?? 'de')} publishable={col.publishable} />
     </Page>
   );
 }

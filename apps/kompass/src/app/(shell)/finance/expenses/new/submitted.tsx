@@ -1,6 +1,7 @@
 import type { ExpenseClaimView } from '@kompass/module-finance';
 import { getTranslations } from 'next-intl/server';
 import Link from 'next/link';
+import { PageHeader } from '@/components/page-header';
 import { buttonVariants } from '@/components/ui/button';
 import { dateFormatOf } from '@/lib/date-format';
 import { formatEuro } from '@/lib/finance/amount';
@@ -17,13 +18,11 @@ export async function SubmittedView({ claim }: { claim: ExpenseClaimView }) {
   const t = await getTranslations('finance.expenses.submitted');
   const fmt = dateFormatOf(deps);
   return (
-    <section data-testid="expense-submitted" aria-labelledby="expense-submitted-title" className="space-y-5">
+    <section data-testid="expense-submitted" className="space-y-5">
       <div className="rounded-lg border border-line bg-surface p-5">
-        <h2 id="expense-submitted-title" className="font-heading text-[22px]">
-          {t('title')}
-        </h2>
-        <p className="mt-1 text-[14px] text-ink-2">{t('text', { number: claim.number ?? '', at: fmt.dateTime(claim.submittedAt) })}</p>
-        <p className="mt-4 text-[13px] text-muted-ink">{t('amount')}</p>
+        {/* Der Titel ist das `h1` der Seite (Spec Seitenkopf § 2.2); der Kopf bringt seinen Abstand nach unten mit. */}
+        <PageHeader title={t('title')} description={t('text', { number: claim.number ?? '', at: fmt.dateTime(claim.submittedAt) })} />
+        <p className="text-[13px] text-muted-ink">{t('amount')}</p>
         <p className="font-mono text-[34px] font-semibold tabular-nums">{formatEuro(claim.totalCents)}</p>
         {claim.waiver ? <p className="mt-1 text-[14px] text-ink-2">{t('waiver')}</p> : null}
       </div>

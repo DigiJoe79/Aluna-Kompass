@@ -94,7 +94,7 @@ export function applyCorrectionInternal(tx: DbOrTx, deps: Deps, ctx: CallContext
   const now = isoNow(deps.clock);
   tx.update(financeAllocationCorrections).set({ state: 'applied', approvedByUserId: ctx.userId, approvedAt: now }).where(eq(financeAllocationCorrections.id, correctionId)).run();
   const applied = correctionViewOf(tx, correctionId);
-  financeAudit(tx, deps, ctx, { action: 'finance.correction.apply', entity: 'financeAllocationCorrection', id: correctionId, after: auditFieldsFor(applied, 'applied'), summary: `Zuordnungskorrektur ${correctionId} angewandt` });
+  financeAudit(tx, deps, ctx, { action: 'finance.correction.apply', entity: 'financeAllocationCorrection', id: correctionId, after: auditFieldsFor(applied, 'applied') });
   return ok(applied);
 }
 
@@ -206,7 +206,7 @@ export async function requestAllocationCorrection(deps: Deps, ctx: CallContext, 
         linkDocumentInternal(tx, deps, { documentId: proofDoc.id, entityType: 'financeEntry', entityId: line.entryId });
       }
       const requested = correctionViewOf(tx, id);
-      financeAudit(tx, deps, ctx, { action: 'finance.correction.request', entity: 'financeAllocationCorrection', id, after: auditFieldsFor(requested, 'pending'), summary: `Zuordnungskorrektur ${id} angelegt` });
+      financeAudit(tx, deps, ctx, { action: 'finance.correction.request', entity: 'financeAllocationCorrection', id, after: auditFieldsFor(requested, 'pending') });
 
       const notices: ('section153')[] = triggersSection153 ? ['section153'] : [];
       if (!closed) {
@@ -273,7 +273,7 @@ export async function rejectAllocationCorrection(deps: Deps, ctx: CallContext, i
     const now = isoNow(deps.clock);
     tx.update(financeAllocationCorrections).set({ state: 'rejected', rejectedByUserId: ctx.userId, rejectedAt: now, rejectNote: parsed.value.note }).where(eq(financeAllocationCorrections.id, correction.id)).run();
     const rejected = correctionViewOf(tx, correction.id);
-    financeAudit(tx, deps, ctx, { action: 'finance.correction.reject', entity: 'financeAllocationCorrection', id: correction.id, after: auditFieldsFor(rejected, 'rejected'), summary: `Zuordnungskorrektur ${correction.id} abgelehnt` });
+    financeAudit(tx, deps, ctx, { action: 'finance.correction.reject', entity: 'financeAllocationCorrection', id: correction.id, after: auditFieldsFor(rejected, 'rejected') });
     return ok(rejected);
   });
 }

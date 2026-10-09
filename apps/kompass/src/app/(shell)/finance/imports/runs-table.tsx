@@ -81,16 +81,10 @@ export function RunsTable({ runs, canDiscard }: { runs: RunRow[]; canDiscard: bo
         return (
           <div key={run.id} data-testid="import-run" className="rounded-md border border-line bg-surface">
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1 p-3 text-[13px]">
-              <button
-                type="button"
-                aria-expanded={isOpen}
-                aria-label={t('detail.trigger')}
-                onClick={() => toggle(run.id)}
-                className="flex items-center gap-1.5 font-semibold text-ink"
-              >
+              <Button type="button" variant="ghost" size="sm" aria-expanded={isOpen} aria-label={t('detail.trigger')} onClick={() => toggle(run.id)}>
                 <ChevronRight className={cn('size-4 shrink-0 transition-transform', isOpen && 'rotate-90')} aria-hidden />
                 {run.accountName}
-              </button>
+              </Button>
               <span className="text-ink-2">{run.periodFrom && run.periodTo ? t('period', { from: date(run.periodFrom), to: date(run.periodTo) }) : '—'}</span>
               <span data-testid="import-run-format" className="text-muted-ink">{run.format === 'csv' ? (run.formatName ?? t('formatCsv')) : t('formatCamt')}</span>
               <span className="font-mono tabular-nums text-ink-2">

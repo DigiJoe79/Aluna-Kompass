@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { BlockedState } from '@/components/blocked-state';
 import { ForbiddenCard } from '@/components/forbidden-card';
+import { ListTruncated } from '@/components/list-truncated';
 import { TransferBlock } from '@/components/finance/transfer-block';
 import { Notice } from '@/components/notice';
 import { Page } from '@/components/page';
@@ -38,8 +39,11 @@ export default async function ApprovalsPage({ searchParams }: { searchParams: Pr
   const fmt = dateFormatOf(deps);
   const query = await searchParams;
 
+  // Die Schlange blättert nicht: Die Auswahl steht in der Adresse, und wer entscheidet, lässt die nächsten nachrücken.
+  // Mehr als 200 wartende Vorgänge nennt `ListTruncated` (MUSTER § L).
   const queueRes = await listApprovals(deps, ctx, { limit: 200 });
   const queueItems: ApprovalQueueItem[] = queueRes.ok ? queueRes.value.items : [];
+  const queueTotal = queueRes.ok ? queueRes.value.total : 0;
   const isExpenseClaim = (i: ApprovalQueueItem): i is Extract<ApprovalQueueItem, { kind: 'expenseClaim' }> => i.kind === 'expenseClaim';
   const isPartnerPayment = (i: ApprovalQueueItem): i is Extract<ApprovalQueueItem, { kind: 'partnerPayment' }> => i.kind === 'partnerPayment';
   const isPurposeTransfer = (i: ApprovalQueueItem): i is Extract<ApprovalQueueItem, { kind: 'purposeTransfer' }> => i.kind === 'purposeTransfer';
@@ -115,6 +119,7 @@ export default async function ApprovalsPage({ searchParams }: { searchParams: Pr
         {withQueue ? (
           <div className={cn(activeQuery && 'max-lg:hidden')}>
             <ApprovalQueue rows={rows} selectedId={selectedId} />
+            <ListTruncated shown={rows.length} total={queueTotal} text={t('queue.truncated', { shown: rows.length, total: queueTotal })} className="mt-2" testId="approvals-truncated" />
           </div>
         ) : null}
         <div data-testid="approval-detail" className={cn('min-w-0 space-y-3', withQueue && !activeQuery && 'max-lg:hidden')}>

@@ -60,8 +60,9 @@ Manche Rollen, die ein Modul mitbringt, haben **keine eigene Frist** — das Mod
 
 Ein Kontakt, der mit einem Nutzerkonto verknüpft ist, bleibt, solange die Verknüpfung besteht — sie zu lösen ist Sache der [Nutzerverwaltung](einstellungen/nutzer-und-rollen.md#konto-und-kontakt-verknüpfen).
 
-Solange irgendetwas den Kontakt hält, ist „Kontakt löschen“ gesperrt und
-sagt, was. Ist alles abgelaufen, wird der Kontakt unter Aufbewahrung als
+„Kontakt löschen …“ steht oben rechts im Menü **Weitere Aktionen** (⋯).
+Solange irgendetwas den Kontakt hält, nennt der Dialog die Frist, statt zu
+löschen; die Karte „Aufbewahrung“ zeigt, was den Kontakt hält. Ist alles abgelaufen, wird der Kontakt unter Aufbewahrung als
 fällig gelistet — gelöscht wird er erst, wenn ein Mensch es hier bestätigt.
 Der Löschvorgang steht im Änderungsprotokoll: was verschwindet, ist der
 Inhalt, nicht die Tatsache, dass jemand ihn entfernt hat.

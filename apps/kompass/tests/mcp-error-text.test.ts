@@ -24,7 +24,7 @@ const t = createTranslator({ locale: 'de', messages, timeZone: 'Europe/Berlin' }
 
 async function connectAsAdministrator() {
   const deps = createTestDeps({ manifests: [coreModule, contactsModule, dmsModule, projectsModule, financeModule] });
-  deps.db.transaction((tx) => writeSettingInternal(tx, deps, systemContext(), 'modules.enabled', ['contacts', 'dms', 'projects', 'finance'], 'test.enable'));
+  deps.db.transaction((tx) => writeSettingInternal(tx, deps, systemContext(), 'modules.enabled', ['contacts', 'dms', 'projects', 'finance']));
   const handler = createKompassMcpHandler(deps, { extraTools: coreMcpTools, translateError: mcpErrorTranslator(deps) });
   const userId = insertUser(deps, {});
   const admin = ctxWith([...deps.registry.permissionKeys], userId);
@@ -128,7 +128,7 @@ describe('Befund 25: Konflikte tragen ihre Werte als params', () => {
 describe('Prüfmeldungen immer aus der Sprachdatei (M)', () => {
   it('ein negativer Betrag bei der Spendendose über MCP: deutscher Satz, Code daneben', async () => {
     const { deps, client } = await connectAsAdministrator();
-    deps.db.transaction((tx) => writeSettingInternal(tx, deps, systemContext(), 'finance.mcpHumanOnlyAllowed', true, 'test.allow'));
+    deps.db.transaction((tx) => writeSettingInternal(tx, deps, systemContext(), 'finance.mcpHumanOnlyAllowed', true));
     const error = await callError(client, 'finance_donation_box_empty', { accountId: 'x', date: '2026-03-10', amountCents: -500, counterOneContactId: 'a', counterTwoContactId: 'b', boxLabel: 'Dose' });
     expect(error.type).toBe('validation');
     expect(error.issues).toEqual([{ path: 'amountCents', code: 'mustBeGreater', message: 'Muss größer als 0 sein.' }]);

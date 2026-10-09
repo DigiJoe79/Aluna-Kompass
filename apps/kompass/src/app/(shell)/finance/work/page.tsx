@@ -6,8 +6,10 @@ import { listProjects } from '@kompass/module-projects';
 import { getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 import { ForbiddenCard } from '@/components/forbidden-card';
+import { ListPager } from '@/components/list-pager';
 import { Page } from '@/components/page';
 import { PageHeader } from '@/components/page-header';
+import { ViewTabs } from '@/components/view-tabs';
 import { dateFormatOf } from '@/lib/date-format';
 import { formatEuro } from '@/lib/finance/amount';
 import { formatDateOrDash } from '@/lib/finance/dates';
@@ -26,7 +28,11 @@ export interface WorkQuery {
   raw?: string;
   /** Aus der Karte „Aus der Rechnung“ (F5b): dieses Dokument kommt nach dem Übernehmen als Beleg an den Entwurf. */
   voucher?: string;
+  page?: string;
 }
+
+/** Zeilen je Seite — bis 0.2.8 eine stille Grenze bei 200 (Inventar Filterleisten, Befund 9/10). */
+const PAGE_SIZE = 50;
 
 /**
  * Die Arbeitsliste (F5 Task 7, HANDOFF § 12.5 B1): oben die Ablagefläche und
@@ -50,10 +56,21 @@ export default async function FinanceWorkPage({ searchParams }: { searchParams: 
   const accountName = new Map(accounts.map((a) => [a.id, a.name]));
   const account = query.account && accountName.has(query.account) ? query.account : null;
 
-  const [countsRes, itemsRes] = await Promise.all([getWorkCounts(deps, ctx), listWorkItems(deps, ctx, { tab, accountId: account ?? undefined, limit: 200, offset: 0 })]);
-  if (!countsRes.ok || !itemsRes.ok) return <Page width="full"><ForbiddenCard permission="finance.read" /></Page>;
+  const page = Math.max(1, Number(query.page) || 1);
+  const offset = (page - 1) * PAGE_SIZE;
+  // Die Reiterzahlen folgen dem Konto (HANDOFF § 8e.3.2); die Zeile „… geprüft“ und „Festschreiben“ gelten allen
+  // geprüften Entwürfen und nehmen deshalb die Zahl ohne Konto.
+  const [countsRes, tabCountsRes, itemsRes] = await Promise.all([
+    getWorkCounts(deps, ctx),
+    account ? getWorkCounts(deps, ctx, { accountId: account }) : null,
+    listWorkItems(deps, ctx, { tab, accountId: account ?? undefined, limit: PAGE_SIZE, offset }),
+  ]);
+  if (!countsRes.ok || !itemsRes.ok || (tabCountsRes && !tabCountsRes.ok)) return <Page width="full"><ForbiddenCard permission="finance.read" /></Page>;
   const counts = countsRes.value;
+  const tabCounts = tabCountsRes?.ok ? tabCountsRes.value : counts;
   const items = itemsRes.value.items;
+  // Fuß der Listenkarte (Designer 2026-10-08, Board § L Ziel 4).
+  const pager = <ListPager total={itemsRes.value.total} offset={offset} pageSize={PAGE_SIZE} hrefFor={(next) => workHref({ tab, account, page: Math.floor(next / PAGE_SIZE) + 1 })} footer testId="work-pager" />;
 
   const importable = accounts.filter((a) => a.isActive && (a.kind === 'bank' || a.kind === 'paymentService')).map((a) => ({ id: a.id, name: a.name }));
   const filterAccounts = accounts.filter((a) => a.isActive).map((a) => ({ id: a.id, name: a.name }));
@@ -124,11 +141,13 @@ export default async function FinanceWorkPage({ searchParams }: { searchParams: 
     const showTax = readSetting<boolean>(deps, 'finance.isEntrepreneurOrHasVatId');
     body = (
       <WorkTransactions
+        footer={pager}
         key={`${tab}-${account ?? ''}`}
         rows={rows}
         selectedId={selectedId}
         tab={tab}
         account={account}
+        page={page}
         canWrite={canWrite}
         waitingCount={counts.open + counts.unsure}
         detail={detail}
@@ -171,7 +190,7 @@ export default async function FinanceWorkPage({ searchParams }: { searchParams: 
           }]
         : [],
     );
-    body = <WorkEntries rows={rows} tab={tab} canWrite={canWrite} />;
+    body = <WorkEntries rows={rows} tab={tab} canWrite={canWrite} footer={pager} />;
   } else {
     const openItems = items.flatMap((i) => (i.type === 'openItem' ? [i.openItem] : []));
     await loadContacts(openItems.map((i) => i.contactId).filter((id): id is string => !!id));
@@ -183,40 +202,28 @@ export default async function FinanceWorkPage({ searchParams }: { searchParams: 
       paymentReference: i.paymentReference,
       contactName: i.contactId ? (contactNames.get(i.contactId) ?? null) : null,
     }));
-    body = <WorkOpenItems rows={rows} />;
+    body = <WorkOpenItems rows={rows} footer={pager} />;
   }
 
-  const countOf = { open: counts.open, unsure: counts.unsure, agent: counts.agent, reviewed: counts.reviewed, due: counts.due } as const;
-  const tone = { open: 'bg-info-bg text-info', unsure: 'bg-warning-bg text-warning', agent: 'bg-agent-bg text-agent', reviewed: 'bg-info-bg text-info', due: 'bg-error-bg text-error' } as const;
+  const countOf = { open: tabCounts.open, unsure: tabCounts.unsure, agent: tabCounts.agent, reviewed: tabCounts.reviewed, due: tabCounts.due } as const;
 
   return (
     <Page width="full">
       <div className="space-y-4">
         <PageHeader title={t('title')} description={t('description')} />
 
-        <div className="sticky top-0 z-10 space-y-3 bg-bg pb-2">
+        {/* Klebt erst ab 640 px: Am Telefon nahm der Block (Ablagefläche, Reiter, Filter, „Festschreiben“) gut die Hälfte
+            des Bildschirms ein (gemessen 344 von 664 px, Joe/Designer 2026-10-08). Kein Layout-Test (Projektregel). */}
+        <div className="z-10 space-y-3 bg-bg pb-2 sm:sticky sm:top-0">
           {/* N3, W-1: die Ablagefläche erkennt das Konto selbst — „Liste für Konto“ filtert nur die Liste. */}
           {canWrite && importable.length > 0 ? <ImportUpload accounts={importable} /> : null}
 
-          <div className="flex flex-wrap items-end justify-between gap-3">
-            <div role="tablist" aria-label={t('tabsGroup')} className="flex flex-wrap gap-1 border-b border-line">
-              {WORK_TABS.map((key) => (
-                <Link
-                  key={key}
-                  href={workHref({ tab: key, account })}
-                  role="tab"
-                  aria-selected={tab === key}
-                  className={cn('-mb-px flex items-center gap-2 border-b-2 px-3 py-2 text-[13px]', tab === key ? 'border-brand font-semibold text-ink' : 'border-transparent text-ink-2')}
-                >
-                  {t(`tabs.${key}`)}
-                  <span data-testid={`work-count-${key}`} className={cn('rounded-full px-2 py-0.5 font-mono text-[11px] font-semibold tabular-nums', countOf[key] > 0 ? tone[key] : 'bg-surface-2 text-muted-ink')}>
-                    {countOf[key]}
-                  </span>
-                </Link>
-              ))}
-            </div>
-            <AccountFilter accounts={filterAccounts} value={account} tab={tab} />
-          </div>
+          <ViewTabs
+            label={t('tabsGroup')}
+            current={tab}
+            tabs={WORK_TABS.map((key) => ({ key, label: t(`tabs.${key}`), href: workHref({ tab: key, account }), count: countOf[key], testId: `work-tab-${key}` }))}
+          />
+          <AccountFilter accounts={filterAccounts} value={account} tab={tab} count={{ shown: itemsRes.value.total, total: counts[tab] }} />
 
           {counts.heldCandidates > 0 ? (
             <p className="text-[13px] text-ink-2">

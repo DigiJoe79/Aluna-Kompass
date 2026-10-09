@@ -25,7 +25,7 @@ function setup() {
 }
 
 const setSetting = (deps: ReturnType<typeof setup>['deps'], key: string, value: unknown) =>
-  deps.db.transaction((tx) => writeSettingInternal(tx, deps, systemContext(), key, value, 'test'));
+  deps.db.transaction((tx) => writeSettingInternal(tx, deps, systemContext(), key, value));
 
 describe('core tiles are registered and declare their form', () => {
   it('führt die sechs Kacheln am Kern-Manifest', () => {

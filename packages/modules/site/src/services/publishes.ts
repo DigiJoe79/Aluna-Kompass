@@ -1,5 +1,5 @@
 import { apiTokenNamesFor, isoNow, newId, notFound, ok, recordAudit, requirePermission, schema, userNamesFor, validate, type CallContext, type Deps, type Result } from '@kompass/core';
-import { and, desc, eq, inArray, sql } from 'drizzle-orm';
+import { and, count, desc, eq, inArray, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { sitePublishes } from '../schema';
 import { tailLog, trimPaths, type PathList } from './job-view';
@@ -98,6 +98,17 @@ export async function listPublishes(deps: Deps, ctx: CallContext, input: { envir
   return ok(withNames(deps, rows));
 }
 
+const countSchema = z.object({ environment: z.string().min(1).optional() });
+
+/** Wie viele Publishes eine Umgebung hat — die Gesamtzahl unter „Letzte Publishes“, die nur die jüngsten zeigt. */
+export async function countPublishes(deps: Deps, ctx: CallContext, input: { environment?: string } = {}): Promise<Result<number>> {
+  const denied = requirePermission(ctx, 'site.view');
+  if (denied) return denied;
+  const parsed = validate(deps, countSchema, input);
+  if (!parsed.ok) return parsed;
+  return ok(deps.db.select({ n: count() }).from(sitePublishes).where(eq(sitePublishes.environment, parsed.value.environment ?? deps.env)).get()?.n ?? 0);
+}
+
 const getSchema = z.object({ id: z.string().min(1), paths: z.literal('all').optional(), log: z.literal('full').optional() });
 
 export async function getPublish(deps: Deps, ctx: CallContext, input: { id: string; paths?: 'all'; log?: 'full' }): Promise<Result<PublishDetail>> {
@@ -155,7 +166,7 @@ export function recordPublish(deps: Deps, ctx: CallContext, input: { environment
         added: input.diff.added.length,
         removed: input.diff.removed.length,
       },
-      summary: input.summary,
+      params: { status: input.status, changed: input.diff.changed.length, added: input.diff.added.length, removed: input.diff.removed.length },
     });
     return tx.select().from(sitePublishes).where(eq(sitePublishes.id, id)).get()!;
   });

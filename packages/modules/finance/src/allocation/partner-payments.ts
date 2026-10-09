@@ -316,7 +316,6 @@ export async function savePartnerPaymentDraft(deps: Deps, ctx: CallContext, inpu
     financeAudit(tx, deps, ctx, {
       action: 'finance.partnerPayment.saveDraft', entity: 'financePartnerPayment', id: paymentId,
       after: { state: 'draft', basis: after.basis, basisOverridden: after.basisOverridden, retroactive: after.retroactive, proofMonths: after.proofMonths, positionCount: positions.length, totalCents },
-      summary: `Zahlung an Partner (Entwurf) ${paymentId} gesichert`,
     });
     return ok(toView(deps, ctx, tx, after));
   });
@@ -417,13 +416,12 @@ export async function submitPartnerPayment(deps: Deps, ctx: CallContext, input: 
       if (!present) {
         const evidenceId = newId();
         tx.insert(financePartnerEvidence).values({ id: evidenceId, paymentId: payment.id, kind: 'agreement', documentId: after.agreementDocumentId, foreignLanguage: false, explanationDe: null, coveredCents: null, addedByUserId: ctx.userId ?? 'system', addedAt: now }).run();
-        financeAudit(tx, deps, ctx, { action: 'finance.partnerEvidence.add', entity: 'financePartnerEvidence', id: evidenceId, after: { paymentId: payment.id, kind: 'agreement', foreignLanguage: false, coveredCents: null, documentId: after.agreementDocumentId }, summary: `Nachweis ${evidenceId} an Zahlung an Partner ${payment.id} aus dem Entwurf übernommen` });
+        financeAudit(tx, deps, ctx, { action: 'finance.partnerEvidence.add', entity: 'financePartnerEvidence', id: evidenceId, after: { paymentId: payment.id, kind: 'agreement', foreignLanguage: false, coveredCents: null, documentId: after.agreementDocumentId }, params: { paymentNumber: null, way: 'draft' } });
       }
     }
     financeAudit(tx, deps, ctx, {
       action: 'finance.partnerPayment.submit', entity: 'financePartnerPayment', id: payment.id,
       before: { state: 'draft' }, after: { state: 'submitted', basis: after.basis, basisOverridden: after.basisOverridden, retroactive: after.retroactive, positionCount: finalPositions.length, totalCents: sumPositionCents(finalPositions), proofMonths: after.proofMonths, proofDueOn: after.proofDueOn, submittedAt: now, channel: ctx.channel },
-      summary: `Zahlung an Partner (Entwurf) ${payment.id} eingereicht`,
     });
     return ok(toView(deps, ctx, tx, after));
   });
@@ -451,7 +449,7 @@ export async function rejectPartnerPayment(deps: Deps, ctx: CallContext, input: 
       .run().changes;
     if (changed !== 1) return financeConflict('partnerPaymentNotSubmitted');
     const after = tx.select().from(financePartnerPayments).where(eq(financePartnerPayments.id, payment.id)).get()!;
-    financeAudit(tx, deps, ctx, { action: 'finance.partnerPayment.reject', entity: 'financePartnerPayment', id: payment.id, before: { state: 'submitted' }, after: { state: 'rejected', channel: ctx.channel }, summary: `Zahlung an Partner ${payment.id} abgelehnt` });
+    financeAudit(tx, deps, ctx, { action: 'finance.partnerPayment.reject', entity: 'financePartnerPayment', id: payment.id, before: { state: 'submitted' }, after: { state: 'rejected', channel: ctx.channel } });
     return ok(toView(deps, ctx, tx, after));
   });
 }
@@ -492,7 +490,7 @@ export async function copyPartnerPayment(deps: Deps, ctx: CallContext, input: un
       tx.insert(financePartnerEvidence).values({ ...e, id: newId(), paymentId: id, addedByUserId: ctx.userId ?? 'system', addedAt: now }).run();
       if (e.documentId) linkDocumentInternal(tx, deps, { documentId: e.documentId, entityType: 'financePartnerPayment', entityId: id });
     }
-    financeAudit(tx, deps, ctx, { action: 'finance.partnerPayment.copy', entity: 'financePartnerPayment', id, after: { state: 'draft', basis: source.basis, retroactive: source.retroactive, copiedFromPaymentId: source.id }, summary: `Zahlung an Partner ${source.number ?? source.id} als Entwurf ${id} neu angelegt` });
+    financeAudit(tx, deps, ctx, { action: 'finance.partnerPayment.copy', entity: 'financePartnerPayment', id, after: { state: 'draft', basis: source.basis, retroactive: source.retroactive, copiedFromPaymentId: source.id }, params: { sourceNumber: source.number ?? null } });
     return ok(toView(deps, ctx, tx, tx.select().from(financePartnerPayments).where(eq(financePartnerPayments.id, id)).get()!));
   });
 }
@@ -512,7 +510,7 @@ export async function deletePartnerPaymentDraft(deps: Deps, ctx: CallContext, in
     tx.delete(financePartnerEvidence).where(eq(financePartnerEvidence.paymentId, payment.id)).run();
     tx.delete(documentLinks).where(and(eq(documentLinks.entityType, 'financePartnerPayment'), eq(documentLinks.entityId, payment.id))).run();
     tx.delete(financePartnerPayments).where(eq(financePartnerPayments.id, payment.id)).run();
-    financeAudit(tx, deps, ctx, { action: 'finance.partnerPayment.draftDelete', entity: 'financePartnerPayment', id: payment.id, before: { state: payment.state, positionCount }, summary: `Zahlung an Partner (Entwurf) ${payment.id} gelöscht` });
+    financeAudit(tx, deps, ctx, { action: 'finance.partnerPayment.draftDelete', entity: 'financePartnerPayment', id: payment.id, before: { state: payment.state, positionCount }, params: { withContact: false } });
     return ok({ id: payment.id });
   });
 }

@@ -193,7 +193,7 @@ test.describe('finance cash', () => {
   test('eine geleerte Spendendose wird eine Einnahme ohne Spender', async ({ page }) => {
     await openCashPage(page);
     await page.getByRole('button', { name: 'Kasse oder Dose gezählt' }).click();
-    await page.getByRole('button', { name: 'Dose' }).click();
+    await page.getByRole('radio', { name: 'Dose' }).click();
     await page.getByLabel('Bezeichnung der Dose').fill('Sammeldose Empfang');
     await page.getByLabel('Gezählter Betrag').fill('35,00');
     await pickCounters(page, 'Mira Sandberg', 'Tomas Leitner');

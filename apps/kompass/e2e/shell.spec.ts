@@ -37,15 +37,17 @@ test.describe('app shell', () => {
     // Tiere hat heute eine Seite; eine Spalte mit „Hunde“ unter „Tiere“ würde
     // nur die Schiene wiederholen. Sie erscheint, sobald das Modul wächst.
     await expect(page.getByRole('navigation', { name: 'Unternavigation' })).toHaveCount(0);
+    // Der Seitentitel ist das eine h1; die Brotkrume ist Navigation und markiert die Liste als aktuelle Seite.
     await expect(page.getByRole('heading', { level: 1 })).toHaveCount(1);
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('Hunde');
+    await expect(page.getByRole('navigation', { name: 'Brotkrume' }).getByText('Hunde')).toHaveAttribute('aria-current', 'page');
   });
 
   test('keeps the module marked under a website collection', async ({ page }) => {
     // Sammlungen gibt es erst mit eingelesenem Template — derselbe Weg wie in
     // `site-template.spec.ts`; das Basis-Template bringt die Sammlung „Aktuelles“ mit.
     await page.goto('/site/template');
-    await page.getByRole('button', { name: 'Template einlesen' }).click();
+    await page.getByRole('button', { name: 'Vorlage einlesen' }).click();
     await expect(page.getByRole('region', { name: 'Befunde' })).toBeVisible();
     await page.getByRole('button', { name: 'Übernehmen' }).click();
     await expect(page.getByRole('status')).toContainText('eingelesen');
@@ -58,7 +60,7 @@ test.describe('app shell', () => {
     await expect(page.getByRole('navigation', { name: 'Hauptnavigation' }).getByRole('link', { name: 'Webseite' })).toHaveAttribute('aria-current', 'page');
     await expect(sections.getByRole('link', { name: 'Aktuelles' })).toHaveAttribute('aria-current', 'page');
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('Aktuelles');
-    await expect(page.getByRole('banner')).toContainText('Webseite');
+    await expect(page.getByRole('navigation', { name: 'Brotkrume' })).toContainText('Webseite');
   });
 
   test('opens settings as one area with two headed sections', async ({ page }) => {
@@ -75,10 +77,27 @@ test.describe('app shell', () => {
     await expect(sections).toHaveCSS('width', '208px');
     await sections.getByRole('link', { name: 'Erscheinungsbild' }).click();
     await expect(sections.getByRole('link', { name: 'Erscheinungsbild' })).toHaveAttribute('aria-current', 'page');
-    await expect(page.getByRole('banner')).toContainText('Einstellungen');
-    await expect(page.getByRole('banner')).toContainText('Einrichtung');
+    const crumbs = page.getByRole('navigation', { name: 'Brotkrume' });
+    await expect(crumbs).toContainText('Einstellungen');
+    await expect(crumbs).toContainText('Einrichtung');
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('Erscheinungsbild');
     await expect(page.getByRole('navigation', { name: 'Hauptnavigation' }).getByRole('link', { name: 'Einstellungen' })).toHaveAttribute('aria-current', 'page');
+  });
+
+  test('genau ein h1 je Seite: Liste, Detail, Einstellungen', async ({ page }) => {
+    // Spec Seitenkopf § 2.3: Der Wächter `one-h1` sieht nur den Quelltext; ob eine Seite überhaupt einen Titel hat,
+    // zeigt erst die gerenderte Seite — hier auf den drei Seitentypen.
+    for (const path of ['/animals', '/projects', '/admin/settings']) {
+      await page.goto(path);
+      await expect(page.getByRole('heading', { level: 1 })).toHaveCount(1);
+    }
+    await page.goto('/projects');
+    await page.getByRole('row').nth(1).getByRole('link').first().click();
+    await expect(page).toHaveURL(/\/projects\/[0-9A-Z]{26}$/);
+    await expect(page.getByRole('heading', { level: 1 })).toHaveCount(1);
+    const crumbs = page.getByRole('navigation', { name: 'Brotkrume' });
+    await expect(crumbs.getByRole('link', { name: 'Projekte' })).toBeVisible();
+    await expect(crumbs.locator('[aria-current]')).toHaveCount(0);
   });
 
   test('the command palette still finds pages of modules and settings', async ({ page }) => {

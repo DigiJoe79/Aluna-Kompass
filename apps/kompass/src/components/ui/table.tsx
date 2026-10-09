@@ -150,6 +150,17 @@ function TableEmpty({ colSpan, children }: { colSpan: number; children: React.Re
   )
 }
 
+/** Gruppenzeile im Rumpf (z. B. je Modul): ein Kopf über alle Spalten der Gruppe (K10 Charge 2, T3.5). */
+function TableGroupRow({ colSpan, children, testId }: { colSpan: number; children: React.ReactNode; testId?: string }) {
+  return (
+    <TableRow data-testid={testId} className="bg-surface-2 even:bg-surface-2">
+      <TableHead colSpan={colSpan} scope="colgroup" className="text-hint font-semibold text-ink-2">
+        {children}
+      </TableHead>
+    </TableRow>
+  )
+}
+
 const ROW_TARGET =
   'after:absolute after:inset-0 after:content-[""] focus-visible:outline-none focus-visible:after:outline-2 focus-visible:after:outline-offset-[-2px] focus-visible:after:outline-focus'
 
@@ -196,4 +207,5 @@ export {
   TableCell,
   TableCaption,
   TableEmpty,
+  TableGroupRow,
 }

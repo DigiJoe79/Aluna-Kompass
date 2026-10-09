@@ -2,7 +2,8 @@
 
 import { AlertTriangle, ExternalLink, Pause } from 'lucide-react';
 import Link from 'next/link';
-import { useFormatter, useTranslations } from 'next-intl';
+import { useTranslations } from 'next-intl';
+import { useDateFormat } from '@/components/date-format-provider';
 import { useId, type ReactNode, type Ref } from 'react';
 import { Button, buttonVariants } from '@/components/ui/button';
 import type { DetailView } from '@/lib/site-job-view';
@@ -49,13 +50,13 @@ const hostOf = (url: string | null): string | null => {
  */
 export function PublishFlowCard(p: PublishFlowCardProps) {
   const t = useTranslations('site.publish');
-  const format = useFormatter();
+  const fmt = useDateFormat();
   const reasonId = useId();
   const { state } = p;
   const canPublishHere = p.env !== 'development' && p.hasDeploy;
   const host = hostOf(p.publicUrl);
-  const time = (iso: string) => format.dateTime(new Date(iso), { timeStyle: 'short' });
-  const dateTime = (iso: string) => format.dateTime(new Date(iso), { dateStyle: 'medium', timeStyle: 'short' });
+  const time = (iso: string) => fmt.time(iso);
+  const dateTime = (iso: string) => fmt.dateTime(iso);
   const tr = t as unknown as Translate;
 
   const publishLabel = p.env === 'test' ? t('flow.publish.test') : t('flow.publish.live');

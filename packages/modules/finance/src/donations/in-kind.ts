@@ -81,7 +81,7 @@ export async function saveInKindDetails(deps: Deps, ctx: CallContext, input: unk
     }
 
     const after = tx.select().from(financeInKindDetails).where(eq(financeInKindDetails.lineId, line.id)).get()!;
-    financeAudit(tx, deps, ctx, { action: 'finance.inKindDetails.save', entity: 'financeInKindDetails', id: line.id, before: before ? auditFields(before) : undefined, after: auditFields(after), summary: `Angaben zur Sachspende an Zeile ${line.id} ${before ? 'geändert' : 'erfasst'}` });
+    financeAudit(tx, deps, ctx, { action: 'finance.inKindDetails.save', entity: 'financeInKindDetails', id: line.id, before: before ? auditFields(before) : undefined, after: auditFields(after), params: { created: !before } });
     return ok(after);
   });
 }

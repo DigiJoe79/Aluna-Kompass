@@ -13,11 +13,13 @@ import { cn } from '@/lib/utils';
  * - `full`: Listen ab fünf Spalten und Arbeitsflächen. Ohne eigenen Kasten (`contents`): Arbeitsflächen holen
  *   ihre Höhe aus dem Hauptbereich (`min-h-full`, `h-[calc(100%+3rem)]`), ein Block ohne Höhe dazwischen nähme
  *   sie ihnen (Handoff Konsistenz § 8c).
+ *
+ * Abschnitte stehen auf Ebene 2: Der Seitentitel im `PageHeader` ist das `h1` (Spec Seitenkopf § 2.2).
  */
 export function Page({ width, header, children }: { width: 'task' | 'standard' | 'full'; header?: ReactNode; children?: ReactNode }) {
   return (
     <div data-page-width={width} className={cn(width === 'task' && 'max-w-task', width === 'standard' && 'max-w-standard', width === 'full' && 'contents')}>
-      <SectionLevel level={3}>
+      <SectionLevel level={2}>
         {header}
         {children}
       </SectionLevel>

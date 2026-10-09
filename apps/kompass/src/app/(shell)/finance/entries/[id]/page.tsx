@@ -6,6 +6,7 @@ import { listProjects } from '@kompass/module-projects';
 import { getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
+import { Table, TableBody, TableCell, TableRow } from '@/components/ui/table';
 import { AmountCell } from '@/components/finance/amount-cell';
 import { ConfirmationSection, type ConfirmationSectionLine } from '@/components/finance/confirmation-section';
 import { EntryStateBadge } from '@/components/finance/entry-state-badge';
@@ -16,8 +17,10 @@ import { PageHeader } from '@/components/page-header';
 import { dateFormatOf } from '@/lib/date-format';
 import { formatEuro } from '@/lib/finance/amount';
 import { taxTextKey } from '@/lib/finance/tax-text';
+import { readAllPages } from '@/lib/read-all-pages';
 import { requireSession } from '@/lib/request-context';
 import { CorrectDialog } from './correct-dialog';
+import { EntryActions } from './entry-actions';
 import { EntryHistory } from './history';
 import { NotReturnCard } from './not-return';
 import { EntryVouchers } from './vouchers';
@@ -43,7 +46,8 @@ export default async function ViewFinanceEntryPage({ params }: { params: Promise
     listProjects(deps, ctx),
     listFiscalYears(deps, ctx),
   ]);
-  const closedYear = entry.fiscalYearId !== null && (fiscalYearsRes.ok ? fiscalYearsRes.value.find((y) => y.id === entry.fiscalYearId)?.status === 'closed' : false);
+  const yearStatus = entry.fiscalYearId !== null && fiscalYearsRes.ok ? fiscalYearsRes.value.find((y) => y.id === entry.fiscalYearId)?.status : undefined;
+  const closedYear = yearStatus === 'closed';
 
   const accountNames = new Map((accountsRes.ok ? accountsRes.value : []).map((a) => [a.id, a.name]));
   const categories = categoriesRes.ok ? categoriesRes.value : [];
@@ -71,8 +75,9 @@ export default async function ViewFinanceEntryPage({ params }: { params: Promise
 
   // „Hängt zusammen mit“ (Task 4): jede offene Zahlung, die eine Geldzeile dieser Buchung begleicht.
   const settlementItemIds = new Set(entry.moneyLines.flatMap((l) => l.settlements.map((s) => s.openItemId)));
-  const openItemsRes = settlementItemIds.size > 0 ? await listOpenItems(deps, ctx, { state: 'all', limit: 200 }) : null;
-  const openItemById = new Map((openItemsRes?.ok ? openItemsRes.value.items : []).filter((i) => settlementItemIds.has(i.id)).map((i) => [i.id, i]));
+  // Alle Posten lesen, nicht die jüngsten 200: Sonst fehlte einem älteren Posten die Beschriftung.
+  const openItemsRes = settlementItemIds.size > 0 ? await readAllPages((page) => listOpenItems(deps, ctx, { state: 'all', ...page }), (v) => v.items) : null;
+  const openItemById = new Map((openItemsRes?.ok ? openItemsRes.value : []).filter((i) => settlementItemIds.has(i.id)).map((i) => [i.id, i]));
   const settlements = entry.moneyLines.flatMap((line) => line.settlements.map((s) => ({ settlement: s, item: openItemById.get(s.openItemId) })));
 
   // Abschnitt „Bestätigung“ (F6a Task 7): je bescheinigungsfähiger Zeile die gültige Bestätigung, gelesen über die Liste des Kontakts.
@@ -80,10 +85,10 @@ export default async function ViewFinanceEntryPage({ params }: { params: Promise
   const certifiableLines = entry.allocationLines.filter((l) => l.amountCents > 0 && (CERTIFIABLE_INCOME_KINDS as readonly string[]).includes(incomeKinds.get(l.categoryId) ?? ''));
   const confirmationByLine = new Map<string, { id: string; number: string; issuedOn: string }>();
   const confirmationContacts = [...new Set(certifiableLines.map((l) => l.contactId).filter((v): v is string => !!v))];
-  const confirmationLists = await Promise.all(confirmationContacts.map((contactId) => listConfirmations(deps, ctx, { tab: 'issued', contactId, limit: 200 })));
+  const confirmationLists = await Promise.all(confirmationContacts.map((contactId) => readAllPages((page) => listConfirmations(deps, ctx, { tab: 'issued', contactId, ...page }), (v) => v.items)));
   for (const list of confirmationLists) {
     if (!list.ok) continue;
-    for (const c of list.value.items) {
+    for (const c of list.value) {
       if (c.state !== 'valid') continue;
       for (const l of c.lines) if (l.releasedAt === null) confirmationByLine.set(l.lineId, { id: c.id, number: c.documentNumber, issuedOn: c.issuedOn });
     }
@@ -110,14 +115,30 @@ export default async function ViewFinanceEntryPage({ params }: { params: Promise
     replacedByNumber: v.replacedByLinkId ? (entry.vouchers.find((o) => o.linkId === v.replacedByLinkId)?.documentNumber ?? null) : null,
   }));
 
+  // Wie der Dienst (`ledger/reverse.ts`): im offenen Geschäftsjahr am Datum der Buchung, sonst heute.
+  const reversalDate = yearStatus === 'open' ? entry.entryDate : today;
+  const correct = !reversed && canCorrect ? (
+    <CorrectDialog
+      entry={entry}
+      purposes={purposes}
+      projects={projects}
+      contactNames={contactNames}
+      categoryNames={categoryNames}
+      confirmations={Object.fromEntries(confirmationByLine)}
+      canVoidConfirmation={hasPermission(ctx, 'finance.donationsIssue')}
+    />
+  ) : null;
+  const actions = canCorrect ? (
+    <EntryActions entry={{ id: entry.id, number: entry.number, isReversal: !!entry.reversesEntryId, reversed }} reversalDate={reversalDate}>
+      {correct}
+    </EntryActions>
+  ) : undefined;
+
   return (
-    <Page width="standard" header={<PageHeader back={{ href: '/finance/entries', label: t('back') }} />}>
+    <Page width="standard" header={<PageHeader back={{ href: '/finance/entries', label: t('back') }} title={entry.number ?? undefined} status={<EntryStateBadge entry={entry} />} actions={actions} />}>
       <div className="space-y-4">
         <section className="space-y-2 rounded-md border border-line bg-surface p-4">
-          <div className="flex flex-wrap items-center gap-3">
-            <span data-testid="entry-number" className="font-mono text-[26px] font-semibold">{entry.number}</span>
-            <EntryStateBadge entry={entry} />
-          </div>
+          {/* Nummer und Stand stehen im Seitenkopf (`PageHeader title`/`status`, Board § K Ziel 5). */}
           <p className="text-[15px] text-ink">{entry.text}</p>
           {finalizedEvent && finalizedEvent.kind === 'finalized' ? (
             <LockLine at={finalizedEvent.at} userName={finalizedEvent.userName} channel={finalizedEvent.channel} fmt={dateFormatOf(deps)} />
@@ -142,62 +163,51 @@ export default async function ViewFinanceEntryPage({ params }: { params: Promise
               {t('reverses')} <Link className="underline" href={`/finance/entries/${entry.reversesEntryId}`}>{t('open')}</Link>
             </p>
           ) : null}
-          {!reversed && canCorrect ? (
-            <CorrectDialog
-              entry={entry}
-              purposes={purposes}
-              projects={projects}
-              contactNames={contactNames}
-              categoryNames={categoryNames}
-              confirmations={Object.fromEntries(confirmationByLine)}
-              canVoidConfirmation={hasPermission(ctx, 'finance.donationsIssue')}
-            />
-          ) : null}
         </section>
 
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-[2fr_1fr]">
           <div className="space-y-4">
             <section className="space-y-2 rounded-md border border-line bg-surface p-4">
               <h3 className="text-[13px] font-semibold uppercase tracking-wide text-muted-ink">{t('account')}</h3>
-              <table className="w-full text-[13px]">
-                <tbody>
+              <Table className="text-[13px]">
+                <TableBody>
                   {entry.moneyLines.map((line) => (
-                    <tr key={line.id} className="border-b border-line-2 last:border-0">
-                      <td className="py-1.5 text-ink-2">{accountNames.get(line.accountId) ?? line.accountId}</td>
-                      <td className="py-1.5">
+                    <TableRow key={line.id}>
+                      <TableCell className="text-ink-2">{accountNames.get(line.accountId) ?? line.accountId}</TableCell>
+                      <TableCell>
                         <AmountCell cents={line.amountCents} />
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   ))}
-                </tbody>
-              </table>
+                </TableBody>
+              </Table>
             </section>
 
             <section className="space-y-2 rounded-md border border-line bg-surface p-4">
               <h3 className="text-[13px] font-semibold uppercase tracking-wide text-muted-ink">{t('allocation')}</h3>
-              <table data-testid="finance-allocation-table" className="w-full text-[13px]">
-                <tbody>
+              <Table data-testid="finance-allocation-table" className="text-[13px]">
+                <TableBody>
                   {entry.allocationLines.map((line) => (
-                    <tr key={line.id} className="border-b border-line-2 last:border-0">
-                      <td className="py-1.5 text-ink-2">{categoryNames.get(line.categoryId) ?? line.categoryId}</td>
-                      <td className="py-1.5 text-ink-2">{line.contactId ? (contactNames.get(line.contactId) ?? '') : '—'}</td>
-                      <td className="py-1.5 text-ink-2">{line.purposeId ? (purposeNames.get(line.purposeId) ?? '') : '—'}</td>
-                      <td className="py-1.5">
+                    <TableRow key={line.id}>
+                      <TableCell className="text-ink-2">{categoryNames.get(line.categoryId) ?? line.categoryId}</TableCell>
+                      <TableCell className="text-ink-2">{line.contactId ? (contactNames.get(line.contactId) ?? '') : '—'}</TableCell>
+                      <TableCell className="text-ink-2">{line.purposeId ? (purposeNames.get(line.purposeId) ?? '') : '—'}</TableCell>
+                      <TableCell className="whitespace-normal">
                         <AmountCell cents={line.amountCents} />
                         {line.amountCents !== 0 && taxTextKey(line.tax) ? (
                           <p className="text-right text-[12px] text-muted-ink">
                             {tTax(taxTextKey(line.tax)!.key, { amount: formatEuro(taxTextKey(line.tax)!.cents) })}
                           </p>
                         ) : null}
-                      </td>
-                      <td className="py-1.5 text-right text-[12px]">
+                      </TableCell>
+                      <TableCell className="text-right text-[12px]">
                         {line.corrected ? <span className="text-info">{t('corrected')}</span> : null}
                         {line.pendingCorrectionId ? <span className="text-warning">{t('pendingCorrection')}</span> : null}
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   ))}
-                </tbody>
-              </table>
+                </TableBody>
+              </Table>
             </section>
 
             {settlements.length > 0 ? (

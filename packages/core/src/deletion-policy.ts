@@ -1,3 +1,4 @@
+import { AUDIT_ACTION } from './audit/actions';
 import type { ModuleManifest } from './modules/manifest';
 import type { RetentionClass } from './retention/classes';
 
@@ -34,8 +35,6 @@ export interface DeletionRule {
   retentionClass?: RetentionClass;
 }
 
-/** Dieselbe Form wie ein Permission-Key: camelCase je Abschnitt, mindestens ein Punkt. */
-const AUDIT_ACTION = /^[a-z][a-zA-Z0-9]*(\.[a-z][a-zA-Z0-9]*)+$/;
 
 /** Wirft bei einer in sich widersprüchlichen Regel; von `defineModule` aufgerufen. */
 export function validateDeletionRules(moduleKey: string, rules: readonly DeletionRule[]): void {

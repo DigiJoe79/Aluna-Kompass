@@ -43,7 +43,7 @@ describe('addEvidenceUpload / addEvidenceLink (F7 Task 3)', () => {
     const subject = f.deps.db.select({ subject: documents.subject }).from(documents).where(eq(documents.id, added.documentId!)).get()!.subject;
     expect(subject).toMatch(/^Zahlungsnachweis vom \d{2}\.\d{2}\.\d{4}$/);
     // Leitsprache ohne eigene Tabelle: der Betreff bleibt deutsch, nie der Code.
-    f.deps.db.transaction((tx) => writeSettingInternal(tx, f.deps, systemContext(), 'i18n.locales', ['en', 'de'], 'test.locales'));
+    f.deps.db.transaction((tx) => writeSettingInternal(tx, f.deps, systemContext(), 'i18n.locales', ['en', 'de']));
     const report = unwrap(await addEvidenceUpload(f.deps, f.ctx, { paymentId: payment.id, kind: 'report', bytes: pdfBytes(), fileName: 'bericht.pdf' }));
     expect(f.deps.db.select({ subject: documents.subject }).from(documents).where(eq(documents.id, report.documentId!)).get()!.subject).toMatch(/^Bericht vom /);
   });

@@ -1,4 +1,5 @@
-import { schema as core, unwrap } from '@kompass/core';
+import { siteModule } from '../src/manifest';
+import { coreModule, schema as core, unwrap } from '@kompass/core';
 import { auditEntry, createTestDeps, ctxWith, insertUser } from '@kompass/core/testing';
 import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
@@ -21,7 +22,7 @@ const asJson = (s: unknown) => z.toJSONSchema(s as z.ZodType, { io: 'input' }) a
 type Cols = TemplateSchema['collections'];
 
 const withUser = (collections: Cols, locales = ['de']) => {
-  const deps = createTestDeps({ locales });
+  const deps = createTestDeps({ locales, manifests: [coreModule, siteModule] });
   insertUser(deps, { id: 'USER-TEST' });
   deps.db
     .insert(siteTemplateState)

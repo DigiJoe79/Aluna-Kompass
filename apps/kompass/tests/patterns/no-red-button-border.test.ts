@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { callArguments, openingTags, read, relative, sourceFiles } from './source';
 
 /**
- * Löschknöpfe auf der Seite sind neutral (docs/MUSTER.md § C): ein schlichtes `outline`, wie in
- * `DangerSection`. Rot ergibt erst im Bestätigungsdialog Sinn (`destructive`) — und gesperrt wäre
+ * Lösch- und Stornoknöpfe auf der Seite sind neutral (docs/MUSTER.md § C): ein schlichtes `outline` bzw. ein
+ * Eintrag in „Weitere Aktionen“ (`RecordActions`). Rot ergibt erst im Bestätigungsdialog Sinn (`destructive`) — und gesperrt wäre
  * ein roter Rahmen irreführend. Gefunden wird `border-error` im Tag eines `<Button` und in
  * `buttonVariants(…)`; Rahmen von Meldungen, Feldern und Karten bleiben unberührt.
  */

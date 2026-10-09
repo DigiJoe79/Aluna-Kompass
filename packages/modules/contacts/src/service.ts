@@ -111,9 +111,10 @@ function changedFields(before: Record<string, unknown>, changes: Record<string, 
 /** D7: die Felder, die den Namen eines Kontakts ausmachen — Person wie Organisation. */
 const NAME_FIELDS = new Set(['salutation', 'firstName', 'lastName', 'name']);
 
-function updateSummary(fields: string[]): string {
-  if (fields.length > 0 && fields.every((f) => NAME_FIELDS.has(f))) return 'Name geändert';
-  return fields.length > 0 && fields.every((f) => ADDRESS_FIELDS.has(f)) ? 'Anschrift geändert' : 'Kontakt geändert';
+/** Was eine Änderung betraf, als Code für den Satz im Protokoll (Spec Protokoll § 2) — ohne Werte. */
+function updateScope(fields: string[]): 'name' | 'address' | 'other' {
+  if (fields.length > 0 && fields.every((f) => NAME_FIELDS.has(f))) return 'name';
+  return fields.length > 0 && fields.every((f) => ADDRESS_FIELDS.has(f)) ? 'address' : 'other';
 }
 
 export async function createContact(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<ContactRecord>> {
@@ -128,7 +129,7 @@ export async function createContact(deps: Deps, ctx: CallContext, input: unknown
     const now = isoNow(deps.clock);
     tx.insert(contacts).values({ id, ...parsed.value, status: 'active', createdAt: now, updatedAt: now }).run();
     const record = loadContact(tx, id)!;
-    recordAudit(tx, deps, ctx, { action: 'contacts.create', entityType: 'contact', entityId: id, after: { kind: record.kind, changedFields: filledFields(parsed.value) }, summary: 'Kontakt angelegt' });
+    recordAudit(tx, deps, ctx, { action: 'contacts.create', entityType: 'contact', entityId: id, after: { kind: record.kind, changedFields: filledFields(parsed.value) } });
     return ok(record);
   });
 }
@@ -149,7 +150,7 @@ export async function updateContact(deps: Deps, ctx: CallContext, input: unknown
   return deps.db.transaction((tx: DbOrTx) => {
     tx.update(contacts).set({ ...changes, updatedAt: isoNow(deps.clock) }).where(eq(contacts.id, id)).run();
     const after = loadContact(tx, id)!;
-    recordAudit(tx, deps, ctx, { action: 'contacts.update', entityType: 'contact', entityId: id, after: { changedFields: fields }, summary: updateSummary(fields) });
+    recordAudit(tx, deps, ctx, { action: 'contacts.update', entityType: 'contact', entityId: id, after: { changedFields: fields }, params: { scope: updateScope(fields) } });
     return ok(after);
   });
 }
@@ -164,7 +165,7 @@ export async function setContactStatus(deps: Deps, ctx: CallContext, input: unkn
   return deps.db.transaction((tx: DbOrTx) => {
     tx.update(contacts).set({ status: parsed.value.status, updatedAt: isoNow(deps.clock) }).where(eq(contacts.id, parsed.value.id)).run();
     const after = loadContact(tx, parsed.value.id)!;
-    recordAudit(tx, deps, ctx, { action: 'contacts.setStatus', entityType: 'contact', entityId: after.id, before: { status: before.status }, after: { status: after.status }, summary: after.status === 'archived' ? 'Kontakt archiviert' : 'Kontakt reaktiviert' });
+    recordAudit(tx, deps, ctx, { action: 'contacts.setStatus', entityType: 'contact', entityId: after.id, before: { status: before.status }, after: { status: after.status }, params: { archived: after.status === 'archived' } });
     return ok(after);
   });
 }
@@ -276,7 +277,7 @@ export async function setContactChannels(deps: Deps, ctx: CallContext, input: un
         .run();
     });
     const after = loadContact(tx, before.id)!;
-    recordAudit(tx, deps, ctx, { action: 'contacts.setChannels', entityType: 'contact', entityId: after.id, before: { kinds: before.channels.map((c) => c.kind) }, after: { kinds: after.channels.map((c) => c.kind), changedFields: ['channels'] }, summary: 'Kommunikationswege geändert' });
+    recordAudit(tx, deps, ctx, { action: 'contacts.setChannels', entityType: 'contact', entityId: after.id, before: { kinds: before.channels.map((c) => c.kind) }, after: { kinds: after.channels.map((c) => c.kind), changedFields: ['channels'] } });
     return ok(after);
   });
 }
@@ -308,7 +309,7 @@ export async function addContactRole(deps: Deps, ctx: CallContext, input: unknow
   return deps.db.transaction((tx: DbOrTx) => {
     tx.insert(contactRoles).values({ id: newId(), contactId: contact.id, role: parsed.value.role, since: parsed.value.since, until: null, note: parsed.value.note ?? null }).run();
     const after = loadContact(tx, contact.id)!;
-    recordAudit(tx, deps, ctx, { action: 'contacts.addRole', entityType: 'contact', entityId: after.id, after: { role: parsed.value.role, since: parsed.value.since }, summary: `Rolle ${parsed.value.role} begonnen` });
+    recordAudit(tx, deps, ctx, { action: 'contacts.addRole', entityType: 'contact', entityId: after.id, after: { role: parsed.value.role, since: parsed.value.since }, params: { role: parsed.value.role } });
     return ok(after);
   });
 }
@@ -324,7 +325,7 @@ export async function endContactRole(deps: Deps, ctx: CallContext, input: unknow
   return deps.db.transaction((tx: DbOrTx) => {
     tx.update(contactRoles).set({ until: parsed.value.until }).where(eq(contactRoles.id, row.id)).run();
     const after = loadContact(tx, row.contactId)!;
-    recordAudit(tx, deps, ctx, { action: 'contacts.endRole', entityType: 'contact', entityId: after.id, before: { role: row.role, until: null }, after: { role: row.role, until: parsed.value.until }, summary: `Rolle ${row.role} beendet` });
+    recordAudit(tx, deps, ctx, { action: 'contacts.endRole', entityType: 'contact', entityId: after.id, before: { role: row.role, until: null }, after: { role: row.role, until: parsed.value.until }, params: { role: row.role } });
     return ok(after);
   });
 }
@@ -384,7 +385,7 @@ export async function deleteContact(deps: Deps, ctx: CallContext, input: unknown
     tx.delete(contactRoles).where(eq(contactRoles.contactId, contact.id)).run();
     tx.delete(contacts).where(eq(contacts.id, contact.id)).run();
     notifyRecordDeleted(tx, deps, ctx, 'contact', contact.id);
-    recordAudit(tx, deps, ctx, { action: 'contacts.delete', entityType: 'contact', entityId: contact.id, before: { until }, summary: 'Kontakt nach Fristablauf gelöscht' });
+    recordAudit(tx, deps, ctx, { action: 'contacts.delete', entityType: 'contact', entityId: contact.id, before: { until } });
     return ok({ id: contact.id });
   });
 }

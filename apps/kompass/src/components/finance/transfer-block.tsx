@@ -1,11 +1,8 @@
 'use client';
 
-import { Copy } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { useState } from 'react';
-import { toast } from 'sonner';
 import { QrCode } from '@/components/ui/qr-code';
-import { copyToClipboard } from '@/lib/clipboard';
+import { CopyButton } from '@/components/copy-button';
 import { formatEuro } from '@/lib/finance/amount';
 import { groupIban } from '@/lib/finance/iban-check';
 import { cn } from '@/lib/utils';
@@ -14,28 +11,13 @@ import { cn } from '@/lib/utils';
 const QR_SIZE = 160;
 
 function CopyField({ label, value }: { label: string; value: string }) {
-  const c = useTranslations('common');
-  const [copied, setCopied] = useState(false);
   return (
     <div className="flex items-center justify-between gap-2 border-b border-line-2 py-1.5 last:border-0">
       <div className="min-w-0">
         <p className="text-[11px] text-muted-ink">{label}</p>
         <p className="truncate text-[13px] text-ink">{value}</p>
       </div>
-      <button
-        type="button"
-        aria-label={`${c('copy')}: ${label}`}
-        onClick={async () => {
-          if (await copyToClipboard(value)) {
-            setCopied(true);
-            setTimeout(() => setCopied(false), 2000);
-          } else toast.error(c('copyFailed'), { duration: Infinity, closeButton: true });
-        }}
-        className="flex shrink-0 items-center gap-1.5 rounded-sm border border-line px-2 py-1 text-[12px] text-ink-2 hover:bg-hover"
-      >
-        <Copy className="size-3.5" aria-hidden />
-        {copied ? c('copied') : c('copy')}
-      </button>
+      <CopyButton value={value} label={label} />
     </div>
   );
 }

@@ -95,7 +95,7 @@ export function writeSettingInternal(
     entityType: 'setting',
     entityId: key,
     ...(def.auditValue === 'redact' ? { before: undefined, after: { changed: true } } : { before, after: parsed.value }),
-    summary: `${key} geändert`,
+    params: { key },
   });
   return ok({ key, value: parsed.value });
 }

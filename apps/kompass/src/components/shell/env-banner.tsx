@@ -15,7 +15,7 @@ export function EnvBanner({ banner, context, date }: { banner: Banner; context: 
   const stripe = (angle: number) => `repeating-linear-gradient(${angle}deg, ${c.fg} 0 8px, ${c.bg} 8px 16px)`;
   const detail =
     banner.kind === 'test'
-      ? t('testContext', { date: context.lastImportAt ? date(context.lastImportAt) : t('noImport') })
+      ? (context.lastImportAt ? t('testContext', { date: date(context.lastImportAt) }) : t('testContextNoImport'))
       : t('devContext', { migrations: context.migrationCount });
   return (
     <div data-testid="env-banner" aria-label={label} style={{ background: c.bg, color: c.fg, height: 28 }} className="relative flex items-center justify-center gap-3 overflow-hidden text-[12px] font-bold tracking-[.18em]">

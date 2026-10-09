@@ -7,7 +7,8 @@ import { DocumentPicker } from '@/app/(shell)/dms/document-picker';
 import type { PickedDocument } from '@/app/(shell)/dms/search-action';
 import { FormActionBar } from '@/components/forms/form-action-bar';
 import { useActionFeedback } from '@/components/forms/use-action-feedback';
-import { withUnplacedFieldErrors } from '@/lib/feedback';
+import { toastUndo, withUnplacedFieldErrors } from '@/lib/feedback';
+import { Notice } from '@/components/notice';
 import { StatusBadge } from '@/components/status-badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogBody, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -42,8 +43,9 @@ const IBAN_STATE_KEY: Record<IbanCheckResult['state'], string> = { empty: '', va
 /**
  * H2 — Tabelle + Dialog: Name, Art, IBAN (Prüfung am Feld, kein Bankname aus
  * der IBAN), BIC, Bank, Anfangsbestand mit Stichtag (beides oder keines),
- * Hauptkonto mit Konflikten als Ablehnung. „Stilllegen statt löschen“ als
- * Link links unten im Dialog — kein roter Knopf.
+ * Hauptkonto mit Konflikten als Ablehnung. „Stilllegen“ als Aktion am Datensatz links im Dialogfuß (`recordAction`,
+ * Spec Seitenkopf § 3.3), ohne Rückfrage mit „Rückgängig“; ein stillgelegtes Konto trägt die Marke neben dem Titel
+ * und „Wieder aktivieren“ sichtbar im Kopf. Das Hauptkonto hat keinen Eintrag, sondern den Grund als Hinweis im Kopf.
  */
 export function AccountsPanel({ accounts, canPickDocument }: { accounts: AccountRow[]; canPickDocument: boolean }) {
   const t = useTranslations('finance.admin.accounts');
@@ -113,6 +115,7 @@ export function AccountsPanel({ accounts, canPickDocument }: { accounts: Account
 function AccountDialog({ account, canPickDocument, onClose, onSaved }: { account: AccountRow | null; canPickDocument: boolean; onClose: () => void; onSaved: (data?: unknown) => void }) {
   const t = useTranslations('finance.admin.accounts');
   const tCommon = useTranslations('common');
+  const tErrors = useTranslations('finance.errors');
   const [name, setName] = useState(account?.name ?? '');
   const [kind, setKind] = useState<'bank' | 'cash' | 'paymentService'>(account?.kind ?? 'bank');
   const [iban, setIban] = useState(account?.iban ?? '');
@@ -150,12 +153,24 @@ function AccountDialog({ account, canPickDocument, onClose, onSaved }: { account
     if (result.status === 'success') onSaved(result.data);
   };
 
-  const deactivate = async () => {
+  // Umkehrbar, der Gegenweg steht danach dauerhaft im Dialog: ohne Rückfrage, „Rückgängig“ im Toast (MUSTER § C).
+  const setActive = async (next: boolean) => {
     if (!account) return;
     setPending(true);
-    const result = await feedback.run(() => setAccountActiveAction(account.id, false, account.expectedVersion), { retry: () => void deactivate() });
+    const result = await feedback.run(() => setAccountActiveAction(account.id, next, account.expectedVersion), { retry: () => void setActive(next) });
     setPending(false);
-    if (result.status === 'success') onSaved(result.data);
+    if (result.status !== 'success') return;
+    onSaved(result.data);
+    const version = (result.data as { updatedAt?: string } | undefined)?.updatedAt ?? account.expectedVersion;
+    toastUndo(
+      next ? t('toast.activated') : t('toast.deactivated'),
+      async () => {
+        const undone = await setAccountActiveAction(account.id, !next, version);
+        if (undone.status === 'success') onSaved(undone.data);
+        return undone;
+      },
+      { undo: tCommon('undo'), network: tCommon('network') },
+    );
   };
 
   return (
@@ -163,7 +178,21 @@ function AccountDialog({ account, canPickDocument, onClose, onSaved }: { account
       {/* Mit Bankverbindung höher als ein Telefon- oder Laptopfenster: Kopf und Leiste fest, die Mitte scrollt. */}
       <DialogContent size="md" layout="fixed-footer" className="bg-surface shadow-md">
         <DialogHeader>
-          <DialogTitle>{account ? t('edit') : t('create')}</DialogTitle>
+          {/* Marke neben dem Titel wie `PageHeader status`, „Wieder aktivieren“ als nächster Schritt sichtbar daneben (Spec Seitenkopf § 3.4). */}
+          <div className="flex flex-wrap items-center gap-2.5">
+            <DialogTitle>{account ? t('edit') : t('create')}</DialogTitle>
+            {account && !account.isActive ? <StatusBadge tone="neutral">{t('inactiveState')}</StatusBadge> : null}
+            {account && !account.isActive ? (
+              <Button type="button" variant="outline" size="sm" disabled={pending} onClick={() => void setActive(true)} data-testid="account-activate">
+                {t('activate')}
+              </Button>
+            ) : null}
+          </div>
+          {account?.isMain ? (
+            <Notice level="hint">
+              {tErrors('mainAccountMustStayActive.reason')} {tErrors('mainAccountMustStayActive.remedy')}
+            </Notice>
+          ) : null}
         </DialogHeader>
         <DialogBody>
           <section>
@@ -238,13 +267,7 @@ function AccountDialog({ account, canPickDocument, onClose, onSaved }: { account
           saveLabel={t('dialog.save')}
           onSave={() => void submit()}
           state={withUnplacedFieldErrors(feedback.state, [])}
-          note={
-            account && !account.isMain ? (
-              <button type="button" className="text-[13px] font-semibold text-brand underline" onClick={() => void deactivate()} disabled={pending}>
-                {t('deactivate')}
-              </button>
-            ) : undefined
-          }
+          recordAction={account && account.isActive && !account.isMain ? { key: 'deactivate', label: t('deactivate'), kind: 'reversible', onSelect: () => void setActive(false), testId: 'account-deactivate' } : undefined}
         />
       </DialogContent>
     </Dialog>

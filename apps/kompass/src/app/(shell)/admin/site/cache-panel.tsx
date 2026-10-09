@@ -3,6 +3,7 @@
 import type { SiteCacheStatus } from '@kompass/module-site';
 import { useRouter } from 'next/navigation';
 import { useFormatter, useTranslations } from 'next-intl';
+import { useDateFormat } from '@/components/date-format-provider';
 import { useState } from 'react';
 import { ConfirmDialog } from '@/components/forms/confirm-dialog';
 import { useSiteJobStatus } from '@/components/site/site-job-provider';
@@ -15,10 +16,11 @@ const MB = 1_048_576;
 export function CachePanel({ status }: { status: SiteCacheStatus }) {
   const t = useTranslations('site.admin.cache');
   const format = useFormatter();
+  const fmt = useDateFormat();
   const router = useRouter();
   const { running } = useSiteJobStatus();
   const [open, setOpen] = useState(false);
-  const date = (iso: string) => format.dateTime(new Date(iso), { dateStyle: 'medium', timeStyle: 'short' });
+  const date = (iso: string) => fmt.dateTime(iso);
   const size = (bytes: number) => format.number(bytes / MB, { maximumFractionDigits: 1 });
   const { images, preview } = status;
   const busy = running !== null;

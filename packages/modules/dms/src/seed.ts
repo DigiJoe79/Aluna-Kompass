@@ -1,4 +1,4 @@
-import { completeFollowUp, isoDayIn, isoNow, newId, seedClockAt, seedMoment, storyDay, todayIn, unwrap, type CallContext, type Deps } from '@kompass/core';
+import { completeFollowUp, isoDayIn, isoNow, newId, seedClockAt, seedMoment, seedStoryYear, storyDay, todayIn, unwrap, type CallContext, type Deps } from '@kompass/core';
 import { contacts } from '@kompass/module-contacts';
 import { and, eq } from 'drizzle-orm';
 import { EXAMPLE_DOCUMENT_TYPES } from './catalog';
@@ -39,18 +39,19 @@ interface Step {
 
 // — Texte. Briefe sind Markdown (Typst setzt sie); Eingänge sind `textPdf`, also nur Latin-1. —
 
-const ANTRAG = 'Sehr geehrte Damen und Herren,\n\nanbei erhalten Sie die Körperschaftsteuererklärung des Musterverein e.V. für das Jahr 2024 mit Tätigkeitsbericht, Kassenbericht und dem Protokoll der Mitgliederversammlung.\n\nWir bitten um Prüfung und um einen Bescheid über die Freistellung für diesen Zeitraum. Rückfragen beantwortet unser Schatzmeister gern.\n\nMit freundlichen Grüßen\n\nDer Vorstand';
+/** Der Antrag zum Jahr `y − 2` — Erklärung und Bescheid hängen am Stichjahr, nie an einer festen Zahl. */
+const antrag = (year: number) => 'Sehr geehrte Damen und Herren,\n\nanbei erhalten Sie die Körperschaftsteuererklärung des Musterverein e.V. für das Jahr ' + year + ' mit Tätigkeitsbericht, Kassenbericht und dem Protokoll der Mitgliederversammlung.\n\nWir bitten um Prüfung und um einen Bescheid über die Freistellung für diesen Zeitraum. Rückfragen beantwortet unser Schatzmeister gern.\n\nMit freundlichen Grüßen\n\nDer Vorstand';
 
 const EINLADUNG = 'Sehr geehrte Damen und Herren,\n\nhiermit laden wir Sie herzlich zur ordentlichen Mitgliederversammlung ein.\n\n**Tagesordnung**\n\n1. Bericht des Vorstands\n2. Kassenbericht und Bericht der Kassenprüfung\n3. Entlastung des Vorstands\n4. Wahl des Vorstands\n5. Verschiedenes\n\nAnträge zur Tagesordnung reichen Sie bitte bis spätestens zwei Wochen vor der Versammlung schriftlich ein.\n\nMit freundlichen Grüßen\n\nDer Vorstand';
 
-const BESCHEID = [
+const bescheid = (year: number) => [
   'Finanzamt Musterstadt',
   'Steuernummer 99/999/99999',
   '',
   'Musterverein e.V.',
   'Vereinsweg 1, 12345 Musterstadt',
   '',
-  'Freistellungsbescheid für 2024',
+  `Freistellungsbescheid für ${year}`,
   '',
   'Der Verein verfolgt ausschließlich und unmittelbar gemeinnützige Zwecke',
   'im Sinne der Abgabenordnung, nämlich die Förderung des Tierschutzes',
@@ -187,6 +188,8 @@ const WINTERBRIEF = '### Winterhilfe: Wir brauchen Sie\n\nLiebe Sabine,\n\nab No
 export async function seedDms(deps: Deps, ctx: CallContext): Promise<void> {
   const existing = deps.db.select({ id: documents.id }).from(documents).all();
   if (existing.length > 0) return;
+  // Das Stichjahr; die Briefe aus 0.1 liegen im Januar bis März darin (Befund 0.2.8/20).
+  const y = seedStoryYear(todayIn(deps));
 
   // Die beiden unklassifizierten Arten stehen schon: `installDms` hat sie beim
   // Einschalten angelegt. Hier kommen nur die Beispiele dazu, die noch fehlen —
@@ -203,7 +206,7 @@ export async function seedDms(deps: Deps, ctx: CallContext): Promise<void> {
     'behoerden',
     'behoerden/finanzamt',
     'behoerden/amtsgericht',
-    'behoerden/amtsgericht/vereinsregister-2026',
+    `behoerden/amtsgericht/vereinsregister-${y}`,
     'vertraege',
     'protokolle',
     'korrespondenz-mit-dem-landesverband-und-den-kreisgruppen',
@@ -252,7 +255,6 @@ export async function seedDms(deps: Deps, ctx: CallContext): Promise<void> {
     if (!value) throw new Error(`Seed-Dokument fehlt: ${key}`);
     return value;
   };
-  const fixed = (isoDay: string, time = '09:00') => seedMoment(deps, isoDay, time);
   const story = (monthDay: string, time = '09:00') => seedMoment(deps, storyDay(deps, monthDay), time);
   const minutesAgo = (minutes: number) => new Date(deps.clock.now().getTime() - minutes * 60_000);
 
@@ -279,28 +281,28 @@ export async function seedDms(deps: Deps, ctx: CallContext): Promise<void> {
   const vorstand = [...linkTo(who.clara, 'about'), ...linkTo(who.bernd, 'about')];
 
   const steps: Step[] = [
-    // — Feste Daten aus 0.1: E2E-Tests lesen Betreff, Datum (10.02.2026, 15.02.2026) und Ort. Das Schreiben ans
-    //   Finanzamt ist neu und hängt am festen Bescheid, der darauf antwortet. —
-    { at: fixed('2026-01-12'), run: async (d) => { await write(d, 'antrag', { subject: 'Steuererklärung 2024 und Antrag auf Freistellung', body: ANTRAG, folder: 'behoerden/finanzamt', links: linkTo(who.finanzamt, 'recipient') }); await dispatch(d, 'antrag', 'portal'); } },
+    // — Die Briefe aus 0.1, Januar bis März des Stichjahrs: E2E-Tests lesen Betreff, Datum (10.02., 15.02., über
+    //   `story()`) und Ort. Das Schreiben ans Finanzamt hängt am Bescheid, der darauf antwortet. —
+    { at: story('01-12'), run: async (d) => { await write(d, 'antrag', { subject: `Steuererklärung ${y - 2} und Antrag auf Freistellung`, body: antrag(y - 2), folder: 'behoerden/finanzamt', links: linkTo(who.finanzamt, 'recipient') }); await dispatch(d, 'antrag', 'portal'); } },
     {
-      at: fixed('2026-01-20'),
+      at: story('01-20'),
       run: async (d) => {
-        await receive(d, 'mietvertrag', { filename: '2026-01-20 Mietvertrag Lager.pdf', typeKey: firstType, subject: 'Mietvertrag Lagerraum', lines: ['Mietvertrag', '', 'über den Lagerraum im Hof, Beginn 1. Februar 2026.'], folder: 'vertraege', links: [] });
+        await receive(d, 'mietvertrag', { filename: `${y}-01-20 Mietvertrag Lager.pdf`, typeKey: firstType, subject: 'Mietvertrag Lagerraum', lines: ['Mietvertrag', '', `über den Lagerraum im Hof, Beginn 1. Februar ${y}.`], folder: 'vertraege', links: [] });
         unwrap(await reclassifyDocument(d, ctx, { id: id('mietvertrag'), typeKey: 'contract' }));
       },
     },
-    { at: fixed('2026-02-10'), run: (d) => write(d, 'einladung', { subject: 'Einladung zur ordentlichen Mitgliederversammlung', body: EINLADUNG, folder: 'behoerden/amtsgericht/vereinsregister-2026', links: linkTo(who.first, 'recipient') }) },
-    { at: fixed('2026-02-12'), run: (d) => dispatch(d, 'einladung', 'post', 'mit Anmeldeformular') },
+    { at: story('02-10'), run: (d) => write(d, 'einladung', { subject: 'Einladung zur ordentlichen Mitgliederversammlung', body: EINLADUNG, folder: `behoerden/amtsgericht/vereinsregister-${y}`, links: linkTo(who.first, 'recipient') }) },
+    { at: story('02-12'), run: (d) => dispatch(d, 'einladung', 'post', 'mit Anmeldeformular') },
     {
       // Im Eingangskorb, ohne Absender (E2E `dms.spec.ts:1251` setzt beides selbst). Die Textebene liest der Worker.
-      at: fixed('2026-02-15'),
+      at: story('02-15'),
       run: async (d) => {
-        await receive(d, 'bescheid', { filename: '2026-02-15 Bescheid.pdf', typeKey: 'authority', subject: 'Freistellungsbescheid', lines: BESCHEID, folder: null, links: [], repliesTo: 'antrag' });
+        await receive(d, 'bescheid', { filename: `${y}-02-15 Bescheid.pdf`, typeKey: 'authority', subject: 'Freistellungsbescheid', lines: bescheid(y - 2), folder: null, links: [], repliesTo: 'antrag' });
         unwrap(await addNote(d, ctx, { documentId: id('bescheid'), body: 'Bescheid liegt im Original im Ordner Behörden, Fach 3.' }));
       },
     },
     // Festgeschrieben und bewusst nicht versandt — die Liste soll beides zeigen.
-    { at: fixed('2026-03-02'), run: (d) => write(d, 'dank', { subject: 'Dankschreiben an die Tierarztpraxis', body: DANK, folder: null, links: praxis }) },
+    { at: story('03-02'), run: (d) => write(d, 'dank', { subject: 'Dankschreiben an die Tierarztpraxis', body: DANK, folder: null, links: praxis }) },
 
     // — Das Stichjahr (Spec 2026-10-06 § 4): Praxis, Pflegestelle, Versammlung, Register, Finanzamt. —
     { at: story('03-04'), run: async (d) => { await write(d, 'anfrage', { subject: 'Anfrage Kastrationsaktion: Termine und Kosten', body: ANFRAGE, folder: 'partner/tieraerzte', links: praxis }); await dispatch(d, 'anfrage', 'email'); } },

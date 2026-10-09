@@ -38,7 +38,7 @@ export async function createSnippet(deps: Deps, ctx: CallContext, input: unknown
     const id = newId();
     tx.insert(documentSnippets).values({ id, name: parsed.value.name, subject: parsed.value.subject ?? null, body: parsed.value.body, sortOrder: parsed.value.sortOrder, isActive: true }).run();
     const row = load(tx, id)!;
-    recordAudit(tx, deps, ctx, { action: 'dms.snippet.create', entityType: 'documentSnippet', entityId: id, after: { name: row.name, subject: row.subject }, summary: `Textbaustein „${row.name}“ angelegt` });
+    recordAudit(tx, deps, ctx, { action: 'dms.snippet.create', entityType: 'documentSnippet', entityId: id, after: { name: row.name, subject: row.subject }, params: { name: row.name } });
     return ok(row);
   });
 }
@@ -61,7 +61,7 @@ export async function updateSnippet(deps: Deps, ctx: CallContext, input: unknown
   return deps.db.transaction((tx: DbOrTx) => {
     tx.update(documentSnippets).set(updates).where(eq(documentSnippets.id, id)).run();
     const after = load(tx, id)!;
-    recordAudit(tx, deps, ctx, { action: 'dms.snippet.update', entityType: 'documentSnippet', entityId: id, before: { name: before.name, isActive: before.isActive }, after: { name: after.name, isActive: after.isActive }, summary: `Textbaustein „${after.name}“ geändert` });
+    recordAudit(tx, deps, ctx, { action: 'dms.snippet.update', entityType: 'documentSnippet', entityId: id, before: { name: before.name, isActive: before.isActive }, after: { name: after.name, isActive: after.isActive }, params: { name: after.name } });
     return ok(after);
   });
 }
@@ -75,7 +75,7 @@ export async function deleteSnippet(deps: Deps, ctx: CallContext, input: unknown
   if (!row) return notFound('documentSnippet', parsed.value.id);
   return deps.db.transaction((tx: DbOrTx) => {
     tx.delete(documentSnippets).where(eq(documentSnippets.id, row.id)).run();
-    recordAudit(tx, deps, ctx, { action: 'dms.snippet.delete', entityType: 'documentSnippet', entityId: row.id, before: { name: row.name }, summary: `Textbaustein „${row.name}“ gelöscht` });
+    recordAudit(tx, deps, ctx, { action: 'dms.snippet.delete', entityType: 'documentSnippet', entityId: row.id, before: { name: row.name }, params: { name: row.name } });
     return ok(null);
   });
 }

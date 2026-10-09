@@ -1,5 +1,5 @@
 import { schema, unwrap, writeSettingInternal } from '@kompass/core';
-import { ctxWith, systemContext } from '@kompass/core/testing';
+import { auditEntry, ctxWith, systemContext } from '@kompass/core/testing';
 import { contactRoles, createContact } from '@kompass/module-contacts';
 import { documentLinks, documents } from '@kompass/module-dms';
 import { and, eq } from 'drizzle-orm';
@@ -244,6 +244,8 @@ describe('voidConfirmation', () => {
     const confirmation = unwrap(await issueConfirmation(f.deps, f.ctx, { lineIds: [line.id] }));
     const signed = unwrap(await attachSignedConfirmation(f.deps, f.ctx, { id: confirmation.id, bytes: pdfBytes(), fileName: 'unterschrieben.pdf' }));
     expect(signed.signedDocumentId).not.toBe(confirmation.documentId);
+    // Die Akte nennt den Vorgang über seine Nummer (Designer 2026-10-09).
+    expect(JSON.parse(auditEntry(f.deps, 'dms.receive').params!)).toMatchObject({ via: 'recordWithNumber', recordNumber: confirmation.documentNumber });
     unwrap(await voidConfirmation(f.deps, f.ctx, { id: confirmation.id, note: 'Betrag falsch', alreadySent: false }));
     expect(f.deps.db.select().from(documents).where(eq(documents.id, signed.signedDocumentId!)).get()).toMatchObject({ status: 'voided', voidReason: 'Betrag falsch' });
     expect(f.deps.db.select().from(documents).where(eq(documents.id, confirmation.documentId)).get()).toMatchObject({ status: 'voided' });
@@ -449,7 +451,7 @@ describe('listUncertifiedDonations', () => {
 describe('membership fees and the settings', () => {
   it('prints the membership sentence switch into the money confirmation', async () => {
     const f = await donationFixture();
-    f.deps.db.transaction((tx) => writeSettingInternal(tx, f.deps, systemContext(), 'finance.membershipFeesCertifiable', false, 'test'));
+    f.deps.db.transaction((tx) => writeSettingInternal(tx, f.deps, systemContext(), 'finance.membershipFeesCertifiable', false));
     const confirmation = unwrap(await issueConfirmation(f.deps, ctxWith(FINANCE_PERMISSIONS, f.userId), { lineIds: [(await f.donate()).line.id] }));
     expect(snapshotOf(f, confirmation.documentId).input.membershipFeesCertifiable).toBe(false);
   });

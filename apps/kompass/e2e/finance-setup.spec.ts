@@ -185,10 +185,12 @@ test.describe('finance setup', () => {
 
     await page.getByTestId('account-row-Vereinskonto').getByRole('button', { name: 'Ändern' }).click();
     dialog = page.getByRole('dialog');
-    await expect(dialog.getByText('Stilllegen statt löschen')).not.toBeVisible();
+    // Das Hauptkonto hat keinen Eintrag zum Stilllegen, sondern den Grund als Hinweis im Kopf (Spec Seitenkopf § 3.4).
+    await expect(dialog.getByRole('button', { name: 'Stilllegen' })).toHaveCount(0);
+    await expect(dialog).toContainText('Das Hauptkonto lässt sich nicht stilllegen oder löschen.');
   });
 
-  test('ein Konto ohne Buchungen lässt sich über den Link „Stilllegen“ stilllegen und steht danach unter den stillgelegten', async ({ page }) => {
+  test('ein Konto ohne Buchungen lässt sich links im Dialogfuß stilllegen, mit „Rückgängig“, und wieder aktivieren', async ({ page }) => {
     await page.goto('/admin/finance?panel=accounts');
     await page.getByRole('button', { name: 'Konto anlegen' }).click();
     const dialog = page.getByRole('dialog');
@@ -199,8 +201,23 @@ test.describe('finance setup', () => {
 
     await page.getByTestId('account-row-Spendenkonto ohne Buchungen').getByRole('button', { name: 'Ändern' }).click();
     const editDialog = page.getByRole('dialog');
-    await editDialog.getByRole('button', { name: 'Stilllegen statt löschen' }).click();
+    await editDialog.getByRole('button', { name: 'Stilllegen' }).click();
     await expect(editDialog).toBeHidden();
+    await expect(page.getByTestId('account-row-Spendenkonto ohne Buchungen')).toContainText('Stillgelegt');
+    // Ohne Rückfrage, aber mit „Rückgängig“; der Gegenweg steht danach dauerhaft im Dialog.
+    const toast = page.locator('[data-sonner-toast]').filter({ hasText: 'Konto stillgelegt.' });
+    await expect(toast.getByRole('button', { name: 'Rückgängig' })).toBeVisible();
+    await toast.getByRole('button', { name: 'Rückgängig' }).click();
+    await expect(page.getByTestId('account-row-Spendenkonto ohne Buchungen')).not.toContainText('Stillgelegt');
+    await page.getByTestId('account-row-Spendenkonto ohne Buchungen').getByRole('button', { name: 'Ändern' }).click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Stilllegen' }).click();
+    await expect(page.getByTestId('account-row-Spendenkonto ohne Buchungen')).toContainText('Stillgelegt');
+    await page.getByTestId('account-row-Spendenkonto ohne Buchungen').getByRole('button', { name: 'Ändern' }).click();
+    await expect(page.getByRole('dialog').getByText('Stillgelegt', { exact: true })).toBeVisible();
+    await page.getByRole('dialog').getByRole('button', { name: 'Wieder aktivieren' }).click();
+    await expect(page.getByTestId('account-row-Spendenkonto ohne Buchungen')).not.toContainText('Stillgelegt');
+    await page.getByTestId('account-row-Spendenkonto ohne Buchungen').getByRole('button', { name: 'Ändern' }).click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Stilllegen' }).click();
     await expect(page.getByTestId('account-row-Spendenkonto ohne Buchungen')).toContainText('Stillgelegt');
 
     await page.goto('/finance/accounts');
@@ -382,6 +399,21 @@ test.describe('finance setup', () => {
     await expect(row.getByText('Stillgelegt')).toBeVisible();
   });
 
+  test('Kategorien: Suche in der Adresse, Zählzeile, ohne Treffer steht „Filter zurücksetzen“', async ({ page }) => {
+    await page.goto('/admin/finance?panel=categories');
+    const search = page.getByRole('searchbox', { name: 'Suchen' });
+    await search.fill('zzz');
+    await expect(page).toHaveURL(/panel=categories&text=zzz$/);
+    await expect(page.getByText(/^0 von \d+ Kategorien$/)).toBeVisible();
+    await expect(page.getByText('Keine Kategorie passt zu diesen Filtern.')).toBeVisible();
+    await page.reload();
+    await expect(search).toHaveValue('zzz');
+    await page.getByRole('button', { name: 'Filter zurücksetzen' }).last().click();
+    await expect(search).toHaveValue('');
+    await expect(page).toHaveURL(/panel=categories$/);
+    await expect(page.getByTestId('category-row-office')).toBeVisible();
+  });
+
   test('„Kategorien durchgesehen“ hakt den Schritt ab', async ({ page }) => {
     await page.goto('/admin/finance?panel=categories');
     await expect(page.getByText('Noch nicht durchgesehen.')).toBeVisible();
@@ -493,7 +525,7 @@ test.describe('finance setup', () => {
 
   test('Barkasse und Journal ohne Einrichtung: Seitenkopf, leerer Zustand und der Weg zum Einrichten (K9-Befund 6)', async ({ page }) => {
     await page.goto('/finance/cash');
-    await expect(page.getByRole('heading', { name: 'Barkasse', level: 2 })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Barkasse', level: 1 })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Noch keine Barkasse' })).toBeVisible();
     // Kein gesperrter Schritt, sondern noch nichts da (MUSTER Seitenrahmen).
     await expect(page.getByText('nicht möglich', { exact: true })).toHaveCount(0);
@@ -501,14 +533,14 @@ test.describe('finance setup', () => {
 
     // Dasselbe im Journal: ohne Geschäftsjahr und Konto ein leerer Zustand mit dem Weg zur Checkliste.
     await page.goto('/finance/entries');
-    await expect(page.getByRole('heading', { name: 'Journal', level: 2 })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Journal', level: 1 })).toBeVisible();
     await expect(page.getByText('nicht möglich', { exact: true })).toHaveCount(0);
     await expect(page.getByRole('link', { name: 'Finanzen einrichten' })).toHaveAttribute('href', '/admin/finance?panel=checklist');
   });
 
   test('Freigaben ohne wartende Anträge: nur der leere Zustand unter dem Seitenkopf (K9-Befund 7)', async ({ page }) => {
     await page.goto('/finance/approvals');
-    await expect(page.getByRole('heading', { name: 'Freigaben', level: 2 })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Freigaben', level: 1 })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Nichts wartet auf Ihre Freigabe' })).toBeVisible();
     // Keine leere Schlange mit Überschrift und keine leere Detailspalte daneben.
     await expect(page.getByTestId('approval-queue')).toHaveCount(0);

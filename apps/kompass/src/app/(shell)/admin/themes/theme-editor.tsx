@@ -1,18 +1,21 @@
 'use client';
 
 import { checkThemeContrast, THEME_TOKENS, type Theme } from '@kompass/core/themes';
-import { AlertTriangle } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { useMemo, useState, useTransition } from 'react';
+import { useMemo, useRef, useState, useTransition } from 'react';
+import { Notice } from '@/components/notice';
 import { ConfirmDialog } from '@/components/forms/confirm-dialog';
 import { FormField } from '@/components/forms/form-field';
 import { FormGrid } from '@/components/forms/form-grid';
+import { FormCard } from '@/components/forms/form-card';
 import { FormActionBar } from '@/components/forms/form-action-bar';
 import { RefusalNotice } from '@/components/forms/refusal-notice';
 import { useActionFeedback } from '@/components/forms/use-action-feedback';
 import { isRefusal } from '@/lib/actions';
 import { withUnplacedFieldErrors } from '@/lib/feedback';
 import { StatusBadge } from '@/components/status-badge';
+import { Segmented } from '@/components/ui/segmented';
+import { RecordActions } from '@/components/record-actions';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -30,6 +33,7 @@ export function ThemeEditor({ themes, activeKey }: { themes: Theme[]; activeKey:
   const [mode, setMode] = useState<'light' | 'dark'>('light');
   const [dup, setDup] = useState(false);
   const [del, setDel] = useState(false);
+  const moreActions = useRef<HTMLButtonElement>(null);
   const [saving, start] = useTransition();
   const saveFb = useActionFeedback();
   const activateFb = useActionFeedback();
@@ -81,7 +85,7 @@ export function ThemeEditor({ themes, activeKey }: { themes: Theme[]; activeKey:
     ));
 
   return (
-    <div className="grid min-h-[640px] grid-cols-[220px_minmax(0,1fr)_400px] overflow-hidden rounded-lg border border-line bg-surface">
+    <FormCard className="grid min-h-[640px] grid-cols-[220px_minmax(0,1fr)_400px]">
       <aside className="flex flex-col gap-2 border-r border-line p-3">
         <ul aria-label={t('listAria')} className="flex flex-col gap-0.5">
           {themes.map((th) => (
@@ -131,14 +135,6 @@ export function ThemeEditor({ themes, activeKey }: { themes: Theme[]; activeKey:
             >
               {t('duplicate')}
             </Button>
-            {readOnly || selected.key === activeKey ? null : (
-              <Button
-                variant="outline"
-                onClick={() => setDel(true)}
-              >
-                {t('delete')}
-              </Button>
-            )}
             {selected.key === activeKey ? null : (
               <Button
                 onClick={() =>
@@ -150,6 +146,11 @@ export function ThemeEditor({ themes, activeKey }: { themes: Theme[]; activeKey:
                 {t('activate')}
               </Button>
             )}
+            {/* Ausgeblendet beim aktiven und beim Default-Theme: Der Grund steht dauerhaft in der Seitenleiste (`deleteHint`). */}
+            <RecordActions
+              triggerRef={moreActions}
+              actions={[{ key: 'delete', label: t('deleteItem'), kind: 'delete', onSelect: () => setDel(true), hidden: readOnly || selected.key === activeKey }]}
+            />
           </div>
         </div>
         {isRefusal(activateFb.state) ? (
@@ -158,15 +159,8 @@ export function ThemeEditor({ themes, activeKey }: { themes: Theme[]; activeKey:
           </div>
         ) : null}
         {findings.length > 0 ? (
-          <div
-            role="alert"
-            className="m-5 mb-0 flex gap-2 rounded-md border border-warning bg-warning-bg p-3 text-[13px] text-ink-2"
-          >
-            <AlertTriangle className="mt-0.5 size-4 shrink-0 text-warning" aria-hidden />
-            <div>
-              <div className="font-semibold text-warning">
-                {t('contrastTitle', { ratio: findings[0]!.ratio.toFixed(1).replace('.', ',') })}
-              </div>
+          <div className="m-5 mb-0">
+            <Notice level="warn" title={t('contrastTitle', { ratio: findings[0]!.ratio.toFixed(1).replace('.', ',') })} testId="contrast-findings">
               <ul className="mt-1 list-disc pl-4">
                 {findings.map((f) => (
                   <li key={`${f.fg}-${f.bg}-${f.mode}`}>
@@ -180,7 +174,7 @@ export function ThemeEditor({ themes, activeKey }: { themes: Theme[]; activeKey:
                   </li>
                 ))}
               </ul>
-            </div>
+            </Notice>
           </div>
         ) : null}
         <div className="flex-1 overflow-auto">
@@ -249,22 +243,12 @@ export function ThemeEditor({ themes, activeKey }: { themes: Theme[]; activeKey:
       <aside className="flex flex-col gap-3 border-l border-line bg-surface-2 p-4">
         <div className="flex items-center justify-between">
           <span className="text-[13px] font-semibold">{t('preview.title')}</span>
-          <div className="flex overflow-hidden rounded-md border border-line-strong text-[12px]">
-            {(['light', 'dark'] as const).map((m) => (
-              <button
-                key={m}
-                type="button"
-                aria-pressed={mode === m}
-                onClick={() => setMode(m)}
-                className={cn(
-                  'px-3 py-1',
-                  mode === m ? 'bg-brand text-on-brand' : 'bg-surface text-ink-2'
-                )}
-              >
-                {t(`mode.${m}`)}
-              </button>
-            ))}
-          </div>
+          <Segmented
+            aria-label={t('preview.modeGroup')}
+            options={(['light', 'dark'] as const).map((m) => ({ value: m, label: t(`mode.${m}`) }))}
+            value={mode}
+            onValueChange={setMode}
+          />
         </div>
         <ThemePreview theme={current} mode={mode} />
       </aside>
@@ -312,6 +296,7 @@ export function ThemeEditor({ themes, activeKey }: { themes: Theme[]; activeKey:
       <ConfirmDialog
         open={del}
         onOpenChange={setDel}
+        finalFocus={moreActions}
         title={t('deleteTitle', { name: selected.name })}
         description={t('deleteText')}
         confirmLabel={t('delete')}
@@ -322,6 +307,6 @@ export function ThemeEditor({ themes, activeKey }: { themes: Theme[]; activeKey:
           return s;
         }}
       />
-    </div>
+    </FormCard>
   );
 }

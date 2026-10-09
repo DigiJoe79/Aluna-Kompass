@@ -75,7 +75,8 @@ test.describe('projects', () => {
     await page.getByRole('button', { name: 'Speichern' }).click();
     await expect(page).toHaveURL(/\/projects\/[A-Z0-9]+$/);
 
-    await page.getByRole('button', { name: 'Projekt löschen' }).click();
+    await page.getByRole('button', { name: 'Weitere Aktionen' }).click();
+    await page.getByRole('menuitem', { name: 'Projekt löschen …' }).click();
     const dialog = page.getByRole('alertdialog', { name: 'Partneraktion löschen?' });
     await expect(dialog.getByText('Der Inhalt wird entfernt.')).toBeVisible();
     await dialog.getByRole('button', { name: 'Löschen' }).click();
@@ -84,7 +85,7 @@ test.describe('projects', () => {
     await expect(page.getByRole('row', { name: /Partneraktion/ })).toHaveCount(0);
 
     await page.goto('/admin/audit');
-    await expect(page.getByText('Projekt partneraktion gelöscht')).toBeVisible();
+    await expect(page.getByText('Projekt „Partneraktion“ gelöscht')).toBeVisible();
   });
 
   test('sortiert nach Name; dann fehlen die Reihenfolge-Knöpfe, „Eigene Reihenfolge“ bringt sie zurück', async ({ page }) => {
@@ -99,7 +100,7 @@ test.describe('projects', () => {
     await expect(page.getByRole('button', { name: 'Nach oben' }).first()).toBeVisible();
   });
 
-  test('Speichern ohne Änderung sagt „Nichts geändert“; auf dem Telefon stehen die Knöpfe untereinander', async ({ page }) => {
+  test('Speichern ohne Änderung sagt „Nichts geändert“; auf dem Telefon Speichern oben, Verwerfen und Abbrechen darunter nebeneinander', async ({ page }) => {
     await page.goto('/projects');
     await page.getByRole('link', { name: 'Projekt anlegen' }).click();
     await page.getByLabel('Slug (URL-Teil)').fill('telefonprojekt');
@@ -117,11 +118,16 @@ test.describe('projects', () => {
     await expect(async () => {
       const save = await bar.getByRole('button', { name: 'Speichern' }).boundingBox();
       const discard = await bar.getByRole('button', { name: 'Verwerfen' }).boundingBox();
+      const cancel = await bar.getByRole('link', { name: 'Abbrechen' }).boundingBox();
       const frame = await bar.boundingBox();
       expect(save!.y).toBeLessThan(discard!.y);
       // Volle Breite der Leiste abzüglich ihres Polsters `px-5` (2 × 20 px, docs/MUSTER.md § I).
       expect(Math.abs(save!.width - (frame!.width - 40))).toBeLessThanOrEqual(2);
-      expect(Math.abs(discard!.width - save!.width)).toBeLessThanOrEqual(2);
+      // Darunter „Verwerfen“ und „Abbrechen“ nebeneinander, je eine Hälfte (Designer 2026-10-08).
+      expect(Math.abs(discard!.y - cancel!.y)).toBeLessThanOrEqual(1);
+      expect(discard!.x).toBeLessThan(cancel!.x);
+      expect(Math.abs(discard!.width - cancel!.width)).toBeLessThanOrEqual(2);
+      expect(discard!.width).toBeLessThan(save!.width / 2);
     }).toPass();
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
   });

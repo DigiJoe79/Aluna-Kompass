@@ -71,7 +71,7 @@ export async function setProjectFinance(deps: Deps, ctx: CallContext, input: unk
       .values(after)
       .onConflictDoUpdate({ target: financeProjectSettings.projectId, set: after })
       .run();
-    financeAudit(tx, deps, ctx, { action: 'finance.projectSettings.set', entity: 'financeProjectSettings', id: v.projectId, before, after, summary: `Finanzfelder von Projekt ${v.projectId} geändert` });
+    financeAudit(tx, deps, ctx, { action: 'finance.projectSettings.set', entity: 'financeProjectSettings', id: v.projectId, before, after });
     return ok(after);
   });
 }

@@ -51,7 +51,7 @@ async function readyDraft(f: ExpenseFixture, who: ExpenseFixture['hanna'] = f.ha
   return unwrap(await uploadExpenseReceipt(f.deps, who.ctx, { claimId: draft.id, positionId: draft.positions[0]!.id, bytes: f.pdf(), fileName: 'rechnung.pdf' }));
 }
 
-const enableWaivers = (f: ExpenseFixture, on = true) => f.deps.db.transaction((tx) => writeSettingInternal(tx, f.deps, systemContext(), 'finance.expenseWaiversEnabled', on, 'test'));
+const enableWaivers = (f: ExpenseFixture, on = true) => f.deps.db.transaction((tx) => writeSettingInternal(tx, f.deps, systemContext(), 'finance.expenseWaiversEnabled', on));
 
 describe('saveExpenseDraft', () => {
   it('saves an incomplete draft for the own contact and refuses without a contact link, naming who can set it', async () => {
@@ -147,6 +147,8 @@ describe('uploadExpenseReceipt', () => {
     expect(doc.subject).not.toContain('Hanna');
     expect(doc.subject).not.toMatch(ULID_PATTERN);
     expect(f.deps.db.select().from(documentLinks).where(eq(documentLinks.documentId, doc.id)).all()).toEqual([expect.objectContaining({ entityType: 'financeExpenseClaim', entityId: draft.id })]);
+    // Im Protokoll der Akte: in einem Vorgang abgelegt — der Entwurf hat noch keine Nummer (Designer 2026-10-09).
+    expect(JSON.parse(auditEntry(f.deps, 'dms.receive').params!)).toEqual({ number: doc.number, via: 'record', recordNumber: '' });
 
     // Ersetzen: die Position zeigt auf das neue Dokument, der alte Bezug bleibt in der Akte.
     const replaced = unwrap(await uploadExpenseReceipt(f.deps, f.hanna.ctx, { claimId: draft.id, positionId, bytes: f.pdf(), fileName: 'rechnung-2.pdf' }));
@@ -168,7 +170,7 @@ describe('uploadExpenseReceipt', () => {
 
   it('prefers voucher-invoice and otherwise takes the first voucher type', async () => {
     const f = await expenseFixture();
-    f.deps.db.transaction((tx) => writeSettingInternal(tx, f.deps, systemContext(), 'finance.voucherTypes', ['voucher-receipt', 'voucher-own'], 'test'));
+    f.deps.db.transaction((tx) => writeSettingInternal(tx, f.deps, systemContext(), 'finance.voucherTypes', ['voucher-receipt', 'voucher-own']));
     const draft = unwrap(await saveExpenseDraft(f.deps, f.hanna.ctx, { waiver: false, positions: [{ kind: 'receipt' }] }));
     const saved = unwrap(await uploadExpenseReceipt(f.deps, f.hanna.ctx, { claimId: draft.id, positionId: draft.positions[0]!.id, bytes: f.pdf(), fileName: 'bon.pdf' }));
     expect(f.deps.db.select().from(documents).where(eq(documents.id, saved.positions[0]!.documentId!)).get()!.typeKey).toBe('voucher-receipt');
@@ -199,7 +201,7 @@ describe('expenseFormStart', () => {
     expect(unwrap(await expenseFormStart(f.deps, f.hanna.ctx, {})).waiversEnabled).toBe(true);
     // Der Schalter allein reicht nicht — ohne Grundlage bleibt der Verzicht unverfügbar.
     expect(unwrap(await expenseFormStart(f.deps, f.hanna.ctx, {}))).toMatchObject({ waiverAvailable: false, waiverUnavailableReason: 'basisMissing' });
-    f.deps.db.transaction((tx) => writeSettingInternal(tx, f.deps, systemContext(), 'finance.expenseWaiverBasisText', 'Satzung § 7 Abs. 2', 'test'));
+    f.deps.db.transaction((tx) => writeSettingInternal(tx, f.deps, systemContext(), 'finance.expenseWaiverBasisText', 'Satzung § 7 Abs. 2'));
     expect(unwrap(await expenseFormStart(f.deps, f.hanna.ctx, {}))).toMatchObject({ waiverAvailable: true, waiverUnavailableReason: null, waiverUnavailableNames: [] });
 
     const refused = await expenseFormStart(f.deps, f.unlinked, {});
@@ -308,15 +310,15 @@ describe('submitExpenseClaim', () => {
     enableWaivers(f);
     // Befund 8: der Schalter allein reicht nicht — ohne hinterlegte Anspruchsgrundlage wird der Antrag abgelehnt.
     expect(err(await submitExpenseClaim(f.deps, f.hanna.ctx, { id: waived.id }))).toMatchObject({ code: 'waiverBasisMissing' });
-    f.deps.db.transaction((tx) => writeSettingInternal(tx, f.deps, systemContext(), 'finance.expenseWaiverBasisText', 'Satzung § 7 Abs. 2', 'test'));
+    f.deps.db.transaction((tx) => writeSettingInternal(tx, f.deps, systemContext(), 'finance.expenseWaiverBasisText', 'Satzung § 7 Abs. 2'));
     expect(unwrap(await submitExpenseClaim(f.deps, f.hanna.ctx, { id: waived.id }))).toMatchObject({ state: 'submitted', waiver: true, iban: null });
   });
 
   it('copies the basis of the waiver onto the claim when it is submitted: the terms of the person, else the setting', async () => {
     const f = await expenseFixture();
     enableWaivers(f);
-    f.deps.db.transaction((tx) => writeSettingInternal(tx, f.deps, systemContext(), 'finance.expenseWaiverBasisText', 'Satzung § 7 Abs. 2', 'test'));
-    f.deps.db.transaction((tx) => writeSettingInternal(tx, f.deps, systemContext(), 'finance.expenseWaiverBasisAgreedOn', '2025-05-01', 'test'));
+    f.deps.db.transaction((tx) => writeSettingInternal(tx, f.deps, systemContext(), 'finance.expenseWaiverBasisText', 'Satzung § 7 Abs. 2'));
+    f.deps.db.transaction((tx) => writeSettingInternal(tx, f.deps, systemContext(), 'finance.expenseWaiverBasisAgreedOn', '2025-05-01'));
     const general = unwrap(await submitExpenseClaim(f.deps, f.hanna.ctx, { id: (await readyDraft(f, f.hanna, { iban: null, waiver: true })).id }));
     // Befund J: das Datum der Vereinsgrundlage kommt mit — sonst liefe „vorab vereinbart“ ins Leere.
     expect(general).toMatchObject({ waiverBasisText: 'Satzung § 7 Abs. 2', waiverAgreedOn: '2025-05-01' });
@@ -414,7 +416,7 @@ describe('copyExpenseClaim', () => {
   it('drops the waiver from the copy while waivers are switched off', async () => {
     const f = await expenseFixture();
     enableWaivers(f);
-    f.deps.db.transaction((tx) => writeSettingInternal(tx, f.deps, systemContext(), 'finance.expenseWaiverBasisText', 'Satzung § 7 Abs. 2', 'test'));
+    f.deps.db.transaction((tx) => writeSettingInternal(tx, f.deps, systemContext(), 'finance.expenseWaiverBasisText', 'Satzung § 7 Abs. 2'));
     const claim = unwrap(await submitExpenseClaim(f.deps, f.hanna.ctx, { id: (await readyDraft(f, f.hanna, { iban: null, waiver: true })).id }));
     f.deps.db.update(financeExpenseClaims).set({ state: 'rejected', rejectedAt: '2026-09-06T10:00:00.000Z', rejectedByUserId: f.secondPersonId }).where(eq(financeExpenseClaims.id, claim.id)).run();
     enableWaivers(f, false);

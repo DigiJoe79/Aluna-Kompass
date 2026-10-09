@@ -17,13 +17,14 @@ import { FormActionBar } from '@/components/forms/form-action-bar';
 import { FormField } from '@/components/forms/form-field';
 import { FormCell, FormGrid } from '@/components/forms/form-grid';
 import { Notice } from '@/components/notice';
+import { Segmented } from '@/components/ui/segmented';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
 import type { ActionState } from '@/lib/actions';
 import { formatAmount, formatEuro, parseAmount } from '@/lib/finance/amount';
-import { applyTemplate, remainderCents, restInto, toServiceInput, type EntryFormState, type EntryTemplate, type MoneyRow } from '@/lib/finance/entry-form';
+import { applyTemplate, countEntryChanges, remainderCents, restInto, toServiceInput, type EntryFormState, type EntryTemplate, type MoneyRow } from '@/lib/finance/entry-form';
 import { RefusalNotice } from '@/components/forms/refusal-notice';
 import { runAction as guarded, toastNetwork, toastRefusal } from '@/lib/feedback';
 import { remediesFor, type RemedyAction } from '@/lib/finance/remedies';
@@ -120,9 +121,9 @@ function MoneySettlements({
 
   return (
     <div className="space-y-2 border-t border-line pt-2">
-      <button type="button" onClick={() => setExpanded((v) => !v)} className="text-[13px] font-semibold text-ink-2 underline underline-offset-2">
+      <Button type="button" variant="link" className="h-auto p-0" aria-expanded={expanded} onClick={() => setExpanded((v) => !v)}>
         {ts('toggle')}
-      </button>
+      </Button>
       {expanded ? (
         <div className="space-y-2">
           {row.settlements.map((settlement, sIndex) => {
@@ -187,6 +188,8 @@ export function EntryForm({ initial, accounts, categories, purposes, projects, t
   const router = useRouter();
   const [, startTransition] = useTransition();
   const [state, setState] = useState<EntryFormState>(initial);
+  // Der zuletzt gesicherte Stand: beim Laden, nach dem automatischen Entwurf für einen Beleg wieder neu.
+  const [saved, setSaved] = useState<EntryFormState>(initial);
   const [entryId, setEntryId] = useState<string | undefined>(initial.id);
   const [vouchers, setVouchers] = useState<ReceiptListItem[]>(initialVouchers);
   const [confirmFinalize, setConfirmFinalize] = useState(false);
@@ -275,6 +278,7 @@ export function EntryForm({ initial, accounts, categories, purposes, projects, t
     await attachPending(data.id);
     setEntryId(data.id);
     setState((s) => ({ ...s, id: data.id, expectedVersion: data.expectedVersion }));
+    setSaved(state);
     return data.id;
   };
 
@@ -337,20 +341,14 @@ export function EntryForm({ initial, accounts, categories, purposes, projects, t
           <FormField id="entry-text" label={t('text')} size="l">
             <Input id="entry-text" value={state.text} onChange={(e) => setState((s) => ({ ...s, text: e.target.value }))} required />
           </FormField>
-          <FormCell role="radiogroup" aria-label={t('template')} size="full" className="flex flex-wrap gap-2">
-            {TEMPLATES.map((template) => (
-              <button
-                key={template}
-                type="button"
-                role="radio"
-                aria-checked={state.template === template}
-                disabled={bound && state.template !== template}
-                onClick={() => setState((s) => applyTemplate(s, template))}
-                className={`h-[var(--field-h)] rounded-md border px-3 text-[13px] font-semibold ${state.template === template ? 'border-selected bg-selected text-selected-ink' : 'border-line-strong bg-surface-2 text-ink-2'}`}
-              >
-                {t(`templates.${template}`)}
-              </button>
-            ))}
+          <FormCell size="full">
+            {/* Vier Vorlagen: Segmented (MUSTER § E, ab fünf wäre es Select). Gebunden an einen Umsatz bleibt nur die gewählte frei. */}
+            <Segmented
+              aria-label={t('template')}
+              options={TEMPLATES.map((template) => ({ value: template, label: t(`templates.${template}`), disabled: bound && state.template !== template }))}
+              value={state.template}
+              onValueChange={(template) => setState((s) => applyTemplate(s, template))}
+            />
           </FormCell>
         </FormGrid>
       </section>
@@ -508,7 +506,9 @@ export function EntryForm({ initial, accounts, categories, purposes, projects, t
       <FormActionBar
         mode="create"
         back={{ href: returnTo, label: t('cancel') }}
-        count={0}
+        // Verborgen gezählt: Der Kassenhinweis bleibt stehen, die Rückfrage beim Verlassen kommt nur nach einer Eingabe.
+        count={countEntryChanges(saved, state)}
+        countHidden
         note={isCash ? t('cashNote') : undefined}
         extraActions={
           !isCash ? (

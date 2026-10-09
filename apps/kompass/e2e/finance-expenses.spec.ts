@@ -212,7 +212,7 @@ test.describe('finance expenses — eigene Anträge (D2)', () => {
     await linkOwnContact(page);
     await page.setViewportSize(PHONE);
     await page.goto('/finance/expenses');
-    await expect(page.getByRole('heading', { name: 'Eigene Anträge', level: 2 })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Eigene Anträge', level: 1 })).toBeVisible();
     await expect(page.getByText('Noch kein Antrag')).toBeVisible();
     await expect(page.getByTestId('claims-empty').getByRole('link', { name: 'Auslage einreichen' })).toHaveAttribute('href', '/finance/expenses/new');
 

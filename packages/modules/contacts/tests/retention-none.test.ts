@@ -11,7 +11,7 @@ const financeLike = defineModule({ key: 'finance', version: '1', permissions: ['
 
 function setup() {
   const deps = createTestDeps({ manifests: [coreModule, contactsModule, financeLike] });
-  deps.db.transaction((tx) => writeSettingInternal(tx, deps, ctxWith(['settings.manage']), 'modules.enabled', ['contacts', 'finance'], 'test.enable'));
+  deps.db.transaction((tx) => writeSettingInternal(tx, deps, ctxWith(['settings.manage']), 'modules.enabled', ['contacts', 'finance']));
   return { deps, ctx: ctxWith(['contacts.view', 'contacts.manage']) };
 }
 const person = { kind: 'person' as const, firstName: 'Erika', lastName: 'Beispiel' };

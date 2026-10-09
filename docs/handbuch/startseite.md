@@ -56,7 +56,7 @@ Welche Kacheln Sie sehen können, hängt an Ihren Rechten. Heute gibt es:
   **Umsätze ohne Zuordnung**, **Saldodifferenz**, **Letzter Auszug** und
   **Bestätigungen zu korrigieren**.
 - **Webseite** — ob seit dem letzten Publish etwas geändert wurde, ob der
-  letzte Publish gelungen ist, und ob das Template nach einem Import noch
+  letzte Publish gelungen ist, und ob die Vorlage nach einem Import noch
   geprüft werden muss. Siehe [Publizieren](webseite/publizieren.md).
 - **Einrichtung** — was an den Stammdaten noch fehlt, ob es eine zweite
   Rolle gibt und ob ein Fachmodul eingeschaltet ist. Leer, sobald der Verein

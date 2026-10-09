@@ -20,12 +20,12 @@ describe('createDraft', () => {
     expect(created.value.draftBody).toContain('Einladung');
   });
 
-  it('schließt das Anführungszeichen im Protokolleintrag deutsch', async () => {
+  it('nennt einen Entwurf im Protokoll ohne Betreff (der kann Personen nennen)', async () => {
     const { deps, ctx } = setupWithTypes();
     const created = await createDraft(deps, ctx, { typeKey: 'letter', subject: 'Einladung', body: 'x' });
     if (!created.ok) throw new Error('setup');
     const entry = deps.db.select().from(schema.auditLog).all().find((e) => e.action === 'dms.draft.create');
-    expect(entry?.summary).toBe('Entwurf \u201eEinladung\u201c angelegt');
+    expect(entry).toMatchObject({ entityId: created.value.id, params: null });
   });
 
   it('ohne Datum trägt der Entwurf den Tag des Vereins, nicht den UTC-Tag (22:30 UTC ist in Berlin schon morgen)', async () => {
@@ -76,8 +76,9 @@ describe('updateDraft', () => {
     expect(updated.value.subject).toBe('Neu');
     const entry = auditEntry(deps, 'dms.draft.update');
     expect(entry).toMatchObject({ entityType: 'documentDraft', entityId: created.value.id });
-    expect(JSON.parse(entry.before!)).toEqual({ subject: 'Alt' });
-    expect(JSON.parse(entry.after!)).toEqual({ subject: 'Neu' });
+    // Nie der Betreff selbst, nur welche Felder (Spec Protokoll § 2).
+    expect(entry.before).toBeNull();
+    expect(JSON.parse(entry.after!)).toEqual({ changedFields: expect.arrayContaining(['subject']) });
   });
 });
 
@@ -121,7 +122,7 @@ describe('previewDraft', () => {
     // Auch eine Vorschau, die nichts ablegt, ist ein Zugriff auf den Inhalt.
     const entry = auditEntry(deps, 'dms.draft.preview');
     expect(entry).toMatchObject({ entityType: 'documentDraft', entityId: draft.value.id });
-    expect(JSON.parse(entry.after!)).toMatchObject({ subject: 'Test' });
+    expect(JSON.parse(entry.after!)).toEqual({ templateKey: 'letter' });
   });
 
   it('rendert eine Vorschau, ohne etwas abzulegen', async () => {

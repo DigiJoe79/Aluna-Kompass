@@ -9,7 +9,7 @@ import { queuePosition } from '@/lib/queue-position';
 import { requireSession } from '@/lib/request-context';
 import { RelatedDocuments } from '@/components/related-documents';
 import { AnimalForm } from '../animal-form';
-import { DeleteAnimal } from '../delete-animal';
+import { AnimalActions } from '../animal-actions';
 import { animalListInput, formTab, listQueryString, type AnimalListQuery, type AnimalQueue } from '../list-params';
 import { ProfileExportButton } from '../profile-export-button';
 import { QueueNav } from '../queue-nav';
@@ -38,7 +38,8 @@ export default async function AnimalEditPage(props: { params: Promise<{ id: stri
   // Die Adresse aus der Einstellung statt eines festen Pfads: Den Pfad legt das Template fest (Spec § 9.2).
   const address = profileUrl(readSetting<string>(deps, PROFILE_URL_KEY), animal.value.slug) ?? undefined;
   const exportButton = hasPermission(ctx, 'documents.export') ? <ProfileExportButton ids={[animal.value.id]} /> : null;
-  const actions = exportButton || queue ? <>{exportButton}{queue ? <QueueNav key={animal.value.id} queue={queue} /> : null}</> : undefined;
+  const recordActions = requirePermission(ctx, 'animals.manage') ? null : <AnimalActions id={animal.value.id} name={animal.value.name} />;
+  const actions = exportButton || queue || recordActions ? <>{exportButton}{queue ? <QueueNav key={animal.value.id} queue={queue} /> : null}{recordActions}</> : undefined;
   return (
     <Page width="standard" header={<PageHeader title={animal.value.name} description={address} back={back} actions={actions} />}>
       {/* `key`: Beim Wechsel zum nächsten Hund behielte React sonst den Zustand der Felder und der Fotos. */}
@@ -46,7 +47,6 @@ export default async function AnimalEditPage(props: { params: Promise<{ id: stri
       <div className="mt-6">
         <RelatedDocuments deps={deps} ctx={ctx} entityType="animal" entityId={animal.value.id} />
       </div>
-      {requirePermission(ctx, 'animals.manage') ? null : <DeleteAnimal id={animal.value.id} name={animal.value.name} />}
     </Page>
   );
 }

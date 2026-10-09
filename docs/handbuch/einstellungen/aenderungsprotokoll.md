@@ -7,11 +7,15 @@ dass Kompass Rechenschaft ablegen kann.
 
 ## Lesen
 
-Je Eintrag Zeitpunkt, Nutzer, Kanal (Oberfläche, MCP oder System), Aktion,
-Objekt und eine Zusammenfassung. Ein Klick öffnet den Feld-Diff: links
-vorher, rechts nachher, geänderte Felder hervorgehoben. Filter nach Text,
-Nutzer, Kanal, Aktion und Zeitraum; die Suche greift auf Objekt und Werte —
-„Rocky“ findet jede Änderung an dem Hund.
+Je Eintrag Zeitpunkt, Nutzer, Kanal (Oberfläche, MCP oder System), die
+Aktion in Worten („Rolle „Vorstand“ an Erika Muster vergeben“) und das
+Objekt. Personen stehen dabei mit ihrem heutigen Namen; ist eine Person
+gelöscht, steht nur die Aktion. Ein Klick öffnet den Feld-Diff: links
+vorher, rechts nachher, geänderte Felder hervorgehoben; am Ende steht die
+Aktion in technischer Schreibweise zum Kopieren. Filter nach Text, Nutzer,
+Kanal, Aktion und Zeitraum. Die Suche greift auf die gespeicherten Werte
+(Nummern, Bezeichnungen, IDs) — „Rocky“ findet jede Änderung an dem Hund,
+ein Name einer Person nicht: Personen finden Sie über den Filter „Nutzer“.
 
 ## Was drinsteht
 

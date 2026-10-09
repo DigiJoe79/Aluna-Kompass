@@ -22,14 +22,20 @@ const row = (over: Partial<PublishSummary>): PublishSummary => ({
   hasLog: true,
   ...over,
 });
-const render = (items: PublishSummary[], highlightId: string | null = null) =>
+const render = (items: PublishSummary[], highlightId: string | null = null, total?: number) =>
   renderToStaticMarkup(
     <NextIntlClientProvider locale="de" messages={messages} timeZone="Europe/Berlin">
-      <PublishHistory items={items} highlightId={highlightId} />
+      <PublishHistory items={items} highlightId={highlightId} total={total} />
     </NextIntlClientProvider>,
   );
 
 describe('PublishHistory', () => {
+  /** Keine stille Grenze (MUSTER § L): Die Seite liest die jüngsten 20 und nennt die Gesamtzahl. */
+  it('names the limit when the environment has more publishes than shown', () => {
+    expect(render([row({}), row({ id: 'P2' })], null, 2)).not.toContain('Es werden');
+    expect(render([row({}), row({ id: 'P2' })], null, 31)).toContain('Es werden die letzten 2 von 31 Publishes gezeigt.');
+  });
+
   it('shows the name instead of the id and the status in words', () => {
     const markup = render([row({}), row({ id: 'P2', status: 'aborted', triggeredByUserId: null, triggeredByName: null, hasLog: false })]);
     expect(markup).toContain('Erika Beispiel');
@@ -70,13 +76,14 @@ describe('PublishHistory', () => {
   it('shows five rows and offers the older ones on request', () => {
     const rows = Array.from({ length: 7 }, (_, i) => row({ id: `P${i}`, startedAt: `2026-10-0${i + 1}T08:00:00.000Z` }));
     const markup = render(rows);
-    expect(markup.match(/<tbody>.*<\/tbody>/s)![0].match(/<tr/g)).toHaveLength(5);
+    expect(markup.match(/<tbody[^>]*>.*<\/tbody>/s)![0].match(/<tr/g)).toHaveLength(5);
     expect(markup).toContain('Ältere anzeigen');
     expect(render(rows.slice(0, 5))).not.toContain('Ältere anzeigen');
   });
   it('marks the entry that just ended as new', () => {
     const markup = render([row({ id: 'P1' }), row({ id: 'P2' })], 'P1');
     expect(markup.match(/>neu</g)).toHaveLength(1);
-    expect(markup).toContain('bg-brand-soft');
+    // Hervorgehoben über den Zustand der Tabellenzeile, nicht über eine eigene Fläche (K10 Charge 2).
+    expect(markup.match(/data-state="selected"/g)).toHaveLength(1);
   });
 });

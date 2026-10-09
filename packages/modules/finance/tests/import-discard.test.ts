@@ -218,7 +218,7 @@ describe('discardRun', () => {
     const f = await discardFixture();
     unwrap(await discardRun(f.deps, f.ctx, { id: f.mainRun.id, note: 'Geheime interne Begruendung Musterstadt' }));
     const entry = auditEntry(f.deps, 'finance.import.discard');
-    const text = `${entry.summary}${entry.after ?? ''}`;
+    const text = `${entry.params}${entry.after ?? ''}`;
     expect(text).not.toContain('Geheime interne Begruendung');
   });
 });

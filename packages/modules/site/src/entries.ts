@@ -119,7 +119,7 @@ export async function createEntry(deps: Deps, ctx: CallContext, raw: unknown): P
       .values({ id, collection, slug: slugResult.value, sortOrder, isPublished: false, data: validated.value, createdAt: now, updatedAt: now })
       .run();
     const row = tx.select().from(siteEntries).where(eq(siteEntries.id, id)).get()!;
-    recordAudit(tx, deps, ctx, { action: 'site.entry.create', entityType: 'siteEntry', entityId: id, after: row, summary: `Eintrag in „${col.label}“ angelegt` });
+    recordAudit(tx, deps, ctx, { action: 'site.entry.create', entityType: 'siteEntry', entityId: id, after: row, params: { collection: col.label } });
     return ok(row);
   });
 }
@@ -159,7 +159,7 @@ export async function updateEntry(deps: Deps, ctx: CallContext, raw: unknown): P
   return deps.db.transaction((tx) => {
     tx.update(siteEntries).set({ slug: nextSlug, data: nextData, updatedAt: now }).where(eq(siteEntries.id, id)).run();
     const after = tx.select().from(siteEntries).where(eq(siteEntries.id, id)).get()!;
-    recordAudit(tx, deps, ctx, { action: 'site.entry.update', entityType: 'siteEntry', entityId: id, before, after, summary: `Eintrag in „${col.label}“ geändert` });
+    recordAudit(tx, deps, ctx, { action: 'site.entry.update', entityType: 'siteEntry', entityId: id, before, after, params: { collection: col.label } });
     return ok(after);
   });
 }
@@ -213,7 +213,7 @@ export async function deleteEntry(deps: Deps, ctx: CallContext, raw: unknown): P
       entityType: 'siteEntry',
       entityId: before.id,
       before,
-      summary: `Eintrag aus „${col?.label ?? before.collection}“ gelöscht`,
+      params: { collection: col?.label ?? before.collection },
     });
   });
   if (!parsed.data.deleteOrphanedMedia) return ok({ deletedMedia: [], keptMedia: [] });
@@ -240,7 +240,7 @@ export async function reorderEntries(deps: Deps, ctx: CallContext, raw: unknown)
     ids.forEach((id, index) => {
       tx.update(siteEntries).set({ sortOrder: index, updatedAt: now }).where(eq(siteEntries.id, id)).run();
     });
-    recordAudit(tx, deps, ctx, { action: 'site.entry.reorder', entityType: 'siteCollection', entityId: collection, after: ids, summary: `Reihenfolge in „${col.label}“ geändert` });
+    recordAudit(tx, deps, ctx, { action: 'site.entry.reorder', entityType: 'siteCollection', entityId: collection, after: ids, params: { collection: col.label } });
     return ok(rowsOf(tx, collection));
   });
 }
@@ -262,14 +262,10 @@ export async function setEntryPublished(deps: Deps, ctx: CallContext, raw: unkno
   return deps.db.transaction((tx) => {
     tx.update(siteEntries).set({ isPublished, updatedAt: now }).where(eq(siteEntries.id, id)).run();
     const after = tx.select().from(siteEntries).where(eq(siteEntries.id, id)).get()!;
-    recordAudit(tx, deps, ctx, {
-      action: isPublished ? 'site.entry.publish' : 'site.entry.unpublish',
-      entityType: 'siteEntry',
-      entityId: id,
-      before: { isPublished: before.isPublished },
-      after: { isPublished },
-      summary: `Eintrag in „${col.label}“ ${isPublished ? 'veröffentlicht' : 'zurückgezogen'}`,
-    });
+    // Die Aktion steht als fester Text im Aufruf (Wächter audit-actions), deshalb zwei Aufrufe.
+    const entry = { entityType: 'siteEntry', entityId: id, before: { isPublished: before.isPublished }, after: { isPublished }, params: { collection: col.label } };
+    if (isPublished) recordAudit(tx, deps, ctx, { action: 'site.entry.publish', ...entry });
+    else recordAudit(tx, deps, ctx, { action: 'site.entry.unpublish', ...entry });
     return ok(after);
   });
 }

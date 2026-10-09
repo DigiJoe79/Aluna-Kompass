@@ -18,7 +18,7 @@ function setup() {
 }
 
 function outgoingDefault(deps: Deps, key = 'letter') {
-  deps.db.transaction((tx) => writeSettingInternal(tx, deps, systemContext(), 'dms.defaultTypeOutgoing', key, 'test.default'));
+  deps.db.transaction((tx) => writeSettingInternal(tx, deps, systemContext(), 'dms.defaultTypeOutgoing', key));
 }
 
 async function contact(deps: Deps, ctx: CallContext, lastName: string) {
@@ -63,7 +63,9 @@ describe('createResponseDraft', () => {
 
     const entries = deps.db.select().from(schema.auditLog).all().slice(before);
     expect(entries.map((e) => e.action)).toEqual(['dms.draft.create', 'dms.relate']);
-    expect(entries[0]).toMatchObject({ entityId: reply.id, summary: 'Entwurf „Ihr Schreiben vom 03.09.2026: Freistellungsbescheid“ angelegt' });
+    expect(entries[0]).toMatchObject({ entityId: reply.id, params: null });
+    // Der Betreff kann Personen nennen: Er steht nicht in den Werten (Spec Protokoll § 2).
+    expect(JSON.parse(entries[1]!.params!)).toEqual({ number: null, relatedNumber: source.number, kind: 'repliesTo' });
   });
 
   it('die Antwort trägt den Tag des Vereins, nicht den UTC-Tag (22:30 UTC ist in Berlin schon morgen)', async () => {
@@ -165,6 +167,5 @@ describe('createResponseDraft', () => {
     expect(reply.subject).toBe('Ihr Schreiben vom 01.09.2026: Streng geheimer Betreff');
     const text = JSON.stringify(deps.db.select().from(schema.auditLog).all().slice(-2));
     expect(text).not.toContain('Streng geheimer Betreff');
-    expect(text).toContain(`Entwurf ${reply.id} (secret-out)`);
   });
 });

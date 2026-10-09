@@ -8,7 +8,7 @@ import { PageHeader } from '@/components/page-header';
 import { requireSession } from '@/lib/request-context';
 import { RelatedDocuments } from '@/components/related-documents';
 import { ProjectForm } from '../project-form';
-import { DeleteProject } from '../delete-project';
+import { ProjectActions } from '../project-actions';
 import { ProjectFinanceSection } from './finance-section';
 
 export default async function ProjectEditPage(props: { params: Promise<{ id: string }> }) {
@@ -23,14 +23,15 @@ export default async function ProjectEditPage(props: { params: Promise<{ id: str
   if (id === 'new') return (<Page width="standard" header={<PageHeader title={t('create')} back={back} />}><ProjectForm project={null} locales={locales} /></Page>);
   const project = await getProject(deps, ctx, id);
   if (!project.ok) notFound();
+  const name = project.value.name[leading] || project.value.slug;
+  const actions = requirePermission(ctx, 'projects.manage') ? undefined : <ProjectActions id={project.value.id} name={name} />;
   return (
-    <Page width="standard" header={<PageHeader title={project.value.name[leading] || project.value.slug} description={`/projekte/${project.value.slug}/`} back={back} />}>
+    <Page width="standard" header={<PageHeader title={name} description={`/projekte/${project.value.slug}/`} back={back} actions={actions} />}>
       <ProjectForm project={project.value} locales={locales} />
       <div className="mt-6 space-y-4">
         <ProjectFinanceSection deps={deps} ctx={ctx} projectId={project.value.id} />
         <RelatedDocuments deps={deps} ctx={ctx} entityType="project" entityId={project.value.id} />
       </div>
-      {requirePermission(ctx, 'projects.manage') ? null : <DeleteProject id={project.value.id} name={project.value.name[leading] || project.value.slug} />}
     </Page>
   );
 }

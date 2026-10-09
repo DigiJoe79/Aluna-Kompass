@@ -14,6 +14,8 @@ const DELETED: Readonly<Record<string, string>> = {
   'components/ui/badge.tsx': '`StatusBadge` (§ F)',
   'components/forms/save-bar.tsx': '`FormActionBar` (§ B)',
   'components/forms/sticky-footer.tsx': '`FormActionBar` (§ B)',
+  // Spec Seitenkopf (0.2.9): seltene Aktionen am Datensatz stehen im Seitenkopf, nicht als Karte am Seitenende.
+  'components/forms/danger-section.tsx': '`RecordActions` (§ C)',
   'app/(shell)/admin/finance/panel-nav.tsx': '`components/panel-nav.tsx` (§ D)',
   'app/(shell)/admin/site/panel-nav.tsx': '`components/panel-nav.tsx` (§ D)',
 };

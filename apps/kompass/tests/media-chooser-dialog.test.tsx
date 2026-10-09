@@ -57,6 +57,16 @@ const fixed = (key: string) => document.querySelector<HTMLElement>(`[data-fixed=
 const tree = () => screen.getByRole('tree', { name: 'Ordner' });
 
 describe('MediaChooserDialog', () => {
+  it('uploads through a button, the file input itself stays out of sight', async () => {
+    renderChooser();
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByRole('button', { name: 'Hochladen' })).toBeTruthy();
+    const input = within(dialog).getByLabelText('Hochladen');
+    expect(input.getAttribute('type')).toBe('file');
+    expect(input.className).toContain('sr-only');
+    expect(input.tabIndex).toBe(-1);
+  });
+
   it('counts only its kind and hides folders without a matching file, keeping their parents', async () => {
     renderChooser();
     await waitFor(() => expect(fixed('all')).toBeTruthy());

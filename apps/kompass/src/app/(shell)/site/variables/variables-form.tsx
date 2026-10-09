@@ -4,6 +4,7 @@ import type { FieldSchema } from '@kompass/module-site/client';
 import { useTranslations } from 'next-intl';
 import { useActionState, useEffect, useState } from 'react';
 import { toast } from 'sonner';
+import { FormCard, FormCardBody } from '@/components/forms/form-card';
 import { FormActionBar } from '@/components/forms/form-action-bar';
 import { SchemaForm, withBlanks } from '@/components/schema-form';
 import { idleState } from '@/lib/actions';
@@ -40,13 +41,13 @@ export function VariablesForm({
   }, [state]);
 
   return (
-    <form action={action} className="overflow-hidden rounded-lg border border-line bg-surface">
+    <FormCard as="form" action={action}>
       <input type="hidden" name="expectedVersion" value={version} />
       <input type="hidden" name="payload" value={JSON.stringify(changedValues(loaded, current))} />
-      <div className="p-5">
+      <FormCardBody>
         <SchemaForm schema={schema} value={current} errors={errors} locales={locales} onChange={setCurrent} options={options} />
-      </div>
+      </FormCardBody>
       <FormActionBar count={changedCount} onDiscard={() => setCurrent(loaded)} state={state} />
-    </form>
+    </FormCard>
   );
 }

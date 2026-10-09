@@ -23,6 +23,9 @@ describe('work list: tabs, links and selection', () => {
     expect(workHref({ tab: 'open' })).toBe('/finance/work');
     expect(workHref({ tab: 'unsure', account: 'A1', raw: 'R1' })).toBe('/finance/work?tab=unsure&account=A1&raw=R1');
     expect(workHref({ tab: 'open', account: 'A1' })).toBe('/finance/work?account=A1');
+    // Die Seite bleibt beim Wählen einer Zeile; Seite 1 steht nicht in der Adresse.
+    expect(workHref({ tab: 'open', raw: 'R1', page: 3 })).toBe('/finance/work?page=3&raw=R1');
+    expect(workHref({ tab: 'open', page: 1 })).toBe('/finance/work');
   });
 
   it('moves the selection by one and stays at the ends', () => {

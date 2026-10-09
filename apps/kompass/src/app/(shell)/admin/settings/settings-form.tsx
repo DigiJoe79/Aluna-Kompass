@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { useMemo, useState, useTransition } from 'react';
 import { FormField } from '@/components/forms/form-field';
 import { FormCell, FormGrid } from '@/components/forms/form-grid';
+import { FormCard } from '@/components/forms/form-card';
 import { FormActionBar } from '@/components/forms/form-action-bar';
 import { useActionFeedback } from '@/components/forms/use-action-feedback';
 import { ManagedField } from '@/components/managed-field';
@@ -178,7 +179,7 @@ export function SettingsForm({
     });
 
   return (
-    <>
+    <FormCard>
     <FormErrorSummary errors={errors} labels={labels} />
     <div className="px-6">
       <PanelNav
@@ -198,18 +199,11 @@ export function SettingsForm({
         <div key={tab.key} className="p-5">
           {tabManagedHintKey ? <p className="mb-4 text-[13px] text-ink-2">{t(tabManagedHintKey)}</p> : null}
           {tab.key === 'tax' && taxMissingUnmanaged > 0 ? (
-            <p
-              role="alert"
-              className="mb-4 flex gap-2 rounded-md border border-warning bg-warning-bg p-3 text-[13px] text-ink-2"
-            >
-              <Info className="mt-0.5 size-4 shrink-0 text-warning" aria-hidden />
-              <span>
-                <span className="font-semibold text-warning">
-                  {t('taxIncomplete', { count: taxMissingUnmanaged })}
-                </span>{' '}
+            <div className="mb-4">
+              <Notice level="warn" title={t('taxIncomplete', { count: taxMissingUnmanaged })} testId="tax-incomplete">
                 {t('taxIncompleteText')}
-              </span>
-            </p>
+              </Notice>
+            </div>
           ) : tab.key === 'tax' && taxMissingManaged > 0 ? (
             <div className="mb-4">
               <Notice level="hint">
@@ -258,6 +252,6 @@ export function SettingsForm({
         }}
         onSave={save}
       />
-    </>
+    </FormCard>
   );
 }

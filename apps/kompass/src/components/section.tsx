@@ -7,8 +7,8 @@ export type SectionLevelValue = 2 | 3 | 4;
 const LevelContext = createContext<SectionLevelValue | null>(null);
 
 /**
- * Die Ebene der Abschnitte darunter (K10, Designer 2026-10-07): `Page` setzt 3 (der Seitentitel ist ein h2,
- * der h1 steht in der Brotkrume), `DialogContent` und `SheetContent` setzen ebenfalls 3. Ein Dialog muss sie selbst setzen — der Kontext der Seite reicht durch das Portal.
+ * Die Ebene der Abschnitte darunter (K10, Designer 2026-10-07): `Page` setzt 2 (der Seitentitel im `PageHeader`
+ * ist das h1), `DialogContent` und `SheetContent` setzen 3 (`DialogTitle` ist h2). Ein Dialog muss sie selbst setzen — der Kontext der Seite reicht durch das Portal.
  */
 export function SectionLevel({ level, children }: { level: SectionLevelValue; children: ReactNode }) {
   return <LevelContext.Provider value={level}>{children}</LevelContext.Provider>;

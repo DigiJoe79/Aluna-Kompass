@@ -4,6 +4,7 @@ import { useTranslations } from 'next-intl';
 import { useActionState, useState } from 'react';
 import { FormField } from '@/components/forms/form-field';
 import { FormGrid } from '@/components/forms/form-grid';
+import { RefusalNotice } from '@/components/forms/refusal-notice';
 import { SubmitButton } from '@/components/forms/submit-button';
 import { Input } from '@/components/ui/input';
 import { idleState } from '@/lib/actions';
@@ -18,7 +19,7 @@ export function PasswordForm() {
   const filled = strengthSegments(value);
   return (
     <form action={action} className="flex flex-col gap-4">
-      {state.status === 'error' && Object.keys(errors).length === 0 ? <p role="alert" className="rounded-md border border-error bg-error-bg p-3 text-[13px] text-error">{state.message}</p> : null}
+      <RefusalNotice state={state} />
       <FormGrid>
         <FormField id="currentPassword" label={t('current')} error={errors.currentPassword}>
           <Input id="currentPassword" name="currentPassword" type="password" required autoComplete="current-password" />

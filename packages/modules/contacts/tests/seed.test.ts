@@ -18,7 +18,7 @@ describe('contacts seed', () => {
     expect(texts.size).toBeGreaterThan(10);
     const entries = deps.db.select().from(schema.auditLog).all().filter((e) => e.action.startsWith('contacts.'));
     expect(entries.length).toBeGreaterThan(5);
-    const log = JSON.stringify(entries.map((e) => [e.before, e.after, e.summary]));
+    const log = JSON.stringify(entries.map((e) => [e.before, e.after, e.params]));
     const escape = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const leaked = [...texts].filter((text) => new RegExp(`(?<![\\p{L}\\d])${escape(text)}(?![\\p{L}\\d])`, 'u').test(log));
     expect(leaked).toEqual([]);
@@ -45,6 +45,14 @@ describe('contacts seed', () => {
   it('legt einen Kontakt an, dessen Frist abgelaufen ist — damit der Fristenbildschirm etwas zeigt', async () => {
     const deps = createTestDeps({ manifests: [coreModule, contactsModule], env: 'development', now: '2026-09-17T08:00:00.000Z' });
     await seedDevelopment(deps);
+    expect(contactsRetentionDue(deps).map((d) => d.label)).toEqual(['Lena Vogt']);
+  });
+
+  it('hängt jede Rolle am Stichjahr, keine an einer festen Jahreszahl (Befund 0.2.8/20)', async () => {
+    // 2031 ist das Stichjahr; die älteste Rolle (Finanzamt, Lena Vogt) liegt drei Jahre davor.
+    const deps = createTestDeps({ manifests: [coreModule, contactsModule], env: 'development', now: '2031-10-01T08:00:00.000Z' });
+    await seedDevelopment(deps);
+    expect(deps.db.select().from(contactRoles).all().every((r) => r.since >= '2028-01-01')).toBe(true);
     expect(contactsRetentionDue(deps).map((d) => d.label)).toEqual(['Lena Vogt']);
   });
 

@@ -111,7 +111,7 @@ describe('managedBy and uiOnly', () => {
   });
   const admin = ctxWith(['settings.manage']);
   const enable = (deps: ReturnType<typeof createTestDeps>, keys: string[]) =>
-    deps.db.transaction((tx) => writeSettingInternal(tx, deps, admin, 'modules.enabled', keys, 'test.enable'));
+    deps.db.transaction((tx) => writeSettingInternal(tx, deps, admin, 'modules.enabled', keys));
 
   it('refuses a managed setting while the managing module is on, and only then', async () => {
     const deps = createTestDeps({ manifests: [coreModule, owner, host] });

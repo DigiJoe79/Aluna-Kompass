@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type RefObject } from 'react';
 import { ConfirmDialog } from '@/components/forms/confirm-dialog';
 import { RefusalNotice } from '@/components/forms/refusal-notice';
 import { useActionFeedback } from '@/components/forms/use-action-feedback';
@@ -28,6 +28,7 @@ export function DeleteRecordDialog({
   loadPreview,
   unpublish,
   remove,
+  finalFocus,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -35,6 +36,8 @@ export function DeleteRecordDialog({
   loadPreview: () => Promise<DeletionPreviewView | null>;
   unpublish?: () => Promise<ActionState>;
   remove: (deleteOrphanedMedia: boolean) => Promise<ActionState>;
+  /** Fokus nach dem Schließen, etwa zurück auf ⋯ (`RecordActions triggerRef`). */
+  finalFocus?: RefObject<HTMLElement | null>;
 }) {
   const t = useTranslations('deletion');
   const format = useDateFormat();
@@ -66,6 +69,7 @@ export function DeleteRecordDialog({
       destructive
       confirmDisabled={!free}
       action={() => remove(offerMedia && withMedia)}
+      finalFocus={finalFocus}
     >
       {preview?.isPublished && unpublish ? (
         <div className="space-y-2">

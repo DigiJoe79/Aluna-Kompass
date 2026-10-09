@@ -26,7 +26,7 @@ function setup() {
     .values({ id: 'current', name: 'T', schemaJson: { name: 'T', locales: ['de'], uses: [], variables: {}, collections: { articles, notes } }, checksum: 'a'.repeat(64), readAt: 't', readByUserId: null })
     .run();
   deps.db.transaction((tx) => {
-    writeSettingInternal(tx, deps, ctxWith(['settings.manage']), 'modules.enabled', ['site'], 'test.enable');
+    writeSettingInternal(tx, deps, ctxWith(['settings.manage']), 'modules.enabled', ['site']);
   });
   return deps;
 }

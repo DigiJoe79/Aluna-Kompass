@@ -35,8 +35,9 @@ test.describe('finance import', () => {
 
     // Die Arbeitsliste zeigt alle Konten; die Ablagefläche fragt nicht nach dem Konto (N3, W-1).
     await page.goto('/finance/work');
-    await expect(page.getByLabel('Liste für Konto')).toHaveValue('');
-    await expect(page.getByLabel('Konto', { exact: true })).toHaveCount(0);
+    await expect(page.getByTestId('work-filter-bar').getByRole('combobox', { name: 'Konto' })).toHaveValue('');
+    // Das einzige Feld „Konto“ ist der Filter der Liste — die Ablagefläche hat keins.
+    await expect(page.getByLabel('Konto', { exact: true })).toHaveCount(1);
     await page.getByTestId('statement-file-input').setInputFiles(fixture('neuer-auszug.xml'));
     await expect(page.getByText(/neuer-auszug\.xml: 1 neu, 1 bereits vorhanden, 1 zurückgehalten/)).toBeVisible();
     await expect(page.getByRole('dialog')).toHaveCount(0);

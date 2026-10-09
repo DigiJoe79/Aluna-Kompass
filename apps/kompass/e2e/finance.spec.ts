@@ -36,11 +36,38 @@ test.describe('finance', () => {
   test('das Suchfeld folgt der Adresse, auch wenn sie von außen wechselt', async ({ page }) => {
     await loginAsAdmin(page);
     await page.goto('/finance/entries');
-    await page.getByLabel('Suche').fill('Entwurf');
+    const search = page.getByRole('searchbox', { name: 'Suchen' });
+    await search.fill('Entwurf');
     await expect(page).toHaveURL(/q=Entwurf/);
-    await page.getByRole('button', { name: 'Entwurf', exact: true }).click(); // der Chip nimmt den Filter zurück
+    await page.getByRole('button', { name: 'Filter „Suche: Entwurf“ entfernen' }).click(); // das Kreuz am Chip nimmt den Filter zurück
     await expect(page).not.toHaveURL(/q=/);
-    await expect(page.getByLabel('Suche')).toHaveValue('');
+    await expect(search).toHaveValue('');
+  });
+
+  /** Spec Filterleisten § 4: Jahr sichtbar, Kategorie und „Nur …“ unter „Weitere Filter“, `ids` als Chip. */
+  test('Jahr ist ein Filter, „Weitere Filter“ zählt, ausgewählte Buchungen stehen als Chip', async ({ page }) => {
+    await loginAsAdmin(page);
+    await page.goto('/finance/entries');
+    await expect(page.getByText(/^\d+ Buchungen$/)).toBeVisible();
+    await page.getByLabel('Jahr', { exact: true }).selectOption({ index: 1 });
+    await expect(page).toHaveURL(/year=/);
+    await expect(page.getByText(/^\d+ von \d+ Buchungen$/)).toBeVisible();
+
+    await page.getByRole('button', { name: 'Weitere Filter' }).click();
+    await page.getByRole('checkbox', { name: 'Nur ohne Beleg' }).click();
+    await expect(page).toHaveURL(/novoucher=1/);
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('button', { name: /^Weitere Filter\s*1$/ })).toBeVisible();
+    await expect(page.getByTestId('filter-chips').getByRole('button', { name: 'Filter „Nur ohne Beleg“ entfernen' })).toBeVisible();
+    await page.getByRole('button', { name: 'Filter zurücksetzen' }).first().click();
+    await expect(page).toHaveURL(/\/finance\/entries$/);
+
+    const id = await page.locator('tr[data-row-id]').first().getAttribute('data-row-id');
+    expect(id).toBeTruthy();
+    await page.goto(`/finance/entries?ids=${id}`);
+    await expect(page.getByText(/^1 von \d+ Buchungen$/)).toBeVisible();
+    await page.getByRole('button', { name: 'Filter „Ausgewählte Buchungen“ entfernen' }).click();
+    await expect(page).not.toHaveURL(/ids=/);
   });
 
   test('die Summenzeile nennt die gefilterte Menge', async ({ page }) => {
@@ -195,7 +222,7 @@ test.describe('finance', () => {
 
     await refused.getByRole('button', { name: 'Rest in diese Zeile eintragen' }).click();
     await expect(page).toHaveURL(/\/finance\/entries\/[0-9A-Z]{26}$/);
-    await expect(page.getByTestId('entry-number')).toContainText(/\d{4}-\d+/);
+    await expect(page.getByRole('heading', { level: 1 })).toContainText(/\d{4}-\d+/);
   });
 
   test('ein Entwurf vor dem ersten Geschäftsjahr wird am Datumsfeld abgewiesen und nennt, wer eines anlegen kann (Befund 10)', async ({ page }) => {
@@ -334,7 +361,7 @@ test.describe('finance', () => {
     await page.getByRole('button', { name: 'Festschreiben', exact: true }).click();
     await page.getByRole('alertdialog').getByRole('button', { name: 'Festschreiben' }).click();
     await expect(page).toHaveURL(/\/finance\/entries\/[0-9A-Z]{26}$/);
-    await expect(page.getByTestId('entry-number')).toContainText(/\d{4}-\d+/);
+    await expect(page.getByRole('heading', { level: 1 })).toContainText(/\d{4}-\d+/);
   });
 
   test('eine Ausgabe begleicht eine offene Zahlung ganz; danach steht sie als erledigt', async ({ page }) => {
@@ -455,25 +482,35 @@ test.describe('finance', () => {
     await expect(page.getByText(/Zuordnung geändert von/)).toBeVisible();
   });
 
-  test('Buchung zurücknehmen erzeugt die Gegenbuchung und öffnet den vorbelegten Entwurf', async ({ page }) => {
+  test('Zurücknehmen aus „Weitere Aktionen“ nennt Gegenbuchung und Datum, erzeugt sie und öffnet den vorbelegten Entwurf', async ({ page }) => {
     await loginAsAdmin(page);
     await page.goto('/finance/entries');
     await page.locator('tr', { hasText: 'Ausgabe Sommerfest' }).click();
-    await page.getByRole('button', { name: 'Korrigieren' }).click();
-    await page.getByRole('checkbox', { name: 'Betrag' }).check();
-    await expect(page.getByText('Das nimmt die Buchung zurück.')).toBeVisible();
-    await page.getByRole('button', { name: 'Buchung zurücknehmen' }).click();
+    await page.getByRole('button', { name: 'Weitere Aktionen' }).click();
+    await page.getByRole('menuitem', { name: 'Zurücknehmen …' }).click();
+    const dialog = page.getByRole('alertdialog', { name: /zurücknehmen\?$/ });
+    // Die Nummer vergibt erst das Festschreiben — der Dialog nennt das Datum und sagt es (Designer 2026-10-08).
+    await expect(dialog).toContainText(/Es entsteht eine Gegenbuchung zum \d{2}\.\d{2}\.\d{4}\. Die Nummer wird beim Zurücknehmen vergeben\./);
+    await dialog.getByRole('button', { name: 'Zurücknehmen' }).click();
     await expect(page).toHaveURL(/\/finance\/entries\/[^/]+\/edit$/);
+    const toast = page.locator('[data-sonner-toast]').filter({ hasText: /Gegenbuchung .+ festgeschrieben\./ });
+    await expect(toast.getByRole('button', { name: 'Öffnen' })).toBeVisible();
   });
 
-  test('wer „Betrag“ ankreuzt, bekommt „Buchung zurücknehmen“, auch wenn zusätzlich „Projekt“ angekreuzt ist', async ({ page }) => {
+  test('der Korrekturdialog bucht nur um; Zahlen verweist er auf „Zurücknehmen …“', async ({ page }) => {
     await loginAsAdmin(page);
     await page.goto('/finance/entries');
     await page.locator('tr', { hasText: 'Bar-Ausgabe Fahrtkosten' }).click();
     await page.getByRole('button', { name: 'Korrigieren' }).click();
-    await page.getByRole('checkbox', { name: 'Projekt' }).check();
-    await page.getByRole('checkbox', { name: 'Betrag' }).check();
-    await expect(page.getByText('Das nimmt die Buchung zurück.')).toBeVisible();
+    const dialog = page.getByRole('dialog', { name: 'Was stimmt nicht?' });
+    await expect(dialog.getByRole('checkbox', { name: 'Betrag' })).toHaveCount(0);
+    await dialog.getByRole('checkbox', { name: 'Projekt' }).check();
+    await expect(dialog.getByText('Das ändert die Zuordnung.')).toBeVisible();
+    await expect(dialog.getByRole('button', { name: /Stornieren|zurücknehmen\b/ })).toHaveCount(0);
+    // Für Zahlen führt der Satz direkt zu „Zurücknehmen …“ (Joe 2026-10-08, statt der Weiche „Was ist falsch?“).
+    await dialog.getByRole('button', { name: 'Zurücknehmen …' }).click();
+    await expect(dialog).toBeHidden();
+    await expect(page.getByRole('dialog', { name: /zurücknehmen\?/ }).or(page.getByRole('alertdialog', { name: /zurücknehmen\?/ }))).toBeVisible();
   });
 
   test('Korrigieren an einer geteilten Buchung: die dritte Aufteilung bekommt ein anderes Projekt, die übrigen bleiben', async ({ page }) => {
@@ -696,9 +733,9 @@ test.describe('finance', () => {
     await page.goto('/finance/accounts');
     await page.locator('[role="link"]', { hasText: 'Vereinskonto' }).click();
     await expect(page).toHaveURL(/\/finance\/entries\?account=/);
-    await expect(page.getByRole('heading', { name: 'Journal' })).toBeVisible();
-    // Befund 21/23: mit Kontofilter zeigt die Seite zusätzlich die Kontoblatt-Kopfzeile.
-    await expect(page.getByRole('heading', { name: 'Kontoblatt Vereinskonto' })).toBeVisible();
+    // Befund 21/23: mit Kontofilter ist das Kontoblatt der Seitentitel; „Journal“ steht in der Brotkrume.
+    await expect(page.getByRole('navigation', { name: 'Brotkrume' })).toContainText('Journal');
+    await expect(page.getByRole('heading', { level: 1, name: 'Kontoblatt Vereinskonto' })).toBeVisible();
   });
 
   test('Kontoblatt zeigt die Bewegung mit laufendem Saldo; ohne Filter steht die Umbuchung als solche da (Befund 21/23)', async ({ page }) => {
@@ -757,10 +794,10 @@ test.describe('finance', () => {
     await expect(row).not.toContainText(/\d{4}-\d{2}-\d{2}/);
 
     // Zwei Reiter in der URL: unter „Wir erwarten“ steht der neue Posten nicht.
-    await page.getByRole('tab', { name: 'Wir erwarten' }).click();
+    await page.getByRole('link', { name: 'Wir erwarten', exact: true }).click();
     await expect(page).toHaveURL(/tab=receivable/);
     await expect(page.getByRole('row', { name: storyPattern('RE-2026-999') })).toHaveCount(0);
-    await page.getByRole('tab', { name: 'Wir zahlen noch' }).click();
+    await page.getByRole('link', { name: 'Wir zahlen noch', exact: true }).click();
     await expect(page).toHaveURL(/tab=payable/);
     await expect(page.getByRole('row', { name: storyPattern('RE-2026-999') })).toBeVisible();
 
@@ -865,7 +902,7 @@ test.describe('finance', () => {
     await page.getByRole('button', { name: 'Festschreiben', exact: true }).click();
     await page.getByRole('alertdialog').getByRole('button', { name: 'Festschreiben' }).click();
     await expect(page).toHaveURL(/\/finance\/entries\/[0-9A-Z]{26}$/);
-    const bookedNumber = (await page.getByTestId('entry-number').textContent())!.trim();
+    const bookedNumber = (await page.getByRole('heading', { level: 1 }).textContent())!.trim();
 
     await page.goto('/finance/open-items');
     const row = page.getByRole('row', { name: storyPattern('RE-2026-041') });
@@ -880,7 +917,7 @@ test.describe('finance', () => {
     await loginAsAdmin(page);
     await page.goto('/finance/open-items');
     await page.getByRole('row', { name: storyPattern('RE-2026-041') }).click();
-    await page.getByRole('button', { name: 'Erledigt ohne Zahlung' }).click();
+    await page.getByRole('button', { name: 'Ohne Zahlung erledigen …' }).click();
     await expect(page.getByText(/Es entsteht keine Buchung/)).toBeVisible();
     const alertDialog = page.getByRole('alertdialog');
     const confirm = alertDialog.getByRole('button', { name: 'Erledigt ohne Zahlung' });
@@ -898,7 +935,7 @@ test.describe('finance', () => {
     await page.goto('/finance/open-items');
     await page.getByRole('row', { name: storyPattern('ANT-2026-014') }).click();
     await expect(page).toHaveURL(/item=/);
-    await expect(page.getByRole('button', { name: 'Erledigt ohne Zahlung' })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Ohne Zahlung erledigen …' })).toHaveCount(0);
     await expect(page.getByText('Was mit dem Vorgang geschieht, entscheidet sich an ihm selbst.')).toBeVisible();
   });
 
@@ -924,20 +961,55 @@ test.describe('finance', () => {
     await page.getByRole('row', { name: storyPattern('RE-2026-041') }).click();
     await expect(page.getByText('Kein Recht zum Erledigen')).toBeVisible();
     await expect(page.getByText('Anna Berger')).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Erledigt ohne Zahlung' })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Ohne Zahlung erledigen …' })).toHaveCount(0);
   });
 
-  test('das leere Journal bietet den Weg zur Einrichtung nur, wenn ein Konto ohne Anfangsbestand existiert', async ({ page }) => {
-    // Statt einer leeren Installation (H2 — Konten anlegen — kommt erst mit Task 5): eine Suche ohne
-    // Treffer zeigt denselben leeren Zustand; „Barkasse“ hat im Seed keinen Anfangsbestand.
+  test('das Journal blättert: Seite 2 zeigt den Rest, ein Filterwechsel springt auf Seite 1', async ({ page, baseURL }) => {
+    // Befund 1 (Inventar Filterleisten): Ab der 51. Buchung war der Rest nur über die Adresse erreichbar. Kein
+    // Testparameter für die Seitengröße (bliebe im Produkt) — der Aufbau legt 60 Entwürfe über den Dienst an.
+    await loginAsAdmin(page);
+    const client = await mcpClient(page, baseURL);
+    const created: string[] = [];
+    try {
+      for (let i = 0; i < 60; i += 1) {
+        const draft = await callTool<{ id: string }>(client, 'finance_entry_save_draft', { entryDate: story('2026-03-15'), text: `Blättern E2E ${i}`, moneyLines: [], allocationLines: [] });
+        created.push(draft.id);
+      }
+      await page.goto('/finance/entries?q=Bl%C3%A4ttern%20E2E');
+      await expect(page.getByText('1–50 von 60')).toBeVisible();
+      await expect(page.getByText('Summe über die gefilterten 60 Buchungen')).toBeVisible();
+      await page.getByRole('link', { name: 'Weiter' }).click();
+      await expect(page).toHaveURL(/page=2/);
+      await expect(page.getByText('51–60 von 60')).toBeVisible();
+      await expect(page.getByRole('link', { name: 'Weiter' })).toHaveCount(0);
+      await page.getByRole('combobox', { name: 'Zustand' }).selectOption({ index: 1 });
+      await expect(page).toHaveURL(/state=/);
+      await expect(page).not.toHaveURL(/page=2/);
+      await expect(page.getByText('1–50 von 60')).toBeVisible();
+    } finally {
+      for (const id of created) await callTool(client, 'finance_entry_delete_draft', { id });
+      await client.close();
+    }
+  });
+
+  test('das Journal ohne Treffer ist gefiltert leer: Zurücksetzen statt „Neue Buchung“ und Einrichtung', async ({ page }) => {
+    // Bis L (Filterleisten) zeigte eine Suche ohne Treffer den Leerzustand „Noch keine Buchung.“ mit „Neue Buchung“
+    // und dem Weg zur Einrichtung (Befund 2). Den Weg zur Einrichtung zeigt jetzt nur das wirklich leere Journal —
+    // abgedeckt in `tests/journal-empty.test.tsx`, weil der Seed immer Buchungen hat.
     await loginAsAdmin(page);
     // Der Seed schaltet Finanzen und seine Abhängigkeiten wirklich ein (nicht nur
     // vorgetäuscht) — sonst zeigte die neue Sperre „Modul inaktiv“ statt des leeren Journals.
     await page.goto('/admin/modules');
     await expect(page.getByRole('switch', { name: 'Finanzen aktivieren oder deaktivieren' })).toBeChecked();
-    await page.goto('/finance/entries?q=kein-treffer-fuer-diesen-text-xyz');
-    await expect(page.getByText('Noch keine Buchung.')).toBeVisible();
-    await expect(page.getByRole('link', { name: 'Bankkonten und Kassen einrichten' })).toBeVisible();
+    await page.goto('/finance/entries?q=zzz');
+    const empty = page.locator('section').filter({ hasText: 'Keine Buchung passt zu diesen Filtern.' });
+    await expect(empty).toBeVisible();
+    await expect(page.getByText('Noch keine Buchung.')).toHaveCount(0);
+    await expect(empty.getByRole('link', { name: 'Neue Buchung' })).toHaveCount(0);
+    await expect(page.getByRole('link', { name: 'Bankkonten und Kassen einrichten' })).toHaveCount(0);
+    await empty.getByRole('link', { name: 'Filter zurücksetzen' }).click();
+    await expect(page).toHaveURL(/\/finance\/entries$/);
+    await expect(page.getByRole('table')).toBeVisible();
 
     await page.goto('/admin/users');
     await page.getByRole('row', { name: /Mira Klein/ }).getByRole('button', { name: 'Aktionen' }).click();
@@ -955,8 +1027,8 @@ test.describe('finance', () => {
     await page.getByRole('button', { name: 'Passwort setzen und fortfahren' }).click();
     await expect(page).toHaveURL('/');
     // Mira Klein hat finance.read (Kassenprüfer), aber kein finance.setup.
-    await page.goto('/finance/entries?q=kein-treffer-fuer-diesen-text-xyz');
-    await expect(page.getByText('Noch keine Buchung.')).toBeVisible();
+    await page.goto('/finance/entries?q=zzz');
+    await expect(page.getByText('Keine Buchung passt zu diesen Filtern.')).toBeVisible();
     await expect(page.getByRole('link', { name: 'Bankkonten und Kassen einrichten' })).toHaveCount(0);
   });
 

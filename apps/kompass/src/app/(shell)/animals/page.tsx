@@ -19,13 +19,13 @@ export default async function AnimalsPage(props: { searchParams: Promise<AnimalL
   // Gefiltert und sortiert wird im Dienst; `animalListInput` überliest, was er nicht kennt.
   const result = await listAnimals(deps, ctx, animalListInput(q));
   if (!result.ok) return <Page width="full"><ForbiddenCard permission="animals.view" /></Page>;
-  const { animals, total, reviewPending } = result.value;
+  const { animals, total, reviewPending, tabCounts } = result.value;
   return (
     <Page width="full" header={<PageHeader title={t('title')} actions={<Link href="/animals/new" className={buttonVariants()}>{t('create')}</Link>} />}>
       {total === 0 && !hasListFilter(q) ? (
         <EmptyState title={t('emptyTitle')} text={t('emptyText')} />
       ) : (
-        <AnimalList animals={animals} total={total} reviewPending={reviewPending} canExport={hasPermission(ctx, 'documents.export')} />
+        <AnimalList animals={animals} total={total} reviewPending={reviewPending} tabCounts={tabCounts} canExport={hasPermission(ctx, 'documents.export')} />
       )}
     </Page>
   );

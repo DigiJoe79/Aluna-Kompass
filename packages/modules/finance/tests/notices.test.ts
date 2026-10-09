@@ -227,12 +227,13 @@ describe('supersedeNotice and voidNotice', () => {
     expect(err(await supersedeNotice(f.deps, f.ctx, { id: 'nope', supersededOn: '2026-01-01' }))).toMatchObject({ type: 'notFound' });
   });
 
-  it('nennt den Tag der Aufhebung im Protokoll wie die Anzeige (K10)', async () => {
+  it('speichert den Tag der Aufhebung als Wert im Protokoll', async () => {
     const f = await ledgerFixture();
     f.deps.clock.set('2026-03-01T10:00:00.000Z');
     const notice = unwrap(await saveNotice(f.deps, f.ctx, exemption));
     unwrap(await supersedeNotice(f.deps, f.ctx, { id: notice.id, supersededOn: '2026-02-15' }));
-    expect(auditOf(f.deps, 'finance.notice.supersede').at(-1)!.summary).toBe(`Bescheid ${notice.id} aufgehoben oder ersetzt am 15.02.2026`);
+    // Der Tag als ISO-Wert; formatiert wird erst in der Anzeige (Spec Protokoll § 2).
+    expect(JSON.parse(auditOf(f.deps, 'finance.notice.supersede').at(-1)!.params!)).toEqual({ supersededOn: '2026-02-15' });
   });
 });
 

@@ -3,6 +3,7 @@ import { getAccountStatements, getImportRun, listAccounts, listCandidates, listI
 import { getTranslations } from 'next-intl/server';
 import { EmptyState } from '@/components/empty-state';
 import { ForbiddenCard } from '@/components/forbidden-card';
+import { ListPager } from '@/components/list-pager';
 import { Page } from '@/components/page';
 import { PageHeader } from '@/components/page-header';
 import { dateFormatOf } from '@/lib/date-format';
@@ -22,17 +23,21 @@ import { ImportUpload } from './upload';
  * genügt zum Lesen — Hochladen, Entscheiden und Verwerfen brauchen
  * `finance.entriesWrite`.
  */
-export default async function FinanceImportsPage() {
+/** Läufe je Seite (MUSTER § L) — bis 0.2.8 eine stille Grenze bei 100. */
+const PAGE_SIZE = 50;
+
+export default async function FinanceImportsPage({ searchParams }: { searchParams: Promise<{ page?: string }> }) {
   const { deps, ctx } = await requireSession();
   const t = await getTranslations('finance.imports');
   if (!hasPermission(ctx, 'finance.read')) return <Page width="standard"><ForbiddenCard permission="finance.read" /></Page>;
   const canWrite = hasPermission(ctx, 'finance.entriesWrite');
   const fmtDate = dateFormatOf(deps).date;
+  const page = Math.max(1, Number((await searchParams).page) || 1);
 
   const [accountsRes, statementsRes, runsRes, candidatesRes] = await Promise.all([
     listAccounts(deps, ctx, {}),
     getAccountStatements(deps, ctx, {}),
-    listImportRuns(deps, ctx, { limit: 100 }),
+    listImportRuns(deps, ctx, { limit: PAGE_SIZE, offset: (page - 1) * PAGE_SIZE }),
     listCandidates(deps, ctx, { open: true }),
   ]);
   if (!accountsRes.ok || !statementsRes.ok || !runsRes.ok || !candidatesRes.ok) return <Page width="standard"><ForbiddenCard permission="finance.read" /></Page>;
@@ -114,7 +119,17 @@ export default async function FinanceImportsPage() {
 
         {canWrite ? <ImportUpload accounts={importableAccounts.map((a) => ({ id: a.id, name: a.name }))} /> : null}
 
-        <RunsTable runs={runRows} canDiscard={canWrite} />
+        <div>
+          <RunsTable runs={runRows} canDiscard={canWrite} />
+          {/* Die Läufe stehen als einzelne Karten ohne gemeinsame Karte: Der Pager sitzt direkt darunter (MUSTER § L). */}
+          <ListPager
+            total={runsRes.value.total}
+            offset={(page - 1) * PAGE_SIZE}
+            pageSize={PAGE_SIZE}
+            hrefFor={(next) => (next > 0 ? `/finance/imports?page=${Math.floor(next / PAGE_SIZE) + 1}#runs` : '/finance/imports#runs')}
+            testId="import-runs-pager"
+          />
+        </div>
 
         <CandidatesSection candidates={candidateRows} canDecide={canWrite} />
       </div>

@@ -243,19 +243,19 @@ export function SuggestionCard({
             </Button>
           </div>
           <p className="flex flex-wrap gap-x-4 gap-y-1 text-[13px]">
-            <button type="button" onClick={openRule} className="font-semibold text-ink underline underline-offset-2">
+            <Button type="button" variant="link" className="h-auto p-0" onClick={openRule}>
               {t('actions.rule')}
-            </button>
-            <button type="button" onClick={() => setDialog('foreign')} className="font-semibold text-ink underline underline-offset-2">
+            </Button>
+            <Button type="button" variant="link" className="h-auto p-0" onClick={() => setDialog('foreign')}>
               {t('actions.foreign')}
-            </button>
-            <button type="button" onClick={() => setDialog('contact')} className="font-semibold text-ink underline underline-offset-2">
+            </Button>
+            <Button type="button" variant="link" className="h-auto p-0" onClick={() => setDialog('contact')}>
               {t('actions.createContact')}
-            </button>
+            </Button>
             {raw.amountCents < 0 ? (
-              <button type="button" onClick={() => setDialog('partner')} className="font-semibold text-ink underline underline-offset-2">
+              <Button type="button" variant="link" className="h-auto p-0" onClick={() => setDialog('partner')}>
                 {t('actions.partner')}
-              </button>
+              </Button>
             ) : null}
           </p>
         </div>

@@ -2,36 +2,19 @@
 
 import { useDateFormat } from '@/components/date-format-provider';
 import { useTranslations } from 'next-intl';
-import { useTransition } from 'react';
-import { Button } from '@/components/ui/button';
 import { roleLabel } from '@/lib/contact-roles';
-import { deleteContactAction } from '../actions';
 
+/** Was den Kontakt hält und bis wann. Löschen steht im Seitenkopf unter „Weitere Aktionen“ (`contact-actions.tsx`). */
 export function RetentionPanel({
-  contactId,
   holds,
   roleKeysById,
-  until,
-  due,
-  canManage,
 }: {
-  contactId: string;
   holds: { entity: string; id: string; label: string; until: string | null }[];
   /** Rollenschlüssel je Rollenzeile — der Halter aus dem Modul nennt nur die ID. */
   roleKeysById: Record<string, string>;
-  until: string | null;
-  due: boolean;
-  canManage: boolean;
 }) {
   const t = useTranslations('contacts');
   const fmt = useDateFormat();
-  const [pending, startTransition] = useTransition();
-
-  const handleDelete = () => {
-    startTransition(async () => {
-      await deleteContactAction(contactId);
-    });
-  };
 
   return (
     <section className="rounded-md border border-line bg-surface p-5">
@@ -55,26 +38,6 @@ export function RetentionPanel({
       ) : (
         <p className="text-[13px] text-muted-ink">{t('retention.unknown')}</p>
       )}
-
-      {canManage ? (
-        <div className="mt-5 flex flex-col gap-2 border-t border-line-2 pt-4">
-          <div className="flex items-center gap-4">
-            <Button
-              type="button"
-              variant="outline"
-              disabled={!due || pending}
-              onClick={handleDelete}
-            >
-              {t('retention.delete')}
-            </Button>
-            {!due ? (
-              <span className="text-[12px] text-muted-ink">
-                {holds.length > 0 ? t('retention.deleteBlocked') : t('retention.unknown')}
-              </span>
-            ) : null}
-          </div>
-        </div>
-      ) : null}
     </section>
   );
 }

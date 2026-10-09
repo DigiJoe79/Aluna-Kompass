@@ -100,7 +100,7 @@ export async function decideCandidate(deps: Deps, ctx: CallContext, input: unkno
     financeAudit(tx, deps, ctx, {
       action: 'finance.import.candidateDecide', entity: 'financeImportCandidate', id: before.id,
       after: { runId: before.runId, accountId: before.accountId, decision: parsed.value.decision, matchesRawTransactionId: before.matchesRawTransactionId, rawTransactionId },
-      summary: `Kandidat ${before.id} entschieden (${parsed.value.decision})`,
+      params: { decision: parsed.value.decision },
     });
     return ok(candidateViewInternal(tx, after));
   });

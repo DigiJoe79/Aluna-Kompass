@@ -55,8 +55,8 @@ describe('core document templates', () => {
         title: 'Protokoll',
         filters: {},
         entries: [
-          { occurredAt: '28.09.2026 21:49:27', userName: 'Anna Berger', channel: 'Oberfläche', action: 'finance.notice.save', entityType: 'financeNotice', entityId: '01M3MQP000000000000000000', entityLabel: 'GRD-2026-003', summary: 'Bescheid geändert' },
-          { occurredAt: '28.09.2026 21:50:01', userName: null, channel: 'System', action: 'document.textExtracted', entityType: 'document', entityId: '01M3MRY000000000000000000', summary: 'Text erkannt' },
+          { occurredAt: '28.09.2026 21:49:27', userName: 'Anna Berger', channel: 'Oberfläche', entityType: 'financeNotice', entityId: '01M3MQP000000000000000000', entityLabel: 'GRD-2026-003', sentence: 'Bescheid „BEH-2026-003“ geändert' },
+          { occurredAt: '28.09.2026 21:50:01', userName: null, channel: 'System', entityType: 'document', entityId: '01M3MRY000000000000000000', sentence: 'Text erkannt' },
         ],
       },
       ctx,
@@ -64,12 +64,13 @@ describe('core document templates', () => {
     const typst = 'typst' in built.body ? built.body.typst : '';
     // Kein Fettdruck in der Kopfzeile: Die Basis setzt sie selbst fett und hell. Eine Basis, die Fettes in ihrer
     // Hauptfarbe setzt, machte die Köpfe sonst unsichtbar (dunkel auf dunkel).
-    expect(typst).toContain('table.header([Zeitpunkt], [Nutzer / Kanal], [Aktion], [Objekt / Zusammenfassung])');
-    // Feste Breiten für die Metadaten, der Rest gehört dem Inhalt.
-    expect(typst).toMatch(/columns: \(\d+mm, \d+mm, \d+mm, 1fr\)/);
+    expect(typst).toContain('table.header([Zeitpunkt], [Nutzer / Kanal], [Aktion], [Objekt])');
+    // Feste Breiten für die Metadaten, der Rest gehört dem Inhalt: die Aktion als Satz und das Objekt.
+    expect(typst).toMatch(/columns: \(\d+mm, \d+mm, [\d.]+fr, 1fr\)/);
     expect(typst).toContain('hyphenate: false');
-    // Der Aktionsschlüssel darf an den Punkten umbrechen.
-    expect(typst).toContain('finance.\\u{200B}notice.\\u{200B}save');
+    // Die Aktion steht als Satz (Spec Protokoll § 4), nicht als Schlüssel.
+    expect(typst).toContain('Bescheid „BEH-2026-003“ geändert');
+    expect(typst).not.toContain('finance.notice.save');
     // Der Name des Datensatzes statt seiner ID, wo es einen gibt.
     expect(typst).toContain('financeNotice · GRD-2026-003');
     expect(typst).not.toContain('01M3MQP');

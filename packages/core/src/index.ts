@@ -28,6 +28,7 @@ export * from './modules/record-hooks';
 export * from './modules/document-areas';
 export * from './modules/linked-access';
 export { coreModule } from './core-module';
+export * from './audit/actions';
 export * from './audit/log';
 export * from './audit/query';
 export * from './files/reset';

@@ -202,7 +202,7 @@ export function ReceiveForm({
                   id="typeKey"
                   name="typeKey"
                   required
-                  className={origin.typeKey ? 'border-info' : undefined}
+                  className={origin.typeKey ? 'border-agent' : undefined}
                   value={typeKey}
                   onFocus={() => touch('typeKey')}
                   onChange={(e) => {
@@ -225,7 +225,7 @@ export function ReceiveForm({
                   name="documentDate"
                   type="date"
                   required
-                  className={origin.documentDate ? 'border-info font-mono' : 'font-mono'}
+                  className={origin.documentDate ? 'border-agent font-mono' : 'font-mono'}
                   value={documentDate}
                   onFocus={() => touch('documentDate')}
                   onChange={(e) => {

@@ -33,13 +33,59 @@ test.describe('settings', () => {
     expect(listBox.width).toBeGreaterThan(listBox.height);
   });
 
+  /**
+   * Die Speicherleiste klebt ab 640 × 600 px am unteren Rand (MUSTER § B). Bis 0.2.9 tat sie das auf den meisten
+   * Seiten nie, weil die Formularkarte `overflow-hidden` trug — `position: sticky` stand trotzdem im CSS; geprüft wird
+   * deshalb die Lage im Fenster, nicht die Eigenschaft (Befund 39). Auf dem Telefon klebt sie nicht.
+   */
+  test('die Speicherleiste klebt am Rechner, auf dem Telefon steht sie am Ende der Karte', async ({ page }) => {
+    const bar = page.locator('[data-slot="form-action-bar"]');
+    const main = page.locator('main');
+    const toMiddle = () =>
+      main.evaluate((el) => {
+        el.scrollTop = (el.scrollHeight - el.clientHeight) / 2;
+        return el.scrollHeight - el.clientHeight;
+      });
+
+    expect(await toMiddle()).toBeGreaterThan(200);
+    await expect(bar).toHaveAttribute('data-stuck', '');
+    const desk = await bar.boundingBox();
+    if (!desk) throw new Error('Speicherleiste fehlt');
+    expect(desk.y).toBeGreaterThanOrEqual(0);
+    expect(desk.y + desk.height).toBeLessThanOrEqual(800 + 1);
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    expect(await toMiddle()).toBeGreaterThan(400);
+    await expect(bar).toHaveCSS('position', 'static');
+    const phone = await bar.boundingBox();
+    if (!phone) throw new Error('Speicherleiste fehlt');
+    expect(phone.y).toBeGreaterThan(844);
+  });
+
+  test('fragt beim Verlassen mit ungespeicherten Änderungen nach, der Bereichswechsel nicht', async ({ page }) => {
+    await page.getByLabel('Vereinsname').fill('Ungespeichert e.V.');
+    // Bereichswechsel im Formular: Die Eingaben bleiben, also keine Rückfrage.
+    await page.getByRole('navigation', { name: NAV }).getByRole('link').nth(1).click();
+    await expect(page).toHaveURL(/panel=/);
+    await expect(page.getByRole('alertdialog')).toHaveCount(0);
+    // Ein Link aus der Seite hinaus fragt.
+    await page.getByRole('link', { name: 'Projekte' }).first().click();
+    const dialog = page.getByRole('alertdialog');
+    await expect(dialog).toContainText('Eine Änderung ist noch nicht gespeichert');
+    await dialog.getByRole('button', { name: 'Abbrechen' }).click();
+    await expect(page).toHaveURL(/\/admin\/settings/);
+    await page.getByRole('link', { name: 'Projekte' }).first().click();
+    await page.getByRole('alertdialog').getByRole('button', { name: 'Seite verlassen' }).click();
+    await expect(page).toHaveURL(/\/projects$/);
+  });
+
   test('saves changed fields, shows the pending counter and audits', async ({ page }) => {
     await page.getByLabel('Vereinsname').fill('Aluna Musterverein e.V.');
     // Der Seed trägt schon „Musterstadt“ ein (F6a) — eine Änderung braucht einen anderen Ort.
     await page.getByLabel('Ort').fill('Beispielstadt');
     await expect(page.getByText('2 Änderungen noch nicht gespeichert')).toBeVisible();
     await page.getByRole('button', { name: 'Speichern' }).click();
-    await expect(page.getByRole('status')).toContainText('Einstellungen gespeichert');
+    await expect(page.getByRole('status').filter({ hasText: 'Einstellungen gespeichert' })).toContainText('Einstellungen gespeichert');
     await page.reload();
     await expect(page.getByLabel('Vereinsname')).toHaveValue('Aluna Musterverein e.V.');
     await page.goto('/admin/audit');
@@ -85,7 +131,8 @@ test.describe('settings', () => {
     await page.getByRole('navigation', { name: NAV }).getByRole('link', { name: 'Steuer & Bescheide' }).click();
     // Seit F6a erfasst der Finanz-Seed den Freistellungsbescheid; Finanzamt, Steuernummer und Bescheid stehen damit (E22).
     await expect(page.getByTestId('managed-field-value').first()).toBeVisible();
-    await expect(page.locator('main').getByRole('alert')).toHaveCount(0);
+    // Der Kasten „Angaben unvollständig“ ist seit K10 Charge 2 eine Warnung (`status`), kein `alert`.
+    await expect(page.locator('main').getByRole('status').filter({ hasText: 'unvollständig' })).toHaveCount(0);
     // Befund 31 (0.2.1): Den Zweck führt der Bescheid; das Feld hier las niemand.
     await expect(page.getByLabel('Satzungszweck')).toHaveCount(0);
   });
@@ -112,7 +159,8 @@ test.describe('settings', () => {
   test('der Hinweis Steuer unvollständig zählt geführte Felder nicht', async ({ page }) => {
     await page.goto('/finance/donations/notices');
     const row = page.getByTestId('notice-row').filter({ hasText: 'Freistellungsbescheid' });
-    await row.getByRole('button', { name: 'Irrtümlich erfasst' }).click();
+    await row.getByTestId('notice-menu').click();
+    await page.getByRole('menuitem', { name: 'Irrtümlich erfasst' }).click();
     const dialog = page.getByRole('dialog');
     await dialog.getByLabel('Grund').fill('Für die Prüfung zurückgenommen');
     await dialog.getByRole('button', { name: 'Irrtümlich erfasst' }).click();
@@ -120,7 +168,8 @@ test.describe('settings', () => {
 
     await page.goto('/admin/settings');
     await page.getByRole('navigation', { name: NAV }).getByRole('link', { name: 'Steuer & Bescheide' }).click();
-    await expect(page.locator('main').getByRole('alert')).toHaveCount(0);
+    // Der Kasten „Angaben unvollständig“ ist seit K10 Charge 2 eine Warnung (`status`), kein `alert`.
+    await expect(page.locator('main').getByRole('status').filter({ hasText: 'unvollständig' })).toHaveCount(0);
     await expect(page.getByText('Es ist noch kein Bescheid erfasst.')).toBeVisible();
     const link = page.getByRole('link', { name: 'Bescheid erfassen' });
     await expect(link).toHaveAttribute('href', '/finance/donations/notices');
@@ -140,7 +189,7 @@ test.describe('settings', () => {
     await chooser.getByRole('button', { name: /logo-/ }).click();
     await expect(chooser).toBeHidden();
     await page.getByRole('button', { name: 'Speichern' }).click();
-    await expect(page.getByRole('status')).toContainText('gespeichert');
+    await expect(page.getByRole('status').filter({ hasText: 'gespeichert' })).toContainText('gespeichert');
 
     await page.goto('/admin/media');
     await page.getByRole('row', { name: /logo-/ }).click();

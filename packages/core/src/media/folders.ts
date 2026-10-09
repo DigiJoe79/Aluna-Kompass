@@ -135,7 +135,7 @@ export async function createMediaFolder(deps: Deps, ctx: CallContext, input: unk
       entityType: 'mediaFolder',
       entityId: path,
       after: { path },
-      summary: `Ordner „${path}“ angelegt`,
+      params: { path },
     });
   });
   return ok({ path });
@@ -173,7 +173,7 @@ export async function renameMediaFolder(deps: Deps, ctx: CallContext, input: unk
       entityId: from,
       before: { path: from },
       after: { path: to, folders: plan.renames.length, assets },
-      summary: `Ordner „${from}“ in „${to}“ umbenannt`,
+      params: { from, to },
     });
   });
   return ok({ path: to });
@@ -201,7 +201,7 @@ export async function deleteMediaFolder(deps: Deps, ctx: CallContext, input: unk
       entityType: 'mediaFolder',
       entityId: path,
       before: { path },
-      summary: `Ordner „${path}“ gelöscht`,
+      params: { path },
     });
   });
   return ok(null);
@@ -243,7 +243,7 @@ export async function moveMediaAsset(deps: Deps, ctx: CallContext, input: unknow
       entityId: asset.id,
       before: { folder: asset.folder },
       after: { folder },
-      summary: `Datei „${asset.filename}“ nach „${folder ?? 'Wurzel'}“ verschoben`,
+      params: { filename: asset.filename, folder: folder ?? '', toRoot: folder === null },
     });
   });
   return ok({ moved: true });

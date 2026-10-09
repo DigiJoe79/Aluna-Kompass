@@ -80,8 +80,8 @@ export function installDms(tx: DbOrTx, deps: Deps, ctx: CallContext): void {
       .run();
   }
 
-  writeSettingInternal(tx, deps, ctx, 'dms.defaultTypeIncoming', DEFAULT_TYPE_INCOMING, 'dms.install');
-  writeSettingInternal(tx, deps, ctx, 'dms.defaultTypeOutgoing', DEFAULT_TYPE_OUTGOING, 'dms.install');
+  writeSettingInternal(tx, deps, ctx, 'dms.defaultTypeIncoming', DEFAULT_TYPE_INCOMING, 'dms.install.setting');
+  writeSettingInternal(tx, deps, ctx, 'dms.defaultTypeOutgoing', DEFAULT_TYPE_OUTGOING, 'dms.install.setting');
 
   // Eine englische Installation bekommt englische Beschriftungen; die Vorgabe
   // der Definition bleibt deutsch — sie gilt für Installationen, die vor dieser
@@ -94,7 +94,7 @@ export function installDms(tx: DbOrTx, deps: Deps, ctx: CallContext): void {
     writeSettingInternal(
       tx, deps, ctx, 'dms.dispatchChannels',
       DEFAULT_DISPATCH_CHANNELS.map((c) => ({ key: c.key, label: labelsFor[c.key] ?? c.label })),
-      'dms.install',
+      'dms.install.setting',
     );
   }
 
@@ -103,6 +103,7 @@ export function installDms(tx: DbOrTx, deps: Deps, ctx: CallContext): void {
     entityType: 'module',
     entityId: 'dms',
     after: { documentTypes: starters.map((type) => type.key) },
-    summary: 'Akte eingerichtet: zwei unklassifizierte Dokumentarten angelegt',
+    // Die Namen der beiden Arten zum Zeitpunkt (Nutzdaten, der Verein darf sie umbenennen; Designer 2026-10-09).
+    params: { incomingLabel: labels.incoming, outgoingLabel: labels.outgoing },
   });
 }

@@ -101,7 +101,7 @@ export function createCategoryInternal(tx: DbOrTx, deps: Deps, ctx: CallContext,
     updatedAt: now,
   };
   tx.insert(financeCategories).values(row).run();
-  financeAudit(tx, deps, ctx, { action: 'finance.category.create', entity: 'financeCategory', id, after: row, summary: `Kategorie ${row.key} angelegt` });
+  financeAudit(tx, deps, ctx, { action: 'finance.category.create', entity: 'financeCategory', id, after: row });
   return row;
 }
 
@@ -147,7 +147,7 @@ export async function updateCategory(deps: Deps, ctx: CallContext, input: unknow
   return deps.db.transaction((tx: DbOrTx) => {
     const after = { ...merged, updatedAt: isoNow(deps.clock) };
     tx.update(financeCategories).set(after).where(eq(financeCategories.id, id)).run();
-    financeAudit(tx, deps, ctx, { action: 'finance.category.update', entity: 'financeCategory', id, before, after, summary: `Kategorie ${before.key} geändert` });
+    financeAudit(tx, deps, ctx, { action: 'finance.category.update', entity: 'financeCategory', id, before, after });
     return ok(after);
   });
 }
@@ -166,7 +166,7 @@ export async function setCategoryActive(deps: Deps, ctx: CallContext, input: unk
   return deps.db.transaction((tx: DbOrTx) => {
     const after = { ...before, isActive: parsed.value.isActive, updatedAt: isoNow(deps.clock) };
     tx.update(financeCategories).set({ isActive: after.isActive, updatedAt: after.updatedAt }).where(eq(financeCategories.id, before.id)).run();
-    financeAudit(tx, deps, ctx, { action: 'finance.category.setActive', entity: 'financeCategory', id: before.id, before, after, summary: `Kategorie ${before.key} ${after.isActive ? 'aktiviert' : 'stillgelegt'}` });
+    financeAudit(tx, deps, ctx, { action: 'finance.category.setActive', entity: 'financeCategory', id: before.id, before, after, params: { active: after.isActive } });
     return ok(after);
   });
 }
@@ -183,7 +183,7 @@ export async function deleteCategory(deps: Deps, ctx: CallContext, input: unknow
   if (categoryInUseInternal(deps.db, before.id)) return financeConflict('categoryInUse');
   return deps.db.transaction((tx: DbOrTx) => {
     tx.delete(financeCategories).where(eq(financeCategories.id, before.id)).run();
-    financeAudit(tx, deps, ctx, { action: 'finance.category.delete', entity: 'financeCategory', id: before.id, before, summary: `Kategorie ${before.key} gelöscht` });
+    financeAudit(tx, deps, ctx, { action: 'finance.category.delete', entity: 'financeCategory', id: before.id, before });
     return ok({ id: before.id });
   });
 }

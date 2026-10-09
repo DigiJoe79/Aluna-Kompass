@@ -1,4 +1,4 @@
-import { invalid, isoDay, isoNow, messageDate, newId, notFound, ok, paperDate, readSetting, requirePermission, todayIn, validate, writeSettingInternal, type CallContext, type DbOrTx, type Deps, type Result } from '@kompass/core';
+import { invalid, isoDay, isoNow, newId, notFound, ok, paperDate, readSetting, requirePermission, todayIn, validate, writeSettingInternal, type CallContext, type DbOrTx, type Deps, type Result } from '@kompass/core';
 import { abortReceive, documents, getDocumentRecord, linkDocumentInternal, receiveGeneratedUpload } from '@kompass/module-dms';
 import { and, eq, gt, inArray, isNotNull, isNull } from 'drizzle-orm';
 import { z } from 'zod';
@@ -227,7 +227,7 @@ export async function saveNotice(deps: Deps, ctx: CallContext, input: unknown): 
     const synced = syncCoreSettingsInternal(tx, deps, ctx);
     if (!synced.ok) return synced;
     const after = tx.select().from(financeNotices).where(eq(financeNotices.id, id)).get()!;
-    financeAudit(tx, deps, ctx, { action: 'finance.notice.save', entity: 'financeNotice', id, before: before ? auditFields(before) : undefined, after: auditFields(after), summary: `Bescheid ${id} ${before ? 'geändert' : 'erfasst'}` });
+    financeAudit(tx, deps, ctx, { action: 'finance.notice.save', entity: 'financeNotice', id, before: before ? auditFields(before) : undefined, after: auditFields(after), params: { created: !before } });
     return ok(viewInternal(tx, id, todayIn(deps)));
   });
 }
@@ -266,7 +266,7 @@ export async function attachNoticeDocument(deps: Deps, ctx: CallContext, input: 
     afterReceive: (tx, doc) => {
       const changed = tx.update(financeNotices).set({ documentId: doc.id, updatedAt: isoNow(deps.clock) }).where(and(eq(financeNotices.id, before.id), isNull(financeNotices.voidedAt), isNull(financeNotices.supersededOn))).run().changes;
       if (changed !== 1) abortReceive(financeConflict('noticeVoided'));
-      financeAudit(tx, deps, ctx, { action: 'finance.notice.document', entity: 'financeNotice', id: before.id, after: { documentId: doc.id }, summary: `Dokument ${doc.number} zum Bescheid ${before.id} abgelegt` });
+      financeAudit(tx, deps, ctx, { action: 'finance.notice.document', entity: 'financeNotice', id: before.id, after: { documentId: doc.id }, params: { documentNumber: doc.number } });
       return null;
     },
   });
@@ -301,7 +301,7 @@ export async function supersedeNotice(deps: Deps, ctx: CallContext, input: unkno
     if (documentId) linkDocumentInternal(tx, deps, { documentId, entityType: 'financeNotice', entityId: v.id });
     const synced = syncCoreSettingsInternal(tx, deps, ctx);
     if (!synced.ok) return synced;
-    financeAudit(tx, deps, ctx, { action: 'finance.notice.supersede', entity: 'financeNotice', id: v.id, after: { supersededOn: v.supersededOn, supersededDocumentId: documentId }, summary: `Bescheid ${v.id} aufgehoben oder ersetzt am ${messageDate(deps, v.supersededOn)}` });
+    financeAudit(tx, deps, ctx, { action: 'finance.notice.supersede', entity: 'financeNotice', id: v.id, after: { supersededOn: v.supersededOn, supersededDocumentId: documentId }, params: { supersededOn: v.supersededOn } });
     return ok(viewInternal(tx, v.id, todayIn(deps)));
   });
 }
@@ -325,7 +325,7 @@ export async function voidNotice(deps: Deps, ctx: CallContext, input: unknown): 
     tx.update(financeNotices).set({ voidedAt: now, voidedByUserId: ctx.userId ?? 'system', voidNote: v.note, updatedAt: now }).where(eq(financeNotices.id, v.id)).run();
     const synced = syncCoreSettingsInternal(tx, deps, ctx);
     if (!synced.ok) return synced;
-    financeAudit(tx, deps, ctx, { action: 'finance.notice.void', entity: 'financeNotice', id: v.id, after: { voided: true }, summary: `Bescheid ${v.id} als irrtümlich erfasst gekennzeichnet` });
+    financeAudit(tx, deps, ctx, { action: 'finance.notice.void', entity: 'financeNotice', id: v.id, after: { voided: true } });
     return ok(viewInternal(tx, v.id, todayIn(deps)));
   });
 }

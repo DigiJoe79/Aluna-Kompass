@@ -1,15 +1,12 @@
 import type { DashboardTileView } from '@kompass/core';
-import { getFormatter, getTranslations } from 'next-intl/server';
+import { getTranslations } from 'next-intl/server';
 import Link from 'next/link';
+import { Notice } from '@/components/notice';
 import { buttonVariants } from '@/components/ui/button';
+import type { DateFormatter } from '@/lib/date-format';
 import { cn } from '@/lib/utils';
 import { TileLines } from './tile-lines';
 
-const TONE: Record<'neutral' | 'info' | 'warning', string> = {
-  neutral: 'text-ink-2',
-  info: 'rounded-md border border-info bg-info-bg p-3 text-ink-2',
-  warning: 'rounded-md border border-warning bg-warning-bg p-3 text-ink',
-};
 
 function isEmpty(view: DashboardTileView): boolean {
   if (view.error || !view.content) return false;
@@ -22,9 +19,8 @@ function isEmpty(view: DashboardTileView): boolean {
  * Eine Kachel nach Form (Spec 2026-09-17, § 6). `list` ist doppelt breit, das
  * entscheidet die Form. Leer heißt: ein Satz, gedämpft, der Platz bleibt.
  */
-export async function TileCard({ view, canComplete }: { view: DashboardTileView; canComplete: boolean }) {
+export async function TileCard({ view, canComplete, fmt }: { view: DashboardTileView; canComplete: boolean; fmt: DateFormatter }) {
   const t = await getTranslations('dashboard');
-  const format = await getFormatter();
   const ns = `tiles.${view.module}.${view.key}`;
   const empty = isEmpty(view);
   const content = view.content;
@@ -62,10 +58,14 @@ export async function TileCard({ view, canComplete }: { view: DashboardTileView;
     );
   } else {
     const values: Record<string, string | number> = { ...(content.values ?? {}) };
-    if (typeof values.date === 'string') values.date = format.dateTime(new Date(values.date), { dateStyle: 'medium', timeStyle: 'short' });
+    if (typeof values.date === 'string') values.date = fmt.dateTime(values.date);
     body = (
       <>
-        <p className={cn('text-[13px] leading-[1.55]', TONE[content.tone])}>{t(`${ns}.messages.${content.messageKey}`, values)}</p>
+        {content.tone === 'neutral' ? (
+          <p className="text-[13px] leading-[1.55] text-ink-2">{t(`${ns}.messages.${content.messageKey}`, values)}</p>
+        ) : (
+          <Notice level={content.tone === 'warning' ? 'warn' : 'hint'}>{t(`${ns}.messages.${content.messageKey}`, values)}</Notice>
+        )}
         {openLink(content.href)}
       </>
     );

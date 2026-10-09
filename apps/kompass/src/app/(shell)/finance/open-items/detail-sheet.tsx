@@ -1,16 +1,19 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { Textarea } from '@/components/ui/textarea';
+import { FormField } from '@/components/forms/form-field';
 import { BlockedState } from '@/components/blocked-state';
 import { useDateFormat } from '@/components/date-format-provider';
 import { TransferBlock } from '@/components/finance/transfer-block';
 import { ConfirmDialog } from '@/components/forms/confirm-dialog';
+import { RecordActions } from '@/components/record-actions';
 import { Button } from '@/components/ui/button';
 import { buttonVariants } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetFooter, SheetTitle } from '@/components/ui/sheet';
 import { formatEuro } from '@/lib/finance/amount';
 import { formatDateOrDash } from '@/lib/finance/dates';
 import { openItemState } from '@/lib/finance/open-item-state';
@@ -74,6 +77,7 @@ export function DetailSheet({
   const params = useSearchParams();
   const [editOpen, setEditOpen] = useState(false);
   const [settleOpen, setSettleOpen] = useState(false);
+  const settleTrigger = useRef<HTMLButtonElement>(null);
   const [note, setNote] = useState('');
 
   const close = () => {
@@ -144,35 +148,41 @@ export function DetailSheet({
                 )}
               </div>
 
-              {!done ? (
-                <div className="flex flex-col gap-2 border-t border-line pt-3">
-                  {!item.originType ? (
-                    canFinalize ? (
-                      <Button type="button" variant="secondary" onClick={() => setSettleOpen(true)}>
-                        {t('settleWithoutPayment.trigger')}
-                      </Button>
-                    ) : (
-                      <BlockedState step={t('settleWithoutPayment.trigger')} title={t('settleWithoutPayment.noRight.title')}>
-                        {finalizeNames.length > 0
-                          ? t('settleWithoutPayment.noRight.textWithNames', { names: finalizeNames.join(', ') })
-                          : t('settleWithoutPayment.noRight.text')}
-                      </BlockedState>
-                    )
-                  ) : (
-                    <p className="text-[13px] text-ink-2">{t('detail.hasOriginText')}</p>
-                  )}
-                  <Link href={bookHref} className={buttonVariants()}>
-                    {t('detail.bookNow')}
-                  </Link>
-                  {canWrite ? (
-                    <Button type="button" variant="ghost" onClick={() => setEditOpen(true)}>
-                      {t('detail.change')}
-                    </Button>
-                  ) : null}
-                </div>
+              {!done && item.originType ? <p className="text-[13px] text-ink-2">{t('detail.hasOriginText')}</p> : null}
+              {!done && !item.originType && !canFinalize ? (
+                <BlockedState step={t('settleWithoutPayment.trigger')} title={t('settleWithoutPayment.noRight.title')}>
+                  {finalizeNames.length > 0
+                    ? t('settleWithoutPayment.noRight.textWithNames', { names: finalizeNames.join(', ') })
+                    : t('settleWithoutPayment.noRight.text')}
+                </BlockedState>
               ) : null}
             </div>
           </div>
+          {!done ? (
+            // Wie die `FormActionBar` im Dialog (Spec Seitenkopf § 3.3): die Aktion am Datensatz links, die Knöpfe rechts;
+            // auf dem Telefon untereinander, die Aktion zuletzt.
+            <SheetFooter className="flex-row flex-wrap items-center gap-3 border-t border-line max-sm:flex-col max-sm:items-stretch">
+              {!item.originType && canFinalize ? (
+                <div className="max-sm:order-last max-sm:mt-3">
+                  <RecordActions
+                    single="button"
+                    triggerRef={settleTrigger}
+                    actions={[{ key: 'settle', label: t('settleWithoutPayment.item'), kind: 'undoing', onSelect: () => setSettleOpen(true), testId: 'open-item-settle-trigger' }]}
+                  />
+                </div>
+              ) : null}
+              <div className="ml-auto flex items-center gap-2 max-sm:ml-0 max-sm:flex-col-reverse max-sm:[&>*]:w-full">
+                {canWrite ? (
+                  <Button type="button" variant="ghost" onClick={() => setEditOpen(true)}>
+                    {t('detail.change')}
+                  </Button>
+                ) : null}
+                <Link href={bookHref} className={buttonVariants()}>
+                  {t('detail.bookNow')}
+                </Link>
+              </div>
+            </SheetFooter>
+          ) : null}
         </SheetContent>
       </Sheet>
 
@@ -180,6 +190,7 @@ export function DetailSheet({
 
       <ConfirmDialog
         open={settleOpen}
+        finalFocus={settleTrigger}
         onOpenChange={(o) => {
           setSettleOpen(o);
           if (!o) setNote('');
@@ -198,16 +209,9 @@ export function DetailSheet({
           return result;
         }}
       >
-        <label className="block space-y-1.5 text-[13px]">
-          <span className="font-semibold text-ink">{t('settleWithoutPayment.noteLabel')}</span>
-          <textarea
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-            required
-            rows={3}
-            className="w-full rounded-sm border border-line bg-surface px-2.5 py-1.5 text-[13px]"
-          />
-        </label>
+        <FormField id="settle-without-payment-note" label={t('settleWithoutPayment.noteLabel')}>
+          <Textarea id="settle-without-payment-note" value={note} onChange={(e) => setNote(e.target.value)} required rows={3} />
+        </FormField>
       </ConfirmDialog>
     </>
   );

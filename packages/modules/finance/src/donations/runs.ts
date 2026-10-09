@@ -586,7 +586,7 @@ export async function startConfirmationRun(deps: Deps, ctx: CallContext, input: 
     financeAudit(tx, deps, ctx, {
       action: 'finance.confirmationRun.start', entity: 'financeConfirmationRun', id: runId,
       after: { year: v.year, minCents: preview.minCents, excludedCount: preview.excludedContactIds.length, followUpOfRunId: v.followUpOfRunId ?? null, startedOn: issuedOn, itemCount: items.filter((i) => i.state === 'pending').length, channel: ctx.channel },
-      summary: `Serienlauf ${v.year} gestartet`,
+      params: { year: v.year },
     });
     return ok(runViewInternal(tx, runId)!);
   });
@@ -609,7 +609,7 @@ function settleItemInternal(deps: Deps, ctx: CallContext, row: FinanceConfirmati
       .where(and(eq(financeConfirmationRunItems.id, row.id), eq(financeConfirmationRunItems.state, 'pending')))
       .run().changes;
     if (changed !== 1) return;
-    financeAudit(tx, deps, ctx, { action: 'finance.confirmationRun.item', entity: 'financeConfirmationRunItem', id: row.id, after: itemAudit(row, outcome), summary: `Posten des Serienlaufs ${outcome.state === 'issued' ? 'ausgestellt' : 'gescheitert'}` });
+    financeAudit(tx, deps, ctx, { action: 'finance.confirmationRun.item', entity: 'financeConfirmationRunItem', id: row.id, after: itemAudit(row, outcome), params: { issued: outcome.state === 'issued' } });
   });
 }
 
@@ -676,7 +676,7 @@ export async function continueConfirmationRun(deps: Deps, ctx: CallContext, inpu
     financeAudit(tx, deps, ctx, {
       action: 'finance.confirmationRun.finish', entity: 'financeConfirmationRun', id: run.id,
       after: { itemCount: rows.filter((i) => i.state !== 'skipped').length, issuedCount: rows.filter((i) => i.state === 'issued').length, failedCount: rows.filter((i) => i.state === 'failed').length, finished: true },
-      summary: `Serienlauf ${run.year} abgeschlossen`,
+      params: { year: run.year },
     });
   });
   return ok(runViewInternal(deps.db, run.id)!);
@@ -737,7 +737,7 @@ export async function dispatchRunConfirmations(deps: Deps, ctx: CallContext, inp
     if (!run.dispatchedAt) {
       tx.update(financeConfirmationRuns).set({ dispatchedAt: v.sentAt, dispatchedVia: v.sentVia }).where(and(eq(financeConfirmationRuns.id, run.id), isNull(financeConfirmationRuns.dispatchedAt))).run();
     }
-    financeAudit(tx, deps, ctx, { action: 'finance.confirmationRun.dispatch', entity: 'financeConfirmationRun', id: run.id, after: { dispatchedVia: v.sentVia }, summary: `Versand für ${dispatched} Bestätigungen des Serienlaufs ${run.year} vermerkt` });
+    financeAudit(tx, deps, ctx, { action: 'finance.confirmationRun.dispatch', entity: 'financeConfirmationRun', id: run.id, after: { dispatchedVia: v.sentVia }, params: { year: run.year, count: dispatched } });
     return ok(runViewInternal(tx, run.id)!);
   });
 }

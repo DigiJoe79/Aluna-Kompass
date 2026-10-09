@@ -26,8 +26,6 @@ const ALLOWED: Allowlist = {
   'app/(shell)/finance/cash/count-dialog.tsx':
     'Zählhilfe mit eigenem Unterraster für die Stückelungen (`grid-cols-3`); die Felder des Dialogs stehen im FormGrid (Entscheidung zum Inventar § D).',
   // — Anzeige, kein Formular: Seitenlayout einer Lesesicht oder Definitionsliste neben bzw. in einem Formular.
-  'app/(shell)/dms/[id]/document-detail.tsx':
-    'Seitenlayout der Lesesicht: Dokumentvorschau neben der Angabenspalte (`lg:grid-cols-3`), kein Formular; der Storno-Dialog steht im FormGrid (Inventar § 3 C).',
   'app/(shell)/finance/approvals/approval-detail.tsx':
     'Seitenlayout der Freigabe: Positionen neben der Belegvorschau (`xl:grid-cols-[…]`), kein Formularraster; die Entscheidung je Position steht im FormGrid (Inventar § 3 D).',
   'app/(shell)/finance/partners/[id]/partner-detail.tsx':
@@ -36,6 +34,8 @@ const ALLOWED: Allowlist = {
     'Dialoglayout: Voraussetzungen neben der Vorschau der Bestätigung (`lg:grid-cols-[minmax(0,1fr)_400px]`), kein Formularraster; die Angaben zur Sachspende stehen im FormGrid (Inventar § 3 D).',
   'app/(shell)/finance/donations/confirmations-table.tsx':
     'Aufklapp-Detail einer Tabellenzeile (`md:grid-cols-[2fr_1fr]`), Anzeige, kein Formular; Versand- und Rückholdialog stehen im FormGrid (Inventar § 3 D).',
+  'app/setup/import/import-form.tsx':
+    'Inhalt des Archivs als Definitionsliste (`grid-cols-2`), Anzeige, kein Formular; die Dateiwahl darüber ist ein einzelnes FormField ohne Raster.',
   'app/(shell)/finance/imports/format/csv-assistant.tsx':
     'Probezeile als Definitionsliste (`grid-cols-[max-content_1fr]`), Anzeige, kein Formular; die Felder der Schritte stehen im FormGrid (Inventar § 3 D).',
 };

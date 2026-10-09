@@ -102,7 +102,7 @@ export const auditLog = sqliteTable(
     entityId: text('entity_id'),
     before: text('before'), // JSON
     after: text('after'), // JSON
-    summary: text('summary').notNull(),
+    params: text('params'), // JSON, Werte für den Satz der Aktion (Spec Protokoll § 2)
     apiTokenId: text('api_token_id'),
     ipAddress: text('ip_address'),
     requestId: text('request_id').notNull(),

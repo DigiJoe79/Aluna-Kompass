@@ -19,7 +19,7 @@ describe('switching finance on, the way Verwaltung → Module would', () => {
     const admin = ctxWith(['modules.manage', 'settings.manage', 'dms.manage']);
 
     // Voraussetzungen von Finanzen (dependsOn) einschalten, wie es eine echte Installation vorher täte.
-    deps.db.transaction((tx) => writeSettingInternal(tx, deps, systemContext(), 'modules.enabled', ['contacts', 'dms', 'projects'], 'test.enable'));
+    deps.db.transaction((tx) => writeSettingInternal(tx, deps, systemContext(), 'modules.enabled', ['contacts', 'dms', 'projects']));
 
     const enabled = await setModuleEnabled(deps, admin, { key: 'finance', enabled: true });
     expect(enabled.ok).toBe(true);

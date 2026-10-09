@@ -1,4 +1,5 @@
-import { storeMediaAsset, unwrap } from '@kompass/core';
+import { projectsModule } from '../src/manifest';
+import { coreModule, storeMediaAsset, unwrap } from '@kompass/core';
 import { createTestDeps, ctxWith, insertUser } from '@kompass/core/testing';
 import { describe, expect, it } from 'vitest';
 import { projectsMediaReferences } from '../src/references';
@@ -10,7 +11,7 @@ const SVG = new TextEncoder().encode('<svg xmlns="http://www.w3.org/2000/svg" wi
 
 describe('projectsMediaReferences', () => {
   it('names the project that uses an image, and nothing for a stranger', async () => {
-    const deps = createTestDeps();
+    const deps = createTestDeps({ manifests: [coreModule, projectsModule] });
     const ctx = ctxWith(['media.upload', 'projects.manage'], insertUser(deps, {}));
     const asset = unwrap(await storeMediaAsset(deps, ctx, { originalName: 'hof.png', bytes: PNG }));
     const other = unwrap(await storeMediaAsset(deps, ctx, { originalName: 'x.svg', bytes: SVG, declaredMimeType: 'image/svg+xml' }));

@@ -2,29 +2,41 @@
 
 import type { AnimalListItem } from '@kompass/module-animals';
 import { useTranslations } from 'next-intl';
-import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useTransition } from 'react';
 import { useDateFormat } from '@/components/date-format-provider';
 import { EmptyState } from '@/components/empty-state';
+import { FilterBar, selectFilter } from '@/components/filter-bar';
 import { PublishSwitch } from '@/components/forms/publish-switch';
 import { SelectionBar } from '@/components/selection-bar';
 import { SortableHead } from '@/components/sortable-head';
 import { StatusBadge } from '@/components/status-badge';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Input } from '@/components/ui/input';
-import { Select } from '@/components/ui/select';
 import { RowLink, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { SearchField } from '@/components/search-field';
+import { ViewTabs } from '@/components/view-tabs';
 import { listKeyOf, useListSelection } from '@/lib/use-list-selection';
 import { useUrlFilters } from '@/lib/use-url-filters';
-import { cn } from '@/lib/utils';
 import { setAnimalPublishedAction } from './actions';
 import { LIST_LOCATIONS, LIST_STATUSES, listQueryString } from './list-params';
 import { ProfileExportButton } from './profile-export-button';
 
 type Filters = { text: string; status: string; location: string; published: string };
 
-export function AnimalList({ animals, total, reviewPending, canExport }: { animals: AnimalListItem[]; total: number; reviewPending: number; canExport: boolean }) {
+export function AnimalList({
+  animals,
+  total,
+  reviewPending,
+  tabCounts,
+  canExport,
+}: {
+  animals: AnimalListItem[];
+  total: number;
+  reviewPending: number;
+  /** Mit den Filtern der Leiste gezählt, ohne die Sicht — was ein Klick auf den Reiter zeigen würde. */
+  tabCounts: { all: number; reviewPending: number };
+  canExport: boolean;
+}) {
   const t = useTranslations('animals.list');
   const f = useTranslations('animals.form');
   const dates = useDateFormat();
@@ -66,38 +78,48 @@ export function AnimalList({ animals, total, reviewPending, canExport }: { anima
   const selection = useListSelection(listKeyOf(params), animals);
   const selected = animals.filter((a) => selection.ids.has(a.id));
   const allSelected = animals.length > 0 && selected.length === animals.length;
-  const viewClass = (active: boolean) => cn('rounded-sm px-3 py-1.5 text-[13px] font-semibold', active ? 'bg-brand-soft text-brand-ink' : 'text-muted-ink hover:bg-surface-2');
+  const filtered = Boolean(filters.text.trim() || filters.status || filters.location || filters.published);
+  const reset = () => applyFilters({ text: '', status: '', location: '', published: '' });
 
   return (
     <div className="flex flex-col gap-3">
-      <nav className="flex flex-wrap gap-1" aria-label={t('views')}>
-        <Link href={viewHref({ review: undefined })} aria-current={review ? undefined : 'page'} className={viewClass(!review)}>
-          {t('all', { count: total })}
-        </Link>
-        <Link href={viewHref({ review: '1', sort: undefined, dir: undefined })} aria-current={review ? 'page' : undefined} className={viewClass(review)}>
-          {t('reviewPending', { count: reviewPending })}
-        </Link>
-      </nav>
+      {/* Die Reiter behalten die Filter (`viewHref`); ihre Zahlen folgen den Filtern (MUSTER § L, Designer 2026-10-08). */}
+      <ViewTabs
+        label={t('views')}
+        current={review ? 'review' : 'all'}
+        tabs={[
+          { key: 'all', label: t('all'), href: viewHref({ review: undefined }), count: tabCounts.all },
+          { key: 'review', label: t('reviewPending'), href: viewHref({ review: '1', sort: undefined, dir: undefined }), count: tabCounts.reviewPending },
+        ]}
+      />
 
-      <div className="flex flex-wrap items-center gap-3">
-        <Input aria-label={t('search')} placeholder={t('search')} value={filters.text} onChange={(e) => applyFilters({ text: e.target.value })} className="w-[260px]" />
-        <Select aria-label={t('filterStatus')} value={filters.status} onChange={(e) => applyFilters({ status: e.target.value })} className="w-auto">
-          <option value="">{t('allStatuses')}</option>
-          {LIST_STATUSES.map((s) => <option key={s} value={s}>{f(`status.${s}`)}</option>)}
-        </Select>
-        <Select aria-label={t('filterLocation')} value={filters.location} onChange={(e) => applyFilters({ location: e.target.value })} className="w-auto">
-          <option value="">{t('allLocations')}</option>
-          {LIST_LOCATIONS.map((l) => <option key={l} value={l}>{f(`locations.${l}`)}</option>)}
-        </Select>
-        <Select aria-label={t('filterPublished')} value={filters.published} onChange={(e) => applyFilters({ published: e.target.value })} className="w-auto">
-          <option value="">{t('publishedAny')}</option>
-          <option value="1">{t('publishedYes')}</option>
-          <option value="0">{t('publishedNo')}</option>
-        </Select>
-        <span className="ml-auto text-[13px] text-muted-ink">{t('countLine', { shown: animals.length, total })}</span>
-      </div>
+      <FilterBar
+        search={<SearchField value={filters.text} onChange={(text) => applyFilters({ text })} placeholder={t('search')} />}
+        searchActive={filters.text.trim() ? { chip: filters.text.trim(), onClear: () => applyFilters({ text: '' }) } : undefined}
+        filters={[
+          selectFilter({ key: 'status', label: t('filterStatus'), value: filters.status, options: LIST_STATUSES.map((s) => ({ value: s, label: f(`status.${s}`) })), onChange: (status) => applyFilters({ status }) }),
+          selectFilter({ key: 'location', label: t('filterLocation'), value: filters.location, options: LIST_LOCATIONS.map((l) => ({ value: l, label: f(`locations.${l}`) })), onChange: (location) => applyFilters({ location }) }),
+          selectFilter({
+            key: 'published',
+            label: t('filterPublished'),
+            value: filters.published,
+            options: [
+              { value: '1', label: t('publishedYes') },
+              { value: '0', label: t('publishedNo') },
+            ],
+            onChange: (published) => applyFilters({ published }),
+          }),
+        ]}
+        onApply={(values) => applyFilters(values as Partial<Filters>)}
+        // „Prüfung offen“ ist eine Sicht, kein Filter: Ihre Gesamtzahl ist die der Sicht.
+        count={{ shown: animals.length, total: review ? reviewPending : total, noun: { one: t('nounOne'), other: t('nounOther'), dative: t('nounDative') } }}
+        onReset={reset}
+      />
 
-      {animals.length === 0 ? (
+      {animals.length === 0 && filtered ? (
+        // Befund 4: Der Umschalter „Alle“ behält die Filter — der Ausweg ist Zurücksetzen, die Ansicht bleibt.
+        <EmptyState filtered={{ noun: t('noMatchNoun'), onReset: reset }} />
+      ) : animals.length === 0 ? (
         <EmptyState title={t('noMatchTitle')} text={t('noMatchText')} />
       ) : (
         <div className="overflow-hidden rounded-md border border-line bg-surface">

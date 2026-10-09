@@ -148,7 +148,7 @@ export function reverseInternal(
     entity: 'financeEntry',
     id: reversalId,
     after: { status: reversal.status, number: reversal.number, entryDate: reversal.entryDate, reversesEntryId: reversal.reversesEntryId, channel: ctx.channel, cashWarning: reversal.cashWarningReason !== null },
-    summary: `Buchung ${original.number} storniert durch ${reversal.number}`,
+    params: { number: original.number, reversalNumber: reversal.number },
   });
 
   return ok({ reversal: entryViewInternal(tx, reversalId)!, correctionDraft });

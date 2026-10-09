@@ -131,22 +131,33 @@ test.describe('animals', () => {
 
   test('filtert und sortiert die Liste; der Weg ins Profil behält die Auswahl', async ({ page }) => {
     await page.goto('/animals');
-    await expect(page.getByRole('link', { name: /^Alle \(6\)$/ })).toBeVisible();
-    await page.getByRole('link', { name: /^Prüfung offen \(2\)$/ }).click();
+    await expect(page.getByRole('link', { name: /^Alle\s*6$/ })).toBeVisible();
+    await page.getByRole('link', { name: /^Prüfung offen\s*2$/ }).click();
     await expect(page).toHaveURL(/review=1/);
     await expect(page.getByTestId('animal-row')).toHaveCount(2);
     // Ohne eigene Wahl steht oben, was am längsten wartet.
     await expect(page.getByTestId('animal-row').first()).toContainText('Prüfung offen');
-    await expect(page.getByText('2 von 6 Hunden')).toBeVisible();
+    // „Prüfung offen“ ist eine Sicht, kein Filter: Die Zählzeile zählt die Sicht.
+    await expect(page.getByText('2 Hunde', { exact: true })).toBeVisible();
+    await expect(page.getByRole('link', { name: /^Prüfung offen\s*2$/ })).toHaveAttribute('aria-current', 'page');
 
-    // Kein Treffer ist nicht „noch kein Hund“: Umschalter und Filter bleiben stehen.
+    // Kein Treffer ist nicht „noch kein Hund“: Umschalter und Filter bleiben stehen, der Ausweg ist Zurücksetzen.
     await page.getByLabel('Status', { exact: true }).selectOption('adopted');
-    await expect(page.getByText('Kein Hund passt zu dieser Auswahl.')).toBeVisible();
-    await expect(page.getByText('0 von 6 Hunden')).toBeVisible();
-    await page.getByLabel('Status', { exact: true }).selectOption('');
+    await expect(page.getByText('Kein Hund passt zu diesen Filtern.')).toBeVisible();
+    await expect(page.getByText('0 von 2 Hunden')).toBeVisible();
+    await expect(page.getByLabel('Status', { exact: true })).toHaveValue('adopted');
+    // Die Reiter zeigen, was ein Klick zeigen würde: mit dem Status, ohne die Sicht (Designer 2026-10-08).
+    await expect(page.getByRole('link', { name: /^Alle\s*2$/ })).toBeVisible();
+    await expect(page.getByRole('link', { name: /^Prüfung offen$/ })).toBeVisible();
+    await page.getByLabel('Status', { exact: true }).selectOption('lookingForHome');
+    await expect(page.getByRole('link', { name: /^Alle\s*3$/ })).toBeVisible();
+    await expect(page.getByRole('link', { name: /^Prüfung offen\s*2$/ })).toBeVisible();
+    await page.getByRole('button', { name: 'Filter zurücksetzen' }).last().click();
+    await expect(page).not.toHaveURL(/status=/);
+    await expect(page).toHaveURL(/review=1/);
     await expect(page.getByTestId('animal-row')).toHaveCount(2);
 
-    await page.getByRole('link', { name: /^Alle \(6\)$/ }).click();
+    await page.getByRole('link', { name: /^Alle\s*6$/ }).click();
     await expect(page.getByTestId('animal-row')).toHaveCount(6);
     await page.getByRole('button', { name: 'Sortieren nach Hund' }).click(); // erster Klick: absteigend
     await expect(page.getByTestId('animal-row').first()).toContainText('Pelle');
@@ -200,7 +211,7 @@ test.describe('animals', () => {
     await expect(pelle).not.toContainText('Prüfung offen');
     await expect(pelle.getByRole('cell').nth(5)).toHaveText('2'); // Fotozahl (Zelle 0 ist das Kästchen der Auswahl)
     expect(await pelle.locator('img').getAttribute('src')).not.toBe(thumb); // neues Hauptfoto
-    await expect(page.getByRole('link', { name: /^Prüfung offen \(1\)$/ })).toBeVisible();
+    await expect(page.getByRole('link', { name: /^Prüfung offen\s*1$/ })).toBeVisible();
     await pelle.getByRole('link', { name: 'Pelle' }).click();
     await page.getByRole('tab', { name: 'Texte und Fotos' }).click();
     await expect(page.locator('[name="summary.de"]')).toHaveValue('Von Hand geprüfter Kurztext.');
@@ -405,7 +416,8 @@ test.describe('animals', () => {
     await expect(publish).toBeChecked();
 
     await page.goto(detailUrl);
-    await page.getByRole('button', { name: 'Tierprofil löschen' }).click();
+    await page.getByRole('button', { name: 'Weitere Aktionen' }).click();
+    await page.getByRole('menuitem', { name: 'Tierprofil löschen …' }).click();
     const dialog = page.getByRole('alertdialog', { name: 'Partnerhund löschen?' });
     await expect(dialog.getByText('Das ist noch veröffentlicht.')).toBeVisible();
     await expect(dialog.getByRole('button', { name: 'Löschen' })).toBeDisabled();

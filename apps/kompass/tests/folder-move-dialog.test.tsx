@@ -420,6 +420,6 @@ describe('FolderField for a form that only picks (verb „pick“)', () => {
     const place = () => document.querySelector('[data-folder-path]')!;
     expect(place().className).toContain('border-line-strong');
     rerender(<FolderField value="Verträge" folders={folders} label="Ordner" emptyLabel="Eingangskorb" variant="field" suggested />);
-    expect(place().className).toContain('border-info');
+    expect(place().className).toContain('border-agent');
   });
 });

@@ -142,7 +142,7 @@ export async function exportBundle(deps: Deps, ctx: CallContext, input: BundleSe
     const included = entries.filter((e) => e.fileName !== null).length;
     deps.db.transaction((tx: DbOrTx) => {
       // Nummern, nie Betreffe: Das Protokoll ist unlöschbar und durchsuchbar.
-      recordAudit(tx, deps, ctx, { action: 'dms.export', entityType: 'documentBundle', entityId: filename, after: { numbers: entries.map((e) => e.number), included, listedOnly: entries.length - included }, summary: `Bündel mit ${included} von ${entries.length} Dokumenten gezogen` });
+      recordAudit(tx, deps, ctx, { action: 'dms.export', entityType: 'documentBundle', entityId: filename, after: { numbers: entries.map((e) => e.number), included, listedOnly: entries.length - included }, params: { included, total: entries.length } });
     });
     return ok({ archivePath, filename, included, listedOnly: entries.length - included });
   } catch (error) {

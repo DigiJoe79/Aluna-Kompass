@@ -283,6 +283,26 @@ Sonst ist nichts von Hand zu tun. Wer sich wundert:
   Eingabemaske ordnen; ohne sie bekommt jedes Feld eine Breite nach seinem Typ.
 - MCP-Clients sind nicht betroffen.
 
+### Von 0.2.8 auf 0.2.9
+
+Die Fassung 0.2.9 bringt eine Migration mit (`0006`): Das Änderungsprotokoll
+speichert statt eines fertigen Satzes nur noch Werte. `/api/health` meldet
+danach `migrationCount: 7`. Vor dem Update gehört wie immer ein Backup
+(Schritt 1) dazu; danach ist nichts zu tun. Backups von vor dem Update lassen
+sich weiter einspielen, die Migration zieht sie hoch.
+
+Wer sich wundert:
+
+- **Alte Protokolleinträge zeigen nur die Aktion.** Ihr gespeicherter Satz
+  entfällt mit der Migration; Zeit, Person, Kanal, Datensatz und die
+  geänderten Felder bleiben. Neue Einträge zeigen einen Satz mit den Werten.
+- **Ein Agent liest `summary` nicht mehr.** `audit_query` und `audit_get`
+  liefern stattdessen `params` (Werte der Aktion, Personen als ID) und
+  `paramUserNames`. Eigene Auswertungen, die `summary` lasen, brauchen eine
+  Anpassung.
+- **„Template“ heißt in der Oberfläche „Vorlage der Webseite“.** Die Datei
+  selbst heißt weiter `kompass.template.ts`.
+
 ### Von 0.2.7 auf 0.2.8
 
 Die Fassung 0.2.8 bringt keine Migration mit; `/api/health` meldet weiter
@@ -354,10 +374,10 @@ Token wirkt mit den Rechten des Nutzers, dem es gehört; jeder Vorgang steht im
 sondern die Inhalte, die ein Astro-Template deklariert. Beim ersten Start legt
 der Container das mitgelieferte Basis-Template dort ab; ein vorhandenes bleibt
 unberührt, auch bei einem Update. Der Verein ersetzt es durch sein eigenes und
-liest es unter Einstellungen → Webseite → Template ein.
+liest es unter Einstellungen → Webseite → Vorlage ein.
 
 **Startinhalte.** Bringt ein Template ein Verzeichnis `seed/` mit, erscheint
-unter Einstellungen → Webseite → Template der Knopf „Startinhalte“ — einmalig, solange die
+unter Einstellungen → Webseite → Vorlage der Knopf „Startinhalte“ — einmalig, solange die
 Webseite leer ist. Danach ist die Datenbank die Quelle. Das mitgelieferte
 Basis-Template hat kein `seed/`.
 

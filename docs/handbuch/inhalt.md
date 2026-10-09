@@ -5,11 +5,11 @@
   - [Speichern und Meldungen](einstieg/speichern-und-meldungen.md)
 - [Startseite](startseite.md)
 - Webseite
-  - [Template einlesen](webseite/template-einlesen.md)
+  - [Vorlage einlesen](webseite/template-einlesen.md)
   - [Variablen](webseite/variablen.md)
   - [Sammlungen](webseite/sammlungen.md)
   - [Publizieren](webseite/publizieren.md)
-  - [Ein Template schreiben](webseite/template-schreiben.md)
+  - [Eine Vorlage (Template-Datei) schreiben](webseite/template-schreiben.md)
 - [Projekte](projekte.md)
 - [Tiere](tiere.md)
 - [Kontakte](kontakte.md)

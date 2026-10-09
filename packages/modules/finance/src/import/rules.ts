@@ -203,7 +203,7 @@ export async function saveImportRule(deps: Deps, ctx: CallContext, input: unknow
     };
     if (before) tx.update(financeImportRules).set(row).where(eq(financeImportRules.id, row.id)).run();
     else tx.insert(financeImportRules).values(row).run();
-    financeAudit(tx, deps, ctx, { action: 'finance.importRule.save', entity: 'financeImportRule', id: row.id, before: before ? auditOf(before) : undefined, after: auditOf(row), summary: `Regel ${row.id} gespeichert` });
+    financeAudit(tx, deps, ctx, { action: 'finance.importRule.save', entity: 'financeImportRule', id: row.id, before: before ? auditOf(before) : undefined, after: auditOf(row) });
     return ok(ruleViewsInternal(tx, [row])[0]!);
   });
 }
@@ -238,7 +238,7 @@ export async function deleteImportRule(deps: Deps, ctx: CallContext, input: unkn
   if (!before) return notFound('financeImportRule', parsed.value.id);
   return deps.db.transaction((tx: DbOrTx) => {
     tx.delete(financeImportRules).where(eq(financeImportRules.id, before.id)).run();
-    financeAudit(tx, deps, ctx, { action: 'finance.importRule.delete', entity: 'financeImportRule', id: before.id, before: auditOf(before), summary: `Regel ${before.id} gelöscht` });
+    financeAudit(tx, deps, ctx, { action: 'finance.importRule.delete', entity: 'financeImportRule', id: before.id, before: auditOf(before) });
     return ok({ id: before.id });
   });
 }

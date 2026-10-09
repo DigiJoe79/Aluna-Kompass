@@ -11,6 +11,7 @@ import { FormCell, FormGrid, FormRowBreak } from '@/components/forms/form-grid';
 import { useActionFeedback } from '@/components/forms/use-action-feedback';
 import { Notice } from '@/components/notice';
 import { AmountField } from '@/components/finance/amount-field';
+import { Segmented } from '@/components/ui/segmented';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
@@ -121,19 +122,12 @@ export function CountDialog({ account, today, canCreateContact }: { account: Cas
             <div className="mt-3">
               <FormGrid>
                 <FormCell size="s">
-                  <div role="group" aria-label={t('modeGroup')} className="inline-flex h-[var(--field-h)] overflow-hidden rounded-md border border-line-strong">
-                    {(['cash', 'box'] as const).map((m) => (
-                      <button
-                        key={m}
-                        type="button"
-                        aria-pressed={mode === m}
-                        onClick={() => setMode(m)}
-                        className={mode === m ? 'bg-selected px-3 text-[13px] font-semibold text-selected-ink' : 'bg-surface-2 px-3 text-[13px] text-ink-2'}
-                      >
-                        {t(`mode.${m}`)}
-                      </button>
-                    ))}
-                  </div>
+                  <Segmented
+                    aria-label={t('modeGroup')}
+                    options={(['cash', 'box'] as const).map((m) => ({ value: m, label: t(`mode.${m}`) }))}
+                    value={mode}
+                    onValueChange={setMode}
+                  />
                 </FormCell>
                 {mode === 'box' ? (
                   <FormField id="countBoxLabel" label={t('boxLabel')} required>

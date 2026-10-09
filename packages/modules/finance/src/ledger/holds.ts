@@ -442,7 +442,7 @@ export function financeRecordDeleted(tx: DbOrTx, deps: Deps, ctx: CallContext, e
     const links = tx.select().from(financeEntryDocuments).where(eq(financeEntryDocuments.documentId, id)).all();
     for (const link of links) {
       tx.update(financeEntryDocuments).set({ documentId: null, documentDeletedAt: now }).where(eq(financeEntryDocuments.id, link.id)).run();
-      financeAudit(tx, deps, ctx, { action: 'finance.entry.documentGone', entity: 'financeEntry', id: link.entryId, after: documentGoneAuditFields(link.entryId), summary: `Beleg an Buchung ${link.entryId} entfernt` });
+      financeAudit(tx, deps, ctx, { action: 'finance.entry.documentGone', entity: 'financeEntry', id: link.entryId, after: documentGoneAuditFields(link.entryId) });
     }
     tx.update(financeOpenItems).set({ documentId: null }).where(eq(financeOpenItems.documentId, id)).run();
     tx.update(financeAllocationCorrections).set({ proofDocumentId: null }).where(eq(financeAllocationCorrections.proofDocumentId, id)).run();
@@ -460,25 +460,25 @@ export function financeRecordDeleted(tx: DbOrTx, deps: Deps, ctx: CallContext, e
     const evidenceRows = tx.select().from(financePartnerEvidence).where(eq(financePartnerEvidence.documentId, id)).all();
     for (const row of evidenceRows) {
       tx.update(financePartnerEvidence).set({ documentId: null }).where(eq(financePartnerEvidence.id, row.id)).run();
-      financeAudit(tx, deps, ctx, { action: 'finance.partnerEvidence.documentGone', entity: 'financePartnerEvidence', id: row.id, after: { paymentId: row.paymentId, kind: row.kind }, summary: `Dokument des Nachweises ${row.id} entfernt` });
+      financeAudit(tx, deps, ctx, { action: 'finance.partnerEvidence.documentGone', entity: 'financePartnerEvidence', id: row.id, after: { paymentId: row.paymentId, kind: row.kind } });
     }
     // F8b: der Beschluss von zurückgelegtem Geld (Stammsatz, Vortrag) und eines seiner Vorgänge behalten die Grabstein-Zeile,
     // nur die Dokument-ID verschwindet (vier Spalten: resolutionDocumentId ×2, carryForwardDocumentId, documentId der Umwidmung).
     for (const reserve of tx.select().from(financeReserves).where(eq(financeReserves.resolutionDocumentId, id)).all()) {
       tx.update(financeReserves).set({ resolutionDocumentId: null }).where(eq(financeReserves.id, reserve.id)).run();
-      financeAudit(tx, deps, ctx, { action: 'finance.reserve.documentGone', entity: 'financeReserve', id: reserve.id, after: { kind: reserve.kind, isActive: reserve.isActive }, summary: `Beschluss von zurückgelegtem Geld ${reserve.id} entfernt` });
+      financeAudit(tx, deps, ctx, { action: 'finance.reserve.documentGone', entity: 'financeReserve', id: reserve.id, after: { kind: reserve.kind, isActive: reserve.isActive }, params: { carryForward: false } });
     }
     for (const reserve of tx.select().from(financeReserves).where(eq(financeReserves.carryForwardDocumentId, id)).all()) {
       tx.update(financeReserves).set({ carryForwardDocumentId: null }).where(eq(financeReserves.id, reserve.id)).run();
-      financeAudit(tx, deps, ctx, { action: 'finance.reserve.documentGone', entity: 'financeReserve', id: reserve.id, after: { kind: reserve.kind, isActive: reserve.isActive }, summary: `Vortragsbeschluss von zurückgelegtem Geld ${reserve.id} entfernt` });
+      financeAudit(tx, deps, ctx, { action: 'finance.reserve.documentGone', entity: 'financeReserve', id: reserve.id, after: { kind: reserve.kind, isActive: reserve.isActive }, params: { carryForward: true } });
     }
     for (const movement of tx.select().from(financeReserveMovements).where(eq(financeReserveMovements.resolutionDocumentId, id)).all()) {
       tx.update(financeReserveMovements).set({ resolutionDocumentId: null }).where(eq(financeReserveMovements.id, movement.id)).run();
-      financeAudit(tx, deps, ctx, { action: 'finance.reserveMovement.documentGone', entity: 'financeReserveMovement', id: movement.id, after: { reserveId: movement.reserveId, kind: movement.kind }, summary: `Beschluss des Vorgangs ${movement.id} entfernt` });
+      financeAudit(tx, deps, ctx, { action: 'finance.reserveMovement.documentGone', entity: 'financeReserveMovement', id: movement.id, after: { reserveId: movement.reserveId, kind: movement.kind } });
     }
     for (const transfer of tx.select().from(financePurposeTransfers).where(eq(financePurposeTransfers.documentId, id)).all()) {
       tx.update(financePurposeTransfers).set({ documentId: null }).where(eq(financePurposeTransfers.id, transfer.id)).run();
-      financeAudit(tx, deps, ctx, { action: 'finance.purposeTransfer.documentGone', entity: 'financePurposeTransfer', id: transfer.id, after: { state: transfer.state, number: transfer.number }, summary: `Beschluss der Umwidmung ${transfer.number} entfernt` });
+      financeAudit(tx, deps, ctx, { action: 'finance.purposeTransfer.documentGone', entity: 'financePurposeTransfer', id: transfer.id, after: { state: transfer.state, number: transfer.number }, params: { number: transfer.number } });
     }
     return;
   }
@@ -494,18 +494,18 @@ export function financeRecordDeleted(tx: DbOrTx, deps: Deps, ctx: CallContext, e
         tx.delete(financePartnerEvidence).where(eq(financePartnerEvidence.paymentId, draft.id)).run();
         tx.delete(documentLinks).where(and(eq(documentLinks.entityType, 'financePartnerPayment'), eq(documentLinks.entityId, draft.id))).run();
         tx.delete(financePartnerPayments).where(eq(financePartnerPayments.id, draft.id)).run();
-        financeAudit(tx, deps, ctx, { action: 'finance.partnerPayment.draftDelete', entity: 'financePartnerPayment', id: draft.id, before: { state: draft.state, positionCount }, summary: `Zahlung an Partner (Entwurf) ${draft.id} mit dem Kontakt gelöscht` });
+        financeAudit(tx, deps, ctx, { action: 'finance.partnerPayment.draftDelete', entity: 'financePartnerPayment', id: draft.id, before: { state: draft.state, positionCount }, params: { withContact: true } });
       }
       tx.delete(documentLinks).where(and(eq(documentLinks.entityType, 'financePartner'), eq(documentLinks.entityId, partner.id))).run();
       tx.delete(financePartnerProfiles).where(eq(financePartnerProfiles.id, partner.id)).run();
-      financeAudit(tx, deps, ctx, { action: 'finance.partnerProfile.delete', entity: 'financePartnerProfile', id: partner.id, before: { status: partner.status, usualBasis: partner.usualBasis, usualProofMonths: partner.usualProofMonths, isActive: partner.isActive }, summary: `Angaben zum Partner ${partner.id} mit dem Kontakt gelöscht` });
+      financeAudit(tx, deps, ctx, { action: 'finance.partnerProfile.delete', entity: 'financePartnerProfile', id: partner.id, before: { status: partner.status, usualBasis: partner.usualBasis, usualProofMonths: partner.usualProofMonths, isActive: partner.isActive }, params: { withContact: true } });
     }
     // Die gelernten IBANs (F5) sind Arbeitsmaterial ohne eigenen Nachweis — sie gehen mit dem Kontakt.
     const rows = tx.select().from(financeContactBankAccounts).where(eq(financeContactBankAccounts.contactId, id)).all();
     for (const row of rows) {
       tx.delete(financeContactBankAccounts).where(eq(financeContactBankAccounts.id, row.id)).run();
       const learnedFrom = learnedFromInternal(tx, row.id);
-      financeAudit(tx, deps, ctx, { action: 'finance.contactIban.delete', entity: 'financeContactBankAccount', id: row.id, before: learnedFrom ? { learnedFrom } : undefined, summary: `Kontakt-IBAN ${row.id} mit dem Kontakt gelöscht` });
+      financeAudit(tx, deps, ctx, { action: 'finance.contactIban.delete', entity: 'financeContactBankAccount', id: row.id, before: learnedFrom ? { learnedFrom } : undefined, params: { withContact: true } });
     }
     // F8a: Entwürfe der Person sind Arbeitsmaterial ohne Nummer — sie gehen mit ihr. Eingereichte Anträge halten den
     // Kontakt fest (`contactHolds`), bis hierher kommt es mit ihnen nicht. Die Belege bleiben in der Akte, ihre Bezüge
@@ -515,13 +515,13 @@ export function financeRecordDeleted(tx: DbOrTx, deps: Deps, ctx: CallContext, e
       const positionCount = tx.delete(financeExpensePositions).where(eq(financeExpensePositions.claimId, draft.id)).run().changes;
       tx.delete(documentLinks).where(and(eq(documentLinks.entityType, 'financeExpenseClaim'), eq(documentLinks.entityId, draft.id))).run();
       tx.delete(financeExpenseClaims).where(eq(financeExpenseClaims.id, draft.id)).run();
-      financeAudit(tx, deps, ctx, { action: 'finance.expenseClaim.draftDelete', entity: 'financeExpenseClaim', id: draft.id, before: { state: draft.state, positionCount }, summary: `Auslage (Entwurf) ${draft.id} mit dem Kontakt gelöscht` });
+      financeAudit(tx, deps, ctx, { action: 'finance.expenseClaim.draftDelete', entity: 'financeExpenseClaim', id: draft.id, before: { state: draft.state, positionCount }, params: { withContact: true } });
     }
     // Die Anspruchsgrundlage der Person — der Antrag trägt seine eigene Abschrift.
     const terms = tx.select().from(financeContactWaiverTerms).where(eq(financeContactWaiverTerms.contactId, id)).get();
     if (terms) {
       tx.delete(financeContactWaiverTerms).where(eq(financeContactWaiverTerms.id, terms.id)).run();
-      financeAudit(tx, deps, ctx, { action: 'finance.contactWaiverTerms.delete', entity: 'financeContactWaiverTerms', id: terms.id, before: terms, summary: `Anspruchsgrundlage ${terms.id} mit dem Kontakt gelöscht` });
+      financeAudit(tx, deps, ctx, { action: 'finance.contactWaiverTerms.delete', entity: 'financeContactWaiverTerms', id: terms.id, before: terms });
     }
     return;
   }
@@ -530,7 +530,7 @@ export function financeRecordDeleted(tx: DbOrTx, deps: Deps, ctx: CallContext, e
     const settings = tx.select().from(financeProjectSettings).where(eq(financeProjectSettings.projectId, id)).get();
     if (!settings) return;
     tx.delete(financeProjectSettings).where(eq(financeProjectSettings.projectId, id)).run();
-    financeAudit(tx, deps, ctx, { action: 'finance.projectSettings.delete', entity: 'financeProjectSettings', id, before: settings, summary: `Finanzfelder von Projekt ${id} gelöscht` });
+    financeAudit(tx, deps, ctx, { action: 'finance.projectSettings.delete', entity: 'financeProjectSettings', id, before: settings });
     return;
   }
 }

@@ -27,7 +27,7 @@ async function setupWithContacts(now?: string) {
   const userId = insertUser(deps, { name: 'Admin', email: 'admin@kompass.local' });
   const ctx = ctxWith([...ALL_DMS, 'contacts.manage', 'contacts.view', 'followUps.view', 'followUps.manage'], userId);
   // Die Rollen der Kontakte kommen aus eingeschalteten Modulen (`contactRoleDefinitions`).
-  deps.db.transaction((tx) => writeSettingInternal(tx, deps, ctx, 'modules.enabled', ['contacts', 'dms'], 'test.enable'));
+  deps.db.transaction((tx) => writeSettingInternal(tx, deps, ctx, 'modules.enabled', ['contacts', 'dms']));
   await seedContacts(deps, ctx);
   return { deps, ctx };
 }
@@ -61,6 +61,20 @@ describe('seedDms', () => {
     expect(paths.some((p) => p.split('/').some((segment) => segment.length > 40))).toBe(true);
     const deep = deps.db.select().from(documents).all().filter((d) => d.folder === 'behoerden/amtsgericht/vereinsregister-2026');
     expect(deep.length).toBeGreaterThan(0);
+  });
+
+  it('legt die Briefe aus 0.1 ins Stichjahr, keine feste Jahreszahl (Befund 0.2.8/20)', async () => {
+    // 2031 ist das Stichjahr: Antrag und Bescheid gelten zwei Jahre davor, der Registerordner trägt das Jahr.
+    const { deps, ctx } = await setupWithContacts('2031-10-01T08:00:00.000Z');
+    await seedDms(deps, ctx);
+    const docs = deps.db.select().from(documents).all();
+    const bescheid = docs.find((d) => d.subject === 'Freistellungsbescheid');
+    expect(bescheid?.documentDate).toBe('2031-02-15');
+    expect(docs.some((d) => d.subject === 'Steuererklärung 2029 und Antrag auf Freistellung')).toBe(true);
+    expect(docs.filter((d) => d.folder === 'behoerden/amtsgericht/vereinsregister-2031').length).toBeGreaterThan(0);
+    const texts = [...docs.flatMap((d) => [d.subject, d.folder ?? '', d.fileName ?? '']), ...deps.db.select().from(documentFolders).all().map((f) => f.path)];
+    // Jede Jahreszahl hängt am Stichjahr: höchstens drei Jahre davor, nie die von 2026.
+    expect(texts.flatMap((text) => text.match(/\b20\d\d\b/g) ?? []).filter((year) => Number(year) < 2028 || Number(year) > 2031)).toEqual([]);
   });
 
   it('bringt einen umklassifizierten Eingang mit früherer Nummer (Spec 2026-09-19)', async () => {

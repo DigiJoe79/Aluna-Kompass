@@ -2,7 +2,8 @@
 
 import { Download } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useFormatter, useTranslations } from 'next-intl';
+import { useTranslations } from 'next-intl';
+import { useDateFormat } from '@/components/date-format-provider';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { RefusalNotice } from '@/components/forms/refusal-notice';
@@ -11,7 +12,7 @@ import type { ActionState } from '@/lib/actions';
 
 export function ExportCard({ lastExportAt }: { lastExportAt: string | null }) {
   const t = useTranslations('backup.export');
-  const format = useFormatter();
+  const fmt = useDateFormat();
   const router = useRouter();
   const tCommon = useTranslations('common');
   const [busy, setBusy] = useState(false);
@@ -51,7 +52,7 @@ export function ExportCard({ lastExportAt }: { lastExportAt: string | null }) {
       <div>
         <h3 className="text-[15px] font-semibold">{t('title')}</h3>
         <p className="mt-1 text-[14px] text-ink-2">{t('text')}</p>
-        <dl className="mt-3 grid grid-cols-[max-content_1fr] gap-x-6 gap-y-1 text-[13px]"><dt className="text-muted-ink">{t('last')}</dt><dd className="font-mono font-semibold">{lastExportAt ? format.dateTime(new Date(lastExportAt), { dateStyle: 'short', timeStyle: 'short' }) : '—'}</dd></dl>
+        <dl className="mt-3 grid grid-cols-[max-content_1fr] gap-x-6 gap-y-1 text-[13px]"><dt className="text-muted-ink">{t('last')}</dt><dd className="font-mono font-semibold">{lastExportAt ? fmt.dateTime(lastExportAt) : '—'}</dd></dl>
       </div>
       <div className="flex flex-col items-end gap-1 max-sm:items-start">
         <RefusalNotice action state={refusal} />

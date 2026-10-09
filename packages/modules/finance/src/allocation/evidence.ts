@@ -97,13 +97,14 @@ export async function addEvidenceUpload(deps: Deps, ctx: CallContext, input: unk
     bytes: v.bytes,
     typeKey: 'finance-partner-evidence',
     subject: evidenceSubject(v.kind, p.basis, paperDate(now), defaultLocale(deps)),
+    recordNumber: p.number ?? null,
     documentDate: now,
     links: [{ entityType: 'financePartnerPayment', entityId: p.id }],
     afterReceive: (tx, doc) => {
       const id = newId();
       const addedAt = isoNow(deps.clock);
       tx.insert(financePartnerEvidence).values({ id, paymentId: p.id, kind: v.kind, documentId: doc.id, foreignLanguage: v.foreignLanguage, explanationDe: v.explanationDe ?? null, coveredCents: v.coveredCents ?? null, addedByUserId: ctx.userId ?? 'system', addedAt }).run();
-      financeAudit(tx, deps, ctx, { action: 'finance.partnerEvidence.add', entity: 'financePartnerEvidence', id, after: auditFields({ id, paymentId: p.id, kind: v.kind, documentId: doc.id, foreignLanguage: v.foreignLanguage, explanationDe: null, coveredCents: v.coveredCents ?? null, addedByUserId: '', addedAt }), summary: `Nachweis ${id} an Zahlung an Partner ${p.number ?? p.id} hinzugefügt` });
+      financeAudit(tx, deps, ctx, { action: 'finance.partnerEvidence.add', entity: 'financePartnerEvidence', id, after: auditFields({ id, paymentId: p.id, kind: v.kind, documentId: doc.id, foreignLanguage: v.foreignLanguage, explanationDe: null, coveredCents: v.coveredCents ?? null, addedByUserId: '', addedAt }), params: { paymentNumber: p.number ?? null, way: 'upload' } });
       return null;
     },
   });
@@ -136,7 +137,7 @@ export async function addEvidenceLink(deps: Deps, ctx: CallContext, input: unkno
     const addedAt = isoNow(deps.clock);
     tx.insert(financePartnerEvidence).values({ id, paymentId: p.id, kind: v.kind, documentId: v.documentId, foreignLanguage: v.foreignLanguage, explanationDe: v.explanationDe ?? null, coveredCents: v.coveredCents ?? null, addedByUserId: ctx.userId ?? 'system', addedAt }).run();
     linkDocumentInternal(tx, deps, { documentId: v.documentId, entityType: 'financePartnerPayment', entityId: p.id });
-    financeAudit(tx, deps, ctx, { action: 'finance.partnerEvidence.add', entity: 'financePartnerEvidence', id, after: { paymentId: p.id, kind: v.kind, foreignLanguage: v.foreignLanguage, coveredCents: v.coveredCents ?? null, documentId: v.documentId }, summary: `Nachweis ${id} an Zahlung an Partner ${p.number ?? p.id} verknüpft` });
+    financeAudit(tx, deps, ctx, { action: 'finance.partnerEvidence.add', entity: 'financePartnerEvidence', id, after: { paymentId: p.id, kind: v.kind, foreignLanguage: v.foreignLanguage, coveredCents: v.coveredCents ?? null, documentId: v.documentId }, params: { paymentNumber: p.number ?? null, way: 'link' } });
     return ok(tx.select().from(financePartnerEvidence).where(eq(financePartnerEvidence.id, id)).get()!);
   });
 }
@@ -157,7 +158,7 @@ export async function updateEvidence(deps: Deps, ctx: CallContext, input: unknow
     const fields = { foreignLanguage: parsed.value.foreignLanguage ?? before.foreignLanguage, explanationDe: parsed.value.explanationDe === undefined ? before.explanationDe : parsed.value.explanationDe, coveredCents: parsed.value.coveredCents === undefined ? before.coveredCents : parsed.value.coveredCents };
     tx.update(financePartnerEvidence).set(fields).where(eq(financePartnerEvidence.id, before.id)).run();
     const after = tx.select().from(financePartnerEvidence).where(eq(financePartnerEvidence.id, before.id)).get()!;
-    financeAudit(tx, deps, ctx, { action: 'finance.partnerEvidence.update', entity: 'financePartnerEvidence', id: before.id, before: auditFields(before), after: auditFields(after), summary: `Nachweis ${before.id} geändert` });
+    financeAudit(tx, deps, ctx, { action: 'finance.partnerEvidence.update', entity: 'financePartnerEvidence', id: before.id, before: auditFields(before), after: auditFields(after) });
     return ok(after);
   });
 }
@@ -176,7 +177,7 @@ export async function removeEvidence(deps: Deps, ctx: CallContext, input: unknow
   if (p.acknowledgedAt) return financeConflict('evidenceAlreadyAcknowledged');
   return deps.db.transaction((tx: DbOrTx) => {
     tx.delete(financePartnerEvidence).where(eq(financePartnerEvidence.id, before.id)).run();
-    financeAudit(tx, deps, ctx, { action: 'finance.partnerEvidence.remove', entity: 'financePartnerEvidence', id: before.id, before: auditFields(before), summary: `Nachweis ${before.id} entfernt` });
+    financeAudit(tx, deps, ctx, { action: 'finance.partnerEvidence.remove', entity: 'financePartnerEvidence', id: before.id, before: auditFields(before) });
     return ok({ id: before.id });
   });
 }
@@ -234,7 +235,7 @@ export async function acknowledgeEvidence(deps: Deps, ctx: CallContext, input: u
       .run().changes;
     if (changed !== 1) return financeConflict('partnerPaymentNotSubmitted');
     const after = tx.select().from(financePartnerPayments).where(eq(financePartnerPayments.id, p.id)).get()!;
-    financeAudit(tx, deps, ctx, { action: 'finance.partnerPayment.acknowledge', entity: 'financePartnerPayment', id: p.id, before: { acknowledgedAt: null }, after: { acknowledgedAt: now, channel: ctx.channel }, summary: `Nachweise der Zahlung an Partner ${p.number ?? p.id} anerkannt` });
+    financeAudit(tx, deps, ctx, { action: 'finance.partnerPayment.acknowledge', entity: 'financePartnerPayment', id: p.id, before: { acknowledgedAt: null }, after: { acknowledgedAt: now, channel: ctx.channel }, params: { number: p.number ?? null } });
     return ok(after);
   });
 }

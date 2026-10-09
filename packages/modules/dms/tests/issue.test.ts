@@ -102,7 +102,7 @@ describe('voidDocumentInternal', () => {
     const row = deps.db.select().from(documents).where(eq(documents.id, document.id)).get()!;
     expect(row).toMatchObject({ status: 'voided', voidReason: 'Spender Müller hat widerrufen' });
     const entry = auditEntry(deps, 'dms.void');
-    expect(`${entry.summary}${entry.after}`).not.toContain('Müller');
+    expect(`${entry.params}${entry.after}`).not.toContain('Müller');
   });
 
   it('says so when the document is a draft or already voided', async () => {

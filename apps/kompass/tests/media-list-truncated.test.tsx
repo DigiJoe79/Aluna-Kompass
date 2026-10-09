@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen } from '@testing-library/react';
-import { NextIntlClientProvider } from 'next-intl';
+import { NextIntlClientProvider, useTranslations } from 'next-intl';
 import { afterEach, describe, expect, it } from 'vitest';
-import { ListTruncated } from '@/app/(shell)/admin/media/list-truncated';
+import { ListTruncated } from '@/components/list-truncated';
 import { MEDIA_LIST_LIMIT, capItems } from '@/app/(shell)/admin/media/types';
 import messages from '../messages/de.json';
 
@@ -27,11 +27,17 @@ describe('capItems', () => {
   });
 });
 
+/** So ruft die Mediathek den Baustein auf (`library-client.tsx`). */
+function Notice({ shown, matching }: { shown: number; matching: number }) {
+  const t = useTranslations('media');
+  return <ListTruncated shown={shown} total={matching} text={t('listTruncated', { shown, matching })} testId="media-list-truncated" />;
+}
+
 describe('ListTruncated', () => {
   const renderNotice = (shown: number, matching: number) =>
     render(
       <NextIntlClientProvider locale="de" messages={messages} timeZone="Europe/Berlin">
-        <ListTruncated shown={shown} matching={matching} />
+        <Notice shown={shown} matching={matching} />
       </NextIntlClientProvider>,
     );
 

@@ -59,7 +59,7 @@ export async function markNotReturn(deps: Deps, ctx: CallContext, input: unknown
     financeAudit(tx, deps, ctx, {
       action: 'finance.entry.notReturn', entity: 'financeNotReturnMark', id: entry.id,
       before: { entryId: entry.id, notReturn: before }, after: { entryId: entry.id, notReturn: v.notReturn },
-      summary: v.notReturn ? `Buchung ${entry.number ?? entry.id} als „keine Rückgabe“ gekennzeichnet` : `Kennzeichnung „keine Rückgabe“ an Buchung ${entry.number ?? entry.id} aufgehoben`,
+      params: { number: entry.number ?? null, notReturn: v.notReturn },
     });
     return ok({ entryId: entry.id, notReturn: v.notReturn });
   });

@@ -43,7 +43,7 @@ const code = (r: { ok: boolean; error?: { type: string; code?: string } }) => (r
 async function world() {
   const deps = createTestDeps({ manifests: [coreModule, contactsModule] });
   // Das Modul muss eingeschaltet sein: Halter und Rollen kennt der Kern nur von eingeschalteten Modulen.
-  deps.db.transaction((tx) => writeSettingInternal(tx, deps, ctxWith(['settings.manage']), 'modules.enabled', ['contacts'], 'test.enable'));
+  deps.db.transaction((tx) => writeSettingInternal(tx, deps, ctxWith(['settings.manage']), 'modules.enabled', ['contacts']));
   const adminId = insertUser(deps, { name: 'Admin', email: 'admin@kompass.local' });
   const helperId = insertUser(deps, { name: 'Helferin', email: 'helferin@kompass.local' });
   const admin = ctxWith(['users.manage', 'contacts.view', 'contacts.manage'], adminId);
@@ -68,7 +68,8 @@ describe('linking a user account to a contact', () => {
     expect(code(await linkUserToContact(deps, admin, { userId: adminId, contactId: c1 }))).toBe('contactAlreadyLinked');
     const entry = deps.db.select().from(schema.auditLog).all().at(-1)!;
     expect(entry.action).toBe('contacts.userLink.create');
-    expect(`${entry.summary}${entry.after}`).not.toMatch(/Erika|Eins|Helferin/);
+    expect(`${entry.params}${entry.after}`).not.toMatch(/Erika|Eins|Helferin/);
+    expect(JSON.parse(entry.params!)).toEqual({ targetUserId: helperId, contactId: c1 });
   });
 
   it('unlinking ends the row and keeps it; the account can be linked again', async () => {

@@ -111,10 +111,8 @@ export async function receiveDocument(
     deps, ctx, bytes,
     {
       docType, subject: parsed.value.subject, documentDate: parsed.value.documentDate, folder, links: parsed.value.links, relations: parsed.value.relations,
-      // Ist die Art geschützt, steht der Betreff nicht im Protokoll — nur die Nummer.
-      audit: isProtectedType(docType)
-        ? { after: { relations: parsed.value.relations.length }, summary: (number) => `Dokument ${number} eingegangen` }
-        : { after: { subject: parsed.value.subject, relations: parsed.value.relations.length }, summary: (number) => `Dokument ${number} („${parsed.value.subject}“) eingegangen` },
+      // Nie der Betreff im Protokoll, nur die Nummer (Spec Protokoll § 2).
+      audit: { after: { relations: parsed.value.relations.length }, via: 'post', recordNumber: '' },
     },
     // Befund Z: dieselbe Datei liegt schon vor — ein Hinweis mit Nummer, kein Verbot.
     (tx, doc) => ({ ...toRecord(deps, ctx, tx.select().from(documents).where(eq(documents.id, doc.id)).get()!, tx), duplicateOf: doc.duplicateOf }),
@@ -129,7 +127,8 @@ export interface IncomingFields {
   links: { entityType: string; entityId: string; role: 'sender' | 'recipient' | 'about' }[];
   relations: { relatedDocumentId: string; kind: (typeof RELATION_KINDS)[number] }[];
   /** Was im Protokoll steht. Der freie Eingang nennt den Betreff; ein Modul nie. */
-  audit: { after: Record<string, unknown>; summary: (number: string) => string };
+  /** `via`: als Post eingegangen oder in einem Vorgang hochgeladen (`linked.ts`), mit dessen Nummer (`recordNumber`, sonst leer). */
+  audit: { after: Record<string, unknown>; via: 'post' | 'record' | 'recordWithNumber'; recordNumber: string };
 }
 
 /**
@@ -168,7 +167,7 @@ export async function storeIncoming<T>(deps: Deps, ctx: CallContext, bytes: Uint
       for (const relation of fields.relations) {
         tx.insert(documentRelations).values({ id: newId(), documentId: id, relatedDocumentId: relation.relatedDocumentId, kind: relation.kind, createdByUserId: ctx.userId ?? 'system', createdAt: now }).run();
       }
-      recordAudit(tx, deps, ctx, { action: 'dms.receive', entityType: 'document', entityId: id, after: { number, typeKey: fields.docType.key, ...fields.audit.after }, summary: fields.audit.summary(number) });
+      recordAudit(tx, deps, ctx, { action: 'dms.receive', entityType: 'document', entityId: id, after: { number, typeKey: fields.docType.key, ...fields.audit.after }, params: { number, via: fields.audit.via, recordNumber: fields.audit.recordNumber } });
       return ok(inTx(tx, { id, number, fileChecksum: stored.value.fileChecksum, duplicateOf }));
     });
   } catch (error) {
@@ -261,16 +260,15 @@ export async function reclassifyDocument(deps: Deps, ctx: CallContext, input: un
       .where(eq(documents.id, id))
       .run();
     const after = tx.select().from(documents).where(eq(documents.id, id)).get()!;
-    // Ist die alte oder die neue Art geschützt, steht der Betreff nicht im Protokoll.
-    const ref = auditDocumentRef(tx, before, newType?.key);
-    const pick = (row: DocumentRow) => ({ typeKey: row.typeKey, number: row.number, ...(ref.hidden ? {} : { subject: row.subject }), documentDate: row.documentDate });
+    // Nie der Betreff im Protokoll; dass er sich änderte, sagt `subjectChanged` (Spec Protokoll § 2).
+    const pick = (row: DocumentRow) => ({ typeKey: row.typeKey, number: row.number, documentDate: row.documentDate });
     recordAudit(tx, deps, ctx, {
       action: 'dms.reclassify',
       entityType: 'document',
       entityId: id,
       before: pick(before),
-      after: pick(after),
-      summary: newType ? `${before.number} → ${after.number} umklassifiziert` : `Angaben zu ${after.number} berichtigt`,
+      after: { ...pick(after), ...(before.subject !== after.subject ? { subjectChanged: true } : {}) },
+      params: { number: after.number, previousNumber: before.number, retyped: newType !== null },
     });
     return ok(toRecord(deps, ctx, after, tx));
   });

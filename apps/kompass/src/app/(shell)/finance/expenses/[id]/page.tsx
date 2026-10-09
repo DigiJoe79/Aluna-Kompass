@@ -34,7 +34,7 @@ export default async function ExpenseClaimPage({ params }: { params: Promise<{ i
   if (!result.ok) {
     if (result.error.type === 'notFound') notFound();
     return (
-      <Page width="task" header={<PageHeader back={back} />}>
+      <Page width="task" header={<PageHeader back={back} title={t('title', { number: '' })} />}>
         <BlockedState step={t('back')} title={t('title', { number: '' })}>
           {result.error.type === 'conflict' ? conflictText(result.error, await getTranslations()) : ''}
         </BlockedState>

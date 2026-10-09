@@ -12,7 +12,6 @@ import { conflict, notFound, ok, type Result } from '../result';
 import { validate } from '../validate';
 
 import { resolveRecordLabel } from '../modules/record-hooks';
-import { messageDate } from '../message-date';
 
 export type FollowUpRecord = typeof followUps.$inferSelect & { titleHidden: boolean };
 
@@ -23,10 +22,13 @@ function toRecord(row: typeof followUps.$inferSelect): FollowUpRecord {
 const hideTitleIfForbidden = (deps: Deps, ctx: CallContext, row: FollowUpRecord): FollowUpRecord =>
   resolveRecordLabel(deps, ctx, row.entityType, row.entityId)?.state === 'forbidden' ? { ...row, title: '', titleHidden: true } : row;
 
-/** Was das Protokoll von einer Wiedervorlage nennt: den Titel — außer der Datensatz ist heikel, dann nur, woran sie hängt. */
-function auditName(deps: Deps, ctx: CallContext, row: { entityType: string; entityId: string; title: string }): { name: string; redact: boolean } {
+/**
+ * Was das Protokoll von einer Wiedervorlage nennt (`params`, Spec Protokoll § 2): den Titel — außer der Datensatz ist
+ * heikel, dann nur, woran sie hängt (`onRecord`: `label` ist die Kennung des Datensatzes, etwa seine Nummer).
+ */
+function auditName(deps: Deps, ctx: CallContext, row: { entityType: string; entityId: string; title: string }): { params: { label: string; onRecord: boolean }; redact: boolean } {
   const label = resolveRecordLabel(deps, ctx, row.entityType, row.entityId);
-  return label?.sensitive ? { name: `Wiedervorlage zu ${label.auditLabel ?? label.label}`, redact: true } : { name: `Wiedervorlage „${row.title}“`, redact: false };
+  return label?.sensitive ? { params: { label: label.auditLabel ?? label.label, onRecord: true }, redact: true } : { params: { label: row.title, onRecord: false }, redact: false };
 }
 const redacted = <T extends { title: string }>(row: T, redact: boolean): T => (redact ? { ...row, title: '' } : row);
 
@@ -100,7 +102,7 @@ export async function createFollowUp(deps: Deps, ctx: CallContext, input: unknow
       entityType: 'followUp',
       entityId: id,
       after: redacted(record, n.redact),
-      summary: `${n.name} zum ${messageDate(deps, v.dueAt)} angelegt`,
+      params: { ...n.params, dueOn: v.dueAt },
     });
     return ok(record);
   });
@@ -126,7 +128,7 @@ export async function completeFollowUp(deps: Deps, ctx: CallContext, input: unkn
       entityId: row.id,
       before: { doneAt: null },
       after: { doneAt: now },
-      summary: `${n.name} erledigt`,
+      params: n.params,
     });
     return ok(after);
   });
@@ -152,7 +154,7 @@ export async function reopenFollowUp(deps: Deps, ctx: CallContext, input: unknow
       entityId: row.id,
       before: { doneAt: row.doneAt },
       after: { doneAt: null },
-      summary: `${n.name} wieder geöffnet`,
+      params: n.params,
     });
     return ok(after);
   });
@@ -174,7 +176,7 @@ export async function deleteFollowUp(deps: Deps, ctx: CallContext, input: unknow
       entityType: 'followUp',
       entityId: row.id,
       before: redacted(row, n.redact),
-      summary: `${n.name} gelöscht`,
+      params: n.params,
     });
     return ok(null);
   });

@@ -121,6 +121,10 @@ describe('end cards and the log', () => {
     renderCard(ended({ status: 'success' }), { onOpenLog: () => {} });
     expect(screen.queryByRole('button', { name: 'Protokoll ansehen' })).toBeNull();
   });
+  it('counts files after a success, not pages: image variants are in the numbers, too (Backlog 49)', () => {
+    renderCard(ended({ status: 'success', counts: { ...zero, changed: 41, added: 2 } }));
+    expect(screen.getByText(/41 Dateien geändert, 2 neu, 0 entfallen/)).toBeTruthy();
+  });
 });
 
 describe('endText', () => {

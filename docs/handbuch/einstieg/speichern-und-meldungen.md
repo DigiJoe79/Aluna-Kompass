@@ -15,9 +15,11 @@ ausgegraut; ein Klick sagt „Nichts geändert“. Bei neuen Einträgen schickt
 Knöpfe untereinander, die Hauptaktion oben.
 
 Einen neuen Eintrag — ein Tier, ein Projekt, einen Partner, einen Eintrag
-einer Webseitensammlung — legen Sie auf einer eigenen Seite an. Löschen oder
-Archivieren steht bei diesen Einträgen als letzter Abschnitt ganz unten,
-nie neben „Speichern“.
+einer Webseitensammlung — legen Sie auf einer eigenen Seite an. Löschen,
+Archivieren und ähnlich seltene Aktionen stehen oben rechts im Menü
+**Weitere Aktionen** (⋯), nie neben „Speichern“. Was sich nicht zurücknehmen
+lässt, fragt vorher nach; Archivieren bietet danach im Hinweis unten
+„Rückgängig“.
 
 ## Wenn etwas fehlt oder abgelehnt wird
 

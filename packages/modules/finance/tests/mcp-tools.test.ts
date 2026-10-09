@@ -108,7 +108,7 @@ describe('finance MCP tools', () => {
     expect(res).toMatchObject({ ok: false, error: { type: 'validation' } });
   });
 
-  it('registers the work list tools (F5); an argument-less tool takes (deps, ctx)', async () => {
+  it('registers the work list tools (F5); an argument-less tool takes (deps, ctx), the counts take an account', async () => {
     const names = [
       'finance_work_list', 'finance_work_counts', 'finance_suggestion_get', 'finance_transaction_book', 'finance_transaction_link_entry', 'finance_transaction_mark_foreign',
       'finance_foreign_money_list', 'finance_import_rule_save', 'finance_import_rules_list', 'finance_import_rule_delete', 'finance_import_rule_preview',
@@ -118,7 +118,9 @@ describe('finance MCP tools', () => {
     ];
     const tool = (name: string) => FINANCE_MCP_TOOLS.find((t) => t.name === name)!;
     for (const name of names) expect(FINANCE_MCP_TOOLS.some((t) => t.name === name), name).toBe(true);
-    for (const name of ['finance_work_counts', 'finance_foreign_money_list']) expect(tool(name).handler.length, name).toBe(2);
+    expect(tool('finance_foreign_money_list').handler.length).toBe(2);
+    // Seit den Filterleisten (0.2.9) nimmt die Zählung ein Konto wie die Liste.
+    expect(tool('finance_work_counts').handler.length).toBe(3);
     expect(tool('finance_transaction_book').description).toMatch(/reviewed:true is human only/);
     expect(tool('finance_transaction_mark_foreign').description).toMatch(/reviewed:true is human only/);
     expect(tool('finance_contact_create_from_transaction').description).toContain('contacts.manage');

@@ -11,10 +11,10 @@ const files = (dir: string): string[] => readdirSync(dir).flatMap((n) => { const
 describe('financeAudit', () => {
   it('writes only whitelisted fields — a name or an IBAN never reaches the log', () => {
     const { deps, ctx } = setupFinance();
-    deps.db.transaction((tx) => financeAudit(tx, deps, ctx, { action: 'finance.account.create', entity: 'financeAccount', id: 'A1', after: { kind: 'bank', isMain: true, name: 'Sparkasse Musterstadt', iban: 'DE23999999990000202051', openingBalanceCents: 5000 }, summary: 'Konto A1 angelegt' }));
+    deps.db.transaction((tx) => financeAudit(tx, deps, ctx, { action: 'finance.account.create', entity: 'financeAccount', id: 'A1', after: { kind: 'bank', isMain: true, name: 'Sparkasse Musterstadt', iban: 'DE23999999990000202051', openingBalanceCents: 5000 } }));
     const entry = deps.db.select().from(schema.auditLog).all().at(-1)!;
     expect(JSON.parse(entry.after as string)).toEqual({ kind: 'bank', isMain: true, openingBalanceCents: 5000 });
-    expect(`${entry.after}${entry.summary}`).not.toMatch(/Sparkasse|DE02/);
+    expect(`${entry.after}${entry.params}`).not.toMatch(/Sparkasse|DE02/);
     expect(entry).toMatchObject({ action: 'finance.account.create', entityType: 'financeAccount', entityId: 'A1' });
   });
 
@@ -25,8 +25,8 @@ describe('financeAudit', () => {
       accountId: 'A1', direction: 'out', categoryId: 'CAT1', projectId: null, purposeId: null, taxCode: 'none', isActive: true, sortOrder: 2,
       hasBankDetailsCondition: true, hasWordCondition: true, hasAmountCondition: false, partySet: true,
     };
-    deps.db.transaction((tx) => financeAudit(tx, deps, ctx, { action: 'finance.importRule.save', entity: 'financeImportRule', id: 'R1', after: rule, summary: 'Regel R1 gespeichert' }));
-    deps.db.transaction((tx) => financeAudit(tx, deps, ctx, { action: 'finance.contactIban.link', entity: 'financeContactBankAccount', id: 'CB1', after: { contactId: 'CONTACT-1', iban: 'DE66999999991234567890', learnedFrom: 'manual' }, summary: 'Zuordnung CB1 angelegt' }));
+    deps.db.transaction((tx) => financeAudit(tx, deps, ctx, { action: 'finance.importRule.save', entity: 'financeImportRule', id: 'R1', after: rule}));
+    deps.db.transaction((tx) => financeAudit(tx, deps, ctx, { action: 'finance.contactIban.link', entity: 'financeContactBankAccount', id: 'CB1', after: { contactId: 'CONTACT-1', iban: 'DE66999999991234567890', learnedFrom: 'manual' } }));
     const [ruleEntry, ibanEntry] = deps.db.select().from(schema.auditLog).all().slice(-2);
     expect(JSON.parse(ruleEntry!.after as string)).toEqual({
       accountId: 'A1', direction: 'out', categoryId: 'CAT1', projectId: null, purposeId: null, taxCode: 'none', isActive: true, sortOrder: 2,
@@ -40,15 +40,15 @@ describe('financeAudit', () => {
     const { deps, ctx } = setupFinance();
     const secret = { signerName: 'Jonas Feld', taxOffice: 'Finanzamt Musterstadt', taxNumber: '99/999/99999', purposesText: 'Förderung des Tierschutzes', item: 'Kratzbaum', contactId: 'CONTACT-1', voidNote: 'Tippfehler' };
     deps.db.transaction((tx) => {
-      financeAudit(tx, deps, ctx, { action: 'finance.notice.save', entity: 'financeNotice', id: 'N1', after: { ...secret, kind: 'exemptionNotice', noticeDate: '2025-05-02', assessmentPeriod: '2023', documentId: 'D1', supersededOn: null, supersededDocumentId: null, voided: false }, summary: 'Bescheid N1 gespeichert' });
-      financeAudit(tx, deps, ctx, { action: 'finance.confirmation.issue', entity: 'financeConfirmation', id: 'C1', after: { ...secret, kind: 'money', noticeId: 'N1', documentId: 'D2', documentNumber: 'ZWB-2026-0001', issuedOn: '2026-03-10', machine: true, signerId: 'S1', expenseWaiver: false, totalCents: 5000, lineCount: 1, channel: 'ui' }, summary: 'Bestätigung ZWB-2026-0001 ausgestellt' });
-      financeAudit(tx, deps, ctx, { action: 'finance.signer.save', entity: 'financeSigner', id: 'S1', after: { ...secret, validFrom: '2026-01-01', validTo: null, hasFacsimile: true, notifiedOn: '2026-02-01' }, summary: 'Unterzeichner S1 gespeichert' });
-      financeAudit(tx, deps, ctx, { action: 'finance.inKind.save', entity: 'financeInKindDetails', id: 'L1', after: { ...secret, lineId: 'L1', origin: 'business', withdrawalValueCents: 1000, vatCents: 190, proofDocumentId: 'D3' }, summary: 'Sachspende an Zeile L1 beschrieben' });
+      financeAudit(tx, deps, ctx, { action: 'finance.notice.save', entity: 'financeNotice', id: 'N1', after: { ...secret, kind: 'exemptionNotice', noticeDate: '2025-05-02', assessmentPeriod: '2023', documentId: 'D1', supersededOn: null, supersededDocumentId: null, voided: false }, params: { created: true } });
+      financeAudit(tx, deps, ctx, { action: 'finance.confirmation.issue', entity: 'financeConfirmation', id: 'C1', after: { ...secret, kind: 'money', noticeId: 'N1', documentId: 'D2', documentNumber: 'ZWB-2026-001', issuedOn: '2026-03-10', machine: true, signerId: 'S1', expenseWaiver: false, totalCents: 5000, lineCount: 1, channel: 'ui' }, params: { documentNumber: 'ZWB-2026-001' } });
+      financeAudit(tx, deps, ctx, { action: 'finance.signer.save', entity: 'financeSigner', id: 'S1', after: { ...secret, validFrom: '2026-01-01', validTo: null, hasFacsimile: true, notifiedOn: '2026-02-01' }, params: { created: true } });
+      financeAudit(tx, deps, ctx, { action: 'finance.inKindDetails.save', entity: 'financeInKindDetails', id: 'L1', after: { ...secret, lineId: 'L1', origin: 'business', withdrawalValueCents: 1000, vatCents: 190, proofDocumentId: 'D3' }, params: { created: true } });
     });
     const entries = deps.db.select().from(schema.auditLog).all().slice(-4);
     expect(entries.map((e) => e.entityType)).toEqual(['financeNotice', 'financeConfirmation', 'financeSigner', 'financeInKindDetails']);
     expect(JSON.stringify(entries)).not.toMatch(/Jonas|Musterstadt|99\/999|Tierschutz|Kratzbaum|CONTACT-1|Tippfehler|vorher/);
-    expect(JSON.parse(entries[1]!.after as string)).toMatchObject({ documentNumber: 'ZWB-2026-0001', totalCents: 5000, lineCount: 1 });
+    expect(JSON.parse(entries[1]!.after as string)).toMatchObject({ documentNumber: 'ZWB-2026-001', totalCents: 5000, lineCount: 1 });
   });
 
   it('logs a confirmation run by its counters and parameters, never a contact id or the sort key (F6b)', () => {
@@ -57,12 +57,12 @@ describe('financeAudit', () => {
       financeAudit(tx, deps, ctx, {
         action: 'finance.confirmationRun.start', entity: 'financeConfirmationRun', id: 'R1',
         after: { excludedContactIds: ['CONTACT-1'], contactId: 'CONTACT-2', year: 2026, minCents: 0, excludedCount: 1, followUpOfRunId: null, startedOn: '2027-01-15', itemCount: 3, issuedCount: 0, failedCount: 0, finished: false, dispatchedVia: null, channel: 'ui' },
-        summary: 'Serienlauf R1 gestartet',
+        params: { year: 2026 },
       });
       financeAudit(tx, deps, ctx, {
         action: 'finance.confirmationRun.item', entity: 'financeConfirmationRunItem', id: 'I1',
         after: { contactId: 'CONTACT-2', sortKey: 'musterspenderin', lineIds: ['L1'], runId: 'R1', kind: 'collective', state: 'issued', confirmationId: 'C1', errorCode: null, totalCents: 5000, lineCount: 1 },
-        summary: 'Posten I1 ausgestellt',
+        params: { issued: true },
       });
     });
     const [run, item] = deps.db.select().from(schema.auditLog).all().slice(-2);
@@ -78,14 +78,14 @@ describe('financeAudit', () => {
       financeAudit(tx, deps, ctx, {
         action: 'finance.expenseClaim.submit', entity: 'financeExpenseClaim', id: 'EC1',
         after: { ...secret, state: 'submitted', number: 'KE-2026-001', positionCount: 2, totalCents: 4520, waiver: false, recurring: false, submittedAt: '2026-03-02T10:00:00.000Z', approvedAt: null, rejected: false, openItemId: null, entryId: null, copiedFromClaimId: null, channel: 'ui', waiverFreeFundsCents: null },
-        summary: 'Antrag KE-2026-001 eingereicht',
+        params: { number: 'KE-2026-001' },
       });
       financeAudit(tx, deps, ctx, {
         action: 'finance.expenseClaim.approve', entity: 'financeExpensePosition', id: 'P1',
         after: { ...secret, claimId: 'EC1', kind: 'trip', positionDate: '2026-02-20', amountCents: 2520, tripKm: 84, documentId: null, categoryId: 'CAT1', projectId: null, purposeId: null },
-        summary: 'Position P1 zugeordnet',
+        params: { number: 'KE-2026-001', waiver: false },
       });
-      financeAudit(tx, deps, ctx, { action: 'finance.contactWaiverTerms.save', entity: 'financeContactWaiverTerms', id: 'WT1', after: { ...secret, agreedOn: '2026-01-02' }, summary: 'Anspruchsgrundlage gespeichert' });
+      financeAudit(tx, deps, ctx, { action: 'finance.contactWaiverTerms.save', entity: 'financeContactWaiverTerms', id: 'WT1', after: { ...secret, agreedOn: '2026-01-02' } });
     });
     const [claim, position, terms] = deps.db.select().from(schema.auditLog).all().slice(-3);
     expect(JSON.parse(claim!.after as string)).toEqual({ state: 'submitted', number: 'KE-2026-001', positionCount: 2, totalCents: 4520, waiver: false, recurring: false, submittedAt: '2026-03-02T10:00:00.000Z', approvedAt: null, rejected: false, openItemId: null, entryId: null, copiedFromClaimId: null, channel: 'ui', waiverFreeFundsCents: null });
@@ -98,13 +98,12 @@ describe('financeAudit', () => {
     const { deps, ctx } = setupFinance();
     const secret = { contactId: 'CONTACT-1', note: 'Vertraulich', purposeText: 'Förderung Erika', basisOverrideReason: 'Ausnahme', noticeReason: 'Bescheid fehlt', overdueReason: 'zu spät', rejectNote: 'unklar', explanationDe: 'Bericht auf Englisch' };
     deps.db.transaction((tx) => {
-      financeAudit(tx, deps, ctx, { action: 'finance.partnerProfile.save', entity: 'financePartnerProfile', id: 'PP1', after: { ...secret, status: 'taxExemptBody', usualBasis: 'transfer58', usualProofMonths: 3, isActive: true }, summary: 'Angaben zum Partner PP1 gespeichert' });
+      financeAudit(tx, deps, ctx, { action: 'finance.partnerProfile.save', entity: 'financePartnerProfile', id: 'PP1', after: { ...secret, status: 'taxExemptBody', usualBasis: 'transfer58', usualProofMonths: 3, isActive: true }, params: { created: true } });
       financeAudit(tx, deps, ctx, {
         action: 'finance.partnerPayment.submit', entity: 'financePartnerPayment', id: 'PZ1',
         after: { ...secret, state: 'submitted', number: null, basis: 'transfer58', basisOverridden: false, retroactive: false, positionCount: 1, totalCents: 5000, proofDueOn: '2026-06-01', submittedAt: '2026-03-02T10:00:00.000Z', approvedAt: null, acknowledgedAt: null, openItemId: null, channel: 'ui', copiedFromPaymentId: null },
-        summary: 'Vorgang PZ1 eingereicht',
       });
-      financeAudit(tx, deps, ctx, { action: 'finance.partnerEvidence.add', entity: 'financePartnerEvidence', id: 'EV1', after: { ...secret, paymentId: 'PZ1', kind: 'report', foreignLanguage: true, coveredCents: null, documentId: 'D1' }, summary: 'Nachweis EV1 hinzugefügt' });
+      financeAudit(tx, deps, ctx, { action: 'finance.partnerEvidence.add', entity: 'financePartnerEvidence', id: 'EV1', after: { ...secret, paymentId: 'PZ1', kind: 'report', foreignLanguage: true, coveredCents: null, documentId: 'D1' }, params: { paymentNumber: 'PZ-2026-001', way: 'upload' } });
     });
     const [profile, payment, evidence] = deps.db.select().from(schema.auditLog).all().slice(-3);
     expect(JSON.parse(profile!.after as string)).toEqual({ status: 'taxExemptBody', usualBasis: 'transfer58', usualProofMonths: 3, isActive: true });
@@ -117,12 +116,12 @@ describe('financeAudit', () => {
     const { deps, ctx } = setupFinance();
     const secret = { purposeText: 'Neues Vereinsheim', note: 'unsicher', reason: 'Umschichtung laut Vorstand', rejectNote: 'zu spät eingereicht' };
     deps.db.transaction((tx) => {
-      financeAudit(tx, deps, ctx, { action: 'finance.reserve.save', entity: 'financeReserve', id: 'RES1', after: { ...secret, kind: 'free', purposeId: null, carryForwardCents: null, carryForwardDate: null, isActive: true }, summary: 'Zurückgelegtes Geld RES1 angelegt' });
-      financeAudit(tx, deps, ctx, { action: 'finance.reserveMovement.record', entity: 'financeReserveMovement', id: 'MOV1', after: { ...secret, reserveId: 'RES1', kind: 'allocate', movementDate: '2026-03-05', amountCents: 5000, forFiscalYearId: 'FY1' }, summary: 'Vorgang MOV1 erfasst' });
+      financeAudit(tx, deps, ctx, { action: 'finance.reserve.save', entity: 'financeReserve', id: 'RES1', after: { ...secret, kind: 'free', purposeId: null, carryForwardCents: null, carryForwardDate: null, isActive: true }, params: { created: true } });
+      financeAudit(tx, deps, ctx, { action: 'finance.reserveMovement.record', entity: 'financeReserveMovement', id: 'MOV1', after: { ...secret, reserveId: 'RES1', kind: 'allocate', movementDate: '2026-03-05', amountCents: 5000, forFiscalYearId: 'FY1' } });
       financeAudit(tx, deps, ctx, {
         action: 'finance.purposeTransfer.request', entity: 'financePurposeTransfer', id: 'UM1',
         after: { ...secret, state: 'submitted', number: 'UM-2026-001', fromPurposeId: 'P1', toPurposeId: null, amountCents: 5000, transferDate: '2026-03-05', approvedAt: null, rejected: false, channel: 'ui' },
-        summary: 'Umwidmung UM-2026-001 angelegt',
+        params: { number: 'KE-2026-001' },
       });
     });
     const [reserve, movement, transfer] = deps.db.select().from(schema.auditLog).all().slice(-3);
@@ -130,6 +129,14 @@ describe('financeAudit', () => {
     expect(JSON.parse(movement!.after as string)).toEqual({ reserveId: 'RES1', kind: 'allocate', movementDate: '2026-03-05', amountCents: 5000, forFiscalYearId: 'FY1' });
     expect(JSON.parse(transfer!.after as string)).toEqual({ state: 'submitted', number: 'UM-2026-001', fromPurposeId: 'P1', toPurposeId: null, amountCents: 5000, transferDate: '2026-03-05', approvedAt: null, rejected: false, channel: 'ui' });
     expect(JSON.stringify([reserve, movement, transfer])).not.toMatch(/Vereinsheim|unsicher|Umschichtung|zu spät/);
+  });
+
+  it('stores params, and throws on a param that names a contact (Spec 10.3, Plan Protokoll Task 7)', () => {
+    const { deps, ctx } = setupFinance();
+    deps.db.transaction((tx) => financeAudit(tx, deps, ctx, { action: 'finance.entry.finalize', entity: 'financeEntry', id: 'E1', params: { number: '2026-0012' } }));
+    expect(deps.db.select().from(schema.auditLog).all().at(-1)).toMatchObject({ action: 'finance.entry.finalize', params: '{"number":"2026-0012"}' });
+    expect(() => deps.db.transaction((tx) => financeAudit(tx, deps, ctx, { action: 'finance.entry.finalize', entity: 'financeEntry', id: 'E1', params: { contactId: 'C1' } }))).toThrow(/contactId names a contact/);
+    expect(() => deps.db.transaction((tx) => financeAudit(tx, deps, ctx, { action: 'finance.entry.finalize', entity: 'financeEntry', id: 'E1', params: { recipientContactId: 'C1' } }))).toThrow(/names a contact/);
   });
 
   it('never lists a field that could carry a person, free text or a bank detail', () => {

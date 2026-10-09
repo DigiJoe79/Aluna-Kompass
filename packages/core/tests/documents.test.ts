@@ -139,7 +139,7 @@ describe('documentBaseGaps (Befund 51 b)', () => {
   };
   const deps = (own: string[]) => {
     const d = createTestDeps({ manifests: [coreModule, formModule], documents: withOwn(own) });
-    d.db.transaction((tx) => writeSettingInternal(tx, d, systemContext(), 'modules.enabled', ['formtest'], 'test'));
+    d.db.transaction((tx) => writeSettingInternal(tx, d, systemContext(), 'modules.enabled', ['formtest']));
     return d;
   };
 

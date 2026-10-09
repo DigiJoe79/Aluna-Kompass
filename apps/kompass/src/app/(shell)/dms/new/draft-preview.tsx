@@ -1,7 +1,9 @@
 'use client';
 
 import { AlertTriangle, Check } from 'lucide-react';
-import { useFormatter, useTranslations } from 'next-intl';
+import { useTranslations } from 'next-intl';
+import { useDateFormat } from '@/components/date-format-provider';
+import { StatusBadge } from '@/components/status-badge';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
@@ -30,34 +32,22 @@ export function DraftPreview({
   onRetry?: () => void;
 }) {
   const t = useTranslations('dms');
-  const format = useFormatter();
-  const time = savedAt ? format.dateTime(savedAt, { hour: '2-digit', minute: '2-digit' }) : '';
+  const fmt = useDateFormat();
+  const time = savedAt ? fmt.stamp(savedAt) : '';
 
   return (
     <div data-slot="preview-pane" className="flex min-h-0 flex-1 flex-col bg-surface-2">
-      <div
-        className={cn(
-          'flex h-[46px] shrink-0 items-center gap-2.5 border-b border-line px-5',
-          status === 'current' && 'bg-success-bg',
-          status === 'stale' && 'bg-warning-bg',
-          status === 'error' && 'bg-error-bg'
-        )}
-      >
+      {/* Leiste neutral, der Zustand steht in der Marke (K10 Charge 2, Spec § 3.7.3). */}
+      <div data-testid="preview-bar" className="flex h-[46px] shrink-0 items-center gap-2.5 border-b border-line bg-surface px-5">
         {status === 'current' ? (
-          <>
-            <Check className="size-4 text-success" aria-hidden />
-            <span className="text-[13px] font-semibold text-success">
-              {t('previewPane.current', { time })}
-            </span>
-          </>
+          <StatusBadge tone="success" icon={Check}>
+            {t('previewPane.current', { time })}
+          </StatusBadge>
         ) : null}
         {status === 'stale' ? (
-          <>
-            <AlertTriangle className="size-4 text-warning" aria-hidden />
-            <span className="text-[13px] font-semibold text-warning">
-              {t('previewPane.stale', { time })}
-            </span>
-          </>
+          <StatusBadge tone="warning" icon={AlertTriangle}>
+            {t('previewPane.stale', { time })}
+          </StatusBadge>
         ) : null}
         {status === 'rendering' ? (
           <>
@@ -69,13 +59,9 @@ export function DraftPreview({
           </>
         ) : null}
         {status === 'error' ? (
-          <>
-            <AlertTriangle className="size-4 text-error" aria-hidden />
-            <span className="text-[13px] font-semibold text-error">{t('previewPane.failed')}</span>
-            <Button type="button" variant="outline" size="sm" className="ml-auto" onClick={onRetry}>
-              {t('previewPane.retry')}
-            </Button>
-          </>
+          <StatusBadge tone="error" icon={AlertTriangle}>
+            {t('previewPane.failed')}
+          </StatusBadge>
         ) : null}
 
         {/*
@@ -101,6 +87,15 @@ export function DraftPreview({
         {/* Der leere Zustand erklärt sich auf dem Blatt selbst — zweimal
             dasselbe zu schreiben macht es nicht klarer. */}
       </div>
+
+      {/* Wiederholen gehört zum Inhalt, nicht in die Leiste (Designer 2026-10-08); eine Ursache liefert der Renderer nicht. */}
+      {status === 'error' ? (
+        <div className="flex shrink-0 justify-center px-6 pt-6">
+          <Button type="button" variant="outline" size="sm" onClick={onRetry}>
+            {t('previewPane.retry')}
+          </Button>
+        </div>
+      ) : null}
 
       <div className="flex min-h-0 flex-1 items-stretch justify-center overflow-auto p-6">
         {src ? (

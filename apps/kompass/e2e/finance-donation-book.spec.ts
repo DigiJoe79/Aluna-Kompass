@@ -85,6 +85,23 @@ test.describe('finance donation book', () => {
     await expect(page).toHaveURL('/finance/donations?tab=toCorrect');
   });
 
+  /** Spec Filterleisten § 4, Review Focus 5: „anonym“ ist ein versteckter Filter mit Chip; die Summen gelten dem Jahr. */
+  test('anonyme Zuwendungen: Chip, Zählzeile, „Filter zurücksetzen“, Summen unverändert', async ({ page }) => {
+    await loginAsAdmin(page);
+    await page.goto(`/finance/donations/book?year=${YEAR}`);
+    const total = await page.getByTestId('book-sum-total').textContent();
+    await expect(page.getByLabel('Jahr', { exact: true })).toHaveValue(String(YEAR));
+    await expect(page.getByRole('button', { name: 'Filter zurücksetzen' })).toHaveCount(0);
+
+    await page.goto(`/finance/donations/book?year=${YEAR}&contact=anonymous`);
+    await expect(page.getByRole('button', { name: 'Filter „Nur anonyme Zuwendungen“ entfernen' })).toBeVisible();
+    await expect(page.getByText(/^\d+ von \d+ Zuwendungen$/)).toBeVisible();
+    await expect(page.getByTestId('book-sum-total')).toHaveText(total!);
+    await page.getByRole('button', { name: 'Filter zurücksetzen' }).first().click();
+    await expect(page).toHaveURL(`/finance/donations/book?year=${YEAR}`);
+    await expect(page.getByRole('button', { name: 'Filter „Nur anonyme Zuwendungen“ entfernen' })).toHaveCount(0);
+  });
+
   test('der vereinfachte Nachweis lädt als PDF', async ({ page }) => {
     await loginAsAdmin(page);
     await page.goto(`/finance/donations/book?year=${YEAR}`);

@@ -140,7 +140,7 @@ describe('applySeed', () => {
     unwrap(await applySeed(deps, manage, { confirm: true }));
     const entries = deps.db.select().from(core.auditLog).all().filter((e) => e.action === 'site.seed.apply');
     expect(entries).toHaveLength(1);
-    expect(entries[0]?.summary).toContain('2 Variablen');
+    expect(JSON.parse(entries[0]!.params!)).toMatchObject({ variables: 2 });
   });
 
   it('uploads seed assets and rewrites the asset field to the media id', async () => {

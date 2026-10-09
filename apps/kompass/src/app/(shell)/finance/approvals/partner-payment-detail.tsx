@@ -169,7 +169,7 @@ export function PartnerPaymentDetail({ payment, creatorName, evidence, nextHref 
         <div className="space-y-2" data-testid="partner-payment-detail">
           <p className="flex flex-wrap items-center gap-2" data-testid="partner-payment-basis">
             <span className="rounded-sm border border-line-strong px-1.5 py-0.5 text-[12px] font-semibold text-ink-2">{tBasis(basis)}</span>
-            {payment.retroactive ? <span className="rounded-sm border border-warning px-1.5 py-0.5 text-[12px] font-semibold text-warning">{t('partnerRetroactive')}</span> : null}
+            {payment.retroactive ? <StatusBadge tone="warning">{t('partnerRetroactive')}</StatusBadge> : null}
           </p>
           <p className="text-[14px] text-ink">{payment.purposeText}</p>
           {payment.basisOverridden && payment.basisOverrideReason ? <p className="text-[13px] text-ink-2">{t('partnerOverride', { reason: payment.basisOverrideReason })}</p> : null}

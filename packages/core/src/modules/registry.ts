@@ -1,3 +1,4 @@
+import type { AuditActionDef } from '../audit/actions';
 import type { DocumentTemplate, ModuleManifest, SettingDefinition } from './manifest';
 
 export interface Registry {
@@ -5,6 +6,8 @@ export interface Registry {
   permissionKeys: ReadonlySet<string>;
   settingDefinitions: ReadonlyMap<string, SettingDefinition>;
   documentTemplates: ReadonlyMap<string, DocumentTemplate>;
+  /** Alle Aktionen des Änderungsprotokolls mit ihren Werten, je mit dem Modul, das sie führt (Spec Protokoll § 3). */
+  auditActions: ReadonlyMap<string, AuditActionDef & { module: string }>;
   module(key: string): ModuleManifest | undefined;
 }
 
@@ -18,6 +21,7 @@ export function createRegistry(
   const ruledEntities = new Set<string>();
   const linkedTypes = new Set<string>();
   const areaKeys = new Set<string>();
+  const auditActions = new Map<string, AuditActionDef & { module: string }>();
 
   for (const manifest of manifests) {
     if (byKey.has(manifest.key)) throw new Error(`duplicate module key: ${manifest.key}`);
@@ -42,6 +46,10 @@ export function createRegistry(
       if (areaKeys.has(area.key)) throw new Error(`duplicate document area: ${area.key}`);
       areaKeys.add(area.key);
     }
+    for (const [action, def] of Object.entries(manifest.auditActions ?? {})) {
+      if (auditActions.has(action)) throw new Error(`duplicate audit action: ${action}`);
+      auditActions.set(action, { ...def, module: manifest.key });
+    }
   }
 
   const documentTemplates = new Map<string, DocumentTemplate>();
@@ -57,6 +65,7 @@ export function createRegistry(
     permissionKeys,
     settingDefinitions,
     documentTemplates,
+    auditActions,
     module: (key) => byKey.get(key),
   };
 }

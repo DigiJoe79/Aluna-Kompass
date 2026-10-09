@@ -51,7 +51,7 @@ export async function completeSetup(deps: Deps, input: unknown): Promise<Result<
     if (!localesRes.ok) return localesRes;
     const session = createSession(tx, deps, userId);
     tx.update(users).set({ lastLoginAt: now }).where(eq(users.id, userId)).run();
-    recordAudit(tx, deps, ctx, { action: 'setup.complete', entityType: 'user', entityId: userId, after: { name, email, role: PROTECTED_ROLE_NAME }, summary: `Einrichtung abgeschlossen durch ${name}` });
+    recordAudit(tx, deps, ctx, { action: 'setup.complete', entityType: 'user', entityId: userId, after: { role: PROTECTED_ROLE_NAME } });
     return ok({ userId, sessionId: session.id, expiresAt: session.expiresAt });
   });
 }

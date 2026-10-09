@@ -37,7 +37,8 @@ test.describe('first run and login', () => {
     await page.getByLabel('Passwort').fill('ein-langes-merkbares-passwort');
     await page.getByRole('button', { name: 'Konto anlegen und starten' }).click();
     await expect(page).toHaveURL('/');
-    await expect(page.getByText('Guten Tag, Anna.')).toBeVisible();
+    // Über die Rolle: Der Routen-Ansager von Next liest das `h1` vor und trägt denselben Text.
+    await expect(page.getByRole('heading', { level: 1, name: 'Guten Tag, Anna.' })).toBeVisible();
     await page.request.post('/logout');
     await page.goto('/setup');
     await expect(page).toHaveURL('/login');

@@ -3,12 +3,13 @@
 import { FileCheck2, FileStack, FileSymlink, FileWarning, FileX2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useRef, useState, useTransition } from 'react';
 import { toast } from 'sonner';
 import type { Standing } from '@kompass/module-finance';
 import { useDateFormat } from '@/components/date-format-provider';
 import { EmptyState } from '@/components/empty-state';
+import { ListPager } from '@/components/list-pager';
 import { ConfirmDialog } from '@/components/forms/confirm-dialog';
 import { RefusalNotice } from '@/components/forms/refusal-notice';
 import { useActionFeedback } from '@/components/forms/use-action-feedback';
@@ -61,10 +62,16 @@ export interface JournalProps {
   standing: Standing;
   accounts: { id: string; name: string }[];
   categories: { id: string; name: string }[];
+  /** Geschäftsjahre für den Filter „Jahr“. */
+  years: { id: string; label: string }[];
+  /** Buchungen ohne jeden Filter — das „von …“ der Zählzeile. */
+  unfiltered: number;
   canWrite: boolean;
   canFinalize: boolean;
   /** Zweiter Knopf im leeren Journal (Task 3): nur solange ein Konto ohne Anfangsbestand existiert und der Betrachter `finance.setup` hat. */
   showSetupLink: boolean;
+  /** Irgendein Filter der Leiste gesetzt (auch `year` und `ids` aus Links): Ohne Treffer heißt das „gefiltert leer“, nicht „noch keine Buchung“. */
+  filtered: boolean;
   /** Befund 21/23: gesetzt, sobald nach einem Konto gefiltert wird — dann ist die Seite ein Kontoblatt (eigene Kopfzeile, Saldospalte). */
   accountFilter: { name: string; openingBalanceCents: number | null } | null;
 }
@@ -78,9 +85,20 @@ function VoucherIcon({ state }: { state: JournalRow['documentationState'] }) {
   return <FileWarning className="size-4 text-warning" aria-label={tv('missing')} />;
 }
 
-export function Journal({ rows, total, totals, standing, accounts, categories, canWrite, canFinalize, showSetupLink, accountFilter }: JournalProps) {
+export function Journal({ rows, total, totals, page, pageSize, standing, accounts, categories, years, unfiltered, canWrite, canFinalize, showSetupLink, filtered, accountFilter }: JournalProps) {
   const t = useTranslations('finance.journal');
   const router = useRouter();
+  const pathname = usePathname();
+  const params = useSearchParams();
+  // Befund 1: Das Journal blättert. Die Filter streichen `page` beim Schreiben der Adresse (`filters.tsx`).
+  const pageHref = (offset: number) => {
+    const next = new URLSearchParams(params.toString());
+    const target = Math.floor(offset / pageSize) + 1;
+    if (target > 1) next.set('page', String(target));
+    else next.delete('page');
+    const qs = next.toString();
+    return qs ? `${pathname}?${qs}` : pathname;
+  };
   const fmt = useDateFormat();
   const [, startTransition] = useTransition();
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -148,7 +166,9 @@ export function Journal({ rows, total, totals, standing, accounts, categories, c
   return (
     <div>
       <PageHeader
-        title={accountFilter ? t('accountLedger.title', { account: accountFilter.name }) : undefined}
+        // Ohne Kontofilter stand der Titel bis 0.2.8 nur als `h1` in der Brotkrume; jetzt ist er das `h1` der Seite
+        // (Spec Seitenkopf § 2.2: Seiten ohne Titel bekommen einen).
+        title={accountFilter ? t('accountLedger.title', { account: accountFilter.name }) : t('title')}
         description={description}
         actions={
           <>
@@ -166,9 +186,12 @@ export function Journal({ rows, total, totals, standing, accounts, categories, c
         }
       />
 
-      <JournalFilters accounts={accounts} categories={categories} />
+      <JournalFilters accounts={accounts} categories={categories} years={years} count={{ shown: total, total: unfiltered }} />
 
-      {rows.length === 0 ? (
+      {rows.length === 0 && filtered ? (
+        // Befund 2 (Inventar Filterleisten): Mit Filter nie „Noch keine Buchung“ und „Neue Buchung“, sondern Zurücksetzen.
+        <EmptyState filtered={{ noun: t('empty.filteredNoun'), resetHref: '/finance/entries' }} />
+      ) : rows.length === 0 ? (
         <EmptyState
           title={t('empty.title')}
           text={t('empty.text')}
@@ -286,6 +309,7 @@ export function Journal({ rows, total, totals, standing, accounts, categories, c
               </TableRow>
             </TableFooter>
           </Table>
+          <ListPager total={total} offset={(page - 1) * pageSize} pageSize={pageSize} hrefFor={pageHref} footer testId="journal-pager" />
         </div>
       )}
 

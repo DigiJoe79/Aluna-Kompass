@@ -4,9 +4,9 @@ Gilt für jede neue Seite und jedes neue Modul, für Menschen wie für Agenten: 
 
 Abweichungen von den Mustern stehen nur in der Erlaubnisliste des jeweiligen Wächter-Tests (`apps/kompass/tests/patterns/`), je Zeile mit Begründung. Das Diff zeigt sie, also sieht sie das Review. Herkunft: Fassung 0.2.6 (Konsistenz).
 
-**Positivliste.** Die Wächter sagen, was erlaubt ist, nicht nur, was verboten ist: Schrift, Größe und Farbe eines Dialogtitels, einer Beschreibung oder eines Abschnitts kommen aus dem Baustein; die Aufrufstelle ergänzt höchstens Layout (`flex`, `gap-*`, `items-*`, `truncate`, `sr-only`, `text-pretty`). Was abweicht, steht mit Grund in der Erlaubnisliste von `no-title-override.test.ts`. Herkunft: K10 (Designer und Joe 2026-10-06).
+**Positivliste.** Die Wächter sagen, was erlaubt ist, nicht nur, was verboten ist: Schrift, Größe und Farbe eines Dialogtitels, einer Beschreibung oder eines Abschnitts kommen aus dem Baustein; die Aufrufstelle ergänzt höchstens Layout (`flex`, `gap-*`, `items-*`, `truncate`, `sr-only`, `text-pretty`). Was abweicht, steht mit Grund in der Erlaubnisliste von `no-title-override.test.ts`. Keine rohen Elemente unter `src/app` (`no-raw-elements`) — Datei-Felder `sr-only` hinter Knopf oder Ablagefläche; Statusfarbe als Fläche oder Rahmen nur in `Notice`, `StatusBadge` und `ui/*` (`no-status-surface`). Herkunft: K10 (Designer und Joe 2026-10-06, Charge 2 2026-10-08).
 
-Vorlage zum Abschreiben: das Modul **Projekte** — Liste `apps/kompass/src/app/(shell)/projects/page.tsx`, Anlegen und Detail `projects/[id]/page.tsx` (die Kennung `new` legt an), Formular `projects/project-form.tsx`, Löschen `projects/delete-project.tsx`. Für eine Einstellungsseite mit Unterbereichen: `admin/settings/` (Reiter in der Adresse).
+Vorlage zum Abschreiben: das Modul **Projekte** — Liste `apps/kompass/src/app/(shell)/projects/page.tsx`, Anlegen und Detail `projects/[id]/page.tsx` (die Kennung `new` legt an), Formular `projects/project-form.tsx`, Weitere Aktionen (Löschen) `projects/project-actions.tsx`. Für eine Einstellungsseite mit Unterbereichen: `admin/settings/` (Reiter in der Adresse).
 
 ## A — Meldungen
 
@@ -18,7 +18,8 @@ Vorlage zum Abschreiben: das Modul **Projekte** — Liste `apps/kompass/src/app/
 - **Feldfehler, den die Maske nicht zeigen kann** → `withUnplacedFieldErrors(state, [Felder, die sie zeigt])` macht daraus eine Ablehnung über der Leiste, statt dass nichts erscheint.
 - **Veralteter Stand** → der Konflikt-Satz („Der Eintrag wurde inzwischen geändert“) mit den Auswegen „Ihre Änderungen neben den neuen Stand legen“ und „Neuen Stand laden“ (`lib/conflict-remedies.ts`); die Leiste zeigt ihn selbst.
 - **Warnung ohne Sperre** → `Notice level="warn"` an der betroffenen Stelle; Hinweis → `level="hint"`.
-- **Erfolg** → `toast.success`.
+- **Rolle:** `Notice level="refuse"` ist `alert`, `warn` ist `status`, `hint` trägt keine Rolle: Ein Hinweis, der von Anfang an dasteht, wird beim Lesen erfasst. Erscheint ein Hinweis erst nach einer Handlung (das Ergebnis mit Details nach einem Import), sagt `toast.success` das Ergebnis kurz an, der Kasten trägt die Details ohne Rolle (Designer 2026-10-08). Die Rolle kommt aus dem Baustein, nie von der Aufrufstelle. **Info-Blau gibt es nicht** — Farbe nur für Zustände, die eine Handlung verlangen; ein Hinweis ist `hint`, einer mit Folge vor dem Handeln `warn`.
+- **Erfolg** ohne eigene Stufe: ein Zustand, der bleibt → `StatusBadge tone="success"` mit Satz; ein Ereignis → `toast.success`; ein Ergebnis mit Details (Zähler, übersprungene Zeilen) → `Notice level="hint"` mit Titel, ohne Grün.
 - **Beschreibung eines Dialogs** → `DialogDescription` bzw. `SheetDescription` mit `tone`: `body` (14 px, `ink-2`), wenn der Satz die Folge erklärt — Löschen, Überschreiben, Veröffentlichen, ein einmalig sichtbares Geheimnis; sonst `meta` (Standard, 13 px, `muted`). Muted ist Text, den man auslassen kann. Der Satz bleibt in der Description, damit ein Vorleser ihn als Beschreibung des Dialogs sagt. `ConfirmDialog` setzt `body` selbst und verlangt `description`. Kein `className` für die Schrift (K10, Designer und Joe 2026-10-07).
 - Ablehnungen nennen den Grund und bis zu drei Auswege, nie das Wort „Fehler“. Jede Ablehnung steht an der Stelle, an der man gehandelt hat.
 
@@ -28,27 +29,41 @@ Bausteine: `forms/form-error-summary.tsx`, `forms/field-error.tsx`, `forms/refus
 
 - Immer `FormActionBar`, als **letztes Kind** der Formularkarte bzw. des Dialogs. Sie gehört in das `<form>` und liest den Stand von dort.
 - `mode`: `edit` (Standard; ohne Änderung sagt sie „Nichts geändert“), `create` (schickt immer ab, der Dienst nennt die Pflichtfelder), `run` (eine Aktion ausführen, ohne Zähler).
-- `placement`: `page` klebt am unteren Rand, `dialog` klebt nichts (gilt, sobald `cancel` gesetzt ist). Ein Dialog mit eigenem Rand setzt `--dialog-pad` selbst (`[--dialog-pad:0px]` bei `p-0`, `1.5rem` bei `p-6`); `layout="fixed-footer"` am Dialog hält Kopf und Leiste fest und lässt die Mitte (`DialogBody`) scrollen — nötig, sobald die Maske höher werden kann als ein Fenster.
+- Ab 640 × 600 px klebt die Speicherleiste am unteren Rand der Formularkarte, darunter steht sie am Ende der Karte. Die Formularkarte ist FormCard mit overflow-clip, nie overflow-hidden. (Designer 2026-10-08: Die Variante `stickybar` in `globals.css` schaltet das Kleben; einen Schatten trägt die Leiste nur, solange sie klebt. Am Telefon: Statuszeile, „Speichern“ über die volle Breite, darunter „Verwerfen“ und „Abbrechen“ nebeneinander. Mit ungespeicherten Änderungen fragt sie beim Verlassen der Seite nach. Wächter `form-card.test.ts`.)
+- `placement`: `page` auf einer Seite (siehe oben), `dialog` klebt nichts (gilt, sobald `cancel` gesetzt ist). Ein Dialog mit eigenem Rand setzt `--dialog-pad` selbst (`[--dialog-pad:0px]` bei `p-0`, `1.5rem` bei `p-6`); `layout="fixed-footer"` am Dialog hält Kopf und Leiste fest und lässt die Mitte (`DialogBody`) scrollen — nötig, sobald die Maske höher werden kann als ein Fenster.
 - Ohne `<form>` (Dialog mit eigenem Zustand): `onSave` und `pending`; gezählt wird über `count`.
 - Linke Zeile über Props: `note` (Freigeber, Protokoll, Pflichtfeld-Legende), `status` (Zwischenstand laufend gesicherter Masken), sonst zählt die Leiste selbst. `destructive` macht den Hauptknopf zum Löschknopf; `testId`/`saveTestId` sind Kennungen für Tests.
 - Speichern ist nie ausgegraut; `saveDisabled` nur, wenn ohne eine Sache gar nichts geht (die Akte ohne Datei, die Sammelbestätigung ohne Auswahl).
 - Keine eigenen Fußleisten, kein eigenes `sticky bottom-0`, kein `SaveBar`/`StickyFooter`. Dialoge ohne Hauptaktion (nur Schließen, nur Abbrechen) behalten einen `DialogFooter`, mit Grund im Code.
 
-Bausteine: `forms/form-action-bar.tsx`, `forms/save-status.tsx`, `forms/submit-button.tsx`, `forms/action-form.tsx`, `forms/use-autosave.ts`.
+Bausteine: `forms/form-action-bar.tsx`, `forms/form-card.tsx`, `forms/save-status.tsx`, `forms/submit-button.tsx`, `forms/action-form.tsx`, `forms/use-autosave.ts`.
 
 ## C — Bearbeiten
 
 | Art | Muster |
 |---|---|
-| **Stammdaten** (etwas, das man pflegt: Tiere, Projekte, Partner, Webseiten-Einträge) | Die Detailseite ist das Formular. Nebenlisten darunter. Anlegen auf einer eigenen Seite `/new` (oder `[id]` mit `id === 'new'`), nicht in einem Dialog. Letzter Abschnitt der Seite: `DangerSection` (Löschen oder Archivieren). |
-| **Vorgang** (Ablauf, Freigabe, Festschreibung, Dokument der Akte) | Lesesicht. „Bearbeiten“ bzw. „Korrigieren“ als einziger Knopf im `PageHeader`. |
+| **Stammdaten** (etwas, das man pflegt: Tiere, Projekte, Partner, Webseiten-Einträge) | Die Detailseite ist das Formular. Nebenlisten darunter. Anlegen auf einer eigenen Seite `/new` (oder `[id]` mit `id === 'new'`), nicht in einem Dialog. Seltene Aktionen am Datensatz (Löschen, Archivieren) im Menü ⋯ „Weitere Aktionen“ (`RecordActions`) im `PageHeader`. |
+| **Vorgang** (Ablauf, Freigabe, Festschreibung, Dokument der Akte) | Lesesicht. „Bearbeiten“ bzw. „Korrigieren“ als sichtbarer Knopf im `PageHeader`; Stornieren, Zurücknehmen, Löschen daneben im Menü ⋯ (`RecordActions`). |
 
 - Ein Dialog zum Anlegen nur als Schnellanlage aus einem anderen Vorgang heraus (etwa ein Kontakt aus der Auswahl heraus), mit denselben Feldern wie die Seite.
-- Löschen und Archivieren nie in der Kopfzeile und nie neben „Speichern“. `DangerSection title text actionLabel onAction` ist eine Karte mit Titel, einem Satz und einem Outline-Knopf; der Knopf öffnet den Bestätigungsdialog der Seite. Gelöscht wird, wo der Bestand es erlaubt, über `DeleteRecordDialog` (Vorschau, in zwei Stufen: erst zurückziehen, dann löschen); wo etwas dranhängt (ein Partner mit Zahlungen), bleibt das Archivieren, also das Deaktivieren.
-- Ein Lösch-, Storno- oder Widerrufsknopf auf der Seite ist neutral (`outline`, wie in `DangerSection`), auch wenn er gesperrt ist; Rot (`destructive`) gehört erst in den Bestätigungsdialog. Kein `border-error` und kein `text-error` an einem `Button` (Wächter `no-red-button-border.test.ts`).
+
+**Weitere Aktionen** (Spec Seitenkopf, Designer 2026-10-08). Das Menü ⋯ ist der Ort für seltene Aktionen am ganzen Datensatz, auf Stammdaten- und Vorgangsseiten:
+
+- **Nächster Schritt im Ablauf** (Buchen, Freigeben, Festschreiben, Veröffentlichen, Bearbeiten, Korrigieren) → sichtbarer Knopf im Kopf, nicht im Menü.
+- **Macht etwas rückgängig oder beendet den Vorgang** (Archivieren, Stornieren, Zurückziehen, Ersetzen, Löschen) → Eintrag im Menü; mit „…“, wenn ein Dialog folgt.
+- Auch bei genau einer solchen Aktion das Menü — dieselbe Art Aktion steht auf jeder Seite am selben Ort. `RecordActions` steht als letztes Element in `PageHeader actions`.
+- **Reihenfolge fest** über `kind`: umkehrbar (`reversible`: Archivieren, Wieder aktivieren) → rückgängig machend (`undoing`: Stornieren, Zurückziehen, Ersetzen) → Löschen (`delete`) zuletzt. Einträge sind nie rot; Rot (`destructive`) gehört erst in den Bestätigungsdialog.
+- Kein sichtbarer Eintrag → kein Knopf. **Keine Sperre ohne Grund:** Ist eine Aktion fachlich unmöglich (Frist läuft, noch verwendet), bleibt der Eintrag sichtbar und der Dialog nennt den Grund (`ConfirmDialog refusal`: `Notice refuse` als Beschreibung, nur „Schließen“). Ausgeblendet wird nur, was dauerhaft unmöglich ist und dessen Grund sichtbar auf der Seite steht (Hauptkonto, aktives Theme).
+- Nicht beim Anlegen (`create`), nicht gesperrt bei ungespeicherten Änderungen. Löschen und Archivieren nie in der Speicherleiste einer Seite.
+- **Archiviert oder deaktiviert:** `PageHeader status` (nur eine `StatusBadge`, neben dem Titel), „Wieder aktivieren“ als sichtbarer Knopf im Kopf.
+- **Zurücknehmen:** Lässt sich eine Aktion nicht zurücknehmen, fragt ein Bestätigungsdialog (Erklärung und Vorschau nur dort, `tone="body"`); gelöscht wird, wo der Bestand es erlaubt, über `DeleteRecordDialog` (Vorschau, in zwei Stufen: erst zurückziehen, dann löschen). Lässt sie sich zurücknehmen **und** steht der Gegenweg danach dauerhaft auf der Seite oder im Menü, läuft sie ohne Rückfrage mit `toastUndo` (8 s, „Rückgängig“ ruft die Gegenaktion beim Dienst, nur ein solcher Toast zugleich). Der Toast ist eine Abkürzung, nicht der einzige Weg zurück.
+- **Dialoge gesteuert:** je Aktion genau eine Dialoginstanz mit `open`; der Menüeintrag öffnet nur. `RecordActions triggerRef` geht als `finalFocus` an den Dialog (`ConfirmDialog`, `DeleteRecordDialog`, `DialogContent`), damit der Fokus nach dem Schließen auf ⋯ liegt. Vorlage: `projects/project-actions.tsx`; E2E `record-actions.spec.ts` je Aufrufer.
+- **Dialog und Seitenfenster** haben keinen Seitenkopf: Dort steht die Aktion links im Fuß — `FormActionBar recordAction` (nur `placement="dialog"`, im Typ und vom Wächter `record-action-placement` erzwungen; eine Aktion als `ghost`-Knopf, ab zwei das Menü ⋯), ohne `FormActionBar` `RecordActions single="button"` links im `SheetFooter` bzw. in der Fußzeile.
+- Aktionen an Unterpositionen (Nachweis, Notiz, Verknüpfung, Beleg) und Zeilenaktionen in Listen sind nicht `RecordActions`.
+- Ein Lösch-, Storno- oder Widerrufsknopf, der doch auf der Seite steht (in einer Zeile, einem aufgeklappten Detail), ist neutral (`outline`), auch wenn er gesperrt ist. Kein `border-error` und kein `text-error` an einem `Button` (Wächter `no-red-button-border.test.ts`). Jeder Dialog mit unumkehrbarer Hauptaktion hat eine `DialogDescription` (Wächter `destructive-dialog-description.test.ts`).
 - **Ausnahme Kontakte:** Sie sind noch Lesesicht mit Bearbeiten-Dialog und Anlegen im Dialog; die Umstellung auf das Stammdatenmuster ist vorgemerkt und steht bis dahin in der Erlaubnisliste von `stammdaten-new-route.test.ts`.
 
-Bausteine: `forms/danger-section.tsx`, `forms/delete-record-dialog.tsx`, `forms/publish-switch.tsx`, `forms/reorder-buttons.tsx`, `page-header.tsx`.
+Bausteine: `record-actions.tsx`, `forms/confirm-dialog.tsx` (`refusal`, `finalFocus`), `forms/delete-record-dialog.tsx`, `forms/form-action-bar.tsx` (`recordAction`), `lib/feedback.ts` (`toastUndo`), `forms/publish-switch.tsx`, `forms/reorder-buttons.tsx`, `page-header.tsx` (`status`).
 
 ## D — Einstellungen
 
@@ -60,14 +75,14 @@ Bausteine: `panel-nav.tsx` (mit dem Hilfsteil `panel-nav-scroll.tsx`, der den ge
 
 ## E — Formulare
 
-- **Eine Karte** (`rounded-lg border border-line bg-surface`) mit Inhalt `p-5`; die `FormActionBar` ist das letzte Kind der Karte. Keine Karte in der Karte.
+- **Eine Karte**: `FormCard` (`rounded-lg border border-line bg-surface`, `overflow-clip`; `as` für `section` oder `form`) mit Inhalt `p-5` (`FormCardBody`); die `FormActionBar` ist das letzte Kind der Karte. Keine Karte in der Karte, kein `overflow-hidden` an der Karte oder einem Behälter darin (Reiter).
 - Abschnitte über `Section title intro actions` (`components/section.tsx`): Titel in der Rolle `text-section` (15/600), Einleitung `text-meta`, Inhalt `mt-3`, Aktionen rechts neben dem Titel (brechen am Telefon um). Ein Folgeabschnitt bekommt Linie und Abstand selbst (`border-t`, 20 px) — aber nur, wenn er **direkt** auf eine `Section` folgt; ein Hinweis oder bedingter Wrapper dazwischen unterbricht die Linie (gewollt).
-- Die Überschriftenebene kommt aus dem Umfeld: `Page` setzt 3 (der Seitentitel ist `h2`, der `h1` ist die Brotkrume), `DialogContent`/`SheetContent` 3, eine verschachtelte `Section` eins mehr, höchstens 4, ohne Umfeld 2; `level` nur als Ausnahme. Einstellungs-Panels unter `PanelNav` haben keinen eigenen Titel, ihre Abschnitte stehen wie überall unter dem Seitentitel auf Ebene 3. Vorlagen: Projekt-Formular und Einstellungen → Verein; die übrigen handgeschriebenen Abschnitte folgen in K10 Charge 3.
+- Die Überschriftenebene kommt aus dem Umfeld: `Page` setzt 2 (der Seitentitel im `PageHeader` ist das einzige `h1`), `DialogContent`/`SheetContent` 3, eine verschachtelte `Section` eins mehr, höchstens 4, ohne Umfeld 2; `level` nur als Ausnahme. Einstellungs-Panels unter `PanelNav` haben keinen eigenen Titel, ihre Abschnitte stehen wie überall unter dem Seitentitel auf Ebene 2. Vorlagen: Projekt-Formular und Einstellungen → Verein; die übrigen handgeschriebenen Abschnitte folgen in K10 Charge 3.
 - Raster je Abschnitt über `FormGrid`, Spannweite je Feld über `FormField size` (§ J). Kein `grid-cols-*` von Hand.
 - Jedes Feld über `FormField` (Beschriftung, Pflichtmarke, Hinweis, Feldfehler).
 - Reiter erst ab zwei Reitern; ein einzelner Reiter ist ein Abschnitt.
 
-Bausteine: `section.tsx`, `forms/form-field.tsx`, `forms/form-grid.tsx`, `forms/localized-field.tsx`, `forms/media-picker.tsx`, `contact-picker.tsx`, `choice-cards.tsx`, `ui/radio-group.tsx` (zwei bis vier kurze Optionen, wo `ChoiceCards` zu schwer wäre; keine nativen Radios), `schema-form/`, `ui/input.tsx`, `ui/select.tsx`, `ui/textarea.tsx`, `ui/label.tsx`, `ui/tabs.tsx`.
+Bausteine: `forms/form-card.tsx`, `section.tsx`, `forms/form-field.tsx`, `forms/form-grid.tsx`, `forms/localized-field.tsx`, `forms/media-picker.tsx`, `contact-picker.tsx`, `choice-cards.tsx`, `ui/radio-group.tsx` (zwei bis vier kurze Optionen, wo `ChoiceCards` zu schwer wäre; keine nativen Radios), `ui/segmented.tsx` (zwei bis vier kurze, gleichrangige Optionen nebeneinander: `Segmented`, Radio-Semantik, Höhe wie ein Feld; ab fünf Optionen oder bei langen Beschriftungen `Select`; Symbole nur mit `ariaLabel` je Option), `schema-form/`, `ui/input.tsx`, `ui/select.tsx`, `ui/textarea.tsx`, `ui/label.tsx`, `ui/tabs.tsx`.
 
 ## F — Marken
 
@@ -81,8 +96,9 @@ Bausteine: `status-badge.tsx`, `finance/entry-state-badge.tsx`.
 - `ui/table` (`Table`, `TableHeader`, `TableBody`, `TableRow`, `TableHead`, `TableCell`) ohne eigene Kopf-, Zebra-, Hover- oder Höhenklassen; Aufrufstellen ergänzen nur Breiten und Ausrichtung. Zeilenhöhe und Zellpolster folgen der Dichte im Profil.
 - **Öffnen:** Das Element in der ersten Inhaltsspalte trägt eine unsichtbare Fläche über die ganze Zeile — `RowLink` (navigiert; echter Link, Cmd-/Strg-Klick öffnet einen Tab) bzw. `RowButton` (klappt auf oder öffnet ein Seitenfenster; mit `aria-expanded` bzw. `aria-haspopup="dialog"`). **Kein `onClick`, `onKeyDown`, `tabIndex` oder `cursor-pointer` an einer Zeile.**
 - Haken, Schalter, Knöpfe, Menüs und Links in anderen Zellen liegen über der Fläche und öffnen die Zeile nicht nebenbei (macht `TableCell` selbst). Eine Zelle mit Text zum Kopieren (IBAN, Belegnummer, Betrag) bekommt `selectable`.
+- Gruppenzeilen über `TableGroupRow colSpan` (ein Kopf über alle Spalten der Gruppe).
 - Sortierbare Spalten über `SortableHead`; Filter setzen nur Query-Parameter (`useUrlFilters`). Mehrfachauswahl über `SelectionBar` (unten klebend, mit Ansage für Vorleser).
-- Leer: `EmptyState`; gefiltert leer: `EmptyState` mit „Keine Treffer“. Eine Tabelle, deren Kopf stehen bleibt, zeigt die Leere als `TableEmpty colSpan` — eine Zeile im Ton von `EmptyState`, nie eine handgeschriebene Zelle.
+- Leer: `EmptyState`; gefiltert leer: `EmptyState filtered` mit „Filter zurücksetzen“ (§ L). Eine Tabelle, deren Kopf stehen bleibt, zeigt die Leere als `TableEmpty colSpan` — eine Zeile im Ton von `EmptyState`, nie eine handgeschriebene Zelle.
 
 Bausteine: `ui/table.tsx`, `sortable-head.tsx`, `selection-bar.tsx`, `empty-state.tsx`, `ui/checkbox.tsx`, `ui/switch.tsx`.
 
@@ -121,6 +137,24 @@ Bausteine: `page.tsx`, `ui/dialog.tsx`, `ui/sheet.tsx`. Wächter: `page-width.te
 
 Bausteine: `forms/form-grid.tsx` (`FormGrid`, `FormCell`, `FormRowBreak`), `forms/form-field.tsx`. Wächter: `form-grid.test.ts`.
 
+## L — Filterleisten
+
+Jede Liste mit Suche oder Filtern nutzt `FilterBar`. Reiter darüber sind `ViewTabs`. Der Zustand steht in der Adresse (`useUrlFilters`), auch bei kleinen Listen; nur Auswahldialoge (Medienwahl) halten ihn auf der Seite. Die Zählzeile zählt Treffer. „Filter zurücksetzen“ erscheint, sobald ein Filter gesetzt ist, und steht als Aktion im leeren Ergebnis. Begrenzte Listen blättern oder nennen die Grenze. Nicht in `FilterBar`: Kombobox-Felder (`ContactPicker`, `DocumentPicker`, Serienlauf „Ausschließen“), Befehlspalette, „Beleg suchen“ — sie wählen einen Wert und filtern keine Liste, übernehmen aber Lupe und ✕ vom `SearchField`. Herkunft: Board § L, HANDOFF § 8e, Spec Filterleisten 2026-10-08.
+
+- **Feste Plätze:** Suche, bis zu drei Filter, „Weitere Filter (n)“, rechts Zählzeile und „Filter zurücksetzen“, dann `sort`, ganz rechts `view` (`Segmented` Liste/Raster). Die Leiste steht zwischen den Reitern und der Tabelle, außerhalb der Karte.
+- **Suche:** `SearchField` — Lupe, ✕ „Suche leeren“, 260 px (Telefon volle Breite), Name „Suchen“, der Platzhalter nennt die Felder; gilt nach 250 ms, kein Knopf „Filtern“, kein Enter nötig.
+- **Zählzeile:** ohne Filter „{total} {Nomen}“, mit Filter „{shown} von {total} {Nomen}“ (Nomen mit Dativ: „3 von 6 Hunden“); zählt Treffer, nicht die Zeilen einer Seite; `aria-live="polite"`. Was einen Bestand nur abgrenzt (das Jahr im Spendenbuch und in der Personenübersicht, eine Sicht wie „Prüfung offen“), ist das „von …“, kein gesetzter Filter. Ein solcher Rahmen ist ein Select ohne „alle“ über `frameFilter`: nie Rahmen in Primärfarbe, kein Chip, kein Zurücksetzen (Designer 2026-10-08); im Journal ist „Jahr: alle“ ein echter Filter.
+- **Filter-Selects:** über `selectFilter` — Standardoption „{Filter}: alle“; ein gesetzter Filter ist am Text erkennbar („Sucht ein Zuhause“), der Rahmen in Primärfarbe kommt nur hinzu; der Fokusring steht mit Abstand neben dem Rahmen (`filterControlClass`). Ja/Nein-Filter als Checkbox „Nur …“ bzw. „Auch …“ (`checkFilter`), kein Switch.
+- **Sortierung** außerhalb des Tabellenkopfs steht im Platz `sort` und ist kein Filter: Sie belegt keinen Filterplatz, zählt nicht als gesetzt und löst kein „Filter zurücksetzen“ aus. Im Tabellenkopf bleibt `SortableHead`.
+- **Mehr als drei Filter:** die drei häufigsten in der Leiste, der Rest unter „Weitere Filter (n)“. Chips je gesetztem Filter erscheinen, wenn es `more` gibt oder ein versteckter Filter (`hidden`: `ids`, „anonym“) gesetzt ist; die Zählzeile rückt dann in die Chip-Zeile. Ein Chip lautet immer „{Filter}: {Wert}“ („Zustand: festgeschrieben“, „Konto: Girokonto“, „Suche: Futter“); nur Ja/Nein-Filter zeigen ihren Text allein („Nur ohne Beleg“). Das setzt `FilterBar` aus `label` und `chip` zusammen, nie die Seite; wiederholt eine Option den Filternamen, kürzt `chip` an der Option den Wert („Wiedervorlage: offen“) (Designer 2026-10-08).
+- **Telefon (unter 640 px):** Suche über die volle Breite, alle Filter hinter „Filter (n)“ in einem Sheet von unten. Im Sheet wirken Filter erst mit „Anwenden“; Schließen verwirft den Entwurf; „Zurücksetzen“ wirkt sofort und schließt. Wer mehrere Werte in dieselbe Adresse schreibt, gibt `onApply` (ein Schreiben statt mehrerer, die sich überholen).
+- **Gefiltert leer** ist ein eigener Zustand: `EmptyState filtered` — „{Nomen} passt zu diesen Filtern.“ mit „Filter zurücksetzen“; nie „Noch keine …“ und nie Anlegen.
+- **Keine stille Grenze:** Kann der Dienst `offset` und `total`, blättert die Liste (`ListPager`, 50 je Seite, Filterwechsel → Seite 1); sonst nennt `ListTruncated` die Grenze mit der Gesamtzahl. Beide stehen als **Fuß in der Karte der Tabelle** (`footer`: Linie oben, Polster wie die Karte — wie die Speicherleiste der Fuß der Formularkarte ist); steht eine Liste ohne gemeinsame Karte (Mediathek, Personen-Gruppen), sitzen sie direkt darunter. Die Blätterknöpfe sind `outline sm`, eine Art im ganzen Bestand (Designer 2026-10-08). Eine Auswahl im Formular, die auf dem Rechner sucht (Ausgleich in der Buchungsmaske), und eine Beschriftung lesen alles über `readAllPages` (`lib/read-all-pages.ts`) statt der ersten 200.
+- **Ordner sind Ort, keine Filter:** Ein Klick im Ordnerbaum behält Suche und Filter (Akte und Mediathek); die Zahl steht in der Zählzeile, nicht in der Ordnerüberschrift.
+- **Reiter über Listen:** `ViewTabs` — Unterstrich, Links mit `aria-current="page"` (kein `role="tab"`), Zahl als `StatusBadge` (0 → keine), am Telefon waagerecht scrollend; die Zahlen zeigen, was ein Klick zeigen würde, und folgen den Filtern der Leiste, wo der Dienst es kann (Arbeitsliste: Konto; Hunde: alle Filter außer der Sicht selbst, „Sucht ein Zuhause“ → „Alle 3 · Prüfung offen 1“). Jahr ist ein Filter, kein Reiter.
+
+Bausteine: `filter-bar.tsx` (`FilterBar`, `selectFilter`, `checkFilter`, `frameFilter`, `filterControlClass`), `search-field.tsx`, `view-tabs.tsx`, `list-pager.tsx`, `list-truncated.tsx`, `empty-state.tsx` (`filtered`), `lib/use-url-filters.ts`. Wächter: `filter-bar.test.ts`, `no-silent-limit.test.ts` (zählt auch Aufrufe von Diensten mit Standardgrenze im Schema oder Code — ohne `limit:` kürzt der Dienst sonst still —, gelesen aus den Quellen der Pakete).
+
 ## Schrift
 
 Sechs Rollen in `app/globals.css` (`@theme`, `--text-*` mit Zeilenhöhe und Gewicht); `cn` kennt sie über `TYPE_ROLES` in `lib/utils.ts`. Die Schriftfamilie steht nie in der Rolle, sondern im Baustein bzw. an der Kennzahl.
@@ -142,15 +176,20 @@ Zwei Formate, drei Funktionen (K10, Joe 2026-10-07): Was ein Mensch am Bildschir
 
 | Weg | Funktion | Format |
 |---|---|---|
-| Bildschirm | `formatDate(value, mode, timeZone, locale?)`, `formatDateTime(…)` (die Zeitzone ist Pflicht) | Einstellung `ui.dateFormat` |
-| Meldungen der Dienste (Ablehnungen, Hinweise, Protokoll) | `messageDate(deps, iso)` | `ui.dateFormat` (über `readSetting`), immer absolut |
+| Bildschirm | `formatDate(value, mode, timeZone, locale?)`, `formatDateTime(…, { seconds? })` (die Zeitzone ist Pflicht); im Client `useDateFormat()` (`date`, `dateTime`, `time`, `stamp`), auf dem Server `dateFormatOf(deps)` | Einstellung `ui.dateFormat` |
+| Uhrzeit eines laufenden Vorgangs (Veröffentlichen) | `time(value)` / `formatTime(value, timeZone)` | fest `HH:mm`, 24 Stunden, Vereinszone |
+| „gespeichert um …“ | `stamp(value)` / `formatStamp(value, mode, timeZone, now)` | am selben Vereinstag `HH:mm`, sonst Datum und Uhrzeit; nie relativ |
+| Meldungen der Dienste (Ablehnungen, Hinweise) | `messageDate(deps, iso)` | `ui.dateFormat` (über `readSetting`), immer absolut |
 | Papier (alles aus Typst, Betreffe der Akte) | `paperDate(iso)` | fest `TT.MM.JJJJ` |
 
 Papier ist fest, weil ein Brief nach außen geht, die Zuwendungsbestätigung dem amtlichen Muster folgt und ein festgeschriebenes Dokument sich nicht ändern darf, wenn jemand später die Einstellung umstellt. Kein `toLocaleString`, kein `.slice(0, 10)` in einer Anzeige — Wächter `no-raw-date.test.ts`.
 
+Sekunden (`dateTime(value, { seconds: true })`) nur im Protokoll — zum Abgleich mit Serverprotokollen und Backups; die Reihenfolge innerhalb einer Minute sichert die Sortierung, nicht die Anzeige. `time` hängt nicht an `ui.dateFormat`; wird die Oberfläche englisch, ist das neu zu entscheiden. Kein `useFormatter().dateTime` — Wächter `no-raw-date` Teil 4; Grenze: Ein Formatierer, der als Prop weitergereicht wird, ist für den Wächter unsichtbar.
+
 ## Seitenrahmen
 
 - `Page` mit `PageHeader` auf jeder Seite (§ I); `back` für Seiten, die nicht in der Navigation hängen (alles mit Platzhalter oder mit den Endungen `new`, `edit`, `receive` im Pfad) — `tests/back-navigation.test.ts` prüft es.
+- Die Brotkrume ist `nav` (`aria-label` „Brotkrume“) und endet bei der Liste; `aria-current="page"` trägt sie nur auf der Seite des letzten Segments, auf einer Detailseite ist es ein Link. Genau ein `h1` je Seite: der Titel im `PageHeader` — jede Seite hat einen. Wächter `one-h1.test.ts`; der E2E prüft Liste, Detail und Einstellungen, eine neue Seite ohne `PageHeader`-Titel fiele nur dort auf, wo sie getestet wird.
 - Die Kopfzeile hat höchstens eine primäre Aktion, und zwar die naheliegende Hauptaktion der Seite (Anlegen auf einer Liste, „Bearbeiten“ auf einer Lesesicht, der Export auf der Protokollseite); alle anderen Knöpfe dort sind `outline`. Sie bleibt primär, auch wenn sie gesperrt ist.
 - Fehlendes Recht → `ForbiddenCard`; Schritt nicht erlaubt → `BlockedState`; Modul aus → `ModuleInactiveCard`.
 - Anlegen- und Hinzufügen-Knöpfe tragen kein „+“, weder als Symbol noch im Text („Kontakt anlegen“, „Sprache auswählen…“); auch der Knopf „Neuer Ordner“ der Ordnerbäume. Wächter `no-plus-on-create.test.ts`, Ausnahmen dort mit Grund.
@@ -159,6 +198,16 @@ Papier ist fest, weil ein Brief nach außen geht, die Zuwendungsbestätigung dem
 
 Bausteine: `page-header.tsx`, `forbidden-card.tsx`, `blocked-state.tsx`, `module-inactive-card.tsx`, `empty-state.tsx`.
 
+## Protokoll
+
+Das Änderungsprotokoll speichert, was geschah — Aktion, Datensatz, Werte —, nie einen fertigen Satz (Spec Protokoll in Sätzen, 2026-10-09).
+
+- **Katalog im Manifest:** `auditActions` nennt jede Aktion des Moduls mit ihren Werten (`{ params: ['number'] }`; Kern: `packages/core/src/audit/actions.ts`). `recordAudit` wirft bei einer Aktion ohne Katalog, einem fehlenden oder fremden Wert und einem Wert, der keine Zahl, kein Text, kein Schalter und nicht `null` ist. Die Aktion steht als fester Text im Aufruf (`action: 'dms.file'`), auch das letzte Argument von `writeSettingInternal`.
+- **`params` sprachneutral:** Codes statt Wörter (`sentVia: 'post'`), Datum als ISO (Schlüssel auf `At` für Zeitpunkte, `On` für Tage — nur diese formatiert die Anzeige), Zahlen als Zahl, Schalter als `boolean`; Nutzdaten (Ordnerpfad, Name eines Hundes, Nummer) sind erlaubt, ein im Code gebauter Satz nie. Personen nur als ID unter `…UserId`/`…ContactId`, nie Name, E-Mail, Telefon, IBAN; die Finanzen nennen auch keine Kontakt-ID. Eine ID, die nur den Datensatz wiederholt, ist kein Wert — die Spalte „Objekt“ nennt ihn.
+- **Zwei Texte je Aktion:** `audit.actions.<aktion>` (Klartext, Pflicht: Filter, Titel, Rückfall) und `audit.sentences.<aktion>` (Satz mit ICU-Platzhaltern, optional; Personen ohne `Id`: `{targetUser}`, `{contact}`). Punkte im Schlüssel werden zu Unterstrichen. Satzform wie der Klartext: Objekt vor Partizip, Werte in „…“ (Personen ohne), kein Punkt, kein Doppelpunkt und keine Klammer, Anzahlen über `plural` (Nullwerte mit `=0 {}` weglassen). Kein technischer Wert im Satz: Ein Code, der in der Oberfläche anders heißt (Schlüssel einer Einstellung, Sprachcode, Byte), bekommt in `DISPLAY` (`lib/audit-sentences.ts`) seine Beschriftung; ohne Beschriftung kein Satz.
+- **Rückfall:** Ohne Satz, bei einem fehlenden Wert oder einer Person, die sich nicht mehr auflösen lässt, steht der Klartext — nie ein halber Satz (`lib/audit-sentences.ts`, für Tabelle, Detail und PDF).
+- Wächter: `audit-actions.test.ts` (Katalog, Klartexte, feste Aktionen), `audit-sentences-catalog.test.ts` (Platzhalter eines Satzes stehen im Katalog), `patterns/no-audit-summary.test.ts` (kein `summary` neben `action`), `finance-wording.test.ts` (auch die Sätze der Finanzen).
+
 ## Fachbausteine und Grundbausteine
 
 Was keinem der Abschnitte oben gehört, steht im Wächter `component-inventory.test.ts` mit seiner Zuordnung: Bausteine der Hülle (`shell/`), der Ordnerbäume (`folder-tree/`), der Mediathek (`media/`), der Webseite (`site/`), der Finanzen (`finance/`) und die Grundbausteine unter `ui/`. Eine neue Datei unter `src/components/` macht diesen Test rot: Sie wird dort eingeordnet, mit der Freigabe, die sie nennt.
@@ -166,12 +215,14 @@ Was keinem der Abschnitte oben gehört, steht im Wächter `component-inventory.t
 ## Vor dem Commit
 
 - [ ] Art bestimmt (Stammdaten oder Vorgang), Muster C eingehalten
-- [ ] Speichern über `FormActionBar`; keine eigene Leiste
+- [ ] Speichern über `FormActionBar`; keine eigene Leiste; Formularkarte über `FormCard` (overflow-clip, nie overflow-hidden)
 - [ ] Ablehnungen über `state` an Leiste, Dialog oder `RefusalNotice`; kein `toast.error`
 - [ ] Listen über `ui/table`, Öffnen über `RowLink`/`RowButton` in der ersten Inhaltsspalte
 - [ ] Einstellungen mit Unterbereichen über `PanelNav`
 - [ ] Seite über `Page width`, Dialog über `DialogContent size` (§ I)
 - [ ] Formular als eine Karte, Abschnitte statt Reiter, Raster über `FormGrid`, jedes Feld über `FormField size` (§ J)
-- [ ] Löschen oder Archivieren als `DangerSection` am Ende der Detailseite
+- [ ] Seltene Aktionen am Datensatz über `RecordActions` (im Dialog `recordAction`); Unumkehrbares mit Rückfrage
+- [ ] Keine rohen Elemente, keine Statusfläche von Hand (`no-raw-elements`, `no-status-surface`)
 - [ ] Keine Schrift, Größe oder Farbe an Titel, Beschreibung oder Abschnitt; Datum nur über `formatDate`, `messageDate` oder `paperDate`
+- [ ] Liste mit Suche/Filtern über `FilterBar`; Grenze blättert oder wird genannt (§ L)
 - [ ] `apps/kompass/tests/patterns/` grün

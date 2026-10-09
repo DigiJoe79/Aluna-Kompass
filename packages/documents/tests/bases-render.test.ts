@@ -58,7 +58,7 @@ describe('generic bases render', () => {
     const [audit] = coreDocumentTemplates();
     const ctx: DocumentRenderContext = { number: 'PRO-2026-001', issuedAt: '2026-09-05T08:00:00.000Z', issuedDay: isoDay('2026-09-05'), organization: { 'organization.name': 'Musterverein e.V.' }, theme: DEFAULT_THEME, logo: null };
     const built = audit!.build(
-      { title: 'Änderungsprotokoll', filters: { Kanal: 'system' }, entries: [{ occurredAt: '2026-09-05T08:00:00.000Z', userName: 'Anna Berger', channel: 'ui', action: 'settings.update', entityType: 'setting', entityId: 'organization.name', summary: 'geändert #[nicht als Code]' }] },
+      { title: 'Änderungsprotokoll', filters: { Kanal: 'system' }, entries: [{ occurredAt: '2026-09-05T08:00:00.000Z', userName: 'Anna Berger', channel: 'ui', entityType: 'setting', entityId: 'organization.name', sentence: 'geändert #[nicht als Code]' }] },
       ctx,
     );
     expect('typst' in built.body).toBe(true);

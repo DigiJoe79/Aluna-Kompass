@@ -211,7 +211,7 @@ export function cancelSiteJob(deps: Deps, ctx: CallContext, env: SiteEnv, input:
   const step = run.steps.find((s) => s.state === 'running')?.key ?? null;
   if (!run.cancellable || !requestCancel(run.runId)) return localizedConflict('jobNotCancellable', 'site.publish.job.errors.jobNotCancellable');
   deps.db.transaction((tx) =>
-    recordAudit(tx, deps, ctx, { action: 'site.jobCancel', entityType: 'siteJob', entityId: run.runId, after: { kind: run.kind, step }, summary: `Lauf ${run.kind} abgebrochen` }),
+    recordAudit(tx, deps, ctx, { action: 'site.jobCancel', entityType: 'siteJob', entityId: run.runId, after: { kind: run.kind, step }, params: { kind: run.kind } }),
   );
   return ok({ cancelled: true as const });
 }

@@ -110,7 +110,7 @@ describe('exportBundle', () => {
     const entry = deps.db.select().from(schema.auditLog).all().at(-1)!;
     expect(entry.action).toBe('dms.export');
     expect(JSON.parse(entry.after as string).numbers.sort()).toEqual(numbers.sort());
-    expect(`${entry.summary}${entry.after}`).not.toContain('Streng geheimer Betreff');
+    expect(`${entry.params}${entry.after}`).not.toContain('Streng geheimer Betreff');
   });
 
   it('lists what the caller may not read with its number only, and leaves the file out', async () => {

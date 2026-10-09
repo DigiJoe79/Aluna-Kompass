@@ -2,7 +2,9 @@
 
 import type { ApiTokenSummary } from '@kompass/core';
 import { Copy } from 'lucide-react';
-import { useFormatter, useTranslations } from 'next-intl';
+import { useTranslations } from 'next-intl';
+import { Notice } from '@/components/notice';
+import { useDateFormat } from '@/components/date-format-provider';
 import { useActionState, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { ConfirmDialog } from '@/components/forms/confirm-dialog';
@@ -21,7 +23,7 @@ import { ActionForm } from '@/components/forms/action-form';
 export function ApiTokens({ tokens }: { tokens: ApiTokenSummary[] }) {
   const t = useTranslations('profile.tokens');
   const c = useTranslations('common');
-  const format = useFormatter();
+  const fmt = useDateFormat();
   const [open, setOpen] = useState(false);
   const [state, action] = useActionState(createTokenAction, idleState);
   const [created, setCreated] = useState<{ token: string; record: ApiTokenSummary } | null>(null);
@@ -74,7 +76,7 @@ export function ApiTokens({ tokens }: { tokens: ApiTokenSummary[] }) {
                   <div className="font-mono text-[11px] text-muted-ink">{token.prefix}…</div>
                 </TableCell>
                 <TableCell className="font-mono text-[12px]">
-                  {format.dateTime(new Date(token.createdAt), { dateStyle: 'short' })}
+                  {fmt.date(token.createdAt)}
                 </TableCell>
                 <TableCell
                   className={cn(
@@ -83,7 +85,7 @@ export function ApiTokens({ tokens }: { tokens: ApiTokenSummary[] }) {
                   )}
                 >
                   {token.revokedAt
-                    ? t('revokedAt', { date: format.dateTime(new Date(token.revokedAt), { dateStyle: 'short' }) })
+                    ? t('revokedAt', { date: fmt.date(token.revokedAt) })
                     : days === null
                       ? t('neverUsed')
                       : t('lastUsedDays', { days })}
@@ -134,9 +136,7 @@ export function ApiTokens({ tokens }: { tokens: ApiTokenSummary[] }) {
                 {copied ? c('copied') : c('copy')}
               </Button>
             </div>
-            <p className="rounded-md border border-info bg-info-bg p-3 text-[13px] text-ink-2">
-              {t('createdInfo')}
-            </p>
+            <Notice level="warn">{t('createdInfo')}</Notice>
             <Button
               onClick={() => {
                 setCreated(null);

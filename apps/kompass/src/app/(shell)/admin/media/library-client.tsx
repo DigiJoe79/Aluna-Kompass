@@ -2,11 +2,13 @@
 
 import { CircleSlash, Files, Upload } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import { ListTruncated } from '@/components/list-truncated';
 import { useRouter } from 'next/navigation';
+import { FilterBar, selectFilter } from '@/components/filter-bar';
+import { SearchField } from '@/components/search-field';
 import { useEffect, useMemo, useRef, useState, useTransition, type ReactNode } from 'react';
 import { toast } from 'sonner';
 import { useDateFormat } from '@/components/date-format-provider';
-import { ConfirmDialog } from '@/components/forms/confirm-dialog';
 import { DropOverlay } from '@/components/drop-overlay';
 import { FolderColumn } from '@/components/folder-column';
 import { EmptyState } from '@/components/empty-state';
@@ -17,8 +19,8 @@ import { useUndoableMoves, type ItemWording, type UndoableItem } from '@/compone
 import { AssetGrid } from '@/components/media/asset-grid';
 import { useAssetDrag } from '@/components/media/use-asset-drag';
 import { PageHeader } from '@/components/page-header';
+import { Segmented } from '@/components/ui/segmented';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { RowButton, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import type { ActionState } from '@/lib/actions';
@@ -26,12 +28,12 @@ import { MEDIA_MIME, carriesOutsideFiles } from '@/lib/drag-types';
 import { ancestorsOf, isWithin, nameOf, namesBelow } from '@/lib/folder-tree-model';
 import { runAction } from '@/lib/feedback';
 import { usePreference } from '@/lib/preferences';
+import { useUrlFilters } from '@/lib/use-url-filters';
 import { AssetDetailDialog } from './asset-detail-dialog';
-import { ListTruncated } from './list-truncated';
 import { formatBytes, mediaHref, type Folder, type Item, type ListQuery } from './types';
 import { createFolderAction, deleteFolderAction, deleteMediaAction, moveFolderAction, moveMediaAction, renameFolderAction, uploadMediaAction } from './actions';
 
-const KINDS = ['all', 'image', 'pdf'] as const;
+const KINDS = ['image', 'pdf'] as const;
 const SORTS = ['newest', 'oldest', 'name', 'size'] as const;
 
 /** Die Mediathek kennt keine Mehrfachauswahl (Spec § 9): Ein Zug ist eine Datei. */
@@ -82,10 +84,20 @@ export function LibraryClient({
   const fmt = useDateFormat();
   const router = useRouter();
   const [view, setView] = usePreference('mediaView');
+  // Suche, Typ und Sortierung stehen in der Adresse (Spec Filterleisten § 3); der Ordner ist Ort und bleibt beim Filtern.
+  const [filters, setFilters] = useUrlFilters<{ q: string; kind: string; sort: string }>({ q: query.q, kind: query.kind === 'all' ? '' : query.kind, sort: query.sort });
+  const [, startNavigation] = useTransition();
+  const applyFilters = (patch: Partial<typeof filters>) => {
+    const merged = { ...filters, ...patch };
+    setFilters(merged);
+    const kind = merged.kind === 'image' || merged.kind === 'pdf' ? merged.kind : 'all';
+    const sort = SORTS.find((s) => s === merged.sort) ?? 'newest';
+    startNavigation(() => router.replace(mediaHref({ ...query, q: merged.q.trim(), kind, sort })));
+  };
+  const resetFilters = () => applyFilters({ q: '', kind: '' });
   /** Die Listenzeilen ziehen wie die Kacheln (gleiche Hilfe); die Zeile bleibt blass, solange sie gezogen wird. */
   const { dragging: rowDragging, dragProps } = useAssetDrag();
   const [detailId, setDetailId] = useState<string | null>(null);
-  const [confirmId, setConfirmId] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   /** Der Ordner, für den „Verschieben nach…“ offen ist. */
   const [moving, setMoving] = useState<string | null>(null);
@@ -261,9 +273,14 @@ export function LibraryClient({
     return s;
   };
 
-  const requestDelete = (id: string) => {
-    setDetailId(null);
-    setConfirmId(id);
+  /** Aus dem Detaildialog, nach dessen Rückfrage: Bei Erfolg schließt der Detaildialog mit. */
+  const deleteItem = async (id: string): Promise<ActionState> => {
+    const state = await deleteMediaAction(id);
+    if (state.status === 'success') {
+      setDetailId(null);
+      start(() => router.refresh());
+    }
+    return state;
   };
 
   /** Der Ort einer Datei unter dem geöffneten Ordner, als Namen mit „›“; leer heißt „direkt hier“ (Spec § 9). */
@@ -367,45 +384,39 @@ export function LibraryClient({
             <FolderTree {...treeProps} density="touch" />
           </FolderSheet>
 
-          <form method="get" action="/admin/media" className="mb-3 flex flex-wrap items-center gap-3 text-[13px]">
-            {query.unfiled ? <input type="hidden" name="unfiled" value="1" /> : current !== null ? <input type="hidden" name="folder" value={current} /> : null}
-            <Input type="search" name="q" defaultValue={query.q} placeholder={t('searchPlaceholder')} aria-label={t('search')} className="min-w-0 flex-1" />
-            <label className="flex items-center gap-2 text-ink-2">
-              {t('kind.label')}
-              <Select name="kind" defaultValue={query.kind} className="w-auto">
-                {KINDS.map((k) => (
-                  <option key={k} value={k}>
-                    {t(`kind.${k}`)}
-                  </option>
-                ))}
-              </Select>
-            </label>
-            <label className="flex items-center gap-2 text-ink-2">
-              {t('sort.label')}
-              <Select name="sort" defaultValue={query.sort} className="w-auto">
-                {SORTS.map((s) => (
-                  <option key={s} value={s}>
-                    {t(`sort.${s}`)}
-                  </option>
-                ))}
-              </Select>
-            </label>
-            <Button type="submit" size="sm" variant="secondary">
-              {t('filter')}
-            </Button>
-          </form>
-
-          <div className="mb-4 flex items-center justify-end gap-4">
-            <div className="flex overflow-hidden rounded-md border border-line text-[13px]">
-              {(['list', 'grid'] as const).map((v) => (
-                <button key={v} type="button" onClick={() => setView(v)} className={`px-3 py-1 ${view === v ? 'bg-selected text-selected-ink' : 'hover:bg-row-hover'}`}>
-                  {t(`view.${v}`)}
-                </button>
-              ))}
-            </div>
+          <div className="mb-4">
+            <FilterBar
+              search={<SearchField value={filters.q} onChange={(q) => applyFilters({ q })} placeholder={t('searchPlaceholder')} />}
+              searchActive={filters.q.trim() ? { chip: filters.q.trim(), onClear: () => applyFilters({ q: '' }) } : undefined}
+              filters={[selectFilter({ key: 'kind', label: t('kind.label'), value: filters.kind, options: KINDS.map((k) => ({ value: k, label: t(`kind.${k}`) })), onChange: (kind) => applyFilters({ kind }) })]}
+              onApply={(values) => applyFilters(values)}
+              // „{Treffer} von {alle}“: „alle“ ist, was am Ort liegt — dieselbe Zahl wie im Baum.
+              count={{ shown: matching, total: place.count, noun: { one: t('noun.one'), other: t('noun.other'), dative: t('noun.dative') } }}
+              onReset={resetFilters}
+              sort={
+                <Select aria-label={t('sort.label')} value={filters.sort} onChange={(e) => applyFilters({ sort: e.target.value })} className="w-auto">
+                  {SORTS.map((s) => (
+                    <option key={s} value={s}>
+                      {t(`sort.${s}`)}
+                    </option>
+                  ))}
+                </Select>
+              }
+              view={
+                <Segmented
+                  aria-label={t('viewGroup')}
+                  options={(['list', 'grid'] as const).map((v) => ({ value: v, label: t(`view.${v}`) }))}
+                  value={view}
+                  onValueChange={setView}
+                />
+              }
+            />
           </div>
 
-          {items.length === 0 ? (
+          {items.length === 0 && (query.q || query.kind !== 'all') ? (
+            // Befund 7: Suche oder Art blenden alles aus — das ist nicht „Keine Dateien in diesem Ordner“. Der Ordner bleibt (Ort, kein Filter).
+            <EmptyState filtered={{ noun: t('emptyFilteredNoun'), onReset: resetFilters }} />
+          ) : items.length === 0 ? (
             <EmptyState title={t('emptyTitle')} text={t('empty')} />
           ) : view === 'grid' ? (
             <AssetGrid
@@ -418,10 +429,12 @@ export function LibraryClient({
               <TableHeader>
                 <TableRow>
                   <TableHead>{t('columns.file')}</TableHead>
-                  <TableHead>{t('columns.folder')}</TableHead>
-                  <TableHead>{t('columns.size')}</TableHead>
-                  <TableHead>{t('columns.uploadedAt')}</TableHead>
-                  <TableHead>{t('columns.usage')}</TableHead>
+                  {/* Telefon: nur die Datei — fünf Spalten liefen seitlich über und schnitten die zweite mitten im Wort ab
+                      (Befund 39, 0.2.9); Ordner, Größe, Datum und Verwendung stehen im Detail. Wie Partnerliste. */}
+                  <TableHead className="hidden sm:table-cell">{t('columns.folder')}</TableHead>
+                  <TableHead className="hidden sm:table-cell">{t('columns.size')}</TableHead>
+                  <TableHead className="hidden sm:table-cell">{t('columns.uploadedAt')}</TableHead>
+                  <TableHead className="hidden sm:table-cell">{t('columns.usage')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -437,19 +450,19 @@ export function LibraryClient({
                         <span className="font-mono text-[13px]">{it.filename}</span>
                       </RowButton>
                     </TableCell>
-                    <TableCell data-folder-cell className="text-ink-2">
+                    <TableCell data-folder-cell className="hidden text-ink-2 sm:table-cell">
                       {placeOf(it.folder)}
                     </TableCell>
-                    <TableCell>{formatBytes(it.bytes)}</TableCell>
-                    <TableCell className="text-ink-2">{fmt.date(it.createdAt)}</TableCell>
-                    <TableCell className="whitespace-normal">{it.references.length === 0 ? <span className="text-ink-2">{t('unused')}</span> : it.references.map((r) => r.label).join(', ')}</TableCell>
+                    <TableCell className="hidden sm:table-cell">{formatBytes(it.bytes)}</TableCell>
+                    <TableCell className="hidden text-ink-2 sm:table-cell">{fmt.date(it.createdAt)}</TableCell>
+                    <TableCell className="hidden whitespace-normal sm:table-cell">{it.references.length === 0 ? <span className="text-ink-2">{t('unused')}</span> : it.references.map((r) => r.label).join(', ')}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
           )}
 
-          <ListTruncated shown={items.length} matching={matching} />
+          <ListTruncated shown={items.length} total={matching} text={t('listTruncated', { shown: items.length, matching })} testId="media-list-truncated" className="mt-3" />
 
           {dragging ? (
             <DropOverlay
@@ -470,7 +483,7 @@ export function LibraryClient({
         </div>
       </div>
 
-      <AssetDetailDialog item={detail} folders={shownFolders} assetFolder={detail?.folder ?? null} onOpenChange={(open) => !open && setDetailId(null)} onMove={move} onDelete={requestDelete} />
+      <AssetDetailDialog item={detail} folders={shownFolders} assetFolder={detail?.folder ?? null} onOpenChange={(open) => !open && setDetailId(null)} onMove={move} onDelete={deleteItem} />
 
       {moving !== null ? (
         <FolderMoveDialog
@@ -487,23 +500,6 @@ export function LibraryClient({
         />
       ) : null}
 
-      <ConfirmDialog
-        open={confirmId !== null}
-        onOpenChange={(open) => !open && setConfirmId(null)}
-        title={t('confirmDelete')}
-        description={t('confirmDeleteBody')}
-        confirmLabel={t('delete')}
-        destructive
-        action={async () => {
-          if (!confirmId) return { status: 'idle' } as ActionState;
-          const state = await deleteMediaAction(confirmId);
-          if (state.status === 'success') {
-            start(() => router.refresh());
-            setConfirmId(null);
-          }
-          return state;
-        }}
-      />
     </div>
   );
 }

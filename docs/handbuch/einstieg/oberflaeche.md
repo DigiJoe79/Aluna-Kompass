@@ -20,7 +20,7 @@ Backup.
 
 ## Die Zweitebene
 
-Steht ein Bereich auf mehr als einer Seite — die Webseite mit Template,
+Steht ein Bereich auf mehr als einer Seite — die Webseite mit Vorlage,
 Variablen, Sammlungen und Publizieren, die Einstellungen mit ihren beiden
 Abschnitten —, erscheint neben der Schiene eine zweite Spalte. Die aktuelle
 Seite ist darin hervorgehoben. Bei einem Bereich mit nur einer Seite entfällt

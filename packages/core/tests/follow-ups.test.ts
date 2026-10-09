@@ -3,7 +3,6 @@ import { coreModule } from '../src/core-module';
 import { auditLog, followUps, settings } from '../src/db/schema';
 import { defineModule } from '../src/modules/manifest';
 import { unwrap } from '../src/result';
-import { writeSettingInternal } from '../src/settings/service';
 import {
   completeFollowUp,
   createFollowUp,
@@ -13,7 +12,7 @@ import {
   listFollowUps,
   reopenFollowUp,
 } from '../src/follow-ups/service';
-import { createTestDeps, ctxWith, insertUser, systemContext, TEST_NOW } from '../src/testing';
+import { createTestDeps, ctxWith, insertUser, TEST_NOW } from '../src/testing';
 
 const ALL = ['followUps.view', 'followUps.manage'];
 
@@ -26,14 +25,11 @@ function setup() {
 const actions = (deps: ReturnType<typeof setup>['deps']) => deps.db.select().from(auditLog).all().map((e) => e.action);
 
 describe('createFollowUp', () => {
-  it('nennt die Frist im Protokoll wie die Anzeige (K10)', async () => {
+  it('speichert die Frist als Tag, die Anzeige formatiert sie (Spec Protokoll § 2)', async () => {
     const { deps, ctx } = setup();
     unwrap(await createFollowUp(deps, ctx, { entityType: 'document', entityId: 'D1', dueAt: '2026-09-20', title: 'Antwort abwarten' }));
     const created = () => deps.db.select().from(auditLog).all().filter((e) => e.action === 'followUps.create');
-    expect(created().at(-1)!.summary).toMatch(/ zum 20\.09\.2026 angelegt$/);
-    deps.db.transaction((tx) => writeSettingInternal(tx, deps, systemContext(), 'ui.dateFormat', 'iso'));
-    unwrap(await createFollowUp(deps, ctx, { entityType: 'document', entityId: 'D1', dueAt: '2026-09-21', title: 'Nachfassen' }));
-    expect(created().at(-1)!.summary).toMatch(/ zum 2026-09-21 angelegt$/);
+    expect(JSON.parse(created().at(-1)!.params!)).toEqual({ label: 'Antwort abwarten', onRecord: false, dueOn: '2026-09-20' });
   });
 
   it('legt eine offene Wiedervorlage an und protokolliert sie', async () => {
@@ -177,7 +173,10 @@ describe('Wiedervorlagen an heiklen Datensätzen', () => {
     unwrap(await deleteFollowUp(deps, ctx, { id: created.id }));
     const log = JSON.stringify(deps.db.select().from(auditLog).all());
     expect(log).not.toContain('Müller');
-    expect(log).toContain('Wiedervorlage zu T-7');
+    // Statt des Titels nur die Kennung des Datensatzes (`auditLabel`, sonst sein Label).
+    const params = deps.db.select().from(auditLog).all().map((e) => e.params && JSON.parse(e.params));
+    expect(params).toContainEqual({ label: 'T-7', onRecord: true, dueOn: '2026-10-01' });
+    expect(params).toContainEqual({ label: 'T-7', onRecord: true });
     expect(created.title).toBe('Müller anrufen'); // im Fachdatensatz bleibt er
   });
 });

@@ -1,13 +1,14 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { useState, type KeyboardEvent } from 'react';
+import { useState } from 'react';
 import type { PickedDocument } from '@/app/(shell)/dms/search-action';
 import { Notice } from '@/components/notice';
 import { FormActionBar } from '@/components/forms/form-action-bar';
 import { useActionFeedback } from '@/components/forms/use-action-feedback';
 import { Dialog, DialogBody, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { Segmented } from '@/components/ui/segmented';
 import { Select } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import type { ActionState } from '@/lib/actions';
@@ -70,15 +71,6 @@ export function MovementDialog({
   const after = reserveBalanceAfter(reserve.balanceCents, kind, amountCents);
 
   // Segment als Radiogruppe (HANDOFF § 6): ein Tab-Halt, Pfeiltasten wechseln und wandern ringsum.
-  const onSegmentKey = (e: KeyboardEvent<HTMLDivElement>) => {
-    const step = e.key === 'ArrowRight' || e.key === 'ArrowDown' ? 1 : e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? -1 : 0;
-    if (step === 0) return;
-    e.preventDefault();
-    const next = KINDS[(KINDS.indexOf(kind) + step + KINDS.length) % KINDS.length]!;
-    setKind(next);
-    e.currentTarget.querySelector<HTMLButtonElement>(`[data-testid="movement-kind-${next}"]`)?.focus();
-  };
-
   const submit = async () => {
     setPending(true);
     const base = {
@@ -128,22 +120,12 @@ export function MovementDialog({
               {/* Sichtbares Label wie bei FormField (Entscheidung zum Inventar § E); die Leiste ist kein einzelnes Eingabefeld. */}
               <FormCell size="m" className="flex flex-col gap-1.5">
                 <span id="movement-kind-label" className="text-[13px] font-semibold text-ink-2">{t('kindLabel')}</span>
-                <div role="radiogroup" aria-labelledby="movement-kind-label" className="flex gap-1 rounded-md border border-line bg-surface-2 p-1" onKeyDown={onSegmentKey}>
-                  {KINDS.map((k) => (
-                    <button
-                      key={k}
-                      type="button"
-                      role="radio"
-                      aria-checked={kind === k}
-                      tabIndex={kind === k ? 0 : -1}
-                      data-testid={`movement-kind-${k}`}
-                      onClick={() => setKind(k)}
-                      className={`flex-1 rounded-sm px-2 py-1.5 text-[13px] font-semibold ${kind === k ? 'bg-surface text-ink shadow-sm' : 'text-ink-2'}`}
-                    >
-                      {t(`kinds.${k}`)}
-                    </button>
-                  ))}
-                </div>
+                <Segmented
+                  aria-labelledby="movement-kind-label"
+                  options={KINDS.map((k) => ({ value: k, label: t(`kinds.${k}`), testId: `movement-kind-${k}` }))}
+                  value={kind}
+                  onValueChange={setKind}
+                />
               </FormCell>
               <FormField id="movement-date" label={t('date')} required size="s">
                 <Input id="movement-date" type="date" value={date} onChange={(e) => setDate(e.target.value)} />

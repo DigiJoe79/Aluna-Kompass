@@ -70,7 +70,7 @@ export function clearSiteCache(deps: Deps, ctx: CallContext, env: SiteEnv): Resu
     // kein Vorschauverzeichnis, nichts zu räumen
   }
   deps.db.transaction((tx) =>
-    recordAudit(tx, deps, ctx, { action: 'site.cacheClear', entityType: 'siteCache', entityId: null, after: { removed: files.length }, summary: `Webseiten-Cache geleert: ${files.length} Dateien` }),
+    recordAudit(tx, deps, ctx, { action: 'site.cacheClear', entityType: 'siteCache', entityId: null, after: { removed: files.length }, params: { fileCount: files.length } }),
   );
   return ok({ removed: files.length });
 }

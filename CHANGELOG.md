@@ -9,6 +9,64 @@ die Nummern folgen [Semantic Versioning](https://semver.org/lang/de/). Vor
 1.0.0 kann jede Minor-Fassung Brüche enthalten — was bricht, steht unter
 **Geändert** mit dem, was zu tun ist.
 
+## [0.2.9] - 2026-10-09
+
+Diese Fassung macht die Oberfläche einheitlicher – Filterleisten,
+Speicherleiste und das Menü „Weitere Aktionen“ sehen überall gleich aus – und
+baut das Änderungsprotokoll um: Es zeigt Aktionen in Worten und speichert
+keine Namen, E-Mail-Adressen oder Betreffe mehr. Eine Migration (`0006`,
+`migrationCount` 7). Einträge von vor dem Update zeigen danach nur noch die
+Aktion; ihre gespeicherte Zusammenfassung entfällt. Nach dem Update ist nichts
+zu tun.
+
+### Sicherheit
+
+- `http-cache-semantics` (im Werkzeug, das die Webseite baut) aktualisiert.
+
+### Geändert
+
+- Das Änderungsprotokoll zeigt Aktionen in Worten („Rolle „Vorstand“ an Erika
+  Muster vergeben“) und nennt Personen mit ihrem aktuellen Namen. Der Eintrag
+  selbst speichert dafür keine Namen, E-Mail-Adressen oder Betreffe von
+  Dokumenten mehr, nur Werte wie Nummern und Daten; bei Nutzern und Dokumenten
+  steht nur noch, welches Feld sich geändert hat. Die technische Aktion steht
+  im Detail ganz unten zum Kopieren. Agenten bekommen über MCP (`audit_query`,
+  `audit_get`) statt `summary` die Werte `params`.
+- In der Webseiten-Verwaltung heißt das Template jetzt „Vorlage der Webseite“
+  („Vorlage einlesen“).
+- Löschen, Archivieren, Stornieren und ähnliche seltene Aktionen stehen auf
+  jeder Seite im Menü „Weitere Aktionen“ (⋯) oben rechts, statt in eigenen
+  Kästen am Seitenende. Archivieren lässt sich direkt im Hinweis unten
+  rückgängig machen; was sich nicht zurücknehmen lässt, fragt vorher nach.
+- Alle Listen mit Suche und Filtern haben dieselbe Leiste: Suche, „{Filter}:
+  alle“, die Zahl der Treffer und „Filter zurücksetzen“; am Telefon stehen die
+  Filter in einem eigenen Fenster. Lange Listen blättern oder nennen ihre
+  Grenze, statt still nach 20 bis 200 Einträgen aufzuhören; das Journal hat
+  einen Jahresfilter.
+- Hinweise, Warnungen und Ablehnungen sehen überall gleich aus; Farbe steht
+  nur noch für etwas, das eine Handlung verlangt.
+- Alle Zeitangaben folgen der Einstellung für das Datumsformat, auch im
+  Protokoll, bei den Nutzern, beim Veröffentlichen und auf der Startseite.
+- Dateien wählen Sie über einen Knopf „Hochladen“ bzw. eine Ablagefläche statt
+  über das englische Browserfeld „Choose Files“.
+- Bildschirmleser finden den Seitentitel als Hauptüberschrift; die Brotkrume
+  führt von einer Detailseite zurück zur Liste.
+
+### Behoben
+
+- Wer eine Formularseite mit ungespeicherten Änderungen verlässt, wird
+  gefragt, ob die Eingaben verloren gehen dürfen – auch in „Neue Buchung“ und
+  „Umwidmung“. Bisher gingen sie stillschweigend verloren.
+- Die Speicherleiste langer Formulare bleibt am Rechner beim Scrollen am
+  unteren Rand stehen; bisher scrollte sie auf den meisten Seiten mit weg. Auf
+  dem Telefon steht sie am Ende des Formulars, statt ein Drittel des
+  Bildschirms zu belegen.
+- Die Mediathek zeigt am Telefon nur die Spalte „Datei“, statt seitlich
+  überzulaufen; Ordner, Größe und Verwendung stehen im Detail.
+- Ein Verweis auf eine offene Zahlung findet sie auch jenseits der ersten 200.
+- Ein Kontakt, dessen Aufbewahrungsfrist abgelaufen ist, wird erst nach einer
+  Rückfrage gelöscht.
+
 ## [0.2.8] - 2026-10-07
 
 Eine Wartungsfassung mit Sicherheitsupdates: Abhängigkeiten mit bekannten

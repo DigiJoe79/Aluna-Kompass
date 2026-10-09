@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import path from 'node:path';
 
 /**
@@ -80,3 +80,45 @@ export function callArguments(text: string, prefix: string): { line: number; arg
  * Unerlaubtes dasteht und dass keine Ausnahme veraltet ist (die Datei gibt es, der Verstoß ebenso).
  */
 export type Allowlist = Readonly<Record<string, string>>;
+
+/**
+ * Erlaubnisliste mit Trefferzahl: Pfad → wie viele Treffer die Datei haben darf, und warum. Gebunden an die
+ * Zahl statt an die ganze Datei, damit ein zusätzliches rohes Datum in einer freigegebenen Datei auffällt
+ * (K10-Review, 2026-10-07). Weniger Treffer als erlaubt heißt: Die Ausnahme ist veraltet, die Zahl sinkt mit.
+ */
+export type CountedAllowlist = Readonly<Record<string, { count: number; reason: string }>>;
+type Hit = { where: string; file: string };
+
+export function checkCountedAllowlist(hits: Hit[], allowed: CountedAllowlist): { unexpected: string[]; stale: string[] } {
+  const byFile = new Map<string, Hit[]>();
+  for (const hit of hits) byFile.set(hit.file, [...(byFile.get(hit.file) ?? []), hit]);
+  const unexpected: string[] = [];
+  for (const [file, found] of byFile) {
+    const limit = allowed[file]?.count;
+    if (limit === undefined) unexpected.push(...found.map(({ where }) => where));
+    else if (found.length > limit) unexpected.push(`${file}: ${found.length} Treffer, erlaubt ${limit} (${found.map(({ where }) => where).join(', ')})`);
+  }
+  const stale = Object.entries(allowed).flatMap(([file, { count }]) => {
+    const found = byFile.get(file)?.length ?? 0;
+    return found < count ? [`${file}: ${found} Treffer, erlaubt ${count}`] : [];
+  });
+  return { unexpected, stale };
+}
+
+/**
+ * Ob die Datei — oder eine Liste aus ihrem Ordner, die sie einbindet, auch über weitere Dateien desselben Ordners
+ * (Seite → Client → Tabelle) — `pattern` enthält.
+ */
+export function inFileOrLocalImport(file: string, pattern: RegExp, seen: Set<string> = new Set()): boolean {
+  if (seen.has(file)) return false;
+  seen.add(file);
+  const text = read(file);
+  if (pattern.test(text)) return true;
+  const imports = [...text.matchAll(/from '\.\/([\w-]+)'/g)].map((m) => m[1]!);
+  return imports.some((name) =>
+    ['.tsx', '.ts'].some((ext) => {
+      const candidate = path.join(path.dirname(file), name + ext);
+      return existsSync(candidate) && inFileOrLocalImport(candidate, pattern, seen);
+    }),
+  );
+}

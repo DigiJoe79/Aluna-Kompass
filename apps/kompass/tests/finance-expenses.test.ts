@@ -8,7 +8,6 @@ import {
   claimHistory,
   claimHref,
   claimSentence,
-  groupClaims,
   deviceFromUserAgent,
   draftInput,
   emptyExpenseForm,
@@ -207,13 +206,6 @@ describe('own claims (D2)', () => {
     expect(claimSentence(claim({ state: 'approved', stateLabelKey: 'paid', paid: { settledCents: 4099, paidOn: '2026-10-02', state: 'paid' } }))).toEqual({ key: 'paid', date: '2026-10-02' });
     // Abgelehnt: Der Grund ist der Satz.
     expect(claimSentence(claim({ state: 'rejected', stateLabelKey: 'rejected', rejectedAt: '2026-09-26T10:00:00.000Z', rejectNote: 'Beleg ist nicht lesbar.' }))).toEqual({ key: 'rejected', date: '2026-09-26T10:00:00.000Z', note: 'Beleg ist nicht lesbar.' });
-  });
-
-  it('groups open (draft, submitted, approved) before done (paid, rejected), keeping the order', () => {
-    const items = [claim({ id: 'a', stateLabelKey: 'paid' }), claim({ id: 'b', stateLabelKey: 'draft' }), claim({ id: 'c', stateLabelKey: 'rejected' }), claim({ id: 'd', stateLabelKey: 'approved' }), claim({ id: 'e' })];
-    const groups = groupClaims(items);
-    expect(groups.open.map((c) => c.id)).toEqual(['b', 'd', 'e']);
-    expect(groups.done.map((c) => c.id)).toEqual(['a', 'c']);
   });
 
   it('opens a draft in the form and everything else in the detail', () => {

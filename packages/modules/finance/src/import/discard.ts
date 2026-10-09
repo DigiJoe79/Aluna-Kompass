@@ -176,7 +176,6 @@ export async function discardRun(deps: Deps, ctx: CallContext, input: unknown): 
       entity: 'financeImportRun',
       id: before.id,
       after: { discarded: true, fileKeyCleared: true },
-      summary: `Kontoauszug ${before.id} verworfen`,
     });
 
     return ok(toRunView(tx, importRunRowInternal(tx, before.id)!));

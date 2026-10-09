@@ -77,8 +77,8 @@ function handbookLinks(doc: string) {
 
 /**
  * Das Handbuch in der App: Bilder aus `bilder/`, Links zwischen Seiten, und
- * alle Überschriften eine Stufe tiefer — das einzige `<h1>` bleibt die
- * Brotkrume der Schale.
+ * alle Überschriften eine Stufe tiefer — das einzige `<h1>` ist der
+ * Seitentitel im `PageHeader` der Hilfeseite.
  */
 export async function renderHandbook(markdown: string, options: { doc: string }): Promise<string> {
   if (markdown.trim().length === 0) return '';

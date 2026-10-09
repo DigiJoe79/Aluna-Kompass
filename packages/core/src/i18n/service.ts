@@ -49,7 +49,7 @@ export async function addLocale(deps: Deps, ctx: CallContext, input: unknown): P
       entityId: parsed.value.code,
       before: current,
       after: next,
-      summary: `Sprache ${parsed.value.code} hinzugefügt`,
+      params: { code: parsed.value.code },
     });
   });
   return ok(next);
@@ -78,7 +78,6 @@ export async function reorderLocales(deps: Deps, ctx: CallContext, input: unknow
       entityId: next[0]!,
       before: current,
       after: next,
-      summary: 'Sprachen neu geordnet',
     });
   });
   return ok(next);
@@ -204,7 +203,7 @@ export async function removeLocale(deps: Deps, ctx: CallContext, input: unknown)
       entityId: code,
       before: { locales: current, filled },
       after: { locales: next },
-      summary: `Sprache ${code} entfernt`,
+      params: { code },
     });
   });
   return ok(next);

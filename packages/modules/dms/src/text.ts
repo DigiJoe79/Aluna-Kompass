@@ -70,7 +70,7 @@ export async function extractDocumentText(
         entityId: documentId,
         before: { textStatus: row.textStatus },
         after: { textStatus: 'unavailable', reason: probe.error },
-        summary: `Volltext von ${row.number ?? row.subject} nicht lesbar: ${probe.error}`,
+        params: { number: row.number ?? null },
       });
 
       return ok({ documentId, pages: 0, status: 'unavailable' as const });
@@ -108,7 +108,7 @@ export async function extractDocumentText(
           entityId: documentId,
           before: { textStatus: row.textStatus, textAttempts: row.textAttempts },
           after: { textStatus: 'failed', textAttempts: attempts, reason: message },
-          summary: `Volltext von ${row.number ?? row.subject} nach ${attempts} Versuchen aufgegeben: ${message}`,
+          params: { number: row.number ?? null, attempts },
         });
       }
 
@@ -138,7 +138,7 @@ export async function extractDocumentText(
       entityId: documentId,
       before: { textStatus: row.textStatus },
       after: { textStatus: 'done', pages: pages.length },
-      summary: `Volltext von ${row.number ?? row.subject} gelesen (${pages.length} Seiten)`,
+      params: { number: row.number ?? null, pages: pages.length },
     });
 
     return ok({ documentId, pages: pages.length, status: 'done' as const });
@@ -184,7 +184,7 @@ export async function reindexAllDocuments(deps: Deps, ctx: CallContext): Promise
       // Kein `before: null` — das schriebe die Zeichenkette „null“ in die
       // Spalte. Ein weggelassenes Feld bleibt leer, wie bei allen anderen.
       after: { queued: rows.length },
-      summary: `${rows.length} Dokumente zum Neu-Lesen vorgemerkt`,
+      params: { count: rows.length },
     });
 
     return ok({ queued: rows.length });

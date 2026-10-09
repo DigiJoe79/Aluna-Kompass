@@ -10,7 +10,7 @@ const PNG = Buffer.from(
 
 const importTemplate = async (page: import('@playwright/test').Page) => {
   await page.goto('/site/template');
-  await page.getByRole('button', { name: 'Template einlesen' }).click();
+  await page.getByRole('button', { name: 'Vorlage einlesen' }).click();
   await page.getByRole('button', { name: 'Übernehmen' }).click();
   await expect(page.getByRole('status')).toContainText('eingelesen');
 };
@@ -127,9 +127,9 @@ test('preview build, diff and publish to the local staging target', async ({ pag
   // Die Vorschau lässt sich auf Telefon- und Tablet-Breite schalten.
   const frame = tab.getByTitle('Vorschau');
   await expect(frame).not.toHaveCSS('width', '390px');
-  await tab.getByRole('button', { name: /Mobil/ }).click();
+  await tab.getByRole('radio', { name: /Mobil/ }).click();
   await expect(frame).toHaveCSS('width', '390px');
-  await tab.getByRole('button', { name: /Tablet/ }).click();
+  await tab.getByRole('radio', { name: /Tablet/ }).click();
   await expect(frame).toHaveCSS('width', '820px');
 
   // Der erste Tab steht unverändert: Die Vorschau ist noch da.

@@ -31,6 +31,22 @@ describe('planResync', () => {
     expect(of('removed', findings)).toEqual([]);
   });
 
+  it('is silent about a rename that is already done: the old field is gone, the new one is there (Backlog 51)', () => {
+    expect(planResync(after as never, after as never, { variables: { lede: { de: 'Wer wir sind' } } })).toEqual([]);
+  });
+
+  it('treats a declared rename without the old field as a new field', () => {
+    const without = { ...before, variables: { claim: before.variables.claim, layout: after.variables.layout } };
+    expect(of('renamed', planResync(without as never, after as never, data))).toEqual([]);
+    expect(of('added', planResync(without as never, after as never, data))).toEqual([{ kind: 'added', path: 'variables.lede', label: 'Einleitung' }]);
+  });
+
+  it('is silent about a done rename inside a collection, too', () => {
+    const renamedField = { ...after, collections: { metrics: { ...after.collections.metrics, fields: { title: field('localized', { label: 'Titel', renamedFrom: 'label' }) } } } };
+    expect(of('renamed', planResync(before as never, renamedField as never, data)).map((f) => f.path)).toEqual(['variables.lede', 'collections.metrics[].title']);
+    expect(planResync(renamedField as never, renamedField as never, data)).toEqual([]);
+  });
+
   it('says nothing about locales: a template cannot remove one', () => {
     const fewer = planResync(before as never, { ...after, locales: ['de'] } as never, data);
     expect(fewer.map((f) => f.kind)).toEqual(findings.map((f) => f.kind));

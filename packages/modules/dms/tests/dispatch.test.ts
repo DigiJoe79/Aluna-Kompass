@@ -15,12 +15,13 @@ describe('Versandvermerk', () => {
     expect(auditActions(deps)).toContain('dms.dispatch');
   });
 
-  it('nennt das Versanddatum im Protokoll wie die Anzeige (K10)', async () => {
+  it('speichert das Versanddatum und den Versandweg als Werte', async () => {
     const { deps, ctx } = setupWithTypes();
     const letter = await fileFixture(deps, ctx);
     unwrap(await recordDispatch(deps, ctx, { id: letter.id, sentAt: '2026-09-05', sentVia: 'post' }));
     const entry = deps.db.select().from(schema.auditLog).all().filter((e) => e.action === 'dms.dispatch').at(-1)!;
-    expect(entry.summary).toBe(`Dokument ${letter.number} als versandt vermerkt: 05.09.2026 per post`);
+    // Das Datum als Tag, der Versandweg als Schlüssel — formatiert wird erst in der Anzeige (Spec Protokoll § 2).
+    expect(JSON.parse(entry.params!)).toEqual({ number: letter.number, sentOn: '2026-09-05', sentVia: 'post' });
   });
 
   it('ändert nachträglich mit Vorher und Nachher im Protokoll', async () => {

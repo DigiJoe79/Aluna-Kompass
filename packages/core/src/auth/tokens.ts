@@ -57,7 +57,7 @@ export async function createApiToken(deps: Deps, ctx: CallContext, input: unknow
       .values({ id, userId, name: parsed.value.name, prefix: token.slice(0, 12), tokenHash: hashToken(token), createdAt: isoNow(deps.clock) })
       .run();
     const record = toSummary(tx.select().from(apiTokens).where(eq(apiTokens.id, id)).get()!, deps.clock.now());
-    recordAudit(tx, deps, ctx, { action: 'apiTokens.create', entityType: 'apiToken', entityId: id, after: record, summary: `API-Token „${record.name}“ erstellt` });
+    recordAudit(tx, deps, ctx, { action: 'apiTokens.create', entityType: 'apiToken', entityId: id, after: record, params: { tokenName: record.name } });
     return ok({ token, record });
   });
 }
@@ -91,7 +91,7 @@ export async function revokeApiToken(deps: Deps, ctx: CallContext, input: unknow
     tx.update(apiTokens).set({ revokedAt: isoNow(deps.clock) }).where(eq(apiTokens.id, row.id)).run();
     const now = deps.clock.now();
     const after = toSummary(tx.select().from(apiTokens).where(eq(apiTokens.id, row.id)).get()!, now);
-    recordAudit(tx, deps, ctx, { action: 'apiTokens.revoke', entityType: 'apiToken', entityId: row.id, before: toSummary(row, now), after, summary: `API-Token „${row.name}“ widerrufen` });
+    recordAudit(tx, deps, ctx, { action: 'apiTokens.revoke', entityType: 'apiToken', entityId: row.id, before: toSummary(row, now), after, params: { tokenName: row.name } });
     return ok(after);
   });
 }

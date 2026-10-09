@@ -84,7 +84,7 @@ export function ExpenseForm({
   const [refusal, setRefusal] = useState<Refusal | null>(null);
   const [focusKey, setFocusKey] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const firstFieldRefs = useRef(new Map<string, HTMLInputElement>());
+  const firstFieldRefs = useRef(new Map<string, HTMLDivElement>());
 
   /** Eine Sicherung des jüngsten Stands; die Antwort wird in den Stand zum Zeitpunkt der Antwort eingeführt. */
   const saveDraft = useCallback(async (current: FormState): Promise<SaveOutcome<FormState>> => {
@@ -122,7 +122,7 @@ export function ExpenseForm({
 
   useEffect(() => {
     if (!focusKey) return;
-    firstFieldRefs.current.get(focusKey)?.focus();
+    firstFieldRefs.current.get(focusKey)?.querySelector<HTMLElement>('[role="radio"][aria-checked="true"]')?.focus();
     setFocusKey(null);
   }, [focusKey]);
 

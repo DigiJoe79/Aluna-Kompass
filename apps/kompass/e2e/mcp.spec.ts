@@ -24,9 +24,13 @@ test('an API token created in the profile drives the MCP endpoint and is audited
   // Auf MCP filtern: Nach dem Reset liest der Hintergrunddienst die Seed-PDFs
   // und protokolliert das, womöglich nach dem Aufruf oben — im Container-Ring
   // des Tag-Laufs von 0.1.1 stand so „Volltext gelesen“ zuoberst.
+  // Kanal steht unter „Weitere Filter“ (Spec Filterleisten § 4).
+  await page.getByRole('button', { name: 'Weitere Filter' }).click();
   await page.getByLabel('Kanal').selectOption('mcp');
+  await expect(page).toHaveURL(/channel=mcp/);
+  await page.keyboard.press('Escape');
   const row = page.getByRole('table').getByRole('row').nth(1);
-  await expect(row).toContainText('settings.update');
+  await expect(row).toContainText('Einstellung');
   await expect(row).toContainText('MCP');
   await page.goto('/admin/settings');
   await expect(page.getByLabel('Ort')).toHaveValue('Musterstadt');

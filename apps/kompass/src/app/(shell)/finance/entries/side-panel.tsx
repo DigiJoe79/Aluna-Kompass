@@ -2,6 +2,7 @@
 
 import { useTranslations } from 'next-intl';
 import type { BalancesView, IncomeStatement } from '@kompass/module-finance';
+import { Button } from '@/components/ui/button';
 import { formatEuro } from '@/lib/finance/amount';
 import { usePreference } from '@/lib/preferences';
 import { cn } from '@/lib/utils';
@@ -25,17 +26,16 @@ export function SidePanel({ balances, incomeStatement }: SidePanelProps) {
 
   return (
     <>
-      <button
+      <Button
         type="button"
+        variant="outline"
+        size="sm"
         aria-label={t('expand')}
         onClick={() => setPref('open')}
-        className={cn(
-          'h-9 shrink-0 self-start rounded-md border border-line-strong bg-surface px-2 text-[12px] text-ink-2',
-          explicit ? (open ? 'hidden' : 'block') : 'hidden max-[1359px]:block',
-        )}
+        className={cn('shrink-0 self-start', explicit ? (open ? 'hidden' : 'inline-flex') : 'hidden max-[1359px]:inline-flex')}
       >
         {t('expand')}
-      </button>
+      </Button>
       <aside
         data-testid="finance-side-panel"
         className={cn(
@@ -45,9 +45,9 @@ export function SidePanel({ balances, incomeStatement }: SidePanelProps) {
       >
         <div className="flex items-center justify-between">
           <h3 className="text-[13px] font-semibold uppercase tracking-wide text-muted-ink">{t('title')}</h3>
-          <button type="button" onClick={() => setPref('closed')} className="text-[12px] text-ink-2 underline underline-offset-2">
+          <Button type="button" variant="link" className="h-auto p-0" onClick={() => setPref('closed')}>
             {t('collapse')}
-          </button>
+          </Button>
         </div>
 
         <div className="space-y-2">

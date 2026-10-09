@@ -284,6 +284,7 @@ test.describe('finance partners (F7)', () => {
     await expect(page.getByRole('heading', { name: 'Zahlung an Partner · Entwurf', exact: true })).toBeVisible();
     await expect(page.getByText('Titelpartner e.V.').first()).toBeVisible();
 
+    await page.getByRole('button', { name: 'Weitere Aktionen' }).click();
     await page.getByTestId('payment-delete-draft').click();
     const dialog = page.getByRole('alertdialog');
     await expect(dialog).toContainText('Entwurf löschen?');
@@ -291,19 +292,21 @@ test.describe('finance partners (F7)', () => {
     await expect(dialog).toBeHidden();
     await expect(page).toHaveURL(new RegExp(`/payments/${draft.id}$`));
 
+    await page.getByRole('button', { name: 'Weitere Aktionen' }).click();
     await page.getByTestId('payment-delete-draft').click();
     await page.getByRole('alertdialog').getByRole('button', { name: 'Entwurf löschen' }).click();
     await expect(page).toHaveURL(new RegExp(`/finance/partners/${partner.id}$`));
     await expect(page.getByText('Zum Löschen')).toHaveCount(0);
   });
 
-  test('Löschen und Archivieren stehen als letzter Abschnitt: ohne Vorgänge Löschen, mit Bescheid Archivieren und wieder Aktivieren', async ({ page, baseURL }) => {
+  test('Weitere Aktionen: ohne Vorgänge Löschen, mit Bescheid Löschen mit Grund, Archivieren mit Rückgängig und Wieder aktivieren', async ({ page, baseURL }) => {
     const client = await mcpClient(page, baseURL);
     const leer = await callTool<{ id: string }>(client, 'contacts_create', { kind: 'organization', name: 'Leerpartner e.V.' });
     const leerPartner = await callTool<{ id: string }>(client, 'finance_partner_save', { contactId: leer.id, status: 'taxExemptBody' });
     await page.goto(`/finance/partners/${leerPartner.id}`);
-    // Speichern steht allein; Löschen ist der Abschnitt darunter, nicht mehr der Knopf daneben.
+    // Speichern steht allein; Löschen steht im Seitenkopf unter „Weitere Aktionen“, nicht neben „Speichern“.
     await expect(page.getByTestId('partner-profile').getByRole('button', { name: 'Löschen' })).toHaveCount(0);
+    await page.getByRole('button', { name: 'Weitere Aktionen' }).click();
     await page.getByTestId('partner-delete-trigger').click();
     await page.getByRole('alertdialog').getByRole('button', { name: 'Löschen' }).click();
     await expect(page).toHaveURL(/\/finance\/partners$/);
@@ -314,11 +317,44 @@ test.describe('finance partners (F7)', () => {
     const partner = await callTool<{ id: string }>(client, 'finance_partner_save', { contactId: org.id, status: 'taxExemptBody' });
     await callTool(client, 'finance_partner_notice_save', { partnerId: partner.id, kind: 'exemptionNotice', noticeDate: story('2026-03-15'), receivedOn: story('2026-03-20'), documentId: doc.id });
     await page.goto(`/finance/partners/${partner.id}`);
-    await expect(page.getByTestId('partner-delete-trigger')).toHaveCount(0);
+    const more = page.getByRole('button', { name: 'Weitere Aktionen' });
+    // Mit Bescheid ist Löschen unmöglich: Der Eintrag bleibt, der Dialog nennt den Grund und bietet nur „Schließen“.
+    await more.click();
+    await page.getByTestId('partner-delete-trigger').click();
+    const refusal = page.getByRole('alertdialog', { name: 'Partner löschen?' });
+    await expect(refusal).toContainText('Archivieren Sie ihn stattdessen');
+    await expect(refusal.getByRole('button', { name: 'Löschen' })).toHaveCount(0);
+    await refusal.getByRole('button', { name: 'Schließen' }).click();
+    await expect(more).toBeFocused();
+
+    // Archivieren ohne Rückfrage; der Toast bietet „Rückgängig“, die Seite zeigt Marke und „Wieder aktivieren“.
+    await more.click();
     await page.getByTestId('partner-archive-trigger').click();
+    const toast = page.locator('[data-sonner-toast]').filter({ hasText: 'Partner archiviert.' });
+    await expect(toast.getByRole('button', { name: 'Rückgängig' })).toBeVisible();
     await expect(page.getByTestId('partner-profile')).toContainText('deaktiviert');
+    await expect(page.getByText('Archiviert', { exact: true })).toBeVisible();
+    await expect(page.getByTestId('partner-activate-trigger')).toBeVisible();
+    await toast.getByRole('button', { name: 'Rückgängig' }).click();
+    await expect(page.getByTestId('partner-profile')).not.toContainText('deaktiviert');
+    await expect(page.getByTestId('partner-activate-trigger')).toHaveCount(0);
+
+    // Der Gegenweg steht dauerhaft auf der Seite, nicht nur im Toast.
+    await more.click();
+    await page.getByTestId('partner-archive-trigger').click();
+    await expect(page.getByTestId('partner-activate-trigger')).toBeVisible();
     await page.getByTestId('partner-activate-trigger').click();
     await expect(page.getByTestId('partner-profile')).not.toContainText('deaktiviert');
+
+    // Einen Bescheid als irrtümlich erfasst kennzeichnen ist unumkehrbar: Rückfrage mit Folge und Begründung.
+    await page.getByRole('button', { name: 'Als irrtümlich erfasst kennzeichnen …' }).click();
+    const voidDialog = page.getByRole('alertdialog', { name: 'Bescheid als irrtümlich erfasst kennzeichnen?' });
+    await expect(voidDialog).toContainText('Das lässt sich nicht zurücknehmen.');
+    await expect(voidDialog.getByRole('button', { name: 'Als irrtümlich erfasst kennzeichnen' })).toBeDisabled();
+    await voidDialog.getByLabel('Begründung').fill('Falscher Partner');
+    await voidDialog.getByRole('button', { name: 'Als irrtümlich erfasst kennzeichnen' }).click();
+    await expect(voidDialog).toBeHidden();
+    await expect(page.getByTestId('partner-notices')).toContainText('irrtümlich erfasst');
   });
 
   test('D5: Leser sehen Registernachweis und Rahmenvereinbarung, das Bescheiddatum formatiert und „deaktiviert“ als Zustand', async ({ page, baseURL }) => {

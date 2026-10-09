@@ -197,7 +197,7 @@ export function ImportUpload({ accounts }: { accounts: ImportAccountOption[] }) 
           if (!busy) void processFiles(Array.from(e.dataTransfer.files));
         }}
         className={cn(
-          'flex h-24 flex-col items-center justify-center gap-1 rounded-md border-2 border-dashed text-center text-[13px]',
+          'flex min-h-24 flex-col items-center justify-center gap-1 rounded-md border-2 border-dashed px-3 py-2 text-center text-[13px]',
           dragging ? 'border-brand bg-brand-soft' : 'border-line-strong bg-surface',
         )}
       >
@@ -205,9 +205,10 @@ export function ImportUpload({ accounts }: { accounts: ImportAccountOption[] }) 
         {dragging ? (
           <p className="font-semibold text-ink">{t('dropHere')}</p>
         ) : (
-          <button type="button" disabled={busy} onClick={() => inputRef.current?.click()} className="font-semibold text-ink underline underline-offset-2">
+          // 390 px: Der Satz bricht um statt über den Rand zu laufen (Pipeline-Warnung fl-arbeitsliste, 401 > 390; ohne Layout-Test, Projektregel).
+          <Button type="button" variant="link" className="h-auto max-w-full p-0 whitespace-normal underline underline-offset-2" disabled={busy} onClick={() => inputRef.current?.click()}>
             {t('dragOrPick')}
-          </button>
+          </Button>
         )}
         <input
           ref={inputRef}

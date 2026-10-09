@@ -4,6 +4,7 @@ import { listVouchersWithoutEntry } from '@kompass/module-finance';
 import { getTranslations } from 'next-intl/server';
 import { EmptyState } from '@/components/empty-state';
 import { ForbiddenCard } from '@/components/forbidden-card';
+import { ListPager } from '@/components/list-pager';
 import { Page } from '@/components/page';
 import { PageHeader } from '@/components/page-header';
 import { Table, TableBody, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -16,11 +17,15 @@ import { VoucherRows } from './voucher-rows';
  * der Akte nicht lesen darf, fehlt (die Akte prüft). Je Zeile klappt die
  * Karte „Aus der Rechnung“ auf (F5b), wenn das PDF eine ZUGFeRD-Rechnung trägt.
  */
-export default async function FinanceVouchersWithoutEntryPage() {
+/** Belege je Seite (MUSTER § L) — bis 0.2.8 eine stille Grenze bei 200. */
+const PAGE_SIZE = 50;
+
+export default async function FinanceVouchersWithoutEntryPage({ searchParams }: { searchParams: Promise<{ page?: string }> }) {
   const { deps, ctx } = await requireSession();
   if (!hasPermission(ctx, 'finance.read')) return <Page width="full"><ForbiddenCard permission="finance.read" /></Page>;
   const t = await getTranslations('finance.work');
-  const result = await listVouchersWithoutEntry(deps, ctx, { limit: 200 });
+  const page = Math.max(1, Number((await searchParams).page) || 1);
+  const result = await listVouchersWithoutEntry(deps, ctx, { limit: PAGE_SIZE, offset: (page - 1) * PAGE_SIZE });
   if (!result.ok) return <Page width="full"><ForbiddenCard permission="finance.read" /></Page>;
   const documents = result.value.documents;
   const canWrite = hasPermission(ctx, 'finance.entriesWrite');
@@ -30,7 +35,7 @@ export default async function FinanceVouchersWithoutEntryPage() {
     <Page width="full">
       <div className="space-y-4">
         <PageHeader title={t('pages.vouchers.title')} description={t('pages.vouchers.description')} />
-        {documents.length === 0 ? (
+        {documents.length === 0 && page === 1 ? (
           <EmptyState title={t('pages.vouchers.empty')} text={t('pages.vouchers.emptyText')} />
         ) : (
           <div className="overflow-hidden rounded-md border border-line bg-surface">
@@ -53,6 +58,14 @@ export default async function FinanceVouchersWithoutEntryPage() {
                 />
               </TableBody>
             </Table>
+            <ListPager
+              total={result.value.total}
+              offset={(page - 1) * PAGE_SIZE}
+              pageSize={PAGE_SIZE}
+              hrefFor={(next) => (next > 0 ? `/finance/work/vouchers?page=${Math.floor(next / PAGE_SIZE) + 1}` : '/finance/work/vouchers')}
+              footer
+              testId="vouchers-pager"
+            />
           </div>
         )}
       </div>

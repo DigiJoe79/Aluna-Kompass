@@ -1,11 +1,13 @@
-import { getAuditEntry, hasPermission, listUsers, queryAudit, requirePermission } from '@kompass/core';
-import { getTranslations } from 'next-intl/server';
-import Link from 'next/link';
+import { getAuditEntry, hasPermission, listAuditActions, listUsers, queryAudit, requirePermission } from '@kompass/core';
+import { getLocale, getTranslations } from 'next-intl/server';
 import { ForbiddenCard } from '@/components/forbidden-card';
 import { Page } from '@/components/page';
 import { PageHeader } from '@/components/page-header';
-import { buttonVariants } from '@/components/ui/button';
+import { ListPager } from '@/components/list-pager';
+import { auditActionLabel } from '@/lib/audit-actions';
 import { auditEntityLabels } from '@/lib/audit-entities';
+import { auditSentences, labelsFrom, type SentenceTranslator } from '@/lib/audit-sentences';
+import { dateFormatOf } from '@/lib/date-format';
 import { requireSession } from '@/lib/request-context';
 import { ExportButton } from './export-button';
 import { AuditDetail } from './audit-detail';
@@ -32,9 +34,17 @@ export default async function AuditPage(props: { searchParams: Promise<Record<st
   });
   if (!result.ok) return <Page width="full"><ForbiddenCard permission="audit.view" /></Page>;
   const users = await listUsers(deps, ctx);
-  const recent = queryAudit(deps, ctx, { limit: 200 });
-  const actions = recent.ok ? [...new Set(recent.value.entries.map((e) => e.action))].sort() : [];
+  // Alle vorkommenden Aktionen, in Worten (Spec Filterleisten § 4) — nicht nur die der letzten 200 Einträge.
+  const actionsRes = listAuditActions(deps, ctx);
+  const actions = (actionsRes.ok ? actionsRes.value : [])
+    .map((value) => ({ value, label: auditActionLabel(t, value) }))
+    .sort((a, b) => a.label.localeCompare(b.label, 'de'));
+  const filtered = Boolean(sp.userId || sp.channel || sp.action || sp.text || sp.from || sp.to);
+  const all = filtered ? queryAudit(deps, ctx, { limit: 1 }) : result;
+  const unfiltered = all.ok ? all.value.total : result.value.total;
   const selected = sp.entry ? getAuditEntry(deps, ctx, sp.entry) : null;
+  // Der Satz entsteht erst hier, aus `audit.sentences.*` (Spec Protokoll § 4); ohne Satz steht der Klartext.
+  const sentences = auditSentences(deps, ctx, t as unknown as SentenceTranslator, [...result.value.entries, ...(selected?.ok ? [selected.value] : [])], { paper: false, label: labelsFrom(await getTranslations()), locale: await getLocale() });
   const query = new URLSearchParams(
     Object.entries(sp).filter(([k, v]) => v && k !== 'entry' && k !== 'offset') as [string, string][]
   ).toString();
@@ -48,47 +58,22 @@ export default async function AuditPage(props: { searchParams: Promise<Record<st
         />
       }
     >
-      <div className="overflow-hidden rounded-lg border border-line bg-surface">
-        <AuditFilters
-          users={users.ok ? users.value.map((u) => ({ id: u.id, name: u.name })) : []}
-          actions={actions}
-          total={result.value.total}
-        />
-        <AuditTable
-          entries={result.value.entries}
-          selectedId={sp.entry ?? null}
-          query={query}
-          labels={auditEntityLabels(deps, ctx, result.value.entries)}
-        />
-        <div className="flex items-center justify-between px-5 py-3 text-[13px] text-muted-ink">
-          <span>
-            {t('range', {
-              from: Math.min(offset + 1, result.value.total),
-              to: Math.min(offset + PAGE, result.value.total),
-              total: result.value.total,
-            })}
-          </span>
-          <div className="flex gap-2">
-            {offset > 0 ? (
-              <Link
-                href={`?${query}&offset=${Math.max(0, offset - PAGE)}`}
-                className={buttonVariants({ variant: 'ghost', size: 'sm' })}
-              >
-                {t('prev')}
-              </Link>
-            ) : null}
-            {offset + PAGE < result.value.total ? (
-              <Link
-                href={`?${query}&offset=${offset + PAGE}`}
-                className={buttonVariants({ variant: 'ghost', size: 'sm' })}
-              >
-                {t('next')}
-              </Link>
-            ) : null}
-          </div>
+      <div className="flex flex-col gap-3">
+        <AuditFilters users={users.ok ? users.value.map((u) => ({ id: u.id, name: u.name })) : []} actions={actions} count={{ shown: result.value.total, total: unfiltered }} />
+        <div className="overflow-hidden rounded-lg border border-line bg-surface">
+          <AuditTable
+            entries={result.value.entries}
+            selectedId={sp.entry ?? null}
+            query={query}
+            labels={auditEntityLabels(deps, ctx, result.value.entries)}
+            fmt={dateFormatOf(deps)}
+            sentences={sentences}
+            filtered={filtered ? { resetHref: '/admin/audit', peopleHint: Boolean(sp.text) && !sp.userId } : null}
+          />
+          <ListPager total={result.value.total} offset={offset} pageSize={PAGE} hrefFor={(next) => (next > 0 ? `?${query}${query ? '&' : ''}offset=${next}` : `?${query}`)} footer testId="audit-pager" />
         </div>
       </div>
-      {selected?.ok ? <AuditDetail entry={selected.value} /> : null}
+      {selected?.ok ? <AuditDetail entry={selected.value} sentence={sentences[selected.value.id] ?? null} /> : null}
     </Page>
   );
 }

@@ -19,6 +19,10 @@ allowBuilds:
 # der `cooldown` von Dependabot (pnpm 11 wartet von sich aus nur einen Tag).
 # Eine dringende Sicherheitskorrektur kommt ueber `minimumReleaseAgeExclude`.
 minimumReleaseAge: 10080
+minimumReleaseAgeExclude:
+  # Sicherheitskorrektur (Dependabot), auf Joes Wunsch zwei Tage vor Ablauf der
+  # Frist in 0.2.9 übernommen; entfällt mit der nächsten Fassung (ab 11.10. alt genug).
+  - http-cache-semantics@4.3.0
 # Nur direkte Abhaengigkeiten duerfen aus Git oder von einer URL kommen
 # (Vorgabe von pnpm 11, ausdruecklich hier, damit sie nicht still wegfaellt).
 blockExoticSubdeps: true
@@ -38,11 +42,7 @@ trustPolicyIgnoreAfter: 43200
 # Transform-API ist zwischen den Fassungen stabil; `db:generate` prueft es.
 overrides:
   '@esbuild-kit/core-utils>esbuild': ^0.25.0
+  # Sicherheitskorrektur über Astro (s. minimumReleaseAgeExclude); pnpm update zieht die
+  # transitive Version nicht selbst nach. Entfällt, sobald Astro sie ohnehin auflöst.
+  'astro>http-cache-semantics': 4.3.0
 
-minimumReleaseAgeExclude:
-  - '@playwright/test@1.63.0'
-  - playwright-core@1.63.0
-  - playwright@1.63.0
-  # Sicherheitskorrektur (GHSA, Alert #19), wenige Minuten vor Ablauf der Frist
-  # in 0.2.8 übernommen; entfällt mit der nächsten Fassung.
-  - source-map-js@1.2.2

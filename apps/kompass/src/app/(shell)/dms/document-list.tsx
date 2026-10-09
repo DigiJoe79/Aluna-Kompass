@@ -2,20 +2,21 @@
 
 import { useDateFormat } from '@/components/date-format-provider';
 import { useTranslations } from 'next-intl';
+import { ListTruncated } from '@/components/list-truncated';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { Fragment, useEffect, useState, useTransition } from 'react';
 import { EmptyState } from '@/components/empty-state';
 import { SelectionBar } from '@/components/selection-bar';
 import { SnippetText } from '@/components/snippet-text';
 import { StatusBadge } from '@/components/status-badge';
-import { Input } from '@/components/ui/input';
+import { FilterBar, selectFilter } from '@/components/filter-bar';
+import { SearchField } from '@/components/search-field';
 import { SortableHead } from '@/components/sortable-head';
 import { RowLink, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useFinePointer } from '@/lib/use-fine-pointer';
 import { listKeyOf, useListSelection } from '@/lib/use-list-selection';
 import { useUrlFilters } from '@/lib/use-url-filters';
 import { cn } from '@/lib/utils';
-import { Select } from '@/components/ui/select';
 import { setDragPreview } from '@/components/folder-tree/drag-preview';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -49,6 +50,10 @@ export interface DocumentListProps {
   currentFolder: string | null;
   /** Wie viele Dokumente passen — die Liste holt höchstens eine Seite davon. */
   total: number;
+  /** Wie viele Dokumente am Ort liegen, ohne Suche und Filter — das „von …“ der Zählzeile. */
+  unfiltered: number;
+  /** Nur mit Bereichsrecht: Die Zahl zählt nur Lesbares, und das steht dabei (Artboard 9b). */
+  readableOnly: boolean;
   types: { key: string; label: string }[];
   folders: string[];
   inboxCount: number;
@@ -60,7 +65,7 @@ export interface DocumentListProps {
   canMove: boolean;
 }
 
-export function DocumentList({ documents, currentFolder, total, types, folders, inboxCount, hits, fulltextTooShort, today, canMove }: DocumentListProps) {
+export function DocumentList({ documents, currentFolder, total, unfiltered, readableOnly, types, folders, inboxCount, hits, fulltextTooShort, today, canMove }: DocumentListProps) {
   const t = useTranslations('dms');
   const tTree = useTranslations('folderTree');
   const fmt = useDateFormat();
@@ -124,6 +129,10 @@ export function DocumentList({ documents, currentFolder, total, types, folders, 
     });
   };
 
+  const filtered = Boolean(query.trim() || directionFilter || typeFilter || phaseFilter || dispatchFilter || followUpFilter);
+  // Der Ort bleibt: Zurücksetzen nimmt Suche und Filter, nicht den Ordner (Ordner sind Ort, keine Filter).
+  const resetFilters = () => applyFilters({ text: '', direction: '', type: '', phase: '', unsent: '', followUp: '' });
+
   /**
    * Was die Liste zeigt: der Stand des Servers, darüber laufende Züge
    * vorweggenommen. Was dabei den geöffneten Ort verlässt, fällt heraus; in
@@ -178,87 +187,52 @@ export function DocumentList({ documents, currentFolder, total, types, folders, 
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex flex-wrap items-center gap-3">
-        <Input
-          aria-label={t('searchPlaceholder')}
-          placeholder={t('searchPlaceholder')}
-          value={query}
-          onChange={(e) => {
-            applyFilters({ text: e.target.value });
-          }}
-          className="w-[260px]"
-        />
-        <Select
-          aria-label={t('columns.direction')}
-          value={directionFilter}
-          onChange={(e) => {
-            const val = e.target.value;
-            applyFilters({ direction: val });
-          }}
-          className="w-auto"
-        >
-          <option value="">{t('allDirections')}</option>
-          <option value="incoming">{t('directions.incoming')}</option>
-          <option value="outgoing">{t('directions.outgoing')}</option>
-        </Select>
-        <Select
-          aria-label={t('columns.type')}
-          value={typeFilter}
-          onChange={(e) => {
-            const val = e.target.value;
-            applyFilters({ type: val });
-          }}
-          className="w-auto"
-        >
-          <option value="">{t('allTypes')}</option>
-          {types.map((type) => (
-            <option key={type.key} value={type.key}>
-              {type.label}
-            </option>
-          ))}
-        </Select>
-        <Select
-          aria-label={t('columns.status')}
-          value={phaseFilter}
-          onChange={(e) => {
-            const val = e.target.value;
-            applyFilters({ phase: val });
-          }}
-          className="w-auto"
-        >
-          <option value="">{t('allPhases')}</option>
-          <option value="draft">{t('phases.draft')}</option>
-          <option value="issued">{t('phases.issued')}</option>
-        </Select>
-        <Select
-          aria-label={t('filters.dispatch')}
-          value={dispatchFilter}
-          onChange={(e) => {
-            const val = e.target.value;
-            applyFilters({ unsent: val });
-          }}
-          className="w-auto"
-        >
-          <option value="">{t('filters.dispatchAll')}</option>
-          <option value="unsent">{t('filters.unsent')}</option>
-        </Select>
-        <Select
-          aria-label={t('filters.followUp')}
-          value={followUpFilter}
-          onChange={(e) => {
-            const val = e.target.value;
-            applyFilters({ followUp: val });
-          }}
-          className="w-auto"
-        >
-          <option value="">{t('filters.followUpAll')}</option>
-          <option value="open">{t('filters.followUpOpen')}</option>
-        </Select>
-      </div>
+      <FilterBar
+        search={<SearchField value={query} onChange={(text) => applyFilters({ text })} placeholder={t('searchPlaceholder')} />}
+        searchActive={query.trim() ? { chip: query.trim(), onClear: () => applyFilters({ text: '' }) } : undefined}
+        filters={[
+          selectFilter({
+            key: 'direction',
+            label: t('columns.direction'),
+            value: directionFilter,
+            options: [
+              { value: 'incoming', label: t('directions.incoming') },
+              { value: 'outgoing', label: t('directions.outgoing') },
+            ],
+            onChange: (direction) => applyFilters({ direction }),
+          }),
+          selectFilter({ key: 'type', label: t('columns.type'), value: typeFilter, options: types.map((type) => ({ value: type.key, label: type.label })), onChange: (type) => applyFilters({ type }) }),
+          selectFilter({
+            key: 'phase',
+            label: t('columns.status'),
+            value: phaseFilter,
+            options: [
+              { value: 'draft', label: t('phases.draft') },
+              { value: 'issued', label: t('phases.issued') },
+            ],
+            onChange: (phase) => applyFilters({ phase }),
+          }),
+        ]}
+        more={[
+          selectFilter({ key: 'unsent', label: t('filters.dispatch'), value: dispatchFilter, options: [{ value: 'unsent', label: t('filters.unsent') }], onChange: (unsent) => applyFilters({ unsent }) }),
+          selectFilter({ key: 'followUp', label: t('filters.followUp'), value: followUpFilter, options: [{ value: 'open', label: t('filters.followUpOpen'), chip: t('filters.followUpOpenChip') }], onChange: (followUp) => applyFilters({ followUp }) }),
+        ]}
+        onApply={(values) => applyFilters(values)}
+        count={{
+          shown: total,
+          total: unfiltered,
+          noun: readableOnly
+            ? { one: t('list.nounReadable.one'), other: t('list.nounReadable.other'), dative: t('list.nounReadable.dative') }
+            : { one: t('list.noun.one'), other: t('list.noun.other'), dative: t('list.noun.dative') },
+        }}
+        onReset={resetFilters}
+      />
 
       {fulltextTooShort ? <p className="text-[13px] text-muted-ink">{t('searchTooShort')}</p> : null}
 
-      {shown.length === 0 ? (
+      {shown.length === 0 && filtered ? (
+        <EmptyState filtered={{ noun: t('list.emptyFilteredNoun'), onReset: resetFilters }} />
+      ) : shown.length === 0 ? (
         <EmptyState title={t('empty.title')} text={t('empty.text')} />
       ) : (
         <div className="overflow-hidden rounded-md border border-line bg-surface">
@@ -382,6 +356,7 @@ export function DocumentList({ documents, currentFolder, total, types, folders, 
               ))}
             </TableBody>
           </Table>
+          <ListTruncated shown={documents.length} total={total} text={t('list.truncated', { shown: documents.length, total })} footer testId="list-truncated" />
         </div>
       )}
 
@@ -394,11 +369,6 @@ export function DocumentList({ documents, currentFolder, total, types, folders, 
         </SelectionBar>
       ) : null}
 
-      {documents.length < total ? (
-        <p data-testid="list-truncated" className="text-[13px] text-muted-ink">
-          {t('list.truncated', { shown: documents.length, total })}
-        </p>
-      ) : null}
     </div>
   );
 }

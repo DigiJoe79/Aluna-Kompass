@@ -3,4 +3,4 @@
  * Oberfläche, Dienste (`messageDate`) und Papier (`paperDate`) eine Quelle haben. Diese Datei leitet
  * nur weiter; ihre Aufrufer bleiben.
  */
-export { DEFAULT_TIME_ZONE, formatDate, formatDateTime, isIsoDay, paperDate, type DateFormatMode, type IsoDay } from '@kompass/core/dates';
+export { DEFAULT_TIME_ZONE, formatDate, formatDateTime, formatStamp, formatTime, isIsoDay, paperDate, type DateFormatMode, type DateTimeOptions, type IsoDay } from '@kompass/core/dates';

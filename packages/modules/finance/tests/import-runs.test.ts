@@ -223,7 +223,7 @@ describe('importStatement', () => {
     const f = await importFixture();
     unwrap(await importStatement(f.deps, f.ctx, { accountId: f.account.id, fileName: 'a.xml', bytes: bytes('einfach-001-02.xml') }));
     const entry = auditEntry(f.deps, 'finance.import.run');
-    const text = `${entry.summary}${entry.after ?? ''}`;
+    const text = `${entry.params}${entry.after ?? ''}`;
     expect(text).not.toContain('Erika');
     expect(text).not.toContain('Beispiel');
     expect(text).not.toContain('DE66999999991234567890');

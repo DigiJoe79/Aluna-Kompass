@@ -76,17 +76,59 @@ export function formatDate(value: string | null | undefined, mode: DateFormatMod
   );
 }
 
+/** Zusatz für `formatDateTime`. `seconds` nur im Protokoll — zum Abgleich mit Serverprotokollen und Backups (MUSTER § Datum). */
+export type DateTimeOptions = { seconds?: boolean };
+
 /** Ein ISO-Zeitstempel als Datum mit Uhrzeit, in der Zeitzone des Vereins. */
-export function formatDateTime(value: string | null | undefined, mode: DateFormatMode, timeZone: string, locale = UI_DATE_LOCALE): string {
+export function formatDateTime(
+  value: string | null | undefined,
+  mode: DateFormatMode,
+  timeZone: string,
+  locale = UI_DATE_LOCALE,
+  { seconds = false }: DateTimeOptions = {},
+): string {
   if (!value) return '';
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
+  const second = seconds ? ({ second: '2-digit' } as const) : {};
   if (mode === 'iso') {
-    const parts = new Intl.DateTimeFormat('sv-SE', { timeZone, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }).formatToParts(date);
+    const parts = new Intl.DateTimeFormat('sv-SE', { timeZone, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23', ...second }).formatToParts(date);
     const get = (type: string) => parts.find((p) => p.type === type)?.value ?? '';
-    return `${get('year')}-${get('month')}-${get('day')} ${get('hour')}:${get('minute')}`;
+    return `${get('year')}-${get('month')}-${get('day')} ${get('hour')}:${get('minute')}${seconds ? `:${get('second')}` : ''}`;
   }
-  return new Intl.DateTimeFormat(locale, { timeZone, day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }).format(date);
+  // Sekunden aus derselben Formatierung: Bei einem Format mit Zusatz nach der Uhrzeit stünden angehängte falsch.
+  return new Intl.DateTimeFormat(locale, { timeZone, day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', ...second }).format(date);
+}
+
+function toInstant(value: string | Date): Date {
+  return typeof value === 'string' ? new Date(value) : value;
+}
+
+/**
+ * Nur die Uhrzeit, fest `HH:mm` in 24 Stunden, in der Zone des Vereins — für Zeiten eines laufenden
+ * Vorgangs (Veröffentlichen). Hängt nicht an `ui.dateFormat`; wird die Oberfläche englisch, ist das neu zu
+ * entscheiden (Spec K10 Charge 2, § 2.1).
+ */
+export function formatTime(value: string | Date | null | undefined, timeZone: string): string {
+  if (!value) return '';
+  const date = toInstant(value);
+  if (Number.isNaN(date.getTime())) return String(value);
+  const parts = new Intl.DateTimeFormat('sv-SE', { timeZone, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(date);
+  const get = (type: string) => parts.find((p) => p.type === type)?.value ?? '';
+  return `${get('hour')}:${get('minute')}`;
+}
+
+/**
+ * „Gespeichert um …“: am selben Vereinstag wie `now` nur `HH:mm`, sonst Datum und Uhrzeit. Eine Uhrzeit
+ * allein ist nur am selben Tag eindeutig. Keine relative Form; ein Zeitpunkt kurz nach `now` (Uhren von
+ * Server und Browser laufen auseinander) zählt nach seinem Tag.
+ */
+export function formatStamp(value: string | Date | null | undefined, mode: DateFormatMode, timeZone: string, now: Date | number): string {
+  if (!value) return '';
+  const date = toInstant(value);
+  if (Number.isNaN(date.getTime())) return String(value);
+  if (isoDayInZone(date, timeZone) === isoDayInZone(now, timeZone)) return formatTime(date, timeZone);
+  return formatDateTime(date.toJSON(), mode, timeZone);
 }
 
 /**

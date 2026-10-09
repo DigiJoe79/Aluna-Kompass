@@ -130,10 +130,11 @@ export function NameInputRow({ level, density, initial = '', chevron = null, che
           aria-describedby={error ? errorId : undefined}
           autoComplete="off"
           spellCheck={false}
+          // Höhe der Baumzeile, nicht `--field-h` (Wächter `field-metrics`): daher kein `Input`. Der Fehlerrahmen
+          // folgt wie in `ui/input` aus `aria-invalid`, nicht aus einer eigenen Bedingung.
           className={cn(
-            'w-full min-w-0 rounded-sm border bg-field px-2 font-normal text-ink outline-2 outline-offset-1 outline-focus placeholder:text-placeholder',
-            density === 'touch' ? 'h-9' : 'h-7',
-            error ? 'border-error' : 'border-line-strong'
+            'w-full min-w-0 rounded-sm border border-line-strong bg-field px-2 font-normal text-ink outline-2 outline-offset-1 outline-focus placeholder:text-placeholder aria-invalid:border-error',
+            density === 'touch' ? 'h-9' : 'h-7'
           )}
         />
         {error ? (

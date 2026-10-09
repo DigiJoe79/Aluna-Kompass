@@ -2,14 +2,17 @@
 
 import { CircleQuestionMark, Menu, Search } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { Fragment, type ReactNode } from 'react';
+import Link from 'next/link';
+import type { ReactNode } from 'react';
+import type { Crumb } from '@/lib/navigation';
+import { cn } from '@/lib/utils';
 import { UserMenu, type UserMenuProps } from './user-menu';
 
 export interface TopbarProps {
   organization: string;
   logoUrl: string | null;
-  /** Brotkrume; das letzte Segment ist das `<h1>` der Seite. */
-  crumbs: string[];
+  /** Brotkrume (`crumbsFor`); endet bei der Liste. */
+  crumbs: Crumb[];
   user: UserMenuProps['user'];
   build: string;
   version: string;
@@ -30,8 +33,10 @@ export interface TopbarProps {
  * Tastenkürzel fallen weg (der Suchtext bleibt für Vorleser, `sr-only`; ein
  * `aria-label` machte `getByLabel('Suchen')` der Suchfelder mehrdeutig), das Nutzermenü zeigt nur die Initialen. Sonst schob das
  * 240 px breite Suchfeld Hilfe und Nutzermenü bei 390 px aus dem Bild, und von der
- * Brotkrume blieb nur „/“ (release-0.2.7.md, Befund 15). Der Seitentitel (`h1`)
- * bleibt. Kein Layout-Test für diese Einzelstelle (AGENTS.md); der Überlauf-Wächter
+ * Brotkrume blieb nur „/“ (release-0.2.7.md, Befund 15). Das letzte Segment
+ * bleibt sichtbar; das `h1` der Seite steht im `PageHeader`. Das letzte Segment trägt `font-heading` und
+ * die Zeilenhöhe der Überschriften, die es als `h1` aus `globals.css` bekam — so sieht die Brotkrume aus wie
+ * vorher (Spec Seitenkopf § 2.1: sichtbar ändert sich nichts). Kein Layout-Test für diese Einzelstelle (AGENTS.md); der Überlauf-Wächter
  * der Screenshot-Pipeline prüft die Kopfzeile.
  */
 export function Topbar({ organization, logoUrl, crumbs, user, build, version, drawer, onOpenDrawer, onSearch, onHelp, extras }: TopbarProps) {
@@ -51,17 +56,25 @@ export function Topbar({ organization, logoUrl, crumbs, user, build, version, dr
         )}
         <span className="max-w-60 truncate text-[14px] font-semibold max-sm:hidden">{organization}</span>
       </div>
-      <div className="flex min-w-0 flex-1 items-center gap-1.5 text-[14px]">
-        {crumbs.map((crumb, index) => {
-          const last = index === crumbs.length - 1;
-          return (
-            <Fragment key={`${index}-${crumb}`}>
-              {index > 0 ? <span className="text-muted-ink-2 max-sm:hidden" aria-hidden>/</span> : null}
-              {last ? <h1 className="min-w-0 truncate text-[14px] font-semibold">{crumb}</h1> : <span className="min-w-0 truncate text-muted-ink max-sm:hidden">{crumb}</span>}
-            </Fragment>
-          );
-        })}
-      </div>
+      <nav aria-label={t('shell.topbar.breadcrumb')} className="min-w-0 flex-1">
+        <ol className="flex min-w-0 items-center gap-1.5 text-[14px]">
+          {crumbs.map((crumb, index) => {
+            const last = index === crumbs.length - 1;
+            return (
+              <li key={`${index}-${crumb.label}`} className={cn('flex min-w-0 items-center gap-1.5', !last && 'max-sm:hidden')}>
+                {index > 0 ? <span className="text-muted-ink-2 max-sm:hidden" aria-hidden>/</span> : null}
+                {last && crumb.current ? (
+                  <span aria-current="page" className="min-w-0 truncate font-heading leading-[1.2] font-semibold">{crumb.label}</span>
+                ) : last && crumb.href ? (
+                  <Link href={crumb.href} className="min-w-0 truncate font-heading leading-[1.2] font-semibold hover:underline">{crumb.label}</Link>
+                ) : (
+                  <span className="min-w-0 truncate text-muted-ink">{crumb.label}</span>
+                )}
+              </li>
+            );
+          })}
+        </ol>
+      </nav>
       <button type="button" onClick={onSearch} className="flex h-8 w-60 shrink-0 items-center gap-2 rounded-md border border-line-strong bg-field px-2.5 text-[13px] text-placeholder max-sm:w-auto">
         <Search className="size-3.5" aria-hidden />
         <span className="flex-1 text-left max-sm:sr-only">{t('shell.topbar.search')}</span>

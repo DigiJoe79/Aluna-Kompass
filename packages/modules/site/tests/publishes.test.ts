@@ -1,12 +1,13 @@
-import { schema, unwrap } from '@kompass/core';
+import { siteModule } from '../src/manifest';
+import { coreModule, schema, unwrap } from '@kompass/core';
 import { createTestDeps, ctxWith, insertUser } from '@kompass/core/testing';
 import { describe, expect, it } from 'vitest';
 import { sitePublishes } from '../src/schema';
-import { getPublish, listPublishes, recordPublish } from '../src/services/publishes';
+import { countPublishes, getPublish, listPublishes, recordPublish } from '../src/services/publishes';
 
 const manifest = () => JSON.stringify(Object.fromEntries(Array.from({ length: 2000 }, (_, i) => [`_astro/bilder/hund-${String(i).padStart(4, '0')}.webp`, 'a'.repeat(64)])));
 const seeded = () => {
-  const deps = createTestDeps();
+  const deps = createTestDeps({ manifests: [coreModule, siteModule] });
   insertUser(deps, { id: 'U1', name: 'Erika Beispiel' });
   for (let i = 1; i <= 20; i++) {
     deps.db
@@ -44,6 +45,17 @@ describe('listPublishes', () => {
   });
 });
 
+/** Keine stille Grenze (MUSTER § L): „Letzte Publishes“ zeigt 20 und nennt die Gesamtzahl. */
+describe('countPublishes', () => {
+  it('counts the own environment by default, another on request; needs site.view, validates', async () => {
+    const deps = seeded();
+    expect(unwrap(await countPublishes(deps, view, {}))).toBe(20);
+    expect(unwrap(await countPublishes(deps, view, { environment: 'other' }))).toBe(0);
+    expect(await countPublishes(deps, ctxWith([]), {})).toMatchObject({ ok: false, error: { type: 'forbidden' } });
+    expect(await countPublishes(deps, view, { environment: '' })).toMatchObject({ ok: false, error: { type: 'validation' } });
+  });
+});
+
 describe('getPublish', () => {
   it('trims files and log by default and gives everything on request', async () => {
     const deps = seeded();
@@ -68,7 +80,7 @@ describe('source of a publish', () => {
   const record = (deps: ReturnType<typeof createTestDeps>, ctx: ReturnType<typeof ctxWith>, at: string) =>
     recordPublish(deps, ctx, { environment: deps.env, startedAt: at, status: 'success', contentHash: 'h', diff: { changed: [], added: [], removed: [] }, fileManifest: {}, log: 'x', summary: 's' });
   it('reads channel and token name from the audit entry, in list and detail', async () => {
-    const deps = createTestDeps();
+    const deps = createTestDeps({ manifests: [coreModule, siteModule] });
     insertUser(deps, { id: 'U1', name: 'Erika Beispiel' });
     deps.db.insert(schema.apiTokens).values({ id: 'T1', userId: 'U1', name: 'Hundeblicke-Sync', prefix: 'dev_abc', tokenHash: 'x', createdAt: '2026-10-01T00:00:00.000Z' }).run();
     const ui = record(deps, ctxWith(['site.view'], 'U1'), '2026-10-01T08:00:00.000Z');

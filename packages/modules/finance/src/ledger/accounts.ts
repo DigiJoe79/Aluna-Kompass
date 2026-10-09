@@ -62,7 +62,7 @@ export async function createAccount(deps: Deps, ctx: CallContext, input: unknown
     const row = { id, name: v.name, kind: v.kind, iban: v.iban ? normalizeIban(v.iban) : null, bic: v.bic || null, bankName: v.bankName || null, openingBalanceCents: v.openingBalanceCents ?? null, openingDate: v.openingDate ?? null, importFormat: v.importFormat ?? null, importProfileId: null, isMain: v.isMain, isActive: true, createdAt: now, updatedAt: now };
     tx.insert(financeAccounts).values(row).run();
     if (row.isMain) publishMainAccount(tx, deps, ctx, row);
-    financeAudit(tx, deps, ctx, { action: 'finance.account.create', entity: 'financeAccount', id, after: row, summary: `Geldkonto ${id} angelegt` });
+    financeAudit(tx, deps, ctx, { action: 'finance.account.create', entity: 'financeAccount', id, after: row });
     return ok(row);
   });
 }
@@ -94,7 +94,7 @@ export async function updateAccount(deps: Deps, ctx: CallContext, input: unknown
     tx.update(financeAccounts).set(after).where(eq(financeAccounts.id, id)).run();
     if (after.isMain) publishMainAccount(tx, deps, ctx, after);
     // `bankDetailsChanged` statt `ibanChanged`: der Verbotstest von audit.ts greift auf jede Zeichenfolge mit „iban“.
-    financeAudit(tx, deps, ctx, { action: 'finance.account.update', entity: 'financeAccount', id, before, after: { ...after, bankDetailsChanged: after.iban !== before.iban }, summary: `Geldkonto ${id} geändert` });
+    financeAudit(tx, deps, ctx, { action: 'finance.account.update', entity: 'financeAccount', id, before, after: { ...after, bankDetailsChanged: after.iban !== before.iban } });
     return ok(after);
   });
 }
@@ -114,7 +114,7 @@ export async function setAccountActive(deps: Deps, ctx: CallContext, input: unkn
   return deps.db.transaction((tx: DbOrTx) => {
     const after = { ...before, isActive: parsed.value.isActive, updatedAt: isoNow(deps.clock) };
     tx.update(financeAccounts).set({ isActive: after.isActive, updatedAt: after.updatedAt }).where(eq(financeAccounts.id, before.id)).run();
-    financeAudit(tx, deps, ctx, { action: 'finance.account.setActive', entity: 'financeAccount', id: before.id, before, after, summary: `Geldkonto ${before.id} ${after.isActive ? 'aktiviert' : 'stillgelegt'}` });
+    financeAudit(tx, deps, ctx, { action: 'finance.account.setActive', entity: 'financeAccount', id: before.id, before, after, params: { active: after.isActive } });
     return ok(after);
   });
 }
@@ -132,7 +132,7 @@ export async function deleteAccount(deps: Deps, ctx: CallContext, input: unknown
   if (accountInUseInternal(deps.db, before.id)) return financeConflict('accountInUse');
   return deps.db.transaction((tx: DbOrTx) => {
     tx.delete(financeAccounts).where(eq(financeAccounts.id, before.id)).run();
-    financeAudit(tx, deps, ctx, { action: 'finance.account.delete', entity: 'financeAccount', id: before.id, before, summary: `Geldkonto ${before.id} gelöscht` });
+    financeAudit(tx, deps, ctx, { action: 'finance.account.delete', entity: 'financeAccount', id: before.id, before });
     return ok({ id: before.id });
   });
 }
@@ -150,7 +150,7 @@ export function setImportFormatInternal(tx: DbOrTx, deps: Deps, ctx: CallContext
   const importProfileId = format === 'csv' ? profileId : null;
   tx.update(financeAccounts).set({ importFormat: format, importProfileId, updatedAt: now }).where(eq(financeAccounts.id, account.id)).run();
   const after = { ...account, importFormat: format, importProfileId, updatedAt: now };
-  financeAudit(tx, deps, ctx, { action: 'finance.account.update', entity: 'financeAccount', id: account.id, before: account, after, summary: `Geldkonto ${account.id} geändert` });
+  financeAudit(tx, deps, ctx, { action: 'finance.account.update', entity: 'financeAccount', id: account.id, before: account, after });
   return after;
 }
 

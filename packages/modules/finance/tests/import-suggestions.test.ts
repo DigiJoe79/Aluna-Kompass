@@ -20,7 +20,7 @@ const IBAN = 'DE66999999991234567890';
 const suggest = async (f: Fixture, rawTransactionId: string) => unwrap(await suggestForTransaction(f.deps, f.ctx, { rawTransactionId }));
 
 function setSetting(f: Fixture, key: string, value: unknown): void {
-  f.deps.db.transaction((tx) => writeSettingInternal(tx, f.deps, systemContext(), key, value, 'test.setting'));
+  f.deps.db.transaction((tx) => writeSettingInternal(tx, f.deps, systemContext(), key, value));
 }
 
 describe('suggestForTransaction — (0) an existing entry', () => {

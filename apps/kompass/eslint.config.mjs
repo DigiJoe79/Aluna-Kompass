@@ -57,6 +57,7 @@ export default [
             { name: '@/components/ui/badge', message: 'StatusBadge verwenden (docs/MUSTER.md § F).' },
             { name: '@/components/forms/save-bar', message: 'FormActionBar verwenden (docs/MUSTER.md § B).' },
             { name: '@/components/forms/sticky-footer', message: 'FormActionBar verwenden (docs/MUSTER.md § B).' },
+            { name: '@/components/forms/danger-section', message: 'RecordActions im Seitenkopf verwenden (docs/MUSTER.md § C).' },
           ],
         },
       ],

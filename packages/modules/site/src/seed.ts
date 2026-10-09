@@ -186,7 +186,7 @@ export async function applySeed(deps: Deps, ctx: CallContext, opts: { confirm: b
         entityType: 'mediaFolder',
         entityId: mediaFolder,
         after: { path: mediaFolder },
-        summary: `Ordner „${mediaFolder}“ für die Startinhalte angelegt`,
+        params: { path: mediaFolder },
       });
     });
   }
@@ -244,7 +244,7 @@ export async function applySeed(deps: Deps, ctx: CallContext, opts: { confirm: b
       entityType: 'siteTemplate',
       entityId: 'current',
       after: report,
-      summary: `Startinhalte aus dem Template übernommen (${report.variables} Variablen, ${report.entries} Einträge, ${report.assets} Dateien)`,
+      params: { variables: report.variables, entries: report.entries, assets: report.assets },
     });
   });
 

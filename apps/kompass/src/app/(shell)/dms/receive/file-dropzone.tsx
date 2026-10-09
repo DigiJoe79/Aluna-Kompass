@@ -130,13 +130,9 @@ export function FileDropzone({
           <p className="text-[13px] text-ink-2">
             {t.rich('upload.dropBrowse', {
               a: (chunks) => (
-                <button
-                  type="button"
-                  className="cursor-pointer underline underline-offset-2"
-                  onClick={() => input.current?.click()}
-                >
+                <Button type="button" variant="link" className="h-auto p-0 underline underline-offset-2" onClick={() => input.current?.click()}>
                   {chunks}
-                </button>
+                </Button>
               ),
             })}
           </p>

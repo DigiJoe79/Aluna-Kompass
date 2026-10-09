@@ -1,40 +1,16 @@
 import { existsSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { isCommentLine, matchingLines, read, relative, sourceFiles, SRC } from './source';
+import { checkCountedAllowlist, type CountedAllowlist, isCommentLine, matchingLines, read, relative, sourceFiles, SRC } from './source';
 
 /**
  * Ein Datum hat zwei Wege (K10 Charge 1, Spec § 2): Bildschirm über `formatDate`/`formatDateTime`
  * (`@/lib/dates`, `useDateFormat`), in Diensten `messageDate` — beides nach `ui.dateFormat`; Papier über
  * `paperDate`, fest TT.MM.JJJJ. Bis 0.2.7 schnitten Seiten ISO-Werte mit `.slice(0, 10)` ab, formatierten
  * mit `toLocaleString('de-DE')` an der Einstellung vorbei, und Dienste schrieben `bis 2036-12-31` in ihre
- * Meldungen. Alle drei Teile sind Heuristiken: Rechnen, Schlüssel, Dateinamen und gespeicherte Werte stehen mit
- * Grund in der Erlaubnisliste.
+ * Meldungen. Alle vier Teile sind Heuristiken: Rechnen, Schlüssel, Dateinamen und gespeicherte Werte stehen mit
+ * Grund in der Erlaubnisliste. Teil 4 (K10 Charge 2): Zeiten nicht über den Formatierer von next-intl.
  */
-
-/**
- * Erlaubnisliste mit Trefferzahl: Pfad → wie viele Treffer die Datei haben darf, und warum. Gebunden an die
- * Zahl statt an die ganze Datei, damit ein zusätzliches rohes Datum in einer freigegebenen Datei auffällt
- * (K10-Review, 2026-10-07). Weniger Treffer als erlaubt heißt: Die Ausnahme ist veraltet, die Zahl sinkt mit.
- */
-type CountedAllowlist = Readonly<Record<string, { count: number; reason: string }>>;
-type Hit = { where: string; file: string };
-
-function checkAllowlist(hits: Hit[], allowed: CountedAllowlist): { unexpected: string[]; stale: string[] } {
-  const byFile = new Map<string, Hit[]>();
-  for (const hit of hits) byFile.set(hit.file, [...(byFile.get(hit.file) ?? []), hit]);
-  const unexpected: string[] = [];
-  for (const [file, found] of byFile) {
-    const limit = allowed[file]?.count;
-    if (limit === undefined) unexpected.push(...found.map(({ where }) => where));
-    else if (found.length > limit) unexpected.push(`${file}: ${found.length} Treffer, erlaubt ${limit} (${found.map(({ where }) => where).join(', ')})`);
-  }
-  const stale = Object.entries(allowed).flatMap(([file, { count }]) => {
-    const found = byFile.get(file)?.length ?? 0;
-    return found < count ? [`${file}: ${found} Treffer, erlaubt ${count}`] : [];
-  });
-  return { unexpected, stale };
-}
 
 /** Teil 1 — Oberfläche: kein Abschneiden und kein Formatieren von Hand. */
 const RAW_UI_DATE = /\.slice\(0, ?(?:10|16|19)\)|\btoLocale(?:Date|Time)?String\(|\btoISOString\(/;
@@ -52,6 +28,28 @@ const RAW_TODAY = /(?:\bisoNow\([^)]*\)|(?<![\w.])now|\bnew Date\(\)\.toISOStrin
 
 /** Drizzle-Vorlagen setzen Spalten ein, keine Texte. */
 const SQL_TEMPLATE = /\bsql(?:<[^>]*>)?`/;
+
+/**
+ * Teil 4 — Oberfläche: Zeiten nicht über next-intl (`useFormatter`/`getFormatter`). Die Zone stimmte dort,
+ * `ui.dateFormat` aber nicht (Befund 0.2.8/22). Erkannt über Import **und** Bindung: Nur der Rückgabewert des
+ * Formatierers zählt, damit `useFormatter` für Zahlen neben `fmt.dateTime` aus `useDateFormat` stehen darf.
+ * Grenze: Ein Formatierer, der als Prop weitergereicht wird, ist unsichtbar (MUSTER § Datum).
+ */
+const INTL_FORMATTER_IMPORT = /\b(?:useFormatter|getFormatter)\b[\s\S]*?from\s+['"]next-intl(?:\/server)?['"]/;
+const FORMATTER_CALL = String.raw`(?:await\s+)?(?:useFormatter|getFormatter)\(\)`;
+
+function intlDateCallLines(source: string): number[] {
+  if (!INTL_FORMATTER_IMPORT.test(source)) return [];
+  const callees: RegExp[] = [new RegExp(String.raw`\(?${FORMATTER_CALL}\)?\.(?:dateTime|relativeTime)\(`)];
+  for (const [, name] of source.matchAll(new RegExp(String.raw`(?:const|let)\s+(\w+)\s*=\s*${FORMATTER_CALL}`, 'g')))
+    callees.push(new RegExp(String.raw`(?<![\w.])${name}\.(?:dateTime|relativeTime)\(`));
+  for (const [, inner] of source.matchAll(new RegExp(String.raw`(?:const|let)\s*\{([^}]*)\}\s*=\s*${FORMATTER_CALL}`, 'g')))
+    for (const part of inner!.split(',')) {
+      const [key, alias] = part.split(':').map((s) => s.trim());
+      if (key === 'dateTime' || key === 'relativeTime') callees.push(new RegExp(String.raw`(?<![\w.])${alias || key}\(`));
+    }
+  return source.split('\n').flatMap((line, index) => (!isCommentLine(line) && callees.some((re) => re.test(line)) ? [index + 1] : []));
+}
 
 const UI_ALLOWED: CountedAllowlist = {
   'app/(shell)/dms/actions.ts': { count: 1, reason: 'Zeitstempel `savedAt` im Aktionszustand, keine Anzeige.' },
@@ -91,10 +89,10 @@ describe('Heuristik des Wächters', () => {
   it('die Erlaubnisliste zählt je Datei: ein Treffer mehr ist rot, einer weniger veraltet', () => {
     const allowed: CountedAllowlist = { 'a.ts': { count: 2, reason: 'Rechnen.' } };
     const at = (file: string, line: number) => ({ where: `${file}:${line}`, file });
-    expect(checkAllowlist([at('a.ts', 1), at('a.ts', 2)], allowed)).toEqual({ unexpected: [], stale: [] });
-    expect(checkAllowlist([at('a.ts', 1), at('a.ts', 2), at('a.ts', 9)], allowed).unexpected).toEqual(['a.ts: 3 Treffer, erlaubt 2 (a.ts:1, a.ts:2, a.ts:9)']);
-    expect(checkAllowlist([at('a.ts', 1)], allowed).stale).toEqual(['a.ts: 1 Treffer, erlaubt 2']);
-    expect(checkAllowlist([at('b.ts', 4)], allowed)).toEqual({ unexpected: ['b.ts:4'], stale: ['a.ts: 0 Treffer, erlaubt 2'] });
+    expect(checkCountedAllowlist([at('a.ts', 1), at('a.ts', 2)], allowed)).toEqual({ unexpected: [], stale: [] });
+    expect(checkCountedAllowlist([at('a.ts', 1), at('a.ts', 2), at('a.ts', 9)], allowed).unexpected).toEqual(['a.ts: 3 Treffer, erlaubt 2 (a.ts:1, a.ts:2, a.ts:9)']);
+    expect(checkCountedAllowlist([at('a.ts', 1)], allowed).stale).toEqual(['a.ts: 1 Treffer, erlaubt 2']);
+    expect(checkCountedAllowlist([at('b.ts', 4)], allowed)).toEqual({ unexpected: ['b.ts:4'], stale: ['a.ts: 0 Treffer, erlaubt 2'] });
   });
 
   it('Teil 1 trifft Abschneiden und Formatieren von Hand, nicht die Formatierer', () => {
@@ -123,6 +121,30 @@ describe('Heuristik des Wächters', () => {
     expect(SQL_TEMPLATE.test('sql<string | null>`max(${financeEntries.entryDate})`')).toBe(true);
     expect(SQL_TEMPLATE.test('`Kassenzählung ${name}`')).toBe(false);
   });
+
+  it('Teil 4 trifft Zeiten über den Formatierer von next-intl, gleich wie er heißt', () => {
+    const client = (body: string) => `import { useFormatter } from 'next-intl';\nfunction A() {\n${body}\n}`;
+    const server = (body: string) => `import { getFormatter } from 'next-intl/server';\nasync function A() {\n${body}\n}`;
+    expect(intlDateCallLines(client('  const format = useFormatter();\n  return format.dateTime(d);'))).toEqual([4]);
+    expect(intlDateCallLines(server('  const f = await getFormatter();\n  return f.dateTime(d, { dateStyle: "short" });'))).toEqual([4]);
+    expect(intlDateCallLines(client('  const { dateTime } = useFormatter();\n  return dateTime(d);'))).toEqual([4]);
+    expect(intlDateCallLines(client('  const { dateTime: when, number } = useFormatter();\n  return when(d) + number(1);'))).toEqual([4]);
+    expect(intlDateCallLines(client('  const x = useFormatter();\n  return x.relativeTime(d);'))).toEqual([4]);
+  });
+
+  it('Teil 4 schlägt nicht an bei Zahlen über next-intl und Datum über useDateFormat in einer Datei', () => {
+    const source = [
+      "import { useFormatter } from 'next-intl';",
+      "import { useDateFormat } from '@/components/date-format-provider';",
+      'function A() {',
+      '  const format = useFormatter();',
+      '  const fmt = useDateFormat();',
+      '  return `${format.number(n)} ${fmt.dateTime(d)} ${fmt.time(d)}`;',
+      '}',
+    ].join('\n');
+    expect(intlDateCallLines(source)).toEqual([]);
+    expect(intlDateCallLines('const fmt = useDateFormat();\nfmt.dateTime(d);')).toEqual([]);
+  });
 });
 
 describe('kein rohes Datum in der Oberfläche (Teil 1)', () => {
@@ -131,11 +153,11 @@ describe('kein rohes Datum in der Oberfläche (Teil 1)', () => {
     .flatMap((file) => matchingLines(file, read(file), RAW_UI_DATE).map((where) => ({ where, file: relative(file) })));
 
   it('Anzeigen gehen über formatDate/formatDateTime, Rechnen steht in der Erlaubnisliste', () => {
-    expect(checkAllowlist(hits, UI_ALLOWED).unexpected).toEqual([]);
+    expect(checkCountedAllowlist(hits, UI_ALLOWED).unexpected).toEqual([]);
   });
 
   it('jede Ausnahme ist noch nötig', () => {
-    expect(checkAllowlist(hits, UI_ALLOWED).stale).toEqual([]);
+    expect(checkCountedAllowlist(hits, UI_ALLOWED).stale).toEqual([]);
   });
 });
 
@@ -150,11 +172,11 @@ describe('kein rohes Datum in Meldungen der Pakete (Teil 2)', () => {
     );
 
   it('Meldungen nehmen messageDate, Papier paperDate; Rechnen steht in der Erlaubnisliste', () => {
-    expect(checkAllowlist(hits, PACKAGES_ALLOWED).unexpected).toEqual([]);
+    expect(checkCountedAllowlist(hits, PACKAGES_ALLOWED).unexpected).toEqual([]);
   });
 
   it('jede Ausnahme ist noch nötig', () => {
-    expect(checkAllowlist(hits, PACKAGES_ALLOWED).stale).toEqual([]);
+    expect(checkCountedAllowlist(hits, PACKAGES_ALLOWED).stale).toEqual([]);
   });
 });
 
@@ -169,10 +191,27 @@ describe('kein „heute“ als UTC-Tag in den Paketen (Teil 3)', () => {
     );
 
   it('„heute“ ist todayIn(deps), ein Zeitpunkt wird über isoDayIn zum Tag', () => {
-    expect(checkAllowlist(hits, TODAY_ALLOWED).unexpected).toEqual([]);
+    expect(checkCountedAllowlist(hits, TODAY_ALLOWED).unexpected).toEqual([]);
   });
 
   it('jede Ausnahme ist noch nötig', () => {
-    expect(checkAllowlist(hits, TODAY_ALLOWED).stale).toEqual([]);
+    expect(checkCountedAllowlist(hits, TODAY_ALLOWED).stale).toEqual([]);
+  });
+});
+
+/** Ausnahmen nur mit echtem Grund. Bei Einführung leer: alle Stellen gehen über `useDateFormat`/`dateFormatOf`. */
+const INTL_ALLOWED: CountedAllowlist = {};
+
+describe('keine Zeiten über next-intl in der Oberfläche (Teil 4)', () => {
+  const hits = [path.join(SRC, 'app'), path.join(SRC, 'components')]
+    .flatMap((dir) => sourceFiles(dir))
+    .flatMap((file) => intlDateCallLines(read(file)).map((line) => ({ where: `${relative(file)}:${line}`, file: relative(file) })));
+
+  it('Zeiten gehen über useDateFormat bzw. dateFormatOf', () => {
+    expect(checkCountedAllowlist(hits, INTL_ALLOWED).unexpected).toEqual([]);
+  });
+
+  it('jede Ausnahme ist noch nötig', () => {
+    expect(checkCountedAllowlist(hits, INTL_ALLOWED).stale).toEqual([]);
   });
 });

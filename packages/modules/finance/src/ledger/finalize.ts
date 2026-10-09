@@ -203,7 +203,7 @@ export function finalizeInternal(tx: DbOrTx, deps: Deps, ctx: CallContext, entry
   if (exceeded.length > 0) notices.push('allowanceExceeded');
   // N2: eine Rückgabe auf einer Spenden-Kategorie ohne Bezug — Hinweis, keine Sperre.
   if (!after.reversesEntryId && certifiableOutflowInternal(tx, entryId, { withoutOrigin: true })) notices.push('returnWithoutOrigin');
-  financeAudit(tx, deps, ctx, { action: 'finance.entry.finalize', entity: 'financeEntry', id: entryId, after: auditFields(after, ctx), summary: `Buchung ${number} festgeschrieben` });
+  financeAudit(tx, deps, ctx, { action: 'finance.entry.finalize', entity: 'financeEntry', id: entryId, after: auditFields(after, ctx), params: { number } });
   return ok(notices.length > 0 ? { ...after, notices, ...(exceeded.length > 0 ? { allowanceExceeded: exceeded } : {}) } : after);
 }
 

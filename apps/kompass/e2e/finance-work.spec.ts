@@ -18,21 +18,41 @@ test.describe('finance work list', () => {
 
   async function openWorkList(page: Page) {
     await page.goto('/finance/work');
-    await page.getByLabel('Liste für Konto').selectOption({ label: 'Importkonto' });
+    await page.getByTestId('work-filter-bar').getByRole('combobox', { name: 'Konto' }).selectOption({ label: 'Importkonto' });
     await expect(page).toHaveURL(/account=/);
     await expect(page.getByRole('listbox', { name: 'Kontoumsätze' }).getByRole('option').first()).toBeVisible();
   }
 
   const option = (page: Page, text: string) => page.getByRole('listbox', { name: 'Kontoumsätze' }).getByRole('option').filter({ hasText: text });
 
+  /** Spec Filterleisten, Review Focus 3 (HANDOFF § 8e.3.2): Die Reiterzahlen folgen dem Konto der Leiste. */
+  test('die Reiterzahlen folgen dem Konto', async ({ page }) => {
+    await loginAsAdmin(page);
+    await page.goto('/finance/work');
+    const tabs = page.getByRole('navigation', { name: 'Reiter der Arbeitsliste' });
+    const counted = async () => (await tabs.getByRole('link').allInnerTexts()).filter((text) => /\d\s*$/.test(text)).length;
+    await expect.poll(counted).toBeGreaterThan(0);
+    await expect(page.getByText(/^\d+ Umsätze?$/)).toBeVisible();
+
+    // Die Barkasse lädt keine Auszüge: Umsätze und Entwürfe zählen dort nicht; „Fällig“ hängt an keinem Konto.
+    await page.getByTestId('work-filter-bar').getByRole('combobox', { name: 'Konto' }).selectOption({ label: 'Barkasse' });
+    await expect(page).toHaveURL(/account=/);
+    for (const key of ['open', 'unsure', 'agent', 'reviewed']) await expect(page.getByTestId(`work-tab-${key}`)).not.toHaveText(/\d\s*$/);
+    await expect(page.getByText(/^0 von \d+ Umsätzen$/)).toBeVisible();
+
+    await page.getByRole('button', { name: 'Filter zurücksetzen' }).click();
+    await expect(page).not.toHaveURL(/account=/);
+    await expect.poll(counted).toBeGreaterThan(0);
+  });
+
   test('die Arbeitsliste zählt die Reiter und zeigt offene Kontoumsätze mit ihrem Vorschlag', async ({ page }) => {
     await loginAsAdmin(page);
     await openWorkList(page);
     for (const name of ['Zuzuordnen', 'Unsicher', 'Vom Agenten vorbereitet', 'Geprüft, nicht festgeschrieben', 'Fällig']) {
-      await expect(page.getByRole('tab', { name: new RegExp(name) })).toBeVisible();
+      await expect(page.getByRole('navigation', { name: 'Reiter der Arbeitsliste' }).getByRole('link', { name: new RegExp(name) })).toBeVisible();
     }
-    await expect(page.getByTestId('work-count-agent')).toHaveText('1');
-    await expect(page.getByRole('tab', { name: /Zuzuordnen/ })).toHaveAttribute('aria-selected', 'true');
+    await expect(page.getByTestId('work-tab-agent')).toHaveText(/^Vom Agenten vorbereitet\s*1$/);
+    await expect(page.getByRole('navigation', { name: 'Reiter der Arbeitsliste' }).getByRole('link', { name: /Zuzuordnen/ })).toHaveAttribute('aria-current', 'page');
     await expect(page.getByText(/zurückgehaltene Zeilen? warte/)).toBeVisible();
 
     await expect(option(page, 'Buerobedarf Muster GmbH')).toBeVisible();
@@ -46,10 +66,10 @@ test.describe('finance work list', () => {
     await expect(detail.getByTestId('suggestion-reasons')).toContainText('Vorschlag, weil:');
 
     // Der Reiter steht in der Adresse — ein Neuladen bleibt dort.
-    await page.getByRole('tab', { name: /Vom Agenten vorbereitet/ }).click();
+    await page.getByRole('navigation', { name: 'Reiter der Arbeitsliste' }).getByRole('link', { name: /Vom Agenten vorbereitet/ }).click();
     await expect(page).toHaveURL(/tab=agent/);
     await page.reload();
-    await expect(page.getByRole('tab', { name: /Vom Agenten vorbereitet/ })).toHaveAttribute('aria-selected', 'true');
+    await expect(page.getByRole('navigation', { name: 'Reiter der Arbeitsliste' }).getByRole('link', { name: /Vom Agenten vorbereitet/ })).toHaveAttribute('aria-current', 'page');
   });
 
   test('D4 → Task 5: der alte Platzhalter und der Verweis sind weg — „Als Zahlung an Partner erfassen“ ist ein Knopf', async ({ page }) => {
@@ -78,7 +98,7 @@ test.describe('finance work list', () => {
     await expect(option(page, 'Foerderverein Musterstadt e. V.')).toHaveAttribute('aria-selected', 'true');
 
     // Der übernommene Umsatz ist ein geprüfter Entwurf.
-    await page.getByRole('tab', { name: /Geprüft, nicht festgeschrieben/ }).click();
+    await page.getByRole('navigation', { name: 'Reiter der Arbeitsliste' }).getByRole('link', { name: /Geprüft, nicht festgeschrieben/ }).click();
     await expect(page.getByTestId('work-entry').filter({ hasText: 'Büromaterial' })).toBeVisible();
   });
 
@@ -109,7 +129,7 @@ test.describe('finance work list', () => {
     await expect(page.getByTestId('split-row').getByLabel('Kategorie')).toHaveValue(/.+/);
     await page.getByRole('button', { name: 'Speichern und als geprüft markieren' }).click();
     await expect(page).toHaveURL(/\/finance\/work/);
-    await page.getByLabel('Liste für Konto').selectOption({ label: 'Importkonto' });
+    await page.getByTestId('work-filter-bar').getByRole('combobox', { name: 'Konto' }).selectOption({ label: 'Importkonto' });
     await expect(option(page, 'Foerderverein Musterstadt e. V.')).toBeVisible();
     await expect(option(page, 'Buerobedarf Muster GmbH')).toHaveCount(0);
   });
@@ -167,7 +187,8 @@ test.describe('finance work list', () => {
     await expect(row.getByText('vom Agenten vorbereitet')).toBeVisible();
     await row.getByRole('button', { name: 'Geprüft' }).click();
     await expect(page.getByTestId('work-entry').filter({ hasText: 'Spende April' })).toHaveCount(0);
-    await expect(page.getByTestId('work-count-agent')).toHaveText('0');
+    // Bei null keine Marke (K10 Charge 2, Spec § 3.7.6).
+    await expect(page.getByTestId('work-tab-agent')).toHaveText('Vom Agenten vorbereitet');
   });
 });
 
@@ -188,7 +209,7 @@ test.describe('finance work list: rules, foreign money, vouchers, batch', () => 
 
   async function openImportAccount(page: Page, tab?: 'unsure') {
     await page.goto(tab ? `/finance/work?tab=${tab}` : '/finance/work');
-    await page.getByLabel('Liste für Konto').selectOption({ label: 'Importkonto' });
+    await page.getByTestId('work-filter-bar').getByRole('combobox', { name: 'Konto' }).selectOption({ label: 'Importkonto' });
     await expect(page).toHaveURL(/account=/);
   }
 
@@ -197,7 +218,7 @@ test.describe('finance work list: rules, foreign money, vouchers, batch', () => 
     await page.getByTestId('statement-file-input').setInputFiles(camt('arbeitsliste-futter.xml'));
     await expect(page.getByText(/2 neu, 0 bereits vorhanden, 0 zurückgehalten/)).toBeVisible();
     // Ohne Vorschlag stehen die Futter-Umsätze unter „Unsicher“.
-    await page.getByRole('tab', { name: /Unsicher/ }).click();
+    await page.getByRole('navigation', { name: 'Reiter der Arbeitsliste' }).getByRole('link', { name: /Unsicher/ }).click();
     await expect(page).toHaveURL(/tab=unsure/);
     await expect(option(page, 'Futter Juli')).toBeVisible();
   }
@@ -236,8 +257,8 @@ test.describe('finance work list: rules, foreign money, vouchers, batch', () => 
     // Befund 50: Unter Last kam der Klick auf die Zeile vor der Tab-Navigation an — die Auswahl baute ihre
     // Adresse mit dem alten Tab, und die Seite zeigte den Vorschlag einer anderen Zeile (Seed-Regel „Büromaterial“).
     // Die Verzögerung (vor „Regel speichern“) macht das Fenster breit; gewartet wird, bis der Tab wirklich gewechselt hat.
-    await page.getByRole('tab', { name: /Zuzuordnen/ }).click();
-    await expect(page.getByRole('tab', { name: /Zuzuordnen/ })).toHaveAttribute('aria-selected', 'true');
+    await page.getByRole('navigation', { name: 'Reiter der Arbeitsliste' }).getByRole('link', { name: /Zuzuordnen/ }).click();
+    await expect(page.getByRole('navigation', { name: 'Reiter der Arbeitsliste' }).getByRole('link', { name: /Zuzuordnen/ })).toHaveAttribute('aria-current', 'page');
     await option(page, 'Futter August').click();
     await expect(option(page, 'Futter August')).toHaveAttribute('aria-selected', 'true');
     await expect(detail.getByTestId('suggestion-reasons')).toContainText('Regel „Futterhaus Beispiel KG“');
@@ -294,7 +315,7 @@ test.describe('finance work list: rules, foreign money, vouchers, batch', () => 
     await openImportAccount(page);
     await page.getByTestId('statement-file-input').setInputFiles(camt('arbeitsliste-weitergabe.xml'));
     await expect(page.getByText(/1 neu, 0 bereits vorhanden, 0 zurückgehalten/)).toBeVisible();
-    await page.getByRole('tab', { name: /Unsicher/ }).click();
+    await page.getByRole('navigation', { name: 'Reiter der Arbeitsliste' }).getByRole('link', { name: /Unsicher/ }).click();
     await option(page, 'Weitergabe Sammelbestellung').click();
     await expect(option(page, 'Weitergabe Sammelbestellung')).toHaveAttribute('aria-selected', 'true');
     await page.getByTestId('work-detail').getByRole('button', { name: 'Gehört nicht dem Verein' }).click();
@@ -449,7 +470,7 @@ test.describe('finance work list: rules, foreign money, vouchers, batch', () => 
   test('die Regel-Liste zeigt Treffer und „Kategorie stillgelegt“; Löschen fragt nach', async ({ page }) => {
     await loginAsAdmin(page);
     await page.goto('/finance/work/rules');
-    await expect(page.getByRole('heading', { level: 2, name: 'Regeln', exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: 'Regeln', exact: true })).toBeVisible();
     const december = page.getByRole('row', { name: /Bürobedarf Dezember/ });
     await expect(december).toContainText('Kategorie stillgelegt');
     const office = page.getByRole('row', { name: /Büromaterial/ }).filter({ hasNotText: 'Dezember' });

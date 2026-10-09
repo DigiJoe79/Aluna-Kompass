@@ -30,7 +30,8 @@ sein und lässt sich jederzeit ändern oder löschen. Wer eine zweite Person
 kurz gegenlesen lässt, markiert den Entwurf als **geprüft** — das ist eine
 Vorstufe, noch keine endgültige Buchung. Erst **Festschreiben** vergibt
 eine Nummer und macht die Buchung unveränderlich; danach gibt es kein
-Eingabefeld mehr, nur noch „Korrigieren“.
+Eingabefeld mehr, nur noch „Korrigieren“ und — im Menü **Weitere Aktionen**
+(⋯) — „Zurücknehmen …“.
 
 Eine unausgeglichene Buchung lässt sich nicht festschreiben — die
 Oberfläche nennt den Grund und bietet einen Ausweg an, etwa den Rest in
@@ -98,18 +99,18 @@ nicht hat, sieht statt der Maske einen Hinweis, wer stattdessen bucht.
 ## Korrigieren
 
 Eine festgeschriebene Buchung lässt sich nicht mehr bearbeiten, aber
-korrigieren. Der Dialog fragt zuerst, was nicht stimmt, und schlägt
-danach den passenden Weg vor:
+korrigieren. Es gibt zwei Wege:
 
 - Betrifft es nur die **Zuordnung** — Spender, Projekt, Zweck oder ob das
-  Geld im Ausland verwendet wird —, wirkt die Änderung im laufenden
-  Geschäftsjahr sofort. In einem bereits abgeschlossenen Jahr wartet sie
-  auf die Freigabe einer zweiten Person.
+  Geld im Ausland verwendet wird —, führt **Korrigieren** oben rechts dorthin.
+  Die Änderung wirkt im laufenden Geschäftsjahr sofort; in einem bereits
+  abgeschlossenen Jahr wartet sie auf die Freigabe einer zweiten Person.
 - Betrifft es die **Zahlen** — Betrag, Datum, Konto, Kategorie oder
-  Umsatzsteuer — nimmt Kompass die Buchung zurück: Eine Gegenbuchung mit
-  den negierten Beträgen entsteht und wird sofort festgeschrieben; ein
-  vorbelegter Entwurf mit den bisherigen Werten öffnet sich danach, wenn
-  gewünscht, für die richtige Fassung.
+  Umsatzsteuer —, nehmen Sie die Buchung zurück: **Weitere Aktionen** (⋯) →
+  **Zurücknehmen …**. Der Dialog nennt das Datum der Gegenbuchung; sie
+  entsteht mit den negierten Beträgen und wird sofort festgeschrieben, ihre
+  Nummer nennt der Hinweis danach. Ein vorbelegter Entwurf mit den bisherigen
+  Werten öffnet sich, wenn gewünscht, für die richtige Fassung.
 
 Sind beide Arten von Änderungen nötig, gilt immer der zweite Weg — er
 kann alles.

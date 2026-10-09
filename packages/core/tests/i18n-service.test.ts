@@ -126,10 +126,10 @@ describe('locale removal reaches beyond localized columns', () => {
     const deps = setup();
     const ctx = ctxWith(['settings.manage']);
     unwrap(await addLocale(deps, ctx, { code: 'en' }));
-    recordAudit(deps.db, deps, ctx, { action: 'probe.create', entityType: 'probe', entityId: 'P1', after: { name: { de: 'Hof', en: 'Yard' } }, summary: 'Probe' });
+    recordAudit(deps.db, deps, ctx, { action: 'locale.reorder', entityType: 'probe', entityId: 'P1', after: { name: { de: 'Hof', en: 'Yard' } } });
     unwrap(await removeLocale(deps, ctx, { code: 'en', confirm: true }));
     const entries = deps.db.select().from(schema.auditLog).all();
-    const created = entries.find((e) => e.action === 'probe.create')!;
+    const created = entries.find((e) => e.action === 'locale.reorder')!;
     expect(String(created.after)).toContain('Yard');
   });
 });

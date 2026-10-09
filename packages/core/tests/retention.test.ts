@@ -89,7 +89,7 @@ describe('retention collection', () => {
   it('asks every enabled module and takes the longest hold', () => {
     const deps = createTestDeps({ manifests: [coreModule, holder('alpha', '2028-12-31'), holder('beta', '2036-12-31')] });
     deps.db.transaction((tx) => {
-      writeSettingInternal(tx, deps, ctxWith(['settings.manage']), 'modules.enabled', ['alpha', 'beta'], 'test.enable');
+      writeSettingInternal(tx, deps, ctxWith(['settings.manage']), 'modules.enabled', ['alpha', 'beta']);
     });
     const holds = holdsFor(deps, 'contact', 'C1');
     expect(holds.map((h) => h.entity).sort()).toEqual(['alpha', 'beta']);
@@ -107,7 +107,7 @@ describe('retention collection', () => {
   it('does not ask a disabled module', () => {
     const deps = createTestDeps({ manifests: [coreModule, holder('alpha', '2028-12-31'), holder('beta', '2036-12-31')] });
     deps.db.transaction((tx) => {
-      writeSettingInternal(tx, deps, ctxWith(['settings.manage']), 'modules.enabled', ['alpha'], 'test.enable');
+      writeSettingInternal(tx, deps, ctxWith(['settings.manage']), 'modules.enabled', ['alpha']);
     });
     expect(holdsFor(deps, 'contact', 'C1').map((h) => h.entity)).toEqual(['alpha']);
     expect(collectRetentionDue(deps).map((d) => d.entity)).toEqual(['alpha']);
@@ -116,7 +116,7 @@ describe('retention collection', () => {
   it('does not ask about an entityType the module does not answer for', () => {
     const deps = createTestDeps({ manifests: [coreModule, holder('alpha', '2028-12-31')] });
     deps.db.transaction((tx) => {
-      writeSettingInternal(tx, deps, ctxWith(['settings.manage']), 'modules.enabled', ['alpha'], 'test.enable');
+      writeSettingInternal(tx, deps, ctxWith(['settings.manage']), 'modules.enabled', ['alpha']);
     });
     expect(holdsFor(deps, 'document', 'D1')).toEqual([]);
   });
@@ -166,7 +166,7 @@ describe('holdsFor validates hold shape at the module boundary (Fix 1b)', () => 
       ],
     });
     deps.db.transaction((tx) => {
-      writeSettingInternal(tx, deps, ctxWith(['settings.manage']), 'modules.enabled', ['broken-date'], 'test.enable');
+      writeSettingInternal(tx, deps, ctxWith(['settings.manage']), 'modules.enabled', ['broken-date']);
     });
     expect(() => holdsFor(deps, 'contact', 'C1')).toThrow(/broken-date/);
     expect(() => holdsFor(deps, 'contact', 'C1')).toThrow(/kaputtes Datum/);
@@ -186,7 +186,7 @@ describe('holdsFor validates hold shape at the module boundary (Fix 1b)', () => 
       ],
     });
     deps.db.transaction((tx) => {
-      writeSettingInternal(tx, deps, ctxWith(['settings.manage']), 'modules.enabled', ['broken-date'], 'test.enable');
+      writeSettingInternal(tx, deps, ctxWith(['settings.manage']), 'modules.enabled', ['broken-date']);
     });
     expect(() => holdsFor(deps, 'contact', 'C1')).toThrow(/broken-date/);
   });
@@ -279,7 +279,7 @@ describe('a throwing module hook must never be read as "holds nothing" (Fix 2)',
       ],
     });
     deps.db.transaction((tx) => {
-      writeSettingInternal(tx, deps, ctxWith(['settings.manage']), 'modules.enabled', ['exploding'], 'test.enable');
+      writeSettingInternal(tx, deps, ctxWith(['settings.manage']), 'modules.enabled', ['exploding']);
     });
     expect(() => holdsFor(deps, 'contact', 'C1')).toThrow('finance module is broken');
   });
@@ -299,7 +299,7 @@ describe('a throwing module hook must never be read as "holds nothing" (Fix 2)',
       ],
     });
     deps.db.transaction((tx) => {
-      writeSettingInternal(tx, deps, ctxWith(['settings.manage']), 'modules.enabled', ['exploding'], 'test.enable');
+      writeSettingInternal(tx, deps, ctxWith(['settings.manage']), 'modules.enabled', ['exploding']);
     });
     expect(() => collectRetentionDue(deps)).toThrow('finance module is broken');
   });
@@ -311,7 +311,7 @@ describe('listRetentionDue', () => {
   it('collects across enabled modules and requires retention.view', async () => {
     const deps = createTestDeps({ manifests: [coreModule, holder('alpha', '2028-12-31')] });
     deps.db.transaction((tx) => {
-      writeSettingInternal(tx, deps, ctxWith(['settings.manage']), 'modules.enabled', ['alpha'], 'test.enable');
+      writeSettingInternal(tx, deps, ctxWith(['settings.manage']), 'modules.enabled', ['alpha']);
     });
     expect(unwrap(await listRetentionDue(deps, ctxWith(['retention.view']))).map((d) => d.id)).toEqual(['X1']);
     const denied = await listRetentionDue(deps, ctxWith([]));

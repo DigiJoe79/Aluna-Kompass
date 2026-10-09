@@ -109,7 +109,7 @@ export function insertRelation(
     entityType: 'documentRelation',
     entityId: id,
     after: { documentId: v.documentId, relatedDocumentId: v.relatedDocumentId, kind: v.kind },
-    summary: hidden ? `Bezug „${v.kind}“ von ${a.name} auf ${b.name} angelegt` : `Bezug „${v.kind}“ von ${doc.number ?? doc.subject} auf ${related.number ?? related.subject} angelegt`,
+    params: { number: a.number, relatedNumber: b.number, kind: v.kind },
   });
   return tx.select().from(documentRelations).where(eq(documentRelations.id, id)).get()!;
 }
@@ -129,7 +129,7 @@ export async function unrelateDocuments(deps: Deps, ctx: CallContext, input: unk
   }
   return deps.db.transaction((tx: DbOrTx) => {
     tx.delete(documentRelations).where(eq(documentRelations.id, row.id)).run();
-    recordAudit(tx, deps, ctx, { action: 'dms.unrelate', entityType: 'documentRelation', entityId: row.id, before: row, summary: `Bezug ${row.id} gelöst` });
+    recordAudit(tx, deps, ctx, { action: 'dms.unrelate', entityType: 'documentRelation', entityId: row.id, before: row });
     return ok(null);
   });
 }

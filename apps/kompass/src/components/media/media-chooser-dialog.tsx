@@ -1,6 +1,6 @@
 'use client';
 
-import { CircleSlash, Files, Image as ImageIcon } from 'lucide-react';
+import { CircleSlash, Files, Image as ImageIcon, Upload } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
@@ -8,11 +8,12 @@ import { FormActionBar } from '@/components/forms/form-action-bar';
 import { RefusalNotice } from '@/components/forms/refusal-notice';
 import { uploadMediaAction } from '@/app/(shell)/admin/media/actions';
 import { EmptyState } from '@/components/empty-state';
+import { FilterBar } from '@/components/filter-bar';
+import { SearchField } from '@/components/search-field';
 import { FolderSheet } from '@/components/folder-tree/folder-sheet';
 import { FolderTree } from '@/components/folder-tree/folder-tree';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogTitle } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import type { ActionState } from '@/lib/actions';
 import { runAction, toastNetwork } from '@/lib/feedback';
@@ -107,12 +108,11 @@ export function MediaChooserDialog({ open, onOpenChange, kind, multiple, max, se
     }
   }, [folder, query, kind, sort]);
 
-  // Laden beim Öffnen und bei jeder Änderung; die Suche entprellt.
+  // Laden beim Öffnen und bei jeder Änderung; die Suche entprellt das `SearchField` selbst.
   useEffect(() => {
     if (!open) return;
-    const handle = setTimeout(() => void load(), query ? 300 : 0);
-    return () => clearTimeout(handle);
-  }, [open, load, query]);
+    void load();
+  }, [open, load]);
 
   const shownFolders = useMemo(() => foldersWithMatches(listing?.folders ?? []), [listing]);
   /** Ein geöffneter Ordner, oder `null` bei „Alle Dateien“ und „Ohne Ordner“. */
@@ -227,39 +227,43 @@ export function MediaChooserDialog({ open, onOpenChange, kind, multiple, max, se
       <DialogContent size="xl">
         <DialogTitle>{title}</DialogTitle>
 
-        <div className="flex flex-wrap items-center gap-3 text-[13px]">
-          <Input
-            type="search"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder={t('searchPlaceholder')}
-            aria-label={t('search')}
-            className="min-w-0 flex-1"
-          />
-          <label className="flex items-center gap-2 text-ink-2">
-            {t('sort.label')}
-            <Select value={sort} onChange={(e) => setSort(e.target.value as Sort)} className="w-auto">
-              {SORTS.map((s) => (
-                <option key={s} value={s}>
-                  {t(`sort.${s}`)}
-                </option>
-              ))}
-            </Select>
-          </label>
-          <label className="flex items-center gap-2 text-ink-2">
-            {t('chooser.upload')}
-            <input
-              ref={fileInput}
-              type="file"
-              accept={ACCEPT[kind]}
-              multiple
-              disabled={uploading}
-              aria-label={t('chooser.upload')}
-              className="text-[12px]"
-              onChange={(e) => e.target.files && e.target.files.length > 0 && void upload(e.target.files)}
+        {/* Die Leiste wie in der Mediathek, der Zustand bleibt im Dialog (Spec Filterleisten § 3: Auswahldialoge). */}
+        <div className="flex flex-wrap items-start gap-3">
+          <div className="min-w-0 flex-1">
+            <FilterBar
+              search={<SearchField value={query} onChange={setQuery} placeholder={t('searchPlaceholder')} />}
+              searchActive={query.trim() ? { chip: query.trim(), onClear: () => setQuery('') } : undefined}
+              filters={[]}
+              count={{ shown: items.length, total: place.count, noun: { one: t('noun.one'), other: t('noun.other'), dative: t('noun.dative') } }}
+              onReset={() => setQuery('')}
+              sort={
+                <Select aria-label={t('sort.label')} value={sort} onChange={(e) => setSort(e.target.value as Sort)} className="w-auto">
+                  {SORTS.map((s) => (
+                    <option key={s} value={s}>
+                      {t(`sort.${s}`)}
+                    </option>
+                  ))}
+                </Select>
+              }
             />
-            {uploading ? <span aria-live="polite">{t('uploading')}</span> : null}
-          </label>
+          </div>
+          {uploading ? <span aria-live="polite" className="self-center text-meta text-ink-2">{t('uploading')}</span> : null}
+          <Button type="button" variant="outline" onClick={() => fileInput.current?.click()} disabled={uploading}>
+            <Upload aria-hidden />
+            {t('chooser.upload')}
+          </Button>
+          {/* Wie in der Mediathek: Das rohe Feld zeigt sonst „Choose Files“ in der Sprache des Browsers. */}
+          <input
+            ref={fileInput}
+            type="file"
+            accept={ACCEPT[kind]}
+            multiple
+            tabIndex={-1}
+            disabled={uploading}
+            aria-label={t('chooser.upload')}
+            className="sr-only"
+            onChange={(e) => e.target.files && e.target.files.length > 0 && void upload(e.target.files)}
+          />
         </div>
 
         <RefusalNotice action state={uploadRefusal} />

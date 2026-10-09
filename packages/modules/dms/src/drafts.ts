@@ -185,8 +185,7 @@ function insertDraft(tx: DbOrTx, deps: Deps, ctx: CallContext, v: DraftValues): 
     action: 'dms.draft.create',
     entityType: 'documentDraft',
     entityId: v.id,
-    after: { typeKey: v.docType.key, ...ref.subject },
-    summary: ref.hidden ? `${ref.name} angelegt` : `Entwurf „${v.subject}“ angelegt`,
+    after: { typeKey: v.docType.key },
   });
   return row;
 }
@@ -247,9 +246,8 @@ export async function updateDraft(deps: Deps, ctx: CallContext, input: unknown):
       action: 'dms.draft.update',
       entityType: 'documentDraft',
       entityId: row.id,
-      before: ref.hidden ? {} : { subject: row.subject },
-      after: ref.hidden ? {} : { subject: after.subject },
-      summary: ref.hidden ? `${ref.name} geändert` : `Entwurf „${after.subject}“ geändert`,
+      // Welche Felder, nie ihr Inhalt (Spec Protokoll § 2).
+      after: { changedFields: (['subject', 'body'] as const).filter((field) => (field === 'subject' ? row.subject !== after.subject : row.draftBody !== after.draftBody)) },
     });
 
     return ok(toRecord(deps, ctx, after, tx));
@@ -286,8 +284,7 @@ export async function deleteDraft(deps: Deps, ctx: CallContext, input: unknown):
       action: 'dms.draft.delete',
       entityType: 'documentDraft',
       entityId: row.id,
-      before: { ...ref.subject, typeKey: row.typeKey, removed },
-      summary: ref.hidden ? `${ref.name} gelöscht` : `Entwurf „${row.subject}“ gelöscht`,
+      before: { typeKey: row.typeKey, removed },
     });
   });
 
@@ -337,8 +334,7 @@ export async function previewDraft(
       action: 'dms.draft.preview',
       entityType: 'documentDraft',
       entityId: row.id,
-      after: { templateKey, ...ref.subject },
-      summary: ref.hidden ? `Vorschau für ${ref.name} erzeugt` : `Vorschau für Entwurf „${row.subject}“ erzeugt`,
+      after: { templateKey },
     });
   });
 
@@ -423,7 +419,7 @@ export async function fileDocument(deps: Deps, ctx: CallContext, input: unknown)
           entityType: 'document',
           entityId: row.id,
           after: { number, templateKey, base: baseId },
-          summary: `Dokument ${number} festgeschrieben`,
+          params: { number },
         });
         return ok(toRecord(deps, ctx, after, tx));
       });

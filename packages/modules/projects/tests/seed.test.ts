@@ -8,7 +8,7 @@ import { seedProjects } from '../src/seed';
 describe('seedProjects', () => {
   it('seeds example projects with a published one, links included, and is idempotent', async () => {
     // Die Beispiele tragen Deutsch und Englisch; die Installation muss beide führen.
-    const deps = createTestDeps({ locales: ['de', 'en'] });
+    const deps = createTestDeps({ locales: ['de', 'en'], manifests: [coreModule, projectsModule] });
     const ctx = ctxWith(['projects.manage', 'projects.view'], insertUser(deps, {}));
     await seedProjects(deps, ctx);
     const rows = deps.db.select().from(projects).all();
@@ -22,7 +22,7 @@ describe('seedProjects', () => {
   });
 
   it('leaves one project summary untranslated so translations_list_gaps has something to show', async () => {
-    const deps = createTestDeps({ locales: ['de', 'en'] });
+    const deps = createTestDeps({ locales: ['de', 'en'], manifests: [coreModule, projectsModule] });
     const ctx = ctxWith(['projects.manage', 'projects.view'], insertUser(deps, {}));
     await seedProjects(deps, ctx);
     const rows = deps.db.select().from(projects).all();

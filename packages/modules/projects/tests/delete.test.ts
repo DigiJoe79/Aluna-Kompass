@@ -27,7 +27,7 @@ async function setup() {
   insertUser(deps, { id: 'USER-TEST' });
   await setSetting(deps, ctxWith(['settings.manage']), { key: 'i18n.locales', value: ['de'] });
   deps.db.transaction((tx) => {
-    writeSettingInternal(tx, deps, ctxWith(['settings.manage']), 'modules.enabled', ['projects', 'probe'], 'test.enable');
+    writeSettingInternal(tx, deps, ctxWith(['settings.manage']), 'modules.enabled', ['projects', 'probe']);
   });
   return deps;
 }
@@ -44,7 +44,7 @@ describe('deleteProject', () => {
     expect(unwrap(await deleteProject(deps, manage, { id: p.id }))).toEqual({ deletedMedia: [], keptMedia: [] });
     expect(deps.db.select().from(projects).all()).toEqual([]);
     const entry = auditEntry(deps, 'projects.delete');
-    expect(entry).toMatchObject({ entityType: 'project', entityId: p.id, summary: 'Projekt kastration gelöscht' });
+    expect(entry).toMatchObject({ entityType: 'project', entityId: p.id, params: JSON.stringify({ name: 'Kastrationsaktion des Partnervereins' }) });
     expect(JSON.parse(entry.before!)).toMatchObject({ slug: 'kastration', externalLinks: base.externalLinks });
   });
 

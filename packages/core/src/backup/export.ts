@@ -70,7 +70,7 @@ export async function exportBackup(deps: AppDeps, ctx: CallContext, opts: { work
     const bytes = (await stat(archivePath)).size;
     deps.db.transaction((tx) => {
       writeSettingInternal(tx, deps, systemContext(ctx.requestId), 'system.lastExportAt', now, 'backup.export.mark');
-      recordAudit(tx, deps, ctx, { action: 'backup.export', entityType: 'backup', entityId: path.basename(archivePath), after: manifest, summary: `Backup exportiert (${Math.round(bytes / 1024)} KB)` });
+      recordAudit(tx, deps, ctx, { action: 'backup.export', entityType: 'backup', entityId: path.basename(archivePath), after: manifest, params: { sizeBytes: bytes } });
     });
     return ok({ archivePath, bytes, manifest });
   } finally {

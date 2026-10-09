@@ -84,7 +84,7 @@ export async function createPurpose(deps: Deps, ctx: CallContext, input: unknown
       updatedAt: now,
     };
     tx.insert(financePurposes).values(row).run();
-    financeAudit(tx, deps, ctx, { action: 'finance.purpose.create', entity: 'financePurpose', id, after: row, summary: `Zweck ${id} angelegt` });
+    financeAudit(tx, deps, ctx, { action: 'finance.purpose.create', entity: 'financePurpose', id, after: row });
     return ok(row);
   });
 }
@@ -115,7 +115,7 @@ export async function updatePurpose(deps: Deps, ctx: CallContext, input: unknown
   return deps.db.transaction((tx: DbOrTx) => {
     const after = { ...merged, updatedAt: isoNow(deps.clock) };
     tx.update(financePurposes).set(after).where(eq(financePurposes.id, id)).run();
-    financeAudit(tx, deps, ctx, { action: 'finance.purpose.update', entity: 'financePurpose', id, before, after, summary: `Zweck ${id} geändert` });
+    financeAudit(tx, deps, ctx, { action: 'finance.purpose.update', entity: 'financePurpose', id, before, after });
     return ok(after);
   });
 }
@@ -139,7 +139,7 @@ export async function fulfillPurpose(deps: Deps, ctx: CallContext, input: unknow
     const now = isoNow(deps.clock);
     const after = { ...before, fulfilledAt: now, fulfilledByUserId: ctx.userId, updatedAt: now };
     tx.update(financePurposes).set({ fulfilledAt: after.fulfilledAt, fulfilledByUserId: after.fulfilledByUserId, updatedAt: after.updatedAt }).where(eq(financePurposes.id, before.id)).run();
-    financeAudit(tx, deps, ctx, { action: 'finance.purpose.fulfill', entity: 'financePurpose', id: before.id, before, after, summary: `Zweck ${before.id} erfüllt` });
+    financeAudit(tx, deps, ctx, { action: 'finance.purpose.fulfill', entity: 'financePurpose', id: before.id, before, after });
     const remainderCents = Math.max(0, purposeBalancesAt(tx, todayIn(deps)).find((b) => b.purposeId === before.id)?.balanceCents ?? 0);
     return ok({ ...after, remainderCents });
   });
@@ -159,7 +159,7 @@ export async function dissolvePurpose(deps: Deps, ctx: CallContext, input: unkno
     const now = isoNow(deps.clock);
     const after = { ...before, dissolvedAt: now, dissolvedByUserId: ctx.userId, updatedAt: now };
     tx.update(financePurposes).set({ dissolvedAt: after.dissolvedAt, dissolvedByUserId: after.dissolvedByUserId, updatedAt: after.updatedAt }).where(eq(financePurposes.id, before.id)).run();
-    financeAudit(tx, deps, ctx, { action: 'finance.purpose.dissolve', entity: 'financePurpose', id: before.id, before, after, summary: `Zweck ${before.id} aufgelöst` });
+    financeAudit(tx, deps, ctx, { action: 'finance.purpose.dissolve', entity: 'financePurpose', id: before.id, before, after });
     return ok(after);
   });
 }
@@ -180,7 +180,7 @@ export async function reopenPurpose(deps: Deps, ctx: CallContext, input: unknown
     const now = isoNow(deps.clock);
     const after = { ...before, fulfilledAt: null, fulfilledByUserId: null, dissolvedAt: null, dissolvedByUserId: null, reopenNote: parsed.value.reason, reopenedAt: now, reopenedByUserId: ctx.userId, updatedAt: now };
     tx.update(financePurposes).set({ fulfilledAt: null, fulfilledByUserId: null, dissolvedAt: null, dissolvedByUserId: null, reopenNote: parsed.value.reason, reopenedAt: now, reopenedByUserId: ctx.userId, updatedAt: now }).where(eq(financePurposes.id, before.id)).run();
-    financeAudit(tx, deps, ctx, { action: 'finance.purpose.reopen', entity: 'financePurpose', id: before.id, before, after: { ...after, reopenedAt: now }, summary: `Zweck ${before.id} wieder geöffnet` });
+    financeAudit(tx, deps, ctx, { action: 'finance.purpose.reopen', entity: 'financePurpose', id: before.id, before, after: { ...after, reopenedAt: now } });
     return ok(after);
   });
 }
@@ -200,7 +200,7 @@ export async function setPurposeActive(deps: Deps, ctx: CallContext, input: unkn
   return deps.db.transaction((tx: DbOrTx) => {
     const after = { ...before, isActive: parsed.value.isActive, updatedAt: isoNow(deps.clock) };
     tx.update(financePurposes).set({ isActive: after.isActive, updatedAt: after.updatedAt }).where(eq(financePurposes.id, before.id)).run();
-    financeAudit(tx, deps, ctx, { action: 'finance.purpose.setActive', entity: 'financePurpose', id: before.id, before, after, summary: `Zweck ${before.id} ${after.isActive ? 'aktiviert' : 'stillgelegt'}` });
+    financeAudit(tx, deps, ctx, { action: 'finance.purpose.setActive', entity: 'financePurpose', id: before.id, before, after, params: { active: after.isActive } });
     return ok(after);
   });
 }
@@ -217,7 +217,7 @@ export async function deletePurpose(deps: Deps, ctx: CallContext, input: unknown
   if (purposeInUseInternal(deps.db, before.id)) return financeConflict('purposeInUse');
   return deps.db.transaction((tx: DbOrTx) => {
     tx.delete(financePurposes).where(eq(financePurposes.id, before.id)).run();
-    financeAudit(tx, deps, ctx, { action: 'finance.purpose.delete', entity: 'financePurpose', id: before.id, before, summary: `Zweck ${before.id} gelöscht` });
+    financeAudit(tx, deps, ctx, { action: 'finance.purpose.delete', entity: 'financePurpose', id: before.id, before });
     return ok({ id: before.id });
   });
 }

@@ -2,6 +2,7 @@
 
 import { useTranslations } from 'next-intl';
 import { useActionState, useState, useTransition } from 'react';
+import { Notice } from '@/components/notice';
 import { FormActionBar } from '@/components/forms/form-action-bar';
 import { useActionFeedback } from '@/components/forms/use-action-feedback';
 import { StatusBadge } from '@/components/status-badge';
@@ -108,7 +109,11 @@ export function TypesPanel({
 
     const currentArea = current === null ? null : areas.find((area) => area.key === current);
     if (current !== null && !currentArea) {
-      return <p className="col-span-full rounded-md bg-error-bg p-2.5 text-[13px] text-error">{t('areaUnknown', { key: current })}</p>;
+      return (
+        <div className="col-span-full">
+          <Notice level="warn">{t('areaUnknown', { key: current })}</Notice>
+        </div>
+      );
     }
 
     // Ändern darf nur, wer das Recht des jetzigen Bereichs selbst hat; die anderen stehen ausgegraut in der Liste.
@@ -128,10 +133,10 @@ export function TypesPanel({
         </Select>
         {locked && currentArea ? <p className="text-[12px] text-muted-ink">{t('areaNotHeld', { permission: permissionLabel(currentArea.permission) })}</p> : null}
         {!locked && changed ? (
-          <div className="space-y-1 rounded-md bg-info-bg px-3 py-2.5 text-[12px] text-ink-2" data-testid="area-hint">
+          <Notice level="warn" testId="area-hint">
             <p>{chosen ? t('areaSetHint', { count, permission: permissionLabel(chosen.permission) }) : t('areaRemoveHint', { count })}</p>
-            <p>{t('areaExceptions')}</p>
-          </div>
+            <p className="mt-1">{t('areaExceptions')}</p>
+          </Notice>
         ) : null}
       </FormField>
     );

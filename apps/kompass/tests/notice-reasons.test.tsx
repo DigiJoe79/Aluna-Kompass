@@ -26,3 +26,9 @@ describe('Notice mit Gründen', () => {
     expect(markup).toContain('Nur ein Grund.');
   });
 });
+
+describe('Notice testId', () => {
+  it('setzt data-testid am äußeren div', () => {
+    expect(render(<Notice level="hint" testId="x">t</Notice>)).toMatch(/^<div[^>]*data-testid="x"/);
+  });
+});

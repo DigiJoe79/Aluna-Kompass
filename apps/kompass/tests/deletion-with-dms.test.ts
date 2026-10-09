@@ -10,7 +10,7 @@ function setup() {
   const userId = insertUser(deps, { name: 'Test', email: 'test@kompass.local' });
   for (const [index, type] of EXAMPLE_DOCUMENT_TYPES.entries()) deps.db.insert(documentTypes).values({ ...type, sortOrder: index }).run();
   deps.db.transaction((tx) => {
-    writeSettingInternal(tx, deps, ctxWith(['settings.manage']), 'modules.enabled', ['contacts', 'animals', 'dms'], 'test.enable');
+    writeSettingInternal(tx, deps, ctxWith(['settings.manage']), 'modules.enabled', ['contacts', 'animals', 'dms']);
   });
   const ctx = ctxWith(['animals.manage', 'animals.view', 'dms.view', 'dms.create', 'dms.manage', 'media.upload'], userId);
   return { deps, ctx };

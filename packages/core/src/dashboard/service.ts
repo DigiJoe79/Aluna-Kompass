@@ -179,7 +179,7 @@ export async function setDashboardLayout(deps: Deps, ctx: CallContext, input: un
       entityId: userId,
       before,
       after: tiles,
-      summary: `Startseite angeordnet: ${tiles.length} Kacheln`,
+      params: { tileCount: tiles.length },
     });
     return ok({ custom: true, tiles });
   });
@@ -198,7 +198,6 @@ export async function resetDashboardLayout(deps: Deps, ctx: CallContext): Promis
         entityId: userId,
         before,
         after: null,
-        summary: 'Startseite auf die Vorgabe zurückgesetzt',
       });
     });
   }

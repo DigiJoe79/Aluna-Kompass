@@ -1,12 +1,17 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { useActionState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { saveSettingsAction } from '../settings/actions';
-import type { ActionState } from '@/lib/actions';
+import { useActionState, useEffect, useId, useState } from 'react';
+import { toast } from 'sonner';
 import { ActionForm } from '@/components/forms/action-form';
+import { FormCard } from '@/components/forms/form-card';
+import { FormActionBar } from '@/components/forms/form-action-bar';
+import { FormField } from '@/components/forms/form-field';
+import { FormGrid } from '@/components/forms/form-grid';
+import { Input } from '@/components/ui/input';
+import type { ActionState } from '@/lib/actions';
+import { withUnplacedFieldErrors } from '@/lib/feedback';
+import { saveSettingsAction } from '../settings/actions';
 
 interface Props {
   statutory10Y: number;
@@ -16,132 +21,59 @@ interface Props {
   canManage: boolean;
 }
 
+const FIELDS = [
+  { key: 'statutory10Y', hintKey: 'statutory10YHint', setting: 'retention.statutory10Y' },
+  { key: 'statutory8Y', hintKey: 'statutory8YHint', setting: 'retention.statutory8Y' },
+  { key: 'statutory6Y', hintKey: 'statutory6YHint', setting: 'retention.statutory6Y' },
+  { key: 'consent', hintKey: 'consentHint', setting: 'retention.consent' },
+] as const;
+
+/**
+ * Die Fristen der Aufbewahrung in Monaten. Eine Karte, die Leiste ihr letztes Kind (MUSTER § B/E); ohne
+ * `settings.manage` sind die Felder nur zu lesen und die Leiste fehlt.
+ */
 export function RetentionSettings({ statutory10Y, statutory8Y, statutory6Y, consent, canManage }: Props) {
   const t = useTranslations('retention.settings');
-  const [state, formAction, isPending] = useActionState<ActionState, FormData>(
+  const titleId = useId();
+  const current = { statutory10Y, statutory8Y, statutory6Y, consent };
+  const [saves, setSaves] = useState(0);
+  const [state, formAction] = useActionState<ActionState, FormData>(
     async (_prev, formData) => {
-      const v10 = parseInt(String(formData.get('retention.statutory10Y')), 10);
-      const v8 = parseInt(String(formData.get('retention.statutory8Y')), 10);
-      const v6 = parseInt(String(formData.get('retention.statutory6Y')), 10);
-      const vc = parseInt(String(formData.get('retention.consent')), 10);
-      return saveSettingsAction({
-        'retention.statutory10Y': isNaN(v10) ? statutory10Y : v10,
-        'retention.statutory8Y': isNaN(v8) ? statutory8Y : v8,
-        'retention.statutory6Y': isNaN(v6) ? statutory6Y : v6,
-        'retention.consent': isNaN(vc) ? consent : vc,
-      });
+      const changes: Record<string, number> = {};
+      for (const { key, setting } of FIELDS) {
+        const n = parseInt(String(formData.get(setting)), 10);
+        changes[setting] = Number.isNaN(n) ? current[key] : n;
+      }
+      return saveSettingsAction(changes);
     },
     { status: 'idle' },
   );
 
+  useEffect(() => {
+    if (state.status !== 'success') return;
+    toast.success(state.message ?? '');
+    setSaves((n) => n + 1);
+  }, [state]);
+
+  const errors = state.status === 'error' ? state.fieldErrors : {};
   return (
-    <section className="mb-6 rounded-md border border-line bg-surface p-4">
-      <h2 className="mb-3 text-[14px] font-semibold text-ink">{t('title')}</h2>
-      <ActionForm action={formAction} state={state} className="space-y-4">
-        <div className="grid gap-4 sm:grid-cols-4">
-          <div>
-            <label htmlFor="statutory10Y" className="block text-[13px] font-medium text-ink">
-              {t('statutory10Y')}
-            </label>
-            <p className="mb-1.5 text-[11px] text-muted-ink">{t('statutory10YHint')}</p>
-            {canManage ? (
-              <div className="flex items-center gap-2">
-                <Input
-                  id="statutory10Y"
-                  name="retention.statutory10Y"
-                  type="number"
-                  min={0}
-                  defaultValue={statutory10Y}
-                  className="w-24 font-mono"
-                  disabled={isPending}
-                />
-                <span className="text-[13px] text-muted-ink">{t('months')}</span>
-              </div>
-            ) : (
-              <p className="font-mono text-[13px] text-ink">{statutory10Y} {t('months')}</p>
-            )}
-          </div>
-
-          <div>
-            <label htmlFor="statutory8Y" className="block text-[13px] font-medium text-ink">
-              {t('statutory8Y')}
-            </label>
-            <p className="mb-1.5 text-[11px] text-muted-ink">{t('statutory8YHint')}</p>
-            {canManage ? (
-              <div className="flex items-center gap-2">
-                <Input
-                  id="statutory8Y"
-                  name="retention.statutory8Y"
-                  type="number"
-                  min={0}
-                  defaultValue={statutory8Y}
-                  className="w-24 font-mono"
-                  disabled={isPending}
-                />
-                <span className="text-[13px] text-muted-ink">{t('months')}</span>
-              </div>
-            ) : (
-              <p className="font-mono text-[13px] text-ink">{statutory8Y} {t('months')}</p>
-            )}
-          </div>
-
-          <div>
-            <label htmlFor="statutory6Y" className="block text-[13px] font-medium text-ink">
-              {t('statutory6Y')}
-            </label>
-            <p className="mb-1.5 text-[11px] text-muted-ink">{t('statutory6YHint')}</p>
-            {canManage ? (
-              <div className="flex items-center gap-2">
-                <Input
-                  id="statutory6Y"
-                  name="retention.statutory6Y"
-                  type="number"
-                  min={0}
-                  defaultValue={statutory6Y}
-                  className="w-24 font-mono"
-                  disabled={isPending}
-                />
-                <span className="text-[13px] text-muted-ink">{t('months')}</span>
-              </div>
-            ) : (
-              <p className="font-mono text-[13px] text-ink">{statutory6Y} {t('months')}</p>
-            )}
-          </div>
-
-          <div>
-            <label htmlFor="consent" className="block text-[13px] font-medium text-ink">
-              {t('consent')}
-            </label>
-            <p className="mb-1.5 text-[11px] text-muted-ink">{t('consentHint')}</p>
-            {canManage ? (
-              <div className="flex items-center gap-2">
-                <Input
-                  id="consent"
-                  name="retention.consent"
-                  type="number"
-                  min={0}
-                  defaultValue={consent}
-                  className="w-24 font-mono"
-                  disabled={isPending}
-                />
-                <span className="text-[13px] text-muted-ink">{t('months')}</span>
-              </div>
-            ) : (
-              <p className="font-mono text-[13px] text-ink">{consent} {t('months')}</p>
-            )}
-          </div>
+    <FormCard as="section" aria-labelledby={titleId} className="mb-6">
+      <ActionForm action={formAction} state={state}>
+        <div className="flex flex-col gap-3 p-5">
+          <h3 id={titleId} className="text-[15px] font-semibold">{t('title')}</h3>
+          <FormGrid>
+            {FIELDS.map(({ key, hintKey, setting }) => (
+              <FormField key={key} id={key} label={t(key)} hint={t(hintKey)} error={errors[setting]} size="s">
+                <div className="flex items-center gap-2">
+                  <Input id={key} name={setting} type="number" min={0} defaultValue={current[key]} readOnly={!canManage} className="w-24 font-mono" />
+                  <span className="text-[13px] text-muted-ink">{t('months')}</span>
+                </div>
+              </FormField>
+            ))}
+          </FormGrid>
         </div>
-
-        {canManage && (
-          <div className="flex items-center gap-3 pt-2">
-            <Button type="submit" disabled={isPending} size="sm">
-              {t('save')}
-            </Button>
-            {state.status === 'success' && <span className="text-[12px] text-muted-ink">{state.message}</span>}
-            {state.status === 'error' && <span className="text-[12px] text-error">{state.message}</span>}
-          </div>
-        )}
+        {canManage ? <FormActionBar baseline={saves} state={withUnplacedFieldErrors(state, FIELDS.map(({ setting }) => setting))} /> : null}
       </ActionForm>
-    </section>
+    </FormCard>
   );
 }

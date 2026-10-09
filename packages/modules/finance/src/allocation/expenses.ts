@@ -292,7 +292,6 @@ export async function saveExpenseDraft(deps: Deps, ctx: CallContext, input: unkn
       id: claimId,
       before: before ? claimAudit(before, [...existing.values()]) : undefined,
       after: claimAudit(saved, positions),
-      summary: `Auslage (Entwurf) ${claimId} gesichert`,
     });
     return ok(expenseClaimViewInternal(deps, tx, claimId)!);
   });
@@ -353,6 +352,7 @@ export async function uploadExpenseReceipt(deps: Deps, ctx: CallContext, input: 
     bytes: v.bytes,
     typeKey,
     subject: expenseReceiptSubject({ claimNumber: claim.number, positionDate: position.positionDate, today: todayIn(deps), position: index + 1 }),
+    recordNumber: claim.number ?? null,
     documentDate: position.positionDate ?? todayIn(deps),
     links: [{ entityType: 'financeExpenseClaim', entityId: claim.id }],
     afterReceive: (tx, doc) => {
@@ -366,7 +366,7 @@ export async function uploadExpenseReceipt(deps: Deps, ctx: CallContext, input: 
         id: position.id,
         before: position.documentId ? { claimId: claim.id, documentId: position.documentId } : undefined,
         after: { claimId: claim.id, documentId: doc.id },
-        summary: `Beleg ${doc.number} an Position ${index + 1} der Auslage ${claim.number ?? claim.id}`,
+        params: { documentNumber: doc.number, position: index + 1, number: claim.number ?? null },
       });
       return null;
     },
@@ -495,7 +495,7 @@ export async function submitExpenseClaim(deps: Deps, ctx: CallContext, input: un
       id: claim.id,
       before: { state: 'draft' },
       after: { ...claimAudit({ ...claim, state: 'submitted' }, positions), number, submittedAt },
-      summary: `Antrag ${number} eingereicht`,
+      params: { number },
     });
     return ok(null);
   });
@@ -542,7 +542,7 @@ export async function deleteExpenseDraft(deps: Deps, ctx: CallContext, input: un
       entity: 'financeExpenseClaim',
       id: claim.id,
       before: { state: claim.state, positionCount: positions.length, totalCents: sumCents(positions) },
-      summary: `Auslage (Entwurf) ${claim.id} gelöscht`,
+      params: { withContact: false },
     });
     return ok({ id: claim.id });
   });
@@ -580,7 +580,7 @@ export async function copyExpenseClaim(deps: Deps, ctx: CallContext, input: unkn
       entity: 'financeExpenseClaim',
       id,
       after: { ...claimAudit({ state: 'draft', waiver, recurring: source.recurring }, positions), copiedFromClaimId: source.id },
-      summary: `Antrag ${source.number} als Auslage (Entwurf) ${id} neu angelegt`,
+      params: { sourceNumber: source.number },
     });
     return ok(expenseClaimViewInternal(deps, tx, id)!);
   });

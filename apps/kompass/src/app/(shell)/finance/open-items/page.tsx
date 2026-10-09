@@ -5,13 +5,18 @@ import { ForbiddenCard } from '@/components/forbidden-card';
 import { Page } from '@/components/page';
 import { requireSession } from '@/lib/request-context';
 import { openItemState } from '@/lib/finance/open-item-state';
+import { readAllPages } from '@/lib/read-all-pages';
 import { DetailSheet } from './detail-sheet';
 import { OpenItemsList, type OpenItemRow } from './list';
 
 export interface OpenItemsQuery {
   tab?: string;
   item?: string;
+  page?: string;
 }
+
+/** Posten je Seite und Reiter — bis 0.2.8 eine stille Grenze bei 200 über beide Reiter (Inventar Filterleisten, Befund 10). */
+const PAGE_SIZE = 50;
 
 export default async function FinanceOpenItemsPage({ searchParams }: { searchParams: Promise<OpenItemsQuery> }) {
   const { deps, ctx } = await requireSession();
@@ -20,9 +25,17 @@ export default async function FinanceOpenItemsPage({ searchParams }: { searchPar
   const query = await searchParams;
   const tab: 'receivable' | 'payable' = query.tab === 'receivable' ? 'receivable' : 'payable';
 
-  const itemsRes = await listOpenItems(deps, ctx, { state: 'all', limit: 200 });
+  const page = Math.max(1, Number(query.page) || 1);
+  const offset = (page - 1) * PAGE_SIZE;
+  // Je Reiter getrennt geblättert. Ein Verweis mit `?item=` (Buchung, Rechnungskarte, Arbeitsliste) kann auf einen
+  // Posten einer anderen Seite oder des anderen Reiters zeigen: Dann sucht ihn der zweite Aufruf wie bis 0.2.8.
+  const itemsRes = await listOpenItems(deps, ctx, { kind: tab, state: 'all', limit: PAGE_SIZE, offset });
   if (!itemsRes.ok) return <Page width="full"><ForbiddenCard permission="finance.read" /></Page>;
-  const allItems = itemsRes.value.items;
+  const pageItems = itemsRes.value.items;
+  // Über alle Seiten (MUSTER § L, `readAllPages`): Mit `limit: 200` verfehlte der Verweis jeden Posten jenseits der
+  // ersten 200 (Befund 36, 0.2.9).
+  const lookupRes = query.item && !pageItems.some((i) => i.id === query.item) ? await readAllPages((p) => listOpenItems(deps, ctx, { state: 'all', ...p }), (v) => v.items) : null;
+  const allItems = [...pageItems, ...(lookupRes?.ok ? lookupRes.value.filter((i) => i.id === query.item) : [])];
 
   const contactIds = new Set(allItems.map((i) => i.contactId).filter((id): id is string => !!id));
   const contactNames = new Map<string, string>();
@@ -34,8 +47,7 @@ export default async function FinanceOpenItemsPage({ searchParams }: { searchPar
   );
 
   const today = todayIn(deps);
-  const rows: OpenItemRow[] = allItems
-    .filter((i) => i.kind === tab)
+  const rows: OpenItemRow[] = pageItems
     .map((i) => {
       const state = openItemState(i, today);
       return {
@@ -77,7 +89,7 @@ export default async function FinanceOpenItemsPage({ searchParams }: { searchPar
 
   return (
     <Page width="full">
-      <OpenItemsList rows={rows} tab={tab} canWrite={canWrite} canCreateContact={canCreateContact} today={today} />
+      <OpenItemsList rows={rows} tab={tab} page={page} total={itemsRes.value.total} pageSize={PAGE_SIZE} canWrite={canWrite} canCreateContact={canCreateContact} today={today} />
       {selected ? (
         <DetailSheet
           item={{

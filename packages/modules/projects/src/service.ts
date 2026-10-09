@@ -6,6 +6,7 @@ import {
   type MediaCleanup,
   type Result,
   buildDeletionPreview,
+  defaultLocale,
   expectedVersionField,
   staleVersion,
   conflict,
@@ -77,6 +78,12 @@ function assetExists(db: DbOrTx, id: string | null): boolean {
   return id === null || !!db.select({ id: mediaAssets.id }).from(mediaAssets).where(eq(mediaAssets.id, id)).get();
 }
 
+/** Titel des Projekts für das Protokoll (Spec Protokoll § 2: Nutzdatum, Momentaufnahme) — in der Standardsprache. */
+function auditName(deps: Deps, project: Pick<ProjectRecord, 'name'>): string {
+  const name = project.name as Record<string, string>;
+  return name[defaultLocale(deps)] || Object.values(name).find(Boolean) || '';
+}
+
 export async function createProject(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<ProjectRecord>> {
   const denied = requirePermission(ctx, 'projects.manage');
   if (denied) return denied;
@@ -91,7 +98,7 @@ export async function createProject(deps: Deps, ctx: CallContext, input: unknown
     const max = tx.select({ n: sql<number>`coalesce(max(${projects.sortOrder}), 0)` }).from(projects).get()?.n ?? 0;
     tx.insert(projects).values({ id, ...v, sortOrder: max + 1, isPublished: false, createdAt: now, updatedAt: now }).run();
     const record = load(tx, id) as ProjectRecord;
-    recordAudit(tx, deps, ctx, { action: 'projects.create', entityType: 'project', entityId: id, after: record, summary: `Projekt ${v.slug} angelegt` });
+    recordAudit(tx, deps, ctx, { action: 'projects.create', entityType: 'project', entityId: id, after: record, params: { name: auditName(deps, record) } });
     return ok(record);
   });
 }
@@ -111,7 +118,7 @@ export async function updateProject(deps: Deps, ctx: CallContext, input: unknown
   return deps.db.transaction((tx) => {
     tx.update(projects).set({ ...changes, updatedAt: isoNow(deps.clock) }).where(eq(projects.id, id)).run();
     const after = load(tx, id) as ProjectRecord;
-    recordAudit(tx, deps, ctx, { action: 'projects.update', entityType: 'project', entityId: id, before, after, summary: `Projekt ${after.slug} geändert` });
+    recordAudit(tx, deps, ctx, { action: 'projects.update', entityType: 'project', entityId: id, before, after, params: { name: auditName(deps, after) } });
     return ok(after);
   });
 }
@@ -128,7 +135,10 @@ export async function setProjectPublished(deps: Deps, ctx: CallContext, input: u
   return deps.db.transaction((tx) => {
     tx.update(projects).set({ isPublished: parsed.value.isPublished, updatedAt: isoNow(deps.clock) }).where(eq(projects.id, before.id)).run();
     const after = load(tx, before.id) as ProjectRecord;
-    recordAudit(tx, deps, ctx, { action: parsed.value.isPublished ? 'projects.publish' : 'projects.unpublish', entityType: 'project', entityId: before.id, before: { isPublished: before.isPublished }, after: { isPublished: after.isPublished }, summary: `Projekt ${after.slug} ${after.isPublished ? 'veröffentlicht' : 'zurückgezogen'}` });
+    // Die Aktion steht als fester Text im Aufruf (Wächter audit-actions), deshalb zwei Aufrufe.
+    const entry = { entityType: 'project', entityId: before.id, before: { isPublished: before.isPublished }, after: { isPublished: after.isPublished }, params: { name: auditName(deps, after) } };
+    if (parsed.value.isPublished) recordAudit(tx, deps, ctx, { action: 'projects.publish', ...entry });
+    else recordAudit(tx, deps, ctx, { action: 'projects.unpublish', ...entry });
     return ok(after);
   });
 }
@@ -142,7 +152,7 @@ export async function reorderProjects(deps: Deps, ctx: CallContext, input: unkno
   if (!parsed.ok) return parsed;
   return deps.db.transaction((tx) => {
     parsed.value.ids.forEach((id, index) => tx.update(projects).set({ sortOrder: index + 1 }).where(eq(projects.id, id)).run());
-    recordAudit(tx, deps, ctx, { action: 'projects.reorder', entityType: 'project', entityId: null, after: parsed.value.ids, summary: 'Projektreihenfolge geändert' });
+    recordAudit(tx, deps, ctx, { action: 'projects.reorder', entityType: 'project', entityId: null, after: parsed.value.ids });
     return ok(undefined);
   });
 }
@@ -197,7 +207,7 @@ export async function deleteProject(deps: Deps, ctx: CallContext, input: unknown
   deps.db.transaction((tx) => {
     tx.delete(projects).where(eq(projects.id, before.id)).run();
     notifyRecordDeleted(tx, deps, ctx, 'project', before.id);
-    recordAudit(tx, deps, ctx, { action: 'projects.delete', entityType: 'project', entityId: before.id, before, summary: `Projekt ${before.slug} gelöscht` });
+    recordAudit(tx, deps, ctx, { action: 'projects.delete', entityType: 'project', entityId: before.id, before, params: { name: auditName(deps, before) } });
   });
   if (!parsed.value.deleteOrphanedMedia) return ok({ deletedMedia: [], keptMedia: [] });
   return deleteUnreferencedMedia(deps, ctx, assetIdsOf(before));

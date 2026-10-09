@@ -16,7 +16,7 @@ import { donationFixture, err, type DonationFixture } from './donation-fixture';
  * Versandvermerk für alle. Heute ist der 2026-03-20.
  */
 const setSetting = (f: DonationFixture, key: string, value: unknown) =>
-  f.deps.db.transaction((tx) => writeSettingInternal(tx, f.deps, systemContext(), key, value, 'test.confirmationRuns'));
+  f.deps.db.transaction((tx) => writeSettingInternal(tx, f.deps, systemContext(), key, value));
 
 const person = async (f: DonationFixture, firstName: string, lastName: string, address = true) =>
   unwrap(await createContact(f.deps, f.manage, { kind: 'person', firstName, lastName, ...(address ? { street: 'Probeweg 3', postalCode: '11111', city: 'Probestadt' } : {}) }));

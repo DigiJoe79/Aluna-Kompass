@@ -209,7 +209,7 @@ export function createOpenItemInternal(tx: DbOrTx, deps: Deps, ctx: CallContext,
     probablyPaidReason: v.probablyPaidReason ?? null, createdByUserId: ctx.userId ?? 'system', createdAt: now, updatedAt: now,
   };
   tx.insert(financeOpenItems).values(row).run();
-  financeAudit(tx, deps, ctx, { action: 'finance.openItem.create', entity: 'financeOpenItem', id: row.id, after: auditFields(row), summary: `Posten ${row.id} angelegt` });
+  financeAudit(tx, deps, ctx, { action: 'finance.openItem.create', entity: 'financeOpenItem', id: row.id, after: auditFields(row) });
   return openItemViewOf(tx, row);
 }
 
@@ -262,7 +262,7 @@ export async function updateOpenItem(deps: Deps, ctx: CallContext, input: unknow
     };
     tx.update(financeOpenItems).set(after).where(eq(financeOpenItems.id, before.id)).run();
     if (doc.value) linkDocumentInternal(tx, deps, { documentId: doc.value.id, entityType: 'financeOpenItem', entityId: before.id });
-    financeAudit(tx, deps, ctx, { action: 'finance.openItem.update', entity: 'financeOpenItem', id: before.id, before: auditFields(before), after: auditFields(after), summary: `Posten ${before.id} geändert` });
+    financeAudit(tx, deps, ctx, { action: 'finance.openItem.update', entity: 'financeOpenItem', id: before.id, before: auditFields(before), after: auditFields(after) });
     return ok(openItemViewOf(tx, after));
   });
 }
@@ -291,7 +291,7 @@ export async function cancelOpenItem(deps: Deps, ctx: CallContext, input: unknow
     const now = isoNow(deps.clock);
     const after: FinanceOpenItemRow = { ...before, cancelledAt: now, cancelledByUserId: ctx.userId, cancelNote: parsed.value.note, updatedAt: now };
     tx.update(financeOpenItems).set(after).where(eq(financeOpenItems.id, before.id)).run();
-    financeAudit(tx, deps, ctx, { action: 'finance.openItem.cancel', entity: 'financeOpenItem', id: before.id, before: auditFields(before), after: auditFields(after), summary: `Posten ${before.id} ohne Zahlung erledigt` });
+    financeAudit(tx, deps, ctx, { action: 'finance.openItem.cancel', entity: 'financeOpenItem', id: before.id, before: auditFields(before), after: auditFields(after) });
     return ok(openItemViewOf(tx, after));
   });
 }

@@ -170,7 +170,7 @@ test.describe('finance donation run', () => {
     for (const row of await issuedRow(page, 'Lukas Hofmann').all()) await expect(row).not.toContainText('Post');
     // Dazu Sina Krügers Aufwandsspende aus dem Serienlauf des Vorjahrs und (F8a Task 7) Nadja Vogts
     // freigegebene Verzicht-Auslage aus diesem Lauf — beide ebenfalls ohne Unterschrift.
-    await expect(page.getByRole('tab', { name: 'Unterschrift fehlt (4)' })).toBeVisible();
+    await expect(page.getByRole('navigation', { name: 'Ansicht' }).getByRole('link', { name: 'Unterschrift fehlt 4' })).toBeVisible();
     await page.goto('/finance/donations?tab=needsSignature');
     await expect(page.getByTestId('signature-steps').filter({ hasText: '36,00 €' })).toBeVisible();
   });

@@ -1,5 +1,5 @@
 import { requirePermission } from '@kompass/core';
-import { activeTemplate, listPublishes, siteCacheStatus, siteContentHash } from '@kompass/module-site';
+import { activeTemplate, countPublishes, listPublishes, siteCacheStatus, siteContentHash } from '@kompass/module-site';
 import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
 import { buttonVariants } from '@/components/ui/button';
@@ -13,6 +13,9 @@ import { siteEnv } from '@/lib/site-env';
 import { PublishClient } from './publish-client';
 import { PublishTarget } from './publish-target';
 import { panelHref } from '@/components/panel-nav';
+
+/** So viele Publishes liest „Letzte Publishes“; mehr nennt `ListTruncated`. */
+const HISTORY_LIMIT = 20;
 
 export default async function PublishPage() {
   const { deps, ctx } = await requireSession();
@@ -34,8 +37,10 @@ export default async function PublishPage() {
   }
   const env = runtimeEnv().env;
   const se = siteEnv();
-  const historyRes = await listPublishes(deps, ctx, { environment: env });
+  // „Letzte Publishes“ zeigt die jüngsten 20 und nennt die Gesamtzahl (`ListTruncated` in `history.tsx`).
+  const [historyRes, historyCountRes] = await Promise.all([listPublishes(deps, ctx, { environment: env, limit: HISTORY_LIMIT }), countPublishes(deps, ctx, { environment: env })]);
   const history = historyRes.ok ? historyRes.value : [];
+  const historyTotal = historyCountRes.ok ? historyCountRes.value : history.length;
   // Ohne `site.manage` liefert der Dienst `forbidden`; dann kein Hinweis.
   const cache = siteCacheStatus(deps, ctx, se);
   const imageCacheEmpty = cache.ok && cache.value.images.count === 0;
@@ -57,6 +62,7 @@ export default async function PublishPage() {
           canManage={!requirePermission(ctx, 'site.manage')}
           imageCacheEmpty={imageCacheEmpty}
           history={history}
+          historyTotal={historyTotal}
           currentHash={currentHash}
           lastPublishedAt={lastPublishedAt}
         />

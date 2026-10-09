@@ -15,3 +15,9 @@ describe('StatusBadge', () => {
     expect(markup).toContain('text-[12px] font-semibold');
   });
 });
+
+describe('StatusBadge testId', () => {
+  it('setzt data-testid am span', () => {
+    expect(renderToStaticMarkup(<StatusBadge tone="neutral" testId="y">x</StatusBadge>)).toMatch(/^<span[^>]*data-testid="y"/);
+  });
+});

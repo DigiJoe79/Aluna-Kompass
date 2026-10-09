@@ -75,7 +75,9 @@ describe('login and sessions', () => {
       expect.objectContaining({ channel: 'system', userId: null, entityType: 'user', entityId: userId, ipAddress: '10.0.0.5' }),
       expect.objectContaining({ channel: 'system', userId: null, entityType: 'user', entityId: null, ipAddress: '10.0.0.5' }),
     ]);
-    expect(failed[1]!.summary).toContain('nobody@example.org');
+    // Spec Protokoll § 2 Regel 4: Konto vorhanden → nur seine ID; unbekannte Adresse → kein Wert. Nie die eingetippte Adresse.
+    expect(failed.map((e) => e.params)).toEqual([JSON.stringify({ targetUserId: userId }), JSON.stringify({ targetUserId: null })]);
+    expect(JSON.stringify(failed)).not.toMatch(/example\.org/);
   });
 
   it('pauses all logins after too many failures across accounts, and resumes when the window has passed', async () => {

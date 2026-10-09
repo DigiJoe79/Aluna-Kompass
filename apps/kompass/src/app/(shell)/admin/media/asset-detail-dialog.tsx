@@ -2,9 +2,11 @@
 
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
+import { useEffect, useRef, useState } from 'react';
 import { useDateFormat } from '@/components/date-format-provider';
 import { FolderField } from '@/components/folder-tree/folder-field';
-import { Button } from '@/components/ui/button';
+import { ConfirmDialog } from '@/components/forms/confirm-dialog';
+import { RecordActions } from '@/components/record-actions';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import type { ActionState } from '@/lib/actions';
 import type { FolderEntry } from '@/lib/folder-tree-model';
@@ -15,6 +17,10 @@ import { formatBytes, type Item } from './types';
  * nach…“ (HANDOFF § 3.5, README § 3 Artboard 5): verschoben wird über
  * denselben Weg wie beim Ziehen — Toast mit „Rückgängig“ —; lehnt der Server
  * ab, bleibt der Dialog offen und nennt den Grund.
+ *
+ * „Löschen …“ steht links im Fuß (Aktion am Datensatz, Spec Seitenkopf § 3.3). Die Rückfrage ist ein Dialog im Dialog,
+ * damit der Fokus nach dem Schließen auf „Löschen …“ zurückkehrt; wird die Datei noch verwendet, nennt sie den Grund
+ * statt zu löschen (keine Sperre ohne Grund).
  */
 export function AssetDetailDialog({
   item,
@@ -30,12 +36,17 @@ export function AssetDetailDialog({
   assetFolder: string | null;
   onOpenChange: (open: boolean) => void;
   onMove: (id: string, folder: string | null) => Promise<ActionState>;
-  onDelete: (id: string) => void;
+  /** Löscht nach der Rückfrage; bei Erfolg schließt der Aufrufer den Detaildialog. */
+  onDelete: (id: string) => Promise<ActionState>;
 }) {
   const t = useTranslations('media');
   const tMove = useTranslations('moveDialog');
   const fmt = useDateFormat();
   const isImage = item?.mimeType.startsWith('image/') ?? false;
+  const trigger = useRef<HTMLButtonElement>(null);
+  const [confirming, setConfirming] = useState(false);
+  // Ein anderes Element im Dialog beginnt ohne offene Rückfrage.
+  useEffect(() => setConfirming(false), [item?.id]);
 
   return (
     <Dialog open={item !== null} onOpenChange={onOpenChange}>
@@ -104,21 +115,24 @@ export function AssetDetailDialog({
               onChange={(target) => onMove(item.id, target)}
             />
 
+            {/* Wie der Fuß der `FormActionBar`: Aktion am Datensatz links, „Öffnen“ rechts. */}
             <div className="flex flex-wrap items-center justify-between gap-2 border-t border-line-2 pt-3">
+              <RecordActions single="button" triggerRef={trigger} actions={[{ key: 'delete', label: t('deleteItem'), kind: 'delete', onSelect: () => setConfirming(true), testId: 'media-delete-trigger' }]} />
               <a href={`/media/${item.id}`} target="_blank" rel="noopener" className="text-[13px] text-link underline">
                 {t('open')}
               </a>
-              <Button
-                type="button"
-                variant="destructive"
-                size="sm"
-                disabled={item.references.length > 0}
-                title={item.references.length > 0 ? t('inUse') : undefined}
-                onClick={() => onDelete(item.id)}
-              >
-                {t('delete')}
-              </Button>
             </div>
+            <ConfirmDialog
+              open={confirming}
+              onOpenChange={setConfirming}
+              finalFocus={trigger}
+              title={t('confirmDelete')}
+              description={t('confirmDeleteBody')}
+              confirmLabel={t('delete')}
+              destructive
+              refusal={item.references.length > 0 ? { message: t('inUseRefusal', { places: item.references.map((r) => r.label).join(', ') }) } : undefined}
+              action={() => onDelete(item.id)}
+            />
           </>
         ) : null}
       </DialogContent>

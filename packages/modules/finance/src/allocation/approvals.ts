@@ -320,7 +320,7 @@ export async function approveExpenseClaim(deps: Deps, ctx: CallContext, input: u
       for (const d of decisions) {
         const p = byId.get(d.positionId)!;
         tx.update(financeExpensePositions).set({ categoryId: d.categoryId, purposeId: d.purposeId }).where(eq(financeExpensePositions.id, p.id)).run();
-        financeAudit(tx, deps, ctx, { action: 'finance.expensePosition.categorize', entity: 'financeExpensePosition', id: p.id, after: { claimId: claim.id, categoryId: d.categoryId, purposeId: d.purposeId, projectId: p.projectId }, summary: `Position ${p.sortOrder + 1} des Antrags ${claim.number} zugeordnet` });
+        financeAudit(tx, deps, ctx, { action: 'finance.expensePosition.categorize', entity: 'financeExpensePosition', id: p.id, after: { claimId: claim.id, categoryId: d.categoryId, purposeId: d.purposeId, projectId: p.projectId }, params: { position: p.sortOrder + 1, number: claim.number } });
       }
 
       let openItemId: string | null = null;
@@ -399,7 +399,7 @@ export async function approveExpenseClaim(deps: Deps, ctx: CallContext, input: u
           state: 'approved', number: claim.number, positionCount: positions.length, totalCents, waiver: claim.waiver, recurring: claim.recurring, approvedAt,
           ...(openItemId ? { openItemId } : {}), ...(entryId ? { entryId } : {}), ...(waiver ? { waiverFreeFundsCents: waiver.freeCents } : {}), channel: ctx.channel,
         },
-        summary: waiver ? `Antrag ${claim.number} freigegeben (Aufwandsspende)` : `Antrag ${claim.number} freigegeben`,
+        params: { number: claim.number, waiver: waiver !== null },
       });
       return ok(expenseClaimViewInternal(deps, tx, claim.id)!);
     });
@@ -433,7 +433,7 @@ export async function rejectExpenseClaim(deps: Deps, ctx: CallContext, input: un
       .where(and(eq(financeExpenseClaims.id, claim.id), eq(financeExpenseClaims.state, 'submitted')))
       .run().changes;
     if (changed !== 1) return financeConflict('expenseNotSubmitted');
-    financeAudit(tx, deps, ctx, { action: 'finance.expenseClaim.reject', entity: 'financeExpenseClaim', id: claim.id, before: { state: 'submitted' }, after: { state: 'rejected', number: claim.number, rejected: true, channel: ctx.channel }, summary: `Antrag ${claim.number} abgelehnt` });
+    financeAudit(tx, deps, ctx, { action: 'finance.expenseClaim.reject', entity: 'financeExpenseClaim', id: claim.id, before: { state: 'submitted' }, after: { state: 'rejected', number: claim.number, rejected: true, channel: ctx.channel }, params: { number: claim.number } });
     return ok(expenseClaimViewInternal(deps, tx, claim.id)!);
   });
 }
@@ -535,7 +535,7 @@ export async function approvePartnerPayment(deps: Deps, ctx: CallContext, input:
       action: 'finance.partnerPayment.approve', entity: 'financePartnerPayment', id: payment.id,
       before: { state: 'submitted' },
       after: { state: 'approved', number, basis: after.basis, basisOverridden: after.basisOverridden, retroactive: after.retroactive, positionCount: positions.length, totalCents, proofMonths: after.proofMonths, openItemId, channel: ctx.channel },
-      summary: `Zahlung an Partner ${number} freigegeben`,
+      params: { number },
     });
     return ok(partnerPaymentViewInternal(deps, ctx, tx, after));
   });

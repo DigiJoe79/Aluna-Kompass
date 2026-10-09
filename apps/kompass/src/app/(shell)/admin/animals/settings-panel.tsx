@@ -3,6 +3,7 @@
 import type { PhotoFrame } from '@kompass/module-animals';
 import { useTranslations } from 'next-intl';
 import { useState, useTransition } from 'react';
+import { FormCard, FormCardBody } from '@/components/forms/form-card';
 import { FormActionBar } from '@/components/forms/form-action-bar';
 import { FormField } from '@/components/forms/form-field';
 import { FormGrid } from '@/components/forms/form-grid';
@@ -32,8 +33,8 @@ export function AnimalSettingsPanel({ initial, canManage }: { initial: Values; c
   // Die Adresse ist ein einzelner Wert: Ihr Prüffehler kommt ohne Pfad und steht am Feld; alles andere über der Leiste (MUSTER A).
   const urlError = feedback.state.status === 'error' ? feedback.state.fieldErrors[''] : undefined;
   return (
-    <section aria-label={t('title')} className="overflow-hidden rounded-lg border border-line bg-surface">
-      <div className="p-5">
+    <FormCard as="section" aria-label={t('title')}>
+      <FormCardBody>
         <section>
           <h3 className="text-[15px] font-semibold">{t('frame.title')}</h3>
           <p className="mt-1 text-[13px] text-ink-2">{t('frame.intro')}</p>
@@ -70,7 +71,7 @@ export function AnimalSettingsPanel({ initial, canManage }: { initial: Values; c
             </FormGrid>
           </div>
         </section>
-      </div>
+      </FormCardBody>
       {canManage ? (
         <FormActionBar
           count={changed}
@@ -84,6 +85,6 @@ export function AnimalSettingsPanel({ initial, canManage }: { initial: Values; c
           onSave={() => start(async () => void (await feedback.run(() => saveAnimalSettingsAction(values), { retry: () => undefined })))}
         />
       ) : null}
-    </section>
+    </FormCard>
   );
 }

@@ -27,8 +27,9 @@ für alle, ohne es gesehen zu haben.
 
 „Aktivieren“ schaltet das Theme für alle Nutzer; wer Dunkel eingestellt hat,
 bekommt die dunkle Hälfte. Gelöscht werden darf jedes Theme außer dem
-aktiven und dem Default.
+aktiven und dem Default; „Theme löschen …“ steht im Menü **Weitere Aktionen**
+(⋯) neben „Aktivieren“.
 
-Was ein Theme **nicht** ist: die Webseite. Deren Aussehen bestimmt das
-Template; das Theme gilt für Kompass selbst und für die Dokumente, die
+Was ein Theme **nicht** ist: die Webseite. Deren Aussehen bestimmt ihre
+Vorlage; das Theme gilt für Kompass selbst und für die Dokumente, die
 Kompass erzeugt.

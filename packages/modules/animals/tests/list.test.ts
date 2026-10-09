@@ -82,6 +82,17 @@ describe('listAnimals', () => {
     }
   });
 
+  /** Designer 2026-10-08: Die Reiter zeigen, was ein Klick zeigen würde — mit den Filtern der Leiste, ohne die Sicht. */
+  it('counts the tabs with the active filters but without the review view', async () => {
+    const { d } = await setup();
+    expect(unwrap(await listAnimals(d, view)).tabCounts).toEqual({ all: 4, reviewPending: 1 });
+    expect(unwrap(await listAnimals(d, view, { status: 'lookingForHome' })).tabCounts).toEqual({ all: 2, reviewPending: 1 });
+    expect(unwrap(await listAnimals(d, view, { isPublished: true })).tabCounts).toEqual({ all: 2, reviewPending: 0 });
+    expect(unwrap(await listAnimals(d, view, { text: 'ant', reviewPending: true })).tabCounts).toEqual({ all: 1, reviewPending: 1 });
+    expect(unwrap(await listAnimals(d, view, { status: 'lookingForHome', reviewPending: true })).tabCounts).toEqual({ all: 2, reviewPending: 1 });
+    expect(unwrap(await listAnimals(d, view, { status: 'lookingForHome', reviewPending: false })).tabCounts).toEqual({ all: 2, reviewPending: 1 });
+  });
+
   it('sorts by the chosen field, ties and missing values fall back to the name', async () => {
     const { d, milo, zora } = await setup();
     expect(await names(d, { orderBy: { field: 'name', direction: 'desc' } })).toEqual(['Zora', 'Milo', 'Bärbel', 'anton']);
@@ -105,6 +116,6 @@ describe('listAnimals', () => {
 
   it('an empty installation lists nothing', async () => {
     const d = createTestDeps({ manifests: [coreModule, animalsModule] });
-    expect(unwrap(await listAnimals(d, view))).toEqual({ animals: [], total: 0, reviewPending: 0 });
+    expect(unwrap(await listAnimals(d, view))).toEqual({ animals: [], total: 0, reviewPending: 0, tabCounts: { all: 0, reviewPending: 0 } });
   });
 });

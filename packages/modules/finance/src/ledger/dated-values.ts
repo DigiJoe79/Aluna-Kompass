@@ -51,7 +51,7 @@ export async function setDatedValue(deps: Deps, ctx: CallContext, input: unknown
       .values({ key, validFrom: parsed.value.validFrom, value: JSON.stringify(value), updatedAt: now, updatedByUserId: ctx.userId })
       .onConflictDoUpdate({ target: [financeDatedValues.key, financeDatedValues.validFrom], set: { value: JSON.stringify(value), updatedAt: now, updatedByUserId: ctx.userId } })
       .run();
-    financeAudit(tx, deps, ctx, { action: 'finance.datedValue.set', entity: 'financeDatedValue', id: `${key}@${parsed.value.validFrom}`, after: { key, validFrom: parsed.value.validFrom, value }, summary: `Datierter Wert ${key}@${parsed.value.validFrom} gesetzt` });
+    financeAudit(tx, deps, ctx, { action: 'finance.datedValue.set', entity: 'financeDatedValue', id: `${key}@${parsed.value.validFrom}`, after: { key, validFrom: parsed.value.validFrom, value }, params: { key, fromOn: parsed.value.validFrom } });
     return ok({ key, validFrom: parsed.value.validFrom, value });
   });
 }
@@ -67,7 +67,7 @@ export async function removeDatedValue(deps: Deps, ctx: CallContext, input: unkn
   if (!before) return notFound('financeDatedValue', `${parsed.value.key}@${parsed.value.validFrom}`);
   return deps.db.transaction((tx: DbOrTx) => {
     tx.delete(financeDatedValues).where(and(eq(financeDatedValues.key, parsed.value.key), eq(financeDatedValues.validFrom, parsed.value.validFrom))).run();
-    financeAudit(tx, deps, ctx, { action: 'finance.datedValue.remove', entity: 'financeDatedValue', id: `${parsed.value.key}@${parsed.value.validFrom}`, before: { key: before.key, validFrom: before.validFrom, value: JSON.parse(before.value) as DatedValue }, summary: `Datierter Wert ${parsed.value.key}@${parsed.value.validFrom} entfernt` });
+    financeAudit(tx, deps, ctx, { action: 'finance.datedValue.remove', entity: 'financeDatedValue', id: `${parsed.value.key}@${parsed.value.validFrom}`, before: { key: before.key, validFrom: before.validFrom, value: JSON.parse(before.value) as DatedValue }, params: { key: parsed.value.key, fromOn: parsed.value.validFrom } });
     return ok({ key: parsed.value.key, validFrom: parsed.value.validFrom });
   });
 }

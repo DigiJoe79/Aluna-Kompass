@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -29,7 +30,7 @@ export default defineTemplate({
 });`;
 
 const withUser = (locales?: string[]) => {
-  const deps = createTestDeps(locales ? { locales } : {});
+  const deps = createTestDeps({ ...(locales ? { locales } : {}), manifests: [coreModule, siteModule] });
   insertUser(deps, { id: 'USER-TEST' });
   return deps;
 };
@@ -111,6 +112,17 @@ describe('template sync', () => {
     await expect(templateIsCurrent(deps, dir)).resolves.toBe(true);
     writeFileSync(path.join(dir, 'kompass.template.ts'), GOOD.replace("name: 'Basis'", "name: 'Basis 2'"));
     await expect(templateIsCurrent(deps, dir)).resolves.toBe(false);
+  });
+
+  it('compares the checksum without importing the template again (Backlog 48)', async () => {
+    // Der Export fragt bei jedem Lauf; ein Import je Frage füllte den Modul-Cache. Eine Datei, die sich gar
+    // nicht importieren lässt, aber zum gespeicherten Stand passt, gilt deshalb als aktuell.
+    const deps = withUser();
+    unwrap(await applyTemplateSync(deps, ctxWith(['site.manage']), { dir: templateDir(GOOD), confirm: true }));
+    // Ein frisches Verzeichnis: Den Pfad hat noch kein Import gesehen, auch nicht der Modul-Cache von Vitest.
+    const broken = 'export default {';
+    deps.db.update(siteTemplateState).set({ checksum: createHash('sha256').update(broken).digest('hex') }).run();
+    await expect(templateIsCurrent(deps, templateDir(broken))).resolves.toBe(true);
   });
 });
 

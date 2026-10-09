@@ -6,6 +6,7 @@ import { useTranslations } from 'next-intl';
 import { useActionState, useEffect, useMemo, useState, useTransition } from 'react';
 import { FormField } from '@/components/forms/form-field';
 import { FormGrid } from '@/components/forms/form-grid';
+import { FormCard } from '@/components/forms/form-card';
 import { FormActionBar } from '@/components/forms/form-action-bar';
 import { useActionFeedback } from '@/components/forms/use-action-feedback';
 import { Button } from '@/components/ui/button';
@@ -82,7 +83,7 @@ export function RoleEditor({
   };
 
   return (
-    <div className="grid min-h-[560px] grid-cols-[280px_minmax(0,1fr)] overflow-hidden rounded-lg border border-line bg-surface">
+    <FormCard className="grid min-h-[560px] grid-cols-[280px_minmax(0,1fr)]">
       <aside className="flex flex-col border-r border-line p-3">
         <ul aria-label={t('listAria')} className="flex flex-col gap-0.5">
           {roles.map((role) => (
@@ -217,6 +218,6 @@ export function RoleEditor({
           />
         )}
       </section>
-    </div>
+    </FormCard>
   );
 }

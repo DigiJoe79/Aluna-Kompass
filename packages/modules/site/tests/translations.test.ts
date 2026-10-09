@@ -1,4 +1,4 @@
-import { schema as core, unwrap } from '@kompass/core';
+import { coreModule, schema as core, unwrap } from '@kompass/core';
 import { createTestDeps, ctxWith, insertUser } from '@kompass/core/testing';
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
@@ -36,7 +36,7 @@ const manage = ctxWith(['site.manage', 'site.view']);
 const view = ctxWith(['site.view']);
 
 const setup = (templateLocales = ['de', 'en'], installation = ['de', 'en']) => {
-  const deps = createTestDeps({ locales: installation });
+  const deps = createTestDeps({ locales: installation, manifests: [coreModule, siteModule] });
   insertUser(deps, { id: 'USER-TEST' });
   deps.db
     .insert(siteTemplateState)
@@ -75,7 +75,7 @@ describe('siteTranslatables', () => {
   });
 
   it('is empty without a template and forbidden without site.view', () => {
-    const bare = createTestDeps({ locales: ['de', 'en'] });
+    const bare = createTestDeps({ locales: ['de', 'en'], manifests: [coreModule, siteModule] });
     expect(unwrap(siteTranslatables(bare, view))).toEqual([]);
     expect(siteTranslatables(setup(), ctxWith([])).ok).toBe(false);
   });
@@ -91,7 +91,7 @@ describe('siteSetTranslations', () => {
     expect(readValues(deps)).toEqual({ claim: { de: 'Willkommen', en: 'Welcome' }, pct: 7, steps: [{ title: { de: 'Eins', en: '' }, count: 1 }, { title: { de: 'Zwei', en: 'Two' }, count: 2 }] });
     const audits = deps.db.select().from(core.auditLog).all().slice(auditBefore);
     expect(audits.map((e) => e.action)).toEqual(['site.values.update']);
-    expect(audits[0]?.summary).toContain('steps');
+    expect(JSON.parse(audits[0]!.params!)).toEqual({ variables: 'steps, claim', variableCount: 2 });
   });
 
   it('writes an entry field through updateEntry with one audit entry', async () => {

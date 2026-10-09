@@ -107,7 +107,7 @@ async function storeDetailed(deps: Deps, ctx: CallContext, input: StoreMediaInpu
       .values({ id, filename, mimeType: meta.mimeType, bytes: input.bytes.byteLength, width: meta.width, height: meta.height, uploadedByUserId: ctx.userId, createdAt: isoNow(deps.clock), folder, checksum: meta.hash })
       .run();
     const record = tx.select().from(mediaAssets).where(eq(mediaAssets.id, id)).get() as MediaAssetRecord;
-    recordAudit(tx, deps, ctx, { action: 'media.upload', entityType: 'mediaAsset', entityId: id, after: record, summary: `Datei ${filename} abgelegt` });
+    recordAudit(tx, deps, ctx, { action: 'media.upload', entityType: 'mediaAsset', entityId: id, after: record, params: { filename } });
     return ok({ record, created: true });
   });
 }
@@ -254,7 +254,7 @@ export async function deleteMediaAsset(deps: Deps, ctx: CallContext, input: unkn
       entityType: 'mediaAsset',
       entityId: record.id,
       before: record,
-      summary: `Datei „${record.filename}“ gelöscht`,
+      params: { filename: record.filename },
     });
   });
   // Datei erst nach dem Commit; ein verwaister Rest wäre harmlos (Dedup nach Hash).

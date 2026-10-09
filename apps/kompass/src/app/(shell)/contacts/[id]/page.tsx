@@ -8,6 +8,7 @@ import { PageHeader } from '@/components/page-header';
 import { StatusBadge } from '@/components/status-badge';
 import { requireSession } from '@/lib/request-context';
 import { ChannelsEditor } from './channels-editor';
+import { ContactActions } from './contact-actions';
 import { RetentionPanel } from './retention-panel';
 import { RolesPanel } from './roles-panel';
 import { RelatedDocuments } from '@/components/related-documents';
@@ -41,9 +42,9 @@ export default async function ContactDetailPage(props: { params: Promise<{ id: s
           title={displayName(contact)}
           description={contact.kind === 'organization' ? t('fields.organization') : t('fields.person')}
           back={{ href: '/contacts', label: c('backToList') }}
+          status={contact.status === 'archived' ? <StatusBadge tone="neutral">{t('archived')}</StatusBadge> : undefined}
           actions={
             <>
-              {contact.status === 'archived' ? <StatusBadge tone="neutral">{t('archived')}</StatusBadge> : null}
               {canManage ? (
                 <CreateContactDialog
                   contact={{
@@ -64,6 +65,7 @@ export default async function ContactDetailPage(props: { params: Promise<{ id: s
                   }}
                 />
               ) : null}
+              {canManage ? <ContactActions contactId={contact.id} until={retention.until} due={retention.due} held={retention.holds.length > 0} /> : null}
             </>
           }
         />
@@ -74,7 +76,7 @@ export default async function ContactDetailPage(props: { params: Promise<{ id: s
           <h2 className="mb-2 text-[13px] font-semibold text-muted-ink">{t('preview')}</h2>
           <pre
             data-testid="postal-address"
-            className="whitespace-pre-line rounded-md border border-line bg-code-bg px-3 py-2 font-body text-[14px] leading-relaxed text-ink"
+            className="whitespace-pre-line rounded-md border border-line bg-code px-3 py-2 font-body text-[14px] leading-relaxed text-ink"
           >
             {formatPostalAddress(contact, contact.belongsTo, organizationCountry)}
           </pre>
@@ -86,14 +88,7 @@ export default async function ContactDetailPage(props: { params: Promise<{ id: s
           ) : null}
         </section>
 
-        <RetentionPanel
-          contactId={contact.id}
-          holds={retention.holds}
-          roleKeysById={Object.fromEntries(contact.roles.map((r) => [r.id, r.role]))}
-          until={retention.until}
-          due={retention.due}
-          canManage={canManage}
-        />
+        <RetentionPanel holds={retention.holds} roleKeysById={Object.fromEntries(contact.roles.map((r) => [r.id, r.role]))} />
 
         <RolesPanel
           contactId={contact.id}

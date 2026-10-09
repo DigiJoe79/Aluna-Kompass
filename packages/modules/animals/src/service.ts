@@ -82,7 +82,7 @@ function markReviewPending(tx: DbOrTx, deps: Deps, ctx: CallContext, id: string)
   // Jedes Vormerken hat seinen eigenen Eintrag, dieselbe Aktion wie das ausdrückliche Anfordern; zusätzlich
   // steht der Merker im Nachher-Stand des Eintrags der Änderung, die ihn ausgelöst hat (alle vier Dienste).
   // Der eigene Eintrag steht davor.
-  recordAudit(tx, deps, ctx, { action: 'animals.requestReview', entityType: 'animal', entityId: id, before: { reviewRequestedAt: null, reviewNote: row.reviewNote }, after: { reviewRequestedAt: now, reviewNote: row.reviewNote }, summary: `${row.name} zur Prüfung vorgemerkt (Schreiben über MCP)` });
+  recordAudit(tx, deps, ctx, { action: 'animals.requestReview', entityType: 'animal', entityId: id, before: { reviewRequestedAt: null, reviewNote: row.reviewNote }, after: { reviewRequestedAt: now, reviewNote: row.reviewNote }, params: { name: row.name, viaMcp: true } });
 }
 
 export async function createAnimal(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<AnimalRecord>> {
@@ -97,7 +97,7 @@ export async function createAnimal(deps: Deps, ctx: CallContext, input: unknown)
     tx.insert(animals).values({ id, slug: animalSlugFor(tx, parsed.value.name, id), ...parsed.value, species: 'dog', status: 'lookingForHome', isPublished: false, createdAt: now, updatedAt: now }).run();
     markReviewPending(tx, deps, ctx, id);
     const record = loadAnimal(tx, id)!;
-    recordAudit(tx, deps, ctx, { action: 'animals.create', entityType: 'animal', entityId: id, after: record, summary: `Tier ${record.name} angelegt` });
+    recordAudit(tx, deps, ctx, { action: 'animals.create', entityType: 'animal', entityId: id, after: record, params: { name: record.name } });
     return ok(record);
   });
 }
@@ -117,7 +117,7 @@ export async function updateAnimal(deps: Deps, ctx: CallContext, input: unknown)
     tx.update(animals).set({ ...changes, updatedAt: isoNow(deps.clock) }).where(eq(animals.id, id)).run();
     markReviewPending(tx, deps, ctx, id);
     const after = loadAnimal(tx, id)!;
-    recordAudit(tx, deps, ctx, { action: 'animals.update', entityType: 'animal', entityId: id, before, after, summary: `Tier ${after.name} geändert` });
+    recordAudit(tx, deps, ctx, { action: 'animals.update', entityType: 'animal', entityId: id, before, after, params: { name: after.name } });
     return ok(after);
   });
 }
@@ -142,7 +142,7 @@ export async function setAnimalStatus(deps: Deps, ctx: CallContext, input: unkno
       tx.update(animalStories).set({ adoptedYear: adoptedYear as number }).where(eq(animalStories.animalId, id)).run();
     }
     const after = loadAnimal(tx, id)!;
-    recordAudit(tx, deps, ctx, { action: 'animals.setStatus', entityType: 'animal', entityId: id, before: { status: before.status, adoptedYear: before.story?.adoptedYear ?? null }, after: { status, adoptedYear: adoptedYear ?? null }, summary: `Status von ${after.name}: ${status}` });
+    recordAudit(tx, deps, ctx, { action: 'animals.setStatus', entityType: 'animal', entityId: id, before: { status: before.status, adoptedYear: before.story?.adoptedYear ?? null }, after: { status, adoptedYear: adoptedYear ?? null }, params: { name: after.name, status } });
     return ok(after);
   });
 }
@@ -173,7 +173,7 @@ export async function setAnimalPhotos(deps: Deps, ctx: CallContext, input: unkno
     tx.update(animals).set({ updatedAt: isoNow(deps.clock) }).where(eq(animals.id, id)).run();
     markReviewPending(tx, deps, ctx, id);
     const after = loadAnimal(tx, id)!;
-    recordAudit(tx, deps, ctx, { action: 'animals.setPhotos', entityType: 'animal', entityId: id, before: { photos: before.photos, reviewRequestedAt: before.reviewRequestedAt }, after: { photos: after.photos, reviewRequestedAt: after.reviewRequestedAt }, summary: `Fotos von ${after.name} geändert` });
+    recordAudit(tx, deps, ctx, { action: 'animals.setPhotos', entityType: 'animal', entityId: id, before: { photos: before.photos, reviewRequestedAt: before.reviewRequestedAt }, after: { photos: after.photos, reviewRequestedAt: after.reviewRequestedAt }, params: { name: after.name } });
     return ok(after);
   });
 }
@@ -221,7 +221,7 @@ export async function setAnimalStory(deps: Deps, ctx: CallContext, input: unknow
     tx.update(animals).set({ updatedAt: isoNow(deps.clock) }).where(eq(animals.id, id)).run();
     markReviewPending(tx, deps, ctx, id);
     const after = loadAnimal(tx, id)!;
-    recordAudit(tx, deps, ctx, { action: 'animals.setStory', entityType: 'animal', entityId: id, before: { ...before.story, reviewRequestedAt: before.reviewRequestedAt }, after: { ...after.story, reviewRequestedAt: after.reviewRequestedAt }, summary: `Erfolgsgeschichte von ${after.name} geändert` });
+    recordAudit(tx, deps, ctx, { action: 'animals.setStory', entityType: 'animal', entityId: id, before: { ...before.story, reviewRequestedAt: before.reviewRequestedAt }, after: { ...after.story, reviewRequestedAt: after.reviewRequestedAt }, params: { name: after.name } });
     return ok(after);
   });
 }
@@ -236,7 +236,10 @@ export async function setAnimalPublished(deps: Deps, ctx: CallContext, input: un
   return deps.db.transaction((tx) => {
     tx.update(animals).set({ isPublished: parsed.value.isPublished, updatedAt: isoNow(deps.clock) }).where(eq(animals.id, before.id)).run();
     const after = loadAnimal(tx, before.id)!;
-    recordAudit(tx, deps, ctx, { action: after.isPublished ? 'animals.publish' : 'animals.unpublish', entityType: 'animal', entityId: before.id, before: { isPublished: before.isPublished }, after: { isPublished: after.isPublished }, summary: `${after.name} ${after.isPublished ? 'veröffentlicht' : 'zurückgezogen'}` });
+    // Die Aktion steht als fester Text im Aufruf (Wächter audit-actions), deshalb zwei Aufrufe.
+    const entry = { entityType: 'animal', entityId: before.id, before: { isPublished: before.isPublished }, after: { isPublished: after.isPublished }, params: { name: after.name } };
+    if (after.isPublished) recordAudit(tx, deps, ctx, { action: 'animals.publish', ...entry });
+    else recordAudit(tx, deps, ctx, { action: 'animals.unpublish', ...entry });
     return ok(after);
   });
 }
@@ -260,7 +263,7 @@ export async function requestAnimalReview(deps: Deps, ctx: CallContext, input: u
     const now = isoNow(deps.clock);
     tx.update(animals).set({ reviewRequestedAt: before.reviewRequestedAt ?? now, reviewNote: note, updatedAt: now }).where(eq(animals.id, id)).run();
     const after = loadAnimal(tx, id)!;
-    recordAudit(tx, deps, ctx, { action: 'animals.requestReview', entityType: 'animal', entityId: id, before: { reviewRequestedAt: before.reviewRequestedAt, reviewNote: before.reviewNote }, after: { reviewRequestedAt: after.reviewRequestedAt, reviewNote: after.reviewNote }, summary: `Prüfung für ${after.name} angefordert` });
+    recordAudit(tx, deps, ctx, { action: 'animals.requestReview', entityType: 'animal', entityId: id, before: { reviewRequestedAt: before.reviewRequestedAt, reviewNote: before.reviewNote }, after: { reviewRequestedAt: after.reviewRequestedAt, reviewNote: after.reviewNote }, params: { name: after.name, viaMcp: false } });
     return ok(after);
   });
 }
@@ -291,8 +294,8 @@ export async function confirmAnimalReview(deps: Deps, ctx: CallContext, input: u
   return deps.db.transaction((tx) => {
     tx.update(animals).set({ reviewRequestedAt: null, reviewNote: '', updatedAt: isoNow(deps.clock), ...(publishNow ? { isPublished: true } : {}) }).where(eq(animals.id, id)).run();
     const after = loadAnimal(tx, id)!;
-    recordAudit(tx, deps, ctx, { action: 'animals.confirmReview', entityType: 'animal', entityId: id, before: { reviewRequestedAt: before.reviewRequestedAt, reviewNote: before.reviewNote }, after: { reviewRequestedAt: null, reviewNote: '' }, summary: `Prüfung für ${after.name} bestätigt` });
-    if (publishNow) recordAudit(tx, deps, ctx, { action: 'animals.publish', entityType: 'animal', entityId: id, before: { isPublished: false }, after: { isPublished: true }, summary: `${after.name} veröffentlicht` });
+    recordAudit(tx, deps, ctx, { action: 'animals.confirmReview', entityType: 'animal', entityId: id, before: { reviewRequestedAt: before.reviewRequestedAt, reviewNote: before.reviewNote }, after: { reviewRequestedAt: null, reviewNote: '' }, params: { name: after.name } });
+    if (publishNow) recordAudit(tx, deps, ctx, { action: 'animals.publish', entityType: 'animal', entityId: id, before: { isPublished: false }, after: { isPublished: true }, params: { name: after.name } });
     return ok(after);
   });
 }
@@ -308,8 +311,12 @@ export const animalListSchema = z.object({
 export type AnimalListInput = z.input<typeof animalListSchema>;
 /** Eine knappe Zeile der Liste: ohne Texte, Fotos und Geschichte. Das volle Profil liefert `getAnimal`. */
 export interface AnimalListItem { id: string; slug: string; name: string; sex: 'female' | 'male'; status: 'lookingForHome' | 'reserved' | 'adopted'; location: 'shelter' | 'germany'; place: string; isEmergency: boolean; isSponsorable: boolean; isPublished: boolean; externalProfileUrl: string; reviewRequestedAt: string | null; reviewNote: string; createdAt: string; updatedAt: string; photoCount: number; primaryAssetId: string | null }
-/** `total` und `reviewPending` zählen ungefiltert — für die Zähler an den Umschaltern der Liste. */
-export interface AnimalList { animals: AnimalListItem[]; total: number; reviewPending: number }
+/**
+ * `total` und `reviewPending` zählen ungefiltert — die Gesamtzahl der Zählzeile („3 von 6 Hunden“). `tabCounts`
+ * zählt mit allen Filtern außer der Sicht `reviewPending`: die Zahlen an den Reitern Alle / Prüfung offen, also das,
+ * was ein Klick zeigen würde (MUSTER § L, Designer 2026-10-08).
+ */
+export interface AnimalList { animals: AnimalListItem[]; total: number; reviewPending: number; tabCounts: { all: number; reviewPending: number } }
 
 const byName = (a: { name: string; slug: string }, b: { name: string; slug: string }): number => a.name.localeCompare(b.name, 'de', { sensitivity: 'base' }) || a.slug.localeCompare(b.slug);
 
@@ -324,19 +331,21 @@ export async function listAnimals(deps: Deps, ctx: CallContext, input: unknown =
   const parsed = validate(deps, animalListSchema, input ?? {});
   if (!parsed.ok) return parsed;
   const { text, status, location, isPublished, reviewPending, orderBy } = parsed.value;
+  // Die Sicht `reviewPending` filtert erst in JS: So zählen die Reiter mit denselben Zeilen (`tabCounts`).
   const where = and(
     status ? eq(animals.status, status) : undefined,
     location ? eq(animals.location, location) : undefined,
     isPublished === undefined ? undefined : eq(animals.isPublished, isPublished),
-    reviewPending === undefined ? undefined : reviewPending ? isNotNull(animals.reviewRequestedAt) : isNull(animals.reviewRequestedAt),
   );
   const needle = (text ?? '').toLocaleLowerCase('de');
-  const rows = deps.db
+  const matching = deps.db
     .select({ id: animals.id, slug: animals.slug, name: animals.name, sex: animals.sex, status: animals.status, location: animals.location, place: animals.place, isEmergency: animals.isEmergency, isSponsorable: animals.isSponsorable, isPublished: animals.isPublished, externalProfileUrl: animals.externalProfileUrl, reviewRequestedAt: animals.reviewRequestedAt, reviewNote: animals.reviewNote, createdAt: animals.createdAt, updatedAt: animals.updatedAt })
     .from(animals)
     .where(where)
     .all()
     .filter((a) => !needle || a.name.toLocaleLowerCase('de').includes(needle) || a.slug.includes(needle));
+  const tabCounts = { all: matching.length, reviewPending: matching.filter((a) => a.reviewRequestedAt !== null).length };
+  const rows = reviewPending === undefined ? matching : matching.filter((a) => (a.reviewRequestedAt !== null) === reviewPending);
 
   const field = orderBy?.field ?? 'name';
   const sign = orderBy?.direction === 'desc' ? -1 : 1;
@@ -353,7 +362,7 @@ export async function listAnimals(deps: Deps, ctx: CallContext, input: unknown =
   if (rows.length > 0) {
     // Alle Fotos der Liste in einem Zug. Ohne `inArray` bei ungefilterter Liste: SQLite begrenzt die Zahl der Bindevariablen.
     const all = deps.db.select({ animalId: animalPhotos.animalId, assetId: animalPhotos.assetId, isPrimary: animalPhotos.isPrimary }).from(animalPhotos);
-    const wanted = where || needle ? all.where(inArray(animalPhotos.animalId, rows.map((a) => a.id))) : all;
+    const wanted = rows.length < matching.length || where || needle ? all.where(inArray(animalPhotos.animalId, rows.map((a) => a.id))) : all;
     for (const p of wanted.orderBy(asc(animalPhotos.sortOrder)).all()) {
       const entry = photos.get(p.animalId) ?? { count: 0, primary: null, first: null };
       entry.count += 1;
@@ -368,6 +377,7 @@ export async function listAnimals(deps: Deps, ctx: CallContext, input: unknown =
     animals: rows.map((a) => { const p = photos.get(a.id); return { ...a, photoCount: p?.count ?? 0, primaryAssetId: p?.primary ?? p?.first ?? null }; }),
     total,
     reviewPending: pending,
+    tabCounts,
   });
 }
 
@@ -419,7 +429,7 @@ export async function deleteAnimal(deps: Deps, ctx: CallContext, input: unknown)
     tx.delete(animalStories).where(eq(animalStories.animalId, before.id)).run();
     tx.delete(animals).where(eq(animals.id, before.id)).run();
     notifyRecordDeleted(tx, deps, ctx, 'animal', before.id);
-    recordAudit(tx, deps, ctx, { action: 'animals.delete', entityType: 'animal', entityId: before.id, before, summary: `Tier ${before.name} gelöscht` });
+    recordAudit(tx, deps, ctx, { action: 'animals.delete', entityType: 'animal', entityId: before.id, before, params: { name: before.name } });
   });
   if (!parsed.value.deleteOrphanedMedia) return ok({ deletedMedia: [], keptMedia: [] });
   return deleteUnreferencedMedia(deps, ctx, assetIds);

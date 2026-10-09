@@ -2,9 +2,9 @@
 
 import { useState } from 'react';
 import { FieldError } from '@/components/forms/field-error';
+import { Segmented } from '@/components/ui/segmented';
 import { useTranslations } from 'next-intl';
 import { formatAmount, parseAmount } from '@/lib/finance/amount';
-import { cn } from '@/lib/utils';
 
 export interface AmountFieldProps {
   name: string;
@@ -53,22 +53,15 @@ export function AmountField({ name, id, value, onChange, direction, onDirectionC
     <div className="space-y-1">
       <div className="flex items-stretch gap-2">
         {direction !== undefined ? (
-          <div role="group" aria-label={t('directionGroup')} className="inline-flex h-[var(--field-h)] shrink-0 overflow-hidden rounded-md border border-line-strong">
-            {(['out', 'in'] as const).map((d) => (
-              <button
-                key={d}
-                type="button"
-                aria-pressed={direction === d}
-                onClick={() => onDirectionChange?.(d)}
-                disabled={disabled}
-                className={cn('px-2.5 text-[13px] font-semibold', direction === d ? 'bg-selected text-selected-ink' : 'bg-surface-2 text-ink-2')}
-              >
-                {t(`direction.${d}`)}
-              </button>
-            ))}
-          </div>
+          <Segmented
+            aria-label={t('directionGroup')}
+            options={(['out', 'in'] as const).map((d) => ({ value: d, label: t(`direction.${d}`), disabled }))}
+            value={direction}
+            onValueChange={(d) => onDirectionChange?.(d)}
+          />
         ) : null}
-        <div className={cn('flex h-[var(--field-h)] flex-1 items-stretch overflow-hidden rounded-md border bg-field', showError ? 'border-error' : 'border-line-strong')}>
+        {/* Feldrahmen im Fehlerzustand wie `ui/input`: aus `aria-invalid` am Feld, nicht aus einer eigenen Bedingung. */}
+        <div className="flex h-[var(--field-h)] flex-1 items-stretch overflow-hidden rounded-md border border-line-strong bg-field has-[[aria-invalid=true]]:border-error">
           <input
             id={fieldId}
             name={name}

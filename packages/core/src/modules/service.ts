@@ -76,7 +76,8 @@ export async function setModuleEnabled(deps: Deps, ctx: CallContext, input: unkn
   next.sort();
   try {
     return deps.db.transaction((tx) => {
-      const written = writeSettingInternal(tx, deps, ctx, 'modules.enabled', next, enabled ? 'modules.enable' : 'modules.disable');
+      // Die Aktion steht als fester Text im Aufruf (Wächter audit-actions), deshalb zwei Aufrufe.
+      const written = enabled ? writeSettingInternal(tx, deps, ctx, 'modules.enabled', next, 'modules.enable') : writeSettingInternal(tx, deps, ctx, 'modules.enabled', next, 'modules.disable');
       if (!written.ok) return written;
       // Stammdaten, ohne die das Modul nicht benutzbar wäre — in derselben
       // Transaktion, damit es das Modul entweder eingeschaltet **und**

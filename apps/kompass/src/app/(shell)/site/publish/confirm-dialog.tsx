@@ -1,6 +1,8 @@
 'use client';
 
-import { useFormatter, useTranslations } from 'next-intl';
+import { useTranslations } from 'next-intl';
+import { Notice } from '@/components/notice';
+import { useDateFormat } from '@/components/date-format-provider';
 import { useEffect, useState, useTransition } from 'react';
 import { FormActionBar } from '@/components/forms/form-action-bar';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
@@ -35,7 +37,7 @@ export function PublishConfirmDialog({
   onRebuild(): void;
 }) {
   const t = useTranslations('site.publish.flow');
-  const format = useFormatter();
+  const fmt = useDateFormat();
   const [check, setCheck] = useState<Check>('checking');
   const [, startCheck] = useTransition();
   const hash = preview.contentHash ?? null;
@@ -87,9 +89,7 @@ export function PublishConfirmDialog({
               })}
         </DialogDescription>
         {check === 'stale' ? (
-          <p role="alert" className="rounded-md border border-warning bg-warning-bg p-3 text-[13px] text-ink">
-            {t.rich('confirm.stale', { ...bold, time: format.dateTime(new Date(preview.finishedAt), { timeStyle: 'short' }) })}
-          </p>
+          <Notice level="refuse">{t.rich('confirm.stale', { ...bold, time: fmt.time(preview.finishedAt) })}</Notice>
         ) : null}
         <p className="rounded-md border border-line bg-surface-2 p-3 text-[13px] text-ink-2">
           {env === 'test' ? t('publish.test') : t('publish.live')} · {host}

@@ -8,7 +8,7 @@ import { read, relative, sourceFiles } from './source';
  * `ring-focus` …). `text-muted-ink` und Verwandte enden anders und treffen nicht.
  */
 const SHADCN =
-  /(?<![\w-])(?:bg|text|border|ring|outline|fill|stroke|from|to|via|divide|placeholder|decoration|accent|caret)-(?:primary|primary-foreground|secondary|secondary-foreground|muted|muted-foreground|foreground|background|destructive|accent|accent-foreground|input|border|ring|popover|popover-foreground|card|card-foreground)(?:\/[0-9]+)?(?![\w-])/;
+  /(?<![\w-])(?:bg|text|border(?:-[xytrblse])?|ring|outline|fill|stroke|from|to|via|divide|placeholder|decoration|accent|caret)-(?:primary|primary-foreground|secondary|secondary-foreground|muted|muted-foreground|foreground|background|destructive|accent|accent-foreground|input|border|ring|popover|popover-foreground|card|card-foreground)(?:\/[0-9]+)?(?![\w-])/;
 
 describe('keine shadcn-Farbnamen', () => {
   it('Klassen nennen nur Theme-Tokens', () => {

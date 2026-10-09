@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl';
 import { useActionState, useEffect, useState, useMemo } from 'react';
 import { toast } from 'sonner';
 import { FormField } from '@/components/forms/form-field';
+import { FormCard, FormCardBody } from '@/components/forms/form-card';
 import { FormActionBar } from '@/components/forms/form-action-bar';
 import { SchemaForm, withBlanks } from '@/components/schema-form';
 import { Input } from '@/components/ui/input';
@@ -65,12 +66,12 @@ export function EntryForm({
   }, [state]);
 
   return (
-    <form action={action} className="overflow-hidden rounded-lg border border-line bg-surface">
+    <FormCard as="form" action={action}>
       <input type="hidden" name="collection" value={collection} />
       {entry ? <input type="hidden" name="id" value={entry.id} /> : null}
       {entry ? <input type="hidden" name="expectedVersion" value={version} /> : null}
       <input type="hidden" name="payload" value={JSON.stringify({ slug: hasSlug ? slug : undefined, data })} />
-      <div className="p-5">
+      <FormCardBody>
         <SchemaForm
           schema={fields}
           value={data}
@@ -85,7 +86,7 @@ export function EntryForm({
             ) : null
           }
         />
-      </div>
+      </FormCardBody>
       <FormActionBar
         mode={entry ? 'edit' : 'create'}
         back={{ href: `/site/c/${collection}`, label: tCommon('backToList') }}
@@ -93,6 +94,6 @@ export function EntryForm({
         onDiscard={discard}
         state={state}
       />
-    </form>
+    </FormCard>
   );
 }

@@ -178,7 +178,7 @@ describe('relatedPartyPayments (E21, Annahme 10, Review Focus 6)', () => {
     expect(rows.map((r) => [r.entryDate, r.boardAllowanceWithoutBasis])).toEqual([['2026-03-01', true], ['2026-05-01', false]]);
 
     // Eine Grundlage von vor dem Datum (Bestand ohne `validFrom`) trägt keine Zahlung.
-    f.deps.db.transaction((tx) => writeSettingInternal(tx, f.deps, systemContext(), 'finance.boardRemunerationValidFrom', null, 'test'));
+    f.deps.db.transaction((tx) => writeSettingInternal(tx, f.deps, systemContext(), 'finance.boardRemunerationValidFrom', null));
     expect(unwrap(await relatedPartyPayments(f.deps, f.ctx, { fiscalYearId: f.year.id })).rows.every((r) => r.boardAllowanceWithoutBasis)).toBe(true);
   });
 });

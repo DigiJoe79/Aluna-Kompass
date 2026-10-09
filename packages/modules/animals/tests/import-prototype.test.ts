@@ -1,3 +1,4 @@
+import { projectsModule } from '@kompass/module-projects';
 import { coreModule, unwrap } from '@kompass/core';
 import { listProjects } from '@kompass/module-projects';
 import { createTestDeps, ctxWith, insertUser } from '@kompass/core/testing';
@@ -13,7 +14,7 @@ afterEach(() => {
 
 describe('importPrototype', () => {
   it('imports dogs with their story and the projects, and stays idempotent', async () => {
-    const deps = createTestDeps({ manifests: [coreModule, animalsModule], env: 'test' });
+    const deps = createTestDeps({ manifests: [coreModule, animalsModule, projectsModule], env: 'test' });
     insertUser(deps, { id: 'USER-TEST' });
     const ctx = ctxWith(['projects.manage', 'projects.view', 'animals.manage', 'animals.view', 'media.upload', 'settings.manage']);
     const dir = fakePrototype();

@@ -99,6 +99,10 @@ export default async function FinanceEntriesPage({ searchParams }: { searchParam
     offset: (page - 1) * PAGE_SIZE,
   });
   if (!entriesRes.ok) return <Page width="full"><ForbiddenCard permission="finance.read" /></Page>;
+  const filtered = Boolean(query.q || query.state || query.account || query.category || query.novoucher || query.agent || query.year || query.ids);
+  // „{Treffer} von {alle}“ in der Zählzeile; ohne Filter ist die Trefferzahl schon alles.
+  const allRes = filtered ? await listEntries(deps, ctx, { limit: 1 }) : entriesRes;
+  const unfiltered = allRes.ok ? allRes.value.total : entriesRes.value.total;
 
   const numbersById = new Map(entriesRes.value.entries.map((e) => [e.id, e.number]));
 
@@ -170,9 +174,12 @@ export default async function FinanceEntriesPage({ searchParams }: { searchParam
             standing={balancesRes.ok ? balancesRes.value.standing : { finalizedThrough: null, draftCount: 0, reviewedDraftCount: 0 }}
             accounts={activeAccounts.map((a) => ({ id: a.id, name: a.name }))}
             categories={categories.map((c) => ({ id: c.id, name: c.name }))}
+            years={fiscalYears.map((y) => ({ id: y.id, label: y.designation }))}
+            unfiltered={unfiltered}
             canWrite={canWrite}
             canFinalize={canFinalize}
             showSetupLink={showSetupLink}
+            filtered={filtered}
             accountFilter={filteredAccount ? { name: filteredAccount.name, openingBalanceCents: filteredAccount.openingBalanceCents } : null}
           />
         </div>

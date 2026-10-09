@@ -11,6 +11,7 @@ import { useDateFormat } from '@/components/date-format-provider';
 import { Notice } from '@/components/notice';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { formatEuro } from '@/lib/finance/amount';
 import { formatDateOrDash } from '@/lib/finance/dates';
 import { batchAccountState } from '@/lib/finance/work-dialogs';
@@ -70,24 +71,24 @@ export function BatchFinalizeDialog({ reviewedCount }: { reviewedCount: number }
             {preview ? (
               <>
                 <p className="text-ink-2">{t('intro', { count: preview.entries || reviewedCount })}</p>
-                <table className="w-full text-left">
-                  <thead className="text-[12px] uppercase tracking-[.04em] text-muted-ink">
-                    <tr className="border-b border-line">
-                      <th className="py-1.5 pr-3 font-semibold">{t('account')}</th>
-                      <th className="py-1.5 pr-3 text-right font-semibold">{t('sum')}</th>
-                      <th className="py-1.5 pr-3 text-right font-semibold">{t('bookAfter')}</th>
-                      <th className="py-1.5 font-semibold">{t('statement')}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>{t('account')}</TableHead>
+                      <TableHead className="text-right">{t('sum')}</TableHead>
+                      <TableHead className="text-right">{t('bookAfter')}</TableHead>
+                      <TableHead>{t('statement')}</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
                     {preview.byAccount.map((row) => {
                       const state = batchAccountState(row);
                       return (
-                        <tr key={row.accountId} className="border-b border-line-2 align-top">
-                          <td className="py-1.5 pr-3 font-medium text-ink">{row.accountName}</td>
-                          <td className="py-1.5 pr-3 text-right font-mono tabular-nums">{formatEuro(row.sumCents)}</td>
-                          <td className="py-1.5 pr-3 text-right font-mono tabular-nums">{formatEuro(row.bookCentsAfter)}</td>
-                          <td className="py-1.5 text-ink-2">
+                        <TableRow key={row.accountId}>
+                          <TableCell className="align-top font-medium text-ink">{row.accountName}</TableCell>
+                          <TableCell className="text-right align-top font-mono tabular-nums">{formatEuro(row.sumCents)}</TableCell>
+                          <TableCell className="text-right align-top font-mono tabular-nums">{formatEuro(row.bookCentsAfter)}</TableCell>
+                          <TableCell className="align-top text-ink-2">
                             {state.state === 'cash' ? t('cash') : null}
                             {state.state === 'noStatement' ? t('noStatement') : null}
                             {state.state === 'matches' || state.state === 'differs' ? (
@@ -96,12 +97,12 @@ export function BatchFinalizeDialog({ reviewedCount }: { reviewedCount: number }
                                 {state.state === 'matches' ? <span className="ml-1 font-sans text-success">✓ {t('matches')}</span> : null}
                               </span>
                             ) : null}
-                          </td>
-                        </tr>
+                          </TableCell>
+                        </TableRow>
                       );
                     })}
-                  </tbody>
-                </table>
+                  </TableBody>
+                </Table>
                 {preview.byAccount.map((row) => {
                   const state = batchAccountState(row);
                   return state.state === 'differs' ? (

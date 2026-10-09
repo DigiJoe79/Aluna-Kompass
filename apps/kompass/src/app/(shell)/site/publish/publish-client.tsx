@@ -22,6 +22,7 @@ export function PublishClient({
   canManage,
   imageCacheEmpty,
   history,
+  historyTotal,
   currentHash,
   lastPublishedAt,
 }: {
@@ -31,6 +32,8 @@ export function PublishClient({
   canManage: boolean;
   imageCacheEmpty: boolean;
   history: PublishSummary[];
+  /** Alle Publishes der Umgebung — `history` sind nur die jüngsten. */
+  historyTotal: number;
   /** Inhalts-Hash des Stands beim Laden der Seite; frisch nach jedem Lauf, weil der Poller die Seite dann erneuert. */
   currentHash: string | null;
   lastPublishedAt: string | null;
@@ -122,7 +125,7 @@ export function PublishClient({
         />
       ) : null}
       <LogDialog item={logSubject} onClose={() => setLogSubject(null)} />
-      <PublishHistory items={history} highlightId={state.kind === 'ended' && state.job.status === 'success' ? (state.job.publishId ?? null) : null} />
+      <PublishHistory items={history} total={historyTotal} highlightId={state.kind === 'ended' && state.job.status === 'success' ? (state.job.publishId ?? null) : null} />
     </>
   );
 }

@@ -82,9 +82,11 @@ test.describe('finance purposes (F8b)', () => {
     // 3. Als erfüllt kennzeichnen — mit Rest-Warnung, danach „erfüllt, 200,00 € Rest“.
     await row(page, 'Tierarztfonds E2E').getByRole('button', { name: 'Tierarztfonds E2E' }).click();
     await expect(page.getByTestId('purpose-movements')).toContainText('Umwidmung, Abgang');
+    await page.getByTestId('purpose-menu').click();
     await page.getByTestId('purpose-fulfill').click();
-    await expect(page.getByTestId('purpose-fulfill-confirm')).toContainText('200,00 €');
-    await page.getByTestId('purpose-fulfill-confirm-button').click();
+    const fulfill = page.getByRole('dialog', { name: /als erfüllt kennzeichnen\?$/ });
+    await expect(fulfill).toContainText('200,00 €');
+    await fulfill.getByRole('button', { name: 'Trotzdem als erfüllt kennzeichnen' }).click();
     await expect(row(page, 'Tierarztfonds E2E')).toContainText('erfüllt, 200,00 € Rest');
 
     // 4. Wieder öffnen verlangt eine Begründung.
@@ -162,7 +164,8 @@ test.describe('finance purposes (F8b)', () => {
     const from = await form.locator('#transfer-from').boundingBox();
     const to = await form.locator('#transfer-to').boundingBox();
     expect(to!.y).toBeGreaterThan(from!.y + from!.height);
-    await expect(page.getByTestId('transfer-footer')).toHaveCSS('position', 'sticky');
+    // Am Telefon klebt die Leiste nicht, sie steht am Ende der Karte (Designer 2026-10-08, Befund 39).
+    await expect(page.getByTestId('transfer-footer')).toHaveCSS('position', 'static');
 
     // Per Tastatur: von → nach → Betrag → Datum → Begründung, dann absenden ohne Dokument.
     await form.locator('#transfer-from').focus();

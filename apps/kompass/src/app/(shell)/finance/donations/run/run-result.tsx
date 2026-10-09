@@ -6,7 +6,7 @@ import { Download } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { toast } from 'sonner';
 import { FormActionBar } from '@/components/forms/form-action-bar';
 import { useActionFeedback } from '@/components/forms/use-action-feedback';
@@ -41,6 +41,7 @@ export function RunResult({ run, canIssue, today, missing, followUpHref }: { run
   const [downloading, setDownloading] = useState<'machine' | 'signature' | null>(null);
   const [refusal, setRefusal] = useState<ActionState>({ status: 'idle' });
   const tCommon = useTranslations('common');
+  const emptyId = useId();
   const { total } = runProgress(run.counts);
 
   const errorText = (code: string | null) => {
@@ -92,16 +93,42 @@ export function RunResult({ run, canIssue, today, missing, followUpHref }: { run
       <div className="space-y-2">
         <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-ink">{t('result.bundles')}</p>
         <RefusalNotice action state={refusal} />
+        {/* Ein leeres Paket ist nicht stumm gesperrt, sondern nennt den Grund (Vorbild `site/publish/run-card.tsx`, Spec Seitenkopf § 3.6). */}
         <div className="flex flex-wrap gap-2">
-          <Button type="button" variant="outline" disabled={run.counts.machine === 0 || downloading !== null} onClick={() => void download('machine')}>
+          <Button
+            type="button"
+            variant="outline"
+            disabled={downloading !== null}
+            aria-disabled={run.counts.machine === 0 || undefined}
+            aria-describedby={run.counts.machine === 0 ? emptyId : undefined}
+            className={run.counts.machine === 0 ? 'opacity-60' : undefined}
+            onClick={() => {
+              if (run.counts.machine > 0) void download('machine');
+            }}
+          >
             <Download aria-hidden />
             {t('result.bundleMachine', { count: run.counts.machine })}
           </Button>
-          <Button type="button" variant="outline" disabled={run.counts.needsSignature === 0 || downloading !== null} onClick={() => void download('signature')}>
+          <Button
+            type="button"
+            variant="outline"
+            disabled={downloading !== null}
+            aria-disabled={run.counts.needsSignature === 0 || undefined}
+            aria-describedby={run.counts.needsSignature === 0 ? emptyId : undefined}
+            className={run.counts.needsSignature === 0 ? 'opacity-60' : undefined}
+            onClick={() => {
+              if (run.counts.needsSignature > 0) void download('signature');
+            }}
+          >
             <Download aria-hidden />
             {t('result.bundleSignature', { count: run.counts.needsSignature })}
           </Button>
         </div>
+        {run.counts.machine === 0 || run.counts.needsSignature === 0 ? (
+          <p id={emptyId} className="text-[12px] text-muted-ink">
+            {t('result.bundleEmpty')}
+          </p>
+        ) : null}
       </div>
 
       <div className="flex flex-wrap items-center gap-3 text-[13px]">

@@ -1,7 +1,8 @@
 'use client';
 
 import { Check, Minus, X } from 'lucide-react';
-import { useFormatter, useTranslations } from 'next-intl';
+import { useTranslations } from 'next-intl';
+import { useDateFormat } from '@/components/date-format-provider';
 import { Button } from '@/components/ui/button';
 import { useSiteJobStatus } from '@/components/site/site-job-provider';
 import { Disclosure } from '@/components/ui/disclosure';
@@ -21,7 +22,7 @@ export function ConnectionCard() {
   const t = useTranslations('site.publish.connection');
   const tStep = useTranslations('site.publish.job.steps');
   const tRun = useTranslations('site.publish.run');
-  const format = useFormatter();
+  const fmt = useDateFormat();
   const { running } = useSiteJobStatus();
   const { pending, start, state: startRefusal } = useStartJob();
   const detail = useSiteJobDetail('deployCheck');
@@ -50,7 +51,7 @@ export function ConnectionCard() {
       {result && (
         <section aria-label={t('resultTitle')} className="flex flex-col gap-3">
           <p className="text-[12px] text-muted-ink">
-            {t('checkedAt', { date: format.dateTime(new Date(result.finishedAt), { dateStyle: 'medium', timeStyle: 'short' }) })}
+            {t('checkedAt', { date: fmt.dateTime(result.finishedAt) })}
           </p>
           <ul aria-label={t('checksLabel')} className="flex flex-col gap-1.5 text-[13px]">
             {result.checks!.map((c) => (

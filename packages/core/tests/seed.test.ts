@@ -38,7 +38,7 @@ describe('seedDevelopment', () => {
   it('keeps an address someone already entered', async () => {
     const deps = createTestDeps({ env: 'development' });
     await seedDevelopment(deps);
-    deps.db.transaction((tx) => writeSettingInternal(tx, deps, systemContext(), 'organization.city', 'Anderswo', 'test'));
+    deps.db.transaction((tx) => writeSettingInternal(tx, deps, systemContext(), 'organization.city', 'Anderswo'));
     await seedDevelopment(deps);
     expect(readSetting(deps, 'organization.city')).toBe('Anderswo');
   });

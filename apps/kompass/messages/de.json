@@ -20,11 +20,45 @@
     }
   },
   "common": {
+    "leave": {
+      "title": "Seite verlassen?",
+      "description": "{count, plural, one {Eine Änderung ist} other {# Änderungen sind}} noch nicht gespeichert. Wenn Sie die Seite verlassen, {count, plural, one {geht sie} other {gehen sie}} verloren.",
+      "confirm": "Seite verlassen"
+    },
     "sortBy": "Sortieren nach {column}",
+    "search": "Suchen",
+    "clearSearch": "Suche leeren",
+    "filterBar": {
+      "more": "Weitere Filter",
+      "all": "{filter}: alle",
+      "filters": "Filter",
+      "sheetTitle": "Filter",
+      "apply": "Anwenden",
+      "reset": "Filter zurücksetzen",
+      "resetShort": "Zurücksetzen",
+      "count": "{total} {noun}",
+      "countFiltered": "{shown} von {total} {noun}",
+      "removeChip": "Filter „{label}“ entfernen",
+      "chip": "{label}: {value}",
+      "search": "Suche"
+    },
+    "listPager": {
+      "label": "Seiten der Liste",
+      "range": "{from}–{to} von {total}",
+      "prev": "Zurück",
+      "next": "Weiter"
+    },
+    "emptyFiltered": {
+      "title": "{noun} passt zu diesen Filtern.",
+      "text": "Ändern Sie die Suche oder setzen Sie die Filter zurück.",
+      "reset": "Filter zurücksetzen"
+    },
     "save": "Speichern",
     "cancel": "Abbrechen",
     "discard": "Verwerfen",
     "close": "Schließen",
+    "moreActions": "Weitere Aktionen",
+    "undo": "Rückgängig",
     "copy": "Kopieren",
     "copied": "Kopiert",
     "copyFailed": "Kopieren hat nicht geklappt. Bitte den Text von Hand markieren und kopieren.",
@@ -37,10 +71,6 @@
     "lastSaved": "zuletzt gespeichert am {date} von {name}",
     "audited": "Wird protokolliert.",
     "backToList": "Zurück zur Übersicht",
-    "danger": {
-      "delete": "Löschen",
-      "archive": "Archivieren"
-    },
     "requiredLegend": "* Pflichtfeld",
     "nothingChanged": "Nichts geändert",
     "retry": "Erneut versuchen",
@@ -259,6 +289,7 @@
   "media": {
     "title": "Mediathek",
     "empty": "Keine Dateien in diesem Ordner.",
+    "emptyFilteredNoun": "Keine Datei",
     "columns": {
       "file": "Datei",
       "folder": "Ordner",
@@ -271,8 +302,9 @@
     "used": "verwendet",
     "view": {
       "list": "Liste",
-      "grid": "Grid"
+      "grid": "Raster"
     },
+    "viewGroup": "Ansicht",
     "type": "Typ",
     "dimensions": "Maße",
     "folder": "Ordner",
@@ -283,10 +315,8 @@
     "uploading": "Datei wird hochgeladen …",
     "alreadyStored": "Diese Datei gibt es schon: „{filename}“ im Ordner „{folder}“.",
     "noFolder": "Ohne Ordner",
-    "filter": "Filtern",
     "kind": {
       "label": "Typ",
-      "all": "Alle",
       "image": "Bilder",
       "pdf": "PDF"
     },
@@ -295,7 +325,8 @@
     "confirmDelete": "Diese Datei löschen?",
     "confirmDeleteBody": "Die Datei wird entfernt. Der Löschvorgang steht im Änderungsprotokoll.",
     "deleted": "Datei gelöscht.",
-    "inUse": "In Verwendung — kann nicht gelöscht werden.",
+    "inUseRefusal": "Die Datei wird noch verwendet: {places}. Entfernen Sie sie dort, dann lässt sie sich löschen.",
+    "deleteItem": "Löschen …",
     "root": "Alle Dateien",
     "uploadButton": "Hochladen",
     "treeEmpty": "Mit Ordnern finden Sie Dateien schneller wieder, etwa „Logos“ oder „Veranstaltungen“. Unterordner legen Sie später am Ordner an.",
@@ -314,7 +345,6 @@
       "undoMovedAway": "Nicht mehr rückgängig zu machen: {count, plural, one {„{title}“ wurde} other {Eine der # Dateien wurde}} inzwischen verschoben"
     },
     "emptyTitle": "Keine Dateien",
-    "search": "Suchen",
     "searchPlaceholder": "Dateiname oder Verwendung",
     "sort": {
       "label": "Sortierung",
@@ -349,6 +379,11 @@
       "empty": "Laden Sie eine Datei hoch oder ändern Sie Suche und Ordner.",
       "loadFailed": "Die Mediathek konnte nicht geladen werden.",
       "selected": "Ausgewählt"
+    },
+    "noun": {
+      "one": "Datei",
+      "other": "Dateien",
+      "dative": "Dateien"
     }
   },
   "content": {
@@ -363,7 +398,6 @@
     "choose": "Wählen",
     "removeImage": "Bild entfernen",
     "noFile": "Bitte eine Datei auswählen.",
-    "gaps": "{count, plural, =0 {Alle Übersetzungen vorhanden} one {# Übersetzung offen} other {# Übersetzungen offen}}",
     "moduleInactiveTitle": "Modul Webseite ist nicht aktiv",
     "moduleInactiveText": "Aktivieren Sie das Modul unter Einrichtung → Module. Vorhandene Inhalte bleiben erhalten.",
     "openModules": "Module öffnen",
@@ -389,8 +423,8 @@
       "remedy": "Schalten Sie zuerst {modules} aus."
     },
     "localeRequired": {
-      "reason": "Die Sprache „{locale}“ wird noch gebraucht: Das Modul „{module}“ verlangt sie (bei der Webseite: das eingelesene Template).",
-      "remedy": "Ändern Sie zuerst das Template oder schalten Sie das Modul aus."
+      "reason": "Die Sprache „{locale}“ wird noch gebraucht: Das Modul „{module}“ verlangt sie (bei der Webseite: die eingelesene Vorlage).",
+      "remedy": "Ändern Sie zuerst die Vorlage der Webseite oder schalten Sie das Modul aus."
     },
     "folder": {
       "sameLocation": { "reason": "Der Ordner liegt schon hier.", "remedy": "Wählen Sie ein anderes Ziel." },
@@ -458,23 +492,23 @@
       "belongsToNotAnOrganization": "Ein Kontakt kann nur einer Organisation zugeordnet werden.",
       "multiplePrimaryChannels": "Es kann nur ein Hauptkontaktweg festgelegt werden.",
       "roleAlreadyRunning": "Diese Rolle ist für diesen Kontakt bereits aktiv.",
-      "unknownView": "Das Template verweist auf eine Sicht, die es nicht gibt: {detail}",
-      "unknownViewField": "Das Template nennt ein Feld, das die Sicht nicht hat: {detail}",
+      "unknownView": "Die Vorlage der Webseite verweist auf eine Sicht, die es nicht gibt: {detail}",
+      "unknownViewField": "Die Vorlage der Webseite nennt ein Feld, das die Sicht nicht hat: {detail}",
       "default": "Der Vorgang ist nicht möglich: {detail}",
       "notIncoming": "Nur eingehende Post lässt sich nachträglich umklassifizieren — die Nummer eines ausgehenden Dokuments steht im verschickten PDF.",
       "documentVoided": "Das Dokument ist storniert und lässt sich nicht mehr ändern.",
       "documentTypeInactive": "Diese Dokumentart ist abgeschaltet.",
       "alreadySeeded": "Die Startinhalte wurden bereits übernommen.",
-      "noSeed": "Das Template bringt keine Startinhalte mit.",
-      "noTemplate": "Es ist noch kein Template eingelesen. Lesen Sie es zuerst ein.",
+      "noSeed": "Die Vorlage der Webseite bringt keine Startinhalte mit.",
+      "noTemplate": "Es ist noch keine Vorlage der Webseite eingelesen. Lesen Sie sie zuerst ein.",
       "siteNotEmpty": "Es sind schon Inhalte vorhanden. Startinhalte werden nur in eine leere Webseite übernommen.",
-      "templateMissing": "Im Template-Verzeichnis fehlt die Datei kompass.template.ts.",
-      "templateResolutionMissing": "Das Template-Verzeichnis hat noch keine Modulauflösung; sie wird beim Einrichten angelegt.",
-      "templateInvalid": "kompass.template.ts exportiert keine Template-Deklaration.",
-      "templateNeedsReview": "Das Template kam mit einem Backup und muss erst eingelesen werden.",
-      "templateStale": "Die Template-Datei weicht vom eingelesenen Stand ab. Lesen Sie das Template neu ein.",
-      "templateUnreadable": "Das Template lässt sich nicht laden: {detail}",
-      "localeMissing": "Das Template verlangt Sprachen, die nicht eingerichtet sind: {detail}",
+      "templateMissing": "Im Verzeichnis der Vorlage fehlt die Datei kompass.template.ts.",
+      "templateResolutionMissing": "Das Verzeichnis der Vorlage hat noch keine Modulauflösung; sie wird beim Einrichten angelegt.",
+      "templateInvalid": "kompass.template.ts exportiert keine Deklaration der Vorlage.",
+      "templateNeedsReview": "Die Vorlage der Webseite kam mit einem Backup und muss erst eingelesen werden.",
+      "templateStale": "Die Datei der Vorlage weicht vom eingelesenen Stand ab. Lesen Sie die Vorlage neu ein.",
+      "templateUnreadable": "Die Vorlage der Webseite lässt sich nicht laden: {detail}",
+      "localeMissing": "Die Vorlage der Webseite verlangt Sprachen, die nicht eingerichtet sind: {detail}",
       "seedAssetsMissing": "Unter seed/assets fehlen Dateien: {detail}",
       "deployCredentialsUnusable": "Die Zugangsdaten für das Ziel sind nicht nutzbar: {detail}",
       "deployCheckFailed": "Der Verbindungstest ist fehlgeschlagen: {detail}",
@@ -498,16 +532,16 @@
         "remedy": "Ihre Einträge erscheinen ohne Freigabe auf der Webseite."
       },
       "moduleDisabled": {
-        "reason": "Das Template nutzt Sichten des Moduls „{module}“, das nicht aktiv ist.",
+        "reason": "Die Vorlage der Webseite nutzt Sichten des Moduls „{module}“, das nicht aktiv ist.",
         "remedy": "Schalten Sie es unter Einrichtung → Module ein."
       },
       "localeMissing": {
-        "reason": "Das Template fordert Sprachen, die nicht eingerichtet sind: {locales}.",
-        "remedy": "Fügen Sie sie unter Einstellungen → Sprachen hinzu und lesen Sie das Template dann ein."
+        "reason": "Die Vorlage der Webseite fordert Sprachen, die nicht eingerichtet sind: {locales}.",
+        "remedy": "Fügen Sie sie unter Einstellungen → Sprachen hinzu und lesen Sie die Vorlage dann ein."
       },
       "overLimit": {
-        "reason": "{names} überschreitet die neue Obergrenze des Templates.",
-        "remedy": "Räumen Sie dort zuerst auf und lesen Sie das Template dann ein."
+        "reason": "{names} überschreitet die neue Obergrenze der Vorlage.",
+        "remedy": "Räumen Sie dort zuerst auf und lesen Sie die Vorlage dann ein."
       }
     },
     "fields": {
@@ -619,7 +653,7 @@
       "slugGenerated": "Den URL-Teil bildet Kompass beim Anlegen selbst; er bleibt danach fest.",
       "slugNotAllowed": "Diese Sammlung hat keinen Slug.",
       "invalidJson": "Die Datei ist kein gültiges JSON.",
-      "unknownVariable": "Diese Variable kennt das Template nicht."
+      "unknownVariable": "Diese Variable kennt die Vorlage der Webseite nicht."
     },
     "pages": {
       "forbidden": {
@@ -734,7 +768,7 @@
     "version": "Version {version} ({build})",
     "envBanner": {
       "testContext": "Daten vom {date} · Änderungen hier haben keine Wirkung",
-      "noImport": "kein Import",
+      "testContextNoImport": "Keine Daten eingespielt · Änderungen hier haben keine Wirkung",
       "devContext": "localhost · Migrationsstand {migrations}",
       "test": "TESTUMGEBUNG",
       "development": "ENTWICKLUNG"
@@ -742,7 +776,8 @@
     "topbar": {
       "search": "Suchen",
       "openNav": "Navigation öffnen",
-      "help": "Hilfe zu dieser Seite"
+      "help": "Hilfe zu dieser Seite",
+      "breadcrumb": "Brotkrume"
     },
     "help": {
       "readAll": "Ganze Seite lesen",
@@ -783,6 +818,7 @@
       "title": "Bestand wiederherstellen",
       "intro": "Spielen Sie ein Backup ein, statt neu zu beginnen. Die Datenbank ist noch leer, es geht nichts verloren.",
       "file": "Backup-Datei",
+      "fileHint": "Ein Kompass-Backup (.tar.gz) aus „Export“.",
       "uploading": "Wird geprüft …",
       "manifestTitle": "Inhalt des Archivs",
       "environment": "Umgebung",
@@ -1094,7 +1130,7 @@
           "open": "Zum Publizieren",
           "messages": {
             "running": "{kind, select, preview {Die Vorschau} deployCheck {Der Verbindungstest} other {Der Publish}} läuft gerade.",
-            "templateUnreviewed": "Das Template ist seit dem Import ungeprüft. Der Publish ist gesperrt, bis es eingelesen wurde.",
+            "templateUnreviewed": "Die Vorlage der Webseite ist seit dem Import ungeprüft. Das Veröffentlichen ist gesperrt, bis sie eingelesen wurde.",
             "lastFailed": "Der letzte Publish ist fehlgeschlagen.",
             "lastAborted": "Der letzte Publish wurde abgebrochen.",
             "changed": "{count, plural, one {# Änderung} other {# Änderungen}} seit dem letzten Publish.",
@@ -1113,8 +1149,11 @@
     "title": "Nutzer",
     "filter": {
       "search": "Name oder E-Mail",
-      "showInactive": "Inaktive anzeigen",
-      "count": "{count} Nutzer, davon {inactive} inaktiv"
+      "emptyNoun": "Kein Nutzer",
+      "onlyActive": "Nur aktive",
+      "nounOne": "Nutzer",
+      "nounOther": "Nutzer",
+      "nounDative": "Nutzern"
     },
     "contactLink": {
       "column": "Kontakt",
@@ -1289,11 +1328,11 @@
       "site": {
         "view": {
           "label": "Webseite ansehen",
-          "description": "Template-Variablen und Sammlungseinträge einsehen."
+          "description": "Variablen der Vorlage und Sammlungseinträge einsehen."
         },
         "manage": {
           "label": "Webseite verwalten",
-          "description": "Template einlesen, Variablen und Sammlungseinträge pflegen."
+          "description": "Vorlage der Webseite einlesen, Variablen und Sammlungseinträge pflegen."
         },
         "publish": {
           "label": "Webseite publizieren",
@@ -1533,6 +1572,7 @@
     "keyHint": "Kleinbuchstaben, Ziffern und Bindestrich.",
     "duplicate": "Duplizieren",
     "delete": "Löschen",
+    "deleteItem": "Theme löschen …",
     "activate": "Aktivieren",
     "save": "Theme speichern",
     "duplicateTitle": "„{name}“ duplizieren",
@@ -1550,6 +1590,7 @@
     },
     "preview": {
       "title": "Live-Vorschau",
+      "modeGroup": "Modus der Vorschau",
       "group": "Verwaltung",
       "activeItem": "Nutzer",
       "item": "Rollen",
@@ -1693,33 +1734,33 @@
   "audit": {
     "title": "Änderungsprotokoll",
     "export": "Als PDF exportieren",
-    "range": "{from}–{to} von {total}",
-    "prev": "Zurück",
-    "next": "Weiter",
     "columns": {
       "time": "Zeitpunkt",
       "user": "Nutzer",
       "channel": "Kanal",
       "action": "Aktion",
-      "entity": "Objekt",
-      "summary": "Zusammenfassung"
+      "entity": "Objekt"
     },
     "filters": {
       "text": "Objekt oder Wert",
       "user": "Nutzer",
-      "allUsers": "Alle Nutzer",
       "channel": "Kanal",
-      "allChannels": "Alle Kanäle",
       "action": "Aktion",
-      "allActions": "Alle Aktionen",
       "from": "Von",
       "to": "Bis",
-      "count": "{count, plural, one {# Eintrag} other {# Einträge}}",
       "channels": {
         "ui": "Oberfläche",
         "mcp": "MCP",
         "system": "System"
-      }
+      },
+      "period": "Zeitraum",
+      "nounOne": "Eintrag",
+      "nounOther": "Einträge",
+      "nounDative": "Einträgen",
+      "periodBoth": "{from} – {to}",
+      "periodFrom": "ab {from}",
+      "periodTo": "bis {to}",
+      "searchPlaceholder": "Nummer, Bezeichnung oder ID suchen"
     },
     "detail": {
       "tokenGone": "gelöschter Token ({id})",
@@ -1733,14 +1774,427 @@
       "origin": "Herkunft",
       "request": "Vorgang",
       "environment": "Umgebung",
-      "summary": "Zusammenfassung",
-      "immutable": "Einträge können nicht geändert werden."
+      "summary": "Was geschah",
+      "immutable": "Einträge können nicht geändert werden.",
+      "actionKey": "Aktion (technisch)"
     },
     "empty": {
       "title": "Keine Einträge",
       "text": "Zu diesem Filter gibt es nichts. Protokolliert wird jede schreibende Aktion — vielleicht ist der Zeitraum zu eng oder der Nutzer war nicht beteiligt."
     },
-    "deletedRecord": "{type, select, contact {gelöschter Kontakt} other {gelöschter Datensatz}}"
+    "deletedRecord": "{type, select, contact {gelöschter Kontakt} other {gelöschter Datensatz}}",
+    "actions": {
+      "animals_confirmReview": "Prüfung des Hundes bestätigt",
+      "animals_create": "Hund angelegt",
+      "animals_delete": "Hund gelöscht",
+      "animals_publish": "Hund veröffentlicht",
+      "animals_requestReview": "Prüfung des Hundes angefordert",
+      "animals_setPhotos": "Hund geändert (Fotos)",
+      "animals_setStatus": "Hund geändert (Status)",
+      "animals_setStory": "Hund geändert (Geschichte)",
+      "animals_update": "Hund geändert",
+      "apiTokens_create": "Zugangsschlüssel angelegt",
+      "apiTokens_revoke": "Zugangsschlüssel widerrufen",
+      "auth_changePassword": "Passwort geändert",
+      "auth_failed": "Anmeldung fehlgeschlagen",
+      "auth_locked": "Anmeldung gesperrt",
+      "auth_login": "Angemeldet",
+      "auth_throttled": "Anmeldung verzögert (zu viele Versuche)",
+      "backup_export": "Sicherung erstellt",
+      "backup_import": "Sicherung eingespielt",
+      "contacts_addRole": "Rolle des Kontakts vergeben",
+      "contacts_create": "Kontakt angelegt",
+      "contacts_delete": "Kontakt gelöscht",
+      "contacts_endRole": "Rolle des Kontakts beendet",
+      "contacts_setChannels": "Kontakt geändert (Kommunikationswege)",
+      "contacts_setStatus": "Kontakt archiviert oder wieder aktiviert",
+      "contacts_update": "Kontakt geändert",
+      "contacts_userLink_create": "Kontakt mit Nutzer verknüpft",
+      "contacts_userLink_end": "Verknüpfung von Kontakt und Nutzer gelöst",
+      "dashboard_resetLayout": "Startseite zurückgesetzt",
+      "dashboard_setLayout": "Startseite angepasst",
+      "dms_checksumMismatch": "Abweichende Prüfsumme eines Dokuments festgestellt",
+      "dms_delete": "Dokument gelöscht",
+      "dms_dispatch": "Dokument versandt",
+      "dms_dispatch_clear": "Versand des Dokuments zurückgenommen",
+      "dms_draft_create": "Entwurf angelegt",
+      "dms_draft_delete": "Entwurf gelöscht",
+      "dms_draft_preview": "Vorschau des Entwurfs erzeugt",
+      "dms_draft_update": "Entwurf geändert",
+      "dms_export": "Akte exportiert",
+      "dms_file": "Entwurf festgeschrieben",
+      "dms_folder_create": "Ordner der Akte angelegt",
+      "dms_folder_delete": "Ordner der Akte gelöscht",
+      "dms_folder_move": "Ordner der Akte verschoben",
+      "dms_install": "Akte eingerichtet",
+      "dms_issue": "Dokument ausgestellt",
+      "dms_link": "Dokument verknüpft",
+      "dms_move": "Dokument verschoben",
+      "dms_note_add": "Notiz zum Dokument angelegt",
+      "dms_note_delete": "Notiz zum Dokument gelöscht",
+      "dms_receive": "Post abgelegt",
+      "dms_reclassify": "Dokument geändert (Art)",
+      "dms_relate": "Dokumente in Beziehung gesetzt",
+      "dms_rule_create": "Einsortierregel angelegt",
+      "dms_rule_delete": "Einsortierregel gelöscht",
+      "dms_rule_update": "Einsortierregel geändert",
+      "dms_snippet_create": "Textbaustein angelegt",
+      "dms_snippet_delete": "Textbaustein gelöscht",
+      "dms_snippet_update": "Textbaustein geändert",
+      "dms_type_create": "Dokumentart angelegt",
+      "dms_type_delete": "Dokumentart gelöscht",
+      "dms_type_provision": "Dokumentart bereitgestellt",
+      "dms_type_update": "Dokumentart geändert",
+      "dms_unlink": "Verknüpfung des Dokuments gelöst",
+      "dms_unrelate": "Beziehung der Dokumente gelöst",
+      "dms_void": "Dokument storniert",
+      "document_reindexRequested": "Dokumente für neue Texterkennung vorgemerkt",
+      "document_textExtracted": "Texterkennung abgeschlossen",
+      "document_textExtractionFailed": "Texterkennung abgebrochen",
+      "document_textExtractionUnavailable": "Texterkennung übersprungen",
+      "documents_export": "Dokumente exportiert",
+      "finance_account_create": "Konto angelegt",
+      "finance_account_delete": "Konto gelöscht",
+      "finance_account_setActive": "Konto stillgelegt oder wieder aktiviert",
+      "finance_account_update": "Konto geändert",
+      "finance_cashCount_record": "Kasse gezählt",
+      "finance_category_create": "Kategorie angelegt",
+      "finance_category_delete": "Kategorie gelöscht",
+      "finance_category_setActive": "Kategorie stillgelegt oder wieder aktiviert",
+      "finance_category_update": "Kategorie geändert",
+      "finance_confirmation_dispatch": "Zuwendungsbestätigung versandt",
+      "finance_confirmation_issue": "Zuwendungsbestätigung ausgestellt",
+      "finance_confirmation_recall": "Zuwendungsbestätigung zurückgefordert",
+      "finance_confirmation_signed": "Zuwendungsbestätigung unterschrieben",
+      "finance_confirmation_void": "Zuwendungsbestätigung zurückgenommen",
+      "finance_confirmationRun_dispatch": "Serienlauf versandt",
+      "finance_confirmationRun_finish": "Serienlauf abgeschlossen",
+      "finance_confirmationRun_item": "Bestätigung im Serienlauf erstellt",
+      "finance_confirmationRun_start": "Serienlauf gestartet",
+      "finance_contactIban_delete": "IBAN vom Kontakt gelöst",
+      "finance_contactIban_link": "IBAN mit Kontakt verknüpft",
+      "finance_contactWaiverTerms_delete": "Verzichtsvereinbarung gelöscht",
+      "finance_contactWaiverTerms_save": "Verzichtsvereinbarung gespeichert",
+      "finance_correction_apply": "Korrektur übernommen",
+      "finance_correction_reject": "Korrektur abgelehnt",
+      "finance_correction_request": "Korrektur angefordert",
+      "finance_datedValue_remove": "Stichtagswert entfernt",
+      "finance_datedValue_set": "Stichtagswert gesetzt",
+      "finance_entry_documentAdd": "Beleg an Buchung gehängt",
+      "finance_entry_documentGone": "Beleg der Buchung entfallen",
+      "finance_entry_documentRevoke": "Beleg von Buchung gelöst",
+      "finance_entry_draftDelete": "Buchungsentwurf gelöscht",
+      "finance_entry_draftSave": "Buchungsentwurf gespeichert",
+      "finance_entry_finalize": "Buchung festgeschrieben",
+      "finance_entry_justify": "Buchung begründet",
+      "finance_entry_notReturn": "Kennzeichnung „keine Rückgabe“ geändert",
+      "finance_entry_rawLink": "Buchung mit Kontoumsatz verknüpft",
+      "finance_entry_reverse": "Buchung zurückgenommen",
+      "finance_entry_review": "Buchung geprüft",
+      "finance_expenseClaim_approve": "Auslage freigegeben",
+      "finance_expenseClaim_copy": "Auslage kopiert",
+      "finance_expenseClaim_draftDelete": "Auslagenentwurf gelöscht",
+      "finance_expenseClaim_reject": "Auslage abgelehnt",
+      "finance_expenseClaim_saveDraft": "Auslagenentwurf gespeichert",
+      "finance_expenseClaim_submit": "Auslage eingereicht",
+      "finance_expenseClaim_waiverDeclaration": "Verzicht zur Auslage erklärt",
+      "finance_expenseClaim_waiverSigned": "Verzicht zur Auslage unterschrieben",
+      "finance_expensePosition_categorize": "Auslagenposten zugeordnet",
+      "finance_expensePosition_receipt": "Beleg zum Auslagenposten hinterlegt",
+      "finance_fiscalYear_autoCreate": "Geschäftsjahr automatisch angelegt",
+      "finance_fiscalYear_create": "Geschäftsjahr angelegt",
+      "finance_fiscalYear_update": "Geschäftsjahr geändert",
+      "finance_import_candidateDecide": "Mögliche doppelte Zahlung im Auszug entschieden",
+      "finance_import_discard": "Auszug verworfen",
+      "finance_import_fail": "Laden des Auszugs fehlgeschlagen",
+      "finance_import_run": "Auszug geladen",
+      "finance_import_runBalance": "Saldo des Auszugs abgeglichen",
+      "finance_importProfile_save": "Importprofil gespeichert",
+      "finance_importRule_delete": "Zuordnungsregel gelöscht",
+      "finance_importRule_save": "Zuordnungsregel gespeichert",
+      "finance_inKindDetails_save": "Angaben zur Sachzuwendung gespeichert",
+      "finance_notice_document": "Dokument zum Bescheid hinterlegt",
+      "finance_notice_save": "Bescheid gespeichert",
+      "finance_notice_supersede": "Bescheid außer Kraft gesetzt",
+      "finance_notice_void": "Bescheid zurückgenommen",
+      "finance_openItem_cancel": "Offene Zahlung ohne Zahlung erledigt",
+      "finance_openItem_create": "Offene Zahlung angelegt",
+      "finance_openItem_update": "Offene Zahlung geändert",
+      "finance_partnerEvidence_add": "Nachweis des Partners angelegt",
+      "finance_partnerEvidence_documentGone": "Nachweis des Partners entfallen",
+      "finance_partnerEvidence_remove": "Nachweis des Partners entfernt",
+      "finance_partnerEvidence_update": "Nachweis des Partners geändert",
+      "finance_partnerNotice_save": "Anerkennung des Partners gespeichert",
+      "finance_partnerNotice_void": "Anerkennung des Partners zurückgenommen",
+      "finance_partnerPayment_acknowledge": "Nachweise der Zahlung an Partner anerkannt",
+      "finance_partnerPayment_approve": "Zahlung an Partner freigegeben",
+      "finance_partnerPayment_copy": "Zahlung an Partner kopiert",
+      "finance_partnerPayment_draftDelete": "Entwurf der Zahlung an Partner gelöscht",
+      "finance_partnerPayment_reject": "Zahlung an Partner abgelehnt",
+      "finance_partnerPayment_saveDraft": "Entwurf der Zahlung an Partner gespeichert",
+      "finance_partnerPayment_submit": "Zahlung an Partner eingereicht",
+      "finance_partnerProfile_delete": "Partner gelöscht",
+      "finance_partnerProfile_save": "Partner gespeichert",
+      "finance_partnerProfile_setActive": "Partner archiviert oder wieder aktiviert",
+      "finance_period_close": "Geschäftsjahr abgeschlossen",
+      "finance_period_reopen": "Geschäftsjahr wieder geöffnet",
+      "finance_projectSettings_delete": "Finanzangaben zum Projekt gelöscht",
+      "finance_projectSettings_set": "Finanzangaben zum Projekt gesetzt",
+      "finance_purpose_create": "Zweck angelegt",
+      "finance_purpose_delete": "Zweck gelöscht",
+      "finance_purpose_dissolve": "Zweck aufgelöst",
+      "finance_purpose_fulfill": "Zweck erfüllt",
+      "finance_purpose_reopen": "Zweck wieder geöffnet",
+      "finance_purpose_setActive": "Zweck stillgelegt oder wieder aktiviert",
+      "finance_purpose_update": "Zweck geändert",
+      "finance_purposeTransfer_approve": "Umwidmung freigegeben",
+      "finance_purposeTransfer_documentGone": "Beleg der Umwidmung entfallen",
+      "finance_purposeTransfer_reject": "Umwidmung abgelehnt",
+      "finance_purposeTransfer_request": "Umwidmung beantragt",
+      "finance_reserve_carryForward": "Rücklage vorgetragen",
+      "finance_reserve_delete": "Rücklage gelöscht",
+      "finance_reserve_documentGone": "Beschluss der Rücklage entfallen",
+      "finance_reserve_linkResolution": "Beschluss mit Rücklage verknüpft",
+      "finance_reserve_save": "Rücklage gespeichert",
+      "finance_reserve_setActive": "Rücklage stillgelegt oder wieder aktiviert",
+      "finance_reserve_uploadResolution": "Beschluss zur Rücklage hochgeladen",
+      "finance_reserveMovement_documentGone": "Beleg der Rücklagenbewegung entfallen",
+      "finance_reserveMovement_record": "Rücklagenbewegung erfasst",
+      "finance_setup_applyTaxDefaults": "Steuervorgaben übernommen",
+      "finance_setup_boardRemuneration": "Vergütung des Vorstands eingestellt",
+      "finance_setup_confirm": "Einrichtungsschritt bestätigt",
+      "finance_setup_documentTypeProtectionArea": "Schutzbereich einer Dokumentart gesetzt",
+      "finance_setup_limit": "Betragsgrenze der Einrichtung eingestellt",
+      "finance_setup_switch": "Einstellung der Finanzen umgeschaltet",
+      "finance_setup_waiverBasis": "Grundlage für Verzicht eingestellt",
+      "finance_signer_facsimile": "Unterschrift hinterlegt",
+      "finance_signer_save": "Unterzeichnende gespeichert",
+      "followUps_complete": "Wiedervorlage erledigt",
+      "followUps_create": "Wiedervorlage angelegt",
+      "followUps_delete": "Wiedervorlage gelöscht",
+      "followUps_reopen": "Wiedervorlage wieder geöffnet",
+      "locale_add": "Sprache hinzugefügt",
+      "locale_remove": "Sprache entfernt",
+      "locale_reorder": "Sprachen umsortiert",
+      "media_delete": "Datei gelöscht",
+      "media_folder_create": "Ordner der Mediathek angelegt",
+      "media_folder_delete": "Ordner der Mediathek gelöscht",
+      "media_folder_rename": "Ordner der Mediathek umbenannt",
+      "media_move": "Datei verschoben",
+      "media_upload": "Datei hochgeladen",
+      "projects_create": "Projekt angelegt",
+      "projects_delete": "Projekt gelöscht",
+      "projects_reorder": "Projekte umsortiert",
+      "projects_update": "Projekt geändert",
+      "roles_create": "Rolle angelegt",
+      "roles_provision": "Rolle bereitgestellt",
+      "roles_setPermissions": "Rechte der Rolle geändert",
+      "roles_update": "Rolle geändert",
+      "settings_update": "Einstellung geändert",
+      "setup_complete": "Einrichtung abgeschlossen",
+      "site_cacheClear": "Zwischenspeicher der Webseite geleert",
+      "site_entry_create": "Eintrag der Webseite angelegt",
+      "site_entry_delete": "Eintrag der Webseite gelöscht",
+      "site_entry_reorder": "Einträge der Webseite umsortiert",
+      "site_entry_update": "Eintrag der Webseite geändert",
+      "site_jobCancel": "Lauf der Webseite abgebrochen",
+      "site_publish": "Veröffentlichen der Webseite",
+      "site_seed_apply": "Startinhalte der Webseite übernommen",
+      "site_template_read": "Vorlage der Webseite eingelesen",
+      "site_template_settled": "Vorlage der Webseite übernommen",
+      "site_values_update": "Inhalte der Webseite geändert",
+      "users_activate": "Nutzer aktiviert",
+      "users_assignRole": "Rolle des Nutzers vergeben",
+      "users_create": "Nutzer angelegt",
+      "users_deactivate": "Nutzer deaktiviert",
+      "users_removeRole": "Rolle des Nutzers entzogen",
+      "users_resetStartPassword": "Startpasswort neu vergeben",
+      "users_update": "Nutzer geändert",
+      "backup_export_mark": "Zeitpunkt der Sicherung vermerkt",
+      "backup_import_mark": "Herkunft des Bestands vermerkt",
+      "modules_disable": "Modul ausgeschaltet",
+      "seed_organization": "Beispielverein eingetragen",
+      "seed_locales": "Beispielsprachen eingetragen",
+      "seed_modules": "Beispielmodule eingeschaltet",
+      "setup_organizationName": "Vereinsname bei der Einrichtung eingetragen",
+      "setup_locales": "Sprache bei der Einrichtung eingetragen",
+      "themes_activate": "Theme aktiviert",
+      "themes_create": "Theme angelegt",
+      "themes_update": "Theme geändert",
+      "themes_duplicate": "Theme dupliziert",
+      "themes_delete": "Theme gelöscht",
+      "animals_unpublish": "Hund zurückgezogen",
+      "projects_publish": "Projekt veröffentlicht",
+      "projects_unpublish": "Projekt zurückgezogen",
+      "dms_install_setting": "Einstellung der Akte bei der Einrichtung eingetragen",
+      "site_entry_publish": "Eintrag der Webseite veröffentlicht",
+      "site_entry_unpublish": "Eintrag der Webseite zurückgezogen",
+      "site_blockedTerms_set": "Sperrwörter der Webseite geändert",
+      "finance_setup_setting": "Einstellung der Finanzen gesetzt",
+      "finance_notice": "Einstellung zum Bescheid gesetzt",
+      "settings_financeMainAccount": "Bankverbindung des Vereins aus dem Hauptkonto übernommen",
+      "modules_enable": "Modul eingeschaltet"
+    },
+    "fields": {
+      "email": "E-Mail-Adresse",
+      "roles": "Rollen"
+    },
+    "emptyPeopleHint": "Personen finden Sie über den Filter „Nutzer“.",
+    "sentences": {
+      "animals_confirmReview": "Prüfung von Hund „{name}“ bestätigt",
+      "animals_create": "Hund „{name}“ angelegt",
+      "animals_delete": "Hund „{name}“ gelöscht",
+      "animals_publish": "Hund „{name}“ veröffentlicht",
+      "animals_requestReview": "{viaMcp, select, true {Hund „{name}“ beim Schreiben über MCP zur Prüfung vorgemerkt} other {Prüfung von Hund „{name}“ angefordert}}",
+      "animals_setPhotos": "Fotos von Hund „{name}“ geändert",
+      "animals_setStatus": "Status von Hund „{name}“ auf „{status, select, lookingForHome {Sucht ein Zuhause} reserved {Reserviert} adopted {Vermittelt} other {{status}}}“ gesetzt",
+      "animals_setStory": "Geschichte von Hund „{name}“ geändert",
+      "animals_unpublish": "Hund „{name}“ zurückgezogen",
+      "animals_update": "Hund „{name}“ geändert",
+      "apiTokens_create": "Zugangsschlüssel „{tokenName}“ angelegt",
+      "apiTokens_revoke": "Zugangsschlüssel „{tokenName}“ widerrufen",
+      "auth_failed": "Anmeldung als {targetUser} fehlgeschlagen",
+      "auth_locked": "Anmeldung für {targetUser} nach {attempts, plural, one {# Fehlversuch} other {# Fehlversuchen}} gesperrt",
+      "auth_throttled": "Anmeldung nach {attempts, plural, one {# Fehlversuch} other {# Fehlversuchen}} in {minutes, plural, one {# Minute} other {# Minuten}} für alle verzögert",
+      "backup_export": "Sicherung mit {sizeBytes} erstellt",
+      "backup_import": "Sicherung vom {createdAt} eingespielt",
+      "contacts_setStatus": "Kontakt {archived, select, true {archiviert} other {wieder aktiviert}}",
+      "contacts_update": "{scope, select, name {Name des Kontakts geändert} address {Anschrift des Kontakts geändert} other {Kontakt geändert}}",
+      "contacts_userLink_create": "Kontakt {contact} mit Nutzer verknüpft",
+      "contacts_userLink_end": "Verknüpfung von Kontakt {contact} mit Nutzer gelöst",
+      "dashboard_setLayout": "Startseite mit {tileCount, plural, one {# Kachel} other {# Kacheln}} angepasst",
+      "dms_checksumMismatch": "Abweichende Prüfsumme an Dokument „{number}“ festgestellt",
+      "dms_delete": "Dokument „{number}“ gelöscht",
+      "dms_dispatch": "Dokument „{number}“ am {sentOn} {sentVia, select, post {per Post versandt} registeredMail {per Einschreiben versandt} email {per E-Mail versandt} inPerson {persönlich übergeben} portal {über ein Portal versandt} other {auf anderem Weg versandt}}",
+      "dms_dispatch_clear": "Versand von Dokument „{number}“ zurückgenommen",
+      "dms_export": "{included} von {total, plural, one {# Dokument} other {# Dokumenten}} der Akte exportiert",
+      "dms_file": "Entwurf als Dokument „{number}“ festgeschrieben",
+      "dms_folder_create": "Ordner „{path}“ angelegt",
+      "dms_folder_delete": "Ordner „{path}“ gelöscht",
+      "dms_folder_move": "Ordner „{from}“ nach „{to}“ verschoben",
+      "dms_install": "Akte mit Dokumentarten „{incomingLabel}“ und „{outgoingLabel}“ eingerichtet",
+      "dms_issue": "Dokument „{number}“ ausgestellt",
+      "dms_link": "Dokument „{number}“ verknüpft",
+      "dms_move": "Dokument „{number}“ {toInbox, select, true {in den Eingangskorb} other {nach „{folder}“}} verschoben",
+      "dms_note_add": "Notiz an Dokument „{number}“ angefügt",
+      "dms_receive": "{via, select, recordWithNumber {Dokument „{number}“ zu Vorgang „{recordNumber}“ abgelegt} record {Dokument „{number}“ in einem Vorgang abgelegt} other {Post als Dokument „{number}“ abgelegt}}",
+      "dms_reclassify": "{retyped, select, true {Art von Dokument „{previousNumber}“ geändert, neue Nummer „{number}“} other {Angaben zu Dokument „{number}“ berichtigt}}",
+      "dms_relate": "Dokument „{number}“ {kind, select, repliesTo {als Antwort auf} signedCopyOf {als unterschriebene Fassung von} replaces {als Ersatz für} attachmentOf {als Anlage zu} other {mit Bezug auf}} „{relatedNumber}“ vermerkt",
+      "dms_rule_create": "Einsortierregel für „{matchContains}“ angelegt",
+      "dms_rule_delete": "Einsortierregel für „{matchContains}“ gelöscht",
+      "dms_rule_update": "Einsortierregel für „{matchContains}“ geändert",
+      "dms_snippet_create": "Textbaustein „{name}“ angelegt",
+      "dms_snippet_delete": "Textbaustein „{name}“ gelöscht",
+      "dms_snippet_update": "Textbaustein „{name}“ geändert",
+      "dms_type_create": "Dokumentart „{label}“ angelegt",
+      "dms_type_delete": "Dokumentart „{label}“ gelöscht",
+      "dms_type_provision": "{created, select, true {Dokumentart „{label}“ als Vorschlag eines Moduls angelegt} other {Dokumentart „{label}“ nicht angelegt, Schlüssel oder Präfix schon vergeben}}",
+      "dms_type_update": "Dokumentart „{label}“ geändert",
+      "dms_void": "Dokument „{number}“ storniert",
+      "document_reindexRequested": "{count, plural, one {# Dokument} other {# Dokumente}} für neue Texterkennung vorgemerkt",
+      "document_textExtracted": "Text auf {pages, plural, one {# Seite} other {# Seiten}} von Dokument „{number}“ erkannt",
+      "document_textExtractionFailed": "Texterkennung für Dokument „{number}“ nach {attempts, plural, one {# Versuch} other {# Versuchen}} abgebrochen",
+      "document_textExtractionUnavailable": "Texterkennung für Dokument „{number}“ übersprungen",
+      "finance_cashCount_record": "Kasse gezählt, Zählprotokoll „{documentNumber}“",
+      "finance_confirmationRun_dispatch": "Versand von {count, plural, one {# Bestätigung} other {# Bestätigungen}} des Serienlaufs {year} vermerkt",
+      "finance_confirmationRun_finish": "Serienlauf {year} abgeschlossen",
+      "finance_confirmationRun_item": "Bestätigung im Serienlauf {issued, select, true {ausgestellt} other {gescheitert}}",
+      "finance_confirmationRun_start": "Serienlauf {year} gestartet",
+      "finance_confirmation_dispatch": "Versand der Zuwendungsbestätigung „{documentNumber}“ vermerkt",
+      "finance_confirmation_issue": "Zuwendungsbestätigung „{documentNumber}“ ausgestellt",
+      "finance_confirmation_recall": "Rückforderung der Zuwendungsbestätigung „{documentNumber}“ nachgetragen",
+      "finance_confirmation_signed": "Unterschriebene Fassung „{signedNumber}“ der Zuwendungsbestätigung „{documentNumber}“ abgelegt",
+      "finance_confirmation_void": "Zuwendungsbestätigung „{documentNumber}“ zurückgenommen",
+      "finance_contactIban_delete": "{withContact, select, true {IBAN mit dem Kontakt gelöscht} other {IBAN vom Kontakt gelöst}}",
+      "finance_datedValue_remove": "Wert „{key}“ ab {fromOn} zurückgenommen",
+      "finance_datedValue_set": "Wert „{key}“ ab {fromOn} gesetzt",
+      "finance_entry_finalize": "Buchung „{number}“ festgeschrieben",
+      "finance_entry_justify": "Buchung „{number}“ ohne Beleg begründet",
+      "finance_entry_notReturn": "{notReturn, select, true {Buchung „{number}“ als „keine Rückgabe“ gekennzeichnet} other {Kennzeichnung „keine Rückgabe“ an Buchung „{number}“ aufgehoben}}",
+      "finance_entry_rawLink": "Kontoumsatz mit Buchung „{number}“ verknüpft",
+      "finance_entry_reverse": "Buchung „{number}“ durch „{reversalNumber}“ zurückgenommen",
+      "finance_entry_review": "{reviewed, select, true {Buchungsentwurf geprüft} other {Prüfung des Buchungsentwurfs zurückgenommen}}",
+      "finance_expenseClaim_approve": "{waiver, select, true {Auslage „{number}“ als Aufwandsspende freigegeben} other {Auslage „{number}“ freigegeben}}",
+      "finance_expenseClaim_copy": "Auslage „{sourceNumber}“ als neuer Entwurf kopiert",
+      "finance_expenseClaim_draftDelete": "{withContact, select, true {Auslagenentwurf mit dem Kontakt gelöscht} other {Auslagenentwurf gelöscht}}",
+      "finance_expenseClaim_reject": "Auslage „{number}“ abgelehnt",
+      "finance_expenseClaim_submit": "Auslage „{number}“ eingereicht",
+      "finance_expenseClaim_waiverDeclaration": "Verzichtserklärung „{documentNumber}“ zur Auslage „{number}“ erzeugt",
+      "finance_expenseClaim_waiverSigned": "Unterschriebene Verzichtserklärung „{documentNumber}“ zur Auslage „{number}“ abgelegt",
+      "finance_expensePosition_categorize": "Position {position} der Auslage „{number}“ zugeordnet",
+      "finance_expensePosition_receipt": "Beleg „{documentNumber}“ an Position {position} der Auslage „{number}“ angehängt",
+      "finance_fiscalYear_autoCreate": "Geschäftsjahr „{designation}“ als Nachfolger angelegt",
+      "finance_fiscalYear_create": "Geschäftsjahr „{designation}“ angelegt",
+      "finance_fiscalYear_update": "Geschäftsjahr „{designation}“ geändert",
+      "finance_import_candidateDecide": "{decision, select, same {Zahlung im Auszug als dieselbe erkannt und nicht übernommen} own {Zahlung im Auszug als eigene Zahlung übernommen} other {Mögliche doppelte Zahlung im Auszug entschieden}}",
+      "finance_inKindDetails_save": "Angaben zur Sachzuwendung {created, select, true {erfasst} other {geändert}}",
+      "finance_notice_document": "Dokument „{documentNumber}“ zum Bescheid hinterlegt",
+      "finance_notice_supersede": "Bescheid ab {supersededOn} außer Kraft gesetzt",
+      "finance_partnerEvidence_add": "Nachweis zur Zahlung an Partner „{paymentNumber}“ {way, select, upload {hochgeladen} link {verknüpft} other {übernommen}}",
+      "finance_partnerNotice_save": "Anerkennung des Partners {created, select, true {erfasst} other {geändert}}",
+      "finance_partnerPayment_acknowledge": "Nachweise der Zahlung an Partner „{number}“ anerkannt",
+      "finance_partnerPayment_approve": "Zahlung an Partner „{number}“ freigegeben",
+      "finance_partnerPayment_copy": "Zahlung an Partner „{sourceNumber}“ als neuer Entwurf kopiert",
+      "finance_partnerPayment_draftDelete": "{withContact, select, true {Entwurf der Zahlung an Partner mit dem Kontakt gelöscht} other {Entwurf der Zahlung an Partner gelöscht}}",
+      "finance_partnerProfile_delete": "{withContact, select, true {Partner mit dem Kontakt gelöscht} other {Partner gelöscht}}",
+      "finance_period_close": "Geschäftsjahr „{designation}“ abgeschlossen",
+      "finance_period_reopen": "Geschäftsjahr „{designation}“ wieder geöffnet",
+      "finance_purposeTransfer_approve": "Umwidmung „{number}“ freigegeben",
+      "finance_purposeTransfer_documentGone": "Beleg der Umwidmung „{number}“ entfallen",
+      "finance_purposeTransfer_reject": "Umwidmung „{number}“ abgelehnt",
+      "finance_purposeTransfer_request": "Umwidmung „{number}“ beantragt",
+      "finance_reserve_uploadResolution": "Beschluss „{documentNumber}“ zur Rücklage hochgeladen",
+      "finance_setup_confirm": "Einrichtungsschritt „{step, select, categories {Kategorien} tax {Steuern} other {{step}}}“ bestätigt",
+      "followUps_complete": "Wiedervorlage {onRecord, select, true {zu „{label}“} other {„{label}“}} erledigt",
+      "followUps_create": "Wiedervorlage {onRecord, select, true {zu „{label}“} other {„{label}“}} zum {dueOn} angelegt",
+      "followUps_delete": "Wiedervorlage {onRecord, select, true {zu „{label}“} other {„{label}“}} gelöscht",
+      "followUps_reopen": "Wiedervorlage {onRecord, select, true {zu „{label}“} other {„{label}“}} wieder geöffnet",
+      "locale_add": "Sprache „{code}“ hinzugefügt",
+      "locale_remove": "Sprache „{code}“ entfernt",
+      "media_delete": "Datei „{filename}“ gelöscht",
+      "media_folder_create": "Ordner „{path}“ angelegt",
+      "media_folder_delete": "Ordner „{path}“ gelöscht",
+      "media_folder_rename": "Ordner „{from}“ in „{to}“ umbenannt",
+      "media_move": "Datei „{filename}“ {toRoot, select, true {in die oberste Ebene} other {nach „{folder}“}} verschoben",
+      "media_upload": "Datei „{filename}“ hochgeladen",
+      "projects_create": "Projekt „{name}“ angelegt",
+      "projects_delete": "Projekt „{name}“ gelöscht",
+      "projects_publish": "Projekt „{name}“ veröffentlicht",
+      "projects_unpublish": "Projekt „{name}“ zurückgezogen",
+      "projects_update": "Projekt „{name}“ geändert",
+      "roles_create": "Rolle „{roleName}“ angelegt",
+      "roles_provision": "{created, select, true {Rolle „{roleName}“ als Vorschlag eines Moduls angelegt} other {Rollenvorschlag „{roleName}“ nicht angelegt, Bezeichnung schon vergeben}}",
+      "roles_setPermissions": "Rechte der Rolle „{roleName}“ geändert",
+      "roles_update": "Rolle „{roleName}“ geändert",
+      "settings_update": "Einstellung „{key}“ geändert",
+      "site_cacheClear": "Zwischenspeicher der Webseite mit {fileCount, plural, one {# Datei} other {# Dateien}} geleert",
+      "site_entry_create": "Eintrag in „{collection}“ angelegt",
+      "site_entry_delete": "Eintrag aus „{collection}“ gelöscht",
+      "site_entry_publish": "Eintrag in „{collection}“ veröffentlicht",
+      "site_entry_reorder": "Reihenfolge in „{collection}“ geändert",
+      "site_entry_unpublish": "Eintrag in „{collection}“ zurückgezogen",
+      "site_entry_update": "Eintrag in „{collection}“ geändert",
+      "site_jobCancel": "{kind, select, preview {Vorschau der Webseite} publish {Veröffentlichen der Webseite} deployCheck {Prüfung der Webseite} other {Lauf der Webseite}} abgebrochen",
+      "site_publish": "{status, select, success {Webseite veröffentlicht{changed, plural, =0 {} one {, # Seite geändert} other {, # Seiten geändert}}{added, plural, =0 {} one {, # Seite neu} other {, # Seiten neu}}{removed, plural, =0 {} one {, # Seite entfernt} other {, # Seiten entfernt}}} failed {Veröffentlichen der Webseite fehlgeschlagen} other {Veröffentlichen der Webseite abgebrochen}}",
+      "site_seed_apply": "{items} aus der Vorlage der Webseite übernommen",
+      "site_template_read": "Vorlage der Webseite „{templateName}“ eingelesen",
+      "site_values_update": "{variableCount, plural, one {Variable} other {Variablen}} {variables} geändert",
+      "users_activate": "Nutzer {targetUser} aktiviert",
+      "users_assignRole": "Rolle „{roleName}“ an {targetUser} vergeben",
+      "users_create": "Nutzer {targetUser} angelegt",
+      "users_deactivate": "Nutzer {targetUser} deaktiviert",
+      "users_removeRole": "Rolle „{roleName}“ von {targetUser} entzogen",
+      "users_resetStartPassword": "Startpasswort für {targetUser} neu vergeben",
+      "users_update": "Nutzer {targetUser} geändert"
+    },
+    "emptyFilteredNoun": "Kein Eintrag",
+    "parts": {
+      "siteSeed": {
+        "variables": "{count, plural, one {# Variable} other {# Variablen}}",
+        "entries": "{count, plural, one {# Eintrag} other {# Einträge}}",
+        "assets": "{count, plural, one {# Datei} other {# Dateien}}"
+      }
+    }
   },
   "profile": {
     "title": "Profil",
@@ -1888,6 +2342,7 @@
       "badge": "Überschreibt alles",
       "warning": "Der Import ersetzt den gesamten Bestand dieser Umgebung, einschließlich Änderungsprotokoll. Erstellen Sie vorher einen Export. Der Vorgang selbst wird im neuen Bestand als Systemeintrag protokolliert.",
       "file": "Backup-Datei",
+      "fileHint": "Ein Kompass-Backup (.tar.gz) aus „Export“.",
       "noFile": "Bitte eine Backup-Datei auswählen.",
       "prepare": "Import vorbereiten",
       "confirmTitle": "Bestand der Umgebung „{env}“ überschreiben?",
@@ -1947,7 +2402,7 @@
       },
       "links": {
         "title": "Verweise nach außen",
-        "hint": "Spendenseite, Bericht, Partner — Bezeichnung und Adresse. Was die Webseite daraus macht, entscheidet das Template.",
+        "hint": "Spendenseite, Bericht, Partner — Bezeichnung und Adresse. Was die Webseite daraus macht, entscheidet ihre Vorlage.",
         "label": "Bezeichnung",
         "url": "Adresse (https://…)",
         "add": "Verweis hinzufügen",
@@ -1956,9 +2411,8 @@
       }
     },
     "delete": {
-      "button": "Projekt löschen",
-      "title": "{name} löschen?",
-      "hint": "Ein Projekt ist Webseiteninhalt. Hängt ein Dokument oder eine Wiedervorlage daran, bleibt es."
+      "button": "Projekt löschen …",
+      "title": "{name} löschen?"
     },
     "common": {
       "moduleInactiveTitle": "Modul Projekte ist nicht aktiv",
@@ -2009,21 +2463,21 @@
       "emergency": "Notfall",
       "sponsorable": "Patentier",
       "views": "Ansicht",
-      "all": "Alle ({count})",
-      "reviewPending": "Prüfung offen ({count})",
+      "all": "Alle",
+      "reviewPending": "Prüfung offen",
       "reviewBadge": "Prüfung offen",
       "search": "Name suchen",
       "filterStatus": "Status",
-      "allStatuses": "Alle Status",
       "filterLocation": "Aufenthalt",
-      "allLocations": "Jeder Aufenthalt",
       "filterPublished": "Webseite",
-      "publishedAny": "Veröffentlicht und nicht",
       "publishedYes": "Veröffentlicht",
       "publishedNo": "Nicht veröffentlicht",
-      "countLine": "{shown} von {total} Hunden",
       "noMatchTitle": "Kein Hund passt zu dieser Auswahl.",
-      "noMatchText": "Ändern Sie die Filter oder wechseln Sie auf „Alle“."
+      "noMatchText": "Ändern Sie die Filter oder wechseln Sie auf „Alle“.",
+      "noMatchNoun": "Kein Hund",
+      "nounOne": "Hund",
+      "nounOther": "Hunde",
+      "nounDative": "Hunden"
     },
     "queue": {
       "label": "Blättern in der Liste",
@@ -2124,9 +2578,8 @@
       "captionHint": "Leer heißt: keine Ortsangabe unter dem Bild."
     },
     "delete": {
-      "button": "Tierprofil löschen",
-      "title": "{name} löschen?",
-      "hint": "Ein Profil ist Webseiteninhalt. Hängt ein Dokument oder eine Wiedervorlage daran, bleibt es."
+      "button": "Tierprofil löschen …",
+      "title": "{name} löschen?"
     },
     "records": {
       "forbidden": "Tier (kein Zugriff)"
@@ -2137,7 +2590,7 @@
       "saved": "Einstellungen gespeichert.",
       "frame": {
         "title": "Bildausschnitt des Hauptfotos",
-        "intro": "In welchem Format und mit welchem Ausschnitt die Webseite das Hauptfoto eines Tiers zeigt. Das legt das Template der Webseite fest; tragen Sie hier dasselbe ein, dann zeigt das Tierprofil die Fotos so, wie die Seite sie zeigen wird, und Sie sehen beim Wählen des Hauptfotos, ob es passt.",
+        "intro": "In welchem Format und mit welchem Ausschnitt die Webseite das Hauptfoto eines Tiers zeigt. Das legt die Vorlage der Webseite fest; tragen Sie hier dasselbe ein, dann zeigt das Tierprofil die Fotos so, wie die Seite sie zeigen wird, und Sie sehen beim Wählen des Hauptfotos, ob es passt.",
         "aspect": "Seitenverhältnis",
         "aspectHint": "Breite zu Höhe",
         "aspects": {
@@ -2156,7 +2609,7 @@
       },
       "profileUrl": {
         "title": "Adresse des Online-Profils",
-        "intro": "Unter welcher Adresse die Webseite ein Tierprofil zeigt. Das legt das Template fest. Aus der Adresse entstehen der QR-Code auf dem PDF und die Zeile unter dem Namen im Profil. Leer: kein QR-Code, keine Adresse.",
+        "intro": "Unter welcher Adresse die Webseite ein Tierprofil zeigt. Das legt die Vorlage der Webseite fest. Aus der Adresse entstehen der QR-Code auf dem PDF und die Zeile unter dem Namen im Profil. Leer: kein QR-Code, keine Adresse.",
         "label": "Adressvorlage",
         "hint": "Mit '{slug}' als Platzhalter, etwa https://example.org/tiere/'{slug}'/"
       }
@@ -2165,7 +2618,7 @@
   "site": {
     "admin": {
       "title": "Webseite",
-      "description": "Template, Verbindung zum Webspace, Cache und gesperrte Begriffe.",
+      "description": "Vorlage der Webseite, Verbindung zum Webspace, Cache und gesperrte Begriffe.",
       "tabsLabel": "Bereiche der Webseite",
       "cache": {
         "title": "Cache der Webseite",
@@ -2210,7 +2663,7 @@
         "notReady": "Das Ziel ist nicht vollständig eingerichtet oder die Schlüssel- oder Passwortdatei ist nicht lesbar. Ein Verbindungstest ist erst möglich, wenn die Umgebung stimmt."
       },
       "tabs": {
-        "template": "Template",
+        "template": "Vorlage",
         "connection": "Verbindung",
         "cache": "Cache",
         "blockedTerms": "Gesperrte Begriffe"
@@ -2224,18 +2677,18 @@
       "preview": "Vorschau",
       "atMost": "höchstens {max}",
       "untranslated": "noch nicht übersetzt",
-      "noChoice": "Keine Auswahl – das Template entscheidet",
+      "noChoice": "Keine Auswahl – die Vorlage entscheidet",
       "slot": "Platz {n}",
       "slotName": "{label}, Platz {n}",
       "staleReference": "„{value}“ steht nicht mehr zur Auswahl.",
       "clearReference": "Leeren"
     },
     "template": {
-      "title": "Template",
+      "title": "Vorlage der Webseite",
       "lastRead": "Zuletzt eingelesen: {when}",
-      "neverRead": "Noch kein Template eingelesen.",
-      "needsReview": "Dieses Template kam mit einem eingespielten Backup und unterscheidet sich von dem, das zuvor lief. Ein Template ist ausführbarer Code: Es wird erst beim Einlesen ausgeführt und erst danach wieder publiziert. Lesen Sie es ein, wenn Sie wissen, woher das Backup stammt.",
-      "read": "Template einlesen",
+      "neverRead": "Noch keine Vorlage eingelesen.",
+      "needsReview": "Diese Vorlage kam mit einem eingespielten Backup und unterscheidet sich von der, die zuvor lief. Eine Vorlage der Webseite ist ausführbarer Code: Sie wird erst beim Einlesen ausgeführt und erst danach wieder veröffentlicht. Lesen Sie sie ein, wenn Sie wissen, woher das Backup stammt.",
+      "read": "Vorlage einlesen",
       "apply": "Übernehmen",
       "cancel": "Abbrechen",
       "findings": "Befunde",
@@ -2243,8 +2696,9 @@
       "blocking": "Blockiert — erst aufräumen:",
       "lossy": "Kostet Inhalt:",
       "harmless": "Unkritisch:",
-      "localesMissing": "Das Template fordert Sprachen, die nicht eingerichtet sind: {locales}. Fügen Sie sie unter Einstellungen → Sprachen hinzu.",
-      "readDone": "Template eingelesen.",
+      "localesMissing": "Die Vorlage der Webseite fordert Sprachen, die nicht eingerichtet sind: {locales}. Fügen Sie sie unter Einstellungen → Sprachen hinzu.",
+      "localesMissingRemedy": "Sprachen einrichten",
+      "readDone": "Vorlage eingelesen.",
       "name": "Name",
       "finding": {
         "added": "{name} wird leer angelegt",
@@ -2259,7 +2713,7 @@
     },
     "seed": {
       "title": "Startinhalte",
-      "intro": "Das Template bringt Startinhalte mit. Einmalig übernehmbar, solange die Webseite leer ist.",
+      "intro": "Die Vorlage der Webseite bringt Startinhalte mit. Einmalig übernehmbar, solange die Webseite leer ist.",
       "preview": "Vorschau",
       "apply": "Übernehmen",
       "cancel": "Abbrechen",
@@ -2274,15 +2728,14 @@
     "entries": {
       "new": "Neu",
       "saved": "Gespeichert.",
-      "delete": "Löschen",
+      "delete": "Eintrag löschen …",
       "deleteTitle": "„{label}“ löschen?",
-      "deleteHint": "Ein Eintrag ist Webseiteninhalt. Hängt ein Dokument oder eine Wiedervorlage daran, bleibt er.",
       "count": "{n, plural, =0 {keine Einträge} one {ein Eintrag} other {# Einträge}}"
     },
     "publish": {
       "title": "Publizieren",
       "empty": {
-        "text": "Es ist noch kein Template eingelesen. Erst danach lassen sich Inhalte pflegen und veröffentlichen.",
+        "text": "Es ist noch keine Vorlage der Webseite eingelesen. Erst danach lassen sich Inhalte pflegen und veröffentlichen.",
         "action": "In den Einstellungen einrichten"
       },
       "target": {
@@ -2308,7 +2761,7 @@
         "gaps": "Fehlende Übersetzungen",
         "gapItem": "Text fehlt auf {language}",
         "stale": "Veraltete Verweise",
-        "staleHint": "Wird im Export leer ausgeliefert; das Template zeigt dann seine Automatik.",
+        "staleHint": "Wird im Export leer ausgeliefert; die Vorlage zeigt dann ihre Automatik.",
         "pendingReview": "Noch zu prüfen",
         "pendingReviewHint": "Diese Einträge sind veröffentlicht und seit der letzten Änderung von niemandem geprüft. Der Publish nimmt sie mit.",
         "skippedImages": "Bilder nicht lesbar",
@@ -2378,6 +2831,7 @@
         "log": "Protokoll",
         "new": "neu",
         "older": "Ältere anzeigen",
+        "truncated": "Es werden die letzten {shown} von {total} Publishes gezeigt.",
         "empty": "Bislang keine Veröffentlichungen.",
         "status": {
           "success": "Publiziert",
@@ -2507,7 +2961,7 @@
         "end": {
           "success": {
             "title": "Publiziert",
-            "text": "{when}: {changed, plural, one {# Seite} other {# Seiten}} geändert, {added} neu, {removed} entfallen. Die Webseite zeigt jetzt diesen Stand.",
+            "text": "{when}: {changed, plural, one {# Datei} other {# Dateien}} geändert, {added} neu, {removed} entfallen. Die Webseite zeigt jetzt diesen Stand.",
             "open": "{host} öffnen",
             "consumed": "Die Vorschau ist damit verbraucht. Für die nächste Änderung bauen Sie eine neue."
           },
@@ -2620,6 +3074,7 @@
     }
   },
   "contacts": {
+    "emptyFilteredNoun": "Kein Kontakt",
     "picker": {
       "placeholder": "Name eingeben …",
       "empty": "Kein Kontakt gefunden.",
@@ -2645,13 +3100,10 @@
       "title": "Keine Kontakte",
       "text": "Es wurden noch keine Kontakte angelegt."
     },
-    "search": "Suche",
-    "allKinds": "Alle Arten",
     "filterRole": "Rolle",
-    "allRoles": "Alle Rollen",
     "includeArchived": "Auch archivierte",
     "archived": "Archiviert",
-    "preview": "So fällt die Anschrift",
+    "preview": "Vorschau der Anschrift",
     "previewPlaceholder": "Anschrift wird hier als Vorschau angezeigt…",
     "sections": {
       "name": "Name",
@@ -2737,6 +3189,10 @@
       "heldUntil": "gehalten bis {date}",
       "heldPermanently": "dauerhaft gehalten",
       "delete": "Kontakt löschen",
+      "deleteItem": "Kontakt löschen …",
+      "refusedUntil": "Löschen ist erst nach Ablauf der Aufbewahrung möglich: bis {date}.",
+      "confirmTitle": "Kontakt löschen?",
+      "confirmText": "Der Kontakt wird mit Anschrift, Kanälen und Rollen endgültig gelöscht. Das lässt sich nicht rückgängig machen.",
       "deleteBlocked": "Solange etwas diesen Kontakt hält, kann er nicht gelöscht werden.",
       "unknown": "Für diesen Kontakt ist keine Frist nachgewiesen. Vergeben Sie eine Rolle oder archivieren Sie ihn."
     },
@@ -2750,7 +3206,11 @@
     },
     "records": {
       "forbidden": "Kontakt (kein Zugriff)"
-    }
+    },
+    "searchPlaceholder": "Name, Ort, E-Mail oder Telefon",
+    "nounOne": "Kontakt",
+    "nounOther": "Kontakte",
+    "nounDative": "Kontakten"
   },
   "deletion": {
     "loading": "Es wird geprüft, ob etwas dagegen spricht …",
@@ -2781,12 +3241,21 @@
     "noFolder": "Kein Ordner",
     "allDocuments": "Alle Dokumente",
     "heading": {
-      "path": "Weg",
-      "count": "{count, plural, one {# Dokument} other {# Dokumente}}",
-      "countReadable": "{count, plural, one {# Dokument, das Sie lesen dürfen} other {# Dokumente, die Sie lesen dürfen}}"
+      "path": "Weg"
     },
     "list": {
-      "truncated": "Es werden die ersten {shown} von {total} Dokumenten gezeigt. Grenzen Sie die Liste mit Suche oder Filtern ein."
+      "truncated": "Es werden die ersten {shown} von {total} Dokumenten gezeigt. Grenzen Sie die Liste mit Suche oder Filtern ein.",
+      "noun": {
+        "one": "Dokument",
+        "other": "Dokumente",
+        "dative": "Dokumenten"
+      },
+      "nounReadable": {
+        "one": "Dokument, das Sie lesen dürfen",
+        "other": "Dokumente, die Sie lesen dürfen",
+        "dative": "Dokumenten, die Sie lesen dürfen"
+      },
+      "emptyFilteredNoun": "Kein Dokument"
     },
     "newDraft": "Neuer Entwurf",
     "receivePost": "Post ablegen",
@@ -2808,9 +3277,6 @@
     "searchTooShort": "Für die Suche im Inhalt braucht es mindestens drei Zeichen. Gesucht wurde nur in Betreff und Nummer.",
     "hitOnPage": "Seite {page}",
     "textPending": "Der Inhalt wird noch gelesen",
-    "allDirections": "Alle Richtungen",
-    "allTypes": "Alle Arten",
-    "allPhases": "Alle Zustände",
     "columns": {
       "number": "Nummer",
       "subject": "Betreff",
@@ -2874,6 +3340,7 @@
       "discardConfirm": "Verwerfen"
     },
     "filedProtected": "Abgelegt als {number}. Die Dokumentart ist geschützt; Sie sehen das Dokument hier nicht.",
+    "filedToast": "Abgelegt als {number}.",
     "folderGone": "Den Ordner „{name}“ gibt es nicht mehr, vielleicht wurde er verschoben oder umbenannt. Sie sehen den Ordner „{target}“.",
     "folderGoneAll": "Den Ordner „{name}“ gibt es nicht mehr, vielleicht wurde er verschoben oder umbenannt. Sie sehen alle Dokumente.",
     "areas": {
@@ -2918,15 +3385,16 @@
       "title": "Die Datei fehlt.",
       "body": "Zu diesem Dokument gehört eine Datei, die im Speicher nicht mehr liegt. Das ist kein Hinweis auf eine Veränderung — vermutlich ist beim Einspielen eines Backups oder beim Verschieben etwas verloren gegangen."
     },
-    "deleteDraft": "Entwurf löschen",
+    "deleteDraftItem": "Entwurf löschen …",
     "deleteDraftConfirmTitle": "Entwurf verwerfen",
     "deleteDraftConfirmDescription": "Möchten Sie diesen Entwurf wirklich unwiderruflich löschen?",
     "deleteDraftConfirmSubmit": "Entwurf löschen",
-    "void": "Stornieren",
+    "voidItem": "Stornieren …",
     "voidConfirmTitle": "Dokument stornieren",
     "voidConfirmDescription": "Geben Sie einen Grund für die Stornierung an. Die vergebene Nummer bleibt erhalten.",
     "voidConfirmSubmit": "Stornieren bestätigen",
-    "deleteDocument": "Endgültig löschen",
+    "deleteDocumentItem": "Löschen …",
+    "deleteDocumentRefusedUntil": "Löschen ist erst nach Ablauf der Aufbewahrung möglich: bis {date}.",
     "deleteDocumentBlocked": "Löschen ist erst nach Ablauf der Aufbewahrungsfrist möglich.",
     "deleteDocumentConfirmTitle": "Dokument endgültig löschen?",
     "deleteDocumentConfirmDescription": "Die Datei, die Metadaten und alle Bezüge verschwinden. Im Änderungsprotokoll bleibt festgehalten, wer wann welches Dokument gelöscht hat. Dieser Schritt lässt sich nicht rückgängig machen.",
@@ -2973,11 +3441,10 @@
     "followUpBadge": "Wiedervorlage {date}",
     "filters": {
       "dispatch": "Versand",
-      "dispatchAll": "Versand: alle",
-      "unsent": "nicht versandt",
+      "unsent": "Nicht versandt",
       "followUp": "Wiedervorlage",
-      "followUpAll": "Wiedervorlage: alle",
-      "followUpOpen": "offen"
+      "followUpOpen": "Wiedervorlage offen",
+      "followUpOpenChip": "offen"
     },
     "voidWithReplacement": "Ersatz als Entwurf anlegen",
     "respond": {
@@ -3448,7 +3915,8 @@
       "empty": {
         "title": "Noch keine Buchung.",
         "text": "Beginnen Sie mit dem Anfangsbestand Ihres Kontos oder der ersten Einnahme.",
-        "setupAction": "Bankkonten und Kassen einrichten"
+        "setupAction": "Bankkonten und Kassen einrichten",
+        "filteredNoun": "Keine Buchung"
       },
       "columns": {
         "number": "Nummer",
@@ -3499,22 +3967,23 @@
         "finalized": "Festgeschrieben: {numbers}."
       },
       "filters": {
-        "textLabel": "Suche",
         "textPlaceholder": "Text, Nummer oder Betrag",
         "state": {
           "label": "Zustand",
-          "all": "Alle Zustände",
           "draft": "Entwurf",
           "reviewed": "geprüft",
           "final": "festgeschrieben",
           "reversed": "zurückgenommen"
         },
         "account": "Konto",
-        "accountAll": "Alle Konten",
         "category": "Kategorie",
-        "categoryAll": "Alle Kategorien",
-        "withoutVoucher": "ohne Beleg",
-        "agentPrepared": "vom Agenten vorbereitet"
+        "withoutVoucher": "Nur ohne Beleg",
+        "agentPrepared": "Nur vom Agenten vorbereitet",
+        "year": "Jahr",
+        "ids": "Ausgewählte Buchungen",
+        "nounOne": "Buchung",
+        "nounOther": "Buchungen",
+        "nounDative": "Buchungen"
       },
       "sidePanel": {
         "title": "Bestände und vorläufige Summen",
@@ -3656,28 +4125,29 @@
           "noteLabel": "Warum wird der Beleg widerrufen?"
         }
       },
+      "reverse": {
+        "item": "Zurücknehmen …",
+        "title": "Buchung {number} zurücknehmen?",
+        "description": "Es entsteht eine Gegenbuchung zum {date}. Die Nummer wird beim Zurücknehmen vergeben. Das lässt sich nicht rückgängig machen.",
+        "withDraft": "danach vorbelegten Entwurf öffnen",
+        "cashReasonLabel": "Warum geht die Kasse ins Minus?",
+        "submit": "Zurücknehmen",
+        "done": "Gegenbuchung {number} festgeschrieben.",
+        "open": "Öffnen"
+      },
       "correct": {
         "trigger": "Korrigieren",
         "title": "Was stimmt nicht?",
         "groupParty": "Die Zuordnung",
-        "groupNumbers": "Die Zahlen",
         "groupNew": "Neue Zuordnung",
-        "groupReverse": "Zurücknehmen",
         "party": {
           "contact": "Spender/Empfänger",
           "project": "Projekt",
           "purpose": "Zweck",
           "abroad": "wird im Ausland verwendet"
         },
-        "numbers": {
-          "amount": "Betrag",
-          "date": "Datum",
-          "account": "Konto",
-          "category": "Kategorie",
-          "vat": "Umsatzsteuer"
-        },
         "pathAllocation": "Das ändert die Zuordnung.",
-        "pathReverse": "Das nimmt die Buchung zurück.",
+        "numbersElsewhere": "Stimmen Betrag, Datum, Konto, Kategorie oder Umsatzsteuer nicht, nehmen Sie die Buchung über <reverse>Zurücknehmen …</reverse> zurück und erfassen sie neu.",
         "currentlyValue": "bisher: {value}",
         "pickLine": {
           "title": "Welche Aufteilung?",
@@ -3687,14 +4157,6 @@
         "noteLabel": "Begründung",
         "cancel": "Abbrechen",
         "submitAllocation": "Zuordnung ändern",
-        "submitReverse": "Buchung zurücknehmen",
-        "reverse": {
-          "step1": "Diese Buchung wird zurückgenommen.",
-          "step2": "Eine Gegenbuchung mit den negierten Beträgen entsteht und wird sofort festgeschrieben.",
-          "step3": "Ein vorbelegter Entwurf mit den bisherigen Werten öffnet sich, wenn gewünscht.",
-          "withDraft": "danach vorbelegten Entwurf öffnen",
-          "cashReasonLabel": "Warum geht die Kasse ins Minus?"
-        },
         "purposeReasonLabel": "Warum geht der Zweck ins Minus?",
         "proof": {
           "label": "Dokument, das belegt, was die Spenderin bestimmt hat",
@@ -3801,7 +4263,8 @@
         "fromCash": "Aus der Vereinskasse",
         "fromPocket": "Aus eigener Tasche",
         "pocketHint": "Auslagen reichen Sie künftig selbst ein; bis dahin bucht die Schatzmeisterin die Erstattung als Ausgabe. Es wurde nichts angelegt."
-      }
+      },
+      "accountsGroup": "Kassen"
     },
     "accounts": {
       "title": "Bankkonten und Kassen",
@@ -3940,6 +4403,7 @@
       },
       "discard": {
         "title": "Auszug verwerfen",
+      "description": "Der Auszug wird mit seinen Kontoumsätzen und Entwürfen entfernt. Das lässt sich nicht zurücknehmen.",
         "failed": "Die Folgen lassen sich gerade nicht ermitteln.",
         "consequence": {
           "rawTransactions": "{count, plural, one {# Kontoumsatz wird gelöscht} other {# Kontoumsätze werden gelöscht}}",
@@ -4032,6 +4496,7 @@
       },
       "settleWithoutPayment": {
         "trigger": "Erledigt ohne Zahlung",
+        "item": "Ohne Zahlung erledigen …",
         "title": "Ohne Zahlung erledigen?",
         "description": "Es entsteht keine Buchung. Rückgängig geht das nur, indem Sie den Posten neu anlegen.",
         "noteLabel": "Begründung",
@@ -4138,7 +4603,8 @@
         "edit": "Konto ändern",
         "active": "Aktiv",
         "inactiveState": "Stillgelegt",
-        "deactivate": "Stilllegen statt löschen",
+        "deactivate": "Stilllegen",
+      "activate": "Wieder aktivieren",
         "kind": {
           "bank": "Bankkonto",
           "cash": "Kasse",
@@ -4171,11 +4637,13 @@
         },
         "toast": {
           "created": "Konto angelegt.",
-          "updated": "Konto geändert."
+          "updated": "Konto geändert.",
+        "deactivated": "Konto stillgelegt.",
+        "activated": "Konto wieder aktiv."
         }
       },
       "categories": {
-        "search": "Suchen",
+        "emptyNoun": "Keine Kategorie",
         "sections": {
           "basics": "Grunddaten",
           "tax": "Steuer"
@@ -4261,7 +4729,10 @@
         "toast": {
           "created": "Kategorie angelegt.",
           "updated": "Kategorie geändert."
-        }
+        },
+        "searchPlaceholder": "Name oder Schlüssel",
+        "nounOne": "Kategorie",
+        "nounOther": "Kategorien"
       },
       "purposes": {
         "create": "Zweck anlegen",
@@ -4578,8 +5049,7 @@
     "work": {
       "title": "Arbeitsliste",
       "description": "Kontoumsätze mit ihrem Vorschlag — mit der Tastatur abzuarbeiten.",
-      "accountFilter": "Liste für Konto",
-      "allAccounts": "Alle Konten",
+      "accountFilter": "Konto",
       "tabsGroup": "Reiter der Arbeitsliste",
       "tabs": {
         "open": "Zuzuordnen",
@@ -4966,6 +5436,23 @@
         "apply": "Angaben aus der Rechnung übernehmen",
         "skip": "Ohne Angaben weiter",
         "applied": "Angaben aus der Rechnung übernommen."
+      },
+      "noun": {
+        "transactions": {
+          "one": "Umsatz",
+          "other": "Umsätze",
+          "dative": "Umsätzen"
+        },
+        "drafts": {
+          "one": "Entwurf",
+          "other": "Entwürfe",
+          "dative": "Entwürfen"
+        },
+        "openItems": {
+          "one": "Zahlung",
+          "other": "Zahlungen",
+          "dative": "Zahlungen"
+        }
       }
     },
     "donations": {
@@ -4975,8 +5462,8 @@
       "tabs": {
         "issued": "Ausgestellt",
         "uncertified": "Noch nicht bestätigt",
-        "toCorrect": "Zu korrigieren ({count})",
-        "needsSignature": "Unterschrift fehlt ({count})"
+        "toCorrect": "Zu korrigieren",
+        "needsSignature": "Unterschrift fehlt"
       },
       "columns": {
         "number": "Nummer",
@@ -5177,6 +5664,7 @@
       },
       "void": {
         "title": "Bestätigung {number} zurücknehmen",
+      "description": "Die Bestätigung verliert ihre Gültigkeit. Das lässt sich nicht zurücknehmen.",
         "reason": "Grund",
         "alreadySent": "Bereits versandt?",
         "alreadySentFixed": "Der Versand ist vermerkt — die Rückholspur gehört dazu. Fehlende Daten lassen sich später nachtragen.",
@@ -5207,10 +5695,7 @@
         }
       },
       "uncertified": {
-        "filterBefore": "Spenden ab",
-        "filterAfter": "ohne Bestätigung",
-        "apply": "Anwenden",
-        "reset": "Alle zeigen",
+        "emptyFilteredNoun": "Keine Zuwendung",
         "sum": "Summe {amount}",
         "addressMissing": "Anschrift fehlt",
         "completeAddress": "Anschrift ergänzen",
@@ -5221,7 +5706,12 @@
         "empty": {
           "title": "Alles bestätigt",
           "text": "Es gibt keine festgeschriebene Zuwendung ohne gültige Bestätigung."
-        }
+        },
+        "filterMin": "Ab Betrag",
+        "chip": "Ab {amount}",
+        "nounOne": "Person",
+        "nounOther": "Personen",
+        "nounDative": "Personen"
       },
       "signature": {
         "done": "erledigt",
@@ -5284,7 +5774,8 @@
         "actions": {
           "supersede": "Aufgehoben oder ersetzt am …",
           "void": "Irrtümlich erfasst",
-          "attach": "Dokument nachreichen"
+          "attach": "Dokument nachreichen",
+          "menu": "Aktionen zu {name}"
         },
         "dialog": {
           "title": "Bescheid erfassen",
@@ -5507,6 +5998,7 @@
           "bundles": "Zum Drucken",
           "bundleMachine": "Maschinelle Bestätigungen (PDF) · {count}",
           "bundleSignature": "Zum Unterschreiben (PDF) · {count}",
+          "bundleEmpty": "Ein Paket ohne Bestätigung lässt sich nicht herunterladen.",
           "bundleFailed": "Das Sammel-PDF ließ sich nicht erstellen.",
           "dispatchAll": "Versand für alle vermerken",
           "dispatched": "Versand vermerkt am {date} · {via}",
@@ -5594,8 +6086,7 @@
         "notConfirmed": "—",
         "collectiveSuffix": "Sammel",
         "filter": {
-          "anonymous": "Nur anonyme Zuwendungen.",
-          "clear": "Filter aufheben"
+          "anonymous": "Nur anonyme Zuwendungen"
         },
         "empty": {
           "title": "Noch keine Zuwendungen",
@@ -5623,7 +6114,11 @@
           "hint": "Für Zuwendungen bis {limit} genügt der Bareinzahlungsbeleg oder die Buchungsbestätigung der Bank als Nachweis.",
           "hintUnknown": "Die Grenze des vereinfachten Nachweises ist nicht hinterlegt.",
           "failed": "Der vereinfachte Nachweis konnte nicht erstellt werden."
-        }
+        },
+        "nounOne": "Zuwendung",
+        "nounOther": "Zuwendungen",
+        "nounDative": "Zuwendungen",
+        "emptyFilteredNoun": "Keine Zuwendung"
       }
     },
     "expenses": {
@@ -5747,6 +6242,7 @@
         "open": "Offen",
         "done": "Erledigt",
         "draftNumber": "Entwurf",
+        "openTruncated": "Es werden die jüngsten {shown} von {total} offenen Anträgen gezeigt.",
         "emptyTitle": "Noch kein Antrag",
         "emptyText": "Was Sie für den Verein ausgelegt haben, reichen Sie hier ein – mit Beleg als PDF oder als Fahrt.",
         "next": {
@@ -5854,18 +6350,21 @@
           "agreementDocument": "Rahmenvereinbarung",
           "documentNone": "nicht hinterlegt",
           "documentHidden": "hinterlegt – ohne Zugriff auf die Akte nicht einsehbar",
-          "save": "Speichern",
-          "activate": "Aktivieren",
-          "deactivate": "Deaktivieren",
-          "delete": "Löschen",
-          "deleteConfirmTitle": "Partner löschen?",
-          "deleteConfirmDescription": "Das lässt sich nicht zurücknehmen."
+          "save": "Speichern"
         },
-        "danger": {
-          "deleteText": "Entfernt die Angaben zum Partner. Das geht nur, solange weder Zahlungen noch Bescheide daran hängen.",
-          "archiveText": "Der Partner bleibt mit seinen Zahlungen und Bescheiden erhalten und wird als inaktiv geführt.",
-          "activateTitle": "Wieder aktivieren",
-          "activateText": "Der Partner wird wieder als aktiv geführt."
+        "actions": {
+          "archive": "Archivieren",
+          "activate": "Wieder aktivieren",
+          "archived": "Archiviert",
+          "delete": "Löschen …",
+          "deleteTitle": "Partner löschen?",
+          "deleteDescription": "Die Angaben zum Partner werden entfernt. Das lässt sich nicht zurücknehmen.",
+          "deleteConfirm": "Löschen",
+          "deleteRefused": "Zu diesem Partner gibt es Zahlungen oder Bescheide. Archivieren Sie ihn stattdessen; er bleibt dann mit allem erhalten.",
+          "toast": {
+            "archived": "Partner archiviert.",
+            "activated": "Partner wieder aktiv."
+          }
         },
         "notices": {
           "title": "Bescheide des Partners",
@@ -5877,6 +6376,9 @@
           "save": "Speichern",
           "cancel": "Abbrechen",
           "void": "Als irrtümlich erfasst kennzeichnen",
+          "voidItem": "Als irrtümlich erfasst kennzeichnen …",
+          "voidTitle": "Bescheid als irrtümlich erfasst kennzeichnen?",
+          "voidDescription": "Der Bescheid bleibt in der Liste, trägt aber nicht mehr. Das lässt sich nicht zurücknehmen.",
           "voidNote": "Begründung",
           "kindAbroad": "Anerkennung im Sitzland",
           "validUntil": "gültig bis",
@@ -5967,6 +6469,7 @@
         "save": "Als Entwurf speichern",
         "submit": "Zur Freigabe geben",
         "deleteDraft": "Entwurf löschen",
+        "deleteDraftItem": "Entwurf löschen …",
         "deleteDraftConfirm": {
           "title": "Entwurf löschen?",
           "description": "Der Entwurf verschwindet mit allen Positionen. Das lässt sich nicht rückgängig machen."
@@ -6060,7 +6563,8 @@
       "queue": {
         "title": "Wartet auf Ihre Freigabe",
         "since": "seit {date}",
-        "back": "Zur Warteschlange"
+        "back": "Zur Warteschlange",
+        "truncated": "Es werden die ältesten {shown} von {total} Vorgängen gezeigt. Entscheiden Sie diese zuerst, dann rücken die übrigen nach."
       },
       "kind": {
         "expenseClaim": "Auslage",
@@ -6234,12 +6738,13 @@
         "movements": "Bewegungen",
         "transfer": "Zweck ändern (Umwidmung)",
         "fulfill": "Als erfüllt kennzeichnen",
+        "fulfillWithRest": "Als erfüllt kennzeichnen …",
+        "fulfillConfirmTitle": "„{name}“ als erfüllt kennzeichnen?",
         "reopen": "Wieder öffnen …",
         "project": "Projekt",
         "target": "Ziel",
         "reference": "Bezug",
         "noTarget": "ohne Ziel",
-        "menu": "Weitere Aktionen",
         "movementsEmpty": "Noch keine Bewegungen.",
         "movementsLoading": "Bewegungen werden geladen …",
         "movementColumns": {
@@ -6265,7 +6770,6 @@
         "title": "Zweck wieder öffnen",
         "reason": "Begründung",
         "hint": "Die Begründung steht am Zweck, nicht im Änderungsprotokoll.",
-        "cancel": "Abbrechen",
         "save": "Wieder öffnen"
       },
       "transferDialog": {
@@ -6430,6 +6934,7 @@
         "text": "Das Recht vergibt, wer Rollen verwalten darf.",
         "textWithNames": "Das Recht vergeben kann: {names}."
       },
+      "emptyTitle": "Keine Pauschalen oder Erstattungen",
       "empty": "In diesem Jahr gibt es keine Pauschalen oder Erstattungen an Personen.",
       "withoutPerson": "{count, plural, one {Eine Pauschale ist} other {# Pauschalen sind}} keiner Person zugeordnet.",
       "boardMissing": {
@@ -6473,7 +6978,9 @@
       "pageTitle": "Personenübersicht {year}",
       "yearChoice": "Jahr",
       "allowancesHeading": "Pauschalen und Erstattungen",
-      "allowancesHeadingCalendar": "Pauschalen und Erstattungen {year} (Kalenderjahr)"
+      "allowancesHeadingCalendar": "Pauschalen und Erstattungen {year} (Kalenderjahr)",
+      "nounOne": "Person",
+      "nounOther": "Personen"
     },
     "errors": {
       "humanOnly": {

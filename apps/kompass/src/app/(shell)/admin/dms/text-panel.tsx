@@ -2,6 +2,7 @@
 
 import { useTranslations } from 'next-intl';
 import { useState, useTransition } from 'react';
+import { X } from 'lucide-react';
 import { RefusalNotice } from '@/components/forms/refusal-notice';
 import { useActionFeedback } from '@/components/forms/use-action-feedback';
 import { Button } from '@/components/ui/button';
@@ -78,14 +79,9 @@ export function TextPanel({
                 >
                   {lang}
                   {canManageSettings && selectedLangs.length > 1 ? (
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveLanguage(lang)}
-                      className="text-muted-ink hover:text-error"
-                      aria-label={t('removeLanguage', { lang })}
-                    >
-                      ×
-                    </button>
+                    <Button type="button" variant="ghost" size="icon-xs" onClick={() => handleRemoveLanguage(lang)} aria-label={t('removeLanguage', { lang })}>
+                      <X aria-hidden />
+                    </Button>
                   ) : null}
                 </span>
               ))}

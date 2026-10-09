@@ -56,6 +56,21 @@ describe('getWorkCounts', () => {
     expect(unwrap(await getWorkCounts(f.deps, ctxWith(['finance.read'])))).toEqual({ open: 3, unsure: 2, agent: 1, reviewed: 1, due: 1, heldCandidates: 1 });
     expect(await getWorkCounts(f.deps, ctxWith(['finance.overview']))).toMatchObject({ ok: false, error: { type: 'forbidden', permission: 'finance.read' } });
   });
+
+  /** Spec Filterleisten (HANDOFF § 8e.3.2): Die Reiterzahlen folgen dem Kontofilter der Leiste — wie `listWorkItems`. */
+  it('with an account, counts what the tabs would list for it; due and held stay overall', async () => {
+    const f = await workFixture();
+    const cashRun = insertRun(f, f.cash.id);
+    insertRaw(f, cashRun, { accountId: f.cash.id, amountCents: 300, purpose: 'Kasse irgendwas', date: '2026-03-08', iban: null });
+    expect(unwrap(await getWorkCounts(f.deps, f.ctx, { accountId: f.bank.id }))).toEqual({ open: 3, unsure: 2, agent: 1, reviewed: 1, due: 1, heldCandidates: 1 });
+    expect(unwrap(await getWorkCounts(f.deps, f.ctx, { accountId: f.cash.id }))).toEqual({ open: 0, unsure: 1, agent: 0, reviewed: 0, due: 1, heldCandidates: 1 });
+    for (const tab of ['open', 'unsure', 'agent', 'reviewed'] as const) {
+      const listed = unwrap(await listWorkItems(f.deps, f.ctx, { tab, accountId: f.cash.id })).total;
+      expect(unwrap(await getWorkCounts(f.deps, f.ctx, { accountId: f.cash.id }))[tab]).toBe(listed);
+    }
+    expect(unwrap(await getWorkCounts(f.deps, f.ctx, {}))).toMatchObject({ open: 3, unsure: 3 });
+    expect(await getWorkCounts(f.deps, f.ctx, { accountId: '' })).toMatchObject({ ok: false, error: { type: 'validation' } });
+  });
 });
 
 describe('listWorkItems', () => {

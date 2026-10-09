@@ -78,7 +78,6 @@ export async function saveImportProfile(deps: Deps, ctx: CallContext, input: unk
         accountId: account.id, encoding: v.format.encoding, delimiter: v.format.delimiter,
         headerChecksum: checksumOf(new TextEncoder().encode(v.format.headerSignature)), switched, builtinKey: v.builtinKey ?? null,
       },
-      summary: `CSV-Format ${id} für Konto ${account.id} gespeichert`,
     });
     return ok({ profileId: id, account: after });
   });

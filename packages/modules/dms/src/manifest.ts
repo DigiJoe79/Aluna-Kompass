@@ -111,6 +111,56 @@ export const dmsModule: ModuleManifest = defineModule({
   recordLabels: dmsRecordLabels,
   followUpTargets: dmsFollowUpTargets,
   dashboardTiles: DMS_DASHBOARD_TILES,
+  /**
+   * Aktionen des Änderungsprotokolls (Spec Protokoll § 3). Ein Dokument nennen sie nur über seine Nummer (`number`,
+   * bei Entwürfen keine) — nie über den Betreff, der Personen nennen kann; das Vorher/Nachher regelt `audit-ref.ts`.
+   */
+  auditActions: {
+    'dms.folder.create': { params: ['path'] },
+    'dms.folder.move': { params: ['from', 'to'] },
+    'dms.folder.delete': { params: ['path'] },
+    'dms.type.create': { params: ['label'] },
+    'dms.type.update': { params: ['label'] },
+    'dms.type.delete': { params: ['label'] },
+    'dms.type.provision': { params: ['label', 'module', 'created'] },
+    'dms.rule.create': { params: ['matchContains'] },
+    'dms.rule.update': { params: ['matchContains'] },
+    'dms.rule.delete': { params: ['matchContains'] },
+    'dms.snippet.create': { params: ['name'] },
+    'dms.snippet.update': { params: ['name'] },
+    'dms.snippet.delete': { params: ['name'] },
+    'dms.install': { params: ['incomingLabel', 'outgoingLabel'] },
+    /** Die Einstellungen, die die Einrichtung setzt (über `writeSettingInternal`). */
+    'dms.install.setting': { params: ['key'] },
+    'dms.draft.create': { params: [] },
+    'dms.draft.update': { params: [] },
+    'dms.draft.delete': { params: [] },
+    'dms.draft.preview': { params: [] },
+    'dms.file': { params: ['number'] },
+    'dms.issue': { params: ['number'] },
+    /** `via`: `post`, `record` oder `recordWithNumber` — dann nennt `recordNumber` den Vorgang (sonst leer). */
+    'dms.receive': { params: ['number', 'via', 'recordNumber'] },
+    /** `retyped`: neue Art mit neuer Nummer (`previousNumber` die alte), sonst nur Angaben berichtigt. */
+    'dms.reclassify': { params: ['number', 'previousNumber', 'retyped'] },
+    'dms.void': { params: ['number'] },
+    'dms.move': { params: ['number', 'folder', 'toInbox'] },
+    'dms.delete': { params: ['number'] },
+    'dms.checksumMismatch': { params: ['number'] },
+    /** `sentVia`: Schlüssel des Versandwegs aus `dms.dispatchChannels`. */
+    'dms.dispatch': { params: ['number', 'sentOn', 'sentVia'] },
+    'dms.dispatch.clear': { params: ['number'] },
+    'dms.link': { params: ['number'] },
+    'dms.unlink': { params: [] },
+    'dms.relate': { params: ['number', 'relatedNumber', 'kind'] },
+    'dms.unrelate': { params: [] },
+    'dms.note.add': { params: ['number'] },
+    'dms.note.delete': { params: [] },
+    'dms.export': { params: ['included', 'total'] },
+    'document.textExtracted': { params: ['number', 'pages'] },
+    'document.textExtractionFailed': { params: ['number', 'attempts'] },
+    'document.textExtractionUnavailable': { params: ['number'] },
+    'document.reindexRequested': { params: ['count'] },
+  },
   deletionRules: DMS_DELETION_RULES,
   // Ein ausgeschaltetes Modul schweigt als Halter: Kontakte, die nur ein
   // Dokument hält, würden löschbar. Entwürfe zählen nicht — sie halten nichts.

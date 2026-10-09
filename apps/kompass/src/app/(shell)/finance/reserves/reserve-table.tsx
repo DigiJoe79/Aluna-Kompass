@@ -55,9 +55,10 @@ function KindInfo({ kind }: { kind: ReserveKind }) {
     >
       <span className="inline-flex items-center gap-1">
         {t(`kinds.${kind}`)}
-        <button
+        <Button
           type="button"
-          className="inline-flex size-6 items-center justify-center rounded-full text-muted-ink hover:text-ink focus-visible:outline-2 focus-visible:outline-brand"
+          variant="ghost"
+          size="icon-xs"
           aria-expanded={open}
           aria-controls={id}
           aria-label={t('kindInfo', { kind: t(`kinds.${kind}`) })}
@@ -65,7 +66,7 @@ function KindInfo({ kind }: { kind: ReserveKind }) {
           onClick={() => setOpen((v) => !v)}
         >
           <Info className="size-3.5" aria-hidden />
-        </button>
+        </Button>
       </span>
       <span id={id} hidden={!open} className="text-[12px] text-muted-ink">
         {t(`kindHints.${kind}`)}

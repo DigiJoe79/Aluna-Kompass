@@ -34,6 +34,16 @@ test.describe('media library', () => {
     await loginAsAdmin(page);
   });
 
+  test('Suche ohne Treffer ist gefiltert leer, nicht „Keine Dateien in diesem Ordner.“', async ({ page }) => {
+    await page.goto('/admin/media?q=zzz');
+    await expect(page.getByText('Keine Datei passt zu diesen Filtern.')).toBeVisible();
+    await expect(page.getByText('Keine Dateien in diesem Ordner.')).toHaveCount(0);
+    await expect(page.getByText(/^0 von \d+ Dateien$/)).toBeVisible();
+    await page.getByRole('button', { name: 'Filter zurücksetzen' }).last().click();
+    await expect(page).toHaveURL(/\/admin\/media$/);
+    await expect(page.getByText('Keine Datei passt zu diesen Filtern.')).toHaveCount(0);
+  });
+
   test('opens the detail dialog and blocks deleting an asset that is in use', async ({ page }) => {
     await page.goto('/projects');
     await page.getByRole('link', { name: 'Projekt anlegen' }).click();
@@ -52,7 +62,14 @@ test.describe('media library', () => {
     await page.getByRole('row', { name: /hof-/ }).click();
     const dialog = page.getByRole('dialog');
     await expect(dialog).toContainText('Projekt „hofprojekt“');
-    await expect(dialog.getByRole('button', { name: 'Löschen' })).toBeDisabled();
+    // Keine Sperre ohne Grund: „Löschen …“ bleibt, die Rückfrage nennt, wo die Datei verwendet wird.
+    await dialog.getByRole('button', { name: 'Löschen …' }).click();
+    const refusal = page.getByRole('alertdialog', { name: 'Diese Datei löschen?' });
+    await expect(refusal).toContainText('Die Datei wird noch verwendet: Projekt „hofprojekt“');
+    await expect(refusal.getByRole('button', { name: 'Löschen' })).toHaveCount(0);
+    await refusal.getByRole('button', { name: 'Schließen' }).click();
+    await expect(refusal).toBeHidden();
+    await expect(dialog.getByRole('button', { name: 'Löschen …' })).toBeFocused();
   });
 
   test('uploads a file, inspects it in the dialog and deletes it while unused', async ({ page }) => {
@@ -62,7 +79,7 @@ test.describe('media library', () => {
     await page.getByRole('row', { name: /frei-/ }).click();
     const dialog = page.getByRole('dialog');
     await expect(dialog).toContainText('nicht verwendet');
-    await dialog.getByRole('button', { name: 'Löschen' }).click();
+    await dialog.getByRole('button', { name: 'Löschen …' }).click();
     await page.getByRole('alertdialog').getByRole('button', { name: 'Löschen' }).click();
     await expect(page.getByRole('row', { name: /frei-/ })).toHaveCount(0);
   });
@@ -100,9 +117,9 @@ test.describe('media library', () => {
 
   test('remembers the grid view across a reload', async ({ page }) => {
     await page.goto('/admin/media');
-    await page.getByRole('button', { name: 'Grid', exact: true }).click();
+    await page.getByRole('radio', { name: 'Raster', exact: true }).click();
     await page.reload();
-    await expect(page.getByRole('button', { name: 'Grid', exact: true })).toHaveClass(/bg-selected/);
+    await expect(page.getByRole('radio', { name: 'Raster', exact: true })).toHaveAttribute('aria-checked', 'true');
   });
 
   test('serves a webp preview for an uploaded image, sandboxed', async ({ page }) => {
@@ -154,8 +171,8 @@ test.describe('media library', () => {
     await page.getByLabel('Datei hochladen').setInputFiles({ name: 'mitgliederordnung.pdf', mimeType: 'application/pdf', buffer: PDF });
     await expect(page.getByRole('row', { name: /mitgliederordnung-/ })).toBeVisible();
 
-    await page.getByLabel('Suchen').fill('Rex');
-    await page.getByRole('button', { name: 'Filtern' }).click();
+    // Kein Knopf „Filtern“ mehr: Die Suche gilt nach kurzer Pause (Spec Filterleisten § 4).
+    await page.getByRole('searchbox', { name: 'Suchen' }).fill('Rex');
     await expect(page).toHaveURL(/q=Rex/);
     await expect(page.getByRole('row', { name: /rex-foto-/ })).toBeVisible();
     await expect(page.getByRole('row', { name: /mitgliederordnung-/ })).toHaveCount(0);
@@ -163,6 +180,10 @@ test.describe('media library', () => {
     await page.goto('/admin/media?kind=pdf');
     await expect(page.getByRole('row', { name: /mitgliederordnung-/ })).toBeVisible();
     await expect(page.getByRole('row', { name: /rex-foto-/ })).toHaveCount(0);
+    await expect(page.getByLabel('Typ', { exact: true })).toHaveValue('pdf');
+    await page.getByLabel('Typ', { exact: true }).selectOption('');
+    await expect(page).toHaveURL(/\/admin\/media$/);
+    await expect(page.getByRole('row', { name: /rex-foto-/ })).toBeVisible();
 
     await page.goto('/admin/media?sort=name');
     // Nur der Dateiname, nicht die Typ-Badge davor (die für PDF „PDF“ zeigt).
@@ -352,7 +373,7 @@ test.describe('Ziehen in der Mediathek', () => {
   async function openGrid(page: Page, url: string) {
     await page.goto(url);
     await waitForHydration(page, '[role="tree"]');
-    await page.getByRole('button', { name: 'Grid', exact: true }).click();
+    await page.getByRole('radio', { name: 'Raster', exact: true }).click();
     await expect(page.locator('[data-asset-id]').first()).toBeVisible();
   }
 
@@ -459,7 +480,7 @@ test.describe('Ziehen in der Mediathek', () => {
   test('mit der Maus gezogen verschiebt eine Listenzeile auf einen Ordner', async ({ page }) => {
     await page.goto('/admin/media?folder=Bilder');
     await waitForHydration(page, '[role="tree"]');
-    await page.getByRole('button', { name: 'Liste', exact: true }).click();
+    await page.getByRole('radio', { name: 'Liste', exact: true }).click();
     const row = assetRows(page).filter({ hasText: /vereinsbanner-/i });
     await expect(row).toBeVisible();
     const before = await assetTotal(page);
@@ -501,7 +522,7 @@ test.describe('Ziehen in der Mediathek', () => {
     expect(await assetTotal(page)).toBe(before);
 
     // Auch ein Zug am Vorschaubild der Liste (mit beigelegter Datei) lädt nichts hoch.
-    await page.getByRole('button', { name: 'Liste', exact: true }).click();
+    await page.getByRole('radio', { name: 'Liste', exact: true }).click();
     await expect(assetRows(page).first()).toBeVisible();
     await page.evaluate((base64) => {
       const thumb = document.querySelector('tbody tr img')!;

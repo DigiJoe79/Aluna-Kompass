@@ -8,9 +8,9 @@ test('das alte Lesezeichen führt auf den Template-Reiter der Einstellungen', as
   await expect(page).toHaveURL('/admin/site?panel=template');
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Webseite');
   const tabs = page.getByRole('navigation', { name: 'Bereiche der Webseite' });
-  await expect(tabs.getByRole('link')).toHaveText(['Template', 'Verbindung', 'Cache', 'Gesperrte Begriffe']);
-  await expect(tabs.getByRole('link', { name: 'Template' })).toHaveAttribute('aria-current', 'page');
-  await page.getByRole('button', { name: 'Template einlesen' }).click();
+  await expect(tabs.getByRole('link')).toHaveText(['Vorlage', 'Verbindung', 'Cache', 'Gesperrte Begriffe']);
+  await expect(tabs.getByRole('link', { name: 'Vorlage' })).toHaveAttribute('aria-current', 'page');
+  await page.getByRole('button', { name: 'Vorlage einlesen' }).click();
   await page.getByRole('button', { name: 'Übernehmen' }).click();
   await expect(page.getByRole('status')).toContainText('eingelesen');
   const nav = page.getByRole('navigation', { name: 'Unternavigation' });
@@ -52,7 +52,7 @@ test('Cache leeren unter Einstellungen → Webseite', async ({ page }) => {
   await resetDatabase(page, 'seeded');
   await loginAsAdmin(page);
   await page.goto('/admin/site?panel=template');
-  await page.getByRole('button', { name: 'Template einlesen' }).click();
+  await page.getByRole('button', { name: 'Vorlage einlesen' }).click();
   await page.getByRole('button', { name: 'Übernehmen' }).click();
   await expect(page.getByRole('status')).toContainText('eingelesen');
   // Die Vorschau füllt die Bildvarianten.

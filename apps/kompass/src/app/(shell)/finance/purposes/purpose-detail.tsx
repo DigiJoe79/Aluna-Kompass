@@ -1,18 +1,17 @@
 'use client';
 
 import type { PurposeMovementLine, PurposeOverviewRow } from '@kompass/module-finance';
-import { MoreHorizontal } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
+import { ConfirmDialog } from '@/components/forms/confirm-dialog';
 import { RefusalNotice } from '@/components/forms/refusal-notice';
 import { useActionFeedback } from '@/components/forms/use-action-feedback';
 import { useDateFormat } from '@/components/date-format-provider';
-import { Notice } from '@/components/notice';
-import { Button, buttonVariants } from '@/components/ui/button';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { RecordActions } from '@/components/record-actions';
+import { buttonVariants } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { formatEuro } from '@/lib/finance/amount';
 import { fulfillPurposeAction, purposeMovementsAction, reopenPurposeAction } from './actions';
@@ -44,8 +43,8 @@ export function PurposeDetail({
   const [error, setError] = useState<string | null>(null);
   const [confirmFulfill, setConfirmFulfill] = useState(false);
   const [reopening, setReopening] = useState(false);
-  const [pending, setPending] = useState(false);
   const fulfillFb = useActionFeedback();
+  const trigger = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -59,15 +58,15 @@ export function PurposeDetail({
     };
   }, [row.id, row.balanceCents]);
 
+  // Ohne Rest direkt (der Gegenweg „Wieder öffnen …“ steht danach im Menü); mit Rest fragt ein Dialog nach. Kein
+  // „Rückgängig“ im Toast: Wieder öffnen verlangt eine Begründung (Annahme 7), die ein Toast nicht erfragen kann.
   const fulfill = async () => {
-    setPending(true);
     const result = await fulfillFb.run(() => fulfillPurposeAction(row.id, row.updatedAt ?? ''), { retry: () => void fulfill() });
-    setPending(false);
-    setConfirmFulfill(false);
     if (result.status !== 'success') return;
     toast.success(t('detail.fulfilled'));
     router.refresh();
   };
+  const hasRest = row.balanceCents > 0;
 
   return (
     <section className="space-y-4 rounded-lg border border-line bg-surface p-5" data-testid="purpose-detail">
@@ -93,47 +92,38 @@ export function PurposeDetail({
               {t('detail.transfer')}
             </Link>
           ) : null}
-          {canSetup && row.state === 'open' ? (
-            <Button type="button" variant="outline" disabled={pending} onClick={() => (row.balanceCents > 0 ? setConfirmFulfill(true) : void fulfill())} data-testid="purpose-fulfill">
-              {t('detail.fulfill')}
-            </Button>
-          ) : null}
-          {canSetup && row.state !== 'open' ? (
-            <DropdownMenu>
-              <DropdownMenuTrigger
-                render={
-                  <Button variant="ghost" size="icon" aria-label={t('detail.menu')} data-testid="purpose-menu">
-                    <MoreHorizontal className="size-4" />
-                  </Button>
-                }
-              />
-              <DropdownMenuContent align="end" className="bg-surface shadow-md">
-                <DropdownMenuItem onSelect={() => setReopening(true)} data-testid="purpose-reopen">
-                  {t('detail.reopen')}
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+          {canSetup ? (
+            <RecordActions
+              triggerRef={trigger}
+              testId="purpose-menu"
+              actions={[
+                { key: 'reopen', label: t('detail.reopen'), kind: 'reversible', onSelect: () => setReopening(true), hidden: row.state === 'open', testId: 'purpose-reopen' },
+                { key: 'fulfill', label: hasRest ? t('detail.fulfillWithRest') : t('detail.fulfill'), kind: 'undoing', onSelect: () => (hasRest ? setConfirmFulfill(true) : void fulfill()), hidden: row.state !== 'open', testId: 'purpose-fulfill' },
+              ]}
+            />
           ) : null}
         </div>
       </div>
 
       <RefusalNotice action state={fulfillFb.state} />
 
-      {confirmFulfill ? (
-        <Notice level="hint">
-          <div className="space-y-2" data-testid="purpose-fulfill-confirm">
-            <p>{t('detail.fulfillConfirm', { amount: formatEuro(row.balanceCents) })}</p>
-            <div className="flex gap-2">
-              <Button type="button" size="sm" disabled={pending} onClick={() => void fulfill()} data-testid="purpose-fulfill-confirm-button">
-                {t('detail.fulfillConfirmButton')}
-              </Button>
-              <Button type="button" size="sm" variant="ghost" onClick={() => setConfirmFulfill(false)}>
-                {t('reopenDialog.cancel')}
-              </Button>
-            </div>
-          </div>
-        </Notice>
-      ) : null}
+      <ConfirmDialog
+        open={confirmFulfill}
+        onOpenChange={setConfirmFulfill}
+        finalFocus={trigger}
+        role="dialog"
+        title={t('detail.fulfillConfirmTitle', { name: row.name })}
+        description={t('detail.fulfillConfirm', { amount: formatEuro(row.balanceCents) })}
+        confirmLabel={t('detail.fulfillConfirmButton')}
+        action={async () => {
+          const result = await fulfillPurposeAction(row.id, row.updatedAt ?? '');
+          if (result.status === 'success') {
+            toast.success(t('detail.fulfilled'));
+            router.refresh();
+          }
+          return result;
+        }}
+      />
 
       <div className="space-y-2">
         <h3 className="text-[13px] font-semibold uppercase tracking-[.04em] text-muted-ink">{t('detail.movements')}</h3>
@@ -181,16 +171,18 @@ export function PurposeDetail({
         )}
       </div>
 
-      {reopening ? <ReopenDialog
-          name={row.name}
-          onClose={() => setReopening(false)}
-          onConfirm={(reason) => reopenPurposeAction(row.id, row.updatedAt ?? '', reason)}
-          onDone={() => {
-            setReopening(false);
-            toast.success(t('detail.reopened'));
-            router.refresh();
-          }}
-        /> : null}
+      <ReopenDialog
+        open={reopening}
+        finalFocus={trigger}
+        name={row.name}
+        onClose={() => setReopening(false)}
+        onConfirm={(reason) => reopenPurposeAction(row.id, row.updatedAt ?? '', reason)}
+        onDone={() => {
+          setReopening(false);
+          toast.success(t('detail.reopened'));
+          router.refresh();
+        }}
+      />
     </section>
   );
 }

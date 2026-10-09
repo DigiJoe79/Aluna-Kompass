@@ -30,6 +30,8 @@ export interface NoticeProps {
   remedies?: NoticeRemedy[];
   /** Mehrere Gründe (je Grund und Abhilfe ein Satz) — ab zwei als Liste an Stelle von `children`. */
   reasons?: string[];
+  /** Kennung für Tests (`data-testid` am Kasten), wie an `FormActionBar`. */
+  testId?: string;
 }
 
 const ROLE: Record<NoticeProps['level'], 'status' | 'alert' | undefined> = {
@@ -43,11 +45,12 @@ const ROLE: Record<NoticeProps['level'], 'status' | 'alert' | undefined> = {
  * nur in der Farbe (HANDOFF § 2.6). `refuse` nennt den Grund und bis zu drei
  * Auswege — nie das Wort „Fehler“.
  */
-export function Notice({ level, title, children, reason, action, remedies, reasons }: NoticeProps) {
+export function Notice({ level, title, children, reason, action, remedies, reasons, testId }: NoticeProps) {
   const t = useTranslations('common.notice');
   return (
     <div
       role={ROLE[level]}
+      data-testid={testId}
       className={cn(
         'rounded-md border p-3 text-[13px]',
         level === 'hint' && 'border-line bg-surface',

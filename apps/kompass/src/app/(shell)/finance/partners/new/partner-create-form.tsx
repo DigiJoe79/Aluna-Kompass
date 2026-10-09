@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { ContactPicker, type PickedContact } from '@/components/contact-picker';
 import { FieldError } from '@/components/forms/field-error';
+import { FormCard, FormCardBody } from '@/components/forms/form-card';
 import { FormActionBar } from '@/components/forms/form-action-bar';
 import { FormField } from '@/components/forms/form-field';
 import { FormCell, FormGrid } from '@/components/forms/form-grid';
@@ -16,13 +17,15 @@ import { savePartnerProfileAction } from '../actions';
 const STATUSES = ['taxExemptBody', 'publicBody', 'agent', 'foreignBody'] as const;
 
 /** Karte mit Kontakt und Status; Speichern führt auf die Detailseite des neuen Partners. */
+const INITIAL_STATUS = 'taxExemptBody' satisfies (typeof STATUSES)[number];
+
 export function PartnerCreateForm() {
   const t = useTranslations('finance.partners.list');
   const c = useTranslations('common');
   const tStatus = useTranslations('finance.partners.status');
   const router = useRouter();
   const [contact, setContact] = useState<PickedContact | null>(null);
-  const [status, setStatus] = useState<(typeof STATUSES)[number]>('taxExemptBody');
+  const [status, setStatus] = useState<(typeof STATUSES)[number]>(INITIAL_STATUS);
   const [pending, setPending] = useState(false);
   const feedback = useActionFeedback();
 
@@ -41,8 +44,8 @@ export function PartnerCreateForm() {
   const errors = state.status === 'error' ? state.fieldErrors : {};
 
   return (
-    <div className="overflow-hidden rounded-lg border border-line bg-surface" data-testid="partner-create-form">
-      <div className="p-5">
+    <FormCard data-testid="partner-create-form">
+      <FormCardBody>
         <section>
           <FormGrid>
             <FormCell size="m">
@@ -58,8 +61,22 @@ export function PartnerCreateForm() {
             </FormField>
           </FormGrid>
         </section>
-      </div>
-      <FormActionBar mode="create" back={{ href: '/finance/partners', label: c('backToList') }} state={state} onSave={() => void create()} pending={pending} saveLabel={t('create.save')} />
-    </div>
+      </FormCardBody>
+      {/* Ohne `<form>` zählt die Leiste nicht selbst: Der Stand kommt mit, damit sie zählt, verwirft und beim Verlassen nachfragt. */}
+      <FormActionBar
+        mode="create"
+        back={{ href: '/finance/partners', label: c('backToList') }}
+        state={state}
+        count={Number(contact !== null) + Number(status !== INITIAL_STATUS)}
+        onDiscard={() => {
+          setContact(null);
+          setStatus(INITIAL_STATUS);
+          feedback.reset();
+        }}
+        onSave={() => void create()}
+        pending={pending}
+        saveLabel={t('create.save')}
+      />
+    </FormCard>
   );
 }

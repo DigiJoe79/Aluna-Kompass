@@ -28,6 +28,8 @@ const FORBIDDEN: { pattern: RegExp; word: string }[] = [
   { pattern: /\bDatierte Werte\b/, word: 'Datierte Werte' },
   { pattern: /\bDoppel\b/, word: 'Doppel' },
   { pattern: /\btransit\b/, word: 'transit' },
+  // Die Oberfläche spricht von „Dieselbe Zahlung“ / „Eigene Zahlung“ (finance.import.candidates), nie von Dubletten (Designer 2026-10-09).
+  { pattern: /\bDublette\w*/, word: 'Dublette' },
 ];
 
 /**
@@ -76,6 +78,18 @@ function collectFinanceSurfaceStrings(): Map<string, string> {
   // Auch die Beschreibungen der Finanzrechte liest ein Mensch — in der Rollenverwaltung.
   collectStrings(at(messages, ['permissions', 'keys', 'finance']), 'permissions.keys.finance', strings);
 
+  // Die Klartexte der Protokoll-Aktionen der Finanzen liest ein Mensch im Filter „Aktion“ (und künftig in Tabelle und
+  // PDF, Backlog 33) — „Offene Zahlung storniert“ rutschte durch, weil nur `finance.*` geprüft wurde (Designer 2026-10-08).
+  const actions = (at(messages, ['audit', 'actions']) ?? {}) as Record<string, string>;
+  for (const [key, value] of Object.entries(actions)) {
+    if (key.startsWith('finance_')) strings.set(`audit.actions.${key}`, value);
+  }
+  // Auch die Sätze des Protokolls (Spec Protokoll § 6, Wächter 4; Befund 42): Sie stehen jetzt in de.json, nicht im Code.
+  const sentences = (at(messages, ['audit', 'sentences']) ?? {}) as Record<string, string>;
+  for (const [key, value] of Object.entries(sentences)) {
+    if (key.startsWith('finance_')) strings.set(`audit.sentences.${key}`, value);
+  }
+
   const fields = (at(messages, ['errors', 'fields']) ?? {}) as Record<string, string>;
   for (const key of FINANCE_ERROR_FIELDS) {
     if (key in fields) strings.set(`errors.fields.${key}`, fields[key]!);
@@ -107,6 +121,18 @@ function findHits(strings: Map<string, string>): string[] {
 }
 
 describe('Verbotsliste der Modellwörter (Finanzen)', () => {
+  it('prüft auch die Klartexte der Protokoll-Aktionen der Finanzen', () => {
+    const strings = collectFinanceSurfaceStrings();
+    expect(strings.has('audit.actions.finance_openItem_cancel')).toBe(true);
+    expect(findHits(new Map([['audit.actions.finance_openItem_cancel', 'Offene Zahlung storniert']]))).not.toEqual([]);
+  });
+
+  it('prüft auch die Sätze der Protokoll-Aktionen der Finanzen', () => {
+    const strings = collectFinanceSurfaceStrings();
+    expect(strings.has('audit.sentences.finance_entry_reverse')).toBe(true);
+    expect(findHits(new Map([['audit.sentences.finance_account_setActive', 'Geldkonto stillgelegt']]))).not.toEqual([]);
+  });
+
   it('kein Modellwort erscheint in den geprüften Namensräumen von de.json', () => {
     const hits = findHits(collectFinanceSurfaceStrings());
     expect(hits).toEqual([]);

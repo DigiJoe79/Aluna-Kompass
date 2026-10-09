@@ -8,6 +8,7 @@ import { ForbiddenCard } from '@/components/forbidden-card';
 import { Page } from '@/components/page';
 import { PageHeader } from '@/components/page-header';
 import { requireSession } from '@/lib/request-context';
+import { PaymentActions } from './payment-actions';
 import { PaymentDetail } from './payment-detail';
 
 /**
@@ -81,6 +82,7 @@ export default async function PartnerPaymentPage({ params }: { params: Promise<{
           title={t('heading', { label: payment.number ?? tState(payment.state) })}
           description={partner.contactName}
           back={{ href: `/finance/partners/${id}`, label: t('back') }}
+          actions={payment.state === 'draft' && canWrite ? <PaymentActions paymentId={payment.id} partnerId={id} /> : undefined}
         />
       }
     >

@@ -41,11 +41,11 @@ verbleibenden Rest vorbelegt, sodass sich die Zahlung mit ein paar Klicks
 festschreiben lässt. Ist eine IBAN zum Kontakt bekannt, steht daneben ein
 QR-Code zum Scannen mit der Banking-App.
 
-Muss ein Posten ohne tatsächliche Zahlung von der Liste, erledigt „Erledigt
-ohne Zahlung“ ihn: Es entsteht keine Buchung, und der Schritt lässt sich
+Muss ein Posten ohne tatsächliche Zahlung von der Liste, erledigt „Ohne
+Zahlung erledigen …“ links unten im Seitenfenster ihn: Es entsteht keine Buchung, und der Schritt lässt sich
 nur rückgängig machen, indem der Posten neu angelegt wird. Das verlangt
 eine Begründung, die in der Kassenprüfung erscheint, und ist nur mit dem
 Recht „Buchungen festschreiben“ möglich — wer es nicht hat, sieht, wer es
 stattdessen erledigen kann. Ein Posten mit eigener Herkunft (etwa aus einem
-anderen Vorgang) bietet „Erledigt ohne Zahlung“ nicht an: Was mit ihm
+anderen Vorgang) bietet „Ohne Zahlung erledigen …“ nicht an: Was mit ihm
 geschieht, entscheidet sich an seinem Vorgang selbst.

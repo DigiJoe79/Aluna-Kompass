@@ -17,6 +17,7 @@ import { Notice } from '@/components/notice';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import type { ActionState } from '@/lib/actions';
 import { formatEuro, parseAmount } from '@/lib/finance/amount';
 import { takeCsvHandoff, type CsvHandoff } from '@/lib/finance/csv-handoff';
@@ -307,13 +308,14 @@ export function CsvAssistant({ accounts, initialAccountId, canLoad, reselect = f
           <h3 className="text-[15px] font-semibold">{t('columns.title')}</h3>
           <p className="max-w-prose text-[14px] text-ink-2">{t('columns.text')}</p>
           <div className="overflow-x-auto rounded-md border border-line">
-            <table data-testid="csv-preview" className="w-full text-[13px]">
-              <thead>
-                <tr>
+            <Table data-testid="csv-preview" className="text-[13px]">
+              <TableHeader>
+                <TableRow>
                   {preview.header.map((column, i) => {
                     const ignored = (state.roles[i] ?? 'ignore') === 'ignore';
                     return (
-                      <th key={i} data-column={column} data-ignored={ignored ? 'true' : 'false'} className={cn('space-y-1 border-b border-line bg-surface-2 p-2 text-left align-top', ignored && 'border-dashed text-muted-ink')}>
+                      // `h-auto`: Die Rollenwahl steht im Kopf und ist höher als die Kopfzeile.
+                      <TableHead key={i} data-column={column} data-ignored={ignored ? 'true' : 'false'} className={cn('h-auto space-y-1 py-2 align-top', ignored && 'text-muted-ink')}>
                         <Select
                           aria-label={t('columns.roleLabel', { column })}
                           value={state.roles[i] ?? 'ignore'}
@@ -326,26 +328,26 @@ export function CsvAssistant({ accounts, initialAccountId, canLoad, reselect = f
                           ))}
                         </Select>
                         <p className="font-semibold">{column}</p>
-                      </th>
+                      </TableHead>
                     );
                   })}
-                </tr>
-              </thead>
-              <tbody>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {preview.rows.map((row, r) => (
-                  <tr key={r} className="border-b border-line-2 last:border-0">
+                  <TableRow key={r}>
                     {preview.header.map((column, i) => {
                       const ignored = (state.roles[i] ?? 'ignore') === 'ignore';
                       return (
-                        <td key={i} data-column={column} data-ignored={ignored ? 'true' : 'false'} className={cn('p-2 font-mono', ignored && 'border-x border-dashed border-line text-muted-ink opacity-60')}>
+                        <TableCell key={i} data-column={column} data-ignored={ignored ? 'true' : 'false'} className={cn('font-mono', ignored && 'border-x border-dashed border-line text-muted-ink opacity-60')}>
                           {row[i] ?? ''}
-                        </td>
+                        </TableCell>
                       );
                     })}
-                  </tr>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
           {state.roles.includes('indicator') || state.roles.includes('pending') ? (
             <FormGrid>
