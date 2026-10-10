@@ -41,3 +41,6 @@ export function createDayStore(timeZone: string, now: () => number = Date.now) {
 }
 
 export type DayStore = ReturnType<typeof createDayStore>;
+
+/** Der Vereinstag in `days` Tagen, etwa als Vorgabe einer Wiedervorlage. */
+export const dayInZoneAfter = (days: number, timeZone: string, now: number = Date.now()): string => isoDayInZone(now + days * 86_400_000, timeZone);

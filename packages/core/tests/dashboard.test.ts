@@ -188,3 +188,22 @@ describe('readDashboard', () => {
     expect(res.ok && res.value.map((t) => [t.key, t.error, t.content])).toEqual([['broken', true, null], ['alpha', false, { kind: 'count', count: 1, href: '/alpha' }]]);
   });
 });
+
+describe('tiles that may be absent (Spec Vorschläge § 4)', () => {
+  it('leaves out a tile whose available() is false, in the layout and in the choice', async () => {
+    let on = false;
+    const maybe: DashboardTile = { key: 'maybe', permission: 'test.view', kind: 'count', defaultOn: true, options: z.object({}), available: () => on, load: () => ({ kind: 'count', count: 1, href: null }) };
+    const mod = defineModule({ key: 'test', version: '0', permissions: ['test.view'], dashboardTiles: [maybe] });
+    const deps = createTestDeps({ manifests: [coreModule, mod] });
+    deps.db.insert(schemaSettings).values({ key: 'modules.enabled', value: JSON.stringify(['test']), updatedAt: TEST_NOW }).run();
+    const ctx = ctxWith(['test.view'], insertUser(deps, { name: 'Anna' }));
+    const keys = async () => {
+      const list = await listDashboardTiles(deps, ctx);
+      const read = await readDashboard(deps, ctx);
+      return [list.ok ? list.value.map((t) => t.key) : [], read.ok ? read.value.map((t) => t.key) : []];
+    };
+    expect(await keys()).toEqual([[], []]);
+    on = true;
+    expect(await keys()).toEqual([['maybe'], ['maybe']]);
+  });
+});

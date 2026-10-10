@@ -25,7 +25,7 @@ describe('toActionState', () => {
       return state.status === 'error' ? state.message : null;
     };
     expect(getMsg(conflict('emailTaken', 'x'))).toBe('errors.conflict.emailTaken');
-    expect(getMsg(conflict('insufficientPrivileges', 'Dafür fehlen eigene Rechte: audit.view'))).toBe('errors.conflict.insufficientPrivileges');
+    expect(getMsg(conflict('documentIsDraft', 'x'))).toBe('errors.conflict.documentIsDraft');
     expect(getMsg(conflict('weird', 'Detail'))).toBe('errors.conflict.default:{"detail":"Detail"}');
     expect(getMsg(conflict('stillPublished', 'Der Datensatz ist veröffentlicht. Ziehen Sie ihn erst zurück.'))).toBe('errors.conflict.stillPublished');
     expect(getMsg(conflict('recordHeld', 'Noch gehalten von: Vertrag V-1 (bis 2036-12-31)'))).toBe('errors.conflict.recordHeld:{"detail":"Vertrag V-1 (bis 2036-12-31)"}');

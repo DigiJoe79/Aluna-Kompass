@@ -55,8 +55,8 @@ describe('core document templates', () => {
         title: 'Protokoll',
         filters: {},
         entries: [
-          { occurredAt: '28.09.2026 21:49:27', userName: 'Anna Berger', channel: 'Oberfläche', entityType: 'financeNotice', entityId: '01M3MQP000000000000000000', entityLabel: 'GRD-2026-003', sentence: 'Bescheid „BEH-2026-003“ geändert' },
-          { occurredAt: '28.09.2026 21:50:01', userName: null, channel: 'System', entityType: 'document', entityId: '01M3MRY000000000000000000', sentence: 'Text erkannt' },
+          { occurredAt: '28.09.2026 21:49:27', userName: 'Anna Berger', channel: 'Oberfläche', entity: 'Bescheid · GRD-2026-003', sentence: 'Bescheid „BEH-2026-003“ geändert' },
+          { occurredAt: '28.09.2026 21:50:01', userName: null, channel: 'System', entity: 'Dokument', entityGone: 'gelöscht', sentence: 'Text erkannt' },
         ],
       },
       ctx,
@@ -71,10 +71,10 @@ describe('core document templates', () => {
     // Die Aktion steht als Satz (Spec Protokoll § 4), nicht als Schlüssel.
     expect(typst).toContain('Bescheid „BEH-2026-003“ geändert');
     expect(typst).not.toContain('finance.notice.save');
-    // Der Name des Datensatzes statt seiner ID, wo es einen gibt.
-    expect(typst).toContain('financeNotice · GRD-2026-003');
-    expect(typst).not.toContain('01M3MQP');
-    expect(typst).toContain('document · 01M3MRY000000000000000000');
+    // Das Objekt kommt fertig vom Aufrufer: Typ in Worten und Name, ohne Namen nur der Typ (Joe 2026-10-09).
+    expect(typst).toContain('[Bescheid · GRD-2026-003]');
+    // „gelöscht“ kursiv, damit es nicht wie ein Name aussieht (Designer 2026-10-09).
+    expect(typst).toContain('[Dokument · #emph[gelöscht]]');
     expect(typst).toContain('28.09.2026 21:49:27');
     expect(typst).toContain('Oberfläche');
   });

@@ -71,7 +71,7 @@ Das Änderungsprotokoll lässt sich nicht löschen, deshalb schreibt Kompass
 bei Kontakten keinen Namen, keine Anschrift und keinen Kontaktweg hinein —
 nur, welche Felder sich geändert haben („Anschrift geändert“). Den Namen
 zeigt das Protokoll live aus dem Kontakt, solange es ihn gibt; nach dem
-Löschen steht dort „gelöschter Kontakt“.
+Löschen steht dort „Kontakt · gelöscht“.
 
 Zeigt der Block „keine Frist nachgewiesen“, fehlt dem Kontakt eine Rolle.
 Vergeben Sie eine — sonst weiß Kompass nicht, wie lange er bleiben darf.

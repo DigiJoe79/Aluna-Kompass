@@ -30,6 +30,8 @@ const FORBIDDEN: { pattern: RegExp; word: string }[] = [
   { pattern: /\btransit\b/, word: 'transit' },
   // Die Oberfläche spricht von „Dieselbe Zahlung“ / „Eigene Zahlung“ (finance.import.candidates), nie von Dubletten (Designer 2026-10-09).
   { pattern: /\bDublette\w*/, word: 'Dublette' },
+  // Joe 2026-10-09: Die Oberfläche sagt „Zahlung im Auszug“ wie das Protokoll, nie „Kandidat“.
+  { pattern: /Kandidat\w*/, word: 'Kandidat' },
 ];
 
 /**
@@ -90,6 +92,12 @@ function collectFinanceSurfaceStrings(): Map<string, string> {
     if (key.startsWith('finance_')) strings.set(`audit.sentences.${key}`, value);
   }
 
+  // Und die Typen in der Spalte „Objekt“ (Joe 2026-10-09): „Importlauf“ statt „Auszug“ fiele sonst durch.
+  const entities = (at(messages, ['audit', 'entities']) ?? {}) as Record<string, string>;
+  for (const [key, value] of Object.entries(entities)) {
+    if (key.startsWith('finance')) strings.set(`audit.entities.${key}`, value);
+  }
+
   const fields = (at(messages, ['errors', 'fields']) ?? {}) as Record<string, string>;
   for (const key of FINANCE_ERROR_FIELDS) {
     if (key in fields) strings.set(`errors.fields.${key}`, fields[key]!);
@@ -131,6 +139,16 @@ describe('Verbotsliste der Modellwörter (Finanzen)', () => {
     const strings = collectFinanceSurfaceStrings();
     expect(strings.has('audit.sentences.finance_entry_reverse')).toBe(true);
     expect(findHits(new Map([['audit.sentences.finance_account_setActive', 'Geldkonto stillgelegt']]))).not.toEqual([]);
+  });
+
+  it('sperrt „Kandidat“, auch in Zusammensetzungen', () => {
+    expect(findHits(new Map([['x', 'Für diesen Kontoumsatz-Kandidaten steht die Entscheidung schon fest.']]))).not.toEqual([]);
+  });
+
+  it('prüft auch die Typen der Finanzen in der Spalte „Objekt“', () => {
+    const strings = collectFinanceSurfaceStrings();
+    expect(strings.has('audit.entities.financeImportRun')).toBe(true);
+    expect(findHits(new Map([['audit.entities.financeImportRun', 'Importlauf']]))).not.toEqual([]);
   });
 
   it('kein Modellwort erscheint in den geprüften Namensräumen von de.json', () => {

@@ -6,6 +6,7 @@ import { PageHeader } from '@/components/page-header';
 import { panelFromQuery } from '@/components/panel-nav';
 import { requireSession } from '@/lib/request-context';
 import { SETTINGS_TABS } from '@/lib/settings-fields';
+import { PendingPublishLine } from '@/components/site/pending-publish';
 import { SettingsForm } from './settings-form';
 
 const SETTINGS_TAB_KEYS = SETTINGS_TABS.map((tab) => tab.key);
@@ -21,6 +22,8 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
   );
   return (
     <Page width="standard" header={<PageHeader title={t('title')} />}>
+      {/* Nur der Bereich Verein steht in der Sicht der Webseite (`publishedOrganization`, editLink /admin/settings). */}
+      {panel === 'organization' ? <PendingPublishLine href="/admin/settings" className="-mt-3 mb-4 block" /> : null}
       <SettingsForm
         panel={panel}
         initial={editable}

@@ -1,7 +1,8 @@
 import { existsSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { coreModule, createMediaFolder, readSetting, setModuleEnabled, storeMediaAsset, unwrap, writeSettingInternal } from '@kompass/core';
+import { coreModule, createMediaFolder, readSetting, seedDevelopment, setModuleEnabled, storeMediaAsset, unwrap, writeSettingInternal } from '@kompass/core';
+import { animalsModule } from '@kompass/module-animals';
 import { projectsModule } from '@kompass/module-projects';
 import { createTestDeps, ctxWith, insertUser } from '@kompass/core/testing';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -11,6 +12,7 @@ import { lastSuccessfulPublish, listPublishes } from '../src/services/publishes'
 import { seedSiteDevelopment, sprechenderSlug } from '../src/dev-seed';
 import { NICHT_TEMPLATE } from '../src/review';
 import { activeTemplate } from '../src/service';
+import { BASELINE_ENVIRONMENT, sitePendingChanges } from '../src/pending';
 
 const dirs: string[] = [];
 afterEach(() => {
@@ -279,5 +281,31 @@ describe('seedSiteDevelopment', () => {
     expect(team.filter(Boolean)).toEqual([portrait.id, portrait.id]);
     expect(news.filter(Boolean)).toEqual([scene.id, scene.id]);
     expect([...team, ...news]).not.toContain(other.id);
+  });
+
+  /**
+   * „Nicht publiziert“ soll nach dem Seed etwas zeigen (0.2.10): Ein erfundener Publish der Produktion hält einen
+   * Stand fest, der an wenigen Stellen vom heutigen abweicht — eine Variable (die erste Zahl), ein Eintrag fehlt
+   * (also neu), und je Sicht eines Moduls der erste Datensatz. Die Historie der eigenen Umgebung bleibt, wie sie war.
+   */
+  it('records an invented production publish, so that a few records show as not published after the full seed', async () => {
+    process.env.SITE_TEMPLATE_DIR = BASIS;
+    // Webseite zuerst, wie in der App: Der festgehaltene Stand entsteht trotzdem erst nach den Seeds der anderen Module.
+    const deps = createTestDeps({ manifests: [coreModule, siteModule, projectsModule, animalsModule], locales: ['de', 'en'], env: 'development' });
+    await seedDevelopment(deps);
+    const publish = ctxWith(['site.publish', 'site.view']);
+    const pending = unwrap(await sitePendingChanges(deps, publish));
+    expect(pending.items.map((i) => [i.kind, i.label])).toEqual([
+      ['changed', 'Mitgliedsbeitrag im Jahr (Euro)'],
+      ['changed', 'Winterhilfe für Streuner'],
+      ['added', 'Winterhilfe gestartet: 40 neue Schlafboxen'],
+    ]);
+    const production = unwrap(await listPublishes(deps, publish, { environment: BASELINE_ENVIRONMENT }));
+    expect(production.map((p) => [p.status, p.source.channel])).toEqual([['success', 'ui']]);
+    expect(unwrap(await listPublishes(deps, publish, {})).map((p) => p.status)).toEqual(['success', 'aborted']);
+
+    await seedDevelopment(deps);
+    expect(deps.db.select().from(sitePublishes).all().filter((p) => p.environment === BASELINE_ENVIRONMENT)).toHaveLength(1);
+    expect(unwrap(await sitePendingChanges(deps, publish)).count).toBe(3);
   });
 });

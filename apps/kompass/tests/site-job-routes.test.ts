@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const session = vi.hoisted(() => ({ value: null as unknown }));
-const service = vi.hoisted(() => ({ result: null as unknown, calls: [] as unknown[][] }));
+const service = vi.hoisted(() => ({ result: null as unknown, pending: { ok: false, error: { type: 'forbidden', permission: 'site.publish' } } as unknown, calls: [] as unknown[][] }));
 
 vi.mock('@/lib/request-context', () => ({ optionalSession: async () => session.value }));
 vi.mock('@/lib/deps', () => ({ getDeps: () => ({}) }));
@@ -12,7 +12,7 @@ vi.mock('@kompass/module-site', () => {
     service.calls.push([name, ...args]);
     return service.result;
   };
-  return { SITE_JOB_KINDS: ['preview', 'publish', 'deployCheck'], siteJobOverview: (...args: unknown[]) => (service.calls.push(['overview', ...args]), service.result), siteJobResult: (...args: unknown[]) => (service.calls.push(['result', ...args]), service.result), getPublish: record('publish') };
+  return { SITE_JOB_KINDS: ['preview', 'publish', 'deployCheck'], siteJobOverview: (...args: unknown[]) => (service.calls.push(['overview', ...args]), service.result), siteJobResult: (...args: unknown[]) => (service.calls.push(['result', ...args]), service.result), getPublish: record('publish'), sitePendingChanges: async (...args: unknown[]) => (service.calls.push(['pending', ...args]), service.pending) };
 });
 
 const overview = async () => (await import('@/app/site/job/route')).GET();
@@ -53,6 +53,23 @@ describe('site job routes', () => {
     const body = (await res.json()) as { last: { preview: { error: { code: string; message: string } } } };
     expect(body.last.preview.error).toMatchObject({ code: 'previewFailed' });
     expect(typeof body.last.preview.error.message).toBe('string');
+  });
+
+  it('adds what is not yet published: five names, all addresses, the count (Plan C)', async () => {
+    service.result = { ok: true, value: { running: null, last: { preview: null, publish: null, deployCheck: null } } };
+    const items = [
+      ...Array.from({ length: 6 }, (_, i) => ({ key: `k${i}`, kind: 'changed', label: `Hund ${i}`, href: `/animals/${i}`, recordHref: `/animals/${i}` })),
+      // Hinter den ersten fünf: Die Namen der Variablen kommen trotzdem alle mit (Designer 2026-10-10).
+      { key: 'variables.phone', kind: 'changed', label: 'Telefon', href: '/site/variables', recordHref: '/site/variables' },
+    ];
+    service.pending = { ok: true, value: { since: '2026-09-28T08:00:00.000Z', count: 7, items, truncated: false } };
+    const body = await (await overview()).json();
+    expect(body.pending).toMatchObject({ since: '2026-09-28T08:00:00.000Z', count: 7 });
+    expect(body.pending.items).toHaveLength(5);
+    expect(body.pending.hrefs).toHaveLength(7);
+    expect(body.pending.variables).toEqual(['Telefon']);
+    service.pending = { ok: false, error: { type: 'forbidden', permission: 'site.publish' } };
+    expect((await (await overview()).json()).pending).toBeNull();
   });
 
   it('pass paths=all and log=full on, and ignore other values', async () => {

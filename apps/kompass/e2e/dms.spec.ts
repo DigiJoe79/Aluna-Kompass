@@ -1648,7 +1648,7 @@ test('exports a folder as a bundle', async ({ page }) => {
   await resetDatabase(page, 'seeded');
   await login(page);
   await page.goto('/dms');
-  await page.getByRole('button', { name: 'Bündel exportieren' }).click();
+  await page.getByRole('button', { name: 'Akte exportieren' }).click();
   await page.getByRole('radio', { name: 'Einen Jahrgang' }).check();
   const download = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Bündel herunterladen' }).click();

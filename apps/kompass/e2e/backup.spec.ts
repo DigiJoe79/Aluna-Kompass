@@ -15,7 +15,7 @@ test('exports a backup and imports it back, ending all sessions', async ({ page,
   const confirm = page.getByRole('alertdialog');
   await expect(confirm).toContainText('Bestand der Umgebung „test“ überschreiben?');
   // 5 Kernseed-Personen + Nadja Vogt (F8a Task 7, Rolle „Auslagen einreichen“).
-  await expect(confirm).toContainText('6 Nutzer');
+  await expect(confirm).toContainText('7 Nutzer');
   await expect(confirm.getByRole('button', { name: 'Bestand überschreiben' })).toBeDisabled();
   await confirm.getByLabel('Tippen Sie zur Bestätigung den Umgebungsnamen').fill('test');
   await confirm.getByRole('button', { name: 'Bestand überschreiben' }).click();
@@ -29,7 +29,7 @@ test('exports a backup and imports it back, ending all sessions', async ({ page,
   await loginAsAdmin(page);
   await page.goto('/admin/audit');
   // Neueste zuerst: über dem Import steht der erneute Login nach dem Import. Die Aktion steht als Satz (Spec Protokoll § 4).
-  await expect(page.getByRole('table')).toContainText(/Sicherung vom \d/);
+  await expect(page.getByRole('table')).toContainText(/Backup vom \d/);
   const health = await request.get('/api/health');
   expect(health.ok()).toBe(true);
 });

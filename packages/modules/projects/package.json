@@ -1,6 +1,6 @@
 {
   "name": "@kompass/module-projects",
-  "version": "0.2.9",
+  "version": "0.2.10",
   "private": true,
   "type": "module",
   "exports": {

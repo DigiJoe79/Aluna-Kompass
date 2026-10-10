@@ -11,6 +11,8 @@ const FORBIDDEN: { pattern: RegExp; word: string; instead: string }[] = [
   // Designer 2026-10-09: In der Oberfläche heißt es „Vorlage“ („Vorlage der Webseite“, wo „Dokumentvorlage“ daneben steht).
   // Großgeschrieben, damit der Dateiname `kompass.template.ts` in einer Meldung nicht trifft.
   { pattern: /\bTemplate/, word: 'Template', instead: 'Vorlage' },
+  // Joe 2026-10-09: „Backup“ überall, wie Seite und Handbuch. Wortanfang, damit „Sozialversicherung“ nicht trifft.
+  { pattern: /\bSicherung/, word: 'Sicherung', instead: 'Backup' },
 ];
 
 /** Schlüssel → Grund. Nur, wo das Wort Teil eines Eigennamens oder Produktnamens ist. */
@@ -34,6 +36,11 @@ function hits(texts: Map<string, string>): string[] {
 describe('Wortschatz der Oberfläche', () => {
   it('kein gesperrtes Wort in de.json', () => {
     expect(hits(strings(messages, '', new Map()))).toEqual([]);
+  });
+
+  it('findet „Sicherung“, aber nicht „Sozialversicherung“', () => {
+    expect(hits(new Map([['x', 'Sicherung erstellt']]))).toHaveLength(1);
+    expect(hits(new Map([['x', 'Lohnsteuer oder Sozialversicherung']]))).toEqual([]);
   });
 
   it('findet das Wort, aber nicht den Dateinamen', () => {

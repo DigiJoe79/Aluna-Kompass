@@ -12,8 +12,10 @@ const buttonVariants = cva(
           "border-line-strong bg-surface hover:bg-hover aria-expanded:bg-hover",
         secondary:
           "bg-surface-2 text-ink-2 hover:bg-hover aria-expanded:bg-hover",
+        // Gesperrt ohne Fläche: Ein ghost-Knopf hat keine, die graue Fläche aus der Basis hob ihn hervor statt ihn
+        // auszugrauen (gesperrter Blätterpfeil „7 von 7“, Befund 10). Kein Layout-Test — Einzelstelle, Laufzeit zählt.
         ghost:
-          "hover:bg-hover hover:text-ink aria-expanded:bg-hover aria-expanded:text-ink",
+          "hover:bg-hover hover:text-ink aria-expanded:bg-hover aria-expanded:text-ink disabled:bg-transparent",
         destructive:
           "bg-error-bg text-error hover:bg-[color-mix(in_oklch,var(--color-error-bg),var(--color-error)_12%)]",
         link: "text-link underline-offset-4 hover:underline hover:text-link-hover",

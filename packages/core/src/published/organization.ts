@@ -55,4 +55,6 @@ export const publishedOrganization = definePublishedView({
       },
     ];
   },
+  // Eine Zeile, gepflegt unter Einstellungen → Verein (Standard-Bereich); Name und Link für „nicht publiziert“ (Plan C).
+  editLink: (_deps, row) => ({ href: '/admin/settings', title: row.name }),
 });

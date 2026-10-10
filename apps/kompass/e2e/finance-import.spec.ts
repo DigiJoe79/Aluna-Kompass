@@ -134,10 +134,10 @@ test.describe('finance import', () => {
   test('ein Kandidat steht neben dem vorhandenen Umsatz; „Eigene Zahlung“ übernimmt ihn', async ({ page }) => {
     await loginAsAdmin(page);
     await page.goto('/finance/imports');
-    await expect(page.getByRole('heading', { name: 'Kandidaten' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Zahlungen im Auszug' })).toBeVisible();
     await expect(page.getByText('Bueromaterial').first()).toBeVisible();
     await page.getByRole('button', { name: 'Eigene Zahlung — übernehmen' }).click();
-    await expect(page.getByRole('heading', { name: 'Kandidaten' })).toHaveCount(0);
+    await expect(page.getByRole('heading', { name: 'Zahlungen im Auszug' })).toHaveCount(0);
   });
 
   test('ein Lauf klappt auf und zeigt seine Kontoumsätze, und klappt wieder zu', async ({ page }) => {
@@ -230,7 +230,7 @@ test.describe('finance import', () => {
     await expect(page.getByTestId('statement-file-input')).toHaveCount(0);
     await expect(page.getByRole('button', { name: 'Verwerfen' })).toHaveCount(0);
     // Der Kandidat ist sichtbar (lesend, finance.read genügt), aber nicht entscheidbar.
-    await expect(page.getByRole('heading', { name: 'Kandidaten' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Zahlungen im Auszug' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Eigene Zahlung — übernehmen' })).toHaveCount(0);
     await expect(page.getByRole('button', { name: 'Dieselbe Zahlung — nicht übernehmen' })).toHaveCount(0);
   });

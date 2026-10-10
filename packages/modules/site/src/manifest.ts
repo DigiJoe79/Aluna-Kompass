@@ -1,11 +1,12 @@
 import { defineModule, type ModuleManifest, type NavigationItem } from '@kompass/core';
 import { SITE_DASHBOARD_TILES } from './dashboard';
 import { SITE_MCP_TOOLS } from './mcp-tools';
+import { siteRecordLabels } from './record-labels';
 import { siteMediaReferences } from './references';
 import { SITE_SETTINGS } from './settings';
 import { activeTemplate } from './service';
 import { siteSetTranslations, siteTranslatables } from './translations';
-import { seedSiteDevelopment } from './dev-seed';
+import { seedSiteDevelopment, seedSitePublishedState } from './dev-seed';
 
 export const SITE_PERMISSIONS = ['site.view', 'site.manage', 'site.publish'] as const;
 
@@ -54,6 +55,7 @@ export const siteModule: ModuleManifest = defineModule({
   navigationFor: siteNavigationFor,
   mcpTools: SITE_MCP_TOOLS,
   seed: seedSiteDevelopment,
+  seedLast: seedSitePublishedState,
   mediaReferences: siteMediaReferences,
   // Die Sprachen des eingelesenen Templates: Ohne sie filtert der Export Inhalte stillschweigend weg.
   requiredLocales: (deps) => activeTemplate(deps)?.schema.locales ?? [],
@@ -92,6 +94,7 @@ export const siteModule: ModuleManifest = defineModule({
       auditAction: 'site.entry.delete',
     },
   ],
+  recordLabels: siteRecordLabels,
   translatables: siteTranslatables,
   setTranslations: siteSetTranslations,
   files: true,

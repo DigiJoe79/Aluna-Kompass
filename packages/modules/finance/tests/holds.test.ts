@@ -163,7 +163,8 @@ describe('what finance holds, and until when', () => {
     const manage = ctxWith(['contacts.manage'], f.userId);
     const result = await deleteContact(f.deps, manage, { id: f.donor.id });
     expect(result.ok).toBe(false);
-    if (!result.ok) expect((result.error as { message: string }).message).toContain(`Buchung ${entry.number}`);
+    // Die haltenden Einträge stehen als Werte, der Satz kommt aus der Sprachdatei (Backlog 55).
+    if (!result.ok) expect((result.error as { params?: { holders?: string } }).params?.holders).toContain(`Buchung ${entry.number}`);
   });
 
   it('answers nothing for entity types it does not know, and never throws', async () => {

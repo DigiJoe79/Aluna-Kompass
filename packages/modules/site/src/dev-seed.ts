@@ -2,11 +2,13 @@ import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { type CallContext, type Deps, newId, readLocales, readSetting, schema as core, SEED_PHOTO_FOLDER, unwrap, writeSettingInternal } from '@kompass/core';
 import { siteTemplateDir } from './env';
+import { BASELINE_ENVIRONMENT, currentContentManifest } from './pending';
+import type { ContentManifest } from './public-content';
 import { widgetOf } from './field-schema';
 import { createEntry, setEntryPublished } from './entries';
 import { siteEntries, sitePublishes, siteValues } from './schema';
 import { activeTemplate, applyTemplateSync } from './service';
-import { recordPublish } from './services/publishes';
+import { lastSuccessfulPublish, recordPublish } from './services/publishes';
 import { setValues } from './values';
 import type { FieldSchema } from './types';
 
@@ -125,6 +127,57 @@ export async function seedSiteDevelopment(deps: Deps, ctx: CallContext): Promise
       }
     }
   }
+}
+
+/**
+ * Ein erfundener Publish der **Produktion** mit festgehaltenem Stand, damit „nicht publiziert“ in der Entwicklung, in
+ * der E2E-Suite und auf den Handbuch-Bildern etwas zeigt (0.2.10). Produktion, weil nur deren Stand als Webseite gilt
+ * (`BASELINE_ENVIRONMENT`); publiziert wird dabei nichts, und die Historie der eigenen Umgebung bleibt, wie sie ist.
+ * Läuft als `seedLast`: Der Stand rechnet aus den Tieren und Projekten der anderen Module, deren Seeds erst nach
+ * diesem Modul laufen. Abgeleitet vom heutigen öffentlichen Stand und an wenigen Stellen bewusst anders — ohne einen
+ * Namen aus dem Template: eine Variable (die erste Zahl, sonst die erste), der erste Eintrag einer Sammlung fehlt
+ * (also neu), und je Sicht eines Moduls der erste Datensatz. Die Sicht des Vereinsstamms bleibt, wie sie ist.
+ */
+export async function seedSitePublishedState(deps: Deps, ctx: CallContext): Promise<void> {
+  if (lastSuccessfulPublish(deps, BASELINE_ENVIRONMENT)) return;
+  const current = currentContentManifest(deps);
+  const template = activeTemplate(deps);
+  if (!current || !template) return;
+  const keys = Object.keys(current);
+  const variables = keys.filter((k) => k.startsWith('variables.'));
+  const number = variables.find((k) => widgetOf(template.schema.variables[k.slice('variables.'.length)]!) === 'number');
+  const changed = [number ?? variables[0], ...firstPerView(keys)].filter((k): k is string => k !== undefined);
+  const added = keys.find((k) => k.startsWith('entries.'));
+  const baseline: ContentManifest = {};
+  for (const [key, item] of Object.entries(current)) {
+    if (key === added) continue;
+    baseline[key] = changed.includes(key) ? { ...item, hash: `beispiel-${item.hash}` } : item;
+  }
+  const daysAgo = (days: number) => new Date(deps.clock.now().getTime() - days * 86_400_000).toISOString();
+  // Über die Oberfläche wie das Beispiel der eigenen Umgebung: Der Kanal `system` des Seeds hieße in der Historie „System (Neustart)“.
+  recordPublish(deps, { ...ctx, channel: 'ui', apiTokenId: null }, {
+    environment: BASELINE_ENVIRONMENT,
+    startedAt: daysAgo(10),
+    status: 'success',
+    contentHash: 'beispiel',
+    diff: { changed: [], added: [], removed: [] },
+    fileManifest: {},
+    log: 'Beispiel: Stand der Produktion.',
+    summary: 'Beispiel-Publish der Produktion',
+    contentManifest: baseline,
+  });
+}
+
+/** Je Sicht eines Moduls der erste Datensatz (Schlüssel `views.<sicht>:<adresse>`); `organization` ist der Vereinsstamm des Kerns. */
+function firstPerView(keys: readonly string[]): string[] {
+  const seen = new Set<string>();
+  return keys.filter((k) => {
+    if (!k.startsWith('views.')) return false;
+    const view = k.slice('views.'.length).split(':')[0]!;
+    if (view === 'organization' || seen.has(view)) return false;
+    seen.add(view);
+    return true;
+  });
 }
 
 /**

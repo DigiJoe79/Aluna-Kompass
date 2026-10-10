@@ -1,6 +1,7 @@
 import { apiTokenNamesFor, isoNow, newId, notFound, ok, recordAudit, requirePermission, schema, userNamesFor, validate, type CallContext, type Deps, type Result } from '@kompass/core';
 import { and, count, desc, eq, inArray, sql } from 'drizzle-orm';
 import { z } from 'zod';
+import type { ContentManifest } from '../public-content';
 import { sitePublishes } from '../schema';
 import { tailLog, trimPaths, type PathList } from './job-view';
 
@@ -136,7 +137,10 @@ export function lastPublish(deps: Deps, environment: string): PublishRecord | nu
   return deps.db.select().from(sitePublishes).where(eq(sitePublishes.environment, environment)).orderBy(desc(sitePublishes.startedAt)).get() ?? null;
 }
 
-export function recordPublish(deps: Deps, ctx: CallContext, input: { environment: string; startedAt: string; status: 'success' | 'failed' | 'aborted'; contentHash: string; diff: PublishDiff; fileManifest: Record<string, string>; log: string; summary: string }): PublishRecord {
+export function recordPublish(deps: Deps, ctx: CallContext, input: { environment: string; startedAt: string; status: 'success' | 'failed' | 'aborted'; contentHash: string; diff: PublishDiff; fileManifest: Record<string, string>; log: string; summary: string;
+  /** Der öffentliche Stand, der mit diesem Publish auf die Webseite ging (Plan C); nur bei Erfolg festgehalten. */
+  contentManifest?: ContentManifest | null;
+}): PublishRecord {
   return deps.db.transaction((tx) => {
     const id = newId();
     tx.insert(sitePublishes).values({
@@ -153,6 +157,7 @@ export function recordPublish(deps: Deps, ctx: CallContext, input: { environment
       triggeredByUserId: ctx.userId,
       log: input.log.slice(-20_000),
       fileManifest: JSON.stringify(input.fileManifest),
+      contentManifest: input.status === 'success' && input.contentManifest ? JSON.stringify(input.contentManifest) : null,
     }).run();
     recordAudit(tx, deps, ctx, {
       action: 'site.publish',

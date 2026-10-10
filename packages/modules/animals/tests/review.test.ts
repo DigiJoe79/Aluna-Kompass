@@ -1,7 +1,7 @@
 import { coreModule, schema, setSetting, storeMediaAsset, unwrap } from '@kompass/core';
 import { auditEntry, createTestDeps, ctxWith, insertUser } from '@kompass/core/testing';
 import { describe, expect, it } from 'vitest';
-import { animalsModule, confirmAnimalReview, createAnimal, getAnimal, publishedAnimals, requestAnimalReview, setAnimalPhotos, setAnimalPublished, setAnimalStatus, setAnimalStory, updateAnimal } from '../src';
+import { animalsModule, REVIEW_ON_MCP_WRITE_KEY, confirmAnimalReview, createAnimal, getAnimal, publishedAnimals, requestAnimalReview, setAnimalPhotos, setAnimalPublished, setAnimalStatus, setAnimalStory, updateAnimal } from '../src';
 import { animalsSetTranslations } from '../src/translations';
 
 /**
@@ -14,6 +14,8 @@ const deps = async () => {
   const d = createTestDeps({ manifests: [coreModule, animalsModule] });
   insertUser(d, { id: 'USER-TEST' });
   await setSetting(d, ctxWith(['settings.manage']), { key: 'i18n.locales', value: ['de', 'en'] });
+  // Seit 0.2.10 eine Einstellung, Vorgabe aus (Spec Vorschlags-Eingang § 4); diese Tests prüfen das Verhalten mit „an“.
+  await setSetting(d, ctxWith(['settings.manage']), { key: REVIEW_ON_MCP_WRITE_KEY, value: true });
   return d;
 };
 const manage = ctxWith(['animals.manage', 'animals.view', 'media.upload']);
@@ -23,6 +25,15 @@ const chiara = { name: 'Chiara', sex: 'female' as const, birthText: { de: '16.02
 const story = { beforeAssetId: null, afterAssetId: null, quote: { de: 'Zitat', en: '' }, family: 'Familie M.', adoptedYear: 2026 };
 
 describe('animal review marker', () => {
+  it('with the setting off (the default), writing through mcp sets no marker; an explicit request still does', async () => {
+    const d = createTestDeps({ manifests: [coreModule, animalsModule], locales: ['de', 'en'] });
+    insertUser(d, { id: 'USER-TEST' });
+    const a = unwrap(await createAnimal(d, mcp, chiara));
+    expect(a.reviewRequestedAt).toBeNull();
+    expect(unwrap(await updateAnimal(d, mcp, { id: a.id, name: 'Neu' })).reviewRequestedAt).toBeNull();
+    expect(unwrap(await requestAnimalReview(d, mcp, { id: a.id, note: 'bitte ansehen' })).reviewRequestedAt).not.toBeNull();
+  });
+
   it('a new animal carries no review marker, and the published view never shows one', async () => {
     const d = await deps();
     const a = unwrap(await createAnimal(d, manage, chiara));

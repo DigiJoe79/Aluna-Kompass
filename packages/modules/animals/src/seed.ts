@@ -1,6 +1,7 @@
 import { SEED_PHOTO_FOLDER, seedPhotoIds, unwrap, writeSettingInternal, type CallContext, type Deps, type LocalizedText } from '@kompass/core';
 import { animals } from './schema';
 import { PROFILE_URL_KEY } from './settings';
+import { seedProposals } from './proposals/seed';
 import { createAnimal, requestAnimalReview, setAnimalPhotos, setAnimalPublished, setAnimalStatus, setAnimalStory } from './service';
 
 interface ExampleStory {
@@ -154,7 +155,11 @@ const EXAMPLE_ANIMALS: ExampleAnimal[] = [
     isSponsorable: true,
     traits: { de: ['neugierig', 'verspielt'], en: ['curious', 'playful'] },
     summary: { de: 'Junger Rüde, frisch im Shelter angekommen.', en: 'Young boy, newly arrived at the shelter.' },
-    body: { de: 'Pelle ist neu angelegt und wartet darauf, dass jemand Texte und Fotos ansieht.', en: 'Pelle was newly created and waits for someone to look at texts and photos.' },
+    // Mehrere Absätze: Die Beispielquelle schlägt dazu eine Änderung an wenigen Stellen vor (Wortunterschied der Prüfseite).
+    body: {
+      de: 'Pelle wurde im Frühjahr mit seinen Geschwistern an einer Landstraße gefunden und lebt seit drei Wochen im Shelter. Er ist ein neugieriger, fröhlicher Junghund, der jeden Besuch am Zaun begrüßt und sofort wissen will, was in den Taschen steckt.\n\nMit anderen Hunden versteht sich Pelle gut, im Auslauf spielt er am liebsten mit den jüngeren. An der Leine läuft er noch unsicher und zieht, wenn ihn etwas interessiert. Das Team vor Ort übt mit ihm kurze Runden auf dem Gelände.\n\nPelle ist geimpft und gechippt. Für ihn suchen wir Menschen, die Freude an einem jungen Hund haben und mit ihm eine Hundeschule besuchen möchten.',
+      en: 'Pelle was found with his siblings by a country road in spring and has been at the shelter for three weeks. He is a curious, cheerful young dog who greets every visitor at the fence and wants to know right away what is in their pockets.\n\nPelle gets on well with other dogs and likes to play with the younger ones in the run. On the lead he is still unsure and pulls when something catches his interest. The team on site practises short walks with him around the grounds.\n\nPelle is vaccinated and microchipped. We are looking for people who enjoy a young dog and would like to attend a dog school with him.',
+    },
     status: 'lookingForHome' as const,
     published: false,
     review: 'neu',
@@ -183,9 +188,13 @@ const EXAMPLE_ANIMALS: ExampleAnimal[] = [
   },
 ];
 
-/** Legt die Beispieltiere an, sofern noch keine Tiere existieren. */
+/** Legt die Beispieltiere an, sofern noch keine Tiere existieren, und die Beispielvorschläge, sofern es noch keine gibt. */
 export async function seedAnimals(deps: Deps, ctx: CallContext): Promise<void> {
-  if (deps.db.select({ id: animals.id }).from(animals).all().length > 0) return;
+  if (deps.db.select({ id: animals.id }).from(animals).all().length === 0) await seedExampleAnimals(deps, ctx);
+  await seedProposals(deps, ctx);
+}
+
+async function seedExampleAnimals(deps: Deps, ctx: CallContext): Promise<void> {
   const photosOf = (prefix: string) => seedPhotoIds(deps, SEED_PHOTO_FOLDER.animals, prefix);
   for (const a of EXAMPLE_ANIMALS) {
     const created = unwrap(

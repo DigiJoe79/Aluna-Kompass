@@ -283,6 +283,33 @@ Sonst ist nichts von Hand zu tun. Wer sich wundert:
   Eingabemaske ordnen; ohne sie bekommt jedes Feld eine Breite nach seinem Typ.
 - MCP-Clients sind nicht betroffen.
 
+### Von 0.2.9 auf 0.2.10
+
+Die Fassung 0.2.10 bringt eine Migration mit (`0007`): Tabellen für Vorschläge
+von Quellen und ihre Herkunft am Tier sowie der festgehaltene Stand der Webseite
+je Publish. `/api/health` meldet danach `migrationCount: 8`. Vor dem Update
+gehört wie immer ein Backup (Schritt 1) dazu.
+
+Nach dem Update:
+
+- **Vormerken zur Prüfung.** Es ist jetzt eine Einstellung und standardmäßig
+  aus. Wer es weiter nutzen will: Einstellungen → Tiere → „Schreiben über MCP
+  zur Prüfung vormerken“ einschalten (MCP: `animals.review.onMcpWrite`).
+  Schon gesetzte Merker bleiben stehen.
+- **Vorschläge von Quellen** sind aus, bis Sie sie einschalten. Wer einen
+  Dienst anbinden will: Einstellungen → Tiere → „Vorschläge von Quellen
+  annehmen“ einschalten, den Ordner für Fotos aus Vorschlägen wählen, nach
+  Wunsch „Vorschläge im Stapel durchgehen“; dem Nutzer des Dienstes eine Rolle
+  mit dem Recht „Tiere vorschlagen“ (`animals.propose`) geben. Siehe
+  [Vorschläge prüfen](tiere-vorschlaege.md).
+
+Wer sich wundert:
+
+- **„nicht publiziert“ erscheint erst nach dem ersten Publish.** Kompass
+  vergleicht mit dem Stand, den ein Publish der Produktion festgehalten hat;
+  Publishes von vor dem Update haben keinen. Bis zum ersten Publish nach dem
+  Update zeigt die Kopfzeile nichts.
+
 ### Von 0.2.8 auf 0.2.9
 
 Die Fassung 0.2.9 bringt eine Migration mit (`0006`): Das Änderungsprotokoll

@@ -49,7 +49,7 @@ nicht mehr unter Einstellungen.
   „Verschieben nach…“, „Als Paket exportieren“ (nur, wenn Sie auch exportieren
   dürfen; [siehe unten](#ordner-und-jahrgänge-als-bündel)) und „Löschen“.
   Das Menü gibt es nur mit „Akte verwalten“; wer nur exportieren darf, nutzt
-  den Knopf „Bündel exportieren“ im Seitenkopf.
+  den Knopf „Akte exportieren“ im Seitenkopf.
 - **Löschen** — nur leere Ordner, ohne Rückfrage. Liegen Dokumente oder
   Unterordner darin, ist der Eintrag gesperrt und nennt den Grund.
 - **Verschieben nach…** — öffnet „Ordner wählen“ mit dem Baum; Sie wählen das
@@ -144,7 +144,7 @@ der nie festgeschrieben wurde, und auch das steht im Änderungsprotokoll.
 
 ## Ordner und Jahrgänge als Bündel
 
-Für die Kassenprüfung, den Steuerberater oder das eigene Archiv lässt sich ein Teil der Akte als ZIP-Datei herunterladen: im Seitenkopf der Akte „Bündel exportieren“ — oder, mit dem Recht „Akte verwalten“, am Ordner im Menü „Als Paket exportieren“ —, dann den gewählten Ordner (samt Unterordnern) oder einen Jahrgang — das Jahr des Dokumentdatums. Sie brauchen dafür das Recht „Dokumente exportieren“.
+Für die Kassenprüfung, den Steuerberater oder das eigene Archiv lässt sich ein Teil der Akte als ZIP-Datei herunterladen: im Seitenkopf der Akte „Akte exportieren“ — oder, mit dem Recht „Akte verwalten“, am Ordner im Menü „Als Paket exportieren“ —, dann den gewählten Ordner (samt Unterordnern) oder einen Jahrgang — das Jahr des Dokumentdatums. Sie brauchen dafür das Recht „Dokumente exportieren“.
 
 Im Bündel liegen die PDFs unter ihrer Nummer, ein **Inhaltsverzeichnis als PDF** und dasselbe als **CSV** mit Nummer, Datum, Art, Betreff, Prüfsumme (SHA-256) und Status.
 

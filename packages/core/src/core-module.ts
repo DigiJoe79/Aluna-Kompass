@@ -1,4 +1,5 @@
 import { CORE_AUDIT_ACTIONS } from './audit/actions';
+import { coreRecordLabels } from './audit/record-labels';
 import { CORE_DASHBOARD_TILES } from './dashboard/tiles';
 import { CORE_DELETION_RULES } from './deletion-policy';
 import { coreRecordReferences } from './deletion-guards';
@@ -16,6 +17,7 @@ export const coreModule = defineModule({
   publishedViews: [publishedOrganization],
   mediaReferences: coreMediaReferences,
   recordReferences: coreRecordReferences,
+  recordLabels: coreRecordLabels,
   deletionRules: CORE_DELETION_RULES,
   auditActions: CORE_AUDIT_ACTIONS,
   dashboardTiles: CORE_DASHBOARD_TILES,

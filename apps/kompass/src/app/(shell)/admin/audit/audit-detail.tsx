@@ -8,9 +8,14 @@ import { CopyButton } from '@/components/copy-button';
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
 import { auditActionLabel } from '@/lib/audit-actions';
 import { changedFieldsOf, diffFields } from '@/lib/audit-diff';
+import type { AuditObject } from '@/lib/audit-entities';
+import { AuditObjectLabel } from './audit-object';
 
-/** `sentence`: der Satz aus `auditSentences`; `null` (alter Eintrag, Aktion ohne Satz) → keine Zeile „Was geschah“. */
-export function AuditDetail({ entry, sentence }: { entry: AuditEntry; sentence: string | null }) {
+/**
+ * `sentence`: der Satz aus `auditSentences`; `null` (alter Eintrag, Aktion ohne Satz) → keine Zeile „Was geschah“.
+ * `object`: das Objekt wie in der Spalte der Tabelle (`auditObject`); Typ und ID technisch stehen am Ende.
+ */
+export function AuditDetail({ entry, sentence, object }: { entry: AuditEntry; sentence: string | null; object: AuditObject }) {
   const t = useTranslations('audit.detail');
   const a = useTranslations('audit');
   const f = useTranslations('audit.filters.channels');
@@ -85,11 +90,21 @@ export function AuditDetail({ entry, sentence }: { entry: AuditEntry; sentence: 
                 <dd>{sentence}</dd>
               </>
             ) : null}
+            <dt className="text-muted-ink">{t('object')}</dt>
+            <dd>
+              <AuditObjectLabel object={object} />
+            </dd>
             {/* Nebeninformation für Vorstand und Kassenprüfung, deshalb am Ende (Designer 2026-10-09). */}
             <dt className="text-muted-ink">{t('actionKey')}</dt>
             <dd className="flex flex-wrap items-center gap-2">
               <span className="font-mono">{entry.action}</span>
               <CopyButton value={entry.action} label={t('actionKey')} />
+            </dd>
+            {/* Die ID gehört nicht in die Spalte „Objekt“, sondern hierher (Joe 2026-10-09). */}
+            <dt className="text-muted-ink">{t('objectKey')}</dt>
+            <dd className="flex flex-wrap items-center gap-2">
+              <span className="font-mono wrap-anywhere">{entry.entityId ? `${entry.entityType} · ${entry.entityId}` : entry.entityType}</span>
+              {entry.entityId ? <CopyButton value={entry.entityId} label={t('objectKey')} /> : null}
             </dd>
           </dl>
           <p className="mt-6 text-[12px] text-muted-ink">{t('immutable')}</p>

@@ -5,7 +5,7 @@ import { useTranslations } from 'next-intl';
 import { createContext, useContext, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { toast } from 'sonner';
 import { nextPollDelay, transitions } from '@/lib/site-job-poll';
-import type { OverviewView } from '@/lib/site-job-view';
+import type { OverviewView, PendingView } from '@/lib/site-job-view';
 import { panelHref } from '@/components/panel-nav';
 
 export interface SiteJobStatus {
@@ -13,12 +13,14 @@ export interface SiteJobStatus {
   enabled: boolean;
   running: OverviewView['running'];
   last: OverviewView['last'] | null;
+  /** Was noch nicht publiziert ist (Plan C); null ohne Stand. */
+  pending?: PendingView | null;
   /** Nach einem Start: sofort abfragen und den Lauf als „begleitet“ merken. */
   track(runId: string): void;
   refresh(): void;
 }
 
-const OFF: SiteJobStatus = { enabled: false, running: null, last: null, track: () => {}, refresh: () => {} };
+const OFF: SiteJobStatus = { enabled: false, running: null, last: null, pending: null, track: () => {}, refresh: () => {} };
 
 /**
  * Der Abfragestand lebt in einem Store, nicht im Context-Wert: Der Context
@@ -47,7 +49,7 @@ export function useSiteJobStatus(): SiteJobStatus {
   const source = store ?? NO_STORE;
   const state = useSyncExternalStore(source.subscribe, source.get, serverSnapshot);
   return useMemo(
-    () => fixed ?? (store ? { enabled: true, running: state?.running ?? null, last: state?.last ?? null, track: store.track, refresh: store.refresh } : OFF),
+    () => fixed ?? (store ? { enabled: true, running: state?.running ?? null, last: state?.last ?? null, pending: state?.pending ?? null, track: store.track, refresh: store.refresh } : OFF),
     [fixed, store, state],
   );
 }
@@ -135,6 +137,16 @@ export function SiteJobProvider({ children }: { children: ReactNode }) {
       document.removeEventListener('visibilitychange', onVisible);
     };
   }, [store]);
+
+  // Ein Seitenwechsel folgt oft auf ein Speichern: Die Kopfzeile fragt dann gleich nach, statt bis zu 30 s zu warten (Plan C).
+  const firstPath = useRef(true);
+  useEffect(() => {
+    if (firstPath.current) {
+      firstPath.current = false;
+      return;
+    }
+    pollNow.current();
+  }, [pathname]);
 
   return <SiteJobStoreContext.Provider value={store}>{children}</SiteJobStoreContext.Provider>;
 }

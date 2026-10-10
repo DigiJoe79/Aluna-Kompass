@@ -81,7 +81,7 @@ test.describe('animals', () => {
     await expect(page.getByRole('status')).toContainText('Gespeichert');
     await expect(page.getByText('noch nicht gespeichert')).toHaveCount(0);
     // Zweites Speichern ohne Neuladen: Die Maske trägt schon den neuen Versionsstempel.
-    await page.locator('[data-testid="animal-photo"]').nth(1).getByRole('button', { name: 'Hauptfoto' }).click();
+    await page.locator('[data-testid="animal-photo"]').nth(1).getByRole('button', { name: 'Als Hauptfoto' }).click();
     await page.getByRole('button', { name: 'Speichern' }).click();
     await expect(page.getByText('noch nicht gespeichert')).toHaveCount(0);
     await expect(page.getByText('wurde inzwischen geändert')).toHaveCount(0);
@@ -192,7 +192,7 @@ test.describe('animals', () => {
     await page.locator('[name="summary.de"]').fill('Von Hand geprüfter Kurztext.');
     const photos = page.getByTestId('animal-photo');
     await expect(photos).toHaveCount(3);
-    await photos.nth(1).getByRole('button', { name: 'Hauptfoto' }).click();
+    await photos.nth(1).getByRole('button', { name: 'Als Hauptfoto' }).click();
     await photos.last().getByRole('button', { name: 'Entfernen' }).click();
     await page.getByRole('button', { name: 'Geprüft und weiter' }).click();
 
@@ -282,6 +282,9 @@ test.describe('animals', () => {
 
   test('the story tab is locked until the dog is adopted', async ({ page }) => {
     await page.goto('/animals/new');
+    // Ohne gespeicherten Hund gibt es keine Geschichte: Der Reiter fehlt, statt ausgegraut zu wirken (Befund 10).
+    await expect(page.getByRole('tab', { name: 'Texte und Fotos' })).toBeVisible();
+    await expect(page.getByRole('tab', { name: 'Geschichte' })).toHaveCount(0);
     await page.getByLabel('Name').fill('Bruno');
     await page.getByLabel('Geschlecht').selectOption('male');
     await page.getByRole('button', { name: 'Speichern' }).click();

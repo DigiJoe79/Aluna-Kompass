@@ -36,4 +36,11 @@ describe('ViewTabs', () => {
     expect(nav.innerHTML).toContain('overflow-x-auto');
     expect(nav.innerHTML).not.toContain('flex-wrap');
   });
+
+  it('Zahl in Violett für Arbeit einer Maschine (tone agent, Board Vorschläge 1d)', () => {
+    render(<ViewTabs label="Ansichten" tabs={[{ key: 'p', label: 'Vorschläge', href: '/p', count: 6, tone: 'agent', testId: 'tab-p' }, { key: 'a', label: 'Alle', href: '/a', count: 3, testId: 'tab-a' }, { key: 'z', label: 'Null', href: '/z', count: 0, tone: 'agent', testId: 'tab-z' }]} current="p" />);
+    expect(within(screen.getByTestId('tab-p')).getByText('6').className).toContain('text-agent');
+    expect(within(screen.getByTestId('tab-a')).getByText('3').className).toContain('text-badge-ink');
+    expect(screen.getByTestId('tab-z').textContent).toBe('Null');
+  });
 });

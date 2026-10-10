@@ -41,3 +41,12 @@ describe('rewritePreviewHtml', () => {
     expect(rewritePreviewHtml('<a href="aktuelles/">')).toContain('href="aktuelles/"');
   });
 });
+
+describe('rewritePreviewHtml with another prefix (Vorschau einer Prüfung)', () => {
+  it('points absolute addresses at the given prefix', () => {
+    const html = rewritePreviewHtml('<head><img src="/images/a.webp" srcset="/images/a-480.webp 480w, /images/a-960.webp 960w">', '/animals/proposal-preview/k1/');
+    expect(html).toContain('src="/animals/proposal-preview/k1/images/a.webp"');
+    expect(html).toContain('srcset="/animals/proposal-preview/k1/images/a-480.webp 480w, /animals/proposal-preview/k1/images/a-960.webp 960w"');
+    expect(html).toContain('<base href="/animals/proposal-preview/k1/">');
+  });
+});

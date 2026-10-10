@@ -9,20 +9,19 @@ describe('auditExportEntries', () => {
     const rows = auditExportEntries([entry, { ...entry, id: 'E2', channel: 'system', entityId: 'WEG' }, { ...entry, id: 'E3', entityId: null }], {
       timeZone: 'Europe/Berlin',
       channels: { ui: 'Oberfläche', mcp: 'MCP', system: 'System' },
-      labels: { E1: { state: 'ok', label: 'GRD-2026-003' }, E2: { state: 'missing' } },
-      deleted: (type) => `gelöscht (${type})`,
+      // Das Objekt wie in der Spalte der Ansicht (`auditObject`): Typ in Worten, Name oder nichts — nie die ID.
+      entity: (e) => ({ E1: { word: 'Bescheid', name: 'GRD-2026-003', deleted: null }, E2: { word: 'Bescheid', name: null, deleted: 'gelöscht' } })[e.id] ?? { word: 'Bescheid', name: null, deleted: null },
       sentences: { E1: 'Bescheid „BEH-2026-003“ geändert', E2: null },
       actionLabel: (action) => (action === 'finance.notice.save' ? 'Bescheid gespeichert' : action),
     });
-    expect(rows[0]).toEqual({ occurredAt: '28.09.2026 21:49:27', userName: 'Anna Berger', channel: 'Oberfläche', entityType: 'financeNotice', entityId: '01M3MQP', entityLabel: 'GRD-2026-003', sentence: 'Bescheid „BEH-2026-003“ geändert' });
+    expect(rows[0]).toEqual({ occurredAt: '28.09.2026 21:49:27', userName: 'Anna Berger', channel: 'Oberfläche', entity: 'Bescheid · GRD-2026-003', entityGone: null, sentence: 'Bescheid „BEH-2026-003“ geändert' });
     // Ohne Satz (alter Eintrag, Aktion ohne Satz) steht der Klartext — nie der Schlüssel.
-    expect(rows[1]).toMatchObject({ channel: 'System', entityLabel: 'gelöscht (financeNotice)', sentence: 'Bescheid gespeichert' });
-    expect(rows[2]).toMatchObject({ sentence: 'Bescheid gespeichert' });
-    expect(rows[2]).toMatchObject({ entityId: null, entityLabel: null });
+    expect(rows[1]).toMatchObject({ channel: 'System', entity: 'Bescheid', entityGone: 'gelöscht', sentence: 'Bescheid gespeichert' });
+    expect(rows[2]).toMatchObject({ entity: 'Bescheid', sentence: 'Bescheid gespeichert' });
   });
 
-  it('keeps an unknown channel and a record without a label as they are', () => {
-    const [row] = auditExportEntries([{ ...entry, channel: 'neu' }], { timeZone: 'UTC', channels: {}, labels: {}, deleted: () => '', sentences: {}, actionLabel: (action) => action });
-    expect(row).toMatchObject({ occurredAt: '28.09.2026 19:49:27', channel: 'neu', entityLabel: null, entityId: '01M3MQP' });
+  it('keeps an unknown channel as it is', () => {
+    const [row] = auditExportEntries([{ ...entry, channel: 'neu' }], { timeZone: 'UTC', channels: {}, entity: () => ({ word: 'Bescheid', name: null, deleted: null }), sentences: {}, actionLabel: (action) => action });
+    expect(row).toMatchObject({ occurredAt: '28.09.2026 19:49:27', channel: 'neu', entity: 'Bescheid' });
   });
 });

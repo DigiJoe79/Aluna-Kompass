@@ -89,7 +89,8 @@ test.describe('settings', () => {
     await page.reload();
     await expect(page.getByLabel('Vereinsname')).toHaveValue('Aluna Musterverein e.V.');
     await page.goto('/admin/audit');
-    await expect(page.getByRole('row', { name: /organization.name/ }).first()).toBeVisible();
+    // Die Einstellung mit ihrer Beschriftung, nicht mit ihrem Schlüssel (Joe 2026-10-09).
+    await expect(page.getByRole('row', { name: /Einstellung · Vereinsname/ }).first()).toBeVisible();
   });
 
   test('behält Änderungen über einen Reiterwechsel und speichert alle zusammen', async ({ page }) => {

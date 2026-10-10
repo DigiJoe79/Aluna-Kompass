@@ -9,10 +9,13 @@ dass Kompass Rechenschaft ablegen kann.
 
 Je Eintrag Zeitpunkt, Nutzer, Kanal (Oberfläche, MCP oder System), die
 Aktion in Worten („Rolle „Vorstand“ an Erika Muster vergeben“) und das
-Objekt. Personen stehen dabei mit ihrem heutigen Namen; ist eine Person
-gelöscht, steht nur die Aktion. Ein Klick öffnet den Feld-Diff: links
-vorher, rechts nachher, geänderte Felder hervorgehoben; am Ende steht die
-Aktion in technischer Schreibweise zum Kopieren. Filter nach Text, Nutzer,
+Objekt („Nutzer · Erika Muster“, „Einstellung · Vereinsname“; wo es keinen
+Namen gibt, nur die Art, etwa „Veröffentlichung der Webseite“; ein
+gelöschtes als „Kontakt · gelöscht“). Personen stehen dabei mit ihrem
+heutigen Namen; ist eine Person gelöscht, steht nur die Aktion. Ein Klick
+öffnet den Feld-Diff: links vorher, rechts nachher, geänderte Felder
+hervorgehoben; am Ende stehen Aktion und Objekt in technischer Schreibweise
+zum Kopieren. Filter nach Text, Nutzer,
 Kanal, Aktion und Zeitraum. Die Suche greift auf die gespeicherten Werte
 (Nummern, Bezeichnungen, IDs) — „Rocky“ findet jede Änderung an dem Hund,
 ein Name einer Person nicht: Personen finden Sie über den Filter „Nutzer“.

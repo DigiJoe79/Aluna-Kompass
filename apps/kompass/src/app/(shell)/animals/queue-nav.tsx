@@ -14,7 +14,8 @@ import type { AnimalQueue } from './list-params';
  * Rückweg zur Liste steht ohnehin über dem Titel. Fällt er erst in der Maske aus
  * dem Filter, bleibt der Platz vom Öffnen stehen (`key` je Hund an der Seite).
  */
-export function QueueNav({ queue }: { queue: AnimalQueue }) {
+/** `basePath`: Prüfseiten der Vorschläge blättern unter `/animals/proposals`; `keepTab`: dort gibt es keinen Reiter. */
+export function QueueNav({ queue, basePath = '/animals', keepTab = true }: { queue: AnimalQueue; basePath?: string; keepTab?: boolean }) {
   const t = useTranslations('animals.queue');
   // Der Reiter wird beim Wechsel nur in der Adresse nachgezogen; von dort liest ihn der Pfeil.
   const tab = useSearchParams().get('tab');
@@ -22,7 +23,7 @@ export function QueueNav({ queue }: { queue: AnimalQueue }) {
   const position = queue.position ?? openedAt;
   const { query } = queue;
   if (!position) return null;
-  const href = (id: string) => `/animals/${id}?${query}${tab ? `&tab=${encodeURIComponent(tab)}` : ''}`;
+  const href = (id: string) => `${basePath}/${id}${query ? `?${query}` : ''}${keepTab && tab ? `${query ? '&' : '?'}tab=${encodeURIComponent(tab)}` : ''}`;
   const arrow = (id: string | null, label: string, Icon: typeof ChevronLeft) =>
     id ? (
       <Link href={href(id)} aria-label={label} title={label} className={buttonVariants({ variant: 'ghost', size: 'icon' })}>
@@ -36,7 +37,7 @@ export function QueueNav({ queue }: { queue: AnimalQueue }) {
   return (
     <nav aria-label={t('label')} className="flex items-center gap-1">
       {arrow(position.previousId, t('previous'), ChevronLeft)}
-      <span className="px-1 text-[13px] text-ink-2">{t('position', { index: position.index, total: position.total })}</span>
+      <span className="px-1 text-meta text-ink-2">{t('position', { index: position.index, total: position.total })}</span>
       {arrow(position.nextId, t('next'), ChevronRight)}
     </nav>
   );

@@ -20,6 +20,7 @@ import { getVariables, listReferenceOptions, setValues } from './values';
 import { readSiteEnv } from './pipeline/env';
 import { getPublish, listPublishes } from './services/publishes';
 import { siteJobResult } from './services/job-view';
+import { sitePendingChanges } from './pending';
 import { clearSiteCache, siteCacheStatus } from './pipeline/cache';
 import { cancelSiteJob, SITE_JOB_KINDS, startDeployCheck, startPreview, startPublish } from './pipeline/jobs';
 
@@ -115,6 +116,13 @@ const FIXED: McpToolDefinition[] = [
     const result = await siteContentHash(deps, ctx);
     return result.ok ? { ok: true as const, value: { contentHash: result.value.contentHash, assets: result.value.assets, gaps: result.value.gaps, violations: result.value.violations, stale: result.value.stale, pendingReview: result.value.pendingReview } } : result;
   }, siteContentHash),
+  tool(
+    'site_pending_changes',
+    'List the records whose public state (what the template receives: animals, projects, entries, variables, association data) changed since the last successful publish to production: kind changed|added|removed, label, href (the edit page; null for removed, the record may be gone) and recordHref (its address even when removed). count is the total, items are sorted by label and cut to limit (default 50), truncated says whether more exist. Internal fields, unpublished records and publishes on test do not count. since is the start of that publish; null means no publish with a recorded state yet, then count is 0. Changes nothing. Requires site.publish.',
+    z.object({ limit: z.number().int().min(1).max(500).optional().describe('At most this many items (default 50); count stays the total.') }),
+    (deps, ctx, args) => sitePendingChanges(deps, ctx, { limit: 50, ...(args as { limit?: number }) }),
+    sitePendingChanges,
+  ),
   // Check, Vorschau und Publish bauen die Seite und liefen über MCP in die
   // Zeitüberschreitung des Clients (01.10.). Sie starten nur; was dabei
   // herauskam, liest site_job_result — eine Abfrage für alle drei, weil Antwort

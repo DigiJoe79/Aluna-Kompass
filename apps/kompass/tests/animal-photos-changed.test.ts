@@ -19,6 +19,12 @@ describe('photosChanged', () => {
     expect(photosChanged([a, b], [b, a])).toBe(true);
   });
 
+  it('sieht in einem Ausschnitt der Quelle keine Änderung (er wird nicht gespeichert, Plan A)', () => {
+    const cropped = { ...a, crop: { x: 0.1, y: 0.1, w: 0.5, h: 0.5 } };
+    expect(photosChanged([a, b], [cropped, b])).toBe(false);
+    expect(photosFromForm(JSON.stringify([cropped]))).toEqual([a]);
+  });
+
   it('erkennt ein Foto weniger und eines mehr', () => {
     expect(photosChanged([a, b], [a])).toBe(true);
     expect(photosChanged([a, b], [a, b, c])).toBe(true);

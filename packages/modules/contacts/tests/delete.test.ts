@@ -68,15 +68,14 @@ describe('contact retention and deletion', () => {
     expect(r.holds.map((h) => h.label).some((l) => l.includes('BST-2026-0042'))).toBe(true);
   });
 
-  it('refuses to delete while a hold is running and names the holders', async () => {
+  it('refuses to delete while a hold is running, with the sentence from the language file (Backlog 55)', async () => {
     const { deps, ctx } = setup();
     const c = unwrap(await createContact(deps, ctx, anna));
     unwrap(await addContactRole(deps, ctx, { id: c.id, role: 'interested', since: '2026-03-15' }));
     const res = await deleteContact(deps, ctx, { id: c.id });
     expect(res.ok === false && res.error.type === 'conflict' && res.error.code === 'retentionHoldActive').toBe(true);
-    if (!res.ok && res.error.type === 'conflict') {
-      expect(res.error.message).toContain('interested');
-    }
+    // Welche Fristen gelten, zeigt „Aufbewahrung“; der Satz nennt nur, bis wann.
+    expect(!res.ok && res.error.type === 'conflict' && res.error).toMatchObject({ messageKey: 'errors.retentionHoldActive', params: { permanent: 'no', untilText: '31.12.2028', holders: expect.any(String) } });
   });
 
   it('nennt das Ende der Frist wie die Anzeige, bei iso als ISO (K10)', async () => {
@@ -84,10 +83,10 @@ describe('contact retention and deletion', () => {
     const c = unwrap(await createContact(deps, ctx, anna));
     unwrap(await addContactRole(deps, ctx, { id: c.id, role: 'interested', since: '2026-03-15' }));
     const res = await deleteContact(deps, ctx, { id: c.id });
-    expect(!res.ok && res.error.type === 'conflict' && res.error.message).toMatch(/\(bis 31\.12\.2028\)/);
+    expect(!res.ok && res.error.type === 'conflict' && res.error.params).toMatchObject({ permanent: 'no', untilText: '31.12.2028' });
     deps.db.transaction((tx) => writeSettingInternal(tx, deps, ctx, 'ui.dateFormat', 'iso'));
     const iso = await deleteContact(deps, ctx, { id: c.id });
-    expect(!iso.ok && iso.error.type === 'conflict' && iso.error.message).toMatch(/\(bis 2028-12-31\)/);
+    expect(!iso.ok && iso.error.type === 'conflict' && iso.error.params).toMatchObject({ permanent: 'no', untilText: '2028-12-31' });
   });
 
   it('deletes a contact with no running hold, removes its rows and audits it', async () => {

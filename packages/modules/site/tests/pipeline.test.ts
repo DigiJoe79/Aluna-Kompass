@@ -246,6 +246,8 @@ describe('preview and publish against templates/verein-basis', () => {
 
     unwrap(await runPreview(deps, publishCtx, env));
     const published = unwrap(await runPublish(deps, publishCtx, env, { confirm: true }));
+    // Plan C: Der erfolgreiche Publish hält fest, was öffentlich war — hier die Variable des Basis-Templates.
+    expect(JSON.parse(published.record.contentManifest ?? 'null')).toMatchObject({ 'variables.claim': { href: '/site/variables' } });
     expect(published.record.log).toContain(REUSED_PREVIEW);
     expect(readFileSync(path.join(target, 'index.html'), 'utf8')).toContain('Erster Stand');
 

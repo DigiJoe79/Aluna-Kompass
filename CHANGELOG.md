@@ -9,6 +9,68 @@ die Nummern folgen [Semantic Versioning](https://semver.org/lang/de/). Vor
 1.0.0 kann jede Minor-Fassung Brüche enthalten — was bricht, steht unter
 **Geändert** mit dem, was zu tun ist.
 
+## [0.2.10] - 2026-10-10
+
+Diese Fassung bringt den Vorschlags-Eingang für Tiere: Ein angebundener Dienst
+schlägt neue Hunde, Änderungen und Hinweise vor, ein Mensch prüft in Kompass und
+nimmt an oder lehnt ab. Dazu zeigt Kompass, was auf der Webseite noch nicht
+publiziert ist. Eine Migration (`0007`, `migrationCount` 8). Bricht: Das
+Vormerken zur Prüfung beim Schreiben über MCP ist jetzt standardmäßig aus –
+wer es nutzt, schaltet es nach dem Update wieder ein (siehe **Geändert**).
+
+### Sicherheit
+
+- Next.js auf 16.3.8: behebt unter anderem eine Server-Side Request Forgery
+  in der Bildoptimierung und Cache-Vergiftung bei vorgerenderten Seiten.
+
+### Hinzugefügt
+
+- **Vorschläge von Quellen für Tiere.** Ein angebundener Dienst kann über
+  MCP neue Hunde, Änderungen, Hinweise („nicht mehr gelistet“) und
+  Zuordnungen samt Fotos vorschlagen, ohne selbst etwas zu ändern;
+  angenommen oder abgelehnt wird mit dem Recht „Tiere verwalten“, und die
+  Quelle erfährt das Ergebnis. Neues Recht „Tiere vorschlagen“, Einstellung
+  „Vorschläge von Quellen annehmen“ (Vorgabe aus). Geprüft wird in Kompass:
+  Reiter „Vorschläge“ in der Tierliste, Prüfseite je Art mit
+  Gegenüberstellung „Heute“/„Vorschlag“, Durchgehen im Wisch-Stapel mit
+  Rückgängig (abschaltbar, Vorgabe aus), Kachel „Vorschläge offen“ und eine
+  Vorschau der Hundeseite.
+  Herkunft und Bildausschnitt der Quelle stehen am Hund. Einstellungen →
+  Tiere schaltet Vorschläge, den Stapel und das Vormerken zur Prüfung.
+- Die Kopfzeile zeigt, wie viele Datensätze auf der Webseite noch anders
+  aussehen als in Kompass („7 nicht publiziert“), mit Namen und dem Weg zum
+  Publizieren; am Hund, an Projekten, Einträgen, Variablen und den
+  Vereinsdaten steht „Änderung noch nicht publiziert“ mit Link zum
+  Publizieren, und die Publizieren-Seite nennt die geänderten Datensätze. Gezählt wird nur, was die
+  Webseite zeigt, verglichen mit dem letzten Publish der Produktion; die
+  Anzeige beginnt mit dem ersten Publish nach dem Update. Für Assistenten:
+  `site_pending_changes`.
+
+### Geändert
+
+- Das automatische Vormerken zur Prüfung beim Schreiben über MCP ist jetzt
+  eine Einstellung der Tiere und standardmäßig aus. Wer es weiter nutzen
+  will, setzt nach dem Update `animals.review.onMcpWrite` auf `true`
+  (Werkzeug `settings_set` oder Einstellungen → Tiere); schon gesetzte Merker
+  bleiben stehen. Der Reiter „Prüfung offen“ und seine Kachel erscheinen nur
+  noch, wenn das Vormerken eingeschaltet ist oder noch Tiere markiert sind.
+- Das Änderungsprotokoll nennt in der Spalte „Objekt“ die Art in Worten und
+  den Namen („Nutzer · Anna Berger“, „Einstellung · Vereinsname“) statt
+  technischer Schlüssel und IDs, auch im PDF-Auszug; die ID steht im Detail.
+  Auch Konten, Zwecke, Rücklagen, Kategorien, Buchungen, Bestätigungen und
+  Partner der Finanzen stehen dort mit Namen oder Nummer.
+- Einheitliche Wörter: „Backup“ statt „Sicherung“ im Protokoll, „Akte
+  exportieren“ statt „Bündel exportieren“, und auf der Importseite der
+  Finanzen „Zahlungen im Auszug“ statt „Kandidaten“.
+
+### Behoben
+
+- Vier Ablehnungen zeigten nur ein Bruchstück statt eines Satzes: fehlende
+  eigene Rechte beim Vergeben (nur technische Schlüssel), ein schon laufender
+  Lauf der Webseite (nur ein Code), eine Dokumentart mit Ablageregeln (nur die
+  Liste) und ein noch aufbewahrter Kontakt. Jetzt stehen Grund und Ausweg da,
+  Rechte mit ihrer Beschriftung.
+
 ## [0.2.9] - 2026-10-09
 
 Diese Fassung macht die Oberfläche einheitlicher – Filterleisten,

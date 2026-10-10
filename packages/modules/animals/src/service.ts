@@ -1,13 +1,17 @@
-import { buildDeletionPreview, conflict, expectedVersionField, staleVersion, deleteUnreferencedMedia, deletionConflict, emptyLocalized, invalid, isoNow, localizedList as coreLocalizedList, localizedText, newId, notFound, notifyRecordDeleted, ok, recordAudit, requirePermission, schema as core, validate, type CallContext, type DbOrTx, type DeletionPreview, type Deps, type LocalizedText, type MediaCleanup, type Result } from '@kompass/core';
+import { buildDeletionPreview, conflict, expectedVersionField, staleVersion, deleteUnreferencedMedia, deletionConflict, emptyLocalized, invalid, isoNow, localizedList as coreLocalizedList, localizedText, newId, notFound, notifyRecordDeleted, ok, readSetting, recordAudit, requirePermission, schema as core, validate, type CallContext, type DbOrTx, type DeletionPreview, type Deps, type LocalizedText, type MediaCleanup, type Result } from '@kompass/core';
 import { and, asc, count, eq, inArray, isNotNull, isNull } from 'drizzle-orm';
 import { z } from 'zod';
 import { animalSlug } from './slug';
-import { animalPhotos, animalStories, animals, type LocalizedList } from './schema';
+import { rejectOpenProposalsOfAnimal } from './proposals/animal-deleted';
+import { animalIdsWithOrigin } from './proposals/origins';
+import { deleteProposalFiles } from './proposals/images';
+import { animalOrigins, animalPhotos, animalStories, animals, type LocalizedList, type PhotoCrop } from './schema';
+import { REVIEW_ON_MCP_WRITE_KEY } from './settings';
 
 export const SLUG = /^[a-z0-9][a-z0-9-]{0,80}$/;
 const localizedList = coreLocalizedList({ max: 12, itemMax: 40 });
 
-export interface AnimalPhoto { assetId: string; sortOrder: number; isPrimary: boolean }
+export interface AnimalPhoto { assetId: string; sortOrder: number; isPrimary: boolean; crop: PhotoCrop | null; sourceUserId: string | null; sourceRef: string | null }
 export interface AnimalStory { beforeAssetId: string | null; afterAssetId: string | null; quote: LocalizedText; family: string; adoptedYear: number; beforeCaption: LocalizedText; afterCaption: LocalizedText }
 export type AnimalRecord = typeof animals.$inferSelect & { photos: AnimalPhoto[]; story: AnimalStory | null };
 
@@ -27,6 +31,7 @@ const fields = {
   body: localizedText({ max: 20_000 }),
 };
 export const animalCreateSchema = z.object(fields);
+export type AnimalCreateValues = z.output<typeof animalCreateSchema>;
 // Beim Update zählt nur, was genannt ist. `.default()` greift in Zod 4 auch
 // hinter `.optional()` — ohne `removeDefault()` setzte ein Update mit einem
 // einzigen Feld Größe, Standort, Notfall und Patenschaft auf die Vorgabe zurück.
@@ -49,10 +54,26 @@ export const animalUpdateSchema = z.object({
   expectedVersion: expectedVersionField,
 });
 
+export type AnimalChanges = Omit<z.output<typeof animalUpdateSchema>, 'id' | 'expectedVersion'>;
+export type AnimalStatus = 'lookingForHome' | 'reserved' | 'adopted';
+
+const unit = z.number().min(0).max(1);
+/**
+ * Spec Vorschlags-Eingang § 2: normiertes Rechteck zum Bild; vier Nachkommastellen genügen (0,1 px bei 1000 px).
+ * Ob das Rechteck im Bild liegt, prüft der Dienst (`cropIssues`), nicht das Schema: Werkzeugschemas tragen keine
+ * Prüfung über mehrere Felder (Wächter mcp-conditional-required, N5).
+ */
+export const photoCropSchema = z.object({ x: unit, y: unit, w: z.number().gt(0).max(1), h: z.number().gt(0).max(1) }).strict();
+/** Ragt ein Ausschnitt über das Bild hinaus? Je Foto ein Befund unter `<base>.<i>.crop`. */
+export function cropIssues(photos: readonly { crop?: PhotoCrop | null }[], base: string): { path: string; message: string }[] {
+  return photos.flatMap((p, i) => (p.crop && (p.crop.x + p.crop.w > 1.0001 || p.crop.y + p.crop.h > 1.0001) ? [{ path: `${base}.${i}.crop`, message: 'cropOutOfBounds' }] : []));
+}
+export const roundCrop = (c: PhotoCrop): PhotoCrop => ({ x: +c.x.toFixed(4), y: +c.y.toFixed(4), w: +c.w.toFixed(4), h: +c.h.toFixed(4) });
+
 export function loadAnimal(db: DbOrTx, id: string): AnimalRecord | null {
   const row = db.select().from(animals).where(eq(animals.id, id)).get();
   if (!row) return null;
-  const photos = db.select({ assetId: animalPhotos.assetId, sortOrder: animalPhotos.sortOrder, isPrimary: animalPhotos.isPrimary }).from(animalPhotos).where(eq(animalPhotos.animalId, id)).orderBy(asc(animalPhotos.sortOrder)).all();
+  const photos = db.select({ assetId: animalPhotos.assetId, sortOrder: animalPhotos.sortOrder, isPrimary: animalPhotos.isPrimary, crop: animalPhotos.crop, sourceUserId: animalPhotos.sourceUserId, sourceRef: animalPhotos.sourceRef }).from(animalPhotos).where(eq(animalPhotos.animalId, id)).orderBy(asc(animalPhotos.sortOrder)).all();
   const story = db.select().from(animalStories).where(eq(animalStories.animalId, id)).get();
   return { ...row, traits: row.traits as LocalizedList, photos, story: story ? { beforeAssetId: story.beforeAssetId, afterAssetId: story.afterAssetId, quote: story.quote, family: story.family, adoptedYear: story.adoptedYear, beforeCaption: story.beforeCaption, afterCaption: story.afterCaption } : null };
 }
@@ -70,11 +91,15 @@ export function animalSlugFor(db: DbOrTx, name: string, id: string): string {
 
 /** Den Slug bildet Kompass; wer ihn mitschickt, hat ein altes Bild von der Schnittstelle (Spec, Entscheidung 5). */
 const sendsSlug = (input: unknown): boolean => typeof input === 'object' && input !== null && 'slug' in input;
-const imageMime = (db: DbOrTx, id: string): 'missing' | 'notImage' | 'ok' => { const m = db.select({ mime: core.mediaAssets.mimeType }).from(core.mediaAssets).where(eq(core.mediaAssets.id, id)).get()?.mime; return !m ? 'missing' : m.startsWith('image/') ? 'ok' : 'notImage'; };
+export const imageState = (db: DbOrTx, id: string): 'missing' | 'notImage' | 'ok' => { const m = db.select({ mime: core.mediaAssets.mimeType }).from(core.mediaAssets).where(eq(core.mediaAssets.id, id)).get()?.mime; return !m ? 'missing' : m.startsWith('image/') ? 'ok' : 'notImage'; };
 
-/** Was ein Agent schreibt, ist ein Vorschlag, bis ein Mensch ihn gesehen hat (Spec 2026-09-30, § 5.1). Der erste Zeitpunkt bleibt: Die Warteschlange sortiert nach ihm. */
+/**
+ * Was ein Agent schreibt, ist ein Vorschlag, bis ein Mensch ihn gesehen hat (Spec 2026-09-30, § 5.1). Der erste
+ * Zeitpunkt bleibt: Die Warteschlange sortiert nach ihm. Seit 0.2.10 abschaltbar, Vorgabe aus (Spec
+ * Vorschlags-Eingang § 4). Ausgeschaltet bleiben gesetzte Merker stehen, bis ein Mensch sie zurücknimmt.
+ */
 function markReviewPending(tx: DbOrTx, deps: Deps, ctx: CallContext, id: string): void {
-  if (ctx.channel !== 'mcp') return;
+  if (ctx.channel !== 'mcp' || readSetting<boolean>(deps, REVIEW_ON_MCP_WRITE_KEY) !== true) return;
   const row = tx.select({ name: animals.name, reviewRequestedAt: animals.reviewRequestedAt, reviewNote: animals.reviewNote }).from(animals).where(eq(animals.id, id)).get();
   if (!row || row.reviewRequestedAt) return;
   const now = isoNow(deps.clock);
@@ -91,15 +116,21 @@ export async function createAnimal(deps: Deps, ctx: CallContext, input: unknown)
   if (sendsSlug(input)) return invalid([{ path: 'slug', message: 'slugGenerated' }]);
   const parsed = validate(deps, animalCreateSchema, input);
   if (!parsed.ok) return parsed;
-  return deps.db.transaction((tx) => {
-    const id = newId();
-    const now = isoNow(deps.clock);
-    tx.insert(animals).values({ id, slug: animalSlugFor(tx, parsed.value.name, id), ...parsed.value, species: 'dog', status: 'lookingForHome', isPublished: false, createdAt: now, updatedAt: now }).run();
-    markReviewPending(tx, deps, ctx, id);
-    const record = loadAnimal(tx, id)!;
-    recordAudit(tx, deps, ctx, { action: 'animals.create', entityType: 'animal', entityId: id, after: record, params: { name: record.name } });
-    return ok(record);
-  });
+  return deps.db.transaction((tx) => ok(insertAnimalTx(tx, deps, ctx, parsed.value)));
+}
+
+/**
+ * Schreibhelfer in der Transaktion des Aufrufers (Vorschlags-Eingang: Annehmen schreibt Tier, Status, Fotos und
+ * Veröffentlichung in einem Zug). Prüfungen stehen in den Diensten davor; die Helfer verlassen sich darauf.
+ */
+export function insertAnimalTx(tx: DbOrTx, deps: Deps, ctx: CallContext, values: AnimalCreateValues): AnimalRecord {
+  const id = newId();
+  const now = isoNow(deps.clock);
+  tx.insert(animals).values({ id, slug: animalSlugFor(tx, values.name, id), ...values, species: 'dog', status: 'lookingForHome', isPublished: false, createdAt: now, updatedAt: now }).run();
+  markReviewPending(tx, deps, ctx, id);
+  const record = loadAnimal(tx, id)!;
+  recordAudit(tx, deps, ctx, { action: 'animals.create', entityType: 'animal', entityId: id, after: record, params: { name: record.name } });
+  return record;
 }
 
 export async function updateAnimal(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<AnimalRecord>> {
@@ -113,13 +144,16 @@ export async function updateAnimal(deps: Deps, ctx: CallContext, input: unknown)
   if (!before) return notFound('animal', id);
   const stale = staleVersion(expectedVersion, before.updatedAt);
   if (stale) return stale;
-  return deps.db.transaction((tx) => {
-    tx.update(animals).set({ ...changes, updatedAt: isoNow(deps.clock) }).where(eq(animals.id, id)).run();
-    markReviewPending(tx, deps, ctx, id);
-    const after = loadAnimal(tx, id)!;
-    recordAudit(tx, deps, ctx, { action: 'animals.update', entityType: 'animal', entityId: id, before, after, params: { name: after.name } });
-    return ok(after);
-  });
+  return deps.db.transaction((tx) => ok(updateAnimalTx(tx, deps, ctx, before, changes)));
+}
+
+export function updateAnimalTx(tx: DbOrTx, deps: Deps, ctx: CallContext, before: AnimalRecord, changes: AnimalChanges): AnimalRecord {
+  const id = before.id;
+  tx.update(animals).set({ ...changes, updatedAt: isoNow(deps.clock) }).where(eq(animals.id, id)).run();
+  markReviewPending(tx, deps, ctx, id);
+  const after = loadAnimal(tx, id)!;
+  recordAudit(tx, deps, ctx, { action: 'animals.update', entityType: 'animal', entityId: id, before, after, params: { name: after.name } });
+  return after;
 }
 
 export const animalStatusSchema = z.object({ id: z.string().min(1), status: z.enum(['lookingForHome', 'reserved', 'adopted']), adoptedYear: z.number().int().min(2000).max(2100).optional() });
@@ -133,24 +167,32 @@ export async function setAnimalStatus(deps: Deps, ctx: CallContext, input: unkno
   if (status === 'adopted' && adoptedYear === undefined) return invalid([{ path: 'adoptedYear', message: 'required' }]);
   const before = loadAnimal(deps.db, id);
   if (!before) return notFound('animal', id);
-  return deps.db.transaction((tx) => {
-    tx.update(animals).set({ status, updatedAt: isoNow(deps.clock) }).where(eq(animals.id, id)).run();
-    if (status === 'adopted' && !before.story) {
-      tx.insert(animalStories).values({ animalId: id, beforeAssetId: null, afterAssetId: null, quote: emptyLocalized(deps.locales()), family: '', adoptedYear: adoptedYear as number }).run();
-    } else if (status === 'adopted') {
-      // Das abgefragte Jahr gilt auch für eine schon vorhandene Geschichte; der Rest bleibt.
-      tx.update(animalStories).set({ adoptedYear: adoptedYear as number }).where(eq(animalStories.animalId, id)).run();
-    }
-    const after = loadAnimal(tx, id)!;
-    recordAudit(tx, deps, ctx, { action: 'animals.setStatus', entityType: 'animal', entityId: id, before: { status: before.status, adoptedYear: before.story?.adoptedYear ?? null }, after: { status, adoptedYear: adoptedYear ?? null }, params: { name: after.name, status } });
-    return ok(after);
-  });
+  return deps.db.transaction((tx) => ok(setStatusTx(tx, deps, ctx, before, status, adoptedYear)));
+}
+
+/** `adoptedYear` ist bei `adopted` Pflicht — der Dienst prüft das vorher. */
+export function setStatusTx(tx: DbOrTx, deps: Deps, ctx: CallContext, before: AnimalRecord, status: AnimalStatus, adoptedYear: number | undefined): AnimalRecord {
+  const id = before.id;
+  tx.update(animals).set({ status, updatedAt: isoNow(deps.clock) }).where(eq(animals.id, id)).run();
+  if (status === 'adopted' && !before.story) {
+    tx.insert(animalStories).values({ animalId: id, beforeAssetId: null, afterAssetId: null, quote: emptyLocalized(deps.locales()), family: '', adoptedYear: adoptedYear as number }).run();
+  } else if (status === 'adopted') {
+    // Das abgefragte Jahr gilt auch für eine schon vorhandene Geschichte; der Rest bleibt.
+    tx.update(animalStories).set({ adoptedYear: adoptedYear as number }).where(eq(animalStories.animalId, id)).run();
+  }
+  const after = loadAnimal(tx, id)!;
+  recordAudit(tx, deps, ctx, { action: 'animals.setStatus', entityType: 'animal', entityId: id, before: { status: before.status, adoptedYear: before.story?.adoptedYear ?? null }, after: { status, adoptedYear: adoptedYear ?? null }, params: { name: after.name, status } });
+  return after;
 }
 
 /** Höchstens so viele Fotos je Tier. Die Maske zeigt die Zahl und sperrt den Auswahldialog daran (Befund 6, 0.2.4). */
 export const MAX_ANIMAL_PHOTOS = 12;
 
-export const animalPhotosSchema = z.object({ id: z.string().min(1), photos: z.array(z.object({ assetId: z.string().min(1), isPrimary: z.boolean().default(false) })).max(MAX_ANIMAL_PHOTOS) });
+/** `crop` weggelassen = gespeicherten Ausschnitt dieses Fotos behalten, `null` = entfernen (so speichert die Fotomaske ohne Ausschnitt). */
+export const animalPhotosSchema = z.object({ id: z.string().min(1), photos: z.array(z.object({ assetId: z.string().min(1), isPrimary: z.boolean().default(false), crop: photoCropSchema.nullable().optional() })).max(MAX_ANIMAL_PHOTOS) });
+
+/** `crop`/`source` undefined = für dieses Medium bisherigen Wert behalten; `null` = entfernen. */
+export interface PhotoWrite { assetId: string; isPrimary: boolean; crop?: PhotoCrop | null; source?: { userId: string; ref: string | null } | null }
 
 export async function setAnimalPhotos(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<AnimalRecord>> {
   const denied = requirePermission(ctx, 'animals.manage');
@@ -158,24 +200,44 @@ export async function setAnimalPhotos(deps: Deps, ctx: CallContext, input: unkno
   const parsed = validate(deps, animalPhotosSchema, input);
   if (!parsed.ok) return parsed;
   const { id, photos } = parsed.value;
+  const outside = cropIssues(photos, 'photos');
+  if (outside.length) return invalid(outside);
   const before = loadAnimal(deps.db, id);
   if (!before) return notFound('animal', id);
   if (photos.filter((p) => p.isPrimary).length > 1) return invalid([{ path: 'photos', message: 'multiplePrimary' }]);
   for (const [i, p] of photos.entries()) {
-    const state = imageMime(deps.db, p.assetId);
+    const state = imageState(deps.db, p.assetId);
     if (state === 'missing') return notFound('mediaAsset', p.assetId);
     if (state === 'notImage') return invalid([{ path: `photos.${i}.assetId`, message: 'notAnImage' }]);
   }
-  return deps.db.transaction((tx) => {
-    tx.delete(animalPhotos).where(eq(animalPhotos.animalId, id)).run(); // Zuordnung, kein Rechenschaftsdatum; Assets bleiben
-    photos.forEach((p, i) => tx.insert(animalPhotos).values({ animalId: id, assetId: p.assetId, sortOrder: i + 1, isPrimary: p.isPrimary || (i === 0 && !photos.some((x) => x.isPrimary)) }).run());
-    // Ohne das wäre „zuletzt geändert“ falsch, und der Ladestand einer Maske sähe einen Fototausch nicht.
-    tx.update(animals).set({ updatedAt: isoNow(deps.clock) }).where(eq(animals.id, id)).run();
-    markReviewPending(tx, deps, ctx, id);
-    const after = loadAnimal(tx, id)!;
-    recordAudit(tx, deps, ctx, { action: 'animals.setPhotos', entityType: 'animal', entityId: id, before: { photos: before.photos, reviewRequestedAt: before.reviewRequestedAt }, after: { photos: after.photos, reviewRequestedAt: after.reviewRequestedAt }, params: { name: after.name } });
-    return ok(after);
+  return deps.db.transaction((tx) => ok(replacePhotosTx(tx, deps, ctx, before, photos)));
+}
+
+/** Ersetzt die Fotoliste; Ausschnitt und Herkunft eines bleibenden Fotos bleiben, solange der Aufrufer sie nicht nennt. */
+export function replacePhotosTx(tx: DbOrTx, deps: Deps, ctx: CallContext, before: AnimalRecord, photos: readonly PhotoWrite[]): AnimalRecord {
+  const id = before.id;
+  const kept = new Map(before.photos.map((p) => [p.assetId, p]));
+  tx.delete(animalPhotos).where(eq(animalPhotos.animalId, id)).run(); // Zuordnung, kein Rechenschaftsdatum; Assets bleiben
+  photos.forEach((p, i) => {
+    const old = kept.get(p.assetId);
+    tx.insert(animalPhotos)
+      .values({
+        animalId: id,
+        assetId: p.assetId,
+        sortOrder: i + 1,
+        isPrimary: p.isPrimary || (i === 0 && !photos.some((x) => x.isPrimary)),
+        crop: p.crop === undefined ? (old?.crop ?? null) : p.crop === null ? null : roundCrop(p.crop),
+        sourceUserId: p.source === undefined ? (old?.sourceUserId ?? null) : (p.source?.userId ?? null),
+        sourceRef: p.source === undefined ? (old?.sourceRef ?? null) : (p.source?.ref ?? null),
+      })
+      .run();
   });
+  // Ohne das wäre „zuletzt geändert“ falsch, und der Ladestand einer Maske sähe einen Fototausch nicht.
+  tx.update(animals).set({ updatedAt: isoNow(deps.clock) }).where(eq(animals.id, id)).run();
+  markReviewPending(tx, deps, ctx, id);
+  const after = loadAnimal(tx, id)!;
+  recordAudit(tx, deps, ctx, { action: 'animals.setPhotos', entityType: 'animal', entityId: id, before: { photos: before.photos, reviewRequestedAt: before.reviewRequestedAt }, after: { photos: after.photos, reviewRequestedAt: after.reviewRequestedAt }, params: { name: after.name } });
+  return after;
 }
 
 export const animalStorySchema = z.object({
@@ -212,7 +274,7 @@ export async function setAnimalStory(deps: Deps, ctx: CallContext, input: unknow
   };
   for (const assetId of [story.beforeAssetId, story.afterAssetId]) {
     if (!assetId) continue;
-    const state = imageMime(deps.db, assetId);
+    const state = imageState(deps.db, assetId);
     if (state === 'missing') return notFound('mediaAsset', assetId);
     if (state === 'notImage') return invalid([{ path: 'beforeAssetId', message: 'notAnImage' }]);
   }
@@ -233,15 +295,17 @@ export async function setAnimalPublished(deps: Deps, ctx: CallContext, input: un
   if (!parsed.ok) return parsed;
   const before = loadAnimal(deps.db, parsed.value.id);
   if (!before) return notFound('animal', parsed.value.id);
-  return deps.db.transaction((tx) => {
-    tx.update(animals).set({ isPublished: parsed.value.isPublished, updatedAt: isoNow(deps.clock) }).where(eq(animals.id, before.id)).run();
-    const after = loadAnimal(tx, before.id)!;
-    // Die Aktion steht als fester Text im Aufruf (Wächter audit-actions), deshalb zwei Aufrufe.
-    const entry = { entityType: 'animal', entityId: before.id, before: { isPublished: before.isPublished }, after: { isPublished: after.isPublished }, params: { name: after.name } };
-    if (after.isPublished) recordAudit(tx, deps, ctx, { action: 'animals.publish', ...entry });
-    else recordAudit(tx, deps, ctx, { action: 'animals.unpublish', ...entry });
-    return ok(after);
-  });
+  return deps.db.transaction((tx) => ok(setPublishedTx(tx, deps, ctx, before, parsed.value.isPublished)));
+}
+
+export function setPublishedTx(tx: DbOrTx, deps: Deps, ctx: CallContext, before: AnimalRecord, isPublished: boolean): AnimalRecord {
+  tx.update(animals).set({ isPublished, updatedAt: isoNow(deps.clock) }).where(eq(animals.id, before.id)).run();
+  const after = loadAnimal(tx, before.id)!;
+  // Die Aktion steht als fester Text im Aufruf (Wächter audit-actions), deshalb zwei Aufrufe.
+  const entry = { entityType: 'animal', entityId: before.id, before: { isPublished: before.isPublished }, after: { isPublished: after.isPublished }, params: { name: after.name } };
+  if (after.isPublished) recordAudit(tx, deps, ctx, { action: 'animals.publish', ...entry });
+  else recordAudit(tx, deps, ctx, { action: 'animals.unpublish', ...entry });
+  return after;
 }
 
 export const animalReviewRequestSchema = z.object({ id: z.string().min(1), note: z.string().trim().max(500).default('') });
@@ -307,6 +371,8 @@ export const animalListSchema = z.object({
   isPublished: z.boolean().optional(),
   reviewPending: z.boolean().optional(),
   orderBy: z.object({ field: z.enum(['name', 'createdAt', 'updatedAt', 'reviewRequestedAt']), direction: z.enum(['asc', 'desc']).default('asc') }).optional(),
+  /** Das Tier zu einem Eintrag bei einer Quelle (Vorschlags-Eingang § 5). */
+  origin: z.object({ externalRef: z.string().trim().min(1).max(200), sourceUserId: z.string().min(1).optional() }).optional(),
 });
 export type AnimalListInput = z.input<typeof animalListSchema>;
 /** Eine knappe Zeile der Liste: ohne Texte, Fotos und Geschichte. Das volle Profil liefert `getAnimal`. */
@@ -330,7 +396,8 @@ export async function listAnimals(deps: Deps, ctx: CallContext, input: unknown =
   if (denied) return denied;
   const parsed = validate(deps, animalListSchema, input ?? {});
   if (!parsed.ok) return parsed;
-  const { text, status, location, isPublished, reviewPending, orderBy } = parsed.value;
+  const { text, status, location, isPublished, reviewPending, orderBy, origin } = parsed.value;
+  const withOrigin = origin ? animalIdsWithOrigin(deps.db, origin) : null;
   // Die Sicht `reviewPending` filtert erst in JS: So zählen die Reiter mit denselben Zeilen (`tabCounts`).
   const where = and(
     status ? eq(animals.status, status) : undefined,
@@ -343,7 +410,8 @@ export async function listAnimals(deps: Deps, ctx: CallContext, input: unknown =
     .from(animals)
     .where(where)
     .all()
-    .filter((a) => !needle || a.name.toLocaleLowerCase('de').includes(needle) || a.slug.includes(needle));
+    .filter((a) => !needle || a.name.toLocaleLowerCase('de').includes(needle) || a.slug.includes(needle))
+    .filter((a) => !withOrigin || withOrigin.has(a.id));
   const tabCounts = { all: matching.length, reviewPending: matching.filter((a) => a.reviewRequestedAt !== null).length };
   const rows = reviewPending === undefined ? matching : matching.filter((a) => (a.reviewRequestedAt !== null) === reviewPending);
 
@@ -362,7 +430,7 @@ export async function listAnimals(deps: Deps, ctx: CallContext, input: unknown =
   if (rows.length > 0) {
     // Alle Fotos der Liste in einem Zug. Ohne `inArray` bei ungefilterter Liste: SQLite begrenzt die Zahl der Bindevariablen.
     const all = deps.db.select({ animalId: animalPhotos.animalId, assetId: animalPhotos.assetId, isPrimary: animalPhotos.isPrimary }).from(animalPhotos);
-    const wanted = rows.length < matching.length || where || needle ? all.where(inArray(animalPhotos.animalId, rows.map((a) => a.id))) : all;
+    const wanted = rows.length < matching.length || where || needle || withOrigin ? all.where(inArray(animalPhotos.animalId, rows.map((a) => a.id))) : all;
     for (const p of wanted.orderBy(asc(animalPhotos.sortOrder)).all()) {
       const entry = photos.get(p.animalId) ?? { count: 0, primary: null, first: null };
       entry.count += 1;
@@ -424,13 +492,19 @@ export async function deleteAnimal(deps: Deps, ctx: CallContext, input: unknown)
   if (blocked) return blocked;
 
   const assetIds = assetIdsOf(before);
-  deps.db.transaction((tx) => {
+  const proposalFiles = deps.db.transaction((tx) => {
+    // Vorschlags-Eingang (Spec § 3): offene Vorschläge abgelehnt, Herkunft weg — vor dem Tier, weil die Herkunft einen
+    // Fremdschlüssel auf das Tier hat und das Protokoll den Namen braucht (deshalb nicht über `recordDeleted`).
+    const files = rejectOpenProposalsOfAnimal(tx, deps, ctx, before);
+    tx.delete(animalOrigins).where(eq(animalOrigins.animalId, before.id)).run();
     tx.delete(animalPhotos).where(eq(animalPhotos.animalId, before.id)).run();
     tx.delete(animalStories).where(eq(animalStories.animalId, before.id)).run();
     tx.delete(animals).where(eq(animals.id, before.id)).run();
     notifyRecordDeleted(tx, deps, ctx, 'animal', before.id);
     recordAudit(tx, deps, ctx, { action: 'animals.delete', entityType: 'animal', entityId: before.id, before, params: { name: before.name } });
+    return files;
   });
+  await deleteProposalFiles(deps, proposalFiles);
   if (!parsed.value.deleteOrphanedMedia) return ok({ deletedMedia: [], keptMedia: [] });
   return deleteUnreferencedMedia(deps, ctx, assetIds);
 }

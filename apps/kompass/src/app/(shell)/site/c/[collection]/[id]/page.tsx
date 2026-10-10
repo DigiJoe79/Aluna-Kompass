@@ -5,6 +5,7 @@ import { notFound } from 'next/navigation';
 import { ForbiddenCard } from '@/components/forbidden-card';
 import { Page } from '@/components/page';
 import { PageHeader } from '@/components/page-header';
+import { PendingPublishLine } from '@/components/site/pending-publish';
 import { requireSession } from '@/lib/request-context';
 import { EntryActions } from '../entry-actions';
 import { EntryForm } from '../entry-form';
@@ -40,6 +41,7 @@ export default async function EntryPage(props: { params: Promise<{ collection: s
       width="standard"
       header={<PageHeader title={col.label} back={back} actions={<EntryActions collection={collection} id={result.value.id} label={entryLabel(col, result.value, locales[0] ?? 'de')} publishable={col.publishable} />} />}
     >
+      <PendingPublishLine href={`/site/c/${collection}/${result.value.id}`} className="-mt-3 mb-4 block" />
       <EntryForm
         collection={collection}
         fields={col.fields}

@@ -5,7 +5,7 @@ import { Page } from '@/components/page';
 import { PageHeader } from '@/components/page-header';
 import { ListPager } from '@/components/list-pager';
 import { auditActionLabel } from '@/lib/audit-actions';
-import { auditEntityLabels } from '@/lib/audit-entities';
+import { auditEntityLabels, auditObject } from '@/lib/audit-entities';
 import { auditSentences, labelsFrom, type SentenceTranslator } from '@/lib/audit-sentences';
 import { dateFormatOf } from '@/lib/date-format';
 import { requireSession } from '@/lib/request-context';
@@ -44,7 +44,12 @@ export default async function AuditPage(props: { searchParams: Promise<Record<st
   const unfiltered = all.ok ? all.value.total : result.value.total;
   const selected = sp.entry ? getAuditEntry(deps, ctx, sp.entry) : null;
   // Der Satz entsteht erst hier, aus `audit.sentences.*` (Spec Protokoll § 4); ohne Satz steht der Klartext.
-  const sentences = auditSentences(deps, ctx, t as unknown as SentenceTranslator, [...result.value.entries, ...(selected?.ok ? [selected.value] : [])], { paper: false, label: labelsFrom(await getTranslations()), locale: await getLocale() });
+  const shown = [...result.value.entries, ...(selected?.ok ? [selected.value] : [])];
+  const label = labelsFrom(await getTranslations());
+  const locale = await getLocale();
+  const sentences = auditSentences(deps, ctx, t as unknown as SentenceTranslator, shown, { paper: false, label, locale });
+  // Das Objekt in Worten mit Namen (Joe 2026-10-09), für Tabelle und Detail.
+  const objects = auditEntityLabels(deps, ctx, shown, { label, locale });
   const query = new URLSearchParams(
     Object.entries(sp).filter(([k, v]) => v && k !== 'entry' && k !== 'offset') as [string, string][]
   ).toString();
@@ -65,7 +70,7 @@ export default async function AuditPage(props: { searchParams: Promise<Record<st
             entries={result.value.entries}
             selectedId={sp.entry ?? null}
             query={query}
-            labels={auditEntityLabels(deps, ctx, result.value.entries)}
+            labels={objects}
             fmt={dateFormatOf(deps)}
             sentences={sentences}
             filtered={filtered ? { resetHref: '/admin/audit', peopleHint: Boolean(sp.text) && !sp.userId } : null}
@@ -73,7 +78,7 @@ export default async function AuditPage(props: { searchParams: Promise<Record<st
           <ListPager total={result.value.total} offset={offset} pageSize={PAGE} hrefFor={(next) => (next > 0 ? `?${query}${query ? '&' : ''}offset=${next}` : `?${query}`)} footer testId="audit-pager" />
         </div>
       </div>
-      {selected?.ok ? <AuditDetail entry={selected.value} sentence={sentences[selected.value.id] ?? null} /> : null}
+      {selected?.ok ? <AuditDetail entry={selected.value} sentence={sentences[selected.value.id] ?? null} object={auditObject(t, selected.value, objects[selected.value.id])} /> : null}
     </Page>
   );
 }

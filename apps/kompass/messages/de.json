@@ -439,6 +439,22 @@
     "humanOnly": "Diese Aktion ist über MCP gesperrt. Ein Mensch löst sie in der Oberfläche aus.",
     "settingManaged": "Diese Einstellung wird im Modul „{module}“ geführt und dort geändert.",
     "settingUiOnly": "Diese Einstellung lässt sich nur in der Oberfläche ändern.",
+    "insufficientPrivileges": {
+      "reason": "Dafür fehlen Ihnen selbst Rechte: {permissions}.",
+      "remedy": "Bitten Sie jemanden, der diese Rechte hat."
+    },
+    "siteJobRunning": {
+      "reason": "{kind, select, publish {Die Webseite wird gerade veröffentlicht.} preview {Es läuft gerade eine Vorschau der Webseite.} deployCheck {Es läuft gerade ein Verbindungstest der Webseite.} other {Es läuft gerade ein Lauf der Webseite.}}",
+      "remedy": "Warten Sie, bis der Lauf fertig ist."
+    },
+    "documentTypeHasRules": {
+      "reason": "Die Dokumentart „{label}“ wird noch von Ablageregeln genutzt: {matchList}.",
+      "remedy": "Löschen oder ändern Sie zuerst diese Regeln."
+    },
+    "retentionHoldActive": {
+      "reason": "{permanent, select, yes {Der Kontakt wird dauerhaft aufbewahrt} other {Der Kontakt wird noch bis {untilText} aufbewahrt}}, gehalten von {holderList}.",
+      "remedy": "Löschen ist nach Ablauf der Frist möglich; welche Fristen gelten, steht unter „Aufbewahrung“."
+    },
     "conflict": {
       "staleVersion": "Inzwischen wurde dieser Eintrag an anderer Stelle geändert — etwa über MCP oder in einem zweiten Fenster. Gespeichert wurde nichts; Ihre Eingaben stehen noch in der Maske. Kopieren Sie, was Sie behalten wollen, laden Sie die Seite neu und tragen Sie es auf dem aktuellen Stand erneut ein.",
       "reviewUiOnly": "Die Prüfung bestätigt ein Mensch in der Oberfläche.",
@@ -457,7 +473,6 @@
       "roleNameTaken": "Eine Rolle mit diesem Namen existiert bereits.",
       "roleProtected": "Die Rolle „Administration“ kann nicht geändert werden.",
       "lastAdministrator": "Mindestens ein aktiver Nutzer muss die Rolle „Administration“ behalten.",
-      "insufficientPrivileges": "Dafür fehlen Ihnen selbst Rechte. Rechte, die Sie nicht haben, können Sie nicht vergeben, und Konten mit mehr Rechten als Ihren eigenen nicht verwalten.",
       "settingSystemOnly": "Diese Einstellung setzt nur das System.",
       "themeKeyTaken": "Ein Theme mit diesem Schlüssel existiert bereits.",
       "themeReadOnly": "Das Default-Theme ist schreibgeschützt.",
@@ -470,7 +485,6 @@
       "blockedTermsPresent": "Sperrworttreffer: {detail}",
       "siteBuildFailed": "Der Build ist fehlgeschlagen: {detail}",
       "publishFailed": "Die Übertragung ist fehlgeschlagen: {detail}",
-      "siteJobRunning": "Es läuft bereits eine Vorschau, ein Publish oder ein Verbindungstest. Bitte warten Sie, bis der Lauf fertig ist.",
       "duplicateLocale": "Diese Sprache ist bereits eingerichtet.",
       "tooManyLocales": "Höchstens zehn Sprachen können eingerichtet werden.",
       "lastLocale": "Die letzte verbleibende Sprache kann nicht entfernt werden.",
@@ -480,7 +494,6 @@
       "folderExists": "Ein Ordner mit diesem Namen existiert bereits.",
       "folderParentMissing": "Der übergeordnete Ordner fehlt.",
       "folderNotFound": "Der Zielordner existiert nicht.",
-      "retentionHoldActive": "Der Kontakt wird noch durch aktive Aufbewahrungsfristen gehalten.",
       "userAlreadyLinked": "Dieses Nutzerkonto ist schon mit einem Kontakt verknüpft. Lösen Sie die Verknüpfung zuerst.",
       "contactAlreadyLinked": "Dieser Kontakt ist schon mit einem Nutzerkonto verknüpft.",
       "userNotLinked": "Dieses Nutzerkonto ist mit keinem Kontakt verknüpft.",
@@ -501,6 +514,7 @@
       "alreadySeeded": "Die Startinhalte wurden bereits übernommen.",
       "noSeed": "Die Vorlage der Webseite bringt keine Startinhalte mit.",
       "noTemplate": "Es ist noch keine Vorlage der Webseite eingelesen. Lesen Sie sie zuerst ein.",
+      "pendingUnavailable": "Was seit dem letzten Veröffentlichen geändert wurde, lässt sich gerade nicht ermitteln. Die Ursache steht im Serverprotokoll.",
       "siteNotEmpty": "Es sind schon Inhalte vorhanden. Startinhalte werden nur in eine leere Webseite übernommen.",
       "templateMissing": "Im Verzeichnis der Vorlage fehlt die Datei kompass.template.ts.",
       "templateResolutionMissing": "Das Verzeichnis der Vorlage hat noch keine Modulauflösung; sie wird beim Einrichten angelegt.",
@@ -512,7 +526,8 @@
       "seedAssetsMissing": "Unter seed/assets fehlen Dateien: {detail}",
       "deployCredentialsUnusable": "Die Zugangsdaten für das Ziel sind nicht nutzbar: {detail}",
       "deployCheckFailed": "Der Verbindungstest ist fehlgeschlagen: {detail}",
-      "previewFailed": "Die Vorschau ist fehlgeschlagen: {detail}"
+      "previewFailed": "Die Vorschau ist fehlgeschlagen: {detail}",
+      "viewNotInTemplate": "Die Vorlage der Webseite nutzt diese Sicht nicht."
     },
     "site": {
       "previewOutdated": {
@@ -653,7 +668,14 @@
       "slugGenerated": "Den URL-Teil bildet Kompass beim Anlegen selbst; er bleibt danach fest.",
       "slugNotAllowed": "Diese Sammlung hat keinen Slug.",
       "invalidJson": "Die Datei ist kein gültiges JSON.",
-      "unknownVariable": "Diese Variable kennt die Vorlage der Webseite nicht."
+      "unknownVariable": "Diese Variable kennt die Vorlage der Webseite nicht.",
+      "cropOutOfBounds": "Der Ausschnitt ragt über das Bild hinaus.",
+      "hintNeedsTitleOrField": "Ein Zweifelsfall braucht einen Titel oder ein Feld.",
+      "photoRefAmbiguous": "Ein Foto ist entweder ein bereitgestelltes Bild oder ein Foto des Hundes, nicht beides.",
+      "emptyProposal": "Eine Änderung braucht mindestens einen Wert oder Fotos.",
+      "notAnimalPhoto": "Das ist kein Foto dieses Hundes.",
+      "mediaNotAllowed": "Ein neuer Hund hat noch keine Fotos in Kompass.",
+      "notProposed": "Dieses Feld steht nicht im Vorschlag."
     },
     "pages": {
       "forbidden": {
@@ -677,6 +699,32 @@
         "retry": "Erneut versuchen",
         "home": "Startseite",
         "login": "Zur Anmeldung"
+      }
+    },
+    "animalProposals": {
+      "proposalsDisabled": {
+        "reason": "Vorschläge von Quellen sind in dieser Installation ausgeschaltet.",
+        "remedy": "Schalten Sie unter Einstellungen → Tiere „Vorschläge von Quellen annehmen“ ein."
+      },
+      "originExists": {
+        "reason": "Zu diesem Eintrag der Quelle gibt es schon einen Hund in Kompass.",
+        "remedy": "Schlagen Sie eine Änderung an diesem Hund vor ({animalId})."
+      },
+      "proposalImageUnavailable": {
+        "reason": "Das Bild {imageId} ist nicht bereitgestellt, gehört einer anderen Quelle oder hängt an einem anderen Vorschlag.",
+        "remedy": "Stellen Sie es neu bereit."
+      },
+      "proposalNotOpen": {
+        "reason": "Der Vorschlag ist schon entschieden ({state, select, accepted {angenommen} acceptedWithChanges {mit Änderungen angenommen} rejected {abgelehnt} replaced {ersetzt} withdrawn {zurückgezogen} other {{state}}}).",
+        "remedy": "Laden Sie die Liste neu."
+      },
+      "tooManyPhotos": {
+        "reason": "Danach hätte der Hund {count} Fotos, erlaubt sind {max}.",
+        "remedy": "Wählen Sie Fotos ab."
+      },
+      "notDelisted": {
+        "reason": "Dieser Hinweis sagt nicht, dass der Hund bei der Quelle nicht mehr gelistet ist.",
+        "remedy": "Ändern Sie den Status einzeln oder nehmen Sie den Hinweis zur Kenntnis."
       }
     }
   },
@@ -949,6 +997,14 @@
           "title": "Tiere: Prüfung offen",
           "empty": "Kein Profil wartet auf eine Prüfung.",
           "open": "Zur Prüfliste"
+        },
+        "proposalsOpen": {
+          "title": "Vorschläge offen",
+          "empty": "Kein Vorschlag wartet auf eine Prüfung.",
+          "open": "Zu den Vorschlägen",
+          "messages": {
+            "oldest": "ältester seit {days, plural, =0 {heute} one {# Tag} other {# Tagen}}{conflicts, plural, =0 {} other { · davon # mit Konflikt}}"
+          }
         }
       },
       "dms": {
@@ -1347,6 +1403,10 @@
         "manage": {
           "label": "Tiere verwalten",
           "description": "Tierprofile anlegen, bearbeiten, Fotos zuordnen und Status ändern."
+        },
+        "propose": {
+          "label": "Tiere vorschlagen",
+          "description": "Neue Tiere, Änderungen und Hinweise vorschlagen, die ein Mensch prüft. Für Zugänge von Quellen, die selbst nichts ändern dürfen."
         }
       },
       "projects": {
@@ -1490,6 +1550,15 @@
       },
       "ui": {
         "dateFormat": "Datumsformat"
+      },
+      "animals": {
+        "proposals": {
+          "enabled": "Vorschläge von Quellen annehmen",
+          "photoFolder": "Ordner für Fotos aus Vorschlägen"
+        },
+        "review": {
+          "onMcpWrite": "Schreiben über MCP zur Prüfung vormerken"
+        }
       }
     },
     "sections": {
@@ -1760,7 +1829,7 @@
       "periodBoth": "{from} – {to}",
       "periodFrom": "ab {from}",
       "periodTo": "bis {to}",
-      "searchPlaceholder": "Nummer, Bezeichnung oder ID suchen"
+      "searchPlaceholder": "Nummer, Bezeichnung, ID"
     },
     "detail": {
       "tokenGone": "gelöschter Token ({id})",
@@ -1776,13 +1845,92 @@
       "environment": "Umgebung",
       "summary": "Was geschah",
       "immutable": "Einträge können nicht geändert werden.",
-      "actionKey": "Aktion (technisch)"
+      "actionKey": "Aktion (technisch)",
+      "object": "Objekt",
+      "objectKey": "Objekt (technisch)"
     },
     "empty": {
       "title": "Keine Einträge",
       "text": "Zu diesem Filter gibt es nichts. Protokolliert wird jede schreibende Aktion — vielleicht ist der Zeitraum zu eng oder der Nutzer war nicht beteiligt."
     },
-    "deletedRecord": "{type, select, contact {gelöschter Kontakt} other {gelöschter Datensatz}}",
+    "deletedRecord": "gelöscht",
+    "entities": {
+      "animal": "Hund",
+      "animalProposal": "Vorschlag",
+      "animalProposalImage": "Bild eines Vorschlags",
+      "apiToken": "Zugangsschlüssel",
+      "auth": "Anmeldung",
+      "backup": "Backup",
+      "contact": "Kontakt",
+      "contactUserLink": "Verknüpfung von Kontakt und Nutzer",
+      "dashboardLayout": "Startseite",
+      "document": "Dokument",
+      "documentBundle": "Export der Akte",
+      "documentDraft": "Entwurf",
+      "documentFolder": "Ordner der Akte",
+      "documentLink": "Verknüpfung des Dokuments",
+      "documentNote": "Notiz zum Dokument",
+      "documentRelation": "Beziehung der Dokumente",
+      "documentRule": "Einsortierregel",
+      "documentSnippet": "Textbaustein",
+      "documentTemplate": "Dokumentvorlage",
+      "documentType": "Dokumentart",
+      "financeAccount": "Konto",
+      "financeAllocationCorrection": "Korrektur",
+      "financeCashCount": "Kassenzählung",
+      "financeCategory": "Kategorie",
+      "financeConfirmation": "Zuwendungsbestätigung",
+      "financeConfirmationRun": "Serienlauf",
+      "financeConfirmationRunItem": "Bestätigung im Serienlauf",
+      "financeContactBankAccount": "Bankverbindung des Kontakts",
+      "financeContactWaiverTerms": "Verzichtsvereinbarung",
+      "financeDatedValue": "Stichtagswert",
+      "financeEntry": "Buchung",
+      "financeEntryDocument": "Beleg der Buchung",
+      "financeEntryJustification": "Begründung der Buchung",
+      "financeExpenseClaim": "Auslage",
+      "financeExpensePosition": "Auslagenposten",
+      "financeFiscalYear": "Geschäftsjahr",
+      "financeImportCandidate": "Zahlung im Auszug",
+      "financeImportProfile": "Importprofil",
+      "financeImportRule": "Zuordnungsregel",
+      "financeImportRun": "Auszug",
+      "financeInKindDetails": "Angaben zur Sachzuwendung",
+      "financeNotReturnMark": "Kennzeichnung „keine Rückgabe“",
+      "financeNotice": "Bescheid",
+      "financeOpenItem": "Offene Zahlung",
+      "financePartnerEvidence": "Nachweis des Partners",
+      "financePartnerNotice": "Anerkennung des Partners",
+      "financePartnerPaidLine": "Bezahlter Posten",
+      "financePartnerPayment": "Zahlung an Partner",
+      "financePartnerPaymentPosition": "Posten der Zahlung an Partner",
+      "financePartnerProfile": "Partner",
+      "financePeriodEvent": "Geschäftsjahr",
+      "financeProjectSettings": "Finanzangaben zum Projekt",
+      "financePurpose": "Zweck",
+      "financePurposeTransfer": "Umwidmung",
+      "financeRawTransaction": "Kontoumsatz",
+      "financeReserve": "Rücklage",
+      "financeReserveMovement": "Rücklagenbewegung",
+      "financeSetup": "Einrichtung der Finanzen",
+      "financeSigner": "Unterzeichnende Person",
+      "followUp": "Wiedervorlage",
+      "locale": "Sprache",
+      "mediaAsset": "Datei",
+      "mediaFolder": "Ordner der Mediathek",
+      "module": "Modul",
+      "project": "Projekt",
+      "role": "Rolle",
+      "setting": "Einstellung",
+      "siteCache": "Zwischenspeicher der Webseite",
+      "siteCollection": "Sammlung der Webseite",
+      "siteEntry": "Eintrag der Webseite",
+      "siteJob": "Lauf der Webseite",
+      "sitePublish": "Veröffentlichung der Webseite",
+      "siteTemplate": "Vorlage der Webseite",
+      "siteValues": "Inhalte der Webseite",
+      "user": "Nutzer"
+    },
     "actions": {
       "animals_confirmReview": "Prüfung des Hundes bestätigt",
       "animals_create": "Hund angelegt",
@@ -1793,6 +1941,14 @@
       "animals_setStatus": "Hund geändert (Status)",
       "animals_setStory": "Hund geändert (Geschichte)",
       "animals_update": "Hund geändert",
+      "animals_proposal_submit": "Vorschlag eingegangen",
+      "animals_proposal_replace": "Vorschlag ersetzt",
+      "animals_proposal_withdraw": "Vorschlag zurückgezogen",
+      "animals_proposal_accept": "Vorschlag angenommen",
+      "animals_proposal_acceptWithChanges": "Vorschlag mit Änderungen angenommen",
+      "animals_proposal_reject": "Vorschlag abgelehnt",
+      "animals_proposal_stageImage": "Bild für einen Vorschlag bereitgestellt",
+      "animals_proposal_clear": "Vorschläge aufgeräumt",
       "apiTokens_create": "Zugangsschlüssel angelegt",
       "apiTokens_revoke": "Zugangsschlüssel widerrufen",
       "auth_changePassword": "Passwort geändert",
@@ -1800,8 +1956,8 @@
       "auth_locked": "Anmeldung gesperrt",
       "auth_login": "Angemeldet",
       "auth_throttled": "Anmeldung verzögert (zu viele Versuche)",
-      "backup_export": "Sicherung erstellt",
-      "backup_import": "Sicherung eingespielt",
+      "backup_export": "Backup erstellt",
+      "backup_import": "Backup eingespielt",
       "contacts_addRole": "Rolle des Kontakts vergeben",
       "contacts_create": "Kontakt angelegt",
       "contacts_delete": "Kontakt gelöscht",
@@ -2010,7 +2166,7 @@
       "users_removeRole": "Rolle des Nutzers entzogen",
       "users_resetStartPassword": "Startpasswort neu vergeben",
       "users_update": "Nutzer geändert",
-      "backup_export_mark": "Zeitpunkt der Sicherung vermerkt",
+      "backup_export_mark": "Zeitpunkt des Backups vermerkt",
       "backup_import_mark": "Herkunft des Bestands vermerkt",
       "modules_disable": "Modul ausgeschaltet",
       "seed_organization": "Beispielverein eingetragen",
@@ -2051,13 +2207,20 @@
       "animals_setStory": "Geschichte von Hund „{name}“ geändert",
       "animals_unpublish": "Hund „{name}“ zurückgezogen",
       "animals_update": "Hund „{name}“ geändert",
+      "animals_proposal_submit": "{kind, select, create {Neuer Hund} update {Änderung} notice {Hinweis} sameAs {Zuordnung} other {Vorschlag}} „{name}“ eingegangen ({sourceKey})",
+      "animals_proposal_replace": "{kind, select, create {Neuer Hund} update {Änderung} other {Vorschlag}} „{name}“ durch einen neueren ersetzt ({sourceKey})",
+      "animals_proposal_withdraw": "{kind, select, create {Neuer Hund} update {Änderung} notice {Hinweis} sameAs {Zuordnung} other {Vorschlag}} „{name}“ von der Quelle zurückgezogen ({sourceKey})",
+      "animals_proposal_accept": "{kind, select, notice {Hinweis zu „{name}“ zur Kenntnis genommen} sameAs {Zuordnung zu „{name}“ entschieden} create {Neuer Hund „{name}“ angenommen} other {Änderung an „{name}“ angenommen}} ({sourceKey})",
+      "animals_proposal_acceptWithChanges": "{kind, select, create {Neuer Hund „{name}“} other {Änderung an „{name}“}} mit Änderungen angenommen ({sourceKey})",
+      "animals_proposal_reject": "{kind, select, create {Neuer Hund} update {Änderung} notice {Hinweis} sameAs {Zuordnung} other {Vorschlag}} „{name}“ abgelehnt ({sourceKey})",
+      "animals_proposal_clear": "Vorschläge aufgeräumt: {proposals, plural, =0 {{images, plural, one {# Bild gelöscht} other {# Bilder gelöscht}}} one {# Inhalt geleert{images, plural, =0 {} one {, # Bild gelöscht} other {, # Bilder gelöscht}}} other {# Inhalte geleert{images, plural, =0 {} one {, # Bild gelöscht} other {, # Bilder gelöscht}}}}",
       "apiTokens_create": "Zugangsschlüssel „{tokenName}“ angelegt",
       "apiTokens_revoke": "Zugangsschlüssel „{tokenName}“ widerrufen",
       "auth_failed": "Anmeldung als {targetUser} fehlgeschlagen",
       "auth_locked": "Anmeldung für {targetUser} nach {attempts, plural, one {# Fehlversuch} other {# Fehlversuchen}} gesperrt",
       "auth_throttled": "Anmeldung nach {attempts, plural, one {# Fehlversuch} other {# Fehlversuchen}} in {minutes, plural, one {# Minute} other {# Minuten}} für alle verzögert",
-      "backup_export": "Sicherung mit {sizeBytes} erstellt",
-      "backup_import": "Sicherung vom {createdAt} eingespielt",
+      "backup_export": "Backup mit {sizeBytes} erstellt",
+      "backup_import": "Backup vom {createdAt} eingespielt",
       "contacts_setStatus": "Kontakt {archived, select, true {archiviert} other {wieder aktiviert}}",
       "contacts_update": "{scope, select, name {Name des Kontakts geändert} address {Anschrift des Kontakts geändert} other {Kontakt geändert}}",
       "contacts_userLink_create": "Kontakt {contact} mit Nutzer verknüpft",
@@ -2175,7 +2338,7 @@
       "site_entry_unpublish": "Eintrag in „{collection}“ zurückgezogen",
       "site_entry_update": "Eintrag in „{collection}“ geändert",
       "site_jobCancel": "{kind, select, preview {Vorschau der Webseite} publish {Veröffentlichen der Webseite} deployCheck {Prüfung der Webseite} other {Lauf der Webseite}} abgebrochen",
-      "site_publish": "{status, select, success {Webseite veröffentlicht{changed, plural, =0 {} one {, # Seite geändert} other {, # Seiten geändert}}{added, plural, =0 {} one {, # Seite neu} other {, # Seiten neu}}{removed, plural, =0 {} one {, # Seite entfernt} other {, # Seiten entfernt}}} failed {Veröffentlichen der Webseite fehlgeschlagen} other {Veröffentlichen der Webseite abgebrochen}}",
+      "site_publish": "{status, select, success {Webseite veröffentlicht{changed, plural, =0 {} one {, # Datei geändert} other {, # Dateien geändert}}{added, plural, =0 {} one {, # Datei neu} other {, # Dateien neu}}{removed, plural, =0 {} one {, # Datei entfernt} other {, # Dateien entfernt}}} failed {Veröffentlichen der Webseite fehlgeschlagen} other {Veröffentlichen der Webseite abgebrochen}}",
       "site_seed_apply": "{items} aus der Vorlage der Webseite übernommen",
       "site_template_read": "Vorlage der Webseite „{templateName}“ eingelesen",
       "site_values_update": "{variableCount, plural, one {Variable} other {Variablen}} {variables} geändert",
@@ -2477,7 +2640,9 @@
       "noMatchNoun": "Kein Hund",
       "nounOne": "Hund",
       "nounOther": "Hunde",
-      "nounDative": "Hunden"
+      "nounDative": "Hunden",
+      "proposals": "Vorschläge",
+      "proposalBadge": "Vorschlag"
     },
     "queue": {
       "label": "Blättern in der Liste",
@@ -2536,7 +2701,8 @@
         "flags": "Kennzeichen",
         "texts": "Texte",
         "photos": "Fotos"
-      }
+      },
+      "hintMark": "Zweifelsfall der Quelle, siehe Spalte Zweifelsfälle."
     },
     "status": {
       "change": "Status ändern",
@@ -2558,9 +2724,13 @@
       "count": "{count} von {max} Fotos",
       "tooMany": "Höchstens {max} Fotos. Entfernen Sie eines, bevor Sie ein neues hinzufügen.",
       "primary": "Hauptfoto",
+      "makePrimary": "Als Hauptfoto",
+      "moveLeft": "Nach vorn",
+      "moveRight": "Nach hinten",
       "remove": "Entfernen",
       "open": "Foto in neuem Tab öffnen",
-      "afterCreate": "Fotos lassen sich wählen, sobald der Hund angelegt ist."
+      "afterCreate": "Fotos lassen sich wählen, sobald der Hund angelegt ist.",
+      "crop": "Ausschnitt der Quelle"
     },
     "story": {
       "locked": "Erst nach der Vermittlung: Setzen Sie den Status auf „Vermittelt“, dann lässt sich die Erfolgsgeschichte pflegen.",
@@ -2582,11 +2752,12 @@
       "title": "{name} löschen?"
     },
     "records": {
-      "forbidden": "Tier (kein Zugriff)"
+      "forbidden": "Tier (kein Zugriff)",
+      "proposal": "Vorschlag zu „{name}“"
     },
     "admin": {
       "title": "Tiere",
-      "description": "Einstellungen des Tiermoduls.",
+      "description": "Einstellungen des Tiermoduls: Bildausschnitt, Profiladresse, Vorschläge von Quellen und Prüfung.",
       "saved": "Einstellungen gespeichert.",
       "frame": {
         "title": "Bildausschnitt des Hauptfotos",
@@ -2612,7 +2783,300 @@
         "intro": "Unter welcher Adresse die Webseite ein Tierprofil zeigt. Das legt die Vorlage der Webseite fest. Aus der Adresse entstehen der QR-Code auf dem PDF und die Zeile unter dem Namen im Profil. Leer: kein QR-Code, keine Adresse.",
         "label": "Adressvorlage",
         "hint": "Mit '{slug}' als Platzhalter, etwa https://example.org/tiere/'{slug}'/"
+      },
+      "proposals": {
+        "title": "Vorschläge von Quellen",
+        "intro": "Eine Quelle ist ein angebundener Dienst mit eigenem Zugang, der Hunde nur vorschlagen darf. Was sie vorschlägt, prüfen Sie unter Tiere → Vorschläge.",
+        "enabled": "Vorschläge von Quellen annehmen",
+        "enabledHint": "Aus: Werkzeuge der Quellen lehnen ab; offene Vorschläge bleiben sichtbar, bis sie abgearbeitet sind.",
+        "stack": "Vorschläge im Stapel durchgehen",
+        "stackHint": "Zeigt in den Vorschlägen den Knopf „Durchgehen“: offene Vorschläge als Kartenstapel, etwa am Telefon wischen.",
+        "photoFolder": "Ordner für Fotos aus Vorschlägen",
+        "photoFolderHint": "Ordner der Mediathek, in den angenommene Fotos gehen. Ohne Ordner: oberste Ebene.",
+        "photoFolderGone": "Den Ordner „{name}“ gibt es in der Mediathek nicht mehr. Bis Sie einen anderen wählen, landen die Fotos auf der obersten Ebene."
+      },
+      "review": {
+        "title": "Prüfung",
+        "intro": "Ob Änderungen eines Agenten auf eine Durchsicht durch einen Menschen warten.",
+        "onMcpWrite": "Schreiben über MCP zur Prüfung vormerken",
+        "onMcpWriteHint": "Wie bis 0.2.9: Was ein Agent über MCP schreibt, wartet auf eine Durchsicht. Aus: kein Merker; schon markierte Tiere bleiben markiert, bis sie geprüft sind."
       }
+    },
+    "proposals": {
+      "title": "Vorschläge",
+      "walkThrough": "Durchgehen",
+      "kinds": {
+        "create": "Neuer Hund",
+        "update": "Änderung",
+        "notice": "Hinweis",
+        "sameAs": "Zuordnung"
+      },
+      "states": {
+        "open": "offen",
+        "accepted": "angenommen",
+        "acceptedWithChanges": "angenommen mit Änderungen",
+        "rejected": "abgelehnt",
+        "replaced": "ersetzt",
+        "withdrawn": "zurückgezogen",
+        "acknowledged": "zur Kenntnis genommen"
+      },
+      "stateFilter": {
+        "label": "Zustand",
+        "open": "offen",
+        "decided": "entschieden",
+        "accepted": "angenommen",
+        "acceptedWithChanges": "angenommen mit Änderungen",
+        "rejected": "abgelehnt",
+        "replaced": "ersetzt",
+        "withdrawn": "zurückgezogen",
+        "all": "alle"
+      },
+      "filterKind": "Art",
+      "filterSource": "Quelle",
+      "search": "Name suchen",
+      "columns": {
+        "kind": "Art",
+        "animal": "Hund",
+        "content": "Inhalt",
+        "source": "Quelle",
+        "received": "Eingang",
+        "state": "Zustand",
+        "decided": "Entschieden",
+        "reason": "Grund"
+      },
+      "conflicts": "{count, plural, one {# Konflikt} other {# Konflikte}}",
+      "hints": "{count, plural, one {# Zweifelsfall} other {# Zweifelsfälle}}",
+      "missing": {
+        "primaryPhoto": "Kein Titelbild",
+        "summary": "Kein Kurztext"
+      },
+      "photos": "{count, plural, one {# Foto} other {# Fotos}}",
+      "sameAsLine": "„{name}“ ist vermutlich dieser Hund",
+      "delistedLine": "Bei {source} nicht mehr gelistet",
+      "unnamed": "ohne Namen",
+      "emptyTitle": "Keine offenen Vorschläge",
+      "emptyText": "Was eine Quelle vorschlägt, erscheint hier.",
+      "noMatchNoun": "Kein Vorschlag",
+      "noun": {
+        "one": "Vorschlag",
+        "other": "Vorschläge",
+        "dative": "Vorschlägen"
+      },
+      "fields": {
+        "sizeCm": "Größe (cm)",
+        "sizeText": "Größe (Text)",
+        "status": "Status"
+      },
+      "animalDeleted": "Hund gelöscht",
+      "accept": {
+        "confirm": "Annehmen",
+        "open": "Annehmen …",
+        "titleUpdate": "Änderung an {name} annehmen",
+        "reported": "Wird als „{state}“ an {source} zurückgemeldet.",
+        "stateAccepted": "angenommen",
+        "stateWithChanges": "angenommen mit Änderungen",
+        "toMedia": "{count, plural, one {# Foto geht} other {# Fotos gehen}} in die Mediathek.",
+        "taken": "Übernommen",
+        "kept": "Behalten",
+        "photos": "Fotos",
+        "keptConflict": "{field} (in Kompass geändert)",
+        "website": "Auf der Webseite",
+        "publish": "Veröffentlichen",
+        "publishHint": "Erscheint mit dem nächsten Publizieren der Webseite.",
+        "keepUnpublished": "Unveröffentlicht lassen",
+        "keepUnpublishedHint": "Erst in Kompass fertig machen.",
+        "adoptedYear": "Vermittlungsjahr",
+        "adoptedYearHint": "Der Status wird „vermittelt“.",
+        "followUp": "Wiedervorlage anlegen",
+        "followUpDate": "Am",
+        "followUpNote": "Notiz",
+        "done": "{name} angenommen.",
+        "doneWithChanges": "{name} mit Änderungen angenommen.",
+        "doneFollowUpRefused": "{name} angenommen. Die Wiedervorlage ließ sich nicht anlegen.",
+        "doneAcknowledged": "Hinweis zu {name} zur Kenntnis genommen.",
+        "titleCreate": "{name} anlegen"
+      },
+      "reject": {
+        "open": "Ablehnen …",
+        "title": "Vorschlag ablehnen",
+        "description": "Am Hund ändert sich nichts. Die Fotos des Vorschlags werden gelöscht.",
+        "confirm": "Ablehnen",
+        "reason": "Grund",
+        "reasonHint": "{source} bekommt den Grund zurück.",
+        "optional": "optional",
+        "done": "{name} abgelehnt."
+      },
+      "review": {
+        "backToProposals": "Zu den Vorschlägen",
+        "backToList": "Zurück zur Liste",
+        "titleUpdate": "Änderung an {name}",
+        "received": "eingegangen {at}",
+        "atSource": "Eintrag bei {source}",
+        "trail": "Spur",
+        "inKompass": "{name} in Kompass",
+      "decided": "{state} am {at} von {name}.",
+      "decidedNoName": "{state} am {at}.",
+        "decidedNote": "Grund: {note}",
+        "cleared": "Die Werte des Vorschlags sind nach 90 Tagen gelöscht; es bleiben Zustand und Grund.",
+        "conflictTitleOne": "{field} wurde nach dem Vorschlag in Kompass geändert",
+        "conflictTitleMany": "{count} Felder wurden nach dem Vorschlag in Kompass geändert",
+        "conflictText": "Dort ist „Heute“ vorgewählt. Wer den Vorschlag will, wählt ihn bewusst.",
+        "fields": "Felder",
+        "changedCount": "{count} geändert",
+        "takeAll": "Alle übernehmen",
+        "keepAll": "Alle behalten",
+        "columnField": "Feld",
+        "columnCurrent": "Heute in Kompass",
+        "columnProposal": "Vorschlag {source}",
+        "current": "Heute",
+        "proposal": "Vorschlag",
+        "conflict": "Konflikt",
+        "changedSince": "Seit dem Vorschlag geändert",
+        "changedBy": "Seit dem Vorschlag geändert · {name}, {at}",
+        "changedAt": "Seit dem Vorschlag geändert · {at}",
+        "baseline": "Stand beim Vorschlag:",
+        "unchanged": "Unverändert · {count} Zeichen",
+        "show": "zeigen",
+        "placesChanged": "{count, plural, one {# Stelle geändert} other {# Stellen geändert}} · ganzen Text zeigen",
+        "showLess": "gekürzt zeigen",
+        "hint": "Zweifelsfall",
+        "suggestion": "Vorschlag: {value}",
+        "summary": "{taken} übernehmen · {kept} behalten",
+    "noEffect": "Am Hund ändert sich nichts. Wenn Sie den Vorschlag nicht wollen: Ablehnen.",
+        "titleCreate": "Neuer Hund: {name}",
+        "titleNotice": "Hinweis zu {name}",
+        "titleSameAs": "Ist „{proposed}“ unser {name}?"
+      },
+      "photoReview": {
+        "title": "Fotos",
+        "after": "{count} von {max} danach",
+        "line": "Fotos {line}",
+        "added": "{count} dazu",
+        "removed": "{count} weg",
+        "primaryChanges": "Titelbild wechselt",
+        "new": "neu",
+        "kept": "bleibt",
+        "dropped": "fällt weg",
+        "primary": "Titelbild",
+        "fromSource": "von {source}",
+        "fromKompass": "aus Kompass",
+        "take": "übernehmen",
+        "keep": "behalten",
+        "remove": "entfernen",
+        "deselect": "abwählen",
+        "kompassPhoto": "Foto aus Kompass",
+        "sourcePhoto": "Foto der Quelle",
+        "withCrop": "{name}, mit Ausschnitt der Quelle",
+        "primaryChoice": "Titelbild",
+        "keepPrimary": "Heute behalten",
+        "switchPrimary": "Wechseln",
+        "max": "{count} von {max} Fotos danach"
+      },
+      "create": {
+        "sameName": "Es gibt schon einen Hund namens {name}",
+        "sameNameHelp": "Ist es derselbe Hund, bitten Sie die Quelle um eine Zuordnung, oder lehnen Sie ab.",
+        "hintsTitle": "Zweifelsfälle {count}",
+        "onTab": "Reiter {tab}",
+        "toField": "Zum Feld",
+        "hintsNote": "Die Werte stehen schon im Formular. Wer sie ändert, nimmt „mit Änderungen“ an.",
+        "photosTitle": "Fotos {count} von {max}",
+        "noCrop": "ohne Ausschnitt",
+        "omit": "weglassen",
+        "omitted": "weggelassen",
+        "restore": "zurückholen",
+        "makePrimary": "Als Titelbild",
+    "moveLeft": "Nach vorn",
+        "moveRight": "Nach hinten",
+        "cropNote": "Rahmen = Ausschnitt der Quelle. Die Webseite nutzt den Ausschnitt noch nicht.",
+        "prefilled": "Vorbefüllt von {source}"
+      },
+      "held": {
+        "undo": "Rückgängig · {seconds}",
+        "accepted": "{name} angenommen",
+        "acceptedOnline": "{name} angenommen und veröffentlicht",
+        "rejected": "{name} abgelehnt"
+      },
+      "notice": {
+        "atSource": "Bei {source}",
+        "steps": "Einzelschritte, z. B. bei „verstorben“ oder anderem Grund",
+        "unpublish": "Von der Webseite nehmen",
+        "stepTaken": "{name} ist „{status}“. Der Hinweis bleibt offen, bis Sie ihn zur Kenntnis nehmen. Auf der Webseite ab dem nächsten Publizieren.",
+        "acknowledge": "Zur Kenntnis nehmen",
+        "acknowledgeOnly": "Nur zur Kenntnis nehmen",
+        "acknowledgedToast": "Hinweis zu {name} zur Kenntnis genommen.",
+        "resolveBoth": "Vermittelt · offline · erledigt",
+        "resolveBothLong": "Als vermittelt markieren, von der Webseite nehmen und zur Kenntnis nehmen",
+        "resolveOffline": "Offline · erledigt",
+        "resolveOfflineLong": "Von der Webseite nehmen und zur Kenntnis nehmen",
+        "resolveStatus": "Vermittelt · erledigt",
+        "resolveStatusLong": "Als vermittelt markieren und zur Kenntnis nehmen",
+        "resolvedToast": "{name}: vermittelt, offline, erledigt"
+      },
+      "sameAs": {
+        "reason": "Begründung der Quelle: {reason}",
+        "kompass": "Kompass",
+        "photoOf": "Titelbild von {name}",
+        "origin": "Herkunft",
+        "none": "keine",
+        "explain": "„Gleicher Hund“ verknüpft {proposed} mit {name}. Künftige Änderungen von {source} kommen dann als Änderung an {name}.",
+        "same": "Gleicher Hund",
+        "different": "Anderer Hund"
+      },
+      "stack": {
+        "title": "Vorschläge durchgehen",
+        "done": "Fertig",
+        "position": "{index} von {total}",
+        "reject": "Ablehnen",
+        "review": "Prüfen",
+        "accept": "Annehmen",
+        "acceptOnline": "Annehmen stellt den Hund online.",
+        "toReview": "Prüfen und dort annehmen",
+        "stampAccept": "Annehmen",
+        "stampOnline": "Online",
+        "stampReject": "Ablehnen",
+        "stampReview": "Prüfen",
+        "reviewOnly": "Annehmen geht hier nur über die Prüfseite.",
+        "reasons": {
+          "conflict": "Konflikt mit einer Änderung in Kompass",
+          "hints": "Zweifelsfälle der Quelle",
+          "notice": "Ein Hinweis",
+          "sameAs": "Eine Zuordnung",
+          "missingPrimaryPhoto": "Kein Titelbild",
+          "missingSummary": "Kein Kurztext",
+          "adoptedYear": "Status wird „vermittelt“, das Vermittlungsjahr fehlt"
+        },
+        "refusedTitle": "{name}: nicht entschieden",
+        "tally": "{accepted} angenommen · {rejected} abgelehnt · {open} offen gelassen",
+        "endTitle": "Alle durchgesehen",
+        "keys": "Am Rechner: ← ablehnen, ↑ prüfen, → annehmen.",
+        "emptyTitle": "Keine offenen Vorschläge",
+        "emptyText": "Was eine Quelle vorschlägt, erscheint hier.",
+        "photosAdded": "{count, plural, one {# Foto} other {# Fotos}} dazu",
+        "photosRemoved": "{count} weg",
+        "network": "{name}: Der Server war nicht erreichbar; der Vorschlag ist noch offen."
+      },
+      "preview": {
+        "open": "Vorschau",
+        "title": "Vorschau: {name}",
+        "description": "Die Detailseite aus der Vorlage der Webseite, nicht gespeichert und nicht publiziert.",
+        "side": "Stand",
+        "current": "Heute",
+        "choice": "Mit Wahl",
+        "building": "Baut die Seite …",
+        "frame": "Vorschau der Seite von {name}",
+        "invalid": "Mit diesen Werten lässt sich keine Seite bauen.",
+        "noAnimalPage": "Die Vorlage der Webseite hat keine Seite für einzelne Hunde.",
+        "failed": "Die Seite ließ sich nicht bauen. Das Protokoll des Servers nennt den Grund.",
+        "network": "Die Vorschau hat den Server nicht erreicht."
+      }
+    },
+    "origin": {
+      "label": "Herkunft:",
+      "viewPage": "Seite ansehen"
+    },
+    "proposalBand": {
+      "title": "Offener Vorschlag von {source}",
+      "review": "Prüfen"
     }
   },
   "site": {
@@ -3060,6 +3524,22 @@
         "logTruncated": "Nur das Ende des Protokolls; vollständig über MCP (site_job_result, log: full) oder in der Publish-Historie."
       }
     },
+    "pending": {
+      "indicator": "{count} nicht publiziert",
+      "indicatorLabel": "{count, plural, one {# Änderung} other {# Änderungen}} nicht publiziert, zum Publizieren",
+      "kind": {
+        "added": "neu",
+        "removed": "von der Webseite genommen"
+      },
+      "toPublish": "Zum Publizieren",
+      "note": "{count, plural, one {# Änderung ist} other {# Änderungen sind}} noch nicht auf der Webseite.",
+      "line": "Änderung noch nicht publiziert",
+      "variables": "{count, plural, one {# Variable} other {# Variablen}} nicht publiziert",
+      "variablesNamed": "{count, plural, one {# Variable} other {# Variablen}} nicht publiziert: {names}",
+      "since": "Seit dem letzten Publish am {date} geändert:",
+      "and": "und",
+      "more": "und {count} weitere"
+    },
     "previewFrame": {
       "title": "Webseiten-Vorschau",
       "description": "Vollständige Vorschau der statischen Webseite unter dem aktuellen Kompass-Datenstand.",
@@ -3262,7 +3742,7 @@
     "duplicateOf": "Dieselbe Datei liegt schon vor als",
     "duplicateOfToast": "Abgelegt. Dieselbe Datei liegt schon vor als {numbers}.",
     "export": {
-      "open": "Bündel exportieren",
+      "open": "Akte exportieren",
       "title": "Dokumente als Bündel",
       "thisFolder": "Diesen Ordner: „{folder}“ (samt Unterordnern)",
       "year": "Einen Jahrgang",
@@ -4422,7 +4902,7 @@
         }
       },
       "candidates": {
-        "title": "Kandidaten",
+        "title": "Zahlungen im Auszug",
         "inStatement": "Im Auszug",
         "existing": "Bereits vorhanden",
         "existingOpen": "offen",
@@ -7300,7 +7780,7 @@
         "remedy": "Laden Sie den Auszug bei Bedarf erneut, oder lösen Sie die Verknüpfung."
       },
       "candidateAlreadyDecided": {
-        "reason": "Für diesen Kontoumsatz-Kandidaten steht die Entscheidung schon fest.",
+        "reason": "Für diese Zahlung im Auszug steht die Entscheidung schon fest.",
         "remedy": "Nichts zu tun."
       },
       "statementNotDiscardable": {

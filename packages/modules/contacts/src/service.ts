@@ -1,4 +1,4 @@
-import { conflict, expectedVersionField, isoNow, newId, notFound, notifyRecordDeleted, ok, recordAudit, requirePermission, staleVersion, todayIn, validate, type CallContext, type DbOrTx, type Deps, type Result } from '@kompass/core';
+import { conflict, expectedVersionField, isoNow, localizedConflict, newId, notFound, notifyRecordDeleted, ok, recordAudit, requirePermission, staleVersion, todayIn, validate, type CallContext, type DbOrTx, type Deps, type Result } from '@kompass/core';
 import { and, asc, count, desc, eq, inArray, isNull, like, or, sql, type SQL, type SQLWrapper } from 'drizzle-orm';
 import { z } from 'zod';
 import { displayName } from './address';
@@ -377,7 +377,9 @@ export async function deleteContact(deps: Deps, ctx: CallContext, input: unknown
   const until = dueUntil(holds);
   const today = todayIn(deps);
   if (until === null || until >= today) {
-    return conflict('retentionHoldActive', `Noch gehalten von: ${holds.map((h) => `${h.label}${h.until ? ` (bis ${messageDate(deps, h.until)})` : ' (dauerhaft)'}`).join('; ')}`);
+    // Satz aus der Sprachdatei, die haltenden Einträge als Liste (Backlog 55); getrennt durch U+001F.
+    const holders = holds.map((h) => h.label).join('\u001f');
+    return localizedConflict('retentionHoldActive', 'errors.retentionHoldActive', until === null ? { permanent: 'yes', holders } : { permanent: 'no', untilText: messageDate(deps, until), holders });
   }
 
   return deps.db.transaction((tx: DbOrTx) => {

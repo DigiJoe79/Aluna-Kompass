@@ -121,7 +121,8 @@ describe('deleteDocumentType (Task 4)', () => {
     unwrap(await createDocumentRule(deps, ctx, { matchField: 'filename', matchContains: 'Vermerk', thenTypeKey: 'memo' }));
     const denied = await deleteDocumentType(deps, ctx, { key: 'memo' });
     expect(code(denied)).toBe('documentTypeHasRules');
-    expect(denied.ok === false && denied.error.type === 'conflict' && denied.error.message).toContain('Vermerk');
+    // Satz aus der Sprachdatei, die Art und ihre Regeln als Werte (Backlog 55).
+    expect(denied.ok === false && denied.error.type === 'conflict' && denied.error).toMatchObject({ messageKey: 'errors.documentTypeHasRules', params: { label: expect.stringContaining('Vermerk') } });
     expect(documentTypeFor(deps.db, 'memo')).not.toBeNull();
   });
 

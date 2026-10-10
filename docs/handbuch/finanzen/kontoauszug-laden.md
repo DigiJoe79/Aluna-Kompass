@@ -36,8 +36,8 @@ vorhanden, 2 zurückgehalten“.
   früheren, nicht verworfenen Auszug — er wird nicht doppelt angelegt.
 - **Zurückgehalten** heißt: Kompass ist sich nicht sicher, ob es sich um
   einen bereits bekannten Kontoumsatz handelt oder um einen neuen. Solche
-  Kandidaten stehen als Gegenüberstellung „Im Auszug“ und „Bereits
-  vorhanden“ auf derselben Seite; ein Mensch entscheidet mit „Dieselbe
+  Zahlungen stehen unter „Zahlungen im Auszug“ als Gegenüberstellung „Im
+  Auszug“ und „Bereits vorhanden“; ein Mensch entscheidet mit „Dieselbe
   Zahlung — nicht übernehmen“ oder „Eigene Zahlung — übernehmen“.
 
 Nur wenn das Konto nicht eindeutig ist, fragt Kompass nach dem Ziehen nach:

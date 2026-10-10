@@ -1,7 +1,16 @@
 import { coreModule, readSetting, setSetting } from '@kompass/core';
 import { createTestDeps, ctxWith, insertUser } from '@kompass/core/testing';
 import { describe, expect, it } from 'vitest';
-import { animalsModule, PHOTO_FRAME_KEY, photoFrameStyle, type PhotoFrame } from '../src';
+import {
+  animalsModule,
+  PHOTO_FRAME_KEY,
+  photoFrameStyle,
+  PROPOSAL_PHOTO_FOLDER_KEY,
+  PROPOSAL_STACK_KEY,
+  PROPOSALS_ENABLED_KEY,
+  REVIEW_ON_MCP_WRITE_KEY,
+  type PhotoFrame,
+} from '../src';
 
 const deps = () => {
   const d = createTestDeps({ manifests: [coreModule, animalsModule] });
@@ -37,5 +46,21 @@ describe('photo frame setting', () => {
 
   it('turns the frame into the CSS the mask uses', () => {
     expect(photoFrameStyle({ aspect: '4:5', focusX: 50, focusY: 25 })).toEqual({ aspectRatio: '4 / 5', objectPosition: '50% 25%' });
+  });
+});
+
+describe('proposal settings', () => {
+  it('brings the proposal inbox, the review marker and the photo folder, all off or empty by default', () => {
+    const d = deps();
+    expect(readSetting(d, PROPOSALS_ENABLED_KEY)).toBe(false);
+    expect(readSetting(d, REVIEW_ON_MCP_WRITE_KEY)).toBe(false);
+    expect(readSetting(d, PROPOSAL_PHOTO_FOLDER_KEY)).toBe('');
+    // Wisch-Stapel „Durchgehen“: vorerst abschaltbar, Vorgabe aus, bis er mit dem Verein bewertet ist (Joe 2026-10-10).
+    expect(readSetting(d, PROPOSAL_STACK_KEY)).toBe(false);
+  });
+  it('accepts a valid folder path and refuses a broken one', async () => {
+    const d = deps();
+    expect((await setSetting(d, admin, { key: PROPOSAL_PHOTO_FOLDER_KEY, value: 'Fotos/Tiere' })).ok).toBe(true);
+    expect((await setSetting(d, admin, { key: PROPOSAL_PHOTO_FOLDER_KEY, value: 'a//b' })).ok).toBe(false);
   });
 });

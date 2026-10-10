@@ -5,6 +5,7 @@ import { EmptyState } from '@/components/empty-state';
 import { ForbiddenCard } from '@/components/forbidden-card';
 import { Page } from '@/components/page';
 import { PageHeader } from '@/components/page-header';
+import { PendingVariablesLine } from '@/components/site/pending-publish';
 import { requireSession } from '@/lib/request-context';
 import { VariablesForm } from './variables-form';
 
@@ -19,6 +20,7 @@ export default async function SiteVariablesPage() {
   const options = template ? await listReferenceOptions(deps, ctx) : null;
   return (
     <Page width="standard" header={<PageHeader title={t('title')} />}>
+      <PendingVariablesLine className="-mt-3 mb-4 block" />
       {template && Object.keys(template.schema.variables).length > 0 ? (
         <VariablesForm schema={template.schema.variables} value={readValues(deps)} version={valuesVersion(deps)} locales={deps.locales()} options={options?.ok ? options.value : {}} />
       ) : (

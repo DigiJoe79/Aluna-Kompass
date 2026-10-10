@@ -105,6 +105,9 @@ export async function seedDevelopment(deps: Deps): Promise<{ adminEmail: string;
       await manifest.seed(deps, ctx);
     }
   }
+  for (const manifest of deps.registry.manifests) {
+    if (manifest.seedLast) await manifest.seedLast(deps, ctx);
+  }
 
   return { adminEmail: SEED_ADMIN_EMAIL, adminPassword: SEED_ADMIN_PASSWORD };
 }

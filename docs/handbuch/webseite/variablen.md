@@ -9,7 +9,10 @@ Sie füllen die Werte aus, je Sprache.
 
 Jede Variable ist ein Feld mit der Beschriftung, die die Vorlage ihr
 gegeben hat. Die Reihenfolge ist die der Vorlage. „Speichern“ sichert alle
-Felder auf einmal; jede Änderung steht im Änderungsprotokoll.
+Felder auf einmal; jede Änderung steht im Änderungsprotokoll. Sind Variablen
+geändert, aber noch nicht [publiziert](publizieren.md), nennt eine Zeile über
+den Feldern sie, etwa „1 Variable nicht publiziert: Mitgliedsbeitrag im
+Jahr (Euro)“, mit dem Link „Zum Publizieren“.
 
 ![Die Variablen der Vorlage mit ihren Werten](../bilder/webseite/variablen.png)
 

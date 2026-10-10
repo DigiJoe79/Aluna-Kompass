@@ -45,4 +45,10 @@ describe('published organization view', () => {
     expect(row?.phone).toBe('');
     expect(row?.bic).toBe('');
   });
+
+  it('links its one row to the settings, named by the association (Plan C)', async () => {
+    const deps = await setup();
+    const row = publishedOrganization.load(deps)[0]!;
+    expect(publishedOrganization.editLink?.(deps, row)).toEqual({ href: '/admin/settings', title: 'Musterverein e.V.' });
+  });
 });

@@ -6,6 +6,7 @@ import { ForbiddenCard } from '@/components/forbidden-card';
 import { Page } from '@/components/page';
 import { PageHeader } from '@/components/page-header';
 import { requireSession } from '@/lib/request-context';
+import { PendingPublishLine } from '@/components/site/pending-publish';
 import { RelatedDocuments } from '@/components/related-documents';
 import { ProjectForm } from '../project-form';
 import { ProjectActions } from '../project-actions';
@@ -27,6 +28,7 @@ export default async function ProjectEditPage(props: { params: Promise<{ id: str
   const actions = requirePermission(ctx, 'projects.manage') ? undefined : <ProjectActions id={project.value.id} name={name} />;
   return (
     <Page width="standard" header={<PageHeader title={name} description={`/projekte/${project.value.slug}/`} back={back} actions={actions} />}>
+      <PendingPublishLine href={`/projects/${project.value.id}`} className="-mt-3 mb-4 block" />
       <ProjectForm project={project.value} locales={locales} />
       <div className="mt-6 space-y-4">
         <ProjectFinanceSection deps={deps} ctx={ctx} projectId={project.value.id} />

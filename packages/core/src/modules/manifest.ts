@@ -148,6 +148,12 @@ export interface RecordLabel {
   sensitive?: boolean;
   /** Wie das Protokoll den Datensatz nennt, wenn er heikel ist — nie mit Betreff oder Namen. Fehlt es, gilt `label`. */
   auditLabel?: string;
+  /**
+   * Der bloße Name ohne Art, für die Spalte „Objekt“ im Änderungsprotokoll, die die Art selbst davorsetzt
+   * („Geschäftsjahr · 2026“ statt „Geschäftsjahr · Geschäftsjahr 2026“). Nur live angezeigt, nie gespeichert. Fehlt
+   * er, gilt `label`; leer heißt: kein Name, nur die Art.
+   */
+  name?: string;
 }
 
 /**
@@ -390,6 +396,12 @@ export interface ModuleManifest {
    */
   recordDeleted?: (tx: DbOrTx, deps: Deps, ctx: CallContext, entityType: string, id: string) => void;
   /**
+   * Aufräumen im Hintergrund (Spec Vorschlags-Eingang § 7): Der Kern ruft den Haken in einem Takt für **jedes
+   * installierte** Modul, auch ausgeschaltete — Fristen zum Leeren laufen weiter, wenn ein Modul ruht. Läuft mit
+   * eigenem `systemContext`, darf werfen (der Takt fängt und protokolliert auf der Konsole).
+   */
+  housekeeping?: (deps: Deps) => Promise<void>;
+  /**
    * Dieses Modul legt eigene Dateien ab. Es bekommt dann `<dataPath>/<key>`
    * über `deps.files(key)`. Die Anmeldung ist nicht Form, sondern Zweck: Das
    * Backup sichert genau die angemeldeten Verzeichnisse.
@@ -463,6 +475,11 @@ export interface ModuleManifest {
   auditActions?: Record<string, AuditActionDef>;
   /** Beispieldaten für die Entwicklungsumgebung. */
   seed?: (deps: Deps, ctx: CallContext) => Promise<void>;
+  /**
+   * Beispieldaten, die aus den Daten der anderen Module abgeleitet sind — läuft nach den `seed`-Haken aller Module,
+   * gleich in welcher Reihenfolge die Manifeste stehen (Webseite: der festgehaltene Stand eines Beispiel-Publish).
+   */
+  seedLast?: (deps: Deps, ctx: CallContext) => Promise<void>;
   /**
    * Was dieses Modul braucht, um überhaupt benutzbar zu sein — Stammdaten, die
    * es ohne Konfiguration nicht gäbe. Läuft beim **Einschalten** des Moduls, in

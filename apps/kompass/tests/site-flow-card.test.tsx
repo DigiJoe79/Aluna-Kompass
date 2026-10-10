@@ -224,3 +224,40 @@ describe('LogDialog for a finished run', () => {
     expect(fetchMock.mock.calls[0]![0]).toBe('/site/job/publish?log=full');
   });
 });
+
+describe('none: what changed since the last publish (Board 8d, Plan C)', () => {
+  const items = [
+    { key: 'a', kind: 'changed' as const, label: 'Bruno', href: '/animals/A1', recordHref: '/animals/A1' },
+    { key: 'b', kind: 'removed' as const, label: 'Kira', href: null, recordHref: '/animals/A2' },
+    { key: 'c', kind: 'added' as const, label: 'Nala', href: '/animals/A3', recordHref: '/animals/A3' },
+    { key: 'd', kind: 'changed' as const, label: 'Sommerfest 2026', href: '/site/c/news/E1', recordHref: '/site/c/news/E1' },
+    { key: 'e', kind: 'changed' as const, label: 'Claim', href: '/site/variables', recordHref: '/site/variables' },
+  ];
+  const withPending =
+    (count: number, list = items) =>
+    ({ children }: { children: ReactNode }) => (
+      <Intl>
+        <SiteJobContext.Provider
+          value={{ enabled: true, running: null, last: null, pending: { since: '2026-09-28T08:00:00.000Z', count, items: list, hrefs: list.map((i) => i.recordHref), variables: [] }, track: () => {}, refresh: () => {} }}
+        >
+          {children}
+        </SiteJobContext.Provider>
+      </Intl>
+    );
+  it('names four records with links and how many more; one taken off the website without a link', () => {
+    render(<PublishFlowCard {...props({ kind: 'none', lastPublishedAt: '2026-09-28T08:00:00.000Z' })} />, { wrapper: withPending(7) });
+    const text = screen.getByTestId('site-pending-since').textContent;
+    expect(text).toBe('Seit dem letzten Publish am 28.09.2026 geändert: Bruno, Kira (von der Webseite genommen), Nala (neu), Sommerfest 2026 und 3 weitere.');
+    expect(screen.getByRole('link', { name: 'Bruno' }).getAttribute('href')).toBe('/animals/A1');
+    expect(screen.queryByRole('link', { name: 'Kira' })).toBeNull();
+  });
+  it('joins the last two with „und“ when nothing more follows', () => {
+    render(<PublishFlowCard {...props({ kind: 'none', lastPublishedAt: null })} />, { wrapper: withPending(2, items.slice(0, 2)) });
+    expect(screen.getByTestId('site-pending-since').textContent).toBe('Seit dem letzten Publish am 28.09.2026 geändert: Bruno und Kira (von der Webseite genommen).');
+  });
+  it('keeps the old sentence without changes', () => {
+    render(<PublishFlowCard {...props({ kind: 'none', lastPublishedAt: null })} />, { wrapper: withPending(0, []) });
+    expect(screen.queryByTestId('site-pending-since')).toBeNull();
+    expect(screen.getByText(/Noch nie publiziert/)).toBeTruthy();
+  });
+});

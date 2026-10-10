@@ -42,6 +42,7 @@ export async function TileCard({ view, canComplete, fmt }: { view: DashboardTile
     body = (
       <>
         <p className="font-mono text-figure tabular-nums text-ink">{n}</p>
+        {content.kind === 'count' && content.note ? <p className="text-meta text-ink-2">{t(`${ns}.messages.${content.note.messageKey}`, content.note.values ?? {})}</p> : null}
         {openLink(content.href)}
       </>
     );

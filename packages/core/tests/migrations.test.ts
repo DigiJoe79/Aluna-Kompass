@@ -21,9 +21,10 @@ const rootVersion = (JSON.parse(readFileSync(path.join(__dirname, '../../../pack
  * Schlussabnahme werden sie zu einer zusammengelegt und hier eingetragen.
  * `0003_finance` ist die zusammengelegte Migration der Fassung 0.2.0,
  * `0004_finance_0_2_1` die der Fassung 0.2.1. `0005_animals_review` ist die eine Migration der Fassung 0.2.2
- * (nie zusammengelegt: Der Branch hatte nur diese). `0006_audit_params` ist die der Fassung 0.2.9 (Protokoll in Sätzen).
+ * (nie zusammengelegt: Der Branch hatte nur diese). `0006_audit_params` ist die der Fassung 0.2.9 (Protokoll in Sätzen),
+ * `0007_animal_proposals_site_manifest` die zusammengelegte der Fassung 0.2.10 (Vorschlags-Eingang, „nicht publiziert“).
  */
-const RELEASED = ['0000_init.sql', '0001_dashboard_layouts.sql', '0002_document_former_numbers.sql', '0003_finance.sql', '0004_finance_0_2_1.sql', '0005_animals_review.sql', '0006_audit_params.sql'];
+const RELEASED = ['0000_init.sql', '0001_dashboard_layouts.sql', '0002_document_former_numbers.sql', '0003_finance.sql', '0004_finance_0_2_1.sql', '0005_animals_review.sql', '0006_audit_params.sql', '0007_animal_proposals_site_manifest.sql'];
 
 /**
  * Was eine Produktion schon ausgeführt hat, bleibt Byte für Byte, wie es war:
@@ -37,6 +38,10 @@ const SHIPPED_HASHES: Record<string, string> = {
   '0003_finance.sql': '8e2b6d69c78f801453fee3b1977a2f779ddbd8a48b5fc4187fd27abcc169409a',
   // Seit dem Release der Fassung 0.2.1.
   '0004_finance_0_2_1.sql': '80558554c1a9f90bf52e6dd8887f4bf3dec48b724d295fc63d23378023d36bda',
+  // Seit dem Release der Fassung 0.2.2.
+  '0005_animals_review.sql': 'adf63e1536b9f8e6d742109617ae9f21a2cb5424a1d13bf492e6c2bebf246452',
+  // Seit dem Release der Fassung 0.2.9.
+  '0006_audit_params.sql': 'b34144ee8d237925c4d3e4432d2fac66f6ca69f6ca0c806ccf376e6f830cdb78',
 };
 
 /**
@@ -51,6 +56,12 @@ const LAST_WHEN_BEFORE_SQUASH_0_2_0 = 1790605068196;
  * `0004_finance_0_2_1` denselben Wert, gilt eine Testinstanz aus der unzusammengelegten Reihe als aktuell.
  */
 const LAST_WHEN_BEFORE_SQUASH_0_2_1 = 1790702142322;
+/**
+ * `when` der letzten Migration vor dem Zusammenlegen der Fassung 0.2.10 (`0008_site_content_manifest`, 2026-10-10).
+ * Wie oben: Trägt `0007_animal_proposals_site_manifest` denselben Wert, gilt eine Testinstanz aus der
+ * unzusammengelegten Reihe (9 Migrationszeilen) als aktuell und bekommt nichts doppelt.
+ */
+const LAST_WHEN_BEFORE_SQUASH_0_2_10 = 1791590317073;
 const journal = JSON.parse(readFileSync(path.join(MIGRATIONS_DIR, 'meta/_journal.json'), 'utf8')) as { entries: { idx: number; when: number; tag: string }[] };
 
 /**
@@ -262,6 +273,12 @@ describe('the migrations of this version', () => {
     expect(journal.entries.map((e) => `${e.tag}.sql`)).toEqual(files);
   });
 
+  it('let a database from the unsquashed 0.2.10 series count as current (same `when` as its last migration)', () => {
+    const squashed = journal.entries.find((e) => e.tag === '0007_animal_proposals_site_manifest');
+    expect(squashed?.when).toBe(LAST_WHEN_BEFORE_SQUASH_0_2_10);
+    expect(journal.entries.map((e) => `${e.tag}.sql`)).toEqual(files);
+  });
+
   it('keep a former document number unique across documents', () => {
     const sql = readFileSync(path.join(MIGRATIONS_DIR, '0002_document_former_numbers.sql'), 'utf8');
     expect(sql).toContain('CREATE TABLE `document_former_numbers`');
@@ -299,6 +316,27 @@ describe('migration 0006 (Protokoll in Sätzen)', () => {
     expect(db.prepare(`SELECT action, params FROM audit_log WHERE id = 'A1'`).get()).toEqual({ action: 'animals.update', params: null });
     expect(() => db.prepare(`UPDATE audit_log SET action = 'x' WHERE id = 'A1'`).run()).toThrow(/immutable/);
     expect(() => db.prepare(`DELETE FROM audit_log WHERE id = 'A1'`).run()).toThrow(/immutable/);
+    db.close();
+  });
+});
+
+describe('migration 0007 (Vorschlags-Eingang der Tiere, Publish-Stand je Datensatz)', () => {
+  it('keeps existing animal photos, adds empty crop and source, creates the proposal tables', () => {
+    const db = new Database(':memory:');
+    applyMigrationsUpTo(db, '0006_audit_params.sql');
+    db.exec(`INSERT INTO users (id, name, email, password_hash, created_at, updated_at) VALUES ('U1', 'A', 'a@example.org', 'x', 't', 't');
+      INSERT INTO media_assets (id, filename, mime_type, bytes, created_at) VALUES ('M1', 'm.png', 'image/png', 1, 't');
+      INSERT INTO animals (id, slug, name, sex, birth_text, size_text, summary, body, created_at, updated_at) VALUES ('A1', 'luna-a1a1', 'Luna', 'female', '{}', '{}', '{}', '{}', 't', 't');
+      INSERT INTO animal_photos (animal_id, asset_id, sort_order, is_primary) VALUES ('A1', 'M1', 1, 1);`);
+    applyMigration(db, '0007_animal_proposals_site_manifest.sql');
+    expect(db.prepare(`SELECT asset_id, is_primary, crop, source_user_id, source_ref FROM animal_photos`).get()).toEqual({ asset_id: 'M1', is_primary: 1, crop: null, source_user_id: null, source_ref: null });
+    const tables = (db.prepare(`SELECT name FROM sqlite_master WHERE type = 'table'`).all() as { name: string }[]).map((t) => t.name);
+    expect(tables).toEqual(expect.arrayContaining(['animal_proposals', 'animal_proposal_images', 'animal_origins']));
+    // Je Quelle und Tier höchstens eine offene Änderung — der Index sagt es, nicht nur der Dienst.
+    const insert = db.prepare(`INSERT INTO animal_proposals (id, source_user_id, source_key, kind, animal_id, state, created_at, updated_at) VALUES (?, 'U1', ?, 'update', 'A1', ?, 't', 't')`);
+    insert.run('P1', 'k1', 'open');
+    expect(() => insert.run('P2', 'k2', 'open')).toThrow(/UNIQUE/);
+    insert.run('P3', 'k3', 'replaced');
     db.close();
   });
 });

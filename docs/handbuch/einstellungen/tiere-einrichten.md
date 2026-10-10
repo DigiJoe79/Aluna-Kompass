@@ -1,8 +1,9 @@
 # Tiere
 
-Hier stellen Sie ein, was das Tiermodul über die Webseite wissen muss: in
+Hier stellen Sie ein, was das Tiermodul über die Webseite wissen muss — in
 welchem Ausschnitt die Webseite das Hauptfoto eines Tiers zeigt und unter
-welcher Adresse sie ein Tierprofil zeigt.
+welcher Adresse sie ein Tierprofil zeigt —, ob Quellen Hunde vorschlagen
+dürfen und ob Schreiben über MCP zur Prüfung vorgemerkt wird.
 
 ## Bildausschnitt des Hauptfotos
 
@@ -36,3 +37,31 @@ Platzhalter für den URL-Teil des Tiers, etwa
 fest. Aus der Adresse entstehen der QR-Code auf dem PDF-Profil und die Zeile
 unter dem Namen im Profil. Bleibt das Feld leer, gibt es beides nicht. Per
 MCP: `settings_set` mit `animals.profileUrl`.
+
+## Vorschläge von Quellen
+
+- **Vorschläge von Quellen annehmen** — eingeschaltet können angebundene
+  Quellen Hunde, Änderungen, Hinweise und Zuordnungen vorschlagen; geprüft
+  wird unter [Vorschläge prüfen](../tiere-vorschlaege.md). Aus lehnen die
+  Werkzeuge der Quellen ab; offene Vorschläge bleiben sichtbar, bis sie
+  abgearbeitet sind. Vorgabe: aus. Per MCP: `animals.proposals.enabled`.
+- **Vorschläge im Stapel durchgehen** — zeigt in den Vorschlägen den Knopf
+  „Durchgehen“: offene Vorschläge als Kartenstapel, etwa am Telefon wischen
+  (siehe [Durchgehen](../tiere-vorschlaege.md#durchgehen)). Vorgabe: aus. Per MCP:
+  `animals.proposals.stack`.
+- **Ordner für Fotos aus Vorschlägen** — der Ordner der
+  [Mediathek](../mediathek.md), in den angenommene Fotos gehen. Über
+  **Ändern…** wählen Sie ihn im Ordnerbaum; ohne Ordner landen die Fotos auf
+  der obersten Ebene. Wird der Ordner später umbenannt oder gelöscht, sagt das
+  Feld es Ihnen, und die Fotos landen bis zur neuen Wahl oben. Per MCP:
+  `animals.proposals.photoFolder`.
+
+## Prüfung
+
+**Schreiben über MCP zur Prüfung vormerken** — eingeschaltet wartet, was ein
+Agent über MCP an einem Tier schreibt, auf eine Durchsicht durch einen
+Menschen (so war es bis 0.2.9). Aus entsteht kein Merker; schon markierte
+Tiere bleiben markiert, bis sie geprüft sind. Der Reiter „Prüfung offen“ und
+die Kachel „Tiere: Prüfung offen“ erscheinen nur, solange die Einstellung an
+ist oder noch Tiere markiert sind. Vorgabe: aus. Per MCP:
+`animals.review.onMcpWrite`.

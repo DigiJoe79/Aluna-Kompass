@@ -12,6 +12,7 @@
   - [Eine Vorlage (Template-Datei) schreiben](webseite/template-schreiben.md)
 - [Projekte](projekte.md)
 - [Tiere](tiere.md)
+- [Vorschläge prüfen](tiere-vorschlaege.md)
 - [Kontakte](kontakte.md)
 - Akte
   - [Dokumente und Ordner](akte/dokumente-und-ordner.md)

@@ -17,7 +17,7 @@ describe('animals module', () => {
   it('creates tables via the core chain and registers the view', async () => {
     const d = await deps();
     const tables = (d.sqlite.prepare("select name from sqlite_master where type='table' and name like 'animal%' order by name").all() as { name: string }[]).map((r) => r.name);
-    expect(tables).toEqual(['animal_photos', 'animal_stories', 'animals']);
+    expect(tables).toEqual(['animal_origins', 'animal_photos', 'animal_proposal_images', 'animal_proposals', 'animal_stories', 'animals']);
     expect(animalsModule.publishedViews?.map((v) => v.name)).toEqual(['animals']);
   });
 

@@ -5,7 +5,8 @@ import { SiteJobIndicator } from '@/components/site/site-job-indicator';
 import { SiteJobContext, type SiteJobStatus } from '@/components/site/site-job-provider';
 import messages from '../messages/de.json';
 
-const status = (running: SiteJobStatus['running']): SiteJobStatus => ({ enabled: true, running, last: null, track: () => {}, refresh: () => {} });
+const pending = (count: number, items = [{ key: 'k1', kind: 'changed' as const, label: 'Bruno', href: '/animals/A1', recordHref: '/animals/A1' }]) => ({ since: '2026-09-28T08:00:00.000Z', count, items, hrefs: items.flatMap((i) => (i.recordHref ? [i.recordHref] : [])), variables: [] });
+const status = (running: SiteJobStatus['running'], p: SiteJobStatus['pending'] = null): SiteJobStatus => ({ enabled: true, running, last: null, pending: p, track: () => {}, refresh: () => {} });
 const render = (value: SiteJobStatus) =>
   renderToStaticMarkup(
     <NextIntlClientProvider locale="de" messages={messages}>
@@ -31,5 +32,18 @@ describe('SiteJobIndicator', () => {
   it('renders nothing without a run or without a provider', () => {
     expect(render(status(null))).toBe('');
     expect(renderToStaticMarkup(<NextIntlClientProvider locale="de" messages={messages}><SiteJobIndicator /></NextIntlClientProvider>)).toBe('');
+  });
+  it('at rest shows the count in yellow, as word on the desktop and as icon with a label on the phone (Board 8a)', () => {
+    const markup = render(status(null, pending(7)));
+    expect(markup).toContain('7 nicht publiziert');
+    expect(markup).toContain('border-warning');
+    expect(markup).toContain('aria-label="7 Änderungen nicht publiziert, zum Publizieren"');
+    expect(markup).toContain('href="/site/publish"');
+  });
+  it('shows nothing at zero, and the run instead of the count while one runs', () => {
+    expect(render(status(null, pending(0, [])))).toBe('');
+    const markup = render(status(running([{ key: 'export', state: 'running' }]), pending(7)));
+    expect(markup).toContain('data-testid="site-job"');
+    expect(markup).not.toContain('nicht publiziert');
   });
 });

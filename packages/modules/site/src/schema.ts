@@ -48,5 +48,7 @@ export const sitePublishes = sqliteTable('site_publishes', {
   triggeredByUserId: text('triggered_by_user_id').references(() => core.users.id),
   log: text('log').notNull().default(''),
   fileManifest: text('file_manifest').notNull().default('{}'),
+  /** Der öffentliche Stand je Datensatz, der mit diesem Publish online ging (JSON `ContentManifest`, Plan C). Null vor 0.2.10 und bei jedem Misserfolg. */
+  contentManifest: text('content_manifest'),
 });
 

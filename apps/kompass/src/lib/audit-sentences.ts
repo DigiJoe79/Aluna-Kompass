@@ -22,15 +22,15 @@ export const auditSentenceKey = (action: string): string => `sentences.${action.
 type Entry = Pick<AuditEntry, 'id' | 'action' | 'params' | 'paramUserNames'>;
 
 /** Was ein gespeicherter Code in der Anzeige heißt: Text aus der Oberfläche, sonst `null` (dann steht der Klartext). */
-type Label = (messageKey: string, values?: Record<string, string | number>) => string | null;
+export type Label = (messageKey: string, values?: Record<string, string | number>) => string | null;
 type Display = (value: AuditParam, helpers: { label: Label; locale: string; params: Record<string, AuditParam> }) => string | null;
 
 /** Eine Aufzählung wie in der Oberfläche: „a“, „b“ und „c“ (`Intl.ListFormat`, Designer 2026-10-09). */
 const listOf = (items: string[], locale: string): string => new Intl.ListFormat(locale, { type: 'conjunction' }).format(items);
 
-const settingLabel: Display = (v, h) => h.label(`settings.fields.${String(v)}`);
+export const settingLabel: Display = (v, h) => h.label(`settings.fields.${String(v)}`);
 const datedValueLabel: Display = (v, h) => h.label(`finance.admin.datedValues.keys.${String(v)}`);
-const languageName: Display = (v, h) => {
+export const languageName: Display = (v, h) => {
   try {
     return new Intl.DisplayNames([h.locale], { type: 'language' }).of(String(v)) ?? null;
   } catch {

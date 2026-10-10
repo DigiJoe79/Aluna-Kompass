@@ -1,8 +1,9 @@
-import { definePublishedView, localizedList, localizedText } from '@kompass/core';
+import { definePublishedView, localizedList, localizedText, type Deps } from '@kompass/core';
 import { and, asc, eq, isNotNull } from 'drizzle-orm';
 import { z } from 'zod';
 import { animals } from './schema';
 import { loadAnimal } from './service';
+import { animalSlug } from './slug';
 
 const L = localizedText();
 
@@ -46,7 +47,11 @@ export const publishedAnimals = definePublishedView({
       .where(eq(animals.isPublished, true))
       .orderBy(asc(animals.name))
       .all()
-      .map((r) => loadAnimal(deps.db, r.id)!),
+      .map((r) => {
+        const a = loadAnimal(deps.db, r.id)!;
+        // Ausschnitt und Herkunft je Foto bleiben intern, bis die Webseite sie nutzt (Backlog 24).
+        return { ...a, photos: a.photos.map((p) => ({ assetId: p.assetId, sortOrder: p.sortOrder, isPrimary: p.isPrimary })) };
+      }),
   // Nur Veröffentlichtes: Ein unveröffentlichtes Profil mit Merker geht nicht
   // live und gehört in die Prüfliste, nicht in die Warnung vor dem Publish.
   pendingReview: (deps) =>
@@ -63,3 +68,18 @@ export const publishedAnimals = definePublishedView({
     return a ? { href: `/animals/${a.id}`, title: a.name } : null;
   },
 });
+
+const NEW_ANIMAL = { sex: 'female', birthText: {}, sizeCm: 0, sizeText: {}, location: 'shelter', place: '', status: 'lookingForHome', isEmergency: false, isSponsorable: false, traits: {}, externalProfileUrl: '', summary: {}, body: {}, story: null };
+
+/**
+ * Die Zeile von `publishedAnimals` für eine Wahl, ohne zu speichern (Vorschau einer Prüfung, Plan Vorschläge B):
+ * heutiger Hund (oder die Vorgaben eines neuen) mit den gewählten Werten und Fotos. Ohne `ctx` — das Recht prüft der
+ * Aufrufer (`animals.manage`). Ein neuer Hund bekommt den Slug, den er beim Anlegen bekäme, aus `slugId`.
+ */
+export function publishedRowFor(deps: Deps, input: { animalId: string | null; slugId?: string; values: Record<string, unknown>; photos: readonly { assetId: string; isPrimary: boolean }[] }): unknown {
+  const base: Record<string, unknown> = input.animalId ? { ...loadAnimal(deps.db, input.animalId)! } : { ...NEW_ANIMAL };
+  const merged: Record<string, unknown> = { ...base, ...input.values };
+  if (!input.animalId) merged.slug = animalSlug(String(merged.name ?? ''), input.slugId ?? '');
+  merged.photos = input.photos.map((p, i) => ({ assetId: p.assetId, sortOrder: i + 1, isPrimary: p.isPrimary }));
+  return publishedAnimals.schema.parse(merged);
+}

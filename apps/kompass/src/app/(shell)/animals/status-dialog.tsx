@@ -12,7 +12,8 @@ import { Input } from '@/components/ui/input';
 import { setAnimalStatusAction } from './actions';
 import { Select } from '@/components/ui/select';
 
-export function StatusDialog({ animalId, current }: { animalId: string; current: string }) {
+/** `triggerVariant`: auf der Hinweisseite steht der Knopf gleichrangig neben „Von der Webseite nehmen“ (`outline`). */
+export function StatusDialog({ animalId, current, triggerVariant = 'secondary' }: { animalId: string; current: string; triggerVariant?: 'secondary' | 'outline' }) {
   const t = useTranslations('animals.status');
   const [open, setOpen] = useState(false);
   const [status, setStatus] = useState(current);
@@ -22,7 +23,7 @@ export function StatusDialog({ animalId, current }: { animalId: string; current:
   const resetFeedback = feedback.reset;
   return (
     <Dialog open={open} onOpenChange={(next) => { setOpen(next); if (!next) resetFeedback(); }}>
-      <DialogTrigger render={<Button variant="secondary">{t('change')}</Button>} />
+      <DialogTrigger render={<Button variant={triggerVariant}>{t('change')}</Button>} />
       <DialogContent size="sm" className="bg-surface shadow-md">
         <DialogTitle>{t('title')}</DialogTitle>
         <FormGrid>

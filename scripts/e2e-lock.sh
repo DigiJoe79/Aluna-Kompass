@@ -19,6 +19,13 @@ mkdir -p "$(dirname -- "$lock")"
 wait_seconds="${E2E_LOCK_WAIT:-15}"
 [ "$#" -gt 0 ] || { echo "Aufruf: $0 <befehl …>" >&2; exit 64; }
 
+# Verschachtelt: Läuft der Aufruf schon unter genau dieser Sperre (ein Vorfahr hält sie), gleich durch. Sonst wartete
+# z. B. `e2e-lock.sh sh -c '… && scripts/e2e-kalender.sh'` im Kalenderlauf auf die eigene Sperre — für immer
+# (2026-10-10). Die Kennung erbt nur, wer vom Halter abstammt; parallele Agenten sehen sie nicht.
+if [ "${E2E_LOCK_HELD:-}" = "$lock" ]; then
+  exec "$@"
+fi
+
 announced=''
 until mkdir "$lock" 2>/dev/null; do
   if [ -z "$announced" ]; then
@@ -39,7 +46,7 @@ child=''
 trap 'release' EXIT
 trap '[ -n "$child" ] && kill -TERM "$child" 2>/dev/null' INT TERM
 
-"$@" &
+E2E_LOCK_HELD="$lock" "$@" &
 child=$!
 # `wait` kehrt bei einem Signal vorzeitig zurück — so lange warten, bis der Befehl wirklich fertig ist.
 while :; do

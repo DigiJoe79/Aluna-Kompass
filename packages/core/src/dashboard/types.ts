@@ -32,7 +32,8 @@ export interface DashboardLine {
 }
 
 export type DashboardContent =
-  | { kind: 'count'; count: number; href: string | null }
+  /** `note`: Zeile unter der Zahl (Board Vorschläge 1b), Schlüssel unter `…messages` wie bei `status`. */
+  | { kind: 'count'; count: number; href: string | null; note?: { messageKey: string; values?: Record<string, string | number> } }
   | { kind: 'list'; lines: DashboardLine[]; total: number; href: string | null }
   | { kind: 'status'; tone: DashboardTone; messageKey: string; values?: Record<string, string | number>; href: string | null };
 
@@ -47,7 +48,12 @@ export interface DashboardTile<O = Record<string, unknown>> {
   defaultOn: boolean;
   /** `z.object` aus boolean, enum oder integer, jedes Feld mit `.default()`; `z.object({})` ohne Optionen. */
   options: z.ZodType<O>;
-  /** Jeder `messageKey` (status) und `titleKey` (list), den `load` liefern kann — für den Sprachwächter der App. */
+  /**
+   * Ohne: immer da (mit Recht). Mit: Die Kachel fehlt, solange `false` — weder auf der Startseite noch in der
+   * Auswahl (Spec Vorschläge § 4: Einstellung aus und nichts mehr abzuarbeiten). Nur lesend, nur Datenbank.
+   */
+  available?(deps: Deps): boolean;
+  /** Jeder `messageKey` (status, `note` von count) und `titleKey` (list), den `load` liefern kann — für den Sprachwächter der App. */
   messageKeys?: readonly string[];
   /** Nur lesend, keine I/O außerhalb der Datenbank. Wird nur mit dem Recht gerufen. */
   load(deps: Deps, ctx: CallContext, options: O): DashboardContent | Promise<DashboardContent>;

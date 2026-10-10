@@ -1,6 +1,7 @@
 'use client';
 
 import type { AnimalListItem } from '@kompass/module-animals';
+import { Inbox } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useTransition } from 'react';
@@ -20,6 +21,7 @@ import { useUrlFilters } from '@/lib/use-url-filters';
 import { setAnimalPublishedAction } from './actions';
 import { LIST_LOCATIONS, LIST_STATUSES, listQueryString } from './list-params';
 import { ProfileExportButton } from './profile-export-button';
+import type { AnimalView } from './view-tabs';
 
 type Filters = { text: string; status: string; location: string; published: string };
 
@@ -29,6 +31,9 @@ export function AnimalList({
   reviewPending,
   tabCounts,
   canExport,
+  views,
+  openProposals,
+  proposalAnimalIds,
 }: {
   animals: AnimalListItem[];
   total: number;
@@ -36,6 +41,12 @@ export function AnimalList({
   /** Mit den Filtern der Leiste gezählt, ohne die Sicht — was ein Klick auf den Reiter zeigen würde. */
   tabCounts: { all: number; reviewPending: number };
   canExport: boolean;
+  /** Welche Reiter es gibt (`animalViewTabs`); nur „Alle“ → keine Reiter. */
+  views: readonly AnimalView[];
+  /** Ungefiltert, alle offenen Vorschläge (Ausnahme MUSTER § L). */
+  openProposals: number;
+  /** Hunde mit offenem Vorschlag → Marke „Vorschlag“ (Board 1c). */
+  proposalAnimalIds: readonly string[];
 }) {
   const t = useTranslations('animals.list');
   const f = useTranslations('animals.form');
@@ -78,20 +89,26 @@ export function AnimalList({
   const selection = useListSelection(listKeyOf(params), animals);
   const selected = animals.filter((a) => selection.ids.has(a.id));
   const allSelected = animals.length > 0 && selected.length === animals.length;
+  const proposalIds = new Set(proposalAnimalIds);
   const filtered = Boolean(filters.text.trim() || filters.status || filters.location || filters.published);
   const reset = () => applyFilters({ text: '', status: '', location: '', published: '' });
 
   return (
     <div className="flex flex-col gap-3">
       {/* Die Reiter behalten die Filter (`viewHref`); ihre Zahlen folgen den Filtern (MUSTER § L, Designer 2026-10-08). */}
-      <ViewTabs
-        label={t('views')}
-        current={review ? 'review' : 'all'}
-        tabs={[
-          { key: 'all', label: t('all'), href: viewHref({ review: undefined }), count: tabCounts.all },
-          { key: 'review', label: t('reviewPending'), href: viewHref({ review: '1', sort: undefined, dir: undefined }), count: tabCounts.reviewPending },
-        ]}
-      />
+      {/* „Vorschläge“ ist die benannte Ausnahme zu § L (Spec Vorschläge § 6, Board 1d): eine andere Liste, Filter reisen
+          nicht mit, die Zahl zählt immer alle offenen. Ein einzelner Reiter wäre keiner (MUSTER § E). */}
+      {views.length > 1 ? (
+        <ViewTabs
+          label={t('views')}
+          current={review ? 'review' : 'all'}
+          tabs={[
+            { key: 'all', label: t('all'), href: viewHref({ review: undefined }), count: tabCounts.all },
+            ...(views.includes('review') || review ? [{ key: 'review', label: t('reviewPending'), href: viewHref({ review: '1', sort: undefined, dir: undefined }), count: tabCounts.reviewPending }] : []),
+            ...(views.includes('proposals') ? [{ key: 'proposals', label: t('proposals'), href: '/animals/proposals', count: openProposals, tone: 'agent' as const, testId: 'animals-tab-proposals' }] : []),
+          ]}
+        />
+      ) : null}
 
       <FilterBar
         search={<SearchField value={filters.text} onChange={(text) => applyFilters({ text })} placeholder={t('search')} />}
@@ -154,6 +171,9 @@ export function AnimalList({
                       {/* Die Vorschau statt des Originals: Bei einigen hundert Hunden lüde die Liste sonst jedes Foto in voller Größe. */}
                       {a.primaryAssetId ? <img src={`/media/${a.primaryAssetId}/preview`} loading="lazy" alt="" className="size-9 shrink-0 rounded-full object-cover" /> : <span className="size-9 shrink-0 rounded-full bg-surface-2" aria-hidden />}
                       <RowLink href={`/animals/${a.id}${listQs ? `?${listQs}` : ''}`}>{a.name}</RowLink>
+                      {proposalIds.has(a.id) ? (
+                        <StatusBadge tone="agent" icon={Inbox} testId="animal-proposal-badge">{t('proposalBadge')}</StatusBadge>
+                      ) : null}
                       {a.reviewRequestedAt ? (
                         <span title={a.reviewNote || undefined} data-testid="animal-review-badge">
                           <StatusBadge tone="warning">{t('reviewBadge')}</StatusBadge>

@@ -122,13 +122,30 @@ test.describe('audit log', () => {
     expect(response.ok()).toBe(true);
     const { id } = (await response.json()) as { id: string };
     await page.goto('/admin/audit?action=roles.update');
-    const row = page.getByRole('table').getByRole('row').filter({ hasText: 'LEGACY-1' });
+    // Die Rolle gibt es nicht: Die Spalte „Objekt“ sagt das in Worten, die ID steht nur im Detail (Joe 2026-10-09).
+    const row = page.getByRole('table').getByRole('row').filter({ hasText: 'Rolle · gelöscht' });
     await expect(row).toContainText('Rolle geändert');
+    await expect(row).not.toContainText('LEGACY-1');
+    // „gelöscht“ gedämpft an der Stelle des Namens, damit es nicht wie ein Name aussieht (Designer 2026-10-09).
+    await expect(row.getByText('gelöscht', { exact: true })).toHaveClass(/text-muted-ink/);
     await page.goto(`/admin/audit?action=roles.update&entry=${id}`);
     const detail = page.getByRole('dialog');
     await expect(detail.getByRole('heading', { name: 'Rolle geändert' })).toBeVisible();
     await expect(detail).toContainText('Aktion (technisch)');
     await expect(detail).not.toContainText('Was geschah');
+    await expect(detail).toContainText('role · LEGACY-1');
+  });
+
+  /** Joe 2026-10-09: Die Spalte „Objekt“ nennt den Typ in Worten und den Namen — nie den Schlüssel, nie die ID. */
+  test('die Spalte „Objekt“ zeigt Typ und Namen, die ID steht im Detail', async ({ page }) => {
+    await page.goto('/admin/audit?action=setup.complete');
+    const row = page.getByRole('table').getByRole('row').filter({ hasText: 'Nutzer · Anna Berger' });
+    await expect(row.getByRole('cell').last()).toHaveText('Nutzer · Anna Berger');
+    await row.getByRole('link').click();
+    const detail = page.getByRole('dialog');
+    await expect(detail).toContainText('Nutzer · Anna Berger');
+    await expect(detail).toContainText(/user · [0-9A-HJKMNP-TV-Z]{26}/);
+    await expect(detail.getByRole('button', { name: 'Kopieren: Objekt (technisch)' })).toBeVisible();
   });
 
   /** Spec Protokoll § 4: Die Suche läuft über das Gespeicherte; Personen findet man über den Filter „Nutzer“. */
@@ -136,6 +153,6 @@ test.describe('audit log', () => {
     await page.goto('/admin/audit?text=Wortgibtesnichtimprotokoll');
     await expect(page.getByText('Personen finden Sie über den Filter „Nutzer“.')).toBeVisible();
     await expect(page.getByRole('link', { name: 'Filter zurücksetzen' }).first()).toBeVisible();
-    await expect(page.getByRole('searchbox', { name: 'Suchen' })).toHaveAttribute('placeholder', 'Nummer, Bezeichnung oder ID suchen');
+    await expect(page.getByRole('searchbox', { name: 'Suchen' })).toHaveAttribute('placeholder', 'Nummer, Bezeichnung, ID');
   });
 });

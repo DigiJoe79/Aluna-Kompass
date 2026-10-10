@@ -61,7 +61,9 @@ interface Placed {
 /** Die Kacheln, die dieser Nutzer sehen darf: eingeschaltete Module, in Registry-Reihenfolge, gefiltert nach Recht. */
 function availableTiles(deps: Deps, ctx: CallContext): Placed[] {
   return enabledManifests(deps).flatMap((m) =>
-    (m.dashboardTiles ?? []).filter((tile) => hasAnyOf(ctx.permissions, tile.permission)).map((tile) => ({ module: m.key, tile })),
+    (m.dashboardTiles ?? [])
+      .filter((tile) => hasAnyOf(ctx.permissions, tile.permission) && (tile.available?.(deps) ?? true))
+      .map((tile) => ({ module: m.key, tile })),
   );
 }
 

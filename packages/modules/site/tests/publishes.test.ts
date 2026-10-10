@@ -98,3 +98,20 @@ describe('source of a publish', () => {
     expect(unwrap(await getPublish(deps, view, { id: 'P01' })).source).toEqual({ channel: 'ui', tokenName: null });
   });
 });
+
+describe('recordPublish (Plan C)', () => {
+  const none = { changed: [], added: [], removed: [] };
+  it('keeps the public state of a successful publish, never of a failed one, and lists stay without it', async () => {
+    const deps = createTestDeps({ manifests: [coreModule, siteModule] });
+    insertUser(deps, { id: 'USER-TEST' });
+    const manifest = { 'variables.claim': { hash: '0123456789abcdef', label: 'Claim', href: '/site/variables' } };
+    const base = { environment: 'production', startedAt: '2026-10-01T08:00:00.000Z', contentHash: 'h', diff: none, fileManifest: {}, log: '', summary: 's' };
+    const success = recordPublish(deps, ctxWith([]), { ...base, status: 'success', contentManifest: manifest });
+    expect(JSON.parse(success.contentManifest!)).toEqual(manifest);
+    const failed = recordPublish(deps, ctxWith([]), { ...base, startedAt: '2026-10-02T08:00:00.000Z', status: 'failed', contentManifest: manifest });
+    expect(failed.contentManifest).toBeNull();
+    expect(recordPublish(deps, ctxWith([]), { ...base, startedAt: '2026-10-03T08:00:00.000Z', status: 'success' }).contentManifest).toBeNull();
+    const list = unwrap(await listPublishes(deps, view, { environment: 'production' }));
+    expect(list[0]).not.toHaveProperty('contentManifest');
+  });
+});

@@ -50,8 +50,11 @@ export function useLanguageName(): (code: string) => string {
   };
 }
 
-/** Das Sprachkürzel im Stil der Marke (mono 11/600); feste Mindestbreite, damit die Texte bündig beginnen. */
-const LOCALE_CODE = 'bg-badge font-mono text-[11px] font-semibold text-badge-ink';
+/**
+ * Das Sprachkürzel im Stil der Marke (mono 11/600, MUSTER § J) — eine benannte Ausnahme von den Schriftstufen; auch die
+ * Gegenüberstellung der Vorschläge nimmt sie (Designer 2026-10-10). Feste Mindestbreite setzt die Aufrufstelle.
+ */
+export const LOCALE_CODE = 'bg-badge font-mono text-[11px] font-semibold text-badge-ink';
 
 /**
  * Einzeilige Eingabe einer Sprache: das Kürzel steht links im Feld als Präfix, aufgebaut wie das „€“ im

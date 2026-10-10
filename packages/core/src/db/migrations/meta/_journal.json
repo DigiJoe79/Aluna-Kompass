@@ -50,6 +50,13 @@
       "when": 1791533605634,
       "tag": "0006_audit_params",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1791590317073,
+      "tag": "0007_animal_proposals_site_manifest",
+      "breakpoints": true
     }
   ]
 }

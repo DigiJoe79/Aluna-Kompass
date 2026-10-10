@@ -114,6 +114,12 @@ type BaseProps = {
    * einer primären Aktion — diese Knöpfe sind sekundär.
    */
   extraActions?: ReactNode;
+  /**
+   * Ohne „Verwerfen“ — **nur auf Prüfseiten** (Freigabe Designer 2026-10-10): Die Maske ist vorbefüllt, entschieden
+   * wird mit Annehmen/Ablehnen, und „Verwerfen“ stünde als vierte Wahl neben „Ablehnen“. Wer die Vorbefüllung
+   * zurückwill, bricht ab und öffnet neu. Wächter `patterns/hide-discard.test.ts` hält die Option dort.
+   */
+  hideDiscard?: boolean;
 };
 
 /**
@@ -173,6 +179,7 @@ export function FormActionBar({
   onDiscard,
   note,
   extraActions,
+  hideDiscard = false,
   recordAction,
 }: FormActionBarProps) {
   const t = useTranslations('common');
@@ -354,7 +361,7 @@ export function FormActionBar({
         }
       : state;
 
-  const showDiscard = !(cancel || mode === 'run' || (onSave && !onDiscard && count === undefined));
+  const showDiscard = !(hideDiscard || cancel || mode === 'run' || (onSave && !onDiscard && count === undefined));
   // Nur einer der beiden Nebenknöpfe: Am Telefon nimmt er die ganze Zeile.
   const lone = Number(showDiscard) + Number(!!(cancel || back)) === 1;
 

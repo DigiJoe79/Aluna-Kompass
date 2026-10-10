@@ -7,6 +7,9 @@ import { cn } from '@/lib/utils';
  * eine eigene Adresse, deshalb Links mit `aria-current="page"` und kein `role="tab"` (Pfeiltasten gäbe es nicht).
  * Unterstrich wie `PanelNav`, Zahl als `StatusBadge` (0 oder keine Zahl → keine Marke); unter 640 px scrollt die
  * Leiste waagerecht, statt umzubrechen. Die Zahlen folgen den Filtern der Leiste — das liefert der Aufrufer.
+ *
+ * `tone: 'agent'`: Zahl in `--color-agent` für Arbeit, die eine Maschine vorgelegt hat (Board Vorschläge 1d,
+ * Designer 2026-10-10).
  */
 export function ViewTabs({
   label,
@@ -14,7 +17,7 @@ export function ViewTabs({
   current,
 }: {
   label: string;
-  tabs: readonly { key: string; label: string; href: string; count?: number; testId?: string }[];
+  tabs: readonly { key: string; label: string; href: string; count?: number; tone?: 'neutral' | 'agent'; testId?: string }[];
   current: string;
 }) {
   return (
@@ -36,7 +39,7 @@ export function ViewTabs({
               {tab.label}
               {tab.count ? ' ' : null}
               {tab.count ? (
-                <StatusBadge tone="neutral" className="px-1.5 py-0 font-medium tabular-nums">
+                <StatusBadge tone={tab.tone ?? 'neutral'} className="px-1.5 py-0 font-medium tabular-nums">
                   {tab.count}
                 </StatusBadge>
               ) : null}

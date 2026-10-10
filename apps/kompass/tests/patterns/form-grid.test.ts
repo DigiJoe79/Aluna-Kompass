@@ -15,8 +15,6 @@ const ALLOWED: Allowlist = {
     'Werkzeug-Layout: Rollenliste neben dem Detail und die Rechte-Matrix als Tabellenraster; die Felder im Detailkopf stehen im FormGrid (Inventar § 3 A).',
   'app/(shell)/admin/themes/theme-editor.tsx':
     'Werkzeug-Layout: Liste, Farbtabelle und Vorschau nebeneinander, kein Formularraster abbildbar; der Dialog steht im FormGrid (Inventar § 3 A).',
-  'app/(shell)/animals/animal-form.tsx':
-    'Prüfansicht Texte neben Fotos: eigenes Zwei-Block-Layout nur im Reiter „Texte und Fotos“, jeder Block mit eigenem FormGrid (Plan K8/K9 T2b).',
   'app/(shell)/projects/external-links-field.tsx':
     'Zeilen-Editor mit eigenem Zeilenraster (Bezeichnung · Adresse · Entfernen je Verweis); der Editor steht als Ganzes `full` im FormGrid (Inventar § 3 B).',
   'app/(shell)/finance/partners/[id]/payments/[paymentId]/draft-form.tsx':

@@ -1,7 +1,7 @@
 import { exportDocument, queryAudit, timeZoneOf } from '@kompass/core';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { auditActionLabel } from '@/lib/audit-actions';
-import { auditEntityLabels } from '@/lib/audit-entities';
+import { auditEntityLabels, auditObject } from '@/lib/audit-entities';
 import { auditExportEntries } from '@/lib/audit-export';
 import { auditSentences, labelsFrom, type SentenceTranslator } from '@/lib/audit-sentences';
 import { getDeps } from '@/lib/deps';
@@ -30,6 +30,8 @@ export async function GET(request: Request): Promise<Response> {
   const a = await getTranslations('audit');
   const labels = t.raw('audit.filters') as Record<string, string>;
   const shown = Object.fromEntries(Object.entries(filters).map(([k, v]) => [labels[k] ?? k, String(v)]));
+  const locale = await getLocale();
+  const objects = auditEntityLabels(deps, session.ctx, query.value.entries, { label: labelsFrom(t), locale });
   const result = await exportDocument(deps, session.ctx, {
     templateKey: 'audit-log-export',
     input: {
@@ -38,10 +40,9 @@ export async function GET(request: Request): Promise<Response> {
       entries: auditExportEntries(query.value.entries, {
         timeZone: timeZoneOf(deps),
         channels: t.raw('audit.filters.channels') as Record<string, string>,
-        labels: auditEntityLabels(deps, session.ctx, query.value.entries),
-        deleted: (type) => t('audit.deletedRecord', { type }),
+        entity: (e) => auditObject(a, e, objects[e.id]),
         // Papier: Datumswerte im Satz fest TT.MM.JJJJ (MUSTER § Datum).
-        sentences: auditSentences(deps, session.ctx, a as unknown as SentenceTranslator, query.value.entries, { paper: true, label: labelsFrom(t), locale: await getLocale() }),
+        sentences: auditSentences(deps, session.ctx, a as unknown as SentenceTranslator, query.value.entries, { paper: true, label: labelsFrom(t), locale }),
         actionLabel: (action) => auditActionLabel(a, action),
       }),
     },

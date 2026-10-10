@@ -3,7 +3,7 @@ import type { CallContext } from '../context';
 import type { DbOrTx } from '../db/client';
 import { rolePermissions, roles } from '../db/schema';
 import type { Deps } from '../deps';
-import { conflict, type Failure } from '../result';
+import { conflict, localizedConflict, type Failure } from '../result';
 import { getEffectivePermissions } from './effective';
 
 /**
@@ -18,7 +18,8 @@ function missingFrom(ctx: CallContext, keys: Iterable<string>): string[] {
 }
 
 function insufficientPrivileges(missing: string[]): Failure {
-  return conflict('insufficientPrivileges', `Dafür fehlen eigene Rechte: ${missing.join(', ')}`);
+  // Grund und Ausweg aus der Sprachdatei, die Rechte mit ihrer Beschriftung (Backlog 55).
+  return localizedConflict('insufficientPrivileges', 'errors.insufficientPrivileges', { permissionKeys: missing.join(',') });
 }
 
 function roleGrants(db: DbOrTx, deps: Deps, roleId: string): string[] {

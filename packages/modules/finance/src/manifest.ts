@@ -2,7 +2,6 @@ import { defineModule, type ModuleManifest, type SettingDefinition } from '@komp
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { FINANCE_DASHBOARD_TILES } from './dashboard';
-import { requireFinanceRead } from './ledger/access';
 import { cashCountTemplate } from './ledger/cash-count-template';
 import { confirmationContactLock, confirmationEntryLock } from './donations/locks';
 import { partnerPaidLineContactLock, partnerPaidLineEntryLock, partnerPayingEntryLock } from './allocation/locks';
@@ -14,6 +13,7 @@ import { waiverDeclarationTemplate } from './allocation/templates/waiver-declara
 import { financeRecordDeleted, financeRecordReferences, financeRetentionDue, financeRetentionHolds } from './ledger/holds';
 import { installFinance } from './install';
 import { registerEntryLocks } from './locks';
+import { financeRecordLabels } from './ledger/record-labels';
 import { FINANCE_MCP_TOOLS } from './mcp-tools';
 import { FINANCE_PERMISSIONS } from './permissions';
 import { seedFinance } from './seed';
@@ -426,13 +426,5 @@ export const financeModule: ModuleManifest = defineModule({
     // Eine Seite gibt es erst mit F3; dort wird der Link nachgetragen.
     return { label: { key: 'finance.records.fiscalYear', params: { designation: year.designation } }, href: null };
   },
-  recordLabels: (deps, ctx, entityType, id) => {
-    if (entityType !== 'financeFiscalYear') return null;
-    const year = deps.db.select({ designation: financeFiscalYears.designation }).from(financeFiscalYears).where(eq(financeFiscalYears.id, id)).get();
-    if (!year) return { label: '', href: null, state: 'missing' };
-    const label = { key: 'finance.records.fiscalYear', params: { designation: year.designation } };
-    const denied = requireFinanceRead(ctx, 'overview');
-    // Das Label bleibt auch ohne Recht stehen — eine Jahresbezeichnung verrät nichts.
-    return { label, href: null, state: denied ? 'forbidden' : 'ok' };
-  },
+  recordLabels: financeRecordLabels,
 });

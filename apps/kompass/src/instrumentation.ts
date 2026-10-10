@@ -11,11 +11,19 @@ export async function register(): Promise<void> {
   if (process.env.NEXT_RUNTIME === 'nodejs') {
     const { getDeps } = await import('@/lib/deps');
     const { startTextWorker } = await import('@kompass/module-dms');
+    const { startHousekeeping } = await import('@kompass/core');
     startBackgroundWork({
       onStart: () => {
         const worker = startTextWorker(getDeps);
-        console.log('[kompass] Texterkennung läuft');
-        return worker;
+        // Aufräumen der Module (Haken `housekeeping`) hängt nicht an der Akte, läuft aber im selben Takt an und hält mit an.
+        const keeper = startHousekeeping(getDeps);
+        console.log('[kompass] Texterkennung und Aufräumen laufen');
+        return {
+          wake: () => worker.wake(),
+          stop: async () => {
+            await Promise.all([worker.stop(), keeper.stop()]);
+          },
+        };
       },
     });
   }

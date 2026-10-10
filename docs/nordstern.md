@@ -450,8 +450,12 @@ die Säulen stehen.
   ausstellt, ist über MCP gesperrt, bis ein Verein es bewusst freigibt. Für
   Tierprofile mit 0.2.2 eingelöst: Jedes Schreiben über MCP merkt das Profil
   zur Prüfung vor, bestätigen kann nur ein Mensch in der Oberfläche, und der
-  Publish warnt vor Veröffentlichtem, das noch niemand gesehen hat. Offen
-  bleibt die Akte.
+  Publish warnt vor Veröffentlichtem, das noch niemand gesehen hat. Für
+  Tierprofile aus fremden Quellen mit 0.2.10 weitergeführt: Ein Dienst mit
+  eigenem Token schlägt neue Tiere, Änderungen und Hinweise nur vor, ein Mensch
+  nimmt in einer Inbox an oder lehnt ab, und die Quelle liest die Endfassung
+  zurück; Prüfmerker und Inbox sind Einstellungen des Moduls. Offen bleibt die
+  Akte.
 - **Einsortierregeln auf dem Volltext** (Backlog 5), als Teil desselben
   Vorgangs.
 - **Freigabe-Schritt vor dem Festschreiben** (Vier-Augen-Prinzip), als

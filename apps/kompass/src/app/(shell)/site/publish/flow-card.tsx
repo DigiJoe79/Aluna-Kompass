@@ -4,9 +4,10 @@ import { AlertTriangle, ExternalLink, Pause } from 'lucide-react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { useDateFormat } from '@/components/date-format-provider';
-import { useId, type ReactNode, type Ref } from 'react';
+import { Fragment, useId, type ReactNode, type Ref } from 'react';
 import { Button, buttonVariants } from '@/components/ui/button';
-import type { DetailView } from '@/lib/site-job-view';
+import type { DetailView, PendingView } from '@/lib/site-job-view';
+import { useSiteJobStatus } from '@/components/site/site-job-provider';
 import { BlockedNotice } from './blocked-notice';
 import { endText, endTitle, type Translate } from './end-text';
 import type { FlowState } from './flow-state';
@@ -43,6 +44,33 @@ const hostOf = (url: string | null): string | null => {
   }
 };
 
+/** Board Vorschläge 8d: die geänderten Datensätze mit Namen, vier davon, der Rest als Zahl; von der Webseite genommene ohne Link. */
+function PendingSince({ pending }: { pending: PendingView }) {
+  const tp = useTranslations('site.pending');
+  const fmt = useDateFormat();
+  const shown = pending.items.slice(0, 4);
+  const rest = pending.count - shown.length;
+  return (
+    <p data-testid="site-pending-since" className="text-[14px] text-ink-2">
+      {tp('since', { date: fmt.date(pending.since!) })}{' '}
+      {shown.map((item, i) => (
+        <Fragment key={item.key}>
+          {i === 0 ? null : rest === 0 && i === shown.length - 1 ? ` ${tp('and')} ` : ', '}
+          {item.href ? (
+            <Link href={item.href} className="text-link underline">
+              {item.label}
+            </Link>
+          ) : (
+            item.label
+          )}
+          {item.kind === 'changed' ? null : ` (${tp(`kind.${item.kind}`)})`}
+        </Fragment>
+      ))}
+      {rest > 0 ? ` ${tp('more', { count: rest })}` : null}.
+    </p>
+  );
+}
+
 /**
  * Die Karte der Publizieren-Seite: genau ein Zustand, höchstens ein Primärknopf.
  * Der Zustand kommt fertig abgeleitet aus `deriveFlowState`; hier wird er nur
@@ -53,6 +81,7 @@ export function PublishFlowCard(p: PublishFlowCardProps) {
   const fmt = useDateFormat();
   const reasonId = useId();
   const { state } = p;
+  const { pending } = useSiteJobStatus();
   const canPublishHere = p.env !== 'development' && p.hasDeploy;
   const host = hostOf(p.publicUrl);
   const time = (iso: string) => fmt.time(iso);
@@ -100,7 +129,12 @@ export function PublishFlowCard(p: PublishFlowCardProps) {
   switch (state.kind) {
     case 'none':
       title = t('flow.none.title');
-      body = <p className="text-[14px] text-ink-2">{state.lastPublishedAt ? t('flow.none.text', { date: dateTime(state.lastPublishedAt) }) : t('flow.none.textNever')}</p>;
+      body =
+        pending && pending.count > 0 && pending.since ? (
+          <PendingSince pending={pending} />
+        ) : (
+          <p className="text-[14px] text-ink-2">{state.lastPublishedAt ? t('flow.none.text', { date: dateTime(state.lastPublishedAt) }) : t('flow.none.textNever')}</p>
+        );
       actions = primary(t('flow.startPreview'), p.onStartPreview);
       break;
     case 'outdated':

@@ -202,6 +202,7 @@ const WITHOUT_TOOL: Record<string, string> = {
   'contacts.getUserLink': 'Lesehilfe der Nutzerverwaltung; über MCP liefert contacts_user_link_changes dasselbe mit Verlauf.',
   'animals.seedAnimals': 'Beispieldaten der Entwicklung.',
   'animals.confirmAnimalReview': 'Die Prüfung bestätigt ein Mensch in der Oberfläche.',
+  'animals.readProposalImage': 'Liefert Bytes für die Prüfseite (Route Handler, Plan B); ein Agent mit animals.manage sieht Maße und Herkunft über animals_proposal_get.',
   'animals.exportAnimalProfiles': 'Liefert Bytes wie core.exportDocument; ein Agent liest die Tiere über animals_get und animals_list.',
   'projects.seedProjects': 'Beispieldaten der Entwicklung.',
   'site.applySeed': 'Beispielinhalte des Templates; ein Mensch bestätigt sie in der Oberfläche.',

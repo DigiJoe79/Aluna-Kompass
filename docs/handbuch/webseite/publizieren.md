@@ -33,6 +33,28 @@ Hat sich seit der Vorschau nichts geändert, was sie vom Stand der Webseite
 unterscheidet, steht dort „Alles auf dem neuesten Stand“; ein stiller Link
 „Trotzdem publizieren“ bleibt für den Fall, dass Sie es erzwingen wollen.
 
+## Was noch nicht publiziert ist
+
+Wer publizieren darf, sieht oben in der Kopfzeile in Gelb, wie viele Datensätze
+auf der Webseite noch anders aussehen als in Kompass: „7 nicht publiziert“. Ein
+Klick zeigt die ersten fünf mit Namen und führt zum Publizieren; am Telefon steht
+dort ein Symbol mit der Zahl, ein Tipp führt direkt auf diese Seite. Am Datensatz
+selbst steht dasselbe als Zeile „Änderung noch nicht publiziert · Zum Publizieren“,
+mit dem Link auf diese Seite: am Hund unter „veröffentlicht“, an Projekten, Einträgen
+der Webseite und unter Einstellungen → Verein direkt unter dem Seitenkopf. Die
+Variablen teilen sich eine Seite; dort sagt die Zeile, welche geändert sind, etwa
+„2 Variablen nicht publiziert: Spendenkonto, Telefon“, ab vier nur die Zahl. Vor der
+ersten Vorschau nennt die Karte die geänderten Datensätze.
+
+Gezählt wird, was die Webseite zeigt: geänderte, neu veröffentlichte und von der
+Webseite genommene Hunde, Projekte, Einträge, Variablen und Vereinsdaten. Interne
+Felder (Notizen, Prüfmerker) und nicht veröffentlichte Datensätze zählen nicht.
+Was von der Webseite genommen wurde, steht mit dem Namen, den es beim letzten
+Publish hatte, aber ohne Link — es kann inzwischen gelöscht sein. Verglichen wird
+mit dem letzten erfolgreichen Publish der **Produktion** — ein Publish auf Test
+ändert die Zahl nicht. Nach dem Update auf diese Fassung erscheint die Anzeige
+erst nach dem ersten Publish.
+
 ## Kurzbilanz und Hinweise
 
 Eine fertige Vorschau fasst sich in einer Zeile zusammen: „12 geändert · 3
@@ -150,7 +172,8 @@ alles. `site_export_check` prüft die Inhalte, ohne zu bauen, und ist jetzt in
 Sekunden fertig; sein `contentHash` ist der, den eine Vorschau meldet.
 `site_job_cancel` bricht den laufenden Lauf ab, `site_publish_get` liest einen
 Eintrag der Historie mit Dateiliste und Protokoll. `site_publish` verlangt den
-`expectedContentHash` der Vorschau, die der Assistent geprüft hat.
+`expectedContentHash` der Vorschau, die der Assistent geprüft hat. Was noch nicht
+publiziert ist, liest er mit `site_pending_changes`.
 
 Den Verbindungstest zum Webspace finden Sie unter Einstellungen → Webseite →
 Verbindung ([Webseite einrichten](../einstellungen/webseite-einrichten.md));

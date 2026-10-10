@@ -36,10 +36,10 @@ const auditEntrySchema = z.object({
   occurredAt: z.string(),
   userName: z.string().nullable(),
   channel: z.string(),
-  entityType: z.string(),
-  entityId: z.string().nullable(),
-  /** Der Name des Datensatzes, wo der Aufrufer ihn auflösen konnte; sonst steht die ID. */
-  entityLabel: z.string().nullable().optional(),
+  /** Das Objekt, fertig vom Aufrufer: Typ in Worten und Name („Nutzer · Anna Berger“), ohne Namen nur der Typ. */
+  entity: z.string(),
+  /** Steht der Datensatz nicht mehr, das Wort dafür („gelöscht“) — kursiv gesetzt, damit es nicht wie ein Name aussieht. */
+  entityGone: z.string().nullable().optional(),
   /** Was geschah: der Satz aus `audit.sentences.*` oder, ohne Satz, der Klartext der Aktion (Spec Protokoll § 4). */
   sentence: z.string(),
 });
@@ -53,7 +53,7 @@ const auditExportSchema = z.object({
  * Die Änderungsprotokoll-Tabelle als Typst (datenlastig, kein Markdown).
  *
  * Die Breite gehört dem Inhalt: Zeitpunkt und Nutzer mit Kanal stehen in festen, schmalen Spalten, der Rest ist
- * die Aktion als Satz und das Objekt. Zeitpunkt, Kanal und Satz kommen fertig vom Aufrufer.
+ * die Aktion als Satz und das Objekt. Zeitpunkt, Kanal, Satz und Objekt kommen fertig vom Aufrufer.
  *
  * Die Kopfzeile trägt keinen Fettdruck: Jede Basis setzt sie selbst fett und hell auf ihre Hauptfarbe. Eine
  * Basis, die Fettes in eben dieser Farbe setzt, machte die Köpfe sonst unsichtbar (Befund 5, 0.2.2). Aus
@@ -65,7 +65,7 @@ function auditTable(data: z.infer<typeof auditExportSchema>): string {
     `[${esc(e.occurredAt)}]`,
     `[${esc(e.userName ?? '—')} #linebreak() #text(size: 8pt)[${esc(e.channel)}]]`,
     `[${esc(e.sentence)}]`,
-    `[${esc(`${e.entityType}${e.entityLabel ? ` · ${e.entityLabel}` : e.entityId ? ` · ${e.entityId}` : ''}`)}]`,
+    `[${esc(e.entity)}${e.entityGone ? ` · #emph[${esc(e.entityGone)}]` : ''}]`,
   ]);
   return [
     `#text(size: 9pt)[${esc(`Filter: ${filters || 'keine'}`)}]`,

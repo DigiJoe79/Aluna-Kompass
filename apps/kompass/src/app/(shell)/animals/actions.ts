@@ -11,33 +11,19 @@ import { toDeletionPreviewView, type DeletionPreviewView } from '@/lib/deletion-
 import { localizedFromForm } from '@/lib/localized-form';
 import { requireSession } from '@/lib/request-context';
 import { formTab, listQueryString } from './list-params';
+import { animalFieldsFromForm } from './form-values';
 import { photosChanged, photosFromForm } from './photos-changed';
 import { storyChanged } from './story-changed';
 
 const NEXT_ID = /^[0-9A-Z]{26}$/;
 
-const splitList = (value: FormDataEntryValue | null) => String(value ?? '').split(',').map((s) => s.trim()).filter(Boolean);
 
 export async function saveAnimalAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
   return guardAction('(shell)/animals/actions.ts#saveAnimalAction', async () => {
     const t = await getTranslations();
     const { deps, ctx } = await requireSession();
     const id = String(formData.get('id') ?? '');
-    const fields = {
-      name: String(formData.get('name') ?? '').trim(),
-      sex: String(formData.get('sex') ?? 'female'),
-      birthText: localizedFromForm(formData, 'birthText', deps.locales()),
-      sizeCm: Number(formData.get('sizeCm') ?? 0),
-      sizeText: localizedFromForm(formData, 'sizeText', deps.locales()),
-      location: String(formData.get('location') ?? 'shelter'),
-      place: String(formData.get('place') ?? '').trim(),
-      isEmergency: formData.get('isEmergency') === 'on',
-      isSponsorable: formData.get('isSponsorable') === 'on',
-      traits: { de: splitList(formData.get('traits__text.de')), en: splitList(formData.get('traits__text.en')) },
-      externalProfileUrl: String(formData.get('externalProfileUrl') ?? '').trim(),
-      summary: localizedFromForm(formData, 'summary', deps.locales()),
-      body: localizedFromForm(formData, 'body', deps.locales()),
-    };
+    const fields = animalFieldsFromForm(formData, deps.locales());
     const expectedVersion = String(formData.get('expectedVersion') ?? '') || undefined;
     const result = id ? await updateAnimal(deps, ctx, { id, expectedVersion, ...fields }) : await createAnimal(deps, ctx, fields);
     revalidatePath('/animals');

@@ -15,7 +15,13 @@ steht. „Hund anlegen“ öffnet ein neues Profil.
   Profile, die auf eine Durchsicht warten; die Zahl dahinter gilt immer für
   den ganzen Bestand. In „Prüfung offen“ steht oben, was am längsten wartet.
   Ein wartendes Profil trägt in beiden Ansichten die Marke „Prüfung offen“;
-  wer mit der Maus darauf bleibt, liest die Notiz dazu.
+  wer mit der Maus darauf bleibt, liest die Notiz dazu. „Prüfung offen“
+  erscheint nur, wenn das Vormerken zur Prüfung eingeschaltet ist oder noch
+  Tiere markiert sind (Einstellungen → Tiere).
+- **Vorschläge** — mit dem Recht „Tiere verwalten“ führt der Reiter
+  „Vorschläge“ zu dem, was eine Quelle vorgeschlagen hat; die Zahl zählt alle
+  offenen. Ein Hund mit offenem Vorschlag trägt die Marke „Vorschlag“. Wie
+  man sie prüft, steht unter [Vorschläge prüfen](tiere-vorschlaege.md).
 - **Filter** — die Namenssuche, der Status, der Aufenthalt und ob der Hund
   veröffentlicht ist. Sie wirken zusammen; die Zeile rechts daneben sagt,
   wie viele Hunde übrig bleiben („17 von 187 Hunden“).
@@ -66,9 +72,16 @@ Drei Reiter:
   „Fotos wählen“ steht, wie viele davon belegt sind („10 von 12 Fotos“). Ist
   die Grenze erreicht, lässt der Auswahldialog kein weiteres Foto zu — heben
   Sie dort erst eines auf oder nehmen Sie eines heraus.
+  Kam ein Foto mit einem Ausschnitt der Quelle, zeigt die Kachel das ganze
+  Foto mit dem Ausschnitt als hellem Rechteck, außen abgedunkelt
+  („Ausschnitt der Quelle“); bearbeiten lässt er sich noch nicht.
 - **Geschichte** — erst nach der Vermittlung: Vorher- und Nachher-Bild mit
   Unterschrift, ein Zitat der Familie, das Vermittlungsjahr. Daraus macht die
   Vorlage der Webseite die „Glücklichen Vermittlungen“.
+
+Kam der Hund über eine Quelle, steht oben neben dem Status „Herkunft: …“ mit
+einem Link auf den Eintrag bei der Quelle. Ist ein Vorschlag zu ihm offen,
+steht darunter das Band „Offener Vorschlag von …“ mit „Prüfen“.
 
 Den URL-Teil (Slug) bildet Kompass beim Anlegen selbst: der Name, ein
 Bindestrich und eine kurze Kennung, etwa `luna-7k3f`. Er bleibt danach fest,

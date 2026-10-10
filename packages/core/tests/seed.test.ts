@@ -70,6 +70,15 @@ describe('seedDevelopment', () => {
     expect(called).toBe(true);
   });
 
+  it('runs the seedLast hooks after the seed hooks of every module, whatever the order of the manifests', async () => {
+    const calls: string[] = [];
+    const first = defineModule({ key: 'first', version: '0', permissions: ['first.view'], seed: async () => void calls.push('first.seed'), seedLast: async () => void calls.push('first.seedLast') });
+    const second = defineModule({ key: 'second', version: '0', permissions: ['second.view'], seed: async () => void calls.push('second.seed') });
+    const deps = createTestDeps({ env: 'development', manifests: [coreModule, first, second] });
+    await seedDevelopment(deps);
+    expect(calls).toEqual(['first.seed', 'second.seed', 'first.seedLast']);
+  });
+
   it('gibt Jonas Feld eine eigene Startseite aus den Kacheln, die er sehen darf', async () => {
     const deps = createTestDeps({ env: 'development' });
     await seedDevelopment(deps);

@@ -78,6 +78,71 @@ describe('Aktionen des Protokolls in Worten', () => {
   });
 });
 
+/**
+ * Die Spalte „Objekt“ nennt den Typ in Worten (Joe 2026-10-09): Jeder Typ, der ins Protokoll geschrieben wird, hat
+ * ein Wort unter `audit.entities.*`, und kein Wort steht ohne Typ. Gesammelt aus den festen Texten in den Aufrufen
+ * von `recordAudit` (auch über ein vorher gebautes Objekt, `...entry`) und aus `FinanceEntity` für `financeAudit`.
+ */
+describe('Typen des Protokolls in Worten', () => {
+  const words = (messages.audit as unknown as { entities: Record<string, string> }).entities;
+
+  it('jeder Typ, den ein Dienst protokolliert, hat ein Wort, und jedes Wort gehört zu einem Typ', () => {
+    const found = new Set<string>();
+    const offenders: string[] = [];
+    for (const file of [...sources(path.join(REPO, 'packages')), ...sources(path.join(REPO, 'apps/kompass/src'))]) {
+      const rel = path.relative(REPO, file);
+      const source = readFileSync(file, 'utf8');
+      const scan = auditEntityTypes(source);
+      scan.types.forEach((type) => found.add(type));
+      if (!(rel in DYNAMIC_ENTITY_ALLOWED)) offenders.push(...scan.unknown.map((hit) => `${rel}: ${hit}`));
+    }
+    for (const type of financeEntities()) found.add(type);
+    expect(offenders).toEqual([]);
+    expect(found.size).toBeGreaterThan(70);
+    expect([...found].filter((type) => !(type in words)).sort()).toEqual([]);
+    expect(Object.keys(words).filter((type) => !found.has(type)).sort()).toEqual([]);
+  });
+
+  it('der Sammler findet feste Typen, Typen aus einem vorher gebauten Objekt und meldet Ausdrücke', () => {
+    expect(auditEntityTypes("recordAudit(tx, deps, ctx, { action: 'a.b', entityType: 'thing', entityId: null });")).toEqual({ types: ['thing'], unknown: [] });
+    expect(auditEntityTypes("const entry = { entityType: 'user', entityId: id };\nrecordAudit(tx, deps, ctx, { action: 'a.b', ...entry });")).toEqual({ types: ['user'], unknown: [] });
+    expect(auditEntityTypes('recordAudit(tx, deps, ctx, { action: \'a.b\', entityType: kind, entityId: null });').unknown).toHaveLength(1);
+  });
+});
+
+/** Datei → Grund. Nur Stellen, die den Typ bloß durchreichen. */
+const DYNAMIC_ENTITY_ALLOWED: Record<string, string> = {
+  'packages/core/src/audit/log.ts': 'recordAudit selbst: `entityType: input.entityType`.',
+  'packages/modules/finance/src/audit.ts': 'financeAudit selbst: `entityType: entry.entity`, typisiert als `FinanceEntity`.',
+};
+
+/** Die Typen der Finanzen: die Glieder von `FinanceEntity` (`financeAudit` nimmt nur diese). */
+function financeEntities(): string[] {
+  const source = readFileSync(path.join(REPO, 'packages/modules/finance/src/audit.ts'), 'utf8');
+  const union = source.match(/export type FinanceEntity =([^;]+);/)![1]!;
+  return [...union.matchAll(/'([a-zA-Z]+)'/g)].map((m) => m[1]!);
+}
+
+/** Die festen Typen in den Aufrufen von `recordAudit`; `unknown` nennt Aufrufe, deren Typ kein fester Text ist. */
+function auditEntityTypes(source: string): { types: string[]; unknown: string[] } {
+  const types: string[] = [];
+  const unknown: string[] = [];
+  for (const call of calls(source, /\brecordAudit\(/g)) {
+    const direct = call.match(/\bentityType:\s*([^,}\n]+)/);
+    if (direct) {
+      const literal = direct[1]!.trim().match(/^'([^']+)'$/);
+      if (literal) types.push(literal[1]!);
+      else unknown.push(direct[0]!.trim());
+      continue;
+    }
+    const spread = call.match(/\.\.\.([a-zA-Z]+)/);
+    const built = spread ? source.match(new RegExp(`const ${spread[1]} = \\{[^}]*?\\bentityType:\\s*'([^']+)'`)) : null;
+    if (built) types.push(built[1]!);
+    else unknown.push(call.slice(0, 80));
+  }
+  return { types, unknown };
+}
+
 /** Strings, die wie eine Aktion aussehen, aber keine sind (Schlüssel einer Einstellung im Muster oben). */
 const NOT_AUDIT_ACTIONS = new Set<string>([]);
 

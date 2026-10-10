@@ -4,6 +4,7 @@ import path from 'node:path';
 import { conflict, invalid, isoNow, localizedConflict, systemContext, newId, ok, recordAudit, requirePermission, validate, type CallContext, type Clock, type Deps, type Result, type ServiceError } from '@kompass/core';
 import { z } from 'zod';
 import { exportSiteContent, type SiteContentExport } from '../export';
+import { contentManifestOf } from '../public-content';
 import { lastSuccessfulPublish, recordPublish, type PublishDiff, type PublishRecord } from '../services/publishes';
 import { buildSite, removeLegacyStages, SiteBuildError } from './build';
 import { copyTree, countFiles, type TreeHooks } from './copy';
@@ -129,7 +130,7 @@ function launch<T>(
 
 async function runAndWait<T>(deps: Deps, ctx: CallContext, env: SiteEnv, kind: SiteJobKind, source: 'ui' | 'mcp', body: (h: RunHandle) => Promise<Result<T>>): Promise<Result<T>> {
   const started = launch(deps, ctx, env, kind, source, body);
-  if ('busy' in started) return conflict('siteJobRunning', `Es läuft bereits: ${started.busy.kind}`);
+  if ('busy' in started) return localizedConflict('siteJobRunning', 'errors.siteJobRunning', { kind: started.busy.kind });
   return started.done;
 }
 
@@ -545,6 +546,7 @@ async function publishBody(deps: Deps, ctx: CallContext, env: SiteEnv, h: RunHan
         contentHash,
         diff: built.value.diff,
         fileManifest: built.value.manifest,
+        contentManifest: contentManifestOf(built.value.exported.items),
         log: built.value.log + transferLog,
         summary: `Publiziert: ${built.value.diff.changed.length} geändert, ${built.value.diff.added.length} neu, ${built.value.diff.removed.length} entfernt`,
       }),

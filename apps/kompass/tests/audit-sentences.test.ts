@@ -27,7 +27,7 @@ const messages = {
       probe_link: 'Verknüpft mit {contact}',
       settings_update: 'Einstellung „{key}“ geändert',
       locale_add: 'Sprache „{code}“ hinzugefügt',
-      backup_export: 'Sicherung mit {sizeBytes} erstellt',
+      backup_export: 'Backup mit {sizeBytes} erstellt',
       site_values_update: '{variableCount, plural, one {Variable} other {Variablen}} {variables} geändert',
       site_seed_apply: '{items} aus der Vorlage der Webseite übernommen',
     },
@@ -112,7 +112,7 @@ describe('auditSentences', () => {
     expect(run(e({ action: 'settings.update', params: { key: 'organization.name' } }))).toBe('Einstellung „Vereinsname“ geändert');
     expect(run(e({ action: 'settings.update', params: { key: 'secret.internal' } }))).toBeNull();
     expect(run(e({ action: 'locale.add', params: { code: 'en' } }))).toBe('Sprache „Englisch“ hinzugefügt');
-    expect(run(e({ action: 'backup.export', params: { sizeBytes: 2 * 1024 * 1024 } }))).toBe('Sicherung mit 2,0 MB erstellt');
+    expect(run(e({ action: 'backup.export', params: { sizeBytes: 2 * 1024 * 1024 } }))).toBe('Backup mit 2,0 MB erstellt');
   });
 
   it('joins lists as the surface does and drops parts that are 0 (Designer 2026-10-09)', () => {

@@ -109,6 +109,12 @@ describe('FormActionBar', () => {
     }
   });
 
+  it('Prüfseite (hideDiscard): kein Verwerfen, Abbrechen nimmt am Telefon die ganze Zeile (Designer 2026-10-10)', () => {
+    render(<form><input name="a" /><FormActionBar back={{ href: '/x', label: 'Zurück' }} hideDiscard /></form>, { wrapper });
+    expect(screen.queryByRole('button', { name: 'Verwerfen' })).toBeNull();
+    expect(screen.getByRole('link', { name: 'Abbrechen' }).className).toContain('max-sm:col-span-2');
+  });
+
   it('Telefon: Speichern über die volle Breite zuerst, Verwerfen und Abbrechen darunter nebeneinander', () => {
     render(<form><input name="a" /><FormActionBar back={{ href: '/x', label: 'Zurück' }} extraActions={<button type="button">Speichern und neu</button>} /></form>, { wrapper });
     const save = screen.getByRole('button', { name: 'Speichern' });

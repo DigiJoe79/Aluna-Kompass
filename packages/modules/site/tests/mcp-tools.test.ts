@@ -15,6 +15,7 @@ import { siteTemplateState } from '../src/schema';
 import { getPublish, listPublishes } from '../src/services/publishes';
 import { listReferenceOptions } from '../src/values';
 import { getBlockedTerms, setBlockedTerms } from '../src/blocked-terms';
+import { sitePendingChanges } from '../src/pending';
 import { applyTemplateSync } from '../src/service';
 
 const asJson = (s: unknown) => z.toJSONSchema(s as z.ZodType, { io: 'input' }) as FieldSchema;
@@ -65,6 +66,7 @@ describe('site mcp tools', () => {
       'site_blocked_terms_get',
       'site_blocked_terms_set',
       'site_export_check',
+      'site_pending_changes',
       'site_deploy_check',
       'site_preview_build',
       'site_publish',
@@ -75,6 +77,12 @@ describe('site mcp tools', () => {
       'site_cache_status',
       'site_cache_clear',
     ]);
+  });
+
+  it('reads what is not yet published with site.publish (Plan C)', () => {
+    const tools = Object.fromEntries(moduleMcpTools(createTestDeps({ manifests: [coreModule, siteModule] }), siteModule).map((t) => [t.name, t]));
+    expect(tools.site_pending_changes?.service).toBe(sitePendingChanges);
+    expect(tools.site_pending_changes?.description).toContain('site.publish');
   });
 
   it('bietet Stand und Leeren des Caches an (Spec § 5)', () => {

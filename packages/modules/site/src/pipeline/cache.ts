@@ -1,6 +1,6 @@
 import { existsSync, readdirSync, rmSync, statSync } from 'node:fs';
 import path from 'node:path';
-import { conflict, ok, recordAudit, requirePermission, type CallContext, type Deps, type Result } from '@kompass/core';
+import { localizedConflict, ok, recordAudit, requirePermission, type CallContext, type Deps, type Result } from '@kompass/core';
 import type { SiteEnv } from './env';
 import { runningSiteJob } from './run-state';
 
@@ -61,7 +61,8 @@ export function siteCacheStatus(deps: Deps, ctx: CallContext, env: SiteEnv): Res
 export function clearSiteCache(deps: Deps, ctx: CallContext, env: SiteEnv): Result<{ removed: number }> {
   const denied = requirePermission(ctx, 'site.manage');
   if (denied) return denied;
-  if (runningSiteJob(env)) return conflict('siteJobRunning', 'Es läuft bereits ein Lauf');
+  const running = runningSiteJob(env);
+  if (running) return localizedConflict('siteJobRunning', 'errors.siteJobRunning', { kind: running.kind });
   const files = [...variantFiles(env), ...treeFiles(env.previewDir), ...(existsSync(stamp(env)) ? [stamp(env)] : [])];
   for (const f of files) rmSync(f, { force: true });
   try {

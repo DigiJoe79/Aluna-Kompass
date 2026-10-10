@@ -1,9 +1,10 @@
-import { coreModule, seedDevelopment } from '@kompass/core';
-import { createTestDeps } from '@kompass/core/testing';
+import { coreModule, readSetting, seedDevelopment, unwrap } from '@kompass/core';
+import { createTestDeps, ctxWith } from '@kompass/core/testing';
 import { describe, expect, it } from 'vitest';
 import { animalsModule } from '../src/manifest';
 import { eq } from 'drizzle-orm';
-import { animalPhotos, animalStories, animals } from '../src/schema';
+import { animalPhotos, animalProposals, animalStories, animals } from '../src/schema';
+import { listProposals, PROPOSALS_ENABLED_KEY } from '../src';
 
 describe('animals seed', () => {
   it('seeds a few example animals with a mix of statuses and one published', async () => {
@@ -98,5 +99,54 @@ describe('animals seed', () => {
     expect(story.beforeAssetId).not.toBeNull();
     expect(story.afterAssetId).not.toBeNull();
     expect(story.beforeAssetId).not.toBe(story.afterAssetId);
+  });
+
+  it('seeds proposals of every kind from an invented source, open and decided, idempotent', async () => {
+    const deps = createTestDeps({ manifests: [coreModule, animalsModule], env: 'development' });
+    await seedDevelopment(deps);
+    const rows = deps.db.select().from(animalProposals).all();
+    expect(new Set(rows.filter((r) => r.state === 'open').map((r) => r.kind))).toEqual(new Set(['create', 'update', 'notice', 'sameAs']));
+    expect(rows.some((r) => r.state === 'accepted' || r.state === 'acceptedWithChanges')).toBe(true);
+    expect(rows.some((r) => r.state === 'rejected')).toBe(true);
+    expect(rows.some((r) => r.state === 'withdrawn')).toBe(true);
+    expect(rows.some((r) => r.noticeKind === 'delisted')).toBe(true);
+    expect(readSetting(deps, PROPOSALS_ENABLED_KEY)).toBe(true);
+    const list = unwrap(await listProposals(deps, ctxWith(['animals.manage'])));
+    expect(list.open.withConflict).toBeGreaterThanOrEqual(1);
+    expect(list.proposals.some((p) => p.kind === 'create' && p.missing.length > 0)).toBe(true);
+    expect(list.proposals.some((p) => p.hintCount > 0)).toBe(true);
+    // Für den Stapel (Plan B): eine Änderung und ein neuer Hund, die rechts mit einem Wisch durchgehen.
+    expect(list.proposals.some((p) => p.kind === 'update' && p.conflictCount === 0 && p.hintCount === 0)).toBe(true);
+    expect(list.proposals.some((p) => p.kind === 'create' && p.missing.length === 0 && p.hintCount === 0)).toBe(true);
+    await seedDevelopment(deps);
+    expect(deps.db.select().from(animalProposals).all()).toHaveLength(rows.length);
+  });
+
+  it('seeds an open change to a long text, so the review shows a word diff with a few changed places', async () => {
+    const deps = createTestDeps({ manifests: [coreModule, animalsModule], env: 'development' });
+    await seedDevelopment(deps);
+    const long = deps.db
+      .select()
+      .from(animalProposals)
+      .all()
+      .find((r) => r.state === 'open' && r.kind === 'update' && (r.values as { body?: unknown } | null)?.body !== undefined);
+    expect(long).toBeDefined();
+    const values = long!.values as { body: Record<string, string>; birthText?: Record<string, string> };
+    const animal = deps.db.select().from(animals).where(eq(animals.id, long!.animalId!)).get()!;
+    const current = animal.body as Record<string, string>;
+    for (const locale of ['de', 'en']) {
+      // Lang genug für den Wortunterschied (Gegenüberstellung: ab 200 Zeichen), mehrere Absätze, aber nur stellenweise anders.
+      expect(current[locale]!.length).toBeGreaterThan(200);
+      expect(current[locale]).toContain('\n\n');
+      expect(values.body[locale]).not.toBe(current[locale]);
+      const before = new Set(current[locale]!.split(/\s+/));
+      const after = values.body[locale]!.split(/\s+/);
+      const changed = after.filter((w) => !before.has(w)).length;
+      expect(changed).toBeGreaterThan(1);
+      expect(changed).toBeLessThan(after.length / 5);
+    }
+    expect(values.birthText).toBeDefined();
+    const hints = long!.hints as { title?: string; field?: string }[];
+    expect(hints.some((h) => h.title !== undefined && h.field !== undefined)).toBe(true);
   });
 });

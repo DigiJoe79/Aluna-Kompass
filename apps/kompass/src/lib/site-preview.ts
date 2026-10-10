@@ -30,19 +30,19 @@ const PREFIX = '/site/preview/';
  * dazu steht in `e2e/site-publish.spec.ts` und prüft die Regel statt der
  * einzelnen Attribute.
  */
-export function rewritePreviewHtml(html: string): string {
+export function rewritePreviewHtml(html: string, prefix: string = PREFIX): string {
   return (
     html
-      .replace(/href="\/(?!\/)/g, `href="${PREFIX}`)
-      .replace(/src="\/(?!\/)/g, `src="${PREFIX}`)
+      .replace(/href="\/(?!\/)/g, `href="${prefix}`)
+      .replace(/src="\/(?!\/)/g, `src="${prefix}`)
       // `srcset` trägt mehrere Adressen in einem Attribut, jede mit ihrer Breite
       // dahinter; die Regel für `src` greift hier nicht. Wählt der Browser aus
       // dem `srcset`, fällt er bei einer falschen Adresse nicht auf `src`
       // zurück — das Bild bleibt leer.
-      .replace(/srcset="([^"]+)"/g, (_, set: string) => `srcset="${set.replace(/(^|,\s*)\/(?!\/)/g, `$1${PREFIX}`)}"`)
+      .replace(/srcset="([^"]+)"/g, (_, set: string) => `srcset="${set.replace(/(^|,\s*)\/(?!\/)/g, `$1${prefix}`)}"`)
       // Zuletzt, nicht zuerst: Stünde das `<base>` schon vorher da, bögen die
       // Regeln darüber seine eigene Adresse ein zweites Mal um, und relative
       // Adressen landeten unter `/site/preview/site/preview/`.
-      .replace('<head>', `<head><base href="${PREFIX}">`)
+      .replace('<head>', `<head><base href="${prefix}">`)
   );
 }

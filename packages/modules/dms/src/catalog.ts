@@ -6,6 +6,7 @@ import {
   forbidden,
   invalid,
   isoNow,
+  localizedConflict,
   newId,
   notFound,
   ok,
@@ -456,7 +457,7 @@ export async function deleteDocumentType(deps: Deps, ctx: CallContext, input: un
   if (anyDoc) return conflict('documentTypeHasDocuments', `Dokumentart „${existing.label}“ hat schon Dokumente`);
 
   const rules = deps.db.select({ matchContains: documentRules.matchContains }).from(documentRules).where(eq(documentRules.thenTypeKey, existing.key)).all();
-  if (rules.length > 0) return conflict('documentTypeHasRules', `Dokumentart „${existing.label}“ wird von Ablageregeln genutzt: ${rules.map((r) => `„${r.matchContains}“`).join(', ')}`);
+  if (rules.length > 0) return localizedConflict('documentTypeHasRules', 'errors.documentTypeHasRules', { label: existing.label, matches: rules.map((r) => r.matchContains).join('\u001f') });
 
   const owned = refuseModuleOwned(existing);
   if (owned) return owned;

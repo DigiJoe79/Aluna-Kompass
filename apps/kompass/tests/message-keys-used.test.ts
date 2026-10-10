@@ -40,6 +40,7 @@ const DYNAMIC: { prefix: RegExp; where: string }[] = [
   { prefix: /^finance\.channel\./, where: 'lib/finance/channel.ts — `channelKey()` liefert den Schlüssel' },
   { prefix: /^audit\.actions\./, where: 'lib/audit-actions.ts — `auditActionKey()` macht aus der Aktion des Protokolls den Schlüssel (Punkte → Unterstriche)' },
   { prefix: /^audit\.sentences\./, where: 'lib/audit-sentences.ts — `auditSentenceKey()` macht aus der Aktion des Protokolls den Schlüssel des Satzes (Punkte → Unterstriche)' },
+  { prefix: /^audit\.entities\./, where: 'lib/audit-entities.ts — `auditEntityWord()` nimmt den Typ des Protokolls als Schlüssel (`entities.${entityType}`)' },
 ];
 
 function sourceFiles(dir: string): string[] {

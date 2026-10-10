@@ -4,7 +4,8 @@ import { EmptyState } from '@/components/empty-state';
 import { StatusBadge } from '@/components/status-badge';
 import { RowLink, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { auditActionLabel } from '@/lib/audit-actions';
-import type { AuditEntityLabel } from '@/lib/audit-entities';
+import { auditObject, type AuditEntityLabel } from '@/lib/audit-entities';
+import { AuditObjectLabel } from './audit-object';
 import type { DateFormatter } from '@/lib/date-format';
 
 export async function AuditTable({
@@ -19,7 +20,7 @@ export async function AuditTable({
   entries: AuditEntry[];
   selectedId: string | null;
   query: string;
-  /** Live aufgelöste Namen je Eintrag — das Protokoll selbst trägt bei Personendaten nur die ID. */
+  /** Live aufgelöste Namen je Eintrag (`auditEntityLabels`) — das Protokoll selbst trägt bei Personendaten nur die ID. */
   labels?: Record<string, AuditEntityLabel>;
   /** Protokoll mit Sekunden (MUSTER § Datum). */
   fmt: DateFormatter;
@@ -67,15 +68,9 @@ export async function AuditTable({
                 in der Akte): Einzeilig lief die Tabelle bei 1440 px seitlich über, und
                 `max-w` mit `truncate` greift an einer Tabellenzelle nicht
                 (release-0.2.7.md, Befund 14). */}
+            {/* Typ in Worten und Name, ohne Namen nur der Typ — nie die ID, die steht im Detail (Joe 2026-10-09). */}
             <TableCell className="whitespace-normal wrap-anywhere text-ink-2">
-              {e.entityType}
-              {labels[e.id]?.state === 'ok'
-                ? ` · ${(labels[e.id] as { label: string }).label}`
-                : labels[e.id]?.state === 'missing'
-                  ? ` · ${t('deletedRecord', { type: e.entityType })}`
-                  : e.entityId
-                    ? ` · ${e.entityId}`
-                    : ''}
+              <AuditObjectLabel object={auditObject(t, e, labels[e.id])} />
             </TableCell>
           </TableRow>
         ))}

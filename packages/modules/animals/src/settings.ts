@@ -1,4 +1,4 @@
-import type { SettingDefinition } from '@kompass/core';
+import { parseFolderPath, type SettingDefinition } from '@kompass/core';
 import { z } from 'zod';
 
 /**
@@ -34,9 +34,26 @@ export const profileUrlSchema = z.union([
     .refine((value) => value.includes('{slug}'), { message: 'profileUrlNeedsSlug' }),
 ]);
 
+/** Vorschlags-Eingang (Spec 2026-10-09, § 4): Vorschläge von Quellen annehmen. Vorgabe aus. */
+export const PROPOSALS_ENABLED_KEY = 'animals.proposals.enabled';
+/** Prüfmerker beim Schreiben über MCP (bis 0.2.9 immer an). Seit 0.2.10 eine Einstellung, Vorgabe aus. */
+export const REVIEW_ON_MCP_WRITE_KEY = 'animals.review.onMcpWrite';
+/** Wisch-Stapel „Durchgehen“ in der Inbox. Vorgabe aus, bis er mit dem Verein bewertet ist (Joe 2026-10-10, Backlog 68). */
+export const PROPOSAL_STACK_KEY = 'animals.proposals.stack';
+/** Ordner der Mediathek, in den angenommene Bilder gehen; '' = Wurzel. Fehlt der Ordner, landet das Bild in der Wurzel (Verhalten von `storeMediaInternal`). */
+export const PROPOSAL_PHOTO_FOLDER_KEY = 'animals.proposals.photoFolder';
+const folderSchema = z.union([
+  z.literal(''),
+  z.string().refine((v) => parseFolderPath(v) === v, { message: 'invalidFolderPath' }),
+]);
+
 export const ANIMALS_SETTINGS: SettingDefinition[] = [
   { key: PHOTO_FRAME_KEY, schema: photoFrameSchema, default: { aspect: '4:3', focusX: 50, focusY: 50 } satisfies PhotoFrame },
   { key: PROFILE_URL_KEY, schema: profileUrlSchema, default: '' },
+  { key: PROPOSALS_ENABLED_KEY, schema: z.boolean(), default: false },
+  { key: REVIEW_ON_MCP_WRITE_KEY, schema: z.boolean(), default: false },
+  { key: PROPOSAL_PHOTO_FOLDER_KEY, schema: folderSchema, default: '' },
+  { key: PROPOSAL_STACK_KEY, schema: z.boolean(), default: false },
 ];
 
 /** Der Ausschnitt als CSS für ein Bild mit `object-fit: cover`. */

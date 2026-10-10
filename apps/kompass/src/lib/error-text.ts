@@ -11,7 +11,26 @@ const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
  * kommen in Cent und formatiert das ICU-Skelett (`::currency/EUR scale/0.01`). Alles andere bleibt, wie es kommt.
  */
 export function messageValues(params: Record<string, string | number> = {}): Record<string, string | number | Date> {
-  return Object.fromEntries(Object.entries(params).map(([key, value]) => [key, typeof value === 'string' && ISO_DATE.test(value) ? new Date(`${value}T12:00:00.000Z`) : value]));
+  // Ein Wert auf `…Text` hat der Dienst schon für den Bildschirm geschrieben (`messageDate`) — er bleibt Text, auch wenn
+  // er bei Datumsformat „ISO“ wie ein ISO-Datum aussieht (Backlog 55).
+  return Object.fromEntries(Object.entries(params).map(([key, value]) => [key, typeof value === 'string' && !key.endsWith('Text') && ISO_DATE.test(value) ? new Date(`${value}T12:00:00.000Z`) : value]));
+}
+
+const listOf = (items: string[]): string => new Intl.ListFormat('de', { type: 'conjunction' }).format(items);
+
+/**
+ * Backlog 55: `permissionKeys` („users.manage,finance.read“) wird zu `permissions` („Nutzer verwalten und Finanzen
+ * lesen“), `matches` und `holders` (getrennt durch U+001F, damit ein Komma nichts zerschneidet) zu `matchList` und
+ * `holderList`, jeder Eintrag in „…“.
+ */
+function withListValues(values: Record<string, string | number | Date>, t: Translate): Record<string, string | number | Date> {
+  const next = { ...values };
+  if (typeof values.permissionKeys === 'string') {
+    next.permissions = listOf(values.permissionKeys.split(',').map((key) => ((t.has?.(`permissions.keys.${key}.label`) ?? false) ? t(`permissions.keys.${key}.label`) : key)));
+  }
+  if (typeof values.matches === 'string') next.matchList = listOf(values.matches.split('\u001f').map((m) => `„${m}“`));
+  if (typeof values.holders === 'string') next.holderList = listOf(values.holders.split('\u001f').map((h) => `„${h}“`));
+  return next;
 }
 
 /** `moduleKeys` („dms,finance“) wird zu `modules` („Dokumentenmanagement, Finanzen“): Meldungen nennen Namen, nicht Schlüssel. */
@@ -29,7 +48,7 @@ function withModuleNames(values: Record<string, string | number | Date>, t: Tran
 export function conflictReasons(error: ConflictError, t: Translate): string[] {
   if (!error.messageKey) return [];
   return [{ messageKey: error.messageKey, params: error.params }, ...(error.also ?? [])].map((r) => {
-    const values = withModuleNames(messageValues(r.params), t);
+    const values = withListValues(withModuleNames(messageValues(r.params), t), t);
     return `${t(`${r.messageKey}.reason`, values)} ${t(`${r.messageKey}.remedy`, values)}`;
   });
 }
@@ -80,6 +99,7 @@ export function localizeError(error: ServiceError, t: Translate): ServiceError {
 }
 
 const KNOWN_CONFLICTS = new Set([
+  'pendingUnavailable',
   'documentIsDraft',
   'notOutgoing',
   'notDispatched',
@@ -94,7 +114,6 @@ const KNOWN_CONFLICTS = new Set([
   'roleNameTaken',
   'roleProtected',
   'lastAdministrator',
-  'insufficientPrivileges',
   'settingSystemOnly',
   'themeKeyTaken',
   'themeReadOnly',
@@ -107,7 +126,6 @@ const KNOWN_CONFLICTS = new Set([
   'blockedTermsPresent',
   'siteBuildFailed',
   'publishFailed',
-  'siteJobRunning',
   'duplicateLocale',
   'tooManyLocales',
   'lastLocale',
@@ -115,7 +133,6 @@ const KNOWN_CONFLICTS = new Set([
   'folderExists',
   'folderParentMissing',
   'folderNotFound',
-  'retentionHoldActive',
   'retentionUnknown',
   'belongsToNotAnOrganization',
   'multiplePrimaryChannels',
@@ -132,6 +149,7 @@ const KNOWN_CONFLICTS = new Set([
   'alreadySeeded',
   'noSeed',
   'noTemplate',
+  'viewNotInTemplate',
   'siteNotEmpty',
   'templateMissing',
   'templateResolutionMissing',

@@ -3,9 +3,14 @@
 import { useId } from 'react';
 import { FieldError } from '@/components/forms/field-error';
 import { useTranslations } from 'next-intl';
+import type { PhotoCrop } from '@kompass/module-animals';
+import { ArrowLeft, ArrowRight } from 'lucide-react';
+import { StatusBadge } from '@/components/status-badge';
 import { Button } from '@/components/ui/button';
+import { CropFrame, mediaPreviewUrl } from './crop-frame';
 
-export type EditorPhoto = { assetId: string; isPrimary: boolean };
+/** `crop`: Ausschnitt der Quelle, nur zur Anzeige (Board Vorschläge 7a); gespeichert wird er hier nicht (`photosFromForm`). */
+export type EditorPhoto = { assetId: string; isPrimary: boolean; crop?: PhotoCrop | null };
 
 /**
  * Die Fotos eines Tiers als Raster: Hauptfoto wählen, umsortieren, entfernen.
@@ -31,7 +36,7 @@ export function PhotosEditor({ photos, max, error, onChange, onChoose, frame }: 
         <Button type="button" variant="secondary" className="w-fit" onClick={onChoose} aria-describedby={error ? errorId : undefined}>
           {t('choose')}
         </Button>
-        <span className={`text-[13px] ${photos.length > max ? 'text-error' : 'text-ink-2'}`}>{t('count', { count: photos.length, max })}</span>
+        <span className={`text-meta ${photos.length > max ? 'text-error' : 'text-ink-2'}`}>{t('count', { count: photos.length, max })}</span>
       </div>
       <FieldError id={errorId} message={error} />
       <ul className="grid gap-3 sm:grid-cols-2">
@@ -39,12 +44,18 @@ export function PhotosEditor({ photos, max, error, onChange, onChoose, frame }: 
           <li key={p.assetId} data-testid="animal-photo" className={`flex flex-col gap-1 rounded-md border p-2 ${p.isPrimary ? 'border-brand' : 'border-line'}`}>
             {/* Das Original in einem neuen Tab: Ob ein Mensch im Bild ist, zeigt die Vorschau nicht immer. */}
             <a href={`/media/${p.assetId}`} target="_blank" rel="noreferrer" aria-label={t('open')}>
-              <img src={`/media/${p.assetId}/preview`} alt="" style={frame} className="w-full rounded-sm object-cover" />
+              {p.crop ? <CropFrame src={mediaPreviewUrl(p.assetId)} crop={p.crop} label={t('crop')} /> : <img src={mediaPreviewUrl(p.assetId)} alt="" style={frame} className="w-full rounded-sm object-cover" />}
             </a>
-            <div className="flex flex-wrap gap-1 text-[12px]">
-              <Button type="button" size="sm" variant={p.isPrimary ? 'default' : 'ghost'} aria-pressed={p.isPrimary} onClick={() => onChange(photos.map((x, j) => ({ ...x, isPrimary: j === i })))}>{t('primary')}</Button>
-              <Button type="button" size="sm" variant="ghost" disabled={i === 0} onClick={() => move(i, -1)}>←</Button>
-              <Button type="button" size="sm" variant="ghost" disabled={i === photos.length - 1} onClick={() => move(i, 1)}>→</Button>
+            {p.crop ? <p className="text-hint text-ink-2">{t('crop')}</p> : null}
+            <div className="flex flex-wrap items-center gap-1">
+              {/* Hauptfoto als Marke am gewählten Foto, nicht als Hauptknopf in jeder Kachel — wie in der Prüfung (Befund 10). */}
+              {p.isPrimary ? (
+                <StatusBadge tone="neutral">{t('primary')}</StatusBadge>
+              ) : (
+                <Button type="button" size="sm" variant="ghost" onClick={() => onChange(photos.map((x, j) => ({ ...x, isPrimary: j === i })))}>{t('makePrimary')}</Button>
+              )}
+              <Button type="button" size="icon-sm" variant="ghost" disabled={i === 0} aria-label={t('moveLeft')} onClick={() => move(i, -1)}><ArrowLeft aria-hidden /></Button>
+              <Button type="button" size="icon-sm" variant="ghost" disabled={i === photos.length - 1} aria-label={t('moveRight')} onClick={() => move(i, 1)}><ArrowRight aria-hidden /></Button>
               <Button type="button" size="sm" variant="ghost" onClick={() => onChange(photos.filter((_, j) => j !== i))}>{t('remove')}</Button>
             </div>
           </li>

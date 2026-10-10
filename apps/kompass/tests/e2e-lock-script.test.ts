@@ -69,4 +69,17 @@ describe('scripts/e2e-lock.sh', () => {
     expect(await child).toBe(0);
     expect(readFileSync(log, 'utf8')).toBe('lief\n');
   });
+
+  it('läuft verschachtelt unter der eigenen Sperre sofort durch und lässt sie dem äußeren Aufruf (2026-10-10)', async () => {
+    // `e2e-lock.sh sh -c '… && scripts/e2e-kalender.sh'`: Der Kalenderlauf nimmt die Sperre je Tag selbst und wartete
+    // auf die Sperre seines eigenen Elternprozesses — für immer.
+    const { lock, log } = workdir();
+    const inner = `sh "${SCRIPT}" sh -c 'echo innen >> "${log}"'; echo "nach innen: $(test -d "${lock}" && echo gehalten)" >> "${log}"`;
+    const outer = run(lock, ['sh', '-c', inner]);
+    const code = await Promise.race([outer, new Promise<number>((r) => setTimeout(() => r(-99), 3000))]);
+    expect(code).toBe(0);
+    expect(readFileSync(log, 'utf8')).toBe('innen\nnach innen: gehalten\n');
+    expect(existsSync(lock)).toBe(false);
+  });
 });
+
