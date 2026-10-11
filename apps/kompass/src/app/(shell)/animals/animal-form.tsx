@@ -1,5 +1,6 @@
 'use client';
 
+import type { ResolvedImagePlaces } from '@kompass/core/image-places';
 import type { AnimalOrigin, AnimalRecord, ProposalListItem } from '@kompass/module-animals';
 import { useTranslations } from 'next-intl';
 import { useActionState, useEffect, useMemo, useRef, useState } from 'react';
@@ -22,7 +23,7 @@ import { idleState } from '@/lib/actions';
 import { saveAnimalAction } from './actions';
 import { MediaChooserDialog } from '@/components/media/media-chooser-dialog';
 import type { AnimalQueue, FormTab } from './list-params';
-import { PhotosEditor, type EditorPhoto } from './photos-editor';
+import { PhotosEditor, type AnimalPhotoPlaces, type EditorPhoto } from './photos-editor';
 import { ProfileFields, TextFields } from './animal-fields';
 import { ReviewBand } from './review-band';
 import { OriginLine } from './origin-line';
@@ -34,6 +35,7 @@ import { Select } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { PendingPublishLine } from '@/components/site/pending-publish';
 import { useSiteJobStatus } from '@/components/site/site-job-provider';
+import { Section } from '@/components/section';
 
 /**
  * Welches Feld auf welchem Reiter steht. Nur dafür da, einen Fehler dort
@@ -53,7 +55,7 @@ const FORM_ID = 'animal-form';
 const TAB_LIST = cn(lineTabsListClass, 'px-5');
 const TAB = lineTabsTriggerClass;
 
-export function AnimalForm({ animal, locales, queue, initialTab, backHref, photoFrame, maxPhotos, origins = [], openProposal = null }: { animal: AnimalRecord | null; locales: string[]; queue: AnimalQueue | null; initialTab: FormTab; backHref: string; photoFrame: { aspectRatio: string; objectPosition: string }; maxPhotos: number; origins?: readonly AnimalOrigin[]; openProposal?: ProposalListItem | null }) {
+export function AnimalForm({ animal, locales, queue, initialTab, backHref, photoPlaces, storyPlaces, photoSizes = {}, maxPhotos, origins = [], openProposal = null }: { animal: AnimalRecord | null; locales: string[]; queue: AnimalQueue | null; initialTab: FormTab; backHref: string; photoPlaces: AnimalPhotoPlaces; storyPlaces?: ResolvedImagePlaces; photoSizes?: Readonly<Record<string, { width: number; height: number }>>; maxPhotos: number; origins?: readonly AnimalOrigin[]; openProposal?: ProposalListItem | null }) {
   const t = useTranslations('animals.form');
   const p = useTranslations('animals.photos');
   const r = useTranslations('animals.review');
@@ -104,7 +106,10 @@ export function AnimalForm({ animal, locales, queue, initialTab, backHref, photo
     hiddenField.current?.dispatchEvent(new Event('input', { bubbles: true }));
   }, [hiddenEdits]);
   const hiddenEdited = () => setHiddenEdits((n) => n + 1);
-  const changePhotos = (next: EditorPhoto[]) => { setPhotos(next); hiddenEdited(); };
+  // Die Pixelmaße kommen je Render aus `photoSizes` dazu und reisen nicht im versteckten Feld mit.
+  // Namen für die Ansage beim Titelbildwechsel: die Referenz der Quelle, sonst nennt der Editor den Platz.
+  const photoNames: Record<string, string | undefined> = Object.fromEntries((animal?.photos ?? []).map((x) => [x.assetId, x.sourceRef ?? undefined]));
+  const changePhotos = (next: EditorPhoto[]) => { setPhotos(next.map(({ assetId, isPrimary, crop }) => ({ assetId, isPrimary, crop }))); hiddenEdited(); };
   // Bestätigen kann veröffentlichen, und die Liste schaltet sofort: Der Schalter folgt dem gespeicherten Stand.
   const savedPublished = animal?.isPublished ?? false;
   useEffect(() => { setPublished(savedPublished); }, [savedPublished]);
@@ -136,7 +141,7 @@ export function AnimalForm({ animal, locales, queue, initialTab, backHref, photo
           <StatusBadge tone={animal.status === 'adopted' ? 'success' : animal.status === 'reserved' ? 'warning' : 'info'} dot>{t(`status.${animal.status}`)}</StatusBadge>
           <StatusDialog animalId={animal.id} current={animal.status} />
           <OriginLine origins={origins} />
-          <label className="ml-auto flex items-center gap-2 text-[13px]">
+          <label className="ml-auto flex items-center gap-2 text-meta">
             {/* Text vor dem Schalter: rechtsbündig sitzt der Schalter so immer an derselben Stelle, wie in der Liste. */}
             <span className="flex flex-col items-end">
               <span className={published ? 'text-success' : 'text-muted-ink'}>{published ? c('published') : c('unpublished')}</span>
@@ -178,20 +183,19 @@ export function AnimalForm({ animal, locales, queue, initialTab, backHref, photo
                   {/* Der Texte-Block ist eine eigene Spalte (~570 px): Jedes Feld darin nimmt die volle Blockbreite,
                       auch bei einer Sprache; mehrere Sprachen teilen sie sich (HANDOFF Konsistenz § 8c). */}
                   <TextFields values={animal ?? {}} locales={locales} errors={errors} />
-                  <section className="flex min-w-0 flex-col">
-                    <h3 className="text-[15px] font-semibold">{t('sections.photos')}</h3>
-                    <div className="mt-3">
+                  <div className="flex min-w-0 flex-col">
+                    <Section title={t('sections.photos')}>
                       <FormGrid>
                         <FormCell size="full">
-                          {animal ? <PhotosEditor photos={photos} max={maxPhotos} error={errors.photos} onChange={changePhotos} onChoose={() => setChooserOpen(true)} frame={photoFrame} /> : <p className="h-fit rounded-md border border-line bg-surface-2 p-4 text-[13px] text-ink-2">{p('afterCreate')}</p>}
+                          {animal ? <PhotosEditor key={baseline} photos={photos.map((x) => ({ ...x, ...photoSizes[x.assetId], name: photoNames[x.assetId] }))} max={maxPhotos} error={errors.photos} onChange={changePhotos} onChoose={() => setChooserOpen(true)} places={photoPlaces} /> : <p className="h-fit rounded-md border border-line bg-surface-2 p-4 text-meta text-ink-2">{p('afterCreate')}</p>}
                         </FormCell>
                       </FormGrid>
-                    </div>
-                  </section>
+                    </Section>
+                  </div>
                 </div>
               </div>
             </TabsContent>
-            <TabsContent keepMounted value="story" className="p-5">{animal ? <StoryFields animal={animal} locales={locales} errors={errors} onMediaChange={hiddenEdited} /> : null}</TabsContent>
+            <TabsContent keepMounted value="story" className="p-5">{animal ? <StoryFields animal={animal} locales={locales} errors={errors} onMediaChange={hiddenEdited} {...(storyPlaces ? { places: storyPlaces } : {})} sizes={photoSizes} /> : null}</TabsContent>
             {/* Eine Leiste für alle Reiter: Sie zählt und speichert, was auf irgendeinem von ihnen geändert wurde. */}
             {/* „Speichern“ steht im DOM zuerst: Die Eingabetaste in einem Feld speichert nur, sie bestätigt nichts. */}
             <FormActionBar

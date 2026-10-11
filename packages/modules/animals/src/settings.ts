@@ -1,4 +1,4 @@
-import { parseFolderPath, type SettingDefinition } from '@kompass/core';
+import { imagePlaces, parseFolderPath, readSetting, type Deps, type ImagePlaceDeclaration, type ImageRatio, type SettingDefinition } from '@kompass/core';
 import { z } from 'zod';
 
 /**
@@ -61,3 +61,24 @@ export function photoFrameStyle(frame: PhotoFrame): { aspectRatio: string; objec
   const [w, h] = frame.aspect.split(':');
   return { aspectRatio: `${w} / ${h}`, objectPosition: `${frame.focusX}% ${frame.focusY}%` };
 }
+
+/**
+ * Das wirksame Format des Hauptfotos (Spec Ausschnitt für alle Bilder § 2): Gibt das Template `animals.primary` fest
+ * vor, gewinnt es überall — auch in Kompass (Liste, Fotoraster, Prüfung, Stapel); sonst die Einstellung
+ * „Bildausschnitt“. Der Schwerpunkt kommt immer aus der Einstellung. Mehrere Formate im Template: das erste (vorgewählt).
+ */
+export function effectivePhotoFrame(deps: Deps): PhotoFrame {
+  const frame = readSetting<PhotoFrame>(deps, PHOTO_FRAME_KEY);
+  const fromTemplate = imagePlaces(deps, PRIMARY_PHOTO_PLACE);
+  const ratio = fromTemplate.source === 'template' ? fromTemplate.formats.find((r) => r !== 'original') : undefined;
+  return ratio ? { ...frame, aspect: ratio } : frame;
+}
+
+/** Bildstellen der Sicht `animals` (Spec Ausschnitt für alle Bilder § 2); Namen unter `media.crop.places`. */
+export const PRIMARY_PHOTO_PLACE = 'animals.primary';
+export const ANIMALS_IMAGE_PLACES: ImagePlaceDeclaration[] = [
+  // Ohne Angabe im Template: die Einstellung „Bildausschnitt“, wie vor 0.2.11.
+  { key: PRIMARY_PHOTO_PLACE, label: 'media.crop.places.animalPrimary', fallback: (deps) => readSetting<PhotoFrame>(deps, PHOTO_FRAME_KEY).aspect as ImageRatio },
+  { key: 'animals.gallery', label: 'media.crop.places.animalGallery', lightbox: 'media.crop.places.lightbox' },
+  { key: 'animals.story', label: 'media.crop.places.animalStory' },
+];

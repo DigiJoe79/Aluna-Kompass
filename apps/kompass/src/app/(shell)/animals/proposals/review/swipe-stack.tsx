@@ -12,6 +12,8 @@ import { Notice } from '@/components/notice';
 import { PendingPublishNote } from '@/components/site/pending-publish';
 import { useSiteJobStatus } from '@/components/site/site-job-provider';
 import { Button } from '@/components/ui/button';
+import { SectionHeading } from '@/components/section';
+import { StatusBadge } from '@/components/status-badge';
 import type { ActionState } from '@/lib/actions';
 import { toastNetwork, toastRefusal } from '@/lib/feedback';
 import { flushHeldDecision, holdDecision } from '@/lib/held-decision';
@@ -48,7 +50,6 @@ const fitHeight = (ratio: number | null) => (ratio ? `calc(50svh * ${ratio})` : 
  */
 export function SwipeStack({ cards, backHref, query, frame }: { cards: StackCard[]; backHref: string; query: string; frame: { aspectRatio: string; objectPosition: string } }) {
   const t = useTranslations('animals.proposals.stack');
-  const ph = useTranslations('animals.photos');
   const onlineNoteId = useId();
   const [frameW, frameH] = frame.aspectRatio.split('/').map(Number);
   const frameRatio = frameW && frameH ? frameW / frameH : null;
@@ -154,6 +155,7 @@ export function SwipeStack({ cards, backHref, query, frame }: { cards: StackCard
     else if (d.y < -THRESHOLD) toReview(card);
   };
   const stamp = drag ? (drag.x > THRESHOLD / 2 ? (card?.right.kind === 'review' ? t('stampReview') : card?.right.kind === 'accept' && card.right.publish ? t('stampOnline') : t('stampAccept')) : drag.x < -THRESHOLD / 2 ? t('stampReject') : drag.y < -THRESHOLD / 2 ? t('stampReview') : null) : null;
+  const stampTone = !stamp ? 'neutral' : stamp === t('stampReject') ? 'error' : stamp === t('stampReview') ? 'info' : 'success';
   const reasonText = (reasons: StackReason[]) => {
     const missing = reasons.filter((r) => r === 'missingPrimaryPhoto' || r === 'missingSummary').map((r) => t(`reasons.${r}`));
     const other = reasons.filter((r) => r !== 'missingPrimaryPhoto' && r !== 'missingSummary').map((r) => t(`reasons.${r}`));
@@ -192,14 +194,15 @@ export function SwipeStack({ cards, backHref, query, frame }: { cards: StackCard
             onPointerCancel={() => { start.current = null; setDrag(null); }}
             onDragStart={(e) => e.preventDefault()}
           >
-            {stamp ? <span className="absolute top-4 left-4 z-1 rounded-md border-2 border-brand bg-surface px-3 py-1 font-heading text-section text-brand" aria-hidden>{stamp}</span> : null}
+            {/* Stempel als Marke (Designer 2026-10-10 § 11): Annehmen success, Ablehnen error, Prüfen neutral; Lage am Rahmen. */}
+            {stamp ? <span className="absolute top-4 left-4 z-1 rounded-md bg-surface" aria-hidden><StatusBadge tone={stampTone} stamp>{stamp}</StatusBadge></span> : null}
             {/* Das Titelbild wie die Fotokacheln des Tiers (`photos-editor.tsx`): mit Ausschnitt der Quelle das ganze Foto
                 mit Rahmen (`CropFrame`), sonst im Format und Fokus der Webseite (`animals.photoFrame`). Zu hoch wird es
                 schmaler, nie anders beschnitten. */}
             <div className="bg-surface-2">
               <div className="mx-auto w-full" style={{ maxWidth: fitHeight(card.image?.crop ? card.image.ratio : frameRatio) }}>
                 {card.image?.crop ? (
-                  <CropFrame src={card.image.url} crop={card.image.crop} label={ph('crop')} className="rounded-none" />
+                  <CropFrame src={card.image.url} crop={card.image.crop} label={p('photoReview.withCrop', { name: card.name || p('unnamed') })} className="rounded-none" />
                 ) : card.image ? (
                   <img src={card.image.url} alt="" draggable={false} style={frame} className="block w-full object-cover" />
                 ) : (
@@ -211,7 +214,7 @@ export function SwipeStack({ cards, backHref, query, frame }: { cards: StackCard
               <span className="w-fit">
                 <KindBadge kind={card.kind} />
               </span>
-              <h2 className="font-heading text-dialog-title text-ink">{card.name || p('unnamed')}</h2>
+              <SectionHeading level={2}>{card.name || p('unnamed')}</SectionHeading>
               <span className="text-meta text-ink-2">{card.sourceName} · {dates.dateTime(card.createdAt)}</span>
               {card.lines.length ? (
                 <ul className="m-0 flex list-none flex-col gap-1 p-0 text-meta">

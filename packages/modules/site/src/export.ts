@@ -7,7 +7,9 @@ import {
   type Deps,
   type Result,
   conflict,
+  type CropRect,
   isModuleEnabled,
+  parseDerivedAssetId,
   ok,
   readSetting,
   requirePermission,
@@ -19,6 +21,7 @@ import { z } from 'zod';
 import { previousTemplateDir, siteTemplateDir } from './env';
 import { canonical, isLocalizedMap, readPublicContent, type PublicItem, type ViewLinks } from './public-content';
 import { activeTemplate, templateIsCurrent } from './service';
+import { assetValuesIn } from './asset-values';
 import { settleTemplateAfterImport, templateNeedsReview } from './review';
 
 const inputSchema = z.object({ jobDir: z.string().min(1), templateDir: z.string().optional() });
@@ -27,8 +30,62 @@ export interface ExportedAsset {
   id: string;
   filename: string;
   mimeType: string;
+  /** Bei einem Ausschnitt die Maße des Ausschnitts in Pixeln. */
   width: number | null;
   height: number | null;
+  /** Nur bei einer abgeleiteten ID (`<assetId>~<rechteck>`, Spec Bildausschnitt § 2): das Rechteck als Anteile. */
+  crop?: CropRect;
+}
+
+/** Eine Basis, auf die eine (abgeleitete) ID zeigt: aus der Mediathek oder der Zwischenablage eines Vorschlags. */
+export interface AssetSource {
+  id: string;
+  filename: string;
+  mimeType: string;
+  width: number | null;
+  height: number | null;
+  read: () => Promise<Uint8Array>;
+}
+
+/**
+ * Löst die IDs des Inhalts zu Assets auf — für Export und Einzelvorschau. Eine abgeleitete ID bekommt die Datei ihrer
+ * Basis, ihr Rechteck und die Maße des Ausschnitts; das Original landet je Datei nur einmal in `assetsDir` (ohne
+ * Verzeichnis: nichts schreiben, nichts lesen). Eine ID ohne Basis wird übersprungen.
+ */
+export async function gatherAssets(
+  ids: ReadonlySet<string>,
+  lookup: (id: string) => AssetSource | null,
+  assetsDir: string | null,
+  hooks: { signal?: AbortSignal; onAsset?: (done: number, total: number) => void } = {},
+): Promise<ExportedAsset[]> {
+  const assets: ExportedAsset[] = [];
+  const written = new Set<string>();
+  let done = 0;
+  for (const id of [...ids].sort()) {
+    hooks.signal?.throwIfAborted();
+    hooks.onAsset?.(++done, ids.size);
+    const derived = parseDerivedAssetId(id);
+    const base = lookup(derived?.assetId ?? id);
+    if (!base) continue;
+    if (derived) {
+      const { crop } = derived;
+      const scaled = (n: number | null, part: number) => (n === null ? null : Math.max(1, Math.round(part * n)));
+      assets.push({ id, filename: base.filename, mimeType: base.mimeType, width: scaled(base.width, crop.w), height: scaled(base.height, crop.h), crop });
+    } else {
+      assets.push({ id: base.id, filename: base.filename, mimeType: base.mimeType, width: base.width, height: base.height });
+    }
+    if (assetsDir && !written.has(base.filename)) {
+      written.add(base.filename);
+      await writeFile(path.join(assetsDir, base.filename), await base.read());
+    }
+  }
+  return assets;
+}
+
+/** Die Basis einer ID aus der Mediathek. */
+export function mediaAssetSource(deps: Deps, id: string): AssetSource | null {
+  const row = deps.db.select().from(core.mediaAssets).where(eq(core.mediaAssets.id, id)).get();
+  return row ? { id: row.id, filename: row.filename, mimeType: row.mimeType, width: row.width, height: row.height, read: () => deps.media.read(row.filename) } : null;
 }
 
 /** Wo ein Treffer zu bearbeiten ist: Variablen haben eine Seite, Sammlungseinträge je eine Maske, Zeilen einer Sicht ihre Adresse (`editLink` der Sicht). Dateinamen tragen keinen Verweis. */
@@ -140,7 +197,9 @@ function collectViolations(
       }
     }
   }
-  for (const asset of assets) {
+  // Original und Ausschnitt teilen eine Datei: je Dateiname ein Treffer.
+  for (const filename of new Set(assets.map((a) => a.filename))) {
+    const asset = { filename };
     for (const { term, regex } of patterns) {
       const match = asset.filename.match(regex);
       if (match && match.index !== undefined) {
@@ -192,13 +251,8 @@ function collectGaps(node: unknown, path: string, locales: readonly string[], ga
  * auch immer —, markiert sie aber über den Feldhelfer als `asset`.
  */
 function assetIdsFromFields(fields: Record<string, FieldSchema>, value: unknown, out: Set<string>): void {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) return;
-  const record = value as Record<string, unknown>;
-  for (const [key, field] of Object.entries(fields)) {
-    if (field.widget !== 'asset') continue;
-    const id = record[key];
-    if (typeof id === 'string' && id) out.add(id);
-  }
+  // Auch in Listen; eine abgeleitete ID bleibt, wie sie ist — `gatherAssets` löst sie zur geschnittenen Fassung auf.
+  for (const v of assetValuesIn(fields, value)) out.add(v.value);
 }
 
 /**
@@ -278,17 +332,8 @@ async function collect(
   }
 
   const ids = contentAssetIds(template.schema, { variables, collections, views });
-  const assets: ExportedAsset[] = [];
   if (out) await mkdir(path.join(out.jobDir, 'assets'), { recursive: true });
-  let copied = 0;
-  for (const id of [...ids].sort()) {
-    out?.hooks.signal?.throwIfAborted();
-    out?.hooks.onAsset?.(++copied, ids.size);
-    const row = deps.db.select().from(core.mediaAssets).where(eq(core.mediaAssets.id, id)).get();
-    if (!row) continue;
-    assets.push({ id: row.id, filename: row.filename, mimeType: row.mimeType, width: row.width, height: row.height });
-    if (out) await writeFile(path.join(out.jobDir, 'assets', row.filename), await deps.media.read(row.filename));
-  }
+  const assets = await gatherAssets(ids, (id) => mediaAssetSource(deps, id), out ? path.join(out.jobDir, 'assets') : null, out?.hooks);
 
   const contentPayload = { variables, collections, views };
   const json = JSON.stringify(canonical({ variables, collections, views, assets }), null, 2);

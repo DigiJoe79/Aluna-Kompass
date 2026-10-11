@@ -8,7 +8,7 @@ import type { Device } from '@/lib/finance/expenses';
 function Steps({ device }: { device: 'ios' | 'android' }) {
   const t = useTranslations('finance.expenses.new.guide');
   return (
-    <ol className="list-decimal space-y-1 pl-5 text-[13px] text-ink-2">
+    <ol className="list-decimal space-y-1 pl-5 text-meta text-ink-2">
       <li>{t(`${device}.step1`)}</li>
       <li>{t(`${device}.step2`)}</li>
       <li>{t(`${device}.step3`)}</li>
@@ -26,7 +26,7 @@ export function DeviceHint({ device }: { device: Device }) {
   const t = useTranslations('finance.expenses.new.guide');
   return (
     <div data-testid="scan-guide" className="space-y-2 rounded-md bg-surface-2 p-3">
-      <p className="text-[12px] font-semibold text-ink">{t('title')}</p>
+      <p className="text-hint font-semibold text-ink">{t('title')}</p>
       {device ? (
         <Steps device={device} />
       ) : (
@@ -43,7 +43,7 @@ export function DeviceHint({ device }: { device: Device }) {
           </TabsContent>
         </Tabs>
       )}
-      <Link href="/help/finanzen/auslagen" className="text-[12px] text-ink underline underline-offset-2">
+      <Link href="/help/finanzen/auslagen" className="text-hint text-ink underline underline-offset-2">
         {t('more')}
       </Link>
     </div>

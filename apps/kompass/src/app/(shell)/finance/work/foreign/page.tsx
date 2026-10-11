@@ -48,18 +48,18 @@ export default async function FinanceForeignMoneyPage() {
               <TableBody>
                 {items.map((item) => (
                   <TableRow key={item.lineId}>
-                    <TableCell className="font-mono text-[12px] tabular-nums text-ink-2">{fmt.date(item.entryDate)}</TableCell>
-                    <TableCell className="font-medium text-ink">{item.holderText}</TableCell>
+                    <TableCell className="font-mono text-hint tabular-nums text-ink-2">{fmt.date(item.entryDate)}</TableCell>
+                    <TableCell className="text-ink">{item.holderText}</TableCell>
                     <TableCell className="text-right font-mono tabular-nums">
                       {formatEuro(item.openCents)}
                       {item.passedOnCents > 0 && (
-                        <span className="block text-[11px] text-muted-ink" data-testid="foreign-partly-passed-on">
+                        <span className="block text-hint text-muted-ink" data-testid="foreign-partly-passed-on">
                           {t('partlyPassedOn', { amount: formatEuro(item.amountCents), passedOn: formatEuro(item.passedOnCents) })}
                         </span>
                       )}
                     </TableCell>
                     <TableCell>
-                      <Link href={`/finance/entries/${item.entryId}`} className="font-mono text-[12px] underline underline-offset-2">
+                      <Link href={`/finance/entries/${item.entryId}`} className="font-mono text-hint underline underline-offset-2">
                         {item.entryNumber ?? t('draft')}
                       </Link>
                     </TableCell>

@@ -158,7 +158,7 @@ export function SuggestionCard({
     <>
     <section className="space-y-3 rounded-md border border-line bg-surface p-4">
       {suggestion && suggestion.kind !== 'none' ? (
-        <div data-testid="suggestion-reasons" className="rounded-md bg-agent-bg px-3 py-2 text-[13px] text-agent">
+        <div data-testid="suggestion-reasons" className="rounded-md bg-agent-bg px-3 py-2 text-meta text-agent">
           <p className="flex items-center gap-2 font-semibold">
             {t('suggestion.because')}
             {suggestion.confidence === 'unsure' ? <StatusBadge tone="warning">{t('suggestion.unsure')}</StatusBadge> : null}
@@ -171,7 +171,7 @@ export function SuggestionCard({
           </ul>
         </div>
       ) : (
-        <p className="text-[13px] text-muted-ink">{t('suggestion.none')}</p>
+        <p className="text-meta text-muted-ink">{t('suggestion.none')}</p>
       )}
 
       {suggestion?.problems.map((problem) => (
@@ -179,9 +179,9 @@ export function SuggestionCard({
           {t(`suggestion.problems.${problem}`)}
         </Notice>
       ))}
-      {suggestion?.hints.includes('foreignIban') ? <p className="text-[12px] text-muted-ink">{t('suggestion.foreignIban')}</p> : null}
+      {suggestion?.hints.includes('foreignIban') ? <p className="text-hint text-muted-ink">{t('suggestion.foreignIban')}</p> : null}
       {suggestion?.hints.includes('originIsDraft') ? (
-        <p className="text-[12px] text-muted-ink" data-testid="suggestion-origin-draft">
+        <p className="text-hint text-muted-ink" data-testid="suggestion-origin-draft">
           {t('suggestion.originIsDraft')}
         </p>
       ) : null}
@@ -193,17 +193,17 @@ export function SuggestionCard({
 
       {linkEntry ? (
         <div className="space-y-2">
-          <p className="text-[13px] text-ink">
+          <p className="text-meta text-ink">
             {linkEntry.number ? t('suggestion.linkEntry', { number: linkEntry.number, date: date(linkEntry.entryDate) }) : t('suggestion.linkDraft', { date: date(linkEntry.entryDate) })}
           </p>
-          <Link href={`/finance/entries/${linkEntry.entryId}`} className="text-[13px] font-semibold underline underline-offset-2">
+          <Link href={`/finance/entries/${linkEntry.entryId}`} className="text-meta font-semibold underline underline-offset-2">
             {t('suggestion.openEntry')}
           </Link>
         </div>
       ) : canWrite ? (
         <MiniEntryForm value={mini} onChange={setMini} form={form} extraLineTexts={suggestion?.extraLineTexts ?? []} fieldErrors={fieldErrors} />
       ) : (
-        <ul className="space-y-1 text-[13px] text-ink-2">
+        <ul className="space-y-1 text-meta text-ink-2">
           {suggestion?.extraLineTexts.map((text) => <li key={text}>{text}</li>)}
           {mini.rows
             .filter((r) => r.categoryId)
@@ -233,7 +233,7 @@ export function SuggestionCard({
                 <KeyChip className="ml-1">{t('keys.enterKey')}</KeyChip>
               </Button>
             )}
-            <Link href={`/finance/entries/new?raw=${raw.id}&back=work`} className="inline-flex h-[var(--field-h)] items-center gap-1.5 rounded-md bg-surface-2 px-3.5 text-[13px] font-medium text-ink-2">
+            <Link href={`/finance/entries/new?raw=${raw.id}&back=work`} className="inline-flex h-[var(--field-h)] items-center gap-1.5 rounded-md bg-surface-2 px-3.5 text-meta text-ink-2">
               {t('actions.edit')}
               <KeyChip>E</KeyChip>
             </Link>
@@ -242,7 +242,7 @@ export function SuggestionCard({
               <KeyChip label={t('keys.right')}>→</KeyChip>
             </Button>
           </div>
-          <p className="flex flex-wrap gap-x-4 gap-y-1 text-[13px]">
+          <p className="flex flex-wrap gap-x-4 gap-y-1 text-meta">
             <Button type="button" variant="link" className="h-auto p-0" onClick={openRule}>
               {t('actions.rule')}
             </Button>
@@ -260,7 +260,7 @@ export function SuggestionCard({
           </p>
         </div>
       ) : (
-        <p className="text-[12px] text-muted-ink">{t('suggestion.readOnly')}</p>
+        <p className="text-hint text-muted-ink">{t('suggestion.readOnly')}</p>
       )}
     </section>
     {canWrite ? (

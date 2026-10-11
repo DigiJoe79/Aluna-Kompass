@@ -79,7 +79,7 @@ Bausteine: `panel-nav.tsx` (mit dem Hilfsteil `panel-nav-scroll.tsx`, der den ge
 
 - **Eine Karte**: `FormCard` (`rounded-lg border border-line bg-surface`, `overflow-clip`; `as` für `section` oder `form`) mit Inhalt `p-5` (`FormCardBody`); die `FormActionBar` ist das letzte Kind der Karte. Keine Karte in der Karte, kein `overflow-hidden` an der Karte oder einem Behälter darin (Reiter).
 - Abschnitte über `Section title intro actions` (`components/section.tsx`): Titel in der Rolle `text-section` (15/600), Einleitung `text-meta`, Inhalt `mt-3`, Aktionen rechts neben dem Titel (brechen am Telefon um). Ein Folgeabschnitt bekommt Linie und Abstand selbst (`border-t`, 20 px) — aber nur, wenn er **direkt** auf eine `Section` folgt; ein Hinweis oder bedingter Wrapper dazwischen unterbricht die Linie (gewollt).
-- Die Überschriftenebene kommt aus dem Umfeld: `Page` setzt 2 (der Seitentitel im `PageHeader` ist das einzige `h1`), `DialogContent`/`SheetContent` 3, eine verschachtelte `Section` eins mehr, höchstens 4, ohne Umfeld 2; `level` nur als Ausnahme. Einstellungs-Panels unter `PanelNav` haben keinen eigenen Titel, ihre Abschnitte stehen wie überall unter dem Seitentitel auf Ebene 2. Vorlagen: Projekt-Formular und Einstellungen → Verein; die übrigen handgeschriebenen Abschnitte folgen in K10 Charge 3.
+- Die Überschriftenebene kommt aus dem Umfeld: `Page` setzt 2 (der Seitentitel im `PageHeader` ist das einzige `h1`), `DialogContent`/`SheetContent` 3, eine verschachtelte `Section` eins mehr, höchstens 4, ohne Umfeld 2; `level` nur als Ausnahme. Einstellungs-Panels unter `PanelNav` haben keinen eigenen Titel, ihre Abschnitte stehen wie überall unter dem Seitentitel auf Ebene 2. Vorlagen: Projekt-Formular und Einstellungen → Verein. Eine Überschrift ohne umschlossenen Inhalt (Kartentitel, Kopf mit Menü) ist `SectionHeading`; ein Etikett über gleichartigen Zeilen `Overline` (§ Schrift).
 - Raster je Abschnitt über `FormGrid`, Spannweite je Feld über `FormField size` (§ J). Kein `grid-cols-*` von Hand.
 - Jedes Feld über `FormField` (Beschriftung, Pflichtmarke, Hinweis, Feldfehler).
 - Reiter erst ab zwei Reitern; ein einzelner Reiter ist ein Abschnitt.
@@ -135,7 +135,7 @@ Bausteine: `page.tsx`, `ui/dialog.tsx`, `ui/sheet.tsx`. Wächter: `page-width.te
 - Mehrsprachige Felder: `size` gilt je Sprache; nebeneinander stehende Sprachen multiplizieren die Spannweite (zwei Sprachen: `s` → `m`, `m` → `full`). Ist eine Sprache schon `full`, stehen die Sprachen immer untereinander, jede über die volle Breite.
 - Sprachkürzel: Bei einzeiligen Feldern steht es links **im** Feld als Präfix (Aufbau wie das „€“ im Betragsfeld, Stil der Marke mono 11/600, feste Mindestbreite, damit die Texte bündig beginnen — auch bei `pt-br`); so liegen alle Eingaben einer Rasterzeile auf einer Linie. Mehrzeilige Felder (Textarea, Markdown) tragen es über dem Feld. Das Label steht einmal oben für alle Sprachen; jede Eingabe heißt zugänglich „‹Label› (‹Sprachname›)“ (Sprachname über `Intl.DisplayNames`). „Nicht übersetzt“ steht unter dem Feld. Bausteine: `LocaleInput`, `LocaleLabel` in `forms/localized-field.tsx`, genutzt von `LocalizedField` und `schema-form`.
 - `schema-form`: Größe aus `field.size` im Template-Schema, sonst nach Typ (`text`/`select`/`reference` `m`, `number`/`date` `s`, `textarea`/`markdown` `l`, `asset`/`list`/`objectList` `full`, `localized` wie sein innerer Typ). Ein `references`-Feld hat keinen eigenen Block: Seine Plätze stehen als einzelne Zellen im Raster des Abschnitts, `size` gilt je Platz (Standard `m`); der erste Platz trägt den Feldnamen, die weiteren „Platz n“, zugänglich heißt jeder „‹Feldname›, Platz n“. `field.group` bildet aus aufeinanderfolgenden Feldern einen Abschnitt mit Titel.
-- Vorlage: Einstellungen → Verein (Name · Anschrift · Land und Zeit · Register · Kontakt).
+- Vorlage: Einrichtung → Stammdaten → Verein (Name · Anschrift · Land und Zeit · Register · Kontakt).
 
 Bausteine: `forms/form-grid.tsx` (`FormGrid`, `FormCell`, `FormRowBreak`), `forms/form-field.tsx`. Wächter: `form-grid.test.ts`.
 
@@ -160,18 +160,24 @@ Bausteine: `filter-bar.tsx` (`FilterBar`, `selectFilter`, `checkFilter`, `frameF
 
 ## Schrift
 
-Sechs Rollen in `app/globals.css` (`@theme`, `--text-*` mit Zeilenhöhe und Gewicht); `cn` kennt sie über `TYPE_ROLES` in `lib/utils.ts`. Die Schriftfamilie steht nie in der Rolle, sondern im Baustein bzw. an der Kennzahl.
+Zehn Rollen in `app/globals.css` (`@theme`, `--text-*` mit Zeilenhöhe, Gewicht und beim Etikett der Sperrung); `cn` kennt sie über `TYPE_ROLES` in `lib/utils.ts`. Die Schriftfamilie steht nie in der Rolle, sondern im Baustein bzw. am Betrag (K10 Charge 3, Designer 2026-10-10).
 
 | Klasse | Größe/Zeilenhöhe | Gewicht | Schrift steht … |
 |---|---|---|---|
+| `text-page-title` | 22/1.2 | — | `font-heading` in `PageHeader`, `AuthCard`, den Sperrkarten und Fehlerseiten ohne `PageHeader` |
 | `text-dialog-title` | 19/1.25 | 600 | `font-heading` im Standard von `DialogTitle`/`SheetTitle` |
-| `text-section` | 15/1.35 | 600 | `font-heading` im Standard von `Section` |
+| `text-section` | 15/1.35 | 600 | `font-heading` in `SectionHeading` (`Section`, `EmptyState`, `BlockedState`); mono an Summen und Nummern |
 | `text-body` | 14/1.5 | — | — |
 | `text-meta` | 13/1.45 | — | — |
 | `text-hint` | 12/1.4 | — | — |
-| `text-figure` | 32/1 | — | `font-mono tabular-nums` an der Aufrufstelle (Kennzahl der Startseiten-Kachel) |
+| `text-label` | 12/1.3, `.04em` | 600 | `uppercase text-muted-ink` in `Overline` und `TableHeader` |
+| `text-key` | 11/1.35 | — | `font-mono` in `KeyLine`, `KeyChip`, `LOCALE_CODE` |
+| `text-figure` | 32/1 | — | `font-mono tabular-nums` an der Aufrufstelle (Kopf eines Vorgangs, Kachel) |
+| `text-amount` | 22/1.2 | — | `font-mono tabular-nums` an der Aufrufstelle (Karte, Seitenfenster, Formularsumme) |
 
-In K10 Charge 1 nutzen nur die Bausteine und die Kennzahl die Rollen; die übrigen `text-[…px]` folgen in Charge 3. Wächter: `no-title-override.test.ts`.
+Gewicht nur 400 und 600 (Hervorhebung `font-semibold`; `<b>`/`<strong>` haben 600). Zeilenhöhe, Versalien und Sperrung kommen aus Rolle oder Baustein, nie von der Aufrufstelle. Wert oder gleichartige Zeilen unter einem Etikett: `Overline`; technischer Schlüssel unter Klartext: `KeyLine`. Großer Betrag: Kopf/Kachel `text-figure`, Karte/Blatt/Summe `text-amount`, Liste `text-body` mono. Keine eigene Größe; was fehlt, ist eine Frage an Design. Darunter ein Wert oder gleichartige Zeilen → `Overline`; darunter gemischter Inhalt → `Section`. `font-heading` nur in `SectionHeading`, `PageHeader`, `DialogTitle`, `SheetTitle`, `AuthCard`, `ForbiddenCard`, `ModuleInactiveCard` und im letzten Segment der Brotkrume (`Topbar`). Ein Name auf einer Karte (Wischkarte, Gegenüberstellung) ist `SectionHeading`, ein Stempel `StatusBadge`. Grundbausteine (`components/ui`) folgen denselben Rollen; 600 nur für Schrift, die eine Handlung oder ein Feld benennt (Knopf, Label, Tabellenkopf), Reiter auch aktiv 400; Tastenkürzel `font-mono text-key text-muted-ink` ohne Rahmen. Feldschrift von Eingabe, Auswahl, Textfeld und Knopf kommt aus `--field-font` (14/16 px), nicht aus einer Rolle. Wächter: `no-arbitrary-text.test.ts`, `type-style.test.ts`, `type-role-family.test.ts`, `no-title-override.test.ts`, `section-heading.test.ts` (kein `h2`–`h4` mit eigener Klasse außer `sr-only`).
+
+Bausteine: `overline.tsx`, `key-line.tsx`, `section.tsx` (`SectionHeading`), `key-chip.tsx`.
 
 ## Datum
 
@@ -226,6 +232,6 @@ Was keinem der Abschnitte oben gehört, steht im Wächter `component-inventory.t
 - [ ] Formular als eine Karte, Abschnitte statt Reiter, Raster über `FormGrid`, jedes Feld über `FormField size` (§ J)
 - [ ] Seltene Aktionen am Datensatz über `RecordActions` (im Dialog `recordAction`); Unumkehrbares mit Rückfrage
 - [ ] Keine rohen Elemente, keine Statusfläche von Hand (`no-raw-elements`, `no-status-surface`)
-- [ ] Keine Schrift, Größe oder Farbe an Titel, Beschreibung oder Abschnitt; Datum nur über `formatDate`, `messageDate` oder `paperDate`
+- [ ] Schrift nur über die zehn Rollen und Bausteine: keine Größe, Zeilenhöhe, Versalie, Sperrung oder Gewicht außer 400/600 von Hand; Überschriften aus `PageHeader`, `DialogTitle`, `Section`/`SectionHeading`; keine Farbe an Titel, Beschreibung oder Abschnitt; Datum nur über `formatDate`, `messageDate` oder `paperDate`
 - [ ] Liste mit Suche/Filtern über `FilterBar`; Grenze blättert oder wird genannt (§ L)
 - [ ] `apps/kompass/tests/patterns/` grün

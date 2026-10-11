@@ -94,26 +94,26 @@ export function DeleteRecordDialog({
       ) : null}
 
       {preview && !preview.isPublished && preview.blockers.length > 0 ? (
-        <div className="text-[14px] text-ink-2">
+        <div className="text-body text-ink-2">
           <ul className="list-disc pl-5">
             {preview.blockers.map((b) => {
               const text = b.until === undefined ? b.label : b.until === null ? t('heldPermanently', { label: b.label }) : t('heldUntil', { label: b.label, date: format.date(b.until) });
               return <li key={`${b.label}-${b.href ?? ''}`}>{b.href ? <Link href={b.href} className="text-link underline">{text}</Link> : text}</li>;
             })}
           </ul>
-          <p className="mt-2 text-[13px] text-muted-ink">{t('blockedHint')}</p>
+          <p className="mt-2 text-meta text-muted-ink">{t('blockedHint')}</p>
         </div>
       ) : null}
 
       {offerMedia ? (
-        <label className="flex items-center gap-2 text-[14px]">
+        <label className="flex items-center gap-2 text-body">
           <Checkbox checked={withMedia} onCheckedChange={(next) => setWithMedia(next === true)} />
           <span>{t('withMedia', { count: preview.exclusiveMedia })}</span>
         </label>
       ) : null}
 
       {free && preview.sharedMedia.length > 0 ? (
-        <ul className="text-[13px] text-muted-ink">
+        <ul className="text-meta text-muted-ink">
           {preview.sharedMedia.map((m) => (
             <li key={m.filename}>{t('sharedMedia', { places: m.usedElsewhere.join(', ') })} {m.filename}</li>
           ))}

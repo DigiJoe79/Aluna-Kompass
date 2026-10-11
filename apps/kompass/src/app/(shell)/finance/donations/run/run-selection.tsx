@@ -155,9 +155,9 @@ export function RunSelection(props: RunSelectionProps) {
         <Button type="submit" variant={preview ? 'outline' : 'default'} disabled={loading}>
           {preview ? t('selection.apply') : t('selection.show')}
         </Button>
-        <p className="basis-full text-[12px] text-muted-ink">{t('selection.minimumHint')}</p>
+        <p className="basis-full text-hint text-muted-ink">{t('selection.minimumHint')}</p>
         {excluded.length > 0 ? (
-          <div data-testid="run-excluded" className="flex basis-full flex-wrap items-center gap-2 text-[13px]">
+          <div data-testid="run-excluded" className="flex basis-full flex-wrap items-center gap-2 text-meta">
             <span className="text-ink-2">{t('selection.excluded')}:</span>
             {excluded.map((c) => (
               <span key={c.id} className="inline-flex items-center gap-1 rounded-sm border border-line bg-surface-2 py-0.5 pr-1 pl-2">
@@ -198,7 +198,7 @@ export function RunSelection(props: RunSelectionProps) {
                     </span>
                   </span>
                   <span className="text-ink-2">{t('footer.issuedOn', { date: date(preview.issuedOn) })}</span>
-                  <span className="max-w-prose text-[12px] text-muted-ink">{td('issue.humanOnly')}</span>
+                  <span className="max-w-prose text-hint text-muted-ink">{td('issue.humanOnly')}</span>
                 </div>
               }
               saveLabel={t('footer.submit', { count })}
@@ -208,7 +208,7 @@ export function RunSelection(props: RunSelectionProps) {
               state={startFb.state}
             />
           ) : (
-            <p data-testid="run-footer" className="text-[13px] text-ink-2">{t('footer.noPermission')}</p>
+            <p data-testid="run-footer" className="text-meta text-ink-2">{t('footer.noPermission')}</p>
           )}
         </>
       ) : null}

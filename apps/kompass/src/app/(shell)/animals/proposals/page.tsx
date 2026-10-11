@@ -39,7 +39,7 @@ export default async function ProposalsPage(props: { searchParams: Promise<Propo
           actions={
             <>
               {/* „Durchgehen“ secondary nur auf diesem Reiter; „Hund anlegen“ bleibt die Hauptaktion (Board 1a). Nur mit
-                  eingeschaltetem Stapel (Einstellungen → Tiere, Vorgabe aus). */}
+                  eingeschaltetem Stapel (Einrichtung → Tiere, Vorgabe aus). */}
               {list.value.open.count > 0 && readSetting<boolean>(deps, PROPOSAL_STACK_KEY) === true ? (
                 <Link href={`/animals/proposals/review${query ? `?${query}` : ''}`} className={buttonVariants({ variant: 'secondary' })}>
                   {t('proposals.walkThrough')}

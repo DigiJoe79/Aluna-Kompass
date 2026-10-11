@@ -15,6 +15,7 @@ import { DocumentPicker } from '../document-picker';
 import type { PickedDocument } from '../search-action';
 import { FormField } from '@/components/forms/form-field';
 import { FormCell, FormGrid } from '@/components/forms/form-grid';
+import { Section } from '@/components/section';
 
 const KINDS = ['repliesTo', 'signedCopyOf', 'replaces', 'attachmentOf'] as const;
 
@@ -72,74 +73,77 @@ export function RelationsPanel({
 
   return (
     <section className="rounded-md border border-line bg-surface p-5 shadow-xs">
-      <div className="mb-3 flex items-center justify-between gap-2">
-        <h3 className="text-[15px] font-semibold text-ink">{t('title')}</h3>
-        {canEdit ? (
-          <Button type="button" variant="outline" size="sm" onClick={() => setOpen(true)}>
-            {t('add')}
-          </Button>
-        ) : null}
-      </div>
+      <Section title={t('title')}
+        actions={
+          <>
+            {canEdit ? (
+              <Button type="button" variant="outline" size="sm" onClick={() => setOpen(true)}>
+                {t('add')}
+              </Button>
+            ) : null}
+          </>
+        }
+      >
+        <RefusalNotice action state={removeFb.state} />
 
-      <RefusalNotice action state={removeFb.state} />
+        {relations.length === 0 ? (
+          <p className="text-meta text-muted-ink">{t('none')}</p>
+        ) : (
+          <ul data-testid="document-relations" className="space-y-2 text-meta text-ink-2">
+            {relations.map((relation) => (
+              <li key={relation.id} className="flex items-center gap-2">
+                <span className="size-1.5 shrink-0 rounded-full bg-muted-ink" aria-hidden />
+                <span className="flex-1">
+                  {t(`kinds.${relation.kind}.${relation.direction}`)}{' '}
+                  <Link href={`/dms/${relation.otherId}`} className="underline underline-offset-2">
+                    {relation.otherNumber ?? (relation.otherProtected ? t('protected') : relation.otherSubject)}
+                  </Link>
+                </span>
+                {canEdit ? (
+                  <Button type="button" variant="ghost" size="sm" disabled={pending} onClick={() => remove(relation.id)}>
+                    {t('remove')}
+                  </Button>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+        )}
 
-      {relations.length === 0 ? (
-        <p className="text-[13px] text-muted-ink">{t('none')}</p>
-      ) : (
-        <ul data-testid="document-relations" className="space-y-2 text-[13px] text-ink-2">
-          {relations.map((relation) => (
-            <li key={relation.id} className="flex items-center gap-2">
-              <span className="size-1.5 shrink-0 rounded-full bg-muted-ink" aria-hidden />
-              <span className="flex-1">
-                {t(`kinds.${relation.kind}.${relation.direction}`)}{' '}
-                <Link href={`/dms/${relation.otherId}`} className="underline underline-offset-2">
-                  {relation.otherNumber ?? (relation.otherProtected ? t('protected') : relation.otherSubject)}
-                </Link>
-              </span>
-              {canEdit ? (
-                <Button type="button" variant="ghost" size="sm" disabled={pending} onClick={() => remove(relation.id)}>
-                  {t('remove')}
-                </Button>
-              ) : null}
-            </li>
-          ))}
-        </ul>
-      )}
+        <Dialog open={open} onOpenChange={setOpen}>
+          <DialogContent size="md" className="bg-surface shadow-md">
+            <DialogTitle>{t('add')}</DialogTitle>
+            <DialogDescription>{t('addDescription')}</DialogDescription>
 
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent size="md" className="bg-surface shadow-md">
-          <DialogTitle>{t('add')}</DialogTitle>
-          <DialogDescription>{t('addDescription')}</DialogDescription>
+            <div className="mt-5">
+              <FormGrid>
+                <FormField id="relation-kind" label={t('kind')} required>
+                  <Select id="relation-kind" value={kind} onChange={(e) => setKind(e.target.value as (typeof KINDS)[number])}>
+                    {KINDS.map((k) => (
+                      <option key={k} value={k}>
+                        {t(`kindLabels.${k}`)}
+                      </option>
+                    ))}
+                  </Select>
+                </FormField>
 
-          <div className="mt-5">
-            <FormGrid>
-              <FormField id="relation-kind" label={t('kind')} required>
-                <Select id="relation-kind" value={kind} onChange={(e) => setKind(e.target.value as (typeof KINDS)[number])}>
-                  {KINDS.map((k) => (
-                    <option key={k} value={k}>
-                      {t(`kindLabels.${k}`)}
-                    </option>
-                  ))}
-                </Select>
-              </FormField>
+                <FormCell size="m">
+                  <DocumentPicker
+                    id="relation-document"
+                    name="relatedDocumentId"
+                    label={t('document')}
+                    value={other}
+                    onChange={setOther}
+                    exceptId={documentId}
+                    required
+                  />
+                </FormCell>
+              </FormGrid>
+            </div>
 
-              <FormCell size="m">
-                <DocumentPicker
-                  id="relation-document"
-                  name="relatedDocumentId"
-                  label={t('document')}
-                  value={other}
-                  onChange={setOther}
-                  exceptId={documentId}
-                  required
-                />
-              </FormCell>
-            </FormGrid>
-          </div>
-
-          <FormActionBar placement="dialog" cancel={() => setOpen(false)} pending={pending} saveDisabled={!other} saveLabel={t('submit')} onSave={submit} state={addFb.state} note={<span className="text-[12px] text-muted-ink">{tCommon('requiredLegend')}</span>} />
-        </DialogContent>
-      </Dialog>
+            <FormActionBar placement="dialog" cancel={() => setOpen(false)} pending={pending} saveDisabled={!other} saveLabel={t('submit')} onSave={submit} state={addFb.state} note={<span className="text-hint text-muted-ink">{tCommon('requiredLegend')}</span>} />
+          </DialogContent>
+        </Dialog>
+      </Section>
     </section>
   );
 }

@@ -12,7 +12,8 @@ import { NextIntlClientProvider } from 'next-intl';
 import { getTranslations } from 'next-intl/server';
 import type { ReactNode } from 'react';
 import { Toaster } from '@/components/ui/sonner';
-import { depsReady, getDeps } from '@/lib/deps';
+import { depsReady, getDeps, runtimeEnv } from '@/lib/deps';
+import { titleKeyFor } from '@/lib/env-banner';
 import { PREFERENCE_BOOTSTRAP } from '@/lib/preference-bootstrap';
 import { themeToCss } from '@/lib/theme-css';
 
@@ -24,8 +25,8 @@ import { themeToCss } from '@/lib/theme-css';
 export const dynamic = 'force-dynamic';
 
 export async function generateMetadata(): Promise<Metadata> {
-  const t = await getTranslations('app');
-  return { title: t('name') };
+  const t = await getTranslations();
+  return { title: t(titleKeyFor(runtimeEnv().env)) };
 }
 
 export default async function RootLayout({ children }: { children: ReactNode }) {

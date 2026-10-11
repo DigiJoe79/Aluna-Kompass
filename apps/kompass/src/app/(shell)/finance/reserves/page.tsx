@@ -77,10 +77,10 @@ export default async function ReservesPage() {
         {noCapYet ? (
           <div className="flex flex-col gap-1.5">
             <div className="flex flex-wrap items-center gap-2">
-              <p className="text-[13px] text-ink-2">{t(y.provisional ? 'cap.headingProvisional' : 'cap.heading', { year: y.designation })}</p>
+              <p className="text-meta text-ink-2">{t(y.provisional ? 'cap.headingProvisional' : 'cap.heading', { year: y.designation })}</p>
               <StatusBadge tone="neutral">{t('cap.noCapYet')}</StatusBadge>
             </div>
-            <p className="text-[12px] text-muted-ink">{derivation}</p>
+            <p className="text-hint text-muted-ink">{derivation}</p>
           </div>
         ) : (
           <LimitProgress
@@ -95,7 +95,7 @@ export default async function ReservesPage() {
         )}
         {/* Befund S: das Kennzeichen des Dienstes, mit dem Betrag darüber. */}
         {y.exceeded ? (
-          <p className="mt-2 text-[13px] font-semibold text-error" data-testid="reserve-cap-over">
+          <p className="mt-2 text-meta font-semibold text-error" data-testid="reserve-cap-over">
             {t('cap.over', { over: formatEuro(y.overCents) })}
           </p>
         ) : null}
@@ -106,7 +106,7 @@ export default async function ReservesPage() {
   return (
     <Page width="standard" header={<PageHeader title={t('title')} description={t('intro')} />}>
       <div className="space-y-4">
-        {capYears.length === 0 ? <p className="text-[13px] text-muted-ink">{t('cap.noYear')}</p> : capYears.map(capCard)}
+        {capYears.length === 0 ? <p className="text-meta text-muted-ink">{t('cap.noYear')}</p> : capYears.map(capCard)}
         <ReserveTable
           rows={rows}
           purposes={purposes}

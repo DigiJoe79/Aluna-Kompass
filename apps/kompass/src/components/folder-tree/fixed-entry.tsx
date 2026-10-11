@@ -73,7 +73,7 @@ export function FixedEntry({ entry, state, density, drop }: { entry: FolderTreeF
         {state ? (
           <DropMark state={state.state} />
         ) : entry.count !== undefined ? (
-          <span className={cn('font-mono text-[12px] font-normal tabular-nums', entry.current ? 'text-current' : 'text-muted-ink')}>{entry.count}</span>
+          <span className={cn('font-mono text-hint font-normal tabular-nums', entry.current ? 'text-current' : 'text-muted-ink')}>{entry.count}</span>
         ) : null}
       </span>
     </Link>
@@ -134,7 +134,7 @@ export function PickFixedEntry({
       </span>
       <span className={cn('flex shrink-0 items-center', line)}>
         {mark ? (
-          <span aria-hidden className="rounded-sm bg-badge px-1.5 text-[11px] leading-4 font-semibold whitespace-nowrap text-badge-ink">
+          <span aria-hidden className="rounded-sm bg-badge px-1.5 text-hint font-semibold whitespace-nowrap text-badge-ink">
             {mark}
           </span>
         ) : blocked ? (
@@ -142,7 +142,7 @@ export function PickFixedEntry({
         ) : picked && check ? (
           <Check className="size-4 text-brand" strokeWidth={2.6} aria-hidden />
         ) : entry.count !== undefined ? (
-          <span className={cn('font-mono text-[12px] font-normal tabular-nums', picked ? 'text-current' : 'text-muted-ink')}>{entry.count}</span>
+          <span className={cn('font-mono text-hint font-normal tabular-nums', picked ? 'text-current' : 'text-muted-ink')}>{entry.count}</span>
         ) : null}
       </span>
     </button>

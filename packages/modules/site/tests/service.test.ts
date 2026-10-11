@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { coreModule, schema, unwrap } from '@kompass/core';
+import { coreModule, schema, unwrap, writeSettingInternal } from '@kompass/core';
 import { animalsModule } from '@kompass/module-animals';
 import { createTestDeps, ctxWith, insertUser } from '@kompass/core/testing';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -159,5 +159,30 @@ export default defineTemplate({
     expect(preview.ok === false && preview.error.type === 'conflict' && preview.error.code).toBe('unknownViewField');
     const applied = await applyTemplateSync(deps, ctxWith(['site.manage']), { dir, confirm: true });
     expect(applied.ok === false && applied.error.type === 'conflict' && applied.error.code).toBe('unknownViewField');
+  });
+});
+
+// Ausschnitt für alle Bilder (Spec 2026-10-10 § 2): `images` wird gegen die Stellen der eingeschalteten Module geprüft.
+describe('image places at read time', () => {
+  const WITH_IMAGES = `
+import { defineTemplate, text } from '@kompass/site-template';
+export default defineTemplate({
+  name: 'Bilder', locales: ['de'],
+  variables: { claim: text({ label: 'Claim' }) },
+  collections: {},
+  images: { 'animals.primary': { ratio: '4:5', width: 600 }, 'shop.banner': { ratio: '3:1' } },
+});`;
+
+  it('hints at a place no enabled module knows, reads the template anyway and keeps images', async () => {
+    const deps = createTestDeps({ manifests: [coreModule, animalsModule, siteModule] });
+    insertUser(deps, { id: 'USER-TEST' });
+    deps.db.transaction((tx) => writeSettingInternal(tx, deps, ctxWith(['settings.manage']), 'modules.enabled', ['animals', 'site']));
+    const ctx = ctxWith(['site.manage']);
+    const dir = templateDir(WITH_IMAGES);
+    const preview = unwrap(await previewTemplateSync(deps, ctx, dir));
+    expect(preview.findings.filter((f) => f.kind === 'unknownImagePlace')).toEqual([{ kind: 'unknownImagePlace', path: 'images.shop.banner' }]);
+    expect(preview.blocking).toEqual([]);
+    unwrap(await applyTemplateSync(deps, ctx, { dir, confirm: true }));
+    expect(activeTemplate(deps)!.schema.images).toEqual({ 'animals.primary': { ratio: '4:5', width: 600 }, 'shop.banner': { ratio: '3:1' } });
   });
 });

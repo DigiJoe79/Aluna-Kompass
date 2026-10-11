@@ -26,7 +26,7 @@ export function FormErrorSummary({ errors, labels }: { errors: Record<string, st
   return (
     <div
       role="alert"
-      className="mb-4 flex gap-2 rounded-md border border-error bg-error-bg p-3 text-[13px] text-ink-2"
+      className="mb-4 flex gap-2 rounded-md border border-error bg-error-bg p-3 text-meta text-ink-2"
     >
       <AlertTriangle className="mt-0.5 size-4 shrink-0 text-error" aria-hidden />
       <div className="flex flex-col gap-1">

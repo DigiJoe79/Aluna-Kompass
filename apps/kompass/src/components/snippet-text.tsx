@@ -42,7 +42,7 @@ export function SnippetText({ value }: { value: string }) {
     <>
       {splitSnippet(value).map((part, index) =>
         part.marked ? (
-          <mark key={index} className="rounded-xs bg-brand-soft px-0.5 font-medium text-brand-ink">
+          <mark key={index} className="rounded-xs bg-brand-soft px-0.5 font-semibold text-brand-ink">
             {part.text}
           </mark>
         ) : (

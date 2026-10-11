@@ -6,6 +6,7 @@ import { buttonVariants } from '@/components/ui/button';
 import type { DateFormatter } from '@/lib/date-format';
 import { cn } from '@/lib/utils';
 import { TileLines } from './tile-lines';
+import { SectionHeading } from '@/components/section';
 
 
 function isEmpty(view: DashboardTileView): boolean {
@@ -34,9 +35,9 @@ export async function TileCard({ view, canComplete, fmt }: { view: DashboardTile
 
   let body: React.ReactNode;
   if (view.error || !content) {
-    body = <p className="text-[13px] text-muted-ink">{t('tileError')}</p>;
+    body = <p className="text-meta text-muted-ink">{t('tileError')}</p>;
   } else if (empty) {
-    body = <p className="text-[13px] text-muted-ink">{t(`${ns}.empty`)}</p>;
+    body = <p className="text-meta text-muted-ink">{t(`${ns}.empty`)}</p>;
   } else if (content.kind === 'count' || (content.kind === 'list' && content.lines.length === 0)) {
     const n = content.kind === 'count' ? content.count : content.total;
     body = (
@@ -51,7 +52,7 @@ export async function TileCard({ view, canComplete, fmt }: { view: DashboardTile
       <>
         <TileLines ns={ns} lines={content.lines} canComplete={canComplete} />
         {content.total > content.lines.length && content.href ? (
-          <Link href={content.href} className="text-[13px] underline underline-offset-2 hover:text-link">{t('showAll', { count: content.total })}</Link>
+          <Link href={content.href} className="text-meta underline underline-offset-2 hover:text-link">{t('showAll', { count: content.total })}</Link>
         ) : (
           openLink(content.href)
         )}
@@ -63,7 +64,7 @@ export async function TileCard({ view, canComplete, fmt }: { view: DashboardTile
     body = (
       <>
         {content.tone === 'neutral' ? (
-          <p className="text-[13px] leading-[1.55] text-ink-2">{t(`${ns}.messages.${content.messageKey}`, values)}</p>
+          <p className="text-meta text-ink-2">{t(`${ns}.messages.${content.messageKey}`, values)}</p>
         ) : (
           <Notice level={content.tone === 'warning' ? 'warn' : 'hint'}>{t(`${ns}.messages.${content.messageKey}`, values)}</Notice>
         )}
@@ -78,8 +79,8 @@ export async function TileCard({ view, canComplete, fmt }: { view: DashboardTile
       className={cn('flex flex-col gap-3 rounded-lg border border-line bg-surface p-[18px]', view.kind === 'list' && 'md:col-span-2', empty && 'opacity-70')}
     >
       <div className="flex items-baseline justify-between gap-3">
-        <h3 className="font-heading text-[17px]">{t(`${ns}.title`)}</h3>
-        {counter !== null && !empty ? <span className="font-mono text-[12px] text-muted-ink">{counter}</span> : null}
+        <SectionHeading>{t(`${ns}.title`)}</SectionHeading>
+        {counter !== null && !empty ? <span className="font-mono text-hint text-muted-ink">{counter}</span> : null}
       </div>
       {body}
     </section>

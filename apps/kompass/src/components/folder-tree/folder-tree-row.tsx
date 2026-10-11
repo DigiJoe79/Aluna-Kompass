@@ -36,7 +36,7 @@ export function rowClass(density: FolderTreeDensity) {
     // färben ihn später ein, ohne dass die Zeile springt.
     'relative flex items-start gap-1 rounded-md border-2 border-transparent pr-1.5 text-ink-2',
     'focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-focus',
-    density === 'touch' ? 'min-h-11 py-[9px] text-base leading-[22px]' : 'min-h-8 py-[5px] text-sm leading-[18px]'
+    density === 'touch' ? 'min-h-11 py-[9px] text-body' : 'min-h-8 py-[5px] text-body'
   );
 }
 
@@ -65,7 +65,7 @@ export function DropNote({ drop, opening }: { drop: RowDrop; opening: string }) 
   const text = drop.state === 'blocked' ? drop.reason : drop.opening ? opening : undefined;
   if (!text) return null;
   return (
-    <span data-drop-note className={cn('text-[12px] leading-4 text-pretty', drop.state === 'blocked' ? 'font-semibold text-ink' : 'font-normal text-drop-ink')}>
+    <span data-drop-note className={cn('text-hint text-pretty', drop.state === 'blocked' ? 'font-semibold text-ink' : 'font-normal text-drop-ink')}>
       {text}
     </span>
   );
@@ -230,7 +230,7 @@ export function FolderTreeRow({ node, level, isFolder, isExpanded, isSelected, d
         {drop ? (
           <DropMark state={drop.state} />
         ) : badge ? (
-          <span className="rounded-sm bg-badge px-1.5 text-[11px] leading-4 font-semibold whitespace-nowrap text-badge-ink">{badge}</span>
+          <span className="rounded-sm bg-badge px-1.5 text-hint font-semibold whitespace-nowrap text-badge-ink">{badge}</span>
         ) : locked ? (
           <Ban className="size-4 text-drop-blocked-ring" strokeWidth={2.4} aria-hidden />
         ) : pick && pick.check !== false && isSelected ? (
@@ -251,7 +251,7 @@ export function FolderTreeRow({ node, level, isFolder, isExpanded, isSelected, d
 /** Der Sperrgrund im Dialog: sichtbar als zweite Zeile (fett, `ink`) oder nur für Vorleser. */
 export function PickReason({ blocked }: { blocked: NonNullable<RowPick['blocked']> }) {
   return (
-    <span id={blocked.id} className={blocked.showReason ? 'text-[12px] leading-4 font-semibold text-pretty text-ink' : 'sr-only'}>
+    <span id={blocked.id} className={blocked.showReason ? 'text-hint font-semibold text-pretty text-ink' : 'sr-only'}>
       {blocked.text}
     </span>
   );
@@ -301,7 +301,7 @@ function SavingMark() {
 /** Die Summe; „direkt“ steht im Tooltip (README § 2, Zähler). */
 function Count({ node, tone }: { node: FolderNode; tone: string }) {
   const t = useTranslations('folderTree');
-  const number = <span className={cn('font-mono text-[12px] font-normal tabular-nums', tone)}>{node.total}</span>;
+  const number = <span className={cn('font-mono text-hint font-normal tabular-nums', tone)}>{node.total}</span>;
   return (
     <Tooltip>
       <TooltipTrigger render={number} />

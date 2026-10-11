@@ -44,7 +44,7 @@ export async function PermissionsPanel({ activities, roles }: { activities: Perm
                 ))}
               </TableBody>
             </Table>
-            <div className="space-y-1 border-t border-line px-4 py-2.5 text-[12px]">
+            <div className="space-y-1 border-t border-line px-4 py-2.5 text-hint">
               <p className="text-muted-ink">
                 {t('navigation')}: {role.navigation.length > 0 ? role.navigation.map((key) => t(`navKeys.${key}`)).join(', ') : t('navigationNone')}
               </p>

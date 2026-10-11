@@ -1,5 +1,5 @@
-import { hasPermission, readSetting, requirePermission } from '@kompass/core';
-import { getAnimal, listAnimalOrigins, listAnimals, listProposals, MAX_ANIMAL_PHOTOS, PHOTO_FRAME_KEY, photoFrameStyle, PROFILE_URL_KEY, profileUrl, type PhotoFrame } from '@kompass/module-animals';
+import { hasPermission, imagePlaces, readSetting, requirePermission } from '@kompass/core';
+import { effectivePhotoFrame, getAnimal, listAnimalOrigins, listAnimals, listProposals, MAX_ANIMAL_PHOTOS, photoPixelSizes, PRIMARY_PHOTO_PLACE, PROFILE_URL_KEY, profileUrl } from '@kompass/module-animals';
 import { getTranslations } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 import { ForbiddenCard } from '@/components/forbidden-card';
@@ -24,9 +24,11 @@ export default async function AnimalEditPage(props: { params: Promise<{ id: stri
   // Die Liste, aus der man kam, reist in der Adresse mit: Der Rückweg führt in dieselbe Auswahl.
   const query = listQueryString(q);
   const back = { href: `/animals${query ? `?${query}` : ''}`, label: c('backToList') };
-  // Der Ausschnitt, in dem die Webseite das Hauptfoto zeigt – die Kacheln der Maske stehen darin.
-  const photoFrame = photoFrameStyle(readSetting<PhotoFrame>(deps, PHOTO_FRAME_KEY));
-  if (id === 'new') return (<Page width="standard" header={<PageHeader title={t('create')} back={back} />}><AnimalForm animal={null} locales={deps.locales()} queue={null} initialTab="profile" backHref={back.href} photoFrame={photoFrame} maxPhotos={MAX_ANIMAL_PHOTOS} /></Page>);
+  // Die Stellen der Webseite für die Fotos (Spec Ausschnitt für alle Bilder § 4): Hauptfoto aus dem Template, sonst die
+  // Einstellung „Bildausschnitt“; die übrigen nach `animals.gallery`. Der Blickpunkt kommt immer aus der Einstellung.
+  const { focusX, focusY } = effectivePhotoFrame(deps);
+  const photoPlaces = { primary: imagePlaces(deps, PRIMARY_PHOTO_PLACE), gallery: imagePlaces(deps, 'animals.gallery'), focus: { focusX, focusY } };
+  if (id === 'new') return (<Page width="standard" header={<PageHeader title={t('create')} back={back} />}><AnimalForm animal={null} locales={deps.locales()} queue={null} initialTab="profile" backHref={back.href} photoPlaces={photoPlaces} maxPhotos={MAX_ANIMAL_PHOTOS} /></Page>);
   const animal = await getAnimal(deps, ctx, id);
   if (!animal.ok) notFound();
   // Die Warteschlange ist die gefilterte, sortierte Liste – dieselbe Abfrage wie dort, kein eigener Zustand.
@@ -47,7 +49,7 @@ export default async function AnimalEditPage(props: { params: Promise<{ id: stri
   return (
     <Page width="standard" header={<PageHeader title={animal.value.name} description={address} back={back} actions={actions} />}>
       {/* `key`: Beim Wechsel zum nächsten Hund behielte React sonst den Zustand der Felder und der Fotos. */}
-      <AnimalForm key={animal.value.id} animal={animal.value} locales={deps.locales()} queue={queue} initialTab={formTab(q.tab)} backHref={back.href} photoFrame={photoFrame} maxPhotos={MAX_ANIMAL_PHOTOS} origins={origins.ok ? origins.value : []} openProposal={openProposal} />
+      <AnimalForm key={animal.value.id} animal={animal.value} locales={deps.locales()} queue={queue} initialTab={formTab(q.tab)} backHref={back.href} photoPlaces={photoPlaces} storyPlaces={imagePlaces(deps, 'animals.story')} photoSizes={photoPixelSizes(deps, [...animal.value.photos.map((p) => p.assetId), ...(animal.value.story ? [animal.value.story.beforeAssetId, animal.value.story.afterAssetId].filter((x): x is string => !!x) : [])])} maxPhotos={MAX_ANIMAL_PHOTOS} origins={origins.ok ? origins.value : []} openProposal={openProposal} />
       <div className="mt-6">
         <RelatedDocuments deps={deps} ctx={ctx} entityType="animal" entityId={animal.value.id} />
       </div>

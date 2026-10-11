@@ -119,7 +119,7 @@ export function ReceiptDrop({
             if (!disabled) accept(e.dataTransfer.files);
           }}
           className={cn(
-            'flex flex-col items-center justify-center gap-1 rounded-md border-2 border-dashed text-center text-[13px]',
+            'flex flex-col items-center justify-center gap-1 rounded-md border-2 border-dashed text-center text-meta',
             kind === 'image' ? 'h-16 w-[240px]' : 'h-24',
             dragging ? 'border-brand bg-brand-soft' : 'border-line-strong bg-surface',
           )}

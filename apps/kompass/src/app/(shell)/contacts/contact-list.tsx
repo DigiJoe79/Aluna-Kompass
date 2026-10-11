@@ -112,7 +112,7 @@ export function ContactList({ contacts, roles, total, unfiltered, offset, pageSi
                     <div className="flex flex-col">
                       <RowLink href={`/contacts/${c.id}`}>{c.name}</RowLink>
                       {c.affiliation ? (
-                        <span className="text-[12px] text-muted-ink">{c.affiliation}</span>
+                        <span className="text-hint text-muted-ink">{c.affiliation}</span>
                       ) : null}
                     </div>
                   </TableCell>
@@ -134,7 +134,7 @@ export function ContactList({ contacts, roles, total, unfiltered, offset, pageSi
                     </div>
                   </TableCell>
                   <TableCell className="text-ink-2">{c.city || '—'}</TableCell>
-                  <TableCell selectable className="text-ink-2 font-mono text-[13px]">{c.primaryChannel || '—'}</TableCell>
+                  <TableCell selectable className="text-ink-2 font-mono text-meta">{c.primaryChannel || '—'}</TableCell>
                 </TableRow>
               ))}
             </TableBody>

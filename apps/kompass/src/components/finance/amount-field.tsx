@@ -76,12 +76,12 @@ export function AmountField({ name, id, value, onChange, direction, onDirectionC
             onBlur={handleBlur}
             className="w-full flex-1 bg-transparent px-2.5 text-right font-mono text-[length:var(--field-font)] tabular-nums outline-none"
           />
-          <span className="flex items-center border-l border-line bg-surface-2 px-2.5 text-[13px] text-muted-ink" aria-hidden>
+          <span className="flex items-center border-l border-line bg-surface-2 px-2.5 text-meta text-muted-ink" aria-hidden>
             €
           </span>
         </div>
       </div>
-      {balanceHint ? <p className="text-[12px] text-muted-ink">{balanceHint}</p> : null}
+      {balanceHint ? <p className="text-hint text-muted-ink">{balanceHint}</p> : null}
       <FieldError id={errorId} message={showError ? (errorText ?? t('format')) : undefined} />
     </div>
   );

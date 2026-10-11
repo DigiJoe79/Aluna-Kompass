@@ -99,9 +99,14 @@ mehrere Größen.
 
 ## Verwendung
 
-Die Spalte „Verwendung“ sagt, ob eine Datei irgendwo benutzt wird; die
-Detailansicht nennt die Stellen mit Link: Tier „Rocky“, Projekt „Sommerfest“,
-Logo des Vereins, Variable der Webseite. Eine Datei, die verwendet wird,
+Die Spalte „Verwendung“ sagt, ob eine Datei irgendwo benutzt wird, eine
+Verwendung je Zeile; die Detailansicht nennt die Stellen mit Link: Tier
+„Rocky“, Projekt „Sommerfest“, Logo des Vereins, Variable der Webseite. Steht
+hinter einer Verwendung „· zugeschnitten“, zeigt die Webseite dort nur einen
+Ausschnitt des Bilds — deshalb sieht es dort anders aus als die Vorschau hier,
+die immer das Original zeigt. Den Ausschnitt ändern Sie an der Verwendung
+(„Ausschnitt …“ am Bildfeld oder an der Fotokachel), nicht in der Mediathek:
+Erst die Stelle kennt das Format. Eine Datei, die verwendet wird,
 lässt sich nicht löschen — erst dort entfernen, dann hier; „Löschen …“ links
 unten im Detaildialog nennt dann, wo sie verwendet wird. Eine nicht
 verwendete Datei ist Arbeitsmaterial und darf gelöscht werden; der

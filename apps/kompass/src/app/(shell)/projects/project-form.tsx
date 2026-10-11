@@ -1,9 +1,10 @@
 'use client';
 
 import { Section } from '@/components/section';
+import type { ResolvedImagePlaces } from '@kompass/core/image-places';
 import type { ProjectRecord } from '@kompass/module-projects';
 import { useTranslations } from 'next-intl';
-import { useActionState, useEffect, useMemo } from 'react';
+import { useActionState, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { FormField } from '@/components/forms/form-field';
 import { FormCell, FormGrid } from '@/components/forms/form-grid';
@@ -19,21 +20,29 @@ import { ExternalLinksField } from './external-links-field';
 import { Select } from '@/components/ui/select';
 import { ActionForm } from '@/components/forms/action-form';
 
-export function ProjectForm({ project, locales }: { project: ProjectRecord | null; locales: string[] }) {
+export function ProjectForm({ project, locales, imagePlaces, mediaSizes = {} }: { project: ProjectRecord | null; locales: string[]; imagePlaces?: ResolvedImagePlaces; mediaSizes?: Readonly<Record<string, { width: number; height: number }>> }) {
   const t = useTranslations('projects.form');
+  const tc = useTranslations('media.crop');
   const c = useTranslations('content');
   const tCommon = useTranslations('common');
   // Die Namen für die Fehlerbox; Links melden als `externalLinks.0.url` und stehen unter ihrem Rumpf.
   const labels: Record<string, string> = {
     slug: c('slug'), type: t('type'), status: t('status'), name: t('name'), summary: t('summary'), body: t('body'),
-    imageAssetId: t('image'), externalLinks: t('links.title'),
+    imageAssetId: t('image'), imageCrop: t('image'), externalLinks: t('links.title'),
   };
   const [state, action] = useActionState(saveProjectAction, idleState);
   // `useMemo`, weil `errors` sonst bei jedem Render ein neues Objekt waere und
   // der Effekt unten damit bei jedem Render feuerte statt nur bei einer
   // Zustandsaenderung — der Toast erschiene mehrfach.
   const errors = useMemo(() => (state.status === 'error' ? state.fieldErrors : {}), [state]);
-  useEffect(() => { if (state.status === 'success') toast.success(state.message ?? ''); }, [state]);
+  // Die Maske bleibt nach dem Speichern stehen: Die Leiste zählt ab dem neuen Stand wieder bei null. `form.reset()`
+  // allein trägt nicht — Bild und Ausschnitt stehen in versteckten Feldern, die ihren Wert behalten.
+  const [baseline, setBaseline] = useState(0);
+  useEffect(() => {
+    if (state.status !== 'success') return;
+    toast.success(state.message ?? '');
+    setBaseline((n) => n + 1);
+  }, [state]);
   return (
     <FormCard>
       <ActionForm action={action} state={state}>
@@ -58,12 +67,13 @@ export function ProjectForm({ project, locales }: { project: ProjectRecord | nul
           </Section>
           <Section title={t('sections.media')}>
             <FormGrid>
-              <FormCell size="full"><MediaPicker name="imageAssetId" value={project?.imageAssetId ?? null} label={t('image')} /></FormCell>
+              {/* Projektbild: Stelle(n) der Webseite `projects.image` (Kachel und Titelbild), Ausschnitt als `imageCrop`. */}
+              <FormCell size="full"><MediaPicker name="imageAssetId" value={project?.imageAssetId ?? null} label={t('image')} crop={project?.imageCrop ?? null} cropName="imageCrop" sizes={mediaSizes} target={tc('targets.project')} {...(imagePlaces ? { places: imagePlaces } : {})} /></FormCell>
               <ExternalLinksField value={project?.externalLinks ?? []} errors={errors} />
             </FormGrid>
           </Section>
         </FormCardBody>
-        <FormActionBar state={state} mode={project ? 'edit' : 'create'} back={{ href: '/projects', label: tCommon('backToList') }} />
+        <FormActionBar state={state} baseline={baseline} mode={project ? 'edit' : 'create'} back={{ href: '/projects', label: tCommon('backToList') }} />
       </ActionForm>
     </FormCard>
   );

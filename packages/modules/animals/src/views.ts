@@ -1,11 +1,18 @@
-import { definePublishedView, localizedList, localizedText, type Deps } from '@kompass/core';
+import { definePublishedView, derivedAssetId, localizedList, localizedText, type CropRect, type Deps } from '@kompass/core';
 import { and, asc, eq, isNotNull } from 'drizzle-orm';
 import { z } from 'zod';
 import { animals } from './schema';
-import { loadAnimal } from './service';
+import { loadAnimal, type AnimalStory } from './service';
 import { animalSlug } from './slug';
 
 const L = localizedText();
+
+/** Die Geschichte in der Sicht: Vorher- und Nachher-Bild mit Ausschnitt als abgeleitete ID (Spec Ausschnitt für alle Bilder § 3). */
+function publishedStory(story: AnimalStory | null): AnimalStory | null {
+  if (!story) return null;
+  const derived = (id: string | null, crop: CropRect | null) => (id ? derivedAssetId(id, crop) : null);
+  return { ...story, beforeAssetId: derived(story.beforeAssetId, story.beforeCrop), afterAssetId: derived(story.afterAssetId, story.afterCrop) };
+}
 
 export const publishedAnimals = definePublishedView({
   name: 'animals',
@@ -49,8 +56,9 @@ export const publishedAnimals = definePublishedView({
       .all()
       .map((r) => {
         const a = loadAnimal(deps.db, r.id)!;
-        // Ausschnitt und Herkunft je Foto bleiben intern, bis die Webseite sie nutzt (Backlog 24).
-        return { ...a, photos: a.photos.map((p) => ({ assetId: p.assetId, sortOrder: p.sortOrder, isPrimary: p.isPrimary })) };
+        // Herkunft bleibt intern; der Ausschnitt steckt in der abgeleiteten ID (Spec Bildausschnitt § 2), damit der
+        // Template-Vertrag gleich bleibt und die Pipeline die zugeschnittene Fassung unter dieser ID ablegt.
+        return { ...a, photos: a.photos.map((p) => ({ assetId: derivedAssetId(p.assetId, p.crop), sortOrder: p.sortOrder, isPrimary: p.isPrimary })), story: publishedStory(a.story) };
       }),
   // Nur Veröffentlichtes: Ein unveröffentlichtes Profil mit Merker geht nicht
   // live und gehört in die Prüfliste, nicht in die Warnung vor dem Publish.
@@ -74,12 +82,14 @@ const NEW_ANIMAL = { sex: 'female', birthText: {}, sizeCm: 0, sizeText: {}, loca
 /**
  * Die Zeile von `publishedAnimals` für eine Wahl, ohne zu speichern (Vorschau einer Prüfung, Plan Vorschläge B):
  * heutiger Hund (oder die Vorgaben eines neuen) mit den gewählten Werten und Fotos. Ohne `ctx` — das Recht prüft der
- * Aufrufer (`animals.manage`). Ein neuer Hund bekommt den Slug, den er beim Anlegen bekäme, aus `slugId`.
+ * Aufrufer (`animals.manage`). Ein neuer Hund bekommt den Slug, den er beim Anlegen bekäme, aus `slugId`. Ein Foto
+ * mit `crop` bekommt wie in der Sicht die abgeleitete ID.
  */
-export function publishedRowFor(deps: Deps, input: { animalId: string | null; slugId?: string; values: Record<string, unknown>; photos: readonly { assetId: string; isPrimary: boolean }[] }): unknown {
+export function publishedRowFor(deps: Deps, input: { animalId: string | null; slugId?: string; values: Record<string, unknown>; photos: readonly { assetId: string; isPrimary: boolean; crop?: CropRect | null }[] }): unknown {
   const base: Record<string, unknown> = input.animalId ? { ...loadAnimal(deps.db, input.animalId)! } : { ...NEW_ANIMAL };
   const merged: Record<string, unknown> = { ...base, ...input.values };
+  merged.story = publishedStory((merged.story as AnimalStory | null | undefined) ?? null);
   if (!input.animalId) merged.slug = animalSlug(String(merged.name ?? ''), input.slugId ?? '');
-  merged.photos = input.photos.map((p, i) => ({ assetId: p.assetId, sortOrder: i + 1, isPrimary: p.isPrimary }));
+  merged.photos = input.photos.map((p, i) => ({ assetId: derivedAssetId(p.assetId, p.crop), sortOrder: i + 1, isPrimary: p.isPrimary }));
   return publishedAnimals.schema.parse(merged);
 }

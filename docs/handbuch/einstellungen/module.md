@@ -8,7 +8,7 @@ erhalten und sind wieder da, sobald Sie es einschalten.
 ## Ein- und ausschalten
 
 Jedes Modul ist eine Karte mit Name, Beschreibung, Version und Schalter. Der
-Kern — Anmeldung, Rollen, Einstellungen, Protokoll, Dokumente, Backup — ist
+Kern — Anmeldung, Rollen, Stammdaten, Protokoll, Dokumente, Backup — ist
 immer aktiv. Ein Modul, das ein anderes braucht, sagt es („benötigt
 Kontakte“); das gebrauchte lässt sich nicht abschalten, solange das
 abhängige läuft.

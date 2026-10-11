@@ -1,7 +1,7 @@
 # Die Oberfläche
 
 Links steht die Schiene mit einem Eintrag je Bereich — Startseite, Webseite,
-Kontakte, Akte, Mediathek und unten die Einstellungen. Hat ein Bereich mehrere
+Kontakte, Akte, Mediathek und unten „System“. Hat ein Bereich mehrere
 Seiten, erscheint daneben eine zweite Spalte mit diesen Seiten. Oben läuft die
 Kopfleiste mit Vereinsname, Brotkrume, Suche und Ihrem Nutzermenü.
 
@@ -11,17 +11,20 @@ Kopfleiste mit Vereinsname, Brotkrume, Suche und Ihrem Nutzermenü.
 
 Jeder Bereich ist eine Zeile mit Symbol und Wort. Die Schiene zeigt nur, was
 Ihre Rolle sehen darf: Wer keine Rechte an der Akte hat, sieht die Akte
-nicht. Ein Modul, das unter Einstellungen → Module ausgeschaltet ist, fehlt
+nicht. Ein Modul, das unter Einrichtung → Module ausgeschaltet ist, fehlt
 ebenfalls.
 
-Unten, hinter einer Linie, stehen die Einstellungen. Dort liegt alles, was
-man einmal einrichtet und selten anfasst: Verein, Nutzer, Rollen, Themes,
-Backup.
+Unten, hinter einer Linie, steht „System“. Dort liegt alles, was man einmal
+einrichtet und selten anfasst, in zwei Abschnitten: „Verwaltung“ mit Nutzern,
+Rollen, Änderungsprotokoll, Aufbewahrung und Backup, „Einrichtung“ mit
+Stammdaten, Sprachen, Erscheinungsbild, Modulen, Dokumentvorlagen und der
+Einrichtung der eingeschalteten Module. Hinweise in Kompass und in diesem
+Handbuch nennen den Weg ab dem Abschnitt, etwa „Einrichtung → Sprachen“.
 
 ## Die Zweitebene
 
-Steht ein Bereich auf mehr als einer Seite — die Webseite mit Vorlage,
-Variablen, Sammlungen und Publizieren, die Einstellungen mit ihren beiden
+Steht ein Bereich auf mehr als einer Seite — die Webseite mit
+Variablen, Sammlungen und Publizieren, „System“ mit seinen beiden
 Abschnitten —, erscheint neben der Schiene eine zweite Spalte. Die aktuelle
 Seite ist darin hervorgehoben. Bei einem Bereich mit nur einer Seite entfällt
 die Spalte, und der Inhalt beginnt direkt neben der Schiene.

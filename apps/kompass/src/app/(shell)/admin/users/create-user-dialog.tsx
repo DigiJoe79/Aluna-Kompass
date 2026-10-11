@@ -14,6 +14,7 @@ import { idleState } from '@/lib/actions';
 import { createUserAction } from './actions';
 import { StartPasswordDialog } from './start-password-dialog';
 import { ActionForm } from '@/components/forms/action-form';
+import { Section } from '@/components/section';
 
 type Created = { user: { name: string; email: string }; startPassword: string };
 
@@ -40,9 +41,8 @@ export function CreateUserDialog({ roles }: { roles: { id: string; name: string;
           <ActionForm action={action} state={state}>
             <DialogTitle>{t('title')}</DialogTitle>
             <DialogDescription>{t('subtitle')}</DialogDescription>
-            <section className="mt-4">
-              <h3 className="text-[15px] font-semibold">{t('person')}</h3>
-              <div className="mt-3">
+            <div className="mt-4">
+            <Section title={t('person')}>
                 <FormGrid>
                   <FormField id="name" label={t('name')} error={errors.name}>
                     <Input id="name" name="name" required />
@@ -51,11 +51,9 @@ export function CreateUserDialog({ roles }: { roles: { id: string; name: string;
                     <Input id="email" name="email" type="email" required />
                   </FormField>
                 </FormGrid>
-              </div>
-            </section>
-            <section role="group" aria-labelledby="create-user-roles" className="mt-5 border-t border-line pt-5">
-              <h3 id="create-user-roles" className="text-[15px] font-semibold">{t('roles')}</h3>
-              <div className="mt-3 flex flex-wrap gap-4">
+            </Section>
+            <Section title={t('roles')} headingId="create-user-roles">
+              <div role="group" aria-labelledby="create-user-roles" className="flex flex-wrap gap-4">
                 {roles.map((role) => (
                   <div key={role.id} className="flex items-center gap-2">
                     <Checkbox id={`role-${role.id}`} name="roleIds" value={role.id} disabled={!role.grantable} />
@@ -63,7 +61,8 @@ export function CreateUserDialog({ roles }: { roles: { id: string; name: string;
                   </div>
                 ))}
               </div>
-            </section>
+            </Section>
+            </div>
             <FormActionBar placement="dialog" mode="create" cancel={() => setOpen(false)} saveLabel={t('submit')} note={c('audited')} state={state} />
           </ActionForm>
         </DialogContent>

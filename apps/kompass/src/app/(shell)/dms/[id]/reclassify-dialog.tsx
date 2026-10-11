@@ -85,7 +85,7 @@ export function ReclassifyDialog({
                 <Input id="reclassify-subject" name="subject" defaultValue={doc.subject} required maxLength={300} />
               </FormField>
               {preview ? (
-                <FormCell size="full" className="space-y-1 rounded-md bg-surface-2 p-3 text-[13px] text-ink-2" aria-live="polite">
+                <FormCell size="full" className="space-y-1 rounded-md bg-surface-2 p-3 text-meta text-ink-2" aria-live="polite">
                   <p>
                     {preview.number.next
                       ? t('newNumber', { next: preview.number.next, current: preview.number.current ?? '' })

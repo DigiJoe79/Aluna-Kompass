@@ -11,6 +11,7 @@ import { useDateFormat } from '@/components/date-format-provider';
 import { formatEuro } from '@/lib/finance/amount';
 import { FormField } from '@/components/forms/form-field';
 import { FormGrid } from '@/components/forms/form-grid';
+import { Section } from '@/components/section';
 
 export interface WaiverState {
   declaredOn: string;
@@ -102,7 +103,7 @@ export function WaiverChecks({
           done: check.done,
           blocked: check.blocked,
           extra: check.done ? undefined : agreedLate ? (
-            <p data-testid="waiver-declaration-blocked" className="text-[12px] text-muted-ink">
+            <p data-testid="waiver-declaration-blocked" className="text-hint text-muted-ink">
               {t('declarationBlockedAgreedLate')}
             </p>
           ) : (
@@ -131,45 +132,46 @@ export function WaiverChecks({
   });
 
   return (
-    <section data-testid="waiver-checks" aria-labelledby="waiver-checks-title" className="space-y-3 rounded-lg border border-line bg-surface p-4">
-      <h3 id="waiver-checks-title" className="text-[15px] font-semibold">
-        {t('title')}
-      </h3>
-      <FormGrid>
-        <FormField id="waiver-declared-on" label={t('declaredOn')} size="s">
-          <Input id="waiver-declared-on" type="date" value={state.declaredOn} onChange={(e) => onChange({ declaredOn: e.target.value })} />
-        </FormField>
-        <FormField id="waiver-agreed" label={t('agreed')} toggle>
-          <Checkbox id="waiver-agreed" checked={state.claimAgreedConfirmed} onCheckedChange={(next) => onChange({ claimAgreedConfirmed: next === true })} />
-        </FormField>
-      </FormGrid>
-      <RequirementList items={items} grouping="open-first" />
-      {declaration.href ? (
-        <div className="flex flex-wrap items-center gap-3 text-[13px]">
-          <a href={declaration.href} target="_blank" rel="noreferrer" className="underline underline-offset-2 hover:text-link">
-            {t('declarationOpen')}
-          </a>
-          {declaration.signedHref ? (
-            <a href={declaration.signedHref} target="_blank" rel="noreferrer" className="underline underline-offset-2 hover:text-link">
-              {t('signedOpen')}
-            </a>
-          ) : (
-            <input
-              ref={fileInput}
-              type="file"
-              accept="application/pdf"
-              className="sr-only"
-              tabIndex={-1}
-              aria-hidden
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) onUploadSigned(file);
-                e.target.value = '';
-              }}
-            />
-          )}
+    <section data-testid="waiver-checks" aria-labelledby="waiver-checks-title" className="rounded-lg border border-line bg-surface p-4">
+      <Section title={t('title')} headingId="waiver-checks-title">
+        <div className="space-y-3">
+          <FormGrid>
+            <FormField id="waiver-declared-on" label={t('declaredOn')} size="s">
+              <Input id="waiver-declared-on" type="date" value={state.declaredOn} onChange={(e) => onChange({ declaredOn: e.target.value })} />
+            </FormField>
+            <FormField id="waiver-agreed" label={t('agreed')} toggle>
+              <Checkbox id="waiver-agreed" checked={state.claimAgreedConfirmed} onCheckedChange={(next) => onChange({ claimAgreedConfirmed: next === true })} />
+            </FormField>
+          </FormGrid>
+          <RequirementList items={items} grouping="open-first" />
+          {declaration.href ? (
+            <div className="flex flex-wrap items-center gap-3 text-meta">
+              <a href={declaration.href} target="_blank" rel="noreferrer" className="underline underline-offset-2 hover:text-link">
+                {t('declarationOpen')}
+              </a>
+              {declaration.signedHref ? (
+                <a href={declaration.signedHref} target="_blank" rel="noreferrer" className="underline underline-offset-2 hover:text-link">
+                  {t('signedOpen')}
+                </a>
+              ) : (
+                <input
+                  ref={fileInput}
+                  type="file"
+                  accept="application/pdf"
+                  className="sr-only"
+                  tabIndex={-1}
+                  aria-hidden
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) onUploadSigned(file);
+                    e.target.value = '';
+                  }}
+                />
+              )}
+            </div>
+          ) : null}
         </div>
-      ) : null}
+      </Section>
     </section>
   );
 }

@@ -72,8 +72,8 @@ export function DropOverlay({
             ))}
           </div>
         )}
-        <p className="text-[15px] font-bold text-ink">{title ?? (count === null ? t('drop.overlayTitleUnknown') : t('drop.overlayTitle', { count }))}</p>
-        <p className="mt-1 text-[13px] leading-relaxed text-ink-2">{hint ?? t('drop.overlayHint')}</p>
+        <p className="text-section text-ink">{title ?? (count === null ? t('drop.overlayTitleUnknown') : t('drop.overlayTitle', { count }))}</p>
+        <p className="mt-1 text-meta text-ink-2">{hint ?? t('drop.overlayHint')}</p>
       </div>
     </div>
   );

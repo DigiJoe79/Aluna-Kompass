@@ -50,7 +50,7 @@ export function RowMenu({ target, onClose, finalFocus, onNewSubfolder, newSubfol
           <DropdownMenuItem onSelect={onRename}>
             <Pencil className="text-muted-ink" aria-hidden />
             {t('rename')}
-            <DropdownMenuShortcut aria-hidden className="font-mono tracking-normal">
+            <DropdownMenuShortcut aria-hidden>
               {t('keyNames.f2')}
             </DropdownMenuShortcut>
           </DropdownMenuItem>

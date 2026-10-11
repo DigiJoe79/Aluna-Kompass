@@ -19,9 +19,9 @@ export function ExternalLinksField({ value, errors }: { value: ExternalLink[]; e
   const update = (index: number, patch: Partial<ExternalLink>) => setLinks(links.map((l, i) => (i === index ? { ...l, ...patch } : l)));
   return (
     <FormCell as="fieldset" size="full" className="flex min-w-0 flex-col gap-3">
-      <legend className="text-[13px] font-semibold">{t('title')}</legend>
-      <p className="text-[12px] text-muted-ink">{t('hint')}</p>
-      {links.length === 0 ? <p className="text-[13px] text-muted-ink">{t('empty')}</p> : null}
+      <legend className="text-meta font-semibold">{t('title')}</legend>
+      <p className="text-hint text-muted-ink">{t('hint')}</p>
+      {links.length === 0 ? <p className="text-meta text-muted-ink">{t('empty')}</p> : null}
       {links.map((link, index) => (
         <div key={index} className="grid gap-3 md:grid-cols-[1fr_2fr_auto] md:items-end">
           <FormField id={`externalLinks.${index}.label`} label={t('label')} error={errors[`externalLinks.${index}.label`]}>

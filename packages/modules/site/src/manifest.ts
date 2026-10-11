@@ -44,7 +44,7 @@ export const siteModule: ModuleManifest = defineModule({
   moduleIcon: 'globe',
   // „Publizieren“ steht immer da; Variablen und Sammlungen hängen am Template.
   navigation: [{ key: 'site.publish', href: '/site/publish', icon: 'upload', group: 'site', permission: 'site.publish' }],
-  // Template, Verbindung, Cache und Sperrwörter: eine Seite unter Einstellungen.
+  // Template, Verbindung, Cache und Sperrwörter: eine Seite unter Einrichtung.
   adminNavigation: [{ key: 'site.admin', href: '/admin/site', icon: 'globe', permission: 'site.manage' }],
   help: [
     { href: '/admin/site', doc: 'einstellungen/webseite-einrichten' },
@@ -59,6 +59,8 @@ export const siteModule: ModuleManifest = defineModule({
   mediaReferences: siteMediaReferences,
   // Die Sprachen des eingelesenen Templates: Ohne sie filtert der Export Inhalte stillschweigend weg.
   requiredLocales: (deps) => activeTemplate(deps)?.schema.locales ?? [],
+  // Format und Breite der Bildstellen der Modul-Sichten aus dem eingelesenen Template (Spec Ausschnitt für alle Bilder § 2).
+  imagePlaceSpecs: (deps) => activeTemplate(deps)?.schema.images,
   dashboardTiles: SITE_DASHBOARD_TILES,
   /** Aktionen des Änderungsprotokolls (Spec Protokoll § 3); Sammlungen und Variablen heißen wie im Template. */
   auditActions: {

@@ -28,6 +28,7 @@ const SECTIONS = {
   J: 'J — Formularraster',
   L: 'L — Filterleisten',
   Seitenrahmen: 'Seitenrahmen',
+  Schrift: 'Schrift',
   Fachbaustein: 'Fachbausteine und Grundbausteine',
   Grundbaustein: 'Fachbausteine und Grundbausteine',
 } as const;
@@ -113,6 +114,8 @@ const INVENTORY: Readonly<Record<string, Entry>> = {
   'managed-field.tsx': bestand('E'),
   'markdown-preview.tsx': bestand('Fachbaustein'),
   'media/asset-grid.tsx': bestand('Fachbaustein'),
+  'media/crop-editor.tsx': neu('Fachbaustein', 'Designer 2026-10-10, Handover design_handoff_ausschnitt (Dialog Bildausschnitt)'),
+  'media/cropped-image.tsx': neu('Fachbaustein', 'Designer 2026-10-10, Handover design_handoff_ausschnitt (Ergebnis eines Bildausschnitts im Rahmen)'),
   'media/media-chooser-dialog.tsx': bestand('Fachbaustein'),
   'media/use-asset-drag.ts': bestand('Fachbaustein'),
   'module-inactive-card.tsx': bestand('Seitenrahmen'),
@@ -130,6 +133,8 @@ const INVENTORY: Readonly<Record<string, Entry>> = {
   // L Filterleisten: Abschnitt G, bis MUSTER § L mit Plan Lb kommt.
   'search-field.tsx': neu('L', 'Designer 2026-10-08, HANDOFF § 8e.1'),
   'section.tsx': neu('E', 'K10, Designer und Joe 2026-10-06'),
+  'overline.tsx': neu('Schrift', 'K10 Charge 3, Designer 2026-10-10 (SCHRIFTSTUFEN § 2, § 8)'),
+  'key-line.tsx': neu('Schrift', 'K10 Charge 3, Designer 2026-10-10 (SCHRIFTSTUFEN § 1)'),
   'selection-bar.tsx': neu('G', 'Maintainer 2026-10-04 (SelectionBar für Journal und Akte)'),
   'shell/command-palette.tsx': bestand('Fachbaustein'),
   'shell/env-banner.tsx': bestand('Fachbaustein'),

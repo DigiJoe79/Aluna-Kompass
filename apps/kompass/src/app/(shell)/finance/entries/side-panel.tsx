@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { formatEuro } from '@/lib/finance/amount';
 import { usePreference } from '@/lib/preferences';
 import { cn } from '@/lib/utils';
+import { Section } from '@/components/section';
 
 export interface SidePanelProps {
   balances: BalancesView;
@@ -24,6 +25,11 @@ export function SidePanel({ balances, incomeStatement }: SidePanelProps) {
   const explicit = pref !== 'auto';
   const open = pref === 'open';
 
+  const collapse = (
+    <Button type="button" variant="link" className="h-auto p-0" onClick={() => setPref('closed')}>
+      {t('collapse')}
+    </Button>
+  );
   return (
     <>
       <Button
@@ -39,23 +45,19 @@ export function SidePanel({ balances, incomeStatement }: SidePanelProps) {
       <aside
         data-testid="finance-side-panel"
         className={cn(
-          'w-[280px] shrink-0 space-y-4 rounded-md border border-line bg-surface p-4',
+          'w-[280px] shrink-0 rounded-md border border-line bg-surface p-4',
           explicit ? (open ? 'block' : 'hidden') : 'hidden min-[1360px]:block',
         )}
       >
-        <div className="flex items-center justify-between">
-          <h3 className="text-[13px] font-semibold uppercase tracking-wide text-muted-ink">{t('title')}</h3>
-          <Button type="button" variant="link" className="h-auto p-0" onClick={() => setPref('closed')}>
-            {t('collapse')}
-          </Button>
-        </div>
+        <Section title={t('title')} actions={collapse}>
+        <div className="space-y-4">
 
         <div className="space-y-2">
           {balances.accounts.map((account) => (
             <div key={account.accountId} className="space-y-0.5">
-              <p className="text-[13px] font-semibold">{account.name}</p>
-              <p className="text-right font-mono text-[14px] tabular-nums">{formatEuro(account.balanceCents)}</p>
-              <p className="text-right text-[11px] text-muted-ink">{t('withReviewed', { amount: formatEuro(account.withReviewedCents) })}</p>
+              <p className="text-meta font-semibold">{account.name}</p>
+              <p className="text-right font-mono text-body tabular-nums">{formatEuro(account.balanceCents)}</p>
+              <p className="text-right text-hint text-muted-ink">{t('withReviewed', { amount: formatEuro(account.withReviewedCents) })}</p>
             </div>
           ))}
         </div>
@@ -63,14 +65,16 @@ export function SidePanel({ balances, incomeStatement }: SidePanelProps) {
         {incomeStatement ? (
           <div className="space-y-2 border-t border-line pt-3">
             {incomeStatement.spheres.map((sphere) => (
-              <div key={sphere.sphere} className="flex items-center justify-between text-[13px]">
+              <div key={sphere.sphere} className="flex items-center justify-between text-meta">
                 <span className="text-ink-2">{t(`sphere.${sphere.sphere}`)}</span>
                 <span className="font-mono tabular-nums">{formatEuro(sphere.resultCents)}</span>
               </div>
             ))}
-            {incomeStatement.preliminary ? <p className="text-[11px] text-muted-ink">{t('preliminary')}</p> : null}
+            {incomeStatement.preliminary ? <p className="text-hint text-muted-ink">{t('preliminary')}</p> : null}
           </div>
         ) : null}
+        </div>
+        </Section>
       </aside>
     </>
   );

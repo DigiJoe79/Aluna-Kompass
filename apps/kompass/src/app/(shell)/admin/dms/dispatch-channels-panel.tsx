@@ -57,7 +57,7 @@ export function DispatchChannelsPanel({
     <section className="space-y-4 rounded-md border border-line bg-surface p-5">
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-[13px] text-ink-2">{t('channelsDescription')}</p>
+          <p className="text-meta text-ink-2">{t('channelsDescription')}</p>
         </div>
         {canManageSettings ? (
           <Button
@@ -85,7 +85,7 @@ export function DispatchChannelsPanel({
           <TableBody>
             {channels.map((channel) => (
               <TableRow key={channel.key}>
-                <TableCell className="font-mono text-[13px] text-ink-2">{channel.key}</TableCell>
+                <TableCell className="font-mono text-meta text-ink-2">{channel.key}</TableCell>
                 <TableCell className="font-semibold text-ink">{channel.label}</TableCell>
                 <TableCell className="text-right">
                   {canManageSettings ? (
@@ -112,7 +112,7 @@ export function DispatchChannelsPanel({
         </Table>
       </div>
 
-      {channels.length <= 1 ? <p className="text-[12px] text-muted-ink">{t('lastChannel')}</p> : null}
+      {channels.length <= 1 ? <p className="text-hint text-muted-ink">{t('lastChannel')}</p> : null}
 
       <Dialog
         open={creating || renaming !== null}
@@ -160,7 +160,7 @@ export function DispatchChannelsPanel({
             pending={pending}
             saveDisabled={!label.trim() || (!renaming && !key.trim())}
             saveLabel={tCommon('save')}
-            note={<span className="text-[12px] text-muted-ink">{tCommon('requiredLegend')}</span>}
+            note={<span className="text-hint text-muted-ink">{tCommon('requiredLegend')}</span>}
             state={withUnplacedFieldErrors(feedback.state, [])}
             onSave={() =>
               save(

@@ -31,6 +31,7 @@ import { remediesFor, type RemedyAction } from '@/lib/finance/remedies';
 import { matchesDirection, suggestSettlementCents } from '@/lib/finance/settlement';
 import { splitEvenly } from '@/lib/finance/split';
 import { attachDocumentAction, finalizeAction, saveDraftAction, saveReviewedAction, uploadVoucherAction } from './actions';
+import { Section } from '@/components/section';
 
 const randomKey = (prefix: string): string => `${prefix}-${Math.random().toString(36).slice(2, 10)}`;
 const emptySplitRow = () => ({ key: randomKey('split'), categoryId: '', amountText: '', contactId: null, projectId: null, purposeId: null, abroad: false, addsToAssets: false });
@@ -131,7 +132,7 @@ function MoneySettlements({
             const errorCode = fieldErrors[`moneyRows.${rowIndex}.settlements.${sIndex}.amountText`];
             return (
               <div key={settlement.openItemId} className="flex items-center gap-2">
-                <span className="flex-1 truncate text-[13px] text-ink-2">{item?.label ?? settlement.openItemId}</span>
+                <span className="flex-1 truncate text-meta text-ink-2">{item?.label ?? settlement.openItemId}</span>
                 <div className="w-32">
                   <Label htmlFor={`settlement-${rowIndex}-${sIndex}`} className="sr-only">
                     {ts('amount')}
@@ -159,7 +160,7 @@ function MoneySettlements({
                   <button
                     type="button"
                     onClick={() => add(item)}
-                    className="flex w-full items-center justify-between gap-2 rounded-sm border border-line px-2.5 py-1.5 text-left text-[13px]"
+                    className="flex w-full items-center justify-between gap-2 rounded-sm border border-line px-2.5 py-1.5 text-left text-meta"
                   >
                     <span>{item.label}</span>
                     <span className="font-mono tabular-nums text-ink-2">{ts('rest', { amount: formatEuro(item.openCents) })}</span>
@@ -168,7 +169,7 @@ function MoneySettlements({
               ))}
             </ul>
           ) : (
-            <p className="text-[12px] text-muted-ink">{ts('noMatches')}</p>
+            <p className="text-hint text-muted-ink">{ts('noMatches')}</p>
           )}
         </div>
       ) : null}
@@ -336,7 +337,7 @@ export function EntryForm({ initial, accounts, categories, purposes, projects, t
           <FormField id="entry-date" label={t('date')} size="s">
             <Input ref={dateRef} id="entry-date" type="date" value={state.entryDate} onChange={(e) => setState((s) => ({ ...s, entryDate: e.target.value }))} required />
             {/* Befund 20: warnt, sperrt aber nicht — erst Festschreiben lehnt ein Datum nach heute ab. */}
-            {state.entryDate > today ? <p className="text-[12px] text-warning">{t('futureDate')}</p> : null}
+            {state.entryDate > today ? <p className="text-hint text-warning">{t('futureDate')}</p> : null}
           </FormField>
           <FormField id="entry-text" label={t('text')} size="l">
             <Input id="entry-text" value={state.text} onChange={(e) => setState((s) => ({ ...s, text: e.target.value }))} required />
@@ -354,130 +355,139 @@ export function EntryForm({ initial, accounts, categories, purposes, projects, t
       </section>
 
       {state.template !== 'inKind' ? (
-        <section data-testid="finance-account-card" className="space-y-3 rounded-md border border-line bg-surface p-4">
-          <h3 className="text-[15px] font-semibold">{t('accountCard')}</h3>
-          {state.moneyRows.map((row, index) => (
-            <FormGrid key={row.key}>
-              {row.rawTransactionId ? (
-                <FormCell as="p" data-testid="bound-money-line" size="full" className="rounded-sm border border-line bg-surface-2 px-2.5 py-1.5 font-mono text-[13px] tabular-nums text-ink">
-                  {(() => {
-                    const cents = (parseAmount(row.amountText) ?? 0) * (row.direction === 'out' ? -1 : 1);
-                    return row.rawBookingDate ? t('boundLine', { date: date(row.rawBookingDate), amount: formatEuro(cents) }) : t('boundLineNoDate', { amount: formatEuro(cents) });
-                  })()}
-                </FormCell>
-              ) : null}
-              <FormField id={`account-${row.key}`} label={state.template === 'transfer' ? t(row.direction === 'out' ? 'transferFrom' : 'transferTo') : t('account')}>
-                <Select id={`account-${row.key}`} value={row.accountId} disabled={!!row.rawTransactionId} onChange={(e) => setState((s) => ({ ...s, moneyRows: s.moneyRows.map((r, i) => (i === index ? { ...r, accountId: e.target.value } : r)) }))} required>
-                  <option value="" disabled>
-                    {t('accountPlaceholder')}
-                  </option>
-                  {accounts.map((a) => (
-                    <option key={a.id} value={a.id}>{a.name}</option>
-                  ))}
-                </Select>
-              </FormField>
-              <FormField id={`amount-${row.key}`} label={t('amount')} size="s">
-                <AmountField
-                  id={`amount-${row.key}`}
-                  name={`amount-${row.key}`}
-                  value={row.amountText}
-                  onChange={(amountText) => setState((s) => ({ ...s, moneyRows: s.moneyRows.map((r, i) => (i === index ? { ...r, amountText } : r)) }))}
-                  disabled={!!row.rawTransactionId}
-                  required
-                  balanceHint={accountsById.get(row.accountId) ? t('balanceHint', { amount: formatEuro(accountsById.get(row.accountId)!.balanceCents) }) : undefined}
-                />
-              </FormField>
-              {/* „begleicht offene Zahlung“ bleibt unter seiner Geldzeile (Entscheidung zum Inventar). */}
-              <FormCell size="full">
-                <MoneySettlements
-                  row={row}
-                  rowIndex={index}
-                  openItems={openItems}
-                  fieldErrors={validation.ok ? {} : validation.fieldErrors}
-                  onChange={(settlements) => setState((s) => ({ ...s, moneyRows: s.moneyRows.map((r, i) => (i === index ? { ...r, settlements } : r)) }))}
-                />
-              </FormCell>
-            </FormGrid>
-          ))}
-          {remainder !== null ? <BalanceIndicator open={remainder} /> : null}
+        <section data-testid="finance-account-card" className="rounded-md border border-line bg-surface p-4">
+          <Section title={t('accountCard')}>
+            <div className="space-y-3">
+              {state.moneyRows.map((row, index) => (
+                <FormGrid key={row.key}>
+                  {row.rawTransactionId ? (
+                    <FormCell as="p" data-testid="bound-money-line" size="full" className="rounded-sm border border-line bg-surface-2 px-2.5 py-1.5 font-mono text-meta tabular-nums text-ink">
+                      {(() => {
+                        const cents = (parseAmount(row.amountText) ?? 0) * (row.direction === 'out' ? -1 : 1);
+                        return row.rawBookingDate ? t('boundLine', { date: date(row.rawBookingDate), amount: formatEuro(cents) }) : t('boundLineNoDate', { amount: formatEuro(cents) });
+                      })()}
+                    </FormCell>
+                  ) : null}
+                  <FormField id={`account-${row.key}`} label={state.template === 'transfer' ? t(row.direction === 'out' ? 'transferFrom' : 'transferTo') : t('account')}>
+                    <Select id={`account-${row.key}`} value={row.accountId} disabled={!!row.rawTransactionId} onChange={(e) => setState((s) => ({ ...s, moneyRows: s.moneyRows.map((r, i) => (i === index ? { ...r, accountId: e.target.value } : r)) }))} required>
+                      <option value="" disabled>
+                        {t('accountPlaceholder')}
+                      </option>
+                      {accounts.map((a) => (
+                        <option key={a.id} value={a.id}>{a.name}</option>
+                      ))}
+                    </Select>
+                  </FormField>
+                  <FormField id={`amount-${row.key}`} label={t('amount')} size="s">
+                    <AmountField
+                      id={`amount-${row.key}`}
+                      name={`amount-${row.key}`}
+                      value={row.amountText}
+                      onChange={(amountText) => setState((s) => ({ ...s, moneyRows: s.moneyRows.map((r, i) => (i === index ? { ...r, amountText } : r)) }))}
+                      disabled={!!row.rawTransactionId}
+                      required
+                      balanceHint={accountsById.get(row.accountId) ? t('balanceHint', { amount: formatEuro(accountsById.get(row.accountId)!.balanceCents) }) : undefined}
+                    />
+                  </FormField>
+                  {/* „begleicht offene Zahlung“ bleibt unter seiner Geldzeile (Entscheidung zum Inventar). */}
+                  <FormCell size="full">
+                    <MoneySettlements
+                      row={row}
+                      rowIndex={index}
+                      openItems={openItems}
+                      fieldErrors={validation.ok ? {} : validation.fieldErrors}
+                      onChange={(settlements) => setState((s) => ({ ...s, moneyRows: s.moneyRows.map((r, i) => (i === index ? { ...r, settlements } : r)) }))}
+                    />
+                  </FormCell>
+                </FormGrid>
+              ))}
+              {remainder !== null ? <BalanceIndicator open={remainder} /> : null}
+            </div>
+          </Section>
         </section>
       ) : null}
 
       {state.template === 'transfer' ? (
-        <p className="text-[13px] text-ink-2">{t('transferHint')}</p>
+        <p className="text-meta text-ink-2">{t('transferHint')}</p>
       ) : (
-        <section data-testid="finance-allocation-card" className="space-y-3 rounded-md border border-line bg-surface p-4">
-          <h3 className="text-[15px] font-semibold">{t('allocationCard')}</h3>
-          {state.splitRows.map((row, index) => {
-            const withoutRow = { ...state, splitRows: state.splitRows.filter((r) => r.key !== row.key) };
-            const restForRow = remainderCents(withoutRow);
-            return (
-              <SplitRow
-                key={row.key}
-                position={index + 1}
-                value={row}
-                onChange={(next) =>
-                  setState((s) => {
-                    const updated = { ...s, splitRows: s.splitRows.map((r) => (r.key === row.key ? next : r)) };
-                    // Sachspende: die zweite Zeile folgt der ersten mit dem negierten Betrag — `applyTemplate`
-                    // zieht die Kopplung bei jeder Änderung nach (Kommentar in `entry-form.ts`).
-                    return s.template === 'inKind' ? applyTemplate(updated, 'inKind') : updated;
-                  })
-                }
-                onRemove={() => setState((s) => ({ ...s, splitRows: s.splitRows.filter((r) => r.key !== row.key) }))}
-                onDuplicate={() => setState((s) => ({ ...s, splitRows: [...s.splitRows, { ...row, key: randomKey('split') }] }))}
-                onRestHere={() => setState((s) => restInto(s, row.key))}
-                onSplitEvenly={(n) =>
-                  setState((s) => {
-                    const totalCents = parseAmount(row.amountText) ?? 0;
-                    const [first, ...rest] = splitEvenly(totalCents, n);
-                    return {
-                      ...s,
-                      splitRows: [
-                        ...s.splitRows.map((r) => (r.key === row.key ? { ...r, amountText: formatAmount(first ?? 0) } : r)),
-                        ...rest.map((cents) => ({ ...row, key: randomKey('split'), amountText: formatAmount(cents) })),
-                      ],
-                    };
-                  })
-                }
-                restCents={restForRow}
-                categories={categories}
-                purposes={purposes}
-                projects={projects}
-                taxCodeOptions={taxCodeOptions}
-                showTax={showTax}
-              />
-            );
-          })}
-          {state.template !== 'inKind' ? (
-            <Button type="button" variant="secondary" onClick={() => setState((s) => ({ ...s, splitRows: [...s.splitRows, emptySplitRow()] }))}>
-              {t('addRow')}
-            </Button>
-          ) : null}
+        <section data-testid="finance-allocation-card" className="rounded-md border border-line bg-surface p-4">
+          <Section title={t('allocationCard')}>
+            <div className="space-y-3">
+              {state.splitRows.map((row, index) => {
+                const withoutRow = { ...state, splitRows: state.splitRows.filter((r) => r.key !== row.key) };
+                const restForRow = remainderCents(withoutRow);
+                return (
+                  <SplitRow
+                    key={row.key}
+                    position={index + 1}
+                    value={row}
+                    onChange={(next) =>
+                      setState((s) => {
+                        const updated = { ...s, splitRows: s.splitRows.map((r) => (r.key === row.key ? next : r)) };
+                        // Sachspende: die zweite Zeile folgt der ersten mit dem negierten Betrag — `applyTemplate`
+                        // zieht die Kopplung bei jeder Änderung nach (Kommentar in `entry-form.ts`).
+                        return s.template === 'inKind' ? applyTemplate(updated, 'inKind') : updated;
+                      })
+                    }
+                    onRemove={() => setState((s) => ({ ...s, splitRows: s.splitRows.filter((r) => r.key !== row.key) }))}
+                    onDuplicate={() => setState((s) => ({ ...s, splitRows: [...s.splitRows, { ...row, key: randomKey('split') }] }))}
+                    onRestHere={() => setState((s) => restInto(s, row.key))}
+                    onSplitEvenly={(n) =>
+                      setState((s) => {
+                        const totalCents = parseAmount(row.amountText) ?? 0;
+                        const [first, ...rest] = splitEvenly(totalCents, n);
+                        return {
+                          ...s,
+                          splitRows: [
+                            ...s.splitRows.map((r) => (r.key === row.key ? { ...r, amountText: formatAmount(first ?? 0) } : r)),
+                            ...rest.map((cents) => ({ ...row, key: randomKey('split'), amountText: formatAmount(cents) })),
+                          ],
+                        };
+                      })
+                    }
+                    restCents={restForRow}
+                    categories={categories}
+                    purposes={purposes}
+                    projects={projects}
+                    taxCodeOptions={taxCodeOptions}
+                    showTax={showTax}
+                  />
+                );
+              })}
+              {state.template !== 'inKind' ? (
+                <Button type="button" variant="secondary" onClick={() => setState((s) => ({ ...s, splitRows: [...s.splitRows, emptySplitRow()] }))}>
+                  {t('addRow')}
+                </Button>
+              ) : null}
+            </div>
+          </Section>
         </section>
       )}
 
-      <section className="space-y-3 rounded-md border border-line bg-surface p-4">
-        <h3 className="text-[15px] font-semibold">{t('voucherCard')}</h3>
-        <RefusalNotice action state={voucherRefusal} />
-        <ReceiptDrop onFiles={(files) => void uploadFiles(files)} onPickFromArchive={() => setArchiveOpen(true)} />
-        {archiveOpen ? (
-          <FormGrid>
-            <FormCell size="m">
-              <DocumentPicker id="voucher-archive" name="voucherArchive" label={t('pickFromArchive')} value={null} onChange={(doc) => doc && void pickFromArchive(doc.id)} />
-            </FormCell>
-          </FormGrid>
-        ) : null}
-        {pendingVoucher ? (
-          <p data-testid="pending-voucher" className="flex flex-wrap items-center gap-2 rounded-sm border border-line bg-surface-2 px-2.5 py-1.5 text-[13px]">
-            <span className="font-mono text-[12px]">{pendingVoucher.number}</span>
-            <span className="min-w-0 flex-1 truncate">{pendingVoucher.subject}</span>
-            <span className="text-[12px] text-muted-ink">{pendingVoucher.typeLabel}</span>
-            <span className="font-mono text-[12px] text-muted-ink">{date(pendingVoucher.date)}</span>
-            <span className="text-[12px] font-semibold text-ink-2">{t('pendingVoucher')}</span>
-          </p>
-        ) : null}
-        <ReceiptList items={vouchers} />
+      <section className="rounded-md border border-line bg-surface p-4">
+        <Section title={t('voucherCard')}>
+          <div className="space-y-3">
+            <RefusalNotice action state={voucherRefusal} />
+            <ReceiptDrop onFiles={(files) => void uploadFiles(files)} onPickFromArchive={() => setArchiveOpen(true)} />
+            {archiveOpen ? (
+              <FormGrid>
+                <FormCell size="m">
+                  <DocumentPicker id="voucher-archive" name="voucherArchive" label={t('pickFromArchive')} value={null} onChange={(doc) => doc && void pickFromArchive(doc.id)} />
+                </FormCell>
+              </FormGrid>
+            ) : null}
+            {pendingVoucher ? (
+              <p data-testid="pending-voucher" className="flex flex-wrap items-center gap-2 rounded-sm border border-line bg-surface-2 px-2.5 py-1.5 text-meta">
+                <span className="font-mono text-hint">{pendingVoucher.number}</span>
+                <span className="min-w-0 flex-1 truncate">{pendingVoucher.subject}</span>
+                <span className="text-hint text-muted-ink">{pendingVoucher.typeLabel}</span>
+                <span className="font-mono text-hint text-muted-ink">{date(pendingVoucher.date)}</span>
+                <span className="text-hint font-semibold text-ink-2">{t('pendingVoucher')}</span>
+              </p>
+            ) : null}
+            <ReceiptList items={vouchers} />
+          </div>
+        </Section>
       </section>
 
       {/* Befund AH und Q: eine Warnung mit Pflichtbegründung, kein Verbot — die Begründung geht beim nächsten Speichern mit. */}

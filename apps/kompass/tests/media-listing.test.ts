@@ -1,4 +1,4 @@
-import { createMediaFolder, storeMediaAsset, unwrap } from '@kompass/core';
+import { coreModule, createMediaFolder, defineModule, storeMediaAsset, unwrap, writeSettingInternal } from '@kompass/core';
 import { createTestDeps, ctxWith, insertUser } from '@kompass/core/testing';
 import { describe, expect, it } from 'vitest';
 import { buildMediaListing, parseMediaListParams } from '@/lib/media-listing';
@@ -79,5 +79,28 @@ describe('buildMediaListing for the chooser', () => {
     expect(opened.items).toHaveLength(2);
     const unfiled = unwrap(await buildMediaListing(deps, ctx, { folder: null, kind: 'image' }));
     expect(unfiled.items).toHaveLength(0);
+  });
+});
+
+describe('buildMediaListing: Verwendung mit Ausschnitt', () => {
+  it('reicht „zugeschnitten“ je Verwendung durch (Handover alle Bilder 4)', async () => {
+    const probe = defineModule({
+      key: 'probe',
+      version: '0.0.0',
+      permissions: [],
+      mediaReferences: (_deps, ids) => [...ids].flatMap((assetId) => [
+        { assetId, label: 'Team: Mira', entity: 'entry', id: 'e1', href: '/site/c/team/e1', cropped: true },
+        { assetId, label: 'Projekt: Ost', entity: 'project', id: 'p1' },
+      ]),
+    });
+    const deps = createTestDeps({ manifests: [coreModule, probe] });
+    const ctx = ctxWith(['media.upload', 'settings.manage'], insertUser(deps, {}));
+    deps.db.transaction((tx) => writeSettingInternal(tx, deps, ctx, 'modules.enabled', ['probe']));
+    unwrap(await storeMediaAsset(deps, ctx, { originalName: 'a.png', bytes: PNG }));
+    const listing = unwrap(await buildMediaListing(deps, ctx, {}));
+    expect(listing.items[0]!.references).toEqual([
+      { label: 'Team: Mira', href: '/site/c/team/e1', cropped: true },
+      { label: 'Projekt: Ost' },
+    ]);
   });
 });

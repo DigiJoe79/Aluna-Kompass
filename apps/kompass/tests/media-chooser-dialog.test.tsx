@@ -57,6 +57,15 @@ const fixed = (key: string) => document.querySelector<HTMLElement>(`[data-fixed=
 const tree = () => screen.getByRole('tree', { name: 'Ordner' });
 
 describe('MediaChooserDialog', () => {
+  it('Einzelwahl liefert mit der ID die Pixelmaße — für „Ausschnitt …“ gleich nach dem Wählen (Spec Ausschnitt für alle Bilder § 4)', async () => {
+    const onConfirm = vi.fn();
+    render(<MediaChooserDialog open onOpenChange={() => {}} kind="image" multiple={false} selected={[]} onConfirm={onConfirm} />, { wrapper: Intl });
+    const name = await screen.findByText('a.png');
+    fireEvent.click(name.closest('button')!);
+    expect(onConfirm).toHaveBeenCalledWith(['a'], { a: { width: 1, height: 1 } });
+  });
+
+
   it('uploads through a button, the file input itself stays out of sight', async () => {
     renderChooser();
     const dialog = await screen.findByRole('dialog');
@@ -178,7 +187,7 @@ describe('MediaChooserDialog', () => {
       expect(tile('p12').getAttribute('aria-pressed')).toBe('false');
       expect(tile('p13').disabled).toBe(true);
       fireEvent.click(screen.getByRole('button', { name: 'Übernehmen' }));
-      expect(onConfirm).toHaveBeenCalledWith(ids(12));
+      expect(onConfirm.mock.lastCall![0]).toEqual(ids(12));
     });
 
     it('frees the tiles again once one is unpicked', async () => {

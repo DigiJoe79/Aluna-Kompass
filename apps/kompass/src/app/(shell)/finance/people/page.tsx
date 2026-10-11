@@ -12,6 +12,7 @@ import { requireSession } from '@/lib/request-context';
 import { PersonCard } from './person-card';
 import { RelatedPartyTable } from './related-party-table';
 import { PeopleYearFilter } from './year-filter';
+import { Section } from '@/components/section';
 
 /**
  * D4 Personenübersicht (F8b Task 6b, Designer-README 4f, Annahme 9, 10):
@@ -72,9 +73,8 @@ export default async function PeoplePage({ searchParams }: { searchParams: Promi
         ) : null}
         <PeopleYearFilter years={choices} year={year} count={overview.rows.length} />
 
-        <h2 className="font-heading text-[18px] text-ink" data-testid="people-allowances-heading">
-          {sameYear ? t('allowancesHeading') : t('allowancesHeadingCalendar', { year })}
-        </h2>
+        <Section title={sameYear ? t('allowancesHeading') : t('allowancesHeadingCalendar', { year })}>
+        <div className="space-y-3">
         {overview.rows.length === 0 ? (
           <EmptyState title={t('emptyTitle')} text={t('empty')} />
         ) : (
@@ -84,20 +84,19 @@ export default async function PeoplePage({ searchParams }: { searchParams: Promi
             ))}
           </div>
         )}
-        {overview.linesWithoutPersonCount > 0 ? <p className="text-[13px] text-warning" data-testid="people-without-person">{t('withoutPerson', { count: overview.linesWithoutPersonCount })}</p> : null}
+        {overview.linesWithoutPersonCount > 0 ? <p className="text-meta text-warning" data-testid="people-without-person">{t('withoutPerson', { count: overview.linesWithoutPersonCount })}</p> : null}
+        </div>
+        </Section>
 
-        <section className="space-y-2">
-          <h2 className="font-heading text-[18px] text-ink" data-testid="people-related-heading">
-            {fiscalYear && !sameYear ? t('related.headingFiscal', { name: fiscalYear.designation }) : t('related.heading')}
-          </h2>
+        <Section title={fiscalYear && !sameYear ? t('related.headingFiscal', { name: fiscalYear.designation }) : t('related.heading')}>
           {fiscalYear ? (
             <>
               <RelatedPartyTable rows={related} approverNames={approverNames} fmt={fmt} />
             </>
           ) : (
-            <p className="text-[13px] text-muted-ink">{t('related.noFiscalYear')}</p>
+            <p className="text-meta text-muted-ink">{t('related.noFiscalYear')}</p>
           )}
-        </section>
+        </Section>
       </div>
     </Page>
   );

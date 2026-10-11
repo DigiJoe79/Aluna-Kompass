@@ -40,7 +40,7 @@ export function ReplaceResolutionDialog({ reserve, onClose, onSaved }: { reserve
         <DialogTitle>{t('title', { name: reserve.name })}</DialogTitle>
         <DialogDescription tone="body">{t('hint')}</DialogDescription>
         <div className="space-y-3.5" data-testid="replace-resolution-dialog">
-          <p className="text-[13px] text-ink-2">
+          <p className="text-meta text-ink-2">
             {t('current')} <DocumentLabel document={reserve.resolution} />
           </p>
           <ResolutionField id="replace-resolution" document={document} onDocument={setDocument} onFile={setFile} />

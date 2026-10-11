@@ -64,7 +64,7 @@ export function ForeignDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent size="md" className="bg-surface shadow-md">
         <DialogTitle>{t('title')}</DialogTitle>
-        <div className="space-y-3 text-[13px]">
+        <div className="space-y-3 text-meta">
           <p className="text-ink-2">{t('intro')}</p>
           <FormGrid>
             {outgoing && returnOptions.length > 0 ? (

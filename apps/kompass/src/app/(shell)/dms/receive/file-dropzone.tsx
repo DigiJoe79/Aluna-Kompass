@@ -80,9 +80,9 @@ export function FileDropzone({
         <div className="flex items-center gap-3.5 rounded-md border border-line-strong bg-surface p-3">
           <FilePlaceholder label={kind(file)} />
           <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold text-ink">{file.name}</p>
-            <p className="font-mono text-[12px] text-muted-ink">{pdfOnly ? t('upload.meta', { size: size(file.size) }) : t('upload.metaOf', { kind: kind(file), size: size(file.size) })}</p>
-            {pdfOnly ? <p className="text-[12px] text-ink-2">{t('upload.ocrPending')}</p> : null}
+            <p className="truncate text-body font-semibold text-ink">{file.name}</p>
+            <p className="font-mono text-hint text-muted-ink">{pdfOnly ? t('upload.meta', { size: size(file.size) }) : t('upload.metaOf', { kind: kind(file), size: size(file.size) })}</p>
+            {pdfOnly ? <p className="text-hint text-ink-2">{t('upload.ocrPending')}</p> : null}
           </div>
           <div className="flex shrink-0 gap-2">
             <Button
@@ -126,8 +126,8 @@ export function FileDropzone({
           )}
         >
           <Upload className="size-[26px] text-muted-ink" strokeWidth={1.7} aria-hidden />
-          <p className="text-sm font-semibold text-ink">{pdfOnly ? t('upload.dropTitle') : t('upload.dropTitleAny')}</p>
-          <p className="text-[13px] text-ink-2">
+          <p className="text-body font-semibold text-ink">{pdfOnly ? t('upload.dropTitle') : t('upload.dropTitleAny')}</p>
+          <p className="text-meta text-ink-2">
             {t.rich('upload.dropBrowse', {
               a: (chunks) => (
                 <Button type="button" variant="link" className="h-auto p-0 underline underline-offset-2" onClick={() => input.current?.click()}>
@@ -136,7 +136,7 @@ export function FileDropzone({
               ),
             })}
           </p>
-          <p className="text-[12px] text-muted-ink">{hint ?? t('fileHint')}</p>
+          <p className="text-hint text-muted-ink">{hint ?? t('fileHint')}</p>
         </div>
       )}
     </>

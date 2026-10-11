@@ -4,7 +4,8 @@ import { describe, expect, it } from 'vitest';
 
 const ROOT = path.resolve(import.meta.dirname, '../src');
 // N5: der EPC-QR bleibt immer schwarz auf weiß, unabhängig vom Theme — sonst lesen Banking-Apps ihn im Dunkelmodus nicht zuverlässig (Review Focus 5).
-const ALLOWED = new Set(['components/shell/env-banner.tsx', 'components/ui/qr-code.tsx']);
+// Browser-Icon: feste Farben je Umgebung, folgt nicht dem Vereins-Theme (Designer, Icon-Handoff 2026-10-11).
+const ALLOWED = new Set(['components/shell/env-banner.tsx', 'components/ui/qr-code.tsx', 'lib/env-icon.ts']);
 const PATTERN = /(#[0-9a-fA-F]{3,8}\b|\brgba?\(|\bhsla?\(|\boklch\()/;
 
 function walk(dir: string): string[] {

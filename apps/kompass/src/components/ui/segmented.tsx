@@ -52,7 +52,7 @@ function Segmented<T extends string>({ options, onValueChange, className, testId
           disabled={option.disabled}
           aria-label={option.ariaLabel}
           data-testid={option.testId}
-          className="inline-flex items-center justify-center gap-1.5 rounded-[5px] border border-transparent px-3 text-meta font-semibold whitespace-nowrap text-ink-2 outline-none transition-colors hover:text-ink focus-visible:ring-3 focus-visible:ring-focus data-checked:border-line data-checked:bg-surface data-checked:text-ink data-disabled:cursor-not-allowed data-disabled:opacity-50"
+          className="inline-flex items-center justify-center gap-1.5 rounded-[5px] border border-transparent px-3 text-meta whitespace-nowrap text-ink-2 outline-none transition-colors hover:text-ink focus-visible:ring-3 focus-visible:ring-focus data-checked:border-line data-checked:bg-surface data-checked:text-ink data-disabled:cursor-not-allowed data-disabled:opacity-50"
         >
           {option.label}
         </RadioPrimitive.Root>

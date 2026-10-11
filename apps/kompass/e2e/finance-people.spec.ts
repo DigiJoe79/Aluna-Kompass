@@ -66,8 +66,9 @@ test.describe('finance people (F8b)', () => {
     // Spec Filterleisten § 4: Jahr ist ein Filter der Leiste, keine Links mehr.
     await expect(page.getByTestId('people-year').getByRole('combobox', { name: 'Jahr' })).toHaveValue(String(year()));
     await expect(page.getByTestId('people-year').getByRole('link')).toHaveCount(0);
-    await expect(page.getByTestId('people-allowances-heading')).toHaveText('Pauschalen und Erstattungen');
-    await expect(page.getByTestId('people-related-heading')).toHaveText('Zahlungen an Vorstand und nahestehende Personen');
+    // Überschriften aus Section (K10 Charge 3): über Rolle und Name statt Test-ID.
+    await expect(page.getByRole('heading', { level: 2, name: 'Pauschalen und Erstattungen', exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 2, name: 'Zahlungen an Vorstand und nahestehende Personen', exact: true })).toBeVisible();
     const card = page.getByTestId('person-card').filter({ hasText: 'Tomas Leitner' });
     await expect(card).toContainText('Ehrenamtspauschale');
     await expect(card).toContainText('nähert sich');

@@ -144,13 +144,14 @@ test.describe('finance csv', () => {
     await startAssistant(page, 'Hausbank CSV-Test');
     await page.getByRole('button', { name: 'Weiter' }).click();
     await page.getByRole('button', { name: 'Weiter' }).click();
-    await expect(page.getByRole('heading', { name: 'Vorzeichen' })).toBeVisible();
+    // Die Vorzeichenfrage ist der Titel des Schritts (K10 Charge 3, Designer § 5).
+    await expect(page.getByRole('heading', { name: /Ist das eine Ausgabe\?/ })).toBeVisible();
 
     await page.reload();
     await page.getByLabel('Konto', { exact: true }).selectOption({ label: 'Hausbank CSV-Test' });
     await page.getByRole('button', { name: 'Trotzdem CSV einrichten' }).click();
     await page.getByLabel('CSV-Datei wählen').setInputFiles(csvFile());
-    await expect(page.getByRole('heading', { name: 'Vorzeichen' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /Ist das eine Ausgabe\?/ })).toBeVisible();
   });
 
   test('ein Konto mit CAMT verlangt beim Speichern den Wechsel-Dialog mit dem Hinweis auf mehr Zweifelsfälle', async ({ page }) => {

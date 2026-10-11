@@ -11,6 +11,6 @@ export function MarkdownPreview({ markdown }: { markdown: string }) {
     const handle = setTimeout(() => { renderMarkdownAction(markdown).then(setHtml).catch(() => setHtml('')); }, 300);
     return () => clearTimeout(handle);
   }, [markdown]);
-  if (!markdown.trim()) return <p className="text-[12px] text-muted-ink">{t('previewEmpty')}</p>;
-  return <div className="prose-preview rounded-md border border-line bg-surface p-4 text-[14px]" dangerouslySetInnerHTML={{ __html: html }} />;
+  if (!markdown.trim()) return <p className="text-hint text-muted-ink">{t('previewEmpty')}</p>;
+  return <div className="prose-preview rounded-md border border-line bg-surface p-4 text-body" dangerouslySetInnerHTML={{ __html: html }} />;
 }

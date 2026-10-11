@@ -1,4 +1,4 @@
-import { coreModule, unwrap, writeSettingInternal, type CallContext } from '@kompass/core';
+import { coreModule, unwrap, writeSettingInternal, type CallContext, type ModuleManifest } from '@kompass/core';
 import { createTestDeps, ctxWith, insertUser, systemContext, type TestDeps } from '@kompass/core/testing';
 import sharp from 'sharp';
 import { animalsModule, createAnimal, PROPOSALS_ENABLED_KEY, REVIEW_ON_MCP_WRITE_KEY } from '../src';
@@ -7,13 +7,13 @@ export const SOURCE_A = 'SOURCE-A';
 export const SOURCE_B = 'SOURCE-B';
 
 /** Kern und Tiere, Modul eingeschaltet (Haken wie `recordDeleted` laufen nur dann), Vorschläge an, Merker aus. */
-export async function proposalDeps(opts: { proposals?: boolean; reviewOnMcpWrite?: boolean } = {}): Promise<TestDeps> {
-  const deps = createTestDeps({ manifests: [coreModule, animalsModule], locales: ['de', 'en'] });
+export async function proposalDeps(opts: { proposals?: boolean; reviewOnMcpWrite?: boolean; manifests?: ModuleManifest[] } = {}): Promise<TestDeps> {
+  const deps = createTestDeps({ manifests: [coreModule, animalsModule, ...(opts.manifests ?? [])], locales: ['de', 'en'] });
   insertUser(deps, { id: 'USER-TEST', name: 'Petra Prüferin' });
   insertUser(deps, { id: SOURCE_A, name: 'Tierbörse Nord' });
   insertUser(deps, { id: SOURCE_B, name: 'Tierbörse Süd' });
   deps.db.transaction((tx) => {
-    unwrap(writeSettingInternal(tx, deps, systemContext(), 'modules.enabled', ['animals']));
+    unwrap(writeSettingInternal(tx, deps, systemContext(), 'modules.enabled', ['animals', ...(opts.manifests ?? []).map((m) => m.key)]));
     unwrap(writeSettingInternal(tx, deps, systemContext(), PROPOSALS_ENABLED_KEY, opts.proposals ?? true));
     unwrap(writeSettingInternal(tx, deps, systemContext(), REVIEW_ON_MCP_WRITE_KEY, opts.reviewOnMcpWrite ?? false));
   });

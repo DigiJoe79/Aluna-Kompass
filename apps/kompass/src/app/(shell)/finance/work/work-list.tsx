@@ -160,9 +160,9 @@ export function WorkTransactions({
                   role="option"
                   aria-selected={isSelected}
                   onClick={() => select(row.id)}
-                  className={cn('flex cursor-pointer items-start gap-3 border-l-4 px-3 py-2.5 text-[13px]', isSelected ? 'border-l-brand bg-selected/40' : 'border-l-transparent hover:bg-row-hover')}
+                  className={cn('flex cursor-pointer items-start gap-3 border-l-4 px-3 py-2.5 text-meta', isSelected ? 'border-l-brand bg-selected/40' : 'border-l-transparent hover:bg-row-hover')}
                 >
-                  <span className="w-[84px] shrink-0 font-mono text-[12px] tabular-nums text-ink-2">{date(row.bookingDate)}</span>
+                  <span className="w-[84px] shrink-0 font-mono text-hint tabular-nums text-ink-2">{date(row.bookingDate)}</span>
                   <span className="min-w-0 flex-1 space-y-0.5">
                     <span className="flex flex-wrap items-center gap-2">
                       <span className="font-semibold text-ink">{row.counterpartyName ?? row.purpose}</span>
@@ -187,13 +187,13 @@ export function WorkTransactions({
             })}
           </div>
         )}
-        <p data-testid="work-live" aria-live="polite" className="px-3 py-1 text-[12px] text-ink-2 empty:hidden">
+        <p data-testid="work-live" aria-live="polite" className="px-3 py-1 text-hint text-ink-2 empty:hidden">
           {announce ? t('live.waiting', { count: waitingCount }) : ''}
         </p>
         {footer}
         {/* Die Liste scrollt in sich; die Tastenkürzel stehen darunter und bleiben so immer sichtbar (HANDOFF § 12.6). */}
         {canWrite && rows.length > 0 ? (
-          <div data-testid="work-keys" aria-label={t('keys.label')} className="flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-line bg-surface-2 px-3 py-2 text-[12px] text-ink-2">
+          <div data-testid="work-keys" aria-label={t('keys.label')} className="flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-line bg-surface-2 px-3 py-2 text-hint text-ink-2">
             <span className="flex items-center gap-1">
               <KeyChip label={t('keys.up')}>↑</KeyChip>
               <KeyChip label={t('keys.down')}>↓</KeyChip>
@@ -264,8 +264,8 @@ export function WorkEntries({ rows, tab, canWrite, footer }: { rows: WorkEntryRo
     <RefusalNotice action state={reviewFb.state} />
     <section aria-label={te('entries.label')} className="divide-y divide-line-2 rounded-md border border-line bg-surface">
       {rows.map((row) => (
-        <div key={row.id} data-testid="work-entry" className="flex flex-wrap items-center gap-3 px-3 py-2.5 text-[13px]">
-          <span className="w-[84px] shrink-0 font-mono text-[12px] tabular-nums text-ink-2">{date(row.entryDate)}</span>
+        <div key={row.id} data-testid="work-entry" className="flex flex-wrap items-center gap-3 px-3 py-2.5 text-meta">
+          <span className="w-[84px] shrink-0 font-mono text-hint tabular-nums text-ink-2">{date(row.entryDate)}</span>
           <span className="min-w-0 flex-1 space-y-0.5">
             <span className="flex flex-wrap items-center gap-2">
               <span className="font-semibold text-ink">{row.text}</span>
@@ -278,7 +278,7 @@ export function WorkEntries({ rows, tab, canWrite, footer }: { rows: WorkEntryRo
           </span>
           <span className="flex shrink-0 items-center gap-2">
             {/* Befund 42: Ein Entwurf öffnet direkt in der Maske — die Ansicht leitete ihn serverseitig um, zwei Sprünge statt einem. */}
-            <Link href={`/finance/entries/${row.id}/edit`} className="text-[13px] font-semibold underline underline-offset-2">
+            <Link href={`/finance/entries/${row.id}/edit`} className="text-meta font-semibold underline underline-offset-2">
               {te('entries.view')}
             </Link>
             {canWrite && tab === 'agent' ? (
@@ -334,8 +334,8 @@ export function WorkOpenItems({ rows, footer }: { rows: WorkOpenItemRow[]; foote
   return (
     <section aria-label={td('due.label')} className="divide-y divide-line-2 rounded-md border border-line bg-surface">
       {rows.map((row) => (
-        <div key={row.id} data-testid="work-open-item" className="flex flex-wrap items-center gap-3 px-3 py-2.5 text-[13px]">
-          <span className="w-[120px] shrink-0 font-mono text-[12px] tabular-nums text-ink-2">{row.dueOn ? td('due.dueOn', { date: date(row.dueOn) }) : ''}</span>
+        <div key={row.id} data-testid="work-open-item" className="flex flex-wrap items-center gap-3 px-3 py-2.5 text-meta">
+          <span className="w-[120px] shrink-0 font-mono text-hint tabular-nums text-ink-2">{row.dueOn ? td('due.dueOn', { date: date(row.dueOn) }) : ''}</span>
           <span className="min-w-0 flex-1 space-y-0.5">
             <span className="flex flex-wrap items-center gap-2">
               <span className="font-semibold text-ink">{row.paymentReference ?? td('due.noReference')}</span>
@@ -344,7 +344,7 @@ export function WorkOpenItems({ rows, footer }: { rows: WorkOpenItemRow[]; foote
             {row.contactName ? <span className="block truncate text-ink-2">{row.contactName}</span> : null}
           </span>
           <span className="w-28 shrink-0 text-right font-mono tabular-nums">{formatEuro(row.openCents)}</span>
-          <Link href={`/finance/open-items?tab=${row.kind}&item=${row.id}`} className="text-[13px] font-semibold underline underline-offset-2">
+          <Link href={`/finance/open-items?tab=${row.kind}&item=${row.id}`} className="text-meta font-semibold underline underline-offset-2">
             {td('due.open')}
           </Link>
         </div>

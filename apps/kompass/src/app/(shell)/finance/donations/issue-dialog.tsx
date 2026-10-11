@@ -24,6 +24,7 @@ import { issueAllowed, signatureMode } from '@/lib/finance/donations';
 import { issueConfirmationAction, loadIssueCheckAction, saveInKindDetailsAction } from './actions';
 import { FormField } from '@/components/forms/form-field';
 import { FormCell, FormGrid, FormRowBreak } from '@/components/forms/form-grid';
+import { Section } from '@/components/section';
 
 type Loaded = { check: ConfirmationCheckResult; inKindDetails: FinanceInKindDetailsRow | null };
 type Preview = { state: 'idle' } | { state: 'loading' } | { state: 'ready'; url: string } | { state: 'failed'; message: string };
@@ -125,7 +126,7 @@ export function IssueDialog({ lineId, contactName, open, onOpenChange, today, ca
     return rest.length === 0 ? undefined : (
       <span className="flex flex-wrap gap-3">
         {rest.map((e) => (
-          <Link key={e.entryId} href={e.href} className="text-[12px] text-link underline">
+          <Link key={e.entryId} href={e.href} className="text-hint text-link underline">
             {e.entryNumber ? t('detail.openBlockingEntry', { number: e.entryNumber }) : t('detail.openBlockingDraft', { date: date(e.entryDate) })}
           </Link>
         ))}
@@ -205,7 +206,7 @@ export function IssueDialog({ lineId, contactName, open, onOpenChange, today, ca
         <DialogHeader data-testid="issue-dialog-head">
           <DialogTitle>{t('title')}</DialogTitle>
           {check ? (
-            <p className="text-[13px] text-ink-2">
+            <p className="text-meta text-ink-2">
               {contactName ? <span className="font-semibold text-ink">{contactName} · </span> : null}
               <span className="font-mono tabular-nums text-ink">{formatEuro(netCents)}</span>
               {entryNumbers.length > 0 ? <span> · {t('headLines', { count: entryNumbers.length, numbers: entryNumbers.join(', ') })}</span> : null}
@@ -218,25 +219,31 @@ export function IssueDialog({ lineId, contactName, open, onOpenChange, today, ca
               <Notice level="refuse">{loadError}</Notice>
             </div>
           ) : !check ? (
-            <p className="px-5 py-4 text-[13px] text-muted-ink lg:col-span-2">{t('loading')}</p>
+            <p className="px-5 py-4 text-meta text-muted-ink lg:col-span-2">{t('loading')}</p>
           ) : (
             <>
-              <div data-testid="issue-requirements" className="min-h-0 space-y-4 px-5 py-4 lg:overflow-auto">
-                <h3 className="text-[15px] font-semibold">{t('requirements')}</h3>
-                <RequirementList items={items} grouping="open-first" />
-                {check.kind === 'inKind' ? (
-                  <InKindForm lineId={lineId} valueCents={check.lines[0]?.amountCents ?? 0} details={loaded?.inKindDetails ?? null} canDescribe={canDescribe} onSaved={() => void load()} />
-                ) : null}
-              </div>
-              <div className="flex min-h-[420px] flex-col gap-2 border-t border-line px-5 py-4 lg:min-h-0 lg:border-t-0 lg:border-l">
-                <h3 className="text-[15px] font-semibold">{t('preview')}</h3>
-                {preview.state === 'ready' ? (
-                  <iframe data-testid="confirmation-preview" title={t('previewTitle')} src={preview.url} className="min-h-0 w-full flex-1 rounded-md border border-line bg-surface-2" />
-                ) : (
-                  <div className="flex min-h-0 flex-1 items-center justify-center rounded-md border border-dashed border-line-strong bg-surface-2 p-6 text-center text-[13px] text-muted-ink">
-                    {preview.state === 'loading' ? t('previewLoading') : preview.state === 'failed' ? t('previewFailed', { message: preview.message }) : t('previewWaiting')}
+              <div data-testid="issue-requirements" className="min-h-0 px-5 py-4 lg:overflow-auto">
+                <Section title={t('requirements')}>
+                  <div className="space-y-4">
+                    <RequirementList items={items} grouping="open-first" />
+                    {check.kind === 'inKind' ? (
+                      <InKindForm lineId={lineId} valueCents={check.lines[0]?.amountCents ?? 0} details={loaded?.inKindDetails ?? null} canDescribe={canDescribe} onSaved={() => void load()} />
+                    ) : null}
                   </div>
-                )}
+                </Section>
+              </div>
+              <div className="min-h-[420px] border-t border-line px-5 py-4 lg:min-h-0 lg:border-t-0 lg:border-l">
+                <Section title={t('preview')}>
+                  <div className="flex flex-col gap-2">
+                    {preview.state === 'ready' ? (
+                      <iframe data-testid="confirmation-preview" title={t('previewTitle')} src={preview.url} className="min-h-0 w-full flex-1 rounded-md border border-line bg-surface-2" />
+                    ) : (
+                      <div className="flex min-h-0 flex-1 items-center justify-center rounded-md border border-dashed border-line-strong bg-surface-2 p-6 text-center text-meta text-muted-ink">
+                        {preview.state === 'loading' ? t('previewLoading') : preview.state === 'failed' ? t('previewFailed', { message: preview.message }) : t('previewWaiting')}
+                      </div>
+                    )}
+                  </div>
+                </Section>
               </div>
             </>
           )}
@@ -255,11 +262,11 @@ export function IssueDialog({ lineId, contactName, open, onOpenChange, today, ca
                 <FormField id="issue-date" label={t('issuedOn')} required>
                   <Input id="issue-date" type="date" value={issuedOn} max={today} onChange={(e) => setIssuedOn(e.target.value)} required />
                 </FormField>
-                <div className="space-y-1 text-[13px]">
-                  <p className="text-[12px] font-semibold text-muted-ink">{t('signatureLabel')}</p>
+                <div className="space-y-1 text-meta">
+                  <p className="text-hint font-semibold text-muted-ink">{t('signatureLabel')}</p>
                   <p data-testid="issue-signature-mode" className="font-semibold text-ink">{mode ? t(`signatureMode.${mode}`) : ''}</p>
                 </div>
-                <p className="max-w-prose text-[12px] text-muted-ink">{t('humanOnly')}</p>
+                <p className="max-w-prose text-hint text-muted-ink">{t('humanOnly')}</p>
               </div>
             ) : undefined
           }
@@ -304,7 +311,7 @@ function InKindForm({ lineId, valueCents, details, canDescribe, onSaved }: { lin
 
   return (
     <fieldset className="space-y-3 rounded-md border border-line p-3.5" disabled={!canDescribe}>
-      <legend className="px-1 text-[13px] font-semibold text-ink">{tk('title')}</legend>
+      <legend className="px-1 text-meta font-semibold text-ink">{tk('title')}</legend>
       <FormGrid>
         <FormField id="in-kind-item" label={tk('item')} required>
           <Input id="in-kind-item" value={item} onChange={(e) => setItem(e.target.value)} />
@@ -313,9 +320,9 @@ function InKindForm({ lineId, valueCents, details, canDescribe, onSaved }: { lin
           <Input id="in-kind-condition" value={condition} onChange={(e) => setCondition(e.target.value)} />
         </FormField>
         <FormCell size="full" className="space-y-1">
-          <p className="text-[13px] font-semibold text-ink-2">{tk('value')}</p>
+          <p className="text-meta font-semibold text-ink-2">{tk('value')}</p>
           <p className="font-mono tabular-nums text-ink">{formatEuro(valueCents)}</p>
-          <p className="text-[12px] text-muted-ink">{tk('valueHint')}</p>
+          <p className="text-hint text-muted-ink">{tk('valueHint')}</p>
         </FormCell>
         <FormField id="in-kind-valuation" label={tk('valuation')} required size="l">
           <Textarea id="in-kind-valuation" value={valuation} onChange={(e) => setValuation(e.target.value)} rows={2} />
@@ -342,7 +349,7 @@ function InKindForm({ lineId, valueCents, details, canDescribe, onSaved }: { lin
           <DocumentPicker id="in-kind-proof" name="proofDocument" label={tk('proof')} value={proof} onChange={setProof} />
         </FormCell>
       </FormGrid>
-      {!proof && details?.proofDocumentId ? <p className="text-[12px] text-muted-ink">{tk('proofKept')}</p> : null}
+      {!proof && details?.proofDocumentId ? <p className="text-hint text-muted-ink">{tk('proofKept')}</p> : null}
       <RefusalNotice action state={feedback.state} />
       <Button type="button" variant="outline" disabled={!complete || pending} onClick={() => void save()}>{tk('save')}</Button>
     </fieldset>

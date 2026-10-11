@@ -37,6 +37,7 @@ import {
 } from '@/lib/finance/csv-assistant-state';
 import { cn } from '@/lib/utils';
 import { saveCsvFormatAction } from './actions';
+import { Section } from '@/components/section';
 
 export interface AssistantAccount {
   id: string;
@@ -191,7 +192,7 @@ export function CsvAssistant({ accounts, initialAccountId, canLoad, reselect = f
 
   return (
     <div className="space-y-6">
-      <ol aria-label={t('stepsLabel')} className="flex flex-wrap gap-2 text-[13px]">
+      <ol aria-label={t('stepsLabel')} className="flex flex-wrap gap-2 text-meta">
         {STEPS.map((s) => (
           <li
             key={s}
@@ -217,15 +218,18 @@ export function CsvAssistant({ accounts, initialAccountId, canLoad, reselect = f
               </Select>
             </FormField>
           </FormGrid>
-          <div className="space-y-2 rounded-md border border-line bg-surface p-4">
-            <h3 className="text-[15px] font-semibold">{t('camt.title')}</h3>
-            <p className="text-[14px] text-ink-2">{t('camt.text')}</p>
-            <Link href="/help/finanzen/auszug-bei-der-bank-holen" className="text-link text-[14px]">
-              {t('camt.link')}
-            </Link>
+          <div className="rounded-md border border-line bg-surface p-4">
+            <Section title={t('camt.title')}>
+              <div className="space-y-2">
+                <p className="text-body text-ink-2">{t('camt.text')}</p>
+                <Link href="/help/finanzen/auszug-bei-der-bank-holen" className="text-link text-body">
+                  {t('camt.link')}
+                </Link>
+              </div>
+            </Section>
           </div>
           {handoff ? (
-            <div className="space-y-2 rounded-md border border-brand bg-brand-soft p-4 text-[14px]">
+            <div className="space-y-2 rounded-md border border-brand bg-brand-soft p-4 text-body">
               <p className="font-semibold text-ink">{t('handoff.text', { name: handoff.name })}</p>
               <p className="text-ink-2">{t('handoff.hint')}</p>
               <Button type="button" disabled={!account} onClick={() => openBytes(handoff.name, handoff.bytes)}>
@@ -257,189 +261,193 @@ export function CsvAssistant({ accounts, initialAccountId, canLoad, reselect = f
       ) : null}
 
       {state && step === 2 ? (
-        <section className="space-y-4">
-          <h3 className="text-[15px] font-semibold">{t('settings.title')}</h3>
-          <p className="text-[14px] text-ink-2">{t('settings.text')}</p>
-          <FormGrid>
-            <FormField id="csv-encoding" label={t('settings.encoding')} size="s">
-              <Select id="csv-encoding" value={state.settings.encoding} onChange={(e) => update({ settings: { ...state.settings, encoding: e.target.value as AssistantState['settings']['encoding'] } })}>
-                {ENCODINGS.map((v) => (
-                  <option key={v} value={v}>
-                    {t(`settings.encodings.${v}`)}
-                  </option>
-                ))}
-              </Select>
-            </FormField>
-            <FormField id="csv-delimiter" label={t('settings.delimiter')} size="s">
-              <Select id="csv-delimiter" value={state.settings.delimiter} onChange={(e) => update({ settings: { ...state.settings, delimiter: e.target.value as AssistantState['settings']['delimiter'] } })}>
-                {DELIMITERS.map((v) => (
-                  <option key={v} value={v}>
-                    {t(`settings.delimiters.${v === '\t' ? 'tab' : v === ';' ? 'semicolon' : v === ',' ? 'comma' : 'pipe'}`)}
-                  </option>
-                ))}
-              </Select>
-            </FormField>
-            <FormField id="csv-header-row" label={t('settings.headerRow')} size="s">
-              <Input id="csv-header-row" type="number" min={1} max={31} value={state.settings.headerRow + 1} onChange={(e) => update({ settings: { ...state.settings, headerRow: Math.max(0, Math.min(30, Number(e.target.value) - 1)) } })} />
-            </FormField>
-            <FormField id="csv-date-format" label={t('settings.dateFormat')} size="s">
-              <Select id="csv-date-format" value={state.settings.dateFormat ?? ''} onChange={(e) => update({ settings: { ...state.settings, dateFormat: (e.target.value || null) as AssistantState['settings']['dateFormat'] } })}>
-                <option value="">{t('settings.choose')}</option>
-                {DATE_FORMATS.map((v) => (
-                  <option key={v} value={v}>
-                    {t(`settings.dateFormats.${DATE_FORMAT_KEYS[v]}`)}
-                  </option>
-                ))}
-              </Select>
-            </FormField>
-            <FormField id="csv-decimal" label={t('settings.decimal')} size="s">
-              <Select id="csv-decimal" value={state.settings.decimalSeparator ?? ''} onChange={(e) => update({ settings: { ...state.settings, decimalSeparator: (e.target.value || null) as ',' | '.' | null } })}>
-                <option value="">{t('settings.choose')}</option>
-                <option value=",">{t('settings.decimals.comma')}</option>
-                <option value=".">{t('settings.decimals.dot')}</option>
-              </Select>
-            </FormField>
-          </FormGrid>
-        </section>
+        <Section title={t('settings.title')}>
+          <div className="space-y-4">
+            <p className="text-body text-ink-2">{t('settings.text')}</p>
+            <FormGrid>
+              <FormField id="csv-encoding" label={t('settings.encoding')} size="s">
+                <Select id="csv-encoding" value={state.settings.encoding} onChange={(e) => update({ settings: { ...state.settings, encoding: e.target.value as AssistantState['settings']['encoding'] } })}>
+                  {ENCODINGS.map((v) => (
+                    <option key={v} value={v}>
+                      {t(`settings.encodings.${v}`)}
+                    </option>
+                  ))}
+                </Select>
+              </FormField>
+              <FormField id="csv-delimiter" label={t('settings.delimiter')} size="s">
+                <Select id="csv-delimiter" value={state.settings.delimiter} onChange={(e) => update({ settings: { ...state.settings, delimiter: e.target.value as AssistantState['settings']['delimiter'] } })}>
+                  {DELIMITERS.map((v) => (
+                    <option key={v} value={v}>
+                      {t(`settings.delimiters.${v === '\t' ? 'tab' : v === ';' ? 'semicolon' : v === ',' ? 'comma' : 'pipe'}`)}
+                    </option>
+                  ))}
+                </Select>
+              </FormField>
+              <FormField id="csv-header-row" label={t('settings.headerRow')} size="s">
+                <Input id="csv-header-row" type="number" min={1} max={31} value={state.settings.headerRow + 1} onChange={(e) => update({ settings: { ...state.settings, headerRow: Math.max(0, Math.min(30, Number(e.target.value) - 1)) } })} />
+              </FormField>
+              <FormField id="csv-date-format" label={t('settings.dateFormat')} size="s">
+                <Select id="csv-date-format" value={state.settings.dateFormat ?? ''} onChange={(e) => update({ settings: { ...state.settings, dateFormat: (e.target.value || null) as AssistantState['settings']['dateFormat'] } })}>
+                  <option value="">{t('settings.choose')}</option>
+                  {DATE_FORMATS.map((v) => (
+                    <option key={v} value={v}>
+                      {t(`settings.dateFormats.${DATE_FORMAT_KEYS[v]}`)}
+                    </option>
+                  ))}
+                </Select>
+              </FormField>
+              <FormField id="csv-decimal" label={t('settings.decimal')} size="s">
+                <Select id="csv-decimal" value={state.settings.decimalSeparator ?? ''} onChange={(e) => update({ settings: { ...state.settings, decimalSeparator: (e.target.value || null) as ',' | '.' | null } })}>
+                  <option value="">{t('settings.choose')}</option>
+                  <option value=",">{t('settings.decimals.comma')}</option>
+                  <option value=".">{t('settings.decimals.dot')}</option>
+                </Select>
+              </FormField>
+            </FormGrid>
+          </div>
+        </Section>
       ) : null}
 
       {state && step === 3 ? (
-        <section className="space-y-3">
-          <h3 className="text-[15px] font-semibold">{t('columns.title')}</h3>
-          <p className="max-w-prose text-[14px] text-ink-2">{t('columns.text')}</p>
-          <div className="overflow-x-auto rounded-md border border-line">
-            <Table data-testid="csv-preview" className="text-[13px]">
-              <TableHeader>
-                <TableRow>
-                  {preview.header.map((column, i) => {
-                    const ignored = (state.roles[i] ?? 'ignore') === 'ignore';
-                    return (
-                      // `h-auto`: Die Rollenwahl steht im Kopf und ist höher als die Kopfzeile.
-                      <TableHead key={i} data-column={column} data-ignored={ignored ? 'true' : 'false'} className={cn('h-auto space-y-1 py-2 align-top', ignored && 'text-muted-ink')}>
-                        <Select
-                          aria-label={t('columns.roleLabel', { column })}
-                          value={state.roles[i] ?? 'ignore'}
-                          onChange={(e) => update({ roles: preview.header.map((_, j) => (j === i ? (e.target.value as AssistantState['roles'][number]) : (state.roles[j] ?? 'ignore'))) })}
-                        >
-                          {COLUMN_ROLES.map((role) => (
-                            <option key={role} value={role}>
-                              {t(`columns.roles.${role}`)}
-                            </option>
-                          ))}
-                        </Select>
-                        <p className="font-semibold">{column}</p>
-                      </TableHead>
-                    );
-                  })}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {preview.rows.map((row, r) => (
-                  <TableRow key={r}>
+        <Section title={t('columns.title')}>
+          <div className="space-y-3">
+            <p className="max-w-prose text-body text-ink-2">{t('columns.text')}</p>
+            <div className="overflow-x-auto rounded-md border border-line">
+              <Table data-testid="csv-preview" className="text-meta">
+                <TableHeader>
+                  <TableRow>
                     {preview.header.map((column, i) => {
                       const ignored = (state.roles[i] ?? 'ignore') === 'ignore';
                       return (
-                        <TableCell key={i} data-column={column} data-ignored={ignored ? 'true' : 'false'} className={cn('font-mono', ignored && 'border-x border-dashed border-line text-muted-ink opacity-60')}>
-                          {row[i] ?? ''}
-                        </TableCell>
+                        // `h-auto`: Die Rollenwahl steht im Kopf und ist höher als die Kopfzeile.
+                        <TableHead key={i} data-column={column} data-ignored={ignored ? 'true' : 'false'} className={cn('h-auto space-y-1 py-2 align-top', ignored && 'text-muted-ink')}>
+                          <Select
+                            aria-label={t('columns.roleLabel', { column })}
+                            value={state.roles[i] ?? 'ignore'}
+                            onChange={(e) => update({ roles: preview.header.map((_, j) => (j === i ? (e.target.value as AssistantState['roles'][number]) : (state.roles[j] ?? 'ignore'))) })}
+                          >
+                            {COLUMN_ROLES.map((role) => (
+                              <option key={role} value={role}>
+                                {t(`columns.roles.${role}`)}
+                              </option>
+                            ))}
+                          </Select>
+                          <p className="font-semibold">{column}</p>
+                        </TableHead>
                       );
                     })}
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {preview.rows.map((row, r) => (
+                    <TableRow key={r}>
+                      {preview.header.map((column, i) => {
+                        const ignored = (state.roles[i] ?? 'ignore') === 'ignore';
+                        return (
+                          <TableCell key={i} data-column={column} data-ignored={ignored ? 'true' : 'false'} className={cn('font-mono', ignored && 'border-x border-dashed border-line text-muted-ink opacity-60')}>
+                            {row[i] ?? ''}
+                          </TableCell>
+                        );
+                      })}
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+            {state.roles.includes('indicator') || state.roles.includes('pending') ? (
+              <FormGrid>
+                {state.roles.includes('indicator') ? (
+                  <FormField id="csv-indicator-values" label={t('columns.indicatorValues')} hint={t('columns.valuesHint')}>
+                    <Input id="csv-indicator-values" value={state.indicatorValues} onChange={(e) => update({ indicatorValues: e.target.value })} />
+                  </FormField>
+                ) : null}
+                {state.roles.includes('pending') ? (
+                  <FormField id="csv-pending-values" label={t('columns.pendingValues')} hint={t('columns.valuesHint')}>
+                    <Input id="csv-pending-values" value={state.pendingValues} onChange={(e) => update({ pendingValues: e.target.value })} />
+                  </FormField>
+                ) : null}
+              </FormGrid>
+            ) : null}
+            {built && !built.ok ? <p className="text-meta text-error">{t(`columns.reasons.${built.reason}`)}</p> : null}
           </div>
-          {state.roles.includes('indicator') || state.roles.includes('pending') ? (
-            <FormGrid>
-              {state.roles.includes('indicator') ? (
-                <FormField id="csv-indicator-values" label={t('columns.indicatorValues')} hint={t('columns.valuesHint')}>
-                  <Input id="csv-indicator-values" value={state.indicatorValues} onChange={(e) => update({ indicatorValues: e.target.value })} />
-                </FormField>
-              ) : null}
-              {state.roles.includes('pending') ? (
-                <FormField id="csv-pending-values" label={t('columns.pendingValues')} hint={t('columns.valuesHint')}>
-                  <Input id="csv-pending-values" value={state.pendingValues} onChange={(e) => update({ pendingValues: e.target.value })} />
-                </FormField>
-              ) : null}
-            </FormGrid>
-          ) : null}
-          {built && !built.ok ? <p className="text-[13px] text-error">{t(`columns.reasons.${built.reason}`)}</p> : null}
-        </section>
+        </Section>
       ) : null}
 
       {state && step === 4 ? (
-        <section className="space-y-4">
-          <h3 className="text-[15px] font-semibold">{t('sign.title')}</h3>
-          {signLine ? (
-            <>
-              <p className="text-[15px]">{t('sign.question', { amount: formatEuro(Math.abs(signLine.amountCents)), who: signLine.counterpartyName ?? signLine.purpose })}</p>
-              <ChoiceCards
-                mode="choice"
-                name="csv-sign"
-                options={[
-                  { value: 'yes', label: t('sign.yes') },
-                  { value: 'no', label: t('sign.no') },
-                ]}
-                value={state.invertSign === null ? undefined : state.invertSign === signLine.amountCents > 0 ? 'yes' : 'no'}
-                onSelect={(answer) => update({ invertSign: answer === 'yes' ? signLine.amountCents > 0 : signLine.amountCents < 0 })}
-              />
-            </>
-          ) : (
-            <p className="text-[14px] text-ink-2">{t('sign.noLine')}</p>
-          )}
-        </section>
+        <Section title={signLine ? t('sign.question', { amount: formatEuro(Math.abs(signLine.amountCents)), who: signLine.counterpartyName ?? signLine.purpose }) : t('sign.title')}>
+          <div className="space-y-4">
+            {/* Die Vorzeichenfrage ist der Titel des Schritts, die Antwortkarten stehen darunter (Designer 2026-10-10 § 5). */}
+            {signLine ? (
+              <>
+                <ChoiceCards
+                  mode="choice"
+                  name="csv-sign"
+                  options={[
+                    { value: 'yes', label: t('sign.yes') },
+                    { value: 'no', label: t('sign.no') },
+                  ]}
+                  value={state.invertSign === null ? undefined : state.invertSign === signLine.amountCents > 0 ? 'yes' : 'no'}
+                  onSelect={(answer) => update({ invertSign: answer === 'yes' ? signLine.amountCents > 0 : signLine.amountCents < 0 })}
+                />
+              </>
+            ) : (
+              <p className="text-body text-ink-2">{t('sign.noLine')}</p>
+            )}
+          </div>
+        </Section>
       ) : null}
 
       {state && step === 5 ? (
-        <section className="space-y-4">
-          <h3 className="text-[15px] font-semibold">{t('probe.title')}</h3>
-          {read && !read.ok ? (
-            <Notice level="refuse" title={t('probe.unreadable')}>
-              {t(`probe.errors.${read.error.code}`, { line: read.error.line ?? '' })}
-            </Notice>
-          ) : null}
-          {first ? (
-            <dl data-testid="csv-probe" className="grid grid-cols-[max-content_1fr] gap-x-4 gap-y-1.5 rounded-md border border-line bg-surface p-4 text-[14px]">
-              <dt className="text-muted-ink">{t('probe.date')}</dt>
-              <dd className="font-mono">{date(first.bookingDate)}</dd>
-              <dt className="text-muted-ink">{t('probe.counterparty')}</dt>
-              <dd>{first.counterpartyName ?? '—'}</dd>
-              <dt className="text-muted-ink">{t('probe.iban')}</dt>
-              <dd className="font-mono">{first.counterpartyIban ?? '—'}</dd>
-              <dt className="text-muted-ink">{t('probe.purpose')}</dt>
-              <dd>{first.purpose || '—'}</dd>
-              <dt className="text-muted-ink">{t('probe.amount')}</dt>
-              <dd className="font-mono tabular-nums">{formatEuro(first.amountCents)}</dd>
-              {fee ? (
-                <>
-                  <dt className="text-muted-ink">{t('probe.fee')}</dt>
-                  <dd className="font-mono tabular-nums">{formatEuro(fee.amountCents)}</dd>
-                </>
-              ) : null}
-            </dl>
-          ) : null}
-          <FormGrid>
-            <FormField id="csv-name" label={t('probe.nameLabel')}>
-              <Input id="csv-name" value={state.name} onChange={(e) => update({ name: e.target.value })} />
-            </FormField>
-            {!hasBalanceColumn && read?.ok ? (
-              <FormField id="csv-balance" label={t('probe.balanceLabel', { date: date(read.statement.to) })} size="s">
-                <Input id="csv-balance" inputMode="decimal" value={balanceText} onChange={(e) => setBalanceText(e.target.value)} />
+        <Section title={t('probe.title')}>
+          <div className="space-y-4">
+            {read && !read.ok ? (
+              <Notice level="refuse" title={t('probe.unreadable')}>
+                {t(`probe.errors.${read.error.code}`, { line: read.error.line ?? '' })}
+              </Notice>
+            ) : null}
+            {first ? (
+              <dl data-testid="csv-probe" className="grid grid-cols-[max-content_1fr] gap-x-4 gap-y-1.5 rounded-md border border-line bg-surface p-4 text-body">
+                <dt className="text-muted-ink">{t('probe.date')}</dt>
+                <dd className="font-mono">{date(first.bookingDate)}</dd>
+                <dt className="text-muted-ink">{t('probe.counterparty')}</dt>
+                <dd>{first.counterpartyName ?? '—'}</dd>
+                <dt className="text-muted-ink">{t('probe.iban')}</dt>
+                <dd className="font-mono">{first.counterpartyIban ?? '—'}</dd>
+                <dt className="text-muted-ink">{t('probe.purpose')}</dt>
+                <dd>{first.purpose || '—'}</dd>
+                <dt className="text-muted-ink">{t('probe.amount')}</dt>
+                <dd className="font-mono tabular-nums">{formatEuro(first.amountCents)}</dd>
+                {fee ? (
+                  <>
+                    <dt className="text-muted-ink">{t('probe.fee')}</dt>
+                    <dd className="font-mono tabular-nums">{formatEuro(fee.amountCents)}</dd>
+                  </>
+                ) : null}
+              </dl>
+            ) : null}
+            <FormGrid>
+              <FormField id="csv-name" label={t('probe.nameLabel')}>
+                <Input id="csv-name" value={state.name} onChange={(e) => update({ name: e.target.value })} />
               </FormField>
-            ) : null}
-          </FormGrid>
-          {error ? <Notice level="refuse">{error}</Notice> : null}
-          <div className="flex flex-wrap gap-3">
-            {canLoad ? (
-              <Button type="button" disabled={busy || !read?.ok || !canAdvance(5, state, preview.header)} onClick={() => requestSave(true)}>
-                {t('probe.saveAndLoad')}
+              {!hasBalanceColumn && read?.ok ? (
+                <FormField id="csv-balance" label={t('probe.balanceLabel', { date: date(read.statement.to) })} size="s">
+                  <Input id="csv-balance" inputMode="decimal" value={balanceText} onChange={(e) => setBalanceText(e.target.value)} />
+                </FormField>
+              ) : null}
+            </FormGrid>
+            {error ? <Notice level="refuse">{error}</Notice> : null}
+            <div className="flex flex-wrap gap-3">
+              {canLoad ? (
+                <Button type="button" disabled={busy || !read?.ok || !canAdvance(5, state, preview.header)} onClick={() => requestSave(true)}>
+                  {t('probe.saveAndLoad')}
+                </Button>
+              ) : null}
+              <Button type="button" variant={canLoad ? 'secondary' : 'default'} disabled={busy || !read?.ok || !canAdvance(5, state, preview.header)} onClick={() => requestSave(false)}>
+                {t('probe.saveOnly')}
               </Button>
-            ) : null}
-            <Button type="button" variant={canLoad ? 'secondary' : 'default'} disabled={busy || !read?.ok || !canAdvance(5, state, preview.header)} onClick={() => requestSave(false)}>
-              {t('probe.saveOnly')}
-            </Button>
+            </div>
           </div>
-        </section>
+        </Section>
       ) : null}
 
       {state && step > 1 ? (

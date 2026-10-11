@@ -9,7 +9,7 @@ import { hintCount } from './flow-state';
  */
 export function PreviewSummary({ counts }: { counts: SiteJobCounts }) {
   const t = useTranslations('site.publish.summary');
-  const bold = { b: (chunks: React.ReactNode) => <strong className="font-bold">{chunks}</strong> };
+  const bold = { b: (chunks: React.ReactNode) => <strong>{chunks}</strong> };
   const hints = hintCount({ counts });
   const parts = [
     counts.gaps > 0 ? t('gaps', { count: counts.gaps }) : null,
@@ -19,11 +19,11 @@ export function PreviewSummary({ counts }: { counts: SiteJobCounts }) {
   ].filter((p): p is string => p !== null);
   return (
     <div className="flex flex-col gap-1.5">
-      <p className="text-[16px] text-ink">
+      <p className="text-body text-ink">
         {t.rich('changed', { count: counts.changed, ...bold })} · {t.rich('added', { count: counts.added, ...bold })} · {t.rich('removed', { count: counts.removed, ...bold })}
       </p>
       {hints > 0 ? (
-        <p className="text-[13px] text-ink-2">
+        <p className="text-meta text-ink-2">
           <span className="font-semibold text-warning">{t('hints', { count: hints })}:</span> {t('hintsText', { list: parts.join(', ') })}
         </p>
       ) : null}

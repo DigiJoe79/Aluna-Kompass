@@ -2,6 +2,7 @@
 
 import { useTranslations } from 'next-intl';
 import { useAssetDrag } from './use-asset-drag';
+import { StatusBadge } from '@/components/status-badge';
 
 export interface GridItem {
   id: string;
@@ -71,18 +72,23 @@ export function AssetGrid({
                   <span className="text-[20px] font-semibold uppercase text-ink-2">{it.filename.split('.').at(-1)}</span>
                 )}
               </span>
-              <span className="flex items-center justify-between gap-1 px-2 py-1.5 text-[12px]">
+              <span className="flex items-center justify-between gap-1 px-2 py-1.5 text-hint">
                 <span className="flex min-w-0 flex-col">
                   <span className="truncate font-mono">{it.filename}</span>
                   {it.place ? (
-                    <span data-folder-cell className="truncate text-[11px] text-ink-2">
+                    <span data-folder-cell className="truncate text-hint text-ink-2">
                       {it.place}
                     </span>
                   ) : null}
                 </span>
-                <span className={`shrink-0 rounded-full px-1.5 py-0.5 text-[10px] ${it.used ? 'bg-badge text-badge-ink' : 'text-ink-2'}`}>
-                  {selected && isSelected ? t('chooser.selected') : it.used ? t('used') : t('unused')}
-                </span>
+                {/* „benutzt“ als Marke, sonst Text (K10 Charge 3, Designer § 6: 10 px → StatusBadge, damit 12). */}
+                {it.used ? (
+                  <StatusBadge tone="neutral" className="shrink-0">
+                    {selected && isSelected ? t('chooser.selected') : t('used')}
+                  </StatusBadge>
+                ) : (
+                  <span className="shrink-0 text-hint text-ink-2">{selected && isSelected ? t('chooser.selected') : t('unused')}</span>
+                )}
               </span>
             </button>
           </li>

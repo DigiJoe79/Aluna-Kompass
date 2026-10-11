@@ -1,6 +1,7 @@
 import { ArrowRight } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import type { ReactNode } from 'react';
+import { Overline } from '@/components/overline';
 
 export interface BeforeAfterRow {
   label: string;
@@ -36,15 +37,15 @@ export function BeforeAfter({
       <div className="space-y-3">
         {rows.map((row, index) => (
           <div key={index} className="space-y-1.5">
-            {row.label ? <p className="text-[12px] font-semibold uppercase tracking-wide text-muted-ink">{row.label}</p> : null}
+            {row.label ? <Overline>{row.label}</Overline> : null}
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div>
-                <p className="mb-1 text-[11px] font-semibold uppercase tracking-[.06em] text-muted-ink">{beforeLabel}</p>
-                <div className="rounded-md border-2 border-ink-2 bg-surface p-3 text-[13px]">{row.before}</div>
+                <Overline className="mb-1">{beforeLabel}</Overline>
+                <div className="rounded-md border-2 border-ink-2 bg-surface p-3 text-meta">{row.before}</div>
               </div>
               <div>
-                <p className="mb-1 text-[11px] font-semibold uppercase tracking-[.06em] text-muted-ink">{afterLabel}</p>
-                <div className="rounded-md border border-line bg-surface-2 p-3 text-[13px] text-ink-2">{row.after}</div>
+                <Overline className="mb-1">{afterLabel}</Overline>
+                <div className="rounded-md border border-line bg-surface-2 p-3 text-meta text-ink-2">{row.after}</div>
               </div>
             </div>
           </div>
@@ -55,18 +56,21 @@ export function BeforeAfter({
 
   return (
     <div className="overflow-hidden rounded-md border border-line">
-      <div className="grid grid-cols-[minmax(120px,1fr)_2fr_28px_2fr] items-center gap-x-3 bg-surface-2 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[.06em] text-muted-ink">
-        <span />
-        <span>{t('before')}</span>
-        <span aria-hidden />
-        <span>{t('after')}</span>
+      {/* Fläche und Polster am Rahmen, die Overline bleibt reine Schrift (Designer 2026-10-10 § 10.7). */}
+      <div className="bg-surface-2 px-3 py-1.5">
+        <Overline as="div" className="grid grid-cols-[minmax(120px,1fr)_2fr_28px_2fr] items-center gap-x-3">
+          <span />
+          <span>{t('before')}</span>
+          <span aria-hidden />
+          <span>{t('after')}</span>
+        </Overline>
       </div>
       {rows.map((row, index) => (
         <div key={index} className="grid grid-cols-[minmax(120px,1fr)_2fr_28px_2fr] items-center gap-x-3 border-t border-line px-3 py-2">
-          <span className="text-[13px] text-ink-2">{row.label}</span>
-          <div className="rounded-sm bg-disabled px-2 py-1 text-[13px] text-muted-ink">{row.before}</div>
+          <span className="text-meta text-ink-2">{row.label}</span>
+          <div className="rounded-sm bg-disabled px-2 py-1 text-meta text-muted-ink">{row.before}</div>
           <ArrowRight className="size-4 shrink-0 text-muted-ink" aria-hidden />
-          <div className="text-[13px]">{row.after}</div>
+          <div className="text-meta">{row.after}</div>
         </div>
       ))}
     </div>

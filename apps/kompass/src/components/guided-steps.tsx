@@ -30,7 +30,7 @@ export function guidedSteps(steps: readonly { key: string; label: string; detail
 export function GuidedSteps({ steps, label }: { steps: readonly GuidedStep[]; label?: string }) {
   if (steps.filter((s) => s.state === 'active').length !== 1) throw new Error(ONE_ACTIVE);
   return (
-    <ol className="flex flex-wrap items-center gap-2 text-[13px]" data-testid="guided-steps" aria-label={label}>
+    <ol className="flex flex-wrap items-center gap-2 text-meta" data-testid="guided-steps" aria-label={label}>
       {steps.map((step, index) => (
         <li
           key={step.key}

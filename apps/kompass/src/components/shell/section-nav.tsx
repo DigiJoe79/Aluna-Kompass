@@ -4,6 +4,7 @@ import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import type { NavSection } from '@/lib/navigation';
 import { cn } from '@/lib/utils';
+import { Overline } from '@/components/overline';
 
 export interface SectionNavProps {
   sections: NavSection[];
@@ -30,7 +31,7 @@ export function SectionNav({ sections, activeHref, variant, onClose }: SectionNa
       {sections.map((section, index) => (
         <div key={section.key} className={cn('flex flex-col gap-0.5', index > 0 && 'mt-3')}>
           {section.labelKey ? (
-            <div className="flex h-7 items-center px-2.5 text-[11px] font-bold uppercase tracking-[.09em] text-muted-ink">{t(section.labelKey)}</div>
+            <Overline as="div" className="flex h-7 items-center px-2.5">{t(section.labelKey)}</Overline>
           ) : null}
           {section.items.map((item) => {
             const isActive = item.href === activeHref;
@@ -42,7 +43,7 @@ export function SectionNav({ sections, activeHref, variant, onClose }: SectionNa
                   aria-current={isActive ? 'page' : undefined}
                   onClick={() => onClose?.()}
                   className={cn(
-                    'flex h-8 items-center rounded-md px-2.5 text-[14px]',
+                    'flex h-8 items-center rounded-md px-2.5 text-body',
                     isActive ? 'bg-selected font-semibold text-selected-ink' : 'text-ink-2 hover:bg-hover hover:text-ink',
                   )}
                 >

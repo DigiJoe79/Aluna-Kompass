@@ -3,7 +3,7 @@ import { ANIMALS_DASHBOARD_TILES } from './dashboard';
 import { animalsMediaReferences } from './references';
 import { animalsRecordLabels } from './record-labels';
 import { seedAnimals } from './seed';
-import { ANIMALS_SETTINGS } from './settings';
+import { ANIMALS_IMAGE_PLACES, ANIMALS_SETTINGS } from './settings';
 import { animalsSetTranslations, animalsTranslatables } from './translations';
 import { publishedAnimals } from './views';
 import { ANIMALS_MCP_TOOLS } from './mcp-tools';
@@ -22,6 +22,7 @@ export const animalsModule: ModuleManifest = defineModule({
     { href: '/admin/animals', doc: 'einstellungen/tiere-einrichten' },
   ],
   settings: ANIMALS_SETTINGS,
+  imagePlaces: ANIMALS_IMAGE_PLACES,
   /** Zwischenablage der Bilder von Vorschlägen (`deps.files('animals')`); das Backup sichert sie mit. */
   files: true,
   /** Zwischenablage nach 24 Stunden, Inhalte entschiedener Vorschläge nach 90 Tagen (Spec Vorschlags-Eingang § 7). */

@@ -12,6 +12,7 @@ import { withUnplacedFieldErrors } from '@/lib/feedback';
 import { saveBlockedTermsAction } from './actions';
 import { FormField } from '@/components/forms/form-field';
 import { FormGrid } from '@/components/forms/form-grid';
+import { Section } from '@/components/section';
 
 /**
  * Die Sperrwörter (Backlog 23): ein Begriff je Zeile. Die Seite verlangt
@@ -36,17 +37,19 @@ export function BlockedTermsPanel({ terms, canPublish }: { terms: string[]; canP
   return (
     <FormCard as="section" aria-labelledby={titleId}>
       <ActionForm action={action} state={state}>
-        <div className="flex flex-col gap-3 p-5">
-          <h3 id={titleId} className="text-[15px] font-semibold">{t('title')}</h3>
-          <p className="max-w-prose text-[13px] text-ink-2">{t('intro')}</p>
-          <FormGrid>
-            <FormField id="blocked-terms" label={t('label')} hint={t('hint')} size="l">
-              <Textarea id="blocked-terms" name="terms" rows={4} readOnly={!canPublish} defaultValue={terms.join('\n')} className="font-mono text-[13px]" />
-            </FormField>
-          </FormGrid>
-          {canPublish ? null : (
-            <p className="text-[13px] text-ink-2" role="note">{tAdmin('needsPublish')}</p>
-          )}
+        <div className="p-5">
+          <Section title={t('title')} headingId={titleId} intro={t('intro')}>
+            <div className="flex flex-col gap-3">
+              <FormGrid>
+                <FormField id="blocked-terms" label={t('label')} hint={t('hint')} size="l">
+                  <Textarea id="blocked-terms" name="terms" rows={4} readOnly={!canPublish} defaultValue={terms.join('\n')} className="font-mono text-meta" />
+                </FormField>
+              </FormGrid>
+              {canPublish ? null : (
+                <p className="text-meta text-ink-2" role="note">{tAdmin('needsPublish')}</p>
+              )}
+            </div>
+          </Section>
         </div>
         {canPublish ? <FormActionBar baseline={saves} saveLabel={t('save')} state={withUnplacedFieldErrors(state, [])} /> : null}
       </ActionForm>

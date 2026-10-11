@@ -1,6 +1,8 @@
 export interface Reference {
   label: string;
   href?: string;
+  /** Die Verwendung zeigt einen Ausschnitt („· zugeschnitten“). */
+  cropped?: true;
 }
 
 export interface Item {

@@ -11,7 +11,7 @@ export function AmountCell({ cents, reversed }: { cents: number; reversed?: bool
   return (
     <span
       className={cn(
-        'block text-right font-mono text-[13px] tabular-nums',
+        'block text-right font-mono text-meta tabular-nums',
         reversed ? 'text-muted-ink line-through' : cents < 0 ? 'text-amount-out' : 'text-ink',
       )}
     >

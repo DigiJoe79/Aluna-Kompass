@@ -74,12 +74,12 @@ export function CarryForwardDialog({ reserve, onClose, onSaved }: { reserve: Res
             </FormField>
           </FormGrid>
           {reserve.carryForwardDocument ? (
-            <p className="text-[13px] text-ink-2">
+            <p className="text-meta text-ink-2">
               {t('currentDocument')} <DocumentLabel document={reserve.carryForwardDocument} />
             </p>
           ) : null}
           <ResolutionField id="carry-forward-resolution" document={document} onDocument={setDocument} onFile={setFile} />
-          <p className="text-[12px] text-muted-ink">{t('documentRequired')}</p>
+          <p className="text-hint text-muted-ink">{t('documentRequired')}</p>
         </div>
         <FormActionBar placement="dialog" cancel={onClose} pending={pending} saveDisabled={!canSave} saveLabel={t('save')} saveTestId="carry-forward-save" onSave={() => void submit()} state={withUnplacedFieldErrors(feedback.state, [])} />
       </DialogContent>

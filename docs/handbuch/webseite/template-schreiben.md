@@ -49,7 +49,7 @@ export default defineTemplate({
 
 - **`name`** erscheint in Kompass auf der Seite „Vorlage der Webseite“.
 - **`locales`** sind die Sprachen, die das Template ausliefert. Sie müssen in
-  Kompass unter Einstellungen → Sprachen eingerichtet sein, sonst bricht das
+  Kompass unter Einrichtung → Sprachen eingerichtet sein, sonst bricht das
   Einlesen ab. Pflegt der Verein mehr Sprachen, als das Template nennt,
   bleiben die übrigen unangetastet und werden nur nicht ausgeliefert.
 - **`variables`** sind einzelne Felder, **`collections`** Listen von
@@ -66,7 +66,7 @@ export default defineTemplate({
 | `markdown()` | Text mit Formatierung | `max`, `localized`, `label` |
 | `number()` | Zahl | `min`, `max`, `integer`, `label` |
 | `select([...])` | Auswahl aus festen Werten | `label` |
-| `asset()` | Bild oder Datei aus der Mediathek; gespeichert wird die Asset-ID | `accept` (MIME-Typ, etwa `application/pdf`), `label` |
+| `asset()` | Bild oder Datei aus der Mediathek; gespeichert wird die Asset-ID | `accept` (MIME-Typ, etwa `application/pdf`), `ratio`, `width`, `label` |
 | `date()` | Datum | `label` |
 | `list(of)` | mehrere Werte eines Typs | `max`, `label` |
 | `objectList({ fields })` | mehrere Einträge mit je denselben Feldern | `max`, `label` |
@@ -85,6 +85,20 @@ ein: `{ kind: 'dog' }` oder `{ image: { present: true } }`. Ein leerer Verweis
 heißt „die Vorlage entscheidet“ — bauen Sie diesen Fall ein, meist als
 „erster Datensatz nach Sortierung“. Ein Wert, der die Bedingung nicht mehr
 erfüllt, kommt als `null` an.
+
+**Format und Breite einer Bildstelle.** Zeigt Ihre Vorlage ein Bild in einem
+festen Format, sagen Sie es Kompass: `asset({ label: 'Foto', ratio: '1:1',
+width: 430 })`. `ratio` ist Breite zu Höhe in ganzen Zahlen (`'4:3'`), eine
+Liste zur Auswahl (`['16:10', '16:9']`) oder `'original'`; `width` ist die
+größte Anzeigebreite der Stelle in CSS-Pixeln. Kompass bietet beim Ausschnitt
+dann nur dieses Format an und warnt, wenn ein Ausschnitt für die Stelle zu
+schmal ist. Beides ist freiwillig; ohne Angabe ist jedes Format wählbar. Die
+Bilder der Sichten (Tierfotos, Geschichte, Projektbild) sind keine Felder —
+für sie gibt es in `defineTemplate` den Eintrag `images`, etwa
+`images: { 'animals.primary': { ratio: '4:5', width: 600 }, 'projects.image':
+{ ratio: ['16:10', '16:9'] } }`. Ein Schlüssel, den Kompass nicht kennt, ist
+beim Einlesen ein Hinweis, kein Fehler. Gibt die Vorlage `animals.primary`
+vor, gilt ihr Format auch in Kompass statt der Einstellung „Bildausschnitt“.
 
 ## Sammlungen
 
@@ -121,7 +135,9 @@ gibt, ist damit ein Tippfehler beim Build — nicht ein Loch auf der Seite.
 **Bilder.** Kompass bereitet jedes verwendete Bild in mehreren Größen auf und
 liefert je Asset-ID `src`, `srcset`, `width` und `height` (Beispiel:
 `src/lib/images.ts`). Das Template setzt sie in `<img>` ein; es rechnet
-keine Bilder selbst.
+keine Bilder selbst. Hat ein Bild einen Ausschnitt, steht im Wert eine
+abgeleitete ID (`01J…~1000_0_8000_10000`), und die Bildgrößen unter dieser ID
+sind schon zugeschnitten — das Template behandelt sie wie jede andere ID.
 
 **Sichten.** Unter `views` stehen die Datensätze der Module aus `uses`, so wie
 das Modul sie veröffentlicht — ein Tier mit Profil und Fotos, ein Projekt mit

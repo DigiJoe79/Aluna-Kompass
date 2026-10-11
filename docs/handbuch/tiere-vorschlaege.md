@@ -56,8 +56,18 @@ wer den Vorschlag will, wählt ihn bewusst.
 **Fotos** stehen in der Reihenfolge danach, mit den Marken „neu“, „bleibt“ und
 „fällt weg“. Neue Fotos übernehmen Sie mit dem Haken „übernehmen“; Fotos aus
 Kompass bleiben, solange Sie sie nicht abwählen. Wechselt das Titelbild, ist
-das eine eigene Wahl. Einen Ausschnitt der Quelle zeigt das Foto als helles
-Rechteck, außen abgedunkelt; die Webseite nutzt ihn noch nicht.
+das eine eigene Wahl.
+
+**Ausschnitt:** Jedes Foto steht wie im Tierformular so, wie die Webseite es
+zeigen wird — im Format seiner Stelle, darunter „Ausschnitt“ oder „ohne
+Ausschnitt“. „Ausschnitt …“ neben dem Haken öffnet denselben Dialog wie im
+Tierformular, für jedes Foto, das danach im Tier ist, auch für Fotos aus
+Kompass. Gespeichert wird mit dem Annehmen. Ein geänderter Ausschnitt an einem
+Foto der Quelle meldet der Quelle „angenommen mit Änderungen“, an einem Foto aus
+Kompass nicht. Wechselt das Titelbild — über die Wahl „Titelbild“ oder weil Sie
+das alte abwählen —, gilt dieselbe Regel wie im Tierformular: Das alte
+Titelbild verliert seinen Ausschnitt, Zurückwechseln bringt ihn wieder (siehe
+[Tiere](tiere.md)).
 
 „Zu den Vorschlägen“ führt zurück in die Liste, „1 von 7“ im Kopf blättert
 durch dieselbe Auswahl.
@@ -67,8 +77,8 @@ durch dieselbe Auswahl.
 Die Prüfseite ist dieselbe Maske wie „Hund anlegen“, mit den Werten der Quelle
 vorbefüllt. Die Zweifelsfälle stehen in einer Spalte daneben; „Zum Feld“
 wechselt auf den Reiter und setzt den Cursor ins Feld. Was Sie ändern, gilt
-beim Annehmen. Fotos lassen sich als Titelbild wählen, umsortieren und
-weglassen. Gibt es schon einen Hund gleichen Namens, nennt die Seite ihn mit
+beim Annehmen. Fotos lassen sich als Titelbild wählen, umsortieren,
+zuschneiden („Ausschnitt …“, wie bei einer Änderung) und weglassen. Gibt es schon einen Hund gleichen Namens, nennt die Seite ihn mit
 Link — ist es derselbe, bitten Sie die Quelle um eine Zuordnung oder lehnen ab.
 
 ![Ein neuer Hund aus einem Vorschlag, die Zweifelsfälle neben der Maske](bilder/tiere/vorschlag-hund-neu.png)
@@ -110,7 +120,7 @@ Hund“** sagt der Quelle, dass es nicht derselbe ist.
 
 ## Durchgehen
 
-Den Stapel gibt es nur, wenn er unter [Einstellungen → Tiere](einstellungen/tiere-einrichten.md)
+Den Stapel gibt es nur, wenn er unter [Einrichtung → Tiere](einstellungen/tiere-einrichten.md)
 eingeschaltet ist (Vorgabe: aus). Dann zeigt „Durchgehen“ in der Liste dieselbe
 Auswahl als Kartenstapel: rechts
 annehmen, links ablehnen (ohne Grund), hoch prüfen; am Rechner mit den
@@ -147,10 +157,13 @@ Fenster es.
 Prüfen, annehmen und ablehnen verlangt das Recht „Tiere verwalten“; ohne es
 gibt es weder den Reiter noch die Kachel. Die Quelle bekommt einen eigenen
 Zugang mit den Rechten „Tiere ansehen“ und „Tiere vorschlagen“. Eine Quelle
-pausieren Sie, indem Sie ihren Nutzer deaktivieren.
+pausieren Sie, indem Sie ihren Nutzer deaktivieren. Welche Bildformate Kompass
+für Titelbild und Galerie erwartet, liest die Quelle mit ihren Rückmeldungen
+(`animals_proposals_status`, Feld `imagePlaces`) — dieselben Stellen wie im
+Dialog „Ausschnitt …“.
 
 Ob Kompass Vorschläge überhaupt annimmt und in welchen Ordner der Mediathek
 ihre Fotos gehen, steht unter
-[Einstellungen → Tiere](einstellungen/tiere-einrichten.md). Ist die Einstellung
+[Einrichtung → Tiere](einstellungen/tiere-einrichten.md). Ist die Einstellung
 aus, lehnen die Werkzeuge der Quelle ab; offene Vorschläge bleiben sichtbar, bis
 sie abgearbeitet sind.

@@ -39,7 +39,7 @@ describe('installed modules', () => {
 });
 
 /**
- * Unter Verwaltung → Module steht der Name aus der Sprachdatei; fehlt er,
+ * Unter Einrichtung → Module steht der Name aus der Sprachdatei; fehlt er,
  * zeigt die Karte den blossen Schlüssel an (`module-card.tsx`). So standen
  * dort bis zum 14.09. „site“, „contacts“ und „dms“ — und `names.website`
  * gehörte zu einem Modul, das längst `site` heisst. Der Fallback verschweigt

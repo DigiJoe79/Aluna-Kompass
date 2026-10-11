@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { Notice } from '@/components/notice';
 import { runProgress } from '@/lib/finance/run';
+import { Section } from '@/components/section';
 
 const POLL_MS = 1000;
 
@@ -65,19 +66,22 @@ export function RunProgress({ runId, counts: initial, canContinue }: { runId: st
 
   const { done, total } = runProgress(counts);
   return (
-    <section data-testid="run-progress" className="space-y-3 rounded-md border border-line bg-surface p-4">
-      <h3 className="text-[15px] font-semibold text-ink">{t('title')}</h3>
-      <progress value={done} max={total} aria-label={t('title')} className="h-2 w-full" />
-      <p data-testid="run-progress-status" role="status" aria-live="polite" className="font-mono text-[13px] tabular-nums text-ink">
-        {t('status', { done, total })}
-      </p>
-      <p className="text-[13px] text-ink-2">{canContinue ? t('leave') : t('noPermission')}</p>
-      {stalled !== null ? (
-        <Notice level="warn">
-          {stalled ? `${stalled} ` : ''}
-          {t('stalled')}
-        </Notice>
-      ) : null}
+    <section data-testid="run-progress" className="rounded-md border border-line bg-surface p-4">
+      <Section title={t('title')}>
+        <div className="space-y-3">
+          <progress value={done} max={total} aria-label={t('title')} className="h-2 w-full" />
+          <p data-testid="run-progress-status" role="status" aria-live="polite" className="font-mono text-meta tabular-nums text-ink">
+            {t('status', { done, total })}
+          </p>
+          <p className="text-meta text-ink-2">{canContinue ? t('leave') : t('noPermission')}</p>
+          {stalled !== null ? (
+            <Notice level="warn">
+              {stalled ? `${stalled} ` : ''}
+              {t('stalled')}
+            </Notice>
+          ) : null}
+        </div>
+      </Section>
     </section>
   );
 }

@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/input';
 import type { ActionState } from '@/lib/actions';
 import { withUnplacedFieldErrors } from '@/lib/feedback';
 import { saveSettingsAction } from '../settings/actions';
+import { Section } from '@/components/section';
 
 interface Props {
   statutory10Y: number;
@@ -59,18 +60,19 @@ export function RetentionSettings({ statutory10Y, statutory8Y, statutory6Y, cons
   return (
     <FormCard as="section" aria-labelledby={titleId} className="mb-6">
       <ActionForm action={formAction} state={state}>
-        <div className="flex flex-col gap-3 p-5">
-          <h3 id={titleId} className="text-[15px] font-semibold">{t('title')}</h3>
+        <div className="p-5">
+          <Section title={t('title')} headingId={titleId}>
           <FormGrid>
             {FIELDS.map(({ key, hintKey, setting }) => (
               <FormField key={key} id={key} label={t(key)} hint={t(hintKey)} error={errors[setting]} size="s">
                 <div className="flex items-center gap-2">
                   <Input id={key} name={setting} type="number" min={0} defaultValue={current[key]} readOnly={!canManage} className="w-24 font-mono" />
-                  <span className="text-[13px] text-muted-ink">{t('months')}</span>
+                  <span className="text-meta text-muted-ink">{t('months')}</span>
                 </div>
               </FormField>
             ))}
           </FormGrid>
+          </Section>
         </div>
         {canManage ? <FormActionBar baseline={saves} state={withUnplacedFieldErrors(state, FIELDS.map(({ setting }) => setting))} /> : null}
       </ActionForm>

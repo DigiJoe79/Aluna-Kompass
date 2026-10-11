@@ -1,13 +1,14 @@
 {
   "name": "@kompass/core",
-  "version": "0.2.10",
+  "version": "0.2.11",
   "private": true,
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
     "./testing": "./src/testing/index.ts",
     "./dates": "./src/dates.ts",
-    "./themes": "./src/themes/index.ts"
+    "./themes": "./src/themes/index.ts",
+    "./image-places": "./src/media/image-place-resolve.ts"
   },
   "scripts": {
     "test": "vitest run",
@@ -29,10 +30,10 @@
   },
   "devDependencies": {
     "@types/better-sqlite3": "^9.6.0",
-    "@types/node": "^26.6.2",
+    "@types/node": "^26.6.4",
     "drizzle-kit": "^0.31.11",
     "tsx": "^4.23.15",
     "typescript": "^6.0.3",
-    "vitest": "^5.0.2"
+    "vitest": "^5.0.3"
   }
 }

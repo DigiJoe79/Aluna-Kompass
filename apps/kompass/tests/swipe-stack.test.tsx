@@ -118,7 +118,7 @@ describe('SwipeStack (Board 3b–3e, 8b)', () => {
     // Der Stapel hält seine Karten ab dem Öffnen (`useState`): neu öffnen statt neu rendern.
     cleanup();
     render(<SwipeStack frame={frame} cards={[card('P1', 'Mira', { image: { url: '/animals/proposal-images/I1', crop: { x: 0, y: 0.1, w: 1, h: 0.8 }, ratio: 0.75 } })]} backHref="/x" query="" />, { wrapper: Intl });
-    expect(screen.getByRole('img', { name: 'Ausschnitt der Quelle' })).toBeTruthy();
+    expect(screen.getByRole('img', { name: 'Mira, mit Ausschnitt' })).toBeTruthy();
     expect(screen.getByTestId('crop-rect')).toBeTruthy();
   });
 

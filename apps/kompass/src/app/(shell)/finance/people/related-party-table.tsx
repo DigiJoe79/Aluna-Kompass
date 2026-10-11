@@ -15,7 +15,7 @@ import { panelHref } from '@/components/panel-nav';
  */
 export async function RelatedPartyTable({ rows, approverNames, fmt }: { rows: RelatedPartyPaymentRow[]; approverNames: Map<string, string>; fmt: DateFormatter }) {
   const t = await getTranslations('finance.people.related');
-  if (rows.length === 0) return <p className="text-[13px] text-muted-ink">{t('empty')}</p>;
+  if (rows.length === 0) return <p className="text-meta text-muted-ink">{t('empty')}</p>;
   return (
     <div className="overflow-x-auto rounded-md border border-line">
       <Table data-testid="related-party-table">
@@ -45,7 +45,7 @@ export async function RelatedPartyTable({ rows, approverNames, fmt }: { rows: Re
                     <StatusBadge tone="warning" dot>
                       {t('withoutBasis')}
                     </StatusBadge>
-                    <Link href={panelHref('/admin/finance', 'tax')} className="text-[12px] font-semibold underline underline-offset-2">
+                    <Link href={panelHref('/admin/finance', 'tax')} className="text-hint font-semibold underline underline-offset-2">
                       {t('toSetup')}
                     </Link>
                   </span>

@@ -69,8 +69,8 @@ oder später mit **Dokument nachreichen**: Es wird in der Akte abgelegt und mit
 dem Bescheid verknüpft. Liegt es schon in der Akte, wählen Sie es dort aus.
 
 Sind die Finanzen eingeschaltet, führt Kompass Finanzamt, Steuernummer, Art
-und Datum des Bescheids nur noch hier. Unter Einstellungen → Stammdaten,
-Reiter „Steuer & Bescheide“, stehen sie danach nur lesbar, mit dem Hinweis „Wird unter Finanzen → Spenden →
+und Datum des Bescheids nur noch hier. Unter Einrichtung → Stammdaten → Steuer & Bescheide
+stehen sie danach nur lesbar, mit dem Hinweis „Wird unter Finanzen → Spenden →
 Bescheide geführt“, und zeigen immer den Stand des geltenden Bescheids.
 
 ## Maschinell erstellte Bestätigungen
@@ -108,7 +108,7 @@ Verfahren vollständig eingerichtet ist: Die Regelung gilt nicht für Sach- und
 Aufwandsspenden (R 10b.1 Abs. 4 Satz 3 EStR). Ihre Bestätigungen tragen immer
 ein Unterschriftsfeld.
 
-Die Checkliste unter Einstellungen → Finanzen führt
+Die Checkliste unter Einrichtung → Finanzen → Checkliste führt
 beide Schritte, Bescheid und maschinelles Verfahren, als optionale Schritte.
 
 ## Eine Bestätigung ausstellen
@@ -163,7 +163,7 @@ Wert selbst ändern Sie in der Buchung. Sachspenden bekommen die Bestätigung
 Verzichtet jemand auf die Erstattung einer Auslage, ist das eine
 Aufwandsspende. Sie wird wie eine Geldspende bestätigt, mit dem Satz zum
 Verzicht, aber immer mit Unterschriftsfeld. Aufwandsspenden schalten Sie
-unter Einstellungen → Finanzen im Schritt „Steuerliches“ ein. Wie jemand
+unter Einrichtung → Finanzen → Steuerliches ein. Wie jemand
 beim Einreichen einer Auslage verzichtet und wie die Freigabe die vier
 Voraussetzungen dafür prüft, steht unter [Auslagen](auslagen.md).
 

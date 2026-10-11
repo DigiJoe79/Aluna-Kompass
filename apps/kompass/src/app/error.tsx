@@ -22,13 +22,13 @@ export default function AuthError({
 
   return (
     <AuthCard brand={brand('name')} title={t('title')}>
-      <div className="flex items-center gap-2 text-[12px]">
+      <div className="flex items-center gap-2 text-hint">
         <span className="rounded-sm bg-error-bg px-1.5 py-0.5 font-mono font-semibold text-error">500</span>
         <span className="text-muted-ink">{t('kicker')}</span>
       </div>
-      <p className="text-[14px] leading-[1.55] text-ink-2">{t('text')}</p>
+      <p className="text-body text-ink-2">{t('text')}</p>
       {error.digest ? (
-        <code className="w-fit rounded-md bg-code px-2 py-1 font-mono text-[12px]">{error.digest}</code>
+        <code className="w-fit rounded-md bg-code px-2 py-1 font-mono text-hint">{error.digest}</code>
       ) : null}
       <div className="flex gap-2">
         <Button onClick={reset}>{t('retry')}</Button>

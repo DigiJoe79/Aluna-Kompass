@@ -1,7 +1,7 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { useActionState, useState, useTransition } from 'react';
+import { type ChangeEvent, useActionState, useState, useTransition } from 'react';
 import { Notice } from '@/components/notice';
 import { FormActionBar } from '@/components/forms/form-action-bar';
 import { useActionFeedback } from '@/components/forms/use-action-feedback';
@@ -18,6 +18,7 @@ import { ActionForm } from '@/components/forms/action-form';
 import { FormField } from '@/components/forms/form-field';
 import { FormGrid } from '@/components/forms/form-grid';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Section } from '@/components/section';
 
 export interface DocumentTypeItem {
   key: string;
@@ -42,6 +43,13 @@ export interface AreaItem {
   permission: string;
   /** Ob der Aufrufer das Recht des Bereichs selbst hat. */
   held: boolean;
+}
+
+/** Das Präfix steht in Großbuchstaben in der Nummer; schon beim Tippen so zeigen, ohne Klasse `uppercase` (K10 Charge 3). */
+function toUpper(e: ChangeEvent<HTMLInputElement>) {
+  const { selectionStart, selectionEnd } = e.currentTarget;
+  e.currentTarget.value = e.currentTarget.value.toUpperCase();
+  e.currentTarget.setSelectionRange(selectionStart, selectionEnd);
 }
 
 export function TypesPanel({
@@ -101,7 +109,7 @@ export function TypesPanel({
     // Modul-eigene Arten: nur Anzeige, der Bereich ist fest.
     if (type.ownerModule) {
       return current ? (
-        <p className="col-span-full text-[13px] text-muted-ink">
+        <p className="col-span-full text-meta text-muted-ink">
           {t('area')}: {areaLabel(current)}
         </p>
       ) : null;
@@ -131,7 +139,7 @@ export function TypesPanel({
             </option>
           ))}
         </Select>
-        {locked && currentArea ? <p className="text-[12px] text-muted-ink">{t('areaNotHeld', { permission: permissionLabel(currentArea.permission) })}</p> : null}
+        {locked && currentArea ? <p className="text-hint text-muted-ink">{t('areaNotHeld', { permission: permissionLabel(currentArea.permission) })}</p> : null}
         {!locked && changed ? (
           <Notice level="warn" testId="area-hint">
             <p>{chosen ? t('areaSetHint', { count, permission: permissionLabel(chosen.permission) }) : t('areaRemoveHint', { count })}</p>
@@ -146,7 +154,7 @@ export function TypesPanel({
     <section className="space-y-4 rounded-md border border-line bg-surface p-5">
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-[13px] text-ink-2">{t('typesDescription')}</p>
+          <p className="text-meta text-ink-2">{t('typesDescription')}</p>
         </div>
         <Button size="sm" onClick={() => setCreateOpen(true)}>
           {t('createType')}
@@ -169,11 +177,11 @@ export function TypesPanel({
           <TableBody>
             {types.map((row, i) => (
               <TableRow key={row.key}>
-                <TableCell className="font-mono font-bold text-ink">{row.prefix}</TableCell>
+                <TableCell className="font-mono font-semibold text-ink">{row.prefix}</TableCell>
                 {/* Schlüssel als zweite Zeile unter der Bezeichnung: acht Spalten scrollten auf der standard-Seite waagerecht (K9-Befund 8). */}
                 <TableCell>
-                  <span className="font-medium text-ink">{row.label}</span>
-                  <span className="block font-mono text-[12px] text-muted-ink">{row.key}</span>
+                  <span className="text-ink">{row.label}</span>
+                  <span className="block font-mono text-hint text-muted-ink">{row.key}</span>
                 </TableCell>
                 <TableCell className="text-ink-2">{tDms(`directions.${row.defaultDirection}`)}</TableCell>
                 <TableCell className="text-ink-2">{t(`retentionClasses.${row.retentionClass}`)}</TableCell>
@@ -215,78 +223,72 @@ export function TypesPanel({
             <DialogTitle>{t('createTypeTitle')}</DialogTitle>
             <DialogDescription>{t('createTypeDescription')}</DialogDescription>
 
-            <section>
-              <h3 className="text-[15px] font-semibold">{t('typeSections.identity')}</h3>
-              <div className="mt-3">
-                <FormGrid>
-                  <FormField id="create-key" label={t('typeColumns.key')} size="s">
-                    <Input id="create-key" name="key" placeholder={t('typeKeyPlaceholder')} required />
-                  </FormField>
-                  <FormField id="create-prefix" label={t('typeColumns.prefix')} size="s">
-                    <Input id="create-prefix" name="prefix" placeholder={t('typeShortPlaceholder')} maxLength={3} required />
-                  </FormField>
-                  <FormField id="create-label" label={t('typeColumns.label')}>
-                    <Input id="create-label" name="label" required />
-                  </FormField>
-                </FormGrid>
-              </div>
-            </section>
-            <section className="border-t border-line pt-5">
-              <h3 className="text-[15px] font-semibold">{t('typeSections.filing')}</h3>
-              <div className="mt-3">
-                <FormGrid>
-                  <FormField id="create-direction" label={t('typeColumns.direction')} size="s">
-                    <Select
-                      id="create-direction"
-                      name="defaultDirection"
-                      defaultValue="incoming"
-                    >
-                      <option value="incoming">{tDms('directions.incoming')}</option>
-                      <option value="outgoing">{tDms('directions.outgoing')}</option>
-                    </Select>
-                  </FormField>
-                  <FormField id="create-retention" label={t('typeColumns.retention')}>
-                    <Select
-                      id="create-retention"
-                      name="retentionClass"
-                      defaultValue="statutory10Y"
-                    >
-                      <option value="statutory10Y">{t('retentionClasses.statutory10Y')}</option>
-                      <option value="statutory8Y">{t('retentionClasses.statutory8Y')}</option>
-                      <option value="statutory6Y">{t('retentionClasses.statutory6Y')}</option>
-                      <option value="permanent">{t('retentionClasses.permanent')}</option>
-                      <option value="consent">{t('retentionClasses.consent')}</option>
-                    </Select>
-                  </FormField>
-                  <FormField id="create-folder" label={t('typeColumns.folder')}>
-                    <Select
-                      id="create-folder"
-                      name="defaultFolder"
-                      defaultValue=""
-                    >
-                      <option value="">{tDms('inbox')}</option>
-                      {folders.map((f) => (
-                        <option key={f} value={f}>
-                          {f}
+            <Section title={t('typeSections.identity')}>
+              <FormGrid>
+                <FormField id="create-key" label={t('typeColumns.key')} size="s">
+                  <Input id="create-key" name="key" placeholder={t('typeKeyPlaceholder')} required />
+                </FormField>
+                <FormField id="create-prefix" label={t('typeColumns.prefix')} size="s">
+                  <Input id="create-prefix" name="prefix" placeholder={t('typeShortPlaceholder')} maxLength={3} required onChange={toUpper} />
+                </FormField>
+                <FormField id="create-label" label={t('typeColumns.label')}>
+                  <Input id="create-label" name="label" required />
+                </FormField>
+              </FormGrid>
+            </Section>
+            <Section title={t('typeSections.filing')}>
+              <FormGrid>
+                <FormField id="create-direction" label={t('typeColumns.direction')} size="s">
+                  <Select
+                    id="create-direction"
+                    name="defaultDirection"
+                    defaultValue="incoming"
+                  >
+                    <option value="incoming">{tDms('directions.incoming')}</option>
+                    <option value="outgoing">{tDms('directions.outgoing')}</option>
+                  </Select>
+                </FormField>
+                <FormField id="create-retention" label={t('typeColumns.retention')}>
+                  <Select
+                    id="create-retention"
+                    name="retentionClass"
+                    defaultValue="statutory10Y"
+                  >
+                    <option value="statutory10Y">{t('retentionClasses.statutory10Y')}</option>
+                    <option value="statutory8Y">{t('retentionClasses.statutory8Y')}</option>
+                    <option value="statutory6Y">{t('retentionClasses.statutory6Y')}</option>
+                    <option value="permanent">{t('retentionClasses.permanent')}</option>
+                    <option value="consent">{t('retentionClasses.consent')}</option>
+                  </Select>
+                </FormField>
+                <FormField id="create-folder" label={t('typeColumns.folder')}>
+                  <Select
+                    id="create-folder"
+                    name="defaultFolder"
+                    defaultValue=""
+                  >
+                    <option value="">{tDms('inbox')}</option>
+                    {folders.map((f) => (
+                      <option key={f} value={f}>
+                        {f}
+                      </option>
+                    ))}
+                  </Select>
+                </FormField>
+                {areas.length > 0 ? (
+                  <FormField id="create-area" label={t('area')}>
+                    <Select id="create-area" name="protectionArea" defaultValue="">
+                      <option value="">{t('areaNone')}</option>
+                      {areas.map((area) => (
+                        <option key={area.key} value={area.key} disabled={!area.held}>
+                          {areaLabel(area.key)}
                         </option>
                       ))}
                     </Select>
                   </FormField>
-                  {areas.length > 0 ? (
-                    <FormField id="create-area" label={t('area')}>
-                      <Select id="create-area" name="protectionArea" defaultValue="">
-                        <option value="">{t('areaNone')}</option>
-                        {areas.map((area) => (
-                          <option key={area.key} value={area.key} disabled={!area.held}>
-                            {areaLabel(area.key)}
-                          </option>
-                        ))}
-                      </Select>
-                    </FormField>
-                  ) : null}
-                </FormGrid>
-              </div>
-            </section>
+                ) : null}
+              </FormGrid>
+            </Section>
 
             <FormActionBar placement="dialog" mode="create" cancel={() => setCreateOpen(false)} saveLabel={t('save')} state={createState} />
           </ActionForm>
@@ -301,37 +303,34 @@ export function TypesPanel({
               <DialogTitle>{t('editTypeTitle')}</DialogTitle>
               <DialogDescription>{t('editTypeDescription')}</DialogDescription>
 
-              <section>
-                <h3 className="text-[15px] font-semibold">{t('typeSections.identity')}</h3>
-                <div className="mt-3">
-                  <FormGrid>
-                    <FormField id="edit-key" label={t('typeColumns.key')} hint={t('typeImmutableHint')} size="s">
-                      <Input id="edit-key" value={editingType.key} disabled />
-                    </FormField>
-                    <FormField id="edit-prefix" label={t('typeColumns.prefix')} hint={editingType.ownerModule ? undefined : t('prefixHint')} size="s">
-                      {editingType.ownerModule ? (
-                        <Input id="edit-prefix" value={editingType.prefix} disabled />
-                      ) : (
-                        <Input
-                          id="edit-prefix"
-                          name="prefix"
-                          maxLength={3}
-                          className="font-mono uppercase"
-                          defaultValue={editingType.prefix}
-                          required
-                        />
-                      )}
-                    </FormField>
-                    <FormField id="edit-label" label={t('typeColumns.label')}>
-                      <Input id="edit-label" name="label" defaultValue={editingType.label} required />
-                    </FormField>
-                  </FormGrid>
-                </div>
-              </section>
-              <section className="border-t border-line pt-5">
-                <h3 className="text-[15px] font-semibold">{t('typeSections.filing')}</h3>
+              <Section title={t('typeSections.identity')}>
+                <FormGrid>
+                  <FormField id="edit-key" label={t('typeColumns.key')} hint={t('typeImmutableHint')} size="s">
+                    <Input id="edit-key" value={editingType.key} disabled />
+                  </FormField>
+                  <FormField id="edit-prefix" label={t('typeColumns.prefix')} hint={editingType.ownerModule ? undefined : t('prefixHint')} size="s">
+                    {editingType.ownerModule ? (
+                      <Input id="edit-prefix" value={editingType.prefix} disabled />
+                    ) : (
+                      <Input
+                        id="edit-prefix"
+                        name="prefix"
+                        maxLength={3}
+                        className="font-mono"
+                        defaultValue={editingType.prefix}
+                        required
+                        onChange={toUpper}
+                      />
+                    )}
+                  </FormField>
+                  <FormField id="edit-label" label={t('typeColumns.label')}>
+                    <Input id="edit-label" name="label" defaultValue={editingType.label} required />
+                  </FormField>
+                </FormGrid>
+              </Section>
+              <Section title={t('typeSections.filing')}>
                 {editingType.ownerModule ? (
-                  <p className="mt-3 text-[13px] text-muted-ink">{t('ownedByModule', { module: editingType.ownerModule })}</p>
+                  <p className="mt-3 text-meta text-muted-ink">{t('ownedByModule', { module: editingType.ownerModule })}</p>
                 ) : null}
                 <div className="mt-3">
                   <FormGrid>
@@ -384,7 +383,7 @@ export function TypesPanel({
                     )}
                   </FormGrid>
                 </div>
-              </section>
+              </Section>
 
               <FormActionBar placement="dialog" mode="create" cancel={() => setEditingType(null)} saveLabel={t('save')} state={editState} />
             </ActionForm>

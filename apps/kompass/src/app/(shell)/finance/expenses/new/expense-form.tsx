@@ -22,6 +22,7 @@ import { saveExpenseDraftAction, submitExpenseClaimAction, uploadExpenseReceiptA
 import type { PdfFieldError } from './pdf-field';
 import { countPdfPages } from '@/lib/finance/pdf-pages';
 import { PositionCard } from './position-card';
+import { Section } from '@/components/section';
 
 let keySeq = 0;
 const nextKey = () => `n${Date.now().toString(36)}${(keySeq++).toString(36)}`;
@@ -220,14 +221,12 @@ export function ExpenseForm({
   return (
     <div className="space-y-5">
       <div data-testid="expense-for-whom" className="flex min-h-[var(--field-h)] items-center justify-between gap-3 rounded-md border border-line bg-surface-2 px-3 py-2">
-        <span className="text-[13px] text-muted-ink">{t('forWhom')}</span>
-        <span className="text-[14px] font-semibold text-ink">{contactName}</span>
+        <span className="text-meta text-muted-ink">{t('forWhom')}</span>
+        <span className="text-body font-semibold text-ink">{contactName}</span>
       </div>
 
       <section aria-labelledby="expense-positions" className="space-y-3">
-        <h3 id="expense-positions" className="sr-only">
-          {t('positions')}
-        </h3>
+        <h3 id="expense-positions" className="sr-only">{t('positions')}</h3>
         <ol className="space-y-3">
           {form.positions.map((p, i) => (
             <PositionCard
@@ -253,81 +252,82 @@ export function ExpenseForm({
         </Button>
       </section>
 
-      <section aria-labelledby="expense-refund" className="space-y-4 rounded-lg border border-line bg-surface p-4">
-        <h3 id="expense-refund" className="text-[15px] font-semibold">
-          {t('refund')}
-        </h3>
-        <div data-testid="expense-total" className="flex items-baseline justify-between gap-3">
-          <span className="text-[13px] font-semibold text-muted-ink">{t('total')}</span>
-          <span className="font-mono text-[22px] font-semibold tabular-nums">{formatEuro(totalCents(form, mileageRates))}</span>
-        </div>
-
-        {waiversEnabled && waiverAvailable ? (
-          <div className="space-y-1.5 rounded-md bg-surface-2 p-3">
-            <div className="flex min-h-11 items-center justify-between gap-3">
-              <Label htmlFor="expense-waiver">{t('waiver.label')}</Label>
-              <Switch id="expense-waiver" aria-label={t('waiver.label')} checked={form.waiver} onCheckedChange={(waiver) => update((f) => ({ ...f, waiver }))} />
+      <section aria-labelledby="expense-refund" className="rounded-lg border border-line bg-surface p-4">
+        <Section title={t('refund')} headingId="expense-refund">
+          <div className="space-y-4">
+            <div data-testid="expense-total" className="flex items-baseline justify-between gap-3">
+              <span className="text-meta font-semibold text-muted-ink">{t('total')}</span>
+              <span className="font-mono text-amount font-semibold tabular-nums">{formatEuro(totalCents(form, mileageRates))}</span>
             </div>
-            <p className="text-[13px] text-ink-2">{t('waiver.text')}</p>
-            {form.waiver ? (
-              <div className="space-y-1 border-t border-line pt-2">
-                <FormField id="expense-recurring" label={t('waiver.recurring')} hint={t('waiver.recurringHint')} toggle>
-                  <Checkbox id="expense-recurring" checked={form.recurring} onCheckedChange={(next) => update((f) => ({ ...f, recurring: next === true }))} />
-                </FormField>
-                {agreedLate ? (
-                  <div data-testid="expense-waiver-agreed-late">
-                    <Notice level="warn">{t('waiver.agreedAfterPosition')}</Notice>
+
+            {waiversEnabled && waiverAvailable ? (
+              <div className="space-y-1.5 rounded-md bg-surface-2 p-3">
+                <div className="flex min-h-11 items-center justify-between gap-3">
+                  <Label htmlFor="expense-waiver">{t('waiver.label')}</Label>
+                  <Switch id="expense-waiver" aria-label={t('waiver.label')} checked={form.waiver} onCheckedChange={(waiver) => update((f) => ({ ...f, waiver }))} />
+                </div>
+                <p className="text-meta text-ink-2">{t('waiver.text')}</p>
+                {form.waiver ? (
+                  <div className="space-y-1 border-t border-line pt-2">
+                    <FormField id="expense-recurring" label={t('waiver.recurring')} hint={t('waiver.recurringHint')} toggle>
+                      <Checkbox id="expense-recurring" checked={form.recurring} onCheckedChange={(next) => update((f) => ({ ...f, recurring: next === true }))} />
+                    </FormField>
+                    {agreedLate ? (
+                      <div data-testid="expense-waiver-agreed-late">
+                        <Notice level="warn">{t('waiver.agreedAfterPosition')}</Notice>
+                      </div>
+                    ) : null}
                   </div>
                 ) : null}
               </div>
+            ) : waiversEnabled ? (
+              <p className="text-meta text-ink-2">
+                {waiverUnavailableNames.length > 0 ? t('waiver.unavailableWithNames', { names: waiverUnavailableNames.join(', ') }) : t('waiver.unavailable')}
+              </p>
+            ) : null}
+
+            {form.waiver ? null : (
+              <FormGrid>
+                {ibanLocked ? (
+                  <FormCell size="m" className="space-y-1">
+                    <p id="expense-iban-label" className="text-body font-semibold">
+                      {t('iban')}
+                    </p>
+                    <div className="flex min-h-[var(--field-h)] items-center justify-between gap-2 rounded-md border border-line bg-surface-2 px-3">
+                      <span data-testid="iban-fixed" aria-labelledby="expense-iban-label" className="font-mono text-body tabular-nums">
+                        {groupIban(form.iban)}
+                      </span>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setIbanLocked(false);
+                          update((f) => ({ ...f, iban: '' }));
+                        }}
+                      >
+                        {t('otherIban')}
+                      </Button>
+                    </div>
+                    <p className="text-hint text-muted-ink">{form.iban === prefilledIban ? `${t('ibanHint')} (${t('ibanPrefilled')})` : t('ibanHint')}</p>
+                  </FormCell>
+                ) : (
+                  <FormField id="expense-iban" label={t('iban')}>
+                    <Input id="expense-iban" autoComplete="off" autoCapitalize="characters" spellCheck={false} value={form.iban} aria-invalid={iban.state === 'checksum' || undefined} onChange={(e) => update((f) => ({ ...f, iban: e.target.value }))} />
+                    <p aria-live="polite" className={iban.state === 'valid' || iban.state === 'empty' ? 'text-hint text-muted-ink' : 'text-hint text-error'}>
+                      {iban.state === 'empty' ? t('ibanHint') : t(`ibanCheck.${iban.state}`)}
+                    </p>
+                  </FormField>
+                )}
+              </FormGrid>
+            )}
+            {!form.waiver && foreignIban !== null && foreignIban === compactIban(form.iban) ? (
+              <div data-testid="iban-other-contact">
+                <Notice level="hint">{t('ibanOtherContact')}</Notice>
+              </div>
             ) : null}
           </div>
-        ) : waiversEnabled ? (
-          <p className="text-[13px] text-ink-2">
-            {waiverUnavailableNames.length > 0 ? t('waiver.unavailableWithNames', { names: waiverUnavailableNames.join(', ') }) : t('waiver.unavailable')}
-          </p>
-        ) : null}
-
-        {form.waiver ? null : (
-          <FormGrid>
-            {ibanLocked ? (
-              <FormCell size="m" className="space-y-1">
-                <p id="expense-iban-label" className="text-sm font-medium">
-                  {t('iban')}
-                </p>
-                <div className="flex min-h-[var(--field-h)] items-center justify-between gap-2 rounded-md border border-line bg-surface-2 px-3">
-                  <span data-testid="iban-fixed" aria-labelledby="expense-iban-label" className="font-mono text-[14px] tabular-nums">
-                    {groupIban(form.iban)}
-                  </span>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      setIbanLocked(false);
-                      update((f) => ({ ...f, iban: '' }));
-                    }}
-                  >
-                    {t('otherIban')}
-                  </Button>
-                </div>
-                <p className="text-[12px] text-muted-ink">{form.iban === prefilledIban ? `${t('ibanHint')} (${t('ibanPrefilled')})` : t('ibanHint')}</p>
-              </FormCell>
-            ) : (
-              <FormField id="expense-iban" label={t('iban')}>
-                <Input id="expense-iban" autoComplete="off" autoCapitalize="characters" spellCheck={false} value={form.iban} aria-invalid={iban.state === 'checksum' || undefined} onChange={(e) => update((f) => ({ ...f, iban: e.target.value }))} />
-                <p aria-live="polite" className={iban.state === 'valid' || iban.state === 'empty' ? 'text-[12px] text-muted-ink' : 'text-[12px] text-error'}>
-                  {iban.state === 'empty' ? t('ibanHint') : t(`ibanCheck.${iban.state}`)}
-                </p>
-              </FormField>
-            )}
-          </FormGrid>
-        )}
-        {!form.waiver && foreignIban !== null && foreignIban === compactIban(form.iban) ? (
-          <div data-testid="iban-other-contact">
-            <Notice level="hint">{t('ibanOtherContact')}</Notice>
-          </div>
-        ) : null}
+        </Section>
       </section>
 
       <FormActionBar

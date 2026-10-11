@@ -111,7 +111,7 @@ export function PurposesTable({
                 data-selected={row.id === selectedId ? 'true' : undefined}
                 data-state={row.id === selectedId ? 'selected' : undefined}
               >
-                <TableCell className="px-3 font-medium text-ink">
+                <TableCell className="px-3 text-ink">
                   {full ? (
                     <span className="inline-flex flex-wrap items-center gap-1.5">
                       <RowButton aria-expanded={row.id === selectedId} onClick={() => setSelectedId(row.id === selectedId ? null : row.id)}>

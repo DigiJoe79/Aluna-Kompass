@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { losesContent, planResync, type Finding } from '../src/resync/plan';
+import { losesContent, planResync, unknownImagePlaceFindings, type Finding } from '../src/resync/plan';
 
 const field = (widget: string, extra: Record<string, unknown> = {}) => ({ widget, ...extra });
 const before = {
@@ -80,5 +80,14 @@ describe('planResync', () => {
     const after = { variables: { dog: { widget: 'reference', view: 'animals', key: 'slug', labelField: 'name', label: 'Hund' } } };
     const findings = planResync(before as never, after as never, { variables: { dog: 'chiara' } });
     expect(of('retyped', findings)).toEqual([{ kind: 'retyped', path: 'variables.dog', label: 'Hund', from: 'text', to: 'reference', filled: 1, lossless: true }]);
+  });
+});
+
+// Ausschnitt für alle Bilder (Spec 2026-10-10 § 2): Eine Bildstelle, die kein Modul anmeldet, ist kein Fehler.
+describe('unknownImagePlaceFindings', () => {
+  it('gives a harmless hint per unknown place', () => {
+    const found = unknownImagePlaceFindings(['shop.banner']);
+    expect(found).toEqual([{ kind: 'unknownImagePlace', path: 'images.shop.banner' }]);
+    expect(losesContent(found[0]!)).toBe(false);
   });
 });

@@ -5,7 +5,7 @@ import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { profileUrl } from '../profile-url';
 import { loadAnimal, type AnimalRecord } from '../service';
-import { PHOTO_FRAME_KEY, PROFILE_URL_KEY, type PhotoFrame } from '../settings';
+import { effectivePhotoFrame, PROFILE_URL_KEY } from '../settings';
 import { qrRows } from './qr';
 import { PROFILE_MAX_PAGES, PROFILE_TEMPLATE_KEY, type ProfileImage, type ProfileInput, type ProfilePage } from './template';
 
@@ -113,7 +113,8 @@ export async function exportAnimalProfiles(deps: Deps, ctx: CallContext, input: 
 
   const locale = defaultLocale(deps);
   const urlTemplate = readSetting<string>(deps, PROFILE_URL_KEY);
-  const frame = readSetting<PhotoFrame>(deps, PHOTO_FRAME_KEY);
+  // Gibt das Template das Hauptfoto vor, gewinnt es auch im Steckbrief (Spec Ausschnitt für alle Bilder § 2).
+  const frame = effectivePhotoFrame(deps);
   const [w, h] = frame.aspect.split(':').map(Number) as [number, number];
   const pages: ProfilePage[] = [];
   for (const animal of animals) pages.push(await profilePage(deps, animal, locale, labels, urlTemplate));

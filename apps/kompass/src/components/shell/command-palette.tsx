@@ -72,13 +72,13 @@ export function CommandPalette({ groups, permissions, helpPages = [] }: { groups
                       className="flex items-center gap-3 data-[selected=true]:bg-selected data-[selected=true]:text-selected-ink"
                     >
                       <span className="flex-1">{e.label}</span>
-                      <span className="text-[12px] text-muted-ink">{e.hint}</span>
+                      <span className="text-hint text-muted-ink">{e.hint}</span>
                     </CommandItem>
                   ))}
                 </CommandGroup>
               ))}
           </CommandList>
-          <div className="flex items-center gap-4 border-t border-line bg-surface-2 px-3 py-2 text-[11px] text-muted-ink">
+          <div className="flex items-center gap-4 border-t border-line bg-surface-2 px-3 py-2 text-hint text-muted-ink">
             <span>↑↓ {t('palette.select')}</span>
             <span>↵ {t('palette.open')}</span>
             <span>esc {t('palette.close')}</span>

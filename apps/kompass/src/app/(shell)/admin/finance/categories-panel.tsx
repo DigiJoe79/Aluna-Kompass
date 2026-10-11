@@ -25,6 +25,7 @@ import { FormGrid } from '@/components/forms/form-grid';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
 import { useDateFormat } from '@/components/date-format-provider';
+import { Section } from '@/components/section';
 
 export interface CategoryRow {
   id: string;
@@ -121,8 +122,7 @@ export function CategoriesPanel({ categories, confirmedAt }: { categories: Categ
       {grouped.size === 0 && search ? <EmptyState filtered={{ noun: t('emptyNoun'), onReset: () => setSearch('') }} /> : null}
 
       {[...grouped.entries()].map(([sphere, rows]) => (
-        <div key={sphere} className="space-y-2">
-          <h3 className="text-[12px] font-semibold uppercase tracking-[.04em] text-muted-ink">{t(`sphereGroup.${sphere}`)}</h3>
+        <Section key={sphere} title={t(`sphereGroup.${sphere}`)}>
           <div className="overflow-hidden rounded-md border border-line">
             <Table>
               <TableHeader>
@@ -137,7 +137,7 @@ export function CategoriesPanel({ categories, confirmedAt }: { categories: Categ
               <TableBody>
                 {rows.map((row) => (
                   <TableRow key={row.id} data-testid={`category-row-${row.key}`}>
-                    <TableCell className="font-medium text-ink">{row.name}</TableCell>
+                    <TableCell className="text-ink">{row.name}</TableCell>
                     <TableCell className="text-ink-2">{t(`directions.${row.direction}`)}</TableCell>
                     <TableCell className="text-ink-2">{row.statementSuffices ? tCommon('yes') : tCommon('no')}</TableCell>
                     <TableCell>
@@ -153,12 +153,12 @@ export function CategoriesPanel({ categories, confirmedAt }: { categories: Categ
               </TableBody>
             </Table>
           </div>
-        </div>
+        </Section>
       ))}
 
       <div className="space-y-2 pt-2">
         <RefusalNotice action state={reviewFb.state} />
-        <p className="text-[13px] text-muted-ink">{confirmedAt ? t('reviewedAt', { date: fmt.date(confirmedAt) }) : t('notReviewed')}</p>
+        <p className="text-meta text-muted-ink">{confirmedAt ? t('reviewedAt', { date: fmt.date(confirmedAt) }) : t('notReviewed')}</p>
         <Button size="sm" variant="secondary" disabled={pending} onClick={() => void confirmReviewed()} data-testid="review-categories">
           {t('review')}
         </Button>
@@ -237,65 +237,59 @@ function CategoryDialog({ category, onClose, onSaved }: { category: CategoryRow 
           <DialogTitle>{category ? t('edit') : t('create')}</DialogTitle>
         </DialogHeader>
         <DialogBody>
-          <section>
-            <h3 className="text-[15px] font-semibold">{t('sections.basics')}</h3>
-            <div className="mt-3">
-              <FormGrid>
-                {!category ? (
-                  <FormField id="cat-key" label={t('columns.key')} required size="s">
-                    <Input id="cat-key" value={key} onChange={(e) => setKey(e.target.value)} required />
-                  </FormField>
-                ) : null}
-                <FormField id="cat-name" label={t('columns.name')} required>
-                  <Input id="cat-name" value={name} onChange={(e) => setName(e.target.value)} required />
+          <Section title={t('sections.basics')}>
+            <FormGrid>
+              {!category ? (
+                <FormField id="cat-key" label={t('columns.key')} required size="s">
+                  <Input id="cat-key" value={key} onChange={(e) => setKey(e.target.value)} required />
                 </FormField>
-                <FormField id="cat-explanation" label={t('explanation')} size="l">
-                  <Textarea id="cat-explanation" rows={2} value={explanation} onChange={(e) => setExplanation(e.target.value)} />
-                </FormField>
-              </FormGrid>
-            </div>
-          </section>
-          <section className="mt-5 border-t border-line pt-5">
-            <h3 className="text-[15px] font-semibold">{t('sections.tax')}</h3>
-            <div className="mt-3">
-              <FormGrid>
-                <FormField id="cat-direction" label={t('columns.direction')} size="s">
-                  <Select id="cat-direction" value={direction} onChange={(e) => setDirection(e.target.value as CategoryRow['direction'])}>
-                    <option value="income">{t('directions.income')}</option>
-                    <option value="expense">{t('directions.expense')}</option>
-                    <option value="transit">{t('directions.transit')}</option>
-                  </Select>
-                </FormField>
-                {direction !== 'transit' ? (
-                  <FormField id="cat-sphere" label={t('sphere')} required error={fieldErrors.sphere}>
-                    <Select id="cat-sphere" value={sphere} onChange={(e) => setSphere(e.target.value as 'ideal' | 'assetManagement' | 'purposeOperation' | 'business' | '')} aria-invalid={!!fieldErrors.sphere}>
-                      <option value="">{t('spherePlaceholder')}</option>
-                      {SPHERES.map((s) => (
-                        <option key={s} value={s}>
-                          {t(`sphereGroup.${s}`)}
-                        </option>
-                      ))}
-                    </Select>
-                  </FormField>
-                ) : null}
-                <FormField id="cat-tax-code" label={t('defaultTaxCode')}>
-                  <Select id="cat-tax-code" value={defaultTaxCode} onChange={(e) => setDefaultTaxCode(e.target.value)}>
-                    {TAX_CODES.map((code) => (
-                      <option key={code} value={code}>
-                        {t(`taxCodes.${code}`)}
+              ) : null}
+              <FormField id="cat-name" label={t('columns.name')} required>
+                <Input id="cat-name" value={name} onChange={(e) => setName(e.target.value)} required />
+              </FormField>
+              <FormField id="cat-explanation" label={t('explanation')} size="l">
+                <Textarea id="cat-explanation" rows={2} value={explanation} onChange={(e) => setExplanation(e.target.value)} />
+              </FormField>
+            </FormGrid>
+          </Section>
+          <Section title={t('sections.tax')}>
+            <FormGrid>
+              <FormField id="cat-direction" label={t('columns.direction')} size="s">
+                <Select id="cat-direction" value={direction} onChange={(e) => setDirection(e.target.value as CategoryRow['direction'])}>
+                  <option value="income">{t('directions.income')}</option>
+                  <option value="expense">{t('directions.expense')}</option>
+                  <option value="transit">{t('directions.transit')}</option>
+                </Select>
+              </FormField>
+              {direction !== 'transit' ? (
+                <FormField id="cat-sphere" label={t('sphere')} required error={fieldErrors.sphere}>
+                  <Select id="cat-sphere" value={sphere} onChange={(e) => setSphere(e.target.value as 'ideal' | 'assetManagement' | 'purposeOperation' | 'business' | '')} aria-invalid={!!fieldErrors.sphere}>
+                    <option value="">{t('spherePlaceholder')}</option>
+                    {SPHERES.map((s) => (
+                      <option key={s} value={s}>
+                        {t(`sphereGroup.${s}`)}
                       </option>
                     ))}
                   </Select>
                 </FormField>
-                <FormField id="cat-statement-suffices" label={t('statementSuffices')} toggle>
-                  <Checkbox id="cat-statement-suffices" checked={statementSuffices} onCheckedChange={(checked) => setStatementSuffices(checked)} />
-                </FormField>
-                <FormField id="cat-active" label={t('columns.active')} toggle>
-                  <Checkbox id="cat-active" checked={isActive} onCheckedChange={(checked) => setIsActive(checked)} />
-                </FormField>
-              </FormGrid>
-            </div>
-          </section>
+              ) : null}
+              <FormField id="cat-tax-code" label={t('defaultTaxCode')}>
+                <Select id="cat-tax-code" value={defaultTaxCode} onChange={(e) => setDefaultTaxCode(e.target.value)}>
+                  {TAX_CODES.map((code) => (
+                    <option key={code} value={code}>
+                      {t(`taxCodes.${code}`)}
+                    </option>
+                  ))}
+                </Select>
+              </FormField>
+              <FormField id="cat-statement-suffices" label={t('statementSuffices')} toggle>
+                <Checkbox id="cat-statement-suffices" checked={statementSuffices} onCheckedChange={(checked) => setStatementSuffices(checked)} />
+              </FormField>
+              <FormField id="cat-active" label={t('columns.active')} toggle>
+                <Checkbox id="cat-active" checked={isActive} onCheckedChange={(checked) => setIsActive(checked)} />
+              </FormField>
+            </FormGrid>
+          </Section>
           <div className="mt-5">
             <Disclosure label={t('advanced')} defaultOpen={fieldErrors.incomeKind !== undefined || fieldErrors.costFunction !== undefined}>
               <div className="pt-1">

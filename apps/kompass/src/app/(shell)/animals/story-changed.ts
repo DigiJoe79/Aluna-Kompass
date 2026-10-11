@@ -1,7 +1,11 @@
 type Localized = Record<string, string>;
+type Crop = { x: number; y: number; w: number; h: number };
 export interface StoryInput {
   beforeAssetId: string | null;
   afterAssetId: string | null;
+  /** `undefined`: Die Maske schickt keinen Ausschnitt mit — dann zählt er nicht. */
+  beforeCrop?: Crop | null;
+  afterCrop?: Crop | null;
   quote: Localized;
   family: string;
   adoptedYear: number;
@@ -19,7 +23,10 @@ const filled = (map: Localized | undefined) => JSON.stringify(Object.entries(map
  */
 export function storyChanged(saved: StoryInput | null, next: StoryInput): boolean {
   if (!saved) return true;
+  const cropDiffers = (a: Crop | null | undefined, b: Crop | null | undefined) => b !== undefined && JSON.stringify(a ?? null) !== JSON.stringify(b);
   return (
+    cropDiffers(saved.beforeCrop, next.beforeCrop) ||
+    cropDiffers(saved.afterCrop, next.afterCrop) ||
     saved.beforeAssetId !== next.beforeAssetId ||
     saved.afterAssetId !== next.afterAssetId ||
     saved.family !== next.family ||

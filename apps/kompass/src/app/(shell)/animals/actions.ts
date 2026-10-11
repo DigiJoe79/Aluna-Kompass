@@ -14,6 +14,7 @@ import { formTab, listQueryString } from './list-params';
 import { animalFieldsFromForm } from './form-values';
 import { photosChanged, photosFromForm } from './photos-changed';
 import { storyChanged } from './story-changed';
+import { cropFromForm, withCrop } from '@/lib/crop-form';
 
 const NEXT_ID = /^[0-9A-Z]{26}$/;
 
@@ -51,6 +52,9 @@ export async function saveAnimalAction(_prev: ActionState, formData: FormData): 
       const story = {
         beforeAssetId: String(formData.get('beforeAssetId') ?? '') || null,
         afterAssetId: String(formData.get('afterAssetId') ?? '') || null,
+        // Der Ausschnitt reist als JSON neben dem Bild (MediaPicker `cropName`); fehlt er, bleibt der gespeicherte.
+        ...withCrop('beforeCrop', cropFromForm(formData, 'beforeCrop')),
+        ...withCrop('afterCrop', cropFromForm(formData, 'afterCrop')),
         quote: localizedFromForm(formData, 'quote', deps.locales()),
         family: String(formData.get('family') ?? '').trim(),
         adoptedYear: Number(formData.get('adoptedYear') ?? 0),

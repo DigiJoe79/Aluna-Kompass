@@ -82,7 +82,7 @@ export function UserContactLinkForm({
           </Button>
         ) : null}
       </div>
-      {controls.reason ? <p className="text-[12px] text-muted-ink">{t(controls.reason)}</p> : null}
+      {controls.reason ? <p className="text-hint text-muted-ink">{t(controls.reason)}</p> : null}
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent size="sm" className="bg-surface shadow-md">

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { callArguments, isCommentLine, lineOf, openingTags } from './source';
+import { callArguments, classNameValue, isCommentLine, lineOf, openingTags } from './source';
 
 describe('Hilfe der Wächter', () => {
   it('findet einen Tag über mehrere Zeilen und meldet seine Zeile', () => {
@@ -22,5 +22,14 @@ describe('Hilfe der Wächter', () => {
     expect(lineOf('a\nb\nc', 4)).toBe(3);
     expect(isCommentLine('  * erklärt ?panel=')).toBe(true);
     expect(isCommentLine('  const x = 1;')).toBe(false);
+  });
+});
+
+describe('classNameValue', () => {
+  it('liest nur das className des Tags selbst, nicht eines Elements in einer Prop', () => {
+    expect(classNameValue(`<Section title="x" actions={<Link className="text-meta">y</Link>}>`)).toBeNull();
+    expect(classNameValue(`<Section actions={<b className="a" />} className="b">`)).toBe('b');
+    expect(classNameValue(`<h3 className="text-[15px]">`)).toBe('text-[15px]');
+    expect(classNameValue(`<h3 className={cn('a', x && 'b')}>`)).toBe(`cn('a', x && 'b')`);
   });
 });

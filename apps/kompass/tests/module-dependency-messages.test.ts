@@ -55,7 +55,7 @@ describe('Template-Sync mit nicht eingerichteter Sprache', () => {
     const f = localizedConflict('localeMissing', 'errors.site.localeMissing', { locales: 'fr, es' });
     for (const text of [ui(f), mcp(f)]) {
       expect(text).toContain('fr, es');
-      expect(text).toContain('Einstellungen → Sprachen');
+      expect(text).toContain('Einrichtung → Sprachen');
     }
   });
 });

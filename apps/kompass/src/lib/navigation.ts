@@ -87,7 +87,7 @@ export function buildNavigation(input: {
     ],
   };
   // Inaktive Module erscheinen gar nicht in der Navigation. Wer sie einschalten
-  // will, tut das unter Verwaltung → Module; ihre Seiten zeigen bis dahin die
+  // will, tut das unter Einrichtung → Module; ihre Seiten zeigen bis dahin die
   // „Modul inaktiv“-Seite, falls jemand die URL direkt aufruft.
   const modules: NavGroup[] = input.manifests
     .filter(
@@ -131,8 +131,8 @@ export function buildNavigation(input: {
   return [admin, config, ...modules, media];
 }
 
-/** Die beiden Kerngruppen, die in der Schiene als ein Bereich „Einstellungen“ erscheinen. */
-const SETTINGS_GROUPS: ReadonlySet<string> = new Set(['admin', 'config']);
+/** Die beiden Kerngruppen, die in der Schiene als ein Bereich „System“ erscheinen. */
+export const SETTINGS_GROUPS: ReadonlySet<string> = new Set(['admin', 'config']);
 
 export interface Location {
   /** Modul-Key, oder 'settings' für admin/config. */
@@ -184,7 +184,7 @@ const firstVisible = (group: NavGroup): NavItem | undefined => group.items.find(
 
 /**
  * Eine Zeile je Bereich: Startseite, dann jedes Modul mit mindestens einem
- * sichtbaren Eintrag, zuletzt Einstellungen — und die nur, wenn Verwaltung oder
+ * sichtbaren Eintrag, zuletzt System — und die nur, wenn Verwaltung oder
  * Einrichtung etwas Sichtbares haben. Kein festes `/admin`: Wer nur
  * `media.upload` hat, landete sonst auf einer verbotenen Seite.
  */
@@ -215,7 +215,7 @@ export interface NavSection {
 const visibleItems = (group: NavGroup): NavItem[] => group.items.filter((i) => i.visible);
 
 /**
- * Die Abschnitte der Zweitebene zum Pfad: Einstellungen zeigt Verwaltung und
+ * Die Abschnitte der Zweitebene zum Pfad: System zeigt Verwaltung und
  * Einrichtung mit Überschrift, ein Modul einen Abschnitt ohne. Leer heißt:
  * keine Zweitebene, die Spalte entfällt.
  */

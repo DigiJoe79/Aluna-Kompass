@@ -171,12 +171,12 @@ export default async function ApprovalsPage({ searchParams }: { searchParams: Pr
     return (
       <section data-testid="approval-result" aria-live="polite" className="space-y-4 rounded-lg border border-line bg-surface p-5">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="font-mono text-[15px] font-semibold">{claim.number}</span>
+          <span className="font-mono text-section">{claim.number}</span>
           <StatusBadge tone={approved ? 'success' : 'neutral'}>{approved ? t('result.approved') : t('result.rejected')}</StatusBadge>
           {claim.stateLabelKey === 'paid' ? <StatusBadge tone="final">{tState('paid')}</StatusBadge> : null}
         </div>
-        <p className="font-mono text-[26px] font-semibold tabular-nums">{formatEuro(claim.totalCents)}</p>
-        <p className="text-[14px] text-ink">{claim.contactName}</p>
+        <p className="font-mono text-figure font-semibold tabular-nums">{formatEuro(claim.totalCents)}</p>
+        <p className="text-body text-ink">{claim.contactName}</p>
         {approved && claim.openItemId ? (
           <div className="space-y-2">
             <Notice level="hint">{t('result.payable')}</Notice>
@@ -187,7 +187,7 @@ export default async function ApprovalsPage({ searchParams }: { searchParams: Pr
               iban={claim.iban}
               epcPayload={epcQrPayload({ recipient: claim.contactName, iban: claim.iban ?? '', amountCents: claim.totalCents, reference: claim.number ?? '' })}
             />
-            <Link href="/finance/open-items" className="text-[13px] underline underline-offset-2 hover:text-link">
+            <Link href="/finance/open-items" className="text-meta underline underline-offset-2 hover:text-link">
               {t('result.openItems')}
             </Link>
           </div>
@@ -200,14 +200,14 @@ export default async function ApprovalsPage({ searchParams }: { searchParams: Pr
             </Link>
           </div>
         ) : null}
-        {!approved ? <p className="text-[14px] text-ink-2">{t('result.rejectedText', { note: claim.rejectNote ?? '' })}</p> : null}
+        {!approved ? <p className="text-body text-ink-2">{t('result.rejectedText', { note: claim.rejectNote ?? '' })}</p> : null}
         <div className="border-t border-line pt-3">
           {nextId ? (
             <Link href={`/finance/approvals?claim=${nextId}`} className={buttonVariants({ variant: 'default' })}>
               {t('result.next')}
             </Link>
           ) : (
-            <p className="text-[13px] text-muted-ink">{t('result.none')}</p>
+            <p className="text-meta text-muted-ink">{t('result.none')}</p>
           )}
         </div>
       </section>

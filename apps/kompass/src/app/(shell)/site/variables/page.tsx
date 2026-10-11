@@ -1,4 +1,4 @@
-import { requirePermission } from '@kompass/core';
+import { mediaPixelSizes, requirePermission } from '@kompass/core';
 import { activeTemplate, listReferenceOptions, readValues, valuesVersion } from '@kompass/module-site';
 import { getTranslations } from 'next-intl/server';
 import { EmptyState } from '@/components/empty-state';
@@ -18,11 +18,12 @@ export default async function SiteVariablesPage() {
   const tpl = await getTranslations('site.template');
   const template = activeTemplate(deps);
   const options = template ? await listReferenceOptions(deps, ctx) : null;
+  const values = readValues(deps);
   return (
     <Page width="standard" header={<PageHeader title={t('title')} />}>
       <PendingVariablesLine className="-mt-3 mb-4 block" />
       {template && Object.keys(template.schema.variables).length > 0 ? (
-        <VariablesForm schema={template.schema.variables} value={readValues(deps)} version={valuesVersion(deps)} locales={deps.locales()} options={options?.ok ? options.value : {}} />
+        <VariablesForm schema={template.schema.variables} value={values} version={valuesVersion(deps)} locales={deps.locales()} options={options?.ok ? options.value : {}} mediaSizes={mediaPixelSizes(deps, values)} />
       ) : (
         <EmptyState title={t('title')} text={tpl('neverRead')} />
       )}

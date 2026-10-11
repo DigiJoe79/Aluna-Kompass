@@ -54,7 +54,7 @@ export function useLanguageName(): (code: string) => string {
  * Das Sprachkürzel im Stil der Marke (mono 11/600, MUSTER § J) — eine benannte Ausnahme von den Schriftstufen; auch die
  * Gegenüberstellung der Vorschläge nimmt sie (Designer 2026-10-10). Feste Mindestbreite setzt die Aufrufstelle.
  */
-export const LOCALE_CODE = 'bg-badge font-mono text-[11px] font-semibold text-badge-ink';
+export const LOCALE_CODE = 'bg-badge font-mono text-key font-semibold text-badge-ink';
 
 /**
  * Einzeilige Eingabe einer Sprache: das Kürzel steht links im Feld als Präfix, aufgebaut wie das „€“ im
@@ -144,11 +144,11 @@ export function LocalizedField({
         ) : (
           <>
             <LocaleLabel htmlFor={id} locale={locale} />
-            <Textarea {...props} rows={rows} className={cn(kind === 'markdown' && 'font-mono text-[13px]')} />
+            <Textarea {...props} rows={rows} className={cn(kind === 'markdown' && 'font-mono text-meta')} />
           </>
         )}
         {isUntranslated ? (
-          <p id={hintId} className="text-[12px] text-warning">
+          <p id={hintId} className="text-hint text-warning">
             {t('untranslated')}
           </p>
         ) : null}
@@ -159,10 +159,10 @@ export function LocalizedField({
   const perLocale = size ?? (kind === 'input' ? 'm' : 'l');
   return (
     <FormCell size={localizedSize(perLocale, locales.length)} className="flex flex-col gap-1.5">
-      <span className="text-[13px] font-semibold text-ink-2">
+      <span className="text-meta font-semibold text-ink-2">
         {label}
         {required ? (
-          <span aria-hidden="true" className="ml-1.5 font-bold text-brand-accent">
+          <span aria-hidden="true" className="ml-1.5 font-semibold text-brand-accent">
             *
           </span>
         ) : null}
@@ -177,11 +177,11 @@ export function LocalizedField({
                 type="button"
                 onClick={() => setActiveTab(l)}
                 className={cn(
-                  'flex items-center gap-1.5 rounded-sm px-2.5 py-1 text-[12px] font-medium transition-colors',
+                  'flex items-center gap-1.5 rounded-sm px-2.5 py-1 text-hint transition-colors',
                   activeTab === l ? 'bg-selected font-semibold text-ink' : 'text-muted-ink hover:text-ink',
                 )}
               >
-                <span className="font-mono text-[10px] uppercase">{l}</span>
+                <span className="font-mono text-key font-semibold">{l.toUpperCase()}</span>
                 {isUntranslated ? <span className="h-1.5 w-1.5 rounded-full bg-warning" title={t('untranslated')} /> : null}
               </button>
             );
@@ -192,11 +192,11 @@ export function LocalizedField({
         {/* Abstand wie `FormGrid`: Ein `m`-Feld mit zwei Sprachen liegt so genau auf den `s`-Spalten darüber (K10 § 4.6). */}
         <div className={cn('grid grid-cols-1 gap-x-5 gap-y-4', languageColumns(locales.length, perLocale))}>{locales.map((l) => field(l))}</div>
       </div>
-      {hint && !error ? <p className="text-[12px] text-muted-ink">{hint}</p> : null}
+      {hint && !error ? <p className="text-hint text-muted-ink">{hint}</p> : null}
       <FieldError id={`${name}-error`} message={error} />
       {kind === 'markdown' ? (
         <div className="mt-1 flex flex-col gap-2">
-          <div className="flex items-center gap-2 text-[12px]">
+          <div className="flex items-center gap-2 text-hint">
             <span className="text-muted-ink">{t('preview')}</span>
             {locales.map((l) => (
               <button

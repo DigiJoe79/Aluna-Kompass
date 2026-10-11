@@ -1,4 +1,4 @@
-import { requirePermission } from '@kompass/core';
+import { mediaPixelSizes, requirePermission } from '@kompass/core';
 import { activeTemplate, entryLabel, getEntry } from '@kompass/module-site';
 import { getTranslations } from 'next-intl/server';
 import { notFound } from 'next/navigation';
@@ -28,7 +28,7 @@ export default async function EntryPage(props: { params: Promise<{ collection: s
   if (id === 'new') {
     return (
       <Page width="standard" header={<PageHeader title={`${col.label} — ${t('new')}`} back={back} />}>
-        <EntryForm collection={collection} fields={col.fields} hasSlug={col.slug} entry={null} locales={locales} />
+        <EntryForm collection={collection} fields={col.fields} hasSlug={col.slug} entry={null} locales={locales} collectionLabel={col.label} />
       </Page>
     );
   }
@@ -48,6 +48,8 @@ export default async function EntryPage(props: { params: Promise<{ collection: s
         hasSlug={col.slug}
         entry={{ id: result.value.id, slug: result.value.slug, data: result.value.data as Record<string, unknown>, updatedAt: result.value.updatedAt }}
         locales={locales}
+        collectionLabel={col.label}
+        mediaSizes={mediaPixelSizes(deps, result.value.data)}
       />
     </Page>
   );

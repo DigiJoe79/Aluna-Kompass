@@ -1,4 +1,4 @@
-import { definePublishedView, localizedText, readLocales, type Deps, type LocalizedText } from '@kompass/core';
+import { definePublishedView, derivedAssetId, localizedText, readLocales, type Deps, type LocalizedText } from '@kompass/core';
 import { asc, eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { projects } from './schema';
@@ -22,8 +22,15 @@ export const publishedProjects = definePublishedView({
     externalLinks: z.array(z.object({ label: z.string(), url: z.string() })),
     sortOrder: z.number(),
   }),
+  // Der Ausschnitt steckt in der abgeleiteten ID (Spec Ausschnitt für alle Bilder § 3); der Template-Vertrag bleibt.
   load: (deps: Deps) =>
-    deps.db.select().from(projects).where(eq(projects.isPublished, true)).orderBy(asc(projects.sortOrder)).all(),
+    deps.db
+      .select()
+      .from(projects)
+      .where(eq(projects.isPublished, true))
+      .orderBy(asc(projects.sortOrder))
+      .all()
+      .map(({ imageCrop, ...p }) => ({ ...p, imageAssetId: p.imageAssetId ? derivedAssetId(p.imageAssetId, imageCrop) : null })),
   // Die Zeile hat keine ID, wohl aber den eindeutigen Slug.
   editLink: (deps, row) => {
     const p = deps.db.select().from(projects).where(eq(projects.slug, row.slug)).get();

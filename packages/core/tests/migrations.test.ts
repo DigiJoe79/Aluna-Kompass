@@ -22,9 +22,10 @@ const rootVersion = (JSON.parse(readFileSync(path.join(__dirname, '../../../pack
  * `0003_finance` ist die zusammengelegte Migration der Fassung 0.2.0,
  * `0004_finance_0_2_1` die der Fassung 0.2.1. `0005_animals_review` ist die eine Migration der Fassung 0.2.2
  * (nie zusammengelegt: Der Branch hatte nur diese). `0006_audit_params` ist die der Fassung 0.2.9 (Protokoll in Sätzen),
- * `0007_animal_proposals_site_manifest` die zusammengelegte der Fassung 0.2.10 (Vorschlags-Eingang, „nicht publiziert“).
+ * `0007_animal_proposals_site_manifest` die zusammengelegte der Fassung 0.2.10 (Vorschlags-Eingang, „nicht publiziert“),
+ * `0008_image_crops` die eine der Fassung 0.2.11 (Bildausschnitt an Geschichte und Projektbild).
  */
-const RELEASED = ['0000_init.sql', '0001_dashboard_layouts.sql', '0002_document_former_numbers.sql', '0003_finance.sql', '0004_finance_0_2_1.sql', '0005_animals_review.sql', '0006_audit_params.sql', '0007_animal_proposals_site_manifest.sql'];
+const RELEASED = ['0000_init.sql', '0001_dashboard_layouts.sql', '0002_document_former_numbers.sql', '0003_finance.sql', '0004_finance_0_2_1.sql', '0005_animals_review.sql', '0006_audit_params.sql', '0007_animal_proposals_site_manifest.sql', '0008_image_crops.sql'];
 
 /**
  * Was eine Produktion schon ausgeführt hat, bleibt Byte für Byte, wie es war:
@@ -42,6 +43,8 @@ const SHIPPED_HASHES: Record<string, string> = {
   '0005_animals_review.sql': 'adf63e1536b9f8e6d742109617ae9f21a2cb5424a1d13bf492e6c2bebf246452',
   // Seit dem Release der Fassung 0.2.9.
   '0006_audit_params.sql': 'b34144ee8d237925c4d3e4432d2fac66f6ca69f6ca0c806ccf376e6f830cdb78',
+  // Seit dem Release der Fassung 0.2.10.
+  '0007_animal_proposals_site_manifest.sql': '7a818b30bbc0395f4439557116e47e12f1887da0f472ee16865979875e5f5a71',
 };
 
 /**

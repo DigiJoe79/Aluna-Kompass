@@ -11,6 +11,8 @@ import { useActionFeedback } from '@/components/forms/use-action-feedback';
 import { Button } from '@/components/ui/button';
 import { formatEuro } from '@/lib/finance/amount';
 import { decideCandidateAction } from './actions';
+import { Overline } from '@/components/overline';
+import { Section } from '@/components/section';
 
 export interface CandidateRow {
   id: string;
@@ -48,52 +50,55 @@ export function CandidatesSection({ candidates, canDecide }: { candidates: Candi
   if (candidates.length === 0) return null;
 
   return (
-    <section aria-label={t('title')} className="space-y-4">
-      <h2 className="font-heading text-[16px]">{t('title')}</h2>
-      {candidates.map((c) => (
-        <div key={c.id} className="space-y-2 rounded-md border border-line bg-surface p-3">
-          <p className="text-[12px] font-semibold uppercase tracking-wide text-muted-ink">{c.accountName}</p>
-          <BeforeAfter
-            layout="cards"
-            columnLabels={{ before: t('inStatement'), after: t('existing') }}
-            rows={[
-              {
-                label: '',
-                before: (
-                  <span>
-                    {date(c.line.bookingDate)} · {c.line.counterpartyName ?? '—'} · {c.line.purpose || '—'} · <span className="font-mono tabular-nums">{formatEuro(c.line.amountCents)}</span>
-                  </span>
-                ),
-                after: c.existing ? (
-                  <span>
-                    {date(c.existing.bookingDate)} · {c.existing.counterpartyName ?? '—'} · {c.existing.purpose || '—'} · <span className="font-mono tabular-nums">{formatEuro(c.existing.amountCents)}</span> ·{' '}
-                    {c.existing.state === 'booked' && c.existing.entryId ? (
-                      <Link href={`/finance/entries/${c.existing.entryId}`} className="text-link">
-                        {c.existing.entryNumber}
-                      </Link>
+    <section aria-label={t('title')}>
+      <Section title={t('title')}>
+        <div className="space-y-4">
+          {candidates.map((c) => (
+            <div key={c.id} className="space-y-2 rounded-md border border-line bg-surface p-3">
+              <Overline>{c.accountName}</Overline>
+              <BeforeAfter
+                layout="cards"
+                columnLabels={{ before: t('inStatement'), after: t('existing') }}
+                rows={[
+                  {
+                    label: '',
+                    before: (
+                      <span>
+                        {date(c.line.bookingDate)} · {c.line.counterpartyName ?? '—'} · {c.line.purpose || '—'} · <span className="font-mono tabular-nums">{formatEuro(c.line.amountCents)}</span>
+                      </span>
+                    ),
+                    after: c.existing ? (
+                      <span>
+                        {date(c.existing.bookingDate)} · {c.existing.counterpartyName ?? '—'} · {c.existing.purpose || '—'} · <span className="font-mono tabular-nums">{formatEuro(c.existing.amountCents)}</span> ·{' '}
+                        {c.existing.state === 'booked' && c.existing.entryId ? (
+                          <Link href={`/finance/entries/${c.existing.entryId}`} className="text-link">
+                            {c.existing.entryNumber}
+                          </Link>
+                        ) : (
+                          t('existingOpen')
+                        )}
+                      </span>
                     ) : (
-                      t('existingOpen')
-                    )}
-                  </span>
-                ) : (
-                  '—'
-                ),
-              },
-            ]}
-          />
-          {decidingId === c.id ? <RefusalNotice action state={feedback.state} /> : null}
-          {canDecide ? (
-            <div className="flex flex-wrap gap-2">
-              <Button type="button" disabled={pending && decidingId === c.id} onClick={() => decide(c.id, 'same')}>
-                {t('same')}
-              </Button>
-              <Button type="button" variant="secondary" disabled={pending && decidingId === c.id} onClick={() => decide(c.id, 'own')}>
-                {t('own')}
-              </Button>
+                      '—'
+                    ),
+                  },
+                ]}
+              />
+              {decidingId === c.id ? <RefusalNotice action state={feedback.state} /> : null}
+              {canDecide ? (
+                <div className="flex flex-wrap gap-2">
+                  <Button type="button" disabled={pending && decidingId === c.id} onClick={() => decide(c.id, 'same')}>
+                    {t('same')}
+                  </Button>
+                  <Button type="button" variant="secondary" disabled={pending && decidingId === c.id} onClick={() => decide(c.id, 'own')}>
+                    {t('own')}
+                  </Button>
+                </div>
+              ) : null}
             </div>
-          ) : null}
+          ))}
         </div>
-      ))}
+      </Section>
     </section>
   );
 }

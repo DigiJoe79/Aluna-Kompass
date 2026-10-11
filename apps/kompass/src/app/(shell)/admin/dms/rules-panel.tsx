@@ -19,6 +19,7 @@ import { ActionForm } from '@/components/forms/action-form';
 import { FormField } from '@/components/forms/form-field';
 import { FormGrid } from '@/components/forms/form-grid';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Section } from '@/components/section';
 
 export interface DocumentRuleItem {
   id: string;
@@ -80,7 +81,7 @@ export function RulesPanel({
     <section className="space-y-4 rounded-md border border-line bg-surface p-5">
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-[13px] text-ink-2">{t('rulesDescription')}</p>
+          <p className="text-meta text-ink-2">{t('rulesDescription')}</p>
         </div>
         <Button size="sm" onClick={() => setCreateOpen(true)}>
           {t('createRule')}
@@ -105,10 +106,10 @@ export function RulesPanel({
             ) : (
               rules.map((row, i) => (
                 <TableRow key={row.id}>
-                  <TableCell className="text-[13px] text-ink">
+                  <TableCell className="text-meta text-ink">
                     {t(`ruleFields.${row.matchField}`)}
                   </TableCell>
-                  <TableCell className="font-mono font-medium text-ink">{row.matchContains}</TableCell>
+                  <TableCell className="font-mono text-ink">{row.matchContains}</TableCell>
                   <TableCell className="text-ink-2">
                     {row.thenTypeKey ? typeMap.get(row.thenTypeKey) ?? row.thenTypeKey : '—'}
                   </TableCell>
@@ -142,66 +143,60 @@ export function RulesPanel({
             <DialogTitle>{t('createRuleTitle')}</DialogTitle>
             <DialogDescription>{t('createRuleDescription')}</DialogDescription>
 
-            <section>
-              <h3 className="text-[15px] font-semibold">{t('ruleSections.condition')}</h3>
-              <div className="mt-3">
-                <FormGrid>
-                  <FormField id="create-rule-field" label={t('ruleFields.matchField')} size="s">
-                    <Select
-                      id="create-rule-field"
-                      name="matchField"
-                      defaultValue="filename"
-                    >
-                      <option value="filename">{t('ruleFields.filename')}</option>
-                      <option value="senderName">{t('ruleFields.senderName')}</option>
-                    </Select>
-                  </FormField>
-                  <FormField id="create-rule-contains" label={t('ruleFields.matchContains')}>
-                    <Input
-                      id="create-rule-contains"
-                      name="matchContains"
-                      placeholder={t('ruleFields.matchContainsPlaceholder')}
-                      required
-                    />
-                  </FormField>
-                </FormGrid>
-              </div>
-            </section>
-            <section className="border-t border-line pt-5">
-              <h3 className="text-[15px] font-semibold">{t('ruleSections.result')}</h3>
-              <div className="mt-3">
-                <FormGrid>
-                  <FormField id="create-rule-type" label={t('ruleFields.thenType')}>
-                    <Select
-                      id="create-rule-type"
-                      name="thenTypeKey"
-                      defaultValue=""
-                    >
-                      <option value="">{t('ruleFields.noType')}</option>
-                      {types.map((tp) => (
-                        <option key={tp.key} value={tp.key}>
-                          {tp.label} ({tp.prefix})
-                        </option>
-                      ))}
-                    </Select>
-                  </FormField>
-                  <FormField id="create-rule-folder" label={t('ruleFields.thenFolder')}>
-                    <Select
-                      id="create-rule-folder"
-                      name="thenFolder"
-                      defaultValue=""
-                    >
-                      <option value="">{t('ruleFields.noFolder')}</option>
-                      {folders.map((f) => (
-                        <option key={f} value={f}>
-                          {f}
-                        </option>
-                      ))}
-                    </Select>
-                  </FormField>
-                </FormGrid>
-              </div>
-            </section>
+            <Section title={t('ruleSections.condition')}>
+              <FormGrid>
+                <FormField id="create-rule-field" label={t('ruleFields.matchField')} size="s">
+                  <Select
+                    id="create-rule-field"
+                    name="matchField"
+                    defaultValue="filename"
+                  >
+                    <option value="filename">{t('ruleFields.filename')}</option>
+                    <option value="senderName">{t('ruleFields.senderName')}</option>
+                  </Select>
+                </FormField>
+                <FormField id="create-rule-contains" label={t('ruleFields.matchContains')}>
+                  <Input
+                    id="create-rule-contains"
+                    name="matchContains"
+                    placeholder={t('ruleFields.matchContainsPlaceholder')}
+                    required
+                  />
+                </FormField>
+              </FormGrid>
+            </Section>
+            <Section title={t('ruleSections.result')}>
+              <FormGrid>
+                <FormField id="create-rule-type" label={t('ruleFields.thenType')}>
+                  <Select
+                    id="create-rule-type"
+                    name="thenTypeKey"
+                    defaultValue=""
+                  >
+                    <option value="">{t('ruleFields.noType')}</option>
+                    {types.map((tp) => (
+                      <option key={tp.key} value={tp.key}>
+                        {tp.label} ({tp.prefix})
+                      </option>
+                    ))}
+                  </Select>
+                </FormField>
+                <FormField id="create-rule-folder" label={t('ruleFields.thenFolder')}>
+                  <Select
+                    id="create-rule-folder"
+                    name="thenFolder"
+                    defaultValue=""
+                  >
+                    <option value="">{t('ruleFields.noFolder')}</option>
+                    {folders.map((f) => (
+                      <option key={f} value={f}>
+                        {f}
+                      </option>
+                    ))}
+                  </Select>
+                </FormField>
+              </FormGrid>
+            </Section>
 
             <FormActionBar placement="dialog" mode="create" cancel={() => setCreateOpen(false)} saveLabel={t('save')} state={createState} />
           </ActionForm>
@@ -216,69 +211,63 @@ export function RulesPanel({
               <DialogTitle>{t('editRuleTitle')}</DialogTitle>
               <DialogDescription>{t('editRuleDescription')}</DialogDescription>
 
-              <section>
-                <h3 className="text-[15px] font-semibold">{t('ruleSections.condition')}</h3>
-                <div className="mt-3">
-                  <FormGrid>
-                    <FormField id="edit-rule-field" label={t('ruleFields.matchField')} size="s">
-                      <Select
-                        id="edit-rule-field"
-                        name="matchField"
-                        defaultValue={editingRule.matchField}
-                      >
-                        <option value="filename">{t('ruleFields.filename')}</option>
-                        <option value="senderName">{t('ruleFields.senderName')}</option>
-                      </Select>
-                    </FormField>
-                    <FormField id="edit-rule-contains" label={t('ruleFields.matchContains')}>
-                      <Input
-                        id="edit-rule-contains"
-                        name="matchContains"
-                        defaultValue={editingRule.matchContains}
-                        required
-                      />
-                    </FormField>
-                  </FormGrid>
-                </div>
-              </section>
-              <section className="border-t border-line pt-5">
-                <h3 className="text-[15px] font-semibold">{t('ruleSections.result')}</h3>
-                <div className="mt-3">
-                  <FormGrid>
-                    <FormField id="edit-rule-type" label={t('ruleFields.thenType')}>
-                      <Select
-                        id="edit-rule-type"
-                        name="thenTypeKey"
-                        defaultValue={editingRule.thenTypeKey ?? ''}
-                      >
-                        <option value="">{t('ruleFields.noType')}</option>
-                        {types.map((tp) => (
-                          <option key={tp.key} value={tp.key}>
-                            {tp.label} ({tp.prefix})
-                          </option>
-                        ))}
-                      </Select>
-                    </FormField>
-                    <FormField id="edit-rule-folder" label={t('ruleFields.thenFolder')}>
-                      <Select
-                        id="edit-rule-folder"
-                        name="thenFolder"
-                        defaultValue={editingRule.thenFolder ?? ''}
-                      >
-                        <option value="">{t('ruleFields.noFolder')}</option>
-                        {folders.map((f) => (
-                          <option key={f} value={f}>
-                            {f}
-                          </option>
-                        ))}
-                      </Select>
-                    </FormField>
-                    <FormField id="edit-rule-active" label={t('ruleFields.activeCheckbox')} toggle>
-                      <Checkbox id="edit-rule-active" name="isActive" defaultChecked={editingRule.isActive} value="on" />
-                    </FormField>
-                  </FormGrid>
-                </div>
-              </section>
+              <Section title={t('ruleSections.condition')}>
+                <FormGrid>
+                  <FormField id="edit-rule-field" label={t('ruleFields.matchField')} size="s">
+                    <Select
+                      id="edit-rule-field"
+                      name="matchField"
+                      defaultValue={editingRule.matchField}
+                    >
+                      <option value="filename">{t('ruleFields.filename')}</option>
+                      <option value="senderName">{t('ruleFields.senderName')}</option>
+                    </Select>
+                  </FormField>
+                  <FormField id="edit-rule-contains" label={t('ruleFields.matchContains')}>
+                    <Input
+                      id="edit-rule-contains"
+                      name="matchContains"
+                      defaultValue={editingRule.matchContains}
+                      required
+                    />
+                  </FormField>
+                </FormGrid>
+              </Section>
+              <Section title={t('ruleSections.result')}>
+                <FormGrid>
+                  <FormField id="edit-rule-type" label={t('ruleFields.thenType')}>
+                    <Select
+                      id="edit-rule-type"
+                      name="thenTypeKey"
+                      defaultValue={editingRule.thenTypeKey ?? ''}
+                    >
+                      <option value="">{t('ruleFields.noType')}</option>
+                      {types.map((tp) => (
+                        <option key={tp.key} value={tp.key}>
+                          {tp.label} ({tp.prefix})
+                        </option>
+                      ))}
+                    </Select>
+                  </FormField>
+                  <FormField id="edit-rule-folder" label={t('ruleFields.thenFolder')}>
+                    <Select
+                      id="edit-rule-folder"
+                      name="thenFolder"
+                      defaultValue={editingRule.thenFolder ?? ''}
+                    >
+                      <option value="">{t('ruleFields.noFolder')}</option>
+                      {folders.map((f) => (
+                        <option key={f} value={f}>
+                          {f}
+                        </option>
+                      ))}
+                    </Select>
+                  </FormField>
+                  <FormField id="edit-rule-active" label={t('ruleFields.activeCheckbox')} toggle>
+                    <Checkbox id="edit-rule-active" name="isActive" defaultChecked={editingRule.isActive} value="on" />
+                  </FormField>
+                </FormGrid>
+              </Section>
 
               <FormActionBar placement="dialog" mode="create" cancel={() => setEditingRule(null)} saveLabel={t('save')} state={editState} />
             </ActionForm>

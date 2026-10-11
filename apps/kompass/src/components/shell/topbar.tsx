@@ -34,9 +34,9 @@ export interface TopbarProps {
  * `aria-label` machte `getByLabel('Suchen')` der Suchfelder mehrdeutig), das Nutzermenü zeigt nur die Initialen. Sonst schob das
  * 240 px breite Suchfeld Hilfe und Nutzermenü bei 390 px aus dem Bild, und von der
  * Brotkrume blieb nur „/“ (release-0.2.7.md, Befund 15). Das letzte Segment
- * bleibt sichtbar; das `h1` der Seite steht im `PageHeader`. Das letzte Segment trägt `font-heading` und
- * die Zeilenhöhe der Überschriften, die es als `h1` aus `globals.css` bekam — so sieht die Brotkrume aus wie
- * vorher (Spec Seitenkopf § 2.1: sichtbar ändert sich nichts). Kein Layout-Test für diese Einzelstelle (AGENTS.md); der Überlauf-Wächter
+ * bleibt sichtbar; das `h1` der Seite steht im `PageHeader`. Das letzte Segment trägt `font-heading` in der Rolle
+ * Abschnitt (15/600), die übrigen Sans `text-meta` (Spec Seitenkopf § 2.1; K10 Charge 3, Designer § 11 — `topbar` ist
+ * damit einer der acht Bausteine mit `font-heading`). Kein Layout-Test für diese Einzelstelle (AGENTS.md); der Überlauf-Wächter
  * der Screenshot-Pipeline prüft die Kopfzeile.
  */
 export function Topbar({ organization, logoUrl, crumbs, user, build, version, drawer, onOpenDrawer, onSearch, onHelp, extras }: TopbarProps) {
@@ -54,19 +54,19 @@ export function Topbar({ organization, logoUrl, crumbs, user, build, version, dr
         ) : (
           <div className="flex size-[26px] shrink-0 items-center justify-center rounded-sm border border-dashed border-line-strong text-[9px] text-muted-ink-2" aria-hidden>LOGO</div>
         )}
-        <span className="max-w-60 truncate text-[14px] font-semibold max-sm:hidden">{organization}</span>
+        <span className="max-w-60 truncate text-body font-semibold max-sm:hidden">{organization}</span>
       </div>
       <nav aria-label={t('shell.topbar.breadcrumb')} className="min-w-0 flex-1">
-        <ol className="flex min-w-0 items-center gap-1.5 text-[14px]">
+        <ol className="flex min-w-0 items-center gap-1.5 text-meta">
           {crumbs.map((crumb, index) => {
             const last = index === crumbs.length - 1;
             return (
               <li key={`${index}-${crumb.label}`} className={cn('flex min-w-0 items-center gap-1.5', !last && 'max-sm:hidden')}>
                 {index > 0 ? <span className="text-muted-ink-2 max-sm:hidden" aria-hidden>/</span> : null}
                 {last && crumb.current ? (
-                  <span aria-current="page" className="min-w-0 truncate font-heading leading-[1.2] font-semibold">{crumb.label}</span>
+                  <span aria-current="page" className="min-w-0 truncate font-heading text-section">{crumb.label}</span>
                 ) : last && crumb.href ? (
-                  <Link href={crumb.href} className="min-w-0 truncate font-heading leading-[1.2] font-semibold hover:underline">{crumb.label}</Link>
+                  <Link href={crumb.href} className="min-w-0 truncate font-heading text-section hover:underline">{crumb.label}</Link>
                 ) : (
                   <span className="min-w-0 truncate text-muted-ink">{crumb.label}</span>
                 )}
@@ -75,10 +75,10 @@ export function Topbar({ organization, logoUrl, crumbs, user, build, version, dr
           })}
         </ol>
       </nav>
-      <button type="button" onClick={onSearch} className="flex h-8 w-60 shrink-0 items-center gap-2 rounded-md border border-line-strong bg-field px-2.5 text-[13px] text-placeholder max-sm:w-auto">
+      <button type="button" onClick={onSearch} className="flex h-8 w-60 shrink-0 items-center gap-2 rounded-md border border-line-strong bg-field px-2.5 text-meta text-placeholder max-sm:w-auto">
         <Search className="size-3.5" aria-hidden />
         <span className="flex-1 text-left max-sm:sr-only">{t('shell.topbar.search')}</span>
-        <kbd className="rounded-[3px] border border-line px-1 font-mono text-[11px] max-sm:hidden">⌘K</kbd>
+        <kbd className="rounded-[3px] border border-line px-1 font-mono text-key max-sm:hidden">⌘K</kbd>
       </button>
       {extras}
       <button type="button" onClick={onHelp} aria-label={t('shell.topbar.help')} className="flex size-[30px] shrink-0 items-center justify-center rounded-sm text-muted-ink hover:bg-hover hover:text-ink">

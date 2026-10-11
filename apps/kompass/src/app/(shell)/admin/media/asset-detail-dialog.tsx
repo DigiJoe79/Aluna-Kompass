@@ -1,7 +1,6 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import { useDateFormat } from '@/components/date-format-provider';
 import { FolderField } from '@/components/folder-tree/folder-field';
@@ -11,6 +10,7 @@ import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import type { ActionState } from '@/lib/actions';
 import type { FolderEntry } from '@/lib/folder-tree-model';
 import { formatBytes, type Item } from './types';
+import { UsageLines } from './usage-lines';
 
 /**
  * Eine Datei der Mediathek im Detail. Der Ort steht als Weg mit „Verschieben
@@ -53,7 +53,7 @@ export function AssetDetailDialog({
       <DialogContent size="md">
         {item ? (
           <>
-            <DialogTitle className="truncate font-mono text-[14px] font-medium">{item.filename}</DialogTitle>
+            <DialogTitle className="truncate font-mono text-body">{item.filename}</DialogTitle>
 
             <div className="grid place-items-center rounded-md border border-line bg-surface-2 p-3">
               {isImage ? (
@@ -63,7 +63,7 @@ export function AssetDetailDialog({
               )}
             </div>
 
-            <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-[13px]">
+            <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-meta">
               <dt className="text-ink-2">{t('type')}</dt>
               <dd>{item.mimeType}</dd>
               <dt className="text-ink-2">{t('columns.size')}</dt>
@@ -86,22 +86,7 @@ export function AssetDetailDialog({
               ) : null}
               <dt className="text-ink-2">{t('columns.usage')}</dt>
               <dd>
-                {item.references.length === 0 ? (
-                  <span className="text-ink-2">{t('unused')}</span>
-                ) : (
-                  item.references.map((r, i) => (
-                    <span key={`${r.label}-${i}`}>
-                      {i > 0 ? ', ' : null}
-                      {r.href ? (
-                        <Link href={r.href} className="text-link underline">
-                          {r.label}
-                        </Link>
-                      ) : (
-                        r.label
-                      )}
-                    </span>
-                  ))
-                )}
+                <UsageLines references={item.references} linked />
               </dd>
             </dl>
 
@@ -118,7 +103,7 @@ export function AssetDetailDialog({
             {/* Wie der Fuß der `FormActionBar`: Aktion am Datensatz links, „Öffnen“ rechts. */}
             <div className="flex flex-wrap items-center justify-between gap-2 border-t border-line-2 pt-3">
               <RecordActions single="button" triggerRef={trigger} actions={[{ key: 'delete', label: t('deleteItem'), kind: 'delete', onSelect: () => setConfirming(true), testId: 'media-delete-trigger' }]} />
-              <a href={`/media/${item.id}`} target="_blank" rel="noopener" className="text-[13px] text-link underline">
+              <a href={`/media/${item.id}`} target="_blank" rel="noopener" className="text-meta text-link underline">
                 {t('open')}
               </a>
             </div>

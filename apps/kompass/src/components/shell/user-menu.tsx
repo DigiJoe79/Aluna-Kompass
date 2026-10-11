@@ -29,10 +29,10 @@ export function UserMenu({ user, build, version }: UserMenuProps) {
       <DropdownMenuTrigger
         render={
           <button type="button" aria-label={t('aria')} className="flex h-[38px] max-w-60 items-center gap-2 rounded-md px-1.5 hover:bg-hover">
-            <span className="flex size-[30px] shrink-0 items-center justify-center rounded-full bg-brand text-[12px] font-bold text-on-brand">{initials(user.name)}</span>
+            <span className="flex size-[30px] shrink-0 items-center justify-center rounded-full bg-brand text-hint font-bold text-on-brand">{initials(user.name)}</span>
             {/* Nur der Name: Die Rollen standen hier abgeschnitten und sagten wenig (Befund 30, 0.2.1). */}
             {/* Telefon: nur die Initialen, siehe `topbar.tsx`. */}
-            <span className="min-w-0 flex-1 truncate text-left text-[13px] font-semibold max-sm:hidden">{user.name}</span>
+            <span className="min-w-0 flex-1 truncate text-left text-meta font-semibold max-sm:hidden">{user.name}</span>
             <ChevronDown className="size-3.5 shrink-0 text-muted-ink max-sm:hidden" aria-hidden />
           </button>
         }
@@ -51,7 +51,7 @@ export function UserMenu({ user, build, version }: UserMenuProps) {
           <DropdownMenuItem nativeButton render={<button type="submit" className="w-full text-left" />}>{t('logout')}</DropdownMenuItem>
         </form>
         <DropdownMenuSeparator />
-        <p className="px-2 py-1.5 text-[10px] text-muted-ink">{shell('version', { version, build })}</p>
+        <p className="px-2 py-1.5 text-hint text-muted-ink">{shell('version', { version, build })}</p>
       </DropdownMenuContent>
     </DropdownMenu>
   );

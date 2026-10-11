@@ -3,6 +3,7 @@
 import type { MouseEvent, ReactNode } from 'react';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { cn } from '@/lib/utils';
+import { Overline } from '@/components/overline';
 
 export type CompareSide = 'current' | 'proposal';
 
@@ -62,7 +63,7 @@ export function ChoiceCompare({
       >
         <span className="flex items-center gap-2">
           <RadioGroupItem value={key} aria-label={title} disabled={disabled} />
-          <span className="text-hint font-semibold uppercase tracking-wide text-muted-ink">{title}</span>
+          <Overline as="span">{title}</Overline>
         </span>
         <span className="min-w-0 break-words text-body text-ink">{body}</span>
         {extra}

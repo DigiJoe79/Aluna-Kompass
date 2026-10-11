@@ -40,14 +40,14 @@ export function ApprovalDetailFrame({ head, headRef, children, requirements, foo
     <div className="flex min-h-full flex-col gap-4">
       <div ref={headRef} tabIndex={-1} data-testid="approval-head" aria-labelledby="approval-number" className="space-y-1 rounded-lg border border-line bg-surface p-4 outline-none focus-visible:ring-2 focus-visible:ring-focus">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="rounded-sm border border-line-strong px-1.5 py-0.5 text-[12px] font-semibold text-ink-2">{head.kind}</span>
-          <h3 id="approval-number" data-testid="approval-number" className="font-mono text-[15px] font-semibold text-ink">
+          <span className="rounded-sm border border-line-strong px-1.5 py-0.5 text-hint font-semibold text-ink-2">{head.kind}</span>
+          <p id="approval-number" data-testid="approval-number" className="font-mono text-section text-ink">
             {head.number}
-          </h3>
+          </p>
         </div>
-        <p className="font-mono text-[30px] font-semibold tabular-nums text-ink">{head.amount}</p>
-        <p className="text-[14px] text-ink">{head.person}</p>
-        <p className="text-[12px] text-muted-ink">
+        <p className="font-mono text-figure font-semibold tabular-nums text-ink">{head.amount}</p>
+        <p className="text-body text-ink">{head.person}</p>
+        <p className="text-hint text-muted-ink">
           {head.received}
           {head.note ? ` · ${head.note}` : ''}
         </p>

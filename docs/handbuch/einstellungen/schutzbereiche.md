@@ -17,7 +17,7 @@ Wer Post ablegt, darf sie auch in eine geschützte Art ablegen oder dorthin umkl
 
 ## Einen Bereich setzen
 
-Verwaltung → Akte → Dokumentarten, Auswahl „Schutzbereich“. Ändern kann ihn nur, wer die Akte verwalten darf **und** selbst das Recht des Bereichs hat — niemand hebt einen Schutz auf, hinter den er nicht sehen darf. Vor dem Speichern steht, wie viele Dokumente betroffen sind. Der Bereich wirkt sofort, auch auf alle vorhandenen Dokumente der Art.
+Einrichtung → Akte → Arten, Auswahl „Schutzbereich“. Ändern kann ihn nur, wer die Akte verwalten darf **und** selbst das Recht des Bereichs hat — niemand hebt einen Schutz auf, hinter den er nicht sehen darf. Vor dem Speichern steht, wie viele Dokumente betroffen sind. Der Bereich wirkt sofort, auch auf alle vorhandenen Dokumente der Art.
 
 Bei Dokumentarten, die einem Modul gehören, ist der Bereich fest.
 

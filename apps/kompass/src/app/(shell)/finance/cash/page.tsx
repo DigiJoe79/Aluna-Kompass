@@ -16,6 +16,7 @@ import { formatEuro } from '@/lib/finance/amount';
 import { CountDialog } from './count-dialog';
 import { MoveDialog } from './move-dialog';
 import { PaidDialog } from './paid-dialog';
+import { Section } from '@/components/section';
 
 export interface CashPageQuery {
   account?: string;
@@ -77,8 +78,8 @@ export default async function FinanceCashPage({ searchParams }: { searchParams: 
         ) : null}
 
         <div data-testid="cash-balance" className="rounded-lg border border-line bg-surface p-5">
-          <p className="text-[13px] text-muted-ink">{selected.name}</p>
-          <p className="font-mono text-[34px] font-semibold tabular-nums">{formatEuro(selected.balanceCents)}</p>
+          <p className="text-meta text-muted-ink">{selected.name}</p>
+          <p className="font-mono text-figure font-semibold tabular-nums">{formatEuro(selected.balanceCents)}</p>
         </div>
 
         {canFinalize ? (
@@ -105,48 +106,57 @@ export default async function FinanceCashPage({ searchParams }: { searchParams: 
           </BlockedState>
         )}
 
-        <section aria-label={t('lastMovements.title')} className="space-y-2">
-          <div className="flex items-center justify-between">
-            <h3 className="font-heading text-[15px]">{t('lastMovements.title')}</h3>
-            <Link href={`/finance/entries?account=${selected.accountId}`} className="text-[13px] text-link">
-              {t('lastMovements.toJournal')}
-            </Link>
-          </div>
-          {entriesRes.ok && entriesRes.value.entries.length > 0 ? (
-            <ul className="divide-y divide-line rounded-md border border-line">
-              {entriesRes.value.entries.map((entry) => {
-                const amount = entry.moneyLines.filter((l) => l.accountId === selected.accountId).reduce((s, l) => s + l.amountCents, 0);
-                return (
-                  <li key={entry.id} className="flex items-center justify-between px-3 py-2 text-[13px]">
-                    <span>
-                      {fmt.date(entry.entryDate)} · {entry.text}
-                    </span>
-                    <span className="font-mono tabular-nums">{formatEuro(amount)}</span>
-                  </li>
-                );
-              })}
-            </ul>
-          ) : (
-            <p className="text-[13px] text-muted-ink">{t('lastMovements.empty')}</p>
-          )}
+        <section aria-label={t('lastMovements.title')}>
+          <Section title={t('lastMovements.title')}
+            actions={
+              <>
+                <Link href={`/finance/entries?account=${selected.accountId}`} className="text-meta text-link">
+                  {t('lastMovements.toJournal')}
+                </Link>
+              </>
+            }
+          >
+            <div className="space-y-2">
+              {entriesRes.ok && entriesRes.value.entries.length > 0 ? (
+                <ul className="divide-y divide-line rounded-md border border-line">
+                  {entriesRes.value.entries.map((entry) => {
+                    const amount = entry.moneyLines.filter((l) => l.accountId === selected.accountId).reduce((s, l) => s + l.amountCents, 0);
+                    return (
+                      <li key={entry.id} className="flex items-center justify-between px-3 py-2 text-meta">
+                        <span>
+                          {fmt.date(entry.entryDate)} · {entry.text}
+                        </span>
+                        <span className="font-mono tabular-nums">{formatEuro(amount)}</span>
+                      </li>
+                    );
+                  })}
+                </ul>
+              ) : (
+                <p className="text-meta text-muted-ink">{t('lastMovements.empty')}</p>
+              )}
+            </div>
+          </Section>
         </section>
 
-        <section aria-label={t('counts.title')} className="space-y-2">
-          <h3 className="font-heading text-[15px]">{t('counts.title')}</h3>
-          {countsRes.ok && countsRes.value.counts.length > 0 ? (
-            <ul className="divide-y divide-line rounded-md border border-line">
-              {countsRes.value.counts.map((count) => (
-                <li key={count.id} className="flex items-center justify-between px-3 py-2 text-[13px]">
-                  <span>{fmt.date(count.countedOn)}</span>
-                  <a href={`/finance/cash/${count.id}/protocol`} target="_blank" rel="noreferrer" className="text-link">
-                    {count.documentNumber}
-                  </a>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-[13px] text-muted-ink">{t('counts.empty')}</p>
-          )}
+        <section aria-label={t('counts.title')}>
+          <Section title={t('counts.title')}>
+            <div className="space-y-2">
+              {countsRes.ok && countsRes.value.counts.length > 0 ? (
+                <ul className="divide-y divide-line rounded-md border border-line">
+                  {countsRes.value.counts.map((count) => (
+                    <li key={count.id} className="flex items-center justify-between px-3 py-2 text-meta">
+                      <span>{fmt.date(count.countedOn)}</span>
+                      <a href={`/finance/cash/${count.id}/protocol`} target="_blank" rel="noreferrer" className="text-link">
+                        {count.documentNumber}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-meta text-muted-ink">{t('counts.empty')}</p>
+              )}
+            </div>
+          </Section>
         </section>
       </div>
     </Page>

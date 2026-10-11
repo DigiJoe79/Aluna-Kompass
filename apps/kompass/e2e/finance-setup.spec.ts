@@ -550,7 +550,7 @@ test.describe('finance setup', () => {
   test('Pauschalen an Vorstandsmitglieder: eigener Abschnitt mit Speicherleiste, „Gilt ab“ meldet der Dienst am Feld (K9-Befund 2/3)', async ({ page }) => {
     await page.goto('/admin/finance?panel=tax');
     const panel = page.getByTestId('tax-panel');
-    await expect(panel.getByRole('heading', { name: 'Pauschalen an Vorstandsmitglieder', level: 3 })).toBeVisible();
+    await expect(panel.getByRole('heading', { name: 'Pauschalen an Vorstandsmitglieder', level: 2 })).toBeVisible();
     const form = panel.getByTestId('board-remuneration');
     await form.getByLabel('Pauschalen an Vorstandsmitglieder sind vorgesehen').check();
     await form.getByLabel('Satzungsfundstelle').fill('Satzung § 7 Abs. 3');

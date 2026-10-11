@@ -35,7 +35,11 @@ export interface MediaChooserDialogProps {
   max?: number;
   /** Bereits gewählte IDs; bei multiple vorab angehakt, bei single nur markiert. */
   selected: string[];
-  onConfirm: (ids: string[]) => void;
+  /**
+   * Die gewählten IDs; dazu die Pixelmaße der Rasterbilder, soweit bekannt (aus der Liste oder dem Hochladen) —
+   * ein Bildfeld bietet damit „Ausschnitt …“ gleich nach dem Wählen an (Spec Ausschnitt für alle Bilder § 4).
+   */
+  onConfirm: (ids: string[], sizes: Record<string, { width: number; height: number }>) => void;
 }
 
 const ACCEPT = { image: 'image/png,image/jpeg,image/webp,image/svg+xml', pdf: 'application/pdf' } as const;
@@ -136,9 +140,13 @@ export function MediaChooserDialog({ open, onOpenChange, kind, multiple, max, se
     if (listing && openFolder !== null && !shownFolders.some((f) => f.path === openFolder)) setFolder(null);
   }, [listing, openFolder, shownFolders, setFolder]);
 
+  const sizesOf = (ids: readonly string[]) =>
+    Object.fromEntries(
+      (listing?.items ?? []).flatMap((it) => (ids.includes(it.id) && it.width && it.height ? [[it.id, { width: it.width, height: it.height }]] : [])),
+    );
   const choose = (id: string) => {
     if (!multiple) {
-      onConfirm([id]);
+      onConfirm([id], sizesOf([id]));
       onOpenChange(false);
       return;
     }
@@ -155,6 +163,7 @@ export function MediaChooserDialog({ open, onOpenChange, kind, multiple, max, se
     setUploadRefusal({ status: 'idle' });
     try {
       let last: string | null = null;
+      let lastSize: { width: number; height: number } | null = null;
       for (const file of Array.from(files)) {
         const fd = new FormData();
         fd.set('file', file);
@@ -166,16 +175,17 @@ export function MediaChooserDialog({ open, onOpenChange, kind, multiple, max, se
           continue;
         }
         if (state.status === 'success') {
-          const data = state.data as { id: string; created: boolean };
+          const data = state.data as { id: string; created: boolean; width?: number | null; height?: number | null };
           if (!data.created && state.message) toast.info(state.message);
           last = data.id;
+          lastSize = data.width && data.height ? { width: data.width, height: data.height } : null;
           // Hochladen geht auch an der Grenze; angehakt wird nur, was noch Platz hat.
           if (multiple) setPicked((p) => (max !== undefined && p.size >= max && !p.has(data.id) ? p : new Set(p).add(data.id)));
         }
       }
       await load();
       if (!multiple && last) {
-        onConfirm([last]);
+        onConfirm([last], lastSize ? { [last]: lastSize } : {});
         onOpenChange(false);
       }
     } finally {
@@ -278,7 +288,7 @@ export function MediaChooserDialog({ open, onOpenChange, kind, multiple, max, se
 
           <div className="max-h-[55vh] min-w-0 flex-1 overflow-y-auto">
             {failed ? (
-              <p role="alert" className="text-[13px] text-error">
+              <p role="alert" className="text-meta text-error">
                 {t('chooser.loadFailed')}
               </p>
             ) : listing && items.length === 0 ? (
@@ -301,7 +311,7 @@ export function MediaChooserDialog({ open, onOpenChange, kind, multiple, max, se
               </span>
             }
             onSave={() => {
-              onConfirm([...picked]);
+              onConfirm([...picked], sizesOf([...picked]));
               onOpenChange(false);
             }}
           />

@@ -32,7 +32,7 @@ export function PartnerList({ partners }: { partners: PartnerRow[] }) {
   return (
     <div className="space-y-4">
       {partners.length === 0 ? (
-        <p className="rounded-md border border-dashed border-line-strong bg-surface p-4 text-[14px] text-muted-ink" data-testid="partners-empty">{t('emptyText')}</p>
+        <p className="rounded-md border border-dashed border-line-strong bg-surface p-4 text-body text-muted-ink" data-testid="partners-empty">{t('emptyText')}</p>
       ) : (
         <Table data-testid="partner-rows">
           <TableHeader>

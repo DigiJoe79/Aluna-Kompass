@@ -20,8 +20,9 @@ import {
 } from '@kompass/core';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
+import { mapAssetValues, rebaseAssetValue } from './asset-values';
 import { siteTemplateDir } from './env';
-import { schemaFor, widgetOf } from './field-schema';
+import { schemaFor } from './field-schema';
 import { siteEntries, siteValues } from './schema';
 import { activeTemplate } from './service';
 import type { FieldSchema, TemplateSchema } from './load';
@@ -85,12 +86,6 @@ export async function readSeed(templateDir: string): Promise<Result<SeedDocument
 }
 
 const SLUG = /^[a-z0-9][a-z0-9-]{0,80}$/;
-
-/** Feldnamen, unter denen ein Asset steht — dieselbe Markierung wie im Export. */
-const assetFieldKeys = (fields: Record<string, FieldSchema>): string[] =>
-  Object.entries(fields)
-    .filter(([, f]) => widgetOf(f) === 'asset')
-    .map(([k]) => k);
 
 /**
  * Übernimmt die Startinhalte des Templates in eine leere Webseite. Einmalig:
@@ -159,8 +154,11 @@ export async function applySeed(deps: Deps, ctx: CallContext, opts: { confirm: b
   const files = new Map<string, { filename: string; bytes: Uint8Array; mimeType: string }>();
   for (const a of doc.assets) {
     const file = path.join(seedDir(dir), 'assets', a.filename);
+    // Ein Kompass-Export führt eine abgeleitete ID (`<id>~x_y_w_h`) mit der Datei ihrer Basis: einmal je Basis laden.
+    const logicalId = a.id.split('~')[0]!;
+    if (files.has(logicalId)) continue;
     try {
-      files.set(a.id, { filename: a.filename, bytes: new Uint8Array(await readFile(file)), mimeType: a.mimeType });
+      files.set(logicalId, { filename: a.filename, bytes: new Uint8Array(await readFile(file)), mimeType: a.mimeType });
     } catch {
       missing.push(a.filename);
     }
@@ -202,14 +200,9 @@ export async function applySeed(deps: Deps, ctx: CallContext, opts: { confirm: b
     idMap.set(logicalId, stored.value.id);
   }
 
-  const remap = (data: Record<string, unknown>, fields: Record<string, FieldSchema>): Record<string, unknown> => {
-    const out = { ...data };
-    for (const k of assetFieldKeys(fields)) {
-      const v = out[k];
-      if (typeof v === 'string' && v !== '') out[k] = idMap.get(v) ?? v;
-    }
-    return out;
-  };
+  // Logische ID → Mediathek-ID, auch in Listen; ein Ausschnitt (`~x_y_w_h`) bleibt am Wert.
+  const remap = (data: Record<string, unknown>, fields: Record<string, FieldSchema>): Record<string, unknown> =>
+    mapAssetValues(fields, data, (v) => rebaseAssetValue(v, (id) => idMap.get(id))) as Record<string, unknown>;
 
   // 4. Schreiben in einer Transaktion, ein Audit-Eintrag
   report.applied = true;
@@ -217,8 +210,7 @@ export async function applySeed(deps: Deps, ctx: CallContext, opts: { confirm: b
   deps.db.transaction((tx) => {
     for (const [key, value] of Object.entries(varsChecked.value as Record<string, unknown>)) {
       // Asset-Variablen gibt es bei Aluna nicht; für andere Templates trotzdem umschreiben.
-      const isAsset = widgetOf(schema.variables[key]!) === 'asset';
-      const mapped = isAsset && typeof value === 'string' && value !== '' ? (idMap.get(value) ?? value) : value;
+      const mapped = remap({ [key]: value }, { [key]: schema.variables[key]! })[key];
       tx.insert(siteValues).values({ key, value: mapped, updatedAt: now }).run();
     }
     for (const [key, list] of Object.entries(entriesChecked)) {

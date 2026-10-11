@@ -67,12 +67,12 @@ export function NoticesTable({ rows, canIssue, canPickDocument }: { rows: Notice
                     die sechs Spalten bei 1440 px seitlich über (release-0.2.7.md, Befund 14). */}
                 <TableCell className="whitespace-normal">
                   {tk(row.kind)}
-                  <span className="block text-[12px] text-muted-ink">{row.taxOffice} · <span className="font-mono">{row.taxNumber}</span></span>
+                  <span className="block text-hint text-muted-ink">{row.taxOffice} · <span className="font-mono">{row.taxNumber}</span></span>
                 </TableCell>
                 <TableCell className="font-mono tabular-nums">{date(row.noticeDate)}</TableCell>
                 <TableCell className="whitespace-normal">
                   <span className="whitespace-nowrap font-mono tabular-nums"><span data-testid="notice-exempt-from">{date(row.exemptFrom)}</span> – {date(row.validUntil)}</span>
-                  {row.assessmentPeriod ? <span className="block text-[12px] text-muted-ink">{t('assessmentPeriodLine', { period: row.assessmentPeriod })}</span> : null}
+                  {row.assessmentPeriod ? <span className="block text-hint text-muted-ink">{t('assessmentPeriodLine', { period: row.assessmentPeriod })}</span> : null}
                 </TableCell>
                 <TableCell data-testid="notice-document" className="font-mono">{row.documentNumber ?? <span className="font-sans text-muted-ink">{t('noDocument')}</span>}</TableCell>
                 <TableCell>
@@ -134,7 +134,7 @@ function SupersedeDialog({ notice, canPickDocument, onClose }: { notice: NoticeR
     <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
       <DialogContent size="md" className="bg-surface shadow-md">
         <DialogTitle>{ts('title')}</DialogTitle>
-        <p className="text-[13px] text-ink-2">{ts('hint')}</p>
+        <p className="text-meta text-ink-2">{ts('hint')}</p>
         <FormGrid>
           <FormField id="notice-superseded-on" label={ts('date')} required size="s">
             <Input id="notice-superseded-on" type="date" className="font-mono" value={supersededOn} onChange={(e) => setSupersededOn(e.target.value)} />

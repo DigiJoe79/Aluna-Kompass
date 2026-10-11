@@ -164,6 +164,26 @@ describe('applySeed', () => {
     expect(deps.db.select().from(core.mediaFolders).all().map((f) => f.path)).toEqual(['Webseite']);
   });
 
+  // Ausschnitt für alle Bilder § 3: Ein Kompass-Export führt abgeleitete IDs in Werten und unter `assets`; die
+  // Startinhalte schreiben die Basis um und behalten den Ausschnitt.
+  it('keeps the crop of a derived ID and rewrites its base', async () => {
+    const deps = seededDeps();
+    process.env.SITE_TEMPLATE_DIR = templateWithSeed({
+      collections: { team: [{ photoAssetId: 'logo~1000_0_8000_10000' }, { photoAssetId: 'logo' }] },
+      assets: [
+        { id: 'logo', filename: 'logo.png', mimeType: 'image/png' },
+        { id: 'logo~1000_0_8000_10000', filename: 'logo.png', mimeType: 'image/png' },
+      ],
+    });
+    const dir = process.env.SITE_TEMPLATE_DIR!;
+    writeFileSync(path.join(dir, 'seed', 'assets', 'logo.png'), readFileSync(path.join(FIXTURE, 'seed', 'assets', 'logo.png')));
+    unwrap(await applySeed(deps, manage, { confirm: true }));
+    const media = deps.db.select().from(core.mediaAssets).all();
+    expect(media).toHaveLength(1);
+    const photos = deps.db.select().from(siteEntries).all().filter((e) => e.collection === 'team').map((e) => (e.data as { photoAssetId: string }).photoAssetId);
+    expect(photos.sort()).toEqual([media[0]!.id, `${media[0]!.id}~1000_0_8000_10000`].sort());
+  });
+
   it('refuses when a referenced asset file is missing, writing nothing', async () => {
     const deps = seededDeps();
     process.env.SITE_TEMPLATE_DIR = templateWithSeed({

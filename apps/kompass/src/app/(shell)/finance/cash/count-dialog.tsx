@@ -20,6 +20,7 @@ import { Input } from '@/components/ui/input';
 import { formatAmount, formatEuro, parseAmount } from '@/lib/finance/amount';
 import { countResult, DENOMINATIONS_CENTS, sumDenominations } from '@/lib/finance/cash';
 import { countCashAction, emptyDonationBoxAction } from './actions';
+import { Section } from '@/components/section';
 
 export interface CashAccountOption {
   id: string;
@@ -117,83 +118,77 @@ export function CountDialog({ account, today, canCreateContact }: { account: Cas
       <Dialog open={open} onOpenChange={(next) => (next ? setOpen(true) : close())}>
         <DialogContent size="lg" className="bg-surface shadow-md">
           <DialogTitle>{t('trigger')}</DialogTitle>
-          <section>
-            <h3 className="text-[15px] font-semibold">{t('sections.what')}</h3>
-            <div className="mt-3">
-              <FormGrid>
-                <FormCell size="s">
-                  <Segmented
-                    aria-label={t('modeGroup')}
-                    options={(['cash', 'box'] as const).map((m) => ({ value: m, label: t(`mode.${m}`) }))}
-                    value={mode}
-                    onValueChange={setMode}
-                  />
-                </FormCell>
-                {mode === 'box' ? (
-                  <FormField id="countBoxLabel" label={t('boxLabel')} required>
-                    <Input id="countBoxLabel" value={boxLabel} onChange={(e) => setBoxLabel(e.target.value)} required />
-                  </FormField>
-                ) : null}
-                <FormRowBreak />
-                <FormField id="countedOn" label={t('date')} size="s">
-                  <Input id="countedOn" type="date" value={countedOn} max={today} onChange={(e) => setCountedOn(e.target.value)} />
+          <Section title={t('sections.what')}>
+            <FormGrid>
+              <FormCell size="s">
+                <Segmented
+                  aria-label={t('modeGroup')}
+                  options={(['cash', 'box'] as const).map((m) => ({ value: m, label: t(`mode.${m}`) }))}
+                  value={mode}
+                  onValueChange={setMode}
+                />
+              </FormCell>
+              {mode === 'box' ? (
+                <FormField id="countBoxLabel" label={t('boxLabel')} required>
+                  <Input id="countBoxLabel" value={boxLabel} onChange={(e) => setBoxLabel(e.target.value)} required />
                 </FormField>
-                {!useHelper ? (
-                  <FormField id="countedCents" label={t('countedAmount')} required size="s">
-                    <AmountField id="countedCents" name="countedCents" value={amountText} onChange={setAmountText} required />
-                  </FormField>
-                ) : (
-                  <FormCell as="p" size="s" className="self-end text-[13px] font-mono">{formatEuro(helperCents)}</FormCell>
-                )}
-                {mode === 'cash' ? (
-                  <FormCell size="full">
-                    <Disclosure label={t('helper.title')} defaultOpen={useHelper}>
-                      <FormField id="countHelper" label={t('helper.use')} toggle className="mb-2">
-                        <Checkbox id="countHelper" checked={useHelper} onCheckedChange={(next) => setUseHelper(next === true)} />
-                      </FormField>
-                      {useHelper ? (
-                        // Die Zählhilfe hat ihr eigenes Unterraster für die Stückelungen (Entscheidung zum Inventar).
-                        <div className="grid grid-cols-3 gap-2">
-                          {DENOMINATIONS_CENTS.map((cents) => (
-                            <label key={cents} className="flex items-center gap-1.5 text-[12px]">
-                              <span className="w-16 shrink-0">{formatAmount(cents)} €</span>
-                              <Input
-                                type="number"
-                                min={0}
-                                inputMode="numeric"
-                                data-testid={`denomination-${cents}`}
-                                value={pieces[cents] ?? ''}
-                                onChange={(e) => setPieces((prev) => ({ ...prev, [cents]: Number(e.target.value) || 0 }))}
-                                className="text-right"
-                              />
-                            </label>
-                          ))}
-                        </div>
-                      ) : null}
-                    </Disclosure>
-                  </FormCell>
-                ) : null}
-              </FormGrid>
-            </div>
-          </section>
+              ) : null}
+              <FormRowBreak />
+              <FormField id="countedOn" label={t('date')} size="s">
+                <Input id="countedOn" type="date" value={countedOn} max={today} onChange={(e) => setCountedOn(e.target.value)} />
+              </FormField>
+              {!useHelper ? (
+                <FormField id="countedCents" label={t('countedAmount')} required size="s">
+                  <AmountField id="countedCents" name="countedCents" value={amountText} onChange={setAmountText} required />
+                </FormField>
+              ) : (
+                <FormCell as="p" size="s" className="self-end text-meta font-mono">{formatEuro(helperCents)}</FormCell>
+              )}
+              {mode === 'cash' ? (
+                <FormCell size="full">
+                  <Disclosure label={t('helper.title')} defaultOpen={useHelper}>
+                    <FormField id="countHelper" label={t('helper.use')} toggle className="mb-2">
+                      <Checkbox id="countHelper" checked={useHelper} onCheckedChange={(next) => setUseHelper(next === true)} />
+                    </FormField>
+                    {useHelper ? (
+                      // Die Zählhilfe hat ihr eigenes Unterraster für die Stückelungen (Entscheidung zum Inventar).
+                      <div className="grid grid-cols-3 gap-2">
+                        {DENOMINATIONS_CENTS.map((cents) => (
+                          <label key={cents} className="flex items-center gap-1.5 text-hint">
+                            <span className="w-16 shrink-0">{formatAmount(cents)} €</span>
+                            <Input
+                              type="number"
+                              min={0}
+                              inputMode="numeric"
+                              data-testid={`denomination-${cents}`}
+                              value={pieces[cents] ?? ''}
+                              onChange={(e) => setPieces((prev) => ({ ...prev, [cents]: Number(e.target.value) || 0 }))}
+                              className="text-right"
+                            />
+                          </label>
+                        ))}
+                      </div>
+                    ) : null}
+                  </Disclosure>
+                </FormCell>
+              ) : null}
+            </FormGrid>
+          </Section>
 
-          <section className="border-t border-line pt-5">
-            <h3 className="text-[15px] font-semibold">{t('sections.who')}</h3>
-            <div className="mt-3">
-              <FormGrid>
-                <FormCell size="m">
-                  <ContactPicker id="counter-one" name="counterOne" label={t('counterOne')} value={counterOne} onChange={setCounterOne} required kind="person" canCreate={canCreateContact} />
-                </FormCell>
-                <FormCell size="m">
-                  <ContactPicker id="counter-two" name="counterTwo" label={t('counterTwo')} value={counterTwo} onChange={setCounterTwo} required kind="person" canCreate={canCreateContact} />
-                </FormCell>
-              </FormGrid>
-              <FieldError id="count-counters-error" message={fieldError ?? undefined} />
-            </div>
-          </section>
+          <Section title={t('sections.who')}>
+            <FormGrid>
+              <FormCell size="m">
+                <ContactPicker id="counter-one" name="counterOne" label={t('counterOne')} value={counterOne} onChange={setCounterOne} required kind="person" canCreate={canCreateContact} />
+              </FormCell>
+              <FormCell size="m">
+                <ContactPicker id="counter-two" name="counterTwo" label={t('counterTwo')} value={counterTwo} onChange={setCounterTwo} required kind="person" canCreate={canCreateContact} />
+              </FormCell>
+            </FormGrid>
+            <FieldError id="count-counters-error" message={fieldError ?? undefined} />
+          </Section>
 
           {mode === 'cash' && preview ? (
-            <p aria-live="polite" className="text-[13px]">
+            <p aria-live="polite" className="text-meta">
               {t('resultLine', { book: formatEuro(bookCents), counted: formatEuro(countedCents ?? 0) })}
               {preview.kind !== 'equal' ? <strong> · {t(`kind.${preview.kind}`)} {formatEuro(Math.abs(preview.differenceCents))}</strong> : null}
             </p>

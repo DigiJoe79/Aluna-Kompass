@@ -1,4 +1,4 @@
-import { localizedColumn, schema as core } from '@kompass/core';
+import { localizedColumn, schema as core, type CropRect } from '@kompass/core';
 import { index, integer, sqliteTable, text } from 'drizzle-orm/sqlite-core';
 
 /** Ein Verweis nach aussen — Spendenseite, Bericht, Partner. Was ein Template daraus macht, entscheidet das Template. */
@@ -18,6 +18,8 @@ export const projects = sqliteTable(
     summary: localizedColumn('summary'),
     body: localizedColumn('body'),
     imageAssetId: text('image_asset_id').references(() => core.mediaAssets.id),
+    /** Ausschnitt des Projektbilds (Spec Ausschnitt für alle Bilder § 3); `null` = ganzes Bild. */
+    imageCrop: text('image_crop', { mode: 'json' }).$type<CropRect>(),
     externalLinks: text('external_links', { mode: 'json' }).$type<ExternalLink[]>().notNull().default([]),
     isPublished: integer('is_published', { mode: 'boolean' }).notNull().default(false),
     sortOrder: integer('sort_order').notNull().default(0),

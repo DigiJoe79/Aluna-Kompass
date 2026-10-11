@@ -4,7 +4,7 @@ import { createCn } from 'cn/config';
  * Die Schriftrollen aus `app/globals.css` (K10). `cn` muss sie kennen: Sonst hält die Zusammenführung
  * `text-meta` für eine Textfarbe, und `cn('text-meta text-muted-ink')` ließe nur die Farbe übrig.
  */
-export const TYPE_ROLES = ['dialog-title', 'section', 'body', 'meta', 'hint', 'figure'] as const;
+export const TYPE_ROLES = ['page-title', 'dialog-title', 'section', 'body', 'meta', 'hint', 'label', 'key', 'figure', 'amount'] as const;
 
 export const cn = createCn({ extend: { classGroups: { 'font-size': [{ text: [...TYPE_ROLES] }] } } });
 

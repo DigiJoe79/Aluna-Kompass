@@ -11,9 +11,9 @@ import { financeCategories } from '../src/schema';
 /**
  * Ersatz für die manuelle Prüfung aus Task 13 Step 2 (kein Bildschirm zur
  * Verfügung): schaltet Finanzen über den Dienst des Kerns ein, wie es
- * Verwaltung → Module täte, und prüft die vier sichtbaren Folgen.
+ * Einrichtung → Module täte, und prüft die vier sichtbaren Folgen.
  */
-describe('switching finance on, the way Verwaltung → Module would', () => {
+describe('switching finance on, the way Einrichtung → Module would', () => {
   it('provisions the five roles, the 37 categories, locks the bank details, and shows the protection area', async () => {
     const deps = createTestDeps({ manifests: [coreModule, contactsModule, dmsModule, projectsModule, financeModule] });
     const admin = ctxWith(['modules.manage', 'settings.manage', 'dms.manage']);

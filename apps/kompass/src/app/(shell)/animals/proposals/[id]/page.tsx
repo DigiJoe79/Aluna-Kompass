@@ -1,5 +1,5 @@
-import { hasPermission, requirePermission } from '@kompass/core';
-import { getProposal, listProposals, MAX_ANIMAL_PHOTOS } from '@kompass/module-animals';
+import { hasPermission, imagePlaces, requirePermission } from '@kompass/core';
+import { effectivePhotoFrame, getProposal, listProposals, MAX_ANIMAL_PHOTOS, photoPixelSizes, PRIMARY_PHOTO_PLACE } from '@kompass/module-animals';
 import { getTranslations } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 import { ForbiddenCard } from '@/components/forbidden-card';
@@ -54,7 +54,12 @@ export default async function ProposalPage(props: { params: Promise<{ id: string
       }
     />
   );
-  const common = { review: review.value, locales: deps.locales(), nextHref, backHref: back.href, canFollowUp: hasPermission(ctx, 'followUps.manage') };
+  // Die Stellen der Webseite wie im Tierformular (`animals/[id]/page.tsx`): Die Kachel steht im Format ihrer Stelle, der
+  // Dialog „Ausschnitt“ kennt sie. Pixelmaße für Fotos aus Kompass — Quellbilder bringen ihre mit (Spec Ausschnitt in der Prüfung § 3).
+  const { focusX, focusY } = effectivePhotoFrame(deps);
+  const photoPlaces = { primary: imagePlaces(deps, PRIMARY_PHOTO_PLACE), gallery: imagePlaces(deps, 'animals.gallery'), focus: { focusX, focusY } };
+  const photoSizes = photoPixelSizes(deps, (review.value.photos ?? []).flatMap((r) => (r.mediaId ? [r.mediaId] : [])));
+  const common = { review: review.value, locales: deps.locales(), nextHref, backHref: back.href, canFollowUp: hasPermission(ctx, 'followUps.manage'), photoPlaces, photoSizes };
   switch (proposal.kind) {
     case 'update':
       return (

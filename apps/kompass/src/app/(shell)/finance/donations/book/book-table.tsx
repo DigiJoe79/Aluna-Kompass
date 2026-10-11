@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import type { ActionState } from '@/lib/actions';
 import { formatEuro } from '@/lib/finance/amount';
+import { Overline } from '@/components/overline';
 
 const SUM_KINDS = ['donation', 'membershipFee', 'inKindDonation', 'expenseWaiver'] as const;
 
@@ -124,7 +125,7 @@ export function BookTable({
           <Button type="button" variant="outline" disabled={downloading} onClick={() => void download()}>
             {t('simplified.action')}
           </Button>
-          <p className="text-[12px] text-muted-ink">
+          <p className="text-hint text-muted-ink">
             {simplifiedReceiptLimitCents !== null ? t('simplified.hint', { limit: formatEuro(simplifiedReceiptLimitCents) }) : t('simplified.hintUnknown')}
           </p>
         </div>
@@ -133,16 +134,16 @@ export function BookTable({
       <div data-testid="book-sums" className="flex flex-wrap gap-x-8 gap-y-2 rounded-md border border-line bg-surface p-4">
         {SUM_KINDS.filter((kind) => kind !== 'membershipFee' || membershipFeesCertifiable).map((kind) => (
           <span key={kind} className="flex flex-col">
-            <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-ink">{t(`sums.${kind}`)}</span>
-            <span data-testid={`book-sum-${kind}`} className="font-mono text-[15px] tabular-nums text-ink">{formatEuro(sums[kind])}</span>
+            <Overline as="span">{t(`sums.${kind}`)}</Overline>
+            <span data-testid={`book-sum-${kind}`} className="font-mono text-section tabular-nums text-ink">{formatEuro(sums[kind])}</span>
           </span>
         ))}
         <span className="flex flex-col">
-          <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-ink">{t('sums.total')}</span>
-          <span data-testid="book-sum-total" className="font-mono text-[15px] tabular-nums text-ink">{formatEuro(sums.total)}</span>
+          <Overline as="span">{t('sums.total')}</Overline>
+          <span data-testid="book-sum-total" className="font-mono text-section tabular-nums text-ink">{formatEuro(sums.total)}</span>
         </span>
       </div>
-      {membershipFeesCertifiable ? <p className="text-[12px] text-muted-ink">{t('sums.membershipFeeHint')}</p> : null}
+      {membershipFeesCertifiable ? <p className="text-hint text-muted-ink">{t('sums.membershipFeeHint')}</p> : null}
 
       {rows.length === 0 && filterAnonymous ? (
         <EmptyState filtered={{ noun: t('emptyFilteredNoun'), onReset: () => go({ year, anonymous: false }) }} />

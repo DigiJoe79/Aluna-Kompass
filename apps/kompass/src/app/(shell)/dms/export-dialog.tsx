@@ -99,13 +99,13 @@ export function ExportDialog({
           <div className="mt-5">
             <RadioGroup aria-label={t('title')} value={mode} onValueChange={(value) => setMode(value as 'folder' | 'year')} className="gap-4">
               {folder ? (
-                <label className="flex items-center gap-2 text-[14px] text-ink">
+                <label className="flex items-center gap-2 text-body text-ink">
                   <RadioGroupItem value="folder" />
                   {/* Der Name, nie der Weg mit Schrägstrichen. */}
                   {t('thisFolder', { folder: nameOf(folder) })}
                 </label>
               ) : null}
-              <label className="flex items-center gap-2 text-[14px] text-ink">
+              <label className="flex items-center gap-2 text-body text-ink">
                 <RadioGroupItem value="year" />
                 {t('year')}
               </label>
@@ -123,7 +123,7 @@ export function ExportDialog({
             </FormField>
           </div>
 
-          <p className="mt-4 text-[12px] text-muted-ink">{t('hint')}</p>
+          <p className="mt-4 text-hint text-muted-ink">{t('hint')}</p>
 
           <FormActionBar placement="dialog" cancel={() => setOpen(false)} pending={busy} saveLabel={busy ? t('working') : t('submit')} onSave={() => void run()} state={refusal} />
         </DialogContent>

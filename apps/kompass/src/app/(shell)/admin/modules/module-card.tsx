@@ -8,6 +8,8 @@ import { useActionFeedback } from '@/components/forms/use-action-feedback';
 import { StatusBadge } from '@/components/status-badge';
 import { Switch } from '@/components/ui/switch';
 import { setModuleEnabledAction } from './actions';
+import { KeyLine } from '@/components/key-line';
+import { SectionHeading } from '@/components/section';
 
 export function ModuleCard({ module }: { module: ModuleStatus }) {
   const t = useTranslations('modules');
@@ -21,7 +23,7 @@ export function ModuleCard({ module }: { module: ModuleStatus }) {
     >
       <div>
         <div className="flex items-center gap-2">
-          <h3 className="font-heading text-[17px]">{name}</h3>
+          <SectionHeading>{name}</SectionHeading>
           {module.locked ? (
             <StatusBadge tone="brand">{t('alwaysActive')}</StatusBadge>
           ) : (
@@ -29,19 +31,19 @@ export function ModuleCard({ module }: { module: ModuleStatus }) {
               {module.enabled ? t('enabled') : t('disabled')}
             </StatusBadge>
           )}
-          <span className="font-mono text-[11px] text-muted-ink">{module.key}</span>
+          <KeyLine>{module.key}</KeyLine>
         </div>
-        <p className="mt-1 max-w-prose text-[14px] leading-[1.5] text-ink-2">
+        <p className="mt-1 max-w-prose text-body text-ink-2">
           {t.has(`descriptions.${module.key}`) ? t(`descriptions.${module.key}`) : t('noDescription')}
         </p>
-        <p className="mt-1 text-[12px] text-muted-ink">
+        <p className="mt-1 text-hint text-muted-ink">
           {t('meta', { version: module.version })}
           {module.dependsOn.length > 0 ? ` · ${t('dependsOn', { list: module.dependsOn.join(', ') })}` : ''}
         </p>
       </div>
       <div className="flex flex-col items-end gap-1">
         <RefusalNotice action state={feedback.state} />
-        <div className="flex items-center gap-2 text-[13px] font-semibold">
+        <div className="flex items-center gap-2 text-meta font-semibold">
           <span>{module.locked ? t('locked') : module.enabled ? t('enabled') : t('disabled')}</span>
           <Switch
             checked={module.enabled}
@@ -54,7 +56,7 @@ export function ModuleCard({ module }: { module: ModuleStatus }) {
             }
           />
         </div>
-        <span className="text-right text-[11px] text-muted-ink">
+        <span className="text-right text-hint text-muted-ink">
           {module.locked ? t('coreNote') : t.has(`notes.${module.key}`) ? t(`notes.${module.key}`) : ''}
         </span>
       </div>

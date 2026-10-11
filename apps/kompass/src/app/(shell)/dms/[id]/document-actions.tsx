@@ -86,7 +86,7 @@ export function DocumentActions({
             pending={voidBusy}
             saveDisabled={!voidReason.trim()}
             saveLabel={t('voidConfirmSubmit')}
-            note={<span className="text-[12px] text-muted-ink">{tCommon('requiredLegend')}</span>}
+            note={<span className="text-hint text-muted-ink">{tCommon('requiredLegend')}</span>}
             state={voidFb.state}
             onSave={async () => {
               setVoidBusy(true);

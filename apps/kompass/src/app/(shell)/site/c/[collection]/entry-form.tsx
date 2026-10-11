@@ -27,14 +27,21 @@ export function EntryForm({
   hasSlug,
   entry,
   locales,
+  collectionLabel,
+  mediaSizes = {},
 }: {
   collection: string;
   fields: Record<string, FieldSchema>;
   hasSlug: boolean;
   entry: Entry | null;
   locales: string[];
+  /** Name der Sammlung („Team“) — die Stelle, für die ein Bildformat fest ist („1:1 · fest für Team“). */
+  collectionLabel?: string;
+  /** Pixelmaße der Bilder im Eintrag (`mediaPixelSizes`), für „Ausschnitt …“. */
+  mediaSizes?: Readonly<Record<string, { width: number; height: number }>>;
 }) {
   const t = useTranslations('site.entries');
+  const tc = useTranslations('media.crop');
   const c = useTranslations('content');
   const tCommon = useTranslations('common');
   const [data, setData] = useState(() => withBlanks(fields, entry?.data ?? {}, locales));
@@ -78,6 +85,7 @@ export function EntryForm({
           errors={errors}
           locales={locales}
           onChange={setData}
+          media={{ sizes: mediaSizes, target: tc('targets.entry'), ...(collectionLabel ? { placeLabel: collectionLabel } : {}) }}
           leading={
             hasSlug ? (
               <FormField id="slug" label={c('slug')} error={errors.slug}>

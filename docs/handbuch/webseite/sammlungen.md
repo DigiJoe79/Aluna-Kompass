@@ -27,6 +27,11 @@ einen Eintrag öffnet ihn. Die Felder sind dieselben Typen wie bei den
   jeder Eintrag beim nächsten Publish auf der Seite.
 - **Höchstzahl.** Ist sie erreicht, ist „Neu“ gesperrt, bis ein Eintrag
   geht.
+- **Bilder.** Ein Bildfeld hat neben „Wählen“ den Knopf „Ausschnitt …“ — auch
+  in Listen innerhalb eines Eintrags. Gibt die Vorlage dem Feld ein Format vor,
+  ist es fest („1:1 · fest für Team“); der Hinweis auf eine zu kleine Breite
+  richtet sich nach der Breite, in der die Seite das Bild zeigt. Gespeichert
+  wird der Ausschnitt mit dem Eintrag; ein anderes Bild verwirft ihn.
 
 ## Einträge löschen
 

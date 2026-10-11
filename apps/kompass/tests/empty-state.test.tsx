@@ -5,6 +5,7 @@ import type { ReactElement } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import messages from '../messages/de.json';
 import { EmptyState } from '@/components/empty-state';
+import { SectionLevel } from '@/components/section';
 
 const show = (ui: ReactElement) =>
   render(
@@ -16,6 +17,15 @@ const show = (ui: ReactElement) =>
 afterEach(cleanup);
 
 describe('EmptyState', () => {
+  it('Titel ist eine Überschrift in der Rolle Abschnitt, Ebene aus dem Umfeld (K10 Charge 3)', () => {
+    show(<EmptyState title="Ohne Umfeld" text="x" />);
+    const h = screen.getByRole('heading', { name: 'Ohne Umfeld', level: 2 });
+    expect(h.className.split(/\s+/)).toEqual(expect.arrayContaining(['font-heading', 'text-section']));
+    show(<SectionLevel level={3}><EmptyState title="Im Dialog" text="y" /></SectionLevel>);
+    expect(screen.getByRole('heading', { name: 'Im Dialog', level: 3 })).toBeTruthy();
+  });
+
+
   it('ganz leer: Titel, Text und Aktion des Aufrufers', () => {
     show(<EmptyState title="Noch keine Buchung." text="Legen Sie die erste an." action={<a href="/new">Neue Buchung</a>} />);
     expect(screen.getByRole('heading', { name: 'Noch keine Buchung.' })).toBeTruthy();

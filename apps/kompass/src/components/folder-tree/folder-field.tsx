@@ -109,12 +109,12 @@ export function FolderField({
 
   return (
     <div className="flex flex-col gap-1.5">
-      {labelAs === 'dt' ? <dt className="text-[13px] font-semibold text-ink-2">{label}</dt> : <span className="text-[13px] font-semibold text-ink-2">{label}</span>}
+      {labelAs === 'dt' ? <dt className="text-meta font-semibold text-ink-2">{label}</dt> : <span className="text-meta font-semibold text-ink-2">{label}</span>}
       <Row className={cn('flex items-center', field ? 'gap-2' : 'gap-2.5')}>
         <span
           data-folder-path
           className={cn(
-            'flex min-w-0 flex-1 flex-wrap items-center gap-x-1 text-sm',
+            'flex min-w-0 flex-1 flex-wrap items-center gap-x-1 text-body',
             field && 'min-h-[var(--field-h)] rounded-md border bg-field px-2.5 py-1 text-[length:var(--field-font)] text-ink',
             field && (suggested ? 'border-agent' : 'border-line-strong')
           )}

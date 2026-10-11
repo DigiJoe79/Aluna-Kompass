@@ -3,6 +3,7 @@ import { getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 import { Fragment } from 'react';
 import { ancestorsOf, nameOf } from '@/lib/folder-tree-model';
+import { SectionHeading } from '@/components/section';
 import { cn } from '@/lib/utils';
 import { folderHref } from './folder-href';
 
@@ -28,9 +29,9 @@ export async function FolderHeading({
   const ancestors = folder === null ? [] : ancestorsOf(folder);
   const title = inbox ? t('inbox') : folder === null ? t('allDocuments') : nameOf(folder);
   return (
-    <div data-testid="folder-heading" className={cn('mb-3 flex flex-col gap-[3px]', className)}>
+    <div data-testid="folder-heading" className={cn('mb-3 flex flex-col gap-[3px] wrap-anywhere', className)}>
       {ancestors.length > 0 ? (
-        <nav aria-label={t('heading.path')} className="flex flex-wrap items-center gap-1 text-[13px] text-muted-ink">
+        <nav aria-label={t('heading.path')} className="flex flex-wrap items-center gap-1 text-meta text-muted-ink">
           {ancestors.map((path) => (
             <Fragment key={path}>
               <Link href={folderHref(keep, { folder: path })} className="wrap-anywhere text-link hover:underline">
@@ -41,7 +42,7 @@ export async function FolderHeading({
           ))}
         </nav>
       ) : null}
-      <h2 className="font-heading text-[20px] wrap-anywhere text-ink">{title}</h2>
+      <SectionHeading level={2}>{title}</SectionHeading>
     </div>
   );
 }

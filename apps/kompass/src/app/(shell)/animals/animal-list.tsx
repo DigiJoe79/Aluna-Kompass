@@ -140,7 +140,7 @@ export function AnimalList({
         <EmptyState title={t('noMatchTitle')} text={t('noMatchText')} />
       ) : (
         <div className="overflow-hidden rounded-md border border-line bg-surface">
-          <Table className="text-[14px]">
+          <Table className="text-body">
             <TableHeader>
               <TableRow>
                 {canExport ? (
@@ -193,7 +193,7 @@ export function AnimalList({
                     </span>
                   </TableCell>
                   <TableCell className="text-ink-2">{[f(`locations.${a.location}`), a.place].filter(Boolean).join(' · ')}</TableCell>
-                  <TableCell className="text-right font-mono text-[13px] text-ink-2">{a.photoCount}</TableCell>
+                  <TableCell className="text-right font-mono text-meta text-ink-2">{a.photoCount}</TableCell>
                   <TableCell className="text-ink-2">{dates.date(a.updatedAt)}</TableCell>
                   <TableCell>
                     <span className="flex justify-end">

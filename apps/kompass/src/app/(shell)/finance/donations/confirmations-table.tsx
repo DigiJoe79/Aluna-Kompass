@@ -19,6 +19,7 @@ import { recordDispatchAction, recordRecallAction } from './actions';
 import { VoidDialog } from './void-dialog';
 import { FormField } from '@/components/forms/form-field';
 import { FormGrid } from '@/components/forms/form-grid';
+import { Overline } from '@/components/overline';
 
 export interface ConfirmationRow {
   id: string;
@@ -66,7 +67,7 @@ export function ConfirmationsTable({ rows, canIssue, initialOpenId, today, foote
       return (
         <>
           <StatusBadge tone="neutral">{t('state.voided')}</StatusBadge>
-          {row.toCorrect.length > 0 ? <span className="block text-[12px] text-ink-2">{row.toCorrect.map((reason) => t(`toCorrectReason.${reason}`)).join(', ')}</span> : null}
+          {row.toCorrect.length > 0 ? <span className="block text-hint text-ink-2">{row.toCorrect.map((reason) => t(`toCorrectReason.${reason}`)).join(', ')}</span> : null}
         </>
       );
     }
@@ -74,7 +75,7 @@ export function ConfirmationsTable({ rows, canIssue, initialOpenId, today, foote
       return (
         <>
           <StatusBadge tone="warning">{t('state.toCorrect')}</StatusBadge>
-          <span className="block text-[12px] text-ink-2">{row.toCorrect.map((reason) => t(`toCorrectReason.${reason}`)).join(', ')}</span>
+          <span className="block text-hint text-ink-2">{row.toCorrect.map((reason) => t(`toCorrectReason.${reason}`)).join(', ')}</span>
         </>
       );
     }
@@ -157,9 +158,9 @@ function Detail({ row, canIssue, onVoid, onDispatch, onRecall }: { row: Confirma
   const t = useTranslations('finance.donations');
   const { date } = useDateFormat();
   return (
-    <div data-testid="confirmation-detail" className="grid grid-cols-1 gap-4 text-[13px] md:grid-cols-[2fr_1fr]">
+    <div data-testid="confirmation-detail" className="grid grid-cols-1 gap-4 text-meta md:grid-cols-[2fr_1fr]">
       <div className="space-y-2">
-        <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-ink">{t('detail.lines')}</p>
+        <Overline>{t('detail.lines')}</Overline>
         <ul className="space-y-1">
           {row.lines.map((line) => (
             <li key={line.lineId} className="flex items-center justify-between gap-3">
@@ -277,7 +278,7 @@ function RecallDialog({ row, today, onClose }: { row: ConfirmationRow; today: st
     <Dialog open onOpenChange={(next) => (next ? undefined : onClose())}>
       <DialogContent size="sm" className="bg-surface shadow-md">
         <DialogTitle>{t('recall.title', { number: row.number })}</DialogTitle>
-        <p className="text-[13px] text-ink-2">{t('recall.hint')}</p>
+        <p className="text-meta text-ink-2">{t('recall.hint')}</p>
         <FormGrid>
           {needsOriginal ? (
             <FormField id="recall-returned" label={t('detail.originalReturnedOn')} size="s">

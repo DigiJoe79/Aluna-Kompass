@@ -197,7 +197,7 @@ export function SettingsForm({
         const tabManagedHintKey = tabManagedFields.length > 0 ? managedHintKey(tabManagedFields[0]!.key) : null;
         return (
         <div key={tab.key} className="p-5">
-          {tabManagedHintKey ? <p className="mb-4 text-[13px] text-ink-2">{t(tabManagedHintKey)}</p> : null}
+          {tabManagedHintKey ? <p className="mb-4 text-meta text-ink-2">{t(tabManagedHintKey)}</p> : null}
           {tab.key === 'tax' && taxMissingUnmanaged > 0 ? (
             <div className="mb-4">
               <Notice level="warn" title={t('taxIncomplete', { count: taxMissingUnmanaged })} testId="tax-incomplete">
@@ -222,7 +222,7 @@ export function SettingsForm({
                 label={t('logo.label')}
                 onChange={(id) => set('branding.logoAssetId', id)}
               />
-              <p className="text-[12px] text-ink-2">{t('logo.hint')}</p>
+              <p className="text-hint text-ink-2">{t('logo.hint')}</p>
             </div>
           ) : null}
           {settingsSections(tab).map(({ section, fields }, index) =>

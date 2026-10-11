@@ -131,7 +131,7 @@ function CreateFirstYearDialog({ onClose, onSaved }: { onClose: () => void; onSa
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent size="sm" className="bg-surface shadow-md">
         <DialogTitle>{t('createFirst')}</DialogTitle>
-        <p className="text-[13px] text-muted-ink">{t('createFirstHint')}</p>
+        <p className="text-meta text-muted-ink">{t('createFirstHint')}</p>
         <FormGrid>
           <FormField id="fy-starts" label={t('startsOn')} required size="s">
             <Input id="fy-starts" type="date" value={startsOn} onChange={(e) => setStartsOn(e.target.value)} required />

@@ -115,3 +115,36 @@ test('Leser sehen Sammlungen ohne Bearbeiten-Knöpfe, ohne Leserecht keine Vorsc
   await page.goto('/site/preview-frame');
   await expect(page.getByRole('heading', { name: 'Webseiten-Vorschau' })).toBeVisible();
 });
+
+/**
+ * Ausschnitt für alle Bilder (Plan D Task 5): Das Basis-Template gibt dem Team-Foto 1:1 vor — fest, Schwelle 480.
+ * Zuschneiden am Feld, speichern mit dem Eintrag; die Mediathek sagt „· zugeschnitten“.
+ */
+test('schneidet das Foto eines Team-Eintrags zu; die Mediathek zeigt „zugeschnitten“', async ({ page }) => {
+  await resetDatabase(page, 'seeded');
+  await loginAsAdmin(page);
+  await page.goto('/site/template');
+  await page.getByRole('button', { name: 'Vorlage einlesen' }).click();
+  await page.getByRole('button', { name: 'Übernehmen' }).click();
+  await expect(page.getByRole('status')).toContainText('eingelesen');
+
+  await page.goto('/site/c/team');
+  await page.getByRole('row').nth(1).getByRole('link').click();
+  await waitForHydration(page, '[name="slug"], [name="name"]');
+  await page.getByRole('button', { name: 'Ausschnitt …' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Ausschnitt' });
+  await expect(dialog.getByText('fest für Team')).toBeVisible();
+  await expect(dialog.getByText('Gespeichert wird mit dem Eintrag.')).toBeVisible();
+  await dialog.getByRole('slider', { name: 'Ausschnitt' }).press('+');
+  await dialog.getByRole('button', { name: 'Übernehmen' }).click();
+  await expect(page.getByText('1 Änderung noch nicht gespeichert')).toBeVisible();
+  await page.getByRole('button', { name: 'Speichern' }).click();
+  await expect(page.getByRole('status')).toContainText('Gespeichert');
+
+  await page.reload();
+  await expect(page.getByTestId('cropped-image')).toBeVisible();
+
+  await page.goto('/admin/media');
+  await page.getByRole('radio', { name: 'Liste', exact: true }).click();
+  await expect(page.getByText('· zugeschnitten').first()).toBeVisible();
+});

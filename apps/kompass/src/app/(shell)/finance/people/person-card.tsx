@@ -1,6 +1,7 @@
 import { getTranslations } from 'next-intl/server';
 import { LimitProgress, limitState } from '@/components/finance/limit-progress';
 import { formatEuro } from '@/lib/finance/amount';
+import { Section } from '@/components/section';
 
 export interface PersonCardData {
   contactId: string;
@@ -32,32 +33,35 @@ export async function PersonCard({ person, year, warnAtPercent }: { person: Pers
   ].filter((b) => b.value > 0);
 
   return (
-    <section className="space-y-3 rounded-lg border border-line bg-surface p-4" data-testid="person-card">
-      <h3 className="font-heading text-[16px] text-ink">{person.contactName}</h3>
-      {bars.map((b) => {
-        const state = limitState({ valueCents: b.value, limitCents: b.cap, warnAtPercent, kind: 'limit' });
-        // Entscheidung 9: derselbe Satz wie die Warnung beim Buchen (Befund AI) — vom Steuerberater zu bestätigen.
-        const remainder =
-          b.over > 0
-            ? t('exceededSentence', { person: person.contactName, amount: formatEuro(b.over), allowance: t(b.key as 'volunteer' | 'trainer'), year })
-            : b.cap > 0
-              ? t('rest', { amount: formatEuro(b.cap - b.value) })
-              : undefined;
-        return (
-          <LimitProgress
-            key={b.key}
-            coveredCents={b.value}
-            totalCents={b.cap}
-            label={t(b.key as 'volunteer' | 'trainer')}
-            state={state}
-            stateLabel={state ? tLimit(`states.${state}`) : undefined}
-            figure={tLimit('figure', { value: formatEuro(b.value), limit: formatEuro(b.cap) })}
-            remainder={remainder}
-          />
-        );
-      })}
-      <p className="text-[13px] text-ink-2">{t('reimbursementsWithCount', { year, amount: formatEuro(person.reimbursementCents), count: person.reimbursementClaimCount })}</p>
-      {person.waivedCents > 0 ? <p className="text-[13px] text-ink-2" data-testid="person-waived">{t('waived', { year, amount: formatEuro(person.waivedCents) })}</p> : null}
+    <section className="rounded-lg border border-line bg-surface p-4" data-testid="person-card">
+      <Section title={person.contactName}>
+        <div className="space-y-3">
+          {bars.map((b) => {
+            const state = limitState({ valueCents: b.value, limitCents: b.cap, warnAtPercent, kind: 'limit' });
+            // Entscheidung 9: derselbe Satz wie die Warnung beim Buchen (Befund AI) — vom Steuerberater zu bestätigen.
+            const remainder =
+              b.over > 0
+                ? t('exceededSentence', { person: person.contactName, amount: formatEuro(b.over), allowance: t(b.key as 'volunteer' | 'trainer'), year })
+                : b.cap > 0
+                  ? t('rest', { amount: formatEuro(b.cap - b.value) })
+                  : undefined;
+            return (
+              <LimitProgress
+                key={b.key}
+                coveredCents={b.value}
+                totalCents={b.cap}
+                label={t(b.key as 'volunteer' | 'trainer')}
+                state={state}
+                stateLabel={state ? tLimit(`states.${state}`) : undefined}
+                figure={tLimit('figure', { value: formatEuro(b.value), limit: formatEuro(b.cap) })}
+                remainder={remainder}
+              />
+            );
+          })}
+          <p className="text-meta text-ink-2">{t('reimbursementsWithCount', { year, amount: formatEuro(person.reimbursementCents), count: person.reimbursementClaimCount })}</p>
+          {person.waivedCents > 0 ? <p className="text-meta text-ink-2" data-testid="person-waived">{t('waived', { year, amount: formatEuro(person.waivedCents) })}</p> : null}
+        </div>
+      </Section>
     </section>
   );
 }

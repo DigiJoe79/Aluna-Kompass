@@ -115,6 +115,8 @@ function toSchema(definition: TemplateDefinition): TemplateSchema {
     name: definition.name,
     locales: definition.locales,
     uses: definition.uses,
+    // Ein Template gegen einen älteren Vertrag hat kein `images`.
+    images: { ...(definition.images ?? {}) },
     variables: Object.fromEntries(Object.entries(definition.variables).map(([k, v]) => [k, asJson(v)])),
     collections: Object.fromEntries(
       Object.entries(definition.collections).map(([k, c]) => [

@@ -1,6 +1,7 @@
 'use client';
 
 import { cn } from '@/lib/utils';
+import { Overline } from '@/components/overline';
 
 export interface ChoiceCardOption {
   value: string;
@@ -42,8 +43,8 @@ export function ChoiceCards({
             className="w-full rounded-md border border-line bg-surface px-4 py-3 text-left transition hover:border-brand"
             data-testid={`choice-card-${option.value}`}
           >
-            <span className="block text-[14px] font-semibold text-ink">{option.label}</span>
-            {option.description ? <span className="block text-[13px] text-muted-ink">{option.description}</span> : null}
+            <span className="block text-body font-semibold text-ink">{option.label}</span>
+            {option.description ? <span className="block text-meta text-muted-ink">{option.description}</span> : null}
           </button>
         ))}
       </div>
@@ -52,7 +53,7 @@ export function ChoiceCards({
 
   return (
     <fieldset className="space-y-1" data-testid="choice-cards-choice">
-      {legend ? <legend className="mb-1.5 text-[13px] font-semibold uppercase tracking-wide text-muted-ink">{legend}</legend> : null}
+      {legend ? <legend className="mb-1.5"><Overline as="span">{legend}</Overline></legend> : null}
       <div role="radiogroup" aria-label={legend} className="space-y-2">
         {options.map((option) => (
           <label
@@ -65,8 +66,8 @@ export function ChoiceCards({
           >
             <input type="radio" name={name} value={option.value} checked={value === option.value} onChange={() => onSelect(option.value)} className="mt-1 size-4" />
             <span>
-              <span className="block text-[14px] font-semibold text-ink">{option.label}</span>
-              {option.description ? <span className="block text-[13px] text-muted-ink">{option.description}</span> : null}
+              <span className="block text-body font-semibold text-ink">{option.label}</span>
+              {option.description ? <span className="block text-meta text-muted-ink">{option.description}</span> : null}
             </span>
           </label>
         ))}

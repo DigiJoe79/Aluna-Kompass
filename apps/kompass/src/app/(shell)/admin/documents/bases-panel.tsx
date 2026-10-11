@@ -12,6 +12,8 @@ import { Select } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableGroupRow, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import type { TemplateRow } from '@/lib/document-template-rows';
 import { setDocumentBaseAction } from './actions';
+import { KeyLine } from '@/components/key-line';
+import { Section } from '@/components/section';
 
 interface Base {
   id: string;
@@ -72,12 +74,9 @@ export function BasesPanel({ bases, groups, gaps = [], canManage }: { bases: Bas
         </Notice>
       ) : null}
 
-      <section aria-labelledby="bases-heading" className="rounded-lg border border-line bg-surface">
-        <div className="border-b border-line-2 px-4 py-3">
-          <h2 id="bases-heading" className="text-[14px] font-semibold">{t('title')}</h2>
-          <p className="mt-0.5 text-[13px] text-ink-2">{t('intro')}</p>
-        </div>
-        <Table className="text-[13px]">
+      <section aria-labelledby="bases-heading" className="rounded-lg border border-line bg-surface p-4">
+        <Section title={t('title')} headingId="bases-heading" intro={t('intro')}>
+        <Table className="text-meta">
           <TableHeader>
             <TableRow>
               <TableHead>{t('columns.base')}</TableHead>
@@ -90,32 +89,28 @@ export function BasesPanel({ bases, groups, gaps = [], canManage }: { bases: Bas
             {bases.map((b) => (
               <TableRow key={b.id}>
                 <TableCell>{b.label}</TableCell>
-                <TableCell className="font-mono text-[12px] text-ink-2">{b.id}</TableCell>
+                <TableCell className="font-mono text-hint text-ink-2">{b.id}</TableCell>
                 <TableCell>
                   <StatusBadge tone={b.own ? 'brand' : 'neutral'}>{b.own ? t('own') : t('shipped')}</StatusBadge>
                 </TableCell>
                 <TableCell>
                   <StatusBadge tone={b.ok ? 'success' : 'error'}>{b.ok ? t('ready') : t('broken')}</StatusBadge>
-                  {b.error ? <span className="ml-2 text-[11px] text-error" title={b.error}>{b.error}</span> : null}
+                  {b.error ? <span className="ml-2 text-hint text-error" title={b.error}>{b.error}</span> : null}
                 </TableCell>
               </TableRow>
             ))}
           </TableBody>
         </Table>
+        </Section>
       </section>
 
-      <section aria-labelledby="types-heading" className="rounded-lg border border-line bg-surface">
-        <div className="border-b border-line-2 px-4 py-3">
-          <h2 id="types-heading" className="text-[14px] font-semibold">{t('typesTitle')}</h2>
-          <p className="mt-0.5 text-[13px] text-ink-2">{t('typesIntro')}</p>
-        </div>
-        <div className="px-4 pt-3">
-          <RefusalNotice action state={baseFb.state} />
-        </div>
+      <section aria-labelledby="types-heading" className="rounded-lg border border-line bg-surface p-4">
+        <Section title={t('typesTitle')} headingId="types-heading" intro={t('typesIntro')}>
+        <RefusalNotice action state={baseFb.state} />
         {/* `ui/table` statt rohem `<table>`: Ihr Rahmen scrollt am Telefon in sich, vorher schob die Tabelle `main`
             auf 701 px (Befund 14 in 0.2.8). Am Telefon angesehen, ohne eigenen Layout-Test (Projektregel: keine
             Layout-Tests für Einzelstellen). */}
-        <Table className="text-[13px]">
+        <Table className="text-meta">
           <TableHeader>
             <TableRow>
               <TableHead>{t('columns.type')}</TableHead>
@@ -130,12 +125,12 @@ export function BasesPanel({ bases, groups, gaps = [], canManage }: { bases: Bas
                 <TableRow key={row.key}>
                   <TableCell>
                     <span className="block">{row.label}</span>
-                    {row.label === row.key ? null : <span className="block font-mono text-[11px] text-muted-ink">{row.key}</span>}
+                    {row.label === row.key ? null : <KeyLine>{row.key}</KeyLine>}
                   </TableCell>
                   <TableCell data-testid="effective-base">
                     <span className="flex flex-wrap items-center gap-2">
                       <span>{row.effectiveLabel}</span>
-                      <span className="font-mono text-[11px] text-ink-2">{row.effectiveBase}</span>
+                      <span className="font-mono text-key text-ink-2">{row.effectiveBase}</span>
                       {row.override ? <StatusBadge tone="warning">{t('overridden')}</StatusBadge> : null}
                       {row.available ? null : <StatusBadge tone="error">{t('unavailable')}</StatusBadge>}
                     </span>
@@ -170,6 +165,7 @@ export function BasesPanel({ bases, groups, gaps = [], canManage }: { bases: Bas
             </TableBody>
           ))}
         </Table>
+        </Section>
       </section>
     </div>
   );

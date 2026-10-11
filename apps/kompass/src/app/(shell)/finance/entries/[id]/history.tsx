@@ -3,6 +3,7 @@ import { getTranslations } from 'next-intl/server';
 import { BeforeAfter } from '@/components/before-after';
 import { historyChannel } from '@/lib/finance/channel';
 import type { DateFormatter } from '@/lib/date-format';
+import { Section } from '@/components/section';
 
 function summaryOf(event: EntryHistoryEvent, t: Awaited<ReturnType<typeof getTranslations>>): string {
   switch (event.kind) {
@@ -30,30 +31,33 @@ export async function EntryHistory({ events, fmt }: { events: EntryHistoryEvent[
   if (events.length === 0) return null;
 
   return (
-    <section className="space-y-3 rounded-md border border-line bg-surface p-4">
-      <h3 className="text-[13px] font-semibold uppercase tracking-wide text-muted-ink">{t('title')}</h3>
-      <ul className="space-y-3">
-        {events.map((event, index) => {
-          const channel = historyChannel(event);
-          return (
-            <li key={index} className="space-y-1.5 border-t border-line-2 pt-2 first:border-0 first:pt-0">
-              <p className="text-[13px]">
-                <span className="mr-2 font-mono text-[12px] text-muted-ink">{fmt.dateTime(event.at)}</span>
-                {summaryOf(event, t)}
-                {channel ? <span className="text-muted-ink"> {t('via', { channel: tc(channel) })}</span> : null}
-              </p>
-              {event.kind === 'allocationChanged' ? (
-                <>
-                  <BeforeAfter
-                    rows={[{ label: t('changeLabel'), before: <span>{JSON.stringify(event.before)}</span>, after: <span>{JSON.stringify(event.after)}</span> }]}
-                  />
-                  <p className="text-[13px] italic text-ink-2">„{event.note}“</p>
-                </>
-              ) : null}
-            </li>
-          );
-        })}
-      </ul>
+    <section className="rounded-md border border-line bg-surface p-4">
+      <Section title={t('title')}>
+        <div className="space-y-3">
+          <ul className="space-y-3">
+            {events.map((event, index) => {
+              const channel = historyChannel(event);
+              return (
+                <li key={index} className="space-y-1.5 border-t border-line-2 pt-2 first:border-0 first:pt-0">
+                  <p className="text-meta">
+                    <span className="mr-2 font-mono text-hint text-muted-ink">{fmt.dateTime(event.at)}</span>
+                    {summaryOf(event, t)}
+                    {channel ? <span className="text-muted-ink"> {t('via', { channel: tc(channel) })}</span> : null}
+                  </p>
+                  {event.kind === 'allocationChanged' ? (
+                    <>
+                      <BeforeAfter
+                        rows={[{ label: t('changeLabel'), before: <span>{JSON.stringify(event.before)}</span>, after: <span>{JSON.stringify(event.after)}</span> }]}
+                      />
+                      <p className="text-meta italic text-ink-2">„{event.note}“</p>
+                    </>
+                  ) : null}
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      </Section>
     </section>
   );
 }

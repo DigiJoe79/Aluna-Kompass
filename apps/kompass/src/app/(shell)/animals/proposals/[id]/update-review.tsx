@@ -16,12 +16,14 @@ import { acceptProposalAction, rejectProposalAction } from '../actions';
 import { AcceptDialog } from '../accept-dialog';
 import { fieldLabelKey, formatProposalValue } from '../field-format';
 import { RejectDialog } from '../reject-dialog';
-import { initialPhotoState, PhotoReview, photoChoices, photoChoicesDiffer, photoCounts, photosUnchanged, type PhotoState } from './photo-review';
+import { initialPhotoState, PhotoReview, photoChoices, photoChoicesDiffer, photoCounts, photosUnchanged, type PhotoSizes, type PhotoState } from './photo-review';
+import type { AnimalPhotoPlaces } from '../../photo-tile';
 import { FieldValue, HintLines } from './review-values';
 import { setPreviewChoice } from './preview-choice';
 import { useDecisionDone } from './use-decision';
 import { LOCALE_CODE } from '@/components/forms/localized-field';
 import { cn } from '@/lib/utils';
+import { Overline } from '@/components/overline';
 
 const LONG = 200;
 const LONG_FIELDS: readonly ProposalField[] = ['summary', 'body'];
@@ -40,7 +42,7 @@ function LongDiff({ row, locales }: { row: FieldRow; locales: readonly string[] 
     <span className="flex flex-col gap-1.5">
       {parts.map(({ locale, diff }) => (
         <span key={locale}>
-          <span className={cn('mr-1.5 rounded-sm px-1.5 py-0.5 uppercase', LOCALE_CODE)}>{locale}</span>
+          <span className={cn('mr-1.5 rounded-sm px-1.5 py-0.5', LOCALE_CODE)}>{locale.toUpperCase()}</span>
           {(full ? diff : diffExcerpt(diff)).map((p, i) =>
             p.kind === 'gap' ? (
               <span key={i} className="text-muted-ink"> … </span>
@@ -86,7 +88,7 @@ const isLong = (row: FieldRow, locales: readonly string[]) =>
  * Prüfseite einer Änderung (Spec § 6, Board 2a/3a): je geändertem Feld eine Wahlzeile „Heute“ / „Vorschlag“,
  * Vorwahl Vorschlag, bei Konflikt Heute; Fotos mit eigener Wahl; Annehmen und Ablehnen über Dialoge.
  */
-export function UpdateReview({ review, locales, nextHref, backHref, canFollowUp, maxPhotos }: { review: ProposalReview; locales: string[]; nextHref: string; backHref: string; canFollowUp: boolean; maxPhotos: number }) {
+export function UpdateReview({ review, locales, nextHref, backHref, canFollowUp, maxPhotos, photoPlaces, photoSizes }: { review: ProposalReview; locales: string[]; nextHref: string; backHref: string; canFollowUp: boolean; maxPhotos: number; photoPlaces: AnimalPhotoPlaces; photoSizes: PhotoSizes }) {
   const t = useTranslations('animals.proposals.review');
   const a = useTranslations('animals.proposals.accept');
   const ph = useTranslations('animals.proposals.photoReview');
@@ -145,11 +147,11 @@ export function UpdateReview({ review, locales, nextHref, backHref, canFollowUp,
             }
           >
             <div className="@container">
-              <div className="hidden grid-cols-[180px_1fr_1fr] gap-2 pb-2 text-hint font-semibold uppercase tracking-wide text-muted-ink @[760px]:grid">
+              <Overline as="div" className="mb-2 hidden grid-cols-[180px_1fr_1fr] gap-2 @[760px]:grid">
                 <span>{t('columnField')}</span>
                 <span>{t('columnCurrent')}</span>
                 <span>{t('columnProposal', { source: proposal.sourceName })}</span>
-              </div>
+              </Overline>
               {review.fields.map((row) => {
                 const long = isLong(row, locales);
                 const by = row.conflict?.changedBy;
@@ -192,7 +194,7 @@ export function UpdateReview({ review, locales, nextHref, backHref, canFollowUp,
           </Section>
           {review.photos ? (
             <Section title={ph('title')} intro={[photosLine, ph('after', { count: counts.after, max: maxPhotos })].filter(Boolean).join(' · ')}>
-              <PhotoReview rows={rows} state={photos} onChange={setPhotos} sourceName={proposal.sourceName} max={maxPhotos} readOnly={!open} />
+              <PhotoReview rows={rows} state={photos} onChange={setPhotos} sourceName={proposal.sourceName} max={maxPhotos} readOnly={!open} places={photoPlaces} sizes={photoSizes} />
             </Section>
           ) : null}
         </FormCardBody>

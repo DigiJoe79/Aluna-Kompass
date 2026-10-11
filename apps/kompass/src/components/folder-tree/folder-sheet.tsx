@@ -53,10 +53,10 @@ export function FolderSheet({
         )}
       >
         <span className="flex min-w-0 flex-1 flex-col gap-px">
-          {path.length > 0 ? <span className="truncate text-[12px] text-muted-ink">{path.join(' › ')}</span> : null}
-          <strong className="text-[16px] font-semibold wrap-anywhere text-ink">{title}</strong>
+          {path.length > 0 ? <span className="truncate text-hint text-muted-ink">{path.join(' › ')}</span> : null}
+          <strong className="text-section wrap-anywhere text-ink">{title}</strong>
         </span>
-        <span data-testid="folder-sheet-count" className="font-mono text-[13px] text-muted-ink">
+        <span data-testid="folder-sheet-count" className="font-mono text-meta text-muted-ink">
           {count}
         </span>
         <ChevronDown className="size-[18px] shrink-0 text-muted-ink" strokeWidth={2.2} aria-hidden />
@@ -66,7 +66,7 @@ export function FolderSheet({
           <div aria-hidden className="flex justify-center pt-2 pb-0.5">
             <span className="h-1 w-10 rounded-full bg-line-strong" />
           </div>
-          <SheetTitle className="flex h-[52px] items-center px-4 font-heading text-[17px] font-semibold text-ink">{t('label')}</SheetTitle>
+          <SheetTitle className="flex h-[52px] items-center px-4 text-section">{t('label')}</SheetTitle>
           <div
             className="flex min-h-0 flex-1 flex-col overflow-y-auto px-2.5 pb-4"
             // Ein Name im Baum oder ein fester Eintrag ist ein Link: Wer ihn

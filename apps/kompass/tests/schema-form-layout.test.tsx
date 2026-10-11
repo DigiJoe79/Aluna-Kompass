@@ -75,9 +75,12 @@ describe('LocalizedField', () => {
  * dieselbe (Sprachkürzel am Label), nur die Anordnung wechselt.
  */
 describe('Sprachspalten', () => {
-  /** Das Raster der Sprachzellen: der Elternknoten der Zelle mit dem Sprachkürzel. */
+  /**
+   * Das Raster der Sprachzellen: der Elternknoten der Zelle mit dem Sprachkürzel. Das letzte Vorkommen, weil die
+   * Reiter ab vier Sprachen das Kürzel seit K10 Charge 3 ebenfalls in Großbuchstaben tragen und davor stehen.
+   */
   const languageGrid = (code: string) => {
-    let node: HTMLElement | null = screen.getAllByText(code)[0]!;
+    let node: HTMLElement | null = screen.getAllByText(code).at(-1)!;
     while (node && !node.className.includes('grid')) node = node.parentElement;
     return node!;
   };
@@ -160,14 +163,16 @@ describe('SchemaForm', () => {
 
   it('bildet aus aufeinanderfolgenden Feldern mit gleichem group einen Abschnitt mit Titel, ohne umzusortieren', () => {
     wrap(<SchemaForm schema={schema} value={{}} locales={['de']} onChange={() => {}} />);
-    const sections = screen.getAllByRole('heading', { level: 3 });
+    // Ebene aus dem Umfeld (Section, K10 Charge 3): ohne Umfeld 2.
+    const sections = screen.getAllByRole('heading', { level: 2 });
     expect(sections.map((h) => h.textContent)).toEqual(['Bilder']);
     const bilder = sections[0]!.closest('section')!;
     expect(bilder.textContent).toContain('Vorher');
     expect(bilder.textContent).toContain('Nachher');
     expect(bilder.textContent).not.toContain('Anzahl');
     expect(bilder.textContent).not.toContain('Claim');
-    expect(bilder.className).toContain('border-t');
+    // Nach einem Abschnitt ohne Titel zieht der Rahmen um die Section die Linie.
+    expect(bilder.parentElement!.className).toContain('border-t');
   });
 
   // Befund K9 5b: Die Plätze stehen als einzelne Zellen direkt im Raster des Abschnitts, ohne eigenen Block.

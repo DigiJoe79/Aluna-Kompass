@@ -100,7 +100,7 @@ export function SplitRow({
       {/* Kopf der Zeilenkarte: links „Zeile n“, rechts das Zeilenmenü — in breiter und schmaler Spalte gleich,
           32 px hoch, keine leere Zeile mit nur dem Menü (HANDOFF Konsistenz § 8c). */}
       <div className="-mt-1 -mr-1 flex h-8 items-center justify-between gap-2">
-        <span className="text-[12px] font-semibold text-muted-ink">{t('rowLabel', { n: position })}</span>
+        <span className="text-hint font-semibold text-muted-ink">{t('rowLabel', { n: position })}</span>
         {value.locked ? null : (
           <DropdownMenu>
             <DropdownMenuTrigger aria-label={t('rowMenu')} className={buttonVariants({ variant: 'ghost', size: 'icon-sm' })}>
@@ -144,7 +144,7 @@ export function SplitRow({
             </optgroup>
           </Select>
           {category ? (
-            <p className="text-[11px] text-muted-ink">
+            <p className="text-hint text-muted-ink">
               {t(`sphere.${category.sphere}`)}
               {category.explanation ? ` · ${category.explanation}` : ''}
             </p>

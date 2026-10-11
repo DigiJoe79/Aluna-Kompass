@@ -57,7 +57,7 @@ export function DatedValuesPanel({ entries }: { entries: DatedValueListEntry[] }
           return (
             <div key={entry.key} className="rounded-md border border-line">
               <div className="flex items-center justify-between px-3 pt-2.5">
-                <p className="text-[13px] font-semibold text-ink">{t(`keys.${entry.key}`)}</p>
+                <p className="text-meta font-semibold text-ink">{t(`keys.${entry.key}`)}</p>
                 <Button variant="ghost" size="sm" onClick={() => setEditing(entry)} data-testid={`dated-value-edit-${entry.key}`}>
                   {t('change')}
                 </Button>
@@ -67,7 +67,7 @@ export function DatedValuesPanel({ entries }: { entries: DatedValueListEntry[] }
                   <RefusalNotice action state={revertFb.state} />
                 </div>
               ) : null}
-              {entry.key === 'taxation' ? <p className="px-3 pb-1 text-[12px] text-muted-ink">{t('taxationHint')}</p> : null}
+              {entry.key === 'taxation' ? <p className="px-3 pb-1 text-hint text-muted-ink">{t('taxationHint')}</p> : null}
               {entry.entries.map((row) => (
                 <DatedValueRow
                   key={row.validFrom}
@@ -79,7 +79,7 @@ export function DatedValuesPanel({ entries }: { entries: DatedValueListEntry[] }
                   onRevert={row.source === 'override' ? () => void revert(entry.key, row.validFrom) : undefined}
                 />
               ))}
-              <p className="px-3 py-1.5 text-[11px] text-muted-ink">{t('currentValue', { display: display(entry.unit, latest.value, t) })}</p>
+              <p className="px-3 py-1.5 text-hint text-muted-ink">{t('currentValue', { display: display(entry.unit, latest.value, t) })}</p>
             </div>
           );
         })}

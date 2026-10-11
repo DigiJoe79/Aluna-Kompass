@@ -78,8 +78,60 @@ export const number = (opts: FieldOptions & { min?: number; max?: number; intege
   return bounded.meta(meta(opts, 'number')) as z.ZodType<number>;
 };
 
-export const asset = (opts: FieldOptions & { accept?: string } = {}): z.ZodType<string | null> =>
-  z.string().nullable().default(null).meta(meta(opts, 'asset', { accept: opts.accept ?? 'image/*' })) as z.ZodType<string | null>;
+// ---------------------------------------------------------------------------
+// Bildstellen: Format und Anzeigebreite (Ausschnitt für alle Bilder, Spec 2026-10-10 § 2)
+// ---------------------------------------------------------------------------
+
+/**
+ * Das Format einer Bildstelle: `'W:H'` mit ganzen Zahlen 1–99 oder `'original'` (das Bild, wie es ist). Kompass
+ * bietet beim Ausschnitt nur an, was die Stelle erlaubt: ein Format = fest, mehrere = Auswahl daraus.
+ */
+export type Ratio = `${number}:${number}` | 'original';
+
+const RATIO = /^([1-9]\d?):([1-9]\d?)$/;
+
+export const isRatio = (value: unknown): value is Ratio => value === 'original' || (typeof value === 'string' && RATIO.test(value));
+
+/**
+ * Eine Bildstelle: ihr Format (eins oder mehrere) und ihre Anzeigebreite in CSS-Pixeln. Aus der Breite leitet
+ * Kompass ab, ab wann ein Ausschnitt zu klein für die Stelle ist.
+ */
+export interface ImagePlaceSpec {
+  ratio: Ratio | Ratio[];
+  width?: number;
+}
+
+function checkRatio(ratio: unknown, where: string): void {
+  const list = Array.isArray(ratio) ? ratio : [ratio];
+  if (list.length === 0 || !list.every(isRatio)) throw new Error(`invalid ratio for ${where}: 'W:H' with whole numbers 1–99 or 'original'`);
+}
+
+function checkWidth(width: unknown, where: string): void {
+  if (width !== undefined && !(typeof width === 'number' && Number.isInteger(width) && width > 0)) {
+    throw new Error(`invalid width for ${where}: a positive integer in CSS pixels`);
+  }
+}
+
+export interface AssetOptions extends FieldOptions {
+  accept?: string;
+  /** Format der Stelle, an der das Bild erscheint; ohne Angabe ist jedes Format wählbar. */
+  ratio?: Ratio | Ratio[];
+  /** Anzeigebreite der Stelle in CSS-Pixeln; ohne Angabe nimmt Kompass 960. */
+  width?: number;
+}
+
+export const asset = (opts: AssetOptions = {}): z.ZodType<string | null> => {
+  const where = `asset ${opts.label ?? ''}`.trim();
+  if (opts.ratio !== undefined) checkRatio(opts.ratio, where);
+  checkWidth(opts.width, where);
+  // `ratio` und `width` sind keine Namen aus JSON Schema (AGENTS.md, `.meta()`).
+  const extra = {
+    accept: opts.accept ?? 'image/*',
+    ...(opts.ratio === undefined ? {} : { ratio: opts.ratio }),
+    ...(opts.width === undefined ? {} : { width: opts.width }),
+  };
+  return z.string().nullable().default(null).meta(meta(opts, 'asset', extra)) as z.ZodType<string | null>;
+};
 
 export const select = <const T extends readonly [string, ...string[]]>(values: T, opts: FieldOptions = {}): z.ZodType<T[number]> =>
   z.enum(values as unknown as [string, ...string[]]).meta(meta(opts, 'select')) as z.ZodType<T[number]>;
@@ -110,6 +162,12 @@ export interface TemplateInput<V extends Fields = Fields, C extends Collections 
   variables: V;
   collections: C;
   uses?: string[];
+  /**
+   * Format und Breite der Bildstellen der Modul-Sichten (Tierfotos, Geschichte, Projektbild), etwa
+   * `'animals.primary'`. Welche es gibt, melden die Module von Kompass an; ein Schlüssel, den die laufende Fassung
+   * nicht kennt, ist kein Fehler — Kompass weist beim Einlesen darauf hin.
+   */
+  images?: Record<string, ImagePlaceSpec>;
 }
 
 /** Eine Sammlung nach `defineTemplate`: jedes Merkmal gesetzt, Vorgabe `false`. */
@@ -128,6 +186,7 @@ export interface TemplateDefinition<V extends Fields = Fields, C extends Collect
   variables: V;
   collections: { [K in keyof C]: NormalizedCollection<C[K]> };
   uses: string[];
+  images: Record<string, ImagePlaceSpec>;
 }
 
 // Schlüssel werden zu Objektschlüsseln in content.json und im Template-Code als
@@ -141,11 +200,18 @@ export function defineTemplate<V extends Fields, C extends Collections>(input: T
   for (const l of input.locales) if (!LOCALE_CODE.test(l)) throw new Error(`invalid locale: ${l}`);
   for (const key of Object.keys(input.collections)) if (!KEY.test(key)) throw new Error(`invalid collection key: ${key}`);
   for (const key of Object.keys(input.variables)) if (!KEY.test(key)) throw new Error(`invalid variable key: ${key}`);
+  const images = input.images ?? {};
+  for (const [key, spec] of Object.entries(images)) {
+    if (!key.trim()) throw new Error('invalid image place key: empty');
+    checkRatio(spec?.ratio, `images.${key}`);
+    checkWidth(spec.width, `images.${key}`);
+  }
   return {
     name: input.name.trim(),
     locales: input.locales,
     variables: input.variables,
     uses: input.uses ?? [],
+    images,
     collections: Object.fromEntries(
       Object.entries(input.collections).map(([key, c]) => [
         key,

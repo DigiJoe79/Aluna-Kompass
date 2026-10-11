@@ -1,5 +1,5 @@
 import { SEED_PHOTO_FOLDER, seedPhotoIds, unwrap, writeSettingInternal, type CallContext, type Deps, type LocalizedText } from '@kompass/core';
-import { animals } from './schema';
+import { animals, type PhotoCrop } from './schema';
 import { PROFILE_URL_KEY } from './settings';
 import { seedProposals } from './proposals/seed';
 import { createAnimal, requestAnimalReview, setAnimalPhotos, setAnimalPublished, setAnimalStatus, setAnimalStory } from './service';
@@ -12,12 +12,16 @@ interface ExampleStory {
   /** Präfix eines Bildes aus `Fotos/Tiere` (Kern-Seed) für Vorher bzw. Nachher. */
   beforePhoto?: string;
   afterPhoto?: string;
+  /** Ausschnitt des Vorher-Bildes (Spec Ausschnitt für alle Bilder § 3); das Nachher-Bild bleibt ganz. */
+  beforeCrop?: PhotoCrop;
 }
 interface ExampleAnimal {
   /** Nur zur Orientierung im Code; den Slug bildet Kompass. */
   key: string;
   /** Präfix der eigenen Bilder in `Fotos/Tiere` (Kern-Seed, `seedPhotoIds`); das erste ist das Hauptfoto. */
   photos: string;
+  /** Ausschnitt des Hauptfotos — die Webseite zeigt es zugeschnitten (Spec Bildausschnitt § 2). */
+  primaryCrop?: PhotoCrop;
   name: string;
   sex: 'female' | 'male';
   birthText: LocalizedText;
@@ -55,6 +59,7 @@ const EXAMPLE_ANIMALS: ExampleAnimal[] = [
   {
     key: 'baxter',
     photos: 'baxter-',
+    primaryCrop: { x: 0.15, y: 0.05, w: 0.6, h: 0.9 },
     name: 'Baxter',
     sex: 'male' as const,
     birthText: { de: 'März 2020', en: 'March 2020' },
@@ -114,6 +119,7 @@ const EXAMPLE_ANIMALS: ExampleAnimal[] = [
       afterCaption: { de: 'Zuhause am Rhein', en: 'At home by the Rhine' },
       beforePhoto: 'nala-vorher-',
       afterPhoto: 'nala-nachher-',
+      beforeCrop: { x: 0.1, y: 0, w: 0.8, h: 1 },
     },
   },
   {
@@ -221,10 +227,10 @@ async function seedExampleAnimals(deps: Deps, ctx: CallContext): Promise<void> {
     // Eigene Bilder aus der Mediathek des Kern-Seeds (`seedMedia` läuft vorher, Spec 2026-10-06 § 4);
     // ohne sie bleibt das Tier ohne Fotos. Pelle und Mika haben je drei — die Prüf-E2E tauscht das Hauptfoto.
     const photos = photosOf(a.photos);
-    if (photos.length > 0) unwrap(await setAnimalPhotos(deps, ctx, { id: created.id, photos: photos.map((assetId, i) => ({ assetId, isPrimary: i === 0 })) }));
+    if (photos.length > 0) unwrap(await setAnimalPhotos(deps, ctx, { id: created.id, photos: photos.map((assetId, i) => ({ assetId, isPrimary: i === 0, ...(i === 0 && a.primaryCrop ? { crop: a.primaryCrop } : {}) })) }));
     if (a.status === 'adopted' && a.story) {
       const picture = (prefix?: string) => (prefix ? (photosOf(prefix)[0] ?? null) : null);
-      unwrap(await setAnimalStory(deps, ctx, { id: created.id, beforeAssetId: picture(a.story.beforePhoto), afterAssetId: picture(a.story.afterPhoto), quote: a.story.quote, family: a.story.family, adoptedYear: a.adoptedYear!, beforeCaption: a.story.beforeCaption, afterCaption: a.story.afterCaption }));
+      unwrap(await setAnimalStory(deps, ctx, { id: created.id, beforeAssetId: picture(a.story.beforePhoto), afterAssetId: picture(a.story.afterPhoto), quote: a.story.quote, family: a.story.family, adoptedYear: a.adoptedYear!, beforeCaption: a.story.beforeCaption, afterCaption: a.story.afterCaption, ...(a.story.beforeCrop ? { beforeCrop: a.story.beforeCrop } : {}) }));
     }
     if (a.published) unwrap(await setAnimalPublished(deps, ctx, { id: created.id, isPublished: true }));
     if (a.review !== undefined) {

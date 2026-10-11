@@ -23,18 +23,18 @@ export interface ReceiptListItem {
 export function ReceiptList({ items, onRevoke }: { items: ReceiptListItem[]; onRevoke?: (linkId: string) => void }) {
   const { date } = useDateFormat();
   const t = useTranslations('finance.receipt');
-  if (items.length === 0) return <p className="text-[13px] text-muted-ink">{t('none')}</p>;
+  if (items.length === 0) return <p className="text-meta text-muted-ink">{t('none')}</p>;
 
   return (
     <ul className="divide-y divide-line">
       {items.map((item) => (
-        <li key={item.linkId} className={cn('flex items-center gap-2 py-2 text-[13px]', item.revoked && 'text-muted-ink')}>
-          <span className={cn('font-mono text-[12px]', item.revoked && 'line-through')}>{item.documentNumber}</span>
+        <li key={item.linkId} className={cn('flex items-center gap-2 py-2 text-meta', item.revoked && 'text-muted-ink')}>
+          <span className={cn('font-mono text-hint', item.revoked && 'line-through')}>{item.documentNumber}</span>
           <span className={cn('min-w-0 flex-1 truncate', item.revoked && 'line-through')}>{item.title}</span>
-          <span className="shrink-0 text-[12px] text-muted-ink">{item.typeLabel}</span>
-          <span className="shrink-0 font-mono text-[12px] text-muted-ink">{date(item.date)}</span>
+          <span className="shrink-0 text-hint text-muted-ink">{item.typeLabel}</span>
+          <span className="shrink-0 font-mono text-hint text-muted-ink">{date(item.date)}</span>
           {item.revoked ? (
-            item.replacedByNumber ? <span className="shrink-0 text-[12px]">{t('replacedBy', { number: item.replacedByNumber })}</span> : null
+            item.replacedByNumber ? <span className="shrink-0 text-hint">{t('replacedBy', { number: item.replacedByNumber })}</span> : null
           ) : (
             <span className="flex shrink-0 items-center gap-2">
               <a href={item.viewHref} target="_blank" rel="noreferrer" className="font-semibold text-ink underline underline-offset-2">

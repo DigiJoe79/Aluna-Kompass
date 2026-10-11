@@ -21,3 +21,8 @@ export function bannerFor(env: AppEnv, _ctx: BannerContext): Banner | null {
 export function environmentConfirmationName(env: AppEnv): string {
   return env === 'production' ? 'produktion' : env === 'test' ? 'test' : 'entwicklung';
 }
+
+/** Schlüssel des Seitentitels: Prod heißt wie das Produkt, Test und Dev tragen die Art (Joe 2026-10-11). */
+export function titleKeyFor(env: AppEnv): 'app.name' | 'app.titleTest' | 'app.titleDevelopment' {
+  return env === 'production' ? 'app.name' : env === 'test' ? 'app.titleTest' : 'app.titleDevelopment';
+}

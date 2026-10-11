@@ -1,12 +1,12 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen } from '@testing-library/react';
 import { NextIntlClientProvider } from 'next-intl';
-import type { ReactNode } from 'react';
+import { createRef, type ReactNode } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
 import messages from '../messages/de.json';
 import { Page } from '@/components/page';
 import { PageHeader } from '@/components/page-header';
-import { Section } from '@/components/section';
+import { Section, SectionHeading, SectionLevel } from '@/components/section';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
 
@@ -79,5 +79,28 @@ describe('Section', () => {
     const { container } = render(<><Section title="A">a</Section><Section title="B">b</Section></>, { wrapper });
     const section = container.querySelectorAll('section')[1]!.className.split(' ');
     expect(section).toEqual(expect.arrayContaining(['[&+&]:mt-5', '[&+&]:border-t', '[&+&]:border-line', '[&+&]:pt-5']));
+  });
+});
+
+describe('SectionHeading (K10 Charge 3, Designer § 9.4)', () => {
+  it('nimmt die Ebene aus dem Umfeld, ohne Umfeld 2', () => {
+    render(<SectionHeading>Ohne</SectionHeading>);
+    expect(screen.getByRole('heading', { name: 'Ohne', level: 2 })).toBeTruthy();
+    render(<SectionLevel level={3}><SectionHeading>Im Dialog</SectionHeading></SectionLevel>);
+    expect(screen.getByRole('heading', { name: 'Im Dialog', level: 3 })).toBeTruthy();
+  });
+
+  it('trägt Serife und die Rolle Abschnitt', () => {
+    render(<SectionHeading>Belege</SectionHeading>);
+    expect(screen.getByRole('heading', { name: 'Belege' }).className.split(/\s+/)).toEqual(expect.arrayContaining(['font-heading', 'text-section', 'text-ink']));
+  });
+
+  it('Section reicht headingId und headingRef durch; mit ref fokussierbar', () => {
+    const ref = createRef<HTMLHeadingElement>();
+    render(<Section title="Lauf" headingId="lauf-titel" headingRef={ref}>x</Section>);
+    const h = screen.getByRole('heading', { name: 'Lauf' });
+    expect(h.id).toBe('lauf-titel');
+    expect(ref.current).toBe(h);
+    expect(h.getAttribute('tabindex')).toBe('-1');
   });
 });

@@ -1,5 +1,7 @@
 /** Reine Typen des Moduls — ohne Laufzeitcode, damit sie auch im Client gebraucht werden können. */
 
+import type { ImagePlaceSpec } from '@kompass/core/image-places';
+
 export interface FieldSchema {
   widget?: string;
   label?: string;
@@ -21,6 +23,11 @@ export interface TemplateSchema {
   uses: string[];
   variables: Record<string, FieldSchema>;
   collections: Record<string, CollectionSchema>;
+  /**
+   * Format und Breite der Bildstellen der Modul-Sichten, wie das Template sie angibt — auch Schlüssel, die diese
+   * Fassung nicht kennt (Warnung beim Einlesen). Fehlt in Schemata, die vor 0.2.11 gespeichert wurden.
+   */
+  images?: Record<string, ImagePlaceSpec>;
 }
 
 export interface SeedReport {

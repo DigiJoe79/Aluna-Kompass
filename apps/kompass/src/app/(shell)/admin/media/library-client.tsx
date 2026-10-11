@@ -32,6 +32,7 @@ import { useUrlFilters } from '@/lib/use-url-filters';
 import { AssetDetailDialog } from './asset-detail-dialog';
 import { formatBytes, mediaHref, type Folder, type Item, type ListQuery } from './types';
 import { createFolderAction, deleteFolderAction, deleteMediaAction, moveFolderAction, moveMediaAction, renameFolderAction, uploadMediaAction } from './actions';
+import { UsageLines } from './usage-lines';
 
 const KINDS = ['image', 'pdf'] as const;
 const SORTS = ['newest', 'oldest', 'name', 'size'] as const;
@@ -336,7 +337,7 @@ export function LibraryClient({
         actions={
           <>
             {uploading ? (
-              <span aria-live="polite" className="text-[13px] text-ink-2">
+              <span aria-live="polite" className="text-meta text-ink-2">
                 {t('uploading')}
               </span>
             ) : null}
@@ -447,7 +448,7 @@ export function LibraryClient({
                         ) : (
                           <span className="grid size-8 shrink-0 place-items-center rounded border border-line bg-surface-2 text-[10px] uppercase text-ink-2">{it.filename.split('.').at(-1)}</span>
                         )}
-                        <span className="font-mono text-[13px]">{it.filename}</span>
+                        <span className="font-mono text-meta">{it.filename}</span>
                       </RowButton>
                     </TableCell>
                     <TableCell data-folder-cell className="hidden text-ink-2 sm:table-cell">
@@ -455,7 +456,7 @@ export function LibraryClient({
                     </TableCell>
                     <TableCell className="hidden sm:table-cell">{formatBytes(it.bytes)}</TableCell>
                     <TableCell className="hidden text-ink-2 sm:table-cell">{fmt.date(it.createdAt)}</TableCell>
-                    <TableCell className="hidden whitespace-normal sm:table-cell">{it.references.length === 0 ? <span className="text-ink-2">{t('unused')}</span> : it.references.map((r) => r.label).join(', ')}</TableCell>
+                    <TableCell className="hidden whitespace-normal sm:table-cell"><UsageLines references={it.references} /></TableCell>
                   </TableRow>
                 ))}
               </TableBody>

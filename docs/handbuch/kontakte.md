@@ -53,7 +53,7 @@ Der Block „Aufbewahrung“ zeigt, was diesen Kontakt hält: jede Rolle mit dem
 Datum, bis zu dem sie ihn hält, und jedes Dokument oder jeder Vorgang, der
 ihn braucht — „Adoptionsvertrag für Rocky, gehalten bis 31.12.2036“. Die
 Frist beginnt mit dem Ende des Kalenderjahres, wie das Steuerrecht es
-verlangt; die Dauer je Fristklasse steht unter [Einstellungen →
+verlangt; die Dauer je Fristklasse steht unter [Verwaltung →
 Aufbewahrung](einstellungen/aufbewahrung.md).
 
 Manche Rollen, die ein Modul mitbringt, haben **keine eigene Frist** — das Modul hält den Kontakt dann über seine Vorgänge, etwa Buchungen. Sind die abgelaufen, gilt für den Kontakt die Frist der Einwilligung ab dem Ende der letzten solchen Rolle.

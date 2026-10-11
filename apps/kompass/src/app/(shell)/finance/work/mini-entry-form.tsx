@@ -50,7 +50,7 @@ export function MiniEntryForm({
       </FormGrid>
 
       {extraLineTexts.map((text) => (
-        <p key={text} className="rounded-sm border border-line bg-surface-2 px-2.5 py-1.5 text-[13px] text-ink-2">
+        <p key={text} className="rounded-sm border border-line bg-surface-2 px-2.5 py-1.5 text-meta text-ink-2">
           {text}
         </p>
       ))}

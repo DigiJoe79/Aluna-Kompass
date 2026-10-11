@@ -1,4 +1,4 @@
-import { chmodSync, existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { chmodSync, existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, symlinkSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { coreModule, fixedClock, setModuleEnabled, setSetting, storeMediaAsset, unwrap } from '@kompass/core';
@@ -514,6 +514,57 @@ describe('one job at a time', () => {
     const failed = await runPreview(deps, publishCtx, { ...env, publicUrl: null });
     expect(failed.ok).toBe(false);
     expect((await runPreview(deps, publishCtx, env)).ok).toBe(true);
+  }, 240_000);
+});
+
+/** Backlog 67: Nur ein erfolgreicher Publish der Produktion räumt den Bild-Cache, und das Log nennt das Ergebnis. */
+describe('image cache sweep after publish', () => {
+  it('sweeps unused old variants after a successful production publish only', async () => {
+    const setup = async (env: 'test' | 'production') => {
+      const deps = createTestDeps({ manifests: [coreModule, projectsModule, siteModule], locales: LOCALES, env });
+      insertUser(deps, { id: 'USER-TEST' });
+      unwrap(await enableProjects(deps));
+      unwrap(await applyTemplateSync(deps, ctxWith(['site.manage']), { dir: TEMPLATE_DIR, confirm: true }));
+      return deps;
+    };
+    const siteEnv = () => ({
+      publicUrl: 'https://staging.example.org',
+      staging: true,
+      deploy: { host: '', user: '', path: tmp(), auth: { kind: 'none' as const } },
+      templateDir: TEMPLATE_DIR,
+      cacheDir: tmp(),
+      previewDir: tmp(),
+    });
+    const OLD = 'v1-0123456789abcdef-480.webp';
+    const plant = (dir: string) => {
+      writeFileSync(path.join(dir, OLD), Buffer.alloc(2_000_000));
+      const t = new Date(Date.now() - 40 * 86_400_000);
+      utimesSync(path.join(dir, OLD), t, t);
+    };
+    const publishCtx = ctxWith(['site.publish', 'site.view']);
+    const manageCtx = ctxWith(['site.manage', 'settings.manage']);
+
+    // Testinstanz: kein Aufräumen.
+    const onTest = siteEnv();
+    plant(onTest.cacheDir);
+    const testRun = unwrap(await runPublish(await setup('test'), publishCtx, onTest, { confirm: true }));
+    expect(existsSync(path.join(onTest.cacheDir, OLD))).toBe(true);
+    expect(testRun.record.log).not.toContain('Bild-Cache');
+
+    // Produktion, abgebrochen (Sperrwort): kein Aufräumen.
+    const prod = await setup('production');
+    const env = siteEnv();
+    plant(env.cacheDir);
+    unwrap(await setSetting(prod, manageCtx, { key: 'site.blockedTerms', value: ['strenggeheim'] }));
+    unwrap(await setValues(prod, manageCtx, { values: { claim: { de: 'strenggeheim' } } }));
+    expect((await runPublish(prod, publishCtx, env, { confirm: true })).ok).toBe(false);
+    expect(existsSync(path.join(env.cacheDir, OLD))).toBe(true);
+
+    // Produktion, erfolgreich: Ungebrauchtes und Altes geht, das Log nennt es.
+    unwrap(await setValues(prod, manageCtx, { values: { claim: { de: 'Willkommen' } } }));
+    const done = unwrap(await runPublish(prod, publishCtx, env, { confirm: true }));
+    expect(existsSync(path.join(env.cacheDir, OLD))).toBe(false);
+    expect(done.record.log).toContain('Bild-Cache: 1 Datei entfernt, 2,0 MB frei');
   }, 240_000);
 });
 

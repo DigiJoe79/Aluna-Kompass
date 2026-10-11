@@ -18,14 +18,14 @@ export default async function ModulesPage() {
         <PageHeader
           title={t('title')}
           actions={
-            <span className="text-[13px] text-muted-ink">
+            <span className="text-meta text-muted-ink">
               {t('count', { active: modules.filter((m) => m.enabled).length, total: modules.length })}
             </span>
           }
         />
       }
     >
-      <p className="mb-4 rounded-md border border-line bg-surface-2 p-3 text-[13px] text-ink-2">
+      <p className="mb-4 rounded-md border border-line bg-surface-2 p-3 text-meta text-ink-2">
         {t('hint')}
       </p>
       <div className="flex flex-col gap-3">

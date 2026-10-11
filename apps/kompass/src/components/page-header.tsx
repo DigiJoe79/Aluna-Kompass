@@ -51,11 +51,11 @@ export function PageHeader({
             // Mit `status`: Marke auf der Grundlinie des Titels, 10 px Abstand; Telefon darunter. Ohne `status` derselbe
             // Aufbau, damit der Titel nicht springt, wenn ein Datensatz archiviert wird.
             <div className="flex items-baseline gap-2.5 max-sm:flex-col max-sm:items-start max-sm:gap-1">
-              <h1 className="font-heading text-[22px] tabular-nums">{title}</h1>
+              <h1 className="font-heading text-page-title tabular-nums">{title}</h1>
               {status}
             </div>
           ) : null}
-          {description ? <p className="mt-1 text-[14px] break-words text-ink-2">{description}</p> : null}
+          {description ? <p className="mt-1 text-body break-words text-ink-2">{description}</p> : null}
         </div>
         {actions ? <div className="flex shrink-0 items-center gap-2 max-sm:flex-wrap">{actions}</div> : null}
       </div>

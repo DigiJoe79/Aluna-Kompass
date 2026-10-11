@@ -25,7 +25,7 @@ import {
 import { and, asc, eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { schemaFor } from './field-schema';
-import { assetKeys } from './references';
+import { assetValueIssues, assetValuesIn, newAssetValues } from './asset-values';
 import { siteEntries } from './schema';
 import { activeTemplate } from './service';
 import type { TemplateSchema } from './load';
@@ -102,6 +102,8 @@ export async function createEntry(deps: Deps, ctx: CallContext, raw: unknown): P
 
   const validated = validate(deps, dataSchema(col), data);
   if (!validated.ok) return validated;
+  const assetIssues = assetValueIssues(deps.db, assetValuesIn(col.fields, validated.value));
+  if (assetIssues.length > 0) return invalid(assetIssues);
 
   const existing = rowsOf(deps.db, collection);
   if (col.max !== undefined && existing.length >= col.max) {
@@ -152,6 +154,8 @@ export async function updateEntry(deps: Deps, ctx: CallContext, raw: unknown): P
   if (data !== undefined) {
     const validated = validate(deps, dataSchema(col), { ...(before.data as Record<string, unknown>), ...data });
     if (!validated.ok) return validated;
+    const assetIssues = assetValueIssues(deps.db, newAssetValues(assetValuesIn(col.fields, validated.value), assetValuesIn(col.fields, before.data)));
+    if (assetIssues.length > 0) return invalid(assetIssues);
     nextData = validated.value;
   }
 
@@ -164,13 +168,10 @@ export async function updateEntry(deps: Deps, ctx: CallContext, raw: unknown): P
   });
 }
 
-/** Die Medien eines Eintrags: die Werte seiner als Asset deklarierten Felder. */
+/** Die Medien eines Eintrags: die Basis jedes Bildwerts seiner Felder, auch in Listen und mit Ausschnitt. */
 function assetIdsOf(col: CollectionDef | undefined, entry: SiteEntry): string[] {
   if (!col) return [];
-  const data = entry.data as Record<string, unknown>;
-  return assetKeys(col.fields)
-    .map((key) => data[key])
-    .filter((value): value is string => typeof value === 'string' && value.length > 0);
+  return [...new Set(assetValuesIn(col.fields, entry.data).map((v) => v.assetId))];
 }
 
 /**

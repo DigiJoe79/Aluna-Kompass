@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { idleState } from '@/lib/actions';
 import { strengthSegments } from '@/lib/password-strength';
 import { changePasswordAction } from './actions';
+import { Section } from '@/components/section';
 
 export function ProfilePasswordForm() {
   const t = useTranslations('profile.password');
@@ -21,45 +22,48 @@ export function ProfilePasswordForm() {
   }, [state]);
   const filled = strengthSegments(value);
   return (
-    <form action={action} className="flex flex-col gap-4 rounded-lg border border-line bg-surface p-5">
-      <h3 className="text-[15px] font-semibold">{t('title')}</h3>
-      <FormGrid>
-        <FormField id="currentPassword" label={t('current')} error={errors.currentPassword}>
-          <Input
-            id="currentPassword"
-            name="currentPassword"
-            type="password"
-            required
-            autoComplete="current-password"
-          />
-        </FormField>
-        <FormRowBreak />
-        <FormField id="newPassword" label={t('new')} error={errors.newPassword} hint={t('strength', { count: value.length })}>
-          <Input
-            id="newPassword"
-            name="newPassword"
-            type="password"
-            required
-            minLength={12}
-            autoComplete="new-password"
-            value={value}
-            onChange={(e) => setValue(e.target.value)}
-          />
-          <div className="mt-1 flex gap-1" aria-hidden>
-            {[1, 2, 3, 4].map((n) => (
-              <span
-                key={n}
-                className={`h-1 flex-1 rounded-full ${n <= filled ? 'bg-success' : 'bg-line-strong'}`}
+    <form action={action} className="rounded-lg border border-line bg-surface p-5">
+      <Section title={t('title')}>
+        <div className="flex flex-col gap-4">
+          <FormGrid>
+            <FormField id="currentPassword" label={t('current')} error={errors.currentPassword}>
+              <Input
+                id="currentPassword"
+                name="currentPassword"
+                type="password"
+                required
+                autoComplete="current-password"
               />
-            ))}
-          </div>
-        </FormField>
-        <FormField id="repeat" label={t('repeat')} error={errors.repeat}>
-          <Input id="repeat" name="repeat" type="password" required autoComplete="new-password" />
-        </FormField>
-      </FormGrid>
-      <SubmitButton className="w-fit">{t('submit')}</SubmitButton>
-      <p className="text-[12px] text-muted-ink">{t('footnote')}</p>
+            </FormField>
+            <FormRowBreak />
+            <FormField id="newPassword" label={t('new')} error={errors.newPassword} hint={t('strength', { count: value.length })}>
+              <Input
+                id="newPassword"
+                name="newPassword"
+                type="password"
+                required
+                minLength={12}
+                autoComplete="new-password"
+                value={value}
+                onChange={(e) => setValue(e.target.value)}
+              />
+              <div className="mt-1 flex gap-1" aria-hidden>
+                {[1, 2, 3, 4].map((n) => (
+                  <span
+                    key={n}
+                    className={`h-1 flex-1 rounded-full ${n <= filled ? 'bg-success' : 'bg-line-strong'}`}
+                  />
+                ))}
+              </div>
+            </FormField>
+            <FormField id="repeat" label={t('repeat')} error={errors.repeat}>
+              <Input id="repeat" name="repeat" type="password" required autoComplete="new-password" />
+            </FormField>
+          </FormGrid>
+          <SubmitButton className="w-fit">{t('submit')}</SubmitButton>
+          <p className="text-hint text-muted-ink">{t('footnote')}</p>
+        </div>
+      </Section>
     </form>
   );
 }

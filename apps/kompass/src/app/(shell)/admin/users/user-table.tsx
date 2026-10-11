@@ -124,7 +124,7 @@ export function UserTable({
                       {t(`status.${u.status}`)}
                     </StatusBadge>
                   </TableCell>
-                  <TableCell className="font-mono text-[13px] text-ink-2">
+                  <TableCell className="font-mono text-meta text-ink-2">
                     {u.lastLoginAt ? fmt.dateTime(u.lastLoginAt) : '—'}
                   </TableCell>
                   <TableCell>

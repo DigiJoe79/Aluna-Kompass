@@ -16,6 +16,7 @@ import { Input } from '@/components/ui/input';
 import { idleState } from '@/lib/actions';
 import { importBackupAction, inspectBackupAction } from './actions';
 import { useDateFormat } from '@/components/date-format-provider';
+import { SectionHeading } from '@/components/section';
 
 type Manifest = { createdAt: string; environment: string; appVersion: string; counts: { users: number; auditEntries: number; documents: number } };
 
@@ -41,7 +42,7 @@ export function ImportCard({ environmentName }: { environmentName: string }) {
   };
   return (
     <section className="rounded-lg border border-line bg-surface p-5">
-      <div className="flex items-center gap-2"><h3 className="text-[15px] font-semibold">{t('title')}</h3><StatusBadge tone="warning">{t('badge')}</StatusBadge></div>
+      <div className="flex items-center gap-2"><SectionHeading>{t('title')}</SectionHeading><StatusBadge tone="warning">{t('badge')}</StatusBadge></div>
       <div className="mt-3"><Notice level="warn">{t('warning')}</Notice></div>
       <form action={inspectAction} className="mt-4 flex flex-col gap-3">
         <FormGrid>
@@ -55,16 +56,16 @@ export function ImportCard({ environmentName }: { environmentName: string }) {
             <DialogTitle className="flex items-center gap-2"><AlertTriangle className="size-5 text-warning" aria-hidden />{t('confirmTitle', { env: environmentName })}</DialogTitle>
             <DialogDescription tone="body">{manifest ? t('confirmText', { users: manifest.counts.users, audit: manifest.counts.auditEntries, documents: manifest.counts.documents, source: `${manifest.environment}, ${fmt.dateTime(manifest.createdAt)}` }) : ''}</DialogDescription>
             {pending ? (
-              <ol className="flex flex-col gap-1 text-[13px]" aria-live="polite">
+              <ol className="flex flex-col gap-1 text-meta" aria-live="polite">
                 <li className="font-semibold">{t('steps.writing')}</li>
                 <li className="text-muted-ink-2">{t('steps.sessions')}</li>
               </ol>
             ) : (
               <FormField id="confirmation" label={t('confirmLabel')}>
-                <div className="flex items-center gap-2"><Input id="confirmation" value={confirmation} onChange={(e) => setConfirmation(e.target.value)} className="font-mono" autoComplete="off" /><code className="rounded-sm bg-code px-2 py-1 font-mono text-[12px]">{environmentName}</code></div>
+                <div className="flex items-center gap-2"><Input id="confirmation" value={confirmation} onChange={(e) => setConfirmation(e.target.value)} className="font-mono" autoComplete="off" /><code className="rounded-sm bg-code px-2 py-1 font-mono text-hint">{environmentName}</code></div>
               </FormField>
             )}
-            <p className="text-[12px] text-muted-ink">{pending ? t('noAbort') : confirmation === environmentName ? '' : t('notConfirmed')}</p>
+            <p className="text-hint text-muted-ink">{pending ? t('noAbort') : confirmation === environmentName ? '' : t('notConfirmed')}</p>
             <FormActionBar
               placement="dialog"
               cancel={pending ? undefined : () => setOpen(false)}

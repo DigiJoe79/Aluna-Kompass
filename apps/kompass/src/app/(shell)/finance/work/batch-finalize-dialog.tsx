@@ -65,7 +65,7 @@ export function BatchFinalizeDialog({ reviewedCount }: { reviewedCount: number }
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent size="lg" className="bg-surface shadow-md">
           <DialogTitle>{t('title')}</DialogTitle>
-          <div className="space-y-3 text-[13px]">
+          <div className="space-y-3 text-meta">
             {loaded.state === 'loading' ? <p className="text-ink-2">{t('loading')}</p> : null}
             {loaded.state === 'failed' ? <Notice level="refuse">{loaded.message || t('failed')}</Notice> : null}
             {preview ? (
@@ -85,7 +85,7 @@ export function BatchFinalizeDialog({ reviewedCount }: { reviewedCount: number }
                       const state = batchAccountState(row);
                       return (
                         <TableRow key={row.accountId}>
-                          <TableCell className="align-top font-medium text-ink">{row.accountName}</TableCell>
+                          <TableCell className="align-top text-ink">{row.accountName}</TableCell>
                           <TableCell className="text-right align-top font-mono tabular-nums">{formatEuro(row.sumCents)}</TableCell>
                           <TableCell className="text-right align-top font-mono tabular-nums">{formatEuro(row.bookCentsAfter)}</TableCell>
                           <TableCell className="align-top text-ink-2">

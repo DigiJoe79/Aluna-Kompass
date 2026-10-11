@@ -1,4 +1,4 @@
-import { requirePermission } from '@kompass/core';
+import { imagePlaces, mediaPixelSizes, requirePermission } from '@kompass/core';
 import { getProject } from '@kompass/module-projects';
 import { getTranslations } from 'next-intl/server';
 import { notFound } from 'next/navigation';
@@ -21,7 +21,7 @@ export default async function ProjectEditPage(props: { params: Promise<{ id: str
   const leading = locales[0] ?? 'de';
   const c = await getTranslations('common');
   const back = { href: '/projects', label: c('backToList') };
-  if (id === 'new') return (<Page width="standard" header={<PageHeader title={t('create')} back={back} />}><ProjectForm project={null} locales={locales} /></Page>);
+  if (id === 'new') return (<Page width="standard" header={<PageHeader title={t('create')} back={back} />}><ProjectForm project={null} locales={locales} imagePlaces={imagePlaces(deps, 'projects.image')} /></Page>);
   const project = await getProject(deps, ctx, id);
   if (!project.ok) notFound();
   const name = project.value.name[leading] || project.value.slug;
@@ -29,7 +29,7 @@ export default async function ProjectEditPage(props: { params: Promise<{ id: str
   return (
     <Page width="standard" header={<PageHeader title={name} description={`/projekte/${project.value.slug}/`} back={back} actions={actions} />}>
       <PendingPublishLine href={`/projects/${project.value.id}`} className="-mt-3 mb-4 block" />
-      <ProjectForm project={project.value} locales={locales} />
+      <ProjectForm project={project.value} locales={locales} imagePlaces={imagePlaces(deps, 'projects.image')} mediaSizes={mediaPixelSizes(deps, project.value.imageAssetId ? [project.value.imageAssetId] : [])} />
       <div className="mt-6 space-y-4">
         <ProjectFinanceSection deps={deps} ctx={ctx} projectId={project.value.id} />
         <RelatedDocuments deps={deps} ctx={ctx} entityType="project" entityId={project.value.id} />

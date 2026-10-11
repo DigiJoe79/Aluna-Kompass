@@ -12,7 +12,7 @@ export function PublishTarget({ env, publicUrl }: { env: string; publicUrl: stri
     host = publicUrl;
   }
   return (
-    <p className="flex flex-wrap items-center gap-2 text-[13px] text-ink-2">
+    <p className="flex flex-wrap items-center gap-2 text-meta text-ink-2">
       <StatusBadge tone="neutral" icon={Globe}>
         {t(`target.${env}`)}
       </StatusBadge>

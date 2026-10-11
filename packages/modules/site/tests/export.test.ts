@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { coreModule, defineModule, definePublishedView, setModuleEnabled, setSetting, storeMediaAsset, unwrap, writeSettingInternal } from '@kompass/core';
@@ -8,7 +8,7 @@ import { createTestDeps, ctxWith, insertUser } from '@kompass/core/testing';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
 import { createEntry, setEntryPublished } from '../src/entries';
-import { exportSiteContent, siteContentHash } from '../src/export';
+import { exportSiteContent, gatherAssets, siteContentHash } from '../src/export';
 import { siteModule } from '../src/manifest';
 import { siteValues } from '../src/schema';
 import { applyTemplateSync } from '../src/service';
@@ -183,7 +183,7 @@ export default defineTemplate({
     expect((content as { assets: { id: string }[] }).assets.map((a) => a.id).sort()).toEqual([hero.id, photo.id].sort());
   });
 
-  /** Stammdaten pflegt ein Verein einmal in den Einstellungen — kein Template
+  /** Stammdaten pflegt ein Verein einmal unter Einrichtung → Stammdaten — kein Template
    *  soll sie als eigene Variablen verdoppeln müssen. */
   it('always ships the organization view, without the template asking for it', async () => {
     const { deps, dir } = await setup();
@@ -398,5 +398,90 @@ export default defineTemplate({
     }
     const denied = await siteContentHash(deps, manage, { templateDir: dir });
     expect(denied.ok === false && denied.error.type === 'forbidden').toBe(true);
+  });
+});
+
+/** Spec Bildausschnitt § 2: Export und Einzelvorschau lösen abgeleitete IDs auf. */
+describe('assets with a crop in the export', () => {
+  const PICS = `
+import { defineTemplate } from '@kompass/site-template';
+export default defineTemplate({ name: 'X', locales: ['de'], uses: ['pics'], variables: {}, collections: {} });`;
+  const rows: { slug: string; photoAssetId: string; otherAssetId?: string }[] = [];
+  const pics = defineModule({
+    key: 'pics',
+    version: '0',
+    permissions: [],
+    publishedViews: [definePublishedView({ name: 'pics', schema: z.object({ slug: z.string(), photoAssetId: z.string(), otherAssetId: z.string().optional() }), load: () => rows })],
+  });
+  const setup = async () => {
+    rows.length = 0;
+    const deps = createTestDeps({ locales: ['de'], manifests: [coreModule, pics, siteModule] });
+    insertUser(deps, { id: 'USER-TEST' });
+    unwrap(await setModuleEnabled(deps, ctxWith(['modules.manage']), { key: 'pics', enabled: true }));
+    const dir = templateDir(PICS);
+    unwrap(await applyTemplateSync(deps, manage, { dir, confirm: true }));
+    const sharp = (await import('sharp')).default;
+    const png = await sharp({ create: { width: 200, height: 100, channels: 3, background: '#c00' } }).png().toBuffer();
+    const m = unwrap(await storeMediaAsset(deps, ctxWith(['media.upload']), { originalName: 'pic.png', bytes: png }));
+    return { deps, dir, m };
+  };
+  const exportTo = async (deps: Awaited<ReturnType<typeof setup>>['deps'], dir: string) => {
+    const jobDir = tmp('kompass-exp-job-');
+    const result = unwrap(await exportSiteContent(deps, publish, { jobDir, templateDir: dir }));
+    return { result, jobDir, files: readdirSync(path.join(jobDir, 'assets')) };
+  };
+
+  it('lists the derived ID with crop and the size of the cut, the original once', async () => {
+    const { deps, dir, m } = await setup();
+    rows.push({ slug: 'a', photoAssetId: `${m.id}~5000_0_5000_10000` });
+    const { result, files } = await exportTo(deps, dir);
+    expect(result.assets).toEqual([{ id: `${m.id}~5000_0_5000_10000`, filename: m.filename, mimeType: 'image/png', width: 100, height: 100, crop: { x: 0.5, y: 0, w: 0.5, h: 1 } }]);
+    expect(files).toEqual([m.filename]);
+  });
+
+  it('gives the plain photo and the cut two entries but one file', async () => {
+    const { deps, dir, m } = await setup();
+    rows.push({ slug: 'a', photoAssetId: `${m.id}~5000_0_5000_10000`, otherAssetId: m.id });
+    const { result, files } = await exportTo(deps, dir);
+    expect(result.assets.map((a) => a.id).sort()).toEqual([m.id, `${m.id}~5000_0_5000_10000`].sort());
+    expect(result.assets.find((a) => a.id === m.id)).toEqual({ id: m.id, filename: m.filename, mimeType: 'image/png', width: 200, height: 100 });
+    expect(files).toEqual([m.filename]);
+  });
+
+  it('skips a cut whose base is missing and an unreadable rest', async () => {
+    const { deps, dir, m } = await setup();
+    rows.push({ slug: 'a', photoAssetId: '01NOTTHERE0000000000000000~0_0_5000_5000', otherAssetId: `${m.id}~x` });
+    const { result, files } = await exportTo(deps, dir);
+    expect(result.assets).toEqual([]);
+    expect(files).toEqual([]);
+  });
+
+  it('changes the content hash when the crop changes', async () => {
+    const { deps, dir, m } = await setup();
+    rows.push({ slug: 'a', photoAssetId: `${m.id}~5000_0_5000_10000` });
+    const first = unwrap(await siteContentHash(deps, publish, { templateDir: dir })).contentHash;
+    rows[0]!.photoAssetId = `${m.id}~0_0_5000_10000`;
+    expect(unwrap(await siteContentHash(deps, publish, { templateDir: dir })).contentHash).not.toBe(first);
+  });
+
+  it('reports a blocked term in a file name once, though the file serves two entries', async () => {
+    const { deps, dir, m } = await setup();
+    unwrap(await setSetting(deps, ctxWith(['settings.manage', 'site.manage']), { key: 'site.blockedTerms', value: [m.filename.slice(0, 3)] }));
+    rows.push({ slug: 'a', photoAssetId: `${m.id}~5000_0_5000_10000`, otherAssetId: m.id });
+    const { result } = await exportTo(deps, dir);
+    expect(result.violations.filter((v) => v.path.startsWith('files/'))).toHaveLength(1);
+  });
+
+  it('resolves a cut of an image from the clipboard of a proposal and leaves the size open without the base size', async () => {
+    const dir = tmp('kompass-exp-gather-');
+    const read = vi.fn(async () => new Uint8Array([1, 2, 3]));
+    const extra = { id: 'proposal-image-I1', filename: 'proposal-image-I1.png', mimeType: 'image/png', width: null, height: null, read };
+    const assets = await gatherAssets(new Set(['proposal-image-I1~0_0_5000_5000', 'proposal-image-I1']), (id) => (id === extra.id ? extra : null), dir);
+    expect(assets).toEqual([
+      { id: 'proposal-image-I1', filename: 'proposal-image-I1.png', mimeType: 'image/png', width: null, height: null },
+      { id: 'proposal-image-I1~0_0_5000_5000', filename: 'proposal-image-I1.png', mimeType: 'image/png', width: null, height: null, crop: { x: 0, y: 0, w: 0.5, h: 0.5 } },
+    ]);
+    expect(read).toHaveBeenCalledTimes(1);
+    expect(readdirSync(dir)).toEqual(['proposal-image-I1.png']);
   });
 });

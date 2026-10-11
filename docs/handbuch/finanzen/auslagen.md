@@ -96,7 +96,7 @@ das ist eine Aufwandsspende. Das geht nur, wenn die Erstattung vorher
 zugesagt war: durch einen **Vertrag oder die Satzung**. Ein
 Vorstandsbeschluss allein reicht dafür nicht, außer die Satzung ermächtigt
 den Vorstand ausdrücklich dazu (BMF-Schreiben vom 25. November 2014). Diese
-**Anspruchsgrundlage** hinterlegt der Verein unter Einstellungen → Finanzen
+**Anspruchsgrundlage** hinterlegt der Verein unter Einrichtung → Finanzen → Steuerliches
 (siehe „Einrichtung“ unten); Kompass kopiert ihren Wortlaut beim Einreichen
 in den Antrag. Ohne eine solche Grundlage — weder beim Verein noch bei der
 Person selbst hinterlegt — bietet Kompass den Verzicht gar nicht erst an,
@@ -132,7 +132,7 @@ Unterschriftsfeld und wird nie maschinell erstellt.
 
 ## Einrichtung
 
-Unter Einstellungen → Finanzen → Steuerliches schalten Sie **Aufwandsspenden**
+Unter Einrichtung → Finanzen → Steuerliches schalten Sie **Aufwandsspenden**
 ein — in der Vorgabe aus: Ein Verein, der sie anbietet, schaltet sie bewusst
 ein. Erst dann lässt sich beim Einreichen auf die Erstattung verzichten, und
 erst dann erscheint das Feld **Anspruchsgrundlage für Aufwandsspenden**, in
@@ -141,8 +141,8 @@ Sie den Tag der Vereinbarung oder des Satzungsbeschlusses ein; daran misst
 Kompass, ob der Anspruch vor der Aufwendung vereinbart war — ohne Datum bleibt
 der Schritt der Checkliste offen.
 
-Den **Kilometersatz** für Fahrten pflegen Sie unter Einstellungen →
-Finanzen → „Sätze und Grenzen“ (siehe [Finanzen
+Den **Kilometersatz** für Fahrten pflegen Sie unter Einrichtung →
+Finanzen → Sätze und Grenzen (siehe [Finanzen
 einrichten](einrichten.md#sätze-und-grenzen)); er gilt ab einem Stichtag und
 lässt sich später ändern, ohne bereits eingereichte Fahrten zu verändern.
 

@@ -1,6 +1,6 @@
 {
   "name": "@kompass/mcp",
-  "version": "0.2.10",
+  "version": "0.2.11",
   "private": true,
   "type": "module",
   "exports": {
@@ -12,13 +12,13 @@
   },
   "dependencies": {
     "@kompass/core": "workspace:*",
-    "@modelcontextprotocol/server": "^2.1.0",
+    "@modelcontextprotocol/server": "^2.3.0",
     "zod": "^4.6.5"
   },
   "devDependencies": {
-    "@modelcontextprotocol/client": "^2.2.0",
-    "@types/node": "^26.6.2",
+    "@modelcontextprotocol/client": "^2.3.0",
+    "@types/node": "^26.6.4",
     "typescript": "^6.0.3",
-    "vitest": "^5.0.2"
+    "vitest": "^5.0.3"
   }
 }

@@ -16,15 +16,31 @@ const review = (o: Record<string, unknown> = {}) =>
 
 describe('previewRowInput (Vorschau „Heute“ / „Mit Wahl“)', () => {
   it('shows today without values and with today\'s photos', () => {
-    expect(previewRowInput(review(), 'current', {})).toEqual({ animalId: 'A1', slugId: 'P1', values: {}, photos: [{ assetId: 'M1', isPrimary: true }], proposalImages: [] });
+    expect(previewRowInput(review(), 'current', {})).toEqual({ animalId: 'A1', slugId: 'P1', values: {}, photos: [{ assetId: 'M1', isPrimary: true, crop: null }], proposalImages: [] });
   });
 
   it('takes the proposal where chosen, today on conflict by default, and the chosen photos', () => {
     const input = previewRowInput(review(), 'choice', {});
     expect(input.values).toEqual({ sizeCm: 55 });
-    expect(input.photos).toEqual([{ assetId: `${PROPOSAL_ASSET_PREFIX}I1`, isPrimary: true }, { assetId: 'M1', isPrimary: false }]);
+    expect(input.photos).toEqual([{ assetId: `${PROPOSAL_ASSET_PREFIX}I1`, isPrimary: true, crop: null }, { assetId: 'M1', isPrimary: false, crop: null }]);
     expect(input.proposalImages).toEqual(['I1']);
     expect(previewRowInput(review(), 'choice', { fields: { summary: 'proposal', sizeCm: 'current' }, photos: [{ mediaId: 'M1', isPrimary: true }] })).toMatchObject({ values: { summary: { de: 'Neu.' } }, photos: [{ assetId: 'M1', isPrimary: true }], proposalImages: [] });
+  });
+
+  it('carries the crop of each chosen photo into the row (Spec Bildausschnitt § 4, Vorschau)', () => {
+    const c1 = { x: 0.1, y: 0, w: 0.5, h: 1 };
+    const c2 = { x: 0, y: 0.2, w: 1, h: 0.5 };
+    const r = review({
+      animal: { id: 'A1', photos: [{ assetId: 'M1', isPrimary: true, crop: c2 }] },
+      photos: [photoRow({ key: 'image:I1', imageId: 'I1', proposedPrimary: true, crop: c1 }), photoRow({ key: 'media:M1', mediaId: 'M1', inProposal: false, origin: 'kompass', change: 'kept', currentPrimary: true, crop: c2 })],
+    });
+    // Heute: der gespeicherte Ausschnitt.
+    expect(previewRowInput(r, 'current', {}).photos).toEqual([{ assetId: 'M1', isPrimary: true, crop: c2 }]);
+    // Vorauswahl: Ausschnitt der Quelle für das neue Bild, gespeicherter für das Foto aus Kompass.
+    expect(previewRowInput(r, 'choice', {}).photos).toEqual([{ assetId: `${PROPOSAL_ASSET_PREFIX}I1`, isPrimary: true, crop: c1 }, { assetId: 'M1', isPrimary: false, crop: c2 }]);
+    // Die Wahl ändert oder entfernt ihn; ohne Angabe bleibt er.
+    expect(previewRowInput(r, 'choice', { photos: [{ imageId: 'I1', isPrimary: true, crop: null }, { mediaId: 'M1', isPrimary: false }] }).photos).toEqual([{ assetId: `${PROPOSAL_ASSET_PREFIX}I1`, isPrimary: true, crop: null }, { assetId: 'M1', isPrimary: false, crop: c2 }]);
+    expect(previewRowInput(r, 'choice', { photos: [{ imageId: 'I1', isPrimary: true }, { mediaId: 'M1', isPrimary: false, crop: c1 }] }).photos).toEqual([{ assetId: `${PROPOSAL_ASSET_PREFIX}I1`, isPrimary: true, crop: c1 }, { assetId: 'M1', isPrimary: false, crop: c1 }]);
   });
 
   it('takes all values for a new dog', () => {

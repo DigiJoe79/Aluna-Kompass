@@ -52,8 +52,8 @@ export function PdfField({
         <div data-testid="receipt-file" className="flex min-h-[var(--field-h)] items-center gap-2.5 rounded-md border border-line bg-surface px-3 py-2">
           <FileText className="size-5 shrink-0 text-muted-ink" aria-hidden />
           <div className="min-w-0 flex-1">
-            <p className="truncate text-[14px] text-ink">{fileName ?? documentNumber}</p>
-            <p className="text-[12px] text-muted-ink">
+            <p className="truncate text-body text-ink">{fileName ?? documentNumber}</p>
+            <p className="text-hint text-muted-ink">
               {[pageCount !== null ? t('pages', { count: pageCount }) : null, fileSize !== null ? formatFileSize(fileSize) : null, documentNumber ? t('filed', { number: documentNumber }) : null].filter(Boolean).join(' · ')}
             </p>
           </div>

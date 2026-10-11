@@ -25,7 +25,7 @@ Drei Fristklassen, als Einstellung in Monaten:
 - **Einwilligung / berechtigtes Interesse** — ohne gesetzliche Grundlage,
   etwa Interessenten, aus denen nichts wurde; Vorgabe 24 Monate.
 
-**8 Jahre** gelten seit 2025 für Buchungsbelege — Rechnungen, Quittungen, Kontoauszüge. Bücher, Aufzeichnungen und Jahresabschlüsse bleiben bei 10 Jahren. Dokumentarten, die es schon gibt, behalten ihre Frist; wer Belegarten umstellen will, tut das unter Verwaltung → Akte.
+**8 Jahre** gelten seit 2025 für Buchungsbelege — Rechnungen, Quittungen, Kontoauszüge. Bücher, Aufzeichnungen und Jahresabschlüsse bleiben bei 10 Jahren. Dokumentarten, die es schon gibt, behalten ihre Frist; wer Belegarten umstellen will, tut das unter Einrichtung → Akte → Arten.
 
 Die Frist beginnt mit dem Ende des Kalenderjahres, in dem der Vorgang lag —
 so, wie das Steuerrecht es verlangt. Sie wird nie gespeichert, sondern immer

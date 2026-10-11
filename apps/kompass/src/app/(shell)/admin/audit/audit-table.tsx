@@ -41,7 +41,7 @@ export async function AuditTable({
   }
 
   return (
-    <Table className="text-[14px]">
+    <Table className="text-body">
       <TableHeader>
         <TableRow>
           <TableHead>{t('columns.time')}</TableHead>
@@ -54,7 +54,7 @@ export async function AuditTable({
       <TableBody>
         {entries.map((e) => (
           <TableRow key={e.id} data-state={e.id === selectedId ? 'selected' : undefined}>
-            <TableCell className="font-mono text-[12px]">
+            <TableCell className="font-mono text-hint">
               <RowLink href={`?${query}${query ? '&' : ''}entry=${e.id}`}>
                 {fmt.dateTime(e.occurredAt, { seconds: true })}
               </RowLink>

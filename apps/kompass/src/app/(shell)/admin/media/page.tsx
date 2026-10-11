@@ -5,6 +5,7 @@ import { Page } from '@/components/page';
 import { requireSession } from '@/lib/request-context';
 import { LibraryClient } from './library-client';
 import { capItems, type ListQuery } from './types';
+import { listingReference } from '@/lib/media-listing';
 
 type Params = { folder?: string; unfiled?: string; q?: string; kind?: string; sort?: string };
 
@@ -46,7 +47,7 @@ export default async function MediaPage({ searchParams }: { searchParams: Promis
     createdAt: it.record.createdAt,
     uploadedBy: it.record.uploadedByUserId ? (names.get(it.record.uploadedByUserId) ?? null) : null,
     folder: it.record.folder,
-    references: it.references.map((r) => (r.href ? { label: r.label, href: r.href } : { label: r.label })),
+    references: it.references.map(listingReference),
   }));
 
   // Die Zähler der festen Einträge: „Ohne Ordner“ zählt die losen Dateien, „Alle Dateien“ alles.

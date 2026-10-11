@@ -22,6 +22,7 @@ import { formatEuro } from '@/lib/finance/amount';
 import { savePartnerNoticeAction, savePartnerPaymentDraftAction, savePartnerProfileAction, voidPartnerNoticeAction } from '../actions';
 import { FormField } from '@/components/forms/form-field';
 import { FormCell, FormGrid } from '@/components/forms/form-grid';
+import { Section, SectionHeading } from '@/components/section';
 
 type Status = PartnerView['status'];
 type Basis = 'transfer58' | 'agent57';
@@ -65,62 +66,68 @@ export function PartnerDetail({ partner, notices, payments, registerDocument, ag
         <ProfileSection partner={partner} documents={{ register: registerDocument, agreement: agreementDocument }} canWrite={canWrite} t={t} tStatus={tStatus} tBasis={tBasis} router={router} />
         <div className="space-y-6">
           {showNotices ? <NoticesSection partnerId={partner.id} abroad={partner.status === 'foreignBody'} notices={notices} canWrite={canWrite} t={t} router={router} /> : null}
-          <section className="space-y-3" data-testid="partner-payments">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <h2 className="font-heading text-[16px] text-ink">{t('payments.title')}</h2>
-              {canWrite ? (
-                <Button
-                  type="button"
-                  size="sm"
-                  data-testid="partner-new-payment"
-                  onClick={async () => {
-                    const result = await newPaymentFb.run(() => savePartnerPaymentDraftAction({ partnerId: partner.id, basis: (partner.usualBasis ?? 'transfer58') as Basis, purposeText: '', retroactive: false, positions: [] }));
-                    if (result.status !== 'success') return;
-                    const data = result.data as { id: string } | undefined;
-                    if (data?.id) router.push(`/finance/partners/${partner.id}/payments/${data.id}`);
-                  }}
-                >
-                  {t('payments.new')}
-                </Button>
-              ) : null}
-            </div>
-            <RefusalNotice action state={newPaymentFb.state} />
-            {payments.length === 0 ? (
-              <p className="text-[13px] text-muted-ink">{t('payments.empty')}</p>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>{t('payments.columns.number')}</TableHead>
-                    <TableHead className="text-right">{t('payments.columns.amount')}</TableHead>
-                    <TableHead>{t('payments.columns.state')}</TableHead>
-                    <TableHead className="hidden text-right sm:table-cell">{t('payments.columns.date')}</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {payments.map((p) => (
-                    <TableRow key={p.id} data-testid={`payment-row-${p.id}`}>
-                      <TableCell className="whitespace-normal">
-                        <Link href={`/finance/partners/${partner.id}/payments/${p.id}`} className="font-mono text-ink underline-offset-2 hover:underline">
-                          {p.number ?? (p.purposeText || t('payments.new'))}
-                        </Link>
-                      </TableCell>
-                      <TableCell className="text-right font-mono tabular-nums">{formatEuro(p.totalCents)}</TableCell>
-                      <TableCell className="whitespace-normal text-ink-2">
-                        {t(`payments.state.${paymentStateKey(p)}`)}
-                        {p.readyToAcknowledge ? (
-                          <>
-                            {' '}
-                            <StatusBadge tone="warning">{t('payments.readyToAcknowledge')}</StatusBadge>
-                          </>
-                        ) : null}
-                      </TableCell>
-                      <TableCell className="hidden text-right font-mono tabular-nums sm:table-cell">{fmt.date(p.date)}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            )}
+          <section data-testid="partner-payments">
+            <Section title={t('payments.title')}
+              actions={
+                <>
+                  {canWrite ? (
+                    <Button
+                      type="button"
+                      size="sm"
+                      data-testid="partner-new-payment"
+                      onClick={async () => {
+                        const result = await newPaymentFb.run(() => savePartnerPaymentDraftAction({ partnerId: partner.id, basis: (partner.usualBasis ?? 'transfer58') as Basis, purposeText: '', retroactive: false, positions: [] }));
+                        if (result.status !== 'success') return;
+                        const data = result.data as { id: string } | undefined;
+                        if (data?.id) router.push(`/finance/partners/${partner.id}/payments/${data.id}`);
+                      }}
+                    >
+                      {t('payments.new')}
+                    </Button>
+                  ) : null}
+                </>
+              }
+            >
+              <div className="space-y-3">
+                <RefusalNotice action state={newPaymentFb.state} />
+                {payments.length === 0 ? (
+                  <p className="text-meta text-muted-ink">{t('payments.empty')}</p>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>{t('payments.columns.number')}</TableHead>
+                        <TableHead className="text-right">{t('payments.columns.amount')}</TableHead>
+                        <TableHead>{t('payments.columns.state')}</TableHead>
+                        <TableHead className="hidden text-right sm:table-cell">{t('payments.columns.date')}</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {payments.map((p) => (
+                        <TableRow key={p.id} data-testid={`payment-row-${p.id}`}>
+                          <TableCell className="whitespace-normal">
+                            <Link href={`/finance/partners/${partner.id}/payments/${p.id}`} className="font-mono text-ink underline-offset-2 hover:underline">
+                              {p.number ?? (p.purposeText || t('payments.new'))}
+                            </Link>
+                          </TableCell>
+                          <TableCell className="text-right font-mono tabular-nums">{formatEuro(p.totalCents)}</TableCell>
+                          <TableCell className="whitespace-normal text-ink-2">
+                            {t(`payments.state.${paymentStateKey(p)}`)}
+                            {p.readyToAcknowledge ? (
+                              <>
+                                {' '}
+                                <StatusBadge tone="warning">{t('payments.readyToAcknowledge')}</StatusBadge>
+                              </>
+                            ) : null}
+                          </TableCell>
+                          <TableCell className="hidden text-right font-mono tabular-nums sm:table-cell">{fmt.date(p.date)}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
+              </div>
+            </Section>
           </section>
         </div>
       </div>
@@ -159,112 +166,118 @@ function ProfileSection({ partner, documents, canWrite, t, tStatus, tBasis, rout
   };
 
   return (
-    <section className="space-y-3 rounded-md border border-line bg-surface p-4" data-testid="partner-profile">
-      <div className="flex items-center justify-between">
-        <h2 className="font-heading text-[16px] text-ink">{t('profile.title')}</h2>
-        <div className="flex items-center gap-2">
-          {!partner.isActive ? <StatusBadge tone="neutral">{tList('inactive')}</StatusBadge> : null}
+    <section className="rounded-md border border-line bg-surface p-4" data-testid="partner-profile">
+      <Section title={t('profile.title')}
+        actions={
+          <>
+            <div className="flex items-center gap-2">
+              {!partner.isActive ? <StatusBadge tone="neutral">{tList('inactive')}</StatusBadge> : null}
+            </div>
+          </>
+        }
+      >
+        <div className="space-y-3">
+          {/* Rechtsform als Anzeige in der Zeile des Abschnitts, kein Feld (Entscheidung zum Inventar § E). */}
+          <section>
+            {/* Rechtsform in der Zeile des Titels: SectionHeading nimmt Kinder, Section nur Text (K10 Charge 3). */}
+            <SectionHeading>
+              {t('profile.sections.classification')}
+              <span className="font-normal text-ink-2" data-testid="partner-legal-form">
+                {' · '}
+                {partner.contactLegalForm ?? (
+                  <Link href={`/contacts/${partner.contactId}`} className="underline underline-offset-2">
+                    {t('profile.legalFormNone')}
+                  </Link>
+                )}
+              </span>
+            </SectionHeading>
+            <div className="mt-3">
+              <FormGrid>
+                <FormField id="partner-status" label={t('profile.status')} required>
+                  <Select id="partner-status" value={status} disabled={!canWrite} onChange={(e) => setStatus(e.target.value as Status)}>
+                    {(['taxExemptBody', 'foreignBody', 'publicBody', 'agent'] as const).map((s) => (
+                      <option key={s} value={s}>
+                        {tStatus(s)}
+                      </option>
+                    ))}
+                  </Select>
+                </FormField>
+                <FormField id="partner-proof-months" label={t('profile.usualProofMonths')} size="s">
+                  <Select id="partner-proof-months" value={String(usualProofMonths)} disabled={!canWrite} onChange={(e) => setUsualProofMonths(Number(e.target.value))}>
+                    {PROOF_MONTHS.map((n) => (
+                      <option key={n} value={n}>
+                        {t('profile.months', { count: n })}
+                      </option>
+                    ))}
+                  </Select>
+                </FormField>
+                {derived ? (
+                  <FormCell size="full" className="space-y-1">
+                    <p className="text-meta font-semibold text-ink">{t('profile.usualBasis')}</p>
+                    <p className="text-body text-ink-2" data-testid="partner-basis-derived">
+                      {tBasis(status === 'agent' ? 'agent57' : 'transfer58')} <span className="text-hint text-muted-ink">({t('profile.usualBasisDerived')})</span>
+                    </p>
+                  </FormCell>
+                ) : canWrite ? (
+                  <FormCell size="full" className="space-y-1.5" data-testid="partner-basis-cards">
+                    <ChoiceCards
+                      mode="choice"
+                      name="partner-usual-basis"
+                      legend={t('profile.basisQuestion')}
+                      value={usualBasis}
+                      onSelect={(v) => setUsualBasis(v as Basis)}
+                      options={(['transfer58', 'agent57'] as const).map((b) => ({ value: b, label: t(`profile.basisCards.${b}`), description: tBasis(b) }))}
+                    />
+                    <p className="text-hint text-muted-ink">{t('profile.basisHint')}</p>
+                  </FormCell>
+                ) : (
+                  <FormCell size="full" className="space-y-1">
+                    <p className="text-meta font-semibold text-ink">{t('profile.basisQuestion')}</p>
+                    <p className="text-body text-ink-2">{t(`profile.basisCards.${usualBasis}`)}</p>
+                  </FormCell>
+                )}
+              </FormGrid>
+            </div>
+          </section>
+          {/* Nach einem Abschnitt ohne Section zieht der Rahmen die Linie, die Section sonst selbst setzt. */}
+          <div className="mt-5 border-t border-line pt-5">
+          <Section title={t('profile.sections.documents')}>
+            <FormGrid>
+              {canWrite ? (
+                <>
+                  <FormCell size="m">
+                    <DocumentPicker id="partner-register-doc" name="registerDocumentId" label={t('profile.registerDocument')} value={registerDocument} onChange={setRegisterDocument} />
+                  </FormCell>
+                  <FormCell size="m">
+                    <DocumentPicker id="partner-agreement-doc" name="agreementDocumentId" label={t('profile.agreementDocument')} value={agreementDocument} onChange={setAgreementDocument} />
+                  </FormCell>
+                </>
+              ) : (
+                <>
+                  <FormCell as="dl" size="m">
+                    <DocumentLine label={t('profile.registerDocument')} doc={documents.register} t={t} />
+                  </FormCell>
+                  <FormCell as="dl" size="m">
+                    <DocumentLine label={t('profile.agreementDocument')} doc={documents.agreement} t={t} />
+                  </FormCell>
+                </>
+              )}
+              <FormField id="partner-note" label={t('profile.note')} size="l">
+                <Textarea id="partner-note" rows={2} value={note} disabled={!canWrite} onChange={(e) => setNote(e.target.value)} />
+              </FormField>
+            </FormGrid>
+          </Section>
+          </div>
+          <RefusalNotice state={saveFb.state} />
+          {canWrite ? (
+            <div className="flex items-center justify-end">
+              <Button type="button" disabled={pending} onClick={() => void save()} data-testid="partner-profile-save">
+                {t('profile.save')}
+              </Button>
+            </div>
+          ) : null}
         </div>
-      </div>
-
-      {/* Rechtsform als Anzeige in der Zeile des Abschnitts, kein Feld (Entscheidung zum Inventar § E). */}
-      <section>
-        <h3 className="text-[15px] font-semibold">
-          {t('profile.sections.classification')}
-          <span className="font-normal text-ink-2" data-testid="partner-legal-form">
-            {' · '}
-            {partner.contactLegalForm ?? (
-              <Link href={`/contacts/${partner.contactId}`} className="underline underline-offset-2">
-                {t('profile.legalFormNone')}
-              </Link>
-            )}
-          </span>
-        </h3>
-        <div className="mt-3">
-          <FormGrid>
-            <FormField id="partner-status" label={t('profile.status')} required>
-              <Select id="partner-status" value={status} disabled={!canWrite} onChange={(e) => setStatus(e.target.value as Status)}>
-                {(['taxExemptBody', 'foreignBody', 'publicBody', 'agent'] as const).map((s) => (
-                  <option key={s} value={s}>
-                    {tStatus(s)}
-                  </option>
-                ))}
-              </Select>
-            </FormField>
-            <FormField id="partner-proof-months" label={t('profile.usualProofMonths')} size="s">
-              <Select id="partner-proof-months" value={String(usualProofMonths)} disabled={!canWrite} onChange={(e) => setUsualProofMonths(Number(e.target.value))}>
-                {PROOF_MONTHS.map((n) => (
-                  <option key={n} value={n}>
-                    {t('profile.months', { count: n })}
-                  </option>
-                ))}
-              </Select>
-            </FormField>
-            {derived ? (
-              <FormCell size="full" className="space-y-1">
-                <p className="text-[13px] font-semibold text-ink">{t('profile.usualBasis')}</p>
-                <p className="text-[14px] text-ink-2" data-testid="partner-basis-derived">
-                  {tBasis(status === 'agent' ? 'agent57' : 'transfer58')} <span className="text-[12px] text-muted-ink">({t('profile.usualBasisDerived')})</span>
-                </p>
-              </FormCell>
-            ) : canWrite ? (
-              <FormCell size="full" className="space-y-1.5" data-testid="partner-basis-cards">
-                <ChoiceCards
-                  mode="choice"
-                  name="partner-usual-basis"
-                  legend={t('profile.basisQuestion')}
-                  value={usualBasis}
-                  onSelect={(v) => setUsualBasis(v as Basis)}
-                  options={(['transfer58', 'agent57'] as const).map((b) => ({ value: b, label: t(`profile.basisCards.${b}`), description: tBasis(b) }))}
-                />
-                <p className="text-[12px] text-muted-ink">{t('profile.basisHint')}</p>
-              </FormCell>
-            ) : (
-              <FormCell size="full" className="space-y-1">
-                <p className="text-[13px] font-semibold text-ink">{t('profile.basisQuestion')}</p>
-                <p className="text-[14px] text-ink-2">{t(`profile.basisCards.${usualBasis}`)}</p>
-              </FormCell>
-            )}
-          </FormGrid>
-        </div>
-      </section>
-      <section className="mt-5 border-t border-line pt-5">
-        <h3 className="text-[15px] font-semibold">{t('profile.sections.documents')}</h3>
-        <div className="mt-3">
-          <FormGrid>
-            {canWrite ? (
-              <>
-                <FormCell size="m">
-                  <DocumentPicker id="partner-register-doc" name="registerDocumentId" label={t('profile.registerDocument')} value={registerDocument} onChange={setRegisterDocument} />
-                </FormCell>
-                <FormCell size="m">
-                  <DocumentPicker id="partner-agreement-doc" name="agreementDocumentId" label={t('profile.agreementDocument')} value={agreementDocument} onChange={setAgreementDocument} />
-                </FormCell>
-              </>
-            ) : (
-              <>
-                <FormCell as="dl" size="m">
-                  <DocumentLine label={t('profile.registerDocument')} doc={documents.register} t={t} />
-                </FormCell>
-                <FormCell as="dl" size="m">
-                  <DocumentLine label={t('profile.agreementDocument')} doc={documents.agreement} t={t} />
-                </FormCell>
-              </>
-            )}
-            <FormField id="partner-note" label={t('profile.note')} size="l">
-              <Textarea id="partner-note" rows={2} value={note} disabled={!canWrite} onChange={(e) => setNote(e.target.value)} />
-            </FormField>
-          </FormGrid>
-        </div>
-      </section>
-      <RefusalNotice state={saveFb.state} />
-      {canWrite ? (
-        <div className="flex items-center justify-end">
-          <Button type="button" disabled={pending} onClick={() => void save()} data-testid="partner-profile-save">
-            {t('profile.save')}
-          </Button>
-        </div>
-      ) : null}
+      </Section>
     </section>
   );
 }
@@ -307,112 +320,118 @@ function NoticesSection({ partnerId, abroad, notices, canWrite, t, router }: { p
   };
 
   return (
-    <section className="space-y-3" data-testid="partner-notices">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="font-heading text-[16px] text-ink">{t('notices.title')}</h2>
-        {canWrite && !adding ? (
-          <Button type="button" variant="secondary" size="sm" onClick={() => setAdding(true)} data-testid="notice-add-trigger">
-            {t('notices.new')}
-          </Button>
-        ) : null}
-      </div>
-      {adding ? (
-        <div className="space-y-3 rounded-md border border-line bg-surface p-3" data-testid="notice-form">
-          <FormGrid>
-            <FormField id="notice-kind" label={t('notices.kind')}>
-              <Select id="notice-kind" value={kind} onChange={(e) => setKind(e.target.value as NoticeKindChoice)}>
-                {kinds.map((k) => (
-                  <option key={k} value={k}>
-                    {kindLabel(k)}
-                  </option>
-                ))}
-              </Select>
-            </FormField>
-            <FormField id="notice-date" label={t('notices.noticeDate')} required size="s">
-              <Input id="notice-date" type="date" value={noticeDate} onChange={(e) => setNoticeDate(e.target.value)} />
-            </FormField>
-            {kind === 'recognitionAbroad' ? (
-              <FormField id="notice-valid-until" label={t('notices.validUntil')} required size="s">
-                <Input id="notice-valid-until" type="date" value={validUntil} onChange={(e) => setValidUntil(e.target.value)} />
-              </FormField>
+    <section data-testid="partner-notices">
+      <Section title={t('notices.title')}
+        actions={
+          <>
+            {canWrite && !adding ? (
+              <Button type="button" variant="secondary" size="sm" onClick={() => setAdding(true)} data-testid="notice-add-trigger">
+                {t('notices.new')}
+              </Button>
             ) : null}
-            <FormField id="notice-received" label={t('notices.receivedOn')} size="s">
-              <Input id="notice-received" type="date" value={receivedOn} onChange={(e) => setReceivedOn(e.target.value)} />
-            </FormField>
-            <FormCell size="m">
-              <DocumentPicker id="notice-document" name="documentId" label={t('notices.document')} value={document} onChange={setDocument} required />
-            </FormCell>
-          </FormGrid>
-          <RefusalNotice state={saveFb.state} />
-          <div className="flex justify-end gap-2">
-            <Button type="button" variant="ghost" onClick={() => setAdding(false)}>
-              {t('notices.cancel')}
-            </Button>
-            <Button type="button" disabled={!document || !noticeDate || (kind === 'recognitionAbroad' && !validUntil) || pending} onClick={() => void save()}>
-              {t('notices.save')}
-            </Button>
-          </div>
-        </div>
-      ) : null}
-      {notices.length === 0 ? (
-        <p className="text-[13px] text-muted-ink">{t('notices.empty')}</p>
-      ) : (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>{t('notices.kind')}</TableHead>
-              <TableHead>{t('notices.validUntil')}</TableHead>
-              <TableHead className="hidden sm:table-cell">{t('notices.receivedColumn')}</TableHead>
-              <TableHead>{t('notices.stateColumn')}</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {notices.map((n) => (
-              <TableRow key={n.id} data-testid={`notice-row-${n.id}`}>
-                <TableCell className="whitespace-normal">
-                  {kindLabel(n.kind)}
-                  <span className="block text-[12px] text-muted-ink">{t('notices.dated', { date: fmt.date(n.noticeDate) })}</span>
-                  {canWrite && n.state !== 'voided' ? (
-                    <Button type="button" variant="link" size="xs" className="mt-1 flex px-0" onClick={() => setVoiding(n.id)}>
-                      {t('notices.voidItem')}
-                    </Button>
-                  ) : null}
-                </TableCell>
-                <TableCell className="font-mono tabular-nums">{fmt.date(n.validUntil)}</TableCell>
-                <TableCell className="hidden font-mono tabular-nums sm:table-cell">{fmt.date(n.receivedOn)}</TableCell>
-                <TableCell className="whitespace-normal text-ink-2">{t(`notices.state.${n.state}`)}</TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      )}
-      {/* Unumkehrbar: Rückfrage mit der Folge als Beschreibung und der Begründung als Feld (Spec Seitenkopf § 3.6). */}
-      <ConfirmDialog
-        open={voiding !== null}
-        onOpenChange={(open) => {
-          if (open) return;
-          setVoiding(null);
-          setVoidNote('');
-        }}
-        title={t('notices.voidTitle')}
-        description={t('notices.voidDescription')}
-        confirmLabel={t('notices.void')}
-        destructive
-        confirmDisabled={!voidNote.trim()}
-        action={async () => {
-          if (!voiding) return { status: 'idle' };
-          const result = await voidPartnerNoticeAction(voiding, voidNote);
-          if (result.status === 'success') {
-            setVoidNote('');
-            router.refresh();
-          }
-          return result;
-        }}
+          </>
+        }
       >
-        <FormField id="partner-notice-void-note" label={t('notices.voidNote')} required>
-          <Textarea id="partner-notice-void-note" rows={2} value={voidNote} onChange={(e) => setVoidNote(e.target.value)} />
-        </FormField>
-      </ConfirmDialog>
+        <div className="space-y-3">
+          {adding ? (
+            <div className="space-y-3 rounded-md border border-line bg-surface p-3" data-testid="notice-form">
+              <FormGrid>
+                <FormField id="notice-kind" label={t('notices.kind')}>
+                  <Select id="notice-kind" value={kind} onChange={(e) => setKind(e.target.value as NoticeKindChoice)}>
+                    {kinds.map((k) => (
+                      <option key={k} value={k}>
+                        {kindLabel(k)}
+                      </option>
+                    ))}
+                  </Select>
+                </FormField>
+                <FormField id="notice-date" label={t('notices.noticeDate')} required size="s">
+                  <Input id="notice-date" type="date" value={noticeDate} onChange={(e) => setNoticeDate(e.target.value)} />
+                </FormField>
+                {kind === 'recognitionAbroad' ? (
+                  <FormField id="notice-valid-until" label={t('notices.validUntil')} required size="s">
+                    <Input id="notice-valid-until" type="date" value={validUntil} onChange={(e) => setValidUntil(e.target.value)} />
+                  </FormField>
+                ) : null}
+                <FormField id="notice-received" label={t('notices.receivedOn')} size="s">
+                  <Input id="notice-received" type="date" value={receivedOn} onChange={(e) => setReceivedOn(e.target.value)} />
+                </FormField>
+                <FormCell size="m">
+                  <DocumentPicker id="notice-document" name="documentId" label={t('notices.document')} value={document} onChange={setDocument} required />
+                </FormCell>
+              </FormGrid>
+              <RefusalNotice state={saveFb.state} />
+              <div className="flex justify-end gap-2">
+                <Button type="button" variant="ghost" onClick={() => setAdding(false)}>
+                  {t('notices.cancel')}
+                </Button>
+                <Button type="button" disabled={!document || !noticeDate || (kind === 'recognitionAbroad' && !validUntil) || pending} onClick={() => void save()}>
+                  {t('notices.save')}
+                </Button>
+              </div>
+            </div>
+          ) : null}
+          {notices.length === 0 ? (
+            <p className="text-meta text-muted-ink">{t('notices.empty')}</p>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>{t('notices.kind')}</TableHead>
+                  <TableHead>{t('notices.validUntil')}</TableHead>
+                  <TableHead className="hidden sm:table-cell">{t('notices.receivedColumn')}</TableHead>
+                  <TableHead>{t('notices.stateColumn')}</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {notices.map((n) => (
+                  <TableRow key={n.id} data-testid={`notice-row-${n.id}`}>
+                    <TableCell className="whitespace-normal">
+                      {kindLabel(n.kind)}
+                      <span className="block text-hint text-muted-ink">{t('notices.dated', { date: fmt.date(n.noticeDate) })}</span>
+                      {canWrite && n.state !== 'voided' ? (
+                        <Button type="button" variant="link" size="xs" className="mt-1 flex px-0" onClick={() => setVoiding(n.id)}>
+                          {t('notices.voidItem')}
+                        </Button>
+                      ) : null}
+                    </TableCell>
+                    <TableCell className="font-mono tabular-nums">{fmt.date(n.validUntil)}</TableCell>
+                    <TableCell className="hidden font-mono tabular-nums sm:table-cell">{fmt.date(n.receivedOn)}</TableCell>
+                    <TableCell className="whitespace-normal text-ink-2">{t(`notices.state.${n.state}`)}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+          {/* Unumkehrbar: Rückfrage mit der Folge als Beschreibung und der Begründung als Feld (Spec Seitenkopf § 3.6). */}
+          <ConfirmDialog
+            open={voiding !== null}
+            onOpenChange={(open) => {
+              if (open) return;
+              setVoiding(null);
+              setVoidNote('');
+            }}
+            title={t('notices.voidTitle')}
+            description={t('notices.voidDescription')}
+            confirmLabel={t('notices.void')}
+            destructive
+            confirmDisabled={!voidNote.trim()}
+            action={async () => {
+              if (!voiding) return { status: 'idle' };
+              const result = await voidPartnerNoticeAction(voiding, voidNote);
+              if (result.status === 'success') {
+                setVoidNote('');
+                router.refresh();
+              }
+              return result;
+            }}
+          >
+            <FormField id="partner-notice-void-note" label={t('notices.voidNote')} required>
+              <Textarea id="partner-notice-void-note" rows={2} value={voidNote} onChange={(e) => setVoidNote(e.target.value)} />
+            </FormField>
+          </ConfirmDialog>
+        </div>
+      </Section>
     </section>
   );
 }
@@ -421,8 +440,8 @@ function NoticesSection({ partnerId, abroad, notices, canWrite, t, router }: { p
 function DocumentLine({ label, doc, t }: { label: string; doc: PartnerDocument | null; t: ReturnType<typeof useTranslations> }) {
   return (
     <div className="space-y-1">
-      <dt className="text-[13px] font-semibold text-ink">{label}</dt>
-      <dd className="text-[14px] text-ink-2">
+      <dt className="text-meta font-semibold text-ink">{label}</dt>
+      <dd className="text-body text-ink-2">
         {doc === null ? (
           t('profile.documentNone')
         ) : 'hidden' in doc ? (

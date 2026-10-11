@@ -14,6 +14,7 @@ import { Select } from '@/components/ui/select';
 import { linkDocumentAction, unlinkDocumentAction } from '../actions';
 import { FormField } from '@/components/forms/form-field';
 import { FormCell, FormGrid } from '@/components/forms/form-grid';
+import { Section } from '@/components/section';
 
 export interface ResolvedLink {
   id: string;
@@ -82,107 +83,110 @@ export function LinksPanel({
 
   return (
     <section className="rounded-md border border-line bg-surface p-5 shadow-xs">
-      <div className="mb-3 flex items-center justify-between gap-2">
-        <h3 className="text-[15px] font-semibold text-ink">{t('linksTitle')}</h3>
-        {canEdit ? (
-          <Button type="button" variant="outline" size="sm" onClick={() => setOpen(true)}>
-            {t('links.add')}
-          </Button>
-        ) : null}
-      </div>
+      <Section title={t('linksTitle')}
+        actions={
+          <>
+            {canEdit ? (
+              <Button type="button" variant="outline" size="sm" onClick={() => setOpen(true)}>
+                {t('links.add')}
+              </Button>
+            ) : null}
+          </>
+        }
+      >
+        <RefusalNotice action state={removeFb.state} />
 
-      <RefusalNotice action state={removeFb.state} />
+        {links.length === 0 ? (
+          <p className="text-meta text-muted-ink">{t('links.none')}</p>
+        ) : (
+          <ul data-testid="document-links" className="space-y-2 text-meta text-ink-2">
+            {links.map((link) => (
+              <li key={link.id} className="flex items-center gap-2">
+                <span className="size-1.5 shrink-0 rounded-full bg-muted-ink" aria-hidden />
+                <span className="flex-1">
+                  {link.href && link.label ? (
+                    <Link href={link.href} className="underline underline-offset-2">
+                      {link.label}
+                    </Link>
+                  ) : (
+                    <span className={link.label ? undefined : 'text-muted-ink'}>
+                      {link.label ?? (link.reason === 'forbidden' ? t('linkForbidden') : t('linkMissing'))}
+                    </span>
+                  )}
+                  {' — '}
+                  {t.has(`roles.${link.role}`) ? t(`roles.${link.role}`) : link.role}
+                  {t.has(`entities.${link.entityType}`) ? ` (${t(`entities.${link.entityType}`)})` : null}
+                </span>
+                {canEdit ? (
+                  <Button type="button" variant="ghost" size="sm" disabled={pending} onClick={() => remove(link.id)}>
+                    {t('links.remove')}
+                  </Button>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+        )}
 
-      {links.length === 0 ? (
-        <p className="text-[13px] text-muted-ink">{t('links.none')}</p>
-      ) : (
-        <ul data-testid="document-links" className="space-y-2 text-[13px] text-ink-2">
-          {links.map((link) => (
-            <li key={link.id} className="flex items-center gap-2">
-              <span className="size-1.5 shrink-0 rounded-full bg-muted-ink" aria-hidden />
-              <span className="flex-1">
-                {link.href && link.label ? (
-                  <Link href={link.href} className="underline underline-offset-2">
-                    {link.label}
-                  </Link>
+        <Dialog open={open} onOpenChange={setOpen}>
+          <DialogContent size="md" className="bg-surface shadow-md">
+            <DialogTitle>{t('links.addTitle')}</DialogTitle>
+            <DialogDescription>{t('links.addDescription')}</DialogDescription>
+
+            <div className="mt-5">
+              <FormGrid>
+                {types.length > 1 ? (
+                  <FormField id="link-entity-type" label={t('links.entityType')} size="s">
+                    <Select id="link-entity-type" value={entityType} onChange={(e) => setEntityType(e.target.value)}>
+                      {types.map((type) => (
+                        <option key={type} value={type}>
+                          {t(`entities.${type}`)}
+                        </option>
+                      ))}
+                    </Select>
+                  </FormField>
+                ) : null}
+
+                {entityType === 'contact' ? (
+                  <FormCell size="m">
+                    <ContactPicker
+                      id="link-contact"
+                      name="linkContactId"
+                      label={t('links.contact')}
+                      value={contact}
+                      onChange={setContact}
+                      canCreate={canCreateContact}
+                      required
+                    />
+                  </FormCell>
                 ) : (
-                  <span className={link.label ? undefined : 'text-muted-ink'}>
-                    {link.label ?? (link.reason === 'forbidden' ? t('linkForbidden') : t('linkMissing'))}
-                  </span>
+                  <FormField id="link-entity-id" label={t(`entities.${entityType}`)} required>
+                    <Select id="link-entity-id" value={otherId} onChange={(e) => setOtherId(e.target.value)}>
+                      <option value="">{t('links.choose')}</option>
+                      {(entityType === 'animal' ? animals : projects).map((item) => (
+                        <option key={item.id} value={item.id}>
+                          {item.name}
+                        </option>
+                      ))}
+                    </Select>
+                  </FormField>
                 )}
-                {' — '}
-                {t.has(`roles.${link.role}`) ? t(`roles.${link.role}`) : link.role}
-                {t.has(`entities.${link.entityType}`) ? ` (${t(`entities.${link.entityType}`)})` : null}
-              </span>
-              {canEdit ? (
-                <Button type="button" variant="ghost" size="sm" disabled={pending} onClick={() => remove(link.id)}>
-                  {t('links.remove')}
-                </Button>
-              ) : null}
-            </li>
-          ))}
-        </ul>
-      )}
 
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent size="md" className="bg-surface shadow-md">
-          <DialogTitle>{t('links.addTitle')}</DialogTitle>
-          <DialogDescription>{t('links.addDescription')}</DialogDescription>
-
-          <div className="mt-5">
-            <FormGrid>
-              {types.length > 1 ? (
-                <FormField id="link-entity-type" label={t('links.entityType')} size="s">
-                  <Select id="link-entity-type" value={entityType} onChange={(e) => setEntityType(e.target.value)}>
-                    {types.map((type) => (
-                      <option key={type} value={type}>
-                        {t(`entities.${type}`)}
+                <FormField id="link-role" label={t('links.role')} required size="s">
+                  <Select id="link-role" value={role} onChange={(e) => setRole(e.target.value as (typeof ROLES)[number])}>
+                    {ROLES.map((r) => (
+                      <option key={r} value={r}>
+                        {t(`roles.${r}`)}
                       </option>
                     ))}
                   </Select>
                 </FormField>
-              ) : null}
+              </FormGrid>
+            </div>
 
-              {entityType === 'contact' ? (
-                <FormCell size="m">
-                  <ContactPicker
-                    id="link-contact"
-                    name="linkContactId"
-                    label={t('links.contact')}
-                    value={contact}
-                    onChange={setContact}
-                    canCreate={canCreateContact}
-                    required
-                  />
-                </FormCell>
-              ) : (
-                <FormField id="link-entity-id" label={t(`entities.${entityType}`)} required>
-                  <Select id="link-entity-id" value={otherId} onChange={(e) => setOtherId(e.target.value)}>
-                    <option value="">{t('links.choose')}</option>
-                    {(entityType === 'animal' ? animals : projects).map((item) => (
-                      <option key={item.id} value={item.id}>
-                        {item.name}
-                      </option>
-                    ))}
-                  </Select>
-                </FormField>
-              )}
-
-              <FormField id="link-role" label={t('links.role')} required size="s">
-                <Select id="link-role" value={role} onChange={(e) => setRole(e.target.value as (typeof ROLES)[number])}>
-                  {ROLES.map((r) => (
-                    <option key={r} value={r}>
-                      {t(`roles.${r}`)}
-                    </option>
-                  ))}
-                </Select>
-              </FormField>
-            </FormGrid>
-          </div>
-
-          <FormActionBar placement="dialog" cancel={() => setOpen(false)} pending={pending} saveDisabled={!entityId} saveLabel={t('links.submit')} onSave={submit} state={addFb.state} note={<span className="text-[12px] text-muted-ink">{tCommon('requiredLegend')}</span>} />
-        </DialogContent>
-      </Dialog>
+            <FormActionBar placement="dialog" cancel={() => setOpen(false)} pending={pending} saveDisabled={!entityId} saveLabel={t('links.submit')} onSave={submit} state={addFb.state} note={<span className="text-hint text-muted-ink">{tCommon('requiredLegend')}</span>} />
+          </DialogContent>
+        </Dialog>
+      </Section>
     </section>
   );
 }

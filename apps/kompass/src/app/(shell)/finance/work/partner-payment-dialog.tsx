@@ -52,7 +52,7 @@ export function PartnerPaymentDialog({
       <DialogContent size="sm">
         <DialogTitle>{t('title')}</DialogTitle>
         <div className="space-y-3" data-testid="work-partner-payment">
-          <p className="text-[13px] text-ink-2">{t('text')}</p>
+          <p className="text-meta text-ink-2">{t('text')}</p>
           {partners.length === 0 ? (
             <Notice level="hint">{t('none')}</Notice>
           ) : (

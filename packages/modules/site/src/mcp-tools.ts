@@ -13,6 +13,7 @@ import {
   setEntryPublished,
   updateEntry,
 } from './entries';
+import { assetFieldsIn } from './asset-values';
 import { schemaFor } from './field-schema';
 import type { TemplateSchema } from './load';
 import { activeTemplate, applyTemplateSync, previewTemplateSync, readActiveTemplate } from './service';
@@ -39,6 +40,12 @@ const tool = (
   service,
 });
 
+/** Spec Ausschnitt für alle Bilder § 5: Bildwerte dürfen einen Ausschnitt tragen; das Format der Stelle steht in site_template_read. */
+const IMAGE_VALUE_HINT =
+  'An image value (asset field, also inside lists) is a media asset id or a derived id <assetId>~x_y_w_h with the crop in ten-thousandths of the original (e.g. 01H…~1000_0_8000_10000 = from 10 % left, 80 % wide, full height); another image or null drops the crop. The crop is expected in the format of its place: read fieldImagePlaces of site_template_read (formats: one = fixed, several = choose one, none = any; minWidthPx per place). Another format is accepted, the website then trims it further.';
+
+const hasAssetField = (fields: TemplateSchema['collections'][string]['fields']) => assetFieldsIn(fields).length > 0;
+
 const jobDetailSchema = {
   paths: z.literal('all').optional().describe('Return every path instead of the first 20.'),
   log: z.literal('full').optional().describe('Return the whole log instead of its last 2000 characters.'),
@@ -60,14 +67,15 @@ const updateShape = (fields: TemplateSchema['collections'][string]['fields']) =>
 function collectionTools(key: string, col: TemplateSchema['collections'][string]): McpToolDefinition[] {
   const shape = fieldShape(col.fields);
   const slug = col.slug ? { slug: z.string().optional() } : {};
+  const imageHint = hasAssetField(col.fields) ? ` ${IMAGE_VALUE_HINT}` : '';
   const tools: McpToolDefinition[] = [
     tool(`site_${key}_list`, `List the entries of the „${col.label}“ collection. Requires site.view.`, z.object({}), (deps, ctx) => listEntries(deps, ctx, key), listEntries),
     tool(`site_${key}_get`, `Read one entry of „${col.label}“. Requires site.view.`, z.object({ id: z.string() }), (deps, ctx, args) => getEntry(deps, ctx, (args as { id: string }).id), getEntry),
-    tool(`site_${key}_create`, `Create an entry in „${col.label}“ against its declared fields. Requires site.manage.`, z.object({ ...slug, ...shape }), (deps, ctx, args) => {
+    tool(`site_${key}_create`, `Create an entry in „${col.label}“ against its declared fields.${imageHint} Requires site.manage.`, z.object({ ...slug, ...shape }), (deps, ctx, args) => {
       const { slug: entrySlug, ...data } = args as Record<string, unknown>;
       return createEntry(deps, ctx, { collection: key, slug: entrySlug, data });
     }, createEntry),
-    tool(`site_${key}_update`, `Update an entry in „${col.label}“. Requires site.manage. Localized fields are replaced as a whole map; to change one locale use translations_set. Pass expectedVersion (the updatedAt you last read) to be rejected with staleVersion instead of overwriting a change made in between.`, z.object({ id: z.string(), ...slug, ...updateShape(col.fields), expectedVersion: expectedVersionField }), (deps, ctx, args) => {
+    tool(`site_${key}_update`, `Update an entry in „${col.label}“.${imageHint} Requires site.manage. Localized fields are replaced as a whole map; to change one locale use translations_set. Pass expectedVersion (the updatedAt you last read) to be rejected with staleVersion instead of overwriting a change made in between.`, z.object({ id: z.string(), ...slug, ...updateShape(col.fields), expectedVersion: expectedVersionField }), (deps, ctx, args) => {
       const { id, slug: entrySlug, expectedVersion, ...data } = args as Record<string, unknown> & { id: string; expectedVersion?: string };
       return updateEntry(deps, ctx, { id, slug: entrySlug, data, expectedVersion });
     }, updateEntry),
@@ -90,7 +98,7 @@ function collectionTools(key: string, col: TemplateSchema['collections'][string]
 const FIXED: McpToolDefinition[] = [
   tool(
     'site_template_read',
-    'Read the active template declaration: name, locales, variables and collections. Requires site.view.',
+    'Read the active template declaration: name, locales, variables and collections, plus the resolved image places: imagePlaces per place of the module views (animals.primary, projects.image …) and fieldImagePlaces per asset field path (variables.hero, collections.team.photo, collections.x.gallery[].image), each { formats, places: [{ ratio, minWidthPx, label | labelKey }], source }. Requires site.view.',
     z.object({}),
     (deps, ctx) => readActiveTemplate(deps, ctx),
     readActiveTemplate,
@@ -108,7 +116,7 @@ const FIXED: McpToolDefinition[] = [
     applyTemplateSync,
   ),
   tool('site_variables_get', 'Read all template variable values and their version. Requires site.view.', z.object({}), (deps, ctx) => getVariables(deps, ctx), getVariables),
-  tool('site_variables_set', 'Write template variable values, checked against the template schema. Requires site.manage. Localized fields are replaced as a whole map; to change one locale use translations_set. Pass expectedVersion (the version site_variables_get returned) to be rejected with staleVersion instead of overwriting a change made in between.', z.object({ values: z.record(z.string(), z.unknown()), expectedVersion: expectedVersionField }), (deps, ctx, args) => setValues(deps, ctx, args), setValues),
+  tool('site_variables_set', `Write template variable values, checked against the template schema. ${IMAGE_VALUE_HINT} Requires site.manage. Localized fields are replaced as a whole map; to change one locale use translations_set. Pass expectedVersion (the version site_variables_get returned) to be rejected with staleVersion instead of overwriting a change made in between.`, z.object({ values: z.record(z.string(), z.unknown()), expectedVersion: expectedVersionField }), (deps, ctx, args) => setValues(deps, ctx, args), setValues),
   tool('site_variables_options', 'List the selectable records per reference variable (value and label), filtered by the declared condition. Requires site.view.', z.object({}), (deps, ctx) => listReferenceOptions(deps, ctx), listReferenceOptions),
   tool('site_blocked_terms_get', 'Read the blocked terms: words that must never appear on the website; a hit blocks publishing. Requires site.view.', z.object({}), (deps, ctx) => getBlockedTerms(deps, ctx), getBlockedTerms),
   tool('site_blocked_terms_set', 'Replace the list of blocked terms (2–80 characters each, at most 50; blank lines and duplicates are dropped). Requires site.publish. Audited.', blockedTermsSchema, (deps, ctx, args) => setBlockedTerms(deps, ctx, args), setBlockedTerms),

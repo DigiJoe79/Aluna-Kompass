@@ -4,6 +4,7 @@ import { AlertTriangle, ArrowRight, Info, OctagonAlert } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import type { ReactNode } from 'react';
 import { cn } from '@/lib/utils';
+import { Overline } from '@/components/overline';
 
 export interface NoticeReason {
   name: string;
@@ -52,7 +53,7 @@ export function Notice({ level, title, children, reason, action, remedies, reaso
       role={ROLE[level]}
       data-testid={testId}
       className={cn(
-        'rounded-md border p-3 text-[13px]',
+        'rounded-md border p-3 text-meta',
         level === 'hint' && 'border-line bg-surface',
         level === 'warn' && 'border-warning bg-warning-bg',
         level === 'refuse' && 'border-error bg-error-bg',
@@ -78,7 +79,7 @@ export function Notice({ level, title, children, reason, action, remedies, reaso
 
           {level === 'warn' && reason ? (
             <div className="pt-1">
-              <label htmlFor={reason.name} className="mb-1 block text-[12px] font-semibold text-ink">
+              <label htmlFor={reason.name} className="mb-1 block text-hint font-semibold text-ink">
                 {reason.label}
               </label>
               <textarea
@@ -87,7 +88,7 @@ export function Notice({ level, title, children, reason, action, remedies, reaso
                 required
                 value={reason.value}
                 onChange={(e) => reason.onChange(e.target.value)}
-                className="w-full rounded-sm border border-line bg-surface px-2.5 py-1.5 text-[13px]"
+                className="w-full rounded-sm border border-line bg-surface px-2.5 py-1.5 text-meta"
                 rows={2}
               />
             </div>
@@ -97,7 +98,7 @@ export function Notice({ level, title, children, reason, action, remedies, reaso
 
           {level === 'refuse' && remedies && remedies.length > 0 ? (
             <div className="pt-2">
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-ink">{t('waysOut')}</p>
+              <Overline>{t('waysOut')}</Overline>
               <ul className="mt-1.5 space-y-1.5">
                 {remedies.map((remedy, index) => {
                   const strong = index === 0;

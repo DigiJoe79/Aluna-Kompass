@@ -55,7 +55,7 @@ export function DraftPreview({
               aria-hidden
               className="size-3.5 animate-spin rounded-full border-2 border-line-strong border-t-brand"
             />
-            <span className="text-[13px] text-ink-2">{t('previewPane.rendering')}</span>
+            <span className="text-meta text-ink-2">{t('previewPane.rendering')}</span>
           </>
         ) : null}
         {status === 'error' ? (
@@ -71,7 +71,7 @@ export function DraftPreview({
           steht die Seitenzahl, sobald der Renderer sie liefert.
         */}
         {pages && (status === 'current' || status === 'stale') ? (
-          <span className="ml-auto text-[12px] text-ink-2">{t('previewPane.pageCount', { count: pages })}</span>
+          <span className="ml-auto text-hint text-ink-2">{t('previewPane.pageCount', { count: pages })}</span>
         ) : null}
 
         {href && (status === 'current' || status === 'stale') ? (
@@ -113,7 +113,7 @@ export function DraftPreview({
             )}
           />
         ) : (
-          <div className="flex aspect-[1/1.414] w-full max-w-[452px] self-center items-center justify-center rounded-xs border border-dashed border-line-strong bg-paper/60 p-10 text-center text-[13px] text-muted-ink">
+          <div className="flex aspect-[1/1.414] w-full max-w-[452px] self-center items-center justify-center rounded-xs border border-dashed border-line-strong bg-paper/60 p-10 text-center text-meta text-muted-ink">
             {t('previewPane.none')}
           </div>
         )}

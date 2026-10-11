@@ -13,6 +13,7 @@ import { RetentionPanel } from './retention-panel';
 import { RolesPanel } from './roles-panel';
 import { RelatedDocuments } from '@/components/related-documents';
 import { CreateContactDialog } from '../contact-form';
+import { Overline } from '@/components/overline';
 
 export default async function ContactDetailPage(props: { params: Promise<{ id: string }> }) {
   const { id } = await props.params;
@@ -72,18 +73,18 @@ export default async function ContactDetailPage(props: { params: Promise<{ id: s
       }
     >
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <section className="rounded-md border border-line bg-surface p-5">
-          <h2 className="mb-2 text-[13px] font-semibold text-muted-ink">{t('preview')}</h2>
+        <section aria-label={t('preview')} className="rounded-md border border-line bg-surface p-5">
+          <Overline className="mb-2">{t('preview')}</Overline>
           <pre
             data-testid="postal-address"
-            className="whitespace-pre-line rounded-md border border-line bg-code px-3 py-2 font-body text-[14px] leading-relaxed text-ink"
+            className="whitespace-pre-line rounded-md border border-line bg-code px-3 py-2 font-body text-body text-ink"
           >
             {formatPostalAddress(contact, contact.belongsTo, organizationCountry)}
           </pre>
           {contact.notes ? (
             <div className="mt-4 border-t border-line-2 pt-3">
-              <span className="text-[12px] font-semibold text-muted-ink">{t('fields.notes')}</span>
-              <p className="mt-1 text-[13px] text-ink-2">{contact.notes}</p>
+              <span className="text-hint font-semibold text-muted-ink">{t('fields.notes')}</span>
+              <p className="mt-1 text-meta text-ink-2">{contact.notes}</p>
             </div>
           ) : null}
         </section>

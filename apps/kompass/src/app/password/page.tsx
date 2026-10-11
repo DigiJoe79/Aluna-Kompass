@@ -11,7 +11,7 @@ export default async function PasswordPage() {
   const app = await getTranslations('app');
   return (
     <AuthCard brand={app('name')} title={t('title')} width={360} footer={t('footer')}>
-      <p className="text-[14px] leading-[1.55] text-ink-2">{t('intro')}</p>
+      <p className="text-body text-ink-2">{t('intro')}</p>
       <PasswordForm />
     </AuthCard>
   );

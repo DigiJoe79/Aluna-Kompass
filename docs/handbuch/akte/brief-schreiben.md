@@ -39,7 +39,7 @@ nicht, steht im Betreff die Nummer statt des Betreffs, und die
 ## Bausteine
 
 Wiederkehrende Absätze — Grußformel, Spendenhinweis, Bankverbindung — legen
-Sie unter Einstellungen → Akte als Bausteine an. Im Entwurf fügt
+Sie unter Einrichtung → Akte → Textbausteine an. Im Entwurf fügt
 „Baustein einfügen“ den Text an der Schreibmarke ein; danach ist er normaler
 Text und lässt sich ändern.
 

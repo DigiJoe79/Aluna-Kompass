@@ -23,6 +23,7 @@ import { changesOf, correctionPath, selectableLines, type CorrectableLine } from
 import { VoidForm } from '@/app/(shell)/finance/donations/void-dialog';
 import { requestCorrectionAction, uploadCorrectionProofAction } from '../actions';
 import { useOpenReverse } from './entry-actions';
+import { Section } from '@/components/section';
 
 type PartyGroup = { contact: boolean; project: boolean; purpose: boolean; abroad: boolean };
 
@@ -185,7 +186,7 @@ export function CorrectDialog({
 
           {needsPick && !pickedLine ? (
             <div className="space-y-2">
-              <p className="text-[13px] font-semibold text-ink">{t('pickLine.title')}</p>
+              <p className="text-meta font-semibold text-ink">{t('pickLine.title')}</p>
               <ul className="space-y-1.5">
                 {entry.allocationLines.map((line) => {
                   const pending = !selectableIds.has(line.id);
@@ -195,10 +196,10 @@ export function CorrectDialog({
                         type="button"
                         disabled={pending}
                         onClick={() => setPickedLineId(line.id)}
-                        className="flex w-full items-center justify-between gap-2 rounded-sm border border-line px-2.5 py-1.5 text-left text-[13px] disabled:cursor-not-allowed disabled:opacity-50"
+                        className="flex w-full items-center justify-between gap-2 rounded-sm border border-line px-2.5 py-1.5 text-left text-meta disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         <span>{lineLabel(line)}</span>
-                        {pending ? <span className="text-[12px] text-muted-ink">{t('pickLine.pending')}</span> : null}
+                        {pending ? <span className="text-hint text-muted-ink">{t('pickLine.pending')}</span> : null}
                       </button>
                     </li>
                   );
@@ -207,8 +208,8 @@ export function CorrectDialog({
             </div>
           ) : pickedLine && lineConfirmation ? (
             <div data-testid="correction-three-steps" className="space-y-3">
-              <p className="text-[13px] text-ink-2">{t('confirmation.intro', { number: lineConfirmation.number })}</p>
-              <ol className="space-y-2 text-[13px]">
+              <p className="text-meta text-ink-2">{t('confirmation.intro', { number: lineConfirmation.number })}</p>
+              <ol className="space-y-2 text-meta">
                 <li className="flex flex-wrap items-center gap-2">
                   <span className="flex size-6 items-center justify-center rounded-full bg-selected font-semibold text-selected-ink">1</span>
                   {canVoidConfirmation ? (
@@ -228,7 +229,7 @@ export function CorrectDialog({
                   {t('confirmation.step3')}
                 </li>
               </ol>
-              {!canVoidConfirmation ? <p className="text-[12px] text-muted-ink">{t('confirmation.noRight')}</p> : null}
+              {!canVoidConfirmation ? <p className="text-hint text-muted-ink">{t('confirmation.noRight')}</p> : null}
               {voidingConfirmation ? (
                 <div className="border-t border-line pt-3">
                   <VoidForm
@@ -241,8 +242,7 @@ export function CorrectDialog({
             </div>
           ) : pickedLine ? (
             <>
-              <section>
-                <h3 id="correct-group-party" className="text-[15px] font-semibold">{t('groupParty')}</h3>
+              <Section title={t('groupParty')} headingId="correct-group-party">
                 {/* Die Haken bilden zusammen eine Diagnose: eine Gruppe über die volle Breite, darin zwei Spalten (Entscheidung zum Inventar). */}
                 <div role="group" aria-labelledby="correct-group-party" className="mt-3">
                   <FormGrid>
@@ -259,13 +259,13 @@ export function CorrectDialog({
                     ))}
                   </FormGrid>
                 </div>
-              </section>
+              </Section>
 
-              <p className="text-[13px] text-ink-2">
+              <p className="text-meta text-ink-2">
                 {t.rich('numbersElsewhere', {
                   reverse: (chunks) =>
                     openReverse ? (
-                      <Button type="button" variant="link" className="h-auto p-0 text-[13px]" onClick={() => { setOpen(false); openReverse(); }}>
+                      <Button type="button" variant="link" className="h-auto p-0 text-meta" onClick={() => { setOpen(false); openReverse(); }}>
                         {chunks}
                       </Button>
                     ) : (
@@ -274,89 +274,92 @@ export function CorrectDialog({
                 })}
               </p>
 
-              {path ? <p className="text-[13px] font-semibold text-ink">{t('pathAllocation')}</p> : null}
+              {path ? <p className="text-meta font-semibold text-ink">{t('pathAllocation')}</p> : null}
 
               {path === 'allocation' ? (
-                <section className="space-y-3 border-t border-line pt-5">
-                  <h3 className="text-[15px] font-semibold">{t('groupNew')}</h3>
-                  <FormGrid>
-                    {party.contact ? (
-                      <FormCell size="m">
-                        <ContactPicker id="correct-contact" name="correctContact" label={t('party.contact')} value={contact} onChange={setContact} />
-                      </FormCell>
-                    ) : null}
-                    {party.project ? (
-                      <FormField id="correct-project" label={t('party.project')}>
-                        <Select id="correct-project" value={projectId} onChange={(e) => setProjectId(e.target.value)}>
-                          <option value="">—</option>
-                          {projects.map((p) => (
-                            <option key={p.id} value={p.id}>{p.name}</option>
-                          ))}
-                        </Select>
-                      </FormField>
-                    ) : null}
-                    {party.purpose ? (
-                      <FormField id="correct-purpose" label={t('party.purpose')}>
-                        <Select id="correct-purpose" value={purposeId} onChange={(e) => setPurposeId(e.target.value)}>
-                          <option value="">—</option>
-                          {purposes.map((p) => (
-                            <option key={p.id} value={p.id}>{p.name}</option>
-                          ))}
-                        </Select>
-                      </FormField>
-                    ) : null}
-                    {party.abroad ? (
-                      <FormField id="correct-abroad" label={t('party.abroad')} toggle>
-                        <Switch id="correct-abroad" checked={abroad} onCheckedChange={(c) => setAbroad(c === true)} />
-                      </FormField>
-                    ) : null}
-                    <FormField id="correct-note" label={t('noteLabel')} required size="l">
-                      <Textarea id="correct-note" required value={note} onChange={(e) => setNote(e.target.value)} rows={2} />
-                    </FormField>
-                  </FormGrid>
-                  {nothingChanged ? <p className="text-[12px] text-muted-ink">{t('nothingChanged')}</p> : null}
-
-                  {serverCode === 'purposeChangeNeedsProof' ? (
-                    <div className="space-y-2 border-t border-line pt-3">
-                      <p className="text-[13px] font-semibold text-ink-2">{t('proof.label')}</p>
-                      <ReceiptDrop onFiles={(files) => void uploadProof(files)} onPickFromArchive={() => setProofArchiveOpen(true)} />
-                      {proofArchiveOpen ? (
-                        <FormGrid>
+                <section className="border-t border-line pt-5">
+                  <Section title={t('groupNew')}>
+                    <div className="space-y-3">
+                      <FormGrid>
+                        {party.contact ? (
                           <FormCell size="m">
-                            <DocumentPicker
-                              id="correction-proof-archive"
-                              name="correctionProofArchive"
-                              label={t('proof.label')}
-                              value={null}
-                              onChange={(doc) => doc && void pickProofFromArchive(doc.id)}
-                            />
+                            <ContactPicker id="correct-contact" name="correctContact" label={t('party.contact')} value={contact} onChange={setContact} />
                           </FormCell>
-                        </FormGrid>
-                      ) : null}
-                      {proofDocumentId ? <p className="text-[12px] text-success">{t('proof.attached')}</p> : null}
-                      <p className="text-[13px] text-ink-2">{t('proof.hint')}</p>
-                    </div>
-                  ) : null}
+                        ) : null}
+                        {party.project ? (
+                          <FormField id="correct-project" label={t('party.project')}>
+                            <Select id="correct-project" value={projectId} onChange={(e) => setProjectId(e.target.value)}>
+                              <option value="">—</option>
+                              {projects.map((p) => (
+                                <option key={p.id} value={p.id}>{p.name}</option>
+                              ))}
+                            </Select>
+                          </FormField>
+                        ) : null}
+                        {party.purpose ? (
+                          <FormField id="correct-purpose" label={t('party.purpose')}>
+                            <Select id="correct-purpose" value={purposeId} onChange={(e) => setPurposeId(e.target.value)}>
+                              <option value="">—</option>
+                              {purposes.map((p) => (
+                                <option key={p.id} value={p.id}>{p.name}</option>
+                              ))}
+                            </Select>
+                          </FormField>
+                        ) : null}
+                        {party.abroad ? (
+                          <FormField id="correct-abroad" label={t('party.abroad')} toggle>
+                            <Switch id="correct-abroad" checked={abroad} onCheckedChange={(c) => setAbroad(c === true)} />
+                          </FormField>
+                        ) : null}
+                        <FormField id="correct-note" label={t('noteLabel')} required size="l">
+                          <Textarea id="correct-note" required value={note} onChange={(e) => setNote(e.target.value)} rows={2} />
+                        </FormField>
+                      </FormGrid>
+                      {nothingChanged ? <p className="text-hint text-muted-ink">{t('nothingChanged')}</p> : null}
 
-                  {purposeDetail ? (
-                    <Notice level="warn" reason={{ name: 'purposeReason', value: purposeReason, onChange: setPurposeReason, label: t('purposeReasonLabel') }}>
-                      {purposeDetail}
-                    </Notice>
-                  ) : null}
-
-                  {serverCode === 'section153Unacknowledged' ? (
-                    <Notice
-                      level="warn"
-                      action={
-                        <div className="flex items-center gap-2 text-[13px]">
-                          <Checkbox id="correct-section153" checked={acknowledgeSection153} onCheckedChange={(next) => setAcknowledgeSection153(next === true)} />
-                          <label htmlFor="correct-section153">{t('section153.label')}</label>
+                      {serverCode === 'purposeChangeNeedsProof' ? (
+                        <div className="space-y-2 border-t border-line pt-3">
+                          <p className="text-meta font-semibold text-ink-2">{t('proof.label')}</p>
+                          <ReceiptDrop onFiles={(files) => void uploadProof(files)} onPickFromArchive={() => setProofArchiveOpen(true)} />
+                          {proofArchiveOpen ? (
+                            <FormGrid>
+                              <FormCell size="m">
+                                <DocumentPicker
+                                  id="correction-proof-archive"
+                                  name="correctionProofArchive"
+                                  label={t('proof.label')}
+                                  value={null}
+                                  onChange={(doc) => doc && void pickProofFromArchive(doc.id)}
+                                />
+                              </FormCell>
+                            </FormGrid>
+                          ) : null}
+                          {proofDocumentId ? <p className="text-hint text-success">{t('proof.attached')}</p> : null}
+                          <p className="text-meta text-ink-2">{t('proof.hint')}</p>
                         </div>
-                      }
-                    >
-                      {t('section153.notice')}
-                    </Notice>
-                  ) : null}
+                      ) : null}
+
+                      {purposeDetail ? (
+                        <Notice level="warn" reason={{ name: 'purposeReason', value: purposeReason, onChange: setPurposeReason, label: t('purposeReasonLabel') }}>
+                          {purposeDetail}
+                        </Notice>
+                      ) : null}
+
+                      {serverCode === 'section153Unacknowledged' ? (
+                        <Notice
+                          level="warn"
+                          action={
+                            <div className="flex items-center gap-2 text-meta">
+                              <Checkbox id="correct-section153" checked={acknowledgeSection153} onCheckedChange={(next) => setAcknowledgeSection153(next === true)} />
+                              <label htmlFor="correct-section153">{t('section153.label')}</label>
+                            </div>
+                          }
+                        >
+                          {t('section153.notice')}
+                        </Notice>
+                      ) : null}
+                    </div>
+                  </Section>
                 </section>
               ) : null}
 

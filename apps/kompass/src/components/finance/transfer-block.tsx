@@ -14,8 +14,8 @@ function CopyField({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-center justify-between gap-2 border-b border-line-2 py-1.5 last:border-0">
       <div className="min-w-0">
-        <p className="text-[11px] text-muted-ink">{label}</p>
-        <p className="truncate text-[13px] text-ink">{value}</p>
+        <p className="text-hint text-muted-ink">{label}</p>
+        <p className="truncate text-meta text-ink">{value}</p>
       </div>
       <CopyButton value={value} label={label} />
     </div>
@@ -55,12 +55,12 @@ export function TransferBlock({
         {iban ? <CopyField label={t('iban')} value={groupIban(iban)} /> : null}
         <CopyField label={t('amount')} value={formatEuro(amountCents)} />
         <CopyField label={t('reference')} value={reference} />
-        {iban ? null : <p className="pt-2 text-[12px] text-muted-ink">{t('noIban')}</p>}
+        {iban ? null : <p className="pt-2 text-hint text-muted-ink">{t('noIban')}</p>}
       </div>
       {epcPayload ? (
         <figure data-testid="transfer-qr" className="flex flex-col items-center gap-1.5 self-center md:shrink-0 md:self-start">
           <QrCode payload={epcPayload} size={QR_SIZE} label={t('qrAlt', { recipient })} />
-          <figcaption className="text-[11px] text-muted-ink">{t('qrCaption')}</figcaption>
+          <figcaption className="text-hint text-muted-ink">{t('qrCaption')}</figcaption>
         </figure>
       ) : null}
     </div>

@@ -9,6 +9,82 @@ die Nummern folgen [Semantic Versioning](https://semver.org/lang/de/). Vor
 1.0.0 kann jede Minor-Fassung Brüche enthalten — was bricht, steht unter
 **Geändert** mit dem, was zu tun ist.
 
+## [0.2.11] - 2026-10-11
+
+Diese Fassung bringt den Bildausschnitt: Jedes Bild der Webseite lässt sich
+für seine Stelle zuschneiden – Fotos der Tiere schon in der Prüfung eines
+Vorschlags –, und die Webseite zeigt nur den Ausschnitt. Dazu folgt die
+Oberfläche zehn festen Schriftstufen, und der Bereich unten in der Leiste
+heißt „System“. Eine Migration (`0008`, `migrationCount` 9). Nichts bricht;
+nach dem Update einmal publizieren, und ein Template mit Bildformaten erst
+nach dem Update synchronisieren (Betriebshandbuch, „Von 0.2.10 auf 0.2.11“).
+
+### Hinzugefügt
+
+- **Bildausschnitt auf der Webseite.** Hat ein Foto eines Tiers einen
+  Ausschnitt, zeigt die Webseite es zugeschnitten – in Kachel, Titelbild,
+  Galerie und Lightbox, ebenso die Vorschau in der Prüfung eines Vorschlags.
+  Online liegt nur die zugeschnittene Fassung; das Original in der Mediathek
+  bleibt unverändert. Ein geänderter Ausschnitt zählt als „nicht publiziert“.
+  Nach dem Update erscheinen deshalb alle Tiere, die schon einen Ausschnitt
+  haben, einmal als „nicht publiziert“ – einmal publizieren, dann stimmt die
+  Liste wieder.
+- **Bildausschnitt im Tierprofil bearbeiten.** Unter „Ausschnitt …“ an jedem
+  Foto lässt sich der Ausschnitt setzen, verschieben, in der Größe ändern und
+  entfernen – mit Maus, Tastatur oder zwei Fingern; gespeichert wird mit dem
+  Tier. Die Fotokacheln zeigen jedes Foto so, wie die Webseite es zeigt, und
+  warnen, wenn ein Ausschnitt schmaler ist als das Hauptbild der Webseite.
+- **Ausschnitt für alle Bilder der Webseite.** Auch die Bilder der
+  Erfolgsgeschichte, das Projektbild und die Bildfelder der Webseite (Team,
+  Variablen, Sammlungen, auch Bilder in Listen) können einen Ausschnitt haben;
+  er gehört zur Verwendung, nicht zum Bild, und ein anderes Bild verwirft ihn.
+  Die Mediathek bleibt beim Original. Über MCP setzen `animals_set_story`,
+  `project_create`/`project_update` und die schreibenden `site_*`-Werkzeuge
+  den Ausschnitt; die Lesewerkzeuge nennen das erwartete Format. Migration
+  `0008` ergänzt drei Spalten.
+- **Für Template-Autoren: Format und Breite der Bildstellen.** `asset()` nimmt
+  freiwillig `ratio` (`'4:3'`, mehrere zur Auswahl, oder `'original'`) und
+  `width` (Anzeigebreite in CSS-Pixeln), `defineTemplate` unter `images` dasselbe
+  für die Bilder der Sichten (`animals.primary`, `animals.gallery`,
+  `animals.story`, `projects.image`). Ohne Angaben bleibt alles wie bisher. Gibt
+  das Template das Hauptfoto vor, gilt sein Format statt der Einstellung
+  „Bildausschnitt“.
+- **Ausschnitt an jedem Bildfeld, Format je Stelle.** „Ausschnitt …“ steht
+  jetzt auch an Projektbild, Vorher-/Nachher-Bild und den Bildfeldern der
+  Webseite. Gibt die Stelle ein Format vor, ist es fest („1:1 · fest für
+  Team“); sonst wählt man Original, 1:1, 4:3, 3:2 oder 16:9, quer oder hoch –
+  so auch für die übrigen Fotos eines Tiers. Die Vorschau zeigt jede Stelle,
+  an der das Bild erscheint, und die Warnung vor zu kleinen Bildern richtet
+  sich nach der Breite der Stelle. Die Mediathek nennt die Verwendungen
+  untereinander und markiert sie mit „· zugeschnitten“.
+- **Ausschnitt schon in der Prüfung eines Vorschlags; Titelbild wechseln.**
+  Fotos eines Vorschlags lassen sich vor dem Annehmen zuschneiden, wie im
+  Tierprofil. Wird ein anderes Foto Titelbild, verliert das alte seinen
+  Ausschnitt; zurückwechseln bringt ihn wieder.
+
+### Geändert
+
+- **Der Bild-Cache räumt sich auf.** Nach jedem erfolgreichen Publish der
+  Produktion entfernt Kompass Bildvarianten, die nicht mehr gebraucht wurden
+  und seit 30 Tagen unbenutzt sind; das Publish-Protokoll nennt, wie viel frei
+  wurde.
+- **Einheitliche Schrift.** Titel, Abschnitte, Text, Etiketten und Beträge
+  folgen in der ganzen Oberfläche zehn festen Stufen; Abschnittstitel sind
+  durchgehend in der Überschriftenschrift.
+- **„System“ statt „Einstellungen“.** Der Bereich unten in der Leiste heißt
+  „System“, die Seite mit Verein, Bank und Branding heißt „Stammdaten“.
+  Hinweise nennen den Weg jetzt so, wie er in der Navigation steht, etwa
+  „Einrichtung → Finanzen → Kategorien“.
+- **Abhängigkeiten aktualisiert.** Kleine Fassungen mit Fehlerbehebungen,
+  unter anderem next-intl 4.14.9, das MCP-SDK 2.3.0 und fast-xml-parser 5.11.2
+  für das Lesen elektronischer Rechnungen. Für den Betrieb ändert sich nichts.
+
+### Behoben
+
+- Hochkant fotografierte Bilder, die ihre Drehung nur als Kamera-Angabe
+  tragen, hatten auf der Webseite die Maße des ungedrehten Bilds: Der Platz
+  dafür war quer reserviert, und die größte Variante fehlte.
+
 ## [0.2.10] - 2026-10-10
 
 Diese Fassung bringt den Vorschlags-Eingang für Tiere: Ein angebundener Dienst

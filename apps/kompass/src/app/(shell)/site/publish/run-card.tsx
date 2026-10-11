@@ -11,6 +11,7 @@ import { Progress } from '@/components/ui/progress';
 import { stepCounter } from '@/lib/site-job-steps';
 import { cancelSiteJobAction } from './actions';
 import { McpBadge } from './source-mark';
+import { SectionHeading } from '@/components/section';
 
 const clock = (ms: number) => {
   const seconds = Math.floor(ms / 1000);
@@ -36,13 +37,13 @@ export function RunCard({ embedded = false, notice, headingRef }: { embedded?: b
 
   return (
     <section aria-label={t('run.title')} className={embedded ? 'flex flex-col gap-3' : 'flex flex-col gap-3 rounded-lg border border-line bg-surface p-5'}>
-      {notice ? <p className="rounded-md border border-line bg-surface-2 p-3 text-[13px] text-ink-2">{notice}</p> : null}
+      {notice ? <p className="rounded-md border border-line bg-surface-2 p-3 text-meta text-ink-2">{notice}</p> : null}
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex flex-col gap-1">
-          <h3 ref={headingRef} tabIndex={-1} className="font-heading text-[18px] outline-none">
-            {kind} <span className="text-[13px] font-normal text-muted-ink">{t('run.elapsed', { duration: clock(running.elapsedMs) })}</span>
-          </h3>
-          <p className="flex flex-wrap items-center gap-2 text-[12px] text-muted-ink">
+          <SectionHeading ref={headingRef}>
+            {kind} <span className="text-meta font-normal text-muted-ink">{t('run.elapsed', { duration: clock(running.elapsedMs) })}</span>
+          </SectionHeading>
+          <p className="flex flex-wrap items-center gap-2 text-hint text-muted-ink">
             {running.source === 'mcp' ? (
               <>
                 <McpBadge />
@@ -68,13 +69,13 @@ export function RunCard({ embedded = false, notice, headingRef }: { embedded?: b
             {t('run.cancel')}
           </Button>
           {locked ? (
-            <p id={lockedId} className="max-w-xs text-right text-[12px] text-muted-ink">
+            <p id={lockedId} className="max-w-xs text-right text-hint text-muted-ink">
               {t('flow.run.cancelLocked')}
             </p>
           ) : null}
         </div>
       </div>
-      <ol className="flex flex-col gap-2 text-[14px]">
+      <ol className="flex flex-col gap-2 text-body">
         {running.steps.map((step) => {
           const counter = stepCounter(step);
           const counterText = counter ? t(`job.count.${counter.key}`, counter.values) : null;
@@ -92,10 +93,10 @@ export function RunCard({ embedded = false, notice, headingRef }: { embedded?: b
                   <Circle className="size-[18px] shrink-0" aria-hidden />
                 )}
                 <span>{t(`job.steps.${step.key}`)}</span>
-                {counterText ? <span className="text-[13px] text-ink-2 tabular-nums max-sm:basis-full max-sm:pl-[26px]">{counterText}</span> : null}
-                <span className="ml-auto text-[13px] text-muted-ink">{t(`job.stepState.${step.state}`)}</span>
+                {counterText ? <span className="text-meta text-ink-2 tabular-nums max-sm:basis-full max-sm:pl-[26px]">{counterText}</span> : null}
+                <span className="ml-auto text-meta text-muted-ink">{t(`job.stepState.${step.state}`)}</span>
               </div>
-              {step.key === 'build' && step.state === 'skipped' ? <p className="pl-7 text-[13px] text-muted-ink">{t('job.buildSkipped')}</p> : null}
+              {step.key === 'build' && step.state === 'skipped' ? <p className="pl-7 text-meta text-muted-ink">{t('job.buildSkipped')}</p> : null}
               {known ? (
                 <Progress
                   className="pl-7"
@@ -130,5 +131,5 @@ export function BlockedHint() {
   const t = useTranslations('site.publish');
   const { running } = useSiteJobStatus();
   if (!running) return null;
-  return <p className="text-[12px] text-muted-ink">{t('run.blockedBy', { kind: t(`job.names.${running.kind}`) })}</p>;
+  return <p className="text-hint text-muted-ink">{t('run.blockedBy', { kind: t(`job.names.${running.kind}`) })}</p>;
 }

@@ -10,7 +10,7 @@
  * - fremde Herkunft — dort fragt der Browser selbst (`beforeunload`);
  * - ein Sprung auf derselben Seite (nur `#…`);
  * - ein Link **in der Formularkarte** auf denselben Pfad: Das ist ein Bereichswechsel, den das Formular selbst
- *   führt (Einstellungen → Verein, `?panel=`) — es bleibt stehen, und die Eingaben mit ihm.
+ *   führt (Einrichtung → Stammdaten → Verein, `?panel=`) — es bleibt stehen, und die Eingaben mit ihm.
  */
 export function leavingLink(event: MouseEvent, here: { href: string }, form?: Element | null): HTMLAnchorElement | null {
   if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return null;

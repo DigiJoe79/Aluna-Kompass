@@ -10,6 +10,7 @@ import { useDateFormat } from '@/components/date-format-provider';
 import { idleState } from '@/lib/actions';
 import { withUnplacedFieldErrors } from '@/lib/feedback';
 import { importForSetupAction } from './actions';
+import { Section } from '@/components/section';
 
 interface Manifest {
   environment: string;
@@ -51,7 +52,7 @@ export function ImportForm() {
 
   return (
     <div className="flex flex-col gap-4">
-      <p className="text-[14px] leading-[1.55] text-ink-2">{t('intro')}</p>
+      <p className="text-body text-ink-2">{t('intro')}</p>
 
       <FormField id="archive" label={t('file')} error={problem ?? undefined}>
         <FileDropzone
@@ -64,29 +65,32 @@ export function ImportForm() {
           }}
         />
       </FormField>
-      {busy && <p className="text-[13px] text-muted-ink">{t('uploading')}</p>}
+      {busy && <p className="text-meta text-muted-ink">{t('uploading')}</p>}
 
       {manifest && handle && (
-        <form action={submit} className="flex flex-col gap-3 rounded-lg border border-line p-4">
-          <input type="hidden" name="handle" value={handle} />
-          <h3 className="font-heading text-[16px]">{t('manifestTitle')}</h3>
-          <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-[13px]">
-            <dt className="text-muted-ink">{t('environment')}</dt>
-            <dd className="font-mono">{manifest.environment}</dd>
-            <dt className="text-muted-ink">{t('createdAt')}</dt>
-            <dd className="font-mono">{fmt.dateTime(manifest.createdAt)}</dd>
-            <dt className="text-muted-ink">{t('users')}</dt>
-            <dd className="font-mono">{manifest.counts.users}</dd>
-            <dt className="text-muted-ink">{t('documents')}</dt>
-            <dd className="font-mono">{manifest.counts.documents}</dd>
-            <dt className="text-muted-ink">{t('mediaAssets')}</dt>
-            <dd className="font-mono">{manifest.counts.mediaAssets}</dd>
-          </dl>
-          <p className="text-[13px] text-ink-2">{t('credentialWarning')}</p>
-          <RefusalNotice state={withUnplacedFieldErrors(state, [])} />
-          <Button type="submit" disabled={pending}>
-            {pending ? t('running') : t('confirm')}
-          </Button>
+        <form action={submit} className="rounded-lg border border-line p-4">
+          <Section title={t('manifestTitle')}>
+            <div className="flex flex-col gap-3">
+              <input type="hidden" name="handle" value={handle} />
+              <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-meta">
+                <dt className="text-muted-ink">{t('environment')}</dt>
+                <dd className="font-mono">{manifest.environment}</dd>
+                <dt className="text-muted-ink">{t('createdAt')}</dt>
+                <dd className="font-mono">{fmt.dateTime(manifest.createdAt)}</dd>
+                <dt className="text-muted-ink">{t('users')}</dt>
+                <dd className="font-mono">{manifest.counts.users}</dd>
+                <dt className="text-muted-ink">{t('documents')}</dt>
+                <dd className="font-mono">{manifest.counts.documents}</dd>
+                <dt className="text-muted-ink">{t('mediaAssets')}</dt>
+                <dd className="font-mono">{manifest.counts.mediaAssets}</dd>
+              </dl>
+              <p className="text-meta text-ink-2">{t('credentialWarning')}</p>
+              <RefusalNotice state={withUnplacedFieldErrors(state, [])} />
+              <Button type="submit" disabled={pending}>
+                {pending ? t('running') : t('confirm')}
+              </Button>
+            </div>
+          </Section>
         </form>
       )}
     </div>

@@ -16,7 +16,7 @@ Das Startpasswort ist danach ungültig.
 ## Passwort vergessen
 
 Kompass verschickt keine E-Mails, also auch keinen Link zum Zurücksetzen.
-Bitten Sie eine Person mit Verwaltungsrecht: Unter Einstellungen → Nutzer
+Bitten Sie eine Person mit Verwaltungsrecht: Unter Verwaltung → Nutzer
 gibt „Neues Startpasswort“ Ihnen ein neues, und es geht weiter wie bei der
 ersten Anmeldung.
 

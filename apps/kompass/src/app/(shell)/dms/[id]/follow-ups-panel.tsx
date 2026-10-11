@@ -18,6 +18,7 @@ import { completeFollowUpAction, createFollowUpAction, reopenFollowUpAction } fr
 import { ActionForm } from '@/components/forms/action-form';
 import { FormField } from '@/components/forms/form-field';
 import { FormGrid } from '@/components/forms/form-grid';
+import { Section } from '@/components/section';
 
 export interface FollowUpView {
   id: string;
@@ -69,100 +70,103 @@ export function FollowUpsPanel({
 
   return (
     <section data-testid="follow-ups-panel" className="rounded-md border border-line bg-surface p-5 shadow-xs">
-      <div className="mb-3 flex items-center justify-between gap-2">
-        <h3 className="text-[15px] font-semibold text-ink">{t('title')}</h3>
-        {canManage ? (
-          <Button type="button" variant="outline" size="sm" onClick={() => setOpen(true)}>
-            {t('add')}
-          </Button>
-        ) : null}
-      </div>
+      <Section title={t('title')}
+        actions={
+          <>
+            {canManage ? (
+              <Button type="button" variant="outline" size="sm" onClick={() => setOpen(true)}>
+                {t('add')}
+              </Button>
+            ) : null}
+          </>
+        }
+      >
+        <RefusalNotice action state={toggleFb.state} />
 
-      <RefusalNotice action state={toggleFb.state} />
-
-      {openOnes.length === 0 ? (
-        <p className="text-[13px] text-muted-ink">{t('none')}</p>
-      ) : (
-        <ul className="space-y-2 text-[13px]">
-          {openOnes.map((followUp) => (
-            <li key={followUp.id} className="flex items-start gap-2">
-              {canManage ? (
-                <Checkbox
-                  aria-label={t('complete', { title: followUp.title })}
-                  checked={false}
-                  disabled={pending}
-                  onCheckedChange={() => toggle(followUp)}
-                />
-              ) : null}
-              <span className="flex-1">
-                <span className={cn('font-medium', followUp.dueAt < today ? 'text-warning' : 'text-ink')}>
-                  {fmt.date(followUp.dueAt)}
-                  {followUp.dueAt < today ? ` · ${t('overdue')}` : ''}
-                </span>
-                <span className="block text-ink-2">{followUp.title}</span>
-                {followUp.assigneeName ? <span className="block text-muted-ink">{followUp.assigneeName}</span> : null}
-              </span>
-            </li>
-          ))}
-        </ul>
-      )}
-
-      {doneOnes.length > 0 ? (
-        <div className="mt-4">
-          <Disclosure label={t('doneLabel')} count={doneOnes.length}>
-            <ul className="space-y-2 text-[13px] text-muted-ink">
-              {doneOnes.map((followUp) => (
-                <li key={followUp.id} className="flex items-start gap-2">
-                  {canManage ? (
-                    <Checkbox
-                      aria-label={t('reopen', { title: followUp.title })}
-                      checked
-                      disabled={pending}
-                      onCheckedChange={() => toggle(followUp)}
-                    />
-                  ) : null}
-                  <span className="flex-1 line-through">
-                    {fmt.date(followUp.dueAt)} · {followUp.title}
+        {openOnes.length === 0 ? (
+          <p className="text-meta text-muted-ink">{t('none')}</p>
+        ) : (
+          <ul className="space-y-2 text-meta">
+            {openOnes.map((followUp) => (
+              <li key={followUp.id} className="flex items-start gap-2">
+                {canManage ? (
+                  <Checkbox
+                    aria-label={t('complete', { title: followUp.title })}
+                    checked={false}
+                    disabled={pending}
+                    onCheckedChange={() => toggle(followUp)}
+                  />
+                ) : null}
+                <span className="flex-1">
+                  <span className={cn('font-semibold', followUp.dueAt < today ? 'text-warning' : 'text-ink')}>
+                    {fmt.date(followUp.dueAt)}
+                    {followUp.dueAt < today ? ` · ${t('overdue')}` : ''}
                   </span>
-                </li>
-              ))}
-            </ul>
-          </Disclosure>
-        </div>
-      ) : null}
+                  <span className="block text-ink-2">{followUp.title}</span>
+                  {followUp.assigneeName ? <span className="block text-muted-ink">{followUp.assigneeName}</span> : null}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
 
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent size="md" className="bg-surface shadow-md">
-          <ActionForm action={action} state={state}>
-            <DialogTitle>{t('add')}</DialogTitle>
-            <DialogDescription>{t('addDescription')}</DialogDescription>
+        {doneOnes.length > 0 ? (
+          <div className="mt-4">
+            <Disclosure label={t('doneLabel')} count={doneOnes.length}>
+              <ul className="space-y-2 text-meta text-muted-ink">
+                {doneOnes.map((followUp) => (
+                  <li key={followUp.id} className="flex items-start gap-2">
+                    {canManage ? (
+                      <Checkbox
+                        aria-label={t('reopen', { title: followUp.title })}
+                        checked
+                        disabled={pending}
+                        onCheckedChange={() => toggle(followUp)}
+                      />
+                    ) : null}
+                    <span className="flex-1 line-through">
+                      {fmt.date(followUp.dueAt)} · {followUp.title}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </Disclosure>
+          </div>
+        ) : null}
 
-            <div className="mt-5">
-              <FormGrid>
-                <FormField id="dueAt" label={t('dueAt')} required error={errors.dueAt} size="s">
-                  {/* In einer Woche nachsehen ist der häufigste Fall; wer es anders will, tippt. */}
-                  <Input id="dueAt" name="dueAt" type="date" defaultValue={inOneWeek} required />
-                </FormField>
-                <FormField id="followUpTitle" label={t('titleField')} required error={errors.title}>
-                  <Input id="followUpTitle" name="title" required />
-                </FormField>
-                <FormField id="assigneeUserId" label={t('assignee')}>
-                  <Select id="assigneeUserId" name="assigneeUserId" defaultValue="">
-                    <option value="">{t('everyone')}</option>
-                    {users.map((user) => (
-                      <option key={user.id} value={user.id}>
-                        {user.name}
-                      </option>
-                    ))}
-                  </Select>
-                </FormField>
-              </FormGrid>
-            </div>
+        <Dialog open={open} onOpenChange={setOpen}>
+          <DialogContent size="md" className="bg-surface shadow-md">
+            <ActionForm action={action} state={state}>
+              <DialogTitle>{t('add')}</DialogTitle>
+              <DialogDescription>{t('addDescription')}</DialogDescription>
 
-            <FormActionBar placement="dialog" mode="create" cancel={() => setOpen(false)} saveLabel={t('submit')} state={state} />
-          </ActionForm>
-        </DialogContent>
-      </Dialog>
+              <div className="mt-5">
+                <FormGrid>
+                  <FormField id="dueAt" label={t('dueAt')} required error={errors.dueAt} size="s">
+                    {/* In einer Woche nachsehen ist der häufigste Fall; wer es anders will, tippt. */}
+                    <Input id="dueAt" name="dueAt" type="date" defaultValue={inOneWeek} required />
+                  </FormField>
+                  <FormField id="followUpTitle" label={t('titleField')} required error={errors.title}>
+                    <Input id="followUpTitle" name="title" required />
+                  </FormField>
+                  <FormField id="assigneeUserId" label={t('assignee')}>
+                    <Select id="assigneeUserId" name="assigneeUserId" defaultValue="">
+                      <option value="">{t('everyone')}</option>
+                      {users.map((user) => (
+                        <option key={user.id} value={user.id}>
+                          {user.name}
+                        </option>
+                      ))}
+                    </Select>
+                  </FormField>
+                </FormGrid>
+              </div>
+
+              <FormActionBar placement="dialog" mode="create" cancel={() => setOpen(false)} saveLabel={t('submit')} state={state} />
+            </ActionForm>
+          </DialogContent>
+        </Dialog>
+      </Section>
     </section>
   );
 }

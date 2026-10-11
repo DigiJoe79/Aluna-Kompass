@@ -49,7 +49,7 @@ export function SnippetsPanel({ snippets }: { snippets: SnippetRow[] }) {
     <section className="space-y-4 rounded-md border border-line bg-surface p-5">
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-[13px] text-ink-2">{t('snippetsDescription')}</p>
+          <p className="text-meta text-ink-2">{t('snippetsDescription')}</p>
         </div>
         <Button size="sm" onClick={() => setCreating(true)}>
           {t('createSnippet')}
@@ -121,7 +121,7 @@ export function SnippetsPanel({ snippets }: { snippets: SnippetRow[] }) {
                     rows={6}
                     defaultValue={editing?.body ?? ''}
                     required
-                    className="font-mono text-[13px]"
+                    className="font-mono text-meta"
                   />
                 </FormField>
                 <FormField id="snippet-sortOrder" label={t('snippetFields.sortOrder')} size="s">

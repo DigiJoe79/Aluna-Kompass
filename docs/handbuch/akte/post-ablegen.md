@@ -25,7 +25,7 @@ mit einer Dateiauswahl.
 ## Der Dialog
 
 - **Dokumentart** — Brief, Behördenschreiben, Vertrag, Rechnung, Protokoll
-  oder was Sie unter Einstellungen → Akte angelegt haben. Die Art
+  oder was Sie unter Einrichtung → Akte → Arten angelegt haben. Die Art
   bestimmt Nummernkreis und Aufbewahrungsfrist.
 - **Betreff** — kurz, wie im Briefkopf; danach wird gesucht.
 - **Absender** — ein Kontakt. Fehlt er, legen Sie ihn aus dem Dialog heraus
@@ -36,7 +36,7 @@ mit einer Dateiauswahl.
   wählen den Ordner und übernehmen ihn.
 
 Die **Einsortierhilfe** schlägt Art und Ordner vor, sobald der Text der
-Datei gelesen ist: nach den Regeln, die Sie unter Einstellungen → Akte festgelegt
+Datei gelesen ist: nach den Regeln, die Sie unter Einrichtung → Akte → Regeln festgelegt
 haben (etwa „Absender Finanzamt → Behördenschreiben, Ordner Steuern“). Ein
 Vorschlag ist ein Vorschlag; Sie bestätigen oder ändern ihn.
 

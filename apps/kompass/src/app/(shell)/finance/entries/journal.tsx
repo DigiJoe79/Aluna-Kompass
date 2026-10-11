@@ -243,19 +243,19 @@ export function Journal({ rows, total, totals, page, pageSize, standing, account
                         onClick={(e) => toggle(row.id, index, e.shiftKey)}
                       />
                     </TableCell>
-                    <TableCell className="font-mono text-[13px]">
+                    <TableCell className="font-mono text-meta">
                       {/* Die Fläche dieses Links liegt über der ganzen Zeile (MUSTER.md § G); ein Entwurf hat noch keine Nummer, dann nennt der Text den Link. */}
                       <RowLink href={href} aria-label={row.number ? `${row.number} · ${row.text}` : row.text}>
                         {row.number ?? '—'}
                       </RowLink>
                     </TableCell>
-                    <TableCell className="font-mono text-[13px] text-ink-2">{fmt.date(row.entryDate)}</TableCell>
+                    <TableCell className="font-mono text-meta text-ink-2">{fmt.date(row.entryDate)}</TableCell>
                     <TableCell className={cn('', reversed && 'text-muted-ink line-through')}>
                       {row.text}
                       {reversed && row.reversedByNumber ? (
                         <>
                           {' '}
-                          <Link href={`/finance/entries/${row.reversedByEntryId}`} className="not-italic text-[12px] font-normal text-link no-underline">
+                          <Link href={`/finance/entries/${row.reversedByEntryId}`} className="not-italic text-hint font-normal text-link no-underline">
                             {t('reversedByLink', { number: row.reversedByNumber })}
                           </Link>
                         </>
@@ -263,7 +263,7 @@ export function Journal({ rows, total, totals, page, pageSize, standing, account
                       {row.reversesEntryId && row.reversesNumber ? (
                         <>
                           {' '}
-                          <Link href={`/finance/entries/${row.reversesEntryId}`} className="text-[12px] text-link">
+                          <Link href={`/finance/entries/${row.reversesEntryId}`} className="text-hint text-link">
                             {t('reversesLink', { number: row.reversesNumber })}
                           </Link>
                         </>
@@ -271,7 +271,7 @@ export function Journal({ rows, total, totals, page, pageSize, standing, account
                       {row.correctionOfEntryId && row.correctionOfNumber ? (
                         <>
                           {' '}
-                          <Link href={`/finance/entries/${row.correctionOfEntryId}`} className="text-[12px] text-link">
+                          <Link href={`/finance/entries/${row.correctionOfEntryId}`} className="text-hint text-link">
                             {t('correctionOfLink', { number: row.correctionOfNumber })}
                           </Link>
                         </>
@@ -282,7 +282,7 @@ export function Journal({ rows, total, totals, page, pageSize, standing, account
                     <TableCell className="text-ink-2">{row.contactLabel ?? '—'}</TableCell>
                     <TableCell selectable>
                       <AmountCell cents={row.amountCents} reversed={reversed} />
-                      {row.transfer ? <span className="block text-right text-[11px] text-muted-ink">{t('transfer')}</span> : null}
+                      {row.transfer ? <span className="block text-right text-hint text-muted-ink">{t('transfer')}</span> : null}
                     </TableCell>
                     {accountFilter ? (
                       <TableCell>{row.runningBalanceCents !== null ? <AmountCell cents={row.runningBalanceCents} /> : <span className="block text-right text-ink-2">—</span>}</TableCell>
@@ -299,11 +299,11 @@ export function Journal({ rows, total, totals, page, pageSize, standing, account
             </TableBody>
             <TableFooter className="border-t border-line-strong bg-surface-2">
               <TableRow>
-                <TableCell colSpan={accountFilter ? 8 : 7} className="text-[12px] text-muted-ink">
+                <TableCell colSpan={accountFilter ? 8 : 7} className="text-hint text-muted-ink">
                   {t('totals.label', { count: total })}
                 </TableCell>
-                <TableCell className="text-[12px] text-ink-2">{t('totals.income', { amount: formatEuro(totals.incomeCents) })}</TableCell>
-                <TableCell colSpan={2} className="text-[12px] text-ink-2">
+                <TableCell className="text-hint text-ink-2">{t('totals.income', { amount: formatEuro(totals.incomeCents) })}</TableCell>
+                <TableCell colSpan={2} className="text-hint text-ink-2">
                   {t('totals.expense', { amount: formatEuro(-totals.expenseCents) })} · {t('totals.result', { amount: formatEuro(totals.resultCents) })}
                 </TableCell>
               </TableRow>

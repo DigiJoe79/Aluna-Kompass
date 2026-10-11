@@ -42,15 +42,15 @@ export function Disclosure({
 
   if (count === 0 && empty) {
     return (
-      <section aria-label={label} className={`rounded-md border ${frameClass} p-3 text-[13px]`}>
-        <h4 className={`font-semibold ${toneClass}`}>{label} · 0</h4>
+      <section aria-label={label} className={`rounded-md border ${frameClass} p-3 text-meta`}>
+        <p className={`font-semibold ${toneClass}`}>{label} · 0</p>
         <p className="text-muted-ink">{empty}</p>
       </section>
     );
   }
 
   return (
-    <section aria-label={label} className={`rounded-md border ${frameClass} text-[13px]`}>
+    <section aria-label={label} className={`rounded-md border ${frameClass} text-meta`}>
       <details open={defaultOpen} className="group">
         <summary className="flex cursor-pointer list-none items-center gap-2 p-3 font-semibold">
           <ChevronRight className="size-4 shrink-0 transition-transform group-open:rotate-90" aria-hidden />

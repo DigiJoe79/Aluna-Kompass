@@ -51,8 +51,8 @@ export function VoucherRows({ rows, canOpenDocument, canWrite, canCreateContact 
         return (
           <Fragment key={doc.id}>
             <TableRow>
-              <TableCell className="font-mono text-[12px] text-ink-2">{doc.number}</TableCell>
-              <TableCell className="font-medium text-ink">
+              <TableCell className="font-mono text-hint text-ink-2">{doc.number}</TableCell>
+              <TableCell className="text-ink">
                 {canOpenDocument ? (
                   <Link href={`/dms/${doc.id}`} className="underline underline-offset-2">
                     {doc.subject}
@@ -61,7 +61,7 @@ export function VoucherRows({ rows, canOpenDocument, canWrite, canCreateContact 
                   doc.subject
                 )}
               </TableCell>
-              <TableCell className="font-mono text-[12px] tabular-nums text-ink-2">{date(doc.documentDate)}</TableCell>
+              <TableCell className="font-mono text-hint tabular-nums text-ink-2">{date(doc.documentDate)}</TableCell>
               <TableCell className="text-ink-2">{doc.typeLabel}</TableCell>
               <TableCell className="text-right">
                 <span className="inline-flex items-center gap-2">
@@ -81,11 +81,11 @@ export function VoucherRows({ rows, canOpenDocument, canWrite, canCreateContact 
               <TableRow id={`invoice-${doc.id}`} className="bg-surface-2 even:bg-surface-2 hover:bg-surface-2">
                 <TableCell colSpan={5} className="py-3">
                   {loaded.state === 'loading' ? (
-                    <p className="text-[13px] text-muted-ink">{t('invoice.loading')}</p>
+                    <p className="text-meta text-muted-ink">{t('invoice.loading')}</p>
                   ) : loaded.state === 'failed' ? (
                     <Notice level="refuse">{loaded.message}</Notice>
                   ) : loaded.proposal.kind === 'noInvoice' ? (
-                    <p className="text-[13px] text-muted-ink">{t('invoice.noInvoice')}</p>
+                    <p className="text-meta text-muted-ink">{t('invoice.noInvoice')}</p>
                   ) : (
                     <InvoiceCard documentId={doc.id} proposal={loaded.proposal} canWrite={canWrite} canCreateContact={canCreateContact} />
                   )}

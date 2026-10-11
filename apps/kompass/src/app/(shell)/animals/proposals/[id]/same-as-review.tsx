@@ -16,6 +16,8 @@ import { acceptProposalAction } from '../actions';
 import { fieldLabelKey } from '../field-format';
 import { FieldValue } from './review-values';
 import { useDecisionDone } from './use-decision';
+import { Overline } from '@/components/overline';
+import { SectionHeading } from '@/components/section';
 
 /**
  * Zuordnung (Spec § 6, Board 5b): zwei Spalten Quelle / Kompass, abweichende Werte gelb hinterlegt (Markierung, keine
@@ -55,8 +57,8 @@ export function SameAsReview({ review, locales, nextHref }: { review: ProposalRe
             { key: 'kompass', head: t('kompass'), name: animal.name, photo: ownPhoto ? <img src={mediaPreviewUrl(ownPhoto.assetId)} alt={t('photoOf', { name: animal.name })} className={PHOTO} /> : null },
           ].map((col) => (
             <div key={col.key} className="flex min-w-0 flex-col gap-2">
-              <span className="text-hint font-semibold uppercase tracking-wide text-muted-ink">{col.head}</span>
-              <span className="font-heading text-dialog-title text-ink">{col.name}</span>
+              <Overline as="span">{col.head}</Overline>
+              <SectionHeading>{col.name}</SectionHeading>
               {col.photo ?? <span className={cn(PHOTO, 'bg-surface-2')} aria-hidden />}
             </div>
           ))}

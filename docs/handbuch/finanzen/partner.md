@@ -134,5 +134,5 @@ Die Startseite zeigt sie standardmäßig. Wer Finanzen lesen darf, sieht je
 Zahlung Partner, Nummer, Betrag und „offen“ oder „seit N Tagen überfällig“;
 ohne dieses Recht nur Anzahl, Summe und wie viele überfällig sind. Überfällig
 ist eine Zahlung erst, wenn Zahlungstag, Nachweisfrist und Kulanzfrist
-verstrichen sind; die Kulanzfrist stellen Sie unter Einstellungen → Finanzen →
+verstrichen sind; die Kulanzfrist stellen Sie unter Einrichtung → Finanzen →
 Steuerliches ein.

@@ -25,6 +25,7 @@ import { AMOUNT_EVIDENCE_KINDS, coverageRequired, evidenceCoverage, evidenceKind
 import { acknowledgeEvidenceAction, addEvidenceLinkAction, addEvidenceUploadAction, copyPartnerPaymentAction, removeEvidenceAction, updateEvidenceAction } from '../../../actions';
 import { DraftForm, type LineOption } from './draft-form';
 import { FormField } from '@/components/forms/form-field';
+import { Section } from '@/components/section';
 
 interface Option { id: string; label: string }
 export interface EvidenceRow {
@@ -106,14 +107,14 @@ export function PaymentDetail({
     <div className="space-y-6" data-testid="payment-detail">
       {steps ? <GuidedSteps steps={steps} label={t('steps.label')} /> : null}
       <section className="space-y-2 rounded-md border border-line bg-surface p-4" data-testid="payment-head">
-        <p className="text-[14px] font-semibold text-ink">
+        <p className="text-body font-semibold text-ink">
           {payment.proofDueOn
             ? t('head.withDue', { basis: tBasis(basis), amount: formatEuro(payment.totalCents), date: fmt.date(payment.proofDueOn) })
             : t('head.withMonths', { basis: tBasis(basis), amount: formatEuro(payment.totalCents), count: payment.effectiveProofMonths })}
         </p>
-        <p className="text-[14px] text-ink-2">{payment.purposeText}</p>
-        {payment.retroactive ? <p className="text-[12px] text-muted-ink">{t('head.retroactive')}</p> : null}
-        <ul className="space-y-1 border-t border-line pt-2 text-[13px]" data-testid="payment-positions">
+        <p className="text-body text-ink-2">{payment.purposeText}</p>
+        {payment.retroactive ? <p className="text-hint text-muted-ink">{t('head.retroactive')}</p> : null}
+        <ul className="space-y-1 border-t border-line pt-2 text-meta" data-testid="payment-positions">
           {payment.positions.map((p) => (
             <li key={p.id} className="flex flex-wrap items-baseline justify-between gap-2">
               <span className="text-ink-2">
@@ -126,7 +127,7 @@ export function PaymentDetail({
           ))}
         </ul>
         {payment.rejectNote ? (
-          <p className="text-[13px] text-error" data-testid="reject-note">
+          <p className="text-meta text-error" data-testid="reject-note">
             {payment.rejectNote}
           </p>
         ) : null}
@@ -221,7 +222,7 @@ function EvidenceSection({ payment, basis, canWrite, canApprove, evidence, peopl
           {/* W (Prüfer Block 2): jeder Nachweis mit Nummer und Link auf das PDF — auch für Leser, soweit die Akte es zeigt. */}
           {rows.map((e) =>
             e.document && e.documentId ? (
-              <a key={e.id} href={`/dms/${e.documentId}/file`} target="_blank" rel="noreferrer" className="font-mono text-[12px] font-semibold underline underline-offset-2" data-testid={`evidence-document-${e.id}`}>
+              <a key={e.id} href={`/dms/${e.documentId}/file`} target="_blank" rel="noreferrer" className="font-mono text-hint font-semibold underline underline-offset-2" data-testid={`evidence-document-${e.id}`}>
                 {e.document.number ?? e.document.subject}
               </a>
             ) : null,
@@ -273,60 +274,66 @@ function EvidenceSection({ payment, basis, canWrite, canApprove, evidence, peopl
           : null;
 
   return (
-    <section className="space-y-3" data-testid="evidence-section">
-      <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h2 className="font-heading text-[16px] text-ink">{t('evidence.title')}</h2>
-        <span className="text-[13px] text-muted-ink">{t('evidence.count', { done: required.filter((k) => kindDone(k, rowsOf(k))).length, total: required.length })}</span>
-      </div>
-      <RefusalNotice action state={evidenceFb.state} />
-      <div data-testid="evidence-requirements">
-        <RequirementList items={items} />
-      </div>
-      {openKind ? <EvidenceForm key={openKind} paymentId={payment.id} kind={openKind} label={label(openKind)} onDone={() => { setOpenKind(null); router.refresh(); }} onCancel={() => setOpenKind(null)} /> : null}
-      {completing ? <CompleteForm key={completing} row={evidence.find((e) => e.id === completing)!} onDone={() => { setCompleting(null); router.refresh(); }} onCancel={() => setCompleting(null)} /> : null}
-      <p className="text-[12px] text-muted-ink">{t('evidence.foreignHint')}</p>
-
-      {needsCoverage && coverage.totalCents > 0 ? (
-        <div data-testid="evidence-coverage" aria-live="polite">
-          <LimitProgress
-            coveredCents={coverage.coveredCents}
-            totalCents={coverage.totalCents}
-            label={t('evidence.coverageLabel')}
-            figure={t('evidence.coverageFigure', { covered: formatEuro(coverage.coveredCents), total: formatEuro(coverage.totalCents) })}
-            remainder={rest > 0 ? t('evidence.coverageRest', { rest: formatEuro(rest) }) : t('evidence.coverageDone')}
-          />
-        </div>
-      ) : null}
-
-      <div className="space-y-2" data-testid="evidence-acknowledge-area">
-        {acknowledged ? (
-          <p className="text-[13px] text-success" data-testid="evidence-acknowledged">
-            {t('evidence.acknowledged')}
-          </p>
-        ) : (
+    <section data-testid="evidence-section">
+      <Section title={t('evidence.title')}
+        actions={
           <>
-            {payment.readyToAcknowledge ? (
-              <div data-testid="payment-ready-to-acknowledge">
-                <Notice level="hint">{t('acknowledge.ready')}</Notice>
-              </div>
-            ) : null}
-            <p className="text-[13px] text-ink-2">{t('acknowledge.rule', { creator: people.creator, coverage: needsCoverage ? 'yes' : 'no' })}</p>
-            {block ? (
-              <BlockedState step={t('evidence.acknowledge')} title={t('acknowledge.blockedTitle')}>
-                {block.reason}
-                {block.byRight ? ` ${people.acknowledgers.length > 0 ? t('acknowledge.canDo', { names: people.acknowledgers.join(', ') }) : t('acknowledge.nobody')}` : null}
-              </BlockedState>
+            <span className="text-meta text-muted-ink">{t('evidence.count', { done: required.filter((k) => kindDone(k, rowsOf(k))).length, total: required.length })}</span>
+          </>
+        }
+      >
+        <div className="space-y-3">
+          <RefusalNotice action state={evidenceFb.state} />
+          <div data-testid="evidence-requirements">
+            <RequirementList items={items} />
+          </div>
+          {openKind ? <EvidenceForm key={openKind} paymentId={payment.id} kind={openKind} label={label(openKind)} onDone={() => { setOpenKind(null); router.refresh(); }} onCancel={() => setOpenKind(null)} /> : null}
+          {completing ? <CompleteForm key={completing} row={evidence.find((e) => e.id === completing)!} onDone={() => { setCompleting(null); router.refresh(); }} onCancel={() => setCompleting(null)} /> : null}
+          <p className="text-hint text-muted-ink">{t('evidence.foreignHint')}</p>
+
+          {needsCoverage && coverage.totalCents > 0 ? (
+            <div data-testid="evidence-coverage" aria-live="polite">
+              <LimitProgress
+                coveredCents={coverage.coveredCents}
+                totalCents={coverage.totalCents}
+                label={t('evidence.coverageLabel')}
+                figure={t('evidence.coverageFigure', { covered: formatEuro(coverage.coveredCents), total: formatEuro(coverage.totalCents) })}
+                remainder={rest > 0 ? t('evidence.coverageRest', { rest: formatEuro(rest) }) : t('evidence.coverageDone')}
+              />
+            </div>
+          ) : null}
+
+          <div className="space-y-2" data-testid="evidence-acknowledge-area">
+            {acknowledged ? (
+              <p className="text-meta text-success" data-testid="evidence-acknowledged">
+                {t('evidence.acknowledged')}
+              </p>
             ) : (
               <>
-                <RefusalNotice action state={ackFb.state} />
-                <Button type="button" data-testid="evidence-acknowledge" onClick={() => void acknowledge()}>
-                  {t('evidence.acknowledge')}
-                </Button>
+                {payment.readyToAcknowledge ? (
+                  <div data-testid="payment-ready-to-acknowledge">
+                    <Notice level="hint">{t('acknowledge.ready')}</Notice>
+                  </div>
+                ) : null}
+                <p className="text-meta text-ink-2">{t('acknowledge.rule', { creator: people.creator, coverage: needsCoverage ? 'yes' : 'no' })}</p>
+                {block ? (
+                  <BlockedState step={t('evidence.acknowledge')} title={t('acknowledge.blockedTitle')}>
+                    {block.reason}
+                    {block.byRight ? ` ${people.acknowledgers.length > 0 ? t('acknowledge.canDo', { names: people.acknowledgers.join(', ') }) : t('acknowledge.nobody')}` : null}
+                  </BlockedState>
+                ) : (
+                  <>
+                    <RefusalNotice action state={ackFb.state} />
+                    <Button type="button" data-testid="evidence-acknowledge" onClick={() => void acknowledge()}>
+                      {t('evidence.acknowledge')}
+                    </Button>
+                  </>
+                )}
               </>
             )}
-          </>
-        )}
-      </div>
+          </div>
+        </div>
+      </Section>
     </section>
   );
 }
@@ -371,14 +378,14 @@ function EvidenceForm({ paymentId, kind, label, onDone, onCancel }: { paymentId:
 
   return (
     <div className="space-y-3 rounded-md border border-line bg-surface p-3" data-testid={`evidence-form-${kind}`}>
-      <p className="text-[14px] font-semibold text-ink">{label}</p>
+      <p className="text-body font-semibold text-ink">{label}</p>
       {fromArchive ? (
         <DocumentPicker id={`evidence-document-${kind}`} name="documentId" label={t('evidence.link')} value={document} onChange={setDocument} />
       ) : (
         <ReceiptDrop onFiles={(files) => setFile(files[0] ?? null)} onPickFromArchive={() => setFromArchive(true)} />
       )}
-      {file ? <p className="text-[12px] text-ink-2">{t('evidence.fileChosen', { name: file.name })}</p> : null}
-      <label className="flex min-h-11 items-center gap-2 text-[13px]">
+      {file ? <p className="text-hint text-ink-2">{t('evidence.fileChosen', { name: file.name })}</p> : null}
+      <label className="flex min-h-11 items-center gap-2 text-meta">
         <Checkbox checked={foreignLanguage} onCheckedChange={(v) => setForeignLanguage(v === true)} />
         {t('evidence.foreignLanguage')}
       </label>

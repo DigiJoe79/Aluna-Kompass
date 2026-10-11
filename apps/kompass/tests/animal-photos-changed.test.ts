@@ -19,10 +19,16 @@ describe('photosChanged', () => {
     expect(photosChanged([a, b], [b, a])).toBe(true);
   });
 
-  it('sieht in einem Ausschnitt der Quelle keine Änderung (er wird nicht gespeichert, Plan A)', () => {
-    const cropped = { ...a, crop: { x: 0.1, y: 0.1, w: 0.5, h: 0.5 } };
-    expect(photosChanged([a, b], [cropped, b])).toBe(false);
-    expect(photosFromForm(JSON.stringify([cropped]))).toEqual([a]);
+  it('erkennt einen neuen, geänderten und entfernten Ausschnitt; gerundet gleich ist unverändert', () => {
+    const crop = { x: 0.1, y: 0, w: 0.5, h: 0.5 };
+    const saved = [{ ...a, crop }, { ...b, crop: null }];
+    expect(photosChanged(saved, [{ ...a, crop: { ...crop } }, { ...b, crop: null }])).toBe(false);
+    expect(photosChanged(saved, [{ ...a, crop: { ...crop, x: 0.10001 } }, { ...b, crop: null }])).toBe(false);
+    expect(photosChanged(saved, [{ ...a, crop: { ...crop, x: 0.2 } }, { ...b, crop: null }])).toBe(true);
+    expect(photosChanged(saved, [{ ...a, crop: null }, { ...b, crop: null }])).toBe(true);
+    expect(photosChanged(saved, [{ ...a, crop }, { ...b, crop }])).toBe(true);
+    // Ohne Angabe (MCP-Weg, alte Maske): behalten, keine Änderung.
+    expect(photosChanged(saved, [a, b])).toBe(false);
   });
 
   it('erkennt ein Foto weniger und eines mehr', () => {
@@ -38,6 +44,13 @@ describe('photosFromForm', () => {
 
   it('liest eine leere Auswahl als leere Liste', () => {
     expect(photosFromForm('[]')).toEqual([]);
+  });
+
+  it('liest den Ausschnitt je Foto mit: Rechteck, null = entfernen, fehlt = behalten', () => {
+    const crop = { x: 0.1, y: 0, w: 0.5, h: 0.5 };
+    expect(photosFromForm(JSON.stringify([{ ...a, crop }, { ...b, crop: null }, c]))).toEqual([{ ...a, crop }, { ...b, crop: null }, c]);
+    expect(photosFromForm(JSON.stringify([{ ...a, crop: { x: 'a', y: 0, w: 1, h: 1 } }]))).toBeNull();
+    expect(photosFromForm(JSON.stringify([{ ...a, crop: 5 }]))).toBeNull();
   });
 
   it('liest die Auswahl und schneidet fremde Schlüssel ab', () => {

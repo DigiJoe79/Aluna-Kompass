@@ -6,6 +6,7 @@ import { buttonVariants } from '@/components/ui/button';
 import { dateFormatOf } from '@/lib/date-format';
 import { formatEuro } from '@/lib/finance/amount';
 import { requireSession } from '@/lib/request-context';
+import { Section } from '@/components/section';
 
 /**
  * „Eingereicht“ als eigene Seite statt eines Toasts (Designer-README 3a):
@@ -22,24 +23,27 @@ export async function SubmittedView({ claim }: { claim: ExpenseClaimView }) {
       <div className="rounded-lg border border-line bg-surface p-5">
         {/* Der Titel ist das `h1` der Seite (Spec Seitenkopf § 2.2); der Kopf bringt seinen Abstand nach unten mit. */}
         <PageHeader title={t('title')} description={t('text', { number: claim.number ?? '', at: fmt.dateTime(claim.submittedAt) })} />
-        <p className="text-[13px] text-muted-ink">{t('amount')}</p>
-        <p className="font-mono text-[34px] font-semibold tabular-nums">{formatEuro(claim.totalCents)}</p>
-        {claim.waiver ? <p className="mt-1 text-[14px] text-ink-2">{t('waiver')}</p> : null}
+        <p className="text-meta text-muted-ink">{t('amount')}</p>
+        <p className="font-mono text-figure font-semibold tabular-nums">{formatEuro(claim.totalCents)}</p>
+        {claim.waiver ? <p className="mt-1 text-body text-ink-2">{t('waiver')}</p> : null}
       </div>
 
       <div className="rounded-lg border border-line bg-surface p-5">
-        <h3 className="mb-2 text-[13px] font-semibold text-muted-ink">{t('positions')}</h3>
-        <ul className="divide-y divide-line">
-          {claim.positions.map((p) => (
-            <li key={p.id} className="flex items-baseline justify-between gap-3 py-2 text-[14px]">
-              <span className="min-w-0 text-ink">{p.kind === 'trip' ? t('trip', { from: p.tripFrom ?? '', to: p.tripTo ?? '', km: p.tripKm ?? 0 }) : p.purpose}</span>
-              <span className="shrink-0 font-mono tabular-nums">{formatEuro(p.amountCents)}</span>
-            </li>
-          ))}
-        </ul>
+        <Section title={t('positions')}>
+          <div className="flex flex-col gap-3">
+            <ul className="divide-y divide-line">
+              {claim.positions.map((p) => (
+                <li key={p.id} className="flex items-baseline justify-between gap-3 py-2 text-body">
+                  <span className="min-w-0 text-ink">{p.kind === 'trip' ? t('trip', { from: p.tripFrom ?? '', to: p.tripTo ?? '', km: p.tripKm ?? 0 }) : p.purpose}</span>
+                  <span className="shrink-0 font-mono tabular-nums">{formatEuro(p.amountCents)}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </Section>
       </div>
 
-      <p data-testid="approver-names" className="text-[14px] text-ink-2">
+      <p data-testid="approver-names" className="text-body text-ink-2">
         {claim.approverNames.length > 0 ? t('approvers', { names: claim.approverNames.join(' · ') }) : t('noApprover')}
       </p>
 

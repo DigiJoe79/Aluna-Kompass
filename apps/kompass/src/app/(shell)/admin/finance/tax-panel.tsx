@@ -21,6 +21,7 @@ import { withUnplacedFieldErrors } from '@/lib/feedback';
 import { formatAmount, parseAmount } from '@/lib/finance/amount';
 import { setBoardRemunerationAction, setExpenseWaiverBasisAction, setFinanceLimitAction, setFinanceSwitchAction } from './actions';
 import { useDateFormat } from '@/components/date-format-provider';
+import { Section } from '@/components/section';
 
 export interface TaxSwitches {
   isEntrepreneurOrHasVatId: boolean;
@@ -44,7 +45,7 @@ export interface TaxLimits {
 function SwitchRow({ id, label, checked, onToggle, disabled }: { id: string; label: string; checked: boolean; onToggle: (value: boolean) => void; disabled?: boolean }) {
   return (
     <div className="flex items-center justify-between gap-3 py-2.5">
-      <Label htmlFor={id} className="cursor-pointer text-[14px] font-normal text-ink">{label}</Label>
+      <Label htmlFor={id} className="cursor-pointer text-body font-normal text-ink">{label}</Label>
       <Switch id={id} checked={checked} disabled={disabled} onCheckedChange={onToggle} />
     </div>
   );
@@ -68,7 +69,7 @@ function useNothingChanged(): [boolean, () => void] {
 function NothingChanged({ show }: { show: boolean }) {
   const tCommon = useTranslations('common');
   return (
-    <span aria-live="polite" className="self-center text-[13px] text-ink-2">
+    <span aria-live="polite" className="self-center text-meta text-ink-2">
       {show ? tCommon('nothingChanged') : null}
     </span>
   );
@@ -87,7 +88,7 @@ function DaysRow({ id, label, days, onSave }: { id: string; label: string; days:
 
   return (
     <div className="flex items-center justify-between gap-3 py-2.5" data-testid={id}>
-      <Label htmlFor={id} className="text-[14px] font-normal text-ink">{label}</Label>
+      <Label htmlFor={id} className="text-body font-normal text-ink">{label}</Label>
       <div className="flex shrink-0 items-start gap-2">
         <NothingChanged show={nothing} />
         <div className="w-24">
@@ -123,7 +124,7 @@ function LimitRow({ id, label, cents, onSave }: { id: string; label: string; cen
 
   return (
     <div className="flex items-center justify-between gap-3 py-2.5" data-testid={id}>
-      <Label htmlFor={id} className="text-[14px] font-normal text-ink">{label}</Label>
+      <Label htmlFor={id} className="text-body font-normal text-ink">{label}</Label>
       <div className="flex shrink-0 items-start gap-2">
         <NothingChanged show={nothing} />
         <div className="w-32">
@@ -290,13 +291,12 @@ export function TaxPanel({
 
   return (
     <section data-testid="tax-panel">
-      <p className="text-[13px] text-muted-ink">{confirmedAt ? t('confirmedAt', { date: fmt.date(confirmedAt) }) : t('notConfirmed')}</p>
+      <p className="text-meta text-muted-ink">{confirmedAt ? t('confirmedAt', { date: fmt.date(confirmedAt) }) : t('notConfirmed')}</p>
       {/* Einstellungszeilen statt Raster (Entscheidung zum Inventar, 05.10.2026): Frage links, Bedienelement rechts,
           je Zeile eigenes Speichern. Die Kästen gehen über die volle Breite, bündig mit den Trennlinien (K9-Befund 1,
           Joe 05.10.2026: das Seitenformat stört mehr als der Weg von der Frage zum Bedienelement). */}
-      <section className="mt-5">
-        <h3 className="text-[15px] font-semibold">{t('sections.switches')}</h3>
-        <div className="mt-3">
+      <div className="mt-5">
+      <Section title={t('sections.switches')}>
           <FormGrid>
             <FormCell size="full" className="space-y-3">
               <RefusalNotice action state={toggleFb.state} />
@@ -308,41 +308,32 @@ export function TaxPanel({
               </div>
             </FormCell>
           </FormGrid>
-        </div>
-      </section>
-      <section className="mt-5 border-t border-line pt-5">
-        <h3 className="text-[15px] font-semibold">{t('sections.boardRemuneration')}</h3>
-        <div className="mt-3">
-          <BoardRemunerationForm key={`${boardRemunerationAllowed}-${boardRemunerationBasisText}-${boardRemunerationValidFrom}`} allowed={boardRemunerationAllowed} basisText={boardRemunerationBasisText} validFrom={boardRemunerationValidFrom} />
-        </div>
-      </section>
-      <section className="mt-5 border-t border-line pt-5">
-        <h3 className="text-[15px] font-semibold">{t('sections.limits')}</h3>
-        <div className="mt-3">
-          <FormGrid>
-            <FormCell size="full" className="space-y-3">
-              <RefusalNotice action state={limitFb.state} />
-              <div className="divide-y divide-line-2 rounded-md border border-line bg-surface px-3.5" data-testid="tax-limits">
-                <LimitRow id="tax-limit-statement-suffices" label={t('limits.statementSufficesBelowCents')} cents={limits.statementSufficesBelowCents} onSave={(cents) => saveLimit('statementSufficesBelowCents', cents)} />
-                <LimitRow id="tax-limit-cash-donation" label={t('limits.cashDonationAlertCents')} cents={limits.cashDonationAlertCents} onSave={(cents) => saveLimit('cashDonationAlertCents', cents)} />
-                <LimitRow id="tax-limit-round-amount" label={t('limits.roundAmountFromCents')} cents={limits.roundAmountFromCents} onSave={(cents) => saveLimit('roundAmountFromCents', cents)} />
-                <DaysRow id="tax-limit-proof-grace-days" label={t('limits.proofGraceDays')} days={limits.proofGraceDays} onSave={(days) => saveLimit('proofGraceDays', days)} />
-              </div>
-            </FormCell>
-          </FormGrid>
-        </div>
-      </section>
-      <section className="mt-5 border-t border-line pt-5">
-        <h3 className="text-[15px] font-semibold">{t('sections.agent')}</h3>
-        <div className="mt-3">
-          <FormGrid>
-            <FormCell size="full" className="space-y-1.5 rounded-md border-t-2 border-line-strong bg-surface-2 p-3.5" data-testid="mcp-human-only-row">
-              <SwitchRow id="tax-mcp-human-only" label={t('mcpHumanOnlyAllowed')} checked={switches.mcpHumanOnlyAllowed} disabled={pending} onToggle={(v) => void toggle('mcpHumanOnlyAllowed', v)} />
-              <p className="text-[12px] text-muted-ink">{t('mcpHumanOnlyAllowedHint')}</p>
-            </FormCell>
-          </FormGrid>
-        </div>
-      </section>
+      </Section>
+      <Section title={t('sections.boardRemuneration')}>
+        <BoardRemunerationForm key={`${boardRemunerationAllowed}-${boardRemunerationBasisText}-${boardRemunerationValidFrom}`} allowed={boardRemunerationAllowed} basisText={boardRemunerationBasisText} validFrom={boardRemunerationValidFrom} />
+      </Section>
+      <Section title={t('sections.limits')}>
+        <FormGrid>
+          <FormCell size="full" className="space-y-3">
+            <RefusalNotice action state={limitFb.state} />
+            <div className="divide-y divide-line-2 rounded-md border border-line bg-surface px-3.5" data-testid="tax-limits">
+              <LimitRow id="tax-limit-statement-suffices" label={t('limits.statementSufficesBelowCents')} cents={limits.statementSufficesBelowCents} onSave={(cents) => saveLimit('statementSufficesBelowCents', cents)} />
+              <LimitRow id="tax-limit-cash-donation" label={t('limits.cashDonationAlertCents')} cents={limits.cashDonationAlertCents} onSave={(cents) => saveLimit('cashDonationAlertCents', cents)} />
+              <LimitRow id="tax-limit-round-amount" label={t('limits.roundAmountFromCents')} cents={limits.roundAmountFromCents} onSave={(cents) => saveLimit('roundAmountFromCents', cents)} />
+              <DaysRow id="tax-limit-proof-grace-days" label={t('limits.proofGraceDays')} days={limits.proofGraceDays} onSave={(days) => saveLimit('proofGraceDays', days)} />
+            </div>
+          </FormCell>
+        </FormGrid>
+      </Section>
+      <Section title={t('sections.agent')}>
+        <FormGrid>
+          <FormCell size="full" className="space-y-1.5 rounded-md border-t-2 border-line-strong bg-surface-2 p-3.5" data-testid="mcp-human-only-row">
+            <SwitchRow id="tax-mcp-human-only" label={t('mcpHumanOnlyAllowed')} checked={switches.mcpHumanOnlyAllowed} disabled={pending} onToggle={(v) => void toggle('mcpHumanOnlyAllowed', v)} />
+            <p className="text-hint text-muted-ink">{t('mcpHumanOnlyAllowedHint')}</p>
+          </FormCell>
+        </FormGrid>
+      </Section>
+      </div>
     </section>
   );
 }

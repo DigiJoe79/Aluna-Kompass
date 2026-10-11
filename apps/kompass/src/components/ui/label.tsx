@@ -18,7 +18,7 @@ function Label({
     <label
       data-slot="label"
       className={cn(
-        "flex items-center gap-1.5 text-sm leading-none font-medium select-none group-data-[disabled=true]:pointer-events-none group-data-[disabled=true]:opacity-50 peer-disabled:cursor-not-allowed peer-disabled:opacity-50",
+        "flex items-center gap-1.5 text-meta font-semibold select-none group-data-[disabled=true]:pointer-events-none group-data-[disabled=true]:opacity-50 peer-disabled:cursor-not-allowed peer-disabled:opacity-50",
         className
       )}
       {...props}
@@ -30,7 +30,8 @@ function Label({
   return (
     <span data-slot="label-required" className="flex items-center gap-1.5">
       {label}
-      <span aria-hidden="true" className="font-bold leading-none text-brand-accent">
+      {/* 600 wie das Label (Designer § 14.2): Der Stern ist Geschwister, erbt also nicht. Pflicht für Vorleser: aria-required am Feld. */}
+      <span aria-hidden="true" className="font-semibold text-brand-accent">
         *
       </span>
     </span>

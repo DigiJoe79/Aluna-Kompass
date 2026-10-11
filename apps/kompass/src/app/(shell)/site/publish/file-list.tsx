@@ -7,7 +7,7 @@ import { useTranslations } from 'next-intl';
 export function FileList({ list }: { list: PathList }) {
   const t = useTranslations('site.publish.diff');
   return (
-    <ul className="flex flex-col gap-1 font-mono text-[12px]">
+    <ul className="flex flex-col gap-1 font-mono text-hint">
       {list.items.map((f) => (
         <li key={f}>{f}</li>
       ))}

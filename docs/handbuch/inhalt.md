@@ -36,7 +36,7 @@
   - [Partner](finanzen/partner.md)
   - [Zwecke und zurückgelegtes Geld](finanzen/zwecke-und-ruecklagen.md)
   - [Personen](finanzen/personen.md)
-- Einstellungen
+- System
   - [Stammdaten](einstellungen/verein.md)
   - [Nutzer und Rollen](einstellungen/nutzer-und-rollen.md)
   - [Änderungsprotokoll](einstellungen/aenderungsprotokoll.md)

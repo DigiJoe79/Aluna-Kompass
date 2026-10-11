@@ -18,7 +18,7 @@ export function ListClient({ collection, rows, publishable, sortable, canManage 
 
   return (
     <div className="overflow-hidden rounded-md border border-line bg-surface">
-      <Table className="w-full text-[14px]">
+      <Table className="w-full text-body">
         <TableBody>
           {rows.map((row, index) => (
             <TableRow key={row.id}>

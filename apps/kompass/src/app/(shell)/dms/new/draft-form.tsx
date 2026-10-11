@@ -171,10 +171,10 @@ export function DraftForm({
           value={body}
           onChange={(e) => setBody(e.target.value)}
           aria-describedby="body-hint"
-          className="shrink-0 grow resize-none font-mono text-[13px] leading-relaxed"
+          className="shrink-0 grow resize-none font-mono text-meta"
         />
         <FieldError id="body-error" message={errors.body} />
-        {errors.body ? null : <p id="body-hint" className="text-[12px] text-muted-ink">{t('fields.bodyHint')}</p>}
+        {errors.body ? null : <p id="body-hint" className="text-hint text-muted-ink">{t('fields.bodyHint')}</p>}
       </div>
 
       {/* Die Angaben unter einer Trennlinie im `FormGrid`: In der Schreibspalte (innen rund 430 px) zwei Spalten,
@@ -248,7 +248,7 @@ export function DraftForm({
             Hinweis nur seine Spalte, neben „Art“ bleibt ein Loch, und die
             vier Felder lesen sich als zwei lose Paare statt als Raster. */}
         {draft ? (
-          <FormCell as="p" size="full" className="text-[12px] text-muted-ink">{t('typeFixedHint')}</FormCell>
+          <FormCell as="p" size="full" className="text-hint text-muted-ink">{t('typeFixedHint')}</FormCell>
         ) : null}
 
       </FormGrid>

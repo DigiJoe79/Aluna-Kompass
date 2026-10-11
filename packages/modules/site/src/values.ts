@@ -15,6 +15,7 @@ import {
 } from '@kompass/core';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
+import { assetValueIssues, assetValuesIn, newAssetValues } from './asset-values';
 import { blankValue, schemaFor } from './field-schema';
 import { checkReferenceValues, duplicateReferences, referenceMetaOf, resolveReferenceOptions, type ReferenceOption } from './reference-fields';
 import { siteValues } from './schema';
@@ -87,10 +88,13 @@ export async function setValues(deps: Deps, ctx: CallContext, raw: unknown): Pro
   );
   const stale = checkReferenceValues(deps, template.schema, changed);
   const duplicates = duplicateReferences(template.schema, parsed.value as Record<string, unknown>);
-  if (stale.length > 0 || duplicates.length > 0) {
+  // Bildwerte, auch mit Ausschnitt (`<assetId>~…`): die Basis muss in der Mediathek stehen (Spec Ausschnitt § 3).
+  const assets = assetValueIssues(deps.db, newAssetValues(assetValuesIn(fields, changed), assetValuesIn(fields, before)));
+  if (stale.length > 0 || duplicates.length > 0 || assets.length > 0) {
     return invalid([
       ...stale.map((s) => ({ path: s.field, message: 'referenceNotFound' })),
       ...duplicates.map((field) => ({ path: field, message: 'duplicateReference' })),
+      ...assets,
     ]);
   }
 

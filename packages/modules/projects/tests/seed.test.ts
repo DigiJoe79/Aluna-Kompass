@@ -38,5 +38,7 @@ describe('seedProjects', () => {
     const rows = deps.db.select().from(projects).all();
     expect(rows.map((r) => [r.slug, r.imageAssetId !== null]).sort()).toEqual([['auslauf-am-heim', true], ['kastrationsaktion-2026', true], ['winterhilfe', true]]);
     expect(new Set(rows.map((r) => r.imageAssetId)).size).toBe(3);
+    // Ausschnitt für alle Bilder § 3: das veröffentlichte Projekt zeigt sein Bild zugeschnitten, die anderen ganz.
+    expect(rows.filter((r) => r.imageCrop).map((r) => [r.slug, r.isPublished])).toEqual([['winterhilfe', true]]);
   });
 });

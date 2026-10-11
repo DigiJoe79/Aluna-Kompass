@@ -22,6 +22,7 @@ import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { activateThemeAction, deleteThemeAction, duplicateThemeAction, saveThemeAction } from './actions';
 import { ThemePreview } from './theme-preview';
+import { Overline } from '@/components/overline';
 
 const HEX = /^#[0-9a-fA-F]{6}$/;
 
@@ -99,21 +100,21 @@ export function ThemeEditor({ themes, activeKey }: { themes: Theme[]; activeKey:
                     'bg-selected text-selected-ink shadow-[inset_2px_0_0_var(--color-primary)]'
                 )}
               >
-                <span className="flex items-center gap-2 text-[14px] font-semibold">
+                <span className="flex items-center gap-2 text-body font-semibold">
                   {th.name}
                   {th.key === activeKey ? (
                     <StatusBadge tone="success">{t('active')}</StatusBadge>
                   ) : null}
                 </span>
                 <span className="flex gap-1">{chips(th)}</span>
-                <span className="text-[11px] text-muted-ink">
+                <span className="text-hint text-muted-ink">
                   {th.key === 'default' ? t('readOnly') : th.key}
                 </span>
               </button>
             </li>
           ))}
         </ul>
-        <p className="mt-auto text-[11px] text-muted-ink">{t('deleteHint')}</p>
+        <p className="mt-auto text-hint text-muted-ink">{t('deleteHint')}</p>
       </aside>
       <section className="flex min-w-0 flex-col">
         <div className="flex items-center gap-2 border-b border-line px-5 py-3">
@@ -178,10 +179,13 @@ export function ThemeEditor({ themes, activeKey }: { themes: Theme[]; activeKey:
           </div>
         ) : null}
         <div className="flex-1 overflow-auto">
-          <div className="grid grid-cols-[minmax(0,1fr)_128px_128px] gap-3 bg-table-head px-5 py-2.5 text-[12px] font-semibold uppercase tracking-[.04em] text-muted-ink">
-            <span>{t('columns.token')}</span>
-            <span>{t('mode.light')}</span>
-            <span>{t('mode.dark')}</span>
+          {/* Fläche und Polster am Rahmen, die Overline bleibt reine Schrift (Designer 2026-10-10 § 10.7). */}
+          <div className="bg-table-head px-5 py-2.5">
+            <Overline as="div" className="grid grid-cols-[minmax(0,1fr)_128px_128px] gap-3">
+              <span>{t('columns.token')}</span>
+              <span>{t('mode.light')}</span>
+              <span>{t('mode.dark')}</span>
+            </Overline>
           </div>
           {THEME_TOKENS.map((token) => (
             <div
@@ -189,8 +193,8 @@ export function ThemeEditor({ themes, activeKey }: { themes: Theme[]; activeKey:
               className="grid grid-cols-[minmax(0,1fr)_128px_128px] items-center gap-3 border-b border-line-2 px-5 py-2"
             >
               <div>
-                <div className="font-mono text-[12px]">{token}</div>
-                <div className="text-[11px] text-muted-ink">{t(`tokens.${token}`)}</div>
+                <div className="font-mono text-hint">{token}</div>
+                <div className="text-hint text-muted-ink">{t(`tokens.${token}`)}</div>
               </div>
               {(['light', 'dark'] as const).map((m) => {
                 const value = current.tokens[token][m];
@@ -212,7 +216,7 @@ export function ThemeEditor({ themes, activeKey }: { themes: Theme[]; activeKey:
                       value={value}
                       disabled={readOnly}
                       onChange={(e) => setToken(token, m, e.target.value)}
-                      className="w-full bg-transparent font-mono text-[11px] outline-none"
+                      className="w-full bg-transparent font-mono text-key outline-none"
                     />
                   </div>
                 );
@@ -220,7 +224,7 @@ export function ThemeEditor({ themes, activeKey }: { themes: Theme[]; activeKey:
             </div>
           ))}
         </div>
-        <p className="px-5 py-2 text-[11px] text-muted-ink">{t('noInheritance')}</p>
+        <p className="px-5 py-2 text-hint text-muted-ink">{t('noInheritance')}</p>
         {readOnly ? null : (
           <FormActionBar
             count={pendingCount}
@@ -242,7 +246,7 @@ export function ThemeEditor({ themes, activeKey }: { themes: Theme[]; activeKey:
       </section>
       <aside className="flex flex-col gap-3 border-l border-line bg-surface-2 p-4">
         <div className="flex items-center justify-between">
-          <span className="text-[13px] font-semibold">{t('preview.title')}</span>
+          <span className="text-meta font-semibold">{t('preview.title')}</span>
           <Segmented
             aria-label={t('preview.modeGroup')}
             options={(['light', 'dark'] as const).map((m) => ({ value: m, label: t(`mode.${m}`) }))}

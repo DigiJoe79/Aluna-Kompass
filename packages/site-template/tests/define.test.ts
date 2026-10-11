@@ -1,6 +1,6 @@
 import { describe, expect, expectTypeOf, it } from 'vitest';
 import { z } from 'zod';
-import { asset, date, defineTemplate, list, markdown, number, objectList, reference, references, select, text, type InferContent } from '../src';
+import { asset, date, defineTemplate, isRatio, list, markdown, number, objectList, reference, references, select, text, type InferContent } from '../src';
 
 const template = defineTemplate({
   name: 'Verein Basis',
@@ -173,5 +173,65 @@ describe('reference fields', () => {
     const t = defineTemplate({ name: 'X', locales: ['de'], variables: { dog: reference({ view: 'animals' }), projects: references({ view: 'projects', max: 2 }) }, collections: {}, uses: ['animals', 'projects'] });
     expectTypeOf<InferContent<typeof t>['variables']['dog']>().toEqualTypeOf<string | null | undefined>();
     expectTypeOf<InferContent<typeof t>['variables']['projects']>().toEqualTypeOf<string[] | undefined>();
+  });
+});
+
+// Ausschnitt für alle Bilder (Spec 2026-10-10 § 2): Format und Anzeigebreite einer Bildstelle, freiwillig.
+describe('image places', () => {
+  it('asset carries ratio and width into the schema', () => {
+    const fixed = z.toJSONSchema(asset({ label: 'Foto', ratio: '1:1', width: 320 }), { io: 'input' }) as { ratio?: unknown; width?: unknown; accept?: string };
+    expect(fixed.ratio).toBe('1:1');
+    expect(fixed.width).toBe(320);
+    expect(fixed.accept).toBe('image/*');
+    const choice = z.toJSONSchema(asset({ ratio: ['16:10', '16:9'] }), { io: 'input' }) as { ratio?: unknown };
+    expect(choice.ratio).toEqual(['16:10', '16:9']);
+    expect(z.toJSONSchema(asset({ ratio: 'original' }), { io: 'input' })).toMatchObject({ ratio: 'original' });
+  });
+
+  it('leaves ratio and width out where they were not given', () => {
+    const json = z.toJSONSchema(asset({ label: 'Foto' }), { io: 'input' }) as Record<string, unknown>;
+    expect('ratio' in json).toBe(false);
+    expect('width' in json).toBe(false);
+  });
+
+  it('rejects a ratio that is not W:H with whole numbers 1–99 or original, and a width that is not a positive integer', () => {
+    for (const bad of ['4/3', '0:1', '100:1', '1.5:1', 'quer', '', '4:3:2']) {
+      expect(() => asset({ ratio: bad as never }), bad).toThrow(/ratio/i);
+    }
+    expect(() => asset({ ratio: [] as never })).toThrow(/ratio/i);
+    for (const bad of [0, -1, 1.5, Number.NaN]) expect(() => asset({ width: bad }), String(bad)).toThrow(/width/i);
+  });
+
+  it('keeps the image places of the module views under open keys, and checks their ratio', () => {
+    const t = defineTemplate({
+      name: 'X',
+      locales: ['de'],
+      variables: {},
+      collections: {},
+      images: { 'animals.primary': { ratio: '4:5', width: 600 }, 'projects.image': { ratio: ['16:10', '16:9'] } },
+    });
+    expect(t.images).toEqual({ 'animals.primary': { ratio: '4:5', width: 600 }, 'projects.image': { ratio: ['16:10', '16:9'] } });
+    expect(() => defineTemplate({ name: 'X', locales: ['de'], variables: {}, collections: {}, images: { 'animals.story': { ratio: '4x5' as never } } })).toThrow(/ratio/i);
+    expect(() => defineTemplate({ name: 'X', locales: ['de'], variables: {}, collections: {}, images: { 'animals.story': { ratio: '4:5', width: 0 } } })).toThrow(/width/i);
+  });
+
+  // Welche Stellen es gibt, wissen die Module von Kompass; das Template-Paket zählt sie nicht auf (Joe 2026-10-10).
+  it('takes a place no module of today knows, without complaint', () => {
+    const t = defineTemplate({ name: 'X', locales: ['de'], variables: {}, collections: {}, images: { 'shop.banner': { ratio: '3:1' } } });
+    expect(t.images).toEqual({ 'shop.banner': { ratio: '3:1' } });
+  });
+
+  it('carries ratio and width of an asset inside a list of objects', () => {
+    const gallery = objectList({ label: 'Galerie', fields: { image: asset({ label: 'Bild', ratio: '4:3', width: 480 }) } });
+    const json = z.toJSONSchema(gallery, { io: 'input' }) as { items?: { properties?: { image?: { ratio?: string; width?: number } } } };
+    expect(json.items?.properties?.image).toMatchObject({ ratio: '4:3', width: 480 });
+  });
+
+  it('gives a template without image places an empty object, nothing else changes', () => {
+    const t = defineTemplate({ name: 'X', locales: ['de'], variables: {}, collections: {} });
+    expect(t.images).toEqual({});
+    expect(isRatio('3:2')).toBe(true);
+    expect(isRatio('original')).toBe(true);
+    expect(isRatio('3-2')).toBe(false);
   });
 });

@@ -6,6 +6,7 @@ import { RefusalNotice } from '@/components/forms/refusal-notice';
 import { useActionFeedback } from '@/components/forms/use-action-feedback';
 import { Button } from '@/components/ui/button';
 import { applySeedAction, previewSeedAction, type SeedPreviewState } from '@/app/(shell)/site/actions';
+import { Section } from '@/components/section';
 
 export function SeedClient() {
   const t = useTranslations('site.seed');
@@ -24,27 +25,30 @@ export function SeedClient() {
   const report = state.status === 'preview' ? state.report : null;
 
   return (
-    <div className="flex flex-col gap-4 rounded-lg border border-line bg-surface p-5">
-      <h3 className="text-[15px] font-semibold">{t('title')}</h3>
-      <div className="flex items-center justify-between gap-4">
-        <span className="max-w-prose text-[14px] text-ink-2">{t('intro')}</span>
-        <Button type="button" onClick={preview} disabled={pending}>{t('preview')}</Button>
-      </div>
-
-      <RefusalNotice action state={state.status === 'error' ? { status: 'error', message: state.message, fieldErrors: {} } : { status: 'idle' }} />
-
-      {report ? (
-        <section className="flex flex-col gap-3 border-t border-line pt-4">
-          <p className="max-w-prose text-[13px] text-ink-2">
-            {t('report', { variables: report.variables, entries: report.entries, assets: report.assets })}
-          </p>
-          <RefusalNotice action state={applyFb.state} />
-          <div className="flex gap-2">
-            <Button type="button" onClick={apply} disabled={applying}>{t('apply')}</Button>
-            <Button type="button" variant="ghost" onClick={() => setState({ status: 'idle' })}>{t('cancel')}</Button>
+    <div className="rounded-lg border border-line bg-surface p-5">
+      <Section title={t('title')}>
+        <div className="flex flex-col gap-4">
+          <div className="flex items-center justify-between gap-4">
+            <span className="max-w-prose text-body text-ink-2">{t('intro')}</span>
+            <Button type="button" onClick={preview} disabled={pending}>{t('preview')}</Button>
           </div>
-        </section>
-      ) : null}
+
+          <RefusalNotice action state={state.status === 'error' ? { status: 'error', message: state.message, fieldErrors: {} } : { status: 'idle' }} />
+
+          {report ? (
+            <section className="flex flex-col gap-3 border-t border-line pt-4">
+              <p className="max-w-prose text-meta text-ink-2">
+                {t('report', { variables: report.variables, entries: report.entries, assets: report.assets })}
+              </p>
+              <RefusalNotice action state={applyFb.state} />
+              <div className="flex gap-2">
+                <Button type="button" onClick={apply} disabled={applying}>{t('apply')}</Button>
+                <Button type="button" variant="ghost" onClick={() => setState({ status: 'idle' })}>{t('cancel')}</Button>
+              </div>
+            </section>
+          ) : null}
+        </div>
+      </Section>
     </div>
   );
 }

@@ -12,7 +12,7 @@ import { diffTrees, hashTree } from './diff';
 import { runDeployCheck, type DeployCheckResult } from './deploy-check';
 import { imageLimit, limitFor } from './limits';
 import { SITE_CACHE_VERSION, type DeployTarget, type SiteEnv } from './env';
-import { prepareImageVariants, type SkippedImage } from './images';
+import { prepareImageVariants, sweepImageCache, type SkippedImage } from './images';
 import { checkDeployCredentials, rsyncPublish } from './publish';
 import { JobAbortedError, removeQuietly, step } from './step';
 import { beginRun, endRun, requestCancel, resultFile, runningSiteJob, SITE_JOB_KINDS, SITE_JOB_TMP_PREFIX, workRoot, writeJsonAtomic, type RunHandle, type SiteJobKind, type SiteJobRun, type SiteJobStep, type StepKey } from './run-state';
@@ -281,7 +281,7 @@ async function exportAndBuild(
   h: RunHandle,
   outDir: string,
   opts: { expectedContentHash?: string } = {},
-): Promise<Result<{ exported: SiteContentExport; log: string; manifest: Record<string, string>; diff: PublishDiff; skippedImages: SkippedImage[] }>> {
+): Promise<Result<{ exported: SiteContentExport; log: string; manifest: Record<string, string>; diff: PublishDiff; skippedImages: SkippedImage[]; cacheNames: Set<string> }>> {
   const publicUrl = env.publicUrl;
   if (!publicUrl) return conflict('publicUrlMissing', 'SITE_PUBLIC_URL ist nicht gesetzt');
   const job = await mkdtemp(path.join(workRoot(env), `${SITE_JOB_TMP_PREFIX}site-`));
@@ -380,13 +380,25 @@ async function exportAndBuild(
     });
     const last = lastSuccessfulPublish(deps, deps.env);
     const previous = last ? (JSON.parse(last.fileManifest) as Record<string, string>) : {};
-    return ok({ exported: exported.value, log: imageLog + log, manifest, diff: diffTrees(previous, manifest), skippedImages });
+    return ok({ exported: exported.value, log: imageLog + log, manifest, diff: diffTrees(previous, manifest), skippedImages, cacheNames: images.cacheNames });
   } catch (error) {
     if (error instanceof JobAbortedError) throw error;
     if (error instanceof SiteBuildError) return conflict('siteBuildFailed', error.log.slice(-4000) || error.message);
     throw error;
   } finally {
     await removeQuietly(job);
+  }
+}
+
+/** Räumt den Bild-Cache und gibt die Zeile fürs Lauf-Log; ein Fehler dabei kostet keinen Publish. */
+async function sweepLog(cacheDir: string, used: Set<string>): Promise<string> {
+  try {
+    const { removed, bytes } = await sweepImageCache(cacheDir, used);
+    const mb = (bytes / 1_000_000).toFixed(1).replace('.', ',');
+    return `Bild-Cache: ${removed} ${removed === 1 ? 'Datei' : 'Dateien'} entfernt, ${mb} MB frei\n`;
+  } catch (error) {
+    console.error('[site] Bild-Cache aufräumen', error);
+    return '';
   }
 }
 
@@ -538,6 +550,9 @@ async function publishBody(deps: Deps, ctx: CallContext, env: SiteEnv, h: RunHan
       });
       return conflict('publishFailed', message.slice(0, 2000));
     }
+    // Erst nach erfolgreicher Übertragung, nur in der Produktion (Backlog 67): Vorschau, Test-Publish, Abbruch und
+    // Fehler lassen den Cache stehen.
+    const cacheLog = deps.env === 'production' ? await sweepLog(env.cacheDir, built.value.cacheNames) : '';
     const record = await step(h, 'record', limitFor(env, 'record'), async () =>
       recordPublish(deps, ctx, {
         environment: deps.env,
@@ -547,7 +562,7 @@ async function publishBody(deps: Deps, ctx: CallContext, env: SiteEnv, h: RunHan
         diff: built.value.diff,
         fileManifest: built.value.manifest,
         contentManifest: contentManifestOf(built.value.exported.items),
-        log: built.value.log + transferLog,
+        log: built.value.log + transferLog + cacheLog,
         summary: `Publiziert: ${built.value.diff.changed.length} geändert, ${built.value.diff.added.length} neu, ${built.value.diff.removed.length} entfernt`,
       }),
     );

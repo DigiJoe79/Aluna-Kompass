@@ -140,7 +140,7 @@ test.describe('settings', () => {
 
   test('geführte Felder zeigen Wert, Kennzeichen und den Weg, kein Eingabefeld', async ({ page }) => {
     await page.getByRole('navigation', { name: NAV }).getByRole('link', { name: 'Bank' }).click();
-    await expect(page.getByText('Wird unter Einstellungen → Finanzen → Bankkonten und Kassen am Hauptkonto geführt.')).toHaveCount(1);
+    await expect(page.getByText('Wird unter Einrichtung → Finanzen → Bankkonten und Kassen am Hauptkonto geführt.')).toHaveCount(1);
     for (const label of ['IBAN', 'BIC', 'Bankname']) await expect(page.getByLabel(label)).toHaveCount(0);
     const bankValues = page.getByTestId('managed-field-value');
     await expect(bankValues).toHaveCount(3);

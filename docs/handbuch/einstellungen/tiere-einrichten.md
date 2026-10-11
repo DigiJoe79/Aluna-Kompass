@@ -18,12 +18,24 @@ Reiter „Texte und Fotos“ jedes Foto in diesem Rahmen. Beim Wählen des
 Hauptfotos sehen Sie so, was die Seite zeigen wird: ob Kopf und Ohren im Bild
 sind oder abgeschnitten werden.
 
+Gibt die Vorlage der Webseite das Format des Hauptfotos selbst an, gilt ihres —
+auf der Webseite wie in Kompass —, und das Seitenverhältnis hier wirkt nicht.
+Die Einstellung ist dann nur der Rückfall für eine Vorlage ohne diese Angabe;
+der Blickpunkt gilt weiter.
+
 - **Seitenverhältnis** — Breite zu Höhe, etwa 4:5 für Hochformat oder 4:3 für
   Querformat.
 - **Blickpunkt waagerecht und senkrecht** — in Prozent, wie die Webseite den
   Rahmen über das Bild legt: 50 und 50 schneidet mittig, 50 und 25 behält eher
   den oberen Teil. Wer die Vorlage der Webseite kennt, findet die Werte dort
   unter `object-position`.
+
+Das Format gilt auch für den Dialog „Ausschnitt …“ im Tierprofil: Das Rechteck,
+mit dem Sie den Ausschnitt eines Fotos setzen, hat immer dieses Format. Ändern
+Sie das Format später, bleiben gespeicherte Ausschnitte, wie sie sind; die
+Webseite schneidet sie im neuen Rahmen nach. Öffnen Sie einen solchen
+Ausschnitt, legt der Dialog das größte Rechteck im neuen Format mittig hinein
+und sagt es; erst „Übernehmen“ und „Speichern“ ändern ihn.
 
 Vorgabe ist 4:3, mittig. Die Einstellung verlangt das Recht, Einstellungen zu
 ändern; ein Agent kann sie über MCP mit `settings_set` und dem Schlüssel

@@ -23,7 +23,7 @@ export interface DragPreviewProps {
 export function DragPreview({ kind, title, detail, stacked = false }: DragPreviewProps) {
   const Icon = kind === 'folder' ? Folder : kind === 'asset' ? ImageIcon : FileIcon;
   const card = (
-    <div className="relative flex w-max max-w-[320px] items-center gap-2 rounded-md border border-line-strong bg-surface px-2.5 py-1.5 text-[13px] text-ink shadow-md">
+    <div className="relative flex w-max max-w-[320px] items-center gap-2 rounded-md border border-line-strong bg-surface px-2.5 py-1.5 text-meta text-ink shadow-md">
       <Icon className="size-[15px] shrink-0 text-muted-ink" aria-hidden />
       <span className="truncate font-semibold">{title}</span>
       {detail ? <span className="shrink-0 text-muted-ink">{detail}</span> : null}

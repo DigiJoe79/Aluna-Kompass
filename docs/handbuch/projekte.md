@@ -12,7 +12,10 @@ oder Kurzzeitprojekt) und Status (Aktiv oder Abgeschlossen). Das Formular ist
 eine Karte mit drei Abschnitten: „Darstellung“, „Inhalt“ und „Bild und Links“.
 Der Inhalt trägt, was die Vorlage zeigt: Kurztext, Langtext mit
 Formatierung, ein Bild aus der [Mediathek](mediathek.md) — je Sprache, die
-der Verein pflegt. „Speichern“ steht unten in der Leiste; ohne Änderung sagt
+der Verein pflegt. Am Bild legt „Ausschnitt …“ fest, welcher Teil auf der
+Webseite erscheint; gibt die Vorlage Formate vor (etwa Kachel 16:10 und
+Titelbild 16:9), wählen Sie daraus, und die Vorschau zeigt beide Stellen. Der
+Ausschnitt wird mit dem Projekt gespeichert; ein anderes Bild verwirft ihn. „Speichern“ steht unten in der Leiste; ohne Änderung sagt
 sie „Nichts geändert“, statt ausgegraut zu sein.
 
 Die Liste lässt sich nach Name und Art sortieren. Die eigene Reihenfolge, die

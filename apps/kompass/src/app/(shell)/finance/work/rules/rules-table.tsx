@@ -44,7 +44,7 @@ export function RulesTable({ rows, canWrite, options }: { rows: RuleRow[]; canWr
         <TableBody>
           {rows.map((row) => (
             <TableRow key={row.rule.id} className="align-top">
-              <TableCell className="py-2.5 font-medium text-ink">{row.rule.name}</TableCell>
+              <TableCell className="py-2.5 text-ink">{row.rule.name}</TableCell>
               <TableCell className="py-2.5 text-ink-2">{row.conditionTexts.join(' · ')}</TableCell>
               <TableCell className="py-2.5 text-ink-2">
                 <span className="flex flex-wrap items-center gap-2">

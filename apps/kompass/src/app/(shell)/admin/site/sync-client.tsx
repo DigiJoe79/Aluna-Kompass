@@ -8,13 +8,14 @@ import { useActionFeedback } from '@/components/forms/use-action-feedback';
 import { Notice } from '@/components/notice';
 import { Button } from '@/components/ui/button';
 import { applySyncAction, previewSyncAction, type SyncPreviewState } from '@/app/(shell)/site/actions';
+import { StatusBadge } from '@/components/status-badge';
 
 /**
  * Der Satz zu einem Befund. Er stand bis zum 2026-09-15 als Template-Literal
  * hier — sechs deutsche Sätze, die kein Wächter sah, weil er nur einfache
  * Zeichenketten prüfte.
  */
-function findingText(f: Finding, t: ReturnType<typeof useTranslations<'site.template'>>): string {
+export function findingText(f: Finding, t: ReturnType<typeof useTranslations<'site.template'>>): string {
   const name = f.label ?? f.path;
   switch (f.kind) {
     case 'added':
@@ -29,6 +30,8 @@ function findingText(f: Finding, t: ReturnType<typeof useTranslations<'site.temp
       return t('finding.overLimit', { name, have: f.have, max: f.max });
     case 'valueGone':
       return t('finding.valueGone', { name, value: f.value, replacement: f.replacement, count: f.count });
+    case 'unknownImagePlace':
+      return t('finding.unknownImagePlace', { name });
     default:
       return name;
   }
@@ -56,7 +59,7 @@ export function SyncClient({ name }: { name: string | null }) {
   return (
     <div className="flex flex-col gap-4 rounded-lg border border-line bg-surface p-5">
       <div className="flex items-center justify-between gap-4">
-        <span className="text-[14px] text-ink-2">{name ? t('name') + ': ' + name : t('neverRead')}</span>
+        <span className="text-body text-ink-2">{name ? t('name') + ': ' + name : t('neverRead')}</span>
         <Button type="button" onClick={preview} disabled={pending}>{t('read')}</Button>
       </div>
 
@@ -72,26 +75,26 @@ export function SyncClient({ name }: { name: string | null }) {
 
           {blocking.length > 0 ? (
             <div>
-              <p className="text-[12px] font-semibold uppercase tracking-[.04em] text-error">{t('blocking')}</p>
-              <ul className="mt-1 list-disc pl-5 text-[13px]">{blocking.map((f, i) => <li key={i}>{findingText(f, t)}</li>)}</ul>
+              <StatusBadge tone="error">{t('blocking')}</StatusBadge>
+              <ul className="mt-1 list-disc pl-5 text-meta">{blocking.map((f, i) => <li key={i}>{findingText(f, t)}</li>)}</ul>
             </div>
           ) : null}
 
           {lossy.length > 0 ? (
             <div>
-              <p className="text-[12px] font-semibold uppercase tracking-[.04em] text-warning">{t('lossy')}</p>
-              <ul className="mt-1 list-disc pl-5 text-[13px]">{lossy.map((f, i) => <li key={i}>{findingText(f, t)}</li>)}</ul>
+              <StatusBadge tone="warning">{t('lossy')}</StatusBadge>
+              <ul className="mt-1 list-disc pl-5 text-meta">{lossy.map((f, i) => <li key={i}>{findingText(f, t)}</li>)}</ul>
             </div>
           ) : null}
 
           {harmless.length > 0 ? (
             <div>
-              <p className="text-[12px] font-semibold uppercase tracking-[.04em] text-muted-ink">{t('harmless')}</p>
-              <ul className="mt-1 list-disc pl-5 text-[13px] text-ink-2">{harmless.map((f, i) => <li key={i}>{findingText(f, t)}</li>)}</ul>
+              <StatusBadge tone="neutral">{t('harmless')}</StatusBadge>
+              <ul className="mt-1 list-disc pl-5 text-meta text-ink-2">{harmless.map((f, i) => <li key={i}>{findingText(f, t)}</li>)}</ul>
             </div>
           ) : null}
 
-          {p.findings.length === 0 && p.localesMissing.length === 0 ? <p className="text-[13px] text-muted-ink">{t('noFindings')}</p> : null}
+          {p.findings.length === 0 && p.localesMissing.length === 0 ? <p className="text-meta text-muted-ink">{t('noFindings')}</p> : null}
 
           <RefusalNotice action state={applyFb.state} />
           <div className="flex gap-2 pt-1">

@@ -12,6 +12,17 @@ describe('publishedRowFor', () => {
     expect(publishedAnimals.schema.safeParse(row).success).toBe(true);
   });
 
+  it('maps a chosen photo with crop to the derived ID, one without stays as it is', async () => {
+    const deps = await proposalDeps();
+    const luna = await animal(deps);
+    const row = publishedRowFor(deps, { animalId: luna.id, values: {}, photos: [{ assetId: 'A', isPrimary: true, crop: { x: 0.5, y: 0, w: 0.5, h: 1 } }, { assetId: 'B', isPrimary: false, crop: null }, { assetId: 'C', isPrimary: false }] }) as Record<string, unknown>;
+    expect(row.photos).toEqual([
+      { assetId: 'A~5000_0_5000_10000', sortOrder: 1, isPrimary: true },
+      { assetId: 'B', sortOrder: 2, isPrimary: false },
+      { assetId: 'C', sortOrder: 3, isPrimary: false },
+    ]);
+  });
+
   it('builds a row for a new dog from the proposed values with a slug like the one it would get', async () => {
     const deps = await proposalDeps();
     const row = publishedRowFor(deps, { animalId: null, slugId: '01PROPOSAL0000000000ABCD', values: { name: 'Lotte', sex: 'female', birthText: { de: '2021' }, sizeText: {}, summary: { de: 'Fröhlich.' }, body: {} }, photos: [] }) as Record<string, unknown>;

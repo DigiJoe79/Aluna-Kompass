@@ -1,5 +1,5 @@
 import { expect, test } from './fixtures';
-import { loginAsAdmin, resetDatabase } from './helpers';
+import { loginAsAdmin, resetDatabase, waitForHydration } from './helpers';
 
 const PNG = Buffer.from(
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==',
@@ -14,6 +14,32 @@ test.describe('projects', () => {
   test.beforeEach(async ({ page }) => {
     await resetDatabase(page, 'seeded');
     await loginAsAdmin(page);
+  });
+
+  /** Ausschnitt für alle Bilder (Plan D Task 5): Projektbild zuschneiden, Format wählen, mit dem Projekt speichern. */
+  test('schneidet das Projektbild in einem gewählten Format zu und speichert es mit dem Projekt', async ({ page }) => {
+    await page.goto('/projects');
+    await page.getByRole('link', { name: 'Kastrationsaktion 2026' }).click();
+    await page.getByRole('button', { name: 'Ausschnitt …' }).click();
+    const dialog = page.getByRole('dialog', { name: 'Ausschnitt' });
+    await expect(dialog.getByText('Gespeichert wird mit dem Projekt.')).toBeVisible();
+    await dialog.getByRole('radio', { name: '1:1' }).click();
+    await dialog.getByRole('button', { name: 'Übernehmen' }).click();
+    // Erst zu: Solange der Dialog schließt, steht seine Vorschau mit derselben Test-ID noch im Baum (Image-Ring 2026-10-11).
+    await expect(dialog).toBeHidden();
+    // Die Vorschau im Feld zeigt das Ergebnis im Format der Stelle (Hinweis „· Ausschnitt“ oder „· nur … px breit“).
+    await expect(page.getByTestId('cropped-image')).toBeVisible();
+    await page.getByRole('button', { name: 'Speichern' }).click();
+    await expect(page.getByRole('status')).toContainText('Gespeichert');
+    // Die Maske bleibt stehen: Bild und Ausschnitt sind gespeichert, die Leiste zählt wieder bei null (Joe 2026-10-11 —
+    // vorher blieben „2 Änderungen“ stehen, und der Weg zur Webseite fragte nach).
+    await expect(page.getByText('noch nicht gespeichert')).toHaveCount(0);
+
+    await page.reload();
+    await expect(page.getByTestId('cropped-image')).toBeVisible();
+    await waitForHydration(page, '[name="imageCrop"]');
+    await page.getByRole('button', { name: 'Ausschnitt …' }).click();
+    await expect(dialog.getByRole('radio', { name: '1:1' })).toBeChecked();
   });
 
   test('create with an external link, then publish from the list', async ({ page }) => {

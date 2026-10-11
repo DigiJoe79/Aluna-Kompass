@@ -17,6 +17,7 @@ export function VariablesForm({
   version,
   locales,
   options,
+  mediaSizes = {},
 }: {
   schema: Record<string, FieldSchema>;
   value: Record<string, unknown>;
@@ -24,8 +25,11 @@ export function VariablesForm({
   version: string;
   locales: string[];
   options: Record<string, { value: string; label: string }[]>;
+  /** Pixelmaße der Bilder in den Variablen (`mediaPixelSizes`), für „Ausschnitt …“. */
+  mediaSizes?: Readonly<Record<string, { width: number; height: number }>>;
 }) {
   const t = useTranslations('site.variables');
+  const tc = useTranslations('media.crop');
   const [current, setCurrent] = useState(() => withBlanks(schema, value, locales));
   const [loaded, setLoaded] = useState(current);
   const changedCount = countChangedValues(loaded, current);
@@ -45,7 +49,7 @@ export function VariablesForm({
       <input type="hidden" name="expectedVersion" value={version} />
       <input type="hidden" name="payload" value={JSON.stringify(changedValues(loaded, current))} />
       <FormCardBody>
-        <SchemaForm schema={schema} value={current} errors={errors} locales={locales} onChange={setCurrent} options={options} />
+        <SchemaForm schema={schema} value={current} errors={errors} locales={locales} onChange={setCurrent} options={options} media={{ sizes: mediaSizes, target: tc('targets.settings') }} />
       </FormCardBody>
       <FormActionBar count={changedCount} onDiscard={() => setCurrent(loaded)} state={state} />
     </FormCard>

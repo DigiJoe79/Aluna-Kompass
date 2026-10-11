@@ -147,12 +147,12 @@ export function TransferForm({ purposes, defaultFromId, today, approverNames }: 
             <Textarea id="transfer-reason" rows={2} value={reason} onChange={(e) => setReason(e.target.value)} placeholder={t('reasonPlaceholder')} />
           </FormField>
           <FormCell size="full" className="space-y-1.5" data-testid="transfer-document">
-            <p className="text-[13px] font-semibold text-ink">
+            <p className="text-meta font-semibold text-ink">
               {t('documentLabel')} <span aria-hidden>*</span>
             </p>
             {document || file ? (
-              <p className="flex flex-wrap items-center gap-2 rounded-sm border border-line bg-surface-2 px-2.5 py-1.5 text-[13px]" data-testid="transfer-document-chosen">
-                {document ? <span className="font-mono text-[12px]">{document.number}</span> : null}
+              <p className="flex flex-wrap items-center gap-2 rounded-sm border border-line bg-surface-2 px-2.5 py-1.5 text-meta" data-testid="transfer-document-chosen">
+                {document ? <span className="font-mono text-hint">{document.number}</span> : null}
                 <span className="min-w-0 flex-1 truncate">{document ? document.subject : file!.name}</span>
                 <Button
                   type="button"
@@ -185,7 +185,7 @@ export function TransferForm({ purposes, defaultFromId, today, approverNames }: 
                 ) : null}
               </>
             )}
-            <p className="text-[12px] text-muted-ink">{t('documentRequired')}</p>
+            <p className="text-hint text-muted-ink">{t('documentRequired')}</p>
           </FormCell>
         </FormGrid>
       </section>

@@ -18,7 +18,7 @@ export function BalanceIndicator({ open, accountCents, allocatedCents }: { open:
     <div
       role="status"
       aria-live="polite"
-      className={cn('flex items-center gap-2 border-t px-3 py-2 text-[13px]', open === 0 ? 'border-line bg-success-bg' : 'border-line bg-warning-bg')}
+      className={cn('flex items-center gap-2 border-t px-3 py-2 text-meta', open === 0 ? 'border-line bg-success-bg' : 'border-line bg-warning-bg')}
     >
       {open === 0 ? (
         <>

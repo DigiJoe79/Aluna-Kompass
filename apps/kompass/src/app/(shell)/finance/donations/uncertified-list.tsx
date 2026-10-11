@@ -121,13 +121,13 @@ export function UncertifiedList({
                 <div className="flex items-center gap-3">
                   <span className="font-mono tabular-nums text-ink-2">{t('sum', { amount: formatEuro(group.sumCents) })}</span>
                   {group.contactComplete ? null : (
-                    <Link href={`/contacts/${group.contactId}`} className="rounded-sm border border-line bg-surface px-3 py-1.5 text-[13px] font-semibold text-ink hover:bg-surface-2">
+                    <Link href={`/contacts/${group.contactId}`} className="rounded-sm border border-line bg-surface px-3 py-1.5 text-meta font-semibold text-ink hover:bg-surface-2">
                       {t('completeAddress')}
                     </Link>
                   )}
                 </div>
               </div>
-              <ul className="mt-2 divide-y divide-line-2 text-[13px]">
+              <ul className="mt-2 divide-y divide-line-2 text-meta">
                 {group.lines.map((line) => (
                   // 390 px: Zeile und linke Gruppe brechen um, Betrag und Knopf rücken nach rechts (Pipeline-Warnung
                   // fl-zuwendungen-offen, Überlauf 411 > 390; ohne Layout-Test, Projektregel).
@@ -145,7 +145,7 @@ export function UncertifiedList({
                       <span className="font-mono whitespace-nowrap tabular-nums">{formatEuro(line.netCents)}</span>
                       {/* Befund 59: Ein Datum nach heute ist noch nicht ausstellbar — der Hinweis statt des Knopfs. */}
                       {line.inFuture ? (
-                        <span className="text-[12px] text-muted-ink">{t('inFuture')}</span>
+                        <span className="text-hint text-muted-ink">{t('inFuture')}</span>
                       ) : canIssue ? (
                         <Button type="button" size="sm" variant="outline" onClick={() => setIssuing(line.lineId)}>{t('issue')}</Button>
                       ) : null}

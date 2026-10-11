@@ -21,7 +21,7 @@ export function LockLine({ at, userName, channel, fmt }: { at: string; userName:
   const t = useTranslations('finance.lockLine');
   const tc = useTranslations('finance.channel');
   return (
-    <p className="flex items-center gap-2 rounded-sm bg-final-bg px-3 py-2 text-[13px] text-final">
+    <p className="flex items-center gap-2 rounded-sm bg-final-bg px-3 py-2 text-meta text-final">
       <Lock className="size-[15px] shrink-0" aria-hidden />
       <span>
         {t('text', { date: fmt.date(at), time: formatTime(at, fmt), name: userName ?? t('unknownUser'), channel: tc(channelKey(channel)) })}

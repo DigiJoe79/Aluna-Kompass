@@ -1,10 +1,10 @@
 # Webseite einrichten
 
-Unter Einstellungen → Webseite richten Sie ein, woraus und wohin die
+Unter Einrichtung → Webseite richten Sie ein, woraus und wohin die
 Vereinsseite gebaut wird: die Vorlage, die Verbindung zum Webspace, den
 Cache der Bildvarianten und die Liste gesperrter Begriffe. Die Inhalte
 selbst pflegen Sie unter „Webseite“ in der Leiste; dort steht auch
-„Publizieren“, das ohne Vorlage zuerst in diese Einstellungen führt.
+„Publizieren“, das ohne Vorlage zuerst hierher führt.
 
 Die Seite hat vier Reiter. Sie brauchen dafür das Recht „Webseite pflegen“.
 
@@ -71,4 +71,4 @@ Liste nur zu lesen. Jede Änderung steht im Änderungsprotokoll. Über MCP gehen
 ## Rechte
 
 Die Seite verlangt „Webseite pflegen“. Wer nur „Webseite veröffentlichen“
-hat, sieht unter Einstellungen keinen Eintrag „Webseite“.
+hat, sieht unter Einrichtung keinen Eintrag „Webseite“.

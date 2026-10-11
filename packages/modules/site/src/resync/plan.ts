@@ -26,7 +26,9 @@ export type Finding =
   | { kind: 'removed'; path: string; label?: string; filled: number }
   | { kind: 'retyped'; path: string; label?: string; from: string; to: string; filled: number; lossless: boolean }
   | { kind: 'overLimit'; path: string; label?: string; have: number; max: number }
-  | { kind: 'valueGone'; path: string; label?: string; value: string; count: number; replacement: string };
+  | { kind: 'valueGone'; path: string; label?: string; value: string; count: number; replacement: string }
+  // Nur ein Hinweis: Ein neueres Template läuft auf einem älteren Kompass, die Stelle bleibt ohne Format.
+  | { kind: 'unknownImagePlace'; path: string; label?: string };
 
 export interface FieldDesc {
   path: string;
@@ -179,6 +181,12 @@ export function planResync(before: ResyncSchema, after: ResyncSchema, data: Resy
 
   return findings;
 }
+
+/**
+ * Hinweise auf Bildstellen in `images`, die kein eingeschaltetes Modul angemeldet hat (Spec Ausschnitt für alle
+ * Bilder § 2): kein Fehler — ein neueres Template läuft auf einem älteren Kompass, die Stelle bleibt ohne Format.
+ */
+export const unknownImagePlaceFindings = (keys: readonly string[]): Finding[] => keys.map((key) => ({ kind: 'unknownImagePlace', path: `images.${key}` }));
 
 /** Wahr, wenn ein Befund gefüllte Daten kostet und deshalb bestätigt werden muss. */
 export function losesContent(finding: Finding): boolean {

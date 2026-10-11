@@ -15,13 +15,13 @@ export function ManagedField({ label, value, managedBy }: { label: string; value
   return (
     <div className="flex flex-col gap-1.5">
       <div className="flex items-center gap-2">
-        <span className="text-[13px] font-semibold text-ink-2">{label}</span>
-        <span className="rounded-sm bg-badge px-1.5 py-0.5 text-[11px] font-semibold text-badge-ink">{t('badge')}</span>
+        <span className="text-meta font-semibold text-ink-2">{label}</span>
+        <span className="rounded-sm bg-badge px-1.5 py-0.5 text-hint font-semibold text-badge-ink">{t('badge')}</span>
       </div>
-      <p data-testid="managed-field-value" className="flex h-[var(--field-h)] w-full items-center rounded-md border border-dashed border-line bg-surface-2 px-2.5 text-sm text-ink">
+      <p data-testid="managed-field-value" className="flex h-[var(--field-h)] w-full items-center rounded-md border border-dashed border-line bg-surface-2 px-2.5 text-body text-ink">
         {value.trim() === '' ? '—' : value}
       </p>
-      <Link href={managedBy.href} className="w-fit text-[12px] font-semibold text-ink underline underline-offset-2">
+      <Link href={managedBy.href} className="w-fit text-hint font-semibold text-ink underline underline-offset-2">
         {t('linkText', { label: managedBy.label })}
       </Link>
     </div>

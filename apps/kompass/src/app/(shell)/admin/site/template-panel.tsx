@@ -20,7 +20,7 @@ export async function TemplatePanel({ deps }: { deps: Deps }) {
 
   return (
     <>
-      <p className="text-[13px] text-ink-2">
+      <p className="text-meta text-ink-2">
         {state ? t('lastRead', { when: fmt.dateTime(state.readAt) }) : t('neverRead')}
       </p>
       {needsReview ? (
@@ -29,7 +29,7 @@ export async function TemplatePanel({ deps }: { deps: Deps }) {
       <SyncClient name={state?.name ?? null} />
       {showSeedCard ? (
         seedAppliedAt ? (
-          <p className="rounded-lg border border-line bg-surface p-5 text-[14px] text-ink-2">
+          <p className="rounded-lg border border-line bg-surface p-5 text-body text-ink-2">
             {tSeed('done', { when: fmt.dateTime(seedAppliedAt) })}
           </p>
         ) : (

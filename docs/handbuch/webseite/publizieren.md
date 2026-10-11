@@ -5,7 +5,7 @@ Dateien auf den Webspace des Vereins. Die Seite führt in zwei Schritten: erst
 die Vorschau, die alle Inhalte prüft und zeigt, was sich ändert, dann das
 Publizieren genau dieses Stands. Publiziert wird nur aus der Prod-Instanz und
 aus der Test-Instanz auf Staging. Ist noch keine Vorlage eingelesen, zeigt
-die Seite einen Hinweis mit Link in die Einstellungen.
+die Seite einen Hinweis mit Link zu Einrichtung → Webseite.
 
 ## Ziel
 
@@ -41,7 +41,7 @@ Klick zeigt die ersten fünf mit Namen und führt zum Publizieren; am Telefon st
 dort ein Symbol mit der Zahl, ein Tipp führt direkt auf diese Seite. Am Datensatz
 selbst steht dasselbe als Zeile „Änderung noch nicht publiziert · Zum Publizieren“,
 mit dem Link auf diese Seite: am Hund unter „veröffentlicht“, an Projekten, Einträgen
-der Webseite und unter Einstellungen → Verein direkt unter dem Seitenkopf. Die
+der Webseite und unter Einrichtung → Stammdaten → Verein direkt unter dem Seitenkopf. Die
 Variablen teilen sich eine Seite; dort sagt die Zeile, welche geändert sind, etwa
 „2 Variablen nicht publiziert: Spendenkonto, Telefon“, ab vier nur die Zahl. Vor der
 ersten Vorschau nennt die Karte die geänderten Datensätze.
@@ -87,7 +87,7 @@ führt dorthin, wo Sie es ändern: bei einer Variablen auf die Seite
 „Variablen“, bei einem Eintrag einer Sammlung in seine Maske. Treffer in
 Tier- und Projektsichten und in Dateinamen haben keinen Link, weil sie in
 einem anderen Bereich gepflegt werden. Wer die Webseite verwalten darf,
-findet außerdem den Weg zur Liste der gesperrten Begriffe unter Einstellungen
+findet außerdem den Weg zur Liste der gesperrten Begriffe unter Einrichtung
 → Webseite → Gesperrte Begriffe (siehe
 [Webseite einrichten](../einstellungen/webseite-einrichten.md)). Nach der
 Korrektur bauen Sie die Vorschau neu.
@@ -108,7 +108,7 @@ einmal um — ein Abbruch mittendrin lässt keine halb alte, halb neue Seite
 stehen. Der Publish steht mit Datum, Prüfsumme und Ergebnis im
 Änderungsprotokoll. Kompass verweigert ihn auch, wenn die Vorlage im
 Verzeichnis geändert, aber nicht neu [eingelesen](template-einlesen.md)
-wurde, oder wenn die Vorlage ein Modul braucht, das unter Einstellungen →
+wurde, oder wenn die Vorlage ein Modul braucht, das unter Einrichtung →
 Module ausgeschaltet ist.
 
 ## Laufanzeige und Abbrechen
@@ -175,6 +175,6 @@ Eintrag der Historie mit Dateiliste und Protokoll. `site_publish` verlangt den
 `expectedContentHash` der Vorschau, die der Assistent geprüft hat. Was noch nicht
 publiziert ist, liest er mit `site_pending_changes`.
 
-Den Verbindungstest zum Webspace finden Sie unter Einstellungen → Webseite →
+Den Verbindungstest zum Webspace finden Sie unter Einrichtung → Webseite →
 Verbindung ([Webseite einrichten](../einstellungen/webseite-einrichten.md));
 auf dieser Seite gibt es ihn nicht.

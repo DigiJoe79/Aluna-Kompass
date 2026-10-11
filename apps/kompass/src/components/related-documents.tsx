@@ -2,6 +2,7 @@ import { hasPermission, isModuleEnabled, type CallContext, type Deps } from '@ko
 import { listDocuments, requireDmsGate } from '@kompass/module-dms';
 import { getTranslations } from 'next-intl/server';
 import Link from 'next/link';
+import { Section } from '@/components/section';
 import { StatusBadge } from '@/components/status-badge';
 import { buttonVariants } from '@/components/ui/button';
 import { dateFormatOf } from '@/lib/date-format';
@@ -33,28 +34,27 @@ export async function RelatedDocuments({
   const receiveHref =
     entityType === 'contact' ? `/dms/receive?sender=${entityId}` : `/dms/receive?about=${entityType}:${entityId}`;
 
+  // Zwei Aktionen passen am Telefon nicht neben den Titel: `Section` bricht sie um wie der Seitenkopf.
+  const actions = canCreate ? (
+    <>
+      {entityType === 'contact' ? (
+        <Link href={`/dms/new?recipient=${entityId}`} className={buttonVariants({ variant: 'outline', size: 'sm' })}>
+          {t('writeLetter')}
+        </Link>
+      ) : null}
+      <Link href={receiveHref} className={buttonVariants({ variant: 'outline', size: 'sm' })}>
+        {t('receivePost')}
+      </Link>
+    </>
+  ) : undefined;
+
   return (
-    <section data-testid="related-documents" className="rounded-md border border-line bg-surface p-5">
-      {/* Zwei Aktionen passen am Telefon nicht neben den Titel: umbrechen wie der Seitenkopf. */}
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-[15px] font-semibold text-ink">{t('title')}</h2>
-        {canCreate ? (
-          <div className="flex flex-wrap gap-2">
-            {entityType === 'contact' ? (
-              <Link href={`/dms/new?recipient=${entityId}`} className={buttonVariants({ variant: 'outline', size: 'sm' })}>
-                {t('writeLetter')}
-              </Link>
-            ) : null}
-            <Link href={receiveHref} className={buttonVariants({ variant: 'outline', size: 'sm' })}>
-              {t('receivePost')}
-            </Link>
-          </div>
-        ) : null}
-      </div>
+    <div data-testid="related-documents" className="rounded-md border border-line bg-surface p-5">
+      <Section title={t('title')} actions={actions}>
       {res.value.documents.length === 0 ? (
-        <p className="text-[13px] text-muted-ink">{t('none')}</p>
+        <p className="text-meta text-muted-ink">{t('none')}</p>
       ) : (
-        <ul className="divide-y divide-line-2 text-[13px]">
+        <ul className="divide-y divide-line-2 text-meta">
           {res.value.documents.map((doc) => {
             const role = doc.links.find((l) => l.entityType === entityType && l.entityId === entityId)?.role;
             return (
@@ -65,13 +65,14 @@ export async function RelatedDocuments({
                 <Link href={`/dms/${doc.id}`} className="min-w-0 flex-1 truncate text-ink hover:underline">
                   {doc.subject}
                 </Link>
-                <span className="font-mono text-[12px] text-ink-2">{fmt.date(doc.documentDate)}</span>
+                <span className="font-mono text-hint text-ink-2">{fmt.date(doc.documentDate)}</span>
                 {role ? <StatusBadge tone="neutral">{t(`roles.${role}`)}</StatusBadge> : null}
               </li>
             );
           })}
         </ul>
       )}
-    </section>
+      </Section>
+    </div>
   );
 }

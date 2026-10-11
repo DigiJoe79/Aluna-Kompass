@@ -26,7 +26,7 @@ describe('animalsMediaReferences', () => {
     unwrap(await setAnimalPhotos(d, ctx, { id: animal.id, photos: [{ assetId: photo.id, isPrimary: true }] }));
 
     expect(animalsMediaReferences(d, new Set([photo.id, 'OTHER']))).toEqual([
-      { assetId: photo.id, label: 'Tier „Rocky“', entity: 'animal', id: animal.id, href: `/animals/${animal.id}` },
+      { assetId: photo.id, label: 'Tier „Rocky“', entity: 'animal', id: animal.id, href: `/animals/${animal.id}`, cropped: false },
     ]);
     expect(animalsMediaReferences(d, new Set(['OTHER']))).toEqual([]);
   });

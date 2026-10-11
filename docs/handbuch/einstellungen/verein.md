@@ -22,8 +22,8 @@ führt direkt auf „Bank“ oder „Steuer & Bescheide“.
 - **Darstellung** — Datumsformat der Oberfläche.
 
 Jedes Feld hat einen Hinweis, wo es verwendet wird. Was leer ist, obwohl es
-gebraucht wird, zählt die [Startseite](../startseite.md) unter „Einstellungen
-vervollständigen“.
+gebraucht wird, zählt die [Startseite](../startseite.md) in der Kachel
+„Einrichtung“.
 
 ## Was das bedeutet
 

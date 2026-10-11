@@ -77,14 +77,14 @@ export function DashboardCustomize({ layout, available }: { layout: DashboardLay
       return (
         <div key={field.name} className="flex items-center gap-2">
           <Switch id={inputId} size="sm" checked={Boolean(value)} disabled={pending} onCheckedChange={(v) => setOption(index, field.name, v)} />
-          <Label htmlFor={inputId} className="cursor-pointer text-[13px] text-ink-2">{t(`${ns}.label`)}</Label>
+          <Label htmlFor={inputId} className="cursor-pointer text-meta text-ink-2">{t(`${ns}.label`)}</Label>
         </div>
       );
     }
     if (field.type === 'enum') {
       return (
         <div key={field.name} className="flex items-center gap-2">
-          <Label htmlFor={inputId} className="text-[13px] text-ink-2">{t(`${ns}.label`)}</Label>
+          <Label htmlFor={inputId} className="text-meta text-ink-2">{t(`${ns}.label`)}</Label>
           <Select id={inputId} value={String(value)} disabled={pending} onChange={(e) => setOption(index, field.name, e.target.value)} className="w-32">
             {field.values.map((v) => (
               <option key={v} value={v}>{t(`${ns}.values.${v}`)}</option>
@@ -95,7 +95,7 @@ export function DashboardCustomize({ layout, available }: { layout: DashboardLay
     }
     return (
       <div key={field.name} className="flex items-center gap-2">
-        <Label htmlFor={inputId} className="text-[13px] text-ink-2">{t(`${ns}.label`)}</Label>
+        <Label htmlFor={inputId} className="text-meta text-ink-2">{t(`${ns}.label`)}</Label>
         <Input
           id={inputId}
           type="number"
@@ -123,7 +123,7 @@ export function DashboardCustomize({ layout, available }: { layout: DashboardLay
         <SheetContent side="right" size="sm" className="gap-0 overflow-y-auto bg-surface shadow-md" data-testid="dashboard-customize">
           <div className="p-5">
             <SheetTitle>{t('customize.title')}</SheetTitle>
-            <p className="mt-1 mb-4 text-[13px] text-muted-ink">{t('customize.hint')}</p>
+            <p className="mt-1 mb-4 text-meta text-muted-ink">{t('customize.hint')}</p>
             <div className="mb-3">
               <RefusalNotice action state={feedback.state} />
             </div>
@@ -135,7 +135,7 @@ export function DashboardCustomize({ layout, available }: { layout: DashboardLay
                   <li key={id(tile)} className="flex flex-col gap-2 py-3">
                     <div className="flex items-center gap-2">
                       <Switch id={`tile-${id(tile)}`} checked disabled={pending} onCheckedChange={() => toggle(def, false)} />
-                      <Label htmlFor={`tile-${id(tile)}`} className="flex-1 cursor-pointer text-[14px]">{title(tile)}</Label>
+                      <Label htmlFor={`tile-${id(tile)}`} className="flex-1 cursor-pointer text-body">{title(tile)}</Label>
                       <Button variant="ghost" size="icon-sm" aria-label={tContent('moveUp')} disabled={pending || index === 0} onClick={() => move(index, -1)}><ArrowUp className="size-4" /></Button>
                       <Button variant="ghost" size="icon-sm" aria-label={tContent('moveDown')} disabled={pending || index === tiles.length - 1} onClick={() => move(index, 1)}><ArrowDown className="size-4" /></Button>
                     </div>
@@ -146,8 +146,8 @@ export function DashboardCustomize({ layout, available }: { layout: DashboardLay
               {off.map((tile) => (
                 <li key={id(tile)} className="flex items-center gap-2 py-3 opacity-60">
                   <Switch id={`tile-${id(tile)}`} checked={false} disabled={pending} onCheckedChange={() => toggle(tile, true)} />
-                  <Label htmlFor={`tile-${id(tile)}`} className="flex-1 cursor-pointer text-[14px]">{title(tile)}</Label>
-                  <span className="text-[12px] text-muted-ink">{t('customize.off')}</span>
+                  <Label htmlFor={`tile-${id(tile)}`} className="flex-1 cursor-pointer text-body">{title(tile)}</Label>
+                  <span className="text-hint text-muted-ink">{t('customize.off')}</span>
                 </li>
               ))}
             </ul>

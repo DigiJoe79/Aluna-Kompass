@@ -48,7 +48,7 @@ export function PanelNav<K extends string>({
               aria-current={isActive ? 'page' : undefined}
               data-invalid={isInvalid ? 'true' : undefined}
               className={cn(
-                'inline-flex h-9 shrink-0 items-center gap-2 whitespace-nowrap text-[14px]',
+                'inline-flex h-9 shrink-0 items-center gap-2 whitespace-nowrap text-body',
                 isActive ? 'font-semibold text-ink shadow-[inset_0_-2px_0_var(--color-primary)]' : 'text-ink-2 hover:text-ink',
               )}
             >

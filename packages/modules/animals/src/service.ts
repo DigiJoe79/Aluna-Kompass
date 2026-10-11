@@ -1,4 +1,4 @@
-import { buildDeletionPreview, conflict, expectedVersionField, staleVersion, deleteUnreferencedMedia, deletionConflict, emptyLocalized, invalid, isoNow, localizedList as coreLocalizedList, localizedText, newId, notFound, notifyRecordDeleted, ok, readSetting, recordAudit, requirePermission, schema as core, validate, type CallContext, type DbOrTx, type DeletionPreview, type Deps, type LocalizedText, type MediaCleanup, type Result } from '@kompass/core';
+import { buildDeletionPreview, conflict, cropOutOfBounds, cropRectSchema, roundCropRect, expectedVersionField, staleVersion, deleteUnreferencedMedia, deletionConflict, emptyLocalized, invalid, isoNow, localizedList as coreLocalizedList, localizedText, newId, notFound, notifyRecordDeleted, ok, readSetting, recordAudit, requirePermission, schema as core, validate, type CallContext, type DbOrTx, type DeletionPreview, type Deps, type LocalizedText, type MediaCleanup, type Result } from '@kompass/core';
 import { and, asc, count, eq, inArray, isNotNull, isNull } from 'drizzle-orm';
 import { z } from 'zod';
 import { animalSlug } from './slug';
@@ -12,7 +12,7 @@ export const SLUG = /^[a-z0-9][a-z0-9-]{0,80}$/;
 const localizedList = coreLocalizedList({ max: 12, itemMax: 40 });
 
 export interface AnimalPhoto { assetId: string; sortOrder: number; isPrimary: boolean; crop: PhotoCrop | null; sourceUserId: string | null; sourceRef: string | null }
-export interface AnimalStory { beforeAssetId: string | null; afterAssetId: string | null; quote: LocalizedText; family: string; adoptedYear: number; beforeCaption: LocalizedText; afterCaption: LocalizedText }
+export interface AnimalStory { beforeAssetId: string | null; afterAssetId: string | null; beforeCrop: PhotoCrop | null; afterCrop: PhotoCrop | null; quote: LocalizedText; family: string; adoptedYear: number; beforeCaption: LocalizedText; afterCaption: LocalizedText }
 export type AnimalRecord = typeof animals.$inferSelect & { photos: AnimalPhoto[]; story: AnimalStory | null };
 
 const fields = {
@@ -57,25 +57,25 @@ export const animalUpdateSchema = z.object({
 export type AnimalChanges = Omit<z.output<typeof animalUpdateSchema>, 'id' | 'expectedVersion'>;
 export type AnimalStatus = 'lookingForHome' | 'reserved' | 'adopted';
 
-const unit = z.number().min(0).max(1);
 /**
  * Spec Vorschlags-Eingang § 2: normiertes Rechteck zum Bild; vier Nachkommastellen genügen (0,1 px bei 1000 px).
  * Ob das Rechteck im Bild liegt, prüft der Dienst (`cropIssues`), nicht das Schema: Werkzeugschemas tragen keine
- * Prüfung über mehrere Felder (Wächter mcp-conditional-required, N5).
+ * Prüfung über mehrere Felder (Wächter mcp-conditional-required, N5). Seit 0.2.11 aus dem Kern, weil auch
+ * Geschichte und Projektbild einen Ausschnitt haben.
  */
-export const photoCropSchema = z.object({ x: unit, y: unit, w: z.number().gt(0).max(1), h: z.number().gt(0).max(1) }).strict();
+export const photoCropSchema = cropRectSchema;
 /** Ragt ein Ausschnitt über das Bild hinaus? Je Foto ein Befund unter `<base>.<i>.crop`. */
 export function cropIssues(photos: readonly { crop?: PhotoCrop | null }[], base: string): { path: string; message: string }[] {
-  return photos.flatMap((p, i) => (p.crop && (p.crop.x + p.crop.w > 1.0001 || p.crop.y + p.crop.h > 1.0001) ? [{ path: `${base}.${i}.crop`, message: 'cropOutOfBounds' }] : []));
+  return photos.flatMap((p, i) => (cropOutOfBounds(p.crop) ? [{ path: `${base}.${i}.crop`, message: 'cropOutOfBounds' }] : []));
 }
-export const roundCrop = (c: PhotoCrop): PhotoCrop => ({ x: +c.x.toFixed(4), y: +c.y.toFixed(4), w: +c.w.toFixed(4), h: +c.h.toFixed(4) });
+export const roundCrop: (c: PhotoCrop) => PhotoCrop = roundCropRect;
 
 export function loadAnimal(db: DbOrTx, id: string): AnimalRecord | null {
   const row = db.select().from(animals).where(eq(animals.id, id)).get();
   if (!row) return null;
   const photos = db.select({ assetId: animalPhotos.assetId, sortOrder: animalPhotos.sortOrder, isPrimary: animalPhotos.isPrimary, crop: animalPhotos.crop, sourceUserId: animalPhotos.sourceUserId, sourceRef: animalPhotos.sourceRef }).from(animalPhotos).where(eq(animalPhotos.animalId, id)).orderBy(asc(animalPhotos.sortOrder)).all();
   const story = db.select().from(animalStories).where(eq(animalStories.animalId, id)).get();
-  return { ...row, traits: row.traits as LocalizedList, photos, story: story ? { beforeAssetId: story.beforeAssetId, afterAssetId: story.afterAssetId, quote: story.quote, family: story.family, adoptedYear: story.adoptedYear, beforeCaption: story.beforeCaption, afterCaption: story.afterCaption } : null };
+  return { ...row, traits: row.traits as LocalizedList, photos, story: story ? { beforeAssetId: story.beforeAssetId, afterAssetId: story.afterAssetId, beforeCrop: story.beforeCrop ?? null, afterCrop: story.afterCrop ?? null, quote: story.quote, family: story.family, adoptedYear: story.adoptedYear, beforeCaption: story.beforeCaption, afterCaption: story.afterCaption } : null };
 }
 
 const slugTaken = (db: DbOrTx, slug: string, exceptId?: string) => { const r = db.select({ id: animals.id }).from(animals).where(eq(animals.slug, slug)).get(); return !!r && r.id !== exceptId; };
@@ -252,16 +252,32 @@ export const animalStorySchema = z.object({
   // leerte jeder solche Aufruf beide (2026-09-19, tests/mcp-schemas.test.ts).
   beforeCaption: localizedText({ max: 200 }).optional(),
   afterCaption: localizedText({ max: 200 }).optional(),
+  // Ausschnitt je Bild (Spec Ausschnitt für alle Bilder § 3): weggelassen = behalten, solange das Bild bleibt;
+  // `null` = entfernen. Ein anderes Bild ohne neuen Ausschnitt verwirft den alten.
+  beforeCrop: photoCropSchema.nullable().optional(),
+  afterCrop: photoCropSchema.nullable().optional(),
   /** Ladestand des Tiers (`updatedAt`); veraltet → `staleVersion`. */
   expectedVersion: expectedVersionField,
 });
+
+/**
+ * Der Ausschnitt eines Bildes nach dem Speichern: der neue, wenn einer kommt; sonst der alte, solange das Bild
+ * dasselbe bleibt; ohne Bild nie einer (Handover alle Bilder 3: Bildwechsel verwirft den Ausschnitt).
+ */
+export function nextCrop(assetId: string | null, given: PhotoCrop | null | undefined, previousAssetId: string | null | undefined, previousCrop: PhotoCrop | null | undefined): PhotoCrop | null {
+  if (!assetId) return null;
+  if (given !== undefined) return given === null ? null : roundCropRect(given);
+  return assetId === previousAssetId ? (previousCrop ?? null) : null;
+}
 
 export async function setAnimalStory(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<AnimalRecord>> {
   const denied = requirePermission(ctx, 'animals.manage');
   if (denied) return denied;
   const parsed = validate(deps, animalStorySchema, input);
   if (!parsed.ok) return parsed;
-  const { id, expectedVersion, beforeCaption, afterCaption, ...rest } = parsed.value;
+  const { id, expectedVersion, beforeCaption, afterCaption, beforeCrop, afterCrop, ...rest } = parsed.value;
+  const outside = [...(cropOutOfBounds(beforeCrop) ? ['beforeCrop'] : []), ...(cropOutOfBounds(afterCrop) ? ['afterCrop'] : [])];
+  if (outside.length) return invalid(outside.map((path) => ({ path, message: 'cropOutOfBounds' })));
   const before = loadAnimal(deps.db, id);
   if (!before) return notFound('animal', id);
   const stale = staleVersion(expectedVersion, before.updatedAt);
@@ -271,6 +287,8 @@ export async function setAnimalStory(deps: Deps, ctx: CallContext, input: unknow
     ...rest,
     beforeCaption: beforeCaption ?? before.story?.beforeCaption ?? {},
     afterCaption: afterCaption ?? before.story?.afterCaption ?? {},
+    beforeCrop: nextCrop(rest.beforeAssetId, beforeCrop, before.story?.beforeAssetId, before.story?.beforeCrop),
+    afterCrop: nextCrop(rest.afterAssetId, afterCrop, before.story?.afterAssetId, before.story?.afterCrop),
   };
   for (const assetId of [story.beforeAssetId, story.afterAssetId]) {
     if (!assetId) continue;

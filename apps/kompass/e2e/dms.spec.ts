@@ -489,7 +489,8 @@ test.describe('dms', () => {
 
     // Der Fristenbildschirm führt auf genau dieses Dokument.
     await page.goto('/admin/retention');
-    await expect(page.getByRole('heading', { name: 'Dokumente' })).toBeVisible();
+    // Die Gruppe ist ein Etikett über gleichartigen Zeilen (Overline, K10 Charge 3): benannte Region statt Überschrift.
+    await expect(page.getByRole('region', { name: 'Dokumente' })).toBeVisible();
     await page.getByRole('link', { name: /Dokument RCH-/ }).click();
 
     await page.getByRole('button', { name: 'Weitere Aktionen' }).click();
@@ -538,7 +539,7 @@ test.describe('dms', () => {
     await login(page);
     // Über die Navigation, nicht über die URL: Der Bildschirm war gebaut und
     // fertig, nur zeigte nichts darauf.
-    await page.getByRole('navigation', { name: 'Hauptnavigation' }).getByRole('link', { name: 'Einstellungen' }).click();
+    await page.getByRole('navigation', { name: 'Hauptnavigation' }).getByRole('link', { name: 'System' }).click();
     await page.getByRole('navigation', { name: 'Unternavigation' }).getByRole('link', { name: 'Akte', exact: true }).click();
     const tabs = page.getByRole('navigation', { name: 'Bereiche der Akte' });
     await expect(tabs.getByRole('link', { name: 'Arten' })).toHaveAttribute('aria-current', 'page');
@@ -1508,7 +1509,9 @@ test.describe('dms', () => {
     await page.getByRole('button', { name: 'Dokumentart anlegen' }).click();
     const create = page.getByRole('dialog', { name: 'Neue Dokumentart' });
     await create.getByLabel('Schlüssel').fill('probe-memo');
-    await create.getByLabel('Präfix').fill('PMO');
+    // Das Präfix wird beim Tippen groß (K10 Charge 3, Koordinator): was man sieht, steht in der Nummer.
+    await create.getByLabel('Präfix').fill('pmo');
+    await expect(create.getByLabel('Präfix')).toHaveValue('PMO');
     await create.getByLabel('Bezeichnung').fill('Probe-Vermerk');
     await create.getByRole('button', { name: 'Speichern' }).click();
     const newRow = page.getByRole('row').filter({ hasText: 'Probe-Vermerk' });

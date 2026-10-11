@@ -9,8 +9,16 @@ export interface MediaListingItem {
   height: number | null;
   createdAt: string;
   folder: string | null;
-  references: { label: string; href?: string }[];
+  /** Verwendungen; `cropped`: Die Fundstelle zeigt einen Ausschnitt („· zugeschnitten“). */
+  references: { label: string; href?: string; cropped?: true }[];
 }
+
+/** Eine Verwendung für die Oberfläche (Mediathek und Auswahl): Name, Weg dorthin, ob dort ein Ausschnitt gilt. */
+export const listingReference = (r: { label: string; href?: string; cropped?: boolean }): MediaListingItem['references'][number] => ({
+  label: r.label,
+  ...(r.href ? { href: r.href } : {}),
+  ...(r.cropped ? { cropped: true as const } : {}),
+});
 
 export interface MediaListing {
   items: MediaListingItem[];
@@ -60,7 +68,7 @@ export async function buildMediaListing(deps: Deps, ctx: CallContext, filter: Me
       height: record.height,
       createdAt: record.createdAt,
       folder: record.folder,
-      references: references.map((r) => (r.href ? { label: r.label, href: r.href } : { label: r.label })),
+      references: references.map(listingReference),
     })),
     folders: folders.value,
     total: unfiled.value + folders.value.reduce((sum, f) => sum + f.assetCount, 0),

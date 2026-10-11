@@ -33,7 +33,7 @@ export default async function ProjectsPage({ searchParams }: { searchParams: Pro
       {result.value.length === 0 ? <EmptyState title={t('emptyTitle')} text={t('emptyText')} /> : (
         <>
           {sort ? (
-            <p className="mb-3 text-[13px]">
+            <p className="mb-3 text-meta">
               <Link href="/projects" className="text-link underline">{t('ownOrder')}</Link>
             </p>
           ) : null}
@@ -53,7 +53,7 @@ export default async function ProjectsPage({ searchParams }: { searchParams: Pro
                   <TableRow key={p.id}>
                     <TableCell><RowLink href={`/projects/${p.id}`}>{p.name.de || p.slug}</RowLink></TableCell>
                     <TableCell><StatusBadge tone="neutral">{t(`types.${p.type}`)}</StatusBadge></TableCell>
-                    <TableCell className="text-[12px] text-muted-ink">{p.externalLinks.length > 0 ? p.externalLinks.map((l) => l.label).join(', ') : '—'}</TableCell>
+                    <TableCell className="text-hint text-muted-ink">{p.externalLinks.length > 0 ? p.externalLinks.map((l) => l.label).join(', ') : '—'}</TableCell>
                     <TableCell><PublishSwitch id={p.id} isPublished={p.isPublished} action={setProjectPublishedAction} /></TableCell>
                     <TableCell className="text-right">{sort ? null : <ReorderButtons ids={ids} index={ids.indexOf(p.id)} action={reorderProjectsAction} />}</TableCell>
                   </TableRow>

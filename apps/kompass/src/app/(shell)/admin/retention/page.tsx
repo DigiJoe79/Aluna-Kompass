@@ -8,6 +8,7 @@ import { PageHeader } from '@/components/page-header';
 import { dateFormatOf } from '@/lib/date-format';
 import { requireSession } from '@/lib/request-context';
 import { RetentionSettings } from './retention-settings';
+import { Overline } from '@/components/overline';
 
 export default async function RetentionPage() {
   const { deps, ctx } = await requireSession();
@@ -39,15 +40,15 @@ export default async function RetentionPage() {
         <EmptyState title={t('empty.title')} text={t('empty.text')} />
       ) : (
         [...byEntity.entries()].map(([entity, items]) => (
-          <section key={entity} className="mb-6">
-            <h2 className="mb-2 text-[13px] font-semibold text-muted-ink">{t.has(`entities.${entity}`) ? t(`entities.${entity}`) : entity}</h2>
+          <section key={entity} aria-label={t.has(`entities.${entity}`) ? t(`entities.${entity}`) : entity} className="mb-6">
+            <Overline className="mb-2">{t.has(`entities.${entity}`) ? t(`entities.${entity}`) : entity}</Overline>
             <ul className="divide-y divide-line rounded-md border border-line">
               {items.map((item) => {
                 const href = item.href;
                 return (
                   <li key={`${item.entity}:${item.id}`} className="flex items-center justify-between gap-4 px-3 py-2">
                     <span>{href ? <Link href={href} className="underline underline-offset-2">{item.label}</Link> : item.label}</span>
-                    <span className="text-[12px] text-muted-ink">{t('dueSince', { date: fmt.date(item.dueSince) })}</span>
+                    <span className="text-hint text-muted-ink">{t('dueSince', { date: fmt.date(item.dueSince) })}</span>
                   </li>
                 );
               })}
@@ -55,7 +56,7 @@ export default async function RetentionPage() {
           </section>
         ))
       )}
-      <p className="mt-3 text-[12px] text-muted-ink">{t('footnote')}</p>
+      <p className="mt-3 text-hint text-muted-ink">{t('footnote')}</p>
     </Page>
   );
 }

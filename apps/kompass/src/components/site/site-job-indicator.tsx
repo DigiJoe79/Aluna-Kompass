@@ -21,7 +21,7 @@ export function SiteJobIndicator() {
   const progress = counter ? t(`count.${counter.key}`, counter.values) : '';
   const kind = t(`names.${running.kind}`);
   return (
-    <Link href="/site/publish" data-testid="site-job" aria-live="polite" className="flex h-8 shrink-0 items-center gap-2 rounded-md border border-line-strong bg-field px-2.5 text-[13px] font-medium text-ink-2 hover:bg-hover">
+    <Link href="/site/publish" data-testid="site-job" aria-live="polite" className="flex h-8 shrink-0 items-center gap-2 rounded-md border border-line-strong bg-field px-2.5 text-meta text-ink-2 hover:bg-hover">
       <span className="size-3.5 animate-spin rounded-full border-2 border-brand border-t-transparent" aria-hidden />
       <span className="sm:hidden">{t('indicatorShort', { kind, progress }).trim()}</span>
       <span className="hidden sm:inline">{t('indicator', { kind, step: step ? t(`steps.${step.key}`) : '', progress }).trim()}</span>
@@ -41,7 +41,7 @@ function PendingIndicator({ pending }: { pending: PendingView }) {
         className="relative flex size-11 shrink-0 items-center justify-center text-warning sm:hidden"
       >
         <Globe className="size-5" aria-hidden />
-        <span aria-hidden className="absolute top-1.5 right-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-warning px-1 text-[11px] font-bold text-surface">
+        <span aria-hidden className="absolute top-1.5 right-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-warning px-1 text-hint font-semibold text-surface">
           {pending.count}
         </span>
       </Link>
@@ -51,7 +51,7 @@ function PendingIndicator({ pending }: { pending: PendingView }) {
             <button
               type="button"
               data-testid="site-pending-menu"
-              className="flex h-[30px] shrink-0 items-center gap-1.5 rounded-full border border-warning bg-warning-bg px-3 text-[13px] font-semibold text-warning max-sm:hidden"
+              className="flex h-[30px] shrink-0 items-center gap-1.5 rounded-full border border-warning bg-warning-bg px-3 text-meta font-semibold text-warning max-sm:hidden"
             />
           }
         >

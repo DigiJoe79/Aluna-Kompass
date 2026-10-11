@@ -17,6 +17,8 @@ export const projectsModule: ModuleManifest = defineModule({
   permissions: ['projects.view', 'projects.manage'],
   navigation: [{ key: 'projects.list', href: '/projects', icon: 'folder', group: 'projects', permission: 'projects.view' }],
   help: [{ href: '/projects', doc: 'projekte' }],
+  // Bildstelle der Sicht `projects` (Spec Ausschnitt für alle Bilder § 2); mit zwei Formaten Kachel und Titelbild.
+  imagePlaces: [{ key: 'projects.image', label: 'media.crop.places.projectImage', labels: ['media.crop.places.projectTile', 'media.crop.places.projectCover'] }],
   /** Aktionen des Änderungsprotokolls (Spec Protokoll § 3). */
   auditActions: {
     'projects.create': { params: ['name'] },

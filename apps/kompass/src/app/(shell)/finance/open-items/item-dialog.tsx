@@ -17,6 +17,7 @@ import { withUnplacedFieldErrors } from '@/lib/feedback';
 import { saveOpenItemAction } from './actions';
 import { FormField } from '@/components/forms/form-field';
 import { FormCell, FormGrid } from '@/components/forms/form-grid';
+import { Section } from '@/components/section';
 
 export interface OpenItemEditable {
   id: string;
@@ -82,44 +83,38 @@ export function ItemDialog({ open, onOpenChange, item, defaultKind, canCreateCon
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent size="lg" className="bg-surface shadow-md">
         <DialogTitle>{item ? t('editTitle') : t('newTitle')}</DialogTitle>
-        <section>
-          <h3 className="text-[15px] font-semibold">{t('sections.payment')}</h3>
-          <div className="mt-3">
-            <FormGrid>
-              <FormField id="open-item-kind" label={t('kind')} size="s">
-                <Select id="open-item-kind" value={kind} onChange={(e) => setKind(e.target.value as 'receivable' | 'payable')}>
-                  <option value="payable">{t('kindOptions.payable')}</option>
-                  <option value="receivable">{t('kindOptions.receivable')}</option>
-                </Select>
-              </FormField>
-              <FormField id="open-item-amount" label={t('amount')} required size="s">
-                <AmountField id="open-item-amount" name="amount" value={amountText} onChange={setAmountText} required />
-              </FormField>
-              <FormField id="open-item-date" label={t('itemDate')} required size="s">
-                <Input id="open-item-date" type="date" value={itemDate} onChange={(e) => setItemDate(e.target.value)} required />
-              </FormField>
-              <FormField id="open-item-due" label={t('dueOn')} size="s">
-                <Input id="open-item-due" type="date" value={dueOn} onChange={(e) => setDueOn(e.target.value)} />
-              </FormField>
-            </FormGrid>
-          </div>
-        </section>
-        <section className="mt-5 border-t border-line pt-5">
-          <h3 className="text-[15px] font-semibold">{t('sections.counterparty')}</h3>
-          <div className="mt-3">
-            <FormGrid>
-              <FormCell size="m">
-                <ContactPicker id="open-item-contact" name="contact" label={t('contact')} value={contact} onChange={setContact} canCreate={canCreateContact} />
-              </FormCell>
-              <FormField id="open-item-reference" label={t('reference')}>
-                <Input id="open-item-reference" value={reference} onChange={(e) => setReference(e.target.value)} />
-              </FormField>
-              <FormCell size="m">
-                <DocumentPicker id="open-item-document" name="document" label={t('document')} value={document} onChange={setDocument} />
-              </FormCell>
-            </FormGrid>
-          </div>
-        </section>
+        <Section title={t('sections.payment')}>
+          <FormGrid>
+            <FormField id="open-item-kind" label={t('kind')} size="s">
+              <Select id="open-item-kind" value={kind} onChange={(e) => setKind(e.target.value as 'receivable' | 'payable')}>
+                <option value="payable">{t('kindOptions.payable')}</option>
+                <option value="receivable">{t('kindOptions.receivable')}</option>
+              </Select>
+            </FormField>
+            <FormField id="open-item-amount" label={t('amount')} required size="s">
+              <AmountField id="open-item-amount" name="amount" value={amountText} onChange={setAmountText} required />
+            </FormField>
+            <FormField id="open-item-date" label={t('itemDate')} required size="s">
+              <Input id="open-item-date" type="date" value={itemDate} onChange={(e) => setItemDate(e.target.value)} required />
+            </FormField>
+            <FormField id="open-item-due" label={t('dueOn')} size="s">
+              <Input id="open-item-due" type="date" value={dueOn} onChange={(e) => setDueOn(e.target.value)} />
+            </FormField>
+          </FormGrid>
+        </Section>
+        <Section title={t('sections.counterparty')}>
+          <FormGrid>
+            <FormCell size="m">
+              <ContactPicker id="open-item-contact" name="contact" label={t('contact')} value={contact} onChange={setContact} canCreate={canCreateContact} />
+            </FormCell>
+            <FormField id="open-item-reference" label={t('reference')}>
+              <Input id="open-item-reference" value={reference} onChange={(e) => setReference(e.target.value)} />
+            </FormField>
+            <FormCell size="m">
+              <DocumentPicker id="open-item-document" name="document" label={t('document')} value={document} onChange={setDocument} />
+            </FormCell>
+          </FormGrid>
+        </Section>
         <FormActionBar placement="dialog" cancel={() => onOpenChange(false)} pending={pending} saveDisabled={amountCents === null || !itemDate} saveLabel={t('save')} onSave={() => void submit()} state={withUnplacedFieldErrors(feedback.state, [])} />
       </DialogContent>
     </Dialog>

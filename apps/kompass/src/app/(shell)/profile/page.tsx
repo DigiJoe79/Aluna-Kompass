@@ -22,8 +22,8 @@ export default async function ProfilePage() {
                 {initials(user.name)}
               </span>
               <div>
-                <div className="text-[15px] font-semibold">{user.name}</div>
-                <div className="text-[13px] text-muted-ink">{user.email}</div>
+                <div className="text-section">{user.name}</div>
+                <div className="text-meta text-muted-ink">{user.email}</div>
               </div>
             </div>
             <div className="flex flex-wrap gap-1.5">
@@ -33,7 +33,7 @@ export default async function ProfilePage() {
                 </StatusBadge>
               ))}
             </div>
-            <p className="text-[12px] text-muted-ink">{t('identityHint')}</p>
+            <p className="text-hint text-muted-ink">{t('identityHint')}</p>
           </section>
           <ProfilePasswordForm />
         </div>

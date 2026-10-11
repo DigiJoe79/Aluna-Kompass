@@ -15,6 +15,7 @@ import { idleState } from '@/lib/actions';
 import { createContactAction, updateContactAction } from './actions';
 import { Select } from '@/components/ui/select';
 import { ActionForm } from '@/components/forms/action-form';
+import { Section } from '@/components/section';
 
 /** Was die Maske zum Bearbeiten braucht: die Felder und den Ladestand. */
 export type EditableContact = {
@@ -181,90 +182,81 @@ export function CreateContactDialog({
               </>
             ) : null}
 
-            <section>
-              <h3 className="text-[15px] font-semibold">{t('sections.name')}</h3>
-              <div className="mt-3">
-                <FormGrid>
-                  {/* Beim Bearbeiten steht die Art im Titel, nicht als gesperrtes Feld (Entscheidung zum Inventar). */}
-                  {contact ? null : (
-                    <FormField id="kind" label={t('fields.kind')} size="s">
-                      <Select id="kind" name="kind" value={kind} onChange={(e) => setKind(e.target.value as 'person' | 'organization')}>
-                        <option value="person">{t('fields.person')}</option>
-                        <option value="organization">{t('fields.organization')}</option>
-                      </Select>
+            <Section title={t('sections.name')}>
+              <FormGrid>
+                {/* Beim Bearbeiten steht die Art im Titel, nicht als gesperrtes Feld (Entscheidung zum Inventar). */}
+                {contact ? null : (
+                  <FormField id="kind" label={t('fields.kind')} size="s">
+                    <Select id="kind" name="kind" value={kind} onChange={(e) => setKind(e.target.value as 'person' | 'organization')}>
+                      <option value="person">{t('fields.person')}</option>
+                      <option value="organization">{t('fields.organization')}</option>
+                    </Select>
+                  </FormField>
+                )}
+                {kind === 'person' ? (
+                  <>
+                    <FormField id="salutation" label={t('fields.salutation')} error={errors.salutation} size="s">
+                      <Input id="salutation" name="salutation" list="salutations" value={salutation} onChange={(e) => setSalutation(e.target.value)} />
+                      <datalist id="salutations">
+                        {(['ms', 'mr', 'family'] as const).map((key) => (
+                          <option key={key} value={t(`fields.salutationSuggestions.${key}`)} />
+                        ))}
+                      </datalist>
                     </FormField>
-                  )}
-                  {kind === 'person' ? (
-                    <>
-                      <FormField id="salutation" label={t('fields.salutation')} error={errors.salutation} size="s">
-                        <Input id="salutation" name="salutation" list="salutations" value={salutation} onChange={(e) => setSalutation(e.target.value)} />
-                        <datalist id="salutations">
-                          {(['ms', 'mr', 'family'] as const).map((key) => (
-                            <option key={key} value={t(`fields.salutationSuggestions.${key}`)} />
-                          ))}
-                        </datalist>
-                      </FormField>
-                      <FormField id="firstName" label={t('fields.firstName')} error={errors.firstName}>
-                        <Input id="firstName" name="firstName" value={firstName} onChange={(e) => setFirstName(e.target.value)} />
-                      </FormField>
-                      <FormField id="lastName" label={t('fields.lastName')} error={errors.lastName} required>
-                        <Input id="lastName" name="lastName" value={lastName} onChange={(e) => setLastName(e.target.value)} required />
-                      </FormField>
-                    </>
-                  ) : (
-                    <>
-                      <FormField id="name" label={t('fields.name')} error={errors.name} required>
-                        <Input id="name" name="name" value={name} onChange={(e) => setName(e.target.value)} required />
-                      </FormField>
-                      <FormField id="legalForm" label={t('fields.legalForm')} error={errors.legalForm} size="s">
-                        <Input id="legalForm" name="legalForm" value={legalForm} onChange={(e) => setLegalForm(e.target.value)} placeholder={t('legalFormPlaceholder')} />
-                      </FormField>
-                    </>
-                  )}
-                </FormGrid>
-              </div>
-            </section>
+                    <FormField id="firstName" label={t('fields.firstName')} error={errors.firstName}>
+                      <Input id="firstName" name="firstName" value={firstName} onChange={(e) => setFirstName(e.target.value)} />
+                    </FormField>
+                    <FormField id="lastName" label={t('fields.lastName')} error={errors.lastName} required>
+                      <Input id="lastName" name="lastName" value={lastName} onChange={(e) => setLastName(e.target.value)} required />
+                    </FormField>
+                  </>
+                ) : (
+                  <>
+                    <FormField id="name" label={t('fields.name')} error={errors.name} required>
+                      <Input id="name" name="name" value={name} onChange={(e) => setName(e.target.value)} required />
+                    </FormField>
+                    <FormField id="legalForm" label={t('fields.legalForm')} error={errors.legalForm} size="s">
+                      <Input id="legalForm" name="legalForm" value={legalForm} onChange={(e) => setLegalForm(e.target.value)} placeholder={t('legalFormPlaceholder')} />
+                    </FormField>
+                  </>
+                )}
+              </FormGrid>
+            </Section>
 
-            <section className="mt-5 border-t border-line pt-5">
-              <h3 className="text-[15px] font-semibold">{t('sections.address')}</h3>
-              <div className="mt-3">
-                <FormGrid>
-                  <FormField id="addressExtra" label={t('fields.addressExtra')} error={errors.addressExtra}>
-                    <Input id="addressExtra" name="addressExtra" value={addressExtra} onChange={(e) => setAddressExtra(e.target.value)} />
-                  </FormField>
-                  <FormField id="country" label={t('fields.country')} error={errors.country} size="s">
-                    <Input id="country" name="country" value={country} onChange={(e) => setCountry(e.target.value)} placeholder={t('countryPlaceholder')} />
-                  </FormField>
-                  <FormField id="street" label={t('fields.street')} error={errors.street}>
-                    <Input id="street" name="street" value={street} onChange={(e) => setStreet(e.target.value)} />
-                  </FormField>
-                  <FormField id="postalCode" label={t('fields.postalCode')} error={errors.postalCode} size="s">
-                    <Input id="postalCode" name="postalCode" value={postalCode} onChange={(e) => setPostalCode(e.target.value)} />
-                  </FormField>
-                  <FormField id="city" label={t('fields.city')} error={errors.city} size="s">
-                    <Input id="city" name="city" value={city} onChange={(e) => setCity(e.target.value)} />
-                  </FormField>
-                  {/* Die Vorschau als ruhige Anzeige unter der Anschrift, keine Karte in der Karte (Entscheidung zum Inventar). */}
-                  <FormCell size="full" className="flex flex-col gap-1.5 rounded-md bg-surface-2 px-3 py-2.5">
-                    <span className="text-[13px] font-semibold text-muted-ink">{t('preview')}</span>
-                    <pre className="whitespace-pre-line font-body text-[14px] leading-relaxed text-ink">
-                      {preview || <span className="italic text-muted-ink">{t('previewPlaceholder')}</span>}
-                    </pre>
-                  </FormCell>
-                </FormGrid>
-              </div>
-            </section>
+            <Section title={t('sections.address')}>
+              <FormGrid>
+                <FormField id="addressExtra" label={t('fields.addressExtra')} error={errors.addressExtra}>
+                  <Input id="addressExtra" name="addressExtra" value={addressExtra} onChange={(e) => setAddressExtra(e.target.value)} />
+                </FormField>
+                <FormField id="country" label={t('fields.country')} error={errors.country} size="s">
+                  <Input id="country" name="country" value={country} onChange={(e) => setCountry(e.target.value)} placeholder={t('countryPlaceholder')} />
+                </FormField>
+                <FormField id="street" label={t('fields.street')} error={errors.street}>
+                  <Input id="street" name="street" value={street} onChange={(e) => setStreet(e.target.value)} />
+                </FormField>
+                <FormField id="postalCode" label={t('fields.postalCode')} error={errors.postalCode} size="s">
+                  <Input id="postalCode" name="postalCode" value={postalCode} onChange={(e) => setPostalCode(e.target.value)} />
+                </FormField>
+                <FormField id="city" label={t('fields.city')} error={errors.city} size="s">
+                  <Input id="city" name="city" value={city} onChange={(e) => setCity(e.target.value)} />
+                </FormField>
+                {/* Die Vorschau als ruhige Anzeige unter der Anschrift, keine Karte in der Karte (Entscheidung zum Inventar). */}
+                <FormCell size="full" className="flex flex-col gap-1.5 rounded-md bg-surface-2 px-3 py-2.5">
+                  <span className="text-meta font-semibold text-muted-ink">{t('preview')}</span>
+                  <pre className="whitespace-pre-line font-body text-body text-ink">
+                    {preview || <span className="italic text-muted-ink">{t('previewPlaceholder')}</span>}
+                  </pre>
+                </FormCell>
+              </FormGrid>
+            </Section>
 
-            <section className="mt-5 border-t border-line pt-5">
-              <h3 className="text-[15px] font-semibold">{t('sections.notes')}</h3>
-              <div className="mt-3">
-                <FormGrid>
-                  <FormField id="notes" label={t('fields.notes')} error={errors.notes} size="l">
-                    <Textarea id="notes" name="notes" rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} />
-                  </FormField>
-                </FormGrid>
-              </div>
-            </section>
+            <Section title={t('sections.notes')}>
+              <FormGrid>
+                <FormField id="notes" label={t('fields.notes')} error={errors.notes} size="l">
+                  <Textarea id="notes" name="notes" rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} />
+                </FormField>
+              </FormGrid>
+            </Section>
           </DialogBody>
 
           <FormActionBar placement="dialog" mode="create" cancel={() => setOpen(false)} saveLabel={t(`${mode}.submit`)} note={c('audited')} state={state} />

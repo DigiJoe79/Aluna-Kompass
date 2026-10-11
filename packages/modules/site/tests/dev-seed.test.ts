@@ -1,11 +1,14 @@
-import { existsSync, mkdtempSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { coreModule, createMediaFolder, readSetting, seedDevelopment, setModuleEnabled, storeMediaAsset, unwrap, writeSettingInternal } from '@kompass/core';
 import { animalsModule } from '@kompass/module-animals';
 import { projectsModule } from '@kompass/module-projects';
 import { createTestDeps, ctxWith, insertUser } from '@kompass/core/testing';
+import sharp from 'sharp';
 import { afterEach, describe, expect, it } from 'vitest';
+import { exportSiteContent } from '../src/export';
+import { prepareImageVariants } from '../src/pipeline/images';
 import { siteModule } from '../src/manifest';
 import { siteEntries, sitePublishes, siteValues } from '../src/schema';
 import { lastSuccessfulPublish, listPublishes } from '../src/services/publishes';
@@ -278,9 +281,34 @@ describe('seedSiteDevelopment', () => {
     const entries = deps.db.select().from(siteEntries).all();
     const team = entries.filter((e) => e.collection === 'team').map((e) => (e.data as { photo?: string | null }).photo);
     const news = entries.filter((e) => e.collection === 'news').map((e) => (e.data as { image?: string | null }).image);
-    expect(team.filter(Boolean)).toEqual([portrait.id, portrait.id]);
+    // Das Team-Foto hat im Basis-Template ein festes Format (1:1): Der erste Eintrag zeigt es zugeschnitten.
+    expect(team.filter(Boolean)).toEqual([`${portrait.id}~0_0_10000_10000`, portrait.id]);
     expect(news.filter(Boolean)).toEqual([scene.id, scene.id]);
     expect([...team, ...news]).not.toContain(other.id);
+  });
+
+  /**
+   * Ausschnitt für alle Bilder (Spec 2026-10-10 §§ 2–3): Das Basis-Template gibt dem Team-Foto 1:1 vor; der Seed
+   * schneidet das erste Foto mittig in dieses Format, und der Export führt die abgeleitete ID bis in `images.json`.
+   */
+  it('cuts the first photo of a field with a fixed format, down to images.json of the export', async () => {
+    process.env.SITE_TEMPLATE_DIR = BASIS;
+    const { deps, ctx } = await setup();
+    for (const path of ['Fotos', 'Fotos/Webseite']) unwrap(await createMediaFolder(deps, ctx, { path }));
+    const wide = await sharp({ create: { width: 40, height: 20, channels: 3, background: '#808080' } }).png().toBuffer();
+    const portrait = unwrap(await storeMediaAsset(deps, ctx, { originalName: 'team-1.png', bytes: new Uint8Array(wide), folder: 'Fotos/Webseite' }));
+
+    await seedSiteDevelopment(deps, ctx);
+
+    const derived = `${portrait.id}~2500_0_5000_10000`;
+    const team = deps.db.select().from(siteEntries).all().filter((e) => e.collection === 'team').map((e) => (e.data as { photo?: string | null }).photo);
+    expect(team).toContain(derived);
+    const jobDir = mkdtempSync(path.join(tmpdir(), 'kompass-devseed-job-'));
+    dirs.push(jobDir);
+    const exported = unwrap(await exportSiteContent(deps, ctxWith(['site.publish']), { jobDir, templateDir: BASIS }));
+    await prepareImageVariants({ jobDir, assets: exported.assets, cacheDir: path.join(jobDir, 'cache') });
+    const images = JSON.parse(readFileSync(path.join(jobDir, 'images.json'), 'utf8')) as Record<string, { width: number; height: number }>;
+    expect(images[derived]).toMatchObject({ width: 20, height: 20 });
   });
 
   /**

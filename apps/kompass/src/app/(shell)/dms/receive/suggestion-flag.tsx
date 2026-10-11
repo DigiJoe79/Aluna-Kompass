@@ -8,7 +8,7 @@ import { ArrowDownToLine } from 'lucide-react';
 export function SuggestionFlag({ text }: { text?: string }) {
   if (!text) return null;
   return (
-    <p className="flex items-center gap-1.5 text-[12px] text-info">
+    <p className="flex items-center gap-1.5 text-hint text-info">
       <ArrowDownToLine className="size-3" aria-hidden />
       {text}
     </p>

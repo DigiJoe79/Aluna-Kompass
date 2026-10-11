@@ -57,12 +57,12 @@ export function AccountCard({ account }: { account: AccountCardData }) {
       <div className="flex items-start justify-between gap-2">
         <div>
           <p className="font-semibold text-ink">{account.name}</p>
-          <p className="text-[12px] text-muted-ink">{t(`kind.${account.kind}`)}</p>
+          <p className="text-hint text-muted-ink">{t(`kind.${account.kind}`)}</p>
         </div>
       </div>
 
       {account.kind === 'bank' && account.iban ? (
-        <div className="mt-2 flex items-center gap-2 font-mono text-[13px] text-ink-2">
+        <div className="mt-2 flex items-center gap-2 font-mono text-meta text-ink-2">
           <span data-testid="iban-value">{revealed ? account.iban : maskIban(account.iban)}</span>
           <button
             type="button"
@@ -79,14 +79,14 @@ export function AccountCard({ account }: { account: AccountCardData }) {
       ) : null}
 
       <div className="mt-3">
-        <p className="font-mono text-[24px] font-semibold tabular-nums text-ink">{formatEuro(account.balanceCents)}</p>
+        <p className="font-mono text-amount font-semibold tabular-nums text-ink">{formatEuro(account.balanceCents)}</p>
         {account.withReviewedCents !== account.balanceCents ? (
-          <p className="text-[12px] text-muted-ink">{t('withReviewed', { amount: formatEuro(account.withReviewedCents) })}</p>
+          <p className="text-hint text-muted-ink">{t('withReviewed', { amount: formatEuro(account.withReviewedCents) })}</p>
         ) : null}
       </div>
 
       {account.kind === 'cash' ? (
-        <p className="mt-2 text-[12px] text-muted-ink">
+        <p className="mt-2 text-hint text-muted-ink">
           {account.lastCount ? t('lastCount', { date: date(account.lastCount.countedOn), amount: formatEuro(account.lastCount.countedCents) }) : t('neverCounted')}
         </p>
       ) : null}
@@ -94,9 +94,9 @@ export function AccountCard({ account }: { account: AccountCardData }) {
       {account.statement ? (
         <div className="mt-2 space-y-0.5">
           {account.statement.importedThrough === null ? (
-            <p className="text-[12px] text-muted-ink">{t('statementNone')}</p>
+            <p className="text-hint text-muted-ink">{t('statementNone')}</p>
           ) : (
-            <p className={account.statement.lastStatementDaysAgo !== null && account.statement.lastStatementDaysAgo >= account.statement.warnDays ? 'text-[12px] font-semibold text-warning' : 'text-[12px] text-muted-ink'}>
+            <p className={account.statement.lastStatementDaysAgo !== null && account.statement.lastStatementDaysAgo >= account.statement.warnDays ? 'text-hint font-semibold text-warning' : 'text-hint text-muted-ink'}>
               {t('statementThrough', { date: formatDateOrDash(date, account.statement.importedThrough) })}
               {account.statement.lastStatementInFuture
                 ? ` · ${t('statementInFuture')}`
@@ -106,7 +106,7 @@ export function AccountCard({ account }: { account: AccountCardData }) {
             </p>
           )}
           {account.statement.reconciliation ? (
-            <p className={account.statement.reconciliation.state === 'differs' ? 'text-[12px] font-semibold text-warning' : 'text-[12px] text-muted-ink'}>
+            <p className={account.statement.reconciliation.state === 'differs' ? 'text-hint font-semibold text-warning' : 'text-hint text-muted-ink'}>
               {account.statement.reconciliation.state === 'matches'
                 ? t('reconciliation.matches', { date: formatDateOrDash(date, account.statement.reconciliation.statementDate) })
                 : account.statement.reconciliation.state === 'differs'

@@ -16,6 +16,7 @@ import { useDateFormat } from '@/components/date-format-provider';
 import { formatEuro } from '@/lib/finance/amount';
 import { approvePurposeTransferAction, rejectPurposeTransferAction } from '../purposes/actions';
 import { RejectDialog } from './reject-dialog';
+import { Section } from '@/components/section';
 
 /**
  * Die gemeinsame Detailansicht für eine Umwidmung (F8b Task 3/6a, Annahme 5,
@@ -37,21 +38,21 @@ export function PurposeTransferDetail({ transfer, creatorName, nextHref }: { tra
     return (
       <section data-testid="purpose-transfer-result" aria-live="polite" className="space-y-4 rounded-lg border border-line bg-surface p-5">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="font-mono text-[15px] font-semibold">{transfer.number}</span>
+          <span className="font-mono text-section">{transfer.number}</span>
           <StatusBadge tone={approved ? 'success' : 'neutral'}>{approved ? t('transferResult.approved') : t('transferResult.rejected')}</StatusBadge>
         </div>
-        <p className="font-mono text-[26px] font-semibold tabular-nums">{formatEuro(transfer.amountCents)}</p>
-        <p className="text-[14px] text-ink">
+        <p className="font-mono text-figure font-semibold tabular-nums">{formatEuro(transfer.amountCents)}</p>
+        <p className="text-body text-ink">
           {sideLabel(transfer.from)} → {sideLabel(transfer.to)}
         </p>
-        {!approved && transfer.rejectNote ? <p className="text-[14px] text-ink-2">{transfer.rejectNote}</p> : null}
+        {!approved && transfer.rejectNote ? <p className="text-body text-ink-2">{transfer.rejectNote}</p> : null}
         <div className="border-t border-line pt-3">
           {nextHref ? (
             <Link href={nextHref} className={buttonVariants({ variant: 'default' })}>
               {t('transferResult.next')}
             </Link>
           ) : (
-            <p className="text-[13px] text-muted-ink">{t('transferResult.none')}</p>
+            <p className="text-meta text-muted-ink">{t('transferResult.none')}</p>
           )}
         </div>
       </section>
@@ -77,26 +78,29 @@ export function PurposeTransferDetail({ transfer, creatorName, nextHref }: { tra
 
   // Voraussetzungen (F8b 6a): der Beschluss liegt vor; die Quelle im Minus ist eine Warnung, keine Sperre (Annahme 5).
   const requirements = (
-    <div className="space-y-2" data-testid="purpose-transfer-requirements">
-      <h3 className="text-[13px] font-semibold uppercase tracking-[.04em] text-muted-ink">{t('transfer.requirements')}</h3>
-      {transfer.documentId ? (
-        <p className="flex flex-wrap items-center gap-2 text-[14px] text-ink">
-          <StatusBadge tone="success" dot>{t('transfer.document')}</StatusBadge>
-          <a href={`/dms/${transfer.documentId}/file`} target="_blank" rel="noreferrer" className="text-[13px] font-semibold underline underline-offset-2" data-testid="purpose-transfer-document">
-            {t('transfer.documentOpen')}
-          </a>
-        </p>
-      ) : (
-        <StatusBadge tone="error">{t('transfer.documentMissing')}</StatusBadge>
-      )}
-      {transfer.sourceWouldGoNegative ? <Notice level="warn">{t('transfer.sourceWarning')}</Notice> : null}
-      <p className="text-[13px] text-ink-2">{t('transfer.effective', { date: fmt.date(transfer.transferDate) })}</p>
+    <div data-testid="purpose-transfer-requirements">
+      <Section title={t('transfer.requirements')}>
+        <div className="space-y-2">
+          {transfer.documentId ? (
+            <p className="flex flex-wrap items-center gap-2 text-body text-ink">
+              <StatusBadge tone="success" dot>{t('transfer.document')}</StatusBadge>
+              <a href={`/dms/${transfer.documentId}/file`} target="_blank" rel="noreferrer" className="text-meta font-semibold underline underline-offset-2" data-testid="purpose-transfer-document">
+                {t('transfer.documentOpen')}
+              </a>
+            </p>
+          ) : (
+            <StatusBadge tone="error">{t('transfer.documentMissing')}</StatusBadge>
+          )}
+          {transfer.sourceWouldGoNegative ? <Notice level="warn">{t('transfer.sourceWarning')}</Notice> : null}
+          <p className="text-meta text-ink-2">{t('transfer.effective', { date: fmt.date(transfer.transferDate) })}</p>
+        </div>
+      </Section>
     </div>
   );
 
   const footer: ApprovalFooter = {
     state: refusal ?? undefined,
-    note: <p className="text-[12px] text-muted-ink">{t('footer.humanOnly')}</p>,
+    note: <p className="text-hint text-muted-ink">{t('footer.humanOnly')}</p>,
     reject: (
       <Button type="button" variant="outline" onClick={() => setRejecting(true)} data-testid="purpose-transfer-reject">
         {t('transferReject.trigger')}

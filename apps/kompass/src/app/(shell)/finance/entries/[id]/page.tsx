@@ -24,6 +24,7 @@ import { EntryActions } from './entry-actions';
 import { EntryHistory } from './history';
 import { NotReturnCard } from './not-return';
 import { EntryVouchers } from './vouchers';
+import { Section } from '@/components/section';
 
 export default async function ViewFinanceEntryPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -139,27 +140,27 @@ export default async function ViewFinanceEntryPage({ params }: { params: Promise
       <div className="space-y-4">
         <section className="space-y-2 rounded-md border border-line bg-surface p-4">
           {/* Nummer und Stand stehen im Seitenkopf (`PageHeader title`/`status`, Board § K Ziel 5). */}
-          <p className="text-[15px] text-ink">{entry.text}</p>
+          <p className="text-body text-ink">{entry.text}</p>
           {finalizedEvent && finalizedEvent.kind === 'finalized' ? (
             <LockLine at={finalizedEvent.at} userName={finalizedEvent.userName} channel={finalizedEvent.channel} fmt={dateFormatOf(deps)} />
           ) : null}
           {entry.purposeNegativeReason ? (
-            <p data-testid="entry-purpose-negative-reason" className="text-[13px] text-ink-2">
+            <p data-testid="entry-purpose-negative-reason" className="text-meta text-ink-2">
               {t('purposeNegativeReason', { reason: entry.purposeNegativeReason })}
             </p>
           ) : null}
           {entry.boardAllowanceReason ? (
-            <p data-testid="entry-board-allowance-reason" className="text-[13px] text-ink-2">
+            <p data-testid="entry-board-allowance-reason" className="text-meta text-ink-2">
               {t('boardAllowanceReason', { reason: entry.boardAllowanceReason })}
             </p>
           ) : null}
           {reversed && entry.reversedByEntryId ? (
-            <p className="text-[13px] text-ink-2">
+            <p className="text-meta text-ink-2">
               {t('reversedBy')} <Link className="underline" href={`/finance/entries/${entry.reversedByEntryId}`}>{t('open')}</Link>
             </p>
           ) : null}
           {entry.reversesEntryId ? (
-            <p className="text-[13px] text-ink-2">
+            <p className="text-meta text-ink-2">
               {t('reverses')} <Link className="underline" href={`/finance/entries/${entry.reversesEntryId}`}>{t('open')}</Link>
             </p>
           ) : null}
@@ -167,68 +168,77 @@ export default async function ViewFinanceEntryPage({ params }: { params: Promise
 
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-[2fr_1fr]">
           <div className="space-y-4">
-            <section className="space-y-2 rounded-md border border-line bg-surface p-4">
-              <h3 className="text-[13px] font-semibold uppercase tracking-wide text-muted-ink">{t('account')}</h3>
-              <Table className="text-[13px]">
-                <TableBody>
-                  {entry.moneyLines.map((line) => (
-                    <TableRow key={line.id}>
-                      <TableCell className="text-ink-2">{accountNames.get(line.accountId) ?? line.accountId}</TableCell>
-                      <TableCell>
-                        <AmountCell cents={line.amountCents} />
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+            <section className="rounded-md border border-line bg-surface p-4">
+              <Section title={t('account')}>
+                <div className="space-y-2">
+                  <Table className="text-meta">
+                    <TableBody>
+                      {entry.moneyLines.map((line) => (
+                        <TableRow key={line.id}>
+                          <TableCell className="text-ink-2">{accountNames.get(line.accountId) ?? line.accountId}</TableCell>
+                          <TableCell>
+                            <AmountCell cents={line.amountCents} />
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </Section>
             </section>
 
-            <section className="space-y-2 rounded-md border border-line bg-surface p-4">
-              <h3 className="text-[13px] font-semibold uppercase tracking-wide text-muted-ink">{t('allocation')}</h3>
-              <Table data-testid="finance-allocation-table" className="text-[13px]">
-                <TableBody>
-                  {entry.allocationLines.map((line) => (
-                    <TableRow key={line.id}>
-                      <TableCell className="text-ink-2">{categoryNames.get(line.categoryId) ?? line.categoryId}</TableCell>
-                      <TableCell className="text-ink-2">{line.contactId ? (contactNames.get(line.contactId) ?? '') : '—'}</TableCell>
-                      <TableCell className="text-ink-2">{line.purposeId ? (purposeNames.get(line.purposeId) ?? '') : '—'}</TableCell>
-                      <TableCell className="whitespace-normal">
-                        <AmountCell cents={line.amountCents} />
-                        {line.amountCents !== 0 && taxTextKey(line.tax) ? (
-                          <p className="text-right text-[12px] text-muted-ink">
-                            {tTax(taxTextKey(line.tax)!.key, { amount: formatEuro(taxTextKey(line.tax)!.cents) })}
-                          </p>
-                        ) : null}
-                      </TableCell>
-                      <TableCell className="text-right text-[12px]">
-                        {line.corrected ? <span className="text-info">{t('corrected')}</span> : null}
-                        {line.pendingCorrectionId ? <span className="text-warning">{t('pendingCorrection')}</span> : null}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+            <section className="rounded-md border border-line bg-surface p-4">
+              <Section title={t('allocation')}>
+                <div className="space-y-2">
+                  <Table data-testid="finance-allocation-table" className="text-meta">
+                    <TableBody>
+                      {entry.allocationLines.map((line) => (
+                        <TableRow key={line.id}>
+                          <TableCell className="text-ink-2">{categoryNames.get(line.categoryId) ?? line.categoryId}</TableCell>
+                          <TableCell className="text-ink-2">{line.contactId ? (contactNames.get(line.contactId) ?? '') : '—'}</TableCell>
+                          <TableCell className="text-ink-2">{line.purposeId ? (purposeNames.get(line.purposeId) ?? '') : '—'}</TableCell>
+                          <TableCell className="whitespace-normal">
+                            <AmountCell cents={line.amountCents} />
+                            {line.amountCents !== 0 && taxTextKey(line.tax) ? (
+                              <p className="text-right text-hint text-muted-ink">
+                                {tTax(taxTextKey(line.tax)!.key, { amount: formatEuro(taxTextKey(line.tax)!.cents) })}
+                              </p>
+                            ) : null}
+                          </TableCell>
+                          <TableCell className="text-right text-hint">
+                            {line.corrected ? <span className="text-info">{t('corrected')}</span> : null}
+                            {line.pendingCorrectionId ? <span className="text-warning">{t('pendingCorrection')}</span> : null}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </Section>
             </section>
 
             {settlements.length > 0 ? (
-              <section className="space-y-2 rounded-md border border-line bg-surface p-4">
-                <h3 className="text-[13px] font-semibold uppercase tracking-wide text-muted-ink">{t('related.title')}</h3>
-                <ul className="space-y-1.5 text-[13px]">
-                  {settlements.map(({ settlement, item }) => (
-                    <li key={settlement.id} className="flex items-center justify-between gap-2 border-b border-line-2 py-1 last:border-0">
-                      {item ? (
-                        <Link href={`/finance/open-items?tab=${item.kind}&item=${item.id}`} className="text-link underline">
-                          {item.paymentReference ?? t('related.unnamedItem')}
-                        </Link>
-                      ) : (
-                        <span className="text-ink-2">{t('related.unnamedItem')}</span>
-                      )}
-                      <span className="font-mono tabular-nums text-ink-2">
-                        {t('related.settlement', { amount: formatEuro(settlement.amountCents), rest: formatEuro(item?.openCents ?? 0) })}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
+              <section className="rounded-md border border-line bg-surface p-4">
+                <Section title={t('related.title')}>
+                  <div className="space-y-2">
+                    <ul className="space-y-1.5 text-meta">
+                      {settlements.map(({ settlement, item }) => (
+                        <li key={settlement.id} className="flex items-center justify-between gap-2 border-b border-line-2 py-1 last:border-0">
+                          {item ? (
+                            <Link href={`/finance/open-items?tab=${item.kind}&item=${item.id}`} className="text-link underline">
+                              {item.paymentReference ?? t('related.unnamedItem')}
+                            </Link>
+                          ) : (
+                            <span className="text-ink-2">{t('related.unnamedItem')}</span>
+                          )}
+                          <span className="font-mono tabular-nums text-ink-2">
+                            {t('related.settlement', { amount: formatEuro(settlement.amountCents), rest: formatEuro(item?.openCents ?? 0) })}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </Section>
               </section>
             ) : null}
 

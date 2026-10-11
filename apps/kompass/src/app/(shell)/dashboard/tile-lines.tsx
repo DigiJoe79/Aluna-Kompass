@@ -31,7 +31,7 @@ export function TileLines({ ns, lines, canComplete }: { ns: string; lines: Dashb
         return (
           <li
             key={`${index}-${title}`}
-            className="flex min-h-[46px] flex-col flex-wrap items-start gap-x-3 gap-y-0.5 py-2 text-[13px] min-[391px]:flex-row min-[391px]:items-center"
+            className="flex min-h-[46px] flex-col flex-wrap items-start gap-x-3 gap-y-0.5 py-2 text-meta min-[391px]:flex-row min-[391px]:items-center"
           >
             {line.action && canComplete ? (
               <Checkbox
@@ -63,16 +63,16 @@ export function TileLines({ ns, lines, canComplete }: { ns: string; lines: Dashb
               )}
               {line.link ? (
                 line.link.href ? (
-                  <Link href={line.link.href} className="truncate font-mono text-[12px] underline underline-offset-2 hover:text-link">{line.link.label}</Link>
+                  <Link href={line.link.href} className="truncate font-mono text-hint underline underline-offset-2 hover:text-link">{line.link.label}</Link>
                 ) : (
-                  <span className="truncate font-mono text-[12px] text-muted-ink">{line.link.label}</span>
+                  <span className="truncate font-mono text-hint text-muted-ink">{line.link.label}</span>
                 )
               ) : null}
             </span>
             {line.date ? (
-              <span data-testid="tile-line-date" className={cn('order-3 font-mono text-[12px] min-[391px]:order-2', line.overdue ? 'text-warning' : 'text-ink-2')}>{fmt.date(line.date)}</span>
+              <span data-testid="tile-line-date" className={cn('order-3 font-mono text-hint min-[391px]:order-2', line.overdue ? 'text-warning' : 'text-ink-2')}>{fmt.date(line.date)}</span>
             ) : null}
-            {line.extra ? <span className="order-4 text-[12px] text-muted-ink">{line.extra}</span> : null}
+            {line.extra ? <span className="order-4 text-hint text-muted-ink">{line.extra}</span> : null}
           </li>
         );
       })}

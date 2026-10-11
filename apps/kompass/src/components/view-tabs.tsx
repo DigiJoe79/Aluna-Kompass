@@ -39,7 +39,7 @@ export function ViewTabs({
               {tab.label}
               {tab.count ? ' ' : null}
               {tab.count ? (
-                <StatusBadge tone={tab.tone ?? 'neutral'} className="px-1.5 py-0 font-medium tabular-nums">
+                <StatusBadge tone={tab.tone ?? 'neutral'} className="px-1.5 py-0 tabular-nums">
                   {tab.count}
                 </StatusBadge>
               ) : null}

@@ -169,13 +169,13 @@ Drei Dinge sind nach dem Update von Hand zu tun oder zu wissen:
   Agent vor dem Update angelegt hat, noch von einem Menschen prüfen lassen
   will, merkt sie einmalig über `animals_request_review` vor.
 - **Der Auszug des Änderungsprotokolls** erscheint jetzt auf der Basis
-  `a4-plain-slim`. Wer unter Verwaltung → Dokumentvorlagen für den Export früher
+  `a4-plain-slim`. Wer unter Einrichtung → Dokumentvorlagen für den Export früher
   eine Basis fest eingestellt hat, sieht die Zeile dort als „abweichend“ und
   stellt sie mit „Zurücksetzen“ auf die neue Vorgabe. Wer eigene Basis-Vorlagen
   führt und den Auszug im eigenen Kopf haben will, legt eine
   `a4-plain-slim.typ` daneben.
 - **Der Bildausschnitt der Tierfotos** steht auf 4:3 mittig. Zeigt das Template
-  der Webseite das Hauptfoto in einem anderen Format, unter Einstellungen →
+  der Webseite das Hauptfoto in einem anderen Format, unter Einrichtung →
   Tiere einmal Seitenverhältnis und Blickpunkt eintragen.
 
 Wer eine eigene Compose-Datei führt, übernimmt außerdem aus
@@ -258,7 +258,7 @@ wie immer dazu.
 
 Nach dem Update gibt es zwei Handgriffe für die neuen Tierprofile als PDF:
 
-- Unter Verwaltung → Tiere die **Adresse des Online-Profils** eintragen, mit
+- Unter Einrichtung → Tiere die **Adresse des Online-Profils** eintragen, mit
   `{slug}` als Platzhalter. Ohne sie tragen die PDF-Profile keinen QR-Code, und
   unter dem Namen eines Tiers steht keine Adresse mehr.
 - Rollen, die Profile drucken sollen, brauchen das Recht „Dokumente erzeugen“
@@ -283,6 +283,37 @@ Sonst ist nichts von Hand zu tun. Wer sich wundert:
   Eingabemaske ordnen; ohne sie bekommt jedes Feld eine Breite nach seinem Typ.
 - MCP-Clients sind nicht betroffen.
 
+### Von 0.2.10 auf 0.2.11
+
+Die Fassung 0.2.11 bringt eine Migration mit (`0008`): drei Spalten für den
+Bildausschnitt an der Erfolgsgeschichte (vorher, nachher) und am Projektbild.
+`/api/health` meldet danach `migrationCount: 9`. Vor dem Update gehört wie
+immer ein Backup (Schritt 1) dazu.
+
+Nach dem Update:
+
+- **Template nachziehen, falls es Bildformate nennt.** Ein Template, das
+  `ratio`, `width` oder `images` nutzt, setzt 0.2.11 voraus: erst Kompass
+  aktualisieren, dann das Template synchronisieren. Ein Template ohne diese
+  Angaben läuft unverändert weiter.
+- **Einmal publizieren.** Tiere, deren Fotos schon einen Ausschnitt haben,
+  erscheinen nach dem Update als „nicht publiziert“, weil die Webseite sie
+  jetzt zugeschnitten zeigt. Nach einem Publish der Produktion stimmt die
+  Liste wieder.
+
+Wer sich wundert:
+
+- **„System“ statt „Einstellungen“.** Der Bereich unten in der Leiste heißt
+  jetzt „System“, die Seite mit Verein, Bank und Branding „Stammdaten“. Die
+  Adressen sind gleich geblieben.
+- **Der Bild-Cache wird kleiner.** Nach jedem Publish der Produktion löscht
+  Kompass Bildvarianten, die der Publish nicht brauchte und die seit 30 Tagen
+  kein Lauf benutzt hat. Das Publish-Protokoll nennt, wie viel frei wurde.
+- **Gibt das Template das Format des Titelbilds vor**, gilt es statt der
+  Einstellung „Bildausschnitt“ der Tiere.
+- MCP-Clients sind nicht betroffen; die Werkzeuge nehmen zusätzlich einen
+  Ausschnitt an und nennen das erwartete Format.
+
 ### Von 0.2.9 auf 0.2.10
 
 Die Fassung 0.2.10 bringt eine Migration mit (`0007`): Tabellen für Vorschläge
@@ -293,11 +324,11 @@ gehört wie immer ein Backup (Schritt 1) dazu.
 Nach dem Update:
 
 - **Vormerken zur Prüfung.** Es ist jetzt eine Einstellung und standardmäßig
-  aus. Wer es weiter nutzen will: Einstellungen → Tiere → „Schreiben über MCP
+  aus. Wer es weiter nutzen will: Einrichtung → Tiere → „Schreiben über MCP
   zur Prüfung vormerken“ einschalten (MCP: `animals.review.onMcpWrite`).
   Schon gesetzte Merker bleiben stehen.
 - **Vorschläge von Quellen** sind aus, bis Sie sie einschalten. Wer einen
-  Dienst anbinden will: Einstellungen → Tiere → „Vorschläge von Quellen
+  Dienst anbinden will: Einrichtung → Tiere → „Vorschläge von Quellen
   annehmen“ einschalten, den Ordner für Fotos aus Vorschlägen wählen, nach
   Wunsch „Vorschläge im Stapel durchgehen“; dem Nutzer des Dienstes eine Rolle
   mit dem Recht „Tiere vorschlagen“ (`animals.propose`) geben. Siehe
@@ -401,10 +432,10 @@ Token wirkt mit den Rechten des Nutzers, dem es gehört; jeder Vorgang steht im
 sondern die Inhalte, die ein Astro-Template deklariert. Beim ersten Start legt
 der Container das mitgelieferte Basis-Template dort ab; ein vorhandenes bleibt
 unberührt, auch bei einem Update. Der Verein ersetzt es durch sein eigenes und
-liest es unter Einstellungen → Webseite → Vorlage ein.
+liest es unter Einrichtung → Webseite → Vorlage ein.
 
 **Startinhalte.** Bringt ein Template ein Verzeichnis `seed/` mit, erscheint
-unter Einstellungen → Webseite → Vorlage der Knopf „Startinhalte“ — einmalig, solange die
+unter Einrichtung → Webseite → Vorlage der Knopf „Startinhalte“ — einmalig, solange die
 Webseite leer ist. Danach ist die Datenbank die Quelle. Das mitgelieferte
 Basis-Template hat kein `seed/`.
 
@@ -425,7 +456,7 @@ Die Passwortdatei wird schreibgeschützt in den Container eingehängt, gehört d
 Benutzer des Containers und hat die Rechte 600. Das Passwort steht damit nie in
 der Prozessliste.
 
-**Vor dem ersten Veröffentlichen:** Einstellungen → Webseite → Verbindung →
+**Vor dem ersten Veröffentlichen:** Einrichtung → Webseite → Verbindung →
 „Verbindung testen“. Der Test baut nichts und überträgt nichts. Er meldet sich
 am Ziel an, prüft, ob das Zielverzeichnis da ist, legt dort eine kleine
 Probedatei an und löscht sie wieder (Schreibrecht) und zählt die Dateien am
@@ -468,7 +499,7 @@ Vorlage des Moduls. Zeichnet die eigene Fassung das Anschriftfeld, trägt sie im
 ohne Kennzeichen setzen die Vorlagen Anschrift und Aussteller wie bisher selbst
 in den Text. Daneben optional
 `fonts/` für eigene Schriften und `assets/` für Grafiken, die eine Basis
-einbindet — das Vereinslogo kommt weiter aus den Einstellungen.
+einbindet — das Vereinslogo kommt weiter aus Einrichtung → Stammdaten → Branding.
 
 **Ein leeres Verzeichnis ist gültig** — dann gelten die mitgelieferten Basen.
 Auch dies ist eine Vertrauensgrenze: Jede `.typ` läuft beim Rendern als Code im

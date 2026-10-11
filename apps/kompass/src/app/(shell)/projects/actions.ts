@@ -10,6 +10,7 @@ import { toActionState, type ActionState } from '@/lib/actions';
 import { toDeletionPreviewView, type DeletionPreviewView } from '@/lib/deletion-preview';
 import { localizedFromForm } from '@/lib/localized-form';
 import { requireSession } from '@/lib/request-context';
+import { cropFromForm, withCrop } from '@/lib/crop-form';
 
 /** Die Zeilen der Verweisliste, in Reihenfolge; ganz leere Zeilen zählen nicht. */
 function externalLinksFromForm(formData: FormData): { label: string; url: string }[] {
@@ -35,6 +36,7 @@ export async function saveProjectAction(_prev: ActionState, formData: FormData):
       summary: localizedFromForm(formData, 'summary', deps.locales()),
       body: localizedFromForm(formData, 'body', deps.locales()),
       imageAssetId: String(formData.get('imageAssetId') ?? '') || null,
+      ...withCrop('imageCrop', cropFromForm(formData, 'imageCrop')),
       externalLinks: externalLinksFromForm(formData),
     };
     const expectedVersion = String(formData.get('expectedVersion') ?? '') || undefined;

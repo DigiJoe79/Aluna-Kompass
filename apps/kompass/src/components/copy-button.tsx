@@ -24,7 +24,7 @@ export function CopyButton({ value, label }: { value: string; label: string }) {
           setTimeout(() => setCopied(false), 2000);
         } else toast.error(c('copyFailed'), { duration: Infinity, closeButton: true });
       }}
-      className="flex shrink-0 items-center gap-1.5 rounded-sm border border-line px-2 py-1 text-[12px] text-ink-2 hover:bg-hover"
+      className="flex shrink-0 items-center gap-1.5 rounded-sm border border-line px-2 py-1 text-hint text-ink-2 hover:bg-hover"
     >
       <Copy className="size-3.5" aria-hidden />
       {copied ? c('copied') : c('copy')}

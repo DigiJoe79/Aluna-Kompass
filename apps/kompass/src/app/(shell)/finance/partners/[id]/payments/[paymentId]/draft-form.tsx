@@ -24,6 +24,9 @@ import { evidenceKindLabelKey, proofDueDate, requiredEvidenceKinds, type Partner
 import { savePartnerPaymentDraftAction, submitPartnerPaymentAction } from '../../../actions';
 import { FormField } from '@/components/forms/form-field';
 import { FormCell, FormGrid } from '@/components/forms/form-grid';
+import { Overline } from '@/components/overline';
+import { Section } from '@/components/section';
+import { StatusBadge } from '@/components/status-badge';
 
 interface Option { id: string; label: string }
 export interface LineOption { id: string; entryNumber: string | null; entryDate: string; amountCents: number; categoryId?: string }
@@ -198,11 +201,11 @@ export function DraftForm({
           />
         ) : (
           <div className="space-y-1">
-            <p className="text-[13px] font-semibold text-ink">{t('basis')}</p>
-            <p className="text-[14px] text-ink-2">{tBasis(d.basis)}</p>
+            <p className="text-meta font-semibold text-ink">{t('basis')}</p>
+            <p className="text-body text-ink-2">{tBasis(d.basis)}</p>
           </div>
         )}
-        {partner.usualBasis ? <p className="text-[12px] text-muted-ink">{t('basisFrom', { basis: tBasis(partner.usualBasis) })}</p> : null}
+        {partner.usualBasis ? <p className="text-hint text-muted-ink">{t('basisFrom', { basis: tBasis(partner.usualBasis) })}</p> : null}
       </div>
 
       {overridden ? (
@@ -213,18 +216,21 @@ export function DraftForm({
         </div>
       ) : null}
 
-      <section className="space-y-2 rounded-md border border-line bg-surface p-4" data-testid="draft-required-evidence" aria-live="polite">
-        <h2 className="text-[14px] font-semibold text-ink">{t('requiredEvidence.titleFor', { basis: tBasis(d.basis), status: tStatus(partner.status) })}</h2>
-        <ul className="space-y-1.5">
-          {required.map((kind) => (
-            <li key={kind} className="flex flex-wrap items-center gap-2 text-[14px] text-ink">
-              <span>{t(`requiredEvidence.kind.${evidenceKindLabelKey(kind, d.basis)}`)}</span>
-              {kind === 'agreement' && d.basis === 'agent57' ? <span className="text-[12px] text-muted-ink">— {t('requiredEvidence.agreementAgent57Hint')}</span> : null}
-              <span className="rounded-sm border border-line-strong px-1.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-ink-2">{t('requiredEvidence.required')}</span>
-            </li>
-          ))}
-        </ul>
-        <p className="text-[12px] text-muted-ink">{d.basis === 'agent57' ? t('requiredEvidence.agentNote') : t('requiredEvidence.foreignNote')}</p>
+      <section className="rounded-md border border-line bg-surface p-4" data-testid="draft-required-evidence" aria-live="polite">
+        <Section title={t('requiredEvidence.titleFor', { basis: tBasis(d.basis), status: tStatus(partner.status) })}>
+          <div className="space-y-2">
+            <ul className="space-y-1.5">
+              {required.map((kind) => (
+                <li key={kind} className="flex flex-wrap items-center gap-2 text-body text-ink">
+                  <span>{t(`requiredEvidence.kind.${evidenceKindLabelKey(kind, d.basis)}`)}</span>
+                  {kind === 'agreement' && d.basis === 'agent57' ? <span className="text-hint text-muted-ink">— {t('requiredEvidence.agreementAgent57Hint')}</span> : null}
+                  <StatusBadge tone="neutral">{t('requiredEvidence.required')}</StatusBadge>
+                </li>
+              ))}
+            </ul>
+            <p className="text-hint text-muted-ink">{d.basis === 'agent57' ? t('requiredEvidence.agentNote') : t('requiredEvidence.foreignNote')}</p>
+          </div>
+        </Section>
       </section>
 
       <PartnerReasonPrompt needs={reasonNeeds} noticeReason={noticeReason} overdueReason={overdueReason} onNoticeReason={setNoticeReason} onOverdueReason={setOverdueReason} purposeReason={purposeReason} onPurposeReason={setPurposeReason} purposeDetail={purposeDetail} noticeValidUntil={payment.reasonsNeeded.noticeValidUntil} />
@@ -247,7 +253,7 @@ export function DraftForm({
                   ))}
                 </Select>
                 {/* Task 6c (Joe 28.09.): die Frist läuft ab dem Zahlungstag — ein Datum gibt es erst, wenn er feststeht (nachträglich: die gewählte Zeile). */}
-                {d.retroactive && chosenLines.length > 0 ? <span className="font-mono text-[14px] tabular-nums text-ink">{fmt.date(proofDueDate(paymentDay, months))}</span> : null}
+                {d.retroactive && chosenLines.length > 0 ? <span className="font-mono text-body tabular-nums text-ink">{fmt.date(proofDueDate(paymentDay, months))}</span> : null}
               </div>
             </FormField>
           </FormCell>
@@ -265,94 +271,103 @@ export function DraftForm({
       </div>
 
       {d.retroactive ? (
-        <section className="space-y-2" data-testid="paid-line-picker">
-          <h3 className="text-[15px] font-semibold">{t('paidLines.title')}</h3>
-          {lineOptions.length === 0 ? (
-            <p className="text-[13px] text-muted-ink">{t('paidLines.empty')}</p>
-          ) : (
-            <ul className="space-y-1.5">
-              {lineOptions.map((line) => (
-                <li key={line.id}>
-                  <label className="flex min-h-11 items-center gap-2 text-[13px]">
-                    <Checkbox
-                      checked={d.paidLineIds.includes(line.id)}
-                      disabled={!canWrite}
-                      onCheckedChange={(v) => update((prev) => ({ ...prev, paidLineIds: v === true ? [...prev.paidLineIds, line.id] : prev.paidLineIds.filter((id) => id !== line.id) }))}
-                    />
-                    <span className="font-mono">
-                      {line.entryNumber ? `${line.entryNumber} · ` : ''}
-                      {fmt.date(line.entryDate)} · {formatEuro(Math.abs(line.amountCents))}
-                    </span>
-                  </label>
-                </li>
-              ))}
-            </ul>
-          )}
+        <section data-testid="paid-line-picker">
+          <Section title={t('paidLines.title')}>
+            <div className="space-y-2">
+              {lineOptions.length === 0 ? (
+                <p className="text-meta text-muted-ink">{t('paidLines.empty')}</p>
+              ) : (
+                <ul className="space-y-1.5">
+                  {lineOptions.map((line) => (
+                    <li key={line.id}>
+                      <label className="flex min-h-11 items-center gap-2 text-meta">
+                        <Checkbox
+                          checked={d.paidLineIds.includes(line.id)}
+                          disabled={!canWrite}
+                          onCheckedChange={(v) => update((prev) => ({ ...prev, paidLineIds: v === true ? [...prev.paidLineIds, line.id] : prev.paidLineIds.filter((id) => id !== line.id) }))}
+                        />
+                        <span className="font-mono">
+                          {line.entryNumber ? `${line.entryNumber} · ` : ''}
+                          {fmt.date(line.entryDate)} · {formatEuro(Math.abs(line.amountCents))}
+                        </span>
+                      </label>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </Section>
         </section>
       ) : (
-        <section className="space-y-3" data-testid="position-rows">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <h3 className="text-[15px] font-semibold">{t('positions.title')}</h3>
-            {canWrite ? (
-              <span className="flex flex-wrap gap-2">
-                <Button type="button" variant="secondary" size="sm" onClick={() => addPosition('money')} data-testid="position-add-money">
-                  {t('positions.add')} ({t('positions.money')})
-                </Button>
-                <Button type="button" variant="secondary" size="sm" onClick={() => addPosition('goods')} data-testid="position-add-goods">
-                  {t('positions.add')} ({t('positions.goods')})
-                </Button>
-              </span>
-            ) : null}
-          </div>
-          {d.positions.map((p) => (
-            <div key={p.key} className="grid grid-cols-1 gap-2 rounded-md border border-line bg-surface p-3 sm:grid-cols-4" data-testid="position-row">
-              <span className="text-[12px] font-semibold uppercase text-muted-ink sm:col-span-4">{p.kind === 'money' ? t('positions.money') : t('positions.goods')}</span>
-              {p.kind === 'money' ? (
-                <>
-                  <Input aria-label={t('positions.amount')} inputMode="decimal" className="text-right tabular-nums" value={p.amountText} disabled={!canWrite} onChange={(e) => setPosition(p.key, { amountText: e.target.value })} placeholder={t('positions.amount')} />
-                  <Select aria-label={t('positions.category')} value={p.categoryId} disabled={!canWrite} onChange={(e) => setPosition(p.key, { categoryId: e.target.value })}>
-                    <option value="">{t('positions.category')}</option>
-                    {categories.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.label}
-                      </option>
-                    ))}
-                  </Select>
-                  <Select aria-label={t('positions.paidFrom')} value={p.purposeId} disabled={!canWrite} onChange={(e) => setPosition(p.key, { purposeId: e.target.value })}>
-                    <option value="">{t('positions.freeFunds')}</option>
-                    {purposes.map((pu) => (
-                      <option key={pu.id} value={pu.id}>
-                        {pu.label}
-                      </option>
-                    ))}
-                  </Select>
-                  <Select aria-label={t('positions.project')} value={p.projectId} disabled={!canWrite} onChange={(e) => setPosition(p.key, { projectId: e.target.value })}>
-                    <option value="">{t('positions.project')}</option>
-                    {projects.map((pr) => (
-                      <option key={pr.id} value={pr.id}>
-                        {pr.name}
-                      </option>
-                    ))}
-                  </Select>
-                </>
-              ) : (
-                <Select aria-label={t('positions.goodsLine')} value={p.goodsLineId} disabled={!canWrite} onChange={(e) => setPosition(p.key, { goodsLineId: e.target.value })} className="sm:col-span-3">
-                  <option value="">{t('positions.goodsLine')}</option>
-                  {goodsLineOptions.map((line) => (
-                    <option key={line.id} value={line.id}>
-                      {line.entryNumber ? `${line.entryNumber} · ` : ''}
-                      {fmt.date(line.entryDate)} · {formatEuro(Math.abs(line.amountCents))}
-                    </option>
-                  ))}
-                </Select>
-              )}
-              {canWrite ? (
-                <Button type="button" variant="ghost" size="sm" onClick={() => update((prev) => ({ ...prev, positions: prev.positions.filter((x) => x.key !== p.key) }))} data-testid="position-remove">
-                  {t('positions.remove')}
-                </Button>
-              ) : null}
+        <section data-testid="position-rows">
+          <Section title={t('positions.title')}
+            actions={
+              <>
+                {canWrite ? (
+                  <span className="flex flex-wrap gap-2">
+                    <Button type="button" variant="secondary" size="sm" onClick={() => addPosition('money')} data-testid="position-add-money">
+                      {t('positions.add')} ({t('positions.money')})
+                    </Button>
+                    <Button type="button" variant="secondary" size="sm" onClick={() => addPosition('goods')} data-testid="position-add-goods">
+                      {t('positions.add')} ({t('positions.goods')})
+                    </Button>
+                  </span>
+                ) : null}
+              </>
+            }
+          >
+            <div className="space-y-3">
+              {d.positions.map((p) => (
+                <div key={p.key} className="grid grid-cols-1 gap-2 rounded-md border border-line bg-surface p-3 sm:grid-cols-4" data-testid="position-row">
+                  <Overline as="span" className="sm:col-span-4">{p.kind === 'money' ? t('positions.money') : t('positions.goods')}</Overline>
+                  {p.kind === 'money' ? (
+                    <>
+                      <Input aria-label={t('positions.amount')} inputMode="decimal" className="text-right tabular-nums" value={p.amountText} disabled={!canWrite} onChange={(e) => setPosition(p.key, { amountText: e.target.value })} placeholder={t('positions.amount')} />
+                      <Select aria-label={t('positions.category')} value={p.categoryId} disabled={!canWrite} onChange={(e) => setPosition(p.key, { categoryId: e.target.value })}>
+                        <option value="">{t('positions.category')}</option>
+                        {categories.map((c) => (
+                          <option key={c.id} value={c.id}>
+                            {c.label}
+                          </option>
+                        ))}
+                      </Select>
+                      <Select aria-label={t('positions.paidFrom')} value={p.purposeId} disabled={!canWrite} onChange={(e) => setPosition(p.key, { purposeId: e.target.value })}>
+                        <option value="">{t('positions.freeFunds')}</option>
+                        {purposes.map((pu) => (
+                          <option key={pu.id} value={pu.id}>
+                            {pu.label}
+                          </option>
+                        ))}
+                      </Select>
+                      <Select aria-label={t('positions.project')} value={p.projectId} disabled={!canWrite} onChange={(e) => setPosition(p.key, { projectId: e.target.value })}>
+                        <option value="">{t('positions.project')}</option>
+                        {projects.map((pr) => (
+                          <option key={pr.id} value={pr.id}>
+                            {pr.name}
+                          </option>
+                        ))}
+                      </Select>
+                    </>
+                  ) : (
+                    <Select aria-label={t('positions.goodsLine')} value={p.goodsLineId} disabled={!canWrite} onChange={(e) => setPosition(p.key, { goodsLineId: e.target.value })} className="sm:col-span-3">
+                      <option value="">{t('positions.goodsLine')}</option>
+                      {goodsLineOptions.map((line) => (
+                        <option key={line.id} value={line.id}>
+                          {line.entryNumber ? `${line.entryNumber} · ` : ''}
+                          {fmt.date(line.entryDate)} · {formatEuro(Math.abs(line.amountCents))}
+                        </option>
+                      ))}
+                    </Select>
+                  )}
+                  {canWrite ? (
+                    <Button type="button" variant="ghost" size="sm" onClick={() => update((prev) => ({ ...prev, positions: prev.positions.filter((x) => x.key !== p.key) }))} data-testid="position-remove">
+                      {t('positions.remove')}
+                    </Button>
+                  ) : null}
+                </div>
+              ))}
             </div>
-          ))}
+          </Section>
         </section>
       )}
 

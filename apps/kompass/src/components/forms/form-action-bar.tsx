@@ -367,19 +367,19 @@ export function FormActionBar({
 
   const line =
     nothing ? (
-      <span aria-live="polite" className="text-[13px] text-ink-2">
+      <span aria-live="polite" className="text-meta text-ink-2">
         {t('nothingChanged')}
       </span>
     ) : mode !== 'run' && changed > 0 && !countHidden ? (
-      <span aria-live="polite" className="text-[13px] font-semibold text-warning">
+      <span aria-live="polite" className="text-meta font-semibold text-warning">
         {t('changesPending', { count: changed })}
       </span>
     ) : note ? (
-      <div className="text-[13px] text-ink-2">{note}</div>
+      <div className="text-meta text-ink-2">{note}</div>
     ) : status ? (
       <SaveStatus state={status.state} pending={status.pending} />
     ) : hasRequired ? (
-      <span className="text-[12px] text-muted-ink">{t('requiredLegend')}</span>
+      <span className="text-hint text-muted-ink">{t('requiredLegend')}</span>
     ) : null;
 
   return (

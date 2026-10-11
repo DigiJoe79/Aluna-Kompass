@@ -10,3 +10,4 @@ export * from './print/template';
 export * from './print/service';
 export { animalsModule } from './manifest';
 export * from './proposals';
+export * from './photo-sizes';

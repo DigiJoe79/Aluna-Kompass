@@ -97,16 +97,16 @@ export function LogDialog({ item, onClose }: { item: LogSubject | null; onClose(
         <DialogHeader>
           <DialogTitle>{item ? t('title', { when: fmt.dateTime(item.startedAt) }) : ''}</DialogTitle>
           {item ? (
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] text-ink-2">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-meta text-ink-2">
               <StatusMark status={item.status} />
               <span>
                 <SourceMark source={item.source} name={item.byName} />
               </span>
-              {item.hash ? <span className="font-mono text-[12px]">{item.hash.slice(0, 12)}</span> : null}
+              {item.hash ? <span className="font-mono text-hint">{item.hash.slice(0, 12)}</span> : null}
             </div>
           ) : null}
           {item?.summary ? (
-            <p className="text-[13px] text-ink-2">
+            <p className="text-meta text-ink-2">
               <span className="font-semibold">{t('short')}</span> {item.summary}
             </p>
           ) : null}
@@ -120,7 +120,7 @@ export function LogDialog({ item, onClose }: { item: LogSubject | null; onClose(
               <span className="sr-only">{tHistory('loading')}</span>
             </div>
           ) : (
-            <pre ref={pre} tabIndex={0} className="rounded-md bg-code p-4 font-mono text-[12px] whitespace-pre-wrap text-ink-2 outline-none focus-visible:ring-2 focus-visible:ring-focus">
+            <pre ref={pre} tabIndex={0} className="rounded-md bg-code p-4 font-mono text-hint whitespace-pre-wrap text-ink-2 outline-none focus-visible:ring-2 focus-visible:ring-focus">
               {log}
             </pre>
           )}

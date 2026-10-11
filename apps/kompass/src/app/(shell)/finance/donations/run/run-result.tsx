@@ -23,6 +23,7 @@ import { runProgress } from '@/lib/finance/run';
 import { dispatchRunConfirmationsAction } from './actions';
 import { FormField } from '@/components/forms/form-field';
 import { FormGrid } from '@/components/forms/form-grid';
+import { Overline } from '@/components/overline';
 
 type SentVia = 'post' | 'email' | 'handed';
 
@@ -82,16 +83,16 @@ export function RunResult({ run, canIssue, today, missing, followUpHref }: { run
 
   return (
     <section data-testid="run-result" className="space-y-4 rounded-md border border-line bg-surface p-4">
-      <div className="flex flex-wrap items-center gap-2 text-[13px] text-ink-2">
+      <div className="flex flex-wrap items-center gap-2 text-meta text-ink-2">
         <span>{t('result.startedOn', { year: run.year, date: date(run.startedOn) })}</span>
         {run.followUpOfRunId ? <StatusBadge tone="neutral">{t('result.followUpOf')}</StatusBadge> : null}
       </div>
-      <p data-testid="run-summary" className="font-heading text-[19px] text-ink">
+      <p data-testid="run-summary" className="text-body text-ink">
         {t('result.summary', { issued: run.counts.issued, total })}
       </p>
 
       <div className="space-y-2">
-        <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-ink">{t('result.bundles')}</p>
+        <Overline>{t('result.bundles')}</Overline>
         <RefusalNotice action state={refusal} />
         {/* Ein leeres Paket ist nicht stumm gesperrt, sondern nennt den Grund (Vorbild `site/publish/run-card.tsx`, Spec Seitenkopf § 3.6). */}
         <div className="flex flex-wrap gap-2">
@@ -125,13 +126,13 @@ export function RunResult({ run, canIssue, today, missing, followUpHref }: { run
           </Button>
         </div>
         {run.counts.machine === 0 || run.counts.needsSignature === 0 ? (
-          <p id={emptyId} className="text-[12px] text-muted-ink">
+          <p id={emptyId} className="text-hint text-muted-ink">
             {t('result.bundleEmpty')}
           </p>
         ) : null}
       </div>
 
-      <div className="flex flex-wrap items-center gap-3 text-[13px]">
+      <div className="flex flex-wrap items-center gap-3 text-meta">
         {run.dispatchedAt && run.dispatchedVia ? (
           <p data-testid="run-dispatched" className="text-ink">{t('result.dispatched', { date: date(run.dispatchedAt), via: tv(run.dispatchedVia) })}</p>
         ) : canIssue && run.counts.machine > 0 ? (
@@ -147,7 +148,7 @@ export function RunResult({ run, canIssue, today, missing, followUpHref }: { run
       {failed.length > 0 ? <ItemList testId="run-failed" title={t('result.failed')} items={failed} reason={(i) => errorText(i.errorCode)} /> : null}
       {skipped.length > 0 ? <ItemList testId="run-skipped" title={t('result.skipped')} items={skipped} reason={(i) => errorText(i.errorCode)} /> : null}
 
-      <div data-testid="run-missing" className="flex flex-wrap items-center justify-between gap-3 border-t border-line-2 pt-3 text-[13px]">
+      <div data-testid="run-missing" className="flex flex-wrap items-center justify-between gap-3 border-t border-line-2 pt-3 text-meta">
         {missing.count > 0 ? (
           <>
             <p className="text-ink">{t('result.missing', { count: missing.count, names: missing.names.join(', ') })}</p>
@@ -169,8 +170,8 @@ function ItemList({ testId, title, items, reason }: { testId: string; title: str
   const t = useTranslations('finance.donations.run');
   return (
     <div data-testid={testId} className="space-y-1.5">
-      <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-ink">{title} · {items.length}</p>
-      <ul className="divide-y divide-line-2 rounded-md border border-line text-[13px]">
+      <Overline>{title} · {items.length}</Overline>
+      <ul className="divide-y divide-line-2 rounded-md border border-line text-meta">
         {items.map((item) => (
           <li key={item.id} className="flex flex-wrap items-center justify-between gap-3 px-3 py-1.5">
             <span className="flex flex-wrap items-baseline gap-x-3">
@@ -213,7 +214,7 @@ function DispatchAllDialog({ runId, today, onClose }: { runId: string; today: st
           <DialogTitle>{td('title')}</DialogTitle>
         </DialogHeader>
         <DialogBody className="space-y-3">
-          <p className="text-[13px] text-ink-2">{td('text')}</p>
+          <p className="text-meta text-ink-2">{td('text')}</p>
           <FormGrid>
             <FormField id="run-dispatch-date" label={td('sentAt')} required size="s">
               <Input id="run-dispatch-date" type="date" value={sentAt} max={today} onChange={(e) => setSentAt(e.target.value)} />

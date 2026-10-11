@@ -37,6 +37,7 @@ import { RowMenu, type RowMenuTarget } from './row-menu';
 import { TYPE_AHEAD_MS, nextTypeAheadMatch } from './type-ahead';
 import { useEdgeScroll } from './use-edge-scroll';
 import { useFolderTreeExpanded, type FolderTreeStorageKey } from './use-folder-tree-expanded';
+import { Overline } from '@/components/overline';
 
 export type { FolderTreeFixedEntry } from './fixed-entry';
 export type { BlockReason, DragItem } from '@/lib/folder-tree-model';
@@ -862,14 +863,14 @@ export function FolderTree({
   return (
     <div className="flex min-h-full flex-1 flex-col">
       <div className={cn('mb-1 flex items-center gap-2 pr-1 pl-2', density === 'touch' ? 'h-11' : 'h-7', pick && 'hidden')}>
-        <p className="flex-1 text-[11px] font-bold tracking-[0.08em] text-muted-ink">{t('heading')}</p>
+        <Overline className="flex-1">{t('heading')}</Overline>
         {canManage && onCreate ? (
           // Legt immer auf der obersten Ebene an; im Ordner anlegen geht über „Neuer Unterordner“ (Artboard 4d).
           <button
             type="button"
             onClick={() => startCreate(null)}
             className={cn(
-              'inline-flex h-7 items-center gap-[5px] rounded-sm border border-line-strong bg-active px-[9px] text-[13px] font-medium whitespace-nowrap text-ink hover:bg-hover focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-focus',
+              'inline-flex h-7 items-center gap-[5px] rounded-sm border border-line-strong bg-active px-[9px] text-meta whitespace-nowrap text-ink hover:bg-hover focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-focus',
               // Am Telefon 44 px Klickfläche bei gleicher Optik (HANDOFF § 6).
               density === 'touch' && 'relative after:absolute after:-inset-x-px after:-inset-y-[9px]'
             )}
@@ -898,7 +899,7 @@ export function FolderTree({
 
       {!pick && nodes[TREE_ROOT]?.children.length === 0 ? (
         // Leerzustand (README § 3, Artboard 10): klein in der Spalte, die Liste daneben ist ja nicht leer.
-        <div className="flex flex-col items-start gap-1.5 px-2 py-1 text-[13px] leading-[1.45] text-ink-2">
+        <div className="flex flex-col items-start gap-1.5 px-2 py-1 text-meta text-ink-2">
           <p className="font-semibold text-ink">{t('empty')}</p>
           <p className="text-pretty">{emptyHint ?? (canManage && onCreate ? t('emptyManage') : t('emptyRead'))}</p>
           {canManage && onCreate ? (
@@ -906,7 +907,7 @@ export function FolderTree({
               ref={createFirstRef}
               type="button"
               onClick={() => startCreate(null)}
-              className="mt-1 inline-flex h-7 items-center gap-[5px] rounded-sm border border-line-strong bg-active px-[9px] text-[13px] font-medium whitespace-nowrap text-ink hover:bg-hover focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-focus"
+              className="mt-1 inline-flex h-7 items-center gap-[5px] rounded-sm border border-line-strong bg-active px-[9px] text-meta whitespace-nowrap text-ink hover:bg-hover focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-focus"
             >
               {t('createFirst')}
             </button>
@@ -916,12 +917,12 @@ export function FolderTree({
 
       {keyboardDrag ? (
         // Leiste beim Verschieben per Tastatur (Artboard 6b und 6c): was aufgenommen ist und was jetzt zählt.
-        <div className="mb-2 flex flex-col gap-1 rounded-md bg-info-bg px-2.5 py-2 text-[13px] leading-[1.45] text-ink">
+        <div className="mb-2 flex flex-col gap-1 rounded-md bg-info-bg px-2.5 py-2 text-meta text-ink">
           <span>{t.rich('moving', { name: dragName(keyboardDrag.item), strong: (chunks) => <strong className="font-semibold">{chunks}</strong> })}</span>
           {keyboardReason ? (
-            <span className="text-[12px] text-ink-2">{t('dragBar.blocked', { reason: clause(reasonText(keyboardDrag.item, keyboardReason)) })}</span>
+            <span className="text-hint text-ink-2">{t('dragBar.blocked', { reason: clause(reasonText(keyboardDrag.item, keyboardReason)) })}</span>
           ) : (
-            <span className="flex flex-wrap gap-x-2 gap-y-1 text-[12px] text-ink-2">
+            <span className="flex flex-wrap gap-x-2 gap-y-1 text-hint text-ink-2">
               <span className="inline-flex items-center gap-[3px]">
                 <KeyChip label={t('keyNames.up')}>↑</KeyChip>
                 <KeyChip label={t('keyNames.down')}>↓</KeyChip>
@@ -1091,7 +1092,7 @@ export function FolderTree({
         </div>
       </div>
 
-      {note ? <p className="mx-2 mt-3 text-[12px] leading-[1.5] text-pretty text-muted-ink">{note}</p> : null}
+      {note ? <p className="mx-2 mt-3 text-hint text-pretty text-muted-ink">{note}</p> : null}
 
       {/* Eine Region je Baum, höflich (HANDOFF): Sie unterbricht nicht, was gerade vorgelesen wird. */}
       <div aria-live="polite" className="sr-only">
@@ -1101,7 +1102,7 @@ export function FolderTree({
       <button
         type="button"
         onClick={() => setHelpOpen(true)}
-        className={cn('mt-auto flex items-center gap-1.5 self-start px-2 pt-2.5 text-[12px] text-muted-ink hover:text-ink-2', density === 'touch' && 'min-h-11', pick && 'hidden')}
+        className={cn('mt-auto flex items-center gap-1.5 self-start px-2 pt-2.5 text-hint text-muted-ink hover:text-ink-2', density === 'touch' && 'min-h-11', pick && 'hidden')}
       >
         <Keyboard className="size-3.5" aria-hidden />
         <span className="border-b border-line-strong">{t('keyHelp')}</span>

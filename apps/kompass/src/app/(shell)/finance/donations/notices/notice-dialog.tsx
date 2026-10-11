@@ -24,6 +24,7 @@ import type { ActionState } from '@/lib/actions';
 import { isIsoDay, paperDate } from '@/lib/dates';
 import { withUnplacedFieldErrors } from '@/lib/feedback';
 import { attachNoticeDocumentAction, saveNoticeAction, type NoticeInput } from './actions';
+import { Section } from '@/components/section';
 
 export type NoticeKind = NoticeInput['kind'];
 const KINDS: NoticeKind[] = ['exemptionNotice', 'corporateTaxNoticeAttachment', 'section60a'];
@@ -105,99 +106,87 @@ function FormStep({ onSaved, onCancel }: { onSaved: (notice: SavedNotice) => voi
   return (
     <div className="flex min-h-0 flex-1 flex-col" data-testid="notice-form">
       <DialogBody>
-        <section>
-          <h3 className="text-[15px] font-semibold">{t('sections.notice')}</h3>
-          <div className="mt-3">
-            <FormGrid>
-              <FormField id="notice-kind" label={t('kind')} required>
-                <Select id="notice-kind" value={kind} onChange={(e) => { setKind(e.target.value as NoticeKind); setHadExemption(null); feedback.reset(); }}>
-                  {KINDS.map((k) => <option key={k} value={k}>{tk(k)}</option>)}
-                </Select>
-              </FormField>
-              {provisional ? (
-                <FormCell size="full" className="space-y-2 rounded-md border border-line bg-surface-2 p-3">
-                  <p id="notice-question" className="text-[13px] font-semibold text-ink">{t('section60aQuestion')}</p>
-                  <RadioGroup aria-labelledby="notice-question" value={hadExemption} onValueChange={(value) => setHadExemption(value as 'yes' | 'no')} className="flex-row gap-4 text-[13px]">
-                    <label className="flex items-center gap-1.5"><RadioGroupItem value="yes" />{t('yes')}</label>
-                    <label className="flex items-center gap-1.5"><RadioGroupItem value="no" />{t('no')}</label>
-                  </RadioGroup>
-                  {hadExemption === 'yes' ? (
-                    <Notice level="warn" action={<Button type="button" variant="outline" size="sm" onClick={() => { setKind('exemptionNotice'); setHadExemption(null); }}>{t('switchToExemption')}</Button>}>
-                      {t('section60aRefused')}
-                    </Notice>
-                  ) : null}
-                </FormCell>
-              ) : null}
-            </FormGrid>
-          </div>
-        </section>
+        <Section title={t('sections.notice')}>
+          <FormGrid>
+            <FormField id="notice-kind" label={t('kind')} required>
+              <Select id="notice-kind" value={kind} onChange={(e) => { setKind(e.target.value as NoticeKind); setHadExemption(null); feedback.reset(); }}>
+                {KINDS.map((k) => <option key={k} value={k}>{tk(k)}</option>)}
+              </Select>
+            </FormField>
+            {provisional ? (
+              <FormCell size="full" className="space-y-2 rounded-md border border-line bg-surface-2 p-3">
+                <p id="notice-question" className="text-meta font-semibold text-ink">{t('section60aQuestion')}</p>
+                <RadioGroup aria-labelledby="notice-question" value={hadExemption} onValueChange={(value) => setHadExemption(value as 'yes' | 'no')} className="flex-row gap-4 text-meta">
+                  <label className="flex items-center gap-1.5"><RadioGroupItem value="yes" />{t('yes')}</label>
+                  <label className="flex items-center gap-1.5"><RadioGroupItem value="no" />{t('no')}</label>
+                </RadioGroup>
+                {hadExemption === 'yes' ? (
+                  <Notice level="warn" action={<Button type="button" variant="outline" size="sm" onClick={() => { setKind('exemptionNotice'); setHadExemption(null); }}>{t('switchToExemption')}</Button>}>
+                    {t('section60aRefused')}
+                  </Notice>
+                ) : null}
+              </FormCell>
+            ) : null}
+          </FormGrid>
+        </Section>
 
-        <section className="mt-5 border-t border-line pt-5">
-          <h3 className="text-[15px] font-semibold">{t('sections.taxOffice')}</h3>
-          <div className="mt-3">
-            <FormGrid>
-              <FormField id="notice-tax-office" label={t('taxOffice')} required error={fieldErrors.taxOffice}>
-                <Input id="notice-tax-office" value={taxOffice} onChange={(e) => setTaxOffice(e.target.value)} />
-              </FormField>
-              <FormField id="notice-tax-number" label={t('taxNumber')} required error={fieldErrors.taxNumber} size="s">
-                <Input id="notice-tax-number" className="font-mono" value={taxNumber} onChange={(e) => setTaxNumber(e.target.value)} />
-              </FormField>
-            </FormGrid>
-          </div>
-        </section>
+        <Section title={t('sections.taxOffice')}>
+          <FormGrid>
+            <FormField id="notice-tax-office" label={t('taxOffice')} required error={fieldErrors.taxOffice}>
+              <Input id="notice-tax-office" value={taxOffice} onChange={(e) => setTaxOffice(e.target.value)} />
+            </FormField>
+            <FormField id="notice-tax-number" label={t('taxNumber')} required error={fieldErrors.taxNumber} size="s">
+              <Input id="notice-tax-number" className="font-mono" value={taxNumber} onChange={(e) => setTaxNumber(e.target.value)} />
+            </FormField>
+          </FormGrid>
+        </Section>
 
-        <section className="mt-5 border-t border-line pt-5">
-          <h3 className="text-[15px] font-semibold">{t('sections.period')}</h3>
-          <div className="mt-3">
-            <FormGrid>
-              <FormField id="notice-date" label={t('noticeDate')} required error={fieldErrors.noticeDate} size="s">
-                <Input id="notice-date" type="date" className="font-mono" value={noticeDate} onChange={(e) => setNoticeDate(e.target.value)} />
+        <Section title={t('sections.period')}>
+          <FormGrid>
+            <FormField id="notice-date" label={t('noticeDate')} required error={fieldErrors.noticeDate} size="s">
+              <Input id="notice-date" type="date" className="font-mono" value={noticeDate} onChange={(e) => setNoticeDate(e.target.value)} />
+            </FormField>
+            <FormField id="notice-exempt-from" label={t('exemptFrom')} required hint={t('exemptFromHint')} error={fieldErrors.exemptFrom} size="s">
+              <Input id="notice-exempt-from" type="date" className="font-mono" value={exemptFrom} onChange={(e) => setExemptFrom(e.target.value)} />
+            </FormField>
+            {provisional ? null : (
+              <FormField id="notice-period" label={t('assessmentPeriod')} required hint={t('assessmentPeriodHint')} error={fieldErrors.assessmentPeriod} size="s">
+                <Input id="notice-period" value={assessmentPeriod} onChange={(e) => setAssessmentPeriod(e.target.value)} />
               </FormField>
-              <FormField id="notice-exempt-from" label={t('exemptFrom')} required hint={t('exemptFromHint')} error={fieldErrors.exemptFrom} size="s">
-                <Input id="notice-exempt-from" type="date" className="font-mono" value={exemptFrom} onChange={(e) => setExemptFrom(e.target.value)} />
-              </FormField>
-              {provisional ? null : (
-                <FormField id="notice-period" label={t('assessmentPeriod')} required hint={t('assessmentPeriodHint')} error={fieldErrors.assessmentPeriod} size="s">
-                  <Input id="notice-period" value={assessmentPeriod} onChange={(e) => setAssessmentPeriod(e.target.value)} />
-                </FormField>
-              )}
-            </FormGrid>
-          </div>
-        </section>
+            )}
+          </FormGrid>
+        </Section>
 
-        <section className="mt-5 border-t border-line pt-5">
-          <h3 className="text-[15px] font-semibold">{t('sections.purposes')}</h3>
-          <div className="mt-3">
-            <FormGrid>
-              <FormField id="notice-purposes" label={t('purposesText')} required hint={t('purposesHint')} error={fieldErrors.purposesText} size="l">
-                <Textarea id="notice-purposes" rows={3} value={purposesText} onChange={(e) => setPurposesText(e.target.value)} />
+        <Section title={t('sections.purposes')}>
+          <FormGrid>
+            <FormField id="notice-purposes" label={t('purposesText')} required hint={t('purposesHint')} error={fieldErrors.purposesText} size="l">
+              <Textarea id="notice-purposes" rows={3} value={purposesText} onChange={(e) => setPurposesText(e.target.value)} />
+            </FormField>
+            {provisional ? (
+              <FormField id="notice-purposes-accusative" label={t('purposesTextAccusative')} required hint={t('purposesTextAccusativeHint')} error={fieldErrors.purposesTextAccusative} size="l">
+                <Textarea id="notice-purposes-accusative" rows={3} value={purposesTextAccusative} onChange={(e) => setPurposesTextAccusative(e.target.value)} />
               </FormField>
-              {provisional ? (
-                <FormField id="notice-purposes-accusative" label={t('purposesTextAccusative')} required hint={t('purposesTextAccusativeHint')} error={fieldErrors.purposesTextAccusative} size="l">
-                  <Textarea id="notice-purposes-accusative" rows={3} value={purposesTextAccusative} onChange={(e) => setPurposesTextAccusative(e.target.value)} />
-                </FormField>
-              ) : null}
-              {purposesText.trim() ? (
-                <FormCell size="full" className="space-y-1.5 rounded-md border border-line bg-surface-2 p-3 text-[13px]" data-testid="notice-purposes-preview">
-                  <p className="font-semibold text-ink">{t('previewTitle')}</p>
-                  <p className="text-ink-2">
-                    {noticeSentence({
-                      kind,
-                      taxOffice: taxOffice || '…',
-                      taxNumber: taxNumber || '…',
-                      // Papierdatum wie im amtlichen Satz, unabhängig von ui.dateFormat (K10); halbe Eingaben zeigen „…“.
-                      noticeDate: noticeDate && isIsoDay(noticeDate) ? paperDate(noticeDate) : '…',
-                      assessmentPeriod: provisional ? null : assessmentPeriod || null,
-                      purposesText,
-                      purposesTextAccusative: provisional ? purposesTextAccusative || null : null,
-                    })}
-                  </p>
-                  <p className="text-ink-2">{usageSentence(purposesText)}</p>
-                </FormCell>
-              ) : null}
-            </FormGrid>
-          </div>
-        </section>
+            ) : null}
+            {purposesText.trim() ? (
+              <FormCell size="full" className="space-y-1.5 rounded-md border border-line bg-surface-2 p-3 text-meta" data-testid="notice-purposes-preview">
+                <p className="font-semibold text-ink">{t('previewTitle')}</p>
+                <p className="text-ink-2">
+                  {noticeSentence({
+                    kind,
+                    taxOffice: taxOffice || '…',
+                    taxNumber: taxNumber || '…',
+                    // Papierdatum wie im amtlichen Satz, unabhängig von ui.dateFormat (K10); halbe Eingaben zeigen „…“.
+                    noticeDate: noticeDate && isIsoDay(noticeDate) ? paperDate(noticeDate) : '…',
+                    assessmentPeriod: provisional ? null : assessmentPeriod || null,
+                    purposesText,
+                    purposesTextAccusative: provisional ? purposesTextAccusative || null : null,
+                  })}
+                </p>
+                <p className="text-ink-2">{usageSentence(purposesText)}</p>
+              </FormCell>
+            ) : null}
+          </FormGrid>
+        </Section>
       </DialogBody>
 
       <FormActionBar placement="dialog" cancel={onCancel} pending={pending} saveDisabled={blockedByQuestion} saveLabel={t('save')} onSave={() => void submit()} state={withUnplacedFieldErrors(feedback.state, ['taxOffice', 'taxNumber', 'noticeDate', 'exemptFrom', 'assessmentPeriod', 'purposesText', 'purposesTextAccusative'])} />
@@ -242,12 +231,12 @@ function DocumentStep({ notice, canPickDocument, onChanged, onClose }: { notice:
     <div className="flex min-h-0 flex-1 flex-col" data-testid="notice-document-step">
       <DialogBody className="space-y-4">
         {notice.documentId ? (
-          <p className="text-[14px] text-ink" data-testid="notice-document-number">
+          <p className="text-body text-ink" data-testid="notice-document-number">
             <span className="font-mono font-semibold">{notice.documentNumber}</span>
           </p>
         ) : (
           <>
-            <p className="text-[13px] text-ink-2">{t('documentHint')}</p>
+            <p className="text-meta text-ink-2">{t('documentHint')}</p>
             <RefusalNotice action state={feedback.state} />
             <ReceiptDrop onFiles={(files) => void upload(files)} disabled={pending} />
             {canPickDocument ? (

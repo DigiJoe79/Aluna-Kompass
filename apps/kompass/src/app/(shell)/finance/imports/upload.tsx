@@ -197,7 +197,7 @@ export function ImportUpload({ accounts }: { accounts: ImportAccountOption[] }) 
           if (!busy) void processFiles(Array.from(e.dataTransfer.files));
         }}
         className={cn(
-          'flex min-h-24 flex-col items-center justify-center gap-1 rounded-md border-2 border-dashed px-3 py-2 text-center text-[13px]',
+          'flex min-h-24 flex-col items-center justify-center gap-1 rounded-md border-2 border-dashed px-3 py-2 text-center text-meta',
           dragging ? 'border-brand bg-brand-soft' : 'border-line-strong bg-surface',
         )}
       >
@@ -228,7 +228,7 @@ export function ImportUpload({ accounts }: { accounts: ImportAccountOption[] }) 
       <div data-testid="import-upload-results" aria-live="polite" className="space-y-2">
         {results.map((r) =>
           r.status === 'success' ? (
-            <p key={r.key} className="text-[13px] text-ink-2">
+            <p key={r.key} className="text-meta text-ink-2">
               <span className="font-semibold text-ink">{r.fileName}: </span>
               {t('result', { new: r.summary!.new, known: r.summary!.known, held: r.summary!.held })}
             </p>
@@ -263,12 +263,12 @@ export function ImportUpload({ accounts }: { accounts: ImportAccountOption[] }) 
           {pending && doubt?.kind === 'many' ? (
             <>
               <DialogTitle>{t('choose.title')}</DialogTitle>
-              <p className="text-[14px] text-ink-2">
+              <p className="text-body text-ink-2">
                 {t(doubt.format === 'csv' ? 'choose.questionCsv' : 'choose.questionCamt', { file: pending.file.name, count: doubt.accounts.length })}
               </p>
               <RadioGroup aria-label={t('choose.accountsLabel')} value={chosen} onValueChange={(value) => setChosen(value as string)}>
                 {doubt.accounts.map((a) => (
-                  <label key={a.accountId} className={cn('flex cursor-pointer items-start gap-2.5 rounded-md border p-3 text-[13px]', chosen === a.accountId ? 'border-brand bg-brand-soft' : 'border-line')}>
+                  <label key={a.accountId} className={cn('flex cursor-pointer items-start gap-2.5 rounded-md border p-3 text-meta', chosen === a.accountId ? 'border-brand bg-brand-soft' : 'border-line')}>
                     <RadioGroupItem value={a.accountId} className="mt-0.5" />
                     <span>
                       <span className="block font-semibold text-ink">{a.name}</span>
@@ -286,8 +286,8 @@ export function ImportUpload({ accounts }: { accounts: ImportAccountOption[] }) 
           {pending && doubt?.kind === 'none' && doubt.format === 'csv' ? (
             <>
               <DialogTitle>{t('noneCsv.title')}</DialogTitle>
-              <p className="text-[14px] text-ink-2">{t('noneCsv.text', { file: pending.file.name })}</p>
-              <p className="text-[14px] text-ink-2">{t('noneCsv.question')}</p>
+              <p className="text-body text-ink-2">{t('noneCsv.text', { file: pending.file.name })}</p>
+              <p className="text-body text-ink-2">{t('noneCsv.question')}</p>
               <FormActionBar placement="dialog" cancel={() => answer(null)} saveLabel={t('noneCsv.setUp')} onSave={() => openAssistantWith(pending)} />
             </>
           ) : null}
@@ -295,8 +295,8 @@ export function ImportUpload({ accounts }: { accounts: ImportAccountOption[] }) 
           {pending && doubt?.kind === 'none' && doubt.format === 'camt053' ? (
             <>
               <DialogTitle>{t('noneCamt.title')}</DialogTitle>
-              <p className="text-[14px] text-ink-2">{t('noneCamt.text', { file: pending.file.name, iban: groupIban(doubt.iban ?? '') })}</p>
-              <p className="text-[14px] text-ink-2">{t('noneCamt.hint')}</p>
+              <p className="text-body text-ink-2">{t('noneCamt.text', { file: pending.file.name, iban: groupIban(doubt.iban ?? '') })}</p>
+              <p className="text-body text-ink-2">{t('noneCamt.hint')}</p>
               <DialogFooter>
                 <Button type="button" variant="ghost" onClick={() => answer(null)}>
                   {tCommon('cancel')}

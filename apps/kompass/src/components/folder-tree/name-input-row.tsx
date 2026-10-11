@@ -138,7 +138,7 @@ export function NameInputRow({ level, density, initial = '', chevron = null, che
           )}
         />
         {error ? (
-          <span id={errorId} className="text-[12px] leading-4 font-semibold text-pretty text-error">
+          <span id={errorId} className="text-hint font-semibold text-pretty text-error">
             {error}
           </span>
         ) : null}

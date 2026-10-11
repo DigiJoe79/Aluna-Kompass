@@ -9,12 +9,17 @@ import {
   recordAudit,
   requirePermission,
   localizedConflict,
+  moduleImagePlaces,
+  unknownImagePlaceKeys,
+  type ResolvedImagePlaces,
 } from '@kompass/core';
 import { z } from 'zod';
 import { ensureModuleResolution, loadTemplate, templateChecksum, type TemplateSchema } from './load';
+import { assetFieldsIn } from './asset-values';
+import { fieldImagePlaces } from './image-places';
 import { checkReferenceFields } from './reference-fields';
 import { applyFindings } from './resync/apply';
-import { type Finding, type ResyncData, planResync } from './resync/plan';
+import { type Finding, type ResyncData, planResync, unknownImagePlaceFindings } from './resync/plan';
 import { siteEntries, siteTemplateState, siteValues } from './schema';
 
 const STATE_ID = 'current';
@@ -53,6 +58,20 @@ export interface ActiveTemplateView {
   locales: string[];
   variables: TemplateSchema['variables'];
   collections: TemplateSchema['collections'];
+  /** Aufgelöste Bildstellen der Modul-Sichten (`animals.primary`, `projects.image` …), Spec Ausschnitt § 5. */
+  imagePlaces: Record<string, ResolvedImagePlaces>;
+  /** Aufgelöste Bildstellen der `asset`-Felder je Pfad: `variables.hero`, `collections.team.photo`, `collections.x.gallery[].image`. */
+  fieldImagePlaces: Record<string, ResolvedImagePlaces>;
+}
+
+/** Die Bildstellen der `asset`-Felder eines Schemas; ein Feld einer Sammlung heißt nach ihr („fest für Team“). */
+export function templateFieldImagePlaces(schema: TemplateSchema): Record<string, ResolvedImagePlaces> {
+  const out: Record<string, ResolvedImagePlaces> = {};
+  for (const { path, field } of assetFieldsIn(schema.variables, 'variables')) out[path] = fieldImagePlaces(field);
+  for (const [key, col] of Object.entries(schema.collections)) {
+    for (const { path, field } of assetFieldsIn(col.fields, `collections.${key}`)) out[path] = fieldImagePlaces(field, col.label);
+  }
+  return out;
 }
 
 /** Die aktive Deklaration für einen Client — Struktur ohne Zugriff auf das Volume. */
@@ -61,7 +80,14 @@ export async function readActiveTemplate(deps: Deps, ctx: CallContext): Promise<
   if (denied) return denied;
   const state = readTemplateState(deps);
   if (!state) return conflict('noTemplate', 'Es ist kein Template eingelesen');
-  return ok({ name: state.schema.name, locales: state.schema.locales, variables: state.schema.variables, collections: state.schema.collections });
+  return ok({
+    name: state.schema.name,
+    locales: state.schema.locales,
+    variables: state.schema.variables,
+    collections: state.schema.collections,
+    imagePlaces: moduleImagePlaces(deps),
+    fieldImagePlaces: templateFieldImagePlaces(state.schema),
+  });
 }
 
 /** Die vorhandenen Inhalte in der Form, die `planResync` vergleicht. */
@@ -78,7 +104,7 @@ function readAllData(deps: Deps): ResyncData {
 function buildPreview(deps: Deps, schema: TemplateSchema, definitionLocales: string[], checksum: string, name: string): SyncPreview {
   const localesMissing = definitionLocales.filter((l) => !deps.locales().includes(l));
   const previous = readTemplateState(deps);
-  const findings = planResync(previous?.schema ?? EMPTY_SCHEMA, schema, readAllData(deps));
+  const findings = [...planResync(previous?.schema ?? EMPTY_SCHEMA, schema, readAllData(deps)), ...unknownImagePlaceFindings(unknownImagePlaceKeys(deps, schema.images))];
   return {
     name,
     findings,

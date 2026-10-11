@@ -10,3 +10,6 @@ export type { CollectionSchema, FieldSchema, SeedReport, TemplateSchema } from '
 export { classifyDeployError } from './pipeline/deploy-errors';
 export type { DeployProblem } from './pipeline/deploy-errors';
 export type { DeployCheckItem, DeployCheckKey } from './pipeline/deploy-check';
+export { fieldImagePlaces } from './image-places';
+export { IMAGE_WIDTHS, MAIN_IMAGE_MAX_WIDTH, derivedAssetId, isImageRatio, parseDerivedAssetId, resolvePlaces, thresholdFor } from '@kompass/core/image-places';
+export type { ImagePlace, ImagePlaceSpec, ImageRatio, ResolvedImagePlaces } from '@kompass/core/image-places';

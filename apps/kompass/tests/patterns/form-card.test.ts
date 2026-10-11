@@ -10,7 +10,7 @@ import { lineOf, read, relative, sourceFiles, type Allowlist } from './source';
  * Geprüft wird je Datei mit einer Heuristik über die JSX-Verschachtelung: Ein `FormActionBar` ohne
  * `placement="dialog"` und ohne `cancel` steht in einer `FormCard`, und keiner seiner Vorfahren in derselben Datei
  * setzt `overflow-hidden/auto/scroll` (auch nicht die `FormCard` selbst). Vorfahren in einer anderen Datei (die Seite
- * um ein Formular) sieht der Wächter nicht — dafür steht der E2E-Test an „Einstellungen → Verein“
+ * um ein Formular) sieht der Wächter nicht — dafür steht der E2E-Test an „Einrichtung → Stammdaten → Verein“
  * (`e2e/settings.spec.ts`), der die Lage im Fenster misst.
  */
 

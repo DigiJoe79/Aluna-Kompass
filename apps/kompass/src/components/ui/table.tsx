@@ -12,7 +12,7 @@ function Table({ className, ...props }: React.ComponentProps<"table">) {
     >
       <table
         data-slot="table"
-        className={cn("w-full caption-bottom text-sm", className)}
+        className={cn("w-full caption-bottom text-body", className)}
         {...props}
       />
     </div>
@@ -31,7 +31,7 @@ function TableHeader({ className, ...props }: React.ComponentProps<"thead">) {
     <thead
       data-slot="table-header"
       className={cn(
-        "bg-table-head text-left text-[12px] font-semibold uppercase tracking-[.04em] text-muted-ink [&_tr]:border-b [&_tr]:border-line",
+        "bg-table-head text-left text-label uppercase text-muted-ink [&_tr]:border-b [&_tr]:border-line",
         className
       )}
       {...props}
@@ -56,7 +56,7 @@ function TableFooter({ className, ...props }: React.ComponentProps<"tfoot">) {
     <tfoot
       data-slot="table-footer"
       className={cn(
-        "border-t bg-surface-2 font-medium [&>tr]:last:border-b-0",
+        "border-t bg-surface-2 [&>tr]:last:border-b-0",
         className
       )}
       {...props}
@@ -130,7 +130,7 @@ function TableCaption({
   return (
     <caption
       data-slot="table-caption"
-      className={cn("mt-4 text-sm text-muted-ink", className)}
+      className={cn("mt-4 text-body text-muted-ink", className)}
       {...props}
     />
   )

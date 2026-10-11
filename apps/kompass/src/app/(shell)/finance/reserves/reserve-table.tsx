@@ -68,7 +68,7 @@ function KindInfo({ kind }: { kind: ReserveKind }) {
           <Info className="size-3.5" aria-hidden />
         </Button>
       </span>
-      <span id={id} hidden={!open} className="text-[12px] text-muted-ink">
+      <span id={id} hidden={!open} className="text-hint text-muted-ink">
         {t(`kindHints.${kind}`)}
       </span>
     </span>
@@ -82,13 +82,13 @@ export function DocumentLabel({ document, testId }: { document: ReserveDocument 
   if (!document) return <span data-testid={testId}>—</span>;
   if ('hidden' in document) {
     return (
-      <span className="text-[13px] text-ink-2" data-testid={testId}>
+      <span className="text-meta text-ink-2" data-testid={testId}>
         {t('resolutionHidden')}
       </span>
     );
   }
   return (
-    <a href={`/dms/${document.id}`} className="text-[13px] underline-offset-2 hover:underline" data-testid={testId}>
+    <a href={`/dms/${document.id}`} className="text-meta underline-offset-2 hover:underline" data-testid={testId}>
       <span className="font-mono">{document.number}</span>
       {document.subject ? ` · ${document.subject}` : ''}
       {document.date ? ` · ${fmt.date(document.date)}` : ''}
@@ -176,7 +176,7 @@ export function ReserveTable({
         </div>
       ) : null}
       {rows.length === 0 ? (
-        <p className="rounded-md border border-line bg-surface p-4 text-[14px] text-ink-2">{t('empty')}</p>
+        <p className="rounded-md border border-line bg-surface p-4 text-body text-ink-2">{t('empty')}</p>
       ) : (
         <div className="overflow-x-auto rounded-md border border-line">
           <Table data-testid="reserve-table">
@@ -198,11 +198,11 @@ export function ReserveTable({
                   </TableCell>
                   <TableCell className="px-3 align-top">
                     <div className="flex flex-wrap items-center gap-1.5">
-                      <span className="font-medium text-ink">{row.name}</span>
+                      <span className="text-ink">{row.name}</span>
                       {row.isActive ? null : <StatusBadge tone="neutral">{t('inactive')}</StatusBadge>}
                     </div>
                     {row.carryForwardCents !== null && row.carryForwardDate ? (
-                      <p className="text-[12px] text-muted-ink">{t('carryForwardLine', { amount: formatEuro(row.carryForwardCents), date: fmt.date(row.carryForwardDate) })}</p>
+                      <p className="text-hint text-muted-ink">{t('carryForwardLine', { amount: formatEuro(row.carryForwardCents), date: fmt.date(row.carryForwardDate) })}</p>
                     ) : null}
                   </TableCell>
                   <TableCell className="px-3 align-top text-ink-2">{row.purposeLabel ?? '—'}</TableCell>

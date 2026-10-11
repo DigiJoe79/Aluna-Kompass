@@ -1,6 +1,8 @@
 {
   "app": {
-    "name": "Aluna Kompass"
+    "name": "Aluna Kompass",
+    "titleTest": "TEST · Aluna Kompass",
+    "titleDevelopment": "DEV · Aluna Kompass"
   },
   "admin": {
     "locales": {
@@ -384,6 +386,73 @@
       "one": "Datei",
       "other": "Dateien",
       "dative": "Dateien"
+    },
+    "crop": {
+      "edit": "Ausschnitt …",
+      "title": "Ausschnitt",
+      "description": "Das Original bleibt unverändert.",
+      "format": "Format",
+      "original": "Original",
+      "orientation": "Ausrichtung",
+      "landscape": "Quer",
+      "portrait": "Hoch",
+      "fixed": "fest für {place}",
+      "fixedPrimary": "das Titelbild",
+      "fixedSetting": "Einstellung „Bildausschnitt“",
+      "zoom": "Zoom",
+      "smaller": "Herauszoomen",
+      "larger": "Hineinzoomen",
+      "full": "Ganzes Format",
+      "remove": "Ausschnitt entfernen",
+      "preview": "So auf der Webseite",
+      "placeCaption": "{place} · {ratio}",
+      "trimsSides": "schneidet seitlich nach",
+      "trimsTopBottom": "schneidet oben und unten nach",
+      "lightbox": "wie gewählt",
+      "apply": "Übernehmen",
+      "note": "Gespeichert wird mit {target}.",
+      "noteAccept": "Gespeichert wird mit dem Annehmen.",
+      "primaryMoved": "Titelbild ist jetzt {new}. Ausschnitt von {old} entfernt.",
+      "targets": {
+        "animal": "dem Tier",
+        "entry": "dem Eintrag",
+        "project": "dem Projekt",
+        "settings": "den Einstellungen"
+      },
+      "touchHint": "Ziehen verschiebt, zwei Finger ändern die Größe.",
+      "keysHint": "Pfeile verschieben · + − Zoom · 0 ganzes Format",
+      "pixels": "{width} × {height} px",
+      "valueText": "{width} × {height} px, {position}",
+      "positions": {
+        "top_left": "oben links",
+        "top_center": "oben Mitte",
+        "top_right": "oben rechts",
+        "middle_left": "Mitte links",
+        "middle_center": "Mitte",
+        "middle_right": "Mitte rechts",
+        "bottom_left": "unten links",
+        "bottom_center": "unten Mitte",
+        "bottom_right": "unten rechts"
+      },
+      "has": "Ausschnitt",
+      "none": "ohne Ausschnitt",
+      "small": "Ausschnitt · nur {px} px breit",
+      "hasLine": "· Ausschnitt",
+      "smallLine": "· nur {px} px breit",
+      "trimmedLine": "· zugeschnitten",
+      "smallNotice": "Der Ausschnitt ist nur {px} px breit.",
+      "smallFor": "Die Webseite nimmt für {place} bis {max} px; für diesen Ausschnitt zeigt sie ein kleineres.",
+      "smallRemedies": "{original, select, true {Ausweg: ein größeres Original wählen} other {Ausweg: Ausschnitt größer ziehen · ein größeres Original wählen}}",
+      "formatChanged": "Der Ausschnitt hatte das Format {old} und wird beim Übernehmen auf {new} angepasst.",
+      "places": {
+        "animalPrimary": "Titelbild",
+        "animalGallery": "Galerie",
+        "lightbox": "Lightbox",
+        "animalStory": "Geschichte",
+        "projectImage": "Projektbild",
+        "projectTile": "Kachel",
+        "projectCover": "Titelbild"
+      }
     }
   },
   "content": {
@@ -552,7 +621,7 @@
       },
       "localeMissing": {
         "reason": "Die Vorlage der Webseite fordert Sprachen, die nicht eingerichtet sind: {locales}.",
-        "remedy": "Fügen Sie sie unter Einstellungen → Sprachen hinzu und lesen Sie die Vorlage dann ein."
+        "remedy": "Fügen Sie sie unter Einrichtung → Sprachen hinzu und lesen Sie die Vorlage dann ein."
       },
       "overLimit": {
         "reason": "{names} überschreitet die neue Obergrenze der Vorlage.",
@@ -670,6 +739,8 @@
       "invalidJson": "Die Datei ist kein gültiges JSON.",
       "unknownVariable": "Diese Variable kennt die Vorlage der Webseite nicht.",
       "cropOutOfBounds": "Der Ausschnitt ragt über das Bild hinaus.",
+      "invalidCrop": "Der Ausschnitt dieses Bildes ist nicht lesbar.",
+      "assetNotFound": "Dieses Bild steht nicht in der Mediathek.",
       "hintNeedsTitleOrField": "Ein Zweifelsfall braucht einen Titel oder ein Feld.",
       "photoRefAmbiguous": "Ein Foto ist entweder ein bereitgestelltes Bild oder ein Foto des Hundes, nicht beides.",
       "emptyProposal": "Eine Änderung braucht mindestens einen Wert oder Fotos.",
@@ -704,7 +775,7 @@
     "animalProposals": {
       "proposalsDisabled": {
         "reason": "Vorschläge von Quellen sind in dieser Installation ausgeschaltet.",
-        "remedy": "Schalten Sie unter Einstellungen → Tiere „Vorschläge von Quellen annehmen“ ein."
+        "remedy": "Schalten Sie unter Einrichtung → Tiere „Vorschläge von Quellen annehmen“ ein."
       },
       "originExists": {
         "reason": "Zu diesem Eintrag der Quelle gibt es schon einen Hund in Kompass.",
@@ -732,7 +803,7 @@
     "aria": "Hauptnavigation",
     "home": "Startseite",
     "profile": "Profil",
-    "settingsArea": "Einstellungen",
+    "settingsArea": "System",
     "sectionAria": "Unternavigation",
     "help": "Hilfe",
     "groups": {
@@ -949,7 +1020,7 @@
         "setup": {
           "title": "Einrichtung",
           "empty": "Der Verein ist eingerichtet.",
-          "open": "Zu den Einstellungen",
+          "open": "Zur Einrichtung",
           "messages": {
             "settingName": "Vereinsname fehlt",
             "settingStreet": "Straße fehlt",
@@ -1506,7 +1577,7 @@
     }
   },
   "settings": {
-    "title": "Einstellungen",
+    "title": "Stammdaten",
     "tabsLabel": "Bereiche der Vereinseinstellungen",
     "tabs": {
       "organization": "Verein",
@@ -1621,7 +1692,7 @@
     },
     "managedHint": {
       "tax": "Wird unter Finanzen → Spenden → Bescheide geführt.",
-      "bank": "Wird unter Einstellungen → Finanzen → Bankkonten und Kassen am Hauptkonto geführt."
+      "bank": "Wird unter Einrichtung → Finanzen → Bankkonten und Kassen am Hauptkonto geführt."
     },
     "managedTarget": {
       "notices": "Bescheide",
@@ -1779,7 +1850,7 @@
       "dms": "Dokumentenmanagement"
     },
     "descriptions": {
-      "core": "Anmeldung, Rollen, Einstellungen, Änderungsprotokoll, Dokumente und Backup.",
+      "core": "Anmeldung, Rollen, Stammdaten, Änderungsprotokoll, Dokumente und Backup.",
       "finance": "Konten, Buchungen, Rücklagen, Zuwendungsbestätigungen.",
       "members": "Mitgliederstamm, Beiträge, Versammlungen.",
       "animals": "Tiere, Vermittlung, Patenschaften.",
@@ -2730,7 +2801,7 @@
       "remove": "Entfernen",
       "open": "Foto in neuem Tab öffnen",
       "afterCreate": "Fotos lassen sich wählen, sobald der Hund angelegt ist.",
-      "crop": "Ausschnitt der Quelle"
+      "nth": "Foto {n}"
     },
     "story": {
       "locked": "Erst nach der Vermittlung: Setzen Sie den Status auf „Vermittelt“, dann lässt sich die Erfolgsgeschichte pflegen.",
@@ -2761,7 +2832,7 @@
       "saved": "Einstellungen gespeichert.",
       "frame": {
         "title": "Bildausschnitt des Hauptfotos",
-        "intro": "In welchem Format und mit welchem Ausschnitt die Webseite das Hauptfoto eines Tiers zeigt. Das legt die Vorlage der Webseite fest; tragen Sie hier dasselbe ein, dann zeigt das Tierprofil die Fotos so, wie die Seite sie zeigen wird, und Sie sehen beim Wählen des Hauptfotos, ob es passt.",
+        "intro": "In welchem Format und mit welchem Ausschnitt die Webseite das Hauptfoto eines Tiers zeigt. Das legt die Vorlage der Webseite fest; tragen Sie hier dasselbe ein, dann zeigt das Tierprofil die Fotos so, wie die Seite sie zeigen wird, und Sie sehen beim Wählen des Hauptfotos, ob es passt. Gibt die Vorlage das Format selbst an, gilt ihres, und das Seitenverhältnis hier wirkt nicht; der Blickpunkt gilt weiter.",
         "aspect": "Seitenverhältnis",
         "aspectHint": "Breite zu Höhe",
         "aspects": {
@@ -2966,7 +3037,7 @@
         "deselect": "abwählen",
         "kompassPhoto": "Foto aus Kompass",
         "sourcePhoto": "Foto der Quelle",
-        "withCrop": "{name}, mit Ausschnitt der Quelle",
+        "withCrop": "{name}, mit Ausschnitt",
         "primaryChoice": "Titelbild",
         "keepPrimary": "Heute behalten",
         "switchPrimary": "Wechseln",
@@ -2980,14 +3051,12 @@
         "toField": "Zum Feld",
         "hintsNote": "Die Werte stehen schon im Formular. Wer sie ändert, nimmt „mit Änderungen“ an.",
         "photosTitle": "Fotos {count} von {max}",
-        "noCrop": "ohne Ausschnitt",
         "omit": "weglassen",
         "omitted": "weggelassen",
         "restore": "zurückholen",
         "makePrimary": "Als Titelbild",
     "moveLeft": "Nach vorn",
         "moveRight": "Nach hinten",
-        "cropNote": "Rahmen = Ausschnitt der Quelle. Die Webseite nutzt den Ausschnitt noch nicht.",
         "prefilled": "Vorbefüllt von {source}"
       },
       "held": {
@@ -3160,7 +3229,7 @@
       "blocking": "Blockiert — erst aufräumen:",
       "lossy": "Kostet Inhalt:",
       "harmless": "Unkritisch:",
-      "localesMissing": "Die Vorlage der Webseite fordert Sprachen, die nicht eingerichtet sind: {locales}. Fügen Sie sie unter Einstellungen → Sprachen hinzu.",
+      "localesMissing": "Die Vorlage der Webseite fordert Sprachen, die nicht eingerichtet sind: {locales}. Fügen Sie sie unter Einrichtung → Sprachen hinzu.",
       "localesMissingRemedy": "Sprachen einrichten",
       "readDone": "Vorlage eingelesen.",
       "name": "Name",
@@ -3172,7 +3241,8 @@
         "retyped": "{name} wechselt den Typ ({from} → {to})",
         "retypedLossy": "{name} wechselt den Typ ({from} → {to}) — Inhalt geht verloren",
         "overLimit": "{name} hat {have} Einträge, erlaubt sind {max}",
-        "valueGone": "{name}: „{value}“ entfällt und wird zu „{replacement}“ ({count}×)"
+        "valueGone": "{name}: „{value}“ entfällt und wird zu „{replacement}“ ({count}×)",
+        "unknownImagePlace": "Bildstelle {name}: Diese Kompass-Fassung kennt sie nicht; die Angabe bleibt ohne Wirkung."
       }
     },
     "seed": {
@@ -3200,7 +3270,7 @@
       "title": "Publizieren",
       "empty": {
         "text": "Es ist noch keine Vorlage der Webseite eingelesen. Erst danach lassen sich Inhalte pflegen und veröffentlichen.",
-        "action": "In den Einstellungen einrichten"
+        "action": "Zu Einrichtung → Webseite"
       },
       "target": {
         "development": "Entwicklung",
@@ -6548,7 +6618,7 @@
         "sums": {
           "donation": "Geld",
           "membershipFee": "Mitgliedsbeiträge",
-          "membershipFeeHint": "Mitgliedsbeiträge sind bescheinigungsfähig (Einstellung unter Verwaltung → Finanzen).",
+          "membershipFeeHint": "Mitgliedsbeiträge sind bescheinigungsfähig (Einstellung unter Einrichtung → Finanzen → Steuerliches).",
           "inKindDonation": "Sache",
           "expenseWaiver": "Aufwandsspende",
           "total": "Zusammen"
@@ -7465,7 +7535,7 @@
     "errors": {
       "humanOnly": {
         "reason": "Diesen Schritt führt ein Mensch in der Oberfläche aus.",
-        "remedy": "Der Verein kann ihn für MCP freigeben: Einstellungen → Finanzen → Steuerliches → „Darf ein Agent festschreiben?“ einschalten."
+        "remedy": "Der Verein kann ihn für MCP freigeben: Einrichtung → Finanzen → Steuerliches → „Darf ein Agent festschreiben?“ einschalten."
       },
       "accountInUse": {
         "reason": "Auf dieses Konto ist bereits gebucht.",
@@ -7529,11 +7599,11 @@
       },
       "accountInactive": {
         "reason": "Das Konto {account} ist stillgelegt.",
-        "remedy": "Wählen Sie ein aktives Konto oder aktivieren Sie es unter Einstellungen → Finanzen → Bankkonten und Kassen."
+        "remedy": "Wählen Sie ein aktives Konto oder aktivieren Sie es unter Einrichtung → Finanzen → Bankkonten und Kassen."
       },
       "categoryInactive": {
         "reason": "Die Kategorie {category} ist stillgelegt.",
-        "remedy": "Wählen Sie eine aktive Kategorie oder aktivieren Sie sie unter Einstellungen → Finanzen → Kategorien."
+        "remedy": "Wählen Sie eine aktive Kategorie oder aktivieren Sie sie unter Einrichtung → Finanzen → Kategorien."
       },
       "fiscalYearClosed": {
         "reason": "Das Geschäftsjahr {year} ist abgeschlossen.",
@@ -7569,11 +7639,11 @@
       },
       "noTaxRateForDate": {
         "reason": "Für den {date, date, ::ddMMyyyy} ist kein Umsatzsteuersatz hinterlegt.",
-        "remedy": "Tragen Sie den Satz unter Einstellungen → Finanzen → Sätze und Grenzen mit seinem Stichtag ein."
+        "remedy": "Tragen Sie den Satz unter Einrichtung → Finanzen → Sätze und Grenzen mit seinem Stichtag ein."
       },
       "voucherTypeNotAllowed": {
         "reason": "Die Art „{type}“ gilt beim Verein nicht als Finanzbeleg.",
-        "remedy": "Wählen Sie eine der hinterlegten Belegarten, oder tragen Sie die Art unter Einstellungen → Finanzen nach."
+        "remedy": "Wählen Sie eine der hinterlegten Belegarten, oder tragen Sie die Art unter Einrichtung → Finanzen nach."
       },
       "documentNotFinal": {
         "reason": "Das Dokument ist noch ein Entwurf.",
@@ -7721,7 +7791,7 @@
       },
       "statementTooLarge": {
         "reason": "Die Datei ist größer als das eingestellte Limit von {limit} MB.",
-        "remedy": "Prüfen Sie die Datei, oder erhöhen Sie das Limit unter Einstellungen → Finanzen."
+        "remedy": "Prüfen Sie die Datei, oder erhöhen Sie das Limit unter Einrichtung → Finanzen."
       },
       "statementUnreadable": {
         "reason": "Der Auszug lässt sich nicht lesen.",
@@ -7797,7 +7867,7 @@
       },
       "ruleCategoryInactive": {
         "reason": "Die Regel „{name}“ bucht auf eine stillgelegte Kategorie.",
-        "remedy": "Aktivieren Sie die Kategorie unter Einstellungen → Finanzen → Kategorien, oder ändern Sie die Regel."
+        "remedy": "Aktivieren Sie die Kategorie unter Einrichtung → Finanzen → Kategorien, oder ändern Sie die Regel."
       },
       "suggestionStale": {
         "reason": "Der Kontoumsatz ist inzwischen zugeordnet.",
@@ -7845,7 +7915,7 @@
       },
       "boardAllowanceNeedsReason": {
         "reason": "{contact} ist am {date, date, ::ddMMyyyy} Vorstandsmitglied, und für eine Pauschale an Vorstandsmitglieder gilt an diesem Tag keine bestätigte Grundlage. Ohne Erlaubnis in der Satzung gefährdet eine Vergütung des Vorstands die Gemeinnützigkeit.",
-        "remedy": "Begründen Sie die Buchung — die Begründung steht an der Buchung. Oder tragen Sie unter Einrichtung → Steuerliches die Vergütung des Vorstands mit dem Tag ein, ab dem sie gilt."
+        "remedy": "Begründen Sie die Buchung — die Begründung steht an der Buchung. Oder tragen Sie unter Einrichtung → Finanzen → Steuerliches die Vergütung des Vorstands mit dem Tag ein, ab dem sie gilt."
       },
       "invoiceProbablyPaidNeedsReason": {
         "reason": "Die Rechnung ist wahrscheinlich schon bezahlt: Eine Buchung vom {date, date, ::ddMMyyyy} über denselben Betrag passt dazu.",
@@ -7909,7 +7979,7 @@
       },
       "confirmationOrganizationIncomplete": {
         "reason": "Name oder Anschrift des Vereins fehlen in den Vereinsdaten.",
-        "remedy": "Ergänzen Sie Name, Straße, Postleitzahl und Ort unter Verwaltung → Stammdaten."
+        "remedy": "Ergänzen Sie Name, Straße, Postleitzahl und Ort unter Einrichtung → Stammdaten → Verein."
       },
       "confirmationLineAlreadyConfirmed": {
         "reason": "Für diese Zuwendung gibt es schon die Bestätigung {number}.",
@@ -7949,7 +8019,7 @@
       },
       "confirmationExpenseWaiversDisabled": {
         "reason": "Aufwandsspenden sind ausgeschaltet.",
-        "remedy": "Schalten Sie sie unter Einstellungen → Finanzen → Steuerliches ein, wenn der Verein sie bestätigt."
+        "remedy": "Schalten Sie sie unter Einrichtung → Finanzen → Steuerliches ein, wenn der Verein sie bestätigt."
       },
       "confirmationBeforeExemptionStart": {
         "reason": "Die Zuwendung vom {entryDate, date, ::ddMMyyyy} liegt vor dem Beginn der Steuerbefreiung am {exemptFrom, date, ::ddMMyyyy}; dafür darf keine Bestätigung ausgestellt werden.",
@@ -8105,7 +8175,7 @@
       },
       "expenseWaiversDisabled": {
         "reason": "Aufwandsspenden sind beim Verein ausgeschaltet.",
-        "remedy": "Reichen Sie den Antrag ohne Verzicht neu ein, oder schalten Sie Aufwandsspenden unter Einstellungen → Finanzen → Steuerliches ein."
+        "remedy": "Reichen Sie den Antrag ohne Verzicht neu ein, oder schalten Sie Aufwandsspenden unter Einrichtung → Finanzen → Steuerliches ein."
       },
       "waiverAgreedAfterPosition": {
         "reason": "Die Vereinbarung über den Erstattungsanspruch ist jünger als die früheste Position.",
@@ -8133,7 +8203,7 @@
       },
       "waiverBasisMissing": {
         "reason": "Für den Verzicht fehlt eine Anspruchsgrundlage — weder bei der Person noch beim Verein.",
-        "remedy": "Hinterlegen Sie eine Vereinbarung bei der Person oder den Vereinstext unter Einstellungen → Finanzen → Steuerliches, bevor Sie den Verzicht einreichen oder freigeben."
+        "remedy": "Hinterlegen Sie eine Vereinbarung bei der Person oder den Vereinstext unter Einrichtung → Finanzen → Steuerliches, bevor Sie den Verzicht einreichen oder freigeben."
       },
       "expenseFileNotPdf": {
         "reason": "Die Datei {file} ist kein PDF.",
@@ -8153,7 +8223,7 @@
       },
       "expenseWaiverCategoryMissing": {
         "reason": "Es gibt keine aktive Kategorie für Aufwandsspenden.",
-        "remedy": "Legen Sie unter Einstellungen → Finanzen → Kategorien eine Einnahme-Kategorie der Art „Aufwandsspende“ an oder aktivieren Sie sie wieder."
+        "remedy": "Legen Sie unter Einrichtung → Finanzen → Kategorien eine Einnahme-Kategorie der Art „Aufwandsspende“ an oder aktivieren Sie sie wieder."
       },
       "expenseNotRejected": {
         "reason": "Neu einreichen lässt sich nur ein abgelehnter Antrag.",

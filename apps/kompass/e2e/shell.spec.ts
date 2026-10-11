@@ -9,8 +9,20 @@ test.describe('app shell', () => {
 
   test('shows one rail row per area, home on top and settings behind a line', async ({ page }) => {
     await expect(page.getByTestId('env-banner')).toContainText('TESTUMGEBUNG');
+    // Tab und Safari-Kachel sagen, welche Instanz es ist: Prod und Test laufen auf demselben NAS (Joe 2026-10-11).
+    await expect(page).toHaveTitle('TEST · Aluna Kompass');
+    const icon = await page.request.get(await page.locator('link[rel="icon"][type="image/svg+xml"]').getAttribute('href') ?? '');
+    expect(await icon.text()).toContain('fill="#8A5A05"');
+    const png = await page.request.get(await page.locator('link[rel="icon"][type="image/png"]').getAttribute('href') ?? '');
+    expect(png.headers()['content-type']).toBe('image/png');
+    // Safari fragt `/favicon.ico` unabhängig von den Links ab; das darf nicht auf die Anmeldung umleiten.
+    const ico = await page.request.get('/favicon.ico', { maxRedirects: 0 });
+    expect(ico.status()).toBe(200);
+    expect(ico.headers()['content-type']).toBe('image/png');
+    const apple = await page.request.get(await page.locator('link[rel="apple-touch-icon"]').getAttribute('href') ?? '');
+    expect(apple.headers()['content-type']).toBe('image/png');
     const rail = page.getByRole('navigation', { name: 'Hauptnavigation' });
-    await expect(rail.getByRole('link')).toHaveText(['Startseite', 'Webseite', 'Projekte', 'Tiere', 'Kontakte', 'Akte', 'Finanzen', 'Mediathek', 'Einstellungen']);
+    await expect(rail.getByRole('link')).toHaveText(['Startseite', 'Webseite', 'Projekte', 'Tiere', 'Kontakte', 'Akte', 'Finanzen', 'Mediathek', 'System']);
     // Seiten stehen nicht in der Schiene — weder aus Verwaltung noch aus einem Modul.
     await expect(rail.getByRole('link', { name: 'Nutzer' })).toHaveCount(0);
     await expect(rail.getByRole('link', { name: 'Hunde' })).toHaveCount(0);
@@ -51,7 +63,7 @@ test.describe('app shell', () => {
     await expect(page.getByRole('region', { name: 'Befunde' })).toBeVisible();
     await page.getByRole('button', { name: 'Übernehmen' }).click();
     await expect(page.getByRole('status')).toContainText('eingelesen');
-    // Die Unternavigation der Webseite zeigt erst die Seiten der Webseite, nicht die Einstellungen.
+    // Die Unternavigation der Webseite zeigt erst die Seiten der Webseite, nicht die Bereiche unter System.
     await page.goto('/site/publish');
 
     const sections = page.getByRole('navigation', { name: 'Unternavigation' });
@@ -64,7 +76,7 @@ test.describe('app shell', () => {
   });
 
   test('opens settings as one area with two headed sections', async ({ page }) => {
-    await page.getByRole('navigation', { name: 'Hauptnavigation' }).getByRole('link', { name: 'Einstellungen' }).click();
+    await page.getByRole('navigation', { name: 'Hauptnavigation' }).getByRole('link', { name: 'System' }).click();
     await expect(page).toHaveURL('/admin/users');
     const sections = page.getByRole('navigation', { name: 'Unternavigation' });
     await expect(sections.getByText('Verwaltung')).toBeVisible();
@@ -78,13 +90,13 @@ test.describe('app shell', () => {
     await sections.getByRole('link', { name: 'Erscheinungsbild' }).click();
     await expect(sections.getByRole('link', { name: 'Erscheinungsbild' })).toHaveAttribute('aria-current', 'page');
     const crumbs = page.getByRole('navigation', { name: 'Brotkrume' });
-    await expect(crumbs).toContainText('Einstellungen');
+    await expect(crumbs).toContainText('System');
     await expect(crumbs).toContainText('Einrichtung');
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('Erscheinungsbild');
-    await expect(page.getByRole('navigation', { name: 'Hauptnavigation' }).getByRole('link', { name: 'Einstellungen' })).toHaveAttribute('aria-current', 'page');
+    await expect(page.getByRole('navigation', { name: 'Hauptnavigation' }).getByRole('link', { name: 'System' })).toHaveAttribute('aria-current', 'page');
   });
 
-  test('genau ein h1 je Seite: Liste, Detail, Einstellungen', async ({ page }) => {
+  test('genau ein h1 je Seite: Liste, Detail, Stammdaten', async ({ page }) => {
     // Spec Seitenkopf § 2.3: Der Wächter `one-h1` sieht nur den Quelltext; ob eine Seite überhaupt einen Titel hat,
     // zeigt erst die gerenderte Seite — hier auf den drei Seitentypen.
     for (const path of ['/animals', '/projects', '/admin/settings']) {
@@ -279,7 +291,7 @@ test.describe('app shell', () => {
     // Interne Revision ist eine Seed-Rolle ohne Modulrecht: audit.view und
     // documents.export (roles.spec.ts, Test „edits permissions …“, zeigt den
     // Stand). Beides sind Kernrechte, keine Modulrechte, also bleibt die
-    // Schiene bei Startseite und Einstellungen. Nicht die Finanzrolle
+    // Schiene bei Startseite und System. Nicht die Finanzrolle
     // „Kassenprüfer“ (F1): Die trägt finance.read und finance.overview, also
     // Modulrechte.
     await page.goto('/admin/users');
@@ -305,9 +317,9 @@ test.describe('app shell', () => {
     await expect(page).toHaveURL('/');
 
     const rail = page.getByRole('navigation', { name: 'Hauptnavigation' });
-    await expect(rail.getByRole('link')).toHaveText(['Startseite', 'Einstellungen']);
-    await expect(rail.getByRole('link', { name: 'Einstellungen' })).toHaveAttribute('href', '/admin/audit');
-    await rail.getByRole('link', { name: 'Einstellungen' }).click();
+    await expect(rail.getByRole('link')).toHaveText(['Startseite', 'System']);
+    await expect(rail.getByRole('link', { name: 'System' })).toHaveAttribute('href', '/admin/audit');
+    await rail.getByRole('link', { name: 'System' }).click();
     await expect(page).toHaveURL('/admin/audit');
     const sections = page.getByRole('navigation', { name: 'Unternavigation' });
     await expect(sections.getByText('Verwaltung')).toBeVisible();

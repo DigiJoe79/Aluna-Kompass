@@ -21,6 +21,7 @@ import { DispatchPanel } from './dispatch-panel';
 import { FollowUpsPanel, type FollowUpView } from './follow-ups-panel';
 import { NotesPanel, type NoteView } from './notes-panel';
 import { RelationsPanel, type RelationView } from './relations-panel';
+import { Section } from '@/components/section';
 
 export interface DocumentDetailProps {
   document: {
@@ -131,10 +132,10 @@ export function DocumentDetail({
         <div className="flex items-center gap-3">
           {/* Der Rückweg steht am `PageHeader`, wie auf jeder Seite abseits der Navigation. */}
           {doc.number ? (
-            <span className="font-mono text-[16px] font-bold text-ink">{doc.number}</span>
+            <span className="font-mono text-section text-ink">{doc.number}</span>
           ) : null}
           {doc.formerNumbers.length > 0 ? (
-            <span className="font-mono text-[12px] text-muted-ink">{t('formerNumbers', { numbers: doc.formerNumbers.join(', ') })}</span>
+            <span className="font-mono text-hint text-muted-ink">{t('formerNumbers', { numbers: doc.formerNumbers.join(', ') })}</span>
           ) : null}
           {doc.status === 'voided' ? (
             <StatusBadge tone="error">{t('statuses.voided')}</StatusBadge>
@@ -216,35 +217,36 @@ export function DocumentDetail({
         {/* Right column: Metadaten & Aufbewahrung */}
         <div className="space-y-6">
           <section className="rounded-md border border-line bg-surface p-5 shadow-xs">
-            <h3 className="mb-4 text-[15px] font-semibold text-ink">{t('detailsTitle')}</h3>
-            <dl className="space-y-3 text-[13px]">
-              <div>
-                <dt className="text-muted-ink">{t('columns.subject')}</dt>
-                <dd className="font-medium text-ink">{doc.subject}</dd>
-              </div>
-              <div>
-                <dt className="text-muted-ink">{t('columns.type')}</dt>
-                <dd className="font-medium text-ink">{doc.typeLabel}</dd>
-              </div>
-              <div>
-                <dt className="text-muted-ink">{t('columns.date')}</dt>
-                <dd className="font-medium text-ink">{fmt.date(doc.documentDate)}</dd>
-              </div>
-              <FolderPanel documentId={doc.id} title={doc.subject} folder={doc.folder} folders={folders} direction={doc.direction} canEdit={permissions.canEdit} />
-              <div>
-                <dt className="text-muted-ink">{t('columns.direction')}</dt>
-                <dd className="font-medium text-ink">{t(`directions.${doc.direction}`)}</dd>
-              </div>
-              {doc.status === 'voided' ? (
+            <Section title={t('detailsTitle')}>
+              <dl className="space-y-3 text-meta">
                 <div>
-                  <dt className="text-muted-ink">{t('voidReasonTitle')}</dt>
-                  <dd className="flex flex-wrap items-baseline gap-2 font-medium text-ink">
-                    <StatusBadge tone="error">{t('statuses.voided')}</StatusBadge>
-                    <span>{doc.voidReason}</span>
-                  </dd>
+                  <dt className="text-muted-ink">{t('columns.subject')}</dt>
+                  <dd className="text-ink">{doc.subject}</dd>
                 </div>
-              ) : null}
-            </dl>
+                <div>
+                  <dt className="text-muted-ink">{t('columns.type')}</dt>
+                  <dd className="text-ink">{doc.typeLabel}</dd>
+                </div>
+                <div>
+                  <dt className="text-muted-ink">{t('columns.date')}</dt>
+                  <dd className="text-ink">{fmt.date(doc.documentDate)}</dd>
+                </div>
+                <FolderPanel documentId={doc.id} title={doc.subject} folder={doc.folder} folders={folders} direction={doc.direction} canEdit={permissions.canEdit} />
+                <div>
+                  <dt className="text-muted-ink">{t('columns.direction')}</dt>
+                  <dd className="text-ink">{t(`directions.${doc.direction}`)}</dd>
+                </div>
+                {doc.status === 'voided' ? (
+                  <div>
+                    <dt className="text-muted-ink">{t('voidReasonTitle')}</dt>
+                    <dd className="flex flex-wrap items-baseline gap-2 text-ink">
+                      <StatusBadge tone="error">{t('statuses.voided')}</StatusBadge>
+                      <span>{doc.voidReason}</span>
+                    </dd>
+                  </div>
+                ) : null}
+              </dl>
+            </Section>
           </section>
 
           {doc.direction === 'outgoing' && doc.phase === 'issued' ? (
@@ -272,41 +274,43 @@ export function DocumentDetail({
           {/* Aufbewahrung: nur die Frist; Löschen steht im Seitenkopf unter „Weitere Aktionen“ (`document-actions.tsx`). */}
           {retentionInfo ? (
             <section className="rounded-md border border-line bg-surface p-5 shadow-xs">
-              <h3 className="mb-3 text-[15px] font-semibold text-ink">{t('retentionTitle')}</h3>
-              <p className="text-[13px] text-ink-2">
-                {retentionInfo.retentionClass === 'permanent'
-                  ? t('retentionPermanent')
-                  : retentionInfo.until
-                    ? t('retentionUntil', { date: fmt.date(retentionInfo.until) })
-                    : t('retentionRunning')}
-              </p>
+              <Section title={t('retentionTitle')}>
+                <p className="text-meta text-ink-2">
+                  {retentionInfo.retentionClass === 'permanent'
+                    ? t('retentionPermanent')
+                    : retentionInfo.until
+                      ? t('retentionUntil', { date: fmt.date(retentionInfo.until) })
+                      : t('retentionRunning')}
+                </p>
 
+              </Section>
             </section>
           ) : null}
 
           {/* Volltext */}
           {doc.textStatus ? (
             <section className="rounded-md border border-line bg-surface p-5 shadow-xs">
-              <h3 className="mb-3 text-[15px] font-semibold text-ink">{t('text.heading')}</h3>
-              <p className="text-[13px] text-ink-2">
-                {doc.textStatus === 'done'
-                  ? t('text.done', {
-                      date: doc.textExtractedAt
-                        ? fmt.dateTime(doc.textExtractedAt)
-                        : '—',
-                    })
-                  : doc.textStatus === 'failed'
-                    ? t('text.failed', { reason: doc.textError ?? '' })
-                    : t(`text.${doc.textStatus}`)}
-              </p>
-              {doc.textStatus === 'unavailable' ? (
-                <p className="mt-2 text-[12px] text-muted-ink">{t('text.unavailableHint')}</p>
-              ) : null}
-              {permissions.canManage ? (
-                <div className="mt-4 border-t border-line-2 pt-4">
-                  <RereadButton documentId={doc.id} />
-                </div>
-              ) : null}
+              <Section title={t('text.heading')}>
+                <p className="text-meta text-ink-2">
+                  {doc.textStatus === 'done'
+                    ? t('text.done', {
+                        date: doc.textExtractedAt
+                          ? fmt.dateTime(doc.textExtractedAt)
+                          : '—',
+                      })
+                    : doc.textStatus === 'failed'
+                      ? t('text.failed', { reason: doc.textError ?? '' })
+                      : t(`text.${doc.textStatus}`)}
+                </p>
+                {doc.textStatus === 'unavailable' ? (
+                  <p className="mt-2 text-hint text-muted-ink">{t('text.unavailableHint')}</p>
+                ) : null}
+                {permissions.canManage ? (
+                  <div className="mt-4 border-t border-line-2 pt-4">
+                    <RereadButton documentId={doc.id} />
+                  </div>
+                ) : null}
+              </Section>
             </section>
           ) : null}
 

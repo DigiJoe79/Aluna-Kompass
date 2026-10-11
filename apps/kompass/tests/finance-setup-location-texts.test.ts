@@ -3,7 +3,7 @@ import messages from '../messages/de.json';
 
 /**
  * „Finanzen einrichten“ ist der Name des Rechts, nicht der Seite: Die Seite heißt in der Navigation
- * „Finanzen“ (Einstellungen → Finanzen). Hilfetexte nennen als Ort deshalb „Einstellungen → Finanzen“.
+ * „Finanzen“ (Einrichtung → Finanzen). Hilfetexte nennen als Ort deshalb „Einrichtung → Finanzen“.
  */
 function texts(value: unknown, path: string): { path: string; text: string }[] {
   if (typeof value === 'string') return [{ path, text: value }];

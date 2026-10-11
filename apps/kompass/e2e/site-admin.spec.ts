@@ -1,7 +1,7 @@
 import { expect, test } from './fixtures';
 import { loginAsAdmin, resetDatabase } from './helpers';
 
-test('das alte Lesezeichen führt auf den Template-Reiter der Einstellungen', async ({ page }) => {
+test('das alte Lesezeichen führt auf den Template-Reiter der Webseiten-Einrichtung', async ({ page }) => {
   await resetDatabase(page, 'seeded');
   await loginAsAdmin(page);
   await page.goto('/site/template');
@@ -17,7 +17,7 @@ test('das alte Lesezeichen führt auf den Template-Reiter der Einstellungen', as
   await expect(nav.getByRole('link', { name: 'Webseite', exact: true })).toHaveAttribute('aria-current', 'page');
 });
 
-test('Verbindung testen unter Einstellungen → Webseite räumt nichts am Ziel', async ({ page }) => {
+test('Verbindung testen unter Einrichtung → Webseite räumt nichts am Ziel', async ({ page }) => {
   test.setTimeout(60_000);
   await resetDatabase(page, 'seeded');
   await loginAsAdmin(page);
@@ -47,7 +47,7 @@ test('Verbindung testen unter Einstellungen → Webseite räumt nichts am Ziel',
   }
 });
 
-test('Cache leeren unter Einstellungen → Webseite', async ({ page }) => {
+test('Cache leeren unter Einrichtung → Webseite', async ({ page }) => {
   test.setTimeout(180_000);
   await resetDatabase(page, 'seeded');
   await loginAsAdmin(page);

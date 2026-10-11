@@ -15,6 +15,7 @@ import { PreviewDetails } from './preview-details';
 import { PreviewSummary } from './preview-summary';
 import { RunCard } from './run-card';
 import { panelHref } from '@/components/panel-nav';
+import { SectionHeading } from '@/components/section';
 
 export { endText } from './end-text';
 
@@ -51,7 +52,7 @@ function PendingSince({ pending }: { pending: PendingView }) {
   const shown = pending.items.slice(0, 4);
   const rest = pending.count - shown.length;
   return (
-    <p data-testid="site-pending-since" className="text-[14px] text-ink-2">
+    <p data-testid="site-pending-since" className="text-body text-ink-2">
       {tp('since', { date: fmt.date(pending.since!) })}{' '}
       {shown.map((item, i) => (
         <Fragment key={item.key}>
@@ -108,9 +109,9 @@ export function PublishFlowCard(p: PublishFlowCardProps) {
   /** Die Publizieren-Knöpfe: ohne Ziel oder in der Entwicklung gibt es keinen, sondern einen Satz. */
   const noPublishNote = (): ReactNode =>
     p.env === 'development' ? (
-      <p className="text-[13px] text-muted-ink">{t('flow.notHere')}</p>
+      <p className="text-meta text-muted-ink">{t('flow.notHere')}</p>
     ) : !p.hasDeploy ? (
-      <p className="text-[13px] text-muted-ink">
+      <p className="text-meta text-muted-ink">
         {t('flow.noTarget')}{' '}
         {p.canManage ? (
           <Link href={panelHref('/admin/site', 'connection')} className="text-link underline">
@@ -133,13 +134,13 @@ export function PublishFlowCard(p: PublishFlowCardProps) {
         pending && pending.count > 0 && pending.since ? (
           <PendingSince pending={pending} />
         ) : (
-          <p className="text-[14px] text-ink-2">{state.lastPublishedAt ? t('flow.none.text', { date: dateTime(state.lastPublishedAt) }) : t('flow.none.textNever')}</p>
+          <p className="text-body text-ink-2">{state.lastPublishedAt ? t('flow.none.text', { date: dateTime(state.lastPublishedAt) }) : t('flow.none.textNever')}</p>
         );
       actions = primary(t('flow.startPreview'), p.onStartPreview);
       break;
     case 'outdated':
       title = t('flow.outdated.title');
-      body = <p className="text-[14px] text-ink-2">{t('flow.outdated.text', { time: time(state.preview.finishedAt) })}</p>;
+      body = <p className="text-body text-ink-2">{t('flow.outdated.text', { time: time(state.preview.finishedAt) })}</p>;
       actions = primary(t('flow.rebuild'), p.onStartPreview);
       break;
     case 'running': {
@@ -158,7 +159,7 @@ export function PublishFlowCard(p: PublishFlowCardProps) {
         : t('flow.ready.metaNoName', { when: dateTime(pv.finishedAt), hash: (pv.contentHash ?? '').slice(0, 12) });
       body = (
         <>
-          <p className="text-[12px] text-muted-ink">{meta}</p>
+          <p className="text-hint text-muted-ink">{meta}</p>
           <PreviewSummary counts={pv.counts} />
           <PreviewDetails detail={pv} />
         </>
@@ -176,7 +177,7 @@ export function PublishFlowCard(p: PublishFlowCardProps) {
       eyebrow = t('flow.step2');
       title = t('flow.unchanged.title');
       const pv = state.preview;
-      body = <p className="text-[14px] text-ink-2">{t('flow.unchanged.text', { time: time(pv.finishedAt), host: host ?? '—' })}</p>;
+      body = <p className="text-body text-ink-2">{t('flow.unchanged.text', { time: time(pv.finishedAt), host: host ?? '—' })}</p>;
       actions = (
         <>
           {openPreview}
@@ -198,7 +199,7 @@ export function PublishFlowCard(p: PublishFlowCardProps) {
       const pv = state.preview;
       body = (
         <>
-          <p className="text-[14px] text-ink-2">{t('flow.blocked.text')}</p>
+          <p className="text-body text-ink-2">{t('flow.blocked.text')}</p>
           <BlockedNotice violations={pv.violations ?? []} canManage={p.canManage} />
           <PreviewSummary counts={pv.counts} />
           <PreviewDetails detail={pv} />
@@ -231,21 +232,21 @@ export function PublishFlowCard(p: PublishFlowCardProps) {
         eyebrow = t('flow.step2');
         body = (
           <>
-            <p className="text-[14px] text-ink-2">
+            <p className="text-body text-ink-2">
               {t('flow.end.success.text', { when: dateTime(job.finishedAt), changed: job.counts.changed, added: job.counts.added, removed: job.counts.removed })}
             </p>
             {p.publicUrl ? (
-              <a href={p.publicUrl} target="_blank" rel="noreferrer" className="w-fit text-[14px] font-medium text-link underline">
+              <a href={p.publicUrl} target="_blank" rel="noreferrer" className="w-fit text-body text-link underline">
                 {t('flow.end.success.open', { host: host ?? p.publicUrl })}
               </a>
             ) : null}
-            <p className="text-[13px] text-muted-ink">{t('flow.end.success.consumed')}</p>
+            <p className="text-meta text-muted-ink">{t('flow.end.success.consumed')}</p>
           </>
         );
         actions = outline(t('flow.startPreview'), p.onStartPreview);
       } else {
         eyebrow = job.kind === 'publish' ? t('flow.step2') : t('flow.step1');
-        body = <p className={`text-[14px] ${failed ? 'text-ink' : 'text-ink-2'}`}>{endText(job, tr)}</p>;
+        body = <p className={`text-body ${failed ? 'text-ink' : 'text-ink-2'}`}>{endText(job, tr)}</p>;
         actions =
           state.retry === 'publish' && canPublishHere
             ? primary(t('flow.end.retryPublish'), p.onRetryPublish)
@@ -272,12 +273,14 @@ export function PublishFlowCard(p: PublishFlowCardProps) {
         {title}
       </span>
       <div className="flex flex-col gap-1">
-        <p className="text-[12px] font-semibold text-muted-ink">{eyebrow}</p>
+        <p className="text-hint font-semibold text-muted-ink">{eyebrow}</p>
         {state.kind === 'running' ? null : (
-          <h2 ref={p.headingRef} tabIndex={-1} className="flex items-center gap-2 font-heading text-[20px] leading-[25px] outline-none">
-            {titleIcon}
-            {title}
-          </h2>
+          <SectionHeading ref={p.headingRef}>
+            <span className="inline-flex items-center gap-2">
+              {titleIcon}
+              {title}
+            </span>
+          </SectionHeading>
         )}
       </div>
       {body}

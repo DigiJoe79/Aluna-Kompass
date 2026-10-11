@@ -18,11 +18,11 @@ export function EnvBanner({ banner, context, date }: { banner: Banner; context: 
       ? (context.lastImportAt ? t('testContext', { date: date(context.lastImportAt) }) : t('testContextNoImport'))
       : t('devContext', { migrations: context.migrationCount });
   return (
-    <div data-testid="env-banner" aria-label={label} style={{ background: c.bg, color: c.fg, height: 28 }} className="relative flex items-center justify-center gap-3 overflow-hidden text-[12px] font-bold tracking-[.18em]">
+    <div data-testid="env-banner" aria-label={label} style={{ background: c.bg, color: c.fg, height: 28 }} className="relative flex items-center justify-center gap-3 overflow-hidden text-hint font-semibold">
       <div aria-hidden style={{ background: stripe(135), width: c.stripe, opacity: 0.9 }} className="absolute inset-y-0 left-0" />
       <div aria-hidden style={{ background: stripe(45), width: c.stripe, opacity: 0.9 }} className="absolute inset-y-0 right-0" />
       <span className="relative z-[1]">{label}</span>
-      <span className="relative z-[1] text-[11px] font-normal tracking-normal">{detail}</span>
+      <span className="relative z-[1] text-hint font-normal">{detail}</span>
     </div>
   );
 }

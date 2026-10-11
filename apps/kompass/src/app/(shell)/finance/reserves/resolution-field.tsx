@@ -19,7 +19,7 @@ export function ResolutionField({ id, document, onDocument, onFile }: { id: stri
           if (d) onFile(null);
         }}
       />
-      <p className="text-[12px] text-muted-ink">{t('upload')}</p>
+      <p className="text-hint text-muted-ink">{t('upload')}</p>
       <input
         type="file"
         accept="application/pdf"

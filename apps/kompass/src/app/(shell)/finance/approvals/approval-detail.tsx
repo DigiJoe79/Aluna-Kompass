@@ -150,15 +150,15 @@ export function ApprovalDetail({
             >
               <div className="flex items-baseline justify-between gap-3">
                 <div className="min-w-0">
-                  <p className="text-[12px] font-semibold text-muted-ink">{t('position', { n: i + 1 })}</p>
-                  <p className="text-[14px] text-ink">{p.kind === 'trip' ? t('trip', { from: p.tripFrom ?? '', to: p.tripTo ?? '', km: p.tripKm ?? 0 }) : p.purpose}</p>
-                  <p className="text-[12px] text-muted-ink">
+                  <p className="text-hint font-semibold text-muted-ink">{t('position', { n: i + 1 })}</p>
+                  <p className="text-body text-ink">{p.kind === 'trip' ? t('trip', { from: p.tripFrom ?? '', to: p.tripTo ?? '', km: p.tripKm ?? 0 }) : p.purpose}</p>
+                  <p className="text-hint text-muted-ink">
                     {fmt.date(p.positionDate)}
                     {p.kind === 'trip' && p.tripReason ? ` · ${p.tripReason}` : ''}
                     {p.projectId && projects[p.projectId] ? ` · ${t('project', { name: projects[p.projectId]! })}` : ''}
                   </p>
                 </div>
-                <span className="shrink-0 font-mono text-[15px] font-semibold tabular-nums">{formatEuro(p.amountCents)}</span>
+                <span className="shrink-0 font-mono text-section tabular-nums">{formatEuro(p.amountCents)}</span>
               </div>
 
               <FormGrid>
@@ -172,7 +172,7 @@ export function ApprovalDetail({
                     ))}
                   </Select>
                   {category ? (
-                    <p data-testid="category-explanation" className="text-[11px] text-muted-ink">
+                    <p data-testid="category-explanation" className="text-hint text-muted-ink">
                       {tRow(`sphere.${category.sphere}`)}
                       {category.explanation ? ` · ${category.explanation}` : ''}
                     </p>
@@ -193,7 +193,7 @@ export function ApprovalDetail({
               </FormGrid>
 
               {suggestion && suggestion.categoryId !== decision.categoryId ? (
-                <p data-testid="category-suggestion" className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[12px] text-muted-ink">
+                <p data-testid="category-suggestion" className="flex flex-wrap items-center gap-x-2 gap-y-1 text-hint text-muted-ink">
                   <span>
                     {t('suggestion.because')}{' '}
                     {suggestion.reason.kind === 'rule'
@@ -211,7 +211,7 @@ export function ApprovalDetail({
               ) : null}
 
               {p.documentId ? (
-                <a href={receiptHref(p.documentId)} target="_blank" rel="noreferrer" className="inline-flex text-[13px] underline underline-offset-2 hover:text-link lg:hidden">
+                <a href={receiptHref(p.documentId)} target="_blank" rel="noreferrer" className="inline-flex text-meta underline underline-offset-2 hover:text-link lg:hidden">
                   {t('receipt.view')}
                 </a>
               ) : null}
@@ -219,13 +219,13 @@ export function ApprovalDetail({
           );
         })}
       </ol>
-      {!claim.receiptsVisible ? <p className="text-[12px] text-muted-ink">{t('receipt.hidden')}</p> : null}
+      {!claim.receiptsVisible ? <p className="text-hint text-muted-ink">{t('receipt.hidden')}</p> : null}
     </section>
   );
 
   const receiptPane = preview?.documentId ? (
     <figure data-testid="receipt-preview" className="hidden space-y-1 lg:block">
-      <figcaption className="text-[12px] text-muted-ink">{t('receipt.preview', { n: claim.positions.indexOf(preview) + 1 })}</figcaption>
+      <figcaption className="text-hint text-muted-ink">{t('receipt.preview', { n: claim.positions.indexOf(preview) + 1 })}</figcaption>
       <iframe title={t('receipt.preview', { n: claim.positions.indexOf(preview) + 1 })} src={receiptHref(preview.documentId)} className="h-[520px] w-full rounded-md border border-line bg-paper" />
     </figure>
   ) : null;
@@ -242,7 +242,7 @@ export function ApprovalDetail({
     note: (
       <>
         <p>{claim.waiver ? t('footer.waiver', { name: claim.contactName, amount }) : t('footer.payable', { name: claim.contactName, amount })}</p>
-        <p className="text-[12px] text-muted-ink">{t('footer.humanOnly')}</p>
+        <p className="text-hint text-muted-ink">{t('footer.humanOnly')}</p>
       </>
     ),
     reject: (

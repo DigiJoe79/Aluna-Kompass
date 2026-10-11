@@ -99,6 +99,9 @@ export const animalStories = sqliteTable('animal_stories', {
   /** Unterschrift unter dem Vorher- bzw. Nachher-Bild. Leer heißt: das Template zeigt keine Ortsangabe. */
   beforeCaption: text('before_caption', { mode: 'json' }).$type<LocalizedText>().notNull().default({}),
   afterCaption: text('after_caption', { mode: 'json' }).$type<LocalizedText>().notNull().default({}),
+  /** Ausschnitt des Vorher- bzw. Nachher-Bildes (Spec Ausschnitt für alle Bilder § 3); `null` = ganzes Bild. */
+  beforeCrop: text('before_crop', { mode: 'json' }).$type<PhotoCrop>(),
+  afterCrop: text('after_crop', { mode: 'json' }).$type<PhotoCrop>(),
 });
 
 export const animalProposals = sqliteTable(

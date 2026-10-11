@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { idleState } from '@/lib/actions';
 import { completeSetupAction } from './actions';
 import { Select } from '@/components/ui/select';
+import { Section } from '@/components/section';
 
 const PRESET_LOCALES = [
   { code: 'de', label: 'Deutsch (de)' },
@@ -28,66 +29,60 @@ export function SetupForm() {
   return (
     <form action={action} className="flex flex-col gap-4">
       <RefusalNotice state={state} />
-      <section>
-        <h3 className="text-[15px] font-semibold">{t('sections.organization')}</h3>
-        <div className="mt-3">
-          <FormGrid>
-            <FormField id="organizationName" label={t('organizationName')} error={errors.organizationName}>
-              <Input id="organizationName" name="organizationName" required autoComplete="organization" />
-            </FormField>
-            <FormField id="locale-select" label={t('locale')} error={errors.locale}>
-              <Select
-                id="locale-select"
+      <Section title={t('sections.organization')}>
+        <FormGrid>
+          <FormField id="organizationName" label={t('organizationName')} error={errors.organizationName}>
+            <Input id="organizationName" name="organizationName" required autoComplete="organization" />
+          </FormField>
+          <FormField id="locale-select" label={t('locale')} error={errors.locale}>
+            <Select
+              id="locale-select"
 
-                value={isCustom ? 'custom' : selectedLocale}
-                onChange={(e) => {
-                  if (e.target.value === 'custom') {
-                    setIsCustom(true);
-                  } else {
-                    setIsCustom(false);
-                    setSelectedLocale(e.target.value);
-                  }
-                }}
-              >
-                {PRESET_LOCALES.map((l) => (
-                  <option key={l.code} value={l.code}>{l.label}</option>
-                ))}
-                <option value="custom">{t('localeOther')}</option>
-              </Select>
-              {isCustom ? (
-                <div className="mt-2">
-                  <Input
-                    id="locale"
-                    name="locale"
-                    placeholder={t('localePlaceholder')}
-                    required
-                    pattern="[a-z]{2}(-[a-z]{2})?"
-                    className="font-mono"
-                  />
-                </div>
-              ) : (
-                <input type="hidden" name="locale" value={selectedLocale} />
-              )}
-            </FormField>
-          </FormGrid>
-        </div>
-      </section>
-      <section className="border-t border-line pt-5">
-        <h3 className="text-[15px] font-semibold">{t('sections.account')}</h3>
-        <div className="mt-3">
-          <FormGrid>
-            <FormField id="name" label={t('name')} error={errors.name}>
-              <Input id="name" name="name" required autoComplete="name" />
-            </FormField>
-            <FormField id="email" label={t('email')} error={errors.email}>
-              <Input id="email" name="email" type="email" required autoComplete="email" />
-            </FormField>
-            <FormField id="password" label={t('password')} hint={t('passwordHint')} error={errors.password}>
-              <Input id="password" name="password" type="password" required autoComplete="new-password" minLength={12} />
-            </FormField>
-          </FormGrid>
-        </div>
-      </section>
+              value={isCustom ? 'custom' : selectedLocale}
+              onChange={(e) => {
+                if (e.target.value === 'custom') {
+                  setIsCustom(true);
+                } else {
+                  setIsCustom(false);
+                  setSelectedLocale(e.target.value);
+                }
+              }}
+            >
+              {PRESET_LOCALES.map((l) => (
+                <option key={l.code} value={l.code}>{l.label}</option>
+              ))}
+              <option value="custom">{t('localeOther')}</option>
+            </Select>
+            {isCustom ? (
+              <div className="mt-2">
+                <Input
+                  id="locale"
+                  name="locale"
+                  placeholder={t('localePlaceholder')}
+                  required
+                  pattern="[a-z]{2}(-[a-z]{2})?"
+                  className="font-mono"
+                />
+              </div>
+            ) : (
+              <input type="hidden" name="locale" value={selectedLocale} />
+            )}
+          </FormField>
+        </FormGrid>
+      </Section>
+      <Section title={t('sections.account')}>
+        <FormGrid>
+          <FormField id="name" label={t('name')} error={errors.name}>
+            <Input id="name" name="name" required autoComplete="name" />
+          </FormField>
+          <FormField id="email" label={t('email')} error={errors.email}>
+            <Input id="email" name="email" type="email" required autoComplete="email" />
+          </FormField>
+          <FormField id="password" label={t('password')} hint={t('passwordHint')} error={errors.password}>
+            <Input id="password" name="password" type="password" required autoComplete="new-password" minLength={12} />
+          </FormField>
+        </FormGrid>
+      </Section>
       <SubmitButton className="h-10 w-full">{t('submit')}</SubmitButton>
     </form>
   );

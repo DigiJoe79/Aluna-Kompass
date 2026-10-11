@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { bannerFor } from '@/lib/env-banner';
+import { bannerFor, titleKeyFor } from '@/lib/env-banner';
 
 describe('bannerFor', () => {
   it('is absent in production', () => {
@@ -13,5 +13,17 @@ describe('bannerFor', () => {
   it('names the kind of environment, not its label', () => {
     expect(bannerFor('test', { lastImportAt: '2026-09-02T09:00:00.000Z', migrationCount: 3 })).toEqual({ kind: 'test' });
     expect(bannerFor('development', { lastImportAt: null, migrationCount: 3 })).toEqual({ kind: 'development' });
+  });
+});
+
+/**
+ * Seitentitel je Umgebung (Joe 2026-10-11): Prod und Test laufen auf demselben NAS, Safari blendet den Port aus —
+ * Tab und Kachel müssen sagen, welche Instanz es ist. Prod heißt wie das Produkt, Test und Dev tragen die Art.
+ */
+describe('titleKeyFor', () => {
+  it('nennt in Produktion den Produktnamen, sonst die Art der Instanz', () => {
+    expect(titleKeyFor('production')).toBe('app.name');
+    expect(titleKeyFor('test')).toBe('app.titleTest');
+    expect(titleKeyFor('development')).toBe('app.titleDevelopment');
   });
 });

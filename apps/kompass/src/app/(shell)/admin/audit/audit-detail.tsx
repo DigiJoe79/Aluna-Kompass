@@ -10,6 +10,7 @@ import { auditActionLabel } from '@/lib/audit-actions';
 import { changedFieldsOf, diffFields } from '@/lib/audit-diff';
 import type { AuditObject } from '@/lib/audit-entities';
 import { AuditObjectLabel } from './audit-object';
+import { KeyLine } from '@/components/key-line';
 
 /**
  * `sentence`: der Satz aus `auditSentences`; `null` (alter Eintrag, Aktion ohne Satz) → keine Zeile „Was geschah“.
@@ -43,21 +44,21 @@ export function AuditDetail({ entry, sentence, object }: { entry: AuditEntry; se
       <SheetContent side="right" size="md" className="gap-0 overflow-y-auto bg-surface shadow-md">
         <div className="p-5">
           <SheetTitle>{auditActionLabel(a, entry.action)}</SheetTitle>
-          <p className="mt-1 font-mono text-[12px] text-muted-ink">
+          <p className="mt-1 font-mono text-hint text-muted-ink">
             {fmt.dateTime(entry.occurredAt, { seconds: true })}
           </p>
           <div className="mt-4 flex flex-col gap-2">
             {changed !== null ? (
-              <div className="rounded-md border border-line bg-surface-2 px-3 py-2.5 text-[13px]" data-testid="audit-changed-fields">
+              <div className="rounded-md border border-line bg-surface-2 px-3 py-2.5 text-meta" data-testid="audit-changed-fields">
                 <p>{t('changedFields', { fields: changed.map(labelOf).join(', ') })}</p>
-                <p className="mt-1 text-[12px] text-muted-ink">{t('changedFieldsNote')}</p>
+                <p className="mt-1 text-hint text-muted-ink">{t('changedFieldsNote')}</p>
               </div>
             ) : null}
-            {rows.length === 0 && changed === null ? <p className="text-[13px] text-muted-ink">{t('noDiff')}</p> : null}
+            {rows.length === 0 && changed === null ? <p className="text-meta text-muted-ink">{t('noDiff')}</p> : null}
             {rows.map((row) => (
               <div key={row.key} className="rounded-md border border-line bg-surface-2 px-3 py-2.5">
-                <div className="font-mono text-[11px] text-muted-ink">{row.key}</div>
-                <div className="mt-1 grid grid-cols-[38px_minmax(0,1fr)] gap-1 font-mono text-[12px]">
+                <KeyLine>{row.key}</KeyLine>
+                <div className="mt-1 grid grid-cols-[38px_minmax(0,1fr)] gap-1 font-mono text-hint">
                   <span className="text-muted-ink">{t('before')}</span>
                   <span className="rounded-sm bg-code px-1.5 text-muted-ink line-through">
                     {row.before ?? '—'}
@@ -70,7 +71,7 @@ export function AuditDetail({ entry, sentence, object }: { entry: AuditEntry; se
               </div>
             ))}
           </div>
-          <dl className="mt-4 grid grid-cols-[110px_minmax(0,1fr)] gap-y-1 text-[13px]">
+          <dl className="mt-4 grid grid-cols-[110px_minmax(0,1fr)] gap-y-1 text-meta">
             <dt className="text-muted-ink">{t('user')}</dt>
             <dd>{entry.userName ?? '—'}</dd>
             <dt className="text-muted-ink">{t('channel')}</dt>
@@ -107,7 +108,7 @@ export function AuditDetail({ entry, sentence, object }: { entry: AuditEntry; se
               {entry.entityId ? <CopyButton value={entry.entityId} label={t('objectKey')} /> : null}
             </dd>
           </dl>
-          <p className="mt-6 text-[12px] text-muted-ink">{t('immutable')}</p>
+          <p className="mt-6 text-hint text-muted-ink">{t('immutable')}</p>
         </div>
       </SheetContent>
     </Sheet>

@@ -376,7 +376,7 @@ describe('crumbsFor', () => {
     ({
       'nav.home': 'Startseite',
       'nav.profile': 'Profil',
-      'nav.settingsArea': 'Einstellungen',
+      'nav.settingsArea': 'System',
       'nav.groups.admin': 'Verwaltung',
       'nav.groups.config': 'Einrichtung',
       'nav.groups.site': 'Webseite',
@@ -422,7 +422,7 @@ describe('crumbsFor', () => {
 
   it('gives settings three segments, the last one current on its own page', () => {
     expect(crumbsFor(FIXTURE, '/admin/themes', t)).toEqual([
-      { label: 'Einstellungen', current: false },
+      { label: 'System', current: false },
       { label: 'Einrichtung', current: false },
       { label: 'Erscheinungsbild', href: '/admin/themes', current: true },
     ]);

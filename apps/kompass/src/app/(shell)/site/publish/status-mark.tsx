@@ -8,7 +8,7 @@ export function StatusMark({ status }: { status: PublishSummary['status'] }) {
   const Icon = status === 'success' ? Check : status === 'failed' ? AlertTriangle : Pause;
   const tone = status === 'success' ? 'text-success' : status === 'failed' ? 'text-error' : 'text-muted-ink';
   return (
-    <span className={`inline-flex items-center gap-1.5 font-medium ${tone}`}>
+    <span className={`inline-flex items-center gap-1.5 font-semibold ${tone}`}>
       <Icon className="size-4 shrink-0" aria-hidden />
       {t(status)}
     </span>

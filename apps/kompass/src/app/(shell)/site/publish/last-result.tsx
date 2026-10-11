@@ -74,7 +74,7 @@ export function LastResult({ kind, onRestart, restartDisabled }: { kind: SiteJob
   if (!summary || summary.status === 'success') return null;
   const reason = summary.status === 'interrupted' ? t('run.reason.interrupted') : summary.reason ? t(`run.reason.${summary.reason}`) : (summary.error?.message ?? '');
   return (
-    <section aria-label={t('run.lastTitle', { kind: t(`job.names.${kind}`) })} className="flex flex-col gap-2 rounded-md border border-line bg-surface-2 p-3 text-[13px]">
+    <section aria-label={t('run.lastTitle', { kind: t(`job.names.${kind}`) })} className="flex flex-col gap-2 rounded-md border border-line bg-surface-2 p-3 text-meta">
       <p className="flex items-start gap-2 font-semibold text-error">
         <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden />
         {t(`run.status.${summary.status}`)}

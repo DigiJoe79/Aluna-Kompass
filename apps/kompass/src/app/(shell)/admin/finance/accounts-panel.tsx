@@ -23,6 +23,7 @@ import { FieldError } from '@/components/forms/field-error';
 import { FormField } from '@/components/forms/form-field';
 import { FormCell, FormGrid } from '@/components/forms/form-grid';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Section } from '@/components/section';
 
 export interface AccountRow {
   id: string;
@@ -77,11 +78,11 @@ export function AccountsPanel({ accounts, canPickDocument }: { accounts: Account
           <TableBody>
             {accounts.map((row) => (
               <TableRow key={row.id} data-testid={`account-row-${row.name}`}>
-                <TableCell className="font-medium text-ink">
+                <TableCell className="text-ink">
                   {row.name} {row.isMain ? <StatusBadge tone="brand">{t('dialog.isMain')}</StatusBadge> : null}
                 </TableCell>
                 <TableCell className="text-ink-2">{t(`kind.${row.kind}`)}</TableCell>
-                <TableCell className="font-mono text-[13px] text-muted-ink">{row.iban ?? '—'}</TableCell>
+                <TableCell className="font-mono text-meta text-muted-ink">{row.iban ?? '—'}</TableCell>
                 <TableCell>
                   <StatusBadge tone={row.isActive ? 'success' : 'neutral'}>{row.isActive ? t('active') : t('inactiveState')}</StatusBadge>
                 </TableCell>
@@ -195,69 +196,60 @@ function AccountDialog({ account, canPickDocument, onClose, onSaved }: { account
           ) : null}
         </DialogHeader>
         <DialogBody>
-          <section>
-            <h3 className="text-[15px] font-semibold">{t('dialog.sections.account')}</h3>
-            <div className="mt-3">
-              <FormGrid>
-                <FormField id="account-name" label={t('dialog.name')} required>
-                  <Input id="account-name" value={name} onChange={(e) => setName(e.target.value)} required />
-                </FormField>
-                <FormField id="account-kind" label={t('dialog.kind')} size="s">
-                  <Select id="account-kind" value={kind} onChange={(e) => setKind(e.target.value as typeof kind)}>
-                    <option value="bank">{t('kind.bank')}</option>
-                    <option value="cash">{t('kind.cash')}</option>
-                    <option value="paymentService">{t('kind.paymentService')}</option>
-                  </Select>
-                </FormField>
-              </FormGrid>
-            </div>
-          </section>
+          <Section title={t('dialog.sections.account')}>
+            <FormGrid>
+              <FormField id="account-name" label={t('dialog.name')} required>
+                <Input id="account-name" value={name} onChange={(e) => setName(e.target.value)} required />
+              </FormField>
+              <FormField id="account-kind" label={t('dialog.kind')} size="s">
+                <Select id="account-kind" value={kind} onChange={(e) => setKind(e.target.value as typeof kind)}>
+                  <option value="bank">{t('kind.bank')}</option>
+                  <option value="cash">{t('kind.cash')}</option>
+                  <option value="paymentService">{t('kind.paymentService')}</option>
+                </Select>
+              </FormField>
+            </FormGrid>
+          </Section>
           {kind === 'bank' ? (
-            <section className="mt-5 border-t border-line pt-5">
-              <h3 className="text-[15px] font-semibold">{t('dialog.sections.bank')}</h3>
-              <div className="mt-3">
-                <FormGrid>
-                  <FormField id="account-iban" label={t('dialog.iban')} error={ibanIssue ? t(`dialog.ibanState.${ibanIssue}`) : undefined}>
-                    <Input id="account-iban" value={iban} onChange={(e) => setIban(e.target.value)} aria-invalid={ibanIssue !== null} />
-                    {ibanCheck.state === 'valid' ? <p className="text-[12px] text-success">{t('dialog.ibanState.valid')}</p> : null}
-                  </FormField>
-                  <FormField id="account-bic" label={t('dialog.bic')} size="s">
-                    <Input id="account-bic" value={bic} onChange={(e) => setBic(e.target.value)} />
-                  </FormField>
-                  <FormField id="account-bank-name" label={t('dialog.bankName')}>
-                    <Input id="account-bank-name" value={bankName} onChange={(e) => setBankName(e.target.value)} />
-                  </FormField>
-                  <FormField id="account-main" label={t('dialog.isMain')} hint={isMain ? t('dialog.isMainHint') : undefined} toggle>
-                    <Checkbox id="account-main" checked={isMain} onCheckedChange={(checked) => setIsMain(checked)} />
-                  </FormField>
-                </FormGrid>
-              </div>
-            </section>
-          ) : null}
-          <section className="mt-5 border-t border-line pt-5">
-            <h3 className="text-[15px] font-semibold">{t('dialog.sections.opening')}</h3>
-            <div className="mt-3">
+            <Section title={t('dialog.sections.bank')}>
               <FormGrid>
-                <FormField id="account-opening" label={t('dialog.openingBalance')} size="s">
-                  <Input id="account-opening" value={openingText} onChange={(e) => setOpeningText(e.target.value)} placeholder="0,00" />
+                <FormField id="account-iban" label={t('dialog.iban')} error={ibanIssue ? t(`dialog.ibanState.${ibanIssue}`) : undefined}>
+                  <Input id="account-iban" value={iban} onChange={(e) => setIban(e.target.value)} aria-invalid={ibanIssue !== null} />
+                  {ibanCheck.state === 'valid' ? <p className="text-hint text-success">{t('dialog.ibanState.valid')}</p> : null}
                 </FormField>
-                <FormField id="account-opening-date" label={t('dialog.openingDate')} size="s">
-                  <Input id="account-opening-date" type="date" value={openingDate} onChange={(e) => setOpeningDate(e.target.value)} />
+                <FormField id="account-bic" label={t('dialog.bic')} size="s">
+                  <Input id="account-bic" value={bic} onChange={(e) => setBic(e.target.value)} />
                 </FormField>
-                {openingMismatch ? (
-                  // Betrifft Betrag und Datum zusammen, deshalb über die ganze Zeile statt an einem Feld.
-                  <FormCell size="full"><FieldError id="account-opening-error" message={t('dialog.openingBoth')} /></FormCell>
-                ) : null}
-                <FormCell size="m">
-                  {canPickDocument ? (
-                    <DocumentPicker id="account-document" name="document" label={t('dialog.document')} value={document} onChange={setDocument} />
-                  ) : (
-                    <p className="text-[12px] text-muted-ink">{t('dialog.documentNoAccess')}</p>
-                  )}
-                </FormCell>
+                <FormField id="account-bank-name" label={t('dialog.bankName')}>
+                  <Input id="account-bank-name" value={bankName} onChange={(e) => setBankName(e.target.value)} />
+                </FormField>
+                <FormField id="account-main" label={t('dialog.isMain')} hint={isMain ? t('dialog.isMainHint') : undefined} toggle>
+                  <Checkbox id="account-main" checked={isMain} onCheckedChange={(checked) => setIsMain(checked)} />
+                </FormField>
               </FormGrid>
-            </div>
-          </section>
+            </Section>
+          ) : null}
+          <Section title={t('dialog.sections.opening')}>
+            <FormGrid>
+              <FormField id="account-opening" label={t('dialog.openingBalance')} size="s">
+                <Input id="account-opening" value={openingText} onChange={(e) => setOpeningText(e.target.value)} placeholder="0,00" />
+              </FormField>
+              <FormField id="account-opening-date" label={t('dialog.openingDate')} size="s">
+                <Input id="account-opening-date" type="date" value={openingDate} onChange={(e) => setOpeningDate(e.target.value)} />
+              </FormField>
+              {openingMismatch ? (
+                // Betrifft Betrag und Datum zusammen, deshalb über die ganze Zeile statt an einem Feld.
+                <FormCell size="full"><FieldError id="account-opening-error" message={t('dialog.openingBoth')} /></FormCell>
+              ) : null}
+              <FormCell size="m">
+                {canPickDocument ? (
+                  <DocumentPicker id="account-document" name="document" label={t('dialog.document')} value={document} onChange={setDocument} />
+                ) : (
+                  <p className="text-hint text-muted-ink">{t('dialog.documentNoAccess')}</p>
+                )}
+              </FormCell>
+            </FormGrid>
+          </Section>
         </DialogBody>
         <FormActionBar
           placement="dialog"

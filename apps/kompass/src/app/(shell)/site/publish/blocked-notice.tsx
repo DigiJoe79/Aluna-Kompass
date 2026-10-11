@@ -32,14 +32,14 @@ function Hit({ v }: { v: Violation }) {
   const href = editHref(v.edit);
   return (
     <li className="flex flex-col gap-1">
-      <p className="text-[13px]">
-        <strong className="font-bold text-error">{v.term}</strong> · <span className="font-mono text-[12px]">{v.path}</span>
+      <p className="text-meta">
+        <strong className="text-error">{v.term}</strong> · <span className="font-mono text-hint">{v.path}</span>
       </p>
-      <p className="text-[13px] text-ink-2">
+      <p className="text-meta text-ink-2">
         <Excerpt text={v.excerpt} term={v.term} />
       </p>
       {href && v.edit ? (
-        <Link href={href} className="w-fit text-[13px] font-medium text-link underline">
+        <Link href={href} className="w-fit text-meta text-link underline">
           {v.edit.kind === 'variables' ? t('editVariables') : t('edit', { title: v.edit.title })}
         </Link>
       ) : null}
@@ -67,8 +67,8 @@ export function BlockedNotice({ violations, canManage }: { violations: NonNullab
             ))}
           </ul>
           {rest.length > 0 ? (
-            <details className="text-[13px]">
-              <summary className="cursor-pointer font-medium">{t('more', { count: rest.length })}</summary>
+            <details className="text-meta">
+              <summary className="cursor-pointer">{t('more', { count: rest.length })}</summary>
               <ul className="mt-3 flex flex-col gap-3">
                 {rest.map((v, i) => (
                   <Hit key={i} v={v} />
@@ -76,11 +76,11 @@ export function BlockedNotice({ violations, canManage }: { violations: NonNullab
               </ul>
             </details>
           ) : null}
-          <p className="text-[13px] text-ink-2">
+          <p className="text-meta text-ink-2">
             {canManage
               ? t.rich('manage', {
                   link: (chunks) => (
-                    <Link href={panelHref('/admin/site', 'blockedTerms')} className="font-medium text-link underline">
+                    <Link href={panelHref('/admin/site', 'blockedTerms')} className="text-link underline">
                       {chunks}
                     </Link>
                   ),

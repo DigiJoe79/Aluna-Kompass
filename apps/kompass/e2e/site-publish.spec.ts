@@ -25,7 +25,7 @@ test('the preview blocks on a blocked term and says where to change it', async (
   await loginAsAdmin(page);
   await importTemplate(page);
 
-  // Die Liste liegt unter Einstellungen → Webseite; bis 0.1.1 ließ sie sich nirgends pflegen (Backlog 23).
+  // Die Liste liegt unter Einrichtung → Webseite; bis 0.1.1 ließ sie sich nirgends pflegen (Backlog 23).
   await page.goto('/admin/site?panel=blockedTerms');
   const terms = page.getByRole('region', { name: 'Sperrwörter' });
   await terms.getByLabel('Begriffe, einer je Zeile').fill('Popescu\nLorem ipsum');
@@ -62,7 +62,7 @@ test('the preview blocks on a blocked term and says where to change it', async (
   const pending = page.getByRole('region', { name: 'Noch zu prüfen' });
   await pending.getByText(/Noch zu prüfen/).click();
   await expect(pending.getByRole('link', { name: 'Mika' })).toHaveAttribute('href', /\/animals\/[A-Z0-9]+$/);
-  // Keine Verbindungsprobe auf dieser Seite: Sie liegt unter Einstellungen.
+  // Keine Verbindungsprobe auf dieser Seite: Sie liegt unter System → Webseite.
   await expect(page.locator('main').getByText('Verbindung')).toHaveCount(0);
 
   await blocked.getByRole('link', { name: 'Liste der gesperrten Begriffe' }).click();

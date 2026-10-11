@@ -33,7 +33,7 @@ export default async function HomePage() {
       }
     >
       {tiles.length === 0 ? (
-        <p className="text-[14px] text-ink-2">{t('noTiles')}</p>
+        <p className="text-body text-ink-2">{t('noTiles')}</p>
       ) : (
         // `grid-cols-1` ist `minmax(0,1fr)`: Ohne Vorgabe wuchs die implizite Spalte
         // auf dem Telefon auf die längste `truncate`-Zeile einer Kachel (602 px bei

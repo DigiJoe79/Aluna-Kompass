@@ -228,7 +228,7 @@ export function DocumentList({ documents, currentFolder, total, unfiltered, read
         onReset={resetFilters}
       />
 
-      {fulltextTooShort ? <p className="text-[13px] text-muted-ink">{t('searchTooShort')}</p> : null}
+      {fulltextTooShort ? <p className="text-meta text-muted-ink">{t('searchTooShort')}</p> : null}
 
       {shown.length === 0 && filtered ? (
         <EmptyState filtered={{ noun: t('list.emptyFilteredNoun'), onReset: resetFilters }} />
@@ -286,7 +286,7 @@ export function DocumentList({ documents, currentFolder, total, unfiltered, read
                       </TableCell>
                     ) : null}
                     {/* Die Nummer ist kopierwürdig und liegt über der Zeilenfläche; geöffnet wird über den Betreff. */}
-                    <TableCell selectable className="font-mono text-[13px] font-semibold text-ink">
+                    <TableCell selectable className="font-mono text-meta font-semibold text-ink">
                       {doc.number ?? '—'}
                     </TableCell>
                     {/* Betreff, Art und Ordner brechen um, damit „Ordner“ auch auf dem Tablet ohne Querscrollen sichtbar bleibt (Spec § 9). */}
@@ -319,7 +319,7 @@ export function DocumentList({ documents, currentFolder, total, unfiltered, read
                       </div>
                     </TableCell>
                     <TableCell className="min-w-[110px] whitespace-normal hyphens-auto wrap-anywhere text-ink-2 max-[1100px]:hidden">{doc.typeLabel}</TableCell>
-                    <TableCell className="font-mono text-[13px] text-ink-2">{fmt.date(doc.documentDate)}</TableCell>
+                    <TableCell className="font-mono text-meta text-ink-2">{fmt.date(doc.documentDate)}</TableCell>
                     {/* Der Ort unter dem geöffneten Ordner, als Namen mit „›“; leer heißt „direkt hier“. */}
                     <TableCell data-folder-cell className="min-w-[110px] whitespace-normal text-ink-2">
                       {doc.folder === null ? (doc.direction === 'incoming' ? t('inbox') : t('noFolder')) : namesBelow(doc.folder, openFolder).join(' › ')}
@@ -337,7 +337,7 @@ export function DocumentList({ documents, currentFolder, total, unfiltered, read
                   </TableRow>
                   {hits?.[doc.id] ? (
                     <TableRow className="even:bg-transparent">
-                      <TableCell colSpan={selectable ? 8 : 7} className="pt-0 pb-3 text-[13px] text-muted-ink">
+                      <TableCell colSpan={selectable ? 8 : 7} className="pt-0 pb-3 text-meta text-muted-ink">
                         {/* Die Trefferzeile gehört zum Dokument: eine zweite, für Vorleser unsichtbare Fläche, damit ein Klick auch hier öffnet. */}
                         <RowLink href={`/dms/${doc.id}`} aria-hidden tabIndex={-1} />
                         <SnippetText value={hits[doc.id]!.snippet} />{' '}
@@ -345,7 +345,7 @@ export function DocumentList({ documents, currentFolder, total, unfiltered, read
                             eigenen Betrachter und keine Bibliothek. */}
                         <a
                           href={`/dms/${doc.id}/preview#page=${hits[doc.id]!.page}`}
-                          className="font-medium underline underline-offset-2 hover:text-link"
+                          className="underline underline-offset-2 hover:text-link"
                         >
                           {t('hitOnPage', { page: hits[doc.id]!.page })}
                         </a>

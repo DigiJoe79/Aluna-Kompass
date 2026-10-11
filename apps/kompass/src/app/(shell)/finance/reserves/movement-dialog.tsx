@@ -119,7 +119,7 @@ export function MovementDialog({
             <FormGrid>
               {/* Sichtbares Label wie bei FormField (Entscheidung zum Inventar § E); die Leiste ist kein einzelnes Eingabefeld. */}
               <FormCell size="m" className="flex flex-col gap-1.5">
-                <span id="movement-kind-label" className="text-[13px] font-semibold text-ink-2">{t('kindLabel')}</span>
+                <span id="movement-kind-label" className="text-meta font-semibold text-ink-2">{t('kindLabel')}</span>
                 <Segmented
                   aria-labelledby="movement-kind-label"
                   options={KINDS.map((k) => ({ value: k, label: t(`kinds.${k}`), testId: `movement-kind-${k}` }))}
@@ -146,7 +146,7 @@ export function MovementDialog({
                   </Select>
                 </FormField>
               ) : null}
-              {kind === 'dissolve' ? <FormCell as="p" size="full" className="text-[13px] text-ink-2">{t('dissolveAmount', { amount: formatEuro(reserve.balanceCents) })}</FormCell> : null}
+              {kind === 'dissolve' ? <FormCell as="p" size="full" className="text-meta text-ink-2">{t('dissolveAmount', { amount: formatEuro(reserve.balanceCents) })}</FormCell> : null}
               <FormCell size="full">
                 <ResolutionField id="movement-resolution" document={document} onDocument={setDocument} onFile={setFile} />
               </FormCell>
@@ -161,7 +161,7 @@ export function MovementDialog({
                 </Notice>
               </div>
             ) : null}
-            <p className="text-[13px] text-ink" aria-live="polite" data-testid="movement-after">
+            <p className="text-meta text-ink" aria-live="polite" data-testid="movement-after">
               {t('after', { amount: formatEuro(after) })}
             </p>
           </div>

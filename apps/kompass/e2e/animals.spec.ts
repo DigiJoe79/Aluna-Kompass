@@ -1,6 +1,6 @@
 import { readFile } from 'node:fs/promises';
 import { expect, test } from './fixtures';
-import { loginAsAdmin, resetDatabase, setE2ESetting } from './helpers';
+import { loginAsAdmin, resetDatabase, setE2ESetting, waitForHydration } from './helpers';
 
 const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==', 'base64');
 const SVG = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="4" height="4"><rect width="4" height="4"/></svg>');
@@ -482,6 +482,126 @@ test.describe('animals', () => {
     const photo = page.getByTestId('animal-photo').first().locator('img');
     await expect(photo).toHaveCSS('aspect-ratio', '4 / 5');
     await expect(photo).toHaveCSS('object-position', '50% 25%');
+  });
+
+  /**
+   * Handover Ausschnitt (Plan B Task 5): setzen mit Tastatur, verschieben mit der Maus, Größe mit zwei Fingern,
+   * übernehmen, mit dem Tier speichern, entfernen. Kein Pixeltest: geprüft werden Zustand, Texte und Speichern.
+   */
+  test('setzt, verschiebt und entfernt den Bildausschnitt im Tierformular', async ({ page }) => {
+    await page.goto('/animals');
+    await page.getByRole('link', { name: 'Juno' }).click();
+    await page.getByRole('tab', { name: 'Texte und Fotos' }).click();
+    const tile = page.getByTestId('animal-photo').first();
+    await expect(tile).toContainText('ohne Ausschnitt');
+
+    await tile.getByRole('button', { name: 'Ausschnitt …' }).click();
+    const dialog = page.getByRole('dialog', { name: 'Ausschnitt' });
+    const rect = dialog.getByRole('slider', { name: 'Ausschnitt' });
+    const size = dialog.getByRole('slider', { name: 'Zoom' });
+    await expect(rect).toBeFocused();
+    await expect(size).toHaveValue('1');
+    // Tastatur: zweimal größer, einmal nach rechts.
+    await page.keyboard.press('+');
+    await page.keyboard.press('+');
+    await expect(size).toHaveValue('1.1');
+    await page.keyboard.press('ArrowRight');
+
+    // Maus: im Rechteck ziehen verschiebt.
+    const style = await rect.getAttribute('style');
+    const box = (await rect.boundingBox())!;
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(box.x + box.width / 2 - 30, box.y + box.height / 2 + 20, { steps: 5 });
+    await page.mouse.up();
+    await expect(rect).not.toHaveAttribute('style', style!);
+
+    // Zwei Finger: auseinander vergrößert (Schieber steigt), die Grenze 1,9 hält.
+    const stage = dialog.getByTestId('crop-stage');
+    const s = (await stage.boundingBox())!;
+    const at = (id: number, x: number, y: number) => ({ pointerId: id, pointerType: 'touch', isPrimary: id === 1, clientX: s.x + x * s.width, clientY: s.y + y * s.height, bubbles: true });
+    await stage.dispatchEvent('pointerdown', at(1, 0.45, 0.5));
+    await stage.dispatchEvent('pointerdown', at(2, 0.55, 0.5));
+    await stage.dispatchEvent('pointermove', at(2, 0.95, 0.5));
+    await stage.dispatchEvent('pointerup', at(2, 0.95, 0.5));
+    await stage.dispatchEvent('pointerup', at(1, 0.45, 0.5));
+    await expect(size).toHaveValue('1.9');
+    await expect(dialog.getByRole('button', { name: 'Hineinzoomen' })).toBeDisabled();
+
+    await dialog.getByRole('button', { name: 'Übernehmen' }).click();
+    await expect(dialog).toBeHidden();
+    await expect(tile.getByTestId('cropped-image')).toBeVisible();
+    await expect(tile).not.toContainText('ohne Ausschnitt');
+    // Nichts ist geschrieben, bis das Tier gespeichert wird.
+    await expect(page.getByText('1 Änderung noch nicht gespeichert')).toBeVisible();
+    await page.getByRole('button', { name: 'Speichern' }).click();
+    await expect(page.getByRole('status')).toContainText('Gespeichert');
+
+    await page.reload();
+    await expect(tile.getByTestId('cropped-image')).toBeVisible();
+    await expect(tile).toContainText('Ausschnitt');
+    await expect(tile).not.toContainText('ohne Ausschnitt');
+
+    // Entfernen wirkt ebenfalls erst mit dem Speichern.
+    await tile.getByRole('button', { name: 'Ausschnitt …' }).click();
+    await dialog.getByRole('button', { name: 'Ausschnitt entfernen' }).click();
+    await expect(tile).toContainText('ohne Ausschnitt');
+    await page.getByRole('button', { name: 'Speichern' }).click();
+    await expect(page.getByRole('status')).toContainText('Gespeichert');
+    await page.reload();
+    await expect(tile).toContainText('ohne Ausschnitt');
+  });
+
+  /**
+   * Ausschnitt für alle Bilder (Plan D Task 5): Das Hauptfoto ist fest („fest für das Titelbild“), ein übriges Foto
+   * wählt sein Format; gespeichert wird mit dem Tier, beim nächsten Öffnen steht dieselbe Wahl.
+   */
+  test('wählt das Format eines übrigen Fotos, das Hauptfoto bleibt fest', async ({ page }) => {
+    await page.goto('/animals');
+    await page.getByRole('link', { name: 'Pelle' }).click();
+    await page.getByRole('tab', { name: 'Texte und Fotos' }).click();
+    const tiles = page.getByTestId('animal-photo');
+    const dialog = page.getByRole('dialog', { name: 'Ausschnitt' });
+    await tiles.first().getByRole('button', { name: 'Ausschnitt …' }).click();
+    await expect(dialog.getByText('fest für das Titelbild · Einstellung „Bildausschnitt“')).toBeVisible();
+    await expect(dialog.getByRole('radiogroup', { name: 'Format' })).toHaveCount(0);
+    await dialog.getByRole('button', { name: 'Abbrechen' }).click();
+
+    const second = tiles.nth(1);
+    await second.getByRole('button', { name: 'Ausschnitt …' }).click();
+    await dialog.getByRole('radio', { name: '1:1' }).click();
+    await dialog.getByRole('button', { name: 'Übernehmen' }).click();
+    await expect(second.getByTestId('cropped-image')).toBeVisible();
+    await expect(page.getByText('1 Änderung noch nicht gespeichert')).toBeVisible();
+    await page.getByRole('button', { name: 'Speichern' }).click();
+    // Pelle trägt den Prüfmerker (eigener Statusbereich): gespeichert ist, wenn nichts mehr offen ist.
+    await expect(page.getByRole('button', { name: 'Verwerfen' })).toBeDisabled();
+
+    await page.reload();
+    await expect(second.getByTestId('cropped-image')).toBeVisible();
+    // Nach dem Neuladen erst klicken, wenn die Kachel hydriert ist — sonst geht der Klick ins Leere.
+    await waitForHydration(page, '[data-testid="animal-photo"] button');
+    await second.getByRole('button', { name: 'Ausschnitt …' }).click();
+    await expect(dialog.getByRole('radio', { name: '1:1' })).toBeChecked();
+  });
+
+  /**
+   * Titelbild wechseln (Spec Ausschnitt in der Prüfung § 2.4, Board 4): Der Ausschnitt des alten Titelbilds fällt weg,
+   * Zurückwechseln bringt ihn wieder; Vorleser hören es. Baxter hat im Seed ein Hauptfoto mit Ausschnitt.
+   */
+  test('Titelbild wechseln entfernt den Ausschnitt des alten, Zurückwechseln bringt ihn wieder', async ({ page }) => {
+    await page.goto('/animals');
+    await page.getByRole('link', { name: 'Baxter' }).click();
+    await page.getByRole('tab', { name: 'Texte und Fotos' }).click();
+    await waitForHydration(page, '[data-testid="animal-photo"] button');
+    const [first, second] = [page.getByTestId('animal-photo').nth(0), page.getByTestId('animal-photo').nth(1)];
+    await expect(first.getByTestId('cropped-image')).toBeVisible();
+    await second.getByRole('button', { name: 'Als Hauptfoto' }).click();
+    await expect(first).toContainText('ohne Ausschnitt');
+    await expect(page.getByTestId('primary-crop-announcement')).toHaveText('Titelbild ist jetzt Foto 2. Ausschnitt von Foto 1 entfernt.');
+    await first.getByRole('button', { name: 'Als Hauptfoto' }).click();
+    await expect(first.getByTestId('cropped-image')).toBeVisible();
+    await expect(first).not.toContainText('ohne Ausschnitt');
   });
 
   /** Spec 2026-10-05: Mappe aus der gefilterten Liste, Einzelblatt aus der Maske. Kein Layout-Test des PDFs. */

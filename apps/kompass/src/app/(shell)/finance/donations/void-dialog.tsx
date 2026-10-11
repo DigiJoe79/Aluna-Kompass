@@ -13,6 +13,7 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/compone
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { voidConfirmationAction } from './actions';
+import { Section } from '@/components/section';
 
 export interface VoidableConfirmation {
   id: string;
@@ -71,20 +72,16 @@ export function VoidForm({ confirmation, onDone, onCancel }: { confirmation: Voi
         </FormField>
       </FormGrid>
       {alreadySent ? (
-        <section className="border-t border-line pt-5">
-          <h3 className="text-[15px] font-semibold">{t('trailTitle')}</h3>
-          <p className="mt-1 text-[13px] text-ink-2">{t('trailHint')}</p>
-          <div className="mt-3">
-            <FormGrid>
-              <FormField id={`${id}-returned`} label={t('originalReturnedOn')} size="s">
-                <Input id={`${id}-returned`} type="date" value={originalReturnedOn} onChange={(e) => setOriginalReturnedOn(e.target.value)} />
-              </FormField>
-              <FormField id={`${id}-informed`} label={t('taxOfficeInformedOn')} size="s">
-                <Input id={`${id}-informed`} type="date" value={taxOfficeInformedOn} onChange={(e) => setTaxOfficeInformedOn(e.target.value)} />
-              </FormField>
-            </FormGrid>
-          </div>
-        </section>
+        <Section title={t('trailTitle')} intro={t('trailHint')}>
+          <FormGrid>
+            <FormField id={`${id}-returned`} label={t('originalReturnedOn')} size="s">
+              <Input id={`${id}-returned`} type="date" value={originalReturnedOn} onChange={(e) => setOriginalReturnedOn(e.target.value)} />
+            </FormField>
+            <FormField id={`${id}-informed`} label={t('taxOfficeInformedOn')} size="s">
+              <Input id={`${id}-informed`} type="date" value={taxOfficeInformedOn} onChange={(e) => setTaxOfficeInformedOn(e.target.value)} />
+            </FormField>
+          </FormGrid>
+        </Section>
       ) : null}
       <ConsequenceList items={[{ number: confirmation.lineCount, label: t('consequences.lines', { count: confirmation.lineCount }) }]} stays={[t('stays.copy'), t('stays.number', { number: confirmation.number })]} />
       <FormActionBar placement="dialog" cancel={onCancel} destructive pending={pending} saveDisabled={note.trim().length === 0} saveLabel={t('submit')} onSave={() => void submit()} state={feedback.state} />

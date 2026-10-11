@@ -10,6 +10,7 @@ import { attachInvoiceToEntryAction, createOpenItemFromInvoiceAction } from '@/a
 import { ContactPicker, type PickedContact } from '@/components/contact-picker';
 import { useDateFormat } from '@/components/date-format-provider';
 import { Notice } from '@/components/notice';
+import { Section } from '@/components/section';
 import { Button, buttonVariants } from '@/components/ui/button';
 import type { ActionState } from '@/lib/actions';
 import { formatEuro } from '@/lib/finance/amount';
@@ -36,8 +37,9 @@ export function InvoiceCard({ documentId, proposal, canWrite, canCreateContact }
   if (proposal.kind === 'noInvoice') return null;
 
   return (
-    <section aria-label={t('title')} className="space-y-3 rounded-md border border-line bg-surface p-4 text-[13px]">
-      <h3 className="text-[13px] font-semibold uppercase tracking-wide text-muted-ink">{t('title')}</h3>
+    <section aria-label={t('title')} className="rounded-md border border-line bg-surface p-4 text-meta">
+      <Section title={t('title')}>
+      <div className="space-y-3">
       {proposal.kind === 'unsupported' ? (
         <UnsupportedNotice code={proposal.code} />
       ) : proposal.kind === 'alreadyVoucher' ? (
@@ -90,6 +92,8 @@ export function InvoiceCard({ documentId, proposal, canWrite, canCreateContact }
           )}
         </>
       )}
+      </div>
+      </Section>
     </section>
   );
 }
@@ -131,7 +135,7 @@ function InvoiceFacts({ invoice }: { invoice: InvoiceView }) {
             {t('taxLine', { rate: rateText(tax.ratePercent), amount: formatEuro(tax.taxCents) })}
           </span>
         ))}
-        {invoice.taxCentsDifference ? <span className="block text-[12px] text-muted-ink">{t('taxDifference', { cents: Math.abs(invoice.taxCentsDifference) })}</span> : null}
+        {invoice.taxCentsDifference ? <span className="block text-hint text-muted-ink">{t('taxDifference', { cents: Math.abs(invoice.taxCentsDifference) })}</span> : null}
       </span>,
     ]);
   }

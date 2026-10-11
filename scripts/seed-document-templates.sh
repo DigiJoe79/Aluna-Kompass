@@ -42,7 +42,7 @@ Dazu optional:
   Eine eigene Basis sollte hierher greifen, damit die Renderpipeline in sich
   geschlossen ist.
 
-`payload.logoFile` (das Logo aus den Einstellungen) gibt es weiterhin, aber nur
+`payload.logoFile` (das Logo aus den Stammdaten) gibt es weiterhin, aber nur
 damit die **mitgelieferten** Basen ohne dieses Volume ein Logo zeigen. Wer eine
 eigene Basis bringt, legt sein Druck-Logo in `assets/`.
 

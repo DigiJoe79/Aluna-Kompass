@@ -10,7 +10,12 @@ import {
   expectedVersionField,
   staleVersion,
   conflict,
+  cropOutOfBounds,
+  cropRectSchema,
   deleteUnreferencedMedia,
+  invalid,
+  roundCropRect,
+  type CropRect,
   deletionConflict,
   isoNow,
   localizedText,
@@ -41,6 +46,8 @@ const projectFields = {
   summary: localizedText({ max: 400 }),
   body: localizedText({ max: 20_000 }),
   imageAssetId: z.string().nullable().default(null),
+  // Ausschnitt des Bildes (Spec Ausschnitt für alle Bilder § 3); ohne Bild nie einer.
+  imageCrop: cropRectSchema.nullable().default(null),
   // Verweise nach aussen, Bezeichnung plus Adresse. Nur http(s): Ein Template
   // setzt sie als Links auf die Seite, und `javascript:` hat dort nichts verloren.
   externalLinks: z
@@ -60,6 +67,8 @@ export const projectUpdateSchema = z.object({
   summary: projectFields.summary.optional(),
   body: projectFields.body.optional(),
   imageAssetId: projectFields.imageAssetId.removeDefault().optional(),
+  // Weggelassen = behalten, solange das Bild bleibt; ein anderes Bild ohne neuen Ausschnitt verwirft ihn; `null` entfernt.
+  imageCrop: projectFields.imageCrop.removeDefault().optional(),
   externalLinks: projectFields.externalLinks.removeDefault().optional(),
   /** Ladestand der Maske (`updatedAt`); veraltet → `staleVersion`. */
   expectedVersion: expectedVersionField,
@@ -68,6 +77,18 @@ export const projectUpdateSchema = z.object({
 function load(db: DbOrTx, id: string): ProjectRecord | null {
   return db.select().from(projects).where(eq(projects.id, id)).get() ?? null;
 }
+
+/**
+ * Der Ausschnitt nach dem Speichern: der neue, wenn einer kommt; sonst der alte, solange das Bild dasselbe bleibt;
+ * ohne Bild nie einer (Handover alle Bilder 3: Bildwechsel verwirft den Ausschnitt).
+ */
+function nextImageCrop(imageAssetId: string | null, given: CropRect | null | undefined, before?: Pick<ProjectRecord, 'imageAssetId' | 'imageCrop'>): CropRect | null {
+  if (!imageAssetId) return null;
+  if (given !== undefined) return given === null ? null : roundCropRect(given);
+  return before && before.imageAssetId === imageAssetId ? (before.imageCrop ?? null) : null;
+}
+
+const cropRefused = () => invalid([{ path: 'imageCrop', message: 'cropOutOfBounds' }]);
 
 function slugTaken(db: DbOrTx, slug: string, exceptId?: string): boolean {
   const row = db.select({ id: projects.id }).from(projects).where(eq(projects.slug, slug)).get();
@@ -89,7 +110,8 @@ export async function createProject(deps: Deps, ctx: CallContext, input: unknown
   if (denied) return denied;
   const parsed = validate(deps, projectCreateSchema, input);
   if (!parsed.ok) return parsed;
-  const v = parsed.value;
+  const v = { ...parsed.value, imageCrop: nextImageCrop(parsed.value.imageAssetId, parsed.value.imageCrop) };
+  if (cropOutOfBounds(v.imageCrop)) return cropRefused();
   if (slugTaken(deps.db, v.slug)) return conflict('slugTaken', `Slug ${v.slug} ist bereits vergeben`);
   if (!assetExists(deps.db, v.imageAssetId)) return notFound('mediaAsset', v.imageAssetId ?? '');
   return deps.db.transaction((tx) => {
@@ -108,9 +130,11 @@ export async function updateProject(deps: Deps, ctx: CallContext, input: unknown
   if (denied) return denied;
   const parsed = validate(deps, projectUpdateSchema, input);
   if (!parsed.ok) return parsed;
-  const { id, expectedVersion, ...changes } = parsed.value;
+  const { id, expectedVersion, imageCrop, ...rest } = parsed.value;
+  if (cropOutOfBounds(imageCrop)) return cropRefused();
   const before = load(deps.db, id);
   if (!before) return notFound('project', id);
+  const changes = { ...rest, imageCrop: nextImageCrop(rest.imageAssetId === undefined ? before.imageAssetId : rest.imageAssetId, imageCrop, before) };
   const stale = staleVersion(expectedVersion, before.updatedAt);
   if (stale) return stale;
   if (changes.slug && slugTaken(deps.db, changes.slug, id)) return conflict('slugTaken', `Slug ${changes.slug} ist bereits vergeben`);

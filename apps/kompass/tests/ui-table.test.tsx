@@ -10,8 +10,9 @@ const markup = renderToStaticMarkup(
 );
 
 describe('ui/table Standard', () => {
-  it('Kopf: Tabellenkopf-Fläche, 12/600 Versalien, 36 px', () => {
-    expect(markup).toMatch(/<thead[^>]*bg-table-head[^>]*text-\[12px\][^>]*font-semibold[^>]*uppercase/);
+  it('Kopf: Tabellenkopf-Fläche, Rolle Etikett in Versalien, 36 px (K10 Charge 3)', () => {
+    expect(markup).toMatch(/<thead[^>]*bg-table-head[^>]*text-label[^>]*uppercase/);
+    expect(markup.slice(markup.indexOf('<thead'), markup.indexOf('>', markup.indexOf('<thead')))).not.toContain('text-[12px]');
     expect(markup).toMatch(/<th[^>]*h-9/);
   });
   it('Zeilen im Rumpf: Dichtehöhe, Zebra, Hover, Linie', () => {

@@ -17,6 +17,7 @@ import type { BookFromTransactionInput } from '@/lib/finance/work';
 import { applyInvoiceToDraftAction, linkVoucherAction, refreshWorkAction, searchVouchersAction, uploadVoucherToTransactionAction, type UploadedInvoiceOffer } from './actions';
 import { FormField } from '@/components/forms/form-field';
 import { FormGrid } from '@/components/forms/form-grid';
+import { Section } from '@/components/section';
 
 export interface VoucherTypeOption {
   key: string;
@@ -125,88 +126,91 @@ export function VoucherPanel({
   const matched = (hit: VoucherSearchHit) => hit.matchedBy.map((by) => (by === 'amount' ? t('matchedAmount') : t('matchedCounterparty'))).join(', ');
 
   return (
-    <section aria-label={t('title')} className="space-y-3 rounded-md border border-line bg-surface p-4">
-      <h3 className="text-[15px] font-semibold">{t('title')}</h3>
-      {offer ? (
-        <div data-testid="invoice-offer" className="space-y-2">
-          <Notice level="hint">{tInvoice('offer', { summary: offer.summary })}</Notice>
-          <div className="flex flex-wrap gap-2">
-            <Button type="button" onClick={applyInvoice} disabled={pending}>
-              {tInvoice('apply')}
-            </Button>
-            <Button type="button" variant="ghost" onClick={skipInvoice} disabled={pending}>
-              {tInvoice('skip')}
-            </Button>
-          </div>
-        </div>
-      ) : file ? (
-        <div role="group" aria-label={t('confirm')} className="space-y-3 rounded-md border border-line bg-surface-2 p-3 text-[13px]">
-          <p className="text-ink-2">{t('file', { name: file.name })}</p>
-          <FormGrid>
-            <FormField id="voucher-type" label={t('type')} size="s">
-              <Select id="voucher-type" value={typeKey} onChange={(e) => setTypeKey(e.target.value)}>
-                {voucherTypes.map((v) => (
-                  <option key={v.key} value={v.key}>
-                    {v.label}
-                  </option>
-                ))}
-              </Select>
-            </FormField>
-            <FormField id="voucher-date" label={t('date')} size="s">
-              <Input id="voucher-date" type="date" value={documentDate} onChange={(e) => setDocumentDate(e.target.value)} />
-            </FormField>
-            <FormField id="voucher-title" label={t('titleField')} hint={t('titleHint')}>
-              <Input id="voucher-title" value={title} onChange={(e) => setTitle(e.target.value)} />
-            </FormField>
-          </FormGrid>
-          <div className="flex gap-2">
-            <Button type="button" onClick={upload} disabled={pending}>
-              {t('confirm')}
-            </Button>
-            <Button type="button" variant="ghost" onClick={() => setFile(null)}>
-              {t('cancel')}
-            </Button>
-          </div>
-        </div>
-      ) : (
-        <ReceiptDrop onFiles={(files) => setFile(files[0] ?? null)} disabled={pending} />
-      )}
-
-      <div className="flex flex-wrap items-center gap-3">
-        <Button type="button" variant="secondary" size="sm" onClick={runSearch} disabled={search.state === 'loading'}>
-          {t('search')}
-        </Button>
-        {search.state === 'ready' && search.queries[0] ? (
-          <Link href={`/dms?text=${encodeURIComponent(search.queries[0])}`} className="text-[13px] font-semibold underline underline-offset-2">
-            {t('searchArchive')}
-          </Link>
-        ) : null}
-      </div>
-      {search.state === 'loading' ? <p className="text-[13px] text-muted-ink">{t('searching')}</p> : null}
-      {search.state === 'ready' ? (
-        search.hits.length === 0 ? (
-          <p className="text-[13px] text-muted-ink">{t('noHits')}</p>
-        ) : (
-          <ul aria-label={t('hitsLabel')} className="divide-y divide-line-2 rounded-md border border-line">
-            {search.hits.map((hit) => (
-              <li key={hit.documentId} className="flex items-start gap-2 px-3 py-2 text-[13px]">
-                <span className="min-w-0 flex-1 space-y-0.5">
-                  <span className="block font-semibold text-ink">{hit.subject}</span>
-                  <span className="block font-mono text-[12px] text-ink-2">
-                    {hit.number} · {date(hit.documentDate)}
-                  </span>
-                  <span className="block text-[12px] text-muted-ink">{t('matchedBy', { what: matched(hit) })}</span>
-                </span>
-                <Button type="button" size="sm" onClick={() => link(hit.documentId)} disabled={pending}>
-                  {t('link')}
+    <section aria-label={t('title')} className="rounded-md border border-line bg-surface p-4">
+      <Section title={t('title')}>
+        <div className="space-y-3">
+          {offer ? (
+            <div data-testid="invoice-offer" className="space-y-2">
+              <Notice level="hint">{tInvoice('offer', { summary: offer.summary })}</Notice>
+              <div className="flex flex-wrap gap-2">
+                <Button type="button" onClick={applyInvoice} disabled={pending}>
+                  {tInvoice('apply')}
                 </Button>
-              </li>
-            ))}
-          </ul>
-        )
-      ) : null}
+                <Button type="button" variant="ghost" onClick={skipInvoice} disabled={pending}>
+                  {tInvoice('skip')}
+                </Button>
+              </div>
+            </div>
+          ) : file ? (
+            <div role="group" aria-label={t('confirm')} className="space-y-3 rounded-md border border-line bg-surface-2 p-3 text-meta">
+              <p className="text-ink-2">{t('file', { name: file.name })}</p>
+              <FormGrid>
+                <FormField id="voucher-type" label={t('type')} size="s">
+                  <Select id="voucher-type" value={typeKey} onChange={(e) => setTypeKey(e.target.value)}>
+                    {voucherTypes.map((v) => (
+                      <option key={v.key} value={v.key}>
+                        {v.label}
+                      </option>
+                    ))}
+                  </Select>
+                </FormField>
+                <FormField id="voucher-date" label={t('date')} size="s">
+                  <Input id="voucher-date" type="date" value={documentDate} onChange={(e) => setDocumentDate(e.target.value)} />
+                </FormField>
+                <FormField id="voucher-title" label={t('titleField')} hint={t('titleHint')}>
+                  <Input id="voucher-title" value={title} onChange={(e) => setTitle(e.target.value)} />
+                </FormField>
+              </FormGrid>
+              <div className="flex gap-2">
+                <Button type="button" onClick={upload} disabled={pending}>
+                  {t('confirm')}
+                </Button>
+                <Button type="button" variant="ghost" onClick={() => setFile(null)}>
+                  {t('cancel')}
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <ReceiptDrop onFiles={(files) => setFile(files[0] ?? null)} disabled={pending} />
+          )}
 
-      {refusal ? <Notice level="refuse">{refusal.detail ?? refusal.message}</Notice> : null}
+          <div className="flex flex-wrap items-center gap-3">
+            <Button type="button" variant="secondary" size="sm" onClick={runSearch} disabled={search.state === 'loading'}>
+              {t('search')}
+            </Button>
+            {search.state === 'ready' && search.queries[0] ? (
+              <Link href={`/dms?text=${encodeURIComponent(search.queries[0])}`} className="text-meta font-semibold underline underline-offset-2">
+                {t('searchArchive')}
+              </Link>
+            ) : null}
+          </div>
+          {search.state === 'loading' ? <p className="text-meta text-muted-ink">{t('searching')}</p> : null}
+          {search.state === 'ready' ? (
+            search.hits.length === 0 ? (
+              <p className="text-meta text-muted-ink">{t('noHits')}</p>
+            ) : (
+              <ul aria-label={t('hitsLabel')} className="divide-y divide-line-2 rounded-md border border-line">
+                {search.hits.map((hit) => (
+                  <li key={hit.documentId} className="flex items-start gap-2 px-3 py-2 text-meta">
+                    <span className="min-w-0 flex-1 space-y-0.5">
+                      <span className="block font-semibold text-ink">{hit.subject}</span>
+                      <span className="block font-mono text-hint text-ink-2">
+                        {hit.number} · {date(hit.documentDate)}
+                      </span>
+                      <span className="block text-hint text-muted-ink">{t('matchedBy', { what: matched(hit) })}</span>
+                    </span>
+                    <Button type="button" size="sm" onClick={() => link(hit.documentId)} disabled={pending}>
+                      {t('link')}
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+            )
+          ) : null}
+
+          {refusal ? <Notice level="refuse">{refusal.detail ?? refusal.message}</Notice> : null}
+        </div>
+      </Section>
     </section>
   );
 }

@@ -6,6 +6,7 @@ import { dashboardOptionFields, type DashboardTile } from '../dashboard/types';
 import type { DbOrTx } from '../db/client';
 import { validateDeletionRules, type DeletionRule } from '../deletion-policy';
 import type { Deps } from '../deps';
+import type { ImageRatio } from '../media/image-place-resolve';
 import { CORE_PERMISSIONS } from '../permissions/core';
 import type { PermissionSpec } from '../permissions/check';
 import type { Result } from '../result';
@@ -64,6 +65,11 @@ export interface MediaReference {
   /** Der Weg zur Fundstelle in der Oberfläche; weggelassen, wenn es keine Seite gibt. Muster wie `FollowUpTarget.href`. */
   href?: string;
   /**
+   * Zeigt die Fundstelle einen Ausschnitt des Bildes (Spec Ausschnitt für alle Bilder § 3)? Die Mediathek schreibt
+   * dann „· zugeschnitten“ hinter die Verwendung; bearbeitet wird der Ausschnitt nur an der Verwendung.
+   */
+  cropped?: boolean;
+  /**
    * Das Recht, unter dem dieses Asset steht. Gesetzt heißt: Die Datei gehört
    * einem Datensatz, den nicht jeder sehen darf, und `getMediaAsset` liefert
    * sie nur mit diesem Recht aus. Ohne Angabe bleibt es beim Bisherigen —
@@ -89,6 +95,20 @@ export type RecordReferenceInput = WithLabelRef<RecordReference>;
 export type DueItemInput = WithLabelRef<DueItem>;
 export type FollowUpTargetInput = WithLabelRef<FollowUpTarget>;
 export type RecordLabelInput = Omit<RecordLabel, 'label' | 'auditLabel'> & { label: LabelText; auditLabel?: LabelText };
+
+/** Eine Bildstelle einer Modul-Sicht (`ModuleManifest.imagePlaces`). */
+export interface ImagePlaceDeclaration {
+  /** `<modul>.<stelle>`, etwa `animals.primary`; so heißt sie in `images` des Templates. */
+  key: string;
+  /** Name der Stelle als Übersetzungsschlüssel (voller Pfad in `messages/de.json`). */
+  label: string;
+  /** Je Format ein Name, wenn das Template genau so viele Formate angibt (Projekt: Kachel, Titelbild). */
+  labels?: readonly string[];
+  /** Zeigt die Stelle das Bild zusätzlich groß wie gewählt (Lightbox der Galerie)? Schlüssel des Namens. */
+  lightbox?: string;
+  /** Format, wenn das Template nichts angibt — etwa die Einstellung „Bildausschnitt“ des Tier-Moduls. */
+  fallback?: (deps: Deps) => ImageRatio | undefined;
+}
 
 /** Ein Fund des Haken `mediaReferences`: die Fundstelle samt dem Asset, auf das sie zeigt. */
 export interface AssetMediaReference extends MediaReference {
@@ -496,6 +516,18 @@ export interface ModuleManifest {
    * `dashboard.tiles.<modul>.<key>`.
    */
   dashboardTiles?: readonly DashboardTile[];
+  /**
+   * Die Bildstellen der veröffentlichten Sichten dieses Moduls (Spec Ausschnitt für alle Bilder § 2): Stellen, an
+   * denen ein Bild auf der Webseite erscheint, ohne ein Template-Feld zu sein (Hauptfoto, Projektbild). Ein Template
+   * gibt ihnen unter `images[key]` Format und Breite; Kompass prüft `images` beim Einlesen gegen die Stellen der
+   * eingeschalteten Module. Der Schlüssel beginnt mit dem Modulschlüssel (`animals.primary`).
+   */
+  imagePlaces?: readonly ImagePlaceDeclaration[];
+  /**
+   * Die Angaben `images` des Templates, das die Webseite baut — vom Modul, das das Template einliest (Site). Richtung
+   * Kern → Modul, damit Kern und Fachmodule die Bildstellen auflösen, ohne das Site-Modul zu kennen.
+   */
+  imagePlaceSpecs?: (deps: Deps) => Readonly<Record<string, unknown>> | undefined;
   install?: (tx: DbOrTx, deps: Deps, ctx: CallContext) => void;
 }
 
@@ -509,6 +541,7 @@ const TEMPLATE_KEY = /^[a-z][a-z0-9-]*$/;
 const TEMPLATE_TYPE = /^[a-z][a-z0-9-]*$/;
 const ROLE_KEY = /^[a-z][a-z0-9-]*$/;
 const TILE_KEY = /^[a-z][a-zA-Z0-9]*$/;
+const IMAGE_PLACE_KEY = /^[a-z][a-z0-9-]*\.[a-z][a-zA-Z0-9]*$/;
 const TILE_KINDS: ReadonlySet<string> = new Set(['count', 'list', 'status']);
 
 export function defineModule(manifest: ModuleManifest): ModuleManifest {
@@ -543,6 +576,13 @@ export function defineModule(manifest: ModuleManifest): ModuleManifest {
     for (const permission of [access.readPermission, access.receivePermission]) {
       if (permission && !manifest.permissions.includes(permission)) throw new Error(`linked document access ${manifest.key}/${access.entityType} names a foreign permission: ${permission}`);
     }
+  }
+  const seenPlaces = new Set<string>();
+  for (const place of manifest.imagePlaces ?? []) {
+    if (!IMAGE_PLACE_KEY.test(place.key) || !place.key.startsWith(`${manifest.key}.`)) throw new Error(`invalid image place key: ${manifest.key}/${place.key}`);
+    if (seenPlaces.has(place.key)) throw new Error(`duplicate image place: ${place.key}`);
+    seenPlaces.add(place.key);
+    if (!place.label.trim()) throw new Error(`image place ${place.key} needs a label`);
   }
   for (const area of manifest.documentAreas ?? []) {
     if (!manifest.permissions.includes(area.permission)) throw new Error(`document area ${manifest.key}/${area.key} names a foreign permission: ${area.permission}`);

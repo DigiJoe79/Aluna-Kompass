@@ -8,7 +8,9 @@ import { type Allowlist, read, relative, sourceFiles } from './source';
  * Der Wächter findet jeden Import eines Plus-Symbols; ein Plus, das etwas anderes ist (Zoom, Zähler),
  * steht mit Grund in der Erlaubnisliste.
  */
-const ALLOWED: Allowlist = {};
+const ALLOWED: Allowlist = {
+  'components/media/crop-editor.tsx': 'Zoom: − / + am Schieber „Größe“ (Handover Ausschnitt, Board 2a), kein Anlegen.',
+};
 
 const PLUS_IMPORT = /import\s*\{[^}]*\b(?:Plus|PlusIcon|CirclePlus|SquarePlus|PlusCircle|PlusSquare)\b[^}]*\}\s*from\s*'lucide-react'/;
 

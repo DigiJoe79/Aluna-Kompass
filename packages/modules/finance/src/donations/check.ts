@@ -346,7 +346,7 @@ export function checkConfirmableInternal(db: DbOrTx, deps: Deps, args: CheckConf
   }
   add('contactComplete', { done: missing.length === 0, detail: missing.length > 0 ? { missing: missing.join(',') } : {}, remedy: { href: `/contacts/${contactId}`, labelKey: 'completeAddress' }, warning: contactWarning });
 
-  // 3b. Name und Anschrift des Vereins — sie stehen auf jeder Bestätigung (Verwaltung → Stammdaten).
+  // 3b. Name und Anschrift des Vereins — sie stehen auf jeder Bestätigung (Einrichtung → Stammdaten → Verein).
   const organizationMissing = (['name', 'street', 'postalCode', 'city'] as const).filter((field) => !clean(readSetting<string>(deps, `organization.${field}`)));
   add('organizationAddress', { done: organizationMissing.length === 0, detail: organizationMissing.length > 0 ? { missing: organizationMissing.join(',') } : {}, remedy: { href: '/admin/settings', labelKey: 'completeOrganization' } });
 

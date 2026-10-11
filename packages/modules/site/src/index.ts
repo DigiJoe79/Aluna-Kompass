@@ -6,6 +6,7 @@ export * from './env';
 export * from './field-schema';
 export * from './mcp-tools';
 export * from './resync/plan';
+export { fieldImagePlaces } from './image-places';
 export * from './resync/apply';
 export * from './service';
 export { templateNeedsReview } from './review';

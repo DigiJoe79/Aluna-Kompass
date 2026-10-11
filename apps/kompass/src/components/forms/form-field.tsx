@@ -72,15 +72,15 @@ export function FormField({
       {toggle ? (
         <div className="flex h-[var(--field-h)] items-center gap-2.5">
           {control}
-          <Label htmlFor={id} required={required} className="text-[14px] font-normal text-ink">{label}</Label>
+          <Label htmlFor={id} required={required} className="text-body font-normal text-ink">{label}</Label>
         </div>
       ) : (
         <>
-          <Label htmlFor={id} required={required} className="text-[13px] font-semibold text-ink-2">{label}</Label>
+          <Label htmlFor={id} required={required} className="text-meta font-semibold text-ink-2">{label}</Label>
           {control}
         </>
       )}
-      {showHint ? <p id={`${id}-hint`} className="text-[12px] text-muted-ink">{hint}</p> : null}
+      {showHint ? <p id={`${id}-hint`} className="text-hint text-muted-ink">{hint}</p> : null}
       <FieldError id={`${id}-error`} message={error} />
     </FormCell>
   );

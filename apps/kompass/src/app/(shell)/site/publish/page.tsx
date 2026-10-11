@@ -22,7 +22,7 @@ export default async function PublishPage() {
   if (requirePermission(ctx, 'site.publish')) return <Page width="standard"><ForbiddenCard permission="site.publish" /></Page>;
   const t = await getTranslations('site.publish');
   // „Publizieren“ steht auch ohne Template in der Leiste; jeder Lauf endete an
-  // `noTemplate`, deshalb ein Leerzustand mit dem Weg in die Einstellungen.
+  // `noTemplate`, deshalb ein Leerzustand mit dem Weg zu Einrichtung → Webseite.
   if (!activeTemplate(deps)) {
     const canManage = !requirePermission(ctx, 'site.manage');
     return (

@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { IssueDialog } from '@/app/(shell)/finance/donations/issue-dialog';
 import { useDateFormat } from '@/components/date-format-provider';
+import { Section } from '@/components/section';
 import { Button } from '@/components/ui/button';
 import { formatEuro } from '@/lib/finance/amount';
 
@@ -31,12 +32,12 @@ export function ConfirmationSection({ lines, canIssue, canDescribe, today }: { l
   const [issuing, setIssuing] = useState<string | null>(null);
 
   return (
-    <section data-testid="entry-confirmations" className="space-y-2 rounded-md border border-line bg-surface p-4">
-      <h3 className="text-[13px] font-semibold uppercase tracking-wide text-muted-ink">{t('title')}</h3>
+    <div data-testid="entry-confirmations" className="rounded-md border border-line bg-surface p-4">
+      <Section title={t('title')}>
       {lines.length === 0 ? (
-        <p className="text-[13px] text-muted-ink">{t('noDonation')}</p>
+        <p className="text-meta text-muted-ink">{t('noDonation')}</p>
       ) : (
-        <ul className="space-y-1.5 text-[13px]">
+        <ul className="space-y-1.5 text-meta">
           {lines.map((line) => (
             <li key={line.lineId} className="flex flex-wrap items-center justify-between gap-2 border-b border-line-2 py-1 last:border-0">
               <span className="text-ink-2">
@@ -69,6 +70,7 @@ export function ConfirmationSection({ lines, canIssue, canDescribe, today }: { l
           canDescribe={canDescribe}
         />
       ) : null}
-    </section>
+      </Section>
+    </div>
   );
 }

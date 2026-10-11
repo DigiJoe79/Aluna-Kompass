@@ -17,8 +17,8 @@ Jahr (Euro)“, mit dem Link „Zum Publizieren“.
 ![Die Variablen der Vorlage mit ihren Werten](../bilder/webseite/variablen.png)
 
 Was Sie **nicht** hier finden: Anschrift, Vorstand, Registereintrag,
-Bankverbindung. Die stehen unter [Einstellungen →
-Verein](../einstellungen/verein.md) und werden von dort auf die Seite
+Bankverbindung. Die stehen unter [Einrichtung →
+Stammdaten](../einstellungen/verein.md) und werden von dort auf die Seite
 übernommen — sie stehen nirgends ein zweites Mal.
 
 ## Feldtypen
@@ -30,7 +30,12 @@ Verein](../einstellungen/verein.md) und werden von dort auf die Seite
 - **Auswahl** — einer von mehreren festen Werten.
 - **Bild oder Datei** — aus der [Mediathek](../mediathek.md). Sie wählen aus
   dem Bestand oder laden von hier aus hoch; die Vorlage bestimmt, welche
-  Dateiarten es annimmt.
+  Dateiarten es annimmt. An einem Bild steht „Ausschnitt …“: Er legt fest,
+  welcher Teil auf der Webseite erscheint, im Format, das die Vorlage dem
+  Feld gibt (ein Format ist fest, mehrere stehen zur Wahl, ohne Angabe sind
+  alle wählbar). Die Vorschau im Feld zeigt das Ergebnis, „· Ausschnitt“
+  hinter dem Namen sagt, dass einer gesetzt ist. Ein anderes Bild oder
+  „Bild entfernen“ verwirft ihn; gespeichert wird mit „Speichern“.
 - **Liste** — mehrere Werte desselben Typs, mit „Hinzufügen“, „Entfernen“
   und einer Höchstzahl.
 - **Datum**.

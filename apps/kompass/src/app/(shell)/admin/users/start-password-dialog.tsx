@@ -8,6 +8,7 @@ import { Notice } from '@/components/notice';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { copyToClipboard } from '@/lib/clipboard';
+import { Overline } from '@/components/overline';
 
 export function StartPasswordDialog({
   open,
@@ -46,10 +47,10 @@ export function StartPasswordDialog({
         <DialogTitle>{t('title', { name })}</DialogTitle>
         <DialogDescription tone="body">{t('text')}</DialogDescription>
         <div className="rounded-md border border-line-strong bg-code p-3 font-mono">
-          <div className="text-[11px] font-semibold tracking-[.06em] text-muted-ink">{t('emailLabel')}</div>
-          <div className="text-[13px]">{email}</div>
-          <div className="mt-2 text-[11px] font-semibold tracking-[.06em] text-muted-ink">{t('passwordLabel')}</div>
-          <div data-testid="start-password" className="text-[15px] font-medium">{startPassword}</div>
+          <Overline as="div">{t('emailLabel')}</Overline>
+          <div className="text-meta">{email}</div>
+          <Overline as="div" className="mt-2">{t('passwordLabel')}</Overline>
+          <div data-testid="start-password" className="text-section font-mono tracking-[.04em] select-all">{startPassword}</div>
         </div>
         <div className="flex gap-2">
           <Button

@@ -3,7 +3,7 @@
 Bevor der Verein Geld von Hand bucht, richtet jemand mit dem Recht „Finanzen
 einrichten“ die Grundlagen ein: ein Geschäftsjahr, mindestens ein Bankkonto
 oder eine Kasse mit Anfangsbestand, wer welche Rolle trägt, die Kategorien
-und das Steuerliche. Die Checkliste unter Einstellungen → Finanzen zeigt, was
+und das Steuerliche. Die Checkliste unter Einrichtung → Finanzen → Checkliste zeigt, was
 noch fehlt, und wer es erledigen kann.
 
 ## Die Checkliste
@@ -53,7 +53,7 @@ Ein Verein, der Belege schon vor dem Finanzmodul in der Akte verwaltet hat,
 trägt oft eigene Dokumentarten für Rechnungen, Zählprotokolle oder
 Mittelverwendungsnachweise. Finanzen bringt eigene Arten für dieselben Zwecke
 mit (Eingangsrechnung, Kassenzählung und mehr) — beide nebeneinander wären
-doppelt. Unter Verwaltung → Dokumentarten der Akte lässt sich eine alte,
+doppelt. Unter Einrichtung → Akte → Arten lässt sich eine alte,
 leere Art **stilllegen** (sie verschwindet aus der Auswahl, bleibt aber
 erhalten) oder, wenn sie noch nie ein Dokument trug, ganz **löschen**. Trägt
 eine Art schon Dokumente, bleibt sie bestehen — dann bleibt sie als

@@ -21,7 +21,7 @@ export function PublishSwitch({ id, isPublished, action, label, switchAfterText 
   // Die Kopfzeile zählt „nicht publiziert“ gleich mit (Plan C).
   const { refresh } = useSiteJobStatus();
   return (
-    <label className={`flex items-center gap-2 text-[13px] ${switchAfterText ? 'flex-row-reverse' : ''}`}>
+    <label className={`flex items-center gap-2 text-meta ${switchAfterText ? 'flex-row-reverse' : ''}`}>
       <Switch checked={isPublished} disabled={pending} aria-label={label ?? t('published')} onCheckedChange={(next) => start(async () => { const s = await action(id, next); toastRefusal(s); if (s.status === 'success') refresh(); })} />
       <span className={isPublished ? 'text-success' : 'text-muted-ink'}>{isPublished ? t('published') : t('unpublished')}</span>
     </label>

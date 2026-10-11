@@ -51,14 +51,14 @@ export function LimitProgress({
   return (
     <ProgressPrimitive.Root value={value} data-testid="limit-progress" data-state={state ?? undefined} aria-label={label} className="flex flex-col gap-1.5">
       <div className="flex flex-wrap items-center gap-2">
-        <p className={hideLabel ? 'sr-only' : 'text-[13px] text-ink-2'}>{label}</p>
+        <p className={hideLabel ? 'sr-only' : 'text-meta text-ink-2'}>{label}</p>
         {state && stateLabel ? <StatusBadge tone={TONE[state]}>{stateLabel}</StatusBadge> : null}
-        {figure ? <span className={`${hideLabel ? '' : 'ml-auto '}font-mono text-[12px] tabular-nums text-ink`}>{figure}</span> : null}
+        {figure ? <span className={`${hideLabel ? '' : 'ml-auto '}font-mono text-hint tabular-nums text-ink`}>{figure}</span> : null}
       </div>
       <ProgressTrack className={`h-2 ${state === 'exceeded' ? 'border-r-2 border-error' : ''}`}>
         <ProgressIndicator className={BAR[state ?? 'calm']} />
       </ProgressTrack>
-      {remainder ? <p className="text-[12px] text-muted-ink">{remainder}</p> : null}
+      {remainder ? <p className="text-hint text-muted-ink">{remainder}</p> : null}
     </ProgressPrimitive.Root>
   );
 }

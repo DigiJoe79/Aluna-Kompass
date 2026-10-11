@@ -3,6 +3,7 @@
 import { useTranslations } from 'next-intl';
 import { KeyChip } from '@/components/key-chip';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Overline } from '@/components/overline';
 
 type Key = { text: string; label?: string };
 type Group = { title: string; items: { keys: Key[]; text: string }[] };
@@ -81,10 +82,10 @@ export function FolderTreeKeyHelp({
           <DialogTitle>{t('keyHelpTitle')}</DialogTitle>
         </DialogHeader>
         {groups.map((group) => (
-          <section key={group.title} className="flex flex-col gap-1.5">
-            <h3 className="font-body text-[11px] leading-normal font-bold tracking-[0.06em] text-muted-ink uppercase">{group.title}</h3>
+          <section key={group.title} aria-label={group.title} className="flex flex-col gap-1.5">
+            <Overline>{group.title}</Overline>
             {group.items.map((item) => (
-              <div key={item.text} className="flex items-baseline gap-3 text-[13px] leading-[1.45]">
+              <div key={item.text} className="flex items-baseline gap-3 text-meta">
                 <span className="flex w-[148px] shrink-0 flex-wrap gap-1">
                   {item.keys.map((key) => (
                     <KeyChip key={key.text} label={key.label}>

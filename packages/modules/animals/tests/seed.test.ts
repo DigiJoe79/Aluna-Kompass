@@ -1,10 +1,10 @@
-import { coreModule, readSetting, seedDevelopment, unwrap } from '@kompass/core';
+import { coreModule, parseDerivedAssetId, readSetting, seedDevelopment, unwrap } from '@kompass/core';
 import { createTestDeps, ctxWith } from '@kompass/core/testing';
 import { describe, expect, it } from 'vitest';
 import { animalsModule } from '../src/manifest';
 import { eq } from 'drizzle-orm';
 import { animalPhotos, animalProposals, animalStories, animals } from '../src/schema';
-import { listProposals, PROPOSALS_ENABLED_KEY } from '../src';
+import { listProposals, PROPOSALS_ENABLED_KEY, publishedAnimals } from '../src';
 
 describe('animals seed', () => {
   it('seeds a few example animals with a mix of statuses and one published', async () => {
@@ -14,6 +14,17 @@ describe('animals seed', () => {
     expect(rows.length).toBeGreaterThanOrEqual(3);
     expect(new Set(rows.map((a) => a.status)).size).toBeGreaterThan(1);
     expect(rows.some((a) => a.isPublished)).toBe(true);
+  });
+
+  it('gives a published animal a photo with a crop, so the website export cuts one (Spec Bildausschnitt § 2)', async () => {
+    const deps = createTestDeps({ manifests: [coreModule, animalsModule], env: 'development' });
+    await seedDevelopment(deps);
+    const cropped = deps.db.select({ animalId: animalPhotos.animalId, crop: animalPhotos.crop }).from(animalPhotos).all().filter((p) => p.crop !== null);
+    const published = new Set(deps.db.select().from(animals).all().filter((a) => a.isPublished).map((a) => a.id));
+    expect(cropped.some((p) => published.has(p.animalId))).toBe(true);
+    // Die veröffentlichte Sicht trägt dafür die abgeleitete ID.
+    const ids = publishedAnimals.load(deps).flatMap((a) => (a as { photos: { assetId: string }[] }).photos.map((p) => p.assetId));
+    expect(ids.some((id) => parseDerivedAssetId(id) !== null)).toBe(true);
   });
 
   it('is idempotent', async () => {
@@ -99,6 +110,9 @@ describe('animals seed', () => {
     expect(story.beforeAssetId).not.toBeNull();
     expect(story.afterAssetId).not.toBeNull();
     expect(story.beforeAssetId).not.toBe(story.afterAssetId);
+    // Ausschnitt für alle Bilder § 3: ein Bild mit Ausschnitt, eins ohne.
+    expect(story.beforeCrop).not.toBeNull();
+    expect(story.afterCrop).toBeNull();
   });
 
   it('seeds proposals of every kind from an invented source, open and decided, idempotent', async () => {

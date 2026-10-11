@@ -1,16 +1,14 @@
 import { mkdir, readdir, rm, stat, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
-import { conflict, invalid, ok, schema as core, type Deps, type Result } from '@kompass/core';
-import { eq } from 'drizzle-orm';
-import type { ExportedAsset } from '../export';
-import { contentAssetIds } from '../export';
+import { conflict, invalid, ok, type Deps, type Result } from '@kompass/core';
+import { contentAssetIds, gatherAssets, mediaAssetSource, type AssetSource } from '../export';
 import { canonical, pruneLocales, readPublicContent } from '../public-content';
 import { activeTemplate } from '../service';
 import { buildSite } from './build';
 import { copyImagesIfAny } from './jobs';
 import type { SiteEnv } from './env';
-import { prepareImageVariants } from './images';
+import { prepareImageVariants, sweepImageCache } from './images';
 
 /**
  * Vorschau einer einzelnen Zeile einer Sicht (Plan Vorschläge B, Spike 2026-10-10: ~0,6 s warm): Die Vorlage bekommt
@@ -28,9 +26,7 @@ export interface SinglePageBuild {
 }
 
 /** Ein Bild, das noch nicht in der Mediathek liegt (Zwischenablage eines Vorschlags). */
-export interface SingleAsset extends ExportedAsset {
-  read: () => Promise<Uint8Array>;
-}
+export type SingleAsset = AssetSource;
 
 const KEY = /^[A-Za-z0-9_-]{1,80}$/;
 const MAX_AGE_MS = 3_600_000;
@@ -76,22 +72,15 @@ async function build(deps: Deps, env: SiteEnv, input: { view: string; row: unkno
   await rm(dir, { recursive: true, force: true });
   const job = path.join(dir, 'job');
   await mkdir(path.join(job, 'assets'), { recursive: true });
+  // Bilder eines Vorschlags vor der Mediathek; eine abgeleitete ID setzt auf ihre Basis-ID auf.
   const extra = new Map((input.extraAssets ?? []).map((a) => [a.id, a]));
-  const assets: ExportedAsset[] = [];
-  for (const id of [...contentAssetIds(template.schema, { variables, collections, views })].sort()) {
-    const own = extra.get(id);
-    if (own) {
-      assets.push({ id: own.id, filename: own.filename, mimeType: own.mimeType, width: own.width, height: own.height });
-      await writeFile(path.join(job, 'assets', own.filename), await own.read());
-      continue;
-    }
-    const row = deps.db.select().from(core.mediaAssets).where(eq(core.mediaAssets.id, id)).get();
-    if (!row) continue;
-    assets.push({ id: row.id, filename: row.filename, mimeType: row.mimeType, width: row.width, height: row.height });
-    await writeFile(path.join(job, 'assets', row.filename), await deps.media.read(row.filename));
-  }
+  const ids = contentAssetIds(template.schema, { variables, collections, views });
+  const assets = await gatherAssets(ids, (id) => extra.get(id) ?? mediaAssetSource(deps, id), path.join(job, 'assets'));
   await writeFile(path.join(job, 'content.json'), JSON.stringify(canonical({ variables, collections, views, assets }), null, 2));
-  await prepareImageVariants({ jobDir: job, assets, cacheDir: path.join(root, 'img-cache') });
+  // `pruneOld` lässt `img-cache` stehen; ohne eigenes Aufräumen wüchse er mit jeder Vorschau (Backlog 67, gleiche Regel).
+  const imgCache = path.join(root, 'img-cache');
+  const images = await prepareImageVariants({ jobDir: job, assets, cacheDir: imgCache });
+  await sweepImageCache(imgCache, images.cacheNames);
   await buildSite({ siteDir: env.templateDir, contentDir: job, outDir: out, publicUrl: env.publicUrl || 'http://localhost', staging: true, stageRoot: path.join(root, 'stage'), timeoutMs: 120_000 });
   await copyImagesIfAny(path.join(job, 'images'), path.join(out, 'images'));
   await rm(job, { recursive: true, force: true });

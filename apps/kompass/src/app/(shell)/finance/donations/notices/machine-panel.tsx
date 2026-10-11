@@ -21,6 +21,7 @@ import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { withUnplacedFieldErrors } from '@/lib/feedback';
 import { createNotificationLetterAction, saveSignerAction, uploadFacsimileAction } from './actions';
+import { Section } from '@/components/section';
 
 /**
  * „Maschinell erstellte Bestätigungen“ (C3, F6a Task 8): die Unterzeichner
@@ -66,9 +67,11 @@ export function MachinePanel({ signers, status, canIssue, canDraftLetter, draftN
 
   return (
     <section className="space-y-4 rounded-lg border border-line bg-surface p-5" data-testid="machine-panel" aria-labelledby="machine-title">
-      <div className="space-y-1">
-        <h2 id="machine-title" className="font-heading text-[17px]">{t('title')}</h2>
-        <p className="text-[13px] text-ink-2">{t('intro')}</p>
+      <div>
+        <Section title={t('title')} headingId="machine-title" intro={t('intro')}>
+          <div className="space-y-1">
+          </div>
+        </Section>
       </div>
 
       <Notice level={status.complete ? 'hint' : 'warn'}>
@@ -78,7 +81,7 @@ export function MachinePanel({ signers, status, canIssue, canDraftLetter, draftN
       <RefusalNotice action state={uploadFb.state} />
 
       {signers.length === 0 ? (
-        <p className="text-[13px] text-muted-ink">{t('empty')}</p>
+        <p className="text-meta text-muted-ink">{t('empty')}</p>
       ) : (
         <Table aria-label={t('tableLabel')}>
           <TableHeader>
@@ -101,7 +104,7 @@ export function MachinePanel({ signers, status, canIssue, canDraftLetter, draftN
                 <TableCell className="font-mono tabular-nums">{signer.notifiedOn ? date(signer.notifiedOn) : <span className="font-sans text-muted-ink">{t('notNotified')}</span>}</TableCell>
                 <TableCell>
                   <div className="flex flex-col gap-1.5">
-                    {!signer.hasFacsimile ? <span className="text-[13px] text-muted-ink">{t('noFacsimile')}</span> : null}
+                    {!signer.hasFacsimile ? <span className="text-meta text-muted-ink">{t('noFacsimile')}</span> : null}
                     {canIssue ? (
                       <ReceiptDrop
                         key={signer.facsimileChecksum ?? 'none'}
@@ -125,7 +128,7 @@ export function MachinePanel({ signers, status, canIssue, canDraftLetter, draftN
           </TableBody>
         </Table>
       )}
-      {canIssue ? <p className="text-[12px] text-muted-ink">{t('facsimilePrivacy')} {t('uploadHint')}</p> : null}
+      {canIssue ? <p className="text-hint text-muted-ink">{t('facsimilePrivacy')} {t('uploadHint')}</p> : null}
 
       {canIssue ? (
         <div className="flex flex-wrap items-start gap-3">
@@ -135,8 +138,8 @@ export function MachinePanel({ signers, status, canIssue, canDraftLetter, draftN
               <div className="space-y-1">
                 <RefusalNotice action state={letterFb.state} />
                 <Button type="button" variant="outline" disabled={pending} onClick={() => void draftLetter()}>{t('letter')}</Button>
-                <p className="max-w-prose text-[12px] text-muted-ink">{t('letterHint')}</p>
-                {draftId ? <Link href={`/dms/${draftId}`} className="text-[13px] font-semibold text-ink underline underline-offset-2">{t('openDraft')}</Link> : null}
+                <p className="max-w-prose text-hint text-muted-ink">{t('letterHint')}</p>
+                {draftId ? <Link href={`/dms/${draftId}`} className="text-meta font-semibold text-ink underline underline-offset-2">{t('openDraft')}</Link> : null}
               </div>
             ) : (
               <BlockedState step={t('letter')} title={t('letterBlockedTitle')}>
@@ -193,7 +196,7 @@ function SignerDialog({ signer, onClose }: { signer: SignerView | null; onClose:
           </FormField>
         </FormGrid>
         {/* Der lange Hinweis zu „Gültig bis“ steht unter der Zeile, nicht in der schmalen Spalte (Entscheidung zum Inventar). */}
-        <p id="signer-valid-to-note" className="text-[12px] text-muted-ink">{td('validToHint')}</p>
+        <p id="signer-valid-to-note" className="text-hint text-muted-ink">{td('validToHint')}</p>
         <FormActionBar placement="dialog" cancel={onClose} pending={pending} saveDisabled={signerName.trim() === '' || validFrom === ''} saveLabel={td('save')} onSave={() => void submit()} state={withUnplacedFieldErrors(feedback.state, ['signerName', 'validFrom', 'validTo', 'notifiedOn'])} />
       </DialogContent>
     </Dialog>

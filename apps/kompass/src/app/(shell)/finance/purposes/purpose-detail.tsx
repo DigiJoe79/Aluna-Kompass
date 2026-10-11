@@ -16,6 +16,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { formatEuro } from '@/lib/finance/amount';
 import { fulfillPurposeAction, purposeMovementsAction, reopenPurposeAction } from './actions';
 import { ReopenDialog } from './reopen-dialog';
+import { SectionHeading, Section } from '@/components/section';
 
 /**
  * Detail eines Zwecks (Designer-README 4c): Kopf mit Projekt, Ziel und Bezug;
@@ -72,8 +73,8 @@ export function PurposeDetail({
     <section className="space-y-4 rounded-lg border border-line bg-surface p-5" data-testid="purpose-detail">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="space-y-1">
-          <h2 className="font-heading text-[18px] text-ink">{row.name}</h2>
-          <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 text-[13px]">
+          <SectionHeading>{row.name}</SectionHeading>
+          <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 text-meta">
             <dt className="text-muted-ink">{t('detail.project')}</dt>
             <dd className="text-ink">{projectName ?? '—'}</dd>
             <dt className="text-muted-ink">{t('detail.target')}</dt>
@@ -125,50 +126,53 @@ export function PurposeDetail({
         }}
       />
 
-      <div className="space-y-2">
-        <h3 className="text-[13px] font-semibold uppercase tracking-[.04em] text-muted-ink">{t('detail.movements')}</h3>
-        {error ? (
-          <p className="text-[13px] text-error">{error}</p>
-        ) : movements === null ? (
-          <p className="text-[13px] text-muted-ink">{t('detail.movementsLoading')}</p>
-        ) : movements.length === 0 ? (
-          <p className="text-[13px] text-muted-ink">{t('detail.movementsEmpty')}</p>
-        ) : (
-          <div className="overflow-x-auto rounded-md border border-line">
-            <Table data-testid="purpose-movements">
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="px-3">{t('detail.movementColumns.date')}</TableHead>
-                  <TableHead className="px-3">{t('detail.movementColumns.entry')}</TableHead>
-                  <TableHead className="px-3">{t('detail.movementColumns.text')}</TableHead>
-                  <TableHead className="px-3">{t('detail.movementColumns.counterparty')}</TableHead>
-                  <TableHead className="px-3 text-right">{t('detail.movementColumns.amount')}</TableHead>
-                  <TableHead className="px-3 text-right">{t('detail.movementColumns.running')}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {movements.map((m, i) => (
-                  <TableRow key={`${m.kind}-${m.entryId ?? m.transferId ?? 'cf'}-${i}`}>
-                    <TableCell className="px-3 text-ink-2">{fmt.date(m.date)}</TableCell>
-                    <TableCell className="px-3 font-mono text-[12px]">
-                      {m.kind === 'line' && m.entryId ? (
-                        <Link href={`/finance/entries/${m.entryId}`} className="underline-offset-2 hover:underline">
-                          {m.entryNumber ?? '—'}
-                        </Link>
-                      ) : (
-                        <span className="text-muted-ink">{m.transferNumber ?? '—'}</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="px-3 text-ink">{m.kind === 'line' ? m.text : m.text ? `${t(`movementKind.${m.kind}`)}: ${m.text}` : t(`movementKind.${m.kind}`)}</TableCell>
-                    <TableCell className="px-3 text-ink-2">{m.counterpartyName ?? '—'}</TableCell>
-                    <TableCell className="px-3 text-right font-mono tabular-nums">{formatEuro(m.amountCents)}</TableCell>
-                    <TableCell className="px-3 text-right font-mono tabular-nums">{formatEuro(m.runningBalanceCents)}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+      <div>
+        <Section title={t('detail.movements')}>
+          <div className="space-y-2">
+            {error ? (
+              <p className="text-meta text-error">{error}</p>
+            ) : movements === null ? (
+              <p className="text-meta text-muted-ink">{t('detail.movementsLoading')}</p>
+            ) : movements.length === 0 ? (
+              <p className="text-meta text-muted-ink">{t('detail.movementsEmpty')}</p>
+            ) : (
+              <div className="overflow-x-auto rounded-md border border-line">
+                <Table data-testid="purpose-movements">
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="px-3">{t('detail.movementColumns.date')}</TableHead>
+                      <TableHead className="px-3">{t('detail.movementColumns.entry')}</TableHead>
+                      <TableHead className="px-3">{t('detail.movementColumns.text')}</TableHead>
+                      <TableHead className="px-3">{t('detail.movementColumns.counterparty')}</TableHead>
+                      <TableHead className="px-3 text-right">{t('detail.movementColumns.amount')}</TableHead>
+                      <TableHead className="px-3 text-right">{t('detail.movementColumns.running')}</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {movements.map((m, i) => (
+                      <TableRow key={`${m.kind}-${m.entryId ?? m.transferId ?? 'cf'}-${i}`}>
+                        <TableCell className="px-3 text-ink-2">{fmt.date(m.date)}</TableCell>
+                        <TableCell className="px-3 font-mono text-hint">
+                          {m.kind === 'line' && m.entryId ? (
+                            <Link href={`/finance/entries/${m.entryId}`} className="underline-offset-2 hover:underline">
+                              {m.entryNumber ?? '—'}
+                            </Link>
+                          ) : (
+                            <span className="text-muted-ink">{m.transferNumber ?? '—'}</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="px-3 text-ink">{m.kind === 'line' ? m.text : m.text ? `${t(`movementKind.${m.kind}`)}: ${m.text}` : t(`movementKind.${m.kind}`)}</TableCell>
+                        <TableCell className="px-3 text-ink-2">{m.counterpartyName ?? '—'}</TableCell>
+                        <TableCell className="px-3 text-right font-mono tabular-nums">{formatEuro(m.amountCents)}</TableCell>
+                        <TableCell className="px-3 text-right font-mono tabular-nums">{formatEuro(m.runningBalanceCents)}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
           </div>
-        )}
+        </Section>
       </div>
 
       <ReopenDialog

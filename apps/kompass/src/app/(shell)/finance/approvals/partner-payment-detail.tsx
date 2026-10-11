@@ -17,6 +17,7 @@ import { formatEuro } from '@/lib/finance/amount';
 import { evidenceKindLabelKey, missingEvidence, type EvidenceKind, type PartnerBasis } from '@/lib/finance/partners';
 import { approvePartnerPaymentAction, rejectPartnerPaymentAction } from '../partners/actions';
 import { RejectDialog } from './reject-dialog';
+import { Section } from '@/components/section';
 
 interface EvidenceRow { kind: string; documentId: string | null; foreignLanguage: boolean; explanationDe: string | null; coveredCents: number | null }
 
@@ -52,12 +53,12 @@ export function PartnerPaymentDetail({ payment, creatorName, evidence, nextHref 
     return (
       <section data-testid="partner-payment-result" aria-live="polite" className="space-y-4 rounded-lg border border-line bg-surface p-5">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="font-mono text-[15px] font-semibold">{payment.number}</span>
+          <span className="font-mono text-section">{payment.number}</span>
           <StatusBadge tone={approved ? 'success' : 'neutral'}>{approved ? t('partnerResult.approved') : t('partnerResult.rejected')}</StatusBadge>
         </div>
-        <p className="font-mono text-[26px] font-semibold tabular-nums">{formatEuro(payment.totalCents)}</p>
-        <p className="text-[14px] text-ink">{payment.partnerName}</p>
-        {!approved && payment.rejectNote ? <p className="text-[14px] text-ink-2">{payment.rejectNote}</p> : null}
+        <p className="font-mono text-figure font-semibold tabular-nums">{formatEuro(payment.totalCents)}</p>
+        <p className="text-body text-ink">{payment.partnerName}</p>
+        {!approved && payment.rejectNote ? <p className="text-body text-ink-2">{payment.rejectNote}</p> : null}
         <Link href={detailHref} className={buttonVariants({ variant: 'outline', size: 'sm' })}>
           {tPartner('back')}
         </Link>
@@ -67,7 +68,7 @@ export function PartnerPaymentDetail({ payment, creatorName, evidence, nextHref 
               {t('partnerResult.next')}
             </Link>
           ) : (
-            <p className="text-[13px] text-muted-ink">{t('partnerResult.none')}</p>
+            <p className="text-meta text-muted-ink">{t('partnerResult.none')}</p>
           )}
         </div>
       </section>
@@ -124,11 +125,14 @@ export function PartnerPaymentDetail({ payment, creatorName, evidence, nextHref 
   };
 
   const requirements = (
-    <div className="space-y-2" data-testid="partner-payment-requirements">
-      <h3 className="text-[13px] font-semibold uppercase tracking-[.04em] text-muted-ink">{tPartner('requiredEvidence.title')}</h3>
-      <RequirementList items={items} />
-      <p className="text-[12px] text-muted-ink">{basis === 'agent57' ? tPartner('requiredEvidence.agentNote') : tPartner('requiredEvidence.foreignNote')}</p>
-      <PartnerReasonPrompt needs={reasonNeeds} noticeReason={noticeReason} overdueReason={overdueReason} onNoticeReason={setNoticeReason} onOverdueReason={setOverdueReason} noticeValidUntil={payment.reasonsNeeded.noticeValidUntil} purposeReason={purposeReason} onPurposeReason={setPurposeReason} purposeDetail={purposeDetail ?? t('purposeReason.hint')} />
+    <div data-testid="partner-payment-requirements">
+      <Section title={tPartner('requiredEvidence.title')}>
+        <div className="space-y-2">
+          <RequirementList items={items} />
+          <p className="text-hint text-muted-ink">{basis === 'agent57' ? tPartner('requiredEvidence.agentNote') : tPartner('requiredEvidence.foreignNote')}</p>
+          <PartnerReasonPrompt needs={reasonNeeds} noticeReason={noticeReason} overdueReason={overdueReason} onNoticeReason={setNoticeReason} onOverdueReason={setOverdueReason} noticeValidUntil={payment.reasonsNeeded.noticeValidUntil} purposeReason={purposeReason} onPurposeReason={setPurposeReason} purposeDetail={purposeDetail ?? t('purposeReason.hint')} />
+        </div>
+      </Section>
     </div>
   );
 
@@ -141,7 +145,7 @@ export function PartnerPaymentDetail({ payment, creatorName, evidence, nextHref 
             ? t('partnerFooter.retroactive', { count: payment.effectiveProofMonths })
             : t('partnerFooter.payable', { name: payment.partnerName, amount: formatEuro(payment.totalCents), count: payment.effectiveProofMonths })}
         </p>
-        <p className="text-[12px] text-muted-ink">{t('footer.humanOnly')}</p>
+        <p className="text-hint text-muted-ink">{t('footer.humanOnly')}</p>
       </>
     ),
     reject: (
@@ -168,12 +172,12 @@ export function PartnerPaymentDetail({ payment, creatorName, evidence, nextHref 
       >
         <div className="space-y-2" data-testid="partner-payment-detail">
           <p className="flex flex-wrap items-center gap-2" data-testid="partner-payment-basis">
-            <span className="rounded-sm border border-line-strong px-1.5 py-0.5 text-[12px] font-semibold text-ink-2">{tBasis(basis)}</span>
+            <span className="rounded-sm border border-line-strong px-1.5 py-0.5 text-hint font-semibold text-ink-2">{tBasis(basis)}</span>
             {payment.retroactive ? <StatusBadge tone="warning">{t('partnerRetroactive')}</StatusBadge> : null}
           </p>
-          <p className="text-[14px] text-ink">{payment.purposeText}</p>
-          {payment.basisOverridden && payment.basisOverrideReason ? <p className="text-[13px] text-ink-2">{t('partnerOverride', { reason: payment.basisOverrideReason })}</p> : null}
-          <Link href={detailHref} className="text-[13px] text-link underline">
+          <p className="text-body text-ink">{payment.purposeText}</p>
+          {payment.basisOverridden && payment.basisOverrideReason ? <p className="text-meta text-ink-2">{t('partnerOverride', { reason: payment.basisOverrideReason })}</p> : null}
+          <Link href={detailHref} className="text-meta text-link underline">
             {tPartner('back')}
           </Link>
         </div>

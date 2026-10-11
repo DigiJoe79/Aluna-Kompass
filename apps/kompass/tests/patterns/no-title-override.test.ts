@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { openingTags, read, relative, sourceFiles } from './source';
+import { classNameValue, openingTags, read, relative, sourceFiles } from './source';
 
 /**
  * Schrift, Größe und Farbe von Dialog- und Seitenfenstertiteln, ihren Beschreibungen und von Abschnitten
@@ -18,30 +18,14 @@ type Allowed = Readonly<Record<string, { erwartet: readonly string[]; grund: str
 
 const ALLOWED: Allowed = {
   'components/folder-tree/folder-sheet.tsx': {
-    erwartet: ['font-heading', 'text-[17px]', 'font-semibold', 'text-ink'],
-    grund: 'Kopf des Ordnerblatts: 52 px hoch wie seine Zeilen, 17/600 — benannte Ausnahme Navigation und Ordnerblatt (MUSTER § I).',
+    erwartet: ['text-section'],
+    grund: 'Kopf des Ordnerblatts: 52 px wie seine Zeilen, Rolle Abschnitt (Designer 2026-10-10 § 3).',
   },
   'app/(shell)/admin/media/asset-detail-dialog.tsx': {
-    erwartet: ['font-mono', 'text-[14px]', 'font-medium'],
-    grund: 'Dateiname, kein Titel: Mono 14/500 wie jede Dateikennung, lange Namen per truncate nur optisch gekürzt (Joe und Designer 2026-10-07).',
+    erwartet: ['font-mono', 'text-body'],
+    grund: 'Dateiname, kein Titel: mono in der Rolle Text, lange Namen per truncate nur optisch gekürzt (Designer 2026-10-10 § 9.6; 14/500 vom 2026-10-07 entfällt, nur 400/600).',
   },
 };
-
-/** Der Wert von `className=` in einem öffnenden Tag: der Text eines Strings oder der Ausdruck in `{ … }`. */
-export function classNameValue(tag: string): string | null {
-  const at = tag.search(/\sclassName=/);
-  if (at === -1) return null;
-  const start = tag.indexOf('=', at) + 1;
-  const open = tag[start];
-  if (open === '"' || open === "'") return tag.slice(start + 1, tag.indexOf(open, start + 1));
-  if (open !== '{') return null;
-  let depth = 0;
-  for (let i = start; i < tag.length; i += 1) {
-    if (tag[i] === '{') depth += 1;
-    else if (tag[i] === '}' && (depth -= 1) === 0) return tag.slice(start + 1, i);
-  }
-  return null;
-}
 
 /**
  * Die Schriftklassen eines Tags; Varianten (`sm:`, `[&_a]:`) zählen mit, die erlaubten Layoutklassen nicht.

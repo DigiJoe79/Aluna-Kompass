@@ -1,6 +1,7 @@
 'use client';
 
-import { createContext, useContext, type ReactNode } from 'react';
+import { createContext, useContext, type ReactNode, type Ref } from 'react';
+import { cn } from '@/lib/utils';
 
 export type SectionLevelValue = 2 | 3 | 4;
 
@@ -12,6 +13,27 @@ const LevelContext = createContext<SectionLevelValue | null>(null);
  */
 export function SectionLevel({ level, children }: { level: SectionLevelValue; children: ReactNode }) {
   return <LevelContext.Provider value={level}>{children}</LevelContext.Provider>;
+}
+
+/** Die Ebene aus dem Umfeld, `null` ohne Umfeld — für Bausteine, deren Überschrift sich danach richtet. */
+export function useSectionLevel(): SectionLevelValue | null {
+  return useContext(LevelContext);
+}
+
+/**
+ * Jede Überschrift in der Rolle Abschnitt (K10 Charge 3, Designer § 9.4): Serife, 15/600, Ebene aus dem Umfeld.
+ * Nutzer: `Section`, `EmptyState`, `BlockedState`, der Ordnertitel der Akte. `ref` macht sie zum Fokusziel
+ * (nach einem Laufwechsel), dann ohne Fokusring, weil der Fokus nur die Ansage trägt.
+ */
+export function SectionHeading({ children, id, ref, level }: { children: ReactNode; id?: string; ref?: Ref<HTMLHeadingElement>; level?: SectionLevelValue }) {
+  const outer = useContext(LevelContext);
+  const own: SectionLevelValue = level ?? outer ?? 2;
+  const Heading = `h${own}` as const;
+  return (
+    <Heading id={id} ref={ref} tabIndex={ref ? -1 : undefined} className={cn('font-heading text-section text-ink', ref && 'outline-none')}>
+      {children}
+    </Heading>
+  );
 }
 
 /**
@@ -26,22 +48,29 @@ export function Section({
   intro,
   actions,
   level,
+  headingId,
+  headingRef,
   children,
 }: {
   title: string;
   intro?: ReactNode;
   actions?: ReactNode;
   level?: SectionLevelValue;
+  /** Für `aria-labelledby` an einer Stelle außerhalb des Abschnitts; ohne sichtbare Wirkung. */
+  headingId?: string;
+  /** Fokusziel nach einem Laufwechsel (setzt `tabIndex={-1}`, ohne Fokusring); ohne sichtbare Wirkung. */
+  headingRef?: Ref<HTMLHeadingElement>;
   children: ReactNode;
 }) {
   const outer = useContext(LevelContext);
   const own: SectionLevelValue = level ?? outer ?? 2;
   const inner: SectionLevelValue = own === 2 ? 3 : 4;
-  const Heading = `h${own}` as const;
   return (
     <section className="[&+&]:mt-5 [&+&]:border-t [&+&]:border-line [&+&]:pt-5">
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2">
-        <Heading className="font-heading text-section text-ink">{title}</Heading>
+        <SectionHeading level={own} id={headingId} ref={headingRef}>
+          {title}
+        </SectionHeading>
         {actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}
       </div>
       {intro ? <div className="mt-1 text-meta text-ink-2">{intro}</div> : null}

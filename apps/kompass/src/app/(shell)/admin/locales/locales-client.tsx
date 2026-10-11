@@ -15,6 +15,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { idleState, type ActionState } from '@/lib/actions';
 import { addLocaleAction, previewLocaleRemovalAction, removeLocaleAction, reorderLocalesAction } from './actions';
+import { Section } from '@/components/section';
 
 export function LocalesClient({ locales }: { locales: string[] }) {
   const t = useTranslations('admin.locales');
@@ -57,7 +58,7 @@ export function LocalesClient({ locales }: { locales: string[] }) {
     <div className="flex flex-col gap-6">
       <RefusalNotice action state={removeRefusal} />
       <div className="overflow-hidden rounded-lg border border-line bg-surface">
-        <div className="border-b border-line bg-table-head px-6 py-3 text-[13px] font-semibold text-muted-ink">
+        <div className="border-b border-line bg-table-head px-6 py-3 text-meta font-semibold text-muted-ink">
           {t('title')} ({locales.length})
         </div>
         <ul role="list" className="divide-y divide-line-2">
@@ -70,7 +71,7 @@ export function LocalesClient({ locales }: { locales: string[] }) {
               }`}
             >
               <div className="flex items-center gap-3">
-                <span className="font-mono text-[15px] font-semibold text-ink">{code}</span>
+                <span className="font-mono text-section text-ink">{code}</span>
                 {index === 0 ? <StatusBadge tone="neutral">{t('leading')}</StatusBadge> : null}
               </div>
               <div className="flex items-center gap-2">
@@ -92,10 +93,8 @@ export function LocalesClient({ locales }: { locales: string[] }) {
       </div>
 
       <div className="rounded-lg border border-line bg-surface p-5">
-        <h3 className="text-[15px] font-semibold text-ink">{t('add')}</h3>
-        <div className="mt-3">
-          <RefusalNotice state={state} />
-        </div>
+        <Section title={t('add')}>
+        <RefusalNotice state={state} />
         <form ref={formRef} action={action} className="mt-3">
           <FormGrid>
             <FormField id="code" label={t('code')} hint={t('codeHint')} error={errors.code} size="s">
@@ -113,6 +112,7 @@ export function LocalesClient({ locales }: { locales: string[] }) {
             </div>
           </FormGrid>
         </form>
+        </Section>
       </div>
 
       <ConfirmDialog

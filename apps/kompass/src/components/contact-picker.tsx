@@ -121,7 +121,7 @@ export function ContactPicker({
             className={cn('absolute left-0 right-0 top-full z-20 mt-1 max-h-64 rounded-md border border-line bg-surface shadow-md')}
           >
             {!loaded ? (
-              <div role="presentation" aria-hidden className="px-3 py-2 text-[13px] text-muted-ink">
+              <div role="presentation" aria-hidden className="px-3 py-2 text-meta text-muted-ink">
                 {t('searching')}
               </div>
             ) : (
@@ -133,11 +133,11 @@ export function ContactPicker({
                       {/* Einzeilig: Der Name wird gekürzt, der Ort bleibt stehen. Ein
                           zweizeiliger Treffer verschiebt die Liste unter der Maus. */}
                       <span className="min-w-0 truncate">{option.name}</span>
-                      {option.city ? <span className="ml-auto shrink-0 pl-2 text-[12px] text-muted-ink">{option.city}</span> : null}
+                      {option.city ? <span className="ml-auto shrink-0 pl-2 text-hint text-muted-ink">{option.city}</span> : null}
                     </CommandItem>
                   ))}
                   {more ? (
-                    <div role="presentation" aria-hidden className="px-3 py-1.5 text-[12px] text-muted-ink" data-testid="contact-more">
+                    <div role="presentation" aria-hidden className="px-3 py-1.5 text-hint text-muted-ink" data-testid="contact-more">
                       {t('more')}
                     </div>
                   ) : null}
@@ -163,7 +163,7 @@ export function ContactPicker({
       <p role="status" aria-live="polite" className="sr-only" data-testid="contact-picker-status">
         {open ? (!loaded ? t('searching') : more ? t('more') : '') : ''}
       </p>
-      {hint ? <p className="text-[12px] text-muted-ink">{hint}</p> : null}
+      {hint ? <p className="text-hint text-muted-ink">{hint}</p> : null}
       {canCreate ? (
         <CreateContactDialog withTrigger={false} open={creating} onOpenChange={setCreating} onCreated={(contact) => pick(contact)} />
       ) : null}

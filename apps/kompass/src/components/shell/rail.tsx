@@ -47,7 +47,7 @@ export interface RailProps {
 
 /**
  * Eine Zeile je Bereich. Die Schiene trägt die Marke (Streifen links); die
- * Zweitebene trägt die Auswahl. Vor „Einstellungen“ eine Linie und `mt-auto`,
+ * Zweitebene trägt die Auswahl. Vor „System“ eine Linie und `mt-auto`,
  * damit der Bereich unten steht, egal wie viele Module es gibt.
  */
 export function Rail({ entries, active, variant, onClose }: RailProps) {
@@ -71,12 +71,17 @@ export function Rail({ entries, active, variant, onClose }: RailProps) {
               onClick={() => onClose?.()}
               className={cn(
                 'flex items-center rounded-md',
+                // Schmale Leiste: jede Zeile 52 px, Beschriftung einzeilig. Namen haben höchstens 11 Zeichen, längere
+                // bringen einen Kurznamen `nav.navLabel.<key>` mit (tests/nav-label.test.ts); `truncate` ist nur
+                // Sicherung, der volle Name steht im `title` (Designer 2026-10-11 § 12).
                 rail ? 'mx-auto h-[52px] w-[76px] flex-col justify-center gap-1' : 'h-[34px] gap-2.5 px-2.5',
                 isActive ? 'bg-brand-soft font-semibold text-brand-ink shadow-[inset_2px_0_0_var(--color-primary)]' : 'text-ink-2 hover:bg-hover hover:text-ink',
               )}
             >
               <Icon className={cn('shrink-0', rail ? 'size-5' : 'size-4', isActive ? 'text-brand-ink' : 'text-muted-ink')} aria-hidden />
-              <span className={cn('truncate', rail ? 'max-w-full px-1 text-[11px] leading-none' : 'text-[14px]')}>{t(entry.labelKey)}</span>
+              <span title={rail ? t(entry.labelKey) : undefined} className={cn('truncate', rail ? 'max-w-full px-1 text-center text-hint' : 'text-body')}>
+                {rail && t.has(`nav.navLabel.${entry.key}`) ? t(`nav.navLabel.${entry.key}`) : t(entry.labelKey)}
+              </span>
             </Link>
           </div>
         );

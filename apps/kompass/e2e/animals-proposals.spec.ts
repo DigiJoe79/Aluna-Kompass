@@ -1,5 +1,5 @@
 import { expect, test } from './fixtures';
-import { loginAsAdmin, resetDatabase } from './helpers';
+import { loginAsAdmin, resetDatabase, waitForHydration } from './helpers';
 
 /*
  * Vorschläge einer Quelle prüfen (Spec Vorschlags-Eingang § 6, Plan B). Seed (offen, älteste zuerst): Baxter (Änderung,
@@ -91,6 +91,75 @@ test.describe('Vorschläge prüfen', () => {
     await expect(dialog).toBeHidden();
     await page.goto('/animals?text=Wilma');
     await expect(page.getByRole('row', { name: /Wilma/ }).getByRole('switch')).toBeChecked();
+  });
+
+  /**
+   * Ausschnitt in der Prüfung eines neuen Hundes (Spec 2026-10-11, Board 1 und 4): Titelbild wechseln entfernt den
+   * Ausschnitt des alten, zurück bringt ihn wieder; ein geänderter Ausschnitt am Titelbild geht mit dem Annehmen ins Tier.
+   * Wilma: Titelbild tb-2041-a mit Ausschnitt der Quelle, tb-2041-b ohne.
+   */
+  test('neuer Hund: Titelbild wechseln und zurück, Ausschnitt ändern, das Tier hat ihn', async ({ page }) => {
+    await page.goto('/animals/proposals?kind=create');
+    await page.getByRole('link', { name: 'Wilma' }).click();
+    await page.getByRole('tab', { name: 'Texte und Fotos' }).click();
+    await waitForHydration(page, '[data-testid="proposal-photo"] button');
+    const [first, second] = [page.getByTestId('proposal-photo').nth(0), page.getByTestId('proposal-photo').nth(1)];
+    await expect(first.getByTestId('cropped-image')).toBeVisible();
+    await second.getByRole('button', { name: 'Als Titelbild' }).click();
+    await expect(first).toContainText('ohne Ausschnitt');
+    await expect(page.getByTestId('primary-crop-announcement')).toHaveText('Titelbild ist jetzt tb-2041-b. Ausschnitt von tb-2041-a entfernt.');
+    await first.getByRole('button', { name: 'Als Titelbild' }).click();
+    await expect(first.getByTestId('cropped-image')).toBeVisible();
+
+    await first.getByRole('button', { name: 'Ausschnitt …' }).click();
+    const crop = page.getByRole('dialog', { name: 'Ausschnitt' });
+    await expect(crop).toContainText('fest für das Titelbild');
+    await expect(crop).toContainText('Gespeichert wird mit dem Annehmen.');
+    await crop.getByRole('button', { name: 'Ausschnitt entfernen' }).click();
+    await expect(crop).toBeHidden();
+    await expect(first).toContainText('ohne Ausschnitt');
+    await first.getByRole('button', { name: 'Ausschnitt …' }).click();
+    await page.keyboard.press('+');
+    await crop.getByRole('button', { name: 'Übernehmen' }).click();
+    await expect(first.getByTestId('cropped-image')).toBeVisible();
+    await page.getByRole('button', { name: 'Annehmen …' }).click();
+    const dialog = page.getByRole('dialog');
+    await expect(dialog).toContainText('angenommen mit Änderungen');
+    await dialog.getByRole('button', { name: 'Annehmen', exact: true }).click();
+    await expect(dialog).toBeHidden();
+    await page.goto('/animals?text=Wilma');
+    await page.getByRole('link', { name: 'Wilma' }).click();
+    await page.getByRole('tab', { name: 'Texte und Fotos' }).click();
+    await expect(page.getByTestId('animal-photo').first().getByTestId('cropped-image')).toBeVisible();
+  });
+
+  /**
+   * Ausschnitt in der Prüfung (Spec 2026-10-11 § 2.6, A12): Ein Ausschnitt an einem Foto aus Kompass ändert das Tier,
+   * macht den Vorschlag aber nicht zu „mit Änderungen“. Baxter: neues Bild der Quelle, dahinter zwei Fotos aus Kompass.
+   */
+  test('Änderung: Ausschnitt an einem Foto aus Kompass, Annehmen bleibt „angenommen“', async ({ page }) => {
+    await page.goto('/animals/proposals');
+    await page.getByRole('link', { name: 'Baxter' }).click();
+    await waitForHydration(page, '[data-testid="proposal-photo"] button');
+    await page.getByRole('button', { name: 'Alle übernehmen' }).click();
+    const kompass = page.getByTestId('proposal-photo').nth(2);
+    await expect(kompass).toContainText('ohne Ausschnitt');
+    await kompass.getByRole('button', { name: 'Ausschnitt …' }).click();
+    const crop = page.getByRole('dialog', { name: 'Ausschnitt' });
+    await expect(crop).toContainText('Gespeichert wird mit dem Annehmen.');
+    await page.keyboard.press('+');
+    await crop.getByRole('button', { name: 'Übernehmen' }).click();
+    await expect(crop).toBeHidden();
+    await expect(kompass.getByTestId('cropped-image')).toBeVisible();
+    await page.getByRole('button', { name: 'Annehmen …' }).click();
+    const dialog = page.getByRole('dialog');
+    await expect(dialog).toContainText('Wird als „angenommen“');
+    await dialog.getByRole('button', { name: 'Annehmen', exact: true }).click();
+    await expect(dialog).toBeHidden();
+    await page.goto('/animals?text=Baxter');
+    await page.getByRole('link', { name: 'Baxter' }).click();
+    await page.getByRole('tab', { name: 'Texte und Fotos' }).click();
+    await expect(page.getByTestId('animal-photo').nth(2).getByTestId('cropped-image')).toBeVisible();
   });
 
   test('lehnt einen Vorschlag mit Grund ab', async ({ page }) => {

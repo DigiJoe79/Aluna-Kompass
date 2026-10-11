@@ -14,3 +14,10 @@ describe('PageHeader status', () => {
     expect(h1.nextElementSibling?.textContent).toBe('archiviert');
   });
 });
+
+describe('PageHeader Schrift (K10 Charge 3)', () => {
+  it('das h1 trägt die Rolle Seitentitel in der Serife', () => {
+    render(<PageHeader title="Spenden" />);
+    expect(screen.getByRole('heading', { level: 1 }).className.split(/\s+/)).toEqual(expect.arrayContaining(['font-heading', 'text-page-title']));
+  });
+});

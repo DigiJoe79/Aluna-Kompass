@@ -1,5 +1,5 @@
 import { siteModule } from '../src/manifest';
-import { coreModule, unwrap } from '@kompass/core';
+import { coreModule, storeMediaAsset, unwrap } from '@kompass/core';
 import { createTestDeps, ctxWith, insertUser } from '@kompass/core/testing';
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
@@ -8,6 +8,8 @@ import { createEntry, getEntry, updateEntry } from '../src/entries';
 import type { FieldSchema, TemplateSchema } from '../src/load';
 import { siteTemplateState } from '../src/schema';
 import { readValues, setValues, valuesVersion } from '../src/values';
+
+const PNG = Uint8Array.from(Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==', 'base64'));
 
 /** Backlog 20: siehe `animals/tests/stale-version.test.ts`. */
 const asJson = (s: unknown) => z.toJSONSchema(s as z.ZodType, { io: 'input' }) as FieldSchema;
@@ -64,7 +66,9 @@ describe('setValues mit Ladestand', () => {
 
   it('erkennt auch ein zwischenzeitlich geleertes Feld, dessen Zeile verschwindet', async () => {
     const deps = withTemplate({ variables: { ...variables, hero: asJson(asset({})) }, collections: {} });
-    unwrap(await setValues(deps, manage, { values: { hero: 'ASSET-1' } }));
+    // Seit 0.2.11 muss ein Bildwert in der Mediathek stehen (Spec Ausschnitt für alle Bilder § 3).
+    const image = unwrap(await storeMediaAsset(deps, ctxWith(['media.upload']), { originalName: 'a.png', bytes: PNG }));
+    unwrap(await setValues(deps, manage, { values: { hero: image.id } }));
     const loaded = valuesVersion(deps);
     unwrap(await setValues(deps, manage, { values: { hero: null } }));
 

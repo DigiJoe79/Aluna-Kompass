@@ -5,6 +5,7 @@ import { StatusBadge } from '@/components/status-badge';
 import type { DateFormatter } from '@/lib/date-format';
 import { formatEuro } from '@/lib/finance/amount';
 import { CLAIM_BADGE_TONE, claimHref, claimSentence } from '@/lib/finance/expenses';
+import { Section } from '@/components/section';
 
 /** Badge und Satz in Alltagssprache — gemeinsam für Karte und Ansicht des Antrags. */
 export async function ClaimState({ claim, fmt }: { claim: ExpenseClaimView; fmt: DateFormatter }) {
@@ -13,7 +14,7 @@ export async function ClaimState({ claim, fmt }: { claim: ExpenseClaimView; fmt:
   return (
     <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
       <StatusBadge tone={CLAIM_BADGE_TONE[claim.stateLabelKey]}>{t(`state.${claim.stateLabelKey}`)}</StatusBadge>
-      <span className="text-[13px] text-ink-2">{sentence.key === 'rejected' ? sentence.note : t(`sentence.${sentence.key}`, { date: fmt.date(sentence.date) })}</span>
+      <span className="text-meta text-ink-2">{sentence.key === 'rejected' ? sentence.note : t(`sentence.${sentence.key}`, { date: fmt.date(sentence.date) })}</span>
     </span>
   );
 }
@@ -39,11 +40,11 @@ async function ClaimCard({ claim, fmt }: { claim: ExpenseClaimView; fmt: DateFor
         className="flex min-h-16 flex-col gap-1.5 rounded-lg border border-line bg-surface p-4 hover:bg-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
       >
         <span className="flex items-baseline justify-between gap-3">
-          <span className="font-mono text-[14px] font-semibold text-ink">{claim.number ?? t('draftNumber')}</span>
-          <span className="shrink-0 font-mono text-[16px] font-semibold tabular-nums text-ink">{formatEuro(claim.totalCents)}</span>
+          <span className="font-mono text-body font-semibold text-ink">{claim.number ?? t('draftNumber')}</span>
+          <span className="shrink-0 font-mono text-body font-semibold tabular-nums text-ink">{formatEuro(claim.totalCents)}</span>
         </span>
         <ClaimState claim={claim} fmt={fmt} />
-        <span className="text-[12px] text-muted-ink">{next}</span>
+        <span className="text-hint text-muted-ink">{next}</span>
       </Link>
     </li>
   );
@@ -52,15 +53,14 @@ async function ClaimCard({ claim, fmt }: { claim: ExpenseClaimView; fmt: DateFor
 export async function ClaimGroup({ id, title, claims, fmt }: { id: 'open' | 'done'; title: string; claims: ExpenseClaimView[]; fmt: DateFormatter }) {
   if (claims.length === 0) return null;
   return (
-    <section data-testid={`claims-${id}`} aria-labelledby={`claims-${id}-title`} className="space-y-2">
-      <h3 id={`claims-${id}-title`} className="text-[13px] font-semibold text-muted-ink">
-        {title}
-      </h3>
+    <section data-testid={`claims-${id}`} aria-labelledby={`claims-${id}-title`}>
+      <Section title={title} headingId={`claims-${id}-title`}>
       <ul className="space-y-2">
         {claims.map((claim) => (
           <ClaimCard key={claim.id} claim={claim} fmt={fmt} />
         ))}
       </ul>
+      </Section>
     </section>
   );
 }

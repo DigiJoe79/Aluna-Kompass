@@ -56,8 +56,8 @@ export function DiscardRunDialog({ open, onOpenChange, run }: { open: boolean; o
         <DialogTitle>{t('title')}</DialogTitle>
         <DialogDescription tone="body">{t('description')}</DialogDescription>
 
-        {loaded.state === 'loading' ? <p className="text-[14px] text-ink-2">{tCommon('loading')}</p> : null}
-        {loaded.state === 'failed' ? <p className="text-[14px] text-ink-2">{t('failed')}</p> : null}
+        {loaded.state === 'loading' ? <p className="text-body text-ink-2">{tCommon('loading')}</p> : null}
+        {loaded.state === 'failed' ? <p className="text-body text-ink-2">{t('failed')}</p> : null}
 
         {preview ? (
           <>
@@ -71,8 +71,8 @@ export function DiscardRunDialog({ open, onOpenChange, run }: { open: boolean; o
 
             {blocked ? (
               <div className="space-y-2">
-                <p className="text-[14px] font-semibold text-error">{t('blocked.title')}</p>
-                <ul className="space-y-1 text-[13px]">
+                <p className="text-body font-semibold text-error">{t('blocked.title')}</p>
+                <ul className="space-y-1 text-meta">
                   {preview.blocking.map((b) => (
                     <li key={b.entryId}>
                       <Link href={`/finance/entries/${b.entryId}`} className="text-link">
@@ -81,7 +81,7 @@ export function DiscardRunDialog({ open, onOpenChange, run }: { open: boolean; o
                     </li>
                   ))}
                 </ul>
-                <p className="text-[13px] text-ink-2">{t('blocked.hint')}</p>
+                <p className="text-meta text-ink-2">{t('blocked.hint')}</p>
               </div>
             ) : (
               <FormGrid>

@@ -24,20 +24,38 @@ function wrapper({ children }: { children: ReactNode }) {
 const CSS = readFileSync(path.resolve(import.meta.dirname, '../src/app/globals.css'), 'utf8');
 const classes = (el: HTMLElement) => el.className.split(/\s+/);
 
-/** K10 Charge 1, Spec § 3: sechs Rollen mit Größe, Zeilenhöhe und — bei Titeln — Gewicht. */
+/** K10 Charge 1, Spec § 3; Charge 3, Spec § 2 (Designer 2026-10-10): zehn Rollen. */
 describe('Schriftrollen', () => {
   it.each([
+    ['page-title', '22px', '1.2', null],
     ['dialog-title', '19px', '1.25', '600'],
     ['section', '15px', '1.35', '600'],
     ['body', '14px', '1.5', null],
     ['meta', '13px', '1.45', null],
     ['hint', '12px', '1.4', null],
+    ['label', '12px', '1.3', '600'],
+    ['key', '11px', '1.35', null],
     ['figure', '32px', '1', null],
+    ['amount', '22px', '1.2', null],
   ] as const)('%s', (role, size, leading, weight) => {
     expect(CSS).toContain(`--text-${role}: ${size};`);
     expect(CSS).toContain(`--text-${role}--line-height: ${leading};`);
     if (weight) expect(CSS).toContain(`--text-${role}--font-weight: ${weight};`);
     else expect(CSS).not.toContain(`--text-${role}--font-weight`);
+  });
+
+  it('nur das Etikett trägt eine Sperrung', () => {
+    expect(CSS).toContain('--text-label--letter-spacing: .04em;');
+    expect([...CSS.matchAll(/--text-([a-z-]+)--letter-spacing/g)].map((m) => m[1])).toEqual(['label']);
+  });
+
+  it('b und strong haben 600, nicht bolder (Designer § 9.6)', () => {
+    expect(CSS).toMatch(/@layer base\s*{[\s\S]*?b,\s*strong\s*{\s*font-weight:\s*600;\s*}/);
+  });
+
+  it('keine Rolle heißt wie eine Farbe — Tailwind nähme bei text-<name> die Farbe (text-key färbte statt zu setzen)', () => {
+    const colors = new Set([...CSS.matchAll(/--color-([a-z0-9-]+):/g)].map((m) => m[1]));
+    expect(TYPE_ROLES.filter((role) => colors.has(role))).toEqual([]);
   });
 
   it('cn kennt genau die Rollen aus globals.css', () => {
@@ -103,15 +121,16 @@ describe('Titel und Beschreibung', () => {
     expect(description).not.toContain('text-sm');
   });
 
-  it('Dateiname im Mediendetail: Ausnahme mit Gewicht 500, gekürzt nur optisch', () => {
+  it('Dateiname im Mediendetail: mono in der Rolle Text, gekürzt nur optisch (Designer 2026-10-10 § 9.6)', () => {
     const source = readFileSync(path.resolve(import.meta.dirname, '../src/app/(shell)/admin/media/asset-detail-dialog.tsx'), 'utf8');
     const cls = /<DialogTitle className="([^"]+)">\{item\.filename\}/.exec(source)?.[1];
-    expect(cls).toBe('truncate font-mono text-[14px] font-medium');
+    expect(cls).toBe('truncate font-mono text-body');
     const name = `${'ein-sehr-langer-dateiname-'.repeat(8)}.pdf`;
     render(<Dialog open><DialogContent size="md"><DialogTitle className={cls}>{name}</DialogTitle></DialogContent></Dialog>, { wrapper });
     const title = screen.getByRole('heading', { name });
     expect(title.textContent).toBe(name);
-    expect(title.className.split(' ')).toEqual(expect.arrayContaining(['truncate', 'font-mono', 'text-[14px]', 'font-medium']));
+    expect(title.className.split(' ')).toEqual(expect.arrayContaining(['truncate', 'font-mono', 'text-body']));
+    expect(title.className).not.toContain('font-medium');
     expect(title.className).not.toContain('text-dialog-title');
   });
 

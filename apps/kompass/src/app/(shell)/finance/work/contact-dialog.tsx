@@ -73,7 +73,7 @@ export function ContactDialog({
       <DialogContent size="md" className="bg-surface shadow-md">
         <DialogTitle>{t('title')}</DialogTitle>
         {canCreate ? (
-          <div className="space-y-3 text-[13px]">
+          <div className="space-y-3 text-meta">
             <p className="text-ink-2">{t('intro')}</p>
             {kind === 'person' && counterpartyName ? <p className="text-ink-2">{t('fromCounterparty', { name: counterpartyName })}</p> : null}
             <FormGrid>
@@ -97,7 +97,7 @@ export function ContactDialog({
                   <FormField id="contact-last-name" label={t('lastName')}>
                     <Input id="contact-last-name" value={lastName} onChange={(e) => setLastName(e.target.value)} />
                   </FormField>
-                  <FormCell as="p" size="full" className="text-[12px] text-muted-ink">{t('nameHint')}</FormCell>
+                  <FormCell as="p" size="full" className="text-hint text-muted-ink">{t('nameHint')}</FormCell>
                 </>
               )}
             </FormGrid>

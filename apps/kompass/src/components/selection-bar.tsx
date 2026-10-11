@@ -19,7 +19,7 @@ export function SelectionBar({ count, label, children }: { count: number; label:
           aria-label={label}
           className="sticky bottom-0 z-10 mt-3 flex items-center gap-3 rounded-md border border-line bg-surface px-4 py-2.5 shadow-md max-sm:flex-col max-sm:items-stretch"
         >
-          <span aria-hidden className="text-[13px] font-semibold text-ink">
+          <span aria-hidden className="text-meta font-semibold text-ink">
             {label}
           </span>
           <div className="ml-auto flex items-center gap-2 max-sm:ml-0 max-sm:flex-col max-sm:items-stretch max-sm:[&>*]:w-full">{children}</div>

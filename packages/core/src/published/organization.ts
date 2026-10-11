@@ -7,7 +7,7 @@ import { definePublishedView } from './view';
  * Die Vereinsstammdaten, die auf eine Webseite gehören: was ein Impressum
  * verlangt, dazu Bankverbindung und Erreichbarkeit. Jedes Template bekommt sie,
  * ohne sie zu deklarieren — sonst pflegte jeder Verein seine Anschrift zweimal,
- * einmal in den Einstellungen und einmal als Template-Variable.
+ * einmal in den Stammdaten und einmal als Template-Variable.
  *
  * Was fehlt, fehlt mit Absicht: Steuernummer, Finanzamt, Freistellungsbescheid
  * sind Verwaltungsdaten und nach Prinzip 4 nicht Teil einer
@@ -55,6 +55,6 @@ export const publishedOrganization = definePublishedView({
       },
     ];
   },
-  // Eine Zeile, gepflegt unter Einstellungen → Verein (Standard-Bereich); Name und Link für „nicht publiziert“ (Plan C).
+  // Eine Zeile, gepflegt unter Einrichtung → Stammdaten → Verein (Standard-Bereich); Name und Link für „nicht publiziert“ (Plan C).
   editLink: (_deps, row) => ({ href: '/admin/settings', title: row.name }),
 });

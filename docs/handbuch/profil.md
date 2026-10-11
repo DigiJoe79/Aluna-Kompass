@@ -9,7 +9,7 @@ wie Sie, mit denselben Rechten, und jede Aktion steht unter Ihrem Namen im
 
 Aktuelles Passwort, neues Passwort zweimal, mindestens zwölf Zeichen. Danach
 sind alle anderen Sitzungen abgemeldet; API-Tokens bleiben gültig. Name und
-E-Mail ändert die Verwaltung unter Einstellungen → Nutzer, nicht Sie selbst
+E-Mail ändert die Verwaltung unter Verwaltung → Nutzer, nicht Sie selbst
 — beides steht in Protokolleinträgen, die sich nicht ändern.
 
 ## API-Tokens und MCP

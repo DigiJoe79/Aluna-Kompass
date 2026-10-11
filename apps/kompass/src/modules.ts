@@ -6,5 +6,5 @@ import { financeModule } from '@kompass/module-finance';
 import { projectsModule } from '@kompass/module-projects';
 import { siteModule } from '@kompass/module-site';
 
-/** Installierte Fachmodule dieser Installation. Aktivierung erfolgt unter Verwaltung → Module. */
+/** Installierte Fachmodule dieser Installation. Aktivierung erfolgt unter Einrichtung → Module. */
 export const installedModules: ModuleManifest[] = [siteModule, projectsModule, animalsModule, contactsModule, dmsModule, financeModule];

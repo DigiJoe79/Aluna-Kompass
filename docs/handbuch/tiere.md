@@ -17,7 +17,7 @@ steht. „Hund anlegen“ öffnet ein neues Profil.
   Ein wartendes Profil trägt in beiden Ansichten die Marke „Prüfung offen“;
   wer mit der Maus darauf bleibt, liest die Notiz dazu. „Prüfung offen“
   erscheint nur, wenn das Vormerken zur Prüfung eingeschaltet ist oder noch
-  Tiere markiert sind (Einstellungen → Tiere).
+  Tiere markiert sind (Einrichtung → Tiere).
 - **Vorschläge** — mit dem Recht „Tiere verwalten“ führt der Reiter
   „Vorschläge“ zu dem, was eine Quelle vorgeschlagen hat; die Zahl zählt alle
   offenen. Ein Hund mit offenem Vorschlag trägt die Marke „Vorschlag“. Wie
@@ -47,7 +47,7 @@ weitere Fotos, die Angaben als Marken, den Kurztext und darunter den
 Langtext. Passt der Langtext nicht, wird er kleiner gesetzt; reicht auch das
 nicht, endet er nach dem letzten ganzen Absatz, der noch passt. Bei
 veröffentlichten Hunden steht unten ein QR-Code zum Online-Profil, und ein
-gekürzter Text verweist darauf. Dafür muss unter Verwaltung → Tiere die
+gekürzter Text verweist darauf. Dafür muss unter Einrichtung → Tiere die
 Adresse des Online-Profils eingetragen sein.
 
 ## Das Profil
@@ -64,17 +64,61 @@ Drei Reiter:
 - **Texte und Fotos** — links Kurztext, Beschreibung und Wesensmerkmale, je
   Sprache; rechts die Fotos aus der [Mediathek](mediathek.md), eines davon als
   Hauptfoto. Ein Klick auf ein Foto öffnet das Original in einem neuen Tab.
-  Die Fotos stehen im Ausschnitt, in dem die Webseite das Hauptfoto zeigt;
-  eingestellt wird er unter [Einstellungen → Tiere](einstellungen/tiere-einrichten.md).
+  Jedes Foto steht im Format seiner Stelle auf der Webseite: das Hauptfoto im
+  Format des Titelbilds (aus der Vorlage der Webseite, sonst aus
+  [Einrichtung → Tiere](einstellungen/tiere-einrichten.md)), die übrigen im
+  Format der Galerie, wenn die Vorlage eins angibt.
   Texte und Fotos werden zusammen mit „Speichern“ unten gespeichert; einen
   eigenen Knopf für die Fotos gibt es nicht. Bei einem neuen Hund lassen sich
   Fotos wählen, sobald er angelegt ist. Ein Tier hat höchstens 12 Fotos; neben
   „Fotos wählen“ steht, wie viele davon belegt sind („10 von 12 Fotos“). Ist
   die Grenze erreicht, lässt der Auswahldialog kein weiteres Foto zu — heben
   Sie dort erst eines auf oder nehmen Sie eines heraus.
-  Kam ein Foto mit einem Ausschnitt der Quelle, zeigt die Kachel das ganze
-  Foto mit dem Ausschnitt als hellem Rechteck, außen abgedunkelt
-  („Ausschnitt der Quelle“); bearbeiten lässt er sich noch nicht.
+  Jede Kachel zeigt das Foto so, wie die Webseite es zeigt; darunter steht
+  „Ausschnitt“ oder „ohne Ausschnitt“.
+
+### Bildausschnitt eines Fotos
+
+Mit „Ausschnitt …“ an der Kachel legen Sie fest, welcher Teil eines Fotos auf
+der Webseite erscheint. Der Dialog zeigt das ganze Original, außen
+abgedunkelt, und darauf ein Rechteck im Format der Stelle. Beim Hauptfoto ist
+das Format fest; statt einer Auswahl steht dort „fest für das Titelbild“ (mit
+„Einstellung „Bildausschnitt““, wenn das Format aus der Einstellung kommt). Bei
+den übrigen Fotos wählen Sie es unter „Format“ — Original, 1:1, 4:3, 3:2 oder
+16:9, mit „Quer“ und „Hoch“ —, es sei denn, die Vorlage gibt der Galerie ein
+Format vor. Wechseln Sie das Format, legt der Dialog das größte Rechteck im
+neuen Format um die Mitte des alten. Im Rechteck ziehen verschiebt es, eine Ecke
+ändert die Größe. „Zoom“ zoomt bis 1,9-fach hinein, das Rechteck wird dabei
+kleiner; am Telefon zoomt Auseinanderziehen mit zwei Fingern hinein. Mit der
+Tastatur: Pfeile verschieben (mit Umschalt in großen Schritten), + und − zoomen,
+0 nimmt wieder das ganze Format (ebenso der Knopf „Ganzes Format“), Enter
+übernimmt. Rechts zeigt
+„So auf der Webseite“ das Ergebnis an jeder Stelle, an der das Foto erscheint
+— etwa „Galerie · 4:3“ und „Lightbox · wie gewählt“ —, und sagt, wo eine Stelle
+seitlich oder oben und unten nachschneidet.
+
+Ohne Ausschnitt beginnt das Rechteck dort, wo die Webseite das Foto heute
+zeigt; wer gleich „Übernehmen“ drückt, legt genau das fest. „Ausschnitt
+entfernen“ nimmt einen gesetzten Ausschnitt wieder heraus. „Übernehmen“ ändert
+nur die Maske: Gespeichert wird mit „Speichern“ am Tier, vorher zählt die Leiste
+die Änderung. Das Original in der Mediathek bleibt immer unverändert, auch ein
+Ausschnitt, den eine Quelle mitgebracht hat, lässt sich hier ändern.
+
+**Hauptfoto wechseln:** Wird ein anderes Foto zum Hauptfoto, verliert das alte
+Hauptfoto seinen Ausschnitt — er war für das Format des Titelbilds gezogen —
+und zeigt wieder das ganze Foto. Das neue Hauptfoto behält seinen Ausschnitt;
+hat es keinen, zeigt die Webseite es im Format des Titelbilds am Blickpunkt.
+Wer sich verklickt hat, wechselt zurück: Der entfernte Ausschnitt kommt wieder,
+bis Sie speichern oder verwerfen. Wer vorher am alten Hauptfoto einen neuen
+Ausschnitt übernimmt, behält diesen.
+
+Ist der Ausschnitt schmaler, als die Webseite das Bild an einer seiner Stellen
+zeigt (ohne Angabe der Vorlage 960 Pixel), warnt der Dialog und nennt die
+Stelle, und die Kachel sagt „Ausschnitt · nur … px breit“: Die Webseite zeigt
+dann ein kleineres Bild. Gesperrt wird nichts; ziehen Sie den
+Ausschnitt größer oder wählen Sie ein größeres Original. Fotos ohne bekannte
+Pixelmaße (ältere Medien, SVG) und eben gewählte Fotos bekommen „Ausschnitt …“
+erst nach dem Speichern.
 - **Geschichte** — erst nach der Vermittlung: Vorher- und Nachher-Bild mit
   Unterschrift, ein Zitat der Familie, das Vermittlungsjahr. Daraus macht die
   Vorlage der Webseite die „Glücklichen Vermittlungen“.

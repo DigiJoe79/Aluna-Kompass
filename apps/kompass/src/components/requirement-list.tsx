@@ -7,6 +7,7 @@ import { StatusBadge } from '@/components/status-badge';
 import { Disclosure } from '@/components/ui/disclosure';
 import { groupOpenFirst, type RequirementGroup } from '@/lib/requirement-groups';
 import { cn } from '@/lib/utils';
+import { Overline } from '@/components/overline';
 
 export interface RequirementListItem {
   key: string;
@@ -86,9 +87,9 @@ function OpenRow({ item, symbolOnly = false }: { item: RequirementListItem; symb
           )}
           <span className="font-semibold text-ink">{item.title}</span>
         </div>
-        {item.detail ? <p className="text-[13px] text-muted-ink">{item.detail}</p> : null}
+        {item.detail ? <p className="text-meta text-muted-ink">{item.detail}</p> : null}
         {!item.done && !item.blocked && !item.canSelf && item.canDoNames.length > 0 ? (
-          <p className="text-[12px] text-muted-ink" data-testid={`requirement-${item.key}-candoo`}>
+          <p className="text-hint text-muted-ink" data-testid={`requirement-${item.key}-candoo`}>
             {item.canDoText}
           </p>
         ) : null}
@@ -103,7 +104,7 @@ function OpenRow({ item, symbolOnly = false }: { item: RequirementListItem; symb
 
 function ActionLink({ item }: { item: RequirementListItem }) {
   return (
-    <Link href={item.href} className="rounded-sm border border-line bg-surface px-3 py-1.5 text-[13px] font-semibold text-ink hover:bg-surface-2">
+    <Link href={item.href} className="rounded-sm border border-line bg-surface px-3 py-1.5 text-meta font-semibold text-ink hover:bg-surface-2">
       {item.actionLabel}
     </Link>
   );
@@ -118,7 +119,7 @@ function GroupedRequirementList({ items }: { items: RequirementListItem[] }) {
         if (group === 'missing') {
           return (
             <section key={group} aria-label={label(group)} data-testid="requirement-group-missing" className="space-y-2">
-              <h4 className="text-[12px] font-semibold uppercase tracking-wide text-warning">{label(group)}</h4>
+              <Overline>{label(group)}</Overline>
               <ul className="space-y-2">
                 {rows.map((item) => (
                   <OpenRow key={item.key} item={item} symbolOnly />
@@ -130,7 +131,7 @@ function GroupedRequirementList({ items }: { items: RequirementListItem[] }) {
         if (group === 'review') {
           return (
             <section key={group} aria-label={label(group)} data-testid="requirement-group-review" className="space-y-2">
-              <h4 className="text-[12px] font-semibold uppercase tracking-wide text-warning">{label(group)}</h4>
+              <Overline>{label(group)}</Overline>
               {rows.map((item) => {
                 // Sperrt die Zeile außerdem, steht ihre Abhilfe schon unter „Fehlt noch“ — hier nicht noch einmal.
                 const action = !item.done && !item.blocked && item.canSelf && item.href ? <ActionLink item={item} /> : undefined;
@@ -149,7 +150,7 @@ function GroupedRequirementList({ items }: { items: RequirementListItem[] }) {
           <Disclosure key={group} label={label(group)} count={rows.length} tone={group === 'done' ? 'success' : 'neutral'} bounded={false}>
             <ul className="space-y-1" data-testid={`requirement-group-${group}`}>
               {rows.map((item) => (
-                <li key={item.key} data-testid={`requirement-${item.key}`} data-done={item.done} data-blocked={item.blocked} data-applies={group !== 'notApplicable'} className="flex flex-wrap items-baseline gap-x-2 py-0.5 text-[13px]">
+                <li key={item.key} data-testid={`requirement-${item.key}`} data-done={item.done} data-blocked={item.blocked} data-applies={group !== 'notApplicable'} className="flex flex-wrap items-baseline gap-x-2 py-0.5 text-meta">
                   {group === 'done' ? <Check className="size-3.5 shrink-0 self-center text-success" aria-label={item.doneLabel} /> : null}
                   <span className={group === 'done' ? 'text-ink' : 'text-muted-ink'}>{item.title}</span>
                   {group === 'done' && item.detail ? <span className="text-muted-ink">· {item.detail}</span> : null}

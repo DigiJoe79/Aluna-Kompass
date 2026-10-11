@@ -93,7 +93,7 @@ export function DocumentPicker({
             className="absolute left-0 right-0 top-full z-20 mt-1 max-h-64 rounded-md border border-line bg-surface shadow-md"
           >
             {!loaded ? (
-              <div role="presentation" className="px-3 py-2 text-[13px] text-muted-ink">
+              <div role="presentation" className="px-3 py-2 text-meta text-muted-ink">
                 {t('searching')}
               </div>
             ) : (
@@ -103,7 +103,7 @@ export function DocumentPicker({
                   {options.map((option) => (
                     <CommandItem key={option.id} value={option.id} data-testid="document-option" onSelect={() => pick(option)}>
                       {labelOf(option)}
-                      {option.phase === 'draft' ? <span className="ml-2 text-[12px] text-muted-ink">{t('draft')}</span> : null}
+                      {option.phase === 'draft' ? <span className="ml-2 text-hint text-muted-ink">{t('draft')}</span> : null}
                     </CommandItem>
                   ))}
                 </CommandGroup>

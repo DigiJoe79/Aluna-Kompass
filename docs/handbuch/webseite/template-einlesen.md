@@ -13,7 +13,7 @@ ersetzt sie durch seine eigene, indem die Person, die das NAS betreut, das
 Verzeichnis austauscht (siehe [Betrieb](../betrieb.md)). Kompass liest von
 dort — es lädt keine Vorlage hoch und speichert keine in der Datenbank.
 
-Sie lesen sie unter Einstellungen → Webseite → Vorlage ein (siehe
+Sie lesen sie unter Einrichtung → Webseite → Vorlage ein (siehe
 [Webseite einrichten](../einstellungen/webseite-einrichten.md)). Der Reiter
 zeigt den Namen der Vorlage, die zuletzt eingelesen wurde, und wann. Steht dort „Noch keine Vorlage eingelesen“, sind Variablen,
 Sammlungen und Publizieren noch nicht verfügbar.
@@ -36,7 +36,7 @@ Gruppen:
   Vorlage als solche kennzeichnet, Typwechsel ohne Verlust.
 
 Steht nichts an, sagt die Seite „Keine Änderungen gegenüber dem eingelesenen
-Stand“. Fordert die Vorlage eine Sprache, die unter Einstellungen → Sprachen
+Stand“. Fordert die Vorlage eine Sprache, die unter Einrichtung → Sprachen
 nicht eingerichtet ist, bricht das Einlesen ab, bevor etwas geändert wird.
 
 Mit „Übernehmen“ wendet Kompass die Befunde in einem Schritt an und schreibt

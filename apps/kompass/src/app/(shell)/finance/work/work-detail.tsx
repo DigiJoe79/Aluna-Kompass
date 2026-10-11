@@ -72,7 +72,7 @@ export function WorkDetail({
   if (!detail) {
     acceptRef.current = null;
     return (
-      <aside data-testid="work-detail" aria-label={t('label')} className="w-full shrink-0 rounded-md border border-line bg-surface p-4 text-[13px] text-muted-ink lg:w-[420px]">
+      <aside data-testid="work-detail" aria-label={t('label')} className="w-full shrink-0 rounded-md border border-line bg-surface p-4 text-meta text-muted-ink lg:w-[420px]">
         {t('loading')}
       </aside>
     );
@@ -96,7 +96,7 @@ export function WorkDetail({
   return (
     <aside data-testid="work-detail" aria-label={t('label')} className="w-full shrink-0 space-y-4 lg:w-[420px]">
       <section className="rounded-md border border-line bg-surface p-4">
-        <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-[13px]">
+        <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-meta">
           {fields
             .filter(([, value]) => value !== null && value !== '')
             .map(([key, value]) => (

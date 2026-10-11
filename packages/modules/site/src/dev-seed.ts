@@ -1,10 +1,11 @@
 import { existsSync } from 'node:fs';
 import path from 'node:path';
-import { type CallContext, type Deps, newId, readLocales, readSetting, schema as core, SEED_PHOTO_FOLDER, unwrap, writeSettingInternal } from '@kompass/core';
+import { type CallContext, type Deps, derivedAssetId, newId, readLocales, readSetting, schema as core, SEED_PHOTO_FOLDER, unwrap, writeSettingInternal } from '@kompass/core';
 import { siteTemplateDir } from './env';
 import { BASELINE_ENVIRONMENT, currentContentManifest } from './pending';
 import type { ContentManifest } from './public-content';
 import { widgetOf } from './field-schema';
+import { fieldImagePlaces } from './image-places';
 import { createEntry, setEntryPublished } from './entries';
 import { siteEntries, sitePublishes, siteValues } from './schema';
 import { activeTemplate, applyTemplateSync } from './service';
@@ -77,7 +78,7 @@ export async function seedSiteDevelopment(deps: Deps, ctx: CallContext): Promise
    * und gerade die Bildausgabe will man dort sehen.
    */
   const bilder: Bild[] = deps.db
-    .select({ id: core.mediaAssets.id, mimeType: core.mediaAssets.mimeType, folder: core.mediaAssets.folder, filename: core.mediaAssets.filename })
+    .select({ id: core.mediaAssets.id, mimeType: core.mediaAssets.mimeType, folder: core.mediaAssets.folder, filename: core.mediaAssets.filename, width: core.mediaAssets.width, height: core.mediaAssets.height })
     .from(core.mediaAssets)
     .all()
     .filter((a) => a.mimeType.startsWith('image/'))
@@ -92,7 +93,7 @@ export async function seedSiteDevelopment(deps: Deps, ctx: CallContext): Promise
   for (const [key, field] of Object.entries(schema.variables)) {
     if (widgetOf(field) !== 'asset') continue;
     const gewaehlt = passendesBild(field, key, bilder, 0);
-    if (gewaehlt) variables[key] = gewaehlt;
+    if (gewaehlt) variables[key] = imFormat(field, gewaehlt, bilder);
   }
   if (Object.keys(variables).length > 0) unwrap(await setValues(deps, ctx, { values: variables }));
 
@@ -111,7 +112,8 @@ export async function seedSiteDevelopment(deps: Deps, ctx: CallContext): Promise
         // Zustand, den die Ausgabe beherrschen muss.
         if (widgetOf(field) === 'asset' && i < anzahl - 1) {
           const gewaehlt = passendesBild(field, feldName, bilder, i);
-          if (gewaehlt) data[feldName] = gewaehlt;
+          // Der erste Eintrag zeigt das Bild im Format der Stelle zugeschnitten, die übrigen ganz (beide Zustände).
+          if (gewaehlt) data[feldName] = i === 0 ? imFormat(field, gewaehlt, bilder) : gewaehlt;
         }
       }
       const eintrag = await createEntry(deps, ctx, {
@@ -218,7 +220,7 @@ export function sprechenderSlug(fields: Record<string, FieldSchema>, data: Recor
 /** Drei Einträge je Sammlung: genug für Sortierung und Zustände, wenig genug zum Überblicken. */
 const ANZAHL = 3;
 
-interface Bild { id: string; mimeType: string; folder: string | null; filename: string }
+interface Bild { id: string; mimeType: string; folder: string | null; filename: string; width: number | null; height: number | null }
 
 /** Ein Satz in den beiden Sprachen der Entwicklungsdaten; jede weitere Sprache bekommt die englische Fassung. */
 interface Satz { de: string; en: string }
@@ -313,6 +315,21 @@ function nimmtBilder(field: FieldSchema): boolean {
  * was es im Betrieb gibt. Liegen Webseiten-Fotos des Kern-Seeds vor, kommen
  * sie zuerst: Porträts für Personenfelder, Szenen für alles andere.
  */
+/**
+ * Ein Bild im festen Format seiner Stelle (Spec Ausschnitt für alle Bilder §§ 2–3): mittig geschnitten, als abgeleitete
+ * ID. Ohne festes Format oder ohne Pixelmaße bleibt die ID, wie sie ist.
+ */
+function imFormat(field: FieldSchema, id: string, bilder: Bild[]): string {
+  const { formats } = fieldImagePlaces(field);
+  const bild = bilder.find((b) => b.id === id);
+  const match = formats.length === 1 ? /^(\d+):(\d+)$/.exec(formats[0]!) : null;
+  if (!match || !bild?.width || !bild.height) return id;
+  const want = Number(match[1]) / Number(match[2]);
+  const have = bild.width / bild.height;
+  const crop = have > want ? { x: (1 - want / have) / 2, y: 0, w: want / have, h: 1 } : { x: 0, y: (1 - have / want) / 2, w: 1, h: have / want };
+  return derivedAssetId(id, crop);
+}
+
 function passendesBild(field: FieldSchema, name: string, bilder: Bild[], index: number): string | undefined {
   if (bilder.length === 0 || !nimmtBilder(field)) return undefined;
   const fotos = bilder.filter((b) => b.folder === SEED_PHOTO_FOLDER.website);

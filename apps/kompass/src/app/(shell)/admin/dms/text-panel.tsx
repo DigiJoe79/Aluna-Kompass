@@ -8,6 +8,7 @@ import { useActionFeedback } from '@/components/forms/use-action-feedback';
 import { Button } from '@/components/ui/button';
 import { reindexAllDocumentsAction, updateOcrLanguagesAction } from './actions';
 import { Select } from '@/components/ui/select';
+import { Section } from '@/components/section';
 
 export interface TextPanelProps {
   currentLanguages: string;
@@ -61,21 +62,21 @@ export function TextPanel({
   return (
     <section className="space-y-6 rounded-md border border-line bg-surface p-5">
       <div>
-        <p className="text-[13px] text-ink-2">{t('textPanel.description')}</p>
+        <p className="text-meta text-ink-2">{t('textPanel.description')}</p>
       </div>
 
       {/* Sprachen der Texterkennung */}
-      <div className="space-y-3 border-t border-line-2 pt-4">
-        <h4 className="text-[14px] font-semibold text-ink">{t('textPanel.languages')}</h4>
+      <div className="border-t border-line-2 pt-4">
+        <Section title={t('textPanel.languages')}>
         {availableLanguages === null ? (
-          <p className="text-[13px] text-muted-ink">{tDms('text.unavailableHint')}</p>
+          <p className="text-meta text-muted-ink">{tDms('text.unavailableHint')}</p>
         ) : (
           <div className="space-y-3">
             <div className="flex flex-wrap items-center gap-2">
               {selectedLangs.map((lang) => (
                 <span
                   key={lang}
-                  className="inline-flex items-center gap-1.5 rounded-md bg-brand-soft px-2.5 py-1 font-mono text-[13px] font-medium text-brand-ink"
+                  className="inline-flex items-center gap-1.5 rounded-md bg-brand-soft px-2.5 py-1 font-mono text-meta text-brand-ink"
                 >
                   {lang}
                   {canManageSettings && selectedLangs.length > 1 ? (
@@ -124,6 +125,7 @@ export function TextPanel({
             ) : null}
           </div>
         )}
+        </Section>
       </div>
 
       {/* Alles neu lesen */}
@@ -141,7 +143,7 @@ export function TextPanel({
             {t('textPanel.reindex')}
           </Button>
           {openCount > 0 ? (
-            <span className="text-[13px] text-muted-ink">
+            <span className="text-meta text-muted-ink">
               {t('textPanel.open', { count: openCount })}
             </span>
           ) : null}

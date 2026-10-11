@@ -226,7 +226,7 @@ export default async function FinanceWorkPage({ searchParams }: { searchParams: 
           <AccountFilter accounts={filterAccounts} value={account} tab={tab} count={{ shown: itemsRes.value.total, total: counts[tab] }} />
 
           {counts.heldCandidates > 0 ? (
-            <p className="text-[13px] text-ink-2">
+            <p className="text-meta text-ink-2">
               {t('held', { count: counts.heldCandidates })}{' '}
               <Link href="/finance/imports" className="font-semibold underline underline-offset-2">
                 {t('heldLink')}
@@ -234,7 +234,7 @@ export default async function FinanceWorkPage({ searchParams }: { searchParams: 
             </p>
           ) : null}
           {counts.reviewed > 0 ? (
-            <div className="flex items-center justify-between gap-3 rounded-md border border-line bg-surface px-3 py-2 text-[13px]">
+            <div className="flex items-center justify-between gap-3 rounded-md border border-line bg-surface px-3 py-2 text-meta">
               <span className="text-ink-2">{t('reviewedLine', { count: counts.reviewed })}</span>
               {hasPermission(ctx, 'finance.entriesFinalize') ? <BatchFinalizeDialog reviewedCount={counts.reviewed} /> : null}
             </div>

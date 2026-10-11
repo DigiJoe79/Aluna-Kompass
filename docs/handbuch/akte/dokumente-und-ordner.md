@@ -37,7 +37,7 @@ Dokumente“.“
 
 Ordner anlegen, umbenennen, verschieben und löschen darf, wer das Recht „Akte
 verwalten“ hat; alle anderen sehen den Baum nur. Es geht direkt in der Akte,
-nicht mehr unter Einstellungen.
+nicht mehr unter Einrichtung → Akte.
 
 - **Neuer Ordner** — der Knopf oben in der Ordnerspalte legt einen Ordner auf
   der obersten Ebene an. Tippen Sie den Namen und bestätigen Sie mit Enter.

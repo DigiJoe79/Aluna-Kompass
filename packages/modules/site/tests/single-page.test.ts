@@ -1,4 +1,4 @@
-import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { coreModule, setModuleEnabled, unwrap } from '@kompass/core';
@@ -95,4 +95,21 @@ describe('buildSinglePage', () => {
     expect(await buildSinglePage(deps, env, { view: 'animals', row: {}, key: 'k1' })).toMatchObject({ ok: false, error: { type: 'conflict', code: 'viewNotInTemplate' } });
     expect(await buildSinglePage(deps, env, { view: 'organization', row: {}, key: '../x' })).toMatchObject({ ok: false, error: { type: 'validation' } });
   });
+
+  it('sweeps unused old variants from its own image cache after each build (Backlog 67)', async () => {
+    const deps = createTestDeps({ manifests: [coreModule, projectsModule, siteModule], locales: ['de', 'en'] });
+    insertUser(deps, { id: 'USER-TEST' });
+    unwrap(await setModuleEnabled(deps, ctxWith(['modules.manage']), { key: 'projects', enabled: true }));
+    unwrap(await applyTemplateSync(deps, ctxWith(['site.manage', 'site.view']), { dir: TEMPLATE_DIR, confirm: true }));
+    const row = unwrap(readPublicContent(deps, activeTemplate(deps)!)).views.organization![0];
+    const base = tmp();
+    const env = { publicUrl: 'https://example.org', staging: true, deploy: null, templateDir: TEMPLATE_DIR, cacheDir: path.join(base, 'site-build'), previewDir: path.join(base, 'site-preview') };
+    const cache = path.join(singlePageRoot(env), 'img-cache');
+    mkdirSync(cache, { recursive: true });
+    const old = new Date(Date.now() - 40 * 86_400_000);
+    for (const name of ['v1-0123456789abcdef-480.webp', 'v1-fedcba9876543210-480.webp']) writeFileSync(path.join(cache, name), 'x');
+    utimesSync(path.join(cache, 'v1-0123456789abcdef-480.webp'), old, old);
+    unwrap(await buildSinglePage(deps, env, { view: 'organization', row, key: 'sweep' }));
+    expect(readdirSync(cache)).toEqual(['v1-fedcba9876543210-480.webp']);
+  }, 120_000);
 });

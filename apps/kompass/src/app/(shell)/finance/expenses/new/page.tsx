@@ -62,7 +62,7 @@ export default async function NewExpensePage({ searchParams }: { searchParams: P
   return (
     <Page width="task" header={header}>
       {source?.ok ? (
-        <p data-testid="expense-copied-from" className="mb-4 rounded-md border border-line bg-surface-2 px-3 py-2 text-[13px] text-ink-2">
+        <p data-testid="expense-copied-from" className="mb-4 rounded-md border border-line bg-surface-2 px-3 py-2 text-meta text-ink-2">
           {t('copiedFrom', { number: source.value.number ?? '' })}
         </p>
       ) : null}

@@ -19,6 +19,8 @@ const EXAMPLE_PROJECTS = [
     body: { de: 'Von November bis März werden feste Futterstellen betreut und isolierte Schlafboxen aufgestellt.', en: 'From November to March, fixed feeding stations are maintained and insulated shelter boxes are set up.' },
     externalLinks: [{ label: 'Spendenseite', url: 'https://example.org/spenden/winterhilfe' }],
     published: true,
+    // Ausschnitt für alle Bilder § 3: das Bild oben und unten beschnitten; die anderen Projekte zeigen es ganz.
+    imageCrop: { x: 0, y: 0.1, w: 1, h: 0.8 },
   },
   {
     slug: 'kastrationsaktion-2026',
@@ -51,7 +53,7 @@ export async function seedProjects(deps: Deps, ctx: CallContext): Promise<void> 
   for (const p of EXAMPLE_PROJECTS) {
     // Das Bild aus der Mediathek des Kern-Seeds (Spec 2026-10-06 § 4); ohne sie bleibt das Projekt ohne Bild.
     const imageAssetId = seedPhotoIds(deps, SEED_PHOTO_FOLDER.projects, p.photo)[0] ?? null;
-    const created = unwrap(await createProject(deps, ctx, { slug: p.slug, name: p.name, type: p.type, status: p.status, summary: p.summary, body: p.body, externalLinks: p.externalLinks, imageAssetId }));
+    const created = unwrap(await createProject(deps, ctx, { slug: p.slug, name: p.name, type: p.type, status: p.status, summary: p.summary, body: p.body, externalLinks: p.externalLinks, imageAssetId, ...('imageCrop' in p && imageAssetId ? { imageCrop: p.imageCrop } : {}) }));
     if (p.published) unwrap(await setProjectPublished(deps, ctx, { id: created.id, isPublished: true }));
   }
 }

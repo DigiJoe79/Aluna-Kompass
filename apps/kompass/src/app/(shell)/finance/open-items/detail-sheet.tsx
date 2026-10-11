@@ -19,6 +19,7 @@ import { formatDateOrDash } from '@/lib/finance/dates';
 import { openItemState } from '@/lib/finance/open-item-state';
 import { cancelOpenItemAction } from './actions';
 import { ItemDialog, type OpenItemEditable } from './item-dialog';
+import { Overline } from '@/components/overline';
 
 export interface OpenItemDetailData {
   id: string;
@@ -107,10 +108,10 @@ export function DetailSheet({
             <SheetTitle>{item.paymentReference ?? t('detail.unnamed')}</SheetTitle>
             <div className="mt-4 space-y-4">
               <div>
-                <p className="font-mono text-[22px] font-semibold tabular-nums text-ink">{formatEuro(item.openCents)}</p>
-                <p className="text-[12px] text-muted-ink">{t('detail.ofTotal', { amount: formatEuro(item.amountCents) })}</p>
+                <p className="font-mono text-amount font-semibold tabular-nums text-ink">{formatEuro(item.openCents)}</p>
+                <p className="text-hint text-muted-ink">{t('detail.ofTotal', { amount: formatEuro(item.amountCents) })}</p>
               </div>
-              <dl className="space-y-1.5 text-[13px]">
+              <dl className="space-y-1.5 text-meta">
                 <div className="flex justify-between gap-2">
                   <dt className="text-muted-ink">{t('columns.contact')}</dt>
                   <dd>{item.contactLabel ?? '—'}</dd>
@@ -130,14 +131,14 @@ export function DetailSheet({
 
               <TransferBlock recipient={item.contactLabel ?? t('detail.noRecipient')} amountCents={item.openCents} reference={item.paymentReference ?? ''} iban={iban} epcPayload={epcPayload} />
 
-              <div>
-                <h4 className="text-[12px] font-semibold uppercase tracking-wide text-muted-ink">{t('detail.settledByTitle')}</h4>
+              <section aria-label={t('detail.settledByTitle')}>
+                <Overline>{t('detail.settledByTitle')}</Overline>
                 {settlements.length === 0 ? (
-                  <p className="mt-1 text-[13px] text-muted-ink">{t('detail.settledByEmpty')}</p>
+                  <p className="mt-1 text-meta text-muted-ink">{t('detail.settledByEmpty')}</p>
                 ) : (
                   <ul className="mt-1 space-y-1">
                     {settlements.map((s) => (
-                      <li key={s.entryId} className="flex items-center justify-between gap-2 text-[13px]">
+                      <li key={s.entryId} className="flex items-center justify-between gap-2 text-meta">
                         <Link href={`/finance/entries/${s.entryId}`} className="text-link underline">
                           {s.entryNumber ?? s.entryId}
                         </Link>
@@ -146,9 +147,9 @@ export function DetailSheet({
                     ))}
                   </ul>
                 )}
-              </div>
+              </section>
 
-              {!done && item.originType ? <p className="text-[13px] text-ink-2">{t('detail.hasOriginText')}</p> : null}
+              {!done && item.originType ? <p className="text-meta text-ink-2">{t('detail.hasOriginText')}</p> : null}
               {!done && !item.originType && !canFinalize ? (
                 <BlockedState step={t('settleWithoutPayment.trigger')} title={t('settleWithoutPayment.noRight.title')}>
                   {finalizeNames.length > 0

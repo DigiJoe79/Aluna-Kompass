@@ -4,6 +4,7 @@ import { getTranslations } from 'next-intl/server';
 import { Progress } from '@/components/ui/progress';
 import { formatEuro } from '@/lib/finance/amount';
 import { FinanceSectionEditor } from './finance-section-editor';
+import { Section } from '@/components/section';
 
 /**
  * Der Finanzabschnitt am Projekt (F3b Task 6). Lebt in der App-Schicht wie
@@ -29,44 +30,49 @@ export async function ProjectFinanceSection({ deps, ctx, projectId }: { deps: De
   const progressValue = settings.targetCents && settings.targetCents > 0 ? Math.min(100, Math.round((result.incomeCents / settings.targetCents) * 100)) : null;
 
   return (
-    <section data-testid="project-finance-section" className="space-y-3 rounded-md border border-line bg-surface p-5">
-      <div className="flex items-center justify-between gap-3">
-        <h2 className="text-[15px] font-semibold text-ink">{t('title')}</h2>
-        {canEdit ? (
-          <FinanceSectionEditor
-            projectId={projectId}
-            initial={{ targetCents: settings.targetCents, defaultPurposeId: settings.defaultPurposeId, abroad: settings.abroad, publishDonationStatus: settings.publishDonationStatus }}
-            purposes={purposes}
-          />
-        ) : null}
-      </div>
+    <section data-testid="project-finance-section" className="rounded-md border border-line bg-surface p-5">
+      <Section title={t('title')}
+        actions={
+          <>
+            {canEdit ? (
+              <FinanceSectionEditor
+                projectId={projectId}
+                initial={{ targetCents: settings.targetCents, defaultPurposeId: settings.defaultPurposeId, abroad: settings.abroad, publishDonationStatus: settings.publishDonationStatus }}
+                purposes={purposes}
+              />
+            ) : null}
+          </>
+        }
+      >
+        <div className="space-y-3">
+          {progressValue !== null ? (
+            <div className="space-y-1">
+              <div className="flex items-baseline justify-between text-meta">
+                <span className="text-ink-2">{t('target')}</span>
+                <span className="font-mono text-ink">{formatEuro(settings.targetCents!)}</span>
+              </div>
+              <Progress value={progressValue} data-testid="project-finance-progress" />
+            </div>
+          ) : (
+            <p className="text-meta text-muted-ink">{t('noTarget')}</p>
+          )}
 
-      {progressValue !== null ? (
-        <div className="space-y-1">
-          <div className="flex items-baseline justify-between text-[13px]">
-            <span className="text-ink-2">{t('target')}</span>
-            <span className="font-mono text-ink">{formatEuro(settings.targetCents!)}</span>
-          </div>
-          <Progress value={progressValue} data-testid="project-finance-progress" />
+          <dl className="grid grid-cols-3 gap-3 text-meta">
+            <div>
+              <dt className="text-ink-2">{t('income')}</dt>
+              <dd className="font-mono text-ink">{formatEuro(result.incomeCents)}</dd>
+            </div>
+            <div>
+              <dt className="text-ink-2">{t('expense')}</dt>
+              <dd className="font-mono text-ink">{formatEuro(result.expenseCents)}</dd>
+            </div>
+            <div>
+              <dt className="text-ink-2">{t('result')}</dt>
+              <dd className="font-mono text-ink">{formatEuro(result.resultCents)}</dd>
+            </div>
+          </dl>
         </div>
-      ) : (
-        <p className="text-[13px] text-muted-ink">{t('noTarget')}</p>
-      )}
-
-      <dl className="grid grid-cols-3 gap-3 text-[13px]">
-        <div>
-          <dt className="text-ink-2">{t('income')}</dt>
-          <dd className="font-mono text-ink">{formatEuro(result.incomeCents)}</dd>
-        </div>
-        <div>
-          <dt className="text-ink-2">{t('expense')}</dt>
-          <dd className="font-mono text-ink">{formatEuro(result.expenseCents)}</dd>
-        </div>
-        <div>
-          <dt className="text-ink-2">{t('result')}</dt>
-          <dd className="font-mono text-ink">{formatEuro(result.resultCents)}</dd>
-        </div>
-      </dl>
+      </Section>
     </section>
   );
 }

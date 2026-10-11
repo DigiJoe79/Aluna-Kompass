@@ -23,7 +23,7 @@ export function SaveStatus({ state, pending }: { state: SaveState; pending: bool
   const text =
     state.kind === 'saving' ? t('saving') : state.kind === 'saved' ? t('saved', { time: clock(state.at, timeZone) }) : state.kind === 'offline' ? t('offline') : state.kind === 'failed' ? t('failed', { detail: state.detail }) : t('idle');
   return (
-    <p data-testid="save-status" data-pending={pending} role="status" aria-live="polite" className={cn('text-[12px] leading-snug', state.kind === 'offline' || state.kind === 'failed' ? 'text-warning' : 'text-muted-ink')}>
+    <p data-testid="save-status" data-pending={pending} role="status" aria-live="polite" className={cn('text-hint', state.kind === 'offline' || state.kind === 'failed' ? 'text-warning' : 'text-muted-ink')}>
       {text}
     </p>
   );

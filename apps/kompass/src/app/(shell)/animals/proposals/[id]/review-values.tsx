@@ -26,7 +26,7 @@ export function FieldValue({ field, value, locales }: { field: ProposalField; va
     <span className="flex flex-col gap-1">
       {lines.map((l) => (
         <span key={l.locale ?? 'value'} className="whitespace-pre-line">
-          {l.locale ? <span className={cn('mr-1.5 rounded-sm px-1.5 py-0.5 uppercase', LOCALE_CODE)}>{l.locale}</span> : null}
+          {l.locale ? <span className={cn('mr-1.5 rounded-sm px-1.5 py-0.5', LOCALE_CODE)}>{l.locale.toUpperCase()}</span> : null}
           {l.text || <span className="text-muted-ink">—</span>}
         </span>
       ))}

@@ -16,7 +16,8 @@ export interface PreviewChoice {
  */
 export function previewRowInput(review: ProposalReview, side: 'current' | 'choice', choice: PreviewChoice) {
   const { proposal, animal } = review;
-  const own = (animal?.photos ?? []).map((p) => ({ assetId: p.assetId, isPrimary: p.isPrimary }));
+  // Der Ausschnitt geht mit, damit die Vorschau wie die Webseite schneidet (Spec Bildausschnitt § 4, letzter Punkt).
+  const own = (animal?.photos ?? []).map((p) => ({ assetId: p.assetId, isPrimary: p.isPrimary, crop: p.crop ?? null }));
   if (side === 'current') return { animalId: animal?.id ?? null, slugId: proposal.id, values: {}, photos: own, proposalImages: [] as string[] };
   const values: Record<string, unknown> =
     proposal.kind === 'create'
@@ -24,7 +25,12 @@ export function previewRowInput(review: ProposalReview, side: 'current' | 'choic
       : Object.fromEntries(review.fields.filter((f) => (choice.fields?.[f.field] ?? (f.conflict ? 'current' : 'proposal')) === 'proposal').map((f) => [f.field, f.proposed]));
   const rows = review.photos ?? [];
   const picked: PhotoChoice[] = choice.photos ?? defaultPhotoChoice(rows);
-  const photos = review.photos ? picked.map((c) => ({ assetId: c.imageId ? `${PROPOSAL_ASSET_PREFIX}${c.imageId}` : c.mediaId!, isPrimary: c.isPrimary })) : own;
+  // Wie beim Übernehmen (`photoWrites`): ohne Angabe gilt für ein neues Bild der Ausschnitt der Quelle, für ein Foto
+  // des Tiers der gespeicherte; `null` entfernt ihn.
+  const rowCrop = new Map(rows.map((r) => [r.key, r.crop]));
+  const storedCrop = new Map((animal?.photos ?? []).map((p) => [p.assetId, p.crop ?? null]));
+  const cropOf = (c: PhotoChoice) => (c.crop !== undefined ? c.crop : c.imageId ? (rowCrop.get(`image:${c.imageId}`) ?? null) : (storedCrop.get(c.mediaId!) ?? null));
+  const photos = review.photos ? picked.map((c) => ({ assetId: c.imageId ? `${PROPOSAL_ASSET_PREFIX}${c.imageId}` : c.mediaId!, isPrimary: c.isPrimary, crop: cropOf(c) })) : own;
   const proposalImages = review.photos ? picked.flatMap((c) => (c.imageId ? [c.imageId] : [])) : [];
   return { animalId: animal?.id ?? null, slugId: proposal.id, values, photos, proposalImages };
 }

@@ -18,6 +18,8 @@ import type { PermissionGroup } from '@/lib/permission-groups';
 import { cn } from '@/lib/utils';
 import { createRoleAction, saveRoleAction } from './actions';
 import { ActionForm } from '@/components/forms/action-form';
+import { Overline } from '@/components/overline';
+import { KeyLine } from '@/components/key-line';
 
 export function RoleEditor({
   roles,
@@ -96,11 +98,11 @@ export function RoleEditor({
                   role.id === selected.id && 'bg-selected text-selected-ink shadow-[inset_2px_0_0_var(--color-primary)]',
                 )}
               >
-                <span className="flex items-center gap-1.5 text-[14px] font-semibold">
+                <span className="flex items-center gap-1.5 text-body font-semibold">
                   {role.name}
                   {role.isProtected ? <Lock className="size-3" aria-hidden /> : null}
                 </span>
-                <span className="text-[12px] text-muted-ink">
+                <span className="text-hint text-muted-ink">
                   {role.isProtected
                     ? t('meta.protected', { users: role.userCount })
                     : t('meta.normal', { permissions: role.permissionKeys.length, users: role.userCount })}
@@ -109,7 +111,7 @@ export function RoleEditor({
             </li>
           ))}
         </ul>
-        <p className="mt-3 px-3 text-[12px] text-muted-ink">{t('noDelete')}</p>
+        <p className="mt-3 px-3 text-hint text-muted-ink">{t('noDelete')}</p>
         <Dialog open={createOpen} onOpenChange={setCreateOpen}>
           <DialogTrigger render={<Button variant="outline" className="mt-auto border-dashed">{t('create.button')}</Button>} />
           <DialogContent size="sm" className="bg-surface shadow-md">
@@ -170,10 +172,8 @@ export function RoleEditor({
                       edit({ keys });
                     }}
                   />
-                  <span className="text-[12px] font-bold uppercase tracking-[.08em] text-ink-2">
-                    {tRoot(group.labelKey)}
-                  </span>
-                  <span className="text-[12px] text-muted-ink">
+                  <Overline as="span">{tRoot(group.labelKey)}</Overline>
+                  <span className="text-hint text-muted-ink">
                     {t('groupCount', { active, total: group.keys.length })}
                   </span>
                 </div>
@@ -189,10 +189,10 @@ export function RoleEditor({
                       onCheckedChange={(c) => toggle(key, c === true)}
                     />
                     <span>
-                      <span className="block text-[14px] font-semibold">{p(`keys.${key}.label`)}</span>
-                      <span className="block font-mono text-[11px] text-muted-ink">{key}</span>
+                      <span className="block text-body font-semibold">{p(`keys.${key}.label`)}</span>
+                      <KeyLine>{key}</KeyLine>
                     </span>
-                    <span className="text-[13px] text-ink-2">{p(`keys.${key}.description`)}</span>
+                    <span className="text-meta text-ink-2">{p(`keys.${key}.description`)}</span>
                   </label>
                 ))}
               </div>

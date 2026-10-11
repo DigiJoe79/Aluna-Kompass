@@ -1,6 +1,6 @@
 'use client';
 
-import { fieldSizeOf, widgetOf, type FieldSchema } from '@kompass/module-site/client';
+import { fieldImagePlaces, fieldSizeOf, widgetOf, type FieldSchema } from '@kompass/module-site/client';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { Input } from '@/components/ui/input';
@@ -25,6 +25,19 @@ export interface FieldProps {
   options?: { value: string; label: string }[];
   /** Spannweite im `FormGrid`, gesetzt von `SchemaField`. */
   span?: FieldSize;
+  /** Für Bildfelder mit Ausschnitt; reist in Listen mit. */
+  media?: SchemaMedia;
+}
+
+/**
+ * Was ein Bildfeld des Templates für den Ausschnitt braucht (Spec Ausschnitt für alle Bilder § 4): die Pixelmaße der
+ * gewählten Bilder (`mediaPixelSizes`), womit gespeichert wird („dem Eintrag“) und der Name der Stelle — bei
+ * Sammlungen die Sammlung („Team“), sonst der Feldname.
+ */
+export interface SchemaMedia {
+  sizes?: Readonly<Record<string, { width: number; height: number }>>;
+  target?: string;
+  placeLabel?: string;
 }
 
 const labelOf = (field: FieldSchema, path: string) => (typeof field.label === 'string' && field.label) || path;
@@ -59,13 +72,13 @@ function Localized({ path, field, value, errors, locales, onChange, span }: Fiel
         {isMarkdown ? (
           <>
             <LocaleLabel htmlFor={name} locale={locale} />
-            <Textarea {...shared} rows={5} className="font-mono text-[13px]" />
+            <Textarea {...shared} rows={5} className="font-mono text-meta" />
           </>
         ) : (
           <LocaleInput {...shared} locale={locale} invalid={!!error} />
         )}
         {untranslated ? (
-          <p id={hintId} className="text-[12px] text-warning">
+          <p id={hintId} className="text-hint text-warning">
             {t('untranslated')}
           </p>
         ) : null}
@@ -76,12 +89,12 @@ function Localized({ path, field, value, errors, locales, onChange, span }: Fiel
 
   return (
     <FormCell as="fieldset" size={span} className="flex min-w-0 flex-col gap-2">
-      <legend className="text-[13px] font-semibold text-ink-2">{labelOf(field, path)}</legend>
+      <legend className="text-meta font-semibold text-ink-2">{labelOf(field, path)}</legend>
       {tabbed ? (
         <div className="flex flex-wrap gap-1 border-b border-line pb-1">
           {locales.map((l) => (
-            <button key={l} type="button" onClick={() => setActive(l)} className={cn('rounded-sm px-2 py-1 font-mono text-[10px] uppercase', active === l ? 'bg-selected font-semibold text-ink' : 'text-muted-ink')}>
-              {l}
+            <button key={l} type="button" onClick={() => setActive(l)} className={cn('rounded-sm px-2 py-1 font-mono text-key font-semibold', active === l ? 'bg-selected text-ink' : 'text-muted-ink')}>
+              {l.toUpperCase()}
             </button>
           ))}
         </div>
@@ -91,7 +104,7 @@ function Localized({ path, field, value, errors, locales, onChange, span }: Fiel
       </div>
       {isMarkdown ? (
         <div className="flex flex-col gap-2">
-          <button type="button" aria-pressed={preview} onClick={() => setPreview((p) => !p)} className="self-start rounded-sm bg-badge px-2 py-0.5 text-[11px] text-badge-ink">
+          <button type="button" aria-pressed={preview} onClick={() => setPreview((p) => !p)} className="self-start rounded-sm bg-badge px-2 py-0.5 text-hint text-badge-ink">
             {t('preview')}
           </button>
           {preview ? <MarkdownPreview markdown={record[active] ?? record[leading] ?? ''} /> : null}
@@ -102,7 +115,7 @@ function Localized({ path, field, value, errors, locales, onChange, span }: Fiel
 }
 
 /** Liste aus Textzeilen oder aus Datensätzen — was von beidem, sagt das Feldschema. */
-function ListField({ path, field, value, errors, locales, onChange, span }: FieldProps) {
+function ListField({ path, field, value, errors, locales, onChange, span, media }: FieldProps) {
   const t = useTranslations('site.form');
   const items = Array.isArray(value) ? (value as unknown[]) : [];
   const itemSchema = (field.items as FieldSchema | undefined) ?? { widget: 'text' };
@@ -125,9 +138,9 @@ function ListField({ path, field, value, errors, locales, onChange, span }: Fiel
 
   return (
     <FormCell as="fieldset" size={span} className="flex min-w-0 flex-col gap-2">
-      <legend className="flex items-center gap-2 text-[13px] font-semibold text-ink-2">
+      <legend className="flex items-center gap-2 text-meta font-semibold text-ink-2">
         {labelOf(field, path)}
-        {max ? <span className="text-[11px] font-normal text-muted-ink">{t('atMost', { max })}</span> : null}
+        {max ? <span className="text-hint font-normal text-muted-ink">{t('atMost', { max })}</span> : null}
       </legend>
       <ol className="flex flex-col gap-2">
         {items.map((item, index) => (
@@ -145,8 +158,14 @@ function ListField({ path, field, value, errors, locales, onChange, span }: Fiel
                       errors={errors}
                       locales={locales}
                       onChange={(next) => update(index, setAtPath(item, key, next))}
+                      media={media}
                     />
                   ))}
+                </FormGrid>
+              ) : widgetOf(itemSchema) === 'asset' ? (
+                // Eine Liste von Bildern: je Eintrag ein Bildwähler mit Stelle, wie ein einzelnes Feld.
+                <FormGrid>
+                  <AssetField path={`${path}.${index}`} field={itemSchema} value={item} errors={errors} locales={locales} onChange={(next) => update(index, next)} media={media} span="full" />
                 </FormGrid>
               ) : (
                 <Input
@@ -157,15 +176,15 @@ function ListField({ path, field, value, errors, locales, onChange, span }: Fiel
               )}
             </div>
             <div className="flex flex-col gap-1">
-              <button type="button" aria-label={t('moveUp')} onClick={() => move(index, -1)} className="rounded-sm bg-badge px-1.5 text-[11px] text-badge-ink">↑</button>
-              <button type="button" aria-label={t('moveDown')} onClick={() => move(index, 1)} className="rounded-sm bg-badge px-1.5 text-[11px] text-badge-ink">↓</button>
-              <button type="button" aria-label={t('remove')} onClick={() => onChange(items.filter((_, i) => i !== index))} className="rounded-sm bg-badge px-1.5 text-[11px] text-error">×</button>
+              <button type="button" aria-label={t('moveUp')} onClick={() => move(index, -1)} className="rounded-sm bg-badge px-1.5 text-hint text-badge-ink">↑</button>
+              <button type="button" aria-label={t('moveDown')} onClick={() => move(index, 1)} className="rounded-sm bg-badge px-1.5 text-hint text-badge-ink">↓</button>
+              <button type="button" aria-label={t('remove')} onClick={() => onChange(items.filter((_, i) => i !== index))} className="rounded-sm bg-badge px-1.5 text-hint text-error">×</button>
             </div>
           </li>
         ))}
       </ol>
       {!max || items.length < max ? (
-        <button type="button" onClick={() => onChange([...items, blank])} className="self-start rounded-sm border border-line px-2 py-1 text-[12px] font-semibold text-ink-2">
+        <button type="button" onClick={() => onChange([...items, blank])} className="self-start rounded-sm border border-line px-2 py-1 text-hint font-semibold text-ink-2">
           {t('add')}
         </button>
       ) : null}
@@ -193,7 +212,7 @@ export function SchemaField(fieldProps: FieldProps) {
 
   const simple = (control: React.ReactNode) => (
     <FormCell size={span} className="flex min-w-0 flex-col gap-1">
-      <label htmlFor={path} className="text-[13px] font-semibold text-ink-2">{label}</label>
+      <label htmlFor={path} className="text-meta font-semibold text-ink-2">{label}</label>
       {control}
       <FieldError id={`${path}-error`} message={error} />
     </FormCell>
@@ -202,7 +221,7 @@ export function SchemaField(fieldProps: FieldProps) {
   if (widget === 'markdown') {
     return simple(
       <>
-        <Textarea id={path} name={path} rows={6} value={typeof value === 'string' ? value : ''} onChange={(e) => onChange(e.target.value)} className="font-mono text-[13px]" />
+        <Textarea id={path} name={path} rows={6} value={typeof value === 'string' ? value : ''} onChange={(e) => onChange(e.target.value)} className="font-mono text-meta" />
         <MarkdownPreview markdown={typeof value === 'string' ? value : ''} />
       </>,
     );
@@ -231,17 +250,23 @@ export function SchemaField(fieldProps: FieldProps) {
   );
 }
 
-function AssetField({ path, field, value, errors, onChange, span }: FieldProps) {
+function AssetField({ path, field, value, errors, onChange, span, media }: FieldProps) {
   const assetId = typeof value === 'string' ? value : null;
   const accept = (field as { accept?: string }).accept;
+  const kind = accept === 'application/pdf' ? 'pdf' : 'image';
+  const label = labelOf(field, path);
+  // Ein Bild des Templates ist eine Stelle der Webseite: Ausschnitt im Format, das das Feld vorgibt. Der Wert ist die
+  // abgeleitete ID (`<assetId>~…`); der Wähler zerlegt und bildet sie.
+  const crop = kind === 'image' ? { places: fieldImagePlaces(field, media?.placeLabel ?? label), derived: true, sizes: media?.sizes ?? {}, target: media?.target ?? '' } : {};
   return (
     <FormCell size={span} className="flex min-w-0 flex-col gap-1">
       <MediaPicker
         name={path}
         value={assetId}
-        label={labelOf(field, path)}
-        kind={accept === 'application/pdf' ? 'pdf' : 'image'}
+        label={label}
+        kind={kind}
         onChange={(id) => onChange(id)}
+        {...crop}
       />
       <FieldError id={`${path}-error`} message={errors[path]} />
     </FormCell>
@@ -256,9 +281,9 @@ function AssetField({ path, field, value, errors, onChange, span }: FieldProps) 
 function StaleNote({ value, onClear }: { value: string; onClear: () => void }) {
   const t = useTranslations('site.form');
   return (
-    <p className="flex flex-wrap items-center gap-2 text-[12px] text-warning">
+    <p className="flex flex-wrap items-center gap-2 text-hint text-warning">
       <span>{t('staleReference', { value })}</span>
-      <button type="button" onClick={onClear} className="rounded-sm bg-badge px-2 py-0.5 text-[11px] text-badge-ink">{t('clearReference')}</button>
+      <button type="button" onClick={onClear} className="rounded-sm bg-badge px-2 py-0.5 text-hint text-badge-ink">{t('clearReference')}</button>
     </p>
   );
 }
@@ -281,7 +306,7 @@ function ReferenceField({ path, field, value, errors, onChange, options = [], sp
   const stale = current !== '' && !options.some((o) => o.value === current);
   return (
     <FormCell size={span} className="flex min-w-0 flex-col gap-1">
-      <label htmlFor={path} className="text-[13px] font-semibold text-ink-2">{labelOf(field, path)}</label>
+      <label htmlFor={path} className="text-meta font-semibold text-ink-2">{labelOf(field, path)}</label>
       <ReferenceSelect id={path} name={path} value={current} options={options} stale={stale} onChange={(next) => onChange(next === '' ? null : next)} />
       {stale ? <StaleNote value={current} onClear={() => onChange(null)} /> : null}
       <FieldError id={`${path}-error`} message={errors[path]} />
@@ -312,7 +337,7 @@ function ReferencesField({ path, field, value, errors, onChange, options = [], s
         const stale = current !== '' && !options.some((o) => o.value === current);
         return (
           <FormCell key={index} size={span} className="flex min-w-0 flex-col gap-1">
-            <label htmlFor={id} className="text-[13px] font-semibold text-ink-2">
+            <label htmlFor={id} className="text-meta font-semibold text-ink-2">
               {index === 0 ? label : t('slot', { n: index + 1 })}
             </label>
             <ReferenceSelect id={id} name={id} ariaLabel={t('slotName', { label, n: index + 1 })} value={current} options={options} stale={stale} onChange={(next) => set(index, next)} />

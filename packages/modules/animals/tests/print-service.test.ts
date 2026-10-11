@@ -1,4 +1,4 @@
-import { coreModule, setSetting, storeMediaAsset, unwrap, type Deps } from '@kompass/core';
+import { coreModule, defineModule, setSetting, writeSettingInternal, storeMediaAsset, unwrap, type Deps } from '@kompass/core';
 import { auditEntry, createTestDeps, ctxWith, insertUser } from '@kompass/core/testing';
 import sharp from 'sharp';
 import { describe, expect, it } from 'vitest';
@@ -43,6 +43,23 @@ async function jpegAsset(deps: Deps, ctx: ReturnType<typeof ctxWith>, name: stri
 }
 
 describe('exportAnimalProfiles', () => {
+  it('nimmt das Format des Hauptfotos aus dem Template, wenn es eins vorgibt (Spec Ausschnitt für alle Bilder § 2)', async () => {
+    const web = defineModule({ key: 'web', version: '1', permissions: [], imagePlaceSpecs: () => ({ 'animals.primary': { ratio: '1:1' } }) });
+    const deps = createTestDeps({ manifests: [coreModule, animalsModule, web], now: '2026-10-05T10:00:00.000Z' });
+    const ctx = ctxWith(ALL, insertUser(deps, {}));
+    deps.db.transaction((tx) => writeSettingInternal(tx, deps, ctx, 'modules.enabled', ['animals', 'web']));
+    const calls: RenderRequest[] = [];
+    const original = deps.documents.render;
+    deps.documents.render = async (request) => {
+      calls.push(request);
+      return original(request);
+    };
+    const a = await dog(deps, ctx);
+    unwrap(await exportAnimalProfiles(deps, ctx, { ids: [a.id], labels: LABELS }));
+    // Einstellung unverändert (4:3); das Template gibt 1:1 vor.
+    expect(JSON.stringify(calls[0])).toContain('aspect: (1, 1)');
+  });
+
   it('renders one PDF for several animals in the given order and names it after the title and the day', async () => {
     const { deps, ctx, calls } = await setup();
     const a = await dog(deps, ctx, { name: 'Anton' });

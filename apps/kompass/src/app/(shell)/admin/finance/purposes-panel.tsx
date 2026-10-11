@@ -21,6 +21,7 @@ import { FormField } from '@/components/forms/form-field';
 import { FormGrid } from '@/components/forms/form-grid';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
+import { Section } from '@/components/section';
 
 export interface PurposeRow {
   id: string;
@@ -66,7 +67,7 @@ export function PurposesPanel({ purposes }: { purposes: PurposeRow[] }) {
       <div className="flex items-center justify-end">
         <div className="flex items-center gap-3">
           {/* F8b 6a: Bestände, Bewegungen und Umwidmung stehen auf der operativen Seite E3. */}
-          <Link href="/finance/purposes" className="text-[13px] font-semibold text-ink underline underline-offset-2" data-testid="purposes-panel-overview">
+          <Link href="/finance/purposes" className="text-meta font-semibold text-ink underline underline-offset-2" data-testid="purposes-panel-overview">
             {t('toOverview')}
           </Link>
           <Button size="sm" onClick={() => setEditing('new')}>
@@ -88,7 +89,7 @@ export function PurposesPanel({ purposes }: { purposes: PurposeRow[] }) {
           <TableBody>
             {purposes.map((row) => (
               <TableRow key={row.id}>
-                <TableCell className="font-medium text-ink">{row.name}</TableCell>
+                <TableCell className="text-ink">{row.name}</TableCell>
                 <TableCell className="font-mono text-ink-2">{row.targetCents !== null ? formatAmount(row.targetCents) : '—'}</TableCell>
                 <TableCell>
                   <StatusBadge tone={stateOf(row) === 'open' ? 'success' : 'neutral'}>{t(`states.${stateOf(row)}`)}</StatusBadge>
@@ -206,38 +207,32 @@ function PurposeDialog({ purpose, onClose, onSaved }: { purpose: PurposeRow | nu
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent size="sm" className="bg-surface shadow-md">
         <DialogTitle>{purpose ? t('edit') : t('create')}</DialogTitle>
-        <section>
-          <h3 className="text-[15px] font-semibold">{t('sections.purpose')}</h3>
-          <div className="mt-3">
-            <FormGrid>
-              <FormField id="purpose-name" label={t('columns.name')} required>
-                <Input id="purpose-name" value={name} onChange={(e) => setName(e.target.value)} required />
-              </FormField>
-              <FormField id="purpose-target" label={t('columns.target')} size="s">
-                <Input id="purpose-target" value={targetText} onChange={(e) => setTargetText(e.target.value)} placeholder="0,00" />
-              </FormField>
-              <FormField id="purpose-description" label={t('description')} size="l">
-                <Textarea id="purpose-description" rows={2} value={description} onChange={(e) => setDescription(e.target.value)} />
-              </FormField>
-              <FormField id="purpose-abroad" label={t('abroad')} toggle>
-                <Checkbox id="purpose-abroad" checked={abroad} onCheckedChange={(checked) => setAbroad(checked)} />
-              </FormField>
-            </FormGrid>
-          </div>
-        </section>
-        <section className="border-t border-line pt-5">
-          <h3 className="text-[15px] font-semibold">{t('sections.carryForward')}</h3>
-          <div className="mt-3">
-            <FormGrid>
-              <FormField id="purpose-carry-forward" label={t('carryForward')} size="s">
-                <Input id="purpose-carry-forward" value={carryForwardText} onChange={(e) => setCarryForwardText(e.target.value)} placeholder="0,00" />
-              </FormField>
-              <FormField id="purpose-carry-forward-date" label={t('carryForwardDate')} size="s">
-                <Input id="purpose-carry-forward-date" type="date" value={carryForwardDate} onChange={(e) => setCarryForwardDate(e.target.value)} />
-              </FormField>
-            </FormGrid>
-          </div>
-        </section>
+        <Section title={t('sections.purpose')}>
+          <FormGrid>
+            <FormField id="purpose-name" label={t('columns.name')} required>
+              <Input id="purpose-name" value={name} onChange={(e) => setName(e.target.value)} required />
+            </FormField>
+            <FormField id="purpose-target" label={t('columns.target')} size="s">
+              <Input id="purpose-target" value={targetText} onChange={(e) => setTargetText(e.target.value)} placeholder="0,00" />
+            </FormField>
+            <FormField id="purpose-description" label={t('description')} size="l">
+              <Textarea id="purpose-description" rows={2} value={description} onChange={(e) => setDescription(e.target.value)} />
+            </FormField>
+            <FormField id="purpose-abroad" label={t('abroad')} toggle>
+              <Checkbox id="purpose-abroad" checked={abroad} onCheckedChange={(checked) => setAbroad(checked)} />
+            </FormField>
+          </FormGrid>
+        </Section>
+        <Section title={t('sections.carryForward')}>
+          <FormGrid>
+            <FormField id="purpose-carry-forward" label={t('carryForward')} size="s">
+              <Input id="purpose-carry-forward" value={carryForwardText} onChange={(e) => setCarryForwardText(e.target.value)} placeholder="0,00" />
+            </FormField>
+            <FormField id="purpose-carry-forward-date" label={t('carryForwardDate')} size="s">
+              <Input id="purpose-carry-forward-date" type="date" value={carryForwardDate} onChange={(e) => setCarryForwardDate(e.target.value)} />
+            </FormField>
+          </FormGrid>
+        </Section>
         <FormActionBar placement="dialog" cancel={onClose} pending={pending} saveDisabled={!name} saveLabel={tCommon('save')} onSave={() => void submit()} state={withUnplacedFieldErrors(feedback.state, [])} />
       </DialogContent>
     </Dialog>

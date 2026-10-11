@@ -34,7 +34,7 @@ export function HelpPanel({ open, onOpenChange, pathname }: { open: boolean; onO
       <SheetContent side="right" size="sm" className="gap-0 overflow-y-auto bg-surface shadow-md" data-testid="help-panel">
         <div className="p-5">
           <SheetTitle>{title}</SheetTitle>
-          <div className="prose-preview mt-3 text-[14px]">
+          <div className="prose-preview mt-3 text-body">
             {current === null ? (
               <div className="h-16 animate-pulse rounded-md bg-surface-2" aria-hidden />
             ) : current === 'error' ? (

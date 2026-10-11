@@ -122,3 +122,34 @@ export function inFileOrLocalImport(file: string, pattern: RegExp, seen: Set<str
     }),
   );
 }
+
+/** Der Wert von `className=` in einem öffnenden Tag: der Text eines Strings oder der Ausdruck in `{ … }`. */
+export function classNameValue(tag: string): string | null {
+  // Nur auf oberster Ebene des Tags: Ein `className` in einer Prop (`actions={<Link className=…>}`) gehört einem anderen Element.
+  let at = -1;
+  let level = 0;
+  let quote: string | null = null;
+  for (let i = 0; i < tag.length; i += 1) {
+    const ch = tag[i]!;
+    if (quote) {
+      if (ch === quote) quote = null;
+    } else if (ch === '"' || ch === "'") quote = level === 0 ? ch : null;
+    else if (ch === '{') level += 1;
+    else if (ch === '}') level -= 1;
+    else if (level === 0 && /\s/.test(ch) && tag.startsWith('className=', i + 1)) {
+      at = i;
+      break;
+    }
+  }
+  if (at === -1) return null;
+  const start = tag.indexOf('=', at) + 1;
+  const open = tag[start];
+  if (open === '"' || open === "'") return tag.slice(start + 1, tag.indexOf(open, start + 1));
+  if (open !== '{') return null;
+  let depth = 0;
+  for (let i = start; i < tag.length; i += 1) {
+    if (tag[i] === '{') depth += 1;
+    else if (tag[i] === '}' && (depth -= 1) === 0) return tag.slice(start + 1, i);
+  }
+  return null;
+}

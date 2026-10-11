@@ -135,7 +135,7 @@ export function DraftScreen({
               aria-selected={tab === key}
               onClick={() => setTab(key)}
               className={cn(
-                'flex items-center gap-1.5 border-b-2 border-transparent px-3 py-2 text-[13px] font-medium text-ink-2',
+                'flex items-center gap-1.5 border-b-2 border-transparent px-3 py-2 text-meta text-ink-2',
                 tab === key && 'border-brand text-ink'
               )}
             >

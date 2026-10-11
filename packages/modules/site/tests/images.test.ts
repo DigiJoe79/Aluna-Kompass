@@ -1,10 +1,10 @@
 import { createHash } from 'node:crypto';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import sharp from 'sharp';
 import { afterEach, describe, expect, it } from 'vitest';
-import { prepareImageVariants } from '../src/pipeline/images';
+import { IMAGE_CACHE_MAX_AGE_DAYS, prepareImageVariants, sweepImageCache } from '../src/pipeline/images';
 
 const dirs: string[] = [];
 afterEach(() => {
@@ -36,12 +36,15 @@ describe('prepareImageVariants', () => {
     expect(existsSync(path.join(job, 'images', 'abcdef123456-480.webp'))).toBe(true);
     expect(existsSync(path.join(job, 'images', 'abcdef123456-1600.webp'))).toBe(false); // nie hochskalieren
     expect(JSON.parse(readFileSync(path.join(job, 'images.json'), 'utf8')).A1.width).toBe(960);
-    const cachedMtime = statSync(path.join(cache, cacheName)).mtimeMs;
+    expect(first.cacheNames).toEqual(new Set([480, 960, 1200].map((w) => cacheName.replace('-480.', `-${w}.`))));
     const job2 = tmp();
     mkdirSync(path.join(job2, 'assets'));
     writeFileSync(path.join(job2, 'assets', 'hund-abcdef123456.png'), png);
-    await prepareImageVariants({ jobDir: job2, assets, cacheDir: cache });
-    expect(statSync(path.join(cache, cacheName)).mtimeMs).toBe(cachedMtime);
+    // Ein Treffer erzeugt nichts neu, erneuert aber den Zeitstempel (Backlog 67: Gebrauchtes bleibt jung).
+    const later = new Date(Date.now() + 86_400_000);
+    const second = await prepareImageVariants({ jobDir: job2, assets, cacheDir: cache, now: later });
+    expect(second.generated).toBe(0);
+    expect(statSync(path.join(cache, cacheName)).mtimeMs).toBe(later.getTime());
     expect(readFileSync(path.join(job2, 'images', 'abcdef123456-480.webp')).equals(readFileSync(path.join(job, 'images', 'abcdef123456-480.webp')))).toBe(true);
   });
 
@@ -124,5 +127,37 @@ describe('prepareImageVariants', () => {
     const job2 = jobWith('hund-abcdef123456.png', bytes);
     await expect(prepareImageVariants({ jobDir: job2, assets: [hund], cacheDir: tmp(), signal: ctl.signal })).rejects.toThrow('weg');
     expect(readdirSync(path.join(job2, 'images'))).toEqual([]);
+  });
+});
+
+/** Backlog 67: Nach einem Publish der Produktion geht, was nicht gebraucht wurde und lange unbenutzt ist. */
+describe('sweepImageCache', () => {
+  const DAY = 86_400_000;
+  const now = new Date('2026-10-10T12:00:00Z');
+  const file = (dir: string, name: string, ageDays: number, bytes = 1000) => {
+    writeFileSync(path.join(dir, name), Buffer.alloc(bytes));
+    const t = new Date(now.getTime() - ageDays * DAY);
+    utimesSync(path.join(dir, name), t, t);
+  };
+
+  it('removes only unused files of this cache version older than the limit', async () => {
+    const cache = tmp();
+    file(cache, 'v1-aaaa-480.webp', 40); // gebraucht, alt → bleibt
+    file(cache, 'v1-bbbb-480.webp', 5); // ungebraucht, jung → bleibt
+    file(cache, 'v1-cccc-480.webp', 40, 2_500_000); // ungebraucht, alt → geht
+    file(cache, 'v1-cccc-1200_0_7600_9500-960.webp', 31, 500_000); // ungebraucht, alt → geht
+    file(cache, 'v0-dddd-480.webp', 40); // andere Fassung: räumt pruneImageCache
+    file(cache, 'preview-build.json', 40); // kein Bild
+    const result = await sweepImageCache(cache, new Set(['v1-aaaa-480.webp']), now);
+    expect(result).toEqual({ removed: 2, bytes: 3_000_000 });
+    expect(readdirSync(cache).sort()).toEqual(['preview-build.json', 'v0-dddd-480.webp', 'v1-aaaa-480.webp', 'v1-bbbb-480.webp']);
+  });
+
+  it('keeps 30 days as the limit and survives a missing directory', async () => {
+    expect(IMAGE_CACHE_MAX_AGE_DAYS).toBe(30);
+    const cache = tmp();
+    file(cache, 'v1-eeee-480.webp', 29);
+    expect(await sweepImageCache(cache, new Set(), now)).toEqual({ removed: 0, bytes: 0 });
+    expect(await sweepImageCache(path.join(cache, 'fehlt'), new Set(), now)).toEqual({ removed: 0, bytes: 0 });
   });
 });

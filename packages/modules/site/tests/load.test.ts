@@ -35,6 +35,28 @@ describe('loadTemplate', () => {
     expect(result.value.schema.variables.claim!.widget).toBe('localized');
   });
 
+  // Ausschnitt für alle Bilder: Format und Breite der Bildstellen stehen im eingelesenen Schema.
+  it('keeps the image places and the ratio and width of asset fields in the schema', async () => {
+    const result = await loadTemplate(await withTemplate(`
+import { asset, defineTemplate } from '@kompass/site-template';
+export default defineTemplate({
+  name: 'Probe', locales: ['de'],
+  variables: { hero: asset({ label: 'Bühne', ratio: '16:9', width: 1200 }) },
+  collections: { team: { label: 'Team', fields: { photo: asset({ label: 'Foto', ratio: '1:1', width: 320 }) } } },
+  images: { 'animals.primary': { ratio: '4:5', width: 600 }, 'shop.banner': { ratio: '3:1' } },
+});`));
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value.schema.images).toEqual({ 'animals.primary': { ratio: '4:5', width: 600 }, 'shop.banner': { ratio: '3:1' } });
+    expect(result.value.schema.variables.hero).toMatchObject({ widget: 'asset', ratio: '16:9', width: 1200 });
+    expect(result.value.schema.collections.team!.fields.photo).toMatchObject({ ratio: '1:1', width: 320 });
+  });
+
+  it('gives a template without image places an empty images object', async () => {
+    const result = await loadTemplate(await withTemplate(GOOD));
+    expect(result.ok && result.value.schema.images).toEqual({});
+  });
+
   it('gives the same checksum for the same file and a different one after an edit', async () => {
     const dir = await withTemplate(GOOD);
     const first = await loadTemplate(dir);

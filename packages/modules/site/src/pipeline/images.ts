@@ -1,12 +1,15 @@
 import { createHash } from 'node:crypto';
-import { copyFile, mkdir, readFile, readdir, rename, rm, stat, writeFile } from 'node:fs/promises';
+import { copyFile, mkdir, readFile, readdir, rename, rm, stat, utimes, writeFile } from 'node:fs/promises';
 import path from 'node:path';
-import { newId } from '@kompass/core';
+import { derivedAssetId, newId, type CropRect } from '@kompass/core';
 import sharp, { type Metadata } from 'sharp';
 import type { ExportedAsset } from '../export';
 import { SITE_CACHE_VERSION } from './env';
 
-export const IMAGE_WIDTHS = [480, 960, 1600] as const;
+import { IMAGE_WIDTHS, MAIN_IMAGE_MAX_WIDTH } from '@kompass/core/image-places';
+
+// Seit 0.2.11 im Kern, weil auch die Schwelle der Bildstellen sie braucht (Spec Ausschnitt für alle Bilder § 2).
+export { IMAGE_WIDTHS, MAIN_IMAGE_MAX_WIDTH } from '@kompass/core/image-places';
 export interface ImageVariant {
   src: string;
   srcset: string;
@@ -25,6 +28,8 @@ export interface ImageVariantsResult {
   skipped: SkippedImage[];
   /** Neu erzeugte Varianten (nicht aus dem Cache). */
   generated: number;
+  /** Die Cache-Dateien, die dieser Lauf gebraucht hat — was `sweepImageCache` stehen lässt. */
+  cacheNames: Set<string>;
 }
 
 const RASTER = new Set(['image/png', 'image/jpeg', 'image/webp']);
@@ -57,18 +62,70 @@ export async function pruneImageCache(cacheDir: string): Promise<number> {
   return removed;
 }
 
+/**
+ * Wie lange eine ungebrauchte Variante im Cache bleibt (Backlog 67, Joe 2026-10-10): Puffer für kurz depublizierte
+ * Hunde und für Vorschauen mit unveröffentlichten Datensätzen, die sonst beim nächsten Publish neu gerechnet würden.
+ */
+export const IMAGE_CACHE_MAX_AGE_DAYS = 30;
+
+/**
+ * Räumt den Cache nach einem erfolgreichen Publish der Produktion: Varianten der aktuellen Cache-Version, die der
+ * Lauf nicht gebraucht hat und deren Zeitstempel älter als `maxAgeDays` ist. Andere Fassungen und Temp-Reste räumt
+ * `pruneImageCache`. Die Zeit ist Dateizeit (Wanduhr), nicht die Uhr der Fachlogik: Verglichen wird mit `mtime`.
+ */
+export async function sweepImageCache(cacheDir: string, used: ReadonlySet<string>, now: Date = new Date(), maxAgeDays = IMAGE_CACHE_MAX_AGE_DAYS): Promise<{ removed: number; bytes: number }> {
+  let names: string[];
+  try {
+    names = await readdir(cacheDir);
+  } catch {
+    return { removed: 0, bytes: 0 };
+  }
+  const cutoff = now.getTime() - maxAgeDays * 86_400_000;
+  let removed = 0;
+  let bytes = 0;
+  for (const name of names) {
+    if (!name.startsWith(`${SITE_CACHE_VERSION}-`) || !name.endsWith('.webp') || used.has(name)) continue;
+    const info = await stat(path.join(cacheDir, name)).catch(() => null);
+    if (!info?.isFile() || info.mtimeMs >= cutoff) continue;
+    await rm(path.join(cacheDir, name), { force: true });
+    removed++;
+    bytes += info.size;
+  }
+  return { removed, bytes };
+}
+
 interface PlannedVariant {
   w: number;
   h: number;
   outName: string;
   cacheName: string;
 }
+interface PixelRect {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+}
 interface Planned {
   asset: ExportedAsset;
   source: string;
   svg: boolean;
   hash: string;
+  /** Ausschnitt in Pixeln des gedrehten Originals; `null` ohne Ausschnitt. */
+  rect: PixelRect | null;
   variants: PlannedVariant[];
+}
+
+/** Rechteck aus Anteilen in Pixel des (gedrehten) Bildes, gerundet und ins Bild geklemmt, mindestens 1 px. */
+function pixelRect(crop: CropRect, width: number, height: number): PixelRect {
+  const left = Math.min(Math.max(0, Math.round(crop.x * width)), width - 1);
+  const top = Math.min(Math.max(0, Math.round(crop.y * height)), height - 1);
+  return {
+    left,
+    top,
+    width: Math.min(Math.max(1, Math.round(crop.w * width)), width - left),
+    height: Math.min(Math.max(1, Math.round(crop.h * height)), height - top),
+  };
 }
 
 class ImageDecodeError extends Error {}
@@ -80,6 +137,9 @@ class ImageDecodeError extends Error {}
  * einem Temp-Namen und wird erst fertig umbenannt — ein abgebrochener Lauf
  * hinterlässt nie eine halbe Datei, die der nächste für gültig hält. Ein
  * Bild, das sich nicht lesen lässt, wird übersprungen und mit Namen gemeldet.
+ * Ein Asset mit `crop` (abgeleitete ID, Spec Bildausschnitt § 2) wird nach der
+ * EXIF-Drehung zugeschnitten; seine Breiten reichen bis zur Ausschnittbreite,
+ * Cache- und Ausgabename tragen das Rechteck.
  */
 export async function prepareImageVariants(opts: {
   jobDir: string;
@@ -89,6 +149,8 @@ export async function prepareImageVariants(opts: {
   concurrency?: number;
   onPlan?: (p: { total: number; missing: number }) => void;
   onProgress?: (done: number, total: number, generated: number) => void;
+  /** Zeitstempel für Cache-Treffer; Standard jetzt (Dateizeit). */
+  now?: Date;
 }): Promise<ImageVariantsResult> {
   const outDir = path.join(opts.jobDir, 'images');
   await mkdir(outDir, { recursive: true });
@@ -103,7 +165,7 @@ export async function prepareImageVariants(opts: {
     const source = path.join(opts.jobDir, 'assets', asset.filename);
     const hash = hashOf(asset.filename);
     if (asset.mimeType === 'image/svg+xml') {
-      planned.push({ asset, source, svg: true, hash, variants: [] });
+      planned.push({ asset, source, svg: true, hash, rect: null, variants: [] });
       continue;
     }
     if (!RASTER.has(asset.mimeType)) continue;
@@ -122,13 +184,23 @@ export async function prepareImageVariants(opts: {
       continue;
     }
     const key = createHash('sha256').update(bytes).digest('hex').slice(0, 16);
-    const widths = [...new Set([...IMAGE_WIDTHS.filter((w) => w < originalWidth), originalWidth])].sort((a, b) => a - b);
+    // Ausschnitt, Breiten und Maße beziehen sich auf das gedrehte Bild (Orientation 5–8 tauscht Breite und Höhe).
+    const swapped = (meta.orientation ?? 1) >= 5;
+    const turnedWidth = swapped ? originalHeight : originalWidth;
+    const turnedHeight = swapped ? originalWidth : originalHeight;
+    const rect = asset.crop ? pixelRect(asset.crop, turnedWidth, turnedHeight) : null;
+    const srcWidth = rect?.width ?? turnedWidth;
+    const srcHeight = rect?.height ?? turnedHeight;
+    // Teil nach `~` der abgeleiteten ID, aus dem Rechteck gebildet statt aus der ID gelesen.
+    const tag = asset.crop ? `-${derivedAssetId('', asset.crop).slice(1)}` : '';
+    const widths = [...new Set([...IMAGE_WIDTHS.filter((w) => w < srcWidth), srcWidth])].sort((a, b) => a - b);
     planned.push({
       asset,
       source,
       svg: false,
       hash,
-      variants: widths.map((w) => ({ w, h: Math.round((originalHeight * w) / originalWidth), outName: `${hash}-${w}.webp`, cacheName: `${SITE_CACHE_VERSION}-${key}-${w}.webp` })),
+      rect,
+      variants: widths.map((w) => ({ w, h: Math.max(1, Math.round((srcHeight * w) / srcWidth)), outName: `${hash}${tag}-${w}.webp`, cacheName: `${SITE_CACHE_VERSION}-${key}${tag}-${w}.webp` })),
     });
   }
   const total = planned.reduce((n, p) => n + (p.svg ? 1 : p.variants.length), 0);
@@ -156,10 +228,16 @@ export async function prepareImageVariants(opts: {
     try {
       for (const v of item.variants) {
         const cached = path.join(opts.cacheDir, v.cacheName);
-        if (!(await exists(cached))) {
+        if (await exists(cached)) {
+          // Ein Treffer gilt als Gebrauch: Der Zeitstempel hält die Datei aus `sweepImageCache` heraus. Scheitert das
+          // (fremder Besitzer im Volume, eben gefegt), wird sie höchstens früher gefegt — kein Grund, den Lauf abzubrechen.
+          const now = opts.now ?? new Date();
+          await utimes(cached, now, now).catch(() => undefined);
+        } else {
           const temp = `${cached}.tmp-${process.pid}-${newId()}`;
           try {
-            await base.clone().resize({ width: v.w, withoutEnlargement: true }).webp({ quality: 80, effort: 4 }).toFile(temp);
+            const cut = item.rect ? base.clone().extract(item.rect) : base.clone();
+            await cut.resize({ width: v.w, withoutEnlargement: true }).webp({ quality: 80, effort: 4 }).toFile(temp);
             await rename(temp, cached);
             generated++;
           } catch (error) {
@@ -192,7 +270,7 @@ export async function prepareImageVariants(opts: {
       variants[p.asset.id] = { src: `/images/${p.hash}.svg`, srcset: '', width: 0, height: 0 };
       continue;
     }
-    const main = [...p.variants].reverse().find((e) => e.w <= 960) ?? p.variants[0]!;
+    const main = [...p.variants].reverse().find((e) => e.w <= MAIN_IMAGE_MAX_WIDTH) ?? p.variants[0]!;
     variants[p.asset.id] = {
       src: `/images/${main.outName}`,
       srcset: p.variants.map((e) => `/images/${e.outName} ${e.w}w`).join(', '),
@@ -201,5 +279,6 @@ export async function prepareImageVariants(opts: {
     };
   }
   await writeFile(path.join(opts.jobDir, 'images.json'), JSON.stringify(variants, null, 2));
-  return { variants, skipped: skipped.sort((a, b) => a.assetId.localeCompare(b.assetId)), generated };
+  const cacheNames = new Set(planned.filter((p) => !failed.has(p.asset.id)).flatMap((p) => p.variants.map((v) => v.cacheName)));
+  return { variants, skipped: skipped.sort((a, b) => a.assetId.localeCompare(b.assetId)), generated, cacheNames };
 }

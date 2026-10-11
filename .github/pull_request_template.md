@@ -4,5 +4,5 @@
 
 ## Oberfläche
 
-- [ ] Keine rohen Elemente und keine Schrift von Hand (`text-[…]`, `font-…`, Farbe) an Titel, Beschreibung oder Abschnitt — nur Bausteine und Rollen aus `docs/MUSTER.md`
+- [ ] Keine rohen Elemente; Schrift nur über Rollen und Bausteine (Größe, Zeilenhöhe, Gewicht, Versalien, Überschriften aus `PageHeader`, `DialogTitle`, `Section`/`SectionHeading`), keine Farbe von Hand — siehe `docs/MUSTER.md`
 - [ ] Jede neue Ausnahme steht mit Grund in der Erlaubnisliste des Wächters (`apps/kompass/tests/patterns/`)
