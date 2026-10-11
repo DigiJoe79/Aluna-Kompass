@@ -77,6 +77,18 @@ const DISPLAY: Record<string, Record<string, Display>> = {
 export const DERIVED: Record<string, Record<string, Display>> = {
   // „12 Variablen, 8 Einträge und 5 Dateien“ aus `variables`, `entries`, `assets`.
   'site.seed.apply': { items: seedParts },
+  // Stufe 1, Auftrag 7: wohin ein Dokument ging — ein Ordner, der Eingangskorb, oder (Ausgang, `outgoing`) aus dem
+  // Ordner genommen. Alte Einträge ohne `outgoing` bleiben beim alten Satz „in den Eingangskorb“.
+  'dms.move': { place: (_v, h) => (h.params.toInbox === true ? (h.params.outgoing === true ? 'out' : 'inbox') : 'folder') },
+};
+
+/**
+ * Parameter, die ein Katalog erst später bekam: Einträge von vorher tragen sie nicht und bekommen trotzdem ihren Satz
+ * (den alten — `DERIVED` liest den fehlenden Wert als „nicht gesetzt“), statt auf den Klartext zurückzufallen.
+ */
+const LATER_PARAMS: Record<string, readonly string[]> = {
+  // Stufe 1, Auftrag 7 (0.2.12): Ausgang aus dem Ordner genommen.
+  'dms.move': ['outgoing'],
 };
 
 const isUserParam = (p: string) => /(^u|U)serId$/.test(p);
@@ -127,7 +139,7 @@ export function auditSentences(
     const params = entry.params;
     if (!def || !params || !t.has(key)) continue;
     // Ein fehlender oder leerer Wert ergäbe einen halben Satz: dann der Klartext.
-    if (def.params.some((p) => params[p] === undefined || params[p] === null)) continue;
+    if (def.params.some((p) => (params[p] === undefined || params[p] === null) && !LATER_PARAMS[entry.action]?.includes(p))) continue;
     const values: Record<string, string | number | boolean> = {};
     let unresolved = false;
     for (const [p, v] of Object.entries(params)) {

@@ -1,6 +1,6 @@
 'use client';
 
-import { Files, Inbox, Package } from 'lucide-react';
+import { Files, FolderMinus, Inbox, Package } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
@@ -13,7 +13,7 @@ import { FolderTree, type FolderTreeProps } from '@/components/folder-tree/folde
 import { Button, buttonVariants } from '@/components/ui/button';
 import { DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { DOCUMENTS_MIME, carriesOutsideFiles } from '@/lib/drag-types';
-import { ancestorsOf, isWithin, nameOf, type FolderEntry } from '@/lib/folder-tree-model';
+import { ancestorsOf, isWithin, nameOf, type DragItem, type FolderEntry } from '@/lib/folder-tree-model';
 import { DocumentMovesContext, type DocumentMoves, type MovableDocument } from './document-moves';
 import { DropOverlay } from '@/components/drop-overlay';
 import { FolderColumn } from '@/components/folder-column';
@@ -43,6 +43,7 @@ const isPdf = (file: File) => file.type === 'application/pdf' || file.name.toLow
 export function DmsWorkspace({
   folders,
   inboxCount,
+  unfiledCount,
   total,
   canCreate,
   canManage,
@@ -60,6 +61,8 @@ export function DmsWorkspace({
 }: {
   folders: FolderEntry[];
   inboxCount: number;
+  /** Ausgehende Dokumente ohne Ordner (Stufe 1, Auftrag 7); bei 0 fehlt die Zeile. */
+  unfiledCount: number;
   total: number;
   canCreate: boolean;
   /** Mit `dms.manage`: Ordner im Baum anlegen, umbenennen, verschieben, löschen. */
@@ -94,12 +97,13 @@ export function DmsWorkspace({
   const pathname = usePathname();
   const params = useSearchParams();
   const isInbox = params.get('inbox') === '1';
+  const isUnfiled = !isInbox && params.get('unfiled') === '1';
   const hrefFor = (path: string | null) => folderHref(new URLSearchParams(params.toString()), { folder: path });
   // Die Adresse sofort (ein Klick markiert, bevor der Server antwortet), aber
   // nur, wenn es den Ordner gibt; sonst, was der Server stattdessen öffnet.
   const known = useMemo(() => new Set(folders.flatMap((f) => [...ancestorsOf(f.path), f.path])), [folders]);
   const requested = params.get('folder') || null;
-  const openFolder = isInbox ? null : requested && known.has(requested) ? requested : currentFolder;
+  const openFolder = isInbox || isUnfiled ? null : requested && known.has(requested) ? requested : currentFolder;
   const { folders: shownFolders, selected: selectedFolder, saving, placed, moveFolder, renameFolder, deleteFolder, createFolder, moveDocuments } = useFolderMoves({
     folders,
     selected: openFolder,
@@ -279,7 +283,7 @@ export function DmsWorkspace({
     mode: 'navigate',
     selected: selectedFolder,
     fixed: [
-      { key: 'all', label: t('allDocuments'), icon: Files, count: total, href: hrefFor(null), dropTarget: false, folder: null, current: !isInbox && !selectedFolder },
+      { key: 'all', label: t('allDocuments'), icon: Files, count: total, href: hrefFor(null), dropTarget: false, folder: null, current: !isInbox && !isUnfiled && !selectedFolder },
       {
         key: 'inbox',
         label: t('inbox'),
@@ -289,10 +293,27 @@ export function DmsWorkspace({
         dropTarget: true,
         folder: null,
         current: isInbox,
-        // Ein Ausgang ohne Ordner läge nicht im Eingangskorb, sondern unter „Alle Dokumente“.
+        // Ein Ausgang ohne Ordner liegt nicht im Eingangskorb, sondern unter „Ohne Ordner“.
         refuse: (item) =>
           item.kind === 'documents' && item.ids.some((id) => rows.current.get(id)?.direction === 'outgoing') ? 'incomingOnly' : null,
       },
+      // Stufe 1, Auftrag 7: Ausgänge ohne Ordner, sonst unsichtbar. Ohne Inhalt keine Zeile (außer man steht darauf).
+      ...(unfiledCount > 0 || isUnfiled
+        ? [
+            {
+              key: 'unfiled',
+              label: t('noFolder'),
+              icon: FolderMinus,
+              count: unfiledCount,
+              href: folderHref(new URLSearchParams(params.toString()), { folder: null, unfiled: true }),
+              dropTarget: true,
+              folder: null,
+              current: isUnfiled,
+              refuse: (item: DragItem) =>
+                item.kind === 'documents' && item.ids.some((id) => rows.current.get(id)?.direction === 'incoming') ? ('outgoingOnly' as const) : null,
+            },
+          ]
+        : []),
     ],
     hrefFor,
     acceptsItems: DOCUMENTS_MIME,
@@ -318,7 +339,9 @@ export function DmsWorkspace({
   // Zahl der Treffer steht in der Zählzeile der Leiste, auch am Telefon.
   const place = isInbox
     ? { path: [], title: t('inbox'), count: inboxCount }
-    : selectedFolder === null
+    : isUnfiled
+      ? { path: [], title: t('noFolder'), count: unfiledCount }
+      : selectedFolder === null
       ? { path: [], title: t('allDocuments'), count: total }
       : {
           path: ancestorsOf(selectedFolder).map(nameOf),
@@ -384,7 +407,7 @@ export function DmsWorkspace({
             />
           </FolderColumn>
           <div className="relative min-w-0 flex-1 overflow-auto p-5">
-            <FolderSheet {...place} place={isInbox ? 'inbox' : (selectedFolder ?? '')} className="sm:hidden">
+            <FolderSheet {...place} place={isInbox ? 'inbox' : isUnfiled ? 'unfiled' : (selectedFolder ?? '')} className="sm:hidden">
               <FolderTree {...treeProps} density="touch" note={areaOnly ? tTree('areaNote') : undefined} />
             </FolderSheet>
             {children}
@@ -451,7 +474,8 @@ export function DmsWorkspace({
             }}
             folders={shownFolders}
             // Ohne Ordner ist der Eingangskorb nur für Eingänge; sonst „Kein Ordner“.
-            rootLabel={movingDocuments.every((d) => d.direction === 'incoming') ? t('inbox') : t('noFolder')}
+            // Stufe 1, Auftrag 7: alle eingehend → Eingangskorb, alle ausgehend → Ohne Ordner, gemischt → „Aus dem Ordner nehmen“.
+            rootLabel={movingDocuments.every((d) => d.direction === 'incoming') ? t('inbox') : movingDocuments.every((d) => d.direction === 'outgoing') ? t('noFolder') : t('outOfFolder')}
             rootKind={movingDocuments.every((d) => d.direction === 'incoming') ? 'inbox' : 'none'}
             onConfirm={(target) =>
               moveDocumentsTo(

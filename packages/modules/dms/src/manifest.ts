@@ -143,7 +143,7 @@ export const dmsModule: ModuleManifest = defineModule({
     /** `retyped`: neue Art mit neuer Nummer (`previousNumber` die alte), sonst nur Angaben berichtigt. */
     'dms.reclassify': { params: ['number', 'previousNumber', 'retyped'] },
     'dms.void': { params: ['number'] },
-    'dms.move': { params: ['number', 'folder', 'toInbox'] },
+    'dms.move': { params: ['number', 'folder', 'toInbox', 'outgoing'] },
     'dms.delete': { params: ['number'] },
     'dms.checksumMismatch': { params: ['number'] },
     /** `sentVia`: Schlüssel des Versandwegs aus `dms.dispatchChannels`. */

@@ -1,6 +1,6 @@
 'use client';
 
-import { CircleSlash, Folder, Inbox } from 'lucide-react';
+import { CircleSlash, Folder, FolderMinus, Inbox } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useMemo, useState, useSyncExternalStore, useTransition } from 'react';
 import { FormActionBar } from '@/components/forms/form-action-bar';
@@ -190,7 +190,8 @@ function MoveDialogBody({
     return t('location.list', { items: items.join(t('location.separator')) });
   }, [showLocation, subject, rootKind, t]);
 
-  const RootIcon = subject.kind === 'folder' ? Folder : subject.kind === 'documents' ? Inbox : CircleSlash;
+  // Dokumente: Eingangskorb oder „Ohne Ordner“ (Stufe 1, Auftrag 7) — dasselbe Zeichen wie im Baum der Akte.
+  const RootIcon = subject.kind === 'folder' ? Folder : subject.kind === 'documents' ? (rootKind === 'inbox' ? Inbox : FolderMinus) : CircleSlash;
   const kind = subject.kind === 'assets' ? 'files' : 'documents';
   const unit = unitProp ?? { one: t(`unit.${kind}.one`), many: t(`unit.${kind}.many`) };
 

@@ -629,8 +629,8 @@ test.describe('dms', () => {
     await expect(behoerden).toHaveAttribute('aria-expanded', 'true');
     await expect(row('finanzamt')).toHaveAttribute('aria-current', 'page');
 
-    // Mit Tab vom Eingangskorb in den Baum: Der gewählte Ordner hat den Fokus.
-    await page.getByRole('link', { name: /Eingangskorb/ }).focus();
+    // Mit Tab von der letzten festen Zeile („Ohne Ordner“, der Seed hat einen Ausgang ohne Ordner) in den Baum: Der gewählte Ordner hat den Fokus.
+    await page.getByRole('link', { name: /^Ohne Ordner/ }).focus();
     await page.keyboard.press('Tab');
     await expect(row('finanzamt')).toBeFocused();
 
@@ -1687,7 +1687,7 @@ test.describe('Ordnerbaum', () => {
   /** Nimmt „amtsgericht“ per Tastatur auf und legt es in „vertraege“ ab. */
   async function moveAmtsgerichtByKeyboard(page: Page) {
     await expandFolder(page, 'behoerden');
-    await page.getByRole('link', { name: /Eingangskorb/ }).focus();
+    await page.getByRole('link', { name: /^Ohne Ordner/ }).focus();
     await page.keyboard.press('Tab');
     await expect(treeRow(page, 'behoerden')).toBeFocused();
     await page.keyboard.press('ArrowDown');
@@ -2030,20 +2030,25 @@ test.describe('Mehrfachauswahl', () => {
     return (await row.getAttribute('data-document-id'))!;
   }
 
-  test('ein Ausgang ohne Ordner heißt „Kein Ordner“, nicht Eingangskorb', async ({ page }) => {
+  test('ein Ausgang ohne Ordner heißt „Ohne Ordner“, nicht Eingangskorb, und hat eine eigene Zeile im Baum (Stufe 1, Auftrag 7)', async ({ page }) => {
     await login(page);
     const id = await outgoingRow(page);
     await tick(page, id);
     await selectionBar(page).getByRole('button', { name: 'Verschieben nach…' }).click();
     const dialog = page.getByRole('dialog', { name: '„Einladung zur ordentlichen Mitgliederversammlung“ verschieben nach…' });
-    await dialog.getByRole('button', { name: /^Kein Ordner/ }).click();
-    await dialog.getByRole('button', { name: 'Nach „Kein Ordner“ verschieben' }).click();
-    const moved = toastWith(page, '„Einladung zur ordentlichen Mitgliederversammlung“ nach „Kein Ordner“ verschoben');
+    await dialog.getByRole('button', { name: /^Ohne Ordner/ }).click();
+    await dialog.getByRole('button', { name: 'Nach „Ohne Ordner“ verschieben' }).click();
+    const moved = toastWith(page, '„Einladung zur ordentlichen Mitgliederversammlung“ nach „Ohne Ordner“ verschoben');
     await expect(moved).toBeVisible();
-    await expect(rowOf(page, id)).toContainText('Kein Ordner');
+    await expect(rowOf(page, id)).toContainText('Ohne Ordner');
 
     await moved.getByRole('button', { name: 'Rückgängig' }).click();
     await expect(toastWith(page, story('„Einladung zur ordentlichen Mitgliederversammlung“ liegt wieder in vereinsregister-2026'))).toBeVisible();
+
+    // Die feste Zeile „Ohne Ordner“ zeigt die Ausgänge ohne Ordner (im Seed das Dankschreiben), der Eingangskorb nicht.
+    await page.getByRole('link', { name: /^Ohne Ordner/ }).first().click();
+    await expect(page).toHaveURL(/[?&]unfiled=1/);
+    await expect(page.getByRole('link', { name: /Dankschreiben an die Tierarztpraxis/ }).first()).toBeVisible();
   });
 
   /**

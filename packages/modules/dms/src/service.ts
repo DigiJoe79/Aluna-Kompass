@@ -133,6 +133,8 @@ export const documentListSchema = z.object({
   /** Mit `folder`: auch alles aus den Unterordnern (Teilbaum). Vorgabe: nur genau dieser Ordner. */
   includeSubfolders: z.boolean().default(false),
   inbox: z.boolean().optional(),
+  /** „Ohne Ordner“ (Stufe 1, Auftrag 7): ausgehende Dokumente ohne Ordner — das Gegenstück zum Eingangskorb. */
+  unfiled: z.boolean().optional(),
   linkedTo: z.object({ entityType: z.string().min(1), entityId: z.string().min(1) }).optional(),
   text: z.string().trim().min(1).optional(), // Betreff oder Nummer
   orderBy: z
@@ -163,6 +165,9 @@ export async function listDocuments(
   const parsed = validate(deps, documentListSchema, input);
   if (!parsed.ok) return parsed;
   const q = parsed.value;
+  // Eingangskorb, „Ohne Ordner“ und ein Ordner schließen einander aus — abgelehnt statt still einer genommen. Im Dienst,
+  // nicht im Schema: Werkzeugschemas prüfen kein Feld abhängig von einem anderen (N5, `mcp-conditional-required`).
+  if ([q.inbox === true, q.unfiled === true, q.folder !== undefined].filter(Boolean).length > 1) return invalid([{ path: 'folder', message: 'onePlaceFilter' }]);
   // Was der Aufrufer lesen darf, steht als eigene UND-Bedingung ganz vorn —
   // nie im `or(…)` der Textsuche, sonst fände der Volltext, was die Liste verbirgt.
   const conditions: SQL[] = [readableTypeFilter(deps, ctx)];
@@ -173,6 +178,9 @@ export async function listDocuments(
   // ohne Ordner. Ein Brief ohne Ordner ist ein Brief ohne Ordner (Nachtrag zu
   // Entscheidung 20).
   if (q.inbox) conditions.push(eq(documents.direction, 'incoming'), sql`${documents.folder} is null`);
+  // „Ohne Ordner“: Ausgänge ohne Ordner. Ordner + Eingangskorb + Ohne Ordner ergeben „Alle“ (Test `unfiled`). Mehr als
+  // einen dieser drei Filter lehnt der Dienst oben ab (`onePlaceFilter`).
+  else if (q.unfiled) conditions.push(eq(documents.direction, 'outgoing'), sql`${documents.folder} is null`);
   else if (q.folder !== undefined) {
     // Der Teilbaum ohne LIKE: „behoerden_alt“ und „behoerden%x“ sind Nachbarn, keine Kinder.
     conditions.push(q.folder === null ? sql`${documents.folder} is null` : q.includeSubfolders ? withinSubtree(documents.folder, q.folder) : eq(documents.folder, q.folder));
@@ -492,7 +500,9 @@ function applyMove(tx: DbOrTx, deps: Deps, ctx: CallContext, { doc, target }: Pr
     entityId: doc.id,
     before: { folder: doc.folder },
     after: { folder: target },
-    params: { number: ref.number, folder: target ?? '', toInbox: target === null },
+    // `toInbox` heißt wie bis 0.2.11 „Ziel null“. Stufe 1, Auftrag 7: `outgoing` kennzeichnet einen Ausgang — ohne Ziel
+    // wird er „aus dem Ordner genommen“, nicht in den Eingangskorb gelegt (Satz über `DERIVED` in `lib/audit-sentences.ts`).
+    params: { number: ref.number, folder: target ?? '', toInbox: target === null, outgoing: doc.direction === 'outgoing' },
   });
 }
 

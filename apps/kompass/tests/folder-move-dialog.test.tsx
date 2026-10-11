@@ -332,12 +332,12 @@ describe('FolderMoveDialog, where it lies now (Artboard 5)', () => {
   });
 
   it('says „in keinem Ordner“ where there is no inbox', () => {
-    renderDialog({ subject: docs({ '': 2 }), rootLabel: 'Kein Ordner' });
+    renderDialog({ subject: docs({ '': 2 }), rootLabel: 'Ohne Ordner' });
     expect(screen.getByText('Liegen in keinem Ordner.')).toBeTruthy();
   });
 
   it('counts the place without a folder in a list like any other place', () => {
-    renderDialog({ subject: docs({ '': 2, 'Behörden/Finanzamt': 1 }), rootLabel: 'Kein Ordner' });
+    renderDialog({ subject: docs({ '': 2, 'Behörden/Finanzamt': 1 }), rootLabel: 'Ohne Ordner' });
     expect(screen.getByText('2 liegen in keinem Ordner, 1 in Finanzamt.')).toBeTruthy();
   });
 

@@ -185,8 +185,8 @@
       "undoFailed": "Nicht rückgängig gemacht: {name}",
       "quoted": "„{title}“",
       "documents": "{count} Dokumente",
-      "placeMoved": "{where, select, inbox {in den Eingangskorb verschoben} none {nach „Kein Ordner“ verschoben} loose {aus ihren Ordnern genommen} other {nach {target} verschoben}}",
-      "placeLies": "{where, select, inbox {im Eingangskorb} none {in „Kein Ordner“} loose {ohne Ordner} other {in {target}}}",
+      "placeMoved": "{where, select, inbox {in den Eingangskorb verschoben} none {nach „Ohne Ordner“ verschoben} loose {aus ihren Ordnern genommen} other {nach {target} verschoben}}",
+      "placeLies": "{where, select, inbox {im Eingangskorb} none {in „Ohne Ordner“} loose {ohne Ordner} other {in {target}}}",
       "movedDocument": "„{title}“ {place}",
       "movedDocuments": "{count} Dokumente {place}",
       "movedDocumentsSkipped": "{count, plural, one {# Dokument} other {# Dokumente}} {place}, {skipped, plural, one {# lag} other {# lagen}} schon dort",
@@ -213,7 +213,8 @@
       "exists": "Einen Ordner „{name}“ gibt es dort schon",
       "forbidden": "Keine Berechtigung für diesen Ordner",
       "notCreated": "Diesen Ordner gibt es nur als Weg — legen Sie ihn zuerst an.",
-      "incomingOnly": "In den Eingangskorb kommt nur eingegangene Post."
+      "incomingOnly": "In den Eingangskorb kommt nur eingegangene Post.",
+      "outgoingOnly": "Unter „Ohne Ordner“ liegen nur ausgehende Dokumente."
     },
     "announce": {
       "pickUp": "{name} aufgenommen. Wählen Sie mit den Pfeiltasten ein Ziel. Eingabetaste legt ab, Escape bricht ab.",
@@ -678,6 +679,7 @@
       "multiplePrimary": "Nur ein Foto kann das Hauptfoto sein.",
       "notAnImage": "Diese Datei ist kein Bild.",
       "exactlyOneSelection": "Wählen Sie genau eines: Dokumente, einen Ordner oder einen Jahrgang.",
+      "onePlaceFilter": "Wählen Sie höchstens eines: Eingangskorb, „Ohne Ordner“ oder einen Ordner.",
       "exactlyOneSource": "Geben Sie die Datei genau einmal an — als Bytes oder als Base64, nicht beides.",
       "invalidBytes": "Ungültige Datei.",
       "missingBytes": "Die Datei fehlt.",
@@ -2309,7 +2311,7 @@
       "dms_install": "Akte mit Dokumentarten „{incomingLabel}“ und „{outgoingLabel}“ eingerichtet",
       "dms_issue": "Dokument „{number}“ ausgestellt",
       "dms_link": "Dokument „{number}“ verknüpft",
-      "dms_move": "Dokument „{number}“ {toInbox, select, true {in den Eingangskorb} other {nach „{folder}“}} verschoben",
+      "dms_move": "Dokument „{number}“ {place, select, inbox {in den Eingangskorb verschoben} out {aus dem Ordner genommen} other {nach „{folder}“ verschoben}}",
       "dms_note_add": "Notiz an Dokument „{number}“ angefügt",
       "dms_receive": "{via, select, recordWithNumber {Dokument „{number}“ zu Vorgang „{recordNumber}“ abgelegt} record {Dokument „{number}“ in einem Vorgang abgelegt} other {Post als Dokument „{number}“ abgelegt}}",
       "dms_reclassify": "{retyped, select, true {Art von Dokument „{previousNumber}“ geändert, neue Nummer „{number}“} other {Angaben zu Dokument „{number}“ berichtigt}}",
@@ -3788,7 +3790,8 @@
     "title": "Akte",
     "description": "Schriftverkehr und Dokumente des Vereins",
     "inbox": "Eingangskorb",
-    "noFolder": "Kein Ordner",
+    "noFolder": "Ohne Ordner",
+    "outOfFolder": "Aus dem Ordner nehmen",
     "allDocuments": "Alle Dokumente",
     "heading": {
       "path": "Weg"

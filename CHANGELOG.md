@@ -13,31 +13,20 @@ die Nummern folgen [Semantic Versioning](https://semver.org/lang/de/). Vor
 
 ### Geändert
 
-- **Beträge überall gleich geschrieben.** Ein negativer Betrag trägt überall
-  dasselbe Minuszeichen („−12,50 €“), auch in den Kacheln der Startseite, in
-  Ablehnungen und im Protokoll der Kassenzählung; zwischen Betrag und „€“
-  bricht keine Zeile mehr um. Die Ablehnung eines Barkontos im Minus nennt den
-  Stand („stünde am … bei −415,00 €“) statt „im Minus“ doppelt zu sagen.
-- **Datum überall im eingestellten Format.** Die Geschäftsjahre unter
-  Einrichtung → Finanzen sowie Daten in Ablehnungen und Beschriftungen der
-  Finanzen (etwa „Bescheid vom …“) folgen jetzt der Einstellung
-  „Datumsformat“ statt eines festen Formats.
-- **Leere Felder einheitlich.** Wo ein Wert fehlt, steht überall derselbe
-  graue Strich „—“, den Vorleser als „keine Angabe“ ansagen. Leere Optionen in
-  Auswahllisten heißen ausgeschrieben („Kein Kontakt“, „Kein Projekt“, „Keine
-  Änderung“) statt „— … —“.
-- **IBAN überall gleich.** Eine IBAN steht offen in Vierergruppen, die nicht
-  mitten umbrechen, verdeckt als „DE ·· 3000“ (Land und die letzten vier) statt
-  mit Sternchen oder Punkten. Auch im Briefkopf der PDF-Basen, die die IBAN des
-  Vereins zeigen, steht sie jetzt gruppiert — das gilt ebenso für eigene Basen,
-  die `org("iban")` ausgeben. Der Kopierknopf im Überweisungsblock kopiert sie
-  ohne Leerzeichen.
-- **Namen statt Schlüssel.** Die Mediathek nennt bei „Wird verwendet in“ den
-  Namen eines Projekts statt seines URL-Teils, die Aufbewahrung den Namen einer
-  Kontaktrolle, die Modulübersicht die Namen der benötigten Module, Dokumentarten
-  den Namen des Moduls, dem sie gehören. Die Vorlage des Tierprofils heißt unter
-  Einrichtung → Dokumente „Tierprofil“. Der Kopf einer Projektseite zeigt den
-  URL-Teil nicht mehr.
+- **Beträge und IBAN überall gleich.** Ein negativer Betrag trägt überall
+  dasselbe Minus („−12,50 €“), auch auf der Startseite und in Ablehnungen. Eine
+  IBAN steht in Vierergruppen, verdeckt als „DE ·· 3000“ – auch im Briefkopf
+  der mitgelieferten Basis „A4 mit Briefkopf“.
+- **Leere Felder und Daten einheitlich.** Wo ein Wert fehlt, steht überall
+  „—“; leere Optionen in Auswahllisten heißen ausgeschrieben („Kein Kontakt“,
+  „Kein Projekt“). Die Geschäftsjahre unter Einrichtung → Finanzen folgen der
+  Einstellung „Datumsformat“.
+- **Namen statt Schlüssel.** Wo bisher ein technischer Schlüssel stand –
+  Projekte in der Mediathek, Kontaktrollen in der Aufbewahrung, benötigte
+  Module, die Vorlage „Tierprofil“ –, steht jetzt der Name.
+- **Akte: „Ohne Ordner“.** Ausgehende Dokumente ohne Ordner haben im Baum eine
+  eigene Zeile „Ohne Ordner“; bisher fand man sie nur unter „Alle Dokumente“.
+  Der Eingangskorb bleibt eingegangener Post vorbehalten.
 
 ## [0.2.11] - 2026-10-11
 

@@ -155,7 +155,7 @@ export function followFolder(selected: string | null, from: string, to: string):
  * `incomingOnly`: Der Eingangskorb nimmt nur eingegangene Post (setzt der
  * feste Eintrag selbst, siehe `FolderTreeFixedEntry.refuse`).
  */
-export type BlockReason = 'here' | 'self' | 'depth' | 'nameLength' | 'exists' | 'forbidden' | 'notCreated' | 'incomingOnly';
+export type BlockReason = 'here' | 'self' | 'depth' | 'nameLength' | 'exists' | 'forbidden' | 'notCreated' | 'incomingOnly' | 'outgoingOnly';
 
 /** Was gezogen wird. `sources[i]` ist der Ordner von `ids[i]`; leer, wenn unbekannt (aus einem anderen Tab). */
 export type DragItem =
