@@ -1,5 +1,6 @@
 import { formatAmount, formatEuro, parseAmount } from './amount';
 import type { MiniFormState, WorkRaw } from './work';
+import { formatIban } from '@kompass/module-finance/format';
 
 /**
  * Die Dialoge der Arbeitsliste (F5 Task 8): „Künftig immer so?“ und das
@@ -181,7 +182,7 @@ export function ruleConditionParts(rule: RuleConditionsInput, accountNames: Read
   const parts: RuleConditionPart[] = [];
   if (rule.accountId) parts.push({ key: 'account', values: { account: accountNames.get(rule.accountId) ?? '' } });
   if (rule.direction) parts.push({ key: rule.direction, values: {} });
-  if (rule.counterpartyIban) parts.push({ key: 'iban', values: { iban: rule.counterpartyIban } });
+  if (rule.counterpartyIban) parts.push({ key: 'iban', values: { iban: formatIban(rule.counterpartyIban) } });
   if (rule.textContains) parts.push({ key: 'text', values: { text: rule.textContains } });
   if (rule.amountMinCents !== null && rule.amountMaxCents !== null) parts.push({ key: 'amountBetween', values: { min: formatEuro(rule.amountMinCents), max: formatEuro(rule.amountMaxCents) } });
   else if (rule.amountMinCents !== null) parts.push({ key: 'amountFrom', values: { amount: formatEuro(rule.amountMinCents) } });

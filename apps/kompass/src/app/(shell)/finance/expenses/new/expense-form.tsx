@@ -17,7 +17,8 @@ import { Switch } from '@/components/ui/switch';
 import type { ActionState } from '@/lib/actions';
 import { formatEuro } from '@/lib/finance/amount';
 import { applySaved, draftInput, emptyPosition, receiptProblem, totalCents, type Device, type ExpenseForm as FormState, type MileageRate, type PositionForm } from '@/lib/finance/expenses';
-import { checkIban, groupIban } from '@/lib/finance/iban-check';
+import { checkIban } from '@/lib/finance/iban-check';
+import { compactIban, formatIban } from '@kompass/module-finance/format';
 import { saveExpenseDraftAction, submitExpenseClaimAction, uploadExpenseReceiptAction } from '../actions';
 import type { PdfFieldError } from './pdf-field';
 import { countPdfPages } from '@/lib/finance/pdf-pages';
@@ -295,7 +296,7 @@ export function ExpenseForm({
                     </p>
                     <div className="flex min-h-[var(--field-h)] items-center justify-between gap-2 rounded-md border border-line bg-surface-2 px-3">
                       <span data-testid="iban-fixed" aria-labelledby="expense-iban-label" className="font-mono text-body tabular-nums">
-                        {groupIban(form.iban)}
+                        {formatIban(form.iban)}
                       </span>
                       <Button
                         type="button"
@@ -349,6 +350,3 @@ export function ExpenseForm({
 }
 
 /** Wie der Dienst die IBAN speichert: ohne Leerzeichen, in Großbuchstaben. */
-function compactIban(iban: string): string {
-  return iban.replace(/\s+/g, '').toUpperCase();
-}

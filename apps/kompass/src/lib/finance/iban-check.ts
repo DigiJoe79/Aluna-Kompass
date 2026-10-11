@@ -43,5 +43,4 @@ export function checkIban(text: string): IbanCheckResult {
   return { state: checksumOk(iban) ? 'valid' : 'checksum', country };
 }
 
-/** Zum Lesen in Vierergruppen — dieselbe Anzeige wie `formatIban` im Modul (Test). */
-export const groupIban = (iban: string): string => normalize(iban).replace(/(.{4})(?=.)/g, '$1 ');
+/** Zum Lesen und Maskieren: `formatIban`/`maskIban`/`compactIban` aus `@kompass/module-finance/format` (MUSTER § IBAN). */

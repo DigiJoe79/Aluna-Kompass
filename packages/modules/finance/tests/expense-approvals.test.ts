@@ -109,7 +109,7 @@ describe('getApproval', () => {
     const f = await expenseFixture();
     const claim = await expenseSubmitted(f);
     const view = unwrap(await getApproval(f.deps, ctxWith(['finance.approve'], f.secondPersonId), { claimId: claim.id }));
-    expect(view).toMatchObject({ iban: null, ibanMasked: 'DE66 **** **** **** **78 90', receiptsVisible: false, totalCents: claim.totalCents });
+    expect(view).toMatchObject({ iban: null, ibanMasked: 'DE\u00a0\u00b7\u00b7\u00a07890', receiptsVisible: false, totalCents: claim.totalCents });
     expect(view.positions[0]!.documentId).toBeNull();
     expect(err(await getApproval(f.deps, f.hanna.ctx, { claimId: claim.id }))).toMatchObject({ type: 'forbidden', permission: 'finance.approve' });
   });

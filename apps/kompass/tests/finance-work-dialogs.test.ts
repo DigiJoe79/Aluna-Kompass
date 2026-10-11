@@ -53,7 +53,7 @@ describe('rule dialog („Künftig immer so?“)', () => {
     expect(ruleConditionParts(rule, new Map([['bank', 'Importkonto']]))).toEqual([
       { key: 'account', values: { account: 'Importkonto' } },
       { key: 'out', values: {} },
-      { key: 'iban', values: { iban: 'DE69999999990000445566' } },
+      { key: 'iban', values: { iban: ['DE69', '9999', '9999', '0000', '4455', '66'].join('\u00a0') } },
       { key: 'text', values: { text: 'futter' } },
       { key: 'amountFrom', values: { amount: '10,00\u00a0€' } },
     ]);

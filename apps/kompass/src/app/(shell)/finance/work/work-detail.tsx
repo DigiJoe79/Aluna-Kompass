@@ -11,6 +11,7 @@ import type { RuleDialogOptions } from './rule-dialog';
 import { SuggestionCard } from './suggestion-card';
 import type { VoucherTypeOption } from './voucher-panel';
 import type { WorkPartnerOption } from './partner-payment-dialog';
+import { formatIban } from '@kompass/module-finance/format';
 
 /** Was der Server zum gewählten Kontoumsatz liefert — Namen schon aufgelöst, Gründe schon als Sätze. */
 export interface WorkDetailData {
@@ -84,7 +85,7 @@ export function WorkDetail({
     ['valueDate', raw.valueDate ? date(raw.valueDate) : null],
     ['amount', formatEuro(raw.amountCents)],
     ['counterparty', raw.counterpartyName],
-    ['iban', raw.counterpartyIban],
+    ['iban', raw.counterpartyIban ? formatIban(raw.counterpartyIban) : null],
     ['email', raw.counterpartyEmail],
     ['purpose', raw.purpose],
     ['bankReference', raw.bankReference],

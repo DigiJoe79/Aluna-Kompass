@@ -39,6 +39,7 @@ import { cn } from '@/lib/utils';
 import { saveCsvFormatAction } from './actions';
 import { Section } from '@/components/section';
 import { Empty } from '@/components/empty-value';
+import { formatIban } from '@kompass/module-finance/format';
 
 export interface AssistantAccount {
   id: string;
@@ -413,7 +414,7 @@ export function CsvAssistant({ accounts, initialAccountId, canLoad, reselect = f
                 <dt className="text-muted-ink">{t('probe.counterparty')}</dt>
                 <dd>{first.counterpartyName ?? <Empty />}</dd>
                 <dt className="text-muted-ink">{t('probe.iban')}</dt>
-                <dd className="font-mono">{first.counterpartyIban ?? <Empty />}</dd>
+                <dd className="font-mono">{first.counterpartyIban ? formatIban(first.counterpartyIban) : <Empty />}</dd>
                 <dt className="text-muted-ink">{t('probe.purpose')}</dt>
                 <dd>{first.purpose || <Empty />}</dd>
                 <dt className="text-muted-ink">{t('probe.amount')}</dt>

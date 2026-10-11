@@ -62,7 +62,7 @@ test.describe('finance work list', () => {
     // Der älteste Umsatz ist gewählt; rechts steht er im Klartext mit seinem Vorschlag.
     await expect(option(page, 'Buerobedarf Muster GmbH')).toHaveAttribute('aria-selected', 'true');
     const detail = page.getByTestId('work-detail');
-    await expect(detail.getByText('DE12999999990000112233')).toBeVisible();
+    await expect(detail.getByText('DE12 9999 9999 0000 1122 33')).toBeVisible();
     await expect(detail.getByTestId('suggestion-reasons')).toContainText('Vorschlag, weil:');
 
     // Der Reiter steht in der Adresse — ein Neuladen bleibt dort.
@@ -237,7 +237,7 @@ test.describe('finance work list: rules, foreign money, vouchers, batch', () => 
     await detail.getByRole('button', { name: 'Künftig immer so?' }).click();
     const dialog = page.getByRole('dialog', { name: 'Künftig immer so?' });
     await expect(dialog.getByLabel('Text enthält')).toHaveValue('Futterhaus Beispiel KG');
-    await expect(dialog.getByRole('checkbox', { name: /DE69999999990000445566/ })).toBeChecked();
+    await expect(dialog.getByRole('checkbox', { name: /DE69\s9999\s9999\s0000\s4455\s66/ })).toBeChecked();
     await dialog.getByLabel('Kategorie').selectOption({ label: 'Zweckausgaben' });
     await expect(dialog.getByTestId('rule-preview')).toHaveText(/trifft 2 frühere Umsätze, davon 1 anders gebucht/);
     await expect(dialog.getByRole('link', { name: 'anders gebuchte ansehen' })).toHaveAttribute('href', /\/finance\/entries\?ids=[0-9A-Z]{26}$/);

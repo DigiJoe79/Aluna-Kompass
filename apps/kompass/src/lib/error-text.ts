@@ -1,5 +1,5 @@
 import type { ServiceError } from '@kompass/core';
-import { formatEuro } from '@kompass/module-finance/format';
+import { formatEuro, formatIban } from '@kompass/module-finance/format';
 import { formatDate } from './dates';
 
 type Translate = ((key: string, values?: Record<string, string | number | Date>) => string) & { has?: (key: string) => boolean };
@@ -30,7 +30,7 @@ const listOf = (items: string[]): string => new Intl.ListFormat('de', { type: 'c
 /**
  * Backlog 55: `permissionKeys` („users.manage,finance.read“) wird zu `permissions` („Nutzer verwalten und Finanzen
  * lesen“), `matches` und `holders` (getrennt durch U+001F, damit ein Komma nichts zerschneidet) zu `matchList` und
- * `holderList`, jeder Eintrag in „…“.
+ * `holderList`, jeder Eintrag in „…“; `ibans` wird gruppiert.
  */
 function withListValues(values: Record<string, string | number | Date>, t: Translate): Record<string, string | number | Date> {
   const next = { ...values };
@@ -39,6 +39,8 @@ function withListValues(values: Record<string, string | number | Date>, t: Trans
   }
   if (typeof values.matches === 'string') next.matchList = listOf(values.matches.split('\u001f').map((m) => `„${m}“`));
   if (typeof values.holders === 'string') next.holderList = listOf(values.holders.split('\u001f').map((h) => `„${h}“`));
+  // `ibans` („DE60…, DE12…“) kommt kompakt (Daten, MCP); im Text in Vierergruppen (MUSTER § IBAN).
+  if (typeof values.ibans === 'string') next.ibans = values.ibans.split(', ').map(formatIban).join(', ');
   return next;
 }
 

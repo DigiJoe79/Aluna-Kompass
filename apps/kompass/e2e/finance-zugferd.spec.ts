@@ -42,7 +42,7 @@ test.describe('finance: Rechnungen mit ZUGFeRD', () => {
     await expect(card(page)).toContainText('119,00 €');
     await expect(card(page)).toContainText('19 %: 19,00 €');
     await expect(card(page)).toContainText(story('30.04.2026'));
-    await expect(card(page)).toContainText('DE25999999990000424242');
+    await expect(card(page)).toContainText('DE25 9999 9999 0000 4242 42');
     await expect(card(page)).toContainText('Nicht bezahlt');
     await expect(card(page)).not.toContainText(/\d{4}-\d{2}-\d{2}/);
 

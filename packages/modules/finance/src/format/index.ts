@@ -3,3 +3,4 @@
  * Browser nutzbar (`@kompass/module-finance/format`). Zieht kein `@kompass/core` und keine Datenbank.
  */
 export * from './amount';
+export * from './iban';

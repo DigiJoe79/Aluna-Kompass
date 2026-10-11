@@ -210,6 +210,17 @@ Ein Betrag hat eine Stelle (Stufe 1 der Durchsicht 0.2.11, Joe 2026-10-11): `for
 - Zahl und Wort doppeln sich nicht: „Die Kasse stünde bei −415,00 €“, nicht „wäre mit −415,00 € im Minus“. Wo das Wort die Richtung sagt („Kassenfehlbetrag“, „zu viel verteilt“), steht der Betrag ohne Vorzeichen.
 - Kein `toFixed`, kein `Intl.NumberFormat`, kein `toLocaleString('de-DE')`, keine eigene Tausender-Regel. Ausnahme: der Wortlaut der Zuwendungsbestätigungen (`typst-pure.ts` `formatCents`) — Wächter `no-raw-amount.test.ts`, Ausnahmen dort mit Grund.
 
+## IBAN
+
+Eine IBAN hat eine Stelle (Stufe 1 der Durchsicht 0.2.11, Joe 2026-10-11): `packages/modules/finance/src/format/iban.ts`, in der App über `@kompass/module-finance/format` (nicht im Kern, Prinzip 1).
+
+- **Offen:** `formatIban` — Vierergruppen mit geschütztem Leerzeichen (`DE02 9999 9999 0532 0130 00`).
+- **Maskiert:** `maskIban` — Länderkennung und die letzten vier (`DE ·· 3000`). Keine Sternchen, keine Punktreihen.
+- **Speichern und Vergleichen:** `compactIban` (ohne Leerräume, groß). Ein Kopierknopf kopiert die kompakte Form.
+- PDF: `org("iban")` bleibt roh, wie gespeichert — das ist der Vertrag mit allen Basen, auch denen der Vereine. Eine Basis, die die IBAN zeigt, gruppiert selbst in Typst: `org("iban").replace(" ", "").clusters().chunks(4).map(c => c.join()).join(" ")` (so `a4-mit-briefkopf.typ`).
+- Prüfziffer und Gültigkeit bleiben bei den Finanzen (`lib/finance/iban-check.ts`, `ledger/iban.ts`).
+- Wächter `no-raw-iban.test.ts`: kein Bezeichner `iban`/`…Iban` roh im JSX oder als Wert eines Satzes.
+
 ## Leerwert
 
 Leer ist „—“ (U+2014), ohne Rahmung, an einer Stelle (Stufe 1 der Durchsicht 0.2.11, Joe 2026-10-11): im JSX `<Empty />` (`components/empty-value.tsx`, grau, für Vorleser „keine Angabe“ — `common.empty`), in Texten, Attributen, `<option>` und Meldungen der Module `EMPTY` aus `@kompass/core` (`packages/core/src/format/empty.ts`). `formatDateOrDash` und `ManagedField` nutzen `EMPTY`.

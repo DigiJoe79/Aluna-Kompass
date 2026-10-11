@@ -16,6 +16,7 @@ import { previewImportRuleAction, saveImportRuleAction } from './actions';
 import { FormField } from '@/components/forms/form-field';
 import { FormCell, FormGrid } from '@/components/forms/form-grid';
 import { Section } from '@/components/section';
+import { formatIban } from '@kompass/module-finance/format';
 
 export interface RuleDialogOptions {
   accounts: { id: string; name: string }[];
@@ -161,7 +162,7 @@ export function RuleDialog({
                 <Input id="rule-amount-max" inputMode="decimal" value={form.amountMaxText} onChange={(e) => set({ amountMaxText: e.target.value })} aria-invalid={!!fieldErrors.amountMaxCents} />
               </FormField>
               {form.iban ? (
-                <FormField id="rule-iban" label={t('iban', { iban: form.iban })} toggle size="full">
+                <FormField id="rule-iban" label={t('iban', { iban: formatIban(form.iban) })} toggle size="full">
                   <Checkbox id="rule-iban" checked={form.ibanOn} onCheckedChange={(checked) => set({ ibanOn: checked === true })} />
                 </FormField>
               ) : null}

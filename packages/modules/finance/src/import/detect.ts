@@ -2,7 +2,7 @@ import { ok, readSetting, requirePermission, validate, type CallContext, type De
 import { and, eq, or } from 'drizzle-orm';
 import { z } from 'zod';
 import { financeConflict } from '../errors';
-import { formatIban, normalizeIban } from '../ledger/iban';
+import { normalizeIban } from '../ledger/iban';
 import { financeAccounts, type FinanceAccountRow } from '../schema';
 import { camtStatementIbans } from './camt';
 import { decodeCsv, guessCsvFormat, headerSignature, tokenizeCsv, type CsvFormat } from './csv';
@@ -90,7 +90,8 @@ export async function detectStatementAccount(deps: Deps, ctx: CallContext, input
     const read = camtStatementIbans(bytes, { maxBytes });
     if (!read.ok) return ok({ kind: 'unreadable', code: read.error.code });
     const ibans = [...new Set(read.ibans.map(normalizeIban))];
-    if (ibans.length > 1) return financeConflict('statementMultipleAccounts', { ibans: ibans.map(formatIban).join(', ') });
+    // `ibans` kompakt: Parameter sind Daten (MCP); gruppiert wird im Text (`apps/kompass/src/lib/error-text.ts`).
+    if (ibans.length > 1) return financeConflict('statementMultipleAccounts', { ibans: ibans.join(', ') });
     const iban = ibans[0]!;
     const hits = accounts.filter((a) => a.iban !== null && normalizeIban(a.iban) === iban).map((account) => ({ account, formatLabel: CAMT_LABEL }));
     if (hits.length === 0) return ok({ kind: 'none', format: 'camt053', iban, headerSignature: null });

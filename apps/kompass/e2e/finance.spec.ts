@@ -681,11 +681,11 @@ test.describe('finance', () => {
     await page.goto('/finance/accounts');
     // F4 Task 8: „Importkonto“ (Seed) steht alphabetisch vor „Vereinskonto“ — die Karte gezielt wählen statt `.first()`.
     const card = page.locator('[role="link"]', { hasText: 'Vereinskonto' });
-    await expect(card.getByTestId('iban-value')).toHaveText('DE•• •••• •••• •••• ••20 51');
+    await expect(card.getByTestId('iban-value')).toHaveText('DE ·· 2051');
     await card.getByRole('button', { name: 'IBAN aufdecken' }).click();
-    await expect(card.getByTestId('iban-value')).toHaveText('DE23999999990000202051');
+    await expect(card.getByTestId('iban-value')).toHaveText('DE23 9999 9999 0000 2020 51');
     await card.getByRole('button', { name: 'IBAN wieder verbergen' }).click();
-    await expect(card.getByTestId('iban-value')).toHaveText('DE•• •••• •••• •••• ••20 51');
+    await expect(card.getByTestId('iban-value')).toHaveText('DE ·· 2051');
   });
 
   test('eine Kasse nennt neutral, wann sie zuletzt gezählt wurde', async ({ page }) => {

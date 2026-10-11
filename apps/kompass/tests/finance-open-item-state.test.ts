@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { maskIban, openItemState } from '@/lib/finance/open-item-state';
+import { openItemState } from '@/lib/finance/open-item-state';
 
 describe('openItemState', () => {
   it('names the four state words and overdue only while something is open', () => {
@@ -12,9 +12,3 @@ describe('openItemState', () => {
   });
 });
 
-describe('maskIban', () => {
-  it('masks an IBAN down to its last four digits, grouped', () => {
-    expect(maskIban('DE23999999990000202051')).toBe('DE•• •••• •••• •••• ••20 51');
-    expect(maskIban('DE23 9999 9999 0000 2020 51')).toBe('DE•• •••• •••• •••• ••20 51');
-  });
-});

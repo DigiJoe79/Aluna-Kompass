@@ -7,7 +7,7 @@ import { useState } from 'react';
 import { useDateFormat } from '@/components/date-format-provider';
 import { formatEuro } from '@/lib/finance/amount';
 import { formatDateOrDash } from '@/lib/finance/dates';
-import { maskIban } from '@/lib/finance/open-item-state';
+import { formatIban, maskIban } from '@kompass/module-finance/format';
 
 export interface AccountCardData {
   accountId: string;
@@ -63,7 +63,7 @@ export function AccountCard({ account }: { account: AccountCardData }) {
 
       {account.kind === 'bank' && account.iban ? (
         <div className="mt-2 flex items-center gap-2 font-mono text-meta text-ink-2">
-          <span data-testid="iban-value">{revealed ? account.iban : maskIban(account.iban)}</span>
+          <span data-testid="iban-value">{revealed ? formatIban(account.iban) : maskIban(account.iban)}</span>
           <button
             type="button"
             aria-label={revealed ? t('ibanHide') : t('ibanReveal')}

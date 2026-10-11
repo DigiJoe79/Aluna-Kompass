@@ -22,6 +22,7 @@ import { useDateFormat } from '@/components/date-format-provider';
 import { managedHintKey, managedTarget, SETTINGS_TABS, settingsSections, TAX_REQUIRED, type SettingsField } from '@/lib/settings-fields';
 import { cn } from '@/lib/utils';
 import { saveSettingsAction } from './actions';
+import { formatIban } from '@kompass/module-finance/format';
 
 const SETTINGS_TAB_KEYS = SETTINGS_TABS.map((tab) => tab.key);
 type Values = Record<string, unknown>;
@@ -83,7 +84,7 @@ export function SettingsForm({
     // E-1: kein Eingabeelement für geführte Felder — Wert, Kennzeichen und der Weg dorthin, statt readOnly/disabled.
     if (isManaged && target) {
       // Befund 32 (0.2.1): ein Datum wie überall im Format des Vereins, nicht als ISO.
-      const display = field.kind === 'select' && value ? t(`options.${field.key}.${String(value)}`) : field.kind === 'date' && value ? date(String(value)) : value === null || value === undefined ? '' : String(value);
+      const display = field.kind === 'select' && value ? t(`options.${field.key}.${String(value)}`) : field.kind === 'date' && value ? date(String(value)) : field.key === 'organization.iban' && value ? formatIban(String(value)) : value === null || value === undefined ? '' : String(value);
       return (
         <FormCell key={field.key} size={field.size}>
           <ManagedField label={label} value={display} managedBy={{ label: t(`managedTarget.${target.targetKey}`), href: target.href }} />

@@ -14,14 +14,3 @@ export function openItemState(
   const overdue = (word === 'open' || word === 'partlyPaid') && item.dueOn !== null && item.dueOn < today;
   return { word, overdue };
 }
-
-/** 'DE•• •••• •••• •••• ••20 51' — Ländercode und die letzten vier Ziffern bleiben sichtbar, in Vierergruppen. */
-export function maskIban(iban: string): string {
-  const normalized = iban.replace(/\s+/g, '').toUpperCase();
-  const len = normalized.length;
-  const revealed = normalized
-    .split('')
-    .map((ch, i) => (i < 2 || i >= len - 4 ? ch : '•'))
-    .join('');
-  return (revealed.match(/.{1,4}/g) ?? []).join(' ');
-}

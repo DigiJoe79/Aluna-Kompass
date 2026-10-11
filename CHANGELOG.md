@@ -26,6 +26,12 @@ die Nummern folgen [Semantic Versioning](https://semver.org/lang/de/). Vor
   graue Strich „—“, den Vorleser als „keine Angabe“ ansagen. Leere Optionen in
   Auswahllisten heißen ausgeschrieben („Kein Kontakt“, „Kein Projekt“, „Keine
   Änderung“) statt „— … —“.
+- **IBAN überall gleich.** Eine IBAN steht offen in Vierergruppen, die nicht
+  mitten umbrechen, verdeckt als „DE ·· 3000“ (Land und die letzten vier) statt
+  mit Sternchen oder Punkten. Auch im Briefkopf der PDF-Basen, die die IBAN des
+  Vereins zeigen, steht sie jetzt gruppiert — das gilt ebenso für eigene Basen,
+  die `org("iban")` ausgeben. Der Kopierknopf im Überweisungsblock kopiert sie
+  ohne Leerzeichen.
 
 ## [0.2.11] - 2026-10-11
 

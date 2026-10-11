@@ -15,7 +15,7 @@ import { Dialog, DialogContent, DialogFooter, DialogTitle } from '@/components/u
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import type { ActionState } from '@/lib/actions';
 import { stashCsvHandoff } from '@/lib/finance/csv-handoff';
-import { groupIban } from '@/lib/finance/iban-check';
+import { formatIban } from '@kompass/module-finance/format';
 import { remediesFor } from '@/lib/finance/remedies';
 import { cn } from '@/lib/utils';
 import { detectStatementAccountAction, uploadStatementAction } from './actions';
@@ -295,7 +295,7 @@ export function ImportUpload({ accounts }: { accounts: ImportAccountOption[] }) 
           {pending && doubt?.kind === 'none' && doubt.format === 'camt053' ? (
             <>
               <DialogTitle>{t('noneCamt.title')}</DialogTitle>
-              <p className="text-body text-ink-2">{t('noneCamt.text', { file: pending.file.name, iban: groupIban(doubt.iban ?? '') })}</p>
+              <p className="text-body text-ink-2">{t('noneCamt.text', { file: pending.file.name, iban: formatIban(doubt.iban ?? '') })}</p>
               <p className="text-body text-ink-2">{t('noneCamt.hint')}</p>
               <DialogFooter>
                 <Button type="button" variant="ghost" onClick={() => answer(null)}>

@@ -14,6 +14,7 @@ import { Section } from '@/components/section';
 import { Button, buttonVariants } from '@/components/ui/button';
 import type { ActionState } from '@/lib/actions';
 import { formatEuro } from '@/lib/finance/amount';
+import { formatIban } from '@kompass/module-finance/format';
 
 const rateText = (rate: number): string => new Intl.NumberFormat('de-DE', { maximumFractionDigits: 2 }).format(rate);
 const bookHref = (rawTransactionId: string, documentId: string): string => `/finance/work?raw=${rawTransactionId}&voucher=${documentId}`;
@@ -141,7 +142,7 @@ function InvoiceFacts({ invoice }: { invoice: InvoiceView }) {
   }
   if (invoice.dueDate) rows.push([t('due'), <span key="due" className="font-mono tabular-nums">{date(invoice.dueDate)}</span>]);
   if (invoice.payeeIban) {
-    rows.push([t('iban'), <span key="iban" className="break-all font-mono">{invoice.payeeIban}</span>]);
+    rows.push([t('iban'), <span key="iban" className="break-all font-mono">{formatIban(invoice.payeeIban)}</span>]);
     rows.push([t('contact'), invoice.contactName ?? <span key="contact" className="text-muted-ink">{t('noContact')}</span>]);
   }
   return (

@@ -310,7 +310,7 @@ test.describe('finance setup', () => {
     await page.goto('/admin/finance?panel=accounts');
     const row = page.getByTestId('account-row-Vereinskonto');
     await expect(row).toBeVisible();
-    await expect(row.getByText('DE23999999990000202051')).toBeVisible();
+    await expect(row.getByText('DE23 9999 9999 0000 2020 51')).toBeVisible();
   });
 
   test('„Bankkonten und Kassen einrichten“ führt aus der Kontenübersicht in das Konten-Panel', async ({ page }) => {

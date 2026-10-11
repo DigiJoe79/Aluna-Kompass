@@ -93,7 +93,7 @@ test.describe('finance approvals (D3)', () => {
     await expect(head).toContainText(claim.number!);
     await expect(head).toContainText('40,99 €');
     await expect(head).toContainText('Tomas Leitner');
-    await expect(head).toContainText('DE93 **** **** **** **00 01');
+    await expect(head).toContainText('DE ·· 0001');
     await expect(position(page, 1)).toContainText('Büromaterial für die Geschäftsstelle');
     await expect(position(page, 2)).toContainText('Musterstadt – Beispielstadt, 84 km');
     await expect(detail(page).getByTestId('receipt-preview')).toBeVisible();

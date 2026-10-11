@@ -47,9 +47,10 @@
       #set text(size: 8pt, fill: rgb(b.muted))
       #line(length: 100%, stroke: 0.5pt + rgb(b.line))
       #v(2pt)
+      // IBAN kommt roh (Vertrag mit allen Basen); gruppiert wird hier, in Vierergruppen (MUSTER § IBAN).
       #grid(
         columns: (1fr, auto),
-        [#org("name")#if org("iban") != "" [ · IBAN #org("iban")]],
+        [#org("name")#if org("iban") != "" [ · IBAN #org("iban").replace(" ", "").clusters().chunks(4).map(c => c.join()).join(" ")]],
         [Seite #counter(page).display() von #counter(page).final().first()],
       )
     ],
