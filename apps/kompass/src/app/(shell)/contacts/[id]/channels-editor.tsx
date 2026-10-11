@@ -16,6 +16,7 @@ import { Input } from '@/components/ui/input';
 import { setContactChannelsAction } from '../actions';
 import { Select } from '@/components/ui/select';
 import { Section } from '@/components/section';
+import { Empty } from '@/components/empty-value';
 
 type ChannelKind = 'email' | 'phone' | 'mobile' | 'fax' | 'web';
 
@@ -152,7 +153,7 @@ export function ChannelsEditor({
         <RefusalNotice action state={removeFb.state} />
 
         {channels.length === 0 ? (
-          <p className="text-meta text-muted-ink">—</p>
+          <p className="text-meta text-muted-ink"><Empty /></p>
         ) : (
           <ul className="divide-y divide-line-2">
             {channels.map((ch) => (

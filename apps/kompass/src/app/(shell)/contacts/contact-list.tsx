@@ -12,6 +12,7 @@ import { roleLabel } from '@/lib/contact-roles';
 import { useUrlFilters } from '@/lib/use-url-filters';
 import { EmptyState } from '@/components/empty-state';
 import { ListPager } from '@/components/list-pager';
+import { Empty } from '@/components/empty-value';
 
 export interface ContactListItem {
   id: string;
@@ -133,8 +134,8 @@ export function ContactList({ contacts, roles, total, unfiltered, offset, pageSi
                       ))}
                     </div>
                   </TableCell>
-                  <TableCell className="text-ink-2">{c.city || '—'}</TableCell>
-                  <TableCell selectable className="text-ink-2 font-mono text-meta">{c.primaryChannel || '—'}</TableCell>
+                  <TableCell className="text-ink-2">{c.city || <Empty />}</TableCell>
+                  <TableCell selectable className="text-ink-2 font-mono text-meta">{c.primaryChannel || <Empty />}</TableCell>
                 </TableRow>
               ))}
             </TableBody>

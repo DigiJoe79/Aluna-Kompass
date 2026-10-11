@@ -1,4 +1,4 @@
-import { yearIn, expectedVersionField, forbidden, hasPermission, invalid, isoNow, listUserNamesWithPermission, newId, notFound, ok, readSetting, requirePermission, schema, staleVersion, systemContext, todayIn, validate, type CallContext, type DbOrTx, type Deps, type Result, type ValidationIssue } from '@kompass/core';
+import { type CallContext, type DbOrTx, type Deps, EMPTY, expectedVersionField, forbidden, hasPermission, invalid, isoNow, listUserNamesWithPermission, newId, notFound, ok, readSetting, requirePermission, type Result, schema, staleVersion, systemContext, todayIn, validate, type ValidationIssue, yearIn } from '@kompass/core';
 import { addContactRole, contactIdForUserInternal, contactRoles, contacts, displayName, userIdForContactInternal } from '@kompass/module-contacts';
 import { abortReceive, DOCUMENT_MAX_BYTES, documentLinks, linkDocumentInternal, readLinkedDocument, receiveGeneratedUpload } from '@kompass/module-dms';
 import { listProjects, projects } from '@kompass/module-projects';
@@ -94,7 +94,7 @@ function ownContactInternal(deps: Deps, ctx: CallContext): Result<string> {
   const contactId = ctx.userId ? contactIdForUserInternal(deps.db, ctx.userId) : null;
   if (contactId) return ok(contactId);
   const names = listUserNamesWithPermission(deps, 'users.manage');
-  return financeConflict('expenseNeedsContactLink', { names: names.length > 0 ? names.join(', ') : '—' });
+  return financeConflict('expenseNeedsContactLink', { names: names.length > 0 ? names.join(', ') : EMPTY });
 }
 
 /** Ist der Aufrufer die antragstellende Person? Ohne Verknüpfung nie. */

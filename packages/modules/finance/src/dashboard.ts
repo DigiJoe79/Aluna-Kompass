@@ -1,4 +1,4 @@
-import { hasPermission, isoDayIn, listUserNamesWithPermission, readSetting, todayIn, type DashboardLine, type DashboardTile } from '@kompass/core';
+import { type DashboardLine, type DashboardTile, EMPTY, hasPermission, isoDayIn, listUserNamesWithPermission, readSetting, todayIn } from '@kompass/core';
 import { contacts, displayName } from '@kompass/module-contacts';
 import { and, eq, isNull, lt, or } from 'drizzle-orm';
 import { z } from 'zod';
@@ -391,7 +391,7 @@ const myExpensesTile: DashboardTile<Record<string, never>> = {
   async load(deps, ctx) {
     const res = await listMyExpenseClaims(deps, ctx, { state: 'open', limit: 10 });
     if (!res.ok) return { kind: 'list', lines: [], total: 0, href: '/finance/expenses' };
-    const lines: DashboardLine[] = res.value.items.map((c) => ({ titleKey: c.stateLabelKey, values: { number: c.number ?? '—', amount: formatEuro(c.totalCents) }, href: `/finance/expenses/${c.id}` }));
+    const lines: DashboardLine[] = res.value.items.map((c) => ({ titleKey: c.stateLabelKey, values: { number: c.number ?? EMPTY, amount: formatEuro(c.totalCents) }, href: `/finance/expenses/${c.id}` }));
     return { kind: 'list', lines, total: res.value.total, href: '/finance/expenses' };
   },
 };

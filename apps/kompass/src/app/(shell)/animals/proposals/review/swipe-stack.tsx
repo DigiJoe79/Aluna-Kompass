@@ -22,6 +22,7 @@ import { CropFrame } from '../../crop-frame';
 import { acceptProposalAction, rejectProposalAction } from '../actions';
 import { KindBadge } from '../kind-badge';
 import type { StackReason, StackRight } from './stack-route';
+import { Empty } from '@/components/empty-value';
 
 export interface StackCard {
   id: string;
@@ -221,8 +222,8 @@ export function SwipeStack({ cards, backHref, query, frame }: { cards: StackCard
                   {card.lines.map((l) => (
                     <li key={l.label}>
                       <span className="font-semibold text-ink-2">{l.label}: </span>
-                      {l.from !== null ? <><span className="text-ink-2">{l.from || '—'}</span> → </> : null}
-                      <span className="text-ink">{l.to || '—'}</span>
+                      {l.from !== null ? <><span className="text-ink-2">{l.from || <Empty />}</span> → </> : null}
+                      <span className="text-ink">{l.to || <Empty />}</span>
                     </li>
                   ))}
                 </ul>

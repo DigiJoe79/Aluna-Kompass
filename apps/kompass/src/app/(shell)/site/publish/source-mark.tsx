@@ -4,6 +4,7 @@ import type { PublishSource } from '@kompass/module-site';
 import { Bot } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { StatusBadge } from '@/components/status-badge';
+import { EMPTY } from '@/components/empty-value';
 
 /** Die Marke „MCP“ der Laufkarte, der Historie und des Protokolls — überall dieselbe. */
 export function McpBadge() {
@@ -23,7 +24,7 @@ export function McpBadge() {
 export function SourceMark({ source, name }: { source: PublishSource; name: string | null }) {
   const t = useTranslations('site.publish');
   if (source.channel === 'mcp') {
-    const who = name ?? '—';
+    const who = name ?? EMPTY;
     return (
       <span className="inline-flex flex-wrap items-center gap-x-2 gap-y-1">
         <McpBadge />

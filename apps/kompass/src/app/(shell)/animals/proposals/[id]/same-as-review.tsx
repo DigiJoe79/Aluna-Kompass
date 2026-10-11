@@ -18,6 +18,7 @@ import { FieldValue } from './review-values';
 import { useDecisionDone } from './use-decision';
 import { Overline } from '@/components/overline';
 import { SectionHeading } from '@/components/section';
+import { Empty } from '@/components/empty-value';
 
 /**
  * Zuordnung (Spec § 6, Board 5b): zwei Spalten Quelle / Kompass, abweichende Werte gelb hinterlegt (Markierung, keine
@@ -71,8 +72,8 @@ export function SameAsReview({ review, locales, nextHref }: { review: ProposalRe
           ))}
           <div className="col-span-2 grid grid-cols-2 gap-x-4 border-t border-line pt-2">
             <span className="col-span-2 text-meta font-semibold text-ink-2">{t('origin')}</span>
-            {cell('p', '—', false)}
-            {cell('c', review.origins.length ? review.origins.map((o) => o.sourceName).join(', ') : t('none'), false)}
+            {cell('p', <Empty />, false)}
+            {cell('c', review.origins.length ? review.origins.map((o) => o.sourceName).join(', ') : <Empty />, false)}
           </div>
         </div>
       </div>

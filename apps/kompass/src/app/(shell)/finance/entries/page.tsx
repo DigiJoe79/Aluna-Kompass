@@ -13,6 +13,7 @@ import { requireSession } from '@/lib/request-context';
 import { readSort } from '@/lib/sort';
 import { Journal, type JournalRow } from './journal';
 import { SidePanel } from './side-panel';
+import { EMPTY } from '@/components/empty-value';
 
 export interface EntriesQuery {
   year?: string;
@@ -118,8 +119,8 @@ export default async function FinanceEntriesPage({ searchParams }: { searchParam
 
   const rows: JournalRow[] = entriesRes.value.entries.map((entry) => {
     const distinctAccounts = new Set(entry.moneyLines.map((l) => l.accountId));
-    const accountLabel = distinctAccounts.size === 0 ? '—' : distinctAccounts.size === 1 ? (accountNames.get([...distinctAccounts][0]!) ?? '') : t('accountsCount', { count: distinctAccounts.size });
-    const allocationLabel = entry.allocationLines.length === 0 ? '—' : entry.allocationLines.length === 1 ? (categoryNames.get(entry.allocationLines[0]!.categoryId) ?? '') : t('allocationsCount', { count: entry.allocationLines.length });
+    const accountLabel = distinctAccounts.size === 0 ? EMPTY : distinctAccounts.size === 1 ? (accountNames.get([...distinctAccounts][0]!) ?? '') : t('accountsCount', { count: distinctAccounts.size });
+    const allocationLabel = entry.allocationLines.length === 0 ? EMPTY : entry.allocationLines.length === 1 ? (categoryNames.get(entry.allocationLines[0]!.categoryId) ?? '') : t('allocationsCount', { count: entry.allocationLines.length });
     const contacts = [...new Set(entry.allocationLines.map((l) => l.contactId).filter((id): id is string => !!id))];
     const contactLabel = contacts.length === 0 ? null : contacts.length === 1 ? (contactNames.get(contacts[0]!) ?? null) : t('contactsCount', { count: contacts.length });
 

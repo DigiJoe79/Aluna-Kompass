@@ -7,6 +7,7 @@ import { auditActionLabel } from '@/lib/audit-actions';
 import { auditObject, type AuditEntityLabel } from '@/lib/audit-entities';
 import { AuditObjectLabel } from './audit-object';
 import type { DateFormatter } from '@/lib/date-format';
+import { Empty } from '@/components/empty-value';
 
 export async function AuditTable({
   entries,
@@ -59,7 +60,7 @@ export async function AuditTable({
                 {fmt.dateTime(e.occurredAt, { seconds: true })}
               </RowLink>
             </TableCell>
-            <TableCell className="text-ink-2">{e.userName ?? '—'}</TableCell>
+            <TableCell className="text-ink-2">{e.userName ?? <Empty />}</TableCell>
             <TableCell>
               <StatusBadge tone={tone[e.channel]}>{t(`filters.channels.${e.channel}`)}</StatusBadge>
             </TableCell>

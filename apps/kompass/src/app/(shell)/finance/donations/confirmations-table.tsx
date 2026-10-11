@@ -20,6 +20,7 @@ import { VoidDialog } from './void-dialog';
 import { FormField } from '@/components/forms/form-field';
 import { FormGrid } from '@/components/forms/form-grid';
 import { Overline } from '@/components/overline';
+import { Empty } from '@/components/empty-value';
 
 export interface ConfirmationRow {
   id: string;
@@ -123,8 +124,8 @@ export function ConfirmationsTable({ rows, canIssue, initialOpenId, today, foote
                 <TableCell>{row.contactName}</TableCell>
                 <TableCell>{t(`kind.${row.kind}`)}</TableCell>
                 <TableCell className="text-right font-mono tabular-nums">{formatEuro(row.totalCents)}</TableCell>
-                <TableCell>{row.periodFrom && row.periodTo ? `${date(row.periodFrom)} – ${date(row.periodTo)}` : '—'}</TableCell>
-                <TableCell>{row.sentAt && row.sentVia ? t('sentValue', { date: date(row.sentAt), via: t(`sentVia.${row.sentVia}`) }) : '—'}</TableCell>
+                <TableCell>{row.periodFrom && row.periodTo ? `${date(row.periodFrom)} – ${date(row.periodTo)}` : <Empty />}</TableCell>
+                <TableCell>{row.sentAt && row.sentVia ? t('sentValue', { date: date(row.sentAt), via: t(`sentVia.${row.sentVia}`) }) : <Empty />}</TableCell>
                 <TableCell data-testid="confirmation-state" className="whitespace-normal">{stateOf(row)}</TableCell>
               </TableRow>
               {openId === row.id ? (
@@ -173,7 +174,7 @@ function Detail({ row, canIssue, onVoid, onDispatch, onRecall }: { row: Confirma
         </ul>
         <p className="text-ink-2">
           <span className="font-semibold text-ink">{t('detail.notice')}: </span>
-          {row.notice ? t('detail.noticeValue', { kind: t(`noticeKind.${row.notice.kind}`), date: date(row.notice.noticeDate) }) : '—'}
+          {row.notice ? t('detail.noticeValue', { kind: t(`noticeKind.${row.notice.kind}`), date: date(row.notice.noticeDate) }) : <Empty />}
         </p>
         <p className="text-ink-2">
           <span className="font-semibold text-ink">{t('detail.signature')}: </span>

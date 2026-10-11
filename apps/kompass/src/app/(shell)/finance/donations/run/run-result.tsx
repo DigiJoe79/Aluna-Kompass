@@ -24,6 +24,7 @@ import { dispatchRunConfirmationsAction } from './actions';
 import { FormField } from '@/components/forms/form-field';
 import { FormGrid } from '@/components/forms/form-grid';
 import { Overline } from '@/components/overline';
+import { EMPTY } from '@/components/empty-value';
 
 type SentVia = 'post' | 'email' | 'handed';
 
@@ -47,7 +48,7 @@ export function RunResult({ run, canIssue, today, missing, followUpHref }: { run
 
   const errorText = (code: string | null) => {
     const key = `errorCode.${code ?? 'unknown'}`;
-    return code && t.has(key) ? t(key) : t('errorCode.unknown', { code: code ?? '—' });
+    return code && t.has(key) ? t(key) : t('errorCode.unknown', { code: code ?? EMPTY });
   };
 
   const download = async (part: 'machine' | 'signature') => {

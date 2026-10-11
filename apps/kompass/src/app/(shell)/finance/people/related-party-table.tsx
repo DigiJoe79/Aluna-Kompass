@@ -6,6 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { formatEuro } from '@/lib/finance/amount';
 import type { DateFormatter } from '@/lib/date-format';
 import { panelHref } from '@/components/panel-nav';
+import { Empty } from '@/components/empty-value';
 
 /**
  * E21 „Zahlungen an Vorstandsmitglieder und nahestehende Personen“
@@ -53,7 +54,7 @@ export async function RelatedPartyTable({ rows, approverNames, fmt }: { rows: Re
               </TableCell>
               <TableCell className="px-3 text-right font-mono tabular-nums">{formatEuro(row.amountCents)}</TableCell>
               <TableCell className="px-3 text-ink-2" data-testid="related-party-approver">
-                {row.approvedByUserId ? approverNames.get(row.approvedByUserId) ?? '—' : '—'}
+                {row.approvedByUserId ? approverNames.get(row.approvedByUserId) ?? <Empty /> : <Empty />}
               </TableCell>
             </TableRow>
           ))}

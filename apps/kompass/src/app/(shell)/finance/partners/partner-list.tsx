@@ -4,6 +4,7 @@ import { useTranslations } from 'next-intl';
 import { useDateFormat } from '@/components/date-format-provider';
 import { StatusBadge } from '@/components/status-badge';
 import { RowLink, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Empty } from '@/components/empty-value';
 
 export interface PartnerRow {
   id: string;
@@ -58,12 +59,12 @@ export function PartnerList({ partners }: { partners: PartnerRow[] }) {
                   ) : null}
                 </TableCell>
                 <TableCell className="whitespace-normal text-ink-2">{tStatus(p.status)}</TableCell>
-                <TableCell className="hidden text-ink-2 sm:table-cell">{p.usualBasis ? tBasis(p.usualBasis) : '—'}</TableCell>
+                <TableCell className="hidden text-ink-2 sm:table-cell">{p.usualBasis ? tBasis(p.usualBasis) : <Empty />}</TableCell>
                 <TableCell className="text-right tabular-nums">
                   {p.openProofCount}
                   {p.overdueProofCount > 0 ? <span className="text-warning"> · {t('overdue', { count: p.overdueProofCount })}</span> : null}
                 </TableCell>
-                <TableCell className="hidden text-right font-mono tabular-nums sm:table-cell">{p.lastPaidOn ? fmt.date(p.lastPaidOn) : '—'}</TableCell>
+                <TableCell className="hidden text-right font-mono tabular-nums sm:table-cell">{p.lastPaidOn ? fmt.date(p.lastPaidOn) : <Empty />}</TableCell>
               </TableRow>
             ))}
           </TableBody>

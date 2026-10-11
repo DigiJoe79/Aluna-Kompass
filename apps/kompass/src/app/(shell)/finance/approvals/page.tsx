@@ -23,6 +23,7 @@ import { ApprovalQueue, type QueueRow } from './approval-queue';
 import { PartnerPaymentDetail } from './partner-payment-detail';
 import { PurposeTransferDetail } from './purpose-transfer-detail';
 import { conflictText } from '@/lib/error-text';
+import { EMPTY } from '@/components/empty-value';
 
 /**
  * D3 „Freigaben“ (F8a Task 6, Designer-README 3h): zweispaltig wie die Akte —
@@ -67,7 +68,7 @@ export default async function ApprovalsPage({ searchParams }: { searchParams: Pr
     const paymentRes = await getPartnerPayment(deps, ctx, { id: selectedId });
     if (!paymentRes.ok) notFound();
     const evidenceRes = await listEvidence(deps, ctx, { paymentId: selectedId });
-    const creatorName = userNamesFor(deps, [paymentRes.value.createdByUserId]).get(paymentRes.value.createdByUserId) ?? '—';
+    const creatorName = userNamesFor(deps, [paymentRes.value.createdByUserId]).get(paymentRes.value.createdByUserId) ?? EMPTY;
     detail = (
       <PartnerPaymentDetail
         payment={paymentRes.value}
@@ -79,7 +80,7 @@ export default async function ApprovalsPage({ searchParams }: { searchParams: Pr
   } else if (selectedId && selectedKind === 'purposeTransfer') {
     const transferRes = await getPurposeTransfer(deps, ctx, { id: selectedId });
     if (!transferRes.ok) notFound();
-    const creatorName = userNamesFor(deps, [transferRes.value.createdByUserId]).get(transferRes.value.createdByUserId) ?? '—';
+    const creatorName = userNamesFor(deps, [transferRes.value.createdByUserId]).get(transferRes.value.createdByUserId) ?? EMPTY;
     detail = <PurposeTransferDetail transfer={transferRes.value} creatorName={creatorName} nextHref={nextRow?.href ?? null} />;
   } else if (selectedId) {
     const approval = await getApproval(deps, ctx, { claimId: selectedId });

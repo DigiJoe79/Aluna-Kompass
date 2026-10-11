@@ -13,6 +13,7 @@ import { formatEuro } from '@/lib/finance/amount';
 import { decideCandidateAction } from './actions';
 import { Overline } from '@/components/overline';
 import { Section } from '@/components/section';
+import { Empty } from '@/components/empty-value';
 
 export interface CandidateRow {
   id: string;
@@ -64,12 +65,12 @@ export function CandidatesSection({ candidates, canDecide }: { candidates: Candi
                     label: '',
                     before: (
                       <span>
-                        {date(c.line.bookingDate)} · {c.line.counterpartyName ?? '—'} · {c.line.purpose || '—'} · <span className="font-mono tabular-nums">{formatEuro(c.line.amountCents)}</span>
+                        {date(c.line.bookingDate)} · {c.line.counterpartyName ?? <Empty />} · {c.line.purpose || <Empty />} · <span className="font-mono tabular-nums">{formatEuro(c.line.amountCents)}</span>
                       </span>
                     ),
                     after: c.existing ? (
                       <span>
-                        {date(c.existing.bookingDate)} · {c.existing.counterpartyName ?? '—'} · {c.existing.purpose || '—'} · <span className="font-mono tabular-nums">{formatEuro(c.existing.amountCents)}</span> ·{' '}
+                        {date(c.existing.bookingDate)} · {c.existing.counterpartyName ?? <Empty />} · {c.existing.purpose || <Empty />} · <span className="font-mono tabular-nums">{formatEuro(c.existing.amountCents)}</span> ·{' '}
                         {c.existing.state === 'booked' && c.existing.entryId ? (
                           <Link href={`/finance/entries/${c.existing.entryId}`} className="text-link">
                             {c.existing.entryNumber}
@@ -79,7 +80,7 @@ export function CandidatesSection({ candidates, canDecide }: { candidates: Candi
                         )}
                       </span>
                     ) : (
-                      '—'
+                      <Empty />
                     ),
                   },
                 ]}

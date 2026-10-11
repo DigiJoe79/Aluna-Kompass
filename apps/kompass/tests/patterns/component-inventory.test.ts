@@ -29,6 +29,7 @@ const SECTIONS = {
   L: 'L — Filterleisten',
   Seitenrahmen: 'Seitenrahmen',
   Schrift: 'Schrift',
+  Leerwert: 'Leerwert',
   Fachbaustein: 'Fachbausteine und Grundbausteine',
   Grundbaustein: 'Fachbausteine und Grundbausteine',
 } as const;
@@ -50,6 +51,7 @@ const INVENTORY: Readonly<Record<string, Entry>> = {
   // Fall „gefiltert leer“: Designer 2026-10-08, HANDOFF § 8e.1.
   'copy-button.tsx': neu('Grundbaustein', 'Designer 2026-10-09, Kopier-Knopf für IDs im Protokoll'),
   'empty-state.tsx': bestand('G'),
+  'empty-value.tsx': neu('Leerwert', 'Stufe-1-Auftrag, Joe 2026-10-11 (Durchsicht 0.2.11, Auftrag 3.1)'),
   'finance/account-card.tsx': bestand('Fachbaustein'),
   'finance/amount-cell.tsx': bestand('Fachbaustein'),
   'finance/amount-field.tsx': bestand('Fachbaustein'),

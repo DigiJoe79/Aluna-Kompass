@@ -1,4 +1,4 @@
-import { combineConflicts, yearIn, expectedVersionField, hasPermission, invalid, isoNow, notFound, ok, readSetting, requirePermission, schema, staleVersion, todayIn, validate, type CallContext, type DbOrTx, type Deps, type Failure, type Result, type ValidationIssue } from '@kompass/core';
+import { type CallContext, combineConflicts, type DbOrTx, type Deps, EMPTY, expectedVersionField, type Failure, hasPermission, invalid, isoNow, notFound, ok, readSetting, requirePermission, type Result, schema, staleVersion, todayIn, validate, type ValidationIssue, yearIn } from '@kompass/core';
 import { contactIdForUserInternal, contacts, displayName } from '@kompass/module-contacts';
 import { documents, linkDocumentInternal } from '@kompass/module-dms';
 import { and, asc, eq, ne } from 'drizzle-orm';
@@ -67,7 +67,7 @@ function ownClaimProblem(deps: Deps, ctx: CallContext, claim: FinanceExpenseClai
   if (!created && !sameContact) return null;
   const self = userName(deps.db, ctx.userId);
   const names = expenseClaimViewInternal(deps, deps.db, claim.id)!.approverNames.filter((n) => n !== self);
-  return financeConflict(created ? 'expenseOwnClaim' : 'expenseSameContact', { names: names.length > 0 ? names.join(', ') : '—' });
+  return financeConflict(created ? 'expenseOwnClaim' : 'expenseSameContact', { names: names.length > 0 ? names.join(', ') : EMPTY });
 }
 
 // ── Warteschlange ───────────────────────────────────────────────────────────

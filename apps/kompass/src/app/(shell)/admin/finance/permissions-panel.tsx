@@ -1,5 +1,6 @@
 import { getTranslations } from 'next-intl/server';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Empty } from '@/components/empty-value';
 
 export interface PermissionMatrixActivity {
   key: string;
@@ -39,14 +40,14 @@ export async function PermissionsPanel({ activities, roles }: { activities: Perm
                 {activities.map((activity) => (
                   <TableRow key={activity.key}>
                     <TableCell className="text-ink-2">{activityLabel(activity.permission)}</TableCell>
-                    <TableCell>{role.permissions.includes(activity.permission) ? t('yes') : '—'}</TableCell>
+                    <TableCell>{role.permissions.includes(activity.permission) ? t('yes') : <Empty />}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
             <div className="space-y-1 border-t border-line px-4 py-2.5 text-hint">
               <p className="text-muted-ink">
-                {t('navigation')}: {role.navigation.length > 0 ? role.navigation.map((key) => t(`navKeys.${key}`)).join(', ') : t('navigationNone')}
+                {t('navigation')}: {role.navigation.length > 0 ? role.navigation.map((key) => t(`navKeys.${key}`)).join(', ') : <Empty />}
               </p>
               <p>
                 <span className="text-muted-ink">{t('holders')}: </span>

@@ -22,6 +22,7 @@ import { FollowUpsPanel, type FollowUpView } from './follow-ups-panel';
 import { NotesPanel, type NoteView } from './notes-panel';
 import { RelationsPanel, type RelationView } from './relations-panel';
 import { Section } from '@/components/section';
+import { EMPTY } from '@/components/empty-value';
 
 export interface DocumentDetailProps {
   document: {
@@ -296,7 +297,7 @@ export function DocumentDetail({
                     ? t('text.done', {
                         date: doc.textExtractedAt
                           ? fmt.dateTime(doc.textExtractedAt)
-                          : '—',
+                          : EMPTY,
                       })
                     : doc.textStatus === 'failed'
                       ? t('text.failed', { reason: doc.textError ?? '' })

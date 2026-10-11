@@ -2,6 +2,7 @@
 
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
+import { EMPTY } from '@/components/empty-value';
 
 /**
  * Ein Feld, das ein eingeschaltetes Modul führt (`managedSettings`, E-1):
@@ -19,7 +20,7 @@ export function ManagedField({ label, value, managedBy }: { label: string; value
         <span className="rounded-sm bg-badge px-1.5 py-0.5 text-hint font-semibold text-badge-ink">{t('badge')}</span>
       </div>
       <p data-testid="managed-field-value" className="flex h-[var(--field-h)] w-full items-center rounded-md border border-dashed border-line bg-surface-2 px-2.5 text-body text-ink">
-        {value.trim() === '' ? '—' : value}
+        {value.trim() === '' ? EMPTY : value}
       </p>
       <Link href={managedBy.href} className="w-fit text-hint font-semibold text-ink underline underline-offset-2">
         {t('linkText', { label: managedBy.label })}

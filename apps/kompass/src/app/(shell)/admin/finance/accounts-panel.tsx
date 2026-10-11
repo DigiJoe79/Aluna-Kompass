@@ -24,6 +24,7 @@ import { FormField } from '@/components/forms/form-field';
 import { FormCell, FormGrid } from '@/components/forms/form-grid';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Section } from '@/components/section';
+import { Empty } from '@/components/empty-value';
 
 export interface AccountRow {
   id: string;
@@ -82,7 +83,7 @@ export function AccountsPanel({ accounts, canPickDocument }: { accounts: Account
                   {row.name} {row.isMain ? <StatusBadge tone="brand">{t('dialog.isMain')}</StatusBadge> : null}
                 </TableCell>
                 <TableCell className="text-ink-2">{t(`kind.${row.kind}`)}</TableCell>
-                <TableCell className="font-mono text-meta text-muted-ink">{row.iban ?? '—'}</TableCell>
+                <TableCell className="font-mono text-meta text-muted-ink">{row.iban ?? <Empty />}</TableCell>
                 <TableCell>
                   <StatusBadge tone={row.isActive ? 'success' : 'neutral'}>{row.isActive ? t('active') : t('inactiveState')}</StatusBadge>
                 </TableCell>

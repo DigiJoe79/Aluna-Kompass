@@ -193,7 +193,7 @@ export function SplitRow({
             disabled={value.locked}
             onChange={(e) => set({ projectId: e.target.value || null })}
           >
-            <option value="">{t('none')}</option>
+            <option value="">{t('noProject')}</option>
             {projects.map((p) => (
               <option key={p.id} value={p.id}>{p.name}</option>
             ))}
@@ -213,7 +213,7 @@ export function SplitRow({
                 value={value.purposeId ?? ''}
                 onChange={(e) => set({ purposeId: e.target.value || null })}
               >
-                <option value="">{t('none')}</option>
+                <option value="">{t('noPurpose')}</option>
                 {purposes.map((p) => (
                   <option key={p.id} value={p.id}>{p.name}</option>
                 ))}

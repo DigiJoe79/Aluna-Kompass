@@ -93,6 +93,18 @@ function walk(dir: string): string[] {
   });
 }
 
+/** Ist der Text das einzige Kind seines Elements (Leerraum nicht mitgezählt)? */
+function alleinigerInhalt(node: ts.JsxText): boolean {
+  const parent = node.parent;
+  return ts.isJsxElement(parent) && parent.children.filter((c) => !(ts.isJsxText(c) && c.containsOnlyTriviaWhiteSpaces)).length === 1;
+}
+
+/** Trägt das umschließende Element `aria-hidden`? Dann ist der Strich Zierde, kein Wert. */
+function verborgen(node: ts.JsxText): boolean {
+  const parent = node.parent;
+  return ts.isJsxElement(parent) && parent.openingElement.attributes.properties.some((a) => ts.isJsxAttribute(a) && a.name.getText() === 'aria-hidden');
+}
+
 function offendersIn(file: string, source: string): string[] {
   const src = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true, file.endsWith('.tsx') ? ts.ScriptKind.TSX : ts.ScriptKind.TS);
   const found: string[] = [];
@@ -102,6 +114,9 @@ function offendersIn(file: string, source: string): string[] {
     if (ts.isJsxText(node)) {
       const text = node.text.trim();
       if (text && TRAEGT_TEXT.test(text) && !ERLAUBT.has(text)) found.push(`${zeile(node)}: ${text}`);
+      // Ein Strich als einziger Inhalt eines Elements ist ein Leerwert — der kommt aus `<Empty />` (Stufe 1, Auftrag 3).
+      // Zwischen zwei Werten („von – bis“) oder als verborgener Trenner (`aria-hidden`) ist er Satzzeichen.
+      if (/^[—–]$/.test(text) && alleinigerInhalt(node) && !verborgen(node)) found.push(`${zeile(node)}: ${text} (Leerwert: <Empty />)`);
     }
     if (ts.isJsxAttribute(node) && node.initializer && ts.isStringLiteral(node.initializer)) {
       const name = node.name.getText();

@@ -16,6 +16,7 @@ import { createFirstFiscalYearAction, updateFiscalYearAction } from './actions';
 import { useSavedVersions } from '@/lib/saved-versions';
 import { FormField } from '@/components/forms/form-field';
 import { FormGrid } from '@/components/forms/form-grid';
+import { Empty } from '@/components/empty-value';
 
 export interface FiscalYearRow {
   id: string;
@@ -76,7 +77,7 @@ export function FiscalYearsPanel({ years }: { years: FiscalYearRow[] }) {
                 <TableCell>
                   <StatusBadge tone={year.status === 'open' ? 'success' : 'neutral'}>{t(`statusValues.${year.status}`)}</StatusBadge>
                 </TableCell>
-                <TableCell className="text-ink-2">{year.taxReturnFiledOn ? date(year.taxReturnFiledOn) : '—'}</TableCell>
+                <TableCell className="text-ink-2">{year.taxReturnFiledOn ? date(year.taxReturnFiledOn) : <Empty />}</TableCell>
                 <TableCell className="text-right">
                   <Button variant="ghost" size="sm" onClick={() => setEditing(versions.latest(year))}>
                     {tCommon('edit')}

@@ -16,6 +16,7 @@ import { requireSession } from '@/lib/request-context';
 import { readSort } from '@/lib/sort';
 import { reorderProjectsAction, setProjectPublishedAction } from './actions';
 import { PROJECT_SORT_FIELDS, sortProjects } from './sort';
+import { Empty } from '@/components/empty-value';
 
 export default async function ProjectsPage({ searchParams }: { searchParams: Promise<{ sort?: string; dir?: string }> }) {
   const { deps, ctx } = await requireSession();
@@ -53,7 +54,7 @@ export default async function ProjectsPage({ searchParams }: { searchParams: Pro
                   <TableRow key={p.id}>
                     <TableCell><RowLink href={`/projects/${p.id}`}>{p.name.de || p.slug}</RowLink></TableCell>
                     <TableCell><StatusBadge tone="neutral">{t(`types.${p.type}`)}</StatusBadge></TableCell>
-                    <TableCell className="text-hint text-muted-ink">{p.externalLinks.length > 0 ? p.externalLinks.map((l) => l.label).join(', ') : '—'}</TableCell>
+                    <TableCell className="text-hint text-muted-ink">{p.externalLinks.length > 0 ? p.externalLinks.map((l) => l.label).join(', ') : <Empty />}</TableCell>
                     <TableCell><PublishSwitch id={p.id} isPublished={p.isPublished} action={setProjectPublishedAction} /></TableCell>
                     <TableCell className="text-right">{sort ? null : <ReorderButtons ids={ids} index={ids.indexOf(p.id)} action={reorderProjectsAction} />}</TableCell>
                   </TableRow>

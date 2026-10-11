@@ -25,6 +25,7 @@ import { EntryHistory } from './history';
 import { NotReturnCard } from './not-return';
 import { EntryVouchers } from './vouchers';
 import { Section } from '@/components/section';
+import { Empty } from '@/components/empty-value';
 
 export default async function ViewFinanceEntryPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -195,8 +196,8 @@ export default async function ViewFinanceEntryPage({ params }: { params: Promise
                       {entry.allocationLines.map((line) => (
                         <TableRow key={line.id}>
                           <TableCell className="text-ink-2">{categoryNames.get(line.categoryId) ?? line.categoryId}</TableCell>
-                          <TableCell className="text-ink-2">{line.contactId ? (contactNames.get(line.contactId) ?? '') : '—'}</TableCell>
-                          <TableCell className="text-ink-2">{line.purposeId ? (purposeNames.get(line.purposeId) ?? '') : '—'}</TableCell>
+                          <TableCell className="text-ink-2">{line.contactId ? (contactNames.get(line.contactId) ?? '') : <Empty />}</TableCell>
+                          <TableCell className="text-ink-2">{line.purposeId ? (purposeNames.get(line.purposeId) ?? '') : <Empty />}</TableCell>
                           <TableCell className="whitespace-normal">
                             <AmountCell cents={line.amountCents} />
                             {line.amountCents !== 0 && taxTextKey(line.tax) ? (

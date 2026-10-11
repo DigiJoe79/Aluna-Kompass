@@ -16,6 +16,7 @@ import { createSnippetAction, deleteSnippetAction, updateSnippetAction } from '.
 import { ActionForm } from '@/components/forms/action-form';
 import { FormField } from '@/components/forms/form-field';
 import { FormGrid } from '@/components/forms/form-grid';
+import { Empty } from '@/components/empty-value';
 
 export interface SnippetRow {
   id: string;
@@ -73,7 +74,7 @@ export function SnippetsPanel({ snippets }: { snippets: SnippetRow[] }) {
               snippets.map((snippet) => (
                 <TableRow key={snippet.id}>
                   <TableCell className="font-semibold text-ink">{snippet.name}</TableCell>
-                  <TableCell className="text-ink-2">{snippet.subject ?? '—'}</TableCell>
+                  <TableCell className="text-ink-2">{snippet.subject ?? <Empty />}</TableCell>
                   <TableCell className="text-ink-2">{snippet.isActive ? tCommon('yes') : tCommon('no')}</TableCell>
                   <TableCell className="text-right">
                     <Button variant="ghost" size="sm" onClick={() => setEditing(snippet)}>

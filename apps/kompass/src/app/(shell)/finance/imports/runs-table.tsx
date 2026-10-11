@@ -11,6 +11,7 @@ import { formatEuro } from '@/lib/finance/amount';
 import { cn } from '@/lib/utils';
 import { AmendBalanceDialog } from './amend-balance-dialog';
 import { DiscardRunDialog } from './discard-dialog';
+import { Empty } from '@/components/empty-value';
 
 export interface RunRawTransaction {
   id: string;
@@ -85,7 +86,7 @@ export function RunsTable({ runs, canDiscard }: { runs: RunRow[]; canDiscard: bo
                 <ChevronRight className={cn('size-4 shrink-0 transition-transform', isOpen && 'rotate-90')} aria-hidden />
                 {run.accountName}
               </Button>
-              <span className="text-ink-2">{run.periodFrom && run.periodTo ? t('period', { from: date(run.periodFrom), to: date(run.periodTo) }) : '—'}</span>
+              <span className="text-ink-2">{run.periodFrom && run.periodTo ? t('period', { from: date(run.periodFrom), to: date(run.periodTo) }) : <Empty />}</span>
               <span data-testid="import-run-format" className="text-muted-ink">{run.format === 'csv' ? (run.formatName ?? t('formatCsv')) : t('formatCamt')}</span>
               <span className="font-mono tabular-nums text-ink-2">
                 {run.state === 'finished' && run.openingCents === null && run.closingCents === null ? t('noBalance') : null}
@@ -135,7 +136,7 @@ export function RunsTable({ runs, canDiscard }: { runs: RunRow[]; canDiscard: bo
                     {run.rawTransactions.map((raw) => (
                       <li key={raw.id} className="flex items-center justify-between gap-3 py-1.5">
                         <span className="font-mono text-ink-2">{date(raw.bookingDate)}</span>
-                        <span className="flex-1 truncate">{raw.counterpartyName ?? '—'}</span>
+                        <span className="flex-1 truncate">{raw.counterpartyName ?? <Empty />}</span>
                         <span className="flex-1 truncate text-muted-ink">{truncate(raw.purpose)}</span>
                         <span className="font-mono tabular-nums">{formatEuro(raw.amountCents)}</span>
                         <span>

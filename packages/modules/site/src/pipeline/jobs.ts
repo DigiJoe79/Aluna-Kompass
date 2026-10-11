@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { mkdir, mkdtemp, readdir, readFile, rm, stat } from 'node:fs/promises';
 import path from 'node:path';
-import { conflict, invalid, isoNow, localizedConflict, systemContext, newId, ok, recordAudit, requirePermission, validate, type CallContext, type Clock, type Deps, type Result, type ServiceError } from '@kompass/core';
+import { type CallContext, type Clock, conflict, type Deps, EMPTY, invalid, isoNow, localizedConflict, newId, ok, recordAudit, requirePermission, type Result, type ServiceError, systemContext, validate } from '@kompass/core';
 import { z } from 'zod';
 import { exportSiteContent, type SiteContentExport } from '../export';
 import { contentManifestOf } from '../public-content';
@@ -175,7 +175,7 @@ export function settleInterruptedPublish(deps: Deps, env: SiteEnv): void {
     contentHash: '',
     diff: { changed: [], added: [], removed: [] },
     fileManifest: {},
-    log: `Unterbrochen im Schritt ${rec.lastStep ?? '–'}`,
+    log: `Unterbrochen im Schritt ${rec.lastStep ?? EMPTY}`,
     summary: 'Publish unterbrochen: Neustart während des Laufs',
   });
   writeJsonAtomic(resultFile(env, 'publish'), { ...rec, historyPending: false });
@@ -577,8 +577,8 @@ async function publishBody(deps: Deps, ctx: CallContext, env: SiteEnv, h: RunHan
         contentHash,
         diff: { changed: [], added: [], removed: [] },
         fileManifest: {},
-        log: `${error.reason} (${error.step ?? '–'})`,
-        summary: `Publish abgebrochen: ${error.reason} (${error.step ?? '–'})`,
+        log: `${error.reason} (${error.step ?? EMPTY})`,
+        summary: `Publish abgebrochen: ${error.reason} (${error.step ?? EMPTY})`,
       });
     }
     throw error;

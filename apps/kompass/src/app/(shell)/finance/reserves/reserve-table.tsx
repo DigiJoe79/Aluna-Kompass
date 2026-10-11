@@ -20,6 +20,7 @@ import { CarryForwardDialog } from './carry-forward-dialog';
 import { MovementDialog, type MovementReserve } from './movement-dialog';
 import { ReplaceResolutionDialog } from './replace-resolution-dialog';
 import { ReserveForm } from './reserve-form';
+import { Empty } from '@/components/empty-value';
 
 /** Ein Beschluss, wie die Akte ihn dieser Person zeigt — oder nur „hinterlegt“. */
 export type ReserveDocument = { id: string; number: string; subject: string; date: string | null } | { id: string; hidden: true };
@@ -79,7 +80,7 @@ function KindInfo({ kind }: { kind: ReserveKind }) {
 export function DocumentLabel({ document, testId }: { document: ReserveDocument | null; testId?: string }) {
   const t = useTranslations('finance.reserves');
   const fmt = useDateFormat();
-  if (!document) return <span data-testid={testId}>—</span>;
+  if (!document) return <span data-testid={testId}><Empty /></span>;
   if ('hidden' in document) {
     return (
       <span className="text-meta text-ink-2" data-testid={testId}>
@@ -205,7 +206,7 @@ export function ReserveTable({
                       <p className="text-hint text-muted-ink">{t('carryForwardLine', { amount: formatEuro(row.carryForwardCents), date: fmt.date(row.carryForwardDate) })}</p>
                     ) : null}
                   </TableCell>
-                  <TableCell className="px-3 align-top text-ink-2">{row.purposeLabel ?? '—'}</TableCell>
+                  <TableCell className="px-3 align-top text-ink-2">{row.purposeLabel ?? <Empty />}</TableCell>
                   {/* Nummer · Betreff · Datum darf umbrechen: einzeilig trieb der Betreff die Tabelle auf einer standard-Seite ins waagerechte Scrollen (K9-Befund 8). */}
                   <TableCell className="whitespace-normal px-3 align-top">
                     <DocumentLabel document={row.resolution} testId="reserve-resolution" />

@@ -68,7 +68,7 @@
     "loading": "Wird geladen …",
     "yes": "Ja",
     "no": "Nein",
-    "none": "—",
+    "empty": "keine Angabe",
     "changesPending": "{count, plural, one {# Änderung noch nicht gespeichert} other {# Änderungen noch nicht gespeichert}}",
     "lastSaved": "zuletzt gespeichert am {date} von {name}",
     "audited": "Wird protokolliert.",
@@ -3086,7 +3086,6 @@
         "kompass": "Kompass",
         "photoOf": "Titelbild von {name}",
         "origin": "Herkunft",
-        "none": "keine",
         "explain": "„Gleicher Hund“ verknüpft {proposed} mit {name}. Künftige Änderungen von {source} kommen dann als Änderung an {name}.",
         "same": "Gleicher Hund",
         "different": "Anderer Hund"
@@ -3628,7 +3627,7 @@
     "picker": {
       "placeholder": "Name eingeben …",
       "empty": "Kein Kontakt gefunden.",
-      "clear": "— Kein Kontakt —",
+      "clear": "Kein Kontakt",
       "create": "Neu anlegen …",
       "searching": "Suche …",
       "more": "Weitere Treffer — bitte suchen."
@@ -4025,7 +4024,7 @@
       "dueAt": "Fällig am",
       "titleField": "Anlass",
       "assignee": "Zuständig",
-      "everyone": "— Alle —",
+      "everyone": "Alle",
       "submit": "Anlegen",
       "complete": "{title} erledigen",
       "reopen": "{title} wieder öffnen",
@@ -4056,7 +4055,7 @@
       "addDescription": "Ein Kontakt, Tier oder Projekt, zu dem dieses Dokument gehört.",
       "entityType": "Art des Bezugs",
       "contact": "Kontakt",
-      "choose": "— Bitte wählen —",
+      "choose": "Bitte wählen",
       "role": "Rolle",
       "submit": "Hinzufügen",
       "remove": "Entfernen"
@@ -4255,9 +4254,9 @@
         "matchContains": "Muss enthalten",
         "matchContainsPlaceholder": "z. B. Finanzamt oder Rechnung",
         "thenType": "Ziel-Dokumentart",
-        "noType": "— Keine Änderung —",
+        "noType": "Keine Änderung",
         "thenFolder": "Ziel-Ordner",
-        "noFolder": "— Keine Änderung —",
+        "noFolder": "Keine Änderung",
         "sortOrder": "Reihenfolge",
         "activeCheckbox": "Regel ist aktiv"
       },
@@ -4424,7 +4423,8 @@
       },
       "contact": "Spender/Empfänger",
       "project": "Projekt",
-      "none": "—",
+      "noProject": "Kein Projekt",
+      "noPurpose": "Kein Zweck",
       "rowMenu": "Zeilenmenü",
       "rowLabel": "Zeile {n}",
       "restIntoHereWithAmount": "Rest hierher — {amount}",
@@ -4694,7 +4694,9 @@
           "contact": "Spender/Empfänger",
           "project": "Projekt",
           "purpose": "Zweck",
-          "abroad": "wird im Ausland verwendet"
+          "abroad": "wird im Ausland verwendet",
+          "noProject": "Kein Projekt",
+          "noPurpose": "Kein Zweck"
         },
         "pathAllocation": "Das ändert die Zuordnung.",
         "numbersElsewhere": "Stimmen Betrag, Datum, Konto, Kategorie oder Umsatzsteuer nicht, nehmen Sie die Buchung über <reverse>Zurücknehmen …</reverse> zurück und erfassen sie neu.",
@@ -5426,7 +5428,6 @@
         "granted": "Erlaubt",
         "yes": "Ja",
         "navigation": "Sichtbare Navigationseinträge",
-        "navigationNone": "keine",
         "holders": "Trägt diese Rolle",
         "nobody": "niemand",
         "navKeys": {
@@ -5791,7 +5792,7 @@
         "chooseCategory": "Kategorie wählen",
         "project": "Projekt",
         "purpose": "Zweck",
-        "none": "– keines –",
+        "none": "Keines",
         "contact": "Kontakt",
         "taxCode": "Umsatzsteuer",
         "taxFromCategory": "wie bei der Kategorie",
@@ -5811,7 +5812,7 @@
         "holder": "Für wen ist das Geld?",
         "holderHint": "Der Satz steht im Buchungstext.",
         "returns": "Rückzahlung von",
-        "returnsNone": "– keine: neues fremdes Geld –",
+        "returnsNone": "Keine: neues fremdes Geld",
         "returnsOption": "{date} · {holder} · {amount}",
         "save": "Als fremdes Geld buchen"
       },
@@ -6313,7 +6314,6 @@
           "voided": "irrtümlich erfasst",
           "future": "künftig"
         },
-        "noDocument": "keins",
         "assessmentPeriodLine": "Veranlagungszeitraum {period}",
         "empty": {
           "title": "Noch kein Bescheid erfasst",
@@ -6632,8 +6632,6 @@
           "confirmed": "Bestätigt mit"
         },
         "anonymous": "anonym",
-        "noPurpose": "—",
-        "notConfirmed": "—",
         "collectiveSuffix": "Sammel",
         "filter": {
           "anonymous": "Nur anonyme Zuwendungen"

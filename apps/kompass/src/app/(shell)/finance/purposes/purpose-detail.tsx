@@ -17,6 +17,7 @@ import { formatEuro } from '@/lib/finance/amount';
 import { fulfillPurposeAction, purposeMovementsAction, reopenPurposeAction } from './actions';
 import { ReopenDialog } from './reopen-dialog';
 import { SectionHeading, Section } from '@/components/section';
+import { Empty } from '@/components/empty-value';
 
 /**
  * Detail eines Zwecks (Designer-README 4c): Kopf mit Projekt, Ziel und Bezug;
@@ -76,7 +77,7 @@ export function PurposeDetail({
           <SectionHeading>{row.name}</SectionHeading>
           <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 text-meta">
             <dt className="text-muted-ink">{t('detail.project')}</dt>
-            <dd className="text-ink">{projectName ?? '—'}</dd>
+            <dd className="text-ink">{projectName ?? <Empty />}</dd>
             <dt className="text-muted-ink">{t('detail.target')}</dt>
             <dd className="font-mono tabular-nums text-ink">{row.targetCents !== null ? formatEuro(row.targetCents) : t('detail.noTarget')}</dd>
             {row.referenceNote ? (
@@ -155,14 +156,14 @@ export function PurposeDetail({
                         <TableCell className="px-3 font-mono text-hint">
                           {m.kind === 'line' && m.entryId ? (
                             <Link href={`/finance/entries/${m.entryId}`} className="underline-offset-2 hover:underline">
-                              {m.entryNumber ?? '—'}
+                              {m.entryNumber ?? <Empty />}
                             </Link>
                           ) : (
-                            <span className="text-muted-ink">{m.transferNumber ?? '—'}</span>
+                            <span className="text-muted-ink">{m.transferNumber ?? <Empty />}</span>
                           )}
                         </TableCell>
                         <TableCell className="px-3 text-ink">{m.kind === 'line' ? m.text : m.text ? `${t(`movementKind.${m.kind}`)}: ${m.text}` : t(`movementKind.${m.kind}`)}</TableCell>
-                        <TableCell className="px-3 text-ink-2">{m.counterpartyName ?? '—'}</TableCell>
+                        <TableCell className="px-3 text-ink-2">{m.counterpartyName ?? <Empty />}</TableCell>
                         <TableCell className="px-3 text-right font-mono tabular-nums">{formatEuro(m.amountCents)}</TableCell>
                         <TableCell className="px-3 text-right font-mono tabular-nums">{formatEuro(m.runningBalanceCents)}</TableCell>
                       </TableRow>

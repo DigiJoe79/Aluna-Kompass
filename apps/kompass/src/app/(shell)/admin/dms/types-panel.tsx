@@ -19,6 +19,7 @@ import { FormField } from '@/components/forms/form-field';
 import { FormGrid } from '@/components/forms/form-grid';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Section } from '@/components/section';
+import { Empty } from '@/components/empty-value';
 
 export interface DocumentTypeItem {
   key: string;
@@ -185,7 +186,7 @@ export function TypesPanel({
                 </TableCell>
                 <TableCell className="text-ink-2">{tDms(`directions.${row.defaultDirection}`)}</TableCell>
                 <TableCell className="text-ink-2">{t(`retentionClasses.${row.retentionClass}`)}</TableCell>
-                <TableCell className="text-ink-2">{row.defaultFolder ?? '—'}</TableCell>
+                <TableCell className="text-ink-2">{row.defaultFolder ?? <Empty />}</TableCell>
                 <TableCell>
                   <StatusBadge tone={row.isActive ? 'success' : 'neutral'}>
                     {row.isActive ? t('active') : t('inactive')}

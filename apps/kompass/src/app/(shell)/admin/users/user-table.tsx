@@ -24,6 +24,7 @@ import { useUrlFilters } from '@/lib/use-url-filters';
 import { cn } from '@/lib/utils';
 import { resetStartPasswordAction, setUserActiveAction, setUserRolesAction } from './actions';
 import { StartPasswordDialog } from './start-password-dialog';
+import { Empty } from '@/components/empty-value';
 
 export function UserTable({
   users,
@@ -125,7 +126,7 @@ export function UserTable({
                     </StatusBadge>
                   </TableCell>
                   <TableCell className="font-mono text-meta text-ink-2">
-                    {u.lastLoginAt ? fmt.dateTime(u.lastLoginAt) : '—'}
+                    {u.lastLoginAt ? fmt.dateTime(u.lastLoginAt) : <Empty />}
                   </TableCell>
                   <TableCell>
                     <DropdownMenu>

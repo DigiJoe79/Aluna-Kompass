@@ -27,6 +27,7 @@ import { cn } from '@/lib/utils';
 import { deleteDraftsAction, finalizeAllReviewedAction, finalizeReviewedAction, setReviewedManyAction } from './actions';
 import { JournalFilters } from './filters';
 import { panelHref } from '@/components/panel-nav';
+import { Empty } from '@/components/empty-value';
 
 export interface JournalRow {
   id: string;
@@ -246,7 +247,7 @@ export function Journal({ rows, total, totals, page, pageSize, standing, account
                     <TableCell className="font-mono text-meta">
                       {/* Die Fläche dieses Links liegt über der ganzen Zeile (MUSTER.md § G); ein Entwurf hat noch keine Nummer, dann nennt der Text den Link. */}
                       <RowLink href={href} aria-label={row.number ? `${row.number} · ${row.text}` : row.text}>
-                        {row.number ?? '—'}
+                        {row.number ?? <Empty />}
                       </RowLink>
                     </TableCell>
                     <TableCell className="font-mono text-meta text-ink-2">{fmt.date(row.entryDate)}</TableCell>
@@ -279,13 +280,13 @@ export function Journal({ rows, total, totals, page, pageSize, standing, account
                     </TableCell>
                     <TableCell className="text-ink-2">{row.accountLabel}</TableCell>
                     <TableCell className="text-ink-2">{row.allocationLabel}</TableCell>
-                    <TableCell className="text-ink-2">{row.contactLabel ?? '—'}</TableCell>
+                    <TableCell className="text-ink-2">{row.contactLabel ?? <Empty />}</TableCell>
                     <TableCell selectable>
                       <AmountCell cents={row.amountCents} reversed={reversed} />
                       {row.transfer ? <span className="block text-right text-hint text-muted-ink">{t('transfer')}</span> : null}
                     </TableCell>
                     {accountFilter ? (
-                      <TableCell>{row.runningBalanceCents !== null ? <AmountCell cents={row.runningBalanceCents} /> : <span className="block text-right text-ink-2">—</span>}</TableCell>
+                      <TableCell>{row.runningBalanceCents !== null ? <AmountCell cents={row.runningBalanceCents} /> : <span className="block text-right text-ink-2"><Empty /></span>}</TableCell>
                     ) : null}
                     <TableCell>
                       <VoucherIcon state={row.documentationState} />

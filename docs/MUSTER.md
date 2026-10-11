@@ -210,6 +210,17 @@ Ein Betrag hat eine Stelle (Stufe 1 der Durchsicht 0.2.11, Joe 2026-10-11): `for
 - Zahl und Wort doppeln sich nicht: „Die Kasse stünde bei −415,00 €“, nicht „wäre mit −415,00 € im Minus“. Wo das Wort die Richtung sagt („Kassenfehlbetrag“, „zu viel verteilt“), steht der Betrag ohne Vorzeichen.
 - Kein `toFixed`, kein `Intl.NumberFormat`, kein `toLocaleString('de-DE')`, keine eigene Tausender-Regel. Ausnahme: der Wortlaut der Zuwendungsbestätigungen (`typst-pure.ts` `formatCents`) — Wächter `no-raw-amount.test.ts`, Ausnahmen dort mit Grund.
 
+## Leerwert
+
+Leer ist „—“ (U+2014), ohne Rahmung, an einer Stelle (Stufe 1 der Durchsicht 0.2.11, Joe 2026-10-11): im JSX `<Empty />` (`components/empty-value.tsx`, grau, für Vorleser „keine Angabe“ — `common.empty`), in Texten, Attributen, `<option>` und Meldungen der Module `EMPTY` aus `@kompass/core` (`packages/core/src/format/empty.ts`). `formatDateOrDash` und `ManagedField` nutzen `EMPTY`.
+
+- In Auswahllisten ist die leere Option ein ausgeschriebener Text ohne Striche („Kein Kontakt“, „Keine Änderung“, „Kein Projekt“); Platzhalter ebenso („Bitte wählen“, „Alle“).
+- Kein „keine“/„keins“ als ganzer Wert in einer Zelle — das ist `<Empty />`. Ausgeschrieben bleibt, was eine Aussage ist („Noch keine Bestätigung“, „nicht verknüpft“).
+- Ein Strich zwischen zwei Werten („von – bis“) ist Satzzeichen, kein Leerwert.
+- Wächter `no-raw-empty.test.ts` (Code und Sprachdatei) und `no-hardcoded-ui-text.test.ts` (Strich als einziger Inhalt eines Elements).
+
+Bausteine: `empty-value.tsx`.
+
 ## Seitenrahmen
 
 - `Page` mit `PageHeader` auf jeder Seite (§ I); `back` für Seiten, die nicht in der Navigation hängen (alles mit Platzhalter oder mit den Endungen `new`, `edit`, `receive` im Pfad) — `tests/back-navigation.test.ts` prüft es.

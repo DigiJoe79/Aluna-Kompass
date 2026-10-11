@@ -15,6 +15,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import type { ActionState } from '@/lib/actions';
 import { formatEuro } from '@/lib/finance/amount';
 import { Overline } from '@/components/overline';
+import { Empty } from '@/components/empty-value';
 
 const SUM_KINDS = ['donation', 'membershipFee', 'inKindDonation', 'expenseWaiver'] as const;
 
@@ -169,7 +170,7 @@ export function BookTable({
                   <TableCell>{row.contactName ?? t('anonymous')}</TableCell>
                   <TableCell>{t(`sums.${row.kind}`)}</TableCell>
                   <TableCell className="text-right font-mono tabular-nums">{formatEuro(row.amountCents)}</TableCell>
-                  <TableCell>{row.purposeName ?? t('noPurpose')}</TableCell>
+                  <TableCell>{row.purposeName ?? <Empty />}</TableCell>
                   <TableCell data-testid="book-confirmed">
                     {row.confirmation ? (
                       <span className="inline-flex items-center gap-1">
@@ -179,7 +180,7 @@ export function BookTable({
                         {row.confirmation.kind === 'collective' ? <span className="text-ink-2">{t('collectiveSuffix')}</span> : null}
                       </span>
                     ) : (
-                      t('notConfirmed')
+                      <Empty />
                     )}
                   </TableCell>
                 </TableRow>

@@ -18,6 +18,7 @@ import { fieldLabelKey } from './field-format';
 import { KindBadge } from './kind-badge';
 import { PROPOSAL_KIND_FILTER, PROPOSAL_STATE_FILTER, proposalQueryString } from './list-params';
 import { mediaPreviewUrl, proposalImageUrl } from '../crop-frame';
+import { EMPTY, Empty } from '@/components/empty-value';
 
 type Filters = { text: string; kind: string; source: string; state: string };
 
@@ -78,11 +79,11 @@ export function ProposalList({
   const openCount = list.open.count - hidden;
 
   const content = (p: ProposalListItem) => {
-    if (p.cleared) return '—';
+    if (p.cleared) return EMPTY;
     if (p.kind === 'notice') return p.noticeKind === 'delisted' ? t('delistedLine', { source: p.sourceName }) : shorten(p.reason ?? '');
     if (p.kind === 'sameAs') return t('sameAsLine', { name: p.proposedName || p.name });
     // Neuer Hund: Alle Felder sind vorgeschlagen; die Zeile nennt nur die Fotos (Board 1a), die Marken das Übrige.
-    if (p.kind === 'create') return p.photoCount > 0 ? t('photos', { count: p.photoCount }) : '—';
+    if (p.kind === 'create') return p.photoCount > 0 ? t('photos', { count: p.photoCount }) : EMPTY;
     const names = p.fields.map((f) => root(fieldLabelKey(f)));
     if (p.photoCount > 0) names.push(t('photos', { count: p.photoCount }));
     return names.join(', ');
@@ -171,7 +172,7 @@ export function ProposalList({
                         <StatusBadge tone={p.state === 'accepted' || p.state === 'acceptedWithChanges' ? 'success' : 'neutral'}>{stateWord(p)}</StatusBadge>
                       </TableCell>
                       <TableCell className="whitespace-nowrap text-ink-2">
-                        {p.decisionReason === 'animalDeleted' ? t('animalDeleted') : p.decidedAt ? [p.decidedByName, dates.dateTime(p.decidedAt)].filter(Boolean).join(' · ') : '—'}
+                        {p.decisionReason === 'animalDeleted' ? t('animalDeleted') : p.decidedAt ? [p.decidedByName, dates.dateTime(p.decidedAt)].filter(Boolean).join(' · ') : <Empty />}
                       </TableCell>
                       <TableCell className="text-ink-2">{p.decisionNote ?? ''}</TableCell>
                     </>

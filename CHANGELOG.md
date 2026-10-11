@@ -22,6 +22,10 @@ die Nummern folgen [Semantic Versioning](https://semver.org/lang/de/). Vor
   Einrichtung → Finanzen sowie Daten in Ablehnungen und Beschriftungen der
   Finanzen (etwa „Bescheid vom …“) folgen jetzt der Einstellung
   „Datumsformat“ statt eines festen Formats.
+- **Leere Felder einheitlich.** Wo ein Wert fehlt, steht überall derselbe
+  graue Strich „—“, den Vorleser als „keine Angabe“ ansagen. Leere Optionen in
+  Auswahllisten heißen ausgeschrieben („Kein Kontakt“, „Kein Projekt“, „Keine
+  Änderung“) statt „— … —“.
 
 ## [0.2.11] - 2026-10-11
 

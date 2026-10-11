@@ -10,6 +10,7 @@ import { buttonVariants } from '@/components/ui/button';
 import { RowButton, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { formatEuro } from '@/lib/finance/amount';
 import { PurposeDetail } from './purpose-detail';
+import { Empty } from '@/components/empty-value';
 
 const STATE_TONE: Record<PurposeOverviewRow['state'], BadgeTone> = { open: 'info', fulfilled: 'success', dissolved: 'neutral' };
 
@@ -41,7 +42,7 @@ export function PurposesTable({
   const selected = full ? rows.find((r) => r.id === selectedId) ?? null : null;
 
   const target = (row: PurposeOverviewRow) => {
-    if (row.targetCents === null) return <span className="text-muted-ink">—</span>;
+    if (row.targetCents === null) return <span className="text-muted-ink"><Empty /></span>;
     const state = limitState({ valueCents: row.balanceCents, limitCents: row.targetCents, warnAtPercent: 100, kind: 'target' });
     return (
       <div className="min-w-[120px]">
@@ -71,7 +72,7 @@ export function PurposesTable({
     const transfersIn = row.transfersInCents ?? 0;
     const transfersOut = row.transfersOutCents ?? 0;
     const n = transfersIn - transfersOut;
-    if (transfersIn === 0 && transfersOut === 0) return <span className="text-muted-ink">—</span>;
+    if (transfersIn === 0 && transfersOut === 0) return <span className="text-muted-ink"><Empty /></span>;
     return <span className="font-mono tabular-nums">{formatEuro(n, { sign: 'always' })}</span>;
   };
 
@@ -124,7 +125,7 @@ export function PurposesTable({
                     row.name
                   )}
                 </TableCell>
-                {full ? <TableCell className="px-3 text-ink-2">{row.projectId ? projects[row.projectId] ?? '—' : '—'}</TableCell> : null}
+                {full ? <TableCell className="px-3 text-ink-2">{row.projectId ? projects[row.projectId] ?? <Empty /> : <Empty />}</TableCell> : null}
                 <TableCell className="px-3">{target(row)}</TableCell>
                 {full ? (
                   <>

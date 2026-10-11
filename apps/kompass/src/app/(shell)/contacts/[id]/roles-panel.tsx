@@ -15,6 +15,7 @@ import { Input } from '@/components/ui/input';
 import { addContactRoleAction, endContactRoleAction } from '../actions';
 import { Select } from '@/components/ui/select';
 import { Section } from '@/components/section';
+import { Empty } from '@/components/empty-value';
 
 export function RolesPanel({
   contactId,
@@ -124,7 +125,7 @@ export function RolesPanel({
         }
       >
         {roles.length === 0 ? (
-          <p className="text-meta text-muted-ink">—</p>
+          <p className="text-meta text-muted-ink"><Empty /></p>
         ) : (
           <ul className="divide-y divide-line-2">
             {roles.map((r) => (

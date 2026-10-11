@@ -289,7 +289,7 @@ export function CorrectDialog({
                         {party.project ? (
                           <FormField id="correct-project" label={t('party.project')}>
                             <Select id="correct-project" value={projectId} onChange={(e) => setProjectId(e.target.value)}>
-                              <option value="">—</option>
+                              <option value="">{t('party.noProject')}</option>
                               {projects.map((p) => (
                                 <option key={p.id} value={p.id}>{p.name}</option>
                               ))}
@@ -299,7 +299,7 @@ export function CorrectDialog({
                         {party.purpose ? (
                           <FormField id="correct-purpose" label={t('party.purpose')}>
                             <Select id="correct-purpose" value={purposeId} onChange={(e) => setPurposeId(e.target.value)}>
-                              <option value="">—</option>
+                              <option value="">{t('party.noPurpose')}</option>
                               {purposes.map((p) => (
                                 <option key={p.id} value={p.id}>{p.name}</option>
                               ))}

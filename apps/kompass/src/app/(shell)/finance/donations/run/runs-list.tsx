@@ -9,6 +9,7 @@ import { StatusBadge } from '@/components/status-badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { runProgress } from '@/lib/finance/run';
 import { Section } from '@/components/section';
+import { Empty } from '@/components/empty-value';
 
 /** Frühere Serienläufe unter der Seite (`listConfirmationRuns`), jüngste zuerst; „Öffnen“ zeigt Lauf oder Ergebnis. */
 export function RunsList({ runs, currentId, footer }: { runs: RunSummary[]; currentId: string | null; /** Fuß der Tabellenkarte: `ListPager footer`. */ footer?: ReactNode }) {
@@ -52,7 +53,7 @@ export function RunsList({ runs, currentId, footer }: { runs: RunSummary[]; curr
                     <TableCell>{date(run.startedOn)}</TableCell>
                     <TableCell className="font-mono tabular-nums">{t('issued', { issued: run.counts.issued, total: runProgress(run.counts).total })}</TableCell>
                     <TableCell>{stateOf(run)}</TableCell>
-                    <TableCell>{run.dispatchedAt && run.dispatchedVia ? `${date(run.dispatchedAt)} · ${tv(run.dispatchedVia)}` : '—'}</TableCell>
+                    <TableCell>{run.dispatchedAt && run.dispatchedVia ? `${date(run.dispatchedAt)} · ${tv(run.dispatchedVia)}` : <Empty />}</TableCell>
                     <TableCell className="text-right">
                       <Link href={`/finance/donations/run?run=${run.id}`} className="text-link underline">{t('open')}</Link>
                     </TableCell>

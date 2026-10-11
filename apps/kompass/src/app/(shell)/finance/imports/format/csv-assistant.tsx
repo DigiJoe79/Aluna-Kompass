@@ -38,6 +38,7 @@ import {
 import { cn } from '@/lib/utils';
 import { saveCsvFormatAction } from './actions';
 import { Section } from '@/components/section';
+import { Empty } from '@/components/empty-value';
 
 export interface AssistantAccount {
   id: string;
@@ -410,11 +411,11 @@ export function CsvAssistant({ accounts, initialAccountId, canLoad, reselect = f
                 <dt className="text-muted-ink">{t('probe.date')}</dt>
                 <dd className="font-mono">{date(first.bookingDate)}</dd>
                 <dt className="text-muted-ink">{t('probe.counterparty')}</dt>
-                <dd>{first.counterpartyName ?? '—'}</dd>
+                <dd>{first.counterpartyName ?? <Empty />}</dd>
                 <dt className="text-muted-ink">{t('probe.iban')}</dt>
-                <dd className="font-mono">{first.counterpartyIban ?? '—'}</dd>
+                <dd className="font-mono">{first.counterpartyIban ?? <Empty />}</dd>
                 <dt className="text-muted-ink">{t('probe.purpose')}</dt>
-                <dd>{first.purpose || '—'}</dd>
+                <dd>{first.purpose || <Empty />}</dd>
                 <dt className="text-muted-ink">{t('probe.amount')}</dt>
                 <dd className="font-mono tabular-nums">{formatEuro(first.amountCents)}</dd>
                 {fee ? (

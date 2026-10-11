@@ -22,6 +22,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { noticeActions, noticeStateDisplay } from '@/lib/finance/notices';
 import { supersedeNoticeAction, voidNoticeAction } from './actions';
 import { NoticeDialog, type SavedNotice } from './notice-dialog';
+import { Empty } from '@/components/empty-value';
 
 export type NoticeRow = Pick<NoticeView, 'id' | 'kind' | 'taxOffice' | 'taxNumber' | 'noticeDate' | 'exemptFrom' | 'assessmentPeriod' | 'purposesText' | 'purposesTextAccusative' | 'validUntil' | 'state' | 'supersededOn' | 'voidedAt' | 'documentId' | 'documentNumber' | 'supersededDocumentNumber'>;
 
@@ -74,7 +75,7 @@ export function NoticesTable({ rows, canIssue, canPickDocument }: { rows: Notice
                   <span className="whitespace-nowrap font-mono tabular-nums"><span data-testid="notice-exempt-from">{date(row.exemptFrom)}</span> – {date(row.validUntil)}</span>
                   {row.assessmentPeriod ? <span className="block text-hint text-muted-ink">{t('assessmentPeriodLine', { period: row.assessmentPeriod })}</span> : null}
                 </TableCell>
-                <TableCell data-testid="notice-document" className="font-mono">{row.documentNumber ?? <span className="font-sans text-muted-ink">{t('noDocument')}</span>}</TableCell>
+                <TableCell data-testid="notice-document" className="font-mono">{row.documentNumber ?? <span className="font-sans"><Empty /></span>}</TableCell>
                 <TableCell>
                   <StatusBadge tone={TONE[state.key]}>
                     <span data-testid="notice-state">{t(`state.${state.key}`, { date: state.date ? date(state.date) : '' })}</span>

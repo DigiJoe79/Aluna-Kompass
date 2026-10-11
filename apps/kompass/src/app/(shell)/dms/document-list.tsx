@@ -23,6 +23,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { DOCUMENTS_MIME, beginDrag } from '@/lib/drag-types';
 import { isWithin, namesBelow } from '@/lib/folder-tree-model';
 import { useDocumentMoves } from './document-moves';
+import { Empty } from '@/components/empty-value';
 
 export interface DocumentListItem {
   id: string;
@@ -287,7 +288,7 @@ export function DocumentList({ documents, currentFolder, total, unfiltered, read
                     ) : null}
                     {/* Die Nummer ist kopierwürdig und liegt über der Zeilenfläche; geöffnet wird über den Betreff. */}
                     <TableCell selectable className="font-mono text-meta font-semibold text-ink">
-                      {doc.number ?? '—'}
+                      {doc.number ?? <Empty />}
                     </TableCell>
                     {/* Betreff, Art und Ordner brechen um, damit „Ordner“ auch auf dem Tablet ohne Querscrollen sichtbar bleibt (Spec § 9). */}
                     <TableCell className="min-w-[160px] whitespace-normal hyphens-auto wrap-anywhere max-[1100px]:min-w-[140px]">

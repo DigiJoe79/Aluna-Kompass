@@ -6,6 +6,7 @@ import { StatusBadge } from '@/components/status-badge';
 import { formatProposalValue } from '../field-format';
 import { LOCALE_CODE } from '@/components/forms/localized-field';
 import { cn } from '@/lib/utils';
+import { Empty } from '@/components/empty-value';
 
 export const statusTone = (status: string) => (status === 'adopted' ? 'success' : status === 'reserved' ? 'warning' : 'info') as 'success' | 'warning' | 'info';
 
@@ -21,13 +22,13 @@ export function FieldValue({ field, value, locales }: { field: ProposalField; va
     );
   }
   const lines = formatProposalValue(field, value, { t: (key) => root(key), locales });
-  if (lines.every((l) => !l.text)) return <span className="text-muted-ink">—</span>;
+  if (lines.every((l) => !l.text)) return <span className="text-muted-ink"><Empty /></span>;
   return (
     <span className="flex flex-col gap-1">
       {lines.map((l) => (
         <span key={l.locale ?? 'value'} className="whitespace-pre-line">
           {l.locale ? <span className={cn('mr-1.5 rounded-sm px-1.5 py-0.5', LOCALE_CODE)}>{l.locale.toUpperCase()}</span> : null}
-          {l.text || <span className="text-muted-ink">—</span>}
+          {l.text || <span className="text-muted-ink"><Empty /></span>}
         </span>
       ))}
     </span>

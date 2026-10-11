@@ -16,6 +16,7 @@ import { PreviewSummary } from './preview-summary';
 import { RunCard } from './run-card';
 import { panelHref } from '@/components/panel-nav';
 import { SectionHeading } from '@/components/section';
+import { EMPTY } from '@/components/empty-value';
 
 export { endText } from './end-text';
 
@@ -177,7 +178,7 @@ export function PublishFlowCard(p: PublishFlowCardProps) {
       eyebrow = t('flow.step2');
       title = t('flow.unchanged.title');
       const pv = state.preview;
-      body = <p className="text-body text-ink-2">{t('flow.unchanged.text', { time: time(pv.finishedAt), host: host ?? '—' })}</p>;
+      body = <p className="text-body text-ink-2">{t('flow.unchanged.text', { time: time(pv.finishedAt), host: host ?? EMPTY })}</p>;
       actions = (
         <>
           {openPreview}

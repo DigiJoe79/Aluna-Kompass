@@ -20,6 +20,7 @@ import { openItemState } from '@/lib/finance/open-item-state';
 import { cancelOpenItemAction } from './actions';
 import { ItemDialog, type OpenItemEditable } from './item-dialog';
 import { Overline } from '@/components/overline';
+import { Empty } from '@/components/empty-value';
 
 export interface OpenItemDetailData {
   id: string;
@@ -114,7 +115,7 @@ export function DetailSheet({
               <dl className="space-y-1.5 text-meta">
                 <div className="flex justify-between gap-2">
                   <dt className="text-muted-ink">{t('columns.contact')}</dt>
-                  <dd>{item.contactLabel ?? '—'}</dd>
+                  <dd>{item.contactLabel ?? <Empty />}</dd>
                 </div>
                 <div className="flex justify-between gap-2">
                   <dt className="text-muted-ink">{t('columns.dueOn')}</dt>

@@ -24,6 +24,7 @@ import { useDecisionDone } from './use-decision';
 import { LOCALE_CODE } from '@/components/forms/localized-field';
 import { cn } from '@/lib/utils';
 import { Overline } from '@/components/overline';
+import { Empty } from '@/components/empty-value';
 
 const LONG = 200;
 const LONG_FIELDS: readonly ProposalField[] = ['summary', 'body'];
@@ -175,7 +176,7 @@ export function UpdateReview({ review, locales, nextHref, backHref, canFollowUp,
                           <span className="flex flex-col gap-1 text-meta text-warning" data-testid="proposal-conflict-trail">
                             <span>{by ? (by.userName ? t('changedBy', { name: by.userName, at: dates.dateTime(by.at) }) : t('changedAt', { at: dates.dateTime(by.at) })) : t('changedSince')}</span>
                             <span>
-                              {t('baseline')} <s>{formatProposalValue(row.field, row.baseline, { t: (k) => root(k), locales }).map((l) => l.text).filter(Boolean).join(' / ') || '—'}</s>
+                              {t('baseline')} <s>{formatProposalValue(row.field, row.baseline, { t: (k) => root(k), locales }).map((l) => l.text).filter(Boolean).join(' / ') || <Empty />}</s>
                             </span>
                           </span>
                         ) : undefined

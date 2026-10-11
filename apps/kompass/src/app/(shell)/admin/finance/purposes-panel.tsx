@@ -22,6 +22,7 @@ import { FormGrid } from '@/components/forms/form-grid';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
 import { Section } from '@/components/section';
+import { Empty } from '@/components/empty-value';
 
 export interface PurposeRow {
   id: string;
@@ -90,7 +91,7 @@ export function PurposesPanel({ purposes }: { purposes: PurposeRow[] }) {
             {purposes.map((row) => (
               <TableRow key={row.id}>
                 <TableCell className="text-ink">{row.name}</TableCell>
-                <TableCell className="font-mono text-ink-2">{row.targetCents !== null ? formatAmount(row.targetCents) : '—'}</TableCell>
+                <TableCell className="font-mono text-ink-2">{row.targetCents !== null ? formatAmount(row.targetCents) : <Empty />}</TableCell>
                 <TableCell>
                   <StatusBadge tone={stateOf(row) === 'open' ? 'success' : 'neutral'}>{t(`states.${stateOf(row)}`)}</StatusBadge>
                 </TableCell>

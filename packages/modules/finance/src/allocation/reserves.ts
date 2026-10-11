@@ -1,4 +1,4 @@
-import { expectedVersionField, invalid, isoNow, listUserNamesWithPermission, newId, notFound, ok, requirePermission, staleVersion, todayIn, validate, type CallContext, type DbOrTx, type Deps, type Failure, type Result } from '@kompass/core';
+import { type CallContext, type DbOrTx, type Deps, EMPTY, expectedVersionField, type Failure, invalid, isoNow, listUserNamesWithPermission, newId, notFound, ok, requirePermission, type Result, staleVersion, todayIn, validate } from '@kompass/core';
 import { abortReceive, documentTypeFor, getDocumentRecord, linkDocumentInternal, receiveGeneratedUpload, type ReceivedDocument } from '@kompass/module-dms';
 import { and, eq } from 'drizzle-orm';
 import { z } from 'zod';
@@ -42,7 +42,7 @@ export function minutesTypeProblem(deps: Deps): Failure | null {
   const type = documentTypeFor(deps.db, 'minutes');
   if (!type || type.isActive) return null;
   const names = listUserNamesWithPermission(deps, 'dms.manage');
-  return financeConflict('resolutionTypeInactive', { names: names.length > 0 ? names.join(', ') : '—' });
+  return financeConflict('resolutionTypeInactive', { names: names.length > 0 ? names.join(', ') : EMPTY });
 }
 
 /** Ein gepicktes Dokument: festgeschrieben, nicht widerrufen. */

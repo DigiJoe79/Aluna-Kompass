@@ -12,6 +12,7 @@ import { RowLink, Table, TableBody, TableCell, TableHead, TableHeader, TableRow 
 import { formatEuro } from '@/lib/finance/amount';
 import { formatDateOrDash } from '@/lib/finance/dates';
 import { ItemDialog } from './item-dialog';
+import { Empty } from '@/components/empty-value';
 
 export interface OpenItemRow {
   id: string;
@@ -89,11 +90,11 @@ export function OpenItemsList({ rows, tab, page, total, pageSize, canWrite, canC
                       {formatDateOrDash(date, row.dueOn)}
                     </RowLink>
                   </TableCell>
-                  <TableCell>{row.contactLabel ?? '—'}</TableCell>
+                  <TableCell>{row.contactLabel ?? <Empty />}</TableCell>
                   <TableCell className="font-mono tabular-nums">{formatEuro(row.amountCents)}</TableCell>
                   <TableCell className="font-mono tabular-nums">{formatEuro(row.openCents)}</TableCell>
-                  <TableCell>{row.hasOrigin ? t('hasOrigin') : '—'}</TableCell>
-                  <TableCell selectable>{row.paymentReference ?? '—'}</TableCell>
+                  <TableCell>{row.hasOrigin ? t('hasOrigin') : <Empty />}</TableCell>
+                  <TableCell selectable>{row.paymentReference ?? <Empty />}</TableCell>
                   <TableCell>
                     {t(`state.${row.word}`)}
                     {row.overdue ? ` · ${row.draftSettlementCents > 0 ? t('draftSettlement') : t('overdue')}` : ''}
