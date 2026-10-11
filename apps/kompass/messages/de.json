@@ -7594,7 +7594,7 @@
         "remedy": "Fügen Sie mindestens ein Konto oder ein Zuordnungspaar hinzu."
       },
       "entryDateInFuture": {
-        "reason": "Das Buchungsdatum {date, date, ::ddMMyyyy} liegt nach heute ({today, date, ::ddMMyyyy}).",
+        "reason": "Das Buchungsdatum {date} liegt nach heute ({today}).",
         "remedy": "Ändern Sie das Datum, oder warten Sie, bis der Tag erreicht ist."
       },
       "accountInactive": {
@@ -7610,7 +7610,7 @@
         "remedy": "Buchen Sie im laufenden Jahr, oder öffnen Sie das Jahr wieder (Recht „Geschäftsjahr abschließen“)."
       },
       "noFiscalYearForDate": {
-        "reason": "Für den {date, date, ::ddMMyyyy} gibt es noch kein Geschäftsjahr.",
+        "reason": "Für den {date} gibt es noch kein Geschäftsjahr.",
         "remedy": "Ein Geschäftsjahr anlegen kann {names}."
       },
       "cashDraftNotAllowed": {
@@ -7618,11 +7618,11 @@
         "remedy": "Buchen Sie den Vorgang in einem Zug (festschreiben beim Speichern)."
       },
       "cashWouldGoNegative": {
-        "reason": "Das Barkonto {account} stünde am {date, date, ::ddMMyyyy} bei {amount}.",
+        "reason": "Das Barkonto {account} stünde am {date} bei {amount}.",
         "remedy": "Prüfen Sie Datum und Betrag, oder buchen Sie zuerst die fehlende Einnahme oder Abhebung."
       },
       "cashNegativeNeedsReason": {
-        "reason": "Durch diese Rücknahme stünde das Barkonto {account} am {date, date, ::ddMMyyyy} bei {amount}.",
+        "reason": "Durch diese Rücknahme stünde das Barkonto {account} am {date} bei {amount}.",
         "remedy": "Geben Sie eine Begründung an; der Zeitraum steht dann im Prüfpaket."
       },
       "entryAlreadyReversed": {
@@ -7638,7 +7638,7 @@
         "remedy": "Der Sammellauf nimmt nur geprüfte Entwürfe: Prüfen Sie sie zuerst, oder schreiben Sie sie einzeln fest."
       },
       "noTaxRateForDate": {
-        "reason": "Für den {date, date, ::ddMMyyyy} ist kein Umsatzsteuersatz hinterlegt.",
+        "reason": "Für den {date} ist kein Umsatzsteuersatz hinterlegt.",
         "remedy": "Tragen Sie den Satz unter Einrichtung → Finanzen → Sätze und Grenzen mit seinem Stichtag ein."
       },
       "voucherTypeNotAllowed": {
@@ -7914,15 +7914,15 @@
         "remedy": "Geben Sie an, für welches Geschäftsjahr die Zuführung zählt — {previous}, wenn sie aus dessen Mitteln beim Jahresabschluss beschlossen wurde, sonst {current}."
       },
       "boardAllowanceNeedsReason": {
-        "reason": "{contact} ist am {date, date, ::ddMMyyyy} Vorstandsmitglied, und für eine Pauschale an Vorstandsmitglieder gilt an diesem Tag keine bestätigte Grundlage. Ohne Erlaubnis in der Satzung gefährdet eine Vergütung des Vorstands die Gemeinnützigkeit.",
+        "reason": "{contact} ist am {date} Vorstandsmitglied, und für eine Pauschale an Vorstandsmitglieder gilt an diesem Tag keine bestätigte Grundlage. Ohne Erlaubnis in der Satzung gefährdet eine Vergütung des Vorstands die Gemeinnützigkeit.",
         "remedy": "Begründen Sie die Buchung — die Begründung steht an der Buchung. Oder tragen Sie unter Einrichtung → Finanzen → Steuerliches die Vergütung des Vorstands mit dem Tag ein, ab dem sie gilt."
       },
       "invoiceProbablyPaidNeedsReason": {
-        "reason": "Die Rechnung ist wahrscheinlich schon bezahlt: Eine Buchung vom {date, date, ::ddMMyyyy} über denselben Betrag passt dazu.",
+        "reason": "Die Rechnung ist wahrscheinlich schon bezahlt: Eine Buchung vom {date} über denselben Betrag passt dazu.",
         "remedy": "Hängen Sie die Rechnung als Beleg an diese Buchung. Braucht es trotzdem eine offene Zahlung, begründen Sie das."
       },
       "openItemExistsForInvoice": {
-        "reason": "Zur Rechnung {reference} gibt es beim selben Kontakt schon eine offene Zahlung vom {date, date, ::ddMMyyyy}.",
+        "reason": "Zur Rechnung {reference} gibt es beim selben Kontakt schon eine offene Zahlung vom {date}.",
         "remedy": "Öffnen Sie die vorhandene offene Zahlung unter Finanzen → Offene Zahlungen, statt die Rechnung ein zweites Mal zu erfassen. Ist die vorhandene ein Irrtum, erledigen Sie sie dort zuerst ohne Zahlung."
       },
       "invoiceCurrencyUnsupported": {
@@ -7950,15 +7950,15 @@
         "remedy": "Ein ersetzter Bescheid bleibt, wie er ist — erfassen Sie den neuen Bescheid."
       },
       "noticeNotValidAt": {
-        "reason": "Der gewählte Bescheid gilt am {date, date, ::ddMMyyyy} nicht.",
+        "reason": "Der gewählte Bescheid gilt am {date} nicht.",
         "remedy": "Prüfen Sie das Datum, oder erfassen Sie den Bescheid, der an diesem Tag galt."
       },
       "noNoticeValidAt": {
-        "reason": "Am {date, date, ::ddMMyyyy} gilt kein Bescheid des Finanzamts — ohne Bescheid keine Zuwendungsbestätigung.",
+        "reason": "Am {date} gilt kein Bescheid des Finanzamts — ohne Bescheid keine Zuwendungsbestätigung.",
         "remedy": "Erfassen Sie den Bescheid unter Spenden → Bescheide."
       },
       "noticeAfterExemption": {
-        "reason": "Es gibt schon einen endgültigen Bescheid vom {date, date, ::ddMMyyyy}; eine vorläufige Feststellung danach gibt es nicht.",
+        "reason": "Es gibt schon einen endgültigen Bescheid vom {date}; eine vorläufige Feststellung danach gibt es nicht.",
         "remedy": "Erfassen Sie stattdessen den neuen endgültigen Bescheid des Finanzamts."
       },
       "confirmationLineNotFinal": {
@@ -8022,7 +8022,7 @@
         "remedy": "Schalten Sie sie unter Einrichtung → Finanzen → Steuerliches ein, wenn der Verein sie bestätigt."
       },
       "confirmationBeforeExemptionStart": {
-        "reason": "Die Zuwendung vom {entryDate, date, ::ddMMyyyy} liegt vor dem Beginn der Steuerbefreiung am {exemptFrom, date, ::ddMMyyyy}; dafür darf keine Bestätigung ausgestellt werden.",
+        "reason": "Die Zuwendung vom {entryDate} liegt vor dem Beginn der Steuerbefreiung am {exemptFrom}; dafür darf keine Bestätigung ausgestellt werden.",
         "remedy": "Prüfen Sie unter Spenden → Bescheide, ab wann der Bescheid die Befreiung ausspricht."
       },
       "confirmationAlreadyVoided": {
@@ -8038,7 +8038,7 @@
         "remedy": "Hängen Sie zuerst die unterschriebene Fassung an und vermerken Sie dann den Versand."
       },
       "confirmationWasSent": {
-        "reason": "Die Bestätigung wurde laut Vermerk am {sentAt, date, ::ddMMyyyy} versandt.",
+        "reason": "Die Bestätigung wurde laut Vermerk am {sentAt} versandt.",
         "remedy": "Setzen Sie „Bereits versandt?“ und tragen Sie die Rückholspur ein: Original zurück am, Finanzamt informiert am."
       },
       "confirmationNoRecall": {
@@ -8186,7 +8186,7 @@
         "remedy": "Geben Sie eine Begründung an; sie steht am Antrag."
       },
       "waiverFundsInsufficient": {
-        "reason": "Am {date, date, ::ddMMyyyy} hatte der Verein nur {free} frei verfügbar — weniger als die {amount} des Antrags.",
+        "reason": "Am {date} hatte der Verein nur {free} frei verfügbar — weniger als die {amount} des Antrags.",
         "remedy": "Ein Verzicht setzt voraus, dass der Verein hätte zahlen können: Zahlen Sie die Auslage aus, statt den Verzicht anzunehmen."
       },
       "waiverDeclarationMissing": {
@@ -8322,7 +8322,7 @@
         "remedy": "Tragen Sie ein, wofür das Geld zurückgelegt ist."
       },
       "reserveInsufficient": {
-        "reason": "Am {date, date, ::ddMMyyyy} stehen bei „{name}“ nur {available}, {amount} sind zu viel.",
+        "reason": "Am {date} stehen bei „{name}“ nur {available}, {amount} sind zu viel.",
         "remedy": "Verringern Sie den Betrag, oder wählen Sie ein späteres Datum."
       },
       "reserveDissolved": {
@@ -8330,7 +8330,7 @@
         "remedy": "Nach der Auflösung gibt es keine weiteren Vorgänge."
       },
       "reserveMovementOutOfOrder": {
-        "reason": "Der {date, date, ::ddMMyyyy} liegt vor dem jüngsten Vorgang dieses zurückgelegten Geldes.",
+        "reason": "Der {date} liegt vor dem jüngsten Vorgang dieses zurückgelegten Geldes.",
         "remedy": "Erfassen Sie Vorgänge in der Reihenfolge ihres Datums."
       },
       "reserveInUse": {
@@ -8346,7 +8346,7 @@
         "remedy": "Nutzen Sie im Zeilenmenü „Vortrag erfassen“ (per MCP finance_reserve_carry_forward)."
       },
       "movementDateInFuture": {
-        "reason": "Das Datum {date, date, ::ddMMyyyy} liegt nach heute ({today, date, ::ddMMyyyy}).",
+        "reason": "Das Datum {date} liegt nach heute ({today}).",
         "remedy": "Ändern Sie das Datum, oder warten Sie, bis der Tag erreicht ist."
       },
       "transferSamePurpose": {
@@ -8370,7 +8370,7 @@
         "remedy": "Bitten Sie eine zweite Person mit dem Recht „Freigeben“, den Vorgang zu entscheiden."
       },
       "transferDateInFuture": {
-        "reason": "Das Datum {date, date, ::ddMMyyyy} liegt nach heute ({today, date, ::ddMMyyyy}).",
+        "reason": "Das Datum {date} liegt nach heute ({today}).",
         "remedy": "Ändern Sie das Datum, oder warten Sie, bis der Tag erreicht ist."
       },
       "purposeReopenNeedsReason": {
@@ -8397,8 +8397,8 @@
       "openItem": "Offene Zahlung {id}",
       "cashCount": "Kassenzählung {number}",
       "confirmation": "Bestätigung {number}",
-      "notice": "Bescheid vom {date, date, ::ddMMyyyy}",
-      "partnerNotice": "Bescheid des Partners vom {date, date, ::ddMMyyyy}",
+      "notice": "Bescheid vom {date}",
+      "partnerNotice": "Bescheid des Partners vom {date}",
       "claim": "Antrag {number}",
       "claimDraft": "Auslage (Entwurf) {id}",
       "reserve": "Zurückgelegtes Geld {id}",

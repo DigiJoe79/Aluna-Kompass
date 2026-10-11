@@ -50,7 +50,7 @@ describe('Finanzfehler aus der Sprachdatei (A6)', () => {
     for (const [c, params] of Object.entries(FINANCE_ERRORS)) for (const kind of Object.values(params)) expect(['text', 'date', 'cents', 'evidenceKind'], c).toContain(kind);
   });
 
-  it('die Platzhalter in de.json sind genau die Parameter des Codes, Datum als ICU-Format, Betrag schlicht', () => {
+  it('die Platzhalter in de.json sind genau die Parameter des Codes, Datum und Betrag schlicht', () => {
     const wrong: string[] = [];
     for (const [code, params] of Object.entries(FINANCE_ERRORS) as [FinanceErrorCode, Record<string, string>][]) {
       // Ein ICU-`select` (Nachweisart, P) zählt als ein Platzhalter; seine Zweige sind Text.
@@ -62,8 +62,8 @@ describe('Finanzfehler aus der Sprachdatei (A6)', () => {
       if ([...used.keys()].sort().join() !== inText.sort().join()) wrong.push(`${code}: ${[...used.keys()]} ≠ ${Object.keys(params)}`);
       for (const [name, kind] of Object.entries(params).filter(([k]) => !dataOnly.includes(k))) {
         const format = used.get(name);
-        // Beträge kommen fertig aus `formatEuro` (MUSTER § Beträge, Stufe 1): ein schlichter Platzhalter, kein ICU-Skelett.
-        const expected = kind === 'date' ? 'date, ::ddMMyyyy' : kind === 'evidenceKind' ? 'select' : '';
+        // Datum und Betrag kommen fertig aus `messageValues` (MUSTER § Datum/Beträge, Stufe 1): schlichte Platzhalter, kein ICU-Skelett.
+        const expected = kind === 'evidenceKind' ? 'select' : '';
         if (format !== undefined && format !== expected) wrong.push(`${code}.${name}: „${format}“ statt „${expected}“`);
       }
     }

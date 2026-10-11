@@ -1,5 +1,6 @@
 import type { ServiceError } from '@kompass/core';
 import { formatEuro } from '@kompass/module-finance/format';
+import { formatDate } from './dates';
 
 type Translate = ((key: string, values?: Record<string, string | number | Date>) => string) & { has?: (key: string) => boolean };
 type ConflictError = Extract<ServiceError, { type: 'conflict' }>;
@@ -7,10 +8,11 @@ type ConflictError = Extract<ServiceError, { type: 'conflict' }>;
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 /**
- * Die Parameter eines Konflikts für die Sprachdatei: ein Datum (`YYYY-MM-DD`) wird zum Zeitpunkt **Mittag UTC** dieses
- * Tages, damit `{date, date, ::ddMMyyyy}` in jeder Zeitzone von −12 bis +12 Stunden denselben Kalendertag zeigt.
- * Beträge (`amounts`, in Cent) schreibt `formatEuro` fertig hin (MUSTER § Beträge) — kein ICU-Skelett, das ein
- * anderes Minus setzte. Alles andere bleibt, wie es kommt.
+ * Die Parameter eines Konflikts oder einer Beschriftung für die Sprachdatei, fertig geschrieben (Stufe 1, Aufträge 1
+ * und 2): Ein Tag (`YYYY-MM-DD`) wird fest zu TT.MM.JJJJ (`formatDate` im Modus `locale`, wie vorher ICU `::ddMMyyyy`)
+ * — ein Kalendertag, ohne Zeitzone, also in jeder Zone derselbe; Beträge (`amounts`, in Cent) schreibt `formatEuro`
+ * (MUSTER § Beträge). Die Sprachdatei hat dafür schlichte Platzhalter, kein ICU-Skelett. Alles andere bleibt, wie es
+ * kommt.
  */
 export function messageValues(params: Record<string, string | number> = {}, amounts: readonly string[] = []): Record<string, string | number | Date> {
   // Ein Wert auf `…Text` hat der Dienst schon für den Bildschirm geschrieben (`messageDate`) — er bleibt Text, auch wenn
@@ -18,7 +20,7 @@ export function messageValues(params: Record<string, string | number> = {}, amou
   return Object.fromEntries(
     Object.entries(params).map(([key, value]) => {
       if (amounts.includes(key) && typeof value === 'number') return [key, formatEuro(value)];
-      return [key, typeof value === 'string' && !key.endsWith('Text') && ISO_DATE.test(value) ? new Date(`${value}T12:00:00.000Z`) : value];
+      return [key, typeof value === 'string' && !key.endsWith('Text') && ISO_DATE.test(value) ? formatDate(value, 'locale', 'UTC') : value];
     }),
   );
 }

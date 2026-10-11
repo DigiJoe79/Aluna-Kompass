@@ -20,7 +20,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { MediaPicker } from '@/components/forms/media-picker';
 import { useDateFormat } from '@/components/date-format-provider';
 import { managedHintKey, managedTarget, SETTINGS_TABS, settingsSections, TAX_REQUIRED, type SettingsField } from '@/lib/settings-fields';
-import { formatDate, type DateFormatMode } from '@/lib/dates';
 import { cn } from '@/lib/utils';
 import { saveSettingsAction } from './actions';
 
@@ -45,7 +44,7 @@ export function SettingsForm({
 }) {
   const t = useTranslations('settings');
   const c = useTranslations('common');
-  const { timeZone } = useDateFormat();
+  const { date } = useDateFormat();
   const [values, setValues] = useState<Values>(initial);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, start] = useTransition();
@@ -84,7 +83,7 @@ export function SettingsForm({
     // E-1: kein Eingabeelement für geführte Felder — Wert, Kennzeichen und der Weg dorthin, statt readOnly/disabled.
     if (isManaged && target) {
       // Befund 32 (0.2.1): ein Datum wie überall im Format des Vereins, nicht als ISO.
-      const display = field.kind === 'select' && value ? t(`options.${field.key}.${String(value)}`) : field.kind === 'date' && value ? formatDate(String(value), (initial['ui.dateFormat'] as DateFormatMode | undefined) ?? 'locale', timeZone) : value === null || value === undefined ? '' : String(value);
+      const display = field.kind === 'select' && value ? t(`options.${field.key}.${String(value)}`) : field.kind === 'date' && value ? date(String(value)) : value === null || value === undefined ? '' : String(value);
       return (
         <FormCell key={field.key} size={field.size}>
           <ManagedField label={label} value={display} managedBy={{ label: t(`managedTarget.${target.targetKey}`), href: target.href }} />

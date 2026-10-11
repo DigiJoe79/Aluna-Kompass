@@ -191,7 +191,13 @@ Zwei Formate, drei Funktionen (K10, Joe 2026-10-07): Was ein Mensch am Bildschir
 | Meldungen der Dienste (Ablehnungen, Hinweise) | `messageDate(deps, iso)` | `ui.dateFormat` (über `readSetting`), immer absolut |
 | Papier (alles aus Typst, Betreffe der Akte) | `paperDate(iso)` | fest `TT.MM.JJJJ` |
 
-Papier ist fest, weil ein Brief nach außen geht, die Zuwendungsbestätigung dem amtlichen Muster folgt und ein festgeschriebenes Dokument sich nicht ändern darf, wenn jemand später die Einstellung umstellt. Kein `toLocaleString`, kein `.slice(0, 10)` in einer Anzeige — Wächter `no-raw-date.test.ts`.
+Papier ist fest, weil ein Brief nach außen geht, die Zuwendungsbestätigung dem amtlichen Muster folgt und ein festgeschriebenes Dokument sich nicht ändern darf, wenn jemand später die Einstellung umstellt. Kein `toLocaleString`, kein `.slice(0, 10)` in einer Anzeige — Wächter `no-raw-date.test.ts` (Teile 5–7 für die Ergänzung unten).
+
+Ergänzt in Stufe 1 der Durchsicht 0.2.11 (Joe 2026-10-11):
+
+- **Kein eigenes `Intl.DateTimeFormat`** — formatiert wird in `packages/core/src/dates.ts`; Uhrzeit über `time` (Hook und `dateFormatOf`). Einzige Ausnahme ist der Export des Protokolls (`lib/audit-export.ts`, Papier mit Sekunden).
+- **Kein ICU-Datum in der Sprachdatei** (`{date, date, ::ddMMyyyy}`): Ein Tag geht als fertiger Text an einen schlichten Platzhalter. Ablehnungen und Beschriftungen tragen ISO-Tage, `messageValues` (`lib/error-text.ts`) schreibt sie fest als TT.MM.JJJJ (`formatDate` im Modus `locale`) — wie vorher das ICU-Skelett, ohne eigenes `Intl`.
+- **Kein ISO-Feld roh im JSX** (`{year.startsOn}`): immer `fmt.date(…)`.
 
 Sekunden (`dateTime(value, { seconds: true })`) nur im Protokoll — zum Abgleich mit Serverprotokollen und Backups; die Reihenfolge innerhalb einer Minute sichert die Sortierung, nicht die Anzeige. `time` hängt nicht an `ui.dateFormat`; wird die Oberfläche englisch, ist das neu zu entscheiden. Kein `useFormatter().dateTime` — Wächter `no-raw-date` Teil 4; Grenze: Ein Formatierer, der als Prop weitergereicht wird, ist für den Wächter unsichtbar.
 

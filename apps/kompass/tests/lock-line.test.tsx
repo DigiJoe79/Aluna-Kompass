@@ -3,7 +3,7 @@ import { cleanup, render, screen } from '@testing-library/react';
 import { NextIntlClientProvider } from 'next-intl';
 import { afterEach, describe, expect, it } from 'vitest';
 import { LockLine } from '@/components/finance/lock-line';
-import { formatDate, formatDateTime, type DateFormatMode } from '@/lib/dates';
+import { formatDate, formatDateTime, formatTime, type DateFormatMode } from '@/lib/dates';
 import type { DateFormatter } from '@/lib/date-format';
 import messages from '../messages/de.json';
 
@@ -14,6 +14,7 @@ const fmt = (mode: DateFormatMode, timeZone: string): DateFormatter => ({
   timeZone,
   date: (v) => formatDate(v, mode, timeZone),
   dateTime: (v) => formatDateTime(v, mode, timeZone),
+  time: (v) => formatTime(v, timeZone),
 });
 
 const line = (f: DateFormatter) => {

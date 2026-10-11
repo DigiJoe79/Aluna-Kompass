@@ -3,11 +3,6 @@ import { useTranslations } from 'next-intl';
 import type { DateFormatter } from '@/lib/date-format';
 import { channelKey } from '@/lib/finance/channel';
 
-function formatTime(value: string, { mode, timeZone }: DateFormatter): string {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return '';
-  return new Intl.DateTimeFormat(mode === 'iso' ? 'sv-SE' : 'de-DE', { timeZone, hour: '2-digit', minute: '2-digit', hour12: false }).format(date);
-}
 
 /**
  * Die Schloss-Zeile (HANDOFF § 2.5, Baustein 5): eine Tatsache, keine
@@ -24,7 +19,7 @@ export function LockLine({ at, userName, channel, fmt }: { at: string; userName:
     <p className="flex items-center gap-2 rounded-sm bg-final-bg px-3 py-2 text-meta text-final">
       <Lock className="size-[15px] shrink-0" aria-hidden />
       <span>
-        {t('text', { date: fmt.date(at), time: formatTime(at, fmt), name: userName ?? t('unknownUser'), channel: tc(channelKey(channel)) })}
+        {t('text', { date: fmt.date(at), time: fmt.time(at), name: userName ?? t('unknownUser'), channel: tc(channelKey(channel)) })}
       </span>
     </p>
   );

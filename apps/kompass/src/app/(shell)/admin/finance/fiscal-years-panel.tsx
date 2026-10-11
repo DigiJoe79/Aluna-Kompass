@@ -71,12 +71,12 @@ export function FiscalYearsPanel({ years }: { years: FiscalYearRow[] }) {
                   ) : null}
                 </TableCell>
                 <TableCell className="text-ink-2">
-                  {year.startsOn} – {year.endsOn}
+                  {date(year.startsOn)} – {date(year.endsOn)}
                 </TableCell>
                 <TableCell>
                   <StatusBadge tone={year.status === 'open' ? 'success' : 'neutral'}>{t(`statusValues.${year.status}`)}</StatusBadge>
                 </TableCell>
-                <TableCell className="text-ink-2">{year.taxReturnFiledOn ?? '—'}</TableCell>
+                <TableCell className="text-ink-2">{year.taxReturnFiledOn ? date(year.taxReturnFiledOn) : '—'}</TableCell>
                 <TableCell className="text-right">
                   <Button variant="ghost" size="sm" onClick={() => setEditing(versions.latest(year))}>
                     {tCommon('edit')}

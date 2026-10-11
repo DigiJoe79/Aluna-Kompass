@@ -18,6 +18,10 @@ die Nummern folgen [Semantic Versioning](https://semver.org/lang/de/). Vor
   Ablehnungen und im Protokoll der Kassenzählung; zwischen Betrag und „€“
   bricht keine Zeile mehr um. Die Ablehnung eines Barkontos im Minus nennt den
   Stand („stünde am … bei −415,00 €“) statt „im Minus“ doppelt zu sagen.
+- **Datum überall im eingestellten Format.** Die Geschäftsjahre unter
+  Einrichtung → Finanzen sowie Daten in Ablehnungen und Beschriftungen der
+  Finanzen (etwa „Bescheid vom …“) folgen jetzt der Einstellung
+  „Datumsformat“ statt eines festen Formats.
 
 ## [0.2.11] - 2026-10-11
 

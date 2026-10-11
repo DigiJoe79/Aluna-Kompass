@@ -8,7 +8,7 @@ type Translate = (key: string, values?: Record<string, string | number | Date>) 
 /**
  * K2: der Übersetzer für `Deps.labels` — Bezeichnungen von Haltern, Verweisen und Datensätzen, die die Module als
  * Schlüssel der Sprachdatei liefern. Serverseitig und ohne Anfragekontext wie `mcpErrorTranslator`, deshalb
- * `createTranslator`; ein Datum (`YYYY-MM-DD`) formatiert ICU in der Zeitzone des Vereins.
+ * `createTranslator`; ein Datum (`YYYY-MM-DD`) schreibt `messageValues` als TT.MM.JJJJ.
  */
 export function labelTranslator(deps: Pick<Deps, 'db' | 'registry'>): NonNullable<Deps['labels']> {
   return (key, params) => {
