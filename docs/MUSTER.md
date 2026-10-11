@@ -254,6 +254,10 @@ Das Änderungsprotokoll speichert, was geschah — Aktion, Datensatz, Werte —,
 - **Rückfall:** Ohne Satz, bei einem fehlenden Wert oder einer Person, die sich nicht mehr auflösen lässt, steht der Klartext — nie ein halber Satz (`lib/audit-sentences.ts`, für Tabelle, Detail und PDF).
 - Wächter: `audit-actions.test.ts` (Katalog, Klartexte, feste Aktionen), `audit-sentences-catalog.test.ts` (Platzhalter eines Satzes stehen im Katalog), `patterns/no-audit-summary.test.ts` (kein `summary` neben `action`), `finance-wording.test.ts` (auch die Sätze der Finanzen).
 
+## Namen statt Schlüssel
+
+Was ein Mensch liest, nennt Namen, nie Schlüssel, Slugs oder Pfade (Stufe 1 der Durchsicht 0.2.11, Joe 2026-10-11): Module über `modules.names`, Rechte über `permissions.keys.<key>.label`, Dokumentarten über ihr `label`, Dokumentvorlagen über `documents.create.templates`, Kontaktrollen über `contacts.roleNames` (in Bezeichnungen von Haltern als Parameter `contactRole`, den `labelTranslator` auflöst), Projekte über ihren Namen in der Leitsprache. Fehlt ein Name, steht `EMPTY`, nie der Schlüssel: in Modulen über `nameOrEmpty(name)` aus `@kompass/core` (rein), in der App über `nameOrEmpty(name, key)` aus `lib/name-or-empty.ts`, das in der Entwicklung zusätzlich warnt. Gewollt bleibt der Schlüssel nur **unter** dem Klartext über `KeyLine`. Ausgenommen sind vorerst DMS- und Mediathek-Ordner, die keinen Namen haben (Pfadsegment). Wächter `record-label-keys.test.ts` (Haken der Module) und `document-template-labels.test.ts`.
+
 ## Fachbausteine und Grundbausteine
 
 Was keinem der Abschnitte oben gehört, steht im Wächter `component-inventory.test.ts` mit seiner Zuordnung: Bausteine der Hülle (`shell/`), der Ordnerbäume (`folder-tree/`), der Mediathek (`media/`), der Webseite (`site/`), der Finanzen (`finance/`) und die Grundbausteine unter `ui/`. Eine neue Datei unter `src/components/` macht diesen Test rot: Sie wird dort eingeordnet, mit der Freigabe, die sie nennt.

@@ -1,4 +1,4 @@
-import { hasPermission, listUserNamesWithPermission, readSetting, type LocalizedText } from '@kompass/core';
+import { hasPermission, listUserNamesWithPermission, type LocalizedText, readSetting } from '@kompass/core';
 import { displayName, getContact } from '@kompass/module-contacts';
 import { documentTypeFor } from '@kompass/module-dms';
 import { getWorkCounts, listAccounts, listCategories, listForeignMoney, listPartners, listPurposes, listWorkItems, readInvoiceFromDocument, suggestForTransaction, TAX_CODES, type SuggestionReason, type SuggestionView } from '@kompass/module-finance';
@@ -14,6 +14,7 @@ import { dateFormatOf } from '@/lib/date-format';
 import { formatEuro } from '@/lib/finance/amount';
 import { formatDateOrDash } from '@/lib/finance/dates';
 import { parseWorkTab, WORK_TABS, workHref } from '@/lib/finance/work';
+import { nameOrEmpty } from '@/lib/name-or-empty';
 import { requireSession } from '@/lib/request-context';
 import { cn } from '@/lib/utils';
 import { ImportUpload } from '../imports/upload';
@@ -168,7 +169,7 @@ export default async function FinanceWorkPage({ searchParams }: { searchParams: 
             taxCodeOptions: [...TAX_CODES],
             showTax,
           },
-          voucherTypes: readSetting<string[]>(deps, 'finance.voucherTypes').map((key) => ({ key, label: documentTypeFor(deps.db, key)?.label ?? key })),
+          voucherTypes: readSetting<string[]>(deps, 'finance.voucherTypes').map((key) => ({ key, label: nameOrEmpty(documentTypeFor(deps.db, key)?.label, key) })),
           canCreateContact: hasPermission(ctx, 'contacts.manage'),
           contactGrantNames: hasPermission(ctx, 'contacts.manage') ? [] : listUserNamesWithPermission(deps, 'users.manage'),
           partners: partnerOptions,

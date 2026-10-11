@@ -8,6 +8,7 @@ import { ListPager } from '@/components/list-pager';
 import { Page } from '@/components/page';
 import { PageHeader } from '@/components/page-header';
 import { Table, TableBody, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { nameOrEmpty } from '@/lib/name-or-empty';
 import { requireSession } from '@/lib/request-context';
 import { VoucherRows } from './voucher-rows';
 
@@ -51,7 +52,7 @@ export default async function FinanceVouchersWithoutEntryPage({ searchParams }: 
               </TableHeader>
               <TableBody>
                 <VoucherRows
-                  rows={documents.map((doc) => ({ id: doc.id, number: doc.number, subject: doc.subject, documentDate: doc.documentDate, typeLabel: documentTypeFor(deps.db, doc.typeKey)?.label ?? doc.typeKey }))}
+                  rows={documents.map((doc) => ({ id: doc.id, number: doc.number, subject: doc.subject, documentDate: doc.documentDate, typeLabel: nameOrEmpty(documentTypeFor(deps.db, doc.typeKey)?.label, doc.typeKey) }))}
                   canOpenDocument={canOpenDocument}
                   canWrite={canWrite}
                   canCreateContact={hasPermission(ctx, 'contacts.manage')}

@@ -10,12 +10,15 @@ import { Switch } from '@/components/ui/switch';
 import { setModuleEnabledAction } from './actions';
 import { KeyLine } from '@/components/key-line';
 import { SectionHeading } from '@/components/section';
+import { nameOrEmpty } from '@/lib/name-or-empty';
 
 export function ModuleCard({ module }: { module: ModuleStatus }) {
   const t = useTranslations('modules');
   const [pending, start] = useTransition();
   const feedback = useActionFeedback();
-  const name = t.has(`names.${module.key}`) ? t(`names.${module.key}`) : module.key;
+  // Stufe 1, Auftrag 6: Namen statt Schlüssel — auch für die Abhängigkeiten.
+  const nameOf = (key: string) => nameOrEmpty(t.has(`names.${key}`) ? t(`names.${key}`) : null, key);
+  const name = nameOf(module.key);
   return (
     <section
       aria-label={name}
@@ -38,7 +41,7 @@ export function ModuleCard({ module }: { module: ModuleStatus }) {
         </p>
         <p className="mt-1 text-hint text-muted-ink">
           {t('meta', { version: module.version })}
-          {module.dependsOn.length > 0 ? ` · ${t('dependsOn', { list: module.dependsOn.join(', ') })}` : ''}
+          {module.dependsOn.length > 0 ? ` · ${t('dependsOn', { list: module.dependsOn.map(nameOf).join(', ') })}` : ''}
         </p>
       </div>
       <div className="flex flex-col items-end gap-1">

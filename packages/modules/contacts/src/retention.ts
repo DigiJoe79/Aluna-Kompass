@@ -1,4 +1,4 @@
-import { dueUntil, holdsFor, retentionEnd, retentionMonths, todayIn, type Deps, type DueItem, type RetentionHold } from '@kompass/core';
+import { dueUntil, holdsFor, retentionEnd, retentionMonths, todayIn, type Deps, type DueItem, type RetentionHoldInput } from '@kompass/core';
 import { and, eq, isNull } from 'drizzle-orm';
 import { displayName } from './address';
 import { contactRoleDefinitions } from './roles';
@@ -9,18 +9,20 @@ import { contactRoles, contacts, contactUserLinks } from './schema';
  * hält bis auf Weiteres — ihr Ende steht noch nicht fest, also rechnet sie ab
  * heute. Eine beendete Rolle hält ab ihrem Ende.
  */
-export function contactsRetentionHolds(deps: Deps, entityType: string, id: string): RetentionHold[] {
+export function contactsRetentionHolds(deps: Deps, entityType: string, id: string): RetentionHoldInput[] {
   if (entityType !== 'contact') return [];
   const definitions = contactRoleDefinitions(deps);
   const rows = deps.db.select().from(contactRoles).where(eq(contactRoles.contactId, id)).all();
-  const holds = rows.flatMap((row): RetentionHold[] => {
+  const holds = rows.flatMap((row): RetentionHoldInput[] => {
     const definition = definitions.get(row.role);
     if (!definition || definition.retention === 'none') return [];
-    if (definition.retention === 'permanent') return [{ label: `Rolle ${row.role} (dauerhaft)`, until: null, entity: 'contactRole', id: row.id }];
+    // Stufe 1, Auftrag 6: der Name der Rolle aus `contacts.roleNames`, nie der Schlüssel — `labelTranslator` löst `contactRole` auf.
+    const label = { key: 'contacts.retention.roleHold', params: { contactRole: row.role } };
+    if (definition.retention === 'permanent') return [{ label, until: null, entity: 'contactRole', id: row.id }];
     const months = retentionMonths(deps, definition.retention);
     if (months === null) return [];
     const from = row.until ?? deps.clock.now().toISOString();
-    return [{ label: `Rolle ${row.role}`, until: retentionEnd(from, months), entity: 'contactRole', id: row.id }];
+    return [{ label, until: retentionEnd(from, months), entity: 'contactRole', id: row.id }];
   });
 
   // Rollen ohne eigene Frist halten nicht — aber ihr Kontakt darf deshalb nicht

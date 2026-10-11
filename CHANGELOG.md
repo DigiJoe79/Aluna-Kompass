@@ -32,6 +32,12 @@ die Nummern folgen [Semantic Versioning](https://semver.org/lang/de/). Vor
   Vereins zeigen, steht sie jetzt gruppiert — das gilt ebenso für eigene Basen,
   die `org("iban")` ausgeben. Der Kopierknopf im Überweisungsblock kopiert sie
   ohne Leerzeichen.
+- **Namen statt Schlüssel.** Die Mediathek nennt bei „Wird verwendet in“ den
+  Namen eines Projekts statt seines URL-Teils, die Aufbewahrung den Namen einer
+  Kontaktrolle, die Modulübersicht die Namen der benötigten Module, Dokumentarten
+  den Namen des Moduls, dem sie gehören. Die Vorlage des Tierprofils heißt unter
+  Einrichtung → Dokumente „Tierprofil“. Der Kopf einer Projektseite zeigt den
+  URL-Teil nicht mehr.
 
 ## [0.2.11] - 2026-10-11
 

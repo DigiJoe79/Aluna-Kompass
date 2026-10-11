@@ -42,6 +42,22 @@ describe('Bezeichnungen von Haltern und Datensätzen (K2, Rest von Befund 49)', 
     expect(offenders).toEqual([]);
   });
 
+  it('Fundstellen und Halter nennen Namen, nie Slug oder Schlüssel (Stufe 1, Auftrag 6)', () => {
+    const checked = [
+      ...readdirSync(MODULES).map((m) => path.join(MODULES, m, 'src/references.ts')),
+      ...readdirSync(MODULES).map((m) => path.join(MODULES, m, 'src/record-labels.ts')),
+      path.join(MODULES, 'contacts/src/retention.ts'),
+    ].filter((f) => { try { return statSync(f).isFile(); } catch { return false; } });
+    // Ein Slug, ein Rollen- oder Typschlüssel im Text der Bezeichnung (`Projekt „${p.slug}“`, `Rolle ${row.role}`, `|| row.slug`).
+    const KEY_IN_LABEL = /label:\s*(?:`[^`]*\$\{[^}]*\b(?:slug|role|key|\w+Key)\b[^}]*\}|[^,]*(?:\|\||\?\?)\s*\w+\.slug\b)/;
+    // Variablen der Webseite: Das Template-Schema benennt sie; ohne Beschriftung bleibt der Schlüssel des Templates (Stufe 1 offen).
+    const ALLOWED = ['packages/modules/site/src/references.ts'];
+    const offenders = checked
+      .filter((file) => !ALLOWED.includes(path.relative(ROOT, file)))
+      .flatMap((file) => code(file).split('\n').filter((line) => KEY_IN_LABEL.test(line)).map((line) => `${path.relative(ROOT, file)}: ${line.trim()}`));
+    expect(offenders).toEqual([]);
+  });
+
   it('jeder Schlüssel, den ein Modul nennt, steht in der Sprachdatei', () => {
     const keys = new Set<string>();
     const sources = [...readdirSync(MODULES).map((m) => path.join(MODULES, m, 'src')), path.join(ROOT, 'packages/core/src')];
@@ -57,5 +73,8 @@ describe('Bezeichnungen von Haltern und Datensätzen (K2, Rest von Befund 49)', 
     expect(translate('finance.records.notice', { date: '2024-02-29' })).toBe('Bescheid vom 29.02.2024');
     expect(translate('contacts.records.forbidden', {})).toBe('Kontakt (kein Zugriff)');
     expect(translate('finance.records.partnerPayment', { number: 'PZ-2026-001' })).toBe('Vorgang PZ-2026-001');
+    // Stufe 1, Auftrag 6: der Halter einer Kontaktrolle nennt den Namen der Rolle, ein unbekannter Schlüssel „—“.
+    expect(translate('contacts.retention.roleHold', { contactRole: 'donor' })).toBe('Rolle Spender');
+    expect(translate('contacts.retention.roleHold', { contactRole: 'unbekannt' })).toBe('Rolle \u2014');
   });
 });

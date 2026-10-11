@@ -21,6 +21,7 @@ import { FormGrid } from '@/components/forms/form-grid';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Section } from '@/components/section';
 import { Empty } from '@/components/empty-value';
+import { nameOrEmpty } from '@/lib/name-or-empty';
 
 export interface DocumentRuleItem {
   id: string;
@@ -112,7 +113,7 @@ export function RulesPanel({
                   </TableCell>
                   <TableCell className="font-mono text-ink">{row.matchContains}</TableCell>
                   <TableCell className="text-ink-2">
-                    {row.thenTypeKey ? typeMap.get(row.thenTypeKey) ?? row.thenTypeKey : <Empty />}
+                    {row.thenTypeKey ? nameOrEmpty(typeMap.get(row.thenTypeKey), row.thenTypeKey) : <Empty />}
                   </TableCell>
                   <TableCell className="text-ink-2">{row.thenFolder ?? <Empty />}</TableCell>
                   <TableCell>

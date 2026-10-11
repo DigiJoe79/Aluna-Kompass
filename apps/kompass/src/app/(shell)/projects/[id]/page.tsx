@@ -5,6 +5,7 @@ import { notFound } from 'next/navigation';
 import { ForbiddenCard } from '@/components/forbidden-card';
 import { Page } from '@/components/page';
 import { PageHeader } from '@/components/page-header';
+import { nameOrEmpty } from '@/lib/name-or-empty';
 import { requireSession } from '@/lib/request-context';
 import { PendingPublishLine } from '@/components/site/pending-publish';
 import { RelatedDocuments } from '@/components/related-documents';
@@ -24,10 +25,10 @@ export default async function ProjectEditPage(props: { params: Promise<{ id: str
   if (id === 'new') return (<Page width="standard" header={<PageHeader title={t('create')} back={back} />}><ProjectForm project={null} locales={locales} imagePlaces={imagePlaces(deps, 'projects.image')} /></Page>);
   const project = await getProject(deps, ctx, id);
   if (!project.ok) notFound();
-  const name = project.value.name[leading] || project.value.slug;
+  const name = nameOrEmpty(project.value.name[leading], project.value.slug);
   const actions = requirePermission(ctx, 'projects.manage') ? undefined : <ProjectActions id={project.value.id} name={name} />;
   return (
-    <Page width="standard" header={<PageHeader title={name} description={`/projekte/${project.value.slug}/`} back={back} actions={actions} />}>
+    <Page width="standard" header={<PageHeader title={name} back={back} actions={actions} />}>
       <PendingPublishLine href={`/projects/${project.value.id}`} className="-mt-3 mb-4 block" />
       <ProjectForm project={project.value} locales={locales} imagePlaces={imagePlaces(deps, 'projects.image')} mediaSizes={mediaPixelSizes(deps, project.value.imageAssetId ? [project.value.imageAssetId] : [])} />
       <div className="mt-6 space-y-4">

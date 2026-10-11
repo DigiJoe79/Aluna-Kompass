@@ -4,6 +4,7 @@ import { ForbiddenCard } from '@/components/forbidden-card';
 import { Page } from '@/components/page';
 import { PageHeader } from '@/components/page-header';
 import { documentTemplateGroups } from '@/lib/document-template-rows';
+import { nameOrEmpty } from '@/lib/name-or-empty';
 import { requireSession } from '@/lib/request-context';
 import { BasesPanel } from './bases-panel';
 
@@ -24,8 +25,8 @@ export default async function DocumentsPage() {
   const m = await getTranslations('modules.names');
   const groups = documentTemplateGroups(registered, deps.registry.manifests, configured, bases).map((group) => ({
     module: group.module,
-    moduleLabel: m.has(group.module) ? m(group.module) : group.module,
-    rows: group.rows.map((row) => ({ ...row, label: t.has(`create.templates.${row.key}`) ? t(`create.templates.${row.key}`) : row.key })),
+    moduleLabel: nameOrEmpty(m.has(group.module) ? m(group.module) : null, group.module),
+    rows: group.rows.map((row) => ({ ...row, label: nameOrEmpty(t.has(`create.templates.${row.key}`) ? t(`create.templates.${row.key}`) : null, row.key) })),
   }));
   // Befund 51 b: nur, wenn die Installation überhaupt eigene Basen führt.
   const gaps = documentBaseGaps(deps).missing.map((gap) => ({

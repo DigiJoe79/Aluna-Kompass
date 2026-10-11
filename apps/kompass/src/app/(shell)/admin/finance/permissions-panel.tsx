@@ -1,6 +1,7 @@
 import { getTranslations } from 'next-intl/server';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Empty } from '@/components/empty-value';
+import { nameOrEmpty } from '@/lib/name-or-empty';
 
 export interface PermissionMatrixActivity {
   key: string;
@@ -19,7 +20,7 @@ export interface PermissionMatrixRole {
 export async function PermissionsPanel({ activities, roles }: { activities: PermissionMatrixActivity[]; roles: PermissionMatrixRole[] }) {
   const t = await getTranslations('finance.admin.permissions');
   const tPerm = await getTranslations('permissions.keys');
-  const activityLabel = (permission: string) => (tPerm.has(`${permission}.label`) ? tPerm(`${permission}.label`) : permission);
+  const activityLabel = (permission: string) => nameOrEmpty(tPerm.has(`${permission}.label`) ? tPerm(`${permission}.label`) : null, permission);
 
   return (
     <section className="space-y-4" data-testid="permissions-panel">

@@ -20,6 +20,7 @@ import { FormGrid } from '@/components/forms/form-grid';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Section } from '@/components/section';
 import { Empty } from '@/components/empty-value';
+import { nameOrEmpty } from '@/lib/name-or-empty';
 
 export interface DocumentTypeItem {
   key: string;
@@ -66,9 +67,12 @@ export function TypesPanel({
   const tDms = useTranslations('dms');
   const tCommon = useTranslations('common');
   const tPerm = useTranslations('permissions.keys');
+  const tModules = useTranslations('modules.names');
+  // Stufe 1, Auftrag 6: der Name des Moduls, nie sein Schlüssel.
+  const moduleName = (key: string) => nameOrEmpty(tModules.has(key) ? tModules(key) : null, key);
   // Das Label eines Bereichs bringt das Modul mit, das ihn anmeldet (`dms.areas.<key>`); ohne fällt es auf den Schlüssel zurück.
   const areaLabel = (key: string) => (tDms.has(`areas.${key}`) ? tDms(`areas.${key}`) : key);
-  const permissionLabel = (permission: string) => (tPerm.has(`${permission}.label`) ? tPerm(`${permission}.label`) : permission);
+  const permissionLabel = (permission: string) => nameOrEmpty(tPerm.has(`${permission}.label`) ? tPerm(`${permission}.label`) : null, permission);
 
   const [createOpen, setCreateOpen] = useState(false);
   const [editingType, setEditingType] = useState<DocumentTypeItem | null>(null);
@@ -331,7 +335,7 @@ export function TypesPanel({
               </Section>
               <Section title={t('typeSections.filing')}>
                 {editingType.ownerModule ? (
-                  <p className="mt-3 text-meta text-muted-ink">{t('ownedByModule', { module: editingType.ownerModule })}</p>
+                  <p className="mt-3 text-meta text-muted-ink">{t('ownedByModule', { module: moduleName(editingType.ownerModule) })}</p>
                 ) : null}
                 <div className="mt-3">
                   <FormGrid>

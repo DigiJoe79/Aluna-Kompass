@@ -1,4 +1,4 @@
-import { yearIn, hasPermission, todayIn, type CallContext, type Deps } from '@kompass/core';
+import { type CallContext, type Deps, hasPermission, todayIn, yearIn } from '@kompass/core';
 import { getProject } from '@kompass/module-projects';
 import { getAnimal } from '@kompass/module-animals';
 import { displayName, getContact } from '@kompass/module-contacts';
@@ -14,6 +14,7 @@ import { FiledAnnouncement } from './filed-announcement';
 import { Notice } from '@/components/notice';
 import { ForbiddenCard } from '@/components/forbidden-card';
 import { ancestorsOf, nameOf } from '@/lib/folder-tree-model';
+import { nameOrEmpty } from '@/lib/name-or-empty';
 import { requireSession } from '@/lib/request-context';
 import { DmsWorkspace } from './dms-workspace';
 import { DocumentList, type DocumentListItem } from './document-list';
@@ -125,7 +126,7 @@ export async function DmsView({ query, receive }: { query: DmsQuery; receive?: b
     number: d.number,
     subject: d.subject,
     typeKey: d.typeKey,
-    typeLabel: typesMap.get(d.typeKey) ?? d.typeKey,
+    typeLabel: nameOrEmpty(typesMap.get(d.typeKey), d.typeKey),
     documentDate: d.documentDate,
     folder: d.folder,
     direction: d.direction,

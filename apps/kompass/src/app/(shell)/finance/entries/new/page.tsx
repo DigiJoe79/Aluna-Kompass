@@ -7,6 +7,7 @@ import { getTranslations } from 'next-intl/server';
 import { ForbiddenCard } from '@/components/forbidden-card';
 import { Page } from '@/components/page';
 import { PageHeader } from '@/components/page-header';
+import { nameOrEmpty } from '@/lib/name-or-empty';
 import { readAllPages } from '@/lib/read-all-pages';
 import { requireSession } from '@/lib/request-context';
 import { formatAmount } from '@/lib/finance/amount';
@@ -76,7 +77,7 @@ export default async function NewFinanceEntryPage({ searchParams }: { searchPara
   if (query.voucher) {
     const doc = await getDocumentRecord(deps, ctx, query.voucher);
     if (doc.ok) {
-      pendingVoucher = { documentId: doc.value.id, number: doc.value.number, subject: doc.value.subject, typeLabel: documentTypeFor(deps.db, doc.value.typeKey)?.label ?? doc.value.typeKey, date: doc.value.documentDate };
+      pendingVoucher = { documentId: doc.value.id, number: doc.value.number, subject: doc.value.subject, typeLabel: nameOrEmpty(documentTypeFor(deps.db, doc.value.typeKey)?.label, doc.value.typeKey), date: doc.value.documentDate };
       if (!initial.text) initial = { ...initial, text: doc.value.subject.slice(0, 300) };
     }
   }

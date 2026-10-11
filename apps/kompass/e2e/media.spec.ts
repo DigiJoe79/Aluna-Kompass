@@ -61,11 +61,11 @@ test.describe('media library', () => {
     await page.goto('/admin/media');
     await page.getByRole('row', { name: /hof-/ }).click();
     const dialog = page.getByRole('dialog');
-    await expect(dialog).toContainText('Projekt „hofprojekt“');
+    await expect(dialog).toContainText('Projekt „Hofprojekt“');
     // Keine Sperre ohne Grund: „Löschen …“ bleibt, die Rückfrage nennt, wo die Datei verwendet wird.
     await dialog.getByRole('button', { name: 'Löschen …' }).click();
     const refusal = page.getByRole('alertdialog', { name: 'Diese Datei löschen?' });
-    await expect(refusal).toContainText('Die Datei wird noch verwendet: Projekt „hofprojekt“');
+    await expect(refusal).toContainText('Die Datei wird noch verwendet: Projekt „Hofprojekt“');
     await expect(refusal.getByRole('button', { name: 'Löschen' })).toHaveCount(0);
     await refusal.getByRole('button', { name: 'Schließen' }).click();
     await expect(refusal).toBeHidden();
