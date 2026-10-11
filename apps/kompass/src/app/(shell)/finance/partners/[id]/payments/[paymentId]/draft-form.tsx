@@ -19,7 +19,7 @@ import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import type { ActionState } from '@/lib/actions';
-import { formatEuro, parseAmount } from '@/lib/finance/amount';
+import { formatAmount, formatEuro, parseAmount } from '@/lib/finance/amount';
 import { evidenceKindLabelKey, proofDueDate, requiredEvidenceKinds, type PartnerBasis } from '@/lib/finance/partners';
 import { savePartnerPaymentDraftAction, submitPartnerPaymentAction } from '../../../actions';
 import { FormField } from '@/components/forms/form-field';
@@ -131,7 +131,7 @@ export function DraftForm({
     basisOverrideReason: payment.basisOverrideReason ?? '',
     retroactive: payment.retroactive,
     agreementDocument,
-    positions: payment.positions.map((p) => ({ key: newKey(), kind: p.kind, amountText: p.kind === 'money' ? (p.amountCents / 100).toFixed(2).replace('.', ',') : '', categoryId: p.categoryId ?? '', purposeId: p.purposeId ?? '', projectId: p.projectId ?? '', goodsLineId: p.goodsLineId ?? '', note: p.note ?? '' })),
+    positions: payment.positions.map((p) => ({ key: newKey(), kind: p.kind, amountText: p.kind === 'money' ? formatAmount(p.amountCents) : '', categoryId: p.categoryId ?? '', purposeId: p.purposeId ?? '', projectId: p.projectId ?? '', goodsLineId: p.goodsLineId ?? '', note: p.note ?? '' })),
     paidLineIds: payment.paidLines.map((l) => l.paidLineId),
     proofMonths: payment.proofMonths,
   };

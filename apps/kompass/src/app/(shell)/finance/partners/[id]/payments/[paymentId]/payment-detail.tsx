@@ -20,7 +20,7 @@ import { RequirementList, type RequirementListItem } from '@/components/requirem
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
-import { formatEuro, parseAmount } from '@/lib/finance/amount';
+import { formatAmount, formatEuro, parseAmount } from '@/lib/finance/amount';
 import { AMOUNT_EVIDENCE_KINDS, coverageRequired, evidenceCoverage, evidenceKindLabelKey, missingEvidence, type EvidenceKind, type PartnerBasis } from '@/lib/finance/partners';
 import { acknowledgeEvidenceAction, addEvidenceLinkAction, addEvidenceUploadAction, copyPartnerPaymentAction, removeEvidenceAction, updateEvidenceAction } from '../../../actions';
 import { DraftForm, type LineOption } from './draft-form';
@@ -416,7 +416,7 @@ function EvidenceForm({ paymentId, kind, label, onDone, onCancel }: { paymentId:
 function CompleteForm({ row, onDone, onCancel }: { row: EvidenceRow; onDone: () => void; onCancel: () => void }) {
   const t = useTranslations('finance.partners.payment');
   const [explanationDe, setExplanationDe] = useState(row.explanationDe ?? '');
-  const [amountText, setAmountText] = useState(row.coveredCents !== null ? (row.coveredCents / 100).toFixed(2).replace('.', ',') : '');
+  const [amountText, setAmountText] = useState(row.coveredCents !== null ? formatAmount(row.coveredCents) : '');
   const withAmount = AMOUNT_KINDS.includes(row.kind);
   const feedback = useActionFeedback();
   const save = async () => {

@@ -72,7 +72,7 @@ export function PurposesTable({
     const transfersOut = row.transfersOutCents ?? 0;
     const n = transfersIn - transfersOut;
     if (transfersIn === 0 && transfersOut === 0) return <span className="text-muted-ink">—</span>;
-    return <span className="font-mono tabular-nums">{n > 0 ? `+${formatEuro(n)}` : formatEuro(n)}</span>;
+    return <span className="font-mono tabular-nums">{formatEuro(n, { sign: 'always' })}</span>;
   };
 
   return (

@@ -5,6 +5,7 @@ export * from './concurrency';
 export * from './clock';
 export { DEFAULT_TIME_ZONE, isoDayIn, isTimeZone, timeZoneOf, todayIn, yearIn } from './today';
 export * from './dates';
+export * from './format';
 export { messageDate, messageDateMode, messageDateTime } from './message-date';
 export { newId, ID_PATTERN } from './ids';
 export * from './context';

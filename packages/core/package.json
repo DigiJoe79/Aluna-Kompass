@@ -7,6 +7,7 @@
     ".": "./src/index.ts",
     "./testing": "./src/testing/index.ts",
     "./dates": "./src/dates.ts",
+    "./format": "./src/format/index.ts",
     "./themes": "./src/themes/index.ts",
     "./image-places": "./src/media/image-place-resolve.ts"
   },

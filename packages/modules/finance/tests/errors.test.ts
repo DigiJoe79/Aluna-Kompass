@@ -11,10 +11,10 @@ describe('finance errors', () => {
     for (const [code, params] of Object.entries(FINANCE_ERRORS)) for (const kind of Object.values(params)) expect(['text', 'date', 'cents', 'evidenceKind'], code).toContain(kind);
   });
 
-  it('carries code, language key and raw parameters — dates as YYYY-MM-DD, amounts in cents', () => {
+  it('carries code, language key and raw parameters — dates as YYYY-MM-DD, amounts in cents, named in `amounts`', () => {
     expect(financeConflict('cashWouldGoNegative', { account: 'K1', date: '2026-03-04', amount: -1250 })).toEqual({
       ok: false,
-      error: { type: 'conflict', code: 'cashWouldGoNegative', message: 'cashWouldGoNegative', messageKey: 'finance.errors.cashWouldGoNegative', params: { account: 'K1', date: '2026-03-04', amount: -1250 } },
+      error: { type: 'conflict', code: 'cashWouldGoNegative', message: 'cashWouldGoNegative', messageKey: 'finance.errors.cashWouldGoNegative', params: { account: 'K1', date: '2026-03-04', amount: -1250 }, amounts: ['amount'] },
     });
     expect(financeConflict('humanOnly')).toMatchObject({ error: { messageKey: 'finance.errors.humanOnly', params: {} } });
   });

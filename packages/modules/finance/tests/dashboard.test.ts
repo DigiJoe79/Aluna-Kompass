@@ -17,7 +17,7 @@ import { createAccount } from '../src/ledger/accounts';
 import { saveDraft, setReviewed } from '../src/ledger/entries';
 import { finalizeReviewed } from '../src/ledger/finalize';
 import { createFirstFiscalYear } from '../src/ledger/fiscal-years';
-import { formatEuro } from '../src/ledger/cash-check';
+import { formatEuro } from '../src/format';
 import { createOpenItem } from '../src/ledger/open-items';
 import { reverseEntry } from '../src/ledger/reverse';
 import { applyTaxDefaults, confirmSetupStep } from '../src/ledger/setup';

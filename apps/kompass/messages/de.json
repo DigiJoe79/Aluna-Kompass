@@ -7586,7 +7586,7 @@
         "remedy": "Ein Entwurf wird gelöscht, nicht zurückgenommen."
       },
       "entryUnbalanced": {
-        "reason": "Es sind noch {rest, number, ::currency/EUR scale/0.01} zu verteilen: Die Konten ergeben {money, number, ::currency/EUR scale/0.01}, die Zuordnungen {allocated, number, ::currency/EUR scale/0.01}.",
+        "reason": "Es sind noch {rest} zu verteilen: Die Konten ergeben {money}, die Zuordnungen {allocated}.",
         "remedy": "Ergänzen oder ändern Sie eine Aufteilung, bis beide Summen gleich sind."
       },
       "entryEmpty": {
@@ -7618,11 +7618,11 @@
         "remedy": "Buchen Sie den Vorgang in einem Zug (festschreiben beim Speichern)."
       },
       "cashWouldGoNegative": {
-        "reason": "Das Barkonto {account} wäre am {date, date, ::ddMMyyyy} mit {amount, number, ::currency/EUR scale/0.01} im Minus.",
+        "reason": "Das Barkonto {account} stünde am {date, date, ::ddMMyyyy} bei {amount}.",
         "remedy": "Prüfen Sie Datum und Betrag, oder buchen Sie zuerst die fehlende Einnahme oder Abhebung."
       },
       "cashNegativeNeedsReason": {
-        "reason": "Durch diese Rücknahme wäre das Barkonto {account} am {date, date, ::ddMMyyyy} mit {amount, number, ::currency/EUR scale/0.01} im Minus.",
+        "reason": "Durch diese Rücknahme stünde das Barkonto {account} am {date, date, ::ddMMyyyy} bei {amount}.",
         "remedy": "Geben Sie eine Begründung an; der Zeitraum steht dann im Prüfpaket."
       },
       "entryAlreadyReversed": {
@@ -7774,7 +7774,7 @@
         "remedy": "Wählen Sie den heutigen Tag oder einen vergangenen."
       },
       "cashCountDenominationsMismatch": {
-        "reason": "Die Stückelung ergibt {denominationSum, number, ::currency/EUR scale/0.01}, gezählt wurden {countedCents, number, ::currency/EUR scale/0.01}.",
+        "reason": "Die Stückelung ergibt {denominationSum}, gezählt wurden {countedCents}.",
         "remedy": "Prüfen Sie die Stückelung oder die gezählte Summe."
       },
       "cashMoveNeedsOneCash": {
@@ -7886,7 +7886,7 @@
         "remedy": "Tragen Sie ein, wem das Geld gehört — der Satz steht im Buchungstext."
       },
       "foreignMoneyOverpaid": {
-        "reason": "Weitergegeben würden {amount, number, ::currency/EUR scale/0.01}, vom Eingang offen sind nur {open, number, ::currency/EUR scale/0.01}.",
+        "reason": "Weitergegeben würden {amount}, vom Eingang offen sind nur {open}.",
         "remedy": "Geben Sie als Rückzahlung höchstens den offenen Betrag an. Was darüber hinaus abfließt, ist Geld des Vereins — buchen Sie es als eigene Ausgabe mit ihrer Kategorie."
       },
       "contactIbanTaken": {
@@ -7902,11 +7902,11 @@
         "remedy": "Öffnen Sie die vorhandene offene Zahlung, statt eine zweite anzulegen."
       },
       "purposeGoesNegative": {
-        "reason": "Der Zweck „{purpose}“ stünde danach bei {balance, number, ::currency/EUR scale/0.01} — mehr ausgegeben, als dafür da ist.",
+        "reason": "Der Zweck „{purpose}“ stünde danach bei {balance} — mehr ausgegeben, als dafür da ist.",
         "remedy": "Begründen Sie es (etwa ein zugesagter Zuschuss oder ein Vorschuss aus freien Mitteln) — die Begründung steht am Vorgang. Oder wählen Sie einen anderen Zweck."
       },
       "freeReserveCapExceeded": {
-        "reason": "Die freie Rücklage läge damit {over, number, ::currency/EUR scale/0.01} über dem Höchstbetrag von {cap, number, ::currency/EUR scale/0.01} für dieses Jahr.",
+        "reason": "Die freie Rücklage läge damit {over} über dem Höchstbetrag von {cap} für dieses Jahr.",
         "remedy": "Begründen Sie die Zuführung — die Begründung steht am Vorgang. Der Höchstbetrag ist eine Näherung nach § 62 Abs. 1 Nr. 3 AO; im Zweifel fragen Sie Ihre Steuerberatung."
       },
       "reserveYearAmbiguous": {
@@ -8186,7 +8186,7 @@
         "remedy": "Geben Sie eine Begründung an; sie steht am Antrag."
       },
       "waiverFundsInsufficient": {
-        "reason": "Am {date, date, ::ddMMyyyy} hatte der Verein nur {free, number, ::currency/EUR scale/0.01} frei verfügbar — weniger als die {amount, number, ::currency/EUR scale/0.01} des Antrags.",
+        "reason": "Am {date, date, ::ddMMyyyy} hatte der Verein nur {free} frei verfügbar — weniger als die {amount} des Antrags.",
         "remedy": "Ein Verzicht setzt voraus, dass der Verein hätte zahlen können: Zahlen Sie die Auslage aus, statt den Verzicht anzunehmen."
       },
       "waiverDeclarationMissing": {
@@ -8322,7 +8322,7 @@
         "remedy": "Tragen Sie ein, wofür das Geld zurückgelegt ist."
       },
       "reserveInsufficient": {
-        "reason": "Am {date, date, ::ddMMyyyy} stehen bei „{name}“ nur {available, number, ::currency/EUR scale/0.01}, {amount, number, ::currency/EUR scale/0.01} sind zu viel.",
+        "reason": "Am {date, date, ::ddMMyyyy} stehen bei „{name}“ nur {available}, {amount} sind zu viel.",
         "remedy": "Verringern Sie den Betrag, oder wählen Sie ein späteres Datum."
       },
       "reserveDissolved": {

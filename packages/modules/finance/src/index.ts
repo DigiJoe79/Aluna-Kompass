@@ -123,7 +123,7 @@ export {
 export { DATED_SERIES, type DatedValueKey } from './ledger/dated-series';
 export { listDatedValues, removeDatedValue, setDatedValue, valueAt, type DatedValueListEntry } from './ledger/dated-values';
 export { closePurpose, deleteMasterData, readMasterData, saveMasterData, setMasterDataActive } from './ledger/master-data';
-export { firstNegativeCashDay, formatEuro } from './ledger/cash-check';
+export { firstNegativeCashDay } from './ledger/cash-check';
 export { countCash, emptyDonationBox, lastCountInternal, listCashCounts, moveCash, readCashCountProtocol, type CashCountKind, type CashCountView, type CountCashResult, type EmptyDonationBoxResult } from './ledger/cash';
 export { cashCountTemplate, type CashCountTemplateInput } from './ledger/cash-count-template';
 export {

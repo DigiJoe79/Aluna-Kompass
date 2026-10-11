@@ -55,13 +55,13 @@ describe('rule dialog („Künftig immer so?“)', () => {
       { key: 'out', values: {} },
       { key: 'iban', values: { iban: 'DE69999999990000445566' } },
       { key: 'text', values: { text: 'futter' } },
-      { key: 'amountFrom', values: { amount: '10,00 €' } },
+      { key: 'amountFrom', values: { amount: '10,00\u00a0€' } },
     ]);
     expect(ruleConditionParts({ accountId: null, direction: 'in', counterpartyIban: null, textContains: null, amountMinCents: 1000, amountMaxCents: 2000 }, new Map())).toEqual([
       { key: 'in', values: {} },
-      { key: 'amountBetween', values: { min: '10,00 €', max: '20,00 €' } },
+      { key: 'amountBetween', values: { min: '10,00\u00a0€', max: '20,00\u00a0€' } },
     ]);
-    expect(ruleConditionParts({ accountId: null, direction: null, counterpartyIban: null, textContains: null, amountMinCents: null, amountMaxCents: 900 }, new Map())).toEqual([{ key: 'amountUpTo', values: { amount: '9,00 €' } }]);
+    expect(ruleConditionParts({ accountId: null, direction: null, counterpartyIban: null, textContains: null, amountMinCents: null, amountMaxCents: 900 }, new Map())).toEqual([{ key: 'amountUpTo', values: { amount: '9,00\u00a0€' } }]);
   });
 });
 

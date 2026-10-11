@@ -76,7 +76,7 @@ const CASES: { name: string; open: (page: Page) => Promise<void>; item: RegExp }
     open: async (page) => {
       await page.goto('/finance/purposes');
       // Ein Zweck mit Bestand: „Als erfüllt kennzeichnen …“ fragt dann nach (ohne Rest liefe es ohne Dialog).
-      const withBalance = page.getByTestId('purpose-row').filter({ hasNotText: /0,00 €\s*$/ }).first();
+      const withBalance = page.getByTestId('purpose-row').filter({ hasNotText: /0,00\s€\s*$/ }).first();
       await withBalance.getByRole('button').first().click();
       await expect(page.getByTestId('purpose-detail')).toBeVisible();
     },

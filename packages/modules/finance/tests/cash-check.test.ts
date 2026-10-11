@@ -2,7 +2,7 @@ import { newId, unwrap } from '@kompass/core';
 import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 import { createAccount } from '../src/ledger/accounts';
-import { firstNegativeCashDay, formatEuro } from '../src/ledger/cash-check';
+import { firstNegativeCashDay } from '../src/ledger/cash-check';
 import { financeEntries, financeMoneyLines, type FinanceAccountRow } from '../src/schema';
 import { setupFinance } from './helpers';
 
@@ -76,10 +76,5 @@ describe('firstNegativeCashDay', () => {
     const account = await cashAccount(deps, ctx);
     bookLine(deps, account.id, '2026-01-02', -500);
     expect(firstNegativeCashDay(deps.db, account, '2026-01-01', [])).toEqual({ date: '2026-01-02', balanceCents: -500 });
-  });
-
-  it('formats cents as German euros', () => {
-    expect(formatEuro(-1250)).toBe('-12,50 €');
-    expect(formatEuro(123456)).toBe('1.234,56 €');
   });
 });

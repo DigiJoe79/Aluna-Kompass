@@ -9,6 +9,16 @@ die Nummern folgen [Semantic Versioning](https://semver.org/lang/de/). Vor
 1.0.0 kann jede Minor-Fassung Brüche enthalten — was bricht, steht unter
 **Geändert** mit dem, was zu tun ist.
 
+## [Unveröffentlicht]
+
+### Geändert
+
+- **Beträge überall gleich geschrieben.** Ein negativer Betrag trägt überall
+  dasselbe Minuszeichen („−12,50 €“), auch in den Kacheln der Startseite, in
+  Ablehnungen und im Protokoll der Kassenzählung; zwischen Betrag und „€“
+  bricht keine Zeile mehr um. Die Ablehnung eines Barkontos im Minus nennt den
+  Stand („stünde am … bei −415,00 €“) statt „im Minus“ doppelt zu sagen.
+
 ## [0.2.11] - 2026-10-11
 
 Diese Fassung bringt den Bildausschnitt: Jedes Bild der Webseite lässt sich

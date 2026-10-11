@@ -17,7 +17,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Disclosure } from '@/components/ui/disclosure';
 import { Input } from '@/components/ui/input';
-import { formatAmount, formatEuro, parseAmount } from '@/lib/finance/amount';
+import { formatEuro, parseAmount } from '@/lib/finance/amount';
 import { countResult, DENOMINATIONS_CENTS, sumDenominations } from '@/lib/finance/cash';
 import { countCashAction, emptyDonationBoxAction } from './actions';
 import { Section } from '@/components/section';
@@ -155,7 +155,7 @@ export function CountDialog({ account, today, canCreateContact }: { account: Cas
                       <div className="grid grid-cols-3 gap-2">
                         {DENOMINATIONS_CENTS.map((cents) => (
                           <label key={cents} className="flex items-center gap-1.5 text-hint">
-                            <span className="w-16 shrink-0">{formatAmount(cents)} €</span>
+                            <span className="w-16 shrink-0">{formatEuro(cents)}</span>
                             <Input
                               type="number"
                               min={0}

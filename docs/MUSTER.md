@@ -195,6 +195,15 @@ Papier ist fest, weil ein Brief nach außen geht, die Zuwendungsbestätigung dem
 
 Sekunden (`dateTime(value, { seconds: true })`) nur im Protokoll — zum Abgleich mit Serverprotokollen und Backups; die Reihenfolge innerhalb einer Minute sichert die Sortierung, nicht die Anzeige. `time` hängt nicht an `ui.dateFormat`; wird die Oberfläche englisch, ist das neu zu entscheiden. Kein `useFormatter().dateTime` — Wächter `no-raw-date` Teil 4; Grenze: Ein Formatierer, der als Prop weitergereicht wird, ist für den Wächter unsichtbar.
 
+## Beträge
+
+Ein Betrag hat eine Stelle (Stufe 1 der Durchsicht 0.2.11, Joe 2026-10-11): `formatEuro(cents)` bzw. `formatAmount(cents)` (ohne „€“, etwa im Eingabefeld) aus dem Finanzmodul (`packages/modules/finance/src/format/amount.ts`, browsertauglich über `@kompass/module-finance/format`); in der App über `@/lib/finance/amount`. Euro ist ein Fachbegriff der Finanzen, deshalb nicht im Kern (Prinzip 1). Tausenderpunkt, Dezimalkomma, Minus U+2212, vor „€“ ein geschütztes Leerzeichen.
+
+- Vorzeichen auch bei positiven Beträgen (Bewegungen eines Zwecks): `formatEuro(c, { sign: 'always' })` — kein eigenes „+“ davor.
+- In der Sprachdatei kein ICU `::currency`: Ein Betrag geht als fertiger Text an einen schlichten Platzhalter (`{amount}`). Ablehnungen der Dienste tragen Beträge in Cent und nennen sie in `amounts` (`financeConflict` liest das aus `FINANCE_ERRORS`); `messageValues` in `lib/error-text.ts` schreibt sie.
+- Zahl und Wort doppeln sich nicht: „Die Kasse stünde bei −415,00 €“, nicht „wäre mit −415,00 € im Minus“. Wo das Wort die Richtung sagt („Kassenfehlbetrag“, „zu viel verteilt“), steht der Betrag ohne Vorzeichen.
+- Kein `toFixed`, kein `Intl.NumberFormat`, kein `toLocaleString('de-DE')`, keine eigene Tausender-Regel. Ausnahme: der Wortlaut der Zuwendungsbestätigungen (`typst-pure.ts` `formatCents`) — Wächter `no-raw-amount.test.ts`, Ausnahmen dort mit Grund.
+
 ## Seitenrahmen
 
 - `Page` mit `PageHeader` auf jeder Seite (§ I); `back` für Seiten, die nicht in der Navigation hängen (alles mit Platzhalter oder mit den Endungen `new`, `edit`, `receive` im Pfad) — `tests/back-navigation.test.ts` prüft es.

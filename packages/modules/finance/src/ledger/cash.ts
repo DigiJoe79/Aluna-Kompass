@@ -7,12 +7,12 @@ import { financeAudit } from '../audit';
 import { financeConflict, requireHumanChannelFinance } from '../errors';
 import { financeAccounts, financeCashCounts, financeCategories, financeEntries, type FinanceCashCountRow } from '../schema';
 import { cashCountTemplate, type CashCountTemplateInput, type CashCountVariant } from './cash-count-template';
-import { formatEuro } from './cash-check';
 import { entryViewInternal, writeLinesInternal, type EntryView } from './entries';
 import { bookEntry, finalizeInternal } from './finalize';
 import { accountBalancesAt } from './queries';
 import { requireFinanceRead } from './access';
 import { writeVoucherLink } from './vouchers';
+import { formatEuro } from '../format';
 
 export type CashCountKind = 'equal' | 'surplus' | 'shortage';
 /** MC: die Stückelung als Objekt (Nennwert in Cent → Stück), nicht als JSON-Text der Spalte. */

@@ -5,7 +5,7 @@ import { localizedConflict, requireHumanChannel, type CallContext, type Deps, ty
  * je Code die Parameter, die der Dienst setzt, mit ihrer Art: `date` (`YYYY-MM-DD`), `cents` (Betrag in Cent) oder
  * `text`. Grund und Abhilfe selbst stehen in der Sprachdatei unter `finance.errors.<code>.reason`/`.remedy`
  * (A6); Oberfläche und MCP setzen daraus denselben Text zusammen und formatieren Datum und Betrag dort, an einer
- * Stelle (ICU). `financeConflict` ist die einzige Stelle im Modul, die einen Konflikt erzeugt (Wächter:
+ * Stelle (`apps/kompass/src/lib/error-text.ts`; Beträge nennt `financeConflict` dafür in `amounts`). `financeConflict` ist die einzige Stelle im Modul, die einen Konflikt erzeugt (Wächter:
  * `tests/errors.test.ts`); `apps/kompass/tests/finance-error-messages.test.ts` hält Tabelle und Sprachdatei gleich.
  */
 export const FINANCE_ERRORS = {
@@ -269,7 +269,8 @@ export function lockConflict(hit: { code: EntryLockCode; params: Record<string, 
 
 /** Der Konflikt `code` mit den Parametern, die sein Text braucht — der Text selbst kommt aus der Sprachdatei. */
 export function financeConflict<C extends FinanceErrorCode>(code: C, ...params: keyof (typeof FINANCE_ERRORS)[C] extends never ? [] : [ParamsOf<C>]): Failure {
-  return localizedConflict(code, `finance.errors.${code}`, (params[0] ?? {}) as Record<string, string | number>);
+  const amounts = Object.entries(FINANCE_ERRORS[code] as Record<string, string>).flatMap(([name, kind]) => (kind === 'cents' ? [name] : []));
+  return localizedConflict(code, `finance.errors.${code}`, (params[0] ?? {}) as Record<string, string | number>, amounts);
 }
 
 /**

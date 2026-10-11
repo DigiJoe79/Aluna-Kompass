@@ -340,7 +340,7 @@ test.describe('finance', () => {
     await page.locator('tr', { hasText: 'Teilzahlung Lieferant' }).click();
     await expect(page.getByText('Hängt zusammen mit')).toBeVisible();
     await expect(page.getByText(storyPattern('RE-2026-055'))).toBeVisible();
-    await expect(page.getByText(/Rest 120,00 €/)).toBeVisible();
+    await expect(page.getByText(/Rest 120,00\s€/)).toBeVisible();
     // F3b Task 3 (A6): der Eintrag verlinkt jetzt auf die offene Zahlung.
     await page.getByRole('link', { name: storyPattern('RE-2026-055') }).click();
     await expect(page).toHaveURL(/\/finance\/open-items\?tab=payable&item=/);

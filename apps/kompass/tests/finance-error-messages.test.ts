@@ -50,7 +50,7 @@ describe('Finanzfehler aus der Sprachdatei (A6)', () => {
     for (const [c, params] of Object.entries(FINANCE_ERRORS)) for (const kind of Object.values(params)) expect(['text', 'date', 'cents', 'evidenceKind'], c).toContain(kind);
   });
 
-  it('die Platzhalter in de.json sind genau die Parameter des Codes, Datum und Betrag als ICU-Format', () => {
+  it('die Platzhalter in de.json sind genau die Parameter des Codes, Datum als ICU-Format, Betrag schlicht', () => {
     const wrong: string[] = [];
     for (const [code, params] of Object.entries(FINANCE_ERRORS) as [FinanceErrorCode, Record<string, string>][]) {
       // Ein ICU-`select` (Nachweisart, P) zählt als ein Platzhalter; seine Zweige sind Text.
@@ -62,7 +62,8 @@ describe('Finanzfehler aus der Sprachdatei (A6)', () => {
       if ([...used.keys()].sort().join() !== inText.sort().join()) wrong.push(`${code}: ${[...used.keys()]} ≠ ${Object.keys(params)}`);
       for (const [name, kind] of Object.entries(params).filter(([k]) => !dataOnly.includes(k))) {
         const format = used.get(name);
-        const expected = kind === 'date' ? 'date, ::ddMMyyyy' : kind === 'cents' ? 'number, ::currency/EUR scale/0.01' : kind === 'evidenceKind' ? 'select' : '';
+        // Beträge kommen fertig aus `formatEuro` (MUSTER § Beträge, Stufe 1): ein schlichter Platzhalter, kein ICU-Skelett.
+        const expected = kind === 'date' ? 'date, ::ddMMyyyy' : kind === 'evidenceKind' ? 'select' : '';
         if (format !== undefined && format !== expected) wrong.push(`${code}.${name}: „${format}“ statt „${expected}“`);
       }
     }
@@ -86,12 +87,12 @@ describe('Finanzfehler aus der Sprachdatei (A6)', () => {
 
   it('Datum und Betrag werden beim Übersetzen formatiert (Befund 38), Wortlaut sonst unverändert', () => {
     expect(uiText(financeConflict('cashWouldGoNegative', { account: 'K1', date: '2026-03-04', amount: -1250 }))).toBe(
-      'Das Barkonto K1 wäre am 04.03.2026 mit -12,50\u00a0€ im Minus. Prüfen Sie Datum und Betrag, oder buchen Sie zuerst die fehlende Einnahme oder Abhebung.',
+      'Das Barkonto K1 stünde am 04.03.2026 bei \u221212,50\u00a0€. Prüfen Sie Datum und Betrag, oder buchen Sie zuerst die fehlende Einnahme oder Abhebung.',
     );
     expect(uiText(financeConflict('entryUnbalanced', { rest: 123456, money: 150000, allocated: 26544 }))).toContain('Es sind noch 1.234,56\u00a0€ zu verteilen: Die Konten ergeben 1.500,00\u00a0€, die Zuordnungen 265,44\u00a0€.');
     expect(uiText(financeConflict('noNoticeValidAt', { date: '2026-03-10' }))).toMatch(/10\.03\.2026.*Spenden → Bescheide/);
     expect(uiText(financeConflict('confirmationBeforeExemptionStart', { entryDate: '2025-03-01', exemptFrom: '2025-04-01' }))).toMatch(/01\.03\.2025.*01\.04\.2025.*Bescheide/);
-    // Zwischen Betrag und „€“ steht ein geschütztes Leerzeichen (Intl) — der Betrag bricht nicht um.
+    // Zwischen Betrag und „€“ steht ein geschütztes Leerzeichen (formatEuro) — der Betrag bricht nicht um; Minus ist U+2212.
     // Ein Datum bleibt derselbe Kalendertag, auch wenn der Verein weit westlich sitzt.
     const west = createTranslator({ locale: 'de', messages, timeZone: 'America/Los_Angeles' }) as unknown as typeof t;
     expect(toActionState(financeConflict('noNoticeValidAt', { date: '2026-03-10' }), west)).toMatchObject({ message: expect.stringContaining('10.03.2026') });
@@ -161,7 +162,7 @@ describe('Finanzfehler aus der Sprachdatei (A6)', () => {
       expect(message, code).not.toMatch(/\d{4}-\d{2}-\d{2}/);
       expect(message, code).toContain('26.09.2026');
     }
-    expect(uiText(financeConflict('cashWouldGoNegative', { account: 'Kasse 2026-09', date: '2026-09-26', amount: 1200 }))).toContain('Das Barkonto Kasse 2026-09 wäre am 26.09.2026 mit 12,00 € im Minus.');
+    expect(uiText(financeConflict('cashWouldGoNegative', { account: 'Kasse 2026-09', date: '2026-09-26', amount: -1200 }))).toContain('Das Barkonto Kasse 2026-09 stünde am 26.09.2026 bei \u221212,00\u00a0€.');
     expect(uiText(financeConflict('draftsInPeriod', { count: 2026 }))).toContain('noch 2026 Entwürfe');
   });
 });

@@ -12,7 +12,6 @@ import { certifiableLineExistsInternal, noticeExpiryInternal, noticeValidAtInter
 import { countToCorrectInternal } from './donations/to-correct';
 import { countOpenRawTransactionsInternal, importedThroughInternal, reconcileBankInternal } from './import/queries';
 import { listForeignMoney } from './import/transit';
-import { formatEuro } from './ledger/cash-check';
 import { valueAt } from './ledger/dated-values';
 import { getSetupStatus } from './ledger/setup';
 import { listEntries } from './ledger/entries';
@@ -20,6 +19,7 @@ import { overdueOpenItemsInternal } from './ledger/open-items';
 import { accountBalancesAt, purposeBalancesAt } from './ledger/queries';
 import { listVouchersWithoutEntry } from './ledger/vouchers';
 import { financeAccounts, financeEntries, financeExpenseClaims, financePartnerPayments, financePartnerProfiles, financePurposes, financePurposeTransfers, type FinanceAccountRow } from './schema';
+import { formatEuro } from './format';
 
 /**
  * Die zehn Kacheln der Startseite (F3b Task 6, F4 Task 6, F6a Task 5, Spec 9.7): je genau
