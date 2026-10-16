@@ -70,8 +70,8 @@ export function TypesPanel({
   const tModules = useTranslations('modules.names');
   // Stufe 1, Auftrag 6: der Name des Moduls, nie sein Schlüssel.
   const moduleName = (key: string) => nameOrEmpty(tModules.has(key) ? tModules(key) : null, key);
-  // Das Label eines Bereichs bringt das Modul mit, das ihn anmeldet (`dms.areas.<key>`); ohne fällt es auf den Schlüssel zurück.
-  const areaLabel = (key: string) => (tDms.has(`areas.${key}`) ? tDms(`areas.${key}`) : key);
+  // Das Label eines Bereichs bringt das Modul mit, das ihn anmeldet (`dms.areas.<key>`); ohne steht „—“, nie der Schlüssel.
+  const areaLabel = (key: string) => nameOrEmpty(tDms.has(`areas.${key}`) ? tDms(`areas.${key}`) : null, key);
   const permissionLabel = (permission: string) => nameOrEmpty(tPerm.has(`${permission}.label`) ? tPerm(`${permission}.label`) : null, permission);
 
   const [createOpen, setCreateOpen] = useState(false);

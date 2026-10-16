@@ -1,9 +1,11 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import path from 'node:path';
+import { coreModule } from '@kompass/core';
 import { createTestDeps } from '@kompass/core/testing';
 import { describe, expect, it } from 'vitest';
 import messages from '../messages/de.json';
 import { labelTranslator } from '../src/lib/record-labels';
+import { installedModules } from '@/modules';
 
 const ROOT = path.resolve(import.meta.dirname, '../../..');
 const MODULES = path.join(ROOT, 'packages/modules');
@@ -50,12 +52,19 @@ describe('Bezeichnungen von Haltern und Datensätzen (K2, Rest von Befund 49)', 
     ].filter((f) => { try { return statSync(f).isFile(); } catch { return false; } });
     // Ein Slug, ein Rollen- oder Typschlüssel im Text der Bezeichnung (`Projekt „${p.slug}“`, `Rolle ${row.role}`, `|| row.slug`).
     const KEY_IN_LABEL = /label:\s*(?:`[^`]*\$\{[^}]*\b(?:slug|role|key|\w+Key)\b[^}]*\}|[^,]*(?:\|\||\?\?)\s*\w+\.slug\b)/;
-    // Variablen der Webseite: Das Template-Schema benennt sie; ohne Beschriftung bleibt der Schlüssel des Templates (Stufe 1 offen).
-    const ALLOWED = ['packages/modules/site/src/references.ts'];
+    // Seit 0.2.12 ohne Ausnahme: Auch eine Variable der Webseite ohne Beschriftung nennt „—“, nicht ihren Schlüssel.
     const offenders = checked
-      .filter((file) => !ALLOWED.includes(path.relative(ROOT, file)))
       .flatMap((file) => code(file).split('\n').filter((line) => KEY_IN_LABEL.test(line)).map((line) => `${path.relative(ROOT, file)}: ${line.trim()}`));
     expect(offenders).toEqual([]);
+  });
+
+  it('jeder Bereich der Akte hat einen Namen, und die Einstellungen fallen nie auf den Schlüssel zurück (0.2.12)', () => {
+    const areas = [coreModule, ...installedModules].flatMap((m) => (m.documentAreas ?? []).map((a) => a.key));
+    expect(areas.length).toBeGreaterThan(0);
+    expect(areas.filter((key) => !has(`dms.areas.${key}`))).toEqual([]);
+    const panel = code(path.join(ROOT, 'apps/kompass/src/app/(shell)/admin/dms/types-panel.tsx'));
+    expect(panel).not.toMatch(/areaLabel = [^\n]*: key\)/);
+    expect(panel).toMatch(/areaLabel = [^\n]*nameOrEmpty\(/);
   });
 
   it('jeder Schlüssel, den ein Modul nennt, steht in der Sprachdatei', () => {

@@ -18,7 +18,7 @@ const SOURCE = `
 import { defineTemplate, asset, text } from '@kompass/site-template';
 export default defineTemplate({
   name: 'X', locales: ['de'],
-  variables: { heroImage: asset({ label: 'Titelbild' }) },
+  variables: { heroImage: asset({ label: 'Titelbild' }), stageImage: asset() },
   collections: {
     news: { label: 'News', slug: true, fields: { title: text({ localized: true }), image: asset({ label: 'Bild' }) } },
   },
@@ -54,6 +54,9 @@ describe('siteMediaReferences', () => {
     expect(all.filter((h) => h.assetId === b.id).map((h) => h.label)).toEqual(['Eintrag „Markt“ in „News“']);
     const hits = all.filter((h) => h.assetId === a.id);
     expect(hits.map((h) => h.label).sort()).toEqual(['Eintrag „Fest“ in „News“', 'Variable „Titelbild“']);
+    // Ohne Beschriftung im Template: „—“, nie der Schlüssel der Variable (Namen statt Schlüssel, 0.2.12).
+    unwrap(await setValues(deps, ctx, { values: { stageImage: b.id } }));
+    expect(siteMediaReferences(deps, new Set([b.id])).filter((h) => h.entity === 'siteValue').map((h) => h.label)).toEqual(['Variable „\u2014“']);
     const variable = hits.find((h) => h.entity === 'siteValue')!;
     expect(variable.href).toBe('/site/variables');
     const entry = hits.find((h) => h.entity === 'siteEntry')!;
@@ -86,7 +89,7 @@ export default defineTemplate({
     expect(siteMediaReferences(deps, new Set([a.id])).map((h) => h.label).sort()).toEqual([
       'Eintrag „Rita Beispiel“ in „Team“',
       'Eintrag „Schlichter Titel“ in „Notizen“',
-      'Variable „logo“',
+      'Variable „\u2014“',
     ]);
   });
 });
