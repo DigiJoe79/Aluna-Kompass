@@ -47,7 +47,8 @@ export const DEFAULT_THEME: Theme = {
     'on-primary': { light: '#FFFFFF', dark: '#0D1A1D' },
     'on-primary-muted': { light: '#C6DDE2', dark: '#2C4A50' },
     line: { light: '#E4E4E0', dark: '#2C3138' },
-    'line-2': { light: '#EEEEEA', dark: '#22262C' },
+    // Der Trenner: Tabellenzeilen und Führungslinien im Ordnerbaum (Designer 2026-10-16), dunkel ≥ 1,6:1 zur Fläche.
+    'line-2': { light: '#EEEEEA', dark: '#3E444C' },
     'line-strong': { light: '#C8C8C2', dark: '#414851' },
     'focus-ring': { light: '#2F5D68', dark: '#74B4C0' },
     'hover-surface': { light: '#EDEDE9', dark: '#262B31' },

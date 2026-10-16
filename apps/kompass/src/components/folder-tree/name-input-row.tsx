@@ -105,7 +105,7 @@ export function NameInputRow({ level, density, initial = '', chevron = null, che
   return (
     <div role="none" data-name-input className={cn(rowClass(density), 'text-ink')} style={{ paddingLeft: base + level * indent }}>
       {Array.from({ length: level }, (_, i) => (
-        <span key={i} aria-hidden className="pointer-events-none absolute -top-[3px] -bottom-[3px] w-px bg-tree-guide" style={{ left: base + i * indent + chevronWidth / 2 - 1 }} />
+        <span key={i} aria-hidden className="pointer-events-none absolute -top-[3px] -bottom-[3px] w-px bg-line-2" style={{ left: base + i * indent + chevronWidth / 2 - 1 }} />
       ))}
       <span aria-hidden className={cn('grid shrink-0 place-items-center text-muted-ink', density === 'touch' ? 'h-9' : 'h-7')} style={{ width: chevronWidth }}>
         {chevron ? <ChevronRight className={cn('size-3.5', chevron === 'open' && 'rotate-90')} strokeWidth={2.4} /> : null}

@@ -176,7 +176,7 @@ export function FolderTreeRow({ node, level, isFolder, isExpanded, isSelected, d
           und 3 px über den Rand hinaus (2 px Rahmen + 1 px Zeilenabstand),
           damit sie bei umbrochenen Namen und zwischen den Zeilen durchlaufen. */}
       {Array.from({ length: level }, (_, i) => (
-        <span key={i} aria-hidden className="pointer-events-none absolute -top-[3px] -bottom-[3px] w-px bg-tree-guide" style={{ left: base + i * indent + chevron / 2 - 1 }} />
+        <span key={i} aria-hidden className="pointer-events-none absolute -top-[3px] -bottom-[3px] w-px bg-line-2" style={{ left: base + i * indent + chevron / 2 - 1 }} />
       ))}
       {isFolder && (isLockedOpen || placeholder) ? (
         // Kein Knopf, wo ein Klick nichts bewirken darf: Der Weg zum gewählten

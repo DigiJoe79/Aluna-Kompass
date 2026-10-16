@@ -59,4 +59,15 @@ describe('theme token values', () => {
     expect(pairs).toEqual(expect.arrayContaining(['color-drop-ink/color-drop-bg:4.5', 'color-drop-ring/surface:3', 'color-drop-blocked-ring/surface:3']));
     expect(checkThemeContrast(DEFAULT_THEME)).toEqual([]);
   });
+
+  // Designer 2026-10-16, Teil 3 Nr. 4: ein Trenner-Token für Tabellenzeilen und Ordnerbaum, im Dunkeln ≥ 1,6:1 zur Fläche.
+  it('checks the separator token line-2 against the surface in dark mode', () => {
+    const pairs = CONTRAST_PAIRS.map((p) => `${p.fg}/${p.bg}:${p.minimum}`);
+    expect(pairs).toEqual(expect.arrayContaining(['line-2/surface:1.6', 'line-2/table-zebra:1.6']));
+    expect(checkThemeContrast(DEFAULT_THEME)).toEqual([]);
+    const faint = { ...DEFAULT_THEME, tokens: { ...DEFAULT_THEME.tokens, 'line-2': { light: '#FAFAFA', dark: '#22262C' } } };
+    const findings = checkThemeContrast(faint).filter((f) => f.fg === 'line-2');
+    // Hell gilt die Schwelle nicht: Dort ist die Fläche weiß, und ein Trenner bleibt bewusst leise.
+    expect(findings.map((f) => `${f.bg}:${f.mode}`)).toEqual(['surface:dark', 'table-zebra:dark']);
+  });
 });

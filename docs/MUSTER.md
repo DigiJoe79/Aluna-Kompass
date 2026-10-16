@@ -98,6 +98,7 @@ Bausteine: `status-badge.tsx`, `finance/entry-state-badge.tsx`.
 ## G — Listen
 
 - `ui/table` (`Table`, `TableHeader`, `TableBody`, `TableRow`, `TableHead`, `TableCell`) ohne eigene Kopf-, Zebra-, Hover- oder Höhenklassen; Aufrufstellen ergänzen nur Breiten und Ausrichtung. Zeilenhöhe und Zellpolster folgen der Dichte im Profil.
+- **Trenner:** Zeilen einer Tabelle und die Führungslinien im Ordnerbaum tragen ein Token, `line-2` (Designer 2026-10-16); im Dunkeln ≥ 1,6:1 zur Fläche (`CONTRAST_PAIRS`).
 - **Öffnen:** Das Element in der ersten Inhaltsspalte trägt eine unsichtbare Fläche über die ganze Zeile — `RowLink` (navigiert; echter Link, Cmd-/Strg-Klick öffnet einen Tab) bzw. `RowButton` (klappt auf oder öffnet ein Seitenfenster; mit `aria-expanded` bzw. `aria-haspopup="dialog"`). **Kein `onClick`, `onKeyDown`, `tabIndex` oder `cursor-pointer` an einer Zeile.**
 - Haken, Schalter, Knöpfe, Menüs und Links in anderen Zellen liegen über der Fläche und öffnen die Zeile nicht nebenbei (macht `TableCell` selbst). Eine Zelle mit Text zum Kopieren (IBAN, Belegnummer, Betrag) bekommt `selectable`.
 - Gruppenzeilen über `TableGroupRow colSpan` (ein Kopf über alle Spalten der Gruppe).

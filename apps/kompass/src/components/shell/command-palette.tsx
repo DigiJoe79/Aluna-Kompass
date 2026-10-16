@@ -78,7 +78,8 @@ export function CommandPalette({ groups, permissions, helpPages = [] }: { groups
                 </CommandGroup>
               ))}
           </CommandList>
-          <div className="flex items-center gap-4 border-t border-line bg-surface-2 px-3 py-2 text-hint text-muted-ink">
+          {/* Der Fuß reicht bis an den Rand: `-mx-1 -mb-1` hebt das Polster von `Command` auf (01 B18). */}
+          <div className="-mx-1 -mb-1 flex items-center gap-4 border-t border-line bg-surface-2 px-3 py-2 text-hint text-muted-ink">
             <span>↑↓ {t('palette.select')}</span>
             <span>↵ {t('palette.open')}</span>
             <span>esc {t('palette.close')}</span>

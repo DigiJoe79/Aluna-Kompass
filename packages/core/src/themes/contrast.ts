@@ -23,6 +23,8 @@ export interface ContrastPair {
   fg: ThemeToken;
   bg: ThemeToken;
   minimum: number;
+  /** Nur in diesen Modi geprüft; ohne Angabe hell und dunkel. */
+  modes?: readonly ('light' | 'dark')[];
 }
 
 /** Textpaare 4.5:1 (AA), Platzhalter und Fokusring 3:1. Alle Paare bestehen im Default-Theme. */
@@ -61,6 +63,10 @@ export const CONTRAST_PAIRS: readonly ContrastPair[] = [
   { fg: 'color-drop-ink', bg: 'color-drop-bg', minimum: 4.5 },
   { fg: 'color-drop-ring', bg: 'surface', minimum: 3 },
   { fg: 'color-drop-blocked-ring', bg: 'surface', minimum: 3 },
+  // Trenner (Tabellenzeilen, Führungslinien im Ordnerbaum): im Dunkeln ≥ 1,6:1 zur Fläche (Designer 2026-10-16). Hell
+  // bleibt er bewusst leise.
+  { fg: 'line-2', bg: 'surface', minimum: 1.6, modes: ['dark'] },
+  { fg: 'line-2', bg: 'table-zebra', minimum: 1.6, modes: ['dark'] },
 ];
 
 export interface ContrastFinding {
@@ -74,7 +80,7 @@ export interface ContrastFinding {
 export function checkThemeContrast(theme: Theme): ContrastFinding[] {
   const findings: ContrastFinding[] = [];
   for (const pair of CONTRAST_PAIRS) {
-    for (const mode of ['light', 'dark'] as const) {
+    for (const mode of pair.modes ?? (['light', 'dark'] as const)) {
       const fg = theme.tokens[pair.fg][mode];
       const bg = theme.tokens[pair.bg][mode];
       if (relativeLuminance(fg) === null || relativeLuminance(bg) === null) continue;
