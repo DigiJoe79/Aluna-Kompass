@@ -140,6 +140,21 @@ describe('FormActionBar', () => {
       expect(screen.getByRole('link', { name: 'Abbrechen' })).toBeTruthy();
     });
 
+    // Z7 (Designer Stufe 2 Nr. 7): Beim Anlegen steht statt des Zählers die Pflichtfeld-Legende; die Rückfrage beim
+    // Verlassen bleibt.
+    it('beim Anlegen kein Zähler, sondern „* Pflichtfeld“ — auch mit Eingaben', () => {
+      render(<form><input name="a" aria-label="a" required /><FormActionBar mode="create" back={{ href: '/x', label: 'Zurück' }} /></form>, { wrapper });
+      fireEvent.input(screen.getByLabelText('a'), { target: { value: 'y' } });
+      expect(screen.queryByText(/noch nicht gespeichert/)).toBeNull();
+      expect(screen.getByText('* Pflichtfeld')).toBeTruthy();
+    });
+
+    it('ein bestehender Datensatz mit `create` (Prüfung) zählt weiter', () => {
+      render(<form><input name="a" aria-label="a" /><FormActionBar mode="create" loadedVersion="v1" back={{ href: '/x', label: 'Zurück' }} /></form>, { wrapper });
+      fireEvent.input(screen.getByLabelText('a'), { target: { value: 'y' } });
+      expect(screen.getByText('1 Änderung noch nicht gespeichert')).toBeTruthy();
+    });
+
     it('Buchungsmaske (alwaysDiscard): Verwerfen bleibt auch beim Anlegen, gesperrt ohne Eingabe', () => {
       const { rerender } = render(<form><FormActionBar mode="create" back={{ href: '/x', label: 'Zurück' }} count={0} countHidden alwaysDiscard /></form>, { wrapper });
       expect(screen.getByRole('button', { name: 'Verwerfen' }).hasAttribute('disabled')).toBe(true);

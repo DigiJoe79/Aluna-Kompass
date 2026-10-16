@@ -375,12 +375,16 @@ export function FormActionBar({
   // Nur einer der beiden Nebenknöpfe: Am Telefon nimmt er die ganze Zeile.
   const lone = Number(showDiscard) + Number(!!(cancel || back)) === 1;
 
+  // Der Zähler nur beim Bearbeiten: Beim Anlegen ist jede Eingabe neu, dort steht die Pflichtfeld-Legende (Designer
+  // Stufe 2 Nr. 7). Die Rückfrage beim Verlassen (`guarded`) zählt trotzdem mit. Ein bestehender Datensatz
+  // (`loadedVersion`), der nur `create` nutzt, damit er auch ohne Änderung abschickt (Prüfung der Tiere), zählt weiter.
+  const counts = mode === 'edit' || (mode === 'create' && loadedVersion !== undefined);
   const line =
     nothing ? (
       <span aria-live="polite" className="text-meta text-ink-2">
         {t('nothingChanged')}
       </span>
-    ) : mode !== 'run' && changed > 0 && !countHidden ? (
+    ) : counts && changed > 0 && !countHidden ? (
       <span aria-live="polite" className="text-meta font-semibold text-warning">
         {t('changesPending', { count: changed })}
       </span>
