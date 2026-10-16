@@ -49,7 +49,7 @@ describe('AcceptDialog (Board 6a/6b)', () => {
   it('preselects publishing for a new dog and sends the follow-up only when ticked', async () => {
     render(<AcceptDialog {...base} kind="create" title="Lotte anlegen" willChange={false} photoCount={3} onAccept={accept} />, { wrapper: Intl });
     expect(screen.getByText('Wird als „angenommen“ an Tierbörse zurückgemeldet. 3 Fotos gehen in die Mediathek.')).toBeTruthy();
-    expect(screen.getByRole('radio', { name: /Veröffentlichen/ }).getAttribute('aria-checked')).toBe('true');
+    expect(screen.getByRole('radio', { name: /Publizieren/ }).getAttribute('aria-checked')).toBe('true');
     fireEvent.click(screen.getByRole('button', { name: 'Annehmen' }));
     await waitFor(() => expect(accept).toHaveBeenCalledWith({ publish: true, adoptedYear: undefined, followUp: undefined }));
     accept.mockClear();

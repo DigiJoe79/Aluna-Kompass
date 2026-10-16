@@ -47,7 +47,7 @@ test.describe('media library', () => {
   test('opens the detail dialog and blocks deleting an asset that is in use', async ({ page }) => {
     await page.goto('/projects');
     await page.getByRole('link', { name: 'Projekt anlegen' }).click();
-    await page.getByLabel('Slug (URL-Teil)').fill('hofprojekt');
+    await page.getByLabel('URL-Teil').fill('hofprojekt');
     await page.locator('[name="name.de"]').fill('Hofprojekt');
     await page.locator('[name="summary.de"]').fill('Kurztext.');
     await page.getByRole('button', { name: 'Bild: Wählen' }).click();

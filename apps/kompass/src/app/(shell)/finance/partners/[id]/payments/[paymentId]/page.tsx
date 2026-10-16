@@ -81,7 +81,7 @@ export default async function PartnerPaymentPage({ params }: { params: Promise<{
         <PageHeader
           title={t('heading', { label: payment.number ?? tState(payment.state) })}
           description={partner.contactName}
-          back={{ href: `/finance/partners/${id}`, label: t('back') }}
+          back={{ href: `/finance/partners/${id}`, label: partner.contactName }}
           actions={payment.state === 'draft' && canWrite ? <PaymentActions paymentId={payment.id} partnerId={id} /> : undefined}
         />
       }

@@ -20,10 +20,10 @@ export default async function AnimalEditPage(props: { params: Promise<{ id: stri
   const { id } = await props.params;
   const q = await props.searchParams;
   const t = await getTranslations('animals.list');
-  const c = await getTranslations('common');
+  const nav = await getTranslations('nav');
   // Die Liste, aus der man kam, reist in der Adresse mit: Der Rückweg führt in dieselbe Auswahl.
   const query = listQueryString(q);
-  const back = { href: `/animals${query ? `?${query}` : ''}`, label: c('backToList') };
+  const back = { href: `/animals${query ? `?${query}` : ''}`, label: nav('animals.list') };
   // Die Stellen der Webseite für die Fotos (Spec Ausschnitt für alle Bilder § 4): Hauptfoto aus dem Template, sonst die
   // Einstellung „Bildausschnitt“; die übrigen nach `animals.gallery`. Der Blickpunkt kommt immer aus der Einstellung.
   const { focusX, focusY } = effectivePhotoFrame(deps);

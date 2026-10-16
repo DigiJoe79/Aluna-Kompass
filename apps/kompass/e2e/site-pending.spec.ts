@@ -24,7 +24,7 @@ test('a public change shows as not published in the header, its menu and on the 
   // Ein unveröffentlichter Eintrag ändert die Webseite nicht.
   await page.goto('/site/c/news/new');
   await waitForHydration(page, '[name="title.de"]');
-  await page.getByLabel('Slug (URL-Teil)').fill('sommerfest');
+  await page.getByLabel('URL-Teil').fill('sommerfest');
   await page.locator('[name="title.de"]').fill('Sommerfest 2026');
   await page.getByRole('button', { name: 'Speichern' }).click();
   await expect(page).toHaveURL('/site/c/news');
@@ -33,7 +33,7 @@ test('a public change shows as not published in the header, its menu and on the 
 
   // Veröffentlicht: Die Kopfzeile zählt sofort mit (der Schalter fragt den Poller an).
   await waitForHydration(page, '[role="switch"]');
-  const toggle = page.getByRole('row', { name: /Sommerfest 2026/ }).getByRole('switch', { name: 'Veröffentlicht' });
+  const toggle = page.getByRole('row', { name: /Sommerfest 2026/ }).getByRole('switch', { name: 'Publiziert' });
   await toggle.click();
   await expect(toggle).toBeChecked();
   const indicator = page.getByTestId('site-pending-menu');

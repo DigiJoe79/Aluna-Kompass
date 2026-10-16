@@ -101,7 +101,7 @@ test.describe('finance donation run', () => {
     const range = (await footer.getByTestId('run-number-range').textContent())!.trim();
     const [, first, last] = /^ZWB-\d{4}-(\d{3}) bis ZWB-\d{4}-(\d{3})$/.exec(range) ?? [];
     expect(Number(last) - Number(first), range).toBe(3);
-    await expect(footer).toContainText('Ausstellen kann nur ein Mensch');
+    await expect(footer).toContainText('Ausstellen geht nur hier in Kompass');
     await expect(footer.getByRole('button', { name: '4 Bestätigungen ausstellen' })).toBeEnabled();
 
     // Ausschließen rechnet neu und steht in der Adresse — ein Neuladen zeigt dieselbe Vorschau.

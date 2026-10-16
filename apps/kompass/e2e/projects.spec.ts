@@ -45,7 +45,7 @@ test.describe('projects', () => {
   test('create with an external link, then publish from the list', async ({ page }) => {
     await page.goto('/projects');
     await page.getByRole('link', { name: 'Projekt anlegen' }).click();
-    await page.getByLabel('Slug (URL-Teil)').fill('grundversorgung');
+    await page.getByLabel('URL-Teil').fill('grundversorgung');
     await page.locator('[name="name.de"]').fill('Grundversorgung');
     await page.getByLabel('Typ').selectOption('ongoing');
     await page.getByRole('button', { name: 'Verweis hinzufügen' }).click();
@@ -80,7 +80,7 @@ test.describe('projects', () => {
 
     await page.goto('/projects');
     await page.getByRole('link', { name: 'Projekt anlegen' }).click();
-    await page.getByLabel('Slug (URL-Teil)').fill('bestandsprojekt');
+    await page.getByLabel('URL-Teil').fill('bestandsprojekt');
     await page.locator('[name="name.de"]').fill('Bestandsprojekt');
     await page.getByRole('button', { name: 'Bild: Wählen' }).click();
     const chooser = page.getByRole('dialog', { name: 'Bild wählen' });
@@ -96,7 +96,7 @@ test.describe('projects', () => {
   test('löscht ein reines Verweis-Projekt, solange es nicht veröffentlicht ist', async ({ page }) => {
     await page.goto('/projects');
     await page.getByRole('link', { name: 'Projekt anlegen' }).click();
-    await page.getByLabel('Slug (URL-Teil)').fill('partneraktion');
+    await page.getByLabel('URL-Teil').fill('partneraktion');
     await page.locator('[name="name.de"]').fill('Partneraktion');
     await page.getByLabel('Typ').selectOption('shortTerm');
     await page.getByRole('button', { name: 'Speichern' }).click();
@@ -130,7 +130,7 @@ test.describe('projects', () => {
   test('Speichern ohne Änderung sagt „Nichts geändert“; auf dem Telefon Speichern oben, Verwerfen und Abbrechen darunter nebeneinander', async ({ page }) => {
     await page.goto('/projects');
     await page.getByRole('link', { name: 'Projekt anlegen' }).click();
-    await page.getByLabel('Slug (URL-Teil)').fill('telefonprojekt');
+    await page.getByLabel('URL-Teil').fill('telefonprojekt');
     await page.locator('[name="name.de"]').fill('Telefonprojekt');
     await page.getByRole('button', { name: 'Speichern' }).click();
     await expect(page).toHaveURL(/\/projects\/[A-Z0-9]+$/);
@@ -167,7 +167,7 @@ test.describe('projects', () => {
   test('Konflikt beim Speichern: zwei Auswege, die eigenen Eingaben erscheinen neben dem neuen Stand', async ({ page, context }) => {
     await page.goto('/projects');
     await page.getByRole('link', { name: 'Projekt anlegen' }).click();
-    await page.getByLabel('Slug (URL-Teil)').fill('konfliktprojekt');
+    await page.getByLabel('URL-Teil').fill('konfliktprojekt');
     await page.locator('[name="name.de"]').fill('Konfliktprojekt');
     await page.getByRole('button', { name: 'Speichern' }).click();
     await expect(page).toHaveURL(/\/projects\/[A-Z0-9]+$/);

@@ -16,9 +16,9 @@ export default async function NewPartnerPage() {
   if (!hasPermission(ctx, 'finance.read')) return <Page width="task"><ForbiddenCard permission="finance.read" /></Page>;
   if (!hasPermission(ctx, 'finance.entriesWrite')) return <Page width="task"><ForbiddenCard permission="finance.entriesWrite" /></Page>;
   const t = await getTranslations('finance.partners.list');
-  const c = await getTranslations('common');
+  const nav = await getTranslations('nav');
   return (
-    <Page width="task" header={<PageHeader title={t('create.title')} back={{ href: '/finance/partners', label: c('backToList') }} />}>
+    <Page width="task" header={<PageHeader title={t('create.title')} back={{ href: '/finance/partners', label: nav('finance.partners') }} />}>
       <PartnerCreateForm />
     </Page>
   );

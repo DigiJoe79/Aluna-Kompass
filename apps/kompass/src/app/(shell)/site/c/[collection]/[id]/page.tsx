@@ -21,8 +21,7 @@ export default async function EntryPage(props: { params: Promise<{ collection: s
   if (!col) notFound();
 
   const t = await getTranslations('site.entries');
-  const c = await getTranslations('common');
-  const back = { href: `/site/c/${collection}`, label: c('backToList') };
+  const back = { href: `/site/c/${collection}`, label: col.label };
   const locales = deps.locales();
 
   if (id === 'new') {

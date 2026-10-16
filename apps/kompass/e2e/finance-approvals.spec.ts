@@ -98,7 +98,7 @@ test.describe('finance approvals (D3)', () => {
     await expect(position(page, 2)).toContainText('Musterstadt – Beispielstadt, 84 km');
     await expect(detail(page).getByTestId('receipt-preview')).toBeVisible();
     await expect(footer(page)).toContainText('Nach der Freigabe entsteht eine offene Zahlung an Tomas Leitner über 40,99 €.');
-    await expect(footer(page)).toContainText('Freigeben kann nur ein Mensch.');
+    await expect(footer(page)).toContainText('Freigeben geht nur hier in Kompass, nicht über einen Agenten.');
 
     // Ohne Kategorie keine Freigabe — die Ablehnung nennt die Position.
     await footer(page).getByRole('button', { name: 'Freigeben' }).click();

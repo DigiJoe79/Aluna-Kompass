@@ -31,7 +31,7 @@ test('an API token created in the profile drives the MCP endpoint and is audited
   await page.keyboard.press('Escape');
   const row = page.getByRole('table').getByRole('row').nth(1);
   await expect(row).toContainText('Einstellung');
-  await expect(row).toContainText('MCP');
+  await expect(row).toContainText('Agent'); // Kanal „Agent“ (MUSTER § Begriffe)
   await page.goto('/admin/settings');
   await expect(page.getByLabel('Ort')).toHaveValue('Musterstadt');
 });

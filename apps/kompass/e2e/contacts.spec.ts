@@ -95,7 +95,7 @@ test.describe('contacts', () => {
     await page.getByRole('button', { name: 'Rolle hinzufügen' }).click();
     await page.getByRole('dialog').getByLabel('Rolle').selectOption('interested');
     await page.getByRole('dialog').getByLabel('Seit').fill('2026-03-15');
-    await page.getByRole('dialog').getByRole('button', { name: 'Übernehmen' }).click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Speichern' }).click();
     await expect(page.getByRole('listitem').filter({ hasText: 'Interessiert' })).toBeVisible();
 
     // Solange die Rolle läuft, hält sie den Kontakt — „Kontakt löschen …“ bleibt im Menü, der Dialog nennt die Frist

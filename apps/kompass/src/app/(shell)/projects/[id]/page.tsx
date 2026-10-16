@@ -20,8 +20,9 @@ export default async function ProjectEditPage(props: { params: Promise<{ id: str
   const t = await getTranslations('projects');
   const locales = deps.locales();
   const leading = locales[0] ?? 'de';
-  const c = await getTranslations('common');
-  const back = { href: '/projects', label: c('backToList') };
+  const nav = await getTranslations('nav');
+  // „← Elternseite“ (MUSTER § Begriffe): der Name der Liste, nicht „Zurück zu …“.
+  const back = { href: '/projects', label: nav('projects.list') };
   if (id === 'new') return (<Page width="standard" header={<PageHeader title={t('create')} back={back} />}><ProjectForm project={null} locales={locales} imagePlaces={imagePlaces(deps, 'projects.image')} /></Page>);
   const project = await getProject(deps, ctx, id);
   if (!project.ok) notFound();

@@ -120,7 +120,7 @@ test.describe('finance donations', () => {
 
     const dialog = await openIssueDialog(page, 'Lukas Hofmann', '36,00 €');
     await expect(dialog.getByTestId('issue-signature-mode')).toHaveText('mit Unterschriftsfeld');
-    await expect(dialog.getByText('Ausstellen kann nur ein Mensch — nicht über ein Werkzeug für Agenten.')).toBeVisible();
+    await expect(dialog.getByText('Ausstellen geht nur hier in Kompass, nicht über einen Agenten.')).toBeVisible();
     await dialog.getByRole('button', { name: 'Ausstellen', exact: true }).click();
     await expect(page.getByText(/Bestätigung ZWB-\S+ ausgestellt/)).toBeVisible();
 

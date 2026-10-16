@@ -86,7 +86,7 @@ test.describe('Vorschläge prüfen', () => {
     await tiles.nth(0).getByRole('button', { name: 'Als Titelbild' }).click();
     await page.getByRole('button', { name: 'Annehmen …' }).click();
     const dialog = page.getByRole('dialog');
-    await expect(dialog.getByRole('radio', { name: /Veröffentlichen/ })).toBeChecked();
+    await expect(dialog.getByRole('radio', { name: /Publizieren/ })).toBeChecked();
     await dialog.getByRole('button', { name: 'Annehmen', exact: true }).click();
     await expect(dialog).toBeHidden();
     await page.goto('/animals?text=Wilma');

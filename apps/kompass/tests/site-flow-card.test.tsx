@@ -247,13 +247,13 @@ describe('none: what changed since the last publish (Board 8d, Plan C)', () => {
   it('names four records with links and how many more; one taken off the website without a link', () => {
     render(<PublishFlowCard {...props({ kind: 'none', lastPublishedAt: '2026-09-28T08:00:00.000Z' })} />, { wrapper: withPending(7) });
     const text = screen.getByTestId('site-pending-since').textContent;
-    expect(text).toBe('Seit dem letzten Publish am 28.09.2026 geändert: Bruno, Kira (von der Webseite genommen), Nala (neu), Sommerfest 2026 und 3 weitere.');
+    expect(text).toBe('Seit dem letzten Publizieren am 28.09.2026 geändert: Bruno, Kira (von der Webseite genommen), Nala (neu), Sommerfest 2026 und 3 weitere.');
     expect(screen.getByRole('link', { name: 'Bruno' }).getAttribute('href')).toBe('/animals/A1');
     expect(screen.queryByRole('link', { name: 'Kira' })).toBeNull();
   });
   it('joins the last two with „und“ when nothing more follows', () => {
     render(<PublishFlowCard {...props({ kind: 'none', lastPublishedAt: null })} />, { wrapper: withPending(2, items.slice(0, 2)) });
-    expect(screen.getByTestId('site-pending-since').textContent).toBe('Seit dem letzten Publish am 28.09.2026 geändert: Bruno und Kira (von der Webseite genommen).');
+    expect(screen.getByTestId('site-pending-since').textContent).toBe('Seit dem letzten Publizieren am 28.09.2026 geändert: Bruno und Kira (von der Webseite genommen).');
   });
   it('keeps the old sentence without changes', () => {
     render(<PublishFlowCard {...props({ kind: 'none', lastPublishedAt: null })} />, { wrapper: withPending(0, []) });

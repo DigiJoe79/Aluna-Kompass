@@ -270,6 +270,33 @@ Das Änderungsprotokoll speichert, was geschah — Aktion, Datensatz, Werte —,
 
 Was ein Mensch liest, nennt Namen, nie Schlüssel, Slugs oder Pfade (Stufe 1 der Durchsicht 0.2.11, Joe 2026-10-11): Module über `modules.names`, Rechte über `permissions.keys.<key>.label`, Dokumentarten über ihr `label`, Dokumentvorlagen über `documents.create.templates`, Kontaktrollen über `contacts.roleNames` (in Bezeichnungen von Haltern als Parameter `contactRole`, den `labelTranslator` auflöst), Projekte über ihren Namen in der Leitsprache. Fehlt ein Name, steht `EMPTY`, nie der Schlüssel: in Modulen über `nameOrEmpty(name)` aus `@kompass/core` (rein), in der App über `nameOrEmpty(name, key)` aus `lib/name-or-empty.ts`, das in der Entwicklung zusätzlich warnt. Gewollt bleibt der Schlüssel nur **unter** dem Klartext über `KeyLine`. Ausgenommen sind vorerst DMS- und Mediathek-Ordner, die keinen Namen haben (Pfadsegment). Wächter `record-label-keys.test.ts` (Haken der Module) und `document-template-labels.test.ts`.
 
+## Begriffe
+
+Ein Wort je Sache (Designer 2026-10-16, Stufe 2 Nr. 10, mit Joes Nachtrag). Gilt für jeden Text, den ein Mensch liest; Schlüssel, Namen der MCP-Werkzeuge und ihre englischen Beschreibungen (für Agenten) sowie Protokoll-Schlüssel bleiben, wie sie sind.
+
+| Statt | Immer | Bemerkung |
+|---|---|---|
+| MCP, MCP-Client | Agent, Agenten | „MCP“ nur auf der Einrichtungsseite der Schnittstelle und bei den API-Tokens; der Kanal im Protokoll heißt „Agent“ (Schlüssel `mcp` bleibt) |
+| Publish, Veröffentlichen | Publizieren | Status: „publiziert“, „nicht publiziert“ |
+| Übernehmen, Sichern, Anwenden | Speichern | |
+| Ausgeliefert, Standard, Default | Vorgabe | |
+| Löschen (wenn nur Verknüpfung) | Entfernen | Löschen nur, wenn etwas verschwindet |
+| Stornieren, Widerrufen (Buchung) | Zurücknehmen | Es entsteht eine Gegenbuchung |
+| Zurücknehmen, Widerrufen (Dokument) | Stornieren | Das Dokument wird ungültig, die Nummer bleibt vergeben |
+| Löschen, Stornieren (API-Token) | Widerrufen | Nur für Tokens |
+| Staging | Test | Umgebungsbalken |
+| Slug | URL-Teil | Nur im Formular, sonst nicht zeigen. Bei Projekten und Webseiten-Einträgen bleibt er dort änderbar; Tiere bilden ihn selbst (Joe 2026-10-16) |
+| Key, ID | (nicht zeigen) | Ausnahme: `KeyLine` auf Einrichtungsseiten |
+| Versionsnummer im Fließtext | (nicht zeigen) | nur in „Über“, Fußzeile, Umgebungsbalken |
+| „Freigeben kann nur ein Mensch“ | „Freigeben geht nur hier in Kompass, nicht über einen Agenten.“ | Ebenso Festschreiben und Ausstellen. Ohne Recht kommt die eigene Meldung |
+| OK, Ja (Knopf) | Verb der Handlung | „Löschen“, „Ablegen“, nie „OK“ |
+| Neu, Hinzufügen (Anlegen) | „… anlegen“ | „Hinzufügen“ nur, wenn Bestehendes verknüpft wird |
+| Zurück zu X, ← X | „← X“ | Pfeil plus Name der Elternseite, ohne „Zurück zu“ (`PageHeader back` setzt den Pfeil, `label` ist der Name) |
+
+Knopfwörter sind Verben im Infinitiv, ohne Objekt, wenn der Bezug klar ist („Speichern“, nicht „Kontakt speichern“). Ausnahme: Seiten mit mehr als einer Primäraktion.
+
+Wächter `patterns/terms.test.ts` auf `messages/de.json`: verbotene Wörter und Muster, Ausnahmen je Schlüssel mit Grund und gezählt.
+
 ## Fachbausteine und Grundbausteine
 
 Was keinem der Abschnitte oben gehört, steht im Wächter `component-inventory.test.ts` mit seiner Zuordnung: Bausteine der Hülle (`shell/`), der Ordnerbäume (`folder-tree/`), der Mediathek (`media/`), der Webseite (`site/`), der Finanzen (`finance/`) und die Grundbausteine unter `ui/`. Eine neue Datei unter `src/components/` macht diesen Test rot: Sie wird dort eingeordnet, mit der Freigabe, die sie nennt.

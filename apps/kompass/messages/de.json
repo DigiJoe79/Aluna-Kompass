@@ -73,7 +73,7 @@
     "changesPending": "{count, plural, one {# Änderung noch nicht gespeichert} other {# Änderungen noch nicht gespeichert}}",
     "lastSaved": "zuletzt gespeichert am {date} von {name}",
     "audited": "Wird protokolliert.",
-    "backToList": "Zurück zur Übersicht",
+    "backToList": "Übersicht",
     "requiredLegend": "* Pflichtfeld",
     "nothingChanged": "Nichts geändert",
     "retry": "Erneut versuchen",
@@ -462,8 +462,8 @@
     "previewEmpty": "Noch kein Text.",
     "untranslated": "unübersetzt",
     "localizedName": "{label} ({language})",
-    "published": "Veröffentlicht",
-    "unpublished": "Nicht veröffentlicht",
+    "published": "Publiziert",
+    "unpublished": "Nicht publiziert",
     "moveUp": "Nach oben",
     "moveDown": "Nach unten",
     "choose": "Wählen",
@@ -473,7 +473,7 @@
     "moduleInactiveText": "Aktivieren Sie das Modul unter Einrichtung → Module. Vorhandene Inhalte bleiben erhalten.",
     "openModules": "Module öffnen",
     "saved": "Gespeichert.",
-    "slug": "Slug (URL-Teil)",
+    "slug": "URL-Teil",
     "slugHint": "Kleinbuchstaben, Ziffern, Bindestrich. Sprachneutral."
   },
   "errors": {
@@ -511,7 +511,7 @@
       "parentMissing": { "reason": "Den übergeordneten Ordner „{name}“ gibt es nicht.", "remedy": "Legen Sie ihn zuerst an." },
       "movedInBetween": { "reason": "Inzwischen wurde es an anderer Stelle verschoben.", "remedy": "Laden Sie die Seite neu und verschieben Sie es von dort." }
     },
-    "humanOnly": "Diese Aktion ist über MCP gesperrt. Ein Mensch löst sie in der Oberfläche aus.",
+    "humanOnly": "Das geht nur hier in Kompass, nicht über einen Agenten.",
     "settingManaged": "Diese Einstellung wird im Modul „{module}“ geführt und dort geändert.",
     "settingUiOnly": "Diese Einstellung lässt sich nur in der Oberfläche ändern.",
     "insufficientPrivileges": {
@@ -519,7 +519,7 @@
       "remedy": "Bitten Sie jemanden, der diese Rechte hat."
     },
     "siteJobRunning": {
-      "reason": "{kind, select, publish {Die Webseite wird gerade veröffentlicht.} preview {Es läuft gerade eine Vorschau der Webseite.} deployCheck {Es läuft gerade ein Verbindungstest der Webseite.} other {Es läuft gerade ein Lauf der Webseite.}}",
+      "reason": "{kind, select, publish {Die Webseite wird gerade publiziert.} preview {Es läuft gerade eine Vorschau der Webseite.} deployCheck {Es läuft gerade ein Verbindungstest der Webseite.} other {Es läuft gerade ein Lauf der Webseite.}}",
       "remedy": "Warten Sie, bis der Lauf fertig ist."
     },
     "documentTypeHasRules": {
@@ -531,7 +531,7 @@
       "remedy": "Löschen ist nach Ablauf der Frist möglich; welche Fristen gelten, steht unter „Aufbewahrung“."
     },
     "conflict": {
-      "staleVersion": "Inzwischen wurde dieser Eintrag an anderer Stelle geändert — etwa über MCP oder in einem zweiten Fenster. Gespeichert wurde nichts; Ihre Eingaben stehen noch in der Maske. Kopieren Sie, was Sie behalten wollen, laden Sie die Seite neu und tragen Sie es auf dem aktuellen Stand erneut ein.",
+      "staleVersion": "Inzwischen wurde dieser Eintrag an anderer Stelle geändert — etwa über einen Agenten oder in einem zweiten Fenster. Gespeichert wurde nichts; Ihre Eingaben stehen noch in der Maske. Kopieren Sie, was Sie behalten wollen, laden Sie die Seite neu und tragen Sie es auf dem aktuellen Stand erneut ein.",
       "reviewUiOnly": "Die Prüfung bestätigt ein Mensch in der Oberfläche.",
       "noReviewPending": "Für dieses Profil ist keine Prüfung offen.",
       "documentIsDraft": "Das ist noch ein Entwurf.",
@@ -549,12 +549,12 @@
       "lastAdministrator": "Mindestens ein aktiver Nutzer muss die Rolle „Administration“ behalten.",
       "settingSystemOnly": "Diese Einstellung setzt nur das System.",
       "themeKeyTaken": "Ein Theme mit diesem Schlüssel existiert bereits.",
-      "themeReadOnly": "Das Default-Theme ist schreibgeschützt.",
+      "themeReadOnly": "Das Vorgabe-Theme ist schreibgeschützt.",
       "themeActive": "Das aktive Theme kann nicht gelöscht werden.",
       "moduleLocked": "Der Kern kann nicht deaktiviert werden.",
       "setupAlreadyDone": "Die Einrichtung wurde bereits abgeschlossen.",
       "publicUrlMissing": "SITE_PUBLIC_URL ist nicht gesetzt.",
-      "publishTargetMissing": "Kein Publish-Ziel konfiguriert.",
+      "publishTargetMissing": "Kein Ziel zum Publizieren eingerichtet.",
       "publishNotAllowedHere": "Aus der Entwicklungsumgebung wird nicht publiziert.",
       "blockedTermsPresent": "Sperrworttreffer: {detail}",
       "siteBuildFailed": "Der Build ist fehlgeschlagen: {detail}",
@@ -573,7 +573,7 @@
       "userNotLinked": "Dieses Nutzerkonto ist mit keinem Kontakt verknüpft.",
       "ownLinkNeedsSecondPerson": "Die eigene Verknüpfung ändert nur eine zweite Person mit dem Recht, Nutzer zu verwalten.",
       "retentionUnknown": "Für diesen Kontakt ist keine Frist nachgewiesen.",
-      "stillPublished": "Das ist noch veröffentlicht. Ziehen Sie es erst zurück, dann lässt es sich löschen.",
+      "stillPublished": "Das ist noch publiziert. Ziehen Sie es erst zurück, dann lässt es sich löschen.",
       "recordHeld": "Noch gehalten von: {detail}",
       "stillReferenced": "Es zeigt noch etwas darauf: {detail}. Lösen Sie erst den Bezug.",
       "belongsToNotAnOrganization": "Ein Kontakt kann nur einer Organisation zugeordnet werden.",
@@ -588,7 +588,7 @@
       "alreadySeeded": "Die Startinhalte wurden bereits übernommen.",
       "noSeed": "Die Vorlage der Webseite bringt keine Startinhalte mit.",
       "noTemplate": "Es ist noch keine Vorlage der Webseite eingelesen. Lesen Sie sie zuerst ein.",
-      "pendingUnavailable": "Was seit dem letzten Veröffentlichen geändert wurde, lässt sich gerade nicht ermitteln. Die Ursache steht im Serverprotokoll.",
+      "pendingUnavailable": "Was seit dem letzten Publizieren geändert wurde, lässt sich gerade nicht ermitteln. Die Ursache steht im Serverprotokoll.",
       "siteNotEmpty": "Es sind schon Inhalte vorhanden. Startinhalte werden nur in eine leere Webseite übernommen.",
       "templateMissing": "Im Verzeichnis der Vorlage fehlt die Datei kompass.template.ts.",
       "templateResolutionMissing": "Das Verzeichnis der Vorlage hat noch keine Modulauflösung; sie wird beim Einrichten angelegt.",
@@ -609,7 +609,7 @@
         "remedy": "Bauen Sie die Vorschau neu, sehen Sie sie an und publizieren Sie dann."
       },
       "duplicateSlug": {
-        "reason": "Der Slug „{slug}“ ist in „{collection}“ schon vergeben.",
+        "reason": "Der URL-Teil „{slug}“ ist in „{collection}“ schon vergeben.",
         "remedy": "Wählen Sie einen anderen."
       },
       "tooManyEntries": {
@@ -617,7 +617,7 @@
         "remedy": "Löschen Sie zuerst einen Eintrag."
       },
       "notPublishable": {
-        "reason": "Die Sammlung „{collection}“ kennt keinen Veröffentlicht-Schalter.",
+        "reason": "Die Sammlung „{collection}“ kennt keinen Schalter zum Publizieren.",
         "remedy": "Ihre Einträge erscheinen ohne Freigabe auf der Webseite."
       },
       "moduleDisabled": {
@@ -742,7 +742,7 @@
       "invalidSlug": "Nur Kleinbuchstaben, Ziffern und Bindestrich.",
       "slugRequired": "Bitte einen URL-Teil eingeben.",
       "slugGenerated": "Den URL-Teil bildet Kompass beim Anlegen selbst; er bleibt danach fest.",
-      "slugNotAllowed": "Diese Sammlung hat keinen Slug.",
+      "slugNotAllowed": "Diese Sammlung hat keinen URL-Teil.",
       "invalidJson": "Die Datei ist kein gültiges JSON.",
       "unknownVariable": "Diese Variable kennt die Vorlage der Webseite nicht.",
       "cropOutOfBounds": "Der Ausschnitt ragt über das Bild hinaus.",
@@ -963,7 +963,7 @@
       "credentialWarning": "Nach dem Einspielen melden Sie sich mit den Zugangsdaten aus diesem Backup an. Ohne diese kommen Sie nicht mehr hinein.",
       "confirm": "Diesen Bestand einspielen",
       "running": "Wird eingespielt …",
-      "back": "Zurück zur Einrichtung",
+      "back": "Einrichtung",
       "tooLarge": "Die Datei ist größer als 2 GB.",
       "unreadable": "Die Datei ist kein Kompass-Backup."
     },
@@ -1272,11 +1272,11 @@
           "empty": "",
           "open": "Zum Publizieren",
           "messages": {
-            "running": "{kind, select, preview {Die Vorschau} deployCheck {Der Verbindungstest} other {Der Publish}} läuft gerade.",
-            "templateUnreviewed": "Die Vorlage der Webseite ist seit dem Import ungeprüft. Das Veröffentlichen ist gesperrt, bis sie eingelesen wurde.",
-            "lastFailed": "Der letzte Publish ist fehlgeschlagen.",
-            "lastAborted": "Der letzte Publish wurde abgebrochen.",
-            "changed": "{count, plural, one {# Änderung} other {# Änderungen}} seit dem letzten Publish.",
+            "running": "{kind, select, preview {Die Vorschau} deployCheck {Der Verbindungstest} other {Das Publizieren}} läuft gerade.",
+            "templateUnreviewed": "Die Vorlage der Webseite ist seit dem Import ungeprüft. Das Publizieren ist gesperrt, bis sie eingelesen wurde.",
+            "lastFailed": "Das letzte Publizieren ist fehlgeschlagen.",
+            "lastAborted": "Das letzte Publizieren wurde abgebrochen.",
+            "changed": "{count, plural, one {# Änderung} other {# Änderungen}} seit dem letzten Publizieren.",
             "never": "Noch nie publiziert.",
             "current": "Stand vom {date}. Keine Änderungen seither."
           }
@@ -1480,7 +1480,7 @@
         },
         "publish": {
           "label": "Webseite publizieren",
-          "description": "Inhalt exportieren und die Veröffentlichung starten."
+          "description": "Inhalt exportieren und das Publizieren starten."
         }
       },
       "animals": {
@@ -1504,7 +1504,7 @@
         },
         "manage": {
           "label": "Projekte verwalten",
-          "description": "Projekte anlegen, bearbeiten, sortieren und veröffentlichen."
+          "description": "Projekte anlegen, bearbeiten, sortieren und publizieren."
         }
       },
       "retention": {
@@ -1645,7 +1645,7 @@
           "photoFolder": "Ordner für Fotos aus Vorschlägen"
         },
         "review": {
-          "onMcpWrite": "Schreiben über MCP zur Prüfung vormerken"
+          "onMcpWrite": "Änderungen von Agenten zur Prüfung vormerken"
         }
       }
     },
@@ -1723,7 +1723,7 @@
     "listAria": "Themes",
     "active": "Aktiv",
     "readOnly": "Schreibgeschützt",
-    "deleteHint": "Themes dürfen gelöscht werden — außer dem aktiven und dem Default. Module werden nie gelöscht, nur deaktiviert.",
+    "deleteHint": "Themes dürfen gelöscht werden — außer dem aktiven und der Vorgabe. Module werden nie gelöscht, nur deaktiviert.",
     "name": "Name",
     "key": "Schlüssel",
     "keyHint": "Kleinbuchstaben, Ziffern und Bindestrich.",
@@ -1734,8 +1734,8 @@
     "save": "Theme speichern",
     "duplicateTitle": "„{name}“ duplizieren",
     "deleteTitle": "Theme „{name}“ löschen?",
-    "deleteText": "Das Theme wird entfernt. Es ist weder aktiv noch das Default-Theme.",
-    "noInheritance": "Jedes Theme enthält alle Tokens vollständig — keine Vererbung, damit eine Änderung am Default kein anderes Theme verschiebt. „Duplizieren“ füllt die Werte des Ausgangsthemes vor.",
+    "deleteText": "Das Theme wird entfernt. Es ist weder aktiv noch das Vorgabe-Theme.",
+    "noInheritance": "Jedes Theme enthält alle Tokens vollständig — keine Vererbung, damit eine Änderung an der Vorgabe kein anderes Theme verschiebt. „Duplizieren“ füllt die Werte des Ausgangsthemes vor.",
     "contrastTitle": "Kontrast unter AA: {ratio}:1",
     "contrastPair": "{fg} auf {bg} ({mode}): {ratio}:1, nötig {minimum}:1",
     "mode": {
@@ -1773,7 +1773,7 @@
       "color-primary": "Primäre Aktion, aktiver Navigationseintrag",
       "color-primary-ink": "Hover/Pressed auf Primary, Text auf -soft",
       "color-primary-soft": "Aktive Nav-Fläche, Rollen-Badge, Auswahl",
-      "color-accent": "Zweitakzent: MCP-Badge, Akzentflächen",
+      "color-accent": "Zweitakzent: Akzentflächen",
       "color-accent-deep": "Text auf color-accent-soft",
       "color-accent-soft": "Hintergrund für Akzentflächen",
       "color-success": "Aktiv, gespeichert, erfolgreicher Export",
@@ -1907,7 +1907,7 @@
       "to": "Bis",
       "channels": {
         "ui": "Oberfläche",
-        "mcp": "MCP",
+        "mcp": "Agent",
         "system": "System"
       },
       "period": "Zeitraum",
@@ -2014,7 +2014,7 @@
       "siteCollection": "Sammlung der Webseite",
       "siteEntry": "Eintrag der Webseite",
       "siteJob": "Lauf der Webseite",
-      "sitePublish": "Veröffentlichung der Webseite",
+      "sitePublish": "Publizieren der Webseite",
       "siteTemplate": "Vorlage der Webseite",
       "siteValues": "Inhalte der Webseite",
       "user": "Nutzer"
@@ -2023,7 +2023,7 @@
       "animals_confirmReview": "Prüfung des Hundes bestätigt",
       "animals_create": "Hund angelegt",
       "animals_delete": "Hund gelöscht",
-      "animals_publish": "Hund veröffentlicht",
+      "animals_publish": "Hund publiziert",
       "animals_requestReview": "Prüfung des Hundes angefordert",
       "animals_setPhotos": "Hund geändert (Fotos)",
       "animals_setStatus": "Hund geändert (Status)",
@@ -2242,7 +2242,7 @@
       "site_entry_reorder": "Einträge der Webseite umsortiert",
       "site_entry_update": "Eintrag der Webseite geändert",
       "site_jobCancel": "Lauf der Webseite abgebrochen",
-      "site_publish": "Veröffentlichen der Webseite",
+      "site_publish": "Publizieren der Webseite",
       "site_seed_apply": "Startinhalte der Webseite übernommen",
       "site_template_read": "Vorlage der Webseite eingelesen",
       "site_template_settled": "Vorlage der Webseite übernommen",
@@ -2268,10 +2268,10 @@
       "themes_duplicate": "Theme dupliziert",
       "themes_delete": "Theme gelöscht",
       "animals_unpublish": "Hund zurückgezogen",
-      "projects_publish": "Projekt veröffentlicht",
+      "projects_publish": "Projekt publiziert",
       "projects_unpublish": "Projekt zurückgezogen",
       "dms_install_setting": "Einstellung der Akte bei der Einrichtung eingetragen",
-      "site_entry_publish": "Eintrag der Webseite veröffentlicht",
+      "site_entry_publish": "Eintrag der Webseite publiziert",
       "site_entry_unpublish": "Eintrag der Webseite zurückgezogen",
       "site_blockedTerms_set": "Sperrwörter der Webseite geändert",
       "finance_setup_setting": "Einstellung der Finanzen gesetzt",
@@ -2288,8 +2288,8 @@
       "animals_confirmReview": "Prüfung von Hund „{name}“ bestätigt",
       "animals_create": "Hund „{name}“ angelegt",
       "animals_delete": "Hund „{name}“ gelöscht",
-      "animals_publish": "Hund „{name}“ veröffentlicht",
-      "animals_requestReview": "{viaMcp, select, true {Hund „{name}“ beim Schreiben über MCP zur Prüfung vorgemerkt} other {Prüfung von Hund „{name}“ angefordert}}",
+      "animals_publish": "Hund „{name}“ publiziert",
+      "animals_requestReview": "{viaMcp, select, true {Hund „{name}“ beim Schreiben über einen Agenten zur Prüfung vorgemerkt} other {Prüfung von Hund „{name}“ angefordert}}",
       "animals_setPhotos": "Fotos von Hund „{name}“ geändert",
       "animals_setStatus": "Status von Hund „{name}“ auf „{status, select, lookingForHome {Sucht ein Zuhause} reserved {Reserviert} adopted {Vermittelt} other {{status}}}“ gesetzt",
       "animals_setStory": "Geschichte von Hund „{name}“ geändert",
@@ -2410,7 +2410,7 @@
       "media_upload": "Datei „{filename}“ hochgeladen",
       "projects_create": "Projekt „{name}“ angelegt",
       "projects_delete": "Projekt „{name}“ gelöscht",
-      "projects_publish": "Projekt „{name}“ veröffentlicht",
+      "projects_publish": "Projekt „{name}“ publiziert",
       "projects_unpublish": "Projekt „{name}“ zurückgezogen",
       "projects_update": "Projekt „{name}“ geändert",
       "roles_create": "Rolle „{roleName}“ angelegt",
@@ -2421,12 +2421,12 @@
       "site_cacheClear": "Zwischenspeicher der Webseite mit {fileCount, plural, one {# Datei} other {# Dateien}} geleert",
       "site_entry_create": "Eintrag in „{collection}“ angelegt",
       "site_entry_delete": "Eintrag aus „{collection}“ gelöscht",
-      "site_entry_publish": "Eintrag in „{collection}“ veröffentlicht",
+      "site_entry_publish": "Eintrag in „{collection}“ publiziert",
       "site_entry_reorder": "Reihenfolge in „{collection}“ geändert",
       "site_entry_unpublish": "Eintrag in „{collection}“ zurückgezogen",
       "site_entry_update": "Eintrag in „{collection}“ geändert",
-      "site_jobCancel": "{kind, select, preview {Vorschau der Webseite} publish {Veröffentlichen der Webseite} deployCheck {Prüfung der Webseite} other {Lauf der Webseite}} abgebrochen",
-      "site_publish": "{status, select, success {Webseite veröffentlicht{changed, plural, =0 {} one {, # Datei geändert} other {, # Dateien geändert}}{added, plural, =0 {} one {, # Datei neu} other {, # Dateien neu}}{removed, plural, =0 {} one {, # Datei entfernt} other {, # Dateien entfernt}}} failed {Veröffentlichen der Webseite fehlgeschlagen} other {Veröffentlichen der Webseite abgebrochen}}",
+      "site_jobCancel": "{kind, select, preview {Vorschau der Webseite} publish {Publizieren der Webseite} deployCheck {Prüfung der Webseite} other {Lauf der Webseite}} abgebrochen",
+      "site_publish": "{status, select, success {Webseite publiziert{changed, plural, =0 {} one {, # Datei geändert} other {, # Dateien geändert}}{added, plural, =0 {} one {, # Datei neu} other {, # Dateien neu}}{removed, plural, =0 {} one {, # Datei entfernt} other {, # Dateien entfernt}}} failed {Publizieren der Webseite fehlgeschlagen} other {Publizieren der Webseite abgebrochen}}",
       "site_seed_apply": "{items} aus der Vorlage der Webseite übernommen",
       "site_template_read": "Vorlage der Webseite „{templateName}“ eingelesen",
       "site_values_update": "{variableCount, plural, one {Variable} other {Variablen}} {variables} geändert",
@@ -2462,8 +2462,8 @@
       "wrongCurrent": "Das aktuelle Passwort stimmt nicht."
     },
     "tokens": {
-      "title": "API-Tokens (MCP-Zugang)",
-      "intro": "Ein Token wirkt mit Ihren Rechten. Vorgänge über MCP erscheinen im Änderungsprotokoll mit dem Kanal „MCP“ und dem Namen des Tokens.",
+      "title": "API-Tokens",
+      "intro": "Ein Token wirkt mit Ihren Rechten. Vorgänge über MCP erscheinen im Änderungsprotokoll mit dem Kanal „Agent“ und dem Namen des Tokens.",
       "create": "Token erstellen",
       "createTitle": "Token erstellen",
       "name": "Name",
@@ -2722,8 +2722,8 @@
       "filterStatus": "Status",
       "filterLocation": "Aufenthalt",
       "filterPublished": "Webseite",
-      "publishedYes": "Veröffentlicht",
-      "publishedNo": "Nicht veröffentlicht",
+      "publishedYes": "Publiziert",
+      "publishedNo": "Nicht publiziert",
       "noMatchTitle": "Kein Hund passt zu dieser Auswahl.",
       "noMatchText": "Ändern Sie die Filter oder wechseln Sie auf „Alle“.",
       "noMatchNoun": "Kein Hund",
@@ -2741,7 +2741,7 @@
     },
     "review": {
       "pendingSince": "Prüfung offen seit {date}",
-      "publishOnConfirm": "Beim Bestätigen veröffentlichen",
+      "publishOnConfirm": "Beim Bestätigen publizieren",
       "confirm": "Geprüft",
       "confirmNext": "Geprüft und weiter",
       "confirmed": "Prüfung bestätigt."
@@ -2887,8 +2887,8 @@
       "review": {
         "title": "Prüfung",
         "intro": "Ob Änderungen eines Agenten auf eine Durchsicht durch einen Menschen warten.",
-        "onMcpWrite": "Schreiben über MCP zur Prüfung vormerken",
-        "onMcpWriteHint": "Wie bis 0.2.9: Was ein Agent über MCP schreibt, wartet auf eine Durchsicht. Aus: kein Merker; schon markierte Tiere bleiben markiert, bis sie geprüft sind."
+        "onMcpWrite": "Änderungen von Agenten zur Prüfung vormerken",
+        "onMcpWriteHint": "Was ein Agent schreibt, wartet auf eine Durchsicht. Aus: kein Merker; schon markierte Tiere bleiben markiert, bis sie geprüft sind."
       }
     },
     "proposals": {
@@ -2970,9 +2970,9 @@
         "photos": "Fotos",
         "keptConflict": "{field} (in Kompass geändert)",
         "website": "Auf der Webseite",
-        "publish": "Veröffentlichen",
+        "publish": "Publizieren",
         "publishHint": "Erscheint mit dem nächsten Publizieren der Webseite.",
-        "keepUnpublished": "Unveröffentlicht lassen",
+        "keepUnpublished": "Nicht publiziert lassen",
         "keepUnpublishedHint": "Erst in Kompass fertig machen.",
         "adoptedYear": "Vermittlungsjahr",
         "adoptedYearHint": "Der Status wird „vermittelt“.",
@@ -2997,7 +2997,7 @@
       },
       "review": {
         "backToProposals": "Zu den Vorschlägen",
-        "backToList": "Zurück zur Liste",
+        "backToList": "Vorschläge",
         "titleUpdate": "Änderung an {name}",
         "received": "eingegangen {at}",
         "atSource": "Eintrag bei {source}",
@@ -3080,7 +3080,7 @@
       "held": {
         "undo": "Rückgängig · {seconds}",
         "accepted": "{name} angenommen",
-        "acceptedOnline": "{name} angenommen und veröffentlicht",
+        "acceptedOnline": "{name} angenommen und publiziert",
         "rejected": "{name} abgelehnt"
       },
       "notice": {
@@ -3205,7 +3205,7 @@
           "missing": "fehlt",
           "unreadable": "nicht lesbar"
         },
-        "staging": "Staging",
+        "staging": "Test",
         "yes": "ja",
         "no": "nein",
         "none": "nicht gesetzt",
@@ -3237,7 +3237,7 @@
       "title": "Vorlage der Webseite",
       "lastRead": "Zuletzt eingelesen: {when}",
       "neverRead": "Noch keine Vorlage eingelesen.",
-      "needsReview": "Diese Vorlage kam mit einem eingespielten Backup und unterscheidet sich von der, die zuvor lief. Eine Vorlage der Webseite ist ausführbarer Code: Sie wird erst beim Einlesen ausgeführt und erst danach wieder veröffentlicht. Lesen Sie sie ein, wenn Sie wissen, woher das Backup stammt.",
+      "needsReview": "Diese Vorlage kam mit einem eingespielten Backup und unterscheidet sich von der, die zuvor lief. Eine Vorlage der Webseite ist ausführbarer Code: Sie wird erst beim Einlesen ausgeführt und erst danach wieder publiziert. Lesen Sie sie ein, wenn Sie wissen, woher das Backup stammt.",
       "read": "Vorlage einlesen",
       "apply": "Übernehmen",
       "cancel": "Abbrechen",
@@ -3287,7 +3287,7 @@
     "publish": {
       "title": "Publizieren",
       "empty": {
-        "text": "Es ist noch keine Vorlage der Webseite eingelesen. Erst danach lassen sich Inhalte pflegen und veröffentlichen.",
+        "text": "Es ist noch keine Vorlage der Webseite eingelesen. Erst danach lassen sich Inhalte pflegen und publizieren.",
         "action": "Zu Einrichtung → Webseite"
       },
       "target": {
@@ -3300,7 +3300,7 @@
         "added": "<b>{count, number}</b> neu",
         "removed": "<b>{count, number}</b> entfallen",
         "hints": "{count, plural, one {# Hinweis} other {# Hinweise}}",
-        "hintsText": "{list}. Hinweise halten den Publish nicht auf — wer publiziert, übernimmt sie.",
+        "hintsText": "{list}. Hinweise halten das Publizieren nicht auf — wer publiziert, übernimmt sie.",
         "gaps": "{count, plural, one {# Übersetzungslücke} other {# Übersetzungslücken}}",
         "stale": "{count, plural, one {# veralteter Verweis} other {# veraltete Verweise}}",
         "pendingReview": "{count, plural, one {# offene Prüfung} other {# offene Prüfungen}}",
@@ -3315,7 +3315,7 @@
         "stale": "Veraltete Verweise",
         "staleHint": "Wird im Export leer ausgeliefert; die Vorlage zeigt dann ihre Automatik.",
         "pendingReview": "Noch zu prüfen",
-        "pendingReviewHint": "Diese Einträge sind veröffentlicht und seit der letzten Änderung von niemandem geprüft. Der Publish nimmt sie mit.",
+        "pendingReviewHint": "Diese Einträge sind publiziert und seit der letzten Änderung von niemandem geprüft. Das Publizieren nimmt sie mit.",
         "skippedImages": "Bilder nicht lesbar",
         "clear": {
           "gaps": "keine fehlenden Übersetzungen",
@@ -3353,7 +3353,7 @@
           "targetMissing": "Das Verzeichnis gibt es am Ziel nicht. Prüfen Sie SITE_DEPLOY_PATH.",
           "notWritable": "Am Ziel lässt sich nichts schreiben. Prüfen Sie die Rechte des Benutzers im Zielverzeichnis.",
           "diskFull": "Auf dem Webserver ist kein Platz mehr. Schaffen Sie Platz oder erhöhen Sie das Kontingent.",
-          "probeLeft": "Die Probedatei ließ sich nicht wieder löschen: Anlegen geht, Löschen nicht, und ein Publish würde scheitern. Prüfen Sie die Rechte im Zielverzeichnis.",
+          "probeLeft": "Die Probedatei ließ sich nicht wieder löschen: Anlegen geht, Löschen nicht, und das Publizieren würde scheitern. Prüfen Sie die Rechte im Zielverzeichnis.",
           "unknown": "Der Punkt ist gescheitert; die Meldung steht im Protokoll."
         },
         "ok": "Verbindung steht. Am Ziel liegen {count, number} Dateien.",
@@ -3366,12 +3366,12 @@
         "changed": "Geändert",
         "added": "Neu",
         "removed": "Entfallen",
-        "none": "Keine Änderungen gegenüber dem letzten Publish.",
+        "none": "Keine Änderungen seit dem letzten Publizieren.",
         "more": "… und {count} weitere"
       },
       "done": "Publiziert: {changed} geändert, {added} neu, {removed} entfallen.",
       "history": {
-        "title": "Letzte Publishes",
+        "title": "Zuletzt publiziert",
         "columns": {
           "time": "Zeit",
           "status": "Ergebnis",
@@ -3383,8 +3383,8 @@
         "log": "Protokoll",
         "new": "neu",
         "older": "Ältere anzeigen",
-        "truncated": "Es werden die letzten {shown} von {total} Publishes gezeigt.",
-        "empty": "Bislang keine Veröffentlichungen.",
+        "truncated": "Es werden die letzten {shown} von {total} Läufen gezeigt.",
+        "empty": "Bislang nichts publiziert.",
         "status": {
           "success": "Publiziert",
           "failed": "Gescheitert",
@@ -3430,7 +3430,7 @@
             "remedy": "Laden Sie die Seite neu, um den aktuellen Stand zu sehen."
           },
           "jobNotCancellable": {
-            "reason": "Der Publish überträgt gerade; ein Abbruch ließe die Webseite halb aktualisiert zurück.",
+            "reason": "Das Publizieren überträgt gerade; ein Abbruch ließe die Webseite halb aktualisiert zurück.",
             "remedy": "Warten Sie, bis die Übertragung fertig ist."
           }
         },
@@ -3485,11 +3485,11 @@
         "rebuild": "Vorschau neu bauen",
         "openPreview": "Vorschau öffnen",
         "notHere": "Hier wird nicht publiziert. Vorschau bauen und ansehen geht.",
-        "noTarget": "Es ist kein Publish-Ziel eingerichtet.",
+        "noTarget": "Es ist kein Ziel zum Publizieren eingerichtet.",
         "noTargetLink": "Verbindung einrichten",
         "none": {
           "title": "Noch keine Vorschau",
-          "text": "Seit dem letzten Publish am {date} wurde keine Vorschau gebaut. Die Vorschau prüft die Inhalte und zeigt, was sich auf der Webseite ändert. Publiziert wird danach genau dieser Stand.",
+          "text": "Seit dem letzten Publizieren am {date} wurde keine Vorschau gebaut. Die Vorschau prüft die Inhalte und zeigt, was sich auf der Webseite ändert. Publiziert wird danach genau dieser Stand.",
           "textNever": "Noch nie publiziert. Die Vorschau prüft die Inhalte und zeigt, wie die Webseite aussehen wird. Publiziert wird danach genau dieser Stand."
         },
         "outdated": {
@@ -3520,7 +3520,7 @@
           "failed": {
             "title": "Publizieren gescheitert",
             "untouched": "Es wurde nichts übertragen; die Webseite zeigt weiter den bisherigen Stand.",
-            "partial": "Ein Teil wurde übertragen. Die Webseite kann gemischt aussehen, bis ein Publish gelingt."
+            "partial": "Ein Teil wurde übertragen. Die Webseite kann gemischt aussehen, bis das Publizieren gelingt."
           },
           "failedPreview": {
             "title": "Vorschau gescheitert"
@@ -3577,7 +3577,7 @@
           "publishTest": "Wird auf Test publiziert",
           "deployCheck": "Verbindung wird getestet",
           "cacheEmpty": "Nach dem Update ist der Bild-Cache leer. Dieser erste Bau rechnet alle Bildvarianten neu und dauert einige Minuten. Sie können die Seite verlassen; der Lauf geht im Hintergrund weiter.",
-          "agentBadge": "MCP",
+          "agentBadge": "Agent",
           "byAgent": "{token} · für {name} um {time} Uhr",
           "byAgentNoToken": "für {name} um {time} Uhr",
           "byPerson": "Gestartet von {name} um {time} Uhr",
@@ -3609,7 +3609,7 @@
           "interrupted": "Kompass wurde während des Laufs neu gestartet."
         },
         "lastStep": "Zuletzt im Schritt „{step}“.",
-        "logTruncated": "Nur das Ende des Protokolls; vollständig über MCP (site_job_result, log: full) oder in der Publish-Historie."
+        "logTruncated": "Nur das Ende des Protokolls; vollständig in der Liste „Zuletzt publiziert“ oder über einen Agenten."
       }
     },
     "pending": {
@@ -3624,14 +3624,14 @@
       "line": "Änderung noch nicht publiziert",
       "variables": "{count, plural, one {# Variable} other {# Variablen}} nicht publiziert",
       "variablesNamed": "{count, plural, one {# Variable} other {# Variablen}} nicht publiziert: {names}",
-      "since": "Seit dem letzten Publish am {date} geändert:",
+      "since": "Seit dem letzten Publizieren am {date} geändert:",
       "and": "und",
       "more": "und {count} weitere"
     },
     "previewFrame": {
       "title": "Webseiten-Vorschau",
       "description": "Vollständige Vorschau der statischen Webseite unter dem aktuellen Kompass-Datenstand.",
-      "back": "Zurück zu Publizieren",
+      "back": "Publizieren",
       "frameTitle": "Vorschau",
       "widths": {
         "label": "Breite",
@@ -3729,7 +3729,7 @@
     "roles": {
       "title": "Rollen",
       "add": "Rolle hinzufügen",
-      "submit": "Übernehmen",
+      "submit": "Speichern",
       "field": "Rolle",
       "since": "Seit",
       "until": "Bis",
@@ -3784,7 +3784,7 @@
   "deletion": {
     "loading": "Es wird geprüft, ob etwas dagegen spricht …",
     "failed": "Die Prüfung ist fehlgeschlagen. Bitte schließen Sie den Dialog und versuchen Sie es erneut.",
-    "published": "Das ist noch veröffentlicht. Ziehen Sie es erst zurück — danach lässt es sich löschen.",
+    "published": "Das ist noch publiziert. Ziehen Sie es erst zurück — danach lässt es sich löschen.",
     "unpublish": "Zurückziehen",
     "blocked": "Das lässt sich noch nicht löschen, weil etwas daran hängt:",
     "blockedHint": "Lösen Sie erst den Bezug in der Akte oder haken Sie die Wiedervorlage ab.",
@@ -4311,7 +4311,7 @@
       "typeShortPlaceholder": "z. B. NOT",
       "removeLanguage": "{lang} entfernen"
     },
-    "backToDocument": "Zurück zum Dokument",
+    "backToDocument": "Dokument",
     "formerNumbers": "Früher: {numbers}",
     "reclassify": {
       "open": "Angaben ändern",
@@ -4371,7 +4371,7 @@
       "agentPrepared": "vom Agenten vorbereitet"
     },
     "agent": {
-      "tooltip": "Festschreiben darf nur ein Mensch."
+      "tooltip": "Festschreiben geht nur hier in Kompass, nicht über einen Agenten."
     },
     "channel": {
       "ui": "Oberfläche",
@@ -4633,7 +4633,7 @@
       "pendingVoucher": "wird verknüpft beim Speichern"
     },
     "entryView": {
-      "back": "Zurück zum Journal",
+      "back": "Journal",
       "account": "Konto",
       "allocation": "Wofür?",
       "corrected": "Zuordnung geändert",
@@ -6217,7 +6217,7 @@
           "machine": "maschinell erstellt",
           "signatureField": "mit Unterschriftsfeld"
         },
-        "humanOnly": "Ausstellen kann nur ein Mensch — nicht über ein Werkzeug für Agenten.",
+        "humanOnly": "Ausstellen geht nur hier in Kompass, nicht über einen Agenten.",
         "submit": "Ausstellen",
         "toast": {
           "issued": "Bestätigung {number} ausgestellt"
@@ -7241,7 +7241,7 @@
       "footer": {
         "payable": "Nach der Freigabe entsteht eine offene Zahlung an {name} über {amount}.",
         "waiver": "Nach der Freigabe steht eine Aufwandsspende von {name} über {amount} als Buchung.",
-        "humanOnly": "Freigeben kann nur ein Mensch.",
+        "humanOnly": "Freigeben geht nur hier in Kompass, nicht über einen Agenten.",
         "approve": "Freigeben",
         "reject": "Ablehnen",
         "refused": "Noch nicht freigegeben"
@@ -7571,7 +7571,7 @@
     "errors": {
       "humanOnly": {
         "reason": "Diesen Schritt führt ein Mensch in der Oberfläche aus.",
-        "remedy": "Der Verein kann ihn für MCP freigeben: Einrichtung → Finanzen → Steuerliches → „Darf ein Agent festschreiben?“ einschalten."
+        "remedy": "Der Verein kann ihn für Agenten freigeben: Einrichtung → Finanzen → Steuerliches → „Darf ein Agent festschreiben?“ einschalten."
       },
       "accountInUse": {
         "reason": "Auf dieses Konto ist bereits gebucht.",
@@ -8307,7 +8307,7 @@
       },
       "evidenceExplanationMissing": {
         "reason": "Für den fremdsprachigen Nachweis „{kind, select, agreement {Vereinbarung} agreementAgent57 {Auftrag je Vorhaben} paymentProof {Zahlungsnachweis} recipientReceipt {Empfangsbestätigung} invoice {Rechnung oder Abrechnung} settlement {Abrechnung mit Belegen} report {Bericht} other {Nachweis}}“ fehlt die deutsche Erläuterung.",
-        "remedy": "Bitte die deutsche Erläuterung am Nachweis ergänzen (am Vorgang „ergänzen“, per MCP finance_partner_evidence_update)."
+        "remedy": "Bitte die deutsche Erläuterung am Nachweis ergänzen (am Vorgang „ergänzen“, über einen Agenten mit finance_partner_evidence_update)."
       },
       "evidenceKindMissing": {
         "reason": "Der Nachweis „{kind, select, agreement {Vereinbarung} agreementAgent57 {Auftrag je Vorhaben} paymentProof {Zahlungsnachweis} recipientReceipt {Empfangsbestätigung} invoice {Rechnung oder Abrechnung} settlement {Abrechnung mit Belegen} report {Bericht} other {Nachweis}}“ fehlt noch.",
@@ -8379,7 +8379,7 @@
       },
       "reserveCarryForwardOwnStep": {
         "reason": "Einen Vortrag erfassen Sie zusammen mit seinem Beschluss in einem eigenen Schritt.",
-        "remedy": "Nutzen Sie im Zeilenmenü „Vortrag erfassen“ (per MCP finance_reserve_carry_forward)."
+        "remedy": "Nutzen Sie im Zeilenmenü „Vortrag erfassen“ (über einen Agenten: finance_reserve_carry_forward)."
       },
       "movementDateInFuture": {
         "reason": "Das Datum {date} liegt nach heute ({today}).",

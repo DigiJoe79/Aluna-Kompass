@@ -53,7 +53,7 @@ test('ein Eintrag wird auf seiner Seite gelöscht, unter „Weitere Aktionen“,
   const withdraw = dialog.getByRole('button', { name: 'Zurückziehen' });
   const remove = dialog.getByRole('button', { name: 'Löschen' });
   // Zwei Stufen: Ist der Eintrag veröffentlicht, zuerst zurückziehen.
-  await expect(dialog.getByText(/Das ist noch veröffentlicht\.|Der Inhalt wird entfernt\./)).toBeVisible();
+  await expect(dialog.getByText(/Das ist noch publiziert\.|Der Inhalt wird entfernt\./)).toBeVisible();
   if (await withdraw.isVisible()) await withdraw.click();
   await expect(dialog.getByText('Der Inhalt wird entfernt.')).toBeVisible();
   await remove.click();
@@ -108,7 +108,7 @@ test('Leser sehen Sammlungen ohne Bearbeiten-Knöpfe, ohne Leserecht keine Vorsc
 
   await loginFirstTime(page, 'peter@kompass.local', peterPw);
   await page.goto('/site/c/news');
-  await expect(page.getByRole('row').first()).toContainText(/Veröffentlicht|Nicht veröffentlicht/);
+  await expect(page.getByRole('row').first()).toContainText(/Publiziert|Nicht publiziert/);
   await expect(page.getByRole('link', { name: 'Neu', exact: true })).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Löschen' })).toHaveCount(0);
   await expect(page.getByRole('switch')).toHaveCount(0);

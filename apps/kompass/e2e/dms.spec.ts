@@ -128,7 +128,7 @@ test.describe('dms', () => {
     await page.getByLabel('Text').fill('Text');
     await page.getByRole('button', { name: 'Entwurf speichern' }).click();
     // Anlegen lässt einen im Editor stehen; zum fertigen Dokument führt der Rückweg.
-    await page.getByRole('link', { name: 'Zurück zum Dokument' }).click();
+    await page.getByRole('link', { name: 'Dokument', exact: true }).click();
     await page.getByRole('button', { name: 'Festschreiben' }).click();
     await page.getByRole('button', { name: 'Festschreiben bestätigen' }).click();
     const response = await page.request.get(await page.getByRole('link', { name: 'PDF öffnen' }).getAttribute('href') ?? '');
@@ -144,7 +144,7 @@ test.describe('dms', () => {
     await page.getByLabel('Dokumentart').selectOption('letter');
     await page.getByRole('button', { name: 'Entwurf speichern' }).click();
     // Anlegen lässt einen im Editor stehen; zum fertigen Dokument führt der Rückweg.
-    await page.getByRole('link', { name: 'Zurück zum Dokument' }).click();
+    await page.getByRole('link', { name: 'Dokument', exact: true }).click();
     await expect(page.getByText('Entwurf', { exact: true })).toBeVisible();
     await expect(page.getByRole('link', { name: 'Vorschau' })).toBeVisible();
     await page.getByRole('button', { name: 'Festschreiben' }).click();
@@ -233,7 +233,7 @@ test.describe('dms', () => {
     await page.getByRole('button', { name: 'Speichern und Vorschau aktualisieren' }).click();
     await expect(page.getByText(/Vorschau aktuell/)).toBeVisible();
 
-    await page.getByRole('link', { name: 'Zurück zum Dokument' }).click();
+    await page.getByRole('link', { name: 'Dokument', exact: true }).click();
     await expect(page.getByRole('heading', { name: 'Einladung zur Versammlung' })).toBeVisible();
     // Immer noch ein Entwurf: keine Nummer, nichts festgeschrieben.
     await expect(page.getByText('Entwurf', { exact: true })).toBeVisible();
@@ -414,7 +414,7 @@ test.describe('dms', () => {
     await page.getByLabel('Datum auf dem Dokument').fill('2026-05-02');
     await page.getByRole('button', { name: 'Speichern und Vorschau aktualisieren' }).click();
     await expect(page.getByText(/Vorschau aktuell/)).toBeVisible();
-    await page.getByRole('link', { name: 'Zurück zum Dokument' }).click();
+    await page.getByRole('link', { name: 'Dokument', exact: true }).click();
     await expect(page.getByText('02.05.2026')).toBeVisible();
   });
 
@@ -435,7 +435,7 @@ test.describe('dms', () => {
     await firstOption.click();
     await page.getByRole('button', { name: 'Entwurf speichern' }).click();
     // Anlegen lässt einen im Editor stehen; zum fertigen Dokument führt der Rückweg.
-    await page.getByRole('link', { name: 'Zurück zum Dokument' }).click();
+    await page.getByRole('link', { name: 'Dokument', exact: true }).click();
 
     const links = page.getByTestId('document-links');
     await expect(links).toContainText(name);
@@ -453,7 +453,7 @@ test.describe('dms', () => {
     await page.getByLabel('Dokumentart').selectOption('letter');
     await page.getByRole('button', { name: 'Entwurf speichern' }).click();
     // Anlegen lässt einen im Editor stehen; zum fertigen Dokument führt der Rückweg.
-    await page.getByRole('link', { name: 'Zurück zum Dokument' }).click();
+    await page.getByRole('link', { name: 'Dokument', exact: true }).click();
     await page.getByRole('button', { name: 'Festschreiben' }).click();
     await page.getByRole('button', { name: 'Festschreiben bestätigen' }).click();
     await expect(page.getByText(/BRF-\d{4}-\d{3}/)).toBeVisible();
@@ -527,7 +527,7 @@ test.describe('dms', () => {
     await page.getByLabel('Betreff').fill('Verworfener Entwurf');
     await page.getByLabel('Text').fill('Text');
     await page.getByRole('button', { name: 'Entwurf speichern' }).click();
-    await page.getByRole('link', { name: 'Zurück zum Dokument' }).click();
+    await page.getByRole('link', { name: 'Dokument', exact: true }).click();
     await page.getByRole('button', { name: 'Weitere Aktionen' }).click();
     await page.getByRole('menuitem', { name: 'Entwurf löschen …' }).click();
     await page.getByRole('alertdialog', { name: 'Entwurf verwerfen' }).getByRole('button', { name: 'Entwurf löschen' }).click();
@@ -1822,7 +1822,7 @@ test.describe('Ordnerbaum', () => {
     await page.getByLabel('Betreff').fill('Einspruch Finanzamt');
     await page.getByLabel('Text').fill('Text');
     await page.getByRole('button', { name: 'Entwurf speichern' }).click();
-    await page.getByRole('link', { name: 'Zurück zum Dokument' }).click();
+    await page.getByRole('link', { name: 'Dokument', exact: true }).click();
     await expect(page.getByText('Behörden › Finanzamt').first()).toBeVisible();
   });
 

@@ -24,6 +24,7 @@ export default async function DocumentDetailPage(props: {
 }) {
   const { deps, ctx } = await requireSession();
   const tCommon = await getTranslations('common');
+  const nav = await getTranslations('nav');
   const tDms = await getTranslations('dms');
   if (requireDmsGate(deps, ctx)) return <Page width="standard"><ForbiddenCard permission="dms.view" /></Page>;
 
@@ -137,7 +138,7 @@ export default async function DocumentDetailPage(props: {
       header={
         <PageHeader
           title={doc.subject}
-          back={{ href: '/dms', label: tCommon('backToList') }}
+          back={{ href: '/dms', label: nav('dms.list') }}
           actions={
             <>
               {canMakeEntry ? (

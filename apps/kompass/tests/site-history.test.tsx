@@ -33,7 +33,7 @@ describe('PublishHistory', () => {
   /** Keine stille Grenze (MUSTER § L): Die Seite liest die jüngsten 20 und nennt die Gesamtzahl. */
   it('names the limit when the environment has more publishes than shown', () => {
     expect(render([row({}), row({ id: 'P2' })], null, 2)).not.toContain('Es werden');
-    expect(render([row({}), row({ id: 'P2' })], null, 31)).toContain('Es werden die letzten 2 von 31 Publishes gezeigt.');
+    expect(render([row({}), row({ id: 'P2' })], null, 31)).toContain('Es werden die letzten 2 von 31 Läufen gezeigt.');
   });
 
   it('shows the name instead of the id and the status in words', () => {
@@ -46,14 +46,14 @@ describe('PublishHistory', () => {
   });
   it('marks a publish started over MCP with the badge, the token and the person', () => {
     const markup = render([row({ source: { channel: 'mcp', tokenName: 'Hundeblicke-Sync' } })]);
-    expect(markup).toContain('>MCP<');
+    expect(markup).toContain('>Agent<');
     expect(markup).toContain('Hundeblicke-Sync · für Erika Beispiel');
   });
   it('shows no badge for the interface and a calm text for the system', () => {
-    expect(render([row({})])).not.toContain('>MCP<');
+    expect(render([row({})])).not.toContain('>Agent<');
     const markup = render([row({ source: { channel: 'system', tokenName: null }, triggeredByName: null })]);
     expect(markup).toContain('System (Neustart)');
-    expect(markup).not.toContain('>MCP<');
+    expect(markup).not.toContain('>Agent<');
   });
   it('offers the log only where there is one, and carries no log text', () => {
     const markup = render([row({}), row({ id: 'P2', hasLog: false })]);

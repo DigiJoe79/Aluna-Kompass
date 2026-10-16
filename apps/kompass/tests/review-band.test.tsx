@@ -19,7 +19,7 @@ function Wrapper({ children }: { children: ReactNode }) {
   );
 }
 
-/** K10 Charge 2, T3.4: Der Haken „Beim Bestätigen veröffentlichen“ ist der Checkbox-Baustein, reist mit dem Formular und zählt nie als Änderung. */
+/** K10 Charge 2, T3.4: Der Haken „Beim Bestätigen publizieren“ ist der Checkbox-Baustein, reist mit dem Formular und zählt nie als Änderung. */
 it('der Haken reist mit dem Formular, zählt aber nicht als Änderung', () => {
   render(
     <>
@@ -31,7 +31,7 @@ it('der Haken reist mit dem Formular, zählt aber nicht als Änderung', () => {
     </>,
     { wrapper: Wrapper },
   );
-  const box = screen.getByRole('checkbox', { name: 'Beim Bestätigen veröffentlichen' });
+  const box = screen.getByRole('checkbox', { name: 'Beim Bestätigen publizieren' });
   expect(box.getAttribute('aria-checked')).toBe('true');
   expect(new FormData(screen.getByTestId('f') as HTMLFormElement).get('publishOnConfirm')).toBe('on');
   fireEvent.click(box);

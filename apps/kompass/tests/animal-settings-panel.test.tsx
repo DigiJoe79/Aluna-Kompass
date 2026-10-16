@@ -69,7 +69,7 @@ describe('AnimalSettingsPanel: proposals, review mark, photo folder', () => {
 
   it('has the review switch', () => {
     render(<AnimalSettingsPanel initial={{ ...initial, reviewOnMcpWrite: true }} folders={folders} canManage />, { wrapper: Intl });
-    expect(screen.getByRole('switch', { name: 'Schreiben über MCP zur Prüfung vormerken' }).getAttribute('aria-checked')).toBe('true');
+    expect(screen.getByRole('switch', { name: 'Änderungen von Agenten zur Prüfung vormerken' }).getAttribute('aria-checked')).toBe('true');
   });
 
   it('saves the switch for walking through proposals in a stack', async () => {

@@ -13,7 +13,7 @@ test('adds a locale, fills it, and sees what removing it would cost', async ({ p
   // Seite des Webseiten-Moduls.
   await page.goto('/projects');
   await page.getByRole('link', { name: 'Projekt anlegen' }).click();
-  await page.getByLabel('Slug (URL-Teil)').fill('grundversorgung');
+  await page.getByLabel('URL-Teil').fill('grundversorgung');
   await page.getByLabel('Typ').selectOption('ongoing');
   await page.locator('[name="name.de"]').fill('Grundversorgung');
   await page.locator('[name="summary.de"]').fill('Futter und Wärme.');

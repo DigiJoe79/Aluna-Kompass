@@ -26,7 +26,7 @@ describe('PreviewSummary', () => {
     expect(text(html)).toContain('12 geändert · 3 neu · 0 entfallen');
     expect(text(html)).toContain('3 Hinweise');
     expect(text(html)).toContain('2 Übersetzungslücken');
-    expect(text(html)).toContain('Hinweise halten den Publish nicht auf');
+    expect(text(html)).toContain('Hinweise halten das Publizieren nicht auf');
   });
   it('says nothing about hints when there are none', () => {
     expect(text(render(<PreviewSummary counts={{ ...zero, changed: 1 }} />))).not.toContain('Hinweis');

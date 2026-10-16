@@ -79,14 +79,14 @@ test('preview build, diff and publish to the local staging target', async ({ pag
   await importTemplate(page);
 
   await page.goto('/site/c/news/new');
-  await page.getByLabel('Slug (URL-Teil)').fill('sommerfest');
+  await page.getByLabel('URL-Teil').fill('sommerfest');
   await page.locator('[name="title.de"]').fill('Sommerfest 2026');
   await page.getByRole('button', { name: 'Speichern' }).click();
   await expect(page).toHaveURL('/site/c/news');
   // Der Schalter dieser einen Meldung, nicht irgendeiner: Seit die Webseite
   // Entwicklungsdaten mitbringt (`seedSiteDevelopment`), stehen weitere
   // Einträge in der Liste.
-  const publish = page.getByRole('row', { name: /Sommerfest 2026/ }).getByRole('switch', { name: 'Veröffentlicht' });
+  const publish = page.getByRole('row', { name: /Sommerfest 2026/ }).getByRole('switch', { name: 'Publiziert' });
   await publish.click();
   await expect(publish).toBeChecked();
 
@@ -123,7 +123,7 @@ test('preview build, diff and publish to the local staging target', async ({ pag
   await expect(tab).toHaveURL(/\/site\/publish\/preview$/);
   await expect(tab.getByTestId('env-banner')).toBeVisible();
   // Wer die Vorschauseite direkt aufruft, kommt zurück.
-  await expect(tab.getByRole('link', { name: 'Zurück zu Publizieren' })).toHaveAttribute('href', '/site/publish');
+  await expect(tab.getByRole('main').getByRole('link', { name: 'Publizieren', exact: true })).toHaveAttribute('href', '/site/publish');
   // Die Vorschau lässt sich auf Telefon- und Tablet-Breite schalten.
   const frame = tab.getByTitle('Vorschau');
   await expect(frame).not.toHaveCSS('width', '390px');
@@ -154,7 +154,7 @@ test('preview build, diff and publish to the local staging target', async ({ pag
   await expect(page.getByRole('region', { name: 'Laufender Lauf' }).or(cardTitle(page, 'Publiziert'))).toBeVisible();
   await expect(cardTitle(page, 'Publiziert')).toBeVisible({ timeout: 180_000 });
   await expect(page.getByTestId('site-job')).toHaveCount(0);
-  const history = page.getByRole('table', { name: 'Letzte Publishes' });
+  const history = page.getByRole('table', { name: 'Zuletzt publiziert' });
   await expect(history.getByRole('row').nth(1)).toContainText('Publiziert');
   // Der Publish, der gerade zu Ende ging, trägt die Marke „neu“.
   await expect(history.getByRole('row').nth(1)).toContainText('neu');
@@ -319,7 +319,7 @@ test('a run started over MCP shows in the header and on the publish page and can
     await indicator.click();
     await expect(page).toHaveURL('/site/publish');
     const run = page.getByRole('region', { name: 'Laufender Lauf' });
-    await expect(run).toContainText('MCP');
+    await expect(run).toContainText('Agent');
     await run.getByRole('button', { name: 'Abbrechen' }).click();
     await page.getByRole('alertdialog').getByRole('button', { name: 'Lauf abbrechen' }).click();
     await expect(run).toHaveCount(0, { timeout: 60_000 });
