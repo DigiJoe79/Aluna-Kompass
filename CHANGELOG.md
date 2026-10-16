@@ -49,6 +49,9 @@ die Nummern folgen [Semantic Versioning](https://semver.org/lang/de/). Vor
 - **Auslagen-Entwurf löschen.** Ein eigener Entwurf lässt sich im Kopf über
   „Weitere Aktionen“ löschen; ein Entwurf ohne Betrag zeigt „Betrag fehlt“
   statt 0,00 €.
+- **Checkliste der Finanzen.** Der Schritt „Konto mit Anfangsbestand“ gilt
+  erst als erledigt, wenn jedes aktive Bankkonto einen Anfangsbestand hat.
+  Wer bisher Bankkonten ohne angelegt hat, sieht den Schritt wieder offen.
 - **Gemeinschaftskonto.** Gehört eine IBAN mehreren Kontakten
   (Gemeinschaftskonto), schlägt der Import keinen Kontakt mehr vor, statt still
   den zuletzt verknüpften zu nehmen.

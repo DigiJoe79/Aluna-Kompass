@@ -79,9 +79,17 @@ function hasAnyFiscalYear(db: DbOrTx): boolean {
   return !!db.select({ id: financeFiscalYears.id }).from(financeFiscalYears).limit(1).get();
 }
 
-function accountStepDetail(db: DbOrTx): { accounts: number; withoutOpening: number } {
-  const rows = db.select({ openingBalanceCents: financeAccounts.openingBalanceCents }).from(financeAccounts).where(eq(financeAccounts.isActive, true)).all();
-  return { accounts: rows.length, withoutOpening: rows.filter((r) => r.openingBalanceCents === null).length };
+/**
+ * Konten mit und ohne Anfangsbestand (aktive Konten). `bankWithoutOpening` entscheidet den Schritt: Ein Bankkonto ohne
+ * Anfangsbestand rechnet seinen Saldo falsch, genau das soll die Checkliste fangen (11-1 A8, Joe 2026-10-16).
+ */
+function accountStepDetail(db: DbOrTx): { accounts: number; withoutOpening: number; bankWithoutOpening: number } {
+  const rows = db.select({ kind: financeAccounts.kind, openingBalanceCents: financeAccounts.openingBalanceCents }).from(financeAccounts).where(eq(financeAccounts.isActive, true)).all();
+  return {
+    accounts: rows.length,
+    withoutOpening: rows.filter((r) => r.openingBalanceCents === null).length,
+    bankWithoutOpening: rows.filter((r) => r.kind === 'bank' && r.openingBalanceCents === null).length,
+  };
 }
 
 /**
@@ -138,9 +146,10 @@ export async function getSetupStatus(deps: Deps, ctx: CallContext): Promise<Resu
   if (denied) return denied;
 
   const fiscalYearDone = hasAnyFiscalYear(deps.db);
-  const account = accountStepDetail(deps.db);
+  const { bankWithoutOpening, ...account } = accountStepDetail(deps.db);
   const missingImportFormats = accountsWithoutImportFormat(deps.db);
-  const accountDone = account.accounts - account.withoutOpening > 0;
+  // Erledigt: mindestens ein Konto mit Anfangsbestand und kein aktives Bankkonto ohne (11-1 A8).
+  const accountDone = account.accounts - account.withoutOpening > 0 && bankWithoutOpening === 0;
   const roles = rolesStepDetail(deps);
   const categoriesConfirmedAt = readSetting<string | null>(deps, 'finance.setupCategoriesConfirmedAt');
   const taxConfirmedAt = readSetting<string | null>(deps, 'finance.setupTaxConfirmedAt');

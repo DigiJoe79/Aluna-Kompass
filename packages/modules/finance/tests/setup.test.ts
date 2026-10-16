@@ -132,6 +132,18 @@ describe('finance setup status', () => {
     expect(withOpening.detail).toEqual({ accounts: 2, withoutOpening: 1 });
   });
 
+  // 11-1 A8 (Joe 2026-10-16): erledigt erst, wenn jedes aktive Bankkonto einen Anfangsbestand hat — ein Konto ohne
+  // rechnet seinen Saldo falsch. Eine Kasse ohne Anfangsbestand hält den Schritt nicht auf.
+  it('is done only when every active bank account has an opening balance', async () => {
+    const { deps, ctx } = setupFinance();
+    unwrap(await createFirstFiscalYear(deps, ctx, { startsOn: '2026-01-01', endsOn: '2026-12-31' }));
+    unwrap(await createAccount(deps, ctx, { name: 'Vereinskonto', kind: 'bank', iban: 'DE23999999990000202051', isMain: true, openingBalanceCents: 10000, openingDate: '2026-01-01' }));
+    unwrap(await createAccount(deps, ctx, { name: 'Tagesgeld', kind: 'bank', iban: 'DE66999999991234567890' }));
+    const missing = unwrap(await getSetupStatus(deps, ctx)).steps.find((s) => s.key === 'account')!;
+    expect(missing.done).toBe(false);
+    expect(missing.detail).toEqual({ accounts: 2, withoutOpening: 1 });
+  });
+
   it('adds the optional import format step, done when every active bank account has a format, without touching completeness', async () => {
     const { deps, ctx } = setupFinance();
     unwrap(await createAccount(deps, ctx, { name: 'Barkasse', kind: 'cash' }));

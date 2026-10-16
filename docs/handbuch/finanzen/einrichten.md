@@ -18,7 +18,9 @@ verschwindet aus der Liste:
    steht das als eigenes Kennzeichen mit Zeitraum daneben — nicht in der
    Bezeichnung selbst.
 2. **Bankkonto oder Kasse mit Anfangsbestand anlegen** — ohne ein
-   Geschäftsjahr wartet dieser Schritt. Für jedes Bankkonto braucht der
+   Geschäftsjahr wartet dieser Schritt. Erledigt ist er erst, wenn jedes
+   aktive Bankkonto einen Anfangsbestand hat — ohne ihn stimmt sein Saldo
+   nicht. Für jedes Bankkonto braucht der
    spätere Jahresabschluss mindestens einen Kontoauszug des Jahres.
 3. **Wer welche Rolle trägt** — jede Finanzrolle braucht einen aktiven
    Nutzer, und jeder Nutzer mit einer Finanzrolle einen verknüpften
