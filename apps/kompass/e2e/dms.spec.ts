@@ -737,12 +737,21 @@ test.describe('dms', () => {
     await expectFolder(dialog, 'Behörden/Finanzamt', 'Behörden › Finanzamt');
     await expect(dialog.getByText('hierauf gezogen')).toBeVisible();
 
-    // „Ändern…“ wählt im Baum einen anderen Ordner, und abgelegt wird dort.
-    await dialog.getByRole('button', { name: 'Ändern…' }).click();
-    const pick = page.getByRole('dialog', { name: 'Ordner wählen' });
-    await pick.getByRole('treeitem', { name: /^Protokolle,/ }).click();
-    await pick.getByRole('button', { name: '„Protokolle“ übernehmen' }).click();
-    await expect(pick).toHaveCount(0);
+    // Das Ordnerfeld klappt im Dialog auf (Entwurf E5): kein zweiter Dialog, Suche hat den Fokus, Esc klappt nur zu.
+    const head = dialog.getByRole('button', { name: /^Ordner / });
+    await head.click();
+    await expect(head).toHaveAttribute('aria-expanded', 'true');
+    await expect(page.getByRole('dialog')).toHaveCount(1);
+    await expect(dialog.getByRole('searchbox', { name: 'Ordner suchen' })).toBeFocused();
+    await page.keyboard.press('Escape');
+    await expect(head).toHaveAttribute('aria-expanded', 'false');
+    await expect(dialog).toBeVisible();
+    await expectFolder(dialog, 'Behörden/Finanzamt', 'Behörden › Finanzamt');
+    // Suchen und wählen: Klick übernimmt und klappt zu; abgelegt wird dort.
+    await head.click();
+    await dialog.getByRole('searchbox', { name: 'Ordner suchen' }).fill('proto');
+    await dialog.getByRole('treeitem', { name: /^Protokolle,/ }).click();
+    await expect(head).toHaveAttribute('aria-expanded', 'false');
     await expectFolder(dialog, 'Protokolle', 'Protokolle');
     await expect(dialog.getByText('hierauf gezogen')).toHaveCount(0);
 
@@ -1206,13 +1215,12 @@ test.describe('dms', () => {
     // Der Ort als Weg und „Verschieben nach…“ statt Auswahlliste und „Speichern“ (Artboard 5).
     const place = page.locator('[data-folder-path]');
     await expect(place).toHaveText('Eingangskorb');
+    // Der Baum klappt unter dem Ort auf (Entwurf E5); ein Klick verschiebt.
     await page.getByRole('button', { name: 'Verschieben nach…' }).click();
-    const dialog = page.getByRole('dialog', { name: `„${subject}“ verschieben nach…` });
-    await expect(dialog.getByText('Liegt im Eingangskorb.')).toBeVisible();
-    await dialog.getByRole('treeitem', { name: /^Behörden,/ }).locator('[data-toggle]').click();
-    await dialog.getByRole('treeitem', { name: /^Finanzamt,/ }).click();
-    await dialog.getByRole('button', { name: 'Nach „Finanzamt“ verschieben' }).click();
-    await expect(dialog).toHaveCount(0);
+    const picker = page.getByRole('group', { name: 'Ordner' });
+    await picker.getByRole('treeitem', { name: /^Behörden,/ }).locator('[data-toggle]').click();
+    await picker.getByRole('treeitem', { name: /^Finanzamt,/ }).click();
+    await expect(picker).toHaveCount(0);
 
     await expect(place).toHaveText('Behörden › Finanzamt');
     await expect(place.getByRole('link', { name: 'Finanzamt' })).toHaveAttribute('href', '/dms?folder=Beh%C3%B6rden%2FFinanzamt');
@@ -1224,18 +1232,18 @@ test.describe('dms', () => {
     await expect(place).toHaveText('Eingangskorb');
   });
 
-  test('lehnt der Server das Verschieben am Dokument ab, bleibt der Dialog offen und nennt den Grund', async ({ page }) => {
+  test('lehnt der Server das Verschieben am Dokument ab, bleibt das Feld offen und nennt den Grund', async ({ page }) => {
     await login(page);
     await page.goto('/dms?inbox=1');
     await page.getByRole('row').nth(1).click();
     await expect(page).toHaveURL(/\/dms\/[0-9A-Z]{26}$/);
     await page.getByRole('button', { name: 'Verschieben nach…' }).click();
-    const dialog = page.getByRole('dialog', { name: /verschieben nach…$/ });
-    await dialog.getByRole('treeitem', { name: /^Protokolle,/ }).click();
+    const dialog = page.getByRole('group', { name: 'Ordner' });
+    await expect(dialog.getByRole('treeitem', { name: /^Protokolle,/ })).toBeVisible();
 
     await renameFolderElsewhere(page, 'Protokolle', 'sitzungsprotokolle');
 
-    await dialog.getByRole('button', { name: 'Nach „Protokolle“ verschieben' }).click();
+    await dialog.getByRole('treeitem', { name: /^Protokolle,/ }).click();
     await expect(dialog.getByText('Den Ordner „Protokolle“ gibt es nicht mehr. Wählen Sie einen anderen.')).toBeVisible();
     await expect(page.locator('[data-folder-path]')).toHaveText('Eingangskorb');
     await expect(page.locator('[data-sonner-toast]')).toHaveCount(0);

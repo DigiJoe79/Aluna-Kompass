@@ -108,6 +108,8 @@ export interface FolderTreeProps {
   extraMenuItems?: (path: string) => ReactNode;
   /** Ziele, an denen eine Änderung unterwegs ist: Ihre Zeile zeigt „wird gespeichert“ (README § 3, Artboard 3). */
   saving?: readonly string[];
+  /** Modus `pick`: Treffer einer Suche hervorheben (Ordnerfeld, Entwurf E5). */
+  highlight?: (path: string) => boolean;
   /** Ein Satz unter dem Baum, etwa warum er kurz ist (Bereichsrechte, Artboard 9b). */
   note?: string;
   /** Der Satz im Leerzustand, wenn die Wörter der Akte nicht passen (Mediathek: Dateien statt Dokumente). */
@@ -206,6 +208,7 @@ export function FolderTree({
   extraMenuItems,
   saving,
   note,
+  highlight,
   emptyHint,
 }: FolderTreeProps) {
   const t = useTranslations('folderTree');
@@ -975,6 +978,7 @@ export function FolderTree({
               isSelected={node.path === selected}
               href={pick ? undefined : hrefFor?.(node.path)}
               badge={markFor(node.path)}
+              highlight={highlight?.(node.path)}
               density={density}
             />
           ))}
@@ -1021,6 +1025,7 @@ export function FolderTree({
                   drop={dropFor(path)}
                   dimmed={!!source && isWithin(path, source)}
                   badge={keyboardDrag && path === source ? t('movingBadge') : markFor(path)}
+                  highlight={highlight?.(path)}
                   saving={saving?.includes(path)}
                   isLockedOpen={lockedOpen.has(path)}
                   href={pick ? undefined : hrefFor?.(path)}

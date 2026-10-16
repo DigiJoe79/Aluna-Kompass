@@ -34,7 +34,6 @@ export function FolderPanel({
   canEdit: boolean;
 }) {
   const t = useTranslations('dms');
-  const tMove = useTranslations('moveDialog');
   const { folders: shown, moveDocuments } = useFolderMoves({ folders, selected: null, hrefFor: folderHref });
   // Wo es zuletzt bestätigt lag — Ausgangspunkt für „Rückgängig“, auch bevor
   // die Seite neu geladen ist. Ein neuer Stand vom Server gilt (Rückgängig, anderer Tab).
@@ -59,7 +58,6 @@ export function FolderPanel({
       label={t('columns.folder')}
       emptyLabel={direction === 'incoming' ? t('inbox') : t('noFolder')}
       rootKind={direction === 'incoming' ? 'inbox' : 'none'}
-      dialogTitle={tMove('titleOne', { title })}
       linkToAkte
       labelAs="dt"
       readOnly={!canEdit}

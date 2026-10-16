@@ -431,6 +431,7 @@ export function DmsWorkspace({
             types={types}
             folders={shownFolders}
             canCreateContact={canCreateContact}
+            onCreateFolder={canManage ? createFolder : undefined}
             initialSender={initialSender}
             initialAbout={initialAbout}
             defaultTypeKey={defaultTypeKey}

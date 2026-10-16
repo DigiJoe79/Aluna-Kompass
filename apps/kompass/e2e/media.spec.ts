@@ -323,10 +323,11 @@ test.describe('Ordnerbaum der Mediathek', () => {
     await expect(detail.locator('[data-folder-path]')).toHaveText('Bilder › 2026');
     await expect(detail.locator('select')).toHaveCount(0);
 
+    // Der Baum klappt im Detaildialog auf, kein zweiter Dialog (Entwurf E5); ein Klick verschiebt.
     await detail.getByRole('button', { name: 'Verschieben nach…' }).click();
-    const move = page.getByRole('dialog', { name: /verschieben nach…$/ });
-    await move.getByRole('treeitem', { name: /^Dokumente,/ }).click();
-    await move.getByRole('button', { name: 'Nach „Dokumente“ verschieben' }).click();
+    await expect(page.getByRole('dialog')).toHaveCount(1);
+    await detail.getByRole('treeitem', { name: /^Dokumente,/ }).click();
+    // Nach dem Verschieben schließt der Detaildialog wie bisher.
     await expect(page.getByRole('dialog')).toHaveCount(0);
 
     await toastWith(page, /„hoftor-[0-9a-f]+\.png“ nach Dokumente verschoben/i).getByRole('button', { name: 'Rückgängig' }).click();

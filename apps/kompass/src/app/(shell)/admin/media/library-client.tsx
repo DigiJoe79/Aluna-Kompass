@@ -484,7 +484,7 @@ export function LibraryClient({
         </div>
       </div>
 
-      <AssetDetailDialog item={detail} folders={shownFolders} assetFolder={detail?.folder ?? null} onOpenChange={(open) => !open && setDetailId(null)} onMove={move} onDelete={deleteItem} />
+      <AssetDetailDialog item={detail} folders={shownFolders} assetFolder={detail?.folder ?? null} onOpenChange={(open) => !open && setDetailId(null)} onMove={move} onDelete={deleteItem} onCreateFolder={createFolder} />
 
       {moving !== null ? (
         <FolderMoveDialog

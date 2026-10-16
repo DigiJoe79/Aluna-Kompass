@@ -29,6 +29,7 @@ export function AssetDetailDialog({
   onOpenChange,
   onMove,
   onDelete,
+  onCreateFolder,
 }: {
   item: Item | null;
   /** Die Ordner wie im Baum, samt noch nicht bestätigter Züge. */
@@ -36,11 +37,12 @@ export function AssetDetailDialog({
   assetFolder: string | null;
   onOpenChange: (open: boolean) => void;
   onMove: (id: string, folder: string | null) => Promise<ActionState>;
+  /** Legt einen Ordner an (die Mediathek verlangt `media.upload`, das Recht für Ordner); im Feld „Neuer Ordner in …“. */
+  onCreateFolder?: (parent: string | null, name: string) => Promise<ActionState>;
   /** Löscht nach der Rückfrage; bei Erfolg schließt der Aufrufer den Detaildialog. */
   onDelete: (id: string) => Promise<ActionState>;
 }) {
   const t = useTranslations('media');
-  const tMove = useTranslations('moveDialog');
   const fmt = useDateFormat();
   const isImage = item?.mimeType.startsWith('image/') ?? false;
   const trigger = useRef<HTMLButtonElement>(null);
@@ -95,9 +97,9 @@ export function AssetDetailDialog({
               folders={folders}
               label={t('folder')}
               emptyLabel={t('noFolder')}
-              dialogTitle={tMove('titleOne', { title: item.filename })}
               kind="assets"
               onChange={(target) => onMove(item.id, target)}
+              onCreate={onCreateFolder}
             />
 
             {/* Wie der Fuß der `FormActionBar`: Aktion am Datensatz links, „Öffnen“ rechts. */}

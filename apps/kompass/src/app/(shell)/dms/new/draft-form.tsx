@@ -71,7 +71,6 @@ export function DraftForm({
 }: DraftFormProps) {
   const t = useTranslations('dms');
   const tCommon = useTranslations('common');
-  const tTree = useTranslations('folderTree');
   const [state, formAction] = useActionState(
     draft ? updateDraftAction.bind(null, draft.id) : createDraftAction,
     idleState,
@@ -205,10 +204,6 @@ export function DraftForm({
             label={t('fields.folder')}
             emptyLabel={t('noFolder')}
             name="folder"
-            moveLabel={tTree('change')}
-            dialogTitle={tTree('pickTitle')}
-            showLocation={false}
-            verb="pick"
             variant="field"
             kind="documents"
             onChange={(path) => setFolder(path ?? '')}

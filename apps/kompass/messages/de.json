@@ -177,6 +177,17 @@
     "pickTitle": "Ordner wählen",
     "pickConfirm": "„{target}“ übernehmen",
     "pickConfirmEmpty": "Übernehmen",
+    "field": {
+      "search": "Ordner suchen",
+      "noMatch": "Kein Ordner mit „{query}“.",
+      "newIn": "Neuer Ordner in „{name}“",
+      "newTop": "Neuer Ordner auf oberster Ebene",
+      "back": "← Zurück",
+      "close": "Schließen",
+      "chosen": "Gewählt: {name}",
+      "apply": "Übernehmen",
+      "keys": "↑↓ wählen · ← → auf und zu · Enter übernehmen · Esc zu"
+    },
     "chosen": "gewählt",
     "delete": "Löschen",
     "deleteBlocked": "Enthält {count} {unit}. Löschen lassen sich nur leere Ordner.",

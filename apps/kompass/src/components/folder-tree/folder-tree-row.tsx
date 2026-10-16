@@ -98,6 +98,8 @@ interface FolderTreeRowProps {
   dimmed?: boolean;
   /** Marke statt Zahl, etwa „wird verschoben“ oder im Dialog „liegt hier“. */
   badge?: string;
+  /** Treffer der Suche im Ordnerfeld (Entwurf E5): Fläche `warning-bg` am Namen. */
+  highlight?: boolean;
   /** Eine Änderung an diesem Ziel ist unterwegs: kleiner Kreis vor der Zahl (README § 3, Artboard 3). */
   saving?: boolean;
   /** Im Modus `navigate` der Link des Namens; im Modus `pick` fehlt er (kein Link). */
@@ -138,7 +140,7 @@ export type RowMenuButton = { visible: 'always' | 'hover'; open: boolean; onOpen
  * Knopf und der Name als Link — kein Knopf im Link, und ein Mittelklick auf
  * den Namen öffnet den Ordner im neuen Tab.
  */
-export function FolderTreeRow({ node, level, isFolder, isExpanded, isSelected, drop = null, dimmed = false, badge, saving = false, isLockedOpen = false, href, pick, density, itemProps, label, onToggle, onRowClick, menu = null }: FolderTreeRowProps) {
+export function FolderTreeRow({ node, level, isFolder, isExpanded, isSelected, drop = null, dimmed = false, badge, highlight = false, saving = false, isLockedOpen = false, href, pick, density, itemProps, label, onToggle, onRowClick, menu = null }: FolderTreeRowProps) {
   const t = useTranslations('folderTree');
   const { indent, base, chevron } = DENSITY[density];
   const placeholder = !itemProps;
@@ -216,7 +218,7 @@ export function FolderTreeRow({ node, level, isFolder, isExpanded, isSelected, d
       ) : (
         <span className="flex min-w-0 flex-1 flex-col gap-0.5">
           {href === undefined ? (
-            <span className="wrap-anywhere text-pretty">{node.name}</span>
+            <span className="wrap-anywhere text-pretty">{highlight ? <mark className="rounded-sm bg-warning-bg px-0.5 text-current">{node.name}</mark> : node.name}</span>
           ) : (
             <Link href={href} tabIndex={-1} draggable={false} className="wrap-anywhere text-pretty outline-none">
               {node.name}

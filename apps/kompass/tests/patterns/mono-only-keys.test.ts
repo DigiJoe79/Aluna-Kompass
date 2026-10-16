@@ -48,6 +48,7 @@ const ALLOWED: CountedAllowlist = {
   'app/(shell)/admin/themes/theme-editor.tsx': { count: 2, reason: `${KEY} Name des Theme-Tokens und sein Farbwert.` },
   'app/(shell)/admin/users/start-password-dialog.tsx': { count: 2, reason: 'Startpasswort — wird abgetippt.' },
   'app/(shell)/profile/api-tokens.tsx': { count: 1, reason: 'API-Token im Klartext — wird kopiert.' },
+  'components/folder-tree/folder-field.tsx': { count: 1, reason: 'Tastenzeile am Fuß des Ordnerfelds (Entwurf E5): Tastenkürzel, nur Hinweis.' },
   'components/fixed-value.tsx': { count: 1, reason: 'Fester Wert (E2): `mono` für Kennungen (IBAN, Steuernummer, Schlüssel, URL-Teil), der Aufrufer entscheidet.' },
   'app/(shell)/projects/project-form.tsx': { count: 1, reason: SLUG },
   'app/(shell)/site/c/[collection]/entry-form.tsx': { count: 1, reason: SLUG },

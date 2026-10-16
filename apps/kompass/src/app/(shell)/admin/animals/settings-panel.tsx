@@ -27,7 +27,6 @@ type Values = { frame: PhotoFrame; profileUrl: string; proposalsEnabled: boolean
 export function AnimalSettingsPanel({ initial, folders, canManage }: { initial: Values; folders: FolderEntry[] | null; canManage: boolean }) {
   const t = useTranslations('animals.admin');
   const c = useTranslations('common');
-  const tTree = useTranslations('folderTree');
   const tMove = useTranslations('moveDialog');
   const [values, setValues] = useState(initial);
   const [pending, start] = useTransition();
@@ -93,10 +92,6 @@ export function AnimalSettingsPanel({ initial, folders, canManage }: { initial: 
                 folders={folders ?? []}
                 label={t('proposals.photoFolder')}
                 emptyLabel={tMove('root')}
-                moveLabel={tTree('change')}
-                dialogTitle={tTree('pickTitle')}
-                showLocation={false}
-                verb="pick"
                 variant="field"
                 kind="assets"
                 readOnly={!canManage || folders === null}
