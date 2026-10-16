@@ -2,7 +2,7 @@ import { type CallContext, type DbOrTx, type Deps, EMPTY, expectedVersionField, 
 import { addContactRole, contactIdForUserInternal, contactRoles, contacts, displayName, userIdForContactInternal } from '@kompass/module-contacts';
 import { abortReceive, DOCUMENT_MAX_BYTES, documentLinks, linkDocumentInternal, readLinkedDocument, receiveGeneratedUpload } from '@kompass/module-dms';
 import { listProjects, projects } from '@kompass/module-projects';
-import { and, asc, desc, eq, isNotNull, isNull, ne } from 'drizzle-orm';
+import { and, asc, desc, eq, isNotNull, isNull } from 'drizzle-orm';
 import { z } from 'zod';
 import { basisInForceOn } from './basis-rules';
 import { financeAudit } from '../audit';
@@ -12,6 +12,7 @@ import { DATED_SERIES } from '../ledger/dated-series';
 import { isValidIban, maskIban, normalizeIban } from '../ledger/iban';
 import { openCentsInternal, openItemSettlementsInternal } from '../ledger/open-items';
 import { tripAmountCents } from '../ledger/trip-amount';
+import { contactsForIbanInternal } from '../iban-holders';
 import { expenseReceiptSubject } from './subjects';
 import {
   financeContactBankAccounts,
@@ -67,11 +68,7 @@ export type ExpenseClaimWarning = 'ibanBelongsToOtherContact' | 'waiverAgreedAft
 /** Befund 35: Ist die IBAN über `finance_contact_bank_accounts` einem anderen Kontakt als `contactId` zugeordnet? */
 export function ibanBelongsToOtherContactInternal(db: DbOrTx, contactId: string, iban: string | null): boolean {
   if (!iban) return false;
-  return !!db
-    .select({ id: financeContactBankAccounts.id })
-    .from(financeContactBankAccounts)
-    .where(and(eq(financeContactBankAccounts.iban, iban), ne(financeContactBankAccounts.contactId, contactId)))
-    .get();
+  return contactsForIbanInternal(db, iban).some((id) => id !== contactId);
 }
 
 // ── Hilfen ──────────────────────────────────────────────────────────────────

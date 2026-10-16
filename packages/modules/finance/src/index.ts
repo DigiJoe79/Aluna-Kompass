@@ -314,7 +314,7 @@ export { activeProfileInternal, listImportProfiles, profileFormatInternal, saveI
 // F5 — Arbeitsliste: Regeln, Kontakt über IBAN, Vorschläge, Handeln, fremdes Geld, Sammel-Festschreiben, Beleg von beiden Seiten.
 export { deleteImportRule, listImportRules, previewImportRule, saveImportRule, type ImportRuleView } from './import/rules';
 export { ruleMatches, normalizeText, type RuleConditions, type RuleTarget } from './rules-pure';
-export { contactForIbanInternal, createContactFromTransaction, learnContactIbanInternal, linkContactIban, listContactIbans, unlinkContactIban, type ContactIbanSource, type ContactIbanView } from './import/contact-ibans';
+export { contactForIbanInternal, contactsForIbanInternal, createContactFromTransaction, learnContactIbanInternal, linkContactIban, listContactIbans, unlinkContactIban, type ContactIbanSource, type ContactIbanView } from './import/contact-ibans';
 export { openRawTransactionsInternal, suggestForTransaction, type SuggestionDraft, type SuggestionKind, type SuggestionReason, type SuggestionView } from './import/suggestions';
 export { getWorkCounts, listWorkItems, type SuggestionSummary, type WorkCounts, type WorkEntry, type WorkItem, type WorkOpenItem, type WorkTab } from './import/work';
 export { bookFromTransaction, linkTransactionToEntry } from './import/book';

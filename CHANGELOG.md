@@ -29,6 +29,9 @@ die Nummern folgen [Semantic Versioning](https://semver.org/lang/de/). Vor
   Der Eingangskorb bleibt eingegangener Post vorbehalten.
 - **Schrift.** Beträge, Datum und Texte stehen in der Textschrift; Monospace
   nur noch für Nummern, Schlüssel und IBAN.
+- **Gemeinschaftskonto.** Gehört eine IBAN mehreren Kontakten
+  (Gemeinschaftskonto), schlägt der Import keinen Kontakt mehr vor, statt still
+  den zuletzt verknüpften zu nehmen.
 
 ## [0.2.11] - 2026-10-11
 
