@@ -106,7 +106,7 @@ const todoTile: DashboardTile<Record<string, never>> = {
     const overdue = overdueOpenItemsInternal(deps.db, today, 'payable');
     if (overdue.length > 0) {
       const sumCents = overdue.reduce((s, i) => s + i.openCents, 0);
-      lines.push({ titleKey: 'overdueItems', values: { count: overdue.length, sum: formatEuro(sumCents) }, href: '/finance/open-items?tab=payable' });
+      lines.push({ titleKey: 'overdueItems', values: { count: overdue.length }, trailing: formatEuro(sumCents), href: '/finance/open-items?tab=payable' });
     }
 
     // F4 Task 6: Kontoumsätze ohne Zuordnung — ohne Namen, nur die Zahl. Seit F5 in die Arbeitsliste.
@@ -170,12 +170,12 @@ const todoTile: DashboardTile<Record<string, never>> = {
       if (ready.length > 0) lines.push({ titleKey: 'evidenceReadyToAcknowledge', values: { count: ready.length }, href: only ? `/finance/partners/${only.partnerId}/payments/${only.id}` : '/finance/partners' });
     }
     const withoutProof = partnerPaymentsWithoutProofInternal(deps, today);
-    if (withoutProof.count > 0) lines.push({ titleKey: 'partnerPaymentsWithoutProof', values: { count: withoutProof.count, sum: formatEuro(withoutProof.sumCents) }, href: '/finance/partners' });
+    if (withoutProof.count > 0) lines.push({ titleKey: 'partnerPaymentsWithoutProof', values: { count: withoutProof.count }, trailing: formatEuro(withoutProof.sumCents), href: '/finance/partners' });
     if (withoutProof.overdueCount > 0) lines.push({ titleKey: 'partnerPaymentsOverdue', values: { count: withoutProof.overdueCount }, href: '/finance/partners' });
 
     // Befund 19: Bank- oder Zahlungsdienstkonto stünde negativ — je Konto eine Zeile mit Namen und Betrag.
     for (const { account, balanceCents } of negativeAccountBalancesInternal(deps, today)) {
-      lines.push({ titleKey: 'negativeBalance', values: { account: account.name, amount: formatEuro(balanceCents) }, href: '/finance/accounts' });
+      lines.push({ titleKey: 'negativeBalance', values: { account: account.name }, trailing: formatEuro(balanceCents), href: '/finance/accounts' });
     }
 
     return { kind: 'list', lines, total: lines.length, href: '/finance/entries' };
@@ -245,7 +245,7 @@ const purposesNegativeTile: DashboardTile<Record<string, never>> = {
       return { kind: 'status', tone: 'warning', messageKey: 'negative', values: { count: negative.length, sum: formatEuro(sumCents) }, href: '/finance/purposes' };
     }
     const names = new Map(deps.db.select({ id: financePurposes.id, name: financePurposes.name }).from(financePurposes).all().map((p) => [p.id, p.name] as const));
-    const lines: DashboardLine[] = [...negative].sort((a, b) => a.balanceCents - b.balanceCents).map((p) => ({ titleKey: 'line', values: { name: names.get(p.purposeId) ?? '', amount: formatEuro(p.balanceCents) }, href: '/finance/purposes' }));
+    const lines: DashboardLine[] = [...negative].sort((a, b) => a.balanceCents - b.balanceCents).map((p) => ({ titleKey: 'line', values: { name: names.get(p.purposeId) ?? '' }, trailing: formatEuro(p.balanceCents), href: '/finance/purposes' }));
     return { kind: 'list', lines, total: lines.length, href: '/finance/purposes' };
   },
 };
@@ -392,7 +392,8 @@ const myExpensesTile: DashboardTile<Record<string, never>> = {
   async load(deps, ctx) {
     const res = await listMyExpenseClaims(deps, ctx, { state: 'open', limit: 10 });
     if (!res.ok) return { kind: 'list', lines: [], total: 0, href: '/finance/expenses' };
-    const lines: DashboardLine[] = res.value.items.map((c) => ({ titleKey: c.stateLabelKey, values: { number: c.number ?? EMPTY, amount: formatEuro(c.totalCents) }, href: `/finance/expenses/${c.id}` }));
+    // Betrag rechts nur, wo es einen gibt: Ein Entwurf ohne Betrag zeigt keine „0,00 €“.
+    const lines: DashboardLine[] = res.value.items.map((c) => ({ titleKey: c.stateLabelKey, values: { number: c.number ?? EMPTY }, ...(c.totalCents > 0 ? { trailing: formatEuro(c.totalCents) } : {}), href: `/finance/expenses/${c.id}` }));
     return { kind: 'list', lines, total: res.value.total, href: '/finance/expenses' };
   },
 };
@@ -439,11 +440,12 @@ const partnerPaymentsWithoutProofTile: DashboardTile<Record<string, never>> = {
     const lines: DashboardLine[] = open.map((p) => {
       const profile = deps.db.select({ contactId: financePartnerProfiles.contactId }).from(financePartnerProfiles).where(eq(financePartnerProfiles.id, p.partnerId)).get();
       const contact = profile ? deps.db.select().from(contacts).where(eq(contacts.id, profile.contactId)).get() : undefined;
-      const values = { partner: contact ? displayName(contact) : '', number: p.number ?? '', amount: formatEuro(sumPositionCents(positionViewsOf(deps.db, p.paymentId))) };
+      const values = { partner: contact ? displayName(contact) : '', number: p.number ?? '' };
+      const trailing = formatEuro(sumPositionCents(positionViewsOf(deps.db, p.paymentId)));
       const href = `/finance/partners/${p.partnerId}/payments/${p.paymentId}`;
       return p.overdue
-        ? { titleKey: 'lineOverdue', values: { ...values, days: p.overdueDays ?? 0 }, ...(p.proofDueOn ? { date: p.proofDueOn } : {}), overdue: true, href }
-        : { titleKey: 'lineOpen', values, ...(p.proofDueOn ? { date: p.proofDueOn } : {}), href };
+        ? { titleKey: 'lineOverdue', values: { ...values, days: p.overdueDays ?? 0 }, trailing, ...(p.proofDueOn ? { date: p.proofDueOn } : {}), overdue: true, href }
+        : { titleKey: 'lineOpen', values, trailing, ...(p.proofDueOn ? { date: p.proofDueOn } : {}), href };
     });
     return { kind: 'list', lines, total: lines.length, href: '/finance/partners' };
   },

@@ -25,6 +25,11 @@ export interface DashboardLine {
   link?: { label: string; href: string | null };
   /** Zusatz rechts: Zuständige, Absender. */
   extra?: string;
+  /**
+   * Wert rechtsbündig am Zeilenende (Designer Stufe 2 Nr. 1, Joe 2026-10-16): fertiger Text, vom Modul formatiert —
+   * etwa ein Betrag der Finanzen. Der Kern kennt keinen Geldbegriff; er reicht den Text nur durch.
+   */
+  trailing?: string;
   /** Warnfarbe (überfällig). */
   overdue?: boolean;
   /** Die einzige Aktion auf der Startseite: eine Wiedervorlage erledigen (Entscheidung 12). */

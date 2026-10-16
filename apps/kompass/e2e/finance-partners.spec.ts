@@ -683,7 +683,7 @@ test.describe('finance partners (F7)', () => {
     const tile = page.getByTestId('dashboard-tile-finance-partnerPaymentsWithoutProof');
     // Aus den Entwicklungsdaten: „Nothilfe Erdbebenregion“ ist freigegeben, der Nachweis fehlt.
     await expect(tile).toContainText('Hilfswerk International e.V. · PZ-');
-    await expect(tile).toContainText('1.200,00 €');
+    await expect(tile.getByTestId('tile-line-trailing').first()).toHaveText('1.200,00 €');
     await expect(page.getByTestId('dashboard-tile-finance-purposesNegative')).toBeVisible();
 
     const role = await callTool<{ id: string }>(client, 'roles_create', { name: 'Finanzen Überblick E2E' });

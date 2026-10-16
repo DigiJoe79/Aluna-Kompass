@@ -991,6 +991,7 @@
   },
   "dashboard": {
     "tileError": "Diese Kachel konnte nicht geladen werden.",
+    "toneWarning": "Warnung",
     "showAll": "Alle {count} anzeigen",
     "complete": "{title} erledigen",
     "completed": "Wiedervorlage erledigt",
@@ -1125,7 +1126,7 @@
           "messages": {
             "reviewedNotFinal": "{count, plural, one {# geprüfte, noch nicht festgeschriebene Buchung} other {# geprüfte, noch nicht festgeschriebene Buchungen}}",
             "withoutVoucher": "{count, plural, one {# festgeschriebene Buchung ohne Beleg} other {# festgeschriebene Buchungen ohne Beleg}}",
-            "overdueItems": "{count, plural, one {# überfällige offene Zahlung} other {# überfällige offene Zahlungen}}, zusammen {sum}",
+            "overdueItems": "{count, plural, one {# überfällige offene Zahlung} other {# überfällige offene Zahlungen}}",
             "rawOpen": "{count, plural, one {# Kontoumsatz ohne Zuordnung} other {# Kontoumsätze ohne Zuordnung}}",
             "foreignMoney": "{count, plural, one {# Zahlung gehört nicht dem Verein und ist noch nicht weitergegeben} other {# Zahlungen gehören nicht dem Verein und sind noch nicht weitergegeben}}",
             "vouchersWithoutEntry": "{count, plural, one {# Finanzbeleg ohne Buchung} other {# Finanzbelege ohne Buchung}}",
@@ -1135,9 +1136,9 @@
             "confirmationsToCorrect": "{count, plural, one {# Zuwendungsbestätigung zu korrigieren} other {# Zuwendungsbestätigungen zu korrigieren}}",
             "confirmationsNeedSignature": "{count, plural, one {# Zuwendungsbestätigung ohne Unterschrift} other {# Zuwendungsbestätigungen ohne Unterschrift}}",
             "expenseClaimsPending": "{count, plural, one {# Antrag wartet auf Freigabe} other {# Anträge warten auf Freigabe}}",
-            "negativeBalance": "Kontostand negativ: {account} {amount}",
+            "negativeBalance": "Kontostand negativ: {account}",
             "partnerPaymentsPending": "{count, plural, one {# Zahlung an Partner wartet auf Freigabe} other {# Zahlungen an Partner warten auf Freigabe}}",
-            "partnerPaymentsWithoutProof": "{count, plural, one {# Zahlung an Partner ohne anerkannten Nachweis} other {# Zahlungen an Partner ohne anerkannten Nachweis}}, zusammen {sum}",
+            "partnerPaymentsWithoutProof": "{count, plural, one {# Zahlung an Partner ohne anerkannten Nachweis} other {# Zahlungen an Partner ohne anerkannten Nachweis}}",
             "partnerPaymentsOverdue": "{count, plural, one {# Nachweis einer Zahlung an Partner überfällig} other {# Nachweise von Zahlungen an Partner überfällig}}",
             "evidenceReadyToAcknowledge": "Nachweise bereit zum Anerkennen: {count}",
             "purposeTransfersPending": "{count, plural, one {# Umwidmung wartet auf Freigabe} other {# Umwidmungen warten auf Freigabe}}"
@@ -1165,7 +1166,7 @@
           "messages": {
             "ok": "Kein Zweck im Minus.",
             "negative": "{count, plural, one {# Zweck} other {# Zwecke}} im Minus, zusammen {sum}",
-            "line": "{name} {amount}"
+            "line": "{name}"
           }
         },
         "accountsNegative": {
@@ -1174,7 +1175,7 @@
           "open": "Zu den Konten"
         },
         "setupIncomplete": {
-          "title": "Einrichtung",
+          "title": "Finanzen einrichten",
           "empty": "",
           "open": "Zur Einrichtung",
           "messages": {
@@ -1221,9 +1222,9 @@
           "open": "Zu Ihren Auslagen",
           "messages": {
             "draft": "{number} — Entwurf",
-            "submitted": "{number} · {amount} — wartet auf Freigabe",
-            "approved": "{number} · {amount} — wird überwiesen",
-            "paid": "{number} · {amount} — überwiesen",
+            "submitted": "{number} — wartet auf Freigabe",
+            "approved": "{number} — wird überwiesen",
+            "paid": "{number} — überwiesen",
             "rejected": "{number} — abgelehnt"
           }
         },
@@ -1243,8 +1244,8 @@
           "messages": {
             "ok": "Keine Zahlung an Partner wartet auf einen anerkannten Nachweis.",
             "open": "{count, plural, one {# Zahlung} other {# Zahlungen}} an Partner ohne anerkannten Nachweis, zusammen {sum}{overdue, plural, =0 {} other {, # überfällig}}",
-            "lineOpen": "{partner} · {number} {amount} — offen",
-            "lineOverdue": "{partner} · {number} {amount} — seit {days, plural, one {# Tag} other {# Tagen}} überfällig"
+            "lineOpen": "{partner} · {number} — offen",
+            "lineOverdue": "{partner} · {number} — seit {days, plural, one {# Tag} other {# Tagen}} überfällig"
           }
         },
         "reserveCapNear": {

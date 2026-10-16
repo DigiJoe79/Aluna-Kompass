@@ -73,6 +73,13 @@ export function TileLines({ ns, lines, canComplete }: { ns: string; lines: Dashb
               <span data-testid="tile-line-date" className={cn('tabular-nums order-3 text-hint min-[391px]:order-2', line.overdue ? 'text-warning' : 'text-ink-2')}>{fmt.date(line.date)}</span>
             ) : null}
             {line.extra ? <span className="order-4 text-hint text-muted-ink">{line.extra}</span> : null}
+            {/* Betrag rechts (Designer Stufe 2 Nr. 1): fertiger Text des Moduls, rechtsbündig, Ziffern gleich breit. Keine
+                eigene Marke in der Zeile — den Zustand trägt der Kachelkopf (02 B10). */}
+            {line.trailing ? (
+              <span data-testid="tile-line-trailing" className="order-5 ml-auto text-meta tabular-nums whitespace-nowrap text-ink">
+                {line.trailing}
+              </span>
+            ) : null}
           </li>
         );
       })}

@@ -355,7 +355,9 @@ test.describe('finance approvals (D3)', () => {
     await page.goto('/');
     const mine = page.getByTestId('dashboard-tile-finance-myExpenses');
     await expect(mine.getByRole('heading', { name: 'Ihre Auslagen' })).toBeVisible();
-    await expect(mine).toContainText(`${claim.number} · 12,50 € — wartet auf Freigabe`);
+    await expect(mine).toContainText(`${claim.number} — wartet auf Freigabe`);
+    // Der Betrag steht rechts in der Zeile, nicht im Satz (Designer Stufe 2 Nr. 1).
+    await expect(mine.getByTestId('tile-line-trailing')).toHaveText('12,50 €');
     // Der eigene Antrag wartet nicht auf Annas Freigabe — nur der Seed-Antrag (Nadja Vogt) zählt hier.
     await expect(page.getByTestId('dashboard-tile-finance-approvalsPending')).not.toContainText(claim.number!);
 

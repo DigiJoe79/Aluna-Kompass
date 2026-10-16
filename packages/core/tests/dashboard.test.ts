@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
 import { coreModule } from '../src/core-module';
 import { getDashboardLayout, listDashboardTiles, readDashboard, resetDashboardLayout, setDashboardLayout } from '../src/dashboard/service';
-import type { DashboardTile } from '../src/dashboard/types';
+import type { DashboardLine, DashboardTile } from '../src/dashboard/types';
 import { auditLog, dashboardLayouts, settings as schemaSettings } from '../src/db/schema';
 import { defineModule } from '../src/modules/manifest';
 import { setModuleEnabled } from '../src/modules/service';
@@ -205,5 +205,32 @@ describe('tiles that may be absent (Spec Vorschläge § 4)', () => {
     expect(await keys()).toEqual([[], []]);
     on = true;
     expect(await keys()).toEqual([['maybe'], ['maybe']]);
+  });
+});
+
+describe('Zusatz rechts in einer Kachelzeile (Designer Stufe 2 Nr. 1, Joe 2026-10-16)', () => {
+  it('reicht `trailing` als fertigen Text durch — der Kern kennt keinen Geldbegriff', async () => {
+    const line: DashboardLine = { title: 'Zeile', trailing: '12,00 €' };
+    const lined = defineModule({
+      key: 'lined',
+      version: '0',
+      permissions: ['lined.view'],
+      dashboardTiles: [
+        {
+          key: 'rows',
+          permission: 'lined.view',
+          kind: 'list',
+          defaultOn: true,
+          options: z.object({}),
+          load: () => ({ kind: 'list', lines: [line], total: 1, href: null }),
+        },
+      ],
+    });
+    const deps = createTestDeps({ manifests: [coreModule, lined] });
+    deps.db.insert(schemaSettings).values({ key: 'modules.enabled', value: JSON.stringify(['lined']), updatedAt: TEST_NOW }).run();
+    const ctx = ctxWith(['lined.view'], insertUser(deps, { name: 'Anna' }));
+    const res = await readDashboard(deps, ctx);
+    const tile = res.ok ? res.value.find((t) => t.module === 'lined') : undefined;
+    expect(tile?.content).toEqual({ kind: 'list', lines: [{ title: 'Zeile', trailing: '12,00 €' }], total: 1, href: null });
   });
 });

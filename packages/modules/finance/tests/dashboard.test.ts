@@ -89,7 +89,9 @@ describe('finance dashboard tiles', () => {
     expect(voucherLine.href).toBe('/finance/entries?novoucher=1');
     const overdueLine = result.lines.find((l) => l.titleKey === 'overdueItems')!;
     expect(overdueLine.href).toBe('/finance/open-items?tab=payable');
-    expect(overdueLine.values).toMatchObject({ count: 1 });
+    expect(overdueLine.values).toEqual({ count: 1 });
+    // Betrag rechts (Designer Stufe 2 Nr. 1): fertig formatiert in `trailing`, nicht im Satz.
+    expect(overdueLine.trailing).toMatch(/€$/);
   });
 
   it('dates the reviewed-not-final line by the association\'s day of the oldest review, not the UTC day', async () => {
@@ -261,7 +263,7 @@ describe('finance dashboard tiles', () => {
     unwrap(await finalizeReviewed(f.deps, f.ctx, { ids: [draft.id] }));
     const result = await tileByKey('todo').load(f.deps, f.ctx, {});
     if (result.kind !== 'list') throw new Error('expected list');
-    expect(result.lines.find((l) => l.titleKey === 'negativeBalance')).toEqual({ titleKey: 'negativeBalance', values: { account: 'PayPal', amount: formatEuro(-12000) }, href: '/finance/accounts' });
+    expect(result.lines.find((l) => l.titleKey === 'negativeBalance')).toEqual({ titleKey: 'negativeBalance', values: { account: 'PayPal' }, trailing: formatEuro(-12000), href: '/finance/accounts' });
 
     // Die Kasse hat ihre eigene, härtere Sperre und erscheint hier nie.
     expect(JSON.stringify(result)).not.toMatch(/Barkasse/);
@@ -355,7 +357,7 @@ describe('finance expense dashboard tiles (F8a, Spec 9.7)', () => {
     const result = await tile.load(f.deps, f.hanna.ctx, {});
     expect(result.kind).toBe('list');
     if (result.kind !== 'list') throw new Error('expected list');
-    expect(result.lines).toEqual([{ titleKey: 'submitted', values: { number: claim.number, amount: formatEuro(claim.totalCents) }, href: `/finance/expenses/${claim.id}` }]);
+    expect(result.lines).toEqual([{ titleKey: 'submitted', values: { number: claim.number }, trailing: formatEuro(claim.totalCents), href: `/finance/expenses/${claim.id}` }]);
   });
 
   it('warns that nobody can approve until an active user holds finance.approve', async () => {
@@ -407,7 +409,7 @@ describe('finance partner payment dashboard tiles (F7 Task 5, Annahme 6, 13)', (
 
     const approved = unwrap(await approvePartnerPayment(f.deps, f.secondPerson, { id: f.submitted.id, expectedVersion: f.submitted.version }));
     // Design-Nachtrag Phase 4 (Entscheidung 8): mit „Finanzen lesen“ je Zahlung eine Zeile mit Nummer und Betrag.
-    expect(await tile.load(f.deps, f.ctx, {})).toMatchObject({ kind: 'list', total: 1, lines: [{ titleKey: 'lineOpen', values: { partner: 'Kachelpartner e.V.', number: approved.number, amount: formatEuro(1000) } }] });
+    expect(await tile.load(f.deps, f.ctx, {})).toMatchObject({ kind: 'list', total: 1, lines: [{ titleKey: 'lineOpen', values: { partner: 'Kachelpartner e.V.', number: approved.number }, trailing: formatEuro(1000) }] });
 
     // Task 6c: vor der Zahlung kein „überfällig“, auch lange nach der Freigabe.
     f.deps.clock.set('2027-01-10T09:00:00.000Z');
@@ -422,7 +424,8 @@ describe('finance partner payment dashboard tiles (F7 Task 5, Annahme 6, 13)', (
     expect(JSON.stringify(status)).not.toContain('Kachelpartner');
     result = await todo.load(f.deps, f.ctx, {});
     if (result.kind !== 'list') throw new Error('expected list');
-    expect(result.lines.find((l) => l.titleKey === 'partnerPaymentsWithoutProof')).toMatchObject({ titleKey: 'partnerPaymentsWithoutProof', values: { count: 1 } });
+    expect(result.lines.find((l) => l.titleKey === 'partnerPaymentsWithoutProof')).toMatchObject({ titleKey: 'partnerPaymentsWithoutProof', values: { count: 1 }, trailing: formatEuro(1000) });
+    expect(result.lines.find((l) => l.titleKey === 'partnerPaymentsWithoutProof')!.values).not.toHaveProperty('sum');
     expect(result.lines.find((l) => l.titleKey === 'partnerPaymentsOverdue')).toEqual({ titleKey: 'partnerPaymentsOverdue', values: { count: 1 }, href: '/finance/partners' });
     expect(JSON.stringify(result)).not.toMatch(/Kachelpartner|Förderung/);
     void approved;
@@ -437,7 +440,7 @@ describe('finance partner payment dashboard tiles (F7 Task 5, Annahme 6, 13)', (
     unwrap(await bookEntry(f.deps, f.ctx, { entryDate: '2026-02-01', text: 'Ausgabe ohne Deckung', moneyLines: [{ accountId: f.bank.id, amountCents: -2000 }], allocationLines: [{ categoryId: f.programCosts.id, amountCents: -2000, purposeId: purpose.id }], reason: 'Vorschuss aus freien Mitteln (Befund Q)' }));
     // Entscheidung 8: mit „Finanzen lesen“ je Zweck eine Zeile, sonst nur Anzahl und Summe — die Summe ohne Minus, das
     // Wort „im Minus“ sagt die Richtung (Designer 2026-10-16, Teil 1 Nr. 1).
-    expect(await tile.load(f.deps, f.ctx, {})).toEqual({ kind: 'list', lines: [{ titleKey: 'line', values: { name: 'Zweck im Minus', amount: formatEuro(-2000) }, href: '/finance/purposes' }], total: 1, href: '/finance/purposes' });
+    expect(await tile.load(f.deps, f.ctx, {})).toEqual({ kind: 'list', lines: [{ titleKey: 'line', values: { name: 'Zweck im Minus' }, trailing: formatEuro(-2000), href: '/finance/purposes' }], total: 1, href: '/finance/purposes' });
     expect(await tile.load(f.deps, { ...f.ctx, permissions: new Set(['finance.overview']) }, {})).toEqual({ kind: 'status', tone: 'warning', messageKey: 'negative', values: { count: 1, sum: formatEuro(2000) }, href: '/finance/purposes' });
   });
 
