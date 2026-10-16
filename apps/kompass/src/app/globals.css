@@ -263,3 +263,85 @@
   .prose-preview h3 { font-size: 17px; margin-top: 1.4em; }
   .prose-preview h4 { font-size: 15px; }
 }
+/*
+ * Kartenzeile (Entwurf E1 „Tabelle am Telefon“, Designer 2026-10-17; MUSTER.md § G). Gilt nur für eine Tabelle mit
+ * Titelspalte (`col="title"` an Kopf und Zelle, `ui/table.tsx`). Ohne `@layer`, damit es die Breiten- und
+ * Ausrichtungsklassen der Aufrufstellen schlägt. Kein Layout-Test (Projektregel): Das Bild prüft die Bild-Pipeline;
+ * Rollen, Vorleser und die drei meta-Plätze prüft `tests/table-cards.test.tsx`, die Rollen je Liste `table-roles`.
+ *
+ * - unter `lg`: Spalten ohne Rolle fallen weg — nie waagerechtes Scrollen.
+ * - unter `md`: jede Zeile eine Karte. Raster: Haken | Titel (über die meta-Plätze) | rechts | Menü,
+ *   2. Zeile meta 1–3 und Betrag. Ohne Status rückt der Betrag in die 1. Zeile.
+ */
+@media (max-width: 1023.98px) {
+  table:has([data-col="title"]) :is(th, td):not([data-col]) { display: none; }
+  /* Der Titel bricht um, statt die Tabelle über den Rand zu schieben (die Karte schneidet sonst Betrag und Status ab). */
+  table:has([data-col="title"]) > tbody > tr > [data-col="title"] { white-space: normal; overflow-wrap: break-word; }
+}
+@media (max-width: 767.98px) {
+  table:has([data-col="title"]),
+  table:has([data-col="title"]) > :is(tbody, tfoot) { display: block; }
+  table:has([data-col="title"]) > thead { display: none; }
+  table:has([data-col="title"]) > tbody > tr {
+    display: grid;
+    /* meta 1 und 2 nehmen ihren Platz bis zur Grenze, meta 3 den Rest: Gekürzt wird zuerst hinten (E1 „Kürzung in meta“). */
+    grid-template-columns: [check] auto [m1] fit-content(45%) [m2] fit-content(45%) [m3] minmax(0, 1fr) [right] auto [menu] auto;
+    align-items: start;
+    height: auto;
+    padding: 10px 12px 10px 16px;
+  }
+  /* Keine Zebra-Streifen in der Kartenliste; Hover und Auswahl bleiben (Artboard). */
+  table:has([data-col="title"]) > tbody > tr:nth-child(even):not(:hover):not([data-state="selected"]) { background: transparent; }
+  /* Tastaturfokus: Ring an der ganzen Zeile — das macht die Fläche des RowLink (`ROW_TARGET`), hier nichts zu tun. */
+  table:has([data-col="title"]) > tbody > tr > :is(td, th) {
+    padding: 0;
+    min-width: 0;
+    height: auto;
+    white-space: nowrap;
+    text-align: left;
+  }
+  table:has([data-col="title"]) > tbody > tr > [data-col="select"] {
+    grid-column: check; grid-row: 1 / span 2;
+    display: flex; align-items: flex-start; width: 32px; min-height: 44px; padding-top: 3px;
+  }
+  /* Trefferfläche des Hakens 32 × 44 (der Kasten bleibt 16 px). */
+  table:has([data-col="title"]) > tbody > tr > [data-col="select"] [data-slot="checkbox"]::after { inset: -14px -8px; }
+  table:has([data-col="title"]) > tbody > tr > [data-col="title"] {
+    grid-column: m1 / right; grid-row: 1;
+    font-size: var(--text-body); line-height: var(--text-body--line-height);
+    white-space: normal; overflow-wrap: anywhere; padding-right: 8px;
+    display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden;
+  }
+  /* Marke, Betrag, Haken und Menü kürzen nie: Titel und meta geben Platz ab. */
+  table:has([data-col="title"]) > tbody > tr > :is([data-col="status"], [data-col="amount"], [data-col="select"], [data-col="actions"]) { min-width: max-content; }
+  table:has([data-col="title"]) > tbody > tr > [data-col="status"] { grid-column: right; grid-row: 1; justify-self: end; }
+  table:has([data-col="title"]) > tbody > tr > [data-col="amount"] {
+    grid-column: right; grid-row: 2; justify-self: end; padding-top: 2px;
+    font-variant-numeric: tabular-nums; text-align: right;
+  }
+  table:has([data-col="title"]) > tbody > tr:not(:has(> [data-col="status"])) > [data-col="amount"] { grid-row: 1; padding-top: 0; }
+  table:has([data-col="title"]) > tbody > tr > [data-col="meta"] {
+    grid-row: 2; padding-top: 2px;
+    font-size: var(--text-meta); line-height: var(--text-meta--line-height); color: var(--muted);
+    overflow: hidden; text-overflow: ellipsis;
+  }
+  /* Marken in meta (Rollen, Merkmale) stehen in einer Zeile wie der Text daneben. */
+  table:has([data-col="title"]) > tbody > tr > [data-col="meta"] > :is(div, span) { display: inline-flex; flex-wrap: nowrap; vertical-align: middle; }
+  table:has([data-col="title"]) > tbody > tr > :nth-child(1 of [data-col="meta"]) { grid-column: m1; }
+  table:has([data-col="title"]) > tbody > tr > :nth-child(2 of [data-col="meta"]) { grid-column: m2; }
+  table:has([data-col="title"]) > tbody > tr > :nth-child(3 of [data-col="meta"]) { grid-column: m3; }
+  table:has([data-col="title"]) > tbody > tr > [data-col="meta"] ~ [data-col="meta"]::before { content: "·"; padding: 0 6px; }
+  table:has([data-col="title"]) > tbody > tr > [data-col="actions"] {
+    grid-column: menu; grid-row: 1 / span 2; justify-self: end; margin: -10px -4px 0 4px;
+    display: flex; align-items: flex-start;
+  }
+  table:has([data-col="title"]) > tbody > tr > [data-col="actions"] :is(button, a) { min-width: 44px; min-height: 44px; }
+  table:has([data-col="title"]) > tbody > tr > [data-col="span"] { grid-column: 1 / -1; white-space: normal; }
+  /* Summenzeile: nach der letzten Zeile, Fläche `surface-2`, links das Etikett, rechts der Betrag; klebt nicht. */
+  table:has([data-col="title"]) > tfoot > tr {
+    display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 12px;
+    height: auto; padding: 10px 12px 10px 16px;
+  }
+  table:has([data-col="title"]) > tfoot > tr > :is(td, th) { padding: 0; white-space: normal; }
+  table:has([data-col="title"]) > tfoot > tr > [data-col="amount"] { font-variant-numeric: tabular-nums; text-align: right; }
+}

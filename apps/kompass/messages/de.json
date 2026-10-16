@@ -29,6 +29,13 @@
       "confirm": "Seite verlassen"
     },
     "sortBy": "Sortieren nach {column}",
+    "sortMenu": {
+      "label": "Sortieren",
+      "current": "Sortieren: {column}",
+      "none": "Sortieren: Vorgabe",
+      "desc": "{column}, absteigend",
+      "asc": "{column}, aufsteigend"
+    },
     "search": "Suchen",
     "clearSearch": "Suche leeren",
     "filterBar": {
