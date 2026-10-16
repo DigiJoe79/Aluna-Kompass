@@ -2,8 +2,11 @@ import { Button as ButtonPrimitive } from "@base-ui/react/button"
 import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 
+// Gesperrt ist die Fläche der eigenen Stufe, gedämpft (`opacity-50`) und ohne Hover (`pointer-events-none`), nicht
+// mehr die graue Fläche von `secondary` — ein gesperrter Primärknopf bleibt als Primärknopf erkennbar (Designer
+// Stufe 2 Nr. 3). Den Grund der Sperre nennt die Aufrufstelle als Text neben dem Knopf, nicht nur im Tooltip.
 const buttonVariants = cva(
-  "group/button inline-flex shrink-0 items-center justify-center rounded-md border border-transparent bg-clip-padding text-[length:var(--field-font)] font-semibold whitespace-nowrap transition-all select-none active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:bg-disabled disabled:text-disabled-ink aria-invalid:border-error [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+  "group/button inline-flex shrink-0 items-center justify-center rounded-md border border-transparent bg-clip-padding text-[length:var(--field-font)] font-semibold whitespace-nowrap transition-all select-none active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-error [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
   {
     variants: {
       variant: {
@@ -12,12 +15,12 @@ const buttonVariants = cva(
           "border-line-strong bg-surface hover:bg-hover aria-expanded:bg-hover",
         secondary:
           "bg-surface-2 text-ink-2 hover:bg-hover aria-expanded:bg-hover",
-        // Gesperrt ohne Fläche: Ein ghost-Knopf hat keine, die graue Fläche aus der Basis hob ihn hervor statt ihn
-        // auszugrauen (gesperrter Blätterpfeil „7 von 7“, Befund 10). Kein Layout-Test — Einzelstelle, Laufzeit zählt.
         ghost:
-          "hover:bg-hover hover:text-ink aria-expanded:bg-hover aria-expanded:text-ink disabled:bg-transparent",
+          "hover:bg-hover hover:text-ink aria-expanded:bg-hover aria-expanded:text-ink",
+        // Gefahr in voller Fläche; die Schrift in Flächenfarbe hält 4,5:1 (Paar color-error/surface, Designer Stufe 2
+        // Nr. 3). Ablehnen (Auslage, Vorschlag) ist keine Gefahr und bleibt neutral.
         destructive:
-          "bg-error-bg text-error hover:bg-[color-mix(in_oklch,var(--color-error-bg),var(--color-error)_12%)]",
+          "bg-error text-surface hover:bg-[color-mix(in_oklch,var(--color-error),var(--color-ink)_14%)]",
         link: "text-link underline-offset-4 hover:underline hover:text-link-hover",
       },
       size: {

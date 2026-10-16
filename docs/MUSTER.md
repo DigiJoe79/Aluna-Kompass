@@ -37,6 +37,7 @@ Bausteine: `forms/form-error-summary.tsx`, `forms/field-error.tsx`, `forms/refus
 - Ohne `<form>` (Dialog mit eigenem Zustand): `onSave` und `pending`; gezählt wird über `count`.
 - Linke Zeile über Props: `note` (Freigeber, Protokoll, Pflichtfeld-Legende), `status` (Zwischenstand laufend gesicherter Masken), sonst zählt die Leiste selbst. `destructive` macht den Hauptknopf zum Löschknopf; `testId`/`saveTestId` sind Kennungen für Tests.
 - Speichern ist nie ausgegraut; `saveDisabled` nur, wenn ohne eine Sache gar nichts geht (die Akte ohne Datei, die Sammelbestätigung ohne Auswahl).
+- **Knopfstufen** (Designer 2026-10-16, Stufe 2 Nr. 3): Ein gesperrter Knopf behält die Fläche seiner Stufe, gedämpft, und hat keinen Hover — er sieht nicht aus wie `secondary`. Der Grund der Sperre steht als Text neben dem Knopf, nicht nur im Tooltip. Gefahr (`destructive`) ist die volle rote Fläche mit Schrift in Flächenfarbe (≥ 4,5:1, Paar `color-error`/`surface`); sie gehört in den Bestätigungsdialog. Ablehnen (Auslage, Vorschlag) ist keine Gefahr und bleibt neutral. Baustein `ui/button.tsx`, Test `button-variants.test.ts`.
 - Keine eigenen Fußleisten, kein eigenes `sticky bottom-0`, kein `SaveBar`/`StickyFooter`. Dialoge ohne Hauptaktion (nur Schließen, nur Abbrechen) behalten einen `DialogFooter`, mit Grund im Code.
 
 Bausteine: `forms/form-action-bar.tsx`, `forms/form-card.tsx`, `forms/save-status.tsx`, `forms/submit-button.tsx`, `forms/action-form.tsx`, `forms/use-autosave.ts`.
