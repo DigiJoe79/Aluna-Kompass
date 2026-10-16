@@ -127,23 +127,23 @@ export function CategoriesPanel({ categories, confirmedAt }: { categories: Categ
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>{t('columns.name')}</TableHead>
-                  <TableHead>{t('columns.direction')}</TableHead>
-                  <TableHead>{t('columns.statementSuffices')}</TableHead>
-                  <TableHead>{t('columns.active')}</TableHead>
-                  <TableHead className="text-right">{tCommon('edit')}</TableHead>
+                  <TableHead col="title">{t('columns.name')}</TableHead>
+                  <TableHead col="meta">{t('columns.direction')}</TableHead>
+                  <TableHead col="meta">{t('columns.statementSuffices')}</TableHead>
+                  <TableHead col="status">{t('columns.active')}</TableHead>
+                  <TableHead col="actions" className="text-right">{tCommon('edit')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {rows.map((row) => (
                   <TableRow key={row.id} data-testid={`category-row-${row.key}`}>
-                    <TableCell className="text-ink">{row.name}</TableCell>
-                    <TableCell className="text-ink-2">{t(`directions.${row.direction}`)}</TableCell>
-                    <TableCell className="text-ink-2">{row.statementSuffices ? tCommon('yes') : tCommon('no')}</TableCell>
-                    <TableCell>
+                    <TableCell col="title" className="text-ink">{row.name}</TableCell>
+                    <TableCell col="meta" className="text-ink-2">{t(`directions.${row.direction}`)}</TableCell>
+                    <TableCell col="meta" className="text-ink-2">{row.statementSuffices ? tCommon('yes') : tCommon('no')}</TableCell>
+                    <TableCell col="status">
                       {row.isActive ? null : <StatusBadge tone={statusTone('active', 'inactive')}>{t('inactiveState')}</StatusBadge>}
                     </TableCell>
-                    <TableCell className="text-right">
+                    <TableCell col="actions" className="text-right">
                       <Button variant="ghost" size="sm" onClick={() => openRow(row)}>
                         {tCommon('edit')}
                       </Button>

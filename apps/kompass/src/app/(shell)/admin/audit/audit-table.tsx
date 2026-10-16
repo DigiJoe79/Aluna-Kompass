@@ -44,32 +44,32 @@ export async function AuditTable({
     <Table className="text-body">
       <TableHeader>
         <TableRow>
-          <TableHead>{t('columns.time')}</TableHead>
-          <TableHead>{t('columns.user')}</TableHead>
-          <TableHead>{t('columns.channel')}</TableHead>
-          <TableHead>{t('columns.action')}</TableHead>
-          <TableHead>{t('columns.entity')}</TableHead>
+          <TableHead col="meta">{t('columns.time')}</TableHead>
+          <TableHead col="meta">{t('columns.user')}</TableHead>
+          <TableHead col="status">{t('columns.channel')}</TableHead>
+          <TableHead col="title">{t('columns.action')}</TableHead>
+          <TableHead col="meta">{t('columns.entity')}</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
         {entries.map((e) => (
           <TableRow key={e.id} data-state={e.id === selectedId ? 'selected' : undefined}>
-            <TableCell className="tabular-nums text-hint">
+            <TableCell col="meta" className="tabular-nums text-hint">
               <RowLink href={`?${query}${query ? '&' : ''}entry=${e.id}`}>
                 {fmt.dateTime(e.occurredAt, { seconds: true })}
               </RowLink>
             </TableCell>
-            <TableCell className="text-ink-2">{e.userName ?? <Empty />}</TableCell>
-            <TableCell>
+            <TableCell col="meta" className="text-ink-2">{e.userName ?? <Empty />}</TableCell>
+            <TableCell col="status">
               <StatusBadge tone={statusTone('auditChannel', e.channel)}>{t(`filters.channels.${e.channel}`)}</StatusBadge>
             </TableCell>
-            <TableCell className="whitespace-normal">{sentences[e.id] ?? auditActionLabel(t, e.action)}</TableCell>
+            <TableCell col="title" className="whitespace-normal">{sentences[e.id] ?? auditActionLabel(t, e.action)}</TableCell>
             {/* Objekt bricht um, Kennungen auch mitten im Wort (wie
                 in der Akte): Einzeilig lief die Tabelle bei 1440 px seitlich über, und
                 `max-w` mit `truncate` greift an einer Tabellenzelle nicht
                 (release-0.2.7.md, Befund 14). */}
             {/* Typ in Worten und Name, ohne Namen nur der Typ — nie die ID, die steht im Detail (Joe 2026-10-09). */}
-            <TableCell className="whitespace-normal wrap-anywhere text-ink-2">
+            <TableCell col="meta" className="whitespace-normal wrap-anywhere text-ink-2">
               <AuditObjectLabel object={auditObject(t, e, labels[e.id])} />
             </TableCell>
           </TableRow>

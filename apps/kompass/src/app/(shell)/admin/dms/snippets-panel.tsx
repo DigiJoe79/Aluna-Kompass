@@ -61,10 +61,10 @@ export function SnippetsPanel({ snippets }: { snippets: SnippetRow[] }) {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>{t('snippetColumns.name')}</TableHead>
-              <TableHead>{t('snippetColumns.subject')}</TableHead>
-              <TableHead>{t('snippetColumns.active')}</TableHead>
-              <TableHead className="text-right">{t('snippetColumns.actions')}</TableHead>
+              <TableHead col="title">{t('snippetColumns.name')}</TableHead>
+              <TableHead col="meta">{t('snippetColumns.subject')}</TableHead>
+              <TableHead col="meta">{t('snippetColumns.active')}</TableHead>
+              <TableHead col="actions" className="text-right">{t('snippetColumns.actions')}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -73,10 +73,10 @@ export function SnippetsPanel({ snippets }: { snippets: SnippetRow[] }) {
             ) : (
               snippets.map((snippet) => (
                 <TableRow key={snippet.id}>
-                  <TableCell className="font-semibold text-ink">{snippet.name}</TableCell>
-                  <TableCell className="text-ink-2">{snippet.subject ?? <Empty />}</TableCell>
-                  <TableCell className="text-ink-2">{snippet.isActive ? tCommon('yes') : tCommon('no')}</TableCell>
-                  <TableCell className="text-right">
+                  <TableCell col="title" className="font-semibold text-ink">{snippet.name}</TableCell>
+                  <TableCell col="meta" className="text-ink-2">{snippet.subject ?? <Empty />}</TableCell>
+                  <TableCell col="meta" className="text-ink-2">{snippet.isActive ? tCommon('yes') : tCommon('no')}</TableCell>
+                  <TableCell col="actions" className="text-right">
                     <Button variant="ghost" size="sm" onClick={() => setEditing(snippet)}>
                       {t('edit')}
                     </Button>

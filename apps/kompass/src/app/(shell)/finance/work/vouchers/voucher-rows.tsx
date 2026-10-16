@@ -51,8 +51,8 @@ export function VoucherRows({ rows, canOpenDocument, canWrite, canCreateContact 
         return (
           <Fragment key={doc.id}>
             <TableRow>
-              <TableCell className="font-mono text-hint text-ink-2">{doc.number}</TableCell>
-              <TableCell className="text-ink">
+              <TableCell col="meta" className="font-mono text-hint text-ink-2">{doc.number}</TableCell>
+              <TableCell col="title" className="text-ink">
                 {canOpenDocument ? (
                   <Link href={`/dms/${doc.id}`} className="underline underline-offset-2">
                     {doc.subject}
@@ -61,9 +61,9 @@ export function VoucherRows({ rows, canOpenDocument, canWrite, canCreateContact 
                   doc.subject
                 )}
               </TableCell>
-              <TableCell className="text-hint tabular-nums text-ink-2">{date(doc.documentDate)}</TableCell>
-              <TableCell className="text-ink-2">{doc.typeLabel}</TableCell>
-              <TableCell className="text-right">
+              <TableCell col="meta" className="text-hint tabular-nums text-ink-2">{date(doc.documentDate)}</TableCell>
+              <TableCell col="meta" className="text-ink-2">{doc.typeLabel}</TableCell>
+              <TableCell col="actions" className="text-right">
                 <span className="inline-flex items-center gap-2">
                   <Button type="button" size="sm" variant="ghost" aria-expanded={!!loaded} aria-controls={`invoice-${doc.id}`} onClick={() => toggle(doc.id)}>
                     {loaded ? <ChevronDown className="size-4" aria-hidden /> : <ChevronRight className="size-4" aria-hidden />}
@@ -79,7 +79,7 @@ export function VoucherRows({ rows, canOpenDocument, canWrite, canCreateContact 
             </TableRow>
             {loaded ? (
               <TableRow id={`invoice-${doc.id}`} className="bg-surface-2 even:bg-surface-2 hover:bg-surface-2">
-                <TableCell colSpan={5} className="py-3">
+                <TableCell col="span" colSpan={5} className="py-3">
                   {loaded.state === 'loading' ? (
                     <p className="text-meta text-muted-ink">{t('invoice.loading')}</p>
                   ) : loaded.state === 'failed' ? (

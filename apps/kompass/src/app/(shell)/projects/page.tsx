@@ -42,21 +42,21 @@ export default async function ProjectsPage({ searchParams }: { searchParams: Pro
             <Table>
               <TableHeader>
                 <TableRow>
-                  <SortableHead field="name" label={t('columns.name')} />
-                  <SortableHead field="type" label={t('columns.type')} />
+                  <SortableHead col="title" field="name" label={t('columns.name')} />
+                  <SortableHead col="meta" field="type" label={t('columns.type')} />
                   <TableHead>{t('columns.links')}</TableHead>
-                  <TableHead>{t('columns.status')}</TableHead>
-                  <TableHead />
+                  <TableHead col="status">{t('columns.status')}</TableHead>
+                  <TableHead col="actions" />
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {rows.map((p) => (
                   <TableRow key={p.id}>
-                    <TableCell><RowLink href={`/projects/${p.id}`}>{p.name.de || p.slug}</RowLink></TableCell>
-                    <TableCell><StatusBadge tone="neutral">{t(`types.${p.type}`)}</StatusBadge></TableCell>
+                    <TableCell col="title"><RowLink href={`/projects/${p.id}`}>{p.name.de || p.slug}</RowLink></TableCell>
+                    <TableCell col="meta"><StatusBadge tone="neutral">{t(`types.${p.type}`)}</StatusBadge></TableCell>
                     <TableCell className="text-hint text-muted-ink">{p.externalLinks.length > 0 ? p.externalLinks.map((l) => l.label).join(', ') : <Empty />}</TableCell>
-                    <TableCell><PublishSwitch id={p.id} isPublished={p.isPublished} action={setProjectPublishedAction} /></TableCell>
-                    <TableCell className="text-right">{sort ? null : <ReorderButtons ids={ids} index={ids.indexOf(p.id)} action={reorderProjectsAction} />}</TableCell>
+                    <TableCell col="status"><PublishSwitch id={p.id} isPublished={p.isPublished} action={setProjectPublishedAction} /></TableCell>
+                    <TableCell col="actions" className="text-right">{sort ? null : <ReorderButtons ids={ids} index={ids.indexOf(p.id)} action={reorderProjectsAction} />}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>

@@ -94,12 +94,12 @@ export function RulesPanel({
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>{t('ruleColumns.matchField')}</TableHead>
-              <TableHead>{t('ruleColumns.matchContains')}</TableHead>
-              <TableHead>{t('ruleColumns.thenType')}</TableHead>
-              <TableHead>{t('ruleColumns.thenFolder')}</TableHead>
-              <TableHead>{t('ruleColumns.status')}</TableHead>
-              <TableHead className="text-right">{t('ruleColumns.actions')}</TableHead>
+              <TableHead col="meta">{t('ruleColumns.matchField')}</TableHead>
+              <TableHead col="title">{t('ruleColumns.matchContains')}</TableHead>
+              <TableHead col="meta">{t('ruleColumns.thenType')}</TableHead>
+              <TableHead col="meta">{t('ruleColumns.thenFolder')}</TableHead>
+              <TableHead col="status">{t('ruleColumns.status')}</TableHead>
+              <TableHead col="actions" className="text-right">{t('ruleColumns.actions')}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -108,18 +108,18 @@ export function RulesPanel({
             ) : (
               rules.map((row, i) => (
                 <TableRow key={row.id}>
-                  <TableCell className="text-meta text-ink">
+                  <TableCell col="meta" className="text-meta text-ink">
                     {t(`ruleFields.${row.matchField}`)}
                   </TableCell>
-                  <TableCell className="font-mono text-ink">{row.matchContains}</TableCell>
-                  <TableCell className="text-ink-2">
+                  <TableCell col="title" className="font-mono text-ink">{row.matchContains}</TableCell>
+                  <TableCell col="meta" className="text-ink-2">
                     {row.thenTypeKey ? nameOrEmpty(typeMap.get(row.thenTypeKey), row.thenTypeKey) : <Empty />}
                   </TableCell>
-                  <TableCell className="text-ink-2">{row.thenFolder ?? <Empty />}</TableCell>
-                  <TableCell>
+                  <TableCell col="meta" className="text-ink-2">{row.thenFolder ?? <Empty />}</TableCell>
+                  <TableCell col="status">
                     {row.isActive ? null : <StatusBadge tone={statusTone('active', 'inactive')}>{t('inactive')}</StatusBadge>}
                   </TableCell>
-                  <TableCell className="text-right">
+                  <TableCell col="actions" className="text-right">
                     <div className="flex items-center justify-end gap-1">
                       <Button variant="ghost" size="sm" onClick={() => setEditingRule(row)}>
                         {t('edit')}

@@ -114,29 +114,29 @@ export function OpenItemsList({ rows, tab, state, page, total, tabTotal, pageSiz
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>{t('columns.dueOn')}</TableHead>
-                <TableHead>{t('columns.contact')}</TableHead>
-                <TableHead>{t('columns.amount')}</TableHead>
-                <TableHead>{t('columns.open')}</TableHead>
+                <TableHead col="meta">{t('columns.dueOn')}</TableHead>
+                <TableHead col="title">{t('columns.contact')}</TableHead>
+                <TableHead col="meta">{t('columns.amount')}</TableHead>
+                <TableHead col="amount">{t('columns.open')}</TableHead>
                 <TableHead>{t('columns.origin')}</TableHead>
-                <TableHead>{t('columns.reference')}</TableHead>
-                <TableHead>{t('columns.state')}</TableHead>
+                <TableHead col="meta">{t('columns.reference')}</TableHead>
+                <TableHead col="status">{t('columns.state')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {rows.map((row) => (
                 <TableRow key={row.id}>
-                  <TableCell>
+                  <TableCell col="meta">
                     <RowLink href={`${pageHref(page)}&item=${row.id}`} className={row.overdue ? 'text-error' : 'text-ink'}>
                       {formatDateOrDash(date, row.dueOn)}
                     </RowLink>
                   </TableCell>
-                  <TableCell>{row.contactLabel ?? <Empty />}</TableCell>
-                  <TableCell className="tabular-nums">{formatEuro(row.amountCents)}</TableCell>
-                  <TableCell className="tabular-nums">{formatEuro(row.openCents)}</TableCell>
+                  <TableCell col="title">{row.contactLabel ?? <Empty />}</TableCell>
+                  <TableCell col="meta" className="tabular-nums">{formatEuro(row.amountCents)}</TableCell>
+                  <TableCell col="amount" className="tabular-nums">{formatEuro(row.openCents)}</TableCell>
                   <TableCell>{row.hasOrigin ? t('hasOrigin') : <Empty />}</TableCell>
-                  <TableCell selectable>{row.paymentReference ?? <Empty />}</TableCell>
-                  <TableCell>
+                  <TableCell col="meta" selectable>{row.paymentReference ?? <Empty />}</TableCell>
+                  <TableCell col="status">
                     {t(`state.${row.word}`)}
                     {row.overdue ? ` · ${row.draftSettlementCents > 0 ? t('draftSettlement') : t('overdue')}` : ''}
                   </TableCell>

@@ -53,17 +53,17 @@ export function FiscalYearsPanel({ years }: { years: FiscalYearRow[] }) {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>{t('designation')}</TableHead>
-              <TableHead>{t('range')}</TableHead>
-              <TableHead>{t('status')}</TableHead>
-              <TableHead>{t('taxReturnFiledOn')}</TableHead>
-              <TableHead className="text-right">{tCommon('edit')}</TableHead>
+              <TableHead col="title">{t('designation')}</TableHead>
+              <TableHead col="meta">{t('range')}</TableHead>
+              <TableHead col="status">{t('status')}</TableHead>
+              <TableHead col="meta">{t('taxReturnFiledOn')}</TableHead>
+              <TableHead col="actions" className="text-right">{tCommon('edit')}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {years.map((year) => (
               <TableRow key={year.id}>
-                <TableCell>
+                <TableCell col="title">
                   <span className="font-semibold text-ink">{year.designation}</span>
                   {year.isShortYear ? (
                     <StatusBadge tone="neutral" className="ml-2">
@@ -71,14 +71,14 @@ export function FiscalYearsPanel({ years }: { years: FiscalYearRow[] }) {
                     </StatusBadge>
                   ) : null}
                 </TableCell>
-                <TableCell className="text-ink-2">
+                <TableCell col="meta" className="text-ink-2">
                   {date(year.startsOn)} – {date(year.endsOn)}
                 </TableCell>
-                <TableCell>
+                <TableCell col="status">
                   <StatusBadge tone={year.status === 'open' ? 'success' : 'neutral'}>{t(`statusValues.${year.status}`)}</StatusBadge>
                 </TableCell>
-                <TableCell className="text-ink-2">{year.taxReturnFiledOn ? date(year.taxReturnFiledOn) : <Empty />}</TableCell>
-                <TableCell className="text-right">
+                <TableCell col="meta" className="text-ink-2">{year.taxReturnFiledOn ? date(year.taxReturnFiledOn) : <Empty />}</TableCell>
+                <TableCell col="actions" className="text-right">
                   <Button variant="ghost" size="sm" onClick={() => setEditing(versions.latest(year))}>
                     {tCommon('edit')}
                   </Button>

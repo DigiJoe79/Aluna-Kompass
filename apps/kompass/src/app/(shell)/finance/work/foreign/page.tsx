@@ -38,19 +38,19 @@ export default async function FinanceForeignMoneyPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>{t('date')}</TableHead>
-                  <TableHead>{t('holder')}</TableHead>
-                  <TableHead className="text-right">{t('amount')}</TableHead>
-                  <TableHead>{t('entry')}</TableHead>
-                  <TableHead />
+                  <TableHead col="meta">{t('date')}</TableHead>
+                  <TableHead col="title">{t('holder')}</TableHead>
+                  <TableHead col="amount" className="text-right">{t('amount')}</TableHead>
+                  <TableHead col="meta">{t('entry')}</TableHead>
+                  <TableHead col="actions" />
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {items.map((item) => (
                   <TableRow key={item.lineId}>
-                    <TableCell className="text-hint tabular-nums text-ink-2">{fmt.date(item.entryDate)}</TableCell>
-                    <TableCell className="text-ink">{item.holderText}</TableCell>
-                    <TableCell className="text-right tabular-nums">
+                    <TableCell col="meta" className="text-hint tabular-nums text-ink-2">{fmt.date(item.entryDate)}</TableCell>
+                    <TableCell col="title" className="text-ink">{item.holderText}</TableCell>
+                    <TableCell col="amount" className="text-right tabular-nums">
                       {formatEuro(item.openCents)}
                       {item.passedOnCents > 0 && (
                         <span className="block text-hint text-muted-ink" data-testid="foreign-partly-passed-on">
@@ -58,12 +58,12 @@ export default async function FinanceForeignMoneyPage() {
                         </span>
                       )}
                     </TableCell>
-                    <TableCell>
+                    <TableCell col="meta">
                       <Link href={`/finance/entries/${item.entryId}`} className="font-mono text-hint underline underline-offset-2">
                         {item.entryNumber ?? t('draft')}
                       </Link>
                     </TableCell>
-                    <TableCell className="text-right">
+                    <TableCell col="actions" className="text-right">
                       <PassedOnButton holder={item.holderText} amount={formatEuro(item.openCents)} />
                     </TableCell>
                   </TableRow>

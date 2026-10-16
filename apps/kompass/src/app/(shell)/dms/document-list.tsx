@@ -243,7 +243,7 @@ export function DocumentList({ documents, currentFolder, total, unfiltered, read
             <TableHeader>
               <TableRow>
                 {selectable ? (
-                  <TableHead className="w-10 pr-0 pl-4">
+                  <TableHead col="select" className="w-10 pr-0 pl-4">
                     <Checkbox
                       aria-label={t('selection.selectAll')}
                       checked={allSelected}
@@ -252,14 +252,14 @@ export function DocumentList({ documents, currentFolder, total, unfiltered, read
                     />
                   </TableHead>
                 ) : null}
-                <SortableHead field="number" label={t('columns.number')} />
-                <SortableHead field="subject" label={t('columns.subject')} />
+                <SortableHead col="meta" field="number" label={t('columns.number')} />
+                <SortableHead col="title" field="subject" label={t('columns.subject')} />
                 {/* Auf dem Tablet fehlt der Platz; die Spalte „Ordner“ trägt dort mehr (Spec § 9). */}
                 <SortableHead field="typeKey" label={t('columns.type')} className="max-[1100px]:hidden" />
-                <SortableHead field="documentDate" label={t('columns.date')} />
-                <SortableHead field="folder" label={t('columns.folder')} />
+                <SortableHead col="meta" field="documentDate" label={t('columns.date')} />
+                <SortableHead col="meta" field="folder" label={t('columns.folder')} />
                 <TableHead>{t('columns.direction')}</TableHead>
-                <TableHead>{t('columns.status')}</TableHead>
+                <TableHead col="status">{t('columns.status')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -279,7 +279,7 @@ export function DocumentList({ documents, currentFolder, total, unfiltered, read
                   >
                     {selectable ? (
                       // Das Kästchen wählt aus; die Zeile öffnet weiter das Dokument.
-                      <TableCell className="w-10 pr-0 pl-4">
+                      <TableCell col="select" className="w-10 pr-0 pl-4">
                         <Checkbox
                           aria-label={t('selection.selectOne', { subject: doc.subject })}
                           checked={selection.ids.has(doc.id)}
@@ -288,11 +288,11 @@ export function DocumentList({ documents, currentFolder, total, unfiltered, read
                       </TableCell>
                     ) : null}
                     {/* Die Nummer ist kopierwürdig und liegt über der Zeilenfläche; geöffnet wird über den Betreff. */}
-                    <TableCell selectable className="font-mono text-meta text-ink">
+                    <TableCell col="meta" selectable className="font-mono text-meta text-ink">
                       {doc.number ?? <Empty />}
                     </TableCell>
                     {/* Betreff, Art und Ordner brechen um, damit „Ordner“ auch auf dem Tablet ohne Querscrollen sichtbar bleibt (Spec § 9). */}
-                    <TableCell className="min-w-[160px] whitespace-normal hyphens-auto wrap-anywhere max-[1100px]:min-w-[140px]">
+                    <TableCell col="title" className="min-w-[160px] whitespace-normal hyphens-auto wrap-anywhere max-[1100px]:min-w-[140px]">
                       <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                         <RowLink href={`/dms/${doc.id}`} className="text-ink hover:text-link">
                           {doc.subject}
@@ -321,13 +321,13 @@ export function DocumentList({ documents, currentFolder, total, unfiltered, read
                       </div>
                     </TableCell>
                     <TableCell className="min-w-[110px] whitespace-normal hyphens-auto wrap-anywhere text-ink-2 max-[1100px]:hidden">{doc.typeLabel}</TableCell>
-                    <TableCell className="tabular-nums text-meta text-ink-2">{fmt.date(doc.documentDate)}</TableCell>
+                    <TableCell col="meta" className="tabular-nums text-meta text-ink-2">{fmt.date(doc.documentDate)}</TableCell>
                     {/* Der Ort unter dem geöffneten Ordner, als Namen mit „›“; leer heißt „direkt hier“. */}
-                    <TableCell data-folder-cell className="min-w-[110px] whitespace-normal text-ink-2">
+                    <TableCell col="meta" data-folder-cell className="min-w-[110px] whitespace-normal text-ink-2">
                       {doc.folder === null ? (doc.direction === 'incoming' ? t('inbox') : t('noFolder')) : namesBelow(doc.folder, openFolder).join(' › ')}
                     </TableCell>
                     <TableCell className="text-ink-2">{t(`directions.${doc.direction}`)}</TableCell>
-                    <TableCell>
+                    <TableCell col="status">
                       {/* Ausgestellt ist der Normalzustand: ohne Marke, der Phasenfilter bleibt (Designer Stufe 2 Nr. 6a). */}
                       {doc.status === 'voided' ? (
                         <StatusBadge tone={statusTone('document', 'voided')}>{t('statuses.voided')}</StatusBadge>
@@ -338,7 +338,7 @@ export function DocumentList({ documents, currentFolder, total, unfiltered, read
                   </TableRow>
                   {hits?.[doc.id] ? (
                     <TableRow className="even:bg-transparent">
-                      <TableCell colSpan={selectable ? 8 : 7} className="pt-0 pb-3 text-meta text-muted-ink">
+                      <TableCell col="span" colSpan={selectable ? 8 : 7} className="pt-0 pb-3 text-meta text-muted-ink">
                         {/* Die Trefferzeile gehört zum Dokument: eine zweite, für Vorleser unsichtbare Fläche, damit ein Klick auch hier öffnet. */}
                         <RowLink href={`/dms/${doc.id}`} aria-hidden tabIndex={-1} />
                         <SnippetText value={hits[doc.id]!.snippet} />{' '}

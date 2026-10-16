@@ -70,25 +70,25 @@ export function AccountsPanel({ accounts, canPickDocument }: { accounts: Account
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>{t('dialog.name')}</TableHead>
-              <TableHead>{t('dialog.kind')}</TableHead>
-              <TableHead>{t('dialog.iban')}</TableHead>
-              <TableHead>{t('active')}</TableHead>
-              <TableHead className="text-right">{tCommon('edit')}</TableHead>
+              <TableHead col="title">{t('dialog.name')}</TableHead>
+              <TableHead col="meta">{t('dialog.kind')}</TableHead>
+              <TableHead col="meta">{t('dialog.iban')}</TableHead>
+              <TableHead col="status">{t('active')}</TableHead>
+              <TableHead col="actions" className="text-right">{tCommon('edit')}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {accounts.map((row) => (
               <TableRow key={row.id} data-testid={`account-row-${row.name}`}>
-                <TableCell className="text-ink">
+                <TableCell col="title" className="text-ink">
                   {row.name} {row.isMain ? <StatusBadge tone="brand">{t('dialog.isMain')}</StatusBadge> : null}
                 </TableCell>
-                <TableCell className="text-ink-2">{t(`kind.${row.kind}`)}</TableCell>
-                <TableCell className="font-mono text-meta text-muted-ink">{row.iban ? formatIban(row.iban) : <Empty />}</TableCell>
-                <TableCell>
+                <TableCell col="meta" className="text-ink-2">{t(`kind.${row.kind}`)}</TableCell>
+                <TableCell col="meta" className="font-mono text-meta text-muted-ink">{row.iban ? formatIban(row.iban) : <Empty />}</TableCell>
+                <TableCell col="status">
                   {row.isActive ? null : <StatusBadge tone={statusTone('active', 'inactive')}>{t('inactiveState')}</StatusBadge>}
                 </TableCell>
-                <TableCell className="text-right">
+                <TableCell col="actions" className="text-right">
                   <Button variant="ghost" size="sm" onClick={() => openFor(row)}>
                     {tCommon('edit')}
                   </Button>

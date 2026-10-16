@@ -99,17 +99,17 @@ export function ContactList({ contacts, roles, total, unfiltered, offset, pageSi
           <Table>
             <TableHeader>
               <TableRow>
-                <SortableHead field="name" label={t('columns.name')} />
+                <SortableHead col="title" field="name" label={t('columns.name')} />
                 <SortableHead field="kind" label={t('columns.kind')} />
-                <TableHead>{t('columns.roles')}</TableHead>
-                <SortableHead field="city" label={t('columns.city')} />
-                <TableHead>{t('columns.contact')}</TableHead>
+                <TableHead col="meta">{t('columns.roles')}</TableHead>
+                <SortableHead col="meta" field="city" label={t('columns.city')} />
+                <TableHead col="meta">{t('columns.contact')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {contacts.map((c) => (
                 <TableRow key={c.id}>
-                  <TableCell>
+                  <TableCell col="title">
                     <div className="flex flex-col">
                       <RowLink href={`/contacts/${c.id}`}>{c.name}</RowLink>
                       {c.affiliation ? (
@@ -125,17 +125,21 @@ export function ContactList({ contacts, roles, total, unfiltered, offset, pageSi
                       </StatusBadge>
                     ) : null}
                   </TableCell>
-                  <TableCell>
-                    <div className="flex flex-wrap gap-1">
-                      {c.roles.map((r) => (
-                        <StatusBadge key={r} tone={statusTone('role', 'current')}>
-                          {roleLabel(t, r)}
-                        </StatusBadge>
-                      ))}
-                    </div>
+                  <TableCell col="meta">
+                    {c.roles.length > 0 ? (
+                      <div className="flex flex-wrap gap-1">
+                        {c.roles.map((r) => (
+                          <StatusBadge key={r} tone={statusTone('role', 'current')}>
+                            {roleLabel(t, r)}
+                          </StatusBadge>
+                        ))}
+                      </div>
+                    ) : (
+                      <Empty />
+                    )}
                   </TableCell>
-                  <TableCell className="text-ink-2">{c.city || <Empty />}</TableCell>
-                  <TableCell selectable className="text-ink-2 text-meta">{c.primaryChannel || <Empty />}</TableCell>
+                  <TableCell col="meta" className="text-ink-2">{c.city || <Empty />}</TableCell>
+                  <TableCell col="meta" selectable className="text-ink-2 text-meta">{c.primaryChannel || <Empty />}</TableCell>
                 </TableRow>
               ))}
             </TableBody>

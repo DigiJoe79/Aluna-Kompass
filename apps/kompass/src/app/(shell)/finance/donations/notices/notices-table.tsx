@@ -48,12 +48,12 @@ export function NoticesTable({ rows, canIssue, canPickDocument }: { rows: Notice
       <Table aria-label={t('tableLabel')}>
         <TableHeader>
           <TableRow>
-            <TableHead>{t('columns.notice')}</TableHead>
-            <TableHead>{t('columns.noticeDate')}</TableHead>
-            <TableHead>{t('columns.validity')}</TableHead>
-            <TableHead>{t('columns.document')}</TableHead>
-            <TableHead>{t('columns.state')}</TableHead>
-            {canIssue ? <TableHead className="text-right">{t('columns.actions')}</TableHead> : null}
+            <TableHead col="title">{t('columns.notice')}</TableHead>
+            <TableHead col="meta">{t('columns.noticeDate')}</TableHead>
+            <TableHead col="meta">{t('columns.validity')}</TableHead>
+            <TableHead col="meta">{t('columns.document')}</TableHead>
+            <TableHead col="status">{t('columns.state')}</TableHead>
+            {canIssue ? <TableHead col="actions" className="text-right">{t('columns.actions')}</TableHead> : null}
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -64,17 +64,17 @@ export function NoticesTable({ rows, canIssue, canPickDocument }: { rows: Notice
               <TableRow key={row.id} data-testid="notice-row">
                 {/* Bescheid und Geltung dürfen umbrechen (Unterzeilen): Einzeilig liefen
                     die sechs Spalten bei 1440 px seitlich über (release-0.2.7.md, Befund 14). */}
-                <TableCell className="whitespace-normal">
+                <TableCell col="title" className="whitespace-normal">
                   {tk(row.kind)}
                   <span className="block text-hint text-muted-ink">{row.taxOffice} · <span className="font-mono">{row.taxNumber}</span></span>
                 </TableCell>
-                <TableCell className="tabular-nums">{date(row.noticeDate)}</TableCell>
-                <TableCell className="whitespace-normal">
+                <TableCell col="meta" className="tabular-nums">{date(row.noticeDate)}</TableCell>
+                <TableCell col="meta" className="whitespace-normal">
                   <span className="whitespace-nowrap tabular-nums"><span data-testid="notice-exempt-from">{date(row.exemptFrom)}</span> – {date(row.validUntil)}</span>
                   {row.assessmentPeriod ? <span className="block text-hint text-muted-ink">{t('assessmentPeriodLine', { period: row.assessmentPeriod })}</span> : null}
                 </TableCell>
-                <TableCell data-testid="notice-document" className="font-mono">{row.documentNumber ?? <span className="font-sans"><Empty /></span>}</TableCell>
-                <TableCell>
+                <TableCell col="meta" data-testid="notice-document" className="font-mono">{row.documentNumber ?? <span className="font-sans"><Empty /></span>}</TableCell>
+                <TableCell col="status">
                   {isNormalInList('notice', state.key) ? null : (
                     <StatusBadge tone={statusTone('notice', state.key)}>
                       <span data-testid="notice-state">{t(`state.${state.key}`, { date: state.date ? date(state.date) : '' })}</span>
@@ -82,7 +82,7 @@ export function NoticesTable({ rows, canIssue, canPickDocument }: { rows: Notice
                   )}
                 </TableCell>
                 {canIssue ? (
-                  <TableCell className="text-right">
+                  <TableCell col="actions" className="text-right">
                     {actions.attach || actions.supersede || actions.void ? (
                       <DropdownMenu>
                         <DropdownMenuTrigger

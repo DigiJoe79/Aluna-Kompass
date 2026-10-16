@@ -65,10 +65,10 @@ export function ApiTokens({ tokens }: { tokens: ApiTokenSummary[] }) {
           <Table className="w-full text-body">
             <TableHeader>
               <TableRow>
-                <TableHead>{t('columns.name')}</TableHead>
-                <TableHead>{t('columns.created')}</TableHead>
-                <TableHead>{t('columns.lastUsed')}</TableHead>
-                <TableHead />
+                <TableHead col="title">{t('columns.name')}</TableHead>
+                <TableHead col="meta">{t('columns.created')}</TableHead>
+                <TableHead col="meta">{t('columns.lastUsed')}</TableHead>
+                <TableHead col="actions" />
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -76,14 +76,14 @@ export function ApiTokens({ tokens }: { tokens: ApiTokenSummary[] }) {
                 const days = token.daysSinceLastUsed;
                 return (
                   <TableRow key={token.id}>
-                    <TableCell className={cn(token.revokedAt && 'text-disabled-ink')}>
+                    <TableCell col="title" className={cn(token.revokedAt && 'text-disabled-ink')}>
                       <div className="font-semibold">{token.name}</div>
                       <KeyLine>{token.prefix}…</KeyLine>
                     </TableCell>
-                    <TableCell className="tabular-nums text-hint">
+                    <TableCell col="meta" className="tabular-nums text-hint">
                       {fmt.date(token.createdAt)}
                     </TableCell>
-                    <TableCell
+                    <TableCell col="meta"
                       className={cn(
                         'tabular-nums text-hint',
                         !token.revokedAt && (days === null || days > 90) && 'text-warning'
@@ -95,7 +95,7 @@ export function ApiTokens({ tokens }: { tokens: ApiTokenSummary[] }) {
                           ? t('neverUsed')
                           : t('lastUsedDays', { days })}
                     </TableCell>
-                    <TableCell className="text-right">
+                    <TableCell col="actions" className="text-right">
                       {token.revokedAt ? null : (
                         <Button
                           variant="outline"

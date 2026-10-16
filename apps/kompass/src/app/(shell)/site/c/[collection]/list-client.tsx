@@ -22,11 +22,11 @@ export function ListClient({ collection, rows, publishable, sortable, canManage 
         <TableBody>
           {rows.map((row, index) => (
             <TableRow key={row.id}>
-              <TableCell>
+              <TableCell col="title">
                 {canManage ? <RowLink href={`/site/c/${collection}/${row.id}`}>{row.label}</RowLink> : row.label}
               </TableCell>
               {publishable ? (
-                <TableCell>
+                <TableCell col="status">
                   {canManage ? (
                     <PublishSwitch id={row.id} isPublished={row.isPublished} action={(id, next) => setEntryPublishedAction(id, next, collection)} />
                   ) : (
@@ -35,7 +35,7 @@ export function ListClient({ collection, rows, publishable, sortable, canManage 
                 </TableCell>
               ) : null}
               {sortable && canManage ? (
-                <TableCell className="text-right">
+                <TableCell col="actions" className="text-right">
                   <ReorderButtons ids={ids} index={index} action={(next) => reorderEntriesAction(collection, next)} />
                 </TableCell>
               ) : null}

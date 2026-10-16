@@ -88,9 +88,9 @@ export function PurposesTable({
         <Table data-testid="purposes-table">
           <TableHeader>
             <TableRow>
-              <TableHead className="px-3">{t('columns.name')}</TableHead>
+              <TableHead col="title" className="px-3">{t('columns.name')}</TableHead>
               {full ? <TableHead className="px-3">{t('columns.project')}</TableHead> : null}
-              <TableHead className="px-3">{t('columns.target')}</TableHead>
+              <TableHead col="meta" className="px-3">{t('columns.target')}</TableHead>
               {full ? (
                 <>
                   <TableHead className="px-3 text-right">{t('columns.carryForward')}</TableHead>
@@ -99,8 +99,8 @@ export function PurposesTable({
                   <TableHead className="px-3 text-right">{t('columns.transfers')}</TableHead>
                 </>
               ) : null}
-              <TableHead className="px-3 text-right">{t('columns.balance')}</TableHead>
-              <TableHead className="px-3">{t('columns.state')}</TableHead>
+              <TableHead col="amount" className="px-3 text-right">{t('columns.balance')}</TableHead>
+              <TableHead col="status" className="px-3">{t('columns.state')}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -111,7 +111,7 @@ export function PurposesTable({
                 data-selected={row.id === selectedId ? 'true' : undefined}
                 data-state={row.id === selectedId ? 'selected' : undefined}
               >
-                <TableCell className="px-3 text-ink">
+                <TableCell col="title" className="px-3 text-ink">
                   {full ? (
                     <span className="inline-flex flex-wrap items-center gap-1.5">
                       <RowButton aria-expanded={row.id === selectedId} onClick={() => setSelectedId(row.id === selectedId ? null : row.id)}>
@@ -125,7 +125,7 @@ export function PurposesTable({
                   )}
                 </TableCell>
                 {full ? <TableCell className="px-3 text-ink-2">{row.projectId ? projects[row.projectId] ?? <Empty /> : <Empty />}</TableCell> : null}
-                <TableCell className="px-3">{target(row)}</TableCell>
+                <TableCell col="meta" className="px-3">{target(row)}</TableCell>
                 {full ? (
                   <>
                     <TableCell className="px-3 text-right text-ink-2">{money(row.carryForwardCents ?? 0)}</TableCell>
@@ -134,10 +134,10 @@ export function PurposesTable({
                     <TableCell className="px-3 text-right text-ink-2">{net(row)}</TableCell>
                   </>
                 ) : null}
-                <TableCell className={`px-3 text-right font-semibold ${row.negative ? 'text-warning' : 'text-ink'}`} data-testid="purpose-balance">
+                <TableCell col="amount" className={`px-3 text-right font-semibold ${row.negative ? 'text-warning' : 'text-ink'}`} data-testid="purpose-balance">
                   {money(row.balanceCents)}
                 </TableCell>
-                <TableCell className="px-3">{stateCell(row)}</TableCell>
+                <TableCell col="status" className="px-3">{stateCell(row)}</TableCell>
               </TableRow>
             ))}
           </TableBody>

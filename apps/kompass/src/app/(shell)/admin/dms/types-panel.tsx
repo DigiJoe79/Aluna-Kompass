@@ -170,31 +170,31 @@ export function TypesPanel({
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>{t('typeColumns.prefix')}</TableHead>
-              <TableHead>{t('typeColumns.label')}</TableHead>
-              <TableHead>{t('typeColumns.direction')}</TableHead>
+              <TableHead col="meta">{t('typeColumns.prefix')}</TableHead>
+              <TableHead col="title">{t('typeColumns.label')}</TableHead>
+              <TableHead col="meta">{t('typeColumns.direction')}</TableHead>
               <TableHead>{t('typeColumns.retention')}</TableHead>
-              <TableHead>{t('typeColumns.folder')}</TableHead>
-              <TableHead>{t('typeColumns.status')}</TableHead>
-              <TableHead className="text-right">{t('typeColumns.actions')}</TableHead>
+              <TableHead col="meta">{t('typeColumns.folder')}</TableHead>
+              <TableHead col="status">{t('typeColumns.status')}</TableHead>
+              <TableHead col="actions" className="text-right">{t('typeColumns.actions')}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {types.map((row, i) => (
               <TableRow key={row.key}>
-                <TableCell className="font-mono font-semibold text-ink">{row.prefix}</TableCell>
+                <TableCell col="meta" className="font-mono font-semibold text-ink">{row.prefix}</TableCell>
                 {/* Schlüssel als zweite Zeile unter der Bezeichnung: acht Spalten scrollten auf der standard-Seite waagerecht (K9-Befund 8). */}
-                <TableCell>
+                <TableCell col="title">
                   <span className="text-ink">{row.label}</span>
                   <span className="block font-mono text-hint text-muted-ink">{row.key}</span>
                 </TableCell>
-                <TableCell className="text-ink-2">{tDms(`directions.${row.defaultDirection}`)}</TableCell>
+                <TableCell col="meta" className="text-ink-2">{tDms(`directions.${row.defaultDirection}`)}</TableCell>
                 <TableCell className="text-ink-2">{t(`retentionClasses.${row.retentionClass}`)}</TableCell>
-                <TableCell className="text-ink-2">{row.defaultFolder ?? <Empty />}</TableCell>
-                <TableCell>
+                <TableCell col="meta" className="text-ink-2">{row.defaultFolder ?? <Empty />}</TableCell>
+                <TableCell col="status">
                   {row.isActive ? null : <StatusBadge tone={statusTone('active', 'inactive')}>{t('inactive')}</StatusBadge>}
                 </TableCell>
-                <TableCell className="text-right">
+                <TableCell col="actions" className="text-right">
                   <div className="flex items-center justify-end gap-1">
                     <Button
                       variant="ghost"

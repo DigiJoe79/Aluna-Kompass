@@ -164,7 +164,9 @@ export default async function FinanceEntriesPage({ searchParams }: { searchParam
 
   return (
     <Page width="full">
-      <div className="flex gap-5">
+      {/* Telefon: Das Seitenpanel „Bestände“ (bzw. sein Knopf) steht über dem Journal, nicht als Spalte daneben —
+          sonst blieben der Kartenliste (E1) zwei Drittel der Breite. Ohne Layout-Test (Einzelstelle). */}
+      <div className="flex gap-5 max-md:flex-col-reverse">
         <div className="min-w-0 flex-1">
           <Journal
             rows={rows}

@@ -73,6 +73,29 @@ test.describe('projects', () => {
     await expect(page).toHaveURL(/\/projects\/[A-Z0-9]+$/);
   });
 
+  // E1 „Tabelle am Telefon“ (Designer 2026-10-17): Unter `md` ist jede Zeile eine Karte; der Status (Schalter) ist
+  // erreichbar, die Liste scrollt nie seitlich, sortiert wird über „Sortieren: …“.
+  test('am Telefon: Kartenzeilen, Status erreichbar, Sortieren über der Liste, kein seitliches Scrollen', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/projects');
+    await waitForHydration(page, '[role="switch"]');
+    const list = page.getByRole('list').filter({ has: page.getByRole('link', { name: 'Kastrationsaktion 2026' }) });
+    const item = list.getByRole('listitem').filter({ hasText: 'Kastrationsaktion 2026' });
+    const toggle = item.getByRole('switch');
+    await expect(toggle).toBeInViewport();
+    const wasOn = await toggle.isChecked();
+    await toggle.click();
+    await expect(toggle).toBeChecked({ checked: !wasOn });
+    await expect(page).toHaveURL(/\/projects$/);
+    const overflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth);
+    expect(overflow).toBe(false);
+
+    await page.getByRole('combobox', { name: /Sortieren/ }).click();
+    await page.getByRole('option', { name: 'Projekt, aufsteigend' }).click();
+    await expect(page).toHaveURL(/sort=name&dir=asc/);
+    await expect(page.getByRole('combobox', { name: 'Sortieren: Projekt' })).toBeVisible();
+  });
+
   test('picks an existing image from the library for a project', async ({ page }) => {
     await page.goto('/admin/media');
     await page.getByLabel('Datei hochladen').setInputFiles({ name: 'bestand.png', mimeType: 'image/png', buffer: PNG });

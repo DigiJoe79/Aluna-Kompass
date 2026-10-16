@@ -36,35 +36,31 @@ export function PublishHistory({ items, total = items.length, highlightId = null
             <p className="text-meta text-muted-ink">{t('empty')}</p>
           ) : (
             <Table aria-label={t('title')} className="text-meta">
-              <TableHeader className="max-sm:hidden">
+              <TableHeader>
                 <TableRow>
-                  <TableHead>{t('columns.time')}</TableHead>
-                  <TableHead>{t('columns.status')}</TableHead>
-                  <TableHead>{t('columns.changes')}</TableHead>
-                  <TableHead>{t('columns.by')}</TableHead>
-                  <TableHead>{t('columns.log')}</TableHead>
+                  <TableHead col="title">{t('columns.time')}</TableHead>
+                  <TableHead col="status">{t('columns.status')}</TableHead>
+                  <TableHead col="meta">{t('columns.changes')}</TableHead>
+                  <TableHead col="meta">{t('columns.by')}</TableHead>
+                  <TableHead col="actions">{t('columns.log')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {shown.map((row) => (
-                  // Am Telefon wird die Zeile ein Raster aus zwei Spalten; die feste Zeilenhöhe gibt sie dort frei.
-                  <TableRow
-                    key={row.id}
-                    data-state={row.id === highlightId ? 'selected' : undefined}
-                    className="max-sm:grid max-sm:h-auto max-sm:min-h-14 max-sm:grid-cols-2 max-sm:items-center max-sm:gap-x-3 max-sm:py-2"
-                  >
-                    <TableCell className="max-sm:py-0">
+                  // Am Telefon Kartenzeile über die Spaltenrollen (E1).
+                  <TableRow key={row.id} data-state={row.id === highlightId ? 'selected' : undefined}>
+                    <TableCell col="title">
                       {when(row.startedAt)}
                       {row.id === highlightId ? <StatusBadge tone="brand" className="ml-2">{t('new')}</StatusBadge> : null}
                     </TableCell>
-                    <TableCell className="max-sm:py-0">
+                    <TableCell col="status">
                       <StatusMark status={row.status} />
                     </TableCell>
-                    <TableCell className="tabular-nums max-sm:py-0">{t('changes', { changed: row.pagesChanged, added: row.pagesAdded, removed: row.pagesRemoved })}</TableCell>
-                    <TableCell className="text-ink-2 max-sm:py-0"><SourceMark source={row.source} name={row.triggeredByName} /></TableCell>
-                    <TableCell className="text-right max-sm:col-span-2 max-sm:py-0 sm:text-left">
+                    <TableCell col="meta" className="tabular-nums">{t('changes', { changed: row.pagesChanged, added: row.pagesAdded, removed: row.pagesRemoved })}</TableCell>
+                    <TableCell col="meta" className="text-ink-2"><SourceMark source={row.source} name={row.triggeredByName} /></TableCell>
+                    <TableCell col="actions" className="text-right lg:text-left">
                       {row.hasLog && (
-                        <Button variant="ghost" size="sm" className="max-sm:h-11" onClick={() => setSelected(row)}>
+                        <Button variant="ghost" size="sm" onClick={() => setSelected(row)}>
                           {t('log')}
                         </Button>
                       )}

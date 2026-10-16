@@ -100,36 +100,36 @@ export function ConfirmationsTable({ rows, canIssue, initialOpenId, today, foote
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>{t('columns.number')}</TableHead>
-            <TableHead>{t('columns.issuedOn')}</TableHead>
-            <TableHead>{t('columns.contact')}</TableHead>
-            <TableHead>{t('columns.kind')}</TableHead>
-            <TableHead className="text-right">{t('columns.amount')}</TableHead>
+            <TableHead col="meta">{t('columns.number')}</TableHead>
+            <TableHead col="meta">{t('columns.issuedOn')}</TableHead>
+            <TableHead col="title">{t('columns.contact')}</TableHead>
+            <TableHead col="meta">{t('columns.kind')}</TableHead>
+            <TableHead col="amount" className="text-right">{t('columns.amount')}</TableHead>
             <TableHead>{t('columns.period')}</TableHead>
             <TableHead>{t('columns.sent')}</TableHead>
-            <TableHead>{t('columns.state')}</TableHead>
+            <TableHead col="status">{t('columns.state')}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {rows.map((row) => (
             <Fragment key={row.id}>
               <TableRow data-testid="confirmation-row">
-                <TableCell data-testid="confirmation-number" className="font-mono">
+                <TableCell col="meta" data-testid="confirmation-number" className="font-mono">
                   <RowButton aria-expanded={openId === row.id} onClick={() => toggle(row.id)}>
                     {row.number}
                   </RowButton>
                 </TableCell>
-                <TableCell>{date(row.issuedOn)}</TableCell>
-                <TableCell>{row.contactName}</TableCell>
-                <TableCell>{t(`kind.${row.kind}`)}</TableCell>
-                <TableCell className="text-right tabular-nums">{formatEuro(row.totalCents)}</TableCell>
+                <TableCell col="meta">{date(row.issuedOn)}</TableCell>
+                <TableCell col="title">{row.contactName}</TableCell>
+                <TableCell col="meta">{t(`kind.${row.kind}`)}</TableCell>
+                <TableCell col="amount" className="text-right tabular-nums">{formatEuro(row.totalCents)}</TableCell>
                 <TableCell>{row.periodFrom && row.periodTo ? `${date(row.periodFrom)} – ${date(row.periodTo)}` : <Empty />}</TableCell>
                 <TableCell>{row.sentAt && row.sentVia ? t('sentValue', { date: date(row.sentAt), via: t(`sentVia.${row.sentVia}`) }) : <Empty />}</TableCell>
-                <TableCell data-testid="confirmation-state" className="whitespace-normal">{stateOf(row)}</TableCell>
+                <TableCell col="status" data-testid="confirmation-state" className="whitespace-normal">{stateOf(row)}</TableCell>
               </TableRow>
               {openId === row.id ? (
                 <TableRow className="bg-surface-2 even:bg-surface-2 hover:bg-surface-2">
-                  <TableCell colSpan={8} className="py-3">
+                  <TableCell col="span" colSpan={8} className="py-3">
                     <Detail row={row} canIssue={canIssue} onVoid={() => setVoiding(row)} onDispatch={() => setDispatching(row)} onRecall={() => setRecalling(row)} />
                   </TableCell>
                 </TableRow>

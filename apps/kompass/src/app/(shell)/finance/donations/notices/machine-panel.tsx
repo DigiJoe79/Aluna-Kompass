@@ -86,23 +86,23 @@ export function MachinePanel({ signers, status, canIssue, canDraftLetter, draftN
         <Table aria-label={t('tableLabel')}>
           <TableHeader>
             <TableRow>
-              <TableHead>{t('columns.name')}</TableHead>
-              <TableHead>{t('columns.period')}</TableHead>
-              <TableHead>{t('columns.notifiedOn')}</TableHead>
-              <TableHead>{t('columns.facsimile')}</TableHead>
-              {canIssue ? <TableHead className="text-right">{t('columns.actions')}</TableHead> : null}
+              <TableHead col="title">{t('columns.name')}</TableHead>
+              <TableHead col="meta">{t('columns.period')}</TableHead>
+              <TableHead col="meta">{t('columns.notifiedOn')}</TableHead>
+              <TableHead col="meta">{t('columns.facsimile')}</TableHead>
+              {canIssue ? <TableHead col="actions" className="text-right">{t('columns.actions')}</TableHead> : null}
             </TableRow>
           </TableHeader>
           <TableBody>
             {signers.map((signer) => (
               <TableRow key={signer.id} data-testid="signer-row">
-                <TableCell>
+                <TableCell col="title">
                   <span className="font-semibold text-ink">{signer.signerName}</span>{' '}
                   <StatusBadge tone={signer.state === 'current' ? 'success' : 'neutral'}>{t(`state.${signer.state}`)}</StatusBadge>
                 </TableCell>
-                <TableCell className="tabular-nums">{t('period', { from: date(signer.validFrom), to: signer.validTo ? date(signer.validTo) : t('openEnd') })}</TableCell>
-                <TableCell className="tabular-nums">{signer.notifiedOn ? date(signer.notifiedOn) : <span className="text-muted-ink">{t('notNotified')}</span>}</TableCell>
-                <TableCell>
+                <TableCell col="meta" className="tabular-nums">{t('period', { from: date(signer.validFrom), to: signer.validTo ? date(signer.validTo) : t('openEnd') })}</TableCell>
+                <TableCell col="meta" className="tabular-nums">{signer.notifiedOn ? date(signer.notifiedOn) : <span className="text-muted-ink">{t('notNotified')}</span>}</TableCell>
+                <TableCell col="meta">
                   <div className="flex flex-col gap-1.5">
                     {!signer.hasFacsimile ? <span className="text-meta text-muted-ink">{t('noFacsimile')}</span> : null}
                     {canIssue ? (
@@ -119,7 +119,7 @@ export function MachinePanel({ signers, status, canIssue, canDraftLetter, draftN
                   </div>
                 </TableCell>
                 {canIssue ? (
-                  <TableCell className="text-right">
+                  <TableCell col="actions" className="text-right">
                     <Button type="button" size="sm" variant="outline" onClick={() => setEditing(signer)}>{t('edit')}</Button>
                   </TableCell>
                 ) : null}

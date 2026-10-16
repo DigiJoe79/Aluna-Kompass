@@ -22,21 +22,21 @@ export async function RelatedPartyTable({ rows, approverNames, fmt }: { rows: Re
       <Table data-testid="related-party-table">
         <TableHeader>
           <TableRow>
-            <TableHead className="px-3">{t('columns.date')}</TableHead>
-            <TableHead className="px-3">{t('columns.person')}</TableHead>
-            <TableHead className="px-3">{t('columns.role')}</TableHead>
-            <TableHead className="px-3">{t('columns.kind')}</TableHead>
-            <TableHead className="px-3 text-right">{t('columns.amount')}</TableHead>
+            <TableHead col="meta" className="px-3">{t('columns.date')}</TableHead>
+            <TableHead col="title" className="px-3">{t('columns.person')}</TableHead>
+            <TableHead col="meta" className="px-3">{t('columns.role')}</TableHead>
+            <TableHead col="status" className="px-3">{t('columns.kind')}</TableHead>
+            <TableHead col="amount" className="px-3 text-right">{t('columns.amount')}</TableHead>
             <TableHead className="px-3">{t('columns.approvedBy')}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {rows.map((row, i) => (
             <TableRow key={`${row.entryId}-${row.contactId}-${i}`} data-testid="related-party-row">
-              <TableCell className="px-3 text-ink-2">{fmt.date(row.entryDate)}</TableCell>
-              <TableCell className="px-3 text-ink">{row.contactName}</TableCell>
-              <TableCell className="px-3 text-ink-2" data-testid="related-party-role">{t(`roleShort.${row.role === 'board-member' ? 'boardMember' : 'relatedParty'}`)}</TableCell>
-              <TableCell className="px-3 text-ink-2" data-testid="related-party-kind">
+              <TableCell col="meta" className="px-3 text-ink-2">{fmt.date(row.entryDate)}</TableCell>
+              <TableCell col="title" className="px-3 text-ink">{row.contactName}</TableCell>
+              <TableCell col="meta" className="px-3 text-ink-2" data-testid="related-party-role">{t(`roleShort.${row.role === 'board-member' ? 'boardMember' : 'relatedParty'}`)}</TableCell>
+              <TableCell col="status" className="px-3 text-ink-2" data-testid="related-party-kind">
                 {/* „Art“ (Design 4f): Herkunft mit Nummer, sonst die Kategorie; der Link führt zur Buchung. */}
                 <Link href={`/finance/entries/${row.entryId}`} className="underline-offset-2 hover:underline">
                   {row.originKind !== 'other' && row.originNumber ? t(`origin.${row.originKind}`, { number: row.originNumber }) : row.categoryName}
@@ -52,7 +52,7 @@ export async function RelatedPartyTable({ rows, approverNames, fmt }: { rows: Re
                   </span>
                 ) : null}
               </TableCell>
-              <TableCell className="px-3 text-right tabular-nums">{formatEuro(row.amountCents)}</TableCell>
+              <TableCell col="amount" className="px-3 text-right tabular-nums">{formatEuro(row.amountCents)}</TableCell>
               <TableCell className="px-3 text-ink-2" data-testid="related-party-approver">
                 {row.approvedByUserId ? approverNames.get(row.approvedByUserId) ?? <Empty /> : <Empty />}
               </TableCell>

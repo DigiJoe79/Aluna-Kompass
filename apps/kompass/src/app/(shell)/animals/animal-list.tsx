@@ -11,6 +11,7 @@ import { FilterBar, selectFilter } from '@/components/filter-bar';
 import { PublishSwitch } from '@/components/forms/publish-switch';
 import { SelectionBar } from '@/components/selection-bar';
 import { SortableHead } from '@/components/sortable-head';
+import { Empty } from '@/components/empty-value';
 import { StatusBadge, statusTone } from '@/components/status-badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { RowLink, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -144,17 +145,17 @@ export function AnimalList({
             <TableHeader>
               <TableRow>
                 {canExport ? (
-                  <TableHead className="w-10 pr-0 pl-4">
+                  <TableHead col="select" className="w-10 pr-0 pl-4">
                     <Checkbox aria-label={t('selection.selectAll')} checked={allSelected} indeterminate={selected.length > 0 && !allSelected} onCheckedChange={() => selection.toggle(animals.map((a) => a.id), !allSelected)} />
                   </TableHead>
                 ) : null}
-                <SortableHead field="name" label={t('columns.animal')} />
-                <TableHead>{t('columns.status')}</TableHead>
-                <TableHead>{t('columns.flags')}</TableHead>
-                <TableHead>{t('columns.location')}</TableHead>
+                <SortableHead col="title" field="name" label={t('columns.animal')} />
+                <TableHead col="status">{t('columns.status')}</TableHead>
+                <TableHead col="meta">{t('columns.flags')}</TableHead>
+                <TableHead col="meta">{t('columns.location')}</TableHead>
                 <TableHead className="text-right">{t('columns.photos')}</TableHead>
-                <SortableHead field="updatedAt" label={t('columns.updated')} />
-                <TableHead className="text-right">{t('columns.published')}</TableHead>
+                <SortableHead col="meta" field="updatedAt" label={t('columns.updated')} />
+                <TableHead col="actions" className="text-right">{t('columns.published')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -162,12 +163,12 @@ export function AnimalList({
                 <TableRow key={a.id} data-testid="animal-row">
                   {canExport ? (
                     // Das Kästchen wählt aus; die Zeile öffnet weiter den Hund.
-                    <TableCell className="w-10 pr-0 pl-4">
+                    <TableCell col="select" className="w-10 pr-0 pl-4">
                       <Checkbox aria-label={t('selection.selectOne', { name: a.name })} checked={selection.ids.has(a.id)} onCheckedChange={(on) => selection.toggle([a.id], on === true)} />
                     </TableCell>
                   ) : null}
-                  <TableCell>
-                    <span className="flex items-center gap-3">
+                  <TableCell col="title">
+                    <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
                       {/* Die Vorschau statt des Originals: Bei einigen hundert Hunden lüde die Liste sonst jedes Foto in voller Größe. */}
                       {a.primaryAssetId ? <img src={`/media/${a.primaryAssetId}/preview`} loading="lazy" alt="" className="size-9 shrink-0 rounded-full object-cover" /> : <span className="size-9 shrink-0 rounded-full bg-surface-2" aria-hidden />}
                       <RowLink href={`/animals/${a.id}${listQs ? `?${listQs}` : ''}`}>{a.name}</RowLink>
@@ -181,21 +182,25 @@ export function AnimalList({
                       ) : null}
                     </span>
                   </TableCell>
-                  <TableCell>
+                  <TableCell col="status">
                     <StatusBadge tone={statusTone('animal', a.status)} dot>
                       {f(`status.${a.status}`)}
                     </StatusBadge>
                   </TableCell>
-                  <TableCell>
-                    <span className="flex items-center gap-1.5">
-                      {a.isEmergency ? <StatusBadge tone="error">{t('emergency')}</StatusBadge> : null}
-                      {a.isSponsorable ? <StatusBadge tone="brand">{t('sponsorable')}</StatusBadge> : null}
-                    </span>
+                  <TableCell col="meta">
+                    {a.isEmergency || a.isSponsorable ? (
+                      <span className="flex items-center gap-1.5">
+                        {a.isEmergency ? <StatusBadge tone="error">{t('emergency')}</StatusBadge> : null}
+                        {a.isSponsorable ? <StatusBadge tone="brand">{t('sponsorable')}</StatusBadge> : null}
+                      </span>
+                    ) : (
+                      <Empty />
+                    )}
                   </TableCell>
-                  <TableCell className="text-ink-2">{[f(`locations.${a.location}`), a.place].filter(Boolean).join(' · ')}</TableCell>
+                  <TableCell col="meta" className="text-ink-2">{[f(`locations.${a.location}`), a.place].filter(Boolean).join(' · ')}</TableCell>
                   <TableCell className="tabular-nums text-right text-meta text-ink-2">{a.photoCount}</TableCell>
-                  <TableCell className="text-ink-2">{dates.date(a.updatedAt)}</TableCell>
-                  <TableCell>
+                  <TableCell col="meta" className="text-ink-2">{dates.date(a.updatedAt)}</TableCell>
+                  <TableCell col="actions">
                     <span className="flex justify-end">
                       <PublishSwitch id={a.id} isPublished={a.isPublished} action={setAnimalPublishedAction} />
                     </span>

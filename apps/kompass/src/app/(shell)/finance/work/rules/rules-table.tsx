@@ -33,30 +33,30 @@ export function RulesTable({ rows, canWrite, options }: { rows: RuleRow[]; canWr
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>{t('name')}</TableHead>
-            <TableHead>{t('condition')}</TableHead>
-            <TableHead>{t('result')}</TableHead>
-            <TableHead className="text-right">{t('hits')}</TableHead>
-            <TableHead>{t('active')}</TableHead>
-            <TableHead />
+            <TableHead col="title">{t('name')}</TableHead>
+            <TableHead col="meta">{t('condition')}</TableHead>
+            <TableHead col="meta">{t('result')}</TableHead>
+            <TableHead col="meta" className="text-right">{t('hits')}</TableHead>
+            <TableHead col="status">{t('active')}</TableHead>
+            <TableHead col="actions" />
           </TableRow>
         </TableHeader>
         <TableBody>
           {rows.map((row) => (
             <TableRow key={row.rule.id} className="align-top">
-              <TableCell className="py-2.5 text-ink">{row.rule.name}</TableCell>
-              <TableCell className="py-2.5 text-ink-2">{row.conditionTexts.join(' · ')}</TableCell>
-              <TableCell className="py-2.5 text-ink-2">
+              <TableCell col="title" className="py-2.5 text-ink">{row.rule.name}</TableCell>
+              <TableCell col="meta" className="py-2.5 text-ink-2">{row.conditionTexts.join(' · ')}</TableCell>
+              <TableCell col="meta" className="py-2.5 text-ink-2">
                 <span className="flex flex-wrap items-center gap-2">
                   {row.categoryName}
                   {row.categoryInactive ? <StatusBadge tone="error">{t('categoryInactive')}</StatusBadge> : null}
                 </span>
               </TableCell>
-              <TableCell data-testid="rule-hits" className="py-2.5 text-right tabular-nums">
+              <TableCell col="meta" data-testid="rule-hits" className="py-2.5 text-right tabular-nums">
                 {row.hitCount}
               </TableCell>
-              <TableCell className="py-2.5">{row.rule.isActive ? t('yes') : t('no')}</TableCell>
-              <TableCell className="py-2.5 text-right">
+              <TableCell col="status" className="py-2.5">{row.rule.isActive ? t('yes') : t('no')}</TableCell>
+              <TableCell col="actions" className="py-2.5 text-right">
                 {canWrite ? (
                   <span className="flex justify-end gap-2">
                     <Button type="button" size="sm" variant="secondary" onClick={() => setEditing(ruleFormFromRule(row.rule, row.contactName))}>

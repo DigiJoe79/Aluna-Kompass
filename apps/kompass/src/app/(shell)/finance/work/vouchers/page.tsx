@@ -43,11 +43,11 @@ export default async function FinanceVouchersWithoutEntryPage({ searchParams }: 
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>{t('pages.vouchers.number')}</TableHead>
-                  <TableHead>{t('pages.vouchers.subject')}</TableHead>
-                  <TableHead>{t('pages.vouchers.date')}</TableHead>
-                  <TableHead>{t('pages.vouchers.type')}</TableHead>
-                  <TableHead />
+                  <TableHead col="meta">{t('pages.vouchers.number')}</TableHead>
+                  <TableHead col="title">{t('pages.vouchers.subject')}</TableHead>
+                  <TableHead col="meta">{t('pages.vouchers.date')}</TableHead>
+                  <TableHead col="meta">{t('pages.vouchers.type')}</TableHead>
+                  <TableHead col="actions" />
                 </TableRow>
               </TableHeader>
               <TableBody>

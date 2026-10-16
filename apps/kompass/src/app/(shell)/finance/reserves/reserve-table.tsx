@@ -183,21 +183,21 @@ export function ReserveTable({
           <Table data-testid="reserve-table">
             <TableHeader>
               <TableRow>
-                <TableHead className="px-3">{t('columns.kind')}</TableHead>
-                <TableHead className="px-3">{t('columns.name')}</TableHead>
-                <TableHead className="px-3">{t('columns.purpose')}</TableHead>
-                <TableHead className="px-3">{t('columns.resolution')}</TableHead>
-                <TableHead className="px-3 text-right">{t('columns.balance')}</TableHead>
-                <TableHead className="px-3 text-right">{t('columns.action')}</TableHead>
+                <TableHead col="meta" className="px-3">{t('columns.kind')}</TableHead>
+                <TableHead col="title" className="px-3">{t('columns.name')}</TableHead>
+                <TableHead col="meta" className="px-3">{t('columns.purpose')}</TableHead>
+                <TableHead col="meta" className="px-3">{t('columns.resolution')}</TableHead>
+                <TableHead col="amount" className="px-3 text-right">{t('columns.balance')}</TableHead>
+                <TableHead col="actions" className="px-3 text-right">{t('columns.action')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {rows.map((row) => (
                 <TableRow key={row.id} data-testid="reserve-row">
-                  <TableCell className="px-3 align-top text-ink">
+                  <TableCell col="meta" className="px-3 align-top text-ink">
                     <KindInfo kind={row.kind} />
                   </TableCell>
-                  <TableCell className="px-3 align-top">
+                  <TableCell col="title" className="px-3 align-top">
                     <div className="flex flex-wrap items-center gap-1.5">
                       <span className="text-ink">{row.name}</span>
                       {row.isActive ? null : <StatusBadge tone="neutral">{t('inactive')}</StatusBadge>}
@@ -206,15 +206,15 @@ export function ReserveTable({
                       <p className="text-hint text-muted-ink">{t('carryForwardLine', { amount: formatEuro(row.carryForwardCents), date: fmt.date(row.carryForwardDate) })}</p>
                     ) : null}
                   </TableCell>
-                  <TableCell className="px-3 align-top text-ink-2">{row.purposeLabel ?? <Empty />}</TableCell>
+                  <TableCell col="meta" className="px-3 align-top text-ink-2">{row.purposeLabel ?? <Empty />}</TableCell>
                   {/* Nummer · Betreff · Datum darf umbrechen: einzeilig trieb der Betreff die Tabelle auf einer standard-Seite ins waagerechte Scrollen (K9-Befund 8). */}
-                  <TableCell className="whitespace-normal px-3 align-top">
+                  <TableCell col="meta" className="whitespace-normal px-3 align-top">
                     <DocumentLabel document={row.resolution} testId="reserve-resolution" />
                   </TableCell>
-                  <TableCell className="px-3 text-right align-top font-semibold tabular-nums" data-testid="reserve-balance">
+                  <TableCell col="amount" className="px-3 text-right align-top font-semibold tabular-nums" data-testid="reserve-balance">
                     {formatEuro(row.balanceCents)}
                   </TableCell>
-                  <TableCell className="px-3 text-right align-top">
+                  <TableCell col="actions" className="px-3 text-right align-top">
                     <div className="flex items-center justify-end gap-1">
                       {row.isDissolved ? (
                         <StatusBadge tone="neutral">{t('dissolved')}</StatusBadge>

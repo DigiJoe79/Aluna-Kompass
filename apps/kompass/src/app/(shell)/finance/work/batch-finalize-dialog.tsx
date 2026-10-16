@@ -74,10 +74,10 @@ export function BatchFinalizeDialog({ reviewedCount }: { reviewedCount: number }
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>{t('account')}</TableHead>
-                      <TableHead className="text-right">{t('sum')}</TableHead>
-                      <TableHead className="text-right">{t('bookAfter')}</TableHead>
-                      <TableHead>{t('statement')}</TableHead>
+                      <TableHead col="title">{t('account')}</TableHead>
+                      <TableHead col="amount" className="text-right">{t('sum')}</TableHead>
+                      <TableHead col="meta" className="text-right">{t('bookAfter')}</TableHead>
+                      <TableHead col="meta">{t('statement')}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -85,10 +85,10 @@ export function BatchFinalizeDialog({ reviewedCount }: { reviewedCount: number }
                       const state = batchAccountState(row);
                       return (
                         <TableRow key={row.accountId}>
-                          <TableCell className="align-top text-ink">{row.accountName}</TableCell>
-                          <TableCell className="text-right align-top tabular-nums">{formatEuro(row.sumCents)}</TableCell>
-                          <TableCell className="text-right align-top tabular-nums">{formatEuro(row.bookCentsAfter)}</TableCell>
-                          <TableCell className="align-top text-ink-2">
+                          <TableCell col="title" className="align-top text-ink">{row.accountName}</TableCell>
+                          <TableCell col="amount" className="text-right align-top tabular-nums">{formatEuro(row.sumCents)}</TableCell>
+                          <TableCell col="meta" className="text-right align-top tabular-nums">{formatEuro(row.bookCentsAfter)}</TableCell>
+                          <TableCell col="meta" className="align-top text-ink-2">
                             {state.state === 'cash' ? t('cash') : null}
                             {state.state === 'noStatement' ? t('noStatement') : null}
                             {state.state === 'matches' || state.state === 'differs' ? (

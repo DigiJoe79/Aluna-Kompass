@@ -95,21 +95,22 @@ export function UserTable({
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>{t('columns.name')}</TableHead>
-                <TableHead>{t('columns.email')}</TableHead>
-                <TableHead>{t('columns.roles')}</TableHead>
-                {contactCells ? <TableHead>{t('contactLink.column')}</TableHead> : null}
-                <TableHead>{t('columns.status')}</TableHead>
-                <TableHead>{t('columns.lastLogin')}</TableHead>
-                <TableHead className="w-11" />
+                <TableHead col="title">{t('columns.name')}</TableHead>
+                <TableHead col="meta">{t('columns.email')}</TableHead>
+                <TableHead col="meta">{t('columns.roles')}</TableHead>
+                {contactCells ? <TableHead col="meta">{t('contactLink.column')}</TableHead> : null}
+                <TableHead col="status">{t('columns.status')}</TableHead>
+                {/* Mit Kontaktspalte ist sie der dritte meta-Platz (Verknüpfen bleibt am Telefon erreichbar), sonst die letzte Anmeldung. */}
+                <TableHead col={contactCells ? undefined : 'meta'}>{t('columns.lastLogin')}</TableHead>
+                <TableHead col="actions" className="w-11" />
               </TableRow>
             </TableHeader>
             <TableBody>
               {rows.map((u, i) => (
                 <TableRow key={u.id}>
-                  <TableCell className={cn('font-semibold', !u.isActive && 'text-disabled-ink')}>{u.name}</TableCell>
-                  <TableCell className={cn('text-ink-2', !u.isActive && 'text-disabled-ink')}>{u.email}</TableCell>
-                  <TableCell>
+                  <TableCell col="title" className={cn('font-semibold', !u.isActive && 'text-disabled-ink')}>{u.name}</TableCell>
+                  <TableCell col="meta" className={cn('text-ink-2', !u.isActive && 'text-disabled-ink')}>{u.email}</TableCell>
+                  <TableCell col="meta">
                     <div className="flex flex-wrap gap-1.5">
                       {u.roles.map((r) => (
                         <StatusBadge key={r.id} tone={statusTone('role', 'current')}>
@@ -118,18 +119,18 @@ export function UserTable({
                       ))}
                     </div>
                   </TableCell>
-                  {contactCells ? <TableCell>{contactCells[u.id] ?? null}</TableCell> : null}
-                  <TableCell>
+                  {contactCells ? <TableCell col="meta">{contactCells[u.id] ?? null}</TableCell> : null}
+                  <TableCell col="status">
                     {isNormalInList('user', u.status) ? null : (
                       <StatusBadge tone={statusTone('user', u.status)} dot>
                         {t(`status.${u.status}`)}
                       </StatusBadge>
                     )}
                   </TableCell>
-                  <TableCell className="tabular-nums text-meta text-ink-2">
+                  <TableCell col={contactCells ? undefined : 'meta'} className="tabular-nums text-meta text-ink-2">
                     {u.lastLoginAt ? fmt.dateTime(u.lastLoginAt) : <Empty />}
                   </TableCell>
-                  <TableCell>
+                  <TableCell col="actions">
                     <DropdownMenu>
                       <DropdownMenuTrigger
                         render={

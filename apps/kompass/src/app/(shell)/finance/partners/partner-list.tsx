@@ -38,17 +38,17 @@ export function PartnerList({ partners }: { partners: PartnerRow[] }) {
         <Table data-testid="partner-rows">
           <TableHeader>
             <TableRow>
-              <TableHead>{t('columns.partner')}</TableHead>
-              <TableHead>{t('columns.status')}</TableHead>
-              <TableHead className="hidden sm:table-cell">{t('columns.usualBasis')}</TableHead>
-              <TableHead className="text-right">{t('columns.openProofs')}</TableHead>
-              <TableHead className="hidden text-right sm:table-cell">{t('columns.lastPaid')}</TableHead>
+              <TableHead col="title">{t('columns.partner')}</TableHead>
+              <TableHead col="status">{t('columns.status')}</TableHead>
+              <TableHead col="meta">{t('columns.usualBasis')}</TableHead>
+              <TableHead col="meta" className="text-right">{t('columns.openProofs')}</TableHead>
+              <TableHead col="meta" className="text-right">{t('columns.lastPaid')}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {partners.map((p) => (
               <TableRow key={p.id} data-testid={`partner-row-${p.id}`}>
-                <TableCell className="whitespace-normal">
+                <TableCell col="title" className="whitespace-normal">
                   <RowLink href={`/finance/partners/${p.id}`} className="text-ink">
                     {p.contactName}
                   </RowLink>
@@ -58,13 +58,13 @@ export function PartnerList({ partners }: { partners: PartnerRow[] }) {
                     </span>
                   ) : null}
                 </TableCell>
-                <TableCell className="whitespace-normal text-ink-2">{tStatus(p.status)}</TableCell>
-                <TableCell className="hidden text-ink-2 sm:table-cell">{p.usualBasis ? tBasis(p.usualBasis) : <Empty />}</TableCell>
-                <TableCell className="text-right tabular-nums">
+                <TableCell col="status" className="whitespace-normal text-ink-2">{tStatus(p.status)}</TableCell>
+                <TableCell col="meta" className="text-ink-2">{p.usualBasis ? tBasis(p.usualBasis) : <Empty />}</TableCell>
+                <TableCell col="meta" className="text-right tabular-nums">
                   {p.openProofCount}
                   {p.overdueProofCount > 0 ? <span className="text-warning"> · {t('overdue', { count: p.overdueProofCount })}</span> : null}
                 </TableCell>
-                <TableCell className="hidden text-right tabular-nums sm:table-cell">{p.lastPaidOn ? fmt.date(p.lastPaidOn) : <Empty />}</TableCell>
+                <TableCell col="meta" className="text-right tabular-nums">{p.lastPaidOn ? fmt.date(p.lastPaidOn) : <Empty />}</TableCell>
               </TableRow>
             ))}
           </TableBody>

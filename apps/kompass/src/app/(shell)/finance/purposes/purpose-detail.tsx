@@ -141,19 +141,19 @@ export function PurposeDetail({
                 <Table data-testid="purpose-movements">
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="px-3">{t('detail.movementColumns.date')}</TableHead>
-                      <TableHead className="px-3">{t('detail.movementColumns.entry')}</TableHead>
-                      <TableHead className="px-3">{t('detail.movementColumns.text')}</TableHead>
-                      <TableHead className="px-3">{t('detail.movementColumns.counterparty')}</TableHead>
-                      <TableHead className="px-3 text-right">{t('detail.movementColumns.amount')}</TableHead>
+                      <TableHead col="meta" className="px-3">{t('detail.movementColumns.date')}</TableHead>
+                      <TableHead col="meta" className="px-3">{t('detail.movementColumns.entry')}</TableHead>
+                      <TableHead col="title" className="px-3">{t('detail.movementColumns.text')}</TableHead>
+                      <TableHead col="meta" className="px-3">{t('detail.movementColumns.counterparty')}</TableHead>
+                      <TableHead col="amount" className="px-3 text-right">{t('detail.movementColumns.amount')}</TableHead>
                       <TableHead className="px-3 text-right">{t('detail.movementColumns.running')}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {movements.map((m, i) => (
                       <TableRow key={`${m.kind}-${m.entryId ?? m.transferId ?? 'cf'}-${i}`}>
-                        <TableCell className="px-3 text-ink-2">{fmt.date(m.date)}</TableCell>
-                        <TableCell className="px-3 font-mono text-hint">
+                        <TableCell col="meta" className="px-3 text-ink-2">{fmt.date(m.date)}</TableCell>
+                        <TableCell col="meta" className="px-3 font-mono text-hint">
                           {m.kind === 'line' && m.entryId ? (
                             <Link href={`/finance/entries/${m.entryId}`} className="underline-offset-2 hover:underline">
                               {m.entryNumber ?? <Empty />}
@@ -162,9 +162,9 @@ export function PurposeDetail({
                             <span className="text-muted-ink">{m.transferNumber ?? <Empty />}</span>
                           )}
                         </TableCell>
-                        <TableCell className="px-3 text-ink">{m.kind === 'line' ? m.text : m.text ? `${t(`movementKind.${m.kind}`)}: ${m.text}` : t(`movementKind.${m.kind}`)}</TableCell>
-                        <TableCell className="px-3 text-ink-2">{m.counterpartyName ?? <Empty />}</TableCell>
-                        <TableCell className="px-3 text-right tabular-nums">{formatEuro(m.amountCents)}</TableCell>
+                        <TableCell col="title" className="px-3 text-ink">{m.kind === 'line' ? m.text : m.text ? `${t(`movementKind.${m.kind}`)}: ${m.text}` : t(`movementKind.${m.kind}`)}</TableCell>
+                        <TableCell col="meta" className="px-3 text-ink-2">{m.counterpartyName ?? <Empty />}</TableCell>
+                        <TableCell col="amount" className="px-3 text-right tabular-nums">{formatEuro(m.amountCents)}</TableCell>
                         <TableCell className="px-3 text-right tabular-nums">{formatEuro(m.runningBalanceCents)}</TableCell>
                       </TableRow>
                     ))}

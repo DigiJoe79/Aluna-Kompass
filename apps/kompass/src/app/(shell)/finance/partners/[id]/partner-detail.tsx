@@ -96,22 +96,22 @@ export function PartnerDetail({ partner, notices, payments, registerDocument, ag
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>{t('payments.columns.number')}</TableHead>
-                        <TableHead className="text-right">{t('payments.columns.amount')}</TableHead>
-                        <TableHead>{t('payments.columns.state')}</TableHead>
-                        <TableHead className="hidden text-right sm:table-cell">{t('payments.columns.date')}</TableHead>
+                        <TableHead col="title">{t('payments.columns.number')}</TableHead>
+                        <TableHead col="amount" className="text-right">{t('payments.columns.amount')}</TableHead>
+                        <TableHead col="status">{t('payments.columns.state')}</TableHead>
+                        <TableHead col="meta" className="text-right">{t('payments.columns.date')}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {payments.map((p) => (
                         <TableRow key={p.id} data-testid={`payment-row-${p.id}`}>
-                          <TableCell className="whitespace-normal">
+                          <TableCell col="title" className="whitespace-normal">
                             <Link href={`/finance/partners/${partner.id}/payments/${p.id}`} className="font-mono text-ink underline-offset-2 hover:underline">
                               {p.number ?? (p.purposeText || t('payments.new'))}
                             </Link>
                           </TableCell>
-                          <TableCell className="text-right tabular-nums">{formatEuro(p.totalCents)}</TableCell>
-                          <TableCell className="whitespace-normal text-ink-2">
+                          <TableCell col="amount" className="text-right tabular-nums">{formatEuro(p.totalCents)}</TableCell>
+                          <TableCell col="status" className="whitespace-normal text-ink-2">
                             {t(`payments.state.${paymentStateKey(p)}`)}
                             {p.readyToAcknowledge ? (
                               <>
@@ -120,7 +120,7 @@ export function PartnerDetail({ partner, notices, payments, registerDocument, ag
                               </>
                             ) : null}
                           </TableCell>
-                          <TableCell className="hidden text-right tabular-nums sm:table-cell">{fmt.date(p.date)}</TableCell>
+                          <TableCell col="meta" className="text-right tabular-nums">{fmt.date(p.date)}</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
@@ -377,16 +377,16 @@ function NoticesSection({ partnerId, abroad, notices, canWrite, t, router }: { p
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>{t('notices.kind')}</TableHead>
-                  <TableHead>{t('notices.validUntil')}</TableHead>
-                  <TableHead className="hidden sm:table-cell">{t('notices.receivedColumn')}</TableHead>
-                  <TableHead>{t('notices.stateColumn')}</TableHead>
+                  <TableHead col="title">{t('notices.kind')}</TableHead>
+                  <TableHead col="meta">{t('notices.validUntil')}</TableHead>
+                  <TableHead col="meta">{t('notices.receivedColumn')}</TableHead>
+                  <TableHead col="status">{t('notices.stateColumn')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {notices.map((n) => (
                   <TableRow key={n.id} data-testid={`notice-row-${n.id}`}>
-                    <TableCell className="whitespace-normal">
+                    <TableCell col="title" className="whitespace-normal">
                       {kindLabel(n.kind)}
                       <span className="block text-hint text-muted-ink">{t('notices.dated', { date: fmt.date(n.noticeDate) })}</span>
                       {canWrite && n.state !== 'voided' ? (
@@ -395,9 +395,9 @@ function NoticesSection({ partnerId, abroad, notices, canWrite, t, router }: { p
                         </Button>
                       ) : null}
                     </TableCell>
-                    <TableCell className="tabular-nums">{fmt.date(n.validUntil)}</TableCell>
-                    <TableCell className="hidden tabular-nums sm:table-cell">{fmt.date(n.receivedOn)}</TableCell>
-                    <TableCell className="whitespace-normal text-ink-2">{t(`notices.state.${n.state}`)}</TableCell>
+                    <TableCell col="meta" className="tabular-nums">{fmt.date(n.validUntil)}</TableCell>
+                    <TableCell col="meta" className="tabular-nums">{fmt.date(n.receivedOn)}</TableCell>
+                    <TableCell col="status" className="whitespace-normal text-ink-2">{t(`notices.state.${n.state}`)}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>

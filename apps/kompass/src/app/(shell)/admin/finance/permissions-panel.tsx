@@ -33,15 +33,15 @@ export async function PermissionsPanel({ activities, roles }: { activities: Perm
             <Table>
               <TableHeader>
                 <TableRow className="h-8">
-                  <TableHead>{t('activity')}</TableHead>
-                  <TableHead>{t('granted')}</TableHead>
+                  <TableHead col="title">{t('activity')}</TableHead>
+                  <TableHead col="meta">{t('granted')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {activities.map((activity) => (
                   <TableRow key={activity.key}>
-                    <TableCell className="text-ink-2">{activityLabel(activity.permission)}</TableCell>
-                    <TableCell>{role.permissions.includes(activity.permission) ? t('yes') : <Empty />}</TableCell>
+                    <TableCell col="title" className="text-ink-2">{activityLabel(activity.permission)}</TableCell>
+                    <TableCell col="meta">{role.permissions.includes(activity.permission) ? t('yes') : <Empty />}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>

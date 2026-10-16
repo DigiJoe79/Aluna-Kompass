@@ -79,21 +79,21 @@ export function BasesPanel({ bases, groups, gaps = [], canManage }: { bases: Bas
         <Table className="text-meta">
           <TableHeader>
             <TableRow>
-              <TableHead>{t('columns.base')}</TableHead>
-              <TableHead>{t('columns.id')}</TableHead>
-              <TableHead>{t('columns.origin')}</TableHead>
-              <TableHead>{t('columns.state')}</TableHead>
+              <TableHead col="title">{t('columns.base')}</TableHead>
+              <TableHead col="meta">{t('columns.id')}</TableHead>
+              <TableHead col="meta">{t('columns.origin')}</TableHead>
+              <TableHead col="status">{t('columns.state')}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {bases.map((b) => (
               <TableRow key={b.id}>
-                <TableCell>{b.label}</TableCell>
-                <TableCell className="font-mono text-hint text-ink-2">{b.id}</TableCell>
-                <TableCell>
+                <TableCell col="title">{b.label}</TableCell>
+                <TableCell col="meta" className="font-mono text-hint text-ink-2">{b.id}</TableCell>
+                <TableCell col="meta">
                   <StatusBadge tone={b.own ? 'brand' : 'neutral'}>{b.own ? t('own') : t('shipped')}</StatusBadge>
                 </TableCell>
-                <TableCell>
+                <TableCell col="status">
                   <StatusBadge tone={b.ok ? 'success' : 'error'}>{b.ok ? t('ready') : t('broken')}</StatusBadge>
                   {b.error ? <span className="ml-2 text-hint text-error" title={b.error}>{b.error}</span> : null}
                 </TableCell>
@@ -113,9 +113,9 @@ export function BasesPanel({ bases, groups, gaps = [], canManage }: { bases: Bas
         <Table className="text-meta">
           <TableHeader>
             <TableRow>
-              <TableHead>{t('columns.type')}</TableHead>
-              <TableHead>{t('columns.effective')}</TableHead>
-              <TableHead>{t('columns.choice')}</TableHead>
+              <TableHead col="title">{t('columns.type')}</TableHead>
+              <TableHead col="status">{t('columns.effective')}</TableHead>
+              <TableHead col="actions">{t('columns.choice')}</TableHead>
             </TableRow>
           </TableHeader>
           {groups.map((group) => (
@@ -123,11 +123,11 @@ export function BasesPanel({ bases, groups, gaps = [], canManage }: { bases: Bas
               <TableGroupRow colSpan={3}>{group.moduleLabel}</TableGroupRow>
               {group.rows.map((row) => (
                 <TableRow key={row.key}>
-                  <TableCell>
+                  <TableCell col="title">
                     <span className="block">{row.label}</span>
                     {row.label === row.key ? null : <KeyLine>{row.key}</KeyLine>}
                   </TableCell>
-                  <TableCell data-testid="effective-base">
+                  <TableCell col="status" data-testid="effective-base">
                     <span className="flex flex-wrap items-center gap-2">
                       <span>{row.effectiveLabel}</span>
                       <span className="font-mono text-key text-ink-2">{row.effectiveBase}</span>
@@ -135,7 +135,7 @@ export function BasesPanel({ bases, groups, gaps = [], canManage }: { bases: Bas
                       {row.available ? null : <StatusBadge tone="error">{t('unavailable')}</StatusBadge>}
                     </span>
                   </TableCell>
-                  <TableCell>
+                  <TableCell col="actions">
                     <span className="flex items-center gap-2">
                       <Select
                         aria-label={t('choiceFor', { type: row.label })}

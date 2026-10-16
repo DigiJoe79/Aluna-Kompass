@@ -77,17 +77,17 @@ export function DispatchChannelsPanel({
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>{t('channelColumns.key')}</TableHead>
-              <TableHead>{t('channelColumns.label')}</TableHead>
-              <TableHead className="text-right">{t('channelColumns.actions')}</TableHead>
+              <TableHead col="meta">{t('channelColumns.key')}</TableHead>
+              <TableHead col="title">{t('channelColumns.label')}</TableHead>
+              <TableHead col="actions" className="text-right">{t('channelColumns.actions')}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {channels.map((channel) => (
               <TableRow key={channel.key}>
-                <TableCell className="font-mono text-meta text-ink-2">{channel.key}</TableCell>
-                <TableCell className="font-semibold text-ink">{channel.label}</TableCell>
-                <TableCell className="text-right">
+                <TableCell col="meta" className="font-mono text-meta text-ink-2">{channel.key}</TableCell>
+                <TableCell col="title" className="font-semibold text-ink">{channel.label}</TableCell>
+                <TableCell col="actions" className="text-right">
                   {canManageSettings ? (
                     <>
                       <Button

@@ -15,9 +15,10 @@ export const PHONE = { width: 390, height: 844 };
 export const EXPENSE_IBAN = 'DE93999999990000000001';
 export const PDF = { name: 'rechnung.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4\n1 0 obj<</Type/Catalog>>endobj\ntrailer<</Root 1 0 R>>\n%%EOF\n') };
 
+// Zeilen über `tbody tr`, nicht `getByRole('row')`: Am Telefon ist die Liste eine Kartenliste (`listitem`, E1).
 export async function linkOwnContact(page: Page): Promise<void> {
   await page.goto('/admin/users');
-  const row = page.getByRole('row', { name: /Anna Berger/ });
+  const row = page.locator('tbody tr').filter({ hasText: 'Anna Berger' });
   await row.getByRole('button', { name: 'Verknüpfen' }).click();
   const dialog = page.getByRole('dialog');
   // Getippt statt nur geöffnet (F7 Task 7): die ungefilterte Liste zeigt nur die ersten 20 Kontakte —
@@ -25,7 +26,7 @@ export async function linkOwnContact(page: Page): Promise<void> {
   await dialog.getByRole('combobox', { name: 'Kontakt wählen' }).fill('Leitner');
   await page.getByTestId('contact-option').filter({ hasText: 'Tomas Leitner' }).click();
   await dialog.getByRole('button', { name: 'Verknüpfen' }).click();
-  await expect(page.getByRole('row', { name: /Anna Berger/ }).getByRole('link', { name: 'Tomas Leitner' })).toBeVisible();
+  await expect(page.locator('tbody tr').filter({ hasText: 'Anna Berger' }).getByRole('link', { name: 'Tomas Leitner' })).toBeVisible();
 }
 
 /** Ein MCP-Zugang im Namen der angemeldeten Person — schneller als das Formular, das Task 5 schon prüft. */
@@ -71,7 +72,7 @@ export async function submitClaim(client: Client, o: { purpose: string; amountCe
 /** Von der Verwaltung aus ein Startpasswort für diese Person, dann als sie anmelden (Muster `finance-donation-run.spec.ts`). */
 export async function switchTo(page: Page, name: string, email: string): Promise<void> {
   await page.goto('/admin/users');
-  await page.getByRole('row', { name: new RegExp(name) }).getByRole('button', { name: 'Aktionen' }).click();
+  await page.locator('tbody tr').filter({ hasText: name }).getByRole('button', { name: 'Aktionen' }).click();
   await page.getByRole('menuitem', { name: 'Neues Startpasswort' }).click();
   const startPassword = (await page.getByTestId('start-password').textContent())!.trim();
   await page.getByRole('button', { name: 'Ich habe die Daten notiert' }).click();

@@ -81,21 +81,21 @@ export function PurposesPanel({ purposes }: { purposes: PurposeRow[] }) {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>{t('columns.name')}</TableHead>
-              <TableHead>{t('columns.target')}</TableHead>
-              <TableHead>{t('columns.state')}</TableHead>
-              <TableHead className="text-right">{tCommon('edit')}</TableHead>
+              <TableHead col="title">{t('columns.name')}</TableHead>
+              <TableHead col="amount">{t('columns.target')}</TableHead>
+              <TableHead col="status">{t('columns.state')}</TableHead>
+              <TableHead col="actions" className="text-right">{tCommon('edit')}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {purposes.map((row) => (
               <TableRow key={row.id}>
-                <TableCell className="text-ink">{row.name}</TableCell>
-                <TableCell className="tabular-nums text-ink-2">{row.targetCents !== null ? formatAmount(row.targetCents) : <Empty />}</TableCell>
-                <TableCell>
+                <TableCell col="title" className="text-ink">{row.name}</TableCell>
+                <TableCell col="amount" className="tabular-nums text-ink-2">{row.targetCents !== null ? formatAmount(row.targetCents) : <Empty />}</TableCell>
+                <TableCell col="status">
                   {isNormalInList('purposeSetup', stateOf(row)) ? null : <StatusBadge tone={statusTone('purposeSetup', stateOf(row))}>{t(`states.${stateOf(row)}`)}</StatusBadge>}
                 </TableCell>
-                <TableCell className="text-right">
+                <TableCell col="actions" className="text-right">
                   <div className="flex justify-end gap-1.5">
                     <Button variant="ghost" size="sm" onClick={() => setEditing(versions.latest(row))}>
                       {tCommon('edit')}

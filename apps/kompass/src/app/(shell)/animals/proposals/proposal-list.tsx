@@ -129,15 +129,15 @@ export function ProposalList({
           <Table className="text-body">
             <TableHeader>
               <TableRow>
-                <TableHead>{t('columns.kind')}</TableHead>
-                <TableHead>{t('columns.animal')}</TableHead>
+                <TableHead col="meta">{t('columns.kind')}</TableHead>
+                <TableHead col="title">{t('columns.animal')}</TableHead>
                 <TableHead>{t('columns.content')}</TableHead>
-                <TableHead>{t('columns.source')}</TableHead>
+                <TableHead col="meta">{t('columns.source')}</TableHead>
                 {open ? (
-                  <TableHead>{t('columns.received')}</TableHead>
+                  <TableHead col="meta">{t('columns.received')}</TableHead>
                 ) : (
                   <>
-                    <TableHead>{t('columns.state')}</TableHead>
+                    <TableHead col="status">{t('columns.state')}</TableHead>
                     <TableHead>{t('columns.decided')}</TableHead>
                     <TableHead>{t('columns.reason')}</TableHead>
                   </>
@@ -147,10 +147,10 @@ export function ProposalList({
             <TableBody>
               {proposals.map((p) => (
                 <TableRow key={p.id} data-testid="proposal-row">
-                  <TableCell className="w-0 whitespace-nowrap">
+                  <TableCell col="meta" className="w-0 whitespace-nowrap">
                     <KindBadge kind={p.kind} />
                   </TableCell>
-                  <TableCell>
+                  <TableCell col="title">
                     <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
                       <ProposalThumb item={p} />
                       <RowLink href={`/animals/proposals/${p.id}${rowQs}`}>{p.name || t('unnamed')}</RowLink>
@@ -163,12 +163,12 @@ export function ProposalList({
                     </span>
                   </TableCell>
                   <TableCell className="text-ink-2">{content(p)}</TableCell>
-                  <TableCell className="text-ink-2">{p.sourceName}</TableCell>
+                  <TableCell col="meta" className="text-ink-2">{p.sourceName}</TableCell>
                   {open ? (
-                    <TableCell className="whitespace-nowrap text-ink-2">{dates.dateTime(p.createdAt)}</TableCell>
+                    <TableCell col="meta" className="whitespace-nowrap text-ink-2">{dates.dateTime(p.createdAt)}</TableCell>
                   ) : (
                     <>
-                      <TableCell>
+                      <TableCell col="status">
                         <StatusBadge tone={p.state === 'accepted' || p.state === 'acceptedWithChanges' ? 'success' : 'neutral'}>{stateWord(p)}</StatusBadge>
                       </TableCell>
                       <TableCell className="whitespace-nowrap text-ink-2">

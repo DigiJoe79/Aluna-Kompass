@@ -34,28 +34,28 @@ export function RunsList({ runs, currentId, footer }: { runs: RunSummary[]; curr
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>{t('columns.year')}</TableHead>
-                  <TableHead>{t('columns.startedOn')}</TableHead>
-                  <TableHead>{t('columns.issued')}</TableHead>
-                  <TableHead>{t('columns.state')}</TableHead>
-                  <TableHead>{t('columns.dispatched')}</TableHead>
-                  <TableHead><span className="sr-only">{t('columns.open')}</span></TableHead>
+                  <TableHead col="title">{t('columns.year')}</TableHead>
+                  <TableHead col="meta">{t('columns.startedOn')}</TableHead>
+                  <TableHead col="meta">{t('columns.issued')}</TableHead>
+                  <TableHead col="status">{t('columns.state')}</TableHead>
+                  <TableHead col="meta">{t('columns.dispatched')}</TableHead>
+                  <TableHead col="actions"><span className="sr-only">{t('columns.open')}</span></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {runs.map((run) => (
                   <TableRow key={run.id} data-testid="run-row" aria-current={run.id === currentId ? 'true' : undefined}>
-                    <TableCell>
+                    <TableCell col="title">
                       <span className="inline-flex items-center gap-2">
                         <span className="tabular-nums">{run.year}</span>
                         {run.followUpOfRunId ? <StatusBadge tone="neutral">{t('followUp')}</StatusBadge> : null}
                       </span>
                     </TableCell>
-                    <TableCell>{date(run.startedOn)}</TableCell>
-                    <TableCell className="tabular-nums">{t('issued', { issued: run.counts.issued, total: runProgress(run.counts).total })}</TableCell>
-                    <TableCell>{stateOf(run)}</TableCell>
-                    <TableCell>{run.dispatchedAt && run.dispatchedVia ? `${date(run.dispatchedAt)} · ${tv(run.dispatchedVia)}` : <Empty />}</TableCell>
-                    <TableCell className="text-right">
+                    <TableCell col="meta">{date(run.startedOn)}</TableCell>
+                    <TableCell col="meta" className="tabular-nums">{t('issued', { issued: run.counts.issued, total: runProgress(run.counts).total })}</TableCell>
+                    <TableCell col="status">{stateOf(run)}</TableCell>
+                    <TableCell col="meta">{run.dispatchedAt && run.dispatchedVia ? `${date(run.dispatchedAt)} · ${tv(run.dispatchedVia)}` : <Empty />}</TableCell>
+                    <TableCell col="actions" className="text-right">
                       <Link href={`/finance/donations/run?run=${run.id}`} className="text-link underline">{t('open')}</Link>
                     </TableCell>
                   </TableRow>

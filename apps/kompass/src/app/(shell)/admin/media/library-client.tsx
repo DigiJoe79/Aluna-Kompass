@@ -429,19 +429,19 @@ export function LibraryClient({
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>{t('columns.file')}</TableHead>
-                  {/* Telefon: nur die Datei — fünf Spalten liefen seitlich über und schnitten die zweite mitten im Wort ab
-                      (Befund 39, 0.2.9); Ordner, Größe, Datum und Verwendung stehen im Detail. Wie Partnerliste. */}
-                  <TableHead className="hidden sm:table-cell">{t('columns.folder')}</TableHead>
-                  <TableHead className="hidden sm:table-cell">{t('columns.size')}</TableHead>
-                  <TableHead className="hidden sm:table-cell">{t('columns.uploadedAt')}</TableHead>
-                  <TableHead className="hidden sm:table-cell">{t('columns.usage')}</TableHead>
+                  <TableHead col="title">{t('columns.file')}</TableHead>
+                  {/* Telefon: Kartenzeile (E1) — Datei als Titel, Ordner · Größe · Datum darunter; die Verwendung steht
+                      im Detail (Befund 39, 0.2.9: fünf Spalten liefen seitlich über). */}
+                  <TableHead col="meta">{t('columns.folder')}</TableHead>
+                  <TableHead col="meta">{t('columns.size')}</TableHead>
+                  <TableHead col="meta">{t('columns.uploadedAt')}</TableHead>
+                  <TableHead>{t('columns.usage')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {items.map((it) => (
                   <TableRow key={it.id} {...dragProps(it)} className={rowDragging === it.id ? 'opacity-50' : undefined}>
-                    <TableCell>
+                    <TableCell col="title">
                       <RowButton aria-haspopup="dialog" className="flex items-center gap-2" onClick={() => setDetailId(it.id)}>
                         {it.mimeType.startsWith('image/') ? (
                           <img src={`/media/${it.id}/preview`} alt="" loading="lazy" draggable={false} className="size-8 shrink-0 rounded border border-line object-cover" />
@@ -451,12 +451,12 @@ export function LibraryClient({
                         <span className="text-meta">{it.filename}</span>
                       </RowButton>
                     </TableCell>
-                    <TableCell data-folder-cell className="hidden text-ink-2 sm:table-cell">
+                    <TableCell col="meta" data-folder-cell className="text-ink-2">
                       {placeOf(it.folder)}
                     </TableCell>
-                    <TableCell className="hidden sm:table-cell">{formatBytes(it.bytes)}</TableCell>
-                    <TableCell className="hidden text-ink-2 sm:table-cell">{fmt.date(it.createdAt)}</TableCell>
-                    <TableCell className="hidden whitespace-normal sm:table-cell"><UsageLines references={it.references} /></TableCell>
+                    <TableCell col="meta">{formatBytes(it.bytes)}</TableCell>
+                    <TableCell col="meta" className="text-ink-2">{fmt.date(it.createdAt)}</TableCell>
+                    <TableCell className="whitespace-normal"><UsageLines references={it.references} /></TableCell>
                   </TableRow>
                 ))}
               </TableBody>

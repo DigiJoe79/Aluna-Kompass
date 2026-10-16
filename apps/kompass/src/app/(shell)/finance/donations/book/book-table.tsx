@@ -155,23 +155,23 @@ export function BookTable({
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>{t('columns.date')}</TableHead>
-                <TableHead>{t('columns.contact')}</TableHead>
+                <TableHead col="meta">{t('columns.date')}</TableHead>
+                <TableHead col="title">{t('columns.contact')}</TableHead>
                 <TableHead>{t('columns.kind')}</TableHead>
-                <TableHead className="text-right">{t('columns.amount')}</TableHead>
-                <TableHead>{t('columns.purpose')}</TableHead>
-                <TableHead>{t('columns.confirmed')}</TableHead>
+                <TableHead col="amount" className="text-right">{t('columns.amount')}</TableHead>
+                <TableHead col="meta">{t('columns.purpose')}</TableHead>
+                <TableHead col="meta">{t('columns.confirmed')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {rows.map((row) => (
                 <TableRow key={row.lineId} data-testid="book-row">
-                  <TableCell>{date(row.entryDate)}</TableCell>
-                  <TableCell>{row.contactName ?? t('anonymous')}</TableCell>
+                  <TableCell col="meta">{date(row.entryDate)}</TableCell>
+                  <TableCell col="title">{row.contactName ?? t('anonymous')}</TableCell>
                   <TableCell>{t(`sums.${row.kind}`)}</TableCell>
-                  <TableCell className="text-right tabular-nums">{formatEuro(row.amountCents)}</TableCell>
-                  <TableCell>{row.purposeName ?? <Empty />}</TableCell>
-                  <TableCell data-testid="book-confirmed">
+                  <TableCell col="amount" className="text-right tabular-nums">{formatEuro(row.amountCents)}</TableCell>
+                  <TableCell col="meta">{row.purposeName ?? <Empty />}</TableCell>
+                  <TableCell col="meta" data-testid="book-confirmed">
                     {row.confirmation ? (
                       <span className="inline-flex items-center gap-1">
                         <Link href={`/finance/donations?confirmation=${row.confirmation.id}`} className="font-mono text-link underline">

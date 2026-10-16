@@ -102,6 +102,21 @@ test.describe('finance', () => {
     await expect(page).toHaveURL(/\/finance\/entries\/[0-9A-Z]{26}/);
   });
 
+  // E1 „Tabelle am Telefon“: Haken in der Kartenzeile, die Auswahlleiste klebt unten, die Summe steht nach der Liste.
+  test('am Telefon: Buchung in der Kartenzeile auswählen, Auswahlleiste und Summenzeile', async ({ page }) => {
+    await loginAsAdmin(page);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/finance/entries');
+    const item = page.getByRole('listitem').filter({ hasText: 'Entwurf ungeprüft zwei' });
+    await item.getByRole('checkbox').click();
+    await expect(page).toHaveURL(/\/finance\/entries$/);
+    await expect(page.getByTestId('selection-bar')).toContainText('1 Buchung ausgewählt');
+    await expect(page.getByTestId('selection-bar').getByRole('button', { name: 'als geprüft markieren' })).toBeInViewport();
+    await expect(page.locator('tfoot')).toContainText(/Einnahmen/);
+    const overflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth);
+    expect(overflow).toBe(false);
+  });
+
   test('Mehrfachauswahl: zwei Entwürfe als geprüft markieren, dann festschreiben; die Nummern erscheinen', async ({ page }) => {
     await loginAsAdmin(page);
     await page.goto('/finance/entries');

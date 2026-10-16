@@ -218,17 +218,17 @@ export function Journal({ rows, total, totals, page, pageSize, standing, account
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-9" />
-                <SortableHead field="number" label={t('columns.number')} />
-                <SortableHead field="entryDate" label={t('columns.date')} />
-                <SortableHead field="text" label={t('columns.text')} />
-                <TableHead>{t('columns.account')}</TableHead>
+                <TableHead col="select" className="w-9" />
+                <SortableHead col="meta" field="number" label={t('columns.number')} />
+                <SortableHead col="meta" field="entryDate" label={t('columns.date')} />
+                <SortableHead col="title" field="text" label={t('columns.text')} />
+                <TableHead col="meta">{t('columns.account')}</TableHead>
                 <TableHead>{t('columns.allocation')}</TableHead>
                 <TableHead>{t('columns.contact')}</TableHead>
-                <SortableHead field="amount" label={t('columns.amount')} />
+                <SortableHead col="amount" field="amount" label={t('columns.amount')} />
                 {accountFilter ? <TableHead>{t('columns.balance')}</TableHead> : null}
                 <TableHead>{t('columns.voucher')}</TableHead>
-                <TableHead>{t('columns.state')}</TableHead>
+                <TableHead col="status">{t('columns.state')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -237,21 +237,21 @@ export function Journal({ rows, total, totals, page, pageSize, standing, account
                 const href = row.status === 'draft' ? `/finance/entries/${row.id}/edit` : `/finance/entries/${row.id}`;
                 return (
                   <TableRow key={row.id} data-row-id={row.id}>
-                    <TableCell>
+                    <TableCell col="select">
                       <Checkbox
                         aria-label={t('selectRow', { number: row.number ?? row.text })}
                         checked={selected.has(row.id)}
                         onClick={(e) => toggle(row.id, index, e.shiftKey)}
                       />
                     </TableCell>
-                    <TableCell className="font-mono text-meta">
+                    <TableCell col="meta" className="font-mono text-meta">
                       {/* Die Fläche dieses Links liegt über der ganzen Zeile (MUSTER.md § G); ein Entwurf hat noch keine Nummer, dann nennt der Text den Link. */}
                       <RowLink href={href} aria-label={row.number ? `${row.number} · ${row.text}` : row.text}>
                         {row.number ?? <Empty />}
                       </RowLink>
                     </TableCell>
-                    <TableCell className="tabular-nums text-meta text-ink-2">{fmt.date(row.entryDate)}</TableCell>
-                    <TableCell className={cn('', reversed && 'text-muted-ink line-through')}>
+                    <TableCell col="meta" className="tabular-nums text-meta text-ink-2">{fmt.date(row.entryDate)}</TableCell>
+                    <TableCell col="title" className={cn('', reversed && 'text-muted-ink line-through')}>
                       {row.text}
                       {reversed && row.reversedByNumber ? (
                         <>
@@ -278,10 +278,10 @@ export function Journal({ rows, total, totals, page, pageSize, standing, account
                         </>
                       ) : null}
                     </TableCell>
-                    <TableCell className="text-ink-2">{row.accountLabel}</TableCell>
+                    <TableCell col="meta" className="text-ink-2">{row.accountLabel}</TableCell>
                     <TableCell className="text-ink-2">{row.allocationLabel}</TableCell>
                     <TableCell className="text-ink-2">{row.contactLabel ?? <Empty />}</TableCell>
-                    <TableCell selectable>
+                    <TableCell col="amount" selectable>
                       <AmountCell cents={row.amountCents} reversed={reversed} />
                       {row.transfer ? <span className="block text-right text-hint text-muted-ink">{t('transfer')}</span> : null}
                     </TableCell>
@@ -291,7 +291,7 @@ export function Journal({ rows, total, totals, page, pageSize, standing, account
                     <TableCell>
                       <VoucherIcon state={row.documentationState} />
                     </TableCell>
-                    <TableCell>
+                    <TableCell col="status">
                       <EntryStateBadge entry={row} inList />
                     </TableCell>
                   </TableRow>
@@ -300,11 +300,11 @@ export function Journal({ rows, total, totals, page, pageSize, standing, account
             </TableBody>
             <TableFooter className="border-t border-line-strong bg-surface-2">
               <TableRow>
-                <TableCell colSpan={accountFilter ? 8 : 7} className="text-hint text-muted-ink">
+                <TableCell col="meta" colSpan={accountFilter ? 8 : 7} className="text-hint text-muted-ink">
                   {t('totals.label', { count: total })}
                 </TableCell>
-                <TableCell className="text-hint text-ink-2">{t('totals.income', { amount: formatEuro(totals.incomeCents) })}</TableCell>
-                <TableCell colSpan={2} className="text-hint text-ink-2">
+                <TableCell col="amount" className="text-hint text-ink-2">{t('totals.income', { amount: formatEuro(totals.incomeCents) })}</TableCell>
+                <TableCell col="amount" colSpan={2} className="text-hint text-ink-2">
                   {t('totals.expense', { amount: formatEuro(-totals.expenseCents) })} · {t('totals.result', { amount: formatEuro(totals.resultCents) })}
                 </TableCell>
               </TableRow>
