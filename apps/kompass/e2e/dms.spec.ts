@@ -2177,14 +2177,13 @@ test.describe('Weg und Teilbaum', () => {
     await expect(page.getByTestId('folder-column')).not.toContainText('die Sie lesen dürfen');
   });
 
+  // 11-1 C37 (Designer 2026-10-16, Teil 3 Nr. 10): kein Reiter „Ordner“ mehr, der Kopf verweist in die Akte.
   test('die Verwaltung der Akte verweist für Ordner auf die Akte', async ({ page }) => {
     await login(page);
-    await page.goto('/admin/dms?panel=folders');
-    const card = page.getByTestId('folders-moved');
-    await expect(card).toContainText('Ordner legen Sie jetzt direkt in der Akte an');
-    await expect(card.getByRole('table')).toHaveCount(0);
+    await page.goto('/admin/dms');
+    await expect(page.getByRole('link', { name: 'Ordner', exact: true })).toHaveCount(0);
     await expect(page.getByRole('button', { name: 'Ordner anlegen' })).toHaveCount(0);
-    await card.getByRole('link', { name: 'Zur Akte' }).click();
+    await page.getByRole('link', { name: 'Ordner in der Akte' }).click();
     await expect(page).toHaveURL(/\/dms$/);
   });
 

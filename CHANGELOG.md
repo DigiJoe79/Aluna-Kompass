@@ -38,6 +38,11 @@ die Nummern folgen [Semantic Versioning](https://semver.org/lang/de/). Vor
 - **Umgebungsbalken.** Die Testumgebung trägt jetzt einen ockerfarbenen
   Balken mit Schraffur (bisher schwarz-gelb), die Entwicklung einen
   dunkelgrauen (bisher rot). Die Produktion hat weiter keinen.
+- **Webseite.** Die Anzeige „… nicht publiziert“ steht nur noch im Bereich
+  Webseite. Ein neuer Eintrag heißt „Eintrag anlegen“ (die Sammlung darunter);
+  der URL-Teil ist als Pflichtfeld markiert. Die Vorschau hat eine Brotkrume.
+- **Einrichtung → Akte:** Der Reiter „Ordner“ entfällt; oben führt „Ordner in
+  der Akte“ in die Akte, wo Ordner gepflegt werden.
 - **Gemeinschaftskonto.** Gehört eine IBAN mehreren Kontakten
   (Gemeinschaftskonto), schlägt der Import keinen Kontakt mehr vor, statt still
   den zuletzt verknüpften zu nehmen.

@@ -348,7 +348,11 @@ function CropEditorBody({ onOpenChange, src, width, height, formats, fixedReason
                 ref={stage}
                 data-testid="crop-stage"
                 className="relative mx-auto touch-none select-none"
-                style={{ aspectRatio: `${width} / ${height}`, width: `min(100%, calc(55vh * ${width / height}))` }}
+                // Höhe des Bildes = verfügbarer Raum minus Kopf, Formatzeile, Zoom-Leiste und Fußleiste (Designer 2026-10-16,
+                // Teil 3 Nr. 5; 05 B27): Der Dialog ist höchstens 85 % hoch, das Drumherum rund 25 rem — so liegt die
+                // Zoom-Leiste bei jeder Fensterhöhe frei, ohne zu scrollen. Mindestens 10 rem, höchstens 55 % wie bisher.
+                // Kein Layout-Test: Einzelstelle, Laufzeit zählt (Projektregel).
+                style={{ aspectRatio: `${width} / ${height}`, width: `min(100%, calc(clamp(10rem, 85dvh - 25rem, 55vh) * ${width / height}))` }}
                 onPointerDown={onPointerDown}
                 onPointerMove={onPointerMove}
                 onPointerUp={onPointerEnd}

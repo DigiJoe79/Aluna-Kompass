@@ -1,3 +1,5 @@
+import Link from 'next/link';
+import { buttonVariants } from '@/components/ui/button';
 import { hasPermission, isModuleEnabled, readSetting, requirePermission } from '@kompass/core';
 import { countDocumentsOfType, countUnreadDocuments, dispatchChannels, documentTypeProvisionedBy, isDefaultType, listDocumentAreas, listDocumentFolders, listDocumentRules, listDocumentTypes, listSnippets } from '@kompass/module-dms';
 import { getTranslations } from 'next-intl/server';
@@ -8,13 +10,13 @@ import { PageHeader } from '@/components/page-header';
 import { PanelNav, panelFromQuery } from '@/components/panel-nav';
 import { requireSession } from '@/lib/request-context';
 import { DispatchChannelsPanel } from './dispatch-channels-panel';
-import { FoldersPanel } from './folders-panel';
 import { SnippetsPanel } from './snippets-panel';
 import { RulesPanel } from './rules-panel';
 import { TextPanel } from './text-panel';
 import { TypesPanel } from './types-panel';
 
-const PANELS = ['types', 'rules', 'folders', 'snippets', 'channels', 'text'] as const;
+// Kein Reiter „Ordner“: Ordner pflegt man in der Akte, der Kopf verweist dorthin (11-1 C37, Designer 2026-10-16).
+const PANELS = ['types', 'rules', 'snippets', 'channels', 'text'] as const;
 
 /** Folder-Pfade für die Auswahlfelder der Arten und Regeln. */
 async function loadFolderPaths(...args: Parameters<typeof listDocumentFolders>): Promise<string[]> {
@@ -74,8 +76,6 @@ export default async function AdminDmsPage({ searchParams }: { searchParams: Pro
         }))
       : [];
     content = <RulesPanel rules={rules} types={selectableTypesRes.ok ? selectableTypesRes.value : []} folders={folders} />;
-  } else if (panel === 'folders') {
-    content = <FoldersPanel />;
   } else if (panel === 'snippets') {
     const snippetsRes = await listSnippets(deps, ctx, { includeInactive: true });
     content = <SnippetsPanel snippets={snippetsRes.ok ? snippetsRes.value : []} />;
@@ -96,7 +96,20 @@ export default async function AdminDmsPage({ searchParams }: { searchParams: Pro
 
   const tabs = await getTranslations('dms.admin.panels');
   return (
-    <Page width="standard" header={<PageHeader title={t('title')} description={t('description')} />}>
+    <Page
+      width="standard"
+      header={
+        <PageHeader
+          title={t('title')}
+          description={t('description')}
+          actions={
+            <Link href="/dms" className={buttonVariants({ variant: 'outline' })}>
+              {t('foldersInFile')}
+            </Link>
+          }
+        />
+      }
+    >
       <div className="space-y-5">
         <PanelNav
           basePath="/admin/dms"

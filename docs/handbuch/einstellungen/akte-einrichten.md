@@ -5,7 +5,7 @@ Nummernkreis und Aufbewahrungsfrist, die Einsortierregeln, die aus
 Absender oder Text auf Art und Ordner schließen, und die Textbausteine für
 Briefe. Was hier steht, erscheint beim Ablegen als Vorschlag.
 
-Die Seite hat sechs Reiter: Arten, Regeln, Ordner, Textbausteine, Versand und
+Die Seite hat fünf Reiter: Arten, Regeln, Textbausteine, Versand und
 Texterkennung. Der Bereich steht im Reiter, nicht zusätzlich als Überschrift
 darunter; der gewählte steht in der Adresse, und die Seite lädt nur ihn.
 
@@ -28,8 +28,8 @@ Eine Art kann außerdem einen **Schutzbereich** tragen, sobald ein Modul einen a
 
 ## Ordner
 
-Ordner stehen nicht mehr in der Verwaltung; hier steht nur der Verweis „Zur
-Akte“. Ordner legen Sie in der [Akte](../akte/dokumente-und-ordner.md#ordner-pflegen)
+Ordner stehen nicht in der Verwaltung; oben rechts führt „Ordner in der Akte“
+dorthin. Ordner legen Sie in der [Akte](../akte/dokumente-und-ordner.md#ordner-pflegen)
 an, benennen sie um, verschieben und löschen sie — oben in der Ordnerspalte
 „Neuer Ordner“, am Ordner über „…“ oder mit Rechtsklick. Das dürfen Personen
 mit dem Recht „Akte verwalten“. Ein Unterordner liegt in einem anderen Ordner, etwa
