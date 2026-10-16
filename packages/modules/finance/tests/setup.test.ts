@@ -99,6 +99,16 @@ describe('finance setup status', () => {
     expect((await stepOf()).done).toBe(false);
   });
 
+  it('the import format step is open, not blocked, while a second bank account still lacks its opening balance (11-1 A8)', async () => {
+    const { deps, ctx } = setupFinance();
+    unwrap(await createFirstFiscalYear(deps, ctx, { startsOn: '2026-01-01', endsOn: '2026-12-31' }));
+    unwrap(await createAccount(deps, ctx, { name: 'Vereinskonto', kind: 'bank', iban: 'DE23999999990000202051', isMain: true, importFormat: 'camt053', openingBalanceCents: 0, openingDate: '2026-01-01' }));
+    unwrap(await createAccount(deps, ctx, { name: 'Zweitkonto', kind: 'bank', iban: 'DE66999999990000303030', isMain: false }));
+    const steps = unwrap(await getSetupStatus(deps, ctx)).steps;
+    expect(steps.find((s) => s.key === 'account')!.done).toBe(false);
+    expect(steps.find((s) => s.key === 'importFormat')!).toMatchObject({ done: false, blocked: false, detail: { missing: 1 } });
+  });
+
   it('the import format step counts bank and payment-service accounts and names how many lack a format (F4b)', async () => {
     const { deps, ctx } = setupFinance();
     unwrap(await createFirstFiscalYear(deps, ctx, { startsOn: '2026-01-01', endsOn: '2026-12-31' }));

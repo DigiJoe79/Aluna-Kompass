@@ -95,7 +95,8 @@ test.describe('finance purposes (F8b)', () => {
     await expect(page.getByTestId('reopen-save')).toBeDisabled();
     await page.locator('#purpose-reopen-reason').fill('Weitere Behandlungen zugesagt');
     await page.getByTestId('reopen-save').click();
-    await expect(row(page, 'Tierarztfonds E2E')).toContainText('aktiv');
+    // G3: der Normalzustand „aktiv“ trägt in der Liste keine Marke mehr.
+    await expect(row(page, 'Tierarztfonds E2E')).not.toContainText('erfüllt');
     await expect(row(page, 'Tierarztfonds E2E')).not.toContainText('Rest');
   });
 

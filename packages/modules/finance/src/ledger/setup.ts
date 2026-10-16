@@ -149,7 +149,8 @@ export async function getSetupStatus(deps: Deps, ctx: CallContext): Promise<Resu
   const { bankWithoutOpening, ...account } = accountStepDetail(deps.db);
   const missingImportFormats = accountsWithoutImportFormat(deps.db);
   // Erledigt: mindestens ein Konto mit Anfangsbestand und kein aktives Bankkonto ohne (11-1 A8).
-  const accountDone = account.accounts - account.withoutOpening > 0 && bankWithoutOpening === 0;
+  const anyOpening = account.accounts - account.withoutOpening > 0;
+  const accountDone = anyOpening && bankWithoutOpening === 0;
   const roles = rolesStepDetail(deps);
   const categoriesConfirmedAt = readSetting<string | null>(deps, 'finance.setupCategoriesConfirmedAt');
   const taxConfirmedAt = readSetting<string | null>(deps, 'finance.setupTaxConfirmedAt');
@@ -197,7 +198,8 @@ export async function getSetupStatus(deps: Deps, ctx: CallContext): Promise<Resu
       required: false,
       done: missingImportFormats === 0,
       dependsOn: 'account',
-      blocked: !accountDone,
+      // Das Format braucht nur ein Konto, nicht den Anfangsbestand jedes Bankkontos (11-1 A8 sperrte es sonst mit).
+      blocked: !anyOpening,
       detail: { missing: missingImportFormats },
       permission: 'finance.setup',
       canDo: listUserNamesWithPermission(deps, 'finance.setup'),
