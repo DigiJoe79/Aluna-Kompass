@@ -22,7 +22,7 @@ export function ListClient({ collection, rows, publishable, sortable, canManage 
         <TableBody>
           {rows.map((row, index) => (
             <TableRow key={row.id}>
-              <TableCell className="font-semibold">
+              <TableCell>
                 {canManage ? <RowLink href={`/site/c/${collection}/${row.id}`}>{row.label}</RowLink> : row.label}
               </TableCell>
               {publishable ? (

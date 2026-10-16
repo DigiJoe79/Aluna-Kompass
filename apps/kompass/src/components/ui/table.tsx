@@ -164,7 +164,8 @@ function TableGroupRow({ colSpan, children, testId }: { colSpan: number; childre
 const ROW_TARGET =
   'after:absolute after:inset-0 after:content-[""] focus-visible:outline-none focus-visible:after:outline-2 focus-visible:after:outline-offset-[-2px] focus-visible:after:outline-focus'
 
-/** Öffnet den Datensatz der Zeile (MUSTER.md § G): Link in Spalte 1, Fläche über die ganze Zeile. */
+/** Öffnet den Datensatz der Zeile (MUSTER.md § G): Link in Spalte 1, Fläche über die ganze Zeile. Gewicht 400, nur die
+ * Linkfarbe (Designer Stufe 2 Nr. 4). */
 function RowLink({
   className,
   ...props
@@ -174,7 +175,7 @@ function RowLink({
       data-row-link
       draggable={false}
       className={cn(
-        "font-semibold text-link underline-offset-2 hover:underline",
+        "text-link underline-offset-2 hover:underline",
         ROW_TARGET,
         className
       )}
@@ -189,7 +190,7 @@ function RowButton({ className, ...props }: React.ComponentProps<"button">) {
     <button
       type="button"
       data-row-link
-      className={cn("text-left font-semibold text-link", ROW_TARGET, className)}
+      className={cn("text-left text-link", ROW_TARGET, className)}
       {...props}
     />
   )
