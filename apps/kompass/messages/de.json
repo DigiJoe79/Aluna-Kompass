@@ -892,8 +892,9 @@
         "work": "Arbeit",
         "entries": "Buchungen",
         "donations": "Spenden",
+        "allocation": "Zweckmittel",
         "expenses": "Auslagen",
-        "allocation": "Partner und Zweckmittel"
+        "parties": "Beteiligte"
       }
     },
     "media": "Mediathek"
