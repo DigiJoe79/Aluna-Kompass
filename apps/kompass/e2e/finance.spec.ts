@@ -174,6 +174,20 @@ test.describe('finance', () => {
     await expect(page.locator('tr', { hasText: 'Testausgabe Büromaterial' })).toBeVisible();
   });
 
+  test('leerer Entwurf nennt die fehlenden Angaben am Feld und oben (Befund 1 Nr. 2, 0.2.12)', async ({ page }) => {
+    await loginAsAdmin(page);
+    await page.goto('/finance/entries/new?template=expense');
+    await page.getByLabel('Text', { exact: true }).waitFor();
+    await page.getByRole('button', { name: 'Als Entwurf speichern' }).click();
+    // Meldungsregel A (MUSTER.md): Feldfehler am Feld und die Zusammenfassung oben.
+    const summary = page.getByRole('alert').filter({ hasText: 'Bitte prüfen Sie' });
+    await expect(summary).toContainText('Text: Pflichtfeld.');
+    await expect(summary).toContainText('Betrag: Bitte einen Betrag wie 12,50 eingeben');
+    await expect(page.getByLabel('Text', { exact: true })).toHaveAttribute('aria-invalid', 'true');
+    await expect(page.getByTestId('finance-account-card').getByLabel('Betrag')).toHaveAttribute('aria-invalid', 'true');
+    await expect(page).toHaveURL(/\/finance\/entries\/new/);
+  });
+
   test('Auszahlung einer Spendenplattform: „Noch 85,00 € zu verteilen“, dann „Rest hierher“, „Ausgeglichen“', async ({ page }) => {
     await loginAsAdmin(page);
     await page.goto('/finance/entries/new?template=income');

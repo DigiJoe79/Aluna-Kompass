@@ -2,6 +2,7 @@
 
 import { MoreVertical } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import { FieldError } from '@/components/forms/field-error';
 import { ContactPicker, type PickedContact } from '@/components/contact-picker';
 import { Notice } from '@/components/notice';
 import { FormField } from '@/components/forms/form-field';
@@ -60,6 +61,8 @@ export interface SplitRowProps {
   /** „Zweck im Minus“ — Warnung ohne Begründungsfeld. */
   purposeOverspent?: boolean;
   onFreeFundsRemainder?: () => void;
+  /** Feldfehler der Zeile, schon übersetzt (Meldungsregel A: am Feld und oben in `FormErrorSummary`). */
+  errors?: { categoryId?: string; amountText?: string };
 }
 
 /**
@@ -87,6 +90,7 @@ export function SplitRow({
   density = 'default',
   purposeOverspent,
   onFreeFundsRemainder,
+  errors,
 }: SplitRowProps) {
   const t = useTranslations('finance.splitRow');
   const narrow = density === 'narrow';
@@ -128,6 +132,8 @@ export function SplitRow({
             disabled={value.locked}
             value={value.categoryId}
             onChange={(e) => set({ categoryId: e.target.value })}
+            aria-invalid={errors?.categoryId ? true : undefined}
+            aria-describedby={errors?.categoryId ? `${value.key}-category-error` : undefined}
           >
             <option value="" disabled>
               {t('categoryPlaceholder')}
@@ -149,11 +155,12 @@ export function SplitRow({
               {category.explanation ? ` · ${category.explanation}` : ''}
             </p>
           ) : null}
+          <FieldError id={`${value.key}-category-error`} message={errors?.categoryId} />
         </div>
 
         <div className={cn('space-y-1', narrow && !showTax && 'col-span-2', narrow && 'row-start-2')}>
           <Label htmlFor={`${value.key}-amount`}>{t('amount')}</Label>
-          <AmountField id={`${value.key}-amount`} name={`${value.key}-amount`} value={value.amountText} onChange={(amountText) => set({ amountText })} allowNegative disabled={value.locked} required />
+          <AmountField id={`${value.key}-amount`} name={`${value.key}-amount`} value={value.amountText} onChange={(amountText) => set({ amountText })} allowNegative disabled={value.locked} required invalid={!!errors?.amountText} errorText={errors?.amountText} />
         </div>
 
         {showTax ? (

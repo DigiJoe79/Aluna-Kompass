@@ -14,6 +14,7 @@ import { ReceiptList, type ReceiptListItem } from '@/components/finance/receipt-
 import { SplitRow, type SplitRowCategoryOption, type SplitRowOption } from '@/components/finance/split-row';
 import { ConfirmDialog } from '@/components/forms/confirm-dialog';
 import { FormActionBar } from '@/components/forms/form-action-bar';
+import { FormErrorSummary } from '@/components/forms/form-error-summary';
 import { FormField } from '@/components/forms/form-field';
 import { FormCell, FormGrid } from '@/components/forms/form-grid';
 import { Notice } from '@/components/notice';
@@ -209,6 +210,22 @@ export function EntryForm({ initial, accounts, categories, purposes, projects, t
 
   const validation = toServiceInput(state);
   const remainder = remainderCents(state);
+  // Meldungsregel A (MUSTER.md): Nach einem abgewiesenen Speichern stehen die Feldfehler am Feld und oben in der
+  // Zusammenfassung — und folgen der Eingabe, bis die Maske stimmt. Bis 0.2.12 lagen sie nur in `fieldErrors`,
+  // sichtbar allein in der Begleicht-Zeile; „Als Entwurf speichern“ auf der leeren Maske zeigte nichts.
+  const tSplit = useTranslations('finance.splitRow');
+  const tAmount = useTranslations('finance.amount');
+  const shownCodes = actionState.status === 'error' && actionState.fieldErrors !== undefined && !validation.ok ? validation.fieldErrors : {};
+  const messageOf = (code: string) => (code === 'required' ? tRoot('errors.fields.required') : tAmount(code as 'format' | 'exceeds'));
+  const fieldErrors = Object.fromEntries(Object.entries(shownCodes).map(([key, code]) => [key, messageOf(code)]));
+  const fieldLabels = Object.fromEntries(
+    Object.keys(shownCodes).map((key) => {
+      const [group, index, field] = key.split('.');
+      if (group === 'splitRows') return [key, `${tSplit('rowLabel', { n: Number(index) + 1 })}, ${tSplit(field === 'categoryId' ? 'category' : 'amount')}`];
+      if (group === 'moneyRows') return [key, field === 'accountId' ? t('account') : t('amount')];
+      return [key, key === 'entryDate' ? t('date') : t('text')];
+    }),
+  );
 
   // Festschreiben führt auf die Buchung (Task 4) — Entwurf speichern/prüfen bleibt im Journal.
   /** Der Beleg aus `?voucher=` hängt sich an, sobald die Buchung eine ID hat — einmal. */
@@ -331,15 +348,16 @@ export function EntryForm({ initial, accounts, categories, purposes, projects, t
       }}
       className="space-y-4"
     >
+      <FormErrorSummary errors={fieldErrors} labels={fieldLabels} />
       <section className="space-y-3 rounded-md border border-line bg-surface p-4">
         {/* Raster nur innerhalb der Karte (Entscheidung zum Inventar): Datum `s` und Text `l` ergeben eine Zeile. */}
         <FormGrid>
-          <FormField id="entry-date" label={t('date')} size="s">
+          <FormField id="entry-date" label={t('date')} size="s" error={fieldErrors.entryDate}>
             <Input ref={dateRef} id="entry-date" type="date" value={state.entryDate} onChange={(e) => setState((s) => ({ ...s, entryDate: e.target.value }))} required />
             {/* Befund 20: warnt, sperrt aber nicht — erst Festschreiben lehnt ein Datum nach heute ab. */}
             {state.entryDate > today ? <p className="text-hint text-warning">{t('futureDate')}</p> : null}
           </FormField>
-          <FormField id="entry-text" label={t('text')} size="l">
+          <FormField id="entry-text" label={t('text')} size="l" error={fieldErrors.text}>
             <Input id="entry-text" value={state.text} onChange={(e) => setState((s) => ({ ...s, text: e.target.value }))} required />
           </FormField>
           <FormCell size="full">
@@ -368,7 +386,7 @@ export function EntryForm({ initial, accounts, categories, purposes, projects, t
                       })()}
                     </FormCell>
                   ) : null}
-                  <FormField id={`account-${row.key}`} label={state.template === 'transfer' ? t(row.direction === 'out' ? 'transferFrom' : 'transferTo') : t('account')}>
+                  <FormField id={`account-${row.key}`} label={state.template === 'transfer' ? t(row.direction === 'out' ? 'transferFrom' : 'transferTo') : t('account')} error={fieldErrors[`moneyRows.${index}.accountId`]}>
                     <Select id={`account-${row.key}`} value={row.accountId} disabled={!!row.rawTransactionId} onChange={(e) => setState((s) => ({ ...s, moneyRows: s.moneyRows.map((r, i) => (i === index ? { ...r, accountId: e.target.value } : r)) }))} required>
                       <option value="" disabled>
                         {t('accountPlaceholder')}
@@ -386,6 +404,8 @@ export function EntryForm({ initial, accounts, categories, purposes, projects, t
                       onChange={(amountText) => setState((s) => ({ ...s, moneyRows: s.moneyRows.map((r, i) => (i === index ? { ...r, amountText } : r)) }))}
                       disabled={!!row.rawTransactionId}
                       required
+                      invalid={!!fieldErrors[`moneyRows.${index}.amountText`]}
+                      errorText={fieldErrors[`moneyRows.${index}.amountText`]}
                       balanceHint={accountsById.get(row.accountId) ? t('balanceHint', { amount: formatEuro(accountsById.get(row.accountId)!.balanceCents) }) : undefined}
                     />
                   </FormField>
@@ -451,6 +471,7 @@ export function EntryForm({ initial, accounts, categories, purposes, projects, t
                     projects={projects}
                     taxCodeOptions={taxCodeOptions}
                     showTax={showTax}
+                    errors={{ categoryId: fieldErrors[`splitRows.${index}.categoryId`], amountText: fieldErrors[`splitRows.${index}.amountText`] }}
                   />
                 );
               })}
