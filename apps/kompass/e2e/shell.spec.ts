@@ -149,7 +149,7 @@ test.describe('app shell', () => {
   test('applies the row density from the user menu and keeps it across a reload', async ({ page }) => {
     // Ein Ordner mit kurzer, einzeiliger Zeile: Lange Betreffs brechen in der
     // Akte um (Spec § 9), dann misst die Höhe den Text statt der Dichte.
-    await page.goto('/dms?folder=vertraege');
+    await page.goto('/dms?folder=Vertr%C3%A4ge');
     const rowHeight = () => page.locator('tbody tr').first().evaluate((el) => el.getBoundingClientRect().height);
     const variable = () =>
       page.evaluate(() => {
@@ -171,7 +171,7 @@ test.describe('app shell', () => {
     expect(await rowHeight()).toBe(36);
 
     // Und der Wert übersteht das Neuladen — daran scheiterte er bisher.
-    await page.goto('/dms?folder=vertraege');
+    await page.goto('/dms?folder=Vertr%C3%A4ge');
     expect(await variable()).toBe('36px');
     expect(await rowHeight()).toBe(36);
 

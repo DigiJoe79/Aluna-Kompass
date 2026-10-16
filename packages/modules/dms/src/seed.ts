@@ -201,19 +201,20 @@ export async function seedDms(deps: Deps, ctx: CallContext): Promise<void> {
     deps.db.insert(documentTypes).values({ ...type, sortOrder: sortOrder += 1 }).run();
   }
 
-  // Eltern vor Kindern; drei Ebenen und ein langer Name zeigen den Baum.
+  // Eltern vor Kindern; drei Ebenen und ein langer Name zeigen den Baum. Ordner haben keinen eigenen Anzeigenamen, das
+  // Pfadsegment ist der Name — darum lesbar mit Umlauten und Leerzeichen (0.2.12, Joe 2026-10-16).
   const folders = [
-    'behoerden',
-    'behoerden/finanzamt',
-    'behoerden/amtsgericht',
-    `behoerden/amtsgericht/vereinsregister-${y}`,
-    'vertraege',
-    'protokolle',
-    'korrespondenz-mit-dem-landesverband-und-den-kreisgruppen',
-    'mitglieder',
-    'partner',
-    'partner/pflegestellen',
-    'partner/tieraerzte',
+    'Behörden',
+    'Behörden/Finanzamt',
+    'Behörden/Amtsgericht',
+    `Behörden/Amtsgericht/Vereinsregister ${y}`,
+    'Verträge',
+    'Protokolle',
+    'Korrespondenz mit dem Landesverband und den Kreisgruppen',
+    'Mitglieder',
+    'Partner',
+    'Partner/Pflegestellen',
+    'Partner/Tierärzte',
   ];
   for (const path of folders) {
     const existingFolder = deps.db.select().from(documentFolders).where(eq(documentFolders.path, path)).get();
@@ -229,7 +230,7 @@ export async function seedDms(deps: Deps, ctx: CallContext): Promise<void> {
       matchField: 'filename',
       matchContains: 'Finanzamt',
       thenTypeKey: 'authority',
-      thenFolder: 'behoerden/finanzamt',
+      thenFolder: 'Behörden/Finanzamt',
       isActive: true,
       sortOrder: 0,
     }).run();
@@ -283,15 +284,15 @@ export async function seedDms(deps: Deps, ctx: CallContext): Promise<void> {
   const steps: Step[] = [
     // — Die Briefe aus 0.1, Januar bis März des Stichjahrs: E2E-Tests lesen Betreff, Datum (10.02., 15.02., über
     //   `story()`) und Ort. Das Schreiben ans Finanzamt hängt am Bescheid, der darauf antwortet. —
-    { at: story('01-12'), run: async (d) => { await write(d, 'antrag', { subject: `Steuererklärung ${y - 2} und Antrag auf Freistellung`, body: antrag(y - 2), folder: 'behoerden/finanzamt', links: linkTo(who.finanzamt, 'recipient') }); await dispatch(d, 'antrag', 'portal'); } },
+    { at: story('01-12'), run: async (d) => { await write(d, 'antrag', { subject: `Steuererklärung ${y - 2} und Antrag auf Freistellung`, body: antrag(y - 2), folder: 'Behörden/Finanzamt', links: linkTo(who.finanzamt, 'recipient') }); await dispatch(d, 'antrag', 'portal'); } },
     {
       at: story('01-20'),
       run: async (d) => {
-        await receive(d, 'mietvertrag', { filename: `${y}-01-20 Mietvertrag Lager.pdf`, typeKey: firstType, subject: 'Mietvertrag Lagerraum', lines: ['Mietvertrag', '', `über den Lagerraum im Hof, Beginn 1. Februar ${y}.`], folder: 'vertraege', links: [] });
+        await receive(d, 'mietvertrag', { filename: `${y}-01-20 Mietvertrag Lager.pdf`, typeKey: firstType, subject: 'Mietvertrag Lagerraum', lines: ['Mietvertrag', '', `über den Lagerraum im Hof, Beginn 1. Februar ${y}.`], folder: 'Verträge', links: [] });
         unwrap(await reclassifyDocument(d, ctx, { id: id('mietvertrag'), typeKey: 'contract' }));
       },
     },
-    { at: story('02-10'), run: (d) => write(d, 'einladung', { subject: 'Einladung zur ordentlichen Mitgliederversammlung', body: EINLADUNG, folder: `behoerden/amtsgericht/vereinsregister-${y}`, links: linkTo(who.first, 'recipient') }) },
+    { at: story('02-10'), run: (d) => write(d, 'einladung', { subject: 'Einladung zur ordentlichen Mitgliederversammlung', body: EINLADUNG, folder: `Behörden/Amtsgericht/Vereinsregister ${y}`, links: linkTo(who.first, 'recipient') }) },
     { at: story('02-12'), run: (d) => dispatch(d, 'einladung', 'post', 'mit Anmeldeformular') },
     {
       // Im Eingangskorb, ohne Absender (E2E `dms.spec.ts:1251` setzt beides selbst). Die Textebene liest der Worker.
@@ -305,34 +306,34 @@ export async function seedDms(deps: Deps, ctx: CallContext): Promise<void> {
     { at: story('03-02'), run: (d) => write(d, 'dank', { subject: 'Dankschreiben an die Tierarztpraxis', body: DANK, folder: null, links: praxis }) },
 
     // — Das Stichjahr (Spec 2026-10-06 § 4): Praxis, Pflegestelle, Versammlung, Register, Finanzamt. —
-    { at: story('03-04'), run: async (d) => { await write(d, 'anfrage', { subject: 'Anfrage Kastrationsaktion: Termine und Kosten', body: ANFRAGE, folder: 'partner/tieraerzte', links: praxis }); await dispatch(d, 'anfrage', 'email'); } },
-    { at: story('03-18'), run: (d) => receive(d, 'angebot', { filename: 'Angebot Kastrationsaktion.pdf', typeKey: 'letter', subject: 'Angebot Kastrationsaktion', lines: ANGEBOT, folder: 'partner/tieraerzte', links: linkTo(who.praxis, 'sender'), repliesTo: 'anfrage' }) },
-    { at: story('03-25'), run: async (d) => { await write(d, 'auftrag', { subject: 'Auftrag Kastrationsaktion', body: AUFTRAG, folder: 'partner/tieraerzte', links: praxis }); await relate(d, 'auftrag', 'angebot', 'repliesTo'); await dispatch(d, 'auftrag', 'email'); } },
+    { at: story('03-04'), run: async (d) => { await write(d, 'anfrage', { subject: 'Anfrage Kastrationsaktion: Termine und Kosten', body: ANFRAGE, folder: 'Partner/Tierärzte', links: praxis }); await dispatch(d, 'anfrage', 'email'); } },
+    { at: story('03-18'), run: (d) => receive(d, 'angebot', { filename: 'Angebot Kastrationsaktion.pdf', typeKey: 'letter', subject: 'Angebot Kastrationsaktion', lines: ANGEBOT, folder: 'Partner/Tierärzte', links: linkTo(who.praxis, 'sender'), repliesTo: 'anfrage' }) },
+    { at: story('03-25'), run: async (d) => { await write(d, 'auftrag', { subject: 'Auftrag Kastrationsaktion', body: AUFTRAG, folder: 'Partner/Tierärzte', links: praxis }); await relate(d, 'auftrag', 'angebot', 'repliesTo'); await dispatch(d, 'auftrag', 'email'); } },
     // Ein Protokoll, das jemand angefangen und liegen gelassen hat (E2E `dms.spec.ts:674` sucht die Zeile).
-    { at: story('04-02'), run: (d) => write(d, 'entwurfVorstand', { typeKey: 'minutes', subject: 'Protokoll Vorstandssitzung Quartal 1', body: '## Tagesordnung\n\n1. Begrüßung\n2. Berichte\n3. Verschiedenes', folder: 'protokolle', links: [], file: false }) },
-    { at: story('04-08'), run: (d) => receive(d, 'pflegevertrag', { filename: 'Pflegestellenvertrag.pdf', typeKey: 'contract', subject: 'Pflegestellenvertrag', lines: PFLEGEVERTRAG, folder: 'partner/pflegestellen', links: linkTo(who.sabine, 'sender') }) },
-    { at: story('04-29', '18:00'), run: (d) => write(d, 'mvProtokoll', { typeKey: 'minutes', subject: 'Protokoll der Mitgliederversammlung', body: MV_PROTOKOLL, folder: 'protokolle', links: vorstand }) },
-    { at: story('05-27'), run: async (d) => { await write(d, 'anmeldung', { subject: 'Anmeldung der Vorstandsänderung zum Vereinsregister', body: ANMELDUNG, folder: 'behoerden/amtsgericht', links: [...linkTo(who.amtsgericht, 'recipient'), ...vorstand] }); await relate(d, 'mvProtokoll', 'anmeldung', 'attachmentOf'); } },
+    { at: story('04-02'), run: (d) => write(d, 'entwurfVorstand', { typeKey: 'minutes', subject: 'Protokoll Vorstandssitzung Quartal 1', body: '## Tagesordnung\n\n1. Begrüßung\n2. Berichte\n3. Verschiedenes', folder: 'Protokolle', links: [], file: false }) },
+    { at: story('04-08'), run: (d) => receive(d, 'pflegevertrag', { filename: 'Pflegestellenvertrag.pdf', typeKey: 'contract', subject: 'Pflegestellenvertrag', lines: PFLEGEVERTRAG, folder: 'Partner/Pflegestellen', links: linkTo(who.sabine, 'sender') }) },
+    { at: story('04-29', '18:00'), run: (d) => write(d, 'mvProtokoll', { typeKey: 'minutes', subject: 'Protokoll der Mitgliederversammlung', body: MV_PROTOKOLL, folder: 'Protokolle', links: vorstand }) },
+    { at: story('05-27'), run: async (d) => { await write(d, 'anmeldung', { subject: 'Anmeldung der Vorstandsänderung zum Vereinsregister', body: ANMELDUNG, folder: 'Behörden/Amtsgericht', links: [...linkTo(who.amtsgericht, 'recipient'), ...vorstand] }); await relate(d, 'mvProtokoll', 'anmeldung', 'attachmentOf'); } },
     { at: story('05-28'), run: (d) => dispatch(d, 'anmeldung', 'post', 'mit beglaubigten Unterschriften') },
     {
       at: story('06-16'),
       run: async (d) => {
-        await receive(d, 'eintragung', { filename: 'Eintragungsnachricht.pdf', typeKey: 'authority', subject: 'Eintragungsnachricht Vereinsregister', lines: EINTRAGUNG, folder: 'behoerden/amtsgericht', links: linkTo(who.amtsgericht, 'sender'), repliesTo: 'anmeldung' });
+        await receive(d, 'eintragung', { filename: 'Eintragungsnachricht.pdf', typeKey: 'authority', subject: 'Eintragungsnachricht Vereinsregister', lines: EINTRAGUNG, folder: 'Behörden/Amtsgericht', links: linkTo(who.amtsgericht, 'sender'), repliesTo: 'anmeldung' });
         unwrap(await addNote(d, ctx, { documentId: id('eintragung'), body: 'Registerauszug liegt im Vereinsordner.' }));
       },
     },
-    { at: story('07-02'), run: (d) => receive(d, 'adresse', { filename: 'Neue Anschrift.pdf', typeKey: 'letter', subject: 'Mitteilung neue Anschrift', lines: ADRESSE, folder: 'mitglieder', links: linkTo(who.jakob, 'sender') }) },
-    { at: story('07-14'), run: (d) => receive(d, 'rundschreiben', { filename: 'Rundschreiben Fortbildungen.pdf', typeKey: 'letter', subject: 'Rundschreiben: Fortbildungen im Herbst', lines: RUNDSCHREIBEN, folder: 'korrespondenz-mit-dem-landesverband-und-den-kreisgruppen', links: linkTo(who.landesverband, 'sender') }) },
-    { at: story('07-21'), run: (d) => receive(d, 'anforderung', { filename: 'Anforderung Unterlagen.pdf', typeKey: 'authority', subject: 'Anforderung von Unterlagen zu Zuwendungsbestätigungen', lines: ANFORDERUNG, folder: 'behoerden/finanzamt', links: linkTo(who.finanzamt, 'sender') }) },
-    { at: story('07-30'), run: async (d) => { await write(d, 'unterlagen', { subject: 'Unterlagen zu den Zuwendungsbestätigungen', body: UNTERLAGEN, folder: 'behoerden/finanzamt', links: linkTo(who.finanzamt, 'recipient') }); await relate(d, 'unterlagen', 'anforderung', 'repliesTo'); await dispatch(d, 'unterlagen', 'post'); } },
+    { at: story('07-02'), run: (d) => receive(d, 'adresse', { filename: 'Neue Anschrift.pdf', typeKey: 'letter', subject: 'Mitteilung neue Anschrift', lines: ADRESSE, folder: 'Mitglieder', links: linkTo(who.jakob, 'sender') }) },
+    { at: story('07-14'), run: (d) => receive(d, 'rundschreiben', { filename: 'Rundschreiben Fortbildungen.pdf', typeKey: 'letter', subject: 'Rundschreiben: Fortbildungen im Herbst', lines: RUNDSCHREIBEN, folder: 'Korrespondenz mit dem Landesverband und den Kreisgruppen', links: linkTo(who.landesverband, 'sender') }) },
+    { at: story('07-21'), run: (d) => receive(d, 'anforderung', { filename: 'Anforderung Unterlagen.pdf', typeKey: 'authority', subject: 'Anforderung von Unterlagen zu Zuwendungsbestätigungen', lines: ANFORDERUNG, folder: 'Behörden/Finanzamt', links: linkTo(who.finanzamt, 'sender') }) },
+    { at: story('07-30'), run: async (d) => { await write(d, 'unterlagen', { subject: 'Unterlagen zu den Zuwendungsbestätigungen', body: UNTERLAGEN, folder: 'Behörden/Finanzamt', links: linkTo(who.finanzamt, 'recipient') }); await relate(d, 'unterlagen', 'anforderung', 'repliesTo'); await dispatch(d, 'unterlagen', 'post'); } },
 
     // — Heute: die Post des Tages. Über ihr stehen nur die Finanz-Dokumente, die der Finanz-Seed heute ausstellt
     //   (Ausnahmen in Plan 2b, Task 7); alles andere liegt an seinem Datum darunter (Review Focus 3). —
     { at: minutesAgo(50), run: (d) => receive(d, 'netzwerk', { filename: 'Netzwerktreffen.pdf', typeKey: 'letter', subject: 'Netzwerktreffen im Herbst: Einladung des Landesverbands', lines: NETZWERK, folder: null, links: linkTo(who.landesverband, 'sender') }) },
     { at: minutesAgo(40), run: (d) => receive(d, 'baxter', { filename: 'Anfrage Baxter.pdf', typeKey: 'letter', subject: 'Anfrage zu Baxter', lines: BAXTER, folder: null, links: linkTo(who.mira, 'sender') }) },
-    { at: minutesAgo(30), run: async (d) => { await write(d, 'zusage', { subject: 'Zusage Netzwerktreffen', body: ZUSAGE, folder: 'korrespondenz-mit-dem-landesverband-und-den-kreisgruppen', links: linkTo(who.landesverband, 'recipient') }); await relate(d, 'zusage', 'netzwerk', 'repliesTo'); await dispatch(d, 'zusage', 'email'); } },
+    { at: minutesAgo(30), run: async (d) => { await write(d, 'zusage', { subject: 'Zusage Netzwerktreffen', body: ZUSAGE, folder: 'Korrespondenz mit dem Landesverband und den Kreisgruppen', links: linkTo(who.landesverband, 'recipient') }); await relate(d, 'zusage', 'netzwerk', 'repliesTo'); await dispatch(d, 'zusage', 'email'); } },
     // Der Entwurf für „Brief mit Text und Vorschau“ (§ 5.5): Überschrift, Aufzählung, Fettdruck, Empfänger.
-    { at: minutesAgo(20), run: (d) => write(d, 'winterbrief', { subject: 'Winterhilfe: Bitte um Unterstützung', body: WINTERBRIEF, folder: 'partner/pflegestellen', links: linkTo(who.sabine, 'recipient'), file: false }) },
+    { at: minutesAgo(20), run: (d) => write(d, 'winterbrief', { subject: 'Winterhilfe: Bitte um Unterstützung', body: WINTERBRIEF, folder: 'Partner/Pflegestellen', links: linkTo(who.sabine, 'recipient'), file: false }) },
   ];
   for (const step of [...steps].sort((a, b) => a.at.getTime() - b.at.getTime())) await step.run(seedClockAt(deps, step.at));
 
