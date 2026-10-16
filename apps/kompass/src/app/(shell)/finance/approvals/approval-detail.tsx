@@ -18,6 +18,7 @@ import { RejectDialog } from './reject-dialog';
 import { WaiverChecks, type WaiverState } from './waiver-checks';
 import { FormField } from '@/components/forms/form-field';
 import { FormGrid } from '@/components/forms/form-grid';
+import { pdfFrameSrc } from '@/lib/pdf-frame-src';
 
 /** Ob in dieser Sitzung schon ein Antrag rechts stand — erst ab dem zweiten wandert der Fokus auf den Kopf. */
 let shownBefore = false;
@@ -228,7 +229,7 @@ export function ApprovalDetail({
   const receiptPane = preview?.documentId ? (
     <figure data-testid="receipt-preview" className="hidden space-y-1 lg:block">
       <figcaption className="text-hint text-muted-ink">{t('receipt.preview', { n: claim.positions.indexOf(preview) + 1 })}</figcaption>
-      <iframe title={t('receipt.preview', { n: claim.positions.indexOf(preview) + 1 })} src={receiptHref(preview.documentId)} className="h-[520px] w-full rounded-md border border-line bg-paper" />
+      <iframe title={t('receipt.preview', { n: claim.positions.indexOf(preview) + 1 })} src={pdfFrameSrc(receiptHref(preview.documentId))} className="h-[520px] w-full rounded-md border border-line bg-paper" />
     </figure>
   ) : null;
 

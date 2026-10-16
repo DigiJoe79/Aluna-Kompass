@@ -6,6 +6,7 @@ import { useDateFormat } from '@/components/date-format-provider';
 import { StatusBadge } from '@/components/status-badge';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { pdfFrameSrc } from '@/lib/pdf-frame-src';
 
 export type PreviewStatus = 'none' | 'current' | 'stale' | 'rendering' | 'error';
 
@@ -101,7 +102,7 @@ export function DraftPreview({
         {src ? (
           <iframe
             key={src}
-            src={src}
+            src={pdfFrameSrc(src)}
             title={t('preview')}
             className={cn(
               // Volle Höhe statt einer Seite hoch: Ein mehrseitiges Schreiben

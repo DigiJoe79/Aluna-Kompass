@@ -24,6 +24,7 @@ import { DOCUMENTS_MIME, beginDrag } from '@/lib/drag-types';
 import { isWithin, namesBelow } from '@/lib/folder-tree-model';
 import { useDocumentMoves } from './document-moves';
 import { Empty } from '@/components/empty-value';
+import { pdfFrameSrc } from '@/lib/pdf-frame-src';
 
 export interface DocumentListItem {
   id: string;
@@ -344,7 +345,7 @@ export function DocumentList({ documents, currentFolder, total, unfiltered, read
                         {/* `#page=` versteht jeder Browser-PDF-Betrachter; wir brauchen dafuer keinen
                             eigenen Betrachter und keine Bibliothek. */}
                         <a
-                          href={`/dms/${doc.id}/preview#page=${hits[doc.id]!.page}`}
+                          href={pdfFrameSrc(`/dms/${doc.id}/preview`, { page: hits[doc.id]!.page })}
                           className="underline underline-offset-2 hover:text-link"
                         >
                           {t('hitOnPage', { page: hits[doc.id]!.page })}

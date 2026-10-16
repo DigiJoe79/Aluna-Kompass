@@ -23,6 +23,7 @@ import { NotesPanel, type NoteView } from './notes-panel';
 import { RelationsPanel, type RelationView } from './relations-panel';
 import { Section } from '@/components/section';
 import { EMPTY } from '@/components/empty-value';
+import { pdfFrameSrc } from '@/lib/pdf-frame-src';
 
 export interface DocumentDetailProps {
   document: {
@@ -205,7 +206,7 @@ export function DocumentDetail({
           ) : (
             <div className="overflow-hidden rounded-md border border-line bg-surface shadow-xs">
               <iframe
-                src={doc.phase === 'draft' ? `/dms/${doc.id}/preview` : `/dms/${doc.id}/file`}
+                src={pdfFrameSrc(doc.phase === 'draft' ? `/dms/${doc.id}/preview` : `/dms/${doc.id}/file`)}
                 className="h-[720px] w-full border-none"
                 title={doc.subject}
               />

@@ -25,6 +25,7 @@ import { issueConfirmationAction, loadIssueCheckAction, saveInKindDetailsAction 
 import { FormField } from '@/components/forms/form-field';
 import { FormCell, FormGrid, FormRowBreak } from '@/components/forms/form-grid';
 import { Section } from '@/components/section';
+import { pdfFrameSrc } from '@/lib/pdf-frame-src';
 
 type Loaded = { check: ConfirmationCheckResult; inKindDetails: FinanceInKindDetailsRow | null };
 type Preview = { state: 'idle' } | { state: 'loading' } | { state: 'ready'; url: string } | { state: 'failed'; message: string };
@@ -236,7 +237,7 @@ export function IssueDialog({ lineId, contactName, open, onOpenChange, today, ca
                 <Section title={t('preview')}>
                   <div className="flex flex-col gap-2">
                     {preview.state === 'ready' ? (
-                      <iframe data-testid="confirmation-preview" title={t('previewTitle')} src={preview.url} className="min-h-0 w-full flex-1 rounded-md border border-line bg-surface-2" />
+                      <iframe data-testid="confirmation-preview" title={t('previewTitle')} src={pdfFrameSrc(preview.url)} className="min-h-0 w-full flex-1 rounded-md border border-line bg-surface-2" />
                     ) : (
                       <div className="flex min-h-0 flex-1 items-center justify-center rounded-md border border-dashed border-line-strong bg-surface-2 p-6 text-center text-meta text-muted-ink">
                         {preview.state === 'loading' ? t('previewLoading') : preview.state === 'failed' ? t('previewFailed', { message: preview.message }) : t('previewWaiting')}
