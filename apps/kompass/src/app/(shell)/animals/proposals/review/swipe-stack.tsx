@@ -157,6 +157,9 @@ export function SwipeStack({ cards, backHref, query, frame }: { cards: StackCard
   };
   const stamp = drag ? (drag.x > THRESHOLD / 2 ? (card?.right.kind === 'review' ? t('stampReview') : card?.right.kind === 'accept' && card.right.publish ? t('stampOnline') : t('stampAccept')) : drag.x < -THRESHOLD / 2 ? t('stampReject') : drag.y < -THRESHOLD / 2 ? t('stampReview') : null) : null;
   const stampTone = !stamp ? 'neutral' : stamp === t('stampReject') ? 'error' : stamp === t('stampReview') ? 'info' : 'success';
+  // Dieselbe Reihenfolge wie im Hinweis: erst Konflikt, Zweifel, Hinweis, Zuordnung, Jahr, dann die Lücken.
+  const firstReason = (reasons: StackReason[]): StackReason =>
+    reasons.find((r) => r !== 'missingPrimaryPhoto' && r !== 'missingSummary') ?? reasons[0]!;
   const reasonText = (reasons: StackReason[]) => {
     const missing = reasons.filter((r) => r === 'missingPrimaryPhoto' || r === 'missingSummary').map((r) => t(`reasons.${r}`));
     const other = reasons.filter((r) => r !== 'missingPrimaryPhoto' && r !== 'missingSummary').map((r) => t(`reasons.${r}`));
@@ -244,7 +247,10 @@ export function SwipeStack({ cards, backHref, query, frame }: { cards: StackCard
             {/* Führt schon der Hauptknopf zur Prüfseite (Konflikt, Lücke), stünde „Prüfen“ zweimal da (Befund 1 Nr. 6,
                 0.2.12): Die Mitte bleibt dann leer, damit „Ablehnen“ und „Prüfen“ an ihren Plätzen stehen. */}
             {card.right.kind === 'review' ? (
-              <span aria-hidden />
+              // Die Mitte sagt, warum hier nichts geht (Designer Stufe 2 Nr. 16): der erste Grund als kurzer Auftrag.
+              <span data-testid="stack-blocked" className="flex items-center justify-center text-center text-meta text-ink-2">
+                {t(`blocked.${firstReason(card.right.reasons)}`)}
+              </span>
             ) : (
               <Button type="button" variant="ghost" onClick={() => toReview(card)}>
                 <ArrowUp aria-hidden data-icon="inline-start" />

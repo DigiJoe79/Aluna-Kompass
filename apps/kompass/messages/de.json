@@ -3132,6 +3132,15 @@
           "missingSummary": "Kein Kurztext",
           "adoptedYear": "Status wird „vermittelt“, das Vermittlungsjahr fehlt"
         },
+        "blocked": {
+          "conflict": "Konflikt klären",
+          "hints": "Zweifel klären",
+          "notice": "Hinweis lesen",
+          "sameAs": "Zuordnung klären",
+          "missingPrimaryPhoto": "Titelbild fehlt",
+          "missingSummary": "Kurztext fehlt",
+          "adoptedYear": "Jahr fehlt"
+        },
         "refusedTitle": "{name}: nicht entschieden",
         "tally": "{accepted} angenommen · {rejected} abgelehnt · {open} offen gelassen",
         "endTitle": "Alle durchgesehen",

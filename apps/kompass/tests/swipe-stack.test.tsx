@@ -68,6 +68,15 @@ describe('SwipeStack (Board 3b–3e, 8b)', () => {
     expect(actions.accept).not.toHaveBeenCalled();
   });
 
+  // Designer Stufe 2 Nr. 16: Die leere Mitte sagt als Text, warum nichts geht — der erste Grund, aus der Sprachdatei.
+  it('says in the empty middle why nothing goes', () => {
+    render(<SwipeStack frame={frame} cards={[card('P2', 'Baxter', { right: { kind: 'review', reasons: ['conflict'] } })]} backHref="/x" query="" />, { wrapper: Intl });
+    expect(screen.getByTestId('stack-blocked').textContent).toBe('Konflikt klären');
+    cleanup();
+    render(<SwipeStack frame={frame} cards={[card('P3', 'Bodo', { kind: 'create', right: { kind: 'review', reasons: ['missingPrimaryPhoto', 'missingSummary'] } })]} backHref="/x" query="" />, { wrapper: Intl });
+    expect(screen.getByTestId('stack-blocked').textContent).toBe('Titelbild fehlt');
+  });
+
   it('names what a new dog lacks', () => {
     render(<SwipeStack frame={frame} cards={[card('P3', 'Bodo', { kind: 'create', right: { kind: 'review', reasons: ['missingPrimaryPhoto', 'missingSummary'] } })]} backHref="/x" query="" />, { wrapper: Intl });
     expect(screen.getByText('Kein Titelbild · Kein Kurztext. Annehmen geht hier nur über die Prüfseite.')).toBeTruthy();
@@ -104,7 +113,7 @@ describe('SwipeStack (Board 3b–3e, 8b)', () => {
   it('puts a new dog online to the right', async () => {
     render(<SwipeStack frame={frame} cards={[card('P4', 'Ronja', { kind: 'create', right: { kind: 'accept', publish: true } })]} backHref="/x" query="" />, { wrapper: Intl });
     fireEvent.click(screen.getByRole('button', { name: 'Annehmen' }));
-    expect(toastMock).toHaveBeenLastCalledWith('Ronja angenommen und veröffentlicht', expect.anything());
+    expect(toastMock).toHaveBeenLastCalledWith('Ronja angenommen und publiziert', expect.anything());
     await pass(5_000);
     expect(actions.accept).toHaveBeenCalledWith({ id: 'P4', publish: true }, 'Ronja');
   });

@@ -51,6 +51,7 @@ Bausteine: `forms/form-action-bar.tsx`, `forms/form-card.tsx`, `forms/save-statu
 | **Vorgang** (Ablauf, Freigabe, Festschreibung, Dokument der Akte) | Lesesicht. „Bearbeiten“ bzw. „Korrigieren“ als sichtbarer Knopf im `PageHeader`; Stornieren, Zurücknehmen, Löschen daneben im Menü ⋯ (`RecordActions`). |
 
 - Ein Dialog zum Anlegen nur als Schnellanlage aus einem anderen Vorgang heraus (etwa ein Kontakt aus der Auswahl heraus), mit denselben Feldern wie die Seite.
+- **Keine Auswahl in einem zweiten Dialog; eine Bestätigung darf über einem Dialog stehen** (Designer 2026-10-16, Stufe 2 Nr. 14) — dann sieht man noch, was man löscht. Gewählt wird im Dialog selbst (Suchliste wie bei Kontakten und Dokumenten). Auf dem Telefon gilt dasselbe: keine Ausnahme für ein zweites Seitenblatt; eine Liste öffnet im selben Blatt als zweite Ebene mit Zurück. Hinweis: Die zwei Ordnerauswahlen (Post ablegen, Bild-Details der Mediathek) öffnen heute noch einen zweiten Dialog; sie warten auf den Entwurf des Designers (aufklappbarer Baum im Feld) und werden mit ihm umgestellt.
 
 **Weitere Aktionen** (Spec Seitenkopf, Designer 2026-10-08). Das Menü ⋯ ist der Ort für seltene Aktionen am ganzen Datensatz, auf Stammdaten- und Vorgangsseiten:
 
