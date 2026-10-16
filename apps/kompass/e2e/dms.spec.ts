@@ -549,9 +549,8 @@ test.describe('dms', () => {
     await tabs.getByRole('link', { name: 'Regeln' }).click();
     await expect(page.getByText('Automatische Erkennung und Zuordnung')).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Einsortierregeln' })).toHaveCount(0);
-    await tabs.getByRole('link', { name: 'Ordner' }).click();
-    await expect(page.getByTestId('folders-moved')).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Ordner' })).toHaveCount(0);
+    // Kein Reiter „Ordner“ mehr: Die Ordner pflegt man in der Akte, der Kopf verlinkt sie (Teil A, 11-1 C37).
+    await expect(tabs.getByRole('link', { name: 'Ordner' })).toHaveCount(0);
     // Ein altes Lesezeichen mit unbekanntem Bereich zeigt den ersten, keine leere Seite.
     await page.goto('/admin/dms?panel=quatsch');
     await expect(tabs.getByRole('link', { name: 'Arten' })).toHaveAttribute('aria-current', 'page');
@@ -2096,7 +2095,7 @@ test.describe('Mehrfachauswahl', () => {
       );
     }, id);
     expect(state).toContain('blocked|');
-    expect(state).toContain('In den Eingangskorb kommt nur eingegangene Post.');
+    expect(state).toContain('Im Eingangskorb liegen nur eingehende Dokumente.');
     await expect(rowOf(page, id)).toContainText(story('Vereinsregister 2026'));
     await expect(page.locator('[data-sonner-toast]')).toHaveCount(0);
   });
