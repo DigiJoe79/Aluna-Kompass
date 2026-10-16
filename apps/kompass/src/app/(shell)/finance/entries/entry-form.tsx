@@ -536,6 +536,8 @@ export function EntryForm({ initial, accounts, categories, purposes, projects, t
 
       <FormActionBar
         mode="create"
+        // Ausnahme von „Verwerfen nur bei Änderungen“: Die Buchungsmaske behält ihre fünf Aktionen (Designer 2026-10-16).
+        alwaysDiscard
         back={{ href: returnTo, label: t('cancel') }}
         // Verborgen gezählt: Der Kassenhinweis bleibt stehen, die Rückfrage beim Verlassen kommt nur nach einer Eingabe.
         count={countEntryChanges(saved, state)}

@@ -575,7 +575,7 @@ test.describe('animals', () => {
     await expect(page.getByText('1 Änderung noch nicht gespeichert')).toBeVisible();
     await page.getByRole('button', { name: 'Speichern' }).click();
     // Pelle trägt den Prüfmerker (eigener Statusbereich): gespeichert ist, wenn nichts mehr offen ist.
-    await expect(page.getByRole('button', { name: 'Verwerfen' })).toBeDisabled();
+    await expect(page.getByRole('button', { name: 'Verwerfen' })).toHaveCount(0);
 
     await page.reload();
     await expect(second.getByTestId('cropped-image')).toBeVisible();

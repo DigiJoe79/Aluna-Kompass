@@ -115,8 +115,42 @@ describe('FormActionBar', () => {
     expect(screen.getByRole('link', { name: 'Abbrechen' }).className).toContain('max-sm:col-span-2');
   });
 
+  describe('Verwerfen nur bei Änderungen (Designer 2026-10-16, Teil 2 Nr. 1)', () => {
+    it('beim Bearbeiten ohne Änderung kein Verwerfen', () => {
+      render(<form><input name="a" aria-label="a" defaultValue="x" /><FormActionBar back={{ href: '/x', label: 'Zurück' }} /></form>, { wrapper });
+      expect(screen.queryByRole('button', { name: 'Verwerfen' })).toBeNull();
+      expect(screen.getByRole('link', { name: 'Abbrechen' })).toBeTruthy();
+    });
+
+    it('mit Änderung erscheint Verwerfen als Textknopf', () => {
+      render(<form><input name="a" aria-label="a" defaultValue="x" /><FormActionBar back={{ href: '/x', label: 'Zurück' }} /></form>, { wrapper });
+      fireEvent.input(screen.getByLabelText('a'), { target: { value: 'y' } });
+      const discard = screen.getByRole('button', { name: 'Verwerfen' });
+      expect(discard.hasAttribute('disabled')).toBe(false);
+      // Textknopf: ohne Rahmen und ohne Fläche (ghost), nie ein zweiter Hauptknopf.
+      expect(discard.className).toContain('hover:bg-hover');
+      expect(discard.className).not.toContain('bg-brand');
+      expect(discard.className).not.toContain('border-line-strong');
+    });
+
+    it('beim Anlegen nur Abbrechen, auch mit Eingaben', () => {
+      render(<form><input name="a" aria-label="a" /><FormActionBar mode="create" back={{ href: '/x', label: 'Zurück' }} /></form>, { wrapper });
+      fireEvent.input(screen.getByLabelText('a'), { target: { value: 'y' } });
+      expect(screen.queryByRole('button', { name: 'Verwerfen' })).toBeNull();
+      expect(screen.getByRole('link', { name: 'Abbrechen' })).toBeTruthy();
+    });
+
+    it('Buchungsmaske (alwaysDiscard): Verwerfen bleibt auch beim Anlegen, gesperrt ohne Eingabe', () => {
+      const { rerender } = render(<form><FormActionBar mode="create" back={{ href: '/x', label: 'Zurück' }} count={0} countHidden alwaysDiscard /></form>, { wrapper });
+      expect(screen.getByRole('button', { name: 'Verwerfen' }).hasAttribute('disabled')).toBe(true);
+      rerender(<form><FormActionBar mode="create" back={{ href: '/x', label: 'Zurück' }} count={2} countHidden alwaysDiscard /></form>);
+      expect(screen.getByRole('button', { name: 'Verwerfen' }).hasAttribute('disabled')).toBe(false);
+    });
+  });
+
   it('Telefon: Speichern über die volle Breite zuerst, Verwerfen und Abbrechen darunter nebeneinander', () => {
-    render(<form><input name="a" /><FormActionBar back={{ href: '/x', label: 'Zurück' }} extraActions={<button type="button">Speichern und neu</button>} /></form>, { wrapper });
+    render(<form><input name="a" aria-label="a" /><FormActionBar back={{ href: '/x', label: 'Zurück' }} extraActions={<button type="button">Speichern und neu</button>} /></form>, { wrapper });
+    fireEvent.input(screen.getByLabelText('a'), { target: { value: 'y' } });
     const save = screen.getByRole('button', { name: 'Speichern' });
     const discard = screen.getByRole('button', { name: 'Verwerfen' });
     const cancel = screen.getByRole('link', { name: 'Abbrechen' });
@@ -135,7 +169,8 @@ describe('FormActionBar', () => {
   });
 
   it('Telefon: steht nur einer der beiden Nebenknöpfe da, nimmt er die volle Breite', () => {
-    render(<form><input name="a" /><FormActionBar /></form>, { wrapper });
+    render(<form><input name="a" aria-label="a" /><FormActionBar /></form>, { wrapper });
+    fireEvent.input(screen.getByLabelText('a'), { target: { value: 'y' } });
     expect(screen.getByRole('button', { name: 'Verwerfen' }).className).toContain('max-sm:col-span-2');
   });
 
@@ -192,7 +227,8 @@ describe('FormActionBar', () => {
       rerender(page(<FormActionBar mode="create" count={2} countHidden note="Bargeld wird am selben Tag festgehalten." />));
       expect(screen.getByText('Bargeld wird am selben Tag festgehalten.')).toBeTruthy();
       expect(screen.queryByText(/nicht gespeichert/)).toBeNull();
-      expect(screen.getByRole('button', { name: 'Verwerfen' }).hasAttribute('disabled')).toBe(false);
+      // Anlegen: nur Abbrechen, kein Verwerfen (Designer 2026-10-16).
+      expect(screen.queryByRole('button', { name: 'Verwerfen' })).toBeNull();
       expect(unload()).toBe(true);
       fireEvent.click(screen.getByRole('link', { name: 'Anderswo' }));
       expect(followed).not.toHaveBeenCalled();

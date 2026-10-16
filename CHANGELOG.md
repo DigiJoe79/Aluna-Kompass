@@ -29,6 +29,9 @@ die Nummern folgen [Semantic Versioning](https://semver.org/lang/de/). Vor
   Der Eingangskorb bleibt eingegangener Post vorbehalten.
 - **Schrift.** Beträge, Datum und Texte stehen in der Textschrift; Monospace
   nur noch für Nummern, Schlüssel und IBAN.
+- **„Verwerfen“ nur bei Änderungen.** Die Speicherleiste zeigt „Verwerfen“
+  erst, wenn im Formular etwas geändert ist; beim Anlegen gibt es nur
+  „Abbrechen“. Die Buchungsmaske behält ihre Knöpfe.
 - **Gemeinschaftskonto.** Gehört eine IBAN mehreren Kontakten
   (Gemeinschaftskonto), schlägt der Import keinen Kontakt mehr vor, statt still
   den zuletzt verknüpften zu nehmen.

@@ -55,16 +55,6 @@ export function TransferForm({ purposes, defaultFromId, today, approverNames }: 
   const loaded = { fromId: defaultFromId ?? '', toId: '', amountText: '', date: today, reason: '', document: null as PickedDocument | null, file: null as File | null };
   const current = { fromId, toId, amountText, date, reason, document, file: file ? `${file.name}:${file.size}` : null };
   const changed = countChangedValues(loaded, current);
-  const discard = () => {
-    setFromId(loaded.fromId);
-    setToId(loaded.toId);
-    setAmountText(loaded.amountText);
-    setDate(loaded.date);
-    setReason(loaded.reason);
-    setDocument(loaded.document);
-    setFile(loaded.file);
-    setRefusal(null);
-  };
 
   const amountCents = amountText.trim() === '' ? null : parseAmount(amountText);
   const option = (p: TransferPurposeOption) => t('fromOption', { name: p.name, balance: formatEuro(p.balanceCents) });
@@ -197,7 +187,6 @@ export function TransferForm({ purposes, defaultFromId, today, approverNames }: 
         back={{ href: '/finance/purposes', label: t('cancel') }}
         count={changed}
         countHidden
-        onDiscard={discard}
         note={<span data-testid="transfer-approvers">{approverNames.length > 0 ? t('hint', { names: approverNames.join(' · ') }) : t('noApprover')}</span>}
         saveLabel={t('submit')}
         onSave={() => void submit()}

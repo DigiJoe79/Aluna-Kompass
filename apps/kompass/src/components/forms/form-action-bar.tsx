@@ -120,6 +120,12 @@ type BaseProps = {
    * zurückwill, bricht ab und öffnet neu. Wächter `patterns/hide-discard.test.ts` hält die Option dort.
    */
   hideDiscard?: boolean;
+  /**
+   * „Verwerfen“ immer, auch beim Anlegen und ohne Eingabe (dann gesperrt) — **nur die Buchungsmaske** (Designer
+   * 2026-10-16, Teil 2 Nr. 1): Sie führt die Fachstufen Entwurf, geprüft und festgeschrieben als eigene Knöpfe, und
+   * ihre fünf Aktionen stehen immer am selben Platz. Wächter `patterns/hide-discard.test.ts` hält die Option dort.
+   */
+  alwaysDiscard?: boolean;
 };
 
 /**
@@ -180,6 +186,7 @@ export function FormActionBar({
   note,
   extraActions,
   hideDiscard = false,
+  alwaysDiscard = false,
   recordAction,
 }: FormActionBarProps) {
   const t = useTranslations('common');
@@ -361,7 +368,10 @@ export function FormActionBar({
         }
       : state;
 
-  const showDiscard = !(hideDiscard || cancel || mode === 'run' || (onSave && !onDiscard && count === undefined));
+  // „Verwerfen“ nur mit Änderungen und nie beim Anlegen — dort gibt es nur „Abbrechen“ (Designer 2026-10-16, Teil 2
+  // Nr. 1). Ohne Änderung wäre der Knopf ein Versprechen, das ins Leere greift. Ausnahme ist die Buchungsmaske.
+  const canDiscard = !(hideDiscard || cancel || mode === 'run' || (onSave && !onDiscard && count === undefined));
+  const showDiscard = canDiscard && (alwaysDiscard || (mode === 'edit' && changed > 0));
   // Nur einer der beiden Nebenknöpfe: Am Telefon nimmt er die ganze Zeile.
   const lone = Number(showDiscard) + Number(!!(cancel || back)) === 1;
 
@@ -447,7 +457,7 @@ export function FormActionBar({
               type="button"
               variant="ghost"
               className={cn('max-sm:order-3', lone && 'max-sm:col-span-2')}
-              // Ohne Änderungen wäre der Knopf ein Versprechen, das ins Leere greift.
+              // Nur die Buchungsmaske zeigt ihn ohne Änderung, dann gesperrt.
               disabled={changed === 0}
               onClick={() => (onDiscard ? onDiscard() : reload())}
             >

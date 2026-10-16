@@ -139,6 +139,11 @@ test.describe('projects', () => {
     await expect(bar.getByText('Nichts geändert')).toBeVisible();
     await expect(page).toHaveURL(/\/projects\/[A-Z0-9]+$/);
 
+    // Ohne Änderung kein „Verwerfen“ (Designer 2026-10-16); mit einer Änderung erscheint es.
+    await expect(bar.getByRole('button', { name: 'Verwerfen' })).toHaveCount(0);
+    await page.locator('[name="name.de"]').fill('Telefonprojekt geändert');
+    await expect(bar.getByRole('button', { name: 'Verwerfen' })).toBeVisible();
+
     await page.setViewportSize({ width: 390, height: 844 });
     // Die Umbruchlage greift erst nach dem Neuzeichnen: bis dahin wiederholen.
     await expect(async () => {

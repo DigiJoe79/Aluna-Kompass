@@ -35,7 +35,7 @@ describe('TransferForm – Rückfrage beim Verlassen', () => {
     <TransferForm purposes={[{ id: 'P1', name: 'Kastration', open: true, balanceCents: 50000 }]} today="2026-10-09" approverNames={['Erika Muster']} />
   );
 
-  it('fragt ohne Eingabe nicht, nach einer Eingabe schon; der Hinweis bleibt stehen, Verwerfen setzt zurück', () => {
+  it('fragt ohne Eingabe nicht, nach einer Eingabe schon; der Hinweis bleibt stehen, beim Anlegen kein Verwerfen', () => {
     render(form(), { wrapper: Intl });
     expect(unload()).toBe(false);
 
@@ -44,8 +44,7 @@ describe('TransferForm – Rückfrage beim Verlassen', () => {
     expect(screen.getByTestId('transfer-approvers').textContent).toContain('Erika Muster');
     expect(screen.queryByText(/nicht gespeichert/)).toBeNull();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Verwerfen' }));
-    expect(unload()).toBe(false);
-    expect((screen.getByLabelText(/Begründung/) as HTMLTextAreaElement).value).toBe('');
+    // Anlegen: nur „Abbrechen“ (Designer 2026-10-16, Teil 2 Nr. 1).
+    expect(screen.queryByRole('button', { name: 'Verwerfen' })).toBeNull();
   });
 });
