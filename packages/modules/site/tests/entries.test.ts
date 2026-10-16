@@ -82,6 +82,15 @@ describe('site entries', () => {
     unwrap(await createEntry(deps, manage, { collection: 'blog', slug: 'hallo', data: { title: 'C' } }));
   });
 
+  // 14 A2 (Designer 2026-10-16, Teil 3 Nr. 13): Ein leeres Feld nennt die Pflicht, nicht die Formatregel.
+  it('names a missing slug as missing and a malformed one as malformed', async () => {
+    const deps = withUser({ articles });
+    const empty = await createEntry(deps, manage, { collection: 'articles', slug: '', data: { title: 'A' } });
+    expect(empty.ok === false && empty.error.type === 'validation' && empty.error.issues[0]).toMatchObject({ path: 'slug', message: 'slugRequired' });
+    const bad = await createEntry(deps, manage, { collection: 'articles', slug: 'Hallo Welt', data: { title: 'A' } });
+    expect(bad.ok === false && bad.error.type === 'validation' && bad.error.issues[0]).toMatchObject({ path: 'slug', message: 'invalidSlug' });
+  });
+
   it('refuses a slug where the collection declares none', async () => {
     const deps = withUser({ notes });
     const r = await createEntry(deps, manage, { collection: 'notes', slug: 'nope', data: { body: 'x' } });

@@ -1,9 +1,15 @@
 import { NextIntlClientProvider } from 'next-intl';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { SiteJobIndicator } from '@/components/site/site-job-indicator';
 import { SiteJobContext, type SiteJobStatus } from '@/components/site/site-job-provider';
 import messages from '../messages/de.json';
+
+const nav = vi.hoisted(() => ({ pathname: '/site/publish' }));
+vi.mock('next/navigation', () => ({ usePathname: () => nav.pathname }));
+afterEach(() => {
+  nav.pathname = '/site/publish';
+});
 
 const pending = (count: number, items = [{ key: 'k1', kind: 'changed' as const, label: 'Bruno', href: '/animals/A1', recordHref: '/animals/A1' }]) => ({ since: '2026-09-28T08:00:00.000Z', count, items, hrefs: items.flatMap((i) => (i.recordHref ? [i.recordHref] : [])), variables: [] });
 const status = (running: SiteJobStatus['running'], p: SiteJobStatus['pending'] = null): SiteJobStatus => ({ enabled: true, running, last: null, pending: p, track: () => {}, refresh: () => {} });
@@ -40,6 +46,18 @@ describe('SiteJobIndicator', () => {
     expect(markup).toContain('aria-label="7 Änderungen nicht publiziert, zum Publizieren"');
     expect(markup).toContain('href="/site/publish"');
   });
+  // 10 C38 (Designer 2026-10-16, Teil 3 Nr. 8): Die Pille steht nur im Bereich Webseite; ein laufender Lauf überall.
+  it('shows the pending count only within the website area', () => {
+    nav.pathname = '/site/c/news';
+    expect(render(status(null, pending(7)))).toContain('7 nicht publiziert');
+    for (const elsewhere of ['/', '/animals/A1', '/finance', '/sitemap']) {
+      nav.pathname = elsewhere;
+      expect(render(status(null, pending(7)))).toBe('');
+    }
+    nav.pathname = '/animals';
+    expect(render(status(running([{ key: 'export', state: 'running' }]), pending(7)))).toContain('data-testid="site-job"');
+  });
+
   it('shows nothing at zero, and the run instead of the count while one runs', () => {
     expect(render(status(null, pending(0, [])))).toBe('');
     const markup = render(status(running([{ key: 'export', state: 'running' }]), pending(7)));

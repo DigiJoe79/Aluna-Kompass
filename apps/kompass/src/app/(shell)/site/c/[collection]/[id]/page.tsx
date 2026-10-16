@@ -27,7 +27,9 @@ export default async function EntryPage(props: { params: Promise<{ collection: s
 
   if (id === 'new') {
     return (
-      <Page width="standard" header={<PageHeader title={`${col.label} — ${t('new')}`} back={back} />}>
+      // „Eintrag anlegen“, die Sammlung als Unterzeile (14 A2, Designer 2026-10-16): Einen Einzahl-Namen je Sammlung
+      // liefert das Template nicht.
+      <Page width="standard" header={<PageHeader title={t('create')} description={col.label} back={back} />}>
         <EntryForm collection={collection} fields={col.fields} hasSlug={col.slug} entry={null} locales={locales} collectionLabel={col.label} />
       </Page>
     );

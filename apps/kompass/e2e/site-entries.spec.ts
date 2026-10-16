@@ -101,7 +101,7 @@ test('Leser sehen Sammlungen ohne Bearbeiten-Knöpfe, ohne Leserecht keine Vorsc
   const peterPw = await startPasswordFor(page, 'Peter Lang');
 
   await loginFirstTime(page, 'mira@kompass.local', miraPw);
-  await page.goto('/site/preview-frame');
+  await page.goto('/site/publish/preview');
   await expect(page.getByText('403')).toBeVisible();
   expect((await page.request.get('/site/preview/')).status()).toBe(403);
 
@@ -112,7 +112,7 @@ test('Leser sehen Sammlungen ohne Bearbeiten-Knöpfe, ohne Leserecht keine Vorsc
   await expect(page.getByRole('button', { name: 'Löschen' })).toHaveCount(0);
   await expect(page.getByRole('switch')).toHaveCount(0);
   await expect(page.getByRole('table').getByRole('link')).toHaveCount(0);
-  await page.goto('/site/preview-frame');
+  await page.goto('/site/publish/preview');
   await expect(page.getByRole('heading', { name: 'Webseiten-Vorschau' })).toBeVisible();
 });
 

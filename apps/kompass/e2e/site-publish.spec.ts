@@ -120,7 +120,7 @@ test('preview build, diff and publish to the local staging target', async ({ pag
   // fand beides leer (2026-09-19).
   const [tab] = await Promise.all([page.context().waitForEvent('page'), page.getByRole('link', { name: 'Vorschau öffnen' }).click()]);
   await tab.waitForLoadState();
-  await expect(tab).toHaveURL(/\/site\/preview-frame$/);
+  await expect(tab).toHaveURL(/\/site\/publish\/preview$/);
   await expect(tab.getByTestId('env-banner')).toBeVisible();
   // Wer die Vorschauseite direkt aufruft, kommt zurück.
   await expect(tab.getByRole('link', { name: 'Zurück zu Publizieren' })).toHaveAttribute('href', '/site/publish');

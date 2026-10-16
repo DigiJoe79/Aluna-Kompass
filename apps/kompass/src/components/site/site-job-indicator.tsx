@@ -2,6 +2,7 @@
 
 import { Globe } from 'lucide-react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { stepCounter } from '@/lib/site-job-steps';
@@ -15,7 +16,11 @@ import { useSiteJobStatus } from './site-job-provider';
 export function SiteJobIndicator() {
   const t = useTranslations('site.publish.job');
   const { running, pending } = useSiteJobStatus();
-  if (!running) return pending && pending.count > 0 ? <PendingIndicator pending={pending} /> : null;
+  const pathname = usePathname() ?? '';
+  // Was noch nicht publiziert ist, zeigt die Pille nur im Bereich Webseite (10 C38, Designer 2026-10-16, Teil 3 Nr. 8);
+  // einen laufenden Lauf zeigt die Kopfzeile überall.
+  const inSiteArea = pathname === '/site' || pathname.startsWith('/site/');
+  if (!running) return inSiteArea && pending && pending.count > 0 ? <PendingIndicator pending={pending} /> : null;
   const step = running.steps.find((s) => s.state === 'running') ?? running.steps.find((s) => s.state === 'pending') ?? running.steps.at(-1);
   const counter = step ? stepCounter(step) : null;
   const progress = counter ? t(`count.${counter.key}`, counter.values) : '';

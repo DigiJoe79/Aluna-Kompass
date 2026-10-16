@@ -66,7 +66,9 @@ const slugTaken = (db: DbOrTx, collection: string, slug: string, exceptId?: stri
 
 function checkSlug(col: CollectionDef, slug: string | undefined): Result<string | null> {
   if (col.slug) {
-    if (!slug || !SLUG.test(slug)) return invalid([{ path: 'slug', message: 'invalidSlug' }]);
+    // Leer ist eine fehlende Pflicht, nicht ein Formfehler (14 A2): „Bitte einen URL-Teil eingeben“ statt der Regel.
+    if (!slug) return invalid([{ path: 'slug', message: 'slugRequired' }]);
+    if (!SLUG.test(slug)) return invalid([{ path: 'slug', message: 'invalidSlug' }]);
     return ok(slug);
   }
   if (slug !== undefined && slug !== '') return invalid([{ path: 'slug', message: 'slugNotAllowed' }]);

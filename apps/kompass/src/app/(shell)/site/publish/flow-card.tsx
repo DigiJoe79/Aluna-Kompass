@@ -102,7 +102,7 @@ export function PublishFlowCard(p: PublishFlowCardProps) {
     </Button>
   );
   const openPreview = (
-    <Link href="/site/preview-frame" target="_blank" rel="noopener" className={`${buttonVariants({ variant: 'outline' })} gap-1.5 max-sm:h-[46px]`}>
+    <Link href="/site/publish/preview" target="_blank" rel="noopener" className={`${buttonVariants({ variant: 'outline' })} gap-1.5 max-sm:h-[46px]`}>
       {t('flow.openPreview')}
       <ExternalLink className="size-3.5" aria-hidden />
     </Link>

@@ -2,7 +2,7 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { NextIntlClientProvider } from 'next-intl';
 import type { ReactNode } from 'react';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import messages from '../messages/de.json';
 import { PendingPublishLine, PendingPublishNote, PendingVariablesLine } from '@/components/site/pending-publish';
 import { pendingVariableNames } from '@/lib/site-job-view';
@@ -32,6 +32,8 @@ const wrap =
     </NextIntlClientProvider>
   );
 afterEach(cleanup);
+// Die Pille steht nur im Bereich Webseite (10 C38, Designer 2026-10-16).
+vi.mock('next/navigation', () => ({ usePathname: () => '/site/publish' }));
 
 describe('pending indicator menu (Board 8a)', () => {
   it('opens a menu with the first five names, their kind, and the way to publish', async () => {

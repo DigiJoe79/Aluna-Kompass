@@ -88,8 +88,8 @@ export function EntryForm({
           media={{ sizes: mediaSizes, target: tc('targets.entry'), ...(collectionLabel ? { placeLabel: collectionLabel } : {}) }}
           leading={
             hasSlug ? (
-              <FormField id="slug" label={c('slug')} error={errors.slug}>
-                <Input id="slug" name="slug" value={slug} onChange={(e) => setSlug(e.target.value)} pattern="[a-z0-9][a-z0-9-]{0,80}" className="font-mono" />
+              <FormField id="slug" label={c('slug')} error={errors.slug} required>
+                <Input id="slug" name="slug" value={slug} onChange={(e) => setSlug(e.target.value)} required pattern="[a-z0-9][a-z0-9-]{0,80}" className="font-mono" />
               </FormField>
             ) : null
           }

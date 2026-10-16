@@ -66,7 +66,7 @@ describe('PublishFlowCard', () => {
   it('ready: publish first, then the preview link, details closed', () => {
     renderCard(stateOf('ready'), { env: 'test' });
     expect(screen.getAllByRole('button')[0]!.textContent).toBe('Auf Test publizieren');
-    expect(screen.getByRole('link', { name: /Vorschau öffnen/ })).toHaveProperty('pathname', '/site/preview-frame');
+    expect(screen.getByRole('link', { name: /Vorschau öffnen/ })).toHaveProperty('pathname', '/site/publish/preview');
     expect(document.querySelector('details')!.hasAttribute('open')).toBe(false);
   });
   it('unchanged: no publish button, a quiet link-like action to publish anyway', () => {

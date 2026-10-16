@@ -45,9 +45,11 @@ test('a public change shows as not published in the header, its menu and on the 
   await expect(page.getByTestId('site-pending-since')).toContainText('geändert: Sommerfest 2026 (neu).');
   await expect(page.getByTestId('site-pending-since').getByRole('link', { name: 'Sommerfest 2026' })).toHaveAttribute('href', /\/site\/c\/news\//);
 
-  // Telefon: Symbol mit Zahl, ein Tipp führt direkt auf die Seite.
+  // Telefon: Symbol mit Zahl, ein Tipp führt direkt auf die Seite. Nur im Bereich Webseite (10 C38, Designer 2026-10-16).
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/');
+  await expect(page.getByTestId('site-pending')).toHaveCount(0);
+  await page.goto('/site/c/news');
   await page.getByRole('link', { name: '1 Änderung nicht publiziert, zum Publizieren' }).click();
   await expect(page).toHaveURL('/site/publish');
 

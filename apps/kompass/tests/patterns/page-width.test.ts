@@ -12,7 +12,7 @@ const ALLOWED: Allowlist = {
   'app/(shell)/finance/page.tsx': 'Weiterleitung auf den ersten Finanzbereich, rendert nichts.',
   'app/(shell)/site/template/page.tsx': 'Weiterleitung (`redirect`), rendert nichts.',
   'app/(shell)/[...catchAll]/page.tsx': 'Ruft nur `notFound()`; die Seite dazu ist `not-found.tsx`.',
-  'app/(shell)/site/preview-frame/page.tsx': 'Inhalt eines iframes der Vorschau, keine Seite der Schale.',
+  'app/(shell)/site/publish/preview/page.tsx': 'Inhalt eines iframes der Vorschau, keine Seite der Schale.',
 };
 
 
