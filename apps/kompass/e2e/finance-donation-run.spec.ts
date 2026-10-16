@@ -55,7 +55,12 @@ async function loginAs(page: Page, name: string, email: string): Promise<void> {
   await expect(page).toHaveURL('/');
 }
 
-const step = (page: Page, key: string) => page.getByTestId(`guided-step-${key}`);
+const step = (page: Page, key: string) => page.getByTestId(`steps-${key}`);
+// Auf dem Ergebnis ist der Lauf durch: alle Schritte erledigt, „Fertig.“ (Entwurf E3).
+const finished = async (page: Page, timeout?: number) => {
+  await expect(step(page, 'result')).toHaveAttribute('data-state', 'done', { timeout });
+  await expect(page.getByTestId('steps').getByRole('status')).toContainText('Fertig.');
+};
 const runItem = (page: Page, name: string) => page.getByTestId('run-item').filter({ hasText: name });
 const issuedRow = (page: Page, name: string) => page.getByTestId('confirmation-row').filter({ hasText: name });
 
@@ -63,7 +68,7 @@ const issuedRow = (page: Page, name: string) => page.getByTestId('confirmation-r
 async function runToResult(page: Page): Promise<void> {
   await page.goto(`/finance/donations/run?year=${YEAR}`);
   await page.getByTestId('run-footer').getByRole('button', { name: '4 Bestätigungen ausstellen' }).click();
-  await expect(step(page, 'result')).toHaveAttribute('aria-current', 'step', { timeout: 20_000 });
+  await finished(page, 20_000);
 }
 
 test.describe('finance donation run', () => {
@@ -134,7 +139,7 @@ test.describe('finance donation run', () => {
 
     await page.unroute(continueUrl);
     await page.goto(page.url());
-    await expect(step(page, 'result')).toHaveAttribute('aria-current', 'step', { timeout: 20_000 });
+    await finished(page, 20_000);
     const result = page.getByTestId('run-result');
     await expect(result.getByTestId('run-summary')).toHaveText('4 von 4 Bestätigungen ausgestellt');
 
@@ -224,7 +229,7 @@ test.describe('finance donation run', () => {
     await expect(page.getByTestId('run-group-ready').getByTestId('run-item')).toHaveCount(1);
     await expect(runItem(page, 'Tobias Adler')).toBeVisible();
     await page.getByTestId('run-footer').getByRole('button', { name: '1 Bestätigung ausstellen' }).click();
-    await expect(step(page, 'result')).toHaveAttribute('aria-current', 'step', { timeout: 20_000 });
+    await finished(page, 20_000);
     await expect(page.getByTestId('run-summary')).toHaveText('1 von 1 Bestätigung ausgestellt');
     // Dazu der abgeschlossene Serienlauf des Vorjahrs aus dem Seed — eine Zeile, die hier immer mitzählt.
     const rows = page.getByTestId('run-row');

@@ -19,6 +19,7 @@ const ALLOWED: CountedAllowlist = {
   // Endgültige Einträge (Spec § 3.6/§ 3.7):
   'app/(shell)/animals/proposals/[id]/same-as-review.tsx': { count: 1, reason: 'Markierung abweichender Werte der Zuordnung (Board Vorschläge 5b), keine Meldung und keine Wahl — wie die Diff-Markierung im Protokoll.' },
   'components/finance/balance-indicator.tsx': { count: 2, reason: 'Zustand eines Werts (Saldo), keine Meldung.' },
+  'components/steps.tsx': { count: 2, reason: 'Marker eines fehlgeschlagenen Schritts (Entwurf E3), keine Meldung.' },
   'components/finance/limit-progress.tsx': { count: 1, reason: 'Grenzmarke im Fortschrittsbalken, keine Meldung.' },
   'components/forms/form-error-summary.tsx': { count: 2, reason: 'Selbst Baustein (Fehlerzusammenfassung, MUSTER § A).' },
   'app/error.tsx': { count: 1, reason: 'Fehlergrenze (500-Kennung).' },

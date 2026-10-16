@@ -1,7 +1,6 @@
 'use client';
 
 import { readCsv } from '@kompass/module-finance/csv';
-import { Check } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -10,7 +9,10 @@ import { toast } from 'sonner';
 import { useDateFormat } from '@/components/date-format-provider';
 import { ChoiceCards } from '@/components/choice-cards';
 import { ConfirmDialog } from '@/components/forms/confirm-dialog';
+import { FormActionBar } from '@/components/forms/form-action-bar';
+import { FormCard, FormCardBody } from '@/components/forms/form-card';
 import { FormField } from '@/components/forms/form-field';
+import { Steps, stepsFrom } from '@/components/steps';
 import { FormGrid } from '@/components/forms/form-grid';
 import { FileDropzone } from '@/app/(shell)/dms/receive/file-dropzone';
 import { Notice } from '@/components/notice';
@@ -193,19 +195,11 @@ export function CsvAssistant({ accounts, initialAccountId, canLoad, reselect = f
   const hasBalanceColumn = built?.ok ? built.format.columns.balance !== null : false;
 
   return (
-    <div className="space-y-6">
-      <ol aria-label={t('stepsLabel')} className="flex flex-wrap gap-2 text-meta">
-        {STEPS.map((s) => (
-          <li
-            key={s}
-            aria-current={s === step ? 'step' : undefined}
-            className={cn('flex items-center gap-1.5 rounded-full border px-3 py-1', s === step ? 'border-brand bg-brand-soft font-semibold text-ink' : 'border-line text-muted-ink')}
-          >
-            {s < step ? <Check className="size-3.5" aria-hidden /> : <span>{s}</span>}
-            {t(`steps.${s}`)}
-          </li>
-        ))}
-      </ol>
+    // Assistent in einer Karte mit der Leiste als Fuß (Entwurf E3): Schritte oben, „← Zurück · Schritt n von m ·
+    // Abbrechen · Weiter“ unten, klebend wie die Speicherleiste.
+    <FormCard>
+    <FormCardBody className="space-y-6">
+      <Steps label={t('stepsLabel')} testId="csv-steps" steps={stepsFrom(STEPS.map((s) => ({ key: String(s), label: t(`steps.${s}`) })), String(step))} />
 
       {step === 1 ? (
         <section className="space-y-4">
@@ -438,31 +432,32 @@ export function CsvAssistant({ accounts, initialAccountId, canLoad, reselect = f
               ) : null}
             </FormGrid>
             {error ? <Notice level="refuse">{error}</Notice> : null}
-            <div className="flex flex-wrap gap-3">
-              {canLoad ? (
-                <Button type="button" disabled={busy || !read?.ok || !canAdvance(5, state, preview.header)} onClick={() => requestSave(true)}>
-                  {t('probe.saveAndLoad')}
-                </Button>
-              ) : null}
-              <Button type="button" variant={canLoad ? 'secondary' : 'default'} disabled={busy || !read?.ok || !canAdvance(5, state, preview.header)} onClick={() => requestSave(false)}>
-                {t('probe.saveOnly')}
-              </Button>
-            </div>
           </div>
         </Section>
       ) : null}
 
+    </FormCardBody>
       {state && step > 1 ? (
-        <div className="flex gap-3">
-          <Button type="button" variant="secondary" onClick={() => (step === 2 ? (setState(null), setFile(null)) : goTo((step - 1) as AssistantStep))}>
-            {t('back')}
-          </Button>
-          {step < 5 ? (
-            <Button type="button" disabled={!canAdvance(step, state, preview.header)} onClick={() => goTo((step + 1) as AssistantStep)}>
-              {t('next')}
-            </Button>
-          ) : null}
-        </div>
+        <FormActionBar
+          variant="wizard"
+          wizard={{ step, total: STEPS.length, onBack: () => (step === 2 ? (setState(null), setFile(null)) : goTo((step - 1) as AssistantStep)) }}
+          back={{ href: '/finance/imports', label: t('cancelTarget') }}
+          testId="csv-wizard-bar"
+          {...(step < 5
+            ? { onSave: () => goTo((step + 1) as AssistantStep), saveLabel: t('next'), saveDisabled: !canAdvance(step, state, preview.header) }
+            : {
+                // Im letzten Schritt nennt der Primärknopf die Handlung (E3); „Nur speichern“ daneben, wo Einlesen geht.
+                onSave: () => requestSave(canLoad),
+                saveLabel: canLoad ? t('probe.saveAndLoad') : t('probe.saveOnly'),
+                pending: busy,
+                saveDisabled: !read?.ok || !canAdvance(5, state, preview.header),
+                extraActions: canLoad ? (
+                  <Button type="button" variant="outline" disabled={busy || !read?.ok || !canAdvance(5, state, preview.header)} onClick={() => requestSave(false)}>
+                    {t('probe.saveOnly')}
+                  </Button>
+                ) : undefined,
+              })}
+        />
       ) : null}
 
       <ConfirmDialog
@@ -473,6 +468,6 @@ export function CsvAssistant({ accounts, initialAccountId, canLoad, reselect = f
         confirmLabel={t('switchDialog.confirm')}
         action={() => save(pendingLoad ?? false, true)}
       />
-    </div>
+    </FormCard>
   );
 }

@@ -22,7 +22,7 @@ const BAR: Record<LimitState, string> = { calm: 'bg-brand', near: 'bg-warning', 
 /**
  * Baustein 16 (F7 Task 6a, Design 4h): Label · Zustandswort als Badge ·
  * Balken 8 px · „Wert von Grenze“ in Mono · Restsatz. Alle Texte kommen fertig
- * übersetzt vom Aufrufer (Muster `GuidedSteps`); die Komponente trägt keinen
+ * übersetzt vom Aufrufer (Muster `Steps`); die Komponente trägt keinen
  * Text. Läuft ohne Zustand, deshalb eine Server-Komponente. Genau ein Balken:
  * `ProgressPrimitive.Root` statt `ui/progress`, das seinen eigenen anhängt.
  */

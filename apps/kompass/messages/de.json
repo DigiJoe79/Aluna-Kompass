@@ -26,9 +26,26 @@
     "leave": {
       "title": "Seite verlassen?",
       "description": "{count, plural, one {Eine Änderung ist} other {# Änderungen sind}} noch nicht gespeichert. Wenn Sie die Seite verlassen, {count, plural, one {geht sie} other {gehen sie}} verloren.",
-      "confirm": "Seite verlassen"
+      "confirm": "Seite verlassen",
+      "wizardDescription": "Der Assistent ist noch nicht fertig. Wenn Sie die Seite verlassen, gehen die Angaben dieses Durchgangs verloren."
     },
+    "wizardBack": "← Zurück",
     "sortBy": "Sortieren nach {column}",
+    "steps": {
+      "label": "Schritte",
+      "state": {
+        "todo": "offen",
+        "active": "aktiv",
+        "done": "erledigt",
+        "failed": "fehlgeschlagen"
+      },
+      "stepOf": "Schritt {n} von {total}",
+      "doneOf": "{n} von {total} erledigt",
+      "next": "Danach: {label}",
+      "progress": "Schritt {n} von {total}, {label}",
+      "failed": "fehlgeschlagen",
+      "finished": "Fertig."
+    },
     "sortMenu": {
       "label": "Sortieren",
       "current": "Sortieren: {column}",
@@ -3495,8 +3512,8 @@
         "openLog": "Protokoll"
       },
       "flow": {
-        "step1": "Schritt 1 von 2 · Vorschau",
-        "step2": "Schritt 2 von 2 · Publizieren",
+        "stepPreview": "Änderungen prüfen",
+        "stepPublish": "Publizieren",
         "startPreview": "Vorschau bauen",
         "rebuild": "Vorschau neu bauen",
         "openPreview": "Vorschau öffnen",
@@ -5628,7 +5645,7 @@
         "saveAndLoad": "Speichern und Auszug laden",
         "saveOnly": "Nur speichern"
       },
-      "back": "Zurück",
+      "cancelTarget": "Hochgeladene Auszüge",
       "next": "Weiter",
       "switchDialog": {
         "title": "Auszugsformat wechseln?",
@@ -6314,13 +6331,12 @@
       },
       "signature": {
         "done": "erledigt",
-        "open": "offen",
         "steps": {
           "created": "Bestätigung erzeugt",
           "print": "Drucken und unterschreiben",
-          "printHint": "Unser Exemplar ausdrucken und von Hand unterschreiben lassen.",
           "printAction": "Unser Exemplar öffnen",
           "upload": "Unterschriebene Fassung als Eingang ablegen",
+          "uploadHint": "Wird als eigenes Dokument in der Akte abgelegt und mit {number} verknüpft.",
           "linked": "Mit der Bestätigung verknüpft"
         },
         "empty": {

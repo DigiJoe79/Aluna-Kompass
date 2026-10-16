@@ -127,8 +127,9 @@ test.describe('finance donations', () => {
     await page.goto('/finance/donations?tab=needsSignature');
     await expect(page.getByRole('navigation', { name: 'Ansicht' }).getByRole('link', { name: 'Unterschrift fehlt 3' })).toBeVisible();
     const card = page.getByTestId('signature-steps').filter({ hasText: '36,00 €' });
-    await expect(card.getByTestId('requirement-created')).toHaveAttribute('data-done', 'true');
-    await expect(card.getByTestId('requirement-linked')).toHaveAttribute('data-done', 'false');
+    // Kompakte Schritte (Entwurf E3): erzeugt ist erledigt, verknüpft noch offen.
+    await expect(card.locator('li[data-testid$="-created"]')).toHaveAttribute('data-state', 'done');
+    await expect(card.locator('li[data-testid$="-linked"]')).toHaveAttribute('data-state', 'todo');
     await card.getByTestId('voucher-file-input').setInputFiles({ name: 'unterschrieben.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4\n1 0 obj<</Type/Catalog>>endobj\ntrailer<</Root 1 0 R>>\n%%EOF\n') });
     await expect(page.getByText(/Unterschriebene Fassung ZWU-\S+ abgelegt/)).toBeVisible();
     await expect(page.getByRole('navigation', { name: 'Ansicht' }).getByRole('link', { name: 'Unterschrift fehlt 2' })).toBeVisible();

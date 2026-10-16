@@ -16,6 +16,7 @@ const ALLOWED: CountedAllowlist = {
   'app/(shell)/dms/receive/file-dropzone.tsx': { count: 1, reason: 'Grafik, keine Schrift: Datei-Symbol' },
   'app/(shell)/profile/page.tsx': { count: 1, reason: 'Grafik, keine Schrift: Initialen' },
   'app/global-error.tsx': { count: 5, reason: 'Ersetzt das Wurzel-Layout samt Schale, ohne Tokens und Bausteine (style mit fontSize)' },
+  'components/steps.tsx': { count: 2, reason: 'Grafik, keine Schrift: Ziffern im Schrittmarker (24/20 px, Entwurf E3)' },
   'components/auth-card.tsx': { count: 2, reason: 'Grafik, keine Schrift: Initialen und Wortmarke der Anmeldeseite' },
   'components/drop-overlay.tsx': { count: 1, reason: 'Grafik, keine Schrift: Datei-Symbol' },
   'components/finance/amount-field.tsx': { count: 1, reason: 'Feldschrift wie ui/input (`--field-font`, Spec § 9.3)' },

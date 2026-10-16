@@ -126,6 +126,14 @@ type BaseProps = {
    * ihre fünf Aktionen stehen immer am selben Platz. Wächter `patterns/hide-discard.test.ts` hält die Option dort.
    */
   alwaysDiscard?: boolean;
+  /**
+   * Fuß eines Assistenten (Entwurf E3, Designer 2026-10-17): links „← Zurück“ (im ersten Schritt unsichtbar, damit
+   * nichts springt), daneben „Schritt n von m“ statt des Zählers — „Weiter“ speichert den Schritt —, rechts
+   * „Abbrechen“ (`back`) und der Primärknopf (`onSave`, `saveLabel` nennt im letzten Schritt die Handlung). Klebt wie
+   * auf einer Seite; ab Schritt 2 fragt Verlassen nach.
+   */
+  variant?: 'wizard';
+  wizard?: { step: number; total: number; onBack: () => void };
 };
 
 /**
@@ -187,8 +195,11 @@ export function FormActionBar({
   extraActions,
   hideDiscard = false,
   alwaysDiscard = false,
+  variant,
+  wizard: wizardProp,
   recordAction,
 }: FormActionBarProps) {
+  const wizard = variant === 'wizard' ? wizardProp : undefined;
   const t = useTranslations('common');
   const anchor = useRef<HTMLDivElement>(null);
   const initial = useRef<Snapshot | null>(null);
@@ -207,12 +218,12 @@ export function FormActionBar({
   const [nothing, setNothing] = useState(false);
   // Eigene Eingaben aus einem Versionskonflikt (Neuladen mit „neben den neuen Stand legen“), gegen den jetzt gespeicherten Stand.
   const [compare, setCompare] = useState<{ label: string; yours: string; current: string }[] | null>(null);
-  const blocks = mode === 'edit' && placement === 'page' && changed === 0;
+  const blocks = !wizard && mode === 'edit' && placement === 'page' && changed === 0;
   // Ob die Leiste gerade klebt — nur dann trägt sie einen Schatten (Designer 2026-10-08).
   const [stuck, setStuck] = useState(false);
   // Rückfrage beim Verlassen: nur auf einer Seite, nur mit Ungespeichertem. Ausführen hat nichts zu verlieren, eine
   // laufend gesicherte Maske (`status`) hat es schon gesichert, ein Dialog führt mit „Abbrechen“ nirgendwohin.
-  const guarded = placement === 'page' && mode !== 'run' && !status && changed > 0;
+  const guarded = wizard ? wizard.step > 1 : placement === 'page' && mode !== 'run' && !status && changed > 0;
   const [leaveTo, setLeaveTo] = useState<HTMLAnchorElement | null>(null);
   // Der eigene Weg hinaus (Verwerfen lädt neu, der Konflikt auch, „Seite verlassen“ klickt den Link) fragt nicht.
   const leaving = useRef(false);
@@ -371,7 +382,7 @@ export function FormActionBar({
   // „Verwerfen“ nur mit Änderungen und nie beim Anlegen — dort gibt es nur „Abbrechen“ (Designer 2026-10-16, Teil 2
   // Nr. 1). Ohne Änderung wäre der Knopf ein Versprechen, das ins Leere greift. Ausnahme ist die Buchungsmaske.
   const canDiscard = !(hideDiscard || cancel || mode === 'run' || (onSave && !onDiscard && count === undefined));
-  const showDiscard = canDiscard && (alwaysDiscard || (mode === 'edit' && changed > 0));
+  const showDiscard = !wizard && canDiscard && (alwaysDiscard || (mode === 'edit' && changed > 0));
   // Nur einer der beiden Nebenknöpfe: Am Telefon nimmt er die ganze Zeile.
   const lone = Number(showDiscard) + Number(!!(cancel || back)) === 1;
 
@@ -379,7 +390,9 @@ export function FormActionBar({
   // Stufe 2 Nr. 7). Die Rückfrage beim Verlassen (`guarded`) zählt trotzdem mit. Ein bestehender Datensatz
   // (`loadedVersion`), der nur `create` nutzt, damit er auch ohne Änderung abschickt (Prüfung der Tiere), zählt weiter.
   const counts = mode === 'edit' || (mode === 'create' && loadedVersion !== undefined);
-  const line =
+  const line = wizard ? (
+    <span className="text-meta text-muted-ink">{t('steps.stepOf', { n: wizard.step, total: wizard.total })}</span>
+  ) :
     nothing ? (
       <span aria-live="polite" className="text-meta text-ink-2">
         {t('nothingChanged')}
@@ -433,6 +446,18 @@ export function FormActionBar({
           <div className="max-sm:order-last max-sm:mt-3">
             <RecordActions actions={recordActions} single="button" />
           </div>
+        ) : null}
+        {wizard ? (
+          <Button
+            type="button"
+            variant="outline"
+            className={cn('max-sm:order-last', wizard.step <= 1 && 'invisible')}
+            aria-hidden={wizard.step <= 1 || undefined}
+            tabIndex={wizard.step <= 1 ? -1 : undefined}
+            onClick={wizard.onBack}
+          >
+            {t('wizardBack')}
+          </Button>
         ) : null}
         {line}
         {/*
@@ -509,7 +534,7 @@ export function FormActionBar({
             if (!open) setLeaveTo(null);
           }}
           title={t('leave.title')}
-          description={t('leave.description', { count: changed })}
+          description={wizard ? t('leave.wizardDescription') : t('leave.description', { count: changed })}
           confirmLabel={t('leave.confirm')}
           destructive
           action={async () => {

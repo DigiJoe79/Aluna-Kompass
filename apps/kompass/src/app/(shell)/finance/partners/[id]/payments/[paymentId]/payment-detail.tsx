@@ -15,7 +15,7 @@ import { AmountField } from '@/components/finance/amount-field';
 import { LimitProgress } from '@/components/finance/limit-progress';
 import { Notice } from '@/components/notice';
 import { ReceiptDrop } from '@/components/finance/receipt-drop';
-import { GuidedSteps, guidedSteps } from '@/components/guided-steps';
+import { Steps, stepsFrom } from '@/components/steps';
 import { RequirementList, type RequirementListItem } from '@/components/requirement-list';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -100,13 +100,13 @@ export function PaymentDetail({
     paid: payment.paidOn ? fmt.date(payment.paidOn) : undefined,
     acknowledged: detail(payment.acknowledgedAt, people.acknowledger),
   };
-  const steps = payment.activeStep ? guidedSteps(STEP_KEYS.map((key) => ({ key, label: t(`steps.${key}`), detail: stepDetail[key] })), payment.activeStep) : null;
+  const steps = payment.activeStep ? stepsFrom(STEP_KEYS.map((key) => ({ key, label: t(`steps.${key}`), detail: stepDetail[key] })), payment.activeStep) : null;
   const categoryLabel = new Map(categories.map((c) => [c.id, c.label]));
   const purposeLabel = new Map(purposes.map((p) => [p.id, p.label]));
 
   return (
     <div className="space-y-6" data-testid="payment-detail">
-      {steps ? <GuidedSteps steps={steps} label={t('steps.label')} /> : null}
+      {steps ? <Steps steps={steps} label={t('steps.label')} /> : null}
       <section className="space-y-2 rounded-md border border-line bg-surface p-4" data-testid="payment-head">
         <p className="text-body font-semibold text-ink">
           {payment.proofDueOn

@@ -48,8 +48,8 @@ test.describe('finance partners (F7)', () => {
     await page.getByTestId('payment-submit').click();
     await expect(page.getByTestId('payment-detail')).toBeVisible();
     // O (Prüfer Block 2): eingereicht heißt „wartet auf Freigabe“, nicht mehr „Entwurf“.
-    await expect(page.getByTestId('guided-step-submitted')).toHaveAttribute('aria-current', 'step');
-    await expect(page.getByTestId('guided-step-draft')).toHaveAttribute('data-state', 'done');
+    await expect(page.getByTestId('steps-submitted')).toHaveAttribute('aria-current', 'step');
+    await expect(page.getByTestId('steps-draft')).toHaveAttribute('data-state', 'done');
 
     const paymentUrl = page.url();
     await switchToJonas(page);
@@ -62,7 +62,7 @@ test.describe('finance partners (F7)', () => {
     // Der Nachweis (über 1 MB, N9) — legt die Verwaltung ab (finance.entriesWrite), nie die Freigeberin selbst.
     await backToAdmin(page);
     await page.goto(paymentUrl);
-    await expect(page.getByTestId('guided-steps')).toBeVisible();
+    await expect(page.getByTestId('steps')).toBeVisible();
     // Förderung im Inland: nur der Zahlungsnachweis ist Pflicht (Spec 14.4); ein Bericht darf zusätzlich dabei sein.
     const list = page.getByTestId('evidence-requirements');
     await list.getByTestId('requirement-paymentProof').getByRole('button', { name: 'Hochladen oder verknüpfen' }).click();
@@ -468,9 +468,9 @@ test.describe('finance partners (F7)', () => {
     await backToAdmin(page);
     await page.goto(`/finance/partners/${partner.id}/payments/${submitted.id}`);
     await expect(page.getByTestId('payment-head')).toContainText('Förderung eines Partners · 1.500,00 € · Nachweisfrist');
-    await expect(page.getByTestId('guided-step-draft')).toContainText('Anna Berger');
-    await expect(page.getByTestId('guided-step-approved')).toContainText('Jonas Feld');
-    await expect(page.getByTestId('guided-step-paid')).toContainText('gezahlt');
+    await expect(page.getByTestId('steps-draft')).toContainText('Anna Berger');
+    await expect(page.getByTestId('steps-approved')).toContainText('Jonas Feld');
+    await expect(page.getByTestId('steps-paid')).toContainText('gezahlt');
 
     const list = page.getByTestId('evidence-requirements');
     await expect(list.getByTestId('requirement-agreement')).toHaveAttribute('data-done', 'true');

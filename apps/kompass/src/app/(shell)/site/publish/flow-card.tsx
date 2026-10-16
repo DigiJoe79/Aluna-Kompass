@@ -3,6 +3,7 @@
 import { AlertTriangle, ExternalLink, Pause } from 'lucide-react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
+import { Steps, stepsFrom } from '@/components/steps';
 import { useDateFormat } from '@/components/date-format-provider';
 import { Fragment, useId, type ReactNode, type Ref } from 'react';
 import { Button, buttonVariants } from '@/components/ui/button';
@@ -122,7 +123,8 @@ export function PublishFlowCard(p: PublishFlowCardProps) {
       </p>
     ) : null;
 
-  let eyebrow = t('flow.step1');
+  // Zwei Schritte als Leiste (Entwurf E3, 10 A1): Vorschau → Publizieren. „Schritt n von 2“ steht nur am Telefon.
+  let flowStep: { at: 'preview' | 'publish' | null; failed?: boolean } = { at: 'preview' };
   let title = '';
   let titleIcon: ReactNode = null;
   let body: ReactNode = null;
@@ -147,12 +149,12 @@ export function PublishFlowCard(p: PublishFlowCardProps) {
     case 'running': {
       const kind = state.run.kind;
       title = kind === 'preview' ? t('flow.run.preview') : kind === 'publish' ? (p.env === 'test' ? t('flow.run.publishTest') : t('flow.run.publish')) : t('flow.run.deployCheck');
-      eyebrow = kind === 'publish' ? t('flow.step2') : t('flow.step1');
+      flowStep = { at: kind === 'publish' ? 'publish' : 'preview' };
       body = <RunCard embedded headingRef={p.headingRef} notice={p.imageCacheEmpty && kind !== 'deployCheck' ? t('flow.run.cacheEmpty') : undefined} />;
       break;
     }
     case 'ready': {
-      eyebrow = t('flow.step2');
+      flowStep = { at: 'publish' };
       title = t('flow.ready.title');
       const pv = state.preview;
       const meta = pv.userName
@@ -175,7 +177,7 @@ export function PublishFlowCard(p: PublishFlowCardProps) {
       break;
     }
     case 'unchanged': {
-      eyebrow = t('flow.step2');
+      flowStep = { at: 'publish' };
       title = t('flow.unchanged.title');
       const pv = state.preview;
       body = <p className="text-body text-ink-2">{t('flow.unchanged.text', { time: time(pv.finishedAt), host: host ?? EMPTY })}</p>;
@@ -194,7 +196,7 @@ export function PublishFlowCard(p: PublishFlowCardProps) {
       break;
     }
     case 'blocked': {
-      eyebrow = t('flow.step2');
+      flowStep = { at: 'publish' };
       title = t('flow.blocked.title');
       titleIcon = <AlertTriangle className="size-5 shrink-0 text-error" aria-hidden />;
       const pv = state.preview;
@@ -230,7 +232,7 @@ export function PublishFlowCard(p: PublishFlowCardProps) {
       titleIcon = failed ? <AlertTriangle className="size-5 shrink-0 text-error" aria-hidden /> : <Pause className="size-5 shrink-0 text-muted-ink" aria-hidden />;
       if (job.status === 'success') {
         titleIcon = null;
-        eyebrow = t('flow.step2');
+        flowStep = { at: null };
         body = (
           <>
             <p className="text-body text-ink-2">
@@ -246,7 +248,7 @@ export function PublishFlowCard(p: PublishFlowCardProps) {
         );
         actions = outline(t('flow.startPreview'), p.onStartPreview);
       } else {
-        eyebrow = job.kind === 'publish' ? t('flow.step2') : t('flow.step1');
+        flowStep = { at: job.kind === 'publish' ? 'publish' : 'preview', failed };
         body = <p className={`text-body ${failed ? 'text-ink' : 'text-ink-2'}`}>{endText(job, tr)}</p>;
         actions =
           state.retry === 'publish' && canPublishHere
@@ -273,8 +275,11 @@ export function PublishFlowCard(p: PublishFlowCardProps) {
       <span className="sr-only" aria-live="polite">
         {title}
       </span>
+      <Steps
+        testId="publish-steps"
+        steps={stepsFrom([{ key: 'preview', label: t('flow.stepPreview') }, { key: 'publish', label: t('flow.stepPublish') }], flowStep.at, { failed: flowStep.failed })}
+      />
       <div className="flex flex-col gap-1">
-        <p className="text-hint font-semibold text-muted-ink">{eyebrow}</p>
         {state.kind === 'running' ? null : (
           <SectionHeading ref={p.headingRef}>
             <span className="inline-flex items-center gap-2">

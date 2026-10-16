@@ -107,7 +107,7 @@ const INVENTORY: Readonly<Record<string, Entry>> = {
   'forms/submit-button.tsx': bestand('B'),
   'forms/use-action-feedback.ts': neu('A', 'Handoff Konsistenz § 1; Maintainer 2026-10-04'),
   'forms/use-autosave.ts': bestand('B'),
-  'guided-steps.tsx': bestand('Fachbaustein'),
+  'steps.tsx': neu('B', 'Entwurf E3 „Schritte und Assistent“, Designer 2026-10-17 (durchsicht-0.2.11/entwuerfe); ersetzt guided-steps.tsx'),
   'handbook-toc.tsx': bestand('Fachbaustein'),
   'hydration-marker.tsx': bestand('Fachbaustein'),
   'key-chip.tsx': bestand('Fachbaustein'),
