@@ -14,6 +14,7 @@
       "leading": "Leitsprache",
       "remove": "{code} entfernen",
       "removeTitle": "Sprache „{code}“ entfernen",
+      "nextLeading": "{language} wird Leitsprache.",
       "removeWarning": "{count, plural, =0 {In keinem Feld steht Text auf {locale}.} one {In # Feld steht Text auf {locale}. Beim Entfernen geht er verloren.} other {In # Feldern steht Text auf {locale}. Beim Entfernen geht er verloren.}}",
       "removeConfirm": "Sprache unwiderruflich entfernen",
       "added": "Sprache hinzugefügt.",

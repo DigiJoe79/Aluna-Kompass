@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl';
 import { useActionState, useEffect, useRef, useState, useMemo } from 'react';
 import { toast } from 'sonner';
 import { ConfirmDialog } from '@/components/forms/confirm-dialog';
+import { useLanguageName } from '@/components/forms/localized-field';
 import { FormField } from '@/components/forms/form-field';
 import { FormGrid } from '@/components/forms/form-grid';
 import { RefusalNotice } from '@/components/forms/refusal-notice';
@@ -19,6 +20,7 @@ import { Section } from '@/components/section';
 
 export function LocalesClient({ locales }: { locales: string[] }) {
   const t = useTranslations('admin.locales');
+  const languageName = useLanguageName();
   const [state, action] = useActionState(addLocaleAction, idleState);
   const formRef = useRef<HTMLFormElement>(null);
   // `useMemo`, weil `errors` sonst bei jedem Render ein neues Objekt waere und
@@ -129,7 +131,8 @@ export function LocalesClient({ locales }: { locales: string[] }) {
           loadingPreview
             ? '...'
             : preview
-              ? t('removeWarning', { count: preview.filled, locale: toRemove ?? '' })
+              ? // Die Leitsprache darf weg; die Folge nennt die Vorschau des Dienstes (11-2 A4, Joe 2026-10-16).
+                [t('removeWarning', { count: preview.filled, locale: toRemove ?? '' }), preview.nextLeading ? t('nextLeading', { language: languageName(preview.nextLeading) }) : null].filter(Boolean).join(' ')
               : ''
         }
         confirmLabel={t('removeConfirm')}

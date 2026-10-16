@@ -17,6 +17,8 @@ const orderSchema = z.object({ codes: z.array(z.string().regex(LOCALE_CODE)).min
 
 export interface LocaleRemovalPreview {
   code: string;
+  /** Wird die Leitsprache entfernt, führt danach diese (die zweite der Liste); sonst `null` (11-2 A4). */
+  nextLeading: string | null;
   filled: number;
   tables: { table: string; column: string; filled: number }[];
 }
@@ -166,10 +168,12 @@ export async function previewLocaleRemoval(deps: Deps, ctx: CallContext, input: 
   const parsed = validate(deps, codeSchema, input);
   if (!parsed.ok) return parsed;
   const { code } = parsed.value;
-  if (!readLocales(deps).includes(code)) return conflict('unknownLocale', `${code} ist nicht eingerichtet`);
+  const locales = readLocales(deps);
+  if (!locales.includes(code)) return conflict('unknownLocale', `${code} ist nicht eingerichtet`);
   const required = requiredByModule(deps, code);
   if (required) return required;
-  return ok({ code, ...scanLocale(deps, code, { write: false }) });
+  const nextLeading = locales[0] === code ? (locales[1] ?? null) : null;
+  return ok({ code, nextLeading, ...scanLocale(deps, code, { write: false }) });
 }
 
 export async function removeLocale(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<string[]>> {
