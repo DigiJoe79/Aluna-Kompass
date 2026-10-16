@@ -35,6 +35,9 @@ die Nummern folgen [Semantic Versioning](https://semver.org/lang/de/). Vor
 - **Mehrsprachige Felder einheitlich.** Das Sprachkürzel („DE“, „EN“) steht
   bei allen mehrsprachigen Feldern rechts über der Eingabe, ein- wie
   mehrzeilig.
+- **Umgebungsbalken.** Die Testumgebung trägt jetzt einen ockerfarbenen
+  Balken mit Schraffur (bisher schwarz-gelb), die Entwicklung einen
+  dunkelgrauen (bisher rot). Die Produktion hat weiter keinen.
 - **Gemeinschaftskonto.** Gehört eine IBAN mehreren Kontakten
   (Gemeinschaftskonto), schlägt der Import keinen Kontakt mehr vor, statt still
   den zuletzt verknüpften zu nehmen.

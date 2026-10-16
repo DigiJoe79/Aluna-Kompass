@@ -85,7 +85,8 @@ Container ohnehin erst startet, wenn er direkt davorsitzt, braucht das nicht.
 Wer vor einer Änderung ausprobieren will, wie sie sich auswirkt, betreibt eine
 zweite Installation als Testumgebung — eigener Port, eigene Verzeichnisse,
 eigene Umgebungsdatei mit `APP_ENV=test`. Außerhalb der Produktion zeigt
-Kompass einen Umgebungsbalken, damit niemand die beiden verwechselt.
+Kompass einen Umgebungsbalken, damit niemand die beiden verwechselt: im Test
+ocker mit Schraffur (echte Daten, Vorsicht), in der Entwicklung dunkelgrau.
 
 Daten aus der Produktion in den Test holen: dort exportieren, hier importieren
 (Verwaltung → Backup). Danach sind im Test alle Sitzungen beendet, die
