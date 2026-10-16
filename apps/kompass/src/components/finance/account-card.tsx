@@ -7,6 +7,7 @@ import { useState } from 'react';
 import { useDateFormat } from '@/components/date-format-provider';
 import { formatEuro } from '@/lib/finance/amount';
 import { formatDateOrDash } from '@/lib/finance/dates';
+import { ibanLastFour } from '@/lib/finance/iban-check';
 import { formatIban, maskIban } from '@kompass/module-finance/format';
 
 export interface AccountCardData {
@@ -39,6 +40,7 @@ export interface AccountCardData {
  */
 export function AccountCard({ account }: { account: AccountCardData }) {
   const t = useTranslations('finance.accounts');
+  const tf = useTranslations('finance.common');
   const router = useRouter();
   const { date } = useDateFormat();
   const [revealed, setRevealed] = useState(false);
@@ -63,7 +65,17 @@ export function AccountCard({ account }: { account: AccountCardData }) {
 
       {account.kind === 'bank' && account.iban ? (
         <div className="mt-2 flex items-center gap-2 font-mono text-meta text-ink-2">
-          <span data-testid="iban-value">{revealed ? formatIban(account.iban) : maskIban(account.iban)}</span>
+          {revealed ? (
+            <span data-testid="iban-value">{formatIban(account.iban)}</span>
+          ) : (
+            // Verdeckt: sehend „DE ·· 2051“, für Vorleser ein Satz statt zweier Punkte (Designer 2026-10-16, Teil 1 Nr. 3).
+            <>
+              <span data-testid="iban-value" aria-hidden="true">
+                {maskIban(account.iban)}
+              </span>
+              <span className="sr-only">{tf('ibanEndsWith', { last: ibanLastFour(account.iban) })}</span>
+            </>
+          )}
           <button
             type="button"
             aria-label={revealed ? t('ibanHide') : t('ibanReveal')}

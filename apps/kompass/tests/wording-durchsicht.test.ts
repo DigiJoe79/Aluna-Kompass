@@ -1,0 +1,38 @@
+import { describe, expect, it } from 'vitest';
+import messages from '../messages/de.json';
+
+/** Wortlaut aus den Antworten des Designers (2026-10-16) und Joes Kleinfragen — je Punkt eine Prüfung. */
+type Tree = { [key: string]: string | Tree };
+const at = (path: string): string => path.split('.').reduce<string | Tree>((node, key) => (node as Tree)[key]!, messages as unknown as Tree) as string;
+const all = (node: Tree, prefix = ''): [string, string][] =>
+  Object.entries(node).flatMap(([key, value]) => (typeof value === 'string' ? [[`${prefix}${key}`, value] as [string, string]] : all(value, `${prefix}${key}.`)));
+
+describe('Wortlaut der Durchsicht 0.2.11', () => {
+  it('Optionstexte beginnen groß, auch hinter Doppelpunkt (Teil 1 Nr. 2)', () => {
+    expect(at('dms.admin.areaNone')).toBe('Keiner');
+    expect(at('finance.splitRow.taxNone')).toBe('Keine Angabe');
+    for (const [key, value] of all(messages.finance.splitRow.taxCode as Tree)) expect(value[0], key).toBe(value[0]!.toUpperCase());
+  });
+
+  it('kein „keins“', () => {
+    expect(all(messages as unknown as Tree).filter(([, value]) => /\bkeins\b/i.test(value))).toEqual([]);
+  });
+
+  it('Sperrhinweise der Akte mit halben Anführungszeichen innen (Teil 1 Nr. 5)', () => {
+    expect(at('folderTree.block.outgoingOnly')).toBe('Unter ‚Ohne Ordner‘ liegen nur ausgehende Dokumente.');
+    expect(at('folderTree.block.incomingOnly')).toBe('Im Eingangskorb liegen nur eingehende Dokumente.');
+  });
+
+  it('Sammel-Festschreiben: kein Auszug für diesen Zeitraum (Joe)', () => {
+    expect(at('finance.work.batch.noStatement')).toBe('kein Auszug für diesen Zeitraum');
+  });
+
+  it('Webseite: Eintrag anlegen, leerer URL-Teil (14 A2, Teil 3 Nr. 13)', () => {
+    expect(at('site.entries.create')).toBe('Eintrag anlegen');
+    expect(at('errors.fields.slugRequired')).toBe('Bitte einen URL-Teil eingeben.');
+  });
+
+  it('verdeckte IBAN für Vorleser (Teil 1 Nr. 3)', () => {
+    expect(at('finance.common.ibanEndsWith')).toBe('IBAN endet auf {last}');
+  });
+});

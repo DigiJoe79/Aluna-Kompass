@@ -1,6 +1,6 @@
 'use client';
 
-import { CircleSlash, Files, Upload } from 'lucide-react';
+import { Files, FolderMinus, Upload } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { ListTruncated } from '@/components/list-truncated';
 import { useRouter } from 'next/navigation';
@@ -294,7 +294,7 @@ export function LibraryClient({
     selected: current,
     fixed: [
       { key: 'all', label: t('root'), icon: Files, count: total, href: hrefFor(null), dropTarget: false, folder: null, current: !query.unfiled && current === null },
-      { key: 'unfiled', label: t('noFolder'), icon: CircleSlash, count: unfiledCount, href: mediaHref({ ...query, folder: null, unfiled: true }), dropTarget: true, folder: null, current: query.unfiled },
+      { key: 'unfiled', label: t('noFolder'), icon: FolderMinus, count: unfiledCount, href: mediaHref({ ...query, folder: null, unfiled: true }), dropTarget: true, folder: null, current: query.unfiled },
     ],
     hrefFor,
     acceptsItems: MEDIA_MIME,

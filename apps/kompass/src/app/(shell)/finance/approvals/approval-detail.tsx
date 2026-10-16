@@ -9,6 +9,7 @@ import { Notice } from '@/components/notice';
 import { Button } from '@/components/ui/button';
 import { Select } from '@/components/ui/select';
 import { useDateFormat } from '@/components/date-format-provider';
+import { ibanLastFour, maskedIban } from '@/lib/finance/iban-check';
 import { formatEuro } from '@/lib/finance/amount';
 import { approveInput, type ApprovalDecision } from '@/lib/finance/expenses';
 import { cn } from '@/lib/utils';
@@ -54,6 +55,7 @@ export function ApprovalDetail({
   today: string;
 }) {
   const t = useTranslations('finance.approvals');
+  const tFinance = useTranslations('finance.common');
   const tCommon = useTranslations('common');
   const tRow = useTranslations('finance.splitRow');
   const fmt = useDateFormat();
@@ -263,7 +265,7 @@ export function ApprovalDetail({
           amount,
           person: claim.contactName,
           received: t('head.receivedAt', { at: fmt.dateTime(claim.submittedAt) }),
-          note: claim.waiver ? t('head.noIban') : claim.ibanMasked ? t('head.iban', { iban: claim.ibanMasked }) : undefined,
+          note: claim.waiver ? t('head.noIban') : claim.ibanMasked ? t.rich('head.iban', { iban: () => maskedIban(claim.ibanMasked!, tFinance('ibanEndsWith', { last: ibanLastFour(claim.ibanMasked!) })) }) : undefined,
         }}
         requirements={
           claim.waiver && checks ? (

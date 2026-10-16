@@ -1,6 +1,7 @@
 import { hasPermission } from '@kompass/core';
 import { getExpenseClaim } from '@kompass/module-finance';
 import { getTranslations } from 'next-intl/server';
+import { ibanLastFour, maskedIban } from '@/lib/finance/iban-check';
 import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 import { BlockedState } from '@/components/blocked-state';
@@ -27,6 +28,7 @@ export default async function ExpenseClaimPage({ params }: { params: Promise<{ i
   const { deps, ctx } = await requireSession();
   if (!hasPermission(ctx, 'finance.expensesSubmit') && !hasPermission(ctx, 'finance.read')) return <Page width="task"><ForbiddenCard permission="finance.expensesSubmit" /></Page>;
   const t = await getTranslations('finance.expenses.detail');
+  const tCommon = await getTranslations('finance.common');
   const fmt = dateFormatOf(deps);
   const { id } = await params;
   const back = { href: '/finance/expenses', label: t('back') };
@@ -49,7 +51,7 @@ export default async function ExpenseClaimPage({ params }: { params: Promise<{ i
     claim.stateLabelKey === 'approved'
       ? claim.waiver
         ? t('hint.approvedWaiver')
-        : t('hint.approved', { iban: claim.ibanMasked ?? '' })
+        : t.rich('hint.approved', { iban: () => maskedIban(claim.ibanMasked ?? '', tCommon('ibanEndsWith', { last: ibanLastFour(claim.ibanMasked ?? '') })) })
       : t(`hint.${claim.stateLabelKey}`);
 
   return (

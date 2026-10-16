@@ -213,8 +213,8 @@
       "exists": "Einen Ordner „{name}“ gibt es dort schon",
       "forbidden": "Keine Berechtigung für diesen Ordner",
       "notCreated": "Diesen Ordner gibt es nur als Weg — legen Sie ihn zuerst an.",
-      "incomingOnly": "In den Eingangskorb kommt nur eingegangene Post.",
-      "outgoingOnly": "Unter „Ohne Ordner“ liegen nur ausgehende Dokumente."
+      "incomingOnly": "Im Eingangskorb liegen nur eingehende Dokumente.",
+      "outgoingOnly": "Unter ‚Ohne Ordner‘ liegen nur ausgehende Dokumente."
     },
     "announce": {
       "pickUp": "{name} aufgenommen. Wählen Sie mit den Pfeiltasten ein Ziel. Eingabetaste legt ab, Escape bricht ab.",
@@ -736,6 +736,7 @@
       "carryForwardCentsRequired": "Pflichtfeld.",
       "invalidBase64": "Die Datei ist nicht gültig Base64-kodiert.",
       "invalidSlug": "Nur Kleinbuchstaben, Ziffern und Bindestrich.",
+      "slugRequired": "Bitte einen URL-Teil eingeben.",
       "slugGenerated": "Den URL-Teil bildet Kompass beim Anlegen selbst; er bleibt danach fest.",
       "slugNotAllowed": "Diese Sammlung hat keinen Slug.",
       "invalidJson": "Die Datei ist kein gültiges JSON.",
@@ -3264,6 +3265,7 @@
     },
     "entries": {
       "new": "Neu",
+      "create": "Eintrag anlegen",
       "saved": "Gespeichert.",
       "delete": "Eintrag löschen …",
       "deleteTitle": "„{label}“ löschen?",
@@ -4145,12 +4147,11 @@
       "panels": {
         "types": "Arten",
         "rules": "Regeln",
-        "folders": "Ordner",
         "snippets": "Textbausteine",
         "channels": "Versand",
         "text": "Texterkennung"
       },
-      "description": "Dokumentarten, Ordnerstruktur und Einsortierregeln der Sachakte",
+      "description": "Dokumentarten, Einsortierregeln, Textbausteine, Versand und Texterkennung der Sachakte",
       "typesDescription": "Verwalten Sie die Dokumentarten für Vorlagen, Nummernkreis-Präfixe und Aufbewahrungsfristen.",
       "createType": "Dokumentart anlegen",
       "createTypeTitle": "Neue Dokumentart",
@@ -4160,7 +4161,7 @@
       "typeImmutableHint": "Der Schlüssel ist unveränderlich.",
       "prefixHint": "Änderbar, solange die Art noch kein Dokument hat.",
       "area": "Schutzbereich",
-      "areaNone": "keiner",
+      "areaNone": "Keiner",
       "areaUnknown": "Bereich „{key}“ nicht angemeldet – die Dokumente dieser Art sind für alle gesperrt, bis das Modul wieder da ist.",
       "areaNotHeld": "Ändern kann den Schutzbereich nur, wer selbst das Recht „{permission}“ hat.",
       "areaSetHint": "Danach sehen {count, plural, =0 {Dokumente dieser Art} one {das eine Dokument dieser Art} other {die # Dokumente dieser Art}} nur noch Personen mit dem Recht „{permission}“ und die Administration. Das Recht „Akte lesen“ allein genügt nicht mehr.",
@@ -4187,8 +4188,7 @@
         "permanent": "Dauerhaft",
         "consent": "Einwilligung"
       },
-      "foldersMoved": "Ordner legen Sie jetzt direkt in der Akte an: oben in der Ordnerspalte „Neuer Ordner“, an jedem Ordner über „…“ oder mit Rechtsklick. Dort benennen Sie sie auch um, verschieben und löschen sie.",
-      "toFile": "Zur Akte",
+      "foldersInFile": "Ordner in der Akte",
       "snippetsDescription": "Absätze und Standardbriefe, die der Editor auf Wunsch einfügt. Ohne Platzhalter.",
       "createSnippet": "Baustein anlegen",
       "createSnippetTitle": "Baustein anlegen",
@@ -4330,7 +4330,8 @@
     "common": {
       "moduleInactiveTitle": "Modul Finanzen ist nicht aktiv",
       "moduleInactiveText": "Aktivieren Sie das Modul unter Einrichtung → Module. Vorhandene Daten bleiben erhalten.",
-      "openModules": "Module öffnen"
+      "openModules": "Module öffnen",
+      "ibanEndsWith": "IBAN endet auf {last}"
     },
     "remedy": {
       "restIntoLastRow": "Rest in diese Zeile eintragen",
@@ -4416,15 +4417,15 @@
         "business": "Wirtschaftlicher Geschäftsbetrieb"
       },
       "tax": "Umsatzsteuer",
-      "taxNone": "keine Angabe",
+      "taxNone": "Keine Angabe",
       "taxCode": {
-        "none": "keine Umsatzsteuer",
-        "exemptCounted": "steuerfrei, zählt zur Kleinunternehmergrenze",
-        "exemptNotCounted": "steuerfrei, zählt nicht zur Kleinunternehmergrenze",
-        "reduced": "ermäßigter Satz",
-        "standard": "regulärer Satz",
+        "none": "Keine Umsatzsteuer",
+        "exemptCounted": "Steuerfrei, zählt zur Kleinunternehmergrenze",
+        "exemptNotCounted": "Steuerfrei, zählt nicht zur Kleinunternehmergrenze",
+        "reduced": "Ermäßigter Satz",
+        "standard": "Regulärer Satz",
         "rc13b": "Reverse Charge (§ 13b)",
-        "icAcquisition": "innergemeinschaftlicher Erwerb"
+        "icAcquisition": "Innergemeinschaftlicher Erwerb"
       },
       "contact": "Spender/Empfänger",
       "project": "Projekt",
@@ -5868,7 +5869,7 @@
         "statementOf": "{amount} (Auszug bis {date})",
         "matches": "stimmt",
         "cash": "kein Auszug — Kasse wird gezählt",
-        "noStatement": "noch kein Auszug",
+        "noStatement": "kein Auszug für diesen Zeitraum",
         "differs": "Nach dem Festschreiben weicht der Buchbestand von {account} um {difference} vom Auszug bis {date} ab. Das kann richtig sein, wenn noch Umsätze offen sind.",
         "negative": "Das Konto {account} stünde danach bei {amount}. Meist fehlt ein Auszug.",
         "numbers": "{count, plural, one {# Nummer wird} other {# Nummern werden}} vergeben.",
@@ -6818,7 +6819,7 @@
         "waiver": "Sie verzichten auf die Erstattung und bekommen dafür eine Zuwendungsbestätigung.",
         "hint": {
           "submitted": "Ein eingereichter Antrag lässt sich nicht mehr ändern. Er wartet auf die Freigabe; bei Fragen wenden Sie sich an die Person, die freigibt.",
-          "approved": "Der Antrag ist freigegeben. Die Überweisung auf {iban} folgt.",
+          "approved": "Der Antrag ist freigegeben. Die Überweisung auf <iban></iban> folgt.",
           "approvedWaiver": "Der Antrag ist freigegeben. Ihre Zuwendungsbestätigung stellt der Verein aus.",
           "paid": "Der Betrag ist überwiesen.",
           "rejected": "Der Antrag ist abgelehnt. Sie können ihn als Entwurf kopieren, ändern und neu einreichen."
@@ -7155,7 +7156,7 @@
       },
       "head": {
         "receivedAt": "eingegangen am {at}",
-        "iban": "Erstattung auf {iban}",
+        "iban": "Erstattung auf <iban></iban>",
         "noIban": "Verzicht – es wird nichts überwiesen."
       },
       "ibanUnknown": "IBAN ist neu für diese Person.",

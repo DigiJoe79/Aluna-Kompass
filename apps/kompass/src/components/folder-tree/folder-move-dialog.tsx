@@ -1,6 +1,6 @@
 'use client';
 
-import { CircleSlash, Folder, FolderMinus, Inbox } from 'lucide-react';
+import { Folder, FolderMinus, Inbox } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useMemo, useState, useSyncExternalStore, useTransition } from 'react';
 import { FormActionBar } from '@/components/forms/form-action-bar';
@@ -191,7 +191,8 @@ function MoveDialogBody({
   }, [showLocation, subject, rootKind, t]);
 
   // Dokumente: Eingangskorb oder „Ohne Ordner“ (Stufe 1, Auftrag 7) — dasselbe Zeichen wie im Baum der Akte.
-  const RootIcon = subject.kind === 'folder' ? Folder : subject.kind === 'documents' ? (rootKind === 'inbox' ? Inbox : FolderMinus) : CircleSlash;
+  // „Ohne Ordner“ in Akte und Mediathek mit demselben Symbol, Ordner mit Minus (Designer 2026-10-16, Teil 1 Nr. 4).
+  const RootIcon = subject.kind === 'folder' ? Folder : subject.kind === 'documents' && rootKind === 'inbox' ? Inbox : FolderMinus;
   const kind = subject.kind === 'assets' ? 'files' : 'documents';
   const unit = unitProp ?? { one: t(`unit.${kind}.one`), many: t(`unit.${kind}.many`) };
 

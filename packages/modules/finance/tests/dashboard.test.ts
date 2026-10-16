@@ -435,9 +435,10 @@ describe('finance partner payment dashboard tiles (F7 Task 5, Annahme 6, 13)', (
 
     const purpose = unwrap(await createPurpose(f.deps, f.ctx, { name: 'Zweck im Minus' }));
     unwrap(await bookEntry(f.deps, f.ctx, { entryDate: '2026-02-01', text: 'Ausgabe ohne Deckung', moneyLines: [{ accountId: f.bank.id, amountCents: -2000 }], allocationLines: [{ categoryId: f.programCosts.id, amountCents: -2000, purposeId: purpose.id }], reason: 'Vorschuss aus freien Mitteln (Befund Q)' }));
-    // Entscheidung 8: mit „Finanzen lesen“ je Zweck eine Zeile, sonst nur Anzahl und Summe.
+    // Entscheidung 8: mit „Finanzen lesen“ je Zweck eine Zeile, sonst nur Anzahl und Summe — die Summe ohne Minus, das
+    // Wort „im Minus“ sagt die Richtung (Designer 2026-10-16, Teil 1 Nr. 1).
     expect(await tile.load(f.deps, f.ctx, {})).toEqual({ kind: 'list', lines: [{ titleKey: 'line', values: { name: 'Zweck im Minus', amount: formatEuro(-2000) }, href: '/finance/purposes' }], total: 1, href: '/finance/purposes' });
-    expect(await tile.load(f.deps, { ...f.ctx, permissions: new Set(['finance.overview']) }, {})).toEqual({ kind: 'status', tone: 'warning', messageKey: 'negative', values: { count: 1, sum: formatEuro(-2000) }, href: '/finance/purposes' });
+    expect(await tile.load(f.deps, { ...f.ctx, permissions: new Set(['finance.overview']) }, {})).toEqual({ kind: 'status', tone: 'warning', messageKey: 'negative', values: { count: 1, sum: formatEuro(2000) }, href: '/finance/purposes' });
   });
 
   it('reserve cap tile reports the used share from warnAtPercent (F8b Annahme 12)', async () => {

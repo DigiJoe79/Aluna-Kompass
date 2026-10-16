@@ -240,7 +240,8 @@ const purposesNegativeTile: DashboardTile<Record<string, never>> = {
     const negative = purposeBalancesAt(deps.db, today).filter((p) => p.balanceCents < 0);
     if (!hasPermission(ctx, 'finance.read')) {
       if (negative.length === 0) return { kind: 'status', tone: 'neutral', messageKey: 'ok', href: '/finance/purposes' };
-      const sumCents = negative.reduce((sum, p) => sum + p.balanceCents, 0);
+      // Ohne Vorzeichen: „im Minus“ sagt die Richtung schon (Designer 2026-10-16, Teil 1 Nr. 1; MUSTER § Beträge).
+      const sumCents = negative.reduce((sum, p) => sum - p.balanceCents, 0);
       return { kind: 'status', tone: 'warning', messageKey: 'negative', values: { count: negative.length, sum: formatEuro(sumCents) }, href: '/finance/purposes' };
     }
     const names = new Map(deps.db.select({ id: financePurposes.id, name: financePurposes.name }).from(financePurposes).all().map((p) => [p.id, p.name] as const));

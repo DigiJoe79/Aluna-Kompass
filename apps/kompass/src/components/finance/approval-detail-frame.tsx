@@ -10,8 +10,8 @@ export interface ApprovalDetailHead {
   person: string;
   /** „eingegangen am …“ */
   received: string;
-  /** Eine Zeile unter der Person, etwa die maskierte Erstattungs-IBAN. */
-  note?: string;
+  /** Eine Zeile unter der Person, etwa die maskierte Erstattungs-IBAN (mit Vorleser-Satz, daher ein Knoten). */
+  note?: ReactNode;
 }
 
 /** Die Fußleiste der Freigabe: Entscheidung ablehnen oder freigeben, mit dem Satz, was danach geschieht. */
@@ -49,7 +49,7 @@ export function ApprovalDetailFrame({ head, headRef, children, requirements, foo
         <p className="text-body text-ink">{head.person}</p>
         <p className="text-hint text-muted-ink">
           {head.received}
-          {head.note ? ` · ${head.note}` : ''}
+          {head.note ? <> · {head.note}</> : null}
         </p>
       </div>
       <div className="space-y-4">{children}</div>
