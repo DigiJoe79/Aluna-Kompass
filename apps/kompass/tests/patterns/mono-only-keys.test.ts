@@ -27,8 +27,6 @@ const SHORTCUT = 'Tastenkürzel (MUSTER § Schrift).';
 const ALLOWED: CountedAllowlist = {
   'app/error.tsx': { count: 2, reason: STATUS },
   'app/(shell)/error.tsx': { count: 2, reason: STATUS },
-  'app/(shell)/not-found.tsx': { count: 1, reason: STATUS },
-  'components/forbidden-card.tsx': { count: 2, reason: `${STATUS} Dazu der Schlüssel des fehlenden Rechts.` },
   'app/setup/setup-form.tsx': { count: 1, reason: LOCALE },
   'app/setup/import/import-form.tsx': { count: 1, reason: 'Umgebungsname des Backups (`production`, …) — Schlüssel.' },
   'app/(shell)/admin/locales/locales-client.tsx': { count: 2, reason: LOCALE },

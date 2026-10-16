@@ -1,24 +1,37 @@
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
+import { EmptyState } from '@/components/empty-state';
 import { HydrationMarker } from '@/components/hydration-marker';
+import { KeyLine } from '@/components/key-line';
+import { StatusBadge } from '@/components/status-badge';
 import { buttonVariants } from '@/components/ui/button';
+import { nameOrEmpty } from '@/lib/name-or-empty';
 
+/**
+ * Fehlendes Recht (MUSTER § Seitenrahmen): die Zustandskarte (`EmptyState state`, Designer Stufe 2 Nr. 13). Das Recht
+ * steht im Klartext im Satz, der Schlüssel klein darunter — ein Satz statt zweier, die dasselbe sagten (01 B15).
+ */
 export function ForbiddenCard({ permission }: { permission: string }) {
   const t = useTranslations('errors.pages.forbidden');
+  const root = useTranslations();
+  const labelKey = `permissions.keys.${permission}.label`;
+  const label = nameOrEmpty(root.has(labelKey) ? root(labelKey) : null, permission);
   return (
-    <section className="flex min-h-[320px] flex-col gap-3 rounded-lg border border-line bg-surface p-7">
-      <div className="flex items-center gap-2 text-hint">
-        <span className="rounded-sm bg-warning-bg px-1.5 py-0.5 font-mono font-semibold text-warning">403</span>
-        <span className="text-muted-ink">{t('kicker')}</span>
-      </div>
-      <h1 className="font-heading text-page-title">{t('title')}</h1>
-      <p className="text-body text-ink-2">{t('text')}</p>
-      <code className="w-fit rounded-md bg-code px-2 py-1 font-mono text-hint">{permission}</code>
-      <div className="mt-auto flex items-center gap-3">
-        <Link href="/" className={buttonVariants()}>{t('home')}</Link>
-        <span className="text-hint text-muted-ink">{t('footnote')}</span>
-      </div>
+    <>
+      <EmptyState
+        state={{
+          mark: <StatusBadge tone="warning">{t('kicker')}</StatusBadge>,
+          title: t('title'),
+          text: t('text', { permission: label }),
+          detail: <KeyLine>{permission}</KeyLine>,
+          primary: (
+            <Link href="/" className={buttonVariants()}>
+              {t('home')}
+            </Link>
+          ),
+        }}
+      />
       <HydrationMarker />
-    </section>
+    </>
   );
 }

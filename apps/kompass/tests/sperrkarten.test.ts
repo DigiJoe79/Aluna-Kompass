@@ -8,16 +8,16 @@ import { openingTags, read, relative, sourceFiles, SRC } from './patterns/source
  * steht nie in einem `<Page …>` mit `header`.
  */
 describe('Sperrkarten stehen ohne Seitentitel', () => {
-  it('kein <Page header=…> um ForbiddenCard/ModuleInactiveCard', () => {
+  it('kein <Page header=…> um ForbiddenCard/ModuleInactiveCard/EmptyState state', () => {
     const files = [path.join(SRC, 'app'), path.join(SRC, 'components')].flatMap((dir) => sourceFiles(dir));
     const bad = files.flatMap((file) => {
       const text = read(file);
-      if (!/<(ForbiddenCard|ModuleInactiveCard)\b/.test(text)) return [];
+      if (!/<(ForbiddenCard|ModuleInactiveCard)\b|<EmptyState\s+state=/.test(text)) return [];
       return openingTags(text, /Page/)
         .filter(({ tag }) => /\sheader=/.test(tag))
         .filter(({ line }) => {
           const rest = text.split('\n').slice(line - 1, line + 2).join('\n');
-          return /<(ForbiddenCard|ModuleInactiveCard)\b/.test(rest);
+          return /<(ForbiddenCard|ModuleInactiveCard)\b|<EmptyState\s+state=/.test(rest);
         })
         .map(({ line }) => `${relative(file)}:${line}`);
     });

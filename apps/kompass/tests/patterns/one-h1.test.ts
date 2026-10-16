@@ -12,10 +12,8 @@ const ALLOWED: Allowlist = {
   'components/page-header.tsx': 'Hier steht der Seitentitel.',
   'components/auth-card.tsx': 'Anmelde- und Einrichtungsseiten außerhalb der Schale, ohne PageHeader.',
   'app/global-error.tsx': 'Ersetzt das Wurzel-Layout samt Schale, ohne Bausteine und Tokens; ihr Titel ist das einzige h1.',
-  'components/forbidden-card.tsx': 'Ersetzt den Seiteninhalt bei fehlendem Recht; steht nie unter einem PageHeader (tests/sperrkarten.test.ts).',
-  'components/module-inactive-card.tsx': 'Ersetzt den Seiteninhalt bei ausgeschaltetem Modul; steht nie unter einem PageHeader (tests/sperrkarten.test.ts).',
+  'components/empty-state.tsx': 'Zustandskarte (`state`: 404, 403, Modul aus) ersetzt den Seiteninhalt; steht nie unter einem PageHeader (tests/sperrkarten.test.ts).',
   'app/(shell)/error.tsx': 'Fehlerseite der Schale ohne PageHeader; ihr Titel ist der Seitentitel.',
-  'app/(shell)/not-found.tsx': '„Nicht gefunden“ der Schale ohne PageHeader; ihr Titel ist der Seitentitel.',
 };
 
 describe('ein h1 je Seite', () => {

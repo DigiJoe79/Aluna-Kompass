@@ -60,20 +60,18 @@ describe('Familie der Rollen', () => {
   });
 });
 
-/** `font-heading` nur in den acht Bausteinen (Designer § 9.4, § 11: dazu die Brotkrume); DialogTitle/SheetTitle in components/ui. */
+/** `font-heading` nur in den sieben Bausteinen (die Zustandskarte in `empty-state.tsx` vereint seit Stufe 2 Nr. 13 Sperrkarte, Modul aus und 404) (Designer § 9.4, § 11: dazu die Brotkrume); DialogTitle/SheetTitle in components/ui. */
 const HEADING_HOMES = new Set([
   'components/section.tsx',
   'components/page-header.tsx',
   'components/ui/dialog.tsx',
   'components/ui/sheet.tsx',
   'components/auth-card.tsx',
-  'components/forbidden-card.tsx',
-  'components/module-inactive-card.tsx',
+  'components/empty-state.tsx',
   'components/shell/topbar.tsx',
 ]);
 const HEADING_ALLOWED: Allowlist = {
   'app/(shell)/error.tsx': 'Fehlerseite der Schale ohne PageHeader; Titel als h1 in der Rolle Seitentitel (Designer § 9.4).',
-  'app/(shell)/not-found.tsx': '„Nicht gefunden“ der Schale ohne PageHeader; Titel als h1 in der Rolle Seitentitel (Designer § 9.4).',
   'app/(shell)/admin/settings/settings-form.tsx': 'Kein Klassenname: Feldart `font-heading` (Auswahl der Überschriftenschrift, `case \'font-heading\'`) — der Wächter liest den Text, nicht die Klasse.',
 };
 

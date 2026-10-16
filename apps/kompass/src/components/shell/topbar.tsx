@@ -48,7 +48,8 @@ export function Topbar({ organization, logoUrl, crumbs, user, build, version, dr
           <Menu className="size-4" />
         </button>
       ) : null}
-      <div className="flex h-[30px] shrink-0 items-center gap-2.5 border-r border-line pr-3.5">
+      {/* Der Trennstrich nur, wenn eine Brotkrume folgt — sonst stünde er ins Leere (01 B16). */}
+      <div className={cn('flex h-[30px] shrink-0 items-center gap-2.5', crumbs.length > 0 && 'border-r border-line pr-3.5')}>
         {logoUrl ? (
           <img src={logoUrl} alt={t('nav.logoAlt')} className="size-[26px] shrink-0 rounded-sm object-contain" />
         ) : (

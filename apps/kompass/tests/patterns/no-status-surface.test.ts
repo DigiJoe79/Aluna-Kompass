@@ -21,7 +21,6 @@ const ALLOWED: CountedAllowlist = {
   'components/finance/balance-indicator.tsx': { count: 2, reason: 'Zustand eines Werts (Saldo), keine Meldung.' },
   'components/finance/limit-progress.tsx': { count: 1, reason: 'Grenzmarke im Fortschrittsbalken, keine Meldung.' },
   'components/forms/form-error-summary.tsx': { count: 2, reason: 'Selbst Baustein (Fehlerzusammenfassung, MUSTER § A).' },
-  'components/forbidden-card.tsx': { count: 1, reason: 'Selbst Baustein (403-Kennung).' },
   'app/error.tsx': { count: 1, reason: 'Fehlergrenze (500-Kennung).' },
   'components/site/site-job-indicator.tsx': { count: 2, reason: 'Kopfzeilen-Anzeige „n nicht publiziert“ (Board Vorschläge 8a, Designer 2026-10-10): ein Zustand der Webseite in der Hülle, keine Meldung.' },
   'app/(shell)/error.tsx': { count: 2, reason: 'Fehlergrenze (Rahmen und 500-Kennung).' },

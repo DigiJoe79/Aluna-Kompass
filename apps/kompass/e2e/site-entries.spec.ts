@@ -102,7 +102,8 @@ test('Leser sehen Sammlungen ohne Bearbeiten-Knöpfe, ohne Leserecht keine Vorsc
 
   await loginFirstTime(page, 'mira@kompass.local', miraPw);
   await page.goto('/site/publish/preview');
-  await expect(page.getByText('403')).toBeVisible();
+  // Die Zustandskarte nennt den Zustand als Marke und Titel, nicht als Statuscode (Designer Stufe 2 Nr. 13).
+  await expect(page.getByRole('heading', { level: 1, name: 'Diese Seite ist für Ihre Rolle nicht freigegeben.' })).toBeVisible();
   expect((await page.request.get('/site/preview/')).status()).toBe(403);
 
   await loginFirstTime(page, 'peter@kompass.local', peterPw);

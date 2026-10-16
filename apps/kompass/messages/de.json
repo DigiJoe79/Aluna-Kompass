@@ -759,9 +759,8 @@
       "forbidden": {
         "kicker": "Kein Recht",
         "title": "Diese Seite ist für Ihre Rolle nicht freigegeben.",
-        "text": "Das nötige Recht steht unten. Damit kann die Administration Ihre Rolle anpassen.",
-        "home": "Zurück zur Startseite",
-        "footnote": "Rechte ändert die Administration unter Rollen."
+        "text": "Ihrer Rolle fehlt das Recht „{permission}“. Die Administration kann es Ihrer Rolle geben.",
+        "home": "Zur Startseite"
       },
       "notFound": {
         "kicker": "Nicht gefunden",
@@ -769,6 +768,15 @@
         "text": "Protokollierte Daten werden nicht gelöscht — wenn Sie einen Vorgang suchen, hilft das Änderungsprotokoll.",
         "home": "Startseite",
         "audit": "Protokoll öffnen"
+      },
+      "routeNotFound": {
+        "kicker": "Nicht gefunden",
+        "title": "Diese Seite gibt es nicht.",
+        "text": "Prüfen Sie die Adresse oder wählen Sie einen Bereich in der Navigation.",
+        "home": "Startseite"
+      },
+      "moduleInactive": {
+        "kicker": "Modul aus"
       },
       "technical": {
         "kicker": "Technischer Fehler",

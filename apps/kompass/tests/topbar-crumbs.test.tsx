@@ -44,3 +44,14 @@ describe('Brotkrume der Kopfleiste', () => {
     expect(within(nav).getByText('Tiere').getAttribute('aria-current')).toBeNull();
   });
 });
+
+// 01 B16: Ohne Brotkrume (unbekannte Adresse) steht kein Trennstrich nach dem Vereinsnamen ins Leere.
+describe('Trennstrich der Kopfleiste', () => {
+  it('nur, wenn eine Brotkrume folgt', () => {
+    renderTopbar([]);
+    expect(screen.getByText('LOGO').parentElement!.className).not.toContain('border-r');
+    cleanup();
+    renderTopbar([{ label: 'Tiere', href: '/animals', current: true }]);
+    expect(screen.getByText('LOGO').parentElement!.className).toContain('border-r');
+  });
+});
