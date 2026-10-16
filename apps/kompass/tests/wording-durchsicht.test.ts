@@ -32,6 +32,11 @@ describe('Wortlaut der Durchsicht 0.2.11', () => {
     expect(at('errors.fields.slugRequired')).toBe('Bitte einen URL-Teil eingeben.');
   });
 
+  it('Wiedervorlage ohne Zuständige heißt „Niemand Bestimmtes“, nicht „Alle“ (03 B37, Joe)', () => {
+    expect(at('dms.followUps.unassigned')).toBe('Niemand Bestimmtes');
+    expect((messages.dms.followUps as Record<string, string>).everyone).toBeUndefined();
+  });
+
   it('verdeckte IBAN für Vorleser (Teil 1 Nr. 3)', () => {
     expect(at('finance.common.ibanEndsWith')).toBe('IBAN endet auf {last}');
   });

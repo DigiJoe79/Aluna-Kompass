@@ -27,7 +27,7 @@ test.describe('follow-ups', () => {
     // grenzt die Wahl ein.
     const followUpsRow = sheet.getByRole('listitem').filter({ hasText: 'Fällig' });
     await followUpsRow.getByRole('switch', { name: 'Nur meine' }).click();
-    // Der Seed setzt keine Zuständige: „gilt allen“ ist nicht „meine“.
+    // Der Seed setzt keine Zuständige: „niemand Bestimmtes“ ist nicht „meine“.
     await expect(page.getByTestId('dashboard-tile-core-followUps').getByText('Nichts fällig.')).toBeVisible();
     await page.reload();
     await page.getByRole('button', { name: 'Anpassen' }).click();
