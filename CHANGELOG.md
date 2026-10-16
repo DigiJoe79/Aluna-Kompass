@@ -32,6 +32,9 @@ die Nummern folgen [Semantic Versioning](https://semver.org/lang/de/). Vor
 - **„Verwerfen“ nur bei Änderungen.** Die Speicherleiste zeigt „Verwerfen“
   erst, wenn im Formular etwas geändert ist; beim Anlegen gibt es nur
   „Abbrechen“. Die Buchungsmaske behält ihre Knöpfe.
+- **Mehrsprachige Felder einheitlich.** Das Sprachkürzel („DE“, „EN“) steht
+  bei allen mehrsprachigen Feldern rechts über der Eingabe, ein- wie
+  mehrzeilig.
 - **Gemeinschaftskonto.** Gehört eine IBAN mehreren Kontakten
   (Gemeinschaftskonto), schlägt der Import keinen Kontakt mehr vor, statt still
   den zuletzt verknüpften zu nehmen.

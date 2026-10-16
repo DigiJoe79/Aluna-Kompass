@@ -2,7 +2,8 @@
 
 import type { LocalizedText } from '@kompass/core';
 import { useLocale, useTranslations } from 'next-intl';
-import { useState, type ComponentProps } from 'react';
+import { useState, type ReactNode } from 'react';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
@@ -57,34 +58,19 @@ export function useLanguageName(): (code: string) => string {
 export const LOCALE_CODE = 'bg-badge font-mono text-key font-semibold text-badge-ink';
 
 /**
- * Einzeilige Eingabe einer Sprache: das Kürzel steht links im Feld als Präfix, aufgebaut wie das „€“ im
- * Betragsfeld (`finance/amount-field.tsx`). So liegen alle Eingaben einer Rasterzeile auf einer Linie
- * (docs/MUSTER.md § J). Den zugänglichen Namen bringt `aria-label` mit, das Kürzel selbst ist verborgen.
+ * Die Labelzeile einer Sprache (Designer 2026-10-16, Teil 2 Nr. 8; docs/MUSTER.md § J): links das Label des Feldes —
+ * nur über der ersten Sprache —, rechts das Kürzel als `<label>` der Eingabe. Ein- und mehrzeilige Felder sehen so
+ * gleich aus, und die Eingaben einer Rasterzeile liegen auf einer Linie. Den zugänglichen Namen der Eingabe bringt ihr
+ * `aria-label` mit („‹Label› (‹Sprachname›)“).
  */
-export function LocaleInput({ locale, invalid, ...props }: ComponentProps<'input'> & { locale: string; invalid?: boolean }) {
+export function LocaleLabel({ htmlFor, locale, children }: { htmlFor: string; locale: string; children?: ReactNode }) {
   return (
-    <div
-      className={cn(
-        'flex h-[var(--field-h)] min-w-0 items-stretch overflow-hidden rounded-md border bg-field transition-colors',
-        'has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-focus',
-        // Feldrahmen im Fehlerzustand wie `ui/input`: aus `aria-invalid` am Feld, nicht aus einer eigenen Bedingung.
-        'border-line-strong has-[[aria-invalid=true]]:border-error',
-      )}
-    >
-      <span aria-hidden="true" className={cn('flex min-w-12 shrink-0 items-center justify-center border-r border-line px-1.5', LOCALE_CODE)}>
-        {locale.toUpperCase()}
-      </span>
-      <input type="text" aria-invalid={invalid || undefined} {...props} className="w-full min-w-0 flex-1 bg-transparent px-2.5 text-[length:var(--field-font)] text-ink outline-none" />
+    <div className="flex min-h-5 items-end justify-between gap-2">
+      {children ?? <span />}
+      <Label htmlFor={htmlFor} className="shrink-0">
+        <span className={cn('rounded-sm px-1.5 py-0.5', LOCALE_CODE)}>{locale.toUpperCase()}</span>
+      </Label>
     </div>
-  );
-}
-
-/** Das Kürzel über einem mehrzeiligen Feld — dort bliebe ein Präfix nicht bündig mit der ersten Zeile. */
-export function LocaleLabel({ htmlFor, locale }: { htmlFor: string; locale: string }) {
-  return (
-    <Label htmlFor={htmlFor} className="self-start">
-      <span className={cn('rounded-sm px-1.5 py-0.5', LOCALE_CODE)}>{locale.toUpperCase()}</span>
-    </Label>
   );
 }
 
@@ -119,6 +105,17 @@ export function LocalizedField({
   const [previewLocale, setPreviewLocale] = useState<string>(leading);
   const [activeTab, setActiveTab] = useState<string>(leading);
   const error = errors?.[name] ?? errors?.[`${name}.${leading}`];
+  const tabbed = locales.length >= 4;
+  const fieldLabel = (
+    <span className="min-w-0 text-meta font-semibold text-ink-2">
+      {label}
+      {required ? (
+        <span aria-hidden="true" className="ml-1.5 font-semibold text-brand-accent">
+          *
+        </span>
+      ) : null}
+    </span>
+  );
 
   const field = (locale: string) => {
     const id = `${name}-${locale}`;
@@ -136,17 +133,13 @@ export function LocalizedField({
       'aria-label': t('localizedName', { label, language: languageName(locale) }),
       'aria-describedby': isUntranslated ? hintId : undefined,
     };
-    const isHidden = locales.length >= 4 && locale !== activeTab;
+    const isHidden = tabbed && locale !== activeTab;
     return (
       <div key={locale} className={cn('flex min-w-0 flex-col gap-1', isHidden && 'hidden')}>
-        {kind === 'input' ? (
-          <LocaleInput {...props} locale={locale} invalid={isLeading && !!error} />
-        ) : (
-          <>
-            <LocaleLabel htmlFor={id} locale={locale} />
-            <Textarea {...props} rows={rows} className={cn(kind === 'markdown' && ' text-meta')} />
-          </>
-        )}
+        <LocaleLabel htmlFor={id} locale={locale}>
+          {isLeading && !tabbed ? fieldLabel : undefined}
+        </LocaleLabel>
+        {kind === 'input' ? <Input {...props} type="text" /> : <Textarea {...props} rows={rows} className={cn(kind === 'markdown' && ' text-meta')} />}
         {isUntranslated ? (
           <p id={hintId} className="text-hint text-warning">
             {t('untranslated')}
@@ -159,15 +152,9 @@ export function LocalizedField({
   const perLocale = size ?? (kind === 'input' ? 'm' : 'l');
   return (
     <FormCell size={localizedSize(perLocale, locales.length)} className="flex flex-col gap-1.5">
-      <span className="text-meta font-semibold text-ink-2">
-        {label}
-        {required ? (
-          <span aria-hidden="true" className="ml-1.5 font-semibold text-brand-accent">
-            *
-          </span>
-        ) : null}
-      </span>
-      {locales.length >= 4 ? (
+      {/* Ab vier Sprachen (Reiter) steht das Label über den Reitern, sonst in der Labelzeile der ersten Sprache. */}
+      {tabbed ? fieldLabel : null}
+      {tabbed ? (
         <div className="flex flex-wrap gap-1 border-b border-line pb-1">
           {locales.map((l) => {
             const isUntranslated = l !== leading && (text[leading] ?? '').length > 0 && (text[l] ?? '').length === 0;

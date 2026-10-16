@@ -30,7 +30,6 @@ const ALLOWED: CountedAllowlist = {
   'app/(shell)/finance/donations/run/preview-groups.tsx': { count: 3, reason: 'Gruppenstrich je Gruppe (Wort plus Farbe), keine Meldung.' },
   'components/folder-tree/folder-tree.tsx': { count: 1, reason: 'Leiste beim Verschieben per Tastatur (Zustand mit Tastenkürzeln), keine Meldung.' },
   'components/folder-tree/name-input-row.tsx': { count: 1, reason: 'Feldrahmen im Fehlerzustand wie `ui/input` (aus `aria-invalid`); Höhe der Baumzeile statt `--field-h`, Kandidat für `ui/input`.' },
-  'components/forms/localized-field.tsx': { count: 1, reason: 'Feldrahmen im Fehlerzustand wie `ui/input` (aus `aria-invalid` am Feld); Präfix-Feld, Kandidat für `ui/input`.' },
   'components/finance/amount-field.tsx': { count: 1, reason: 'Feldrahmen im Fehlerzustand wie `ui/input` (aus `aria-invalid` am Feld); Suffix-Feld, Kandidat für `ui/input`.' },
 };
 

@@ -20,7 +20,6 @@ const ALLOWED: CountedAllowlist = {
   'components/drop-overlay.tsx': { count: 1, reason: 'Grafik, keine Schrift: Datei-Symbol' },
   'components/finance/amount-field.tsx': { count: 1, reason: 'Feldschrift wie ui/input (`--field-font`, Spec § 9.3)' },
   'components/folder-tree/folder-field.tsx': { count: 1, reason: 'Feldschrift wie ui/input (`--field-font`, Spec § 9.3)' },
-  'components/forms/localized-field.tsx': { count: 1, reason: 'Feldschrift wie ui/input (`--field-font`, Spec § 9.3)' },
   'components/forms/media-picker.tsx': { count: 1, reason: 'Grafik, keine Schrift: Dateiart als Platzhalterbild' },
   'components/media/asset-grid.tsx': { count: 1, reason: 'Grafik, keine Schrift: Dateiendung als Platzhalterbild' },
   'components/shell/topbar.tsx': { count: 1, reason: 'Grafik, keine Schrift: Platzhalter des Vereinslogos' },

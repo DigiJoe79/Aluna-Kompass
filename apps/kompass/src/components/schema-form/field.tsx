@@ -9,7 +9,7 @@ import { cn } from '@/lib/utils';
 import { FieldError } from '@/components/forms/field-error';
 import type { FieldSize } from '@/components/forms/form-field';
 import { FormCell, FormGrid } from '@/components/forms/form-grid';
-import { LocaleInput, LocaleLabel, languageColumns, localizedSize, useLanguageName } from '@/components/forms/localized-field';
+import { LocaleLabel, languageColumns, localizedSize, useLanguageName } from '@/components/forms/localized-field';
 import { MediaPicker } from '@/components/forms/media-picker';
 import { MarkdownPreview } from '@/components/markdown-preview';
 import { blankFor, setAtPath } from './state';
@@ -69,14 +69,15 @@ function Localized({ path, field, value, errors, locales, onChange, span }: Fiel
     };
     return (
       <div key={locale} className={cn('flex min-w-0 flex-col gap-1', tabbed && locale !== active && 'hidden')}>
-        {isMarkdown ? (
-          <>
-            <LocaleLabel htmlFor={name} locale={locale} />
-            <Textarea {...shared} rows={5} className="text-meta" />
-          </>
-        ) : (
-          <LocaleInput {...shared} locale={locale} invalid={!!error} />
-        )}
+        {/* Kürzel rechts in der Labelzeile, das Label über der ersten Sprache (MUSTER § J, Designer 2026-10-16). */}
+        <LocaleLabel htmlFor={name} locale={locale}>
+          {locale === leading && !tabbed ? (
+            <span id={`${path}-label`} className="min-w-0 text-meta font-semibold text-ink-2">
+              {labelOf(field, path)}
+            </span>
+          ) : undefined}
+        </LocaleLabel>
+        {isMarkdown ? <Textarea {...shared} rows={5} className="text-meta" /> : <Input {...shared} type="text" />}
         {untranslated ? (
           <p id={hintId} className="text-hint text-warning">
             {t('untranslated')}
@@ -88,8 +89,13 @@ function Localized({ path, field, value, errors, locales, onChange, span }: Fiel
   };
 
   return (
-    <FormCell as="fieldset" size={span} className="flex min-w-0 flex-col gap-2">
-      <legend className="text-meta font-semibold text-ink-2">{labelOf(field, path)}</legend>
+    // Gruppe statt `fieldset`: Das Label steht in der Labelzeile der ersten Sprache, ein `legend` muss erstes Kind sein.
+    <FormCell role="group" aria-labelledby={`${path}-label`} size={span} className="flex min-w-0 flex-col gap-2">
+      {tabbed ? (
+        <span id={`${path}-label`} className="text-meta font-semibold text-ink-2">
+          {labelOf(field, path)}
+        </span>
+      ) : null}
       {tabbed ? (
         <div className="flex flex-wrap gap-1 border-b border-line pb-1">
           {locales.map((l) => (
