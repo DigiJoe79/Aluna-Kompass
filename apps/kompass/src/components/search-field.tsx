@@ -2,7 +2,7 @@
 
 import { Search, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
@@ -17,10 +17,25 @@ import { cn } from '@/lib/utils';
  * zurückkommt: Sonst fräße die nachlaufende Adresse die jüngsten Buchstaben. ✕ leert sofort und lässt den Fokus
  * im Feld.
  */
+const PHONE = '(max-width: 639px)';
+
+function subscribePhone(onChange: () => void) {
+  if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return () => {};
+  const media = window.matchMedia(PHONE);
+  media.addEventListener('change', onChange);
+  return () => media.removeEventListener('change', onChange);
+}
+
+/** Unter 640 px (`max-sm`); auf dem Server und ohne `matchMedia` gilt der Rechner. */
+function usePhone(): boolean {
+  return useSyncExternalStore(subscribePhone, () => typeof window.matchMedia === 'function' && window.matchMedia(PHONE).matches, () => false);
+}
+
 export function SearchField({
   value,
   onChange,
   placeholder,
+  placeholderShort,
   delayMs = 250,
   testId,
   className,
@@ -28,11 +43,17 @@ export function SearchField({
   value: string;
   onChange: (value: string) => void;
   placeholder: string;
+  /**
+   * Kurzform für das Telefon (unter 640 px), aus der Sprachdatei: Dort wird gekürzt statt abgeschnitten
+   * („Name, E-Mail …“, Designer 2026-10-16, Teil 2 Nr. 12). Ohne sie gilt `placeholder` überall.
+   */
+  placeholderShort?: string;
   delayMs?: number;
   testId?: string;
   className?: string;
 }) {
   const t = useTranslations('common');
+  const phone = usePhone();
   const [text, setText] = useState(value);
   const sent = useRef(value);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -83,7 +104,7 @@ export function SearchField({
         ref={input}
         type="search"
         aria-label={t('search')}
-        placeholder={placeholder}
+        placeholder={phone && placeholderShort ? placeholderShort : placeholder}
         value={text}
         onChange={(e) => type(e.target.value)}
         data-testid={testId}

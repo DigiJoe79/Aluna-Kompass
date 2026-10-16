@@ -70,7 +70,7 @@ export function ContactList({ contacts, roles, total, unfiltered, offset, pageSi
   return (
     <div className="flex flex-col gap-3">
       <FilterBar
-        search={<SearchField value={query} onChange={(text) => applyFilters({ text })} placeholder={t('searchPlaceholder')} />}
+        search={<SearchField value={query} onChange={(text) => applyFilters({ text })} placeholder={t('searchPlaceholder')} placeholderShort={t('searchPlaceholderShort')} />}
         searchActive={query.trim() ? { chip: query.trim(), onClear: () => applyFilters({ text: '' }) } : undefined}
         filters={[
           selectFilter({

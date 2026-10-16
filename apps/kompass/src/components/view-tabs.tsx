@@ -22,7 +22,12 @@ export function ViewTabs({
 }) {
   return (
     <nav aria-label={label} className="border-b border-line">
-      <div className="flex gap-[22px] overflow-x-auto max-sm:[scrollbar-width:none]">
+      {/*
+        Telefon: Die Reihe läuft bis an den Bildschirmrand statt an der Inhaltskante zu enden — so ist der letzte
+        sichtbare Reiter angeschnitten, und man erkennt, dass es weitergeht (Designer 2026-10-16, Teil 2 Nr. 14).
+        Kein Layout-Test: Einzelstelle, Laufzeit zählt (Projektregel).
+      */}
+      <div className="flex gap-[22px] overflow-x-auto max-sm:-mr-(--shell-pad) max-sm:pr-(--shell-pad) max-sm:[scrollbar-width:none]">
         {tabs.map((tab) => {
           const active = tab.key === current;
           return (

@@ -3763,6 +3763,7 @@
       "forbidden": "Kontakt (kein Zugriff)"
     },
     "searchPlaceholder": "Name, Ort, E-Mail oder Telefon",
+    "searchPlaceholderShort": "Name, E-Mail …",
     "nounOne": "Kontakt",
     "nounOther": "Kontakte",
     "nounDative": "Kontakten"

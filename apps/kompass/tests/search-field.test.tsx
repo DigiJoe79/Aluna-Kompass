@@ -21,6 +21,22 @@ afterEach(() => {
 });
 
 describe('SearchField', () => {
+  // Designer 2026-10-16, Teil 2 Nr. 12 (04 C27): am Telefon die Kurzform aus der Sprachdatei statt abgeschnitten.
+  it('nimmt am Telefon die Kurzform des Platzhalters, am Rechner die lange', () => {
+    const phone = (matches: boolean) => vi.stubGlobal('matchMedia', (query: string) => ({ matches: query === '(max-width: 639px)' && matches, addEventListener() {}, removeEventListener() {} }));
+    try {
+      phone(true);
+      show(<SearchField value="" onChange={vi.fn()} placeholder="Name, Ort, E-Mail oder Telefon" placeholderShort="Name, E-Mail …" />);
+      expect(screen.getByRole('searchbox').getAttribute('placeholder')).toBe('Name, E-Mail …');
+      cleanup();
+      phone(false);
+      show(<SearchField value="" onChange={vi.fn()} placeholder="Name, Ort, E-Mail oder Telefon" placeholderShort="Name, E-Mail …" />);
+      expect(screen.getByRole('searchbox').getAttribute('placeholder')).toBe('Name, Ort, E-Mail oder Telefon');
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
   it('hat den Namen „Suchen“, die Lupe ist Schmuck, der Platzhalter nennt die Felder', () => {
     const { container } = show(<SearchField value="" onChange={vi.fn()} placeholder="Name suchen" />);
     const box = screen.getByRole('searchbox', { name: 'Suchen' });
