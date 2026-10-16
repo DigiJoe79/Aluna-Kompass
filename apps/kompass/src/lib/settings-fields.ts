@@ -109,7 +109,7 @@ export function managedHintKey(key: string): string | null {
 /**
  * Wo ein geführtes Feld gepflegt wird (E-1): der Weg (`href`) und ein
  * Übersetzungsschlüssel unter `settings.managedTarget.*` für den kurzen Namen
- * im Link „geführt unter …“. Finanzamt, Steuernummer, Art und Datum des
+ * im Grund „Geführt in …“ (`ManagedField`). Finanzamt, Steuernummer, Art und Datum des
  * Bescheids führen zu den Bescheiden; IBAN, BIC und Bankname zum Hauptkonto.
  */
 const MANAGED_TARGET: Record<string, { href: string; targetKey: 'notices' | 'accounts' }> = {

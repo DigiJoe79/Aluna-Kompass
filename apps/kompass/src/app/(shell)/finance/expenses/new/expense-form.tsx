@@ -3,6 +3,7 @@
 import type { ExpenseClaimView } from '@kompass/module-finance';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
+import { FixedValue } from '@/components/fixed-value';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { FormActionBar } from '@/components/forms/form-action-bar';
 import { FormField } from '@/components/forms/form-field';
@@ -221,10 +222,10 @@ export function ExpenseForm({
 
   return (
     <div className="space-y-5">
-      <div data-testid="expense-for-whom" className="flex min-h-[var(--field-h)] items-center justify-between gap-3 rounded-md border border-line bg-surface-2 px-3 py-2">
-        <span className="text-meta text-muted-ink">{t('forWhom')}</span>
-        <span className="text-body font-semibold text-ink">{contactName}</span>
-      </div>
+      {/* Es gibt kein Recht, für andere einzureichen (der Dienst nimmt den eigenen Kontakt): fester Wert (E2, 08 B18). */}
+      <FormGrid>
+        <FixedValue id="expense-for-whom" testId="expense-for-whom" label={t('forWhom')} value={t('forWhomValue', { name: contactName })} reason={t('forWhomFixed')} />
+      </FormGrid>
 
       <section aria-labelledby="expense-positions" className="space-y-3">
         <h3 id="expense-positions" className="sr-only">{t('positions')}</h3>

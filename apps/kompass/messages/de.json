@@ -109,8 +109,7 @@
       "notPossible": "nicht möglich"
     },
     "managedField": {
-      "badge": "geführt",
-      "linkText": "geführt unter {label}"
+      "reason": "Geführt in <link>{label}</link>"
     },
     "beforeAfter": {
       "before": "Vorher",
@@ -3942,7 +3941,6 @@
     "editDraft": "Entwurf bearbeiten",
     "editDraftDescription": "Solange nichts festgeschrieben ist, lässt sich jeder Teil des Schreibens ändern.",
     "saveChanges": "Änderungen speichern",
-    "typeFixedHint": "Die Dokumentart steht seit dem Anlegen fest — sie bestimmt Nummernkreis und Aufbewahrung.",
     "preview": "Vorschau",
     "draft": {
       "saveAndPreview": "Speichern und Vorschau aktualisieren",
@@ -4143,6 +4141,7 @@
       "body": "Text",
       "bodyHint": "Markdown: **fett**, _kursiv_, ## Überschrift, - Liste, > Hinweis, | Tabelle |. Bilder, Fußnoten und HTML erscheinen nicht im PDF.",
       "type": "Dokumentart",
+      "typeFixed": "Steht beim Entwurf fest. Für eine andere Art einen neuen Entwurf anlegen.",
       "folder": "Ordner",
       "recipient": "Empfänger",
       "sender": "Absender",
@@ -6729,6 +6728,8 @@
         "intro": "Kompass sichert Ihre Eingaben laufend. Sie können jederzeit aufhören und später weitermachen – auch an einem anderen Gerät.",
         "back": "Eigene Anträge",
         "forWhom": "Für wen?",
+        "forWhomValue": "{name} (Sie selbst)",
+        "forWhomFixed": "Sie reichen Auslagen nur für sich selbst ein.",
         "positions": "Positionen",
         "position": "Position {n}",
         "kind": {
@@ -6865,7 +6866,10 @@
         "back": "Eigene Anträge",
         "title": "Antrag {number}",
         "amount": "Betrag",
-        "waiver": "Sie verzichten auf die Erstattung und bekommen dafür eine Zuwendungsbestätigung.",
+        "waiverLabel": "Verzicht auf Erstattung",
+        "waiverYes": "Ja. Statt Geld bekommen Sie eine Zuwendungsbestätigung über den Betrag.",
+        "waiverNo": "Nein. Der Betrag wird auf das angegebene Konto erstattet.",
+        "waiverFixed": "Festgelegt beim Einreichen am {date}.",
         "hint": {
           "submitted": "Ein eingereichter Antrag lässt sich nicht mehr ändern. Er wartet auf die Freigabe; bei Fragen wenden Sie sich an die Person, die freigibt.",
           "approved": "Der Antrag ist freigegeben. Die Überweisung auf <iban></iban> folgt.",

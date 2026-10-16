@@ -6,7 +6,7 @@ import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { useMemo, useState, useTransition } from 'react';
 import { FormField } from '@/components/forms/form-field';
-import { FormCell, FormGrid } from '@/components/forms/form-grid';
+import { FormGrid } from '@/components/forms/form-grid';
 import { FormCard } from '@/components/forms/form-card';
 import { FormActionBar } from '@/components/forms/form-action-bar';
 import { useActionFeedback } from '@/components/forms/use-action-feedback';
@@ -86,9 +86,7 @@ export function SettingsForm({
       // Befund 32 (0.2.1): ein Datum wie überall im Format des Vereins, nicht als ISO.
       const display = field.kind === 'select' && value ? t(`options.${field.key}.${String(value)}`) : field.kind === 'date' && value ? date(String(value)) : field.key === 'organization.iban' && value ? formatIban(String(value)) : value === null || value === undefined ? '' : String(value);
       return (
-        <FormCell key={field.key} size={field.size}>
-          <ManagedField label={label} value={display} managedBy={{ label: t(`managedTarget.${target.targetKey}`), href: target.href }} />
-        </FormCell>
+        <ManagedField key={field.key} id={id} size={field.size} mono={field.kind === 'mono'} label={label} value={display} managedBy={{ label: t(`managedTarget.${target.targetKey}`), href: target.href }} />
       );
     }
 

@@ -21,17 +21,18 @@ test.describe('animals', () => {
     await page.getByRole('button', { name: 'Speichern' }).click();
     await expect(page).toHaveURL(/\/animals\/[A-Z0-9]+$/);
 
-    const slug = page.getByLabel('URL-Teil');
-    await expect(slug).toHaveAttribute('readonly', '');
-    await expect(slug).toHaveValue(/^wilma-[0-9a-z]{4}$/);
-    const before = await slug.inputValue();
+    // Fester Wert als Text (E2), kein gesperrtes Feld.
+    const slug = page.getByTestId('animal-slug-value');
+    await expect(page.getByRole('group', { name: /URL-Teil/ })).toBeVisible();
+    await expect(slug).toHaveText(/^wilma-[0-9a-z]{4}$/);
+    const before = (await slug.textContent()) ?? '';
 
     await page.getByLabel('Name').fill('Wilhelmine');
     await page.getByRole('button', { name: 'Speichern' }).click();
     await expect(page.getByRole('status')).toContainText('Gespeichert');
     await page.reload();
     await expect(page.locator('html[data-hydrated="true"]')).toBeAttached();
-    await expect(page.getByLabel('URL-Teil')).toHaveValue(before);
+    await expect(page.getByTestId('animal-slug-value')).toHaveText(before);
   });
 
   test('zwei Hunde mit gleichem Namen werden beide angelegt', async ({ page }) => {

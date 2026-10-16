@@ -2,29 +2,46 @@
 
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
-import { EMPTY } from '@/components/empty-value';
+import { FixedValue } from '@/components/fixed-value';
+import type { FieldSize } from '@/components/forms/form-field';
 
 /**
- * Ein Feld, das ein eingeschaltetes Modul führt (`managedSettings`, E-1):
- * der Wert steht als Text auf `--surface-2` mit gestricheltem Rahmen, daneben
- * das Kennzeichen „geführt“, darunter „geführt unter …“ als Link zur Stelle,
- * die den Wert pflegt. Kein Eingabeelement — per Tab ist nur der Link
- * erreichbar, nie das Wertfeld.
+ * Ein Feld, das ein eingeschaltetes Modul führt (`managedSettings`, E-1): ein `FixedValue` (Entwurf E2) mit dem
+ * Grund „Geführt in …“ als Link zur Stelle, die den Wert pflegt. Das Wort „geführt“ steht nicht mehr im Wert.
+ * Kein Eingabeelement — per Tab ist nur der Link erreichbar.
  */
-export function ManagedField({ label, value, managedBy }: { label: string; value: string; managedBy: { label: string; href: string } }) {
+export function ManagedField({
+  id,
+  label,
+  value,
+  managedBy,
+  mono,
+  size,
+}: {
+  id: string;
+  label: string;
+  value: string;
+  managedBy: { label: string; href: string };
+  mono?: boolean;
+  size?: FieldSize;
+}) {
   const t = useTranslations('common.managedField');
   return (
-    <div className="flex flex-col gap-1.5">
-      <div className="flex items-center gap-2">
-        <span className="text-meta font-semibold text-ink-2">{label}</span>
-        <span className="rounded-sm bg-badge px-1.5 py-0.5 text-hint font-semibold text-badge-ink">{t('badge')}</span>
-      </div>
-      <p data-testid="managed-field-value" className="flex h-[var(--field-h)] w-full items-center rounded-md border border-dashed border-line bg-surface-2 px-2.5 text-body text-ink">
-        {value.trim() === '' ? EMPTY : value}
-      </p>
-      <Link href={managedBy.href} className="w-fit text-hint font-semibold text-ink underline underline-offset-2">
-        {t('linkText', { label: managedBy.label })}
-      </Link>
-    </div>
+    <FixedValue
+      id={id}
+      label={label}
+      value={value}
+      mono={mono}
+      size={size}
+      testId="managed-field"
+      reason={t.rich('reason', {
+        link: (chunks) => (
+          <Link href={managedBy.href} className="text-link underline underline-offset-2">
+            {chunks}
+          </Link>
+        ),
+        label: managedBy.label,
+      })}
+    />
   );
 }

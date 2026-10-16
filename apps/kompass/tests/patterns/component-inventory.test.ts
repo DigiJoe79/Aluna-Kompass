@@ -114,6 +114,7 @@ const INVENTORY: Readonly<Record<string, Entry>> = {
   'list-pager.tsx': neu('L', 'Designer 2026-10-08, HANDOFF § 8e.1'),
   'list-truncated.tsx': neu('L', 'Designer 2026-10-08, HANDOFF § 8e.1 (aus admin/media nach components/)'),
   'managed-field.tsx': bestand('E'),
+  'fixed-value.tsx': neu('E', 'Entwurf E2 „Fester Wert als Text“, Designer 2026-10-17 (durchsicht-0.2.11/entwuerfe)'),
   'markdown-preview.tsx': bestand('Fachbaustein'),
   'media/asset-grid.tsx': bestand('Fachbaustein'),
   'media/crop-editor.tsx': neu('Fachbaustein', 'Designer 2026-10-10, Handover design_handoff_ausschnitt (Dialog Bildausschnitt)'),

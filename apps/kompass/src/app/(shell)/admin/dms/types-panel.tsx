@@ -1,6 +1,7 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
+import { FixedValue } from '@/components/fixed-value';
 import { type ChangeEvent, useActionState, useState, useTransition } from 'react';
 import { Notice } from '@/components/notice';
 import { FormActionBar } from '@/components/forms/form-action-bar';
@@ -308,24 +309,23 @@ export function TypesPanel({
 
               <Section title={t('typeSections.identity')}>
                 <FormGrid>
-                  <FormField id="edit-key" label={t('typeColumns.key')} hint={t('typeImmutableHint')} size="s">
-                    <Input id="edit-key" value={editingType.key} disabled />
+                  {/* Schlüssel und Kürzel eines Moduls stehen fest: fester Wert statt gesperrtem Feld (E2). */}
+                  <FixedValue id="edit-key" label={t('typeColumns.key')} value={editingType.key} reason={t('typeImmutableHint')} mono size="s" />
+                  {editingType.ownerModule ? (
+                    <FixedValue id="edit-prefix" label={t('typeColumns.prefix')} value={editingType.prefix} reason={t('ownedByModule', { module: moduleName(editingType.ownerModule) })} mono size="s" />
+                  ) : (
+                  <FormField id="edit-prefix" label={t('typeColumns.prefix')} hint={t('prefixHint')} size="s">
+                    <Input
+                      id="edit-prefix"
+                      name="prefix"
+                      maxLength={3}
+                      className="font-mono"
+                      defaultValue={editingType.prefix}
+                      required
+                      onChange={toUpper}
+                    />
                   </FormField>
-                  <FormField id="edit-prefix" label={t('typeColumns.prefix')} hint={editingType.ownerModule ? undefined : t('prefixHint')} size="s">
-                    {editingType.ownerModule ? (
-                      <Input id="edit-prefix" value={editingType.prefix} disabled />
-                    ) : (
-                      <Input
-                        id="edit-prefix"
-                        name="prefix"
-                        maxLength={3}
-                        className="font-mono"
-                        defaultValue={editingType.prefix}
-                        required
-                        onChange={toUpper}
-                      />
-                    )}
-                  </FormField>
+                  )}
                   <FormField id="edit-label" label={t('typeColumns.label')}>
                     <Input id="edit-label" name="label" defaultValue={editingType.label} required />
                   </FormField>

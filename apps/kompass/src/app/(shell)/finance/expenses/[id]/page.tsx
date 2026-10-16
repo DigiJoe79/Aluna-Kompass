@@ -1,6 +1,7 @@
 import { hasPermission } from '@kompass/core';
 import { getExpenseClaim } from '@kompass/module-finance';
 import { getTranslations } from 'next-intl/server';
+import { FixedValue } from '@/components/fixed-value';
 import { ibanLastFour, maskedIban } from '@/lib/finance/iban-check';
 import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
@@ -63,7 +64,17 @@ export default async function ExpenseClaimPage({ params }: { params: Promise<{ i
             {formatEuro(claim.totalCents)}
           </p>
           <ClaimState claim={claim} fmt={fmt} />
-          {claim.waiver ? <p className="text-body text-ink-2">{t('waiver')}</p> : null}
+          {/* Nach dem Einreichen steht der Verzicht fest: Satz statt Schalter (E2, 08 B19). */}
+          {claim.submittedAt ? (
+            <FixedValue
+              id="claim-waiver"
+              testId="claim-waiver"
+              size="full"
+              label={t('waiverLabel')}
+              value={claim.waiver ? t('waiverYes') : t('waiverNo')}
+              reason={t('waiverFixed', { date: fmt.date(claim.submittedAt) })}
+            />
+          ) : null}
           <p className="text-body text-ink-2">{hint}</p>
           {source?.ok ? <p className="text-hint text-muted-ink">{t('copiedFrom', { number: source.value.number ?? '' })}</p> : null}
         </section>

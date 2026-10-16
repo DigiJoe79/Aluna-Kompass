@@ -2,6 +2,7 @@
 
 import type { AnimalRecord } from '@kompass/module-animals';
 import { useTranslations } from 'next-intl';
+import { FixedValue } from '@/components/fixed-value';
 import { FormField } from '@/components/forms/form-field';
 import { FormGrid } from '@/components/forms/form-grid';
 import { LocalizedField } from '@/components/forms/localized-field';
@@ -27,7 +28,7 @@ export function ProfileFields({ values, slug, locales, errors, marks }: { values
         <FormGrid>
           {slug !== undefined ? (
             // Fest seit dem Anlegen (Spec „Tier-Slug fest“): kein `name`, also reist er nicht mit dem Speichern.
-            <FormField id="slug" label={c('slug')} hint={t('slugFixed')}><Input id="slug" value={slug} readOnly className="font-mono" /></FormField>
+            <FixedValue id="slug" testId="animal-slug" label={c('slug')} value={slug} reason={t('slugFixed')} mono />
           ) : null}
           <FormField id="name" hint={mark('name')} label={t('name')} error={errors.name} required><Input id="name" name="name" defaultValue={values.name ?? ''} required /></FormField>
         </FormGrid>

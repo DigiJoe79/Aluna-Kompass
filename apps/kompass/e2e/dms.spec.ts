@@ -282,7 +282,8 @@ test.describe('dms', () => {
     expect(Math.round(bar.y + bar.height)).toBe(1000);
   });
 
-  test('lässt den Hinweis zur festen Art über die Zeile laufen, statt ein Loch zu reissen', async ({ page }) => {
+  // E2 „Fester Wert als Text“ (03 B26): Die Art eines Entwurfs ist ein Wert mit Grund, kein gesperrtes Auswahlfeld.
+  test('zeigt die Art eines Entwurfs als festen Wert mit Grund', async ({ page }) => {
     await login(page);
     await page.goto('/dms/new');
     await page.getByLabel('Betreff').fill('Mit festem Typ');
@@ -290,20 +291,10 @@ test.describe('dms', () => {
     await page.getByRole('button', { name: 'Entwurf speichern' }).click();
     await expect(page).toHaveURL(/\/edit$/);
 
-    const hint = page.getByText(/Die Dokumentart steht seit dem Anlegen fest/);
-    // Die Zeile darüber ist Art · Datum (HANDOFF Konsistenz § 8c): Der Hinweis beginnt unter „Art“.
-    const type = page.locator('#typeKey');
-    const date = page.getByLabel('Datum auf dem Dokument');
-    const hintBox = await hint.boundingBox();
-    const typeBox = await type.boundingBox();
-    const dateBox = await date.boundingBox();
-    if (!hintBox || !typeBox || !dateBox) throw new Error('Hinweis oder Feld nicht sichtbar');
-
-    // Über beide Spalten statt in einer Zelle: Sonst steht neben „Art“ ein
-    // Loch, und die vier Felder lesen sich als zwei lose Paare.
-    expect(hintBox.width).toBeGreaterThan(dateBox.width * 1.5);
-    expect(Math.round(hintBox.x)).toBe(Math.round(typeBox.x));
-    expect(hintBox.y).toBeGreaterThan(dateBox.y);
+    const type = page.getByRole('group', { name: /^Dokumentart / });
+    await expect(type).toBeVisible();
+    await expect(type).toHaveAccessibleDescription('Steht beim Entwurf fest. Für eine andere Art einen neuen Entwurf anlegen.');
+    await expect(page.locator('select#typeKey')).toHaveCount(0);
   });
 
   test('teilt den Splitscreen mit dem Fenster, statt die Spalte festzunageln', async ({ page }) => {
