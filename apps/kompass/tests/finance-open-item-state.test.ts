@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { openItemState } from '@/lib/finance/open-item-state';
+import { openItemState, openItemsStateFilter } from '@/lib/finance/open-item-state';
 
 describe('openItemState', () => {
   it('names the four state words and overdue only while something is open', () => {
@@ -12,3 +12,16 @@ describe('openItemState', () => {
   });
 });
 
+
+/** Offene Zahlungen (07-2 A1, Joe 2026-10-16): Zustandsfilter in der Adresse, Vorgabe „offen“. */
+describe('openItemsStateFilter', () => {
+  it('ohne Angabe offen, „all“ alle, sonst der genannte Zustand', () => {
+    expect(openItemsStateFilter(undefined)).toBe('open');
+    expect(openItemsStateFilter('')).toBe('open');
+    expect(openItemsStateFilter('all')).toBe('all');
+    expect(openItemsStateFilter('settled')).toBe('settled');
+    expect(openItemsStateFilter('cancelled')).toBe('cancelled');
+    expect(openItemsStateFilter('overpaid')).toBe('overpaid');
+    expect(openItemsStateFilter('quatsch')).toBe('open');
+  });
+});

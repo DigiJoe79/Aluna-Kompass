@@ -4994,8 +4994,21 @@
       "new": "Offene Zahlung anlegen",
       "tabsGroup": "Wir zahlen noch oder wir erwarten",
       "tabs": {
-        "payable": "Wir zahlen noch",
-        "receivable": "Wir erwarten"
+        "payable": "Wir zahlen",
+        "receivable": "Wir bekommen"
+      },
+      "filter": {
+        "state": "Zustand",
+        "states": {
+          "open": "Offen",
+          "settled": "Erledigt",
+          "overpaid": "Überzahlt",
+          "cancelled": "Erledigt ohne Zahlung"
+        },
+        "nounOne": "Posten",
+        "nounOther": "Posten",
+        "nounDative": "Posten",
+        "emptyNoun": "Kein Posten"
       },
       "columns": {
         "dueOn": "Fällig am",

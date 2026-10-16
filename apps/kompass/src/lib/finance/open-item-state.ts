@@ -14,3 +14,15 @@ export function openItemState(
   const overdue = (word === 'open' || word === 'partlyPaid') && item.dueOn !== null && item.dueOn < today;
   return { word, overdue };
 }
+
+export const OPEN_ITEM_FILTER_STATES = ['open', 'settled', 'overpaid', 'cancelled'] as const;
+export type OpenItemsStateFilter = (typeof OPEN_ITEM_FILTER_STATES)[number] | 'all';
+
+/**
+ * Der Zustandsfilter der offenen Zahlungen aus der Adresse (`?state=`, 07-2 A1, Joe 2026-10-16): ohne Angabe „offen“ —
+ * Erledigtes steht nicht mehr unter „Wir zahlen“; `all` zeigt alles. Der Dienst filtert (`listOpenItems state`).
+ */
+export function openItemsStateFilter(param: string | undefined): OpenItemsStateFilter {
+  if (param === 'all') return 'all';
+  return (OPEN_ITEM_FILTER_STATES as readonly string[]).includes(param ?? '') ? (param as OpenItemsStateFilter) : 'open';
+}

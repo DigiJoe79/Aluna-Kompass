@@ -786,7 +786,7 @@ test.describe('finance', () => {
     await expect(cashRow).not.toContainText('−50,00 €');
   });
 
-  test('offene Zahlung anlegen, im Reiter „Wir zahlen noch“ finden, überfällig steht als Wort da', async ({ page }) => {
+  test('offene Zahlung anlegen, im Reiter „Wir zahlen“ finden, überfällig steht als Wort da', async ({ page }) => {
     await loginAsAdmin(page);
     await page.goto('/finance/open-items');
     await page.getByRole('button', { name: 'Offene Zahlung anlegen' }).click();
@@ -807,11 +807,11 @@ test.describe('finance', () => {
     await expect(row.getByText(story('20.01.2026'))).toHaveClass(/text-error/);
     await expect(row).not.toContainText(/\d{4}-\d{2}-\d{2}/);
 
-    // Zwei Reiter in der URL: unter „Wir erwarten“ steht der neue Posten nicht.
-    await page.getByRole('link', { name: 'Wir erwarten', exact: true }).click();
+    // Zwei Reiter in der URL: unter „Wir bekommen“ steht der neue Posten nicht.
+    await page.getByRole('link', { name: 'Wir bekommen', exact: true }).click();
     await expect(page).toHaveURL(/tab=receivable/);
     await expect(page.getByRole('row', { name: storyPattern('RE-2026-999') })).toHaveCount(0);
-    await page.getByRole('link', { name: 'Wir zahlen noch', exact: true }).click();
+    await page.getByRole('link', { name: 'Wir zahlen', exact: true }).click();
     await expect(page).toHaveURL(/tab=payable/);
     await expect(page.getByRole('row', { name: storyPattern('RE-2026-999') })).toBeVisible();
 
@@ -918,7 +918,11 @@ test.describe('finance', () => {
     await expect(page).toHaveURL(/\/finance\/entries\/[0-9A-Z]{26}$/);
     const bookedNumber = (await page.getByRole('heading', { level: 1 }).textContent())!.trim();
 
+    // Erledigtes steht nicht mehr unter der Vorgabe „offen“ (07-2 A1), sondern unter „Zustand: Erledigt“.
     await page.goto('/finance/open-items');
+    await expect(page.getByRole('row', { name: storyPattern('RE-2026-041') })).toHaveCount(0);
+    await page.getByTestId('open-items-state').selectOption({ label: 'Erledigt' });
+    await expect(page).toHaveURL(/state=settled/);
     const row = page.getByRole('row', { name: storyPattern('RE-2026-041') });
     await expect(row).toContainText('erledigt');
 
@@ -940,6 +944,7 @@ test.describe('finance', () => {
     await expect(confirm).toBeEnabled();
     await confirm.click();
     await expect(page.getByText('Ohne Zahlung erledigt.')).toBeVisible();
+    await page.goto('/finance/open-items?state=all');
     const row = page.getByRole('row', { name: storyPattern('RE-2026-041') });
     await expect(row).toContainText('erledigt ohne Zahlung');
   });

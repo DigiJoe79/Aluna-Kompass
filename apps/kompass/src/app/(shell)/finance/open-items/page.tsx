@@ -4,13 +4,15 @@ import { epcQrPayload, listContactIbans, listOpenItems, listOpenItemSettlements 
 import { ForbiddenCard } from '@/components/forbidden-card';
 import { Page } from '@/components/page';
 import { requireSession } from '@/lib/request-context';
-import { openItemState } from '@/lib/finance/open-item-state';
+import { openItemState, openItemsStateFilter } from '@/lib/finance/open-item-state';
 import { readAllPages } from '@/lib/read-all-pages';
 import { DetailSheet } from './detail-sheet';
 import { OpenItemsList, type OpenItemRow } from './list';
 
 export interface OpenItemsQuery {
   tab?: string;
+  /** Zustandsfilter, ohne Angabe „offen“ (`openItemsStateFilter`). */
+  state?: string;
   item?: string;
   page?: string;
 }
@@ -29,8 +31,14 @@ export default async function FinanceOpenItemsPage({ searchParams }: { searchPar
   const offset = (page - 1) * PAGE_SIZE;
   // Je Reiter getrennt geblättert. Ein Verweis mit `?item=` (Buchung, Rechnungskarte, Arbeitsliste) kann auf einen
   // Posten einer anderen Seite oder des anderen Reiters zeigen: Dann sucht ihn der zweite Aufruf wie bis 0.2.8.
-  const itemsRes = await listOpenItems(deps, ctx, { kind: tab, state: 'all', limit: PAGE_SIZE, offset });
-  if (!itemsRes.ok) return <Page width="full"><ForbiddenCard permission="finance.read" /></Page>;
+  // Vorgabe „offen“ (07-2 A1, Joe 2026-10-16): Erledigtes nur über den Zustandsfilter. Die Zählzeile zählt gegen alle
+  // Posten des Reiters.
+  const state = openItemsStateFilter(query.state);
+  const [itemsRes, allRes] = await Promise.all([
+    listOpenItems(deps, ctx, { kind: tab, state, limit: PAGE_SIZE, offset }),
+    listOpenItems(deps, ctx, { kind: tab, state: 'all', limit: 1, offset: 0 }),
+  ]);
+  if (!itemsRes.ok || !allRes.ok) return <Page width="full"><ForbiddenCard permission="finance.read" /></Page>;
   const pageItems = itemsRes.value.items;
   // Über alle Seiten (MUSTER § L, `readAllPages`): Mit `limit: 200` verfehlte der Verweis jeden Posten jenseits der
   // ersten 200 (Befund 36, 0.2.9).
@@ -89,7 +97,7 @@ export default async function FinanceOpenItemsPage({ searchParams }: { searchPar
 
   return (
     <Page width="full">
-      <OpenItemsList rows={rows} tab={tab} page={page} total={itemsRes.value.total} pageSize={PAGE_SIZE} canWrite={canWrite} canCreateContact={canCreateContact} today={today} />
+      <OpenItemsList rows={rows} tab={tab} state={state} page={page} total={itemsRes.value.total} tabTotal={allRes.value.total} pageSize={PAGE_SIZE} canWrite={canWrite} canCreateContact={canCreateContact} today={today} />
       {selected ? (
         <DetailSheet
           item={{

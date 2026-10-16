@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useTransition } from 'react';
 import { useTranslations } from 'next-intl';
 import { useDateFormat } from '@/components/date-format-provider';
 import { EmptyState } from '@/components/empty-state';
+import { FilterBar, selectFilter } from '@/components/filter-bar';
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
 import { ListPager } from '@/components/list-pager';
@@ -11,6 +12,9 @@ import { ViewTabs } from '@/components/view-tabs';
 import { RowLink, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { formatEuro } from '@/lib/finance/amount';
 import { formatDateOrDash } from '@/lib/finance/dates';
+import { OPEN_ITEM_FILTER_STATES, type OpenItemsStateFilter } from '@/lib/finance/open-item-state';
+import { useUrlFilters } from '@/lib/use-url-filters';
+import { usePathname, useRouter } from 'next/navigation';
 import { ItemDialog } from './item-dialog';
 import { Empty } from '@/components/empty-value';
 
@@ -34,11 +38,16 @@ export interface OpenItemRow {
  * öffnet das Detail als Sheet (`?item=`), „überfällig“ steht als Wort im
  * Zustand und färbt das Datum.
  */
-export function OpenItemsList({ rows, tab, page, total, pageSize, canWrite, canCreateContact, today }: {
+export function OpenItemsList({ rows, tab, state, page, total, tabTotal, pageSize, canWrite, canCreateContact, today }: {
   rows: OpenItemRow[];
   tab: 'receivable' | 'payable';
+  /** Zustandsfilter, Vorgabe „offen“ (07-2 A1). */
+  state: OpenItemsStateFilter;
   page: number;
+  /** Treffer unter dem Filter. */
   total: number;
+  /** Alle Posten des Reiters — die Zählzeile „{shown} von {total}“. */
+  tabTotal: number;
   pageSize: number;
   canWrite: boolean;
   canCreateContact: boolean;
@@ -48,8 +57,20 @@ export function OpenItemsList({ rows, tab, page, total, pageSize, canWrite, canC
   const { date } = useDateFormat();
   const [newOpen, setNewOpen] = useState(false);
 
-  const tabHref = (next: 'receivable' | 'payable') => `/finance/open-items?tab=${next}`;
-  const pageHref = (n: number) => (n > 1 ? `/finance/open-items?tab=${tab}&page=${n}` : `/finance/open-items?tab=${tab}`);
+  const router = useRouter();
+  const pathname = usePathname();
+  const [, startNavigation] = useTransition();
+  // Im Filter ist „alle“ der leere Wert (`selectFilter`), in der Adresse `state=all`; „offen“ ist die Vorgabe ohne Angabe.
+  const [filters, setFilters] = useUrlFilters({ state: state === 'all' ? '' : state });
+  const stateQuery = (value: string) => (value === '' ? '&state=all' : value === 'open' ? '' : `&state=${value}`);
+  const applyState = (value: string) => {
+    setFilters({ state: value });
+    startNavigation(() => router.replace(`${pathname}?tab=${tab}${stateQuery(value)}`));
+  };
+
+  const tabHref = (next: 'receivable' | 'payable') => `/finance/open-items?tab=${next}${stateQuery(filters.state)}`;
+  const pageHref = (n: number) => `/finance/open-items?tab=${tab}${stateQuery(filters.state)}${n > 1 ? `&page=${n}` : ''}`;
+  const resetFilters = () => applyState('');
 
   return (
     <div className="space-y-4">
@@ -66,8 +87,28 @@ export function OpenItemsList({ rows, tab, page, total, pageSize, canWrite, canC
 
       <ViewTabs label={t('tabsGroup')} current={tab} tabs={(['payable', 'receivable'] as const).map((k) => ({ key: k, label: t(`tabs.${k}`), href: tabHref(k) }))} />
 
+      <FilterBar
+        filters={[
+          selectFilter({
+            key: 'state',
+            label: t('filter.state'),
+            value: filters.state,
+            options: OPEN_ITEM_FILTER_STATES.map((value) => ({ value, label: t(`filter.states.${value}`) })),
+            onChange: applyState,
+            testId: 'open-items-state',
+          }),
+        ]}
+        onApply={(values) => applyState(values.state ?? filters.state)}
+        count={{ shown: total, total: tabTotal, noun: { one: t('filter.nounOne'), other: t('filter.nounOther'), dative: t('filter.nounDative') } }}
+        onReset={resetFilters}
+      />
+
       {rows.length === 0 ? (
-        <EmptyState title={t('empty.title')} text={t('empty.text')} />
+        tabTotal > 0 ? (
+          <EmptyState filtered={{ noun: t('filter.emptyNoun'), onReset: resetFilters }} />
+        ) : (
+          <EmptyState title={t('empty.title')} text={t('empty.text')} />
+        )
       ) : (
         <div className="overflow-hidden rounded-md border border-line bg-surface">
           <Table>

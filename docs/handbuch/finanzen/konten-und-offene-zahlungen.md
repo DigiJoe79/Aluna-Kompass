@@ -29,8 +29,9 @@ sie als „Umbuchung“ mit dem bewegten Betrag, nie als „0,00 €“.
 
 ## Offene Zahlungen
 
-Der Reiter „Wir zahlen noch“ zeigt Verbindlichkeiten, der Reiter „Wir
-erwarten“ Forderungen. „Offene Zahlung anlegen“ legt einen neuen Posten mit
+Der Reiter „Wir zahlen“ zeigt Verbindlichkeiten, der Reiter „Wir bekommen“
+Forderungen. Vorgegeben ist der Zustand „Offen“; Erledigtes zeigt der Filter
+„Zustand“ („Erledigt“, „Erledigt ohne Zahlung“ oder „Zustand: alle“). „Offene Zahlung anlegen“ legt einen neuen Posten mit
 Art, Datum, Kontakt, Betrag, Fälligkeit, Verwendungszweck und optional
 einem Dokument an.
 

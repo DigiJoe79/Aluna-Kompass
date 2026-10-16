@@ -43,6 +43,9 @@ die Nummern folgen [Semantic Versioning](https://semver.org/lang/de/). Vor
   der URL-Teil ist als Pflichtfeld markiert. Die Vorschau hat eine Brotkrume.
 - **Einrichtung → Akte:** Der Reiter „Ordner“ entfällt; oben führt „Ordner in
   der Akte“ in die Akte, wo Ordner gepflegt werden.
+- **Offene Zahlungen.** Die Liste zeigt zuerst nur Offenes; Erledigtes findet
+  sich über den Filter „Zustand“. Die Reiter heißen „Wir zahlen“ und „Wir
+  bekommen“.
 - **Gemeinschaftskonto.** Gehört eine IBAN mehreren Kontakten
   (Gemeinschaftskonto), schlägt der Import keinen Kontakt mehr vor, statt still
   den zuletzt verknüpften zu nehmen.
