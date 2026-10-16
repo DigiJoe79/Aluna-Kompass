@@ -56,7 +56,7 @@ export function PartnerPaymentDetail({ payment, creatorName, evidence, nextHref 
           <span className="font-mono text-section">{payment.number}</span>
           <StatusBadge tone={approved ? 'success' : 'neutral'}>{approved ? t('partnerResult.approved') : t('partnerResult.rejected')}</StatusBadge>
         </div>
-        <p className="font-mono text-figure font-semibold tabular-nums">{formatEuro(payment.totalCents)}</p>
+        <p className="text-figure font-semibold tabular-nums">{formatEuro(payment.totalCents)}</p>
         <p className="text-body text-ink">{payment.partnerName}</p>
         {!approved && payment.rejectNote ? <p className="text-body text-ink-2">{payment.rejectNote}</p> : null}
         <Link href={detailHref} className={buttonVariants({ variant: 'outline', size: 'sm' })}>

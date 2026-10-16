@@ -86,15 +86,15 @@ export function BatchFinalizeDialog({ reviewedCount }: { reviewedCount: number }
                       return (
                         <TableRow key={row.accountId}>
                           <TableCell className="align-top text-ink">{row.accountName}</TableCell>
-                          <TableCell className="text-right align-top font-mono tabular-nums">{formatEuro(row.sumCents)}</TableCell>
-                          <TableCell className="text-right align-top font-mono tabular-nums">{formatEuro(row.bookCentsAfter)}</TableCell>
+                          <TableCell className="text-right align-top tabular-nums">{formatEuro(row.sumCents)}</TableCell>
+                          <TableCell className="text-right align-top tabular-nums">{formatEuro(row.bookCentsAfter)}</TableCell>
                           <TableCell className="align-top text-ink-2">
                             {state.state === 'cash' ? t('cash') : null}
                             {state.state === 'noStatement' ? t('noStatement') : null}
                             {state.state === 'matches' || state.state === 'differs' ? (
-                              <span className="font-mono tabular-nums">
+                              <span className="tabular-nums">
                                 {t('statementOf', { amount: formatEuro(row.statementClosingCents ?? 0), date: formatDateOrDash(date, row.statementDate) })}
-                                {state.state === 'matches' ? <span className="ml-1 font-sans text-success">✓ {t('matches')}</span> : null}
+                                {state.state === 'matches' ? <span className="ml-1 text-success">✓ {t('matches')}</span> : null}
                               </span>
                             ) : null}
                           </TableCell>

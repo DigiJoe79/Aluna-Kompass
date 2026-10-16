@@ -64,7 +64,7 @@ export function PartnerList({ partners }: { partners: PartnerRow[] }) {
                   {p.openProofCount}
                   {p.overdueProofCount > 0 ? <span className="text-warning"> · {t('overdue', { count: p.overdueProofCount })}</span> : null}
                 </TableCell>
-                <TableCell className="hidden text-right font-mono tabular-nums sm:table-cell">{p.lastPaidOn ? fmt.date(p.lastPaidOn) : <Empty />}</TableCell>
+                <TableCell className="hidden text-right tabular-nums sm:table-cell">{p.lastPaidOn ? fmt.date(p.lastPaidOn) : <Empty />}</TableCell>
               </TableRow>
             ))}
           </TableBody>

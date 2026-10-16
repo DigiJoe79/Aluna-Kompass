@@ -66,7 +66,7 @@ export function RetentionSettings({ statutory10Y, statutory8Y, statutory6Y, cons
             {FIELDS.map(({ key, hintKey, setting }) => (
               <FormField key={key} id={key} label={t(key)} hint={t(hintKey)} error={errors[setting]} size="s">
                 <div className="flex items-center gap-2">
-                  <Input id={key} name={setting} type="number" min={0} defaultValue={current[key]} readOnly={!canManage} className="w-24 font-mono" />
+                  <Input id={key} name={setting} type="number" min={0} defaultValue={current[key]} readOnly={!canManage} className="w-24" />
                   <span className="text-meta text-muted-ink">{t('months')}</span>
                 </div>
               </FormField>

@@ -65,12 +65,12 @@ export function CandidatesSection({ candidates, canDecide }: { candidates: Candi
                     label: '',
                     before: (
                       <span>
-                        {date(c.line.bookingDate)} · {c.line.counterpartyName ?? <Empty />} · {c.line.purpose || <Empty />} · <span className="font-mono tabular-nums">{formatEuro(c.line.amountCents)}</span>
+                        {date(c.line.bookingDate)} · {c.line.counterpartyName ?? <Empty />} · {c.line.purpose || <Empty />} · <span className="tabular-nums">{formatEuro(c.line.amountCents)}</span>
                       </span>
                     ),
                     after: c.existing ? (
                       <span>
-                        {date(c.existing.bookingDate)} · {c.existing.counterpartyName ?? <Empty />} · {c.existing.purpose || <Empty />} · <span className="font-mono tabular-nums">{formatEuro(c.existing.amountCents)}</span> ·{' '}
+                        {date(c.existing.bookingDate)} · {c.existing.counterpartyName ?? <Empty />} · {c.existing.purpose || <Empty />} · <span className="tabular-nums">{formatEuro(c.existing.amountCents)}</span> ·{' '}
                         {c.existing.state === 'booked' && c.existing.entryId ? (
                           <Link href={`/finance/entries/${c.existing.entryId}`} className="text-link">
                             {c.existing.entryNumber}

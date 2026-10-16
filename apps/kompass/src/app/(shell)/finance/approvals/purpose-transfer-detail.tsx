@@ -41,7 +41,7 @@ export function PurposeTransferDetail({ transfer, creatorName, nextHref }: { tra
           <span className="font-mono text-section">{transfer.number}</span>
           <StatusBadge tone={approved ? 'success' : 'neutral'}>{approved ? t('transferResult.approved') : t('transferResult.rejected')}</StatusBadge>
         </div>
-        <p className="font-mono text-figure font-semibold tabular-nums">{formatEuro(transfer.amountCents)}</p>
+        <p className="text-figure font-semibold tabular-nums">{formatEuro(transfer.amountCents)}</p>
         <p className="text-body text-ink">
           {sideLabel(transfer.from)} → {sideLabel(transfer.to)}
         </p>

@@ -42,7 +42,7 @@ export async function TileCard({ view, canComplete, fmt }: { view: DashboardTile
     const n = content.kind === 'count' ? content.count : content.total;
     body = (
       <>
-        <p className="font-mono text-figure tabular-nums text-ink">{n}</p>
+        <p className="text-figure tabular-nums text-ink">{n}</p>
         {content.kind === 'count' && content.note ? <p className="text-meta text-ink-2">{t(`${ns}.messages.${content.note.messageKey}`, content.note.values ?? {})}</p> : null}
         {openLink(content.href)}
       </>
@@ -80,7 +80,7 @@ export async function TileCard({ view, canComplete, fmt }: { view: DashboardTile
     >
       <div className="flex items-baseline justify-between gap-3">
         <SectionHeading>{t(`${ns}.title`)}</SectionHeading>
-        {counter !== null && !empty ? <span className="font-mono text-hint text-muted-ink">{counter}</span> : null}
+        {counter !== null && !empty ? <span className="tabular-nums text-hint text-muted-ink">{counter}</span> : null}
       </div>
       {body}
     </section>

@@ -61,7 +61,7 @@ export function VoucherRows({ rows, canOpenDocument, canWrite, canCreateContact 
                   doc.subject
                 )}
               </TableCell>
-              <TableCell className="font-mono text-hint tabular-nums text-ink-2">{date(doc.documentDate)}</TableCell>
+              <TableCell className="text-hint tabular-nums text-ink-2">{date(doc.documentDate)}</TableCell>
               <TableCell className="text-ink-2">{doc.typeLabel}</TableCell>
               <TableCell className="text-right">
                 <span className="inline-flex items-center gap-2">

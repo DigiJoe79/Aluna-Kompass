@@ -122,7 +122,7 @@ export function SnippetsPanel({ snippets }: { snippets: SnippetRow[] }) {
                     rows={6}
                     defaultValue={editing?.body ?? ''}
                     required
-                    className="font-mono text-meta"
+                    className="text-meta"
                   />
                 </FormField>
                 <FormField id="snippet-sortOrder" label={t('snippetFields.sortOrder')} size="s">

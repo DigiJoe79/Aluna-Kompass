@@ -144,10 +144,10 @@ function FormStep({ onSaved, onCancel }: { onSaved: (notice: SavedNotice) => voi
         <Section title={t('sections.period')}>
           <FormGrid>
             <FormField id="notice-date" label={t('noticeDate')} required error={fieldErrors.noticeDate} size="s">
-              <Input id="notice-date" type="date" className="font-mono" value={noticeDate} onChange={(e) => setNoticeDate(e.target.value)} />
+              <Input id="notice-date" type="date" value={noticeDate} onChange={(e) => setNoticeDate(e.target.value)} />
             </FormField>
             <FormField id="notice-exempt-from" label={t('exemptFrom')} required hint={t('exemptFromHint')} error={fieldErrors.exemptFrom} size="s">
-              <Input id="notice-exempt-from" type="date" className="font-mono" value={exemptFrom} onChange={(e) => setExemptFrom(e.target.value)} />
+              <Input id="notice-exempt-from" type="date" value={exemptFrom} onChange={(e) => setExemptFrom(e.target.value)} />
             </FormField>
             {provisional ? null : (
               <FormField id="notice-period" label={t('assessmentPeriod')} required hint={t('assessmentPeriodHint')} error={fieldErrors.assessmentPeriod} size="s">

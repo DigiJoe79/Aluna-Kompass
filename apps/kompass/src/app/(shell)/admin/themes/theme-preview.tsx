@@ -62,15 +62,15 @@ export function ThemePreview({ theme, mode }: { theme: Theme; mode: 'light' | 'd
         <tbody>
           <tr className="bg-surface">
             <td className="px-2 py-1">{t('row')} 1</td>
-            <td className="px-2 py-1 font-mono">{formatEuro(123400)}</td>
+            <td className="tabular-nums px-2 py-1">{formatEuro(123400)}</td>
           </tr>
           <tr className="bg-zebra">
             <td className="px-2 py-1">{t('row')} 2</td>
-            <td className="px-2 py-1 font-mono">{formatEuro(5600)}</td>
+            <td className="tabular-nums px-2 py-1">{formatEuro(5600)}</td>
           </tr>
           <tr className="bg-row-hover">
             <td className="px-2 py-1">{t('row')} 3</td>
-            <td className="px-2 py-1 font-mono">{formatEuro(700)}</td>
+            <td className="tabular-nums px-2 py-1">{formatEuro(700)}</td>
           </tr>
         </tbody>
       </table>

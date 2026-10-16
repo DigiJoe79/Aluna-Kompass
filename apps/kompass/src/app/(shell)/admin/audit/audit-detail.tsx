@@ -45,7 +45,7 @@ export function AuditDetail({ entry, sentence, object }: { entry: AuditEntry; se
       <SheetContent side="right" size="md" className="gap-0 overflow-y-auto bg-surface shadow-md">
         <div className="p-5">
           <SheetTitle>{auditActionLabel(a, entry.action)}</SheetTitle>
-          <p className="mt-1 font-mono text-hint text-muted-ink">
+          <p className="tabular-nums mt-1 text-hint text-muted-ink">
             {fmt.dateTime(entry.occurredAt, { seconds: true })}
           </p>
           <div className="mt-4 flex flex-col gap-2">

@@ -162,7 +162,7 @@ export function WorkTransactions({
                   onClick={() => select(row.id)}
                   className={cn('flex cursor-pointer items-start gap-3 border-l-4 px-3 py-2.5 text-meta', isSelected ? 'border-l-brand bg-selected/40' : 'border-l-transparent hover:bg-row-hover')}
                 >
-                  <span className="w-[84px] shrink-0 font-mono text-hint tabular-nums text-ink-2">{date(row.bookingDate)}</span>
+                  <span className="w-[84px] shrink-0 text-hint tabular-nums text-ink-2">{date(row.bookingDate)}</span>
                   <span className="min-w-0 flex-1 space-y-0.5">
                     <span className="flex flex-wrap items-center gap-2">
                       <span className="font-semibold text-ink">{row.counterpartyName ?? row.purpose}</span>
@@ -265,7 +265,7 @@ export function WorkEntries({ rows, tab, canWrite, footer }: { rows: WorkEntryRo
     <section aria-label={te('entries.label')} className="divide-y divide-line-2 rounded-md border border-line bg-surface">
       {rows.map((row) => (
         <div key={row.id} data-testid="work-entry" className="flex flex-wrap items-center gap-3 px-3 py-2.5 text-meta">
-          <span className="w-[84px] shrink-0 font-mono text-hint tabular-nums text-ink-2">{date(row.entryDate)}</span>
+          <span className="w-[84px] shrink-0 text-hint tabular-nums text-ink-2">{date(row.entryDate)}</span>
           <span className="min-w-0 flex-1 space-y-0.5">
             <span className="flex flex-wrap items-center gap-2">
               <span className="font-semibold text-ink">{row.text}</span>
@@ -335,7 +335,7 @@ export function WorkOpenItems({ rows, footer }: { rows: WorkOpenItemRow[]; foote
     <section aria-label={td('due.label')} className="divide-y divide-line-2 rounded-md border border-line bg-surface">
       {rows.map((row) => (
         <div key={row.id} data-testid="work-open-item" className="flex flex-wrap items-center gap-3 px-3 py-2.5 text-meta">
-          <span className="w-[120px] shrink-0 font-mono text-hint tabular-nums text-ink-2">{row.dueOn ? td('due.dueOn', { date: date(row.dueOn) }) : ''}</span>
+          <span className="w-[120px] shrink-0 text-hint tabular-nums text-ink-2">{row.dueOn ? td('due.dueOn', { date: date(row.dueOn) }) : ''}</span>
           <span className="min-w-0 flex-1 space-y-0.5">
             <span className="flex flex-wrap items-center gap-2">
               <span className="font-semibold text-ink">{row.paymentReference ?? td('due.noReference')}</span>
@@ -343,7 +343,7 @@ export function WorkOpenItems({ rows, footer }: { rows: WorkOpenItemRow[]; foote
             </span>
             {row.contactName ? <span className="block truncate text-ink-2">{row.contactName}</span> : null}
           </span>
-          <span className="w-28 shrink-0 text-right font-mono tabular-nums">{formatEuro(row.openCents)}</span>
+          <span className="w-28 shrink-0 text-right tabular-nums">{formatEuro(row.openCents)}</span>
           <Link href={`/finance/open-items?tab=${row.kind}&item=${row.id}`} className="text-meta font-semibold underline underline-offset-2">
             {td('due.open')}
           </Link>

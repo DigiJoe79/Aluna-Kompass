@@ -232,7 +232,7 @@ export default async function ViewFinanceEntryPage({ params }: { params: Promise
                           ) : (
                             <span className="text-ink-2">{t('related.unnamedItem')}</span>
                           )}
-                          <span className="font-mono tabular-nums text-ink-2">
+                          <span className="tabular-nums text-ink-2">
                             {t('related.settlement', { amount: formatEuro(settlement.amountCents), rest: formatEuro(item?.openCents ?? 0) })}
                           </span>
                         </li>

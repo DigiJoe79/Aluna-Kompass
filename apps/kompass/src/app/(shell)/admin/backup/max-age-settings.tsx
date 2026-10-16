@@ -49,7 +49,7 @@ export function MaxAgeSettings({ maxAgeDays, canManage }: { maxAgeDays: number; 
               <FormGrid>
                 <FormField id="backup-max-age" label={t('maxAgeDays')} hint={t('maxAgeDaysHint')} error={error} size="s">
                   <div className="flex items-center gap-2">
-                    <Input id="backup-max-age" name={SETTING} type="number" min={1} max={365} defaultValue={maxAgeDays} readOnly={!canManage} className="w-24 font-mono" />
+                    <Input id="backup-max-age" name={SETTING} type="number" min={1} max={365} defaultValue={maxAgeDays} readOnly={!canManage} className="w-24" />
                     <span className="text-meta text-muted-ink">{t('days')}</span>
                   </div>
                 </FormField>

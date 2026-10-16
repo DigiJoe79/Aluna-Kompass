@@ -158,7 +158,7 @@ export function ApprovalDetail({
                     {p.projectId && projects[p.projectId] ? ` · ${t('project', { name: projects[p.projectId]! })}` : ''}
                   </p>
                 </div>
-                <span className="shrink-0 font-mono text-section tabular-nums">{formatEuro(p.amountCents)}</span>
+                <span className="shrink-0 text-section tabular-nums">{formatEuro(p.amountCents)}</span>
               </div>
 
               <FormGrid>

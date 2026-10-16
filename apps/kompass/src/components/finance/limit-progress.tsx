@@ -53,7 +53,7 @@ export function LimitProgress({
       <div className="flex flex-wrap items-center gap-2">
         <p className={hideLabel ? 'sr-only' : 'text-meta text-ink-2'}>{label}</p>
         {state && stateLabel ? <StatusBadge tone={TONE[state]}>{stateLabel}</StatusBadge> : null}
-        {figure ? <span className={`${hideLabel ? '' : 'ml-auto '}font-mono text-hint tabular-nums text-ink`}>{figure}</span> : null}
+        {figure ? <span className={`${hideLabel ? '' : 'ml-auto '}text-hint tabular-nums text-ink`}>{figure}</span> : null}
       </div>
       <ProgressTrack className={`h-2 ${state === 'exceeded' ? 'border-r-2 border-error' : ''}`}>
         <ProgressIndicator className={BAR[state ?? 'calm']} />

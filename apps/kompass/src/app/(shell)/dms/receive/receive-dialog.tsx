@@ -51,7 +51,7 @@ export function ReceiveDialog({
           <div className="flex items-center gap-2.5">
             <DialogTitle>{t('receivePost')}</DialogTitle>
             {queued ? (
-              <span className="rounded-full bg-badge px-2.5 py-0.5 font-mono text-hint text-badge-ink">
+              <span className="tabular-nums rounded-full bg-badge px-2.5 py-0.5 text-hint text-badge-ink">
                 {t('drop.queueBadge', { current: index + 1, total })}
               </span>
             ) : null}

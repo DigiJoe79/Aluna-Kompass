@@ -91,8 +91,8 @@ export function OpenItemsList({ rows, tab, page, total, pageSize, canWrite, canC
                     </RowLink>
                   </TableCell>
                   <TableCell>{row.contactLabel ?? <Empty />}</TableCell>
-                  <TableCell className="font-mono tabular-nums">{formatEuro(row.amountCents)}</TableCell>
-                  <TableCell className="font-mono tabular-nums">{formatEuro(row.openCents)}</TableCell>
+                  <TableCell className="tabular-nums">{formatEuro(row.amountCents)}</TableCell>
+                  <TableCell className="tabular-nums">{formatEuro(row.openCents)}</TableCell>
                   <TableCell>{row.hasOrigin ? t('hasOrigin') : <Empty />}</TableCell>
                   <TableCell selectable>{row.paymentReference ?? <Empty />}</TableCell>
                   <TableCell>

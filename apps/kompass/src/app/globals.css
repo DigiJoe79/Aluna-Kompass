@@ -141,8 +141,9 @@
 /*
  * Schriftrollen (K10 Charge 1, docs/MUSTER.md „Schrift“; Designer und Joe 2026-10-06): Größe, Zeilenhöhe und bei
  * Titeln das Gewicht. Tailwind v4 nimmt in `--text-*` keine Schriftfamilie — `font-heading` steht im Baustein,
- * `font-mono tabular-nums` an der Kennzahl. Eine neue Rolle gehört auch in `TYPE_ROLES` (`lib/utils.ts`).
+ * `tabular-nums` an der Kennzahl. Eine neue Rolle gehört auch in `TYPE_ROLES` (`lib/utils.ts`).
  * Charge 3 (Designer 2026-10-10): zehn Rollen; Familie und Versalien stehen im Baustein.
+ * Auftrag 5 (0.2.12): Mono nur für Kennungen (`text-key`); `text-figure`/`text-amount` stehen in der Textschrift.
  */
 @theme {
   --text-page-title: 22px;

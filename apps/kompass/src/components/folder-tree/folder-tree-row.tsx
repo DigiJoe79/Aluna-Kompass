@@ -301,7 +301,7 @@ function SavingMark() {
 /** Die Summe; „direkt“ steht im Tooltip (README § 2, Zähler). */
 function Count({ node, tone }: { node: FolderNode; tone: string }) {
   const t = useTranslations('folderTree');
-  const number = <span className={cn('font-mono text-hint font-normal tabular-nums', tone)}>{node.total}</span>;
+  const number = <span className={cn(' text-hint font-normal tabular-nums', tone)}>{node.total}</span>;
   return (
     <Tooltip>
       <TooltipTrigger render={number} />

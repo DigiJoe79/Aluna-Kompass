@@ -103,7 +103,7 @@ export function WorkDetail({
             .map(([key, value]) => (
               <div key={key} className="contents">
                 <dt className="text-muted-ink">{t(`fields.${key}`)}</dt>
-                <dd className={key === 'iban' || key === 'bankReference' || key === 'endToEndId' || key === 'relatedReference' || key === 'bookingDate' || key === 'valueDate' || key === 'amount' ? 'break-all font-mono tabular-nums text-ink' : 'text-ink'}>{value}</dd>
+                <dd className={key === 'iban' || key === 'bankReference' || key === 'endToEndId' || key === 'relatedReference' ? 'break-all font-mono text-ink' : key === 'bookingDate' || key === 'valueDate' || key === 'amount' ? 'tabular-nums text-ink' : 'text-ink'}>{value}</dd>
               </div>
             ))}
         </dl>

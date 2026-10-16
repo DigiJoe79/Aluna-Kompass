@@ -36,7 +36,7 @@ export function StatusDialog({ animalId, current, triggerVariant = 'secondary' }
           </FormField>
           {status === 'adopted' ? (
             <FormField id="year" label={t('year')} hint={t('yearHint')} size="s">
-              <Input id="year" type="number" value={year} onChange={(e) => setYear(e.target.value)} className="font-mono" />
+              <Input id="year" type="number" value={year} onChange={(e) => setYear(e.target.value)} />
             </FormField>
           ) : null}
         </FormGrid>

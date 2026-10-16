@@ -110,7 +110,7 @@ export function PartnerDetail({ partner, notices, payments, registerDocument, ag
                               {p.number ?? (p.purposeText || t('payments.new'))}
                             </Link>
                           </TableCell>
-                          <TableCell className="text-right font-mono tabular-nums">{formatEuro(p.totalCents)}</TableCell>
+                          <TableCell className="text-right tabular-nums">{formatEuro(p.totalCents)}</TableCell>
                           <TableCell className="whitespace-normal text-ink-2">
                             {t(`payments.state.${paymentStateKey(p)}`)}
                             {p.readyToAcknowledge ? (
@@ -120,7 +120,7 @@ export function PartnerDetail({ partner, notices, payments, registerDocument, ag
                               </>
                             ) : null}
                           </TableCell>
-                          <TableCell className="hidden text-right font-mono tabular-nums sm:table-cell">{fmt.date(p.date)}</TableCell>
+                          <TableCell className="hidden text-right tabular-nums sm:table-cell">{fmt.date(p.date)}</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
@@ -395,8 +395,8 @@ function NoticesSection({ partnerId, abroad, notices, canWrite, t, router }: { p
                         </Button>
                       ) : null}
                     </TableCell>
-                    <TableCell className="font-mono tabular-nums">{fmt.date(n.validUntil)}</TableCell>
-                    <TableCell className="hidden font-mono tabular-nums sm:table-cell">{fmt.date(n.receivedOn)}</TableCell>
+                    <TableCell className="tabular-nums">{fmt.date(n.validUntil)}</TableCell>
+                    <TableCell className="hidden tabular-nums sm:table-cell">{fmt.date(n.receivedOn)}</TableCell>
                     <TableCell className="whitespace-normal text-ink-2">{t(`notices.state.${n.state}`)}</TableCell>
                   </TableRow>
                 ))}

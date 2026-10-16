@@ -74,7 +74,7 @@ export function PreviewGroups({ items, excluded = [] }: { items: readonly RunPre
                         <Link href="/finance/donations?tab=uncertified" className="text-hint text-link underline">{t('openUncertified')}</Link>
                       </>
                     ) : null}
-                    <span className="font-mono tabular-nums text-ink">{formatEuro(item.totalCents)}</span>
+                    <span className="tabular-nums text-ink">{formatEuro(item.totalCents)}</span>
                   </span>
                 </li>
               ))}
@@ -101,7 +101,7 @@ export function PreviewGroups({ items, excluded = [] }: { items: readonly RunPre
                       {b.entryNumber ? t('excluded.openEntry', { number: b.entryNumber }) : t('excluded.openDraft')}
                     </Link>
                   ))}
-                  <span className="font-mono tabular-nums text-ink">{formatEuro(e.excludedCents)}</span>
+                  <span className="tabular-nums text-ink">{formatEuro(e.excludedCents)}</span>
                 </span>
               </li>
             ))}

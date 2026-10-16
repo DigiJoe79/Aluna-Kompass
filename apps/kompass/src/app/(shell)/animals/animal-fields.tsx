@@ -35,7 +35,7 @@ export function ProfileFields({ values, slug, locales, errors, marks }: { values
       <Section title={t('sections.traits')}>
         <FormGrid>
           <FormField id="sex" hint={mark('sex')} label={t('sex')} size="s"><Select id="sex" name="sex" defaultValue={values.sex ?? 'female'}><option value="female">{t('sexes.female')}</option><option value="male">{t('sexes.male')}</option></Select></FormField>
-          <FormField id="sizeCm" hint={mark('sizeCm')} label={t('sizeCm')} error={errors.sizeCm} size="s"><Input id="sizeCm" name="sizeCm" type="number" defaultValue={values.sizeCm ?? 0} className="font-mono" /></FormField>
+          <FormField id="sizeCm" hint={mark('sizeCm')} label={t('sizeCm')} error={errors.sizeCm} size="s"><Input id="sizeCm" name="sizeCm" type="number" defaultValue={values.sizeCm ?? 0} /></FormField>
           <LocalizedField name="sizeText" hint={mark('sizeText')} label={t('sizeText')} size="s" value={values.sizeText ?? {}} errors={errors} locales={locales} />
           <LocalizedField name="birthText" hint={mark('birthText')} label={t('birthText')} size="s" value={values.birthText ?? {}} errors={errors} locales={locales} />
         </FormGrid>

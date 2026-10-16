@@ -88,7 +88,7 @@ export function RunsTable({ runs, canDiscard }: { runs: RunRow[]; canDiscard: bo
               </Button>
               <span className="text-ink-2">{run.periodFrom && run.periodTo ? t('period', { from: date(run.periodFrom), to: date(run.periodTo) }) : <Empty />}</span>
               <span data-testid="import-run-format" className="text-muted-ink">{run.format === 'csv' ? (run.formatName ?? t('formatCsv')) : t('formatCamt')}</span>
-              <span className="font-mono tabular-nums text-ink-2">
+              <span className="tabular-nums text-ink-2">
                 {run.state === 'finished' && run.openingCents === null && run.closingCents === null ? t('noBalance') : null}
                 {run.openingCents !== null ? t('opening', { amount: formatEuro(run.openingCents) }) : ''} {run.closingCents !== null ? t('closing', { amount: formatEuro(run.closingCents) }) : ''}
               </span>
@@ -135,10 +135,10 @@ export function RunsTable({ runs, canDiscard }: { runs: RunRow[]; canDiscard: bo
                   <ul className="divide-y divide-line text-meta">
                     {run.rawTransactions.map((raw) => (
                       <li key={raw.id} className="flex items-center justify-between gap-3 py-1.5">
-                        <span className="font-mono text-ink-2">{date(raw.bookingDate)}</span>
+                        <span className="tabular-nums text-ink-2">{date(raw.bookingDate)}</span>
                         <span className="flex-1 truncate">{raw.counterpartyName ?? <Empty />}</span>
                         <span className="flex-1 truncate text-muted-ink">{truncate(raw.purpose)}</span>
-                        <span className="font-mono tabular-nums">{formatEuro(raw.amountCents)}</span>
+                        <span className="tabular-nums">{formatEuro(raw.amountCents)}</span>
                         <span>
                           {raw.state === 'booked' && raw.entryId ? (
                             <Link href={`/finance/entries/${raw.entryId}`} className="text-link">

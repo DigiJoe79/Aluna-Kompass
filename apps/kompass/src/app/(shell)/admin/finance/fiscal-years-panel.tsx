@@ -64,7 +64,7 @@ export function FiscalYearsPanel({ years }: { years: FiscalYearRow[] }) {
             {years.map((year) => (
               <TableRow key={year.id}>
                 <TableCell>
-                  <span className="font-mono font-semibold text-ink">{year.designation}</span>
+                  <span className="font-semibold text-ink">{year.designation}</span>
                   {year.isShortYear ? (
                     <StatusBadge tone="neutral" className="ml-2">
                       {t('shortYear', { from: date(year.startsOn), to: date(year.endsOn) })}

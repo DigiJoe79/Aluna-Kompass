@@ -56,7 +56,7 @@ export function SidePanel({ balances, incomeStatement }: SidePanelProps) {
           {balances.accounts.map((account) => (
             <div key={account.accountId} className="space-y-0.5">
               <p className="text-meta font-semibold">{account.name}</p>
-              <p className="text-right font-mono text-body tabular-nums">{formatEuro(account.balanceCents)}</p>
+              <p className="text-right text-body tabular-nums">{formatEuro(account.balanceCents)}</p>
               <p className="text-right text-hint text-muted-ink">{t('withReviewed', { amount: formatEuro(account.withReviewedCents) })}</p>
             </div>
           ))}
@@ -67,7 +67,7 @@ export function SidePanel({ balances, incomeStatement }: SidePanelProps) {
             {incomeStatement.spheres.map((sphere) => (
               <div key={sphere.sphere} className="flex items-center justify-between text-meta">
                 <span className="text-ink-2">{t(`sphere.${sphere.sphere}`)}</span>
-                <span className="font-mono tabular-nums">{formatEuro(sphere.resultCents)}</span>
+                <span className="tabular-nums">{formatEuro(sphere.resultCents)}</span>
               </div>
             ))}
             {incomeStatement.preliminary ? <p className="text-hint text-muted-ink">{t('preliminary')}</p> : null}

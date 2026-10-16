@@ -80,12 +80,12 @@ export function ApiTokens({ tokens }: { tokens: ApiTokenSummary[] }) {
                       <div className="font-semibold">{token.name}</div>
                       <KeyLine>{token.prefix}…</KeyLine>
                     </TableCell>
-                    <TableCell className="font-mono text-hint">
+                    <TableCell className="tabular-nums text-hint">
                       {fmt.date(token.createdAt)}
                     </TableCell>
                     <TableCell
                       className={cn(
-                        'font-mono text-hint',
+                        'tabular-nums text-hint',
                         !token.revokedAt && (days === null || days > 90) && 'text-warning'
                       )}
                     >

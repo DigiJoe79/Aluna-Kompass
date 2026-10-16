@@ -123,7 +123,7 @@ export function ConfirmationsTable({ rows, canIssue, initialOpenId, today, foote
                 <TableCell>{date(row.issuedOn)}</TableCell>
                 <TableCell>{row.contactName}</TableCell>
                 <TableCell>{t(`kind.${row.kind}`)}</TableCell>
-                <TableCell className="text-right font-mono tabular-nums">{formatEuro(row.totalCents)}</TableCell>
+                <TableCell className="text-right tabular-nums">{formatEuro(row.totalCents)}</TableCell>
                 <TableCell>{row.periodFrom && row.periodTo ? `${date(row.periodFrom)} – ${date(row.periodTo)}` : <Empty />}</TableCell>
                 <TableCell>{row.sentAt && row.sentVia ? t('sentValue', { date: date(row.sentAt), via: t(`sentVia.${row.sentVia}`) }) : <Empty />}</TableCell>
                 <TableCell data-testid="confirmation-state" className="whitespace-normal">{stateOf(row)}</TableCell>
@@ -168,7 +168,7 @@ function Detail({ row, canIssue, onVoid, onDispatch, onRecall }: { row: Confirma
               <Link href={`/finance/entries/${line.entryId}`} className="font-mono text-link underline">
                 {line.entryNumber ?? line.entryId}
               </Link>
-              <span className="font-mono tabular-nums text-ink-2">{formatEuro(line.amountCents)}</span>
+              <span className="tabular-nums text-ink-2">{formatEuro(line.amountCents)}</span>
             </li>
           ))}
         </ul>

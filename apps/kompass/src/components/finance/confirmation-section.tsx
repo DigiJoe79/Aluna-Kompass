@@ -41,7 +41,7 @@ export function ConfirmationSection({ lines, canIssue, canDescribe, today }: { l
           {lines.map((line) => (
             <li key={line.lineId} className="flex flex-wrap items-center justify-between gap-2 border-b border-line-2 py-1 last:border-0">
               <span className="text-ink-2">
-                {line.label} · <span className="font-mono tabular-nums">{formatEuro(line.amountCents)}</span>
+                {line.label} · <span className="tabular-nums">{formatEuro(line.amountCents)}</span>
               </span>
               {line.confirmation ? (
                 <Link href={`/finance/donations?confirmation=${line.confirmation.id}`} className="text-link underline">

@@ -144,7 +144,7 @@ export function LocalizedField({
         ) : (
           <>
             <LocaleLabel htmlFor={id} locale={locale} />
-            <Textarea {...props} rows={rows} className={cn(kind === 'markdown' && 'font-mono text-meta')} />
+            <Textarea {...props} rows={rows} className={cn(kind === 'markdown' && ' text-meta')} />
           </>
         )}
         {isUntranslated ? (

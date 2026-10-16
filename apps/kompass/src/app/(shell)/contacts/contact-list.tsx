@@ -135,7 +135,7 @@ export function ContactList({ contacts, roles, total, unfiltered, offset, pageSi
                     </div>
                   </TableCell>
                   <TableCell className="text-ink-2">{c.city || <Empty />}</TableCell>
-                  <TableCell selectable className="text-ink-2 font-mono text-meta">{c.primaryChannel || <Empty />}</TableCell>
+                  <TableCell selectable className="text-ink-2 text-meta">{c.primaryChannel || <Empty />}</TableCell>
                 </TableRow>
               ))}
             </TableBody>

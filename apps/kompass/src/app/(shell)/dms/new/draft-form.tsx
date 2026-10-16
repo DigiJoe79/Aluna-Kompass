@@ -171,7 +171,7 @@ export function DraftForm({
           value={body}
           onChange={(e) => setBody(e.target.value)}
           aria-describedby="body-hint"
-          className="shrink-0 grow resize-none font-mono text-meta"
+          className="shrink-0 grow resize-none text-meta"
         />
         <FieldError id="body-error" message={errors.body} />
         {errors.body ? null : <p id="body-hint" className="text-hint text-muted-ink">{t('fields.bodyHint')}</p>}

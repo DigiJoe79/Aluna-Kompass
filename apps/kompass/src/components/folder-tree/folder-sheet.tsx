@@ -56,7 +56,7 @@ export function FolderSheet({
           {path.length > 0 ? <span className="truncate text-hint text-muted-ink">{path.join(' › ')}</span> : null}
           <strong className="text-section wrap-anywhere text-ink">{title}</strong>
         </span>
-        <span data-testid="folder-sheet-count" className="font-mono text-meta text-muted-ink">
+        <span data-testid="folder-sheet-count" className="tabular-nums text-meta text-muted-ink">
           {count}
         </span>
         <ChevronDown className="size-[18px] shrink-0 text-muted-ink" strokeWidth={2.2} aria-hidden />

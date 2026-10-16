@@ -119,7 +119,7 @@ export function UncertifiedList({
                   {group.contactComplete ? null : <StatusBadge tone="warning">{t('addressMissing')}</StatusBadge>}
                 </div>
                 <div className="flex items-center gap-3">
-                  <span className="font-mono tabular-nums text-ink-2">{t('sum', { amount: formatEuro(group.sumCents) })}</span>
+                  <span className="tabular-nums text-ink-2">{t('sum', { amount: formatEuro(group.sumCents) })}</span>
                   {group.contactComplete ? null : (
                     <Link href={`/contacts/${group.contactId}`} className="rounded-sm border border-line bg-surface px-3 py-1.5 text-meta font-semibold text-ink hover:bg-surface-2">
                       {t('completeAddress')}
@@ -142,7 +142,7 @@ export function UncertifiedList({
                       {line.warnings?.includes('returnDraftPending') ? <StatusBadge tone="warning">{t('returnDraftPending')}</StatusBadge> : null}
                     </span>
                     <span className="ml-auto flex items-center gap-3">
-                      <span className="font-mono whitespace-nowrap tabular-nums">{formatEuro(line.netCents)}</span>
+                      <span className="whitespace-nowrap tabular-nums">{formatEuro(line.netCents)}</span>
                       {/* Befund 59: Ein Datum nach heute ist noch nicht ausstellbar — der Hinweis statt des Knopfs. */}
                       {line.inFuture ? (
                         <span className="text-hint text-muted-ink">{t('inFuture')}</span>

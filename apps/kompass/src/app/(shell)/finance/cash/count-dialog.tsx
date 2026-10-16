@@ -142,7 +142,7 @@ export function CountDialog({ account, today, canCreateContact }: { account: Cas
                   <AmountField id="countedCents" name="countedCents" value={amountText} onChange={setAmountText} required />
                 </FormField>
               ) : (
-                <FormCell as="p" size="s" className="self-end text-meta font-mono">{formatEuro(helperCents)}</FormCell>
+                <FormCell as="p" size="s" className="tabular-nums self-end text-meta">{formatEuro(helperCents)}</FormCell>
               )}
               {mode === 'cash' ? (
                 <FormCell size="full">

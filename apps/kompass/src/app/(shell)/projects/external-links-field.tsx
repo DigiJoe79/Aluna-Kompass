@@ -28,7 +28,7 @@ export function ExternalLinksField({ value, errors }: { value: ExternalLink[]; e
             <Input id={`externalLinks.${index}.label`} name={`externalLinks.${index}.label`} value={link.label} onChange={(e) => update(index, { label: e.target.value })} />
           </FormField>
           <FormField id={`externalLinks.${index}.url`} label={t('url')} error={errors[`externalLinks.${index}.url`]}>
-            <Input id={`externalLinks.${index}.url`} name={`externalLinks.${index}.url`} value={link.url} onChange={(e) => update(index, { url: e.target.value })} className="font-mono" />
+            <Input id={`externalLinks.${index}.url`} name={`externalLinks.${index}.url`} value={link.url} onChange={(e) => update(index, { url: e.target.value })} />
           </FormField>
           <Button type="button" variant="outline" aria-label={t('remove')} onClick={() => setLinks(links.filter((_, i) => i !== index))}>×</Button>
         </div>

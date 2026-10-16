@@ -57,7 +57,7 @@ export default async function ExpenseClaimPage({ params }: { params: Promise<{ i
       <div data-testid="claim-detail" className="space-y-5">
         <section className="space-y-2 rounded-lg border border-line bg-surface p-5">
           <p className="text-meta text-muted-ink">{t('amount')}</p>
-          <p data-testid="claim-amount" className="font-mono text-figure font-semibold tabular-nums">
+          <p data-testid="claim-amount" className="text-figure font-semibold tabular-nums">
             {formatEuro(claim.totalCents)}
           </p>
           <ClaimState claim={claim} fmt={fmt} />
@@ -91,7 +91,7 @@ export default async function ExpenseClaimPage({ params }: { params: Promise<{ i
                           {t('openReceipt')}
                         </a>
                       ) : null}
-                      <span className="font-mono tabular-nums">{formatEuro(p.amountCents)}</span>
+                      <span className="tabular-nums">{formatEuro(p.amountCents)}</span>
                     </span>
                   </li>
                 ))}
@@ -107,7 +107,7 @@ export default async function ExpenseClaimPage({ params }: { params: Promise<{ i
                 {claimHistory(claim).map((event) => (
                   <li key={event.key} className="flex justify-between gap-3">
                     <span className="text-ink">{t(`event.${event.key}`)}</span>
-                    <span className="font-mono text-meta tabular-nums text-ink-2">{event.at.length > 10 ? fmt.dateTime(event.at) : fmt.date(event.at)}</span>
+                    <span className="text-meta tabular-nums text-ink-2">{event.at.length > 10 ? fmt.dateTime(event.at) : fmt.date(event.at)}</span>
                   </li>
                 ))}
               </ol>

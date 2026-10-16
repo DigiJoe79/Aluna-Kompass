@@ -79,7 +79,7 @@ export default async function FinanceCashPage({ searchParams }: { searchParams: 
 
         <div data-testid="cash-balance" className="rounded-lg border border-line bg-surface p-5">
           <p className="text-meta text-muted-ink">{selected.name}</p>
-          <p className="font-mono text-figure font-semibold tabular-nums">{formatEuro(selected.balanceCents)}</p>
+          <p className="text-figure font-semibold tabular-nums">{formatEuro(selected.balanceCents)}</p>
         </div>
 
         {canFinalize ? (
@@ -126,7 +126,7 @@ export default async function FinanceCashPage({ searchParams }: { searchParams: 
                         <span>
                           {fmt.date(entry.entryDate)} · {entry.text}
                         </span>
-                        <span className="font-mono tabular-nums">{formatEuro(amount)}</span>
+                        <span className="tabular-nums">{formatEuro(amount)}</span>
                       </li>
                     );
                   })}

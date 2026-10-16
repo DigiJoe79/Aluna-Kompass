@@ -136,12 +136,12 @@ export function BookTable({
         {SUM_KINDS.filter((kind) => kind !== 'membershipFee' || membershipFeesCertifiable).map((kind) => (
           <span key={kind} className="flex flex-col">
             <Overline as="span">{t(`sums.${kind}`)}</Overline>
-            <span data-testid={`book-sum-${kind}`} className="font-mono text-section tabular-nums text-ink">{formatEuro(sums[kind])}</span>
+            <span data-testid={`book-sum-${kind}`} className="text-section tabular-nums text-ink">{formatEuro(sums[kind])}</span>
           </span>
         ))}
         <span className="flex flex-col">
           <Overline as="span">{t('sums.total')}</Overline>
-          <span data-testid="book-sum-total" className="font-mono text-section tabular-nums text-ink">{formatEuro(sums.total)}</span>
+          <span data-testid="book-sum-total" className="text-section tabular-nums text-ink">{formatEuro(sums.total)}</span>
         </span>
       </div>
       {membershipFeesCertifiable ? <p className="text-hint text-muted-ink">{t('sums.membershipFeeHint')}</p> : null}
@@ -169,7 +169,7 @@ export function BookTable({
                   <TableCell>{date(row.entryDate)}</TableCell>
                   <TableCell>{row.contactName ?? t('anonymous')}</TableCell>
                   <TableCell>{t(`sums.${row.kind}`)}</TableCell>
-                  <TableCell className="text-right font-mono tabular-nums">{formatEuro(row.amountCents)}</TableCell>
+                  <TableCell className="text-right tabular-nums">{formatEuro(row.amountCents)}</TableCell>
                   <TableCell>{row.purposeName ?? <Empty />}</TableCell>
                   <TableCell data-testid="book-confirmed">
                     {row.confirmation ? (

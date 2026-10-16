@@ -151,7 +151,7 @@ export function SettingsForm({
             type="date"
             value={String(value ?? '')}
             onChange={(e) => set(field.key, e.target.value)}
-            className="font-mono"
+           
             aria-invalid={!!errors[field.key] || undefined}
           />
         );

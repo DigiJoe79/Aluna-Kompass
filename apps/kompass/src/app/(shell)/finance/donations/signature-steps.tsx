@@ -62,7 +62,7 @@ function SignatureCard({ row, canIssue }: { row: NeedsSignatureRow; canIssue: bo
   return (
     <li data-testid="signature-steps" className="space-y-3 rounded-md border border-line bg-surface p-4">
       <p className="text-body text-ink">
-        <span className="font-mono font-semibold">{row.number}</span> · {row.contactName} · <span className="font-mono tabular-nums">{formatEuro(row.totalCents)}</span> ·{' '}
+        <span className="font-mono">{row.number}</span> · {row.contactName} · <span className="tabular-nums">{formatEuro(row.totalCents)}</span> ·{' '}
         <span className="text-ink-2">{date(row.issuedOn)}</span>
       </p>
       <RequirementList

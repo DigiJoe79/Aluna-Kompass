@@ -689,10 +689,11 @@ test.describe('dms', () => {
     await login(page);
     await page.goto('/dms');
 
-    // Datum wie Nummer: Zahlen, die man untereinander vergleicht, stehen in
-    // Monospace — das ist der Zweck der Spalte.
+    // Zahlen, die man untereinander vergleicht, stehen mit gleich breiten Ziffern — seit 0.2.12 in der Textschrift,
+    // Monospace nur noch für Kennungen wie die Nummer (Auftrag 5).
     const date = page.getByRole('cell', { name: story('15.02.2026') });
-    expect(await date.evaluate((el) => getComputedStyle(el).fontFamily)).toContain('Plex');
+    expect(await date.evaluate((el) => getComputedStyle(el).fontFamily)).not.toContain('Plex');
+    expect(await date.evaluate((el) => getComputedStyle(el).fontVariantNumeric)).toContain('tabular-nums');
 
     // Die ganze Zeile führt zum Dokument; ein fester Unterstrich am Betreff
     // bietet einen zweiten Weg an, den es nicht gibt.

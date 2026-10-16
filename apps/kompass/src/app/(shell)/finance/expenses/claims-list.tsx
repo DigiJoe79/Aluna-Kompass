@@ -40,8 +40,8 @@ async function ClaimCard({ claim, fmt }: { claim: ExpenseClaimView; fmt: DateFor
         className="flex min-h-16 flex-col gap-1.5 rounded-lg border border-line bg-surface p-4 hover:bg-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
       >
         <span className="flex items-baseline justify-between gap-3">
-          <span className="font-mono text-body font-semibold text-ink">{claim.number ?? t('draftNumber')}</span>
-          <span className="shrink-0 font-mono text-body font-semibold tabular-nums text-ink">{formatEuro(claim.totalCents)}</span>
+          <span className="font-mono text-body text-ink">{claim.number ?? t('draftNumber')}</span>
+          <span className="shrink-0 text-body font-semibold tabular-nums text-ink">{formatEuro(claim.totalCents)}</span>
         </span>
         <ClaimState claim={claim} fmt={fmt} />
         <span className="text-hint text-muted-ink">{next}</span>

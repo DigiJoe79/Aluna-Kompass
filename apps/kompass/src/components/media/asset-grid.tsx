@@ -74,7 +74,7 @@ export function AssetGrid({
               </span>
               <span className="flex items-center justify-between gap-1 px-2 py-1.5 text-hint">
                 <span className="flex min-w-0 flex-col">
-                  <span className="truncate font-mono">{it.filename}</span>
+                  <span className="truncate">{it.filename}</span>
                   {it.place ? (
                     <span data-folder-cell className="truncate text-hint text-ink-2">
                       {it.place}

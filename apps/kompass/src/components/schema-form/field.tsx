@@ -72,7 +72,7 @@ function Localized({ path, field, value, errors, locales, onChange, span }: Fiel
         {isMarkdown ? (
           <>
             <LocaleLabel htmlFor={name} locale={locale} />
-            <Textarea {...shared} rows={5} className="font-mono text-meta" />
+            <Textarea {...shared} rows={5} className="text-meta" />
           </>
         ) : (
           <LocaleInput {...shared} locale={locale} invalid={!!error} />
@@ -221,7 +221,7 @@ export function SchemaField(fieldProps: FieldProps) {
   if (widget === 'markdown') {
     return simple(
       <>
-        <Textarea id={path} name={path} rows={6} value={typeof value === 'string' ? value : ''} onChange={(e) => onChange(e.target.value)} className="font-mono text-meta" />
+        <Textarea id={path} name={path} rows={6} value={typeof value === 'string' ? value : ''} onChange={(e) => onChange(e.target.value)} className="text-meta" />
         <MarkdownPreview markdown={typeof value === 'string' ? value : ''} />
       </>,
     );

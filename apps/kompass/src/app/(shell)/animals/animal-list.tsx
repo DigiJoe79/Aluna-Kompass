@@ -193,7 +193,7 @@ export function AnimalList({
                     </span>
                   </TableCell>
                   <TableCell className="text-ink-2">{[f(`locations.${a.location}`), a.place].filter(Boolean).join(' · ')}</TableCell>
-                  <TableCell className="text-right font-mono text-meta text-ink-2">{a.photoCount}</TableCell>
+                  <TableCell className="tabular-nums text-right text-meta text-ink-2">{a.photoCount}</TableCell>
                   <TableCell className="text-ink-2">{dates.date(a.updatedAt)}</TableCell>
                   <TableCell>
                     <span className="flex justify-end">

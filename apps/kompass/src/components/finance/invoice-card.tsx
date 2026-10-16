@@ -118,10 +118,10 @@ function InvoiceFacts({ invoice }: { invoice: InvoiceView }) {
   const rows: [string, ReactNode][] = [
     [t('seller'), invoice.sellerName],
     [t('number'), <span key="number" className="font-mono">{invoice.invoiceNumber}</span>],
-    [t('date'), <span key="date" className="font-mono tabular-nums">{date(invoice.issueDate)}</span>],
+    [t('date'), <span key="date" className="tabular-nums">{date(invoice.issueDate)}</span>],
     [
       t('total'),
-      <span key="total" className="font-mono tabular-nums">
+      <span key="total" className="tabular-nums">
         {formatEuro(invoice.grandTotalCents)}
         {invoice.typeCode === '381' ? ` · ${t('creditNote')}` : ''}
       </span>,
@@ -132,7 +132,7 @@ function InvoiceFacts({ invoice }: { invoice: InvoiceView }) {
       t('tax'),
       <span key="tax" className="space-y-0.5">
         {invoice.taxes.map((tax) => (
-          <span key={`${tax.ratePercent}-${tax.categoryCode}`} className="block font-mono tabular-nums">
+          <span key={`${tax.ratePercent}-${tax.categoryCode}`} className="block tabular-nums">
             {t('taxLine', { rate: rateText(tax.ratePercent), amount: formatEuro(tax.taxCents) })}
           </span>
         ))}
@@ -140,7 +140,7 @@ function InvoiceFacts({ invoice }: { invoice: InvoiceView }) {
       </span>,
     ]);
   }
-  if (invoice.dueDate) rows.push([t('due'), <span key="due" className="font-mono tabular-nums">{date(invoice.dueDate)}</span>]);
+  if (invoice.dueDate) rows.push([t('due'), <span key="due" className="tabular-nums">{date(invoice.dueDate)}</span>]);
   if (invoice.payeeIban) {
     rows.push([t('iban'), <span key="iban" className="break-all font-mono">{formatIban(invoice.payeeIban)}</span>]);
     rows.push([t('contact'), invoice.contactName ?? <span key="contact" className="text-muted-ink">{t('noContact')}</span>]);

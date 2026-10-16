@@ -59,13 +59,13 @@ export async function RelatedDocuments({
             const role = doc.links.find((l) => l.entityType === entityType && l.entityId === entityId)?.role;
             return (
               <li key={doc.id} className="flex items-center gap-3 py-2">
-                <Link href={`/dms/${doc.id}`} className="font-mono font-semibold underline underline-offset-2 hover:text-link">
+                <Link href={`/dms/${doc.id}`} className="font-mono underline underline-offset-2 hover:text-link">
                   {doc.number ?? t('draft')}
                 </Link>
                 <Link href={`/dms/${doc.id}`} className="min-w-0 flex-1 truncate text-ink hover:underline">
                   {doc.subject}
                 </Link>
-                <span className="font-mono text-hint text-ink-2">{fmt.date(doc.documentDate)}</span>
+                <span className="tabular-nums text-hint text-ink-2">{fmt.date(doc.documentDate)}</span>
                 {role ? <StatusBadge tone="neutral">{t(`roles.${role}`)}</StatusBadge> : null}
               </li>
             );

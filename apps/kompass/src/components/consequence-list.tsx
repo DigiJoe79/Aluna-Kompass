@@ -20,7 +20,7 @@ export function ConsequenceList({ items, stays }: { items: ConsequenceListItem[]
       <ol className="space-y-1.5">
         {items.map((item, index) => (
           <li key={index} className="flex items-baseline gap-2.5 text-meta">
-            <span className="w-6 shrink-0 text-right font-mono font-semibold tabular-nums text-ink">{item.number}</span>
+            <span className="w-6 shrink-0 text-right font-semibold tabular-nums text-ink">{item.number}</span>
             <span className="text-ink-2">{item.label}</span>
           </li>
         ))}

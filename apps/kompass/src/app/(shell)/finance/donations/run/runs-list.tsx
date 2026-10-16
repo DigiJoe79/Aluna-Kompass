@@ -46,12 +46,12 @@ export function RunsList({ runs, currentId, footer }: { runs: RunSummary[]; curr
                   <TableRow key={run.id} data-testid="run-row" aria-current={run.id === currentId ? 'true' : undefined}>
                     <TableCell>
                       <span className="inline-flex items-center gap-2">
-                        <span className="font-mono">{run.year}</span>
+                        <span className="tabular-nums">{run.year}</span>
                         {run.followUpOfRunId ? <StatusBadge tone="neutral">{t('followUp')}</StatusBadge> : null}
                       </span>
                     </TableCell>
                     <TableCell>{date(run.startedOn)}</TableCell>
-                    <TableCell className="font-mono tabular-nums">{t('issued', { issued: run.counts.issued, total: runProgress(run.counts).total })}</TableCell>
+                    <TableCell className="tabular-nums">{t('issued', { issued: run.counts.issued, total: runProgress(run.counts).total })}</TableCell>
                     <TableCell>{stateOf(run)}</TableCell>
                     <TableCell>{run.dispatchedAt && run.dispatchedVia ? `${date(run.dispatchedAt)} · ${tv(run.dispatchedVia)}` : <Empty />}</TableCell>
                     <TableCell className="text-right">

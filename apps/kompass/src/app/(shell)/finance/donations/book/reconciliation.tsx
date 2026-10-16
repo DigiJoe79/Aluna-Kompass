@@ -26,15 +26,15 @@ export function Reconciliation({ data }: { data: DonationReconciliation }) {
           <div className="flex flex-wrap gap-x-8 gap-y-2">
             <span className="flex flex-col">
               <Overline as="span">{t('donations')}</Overline>
-              <span data-testid="reconciliation-donations" className="font-mono text-body tabular-nums text-ink">{formatEuro(data.donationsCents)}</span>
+              <span data-testid="reconciliation-donations" className="text-body tabular-nums text-ink">{formatEuro(data.donationsCents)}</span>
             </span>
             <span className="flex flex-col">
               <Overline as="span">{t('confirmed')}</Overline>
-              <span data-testid="reconciliation-confirmed" className="font-mono text-body tabular-nums text-ink">{formatEuro(data.confirmedCents)}</span>
+              <span data-testid="reconciliation-confirmed" className="text-body tabular-nums text-ink">{formatEuro(data.confirmedCents)}</span>
             </span>
             <span className="flex flex-col">
               <Overline as="span">{t('difference')}</Overline>
-              <span data-testid="reconciliation-difference" className="font-mono text-body tabular-nums text-ink">{formatEuro(data.differenceCents)}</span>
+              <span data-testid="reconciliation-difference" className="text-body tabular-nums text-ink">{formatEuro(data.differenceCents)}</span>
             </span>
           </div>
 
@@ -49,7 +49,7 @@ export function Reconciliation({ data }: { data: DonationReconciliation }) {
                     <Link href={reason.href} className="text-link underline">{t(`reason.${reason.key}`)}</Link>
                     <span className="flex items-center gap-3 text-ink-2">
                       <span>{reason.count}</span>
-                      <span className="font-mono tabular-nums text-ink">{formatEuro(reason.cents)}</span>
+                      <span className="tabular-nums text-ink">{formatEuro(reason.cents)}</span>
                     </span>
                   </li>
                 ))}
@@ -61,7 +61,7 @@ export function Reconciliation({ data }: { data: DonationReconciliation }) {
                     </span>
                     <span className="flex items-center gap-3 text-ink-2">
                       <span>{data.toCorrect.count}</span>
-                      <span className="font-mono tabular-nums text-ink">{formatEuro(data.toCorrect.cents)}</span>
+                      <span className="tabular-nums text-ink">{formatEuro(data.toCorrect.cents)}</span>
                     </span>
                   </li>
                 ) : null}

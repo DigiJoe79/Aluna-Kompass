@@ -103,7 +103,7 @@ export function DashboardCustomize({ layout, available }: { layout: DashboardLay
           max={field.max}
           defaultValue={Number(value)}
           disabled={pending}
-          className="w-20 font-mono"
+          className="w-20"
           onBlur={(e) => {
             const n = parseInt(e.target.value, 10);
             if (!Number.isNaN(n) && n !== value) setOption(index, field.name, n);

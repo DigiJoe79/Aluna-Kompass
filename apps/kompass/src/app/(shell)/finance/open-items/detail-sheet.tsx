@@ -109,7 +109,7 @@ export function DetailSheet({
             <SheetTitle>{item.paymentReference ?? t('detail.unnamed')}</SheetTitle>
             <div className="mt-4 space-y-4">
               <div>
-                <p className="font-mono text-amount font-semibold tabular-nums text-ink">{formatEuro(item.openCents)}</p>
+                <p className="text-amount font-semibold tabular-nums text-ink">{formatEuro(item.openCents)}</p>
                 <p className="text-hint text-muted-ink">{t('detail.ofTotal', { amount: formatEuro(item.amountCents) })}</p>
               </div>
               <dl className="space-y-1.5 text-meta">
@@ -143,7 +143,7 @@ export function DetailSheet({
                         <Link href={`/finance/entries/${s.entryId}`} className="text-link underline">
                           {s.entryNumber ?? s.entryId}
                         </Link>
-                        <span className="font-mono tabular-nums text-ink-2">{formatEuro(s.amountCents)}</span>
+                        <span className="tabular-nums text-ink-2">{formatEuro(s.amountCents)}</span>
                       </li>
                     ))}
                   </ul>

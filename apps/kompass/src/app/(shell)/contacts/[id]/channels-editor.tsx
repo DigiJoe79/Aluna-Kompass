@@ -163,7 +163,7 @@ export function ChannelsEditor({
                     um, die Adresse notfalls in sich. Kein Layout-Test für diese Einzelstelle (AGENTS.md). */}
                 <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
                   <StatusBadge tone="neutral">{t(`channels.kinds.${ch.kind}`)}</StatusBadge>
-                  <span className="min-w-0 font-mono text-meta wrap-anywhere text-ink">{ch.value}</span>
+                  <span className="min-w-0 text-meta wrap-anywhere text-ink">{ch.value}</span>
                   {ch.label ? <span className="text-hint text-muted-ink">({ch.label})</span> : null}
                   {ch.isPrimary ? (
                     <StatusBadge tone="accent" dot>

@@ -448,7 +448,7 @@ export function LibraryClient({
                         ) : (
                           <span className="grid size-8 shrink-0 place-items-center rounded border border-line bg-surface-2 text-[10px] uppercase text-ink-2">{it.filename.split('.').at(-1)}</span>
                         )}
-                        <span className="font-mono text-meta">{it.filename}</span>
+                        <span className="text-meta">{it.filename}</span>
                       </RowButton>
                     </TableCell>
                     <TableCell data-folder-cell className="hidden text-ink-2 sm:table-cell">

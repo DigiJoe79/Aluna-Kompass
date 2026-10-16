@@ -194,8 +194,8 @@ export function VoucherPanel({
                   <li key={hit.documentId} className="flex items-start gap-2 px-3 py-2 text-meta">
                     <span className="min-w-0 flex-1 space-y-0.5">
                       <span className="block font-semibold text-ink">{hit.subject}</span>
-                      <span className="block font-mono text-hint text-ink-2">
-                        {hit.number} · {date(hit.documentDate)}
+                      <span className="block text-hint tabular-nums text-ink-2">
+                        <span className="font-mono">{hit.number}</span> · {date(hit.documentDate)}
                       </span>
                       <span className="block text-hint text-muted-ink">{t('matchedBy', { what: matched(hit) })}</span>
                     </span>

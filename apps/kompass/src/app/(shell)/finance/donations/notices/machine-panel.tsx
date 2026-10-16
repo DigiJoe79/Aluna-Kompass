@@ -100,8 +100,8 @@ export function MachinePanel({ signers, status, canIssue, canDraftLetter, draftN
                   <span className="font-semibold text-ink">{signer.signerName}</span>{' '}
                   <StatusBadge tone={signer.state === 'current' ? 'success' : 'neutral'}>{t(`state.${signer.state}`)}</StatusBadge>
                 </TableCell>
-                <TableCell className="font-mono tabular-nums">{t('period', { from: date(signer.validFrom), to: signer.validTo ? date(signer.validTo) : t('openEnd') })}</TableCell>
-                <TableCell className="font-mono tabular-nums">{signer.notifiedOn ? date(signer.notifiedOn) : <span className="font-sans text-muted-ink">{t('notNotified')}</span>}</TableCell>
+                <TableCell className="tabular-nums">{t('period', { from: date(signer.validFrom), to: signer.validTo ? date(signer.validTo) : t('openEnd') })}</TableCell>
+                <TableCell className="tabular-nums">{signer.notifiedOn ? date(signer.notifiedOn) : <span className="text-muted-ink">{t('notNotified')}</span>}</TableCell>
                 <TableCell>
                   <div className="flex flex-col gap-1.5">
                     {!signer.hasFacsimile ? <span className="text-meta text-muted-ink">{t('noFacsimile')}</span> : null}
@@ -186,13 +186,13 @@ function SignerDialog({ signer, onClose }: { signer: SignerView | null; onClose:
           </FormField>
           <FormRowBreak />
           <FormField id="signer-valid-from" label={td('validFrom')} required error={errors.validFrom} size="s">
-            <Input id="signer-valid-from" type="date" className="font-mono" value={validFrom} onChange={(e) => setValidFrom(e.target.value)} />
+            <Input id="signer-valid-from" type="date" value={validFrom} onChange={(e) => setValidFrom(e.target.value)} />
           </FormField>
           <FormField id="signer-valid-to" label={td('validTo')} error={errors.validTo} size="s">
-            <Input id="signer-valid-to" type="date" className="font-mono" aria-describedby="signer-valid-to-note" value={validTo} onChange={(e) => setValidTo(e.target.value)} />
+            <Input id="signer-valid-to" type="date" aria-describedby="signer-valid-to-note" value={validTo} onChange={(e) => setValidTo(e.target.value)} />
           </FormField>
           <FormField id="signer-notified-on" label={td('notifiedOn')} error={errors.notifiedOn} size="s">
-            <Input id="signer-notified-on" type="date" className="font-mono" value={notifiedOn} onChange={(e) => setNotifiedOn(e.target.value)} />
+            <Input id="signer-notified-on" type="date" value={notifiedOn} onChange={(e) => setNotifiedOn(e.target.value)} />
           </FormField>
         </FormGrid>
         {/* Der lange Hinweis zu „Gültig bis“ steht unter der Zeile, nicht in der schmalen Spalte (Entscheidung zum Inventar). */}

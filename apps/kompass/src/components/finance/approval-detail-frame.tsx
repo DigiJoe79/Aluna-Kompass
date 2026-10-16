@@ -45,7 +45,7 @@ export function ApprovalDetailFrame({ head, headRef, children, requirements, foo
             {head.number}
           </p>
         </div>
-        <p className="font-mono text-figure font-semibold tabular-nums text-ink">{head.amount}</p>
+        <p className="text-figure font-semibold tabular-nums text-ink">{head.amount}</p>
         <p className="text-body text-ink">{head.person}</p>
         <p className="text-hint text-muted-ink">
           {head.received}

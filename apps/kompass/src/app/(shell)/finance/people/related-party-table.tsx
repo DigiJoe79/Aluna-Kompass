@@ -52,7 +52,7 @@ export async function RelatedPartyTable({ rows, approverNames, fmt }: { rows: Re
                   </span>
                 ) : null}
               </TableCell>
-              <TableCell className="px-3 text-right font-mono tabular-nums">{formatEuro(row.amountCents)}</TableCell>
+              <TableCell className="px-3 text-right tabular-nums">{formatEuro(row.amountCents)}</TableCell>
               <TableCell className="px-3 text-ink-2" data-testid="related-party-approver">
                 {row.approvedByUserId ? approverNames.get(row.approvedByUserId) ?? <Empty /> : <Empty />}
               </TableCell>

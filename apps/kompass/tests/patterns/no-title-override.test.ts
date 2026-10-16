@@ -22,8 +22,8 @@ const ALLOWED: Allowed = {
     grund: 'Kopf des Ordnerblatts: 52 px wie seine Zeilen, Rolle Abschnitt (Designer 2026-10-10 § 3).',
   },
   'app/(shell)/admin/media/asset-detail-dialog.tsx': {
-    erwartet: ['font-mono', 'text-body'],
-    grund: 'Dateiname, kein Titel: mono in der Rolle Text, lange Namen per truncate nur optisch gekürzt (Designer 2026-10-10 § 9.6; 14/500 vom 2026-10-07 entfällt, nur 400/600).',
+    erwartet: ['text-body'],
+    grund: 'Dateiname, kein Titel: Rolle Text, lange Namen per truncate nur optisch gekürzt (Designer 2026-10-10 § 9.6; 14/500 vom 2026-10-07 entfällt, nur 400/600). Seit Auftrag 5 (0.2.12) ohne Mono: Dateinamen sind keine Kennung.',
   },
 };
 

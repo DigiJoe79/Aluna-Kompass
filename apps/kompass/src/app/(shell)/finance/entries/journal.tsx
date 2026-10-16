@@ -250,7 +250,7 @@ export function Journal({ rows, total, totals, page, pageSize, standing, account
                         {row.number ?? <Empty />}
                       </RowLink>
                     </TableCell>
-                    <TableCell className="font-mono text-meta text-ink-2">{fmt.date(row.entryDate)}</TableCell>
+                    <TableCell className="tabular-nums text-meta text-ink-2">{fmt.date(row.entryDate)}</TableCell>
                     <TableCell className={cn('', reversed && 'text-muted-ink line-through')}>
                       {row.text}
                       {reversed && row.reversedByNumber ? (

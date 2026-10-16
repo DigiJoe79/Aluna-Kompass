@@ -208,7 +208,7 @@ export function IssueDialog({ lineId, contactName, open, onOpenChange, today, ca
           {check ? (
             <p className="text-meta text-ink-2">
               {contactName ? <span className="font-semibold text-ink">{contactName} · </span> : null}
-              <span className="font-mono tabular-nums text-ink">{formatEuro(netCents)}</span>
+              <span className="tabular-nums text-ink">{formatEuro(netCents)}</span>
               {entryNumbers.length > 0 ? <span> · {t('headLines', { count: entryNumbers.length, numbers: entryNumbers.join(', ') })}</span> : null}
             </p>
           ) : null}
@@ -321,7 +321,7 @@ function InKindForm({ lineId, valueCents, details, canDescribe, onSaved }: { lin
         </FormField>
         <FormCell size="full" className="space-y-1">
           <p className="text-meta font-semibold text-ink-2">{tk('value')}</p>
-          <p className="font-mono tabular-nums text-ink">{formatEuro(valueCents)}</p>
+          <p className="tabular-nums text-ink">{formatEuro(valueCents)}</p>
           <p className="text-hint text-muted-ink">{tk('valueHint')}</p>
         </FormCell>
         <FormField id="in-kind-valuation" label={tk('valuation')} required size="l">

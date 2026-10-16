@@ -176,7 +176,7 @@ export default async function ApprovalsPage({ searchParams }: { searchParams: Pr
           <StatusBadge tone={approved ? 'success' : 'neutral'}>{approved ? t('result.approved') : t('result.rejected')}</StatusBadge>
           {claim.stateLabelKey === 'paid' ? <StatusBadge tone="final">{tState('paid')}</StatusBadge> : null}
         </div>
-        <p className="font-mono text-figure font-semibold tabular-nums">{formatEuro(claim.totalCents)}</p>
+        <p className="text-figure font-semibold tabular-nums">{formatEuro(claim.totalCents)}</p>
         <p className="text-body text-ink">{claim.contactName}</p>
         {approved && claim.openItemId ? (
           <div className="space-y-2">

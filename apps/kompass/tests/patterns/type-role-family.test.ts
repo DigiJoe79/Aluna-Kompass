@@ -1,11 +1,12 @@
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { type Allowlist, classNameValue, openingTags, read, relative, sourceFiles, SRC } from './source';
+import { type Allowlist, classNameValue, isCommentLine, openingTags, read, relative, sourceFiles, SRC } from './source';
 import { scanFiles } from './type-scan';
 
 /**
- * Rollen, deren Familie das Token nicht tragen kann (K10 Charge 3, Spec § 6, Designer § 9): `text-figure`,
- * `text-amount`, `text-key` nur zusammen mit `font-mono` im selben Klassenausdruck; `text-label` nur in
+ * Rollen, deren Familie das Token nicht tragen kann (K10 Charge 3, Spec § 6, Designer § 9): `text-key` nur zusammen
+ * mit `font-mono` im selben Klassenausdruck; `text-figure` und `text-amount` (Beträge und Kennzahlen) in der Textschrift
+ * mit `tabular-nums`, nie in Mono (Durchsicht 0.2.11, Auftrag 5, Joe 2026-10-16); `text-label` nur in
  * `Overline` und `TableHeader`. Ein Klassenausdruck ist der Text zwischen den Klammern eines `cn(…)` oder
  * eine Zeichenkette in `className=`/`const … =` — gelesen als die zusammenhängenden Zeichenketten eines Ausdrucks
  * über Zeilen hinweg (`expressions`).
@@ -19,15 +20,30 @@ export function expressions(text: string): { line: number; classes: string }[] {
   return out;
 }
 
-const MONO_ROLE = /(?<![\w-])text-(?:figure|amount|key)(?![\w-])/;
+/** Kommentarzeilen leeren (Zeilen bleiben gezählt): Ein `?transfer=` im Kommentar öffnete sonst eine Zeichenkette bis zum nächsten Backtick. */
+const withoutComments = (text: string): string => text.split('\n').map((line) => (isCommentLine(line) ? '' : line)).join('\n');
+
+const KEY_ROLE = /(?<![\w-])text-key(?![\w-])/;
+const FIGURE_ROLE = /(?<![\w-])text-(?:figure|amount)(?![\w-])/;
+const FONT_MONO = /(?<![\w-])font-mono(?![\w-])/;
+const TABULAR = /(?<![\w-])tabular-nums(?![\w-])/;
 const LABEL = /(?<![\w-])text-label(?![\w-])/;
 const LABEL_HOME = new Set(['components/overline.tsx', 'components/ui/table.tsx']);
 
 describe('Familie der Rollen', () => {
-  it('text-figure, text-amount, text-key nur mit font-mono', () => {
+  it('text-key nur mit font-mono', () => {
     const bad = scanFiles().flatMap((file) =>
       expressions(read(file))
-        .filter(({ classes }) => MONO_ROLE.test(classes) && !/(?<![\w-])font-mono(?![\w-])/.test(classes))
+        .filter(({ classes }) => KEY_ROLE.test(classes) && !FONT_MONO.test(classes))
+        .map(({ line }) => `${relative(file)}:${line}`),
+    );
+    expect(bad).toEqual([]);
+  });
+
+  it('text-figure und text-amount ohne font-mono, mit tabular-nums', () => {
+    const bad = scanFiles().flatMap((file) =>
+      expressions(withoutComments(read(file)))
+        .filter(({ classes }) => FIGURE_ROLE.test(classes) && (FONT_MONO.test(classes) || !TABULAR.test(classes)))
         .map(({ line }) => `${relative(file)}:${line}`),
     );
     expect(bad).toEqual([]);

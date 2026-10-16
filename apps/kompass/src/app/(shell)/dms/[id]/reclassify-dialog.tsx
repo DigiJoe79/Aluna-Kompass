@@ -79,7 +79,7 @@ export function ReclassifyDialog({
               </FormField>
               {/* Datum neben der Art: beide steuern die Vorschau darunter (Inventar § 3 C). */}
               <FormField id="reclassify-date" label={t('date')} size="s">
-                <Input id="reclassify-date" name="documentDate" type="date" value={documentDate} onChange={(e) => setDocumentDate(e.target.value)} required className="font-mono" />
+                <Input id="reclassify-date" name="documentDate" type="date" value={documentDate} onChange={(e) => setDocumentDate(e.target.value)} required />
               </FormField>
               <FormField id="reclassify-subject" label={t('subject')}>
                 <Input id="reclassify-subject" name="subject" defaultValue={doc.subject} required maxLength={300} />

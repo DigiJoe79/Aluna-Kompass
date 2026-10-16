@@ -52,7 +52,7 @@ export function RulesTable({ rows, canWrite, options }: { rows: RuleRow[]; canWr
                   {row.categoryInactive ? <StatusBadge tone="error">{t('categoryInactive')}</StatusBadge> : null}
                 </span>
               </TableCell>
-              <TableCell data-testid="rule-hits" className="py-2.5 text-right font-mono tabular-nums">
+              <TableCell data-testid="rule-hits" className="py-2.5 text-right tabular-nums">
                 {row.hitCount}
               </TableCell>
               <TableCell className="py-2.5">{row.rule.isActive ? t('yes') : t('no')}</TableCell>

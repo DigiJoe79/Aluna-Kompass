@@ -258,7 +258,7 @@ export function ExpenseForm({
           <div className="space-y-4">
             <div data-testid="expense-total" className="flex items-baseline justify-between gap-3">
               <span className="text-meta font-semibold text-muted-ink">{t('total')}</span>
-              <span className="font-mono text-amount font-semibold tabular-nums">{formatEuro(totalCents(form, mileageRates))}</span>
+              <span className="text-amount font-semibold tabular-nums">{formatEuro(totalCents(form, mileageRates))}</span>
             </div>
 
             {waiversEnabled && waiverAvailable ? (

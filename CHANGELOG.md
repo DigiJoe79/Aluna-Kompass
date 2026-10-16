@@ -27,6 +27,8 @@ die Nummern folgen [Semantic Versioning](https://semver.org/lang/de/). Vor
 - **Akte: „Ohne Ordner“.** Ausgehende Dokumente ohne Ordner haben im Baum eine
   eigene Zeile „Ohne Ordner“; bisher fand man sie nur unter „Alle Dokumente“.
   Der Eingangskorb bleibt eingegangener Post vorbehalten.
+- **Schrift.** Beträge, Datum und Texte stehen in der Textschrift; Monospace
+  nur noch für Nummern, Schlüssel und IBAN.
 
 ## [0.2.11] - 2026-10-11
 

@@ -67,13 +67,13 @@ export function PurposesTable({
     </div>
   );
 
-  const money = (cents: number) => <span className="font-mono tabular-nums">{formatEuro(cents)}</span>;
+  const money = (cents: number) => <span className="tabular-nums">{formatEuro(cents)}</span>;
   const net = (row: PurposeOverviewRow) => {
     const transfersIn = row.transfersInCents ?? 0;
     const transfersOut = row.transfersOutCents ?? 0;
     const n = transfersIn - transfersOut;
     if (transfersIn === 0 && transfersOut === 0) return <span className="text-muted-ink"><Empty /></span>;
-    return <span className="font-mono tabular-nums">{formatEuro(n, { sign: 'always' })}</span>;
+    return <span className="tabular-nums">{formatEuro(n, { sign: 'always' })}</span>;
   };
 
   return (

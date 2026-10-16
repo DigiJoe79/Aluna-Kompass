@@ -187,7 +187,7 @@ test.describe('media library', () => {
 
     await page.goto('/admin/media?sort=name');
     // Nur der Dateiname, nicht die Typ-Badge davor (die für PDF „PDF“ zeigt).
-    const names = await page.locator('tbody tr td:first-child span.font-mono').allInnerTexts();
+    const names = await page.locator('tbody tr td:first-child span.text-meta').allInnerTexts();
     expect(names.map((n) => n.trim())).toEqual([...names.map((n) => n.trim())].sort((a, b) => a.localeCompare(b)));
 
     await page.goto('/admin/media');
@@ -484,7 +484,7 @@ test.describe('Ziehen in der Mediathek', () => {
     const row = assetRows(page).filter({ hasText: /vereinsbanner-/i });
     await expect(row).toBeVisible();
     const before = await assetTotal(page);
-    const from = (await row.locator('span.font-mono').boundingBox())!;
+    const from = (await row.locator('span.text-meta').boundingBox())!;
     const to = (await page.locator('[data-folder="Dokumente"]').boundingBox())!;
     await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
     await page.mouse.down();

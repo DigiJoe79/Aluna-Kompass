@@ -70,7 +70,7 @@ export function RunProgress({ runId, counts: initial, canContinue }: { runId: st
       <Section title={t('title')}>
         <div className="space-y-3">
           <progress value={done} max={total} aria-label={t('title')} className="h-2 w-full" />
-          <p data-testid="run-progress-status" role="status" aria-live="polite" className="font-mono text-meta tabular-nums text-ink">
+          <p data-testid="run-progress-status" role="status" aria-live="polite" className="text-meta tabular-nums text-ink">
             {t('status', { done, total })}
           </p>
           <p className="text-meta text-ink-2">{canContinue ? t('leave') : t('noPermission')}</p>

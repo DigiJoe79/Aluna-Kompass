@@ -91,7 +91,7 @@ export function PurposesPanel({ purposes }: { purposes: PurposeRow[] }) {
             {purposes.map((row) => (
               <TableRow key={row.id}>
                 <TableCell className="text-ink">{row.name}</TableCell>
-                <TableCell className="font-mono text-ink-2">{row.targetCents !== null ? formatAmount(row.targetCents) : <Empty />}</TableCell>
+                <TableCell className="tabular-nums text-ink-2">{row.targetCents !== null ? formatAmount(row.targetCents) : <Empty />}</TableCell>
                 <TableCell>
                   <StatusBadge tone={stateOf(row) === 'open' ? 'success' : 'neutral'}>{t(`states.${stateOf(row)}`)}</StatusBadge>
                 </TableCell>

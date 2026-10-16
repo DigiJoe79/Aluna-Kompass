@@ -48,9 +48,9 @@ export default async function FinanceForeignMoneyPage() {
               <TableBody>
                 {items.map((item) => (
                   <TableRow key={item.lineId}>
-                    <TableCell className="font-mono text-hint tabular-nums text-ink-2">{fmt.date(item.entryDate)}</TableCell>
+                    <TableCell className="text-hint tabular-nums text-ink-2">{fmt.date(item.entryDate)}</TableCell>
                     <TableCell className="text-ink">{item.holderText}</TableCell>
-                    <TableCell className="text-right font-mono tabular-nums">
+                    <TableCell className="text-right tabular-nums">
                       {formatEuro(item.openCents)}
                       {item.passedOnCents > 0 && (
                         <span className="block text-hint text-muted-ink" data-testid="foreign-partly-passed-on">

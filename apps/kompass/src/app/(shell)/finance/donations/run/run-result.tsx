@@ -180,7 +180,7 @@ function ItemList({ testId, title, items, reason }: { testId: string; title: str
               <span className="text-ink-2">{t(`itemKind.${runItemKindKey(item.kind, item.lineCount)}`)}</span>
               <span className="text-ink-2">{reason(item)}</span>
             </span>
-            <span className="font-mono tabular-nums text-ink">{formatEuro(item.totalCents)}</span>
+            <span className="tabular-nums text-ink">{formatEuro(item.totalCents)}</span>
           </li>
         ))}
       </ul>

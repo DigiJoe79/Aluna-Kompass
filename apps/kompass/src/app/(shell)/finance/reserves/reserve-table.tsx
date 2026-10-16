@@ -211,7 +211,7 @@ export function ReserveTable({
                   <TableCell className="whitespace-normal px-3 align-top">
                     <DocumentLabel document={row.resolution} testId="reserve-resolution" />
                   </TableCell>
-                  <TableCell className="px-3 text-right align-top font-mono font-semibold tabular-nums" data-testid="reserve-balance">
+                  <TableCell className="px-3 text-right align-top font-semibold tabular-nums" data-testid="reserve-balance">
                     {formatEuro(row.balanceCents)}
                   </TableCell>
                   <TableCell className="px-3 text-right align-top">

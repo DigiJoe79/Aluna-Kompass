@@ -21,6 +21,7 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
 import { formatAmount, formatEuro, parseAmount } from '@/lib/finance/amount';
+import { cn } from '@/lib/utils';
 import { AMOUNT_EVIDENCE_KINDS, coverageRequired, evidenceCoverage, evidenceKindLabelKey, missingEvidence, type EvidenceKind, type PartnerBasis } from '@/lib/finance/partners';
 import { acknowledgeEvidenceAction, addEvidenceLinkAction, addEvidenceUploadAction, copyPartnerPaymentAction, removeEvidenceAction, updateEvidenceAction } from '../../../actions';
 import { DraftForm, type LineOption } from './draft-form';
@@ -122,7 +123,7 @@ export function PaymentDetail({
                 {p.categoryId && categoryLabel.get(p.categoryId) ? ` · ${categoryLabel.get(p.categoryId)}` : ''}
                 {p.kind === 'money' ? ` · ${t('positions.paidFrom')} ${p.purposeId ? purposeLabel.get(p.purposeId) ?? '' : t('positions.freeFunds')}` : ''}
               </span>
-              <span className="font-mono tabular-nums text-ink">{formatEuro(p.amountCents)}</span>
+              <span className="tabular-nums text-ink">{formatEuro(p.amountCents)}</span>
             </li>
           ))}
         </ul>
@@ -222,7 +223,7 @@ function EvidenceSection({ payment, basis, canWrite, canApprove, evidence, peopl
           {/* W (Prüfer Block 2): jeder Nachweis mit Nummer und Link auf das PDF — auch für Leser, soweit die Akte es zeigt. */}
           {rows.map((e) =>
             e.document && e.documentId ? (
-              <a key={e.id} href={`/dms/${e.documentId}/file`} target="_blank" rel="noreferrer" className="font-mono text-hint font-semibold underline underline-offset-2" data-testid={`evidence-document-${e.id}`}>
+              <a key={e.id} href={`/dms/${e.documentId}/file`} target="_blank" rel="noreferrer" className={cn(e.document.number && 'font-mono', 'text-hint underline underline-offset-2')} data-testid={`evidence-document-${e.id}`}>
                 {e.document.number ?? e.document.subject}
               </a>
             ) : null,

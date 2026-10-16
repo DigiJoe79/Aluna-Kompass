@@ -32,7 +32,7 @@ export function ReceiptList({ items, onRevoke }: { items: ReceiptListItem[]; onR
           <span className={cn('font-mono text-hint', item.revoked && 'line-through')}>{item.documentNumber}</span>
           <span className={cn('min-w-0 flex-1 truncate', item.revoked && 'line-through')}>{item.title}</span>
           <span className="shrink-0 text-hint text-muted-ink">{item.typeLabel}</span>
-          <span className="shrink-0 font-mono text-hint text-muted-ink">{date(item.date)}</span>
+          <span className="tabular-nums shrink-0 text-hint text-muted-ink">{date(item.date)}</span>
           {item.revoked ? (
             item.replacedByNumber ? <span className="shrink-0 text-hint">{t('replacedBy', { number: item.replacedByNumber })}</span> : null
           ) : (

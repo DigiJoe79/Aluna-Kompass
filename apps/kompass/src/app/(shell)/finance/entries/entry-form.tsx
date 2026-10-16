@@ -163,7 +163,7 @@ function MoneySettlements({
                     className="flex w-full items-center justify-between gap-2 rounded-sm border border-line px-2.5 py-1.5 text-left text-meta"
                   >
                     <span>{item.label}</span>
-                    <span className="font-mono tabular-nums text-ink-2">{ts('rest', { amount: formatEuro(item.openCents) })}</span>
+                    <span className="tabular-nums text-ink-2">{ts('rest', { amount: formatEuro(item.openCents) })}</span>
                   </button>
                 </li>
               ))}
@@ -361,7 +361,7 @@ export function EntryForm({ initial, accounts, categories, purposes, projects, t
               {state.moneyRows.map((row, index) => (
                 <FormGrid key={row.key}>
                   {row.rawTransactionId ? (
-                    <FormCell as="p" data-testid="bound-money-line" size="full" className="rounded-sm border border-line bg-surface-2 px-2.5 py-1.5 font-mono text-meta tabular-nums text-ink">
+                    <FormCell as="p" data-testid="bound-money-line" size="full" className="rounded-sm border border-line bg-surface-2 px-2.5 py-1.5 text-meta tabular-nums text-ink">
                       {(() => {
                         const cents = (parseAmount(row.amountText) ?? 0) * (row.direction === 'out' ? -1 : 1);
                         return row.rawBookingDate ? t('boundLine', { date: date(row.rawBookingDate), amount: formatEuro(cents) }) : t('boundLineNoDate', { amount: formatEuro(cents) });
@@ -481,7 +481,7 @@ export function EntryForm({ initial, accounts, categories, purposes, projects, t
                 <span className="font-mono text-hint">{pendingVoucher.number}</span>
                 <span className="min-w-0 flex-1 truncate">{pendingVoucher.subject}</span>
                 <span className="text-hint text-muted-ink">{pendingVoucher.typeLabel}</span>
-                <span className="font-mono text-hint text-muted-ink">{date(pendingVoucher.date)}</span>
+                <span className="tabular-nums text-hint text-muted-ink">{date(pendingVoucher.date)}</span>
                 <span className="text-hint font-semibold text-ink-2">{t('pendingVoucher')}</span>
               </p>
             ) : null}

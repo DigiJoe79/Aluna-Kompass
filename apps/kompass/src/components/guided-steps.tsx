@@ -42,7 +42,7 @@ export function GuidedSteps({ steps, label }: { steps: readonly GuidedStep[]; la
             step.state === 'active' ? 'border-brand bg-brand-soft font-semibold text-ink' : step.state === 'done' ? 'border-line text-ink' : 'border-line text-muted-ink',
           )}
         >
-          {step.state === 'done' ? <Check className="size-3.5 text-success" aria-hidden /> : <span className="font-mono" aria-hidden>{index + 1}</span>}
+          {step.state === 'done' ? <Check className="size-3.5 text-success" aria-hidden /> : <span aria-hidden>{index + 1}</span>}
           <span>{step.label}</span>
           {step.detail ? (
             <span data-testid={`guided-step-${step.key}-detail`} className="font-normal text-muted-ink">

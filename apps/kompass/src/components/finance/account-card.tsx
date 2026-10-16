@@ -79,7 +79,7 @@ export function AccountCard({ account }: { account: AccountCardData }) {
       ) : null}
 
       <div className="mt-3">
-        <p className="font-mono text-amount font-semibold tabular-nums text-ink">{formatEuro(account.balanceCents)}</p>
+        <p className="text-amount font-semibold tabular-nums text-ink">{formatEuro(account.balanceCents)}</p>
         {account.withReviewedCents !== account.balanceCents ? (
           <p className="text-hint text-muted-ink">{t('withReviewed', { amount: formatEuro(account.withReviewedCents) })}</p>
         ) : null}

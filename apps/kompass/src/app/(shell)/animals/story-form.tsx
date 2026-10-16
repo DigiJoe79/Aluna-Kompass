@@ -44,7 +44,7 @@ export function StoryFields({ animal, locales, errors, onMediaChange, places, si
         <Section title={t('sections.family')}>
           <FormGrid>
             <FormField id="family" label={t('family')} error={errors.family}><Input id="family" name="family" defaultValue={story?.family ?? ''} /></FormField>
-            <FormField id="adoptedYear" label={t('year')} error={errors.adoptedYear} size="s"><Input key={animal.updatedAt} id="adoptedYear" name="adoptedYear" type="number" defaultValue={story?.adoptedYear ?? new Date().getFullYear()} className="font-mono" /></FormField>
+            <FormField id="adoptedYear" label={t('year')} error={errors.adoptedYear} size="s"><Input key={animal.updatedAt} id="adoptedYear" name="adoptedYear" type="number" defaultValue={story?.adoptedYear ?? new Date().getFullYear()} /></FormField>
             <LocalizedField name="quote" label={t('quote')} kind="textarea" rows={3} value={story?.quote ?? {}} errors={errors} locales={locales} />
           </FormGrid>
         </Section>

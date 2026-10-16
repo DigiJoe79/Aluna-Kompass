@@ -201,7 +201,7 @@ export function CsvAssistant({ accounts, initialAccountId, canLoad, reselect = f
             aria-current={s === step ? 'step' : undefined}
             className={cn('flex items-center gap-1.5 rounded-full border px-3 py-1', s === step ? 'border-brand bg-brand-soft font-semibold text-ink' : 'border-line text-muted-ink')}
           >
-            {s < step ? <Check className="size-3.5" aria-hidden /> : <span className="font-mono">{s}</span>}
+            {s < step ? <Check className="size-3.5" aria-hidden /> : <span>{s}</span>}
             {t(`steps.${s}`)}
           </li>
         ))}
@@ -410,7 +410,7 @@ export function CsvAssistant({ accounts, initialAccountId, canLoad, reselect = f
             {first ? (
               <dl data-testid="csv-probe" className="grid grid-cols-[max-content_1fr] gap-x-4 gap-y-1.5 rounded-md border border-line bg-surface p-4 text-body">
                 <dt className="text-muted-ink">{t('probe.date')}</dt>
-                <dd className="font-mono">{date(first.bookingDate)}</dd>
+                <dd className="tabular-nums">{date(first.bookingDate)}</dd>
                 <dt className="text-muted-ink">{t('probe.counterparty')}</dt>
                 <dd>{first.counterpartyName ?? <Empty />}</dd>
                 <dt className="text-muted-ink">{t('probe.iban')}</dt>
@@ -418,11 +418,11 @@ export function CsvAssistant({ accounts, initialAccountId, canLoad, reselect = f
                 <dt className="text-muted-ink">{t('probe.purpose')}</dt>
                 <dd>{first.purpose || <Empty />}</dd>
                 <dt className="text-muted-ink">{t('probe.amount')}</dt>
-                <dd className="font-mono tabular-nums">{formatEuro(first.amountCents)}</dd>
+                <dd className="tabular-nums">{formatEuro(first.amountCents)}</dd>
                 {fee ? (
                   <>
                     <dt className="text-muted-ink">{t('probe.fee')}</dt>
-                    <dd className="font-mono tabular-nums">{formatEuro(fee.amountCents)}</dd>
+                    <dd className="tabular-nums">{formatEuro(fee.amountCents)}</dd>
                   </>
                 ) : null}
               </dl>

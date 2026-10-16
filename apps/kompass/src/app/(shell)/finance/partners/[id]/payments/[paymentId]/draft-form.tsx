@@ -253,7 +253,7 @@ export function DraftForm({
                   ))}
                 </Select>
                 {/* Task 6c (Joe 28.09.): die Frist läuft ab dem Zahlungstag — ein Datum gibt es erst, wenn er feststeht (nachträglich: die gewählte Zeile). */}
-                {d.retroactive && chosenLines.length > 0 ? <span className="font-mono text-body tabular-nums text-ink">{fmt.date(proofDueDate(paymentDay, months))}</span> : null}
+                {d.retroactive && chosenLines.length > 0 ? <span className="text-body tabular-nums text-ink">{fmt.date(proofDueDate(paymentDay, months))}</span> : null}
               </div>
             </FormField>
           </FormCell>
@@ -286,8 +286,8 @@ export function DraftForm({
                           disabled={!canWrite}
                           onCheckedChange={(v) => update((prev) => ({ ...prev, paidLineIds: v === true ? [...prev.paidLineIds, line.id] : prev.paidLineIds.filter((id) => id !== line.id) }))}
                         />
-                        <span className="font-mono">
-                          {line.entryNumber ? `${line.entryNumber} · ` : ''}
+                        <span className="tabular-nums">
+                          {line.entryNumber ? <><span className="font-mono">{line.entryNumber}</span>{' · '}</> : null}
                           {fmt.date(line.entryDate)} · {formatEuro(Math.abs(line.amountCents))}
                         </span>
                       </label>

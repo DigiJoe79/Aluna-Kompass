@@ -16,11 +16,11 @@ function PeriodFields({ from, to, onChange, idPrefix }: { from: string; to: stri
   const t = useTranslations('audit.filters');
   return (
     <div role="group" aria-label={t('period')} className="flex items-center gap-1.5">
-      <Input id={`${idPrefix}-from`} aria-label={t('from')} type="date" value={from} onChange={(e) => onChange(e.target.value, to)} className={`w-[150px] font-mono ${filterControlClass(from !== '')}`} />
+      <Input id={`${idPrefix}-from`} aria-label={t('from')} type="date" value={from} onChange={(e) => onChange(e.target.value, to)} className={`w-[150px] ${filterControlClass(from !== '')}`} />
       <span aria-hidden className="text-muted-ink">
         –
       </span>
-      <Input id={`${idPrefix}-to`} aria-label={t('to')} type="date" value={to} onChange={(e) => onChange(from, e.target.value)} className={`w-[150px] font-mono ${filterControlClass(to !== '')}`} />
+      <Input id={`${idPrefix}-to`} aria-label={t('to')} type="date" value={to} onChange={(e) => onChange(from, e.target.value)} className={`w-[150px] ${filterControlClass(to !== '')}`} />
     </div>
   );
 }

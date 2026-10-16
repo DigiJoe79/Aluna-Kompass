@@ -79,7 +79,7 @@ export function PurposeDetail({
             <dt className="text-muted-ink">{t('detail.project')}</dt>
             <dd className="text-ink">{projectName ?? <Empty />}</dd>
             <dt className="text-muted-ink">{t('detail.target')}</dt>
-            <dd className="font-mono tabular-nums text-ink">{row.targetCents !== null ? formatEuro(row.targetCents) : t('detail.noTarget')}</dd>
+            <dd className="tabular-nums text-ink">{row.targetCents !== null ? formatEuro(row.targetCents) : t('detail.noTarget')}</dd>
             {row.referenceNote ? (
               <>
                 <dt className="text-muted-ink">{t('detail.reference')}</dt>
@@ -164,8 +164,8 @@ export function PurposeDetail({
                         </TableCell>
                         <TableCell className="px-3 text-ink">{m.kind === 'line' ? m.text : m.text ? `${t(`movementKind.${m.kind}`)}: ${m.text}` : t(`movementKind.${m.kind}`)}</TableCell>
                         <TableCell className="px-3 text-ink-2">{m.counterpartyName ?? <Empty />}</TableCell>
-                        <TableCell className="px-3 text-right font-mono tabular-nums">{formatEuro(m.amountCents)}</TableCell>
-                        <TableCell className="px-3 text-right font-mono tabular-nums">{formatEuro(m.runningBalanceCents)}</TableCell>
+                        <TableCell className="px-3 text-right tabular-nums">{formatEuro(m.amountCents)}</TableCell>
+                        <TableCell className="px-3 text-right tabular-nums">{formatEuro(m.runningBalanceCents)}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>

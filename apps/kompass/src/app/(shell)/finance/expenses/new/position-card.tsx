@@ -110,7 +110,7 @@ export function PositionCard({ position: p, n, rates, projects, errors, canRemov
                 <FormField id={id('to')} label={t('tripTo')}>
                   <Input id={id('to')} value={p.tripTo} onChange={(e) => onChange({ tripTo: e.target.value })} />
                 </FormField>
-                <FormCell as="p" data-testid="trip-calculation" aria-live="polite" size="full" className="font-mono text-body tabular-nums text-ink-2">
+                <FormCell as="p" data-testid="trip-calculation" aria-live="polite" size="full" className="text-body tabular-nums text-ink-2">
                   {trip
                     ? t.rich('tripCalculation', { km: trip.km, rate: formatEuro(trip.centsPerKm), amount: formatEuro(trip.amountCents), b: (chunks) => <b className="text-ink">{chunks}</b> })
                     : p.positionDate && rateAt(rates, p.positionDate) === null

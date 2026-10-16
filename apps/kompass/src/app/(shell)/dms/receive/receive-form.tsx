@@ -224,7 +224,7 @@ export function ReceiveForm({
                 name="documentDate"
                 type="date"
                 required
-                className={origin.documentDate ? 'border-agent font-mono' : 'font-mono'}
+                className={origin.documentDate ? 'border-agent' : undefined}
                 value={documentDate}
                 onFocus={() => touch('documentDate')}
                 onChange={(e) => {

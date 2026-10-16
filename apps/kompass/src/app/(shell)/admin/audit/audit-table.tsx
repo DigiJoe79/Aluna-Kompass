@@ -55,7 +55,7 @@ export async function AuditTable({
       <TableBody>
         {entries.map((e) => (
           <TableRow key={e.id} data-state={e.id === selectedId ? 'selected' : undefined}>
-            <TableCell className="font-mono text-hint">
+            <TableCell className="tabular-nums text-hint">
               <RowLink href={`?${query}${query ? '&' : ''}entry=${e.id}`}>
                 {fmt.dateTime(e.occurredAt, { seconds: true })}
               </RowLink>
