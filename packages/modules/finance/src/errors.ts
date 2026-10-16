@@ -43,7 +43,7 @@ export const FINANCE_ERRORS = {
   cashNegativeNeedsReason: { account: 'text', date: 'date', amount: 'cents' },
   entryAlreadyReversed: { number: 'text', by: 'text' },
   entryIsReversal: { number: 'text' },
-  notReviewed: { count: 'text' },
+  notReviewed: { count: 'count' },
   noTaxRateForDate: { date: 'date' },
   voucherTypeNotAllowed: { type: 'text' },
   documentNotFinal: {},
@@ -64,10 +64,10 @@ export const FINANCE_ERRORS = {
   section153Unacknowledged: {},
   correctionNotPending: {},
   correctionPendingExists: {},
-  draftsInPeriod: { count: 'text' },
-  unbookedStatementLines: { count: 'text' },
+  draftsInPeriod: { count: 'count' },
+  unbookedStatementLines: { count: 'count' },
   accountsWithoutStatement: { accounts: 'text' },
-  undocumentedEntries: { count: 'text' },
+  undocumentedEntries: { count: 'count' },
   previousYearOpen: {},
   fiscalYearAlreadyClosed: { year: 'text' },
   fiscalYearNotEnded: { year: 'text' },
@@ -184,12 +184,12 @@ export const FINANCE_ERRORS = {
   expenseNotDraft: {},
   expenseNotSubmitted: {},
   expenseNothingToSubmit: {},
-  expensePositionNeedsReceipt: { position: 'text' },
+  expensePositionNeedsReceipt: { position: 'count' },
   expenseTripNeedsKm: {},
   expenseIbanOrWaiver: {},
   expenseOwnClaim: { names: 'text' },
   expenseSameContact: { names: 'text' },
-  expenseCategoryRequired: { position: 'text' },
+  expenseCategoryRequired: { position: 'count' },
   expenseWaiversDisabled: {},
   waiverAgreedAfterPosition: {},
   waiverLateNeedsReason: {},
@@ -248,10 +248,15 @@ export const FINANCE_ERRORS = {
   resolutionFileTooLarge: { file: 'text', limit: 'text' },
 } as const satisfies Record<string, Record<string, FinanceErrorParamKind>>;
 
-/** `evidenceKind`: der Schlüssel einer Nachweisart (P, Prüfer Block 2) — die Sprachdatei nennt ihn per ICU-`select` in Worten. */
-export type FinanceErrorParamKind = 'text' | 'date' | 'cents' | 'evidenceKind';
+/**
+ * `evidenceKind`: der Schlüssel einer Nachweisart (P, Prüfer Block 2) — die Sprachdatei nennt ihn per ICU-`select` in Worten.
+ * `count`: eine Anzahl oder Positionsnummer, als Zahl wie bisher (MCP `params`), im Satz schlicht (Befund 4, 0.2.12).
+ */
+export type FinanceErrorParamKind = 'text' | 'date' | 'cents' | 'count' | 'evidenceKind';
 export type FinanceErrorCode = keyof typeof FINANCE_ERRORS;
-type ParamsOf<C extends FinanceErrorCode> = { [K in keyof (typeof FINANCE_ERRORS)[C]]: string | number };
+/** Der Wert je Art (Befund 4, 0.2.12): ein Betrag nur als Zahl in Cent — als Text käme er roh („1250“) in den Satz. */
+type ParamValue<Kind> = Kind extends 'cents' | 'count' ? number : Kind extends 'date' | 'text' | 'evidenceKind' ? string : never;
+type ParamsOf<C extends FinanceErrorCode> = { [K in keyof (typeof FINANCE_ERRORS)[C]]: ParamValue<(typeof FINANCE_ERRORS)[C][K]> };
 
 /** Die Codes, mit denen eine Sperre an einer Buchung antwortet (`EntryLock`, Befund 49). */
 export type EntryLockCode =

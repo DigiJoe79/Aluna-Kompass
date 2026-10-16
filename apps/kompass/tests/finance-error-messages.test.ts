@@ -47,7 +47,7 @@ describe('Finanzfehler aus der Sprachdatei (A6)', () => {
     expect(code).not.toMatch(/[äöüÄÖÜß„“]/);
     const literals = [...code.matchAll(/'([^'\n]*)'/g)].map((m) => m[1]!);
     expect(literals.filter((l) => / \S+ /.test(l))).toEqual([]);
-    for (const [c, params] of Object.entries(FINANCE_ERRORS)) for (const kind of Object.values(params)) expect(['text', 'date', 'cents', 'evidenceKind'], c).toContain(kind);
+    for (const [c, params] of Object.entries(FINANCE_ERRORS)) for (const kind of Object.values(params)) expect(['text', 'date', 'cents', 'count', 'evidenceKind'], c).toContain(kind);
   });
 
   it('die Platzhalter in de.json sind genau die Parameter des Codes, Datum und Betrag schlicht', () => {
@@ -157,13 +157,30 @@ describe('Finanzfehler aus der Sprachdatei (A6)', () => {
     const dated = Object.entries(FINANCE_ERRORS).filter(([, params]) => Object.values(params).includes('date')) as [FinanceErrorCode, Record<string, string>][];
     expect(dated.map(([code]) => code)).toEqual(expect.arrayContaining(['entryDateInFuture', 'noFiscalYearForDate', 'movementDateInFuture', 'confirmationBeforeExemptionStart']));
     for (const [code, params] of dated) {
-      const values = Object.fromEntries(Object.entries(params).map(([name, kind]) => [name, kind === 'date' ? '2026-09-26' : kind === 'cents' ? 100 : 'x']));
+      const values = Object.fromEntries(Object.entries(params).map(([name, kind]) => [name, kind === 'date' ? '2026-09-26' : kind === 'cents' || kind === 'count' ? 100 : 'x']));
       const message = uiText((financeConflict as (c: string, p: object) => Failure)(code, values)) ?? '';
       expect(message, code).not.toMatch(/\d{4}-\d{2}-\d{2}/);
       expect(message, code).toContain('26.09.2026');
     }
     expect(uiText(financeConflict('cashWouldGoNegative', { account: 'Kasse 2026-09', date: '2026-09-26', amount: -1200 }))).toContain('Das Barkonto Kasse 2026-09 stünde am 26.09.2026 bei \u221212,00\u00a0€.');
     expect(uiText(financeConflict('draftsInPeriod', { count: 2026 }))).toContain('noch 2026 Entwürfe');
+  });
+
+  it('zeigt jeden Betragsparameter als Euro-Betrag, nie roh in Cent (Befund 4, 0.2.12)', () => {
+    const withCents = Object.entries(FINANCE_ERRORS).filter(([, params]) => Object.values(params).includes('cents')) as [FinanceErrorCode, Record<string, string>][];
+    expect(withCents.length).toBeGreaterThan(5);
+    for (const [code, params] of withCents) {
+      const values = Object.fromEntries(Object.entries(params).map(([name, kind]) => [name, kind === 'cents' ? 1250 : kind === 'count' ? 2 : kind === 'date' ? '2026-09-26' : kind === 'evidenceKind' ? 'report' : 'x']));
+      const failure = (financeConflict as (c: string, p: object) => Failure)(code, values);
+      const ui = uiText(failure) ?? '';
+      const centsInText = Object.entries(params).filter(([, kind]) => kind === 'cents').map(([name]) => name);
+      // Ein Betrag, den der Text gar nicht nennt, zählt nicht; jeder genannte steht als „12,50 €“.
+      const raw = (texts[code]?.reason ?? '') + (texts[code]?.remedy ?? '');
+      if (!centsInText.some((name) => raw.includes(`{${name}`))) continue;
+      expect(ui, code).toContain('12,50\u00a0€');
+      expect(ui, code).not.toMatch(/(?<![\d.,])1250(?![\d,])/);
+      expect(mcpText(failure), code).toContain('12,50\u00a0€');
+    }
   });
 });
 
