@@ -241,10 +241,16 @@ export function SwipeStack({ cards, backHref, query, frame }: { cards: StackCard
               <ArrowLeft aria-hidden data-icon="inline-start" />
               {t('reject')}
             </Button>
-            <Button type="button" variant="ghost" onClick={() => toReview(card)}>
-              <ArrowUp aria-hidden data-icon="inline-start" />
-              {t('review')}
-            </Button>
+            {/* Führt schon der Hauptknopf zur Prüfseite (Konflikt, Lücke), stünde „Prüfen“ zweimal da (Befund 1 Nr. 6,
+                0.2.12): Die Mitte bleibt dann leer, damit „Ablehnen“ und „Prüfen“ an ihren Plätzen stehen. */}
+            {card.right.kind === 'review' ? (
+              <span aria-hidden />
+            ) : (
+              <Button type="button" variant="ghost" onClick={() => toReview(card)}>
+                <ArrowUp aria-hidden data-icon="inline-start" />
+                {t('review')}
+              </Button>
+            )}
             <Button
               type="button"
               onClick={() => right(card)}

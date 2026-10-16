@@ -63,6 +63,8 @@ describe('SwipeStack (Board 3b–3e, 8b)', () => {
     fireEvent.keyDown(window, { key: 'ArrowRight' });
     expect(nav.push).toHaveBeenCalledWith('/animals/proposals/P2?text=Baxter');
     expect(screen.getByRole('button', { name: 'Prüfen und dort annehmen' })).toBeTruthy();
+    // „Prüfen“ einmal: Führt schon der Hauptknopf zur Prüfseite, fällt der mittlere weg (Befund 1 Nr. 6, 0.2.12).
+    expect(screen.getAllByRole('button', { name: /^Prüfen/ })).toHaveLength(1);
     expect(actions.accept).not.toHaveBeenCalled();
   });
 
