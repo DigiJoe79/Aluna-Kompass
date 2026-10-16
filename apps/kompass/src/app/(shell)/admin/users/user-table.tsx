@@ -199,6 +199,7 @@ export function UserTable({
       ) : null}
       {reset ? (
         <StartPasswordDialog
+          kind="reset"
           open
           onClose={() => setReset(null)}
           name={reset.user.name}

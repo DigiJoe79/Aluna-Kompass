@@ -1332,6 +1332,7 @@
     },
     "startPassword": {
       "title": "Nutzer „{name}“ angelegt",
+      "titleReset": "Neues Startpasswort für „{name}“",
       "text": "Geben Sie diese Zugangsdaten weiter. Das Startpasswort wird nach dem Schließen nicht mehr angezeigt; ein neues können Sie jederzeit setzen.",
       "copyBoth": "Beides kopieren",
       "info": "Beim ersten Login muss {name} ein eigenes Passwort setzen. Bis dahin steht in der Liste „Erstlogin offen“.",

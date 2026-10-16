@@ -16,7 +16,10 @@ export function StartPasswordDialog({
   name,
   email,
   startPassword,
+  kind,
 }: {
+  /** `created` nach dem Anlegen, `reset` nach „Neues Startpasswort“ — je ein eigener Titel (Befund 1 Nr. 3, 0.2.12). */
+  kind: 'created' | 'reset';
   open: boolean;
   onClose: () => void;
   name: string;
@@ -44,7 +47,7 @@ export function StartPasswordDialog({
         size="md"
         className="bg-surface shadow-md"
       >
-        <DialogTitle>{t('title', { name })}</DialogTitle>
+        <DialogTitle>{t(kind === 'reset' ? 'titleReset' : 'title', { name })}</DialogTitle>
         <DialogDescription tone="body">{t('text')}</DialogDescription>
         <div className="rounded-md border border-line-strong bg-code p-3 font-mono">
           <Overline as="div">{t('emailLabel')}</Overline>
