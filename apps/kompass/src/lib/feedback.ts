@@ -76,3 +76,13 @@ function isNextNavigation(error: unknown): boolean {
     return true;
   }
 }
+
+/**
+ * Ein Konflikt des Dienstes, der ein Feld meint („Rolle existiert bereits“): als Feldfehler mit dem Text der
+ * Ablehnung, damit er am Feld und in `FormErrorSummary` steht statt als Ablehnung über der Leiste (13 #4, Joe
+ * 2026-10-16). Code und Typ bleiben beim Dienst `conflict`; Vorbild für Code → Verhalten ist `correct-dialog.tsx`.
+ */
+export function conflictAtField(state: ActionState, code: string, field: string): ActionState {
+  if (state.status !== 'error' || state.code !== code) return state;
+  return { ...state, fieldErrors: { ...state.fieldErrors, [field]: state.detail ?? state.message } };
+}

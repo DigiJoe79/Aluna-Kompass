@@ -122,7 +122,6 @@ const KNOWN_CONFLICTS = new Set([
   'followUpOpen',
   'linkExists',
   'emailTaken',
-  'roleNameTaken',
   'roleProtected',
   'lastAdministrator',
   'settingSystemOnly',

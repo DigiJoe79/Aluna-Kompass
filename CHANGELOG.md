@@ -52,6 +52,8 @@ die Nummern folgen [Semantic Versioning](https://semver.org/lang/de/). Vor
 - **Checkliste der Finanzen.** Der Schritt „Konto mit Anfangsbestand“ gilt
   erst als erledigt, wenn jedes aktive Bankkonto einen Anfangsbestand hat.
   Wer bisher Bankkonten ohne angelegt hat, sieht den Schritt wieder offen.
+- **Rollen.** „Eine Rolle … gibt es schon“ steht jetzt am Feld „Rollenname“,
+  beim Anlegen wie beim Umbenennen.
 - **Gemeinschaftskonto.** Gehört eine IBAN mehreren Kontakten
   (Gemeinschaftskonto), schlägt der Import keinen Kontakt mehr vor, statt still
   den zuletzt verknüpften zu nehmen.

@@ -8,7 +8,7 @@ import { rolePermissions, roles, userRoles, users } from '../db/schema';
 import type { Deps } from '../deps';
 import { newId } from '../ids';
 import { requireAnyPermission, requirePermission } from '../permissions/check';
-import { conflict, invalid, notFound, ok, type Result } from '../result';
+import { conflict, invalid, localizedConflict, notFound, ok, type Result } from '../result';
 import { validate } from '../validate';
 import { countActiveProtectedHolders } from './effective';
 import { requireControllableUser, requireGrantablePermissions, requireGrantableRole } from './privileges';
@@ -62,7 +62,7 @@ export async function createRole(deps: Deps, ctx: CallContext, input: unknown): 
   const parsed = validate(deps, createRoleSchema, input);
   if (!parsed.ok) return parsed;
   const { name, description } = parsed.value;
-  if (nameTaken(deps.db, name)) return conflict('roleNameTaken', `Rolle „${name}“ existiert bereits`);
+  if (nameTaken(deps.db, name)) return localizedConflict('roleNameTaken', 'errors.roleNameTaken', { name });
   return deps.db.transaction((tx) => {
     const id = newId();
     tx.insert(roles).values({ id, name, description, isProtected: false, createdAt: isoNow(deps.clock) }).run();
@@ -83,7 +83,7 @@ export async function updateRole(deps: Deps, ctx: CallContext, input: unknown): 
   if (!before) return notFound('role', parsed.value.id);
   if (before.isProtected) return conflict('roleProtected', 'Geschützte Rolle kann nicht geändert werden');
   const name = parsed.value.name ?? before.name;
-  if (nameTaken(deps.db, name, before.id)) return conflict('roleNameTaken', `Rolle „${name}“ existiert bereits`);
+  if (nameTaken(deps.db, name, before.id)) return localizedConflict('roleNameTaken', 'errors.roleNameTaken', { name });
   return deps.db.transaction((tx) => {
     tx.update(roles).set({ name, description: parsed.value.description ?? before.description }).where(eq(roles.id, before.id)).run();
     const after = loadRole(tx, before.id) as Role;

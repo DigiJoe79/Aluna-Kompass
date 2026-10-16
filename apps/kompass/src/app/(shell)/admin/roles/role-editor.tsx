@@ -4,6 +4,7 @@ import type { Role } from '@kompass/core';
 import { Lock } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useActionState, useEffect, useMemo, useState, useTransition } from 'react';
+import { FormErrorSummary } from '@/components/forms/form-error-summary';
 import { FormField } from '@/components/forms/form-field';
 import { FormGrid } from '@/components/forms/form-grid';
 import { FormCard } from '@/components/forms/form-card';
@@ -14,6 +15,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { idleState } from '@/lib/actions';
+import { conflictAtField } from '@/lib/feedback';
 import type { PermissionGroup } from '@/lib/permission-groups';
 import { cn } from '@/lib/utils';
 import { createRoleAction, saveRoleAction } from './actions';
@@ -41,7 +43,11 @@ export function RoleEditor({
   const [draft, setDraft] = useState<{ name: string; description: string; keys: Set<string> } | null>(null);
   const [saving, start] = useTransition();
   const saveFb = useActionFeedback();
-  const [createState, createAction] = useActionState(createRoleAction, idleState);
+  const [createRaw, createAction] = useActionState(createRoleAction, idleState);
+  // „Rolle existiert bereits“ steht am Feld „Rollenname“ und in der Übersicht, nicht über der Leiste (13 #4).
+  const createState = conflictAtField(createRaw, 'roleNameTaken', 'name');
+  const saveState = conflictAtField(saveFb.state, 'roleNameTaken', 'name');
+  const nameLabels = { name: t('fields.name') };
   const [createOpen, setCreateOpen] = useState(false);
 
   useEffect(() => {
@@ -117,6 +123,7 @@ export function RoleEditor({
           <DialogContent size="sm" className="bg-surface shadow-md">
             <ActionForm action={createAction} state={createState} className="flex flex-col gap-4">
               <DialogTitle>{t('create.title')}</DialogTitle>
+              {createState.status === 'error' ? <FormErrorSummary errors={createState.fieldErrors} labels={nameLabels} /> : null}
               <FormGrid>
                 <FormField id="new-role-name" label={t('fields.name')} error={createState.status === 'error' ? createState.fieldErrors.name : undefined}>
                   <Input id="new-role-name" name="name" required />
@@ -132,8 +139,13 @@ export function RoleEditor({
       </aside>
       <section className="flex min-w-0 flex-col">
         <div className="border-b border-line px-6 pb-4 pt-5">
+          {saveState.status === 'error' ? (
+            <div className="mb-4">
+              <FormErrorSummary errors={saveState.fieldErrors} labels={nameLabels} />
+            </div>
+          ) : null}
           <FormGrid>
-            <FormField id="role-name" label={t('fields.name')}>
+            <FormField id="role-name" label={t('fields.name')} error={saveState.status === 'error' ? saveState.fieldErrors.name : undefined}>
               <Input
                 id="role-name"
                 value={name}
@@ -203,7 +215,7 @@ export function RoleEditor({
           <FormActionBar
             count={pendingCount}
             pending={saving}
-            state={saveFb.state}
+            state={saveState}
             onDiscard={() => {
               setDraft(null);
               saveFb.reset();

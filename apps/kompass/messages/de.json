@@ -493,6 +493,10 @@
       "reason": "Dieses Modul wird noch gebraucht von: {modules}.",
       "remedy": "Schalten Sie zuerst {modules} aus."
     },
+    "roleNameTaken": {
+      "reason": "Eine Rolle „{name}“ gibt es schon.",
+      "remedy": "Wählen Sie einen anderen Namen."
+    },
     "localeRequired": {
       "reason": "Die Sprache „{locale}“ wird noch gebraucht: Das Modul „{module}“ verlangt sie (bei der Webseite: die eingelesene Vorlage).",
       "remedy": "Ändern Sie zuerst die Vorlage der Webseite oder schalten Sie das Modul aus."
@@ -541,7 +545,6 @@
       "followUpOpen": "Die Wiedervorlage ist noch offen.",
       "linkExists": "Dieser Bezug besteht bereits.",
       "emailTaken": "Diese E-Mail-Adresse ist bereits vergeben.",
-      "roleNameTaken": "Eine Rolle mit diesem Namen existiert bereits.",
       "roleProtected": "Die Rolle „Administration“ kann nicht geändert werden.",
       "lastAdministrator": "Mindestens ein aktiver Nutzer muss die Rolle „Administration“ behalten.",
       "settingSystemOnly": "Diese Einstellung setzt nur das System.",
