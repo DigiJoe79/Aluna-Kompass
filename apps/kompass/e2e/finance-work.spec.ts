@@ -387,7 +387,8 @@ test.describe('finance work list: rules, foreign money, vouchers, batch', () => 
     await expect(importRow).toContainText('1.190,00 €');
     // Endsaldo des August-Auszugs aus dem Seed (F5 Task 9).
     await expect(importRow).toContainText('1.710,00 €');
-    // Seit Befund 34 trägt auch das Vereinskonto einen Auszug (Vorjahr) und damit eine eigene Abgleichzeile.
+    // Das Vereinskonto trägt seit Befund 34 einen leeren Vorjahresauszug; abgeglichen wird aber nur gegen einen Auszug,
+    // der in den Zeitraum der Entwürfe reicht (Befund 44) — seine Zeile nennt deshalb „noch kein Auszug“.
     await expect(dialog.getByRole('status').filter({ hasText: 'Importkonto' })).toBeVisible();
     await expect(dialog.getByRole('row', { name: /Vereinskonto/ })).toContainText('25,00 €');
     await expect(dialog.getByText('2 Nummern werden vergeben.')).toBeVisible();
