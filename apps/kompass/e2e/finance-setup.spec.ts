@@ -329,7 +329,9 @@ test.describe('finance setup', () => {
     await expect(page.getByText('Zweck angelegt.')).toBeVisible();
 
     const row = page.locator('tr', { hasText: 'Neues Katzenhaus' });
-    await expect(row.getByText('Offen', { exact: true })).toBeVisible();
+    // Offen ist der Normalzustand: in der Liste ohne Marke (Designer Stufe 2 Nr. 6a).
+    await expect(row.getByRole('button', { name: 'Erfüllt' })).toBeVisible();
+    await expect(row.getByText('Offen', { exact: true })).toHaveCount(0);
     await row.getByRole('button', { name: 'Erfüllt' }).click();
     await expect(row.getByText('Erfüllt', { exact: true })).toBeVisible();
     await expect(row.getByRole('button', { name: 'Erfüllt' })).toHaveCount(0);
@@ -338,7 +340,8 @@ test.describe('finance setup', () => {
     const reopenDialog = page.getByRole('dialog');
     await reopenDialog.getByLabel('Begründung').fill('Doch noch Bedarf');
     await reopenDialog.getByRole('button', { name: 'Wieder öffnen' }).click();
-    await expect(row.getByText('Offen', { exact: true })).toBeVisible();
+    await expect(row.getByRole('button', { name: 'Erfüllt' })).toBeVisible();
+    await expect(row.getByText('Offen', { exact: true })).toHaveCount(0);
     await expect(row.getByRole('button', { name: 'Wieder öffnen' })).toHaveCount(0);
   });
 

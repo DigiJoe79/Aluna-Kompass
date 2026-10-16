@@ -11,7 +11,7 @@ import { useDateFormat } from '@/components/date-format-provider';
 import { ApprovalDetailFrame, type ApprovalFooter } from '@/components/finance/approval-detail-frame';
 import { PartnerReasonPrompt, type PartnerReasonNeeds } from '@/components/finance/partner-reason-prompt';
 import { RequirementList, type RequirementListItem } from '@/components/requirement-list';
-import { StatusBadge } from '@/components/status-badge';
+import { StatusBadge, statusTone } from '@/components/status-badge';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { formatEuro } from '@/lib/finance/amount';
 import { evidenceKindLabelKey, missingEvidence, type EvidenceKind, type PartnerBasis } from '@/lib/finance/partners';
@@ -54,7 +54,7 @@ export function PartnerPaymentDetail({ payment, creatorName, evidence, nextHref 
       <section data-testid="partner-payment-result" aria-live="polite" className="space-y-4 rounded-lg border border-line bg-surface p-5">
         <div className="flex flex-wrap items-center gap-2">
           <span className="font-mono text-section">{payment.number}</span>
-          <StatusBadge tone={approved ? 'success' : 'neutral'}>{approved ? t('partnerResult.approved') : t('partnerResult.rejected')}</StatusBadge>
+          <StatusBadge tone={statusTone('decision', approved ? 'approved' : 'rejected')}>{approved ? t('partnerResult.approved') : t('partnerResult.rejected')}</StatusBadge>
         </div>
         <p className="text-figure font-semibold tabular-nums">{formatEuro(payment.totalCents)}</p>
         <p className="text-body text-ink">{payment.partnerName}</p>

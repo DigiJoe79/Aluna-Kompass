@@ -9,7 +9,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useTransition, type ReactNode } from 'react';
 import { RefusalNotice } from '@/components/forms/refusal-notice';
 import { useActionFeedback } from '@/components/forms/use-action-feedback';
-import { StatusBadge } from '@/components/status-badge';
+import { StatusBadge, statusTone } from '@/components/status-badge';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { createResponseDraftAction, rereadDocumentAction } from '../actions';
 import { FileDialog } from './file-dialog';
@@ -139,11 +139,11 @@ export function DocumentDetail({
             <span className="font-mono text-hint text-muted-ink">{t('formerNumbers', { numbers: doc.formerNumbers.join(', ') })}</span>
           ) : null}
           {doc.status === 'voided' ? (
-            <StatusBadge tone="error">{t('statuses.voided')}</StatusBadge>
+            <StatusBadge tone={statusTone('document', 'voided')}>{t('statuses.voided')}</StatusBadge>
           ) : doc.phase === 'draft' ? (
-            <StatusBadge tone="warning">{t('phases.draft')}</StatusBadge>
+            <StatusBadge tone={statusTone('document', 'draft')}>{t('phases.draft')}</StatusBadge>
           ) : (
-            <StatusBadge tone="success">{t('phases.issued')}</StatusBadge>
+            <StatusBadge tone={statusTone('document', 'issued')}>{t('phases.issued')}</StatusBadge>
           )}
         </div>
 

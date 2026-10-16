@@ -11,7 +11,7 @@ import { FilterBar, selectFilter } from '@/components/filter-bar';
 import { PublishSwitch } from '@/components/forms/publish-switch';
 import { SelectionBar } from '@/components/selection-bar';
 import { SortableHead } from '@/components/sortable-head';
-import { StatusBadge } from '@/components/status-badge';
+import { StatusBadge, statusTone } from '@/components/status-badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { RowLink, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { SearchField } from '@/components/search-field';
@@ -182,14 +182,14 @@ export function AnimalList({
                     </span>
                   </TableCell>
                   <TableCell>
-                    <StatusBadge tone={a.status === 'adopted' ? 'success' : a.status === 'reserved' ? 'warning' : 'info'} dot>
+                    <StatusBadge tone={statusTone('animal', a.status)} dot>
                       {f(`status.${a.status}`)}
                     </StatusBadge>
                   </TableCell>
                   <TableCell>
                     <span className="flex items-center gap-1.5">
                       {a.isEmergency ? <StatusBadge tone="error">{t('emergency')}</StatusBadge> : null}
-                      {a.isSponsorable ? <StatusBadge tone="accent">{t('sponsorable')}</StatusBadge> : null}
+                      {a.isSponsorable ? <StatusBadge tone="brand">{t('sponsorable')}</StatusBadge> : null}
                     </span>
                   </TableCell>
                   <TableCell className="text-ink-2">{[f(`locations.${a.location}`), a.place].filter(Boolean).join(' · ')}</TableCell>
@@ -197,7 +197,7 @@ export function AnimalList({
                   <TableCell className="text-ink-2">{dates.date(a.updatedAt)}</TableCell>
                   <TableCell>
                     <span className="flex justify-end">
-                      <PublishSwitch id={a.id} isPublished={a.isPublished} action={setAnimalPublishedAction} switchAfterText />
+                      <PublishSwitch id={a.id} isPublished={a.isPublished} action={setAnimalPublishedAction} />
                     </span>
                   </TableCell>
                 </TableRow>

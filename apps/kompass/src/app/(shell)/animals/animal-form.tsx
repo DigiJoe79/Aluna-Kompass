@@ -13,7 +13,7 @@ import { FormActionBar } from '@/components/forms/form-action-bar';
 import { SubmitButton } from '@/components/forms/submit-button';
 import { FormErrorSummary, TabInvalidDot } from '@/components/forms/form-error-summary';
 import { invalidTabs } from '@/lib/form-errors';
-import { StatusBadge } from '@/components/status-badge';
+import { StatusBadge, statusTone } from '@/components/status-badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { ActionForm } from '@/components/forms/action-form';
@@ -138,7 +138,7 @@ export function AnimalForm({ animal, locales, queue, initialTab, backHref, photo
     <div className="flex flex-col gap-4">
       {animal ? (
         <div className="flex flex-wrap items-center gap-3 rounded-lg border border-line bg-surface px-4 py-3">
-          <StatusBadge tone={animal.status === 'adopted' ? 'success' : animal.status === 'reserved' ? 'warning' : 'info'} dot>{t(`status.${animal.status}`)}</StatusBadge>
+          <StatusBadge tone={statusTone('animal', animal.status)} dot>{t(`status.${animal.status}`)}</StatusBadge>
           <StatusDialog animalId={animal.id} current={animal.status} />
           <OriginLine origins={origins} />
           <label className="ml-auto flex items-center gap-2 text-meta">

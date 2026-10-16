@@ -292,7 +292,7 @@ export function Journal({ rows, total, totals, page, pageSize, standing, account
                       <VoucherIcon state={row.documentationState} />
                     </TableCell>
                     <TableCell>
-                      <EntryStateBadge entry={row} />
+                      <EntryStateBadge entry={row} inList />
                     </TableCell>
                   </TableRow>
                 );

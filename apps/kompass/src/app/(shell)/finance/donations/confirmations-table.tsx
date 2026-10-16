@@ -83,7 +83,6 @@ export function ConfirmationsTable({ rows, canIssue, initialOpenId, today, foote
     // C1-5: „Unterschrift fehlt“ als zweites Badge neben „gültig“ — „unterschrieben“ und „maschinell“ bleiben Tatsachen der aufgeklappten Zeile.
     return (
       <span className="inline-flex flex-wrap items-center gap-1.5">
-        <StatusBadge tone="success">{t('state.valid')}</StatusBadge>
         {row.signatureState === 'needsSignature' ? (
           <StatusBadge tone="warning">
             <PenLine className="size-3" aria-hidden />

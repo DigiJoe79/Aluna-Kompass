@@ -5,14 +5,13 @@ import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { useState } from 'react';
 import { LimitProgress, limitState } from '@/components/finance/limit-progress';
-import { StatusBadge, type BadgeTone } from '@/components/status-badge';
+import { isNormalInList, StatusBadge, statusTone } from '@/components/status-badge';
 import { buttonVariants } from '@/components/ui/button';
 import { RowButton, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { formatEuro } from '@/lib/finance/amount';
 import { PurposeDetail } from './purpose-detail';
 import { Empty } from '@/components/empty-value';
 
-const STATE_TONE: Record<PurposeOverviewRow['state'], BadgeTone> = { open: 'info', fulfilled: 'success', dissolved: 'neutral' };
 
 /**
  * E3 „Zwecke“ (F8b Task 6a, Designer-README 4c): Zweck · Projekt · Ziel ·
@@ -61,7 +60,7 @@ export function PurposesTable({
 
   const stateCell = (row: PurposeOverviewRow) => (
     <div className="flex flex-wrap gap-1">
-      <StatusBadge tone={STATE_TONE[row.state]}>{t(`states.${row.state}`)}</StatusBadge>
+      {isNormalInList('purpose', row.state) ? null : <StatusBadge tone={statusTone('purpose', row.state)}>{t(`states.${row.state}`)}</StatusBadge>}
       {row.negative ? <StatusBadge tone="warning" dot>{t('badges.negative')}</StatusBadge> : null}
       {row.fulfilledWithRest ? <StatusBadge tone="warning" dot>{t('badges.fulfilledWithRest', { amount: formatEuro(row.balanceCents) })}</StatusBadge> : null}
     </div>

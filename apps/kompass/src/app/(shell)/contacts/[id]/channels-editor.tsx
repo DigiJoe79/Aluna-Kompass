@@ -166,7 +166,7 @@ export function ChannelsEditor({
                   <span className="min-w-0 text-meta wrap-anywhere text-ink">{ch.value}</span>
                   {ch.label ? <span className="text-hint text-muted-ink">({ch.label})</span> : null}
                   {ch.isPrimary ? (
-                    <StatusBadge tone="accent" dot>
+                    <StatusBadge tone="brand" dot>
                       {t('channels.isPrimary')}
                     </StatusBadge>
                   ) : null}

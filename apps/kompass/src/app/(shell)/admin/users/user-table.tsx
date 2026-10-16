@@ -13,7 +13,7 @@ import { ConfirmDialog } from '@/components/forms/confirm-dialog';
 import { EmptyState } from '@/components/empty-state';
 import { checkFilter, FilterBar } from '@/components/filter-bar';
 import { SearchField } from '@/components/search-field';
-import { StatusBadge } from '@/components/status-badge';
+import { isNormalInList, StatusBadge, statusTone } from '@/components/status-badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
@@ -70,7 +70,6 @@ export function UserTable({
     [users, onlyActive, query],
   );
   const resetFilters = () => applyFilters({ text: '', active: '' });
-  const tone = { active: 'success', firstLoginPending: 'warning', inactive: 'neutral' } as const;
 
   return (
     <div className="flex flex-col gap-3">
@@ -113,7 +112,7 @@ export function UserTable({
                   <TableCell>
                     <div className="flex flex-wrap gap-1.5">
                       {u.roles.map((r) => (
-                        <StatusBadge key={r.id} tone="brand">
+                        <StatusBadge key={r.id} tone={statusTone('role', 'current')}>
                           {r.name}
                         </StatusBadge>
                       ))}
@@ -121,9 +120,11 @@ export function UserTable({
                   </TableCell>
                   {contactCells ? <TableCell>{contactCells[u.id] ?? null}</TableCell> : null}
                   <TableCell>
-                    <StatusBadge tone={tone[u.status]} dot>
-                      {t(`status.${u.status}`)}
-                    </StatusBadge>
+                    {isNormalInList('user', u.status) ? null : (
+                      <StatusBadge tone={statusTone('user', u.status)} dot>
+                        {t(`status.${u.status}`)}
+                      </StatusBadge>
+                    )}
                   </TableCell>
                   <TableCell className="tabular-nums text-meta text-ink-2">
                     {u.lastLoginAt ? fmt.dateTime(u.lastLoginAt) : <Empty />}

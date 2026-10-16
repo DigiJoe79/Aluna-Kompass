@@ -9,7 +9,7 @@ import { FormActionBar } from '@/components/forms/form-action-bar';
 import { useActionFeedback } from '@/components/forms/use-action-feedback';
 import { toastUndo, withUnplacedFieldErrors } from '@/lib/feedback';
 import { Notice } from '@/components/notice';
-import { StatusBadge } from '@/components/status-badge';
+import { StatusBadge, statusTone } from '@/components/status-badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogBody, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -86,7 +86,7 @@ export function AccountsPanel({ accounts, canPickDocument }: { accounts: Account
                 <TableCell className="text-ink-2">{t(`kind.${row.kind}`)}</TableCell>
                 <TableCell className="font-mono text-meta text-muted-ink">{row.iban ? formatIban(row.iban) : <Empty />}</TableCell>
                 <TableCell>
-                  <StatusBadge tone={row.isActive ? 'success' : 'neutral'}>{row.isActive ? t('active') : t('inactiveState')}</StatusBadge>
+                  {row.isActive ? null : <StatusBadge tone={statusTone('active', 'inactive')}>{t('inactiveState')}</StatusBadge>}
                 </TableCell>
                 <TableCell className="text-right">
                   <Button variant="ghost" size="sm" onClick={() => openFor(row)}>

@@ -93,8 +93,12 @@ Bausteine: `forms/form-card.tsx`, `section.tsx`, `forms/form-field.tsx`, `forms/
 
 - Nur `StatusBadge` (Radius 4, 12/600), mit `tone` und höchstens einem Zeichen: `dot` für einen Zustand oder `icon` für eine Art. Symbol und Wort, nie nur Farbe.
 - Pillen-Radius nur für Bedienelemente.
+- **Ein Ton je Zustand** (Designer 2026-10-16, Stufe 2 Nr. 6f): Den Ton eines Zustands liest jede Stelle aus `STATUS_TONES` (`statusTone(art, zustand)`) in `status-badge.tsx`; keine lokale Tontabelle (Wächter `status-tones.test.ts`). Abgelehnte Auslage ist `error`, Rollen sind `neutral`, der Kanal Agent im Protokoll trägt `agent`.
+- **Normalzustand in Listen ohne Marke** (Nr. 6a): In einer Liste bleibt die Zelle für den Normalzustand leer — „festgeschrieben“, „gültig“, „Aktiv“, „ausgestellt“, ein offener Zweck, ein abgeschlossener Serienlauf (`isNormalInList`); Marken stehen nur für Abweichungen, die Filter bleiben. Im Seitenkopf (`PageHeader status`) eines Vorgangs steht der Zustand immer, auch im Normalzustand.
+- **Kein `accent` in Marken** (Nr. 6b): Er sah im Standard-Theme fast aus wie `error`; Marken stehen auf `brand` oder `neutral`. Das Token selbst bleibt für andere Stellen.
+- **`PublishSwitch`** zeigt keinen Text neben dem Schalter (Nr. 6d); den Zustand sagt der Schalter, das `aria-label` bleibt.
 
-Bausteine: `status-badge.tsx`, `finance/entry-state-badge.tsx`.
+Bausteine: `status-badge.tsx` (`STATUS_TONES`, `statusTone`, `isNormalInList`), `finance/entry-state-badge.tsx` (`inList`), `forms/publish-switch.tsx`.
 
 ## G — Listen
 

@@ -8,7 +8,7 @@ import { Fragment, useEffect, useState, useTransition } from 'react';
 import { EmptyState } from '@/components/empty-state';
 import { SelectionBar } from '@/components/selection-bar';
 import { SnippetText } from '@/components/snippet-text';
-import { StatusBadge } from '@/components/status-badge';
+import { StatusBadge, statusTone } from '@/components/status-badge';
 import { FilterBar, selectFilter } from '@/components/filter-bar';
 import { SearchField } from '@/components/search-field';
 import { SortableHead } from '@/components/sortable-head';
@@ -327,13 +327,12 @@ export function DocumentList({ documents, currentFolder, total, unfiltered, read
                     </TableCell>
                     <TableCell className="text-ink-2">{t(`directions.${doc.direction}`)}</TableCell>
                     <TableCell>
+                      {/* Ausgestellt ist der Normalzustand: ohne Marke, der Phasenfilter bleibt (Designer Stufe 2 Nr. 6a). */}
                       {doc.status === 'voided' ? (
-                        <StatusBadge tone="error">{t('statuses.voided')}</StatusBadge>
+                        <StatusBadge tone={statusTone('document', 'voided')}>{t('statuses.voided')}</StatusBadge>
                       ) : doc.phase === 'draft' ? (
-                        <StatusBadge tone="warning">{t('phases.draft')}</StatusBadge>
-                      ) : (
-                        <StatusBadge tone="success">{t('phases.issued')}</StatusBadge>
-                      )}
+                        <StatusBadge tone={statusTone('document', 'draft')}>{t('phases.draft')}</StatusBadge>
+                      ) : null}
                     </TableCell>
                   </TableRow>
                   {hits?.[doc.id] ? (

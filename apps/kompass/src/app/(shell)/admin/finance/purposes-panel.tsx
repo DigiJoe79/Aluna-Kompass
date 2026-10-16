@@ -9,7 +9,7 @@ import { RefusalNotice } from '@/components/forms/refusal-notice';
 import { useActionFeedback } from '@/components/forms/use-action-feedback';
 import type { ActionState } from '@/lib/actions';
 import { withUnplacedFieldErrors } from '@/lib/feedback';
-import { StatusBadge } from '@/components/status-badge';
+import { isNormalInList, StatusBadge, statusTone } from '@/components/status-badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -93,7 +93,7 @@ export function PurposesPanel({ purposes }: { purposes: PurposeRow[] }) {
                 <TableCell className="text-ink">{row.name}</TableCell>
                 <TableCell className="tabular-nums text-ink-2">{row.targetCents !== null ? formatAmount(row.targetCents) : <Empty />}</TableCell>
                 <TableCell>
-                  <StatusBadge tone={stateOf(row) === 'open' ? 'success' : 'neutral'}>{t(`states.${stateOf(row)}`)}</StatusBadge>
+                  {isNormalInList('purposeSetup', stateOf(row)) ? null : <StatusBadge tone={statusTone('purposeSetup', stateOf(row))}>{t(`states.${stateOf(row)}`)}</StatusBadge>}
                 </TableCell>
                 <TableCell className="text-right">
                   <div className="flex justify-end gap-1.5">

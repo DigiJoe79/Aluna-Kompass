@@ -5,7 +5,7 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useTransition } from 'react';
 import { checkFilter, FilterBar, selectFilter } from '@/components/filter-bar';
 import { SearchField } from '@/components/search-field';
-import { StatusBadge } from '@/components/status-badge';
+import { StatusBadge, statusTone } from '@/components/status-badge';
 import { SortableHead } from '@/components/sortable-head';
 import { RowLink, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { roleLabel } from '@/lib/contact-roles';
@@ -128,7 +128,7 @@ export function ContactList({ contacts, roles, total, unfiltered, offset, pageSi
                   <TableCell>
                     <div className="flex flex-wrap gap-1">
                       {c.roles.map((r) => (
-                        <StatusBadge key={r} tone="info">
+                        <StatusBadge key={r} tone={statusTone('role', 'current')}>
                           {roleLabel(t, r)}
                         </StatusBadge>
                       ))}

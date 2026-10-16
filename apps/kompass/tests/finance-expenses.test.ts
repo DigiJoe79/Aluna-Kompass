@@ -4,7 +4,6 @@ import { describe, expect, it } from 'vitest';
 import {
   applySaved,
   approveInput,
-  CLAIM_BADGE_TONE,
   claimAmountMissing,
   claimHistory,
   claimHref,
@@ -196,9 +195,6 @@ describe('own claims (D2)', () => {
       ...over,
     }) as unknown as ExpenseClaimView;
 
-  it('gives every state its badge tone — rejected is never red', () => {
-    expect(CLAIM_BADGE_TONE).toEqual({ draft: 'warning', submitted: 'info', approved: 'success', paid: 'final', rejected: 'neutral' });
-  });
 
   it('says in everyday words what is going on, with the date that matters', () => {
     expect(claimSentence(claim({ state: 'draft', stateLabelKey: 'draft', submittedAt: null }))).toEqual({ key: 'draft', date: '2026-09-20T08:00:00.000Z' });

@@ -1,10 +1,10 @@
 import type { ExpenseClaimView } from '@kompass/module-finance';
 import { getTranslations } from 'next-intl/server';
 import Link from 'next/link';
-import { StatusBadge } from '@/components/status-badge';
+import { StatusBadge, statusTone } from '@/components/status-badge';
 import type { DateFormatter } from '@/lib/date-format';
 import { formatEuro } from '@/lib/finance/amount';
-import { CLAIM_BADGE_TONE, claimAmountMissing, claimHref, claimSentence } from '@/lib/finance/expenses';
+import { claimAmountMissing, claimHref, claimSentence } from '@/lib/finance/expenses';
 import { Section } from '@/components/section';
 
 /** Badge und Satz in Alltagssprache — gemeinsam für Karte und Ansicht des Antrags. */
@@ -13,7 +13,7 @@ export async function ClaimState({ claim, fmt }: { claim: ExpenseClaimView; fmt:
   const sentence = claimSentence(claim);
   return (
     <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
-      <StatusBadge tone={CLAIM_BADGE_TONE[claim.stateLabelKey]}>{t(`state.${claim.stateLabelKey}`)}</StatusBadge>
+      <StatusBadge tone={statusTone('claim', claim.stateLabelKey)}>{t(`state.${claim.stateLabelKey}`)}</StatusBadge>
       <span className="text-meta text-ink-2">{sentence.key === 'rejected' ? sentence.note : t(`sentence.${sentence.key}`, { date: fmt.date(sentence.date) })}</span>
     </span>
   );

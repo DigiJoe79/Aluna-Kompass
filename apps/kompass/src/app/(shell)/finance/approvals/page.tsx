@@ -12,7 +12,7 @@ import { Notice } from '@/components/notice';
 import { Page } from '@/components/page';
 import { EmptyState } from '@/components/empty-state';
 import { PageHeader } from '@/components/page-header';
-import { StatusBadge } from '@/components/status-badge';
+import { StatusBadge, statusTone } from '@/components/status-badge';
 import { buttonVariants } from '@/components/ui/button';
 import { dateFormatOf } from '@/lib/date-format';
 import { formatEuro } from '@/lib/finance/amount';
@@ -173,7 +173,7 @@ export default async function ApprovalsPage({ searchParams }: { searchParams: Pr
       <section data-testid="approval-result" aria-live="polite" className="space-y-4 rounded-lg border border-line bg-surface p-5">
         <div className="flex flex-wrap items-center gap-2">
           <span className="font-mono text-section">{claim.number}</span>
-          <StatusBadge tone={approved ? 'success' : 'neutral'}>{approved ? t('result.approved') : t('result.rejected')}</StatusBadge>
+          <StatusBadge tone={statusTone('claim', approved ? 'approved' : 'rejected')}>{approved ? t('result.approved') : t('result.rejected')}</StatusBadge>
           {claim.stateLabelKey === 'paid' ? <StatusBadge tone="final">{tState('paid')}</StatusBadge> : null}
         </div>
         <p className="text-figure font-semibold tabular-nums">{formatEuro(claim.totalCents)}</p>

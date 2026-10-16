@@ -64,7 +64,7 @@ test('a reference variable is a choice, and a withdrawn record shows as stale un
   await page.goto('/projects');
   const row = page.getByRole('row', { name: /Winterhilfe/ });
   await row.getByRole('switch').click();
-  await expect(row).not.toContainText('Veröffentlicht');
+  await expect(row.getByRole('switch')).not.toBeChecked();
 
   await page.goto('/site/variables');
   await expect(page.getByText('„winterhilfe“ steht nicht mehr zur Auswahl.')).toBeVisible();

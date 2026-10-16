@@ -5,7 +5,7 @@ import { type ChangeEvent, useActionState, useState, useTransition } from 'react
 import { Notice } from '@/components/notice';
 import { FormActionBar } from '@/components/forms/form-action-bar';
 import { useActionFeedback } from '@/components/forms/use-action-feedback';
-import { StatusBadge } from '@/components/status-badge';
+import { StatusBadge, statusTone } from '@/components/status-badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -192,9 +192,7 @@ export function TypesPanel({
                 <TableCell className="text-ink-2">{t(`retentionClasses.${row.retentionClass}`)}</TableCell>
                 <TableCell className="text-ink-2">{row.defaultFolder ?? <Empty />}</TableCell>
                 <TableCell>
-                  <StatusBadge tone={row.isActive ? 'success' : 'neutral'}>
-                    {row.isActive ? t('active') : t('inactive')}
-                  </StatusBadge>
+                  {row.isActive ? null : <StatusBadge tone={statusTone('active', 'inactive')}>{t('inactive')}</StatusBadge>}
                 </TableCell>
                 <TableCell className="text-right">
                   <div className="flex items-center justify-end gap-1">

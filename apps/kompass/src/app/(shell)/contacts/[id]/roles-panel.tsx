@@ -8,7 +8,7 @@ import { FormActionBar } from '@/components/forms/form-action-bar';
 import { FormField } from '@/components/forms/form-field';
 import { FormGrid } from '@/components/forms/form-grid';
 import { useActionFeedback } from '@/components/forms/use-action-feedback';
-import { StatusBadge } from '@/components/status-badge';
+import { StatusBadge, statusTone } from '@/components/status-badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -131,7 +131,7 @@ export function RolesPanel({
             {roles.map((r) => (
               <li key={r.id} className="flex items-center justify-between gap-4 py-2.5">
                 <div className="flex items-center gap-3">
-                  <StatusBadge tone={r.until ? 'neutral' : 'info'}>{roleLabel(t, r.role)}</StatusBadge>
+                  <StatusBadge tone={statusTone('role', r.until ? 'ended' : 'current')}>{roleLabel(t, r.role)}</StatusBadge>
                   <span className="text-meta text-ink-2">
                     {t('roles.since')}: {fmt.date(r.since)}
                     {r.until ? ` · ${t('roles.until')}: ${fmt.date(r.until)}` : ''}

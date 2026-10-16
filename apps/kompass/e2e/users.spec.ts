@@ -15,7 +15,7 @@ test.describe('users', () => {
     await expect(table.getByRole('row')).toHaveCount(8);
     const jonas = table.getByRole('row', { name: /Jonas Feld/ });
     await expect(jonas).toContainText('Schatzmeisterin');
-    await expect(jonas).toContainText('Aktiv');
+    await expect(jonas).not.toContainText(/Inaktiv|Erstlogin offen/); // Normalzustand ohne Marke in Listen (Designer Stufe 2 Nr. 6a).
     await expect(page.getByText('7 Nutzer', { exact: true })).toBeVisible();
   });
 

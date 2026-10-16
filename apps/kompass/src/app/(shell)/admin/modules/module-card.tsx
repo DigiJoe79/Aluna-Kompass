@@ -27,13 +27,8 @@ export function ModuleCard({ module }: { module: ModuleStatus }) {
       <div>
         <div className="flex items-center gap-2">
           <SectionHeading>{name}</SectionHeading>
-          {module.locked ? (
-            <StatusBadge tone="brand">{t('alwaysActive')}</StatusBadge>
-          ) : (
-            <StatusBadge tone={module.enabled ? 'success' : 'neutral'}>
-              {module.enabled ? t('enabled') : t('disabled')}
-            </StatusBadge>
-          )}
+          {/* Den Zustand sagen Wort und Schalter rechts; am Titel nur „Immer aktiv“ beim Kern (01 B19, Designer Stufe 2 Nr. 6). */}
+          {module.locked ? <StatusBadge tone="brand">{t('alwaysActive')}</StatusBadge> : null}
           <KeyLine>{module.key}</KeyLine>
         </div>
         <p className="mt-1 max-w-prose text-body text-ink-2">

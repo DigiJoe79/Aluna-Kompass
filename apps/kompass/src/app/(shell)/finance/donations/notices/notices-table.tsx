@@ -12,7 +12,7 @@ import { FormActionBar } from '@/components/forms/form-action-bar';
 import { FormField } from '@/components/forms/form-field';
 import { FormCell, FormGrid } from '@/components/forms/form-grid';
 import { useActionFeedback } from '@/components/forms/use-action-feedback';
-import { StatusBadge } from '@/components/status-badge';
+import { isNormalInList, StatusBadge, statusTone } from '@/components/status-badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -25,8 +25,6 @@ import { NoticeDialog, type SavedNotice } from './notice-dialog';
 import { Empty } from '@/components/empty-value';
 
 export type NoticeRow = Pick<NoticeView, 'id' | 'kind' | 'taxOffice' | 'taxNumber' | 'noticeDate' | 'exemptFrom' | 'assessmentPeriod' | 'purposesText' | 'purposesTextAccusative' | 'validUntil' | 'state' | 'supersededOn' | 'voidedAt' | 'documentId' | 'documentNumber' | 'supersededDocumentNumber'>;
-
-const TONE = { valid: 'success', endsOn: 'warning', expired: 'neutral', superseded: 'neutral', supersededByFinal: 'neutral', voided: 'neutral', future: 'neutral' } as const;
 
 /**
  * Die Reihe der Bescheide (C3), verdichtet auf sechs Spalten (K9-Befund 8),
@@ -77,9 +75,11 @@ export function NoticesTable({ rows, canIssue, canPickDocument }: { rows: Notice
                 </TableCell>
                 <TableCell data-testid="notice-document" className="font-mono">{row.documentNumber ?? <span className="font-sans"><Empty /></span>}</TableCell>
                 <TableCell>
-                  <StatusBadge tone={TONE[state.key]}>
-                    <span data-testid="notice-state">{t(`state.${state.key}`, { date: state.date ? date(state.date) : '' })}</span>
-                  </StatusBadge>
+                  {isNormalInList('notice', state.key) ? null : (
+                    <StatusBadge tone={statusTone('notice', state.key)}>
+                      <span data-testid="notice-state">{t(`state.${state.key}`, { date: state.date ? date(state.date) : '' })}</span>
+                    </StatusBadge>
+                  )}
                 </TableCell>
                 {canIssue ? (
                   <TableCell className="text-right">

@@ -13,11 +13,13 @@ test.describe('finance', () => {
     await resetDatabase(page, 'seeded');
   });
 
-  test('das Journal zeigt die Buchungen des Seeds mit Zustand als Wort', async ({ page }) => {
+  test('das Journal zeigt die Buchungen des Seeds, festgeschrieben ohne Marke', async ({ page }) => {
     await loginAsAdmin(page);
     await page.goto('/finance/entries');
     await expect(page.getByRole('heading', { name: 'Journal' })).toBeVisible();
-    await expect(page.getByRole('row', { name: /festgeschrieben/ }).first()).toBeVisible();
+    await expect(page.getByRole('row').nth(1)).toBeVisible();
+    // Normalzustand ohne Marke in Listen (Designer Stufe 2 Nr. 6a).
+    await expect(page.getByRole('row', { name: /festgeschrieben/ })).toHaveCount(0);
   });
 
   test('der Zustandsfilter zeigt nur Entwürfe und überlebt das Sortieren', async ({ page }) => {

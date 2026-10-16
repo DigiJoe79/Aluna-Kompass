@@ -5,7 +5,7 @@ import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { useDateFormat } from '@/components/date-format-provider';
-import { StatusBadge } from '@/components/status-badge';
+import { StatusBadge, statusTone } from '@/components/status-badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { runProgress } from '@/lib/finance/run';
 import { Section } from '@/components/section';
@@ -18,9 +18,10 @@ export function RunsList({ runs, currentId, footer }: { runs: RunSummary[]; curr
   const { date } = useDateFormat();
 
   const stateOf = (run: RunSummary) => {
-    if (!run.finishedAt) return <StatusBadge tone="info">{t('state.running')}</StatusBadge>;
-    if (run.counts.failed > 0) return <StatusBadge tone="warning">{t('state.withFailures', { count: run.counts.failed })}</StatusBadge>;
-    return <StatusBadge tone="success">{t('state.finished')}</StatusBadge>;
+    if (!run.finishedAt) return <StatusBadge tone={statusTone('confirmationRun', 'running')}>{t('state.running')}</StatusBadge>;
+    if (run.counts.failed > 0) return <StatusBadge tone={statusTone('confirmationRun', 'withFailures')}>{t('state.withFailures', { count: run.counts.failed })}</StatusBadge>;
+    // Abgeschlossen ist der Normalzustand: in der Liste ohne Marke (Designer Stufe 2 Nr. 6a).
+    return null;
   };
 
   return (

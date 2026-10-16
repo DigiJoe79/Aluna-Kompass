@@ -10,7 +10,7 @@ import { toast } from 'sonner';
 import { ApprovalDetailFrame, type ApprovalFooter } from '@/components/finance/approval-detail-frame';
 import { BeforeAfter } from '@/components/before-after';
 import { Notice } from '@/components/notice';
-import { StatusBadge } from '@/components/status-badge';
+import { StatusBadge, statusTone } from '@/components/status-badge';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { useDateFormat } from '@/components/date-format-provider';
 import { formatEuro } from '@/lib/finance/amount';
@@ -39,7 +39,7 @@ export function PurposeTransferDetail({ transfer, creatorName, nextHref }: { tra
       <section data-testid="purpose-transfer-result" aria-live="polite" className="space-y-4 rounded-lg border border-line bg-surface p-5">
         <div className="flex flex-wrap items-center gap-2">
           <span className="font-mono text-section">{transfer.number}</span>
-          <StatusBadge tone={approved ? 'success' : 'neutral'}>{approved ? t('transferResult.approved') : t('transferResult.rejected')}</StatusBadge>
+          <StatusBadge tone={statusTone('decision', approved ? 'approved' : 'rejected')}>{approved ? t('transferResult.approved') : t('transferResult.rejected')}</StatusBadge>
         </div>
         <p className="text-figure font-semibold tabular-nums">{formatEuro(transfer.amountCents)}</p>
         <p className="text-body text-ink">

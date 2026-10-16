@@ -60,7 +60,8 @@ test.describe('projects', () => {
     await expect(row).toContainText('Dauerprojekt');
     await expect(row).toContainText('Spendenseite');
     await row.getByRole('switch').click();
-    await expect(row).toContainText('Veröffentlicht');
+    // Der Schalter zeigt keinen Text mehr, nur seinen Zustand (Designer Stufe 2 Nr. 6d).
+    await expect(row.getByRole('switch')).toBeChecked();
     // Der Schalter liegt über der Zeilenfläche und öffnet das Projekt nicht nebenbei.
     await expect(page).toHaveURL(/\/projects$/);
 

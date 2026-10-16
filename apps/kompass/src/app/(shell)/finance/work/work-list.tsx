@@ -15,7 +15,7 @@ import { RefusalNotice } from '@/components/forms/refusal-notice';
 import { useActionFeedback } from '@/components/forms/use-action-feedback';
 import { EmptyState } from '@/components/empty-state';
 import { KeyChip } from '@/components/key-chip';
-import { StatusBadge } from '@/components/status-badge';
+import { StatusBadge, statusTone } from '@/components/status-badge';
 import { Button } from '@/components/ui/button';
 import { formatEuro } from '@/lib/finance/amount';
 import { afterRemoval, stepSelection, workHref, type WorkTabKey } from '@/lib/finance/work';
@@ -166,7 +166,7 @@ export function WorkTransactions({
                   <span className="min-w-0 flex-1 space-y-0.5">
                     <span className="flex flex-wrap items-center gap-2">
                       <span className="font-semibold text-ink">{row.counterpartyName ?? row.purpose}</span>
-                      <StatusBadge tone={row.state === 'open' ? 'neutral' : row.state === 'proposed' ? 'info' : 'final'}>{t(`rowState.${row.state}`)}</StatusBadge>
+                      <StatusBadge tone={statusTone('workRow', row.state)}>{t(`rowState.${row.state}`)}</StatusBadge>
                       {row.unsure && tab === 'open' ? <StatusBadge tone="warning">{t('suggestion.unsure')}</StatusBadge> : null}
                     </span>
                     <span className="block truncate text-ink-2">

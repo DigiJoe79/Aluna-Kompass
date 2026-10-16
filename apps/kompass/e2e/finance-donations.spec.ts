@@ -191,7 +191,8 @@ test.describe('finance donations', () => {
 
     await page.goto('/finance/donations');
     const row = issuedRow(page, 'Erika Beispiel');
-    await expect(row).toContainText('gültig');
+    // Normalzustand ohne Marke in Listen (Designer Stufe 2 Nr. 6a).
+    await expect(row.getByTestId('confirmation-state')).not.toContainText('gültig');
     await row.click();
     await page.getByRole('button', { name: 'Bestätigung zurücknehmen' }).click();
     const dialog = page.getByRole('dialog');
@@ -388,7 +389,7 @@ test.describe('finance donations', () => {
     await loginAsAdmin(page);
     await page.goto('/finance/donations');
     const lukas = issuedRow(page, 'Lukas Hofmann');
-    await expect(lukas.getByTestId('confirmation-state')).toContainText('gültig');
+    await expect(lukas.getByTestId('confirmation-state')).not.toContainText('gültig'); // Normalzustand ohne Marke in Listen (Designer Stufe 2 Nr. 6a).
     await expect(lukas.getByTestId('confirmation-state').getByText('Unterschrift fehlt', { exact: true })).toBeVisible();
     await expect(issuedRow(page, 'Erika Beispiel').getByTestId('confirmation-state')).not.toContainText('Unterschrift fehlt');
   });
@@ -450,7 +451,7 @@ test.describe('finance donation notices', () => {
   test('ein Freistellungsbescheid wird erfasst, die Vereinsdaten zeigen Finanzamt, Steuernummer und Bescheid (E22) und lassen sich dort nicht ändern', async ({ page }) => {
     const today = isoDay();
     await page.goto('/finance/donations/notices');
-    await expect(seededExemption(page).getByTestId('notice-state')).toHaveText('gültig');
+    await expect(seededExemption(page).getByTestId('notice-state')).toHaveCount(0); // Normalzustand ohne Marke in Listen (Designer Stufe 2 Nr. 6a).
     await expect(seededExemption(page)).toContainText(`02.05.${STORY_YEAR + 4}`); // Bescheid vom 02.05. des Vorjahrs, gültig fünf Jahre
     await expect(seededExemption(page).getByTestId('notice-exempt-from')).toHaveText(story('01.01.2023'));
     // K9-Befund 8: sechs Spalten — Befreiung ab und gültig bis stehen zusammen unter „Gilt“, der Veranlagungszeitraum darunter.
@@ -481,7 +482,7 @@ test.describe('finance donation notices', () => {
     await expect(row).toContainText('Freistellungsbescheid');
     await expect(row).toContainText('11/222/33333');
     await expect(row).toContainText(germanDay(plusYears(today, 5)));
-    await expect(row.getByTestId('notice-state')).toHaveText('gültig');
+    await expect(row.getByTestId('notice-state')).toHaveCount(0); // Normalzustand ohne Marke in Listen (Designer Stufe 2 Nr. 6a).
     await expect(row.getByTestId('notice-document')).toHaveText(/^EIN-/);
     await expect(row.getByTestId('notice-exempt-from')).toHaveText(story('01.01.2022'));
     await expect(row).toContainText(story('Veranlagungszeitraum 2022–2024'));

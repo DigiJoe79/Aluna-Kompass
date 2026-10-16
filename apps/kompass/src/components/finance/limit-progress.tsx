@@ -1,5 +1,5 @@
 import { Progress as ProgressPrimitive } from '@base-ui/react/progress';
-import { StatusBadge, type BadgeTone } from '@/components/status-badge';
+import { StatusBadge, statusTone } from '@/components/status-badge';
 import { ProgressIndicator, ProgressTrack } from '@/components/ui/progress';
 
 /**
@@ -17,7 +17,6 @@ export function limitState({ valueCents, limitCents, warnAtPercent, kind }: { va
   return valueCents * 100 >= limitCents * warnAtPercent ? 'near' : 'calm';
 }
 
-const TONE: Record<LimitState, BadgeTone> = { calm: 'neutral', near: 'warning', exceeded: 'error', reached: 'success' };
 const BAR: Record<LimitState, string> = { calm: 'bg-brand', near: 'bg-warning', exceeded: 'bg-error', reached: 'bg-success' };
 
 /**
@@ -52,7 +51,7 @@ export function LimitProgress({
     <ProgressPrimitive.Root value={value} data-testid="limit-progress" data-state={state ?? undefined} aria-label={label} className="flex flex-col gap-1.5">
       <div className="flex flex-wrap items-center gap-2">
         <p className={hideLabel ? 'sr-only' : 'text-meta text-ink-2'}>{label}</p>
-        {state && stateLabel ? <StatusBadge tone={TONE[state]}>{stateLabel}</StatusBadge> : null}
+        {state && stateLabel ? <StatusBadge tone={statusTone('limit', state)}>{stateLabel}</StatusBadge> : null}
         {figure ? <span className={`${hideLabel ? '' : 'ml-auto '}text-hint tabular-nums text-ink`}>{figure}</span> : null}
       </div>
       <ProgressTrack className={`h-2 ${state === 'exceeded' ? 'border-r-2 border-error' : ''}`}>

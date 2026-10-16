@@ -201,15 +201,6 @@ export function formatFileSize(bytes: number): string {
 
 export type ClaimStateKey = ExpenseClaimView['stateLabelKey'];
 
-/** Zustandswörter der Auslage (Baustein 4): abgelehnt ist nie rot — der Grund ist ein Satz. */
-export const CLAIM_BADGE_TONE: Record<ClaimStateKey, 'warning' | 'info' | 'success' | 'final' | 'neutral'> = {
-  draft: 'warning',
-  submitted: 'info',
-  approved: 'success',
-  paid: 'final',
-  rejected: 'neutral',
-};
-
 type ClaimDates = Pick<ExpenseClaimView, 'stateLabelKey' | 'createdAt' | 'submittedAt' | 'approvedAt' | 'rejectedAt' | 'rejectNote' | 'paid'>;
 
 /** Der Satz in Alltagssprache neben dem Badge („am 25.09. — wartet auf Freigabe“) und das Datum, das er nennt. Abgelehnt: der Grund. */

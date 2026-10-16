@@ -1,6 +1,6 @@
 import { listApiTokens } from '@kompass/core';
 import { getTranslations } from 'next-intl/server';
-import { StatusBadge } from '@/components/status-badge';
+import { StatusBadge, statusTone } from '@/components/status-badge';
 import { Page } from '@/components/page';
 import { PageHeader } from '@/components/page-header';
 import { initials } from '@/lib/utils';
@@ -31,7 +31,7 @@ export default async function ProfilePage() {
             </div>
             <div className="flex flex-wrap gap-1.5">
               {user.roles.map((r) => (
-                <StatusBadge key={r.id} tone="brand">
+                <StatusBadge key={r.id} tone={statusTone('role', 'current')}>
                   {r.name}
                 </StatusBadge>
               ))}

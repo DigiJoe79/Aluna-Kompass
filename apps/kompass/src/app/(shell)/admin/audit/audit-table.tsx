@@ -1,7 +1,7 @@
 import type { AuditEntry } from '@kompass/core';
 import { getTranslations } from 'next-intl/server';
 import { EmptyState } from '@/components/empty-state';
-import { StatusBadge } from '@/components/status-badge';
+import { StatusBadge, statusTone } from '@/components/status-badge';
 import { RowLink, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { auditActionLabel } from '@/lib/audit-actions';
 import { auditObject, type AuditEntityLabel } from '@/lib/audit-entities';
@@ -31,7 +31,6 @@ export async function AuditTable({
   filtered?: { resetHref: string; peopleHint: boolean } | null;
 }) {
   const t = await getTranslations('audit');
-  const tone = { ui: 'info', mcp: 'accent', system: 'neutral' } as const;
 
   // Spaltenköpfe über einer leeren Fläche sagen nicht, ob nichts passiert ist
   // oder der Filter zu eng steht.
@@ -62,7 +61,7 @@ export async function AuditTable({
             </TableCell>
             <TableCell className="text-ink-2">{e.userName ?? <Empty />}</TableCell>
             <TableCell>
-              <StatusBadge tone={tone[e.channel]}>{t(`filters.channels.${e.channel}`)}</StatusBadge>
+              <StatusBadge tone={statusTone('auditChannel', e.channel)}>{t(`filters.channels.${e.channel}`)}</StatusBadge>
             </TableCell>
             <TableCell className="whitespace-normal">{sentences[e.id] ?? auditActionLabel(t, e.action)}</TableCell>
             {/* Objekt bricht um, Kennungen auch mitten im Wort (wie

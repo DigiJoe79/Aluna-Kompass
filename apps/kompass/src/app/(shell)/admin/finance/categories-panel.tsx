@@ -11,7 +11,7 @@ import { Disclosure } from '@/components/ui/disclosure';
 import { EmptyState } from '@/components/empty-state';
 import { FilterBar } from '@/components/filter-bar';
 import { SearchField } from '@/components/search-field';
-import { StatusBadge } from '@/components/status-badge';
+import { StatusBadge, statusTone } from '@/components/status-badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogBody, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -141,7 +141,7 @@ export function CategoriesPanel({ categories, confirmedAt }: { categories: Categ
                     <TableCell className="text-ink-2">{t(`directions.${row.direction}`)}</TableCell>
                     <TableCell className="text-ink-2">{row.statementSuffices ? tCommon('yes') : tCommon('no')}</TableCell>
                     <TableCell>
-                      <StatusBadge tone={row.isActive ? 'success' : 'neutral'}>{row.isActive ? t('columns.active') : t('inactiveState')}</StatusBadge>
+                      {row.isActive ? null : <StatusBadge tone={statusTone('active', 'inactive')}>{t('inactiveState')}</StatusBadge>}
                     </TableCell>
                     <TableCell className="text-right">
                       <Button variant="ghost" size="sm" onClick={() => openRow(row)}>

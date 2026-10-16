@@ -100,7 +100,8 @@ test.describe('animals', () => {
     const row = page.getByRole('row', { name: /Chiara/ });
     await expect(row).toContainText('Sucht ein Zuhause');
     await expect(row).toContainText('Notfall');
-    await expect(row).toContainText('Veröffentlicht');
+    // Der Schalter zeigt keinen Text mehr, nur seinen Zustand (Designer Stufe 2 Nr. 6d).
+    await expect(row.getByRole('switch', { name: 'Veröffentlicht' })).toBeChecked();
 
     await row.getByRole('link', { name: 'Chiara' }).click();
     // Erst die Maske abwarten: In der Liste träfe „Ort“ auch die Knöpfe „Sortieren nach …“.

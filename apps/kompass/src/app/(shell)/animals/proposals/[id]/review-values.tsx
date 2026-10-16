@@ -2,13 +2,11 @@
 
 import type { AnimalStatus, ProposalField, ProposalHint } from '@kompass/module-animals';
 import { useTranslations } from 'next-intl';
-import { StatusBadge } from '@/components/status-badge';
+import { StatusBadge, statusTone } from '@/components/status-badge';
 import { formatProposalValue } from '../field-format';
 import { LOCALE_CODE } from '@/components/forms/localized-field';
 import { cn } from '@/lib/utils';
 import { Empty } from '@/components/empty-value';
-
-export const statusTone = (status: string) => (status === 'adopted' ? 'success' : status === 'reserved' ? 'warning' : 'info') as 'success' | 'warning' | 'info';
 
 /** Ein Wert in einer Fläche der Gegenüberstellung: Sprachfassungen untereinander mit Kürzel (Board „DE … EN …“), Status als Marke. */
 export function FieldValue({ field, value, locales }: { field: ProposalField; value: unknown; locales: readonly string[] }) {
@@ -16,7 +14,7 @@ export function FieldValue({ field, value, locales }: { field: ProposalField; va
   const f = useTranslations('animals.form');
   if (field === 'status' && typeof value === 'string' && value) {
     return (
-      <StatusBadge tone={statusTone(value)} dot>
+      <StatusBadge tone={statusTone('animal', value as AnimalStatus)} dot>
         {f(`status.${value as AnimalStatus}`)}
       </StatusBadge>
     );

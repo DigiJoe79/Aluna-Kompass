@@ -6056,7 +6056,6 @@
         "collective": "Sammel"
       },
       "state": {
-        "valid": "gültig",
         "voided": "zurückgenommen",
         "toCorrect": "zu korrigieren",
         "needsSignature": "Unterschrift fehlt"
@@ -6609,7 +6608,6 @@
           "issued": "{issued} von {total}",
           "state": {
             "running": "läuft",
-            "finished": "abgeschlossen",
             "withFailures": "abgeschlossen, {count} nicht ausgestellt"
           },
           "followUp": "Nachzügler",
