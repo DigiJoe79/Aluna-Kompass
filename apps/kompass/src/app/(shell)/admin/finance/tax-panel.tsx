@@ -95,8 +95,10 @@ function DaysRow({ id, label, days, onSave }: { id: string; label: string; days:
           <Input id={id} name={id} type="number" min={0} max={365} step={1} value={text} disabled={pending} aria-invalid={showError || undefined} aria-describedby={showError ? `${id}-error` : undefined} onChange={(e) => setText(e.target.value)} className="w-24" />
           <FieldError id={`${id}-error`} message={showError ? tLimits('daysFormat') : undefined} />
         </div>
+        {/* Je Grenze ein eigener Dienstaufruf, der Knopf aber outline statt primär (11-1 A2, Joe 2026-10-16). */}
         <Button
           type="button"
+          variant="outline"
           disabled={pending}
           onClick={async () => {
             if (invalid || parsed === null) return setAttempted(true);
@@ -130,8 +132,10 @@ function LimitRow({ id, label, cents, onSave }: { id: string; label: string; cen
         <div className="w-32">
           <AmountField id={id} name={id} value={text} onChange={setText} invalid={invalid && (attempted || text.trim().length > 0)} disabled={pending} />
         </div>
+        {/* Je Grenze ein eigener Dienstaufruf, der Knopf aber outline statt primär (11-1 A2, Joe 2026-10-16). */}
         <Button
           type="button"
+          variant="outline"
           disabled={pending}
           onClick={async () => {
             if (invalid || parsed === null) return setAttempted(true);
