@@ -71,6 +71,7 @@ const HEADING_HOMES = new Set([
   'components/shell/topbar.tsx',
 ]);
 const HEADING_ALLOWED: Allowlist = {
+  'components/shell/help-panel.tsx': 'Titel der Hilfe als Nebenspalte (Entwurf E4): Familie wie `SheetTitle`, ohne Dialog.',
   'app/(shell)/error.tsx': 'Fehlerseite der Schale ohne PageHeader; Titel als h1 in der Rolle Seitentitel (Designer § 9.4).',
   'app/(shell)/admin/settings/settings-form.tsx': 'Kein Klassenname: Feldart `font-heading` (Auswahl der Überschriftenschrift, `case \'font-heading\'`) — der Wächter liest den Text, nicht die Klasse.',
 };

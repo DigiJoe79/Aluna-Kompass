@@ -278,6 +278,10 @@
   /* Der Titel bricht um, statt die Tabelle über den Rand zu schieben (die Karte schneidet sonst Betrag und Status ab). */
   table:has([data-col="title"]) > tbody > tr > [data-col="title"] { white-space: normal; overflow-wrap: break-word; }
 }
+/* Steht die Hilfe als Nebenspalte daneben (E4), bleiben der Liste rund 760 px: Sie zeigt ihre Rollen-Spalten wie
+   von `md` bis `lg`, statt Betrag und Status aus der Karte zu schieben. */
+body:has(#help-panel) table:has([data-col="title"]) :is(th, td):not([data-col]) { display: none; }
+body:has(#help-panel) table:has([data-col="title"]) > tbody > tr > [data-col="title"] { white-space: normal; overflow-wrap: break-word; }
 @media (max-width: 767.98px) {
   table:has([data-col="title"]),
   table:has([data-col="title"]) > :is(tbody, tfoot) { display: block; }

@@ -7,6 +7,7 @@ import { formatEuro } from '@/lib/finance/amount';
 import { usePreference } from '@/lib/preferences';
 import { cn } from '@/lib/utils';
 import { Section } from '@/components/section';
+import { useHelpAside } from '@/components/shell/help-panel';
 
 export interface SidePanelProps {
   balances: BalancesView;
@@ -22,8 +23,10 @@ export interface SidePanelProps {
 export function SidePanel({ balances, incomeStatement }: SidePanelProps) {
   const t = useTranslations('finance.journal.sidePanel');
   const [pref, setPref] = usePreference('financeSidePanel');
-  const explicit = pref !== 'auto';
-  const open = pref === 'open';
+  // Hilfe und Seitenpanel teilen sich eine Nebenspalte (Entwurf E4): Steht die Hilfe daneben, ist das Panel eingeklappt.
+  const helpAside = useHelpAside();
+  const explicit = helpAside || pref !== 'auto';
+  const open = !helpAside && pref === 'open';
 
   const collapse = (
     <Button type="button" variant="link" className="h-auto p-0" onClick={() => setPref('closed')}>
@@ -38,7 +41,9 @@ export function SidePanel({ balances, incomeStatement }: SidePanelProps) {
         size="sm"
         aria-label={t('expand')}
         onClick={() => setPref('open')}
-        className={cn('shrink-0 self-start', explicit ? (open ? 'hidden' : 'inline-flex') : 'hidden max-[1359px]:inline-flex')}
+        // Steht die Hilfe daneben, fehlt auch der Knopf: Er nähme der Liste eine eigene Spalte (Abweichung von E4, dort
+        // „Knopf im Seitenkopf“; lauf-2-offen Teil H). Wer die Hilfe schließt, hat ihn wieder.
+        className={cn('shrink-0 self-start', helpAside ? 'hidden' : explicit ? (open ? 'hidden' : 'inline-flex') : 'hidden max-[1359px]:inline-flex')}
       >
         {t('expand')}
       </Button>

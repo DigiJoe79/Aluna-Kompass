@@ -3,7 +3,7 @@
 import { CircleQuestionMark, Menu, Search } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
-import type { ReactNode } from 'react';
+import type { ReactNode, Ref } from 'react';
 import type { Crumb } from '@/lib/navigation';
 import { cn } from '@/lib/utils';
 import { UserMenu, type UserMenuProps } from './user-menu';
@@ -20,6 +20,10 @@ export interface TopbarProps {
   onOpenDrawer: () => void;
   onSearch: () => void;
   onHelp: () => void;
+  /** Hilfe offen: Knopf mit `aria-expanded`, als Nebenspalte zusätzlich `aria-controls` (Entwurf E4). */
+  helpOpen?: boolean;
+  helpAside?: boolean;
+  helpButtonRef?: Ref<HTMLButtonElement>;
   /** Platz vor dem Hilfe-Knopf, den die Hülle nicht kennt — etwa die Laufanzeige eines Moduls. */
   extras?: ReactNode;
 }
@@ -39,7 +43,7 @@ export interface TopbarProps {
  * damit einer der acht Bausteine mit `font-heading`). Kein Layout-Test für diese Einzelstelle (AGENTS.md); der Überlauf-Wächter
  * der Screenshot-Pipeline prüft die Kopfzeile.
  */
-export function Topbar({ organization, logoUrl, crumbs, user, build, version, drawer, onOpenDrawer, onSearch, onHelp, extras }: TopbarProps) {
+export function Topbar({ organization, logoUrl, crumbs, user, build, version, drawer, onOpenDrawer, onSearch, onHelp, helpOpen = false, helpAside = false, helpButtonRef, extras }: TopbarProps) {
   const t = useTranslations();
   return (
     <header className="flex h-14 shrink-0 items-center gap-3.5 border-b border-line bg-topbar px-4">
@@ -82,7 +86,15 @@ export function Topbar({ organization, logoUrl, crumbs, user, build, version, dr
         <kbd className="rounded-[3px] border border-line px-1 font-mono text-key max-sm:hidden">⌘K</kbd>
       </button>
       {extras}
-      <button type="button" onClick={onHelp} aria-label={t('shell.topbar.help')} className="flex size-[30px] shrink-0 items-center justify-center rounded-sm text-muted-ink hover:bg-hover hover:text-ink">
+      <button
+        ref={helpButtonRef}
+        type="button"
+        onClick={onHelp}
+        aria-label={t('shell.topbar.help')}
+        aria-expanded={helpOpen}
+        aria-controls={helpAside ? 'help-panel' : undefined}
+        className={cn('flex size-[30px] shrink-0 items-center justify-center rounded-sm text-muted-ink hover:bg-hover hover:text-ink', helpOpen && 'bg-selected text-selected-ink')}
+      >
         <CircleQuestionMark className="size-[18px]" aria-hidden />
       </button>
       <UserMenu user={user} build={build} version={version} />

@@ -938,9 +938,14 @@
       "breadcrumb": "Brotkrume"
     },
     "help": {
-      "readAll": "Ganze Seite lesen",
+      "label": "Hilfe",
+      "titleFor": "Hilfe: {title}",
+      "close": "Hilfe schließen",
+      "openHandbook": "Im Handbuch öffnen",
       "none": "Zu dieser Seite gibt es noch keine Hilfe.",
-      "unavailable": "Die Hilfe ist gerade nicht erreichbar."
+      "noneText": "Im Handbuch finden Sie alle Kapitel:",
+      "failed": "Die Hilfe konnte nicht geladen werden.",
+      "retry": "Erneut versuchen"
     },
     "userMenu": {
       "aria": "Nutzermenü",

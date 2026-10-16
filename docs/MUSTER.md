@@ -125,11 +125,12 @@ Bausteine: `ui/table.tsx` (`ColumnRole`, Kartenzeile in `globals.css`), `sortabl
 - Die Seite wählt, nicht der Bereich: kein `max-w-[…]` in Seiten und Panels. Fließtext `max-w-prose`; schmale Felder über das Raster (§ J).
 - Dialoge über `DialogContent size` (Pflicht): `sm` 440 (bestätigen, ein bis zwei Felder), `md` 560 (innen ~512 px, zwei Spalten), `lg` 760 (zwei Spalten, Auswahl mit Liste, Protokoll), `xl` 1040 (mit Vorschau). Faustregel: bis etwa sechs Felder `md`, mehr Felder `lg`. Telefon: `sm`/`md` als Blatt von unten, `lg`/`xl` als Vollbild; `mobile` übersteuert das. Kein `sm:max-w-[…]`, kein `w-[…]`, kein eigenes Polster oder `--dialog-pad`; randloser Inhalt über `layout="fixed-footer"`.
 - Seitenfenster über `SheetContent size`: `sm` 400 (Hilfe, Navigation), `md` 560 (Detail, Ordner); auf dem Telefon volle Breite. Polster 20 px wie im Dialog, im inneren Behälter (`<div className="p-5">`), nicht am `SheetContent`. Ausnahme: Navigation und Ordnerblatt — Listen ohne Rand mit eigenen Zeilenrändern.
+- **Hilfe neben der Seite** (Entwurf E4, Designer 2026-10-17): Ab `lg` ist die Hilfe eine Nebenspalte (`HelpPanel mode="aside"`, `aside` „Hilfe“, 360 px, ab `xl` 400 px), nicht modal — kein Abdunkeln, keine Fokusfalle, der Inhalt rückt. Sie bleibt beim Seitenwechsel offen und folgt der Seite, offen/zu gilt je Sitzung (`sessionStorage`); Fokus beim Öffnen auf den Titel, Esc (in der Hilfe), × und der Knopf schließen, der Fokus geht an den Knopf zurück. Hilfe und Seitenpanel (z. B. „Bestände“) teilen sich eine Spalte: Steht die Hilfe, klappt das Seitenpanel ein (`useHelpAside`), und Listen zeigen ihre Rollen-Spalten wie unter `lg` (§ G). Darunter das modale Blatt; es schließt beim Seitenwechsel, die Nebenspalte schließt, wenn das Fenster unter `lg` schrumpft. Überlagerungen eines Seitenfensters ohne Unschärfe.
 - Titel über `DialogTitle`/`SheetTitle` ohne Klassen (Standard `font-heading text-dialog-title`, 19/600), Beschreibung mit `tone` (§ A). Kopf und Fuß eines Seitenfensters (`SheetHeader`, `SheetFooter`) haben 20 px Polster wie der Dialog; das Schließen-Kreuz hat in beiden 44 px Klickfläche.
 
 Begründung 1200: Die Schale nimmt 344 px; Inhalt bei Vollbild Air 13″ 1126, Pro 14″ 1168, Air 15″ 1366, Pro 16″ 1384 px. Auf kleinen Schirmen greift die Grenze kaum, ab 15″ hält sie Kopf, Felder und Speicherleiste zusammen.
 
-Bausteine: `page.tsx`, `ui/dialog.tsx`, `ui/sheet.tsx`. Wächter: `page-width.test.ts`, `no-fixed-max-width.test.ts`, `dialog-size.test.ts`.
+Bausteine: `page.tsx`, `ui/dialog.tsx`, `ui/sheet.tsx`, `shell/help-panel.tsx`. Wächter: `page-width.test.ts`, `no-fixed-max-width.test.ts`, `dialog-size.test.ts`.
 
 ## J — Formularraster
 
