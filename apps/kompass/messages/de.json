@@ -6692,6 +6692,12 @@
     "expenses": {
       "new": {
         "title": "Auslage einreichen",
+        "deleteDraft": {
+          "item": "Entwurf löschen …",
+          "title": "Entwurf löschen?",
+          "description": "Der Entwurf verschwindet mit seinen Positionen. Hochgeladene Belege bleiben in der Akte.",
+          "confirm": "Entwurf löschen"
+        },
         "intro": "Kompass sichert Ihre Eingaben laufend. Sie können jederzeit aufhören und später weitermachen – auch an einem anderen Gerät.",
         "back": "Eigene Anträge",
         "forWhom": "Für wen?",
@@ -6810,6 +6816,7 @@
         "open": "Offen",
         "done": "Erledigt",
         "draftNumber": "Entwurf",
+        "amountMissing": "Betrag fehlt",
         "openTruncated": "Es werden die jüngsten {shown} von {total} offenen Anträgen gezeigt.",
         "emptyTitle": "Noch kein Antrag",
         "emptyText": "Was Sie für den Verein ausgelegt haben, reichen Sie hier ein – mit Beleg als PDF oder als Fahrt.",

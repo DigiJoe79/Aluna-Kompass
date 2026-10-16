@@ -5,6 +5,7 @@ import {
   applySaved,
   approveInput,
   CLAIM_BADGE_TONE,
+  claimAmountMissing,
   claimHistory,
   claimHref,
   claimSentence,
@@ -252,5 +253,14 @@ describe('approval input (D3)', () => {
   it('Q Rest: sends the reason for a purpose going negative only when one was typed', () => {
     expect(approveInput({ claimId: 'c1', version: 'v3', positions, decisions: {}, purposeReason: ' Zuschuss zugesagt ' })).toMatchObject({ purposeReason: 'Zuschuss zugesagt' });
     expect(approveInput({ claimId: 'c1', version: 'v3', positions, decisions: {}, purposeReason: '  ' })).not.toHaveProperty('purposeReason');
+  });
+});
+
+/** 08 A2 (Joe 2026-10-16): Ein Entwurf ohne Betrag sagt „Betrag fehlt“ statt 0,00 €. */
+describe('claimAmountMissing', () => {
+  it('nur beim Entwurf ohne Betrag', () => {
+    expect(claimAmountMissing({ state: 'draft', totalCents: 0 })).toBe(true);
+    expect(claimAmountMissing({ state: 'draft', totalCents: 1250 })).toBe(false);
+    expect(claimAmountMissing({ state: 'submitted', totalCents: 0 })).toBe(false);
   });
 });

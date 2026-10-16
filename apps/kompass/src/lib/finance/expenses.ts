@@ -281,3 +281,8 @@ export function approveInput(o: { claimId: string; version: string; positions: r
 }
 
 export type ApproveInput = ReturnType<typeof approveInput>;
+
+/** Ein Entwurf ohne Betrag nennt das Fehlen statt „0,00 €“ (08 A2, Joe 2026-10-16). */
+export function claimAmountMissing(claim: { state: string; totalCents: number }): boolean {
+  return claim.state === 'draft' && claim.totalCents === 0;
+}

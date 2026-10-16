@@ -1,7 +1,7 @@
 import path from 'node:path';
 import type { Page } from '@playwright/test';
 import { expect, test } from './fixtures';
-import { backToAdmin, EXPENSE_IBAN, linkOwnContact, mcpClient, PDF, PHONE, rejectInQueue, submitClaim, switchToJonas } from './expense-helpers';
+import { backToAdmin, callTool, EXPENSE_IBAN, linkOwnContact, mcpClient, PDF, PHONE, rejectInQueue, submitClaim, switchToJonas } from './expense-helpers';
 import { loginAsAdmin, resetDatabase, setE2ESetting } from './helpers';
 
 /** > 1 MB, < 10 MB (N9, Befundliste 0.2.0) — erzeugt mit `docs/intern/recherche/2026-09-26-upload-repro/mkpdf.py`. */
@@ -265,6 +265,26 @@ test.describe('finance expenses — eigene Anträge (D2)', () => {
     await expect(page.getByTestId('expense-copied-from')).toContainText(refused.number!);
     await expect(card(page, 1).getByLabel('Wofür war das?')).toHaveValue('Druckerpatronen');
     await expect(card(page, 1).getByTestId('receipt-file')).toBeVisible();
+  });
+
+  // 08 A2 (Joe 2026-10-16): Ein leerer Entwurf sagt „Betrag fehlt“ und lässt sich im Kopf löschen, mit Rückfrage.
+  test('ein leerer Entwurf zeigt „Betrag fehlt“ und lässt sich löschen', async ({ page, baseURL }) => {
+    await linkOwnContact(page);
+    const client = await mcpClient(page, baseURL);
+    await callTool(client, 'finance_expense_draft_save', { waiver: false, iban: null, positions: [] });
+    await client.close();
+
+    await page.goto('/finance/expenses');
+    const draftCard = page.getByTestId('claims-open').getByTestId('claim-card').filter({ hasText: 'Entwurf' });
+    await expect(draftCard).toContainText('Betrag fehlt');
+    await expect(draftCard).not.toContainText('0,00 €');
+    await draftCard.click();
+    await expect(page).toHaveURL(/\/finance\/expenses\/new\?id=/);
+    await page.getByRole('button', { name: 'Weitere Aktionen' }).click();
+    await page.getByRole('menuitem', { name: 'Entwurf löschen …' }).click();
+    await page.getByRole('alertdialog').getByRole('button', { name: 'Entwurf löschen' }).click();
+    await expect(page).toHaveURL(/\/finance\/expenses$/);
+    await expect(page.getByTestId('claim-card')).toHaveCount(0);
   });
 });
 

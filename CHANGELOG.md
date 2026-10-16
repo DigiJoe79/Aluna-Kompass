@@ -46,6 +46,9 @@ die Nummern folgen [Semantic Versioning](https://semver.org/lang/de/). Vor
 - **Offene Zahlungen.** Die Liste zeigt zuerst nur Offenes; Erledigtes findet
   sich über den Filter „Zustand“. Die Reiter heißen „Wir zahlen“ und „Wir
   bekommen“.
+- **Auslagen-Entwurf löschen.** Ein eigener Entwurf lässt sich im Kopf über
+  „Weitere Aktionen“ löschen; ein Entwurf ohne Betrag zeigt „Betrag fehlt“
+  statt 0,00 €.
 - **Gemeinschaftskonto.** Gehört eine IBAN mehreren Kontakten
   (Gemeinschaftskonto), schlägt der Import keinen Kontakt mehr vor, statt still
   den zuletzt verknüpften zu nehmen.

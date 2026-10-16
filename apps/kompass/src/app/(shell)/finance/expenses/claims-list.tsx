@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { StatusBadge } from '@/components/status-badge';
 import type { DateFormatter } from '@/lib/date-format';
 import { formatEuro } from '@/lib/finance/amount';
-import { CLAIM_BADGE_TONE, claimHref, claimSentence } from '@/lib/finance/expenses';
+import { CLAIM_BADGE_TONE, claimAmountMissing, claimHref, claimSentence } from '@/lib/finance/expenses';
 import { Section } from '@/components/section';
 
 /** Badge und Satz in Alltagssprache — gemeinsam für Karte und Ansicht des Antrags. */
@@ -41,7 +41,11 @@ async function ClaimCard({ claim, fmt }: { claim: ExpenseClaimView; fmt: DateFor
       >
         <span className="flex items-baseline justify-between gap-3">
           <span className="font-mono text-body text-ink">{claim.number ?? t('draftNumber')}</span>
-          <span className="shrink-0 text-body font-semibold tabular-nums text-ink">{formatEuro(claim.totalCents)}</span>
+          {claimAmountMissing(claim) ? (
+            <span className="shrink-0 text-body text-muted-ink">{t('amountMissing')}</span>
+          ) : (
+            <span className="shrink-0 text-body font-semibold tabular-nums text-ink">{formatEuro(claim.totalCents)}</span>
+          )}
         </span>
         <ClaimState claim={claim} fmt={fmt} />
         <span className="text-hint text-muted-ink">{next}</span>

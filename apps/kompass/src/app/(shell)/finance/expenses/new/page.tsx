@@ -10,6 +10,7 @@ import { Page } from '@/components/page';
 import { PageHeader } from '@/components/page-header';
 import { deviceFromUserAgent, emptyExpenseForm, emptyPosition, formFromClaim } from '@/lib/finance/expenses';
 import { requireSession } from '@/lib/request-context';
+import { DraftActions } from './draft-actions';
 import { ExpenseForm } from './expense-form';
 import { SubmittedView } from './submitted';
 import { conflictText } from '@/lib/error-text';
@@ -50,6 +51,12 @@ export default async function NewExpensePage({ searchParams }: { searchParams: P
   }
   if (claim?.ok && claim.value.state === 'submitted') return <Page width="task"><SubmittedView claim={claim.value} /></Page>;
   if (claim?.ok && claim.value.state !== 'draft') redirect(`/finance/expenses/${claim.value.id}`);
+  // Ein gespeicherter Entwurf lässt sich im Kopf löschen (08 A2, Joe 2026-10-16).
+  const draftHeader = claim?.ok ? (
+    <PageHeader title={t('title')} description={t('intro')} back={{ href: '/finance/expenses', label: t('back') }} actions={<DraftActions id={claim.value.id} />} />
+  ) : (
+    header
+  );
 
   const today = todayIn(deps);
   const base = claim?.ok ? formFromClaim(claim.value) : { ...emptyExpenseForm(start.value.iban), positions: [emptyPosition('p0', today)] };
@@ -60,7 +67,7 @@ export default async function NewExpensePage({ searchParams }: { searchParams: P
   const source = claim?.ok && claim.value.copiedFromClaimId ? await getExpenseClaim(deps, ctx, { id: claim.value.copiedFromClaimId }) : null;
 
   return (
-    <Page width="task" header={header}>
+    <Page width="task" header={draftHeader}>
       {source?.ok ? (
         <p data-testid="expense-copied-from" className="mb-4 rounded-md border border-line bg-surface-2 px-3 py-2 text-meta text-ink-2">
           {t('copiedFrom', { number: source.value.number ?? '' })}
