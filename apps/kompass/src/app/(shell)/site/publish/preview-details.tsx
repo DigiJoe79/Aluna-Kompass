@@ -41,9 +41,12 @@ export function PreviewDetails({ detail }: { detail: DetailView }) {
   const more = (shown: number, total: number) => (total > shown ? <li className="font-sans text-muted-ink">{tDiff('more', { count: total - shown })}</li> : null);
 
   return (
-    <details className="group rounded-md border border-line bg-surface-2 text-meta">
+    // Benannte Gruppe: Ein schlichtes `group` hier griff mit `group-open:` bis in die inneren `Disclosure` durch, und bei
+    // offenen „Einzelheiten“ zeigten alle inneren Pfeile nach unten (Befund 1 Nr. 4, 0.2.12). Ohne dauerhaften Test —
+    // ein Layoutfehler an einer Stelle (Projektregel).
+    <details className="group/outer rounded-md border border-line bg-surface-2 text-meta">
       <summary className="flex cursor-pointer list-none items-center gap-2 p-3 font-semibold">
-        <ChevronRight className="size-4 shrink-0 transition-transform group-open:rotate-90" aria-hidden />
+        <ChevronRight className="size-4 shrink-0 transition-transform group-open/outer:rotate-90" aria-hidden />
         {t('show')}
       </summary>
       <div className="grid gap-4 px-3 pb-3 md:grid-cols-2">
