@@ -99,7 +99,8 @@ export function RulesPanel({
               <TableHead col="meta">{t('ruleColumns.thenType')}</TableHead>
               <TableHead col="meta">{t('ruleColumns.thenFolder')}</TableHead>
               <TableHead col="status">{t('ruleColumns.status')}</TableHead>
-              <TableHead col="actions" className="text-right">{t('ruleColumns.actions')}</TableHead>
+              {/* Feste Breite wie bei den Arten (11-1 B13). */}
+              <TableHead col="actions" className="w-44 text-right">{t('ruleColumns.actions')}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>

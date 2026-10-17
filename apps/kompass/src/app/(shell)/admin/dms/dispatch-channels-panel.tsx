@@ -6,6 +6,7 @@ import { ConfirmDialog } from '@/components/forms/confirm-dialog';
 import { FormActionBar } from '@/components/forms/form-action-bar';
 import { useActionFeedback } from '@/components/forms/use-action-feedback';
 import { Button } from '@/components/ui/button';
+import { KeyLine } from '@/components/key-line';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { withUnplacedFieldErrors } from '@/lib/feedback';
@@ -77,7 +78,6 @@ export function DispatchChannelsPanel({
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead col="meta">{t('channelColumns.key')}</TableHead>
               <TableHead col="title">{t('channelColumns.label')}</TableHead>
               <TableHead col="actions" className="text-right">{t('channelColumns.actions')}</TableHead>
             </TableRow>
@@ -85,8 +85,11 @@ export function DispatchChannelsPanel({
           <TableBody>
             {channels.map((channel) => (
               <TableRow key={channel.key}>
-                <TableCell col="meta" className="font-mono text-meta text-ink-2">{channel.key}</TableCell>
-                <TableCell col="title" className="font-semibold text-ink">{channel.label}</TableCell>
+                {/* Schlüssel als `KeyLine` unter dem Namen statt eigener Spalte (11-1 B9). */}
+                <TableCell col="title" className="text-ink">
+                  {channel.label}
+                  <KeyLine>{channel.key}</KeyLine>
+                </TableCell>
                 <TableCell col="actions" className="text-right">
                   {canManageSettings ? (
                     <>

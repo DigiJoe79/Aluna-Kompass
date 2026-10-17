@@ -7,7 +7,8 @@ import { Notice } from '@/components/notice';
 import { FormActionBar } from '@/components/forms/form-action-bar';
 import { useActionFeedback } from '@/components/forms/use-action-feedback';
 import { StatusBadge, statusTone } from '@/components/status-badge';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
+import { KeyLine } from '@/components/key-line';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -20,7 +21,6 @@ import { FormField } from '@/components/forms/form-field';
 import { FormGrid } from '@/components/forms/form-grid';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Section } from '@/components/section';
-import { Empty } from '@/components/empty-value';
 import { nameOrEmpty } from '@/lib/name-or-empty';
 
 export interface DocumentTypeItem {
@@ -175,23 +175,23 @@ export function TypesPanel({
               <TableHead col="title">{t('typeColumns.label')}</TableHead>
               <TableHead col="meta">{t('typeColumns.direction')}</TableHead>
               <TableHead>{t('typeColumns.retention')}</TableHead>
-              <TableHead col="meta">{t('typeColumns.folder')}</TableHead>
               <TableHead col="status">{t('typeColumns.status')}</TableHead>
-              <TableHead col="actions" className="text-right">{t('typeColumns.actions')}</TableHead>
+              {/* Feste Breite: Mit und ohne „Löschen“ stehen die Knöpfe an derselben Stelle (11-1 B13). */}
+              <TableHead col="actions" className="w-44 text-right">{t('typeColumns.actions')}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {types.map((row, i) => (
               <TableRow key={row.key}>
-                <TableCell col="meta" className="font-mono font-semibold text-ink">{row.prefix}</TableCell>
-                {/* Schlüssel als zweite Zeile unter der Bezeichnung: acht Spalten scrollten auf der standard-Seite waagerecht (K9-Befund 8). */}
+                {/* Präfix ist eine Kennung: mono, aber nicht fett (11-1 B14). */}
+                <TableCell col="meta" className="font-mono text-ink">{row.prefix}</TableCell>
+                {/* Schlüssel als `KeyLine` unter der Bezeichnung (11-1 B9); acht Spalten scrollten auf der standard-Seite waagerecht (K9-Befund 8). */}
                 <TableCell col="title">
                   <span className="text-ink">{row.label}</span>
-                  <span className="block font-mono text-hint text-muted-ink">{row.key}</span>
+                  <KeyLine>{row.key}</KeyLine>
                 </TableCell>
                 <TableCell col="meta" className="text-ink-2">{tDms(`directions.${row.defaultDirection}`)}</TableCell>
                 <TableCell className="text-ink-2">{t(`retentionClasses.${row.retentionClass}`)}</TableCell>
-                <TableCell col="meta" className="text-ink-2">{row.defaultFolder ?? <Empty />}</TableCell>
                 <TableCell col="status">
                   {row.isActive ? null : <StatusBadge tone={statusTone('active', 'inactive')}>{t('inactive')}</StatusBadge>}
                 </TableCell>
@@ -211,7 +211,10 @@ export function TypesPanel({
                       <Button variant="ghost" size="sm" onClick={() => setTypeToDelete(row)}>
                         {t('delete')}
                       </Button>
-                    ) : null}
+                    ) : (
+                      // Platzhalter, damit „Bearbeiten“ nicht springt (11-1 B13).
+                      <span aria-hidden className={cn(buttonVariants({ variant: 'ghost', size: 'sm' }), 'invisible')}>{t('delete')}</span>
+                    )}
                   </div>
                 </TableCell>
               </TableRow>

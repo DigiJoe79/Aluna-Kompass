@@ -2565,7 +2565,6 @@
       "intro": "Die Seitenrahmen, auf denen Dokumente erscheinen: Kopf, Ränder, Schrift, Fußzeile. Eine eigene Basis mit derselben Kennung ersetzt die mitgelieferte.",
       "columns": {
         "base": "Basis",
-        "id": "Kennung",
         "origin": "Herkunft",
         "state": "Zustand",
         "type": "Dokumentart",
@@ -4318,7 +4317,6 @@
         "label": "Beschriftung"
       },
       "channelColumns": {
-        "key": "Schlüssel",
         "label": "Beschriftung",
         "actions": "Aktionen"
       },

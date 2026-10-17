@@ -80,7 +80,6 @@ export function BasesPanel({ bases, groups, gaps = [], canManage }: { bases: Bas
           <TableHeader>
             <TableRow>
               <TableHead col="title">{t('columns.base')}</TableHead>
-              <TableHead col="meta">{t('columns.id')}</TableHead>
               <TableHead col="meta">{t('columns.origin')}</TableHead>
               <TableHead col="status">{t('columns.state')}</TableHead>
             </TableRow>
@@ -88,8 +87,11 @@ export function BasesPanel({ bases, groups, gaps = [], canManage }: { bases: Bas
           <TableBody>
             {bases.map((b) => (
               <TableRow key={b.id}>
-                <TableCell col="title">{b.label}</TableCell>
-                <TableCell col="meta" className="font-mono text-hint text-ink-2">{b.id}</TableCell>
+                {/* Kennung als `KeyLine` unter dem Namen statt eigener Spalte (11-1 B9). */}
+                <TableCell col="title">
+                  <span className="block">{b.label}</span>
+                  <KeyLine>{b.id}</KeyLine>
+                </TableCell>
                 <TableCell col="meta">
                   <StatusBadge tone={b.own ? 'brand' : 'neutral'}>{b.own ? t('own') : t('shipped')}</StatusBadge>
                 </TableCell>
@@ -129,8 +131,10 @@ export function BasesPanel({ bases, groups, gaps = [], canManage }: { bases: Bas
                   </TableCell>
                   <TableCell col="status" data-testid="effective-base">
                     <span className="flex flex-wrap items-center gap-2">
-                      <span>{row.effectiveLabel}</span>
-                      <span className="font-mono text-key text-ink-2">{row.effectiveBase}</span>
+                      <span>
+                        <span className="block">{row.effectiveLabel}</span>
+                        <KeyLine>{row.effectiveBase}</KeyLine>
+                      </span>
                       {row.override ? <StatusBadge tone="warning">{t('overridden')}</StatusBadge> : null}
                       {row.available ? null : <StatusBadge tone="error">{t('unavailable')}</StatusBadge>}
                     </span>
@@ -149,7 +153,7 @@ export function BasesPanel({ bases, groups, gaps = [], canManage }: { bases: Bas
                         {row.override && !usable.some((b) => b.id === row.override) ? <option value={row.override}>{row.override}</option> : null}
                         {usable.map((b) => (
                           <option key={b.id} value={b.id}>
-                            {b.label} ({b.id})
+                            {b.label}
                           </option>
                         ))}
                       </Select>

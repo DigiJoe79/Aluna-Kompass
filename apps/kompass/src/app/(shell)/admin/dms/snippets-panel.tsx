@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import { ConfirmDialog } from '@/components/forms/confirm-dialog';
 import { FormActionBar } from '@/components/forms/form-action-bar';
 import { Button } from '@/components/ui/button';
+import { StatusBadge, statusTone } from '@/components/status-badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -63,7 +64,7 @@ export function SnippetsPanel({ snippets }: { snippets: SnippetRow[] }) {
             <TableRow>
               <TableHead col="title">{t('snippetColumns.name')}</TableHead>
               <TableHead col="meta">{t('snippetColumns.subject')}</TableHead>
-              <TableHead col="meta">{t('snippetColumns.active')}</TableHead>
+              <TableHead col="status">{t('snippetColumns.active')}</TableHead>
               <TableHead col="actions" className="text-right">{t('snippetColumns.actions')}</TableHead>
             </TableRow>
           </TableHeader>
@@ -73,9 +74,12 @@ export function SnippetsPanel({ snippets }: { snippets: SnippetRow[] }) {
             ) : (
               snippets.map((snippet) => (
                 <TableRow key={snippet.id}>
-                  <TableCell col="title" className="font-semibold text-ink">{snippet.name}</TableCell>
+                  <TableCell col="title" className="text-ink">{snippet.name}</TableCell>
                   <TableCell col="meta" className="text-ink-2">{snippet.subject ?? <Empty />}</TableCell>
-                  <TableCell col="meta" className="text-ink-2">{snippet.isActive ? tCommon('yes') : tCommon('no')}</TableCell>
+                  {/* Wie die anderen Listen: aktiv ist der Normalfall ohne Marke, nur „inaktiv“ markiert (11-1 B11). */}
+                  <TableCell col="status">
+                    {snippet.isActive ? null : <StatusBadge tone={statusTone('active', 'inactive')}>{t('inactive')}</StatusBadge>}
+                  </TableCell>
                   <TableCell col="actions" className="text-right">
                     <Button variant="ghost" size="sm" onClick={() => setEditing(snippet)}>
                       {t('edit')}
