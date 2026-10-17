@@ -493,7 +493,8 @@ test.describe('finance donation notices', () => {
     const managedValues = page.getByTestId('managed-field-value');
     // Befund 32 (0.2.1): das Datum im Format des Vereins, nicht als ISO.
     await expect(managedValues).toHaveText(['11/222/33333', 'Finanzamt Beispielstadt', 'Freistellungsbescheid', germanDay(today)]);
-    for (const label of ['Finanzamt', 'Steuernummer', 'Art des Bescheids', 'Datum des Bescheids']) await expect(page.getByLabel(label)).toHaveCount(0);
+    // Fester Wert (H2): eine Gruppe mit Beschriftung und Wert, aber kein Eingabefeld.
+    for (const label of ['Finanzamt', 'Steuernummer', 'Art des Bescheids', 'Datum des Bescheids']) await expect(page.getByRole('textbox', { name: label, exact: true })).toHaveCount(0);
     await expect(page.getByText('Wird unter Finanzen → Spenden → Bescheide geführt.')).toHaveCount(1);
     await expect(page.getByLabel('Satzungszweck')).toHaveCount(0);
   });

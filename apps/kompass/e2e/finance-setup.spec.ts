@@ -617,10 +617,10 @@ test.describe('finance setup', () => {
     // Reihenfolge wie das Manifest: Abschnitt „Arbeit“ (F5: Arbeitsliste und Nebenlisten vor den Auszügen),
     // dann „Buchungen“, dann „Spenden“ (F6a), dann „Auslagen“ (F8a), zuletzt die Verwaltung.
     const treasurer = page.getByTestId('permission-role-Schatzmeister');
-    await expect(treasurer.getByText(/^Sichtbare Navigationseinträge:/)).toHaveText('Sichtbare Navigationseinträge: Arbeitsliste, Fremdes Geld, Belege ohne Buchung, Regeln, Hochgeladene Auszüge, Journal, Bankkonten und Kassen, Offene Zahlungen, Barkasse, Bestätigungen, Serienlauf, Spendenbuch, Bescheide, Eigene Anträge, Freigaben, Partner, Zwecke, Zurückgelegtes Geld, Personen, Finanzen einrichten');
+    await expect(treasurer.getByText(/^Sichtbare Navigationseinträge:/)).toHaveText('Sichtbare Navigationseinträge: Arbeitsliste, Fremdes Geld, Belege ohne Buchung, Regeln, Hochgeladene Auszüge, Journal, Bankkonten und Kassen, Offene Zahlungen, Kassen, Bestätigungen, Serienlauf, Spendenbuch, Bescheide, Eigene Anträge, Freigaben, Partner, Zwecke, Zurückgelegtes Geld, Personen, Finanzen einrichten');
 
     const auditor = page.getByTestId('permission-role-Kassenprüfer');
-    await expect(auditor.getByText(/^Sichtbare Navigationseinträge:/)).toHaveText('Sichtbare Navigationseinträge: Arbeitsliste, Fremdes Geld, Belege ohne Buchung, Regeln, Hochgeladene Auszüge, Journal, Bankkonten und Kassen, Offene Zahlungen, Barkasse, Bestätigungen, Serienlauf, Spendenbuch, Bescheide, Partner, Zwecke, Zurückgelegtes Geld, Personen');
+    await expect(auditor.getByText(/^Sichtbare Navigationseinträge:/)).toHaveText('Sichtbare Navigationseinträge: Arbeitsliste, Fremdes Geld, Belege ohne Buchung, Regeln, Hochgeladene Auszüge, Journal, Bankkonten und Kassen, Offene Zahlungen, Kassen, Bestätigungen, Serienlauf, Spendenbuch, Bescheide, Partner, Zwecke, Zurückgelegtes Geld, Personen');
 
     const clerk = page.getByTestId('permission-role-Auslagen einreichen');
     // F8a: „Auslagen einreichen“ sieht genau die eigenen Anträge — sonst nichts aus den Finanzen.

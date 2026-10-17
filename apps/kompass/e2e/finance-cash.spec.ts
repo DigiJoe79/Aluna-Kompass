@@ -105,7 +105,8 @@ test.describe('finance cash', () => {
     await expect(page.getByText(/Zählprotokoll KZP-\S+ erstellt/)).toBeVisible();
     await page.goto('/contacts');
     await page.getByRole('link', { name: 'Mira Sandberg' }).click();
-    await expect(page.getByText(/Kassenzählung/)).toBeVisible();
+    // Die Kopfzeile der Aufbewahrung (04 B10) nennt die Kassenzählung ein zweites Mal.
+    await expect(page.getByText(/Kassenzählung/).first()).toBeVisible();
   });
 
   test('Bargeld zur Bank gebracht: Kasse sinkt, Bankkonto steigt, eine Umbuchung steht im Journal', async ({ page }) => {
