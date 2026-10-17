@@ -3,7 +3,7 @@ import { contacts, displayName } from '@kompass/module-contacts';
 import { and, eq, isNull, lt, or } from 'drizzle-orm';
 import { z } from 'zod';
 import { listApprovals } from './allocation/approvals';
-import { listMyExpenseClaims } from './allocation/expenses';
+import { expenseClaimTitle, listMyExpenseClaims } from './allocation/expenses';
 import { positionViewsOf, sumPositionCents } from './allocation/partner-payments';
 import { openProofsInternal, paymentsReadyToAcknowledgeInternal } from './allocation/partner-proof';
 import { freeReserveCapOverview } from './allocation/reserves';
@@ -388,12 +388,18 @@ const myExpensesTile: DashboardTile<Record<string, never>> = {
   kind: 'list',
   defaultOn: true,
   options: z.object({}),
-  messageKeys: ['draft', 'submitted', 'approved', 'paid', 'rejected'],
+  messageKeys: ['draft', 'draftUntitled', 'submitted', 'approved', 'paid', 'rejected'],
   async load(deps, ctx) {
     const res = await listMyExpenseClaims(deps, ctx, { state: 'open', limit: 10 });
     if (!res.ok) return { kind: 'list', lines: [], total: 0, href: '/finance/expenses' };
     // Betrag rechts nur, wo es einen gibt: Ein Entwurf ohne Betrag zeigt keine „0,00 €“.
-    const lines: DashboardLine[] = res.value.items.map((c) => ({ titleKey: c.stateLabelKey, values: { number: c.number ?? EMPTY }, ...(c.totalCents > 0 ? { trailing: formatEuro(c.totalCents) } : {}), href: `/finance/expenses/${c.id}` }));
+    // Ein Entwurf hat noch keine Nummer: Er heißt nach dem Zweck der ersten Position (02 A1, 08 A1).
+    const lines: DashboardLine[] = res.value.items.map((c) => {
+      const title = c.stateLabelKey === 'draft' ? expenseClaimTitle(c) : null;
+      const label: Pick<DashboardLine, 'titleKey' | 'values'> =
+        c.stateLabelKey !== 'draft' ? { titleKey: c.stateLabelKey, values: { number: c.number ?? EMPTY } } : title ? { titleKey: 'draft', values: { title } } : { titleKey: 'draftUntitled', values: {} };
+      return { ...label, ...(c.totalCents > 0 ? { trailing: formatEuro(c.totalCents) } : {}), href: `/finance/expenses/${c.id}` };
+    });
     return { kind: 'list', lines, total: res.value.total, href: '/finance/expenses' };
   },
 };

@@ -28,7 +28,8 @@ import { bookEntry } from '../src/ledger/finalize';
 import { createPurpose } from '../src/ledger/purposes';
 import { insertDocument, insertRaw, insertRun, ledgerFixture, setupFinance } from './helpers';
 import { donationFixture, EXEMPTION } from './donation-fixture';
-import { approverCtx, expenseFixture, expenseSubmitted } from './expense-fixture';
+import { approverCtx, expenseFixture, expenseReadyDraft, expenseSubmitted } from './expense-fixture';
+import { saveExpenseDraft } from '../src/allocation/expenses';
 
 const withDms = (f: Awaited<ReturnType<typeof ledgerFixture>>) => ctxWith([...FINANCE_PERMISSIONS, 'dms.view'], f.userId);
 
@@ -358,6 +359,20 @@ describe('finance expense dashboard tiles (F8a, Spec 9.7)', () => {
     expect(result.kind).toBe('list');
     if (result.kind !== 'list') throw new Error('expected list');
     expect(result.lines).toEqual([{ titleKey: 'submitted', values: { number: claim.number }, trailing: formatEuro(claim.totalCents), href: `/finance/expenses/${claim.id}` }]);
+  });
+
+  // 02 A1, 08 A1: Ein Entwurf hat keine Nummer — die Zeile heißt nach dem Zweck der ersten Position, nicht „— — Entwurf“.
+  it('names a draft after the purpose of its first position', async () => {
+    const f = await expenseFixture();
+    const tile = tileByKey('myExpenses');
+    const draft = await expenseReadyDraft(f, f.hanna);
+    const empty = unwrap(await saveExpenseDraft(f.deps, f.hanna.ctx, { iban: null, waiver: false, recurring: false, positions: [] }));
+    const result = await tile.load(f.deps, f.hanna.ctx, {});
+    if (result.kind !== 'list') throw new Error('expected list');
+    expect(result.lines).toEqual([
+      { titleKey: 'draftUntitled', values: {}, href: `/finance/expenses/${empty.id}` },
+      { titleKey: 'draft', values: { title: 'Futter für die Pflegestelle' }, trailing: formatEuro(draft.totalCents), href: `/finance/expenses/${draft.id}` },
+    ]);
   });
 
   it('warns that nobody can approve until an active user holds finance.approve', async () => {

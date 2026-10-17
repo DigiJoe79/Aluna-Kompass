@@ -1,4 +1,5 @@
-import type { ExpenseClaimView } from '@kompass/module-finance';
+import { expenseClaimTitle, type ExpenseClaimView } from '@kompass/module-finance';
+import { KeyLine } from '@/components/key-line';
 import { getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 import { StatusBadge, statusTone } from '@/components/status-badge';
@@ -26,6 +27,7 @@ export async function ClaimState({ claim, fmt }: { claim: ExpenseClaimView; fmt:
  */
 async function ClaimCard({ claim, fmt }: { claim: ExpenseClaimView; fmt: DateFormatter }) {
   const t = await getTranslations('finance.expenses.list');
+  const title = expenseClaimTitle(claim);
   const next =
     claim.stateLabelKey === 'submitted'
       ? claim.approverNames.length > 0
@@ -40,7 +42,20 @@ async function ClaimCard({ claim, fmt }: { claim: ExpenseClaimView; fmt: DateFor
         className="flex min-h-16 flex-col gap-1.5 rounded-lg border border-line bg-surface p-4 hover:bg-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
       >
         <span className="flex items-baseline justify-between gap-3">
-          <span className="font-mono text-body text-ink">{claim.number ?? t('draftNumber')}</span>
+          {/* Titel aus dem Zweck der ersten Position, die Nummer klein darunter; ohne Zweck die Nummer bzw. „Entwurf“
+              in der Textschrift — Mono nur für die Nummer selbst (02 A1, 08 A1, 08 B8). */}
+          <span className="min-w-0">
+            {title ? (
+              <>
+                <span className="block truncate text-body text-ink">{title}</span>
+                {claim.number ? <KeyLine>{claim.number}</KeyLine> : null}
+              </>
+            ) : claim.number ? (
+              <span className="font-mono text-body text-ink">{claim.number}</span>
+            ) : (
+              <span className="text-body text-ink">{t('draftNumber')}</span>
+            )}
+          </span>
           {claimAmountMissing(claim) ? (
             <span className="shrink-0 text-body text-muted-ink">{t('amountMissing')}</span>
           ) : (

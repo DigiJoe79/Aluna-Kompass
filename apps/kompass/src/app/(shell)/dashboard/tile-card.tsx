@@ -25,7 +25,8 @@ export async function TileCard({ view, canComplete, fmt }: { view: DashboardTile
   const ns = `tiles.${view.module}.${view.key}`;
   const empty = isEmpty(view);
   const content = view.content;
-  const counter = content?.kind === 'count' ? content.count : content?.kind === 'list' ? content.total : null;
+  // Die kleine Zahl im Kopf nur bei Listen-Kacheln; eine Zahl-Kachel zeigt sie groß im Inhalt, nicht doppelt (01 B5).
+  const counter = content?.kind === 'list' ? content.total : null;
   const openLink = (href: string | null) =>
     href ? (
       <Link href={href} className={buttonVariants({ variant: 'secondary', className: 'w-fit' })}>

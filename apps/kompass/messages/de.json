@@ -1104,8 +1104,8 @@
           }
         },
         "accounts": {
-          "title": "Konten",
-          "empty": "Alle Konten sind eingerichtet.",
+          "title": "Nutzerkonten",
+          "empty": "Alle Nutzerkonten sind eingerichtet.",
           "open": "Zu den Nutzern"
         },
         "retention": {
@@ -1178,7 +1178,7 @@
             "rawOpen": "{count, plural, one {# Kontoumsatz ohne Zuordnung} other {# Kontoumsätze ohne Zuordnung}}",
             "foreignMoney": "{count, plural, one {# Zahlung gehört nicht dem Verein und ist noch nicht weitergegeben} other {# Zahlungen gehören nicht dem Verein und sind noch nicht weitergegeben}}",
             "vouchersWithoutEntry": "{count, plural, one {# Finanzbeleg ohne Buchung} other {# Finanzbelege ohne Buchung}}",
-            "lastStatement": "Letzter Auszug vor {days, plural, one {einem Tag} other {# Tagen}}",
+            "lastStatement": "Kontoauszüge fehlen für bis zu {days, plural, one {einen Tag} other {# Tage}}",
             "noticeExpiring": "{kind, select, section60a {Die vorläufige Feststellung} other {Der Bescheid}} des Finanzamts läuft {months, plural, =0 {in weniger als einem Monat} one {in einem Monat} other {in # Monaten}} ab",
             "noNotice": "Kein gültiger Bescheid des Finanzamts — ohne Bescheid keine Zuwendungsbestätigungen",
             "confirmationsToCorrect": "{count, plural, one {# Zuwendungsbestätigung zu korrigieren} other {# Zuwendungsbestätigungen zu korrigieren}}",
@@ -1269,7 +1269,8 @@
           "empty": "Noch kein Antrag.",
           "open": "Zu Ihren Auslagen",
           "messages": {
-            "draft": "{number} — Entwurf",
+            "draft": "{title} — Entwurf",
+            "draftUntitled": "Entwurf, noch ohne Zweck",
             "submitted": "{number} — wartet auf Freigabe",
             "approved": "{number} — wird überwiesen",
             "paid": "{number} — überwiesen",
@@ -1277,7 +1278,7 @@
           }
         },
         "nobodyCanApprove": {
-          "title": "Niemand kann freigeben",
+          "title": "Freigabe von Auslagen",
           "empty": "",
           "open": "Zu den Rollen",
           "messages": {

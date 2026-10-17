@@ -22,6 +22,8 @@ export function TileLines({ ns, lines, canComplete }: { ns: string; lines: Dashb
   const router = useRouter();
   const [, start] = useTransition();
 
+  // Hat eine Zeile ein Datum, halten die übrigen seinen Platz frei, damit alle Sätze auf einer Flucht beginnen (01 B12).
+  const sampleDate = lines.find((line) => line.date)?.date ?? null;
   const titleOf = (line: DashboardLine) => line.title ?? (line.titleKey ? t(`${ns}.messages.${line.titleKey}`, line.values ?? {}) : '');
 
   return (
@@ -71,6 +73,9 @@ export function TileLines({ ns, lines, canComplete }: { ns: string; lines: Dashb
             </span>
             {line.date ? (
               <span data-testid="tile-line-date" className={cn('tabular-nums order-3 text-hint min-[391px]:order-2', line.overdue ? 'text-warning' : 'text-ink-2')}>{fmt.date(line.date)}</span>
+            ) : sampleDate ? (
+              // Platzhalter in der Breite eines echten Datums; unter 391 px steht das Datum unter dem Satz, dort braucht es keinen.
+              <span aria-hidden className="invisible order-2 tabular-nums text-hint max-[390px]:hidden">{fmt.date(sampleDate)}</span>
             ) : null}
             {line.extra ? <span className="order-4 text-hint text-muted-ink">{line.extra}</span> : null}
             {/* Betrag rechts (Designer Stufe 2 Nr. 1): fertiger Text des Moduls, rechtsbündig, Ziffern gleich breit. Keine

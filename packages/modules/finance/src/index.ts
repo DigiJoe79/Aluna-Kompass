@@ -205,6 +205,7 @@ export { applyCorrectionInternal, approveAllocationCorrection, decideAllocationC
 export {
   copyExpenseClaim,
   deleteExpenseDraft,
+  expenseClaimTitle,
   expenseFormStart,
   getExpenseClaim,
   listMyExpenseClaims,

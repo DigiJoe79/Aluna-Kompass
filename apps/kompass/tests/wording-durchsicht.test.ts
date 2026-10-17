@@ -40,4 +40,12 @@ describe('Wortlaut der Durchsicht 0.2.11', () => {
   it('verdeckte IBAN für Vorleser (Teil 1 Nr. 3)', () => {
     expect(at('finance.common.ibanEndsWith')).toBe('IBAN endet auf {last}');
   });
+
+  it('Startseite: ein Wort je Sache (Teil B: 01 B9, 02 B8, 02 B9)', () => {
+    // Der Titel gilt in beiden Zuständen; die Warnung sagt der Satz und der Ton im Kopf (01 B9).
+    expect(at('dashboard.tiles.finance.nobodyCanApprove.title')).toBe('Freigabe von Auslagen');
+    // „Letzter Auszug vor …“ klang wie die Zahl der Kachel „Letzter Auszug“; jetzt ist es die längste Lücke (02 B8).
+    expect(at('dashboard.tiles.finance.todo.messages.lastStatement')).toMatch(/^Kontoauszüge fehlen für bis zu /);
+    expect(at('dashboard.tiles.core.accounts.title')).toBe('Nutzerkonten');
+  });
 });

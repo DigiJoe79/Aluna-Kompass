@@ -4,6 +4,7 @@ import { Page } from '@/components/page';
 import { PageHeader } from '@/components/page-header';
 import { dateFormatOf } from '@/lib/date-format';
 import { requireSession } from '@/lib/request-context';
+import { cn } from '@/lib/utils';
 import { DashboardCustomize } from './dashboard/customize';
 import { TileCard } from './dashboard/tile-card';
 
@@ -41,7 +42,10 @@ export default async function HomePage() {
         // begrenzt `tile-lines.tsx` (`max-w-full`), beides ist nötig. Kein Layout-Test
         // für diese Einzelstelle (AGENTS.md); der Überlauf-Wächter der
         // Screenshot-Pipeline sieht es.
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+        // `items-start` + `grid-flow-dense`: Eine Kachel ist nur so hoch wie ihr Inhalt, und kurze Kacheln füllen die
+        // Lücken neben einer langen Liste, statt dass die Zeile die Höhe der höchsten Kachel annimmt (01 B6, 02 C12).
+        // Steht nur eine Kachel da, nimmt sie die ganze Breite (02 C13). Kein Layout-Test (AGENTS.md).
+        <div className={cn('grid grid-cols-1 items-start gap-4', tiles.length > 1 && 'grid-flow-dense md:grid-cols-2 xl:grid-cols-4')}>
           {tiles.map((view) => (
             <TileCard key={`${view.module}.${view.key}`} view={view} canComplete={hasPermission(ctx, 'followUps.manage')} fmt={fmt} />
           ))}

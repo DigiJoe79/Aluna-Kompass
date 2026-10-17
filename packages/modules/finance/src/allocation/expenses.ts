@@ -62,6 +62,17 @@ export interface ExpenseClaimView extends FinanceExpenseClaimRow {
   warnings: ExpenseClaimWarning[];
 }
 
+/**
+ * Der Titel eines Antrags für Listen und Kacheln: der Zweck der ersten Position (bei einer Fahrt ihr Anlass),
+ * `null`, wenn noch nichts eingetragen ist. Ein Entwurf hat keine Nummer — ohne Titel hieß er „— — Entwurf“ (02 A1, 08 A1).
+ */
+export function expenseClaimTitle(claim: { positions: readonly Pick<ExpensePositionView, 'purpose' | 'tripReason'>[] }): string | null {
+  const first = claim.positions[0];
+  if (!first) return null;
+  const title = first.purpose.trim() || (first.tripReason ?? '').trim();
+  return title === '' ? null : title;
+}
+
 /** `waiverAgreedAfterPosition` (Prüfer-Fixrunde 28.09.): ein Verzichtsentwurf, dessen Grundlage jünger ist als die früheste Position — das Einreichen als Verzicht wird verweigert, als Erstattung geht es. */
 export type ExpenseClaimWarning = 'ibanBelongsToOtherContact' | 'waiverAgreedAfterPosition';
 
