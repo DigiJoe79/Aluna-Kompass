@@ -338,7 +338,14 @@
     },
     "unused": "nicht verwendet",
     "listTruncated": "Es werden die ersten {shown} von {matching} Dateien gezeigt. Grenzen Sie die Liste mit einem Ordner, der Suche oder der Art ein.",
-    "used": "verwendet",
+    "mimeTypes": {
+      "png": "PNG-Bild",
+      "jpeg": "JPEG-Bild",
+      "webp": "WebP-Bild",
+      "svg": "SVG-Grafik",
+      "pdf": "PDF-Dokument"
+    },
+    "captionMore": "{label} und {count, plural, one {# weitere} other {# weitere}}",
     "view": {
       "list": "Liste",
       "grid": "Raster"
@@ -503,6 +510,9 @@
     "moveDown": "Nach unten",
     "choose": "Wählen",
     "removeImage": "Bild entfernen",
+    "removePdf": "PDF entfernen",
+    "noImage": "Noch kein Bild",
+    "noPdf": "Noch kein PDF",
     "noFile": "Bitte eine Datei auswählen.",
     "moduleInactiveTitle": "Modul Webseite ist nicht aktiv",
     "moduleInactiveText": "Aktivieren Sie das Modul unter Einrichtung → Module. Vorhandene Inhalte bleiben erhalten.",
@@ -3230,11 +3240,15 @@
       "cache": {
         "title": "Cache der Webseite",
         "intro": "Bildvarianten und Vorschau lassen sich jederzeit neu erzeugen. Leeren lohnt sich, wenn Bilder oder Vorschau offensichtlich nicht mehr stimmen.",
-        "images": "{count, plural, one {# Bildvariante} other {# Bildvarianten}}, {size} MB",
+        "terms": {
+          "images": "Bildvarianten",
+          "age": "Zeitraum",
+          "preview": "Vorschau"
+        },
+        "images": "{count, number} · {size} MB",
         "age": "älteste {oldest} · neueste {newest}",
-        "noAge": "keine Bildvarianten",
-        "preview": "Vorschau {size} MB, gebaut {date}",
-        "noPreview": "keine Vorschau",
+        "preview": "{size} MB, gebaut {date}",
+        "noPreview": "noch nicht gebaut",
         "clear": "Cache leeren",
         "blocked": "Während eines Laufs lässt sich der Cache nicht leeren.",
         "confirmTitle": "Cache leeren?",
@@ -3247,7 +3261,7 @@
         "publicUrl": "Öffentliche Adresse",
         "target": "Ziel",
         "targetRemote": "{user}@{host}:{path}",
-        "targetLocal": "lokales Verzeichnis: {path}",
+        "targetLocal": "{path} (lokales Verzeichnis)",
         "notConfigured": "nicht eingerichtet",
         "auth": "Anmeldung",
         "authValues": {
@@ -3339,7 +3353,13 @@
       "saved": "Gespeichert.",
       "delete": "Eintrag löschen …",
       "deleteTitle": "„{label}“ löschen?",
-      "count": "{n, plural, =0 {keine Einträge} one {ein Eintrag} other {# Einträge}}"
+      "count": "{n, plural, =0 {keine Einträge} one {ein Eintrag} other {# Einträge}}",
+    "total": "{n, plural, one {# Eintrag} other {# Einträge}}",
+    "columns": {
+      "entry": "Eintrag",
+      "website": "Webseite",
+      "order": "Reihenfolge"
+    }
     },
     "publish": {
       "title": "Publizieren",
@@ -3458,6 +3478,7 @@
       },
       "log": {
         "title": "Protokoll · {when}",
+        "technical": "Technisches Protokoll anzeigen",
         "short": "Kurz:",
         "copy": "Kopieren",
         "copied": "Protokoll kopiert"
@@ -3555,8 +3576,8 @@
         },
         "ready": {
           "title": "Vorschau bereit",
-          "meta": "Gebaut {when}, von {name} · Stand {hash}",
-          "metaNoName": "Gebaut {when} · Stand {hash}"
+          "meta": "Gebaut {when}, von {name}",
+          "metaNoName": "Gebaut {when}"
         },
         "publish": {
           "live": "Jetzt publizieren",

@@ -20,7 +20,7 @@ import { runAction, toastNetwork } from '@/lib/feedback';
 import { ancestorsOf, isWithin, nameOf, namesBelow, type FolderEntry } from '@/lib/folder-tree-model';
 import type { MediaListing } from '@/lib/media-listing';
 import { usePreference } from '@/lib/preferences';
-import { AssetGrid } from './asset-grid';
+import { AssetGrid, useMediaCaption } from './asset-grid';
 
 export interface MediaChooserDialogProps {
   open: boolean;
@@ -121,6 +121,7 @@ export function MediaChooserDialog({ open, onOpenChange, kind, multiple, max, se
   const shownFolders = useMemo(() => foldersWithMatches(listing?.folders ?? []), [listing]);
   /** Ein geöffneter Ordner, oder `null` bei „Alle Dateien“ und „Ohne Ordner“. */
   const openFolder = folder === null || folder === UNFILED ? null : folder;
+  const caption = useMediaCaption();
   const items = useMemo(
     () =>
       (listing?.items ?? []).map((it) => ({
@@ -128,10 +129,11 @@ export function MediaChooserDialog({ open, onOpenChange, kind, multiple, max, se
         filename: it.filename,
         mimeType: it.mimeType,
         used: it.references.length > 0,
+        caption: caption(it.references),
         // Der Ort unter dem geöffneten Ordner, wie in der Mediathek (Spec § 9).
         place: openFolder === null || it.folder === null ? '' : namesBelow(it.folder, openFolder).join(' › '),
       })),
-    [listing, openFolder]
+    [listing, openFolder, caption]
   );
 
   // Ein gemerkter Ordner, den es nicht mehr gibt (umbenannt, gelöscht) oder der

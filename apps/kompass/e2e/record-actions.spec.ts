@@ -24,7 +24,7 @@ const CASES: { name: string; open: (page: Page) => Promise<void>; item: RegExp }
       await page.getByRole('button', { name: 'Übernehmen' }).click();
       await expect(page.getByRole('status')).toContainText('eingelesen');
       await page.goto('/site/c/news');
-      await page.getByRole('row').first().getByRole('link').click();
+      await page.getByRole('row').nth(1).getByRole('link').click();
       await page.waitForURL(/\/site\/c\/news\/[A-Z0-9]+$/);
     },
     item: /Eintrag löschen/,

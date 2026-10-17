@@ -55,14 +55,12 @@ export function PendingVariablesLine({ className }: { className?: string }) {
   const { pending } = useSiteJobStatus();
   const names = pending?.variables ?? [];
   if (names.length === 0) return null;
+  // 10 B18: ein Hinweis mit Warnstufe statt eines gelben Satzes; der Weg zum Publizieren steht als Aktion darin.
   return (
-    <span data-testid="site-pending-line" className={cn('text-hint text-warning', className)}>
-      {names.length <= NAMED_VARIABLES ? t('variablesNamed', { count: names.length, names: names.join(', ') }) : t('variables', { count: names.length })}
-      <span>
-        {' · '}
-        <Link href="/site/publish" className="underline underline-offset-2 hover:text-link">{t('toPublish')}</Link>
-      </span>
-    </span>
+    <div className={className}>
+      <Notice level="warn" testId="site-pending-line" action={<Link href="/site/publish" className="font-semibold text-link underline">{t('toPublish')}</Link>}>
+        {names.length <= NAMED_VARIABLES ? t('variablesNamed', { count: names.length, names: names.join(', ') }) : t('variables', { count: names.length })}
+      </Notice>
+    </div>
   );
 }
-

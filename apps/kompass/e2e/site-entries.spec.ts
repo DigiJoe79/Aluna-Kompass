@@ -11,8 +11,13 @@ test('ein bestehender Eintrag lässt sich speichern, danach verwerfen und erneut
   await expect(page.getByRole('status')).toContainText('eingelesen');
 
   await page.goto('/site/c/news');
-  await page.getByRole('row').first().getByRole('link').click();
+  // Der Spaltenkopf und der Zähler stehen über der Liste (10 B7).
+  await expect(page.getByRole('columnheader', { name: 'Eintrag' })).toBeVisible();
+  const entryName = (await page.getByRole('row').nth(1).getByRole('link').textContent())!.trim();
+  await page.getByRole('row').nth(1).getByRole('link').click();
   await waitForHydration(page, '[name="title.de"]');
+  // Der Eintrag heißt wie er selbst, nicht wie seine Sammlung (10 B10).
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText(entryName);
   const title = page.locator('[name="title.de"]');
   await title.fill('Erster Stand');
   await page.getByRole('button', { name: 'Speichern' }).click();
@@ -45,7 +50,7 @@ test('ein Eintrag wird auf seiner Seite gelöscht, unter „Weitere Aktionen“,
   // Die Liste kennt keinen Löschen-Knopf (MUSTER.md § C: Löschen steht im Seitenkopf der Detailseite).
   await expect(page.getByRole('button', { name: 'Löschen' })).toHaveCount(0);
   const before = await page.getByRole('row').count();
-  await page.getByRole('row').first().getByRole('link').click();
+  await page.getByRole('row').nth(1).getByRole('link').click();
   await waitForHydration(page, '[name="title.de"]');
   await page.getByRole('button', { name: 'Weitere Aktionen' }).click();
   await page.getByRole('menuitem', { name: 'Eintrag löschen …' }).click();
@@ -108,7 +113,7 @@ test('Leser sehen Sammlungen ohne Bearbeiten-Knöpfe, ohne Leserecht keine Vorsc
 
   await loginFirstTime(page, 'peter@kompass.local', peterPw);
   await page.goto('/site/c/news');
-  await expect(page.getByRole('row').first()).toContainText(/Publiziert|Nicht publiziert/);
+  await expect(page.getByRole('row').nth(1)).toContainText(/Publiziert|Nicht publiziert/);
   await expect(page.getByRole('link', { name: 'Eintrag anlegen', exact: true })).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Löschen' })).toHaveCount(0);
   await expect(page.getByRole('switch')).toHaveCount(0);

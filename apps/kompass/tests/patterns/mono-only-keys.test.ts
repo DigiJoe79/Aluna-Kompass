@@ -31,7 +31,7 @@ const ALLOWED: CountedAllowlist = {
   'app/setup/import/import-form.tsx': { count: 1, reason: 'Umgebungsname des Backups (`production`, …) — Schlüssel.' },
   'app/(shell)/admin/locales/locales-client.tsx': { count: 2, reason: LOCALE },
   'components/forms/localized-field.tsx': { count: 3, reason: `${LOCALE} \`LOCALE_CODE\`, Umschalter der Vorschau.` },
-  'components/schema-form/field.tsx': { count: 1, reason: `${LOCALE} Umschalter der Sprachen.` },
+  'components/schema-form/field.tsx': { count: 2, reason: `${LOCALE} Umschalter der Sprachen und der Vorschau (wie LocalizedField, 10 B12).` },
   'app/(shell)/admin/dms/text-panel.tsx': { count: 2, reason: 'Sprachcodes der Texterkennung (`deu`, `eng`) — Kennung.' },
   'app/(shell)/admin/settings/settings-form.tsx': { count: 1, reason: "Feldart `kind: 'mono'` — nur Kennungen, siehe Test unten." },
   'app/(shell)/admin/audit/audit-detail.tsx': {

@@ -51,7 +51,7 @@ function Localized({ path, field, value, errors, locales, onChange, span }: Fiel
   const isMarkdown = field.markdown === true;
   const tabbed = locales.length >= 4;
   const [active, setActive] = useState(leading);
-  const [preview, setPreview] = useState(false);
+  const [previewLocale, setPreviewLocale] = useState(leading);
 
   const cell = (locale: string) => {
     const name = `${path}.${locale}`;
@@ -109,11 +109,23 @@ function Localized({ path, field, value, errors, locales, onChange, span }: Fiel
         <div className={cn('grid grid-cols-1 gap-3', languageColumns(locales.length, fieldSizeOf(field)))}>{locales.map(cell)}</div>
       </div>
       {isMarkdown ? (
-        <div className="flex flex-col gap-2">
-          <button type="button" aria-pressed={preview} onClick={() => setPreview((p) => !p)} className="self-start rounded-sm bg-badge px-2 py-0.5 text-hint text-badge-ink">
-            {t('preview')}
-          </button>
-          {preview ? <MarkdownPreview markdown={record[active] ?? record[leading] ?? ''} /> : null}
+        // 10 B12: dieselbe Form wie `LocalizedField` — „Vorschau“ und je Sprache ein Umschalter, die Vorschau steht darunter.
+        <div className="mt-1 flex flex-col gap-2">
+          <div className="flex items-center gap-2 text-hint">
+            <span className="text-muted-ink">{t('preview')}</span>
+            {locales.map((l) => (
+              <button
+                key={l}
+                type="button"
+                aria-pressed={previewLocale === l}
+                onClick={() => setPreviewLocale(l)}
+                className={cn('rounded-sm px-2 py-0.5 font-mono', previewLocale === l ? 'bg-brand text-on-brand' : 'bg-badge text-badge-ink')}
+              >
+                {l.toUpperCase()}
+              </button>
+            ))}
+          </div>
+          <MarkdownPreview markdown={record[previewLocale] ?? ''} />
         </div>
       ) : null}
     </FormCell>

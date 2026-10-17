@@ -45,6 +45,8 @@ describe('MediaPicker mit Ausschnitt', () => {
     pick({ places: team, sizes: { A: { width: 1500, height: 1500 } }, derived: true, target: 'dem Eintrag' });
     const names = screen.getAllByRole('button').map((b) => b.textContent);
     expect(names).toEqual(['Wählen', 'Ausschnitt …', 'Bild entfernen']);
+    // 10 B16: eine Stufe für alle drei Bildaktionen.
+    expect(screen.getAllByRole('button').every((b) => b.className.includes('border-line-strong'))).toBe(true);
     cleanup();
     // Ohne Maße (SVG, unbekannt): kein Knopf.
     pick({ places: team, derived: true });
@@ -124,5 +126,21 @@ describe('MediaPicker mit Ausschnitt', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Foto: Ausschnitt …' }));
     fireEvent.keyDown(screen.getByRole('slider', { name: 'Ausschnitt' }), { key: 'Enter' });
     expect(seen).toHaveBeenCalled();
+  });
+});
+
+/** 10 A3, 11-1 B22: Ein leerer Platz sagt, was fehlt; bei einem PDF heißt Entfernen nicht „Bild entfernen“. */
+describe('MediaPicker leer und PDF', () => {
+  it('nennt den leeren Platz', () => {
+    pick({ value: null });
+    expect(screen.getByText('Noch kein Bild')).toBeTruthy();
+    cleanup();
+    pick({ value: null, kind: 'pdf' });
+    expect(screen.getByText('Noch kein PDF')).toBeTruthy();
+  });
+  it('PDF entfernen statt Bild entfernen', () => {
+    pick({ kind: 'pdf' });
+    expect(screen.getByRole('button', { name: 'PDF entfernen' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Bild entfernen' })).toBeNull();
   });
 });

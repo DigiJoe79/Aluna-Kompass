@@ -37,10 +37,12 @@ export default async function EntryPage(props: { params: Promise<{ collection: s
   const result = await getEntry(deps, ctx, id);
   if (!result.ok) notFound();
 
+  // 10 B10: Der Eintrag heißt wie er selbst („Jonas Feld“), die Sammlung steht im Zurück-Link.
+  const label = entryLabel(col, result.value, locales[0] ?? 'de');
   return (
     <Page
       width="standard"
-      header={<PageHeader title={col.label} back={back} actions={<EntryActions collection={collection} id={result.value.id} label={entryLabel(col, result.value, locales[0] ?? 'de')} publishable={col.publishable} />} />}
+      header={<PageHeader title={label} back={back} actions={<EntryActions collection={collection} id={result.value.id} label={label} publishable={col.publishable} />} />}
     >
       <PendingPublishLine href={`/site/c/${collection}/${result.value.id}`} className="-mt-3 mb-4 block" />
       <EntryForm

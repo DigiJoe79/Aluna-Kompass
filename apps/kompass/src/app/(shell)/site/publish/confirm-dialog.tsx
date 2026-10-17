@@ -92,9 +92,6 @@ export function PublishConfirmDialog({
         {check === 'stale' ? (
           <Notice level="refuse">{t.rich('confirm.stale', { ...bold, time: fmt.time(preview.finishedAt) })}</Notice>
         ) : null}
-        <p className="rounded-md border border-line bg-surface-2 p-3 text-meta text-ink-2">
-          {env === 'test' ? t('publish.test') : t('publish.live')} · {host}
-        </p>
         <FormActionBar
           placement="dialog"
           mode="run"

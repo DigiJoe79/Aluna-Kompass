@@ -27,6 +27,9 @@ describe('PreviewSummary', () => {
     expect(text(html)).toContain('3 Hinweise');
     expect(text(html)).toContain('2 Übersetzungslücken');
     expect(text(html)).toContain('Hinweise halten das Publizieren nicht auf');
+    // 10 B21: die Hinweise als Notice (warn = status), nicht als fetter Text in Warnfarbe.
+    expect(html).toContain('role="status"');
+    expect(html).not.toContain('text-warning">3 Hinweise');
   });
   it('says nothing about hints when there are none', () => {
     expect(text(render(<PreviewSummary counts={{ ...zero, changed: 1 }} />))).not.toContain('Hinweis');

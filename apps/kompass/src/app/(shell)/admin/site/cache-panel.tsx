@@ -10,6 +10,7 @@ import { useSiteJobStatus } from '@/components/site/site-job-provider';
 import { Button } from '@/components/ui/button';
 import { clearSiteCacheAction } from './actions';
 import { Section } from '@/components/section';
+import { Empty } from '@/components/empty-value';
 
 const MB = 1_048_576;
 
@@ -25,16 +26,25 @@ export function CachePanel({ status }: { status: SiteCacheStatus }) {
   const size = (bytes: number) => format.number(bytes / MB, { maximumFractionDigits: 1 });
   const { images, preview } = status;
   const busy = running !== null;
+  const rows: [string, React.ReactNode][] = [
+    [t('terms.images'), t('images', { count: images.count, size: size(images.bytes) })],
+    [t('terms.age'), images.oldest && images.newest ? t('age', { oldest: date(images.oldest), newest: date(images.newest) }) : <Empty />],
+    [t('terms.preview'), preview.builtAt ? t('preview', { size: size(preview.bytes), date: date(preview.builtAt) }) : t('noPreview')],
+  ];
 
   return (
     <section className="rounded-lg border border-line bg-surface p-5">
       <Section title={t('title')} intro={t('intro')}>
         <div className="flex flex-col gap-3">
-          <ul className="flex flex-col gap-1 text-meta text-ink">
-            <li>{t('images', { count: images.count, size: size(images.bytes) })}</li>
-            <li>{images.oldest && images.newest ? t('age', { oldest: date(images.oldest), newest: date(images.newest) }) : t('noAge')}</li>
-            <li>{preview.builtAt ? t('preview', { size: size(preview.bytes), date: date(preview.builtAt) }) : t('noPreview')}</li>
-          </ul>
+          {/* 11-2 B18: Begriff und Wert wie bei „Verbindung“ statt drei loser Zeilen. */}
+          <dl className="grid grid-cols-[max-content_1fr] gap-x-6 gap-y-1 text-meta">
+            {rows.map(([label, value]) => (
+              <div key={label} className="contents">
+                <dt className="text-muted-ink">{label}</dt>
+                <dd className="text-ink tabular-nums">{value}</dd>
+              </div>
+            ))}
+          </dl>
           <div className="flex items-center gap-3">
             <Button variant="outline" disabled={busy} onClick={() => setOpen(true)}>{t('clear')}</Button>
             {busy ? <span className="text-meta text-muted-ink">{t('blocked')}</span> : null}

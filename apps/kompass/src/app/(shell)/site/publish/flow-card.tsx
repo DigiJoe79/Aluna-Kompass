@@ -158,8 +158,8 @@ export function PublishFlowCard(p: PublishFlowCardProps) {
       title = t('flow.ready.title');
       const pv = state.preview;
       const meta = pv.userName
-        ? t('flow.ready.meta', { when: dateTime(pv.finishedAt), name: pv.userName, hash: (pv.contentHash ?? '').slice(0, 12) })
-        : t('flow.ready.metaNoName', { when: dateTime(pv.finishedAt), hash: (pv.contentHash ?? '').slice(0, 12) });
+        ? t('flow.ready.meta', { when: dateTime(pv.finishedAt), name: pv.userName })
+        : t('flow.ready.metaNoName', { when: dateTime(pv.finishedAt) });
       body = (
         <>
           <p className="text-hint text-muted-ink">{meta}</p>

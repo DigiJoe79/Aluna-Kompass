@@ -16,7 +16,7 @@ import { FolderMoveDialog } from '@/components/folder-tree/folder-move-dialog';
 import { FolderSheet } from '@/components/folder-tree/folder-sheet';
 import { FolderTree, type FolderTreeProps } from '@/components/folder-tree/folder-tree';
 import { useUndoableMoves, type ItemWording, type UndoableItem } from '@/components/folder-tree/use-undoable-moves';
-import { AssetGrid } from '@/components/media/asset-grid';
+import { AssetGrid, useMediaCaption } from '@/components/media/asset-grid';
 import { useAssetDrag } from '@/components/media/use-asset-drag';
 import { PageHeader } from '@/components/page-header';
 import { Segmented } from '@/components/ui/segmented';
@@ -80,6 +80,7 @@ export function LibraryClient({
   unfiledCount: number;
 }) {
   const t = useTranslations('media');
+  const caption = useMediaCaption();
   const tMove = useTranslations('moveDialog');
   const tCommon = useTranslations('common');
   const fmt = useDateFormat();
@@ -421,7 +422,7 @@ export function LibraryClient({
             <EmptyState title={t('emptyTitle')} text={t('empty')} />
           ) : view === 'grid' ? (
             <AssetGrid
-              items={items.map((it) => ({ id: it.id, filename: it.filename, mimeType: it.mimeType, used: it.references.length > 0, place: current === null ? '' : placeOf(it.folder), folder: it.folder }))}
+              items={items.map((it) => ({ id: it.id, filename: it.filename, mimeType: it.mimeType, used: it.references.length > 0, caption: caption(it.references), place: current === null ? '' : placeOf(it.folder), folder: it.folder }))}
               onOpen={(it) => setDetailId(it.id)}
               draggable
             />
@@ -448,7 +449,12 @@ export function LibraryClient({
                         ) : (
                           <span className="grid size-8 shrink-0 place-items-center rounded border border-line bg-surface-2 text-[10px] uppercase text-ink-2">{it.filename.split('.').at(-1)}</span>
                         )}
-                        <span className="text-meta">{it.filename}</span>
+                        {/* 10 A6, 10 B29: Beschriftung aus der Verwendung, der Dateiname klein darunter; am Telefon ist das
+                            zugleich die Verwendung als Unterzeile (10 B31), die Spalte selbst fällt dort weg. */}
+                        <span className="flex min-w-0 flex-col">
+                          {caption(it.references) ? <span className="text-meta">{caption(it.references)}</span> : null}
+                          <span data-file-name className={caption(it.references) ? 'text-hint text-muted-ink' : 'text-meta'}>{it.filename}</span>
+                        </span>
                       </RowButton>
                     </TableCell>
                     <TableCell col="meta" data-folder-cell className="text-ink-2">

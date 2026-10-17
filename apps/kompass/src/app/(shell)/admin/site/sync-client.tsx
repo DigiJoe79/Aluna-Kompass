@@ -60,7 +60,8 @@ export function SyncClient({ name }: { name: string | null }) {
     <div className="flex flex-col gap-4 rounded-lg border border-line bg-surface p-5">
       <div className="flex items-center justify-between gap-4">
         <span className="text-body text-ink-2">{name ? t('name') + ': ' + name : t('neverRead')}</span>
-        <Button type="button" onClick={preview} disabled={pending}>{t('read')}</Button>
+        {/* Seltener Vorgang: `outline` statt primär (10 A4). */}
+        <Button type="button" variant="outline" onClick={preview} disabled={pending}>{t('read')}</Button>
       </div>
 
       <RefusalNotice action state={state.status === 'error' ? { status: 'error', message: state.message, fieldErrors: {} } : { status: 'idle' }} />

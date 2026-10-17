@@ -25,7 +25,8 @@ export function PreviewFrameClient() {
         value={width}
         onValueChange={setWidth}
       />
-      <div className="overflow-x-auto rounded-md border border-line bg-paper">
+      {/* Leichter Schatten, damit sich die Webseite von der Seite abhebt (10 B26); kein Test, reines Aussehen. */}
+      <div className="overflow-x-auto rounded-md border border-line bg-paper shadow-md">
         <iframe
           src="/site/preview/"
           title={t('frameTitle')}

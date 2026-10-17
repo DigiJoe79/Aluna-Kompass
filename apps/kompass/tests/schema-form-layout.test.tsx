@@ -275,4 +275,13 @@ describe('Sprachkürzel', () => {
     expect(de.tagName).toBe('TEXTAREA');
     expect(codeOf(de)?.textContent).toBe('DE');
   });
+
+  // 10 B12: Die Vorschau hat die Form von LocalizedField — „Vorschau“ und je Sprache ein Umschalter, kein Knopf im Markenstil.
+  it('schema-form localized Markdown: Vorschau-Umschalter je Sprache wie LocalizedField', () => {
+    wrap(<SchemaForm schema={{ lede: { widget: 'localized', label: 'Einleitung', markdown: true } }} value={{ lede: { de: 'Hallo', en: 'Hello' } }} locales={['de', 'en']} onChange={() => {}} />);
+    const toggles = screen.getAllByRole('button', { pressed: undefined }).filter((b) => b.hasAttribute('aria-pressed'));
+    expect(toggles.map((b) => b.textContent)).toEqual(['DE', 'EN']);
+    expect(toggles[0]!.getAttribute('aria-pressed')).toBe('true');
+    expect(screen.queryByRole('button', { name: 'Vorschau' })).toBeNull();
+  });
 });

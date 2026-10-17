@@ -5,6 +5,7 @@ import type { ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import messages from '../messages/de.json';
 import { PublishConfirmDialog } from '@/app/(shell)/site/publish/confirm-dialog';
+import { LogDialog } from '@/app/(shell)/site/publish/log-dialog';
 import { endText, PublishFlowCard, type PublishFlowCardProps } from '@/app/(shell)/site/publish/flow-card';
 import type { FlowState } from '@/app/(shell)/site/publish/flow-state';
 import { SiteJobContext } from '@/components/site/site-job-provider';
@@ -68,6 +69,11 @@ describe('PublishFlowCard', () => {
     expect(screen.getAllByRole('button')[0]!.textContent).toBe('Auf Test publizieren');
     expect(screen.getByRole('link', { name: /Vorschau öffnen/ })).toHaveProperty('pathname', '/site/publish/preview');
     expect(document.querySelector('details')!.hasAttribute('open')).toBe(false);
+  });
+  // 10 B20: Der Stand steht im Kopf des Protokolls, nicht in der Metazeile der Karte.
+  it('ready: the meta line names when and who, not the content hash', () => {
+    renderCard(stateOf('ready'));
+    expect(screen.getByText(/^Gebaut /).textContent).not.toContain('aaaaaaaaaaaa');
   });
   it('unchanged: no publish button, a quiet link-like action to publish anyway', () => {
     renderCard(stateOf('unchanged'));
@@ -179,6 +185,13 @@ describe('PublishConfirmDialog', () => {
     await waitFor(() => expect(onRebuild).toHaveBeenCalled());
     expect(onOpenChange).toHaveBeenCalledWith(false);
   });
+  // 10 B23: keine graue Box, die nur Knopf und Host wiederholt.
+  it('does not repeat button and host in a box below the text', async () => {
+    check.mockResolvedValueOnce({ status: 'success', data: { contentHash: 'a'.repeat(64) } });
+    render(dialog(), { wrapper: Intl });
+    await screen.findByRole('button', { name: 'Jetzt publizieren' });
+    expect(screen.getByRole('alertdialog').textContent).not.toContain('Jetzt publizieren · ');
+  });
   it('says Test instead of the address on the test instance', async () => {
     check.mockResolvedValueOnce({ status: 'success', data: { contentHash: 'a'.repeat(64) } });
     render(dialog({ env: 'test' }), { wrapper: Intl });
@@ -259,5 +272,20 @@ describe('none: what changed since the last publish (Board 8d, Plan C)', () => {
     render(<PublishFlowCard {...props({ kind: 'none', lastPublishedAt: null })} />, { wrapper: withPending(0, []) });
     expect(screen.queryByTestId('site-pending-since')).toBeNull();
     expect(screen.getByText(/Noch nie publiziert/)).toBeTruthy();
+  });
+});
+
+/** 10 A2: Die Rohausgabe (rsync) steht hinter „Technisches Protokoll anzeigen“, offen steht nur die Kurzfassung. */
+describe('LogDialog', () => {
+  it('keeps the raw output in a closed disclosure when there is a summary', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ log: { text: 'rsync -az …\n.htaccess' } }) });
+    vi.stubGlobal('fetch', fetchMock);
+    const item = { key: 'P', from: { kind: 'publish' as const, id: 'P' }, startedAt: '2026-10-03T08:00:00.000Z', status: 'success' as const, byName: 'Erika Beispiel', source: { channel: 'ui' as const, tokenName: null }, hash: 'a'.repeat(64), summary: 'Publiziert: 0 geändert, 39 neu, 0 entfernt', fallback: '' };
+    render(<LogDialog item={item} onClose={() => {}} />, { wrapper: Intl });
+    await screen.findByText(/rsync -az/);
+    const details = screen.getByText('Technisches Protokoll anzeigen').closest('details')!;
+    expect(details.hasAttribute('open')).toBe(false);
+    expect(screen.getByRole('dialog').textContent).toContain('Publiziert: 0 geändert, 39 neu, 0 entfernt');
+    vi.unstubAllGlobals();
   });
 });

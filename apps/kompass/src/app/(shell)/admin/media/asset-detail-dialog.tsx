@@ -9,7 +9,7 @@ import { RecordActions } from '@/components/record-actions';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import type { ActionState } from '@/lib/actions';
 import type { FolderEntry } from '@/lib/folder-tree-model';
-import { formatBytes, type Item } from './types';
+import { formatBytes, mimeKey, type Item } from './types';
 import { UsageLines } from './usage-lines';
 
 /**
@@ -67,7 +67,7 @@ export function AssetDetailDialog({
 
             <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-meta">
               <dt className="text-ink-2">{t('type')}</dt>
-              <dd>{item.mimeType}</dd>
+              <dd>{mimeKey(item.mimeType) ? t(`mimeTypes.${mimeKey(item.mimeType)!}`) : item.mimeType}</dd>
               <dt className="text-ink-2">{t('columns.size')}</dt>
               <dd>{formatBytes(item.bytes)}</dd>
               {item.width && item.height ? (

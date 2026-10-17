@@ -60,7 +60,8 @@ export function PublishHistory({ items, total = items.length, highlightId = null
                     <TableCell col="meta" className="text-ink-2"><SourceMark source={row.source} name={row.triggeredByName} /></TableCell>
                     <TableCell col="actions" className="text-right lg:text-left">
                       {row.hasLog && (
-                        <Button variant="ghost" size="sm" onClick={() => setSelected(row)}>
+                        // 10 B25: dieselbe Form wie „Protokoll ansehen“ auf der Karte.
+                        <Button variant="link" size="sm" className="h-auto px-0 underline" onClick={() => setSelected(row)}>
                           {t('log')}
                         </Button>
                       )}

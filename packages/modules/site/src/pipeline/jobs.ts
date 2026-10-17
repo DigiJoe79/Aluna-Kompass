@@ -217,8 +217,8 @@ export function cancelSiteJob(deps: Deps, ctx: CallContext, env: SiteEnv, input:
   return ok({ cancelled: true as const });
 }
 
-/** Steht im Protokoll, wenn ein Publish den Vorschau-Build uebernommen hat. */
-export const REUSED_PREVIEW = 'Vorschau uebernommen, nicht neu gebaut.';
+/** Steht im Protokoll, wenn ein Publish den Vorschau-Build übernommen hat (Text mit Umlaut, 10 A2). */
+export const REUSED_PREVIEW = 'Vorschau übernommen, nicht neu gebaut.';
 
 /** Neueste Aenderung im Template — ohne node_modules und Baureste. */
 async function newestTemplateChange(dir: string): Promise<number> {

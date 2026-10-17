@@ -45,6 +45,19 @@ export function mediaHref(query: ListQuery): string {
   return s ? `/admin/media?${s}` : '/admin/media';
 }
 
+const MIME_KEYS: Record<string, 'png' | 'jpeg' | 'webp' | 'svg' | 'pdf'> = {
+  'image/png': 'png',
+  'image/jpeg': 'jpeg',
+  'image/webp': 'webp',
+  'image/svg+xml': 'svg',
+  'application/pdf': 'pdf',
+};
+
+/** Schlüssel des Klartexts zu einem gespeicherten MIME-Typ (`media.mimeTypes.*`); unbekannt → `null`, dann steht der Typ selbst (10 B33). */
+export function mimeKey(mimeType: string): (typeof MIME_KEYS)[string] | null {
+  return MIME_KEYS[mimeType] ?? null;
+}
+
 export function formatBytes(b: number): string {
   if (b >= 1024 * 1024) return `${(b / (1024 * 1024)).toFixed(1).replace('.', ',')} MB`;
   return `${Math.max(1, Math.round(b / 1024))} KB`;

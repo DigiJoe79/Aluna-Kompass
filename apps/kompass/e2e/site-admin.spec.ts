@@ -71,9 +71,10 @@ test('Cache leeren unter Einrichtung → Webseite', async ({ page }) => {
   }
   await expect.poll(running, { timeout: 120_000 }).toBe(false);
   await page.goto('/admin/site?panel=cache');
-  await expect(page.getByText(/[1-9]\d* Bildvarianten/)).toBeVisible();
+  // Begriff und Wert als dl (11-2 B18): „Bildvarianten“ · „12 · 3 MB“.
+  await expect(page.getByText(/^[1-9][\d.]* · [\d,]+ MB$/)).toBeVisible();
   await page.getByRole('button', { name: 'Cache leeren' }).click();
   await page.getByRole('alertdialog').getByRole('button', { name: 'Cache leeren' }).click();
   await expect(page.getByRole('status')).toContainText('gelöscht');
-  await expect(page.getByText('0 Bildvarianten')).toBeVisible();
+  await expect(page.getByText(/^0 · 0 MB$/)).toBeVisible();
 });

@@ -39,7 +39,7 @@ test('the preview blocks on a blocked term and says where to change it', async (
   await page.goto('/site/variables');
   await page.locator('[name="claim.de"]').fill('Frau Popescu betreibt den Verein.');
   await page.getByRole('button', { name: 'Speichern' }).click();
-  await expect(page.getByRole('status')).toContainText('Gespeichert');
+  await expect(page.getByRole('status').filter({ hasText: 'Gespeichert' })).toContainText('Gespeichert');
 
   await page.goto('/site/publish');
   await expect(cardTitle(page, 'Noch keine Vorschau')).toBeVisible();
@@ -162,6 +162,9 @@ test('preview build, diff and publish to the local staging target', async ({ pag
   await history.getByRole('button', { name: 'Protokoll' }).first().click();
   const logDialog = page.getByRole('dialog', { name: /Protokoll/ });
   await expect(logDialog).toBeVisible();
+  // Die Rohausgabe steht hinter „Technisches Protokoll anzeigen“ (10 A2).
+  await expect(logDialog.locator('pre')).toBeHidden();
+  await logDialog.getByText('Technisches Protokoll anzeigen').click();
   await expect(logDialog.locator('pre')).toBeVisible();
   await expect(logDialog.getByRole('button', { name: 'Kopieren' })).toBeEnabled();
   await page.keyboard.press('Escape');
@@ -192,7 +195,7 @@ test('publishing is blocked when content changed after the preview was built', a
     await waitForHydration(second, '[name="claim.de"]');
     await second.locator('[name="claim.de"]').fill(text);
     await second.getByRole('button', { name: 'Speichern' }).click();
-    await expect(second.getByRole('status')).toContainText('Gespeichert');
+    await expect(second.getByRole('status').filter({ hasText: 'Gespeichert' })).toContainText('Gespeichert');
     await second.close();
   };
   await change('Geänderter Claim nach der Vorschau.');
@@ -223,7 +226,7 @@ test('the preview reports a stale reference as a hint, not as a block', async ({
   await page.goto('/site/variables');
   await page.getByLabel('Projekt auf der Startseite').selectOption('winterhilfe');
   await page.getByRole('button', { name: 'Speichern' }).click();
-  await expect(page.getByRole('status')).toContainText('Gespeichert');
+  await expect(page.getByRole('status').filter({ hasText: 'Gespeichert' })).toContainText('Gespeichert');
 
   await page.goto('/projects');
   await page.getByRole('row', { name: /Winterhilfe/ }).getByRole('switch').click();
@@ -270,7 +273,7 @@ test('the preview rewrites every absolute path, srcset included', async ({ page 
   await chooser.getByRole('button', { name: /hero-/ }).click();
   await expect(chooser).toBeHidden();
   await page.getByRole('button', { name: 'Speichern' }).click();
-  await expect(page.getByRole('status')).toContainText('Gespeichert');
+  await expect(page.getByRole('status').filter({ hasText: 'Gespeichert' })).toContainText('Gespeichert');
 
   await page.goto('/site/publish');
   await page.getByRole('button', { name: 'Vorschau bauen' }).click();

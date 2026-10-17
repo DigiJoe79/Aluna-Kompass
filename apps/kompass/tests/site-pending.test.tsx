@@ -93,16 +93,17 @@ describe('PendingVariablesLine', () => {
   };
   it('names up to three changed variables and links to publishing', () => {
     render(<PendingVariablesLine />, { wrapper: wrap(withVariables(['Spendenkonto', 'Telefon'])) });
-    expect(screen.getByTestId('site-pending-line').textContent).toBe('2 Variablen nicht publiziert: Spendenkonto, Telefon · Zum Publizieren');
+    // 10 B18: als Hinweis mit Warnstufe (Notice warn), nicht als gelber Satz.
+    expect(screen.getByRole('status').textContent).toBe('2 Variablen nicht publiziert: Spendenkonto, TelefonZum Publizieren');
     expect(screen.getByRole('link', { name: 'Zum Publizieren' }).getAttribute('href')).toBe('/site/publish');
   });
   it('says one variable in the singular', () => {
     render(<PendingVariablesLine />, { wrapper: wrap(withVariables(['Telefon'])) });
-    expect(screen.getByTestId('site-pending-line').textContent).toBe('1 Variable nicht publiziert: Telefon · Zum Publizieren');
+    expect(screen.getByTestId('site-pending-line').textContent).toBe('1 Variable nicht publiziert: TelefonZum Publizieren');
   });
   it('gives only the number from four on', () => {
     render(<PendingVariablesLine />, { wrapper: wrap(withVariables(['A', 'B', 'C', 'D'])) });
-    expect(screen.getByTestId('site-pending-line').textContent).toBe('4 Variablen nicht publiziert · Zum Publizieren');
+    expect(screen.getByTestId('site-pending-line').textContent).toBe('4 Variablen nicht publiziertZum Publizieren');
   });
   it('is silent without changed variables and without provider', () => {
     const { container } = render(<PendingVariablesLine />, { wrapper: wrap(withVariables([])) });
