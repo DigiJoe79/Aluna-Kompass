@@ -77,7 +77,8 @@ export function ContactDialog({
             <p className="text-ink-2">{t('intro')}</p>
             {kind === 'person' && counterpartyName ? <p className="text-ink-2">{t('fromCounterparty', { name: counterpartyName })}</p> : null}
             <FormGrid>
-              <FormCell as={RadioGroup} aria-label={t('kind')} value={kind} onValueChange={(value) => setKind(value as 'person' | 'organization')} size="m" className="flex-row gap-4">
+              {/* 07-1 B27: Die Art steht in einer eigenen Zeile, nicht neben „Vorname“. */}
+              <FormCell as={RadioGroup} aria-label={t('kind')} value={kind} onValueChange={(value) => setKind(value as 'person' | 'organization')} size="full" className="flex-row gap-4">
                 {(['person', 'organization'] as const).map((k) => (
                   <label key={k} className="flex items-center gap-2">
                     <RadioGroupItem value={k} />

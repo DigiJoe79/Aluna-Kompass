@@ -217,7 +217,8 @@ export default async function FinanceWorkPage({ searchParams }: { searchParams: 
             des Bildschirms ein (gemessen 344 von 664 px, Joe/Designer 2026-10-08). Kein Layout-Test (Projektregel). */}
         <div className="z-10 space-y-3 bg-bg pb-2 sm:sticky sm:top-0">
           {/* N3, W-1: die Ablagefläche erkennt das Konto selbst — „Liste für Konto“ filtert nur die Liste. */}
-          {canWrite && importable.length > 0 ? <ImportUpload accounts={importable} /> : null}
+          {/* 07-1 B9: Stehen schon Umsätze da, ist die Ablagefläche eine Zeile statt eines hohen Kastens. */}
+          {canWrite && importable.length > 0 ? <ImportUpload accounts={importable} compact={counts.open + counts.unsure + counts.agent + counts.reviewed > 0} /> : null}
 
           <ViewTabs
             label={t('tabsGroup')}
@@ -226,18 +227,23 @@ export default async function FinanceWorkPage({ searchParams }: { searchParams: 
           />
           <AccountFilter accounts={filterAccounts} value={account} tab={tab} count={{ shown: itemsRes.value.total, total: counts[tab] }} />
 
-          {counts.heldCandidates > 0 ? (
-            <p className="text-meta text-ink-2">
-              {t('held', { count: counts.heldCandidates })}{' '}
-              <Link href="/finance/imports" className="font-semibold underline underline-offset-2">
-                {t('heldLink')}
-              </Link>
-            </p>
-          ) : null}
-          {counts.reviewed > 0 ? (
-            <div className="flex items-center justify-between gap-3 rounded-md border border-line bg-surface px-3 py-2 text-meta">
-              <span className="text-ink-2">{t('reviewedLine', { count: counts.reviewed })}</span>
-              {hasPermission(ctx, 'finance.entriesFinalize') ? <BatchFinalizeDialog reviewedCount={counts.reviewed} /> : null}
+          {/* 07-1 B9: „zurückgehalten“ und Festschreiben stehen in einer Leiste. */}
+          {counts.heldCandidates > 0 || counts.reviewed > 0 ? (
+            <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-md border border-line bg-surface px-3 py-2 text-meta">
+              {counts.heldCandidates > 0 ? (
+                <p className="text-ink-2">
+                  {t('held', { count: counts.heldCandidates })}{' '}
+                  <Link href="/finance/imports" className="font-semibold underline underline-offset-2">
+                    {t('heldLink')}
+                  </Link>
+                </p>
+              ) : null}
+              {counts.reviewed > 0 ? (
+                <span className="ml-auto flex flex-wrap items-center gap-3">
+                  <span className="text-ink-2">{t('reviewedLine', { count: counts.reviewed })}</span>
+                  {hasPermission(ctx, 'finance.entriesFinalize') ? <BatchFinalizeDialog reviewedCount={counts.reviewed} /> : null}
+                </span>
+              ) : null}
             </div>
           ) : null}
         </div>

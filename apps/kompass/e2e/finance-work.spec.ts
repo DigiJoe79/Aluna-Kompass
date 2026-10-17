@@ -234,7 +234,8 @@ test.describe('finance work list: rules, foreign money, vouchers, batch', () => 
     await expect(page.getByText('Übernommen und als geprüft markiert.')).toBeVisible();
     await expect(option(page, 'Futter August')).toHaveAttribute('aria-selected', 'true');
 
-    await detail.getByRole('button', { name: 'Künftig immer so?' }).click();
+    await detail.getByTestId('suggestion-more').click();
+    await page.getByRole('menuitem', { name: 'Künftig immer so?' }).click();
     const dialog = page.getByRole('dialog', { name: 'Künftig immer so?' });
     await expect(dialog.getByLabel('Text enthält')).toHaveValue('Futterhaus Beispiel KG');
     await expect(dialog.getByRole('checkbox', { name: /DE69\s9999\s9999\s0000\s4455\s66/ })).toBeChecked();
@@ -271,7 +272,8 @@ test.describe('finance work list: rules, foreign money, vouchers, batch', () => 
     await expect(option(page, 'Futter Juli')).toHaveAttribute('aria-selected', 'true');
     const detail = page.getByTestId('work-detail');
     await detail.getByTestId('split-row').getByLabel('Kategorie').selectOption({ label: 'Zweckausgaben' });
-    await detail.getByRole('button', { name: 'Als Zahlung an Partner erfassen' }).click();
+    await detail.getByTestId('suggestion-more').click();
+    await page.getByRole('menuitem', { name: 'Als Zahlung an Partner erfassen' }).click();
     const dialog = page.getByRole('dialog', { name: 'Als Zahlung an Partner erfassen' });
     await dialog.getByLabel('Partner').selectOption({ label: 'Kinderhilfe Regional e.V.' });
     await dialog.getByRole('button', { name: 'Entwurf anlegen' }).click();
@@ -286,8 +288,10 @@ test.describe('finance work list: rules, foreign money, vouchers, batch', () => 
     await openImportAccount(page);
     await option(page, 'Foerderverein Musterstadt e. V.').click();
     await expect(option(page, 'Foerderverein Musterstadt e. V.')).toHaveAttribute('aria-selected', 'true');
-    await expect(page.getByTestId('work-detail').getByRole('button', { name: 'Gehört nicht dem Verein' })).toBeVisible();
-    await expect(page.getByTestId('work-detail').getByRole('button', { name: 'Als Zahlung an Partner erfassen' })).toHaveCount(0);
+    // 07-1 B8: Die Sonderaktionen stehen im Menü „Weitere Aktionen“.
+    await page.getByTestId('work-detail').getByTestId('suggestion-more').click();
+    await expect(page.getByRole('menuitem', { name: 'Gehört nicht dem Verein' })).toBeVisible();
+    await expect(page.getByRole('menuitem', { name: 'Als Zahlung an Partner erfassen' })).toHaveCount(0);
   });
 
   test('„Gehört nicht dem Verein“ verlangt den Pflichttext und der Umsatz steht unter „Fremdes Geld, noch nicht weitergegeben“', async ({ page }) => {
@@ -295,7 +299,8 @@ test.describe('finance work list: rules, foreign money, vouchers, batch', () => 
     await openImportAccount(page);
     await option(page, 'Foerderverein Musterstadt e. V.').click();
     await expect(option(page, 'Foerderverein Musterstadt e. V.')).toHaveAttribute('aria-selected', 'true');
-    await page.getByTestId('work-detail').getByRole('button', { name: 'Gehört nicht dem Verein' }).click();
+    await page.getByTestId('work-detail').getByTestId('suggestion-more').click();
+    await page.getByRole('menuitem', { name: 'Gehört nicht dem Verein' }).click();
     const dialog = page.getByRole('dialog', { name: 'Gehört nicht dem Verein' });
     // Ein Eingang zahlt nichts zurück — die Auswahl gibt es nur bei einem Ausgang.
     await expect(dialog.getByLabel('Rückzahlung von')).toHaveCount(0);
@@ -318,7 +323,8 @@ test.describe('finance work list: rules, foreign money, vouchers, batch', () => 
     await page.getByRole('navigation', { name: 'Reiter der Arbeitsliste' }).getByRole('link', { name: /Unsicher/ }).click();
     await option(page, 'Weitergabe Sammelbestellung').click();
     await expect(option(page, 'Weitergabe Sammelbestellung')).toHaveAttribute('aria-selected', 'true');
-    await page.getByTestId('work-detail').getByRole('button', { name: 'Gehört nicht dem Verein' }).click();
+    await page.getByTestId('work-detail').getByTestId('suggestion-more').click();
+    await page.getByRole('menuitem', { name: 'Gehört nicht dem Verein' }).click();
     await dialog.getByLabel('Rückzahlung von').selectOption({ label: story('06.07.2026 · Nachbarverein Beispielstadt · 120,00 €') });
     await dialog.getByLabel('Für wen ist das Geld?').fill('Nachbarverein Beispielstadt');
     await dialog.getByRole('button', { name: 'Als fremdes Geld buchen' }).click();
@@ -403,7 +409,8 @@ test.describe('finance work list: rules, foreign money, vouchers, batch', () => 
     await option(page, 'Futter Juli').click();
     await expect(option(page, 'Futter Juli')).toHaveAttribute('aria-selected', 'true');
     const detail = page.getByTestId('work-detail');
-    await detail.getByRole('button', { name: 'Kontakt anlegen' }).click();
+    await detail.getByTestId('suggestion-more').click();
+    await page.getByRole('menuitem', { name: 'Kontakt anlegen' }).click();
     const dialog = page.getByRole('dialog', { name: 'Kontakt anlegen' });
     await dialog.getByRole('radio', { name: 'Organisation' }).check();
     await expect(dialog.getByLabel('Name')).toHaveValue('Futterhaus Beispiel KG');
@@ -433,7 +440,8 @@ test.describe('finance work list: rules, foreign money, vouchers, batch', () => 
     await expect(page).toHaveURL('/');
     await openImportAccount(page);
     await expect(option(page, 'Buerobedarf Muster GmbH')).toHaveAttribute('aria-selected', 'true');
-    await detail.getByRole('button', { name: 'Kontakt anlegen' }).click();
+    await detail.getByTestId('suggestion-more').click();
+    await page.getByRole('menuitem', { name: 'Kontakt anlegen' }).click();
     const blocked = page.getByRole('dialog', { name: 'Kontakt anlegen' });
     await expect(blocked.getByText('Kein Recht, Kontakte anzulegen')).toBeVisible();
     await expect(blocked.getByText(/„Kontakte verwalten“.*vergeben kann es: .*Anna Berger/)).toBeVisible();
@@ -443,7 +451,8 @@ test.describe('finance work list: rules, foreign money, vouchers, batch', () => 
   test('ein Finanzbeleg ohne Buchung wird aus der Akte zur Buchung; die Maske verknüpft ihn beim Speichern', async ({ page }) => {
     await loginAsAdmin(page);
     await page.goto('/finance/work/vouchers');
-    await page.getByRole('link', { name: 'Rechnung Büromaterial über 35,00 €' }).click();
+    // 07-1 B31: Die Belegnummer in der ersten Spalte öffnet das Dokument, der Betreff ist Text.
+    await page.locator('tr', { hasText: 'Rechnung Büromaterial über 35,00 €' }).getByRole('link').first().click();
     await expect(page).toHaveURL(/\/dms\/[0-9A-Z]{26}$/);
     await page.getByRole('link', { name: 'Zu Buchung machen' }).click();
     await expect(page).toHaveURL(/\/finance\/entries\/new\?voucher=[0-9A-Z]{26}$/);

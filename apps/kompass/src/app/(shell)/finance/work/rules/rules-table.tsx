@@ -4,7 +4,7 @@ import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { ConfirmDialog } from '@/components/forms/confirm-dialog';
-import { StatusBadge } from '@/components/status-badge';
+import { StatusBadge, statusTone } from '@/components/status-badge';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ruleFormFromRule, type RuleFormState, type SavedRule } from '@/lib/finance/work-dialogs';
@@ -37,7 +37,7 @@ export function RulesTable({ rows, canWrite, options }: { rows: RuleRow[]; canWr
             <TableHead col="meta">{t('condition')}</TableHead>
             <TableHead col="meta">{t('result')}</TableHead>
             <TableHead col="meta" className="text-right">{t('hits')}</TableHead>
-            <TableHead col="status">{t('active')}</TableHead>
+            <TableHead col="status">{t('state')}</TableHead>
             <TableHead col="actions" />
           </TableRow>
         </TableHeader>
@@ -55,14 +55,16 @@ export function RulesTable({ rows, canWrite, options }: { rows: RuleRow[]; canWr
               <TableCell col="meta" data-testid="rule-hits" className="py-2.5 text-right tabular-nums">
                 {row.hitCount}
               </TableCell>
-              <TableCell col="status" className="py-2.5">{row.rule.isActive ? t('yes') : t('no')}</TableCell>
+              {/* 07-1 B32: Zustand als Marke, aktiv ist der Normalzustand ohne Marke (§ F). */}
+              <TableCell col="status" className="py-2.5">{row.rule.isActive ? null : <StatusBadge tone={statusTone('active', 'inactive')}>{t('inactive')}</StatusBadge>}</TableCell>
               <TableCell col="actions" className="py-2.5 text-right">
                 {canWrite ? (
                   <span className="flex justify-end gap-2">
-                    <Button type="button" size="sm" variant="secondary" onClick={() => setEditing(ruleFormFromRule(row.rule, row.contactName))}>
+                    {/* 07-1 B20: Zeilenknöpfe `outline`, auch Löschen (§ C). */}
+                    <Button type="button" size="sm" variant="outline" onClick={() => setEditing(ruleFormFromRule(row.rule, row.contactName))}>
                       {t('edit')}
                     </Button>
-                    <Button type="button" size="sm" variant="ghost" onClick={() => setDeleting(row)}>
+                    <Button type="button" size="sm" variant="outline" onClick={() => setDeleting(row)}>
                       {t('delete')}
                     </Button>
                   </span>

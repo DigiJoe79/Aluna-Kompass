@@ -122,7 +122,8 @@ export function RuleDialog({
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
         <DialogBody className="text-meta">
-          <section>
+          {/* 07-1 B25: Linie wie zwischen zwei Abschnitten — `Section` zieht sie nur über einem `Section`. */}
+          <section className="mb-5 border-b border-line pb-5">
             <p className="text-ink-2">{t('intro')}</p>
             <div className="mt-3">
               <FormGrid>
@@ -152,14 +153,15 @@ export function RuleDialog({
                   <option value="out">{t('out')}</option>
                 </Select>
               </FormField>
-              <FormField id="rule-text" label={t('textContains')} hint={t('textHint')}>
-                <Input id="rule-text" value={form.textContains} onChange={(e) => set({ textContains: e.target.value })} />
-              </FormField>
               <FormField id="rule-amount-min" label={t('amountMin')} size="s" error={errorText('amountMinCents')}>
                 <Input id="rule-amount-min" inputMode="decimal" value={form.amountMinText} onChange={(e) => set({ amountMinText: e.target.value })} aria-invalid={!!fieldErrors.amountMinCents} />
               </FormField>
               <FormField id="rule-amount-max" label={t('amountMax')} size="s" error={errorText('amountMaxCents')}>
                 <Input id="rule-amount-max" inputMode="decimal" value={form.amountMaxText} onChange={(e) => set({ amountMaxText: e.target.value })} aria-invalid={!!fieldErrors.amountMaxCents} />
+              </FormField>
+              {/* 07-1 B25: „Betrag ab“ und „bis“ stehen nebeneinander; der Text folgt danach. */}
+              <FormField id="rule-text" label={t('textContains')} hint={t('textHint')}>
+                <Input id="rule-text" value={form.textContains} onChange={(e) => set({ textContains: e.target.value })} />
               </FormField>
               {form.iban ? (
                 <FormField id="rule-iban" label={t('iban', { iban: formatIban(form.iban) })} toggle size="full">

@@ -59,8 +59,9 @@ export default async function FinanceForeignMoneyPage() {
                       )}
                     </TableCell>
                     <TableCell col="meta">
-                      <Link href={`/finance/entries/${item.entryId}`} className="font-mono text-hint underline underline-offset-2">
-                        {item.entryNumber ?? t('draft')}
+                      {/* 07-1 C39: Nur die Nummer ist eine Kennung (Mono); „Entwurf“ steht in der Textschrift. */}
+                      <Link href={`/finance/entries/${item.entryId}`} className="text-hint underline underline-offset-2">
+                        {item.entryNumber ? <span className="font-mono">{item.entryNumber}</span> : t('draft')}
                       </Link>
                     </TableCell>
                     <TableCell col="actions" className="text-right">

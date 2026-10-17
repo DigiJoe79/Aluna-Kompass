@@ -5751,6 +5751,15 @@
         "contactName": "Kontakt über Namen",
         "paymentFee": "Gebühr des Zahlungsdienstes"
       },
+      "legend": {
+        "link": "passt zu einer Buchung",
+        "pair": "Umbuchung",
+        "cash": "Barkasse",
+        "return": "Rückgabe",
+        "openItem": "offene Zahlung",
+        "rule": "Regel",
+        "contact": "Kontakt erkannt"
+      },
       "keys": {
         "label": "Tastenkürzel",
         "move": "wählen",
@@ -6023,9 +6032,8 @@
           "condition": "Wenn",
           "result": "Dann",
           "hits": "Treffer",
-          "active": "Aktiv",
-          "yes": "ja",
-          "no": "nein",
+          "state": "Zustand",
+          "inactive": "inaktiv",
           "categoryInactive": "Kategorie stillgelegt",
           "edit": "Bearbeiten",
           "delete": "Löschen",

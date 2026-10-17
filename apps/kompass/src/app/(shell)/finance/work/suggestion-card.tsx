@@ -9,7 +9,9 @@ import { useDateFormat } from '@/components/date-format-provider';
 import { KeyChip } from '@/components/key-chip';
 import { Notice } from '@/components/notice';
 import { StatusBadge } from '@/components/status-badge';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { MoreHorizontal } from 'lucide-react';
 import type { ActionState } from '@/lib/actions';
 import { formatEuro, parseAmount } from '@/lib/finance/amount';
 import { remediesFor, type Remedy } from '@/lib/finance/remedies';
@@ -164,11 +166,16 @@ export function SuggestionCard({
             {suggestion.confidence === 'unsure' ? <StatusBadge tone="warning">{t('suggestion.unsure')}</StatusBadge> : null}
             {suggestion.confidence === 'possible' ? <StatusBadge tone="warning">{t('suggestion.possible')}</StatusBadge> : null}
           </p>
-          <ul className="mt-1 list-disc space-y-0.5 pl-5">
-            {suggestion.reasonTexts.map((text) => (
-              <li key={text}>{text}</li>
-            ))}
-          </ul>
+          {/* 07-1 B14: Ein Grund ist ein Satz, erst ab zwei eine Liste. */}
+          {suggestion.reasonTexts.length === 1 ? (
+            <p className="mt-1">{suggestion.reasonTexts[0]}</p>
+          ) : (
+            <ul className="mt-1 list-disc space-y-0.5 pl-5">
+              {suggestion.reasonTexts.map((text) => (
+                <li key={text}>{text}</li>
+              ))}
+            </ul>
+          )}
         </div>
       ) : (
         <p className="text-meta text-muted-ink">{t('suggestion.none')}</p>
@@ -233,7 +240,8 @@ export function SuggestionCard({
                 <KeyChip className="ml-1">{t('keys.enterKey')}</KeyChip>
               </Button>
             )}
-            <Link href={`/finance/entries/new?raw=${raw.id}&back=work`} className="inline-flex h-[var(--field-h)] items-center gap-1.5 rounded-md bg-surface-2 px-3.5 text-meta text-ink-2">
+            {/* 07-1 B8: Primär, Ändern und Überspringen in einer Zeile als Knöpfe; „Ändern“ ist ein Link im Knopfstil. */}
+            <Link href={`/finance/entries/new?raw=${raw.id}&back=work`} className={buttonVariants({ variant: 'outline' })}>
               {t('actions.edit')}
               <KeyChip>E</KeyChip>
             </Link>
@@ -241,23 +249,24 @@ export function SuggestionCard({
               {t('actions.skip')}
               <KeyChip label={t('keys.right')}>→</KeyChip>
             </Button>
+            {/* … und die Sonderaktionen in einem Menü. */}
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                render={
+                  <Button type="button" variant="ghost" data-testid="suggestion-more">
+                    <MoreHorizontal className="size-4" aria-hidden />
+                    {tRoot('common.moreActions')}
+                  </Button>
+                }
+              />
+              <DropdownMenuContent align="end" className="w-auto bg-surface shadow-md">
+                <DropdownMenuItem onSelect={openRule}>{t('actions.rule')}</DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => setDialog('foreign')}>{t('actions.foreign')}</DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => setDialog('contact')}>{t('actions.createContact')}</DropdownMenuItem>
+                {raw.amountCents < 0 ? <DropdownMenuItem onSelect={() => setDialog('partner')}>{t('actions.partner')}</DropdownMenuItem> : null}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
-          <p className="flex flex-wrap gap-x-4 gap-y-1 text-meta">
-            <Button type="button" variant="link" className="h-auto p-0" onClick={openRule}>
-              {t('actions.rule')}
-            </Button>
-            <Button type="button" variant="link" className="h-auto p-0" onClick={() => setDialog('foreign')}>
-              {t('actions.foreign')}
-            </Button>
-            <Button type="button" variant="link" className="h-auto p-0" onClick={() => setDialog('contact')}>
-              {t('actions.createContact')}
-            </Button>
-            {raw.amountCents < 0 ? (
-              <Button type="button" variant="link" className="h-auto p-0" onClick={() => setDialog('partner')}>
-                {t('actions.partner')}
-              </Button>
-            ) : null}
-          </p>
         </div>
       ) : (
         <p className="text-hint text-muted-ink">{t('suggestion.readOnly')}</p>

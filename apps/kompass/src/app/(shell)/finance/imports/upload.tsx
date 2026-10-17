@@ -69,7 +69,8 @@ const newKey = (name: string) => `${name}-${Date.now()}-${Math.random().toString
  * Bestätigungsdialog (Entschieden 1) und lädt erst danach dieselbe Datei
  * erneut, mit `confirmFormatChange: true`.
  */
-export function ImportUpload({ accounts }: { accounts: ImportAccountOption[] }) {
+/** `compact`: Stehen schon Umsätze da (Arbeitsliste), ist die Ablagefläche eine Zeile statt eines hohen Kastens (07-1 B9). */
+export function ImportUpload({ accounts, compact = false }: { accounts: ImportAccountOption[]; compact?: boolean }) {
   const t = useTranslations('finance.imports.upload');
   const tRoot = useTranslations();
   const tCommon = useTranslations('common');
@@ -197,7 +198,8 @@ export function ImportUpload({ accounts }: { accounts: ImportAccountOption[] }) 
           if (!busy) void processFiles(Array.from(e.dataTransfer.files));
         }}
         className={cn(
-          'flex min-h-24 flex-col items-center justify-center gap-1 rounded-md border-2 border-dashed px-3 py-2 text-center text-meta',
+          'flex items-center justify-center gap-1 rounded-md border-2 border-dashed px-3 py-2 text-center text-meta',
+          compact ? 'min-h-11 flex-row gap-2' : 'min-h-24 flex-col',
           dragging ? 'border-brand bg-brand-soft' : 'border-line-strong bg-surface',
         )}
       >

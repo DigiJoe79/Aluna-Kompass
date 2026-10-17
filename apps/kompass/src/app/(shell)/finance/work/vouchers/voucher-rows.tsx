@@ -9,7 +9,7 @@ import { useDateFormat } from '@/components/date-format-provider';
 import { InvoiceCard } from '@/components/finance/invoice-card';
 import { Notice } from '@/components/notice';
 import { Button, buttonVariants } from '@/components/ui/button';
-import { TableCell, TableRow } from '@/components/ui/table';
+import { RowLink, TableCell, TableRow } from '@/components/ui/table';
 import { invoiceProposalAction } from '../actions';
 
 export interface VoucherRowData {
@@ -51,16 +51,11 @@ export function VoucherRows({ rows, canOpenDocument, canWrite, canCreateContact 
         return (
           <Fragment key={doc.id}>
             <TableRow>
-              <TableCell col="meta" className="font-mono text-hint text-ink-2">{doc.number}</TableCell>
-              <TableCell col="title" className="text-ink">
-                {canOpenDocument ? (
-                  <Link href={`/dms/${doc.id}`} className="underline underline-offset-2">
-                    {doc.subject}
-                  </Link>
-                ) : (
-                  doc.subject
-                )}
+              {/* 07-1 B31: Die Nummer in der ersten Spalte öffnet das Dokument (`RowLink`, § G); der Betreff ist Text. */}
+              <TableCell col="meta" className="font-mono text-hint text-ink-2">
+                {canOpenDocument ? <RowLink href={`/dms/${doc.id}`}>{doc.number}</RowLink> : doc.number}
               </TableCell>
+              <TableCell col="title" className="text-ink">{doc.subject}</TableCell>
               <TableCell col="meta" className="text-hint tabular-nums text-ink-2">{date(doc.documentDate)}</TableCell>
               <TableCell col="meta" className="text-ink-2">{doc.typeLabel}</TableCell>
               <TableCell col="actions" className="text-right">
