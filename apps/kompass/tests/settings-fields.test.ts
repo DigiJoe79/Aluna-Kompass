@@ -4,6 +4,18 @@ import messages from '../messages/de.json';
 import { managedHintKey, SETTINGS_TABS, settingsSections } from '@/lib/settings-fields';
 
 describe('SETTINGS_TABS', () => {
+  // 11-1 A3: ein Beispieltag über 12, damit Tag und Monat nicht zu verwechseln sind.
+  it('nennt das Datumsformat an einem eindeutigen Beispieltag', () => {
+    const o = messages.settings.options.ui.dateFormat;
+    expect(o.locale).toContain('28.09.2026');
+    expect(o.iso).toContain('2026-09-28');
+  });
+  // 11-1 B21: Datumsformat und Branding in einem Reiter „Darstellung“.
+  it('führt das Datumsformat im Reiter Darstellung, ohne eigenen Reiter', () => {
+    expect(SETTINGS_TABS.map((tab) => tab.key)).toEqual(['organization', 'tax', 'bank', 'branding']);
+    expect(SETTINGS_TABS.find((tab) => tab.key === 'branding')!.fields.map((f) => f.key)).toContain('ui.dateFormat');
+    expect(messages.settings.tabs.branding).toBe('Darstellung');
+  });
   it('sagt am Datumsformat, dass es nur die Anzeige betrifft (K10)', () => {
     const field = SETTINGS_TABS.flatMap((tab) => tab.fields).find((f) => f.key === 'ui.dateFormat')!;
     expect(field.hintKey).toBe('dateFormatHint');

@@ -500,7 +500,7 @@ Vorlage des Moduls. Zeichnet die eigene Fassung das Anschriftfeld, trägt sie im
 ohne Kennzeichen setzen die Vorlagen Anschrift und Aussteller wie bisher selbst
 in den Text. Daneben optional
 `fonts/` für eigene Schriften und `assets/` für Grafiken, die eine Basis
-einbindet — das Vereinslogo kommt weiter aus Einrichtung → Stammdaten → Branding.
+einbindet — das Vereinslogo kommt weiter aus Einrichtung → Stammdaten → Darstellung.
 
 **Ein leeres Verzeichnis ist gültig** — dann gelten die mitgelieferten Basen.
 Auch dies ist eine Vertrauensgrenze: Jede `.typ` läuft beim Rendern als Code im

@@ -17,9 +17,9 @@ führt direkt auf „Bank“ oder „Steuer & Bescheide“.
   Felder aus dem gültigen Bescheid; die begünstigten Zwecke für
   Zuwendungsbestätigungen stehen ebenfalls am Bescheid.
 - **Bank** — IBAN, BIC, Bankname, für Briefbogen und Bestätigungen.
-- **Branding** — Logo aus der [Mediathek](../mediathek.md), Schrift für
-  Fließtext und Überschriften, das aktive [Theme](themes.md).
-- **Darstellung** — Datumsformat der Oberfläche.
+- **Darstellung** — Logo aus der [Mediathek](../mediathek.md), Schrift für
+  Fließtext und Überschriften, das aktive [Theme](themes.md) und das
+  Datumsformat der Oberfläche.
 
 Jedes Feld hat einen Hinweis, wo es verwendet wird. Was leer ist, obwohl es
 gebraucht wird, zählt die [Startseite](../startseite.md) in der Kachel

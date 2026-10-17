@@ -2,7 +2,8 @@
 
 import { Section } from '@/components/section';
 import { Info } from 'lucide-react';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
+import { countryOptions, timeZoneOptions } from '@/lib/settings-options';
 import Link from 'next/link';
 import { useMemo, useState, useTransition } from 'react';
 import { FormField } from '@/components/forms/form-field';
@@ -45,6 +46,7 @@ export function SettingsForm({
 }) {
   const t = useTranslations('settings');
   const c = useTranslations('common');
+  const locale = useLocale();
   const { date } = useDateFormat();
   const [values, setValues] = useState<Values>(initial);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -56,6 +58,7 @@ export function SettingsForm({
     [values, initial]
   );
   const pendingCount = Object.keys(changes).length;
+  const activeTab = SETTINGS_TABS.find((tab) => tab.key === panel);
   // Die Namen für die Fehlerbox, je Einstellung unter ihrem ganzen Schlüssel (`organization.name`).
   const labels = Object.fromEntries(SETTINGS_TABS.flatMap((tab) => tab.fields).map((f) => [f.key, t(`fields.${f.key}`)]));
   const invalidTabs = new Set(
@@ -127,6 +130,26 @@ export function SettingsForm({
             {(field.options ?? []).map((o) => (
               <option key={o} value={o}>
                 {t(`options.${field.key}.${o}`)}
+              </option>
+            ))}
+          </Select>
+        );
+      case 'country':
+        return wrap(
+          <Select id={id} value={String(value ?? '')} onChange={(e) => set(field.key, e.target.value)}>
+            {countryOptions(locale).map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
+          </Select>
+        );
+      case 'timeZone':
+        return wrap(
+          <Select id={id} value={String(value ?? '')} onChange={(e) => set(field.key, e.target.value)}>
+            {timeZoneOptions(value ? String(value) : null).map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
               </option>
             ))}
           </Select>
@@ -238,6 +261,9 @@ export function SettingsForm({
         </div>
         );
       })}
+      {/* Ein Reiter, dessen Felder alle ein Modul führt (Bank, Steuer mit Finanzen), hat nichts zu speichern (11-1 B18) —
+          außer es liegen Änderungen aus anderen Reitern an: Dann bleibt die Leiste samt Rückfrage beim Verlassen. */}
+      {activeTab && pendingCount === 0 && activeTab.fields.every((f) => managed.includes(f.key)) ? null : (
       <FormActionBar
         count={pendingCount}
         pending={saving}
@@ -250,6 +276,7 @@ export function SettingsForm({
         }}
         onSave={save}
       />
+      )}
     </FormCard>
   );
 }

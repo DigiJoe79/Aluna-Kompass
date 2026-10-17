@@ -98,7 +98,8 @@ test.describe('settings', () => {
     await page.goto('/admin/settings?panel=organization');
     await page.getByLabel('Vereinsname').fill('Testverein Reiter e.V.');
     await nav.getByRole('link', { name: 'Darstellung' }).click();
-    await expect(page).toHaveURL(/panel=display/);
+    // Datumsformat steht im Reiter Darstellung (Branding), 11-1 B21.
+    await expect(page).toHaveURL(/panel=branding/);
     await page.getByLabel('Datumsformat').selectOption('iso');
     await expect(page.getByText('2 Änderungen noch nicht gespeichert')).toBeVisible();
     await page.getByRole('button', { name: 'Speichern' }).click();
@@ -184,7 +185,7 @@ test.describe('settings', () => {
     await expect(page.getByRole('row', { name: /logo-/ })).toBeVisible();
 
     await page.goto('/admin/settings');
-    await page.getByRole('navigation', { name: NAV }).getByRole('link', { name: 'Branding' }).click();
+    await page.getByRole('navigation', { name: NAV }).getByRole('link', { name: 'Darstellung' }).click();
     await page.getByRole('button', { name: 'Logo: Wählen' }).click();
     const chooser = page.getByRole('dialog', { name: 'Bild wählen' });
     await chooser.getByRole('button', { name: /logo-/ }).click();

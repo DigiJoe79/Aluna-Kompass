@@ -1,6 +1,6 @@
 import type { FieldSize } from '@/components/forms/form-field';
 import { panelHref } from '@/components/panel-nav';
-export type FieldKind = 'text' | 'mono' | 'textarea' | 'select' | 'date' | 'theme' | 'font-body' | 'font-heading';
+export type FieldKind = 'text' | 'mono' | 'textarea' | 'select' | 'date' | 'theme' | 'font-body' | 'font-heading' | 'country' | 'timeZone';
 
 /**
  * Ein Feld der Vereinseinstellungen. `size` ist die Spannweite im `FormGrid` (docs/MUSTER.md § J), `section` der
@@ -19,7 +19,7 @@ export interface SettingsField {
 }
 
 export interface SettingsTab {
-  key: 'organization' | 'tax' | 'bank' | 'branding' | 'display';
+  key: 'organization' | 'tax' | 'bank' | 'branding';
   fields: SettingsField[];
 }
 
@@ -33,8 +33,9 @@ export const SETTINGS_TABS: SettingsTab[] = [
       { key: 'organization.street', kind: 'text', size: 'm', section: 'address' },
       { key: 'organization.postalCode', kind: 'text', size: 's', section: 'address' },
       { key: 'organization.city', kind: 'text', size: 's', section: 'address' },
-      { key: 'organization.country', kind: 'text', size: 's', section: 'locale' },
-      { key: 'organization.timeZone', kind: 'text', size: 's', section: 'locale', hintKey: 'timeZoneHint', placeholderKey: 'timeZone' },
+      // Auswahl mit Klarnamen, gespeichert bleibt der Code (11-1 B19).
+      { key: 'organization.country', kind: 'country', size: 's', section: 'locale' },
+      { key: 'organization.timeZone', kind: 'timeZone', size: 's', section: 'locale', hintKey: 'timeZoneHint' },
       { key: 'organization.foundedYear', kind: 'text', size: 's', section: 'locale' },
       { key: 'organization.registerCourt', kind: 'text', size: 'm', section: 'register' },
       { key: 'organization.registerNumber', kind: 'text', size: 's', section: 'register', hintKey: 'registerNumberHint' },
@@ -66,11 +67,9 @@ export const SETTINGS_TABS: SettingsTab[] = [
       { key: 'branding.fontBody', kind: 'font-body', size: 'm', section: 'fontsAndColors', options: ['source-sans-3', 'public-sans', 'atkinson-hyperlegible'] },
       { key: 'branding.fontHeading', kind: 'font-heading', size: 'm', section: 'fontsAndColors', options: ['source-serif-4', 'same-as-body'] },
       { key: 'branding.activeTheme', kind: 'theme', size: 'm', section: 'fontsAndColors' },
+      // Ein Reiter „Darstellung“ mit Logo, Schrift, Theme und Datumsformat; vorher stand das Datumsformat allein (11-1 B21).
+      { key: 'ui.dateFormat', kind: 'select', size: 'm', options: ['locale', 'iso'], hintKey: 'dateFormatHint' },
     ],
-  },
-  {
-    key: 'display',
-    fields: [{ key: 'ui.dateFormat', kind: 'select', size: 'm', options: ['locale', 'iso'], hintKey: 'dateFormatHint' }],
   },
 ];
 

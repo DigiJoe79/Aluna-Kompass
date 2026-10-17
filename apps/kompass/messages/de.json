@@ -1653,8 +1653,7 @@
       "organization": "Verein",
       "tax": "Steuer & Bescheide",
       "bank": "Bank",
-      "branding": "Branding",
-      "display": "Darstellung"
+      "branding": "Darstellung"
     },
     "tabInvalid": "Enthält Fehler",
     "counter": "{count} von {max} Zeichen",
@@ -1719,14 +1718,11 @@
       "logoHint": "Logo-Upload folgt mit der Mediathek.",
       "themeHint": "Themes werden unter Einrichtung → Erscheinungsbild bearbeitet."
     },
-    "placeholders": {
-      "timeZone": "Name nach IANA, z. B. Europe/Berlin"
-    },
     "options": {
       "ui": {
         "dateFormat": {
-          "locale": "Aus der Sprache (12.09.2026)",
-          "iso": "ISO 8601 (2026-09-12)"
+          "locale": "Aus der Sprache (28.09.2026)",
+          "iso": "ISO 8601 (2026-09-28)"
         }
       },
       "organization": {
