@@ -117,13 +117,12 @@ export function AccountCard({ account }: { account: AccountCardData }) {
                   : ''}
             </p>
           )}
-          {account.statement.reconciliation ? (
+          {/* 07-2 B8: „Kein Auszug für heute“ unter jedem Konto sagt nichts — die Zeile steht nur mit einem Abgleich. */}
+          {account.statement.reconciliation && account.statement.reconciliation.state !== 'noStatement' ? (
             <p className={account.statement.reconciliation.state === 'differs' ? 'text-hint font-semibold text-warning' : 'text-hint text-muted-ink'}>
               {account.statement.reconciliation.state === 'matches'
                 ? t('reconciliation.matches', { date: formatDateOrDash(date, account.statement.reconciliation.statementDate) })
-                : account.statement.reconciliation.state === 'differs'
-                  ? t('reconciliation.differs', { date: formatDateOrDash(date, account.statement.reconciliation.statementDate), amount: formatEuro(account.statement.reconciliation.differenceCents ?? 0) })
-                  : t('reconciliation.noStatement')}
+                : t('reconciliation.differs', { date: formatDateOrDash(date, account.statement.reconciliation.statementDate), amount: formatEuro(account.statement.reconciliation.differenceCents ?? 0) })}
             </p>
           ) : null}
         </div>

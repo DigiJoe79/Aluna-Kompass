@@ -4934,8 +4934,7 @@
       "statementInFuture": "Auszug reicht bis in die Zukunft",
       "reconciliation": {
         "matches": "Stimmt mit dem Auszug vom {date} überein",
-        "differs": "Differenz zum Auszug vom {date}: {amount}",
-        "noStatement": "Kein Auszug für heute"
+        "differs": "Differenz zum Auszug vom {date}: {amount}"
       },
       "ibanReveal": "IBAN aufdecken",
       "ibanHide": "IBAN wieder verbergen",
@@ -4957,8 +4956,7 @@
         "through": "Auszug importiert bis {date}",
         "none": "Noch kein Auszug geladen.",
         "matches": "Stimmt mit dem Auszug vom {date} überein",
-        "differs": "Differenz zum Auszug vom {date}: {amount}",
-        "noStatement": "Kein Auszug für heute"
+        "differs": "Differenz zum Auszug vom {date}: {amount}"
       },
       "upload": {
         "dragOrPick": "Kontoauszug hierher ziehen (CAMT oder CSV, auch mehrere)",

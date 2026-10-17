@@ -206,7 +206,8 @@ test.describe('finance import', () => {
     // N3 Nachtrag A: die Kontokarte zeigt das deutsche Format, kein rohes ISO-Datum mehr.
     await expect(card.getByText(storyPattern('Auszug importiert bis 31\\.08\\.2026'))).toBeVisible();
     await expect(card).not.toContainText(/\d{4}-\d{2}-\d{2}/);
-    await expect(card.getByText(/Kein Auszug für heute|Stimmt mit dem Auszug|Differenz zum Auszug/)).toBeVisible();
+    // 07-2 B8: „Kein Auszug für heute“ steht nicht mehr unter jedem Konto.
+    await expect(card).not.toContainText('Kein Auszug für heute');
   });
 
   test('ohne finance.entriesWrite sieht man die Läufe, aber weder Ablagefläche noch Verwerfen', async ({ page }) => {
