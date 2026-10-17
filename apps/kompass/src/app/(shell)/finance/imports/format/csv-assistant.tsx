@@ -28,6 +28,7 @@ import {
   buildFormat,
   canAdvance,
   COLUMN_ROLES,
+  defaultFormatName,
   initialState,
   loadState,
   previewRecords,
@@ -133,7 +134,7 @@ export function CsvAssistant({ accounts, initialAccountId, canLoad, reselect = f
     if (!account) return;
     const key = assistantFileKey(name, bytes);
     setFile({ name, bytes, key });
-    setState(loadState(browserStorage(), storageKey(account.id, key)) ?? initialState(bytes, t('defaultName', { account: account.name })));
+    setState(loadState(browserStorage(), storageKey(account.id, key)) ?? initialState(bytes, defaultFormatName(account.name, (name) => t('defaultName', { account: name }))));
   };
 
   const chooseFile = async (chosen: File) => {
@@ -214,16 +215,15 @@ export function CsvAssistant({ accounts, initialAccountId, canLoad, reselect = f
               </Select>
             </FormField>
           </FormGrid>
-          <div className="rounded-md border border-line bg-surface p-4">
-            <Section title={t('camt.title')}>
-              <div className="space-y-2">
-                <p className="text-body text-ink-2">{t('camt.text')}</p>
-                <Link href="/help/finanzen/auszug-bei-der-bank-holen" className="text-link text-body">
-                  {t('camt.link')}
-                </Link>
-              </div>
-            </Section>
-          </div>
+          {/* 07-1 B22: Jeder Schritt steht in derselben Karte (E3); keine Karte in der Karte (§ E). */}
+          <Section title={t('camt.title')}>
+            <div className="space-y-2">
+              <p className="text-body text-ink-2">{t('camt.text')}</p>
+              <Link href="/help/finanzen/auszug-bei-der-bank-holen" className="text-link text-body">
+                {t('camt.link')}
+              </Link>
+            </div>
+          </Section>
           {handoff ? (
             <div className="space-y-2 rounded-md border border-brand bg-brand-soft p-4 text-body">
               <p className="font-semibold text-ink">{t('handoff.text', { name: handoff.name })}</p>
@@ -315,8 +315,10 @@ export function CsvAssistant({ accounts, initialAccountId, canLoad, reselect = f
                     {preview.header.map((column, i) => {
                       const ignored = (state.roles[i] ?? 'ignore') === 'ignore';
                       return (
-                        // `h-auto`: Die Rollenwahl steht im Kopf und ist höher als die Kopfzeile.
-                        <TableHead key={i} data-column={column} data-ignored={ignored ? 'true' : 'false'} className={cn('h-auto space-y-1 py-2 align-top', ignored && 'text-muted-ink')}>
+                        // `h-auto`: Die Rollenwahl steht im Kopf und ist höher als die Kopfzeile. 07-1 A1: Mindestbreite je Spalte,
+                        // damit die Auswahl nicht abgeschnitten ist; der Spaltenname steht über der Auswahl (ohne Layout-Test).
+                        <TableHead key={i} data-column={column} data-ignored={ignored ? 'true' : 'false'} className={cn('h-auto min-w-44 space-y-1 py-2 align-top', ignored && 'text-muted-ink')}>
+                          <p className="font-semibold">{column}</p>
                           <Select
                             aria-label={t('columns.roleLabel', { column })}
                             value={state.roles[i] ?? 'ignore'}
@@ -328,7 +330,6 @@ export function CsvAssistant({ accounts, initialAccountId, canLoad, reselect = f
                               </option>
                             ))}
                           </Select>
-                          <p className="font-semibold">{column}</p>
                         </TableHead>
                       );
                     })}

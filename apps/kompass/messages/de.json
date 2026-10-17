@@ -4948,6 +4948,7 @@
       },
       "upload": {
         "dragOrPick": "Kontoauszug hierher ziehen (CAMT oder CSV, auch mehrere)",
+        "pickOnPhone": "Kontoauszug auswählen",
         "dropHere": "Datei hier ablegen",
         "result": "{new} neu, {known} bereits vorhanden, {held} zurückgehalten",
         "formatChangeDialog": {
@@ -5028,7 +5029,17 @@
         "amendBalance": "Kontostand nachtragen",
         "formatCamt": "CAMT.053",
         "formatCsv": "CSV",
-        "noBalance": "ohne Kontostand"
+        "noBalance": "ohne Kontostand",
+        "columns": {
+          "account": "Konto",
+          "period": "Zeitraum",
+          "format": "Format",
+          "balances": "Kontostand",
+          "counts": "Umsätze",
+          "loaded": "Geladen",
+          "state": "Zustand",
+          "actions": "Aktionen"
+        }
       },
       "amendBalance": {
         "title": "Kontostand nachtragen",
@@ -6323,7 +6334,7 @@
         "originalReturnedOn": "Original zurück am",
         "taxOfficeInformedOn": "Finanzamt informiert am",
         "consequences": {
-          "lines": "{count, plural, one {Zuwendung wird wieder bestätigbar} other {Zuwendungen werden wieder bestätigbar}}"
+          "lines": "{count, plural, one {# Zuwendung wird wieder bestätigbar} other {# Zuwendungen werden wieder bestätigbar}}"
         },
         "stays": {
           "copy": "Unser Exemplar bleibt in der Akte.",

@@ -205,9 +205,11 @@ export function ImportUpload({ accounts }: { accounts: ImportAccountOption[] }) 
         {dragging ? (
           <p className="font-semibold text-ink">{t('dropHere')}</p>
         ) : (
-          // 390 px: Der Satz bricht um statt über den Rand zu laufen (Pipeline-Warnung fl-arbeitsliste, 401 > 390; ohne Layout-Test, Projektregel).
+          // 07-1 C38: Am Telefon gibt es kein Ziehen — dort der kurze Satz „Kontoauszug auswählen“ statt eines unterstrichenen
+          // Satzes über zwei Zeilen (ohne Layout-Test, Projektregel).
           <Button type="button" variant="link" className="h-auto max-w-full p-0 whitespace-normal underline underline-offset-2" disabled={busy} onClick={() => inputRef.current?.click()}>
-            {t('dragOrPick')}
+            <span className="max-sm:hidden">{t('dragOrPick')}</span>
+            <span className="sm:hidden">{t('pickOnPhone')}</span>
           </Button>
         )}
         <input

@@ -11,7 +11,6 @@ import { useActionFeedback } from '@/components/forms/use-action-feedback';
 import { Button } from '@/components/ui/button';
 import { formatEuro } from '@/lib/finance/amount';
 import { decideCandidateAction } from './actions';
-import { Overline } from '@/components/overline';
 import { Section } from '@/components/section';
 import { Empty } from '@/components/empty-value';
 
@@ -56,7 +55,8 @@ export function CandidatesSection({ candidates, canDecide }: { candidates: Candi
         <div className="space-y-4">
           {candidates.map((c) => (
             <div key={c.id} className="space-y-2 rounded-md border border-line bg-surface p-3">
-              <Overline>{c.accountName}</Overline>
+              {/* 07-1 B21: Das Konto ist der Name des Blocks, kein drittes Versalien-Etikett über „Im Auszug“/„Bereits vorhanden“. */}
+              <p className="text-body font-semibold text-ink">{c.accountName}</p>
               <BeforeAfter
                 layout="cards"
                 columnLabels={{ before: t('inStatement'), after: t('existing') }}

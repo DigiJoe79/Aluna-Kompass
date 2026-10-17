@@ -26,12 +26,16 @@ export function AmendBalanceDialog({ open, onOpenChange, run }: { open: boolean;
   const router = useRouter();
   const [amountText, setAmountText] = useState('');
   const [pending, setPending] = useState(false);
+  // 07-1 B29 (§ B): Speichern bleibt frei; ohne lesbaren Betrag steht der Fehler am Feld.
+  const [missing, setMissing] = useState(false);
+  const tFields = useTranslations('errors.fields');
   const feedback = useActionFeedback();
 
   const closingBalanceCents = parseAmount(amountText);
 
   const close = () => {
     setAmountText('');
+    setMissing(false);
     feedback.reset();
     onOpenChange(false);
   };
@@ -39,7 +43,10 @@ export function AmendBalanceDialog({ open, onOpenChange, run }: { open: boolean;
   if (!run) return null;
 
   const submit = async () => {
-    if (closingBalanceCents === null) return;
+    if (closingBalanceCents === null) {
+      setMissing(true);
+      return;
+    }
     setPending(true);
     const result = await feedback.run(() => setRunClosingBalanceAction(run.id, closingBalanceCents), { retry: () => void submit() });
     setPending(false);
@@ -54,11 +61,11 @@ export function AmendBalanceDialog({ open, onOpenChange, run }: { open: boolean;
       <DialogContent size="sm" className="bg-surface shadow-md">
         <DialogTitle>{t('title')}</DialogTitle>
         <FormGrid>
-          <FormField id="amendBalanceAmount" label={run.periodTo ? t('label', { date: formatDateOrDash(date, run.periodTo) }) : t('labelNoDate')} required size="s">
-            <AmountField id="amendBalanceAmount" name="amendBalanceAmount" value={amountText} onChange={setAmountText} allowNegative required />
+          <FormField id="amendBalanceAmount" label={run.periodTo ? t('label', { date: formatDateOrDash(date, run.periodTo) }) : t('labelNoDate')} required size="s" error={missing ? tFields('required') : undefined}>
+            <AmountField id="amendBalanceAmount" name="amendBalanceAmount" value={amountText} onChange={(next) => { setAmountText(next); setMissing(false); }} allowNegative required />
           </FormField>
         </FormGrid>
-        <FormActionBar placement="dialog" cancel={close} pending={pending} saveDisabled={closingBalanceCents === null} saveLabel={t('submit')} onSave={() => void submit()} state={feedback.state} />
+        <FormActionBar placement="dialog" cancel={close} pending={pending} saveLabel={t('submit')} onSave={() => void submit()} state={feedback.state} />
       </DialogContent>
     </Dialog>
   );

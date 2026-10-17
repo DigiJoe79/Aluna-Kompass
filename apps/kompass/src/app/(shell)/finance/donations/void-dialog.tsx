@@ -83,7 +83,7 @@ export function VoidForm({ confirmation, onDone, onCancel }: { confirmation: Voi
           </FormGrid>
         </Section>
       ) : null}
-      <ConsequenceList items={[{ number: confirmation.lineCount, label: t('consequences.lines', { count: confirmation.lineCount }) }]} stays={[t('stays.copy'), t('stays.number', { number: confirmation.number })]} />
+      <ConsequenceList items={[{ label: t('consequences.lines', { count: confirmation.lineCount }) }]} stays={[t('stays.copy'), t('stays.number', { number: confirmation.number })]} />
       <FormActionBar placement="dialog" cancel={onCancel} destructive pending={pending} saveDisabled={note.trim().length === 0} saveLabel={t('submit')} onSave={() => void submit()} state={feedback.state} />
     </div>
   );

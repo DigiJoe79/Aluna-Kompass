@@ -171,8 +171,10 @@ test.describe('finance import', () => {
     await row.getByRole('button', { name: 'Verwerfen' }).click();
     const dialog = page.getByRole('alertdialog');
     await expect(dialog.getByText(/Kontoumsatz wird gelöscht/)).toBeVisible();
-    // Ohne Notiz lässt sich nicht bestätigen.
-    await expect(dialog.getByRole('button', { name: 'Verwerfen' })).toBeDisabled();
+    // Ohne Notiz lässt sich nicht bestätigen: Der Knopf bleibt frei, der Fehler steht am Feld (07-1 B29, MUSTER § B).
+    await dialog.getByRole('button', { name: 'Verwerfen' }).click();
+    await expect(dialog.getByText('Pflichtfeld.')).toBeVisible();
+    await expect(dialog).toBeVisible();
     await dialog.locator('textarea').fill('Testauszug versehentlich geladen');
     await dialog.getByRole('button', { name: 'Verwerfen' }).click();
     await expect(page.getByText('Auszug verworfen.')).toBeVisible();
