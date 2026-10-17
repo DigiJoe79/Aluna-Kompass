@@ -54,8 +54,8 @@ export function Topbar({ organization, logoUrl, crumbs, user, build, version, dr
         </button>
       ) : null}
       {/* Der Trennstrich nur, wenn eine Brotkrume folgt — sonst stünde er ins Leere (01 B16). */}
-      {/* Telefon: Logo und Vereinsname fallen weg (der Name steht im Menü), ebenso die Laufanzeige `extras` — sonst
-          drängten sich sieben Dinge auf 390 px (01 C34). Kein Layout-Test (AGENTS.md). */}
+      {/* Telefon: Logo und Vereinsname fallen weg, der Name steht im Menü (01 C34). Die Pille `extras` bleibt: Sie steht nur
+          im Bereich Webseite und ist dort am Telefon gewollt (10 C38, Designer 2026-10-16). Kein Layout-Test (AGENTS.md). */}
       <div className={cn('flex h-[30px] shrink-0 items-center gap-2.5 max-sm:hidden', crumbs.length > 0 && 'border-r border-line pr-3.5')}>
         {logoUrl ? (
           <img src={logoUrl} alt={t('nav.logoAlt')} className="size-[26px] shrink-0 rounded-sm object-contain" />
@@ -88,7 +88,7 @@ export function Topbar({ organization, logoUrl, crumbs, user, build, version, dr
         <span className="flex-1 text-left max-sm:sr-only">{t('shell.topbar.search')}</span>
         <kbd className="rounded-[3px] border border-line px-1 font-mono text-key max-sm:hidden">⌘K</kbd>
       </button>
-      {extras ? <div className="contents max-sm:hidden">{extras}</div> : null}
+      {extras}
       <button
         ref={helpButtonRef}
         type="button"

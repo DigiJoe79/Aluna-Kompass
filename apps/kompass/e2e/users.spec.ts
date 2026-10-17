@@ -145,7 +145,8 @@ test.describe('users', () => {
     await page.getByRole('button', { name: 'Passwort setzen und fortfahren' }).click();
     await expect(page).toHaveURL('/');
     await page.goto('/admin/users');
-    await expect(page.getByText('403', { exact: true })).toBeVisible();
+    // Zustandskarte (G7): kein „403“ mehr, sondern Titel und Recht.
+    await expect(page.getByText('Diese Seite ist für Ihre Rolle nicht freigegeben.')).toBeVisible();
     await expect(page.getByText('users.manage')).toBeVisible();
   });
 
