@@ -48,7 +48,7 @@ export function FixedValue({
     <FormCell
       size={size}
       role="group"
-      aria-labelledby={`${id}-label ${id}-value`}
+      aria-labelledby={[`${id}-label`, `${id}-value`].join(' ')}
       aria-describedby={`${id}-reason`}
       data-testid={testId}
       className={cn('flex flex-col gap-1.5', className)}

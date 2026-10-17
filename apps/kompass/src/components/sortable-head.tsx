@@ -67,11 +67,11 @@ export function SortableHead({ field, label, className, col }: { field: string; 
  * (`listbox`) mit jeder sortierbaren Spalte in beiden Richtungen, die gewählte mit Haken.
  */
 function SortMenu() {
-  const t = useTranslations('common.sortMenu');
+  const tMenu = useTranslations('common.sortMenu');
   const table = useTableContext();
   const { current, go } = useSortUrl();
   const options = (table?.sorts ?? []).flatMap(({ field, label }) =>
-    (['desc', 'asc'] as const).map((direction) => ({ value: `${field}:${direction}`, field, direction, label: t(direction, { column: label }) })),
+    (['desc', 'asc'] as const).map((direction) => ({ value: `${field}:${direction}`, field, direction, label: tMenu(direction, { column: label }) })),
   );
   const selected = current.field ? `${current.field}:${current.direction}` : null;
   const activeLabel = table?.sorts.find((o) => o.field === current.field)?.label;
@@ -85,16 +85,16 @@ function SortMenu() {
       }}
     >
       <Select.Trigger
-        aria-label={activeLabel ? t('current', { column: activeLabel }) : t('none')}
+        aria-label={activeLabel ? tMenu('current', { column: activeLabel }) : tMenu('none')}
         className="inline-flex min-h-11 items-center gap-1 rounded-md px-2 text-meta text-ink-2 hover:bg-row-hover"
       >
         {activeLabel ? (
           <>
-            {t('current', { column: activeLabel })}
+            {tMenu('current', { column: activeLabel })}
             <Arrow className="size-3" aria-hidden />
           </>
         ) : (
-          t('none')
+          tMenu('none')
         )}
         <ChevronDown className="size-3.5 text-muted-ink" aria-hidden />
       </Select.Trigger>

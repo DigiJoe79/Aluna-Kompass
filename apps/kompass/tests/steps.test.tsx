@@ -104,6 +104,6 @@ describe('stepsFrom', () => {
     expect(stepsFrom(base, 'b').map((s) => s.state)).toEqual(['done', 'active', 'todo']);
     expect(stepsFrom(base, 'b', { failed: true }).map((s) => s.state)).toEqual(['done', 'failed', 'todo']);
     expect(stepsFrom(base, null).map((s) => s.state)).toEqual(['done', 'done', 'done']);
-    expect(() => stepsFrom(base, 'x')).toThrow(/unknown step/);
+    expect(() => stepsFrom(base, 'x')).toThrow(RangeError);
   });
 });

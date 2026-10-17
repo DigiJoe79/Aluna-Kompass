@@ -32,7 +32,7 @@ export function stepsFrom(
 ): Step[] {
   if (activeKey === null) return steps.map((s) => ({ ...s, state: 'done' }));
   const active = steps.findIndex((s) => s.key === activeKey);
-  if (active < 0) throw new Error(`unknown step ${activeKey}`);
+  if (active < 0) throw new RangeError(activeKey); // ein Schlüssel, der in `steps` fehlt
   return steps.map((s, i) => ({ ...s, state: i < active ? 'done' : i === active ? (failed ? 'failed' : 'active') : 'todo' }));
 }
 
