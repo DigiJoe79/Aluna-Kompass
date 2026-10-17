@@ -99,7 +99,7 @@ export function ContactList({ contacts, roles, total, unfiltered, offset, pageSi
           <Table>
             <TableHeader>
               <TableRow>
-                <SortableHead col="title" field="name" label={t('columns.name')} />
+                <SortableHead col="title" field="name" label={t('columns.name')} byDefault="asc" />
                 <SortableHead field="kind" label={t('columns.kind')} />
                 <TableHead col="meta">{t('columns.roles')}</TableHead>
                 <SortableHead col="meta" field="city" label={t('columns.city')} />

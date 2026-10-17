@@ -100,8 +100,8 @@ test.describe('contacts', () => {
 
     // Solange die Rolle läuft, hält sie den Kontakt — „Kontakt löschen …“ bleibt im Menü, der Dialog nennt die Frist
     // und bietet nur „Schließen“ (keine Sperre ohne Grund, Spec Seitenkopf § 3.4).
-    await expect(page.getByTestId('retention-holds')).toContainText('Rolle Interessiert');
-    await expect(page.getByTestId('retention-holds')).toContainText(`31.12.${associationYear() + 2}`); // läuft die Rolle noch, zählt die Frist ab heute
+    await expect(page.getByTestId('retention-summary')).toContainText('Rolle Interessiert');
+    await expect(page.getByTestId('retention-summary')).toContainText(`31.12.${associationYear() + 2}`); // läuft die Rolle noch, zählt die Frist ab heute
     await page.getByRole('button', { name: 'Weitere Aktionen' }).click();
     await page.getByRole('menuitem', { name: 'Kontakt löschen …' }).click();
     const refusal = page.getByRole('alertdialog', { name: 'Kontakt löschen?' });

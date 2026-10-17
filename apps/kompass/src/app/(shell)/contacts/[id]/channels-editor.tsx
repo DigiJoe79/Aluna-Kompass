@@ -1,6 +1,5 @@
 'use client';
 
-import { Trash2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useState, useTransition } from 'react';
 import { FormActionBar } from '@/components/forms/form-action-bar';
@@ -22,10 +21,13 @@ type ChannelKind = 'email' | 'phone' | 'mobile' | 'fax' | 'web';
 
 export function ChannelsEditor({
   contactId,
+  contactName,
   channels,
   canManage,
 }: {
   contactId: string;
+  /** Der Untertitel des Dialogs nennt den Kontakt statt den Abschnitt zu wiederholen (04 A3). */
+  contactName: string;
   channels: { id: string; kind: string; value: string; label: string | null; isPrimary: boolean }[];
   canManage: boolean;
 }) {
@@ -93,9 +95,7 @@ export function ChannelsEditor({
                 <DialogContent size="sm" className="bg-surface shadow-md">
                   <form onSubmit={handleAdd}>
                     <DialogTitle>{t('channels.add')}</DialogTitle>
-                    <DialogDescription>
-                      {t('channels.title')}
-                    </DialogDescription>
+                    <DialogDescription>{t('forContact', { name: contactName })}</DialogDescription>
 
                     <div className="mt-4">
                       <FormGrid>
@@ -113,7 +113,7 @@ export function ChannelsEditor({
                           </Select>
                         </FormField>
 
-                        <FormField id="channel-value" label={t('channels.value')}>
+                        <FormField id="channel-value" label={t('channels.value')} required>
                           <Input
                             id="channel-value"
                             value={value}
@@ -171,15 +171,10 @@ export function ChannelsEditor({
                     </StatusBadge>
                   ) : null}
                 </div>
+                {/* Zeilenaktion als Text wie „Beenden“ bei den Rollen (04 B14), neutral nach § C. */}
                 {canManage ? (
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => handleRemove(ch.id)}
-                    disabled={pending}
-                    className="size-7 shrink-0 p-0 text-muted-ink"
-                  >
-                    <Trash2 className="size-3.5" aria-hidden />
+                  <Button size="sm" variant="outline" onClick={() => handleRemove(ch.id)} disabled={pending} className="shrink-0">
+                    {t('channels.remove')}
                   </Button>
                 ) : null}
               </li>

@@ -10,3 +10,11 @@ describe('readSort', () => {
     expect(readSort({}, allowed)).toBeUndefined();
   });
 });
+
+describe('readSort mit Vorgabe (04 B8)', () => {
+  it('nimmt die Vorgabe der Seite, wenn die Adresse keine Sortierung nennt', () => {
+    const allowed = ['name', 'city'] as const;
+    expect(readSort({}, allowed, { field: 'name', direction: 'asc' })).toEqual({ field: 'name', direction: 'asc' });
+    expect(readSort({ sort: 'city', dir: 'desc' }, allowed, { field: 'name', direction: 'asc' })).toEqual({ field: 'city', direction: 'desc' });
+  });
+});

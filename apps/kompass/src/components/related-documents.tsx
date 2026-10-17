@@ -58,11 +58,13 @@ export async function RelatedDocuments({
           {res.value.documents.map((doc) => {
             const role = doc.links.find((l) => l.entityType === entityType && l.entityId === entityId)?.role;
             return (
-              <li key={doc.id} className="flex items-center gap-3 py-2">
+              // Am Telefon steht der Betreff in einer eigenen Zeile, statt auf „Anme…“ gekürzt zu werden (04 B18).
+              // Kein Layout-Test für diese Einzelstelle (AGENTS.md).
+              <li key={doc.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2">
                 <Link href={`/dms/${doc.id}`} className="font-mono underline underline-offset-2 hover:text-link">
                   {doc.number ?? t('draft')}
                 </Link>
-                <Link href={`/dms/${doc.id}`} className="min-w-0 flex-1 truncate text-ink hover:underline">
+                <Link href={`/dms/${doc.id}`} className="min-w-0 flex-1 truncate text-ink hover:underline max-sm:order-last max-sm:basis-full max-sm:whitespace-normal">
                   {doc.subject}
                 </Link>
                 <span className="tabular-nums text-hint text-ink-2">{fmt.date(doc.documentDate)}</span>

@@ -1,11 +1,10 @@
 'use client';
 
 import { formatPostalAddress } from '@kompass/module-contacts/address';
-import { Pencil } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useActionState, useEffect, useMemo, useState } from 'react';
 import { FormField } from '@/components/forms/form-field';
-import { FormCell, FormGrid } from '@/components/forms/form-grid';
+import { FormCell, FormGrid, FormRowBreak } from '@/components/forms/form-grid';
 import { FormActionBar } from '@/components/forms/form-action-bar';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogBody, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -154,10 +153,8 @@ export function CreateContactDialog({
         <DialogTrigger
           render={
             contact ? (
-              <Button>
-                <Pencil className="size-3.5" aria-hidden />
-                {t('edit.trigger')}
-              </Button>
+              // Ohne Symbol wie jeder Primärknopf im Kopf (04 B16).
+              <Button>{t('edit.trigger')}</Button>
             ) : (
               <Button>
                 {t('create.trigger')}
@@ -228,9 +225,8 @@ export function CreateContactDialog({
                 <FormField id="addressExtra" label={t('fields.addressExtra')} error={errors.addressExtra}>
                   <Input id="addressExtra" name="addressExtra" value={addressExtra} onChange={(e) => setAddressExtra(e.target.value)} />
                 </FormField>
-                <FormField id="country" label={t('fields.country')} error={errors.country} size="s">
-                  <Input id="country" name="country" value={country} onChange={(e) => setCountry(e.target.value)} placeholder={t('countryPlaceholder')} />
-                </FormField>
+                {/* Straße · PLZ · Ort in einer Zeile (§ J, 04 B21), das Land danach. */}
+                <FormRowBreak />
                 <FormField id="street" label={t('fields.street')} error={errors.street}>
                   <Input id="street" name="street" value={street} onChange={(e) => setStreet(e.target.value)} />
                 </FormField>
@@ -239,6 +235,10 @@ export function CreateContactDialog({
                 </FormField>
                 <FormField id="city" label={t('fields.city')} error={errors.city} size="s">
                   <Input id="city" name="city" value={city} onChange={(e) => setCity(e.target.value)} />
+                </FormField>
+                {/* Kein Platzhalter „DE“: Er sah aus wie ein Wert. Leer heißt Inland (04 B20). */}
+                <FormField id="country" label={t('fields.country')} hint={t('countryHint')} error={errors.country} size="s">
+                  <Input id="country" name="country" value={country} onChange={(e) => setCountry(e.target.value)} />
                 </FormField>
                 {/* Die Vorschau als ruhige Anzeige unter der Anschrift, keine Karte in der Karte (Entscheidung zum Inventar). */}
                 <FormCell size="full" className="flex flex-col gap-1.5 rounded-md bg-surface-2 px-3 py-2.5">

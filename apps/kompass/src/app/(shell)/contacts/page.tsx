@@ -28,7 +28,8 @@ export default async function ContactsPage(props: {
     role: q.role || undefined,
     text: q.text || undefined,
     includeArchived: q.archived === '1',
-    orderBy: readSort(q, SORTABLE),
+    // Ohne eigene Wahl nach Name aufsteigend (04 B8); der Dienst bliebe beim Anlagedatum (MCP unverändert).
+    orderBy: readSort(q, SORTABLE, { field: 'name', direction: 'asc' }),
     limit: PAGE_SIZE,
     offset,
   });

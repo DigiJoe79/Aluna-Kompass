@@ -352,12 +352,12 @@ export function EntryForm({ initial, accounts, categories, purposes, projects, t
       <section className="space-y-3 rounded-md border border-line bg-surface p-4">
         {/* Raster nur innerhalb der Karte (Entscheidung zum Inventar): Datum `s` und Text `l` ergeben eine Zeile. */}
         <FormGrid>
-          <FormField id="entry-date" label={t('date')} size="s" error={fieldErrors.entryDate}>
+          <FormField id="entry-date" label={t('date')} size="s" error={fieldErrors.entryDate} required>
             <Input ref={dateRef} id="entry-date" type="date" value={state.entryDate} onChange={(e) => setState((s) => ({ ...s, entryDate: e.target.value }))} required />
             {/* Befund 20: warnt, sperrt aber nicht — erst Festschreiben lehnt ein Datum nach heute ab. */}
             {state.entryDate > today ? <p className="text-hint text-warning">{t('futureDate')}</p> : null}
           </FormField>
-          <FormField id="entry-text" label={t('text')} size="l" error={fieldErrors.text}>
+          <FormField id="entry-text" label={t('text')} size="l" error={fieldErrors.text} required>
             <Input id="entry-text" value={state.text} onChange={(e) => setState((s) => ({ ...s, text: e.target.value }))} required />
           </FormField>
           <FormCell size="full">

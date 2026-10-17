@@ -73,15 +73,14 @@ export default async function ContactDetailPage(props: { params: Promise<{ id: s
         />
       }
     >
+      {/* Anschrift und Wege oben, Aufbewahrung zuletzt (04 B11). */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <section aria-label={t('preview')} className="rounded-md border border-line bg-surface p-5">
           <Overline className="mb-2">{t('preview')}</Overline>
-          <pre
-            data-testid="postal-address"
-            className="whitespace-pre-line rounded-md border border-line bg-code px-3 py-2 font-body text-body text-ink"
-          >
+          {/* Die Anschrift als Text, ohne Rahmen und Codefläche: keine Karte in der Karte (§ E, 04 B12). */}
+          <p data-testid="postal-address" className="whitespace-pre-line text-body text-ink">
             {formatPostalAddress(contact, contact.belongsTo, organizationCountry)}
-          </pre>
+          </p>
           {contact.notes ? (
             <div className="mt-4 border-t border-line-2 pt-3">
               <span className="text-hint font-semibold text-muted-ink">{t('fields.notes')}</span>
@@ -90,23 +89,25 @@ export default async function ContactDetailPage(props: { params: Promise<{ id: s
           ) : null}
         </section>
 
-        <RetentionPanel holds={retention.holds} roleKeysById={Object.fromEntries(contact.roles.map((r) => [r.id, r.role]))} />
+        <ChannelsEditor
+          contactId={contact.id}
+          contactName={displayName(contact)}
+          channels={contact.channels}
+          canManage={canManage}
+        />
 
         <RolesPanel
           contactId={contact.id}
+          contactName={displayName(contact)}
           roles={contact.roles}
           roleDefinitions={roleDefs}
           canManage={canManage}
           today={todayIn(deps)}
         />
 
-        <ChannelsEditor
-          contactId={contact.id}
-          channels={contact.channels}
-          canManage={canManage}
-        />
-
         <RelatedDocuments deps={deps} ctx={ctx} entityType="contact" entityId={contact.id} />
+
+        <RetentionPanel holds={retention.holds} roleKeysById={Object.fromEntries(contact.roles.map((r) => [r.id, r.role]))} />
       </div>
     </Page>
   );

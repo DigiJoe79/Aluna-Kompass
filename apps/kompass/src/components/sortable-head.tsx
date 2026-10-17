@@ -10,12 +10,16 @@ import { type ColumnRole, TableHead, useTableContext } from '@/components/ui/tab
 import type { SortDirection } from '@/lib/sort';
 import { cn } from '@/lib/utils';
 
-function useSortUrl() {
+function useSortUrl(fallback?: { field: string; direction: SortDirection }) {
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
   const [, startTransition] = useTransition();
-  const current = { field: params.get('sort'), direction: (params.get('dir') === 'asc' ? 'asc' : 'desc') as SortDirection };
+  const sorted = params.get('sort');
+  // Ohne `?sort` gilt die Vorgabe der Seite (04 B8): Der Kopf zeigt, wonach die Liste wirklich sortiert ist.
+  const current = sorted
+    ? { field: sorted as string | null, direction: (params.get('dir') === 'asc' ? 'asc' : 'desc') as SortDirection }
+    : { field: fallback?.field ?? null, direction: fallback?.direction ?? ('desc' as SortDirection) };
   const go = (field: string, direction: SortDirection) => {
     const next = new URLSearchParams(params.toString());
     next.set('sort', field);
@@ -27,14 +31,18 @@ function useSortUrl() {
   return { current, go };
 }
 
-export function SortableHead({ field, label, className, col }: { field: string; label: string; className?: string; col?: ColumnRole }) {
+/**
+ * `byDefault`: Diese Spalte ist die Vorgabe der Seite ohne `?sort` (dieselbe wie `readSort(…, fallback)` auf dem
+ * Server), in dieser Richtung — der Kopf und der Sortierknopf am Telefon zeigen sie dann als aktiv (04 B8).
+ */
+export function SortableHead({ field, label, className, col, byDefault }: { field: string; label: string; className?: string; col?: ColumnRole; byDefault?: SortDirection }) {
   const t = useTranslations('common');
-  const { current, go } = useSortUrl();
+  const { current, go } = useSortUrl(byDefault ? { field, direction: byDefault } : undefined);
   const table = useTableContext();
   const registerSort = table?.registerSort;
   const setAmountLabel = table?.setAmountLabel;
 
-  useEffect(() => registerSort?.({ field, label }), [registerSort, field, label]);
+  useEffect(() => registerSort?.({ field, label, byDefault }), [registerSort, field, label, byDefault]);
   useEffect(() => {
     if (col === 'amount') setAmountLabel?.(label);
   }, [col, label, setAmountLabel]);
@@ -69,7 +77,8 @@ export function SortableHead({ field, label, className, col }: { field: string; 
 function SortMenu() {
   const tMenu = useTranslations('common.sortMenu');
   const table = useTableContext();
-  const { current, go } = useSortUrl();
+  const fallback = table?.sorts.find((o) => o.byDefault);
+  const { current, go } = useSortUrl(fallback?.byDefault ? { field: fallback.field, direction: fallback.byDefault } : undefined);
   const options = (table?.sorts ?? []).flatMap(({ field, label }) =>
     (['desc', 'asc'] as const).map((direction) => ({ value: `${field}:${direction}`, field, direction, label: tMenu(direction, { column: label }) })),
   );

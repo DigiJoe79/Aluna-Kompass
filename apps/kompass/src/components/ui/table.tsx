@@ -15,7 +15,7 @@ import { cn } from "@/lib/utils"
  */
 export type ColumnRole = "title" | "status" | "amount" | "meta" | "select" | "actions" | "span"
 
-type SortOption = { field: string; label: string }
+type SortOption = { field: string; label: string; byDefault?: "asc" | "desc" }
 
 type TableContextValue = {
   /** Kartenzeile aktiv: Telefon (unter `md`) und die Tabelle hat eine Titelspalte. */

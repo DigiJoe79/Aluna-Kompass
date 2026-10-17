@@ -3790,6 +3790,7 @@
     "channels": {
       "title": "Kommunikationswege",
       "add": "Weg hinzufügen",
+      "remove": "Entfernen",
       "save": "Speichern",
       "kind": "Typ",
       "value": "Wert",
@@ -3808,6 +3809,9 @@
       "roleHold": "Rolle {role}",
       "heldUntil": "gehalten bis {date}",
       "heldPermanently": "dauerhaft gehalten",
+      "summaryUntil": "Gehalten bis {date}, wegen {reason}",
+      "summaryPermanent": "Dauerhaft gehalten, wegen {reason}",
+      "details": "Einzelheiten",
       "delete": "Kontakt löschen",
       "deleteItem": "Kontakt löschen …",
       "refusedUntil": "Löschen ist erst nach Ablauf der Aufbewahrung möglich: bis {date}.",
@@ -3818,7 +3822,8 @@
     },
     "channelLabelPlaceholder": "z. B. Privat, Büro",
     "legalFormPlaceholder": "z. B. e. V., GmbH",
-    "countryPlaceholder": "DE",
+    "countryHint": "Leer heißt: Land des Vereins.",
+    "forContact": "Für {name}",
     "common": {
       "moduleInactiveTitle": "Modul Kontakte ist nicht aktiv",
       "moduleInactiveText": "Aktivieren Sie das Modul unter Einrichtung → Module. Vorhandene Daten bleiben erhalten.",
