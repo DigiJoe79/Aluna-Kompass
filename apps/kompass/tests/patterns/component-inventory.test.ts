@@ -58,7 +58,6 @@ const INVENTORY: Readonly<Record<string, Entry>> = {
   'finance/approval-detail-frame.tsx': bestand('Fachbaustein'),
   'finance/balance-indicator.tsx': bestand('Fachbaustein'),
   'finance/confirmation-section.tsx': bestand('Fachbaustein'),
-  'finance/dated-value-row.tsx': bestand('Fachbaustein'),
   'finance/entry-state-badge.tsx': bestand('F'),
   'finance/invoice-card.tsx': bestand('Fachbaustein'),
   'finance/limit-progress.tsx': bestand('Fachbaustein'),

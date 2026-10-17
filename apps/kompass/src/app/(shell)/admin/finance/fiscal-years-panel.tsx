@@ -57,7 +57,8 @@ export function FiscalYearsPanel({ years }: { years: FiscalYearRow[] }) {
               <TableHead col="meta">{t('range')}</TableHead>
               <TableHead col="status">{t('status')}</TableHead>
               <TableHead col="meta">{t('taxReturnFiledOn')}</TableHead>
-              <TableHead col="actions" className="text-right">{tCommon('edit')}</TableHead>
+              {/* Kein sichtbarer Kopf über den „Ändern“-Knöpfen (11-1 B12). */}
+              <TableHead col="actions" className="text-right"><span className="sr-only">{tCommon('edit')}</span></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>

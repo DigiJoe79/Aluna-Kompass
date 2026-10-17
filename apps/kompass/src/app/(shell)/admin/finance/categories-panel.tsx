@@ -17,7 +17,7 @@ import { Dialog, DialogBody, DialogContent, DialogHeader, DialogTitle } from '@/
 import { Input } from '@/components/ui/input';
 import { useUrlFilters } from '@/lib/use-url-filters';
 import { Select } from '@/components/ui/select';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Table, TableBody, TableCell, TableHead, TableGroupRow, TableHeader, TableRow } from '@/components/ui/table';
 import { useSavedVersions } from '@/lib/saved-versions';
 import { confirmSetupStepAction, saveCategoryAction, setCategoryActiveAction, type CategoryInput } from './actions';
 import { FormField } from '@/components/forms/form-field';
@@ -121,20 +121,23 @@ export function CategoriesPanel({ categories, confirmedAt }: { categories: Categ
       {/* Befund 6: Ohne Treffer verschwand alles ohne Text. Ohne Kategorien überhaupt gibt es die Seite nicht (Grundausstattung). */}
       {grouped.size === 0 && search ? <EmptyState filtered={{ noun: t('emptyNoun'), onReset: () => setSearch('') }} /> : null}
 
-      {[...grouped.entries()].map(([sphere, rows]) => (
-        <Section key={sphere} title={t(`sphereGroup.${sphere}`)}>
-          <div className="overflow-hidden rounded-md border border-line">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead col="title">{t('columns.name')}</TableHead>
-                  <TableHead col="meta">{t('columns.direction')}</TableHead>
-                  <TableHead col="meta">{t('columns.statementSuffices')}</TableHead>
-                  <TableHead col="status">{t('columns.active')}</TableHead>
-                  <TableHead col="actions" className="text-right">{tCommon('edit')}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+      {/* Eine Tabelle mit Gruppenzeilen je Bereich statt fünf Tabellen untereinander (11-1 B17). */}
+      {grouped.size > 0 ? (
+        <div className="overflow-hidden rounded-md border border-line">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead col="title">{t('columns.name')}</TableHead>
+                <TableHead col="meta">{t('columns.direction')}</TableHead>
+                <TableHead col="meta">{t('columns.statementSuffices')}</TableHead>
+                <TableHead col="status">{t('columns.active')}</TableHead>
+                {/* Kein sichtbarer Kopf über den „Ändern“-Knöpfen (11-1 B12). */}
+                <TableHead col="actions" className="text-right"><span className="sr-only">{tCommon('edit')}</span></TableHead>
+              </TableRow>
+            </TableHeader>
+            {[...grouped.entries()].map(([sphere, rows]) => (
+              <TableBody key={sphere}>
+                <TableGroupRow colSpan={5}>{t(`sphereGroup.${sphere}`)}</TableGroupRow>
                 {rows.map((row) => (
                   <TableRow key={row.id} data-testid={`category-row-${row.key}`}>
                     <TableCell col="title" className="text-ink">{row.name}</TableCell>
@@ -151,10 +154,10 @@ export function CategoriesPanel({ categories, confirmedAt }: { categories: Categ
                   </TableRow>
                 ))}
               </TableBody>
-            </Table>
-          </div>
-        </Section>
-      ))}
+            ))}
+          </Table>
+        </div>
+      ) : null}
 
       <div className="space-y-2 pt-2">
         <RefusalNotice action state={reviewFb.state} />

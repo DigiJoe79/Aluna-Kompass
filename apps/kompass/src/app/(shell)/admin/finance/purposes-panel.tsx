@@ -14,7 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { formatAmount, parseAmount } from '@/lib/finance/amount';
+import { formatAmount, formatEuro, parseAmount } from '@/lib/finance/amount';
 import { savePurposeAction, setPurposeStateAction, type PurposeInput } from './actions';
 import { useSavedVersions } from '@/lib/saved-versions';
 import { FormField } from '@/components/forms/form-field';
@@ -84,14 +84,15 @@ export function PurposesPanel({ purposes }: { purposes: PurposeRow[] }) {
               <TableHead col="title">{t('columns.name')}</TableHead>
               <TableHead col="amount">{t('columns.target')}</TableHead>
               <TableHead col="status">{t('columns.state')}</TableHead>
-              <TableHead col="actions" className="text-right">{tCommon('edit')}</TableHead>
+              {/* Kein sichtbarer Kopf über den „Ändern“-Knöpfen (11-1 B12). */}
+              <TableHead col="actions" className="text-right"><span className="sr-only">{tCommon('edit')}</span></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {purposes.map((row) => (
               <TableRow key={row.id}>
                 <TableCell col="title" className="text-ink">{row.name}</TableCell>
-                <TableCell col="amount" className="tabular-nums text-ink-2">{row.targetCents !== null ? formatAmount(row.targetCents) : <Empty />}</TableCell>
+                <TableCell col="amount" className="tabular-nums text-ink-2">{row.targetCents !== null ? formatEuro(row.targetCents) : <Empty />}</TableCell>
                 <TableCell col="status">
                   {isNormalInList('purposeSetup', stateOf(row)) ? null : <StatusBadge tone={statusTone('purposeSetup', stateOf(row))}>{t(`states.${stateOf(row)}`)}</StatusBadge>}
                 </TableCell>

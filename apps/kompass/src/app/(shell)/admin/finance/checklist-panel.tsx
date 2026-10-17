@@ -13,6 +13,8 @@ import { applyTaxDefaultsAction, confirmSetupStepAction } from './actions';
 import { panelHref } from '@/components/panel-nav';
 
 export interface ChecklistStep {
+  /** Ohne diesen Schritt geht es auch: Marke „Optional“ mit Erklärung (11-1 B33). */
+  required?: boolean;
   key: 'fiscalYear' | 'account' | 'roles' | 'categories' | 'tax' | 'importFormat' | 'notice' | 'machineProcedure' | 'waiverBasis' | 'boardRemuneration' | 'boardMembers' | 'documentBases';
   done: boolean;
   blocked: boolean;
@@ -100,6 +102,7 @@ export function ChecklistPanel({ steps, complete }: { steps: ChecklistStep[]; co
     return {
       key: step.key,
       title: t(`steps.${step.key}`),
+      optional: step.required === false && t.has(`optionalNotes.${step.key}`) ? { label: t('optional'), note: t(`optionalNotes.${step.key}`) } : undefined,
       done: step.done,
       blocked: step.blocked,
       blockedText,

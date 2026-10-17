@@ -350,7 +350,8 @@ test.describe('finance setup', () => {
     const panel = page.getByTestId('dated-values-panel');
     await expect(panel.getByText('Besteuerungsform', { exact: true })).toBeVisible();
     await expect(panel.getByText('Die Besteuerungsform gilt taggenau — eine Änderung wirkt ab dem gewählten Stichtag.')).toBeVisible();
-    await expect(panel.getByText(/Aktuell: (Kleinunternehmer|Regelbesteuerung)/)).toBeVisible();
+    // Der jüngste Stichtag ist der Stand; ein eigenes „Aktuell: …“ gibt es nicht mehr (11-1 B30).
+    await expect(panel.getByText(/^(Kleinunternehmer|Regelbesteuerung)/).first()).toBeVisible();
 
     await page.getByTestId('dated-value-edit-taxation').click();
     const dialog = page.getByRole('dialog');

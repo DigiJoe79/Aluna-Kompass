@@ -43,7 +43,7 @@ export default async function AdminFinancePage({ searchParams }: { searchParams:
     const statusRes = await getSetupStatus(deps, ctx);
     content = statusRes.ok ? (
       <ChecklistPanel
-        steps={statusRes.value.steps.map((s) => ({ key: s.key, done: s.done, blocked: s.blocked, detail: s.detail, canDo: s.canDo, canSelf: hasPermission(ctx, s.permission) }))}
+        steps={statusRes.value.steps.map((s) => ({ key: s.key, required: s.required, done: s.done, blocked: s.blocked, detail: s.detail, canDo: s.canDo, canSelf: hasPermission(ctx, s.permission) }))}
         complete={statusRes.value.complete}
       />
     ) : null;

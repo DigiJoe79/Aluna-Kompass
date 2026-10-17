@@ -17,6 +17,8 @@ export interface RequirementListItem {
   /** Wartet auf eine Abhängigkeit; `blockedText` sagt, worauf. Mit `grouping`: sperrt. */
   blocked: boolean;
   blockedText?: string;
+  /** Ein Schritt, ohne den es auch geht: Marke (`label`, „Optional“) neben dem Titel, `note` als Unterzeile (11-1 B33). */
+  optional?: { label: string; note: string };
   /** Zusatzangabe, z. B. „2 Konten, 1 ohne Anfangsbestand“. */
   detail?: string;
   /** Der Betrachter kann den Schritt selbst erledigen. */
@@ -85,7 +87,9 @@ function OpenRow({ item, symbolOnly = false }: { item: RequirementListItem; symb
             </StatusBadge>
           )}
           <span className="font-semibold text-ink">{item.title}</span>
+          {item.optional ? <StatusBadge tone="neutral">{item.optional.label}</StatusBadge> : null}
         </div>
+        {item.optional ? <p className="text-meta text-muted-ink">{item.optional.note}</p> : null}
         {item.detail ? <p className="text-meta text-muted-ink">{item.detail}</p> : null}
         {!item.done && !item.blocked && !item.canSelf && item.canDoNames.length > 0 ? (
           <p className="text-hint text-muted-ink" data-testid={`requirement-${item.key}-candoo`}>

@@ -74,7 +74,8 @@ export function AccountsPanel({ accounts, canPickDocument }: { accounts: Account
               <TableHead col="meta">{t('dialog.kind')}</TableHead>
               <TableHead col="meta">{t('dialog.iban')}</TableHead>
               <TableHead col="status">{t('active')}</TableHead>
-              <TableHead col="actions" className="text-right">{tCommon('edit')}</TableHead>
+              {/* Kein sichtbarer Kopf über den „Ändern“-Knöpfen (11-1 B12). */}
+              <TableHead col="actions" className="text-right"><span className="sr-only">{tCommon('edit')}</span></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
