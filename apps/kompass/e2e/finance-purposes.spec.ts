@@ -180,6 +180,8 @@ test.describe('finance purposes (F8b)', () => {
     await form.locator('#transfer-reason').focus();
     await page.keyboard.type('Rest in die freien Mittel');
     await form.locator('#transfer-from').selectOption({ index: 1 });
+    // 09 A4: „Nach“ beginnt mit „Bitte wählen“ — die freien Mittel wählt man ausdrücklich.
+    await form.locator('#transfer-to').selectOption({ label: 'Freie Mittel' });
     await page.getByTestId('transfer-save').focus();
     await page.keyboard.press('Enter');
     const refusal = page.getByTestId('transfer-footer');

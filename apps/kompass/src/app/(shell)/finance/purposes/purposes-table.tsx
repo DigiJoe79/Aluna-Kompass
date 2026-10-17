@@ -2,11 +2,9 @@
 
 import type { PurposeOverviewRow } from '@kompass/module-finance';
 import { useTranslations } from 'next-intl';
-import Link from 'next/link';
 import { useState } from 'react';
 import { LimitProgress, limitState } from '@/components/finance/limit-progress';
 import { isNormalInList, StatusBadge, statusTone } from '@/components/status-badge';
-import { buttonVariants } from '@/components/ui/button';
 import { RowButton, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { formatEuro } from '@/lib/finance/amount';
 import { PurposeDetail } from './purpose-detail';
@@ -60,7 +58,8 @@ export function PurposesTable({
 
   const stateCell = (row: PurposeOverviewRow) => (
     <div className="flex flex-wrap gap-1">
-      {isNormalInList('purpose', row.state) ? null : <StatusBadge tone={statusTone('purpose', row.state)}>{t(`states.${row.state}`)}</StatusBadge>}
+      {/* 09 A2 · 09 A1: Bei „erfüllt mit Rest“ steht „erfüllt“ nur einmal — in der Marke mit dem Rest. */}
+      {isNormalInList('purpose', row.state) || row.fulfilledWithRest ? null : <StatusBadge tone={statusTone('purpose', row.state)}>{t(`states.${row.state}`)}</StatusBadge>}
       {row.negative ? <StatusBadge tone="warning" dot>{t('badges.negative')}</StatusBadge> : null}
       {row.fulfilledWithRest ? <StatusBadge tone="warning" dot>{t('badges.fulfilledWithRest', { amount: formatEuro(row.balanceCents) })}</StatusBadge> : null}
     </div>
@@ -77,13 +76,6 @@ export function PurposesTable({
 
   return (
     <div className="space-y-4">
-      {canTransfer ? (
-        <div className="flex justify-end">
-          <Link href="/finance/purposes/transfer" className={buttonVariants()} data-testid="purposes-transfer-trigger">
-            {t('detail.transfer')}
-          </Link>
-        </div>
-      ) : null}
       <div className="overflow-x-auto rounded-md border border-line">
         <Table data-testid="purposes-table">
           <TableHeader>

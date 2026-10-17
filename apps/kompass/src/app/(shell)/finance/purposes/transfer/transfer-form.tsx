@@ -35,6 +35,9 @@ export interface TransferPurposeOption {
  * Fußleiste klebt — eine schlichte, lokale Fassung; die gemeinsame baut
  * Teil A des Design-Nachtrags.
  */
+/** Wert der Option „Freie Mittel“ in „Nach“; leer heißt dort „noch nicht gewählt“. */
+const FREE_FUNDS = 'free';
+
 export function TransferForm({ purposes, defaultFromId, today, approverNames }: { purposes: TransferPurposeOption[]; defaultFromId?: string; today: string; approverNames: string[] }) {
   const t = useTranslations('finance.purposes.transferDialog');
   const router = useRouter();
@@ -57,12 +60,15 @@ export function TransferForm({ purposes, defaultFromId, today, approverNames }: 
   const changed = countChangedValues(loaded, current);
 
   const amountCents = amountText.trim() === '' ? null : parseAmount(amountText);
+  // 09 A4: „Nach“ beginnt mit „Bitte wählen“ statt mit „Freie Mittel“ — sonst stünde es vorbelegt gleich „Von“.
+  const toValue = toId === FREE_FUNDS ? '' : toId;
   const option = (p: TransferPurposeOption) => t('fromOption', { name: p.name, balance: formatEuro(p.balanceCents) });
 
   // „Zur Freigabe geben“ ist nie ausgegraut: Was fehlt, sagt die Ablehnung darüber (Muster D1).
   const missing = (): string | null => {
-    if (!fromId && !toId) return t('missing.purposes');
-    if (fromId === toId) return t('missing.same');
+    if (toId === '') return t('missing.to');
+    if (!fromId && !toValue) return t('missing.purposes');
+    if (fromId === toValue) return t('missing.same');
     if (amountCents === null || amountCents <= 0) return t('missing.amount');
     if (!date) return t('missing.date');
     if (reason.trim() === '') return t('missing.reason');
@@ -78,7 +84,7 @@ export function TransferForm({ purposes, defaultFromId, today, approverNames }: 
     }
     setPending(true);
     setRefusal(null);
-    const base = { fromPurposeId: fromId || null, toPurposeId: toId || null, amountCents: amountCents ?? 0, transferDate: date, reason: reason.trim() };
+    const base = { fromPurposeId: fromId || null, toPurposeId: toValue || null, amountCents: amountCents ?? 0, transferDate: date, reason: reason.trim() };
     let result;
     if (file) {
       const formData = new FormData();
@@ -117,7 +123,8 @@ export function TransferForm({ purposes, defaultFromId, today, approverNames }: 
           </FormField>
           <FormField id="transfer-to" label={t('to')} required>
             <Select id="transfer-to" value={toId} onChange={(e) => setToId(e.target.value)}>
-              <option value="">{t('freeFunds')}</option>
+              <option value="">{t('choose')}</option>
+              <option value={FREE_FUNDS}>{t('freeFunds')}</option>
               {purposes
                 .filter((p) => p.open)
                 .map((p) => (

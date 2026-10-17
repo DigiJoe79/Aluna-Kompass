@@ -58,17 +58,19 @@ export function BeforeAfter({
     <div className="overflow-hidden rounded-md border border-line">
       {/* Fläche und Polster am Rahmen, die Overline bleibt reine Schrift (Designer 2026-10-10 § 10.7). */}
       <div className="bg-surface-2 px-3 py-1.5">
-        <Overline as="div" className="grid grid-cols-[minmax(120px,1fr)_2fr_28px_2fr] items-center gap-x-3">
-          <span />
+        {/* 14 B12: Am Telefon steht die Beschriftung über Vorher → Nachher (drei Spalten statt vier). */}
+        <Overline as="div" className="grid grid-cols-[1fr_28px_1fr] items-center gap-x-3 sm:grid-cols-[minmax(120px,1fr)_2fr_28px_2fr]">
+          <span className="max-sm:hidden" />
           <span>{t('before')}</span>
           <span aria-hidden />
           <span>{t('after')}</span>
         </Overline>
       </div>
       {rows.map((row, index) => (
-        <div key={index} className="grid grid-cols-[minmax(120px,1fr)_2fr_28px_2fr] items-center gap-x-3 border-t border-line px-3 py-2">
-          <span className="text-meta text-ink-2">{row.label}</span>
-          <div className="rounded-sm bg-disabled px-2 py-1 text-meta text-muted-ink">{row.before}</div>
+        <div key={index} className="grid grid-cols-[1fr_28px_1fr] items-center gap-x-3 gap-y-1 border-t border-line px-3 py-2 sm:grid-cols-[minmax(120px,1fr)_2fr_28px_2fr]">
+          <span className="text-meta text-ink-2 max-sm:col-span-3">{row.label}</span>
+          {/* 14 B12: Vorher ist Text in Grau, kein graues Feld — das sah gesperrt aus. */}
+          <div className="text-meta text-muted-ink">{row.before}</div>
           <ArrowRight className="size-4 shrink-0 text-muted-ink" aria-hidden />
           <div className="text-meta">{row.after}</div>
         </div>

@@ -7465,7 +7465,8 @@
         "title": "Zweck ändern (Umwidmung)",
         "from": "Von",
         "to": "Nach",
-        "freeFunds": "freie Mittel",
+        "choose": "Bitte wählen",
+        "freeFunds": "Freie Mittel",
         "amount": "Betrag",
         "date": "Datum",
         "reason": "Begründung",
@@ -7483,6 +7484,7 @@
         "refuseTitle": "So geht es noch nicht",
         "submit": "Zur Freigabe geben",
         "missing": {
+          "to": "Wählen Sie, wohin das Geld wechselt.",
           "purposes": "Wählen Sie, von welchem Zweck oder nach welchem Zweck das Geld wechselt — beides „freie Mittel“ geht nicht.",
           "same": "„Von“ und „Nach“ sind derselbe Zweck.",
           "amount": "Der Betrag fehlt oder ist nicht größer als null.",
