@@ -28,7 +28,7 @@ test.describe('handbook and help', () => {
     await expect(page.getByRole('heading', { level: 1 })).toHaveCount(1);
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('Brief schreiben');
     const crumbs = page.getByRole('navigation', { name: 'Brotkrume' });
-    await expect(crumbs).toContainText('Hilfe');
+    await expect(crumbs).toContainText('Handbuch');
     await expect(crumbs).toContainText('Akte');
     await expect(crumbs.getByText('Brief schreiben')).toHaveAttribute('aria-current', 'page');
   });

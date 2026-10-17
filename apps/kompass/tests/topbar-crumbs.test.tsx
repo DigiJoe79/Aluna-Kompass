@@ -49,9 +49,9 @@ describe('Brotkrume der Kopfleiste', () => {
 describe('Trennstrich der Kopfleiste', () => {
   it('nur, wenn eine Brotkrume folgt', () => {
     renderTopbar([]);
-    expect(screen.getByText('LOGO').parentElement!.className).not.toContain('border-r');
+    expect(screen.getByText('AK').parentElement!.className).not.toContain('border-r');
     cleanup();
     renderTopbar([{ label: 'Tiere', href: '/animals', current: true }]);
-    expect(screen.getByText('LOGO').parentElement!.className).toContain('border-r');
+    expect(screen.getByText('AK').parentElement!.className).toContain('border-r');
   });
 });

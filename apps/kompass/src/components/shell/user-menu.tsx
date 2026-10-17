@@ -3,7 +3,7 @@
 import { ChevronDown } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
-import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuItem, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { usePreference } from '@/lib/preferences';
 import { initials } from '@/lib/utils';
 
@@ -41,11 +41,15 @@ export function UserMenu({ user, build, version }: UserMenuProps) {
         <DropdownMenuItem render={<Link href="/profile" />}>{t('profile')}</DropdownMenuItem>
         <DropdownMenuCheckboxItem checked={scheme === 'dark'} onCheckedChange={(checked) => setScheme(checked ? 'dark' : 'light')}>{t('dark')}</DropdownMenuCheckboxItem>
         <DropdownMenuSeparator />
-        <DropdownMenuRadioGroup value={density} onValueChange={(v) => setDensity(v as typeof density)}>
-          <DropdownMenuRadioItem value="compact">{t('densityCompact')}</DropdownMenuRadioItem>
-          <DropdownMenuRadioItem value="default">{t('densityDefault')}</DropdownMenuRadioItem>
-          <DropdownMenuRadioItem value="comfortable">{t('densityComfortable')}</DropdownMenuRadioItem>
-        </DropdownMenuRadioGroup>
+        {/* Die Gruppe trägt eine Überschrift, damit die drei Zeilen als eine Wahl lesbar sind (01 C31). */}
+        <DropdownMenuGroup>
+          <DropdownMenuLabel>{t('density')}</DropdownMenuLabel>
+          <DropdownMenuRadioGroup value={density} onValueChange={(v) => setDensity(v as typeof density)}>
+            <DropdownMenuRadioItem value="compact">{t('densityCompact')}</DropdownMenuRadioItem>
+            <DropdownMenuRadioItem value="default">{t('densityDefault')}</DropdownMenuRadioItem>
+            <DropdownMenuRadioItem value="comfortable">{t('densityComfortable')}</DropdownMenuRadioItem>
+          </DropdownMenuRadioGroup>
+        </DropdownMenuGroup>
         <DropdownMenuSeparator />
         <form action="/logout" method="post">
           <DropdownMenuItem nativeButton render={<button type="submit" className="w-full text-left" />}>{t('logout')}</DropdownMenuItem>

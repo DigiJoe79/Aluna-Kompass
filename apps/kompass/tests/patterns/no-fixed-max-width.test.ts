@@ -13,7 +13,6 @@ const ALLOWED: Allowlist = {
   'app/(shell)/dms/new/draft-preview.tsx': 'Papiermaß der Briefvorschau (A4 im Maßstab), keine Seitenbreite.',
   'components/empty-state.tsx': 'Textblock des leeren Zustands, wie `max-w-prose` (Entscheidung zum Inventar).',
   'components/steps.tsx': 'Schrittleiste: bis 4 Schritte 880 px, 2 Schritte 440 px (Entwurf E3), keine Seitenbreite.',
-  'components/auth-card.tsx': 'Karte der Anmeldung außerhalb der Schale.',
   'components/drop-overlay.tsx': 'Hinweiskarte über einer Ablagefläche, keine Seitenbreite.',
   'components/folder-tree/drag-preview.tsx': 'Ziehbild eines Ordners, keine Seitenbreite.',
   'components/finance/receipt-drop.tsx': 'Dateiname im Ablagefeld, gekürzt mit `truncate`.',

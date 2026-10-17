@@ -18,11 +18,10 @@ export default async function HelpPage({ params }: { params: Promise<{ doc?: str
 
   if (!doc) {
     return (
-      <Page width="standard">
-        <div className="max-w-[72ch]">
-          <PageHeader title={t('title')} />
-          <HandbookToc chapters={chapters} current={null} />
-        </div>
+      // Das Verzeichnis als Raster in bis zu drei Spalten statt einer schmalen Spalte auf breitem Grund (01 B22).
+      // Kein Layout-Test (AGENTS.md).
+      <Page width="standard" header={<PageHeader title={t('title')} />}>
+        <HandbookToc chapters={chapters} current={null} className="grid items-start gap-x-8 gap-y-5 sm:grid-cols-2 lg:grid-cols-3" />
       </Page>
     );
   }

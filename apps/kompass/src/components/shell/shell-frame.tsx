@@ -123,7 +123,9 @@ export function ShellFrame({ organization, logoUrl, groups, build, version, user
             <Sheet open={drawerOpen} onOpenChange={setDrawerOpen}>
               <SheetContent side="left" size="sm" className="gap-0 overflow-y-auto shadow-md">
                 {/* Das Polster im inneren Behälter wie bei jedem Seitenfenster; die Listen bringen ihre Zeilenränder selbst mit, oben Platz für das Schließen. */}
-                <div className="pt-10">
+                <div>
+                  {/* Oben der Vereinsname, den die Kopfleiste am Telefon weglässt (01 C35); rechts davon das Schließen. */}
+                  <p className="truncate py-3.5 pr-14 pl-4 text-body font-semibold">{organization}</p>
                   <SheetTitle className="sr-only">{t('nav.aria')}</SheetTitle>
                   <Rail entries={rail} active={active} variant="list" onClose={closeDrawer} />
                   <SectionNav sections={sections} activeHref={activeHref} variant="list" onClose={closeDrawer} />

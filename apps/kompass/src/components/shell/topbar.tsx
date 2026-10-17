@@ -6,6 +6,7 @@ import Link from 'next/link';
 import type { ReactNode, Ref } from 'react';
 import type { Crumb } from '@/lib/navigation';
 import { cn } from '@/lib/utils';
+import { FallbackMark } from '@/components/auth-card';
 import { UserMenu, type UserMenuProps } from './user-menu';
 
 export interface TopbarProps {
@@ -53,11 +54,13 @@ export function Topbar({ organization, logoUrl, crumbs, user, build, version, dr
         </button>
       ) : null}
       {/* Der Trennstrich nur, wenn eine Brotkrume folgt — sonst stünde er ins Leere (01 B16). */}
-      <div className={cn('flex h-[30px] shrink-0 items-center gap-2.5', crumbs.length > 0 && 'border-r border-line pr-3.5')}>
+      {/* Telefon: Logo und Vereinsname fallen weg (der Name steht im Menü), ebenso die Laufanzeige `extras` — sonst
+          drängten sich sieben Dinge auf 390 px (01 C34). Kein Layout-Test (AGENTS.md). */}
+      <div className={cn('flex h-[30px] shrink-0 items-center gap-2.5 max-sm:hidden', crumbs.length > 0 && 'border-r border-line pr-3.5')}>
         {logoUrl ? (
           <img src={logoUrl} alt={t('nav.logoAlt')} className="size-[26px] shrink-0 rounded-sm object-contain" />
         ) : (
-          <div className="flex size-[26px] shrink-0 items-center justify-center rounded-sm border border-dashed border-line-strong text-[9px] text-muted-ink-2" aria-hidden>LOGO</div>
+          <FallbackMark small />
         )}
         <span className="max-w-60 truncate text-body font-semibold max-sm:hidden">{organization}</span>
       </div>
@@ -85,7 +88,7 @@ export function Topbar({ organization, logoUrl, crumbs, user, build, version, dr
         <span className="flex-1 text-left max-sm:sr-only">{t('shell.topbar.search')}</span>
         <kbd className="rounded-[3px] border border-line px-1 font-mono text-key max-sm:hidden">⌘K</kbd>
       </button>
-      {extras}
+      {extras ? <div className="contents max-sm:hidden">{extras}</div> : null}
       <button
         ref={helpButtonRef}
         type="button"

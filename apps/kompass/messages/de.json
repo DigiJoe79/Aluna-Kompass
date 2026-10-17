@@ -854,7 +854,7 @@
     "profile": "Profil",
     "settingsArea": "System",
     "sectionAria": "Unternavigation",
-    "help": "Hilfe",
+    "help": "Handbuch",
     "groups": {
       "admin": "Verwaltung",
       "config": "Einrichtung",
@@ -962,6 +962,7 @@
       "aria": "Nutzermenü",
       "profile": "Profil",
       "dark": "Dunkles Design",
+      "density": "Zeilenhöhe",
       "densityCompact": "Kompakte Zeilen",
       "densityDefault": "Normale Zeilen",
       "densityComfortable": "Komfortable Zeilen",
@@ -1029,7 +1030,7 @@
       "strength": "{count} Zeichen — mindestens 12 sind nötig.",
       "mismatch": "Die Passwörter stimmen nicht überein.",
       "submit": "Passwort setzen und fortfahren",
-      "footer": "Kein Überspringen, kein Abmelden-Knopf: ohne eigenes Passwort gibt es keinen Zugang. Der Wechsel wird protokolliert."
+      "footer": "Ohne eigenes Passwort geht es nicht weiter. Der Wechsel wird protokolliert."
     }
   },
   "home": {

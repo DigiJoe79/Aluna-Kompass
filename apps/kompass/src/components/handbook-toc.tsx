@@ -5,16 +5,21 @@ import { cn } from '@/lib/utils';
 import { Overline } from '@/components/overline';
 
 /** Das Inhaltsverzeichnis des Handbuchs, links neben der Seite und als Seite `/help`. */
-export async function HandbookToc({ chapters, current }: { chapters: HandbookChapter[]; current: string | null }) {
+/**
+ * Alle Bereiche gleich gesetzt (01 B22): Ein Bereich mit genau einer Seite ist ein gewöhnlicher Link wie die
+ * Unterseiten der anderen, nicht fett — sonst wirkte er wichtiger als die Bereiche mit Overline. `className`
+ * setzt auf der Seite `/help` das Raster in Spalten.
+ */
+export async function HandbookToc({ chapters, current, className }: { chapters: HandbookChapter[]; current: string | null; className?: string }) {
   const t = await getTranslations('help');
   return (
-    <nav aria-label={t('toc')} className="flex flex-col gap-3 text-body">
+    <nav aria-label={t('toc')} className={cn('flex flex-col gap-3 text-body', className)}>
       {chapters.map((chapter) => {
         const single = chapter.pages.length === 1 && chapter.pages[0]!.title === chapter.title;
         return (
           <div key={chapter.title} className="flex flex-col gap-0.5">
             {single ? (
-              <Link href={`/help/${chapter.pages[0]!.doc}`} aria-current={current === chapter.pages[0]!.doc ? 'page' : undefined} className={cn('rounded-md px-2 py-1 font-semibold hover:bg-hover', current === chapter.pages[0]!.doc && 'bg-selected text-selected-ink')}>
+              <Link href={`/help/${chapter.pages[0]!.doc}`} aria-current={current === chapter.pages[0]!.doc ? 'page' : undefined} className={cn('rounded-md px-2 py-1 text-ink-2 hover:bg-hover hover:text-ink', current === chapter.pages[0]!.doc && 'bg-selected font-semibold text-selected-ink')}>
                 {chapter.title}
               </Link>
             ) : (

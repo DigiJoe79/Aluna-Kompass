@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildCommandIndex } from '@/lib/command-index';
+import { buildCommandIndex, paletteFilter } from '@/lib/command-index';
 import type { NavGroup } from '@/lib/navigation';
 
 const groups: NavGroup[] = [
@@ -32,5 +32,21 @@ describe('buildCommandIndex', () => {
       t: (k) => k,
     });
     expect(entries).toEqual([{ id: 'help:akte/post-ablegen', group: 'help', label: 'Post ablegen', hint: 'Akte', href: '/help/akte/post-ablegen' }]);
+  });
+});
+
+// 01 C36: Treffer nur, wenn jedes Suchwort im Eintrag vorkommt — „Spende“ findet nicht „Speichern und Meldungen“.
+describe('paletteFilter', () => {
+  it('lässt verstreute Buchstaben nicht als Treffer gelten', () => {
+    expect(paletteFilter('Speichern und Meldungen Einstellungen', 'Spende')).toBe(0);
+    expect(paletteFilter('Journal Finanzen', 'jrnl')).toBe(0);
+  });
+  it('findet Wortteile und mehrere Wörter in beliebiger Folge', () => {
+    expect(paletteFilter('Spendenbuch Finanzen', 'Spende')).toBeGreaterThan(0);
+    expect(paletteFilter('Barkasse Finanzen', 'kasse')).toBeGreaterThan(0);
+    expect(paletteFilter('Offene Zahlungen Finanzen', 'zahl offen')).toBeGreaterThan(0);
+  });
+  it('ohne Suche alles', () => {
+    expect(paletteFilter('Kontakte', '')).toBeGreaterThan(0);
   });
 });

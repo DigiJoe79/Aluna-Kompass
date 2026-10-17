@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
-import { buildCommandIndex } from '@/lib/command-index';
+import { buildCommandIndex, paletteFilter } from '@/lib/command-index';
 import type { NavGroup } from '@/lib/navigation';
 import { SETTINGS_TABS } from '@/lib/settings-fields';
 
@@ -53,7 +53,7 @@ export function CommandPalette({ groups, permissions, helpPages = [] }: { groups
       {/* Oben verankert und 600 breit (Ausnahme im Wächter `dialog-size`); auf dem Telefon Vollbild wie jedes `lg`. */}
       <DialogContent size="lg" showCloseButton={false} className="w-[600px] bg-surface p-0 shadow-md sm:top-24 sm:translate-y-0">
         <DialogTitle className="sr-only">{t('palette.aria')}</DialogTitle>
-        <Command label={t('palette.aria')}>
+        <Command label={t('palette.aria')} filter={paletteFilter}>
           <CommandInput placeholder={t('palette.placeholder')} />
           <CommandList>
             <CommandEmpty>{t('palette.empty')}</CommandEmpty>

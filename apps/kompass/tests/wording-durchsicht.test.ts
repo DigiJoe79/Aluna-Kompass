@@ -48,4 +48,12 @@ describe('Wortlaut der Durchsicht 0.2.11', () => {
     expect(at('dashboard.tiles.finance.todo.messages.lastStatement')).toMatch(/^Kontoauszüge fehlen für bis zu /);
     expect(at('dashboard.tiles.core.accounts.title')).toBe('Nutzerkonten');
   });
+
+  it('Schale und Anmeldung (Teil B: 01 B23, 01 C29, 01 C31)', () => {
+    // Kopfleiste und Seitentitel sagen dasselbe (01 B23).
+    expect(at('nav.help')).toBe(at('help.title'));
+    expect(at('auth.password.footer')).toBe('Ohne eigenes Passwort geht es nicht weiter. Der Wechsel wird protokolliert.');
+    // Die Gruppe der Zeilenhöhen im Nutzermenü hat eine Überschrift (01 C31).
+    expect(at('shell.userMenu.density')).toBe('Zeilenhöhe');
+  });
 });
