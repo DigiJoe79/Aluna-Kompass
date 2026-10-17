@@ -989,6 +989,10 @@ test.describe('dms', () => {
     await page.goto('/dms/receive');
     const dialog = receiveDialog(page);
 
+    // Ohne Datei noch kein Hinweis: Es gibt nichts, das eine Nummer bekäme (03 B17).
+    await expect(dialog.getByText(/wird beim Ablegen gezogen/)).toHaveCount(0);
+    await dialog.getByLabel('Datei').setInputFiles(FIXTURE_PDF);
+    await expect(dialog.getByText(/wird beim Ablegen gezogen/)).toBeVisible({ timeout: 30_000 });
     await dialog.getByLabel('Dokumentart').selectOption('authority');
     await expect(dialog.getByText(/Die Nummer BEH-\d{4}-\d{3} wird beim Ablegen gezogen/)).toBeVisible();
 
@@ -1652,7 +1656,8 @@ test('exports a folder as a bundle', async ({ page }) => {
   await login(page);
   await page.goto('/dms');
   await page.getByRole('button', { name: 'Akte exportieren' }).click();
-  await page.getByRole('radio', { name: 'Einen Jahrgang' }).check();
+  // Ohne Ordner gibt es nur den Jahrgang: kein Radio (03 B35).
+  await expect(page.getByRole('radio')).toHaveCount(0);
   const download = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Bündel herunterladen' }).click();
   expect((await download).suggestedFilename()).toMatch(/^Akte-Jahrgang-\d{4}-.*\.zip$/);
@@ -2035,7 +2040,7 @@ test.describe('Mehrfachauswahl', () => {
     const id = await outgoingRow(page);
     await tick(page, id);
     await selectionBar(page).getByRole('button', { name: 'Verschieben nach…' }).click();
-    const dialog = page.getByRole('dialog', { name: '„Einladung zur ordentlichen Mitgliederversammlung“ verschieben nach…' });
+    const dialog = page.getByRole('dialog', { name: 'Verschieben nach…' });
     await dialog.getByRole('button', { name: /^Ohne Ordner/ }).click();
     await dialog.getByRole('button', { name: 'Nach „Ohne Ordner“ verschieben' }).click();
     const moved = toastWith(page, '„Einladung zur ordentlichen Mitgliederversammlung“ nach „Ohne Ordner“ verschoben');

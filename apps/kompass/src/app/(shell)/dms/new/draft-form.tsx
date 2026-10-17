@@ -1,6 +1,7 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
+import Link from 'next/link';
 import { FixedValue } from '@/components/fixed-value';
 import { useActionState, useEffect, useRef, useState } from 'react';
 import { ContactPicker, type PickedContact } from '@/components/contact-picker';
@@ -174,7 +175,18 @@ export function DraftForm({
           className="shrink-0 grow resize-none text-meta"
         />
         <FieldError id="body-error" message={errors.body} />
-        {errors.body ? null : <p id="body-hint" className="text-hint text-muted-ink">{t('fields.bodyHint')}</p>}
+        {/* Ein kurzer Satz und die Handbuchseite statt roher Markdown-Zeichen (03 B24). */}
+        {errors.body ? null : (
+          <p id="body-hint" className="text-hint text-muted-ink">
+            {t.rich('fields.bodyHint', {
+              link: (chunks) => (
+                <Link href="/help/akte/brief-schreiben" target="_blank" className="underline underline-offset-2 hover:text-link">
+                  {chunks}
+                </Link>
+              ),
+            })}
+          </p>
+        )}
       </div>
 
       {/* Die Angaben unter einer Trennlinie im `FormGrid`: In der Schreibspalte (innen rund 430 px) zwei Spalten,

@@ -72,8 +72,8 @@ export function RelationsPanel({
     });
 
   return (
-    <section className="rounded-md border border-line bg-surface p-5 shadow-xs">
-      <Section title={t('title')}
+    // Ohne eigene Karte: Bezüge und Dokumentbezüge stehen in einer Karte der Dokumentseite (03 B29).
+    <Section title={t('title')}
         actions={
           <>
             {canEdit ? (
@@ -144,6 +144,5 @@ export function RelationsPanel({
           </DialogContent>
         </Dialog>
       </Section>
-    </section>
   );
 }

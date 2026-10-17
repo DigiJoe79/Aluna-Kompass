@@ -173,7 +173,7 @@ function MoveDialogBody({
     (subject.kind === 'folder'
       ? t('titleFolder', { name: nameOf(subject.path) })
       : subject.ids.length === 1
-        ? t('titleOne', { title: subject.title })
+        ? t('titleOne')
         : t(subject.kind === 'assets' ? 'titleManyAssets' : 'titleMany', { count: subject.ids.length }));
 
   /** „Liegt in Finanzamt.“ · „3 liegen in Vereinsregister 2026, 2 in Finanzamt.“ — Namen, nie Wege. */
@@ -189,6 +189,10 @@ function MoveDialogBody({
     const items = places.map((entry, i) => t(key(entry, i === 0 ? 'first' : 'next'), args(entry)));
     return t('location.list', { items: items.join(t('location.separator')) });
   }, [showLocation, subject, rootKind, t]);
+
+  // Ein Dokument: kurzer Titel, der Betreff vor dem Ort in der Beschreibung — der volle Betreff im Titel lief über drei
+  // Zeilen (03 B36). Ein eigener Titel des Aufrufers (`title`) bleibt, wie er ist.
+  const subjectLine = !title && subject.kind !== 'folder' && subject.ids.length === 1 ? t('subjectOne', { title: subject.title }) : null;
 
   // Dokumente: Eingangskorb oder „Ohne Ordner“ (Stufe 1, Auftrag 7) — dasselbe Zeichen wie im Baum der Akte.
   // „Ohne Ordner“ in Akte und Mediathek mit demselben Symbol, Ordner mit Minus (Designer 2026-10-16, Teil 1 Nr. 4).
@@ -209,7 +213,13 @@ function MoveDialogBody({
     <>
       <DialogHeader>
         <DialogTitle className="text-pretty">{heading}</DialogTitle>
-        {location ? <DialogDescription>{location}</DialogDescription> : null}
+        {subjectLine || location ? (
+          <DialogDescription>
+            {subjectLine}
+            {subjectLine && location ? ' ' : null}
+            {location ? <span>{location}</span> : null}
+          </DialogDescription>
+        ) : null}
       </DialogHeader>
       <DialogBody className="flex flex-col gap-3 max-sm:px-2.5 max-sm:py-1">
         <div className="flex flex-col rounded-md sm:border sm:border-line sm:p-1.5">

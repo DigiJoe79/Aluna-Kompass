@@ -8,6 +8,7 @@ import { useDateFormat } from '@/components/date-format-provider';
 import { ActionForm } from '@/components/forms/action-form';
 import { FormActionBar } from '@/components/forms/form-action-bar';
 import { Button } from '@/components/ui/button';
+import { Notice } from '@/components/notice';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
@@ -85,7 +86,9 @@ export function ReclassifyDialog({
                 <Input id="reclassify-subject" name="subject" defaultValue={doc.subject} required maxLength={300} />
               </FormField>
               {preview ? (
-                <FormCell size="full" className="space-y-1 rounded-md bg-surface-2 p-3 text-meta text-ink-2" aria-live="polite">
+                // Eine neue Nummer oder Frist ist eine Folge vor dem Handeln → `warn`; bleibt alles, ein Hinweis (03 B38, MUSTER § A).
+                <FormCell size="full" aria-live="polite">
+                  <Notice level={preview.number.next || retentionChanges ? 'warn' : 'hint'}>
                   <p>
                     {preview.number.next
                       ? t('newNumber', { next: preview.number.next, current: preview.number.current ?? '' })
@@ -96,6 +99,7 @@ export function ReclassifyDialog({
                   {retentionChanges ? (
                     <p>{t('retentionChange', { current: retention(preview.retention.current), next: retention(preview.retention.next) })}</p>
                   ) : null}
+                  </Notice>
                 </FormCell>
               ) : null}
             </FormGrid>

@@ -247,10 +247,13 @@ export function ReceiveForm({
               />
             </FormField>
 
-            {/* Die Nummer ist eine Vorschau: Gezogen wird sie beim Ablegen. */}
-            <FormCell size="full">
-              <NumberHint typeKey={typeKey} />
-            </FormCell>
+            {/* Die Nummer ist eine Vorschau: Gezogen wird sie beim Ablegen. Erst mit einer Datei — vorher gibt es
+                nichts, das eine Nummer bekäme (03 B17). */}
+            {hasFile ? (
+              <FormCell size="full">
+                <NumberHint typeKey={typeKey} />
+              </FormCell>
+            ) : null}
           </FormGrid>
         </Section>
 

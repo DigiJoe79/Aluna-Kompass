@@ -63,4 +63,14 @@ describe('Wortlaut der Durchsicht 0.2.11', () => {
     expect(at('dms.list.folderHere')).toBe('direkt hier');
     expect(at('dms.empty.folderTitle')).toBe('Dieser Ordner ist leer');
   });
+
+  it('Akte, Dokument und Dialoge (Teil C: 03 B24, 03 B32, 03 B36, 03 B39)', () => {
+    expect(at('dms.fileConfirmDescription')).not.toMatch(/eingefroren/);
+    expect(at('dms.fileConfirmDescription')).toMatch(/kann danach nicht mehr geändert werden/);
+    expect(at('dms.noNumberYet')).toBe('Noch ohne Nummer');
+    expect(at('moveDialog.titleOne')).toBe('Verschieben nach…');
+    // Kein roher Markdown unter dem Brieftext, ein Link aufs Handbuch (03 B24).
+    expect(at('dms.fields.bodyHint')).not.toMatch(/\*\*/);
+    expect(at('dms.fields.bodyHint')).toMatch(/<link>.+<\/link>/);
+  });
 });

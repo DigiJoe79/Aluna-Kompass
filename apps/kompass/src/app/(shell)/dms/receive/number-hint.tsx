@@ -29,7 +29,8 @@ export function NumberHint({ typeKey }: { typeKey: string }) {
   if (!preview) return null;
 
   return (
-    <Notice level="warn">
+    // Ein Hinweis, keine Warnung: Nichts ist falsch, die Nummer wird nur angekündigt (03 B17, MUSTER § A).
+    <Notice level="hint">
       {preview.number
         ? t.rich('number.pending', {
             number: preview.number,

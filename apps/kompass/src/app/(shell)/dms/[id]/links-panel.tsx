@@ -15,6 +15,8 @@ import { linkDocumentAction, unlinkDocumentAction } from '../actions';
 import { FormField } from '@/components/forms/form-field';
 import { FormCell, FormGrid } from '@/components/forms/form-grid';
 import { Section } from '@/components/section';
+import { StatusBadge, statusTone } from '@/components/status-badge';
+import { nameOrEmpty } from '@/lib/name-or-empty';
 
 export interface ResolvedLink {
   id: string;
@@ -82,8 +84,8 @@ export function LinksPanel({
     });
 
   return (
-    <section className="rounded-md border border-line bg-surface p-5 shadow-xs">
-      <Section title={t('linksTitle')}
+    // Ohne eigene Karte: Bezüge und Dokumentbezüge stehen in einer Karte der Dokumentseite (03 B29).
+    <Section title={t('linksTitle')}
         actions={
           <>
             {canEdit ? (
@@ -101,9 +103,9 @@ export function LinksPanel({
         ) : (
           <ul data-testid="document-links" className="space-y-2 text-meta text-ink-2">
             {links.map((link) => (
+              // Die Rolle als Marke statt „— Empfänger (Kontakt)“ im Fließtext; die Art des Bezugs sagt der Name (03 B34).
               <li key={link.id} className="flex items-center gap-2">
-                <span className="size-1.5 shrink-0 rounded-full bg-muted-ink" aria-hidden />
-                <span className="flex-1">
+                <span className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1">
                   {link.href && link.label ? (
                     <Link href={link.href} className="underline underline-offset-2">
                       {link.label}
@@ -113,9 +115,8 @@ export function LinksPanel({
                       {link.label ?? (link.reason === 'forbidden' ? t('linkForbidden') : t('linkMissing'))}
                     </span>
                   )}
-                  {' — '}
-                  {t.has(`roles.${link.role}`) ? t(`roles.${link.role}`) : link.role}
-                  {t.has(`entities.${link.entityType}`) ? ` (${t(`entities.${link.entityType}`)})` : null}
+                  {/* Nie der Schlüssel: Fehlt die Übersetzung, steht der Leerwert (MUSTER „Namen statt Schlüssel“). */}
+                  <StatusBadge tone={statusTone('role', 'current')}>{nameOrEmpty(t.has(`roles.${link.role}`) ? t(`roles.${link.role}`) : null, link.role)}</StatusBadge>
                 </span>
                 {canEdit ? (
                   <Button type="button" variant="ghost" size="sm" disabled={pending} onClick={() => remove(link.id)}>
@@ -187,6 +188,5 @@ export function LinksPanel({
           </DialogContent>
         </Dialog>
       </Section>
-    </section>
   );
 }

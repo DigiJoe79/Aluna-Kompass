@@ -298,7 +298,8 @@
     }
   },
   "moveDialog": {
-    "titleOne": "„{title}“ verschieben nach…",
+    "titleOne": "Verschieben nach…",
+    "subjectOne": "„{title}“.",
     "titleMany": "{count} Dokumente verschieben nach…",
     "titleManyAssets": "{count} Dateien verschieben nach…",
     "titleFolder": "„{name}“ verschieben nach…",
@@ -3997,7 +3998,7 @@
     },
     "file": "Festschreiben",
     "fileConfirmTitle": "Dokument festschreiben",
-    "fileConfirmDescription": "Beim Festschreiben wird dem Dokument eine fortlaufende Nummer zugewiesen und der Inhalt wird unveränderlich eingefroren.",
+    "fileConfirmDescription": "Beim Festschreiben wird dem Dokument eine fortlaufende Nummer zugewiesen. Der Inhalt kann danach nicht mehr geändert werden.",
     "fileConfirmSubmit": "Festschreiben bestätigen",
     "openPdf": "PDF öffnen",
     "fileAltered": {
@@ -4177,7 +4178,7 @@
       "documentDate": "Datum auf dem Dokument",
       "subject": "Betreff",
       "body": "Text",
-      "bodyHint": "Markdown: **fett**, _kursiv_, ## Überschrift, - Liste, > Hinweis, | Tabelle |. Bilder, Fußnoten und HTML erscheinen nicht im PDF.",
+      "bodyHint": "Fett, Listen, Überschriften und Tabellen schreiben Sie mit wenigen Zeichen. <link>So formatieren Sie einen Brief</link>",
       "type": "Dokumentart",
       "typeFixed": "Steht beim Entwurf fest. Für eine andere Art einen neuen Entwurf anlegen.",
       "folder": "Ordner",
@@ -4367,6 +4368,7 @@
     },
     "backToDocument": "Dokument",
     "formerNumbers": "Früher: {numbers}",
+    "noNumberYet": "Noch ohne Nummer",
     "reclassify": {
       "open": "Angaben ändern",
       "title": "Angaben ändern",

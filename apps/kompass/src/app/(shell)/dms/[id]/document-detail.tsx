@@ -135,7 +135,10 @@ export function DocumentDetail({
           {/* Der Rückweg steht am `PageHeader`, wie auf jeder Seite abseits der Navigation. */}
           {doc.number ? (
             <span className="font-mono text-section text-ink">{doc.number}</span>
-          ) : null}
+          ) : (
+            // Ein Entwurf hat noch keine Nummer; ohne Satz wirkte die Karte leer (03 B32).
+            <span className="text-meta text-muted-ink">{t('noNumberYet')}</span>
+          )}
           {doc.formerNumbers.length > 0 ? (
             <span className="font-mono text-hint text-muted-ink">{t('formerNumbers', { numbers: doc.formerNumbers.join(', ') })}</span>
           ) : null}
@@ -216,8 +219,9 @@ export function DocumentDetail({
           <NotesPanel documentId={doc.id} notes={notes} canEdit={permissions.canEdit} canManage={permissions.canManage} />
         </div>
 
-        {/* Right column: Metadaten & Aufbewahrung */}
-        <div className="space-y-6">
+        {/* Right column: Metadaten & Aufbewahrung. Gestapelt (unter `lg`) stehen die Details direkt nach der Kopfkarte,
+            vor Vorschau und Notizen (03 B33). Kein Layout-Test (AGENTS.md). */}
+        <div className="space-y-6 max-lg:order-first">
           <section className="rounded-md border border-line bg-surface p-5 shadow-xs">
             <Section title={t('detailsTitle')}>
               <dl className="space-y-3 text-meta">
@@ -273,9 +277,26 @@ export function DocumentDetail({
             />
           ) : null}
 
-          {/* Aufbewahrung: nur die Frist; Löschen steht im Seitenkopf unter „Weitere Aktionen“ (`document-actions.tsx`). */}
-          {retentionInfo ? (
+          {/* Bezüge und Dokumentbezüge in einer Karte, als zwei Abschnitte (03 B29). */}
+          <section className="rounded-md border border-line bg-surface p-5 shadow-xs">
+            <LinksPanel
+              documentId={doc.id}
+              links={doc.links}
+              canEdit={permissions.canEdit}
+              canCreateContact={canCreateContact}
+              animals={animals}
+              projects={projects}
+            />
+            <RelationsPanel documentId={doc.id} relations={doc.relations} canEdit={permissions.canEdit} />
+          </section>
+
+          {invoicePanel}
+
+          {/* Aufbewahrung und Volltext sind technische Angaben: eine Karte am Ende der Spalte, nach Versand,
+              Wiedervorlagen und Bezügen (03 B29). Löschen steht im Seitenkopf unter „Weitere Aktionen“. */}
+          {retentionInfo || doc.textStatus ? (
             <section className="rounded-md border border-line bg-surface p-5 shadow-xs">
+              {retentionInfo ? (
               <Section title={t('retentionTitle')}>
                 <p className="text-meta text-ink-2">
                   {retentionInfo.retentionClass === 'permanent'
@@ -286,12 +307,8 @@ export function DocumentDetail({
                 </p>
 
               </Section>
-            </section>
-          ) : null}
-
-          {/* Volltext */}
-          {doc.textStatus ? (
-            <section className="rounded-md border border-line bg-surface p-5 shadow-xs">
+              ) : null}
+              {doc.textStatus ? (
               <Section title={t('text.heading')}>
                 <p className="text-meta text-ink-2">
                   {doc.textStatus === 'done'
@@ -313,21 +330,10 @@ export function DocumentDetail({
                   </div>
                 ) : null}
               </Section>
+              ) : null}
             </section>
           ) : null}
 
-          <LinksPanel
-            documentId={doc.id}
-            links={doc.links}
-            canEdit={permissions.canEdit}
-            canCreateContact={canCreateContact}
-            animals={animals}
-            projects={projects}
-          />
-
-          <RelationsPanel documentId={doc.id} relations={doc.relations} canEdit={permissions.canEdit} />
-
-          {invoicePanel}
         </div>
       </div>
     </div>

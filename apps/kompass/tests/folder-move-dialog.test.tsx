@@ -145,7 +145,9 @@ describe('FolderMoveDialog, for documents', () => {
 
   it('names the document, offers „Eingangskorb“ and focuses the folder it lies in, with its path open', async () => {
     renderDialog({ subject: one, rootLabel: 'Eingangskorb' });
-    expect(screen.getByRole('dialog', { name: '„Registerauszug 2026“ verschieben nach…' })).toBeTruthy();
+    // Kurzer Titel, der Betreff steht in der Beschreibung (03 B36).
+    const dialog = screen.getByRole('dialog', { name: 'Verschieben nach…' });
+    expect(dialog.getAttribute('aria-describedby') && document.getElementById(dialog.getAttribute('aria-describedby')!)?.textContent).toBe('„Registerauszug 2026“. Liegt in Vereinsregister 2026.');
     await screen.findAllByRole('treeitem');
     expect(screen.getByRole('button', { name: 'Eingangskorb' })).toBeTruthy();
     const here = screen.getByRole('treeitem', { name: 'Vereinsregister 2026, 6 Dokumente, liegt hier' });
