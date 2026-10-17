@@ -1,5 +1,7 @@
+import { Tag } from 'lucide-react';
 import type { ReactNode, Ref } from 'react';
 import { FormActionBar } from '@/components/forms/form-action-bar';
+import { StatusBadge } from '@/components/status-badge';
 import type { ActionState } from '@/lib/actions';
 
 export interface ApprovalDetailHead {
@@ -40,7 +42,8 @@ export function ApprovalDetailFrame({ head, headRef, children, requirements, foo
     <div className="flex min-h-full flex-col gap-4">
       <div ref={headRef} tabIndex={-1} data-testid="approval-head" aria-labelledby="approval-number" className="space-y-1 rounded-lg border border-line bg-surface p-4 outline-none focus-visible:ring-2 focus-visible:ring-focus">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="rounded-sm border border-line-strong px-1.5 py-0.5 text-hint font-semibold text-ink-2">{head.kind}</span>
+          {/* 08 B24 · 14 B11: Die Art ist eine Marke (`StatusBadge` mit Symbol für eine Art, § F), kein roher Rahmen. */}
+          <StatusBadge tone="neutral" icon={Tag}>{head.kind}</StatusBadge>
           <p id="approval-number" data-testid="approval-number" className="font-mono text-section text-ink">
             {head.number}
           </p>

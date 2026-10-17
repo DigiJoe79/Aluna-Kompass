@@ -82,7 +82,7 @@ describe('Finanzfehler aus der Sprachdatei (A6)', () => {
     }
     expect(uiText(financeConflict('humanOnly'))).toBe(`${texts.humanOnly!.reason} ${texts.humanOnly!.remedy}`);
     // Befund 13 (Spec 10.2): Grund und Abhilfe statt des rohen Einstellungsschlüssels.
-    expect(mcpText(financeConflict('humanOnly'))).toMatch(/ein Mensch.*Einrichtung → Finanzen → Steuerliches.*Darf ein Agent festschreiben\?/);
+    expect(mcpText(financeConflict('humanOnly'))).toMatch(/nur hier in Kompass.*Einrichtung → Finanzen → Steuerliches.*Darf ein Agent festschreiben\?/);
   });
 
   it('Datum und Betrag werden beim Übersetzen formatiert (Befund 38), Wortlaut sonst unverändert', () => {

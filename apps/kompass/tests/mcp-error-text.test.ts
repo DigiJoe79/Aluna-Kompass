@@ -61,7 +61,7 @@ describe('Sperren des Kerns über MCP als Satz (MB)', () => {
     const { client } = await connectAsAdministrator();
     const error = await callError(client, 'finance_entry_finalize', { id: 'gibt-es-nicht' });
     expect(error).toMatchObject({ type: 'conflict', code: 'humanOnly' });
-    expect(error.message).toMatch(/ein Mensch/);
+    expect(error.message).toMatch(/nur hier in Kompass, nicht über einen Agenten/);
     expect(error.message).not.toContain('finance.');
     await client.close();
   });

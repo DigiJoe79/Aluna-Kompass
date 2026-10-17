@@ -5524,7 +5524,7 @@
         "membershipFeesCertifiable": "Sind Mitgliedsbeiträge bescheinigungsfähig?",
         "expenseWaiversEnabled": "Werden Aufwandsspenden angeboten?",
         "mcpHumanOnlyAllowed": "Darf ein Agent festschreiben?",
-        "mcpHumanOnlyAllowedHint": "Dieser Schalter lässt sich nur hier am Bildschirm ändern — nie über einen Agenten.",
+        "mcpHumanOnlyAllowedHint": "Dieser Schalter lässt sich nur hier in Kompass ändern, nicht über einen Agenten.",
         "limits": {
           "statementSufficesBelowCents": "Bis zu welchem Betrag genügt der Kontoauszug als Beleg?",
           "cashDonationAlertCents": "Ab welchem Betrag soll eine Barspende auffallen?",
@@ -6859,7 +6859,7 @@
         },
         "pdf": {
           "choose": "PDF wählen",
-          "replace": "ersetzen",
+          "replace": "Ersetzen",
           "uploading": "Wird abgelegt …",
           "photo": "Das ist ein Foto. Kompass nimmt nur PDF.",
           "notPdf": "Das ist kein PDF. Kompass nimmt nur PDF.",
@@ -6935,11 +6935,8 @@
         "emptyTitle": "Noch kein Antrag",
         "emptyText": "Was Sie für den Verein ausgelegt haben, reichen Sie hier ein – mit Beleg als PDF oder als Fahrt.",
         "next": {
-          "draft": "Weiter ausfüllen und einreichen",
           "submitted": "Freigeben kann: {names}",
           "submittedNobody": "Zurzeit kann niemand außer Ihnen freigeben.",
-          "approved": "Die Überweisung folgt.",
-          "paid": "Erledigt.",
           "rejected": "Sie können den Antrag neu einreichen."
         },
         "blocked": {
@@ -7676,7 +7673,7 @@
     },
     "errors": {
       "humanOnly": {
-        "reason": "Diesen Schritt führt ein Mensch in der Oberfläche aus.",
+        "reason": "Dieser Schritt geht nur hier in Kompass, nicht über einen Agenten.",
         "remedy": "Der Verein kann ihn für Agenten freigeben: Einrichtung → Finanzen → Steuerliches → „Darf ein Agent festschreiben?“ einschalten."
       },
       "accountInUse": {

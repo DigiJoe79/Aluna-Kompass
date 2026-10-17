@@ -3,7 +3,6 @@ import { getExpenseClaim } from '@kompass/module-finance';
 import { getTranslations } from 'next-intl/server';
 import { FixedValue } from '@/components/fixed-value';
 import { ibanLastFour, maskedIban } from '@/lib/finance/iban-check';
-import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 import { BlockedState } from '@/components/blocked-state';
 import { ForbiddenCard } from '@/components/forbidden-card';
@@ -63,7 +62,8 @@ export default async function ExpenseClaimPage({ params }: { params: Promise<{ i
           <p data-testid="claim-amount" className="text-figure font-semibold tabular-nums">
             {formatEuro(claim.totalCents)}
           </p>
-          <ClaimState claim={claim} fmt={fmt} />
+          {/* 08 A3 · 08 A4: Marke und ein Satz — der Hinweis unten ist der Satz; das Datum steht im Verlauf. */}
+          <ClaimState claim={claim} fmt={fmt} sentence={false} />
           {/* Nach dem Einreichen steht der Verzicht fest: Satz statt Schalter (E2, 08 B19). */}
           {claim.submittedAt ? (
             <FixedValue
@@ -76,6 +76,12 @@ export default async function ExpenseClaimPage({ params }: { params: Promise<{ i
             />
           ) : null}
           <p className="text-body text-ink-2">{hint}</p>
+          {/* 08 B11: Wer freigeben kann, steht in der Statuskarte, nicht frei unter dem Verlauf. */}
+          {claim.stateLabelKey === 'submitted' ? (
+            <p data-testid="approver-names" className="text-body text-ink-2">
+              {claim.approverNames.length > 0 ? t('approvers', { names: claim.approverNames.join(' · ') }) : t('noApprover')}
+            </p>
+          ) : null}
           {source?.ok ? <p className="text-hint text-muted-ink">{t('copiedFrom', { number: source.value.number ?? '' })}</p> : null}
         </section>
 
@@ -128,15 +134,7 @@ export default async function ExpenseClaimPage({ params }: { params: Promise<{ i
           </Section>
         </section>
 
-        {claim.stateLabelKey === 'submitted' ? (
-          <p data-testid="approver-names" className="text-body text-ink-2">
-            {claim.approverNames.length > 0 ? t('approvers', { names: claim.approverNames.join(' · ') }) : t('noApprover')}
-          </p>
-        ) : null}
-
-        <Link href="/finance/expenses" className={buttonVariants({ variant: 'outline', className: 'w-full sm:w-auto' })}>
-          {t('back')}
-        </Link>
+        {/* 08 A5: Kein zweiter Zurück-Knopf unten — der Seitenkopf hat „← Eigene Auslagen“. */}
       </div>
     </Page>
   );

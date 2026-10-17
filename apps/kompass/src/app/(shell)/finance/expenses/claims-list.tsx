@@ -8,14 +8,17 @@ import { formatEuro } from '@/lib/finance/amount';
 import { claimAmountMissing, claimHref, claimSentence } from '@/lib/finance/expenses';
 import { Section } from '@/components/section';
 
-/** Badge und Satz in Alltagssprache — gemeinsam für Karte und Ansicht des Antrags. */
-export async function ClaimState({ claim, fmt }: { claim: ExpenseClaimView; fmt: DateFormatter }) {
+/**
+ * Badge und Satz in Alltagssprache — gemeinsam für Karte und Ansicht des Antrags. Marke und ein Satz genügen (08 A3):
+ * Die Ansicht des Antrags nennt ihren eigenen Satz (`sentence={false}`), das Datum steht dort im Verlauf.
+ */
+export async function ClaimState({ claim, fmt, sentence: withSentence = true }: { claim: ExpenseClaimView; fmt: DateFormatter; sentence?: boolean }) {
   const t = await getTranslations('finance.expenses');
   const sentence = claimSentence(claim);
   return (
     <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
       <StatusBadge tone={statusTone('claim', claim.stateLabelKey)}>{t(`state.${claim.stateLabelKey}`)}</StatusBadge>
-      <span className="text-meta text-ink-2">{sentence.key === 'rejected' ? sentence.note : t(`sentence.${sentence.key}`, { date: fmt.date(sentence.date) })}</span>
+      {withSentence ? <span className="text-meta text-ink-2">{sentence.key === 'rejected' ? sentence.note : t(`sentence.${sentence.key}`, { date: fmt.date(sentence.date) })}</span> : null}
     </span>
   );
 }
@@ -28,12 +31,15 @@ export async function ClaimState({ claim, fmt }: { claim: ExpenseClaimView; fmt:
 async function ClaimCard({ claim, fmt }: { claim: ExpenseClaimView; fmt: DateFormatter }) {
   const t = await getTranslations('finance.expenses.list');
   const title = expenseClaimTitle(claim);
+  // 08 A3 · 08 A4: Eine dritte Zeile nur, wo sie etwas Neues sagt — wer freigeben kann, was nach einer Ablehnung geht.
   const next =
     claim.stateLabelKey === 'submitted'
       ? claim.approverNames.length > 0
         ? t('next.submitted', { names: claim.approverNames.join(' · ') })
         : t('next.submittedNobody')
-      : t(`next.${claim.stateLabelKey}`);
+      : claim.stateLabelKey === 'rejected'
+        ? t('next.rejected')
+        : null;
   return (
     <li>
       <Link
@@ -63,7 +69,7 @@ async function ClaimCard({ claim, fmt }: { claim: ExpenseClaimView; fmt: DateFor
           )}
         </span>
         <ClaimState claim={claim} fmt={fmt} />
-        <span className="text-hint text-muted-ink">{next}</span>
+        {next ? <span className="text-hint text-muted-ink">{next}</span> : null}
       </Link>
     </li>
   );
