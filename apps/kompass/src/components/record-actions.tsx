@@ -2,9 +2,10 @@
 
 import { MoreHorizontal } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import type { Ref } from 'react';
-import { Button } from '@/components/ui/button';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import Link from 'next/link';
+import { createContext, Fragment, type ReactNode, type Ref, useContext, useSyncExternalStore } from 'react';
+import { Button, buttonVariants } from '@/components/ui/button';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 /** `reversible`: Archivieren, Wieder aktivieren. `undoing`: Stornieren, Zurückziehen, Ersetzen, Beenden. `delete`: Löschen. */
 export type RecordActionKind = 'reversible' | 'undoing' | 'delete';
@@ -55,11 +56,16 @@ export function RecordActions({
 }) {
   const t = useTranslations('common');
   const visible = orderRecordActions(actions);
+  // Am Telefon kommen die Nebenaktionen des Seitenkopfs (`PageHeader more`) oben in dasselbe Menü (018). Nur im Kopf
+  // (`single="menu"`), nie im Fuß eines Dialogs, auch wenn der Dialog im Baum unter dem Kopf hängt.
+  const more = useContext(HeaderMoreContext);
+  const phone = usePhone();
+  const extra = single === 'menu' && phone ? more : [];
   if (visible.length === 0) return null;
   if (single === 'button' && visible.length === 1) {
     const only = visible[0]!;
     return (
-      <Button ref={triggerRef} type="button" variant="ghost" onClick={only.onSelect} data-testid={only.testId}>
+      <Button ref={triggerRef} type="button" variant="outline" onClick={only.onSelect} data-testid={only.testId}>
         {only.label}
       </Button>
     );
@@ -75,6 +81,7 @@ export function RecordActions({
             size="icon"
             aria-label={label ?? t('moreActions')}
             data-testid={testId}
+            data-record-actions
             // Klickfläche 44 px (HANDOFF Konsistenz § 8d.2): 38 px Feldhöhe plus 3 px rundum.
             className="relative after:absolute after:-inset-[3px]"
           />
@@ -83,6 +90,12 @@ export function RecordActions({
         <MoreHorizontal className="size-4" />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-auto">
+        {extra.length > 0 ? (
+          <Fragment>
+            {extra.map(headerMenuItem)}
+            <DropdownMenuSeparator />
+          </Fragment>
+        ) : null}
         {visible.map((action) => (
           <DropdownMenuItem key={action.key} onSelect={action.onSelect} data-testid={action.testId}>
             {action.label}
@@ -90,5 +103,106 @@ export function RecordActions({
         ))}
       </DropdownMenuContent>
     </DropdownMenu>
+  );
+}
+
+/**
+ * Nebenaktion im Seitenkopf (`PageHeader more`; Runde 3, 018, Joe 2026-10-17): ab `sm` ein `outline`-Knopf vor den
+ * Aktionen, am Telefon ein Eintrag im ⋯ — im ⋯ von `RecordActions`, falls die Seite eines hat, sonst in einem eigenen.
+ * Ziel (`href`) aus Server-Seiten; ein Auslöser (`onSelect`, öffnet etwa einen gesteuerten Dialog) nur aus
+ * Client-Komponenten, weil eine Funktion nicht über die Grenze geht.
+ */
+export type HeaderAction = {
+  key: string;
+  /** Mit „…“, wenn ein Dialog folgt. */
+  label: string;
+  href?: string;
+  onSelect?: () => void;
+  /** Symbol vor der Beschriftung, nur im Knopf (ab `sm`). */
+  icon?: ReactNode;
+  disabled?: boolean;
+  hidden?: boolean;
+  testId?: string;
+};
+
+const HeaderMoreContext = createContext<readonly HeaderAction[]>([]);
+
+const PHONE = '(max-width: 639.98px)';
+function subscribePhone(onChange: () => void): () => void {
+  const query = typeof window.matchMedia === 'function' ? window.matchMedia(PHONE) : null;
+  query?.addEventListener('change', onChange);
+  return () => query?.removeEventListener('change', onChange);
+}
+/** Telefon (`max-sm`) — gelesen erst im offenen Menü, das nie auf dem Server entsteht; daher keine Abweichung beim Hydrieren. */
+function usePhone(): boolean {
+  return useSyncExternalStore(
+    subscribePhone,
+    () => (typeof window.matchMedia === 'function' ? window.matchMedia(PHONE).matches : false),
+    () => false,
+  );
+}
+
+function headerMenuItem(action: HeaderAction) {
+  return (
+    <DropdownMenuItem
+      key={action.key}
+      onSelect={action.onSelect}
+      disabled={action.disabled}
+      data-testid={action.testId ? `${action.testId}-item` : undefined}
+      render={action.href && !action.disabled ? <Link href={action.href} /> : undefined}
+    >
+      {action.label}
+    </DropdownMenuItem>
+  );
+}
+
+/**
+ * Die Nebenaktionen des Seitenkopfs: Knöpfe ab `sm` (`data-header-more-button`, am Telefon ausgeblendet), danach die
+ * übrigen Aktionen (`children`), am Ende das ⋯ fürs Telefon (`data-header-more`). Hat die Seite ein `RecordActions`,
+ * blendet `globals.css` dieses ⋯ aus, und `RecordActions` nimmt die Einträge in sein Menü. Baustein von `PageHeader`.
+ */
+export function HeaderMore({ items, children }: { items: readonly HeaderAction[]; children?: ReactNode }) {
+  const t = useTranslations('common');
+  const visible = items.filter((item) => !item.hidden);
+  return (
+    <HeaderMoreContext value={visible}>
+      {visible.map((item) =>
+        item.href && !item.disabled ? (
+          <Link key={item.key} href={item.href} className={`${buttonVariants({ variant: 'outline' })} max-sm:hidden`} data-header-more-button data-testid={item.testId}>
+            {item.icon}
+            {item.label}
+          </Link>
+        ) : (
+          <Button key={item.key} type="button" variant="outline" className="max-sm:hidden" disabled={item.disabled} onClick={item.onSelect} data-header-more-button data-testid={item.testId}>
+            {item.icon}
+            {item.label}
+          </Button>
+        ),
+      )}
+      {children}
+      {visible.length > 0 ? (
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            render={
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                aria-label={t('moreActions')}
+                data-record-actions
+                data-header-more
+                // Nur am Telefon; Klickfläche 44 px wie `RecordActions`.
+                className="relative after:absolute after:-inset-[3px] sm:hidden"
+              />
+            }
+          >
+            <MoreHorizontal className="size-4" />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-auto">
+            {visible.map(headerMenuItem)}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      ) : null}
+    </HeaderMoreContext>
   );
 }

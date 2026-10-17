@@ -38,3 +38,17 @@ describe('Checkliste: Ansage, wenn die Einrichtung vollständig wird', () => {
     expect(toast.success).not.toHaveBeenCalled();
   });
 });
+
+describe('Checkliste: Vergütung des Vorstands (Joe 11.9)', () => {
+  it('nennt ein entschiedenes „nein“ mit seinem Tag', async () => {
+    const { DateFormatProvider } = await import('@/components/date-format-provider');
+    const { getByText } = render(
+      <NextIntlClientProvider locale="de" messages={messages} timeZone="Europe/Berlin">
+        <DateFormatProvider mode="locale" timeZone="Europe/Berlin">
+          <ChecklistPanel steps={[{ key: 'boardRemuneration', required: false, done: true, blocked: false, detail: { decision: 'no', decidedOn: '2026-06-15' }, canDo: [], canSelf: true }]} complete={false} />
+        </DateFormatProvider>
+      </NextIntlClientProvider>,
+    );
+    expect(getByText('keine Pauschalen vorgesehen (seit 15.06.2026)')).toBeTruthy();
+  });
+});

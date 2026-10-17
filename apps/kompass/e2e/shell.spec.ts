@@ -1,5 +1,5 @@
 import { expect, test } from './fixtures';
-import { loginAsAdmin, resetDatabase } from './helpers';
+import { loginAsAdmin, resetDatabase, readTemplate } from './helpers';
 
 test.describe('app shell', () => {
   test.beforeEach(async ({ page }) => {
@@ -59,10 +59,7 @@ test.describe('app shell', () => {
     // Sammlungen gibt es erst mit eingelesenem Template — derselbe Weg wie in
     // `site-template.spec.ts`; das Basis-Template bringt die Sammlung „Aktuelles“ mit.
     await page.goto('/site/template');
-    await page.getByRole('button', { name: 'Vorlage einlesen' }).click();
-    await expect(page.getByRole('region', { name: 'Befunde' })).toBeVisible();
-    await page.getByRole('button', { name: 'Übernehmen' }).click();
-    await expect(page.getByRole('status')).toContainText('eingelesen');
+    await readTemplate(page);
     // Die Unternavigation der Webseite zeigt erst die Seiten der Webseite, nicht die Bereiche unter System.
     await page.goto('/site/publish');
 
@@ -149,7 +146,7 @@ test.describe('app shell', () => {
   test('applies the row density from the user menu and keeps it across a reload', async ({ page }) => {
     // Ein Ordner mit kurzer, einzeiliger Zeile: Lange Betreffs brechen in der
     // Akte um (Spec § 9), dann misst die Höhe den Text statt der Dichte.
-    await page.goto('/dms?folder=vertraege');
+    await page.goto('/dms?folder=Vertr%C3%A4ge');
     const rowHeight = () => page.locator('tbody tr').first().evaluate((el) => el.getBoundingClientRect().height);
     const variable = () =>
       page.evaluate(() => {
@@ -171,7 +168,7 @@ test.describe('app shell', () => {
     expect(await rowHeight()).toBe(36);
 
     // Und der Wert übersteht das Neuladen — daran scheiterte er bisher.
-    await page.goto('/dms?folder=vertraege');
+    await page.goto('/dms?folder=Vertr%C3%A4ge');
     expect(await variable()).toBe('36px');
     expect(await rowHeight()).toBe(36);
 
@@ -202,7 +199,8 @@ test.describe('app shell', () => {
     // Tabelle seitlich überlaufen zu lassen; bei 1600 px passt eine Anmeldezeile in eine Zeile.
     await page.setViewportSize({ width: 1600, height: 900 });
     await page.goto('/admin/audit?channel=ui');
-    await expect(page.locator('tbody tr').first()).toContainText('Oberfläche');
+    // Seit 216a424b trägt der Kanal „Oberfläche“ keine Marke mehr (183); die Anmeldezeile erkennt man am Satz.
+    await expect(page.locator('tbody tr').first()).toContainText('Angemeldet');
     const rowHeight = () => page.locator('tbody tr').first().evaluate((el) => el.getBoundingClientRect().height);
     const padding = () => page.locator('tbody tr').first().locator('td').first().evaluate((el) => getComputedStyle(el).paddingTop);
 

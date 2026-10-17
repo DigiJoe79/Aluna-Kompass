@@ -75,7 +75,7 @@ describe('auditObject', () => {
   it('nennt den Typ in Worten und den Namen dahinter; „gelöscht“ steht eigens, damit die Anzeige es dämpft', () => {
     expect(auditObject(t, { entityType: 'user' }, { state: 'ok', label: 'Anna Berger' })).toEqual({ word: 'Nutzer', name: 'Anna Berger', deleted: null });
     expect(auditObject(t, { entityType: 'contact' }, { state: 'missing' })).toEqual({ word: 'Kontakt', name: null, deleted: 'gelöscht' });
-    expect(auditObject(t, { entityType: 'sitePublish' }, undefined)).toEqual({ word: 'Veröffentlichung der Webseite', name: null, deleted: null });
+    expect(auditObject(t, { entityType: 'sitePublish' }, undefined)).toEqual({ word: 'Publizieren der Webseite', name: null, deleted: null });
   });
 
   it('fällt ohne Wort auf den Schlüssel zurück', () => {

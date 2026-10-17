@@ -69,6 +69,7 @@ export function CreateUserDialog({ roles }: { roles: { id: string; name: string;
       </Dialog>
       {created ? (
         <StartPasswordDialog
+          kind="created"
           open
           onClose={() => setCreated(null)}
           name={created.user.name}

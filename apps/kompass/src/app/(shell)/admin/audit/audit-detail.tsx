@@ -11,6 +11,7 @@ import { changedFieldsOf, diffFields } from '@/lib/audit-diff';
 import type { AuditObject } from '@/lib/audit-entities';
 import { AuditObjectLabel } from './audit-object';
 import { KeyLine } from '@/components/key-line';
+import { Empty } from '@/components/empty-value';
 
 /**
  * `sentence`: der Satz aus `auditSentences`; `null` (alter Eintrag, Aktion ohne Satz) → keine Zeile „Was geschah“.
@@ -44,7 +45,7 @@ export function AuditDetail({ entry, sentence, object }: { entry: AuditEntry; se
       <SheetContent side="right" size="md" className="gap-0 overflow-y-auto bg-surface shadow-md">
         <div className="p-5">
           <SheetTitle>{auditActionLabel(a, entry.action)}</SheetTitle>
-          <p className="mt-1 font-mono text-hint text-muted-ink">
+          <p className="tabular-nums mt-1 text-hint text-muted-ink">
             {fmt.dateTime(entry.occurredAt, { seconds: true })}
           </p>
           <div className="mt-4 flex flex-col gap-2">
@@ -61,11 +62,11 @@ export function AuditDetail({ entry, sentence, object }: { entry: AuditEntry; se
                 <div className="mt-1 grid grid-cols-[38px_minmax(0,1fr)] gap-1 font-mono text-hint">
                   <span className="text-muted-ink">{t('before')}</span>
                   <span className="rounded-sm bg-code px-1.5 text-muted-ink line-through">
-                    {row.before ?? '—'}
+                    {row.before ?? <Empty />}
                   </span>
                   <span className="text-muted-ink">{t('after')}</span>
                   <span className="rounded-sm bg-success-bg px-1.5 font-semibold text-success">
-                    {row.after ?? '—'}
+                    {row.after ?? <Empty />}
                   </span>
                 </div>
               </div>
@@ -73,14 +74,14 @@ export function AuditDetail({ entry, sentence, object }: { entry: AuditEntry; se
           </div>
           <dl className="mt-4 grid grid-cols-[110px_minmax(0,1fr)] gap-y-1 text-meta">
             <dt className="text-muted-ink">{t('user')}</dt>
-            <dd>{entry.userName ?? '—'}</dd>
+            <dd>{entry.userName ?? <Empty />}</dd>
             <dt className="text-muted-ink">{t('channel')}</dt>
             <dd>
               {f(entry.channel)}
               {entry.apiTokenId ? ` · ${entry.apiTokenName ?? t('tokenGone', { id: entry.apiTokenId })}` : ''}
             </dd>
             <dt className="text-muted-ink">{t('origin')}</dt>
-            <dd className="font-mono">{entry.ipAddress ?? '—'}</dd>
+            <dd className="font-mono">{entry.ipAddress ?? <Empty />}</dd>
             <dt className="text-muted-ink">{t('request')}</dt>
             <dd className="font-mono">{entry.requestId}</dd>
             <dt className="text-muted-ink">{t('environment')}</dt>

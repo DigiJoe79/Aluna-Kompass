@@ -49,12 +49,13 @@ test.describe('field metrics', () => {
     await expect(dialog.locator('[data-slot="label-required"]').filter({ hasText: 'Betreff' })).toHaveText(
       /^Betreff\s*\*$/
     );
-    // … und erklärt in der Fußleiste, solange nichts geändert wurde.
+    // … und erklärt in der Fußleiste. Beim Anlegen bleibt die Legende auch mit Eingaben stehen, einen Änderungszähler
+    // gibt es dort nicht (Designer Stufe 2 Nr. 7).
     await expect(dialog.getByText('* Pflichtfeld')).toBeVisible();
 
     await dialog.getByLabel('Betreff', { exact: true }).fill('Bescheid der Stadtkasse');
-    await expect(dialog.getByText('1 Änderung noch nicht gespeichert')).toBeVisible();
-    await expect(dialog.getByText('* Pflichtfeld')).toHaveCount(0);
+    await expect(dialog.getByText('* Pflichtfeld')).toBeVisible();
+    await expect(dialog.getByText(/noch nicht gespeichert/)).toHaveCount(0);
   });
 
   test('hält die Höhe auch beim Suchfeld, das seinen Rahmen selbst mitbringt', async ({ page }) => {

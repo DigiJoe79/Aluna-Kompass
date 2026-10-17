@@ -92,6 +92,15 @@ export function previewRecords(bytes: Uint8Array, settings: Pick<AssistantSettin
 }
 
 /** Der Assistent beginnt mit dem, was Kompass errät (Schritt 2); `defaultName` kommt aus der Sprachdatei. */
+/**
+ * Vorschlag für den Namen des Formats (07-1 A2): Kontoname plus „CSV“ — außer der Kontoname endet schon darauf
+ * („Zweitbank CSV“ wird nicht „Zweitbank CSV CSV“). `withSuffix` liefert den Satz aus der Sprachdatei.
+ */
+export function defaultFormatName(accountName: string, withSuffix: (account: string) => string): string {
+  const name = accountName.trim();
+  return /(^|\s)csv$/i.test(name) ? name : withSuffix(name);
+}
+
 export function initialState(bytes: Uint8Array, defaultName: string): AssistantState {
   const guess = guessCsvFormat(bytes);
   const roleByName = new Map<string, ColumnRole>();

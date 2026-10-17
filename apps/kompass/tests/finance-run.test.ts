@@ -1,6 +1,6 @@
 import type { RunPreviewItem } from '@kompass/module-finance';
 import { describe, expect, it } from 'vitest';
-import { groupRunItems, missingDonors, numberRangeText, parseRunQuery, runIssueCount, runProgress, runQueryString, runStep } from '@/lib/finance/run';
+import { groupRunItems, missingDonors, numberRangeText, openRunSummary, parseRunQuery, runIssueCount, runProgress, runQueryString, runStep, runSummary, runsListIssued } from '@/lib/finance/run';
 
 const item = (over: Partial<RunPreviewItem> = {}): RunPreviewItem => ({
   contactId: 'C1',
@@ -107,5 +107,38 @@ describe('Serienlauf in der Oberfläche (F6b Task 7)', () => {
       expect(runProgress({ total: 7, pending: 2, issued: 1, failed: 1, skipped: 3 })).toEqual({ done: 2, total: 4 });
       expect(runProgress({ total: 3, pending: 0, issued: 3, failed: 0, skipped: 0 })).toEqual({ done: 3, total: 3 });
     });
+  });
+});
+
+describe('openRunSummary (09 A5)', () => {
+  it('zählt die gesperrten Posten mit ihren Gründen, ohne Doppelte', () => {
+    const items = [item({ group: 'addressMissing', blockedBy: 'contactComplete' }), item({ contactId: 'C2', group: 'blocked', blockedBy: 'final' }), item({ contactId: 'C3', group: 'addressMissing', blockedBy: 'contactComplete' }), item({ contactId: 'C4', group: 'ready', blockedBy: null })];
+    expect(openRunSummary(items)).toEqual({ count: 3, reasons: ['contactComplete', 'final'] });
+  });
+  it('ist leer, wenn nichts gesperrt ist', () => {
+    expect(openRunSummary([item({ group: 'ready', blockedBy: null })])).toEqual({ count: 0, reasons: [] });
+  });
+});
+
+describe('runSummary (14 A4)', () => {
+  it('nennt ohne Übersprungene „n von m“', () => {
+    expect(runSummary({ total: 4, pending: 0, issued: 4, failed: 0, skipped: 0 })).toEqual({ key: 'summary', values: { issued: 4, total: 4 } });
+  });
+  it('nennt ausgestellt und übersprungen, wenn Posten übersprungen wurden', () => {
+    expect(runSummary({ total: 8, pending: 0, issued: 4, failed: 0, skipped: 4 })).toEqual({ key: 'summaryWithSkipped', values: { issued: 4, skipped: 4 } });
+  });
+});
+
+describe('runsListIssued (Runde 3, 209/210; Joe 2026-10-17)', () => {
+  it('sagt bei einem abgeschlossenen Lauf mit Übersprungenen dasselbe wie das Ergebnis', () => {
+    expect(runsListIssued({ total: 4, pending: 0, issued: 3, failed: 0, skipped: 1 }, true)).toEqual({ key: 'issuedWithSkipped', values: { issued: 3, skipped: 1 } });
+  });
+  it('bleibt ohne Übersprungene und während des Laufs bei „n von m“', () => {
+    expect(runsListIssued({ total: 3, pending: 0, issued: 3, failed: 0, skipped: 0 }, true)).toEqual({ key: 'issued', values: { issued: 3, total: 3 } });
+    expect(runsListIssued({ total: 4, pending: 3, issued: 0, failed: 0, skipped: 1 }, false)).toEqual({ key: 'issued', values: { issued: 0, total: 3 } });
+  });
+  it('hat beide Sätze in der Sprachdatei', async () => {
+    const messages = (await import('../messages/de.json')).default as unknown as { finance: { donations: { run: { runs: Record<string, unknown> } } } };
+    expect(messages.finance.donations.run.runs.issuedWithSkipped).toBe('{issued} ausgestellt, {skipped} übersprungen');
   });
 });

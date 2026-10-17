@@ -12,7 +12,7 @@ export default async function NewDraftPage(props: { searchParams: Promise<{ reci
   if (requirePermission(ctx, 'dms.create')) return <Page width="full"><ForbiddenCard permission="dms.create" /></Page>;
 
   const t = await getTranslations('dms');
-  const tCommon = await getTranslations('common');
+  const nav = await getTranslations('nav');
 
   const typesRes = await listDocumentTypes(deps, ctx, { selectable: true });
   const types = typesRes.ok ? typesRes.value : [];
@@ -39,7 +39,7 @@ export default async function NewDraftPage(props: { searchParams: Promise<{ reci
       <DraftScreen
         title={t('newDraft')}
         description={t('newDraftDescription')}
-        back={{ href: '/dms', label: tCommon('backToList') }}
+        back={{ href: '/dms', label: nav('dms.list') }}
         types={types.map((type) => ({ key: type.key, label: type.label }))}
         folders={folders}
         initialFolder={initialFolder}

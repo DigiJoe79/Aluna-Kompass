@@ -1,6 +1,7 @@
 'use client';
 
 import type { DashboardLine } from '@kompass/core';
+import { ChevronRight } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -12,70 +13,114 @@ import { cn } from '@/lib/utils';
 import { completeDueAction } from '../due-actions';
 
 /**
- * Die Zeilen einer `list`-Kachel — dasselbe Muster wie der frühere
- * Fällig-Kasten: Datum in Mono, Anlass, Bezug als Link daneben, Zusatz
- * rechts. Das Häkchen ist die einzige Aktion auf der Startseite.
+ * Die Zeilen einer Listen-Kachel nach ihrer Art (Briefing Startseite § 4, „Zeilen in Listen“):
+ *
+ * - `list` und `work`: Jede Zeile mit Ziel ist ein Link über die ganze Zeile, mit › am Ende; Polster 9 px, Trenner
+ *   `line-2`, Hover `hover`. Der Betrag (`trailing`) steht rechts, Ziffern gleich breit. `work` bricht nach
+ *   `column-width: 300px` in Spalten um, erst nach unten — in der breiten Spalte von 2:1 zweispaltig, sonst einspaltig.
+ *   Die Regel „ab sieben Zeilen, ab `xl`“ aus Lauf 3 entfällt.
+ * - `due`: Kästchen, Datum (überfällig im Ton `warning`), Text, darunter der Bezug als Link. Die Zeile selbst ist
+ *   kein Link — das Kästchen ist die einzige Aktion auf der Startseite.
+ *
+ * Text, Bezug und Zusatz brechen um, statt zu kürzen: Arbeit wird nie abgeschnitten (Designer 005). Ein Wert `…On`
+ * ist ein Tag und wird im Satz nach der Einstellung formatiert („seit 17.10.2026“).
  */
-export function TileLines({ ns, lines, canComplete }: { ns: string; lines: DashboardLine[]; canComplete: boolean }) {
+export function TileLines({ ns, lines, canComplete, variant }: { ns: string; lines: DashboardLine[]; canComplete: boolean; variant: 'list' | 'due' | 'work' }) {
   const t = useTranslations('dashboard');
   const fmt = useDateFormat();
   const router = useRouter();
   const [, start] = useTransition();
 
-  const titleOf = (line: DashboardLine) => line.title ?? (line.titleKey ? t(`${ns}.messages.${line.titleKey}`, line.values ?? {}) : '');
+  const valuesOf = (line: DashboardLine) =>
+    Object.fromEntries(Object.entries(line.values ?? {}).map(([key, value]) => [key, key.endsWith('On') && typeof value === 'string' ? fmt.date(value) : value]));
+  const titleOf = (line: DashboardLine) => line.title ?? (line.titleKey ? t(`${ns}.messages.${line.titleKey}`, valuesOf(line)) : '');
+
+  if (variant === 'due') {
+    return (
+      <ul>
+        {lines.map((line, index) => {
+          const title = titleOf(line);
+          return (
+            <li key={`${index}-${title}`} className="flex items-start gap-2.5 border-b border-line-2 py-2.5 last:border-b-0">
+              {line.action && canComplete ? (
+                <Checkbox
+                  className="mt-0.5 shrink-0"
+                  aria-label={t('complete', { title })}
+                  onCheckedChange={() =>
+                    start(async () => {
+                      // R5 (MUSTER: Ausnahme): Das Häkchen sitzt in der Zeile einer Kachel, ohne Platz für eine Meldung — Toast bis zum Schließen.
+                      const s = await completeDueAction(line.action!.followUpId);
+                      if (s.status === 'error') toastRefusal(s);
+                      else router.refresh();
+                    })
+                  }
+                />
+              ) : null}
+              <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                <span className="flex flex-wrap items-baseline gap-x-2">
+                  {line.date ? (
+                    <span data-testid="tile-line-date" className={cn('tabular-nums text-hint', line.overdue ? 'font-semibold text-warning' : 'text-muted-ink')}>
+                      {fmt.date(line.date)}
+                    </span>
+                  ) : null}
+                  <span data-testid="tile-line-title" className="wrap-anywhere text-body text-ink">{title}</span>
+                </span>
+                {line.link ? (
+                  line.link.href ? (
+                    <Link href={line.link.href} className="w-fit wrap-anywhere text-meta text-link underline underline-offset-2 hover:text-link-hover">{line.link.label}</Link>
+                  ) : (
+                    <span className="wrap-anywhere text-meta text-muted-ink">{line.link.label}</span>
+                  )
+                ) : null}
+              </span>
+            </li>
+          );
+        })}
+      </ul>
+    );
+  }
+
+  const row = (line: DashboardLine) => {
+    const title = titleOf(line);
+    const inner = (
+      <>
+        {line.date ? (
+          <span data-testid="tile-line-date" className={cn('shrink-0 tabular-nums text-hint', line.overdue ? 'font-semibold text-warning' : 'text-muted-ink')}>
+            {fmt.date(line.date)}
+          </span>
+        ) : null}
+        <span data-testid="tile-line-title" className="min-w-0 flex-1 text-pretty wrap-break-word text-body text-ink">
+          {title}
+          {/* Bezug ohne eigenes Ziel (Nummer eines Antrags) und Zusatz stehen leise hinter dem Text — ein Link in der
+              Link-Zeile wäre verschachtelt. */}
+          {line.link ? <span className="ml-2 text-hint whitespace-nowrap text-muted-ink">{line.link.label}</span> : null}
+          {line.extra ? <span className="ml-2 text-hint text-muted-ink">{line.extra}</span> : null}
+        </span>
+        {line.trailing ? (
+          <span data-testid="tile-line-trailing" className="shrink-0 text-body tabular-nums whitespace-nowrap text-ink">
+            {line.trailing}
+          </span>
+        ) : null}
+        {line.href ? <ChevronRight className="size-3.5 shrink-0 self-center text-muted-ink-2" aria-hidden /> : null}
+      </>
+    );
+    const box = 'flex items-baseline gap-2.5 rounded-sm px-1.5 py-[9px]';
+    return line.href ? (
+      <Link href={line.href} className={cn(box, '-mx-1.5 hover:bg-hover')}>
+        {inner}
+      </Link>
+    ) : (
+      <div className={cn(box, '-mx-1.5')}>{inner}</div>
+    );
+  };
 
   return (
-    <ul className="divide-y divide-line-2">
-      {lines.map((line, index) => {
-        const title = titleOf(line);
-        return (
-          <li
-            key={`${index}-${title}`}
-            className="flex min-h-[46px] flex-col flex-wrap items-start gap-x-3 gap-y-0.5 py-2 text-meta min-[391px]:flex-row min-[391px]:items-center"
-          >
-            {line.action && canComplete ? (
-              <Checkbox
-                className="order-1"
-                aria-label={t('complete', { title })}
-                onCheckedChange={() =>
-                  start(async () => {
-                    // R5 (MUSTER: Ausnahme): Das Häkchen sitzt in der Zeile einer Kachel, ohne Platz für eine Meldung — Toast bis zum Schließen.
-                    const s = await completeDueAction(line.action!.followUpId);
-                    if (s.status === 'error') toastRefusal(s);
-                    else router.refresh();
-                  })
-                }
-              />
-            ) : null}
-            {/* Bis 390 px (einschließlich) steht das Datum unter dem Satz (order 3 vs. 2); ab 391 px wieder davor (order 2 vs. 3) — das einzige responsive Verhalten dieser Komponente.
-                `max-w-full`: In der Spalte (`flex-col flex-wrap items-start`) wuchs der Satz sonst auf seine
-                volle Länge, `truncate` griff nicht, und die Startseite lief auf dem Telefon seitlich über
-                (release-0.2.7.md, Befund 13).
-                `flex-wrap`: Passen Satz und Bezug nicht nebeneinander, steht der Bezug unter dem Satz, statt dass
-                beide kürzen („Antwor… · BRF-2026-002 · Einladung zur ord…“, Befund 18) — auf dem Telefon wie in
-                der halben Kachel am Rechner; was passt, bleibt in einer Zeile. Kein Layout-Test für diese
-                Einzelstelle (AGENTS.md). */}
-            <span data-testid="tile-line-title" className="order-2 flex min-w-0 max-w-full flex-1 flex-wrap items-baseline gap-x-3 gap-y-0.5 min-[391px]:order-3">
-              {line.href ? (
-                <Link href={line.href} className="truncate text-ink underline-offset-2 hover:underline">{title}</Link>
-              ) : (
-                <span className="truncate text-ink">{title}</span>
-              )}
-              {line.link ? (
-                line.link.href ? (
-                  <Link href={line.link.href} className="truncate font-mono text-hint underline underline-offset-2 hover:text-link">{line.link.label}</Link>
-                ) : (
-                  <span className="truncate font-mono text-hint text-muted-ink">{line.link.label}</span>
-                )
-              ) : null}
-            </span>
-            {line.date ? (
-              <span data-testid="tile-line-date" className={cn('order-3 font-mono text-hint min-[391px]:order-2', line.overdue ? 'text-warning' : 'text-ink-2')}>{fmt.date(line.date)}</span>
-            ) : null}
-            {line.extra ? <span className="order-4 text-hint text-muted-ink">{line.extra}</span> : null}
-          </li>
-        );
-      })}
+    <ul className={cn(variant === 'work' && 'columns-[300px] gap-x-7')}>
+      {lines.map((line, index) => (
+        <li key={`${index}-${line.title ?? line.titleKey}`} className={cn('border-b border-line-2', variant === 'work' ? 'break-inside-avoid' : 'last:border-b-0')}>
+          {row(line)}
+        </li>
+      ))}
     </ul>
   );
 }

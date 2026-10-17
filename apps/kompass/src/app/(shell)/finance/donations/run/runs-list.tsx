@@ -2,13 +2,13 @@
 
 import type { RunSummary } from '@kompass/module-finance';
 import { useTranslations } from 'next-intl';
-import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { useDateFormat } from '@/components/date-format-provider';
-import { StatusBadge } from '@/components/status-badge';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { runProgress } from '@/lib/finance/run';
+import { StatusBadge, statusTone } from '@/components/status-badge';
+import { RowLink, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { runsListIssued } from '@/lib/finance/run';
 import { Section } from '@/components/section';
+import { Empty } from '@/components/empty-value';
 
 /** Frühere Serienläufe unter der Seite (`listConfirmationRuns`), jüngste zuerst; „Öffnen“ zeigt Lauf oder Ergebnis. */
 export function RunsList({ runs, currentId, footer }: { runs: RunSummary[]; currentId: string | null; /** Fuß der Tabellenkarte: `ListPager footer`. */ footer?: ReactNode }) {
@@ -16,10 +16,16 @@ export function RunsList({ runs, currentId, footer }: { runs: RunSummary[]; curr
   const tv = useTranslations('finance.donations.sentVia');
   const { date } = useDateFormat();
 
+  // Abgeschlossen mit Übersprungenen: derselbe Satz wie im Ergebnis (Runde 3, 209/210).
+  const issuedText = (run: RunSummary) => {
+    const text = runsListIssued(run.counts, !!run.finishedAt);
+    return text.key === 'issued' ? t('issued', text.values) : t('issuedWithSkipped', text.values);
+  };
   const stateOf = (run: RunSummary) => {
-    if (!run.finishedAt) return <StatusBadge tone="info">{t('state.running')}</StatusBadge>;
-    if (run.counts.failed > 0) return <StatusBadge tone="warning">{t('state.withFailures', { count: run.counts.failed })}</StatusBadge>;
-    return <StatusBadge tone="success">{t('state.finished')}</StatusBadge>;
+    if (!run.finishedAt) return <StatusBadge tone={statusTone('confirmationRun', 'running')}>{t('state.running')}</StatusBadge>;
+    if (run.counts.failed > 0) return <StatusBadge tone={statusTone('confirmationRun', 'withFailures')}>{t('state.withFailures', { count: run.counts.failed })}</StatusBadge>;
+    // Abgeschlossen ist der Normalzustand: in der Liste ohne Marke (Designer Stufe 2 Nr. 6a).
+    return null;
   };
 
   return (
@@ -32,30 +38,27 @@ export function RunsList({ runs, currentId, footer }: { runs: RunSummary[]; curr
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>{t('columns.year')}</TableHead>
-                  <TableHead>{t('columns.startedOn')}</TableHead>
-                  <TableHead>{t('columns.issued')}</TableHead>
-                  <TableHead>{t('columns.state')}</TableHead>
-                  <TableHead>{t('columns.dispatched')}</TableHead>
-                  <TableHead><span className="sr-only">{t('columns.open')}</span></TableHead>
+                  <TableHead col="title">{t('columns.year')}</TableHead>
+                  <TableHead col="meta">{t('columns.startedOn')}</TableHead>
+                  <TableHead col="meta">{t('columns.issued')}</TableHead>
+                  <TableHead col="status">{t('columns.state')}</TableHead>
+                  <TableHead col="meta">{t('columns.dispatched')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {runs.map((run) => (
                   <TableRow key={run.id} data-testid="run-row" aria-current={run.id === currentId ? 'true' : undefined}>
-                    <TableCell>
+                    <TableCell col="title">
                       <span className="inline-flex items-center gap-2">
-                        <span className="font-mono">{run.year}</span>
+                        {/* 09 B17: Das Jahr in der ersten Spalte öffnet den Lauf (`RowLink`, § G), kein „Öffnen“ in der letzten. */}
+                        <RowLink href={`/finance/donations/run?run=${run.id}`} className="tabular-nums">{run.year}</RowLink>
                         {run.followUpOfRunId ? <StatusBadge tone="neutral">{t('followUp')}</StatusBadge> : null}
                       </span>
                     </TableCell>
-                    <TableCell>{date(run.startedOn)}</TableCell>
-                    <TableCell className="font-mono tabular-nums">{t('issued', { issued: run.counts.issued, total: runProgress(run.counts).total })}</TableCell>
-                    <TableCell>{stateOf(run)}</TableCell>
-                    <TableCell>{run.dispatchedAt && run.dispatchedVia ? `${date(run.dispatchedAt)} · ${tv(run.dispatchedVia)}` : '—'}</TableCell>
-                    <TableCell className="text-right">
-                      <Link href={`/finance/donations/run?run=${run.id}`} className="text-link underline">{t('open')}</Link>
-                    </TableCell>
+                    <TableCell col="meta">{date(run.startedOn)}</TableCell>
+                    <TableCell col="meta" className="tabular-nums">{issuedText(run)}</TableCell>
+                    <TableCell col="status">{stateOf(run)}</TableCell>
+                    <TableCell col="meta">{run.dispatchedAt && run.dispatchedVia ? `${date(run.dispatchedAt)} · ${tv(run.dispatchedVia)}` : <Empty />}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>

@@ -1,6 +1,5 @@
 'use client';
 
-import { PenLine } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -20,6 +19,7 @@ import { VoidDialog } from './void-dialog';
 import { FormField } from '@/components/forms/form-field';
 import { FormGrid } from '@/components/forms/form-grid';
 import { Overline } from '@/components/overline';
+import { Empty } from '@/components/empty-value';
 
 export interface ConfirmationRow {
   id: string;
@@ -46,7 +46,7 @@ export interface ConfirmationRow {
 
 /**
  * Die Tabelle der ausgestellten Bestätigungen (C1): Nummer · Datum · Spender ·
- * Art · Betrag · Zeitraum · versandt · Zustand. Ein Klick klappt die Zeile auf
+ * Art (bei Sammelbestätigungen mit Zeitraum) · Betrag · versandt · Zustand. Ein Klick klappt die Zeile auf
  * — Zuwendungen mit Link zur Buchung, Bescheid, unser Exemplar, unterschriebene
  * Fassung, Versand vermerken und „Bestätigung zurücknehmen“. Die beiden
  * letzten nur mit `finance.donationsIssue`.
@@ -66,15 +66,16 @@ export function ConfirmationsTable({ rows, canIssue, initialOpenId, today, foote
     if (row.state === 'voided') {
       return (
         <>
-          <StatusBadge tone="neutral">{t('state.voided')}</StatusBadge>
-          {row.toCorrect.length > 0 ? <span className="block text-hint text-ink-2">{row.toCorrect.map((reason) => t(`toCorrectReason.${reason}`)).join(', ')}</span> : null}
+          {/* „zurückgenommen“ ist ein Endzustand: Die Marke steht am Namen, die Zeile ist gedämpft (Runde 4, 105). Was
+              noch fehlt, ist Arbeit und steht ocker (Runde 3, 205). */}
+          {row.toCorrect.length > 0 ? <span className="block text-hint text-warning">{row.toCorrect.map((reason) => t(`toCorrectReason.${reason}`)).join(', ')}</span> : null}
         </>
       );
     }
     if (row.toCorrect.length > 0) {
       return (
         <>
-          <StatusBadge tone="warning">{t('state.toCorrect')}</StatusBadge>
+          <StatusBadge tone="warning" dot>{t('state.toCorrect')}</StatusBadge>
           <span className="block text-hint text-ink-2">{row.toCorrect.map((reason) => t(`toCorrectReason.${reason}`)).join(', ')}</span>
         </>
       );
@@ -82,10 +83,9 @@ export function ConfirmationsTable({ rows, canIssue, initialOpenId, today, foote
     // C1-5: „Unterschrift fehlt“ als zweites Badge neben „gültig“ — „unterschrieben“ und „maschinell“ bleiben Tatsachen der aufgeklappten Zeile.
     return (
       <span className="inline-flex flex-wrap items-center gap-1.5">
-        <StatusBadge tone="success">{t('state.valid')}</StatusBadge>
         {row.signatureState === 'needsSignature' ? (
-          <StatusBadge tone="warning">
-            <PenLine className="size-3" aria-hidden />
+          // Zustandsmarken mit Punkt, kein Symbol (Runde 3, 105).
+          <StatusBadge tone="warning" dot>
             {t('state.needsSignature')}
           </StatusBadge>
         ) : null}
@@ -100,36 +100,38 @@ export function ConfirmationsTable({ rows, canIssue, initialOpenId, today, foote
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>{t('columns.number')}</TableHead>
-            <TableHead>{t('columns.issuedOn')}</TableHead>
-            <TableHead>{t('columns.contact')}</TableHead>
-            <TableHead>{t('columns.kind')}</TableHead>
-            <TableHead className="text-right">{t('columns.amount')}</TableHead>
-            <TableHead>{t('columns.period')}</TableHead>
+            <TableHead col="meta">{t('columns.number')}</TableHead>
+            <TableHead col="meta">{t('columns.issuedOn')}</TableHead>
+            <TableHead col="title">{t('columns.contact')}</TableHead>
+            <TableHead col="meta">{t('columns.kind')}</TableHead>
+            <TableHead col="amount" className="text-right">{t('columns.amount')}</TableHead>
             <TableHead>{t('columns.sent')}</TableHead>
-            <TableHead>{t('columns.state')}</TableHead>
+            <TableHead col="status">{t('columns.state')}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {rows.map((row) => (
             <Fragment key={row.id}>
-              <TableRow data-testid="confirmation-row">
-                <TableCell data-testid="confirmation-number" className="font-mono">
+              <TableRow data-testid="confirmation-row" muted={row.state === 'voided' ? t('state.voided') : undefined}>
+                <TableCell col="meta" data-testid="confirmation-number" className="font-mono">
                   <RowButton aria-expanded={openId === row.id} onClick={() => toggle(row.id)}>
                     {row.number}
                   </RowButton>
                 </TableCell>
-                <TableCell>{date(row.issuedOn)}</TableCell>
-                <TableCell>{row.contactName}</TableCell>
-                <TableCell>{t(`kind.${row.kind}`)}</TableCell>
-                <TableCell className="text-right font-mono tabular-nums">{formatEuro(row.totalCents)}</TableCell>
-                <TableCell>{row.periodFrom && row.periodTo ? `${date(row.periodFrom)} – ${date(row.periodTo)}` : '—'}</TableCell>
-                <TableCell>{row.sentAt && row.sentVia ? t('sentValue', { date: date(row.sentAt), via: t(`sentVia.${row.sentVia}`) }) : '—'}</TableCell>
-                <TableCell data-testid="confirmation-state" className="whitespace-normal">{stateOf(row)}</TableCell>
+                <TableCell col="meta">{date(row.issuedOn)}</TableCell>
+                <TableCell col="title">{row.contactName}</TableCell>
+                {/* Der Zeitraum gilt nur für Sammelbestätigungen: Unterzeile der Art statt einer fast leeren Spalte (Runde 3, 105). */}
+                <TableCell col="meta">
+                  {t(`kind.${row.kind}`)}
+                  {row.periodFrom && row.periodTo ? <span className="block text-hint text-muted-ink">{`${date(row.periodFrom)} – ${date(row.periodTo)}`}</span> : null}
+                </TableCell>
+                <TableCell col="amount" className="text-right tabular-nums">{formatEuro(row.totalCents)}</TableCell>
+                <TableCell>{row.sentAt && row.sentVia ? t('sentValue', { date: date(row.sentAt), via: t(`sentVia.${row.sentVia}`) }) : <Empty />}</TableCell>
+                <TableCell col="status" data-testid="confirmation-state" className="whitespace-normal">{stateOf(row)}</TableCell>
               </TableRow>
               {openId === row.id ? (
                 <TableRow className="bg-surface-2 even:bg-surface-2 hover:bg-surface-2">
-                  <TableCell colSpan={8} className="py-3">
+                  <TableCell col="span" colSpan={7} className="py-3">
                     <Detail row={row} canIssue={canIssue} onVoid={() => setVoiding(row)} onDispatch={() => setDispatching(row)} onRecall={() => setRecalling(row)} />
                   </TableCell>
                 </TableRow>
@@ -164,16 +166,16 @@ function Detail({ row, canIssue, onVoid, onDispatch, onRecall }: { row: Confirma
         <ul className="space-y-1">
           {row.lines.map((line) => (
             <li key={line.lineId} className="flex items-center justify-between gap-3">
-              <Link href={`/finance/entries/${line.entryId}`} className="font-mono text-link underline">
+              <Link href={`/finance/entries/${line.entryId}`} className="font-mono text-link underline-offset-2 hover:underline">
                 {line.entryNumber ?? line.entryId}
               </Link>
-              <span className="font-mono tabular-nums text-ink-2">{formatEuro(line.amountCents)}</span>
+              <span className="tabular-nums text-ink-2">{formatEuro(line.amountCents)}</span>
             </li>
           ))}
         </ul>
         <p className="text-ink-2">
           <span className="font-semibold text-ink">{t('detail.notice')}: </span>
-          {row.notice ? t('detail.noticeValue', { kind: t(`noticeKind.${row.notice.kind}`), date: date(row.notice.noticeDate) }) : '—'}
+          {row.notice ? t('detail.noticeValue', { kind: t(`noticeKind.${row.notice.kind}`), date: date(row.notice.noticeDate) }) : <Empty />}
         </p>
         <p className="text-ink-2">
           <span className="font-semibold text-ink">{t('detail.signature')}: </span>

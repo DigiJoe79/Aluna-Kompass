@@ -63,6 +63,16 @@ const probeTable = (deps: ReturnType<typeof setup>, name: Record<string, string>
     expect(preview.tables.some((t) => t.table === 'probe_texts' && t.filled > 0)).toBe(true);
   });
 
+  // 11-2 A4 (Joe 2026-10-16): Die Leitsprache darf weg; die Vorschau nennt, welche Sprache dann führt.
+  it('names the next leading locale when the leading one is removed, none otherwise', async () => {
+    const deps = setup();
+    const ctx = ctxWith(['settings.manage']);
+    unwrap(await addLocale(deps, ctx, { code: 'en' }));
+    unwrap(await addLocale(deps, ctx, { code: 'fr' }));
+    expect(unwrap(await previewLocaleRemoval(deps, ctx, { code: 'de' })).nextLeading).toBe('en');
+    expect(unwrap(await previewLocaleRemoval(deps, ctx, { code: 'en' })).nextLeading).toBeNull();
+  });
+
   it('removes a locale, strips it from stored text and keeps the leading one', async () => {
     const deps = setup();
     const ctx = ctxWith(['settings.manage']);

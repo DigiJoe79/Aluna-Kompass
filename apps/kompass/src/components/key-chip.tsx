@@ -4,13 +4,14 @@ import { cn } from '@/lib/utils';
 /**
  * Ein Tastenkürzel als kleine Taste (HANDOFF § 12.1, `KeyChip`): `kbd` in
  * `bg-key-bg`/`text-key-ink`, hell mit leichtem Schatten, dunkel ohne — damit
- * die Taste auf `surface` und `surface-2` erhaben bleibt.
+ * die Taste auf `surface` und `surface-2` erhaben bleibt. Auf Touch-Geräten (`pointer: coarse`) steht sie nicht:
+ * Dort gibt es keine Tastatur (Runde 3, 064).
  */
 export function KeyChip({ children, label, className }: { children: ReactNode; /** Vorgelesener Name der Taste, wenn das Zeichen allein nichts sagt (`↑`, `→`). */ label?: string; className?: string }) {
   return (
     <kbd
       aria-label={label}
-      className={cn('inline-flex h-5 min-w-5 items-center justify-center rounded-sm border border-line-strong bg-key-bg px-1.5 font-mono text-key font-semibold text-key-ink shadow-sm dark:shadow-none', className)}
+      className={cn('inline-flex h-5 min-w-5 items-center justify-center rounded-sm border border-line-strong bg-key-bg px-1.5 font-mono text-key font-semibold text-key-ink shadow-sm pointer-coarse:hidden dark:shadow-none', className)}
     >
       {children}
     </kbd>

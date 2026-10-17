@@ -95,7 +95,7 @@ export default async function FinanceImportsPage({ searchParams }: { searchParam
   }
 
   return (
-    <Page width="standard" header={<PageHeader title={t('title')} />}>
+    <Page width="full" header={<PageHeader title={t('title')} />}>
       <div className="space-y-6">
 
         <section aria-label={t('accountsSummary.title')} className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -105,13 +105,14 @@ export default async function FinanceImportsPage({ searchParams }: { searchParam
               <div key={a.id} className="rounded-md border border-line bg-surface p-3 text-meta">
                 <p className="font-semibold text-ink">{a.name}</p>
                 <p className="text-ink-2">{s?.importedThrough ? t('accountsSummary.through', { date: fmtDate(s.importedThrough) }) : t('accountsSummary.none')}</p>
-                <p className="text-muted-ink">
-                  {!s?.reconciliation || s.reconciliation.state === 'noStatement'
-                    ? t('accountsSummary.noStatement')
-                    : s.reconciliation.state === 'matches'
+                {/* 07-2 B8: ohne Abgleich keine Zeile „Kein Auszug für heute“. */}
+                {!s?.reconciliation || s.reconciliation.state === 'noStatement' ? null : (
+                  <p className="text-muted-ink">
+                    {s.reconciliation.state === 'matches'
                       ? t('accountsSummary.matches', { date: formatDateOrDash(fmtDate, s.reconciliation.statementDate) })
                       : t('accountsSummary.differs', { date: formatDateOrDash(fmtDate, s.reconciliation.statementDate), amount: formatEuro(s.reconciliation.differenceCents ?? 0) })}
-                </p>
+                  </p>
+                )}
               </div>
             );
           })}

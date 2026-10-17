@@ -1,3 +1,4 @@
+import type { Page } from '@playwright/test';
 import { expect, test } from './fixtures';
 import { loginAsAdmin, resetDatabase, setE2ESetting } from './helpers';
 
@@ -29,8 +30,10 @@ test.describe('home', () => {
     await expect(page).toHaveURL('/admin/settings');
   });
 
-  test('Anpassen: abschalten, umsortieren, Option setzen — hält nach dem Neuladen; Vorgabe stellt zurück', async ({ page }) => {
+  test('Anpassen: abschalten, in der Spalte umsortieren, Option setzen — hält nach dem Neuladen; Vorgabe stellt zurück', async ({ page }) => {
     await loginAsAdmin(page);
+    // Anna darf Finanzen lesen: Vorgabe 2:1, Listen in der breiten Spalte (Briefing § 1).
+    await expect(page.getByTestId('dashboard-columns')).toHaveAttribute('data-layout', 'wide-narrow');
     await page.getByRole('button', { name: 'Anpassen' }).click();
     const sheet = page.getByTestId('dashboard-customize');
     // Base UI verdrahtet den Schalter per `aria-labelledby` mit dem sichtbaren
@@ -39,12 +42,12 @@ test.describe('home', () => {
     await sheet.getByRole('switch', { name: 'Unversandt' }).click();
     await expect(page.getByTestId('dashboard-tile-dms-unsent')).toHaveCount(0);
 
-    // Den Eingangskorb nach oben schieben, bis er die erste Kachel ist. Die
-    // Zahl der nötigen Klicks hängt von der Vorgabe-Reihenfolge ab (Kern vor
-    // Site vor Akte); eine Schleife hält den Test unabhängig davon richtig.
+    // Den Eingangskorb in seiner Spalte nach oben schieben, bis er dort die erste Kachel ist. Die Pfeile ordnen nur
+    // innerhalb der Spalte; eine Schleife hält den Test unabhängig von der Vorgabe-Reihenfolge.
+    const column = sheet.getByTestId(/^customize-column-/).filter({ has: page.getByText('Eingangskorb', { exact: true }) });
     let clicks = 0;
     for (let i = 0; i < 10; i++) {
-      const rows = sheet.getByRole('listitem');
+      const rows = column.getByRole('listitem');
       const count = await rows.count();
       let index = -1;
       for (let j = 0; j < count; j++) {
@@ -59,22 +62,91 @@ test.describe('home', () => {
       clicks++;
     }
     expect(clicks).toBeGreaterThan(0);
-    // eslint-disable-next-line no-console
-    console.log(`[home.spec] Eingangskorb brauchte ${clicks} Klicks „Nach oben“.`);
 
-    await sheet.getByLabel('Zeitraum').selectOption('30');
+    // „Spalte“ und die Optionen stehen hinter „Einstellungen“ (Designer 2026-10-17, Frage 3).
+    const withPeriod = sheet.getByRole('listitem').filter({ has: page.getByLabel('Zeitraum') });
+    await withPeriod.getByText('Einstellungen', { exact: true }).click();
+    await withPeriod.getByLabel('Zeitraum').selectOption('30');
 
     await page.reload();
     await expect(page.getByTestId('dashboard-tile-dms-unsent')).toHaveCount(0);
-    const first = page.locator('[data-testid^="dashboard-tile-"]').first();
-    await expect(first).toHaveAttribute('data-testid', 'dashboard-tile-dms-inbox');
+    await expect(page.getByTestId('dashboard-column-0').locator('[data-testid^="dashboard-tile-"]').first()).toHaveAttribute('data-testid', 'dashboard-tile-dms-inbox');
     await page.getByRole('button', { name: 'Anpassen' }).click();
     await expect(page.getByTestId('dashboard-customize').getByLabel('Zeitraum')).toHaveValue('30');
     await page.getByTestId('dashboard-customize').getByRole('button', { name: 'Vorgabe wiederherstellen' }).click();
     await expect(page.getByText('Startseite auf die Vorgabe zurückgesetzt')).toBeVisible();
     await page.reload();
     await expect(page.getByTestId('dashboard-tile-dms-unsent')).toBeVisible();
-    await expect(page.locator('[data-testid^="dashboard-tile-"]').first()).toHaveAttribute('data-testid', 'dashboard-tile-core-followUps');
+    await expect(page.getByTestId('dashboard-column-0').locator('[data-testid^="dashboard-tile-"]').first()).toHaveAttribute('data-testid', 'dashboard-tile-core-followUps');
+  });
+
+  test.describe('bei 1440 × 900', () => {
+    test.use({ viewport: { width: 1440, height: 900 } });
+
+    /** Die Kacheln je Spalte der Seite, als Kennungen. */
+    const pageColumns = (page: Page) =>
+      page.locator('[data-testid^="dashboard-column-"]').evaluateAll((columns) => columns.map((c) => [...c.querySelectorAll('[data-testid^="dashboard-tile-"]')].map((t) => t.getAttribute('data-testid'))));
+
+    test('Layout wechseln und zurück: jedes Layout behält seine Anordnung; eine Kachel in Spalte 3 legen', async ({ page }) => {
+      await loginAsAdmin(page);
+      const grid = page.getByTestId('dashboard-columns');
+      await expect(grid).toHaveAttribute('data-layout', 'wide-narrow');
+      await expect(grid).toHaveAttribute('data-columns', '2');
+      const wide = await pageColumns(page);
+
+      await page.getByRole('button', { name: 'Anpassen' }).click();
+      const sheet = page.getByTestId('dashboard-customize');
+      await sheet.getByRole('radio', { name: 'Drei gleiche Spalten' }).click();
+      // Ab 1440 px Fenster stehen drei Spalten nebeneinander (Briefing § 1).
+      await expect(grid).toHaveAttribute('data-layout', 'thirds');
+      await expect(grid).toHaveAttribute('data-columns', '3');
+      // Erster Wechsel: Spalte 1 und 2 aus der breiten Spalte, die schmale wird Spalte 3 (Briefing § 5).
+      await expect(page.getByTestId('dashboard-column-2').locator('[data-testid^="dashboard-tile-"]')).toHaveCount(wide[1]!.length);
+
+      // Eine Kachel aus Spalte 1 in Spalte 3 legen: Sie steht dort (vor den Ruhe-Zeilen, die die Seite ans Ende stellt).
+      const first = sheet.getByTestId('customize-column-0').getByRole('listitem').first();
+      const moved = (await first.getAttribute('data-testid'))!.replace('customize-tile-', 'dashboard-tile-');
+      await first.getByText('Einstellungen', { exact: true }).click();
+      await first.getByLabel('Spalte', { exact: true }).selectOption({ label: 'Spalte 3' });
+      await expect.poll(async () => (await pageColumns(page))[2]).toContain(moved);
+      expect((await pageColumns(page))[0]).not.toContain(moved);
+      const thirds = await pageColumns(page);
+
+      // Zurück auf 2:1: die vorige Anordnung ist wieder da.
+      await sheet.getByRole('radio', { name: 'Breit und schmal' }).click();
+      await expect(grid).toHaveAttribute('data-layout', 'wide-narrow');
+      await expect.poll(() => pageColumns(page)).toEqual(wide);
+      // Und wieder auf drei: die Kachel steht noch in Spalte 3.
+      await sheet.getByRole('radio', { name: 'Drei gleiche Spalten' }).click();
+      await expect(grid).toHaveAttribute('data-layout', 'thirds');
+      await expect.poll(() => pageColumns(page)).toEqual(thirds);
+      await page.reload();
+      await expect.poll(() => pageColumns(page)).toEqual(thirds);
+    });
+
+    test('jedes Zahl-Widget ist per Tastatur erreichbar und öffnet mit Enter; kein „Zu …“-Knopf', async ({ page }) => {
+      await loginAsAdmin(page);
+      await expect(page.getByTestId('dashboard-columns')).toBeVisible();
+      await expect(page.getByRole('link', { name: /^Zu(m|r)? / })).toHaveCount(0);
+      const retention = page.getByTestId('dashboard-tile-core-retention').getByRole('link');
+      await retention.focus();
+      await expect(retention).toBeFocused();
+      await page.keyboard.press('Enter');
+      await expect(page).toHaveURL('/admin/retention');
+    });
+  });
+
+  test('am Telefon: eine Spalte, Warnungen oben, kein waagerechter Überlauf', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await loginAsAdmin(page);
+    const tiles = page.locator('[data-testid^="dashboard-tile-"]');
+    await expect(tiles.first()).toBeVisible();
+    const tops = await tiles.evaluateAll((els) => els.map((e) => ({ id: e.getAttribute('data-testid'), tone: e.getAttribute('data-tone'), y: e.getBoundingClientRect().top })));
+    const backup = tops.find((t) => t.id === 'dashboard-tile-core-backup')!;
+    expect(backup.tone).toBe('warning');
+    // Die Warnung „Backup“ steht über jeder Kachel ohne Warnung.
+    for (const other of tops.filter((t) => t.tone !== 'warning')) expect(backup.y, other.id!).toBeLessThan(other.y);
+    expect(await page.locator('main').evaluate((main) => main.scrollWidth <= main.clientWidth)).toBe(true);
   });
 
   test('Jonas Feld sieht seine gespeicherte Anordnung und keinen Link ins Leere', async ({ page }) => {
@@ -98,8 +170,17 @@ test.describe('home', () => {
     // F8a Task 7: der Finanz-Seed ergänzt seine gespeicherte Anordnung um „Wartet auf Ihre
     // Freigabe“ — sonst sähe er sie erst nach „Vorgabe wiederherstellen“.
     await expect(page.locator('[data-testid^="dashboard-tile-"]')).toHaveCount(4);
-    const ids = await page.locator('[data-testid^="dashboard-tile-"]').evaluateAll((els) => els.map((e) => e.getAttribute('data-testid')));
-    expect(ids).toEqual(['dashboard-tile-core-followUps', 'dashboard-tile-dms-unsent', 'dashboard-tile-core-backup', 'dashboard-tile-finance-approvalsPending']);
+    const grid = page.getByTestId('dashboard-columns');
+    const columns = await page.locator('[data-testid^="dashboard-column-"]').evaluateAll((cs) => cs.map((c) => [...c.querySelectorAll('[data-testid^="dashboard-tile-"]')].map((t) => t.getAttribute('data-testid'))));
+    // Seine alte flache Liste steht als drei gleiche Spalten (er sieht keine Arbeit-Kachel): Fällig | Unversandt |
+    // Backup, Freigabe. Bei 1280 px Fenster ist der Behälter schmaler als 1440 px: zwei Spalten, Spalte 3 abwechselnd
+    // an 1 und 2 (Briefing § 1).
+    await expect(grid).toHaveAttribute('data-layout', 'thirds');
+    await expect(grid).toHaveAttribute('data-columns', '2');
+    expect(columns).toEqual([
+      ['dashboard-tile-core-followUps', 'dashboard-tile-core-backup'],
+      ['dashboard-tile-dms-unsent', 'dashboard-tile-finance-approvalsPending'],
+    ]);
     await expect(page.getByTestId('dashboard-tile-core-setup')).toHaveCount(0);
     // Jeder Link der Startseite führt auf eine Seite, die Jonas sehen darf.
     const hrefs = await page.locator('[data-testid^="dashboard-tile-"] a[href]').evaluateAll((els) => els.map((a) => a.getAttribute('href')!));

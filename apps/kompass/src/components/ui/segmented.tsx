@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils"
  * Radio-Semantik mit Pfeiltasten, der Fokus springt mit der Auswahl. Höhe `--field-h`, damit der Umschalter
  * auf der Linie der Felder liegt, auf dem Telefon 46 px. Die gewählte Option ist `surface` mit Rahmen auf
  * `surface-2` — keine Primärfarbe als Fläche. Ab fünf Optionen oder bei langen Beschriftungen `Select`.
- * Symbole statt Text nur mit `ariaLabel` je Option.
+ * Symbole statt Text nur mit `ariaLabel` je Option; er steht dann auch als `title` da.
  */
 export type SegmentedOption<T extends string> = {
   value: T
@@ -51,6 +51,8 @@ function Segmented<T extends string>({ options, onValueChange, className, testId
           value={option.value}
           disabled={option.disabled}
           aria-label={option.ariaLabel}
+          // Ein Symbol ohne Text nennt seinen Namen auch Sehenden beim Verweilen (10 B27).
+          title={typeof option.label === "string" ? undefined : option.ariaLabel}
           data-testid={option.testId}
           className="inline-flex items-center justify-center gap-1.5 rounded-[5px] border border-transparent px-3 text-meta whitespace-nowrap text-ink-2 outline-none transition-colors hover:text-ink focus-visible:ring-3 focus-visible:ring-focus data-checked:border-line data-checked:bg-surface data-checked:text-ink data-disabled:cursor-not-allowed data-disabled:opacity-50"
         >

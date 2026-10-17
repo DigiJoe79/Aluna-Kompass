@@ -2,12 +2,11 @@
 
 import type { AnimalStatus, ProposalField, ProposalHint } from '@kompass/module-animals';
 import { useTranslations } from 'next-intl';
-import { StatusBadge } from '@/components/status-badge';
+import { StatusBadge, statusTone } from '@/components/status-badge';
 import { formatProposalValue } from '../field-format';
 import { LOCALE_CODE } from '@/components/forms/localized-field';
 import { cn } from '@/lib/utils';
-
-export const statusTone = (status: string) => (status === 'adopted' ? 'success' : status === 'reserved' ? 'warning' : 'info') as 'success' | 'warning' | 'info';
+import { Empty } from '@/components/empty-value';
 
 /** Ein Wert in einer Fläche der Gegenüberstellung: Sprachfassungen untereinander mit Kürzel (Board „DE … EN …“), Status als Marke. */
 export function FieldValue({ field, value, locales }: { field: ProposalField; value: unknown; locales: readonly string[] }) {
@@ -15,19 +14,19 @@ export function FieldValue({ field, value, locales }: { field: ProposalField; va
   const f = useTranslations('animals.form');
   if (field === 'status' && typeof value === 'string' && value) {
     return (
-      <StatusBadge tone={statusTone(value)} dot>
+      <StatusBadge tone={statusTone('animal', value as AnimalStatus)} dot>
         {f(`status.${value as AnimalStatus}`)}
       </StatusBadge>
     );
   }
   const lines = formatProposalValue(field, value, { t: (key) => root(key), locales });
-  if (lines.every((l) => !l.text)) return <span className="text-muted-ink">—</span>;
+  if (lines.every((l) => !l.text)) return <span className="text-muted-ink"><Empty /></span>;
   return (
     <span className="flex flex-col gap-1">
       {lines.map((l) => (
         <span key={l.locale ?? 'value'} className="whitespace-pre-line">
           {l.locale ? <span className={cn('mr-1.5 rounded-sm px-1.5 py-0.5', LOCALE_CODE)}>{l.locale.toUpperCase()}</span> : null}
-          {l.text || <span className="text-muted-ink">—</span>}
+          {l.text || <span className="text-muted-ink"><Empty /></span>}
         </span>
       ))}
     </span>
@@ -35,7 +34,8 @@ export function FieldValue({ field, value, locales }: { field: ProposalField; va
 }
 
 /**
- * Zweifelsfälle der Quelle unter dem Vorschlag, im Violett der Quelle: Zitat und, wenn vorhanden, ihr Vorschlag. Fett
+ * Zweifelsfälle der Quelle unter dem Vorschlag, neutral (eine Einordnung, nicht maschinell; Runde 3, 049/051): Zitat
+ * und, wenn vorhanden, ihr Vorschlag. Fett
  * steht immer „Zweifelsfall“ wie am Punkt des Reiters, damit man Punkt und Zeile zuordnet (Designer 2026-10-10); ein
  * Titel der Quelle folgt danach.
  */
@@ -45,7 +45,7 @@ export function HintLines({ hints }: { hints: readonly ProposalHint[] }) {
   return (
     <span className="flex flex-col gap-1">
       {hints.map((h, i) => (
-        <span key={i} className="text-meta text-agent" data-testid="proposal-hint">
+        <span key={i} className="text-meta text-ink-2" data-testid="proposal-hint">
           <span className="font-semibold">{t('hint')}</span>
           {h.title ? <> · {h.title}</> : null}
           {h.quote ? <> „{h.quote}“</> : null}

@@ -15,7 +15,7 @@ import { RefusalNotice } from '@/components/forms/refusal-notice';
 import { useActionFeedback } from '@/components/forms/use-action-feedback';
 import { EmptyState } from '@/components/empty-state';
 import { KeyChip } from '@/components/key-chip';
-import { StatusBadge } from '@/components/status-badge';
+import { StatusBadge, statusTone } from '@/components/status-badge';
 import { Button } from '@/components/ui/button';
 import { formatEuro } from '@/lib/finance/amount';
 import { afterRemoval, stepSelection, workHref, type WorkTabKey } from '@/lib/finance/work';
@@ -37,21 +37,34 @@ export interface WorkTransactionRow {
   unsure: boolean;
 }
 
-const ORIGIN_ICON = {
-  linkEntry: Link2,
-  cashTransferEntry: Link2,
-  pair: ArrowLeftRight,
-  cashKeyword: Banknote,
-  returnCode: Undo2,
-  relatedReference: Undo2,
-  paymentReference: FileCheck2,
-  amountAndContact: FileCheck2,
-  rule: ListChecks,
-  contactIban: UserRound,
-  contactEmail: UserRound,
-  contactName: UserRound,
-  paymentFee: ListChecks,
+/** Herkunft eines Vorschlags → Symbolgruppe; die Gruppe hat ein Symbol und einen Namen für die Legende (07-1 B12). */
+const ORIGIN_GROUP = {
+  linkEntry: 'link',
+  cashTransferEntry: 'link',
+  pair: 'pair',
+  cashKeyword: 'cash',
+  returnCode: 'return',
+  relatedReference: 'return',
+  paymentReference: 'openItem',
+  amountAndContact: 'openItem',
+  rule: 'rule',
+  contactIban: 'contact',
+  contactEmail: 'contact',
+  contactName: 'contact',
+  paymentFee: 'rule',
 } as const;
+
+const GROUP_ICON = {
+  link: Link2,
+  pair: ArrowLeftRight,
+  cash: Banknote,
+  return: Undo2,
+  openItem: FileCheck2,
+  rule: ListChecks,
+  contact: UserRound,
+} as const;
+
+type OriginGroup = keyof typeof GROUP_ICON;
 
 /** Tasten, die nur wirken, wenn gerade nichts anderes sie braucht: kein Eingabefeld, kein Knopf, kein Dialog. */
 function keyBelongsToPage(event: KeyboardEvent): boolean {
@@ -141,9 +154,13 @@ export function WorkTransactions({
   });
 
   const shownDetail = detail && detail.raw.id === selected ? detail : null;
+  const legend = [...new Set(rows.flatMap((row) => (row.origin ? [ORIGIN_GROUP[row.origin]] : [])))].sort() as OriginGroup[];
 
   return (
-    <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
+    // 07-1 B18: Liste und Vorschlag nebeneinander nach der Breite des Inhalts, nicht des Fensters — bei 1024 px mit
+  // Seitenleiste rutschte der Vorschlag sonst unter die Liste (ohne Layout-Test, Projektregel).
+  <div className="@container">
+  <div className="flex flex-col gap-4 @min-[48rem]:flex-row @min-[48rem]:items-start">
       <div className="min-w-0 flex-1 rounded-md border border-line bg-surface">
         {rows.length === 0 ? (
           <div className="p-4">
@@ -152,7 +169,7 @@ export function WorkTransactions({
         ) : (
           <div id="work-listbox" role="listbox" aria-label={t('list.label')} tabIndex={0} className="max-h-[60vh] divide-y divide-line-2 overflow-y-auto outline-none focus-visible:ring-2 focus-visible:ring-focus">
             {rows.map((row) => {
-              const Icon = row.origin ? ORIGIN_ICON[row.origin] : null;
+              const Icon = row.origin ? GROUP_ICON[ORIGIN_GROUP[row.origin]] : null;
               const isSelected = row.id === selected;
               return (
                 <div
@@ -162,24 +179,34 @@ export function WorkTransactions({
                   onClick={() => select(row.id)}
                   className={cn('flex cursor-pointer items-start gap-3 border-l-4 px-3 py-2.5 text-meta', isSelected ? 'border-l-brand bg-selected/40' : 'border-l-transparent hover:bg-row-hover')}
                 >
-                  <span className="w-[84px] shrink-0 font-mono text-hint tabular-nums text-ink-2">{date(row.bookingDate)}</span>
+                  {/* Runde 3, 064 (E1): Am Telefon steht das Datum in der Unterzeile und das Symbol am Namen, damit der Name
+                      die Breite hat. Layout an einer Stelle, ohne dauerhaften Test (Projektregel). */}
+                  <span className="w-[84px] shrink-0 text-hint tabular-nums text-ink-2 max-sm:hidden">{date(row.bookingDate)}</span>
                   <span className="min-w-0 flex-1 space-y-0.5">
                     <span className="flex flex-wrap items-center gap-2">
                       <span className="font-semibold text-ink">{row.counterpartyName ?? row.purpose}</span>
-                      <StatusBadge tone={row.state === 'open' ? 'neutral' : row.state === 'proposed' ? 'info' : 'final'}>{t(`rowState.${row.state}`)}</StatusBadge>
+                      {Icon && row.origin ? (
+                        <span className="shrink-0 text-agent sm:hidden" title={t(`origin.${row.origin}`)}>
+                          <Icon className="size-4" aria-hidden />
+                          <span className="sr-only">{t(`origin.${row.origin}`)}</span>
+                        </span>
+                      ) : null}
+                      {/* 07-1 B11: Die Reiter „Zuzuordnen“ und „Unsicher“ zeigen offene Umsätze — „offen“ steht nur, wo es abweicht. */}
+                      {row.state === 'open' ? null : <StatusBadge tone={statusTone('workRow', row.state)}>{t(`rowState.${row.state}`)}</StatusBadge>}
                       {row.unsure && tab === 'open' ? <StatusBadge tone="warning">{t('suggestion.unsure')}</StatusBadge> : null}
                     </span>
-                    <span className="block truncate text-ink-2">
+                    <span className="block truncate text-ink-2" title={row.purpose}>
+                      <span className="tabular-nums sm:hidden">{date(row.bookingDate)} · </span>
                       {row.purpose} · {row.accountName}
                     </span>
                   </span>
                   {Icon && row.origin ? (
-                    <span className="mt-0.5 shrink-0 text-agent" title={t(`origin.${row.origin}`)}>
+                    <span className="mt-0.5 shrink-0 text-agent max-sm:hidden" title={t(`origin.${row.origin}`)}>
                       <Icon className="size-4" aria-hidden />
                       <span className="sr-only">{t(`origin.${row.origin}`)}</span>
                     </span>
                   ) : null}
-                  <span className="w-28 shrink-0">
+                  <span className="w-28 shrink-0 max-sm:w-auto">
                     <AmountCell cents={row.amountCents} />
                   </span>
                 </div>
@@ -192,8 +219,21 @@ export function WorkTransactions({
         </p>
         {footer}
         {/* Die Liste scrollt in sich; die Tastenkürzel stehen darunter und bleiben so immer sichtbar (HANDOFF § 12.6). */}
-        {canWrite && rows.length > 0 ? (
-          <div data-testid="work-keys" aria-label={t('keys.label')} className="flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-line bg-surface-2 px-3 py-2 text-hint text-ink-2">
+        {rows.length > 0 && (canWrite || legend.length > 0) ? (
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-line bg-surface-2 px-3 py-2 text-hint text-ink-2">
+            {/* 07-1 B12: Legende der Symbole, nur die in der Liste vorkommen. */}
+            {legend.map((group) => {
+              const GroupIcon = GROUP_ICON[group];
+              return (
+                <span key={group} data-testid="work-legend" className="flex items-center gap-1">
+                  <GroupIcon className="size-3.5 text-agent" aria-hidden />
+                  {t(`legend.${group}`)}
+                </span>
+              );
+            })}
+            {/* 07-1 B17: Am Telefon gibt es keine Tastatur — die Kürzel stehen dort nicht. */}
+            {canWrite ? (
+            <span data-testid="work-keys" role="group" aria-label={t('keys.label')} className="contents max-sm:hidden pointer-coarse:hidden">
             <span className="flex items-center gap-1">
               <KeyChip label={t('keys.up')}>↑</KeyChip>
               <KeyChip label={t('keys.down')}>↓</KeyChip>
@@ -211,6 +251,8 @@ export function WorkTransactions({
               <KeyChip label={t('keys.right')}>→</KeyChip>
               {t('keys.skip')}
             </span>
+            </span>
+            ) : null}
           </div>
         ) : null}
       </div>
@@ -226,6 +268,7 @@ export function WorkTransactions({
           onReload={() => router.refresh()}
         />
       ) : null}
+    </div>
     </div>
   );
 }
@@ -265,7 +308,7 @@ export function WorkEntries({ rows, tab, canWrite, footer }: { rows: WorkEntryRo
     <section aria-label={te('entries.label')} className="divide-y divide-line-2 rounded-md border border-line bg-surface">
       {rows.map((row) => (
         <div key={row.id} data-testid="work-entry" className="flex flex-wrap items-center gap-3 px-3 py-2.5 text-meta">
-          <span className="w-[84px] shrink-0 font-mono text-hint tabular-nums text-ink-2">{date(row.entryDate)}</span>
+          <span className="w-[84px] shrink-0 text-hint tabular-nums text-ink-2">{date(row.entryDate)}</span>
           <span className="min-w-0 flex-1 space-y-0.5">
             <span className="flex flex-wrap items-center gap-2">
               <span className="font-semibold text-ink">{row.text}</span>
@@ -287,7 +330,7 @@ export function WorkEntries({ rows, tab, canWrite, footer }: { rows: WorkEntryRo
               </Button>
             ) : null}
             {canWrite ? (
-              <Button type="button" size="sm" variant="secondary" onClick={() => setDeleting(row)}>
+              <Button type="button" size="sm" variant="outline" onClick={() => setDeleting(row)}>
                 {te('entries.delete')}
               </Button>
             ) : null}
@@ -335,7 +378,7 @@ export function WorkOpenItems({ rows, footer }: { rows: WorkOpenItemRow[]; foote
     <section aria-label={td('due.label')} className="divide-y divide-line-2 rounded-md border border-line bg-surface">
       {rows.map((row) => (
         <div key={row.id} data-testid="work-open-item" className="flex flex-wrap items-center gap-3 px-3 py-2.5 text-meta">
-          <span className="w-[120px] shrink-0 font-mono text-hint tabular-nums text-ink-2">{row.dueOn ? td('due.dueOn', { date: date(row.dueOn) }) : ''}</span>
+          <span className="w-[120px] shrink-0 text-hint tabular-nums text-ink-2">{row.dueOn ? td('due.dueOn', { date: date(row.dueOn) }) : ''}</span>
           <span className="min-w-0 flex-1 space-y-0.5">
             <span className="flex flex-wrap items-center gap-2">
               <span className="font-semibold text-ink">{row.paymentReference ?? td('due.noReference')}</span>
@@ -343,7 +386,7 @@ export function WorkOpenItems({ rows, footer }: { rows: WorkOpenItemRow[]; foote
             </span>
             {row.contactName ? <span className="block truncate text-ink-2">{row.contactName}</span> : null}
           </span>
-          <span className="w-28 shrink-0 text-right font-mono tabular-nums">{formatEuro(row.openCents)}</span>
+          <span className="w-28 shrink-0 text-right tabular-nums">{formatEuro(row.openCents)}</span>
           <Link href={`/finance/open-items?tab=${row.kind}&item=${row.id}`} className="text-meta font-semibold underline underline-offset-2">
             {td('due.open')}
           </Link>

@@ -136,7 +136,7 @@ Unter Einrichtung → Finanzen → Steuerliches schalten Sie **Aufwandsspenden**
 ein — in der Vorgabe aus: Ein Verein, der sie anbietet, schaltet sie bewusst
 ein. Erst dann lässt sich beim Einreichen auf die Erstattung verzichten, und
 erst dann erscheint das Feld **Anspruchsgrundlage für Aufwandsspenden**, in
-dem Sie den Vertrag oder die Satzungsstelle nennen. Unter **Gilt seit** tragen
+dem Sie den Vertrag oder die Satzungsstelle nennen. Unter **Gilt ab** tragen
 Sie den Tag der Vereinbarung oder des Satzungsbeschlusses ein; daran misst
 Kompass, ob der Anspruch vor der Aufwendung vereinbart war — ohne Datum bleibt
 der Schritt der Checkliste offen.

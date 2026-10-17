@@ -1,9 +1,9 @@
 'use client';
 
-import { Info, MoreHorizontal } from 'lucide-react';
+import { Info } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
-import { useId, useState } from 'react';
+import { useId, useState, type ReactNode } from 'react';
 import { toast } from 'sonner';
 import { RefusalNotice } from '@/components/forms/refusal-notice';
 import { useActionFeedback } from '@/components/forms/use-action-feedback';
@@ -11,7 +11,6 @@ import { useDateFormat } from '@/components/date-format-provider';
 import { ConfirmDialog } from '@/components/forms/confirm-dialog';
 import { StatusBadge } from '@/components/status-badge';
 import { Button } from '@/components/ui/button';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { formatEuro } from '@/lib/finance/amount';
 import type { ReserveKind } from '@/lib/finance/reserves';
@@ -20,6 +19,8 @@ import { CarryForwardDialog } from './carry-forward-dialog';
 import { MovementDialog, type MovementReserve } from './movement-dialog';
 import { ReplaceResolutionDialog } from './replace-resolution-dialog';
 import { ReserveForm } from './reserve-form';
+import { Empty } from '@/components/empty-value';
+import { RowMenu } from '@/components/row-menu';
 
 /** Ein Beschluss, wie die Akte ihn dieser Person zeigt — oder nur „hinterlegt“. */
 export type ReserveDocument = { id: string; number: string; subject: string; date: string | null } | { id: string; hidden: true };
@@ -38,9 +39,12 @@ export interface ReserveRow extends MovementReserve {
   updatedAt: string;
 }
 
-/** § 62 AO als Infoknopf (Designer-README 4d): per Tastatur und Tippen, nicht als `title`. Escape schließt. */
-function KindInfo({ kind }: { kind: ReserveKind }) {
-  const t = useTranslations('finance.reserves');
+/**
+ * Infoknopf (Designer-README 4d): ein kleiner Knopf neben dem Wort, der einen Satz darunter auf- und zuklappt — per
+ * Tastatur und Tippen, nicht als `title`. Escape schließt. Für die Rechtsgrundlage der Art und die Rechnung des
+ * Höchstbetrags (Runde 3, 123).
+ */
+function InfoDisclosure({ children, ariaLabel, text, testId }: { children: ReactNode; ariaLabel: string; text: string; testId: string }) {
   const [open, setOpen] = useState(false);
   const id = useId();
   return (
@@ -54,32 +58,58 @@ function KindInfo({ kind }: { kind: ReserveKind }) {
       }}
     >
       <span className="inline-flex items-center gap-1">
-        {t(`kinds.${kind}`)}
+        {children}
         <Button
           type="button"
           variant="ghost"
           size="icon-xs"
           aria-expanded={open}
           aria-controls={id}
-          aria-label={t('kindInfo', { kind: t(`kinds.${kind}`) })}
-          data-testid="reserve-kind-info"
+          aria-label={ariaLabel}
+          data-testid={testId}
           onClick={() => setOpen((v) => !v)}
         >
           <Info className="size-3.5" aria-hidden />
         </Button>
       </span>
       <span id={id} hidden={!open} className="text-hint text-muted-ink">
-        {t(`kindHints.${kind}`)}
+        {text}
       </span>
     </span>
   );
 }
 
+/** § 62 AO zur Art. */
+function KindInfo({ kind }: { kind: ReserveKind }) {
+  const t = useTranslations('finance.reserves');
+  return (
+    <InfoDisclosure ariaLabel={t('kindInfo', { kind: t(`kinds.${kind}`) })} text={t(`kindHints.${kind}`)} testId="reserve-kind-info">
+      {t(`kinds.${kind}`)}
+    </InfoDisclosure>
+  );
+}
+
+/**
+ * Unter dem Höchstbetrag der freien Rücklage die kurze Zeile; die Rechnung mit den Zahlen des Jahres steht hinter dem
+ * Infoknopf (Runde 3, 123, Joe: als Schatzmeister braucht man die Zahlen).
+ */
+export function CapDerivation({ year, derivation }: { year: string; derivation: string }) {
+  const t = useTranslations('finance.reserves');
+  return (
+    <div className="mt-1.5 text-hint text-muted-ink">
+      <InfoDisclosure ariaLabel={t('cap.derivationInfo', { year })} text={derivation} testId="reserve-cap-derivation">
+        {t('cap.approximation')}
+      </InfoDisclosure>
+    </div>
+  );
+}
+
 /** „A-2026-0090 · Betreff · 12.02.2026“ (Designer-README 4d) statt „Beschluss öffnen“. */
-export function DocumentLabel({ document, testId }: { document: ReserveDocument | null; testId?: string }) {
+/** `subject={false}`: nur Nummer und Datum — in der Tabelle (09 B38); die Dialoge nennen den Betreff. */
+export function DocumentLabel({ document, testId, subject = true }: { document: ReserveDocument | null; testId?: string; subject?: boolean }) {
   const t = useTranslations('finance.reserves');
   const fmt = useDateFormat();
-  if (!document) return <span data-testid={testId}>—</span>;
+  if (!document) return <span data-testid={testId}><Empty /></span>;
   if ('hidden' in document) {
     return (
       <span className="text-meta text-ink-2" data-testid={testId}>
@@ -90,13 +120,13 @@ export function DocumentLabel({ document, testId }: { document: ReserveDocument 
   return (
     <a href={`/dms/${document.id}`} className="text-meta underline-offset-2 hover:underline" data-testid={testId}>
       <span className="font-mono">{document.number}</span>
-      {document.subject ? ` · ${document.subject}` : ''}
+      {subject && document.subject ? ` · ${document.subject}` : ''}
       {document.date ? ` · ${fmt.date(document.date)}` : ''}
     </a>
   );
 }
 
-type Open = { kind: 'movement' | 'edit' | 'carryForward' | 'resolution' | 'delete'; row: ReserveRow } | { kind: 'create' } | null;
+type Open = { kind: 'movement' | 'edit' | 'carryForward' | 'resolution' | 'delete'; row: ReserveRow } | null;
 
 /**
  * E4 Tabelle (Designer-README 4d): Art in Alltagssprache mit § 62 AO im
@@ -143,38 +173,28 @@ export function ReserveTable({
     router.refresh();
   };
 
+  // Zeilenaktionen im ⋯-Menü (Joe 11.8), auch „Vorgang …“ (123); die Spalte trägt keinen sichtbaren Kopf (112).
   const menu = (row: ReserveRow) => {
     if (!canSetup && !canWrite) return null;
     return (
-      <DropdownMenu>
-        <DropdownMenuTrigger
-          render={
-            <Button variant="ghost" size="icon" aria-label={t('menu.label', { name: row.name })} data-testid="reserve-menu">
-              <MoreHorizontal className="size-4" />
-            </Button>
-          }
-        />
-        <DropdownMenuContent align="end" className="w-auto bg-surface shadow-md">
-          {canSetup ? <DropdownMenuItem onSelect={() => setOpen({ kind: 'edit', row })}>{t('menu.edit')}</DropdownMenuItem> : null}
-          {canWrite ? <DropdownMenuItem onSelect={() => setOpen({ kind: 'resolution', row })}>{t('menu.replaceResolution')}</DropdownMenuItem> : null}
-          {canSetup ? <DropdownMenuItem onSelect={() => setOpen({ kind: 'carryForward', row })}>{t('menu.carryForward')}</DropdownMenuItem> : null}
-          {canSetup ? <DropdownMenuItem onSelect={() => void toggleActive(row)}>{row.isActive ? t('menu.deactivate') : t('menu.activate')}</DropdownMenuItem> : null}
-          {canSetup ? <DropdownMenuItem onSelect={() => setOpen({ kind: 'delete', row })}>{t('menu.delete')}</DropdownMenuItem> : null}
-        </DropdownMenuContent>
-      </DropdownMenu>
+      <RowMenu
+        name={row.name}
+        testId="reserve-menu"
+        items={[
+          { key: 'movement', label: t('movementTrigger'), hidden: !(!row.isDissolved && canWrite && row.isActive), onSelect: () => setOpen({ kind: 'movement', row }), testId: 'reserve-movement-trigger' },
+          { key: 'edit', label: t('menu.edit'), hidden: !canSetup, onSelect: () => setOpen({ kind: 'edit', row }) },
+          { key: 'resolution', label: t('menu.replaceResolution'), hidden: !canWrite, onSelect: () => setOpen({ kind: 'resolution', row }) },
+          { key: 'carryForward', label: t('menu.carryForward'), hidden: !canSetup, onSelect: () => setOpen({ kind: 'carryForward', row }) },
+          { key: 'active', label: row.isActive ? t('menu.deactivate') : t('menu.activate'), hidden: !canSetup, onSelect: () => void toggleActive(row) },
+          { key: 'delete', label: t('menu.delete'), kind: 'delete', hidden: !canSetup, onSelect: () => setOpen({ kind: 'delete', row }) },
+        ]}
+      />
     );
   };
 
   return (
     <div className="space-y-3">
       <RefusalNotice action state={activeFb.state} />
-      {canSetup ? (
-        <div className="flex justify-end">
-          <Button type="button" onClick={() => setOpen({ kind: 'create' })} data-testid="reserve-create">
-            {t('create')}
-          </Button>
-        </div>
-      ) : null}
       {rows.length === 0 ? (
         <p className="rounded-md border border-line bg-surface p-4 text-body text-ink-2">{t('empty')}</p>
       ) : (
@@ -182,48 +202,41 @@ export function ReserveTable({
           <Table data-testid="reserve-table">
             <TableHeader>
               <TableRow>
-                <TableHead className="px-3">{t('columns.kind')}</TableHead>
-                <TableHead className="px-3">{t('columns.name')}</TableHead>
-                <TableHead className="px-3">{t('columns.purpose')}</TableHead>
-                <TableHead className="px-3">{t('columns.resolution')}</TableHead>
-                <TableHead className="px-3 text-right">{t('columns.balance')}</TableHead>
-                <TableHead className="px-3 text-right">{t('columns.action')}</TableHead>
+                <TableHead col="meta" className="px-3">{t('columns.kind')}</TableHead>
+                <TableHead col="title" className="px-3">{t('columns.name')}</TableHead>
+                <TableHead col="meta" className="px-3">{t('columns.purpose')}</TableHead>
+                <TableHead col="meta" className="px-3">{t('columns.resolution')}</TableHead>
+                <TableHead col="amount" className="px-3 text-right">{t('columns.balance')}</TableHead>
+                <TableHead col="actions" className="w-11 px-3"><span className="sr-only">{t('columns.action')}</span></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {rows.map((row) => (
                 <TableRow key={row.id} data-testid="reserve-row">
-                  <TableCell className="px-3 align-top text-ink">
+                  <TableCell col="meta" className="px-3 align-top text-ink">
                     <KindInfo kind={row.kind} />
                   </TableCell>
-                  <TableCell className="px-3 align-top">
+                  <TableCell col="title" className="px-3 align-top">
                     <div className="flex flex-wrap items-center gap-1.5">
                       <span className="text-ink">{row.name}</span>
                       {row.isActive ? null : <StatusBadge tone="neutral">{t('inactive')}</StatusBadge>}
+                      {/* 09 B39: „aufgelöst“ ist ein Zustand am Namen, nicht an der Stelle des Knopfes. */}
+                      {row.isDissolved ? <StatusBadge tone="neutral">{t('dissolved')}</StatusBadge> : null}
                     </div>
                     {row.carryForwardCents !== null && row.carryForwardDate ? (
                       <p className="text-hint text-muted-ink">{t('carryForwardLine', { amount: formatEuro(row.carryForwardCents), date: fmt.date(row.carryForwardDate) })}</p>
                     ) : null}
                   </TableCell>
-                  <TableCell className="px-3 align-top text-ink-2">{row.purposeLabel ?? '—'}</TableCell>
-                  {/* Nummer · Betreff · Datum darf umbrechen: einzeilig trieb der Betreff die Tabelle auf einer standard-Seite ins waagerechte Scrollen (K9-Befund 8). */}
-                  <TableCell className="whitespace-normal px-3 align-top">
-                    <DocumentLabel document={row.resolution} testId="reserve-resolution" />
+                  <TableCell col="meta" className="px-3 align-top text-ink-2">{row.purposeLabel ?? <Empty />}</TableCell>
+                  {/* Nummer · Datum (09 B38) darf umbrechen: mit Betreff trieb der Betreff die Tabelle auf einer standard-Seite ins waagerechte Scrollen (K9-Befund 8). */}
+                  <TableCell col="meta" className="whitespace-normal px-3 align-top">
+                    <DocumentLabel document={row.resolution} testId="reserve-resolution" subject={false} />
                   </TableCell>
-                  <TableCell className="px-3 text-right align-top font-mono font-semibold tabular-nums" data-testid="reserve-balance">
+                  <TableCell col="amount" className="px-3 text-right align-top font-semibold tabular-nums" data-testid="reserve-balance">
                     {formatEuro(row.balanceCents)}
                   </TableCell>
-                  <TableCell className="px-3 text-right align-top">
-                    <div className="flex items-center justify-end gap-1">
-                      {row.isDissolved ? (
-                        <StatusBadge tone="neutral">{t('dissolved')}</StatusBadge>
-                      ) : canWrite && row.isActive ? (
-                        <Button type="button" size="sm" variant="outline" onClick={() => setOpen({ kind: 'movement', row })} data-testid="reserve-movement-trigger">
-                          {t('movementTrigger')}
-                        </Button>
-                      ) : null}
-                      {menu(row)}
-                    </div>
+                  <TableCell col="actions" className="px-3 text-right align-top">
+                    {menu(row)}
                   </TableCell>
                 </TableRow>
               ))}
@@ -235,7 +248,6 @@ export function ReserveTable({
       {open?.kind === 'movement' ? (
         <MovementDialog reserve={open.row} today={today} fiscalYears={fiscalYears} defaultFiscalYearId={defaultFiscalYearId} onClose={close} onSaved={saved(t('movement.saved'))} />
       ) : null}
-      {open?.kind === 'create' ? <ReserveForm purposes={purposes} onClose={close} onSaved={saved(t('form.saved'))} /> : null}
       {open?.kind === 'edit' ? <ReserveForm purposes={purposes} initial={open.row} onClose={close} onSaved={saved(t('form.updated'))} /> : null}
       {open?.kind === 'carryForward' ? <CarryForwardDialog reserve={open.row} onClose={close} onSaved={saved(t('carryForward.saved'))} /> : null}
       {open?.kind === 'resolution' ? <ReplaceResolutionDialog reserve={open.row} onClose={close} onSaved={saved(t('replaceResolution.saved'))} /> : null}
@@ -256,5 +268,30 @@ export function ReserveTable({
         />
       ) : null}
     </div>
+  );
+}
+
+/** „Geld zurücklegen“ als Primärknopf im Seitenkopf wie auf jeder Liste, nicht über der Tabelle (Runde 3, 123). */
+export function CreateReserveButton({ purposes }: { purposes: { id: string; name: string }[] }) {
+  const t = useTranslations('finance.reserves');
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <Button type="button" onClick={() => setOpen(true)} data-testid="reserve-create">
+        {t('create')}
+      </Button>
+      {open ? (
+        <ReserveForm
+          purposes={purposes}
+          onClose={() => setOpen(false)}
+          onSaved={() => {
+            setOpen(false);
+            toast.success(t('form.saved'));
+            router.refresh();
+          }}
+        />
+      ) : null}
+    </>
   );
 }

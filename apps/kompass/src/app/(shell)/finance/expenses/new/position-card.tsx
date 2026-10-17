@@ -68,12 +68,16 @@ export function PositionCard({ position: p, n, rates, projects, errors, canRemov
             </FormCell>
             <FormRowBreak />
 
-            <FormField id={id('date')} label={t('date')} error={errors.positionDate} size="s">
-              <Input id={id('date')} type="date" value={p.positionDate} onChange={(e) => onChange({ positionDate: e.target.value })} />
-            </FormField>
-
+            {/* 08 B14 · 08 B15: Reihenfolge und Größen im Raster — „Wofür war das?“ breit vorn, bei der Fahrt steht „Nach“ nie
+                allein in einer Zeile (Anlass · Datum | Von · Nach | km). */}
             {p.kind === 'receipt' ? (
               <>
+                <FormField id={id('purpose')} label={t('purpose')} error={errors.purpose} size="l">
+                  <Input id={id('purpose')} value={p.purpose} onChange={(e) => onChange({ purpose: e.target.value })} />
+                </FormField>
+                <FormField id={id('date')} label={t('date')} error={errors.positionDate} size="s">
+                  <Input id={id('date')} type="date" value={p.positionDate} onChange={(e) => onChange({ positionDate: e.target.value })} />
+                </FormField>
                 <FormField id={id('amount')} label={t('amount')} size="s">
                   <AmountField name={id('amount')} value={p.amountText} invalid={!!errors.amountCents} errorText={errors.amountCents} onChange={(amountText) => onChange({ amountText })} />
                 </FormField>
@@ -89,20 +93,17 @@ export function PositionCard({ position: p, n, rates, projects, errors, canRemov
                     </Select>
                   </FormField>
                 ) : null}
-                <FormField id={id('purpose')} label={t('purpose')} error={errors.purpose}>
-                  <Input id={id('purpose')} value={p.purpose} onChange={(e) => onChange({ purpose: e.target.value })} />
-                </FormField>
                 <FormCell size="full">
                   <PdfField positionKey={p.key} fileName={p.fileName} fileSize={p.fileSize} pageCount={p.pageCount} documentNumber={p.documentNumber} {...pdf} />
                 </FormCell>
               </>
             ) : (
               <>
-                <FormField id={id('km')} label={t('km')} size="s">
-                  <Input id={id('km')} inputMode="numeric" value={p.kmText} onChange={(e) => onChange({ kmText: e.target.value })} />
-                </FormField>
-                <FormField id={id('reason')} label={t('tripReason')}>
+                <FormField id={id('reason')} label={t('tripReason')} size="l">
                   <Input id={id('reason')} value={p.tripReason} onChange={(e) => onChange({ tripReason: e.target.value })} />
+                </FormField>
+                <FormField id={id('date')} label={t('date')} error={errors.positionDate} size="s">
+                  <Input id={id('date')} type="date" value={p.positionDate} onChange={(e) => onChange({ positionDate: e.target.value })} />
                 </FormField>
                 <FormField id={id('from')} label={t('tripFrom')}>
                   <Input id={id('from')} value={p.tripFrom} onChange={(e) => onChange({ tripFrom: e.target.value })} />
@@ -110,7 +111,10 @@ export function PositionCard({ position: p, n, rates, projects, errors, canRemov
                 <FormField id={id('to')} label={t('tripTo')}>
                   <Input id={id('to')} value={p.tripTo} onChange={(e) => onChange({ tripTo: e.target.value })} />
                 </FormField>
-                <FormCell as="p" data-testid="trip-calculation" aria-live="polite" size="full" className="font-mono text-body tabular-nums text-ink-2">
+                <FormField id={id('km')} label={t('km')} size="s">
+                  <Input id={id('km')} inputMode="numeric" value={p.kmText} onChange={(e) => onChange({ kmText: e.target.value })} />
+                </FormField>
+                <FormCell as="p" data-testid="trip-calculation" aria-live="polite" size="full" className="text-body tabular-nums text-ink-2">
                   {trip
                     ? t.rich('tripCalculation', { km: trip.km, rate: formatEuro(trip.centsPerKm), amount: formatEuro(trip.amountCents), b: (chunks) => <b className="text-ink">{chunks}</b> })
                     : p.positionDate && rateAt(rates, p.positionDate) === null

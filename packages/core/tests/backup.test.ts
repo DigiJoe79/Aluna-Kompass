@@ -27,7 +27,9 @@ function fileDeps(dir: string, env: 'test' | 'production' = 'test', clock?: Retu
   return createDeps({ dataPath: dir, env, clock });
 }
 
-describe('backup', () => {
+// Echte Ein- und Ausgabe (Migrationen, SQLite-Kopie, tar.gz): allein 1–1,7 s je Fall, im vollen `pnpm verify` neben den
+// App-Tests mehrfach über den 5-s-Vorgabewert (2026-10-17, dreimal in vier Läufen). Mehr Zeit statt eines Wacklers.
+describe('backup', { timeout: 20_000 }, () => {
   it('exports a tar.gz with manifest, db copy without sessions/tokens, and media; records lastExportAt', async () => {
     const dir = tmp();
     const deps = fileDeps(dir);
@@ -134,7 +136,7 @@ describe('backup', () => {
   });
 });
 
-describe('importBackupForSetup', () => {
+describe('importBackupForSetup', { timeout: 20_000 }, () => {
   async function seededArchive(): Promise<string> {
     const deps = fileDeps(tmp());
     await seedDevelopment(deps);

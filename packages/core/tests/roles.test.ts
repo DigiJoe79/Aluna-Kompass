@@ -22,6 +22,8 @@ describe('roles service', () => {
     unwrap(await createRole(deps, admin, { name: 'Kassenprüfer' }));
     const dup = await createRole(deps, admin, { name: 'kassenprüfer ' });
     expect(dup.ok === false && dup.error.type === 'conflict' && dup.error.code === 'roleNameTaken').toBe(true);
+    // 13 #4 (Joe 2026-10-16): mit Schlüssel und Namen, damit die Maske den Text am Feld zeigt.
+    expect(dup.ok === false && dup.error).toMatchObject({ messageKey: 'errors.roleNameTaken', params: { name: 'kassenprüfer' } });
     const empty = await createRole(deps, admin, { name: '  ' });
     expect(empty.ok === false && empty.error.type === 'validation').toBe(true);
     const denied = await createRole(deps, ctxWith(['users.manage']), { name: 'X' });

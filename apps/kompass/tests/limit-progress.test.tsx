@@ -41,3 +41,12 @@ describe('limitState and the state word (F8b Annahme 17, Design 4h)', () => {
     expect(markup.match(/data-slot="progress-track"/g)).toHaveLength(1);
   });
 });
+
+describe('„nähert sich“ nur einmal (Runde 3, 119)', () => {
+  it('zeigt bei „nähert sich“ den ockerfarbenen Balken ohne Marke; das Wort bleibt für Vorleser', () => {
+    const markup = renderToStaticMarkup(<LimitProgress coveredCents={78000} totalCents={96000} label="Ehrenamtspauschale" state="near" stateLabel="nähert sich" figure="780,00 € von 960,00 €" />);
+    expect(markup).toContain('<span class="sr-only">nähert sich</span>');
+    expect(markup).not.toContain('bg-warning-bg');
+    expect(markup).toContain('bg-warning');
+  });
+});

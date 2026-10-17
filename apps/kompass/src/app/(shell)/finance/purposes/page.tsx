@@ -6,6 +6,8 @@ import { EmptyState } from '@/components/empty-state';
 import { ForbiddenCard } from '@/components/forbidden-card';
 import { Page } from '@/components/page';
 import { PageHeader } from '@/components/page-header';
+import { buttonVariants } from '@/components/ui/button';
+import Link from 'next/link';
 import { requireSession } from '@/lib/request-context';
 import { PurposesTable } from './purposes-table';
 
@@ -32,7 +34,23 @@ export default async function PurposesPage() {
 
   // Neun Spalten mit `finance.read` — nach der Spaltenregel (MUSTER § I, ab fünf Spalten) `full` (K9-Befund 13).
   return (
-    <Page width="full" header={<PageHeader title={t('title')} description={t('intro')} />}>
+    // 09 B35: „Zweck ändern (Umwidmung)“ ist die Hauptaktion der Seite und steht im Kopf, nicht allein über der Tabelle.
+    <Page
+      width="full"
+      header={
+        <PageHeader
+          title={t('title')}
+          description={t('intro')}
+          actions={
+            canTransfer && rows.length > 0 ? (
+              <Link href="/finance/purposes/transfer" className={buttonVariants()} data-testid="purposes-transfer-trigger">
+                {t('detail.transfer')}
+              </Link>
+            ) : undefined
+          }
+        />
+      }
+    >
       {rows.length === 0 ? (
         <EmptyState title={t('empty')} text={t('intro')} />
       ) : (

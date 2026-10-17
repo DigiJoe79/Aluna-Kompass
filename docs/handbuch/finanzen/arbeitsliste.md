@@ -176,7 +176,9 @@ Ein Beleg findet seine Buchung auf zwei Wegen:
 - **Vom Beleg aus.** Ein Finanzbeleg in der Akte, der noch an keiner
   Buchung hängt, zeigt in seiner Ansicht den Knopf **Zu Buchung machen**.
   Er öffnet die Buchungsmaske; der Beleg wird beim Speichern verknüpft.
-  Alle solchen Belege stehen gesammelt unter „Belege ohne Buchung“.
+  Alle solchen Belege stehen gesammelt unter „Belege ohne Buchung“; dort
+  klappt ein Klick auf die Zeile den Beleg auf, darin steht „Zu Buchung
+  machen“.
 
 ## Rechnungen mit ZUGFeRD
 
@@ -189,8 +191,7 @@ solche Rechnung trägt, sieht man ihm von außen nicht an.
 
 Die Karte **Aus der Rechnung** zeigt diese Angaben an drei Stellen:
 
-- unter **Belege ohne Buchung** — je Beleg aufklappbar mit „Aus der
-  Rechnung“;
+- unter **Belege ohne Buchung** — ein Klick auf die Zeile klappt sie auf;
 - in der Ansicht eines Finanzbelegs in der Akte, unter den Bezügen (nur,
   wer Finanzen lesen darf);
 - in der Arbeitsliste, nachdem Sie ein PDF auf einen Umsatz gezogen haben:

@@ -29,7 +29,7 @@
   - [CSV-Format einrichten](finanzen/csv-format-einrichten.md)
   - [Arbeitsliste](finanzen/arbeitsliste.md)
   - [Buchen von Hand](finanzen/buchen.md)
-  - [Barkasse](finanzen/barkasse.md)
+  - [Kassen](finanzen/barkasse.md)
   - [Konten und offene Zahlungen](finanzen/konten-und-offene-zahlungen.md)
   - [Spenden](finanzen/spenden.md)
   - [Auslagen](finanzen/auslagen.md)

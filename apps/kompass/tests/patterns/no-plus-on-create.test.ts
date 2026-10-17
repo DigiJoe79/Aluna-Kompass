@@ -14,6 +14,11 @@ const ALLOWED: Allowlist = {
 
 const PLUS_IMPORT = /import\s*\{[^}]*\b(?:Plus|PlusIcon|CirclePlus|SquarePlus|PlusCircle|PlusSquare)\b[^}]*\}\s*from\s*'lucide-react'/;
 
+/** Texte, die mit „+“ beginnen, ohne etwas anzulegen — Schlüssel (mit führendem Punkt) → Grund. */
+const ALLOWED_KEYS: Record<string, string> = {
+  '.contacts.moreRoles': 'Zähler weiterer Rollen in der Kartenzeile am Telefon („+1“, Runde 3, 038), kein Anlegen.',
+};
+
 function texts(value: unknown, path: string): { path: string; text: string }[] {
   if (typeof value === 'string') return [{ path, text: value }];
   if (value && typeof value === 'object') return Object.entries(value).flatMap(([key, child]) => texts(child, `${path}.${key}`));
@@ -35,6 +40,7 @@ describe('kein „+“ an Anlegen-Knöpfen', () => {
   });
 
   it('kein Text in de.json beginnt mit „+“', () => {
-    expect(texts(messages, '').filter(({ text }) => /^\+/.test(text.trim())).map(({ path }) => path)).toEqual([]);
+    expect(texts(messages, '').filter(({ path, text }) => /^\+/.test(text.trim()) && !(path in ALLOWED_KEYS)).map(({ path }) => path)).toEqual([]);
+    expect(Object.keys(ALLOWED_KEYS).filter((key) => !texts(messages, '').some(({ path }) => path === key))).toEqual([]);
   });
 });

@@ -76,13 +76,13 @@ export function ImportForm() {
                 <dt className="text-muted-ink">{t('environment')}</dt>
                 <dd className="font-mono">{manifest.environment}</dd>
                 <dt className="text-muted-ink">{t('createdAt')}</dt>
-                <dd className="font-mono">{fmt.dateTime(manifest.createdAt)}</dd>
+                <dd className="tabular-nums">{fmt.dateTime(manifest.createdAt)}</dd>
                 <dt className="text-muted-ink">{t('users')}</dt>
-                <dd className="font-mono">{manifest.counts.users}</dd>
+                <dd className="tabular-nums">{manifest.counts.users}</dd>
                 <dt className="text-muted-ink">{t('documents')}</dt>
-                <dd className="font-mono">{manifest.counts.documents}</dd>
+                <dd className="tabular-nums">{manifest.counts.documents}</dd>
                 <dt className="text-muted-ink">{t('mediaAssets')}</dt>
-                <dd className="font-mono">{manifest.counts.mediaAssets}</dd>
+                <dd className="tabular-nums">{manifest.counts.mediaAssets}</dd>
               </dl>
               <p className="text-meta text-ink-2">{t('credentialWarning')}</p>
               <RefusalNotice state={withUnplacedFieldErrors(state, [])} />

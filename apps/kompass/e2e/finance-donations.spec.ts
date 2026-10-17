@@ -77,25 +77,22 @@ test.describe('finance donations', () => {
     await resetDatabase(page, 'seeded');
   });
 
-  test('die Prüfliste nennt eine fehlende Anschrift mit Abhilfe und blockiert; nach dem Ergänzen wird ausgestellt, unser Exemplar trägt ZWB', async ({ page, baseURL }) => {
+  test('ohne Anschrift steht „Anschrift ergänzen“ statt „Ausstellen“; nach dem Ergänzen wird ausgestellt, unser Exemplar trägt ZWB (203)', async ({ page, baseURL }) => {
     await loginAsAdmin(page);
-    let dialog = await openIssueDialog(page, 'Tobias Adler', '50,00 €');
-    const address = dialog.getByTestId('requirement-contactComplete');
-    await expect(address).toHaveAttribute('data-done', 'false');
-    const remedy = address.getByRole('link', { name: 'Anschrift ergänzen' });
+    await page.goto('/finance/donations?tab=uncertified');
+    const line = group(page, 'Tobias Adler').getByTestId('uncertified-line').filter({ hasText: '50,00 €' });
+    await expect(line.getByRole('button', { name: 'Ausstellen' })).toHaveCount(0);
+    const remedy = line.getByRole('link', { name: 'Anschrift ergänzen' });
     await expect(remedy).toBeVisible();
     const contactHref = (await remedy.getAttribute('href'))!;
     expect(contactHref).toMatch(/^\/contacts\//);
-    await expect(dialog.getByRole('button', { name: 'Ausstellen', exact: true })).toBeDisabled();
-    await expect(dialog.getByTestId('requirement-noticeValid')).toHaveAttribute('data-done', 'true');
-    await dialog.getByRole('button', { name: 'Abbrechen' }).click();
 
     // Die Kontaktseite kennt (noch) kein Bearbeiten — die Anschrift kommt über das Werkzeug der Kontakte.
     const client = await mcpClient(page, baseURL);
     await callTool(client, 'contacts_update', { id: contactHref.split('/').at(-1), street: 'Lärchenweg 3', postalCode: '12345', city: 'Musterstadt' });
     await client.close();
 
-    dialog = await openIssueDialog(page, 'Tobias Adler', '50,00 €');
+    let dialog = await openIssueDialog(page, 'Tobias Adler', '50,00 €');
     await expect(dialog.getByTestId('requirement-contactComplete')).toHaveAttribute('data-done', 'true');
     await expect(dialog.getByTestId('issue-signature-mode')).toHaveText('maschinell erstellt');
     await expect(dialog.getByTestId('confirmation-preview')).toHaveAttribute('src', /^blob:/);
@@ -112,7 +109,7 @@ test.describe('finance donations', () => {
     expect(response.headers()['content-type']).toBe('application/pdf');
   });
 
-  test('eine Bestätigung ohne maschinelles Verfahren entsteht mit Unterschriftsfeld; der Vierschritt nimmt die unterschriebene Fassung an', async ({ page }) => {
+  test('eine Bestätigung ohne maschinelles Verfahren entsteht mit Unterschriftsfeld; Schritt 3 nimmt die unterschriebene Fassung an', async ({ page }) => {
     await loginAsAdmin(page);
     await page.goto('/finance/donations');
     // Dazu (Task 9) Sina Krügers Aufwandsspende aus dem Serienlauf des Vorjahrs — auch sie ohne Unterschrift.
@@ -120,15 +117,18 @@ test.describe('finance donations', () => {
 
     const dialog = await openIssueDialog(page, 'Lukas Hofmann', '36,00 €');
     await expect(dialog.getByTestId('issue-signature-mode')).toHaveText('mit Unterschriftsfeld');
-    await expect(dialog.getByText('Ausstellen kann nur ein Mensch — nicht über ein Werkzeug für Agenten.')).toBeVisible();
+    await expect(dialog.getByText('Ausstellen geht nur hier in Kompass, nicht über einen Agenten.')).toBeVisible();
     await dialog.getByRole('button', { name: 'Ausstellen', exact: true }).click();
     await expect(page.getByText(/Bestätigung ZWB-\S+ ausgestellt/)).toBeVisible();
 
     await page.goto('/finance/donations?tab=needsSignature');
     await expect(page.getByRole('navigation', { name: 'Ansicht' }).getByRole('link', { name: 'Unterschrift fehlt 3' })).toBeVisible();
     const card = page.getByTestId('signature-steps').filter({ hasText: '36,00 €' });
-    await expect(card.getByTestId('requirement-created')).toHaveAttribute('data-done', 'true');
-    await expect(card.getByTestId('requirement-linked')).toHaveAttribute('data-done', 'false');
+    // Kompakte Schritte (Entwurf E3): erzeugt ist erledigt, ablegen noch offen; das Verknüpfen ist kein eigener
+    // Schritt mehr, es geschieht beim Ablegen (Runde 3, 204).
+    await expect(card.locator('li[data-testid$="-created"]')).toHaveAttribute('data-state', 'done');
+    await expect(card.locator('li[data-testid$="-upload"]')).toHaveAttribute('data-state', 'todo');
+    await expect(card.locator('li[data-testid$="-linked"]')).toHaveCount(0);
     await card.getByTestId('voucher-file-input').setInputFiles({ name: 'unterschrieben.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4\n1 0 obj<</Type/Catalog>>endobj\ntrailer<</Root 1 0 R>>\n%%EOF\n') });
     await expect(page.getByText(/Unterschriebene Fassung ZWU-\S+ abgelegt/)).toBeVisible();
     await expect(page.getByRole('navigation', { name: 'Ansicht' }).getByRole('link', { name: 'Unterschrift fehlt 2' })).toBeVisible();
@@ -191,7 +191,8 @@ test.describe('finance donations', () => {
 
     await page.goto('/finance/donations');
     const row = issuedRow(page, 'Erika Beispiel');
-    await expect(row).toContainText('gültig');
+    // Normalzustand ohne Marke in Listen (Designer Stufe 2 Nr. 6a).
+    await expect(row.getByTestId('confirmation-state')).not.toContainText('gültig');
     await row.click();
     await page.getByRole('button', { name: 'Bestätigung zurücknehmen' }).click();
     const dialog = page.getByRole('dialog');
@@ -199,7 +200,7 @@ test.describe('finance donations', () => {
     const submit = dialog.getByRole('button', { name: 'Bestätigung zurücknehmen' });
     await expect(submit).toBeDisabled();
     await dialog.getByLabel('Grund').fill('Betrag falsch zugeordnet');
-    await dialog.getByLabel('Bereits versandt?').check();
+    await dialog.getByLabel('Bereits versandt').check();
     await dialog.getByLabel('Original zurück am').fill(story('2026-09-01'));
     await submit.click();
     await expect(page.getByText(/Bestätigung ZWB-\S+ zurückgenommen/)).toBeVisible();
@@ -368,13 +369,16 @@ test.describe('finance donations', () => {
 
   test('eine Abhilfe steht einmal je Zeile, nicht im Badge und auf dem Knopf', async ({ page }) => {
     await loginAsAdmin(page);
-    const dialog = await openIssueDialog(page, 'Tobias Adler', '50,00 €');
-    const missing = dialog.getByRole('region', { name: 'Fehlt noch' });
-    const address = missing.getByTestId('requirement-contactComplete');
-    await expect(address.getByRole('link', { name: 'Anschrift ergänzen' })).toBeVisible();
-    await expect(address.getByText('Anschrift ergänzen')).toHaveCount(1);
-    await expect(dialog.getByRole('region', { name: 'Bitte ansehen' })).toHaveCount(0);
-    await dialog.getByRole('button', { name: 'Abbrechen' }).click();
+    // 105, 203: Alle Arbeitsreiter tragen ihre Zahl, auch „Noch nicht bestätigt“.
+    await page.goto('/finance/donations');
+    await expect(page.getByRole('link', { name: /^Noch nicht bestätigt\s*\d+$/ })).toBeVisible();
+    // 203: Die Abhilfe steht in der Zeile, einmal; die Marke im Kopf nennt nur den Zustand.
+    await page.goto('/finance/donations?tab=uncertified');
+    const adler = group(page, 'Tobias Adler');
+    const line = adler.getByTestId('uncertified-line').filter({ hasText: '50,00 €' });
+    await expect(line.getByRole('link', { name: 'Anschrift ergänzen' })).toBeVisible();
+    await expect(line.getByText('Anschrift ergänzen')).toHaveCount(1);
+    await expect(adler.getByText('Anschrift fehlt', { exact: true })).toBeVisible();
 
     // Dieselbe Zeile in der Einrichtungs-Checkliste (E-4): „Erledigen“ nur auf dem Knopf.
     await page.goto('/admin/finance?panel=checklist');
@@ -388,7 +392,7 @@ test.describe('finance donations', () => {
     await loginAsAdmin(page);
     await page.goto('/finance/donations');
     const lukas = issuedRow(page, 'Lukas Hofmann');
-    await expect(lukas.getByTestId('confirmation-state')).toContainText('gültig');
+    await expect(lukas.getByTestId('confirmation-state')).not.toContainText('gültig'); // Normalzustand ohne Marke in Listen (Designer Stufe 2 Nr. 6a).
     await expect(lukas.getByTestId('confirmation-state').getByText('Unterschrift fehlt', { exact: true })).toBeVisible();
     await expect(issuedRow(page, 'Erika Beispiel').getByTestId('confirmation-state')).not.toContainText('Unterschrift fehlt');
   });
@@ -450,13 +454,17 @@ test.describe('finance donation notices', () => {
   test('ein Freistellungsbescheid wird erfasst, die Vereinsdaten zeigen Finanzamt, Steuernummer und Bescheid (E22) und lassen sich dort nicht ändern', async ({ page }) => {
     const today = isoDay();
     await page.goto('/finance/donations/notices');
+    // Bei Bescheiden ist „gültig“ die Auskunft, die man sucht, und steht als Marke (Joe 11.7, Ausnahme von Stufe 2 Nr. 6a).
     await expect(seededExemption(page).getByTestId('notice-state')).toHaveText('gültig');
     await expect(seededExemption(page)).toContainText(`02.05.${STORY_YEAR + 4}`); // Bescheid vom 02.05. des Vorjahrs, gültig fünf Jahre
     await expect(seededExemption(page).getByTestId('notice-exempt-from')).toHaveText(story('01.01.2023'));
     // K9-Befund 8: sechs Spalten — Befreiung ab und gültig bis stehen zusammen unter „Gilt“, der Veranlagungszeitraum darunter.
     await expect(page.getByRole('table', { name: 'Bescheide des Finanzamts' }).getByRole('columnheader', { name: 'Gilt' })).toBeVisible();
     await expect(page.getByRole('table', { name: 'Bescheide des Finanzamts' }).getByRole('columnheader')).toHaveCount(6);
-    await expect(noticeRow(page, 'vorläufige Anerkennung (§ 60a)').getByTestId('notice-state')).toContainText(story('02.05.2025'));
+    // Endzustand gedämpft (Runde 4, 112): „ersetzt“ steht als Marke am Namen, die Zeile ist grau.
+    await expect(noticeRow(page, 'vorläufige Anerkennung (§ 60a)')).toHaveAttribute('data-muted', '');
+    await expect(noticeRow(page, 'vorläufige Anerkennung (§ 60a)').locator('[data-col="title"]')).toContainText('ersetzt'); // 09 B25
+    await expect(noticeRow(page, 'vorläufige Anerkennung (§ 60a)').getByTestId('notice-state-date')).toContainText(story('02.05.2025'));
 
     await page.getByRole('button', { name: 'Bescheid erfassen' }).click();
     const dialog = page.getByRole('dialog');
@@ -481,7 +489,7 @@ test.describe('finance donation notices', () => {
     await expect(row).toContainText('Freistellungsbescheid');
     await expect(row).toContainText('11/222/33333');
     await expect(row).toContainText(germanDay(plusYears(today, 5)));
-    await expect(row.getByTestId('notice-state')).toHaveText('gültig');
+    await expect(row.getByTestId('notice-state')).toHaveText('gültig'); // Joe 11.7: „gültig“ steht als Marke.
     await expect(row.getByTestId('notice-document')).toHaveText(/^EIN-/);
     await expect(row.getByTestId('notice-exempt-from')).toHaveText(story('01.01.2022'));
     await expect(row).toContainText(story('Veranlagungszeitraum 2022–2024'));
@@ -490,7 +498,8 @@ test.describe('finance donation notices', () => {
     const managedValues = page.getByTestId('managed-field-value');
     // Befund 32 (0.2.1): das Datum im Format des Vereins, nicht als ISO.
     await expect(managedValues).toHaveText(['11/222/33333', 'Finanzamt Beispielstadt', 'Freistellungsbescheid', germanDay(today)]);
-    for (const label of ['Finanzamt', 'Steuernummer', 'Art des Bescheids', 'Datum des Bescheids']) await expect(page.getByLabel(label)).toHaveCount(0);
+    // Fester Wert (H2): eine Gruppe mit Beschriftung und Wert, aber kein Eingabefeld.
+    for (const label of ['Finanzamt', 'Steuernummer', 'Art des Bescheids', 'Datum des Bescheids']) await expect(page.getByRole('textbox', { name: label, exact: true })).toHaveCount(0);
     await expect(page.getByText('Wird unter Finanzen → Spenden → Bescheide geführt.')).toHaveCount(1);
     await expect(page.getByLabel('Satzungszweck')).toHaveCount(0);
   });
@@ -593,7 +602,8 @@ test.describe('finance donation notices', () => {
     await expect(status).toContainText('Vollständig');
 
     // Amtsübergabe: Jonas Feld endet gestern, Mara Winter beginnt heute.
-    await panel.getByTestId('signer-row').filter({ hasText: 'Jonas Feld' }).getByRole('button', { name: 'Bearbeiten' }).click();
+    await panel.getByTestId('signer-row').filter({ hasText: 'Jonas Feld' }).getByRole('button', { name: /^Aktionen für / }).click();
+    await page.getByRole('menuitem', { name: 'Bearbeiten' }).click();
     let dialog = page.getByRole('dialog');
     await dialog.getByLabel('Gültig bis').fill(isoDay(-1));
     await dialog.getByRole('button', { name: 'Speichern' }).click();
@@ -624,11 +634,12 @@ test.describe('finance donation notices', () => {
     await expect(page.getByTestId('requirement-notice')).toHaveAttribute('data-done', 'true');
     const machineStep = page.getByTestId('requirement-machineProcedure');
     await expect(machineStep).toHaveAttribute('data-done', 'false');
-    await expect(machineStep).toContainText('sonst tragen Bestätigungen ein Unterschriftsfeld');
+    await expect(machineStep).toContainText('Sonst tragen Bestätigungen ein Unterschriftsfeld');
     await expect(machineStep.getByRole('link', { name: 'Erledigen' })).toHaveAttribute('href', '/finance/donations/notices');
 
     await page.goto('/finance/donations/notices');
-    await page.getByTestId('machine-panel').getByTestId('signer-row').filter({ hasText: 'Mara Winter' }).getByRole('button', { name: 'Bearbeiten' }).click();
+    await page.getByTestId('machine-panel').getByTestId('signer-row').filter({ hasText: 'Mara Winter' }).getByRole('button', { name: /^Aktionen für / }).click();
+    await page.getByRole('menuitem', { name: 'Bearbeiten' }).click();
     dialog = page.getByRole('dialog');
     await dialog.getByLabel('Angezeigt beim Finanzamt am').fill(today);
     await dialog.getByRole('button', { name: 'Speichern' }).click();
@@ -636,15 +647,19 @@ test.describe('finance donation notices', () => {
     await expect(page.getByTestId('machine-status')).toContainText('Vollständig');
 
     await page.goto('/admin/finance?panel=checklist');
-    await expect(page.getByTestId('requirement-notice')).toContainText('ohne Bescheid keine Zuwendungsbestätigungen');
+    await expect(page.getByTestId('requirement-notice')).toContainText('Ohne Bescheid keine Zuwendungsbestätigungen');
+    await expect(page.getByTestId('requirement-notice')).not.toContainText(/\d{4}-\d{2}-\d{2}/); // Datum im Format des Vereins, nie ISO
     await expect(page.getByTestId('requirement-machineProcedure')).toHaveAttribute('data-done', 'true');
   });
 
   test('das Faksimile wird über die Ablagefläche hochgeladen, ein PDF wird am Feld abgelehnt', async ({ page }) => {
     await page.goto('/finance/donations/notices');
-    // Jonas Feld trägt aus dem Seed schon ein Faksimile — die Fläche zeigt zuerst die Vorschau, „ersetzen“ öffnet die Ablage.
+    // Jonas Feld trägt aus dem Seed schon ein Faksimile — die Zelle zeigt das Bild, „Ersetzen“ im Zeilenmenü öffnet die
+    // Ablage (Runde 3, 112).
     const jonas = page.getByTestId('machine-panel').getByTestId('signer-row').filter({ hasText: 'Jonas Feld' });
-    await jonas.getByRole('button', { name: 'ersetzen' }).click();
+    await expect(jonas.getByRole('button', { name: 'Ersetzen', exact: true })).toHaveCount(0);
+    await jonas.getByRole('button', { name: /^Aktionen für / }).click();
+    await page.getByRole('menuitem', { name: 'Ersetzen' }).click();
 
     await jonas.getByTestId('voucher-file-input').setInputFiles({ name: 'bescheid.pdf', mimeType: 'application/pdf', buffer: PDF });
     await expect(jonas.getByRole('alert')).toHaveText('Das ist ein PDF. Hier braucht es ein Bild der Unterschrift (PNG oder JPEG).');
@@ -658,7 +673,8 @@ test.describe('finance donation notices', () => {
   test('ein Faksimile über 1 MB kommt an (N9) — noch innerhalb der Grenze fürs Bild der Unterschrift', async ({ page }) => {
     await page.goto('/finance/donations/notices');
     const jonas = page.getByTestId('machine-panel').getByTestId('signer-row').filter({ hasText: 'Jonas Feld' });
-    await jonas.getByRole('button', { name: 'ersetzen' }).click();
+    await jonas.getByRole('button', { name: /^Aktionen für / }).click();
+    await page.getByRole('menuitem', { name: 'Ersetzen' }).click();
     await jonas.getByTestId('voucher-file-input').setInputFiles(BIG_FACSIMILE_PNG);
     await expect(page.getByText('Bild der Unterschrift gespeichert.')).toBeVisible();
     await expect(jonas.getByRole('alert')).toHaveCount(0);
@@ -699,7 +715,8 @@ test.describe('finance donation notices', () => {
     await dialog.getByLabel('Grund').fill('Falsches Finanzamt übernommen');
     await dialog.getByRole('button', { name: 'Irrtümlich erfasst' }).click();
     await expect(dialog).toBeHidden();
-    await expect(row.getByTestId('notice-state')).toHaveText('irrtümlich erfasst');
+    await expect(row).toHaveAttribute('data-muted', ''); // Endzustand gedämpft (Runde 4, 112)
+    await expect(row.locator('[data-col="title"]')).toContainText('irrtümlich erfasst');
     await expect(page.getByText('Kein gültiger Bescheid — ohne Bescheid keine Zuwendungsbestätigungen.')).toBeVisible();
   });
 });

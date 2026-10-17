@@ -8,13 +8,21 @@ const files = (dir: string): string[] => readdirSync(dir).flatMap((n) => { const
 
 describe('finance errors', () => {
   it('every error names the parameters its text needs, each with its kind (A6: the text is in the language file)', () => {
-    for (const [code, params] of Object.entries(FINANCE_ERRORS)) for (const kind of Object.values(params)) expect(['text', 'date', 'cents', 'evidenceKind'], code).toContain(kind);
+    for (const [code, params] of Object.entries(FINANCE_ERRORS)) for (const kind of Object.values(params)) expect(['text', 'date', 'cents', 'count', 'evidenceKind'], code).toContain(kind);
   });
 
-  it('carries code, language key and raw parameters — dates as YYYY-MM-DD, amounts in cents', () => {
+  it('nimmt einen Betrag nur als Zahl in Cent, Datum und Text nur als Text (Befund 4, 0.2.12)', () => {
+    // @ts-expect-error — ein Betrag als Text käme roh („1250“) in den Satz.
+    financeConflict('cashWouldGoNegative', { account: 'K1', date: '2026-03-04', amount: '1250' });
+    // @ts-expect-error — ein Datum ist ein ISO-Tag als Text.
+    financeConflict('entryDateInFuture', { date: 20260304, today: '2026-03-01' });
+    expect(financeConflict('notReviewed', { count: 2 })).toMatchObject({ error: { params: { count: 2 } } });
+  });
+
+  it('carries code, language key and raw parameters — dates as YYYY-MM-DD, amounts in cents, named in `amounts`', () => {
     expect(financeConflict('cashWouldGoNegative', { account: 'K1', date: '2026-03-04', amount: -1250 })).toEqual({
       ok: false,
-      error: { type: 'conflict', code: 'cashWouldGoNegative', message: 'cashWouldGoNegative', messageKey: 'finance.errors.cashWouldGoNegative', params: { account: 'K1', date: '2026-03-04', amount: -1250 } },
+      error: { type: 'conflict', code: 'cashWouldGoNegative', message: 'cashWouldGoNegative', messageKey: 'finance.errors.cashWouldGoNegative', params: { account: 'K1', date: '2026-03-04', amount: -1250 }, amounts: ['amount'] },
     });
     expect(financeConflict('humanOnly')).toMatchObject({ error: { messageKey: 'finance.errors.humanOnly', params: {} } });
   });

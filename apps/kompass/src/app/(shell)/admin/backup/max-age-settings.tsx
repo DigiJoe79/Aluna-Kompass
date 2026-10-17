@@ -48,10 +48,8 @@ export function MaxAgeSettings({ maxAgeDays, canManage }: { maxAgeDays: number; 
             <div className="flex flex-col gap-3">
               <FormGrid>
                 <FormField id="backup-max-age" label={t('maxAgeDays')} hint={t('maxAgeDaysHint')} error={error} size="s">
-                  <div className="flex items-center gap-2">
-                    <Input id="backup-max-age" name={SETTING} type="number" min={1} max={365} defaultValue={maxAgeDays} readOnly={!canManage} className="w-24 font-mono" />
-                    <span className="text-meta text-muted-ink">{t('days')}</span>
-                  </div>
+                  {/* Einheit im Feld (Runde 3: 182). */}
+                  <Input id="backup-max-age" name={SETTING} type="number" min={1} max={365} defaultValue={maxAgeDays} readOnly={!canManage} unit={t('days')} className="w-32" />
                 </FormField>
               </FormGrid>
             </div>

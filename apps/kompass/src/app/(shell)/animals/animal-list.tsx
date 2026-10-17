@@ -1,7 +1,7 @@
 'use client';
 
 import type { AnimalListItem } from '@kompass/module-animals';
-import { Inbox } from 'lucide-react';
+import { Inbox, PawPrint } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useTransition } from 'react';
@@ -11,9 +11,10 @@ import { FilterBar, selectFilter } from '@/components/filter-bar';
 import { PublishSwitch } from '@/components/forms/publish-switch';
 import { SelectionBar } from '@/components/selection-bar';
 import { SortableHead } from '@/components/sortable-head';
-import { StatusBadge } from '@/components/status-badge';
+import { Empty } from '@/components/empty-value';
+import { StatusBadge, isNormalInList, statusTone } from '@/components/status-badge';
 import { Checkbox } from '@/components/ui/checkbox';
-import { RowLink, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { MutedMark, RowLink, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { SearchField } from '@/components/search-field';
 import { ViewTabs } from '@/components/view-tabs';
 import { listKeyOf, useListSelection } from '@/lib/use-list-selection';
@@ -50,6 +51,7 @@ export function AnimalList({
 }) {
   const t = useTranslations('animals.list');
   const f = useTranslations('animals.form');
+  const c = useTranslations('content');
   const dates = useDateFormat();
   const router = useRouter();
   const pathname = usePathname();
@@ -144,33 +146,38 @@ export function AnimalList({
             <TableHeader>
               <TableRow>
                 {canExport ? (
-                  <TableHead className="w-10 pr-0 pl-4">
+                  <TableHead col="select" className="w-10 pr-0 pl-4">
                     <Checkbox aria-label={t('selection.selectAll')} checked={allSelected} indeterminate={selected.length > 0 && !allSelected} onCheckedChange={() => selection.toggle(animals.map((a) => a.id), !allSelected)} />
                   </TableHead>
                 ) : null}
-                <SortableHead field="name" label={t('columns.animal')} />
-                <TableHead>{t('columns.status')}</TableHead>
-                <TableHead>{t('columns.flags')}</TableHead>
-                <TableHead>{t('columns.location')}</TableHead>
+                <SortableHead col="title" field="name" label={t('columns.animal')} />
+                <TableHead col="status">{t('columns.status')}</TableHead>
+                <TableHead col="meta">{t('columns.flags')}</TableHead>
+                <TableHead col="meta">{t('columns.location')}</TableHead>
                 <TableHead className="text-right">{t('columns.photos')}</TableHead>
-                <SortableHead field="updatedAt" label={t('columns.updated')} />
-                <TableHead className="text-right">{t('columns.published')}</TableHead>
+                <SortableHead col="meta" field="updatedAt" label={t('columns.updated')} />
+                <TableHead col="actions" className="text-right">{t('columns.published')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {animals.map((a, i) => (
-                <TableRow key={a.id} data-testid="animal-row">
+                // Runde 3, 192: Vermittelt ist der Endzustand — gedämpfte Zeile mit Marke am Namen, keine eigene Marke im Status.
+                <TableRow key={a.id} data-testid="animal-row" muted={a.status === 'adopted' ? f('status.adopted') : undefined}>
                   {canExport ? (
                     // Das Kästchen wählt aus; die Zeile öffnet weiter den Hund.
-                    <TableCell className="w-10 pr-0 pl-4">
+                    <TableCell col="select" className="w-10 pr-0 pl-4">
                       <Checkbox aria-label={t('selection.selectOne', { name: a.name })} checked={selection.ids.has(a.id)} onCheckedChange={(on) => selection.toggle([a.id], on === true)} />
                     </TableCell>
                   ) : null}
-                  <TableCell>
-                    <span className="flex items-center gap-3">
+                  {/* Die Marke „Vermittelt“ steht direkt hinter dem Namen, mit den übrigen Marken als Gruppe: Passt die Gruppe
+                      nicht mehr, bricht sie gemeinsam um, nie unter das Foto (Runde 4, 043, 192). */}
+                  <TableCell col="title" mutedMark="inline">
+                    <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
                       {/* Die Vorschau statt des Originals: Bei einigen hundert Hunden lüde die Liste sonst jedes Foto in voller Größe. */}
-                      {a.primaryAssetId ? <img src={`/media/${a.primaryAssetId}/preview`} loading="lazy" alt="" className="size-9 shrink-0 rounded-full object-cover" /> : <span className="size-9 shrink-0 rounded-full bg-surface-2" aria-hidden />}
+                      {a.primaryAssetId ? <img src={`/media/${a.primaryAssetId}/preview`} loading="lazy" alt="" className="size-9 shrink-0 rounded-full object-cover" /> : <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-surface-2 text-muted-ink" aria-hidden><PawPrint className="size-4" /></span>}
                       <RowLink href={`/animals/${a.id}${listQs ? `?${listQs}` : ''}`}>{a.name}</RowLink>
+                      <span className="inline-flex flex-wrap items-center gap-x-3 gap-y-1 empty:hidden">
+                      <MutedMark />
                       {proposalIds.has(a.id) ? (
                         <StatusBadge tone="agent" icon={Inbox} testId="animal-proposal-badge">{t('proposalBadge')}</StatusBadge>
                       ) : null}
@@ -179,25 +186,38 @@ export function AnimalList({
                           <StatusBadge tone="warning">{t('reviewBadge')}</StatusBadge>
                         </span>
                       ) : null}
+                      </span>
                     </span>
                   </TableCell>
-                  <TableCell>
-                    <StatusBadge tone={a.status === 'adopted' ? 'success' : a.status === 'reserved' ? 'warning' : 'info'} dot>
-                      {f(`status.${a.status}`)}
-                    </StatusBadge>
+                  {/* „Sucht ein Zuhause“ ist der Normalfall und steht in der Liste ohne Marke (Runde 3, Kleinpunkt 6, 043). */}
+                  <TableCell col="status">
+                    {isNormalInList('animal', a.status) || a.status === 'adopted' ? null : (
+                      <StatusBadge tone={statusTone('animal', a.status)} dot>
+                        {f(`status.${a.status}`)}
+                      </StatusBadge>
+                    )}
                   </TableCell>
-                  <TableCell>
-                    <span className="flex items-center gap-1.5">
-                      {a.isEmergency ? <StatusBadge tone="error">{t('emergency')}</StatusBadge> : null}
-                      {a.isSponsorable ? <StatusBadge tone="accent">{t('sponsorable')}</StatusBadge> : null}
-                    </span>
+                  <TableCell col="meta">
+                    {a.isEmergency || a.isSponsorable ? (
+                      <span className="flex items-center gap-1.5">
+                        {a.isEmergency ? <StatusBadge tone="error">{t('emergency')}</StatusBadge> : null}
+                        {a.isSponsorable ? <StatusBadge tone="brand">{t('sponsorable')}</StatusBadge> : null}
+                      </span>
+                    ) : (
+                      <Empty />
+                    )}
                   </TableCell>
-                  <TableCell className="text-ink-2">{[f(`locations.${a.location}`), a.place].filter(Boolean).join(' · ')}</TableCell>
-                  <TableCell className="text-right font-mono text-meta text-ink-2">{a.photoCount}</TableCell>
-                  <TableCell className="text-ink-2">{dates.date(a.updatedAt)}</TableCell>
-                  <TableCell>
-                    <span className="flex justify-end">
-                      <PublishSwitch id={a.id} isPublished={a.isPublished} action={setAnimalPublishedAction} switchAfterText />
+                  <TableCell col="meta" className="text-ink-2">{[f(`locations.${a.location}`), a.place].filter(Boolean).join(' · ')}</TableCell>
+                  <TableCell className="tabular-nums text-right text-meta text-ink-2">{a.photoCount}</TableCell>
+                  <TableCell col="meta" className="text-ink-2">
+                    {dates.date(a.updatedAt)}
+                    {/* 043: Am Telefon steht statt des Schalters ohne Spaltenkopf ein Text in der Unterzeile; geschaltet
+                        wird auf dem Tier. Kein Layout-Test (Einzelstelle, Laufzeit zählt). */}
+                    {a.isPublished ? <span className="md:hidden"> · {c('onWebsite')}</span> : null}
+                  </TableCell>
+                  <TableCell col="actions">
+                    <span className="flex justify-end max-md:hidden">
+                      <PublishSwitch id={a.id} isPublished={a.isPublished} action={setAnimalPublishedAction} />
                     </span>
                   </TableCell>
                 </TableRow>

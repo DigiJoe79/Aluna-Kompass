@@ -3,7 +3,7 @@ import { ctxWith } from '@kompass/core/testing';
 import { contacts } from '@kompass/module-contacts';
 import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
-import { contactForIbanInternal, createContactFromTransaction, learnContactIbanInternal, linkContactIban, listContactIbans, unlinkContactIban } from '../src/import/contact-ibans';
+import { contactForIbanInternal, contactsForIbanInternal, createContactFromTransaction, learnContactIbanInternal, linkContactIban, listContactIbans, unlinkContactIban } from '../src/import/contact-ibans';
 import { FINANCE_PERMISSIONS } from '../src/manifest';
 import { financeContactBankAccounts } from '../src/schema';
 import { insertRaw, insertRun, ledgerFixture } from './helpers';
@@ -39,6 +39,15 @@ describe('linkContactIban', () => {
     const refused = await linkContactIban(f.deps, f.ctx, { contactId: f.wrongDonor.id, iban: IBAN });
     expect(refused).toMatchObject({ ok: false, error: { type: 'conflict', code: 'contactIbanTaken' } });
     expect(JSON.stringify(refused)).toContain('Musterspenderin');
+  });
+
+  it('still refuses when the iban is a joint account of two other contacts', async () => {
+    const f = await ledgerFixture();
+    f.deps.db.transaction((tx) => learnContactIbanInternal(tx, f.deps, f.ctx, { contactId: f.donor.id, iban: IBAN, learnedFrom: 'booking' }));
+    f.deps.db.transaction((tx) => learnContactIbanInternal(tx, f.deps, f.ctx, { contactId: f.rightDonor.id, iban: IBAN, learnedFrom: 'booking' }));
+    expect(await linkContactIban(f.deps, f.ctx, { contactId: f.wrongDonor.id, iban: IBAN })).toMatchObject({ ok: false, error: { type: 'conflict', code: 'contactIbanTaken' } });
+    // Wer die IBAN schon trägt, verknüpft sie noch einmal ohne Ablehnung.
+    expect(await linkContactIban(f.deps, f.ctx, { contactId: f.donor.id, iban: IBAN })).toMatchObject({ ok: true });
   });
 
   it('needs finance.entriesWrite', async () => {
@@ -84,14 +93,34 @@ describe('listContactIbans', () => {
 });
 
 describe('contactForIbanInternal and learnContactIbanInternal', () => {
-  it('finds the most recent contact for an iban in any spelling; nothing for an unknown one', async () => {
+  it('finds the one contact for an iban in any spelling; nothing for an unknown one', async () => {
     const f = await ledgerFixture();
     expect(contactForIbanInternal(f.deps.db, IBAN)).toBeNull();
     f.deps.db.transaction((tx) => learnContactIbanInternal(tx, f.deps, f.ctx, { contactId: f.donor.id, iban: IBAN, learnedFrom: 'booking' }));
+    expect(contactForIbanInternal(f.deps.db, IBAN_SPACED)).toEqual({ contactId: f.donor.id });
+    expect(contactForIbanInternal(f.deps.db, 'DE23999999990000202051')).toBeNull();
+  });
+
+  it('names no contact when two active contacts share the iban — a joint account (Befund 3, 0.2.12)', async () => {
+    const f = await ledgerFixture();
+    f.deps.db.transaction((tx) => learnContactIbanInternal(tx, f.deps, f.ctx, { contactId: f.donor.id, iban: IBAN, learnedFrom: 'booking' }));
     f.deps.clock.advance(1000);
     f.deps.db.transaction((tx) => learnContactIbanInternal(tx, f.deps, f.ctx, { contactId: f.rightDonor.id, iban: IBAN_SPACED, learnedFrom: 'booking' }));
-    expect(contactForIbanInternal(f.deps.db, IBAN_SPACED)).toEqual({ contactId: f.rightDonor.id });
-    expect(contactForIbanInternal(f.deps.db, 'DE23999999990000202051')).toBeNull();
+    expect(contactForIbanInternal(f.deps.db, IBAN)).toBeNull();
+    // Kompass kennt die IBAN trotzdem — jüngste Zuordnung zuerst.
+    expect(contactsForIbanInternal(f.deps.db, IBAN_SPACED)).toEqual([f.rightDonor.id, f.donor.id]);
+    // Ist einer der beiden archiviert, bleibt genau ein aktiver Kontakt.
+    f.deps.db.update(contacts).set({ status: 'archived' }).where(eq(contacts.id, f.rightDonor.id)).run();
+    expect(contactForIbanInternal(f.deps.db, IBAN)).toEqual({ contactId: f.donor.id });
+    expect(contactsForIbanInternal(f.deps.db, IBAN)).toEqual([f.rightDonor.id, f.donor.id]);
+  });
+
+  it('names no contact when the only holder is archived, but still knows the iban', async () => {
+    const f = await ledgerFixture();
+    f.deps.db.transaction((tx) => learnContactIbanInternal(tx, f.deps, f.ctx, { contactId: f.donor.id, iban: IBAN, learnedFrom: 'booking' }));
+    f.deps.db.update(contacts).set({ status: 'archived' }).where(eq(contacts.id, f.donor.id)).run();
+    expect(contactForIbanInternal(f.deps.db, IBAN)).toBeNull();
+    expect(contactsForIbanInternal(f.deps.db, IBAN)).toEqual([f.donor.id]);
   });
 
   it('learns nothing twice, and nothing from an invalid iban', async () => {
@@ -107,6 +136,7 @@ describe('contactForIbanInternal and learnContactIbanInternal', () => {
     const f = await ledgerFixture();
     f.deps.db.insert(financeContactBankAccounts).values({ id: 'CBA-GONE', contactId: 'CONTACT-GONE', iban: IBAN, createdAt: '2026-01-01T00:00:00.000Z', createdByUserId: f.userId }).run();
     expect(contactForIbanInternal(f.deps.db, IBAN)).toBeNull();
+    expect(contactsForIbanInternal(f.deps.db, IBAN)).toEqual([]);
   });
 });
 

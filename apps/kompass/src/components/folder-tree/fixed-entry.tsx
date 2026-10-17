@@ -6,7 +6,7 @@ import Link from 'next/link';
 import type { DragEvent as ReactDragEvent } from 'react';
 import type { BlockReason, DragItem } from '@/lib/folder-tree-model';
 import { cn } from '@/lib/utils';
-import { DropMark, DropNote, HATCH, PickReason, ROW_BLOCKED, ROW_DROP, ROW_SELECTED, rowClass, type FolderTreeDensity, type RowDrop, type RowPick } from './folder-tree-row';
+import { DropMark, DropNote, HATCH, MenuSpacer, PickReason, ROW_BLOCKED, ROW_DROP, ROW_SELECTED, rowClass, type FolderTreeDensity, type RowDrop, type RowPick } from './folder-tree-row';
 
 /** Ein Eintrag über dem Baum: „Alle Dokumente“, „Eingangskorb“. */
 export interface FolderTreeFixedEntry {
@@ -69,12 +69,13 @@ export function FixedEntry({ entry, state, density, drop }: { entry: FolderTreeF
         <span className="wrap-anywhere">{entry.label}</span>
         {state ? <DropNote drop={state} opening={t('opening')} /> : null}
       </span>
-      <span className={cn('flex shrink-0 items-center', line)}>
+      <span className={cn('flex shrink-0 items-center gap-1', line)}>
         {state ? (
           <DropMark state={state.state} />
         ) : entry.count !== undefined ? (
-          <span className={cn('font-mono text-hint font-normal tabular-nums', entry.current ? 'text-current' : 'text-muted-ink')}>{entry.count}</span>
+          <span className={cn(' text-hint font-normal tabular-nums', entry.current ? 'text-current' : 'text-muted-ink')}>{entry.count}</span>
         ) : null}
+        {state ? null : <MenuSpacer density={density} />}
       </span>
     </Link>
   );
@@ -142,7 +143,7 @@ export function PickFixedEntry({
         ) : picked && check ? (
           <Check className="size-4 text-brand" strokeWidth={2.6} aria-hidden />
         ) : entry.count !== undefined ? (
-          <span className={cn('font-mono text-hint font-normal tabular-nums', picked ? 'text-current' : 'text-muted-ink')}>{entry.count}</span>
+          <span className={cn(' text-hint font-normal tabular-nums', picked ? 'text-current' : 'text-muted-ink')}>{entry.count}</span>
         ) : null}
       </span>
     </button>

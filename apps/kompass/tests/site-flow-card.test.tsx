@@ -5,6 +5,7 @@ import type { ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import messages from '../messages/de.json';
 import { PublishConfirmDialog } from '@/app/(shell)/site/publish/confirm-dialog';
+import { LogDialog } from '@/app/(shell)/site/publish/log-dialog';
 import { endText, PublishFlowCard, type PublishFlowCardProps } from '@/app/(shell)/site/publish/flow-card';
 import type { FlowState } from '@/app/(shell)/site/publish/flow-state';
 import { SiteJobContext } from '@/components/site/site-job-provider';
@@ -66,8 +67,13 @@ describe('PublishFlowCard', () => {
   it('ready: publish first, then the preview link, details closed', () => {
     renderCard(stateOf('ready'), { env: 'test' });
     expect(screen.getAllByRole('button')[0]!.textContent).toBe('Auf Test publizieren');
-    expect(screen.getByRole('link', { name: /Vorschau öffnen/ })).toHaveProperty('pathname', '/site/preview-frame');
+    expect(screen.getByRole('link', { name: /Vorschau öffnen/ })).toHaveProperty('pathname', '/site/publish/preview');
     expect(document.querySelector('details')!.hasAttribute('open')).toBe(false);
+  });
+  // 10 B20: Der Stand steht im Kopf des Protokolls, nicht in der Metazeile der Karte.
+  it('ready: the meta line names when and who, not the content hash', () => {
+    renderCard(stateOf('ready'));
+    expect(screen.getByText(/^Gebaut /).textContent).not.toContain('aaaaaaaaaaaa');
   });
   it('unchanged: no publish button, a quiet link-like action to publish anyway', () => {
     renderCard(stateOf('unchanged'));
@@ -179,6 +185,13 @@ describe('PublishConfirmDialog', () => {
     await waitFor(() => expect(onRebuild).toHaveBeenCalled());
     expect(onOpenChange).toHaveBeenCalledWith(false);
   });
+  // 10 B23: keine graue Box, die nur Knopf und Host wiederholt.
+  it('does not repeat button and host in a box below the text', async () => {
+    check.mockResolvedValueOnce({ status: 'success', data: { contentHash: 'a'.repeat(64) } });
+    render(dialog(), { wrapper: Intl });
+    await screen.findByRole('button', { name: 'Jetzt publizieren' });
+    expect(screen.getByRole('alertdialog').textContent).not.toContain('Jetzt publizieren · ');
+  });
   it('says Test instead of the address on the test instance', async () => {
     check.mockResolvedValueOnce({ status: 'success', data: { contentHash: 'a'.repeat(64) } });
     render(dialog({ env: 'test' }), { wrapper: Intl });
@@ -247,17 +260,38 @@ describe('none: what changed since the last publish (Board 8d, Plan C)', () => {
   it('names four records with links and how many more; one taken off the website without a link', () => {
     render(<PublishFlowCard {...props({ kind: 'none', lastPublishedAt: '2026-09-28T08:00:00.000Z' })} />, { wrapper: withPending(7) });
     const text = screen.getByTestId('site-pending-since').textContent;
-    expect(text).toBe('Seit dem letzten Publish am 28.09.2026 geändert: Bruno, Kira (von der Webseite genommen), Nala (neu), Sommerfest 2026 und 3 weitere.');
+    expect(text).toBe('Seit dem letzten Publizieren am 28.09.2026 geändert: Bruno, Kira (von der Webseite genommen), Nala (neu), Sommerfest 2026 und 3 weitere.');
     expect(screen.getByRole('link', { name: 'Bruno' }).getAttribute('href')).toBe('/animals/A1');
     expect(screen.queryByRole('link', { name: 'Kira' })).toBeNull();
   });
   it('joins the last two with „und“ when nothing more follows', () => {
     render(<PublishFlowCard {...props({ kind: 'none', lastPublishedAt: null })} />, { wrapper: withPending(2, items.slice(0, 2)) });
-    expect(screen.getByTestId('site-pending-since').textContent).toBe('Seit dem letzten Publish am 28.09.2026 geändert: Bruno und Kira (von der Webseite genommen).');
+    expect(screen.getByTestId('site-pending-since').textContent).toBe('Seit dem letzten Publizieren am 28.09.2026 geändert: Bruno und Kira (von der Webseite genommen).');
   });
   it('keeps the old sentence without changes', () => {
     render(<PublishFlowCard {...props({ kind: 'none', lastPublishedAt: null })} />, { wrapper: withPending(0, []) });
     expect(screen.queryByTestId('site-pending-since')).toBeNull();
     expect(screen.getByText(/Noch nie publiziert/)).toBeTruthy();
+  });
+});
+
+/**
+ * 10 A2: Die Rohausgabe (rsync) steht hinter „Technisches Protokoll“, offen steht nur die Kurzfassung. 142: Die
+ * Kurzfassung eines Publishs spricht wie die Liste („39 neu“, „entfallen“, ohne Nullen), die Klappe ohne „anzeigen“.
+ */
+describe('LogDialog', () => {
+  it('keeps the raw output in a closed disclosure and words the summary like the list', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ log: { text: 'rsync -az …\n.htaccess' } }) });
+    vi.stubGlobal('fetch', fetchMock);
+    const item = { key: 'P', from: { kind: 'publish' as const, id: 'P' }, startedAt: '2026-10-03T08:00:00.000Z', status: 'success' as const, byName: 'Erika Beispiel', source: { channel: 'ui' as const, tokenName: null }, hash: 'a'.repeat(64), summary: 'Publiziert: 0 geändert, 39 neu, 0 entfernt', counts: { changed: 0, added: 39, removed: 0 }, fallback: '' };
+    render(<LogDialog item={item} onClose={() => {}} />, { wrapper: Intl });
+    await screen.findByText(/rsync -az/);
+    const details = screen.getByText('Technisches Protokoll', { exact: true }).closest('details')!;
+    expect(details.hasAttribute('open')).toBe(false);
+    expect(screen.queryByText(/anzeigen/)).toBeNull();
+    const text = screen.getByRole('dialog').textContent;
+    expect(text).toContain('Kurz: 39\u00a0neu');
+    expect(text).not.toContain('entfernt');
+    vi.unstubAllGlobals();
   });
 });

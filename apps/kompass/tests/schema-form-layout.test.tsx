@@ -25,7 +25,8 @@ function wrap(children: ReactNode) {
 /** Die Zelle im Raster, in der ein Feld mit dieser Beschriftung steht. */
 const cellOf = (label: string) => {
   let node: HTMLElement | null = screen.getByText(label);
-  while (node && !node.parentElement?.className.includes('grid')) node = node.parentElement;
+  // Bis zur Zelle des Formularrasters — mehrsprachige Felder haben ein eigenes Raster der Sprachspalten darin.
+  while (node && !node.parentElement?.className.includes('@[880px]:grid-cols-4')) node = node.parentElement;
   return node!;
 };
 
@@ -120,22 +121,25 @@ describe('Sprachspalten', () => {
   });
 
   // Befund K9 5a: Ist schon eine Sprache `full`, stehen die Sprachen immer untereinander, jede über die volle Breite.
-  it.each([2, 3])('LocalizedField der Größe full mit %i Sprachen steht untereinander', (count) => {
+  it.each([2, 3])('LocalizedField der Größe full mit %i Sprachen steht erst in breiter Spalte nebeneinander', (count) => {
     const locales = ['de', 'en', 'ro'].slice(0, count);
     wrap(<LocalizedField name="lede" label="Einleitung" size="full" value={{}} locales={locales} />);
-    expect(languageGrid('DE').className).not.toMatch(/grid-cols-[23]/);
+    expect(languageGrid('DE').className).toContain(count === 2 ? '@[720px]:grid-cols-2' : '@[1080px]:grid-cols-3');
   });
 
-  it.each([2, 3])('schema-form localized der Größe full mit %i Sprachen steht untereinander', (count) => {
+  it.each([2, 3])('schema-form localized der Größe full mit %i Sprachen steht erst in breiter Spalte nebeneinander', (count) => {
     const locales = ['de', 'en', 'ro'].slice(0, count);
     wrap(<SchemaForm schema={{ lede: { widget: 'localized', label: 'Einleitung', size: 'full' } }} value={{}} locales={locales} onChange={() => {}} />);
-    expect(languageGrid('DE').className).not.toMatch(/grid-cols-[23]/);
+    expect(languageGrid('DE').className).toContain(count === 2 ? '@[720px]:grid-cols-2' : '@[1080px]:grid-cols-3');
     expect(cellOf('Einleitung').className).toContain('@[880px]:col-span-4');
   });
 
-  it('languageColumns liefert bei full keine Spalten', () => {
-    expect(languageColumns(2, 'full')).toBe('');
-    expect(languageColumns(3, 'full')).toBe('');
+  // Runde 3 (128, 130, 190): auch ein Feld, das je Sprache schon die volle Breite nimmt, steht ab md nebeneinander —
+  // erst ab einer breiteren Spalte, damit jede Sprache Platz behält.
+  it('languageColumns stellt auch `full` ab md nebeneinander', () => {
+    expect(languageColumns(2, 'full')).toBe('@[720px]:grid-cols-2');
+    expect(languageColumns(3, 'full')).toBe('@[1080px]:grid-cols-3');
+    expect(languageColumns(4, 'full')).toBe('');
     expect(languageColumns(2, 'l')).toContain('grid-cols-2');
   });
 });
@@ -217,9 +221,11 @@ describe('SchemaForm', () => {
     expect(cellOf('Platz 2').contains(note)).toBe(true);
   });
 
-  it('setzt Felder vor dem ersten Abschnitt ins selbe Raster', () => {
-    wrap(<SchemaForm schema={{ count: schema.count! }} value={{}} locales={['de']} onChange={() => {}} leading={<span>Slug-Feld</span>} />);
-    expect(screen.getByText('Slug-Feld').closest('.grid')).toBe(cellOf('Anzahl').parentElement);
+  it('setzt den URL-Teil ans Ende des ersten Abschnitts, im selben Raster (10 B14)', () => {
+    wrap(<SchemaForm schema={{ count: schema.count! }} value={{}} locales={['de']} onChange={() => {}} trailing={<span>Slug-Feld</span>} />);
+    const slug = screen.getByText('Slug-Feld');
+    expect(slug.closest('.grid')).toBe(cellOf('Anzahl').parentElement);
+    expect(cellOf('Anzahl').compareDocumentPosition(slug) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 });
 
@@ -228,51 +234,65 @@ describe('SchemaForm', () => {
  * im Betragsfeld), damit alle Eingaben einer Rasterzeile auf einer Linie liegen. Mehrzeilige Felder behalten das
  * Kürzel über dem Feld. Jede Eingabe heißt zugänglich „‹Label› (‹Sprachname›)“; „nicht übersetzt“ steht unter dem Feld.
  */
+/** Sprachkürzel rechts in der Labelzeile, ein- wie mehrzeilig (Designer 2026-10-16, Teil 2 Nr. 8). */
 describe('Sprachkürzel', () => {
-  const prefixOf = (input: HTMLElement) => input.previousElementSibling as HTMLElement | null;
+  /** Das Kürzel einer Eingabe: das `<label>` am Ende der Zeile über ihr. */
+  const codeOf = (input: HTMLElement) => (input.previousElementSibling as HTMLElement | null)?.querySelector(`label[for="${CSS.escape(input.id)}"]`) ?? null;
 
-  it('LocalizedField einzeilig: Kürzel als Präfix im Feld, zugänglicher Name je Sprache', () => {
+  it('LocalizedField einzeilig: Kürzel in der Labelzeile, zugänglicher Name je Sprache', () => {
     wrap(<LocalizedField name="sizeText" label="Größe als Text" value={{ de: 'mittel' }} locales={['de', 'en']} />);
     const de = screen.getByRole('textbox', { name: 'Größe als Text (Deutsch)' });
     const en = screen.getByRole('textbox', { name: 'Größe als Text (Englisch)' });
-    expect(prefixOf(de)?.textContent).toBe('DE');
-    expect(prefixOf(de)?.getAttribute('aria-hidden')).toBe('true');
-    expect(prefixOf(en)?.textContent).toBe('EN');
-    // Der Hinweis steht unter dem Feld, nicht neben dem Kürzel.
+    expect(codeOf(de)?.textContent).toBe('DE');
+    expect(codeOf(en)?.textContent).toBe('EN');
+    // Der Hinweis steht unter dem Feld.
     const hint = screen.getByText('unübersetzt');
-    expect(en.parentElement!.nextElementSibling).toBe(hint);
+    expect(en.nextElementSibling).toBe(hint);
     expect(en.getAttribute('aria-describedby')).toBe(hint.id);
   });
 
-  it('LocalizedField mehrzeilig: Kürzel über dem Feld', () => {
+  it('LocalizedField mehrzeilig: dieselbe Labelzeile', () => {
     wrap(<LocalizedField name="summary" label="Kurztext" kind="textarea" value={{}} locales={['de', 'en']} />);
     const de = screen.getByRole('textbox', { name: 'Kurztext (Deutsch)' });
     expect(de.tagName).toBe('TEXTAREA');
-    expect(prefixOf(de)?.tagName).toBe('LABEL');
-    expect(prefixOf(de)?.textContent).toBe('DE');
+    expect(codeOf(de)?.textContent).toBe('DE');
   });
 
-  it('Präfix hat eine feste Mindestbreite, auch für lange Kürzel', () => {
+  it('lange Kürzel stehen ebenso rechts', () => {
     wrap(<LocalizedField name="claim" label="Claim" value={{}} locales={['de', 'pt-br']} />);
-    const de = prefixOf(screen.getByRole('textbox', { name: 'Claim (Deutsch)' }))!;
-    const pt = prefixOf(screen.getByRole('textbox', { name: /^Claim \(Portugiesisch/ }))!;
-    expect(pt.textContent).toBe('PT-BR');
-    expect(de.className).toMatch(/\bmin-w-/);
-    expect(de.className).toBe(pt.className);
+    expect(codeOf(screen.getByRole('textbox', { name: /^Claim \(Portugiesisch/ }))?.textContent).toBe('PT-BR');
   });
 
-  it('schema-form localized einzeilig: Präfix und zugänglicher Name', () => {
+  it('schema-form localized einzeilig: Kürzel und zugänglicher Name', () => {
     wrap(<SchemaForm schema={{ claim: { widget: 'localized', label: 'Claim' } }} value={{ claim: { de: 'Hallo' } }} locales={['de', 'en']} onChange={() => {}} />);
     const en = screen.getByRole('textbox', { name: 'Claim (Englisch)' });
-    expect(prefixOf(en)?.textContent).toBe('EN');
-    expect(en.parentElement!.nextElementSibling).toBe(screen.getByText('noch nicht übersetzt'));
+    expect(codeOf(en)?.textContent).toBe('EN');
+    expect(en.nextElementSibling).toBe(screen.getByText('noch nicht übersetzt'));
+    // Die Gruppe heißt wie das Feld.
+    expect(screen.getByRole('group', { name: 'Claim' })).toBeTruthy();
   });
 
-  it('schema-form localized Markdown: Kürzel über dem Feld', () => {
+  it('schema-form localized Markdown: dieselbe Labelzeile', () => {
     wrap(<SchemaForm schema={{ lede: { widget: 'localized', label: 'Einleitung', markdown: true } }} value={{}} locales={['de', 'en']} onChange={() => {}} />);
     const de = screen.getByRole('textbox', { name: 'Einleitung (Deutsch)' });
     expect(de.tagName).toBe('TEXTAREA');
-    expect(prefixOf(de)?.textContent).toBe('DE');
-    expect(prefixOf(de)?.tagName).toBe('LABEL');
+    expect(codeOf(de)?.textContent).toBe('DE');
+  });
+
+  // 10 B12: Die Vorschau hat die Form von LocalizedField — „Vorschau“ und je Sprache ein Umschalter, kein Knopf im Markenstil.
+  it('schema-form localized Markdown: Vorschau-Umschalter je Sprache wie LocalizedField', () => {
+    wrap(<SchemaForm schema={{ lede: { widget: 'localized', label: 'Einleitung', markdown: true } }} value={{ lede: { de: 'Hallo', en: 'Hello' } }} locales={['de', 'en']} onChange={() => {}} />);
+    const toggles = screen.getAllByRole('button', { pressed: undefined }).filter((b) => b.hasAttribute('aria-pressed'));
+    expect(toggles.map((b) => b.textContent)).toEqual(['DE', 'EN']);
+    expect(toggles[0]!.getAttribute('aria-pressed')).toBe('true');
+    expect(screen.queryByRole('button', { name: 'Vorschau' })).toBeNull();
+  });
+});
+
+/** Runde 3, 135 (MUSTER § E): Eine Zahl mit Einheit aus dem Template zeigt sie rechts im Feld. */
+describe('SchemaForm number with unit', () => {
+  it('shows the unit inside the field', () => {
+    wrap(<SchemaForm schema={{ fee: { type: 'number', label: 'Mitgliedsbeitrag im Jahr', unit: '€' } as FieldSchema }} value={{ fee: 60 }} locales={['de']} onChange={() => {}} />);
+    expect(screen.getByText('€').closest('[data-slot="input-unit"]')).toBeTruthy();
   });
 });

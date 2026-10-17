@@ -300,10 +300,11 @@ describe('FolderTree', () => {
     expect(shell).not.toContain('?');
   });
 
-  it('opens the key help from the link at the foot of the column', async () => {
+  // 144: Kein Hinweis „Tastenkürzel ?“ am Fuß der Spalte (sonst gibt es nirgends einen); das Kürzel „?“ bleibt.
+  it('has no key help link at the foot of the column', async () => {
     renderTree();
-    fireEvent.click(screen.getByRole('button', { name: /Tastenkürzel/ }));
-    expect(await screen.findByRole('dialog', { name: 'Tasten im Ordnerbaum' })).toBeTruthy();
+    await screen.findAllByRole('treeitem');
+    expect(screen.queryByRole('button', { name: /Tastenkürzel/ })).toBeNull();
   });
 
   it('stays reachable by Tab when the selected folder does not exist (bookmark, moved away)', async () => {

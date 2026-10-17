@@ -591,7 +591,7 @@ describe('seedFinance', () => {
       const toCorrect = unwrap(await listConfirmations(deps, ctx, { tab: 'toCorrect' }));
       expect(toCorrect.items).toHaveLength(3);
       const byName = new Map(toCorrect.items.map((c) => [c.contactName, c]));
-      expect(byName.get('Greta Sommer')).toMatchObject({ noticeId: provisional.id, issuedOn: '2025-04-15', totalCents: 12000, state: 'valid' });
+      expect(byName.get('Greta Sommer')).toMatchObject({ noticeId: provisional.id, issuedOn: '2026-02-10', totalCents: 12000, state: 'valid' });
       expect(byName.get('Greta Sommer')!.toCorrect).toEqual(['noticeSuperseded']);
       // Gretas Zuwendung liegt nach dem Beginn der Befreiung laut § 60a-Bescheid — sonst gäbe es keine Bestätigung.
       expect(provisional.exemptFrom <= '2025-03-14').toBe(true);
@@ -716,8 +716,8 @@ describe('seedFinance', () => {
       const { deps, ctx, jonas } = await seededWithClerkAndApprover();
       const jonasCtx = { ...ctx, userId: jonas.id, permissions: getEffectivePermissions(deps.db, deps.registry, jonas.id) };
       const layout = unwrap(await getDashboardLayout(deps, jonasCtx));
-      expect(layout.tiles).toContainEqual({ module: 'finance', key: 'approvalsPending', options: {} });
-      expect(layout.tiles.filter((t) => t.module === 'finance' && t.key === 'approvalsPending')).toHaveLength(1);
+      expect(layout.columns.flat()).toContainEqual({ module: 'finance', key: 'approvalsPending', options: {} });
+      expect(layout.columns.flat().filter((t) => t.module === 'finance' && t.key === 'approvalsPending')).toHaveLength(1);
     });
 
     it('sets the association-wide waiver basis text — otherwise creating a declaration fails with waiverBasisMissing', async () => {

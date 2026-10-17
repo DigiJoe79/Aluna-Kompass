@@ -69,8 +69,14 @@ export function RunProgress({ runId, counts: initial, canContinue }: { runId: st
     <section data-testid="run-progress" className="rounded-md border border-line bg-surface p-4">
       <Section title={t('title')}>
         <div className="space-y-3">
-          <progress value={done} max={total} aria-label={t('title')} className="h-2 w-full" />
-          <p data-testid="run-progress-status" role="status" aria-live="polite" className="font-mono text-meta tabular-nums text-ink">
+          {/* 14 A3: Spur und Füllung in Tokens — die ungestaltete Spur las sich bei 0 als voller Balken (ohne Layout-Test). */}
+          <progress
+            value={done}
+            max={total}
+            aria-label={t('title')}
+            className="h-2 w-full appearance-none overflow-hidden rounded-full bg-surface-2 [&::-moz-progress-bar]:bg-brand [&::-webkit-progress-bar]:bg-surface-2 [&::-webkit-progress-value]:bg-brand"
+          />
+          <p data-testid="run-progress-status" role="status" aria-live="polite" className="text-meta tabular-nums text-ink">
             {t('status', { done, total })}
           </p>
           <p className="text-meta text-ink-2">{canContinue ? t('leave') : t('noPermission')}</p>

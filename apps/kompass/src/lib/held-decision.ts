@@ -52,7 +52,7 @@ function send(slot: Slot): void {
   });
 }
 
-/** Schickt eine zurückgehaltene Entscheidung sofort ab (zweiter Wisch, „Fertig“, Wechsel auf die Prüfseite). */
+/** Schickt eine zurückgehaltene Entscheidung sofort ab (zweiter Wisch, Verlassen des Stapels, Wechsel auf die Prüfseite). */
 export function flushHeldDecision(): void {
   const s = store();
   const slot = s.current;

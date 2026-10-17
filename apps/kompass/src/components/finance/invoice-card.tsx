@@ -14,6 +14,7 @@ import { Section } from '@/components/section';
 import { Button, buttonVariants } from '@/components/ui/button';
 import type { ActionState } from '@/lib/actions';
 import { formatEuro } from '@/lib/finance/amount';
+import { formatIban } from '@kompass/module-finance/format';
 
 const rateText = (rate: number): string => new Intl.NumberFormat('de-DE', { maximumFractionDigits: 2 }).format(rate);
 const bookHref = (rawTransactionId: string, documentId: string): string => `/finance/work?raw=${rawTransactionId}&voucher=${documentId}`;
@@ -117,10 +118,10 @@ function InvoiceFacts({ invoice }: { invoice: InvoiceView }) {
   const rows: [string, ReactNode][] = [
     [t('seller'), invoice.sellerName],
     [t('number'), <span key="number" className="font-mono">{invoice.invoiceNumber}</span>],
-    [t('date'), <span key="date" className="font-mono tabular-nums">{date(invoice.issueDate)}</span>],
+    [t('date'), <span key="date" className="tabular-nums">{date(invoice.issueDate)}</span>],
     [
       t('total'),
-      <span key="total" className="font-mono tabular-nums">
+      <span key="total" className="tabular-nums">
         {formatEuro(invoice.grandTotalCents)}
         {invoice.typeCode === '381' ? ` · ${t('creditNote')}` : ''}
       </span>,
@@ -131,7 +132,7 @@ function InvoiceFacts({ invoice }: { invoice: InvoiceView }) {
       t('tax'),
       <span key="tax" className="space-y-0.5">
         {invoice.taxes.map((tax) => (
-          <span key={`${tax.ratePercent}-${tax.categoryCode}`} className="block font-mono tabular-nums">
+          <span key={`${tax.ratePercent}-${tax.categoryCode}`} className="block tabular-nums">
             {t('taxLine', { rate: rateText(tax.ratePercent), amount: formatEuro(tax.taxCents) })}
           </span>
         ))}
@@ -139,9 +140,9 @@ function InvoiceFacts({ invoice }: { invoice: InvoiceView }) {
       </span>,
     ]);
   }
-  if (invoice.dueDate) rows.push([t('due'), <span key="due" className="font-mono tabular-nums">{date(invoice.dueDate)}</span>]);
+  if (invoice.dueDate) rows.push([t('due'), <span key="due" className="tabular-nums">{date(invoice.dueDate)}</span>]);
   if (invoice.payeeIban) {
-    rows.push([t('iban'), <span key="iban" className="break-all font-mono">{invoice.payeeIban}</span>]);
+    rows.push([t('iban'), <span key="iban" className="font-mono">{formatIban(invoice.payeeIban)}</span>]);
     rows.push([t('contact'), invoice.contactName ?? <span key="contact" className="text-muted-ink">{t('noContact')}</span>]);
   }
   return (
@@ -232,7 +233,7 @@ function ProbablyPaidPart({ documentId, proposal, canWrite }: { documentId: stri
             </Button>
           </>
         ) : (
-          <Button type="button" size="sm" variant="ghost" onClick={() => setAnyway(true)}>
+          <Button type="button" size="sm" variant="outline" onClick={() => setAnyway(true)}>
             {t('createAnyway')}
           </Button>
         )

@@ -1,7 +1,7 @@
 import path from 'node:path';
 import { Client, StreamableHTTPClientTransport } from '@modelcontextprotocol/client';
 import { expect, test } from './fixtures';
-import { loginAsAdmin, resetDatabase, waitForHydration } from './helpers';
+import { loginAsAdmin, resetDatabase, waitForHydration, readTemplate } from './helpers';
 
 const PNG = Buffer.from(
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==',
@@ -10,9 +10,7 @@ const PNG = Buffer.from(
 
 const importTemplate = async (page: import('@playwright/test').Page) => {
   await page.goto('/site/template');
-  await page.getByRole('button', { name: 'Vorlage einlesen' }).click();
-  await page.getByRole('button', { name: 'Übernehmen' }).click();
-  await expect(page.getByRole('status')).toContainText('eingelesen');
+  await readTemplate(page);
 };
 
 /** Die Karte der Publizieren-Seite: ihr Titel nennt den einen Zustand. */
@@ -29,7 +27,7 @@ test('the preview blocks on a blocked term and says where to change it', async (
   await page.goto('/admin/site?panel=blockedTerms');
   const terms = page.getByRole('region', { name: 'Sperrwörter' });
   await terms.getByLabel('Begriffe, einer je Zeile').fill('Popescu\nLorem ipsum');
-  await terms.getByRole('button', { name: 'Sperrwörter speichern' }).click();
+  await terms.getByRole('button', { name: 'Speichern' }).click();
   await expect(page.getByRole('status')).toContainText('Sperrwörter gespeichert');
   await page.reload();
   await expect(page.getByRole('region', { name: 'Sperrwörter' }).getByLabel('Begriffe, einer je Zeile')).toHaveValue('Popescu\nLorem ipsum');
@@ -39,7 +37,7 @@ test('the preview blocks on a blocked term and says where to change it', async (
   await page.goto('/site/variables');
   await page.locator('[name="claim.de"]').fill('Frau Popescu betreibt den Verein.');
   await page.getByRole('button', { name: 'Speichern' }).click();
-  await expect(page.getByRole('status')).toContainText('Gespeichert');
+  await expect(page.getByRole('status').filter({ hasText: 'Gespeichert' })).toContainText('Gespeichert');
 
   await page.goto('/site/publish');
   await expect(cardTitle(page, 'Noch keine Vorschau')).toBeVisible();
@@ -79,14 +77,14 @@ test('preview build, diff and publish to the local staging target', async ({ pag
   await importTemplate(page);
 
   await page.goto('/site/c/news/new');
-  await page.getByLabel('Slug (URL-Teil)').fill('sommerfest');
+  await page.getByLabel('URL-Teil').fill('sommerfest');
   await page.locator('[name="title.de"]').fill('Sommerfest 2026');
   await page.getByRole('button', { name: 'Speichern' }).click();
   await expect(page).toHaveURL('/site/c/news');
   // Der Schalter dieser einen Meldung, nicht irgendeiner: Seit die Webseite
   // Entwicklungsdaten mitbringt (`seedSiteDevelopment`), stehen weitere
   // Einträge in der Liste.
-  const publish = page.getByRole('row', { name: /Sommerfest 2026/ }).getByRole('switch', { name: 'Veröffentlicht' });
+  const publish = page.getByRole('row', { name: /Sommerfest 2026/ }).getByRole('switch', { name: 'Publiziert' });
   await publish.click();
   await expect(publish).toBeChecked();
 
@@ -103,9 +101,9 @@ test('preview build, diff and publish to the local staging target', async ({ pag
   }
   expect(running?.kind).toBe('preview');
   await expect(cardTitle(page, 'Vorschau bereit')).toBeVisible({ timeout: 180_000 });
-  // Die Kurzbilanz hält alle drei Zahlen in einer Zeile, die Dateien stehen zugeklappt darunter.
+  // Die Kurzbilanz nennt die Zahlen in einer Zeile, Nullen fallen weg; die Dateien stehen zugeklappt darunter.
   // (Die Historie darunter nennt ihre Änderungen im selben Wortlaut; die Karte steht zuerst.)
-  await expect(page.getByText(/\d+ geändert · \d+ neu · 0 entfallen/).first()).toBeVisible();
+  await expect(page.getByText(/^\d+\s+geändert(?: · \d+\s+neu)?$/).first()).toBeVisible();
   await expect(page.getByText('aktuelles/sommerfest/index.html')).toBeHidden();
   await page.getByText('Einzelheiten: Dateien und Hinweise').click();
   await expect(page.getByText('aktuelles/sommerfest/index.html')).toBeAttached();
@@ -120,14 +118,14 @@ test('preview build, diff and publish to the local staging target', async ({ pag
   // fand beides leer (2026-09-19).
   const [tab] = await Promise.all([page.context().waitForEvent('page'), page.getByRole('link', { name: 'Vorschau öffnen' }).click()]);
   await tab.waitForLoadState();
-  await expect(tab).toHaveURL(/\/site\/preview-frame$/);
+  await expect(tab).toHaveURL(/\/site\/publish\/preview$/);
   await expect(tab.getByTestId('env-banner')).toBeVisible();
   // Wer die Vorschauseite direkt aufruft, kommt zurück.
-  await expect(tab.getByRole('link', { name: 'Zurück zu Publizieren' })).toHaveAttribute('href', '/site/publish');
+  await expect(tab.getByRole('main').getByRole('link', { name: 'Publizieren', exact: true })).toHaveAttribute('href', '/site/publish');
   // Die Vorschau lässt sich auf Telefon- und Tablet-Breite schalten.
   const frame = tab.getByTitle('Vorschau');
   await expect(frame).not.toHaveCSS('width', '390px');
-  await tab.getByRole('radio', { name: /Mobil/ }).click();
+  await tab.getByRole('radio', { name: /Telefon/ }).click();
   await expect(frame).toHaveCSS('width', '390px');
   await tab.getByRole('radio', { name: /Tablet/ }).click();
   await expect(frame).toHaveCSS('width', '820px');
@@ -151,17 +149,21 @@ test('preview build, diff and publish to the local staging target', async ({ pag
   await confirmDialog.getByRole('button', { name: 'Auf Test publizieren' }).click();
   // Der Dialog schließt beim Start; den Lauf zeigen Karte und Kopfzeile.
   await expect(confirmDialog).toBeHidden();
-  await expect(page.getByRole('region', { name: 'Laufender Lauf' }).or(cardTitle(page, 'Publiziert'))).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Laufender Lauf' }).or(cardTitle(page, 'Publiziert')).first()).toBeVisible(); // beim Übergang stehen kurz beide
   await expect(cardTitle(page, 'Publiziert')).toBeVisible({ timeout: 180_000 });
   await expect(page.getByTestId('site-job')).toHaveCount(0);
-  const history = page.getByRole('table', { name: 'Letzte Publishes' });
-  await expect(history.getByRole('row').nth(1)).toContainText('Publiziert');
+  const history = page.getByRole('table', { name: 'Zuletzt publiziert' });
+  // 137: Der Normalfall „Publiziert“ trägt keine Marke mehr; die Zeile öffnet ihr Protokoll.
+  await expect(history.getByRole('row').nth(1)).not.toContainText('Gescheitert');
   // Der Publish, der gerade zu Ende ging, trägt die Marke „neu“.
   await expect(history.getByRole('row').nth(1)).toContainText('neu');
   // Das Protokoll lädt erst beim Öffnen und liegt in einem Dialog, der mit Escape schließt.
-  await history.getByRole('button', { name: 'Protokoll' }).first().click();
+  await history.getByRole('button', { name: /^Protokoll vom / }).first().click();
   const logDialog = page.getByRole('dialog', { name: /Protokoll/ });
   await expect(logDialog).toBeVisible();
+  // Die Rohausgabe steht hinter „Technisches Protokoll“ (10 A2, 142).
+  await expect(logDialog.locator('pre')).toBeHidden();
+  await logDialog.getByText('Technisches Protokoll', { exact: true }).click();
   await expect(logDialog.locator('pre')).toBeVisible();
   await expect(logDialog.getByRole('button', { name: 'Kopieren' })).toBeEnabled();
   await page.keyboard.press('Escape');
@@ -192,7 +194,7 @@ test('publishing is blocked when content changed after the preview was built', a
     await waitForHydration(second, '[name="claim.de"]');
     await second.locator('[name="claim.de"]').fill(text);
     await second.getByRole('button', { name: 'Speichern' }).click();
-    await expect(second.getByRole('status')).toContainText('Gespeichert');
+    await expect(second.getByRole('status').filter({ hasText: 'Gespeichert' })).toContainText('Gespeichert');
     await second.close();
   };
   await change('Geänderter Claim nach der Vorschau.');
@@ -205,7 +207,7 @@ test('publishing is blocked when content changed after the preview was built', a
   // Neu bauen schließt den Dialog und zeigt den Lauf in der Karte.
   await dialog.getByRole('button', { name: 'Vorschau neu bauen' }).click();
   await expect(dialog).toBeHidden();
-  await expect(page.getByRole('region', { name: 'Laufender Lauf' }).or(cardTitle(page, 'Vorschau bereit'))).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Laufender Lauf' }).or(cardTitle(page, 'Vorschau bereit')).first()).toBeVisible(); // beim Übergang stehen kurz beide
   await expect(cardTitle(page, 'Vorschau bereit')).toBeVisible({ timeout: 180_000 });
 
   // Mit Neuladen: Die Karte nennt es gleich beim Öffnen der Seite.
@@ -223,7 +225,7 @@ test('the preview reports a stale reference as a hint, not as a block', async ({
   await page.goto('/site/variables');
   await page.getByLabel('Projekt auf der Startseite').selectOption('winterhilfe');
   await page.getByRole('button', { name: 'Speichern' }).click();
-  await expect(page.getByRole('status')).toContainText('Gespeichert');
+  await expect(page.getByRole('status').filter({ hasText: 'Gespeichert' })).toContainText('Gespeichert');
 
   await page.goto('/projects');
   await page.getByRole('row', { name: /Winterhilfe/ }).getByRole('switch').click();
@@ -270,7 +272,7 @@ test('the preview rewrites every absolute path, srcset included', async ({ page 
   await chooser.getByRole('button', { name: /hero-/ }).click();
   await expect(chooser).toBeHidden();
   await page.getByRole('button', { name: 'Speichern' }).click();
-  await expect(page.getByRole('status')).toContainText('Gespeichert');
+  await expect(page.getByRole('status').filter({ hasText: 'Gespeichert' })).toContainText('Gespeichert');
 
   await page.goto('/site/publish');
   await page.getByRole('button', { name: 'Vorschau bauen' }).click();
@@ -319,7 +321,7 @@ test('a run started over MCP shows in the header and on the publish page and can
     await indicator.click();
     await expect(page).toHaveURL('/site/publish');
     const run = page.getByRole('region', { name: 'Laufender Lauf' });
-    await expect(run).toContainText('MCP');
+    await expect(run).toContainText('Agent');
     await run.getByRole('button', { name: 'Abbrechen' }).click();
     await page.getByRole('alertdialog').getByRole('button', { name: 'Lauf abbrechen' }).click();
     await expect(run).toHaveCount(0, { timeout: 60_000 });

@@ -17,6 +17,8 @@ import { CountDialog } from './count-dialog';
 import { MoveDialog } from './move-dialog';
 import { PaidDialog } from './paid-dialog';
 import { Section } from '@/components/section';
+import { Empty } from '@/components/empty-value';
+import { RowLink, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 export interface CashPageQuery {
   account?: string;
@@ -77,40 +79,52 @@ export default async function FinanceCashPage({ searchParams }: { searchParams: 
           />
         ) : null}
 
-        <div data-testid="cash-balance" className="rounded-lg border border-line bg-surface p-5">
-          <p className="text-meta text-muted-ink">{selected.name}</p>
-          <p className="font-mono text-figure font-semibold tabular-nums">{formatEuro(selected.balanceCents)}</p>
-        </div>
-
-        {canFinalize ? (
-          <div className="flex flex-wrap items-start gap-2.5">
-            {canPickContacts ? (
-              // `key`: ein Kontowechsel montiert den Dialog neu, statt einen veralteten Buchbestand mitzuschleppen.
+        {/* Runde 3, 092: Die drei Kassenvorgänge stehen im Kopf der Kassenkarte, rechts neben dem Stand, statt frei
+            zwischen Karte und Tabelle (brechen schmal darunter um). Layout an einer Stelle, ohne dauerhaften Test. */}
+        <div data-testid="cash-balance" className="flex flex-wrap items-start justify-between gap-4 rounded-lg border border-line bg-surface p-5">
+          <div>
+            <p className="text-meta text-muted-ink">{selected.name}</p>
+            <p className="text-figure font-semibold tabular-nums">{formatEuro(selected.balanceCents)}</p>
+          </div>
+          {canFinalize && canPickContacts ? (
+            <div className="flex flex-wrap items-start gap-2.5">
+              {/* `key`: ein Kontowechsel montiert den Dialog neu, statt einen veralteten Buchbestand mitzuschleppen. */}
               <CountDialog
                 key={`count-${selected.accountId}`}
                 account={{ id: selected.accountId, name: selected.name, bookCents: selected.balanceCents }}
                 today={today}
                 canCreateContact={canCreateContact}
               />
-            ) : (
-              <BlockedState step={t('count.trigger')} title={t('noContactsView.title')}>
-                {grantNames.length > 0 ? t('noContactsView.textWithNames', { names: grantNames.join(', ') }) : t('noContactsView.text')}
-              </BlockedState>
-            )}
-            {bankAccounts.length > 0 ? <MoveDialog key={`move-${selected.accountId}`} cashId={selected.accountId} bankAccounts={bankAccounts.map((a) => ({ id: a.accountId, name: a.name }))} today={today} /> : null}
-            <PaidDialog cashId={selected.accountId} />
+              {bankAccounts.length > 0 ? <MoveDialog key={`move-${selected.accountId}`} cashId={selected.accountId} bankAccounts={bankAccounts.map((a) => ({ id: a.accountId, name: a.name }))} today={today} /> : null}
+              <PaidDialog cashId={selected.accountId} />
+            </div>
+          ) : null}
+        </div>
+
+        {/* Zählende wählt man aus den Kontakten: Ohne `contacts.view` sagt ein Hinweis, warum „Kasse gezählt“ fehlt;
+            Umbuchen und „Bar bezahlt“ gehen trotzdem. */}
+        {canFinalize && !canPickContacts ? (
+          <div className="space-y-2.5">
+            <BlockedState step={t('count.trigger')} title={t('noContactsView.title')}>
+              {grantNames.length > 0 ? t('noContactsView.textWithNames', { names: grantNames.join(', ') }) : t('noContactsView.text')}
+            </BlockedState>
+            <div className="flex flex-wrap items-start gap-2.5">
+              {bankAccounts.length > 0 ? <MoveDialog key={`move-${selected.accountId}`} cashId={selected.accountId} bankAccounts={bankAccounts.map((a) => ({ id: a.accountId, name: a.name }))} today={today} /> : null}
+              <PaidDialog cashId={selected.accountId} />
+            </div>
           </div>
-        ) : (
+        ) : null}
+        {!canFinalize ? (
           <BlockedState step={t('title')} title={t('noRight.title')}>
             {names.length > 0 ? t('noRight.textWithNames', { names: names.join(', ') }) : t('noRight.text')}
           </BlockedState>
-        )}
+        ) : null}
 
         <section aria-label={t('lastMovements.title')}>
           <Section title={t('lastMovements.title')}
             actions={
               <>
-                <Link href={`/finance/entries?account=${selected.accountId}`} className="text-meta text-link">
+                <Link href={`/finance/entries?account=${selected.accountId}`} className="text-meta text-link underline underline-offset-2">
                   {t('lastMovements.toJournal')}
                 </Link>
               </>
@@ -118,19 +132,36 @@ export default async function FinanceCashPage({ searchParams }: { searchParams: 
           >
             <div className="space-y-2">
               {entriesRes.ok && entriesRes.value.entries.length > 0 ? (
-                <ul className="divide-y divide-line rounded-md border border-line">
-                  {entriesRes.value.entries.map((entry) => {
-                    const amount = entry.moneyLines.filter((l) => l.accountId === selected.accountId).reduce((s, l) => s + l.amountCents, 0);
-                    return (
-                      <li key={entry.id} className="flex items-center justify-between px-3 py-2 text-meta">
-                        <span>
-                          {fmt.date(entry.entryDate)} · {entry.text}
-                        </span>
-                        <span className="font-mono tabular-nums">{formatEuro(amount)}</span>
-                      </li>
-                    );
-                  })}
-                </ul>
+                // 07-2 B14: eine Tabelle wie das Journal — die Nummer öffnet die Buchung (§ G).
+                <div className="overflow-hidden rounded-md border border-line bg-surface">
+                  <Table data-testid="cash-last-movements">
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead col="meta">{t('lastMovements.columns.number')}</TableHead>
+                        <TableHead col="meta">{t('lastMovements.columns.date')}</TableHead>
+                        <TableHead col="title">{t('lastMovements.columns.text')}</TableHead>
+                        <TableHead col="amount" className="text-right">{t('lastMovements.columns.amount')}</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {entriesRes.value.entries.map((entry) => {
+                        const amount = entry.moneyLines.filter((l) => l.accountId === selected.accountId).reduce((s, l) => s + l.amountCents, 0);
+                        return (
+                          <TableRow key={entry.id}>
+                            <TableCell col="meta" className="font-mono text-meta">
+                              <RowLink href={`/finance/entries/${entry.id}`} aria-label={entry.number ? `${entry.number} · ${entry.text}` : entry.text}>
+                                {entry.number ?? <Empty />}
+                              </RowLink>
+                            </TableCell>
+                            <TableCell col="meta" className="tabular-nums text-meta text-ink-2">{fmt.date(entry.entryDate)}</TableCell>
+                            <TableCell col="title" truncate>{entry.text}</TableCell>
+                            <TableCell col="amount" className="text-right tabular-nums">{formatEuro(amount)}</TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
               ) : (
                 <p className="text-meta text-muted-ink">{t('lastMovements.empty')}</p>
               )}

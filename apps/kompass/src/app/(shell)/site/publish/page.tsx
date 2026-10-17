@@ -52,7 +52,7 @@ export default async function PublishPage() {
   const lastPublishedAt = history.find((h) => h.status === 'success')?.startedAt ?? null;
 
   return (
-    <Page width="standard" header={<PageHeader title={t('title')} />}>
+    <Page width="full" header={<PageHeader title={t('title')} />}>
       <div className="flex flex-col gap-4">
         <PublishTarget env={env} publicUrl={se.publicUrl} />
         <PublishClient

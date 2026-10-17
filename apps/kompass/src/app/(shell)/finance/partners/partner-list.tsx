@@ -2,8 +2,9 @@
 
 import { useTranslations } from 'next-intl';
 import { useDateFormat } from '@/components/date-format-provider';
-import { StatusBadge } from '@/components/status-badge';
 import { RowLink, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Empty } from '@/components/empty-value';
+import { EmptyState } from '@/components/empty-state';
 
 export interface PartnerRow {
   id: string;
@@ -32,38 +33,41 @@ export function PartnerList({ partners }: { partners: PartnerRow[] }) {
   return (
     <div className="space-y-4">
       {partners.length === 0 ? (
-        <p className="rounded-md border border-dashed border-line-strong bg-surface p-4 text-body text-muted-ink" data-testid="partners-empty">{t('emptyText')}</p>
+        // 09 B28: Leer über `EmptyState`, nicht von Hand gebaut.
+        <div data-testid="partners-empty">
+          <EmptyState title={t('emptyTitle')} text={t('emptyText')} />
+        </div>
       ) : (
         <Table data-testid="partner-rows">
           <TableHeader>
             <TableRow>
-              <TableHead>{t('columns.partner')}</TableHead>
-              <TableHead>{t('columns.status')}</TableHead>
-              <TableHead className="hidden sm:table-cell">{t('columns.usualBasis')}</TableHead>
-              <TableHead className="text-right">{t('columns.openProofs')}</TableHead>
-              <TableHead className="hidden text-right sm:table-cell">{t('columns.lastPaid')}</TableHead>
+              <TableHead col="title">{t('columns.partner')}</TableHead>
+              <TableHead col="status">{t('columns.status')}</TableHead>
+              {/* Ohne Rolle: Die übliche Art ist fast überall „Förderung“ und weicht unter `lg` und am Telefon (Runde 3, 115). */}
+              <TableHead>{t('columns.usualBasis')}</TableHead>
+              <TableHead col="meta" className="text-right">{t('columns.openProofs')}</TableHead>
+              <TableHead col="meta" className="text-right">{t('columns.lastPaid')}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {partners.map((p) => (
-              <TableRow key={p.id} data-testid={`partner-row-${p.id}`}>
-                <TableCell className="whitespace-normal">
-                  <RowLink href={`/finance/partners/${p.id}`} className="text-ink">
+              // Deaktiviert ist die gedämpfte Zeile mit Marke hinter dem Namen (Joe 11.8).
+              <TableRow key={p.id} data-testid={`partner-row-${p.id}`} muted={p.isActive ? undefined : t('inactive')}>
+                <TableCell col="title" className="whitespace-normal">
+                  {/* 09 B28: Der Name in Linkfarbe — `text-ink` überschrieb den `RowLink`. */}
+                  <RowLink href={`/finance/partners/${p.id}`}>
                     {p.contactName}
                   </RowLink>
-                  {!p.isActive ? (
-                    <span className="ml-2 align-middle">
-                      <StatusBadge tone="neutral">{t('inactive')}</StatusBadge>
-                    </span>
-                  ) : null}
                 </TableCell>
-                <TableCell className="whitespace-normal text-ink-2">{tStatus(p.status)}</TableCell>
-                <TableCell className="hidden text-ink-2 sm:table-cell">{p.usualBasis ? tBasis(p.usualBasis) : '—'}</TableCell>
-                <TableCell className="text-right tabular-nums">
-                  {p.openProofCount}
+                <TableCell col="status" className="whitespace-normal text-ink-2">{tStatus(p.status)}</TableCell>
+                <TableCell className="text-ink-2">{p.usualBasis ? tBasis(p.usualBasis) : <Empty />}</TableCell>
+                <TableCell col="meta" className="text-right tabular-nums">
+                  {/* Nullen fallen weg (09: 115). */}
+                  {/* Ein offener Nachweis ist Arbeit: ocker (Runde 3, 115). */}
+                  {p.openProofCount > 0 ? <span className="text-warning">{p.openProofCount}</span> : <Empty />}
                   {p.overdueProofCount > 0 ? <span className="text-warning"> · {t('overdue', { count: p.overdueProofCount })}</span> : null}
                 </TableCell>
-                <TableCell className="hidden text-right font-mono tabular-nums sm:table-cell">{p.lastPaidOn ? fmt.date(p.lastPaidOn) : '—'}</TableCell>
+                <TableCell col="meta" className="text-right tabular-nums">{p.lastPaidOn ? fmt.date(p.lastPaidOn) : <Empty />}</TableCell>
               </TableRow>
             ))}
           </TableBody>

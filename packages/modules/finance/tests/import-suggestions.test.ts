@@ -1,8 +1,9 @@
 import { unwrap, writeSettingInternal } from '@kompass/core';
 import { ctxWith, systemContext } from '@kompass/core/testing';
-import { createContact, setContactChannels } from '@kompass/module-contacts';
+import { contacts, createContact, setContactChannels } from '@kompass/module-contacts';
+import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
-import { linkContactIban } from '../src/import/contact-ibans';
+import { learnContactIbanInternal, linkContactIban } from '../src/import/contact-ibans';
 import { saveImportRule } from '../src/import/rules';
 import { suggestForTransaction } from '../src/import/suggestions';
 import { createAccount } from '../src/ledger/accounts';
@@ -492,6 +493,24 @@ describe('suggestForTransaction — (5) contact over the iban, and hints', () =>
     // PayPal selbst sitzt in Luxemburg — die eigene Auszahlung an sich hat keine deutsche IBAN.
     const payout = insertRaw(f, insertRun(f, service.id), { accountId: service.id, amountCents: -3200, iban: 'LU280019400644750000', name: 'PayPal', purpose: 'Gebühr' });
     expect((await suggest(f, payout)).hints).toEqual([]);
+  });
+
+  it('proposes no contact for a joint account, and no foreign-iban hint either (Befund 3, 0.2.12)', async () => {
+    const f = await ledgerFixture();
+    const foreignIban = 'AT939999900001234567';
+    f.deps.db.transaction((tx) => learnContactIbanInternal(tx, f.deps, f.ctx, { contactId: f.donor.id, iban: foreignIban, learnedFrom: 'booking' }));
+    f.deps.clock.advance(1000);
+    f.deps.db.transaction((tx) => learnContactIbanInternal(tx, f.deps, f.ctx, { contactId: f.rightDonor.id, iban: foreignIban, learnedFrom: 'booking' }));
+    const run = insertRun(f, f.bank.id);
+    const shared = insertRaw(f, run, { accountId: f.bank.id, amountCents: 2500, iban: foreignIban, name: 'Eheleute', purpose: 'Beitrag' });
+    const suggestion = await suggest(f, shared);
+    expect(suggestion.kind).toBe('none');
+    expect(JSON.stringify(suggestion)).not.toContain(f.donor.id);
+    expect(JSON.stringify(suggestion)).not.toContain(f.rightDonor.id);
+    expect(suggestion.hints).toEqual([]);
+    // Ist einer der beiden archiviert, nennt der Vorschlag den aktiven.
+    f.deps.db.update(contacts).set({ status: 'archived' }).where(eq(contacts.id, f.rightDonor.id)).run();
+    expect(await suggest(f, shared)).toMatchObject({ kind: 'contact', confidence: 'unsure', reasons: [{ kind: 'contactIban', contactId: f.donor.id }], hints: [] });
   });
 
   it('gives no foreign-iban hint when the counterparty iban belongs to a contact (Befund 14)', async () => {

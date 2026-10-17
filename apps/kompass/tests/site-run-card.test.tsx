@@ -46,7 +46,7 @@ describe('RunCard', () => {
     expect(markup).toContain('läuft');
     expect(markup).toContain('wartet');
     expect(markup).toContain('Seite bauen');
-    expect(markup).toContain('>MCP<');
+    expect(markup).toContain('>Agent<');
     expect(markup).toContain('Hundeblicke-Sync · für Erika Beispiel um 10:00 Uhr');
     expect(markup).toContain('1:05');
     expect(markup).toContain('data-state="done"');
@@ -80,7 +80,7 @@ describe('RunCard', () => {
   });
   it('shows the person instead of the badge for a run started in the interface', () => {
     const markup = render(run({ source: 'ui' }));
-    expect(markup).not.toContain('>MCP<');
+    expect(markup).not.toContain('>Agent<');
     expect(markup).toContain('Gestartet von Erika Beispiel um 10:00 Uhr');
   });
   it('can sit inside another card with a notice on top', () => {

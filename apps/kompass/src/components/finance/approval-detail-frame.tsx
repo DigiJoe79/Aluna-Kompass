@@ -3,15 +3,17 @@ import { FormActionBar } from '@/components/forms/form-action-bar';
 import type { ActionState } from '@/lib/actions';
 
 export interface ApprovalDetailHead {
-  /** Die Art als umrandetes Kennzeichen („Auslage“, „Verzicht“, später „Zahlung an Partner“, „Zweck ändern“) — wertet nicht. */
+  /** Die Art als Text vor der Nummer („Auslage“, „Verzicht“, „Zahlung an Partner“, „Umwidmung“) — wertet nicht. */
   kind: string;
-  number: string;
+  /** `null`: noch keine Nummer (Zahlung an Partner vor der Freigabe) — dann steht `numberMissing` grau in der Textschrift (14 A1). */
+  number: string | null;
+  numberMissing?: string;
   amount: string;
   person: string;
   /** „eingegangen am …“ */
   received: string;
-  /** Eine Zeile unter der Person, etwa die maskierte Erstattungs-IBAN. */
-  note?: string;
+  /** Eine Zeile unter der Person, etwa die maskierte Erstattungs-IBAN (mit Vorleser-Satz, daher ein Knoten). */
+  note?: ReactNode;
 }
 
 /** Die Fußleiste der Freigabe: Entscheidung ablehnen oder freigeben, mit dem Satz, was danach geschieht. */
@@ -40,16 +42,24 @@ export function ApprovalDetailFrame({ head, headRef, children, requirements, foo
     <div className="flex min-h-full flex-col gap-4">
       <div ref={headRef} tabIndex={-1} data-testid="approval-head" aria-labelledby="approval-number" className="space-y-1 rounded-lg border border-line bg-surface p-4 outline-none focus-visible:ring-2 focus-visible:ring-focus">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="rounded-sm border border-line-strong px-1.5 py-0.5 text-hint font-semibold text-ink-2">{head.kind}</span>
-          <p id="approval-number" data-testid="approval-number" className="font-mono text-section text-ink">
-            {head.number}
-          </p>
+          {/* Die Art ist Text vor der Nummer, keine Marke — Marken stehen nur für Abweichungen (Runde 3, 103/104, 206/207;
+              wie 049). Gleich in der Warteschlange. */}
+          <p data-testid="approval-kind" className="text-section text-ink">{head.kind}</p>
+          {head.number ? (
+            <p id="approval-number" data-testid="approval-number" className="font-mono text-section text-ink">
+              {head.number}
+            </p>
+          ) : (
+            <p id="approval-number" data-testid="approval-number" className="text-meta text-muted-ink">
+              {head.numberMissing}
+            </p>
+          )}
         </div>
-        <p className="font-mono text-figure font-semibold tabular-nums text-ink">{head.amount}</p>
+        <p className="text-figure font-semibold tabular-nums text-ink">{head.amount}</p>
         <p className="text-body text-ink">{head.person}</p>
         <p className="text-hint text-muted-ink">
           {head.received}
-          {head.note ? ` · ${head.note}` : ''}
+          {head.note ? <> · {head.note}</> : null}
         </p>
       </div>
       <div className="space-y-4">{children}</div>

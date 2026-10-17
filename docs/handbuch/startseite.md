@@ -8,15 +8,24 @@ der Ort, an dem der Tag beginnt.
 ## Kacheln
 
 Jede Kachel ist eine Sicht auf Vorgänge, die es anderswo in Kompass schon
-gibt; ihr Link führt genau dorthin. Kompass kennt keine Aufgaben ohne
-Vorgang: Was hier steht, hängt immer an einem Dokument, einem Kontakt, einer
-Einstellung.
+gibt, und führt genau dorthin. Kompass kennt keine Aufgaben ohne Vorgang: Was
+hier steht, hängt immer an einem Dokument, einem Kontakt, einer Einstellung.
 
-Es gibt drei Arten: eine **Zahl** mit Link zur Liste (etwa „3 Entwürfe“),
-eine **Liste** der nächsten Zeilen mit Datum und Bezug (etwa „Fällig“), und
-ein **Satz** zum Stand einer Sache (etwa „Letztes Backup vor 3 Tagen“). Eine
-leere Kachel bleibt stehen und sagt in einem Satz, dass nichts ansteht — so
-sehen Sie den Unterschied zwischen „nichts zu tun“ und „abgeschaltet“.
+Es gibt fünf Arten:
+
+- eine **Zahl** (etwa „Entwürfe 2“): Die ganze Kachel ist der Link zur Liste.
+- eine **Liste** (etwa der Eingangskorb): Der Titel führt zur ganzen Liste,
+  jede Zeile zu ihrem Eintrag; nach fünf Zeilen steht „Alle … anzeigen“.
+- **Fällig**: Wiedervorlagen mit Häkchen, Datum und Bezug.
+- **Finanzen: zu tun**: alle offenen Arbeiten der Buchhaltung, jede Zeile mit
+  Betrag und Ziel. In einer breiten Spalte steht die Liste zweispaltig.
+- eine **Warnung** (etwa „Backup“): ein Satz und ein Knopf, der sagt, was zu
+  tun ist („Backup erstellen“).
+
+Steht bei einer Kachel nichts an, schrumpft sie auf eine graue Zeile mit
+einem Satz, etwa „Einrichtung — Der Verein ist eingerichtet.“ Sie bleibt an
+ihrem Platz — so sehen Sie den Unterschied zwischen „nichts zu tun“ und
+„abgeschaltet“.
 
 Welche Kacheln Sie sehen können, hängt an Ihren Rechten. Heute gibt es:
 
@@ -76,10 +85,20 @@ Neue Module bringen ihre eigenen Kacheln mit.
 
 ## Anpassen
 
-„Anpassen“ rechts oben öffnet eine Leiste mit allen Kacheln, die Sie sehen
-dürfen. Ein Schalter blendet eine Kachel ein oder aus, die Pfeile ändern die
-Reihenfolge, und darunter stehen die Optionen der Kachel, etwa der Zeitraum
-bei „Fällig“ oder die Zeilenzahl beim Eingangskorb. Jede Änderung wird sofort
+Die Kacheln stehen in Spalten; jede Spalte stapelt ihre Kacheln für sich.
+„Anpassen“ rechts oben öffnet eine Leiste. Oben wählen Sie die Aufteilung:
+**Drei gleiche Spalten** oder **Breit und schmal**. Auf schmaleren Schirmen
+werden drei Spalten zu zwei, auf dem Telefon steht alles untereinander, die
+Warnungen zuerst. Wer Finanzen sieht, beginnt mit „Breit und schmal“, alle
+anderen mit drei Spalten.
+
+Darunter stehen die Spalten mit ihren Kacheln. Ein Schalter blendet eine
+Kachel ein oder aus, die Pfeile ändern die Reihenfolge in der Spalte, „Spalte“
+legt die Kachel in eine andere Spalte, und darunter stehen die Optionen der
+Kachel, etwa der Zeitraum bei „Fällig“ oder die Zeilenzahl beim Eingangskorb.
+Eine eingeschaltete Kachel kommt ans Ende der kürzesten Spalte. Jede
+Aufteilung merkt sich ihre eigene Anordnung: Wer zurückwechselt, findet alles
+wieder vor. Ein- und ausgeschaltet gilt für beide. Jede Änderung wird sofort
 gespeichert und gilt für Sie auf jedem Gerät, mit dem Sie sich anmelden.
 
 „Vorgabe wiederherstellen“ setzt auf die Auswahl zurück, die ein neuer Nutzer

@@ -10,6 +10,13 @@ import type { PermissionSpec } from '../permissions/check';
  */
 export type DashboardKind = 'count' | 'list' | 'status';
 export type DashboardTone = 'neutral' | 'info' | 'warning';
+/**
+ * Zwei Arten der Liste mit eigenem Aufbau (Briefing Startseite § 4, Plan 0.2.12 L2): `due` sind die Wiedervorlagen
+ * (Kästchen, Datum, Bezug), `work` ist eine Arbeitsliste mit Beträgen, die in einer breiten Spalte zweispaltig umbricht.
+ * Die übrigen Arten ergeben sich aus `kind`: Zahl (`count`), Liste (`list`), Warnung (`status` mit Ton `warning`).
+ * Der Ruhezustand ist keine Art, er folgt aus den Daten.
+ */
+export type DashboardVariant = 'due' | 'work';
 
 export interface DashboardLine {
   /** ISO-Datum; fehlt bei Zeilen ohne Datum (Einrichtung). */
@@ -25,6 +32,11 @@ export interface DashboardLine {
   link?: { label: string; href: string | null };
   /** Zusatz rechts: Zuständige, Absender. */
   extra?: string;
+  /**
+   * Wert rechtsbündig am Zeilenende (Designer Stufe 2 Nr. 1, Joe 2026-10-16): fertiger Text, vom Modul formatiert —
+   * etwa ein Betrag der Finanzen. Der Kern kennt keinen Geldbegriff; er reicht den Text nur durch.
+   */
+  trailing?: string;
   /** Warnfarbe (überfällig). */
   overdue?: boolean;
   /** Die einzige Aktion auf der Startseite: eine Wiedervorlage erledigen (Entscheidung 12). */
@@ -44,6 +56,13 @@ export interface DashboardTile<O = Record<string, unknown>> {
   permission: PermissionSpec;
   /** Die Form, die `load` liefert — steht hier, damit die Seitenleiste die Breite kennt, ohne zu laden. */
   kind: DashboardKind;
+  /** Nur bei `kind: 'list'`: Fällig oder Arbeit. Ohne: eine gewöhnliche Liste. */
+  variant?: DashboardVariant;
+  /**
+   * Die Kachel trägt bei Ton `warning` einen Knopf mit Verb, beschriftet über `dashboard.tiles.<modul>.<key>.action`
+   * (Briefing § 4, „Knöpfe“). Ohne: keine Schaltfläche, auch bei einer Warnung.
+   */
+  warningAction?: boolean;
   /** Vorgabe für Nutzer ohne eigene Anordnung (Entscheidung 3). */
   defaultOn: boolean;
   /** `z.object` aus boolean, enum oder integer, jedes Feld mit `.default()`; `z.object({})` ohne Optionen. */

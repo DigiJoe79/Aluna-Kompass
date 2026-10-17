@@ -23,6 +23,8 @@ export interface ContrastPair {
   fg: ThemeToken;
   bg: ThemeToken;
   minimum: number;
+  /** Nur in diesen Modi geprüft; ohne Angabe hell und dunkel. */
+  modes?: readonly ('light' | 'dark')[];
 }
 
 /** Textpaare 4.5:1 (AA), Platzhalter und Fokusring 3:1. Alle Paare bestehen im Default-Theme. */
@@ -61,6 +63,15 @@ export const CONTRAST_PAIRS: readonly ContrastPair[] = [
   { fg: 'color-drop-ink', bg: 'color-drop-bg', minimum: 4.5 },
   { fg: 'color-drop-ring', bg: 'surface', minimum: 3 },
   { fg: 'color-drop-blocked-ring', bg: 'surface', minimum: 3 },
+  // Trenner (Tabellenzeilen, Führungslinien im Ordnerbaum): im Dunkeln ≥ 1,6:1 zur Fläche (Designer 2026-10-16). Hell
+  // bleibt er bewusst leise.
+  { fg: 'line-2', bg: 'surface', minimum: 1.6, modes: ['dark'] },
+  { fg: 'line-2', bg: 'table-zebra', minimum: 1.6, modes: ['dark'] },
+  // Führungslinien im Ordnerbaum wie der Trenner (Runde 3, Kleinpunkt 1); hell bleiben sie in ihrer alten Stärke.
+  { fg: 'color-tree-guide', bg: 'surface', minimum: 1.6, modes: ['dark'] },
+  // Gesperrter Knopf und gesperrtes Feld: Schrift auf gesperrter Fläche dunkel ≥ 3:1 (Runde 3, Punkt 7). Hell bleibt es
+  // bei rund 2,1:1, dort trennt der Unterschied zur weißen Fläche.
+  { fg: 'disabled-ink', bg: 'disabled-bg', minimum: 3, modes: ['dark'] },
 ];
 
 export interface ContrastFinding {
@@ -74,7 +85,7 @@ export interface ContrastFinding {
 export function checkThemeContrast(theme: Theme): ContrastFinding[] {
   const findings: ContrastFinding[] = [];
   for (const pair of CONTRAST_PAIRS) {
-    for (const mode of ['light', 'dark'] as const) {
+    for (const mode of pair.modes ?? (['light', 'dark'] as const)) {
       const fg = theme.tokens[pair.fg][mode];
       const bg = theme.tokens[pair.bg][mode];
       if (relativeLuminance(fg) === null || relativeLuminance(bg) === null) continue;

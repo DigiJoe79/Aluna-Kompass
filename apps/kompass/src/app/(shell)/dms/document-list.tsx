@@ -8,7 +8,7 @@ import { Fragment, useEffect, useState, useTransition } from 'react';
 import { EmptyState } from '@/components/empty-state';
 import { SelectionBar } from '@/components/selection-bar';
 import { SnippetText } from '@/components/snippet-text';
-import { StatusBadge } from '@/components/status-badge';
+import { StatusBadge, statusTone } from '@/components/status-badge';
 import { FilterBar, selectFilter } from '@/components/filter-bar';
 import { SearchField } from '@/components/search-field';
 import { SortableHead } from '@/components/sortable-head';
@@ -18,11 +18,14 @@ import { listKeyOf, useListSelection } from '@/lib/use-list-selection';
 import { useUrlFilters } from '@/lib/use-url-filters';
 import { cn } from '@/lib/utils';
 import { setDragPreview } from '@/components/folder-tree/drag-preview';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
+import Link from 'next/link';
 import { Checkbox } from '@/components/ui/checkbox';
 import { DOCUMENTS_MIME, beginDrag } from '@/lib/drag-types';
 import { isWithin, namesBelow } from '@/lib/folder-tree-model';
 import { useDocumentMoves } from './document-moves';
+import { Empty } from '@/components/empty-value';
+import { pdfFrameSrc } from '@/lib/pdf-frame-src';
 
 export interface DocumentListItem {
   id: string;
@@ -146,6 +149,8 @@ export function DocumentList({ documents, currentFolder, total, unfiltered, read
     if (openFolder !== null && (folder === null || !isWithin(folder, openFolder))) return [];
     return [{ ...doc, folder }];
   });
+  // Im geöffneten Ordner ohne Dokumente in Unterordnern sagte die Spalte nur „direkt hier“ (Runde 3, 022).
+  const showFolderColumn = openFolder === null || shown.some((doc) => doc.folder !== null && namesBelow(doc.folder, openFolder).length > 0);
 
   // Der Baum schlägt beim Ablegen Ort und Betreff nach (er bekommt nur IDs).
   useEffect(() => {
@@ -232,6 +237,19 @@ export function DocumentList({ documents, currentFolder, total, unfiltered, read
 
       {shown.length === 0 && filtered ? (
         <EmptyState filtered={{ noun: t('list.emptyFilteredNoun'), onReset: resetFilters }} />
+      ) : shown.length === 0 && openFolder ? (
+        // Ein leerer Ordner ist kein Suchergebnis: eigener Titel und, mit Recht, der Weg zur Ablage (03 B11).
+        <EmptyState
+          title={t('empty.folderTitle')}
+          text={t('empty.folderText')}
+          action={
+            canMove ? (
+              <Link href={`/dms/receive?folder=${encodeURIComponent(openFolder)}`} className={buttonVariants({ variant: 'outline' })}>
+                {t('receivePost')}
+              </Link>
+            ) : undefined
+          }
+        />
       ) : shown.length === 0 ? (
         <EmptyState title={t('empty.title')} text={t('empty.text')} />
       ) : (
@@ -241,7 +259,7 @@ export function DocumentList({ documents, currentFolder, total, unfiltered, read
             <TableHeader>
               <TableRow>
                 {selectable ? (
-                  <TableHead className="w-10 pr-0 pl-4">
+                  <TableHead col="select" className="w-10 pr-0 pl-4">
                     <Checkbox
                       aria-label={t('selection.selectAll')}
                       checked={allSelected}
@@ -250,14 +268,15 @@ export function DocumentList({ documents, currentFolder, total, unfiltered, read
                     />
                   </TableHead>
                 ) : null}
-                <SortableHead field="number" label={t('columns.number')} />
-                <SortableHead field="subject" label={t('columns.subject')} />
+                <SortableHead col="meta" field="number" label={t('columns.number')} />
+                <SortableHead col="title" field="subject" label={t('columns.subject')} />
                 {/* Auf dem Tablet fehlt der Platz; die Spalte „Ordner“ trägt dort mehr (Spec § 9). */}
                 <SortableHead field="typeKey" label={t('columns.type')} className="max-[1100px]:hidden" />
-                <SortableHead field="documentDate" label={t('columns.date')} />
-                <SortableHead field="folder" label={t('columns.folder')} />
-                <TableHead>{t('columns.direction')}</TableHead>
-                <TableHead>{t('columns.status')}</TableHead>
+                <SortableHead col="meta" field="documentDate" label={t('columns.date')} />
+                {showFolderColumn ? <SortableHead col="meta" field="folder" label={t('columns.folder')} /> : null}
+                {/* Richtung weicht vor dem Betreff, wie die Art (Runde 3, 018 schmal). */}
+                <TableHead className="max-[1100px]:hidden">{t('columns.direction')}</TableHead>
+                <TableHead col="status">{t('columns.status')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -277,7 +296,7 @@ export function DocumentList({ documents, currentFolder, total, unfiltered, read
                   >
                     {selectable ? (
                       // Das Kästchen wählt aus; die Zeile öffnet weiter das Dokument.
-                      <TableCell className="w-10 pr-0 pl-4">
+                      <TableCell col="select" className="w-10 pr-0 pl-4">
                         <Checkbox
                           aria-label={t('selection.selectOne', { subject: doc.subject })}
                           checked={selection.ids.has(doc.id)}
@@ -286,26 +305,19 @@ export function DocumentList({ documents, currentFolder, total, unfiltered, read
                       </TableCell>
                     ) : null}
                     {/* Die Nummer ist kopierwürdig und liegt über der Zeilenfläche; geöffnet wird über den Betreff. */}
-                    <TableCell selectable className="font-mono text-meta font-semibold text-ink">
-                      {doc.number ?? '—'}
+                    <TableCell col="meta" selectable className="font-mono text-meta text-ink">
+                      {doc.number ?? <Empty />}
                     </TableCell>
                     {/* Betreff, Art und Ordner brechen um, damit „Ordner“ auch auf dem Tablet ohne Querscrollen sichtbar bleibt (Spec § 9). */}
-                    <TableCell className="min-w-[160px] whitespace-normal hyphens-auto wrap-anywhere max-[1100px]:min-w-[140px]">
+                    {/* Silbentrennung statt Bruch mitten im Wort (Runde 3, 018; `lang="de"` am Dokument). */}
+                    <TableCell col="title" className="min-w-[160px] whitespace-normal wrap-break-word hyphens-auto max-[1100px]:min-w-[140px]">
                       <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                         <RowLink href={`/dms/${doc.id}`} className="text-ink hover:text-link">
                           {doc.subject}
                         </RowLink>
-                        {/* Auch hier, nicht nur am rechten Rand: Die
-                            Statusspalte steht zu weit weg, um beim Überfliegen
-                            zu wirken. */}
-                        {doc.phase === 'draft' && doc.status !== 'voided' ? (
-                          <StatusBadge tone="warning">{t('phases.draft')}</StatusBadge>
-                        ) : null}
-                        {doc.direction === 'outgoing' && doc.phase === 'issued' && doc.status !== 'voided' && !doc.sentAt ? (
-                          <StatusBadge tone="neutral">{t('dispatch.unsentBadge')}</StatusBadge>
-                        ) : null}
                         {doc.openFollowUp ? (
-                          <StatusBadge tone={doc.openFollowUp.dueAt < today ? 'warning' : 'info'}>
+                          // Neutral statt Info-Blau: Blau ist die Linkfarbe und unterscheidet hier nichts (03 C43).
+                          <StatusBadge tone={doc.openFollowUp.dueAt < today ? 'warning' : 'neutral'}>
                             {t('followUpBadge', { date: fmt.date(doc.openFollowUp.dueAt) })}
                           </StatusBadge>
                         ) : null}
@@ -318,33 +330,46 @@ export function DocumentList({ documents, currentFolder, total, unfiltered, read
                         ) : null}
                       </div>
                     </TableCell>
-                    <TableCell className="min-w-[110px] whitespace-normal hyphens-auto wrap-anywhere text-ink-2 max-[1100px]:hidden">{doc.typeLabel}</TableCell>
-                    <TableCell className="font-mono text-meta text-ink-2">{fmt.date(doc.documentDate)}</TableCell>
-                    {/* Der Ort unter dem geöffneten Ordner, als Namen mit „›“; leer heißt „direkt hier“. */}
-                    <TableCell data-folder-cell className="min-w-[110px] whitespace-normal text-ink-2">
-                      {doc.folder === null ? (doc.direction === 'incoming' ? t('inbox') : t('noFolder')) : namesBelow(doc.folder, openFolder).join(' › ')}
-                    </TableCell>
-                    <TableCell className="text-ink-2">{t(`directions.${doc.direction}`)}</TableCell>
-                    <TableCell>
+                    {/* Mit Silbentrennung: Ohne sie brach „Zuwendungsbestätigu/ng“ ohne Strich mitten im Wort (Runde 3, 018;
+                        ersetzt 03 B7). */}
+                    <TableCell className="min-w-[110px] whitespace-normal wrap-break-word hyphens-auto text-ink-2 max-[1100px]:hidden">{doc.typeLabel}</TableCell>
+                    <TableCell col="meta" className="tabular-nums text-meta text-ink-2">{fmt.date(doc.documentDate)}</TableCell>
+                    {/* Der Ort unter dem geöffneten Ordner, als Namen mit „›“; direkt im Ordner „—“. Liegt nichts in einem
+                        Unterordner, fehlt die Spalte ganz (Runde 3, 022; ersetzt „direkt hier“ aus 03 A2). */}
+                    {showFolderColumn ? (
+                      <TableCell col="meta" data-folder-cell className="min-w-[110px] whitespace-normal text-ink-2">
+                        {doc.folder === null ? (
+                          doc.direction === 'incoming' ? t('inbox') : t('noFolder')
+                        ) : namesBelow(doc.folder, openFolder).length === 0 ? (
+                          <Empty />
+                        ) : (
+                          namesBelow(doc.folder, openFolder).join(' › ')
+                        )}
+                      </TableCell>
+                    ) : null}
+                    <TableCell className="text-ink-2 max-[1100px]:hidden">{t(`directions.${doc.direction}`)}</TableCell>
+                    <TableCell col="status">
+                      {/* Ausgestellt ist der Normalzustand: ohne Marke, der Phasenfilter bleibt (Designer Stufe 2 Nr. 6a).
+                          Alle Zustände stehen hier, auch „nicht versandt“, nicht am Betreff (Runde 3, 018). */}
                       {doc.status === 'voided' ? (
-                        <StatusBadge tone="error">{t('statuses.voided')}</StatusBadge>
+                        <StatusBadge tone={statusTone('document', 'voided')}>{t('statuses.voided')}</StatusBadge>
                       ) : doc.phase === 'draft' ? (
-                        <StatusBadge tone="warning">{t('phases.draft')}</StatusBadge>
-                      ) : (
-                        <StatusBadge tone="success">{t('phases.issued')}</StatusBadge>
-                      )}
+                        <StatusBadge tone={statusTone('document', 'draft')}>{t('phases.draft')}</StatusBadge>
+                      ) : doc.direction === 'outgoing' && !doc.sentAt ? (
+                        <StatusBadge tone="neutral">{t('dispatch.unsentBadge')}</StatusBadge>
+                      ) : null}
                     </TableCell>
                   </TableRow>
                   {hits?.[doc.id] ? (
                     <TableRow className="even:bg-transparent">
-                      <TableCell colSpan={selectable ? 8 : 7} className="pt-0 pb-3 text-meta text-muted-ink">
+                      <TableCell col="span" colSpan={(selectable ? 8 : 7) - (showFolderColumn ? 0 : 1)} className="pt-0 pb-3 text-meta text-muted-ink">
                         {/* Die Trefferzeile gehört zum Dokument: eine zweite, für Vorleser unsichtbare Fläche, damit ein Klick auch hier öffnet. */}
                         <RowLink href={`/dms/${doc.id}`} aria-hidden tabIndex={-1} />
                         <SnippetText value={hits[doc.id]!.snippet} />{' '}
                         {/* `#page=` versteht jeder Browser-PDF-Betrachter; wir brauchen dafuer keinen
                             eigenen Betrachter und keine Bibliothek. */}
                         <a
-                          href={`/dms/${doc.id}/preview#page=${hits[doc.id]!.page}`}
+                          href={pdfFrameSrc(`/dms/${doc.id}/preview`, { page: hits[doc.id]!.page })}
                           className="underline underline-offset-2 hover:text-link"
                         >
                           {t('hitOnPage', { page: hits[doc.id]!.page })}

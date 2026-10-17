@@ -34,7 +34,6 @@ export function DocumentActions({
   retention: { retentionClass: string; until: string | null; due: boolean } | null;
 }) {
   const t = useTranslations('dms');
-  const tCommon = useTranslations('common');
   const fmt = useDateFormat();
   const trigger = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState<'void' | 'deleteDraft' | 'purge' | null>(null);
@@ -86,7 +85,6 @@ export function DocumentActions({
             pending={voidBusy}
             saveDisabled={!voidReason.trim()}
             saveLabel={t('voidConfirmSubmit')}
-            note={<span className="text-hint text-muted-ink">{tCommon('requiredLegend')}</span>}
             state={voidFb.state}
             onSave={async () => {
               setVoidBusy(true);

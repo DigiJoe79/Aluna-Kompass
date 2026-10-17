@@ -1,6 +1,7 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
+import type { ActionState } from '@/lib/actions';
 import { useActionState, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { ActionForm } from '@/components/forms/action-form';
@@ -32,6 +33,7 @@ export function ReceiveForm({
   types,
   folders,
   canCreateContact,
+  onCreateFolder,
   initialSender,
   initialAbout,
   defaultTypeKey,
@@ -46,6 +48,7 @@ export function ReceiveForm({
   folders: FolderEntry[];
   /** Darf der Mensch fehlende Kontakte gleich hier anlegen? */
   canCreateContact: boolean;
+  onCreateFolder?: (parent: string | null, name: string) => Promise<ActionState>;
   /** Von der Kontaktseite vorbelegter Absender. */
   initialSender?: { id: string; name: string } | null;
   /** Von der Seite eines Bezugs vorbelegtes „Betrifft“. */
@@ -65,7 +68,6 @@ export function ReceiveForm({
   onCancel?: () => void;
 }) {
   const t = useTranslations('dms');
-  const tTree = useTranslations('folderTree');
   const [state, formAction] = useActionState(receiveDocumentAction, idleState);
 
   const [documentDate, setDocumentDate] = useState('');
@@ -224,7 +226,7 @@ export function ReceiveForm({
                 name="documentDate"
                 type="date"
                 required
-                className={origin.documentDate ? 'border-agent font-mono' : 'font-mono'}
+                className={origin.documentDate ? 'border-agent' : undefined}
                 value={documentDate}
                 onFocus={() => touch('documentDate')}
                 onChange={(e) => {
@@ -245,10 +247,13 @@ export function ReceiveForm({
               />
             </FormField>
 
-            {/* Die Nummer ist eine Vorschau: Gezogen wird sie beim Ablegen. */}
-            <FormCell size="full">
-              <NumberHint typeKey={typeKey} />
-            </FormCell>
+            {/* Die Nummer ist eine Vorschau: Gezogen wird sie beim Ablegen. Erst mit einer Datei — vorher gibt es
+                nichts, das eine Nummer bekäme (03 B17). */}
+            {hasFile ? (
+              <FormCell size="full">
+                <NumberHint typeKey={typeKey} />
+              </FormCell>
+            ) : null}
           </FormGrid>
         </Section>
 
@@ -278,10 +283,7 @@ export function ReceiveForm({
                 label={t('fields.folder')}
                 emptyLabel={t('inbox')}
                 name="folder"
-                moveLabel={tTree('change')}
-                dialogTitle={tTree('pickTitle')}
-                showLocation={false}
-                verb="pick"
+                onCreate={onCreateFolder}
                 variant="field"
                 suggested={!!origin.folder}
                 errorId={errors.folder ? 'folder-error' : undefined}

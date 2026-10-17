@@ -2,7 +2,7 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { NextIntlClientProvider } from 'next-intl';
 import type { ReactNode } from 'react';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import messages from '../messages/de.json';
 import { PendingPublishLine, PendingPublishNote, PendingVariablesLine } from '@/components/site/pending-publish';
 import { pendingVariableNames } from '@/lib/site-job-view';
@@ -32,6 +32,8 @@ const wrap =
     </NextIntlClientProvider>
   );
 afterEach(cleanup);
+// Die Pille steht nur im Bereich Webseite (10 C38, Designer 2026-10-16).
+vi.mock('next/navigation', () => ({ usePathname: () => '/site/publish' }));
 
 describe('pending indicator menu (Board 8a)', () => {
   it('opens a menu with the first five names, their kind, and the way to publish', async () => {
@@ -91,7 +93,8 @@ describe('PendingVariablesLine', () => {
   };
   it('names up to three changed variables and links to publishing', () => {
     render(<PendingVariablesLine />, { wrapper: wrap(withVariables(['Spendenkonto', 'Telefon'])) });
-    expect(screen.getByTestId('site-pending-line').textContent).toBe('2 Variablen nicht publiziert: Spendenkonto, Telefon · Zum Publizieren');
+    // 10 B18: als Hinweis mit Warnstufe (Notice warn); 135: „Zum Publizieren“ im Satz wie an der Zeile eines Eintrags.
+    expect(screen.getByRole('status').textContent).toBe('2 Variablen nicht publiziert: Spendenkonto, Telefon · Zum Publizieren');
     expect(screen.getByRole('link', { name: 'Zum Publizieren' }).getAttribute('href')).toBe('/site/publish');
   });
   it('says one variable in the singular', () => {

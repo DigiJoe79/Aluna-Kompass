@@ -94,7 +94,7 @@ export function DispatchPanel({
               {sentAt ? t('change') : t('record')}
             </Button>
             {sentAt ? (
-              <Button type="button" variant="ghost" size="sm" onClick={() => setClearing(true)}>
+              <Button type="button" variant="outline" size="sm" onClick={() => setClearing(true)}>
                 {t('clear')}
               </Button>
             ) : null}

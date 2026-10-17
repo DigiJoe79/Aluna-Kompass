@@ -59,4 +59,35 @@ describe('theme token values', () => {
     expect(pairs).toEqual(expect.arrayContaining(['color-drop-ink/color-drop-bg:4.5', 'color-drop-ring/surface:3', 'color-drop-blocked-ring/surface:3']));
     expect(checkThemeContrast(DEFAULT_THEME)).toEqual([]);
   });
+
+  // Designer 2026-10-16, Teil 3 Nr. 4: ein Trenner-Token für Tabellenzeilen und Ordnerbaum, im Dunkeln ≥ 1,6:1 zur Fläche.
+  it('checks the separator token line-2 against the surface in dark mode', () => {
+    const pairs = CONTRAST_PAIRS.map((p) => `${p.fg}/${p.bg}:${p.minimum}`);
+    expect(pairs).toEqual(expect.arrayContaining(['line-2/surface:1.6', 'line-2/table-zebra:1.6']));
+    expect(checkThemeContrast(DEFAULT_THEME)).toEqual([]);
+    const faint = { ...DEFAULT_THEME, tokens: { ...DEFAULT_THEME.tokens, 'line-2': { light: '#FAFAFA', dark: '#22262C' } } };
+    const findings = checkThemeContrast(faint).filter((f) => f.fg === 'line-2');
+    // Hell gilt die Schwelle nicht: Dort ist die Fläche weiß, und ein Trenner bleibt bewusst leise.
+    expect(findings.map((f) => `${f.bg}:${f.mode}`)).toEqual(['surface:dark', 'table-zebra:dark']);
+  });
+
+  // Runde 3, Punkt 7: Der gesperrte Primärknopf verlor im Dunkeln seine Form (#22262C auf #1B1E23). Dunkel trägt er
+  // `disabled-bg` #2A2F36 und `disabled-ink` #7A828B, das Paar hält ≥ 3:1; hell bleibt es, wie es ist.
+  it('checks the disabled pair in dark mode (≥ 3:1) and uses the new dark values', () => {
+    const pairs = CONTRAST_PAIRS.map((p) => `${p.fg}/${p.bg}:${p.minimum}:${(p.modes ?? []).join('+')}`);
+    expect(pairs).toEqual(expect.arrayContaining(['disabled-ink/disabled-bg:3:dark']));
+    expect(DEFAULT_THEME.tokens['disabled-bg'].dark).toBe('#2A2F36');
+    expect(DEFAULT_THEME.tokens['disabled-ink'].dark).toBe('#7A828B');
+    expect(checkThemeContrast(DEFAULT_THEME)).toEqual([]);
+  });
+
+  // Runde 3, Kleinpunkt 1: hell tragen die Baumlinien wieder ihre alte Stärke (`color-tree-guide`), dunkel sind sie so
+  // kräftig wie der Trenner; der Kartenrand `line` hat dunkel dieselbe Stärke wie der Trenner `line-2`.
+  it('keeps the tree guides light as before and matches card border and separator in dark mode', () => {
+    expect(DEFAULT_THEME.tokens['color-tree-guide'].light).toBe('#D2D2CB');
+    expect(DEFAULT_THEME.tokens['color-tree-guide'].dark).toBe(DEFAULT_THEME.tokens['line-2'].dark);
+    expect(DEFAULT_THEME.tokens.line.dark).toBe(DEFAULT_THEME.tokens['line-2'].dark);
+    const pairs = CONTRAST_PAIRS.map((p) => `${p.fg}/${p.bg}:${p.minimum}`);
+    expect(pairs).toEqual(expect.arrayContaining(['color-tree-guide/surface:1.6']));
+  });
 });

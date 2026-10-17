@@ -54,3 +54,13 @@ describe.each([
 });
 
 const container = () => document.body;
+
+/** 11-2 B13: Die Überschrift einer Frist folgt dem gespeicherten Wert in Monaten. */
+describe('RetentionSettings Überschrift', () => {
+  it('rechnet die Monate in Jahre um', () => {
+    render(<RetentionSettings statutory10Y={132} statutory8Y={96} statutory6Y={70} consent={24} canManage />, { wrapper: Intl });
+    expect(screen.getByLabelText('Gesetzliche Aufbewahrung 11 Jahre')).toBeTruthy();
+    expect(screen.getByLabelText('Gesetzliche Aufbewahrung 8 Jahre')).toBeTruthy();
+    expect(screen.getByLabelText('Gesetzliche Aufbewahrung 70 Monate')).toBeTruthy();
+  });
+});

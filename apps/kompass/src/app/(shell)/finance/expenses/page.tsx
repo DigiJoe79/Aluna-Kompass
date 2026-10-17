@@ -27,7 +27,7 @@ const OPEN_LIMIT = 200;
 
 export default async function ExpensesPage({ searchParams }: { searchParams: Promise<{ page?: string }> }) {
   const { deps, ctx } = await requireSession();
-  if (!hasPermission(ctx, 'finance.expensesSubmit')) return <Page width="standard"><ForbiddenCard permission="finance.expensesSubmit" /></Page>;
+  if (!hasPermission(ctx, 'finance.expensesSubmit')) return <Page width="task"><ForbiddenCard permission="finance.expensesSubmit" /></Page>;
   const t = await getTranslations('finance.expenses.list');
   const fmt = dateFormatOf(deps);
   const newLink = (
@@ -44,7 +44,7 @@ export default async function ExpensesPage({ searchParams }: { searchParams: Pro
   if (!openRes.ok || !doneRes.ok) {
     const failure = !openRes.ok ? openRes : (doneRes as Extract<typeof doneRes, { ok: false }>);
     return (
-      <Page width="standard" header={<PageHeader title={t('title')} description={t('intro')} />}>
+      <Page width="task" header={<PageHeader title={t('title')} description={t('intro')} />}>
         <BlockedState step={t('blocked.step')} title={t('blocked.title')}>
           {failure.error.type === 'conflict' ? conflictText(failure.error, await getTranslations()) : t('blocked.title')}
         </BlockedState>
@@ -56,7 +56,7 @@ export default async function ExpensesPage({ searchParams }: { searchParams: Pro
   const done = doneRes.value;
   const any = open.total + done.total > 0;
   return (
-    <Page width="standard" header={<PageHeader title={t('title')} description={t('intro')} actions={any ? newLink : undefined} />}>
+    <Page width="task" header={<PageHeader title={t('title')} description={t('intro')} actions={any ? newLink : undefined} />}>
       {!any ? (
         <div data-testid="claims-empty">
           <EmptyState title={t('emptyTitle')} text={t('emptyText')} action={newLink} />

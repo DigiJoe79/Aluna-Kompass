@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { mkdir, mkdtemp, readdir, readFile, rm, stat } from 'node:fs/promises';
 import path from 'node:path';
-import { conflict, invalid, isoNow, localizedConflict, systemContext, newId, ok, recordAudit, requirePermission, validate, type CallContext, type Clock, type Deps, type Result, type ServiceError } from '@kompass/core';
+import { type CallContext, type Clock, conflict, type Deps, EMPTY, invalid, isoNow, localizedConflict, newId, ok, recordAudit, requirePermission, type Result, type ServiceError, systemContext, validate } from '@kompass/core';
 import { z } from 'zod';
 import { exportSiteContent, type SiteContentExport } from '../export';
 import { contentManifestOf } from '../public-content';
@@ -175,7 +175,7 @@ export function settleInterruptedPublish(deps: Deps, env: SiteEnv): void {
     contentHash: '',
     diff: { changed: [], added: [], removed: [] },
     fileManifest: {},
-    log: `Unterbrochen im Schritt ${rec.lastStep ?? '–'}`,
+    log: `Unterbrochen im Schritt ${rec.lastStep ?? EMPTY}`,
     summary: 'Publish unterbrochen: Neustart während des Laufs',
   });
   writeJsonAtomic(resultFile(env, 'publish'), { ...rec, historyPending: false });
@@ -217,8 +217,8 @@ export function cancelSiteJob(deps: Deps, ctx: CallContext, env: SiteEnv, input:
   return ok({ cancelled: true as const });
 }
 
-/** Steht im Protokoll, wenn ein Publish den Vorschau-Build uebernommen hat. */
-export const REUSED_PREVIEW = 'Vorschau uebernommen, nicht neu gebaut.';
+/** Steht im Protokoll, wenn ein Publish den Vorschau-Build übernommen hat (Text mit Umlaut, 10 A2). */
+export const REUSED_PREVIEW = 'Vorschau übernommen, nicht neu gebaut.';
 
 /** Neueste Aenderung im Template — ohne node_modules und Baureste. */
 async function newestTemplateChange(dir: string): Promise<number> {
@@ -577,8 +577,8 @@ async function publishBody(deps: Deps, ctx: CallContext, env: SiteEnv, h: RunHan
         contentHash,
         diff: { changed: [], added: [], removed: [] },
         fileManifest: {},
-        log: `${error.reason} (${error.step ?? '–'})`,
-        summary: `Publish abgebrochen: ${error.reason} (${error.step ?? '–'})`,
+        log: `${error.reason} (${error.step ?? EMPTY})`,
+        summary: `Publish abgebrochen: ${error.reason} (${error.step ?? EMPTY})`,
       });
     }
     throw error;

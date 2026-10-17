@@ -41,19 +41,18 @@ export function ConfirmationSection({ lines, canIssue, canDescribe, today }: { l
           {lines.map((line) => (
             <li key={line.lineId} className="flex flex-wrap items-center justify-between gap-2 border-b border-line-2 py-1 last:border-0">
               <span className="text-ink-2">
-                {line.label} · <span className="font-mono tabular-nums">{formatEuro(line.amountCents)}</span>
+                {line.label} · <span className="tabular-nums">{formatEuro(line.amountCents)}</span>
+                {/* 07-2 A4: Die Aussage steht ausgeschrieben links in der Zeile, nicht als Wert vor dem Knopf. */}
+                {line.confirmation ? null : <span className="block text-hint text-muted-ink">{line.hasContact ? t('none') : t('noContact')}</span>}
               </span>
               {line.confirmation ? (
                 <Link href={`/finance/donations?confirmation=${line.confirmation.id}`} className="text-link underline">
                   {t('confirmed', { number: line.confirmation.number, date: date(line.confirmation.issuedOn) })}
                 </Link>
               ) : (
-                <span className="flex items-center gap-2">
-                  <span className="text-muted-ink">{line.hasContact ? t('none') : t('noContact')}</span>
-                  {canIssue && line.hasContact ? (
-                    <Button type="button" size="sm" variant="outline" onClick={() => setIssuing(line.lineId)}>{t('issue')}</Button>
-                  ) : null}
-                </span>
+                canIssue && line.hasContact ? (
+                  <Button type="button" size="sm" variant="outline" onClick={() => setIssuing(line.lineId)}>{t('issue')}</Button>
+                ) : null
               )}
             </li>
           ))}

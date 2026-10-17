@@ -1,4 +1,4 @@
-import { expectedVersionField, isoNow, listUserNamesWithPermission, newId, notFound, ok, requirePermission, staleVersion, todayIn, validate, type CallContext, type DbOrTx, type Deps, type Result } from '@kompass/core';
+import { type CallContext, type DbOrTx, type Deps, EMPTY, expectedVersionField, isoNow, listUserNamesWithPermission, newId, notFound, ok, requirePermission, type Result, staleVersion, todayIn, validate } from '@kompass/core';
 import { and, desc, eq, gte, lte } from 'drizzle-orm';
 import { z } from 'zod';
 import { financeAudit } from '../audit';
@@ -43,7 +43,7 @@ export function ensureFiscalYearFor(tx: DbOrTx, deps: Deps, ctx: CallContext, da
   // Prozesstest-Befund 10 (Task 2): Grund **und** Abhilfe — wer ein Geschäftsjahr anlegen kann.
   const none = () => {
     const names = listUserNamesWithPermission({ db: tx }, 'finance.setup');
-    return financeConflict('noFiscalYearForDate', { date, names: names.length > 0 ? names.join(', ') : '—' });
+    return financeConflict('noFiscalYearForDate', { date, names: names.length > 0 ? names.join(', ') : EMPTY });
   };
   if (!latest) return none();
   const startsOn = dayAfter(latest.endsOn);

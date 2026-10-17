@@ -252,11 +252,16 @@ export function CorrectDialog({
                         id={`correct-party-${key}`}
                         label={t(`party.${key}`)}
                         toggle
-                        hint={key === 'contact' && pickedLine.contactId ? t('currentlyValue', { value: contactNames.get(pickedLine.contactId) ?? '' }) : undefined}
                       >
                         <Checkbox id={`correct-party-${key}`} checked={party[key]} onCheckedChange={(next) => setParty((p) => ({ ...p, [key]: next === true }))} />
                       </FormField>
                     ))}
+                    {/* 07-2 B22: „bisher: …“ in einer eigenen Zelle — als Hinweis am Haken verschob er das Raster der Schalter. */}
+                    {pickedLine.contactId ? (
+                      <FormCell as="p" size="full" className="text-hint text-muted-ink">
+                        {t('currentContact', { value: contactNames.get(pickedLine.contactId) ?? '' })}
+                      </FormCell>
+                    ) : null}
                   </FormGrid>
                 </div>
               </Section>
@@ -289,7 +294,7 @@ export function CorrectDialog({
                         {party.project ? (
                           <FormField id="correct-project" label={t('party.project')}>
                             <Select id="correct-project" value={projectId} onChange={(e) => setProjectId(e.target.value)}>
-                              <option value="">—</option>
+                              <option value="">{t('party.noProject')}</option>
                               {projects.map((p) => (
                                 <option key={p.id} value={p.id}>{p.name}</option>
                               ))}
@@ -299,7 +304,7 @@ export function CorrectDialog({
                         {party.purpose ? (
                           <FormField id="correct-purpose" label={t('party.purpose')}>
                             <Select id="correct-purpose" value={purposeId} onChange={(e) => setPurposeId(e.target.value)}>
-                              <option value="">—</option>
+                              <option value="">{t('party.noPurpose')}</option>
                               {purposes.map((p) => (
                                 <option key={p.id} value={p.id}>{p.name}</option>
                               ))}

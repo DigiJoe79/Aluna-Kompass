@@ -68,14 +68,40 @@ export async function setFinanceSwitchAction(key: string, value: boolean): Promi
   });
 }
 
-export async function setFinanceLimitAction(key: string, cents: number): Promise<ActionState> {
-  return guardAction('(shell)/admin/finance/actions.ts#setFinanceLimitAction', async () => {
+/**
+ * Runde 3, 172: die Leiste der Schalter — ein Dienst (`setFinanceSwitch`) je geändertem Schalter, in der Reihenfolge
+ * der Seite; die erste Ablehnung hält an und steht an der Leiste.
+ */
+export async function setFinanceSwitchesAction(entries: { key: string; value: boolean }[]): Promise<ActionState> {
+  return guardAction('(shell)/admin/finance/actions.ts#setFinanceSwitchesAction', async () => {
     const t = await getTranslations();
     const { deps, ctx } = await requireSession();
-    const result = await setFinanceLimit(deps, ctx, { key, cents });
+    for (const entry of entries) {
+      const result = await setFinanceSwitch(deps, ctx, entry);
+      if (!result.ok) {
+        revalidateFinanceAdmin();
+        return toActionState(result, t);
+      }
+    }
     revalidateFinanceAdmin();
-    if (!result.ok) return toActionState(result, t);
-    return toActionState(result, t, t('finance.admin.tax.limits.saved'));
+    return { status: 'success', message: t('finance.admin.tax.switchesSaved') };
+  });
+}
+
+/** Runde 3, 172: die Leiste der Grenzen — ein Dienst (`setFinanceLimit`) je geänderter Grenze, wie bei den Schaltern. */
+export async function setFinanceLimitsAction(entries: { key: string; cents: number }[]): Promise<ActionState> {
+  return guardAction('(shell)/admin/finance/actions.ts#setFinanceLimitsAction', async () => {
+    const t = await getTranslations();
+    const { deps, ctx } = await requireSession();
+    for (const entry of entries) {
+      const result = await setFinanceLimit(deps, ctx, entry);
+      if (!result.ok) {
+        revalidateFinanceAdmin();
+        return toActionState(result, t);
+      }
+    }
+    revalidateFinanceAdmin();
+    return { status: 'success', message: t('finance.admin.tax.limits.saved', { count: entries.length }) };
   });
 }
 

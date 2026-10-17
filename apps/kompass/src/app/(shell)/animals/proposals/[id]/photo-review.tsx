@@ -108,8 +108,8 @@ export function photoCounts(rows: readonly ReviewPhotoRow[], state: PhotoState) 
 
 /**
  * Fotos einer Änderung (Board Vorschläge 2a, Board Ausschnitt in der Prüfung 2): in der Reihenfolge danach, Kachel wie
- * im Tierformular (Bild, Zeile „Ausschnitt“), Marken neu · bleibt · fällt weg, Herkunft; neue mit „übernehmen“,
- * wegfallende mit „entfernen“, Fotos aus Kompass nur durch „abwählen“ weg (A12). „Ausschnitt …“ rechts neben der
+ * im Tierformular (Bild, Zeile „Ausschnitt“), Marken neu · bleibt · fällt weg, Herkunft; jedes Kästchen fragt „danach dabei“ (051),
+ * Fotos aus Kompass gehen nur durch Abhaken weg (A12). „Ausschnitt …“ rechts neben der
  * Checkbox, nur bei Fotos, die danach im Tier sind. Der Titelbildwechsel ist eine eigene Wahl unter den Kacheln; er und
  * das Abwählen laufen durch die Titelbild-Regel (`lib/primary-crop.ts`). `readOnly`: entschiedener Vorschlag.
  */
@@ -148,30 +148,29 @@ export function PhotoReview({ rows, state, onChange, sourceName, max, readOnly, 
           const on = !!state.selected[row.key];
           const crop = cropOf(row, state);
           const isPrimary = row.key === primaryKeyAfter;
-          const toggle =
-            row.change === 'new' || (row.inProposal && row.change === 'kept')
-              ? { label: row.change === 'new' ? t('take') : t('keep'), checked: on, set: (v: boolean) => set(row.key, v) }
-              : row.change === 'dropped'
-                ? { label: t('remove'), checked: !on, set: (v: boolean) => set(row.key, !v) }
-                : { label: t('deselect'), checked: !on, set: (v: boolean) => set(row.key, !v) };
+          // 051: Jedes Kästchen fragt dasselbe — „danach dabei“, angehakt heißt: nach dem Annehmen im Tier. Vorher drehten
+          // „entfernen“ und „abwählen“ die Richtung um; gespeichert wird weiter `selected` (Test in photo-review.test.tsx).
+          const toggle = { label: t('stays'), checked: on, set: (v: boolean) => set(row.key, v) };
           return (
             <li key={row.key} data-testid="proposal-photo" className={`flex min-w-0 flex-col gap-1.5 rounded-md border p-2 ${on ? 'border-line' : 'border-line opacity-60'}`}>
               <PhotoTileImage src={srcOf(row)} crop={crop} isPrimary={isPrimary} places={at} label={crop ? t('withCrop', { name: name(row) }) : name(row)} />
               <CropLine crop={crop} width={sizeOf(row)?.width ?? null} isPrimary={isPrimary} places={at} />
+              {/* Marken und Herkunft in einer Zeile, die Aktionen unten bündig: Die Karten standen mit vier Textzeilen und
+                  verschiedenen Bildhöhen unruhig nebeneinander (05 B23). Kein Layout-Test (AGENTS.md). */}
               <span className="flex flex-wrap items-center gap-1">
                 {row.change === 'new' ? <StatusBadge tone="agent">{t('new')}</StatusBadge> : row.change === 'dropped' ? <StatusBadge tone="warning">{t('dropped')}</StatusBadge> : <StatusBadge tone="neutral">{t('kept')}</StatusBadge>}
                 {isPrimary ? <StatusBadge tone="neutral">{t('primary')}</StatusBadge> : null}
                 {row.conflict ? <StatusBadge tone="warning">{r('changedSince')}</StatusBadge> : null}
+                <span className="text-hint text-ink-2">{row.origin === 'source' ? t('fromSource', { source: sourceName }) : t('fromKompass')}</span>
               </span>
-              <span className="text-hint text-ink-2">{row.origin === 'source' ? t('fromSource', { source: sourceName }) : t('fromKompass')}</span>
               {readOnly ? null : (
                 // Checkbox und Knopf stehen beide für „was passiert mit diesem Foto“ (Board 2a); bricht die Zeile um, steht der Knopf darunter.
-                <PhotoActions className="justify-between gap-x-2 gap-y-1">
+                <PhotoActions className="mt-auto justify-between gap-x-2 gap-y-1">
                   <label className="flex items-center gap-2 text-meta text-ink">
                     <Checkbox checked={toggle.checked} onCheckedChange={(v) => toggle.set(v === true)} aria-label={`${toggle.label}: ${name(row)}`} />
                     {toggle.label}
                   </label>
-                  {on && sizeOf(row) ? <Button type="button" size="sm" variant="ghost" onClick={() => setEditing(row.key)}>{tc('edit')}</Button> : null}
+                  {on && sizeOf(row) ? <Button type="button" size="sm" variant="outline" onClick={() => setEditing(row.key)}>{tc('edit')}</Button> : null}
                 </PhotoActions>
               )}
             </li>

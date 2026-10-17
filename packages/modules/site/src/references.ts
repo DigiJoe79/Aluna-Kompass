@@ -1,4 +1,4 @@
-import type { AssetMediaReference, Deps } from '@kompass/core';
+import { nameOrEmpty, type AssetMediaReference, type Deps } from '@kompass/core';
 import { assetValuesIn, assetValuesOf, type AssetValue } from './asset-values';
 import { entryLabel } from './entry-label';
 import { widgetOf } from './field-schema';
@@ -34,7 +34,7 @@ export function siteMediaReferences(deps: Deps, assetIds: ReadonlySet<string>): 
   const values = readValues(deps);
   for (const [key, field] of Object.entries(template.schema.variables)) {
     for (const [assetId, cropped] of perAsset(assetValuesOf(field, values[key], key), assetIds)) {
-      refs.push({ assetId, label: `Variable „${field.label ?? key}“`, entity: 'siteValue', id: key, href: '/site/variables', cropped });
+      refs.push({ assetId, label: `Variable „${nameOrEmpty(field.label)}“`, entity: 'siteValue', id: key, href: '/site/variables', cropped });
     }
   }
 

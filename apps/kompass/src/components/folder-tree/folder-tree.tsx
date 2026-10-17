@@ -2,9 +2,9 @@
 
 import { dragAndDropFeature, hotkeysCoreFeature, syncDataLoaderFeature, type DragTarget } from '@headless-tree/core';
 import { useTree } from '@headless-tree/react';
-import { Keyboard } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { Fragment, useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type FocusEvent as ReactFocusEvent, type DragEvent as ReactDragEvent, type KeyboardEvent as ReactKeyboardEvent, type MouseEvent as ReactMouseEvent, type ReactNode } from 'react';
+import { Fragment, useCallback, useContext, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type FocusEvent as ReactFocusEvent, type DragEvent as ReactDragEvent, type KeyboardEvent as ReactKeyboardEvent, type MouseEvent as ReactMouseEvent, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { KeyChip } from '@/components/key-chip';
 import { cn } from '@/lib/utils';
 import { useFinePointer } from '@/lib/use-fine-pointer';
@@ -27,6 +27,7 @@ import {
   type FolderEntry,
   type FolderNode,
 } from '@/lib/folder-tree-model';
+import { FolderSheetActions } from './folder-sheet';
 import { announceCancelled, announceNotDropped, announceOpened, announcePickUp, announceTarget, blockText, clause } from './announcements';
 import { setDragPreview } from './drag-preview';
 import { FixedEntry, PickFixedEntry, type FolderTreeFixedEntry } from './fixed-entry';
@@ -38,6 +39,7 @@ import { TYPE_AHEAD_MS, nextTypeAheadMatch } from './type-ahead';
 import { useEdgeScroll } from './use-edge-scroll';
 import { useFolderTreeExpanded, type FolderTreeStorageKey } from './use-folder-tree-expanded';
 import { Overline } from '@/components/overline';
+import { Button } from '@/components/ui/button';
 
 export type { FolderTreeFixedEntry } from './fixed-entry';
 export type { BlockReason, DragItem } from '@/lib/folder-tree-model';
@@ -56,6 +58,11 @@ export interface FolderTreeProps {
    * `aria-current`; gesperrte Ziele nach `blocked`, Marken nach `marks`.
    */
   mode: 'navigate' | 'pick';
+  /**
+   * Zähler an den Ordnern (Vorgabe ja). Das Ordnerfeld und „Verschieben nach…“ zeigen keine: Dort wählt man einen Ort,
+   * man zählt nicht (Runde 3, Kleinpunkt 10). Der Auswahldialog der Mediathek zählt seine Art weiter.
+   */
+  counts?: boolean;
   /** Pfad des gewählten Ordners; `null`, wenn ein fester Eintrag gewählt ist (oder im Modus `pick` noch nichts). */
   selected: string | null;
   fixed: FolderTreeFixedEntry[];
@@ -108,6 +115,8 @@ export interface FolderTreeProps {
   extraMenuItems?: (path: string) => ReactNode;
   /** Ziele, an denen eine Änderung unterwegs ist: Ihre Zeile zeigt „wird gespeichert“ (README § 3, Artboard 3). */
   saving?: readonly string[];
+  /** Modus `pick`: Treffer einer Suche hervorheben (Ordnerfeld, Entwurf E5). */
+  highlight?: (path: string) => boolean;
   /** Ein Satz unter dem Baum, etwa warum er kurz ist (Bereichsrechte, Artboard 9b). */
   note?: string;
   /** Der Satz im Leerzustand, wenn die Wörter der Akte nicht passen (Mediathek: Dateien statt Dokumente). */
@@ -182,6 +191,7 @@ export function FolderTree({
   selected,
   fixed,
   mode,
+  counts = true,
   hrefFor,
   acceptsItems = '',
   onPick,
@@ -206,6 +216,7 @@ export function FolderTree({
   extraMenuItems,
   saving,
   note,
+  highlight,
   emptyHint,
 }: FolderTreeProps) {
   const t = useTranslations('folderTree');
@@ -857,28 +868,37 @@ export function FolderTree({
       ? t('deleteBlocked', { count: block.count, unit: block.count === 1 ? unit.one : unit.many })
       : t('deleteHasChildren', { count: block.count });
   };
+  const sheetActions = useContext(FolderSheetActions);
+  const createButton =
+    canManage && onCreate ? (
+      // Legt immer auf der obersten Ebene an; im Ordner anlegen geht über „Neuer Unterordner“ (Artboard 4d).
+      // Ein schlichter Textknopf statt einer handgebauten grauen Fläche (03 C41).
+      <Button
+        type="button"
+        variant="outline"
+        size={density === 'touch' ? 'sm' : 'xs'}
+        onClick={() => startCreate(null)}
+        // Am Telefon 44 px Klickfläche bei gleicher Optik (HANDOFF § 6).
+        className={cn('whitespace-nowrap', density === 'touch' && 'relative after:absolute after:-inset-x-px after:-inset-y-1.5')}
+      >
+        {t('newFolder')}
+      </Button>
+    ) : null;
   const keyboardDrag = drag?.mode === 'keyboard' ? drag : null;
   const keyboardReason = keyboardDrag && target && target !== source ? validate(keyboardDrag.item, target) : null;
 
   return (
     <div className="flex min-h-full flex-1 flex-col">
-      <div className={cn('mb-1 flex items-center gap-2 pr-1 pl-2', density === 'touch' ? 'h-11' : 'h-7', pick && 'hidden')}>
-        <Overline className="flex-1">{t('heading')}</Overline>
-        {canManage && onCreate ? (
-          // Legt immer auf der obersten Ebene an; im Ordner anlegen geht über „Neuer Unterordner“ (Artboard 4d).
-          <button
-            type="button"
-            onClick={() => startCreate(null)}
-            className={cn(
-              'inline-flex h-7 items-center gap-[5px] rounded-sm border border-line-strong bg-active px-[9px] text-meta whitespace-nowrap text-ink hover:bg-hover focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-focus',
-              // Am Telefon 44 px Klickfläche bei gleicher Optik (HANDOFF § 6).
-              density === 'touch' && 'relative after:absolute after:-inset-x-px after:-inset-y-[9px]'
-            )}
-          >
-            {t('newFolder')}
-          </button>
-        ) : null}
-      </div>
+      {sheetActions && density === 'touch' ? (
+        // Im Blatt am Telefon steht „Neuer Ordner“ in der Titelzeile neben dem ×, nicht allein darunter (Runde 3, 023).
+        pick || !createButton ? null : createPortal(createButton, sheetActions)
+      ) : (
+        <div className={cn('mb-1 flex items-center gap-2 pr-1 pl-2', density === 'touch' ? 'h-11' : 'h-7', pick && 'hidden')}>
+          {/* Im Seitenblatt am Telefon (`touch`) sagt der Blatttitel schon „Ordner“ (03 B15). */}
+          {density === 'touch' ? <span className="flex-1" /> : <Overline className="flex-1">{t('heading')}</Overline>}
+          {createButton}
+        </div>
+      )}
 
       {fixed.length > 0 ? (
         <>
@@ -968,6 +988,7 @@ export function FolderTree({
           {placeholder.map((node) => (
             <FolderTreeRow
               key={node.path}
+              counts={counts}
               node={node}
               level={node.depth}
               isFolder={node.children.length > 0}
@@ -975,6 +996,7 @@ export function FolderTree({
               isSelected={node.path === selected}
               href={pick ? undefined : hrefFor?.(node.path)}
               badge={markFor(node.path)}
+              highlight={highlight?.(node.path)}
               density={density}
             />
           ))}
@@ -1021,12 +1043,15 @@ export function FolderTree({
                   drop={dropFor(path)}
                   dimmed={!!source && isWithin(path, source)}
                   badge={keyboardDrag && path === source ? t('movingBadge') : markFor(path)}
+                  highlight={highlight?.(path)}
                   saving={saving?.includes(path)}
                   isLockedOpen={lockedOpen.has(path)}
                   href={pick ? undefined : hrefFor?.(path)}
                   pick={pickFor(path)}
                   density={density}
-                  label={markFor(path) ? t('accessibleNameMark', { label: accessibleName(t, node, unit), mark: markFor(path)! }) : accessibleName(t, node, unit)}
+                  // Ohne Zähler auch für Vorleser nur der Name (Runde 3, Kleinpunkt 10).
+                  counts={counts}
+                  label={markFor(path) ? t('accessibleNameMark', { label: counts ? accessibleName(t, node, unit) : node.name, mark: markFor(path)! }) : counts ? accessibleName(t, node, unit) : node.name}
                   menu={
                     hasMenu(node) && !drag && !editing
                       ? { visible: path === selected || density === 'touch' ? 'always' : 'hover', open: menu?.path === path, onOpen: () => openMenu(path) }
@@ -1099,16 +1124,7 @@ export function FolderTree({
         {message}
       </div>
 
-      <button
-        type="button"
-        onClick={() => setHelpOpen(true)}
-        className={cn('mt-auto flex items-center gap-1.5 self-start px-2 pt-2.5 text-hint text-muted-ink hover:text-ink-2', density === 'touch' && 'min-h-11', pick && 'hidden')}
-      >
-        <Keyboard className="size-3.5" aria-hidden />
-        <span className="border-b border-line-strong">{t('keyHelp')}</span>
-        <KeyChip>?</KeyChip>
-      </button>
-
+      {/* 144: Kein Hinweis „Tastenkürzel ?“ am Fuß — es gab ihn nirgends sonst. Die Hilfe öffnet weiter mit „?“. */}
       <FolderTreeKeyHelp open={helpOpen} onOpenChange={setHelpOpen} canManage={canManage} />
 
       <RowMenu

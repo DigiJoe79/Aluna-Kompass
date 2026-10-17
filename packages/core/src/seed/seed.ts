@@ -17,7 +17,9 @@ export const SEED_ADMIN_EMAIL = 'admin@kompass.local';
 export const SEED_ADMIN_PASSWORD = 'kompass-entwicklung-2026';
 
 const EXAMPLE_ROLES: { name: string; description: string; permissions: string[] }[] = [
-  { name: 'Schatzmeisterin', description: 'Finanzen und Dokumente', permissions: ['documents.export', 'media.upload', 'audit.view', 'backup.export', 'followUps.view', 'followUps.manage', 'dms.view'] },
+  // Runde 3, 156: nicht „Schatzmeisterin“ — das Finanzmodul bringt „Schatzmeister“ mit, zwei fast gleiche Namen
+  // standen nebeneinander. Die Rolle trägt keine Finanzrechte.
+  { name: 'Geschäftsstelle', description: 'Dokumente, Wiedervorlagen und Sicherung', permissions: ['documents.export', 'media.upload', 'audit.view', 'backup.export', 'followUps.view', 'followUps.manage', 'dms.view'] },
   // Nicht „Kassenprüfer“: Das Finanzmodul liefert ab F1 eine eigene Rolle
   // dieses Namens (Spec 10.1); zwei Rollen mit demselben Namen ließen sich
   // sonst über `nameTaken` nicht beide anlegen.
@@ -46,7 +48,7 @@ function exampleOrganization(deps: Deps): [string, string][] {
 }
 
 const EXAMPLE_USERS: { name: string; email: string; role: string }[] = [
-  { name: 'Jonas Feld', email: 'jonas@kompass.local', role: 'Schatzmeisterin' },
+  { name: 'Jonas Feld', email: 'jonas@kompass.local', role: 'Geschäftsstelle' },
   { name: 'Mira Klein', email: 'mira@kompass.local', role: 'Interne Revision' },
   { name: 'Peter Lang', email: 'peter@kompass.local', role: 'Schriftführung' },
 ];
@@ -116,7 +118,8 @@ export async function seedDevelopment(deps: Deps): Promise<{ adminEmail: string;
  * Eine gespeicherte Anordnung für einen Seed-Nutzer, damit `dashboard_layouts`
  * nach dem Seed nicht leer ist und der Rundlauf Speichern/Lesen belegt ist.
  * Gewünscht sind Fällig (30 Tage), Unversandt, Backup — genommen wird, was die
- * Installation kennt und Jonas sehen darf.
+ * Installation kennt und Jonas sehen darf. Bewusst die flache Form: Sie belegt,
+ * dass `setDashboardLayout` sie weiter annimmt und auf Spalten verteilt (0.2.12).
  */
 async function seedDashboardLayout(deps: Deps): Promise<void> {
   const jonas = deps.db.select({ id: users.id }).from(users).where(eq(users.email, 'jonas@kompass.local')).get();

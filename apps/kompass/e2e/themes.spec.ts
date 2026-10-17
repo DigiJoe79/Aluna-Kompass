@@ -9,8 +9,8 @@ test.describe('themes', () => {
   });
 
   test('default is read-only and active; duplicating creates an editable copy', async ({ page }) => {
-    await expect(page.getByRole('listitem', { name: /Default/ })).toContainText('Aktiv');
-    // Default und aktives Theme haben keinen sichtbaren Eintrag — also auch kein ⋯; der Grund steht in der Seitenleiste.
+    await expect(page.getByRole('listitem', { name: /Vorgabe/ })).toContainText('Aktiv');
+    // Vorgabe und aktives Theme haben keinen sichtbaren Eintrag — also auch kein ⋯; der Grund steht in der Seitenleiste.
     await expect(page.getByRole('button', { name: 'Weitere Aktionen' })).toHaveCount(0);
     await page.getByRole('button', { name: 'Duplizieren' }).click();
     await page.getByRole('dialog').getByLabel('Schlüssel').fill('vereinsfarben');
@@ -26,6 +26,8 @@ test.describe('themes', () => {
     await page.getByRole('dialog').getByLabel('Name').fill('Test');
     await page.getByRole('dialog').getByRole('button', { name: 'Duplizieren' }).click();
     await page.getByRole('button', { name: /^Test/ }).click();
+    // Runde 3, 179: Die Tokens stehen in Gruppen; „muted“ unter „Text“.
+    await page.getByRole('button', { name: /^Text/ }).click();
     await page.getByLabel('muted hell', { exact: true }).fill('#DDDDDD');
     // Warnung ohne Sperre (`status`), Speichern bleibt möglich (K10 Charge 2).
     const contrast = page.locator('main').getByRole('status').filter({ hasText: 'Kontrast unter AA' });
@@ -52,7 +54,7 @@ test.describe('themes', () => {
     await page.getByRole('button', { name: /^Kopie/ }).click();
     await page.getByRole('button', { name: 'Aktivieren' }).click();
     await expect(page.getByRole('button', { name: 'Weitere Aktionen' })).toHaveCount(0);
-    await page.getByRole('button', { name: /^Default/ }).click();
+    await page.getByRole('button', { name: /^Vorgabe/ }).click();
     await page.getByRole('button', { name: 'Aktivieren' }).click();
     await page.getByRole('button', { name: /^Kopie/ }).click();
     await page.getByRole('button', { name: 'Weitere Aktionen' }).click();

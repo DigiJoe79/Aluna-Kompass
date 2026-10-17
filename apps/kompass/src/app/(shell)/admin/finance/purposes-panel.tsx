@@ -9,12 +9,12 @@ import { RefusalNotice } from '@/components/forms/refusal-notice';
 import { useActionFeedback } from '@/components/forms/use-action-feedback';
 import type { ActionState } from '@/lib/actions';
 import { withUnplacedFieldErrors } from '@/lib/feedback';
-import { StatusBadge } from '@/components/status-badge';
+import { isNormalInList, StatusBadge, statusTone } from '@/components/status-badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { formatAmount, parseAmount } from '@/lib/finance/amount';
+import { RowButton, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { formatAmount, formatEuro, parseAmount } from '@/lib/finance/amount';
 import { savePurposeAction, setPurposeStateAction, type PurposeInput } from './actions';
 import { useSavedVersions } from '@/lib/saved-versions';
 import { FormField } from '@/components/forms/form-field';
@@ -22,6 +22,8 @@ import { FormGrid } from '@/components/forms/form-grid';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
 import { Section } from '@/components/section';
+import { Empty } from '@/components/empty-value';
+import { RowMenu } from '@/components/row-menu';
 
 export interface PurposeRow {
   id: string;
@@ -80,40 +82,33 @@ export function PurposesPanel({ purposes }: { purposes: PurposeRow[] }) {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>{t('columns.name')}</TableHead>
-              <TableHead>{t('columns.target')}</TableHead>
-              <TableHead>{t('columns.state')}</TableHead>
-              <TableHead className="text-right">{tCommon('edit')}</TableHead>
+              <TableHead col="title">{t('columns.name')}</TableHead>
+              <TableHead col="amount">{t('columns.target')}</TableHead>
+              <TableHead col="status">{t('columns.state')}</TableHead>
+              {/* Zeilenaktionen im ⋯-Menü (Joe 11.8); der Kopf ist nur für Vorleser da (112). */}
+              <TableHead col="actions" className="w-11"><span className="sr-only">{tCommon('rowActionsColumn')}</span></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {purposes.map((row) => (
               <TableRow key={row.id}>
-                <TableCell className="text-ink">{row.name}</TableCell>
-                <TableCell className="font-mono text-ink-2">{row.targetCents !== null ? formatAmount(row.targetCents) : '—'}</TableCell>
-                <TableCell>
-                  <StatusBadge tone={stateOf(row) === 'open' ? 'success' : 'neutral'}>{t(`states.${stateOf(row)}`)}</StatusBadge>
+                <TableCell col="title">
+                  <RowButton aria-haspopup="dialog" onClick={() => setEditing(versions.latest(row))}>{row.name}</RowButton>
                 </TableCell>
-                <TableCell className="text-right">
-                  <div className="flex justify-end gap-1.5">
-                    <Button variant="ghost" size="sm" onClick={() => setEditing(versions.latest(row))}>
-                      {tCommon('edit')}
-                    </Button>
-                    {stateOf(row) === 'open' ? (
-                      <>
-                        <Button variant="ghost" size="sm" disabled={pending} onClick={() => void setState(row, 'fulfilled')}>
-                          {t('actions.fulfill')}
-                        </Button>
-                        <Button variant="ghost" size="sm" disabled={pending} onClick={() => void setState(row, 'dissolved')}>
-                          {t('actions.dissolve')}
-                        </Button>
-                      </>
-                    ) : (
-                      <Button variant="ghost" size="sm" disabled={pending} onClick={() => setReopening(row)}>
-                        {t('actions.reopen')}
-                      </Button>
-                    )}
-                  </div>
+                <TableCell col="amount" className="tabular-nums text-ink-2">{row.targetCents !== null ? formatEuro(row.targetCents) : <Empty />}</TableCell>
+                <TableCell col="status">
+                  {isNormalInList('purposeSetup', stateOf(row)) ? null : <StatusBadge tone={statusTone('purposeSetup', stateOf(row))}>{t(`states.${stateOf(row)}`)}</StatusBadge>}
+                </TableCell>
+                <TableCell col="actions" className="text-right">
+                  <RowMenu
+                    name={row.name}
+                    items={[
+                      { key: 'edit', label: tCommon('edit'), onSelect: () => setEditing(versions.latest(row)) },
+                      { key: 'fulfill', label: t('actions.fulfill'), hidden: stateOf(row) !== 'open', onSelect: () => void setState(row, 'fulfilled') },
+                      { key: 'dissolve', label: t('actions.dissolve'), hidden: stateOf(row) !== 'open', onSelect: () => void setState(row, 'dissolved') },
+                      { key: 'reopen', label: t('actions.reopen'), hidden: stateOf(row) === 'open', onSelect: () => setReopening(row) },
+                    ]}
+                  />
                 </TableCell>
               </TableRow>
             ))}

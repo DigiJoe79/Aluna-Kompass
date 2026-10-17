@@ -25,7 +25,8 @@ function Steps({ device }: { device: 'ios' | 'android' }) {
 export function DeviceHint({ device }: { device: Device }) {
   const t = useTranslations('finance.expenses.new.guide');
   return (
-    <div data-testid="scan-guide" className="space-y-2 rounded-md bg-surface-2 p-3">
+    // 08 B12: Die Anleitung ist keine dritte Kartenebene (Position → Beleg → Anleitung) — Text unter dem Feld (§ E).
+    <div data-testid="scan-guide" className="space-y-2">
       <p className="text-hint font-semibold text-ink">{t('title')}</p>
       {device ? (
         <Steps device={device} />

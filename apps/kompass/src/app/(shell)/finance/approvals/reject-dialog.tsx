@@ -70,7 +70,8 @@ export function RejectDialog({
         </DialogHeader>
         <p className="text-body text-ink-2">{who ?? t('who', { name: person })}</p>
         <FormGrid>
-          <FormField id="reject-note" label={t('reason')} error={missing ? t('required') : undefined} size="l">
+          {/* 08 A7: Der Grund ist im Dienst Pflicht — der Stern sagt es vorher. */}
+          <FormField id="reject-note" label={t('reason')} required error={missing ? t('required') : undefined} size="l">
             <Textarea
               id="reject-note"
               rows={3}

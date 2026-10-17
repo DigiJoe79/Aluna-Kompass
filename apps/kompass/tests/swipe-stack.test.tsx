@@ -45,7 +45,7 @@ afterEach(() => {
 
 describe('SwipeStack (Board 3b–3e, 8b)', () => {
   it('accepts with the preselection after five seconds and moves on', async () => {
-    render(<SwipeStack frame={frame} cards={[card('P1', 'Mira'), card('P2', 'Nala')]} backHref="/animals/proposals" query="" />, { wrapper: Intl });
+    render(<SwipeStack frame={frame} cards={[card('P1', 'Mira'), card('P2', 'Nala')]} query="" />, { wrapper: Intl });
     expect(screen.getByText('1 von 2')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Annehmen' }));
     expect(screen.getByRole('heading', { name: 'Nala' })).toBeTruthy();
@@ -58,21 +58,32 @@ describe('SwipeStack (Board 3b–3e, 8b)', () => {
   });
 
   it('leads to the review page for a card that needs one, without sending anything', async () => {
-    render(<SwipeStack frame={frame} cards={[card('P2', 'Baxter', { right: { kind: 'review', reasons: ['conflict'] } })]} backHref="/animals/proposals" query="text=Baxter" />, { wrapper: Intl });
+    render(<SwipeStack frame={frame} cards={[card('P2', 'Baxter', { right: { kind: 'review', reasons: ['conflict'] } })]} query="text=Baxter" />, { wrapper: Intl });
     expect(screen.getByText('Konflikt mit einer Änderung in Kompass. Annehmen geht hier nur über die Prüfseite.')).toBeTruthy();
     fireEvent.keyDown(window, { key: 'ArrowRight' });
     expect(nav.push).toHaveBeenCalledWith('/animals/proposals/P2?text=Baxter');
     expect(screen.getByRole('button', { name: 'Prüfen und dort annehmen' })).toBeTruthy();
+    // „Prüfen“ einmal: Führt schon der Hauptknopf zur Prüfseite, fällt der mittlere weg (Befund 1 Nr. 6, 0.2.12).
+    expect(screen.getAllByRole('button', { name: /^Prüfen/ })).toHaveLength(1);
     expect(actions.accept).not.toHaveBeenCalled();
   });
 
+  // Designer Stufe 2 Nr. 16: Die leere Mitte sagt als Text, warum nichts geht — der erste Grund, aus der Sprachdatei.
+  it('says in the empty middle why nothing goes', () => {
+    render(<SwipeStack frame={frame} cards={[card('P2', 'Baxter', { right: { kind: 'review', reasons: ['conflict'] } })]} query="" />, { wrapper: Intl });
+    expect(screen.getByTestId('stack-blocked').textContent).toBe('Konflikt klären');
+    cleanup();
+    render(<SwipeStack frame={frame} cards={[card('P3', 'Bodo', { kind: 'create', right: { kind: 'review', reasons: ['missingPrimaryPhoto', 'missingSummary'] } })]} query="" />, { wrapper: Intl });
+    expect(screen.getByTestId('stack-blocked').textContent).toBe('Titelbild fehlt');
+  });
+
   it('names what a new dog lacks', () => {
-    render(<SwipeStack frame={frame} cards={[card('P3', 'Bodo', { kind: 'create', right: { kind: 'review', reasons: ['missingPrimaryPhoto', 'missingSummary'] } })]} backHref="/x" query="" />, { wrapper: Intl });
+    render(<SwipeStack frame={frame} cards={[card('P3', 'Bodo', { kind: 'create', right: { kind: 'review', reasons: ['missingPrimaryPhoto', 'missingSummary'] } })]} query="" />, { wrapper: Intl });
     expect(screen.getByText('Kein Titelbild · Kein Kurztext. Annehmen geht hier nur über die Prüfseite.')).toBeTruthy();
   });
 
   it('rejects to the left without a reason', async () => {
-    render(<SwipeStack frame={frame} cards={[card('P1', 'Mira')]} backHref="/x" query="" />, { wrapper: Intl });
+    render(<SwipeStack frame={frame} cards={[card('P1', 'Mira')]} query="" />, { wrapper: Intl });
     fireEvent.keyDown(window, { key: 'ArrowLeft' });
     await pass(5_000);
     expect(actions.reject).toHaveBeenCalledWith('P1', '', 'Mira');
@@ -80,7 +91,7 @@ describe('SwipeStack (Board 3b–3e, 8b)', () => {
   });
 
   it('undo sends nothing and puts the card back in front', async () => {
-    render(<SwipeStack frame={frame} cards={[card('P1', 'Mira'), card('P2', 'Nala')]} backHref="/x" query="" />, { wrapper: Intl });
+    render(<SwipeStack frame={frame} cards={[card('P1', 'Mira'), card('P2', 'Nala')]} query="" />, { wrapper: Intl });
     fireEvent.keyDown(window, { key: 'ArrowRight' });
     undoFromToast();
     await pass(10_000);
@@ -100,15 +111,15 @@ describe('SwipeStack (Board 3b–3e, 8b)', () => {
   });
 
   it('puts a new dog online to the right', async () => {
-    render(<SwipeStack frame={frame} cards={[card('P4', 'Ronja', { kind: 'create', right: { kind: 'accept', publish: true } })]} backHref="/x" query="" />, { wrapper: Intl });
+    render(<SwipeStack frame={frame} cards={[card('P4', 'Ronja', { kind: 'create', right: { kind: 'accept', publish: true } })]} query="" />, { wrapper: Intl });
     fireEvent.click(screen.getByRole('button', { name: 'Annehmen' }));
-    expect(toastMock).toHaveBeenLastCalledWith('Ronja angenommen und veröffentlicht', expect.anything());
+    expect(toastMock).toHaveBeenLastCalledWith('Ronja angenommen und publiziert', expect.anything());
     await pass(5_000);
     expect(actions.accept).toHaveBeenCalledWith({ id: 'P4', publish: true }, 'Ronja');
   });
 
   it('shows the title photo in the frame of the website, with the crop of the source when there is one', () => {
-    const { container } = render(<SwipeStack frame={frame} cards={[card('P1', 'Mira', { image: { url: '/media/A1/preview', crop: null, ratio: null } })]} backHref="/x" query="" />, { wrapper: Intl });
+    const { container } = render(<SwipeStack frame={frame} cards={[card('P1', 'Mira', { image: { url: '/media/A1/preview', crop: null, ratio: null } })]} query="" />, { wrapper: Intl });
     const img = container.querySelector<HTMLImageElement>('[data-testid="stack-card"] img')!;
     expect(img.getAttribute('src')).toBe('/media/A1/preview');
     // Wie die Webseite und die Fotokacheln des Tiers: Format und Fokus aus `animals.photoFrame`, `object-cover`.
@@ -117,13 +128,15 @@ describe('SwipeStack (Board 3b–3e, 8b)', () => {
     expect(screen.queryByTestId('crop-rect')).toBeNull();
     // Der Stapel hält seine Karten ab dem Öffnen (`useState`): neu öffnen statt neu rendern.
     cleanup();
-    render(<SwipeStack frame={frame} cards={[card('P1', 'Mira', { image: { url: '/animals/proposal-images/I1', crop: { x: 0, y: 0.1, w: 1, h: 0.8 }, ratio: 0.75 } })]} backHref="/x" query="" />, { wrapper: Intl });
+    render(<SwipeStack frame={frame} cards={[card('P1', 'Mira', { image: { url: '/animals/proposal-images/I1', crop: { x: 0, y: 0.1, w: 1, h: 0.8 }, ratio: 0.75 } })]} query="" />, { wrapper: Intl });
     expect(screen.getByRole('img', { name: 'Mira, mit Ausschnitt' })).toBeTruthy();
-    expect(screen.getByTestId('crop-rect')).toBeTruthy();
+    // Im Stapel nur abgedunkelt, ohne hellen Rahmen — der sah wie ein Fehler aus (05 C31).
+    expect(screen.getAllByTestId('crop-shade').length).toBeGreaterThan(0);
+    expect(screen.queryByTestId('crop-rect')).toBeNull();
   });
 
   it('keeps the three buttons short and says on the card that accepting puts a new dog online', () => {
-    render(<SwipeStack frame={frame} cards={[card('P4', 'Ronja', { kind: 'create', right: { kind: 'accept', publish: true } })]} backHref="/x" query="" />, { wrapper: Intl });
+    render(<SwipeStack frame={frame} cards={[card('P4', 'Ronja', { kind: 'create', right: { kind: 'accept', publish: true } })]} query="" />, { wrapper: Intl });
     expect(screen.getByRole('button', { name: 'Ablehnen' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Prüfen' })).toBeTruthy();
     const accept = screen.getByRole('button', { name: 'Annehmen' });
@@ -134,7 +147,7 @@ describe('SwipeStack (Board 3b–3e, 8b)', () => {
 
   it('counts a refused decision as left open and shows why', async () => {
     actions.accept.mockResolvedValueOnce({ status: 'error', message: 'Der Vorschlag ist nicht mehr offen.', fieldErrors: {} });
-    render(<SwipeStack frame={frame} cards={[card('P1', 'Mira')]} backHref="/x" query="" />, { wrapper: Intl });
+    render(<SwipeStack frame={frame} cards={[card('P1', 'Mira')]} query="" />, { wrapper: Intl });
     fireEvent.click(screen.getByRole('button', { name: 'Annehmen' }));
     await pass(5_000);
     expect(screen.getByText('Der Vorschlag ist nicht mehr offen.')).toBeTruthy();
@@ -143,7 +156,7 @@ describe('SwipeStack (Board 3b–3e, 8b)', () => {
   });
 
   it('ends with the tally and the note about the website; refreshes it after sending', async () => {
-    render(<SwipeStack frame={frame} cards={[card('P1', 'Mira')]} backHref="/x" query="" />, { wrapper: Intl });
+    render(<SwipeStack frame={frame} cards={[card('P1', 'Mira')]} query="" />, { wrapper: Intl });
     fireEvent.click(screen.getByRole('button', { name: 'Annehmen' }));
     expect(screen.getByText('Alle durchgesehen')).toBeTruthy();
     expect(screen.getByText('pending')).toBeTruthy();
@@ -154,34 +167,35 @@ describe('SwipeStack (Board 3b–3e, 8b)', () => {
     expect(refresh).toHaveBeenCalled();
   });
 
-  it('Fertig sends a held decision at once and goes back', async () => {
-    render(<SwipeStack frame={frame} cards={[card('P1', 'Mira'), card('P2', 'Nala')]} backHref="/animals/proposals" query="" />, { wrapper: Intl });
+  /** 059: Ein Rückweg — „← Vorschläge“ im Seitenkopf. Wer den Stapel so verlässt, schickt die zurückgehaltene Entscheidung sofort ab. */
+  it('has no second way back; leaving the stack sends a held decision at once', async () => {
+    const { unmount } = render(<SwipeStack frame={frame} cards={[card('P1', 'Mira'), card('P2', 'Nala')]} query="" />, { wrapper: Intl });
+    expect(screen.queryByRole('button', { name: 'Zur Liste' })).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Annehmen' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Fertig' }));
+    expect(actions.accept).not.toHaveBeenCalled();
+    unmount();
     expect(actions.accept).toHaveBeenCalledOnce();
-    expect(nav.push).toHaveBeenCalledWith('/animals/proposals');
   });
 
   it('keeps the tally when the server renders the page again without the decided cards', async () => {
-    const { rerender } = render(<SwipeStack frame={frame} cards={[card('P1', 'Mira')]} backHref="/x" query="" />, { wrapper: Intl });
+    const { rerender } = render(<SwipeStack frame={frame} cards={[card('P1', 'Mira')]} query="" />, { wrapper: Intl });
     fireEvent.click(screen.getByRole('button', { name: 'Annehmen' }));
     await pass(5_000);
-    rerender(<SwipeStack frame={frame} cards={[]} backHref="/x" query="" />);
+    rerender(<SwipeStack frame={frame} cards={[]} query="" />);
     expect(screen.getByText('Alle durchgesehen')).toBeTruthy();
     expect(screen.getByText('1 angenommen · 0 abgelehnt · 0 offen gelassen')).toBeTruthy();
   });
 
   it('says so when there is nothing to go through from the start', () => {
-    render(<SwipeStack frame={frame} cards={[]} backHref="/x" query="" />, { wrapper: Intl });
+    render(<SwipeStack frame={frame} cards={[]} query="" />, { wrapper: Intl });
     expect(screen.getByText('Keine offenen Vorschläge')).toBeTruthy();
     expect(screen.queryByText('Alle durchgesehen')).toBeNull();
   });
 
   it('a refusal that arrives after the stack is gone still shows, as a lasting toast (Review Focus 2)', async () => {
     actions.accept.mockResolvedValueOnce({ status: 'error', message: 'Der Vorschlag ist nicht mehr offen.', fieldErrors: {} });
-    const { unmount } = render(<SwipeStack frame={frame} cards={[card('P1', 'Mira'), card('P2', 'Nala')]} backHref="/x" query="" />, { wrapper: Intl });
+    const { unmount } = render(<SwipeStack frame={frame} cards={[card('P1', 'Mira'), card('P2', 'Nala')]} query="" />, { wrapper: Intl });
     fireEvent.click(screen.getByRole('button', { name: 'Annehmen' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Fertig' }));
     unmount();
     await settle();
     expect(toastMock.error).toHaveBeenCalledWith('Der Vorschlag ist nicht mehr offen.', expect.objectContaining({ duration: Infinity }));

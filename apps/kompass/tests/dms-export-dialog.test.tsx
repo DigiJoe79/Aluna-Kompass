@@ -19,4 +19,15 @@ describe('ExportDialog', () => {
     expect(label).toContain('finanzamt');
     expect(label).not.toContain('/');
   });
+
+  // 03 B35: Ohne Ordner gibt es nur den Jahrgang — dann keine Auswahl mit einem einzigen Radio.
+  it('shows no radio when the year is the only choice', () => {
+    render(
+      <NextIntlClientProvider locale="de" messages={messages} timeZone="Europe/Berlin">
+        <ExportDialog canExport folder={null} currentYear={2026} open onOpenChange={() => {}} />
+      </NextIntlClientProvider>
+    );
+    expect(screen.queryAllByRole('radio')).toHaveLength(0);
+    expect(screen.getByRole('spinbutton')).toBeTruthy();
+  });
 });

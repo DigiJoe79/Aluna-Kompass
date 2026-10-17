@@ -97,21 +97,22 @@ export function ExportDialog({
           <DialogTitle>{t('title')}</DialogTitle>
 
           <div className="mt-5">
-            <RadioGroup aria-label={t('title')} value={mode} onValueChange={(value) => setMode(value as 'folder' | 'year')} className="gap-4">
-              {folder ? (
+            {/* Ohne Ordner bleibt nur der Jahrgang: dann kein einzelnes Radio, nur das Feld (03 B35). */}
+            {folder ? (
+              <RadioGroup aria-label={t('title')} value={mode} onValueChange={(value) => setMode(value as 'folder' | 'year')} className="gap-4">
                 <label className="flex items-center gap-2 text-body text-ink">
                   <RadioGroupItem value="folder" />
                   {/* Der Name, nie der Weg mit Schrägstrichen. */}
                   {t('thisFolder', { folder: nameOf(folder) })}
                 </label>
-              ) : null}
-              <label className="flex items-center gap-2 text-body text-ink">
-                <RadioGroupItem value="year" />
-                {t('year')}
-              </label>
-            </RadioGroup>
+                <label className="flex items-center gap-2 text-body text-ink">
+                  <RadioGroupItem value="year" />
+                  {t('year')}
+                </label>
+              </RadioGroup>
+            ) : null}
             {/* Außerhalb der Gruppe: Die Pfeiltasten gehören dem Zahlfeld, nicht dem Wechsel der Option. */}
-            <FormField id="export-year" label={t('yearLabel')} className="mt-1.5 ml-6">
+            <FormField id="export-year" label={t('yearLabel')} className={folder ? 'mt-1.5 ml-6' : undefined}>
               <Input
                 id="export-year"
                 type="number"

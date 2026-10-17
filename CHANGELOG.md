@@ -9,6 +9,58 @@ die Nummern folgen [Semantic Versioning](https://semver.org/lang/de/). Vor
 1.0.0 kann jede Minor-Fassung Brüche enthalten — was bricht, steht unter
 **Geändert** mit dem, was zu tun ist.
 
+## [0.2.12] - 2026-10-17
+
+Diese Fassung macht Kompass ruhiger und klarer: Eine Gestaltungsdurchsicht über
+alle Bereiche hat Listen, Formulare, Knöpfe und Marken vereinheitlicht, und die
+Startseite steht jetzt in Spalten. Keine Migration (`migrationCount` bleibt 9).
+Nichts bricht. Nach dem Update einmal die Frage zur Vergütung des Vorstands
+beantworten; wer keine eigene Anordnung der Startseite gespeichert hat, sieht
+die neue Vorgabe (Betriebshandbuch, „Von 0.2.11 auf 0.2.12“).
+
+### Geändert
+
+- **Startseite in Spalten.** Die Kacheln stehen in Spalten, eine lange Kachel
+  lässt keine Lücke mehr. Unter „Anpassen“ wählen Sie drei gleiche Spalten oder
+  breit und schmal, legen jede Kachel in eine Spalte, und jede Aufteilung merkt
+  sich ihre Anordnung. Statt „Zu …“-Knöpfen ist eine Zahl als Ganzes der Link,
+  in Listen jede Zeile; nur eine Warnung hat noch einen Knopf, und er nennt, was
+  zu tun ist („Backup erstellen“). Kacheln ohne Arbeit schrumpfen auf eine
+  gedämpfte Zeile am Ende der Spalte; am Telefon stehen Warnungen oben. Über MCP
+  kennen `dashboard_get_layout` und `dashboard_set_layout` beide Layouts und
+  nehmen die bisherige flache Liste weiter an.
+- **Listen ruhiger und vollständig.** Nichts läuft mehr rechts aus dem Bild:
+  Lange Texte werden mit „…“ gekürzt oder brechen um, Listen ab fünf Spalten
+  nutzen die volle Breite, im Journal weichen bei Platzmangel zuerst Konto und
+  Beleg. Bearbeiten, Löschen und Ähnliches stehen im Menü ⋯ am Ende der Zeile;
+  ein Klick auf den Namen öffnet den Eintrag. Deaktivierte, archivierte und
+  abgeschlossene Einträge stehen grau mit einer Marke hinter dem Namen.
+- **Einheitliche Knöpfe, Marken und Formulare.** Eine Art sekundärer Knöpfe
+  (mit Rand); ein gesperrter Hauptknopf ist auch im Dunkeln als Knopf zu
+  erkennen. „Abgelehnt“ ist überall rot. „* Pflichtfeld“ steht genau dann da,
+  wenn ein Feld einen Stern trägt; Betragsfelder zeigen „€“. „Verwerfen“
+  erscheint nur, wenn etwas geändert ist.
+- **„Konten“ statt „Bankkonten und Kassen“.** Die Übersicht unter Finanzen und
+  der Reiter in der Einrichtung heißen „Konten“; die Karte einer Kasse führt auf
+  die Kassenseite.
+- **Offene Zahlungen** zeigen zuerst nur Offenes; Erledigtes findet sich über
+  den Filter „Zustand“. Die Reiter heißen „Wir zahlen“ und „Wir bekommen“.
+- **Akte: „Ohne Ordner“.** Ausgehende Dokumente ohne Ordner haben im Baum eine
+  eigene Zeile; bisher fand man sie nur unter „Alle Dokumente“.
+- **Checkliste der Finanzen.** „Konto mit Anfangsbestand“ ist erst erledigt,
+  wenn jedes aktive Bankkonto einen Anfangsbestand hat. „Wer welche Rolle trägt“
+  verlangt keinen Träger mehr für den „Finanz-Agent“. Die Vergütung des
+  Vorstands lässt sich jetzt auch mit „Nein“ beantworten – bisher blieb der
+  Schritt ohne Pauschalen für immer offen.
+- **Bescheide und Bestätigungen.** Ein gültiger Bescheid trägt wieder die Marke
+  „gültig“, ein gültiger ohne Dokument in der Akte ist als „ohne Dokument“
+  markiert. Fehlt einer Spende die Anschrift, steht in der Zeile „Anschrift
+  ergänzen“ statt „Ausstellen“.
+- **Gemeinschaftskonto.** Gehört eine IBAN mehreren Kontakten, schlägt der
+  Import keinen Kontakt mehr vor, statt still den zuletzt verknüpften zu nehmen.
+- **Umgebungsbalken.** Die Testumgebung trägt einen ockerfarbenen Balken mit
+  Schraffur, die Entwicklung einen dunkelgrauen.
+
 ## [0.2.11] - 2026-10-11
 
 Diese Fassung bringt den Bildausschnitt: Jedes Bild der Webseite lässt sich

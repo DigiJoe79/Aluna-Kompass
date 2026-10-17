@@ -36,6 +36,7 @@ export type EditorPhoto = { assetId: string; isPrimary: boolean; crop?: PhotoCro
 export function PhotosEditor({ photos, max, error, onChange, onChoose, places }: { photos: EditorPhoto[]; max: number; error?: string; onChange: (photos: EditorPhoto[]) => void; onChoose: () => void; places: AnimalPhotoPlaces }) {
   const t = useTranslations('animals.photos');
   const tc = useTranslations('media.crop');
+  const m = useTranslations('content');
   const at = usePhotoPlaces(places);
   const errorId = useId();
   // Welches Foto der Dialog „Ausschnitt“ bearbeitet; `null` = zu.
@@ -63,7 +64,7 @@ export function PhotosEditor({ photos, max, error, onChange, onChoose, places }:
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center gap-3">
-        <Button type="button" variant="secondary" className="w-fit" onClick={onChoose} aria-describedby={error ? errorId : undefined}>
+        <Button type="button" variant="outline" className="w-fit" onClick={onChoose} aria-describedby={error ? errorId : undefined}>
           {t('choose')}
         </Button>
         <span className={`text-meta ${photos.length > max ? 'text-error' : 'text-ink-2'}`}>{t('count', { count: photos.length, max })}</span>
@@ -83,12 +84,16 @@ export function PhotosEditor({ photos, max, error, onChange, onChoose, places }:
               {p.isPrimary ? (
                 <StatusBadge tone="neutral">{t('primary')}</StatusBadge>
               ) : (
-                <Button type="button" size="sm" variant="ghost" onClick={() => change(photos.map((x, j) => ({ ...x, isPrimary: j === i })))}>{t('makePrimary')}</Button>
+                <Button type="button" size="sm" variant="outline" onClick={() => change(photos.map((x, j) => ({ ...x, isPrimary: j === i })))}>{t('makePrimary')}</Button>
               )}
               <Button type="button" size="icon-sm" variant="ghost" disabled={i === 0} aria-label={t('moveLeft')} onClick={() => move(i, -1)}><ArrowLeft aria-hidden /></Button>
               <Button type="button" size="icon-sm" variant="ghost" disabled={i === photos.length - 1} aria-label={t('moveRight')} onClick={() => move(i, 1)}><ArrowRight aria-hidden /></Button>
-              {p.width && p.height ? <Button type="button" size="sm" variant="ghost" onClick={() => setEditing(i)}>{tc('edit')}</Button> : null}
-              <Button type="button" size="sm" variant="ghost" onClick={() => change(photos.filter((_, j) => j !== i))}>{t('remove')}</Button>
+              {/* „Ausschnitt …“ und „Bild entfernen“ brechen zusammen um; „Entfernen“ stand sonst allein in der zweiten Zeile (05 B20).
+                  Eine Stufe und ein Name wie am Bildfeld der Geschichte (`MediaPicker`, 045/046). */}
+              <span className="flex flex-wrap items-center gap-1">
+                {p.width && p.height ? <Button type="button" size="sm" variant="outline" onClick={() => setEditing(i)}>{tc('edit')}</Button> : null}
+                <Button type="button" size="sm" variant="outline" onClick={() => change(photos.filter((_, j) => j !== i))}>{m('removeImage')}</Button>
+              </span>
             </PhotoActions>
           </li>
         ))}

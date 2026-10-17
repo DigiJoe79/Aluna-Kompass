@@ -39,7 +39,7 @@ export default async function FinanceDonationNoticesPage() {
   const fmt = dateFormatOf(deps);
 
   return (
-    <Page width="standard" header={<PageHeader title={t('title')} description={t('description')} actions={canIssue ? <AddNoticeButton canPickDocument={canPickDocument} /> : undefined} />}>
+    <Page width="full" header={<PageHeader title={t('title')} description={t('description')} actions={canIssue ? <AddNoticeButton canPickDocument={canPickDocument} /> : undefined} />}>
       <div className="space-y-5">
 
         {!hasValid ? <Notice level="warn">{t('noValid')}</Notice> : expiry ? <Notice level="warn">{t('expiring', { date: fmt.date(expiry.validUntil) })}</Notice> : null}

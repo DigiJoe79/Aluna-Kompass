@@ -11,13 +11,12 @@ import { Disclosure } from '@/components/ui/disclosure';
 import { EmptyState } from '@/components/empty-state';
 import { FilterBar } from '@/components/filter-bar';
 import { SearchField } from '@/components/search-field';
-import { StatusBadge } from '@/components/status-badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogBody, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { useUrlFilters } from '@/lib/use-url-filters';
 import { Select } from '@/components/ui/select';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { RowButton, Table, TableBody, TableCell, TableGroupRow, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useSavedVersions } from '@/lib/saved-versions';
 import { confirmSetupStepAction, saveCategoryAction, setCategoryActiveAction, type CategoryInput } from './actions';
 import { FormField } from '@/components/forms/form-field';
@@ -26,6 +25,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
 import { useDateFormat } from '@/components/date-format-provider';
 import { Section } from '@/components/section';
+import { RowMenu } from '@/components/row-menu';
 
 export interface CategoryRow {
   id: string;
@@ -57,6 +57,7 @@ const INPUT_TAX = ['no', 'yes', 'partial'] as const;
 /** H3 — gruppiert nach steuerlichem Bereich; Regelverstöße am Feld, „Erweitert“ als Disclosure. */
 export function CategoriesPanel({ categories, confirmedAt }: { categories: CategoryRow[]; confirmedAt: string | null }) {
   const t = useTranslations('finance.admin.categories');
+  const tMuted = useTranslations('common.muted');
   const tCommon = useTranslations('common');
   const fmt = useDateFormat();
   const router = useRouter();
@@ -115,54 +116,52 @@ export function CategoriesPanel({ categories, confirmedAt }: { categories: Categ
             onReset={() => setSearch('')}
           />
         </div>
+        {/* Runde 3, 168: „Kategorien durchgesehen“ als `outline` im Kopf der Liste neben „Kategorie anlegen“, wie in der
+            Checkliste; der Stand steht darunter. Layout, kein Test. */}
+        <Button variant="outline" disabled={pending} onClick={() => void confirmReviewed()} data-testid="review-categories">
+          {t('review')}
+        </Button>
         <Button onClick={() => setEditing('new')}>{t('create')}</Button>
       </div>
+      <RefusalNotice action state={reviewFb.state} />
+      <p className="text-meta text-muted-ink">{confirmedAt ? t('reviewedAt', { date: fmt.date(confirmedAt) }) : t('notReviewed')}</p>
 
       {/* Befund 6: Ohne Treffer verschwand alles ohne Text. Ohne Kategorien überhaupt gibt es die Seite nicht (Grundausstattung). */}
       {grouped.size === 0 && search ? <EmptyState filtered={{ noun: t('emptyNoun'), onReset: () => setSearch('') }} /> : null}
 
-      {[...grouped.entries()].map(([sphere, rows]) => (
-        <Section key={sphere} title={t(`sphereGroup.${sphere}`)}>
-          <div className="overflow-hidden rounded-md border border-line">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>{t('columns.name')}</TableHead>
-                  <TableHead>{t('columns.direction')}</TableHead>
-                  <TableHead>{t('columns.statementSuffices')}</TableHead>
-                  <TableHead>{t('columns.active')}</TableHead>
-                  <TableHead className="text-right">{tCommon('edit')}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+      {/* Eine Tabelle mit Gruppenzeilen je Bereich statt fünf Tabellen untereinander (11-1 B17). */}
+      {grouped.size > 0 ? (
+        <div className="overflow-hidden rounded-md border border-line">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead col="title">{t('columns.name')}</TableHead>
+                <TableHead col="meta">{t('columns.direction')}</TableHead>
+                <TableHead col="meta">{t('columns.statementSuffices')}</TableHead>
+                {/* Zeilenaktionen im ⋯-Menü (Joe 11.8); der Kopf ist nur für Vorleser da (112). */}
+                <TableHead col="actions" className="w-11"><span className="sr-only">{tCommon('rowActionsColumn')}</span></TableHead>
+              </TableRow>
+            </TableHeader>
+            {[...grouped.entries()].map(([sphere, rows]) => (
+              <TableBody key={sphere}>
+                <TableGroupRow colSpan={4}>{t(`sphereGroup.${sphere}`)}</TableGroupRow>
                 {rows.map((row) => (
-                  <TableRow key={row.id} data-testid={`category-row-${row.key}`}>
-                    <TableCell className="text-ink">{row.name}</TableCell>
-                    <TableCell className="text-ink-2">{t(`directions.${row.direction}`)}</TableCell>
-                    <TableCell className="text-ink-2">{row.statementSuffices ? tCommon('yes') : tCommon('no')}</TableCell>
-                    <TableCell>
-                      <StatusBadge tone={row.isActive ? 'success' : 'neutral'}>{row.isActive ? t('columns.active') : t('inactiveState')}</StatusBadge>
+                  <TableRow key={row.id} data-testid={`category-row-${row.key}`} muted={row.isActive ? undefined : tMuted('retired')}>
+                    <TableCell col="title">
+                      <RowButton aria-haspopup="dialog" onClick={() => openRow(row)}>{row.name}</RowButton>
                     </TableCell>
-                    <TableCell className="text-right">
-                      <Button variant="ghost" size="sm" onClick={() => openRow(row)}>
-                        {tCommon('edit')}
-                      </Button>
+                    <TableCell col="meta" className="text-ink-2">{t(`directions.${row.direction}`)}</TableCell>
+                    <TableCell col="meta" className="text-ink-2">{row.statementSuffices ? tCommon('yes') : tCommon('no')}</TableCell>
+                    <TableCell col="actions" className="text-right">
+                      <RowMenu name={row.name} items={[{ key: 'edit', label: tCommon('edit'), onSelect: () => openRow(row) }]} />
                     </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
-            </Table>
-          </div>
-        </Section>
-      ))}
-
-      <div className="space-y-2 pt-2">
-        <RefusalNotice action state={reviewFb.state} />
-        <p className="text-meta text-muted-ink">{confirmedAt ? t('reviewedAt', { date: fmt.date(confirmedAt) }) : t('notReviewed')}</p>
-        <Button size="sm" variant="secondary" disabled={pending} onClick={() => void confirmReviewed()} data-testid="review-categories">
-          {t('review')}
-        </Button>
-      </div>
+            ))}
+          </Table>
+        </div>
+      ) : null}
 
       {editing ? (
         <CategoryDialog

@@ -1,4 +1,4 @@
-import { yearIn, hasPermission, todayIn, type CallContext, type Deps } from '@kompass/core';
+import { type CallContext, type Deps, hasPermission, todayIn, yearIn } from '@kompass/core';
 import { getProject } from '@kompass/module-projects';
 import { getAnimal } from '@kompass/module-animals';
 import { displayName, getContact } from '@kompass/module-contacts';
@@ -14,6 +14,7 @@ import { FiledAnnouncement } from './filed-announcement';
 import { Notice } from '@/components/notice';
 import { ForbiddenCard } from '@/components/forbidden-card';
 import { ancestorsOf, nameOf } from '@/lib/folder-tree-model';
+import { nameOrEmpty } from '@/lib/name-or-empty';
 import { requireSession } from '@/lib/request-context';
 import { DmsWorkspace } from './dms-workspace';
 import { DocumentList, type DocumentListItem } from './document-list';
@@ -44,6 +45,7 @@ export interface DmsQuery {
   folder?: string;
   phase?: string;
   inbox?: string;
+  unfiled?: string;
   text?: string;
   sort?: string;
   dir?: string;
@@ -85,16 +87,21 @@ export async function DmsView({ query, receive }: { query: DmsQuery; receive?: b
   const inboxRes = await listDocuments(deps, ctx, { inbox: true, limit: 1 });
   const inboxCount = inboxRes.ok ? inboxRes.value.total : 0;
 
+  // Stufe 1, Auftrag 7: Ausgänge ohne Ordner haben eine eigene Zeile; Ordner + Eingangskorb + Ohne Ordner = Alle.
+  const unfiledRes = await listDocuments(deps, ctx, { unfiled: true, limit: 1 });
+  const unfiledCount = unfiledRes.ok ? unfiledRes.value.total : 0;
+
   const allRes = await listDocuments(deps, ctx, { limit: 1 });
   const total = allRes.ok ? allRes.value.total : 0;
 
   const isInbox = query.inbox === '1';
+  const isUnfiled = !isInbox && query.unfiled === '1';
   // Ein Ordner aus der Adresse, den es nicht mehr gibt (von anderer Hand
   // verschoben, alter Link): der nächste vorhandene Vorfahr mit Hinweis, ohne
   // ihn „Alle Dokumente“ (Spec § 5.3). Vorfahren zählen mit, auch wenn sie nur
   // als Weg bestehen — der Baum zeigt sie ebenso.
   const known = new Set(folderPaths.flatMap((path) => [...ancestorsOf(path), path]));
-  const requestedFolder = isInbox ? null : query.folder || null;
+  const requestedFolder = isInbox || isUnfiled ? null : query.folder || null;
   const folderGone = requestedFolder !== null && !known.has(requestedFolder);
   const currentFolder = folderGone ? (ancestorsOf(requestedFolder).reverse().find((path) => known.has(path)) ?? null) : requestedFolder;
   const docsRes = await listDocuments(deps, ctx, {
@@ -102,6 +109,7 @@ export async function DmsView({ query, receive }: { query: DmsQuery; receive?: b
     phase: query.phase === 'draft' || query.phase === 'issued' ? query.phase : undefined,
     typeKey: query.type || undefined,
     inbox: isInbox ? true : undefined,
+    unfiled: isUnfiled ? true : undefined,
     folder: currentFolder ?? undefined,
     // Ein geöffneter Ordner zeigt seinen ganzen Teilbaum: Zahl im Baum und Länge der Liste stimmen überein (Spec § 9).
     includeSubfolders: currentFolder !== null,
@@ -116,7 +124,7 @@ export async function DmsView({ query, receive }: { query: DmsQuery; receive?: b
   // „{Treffer} von {alle}“ in der Zählzeile: „alle“ meint den Ort (Ordner mit Teilbaum, Eingangskorb, alles) ohne Filter.
   const filtered = Boolean(query.text || query.direction || query.type || query.phase || query.unsent === '1' || query.followUp === 'open');
   const placeRes = filtered
-    ? await listDocuments(deps, ctx, { inbox: isInbox ? true : undefined, folder: currentFolder ?? undefined, includeSubfolders: currentFolder !== null, limit: 1 })
+    ? await listDocuments(deps, ctx, { inbox: isInbox ? true : undefined, unfiled: isUnfiled ? true : undefined, folder: currentFolder ?? undefined, includeSubfolders: currentFolder !== null, limit: 1 })
     : docsRes;
   const unfiltered = placeRes.ok ? placeRes.value.total : docsRes.value.total;
 
@@ -125,7 +133,7 @@ export async function DmsView({ query, receive }: { query: DmsQuery; receive?: b
     number: d.number,
     subject: d.subject,
     typeKey: d.typeKey,
-    typeLabel: typesMap.get(d.typeKey) ?? d.typeKey,
+    typeLabel: nameOrEmpty(typesMap.get(d.typeKey), d.typeKey),
     documentDate: d.documentDate,
     folder: d.folder,
     direction: d.direction,
@@ -167,6 +175,7 @@ export async function DmsView({ query, receive }: { query: DmsQuery; receive?: b
     <DmsWorkspace
       folders={folders}
       inboxCount={inboxCount}
+      unfiledCount={unfiledCount}
       total={total}
       canCreate={canCreate}
       canManage={hasPermission(ctx, 'dms.manage')}
@@ -201,6 +210,7 @@ export async function DmsView({ query, receive }: { query: DmsQuery; receive?: b
       <FolderHeading
         folder={currentFolder}
         inbox={isInbox}
+        unfiled={isUnfiled}
         keep={new URLSearchParams(Object.entries(query).filter((entry): entry is [string, string] => typeof entry[1] === 'string'))}
         className="max-sm:hidden"
       />

@@ -16,7 +16,7 @@ export default defineTemplate({
     // Format der Stelle an und warnt, wenn ein Ausschnitt schmaler ist als die Stelle. Die Bühne hat kein festes
     // Format (`object-fit: cover` ohne `aspect-ratio`), unter 800 px ist sie so breit wie die Seite.
     heroImage: asset({ label: 'Bild auf der Startseite', width: 800 }),
-    memberFee: number({ min: 0, label: 'Mitgliedsbeitrag im Jahr (Euro)' }),
+    memberFee: number({ min: 0, label: 'Mitgliedsbeitrag im Jahr', unit: '€' }),
     /**
      * Ein Datensatz aus einem Modul als Variable: Die Auswahl in Kompass zeigt
      * die veröffentlichten Projekte, gespeichert wird der Slug. Leer heißt: das
@@ -25,7 +25,7 @@ export default defineTemplate({
     featuredProject: reference({ view: 'projects', label: 'Projekt auf der Startseite' }),
   },
   collections: {
-    news: { label: 'Aktuelles', slug: true, publishable: true, fields: { title: text({ localized: true, label: 'Titel' }), body: markdown({ localized: true, label: 'Text' }), image: asset({ label: 'Bild', width: 680 }) } },
+    news: { label: 'Aktuelles', slug: true, publishable: true, fields: { title: text({ localized: true, label: 'Titel' }), body: markdown({ localized: true, label: 'Text' }), image: asset({ label: 'Foto', width: 680 }) } },
     team: { label: 'Team', sortable: true, max: 60, fields: { name: text({ label: 'Name' }), role: text({ localized: true, label: 'Aufgabe', size: 's' }), photo: asset({ label: 'Foto', ratio: '1:1', width: 430 }) } },
     faq: { label: 'Fragen und Antworten', sortable: true, fields: { question: text({ localized: true, label: 'Frage' }), answer: markdown({ localized: true, label: 'Antwort' }) } },
     documents: { label: 'Dokumente', fields: { title: text({ localized: true, label: 'Titel' }), file: asset({ accept: 'application/pdf', label: 'PDF' }) } },

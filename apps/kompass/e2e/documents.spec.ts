@@ -16,8 +16,9 @@ test.describe('documents', () => {
     await page.goto('/admin/documents');
     const bases = page.getByRole('region', { name: 'Basis-Vorlagen' });
     await expect(bases.getByText('a4-mit-briefkopf', { exact: true })).toBeVisible();
-    await expect(bases.getByText('bereit').first()).toBeVisible();
-    await expect(bases.getByText('mitgeliefert').first()).toBeVisible();
+    // Runde 3, 165: mitgeliefert und bereit ist der Normalfall ohne Marke.
+    await expect(bases.getByText('fehlerhaft', { exact: true })).toHaveCount(0);
+    await expect(bases.getByText('mitgeliefert', { exact: true })).toHaveCount(0);
   });
 
   /**
@@ -28,8 +29,9 @@ test.describe('documents', () => {
     await page.goto('/admin/documents');
     const types = page.getByRole('region', { name: 'Dokumentarten' });
     const row = types.getByRole('row', { name: /Änderungsprotokoll-Export/ });
-    await expect(row.getByTestId('effective-base')).toContainText('a4-plain-slim');
-    await expect(row.getByRole('combobox').locator('option').first()).toHaveText('Vorgabe der Vorlage (a4-plain-slim)');
+    // Runde 3, 165: Die Vorgabe nennt den Namen der Basis; „Erscheint auf“ steht nur bei Abweichung.
+    await expect(row.getByTestId('effective-base')).toHaveText('');
+    await expect(row.getByRole('combobox').locator('option').first()).toHaveText('Vorgabe der Vorlage (A4 ohne Briefkopf (Bericht, schlank))');
     await expect(row.getByText('abweichend')).toHaveCount(0);
 
     await row.getByRole('combobox').selectOption('a4-plain');
@@ -39,7 +41,7 @@ test.describe('documents', () => {
 
     await row.getByRole('button', { name: 'Zurücksetzen' }).click();
     await expect(row.getByText('abweichend')).toHaveCount(0);
-    await expect(row.getByTestId('effective-base')).toContainText('a4-plain-slim');
+    await expect(row.getByTestId('effective-base')).toHaveText('');
   });
 
   test('exports the audit log as an ad-hoc download that files no document', async ({ page }) => {

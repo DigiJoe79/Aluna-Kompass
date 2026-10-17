@@ -86,7 +86,8 @@ export function EntryVouchers({
           ) : null}
           <ReceiptList items={vouchers} onRevoke={(linkId) => setRevokeTarget(linkId)} />
           <RefusalNotice action state={refusal} />
-          <ReceiptDrop onFiles={(files) => void uploadFiles(files)} />
+          {/* Runde 3, 089: An einer festgeschriebenen Buchung ist Nachreichen die Ausnahme — ein Textlink statt der großen Fläche. */}
+          <ReceiptDrop compact onFiles={(files) => void uploadFiles(files)} />
 
           <ConfirmDialog
             open={revokeTarget !== null}

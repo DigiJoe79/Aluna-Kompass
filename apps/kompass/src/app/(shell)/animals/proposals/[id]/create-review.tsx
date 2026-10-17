@@ -36,7 +36,8 @@ const tabOf = (field: string): Tab => (CONTENT_FIELDS.includes(field) ? 'content
 const FORM_ID = 'proposal-create-form';
 
 /** Punkt am Reiter: Dort steht ein Zweifelsfall. */
-const HintDot = ({ label }: { label: string }) => <span className="ml-1.5 size-[7px] rounded-full bg-agent" role="img" aria-label={label} />;
+// Ein Zweifelsfall ist eine Einordnung, nicht maschinell: Ton `neutral` (Runde 3, 049/051).
+const HintDot = ({ label }: { label: string }) => <span className="ml-1.5 size-[7px] rounded-full bg-muted-ink" role="img" aria-label={label} />;
 
 /** Ein Foto im Editor der Prüfung: Reihenfolge, Titelbild, „weglassen“ (die Kachel bleibt, bis angenommen ist), geltender Ausschnitt. */
 type EditorRow = { row: ReviewPhotoRow; omitted: boolean; primary: boolean; crop: PhotoCrop | null };
@@ -159,7 +160,7 @@ export function CreateReview({ review, locales, nextHref, backHref, canFollowUp,
                   </span>
                   <HintLines hints={[{ ...h, title: undefined }]} />
                   {h.field ? (
-                    <Button type="button" variant="ghost" size="sm" className="w-fit" onClick={() => goTo(h.field!)}>
+                    <Button type="button" variant="outline" size="sm" className="w-fit" onClick={() => goTo(h.field!)}>
                       {t('toField')}
                     </Button>
                   ) : null}
@@ -204,7 +205,7 @@ export function CreateReview({ review, locales, nextHref, backHref, canFollowUp,
                               {p.omitted ? (
                                 <PhotoActions className="text-meta text-ink-2">
                                   {t('omitted')}
-                                  <Button type="button" variant="ghost" size="sm" onClick={() => changePhotos(photos.map((x, j) => (j === i ? { ...x, omitted: false } : x)))}>{t('restore')}</Button>
+                                  <Button type="button" variant="outline" size="sm" onClick={() => changePhotos(photos.map((x, j) => (j === i ? { ...x, omitted: false } : x)))}>{t('restore')}</Button>
                                 </PhotoActions>
                               ) : (
                                 <PhotoActions>
@@ -212,12 +213,12 @@ export function CreateReview({ review, locales, nextHref, backHref, canFollowUp,
                                   {p.primary ? (
                                     <StatusBadge tone="neutral" testId="proposal-photo-primary">{ph('primary')}</StatusBadge>
                                   ) : (
-                                    <Button type="button" size="sm" variant="ghost" onClick={() => changePhotos(photos.map((x, j) => ({ ...x, primary: j === i })))}>{t('makePrimary')}</Button>
+                                    <Button type="button" size="sm" variant="outline" onClick={() => changePhotos(photos.map((x, j) => ({ ...x, primary: j === i })))}>{t('makePrimary')}</Button>
                                   )}
                                   <Button type="button" size="icon-sm" variant="ghost" disabled={i === 0} aria-label={t('moveLeft')} onClick={() => move(i, -1)}><ArrowLeft aria-hidden /></Button>
                                   <Button type="button" size="icon-sm" variant="ghost" disabled={i === photos.length - 1} aria-label={t('moveRight')} onClick={() => move(i, 1)}><ArrowRight aria-hidden /></Button>
-                                  {p.row.width && p.row.height ? <Button type="button" size="sm" variant="ghost" onClick={() => setEditing(p.row.key)}>{pc('edit')}</Button> : null}
-                                  <Button type="button" size="sm" variant="ghost" onClick={() => changePhotos(photos.map((x, j) => (j === i ? { ...x, omitted: true, primary: false } : x)))}>{t('omit')}</Button>
+                                  {p.row.width && p.row.height ? <Button type="button" size="sm" variant="outline" onClick={() => setEditing(p.row.key)}>{pc('edit')}</Button> : null}
+                                  <Button type="button" size="sm" variant="outline" onClick={() => changePhotos(photos.map((x, j) => (j === i ? { ...x, omitted: true, primary: false } : x)))}>{t('omit')}</Button>
                                 </PhotoActions>
                               )}
                             </li>
@@ -248,7 +249,7 @@ export function CreateReview({ review, locales, nextHref, backHref, canFollowUp,
                   saveLabel={a('open')}
                   onChangedCount={setChanged}
                   extraActions={
-                    <Button type="button" variant="secondary" onClick={() => setRejecting(true)}>
+                    <Button type="button" variant="outline" onClick={() => setRejecting(true)}>
                       {root('animals.proposals.reject.open')}
                     </Button>
                   }

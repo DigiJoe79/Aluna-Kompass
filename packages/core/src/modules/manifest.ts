@@ -543,6 +543,7 @@ const ROLE_KEY = /^[a-z][a-z0-9-]*$/;
 const TILE_KEY = /^[a-z][a-zA-Z0-9]*$/;
 const IMAGE_PLACE_KEY = /^[a-z][a-z0-9-]*\.[a-z][a-zA-Z0-9]*$/;
 const TILE_KINDS: ReadonlySet<string> = new Set(['count', 'list', 'status']);
+const TILE_VARIANTS: ReadonlySet<string> = new Set(['due', 'work']);
 
 export function defineModule(manifest: ModuleManifest): ModuleManifest {
   if (!MODULE_KEY.test(manifest.key)) throw new Error(`invalid module key: ${manifest.key}`);
@@ -565,6 +566,10 @@ export function defineModule(manifest: ModuleManifest): ModuleManifest {
     if (seenTiles.has(tile.key)) throw new Error(`duplicate dashboard tile: ${manifest.key}/${tile.key}`);
     seenTiles.add(tile.key);
     if (!TILE_KINDS.has(tile.kind)) throw new Error(`invalid dashboard tile kind: ${tile.kind}`);
+    if (tile.variant !== undefined) {
+      if (!TILE_VARIANTS.has(tile.variant)) throw new Error(`invalid dashboard tile variant: ${tile.variant}`);
+      if (tile.kind !== 'list') throw new Error(`dashboard tile ${manifest.key}/${tile.key}: variant ${tile.variant} needs kind list`);
+    }
     for (const permission of typeof tile.permission === 'string' ? [tile.permission] : tile.permission) {
       const own = manifest.permissions.includes(permission);
       const core = (CORE_PERMISSIONS as readonly string[]).includes(permission);

@@ -9,8 +9,11 @@ mit allem, was dazugehört.
 
 ## Die Ordnerspalte
 
-Oben stehen „Alle Dokumente“ und „Eingangskorb“ (die eingegangene Post, die
-noch keinen Ordner hat), darunter die Ordner als aufklappbarer Baum. Ordner mit
+Oben stehen drei feste Zeilen: „Alle Dokumente“, „Eingangskorb“ (die
+eingegangene Post, die noch keinen Ordner hat) und „Ohne Ordner“ (ausgehende
+Dokumente ohne Ordner — die Zeile fehlt, solange es keine gibt). Darunter die
+Ordner als aufklappbarer Baum. Ordner, Eingangskorb und „Ohne Ordner“ ergeben
+zusammen „Alle Dokumente“. Ordner mit
 Unterordnern haben einen Pfeil; welche Sie aufgeklappt haben, merkt sich der
 Browser. Die Namen stehen in voller Länge. Die Zahl hinter einem Ordner ist die
 Summe samt allen Unterordnern; hält man den Mauszeiger darauf, steht dort
@@ -103,7 +106,10 @@ Sekunden „Rückgängig“ bereit; schon vorher anderswohin verschobene Dokumen
 bleiben dabei, wo sie jetzt liegen.
 
 Der Eingangskorb nimmt nur eingegangene Post auf — ein ausgehender Brief wird
-dort abgewiesen. Ein Ausgang ohne Ordner liegt unter „Kein Ordner“.
+dort abgewiesen; „Ohne Ordner“ nimmt umgekehrt nur ausgehende Dokumente. Im
+Dialog „Verschieben nach…“ heißt das Ziel ohne Ordner je nach Auswahl
+„Eingangskorb“, „Ohne Ordner“ oder, bei gemischter Auswahl, „Aus dem Ordner
+nehmen“: Eingänge landen dann im Eingangskorb, Ausgänge unter „Ohne Ordner“.
 Verschieben ändert weder Nummer noch Inhalt, nur den Ort; es steht im
 Änderungsprotokoll.
 

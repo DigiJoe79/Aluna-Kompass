@@ -1,9 +1,11 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import path from 'node:path';
+import { coreModule } from '@kompass/core';
 import { createTestDeps } from '@kompass/core/testing';
 import { describe, expect, it } from 'vitest';
 import messages from '../messages/de.json';
 import { labelTranslator } from '../src/lib/record-labels';
+import { installedModules } from '@/modules';
 
 const ROOT = path.resolve(import.meta.dirname, '../../..');
 const MODULES = path.join(ROOT, 'packages/modules');
@@ -42,6 +44,29 @@ describe('Bezeichnungen von Haltern und Datensätzen (K2, Rest von Befund 49)', 
     expect(offenders).toEqual([]);
   });
 
+  it('Fundstellen und Halter nennen Namen, nie Slug oder Schlüssel (Stufe 1, Auftrag 6)', () => {
+    const checked = [
+      ...readdirSync(MODULES).map((m) => path.join(MODULES, m, 'src/references.ts')),
+      ...readdirSync(MODULES).map((m) => path.join(MODULES, m, 'src/record-labels.ts')),
+      path.join(MODULES, 'contacts/src/retention.ts'),
+    ].filter((f) => { try { return statSync(f).isFile(); } catch { return false; } });
+    // Ein Slug, ein Rollen- oder Typschlüssel im Text der Bezeichnung (`Projekt „${p.slug}“`, `Rolle ${row.role}`, `|| row.slug`).
+    const KEY_IN_LABEL = /label:\s*(?:`[^`]*\$\{[^}]*\b(?:slug|role|key|\w+Key)\b[^}]*\}|[^,]*(?:\|\||\?\?)\s*\w+\.slug\b)/;
+    // Seit 0.2.12 ohne Ausnahme: Auch eine Variable der Webseite ohne Beschriftung nennt „—“, nicht ihren Schlüssel.
+    const offenders = checked
+      .flatMap((file) => code(file).split('\n').filter((line) => KEY_IN_LABEL.test(line)).map((line) => `${path.relative(ROOT, file)}: ${line.trim()}`));
+    expect(offenders).toEqual([]);
+  });
+
+  it('jeder Bereich der Akte hat einen Namen, und die Einstellungen fallen nie auf den Schlüssel zurück (0.2.12)', () => {
+    const areas = [coreModule, ...installedModules].flatMap((m) => (m.documentAreas ?? []).map((a) => a.key));
+    expect(areas.length).toBeGreaterThan(0);
+    expect(areas.filter((key) => !has(`dms.areas.${key}`))).toEqual([]);
+    const panel = code(path.join(ROOT, 'apps/kompass/src/app/(shell)/admin/dms/types-panel.tsx'));
+    expect(panel).not.toMatch(/areaLabel = [^\n]*: key\)/);
+    expect(panel).toMatch(/areaLabel = [^\n]*nameOrEmpty\(/);
+  });
+
   it('jeder Schlüssel, den ein Modul nennt, steht in der Sprachdatei', () => {
     const keys = new Set<string>();
     const sources = [...readdirSync(MODULES).map((m) => path.join(MODULES, m, 'src')), path.join(ROOT, 'packages/core/src')];
@@ -57,5 +82,8 @@ describe('Bezeichnungen von Haltern und Datensätzen (K2, Rest von Befund 49)', 
     expect(translate('finance.records.notice', { date: '2024-02-29' })).toBe('Bescheid vom 29.02.2024');
     expect(translate('contacts.records.forbidden', {})).toBe('Kontakt (kein Zugriff)');
     expect(translate('finance.records.partnerPayment', { number: 'PZ-2026-001' })).toBe('Vorgang PZ-2026-001');
+    // Stufe 1, Auftrag 6: der Halter einer Kontaktrolle nennt den Namen der Rolle, ein unbekannter Schlüssel „—“.
+    expect(translate('contacts.retention.roleHold', { contactRole: 'donor' })).toBe('Rolle Spender');
+    expect(translate('contacts.retention.roleHold', { contactRole: 'unbekannt' })).toBe('Rolle \u2014');
   });
 });

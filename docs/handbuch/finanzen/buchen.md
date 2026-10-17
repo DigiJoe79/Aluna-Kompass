@@ -58,7 +58,7 @@ ausgeglichen.
 
 Was ein Zweck bekommen und verwendet hat, zeigt Finanzen → Zwecke; soll
 Geld später den Zweck wechseln, geht das nicht über eine neue Buchung,
-sondern über „Zweck ändern (Umwidmung)“ (siehe [Zwecke und zurückgelegtes
+sondern über eine Umwidmung (siehe [Zwecke und zurückgelegtes
 Geld](zwecke-und-ruecklagen.md)).
 
 ## Eine offene Zahlung begleichen

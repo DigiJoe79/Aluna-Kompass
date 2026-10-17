@@ -136,7 +136,7 @@ export function VoucherPanel({
                 <Button type="button" onClick={applyInvoice} disabled={pending}>
                   {tInvoice('apply')}
                 </Button>
-                <Button type="button" variant="ghost" onClick={skipInvoice} disabled={pending}>
+                <Button type="button" variant="outline" onClick={skipInvoice} disabled={pending}>
                   {tInvoice('skip')}
                 </Button>
               </div>
@@ -175,7 +175,7 @@ export function VoucherPanel({
           )}
 
           <div className="flex flex-wrap items-center gap-3">
-            <Button type="button" variant="secondary" size="sm" onClick={runSearch} disabled={search.state === 'loading'}>
+            <Button type="button" variant="outline" size="sm" onClick={runSearch} disabled={search.state === 'loading'}>
               {t('search')}
             </Button>
             {search.state === 'ready' && search.queries[0] ? (
@@ -194,12 +194,13 @@ export function VoucherPanel({
                   <li key={hit.documentId} className="flex items-start gap-2 px-3 py-2 text-meta">
                     <span className="min-w-0 flex-1 space-y-0.5">
                       <span className="block font-semibold text-ink">{hit.subject}</span>
-                      <span className="block font-mono text-hint text-ink-2">
-                        {hit.number} · {date(hit.documentDate)}
+                      <span className="block text-hint tabular-nums text-ink-2">
+                        <span className="font-mono">{hit.number}</span> · {date(hit.documentDate)}
                       </span>
                       <span className="block text-hint text-muted-ink">{t('matchedBy', { what: matched(hit) })}</span>
                     </span>
-                    <Button type="button" size="sm" onClick={() => link(hit.documentId)} disabled={pending}>
+                    {/* Runde 3, 070: Primär ist „Übernehmen und geprüft“ im Vorschlag darüber; „Verknüpfen“ ist sekundär. */}
+                    <Button type="button" size="sm" variant="outline" onClick={() => link(hit.documentId)} disabled={pending}>
                       {t('link')}
                     </Button>
                   </li>

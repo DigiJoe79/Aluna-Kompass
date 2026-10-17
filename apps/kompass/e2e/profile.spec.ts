@@ -1,5 +1,5 @@
 import { expect, test } from './fixtures';
-import { ADMIN, loginAsAdmin, resetDatabase } from './helpers';
+import { ADMIN, loginAsAdmin, resetDatabase, rowAction } from './helpers';
 
 test.describe('profile', () => {
   test.beforeEach(async ({ page }) => {
@@ -25,7 +25,7 @@ test.describe('profile', () => {
     await page.getByRole('button', { name: 'Ich habe das Token gespeichert' }).click();
     const row = page.getByRole('row', { name: /Buchhaltung Skript/ });
     await expect(row).toContainText(token.slice(0, 12));
-    await row.getByRole('button', { name: 'Widerrufen' }).click();
+    await rowAction(page, row, 'Widerrufen');
     await page.getByRole('alertdialog').getByRole('button', { name: 'Widerrufen' }).click();
     await expect(page.getByRole('row', { name: /Buchhaltung Skript/ })).toContainText('widerrufen');
   });

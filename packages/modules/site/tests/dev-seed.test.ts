@@ -324,7 +324,7 @@ describe('seedSiteDevelopment', () => {
     const publish = ctxWith(['site.publish', 'site.view']);
     const pending = unwrap(await sitePendingChanges(deps, publish));
     expect(pending.items.map((i) => [i.kind, i.label])).toEqual([
-      ['changed', 'Mitgliedsbeitrag im Jahr (Euro)'],
+      ['changed', 'Mitgliedsbeitrag im Jahr'],
       ['changed', 'Winterhilfe für Streuner'],
       ['added', 'Winterhilfe gestartet: 40 neue Schlafboxen'],
     ]);

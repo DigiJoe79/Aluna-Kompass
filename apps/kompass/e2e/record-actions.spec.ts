@@ -1,6 +1,6 @@
 import type { Page } from '@playwright/test';
 import { expect, test } from './fixtures';
-import { loginAsAdmin, resetDatabase } from './helpers';
+import { loginAsAdmin, resetDatabase, readTemplate } from './helpers';
 
 /**
  * Nach dem Schließen eines Dialogs aus „Weitere Aktionen“ liegt der Fokus wieder auf ⋯ (Designer 2026-10-08): Das
@@ -20,11 +20,9 @@ const CASES: { name: string; open: (page: Page) => Promise<void>; item: RegExp }
     name: 'Webseiten-Eintrag',
     open: async (page) => {
       await page.goto('/site/template');
-      await page.getByRole('button', { name: 'Vorlage einlesen' }).click();
-      await page.getByRole('button', { name: 'Übernehmen' }).click();
-      await expect(page.getByRole('status')).toContainText('eingelesen');
+      await readTemplate(page);
       await page.goto('/site/c/news');
-      await page.getByRole('row').first().getByRole('link').click();
+      await page.getByRole('row').nth(1).getByRole('link').click();
       await page.waitForURL(/\/site\/c\/news\/[A-Z0-9]+$/);
     },
     item: /Eintrag löschen/,
@@ -76,7 +74,7 @@ const CASES: { name: string; open: (page: Page) => Promise<void>; item: RegExp }
     open: async (page) => {
       await page.goto('/finance/purposes');
       // Ein Zweck mit Bestand: „Als erfüllt kennzeichnen …“ fragt dann nach (ohne Rest liefe es ohne Dialog).
-      const withBalance = page.getByTestId('purpose-row').filter({ hasNotText: /0,00 €\s*$/ }).first();
+      const withBalance = page.getByTestId('purpose-row').filter({ hasNotText: /0,00\s€\s*$/ }).first();
       await withBalance.getByRole('button').first().click();
       await expect(page.getByTestId('purpose-detail')).toBeVisible();
     },

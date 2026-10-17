@@ -6,7 +6,7 @@ import { Notice, type NoticeReason } from '@/components/notice';
 import { StatusBadge } from '@/components/status-badge';
 import { Disclosure } from '@/components/ui/disclosure';
 import { groupOpenFirst, type RequirementGroup } from '@/lib/requirement-groups';
-import { cn } from '@/lib/utils';
+import { buttonVariants } from '@/components/ui/button';
 import { Overline } from '@/components/overline';
 
 export interface RequirementListItem {
@@ -17,6 +17,8 @@ export interface RequirementListItem {
   /** Wartet auf eine Abhängigkeit; `blockedText` sagt, worauf. Mit `grouping`: sperrt. */
   blocked: boolean;
   blockedText?: string;
+  /** Ein Schritt, ohne den es auch geht: Marke (`label`, „Optional“) neben dem Titel, `note` als Unterzeile (11-1 B33). */
+  optional?: { label: string; note: string };
   /** Zusatzangabe, z. B. „2 Konten, 1 ohne Anfangsbestand“. */
   detail?: string;
   /** Der Betrachter kann den Schritt selbst erledigen. */
@@ -42,7 +44,8 @@ export interface RequirementListItem {
  * kann. Kein Finanzwort im Baustein selbst — die Beschriftung kommt vom Aufrufer.
  *
  * Eine offene Zeile mit eigenem Knopf trägt ein Symbol statt eines Badges: Das
- * Wort steht einmal, auf dem Knopf (N3, C1-3/E-4).
+ * Wort steht einmal, auf dem Knopf (N3, C1-3/E-4). Eine erledigte trägt den Haken und
+ * einen gedämpften Titel (Runde 3, 166).
  *
  * `grouping="open-first"` (N3, C1-2): vier Gruppen nach `groupOpenFirst` —
  * „Fehlt noch“ voll, „Bitte ansehen“ als Warnkästen, „Erfüllt · n“ und
@@ -68,25 +71,30 @@ function OpenRow({ item, symbolOnly = false }: { item: RequirementListItem; symb
       data-testid={`requirement-${item.key}`}
       data-done={item.done}
       data-blocked={item.blocked}
-      className={cn(
-        'flex flex-col gap-2 rounded-md border border-line p-3.5 sm:flex-row sm:items-center sm:justify-between',
-        item.done ? 'bg-surface' : 'bg-surface-2',
-      )}
+      // 09 B11: Keine graue Fläche je Zeile — im Dialog stapelten sich sonst drei Grauflächen-Ebenen (gilt auch für
+      // Verzicht und Partner). Offen sagt das Zeichen bzw. die Marke.
+      className="flex flex-col gap-2 rounded-md border border-line bg-surface p-3.5 sm:flex-row sm:items-center sm:justify-between"
     >
       <div className="min-w-0 space-y-1">
         <div className="flex items-center gap-2">
-          {symbol ? (
+          {/* Runde 3, 166: Erledigt und offen haben je ein Symbol (Haken, Kreis), das Wort steht für Vorleser. */}
+          {item.done ? (
+            <>
+              <Check className="size-4 shrink-0 text-success" aria-hidden />
+              <span className="sr-only">{item.doneLabel}</span>
+            </>
+          ) : symbol ? (
             <>
               <CircleDashed className="size-4 shrink-0 text-warning" aria-hidden />
               <span className="sr-only">{t('open')}</span>
             </>
           ) : (
-            <StatusBadge tone={item.done ? 'success' : item.blocked ? 'neutral' : 'warning'}>
-              {item.done ? item.doneLabel : item.blocked ? item.blockedText : item.actionLabel}
-            </StatusBadge>
+            <StatusBadge tone={item.blocked ? 'neutral' : 'warning'}>{item.blocked ? item.blockedText : item.actionLabel}</StatusBadge>
           )}
-          <span className="font-semibold text-ink">{item.title}</span>
+          <span className={item.done ? 'font-semibold text-muted-ink' : 'font-semibold text-ink'}>{item.title}</span>
+          {item.optional ? <StatusBadge tone="neutral">{item.optional.label}</StatusBadge> : null}
         </div>
+        {item.optional ? <p className="text-meta text-muted-ink">{item.optional.note}</p> : null}
         {item.detail ? <p className="text-meta text-muted-ink">{item.detail}</p> : null}
         {!item.done && !item.blocked && !item.canSelf && item.canDoNames.length > 0 ? (
           <p className="text-hint text-muted-ink" data-testid={`requirement-${item.key}-candoo`}>
@@ -104,7 +112,7 @@ function OpenRow({ item, symbolOnly = false }: { item: RequirementListItem; symb
 
 function ActionLink({ item }: { item: RequirementListItem }) {
   return (
-    <Link href={item.href} className="rounded-sm border border-line bg-surface px-3 py-1.5 text-meta font-semibold text-ink hover:bg-surface-2">
+    <Link href={item.href} className={buttonVariants({ variant: 'outline', size: 'sm' })}>
       {item.actionLabel}
     </Link>
   );

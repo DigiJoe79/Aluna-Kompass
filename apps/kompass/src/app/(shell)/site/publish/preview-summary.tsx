@@ -1,5 +1,8 @@
 import { useTranslations } from 'next-intl';
+import { Fragment } from 'react';
 import type { SiteJobCounts } from '@kompass/module-site';
+import { Notice } from '@/components/notice';
+import { withoutZeros } from '@/lib/count-parts';
 import { hintCount } from './flow-state';
 
 /**
@@ -20,12 +23,23 @@ export function PreviewSummary({ counts }: { counts: SiteJobCounts }) {
   return (
     <div className="flex flex-col gap-1.5">
       <p className="text-body text-ink">
-        {t.rich('changed', { count: counts.changed, ...bold })} · {t.rich('added', { count: counts.added, ...bold })} · {t.rich('removed', { count: counts.removed, ...bold })}
+        {/* Nullen fallen weg (10: 137, 140, 141). */}
+        {withoutZeros([
+          [counts.changed, t.rich('changed', { count: counts.changed, ...bold })],
+          [counts.added, t.rich('added', { count: counts.added, ...bold })],
+          [counts.removed, t.rich('removed', { count: counts.removed, ...bold })],
+        ]).map((part, index) => (
+          <Fragment key={index}>
+            {index > 0 ? ' · ' : null}
+            {part}
+          </Fragment>
+        ))}
       </p>
       {hints > 0 ? (
-        <p className="text-meta text-ink-2">
-          <span className="font-semibold text-warning">{t('hints', { count: hints })}:</span> {t('hintsText', { list: parts.join(', ') })}
-        </p>
+        // 10 B21: die Hinweise als Notice mit Titel statt fettem Text in Warnfarbe.
+        <Notice level="warn" title={t('hints', { count: hints })}>
+          {t('hintsText', { list: parts.join(', ') })}
+        </Notice>
       ) : null}
     </div>
   );

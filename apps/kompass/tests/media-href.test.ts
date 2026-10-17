@@ -20,3 +20,14 @@ describe('formatBytes', () => {
     expect(formatBytes(5 * 1024 * 1024 + 200 * 1024)).toBe('5,2 MB');
   });
 });
+
+/** 10 B33: Klartext statt MIME-Typ im Detail („JPEG-Bild“). */
+describe('mimeKey', () => {
+  it('maps the stored types to a label key, unknown stays null', async () => {
+    const { mimeKey } = await import('@/app/(shell)/admin/media/types');
+    expect(mimeKey('image/jpeg')).toBe('jpeg');
+    expect(mimeKey('image/svg+xml')).toBe('svg');
+    expect(mimeKey('application/pdf')).toBe('pdf');
+    expect(mimeKey('text/plain')).toBeNull();
+  });
+});

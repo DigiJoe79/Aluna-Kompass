@@ -11,11 +11,13 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { StatusBadge } from '@/components/status-badge';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { RowButton, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { createFirstFiscalYearAction, updateFiscalYearAction } from './actions';
 import { useSavedVersions } from '@/lib/saved-versions';
 import { FormField } from '@/components/forms/form-field';
 import { FormGrid } from '@/components/forms/form-grid';
+import { Empty } from '@/components/empty-value';
+import { RowMenu } from '@/components/row-menu';
 
 export interface FiscalYearRow {
   id: string;
@@ -33,6 +35,7 @@ export interface FiscalYearRow {
 export function FiscalYearsPanel({ years }: { years: FiscalYearRow[] }) {
   const t = useTranslations('finance.admin.fiscalYears');
   const tCommon = useTranslations('common');
+  const tMuted = useTranslations('common.muted');
   const router = useRouter();
   const { date } = useDateFormat();
   const [createOpen, setCreateOpen] = useState(false);
@@ -52,35 +55,31 @@ export function FiscalYearsPanel({ years }: { years: FiscalYearRow[] }) {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>{t('designation')}</TableHead>
-              <TableHead>{t('range')}</TableHead>
-              <TableHead>{t('status')}</TableHead>
-              <TableHead>{t('taxReturnFiledOn')}</TableHead>
-              <TableHead className="text-right">{tCommon('edit')}</TableHead>
+              <TableHead col="title">{t('designation')}</TableHead>
+              <TableHead col="meta">{t('range')}</TableHead>
+              <TableHead col="meta">{t('taxReturnFiledOn')}</TableHead>
+              {/* Zeilenaktionen im ⋯-Menü (Joe 11.8); der Kopf ist nur für Vorleser da (112). */}
+              <TableHead col="actions" className="w-11"><span className="sr-only">{tCommon('rowActionsColumn')}</span></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {years.map((year) => (
-              <TableRow key={year.id}>
-                <TableCell>
-                  <span className="font-mono font-semibold text-ink">{year.designation}</span>
+              // Runde 3, 170: Offen ist der Normalfall ohne Marke; abgeschlossen ist die gedämpfte Zeile (Ja/Nein-Liste).
+              <TableRow key={year.id} muted={year.status === 'closed' ? tMuted('closed') : undefined}>
+                <TableCell col="title">
+                  <RowButton aria-haspopup="dialog" onClick={() => setEditing(versions.latest(year))}>{year.designation}</RowButton>
                   {year.isShortYear ? (
                     <StatusBadge tone="neutral" className="ml-2">
                       {t('shortYear', { from: date(year.startsOn), to: date(year.endsOn) })}
                     </StatusBadge>
                   ) : null}
                 </TableCell>
-                <TableCell className="text-ink-2">
-                  {year.startsOn} – {year.endsOn}
+                <TableCell col="meta" className="text-ink-2">
+                  {date(year.startsOn)} – {date(year.endsOn)}
                 </TableCell>
-                <TableCell>
-                  <StatusBadge tone={year.status === 'open' ? 'success' : 'neutral'}>{t(`statusValues.${year.status}`)}</StatusBadge>
-                </TableCell>
-                <TableCell className="text-ink-2">{year.taxReturnFiledOn ?? '—'}</TableCell>
-                <TableCell className="text-right">
-                  <Button variant="ghost" size="sm" onClick={() => setEditing(versions.latest(year))}>
-                    {tCommon('edit')}
-                  </Button>
+                <TableCell col="meta" className="text-ink-2">{year.taxReturnFiledOn ? date(year.taxReturnFiledOn) : <Empty />}</TableCell>
+                <TableCell col="actions" className="text-right">
+                  <RowMenu name={year.designation} items={[{ key: 'edit', label: tCommon('edit'), onSelect: () => setEditing(versions.latest(year)) }]} />
                 </TableCell>
               </TableRow>
             ))}

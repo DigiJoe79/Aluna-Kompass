@@ -1,18 +1,21 @@
 import type { Page } from '@playwright/test';
 import { expect, test } from './fixtures';
-import { loginAsAdmin, resetDatabase, waitForHydration } from './helpers';
+import { loginAsAdmin, resetDatabase, waitForHydration, readTemplate } from './helpers';
 
 test('ein bestehender Eintrag lässt sich speichern, danach verwerfen und erneut speichern', async ({ page }) => {
   await resetDatabase(page, 'seeded');
   await loginAsAdmin(page);
   await page.goto('/site/template');
-  await page.getByRole('button', { name: 'Vorlage einlesen' }).click();
-  await page.getByRole('button', { name: 'Übernehmen' }).click();
-  await expect(page.getByRole('status')).toContainText('eingelesen');
+  await readTemplate(page);
 
   await page.goto('/site/c/news');
-  await page.getByRole('row').first().getByRole('link').click();
+  // Der Spaltenkopf und der Zähler stehen über der Liste (10 B7).
+  await expect(page.getByRole('columnheader', { name: 'Eintrag' })).toBeVisible();
+  const entryName = (await page.getByRole('row').nth(1).getByRole('link').textContent())!.trim();
+  await page.getByRole('row').nth(1).getByRole('link').click();
   await waitForHydration(page, '[name="title.de"]');
+  // Der Eintrag heißt wie er selbst, nicht wie seine Sammlung (10 B10).
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText(entryName);
   const title = page.locator('[name="title.de"]');
   await title.fill('Erster Stand');
   await page.getByRole('button', { name: 'Speichern' }).click();
@@ -37,15 +40,13 @@ test('ein Eintrag wird auf seiner Seite gelöscht, unter „Weitere Aktionen“,
   await resetDatabase(page, 'seeded');
   await loginAsAdmin(page);
   await page.goto('/site/template');
-  await page.getByRole('button', { name: 'Vorlage einlesen' }).click();
-  await page.getByRole('button', { name: 'Übernehmen' }).click();
-  await expect(page.getByRole('status')).toContainText('eingelesen');
+  await readTemplate(page);
 
   await page.goto('/site/c/news');
   // Die Liste kennt keinen Löschen-Knopf (MUSTER.md § C: Löschen steht im Seitenkopf der Detailseite).
   await expect(page.getByRole('button', { name: 'Löschen' })).toHaveCount(0);
   const before = await page.getByRole('row').count();
-  await page.getByRole('row').first().getByRole('link').click();
+  await page.getByRole('row').nth(1).getByRole('link').click();
   await waitForHydration(page, '[name="title.de"]');
   await page.getByRole('button', { name: 'Weitere Aktionen' }).click();
   await page.getByRole('menuitem', { name: 'Eintrag löschen …' }).click();
@@ -53,7 +54,7 @@ test('ein Eintrag wird auf seiner Seite gelöscht, unter „Weitere Aktionen“,
   const withdraw = dialog.getByRole('button', { name: 'Zurückziehen' });
   const remove = dialog.getByRole('button', { name: 'Löschen' });
   // Zwei Stufen: Ist der Eintrag veröffentlicht, zuerst zurückziehen.
-  await expect(dialog.getByText(/Das ist noch veröffentlicht\.|Der Inhalt wird entfernt\./)).toBeVisible();
+  await expect(dialog.getByText(/Das ist noch publiziert\.|Der Inhalt wird entfernt\./)).toBeVisible();
   if (await withdraw.isVisible()) await withdraw.click();
   await expect(dialog.getByText('Der Inhalt wird entfernt.')).toBeVisible();
   await remove.click();
@@ -87,12 +88,12 @@ test('Leser sehen Sammlungen ohne Bearbeiten-Knöpfe, ohne Leserecht keine Vorsc
   await resetDatabase(page, 'seeded');
   await loginAsAdmin(page);
   await page.goto('/site/template');
-  await page.getByRole('button', { name: 'Vorlage einlesen' }).click();
-  await page.getByRole('button', { name: 'Übernehmen' }).click();
-  await expect(page.getByRole('status')).toContainText('eingelesen');
+  await readTemplate(page);
 
   await page.goto('/admin/roles');
   await page.getByRole('list', { name: 'Rollen' }).getByRole('button', { name: /Schriftführung/ }).click();
+  // Rechtegruppen sind zugeklappt, teilweise gesetzte offen (Runde 3, 158).
+  await page.getByRole('button', { name: 'Alle aufklappen' }).click();
   await page.getByRole('checkbox', { name: 'Webseite ansehen' }).check();
   await page.getByRole('button', { name: 'Rolle speichern' }).click();
   await expect(page.getByRole('status')).toContainText('Rolle gespeichert.');
@@ -101,18 +102,19 @@ test('Leser sehen Sammlungen ohne Bearbeiten-Knöpfe, ohne Leserecht keine Vorsc
   const peterPw = await startPasswordFor(page, 'Peter Lang');
 
   await loginFirstTime(page, 'mira@kompass.local', miraPw);
-  await page.goto('/site/preview-frame');
-  await expect(page.getByText('403')).toBeVisible();
+  await page.goto('/site/publish/preview');
+  // Die Zustandskarte nennt den Zustand als Marke und Titel, nicht als Statuscode (Designer Stufe 2 Nr. 13).
+  await expect(page.getByRole('heading', { level: 1, name: 'Diese Seite ist für Ihre Rolle nicht freigegeben.' })).toBeVisible();
   expect((await page.request.get('/site/preview/')).status()).toBe(403);
 
   await loginFirstTime(page, 'peter@kompass.local', peterPw);
   await page.goto('/site/c/news');
-  await expect(page.getByRole('row').first()).toContainText(/Veröffentlicht|Nicht veröffentlicht/);
-  await expect(page.getByRole('link', { name: 'Neu', exact: true })).toHaveCount(0);
+  await expect(page.getByRole('row').nth(1)).toContainText(/Publiziert|Nicht publiziert/);
+  await expect(page.getByRole('link', { name: 'Eintrag anlegen', exact: true })).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Löschen' })).toHaveCount(0);
   await expect(page.getByRole('switch')).toHaveCount(0);
   await expect(page.getByRole('table').getByRole('link')).toHaveCount(0);
-  await page.goto('/site/preview-frame');
+  await page.goto('/site/publish/preview');
   await expect(page.getByRole('heading', { name: 'Webseiten-Vorschau' })).toBeVisible();
 });
 
@@ -124,9 +126,7 @@ test('schneidet das Foto eines Team-Eintrags zu; die Mediathek zeigt „zugeschn
   await resetDatabase(page, 'seeded');
   await loginAsAdmin(page);
   await page.goto('/site/template');
-  await page.getByRole('button', { name: 'Vorlage einlesen' }).click();
-  await page.getByRole('button', { name: 'Übernehmen' }).click();
-  await expect(page.getByRole('status')).toContainText('eingelesen');
+  await readTemplate(page);
 
   await page.goto('/site/c/team');
   await page.getByRole('row').nth(1).getByRole('link').click();

@@ -93,12 +93,12 @@ test.describe('finance approvals (D3)', () => {
     await expect(head).toContainText(claim.number!);
     await expect(head).toContainText('40,99 €');
     await expect(head).toContainText('Tomas Leitner');
-    await expect(head).toContainText('DE93 **** **** **** **00 01');
+    await expect(head).toContainText('DE ·· 0001');
     await expect(position(page, 1)).toContainText('Büromaterial für die Geschäftsstelle');
     await expect(position(page, 2)).toContainText('Musterstadt – Beispielstadt, 84 km');
     await expect(detail(page).getByTestId('receipt-preview')).toBeVisible();
     await expect(footer(page)).toContainText('Nach der Freigabe entsteht eine offene Zahlung an Tomas Leitner über 40,99 €.');
-    await expect(footer(page)).toContainText('Freigeben kann nur ein Mensch.');
+    await expect(footer(page)).toContainText('Freigeben geht nur hier in Kompass, nicht über einen Agenten.');
 
     // Ohne Kategorie keine Freigabe — die Ablehnung nennt die Position.
     await footer(page).getByRole('button', { name: 'Freigeben' }).click();
@@ -355,7 +355,11 @@ test.describe('finance approvals (D3)', () => {
     await page.goto('/');
     const mine = page.getByTestId('dashboard-tile-finance-myExpenses');
     await expect(mine.getByRole('heading', { name: 'Ihre Auslagen' })).toBeVisible();
-    await expect(mine).toContainText(`${claim.number} · 12,50 € — wartet auf Freigabe`);
+    // 017: auch eingereicht mit Titel, die Nummer klein dahinter.
+    const line = mine.getByRole('listitem').filter({ hasText: 'Briefmarken — wartet auf Freigabe' });
+    await expect(line).toContainText(claim.number!);
+    // Der Betrag steht rechts in der Zeile, nicht im Satz (Designer Stufe 2 Nr. 1).
+    await expect(line.getByTestId('tile-line-trailing')).toHaveText('12,50 €');
     // Der eigene Antrag wartet nicht auf Annas Freigabe — nur der Seed-Antrag (Nadja Vogt) zählt hier.
     await expect(page.getByTestId('dashboard-tile-finance-approvalsPending')).not.toContainText(claim.number!);
 
@@ -371,6 +375,7 @@ test.describe('finance approvals (D3)', () => {
     await expect(pending).toContainText('4');
     await expect(pending).not.toContainText('Tomas Leitner');
     await expect(pending).not.toContainText('12,50');
-    await expect(pending.getByRole('link', { name: 'Zu den Freigaben' })).toHaveAttribute('href', '/finance/approvals');
+    // Kein „Zu …“-Knopf mehr: Das ganze Zahl-Widget ist der Link (Briefing Startseite § 4).
+    await expect(pending.getByRole('link')).toHaveAttribute('href', '/finance/approvals');
   });
 });

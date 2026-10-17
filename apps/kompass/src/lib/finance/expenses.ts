@@ -201,15 +201,6 @@ export function formatFileSize(bytes: number): string {
 
 export type ClaimStateKey = ExpenseClaimView['stateLabelKey'];
 
-/** Zustandswörter der Auslage (Baustein 4): abgelehnt ist nie rot — der Grund ist ein Satz. */
-export const CLAIM_BADGE_TONE: Record<ClaimStateKey, 'warning' | 'info' | 'success' | 'final' | 'neutral'> = {
-  draft: 'warning',
-  submitted: 'info',
-  approved: 'success',
-  paid: 'final',
-  rejected: 'neutral',
-};
-
 type ClaimDates = Pick<ExpenseClaimView, 'stateLabelKey' | 'createdAt' | 'submittedAt' | 'approvedAt' | 'rejectedAt' | 'rejectNote' | 'paid'>;
 
 /** Der Satz in Alltagssprache neben dem Badge („am 25.09. — wartet auf Freigabe“) und das Datum, das er nennt. Abgelehnt: der Grund. */
@@ -281,3 +272,8 @@ export function approveInput(o: { claimId: string; version: string; positions: r
 }
 
 export type ApproveInput = ReturnType<typeof approveInput>;
+
+/** Ein Entwurf ohne Betrag nennt das Fehlen statt „0,00 €“ (08 A2, Joe 2026-10-16). */
+export function claimAmountMissing(claim: { state: string; totalCents: number }): boolean {
+  return claim.state === 'draft' && claim.totalCents === 0;
+}

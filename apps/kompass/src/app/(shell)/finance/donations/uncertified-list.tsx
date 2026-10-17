@@ -9,7 +9,7 @@ import { EmptyState } from '@/components/empty-state';
 import { FilterBar } from '@/components/filter-bar';
 import { AmountField } from '@/components/finance/amount-field';
 import { StatusBadge } from '@/components/status-badge';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { formatAmount, formatEuro, parseAmount } from '@/lib/finance/amount';
 import { IssueDialog } from './issue-dialog';
 
@@ -24,7 +24,7 @@ export interface UncertifiedGroupRow {
 /**
  * „Noch nicht bestätigt“ (C1): Zuwendungen ohne gültige Bestätigung, je
  * Person, mit dem Filter „Spenden ab ‹Betrag› ohne Bestätigung“ (gegen die
- * Summe je Person). Fehlt die Anschrift, steht der Weg zum Kontakt da;
+ * Summe je Person). Fehlt die Anschrift, steht in der Zeile „Anschrift ergänzen“ statt „Ausstellen“ (203);
  * „Ausstellen“ je Zeile öffnet den Dialog — nur mit `finance.donationsIssue`.
  */
 export function UncertifiedList({
@@ -119,12 +119,8 @@ export function UncertifiedList({
                   {group.contactComplete ? null : <StatusBadge tone="warning">{t('addressMissing')}</StatusBadge>}
                 </div>
                 <div className="flex items-center gap-3">
-                  <span className="font-mono tabular-nums text-ink-2">{t('sum', { amount: formatEuro(group.sumCents) })}</span>
-                  {group.contactComplete ? null : (
-                    <Link href={`/contacts/${group.contactId}`} className="rounded-sm border border-line bg-surface px-3 py-1.5 text-meta font-semibold text-ink hover:bg-surface-2">
-                      {t('completeAddress')}
-                    </Link>
-                  )}
+                  {/* 14 B9: Eine Summe nur bei mehreren Zeilen — bei einer stünde derselbe Betrag zweimal. */}
+                  {group.lines.length > 1 ? <span className="tabular-nums text-ink-2">{t('sum', { amount: formatEuro(group.sumCents) })}</span> : null}
                 </div>
               </div>
               <ul className="mt-2 divide-y divide-line-2 text-meta">
@@ -133,7 +129,7 @@ export function UncertifiedList({
                   // fl-zuwendungen-offen, Überlauf 411 > 390; ohne Layout-Test, Projektregel).
                   <li key={line.lineId} data-testid="uncertified-line" className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 py-1.5">
                     <span className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
-                      <Link href={`/finance/entries/${line.entryId}`} className="font-mono text-link underline">{line.entryNumber ?? line.entryId}</Link>
+                      <Link href={`/finance/entries/${line.entryId}`} className="font-mono text-link underline-offset-2 hover:underline">{line.entryNumber ?? line.entryId}</Link>
                       <span className="text-ink-2">{date(line.entryDate)}</span>
                       <span className="text-muted-ink">{line.incomeKind ? tk(line.incomeKind) : ''}</span>
                       {line.warnings?.includes('possibleReturnWithoutOrigin') ? (
@@ -142,10 +138,15 @@ export function UncertifiedList({
                       {line.warnings?.includes('returnDraftPending') ? <StatusBadge tone="warning">{t('returnDraftPending')}</StatusBadge> : null}
                     </span>
                     <span className="ml-auto flex items-center gap-3">
-                      <span className="font-mono whitespace-nowrap tabular-nums">{formatEuro(line.netCents)}</span>
+                      <span className="whitespace-nowrap tabular-nums">{formatEuro(line.netCents)}</span>
                       {/* Befund 59: Ein Datum nach heute ist noch nicht ausstellbar — der Hinweis statt des Knopfs. */}
                       {line.inFuture ? (
                         <span className="text-hint text-muted-ink">{t('inFuture')}</span>
+                      ) : !group.contactComplete ? (
+                        // 203: Ohne Anschrift sperrt der Dienst das Ausstellen — die Zeile nennt den nächsten Schritt statt „Ausstellen“.
+                        <Link href={`/contacts/${group.contactId}`} className={buttonVariants({ variant: 'outline', size: 'sm' })}>
+                          {t('completeAddress')}
+                        </Link>
                       ) : canIssue ? (
                         <Button type="button" size="sm" variant="outline" onClick={() => setIssuing(line.lineId)}>{t('issue')}</Button>
                       ) : null}

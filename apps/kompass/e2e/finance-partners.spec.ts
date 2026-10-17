@@ -34,7 +34,7 @@ test.describe('finance partners (F7)', () => {
     await expect(page).toHaveURL(/\/finance\/partners\/new$/);
     await page.getByRole('combobox', { name: 'Kontakt' }).click();
     await page.getByTestId('contact-option').filter({ hasText: 'Beispielhilfe gGmbH' }).click();
-    await page.getByLabel('Status').selectOption({ label: 'öffentliche Stelle' });
+    await page.getByLabel('Einordnung').selectOption({ label: 'öffentliche Stelle' }); // 09 A6
     await page.getByTestId('partner-create-form').getByRole('button', { name: 'Anlegen' }).click();
     await expect(page).toHaveURL(/\/finance\/partners\/[^/]+$/);
     await expect(page.getByRole('heading', { name: 'Beispielhilfe gGmbH' })).toBeVisible();
@@ -48,8 +48,8 @@ test.describe('finance partners (F7)', () => {
     await page.getByTestId('payment-submit').click();
     await expect(page.getByTestId('payment-detail')).toBeVisible();
     // O (Prüfer Block 2): eingereicht heißt „wartet auf Freigabe“, nicht mehr „Entwurf“.
-    await expect(page.getByTestId('guided-step-submitted')).toHaveAttribute('aria-current', 'step');
-    await expect(page.getByTestId('guided-step-draft')).toHaveAttribute('data-state', 'done');
+    await expect(page.getByTestId('steps-submitted')).toHaveAttribute('aria-current', 'step');
+    await expect(page.getByTestId('steps-draft')).toHaveAttribute('data-state', 'done');
 
     const paymentUrl = page.url();
     await switchToJonas(page);
@@ -62,7 +62,7 @@ test.describe('finance partners (F7)', () => {
     // Der Nachweis (über 1 MB, N9) — legt die Verwaltung ab (finance.entriesWrite), nie die Freigeberin selbst.
     await backToAdmin(page);
     await page.goto(paymentUrl);
-    await expect(page.getByTestId('guided-steps')).toBeVisible();
+    await expect(page.getByTestId('steps')).toBeVisible();
     // Förderung im Inland: nur der Zahlungsnachweis ist Pflicht (Spec 14.4); ein Bericht darf zusätzlich dabei sein.
     const list = page.getByTestId('evidence-requirements');
     await list.getByTestId('requirement-paymentProof').getByRole('button', { name: 'Hochladen oder verknüpfen' }).click();
@@ -468,9 +468,12 @@ test.describe('finance partners (F7)', () => {
     await backToAdmin(page);
     await page.goto(`/finance/partners/${partner.id}/payments/${submitted.id}`);
     await expect(page.getByTestId('payment-head')).toContainText('Förderung eines Partners · 1.500,00 € · Nachweisfrist');
-    await expect(page.getByTestId('guided-step-draft')).toContainText('Anna Berger');
-    await expect(page.getByTestId('guided-step-approved')).toContainText('Jonas Feld');
-    await expect(page.getByTestId('guided-step-paid')).toContainText('gezahlt');
+    // Daten und Personen stehen im Verlauf, nicht im Schrittbalken (Runde 3, 118).
+    await expect(page.getByTestId('steps-draft')).not.toContainText('Anna Berger');
+    await expect(page.getByTestId('steps-paid')).toContainText('gezahlt');
+    const history = page.getByTestId('payment-history');
+    await expect(history.getByRole('listitem').filter({ hasText: 'Entwurf' })).toContainText('Anna Berger');
+    await expect(history.getByRole('listitem').filter({ hasText: 'freigegeben' })).toContainText('Jonas Feld');
 
     const list = page.getByTestId('evidence-requirements');
     await expect(list.getByTestId('requirement-agreement')).toHaveAttribute('data-done', 'true');
@@ -576,7 +579,7 @@ test.describe('finance partners (F7)', () => {
     expect(payment.purposeNegativeReason).toBe('Spenden sind angekündigt');
   });
 
-  test('Freigabe-Detail ?payment= (3h/4b): gemeinsamer Rahmen, Pflichtnachweise statt Positionen, was danach passiert, Ablehnen im Dialog — auch bei „Zweck ändern“', async ({ page, baseURL }) => {
+  test('Freigabe-Detail ?payment= (3h/4b): gemeinsamer Rahmen, Pflichtnachweise statt Positionen, was danach passiert, Ablehnen im Dialog — auch bei der Umwidmung', async ({ page, baseURL }) => {
     const client = await mcpClient(page, baseURL);
     const org = await callTool<{ id: string }>(client, 'contacts_create', { kind: 'organization', name: 'Auftragspartner Beispielland' });
     const partner = await callTool<{ id: string }>(client, 'finance_partner_save', { contactId: org.id, status: 'foreignBody', usualBasis: 'agent57' });
@@ -588,7 +591,7 @@ test.describe('finance partners (F7)', () => {
     await switchToJonas(page);
     await page.goto('/finance/approvals');
     await expect(page.getByTestId('approval-queue-item').filter({ hasText: 'Auftragspartner Beispielland' })).toContainText('Zahlung an Partner');
-    await expect(page.getByTestId('approval-queue-item').filter({ hasText: 'Zweck ändern' }).first()).toBeVisible();
+    await expect(page.getByTestId('approval-queue-item').filter({ hasText: 'Umwidmung' }).first()).toBeVisible();
     await page.goto(`/finance/approvals?payment=${submitted.id}`);
     const head = page.getByTestId('approval-head');
     await expect(head).toContainText('Zahlung an Partner');
@@ -614,7 +617,7 @@ test.describe('finance partners (F7)', () => {
 
     // Die wartende Umwidmung aus den Entwicklungsdaten: dieselbe Ablehnung im Dialog.
     await page.goto('/finance/approvals');
-    await page.getByTestId('approval-queue-item').filter({ hasText: 'Zweck ändern' }).first().click();
+    await page.getByTestId('approval-queue-item').filter({ hasText: 'Umwidmung' }).first().click();
     await page.getByTestId('purpose-transfer-reject').click();
     const transferDialog = page.getByRole('dialog');
     await transferDialog.getByLabel('Grund').fill('Beschluss fehlt noch');
@@ -633,7 +636,7 @@ test.describe('finance partners (F7)', () => {
 
     await page.goto('/finance/partners');
     const table = page.getByRole('table');
-    for (const column of ['Partner', 'Status', 'übliche Art', 'offene Nachweise', 'zuletzt gezahlt']) await expect(table.getByRole('columnheader', { name: column })).toBeVisible();
+    for (const column of ['Partner', 'Einordnung', 'übliche Art', 'offene Nachweise', 'zuletzt gezahlt']) await expect(table.getByRole('columnheader', { name: column })).toBeVisible();
     const row = table.getByRole('row').filter({ hasText: 'Partnerorganisation Tabelle' });
     await expect(row).toContainText('Organisation im Ausland');
     await expect(row).toContainText('Auftrag');
@@ -683,7 +686,7 @@ test.describe('finance partners (F7)', () => {
     const tile = page.getByTestId('dashboard-tile-finance-partnerPaymentsWithoutProof');
     // Aus den Entwicklungsdaten: „Nothilfe Erdbebenregion“ ist freigegeben, der Nachweis fehlt.
     await expect(tile).toContainText('Hilfswerk International e.V. · PZ-');
-    await expect(tile).toContainText('1.200,00 €');
+    await expect(tile.getByTestId('tile-line-trailing').first()).toHaveText('1.200,00 €');
     await expect(page.getByTestId('dashboard-tile-finance-purposesNegative')).toBeVisible();
 
     const role = await callTool<{ id: string }>(client, 'roles_create', { name: 'Finanzen Überblick E2E' });

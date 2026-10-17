@@ -11,7 +11,7 @@ import { RelatedDocuments } from '@/components/related-documents';
 import { AnimalForm } from '../animal-form';
 import { AnimalActions } from '../animal-actions';
 import { animalListInput, formTab, listQueryString, type AnimalListQuery, type AnimalQueue } from '../list-params';
-import { ProfileExportButton } from '../profile-export-button';
+import { AnimalPageHeader } from '../profile-export-button';
 import { QueueNav } from '../queue-nav';
 
 export default async function AnimalEditPage(props: { params: Promise<{ id: string }>; searchParams: Promise<AnimalListQuery & { tab?: string }> }) {
@@ -20,10 +20,10 @@ export default async function AnimalEditPage(props: { params: Promise<{ id: stri
   const { id } = await props.params;
   const q = await props.searchParams;
   const t = await getTranslations('animals.list');
-  const c = await getTranslations('common');
+  const nav = await getTranslations('nav');
   // Die Liste, aus der man kam, reist in der Adresse mit: Der Rückweg führt in dieselbe Auswahl.
   const query = listQueryString(q);
-  const back = { href: `/animals${query ? `?${query}` : ''}`, label: c('backToList') };
+  const back = { href: `/animals${query ? `?${query}` : ''}`, label: nav('animals.list') };
   // Die Stellen der Webseite für die Fotos (Spec Ausschnitt für alle Bilder § 4): Hauptfoto aus dem Template, sonst die
   // Einstellung „Bildausschnitt“; die übrigen nach `animals.gallery`. Der Blickpunkt kommt immer aus der Einstellung.
   const { focusX, focusY } = effectivePhotoFrame(deps);
@@ -39,18 +39,23 @@ export default async function AnimalEditPage(props: { params: Promise<{ id: stri
   }
   // Die Adresse aus der Einstellung statt eines festen Pfads: Den Pfad legt das Template fest (Spec § 9.2).
   const address = profileUrl(readSetting<string>(deps, PROFILE_URL_KEY), animal.value.slug) ?? undefined;
-  const exportButton = hasPermission(ctx, 'documents.export') ? <ProfileExportButton ids={[animal.value.id]} /> : null;
   const recordActions = requirePermission(ctx, 'animals.manage') ? null : <AnimalActions id={animal.value.id} name={animal.value.name} />;
   // Herkunft und offener Vorschlag (Board Vorschläge 7a); den Vorschlag sieht nur, wer ihn prüfen darf.
   const origins = await listAnimalOrigins(deps, ctx, id);
   const open = hasPermission(ctx, 'animals.manage') ? await listProposals(deps, ctx, { state: 'open', animalId: id }) : null;
   const openProposal = open?.ok ? (open.value.proposals[0] ?? null) : null;
-  const actions = exportButton || queue || recordActions ? <>{exportButton}{queue ? <QueueNav key={animal.value.id} queue={queue} /> : null}{recordActions}</> : undefined;
+  const header = (
+    <AnimalPageHeader id={animal.value.id} canExport={hasPermission(ctx, 'documents.export')} title={animal.value.name} description={address} back={back}>
+      {queue ? <QueueNav key={animal.value.id} queue={queue} /> : null}
+      {recordActions}
+    </AnimalPageHeader>
+  );
   return (
-    <Page width="standard" header={<PageHeader title={animal.value.name} description={address} back={back} actions={actions} />}>
+    <Page width="standard" header={header}>
       {/* `key`: Beim Wechsel zum nächsten Hund behielte React sonst den Zustand der Felder und der Fotos. */}
       <AnimalForm key={animal.value.id} animal={animal.value} locales={deps.locales()} queue={queue} initialTab={formTab(q.tab)} backHref={back.href} photoPlaces={photoPlaces} storyPlaces={imagePlaces(deps, 'animals.story')} photoSizes={photoPixelSizes(deps, [...animal.value.photos.map((p) => p.assetId), ...(animal.value.story ? [animal.value.story.beforeAssetId, animal.value.story.afterAssetId].filter((x): x is string => !!x) : [])])} maxPhotos={MAX_ANIMAL_PHOTOS} origins={origins.ok ? origins.value : []} openProposal={openProposal} />
-      <div className="mt-6">
+      {/* Abstand wie zwischen zwei Karten einer Seite: Das Dokumente-Panel gehört nicht zum Reiter darüber (05 B22). */}
+      <div className="mt-8">
         <RelatedDocuments deps={deps} ctx={ctx} entityType="animal" entityId={animal.value.id} />
       </div>
     </Page>

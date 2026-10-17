@@ -33,45 +33,49 @@ describe('PublishHistory', () => {
   /** Keine stille Grenze (MUSTER § L): Die Seite liest die jüngsten 20 und nennt die Gesamtzahl. */
   it('names the limit when the environment has more publishes than shown', () => {
     expect(render([row({}), row({ id: 'P2' })], null, 2)).not.toContain('Es werden');
-    expect(render([row({}), row({ id: 'P2' })], null, 31)).toContain('Es werden die letzten 2 von 31 Publishes gezeigt.');
+    expect(render([row({}), row({ id: 'P2' })], null, 31)).toContain('Es werden die letzten 2 von 31 Läufen gezeigt.');
   });
 
   it('shows the name instead of the id and the status in words', () => {
     const markup = render([row({}), row({ id: 'P2', status: 'aborted', triggeredByUserId: null, triggeredByName: null, hasLog: false })]);
     expect(markup).toContain('Erika Beispiel');
     expect(markup).not.toContain('U1');
-    expect(markup).toContain('Publiziert');
+    // 137: Der Normalfall „Publiziert“ trägt keine Marke, nur Abweichungen stehen da.
+    expect(markup).not.toContain('Publiziert');
     expect(markup).toContain('Abgebrochen');
     expect(markup).toContain('System');
   });
   it('marks a publish started over MCP with the badge, the token and the person', () => {
     const markup = render([row({ source: { channel: 'mcp', tokenName: 'Hundeblicke-Sync' } })]);
-    expect(markup).toContain('>MCP<');
+    expect(markup).toContain('>Agent<');
     expect(markup).toContain('Hundeblicke-Sync · für Erika Beispiel');
   });
   it('shows no badge for the interface and a calm text for the system', () => {
-    expect(render([row({})])).not.toContain('>MCP<');
+    expect(render([row({})])).not.toContain('>Agent<');
     const markup = render([row({ source: { channel: 'system', tokenName: null }, triggeredByName: null })]);
     expect(markup).toContain('System (Neustart)');
-    expect(markup).not.toContain('>MCP<');
+    expect(markup).not.toContain('>Agent<');
   });
-  it('offers the log only where there is one, and carries no log text', () => {
+  // 137: Die Zeile öffnet ihr Protokoll (die Zeit ist der Knopf), eine eigene Spalte „Protokoll“ gibt es nicht.
+  it('opens the log from the row where there is one, and carries no log text', () => {
     const markup = render([row({}), row({ id: 'P2', hasLog: false })]);
-    expect(markup.match(/<button[^>]*>Protokoll</g)).toHaveLength(1);
+    expect(markup.match(/<button[^>]*aria-haspopup="dialog"[^>]*>/g)).toHaveLength(1);
+    expect(markup).toMatch(/aria-label="Protokoll vom [^"]+"/);
     expect(markup).not.toContain('<pre');
   });
 
-  it('has the columns Zeit, Ergebnis, Änderungen, Von, Protokoll and no hash', () => {
+  it('has the columns Zeit, Ergebnis, Änderungen, Von and no hash', () => {
     const markup = render([row({})]);
     const heads = [...markup.matchAll(/<th[^>]*>([^<]*)<\/th>/g)].map((m) => m[1]);
-    expect(heads).toEqual(['Zeit', 'Ergebnis', 'Änderungen', 'Von', 'Protokoll']);
+    expect(heads).toEqual(['Zeit', 'Ergebnis', 'Änderungen', 'Von']);
     expect(markup).not.toContain('aaaaaaaaaaaa');
   });
-  it('words the changes and gives each status a symbol and a word', () => {
+  it('words the changes and gives a deviating status a symbol and a word', () => {
     const markup = render([row({ pagesChanged: 2, pagesAdded: 1, pagesRemoved: 0 }), row({ id: 'P2', status: 'failed' })]);
-    expect(markup).toContain('2 geändert · 1 neu · 0 entfallen');
+    expect(markup).toContain('2\u00a0geändert · 1\u00a0neu<');
+    expect(markup).not.toContain('0 entfallen');
     expect(markup).toContain('Gescheitert');
-    expect(markup.match(/<svg/g)!.length).toBeGreaterThanOrEqual(2);
+    expect(markup.match(/<svg/g)).toHaveLength(1);
   });
   it('shows five rows and offers the older ones on request', () => {
     const rows = Array.from({ length: 7 }, (_, i) => row({ id: `P${i}`, startedAt: `2026-10-0${i + 1}T08:00:00.000Z` }));

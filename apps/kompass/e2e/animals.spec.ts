@@ -16,22 +16,23 @@ test.describe('animals', () => {
     await page.goto('/animals');
     await page.getByRole('link', { name: 'Hund anlegen' }).click();
     await expect(page).toHaveURL(/\/animals\/new/);
-    await expect(page.getByLabel('Slug (URL-Teil)')).toHaveCount(0);
+    await expect(page.getByLabel('URL-Teil')).toHaveCount(0);
     await page.getByLabel('Name').fill('Wilma');
     await page.getByRole('button', { name: 'Speichern' }).click();
     await expect(page).toHaveURL(/\/animals\/[A-Z0-9]+$/);
 
-    const slug = page.getByLabel('Slug (URL-Teil)');
-    await expect(slug).toHaveAttribute('readonly', '');
-    await expect(slug).toHaveValue(/^wilma-[0-9a-z]{4}$/);
-    const before = await slug.inputValue();
+    // Fester Wert als Text (E2), kein gesperrtes Feld.
+    const slug = page.getByTestId('animal-slug-value');
+    await expect(page.getByRole('group', { name: /URL-Teil/ })).toBeVisible();
+    await expect(slug).toHaveText(/^wilma-[0-9a-z]{4}$/);
+    const before = (await slug.textContent()) ?? '';
 
     await page.getByLabel('Name').fill('Wilhelmine');
     await page.getByRole('button', { name: 'Speichern' }).click();
     await expect(page.getByRole('status')).toContainText('Gespeichert');
     await page.reload();
     await expect(page.locator('html[data-hydrated="true"]')).toBeAttached();
-    await expect(page.getByLabel('Slug (URL-Teil)')).toHaveValue(before);
+    await expect(page.getByTestId('animal-slug-value')).toHaveText(before);
   });
 
   test('zwei Hunde mit gleichem Namen werden beide angelegt', async ({ page }) => {
@@ -89,7 +90,7 @@ test.describe('animals', () => {
     await expect(page.locator('html[data-hydrated="true"]')).toBeAttached();
     await expect(page.locator('[data-testid="animal-photo"]')).toHaveCount(2);
 
-    const publish = page.getByRole('switch', { name: 'Veröffentlicht' });
+    const publish = page.getByRole('switch', { name: 'Publiziert' });
     await publish.click();
     // In der Maske heißt Speichern Speichern: Der Schalter ist ein Feld wie jedes andere und zählt als Änderung.
     await expect(publish).toBeChecked();
@@ -98,9 +99,11 @@ test.describe('animals', () => {
     await expect(page.getByRole('status')).toContainText('Gespeichert');
     await page.goto('/animals');
     const row = page.getByRole('row', { name: /Chiara/ });
-    await expect(row).toContainText('Sucht ein Zuhause');
+    // „Sucht ein Zuhause“ ist der Normalfall und steht in der Liste ohne Marke (Runde 3, Kleinpunkt 6).
+    await expect(row).not.toContainText('Sucht ein Zuhause');
     await expect(row).toContainText('Notfall');
-    await expect(row).toContainText('Veröffentlicht');
+    // Der Schalter zeigt keinen Text mehr, nur seinen Zustand (Designer Stufe 2 Nr. 6d).
+    await expect(row.getByRole('switch', { name: 'Publiziert' })).toBeChecked();
 
     await row.getByRole('link', { name: 'Chiara' }).click();
     // Erst die Maske abwarten: In der Liste träfe „Ort“ auch die Knöpfe „Sortieren nach …“.
@@ -177,15 +180,15 @@ test.describe('animals', () => {
     await expect(page.getByText('1 von 2')).toBeVisible();
     await expect(page.getByText(/Prüfung offen seit/)).toBeVisible();
     await expect(page.getByText('neu', { exact: true })).toBeVisible(); // die Notiz
-    await expect(page.getByLabel('Beim Bestätigen veröffentlichen')).toBeChecked();
+    await expect(page.getByLabel('Beim Bestätigen publizieren')).toBeChecked();
     // Der Haken ändert keinen Datensatz, er wirkt nur beim Bestätigen: Er zählt nie als Änderung.
-    await page.getByLabel('Beim Bestätigen veröffentlichen').uncheck();
+    await page.getByLabel('Beim Bestätigen publizieren').uncheck();
     await page.getByLabel('Name').fill('Pelle');
     await expect(page.getByText('noch nicht gespeichert')).toHaveCount(0);
     await page.getByLabel('Name').fill('Pelle II');
     await expect(page.getByText('1 Änderung noch nicht gespeichert')).toBeVisible();
     await page.getByLabel('Name').fill('Pelle');
-    await page.getByLabel('Beim Bestätigen veröffentlichen').check();
+    await page.getByLabel('Beim Bestätigen publizieren').check();
     await expect(page.getByText('noch nicht gespeichert')).toHaveCount(0);
 
     await page.getByRole('tab', { name: 'Texte und Fotos' }).click();
@@ -201,9 +204,11 @@ test.describe('animals', () => {
     await expect(page).toHaveURL(/review=1/);
     await expect(page).toHaveURL(/tab=content/);
     await expect(page.getByRole('tab', { name: 'Texte und Fotos' })).toHaveAttribute('aria-selected', 'true');
-    await expect(page.getByText('1 von 1')).toBeVisible();
+    // „1 von 1“ blättert nirgendwohin und steht nicht mehr da (05 B18); ohne nächsten Hund kein „… und weiter“ (05 B12).
+    await expect(page.getByText('1 von 1')).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Geprüft und weiter' })).toHaveCount(0);
     // Mika ist schon veröffentlicht: kein Haken, und die Fotos sind ihre eigenen, nicht Pelles Auswahl.
-    await expect(page.getByLabel('Beim Bestätigen veröffentlichen')).toHaveCount(0);
+    await expect(page.getByLabel('Beim Bestätigen publizieren')).toHaveCount(0);
     await expect(page.getByTestId('animal-photo')).toHaveCount(3);
 
     await page.goto('/animals');
@@ -278,6 +283,13 @@ test.describe('animals', () => {
     await expect(page.getByLabel('Name')).toHaveValue(name);
     await page.getByRole('tab', { name: 'Texte und Fotos' }).click();
     await expect(page.locator('[name="summary.de"]')).toHaveValue('Ein Text, der nicht verloren gehen darf.');
+  });
+
+  test('vermittelte Hunde stehen gedämpft, „Vermittelt“ als Marke am Namen (Runde 3, 192)', async ({ page }) => {
+    await page.goto('/animals?status=adopted');
+    const row = page.getByTestId('animal-row').first();
+    await expect(row).toHaveAttribute('data-muted', '');
+    await expect(row).toContainText('Vermittelt');
   });
 
   test('the story tab is locked until the dog is adopted', async ({ page }) => {
@@ -357,7 +369,7 @@ test.describe('animals', () => {
     await page.getByRole('button', { name: 'Speichern' }).click();
     await expect(page).toHaveURL(/\/animals\/[A-Z0-9]+$/);
     await page.getByRole('tab', { name: 'Texte und Fotos' }).click();
-    await expect(page.getByText('0 von 12 Fotos')).toBeVisible();
+    await expect(page.getByText('0 Fotos, höchstens 12')).toBeVisible();
 
     await page.getByRole('button', { name: 'Fotos wählen' }).click();
     const chooser = page.getByRole('dialog', { name: 'Bilder wählen' });
@@ -378,7 +390,7 @@ test.describe('animals', () => {
     const spareId = await spare.getAttribute('data-asset-id');
     await chooser.getByRole('button', { name: 'Übernehmen' }).click();
     await expect(page.getByTestId('animal-photo')).toHaveCount(12);
-    await expect(page.getByText('12 von 12 Fotos')).toBeVisible();
+    await expect(page.getByText('12 Fotos, höchstens 12')).toBeVisible();
 
     // Am Dialog vorbei: das 13. direkt in den Formularzustand.
     await page.locator('input[name="photos"]').evaluate((input: HTMLInputElement, id) => {
@@ -422,7 +434,7 @@ test.describe('animals', () => {
     await page.getByRole('button', { name: 'Weitere Aktionen' }).click();
     await page.getByRole('menuitem', { name: 'Tierprofil löschen …' }).click();
     const dialog = page.getByRole('alertdialog', { name: 'Partnerhund löschen?' });
-    await expect(dialog.getByText('Das ist noch veröffentlicht.')).toBeVisible();
+    await expect(dialog.getByText('Das ist noch publiziert.')).toBeVisible();
     await expect(dialog.getByRole('button', { name: 'Löschen' })).toBeDisabled();
 
     await dialog.getByRole('button', { name: 'Zurückziehen' }).click();
@@ -444,7 +456,7 @@ test.describe('animals', () => {
     await page.getByRole('link', { name: 'Frida' }).click();
     await expect(page).toHaveURL(/\/animals\/[A-Z0-9]+\?published=0/);
     await expect(page.getByText('1 von 3')).toBeVisible();
-    const publish = page.getByRole('switch', { name: 'Veröffentlicht' });
+    const publish = page.getByRole('switch', { name: 'Publiziert' });
     await publish.click();
     await expect(publish).toBeChecked();
     await page.getByRole('button', { name: 'Speichern', exact: true }).click();
@@ -575,7 +587,7 @@ test.describe('animals', () => {
     await expect(page.getByText('1 Änderung noch nicht gespeichert')).toBeVisible();
     await page.getByRole('button', { name: 'Speichern' }).click();
     // Pelle trägt den Prüfmerker (eigener Statusbereich): gespeichert ist, wenn nichts mehr offen ist.
-    await expect(page.getByRole('button', { name: 'Verwerfen' })).toBeDisabled();
+    await expect(page.getByRole('button', { name: 'Verwerfen' })).toHaveCount(0);
 
     await page.reload();
     await expect(second.getByTestId('cropped-image')).toBeVisible();

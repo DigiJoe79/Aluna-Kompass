@@ -1,6 +1,7 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
+import type { ActionState } from '@/lib/actions';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { nameOf, type FolderEntry } from '@/lib/folder-tree-model';
 import type { Drop } from '../dms-workspace';
@@ -15,6 +16,7 @@ export function ReceiveDialog({
   types,
   folders,
   canCreateContact,
+  onCreateFolder,
   initialSender,
   initialAbout,
   defaultTypeKey,
@@ -27,6 +29,8 @@ export function ReceiveDialog({
   types: { key: string; label: string }[];
   folders: FolderEntry[];
   canCreateContact: boolean;
+  /** Legt einen Ordner an (nur mit `dms.manage`); sonst fehlt „Neuer Ordner“ im Ordnerfeld. */
+  onCreateFolder?: (parent: string | null, name: string) => Promise<ActionState>;
   /** Von der Kontaktseite vorbelegter Absender. */
   initialSender?: { id: string; name: string } | null;
   /** Von der Seite eines Bezugs vorbelegtes „Betrifft“. */
@@ -51,7 +55,7 @@ export function ReceiveDialog({
           <div className="flex items-center gap-2.5">
             <DialogTitle>{t('receivePost')}</DialogTitle>
             {queued ? (
-              <span className="rounded-full bg-badge px-2.5 py-0.5 font-mono text-hint text-badge-ink">
+              <span className="tabular-nums rounded-full bg-badge px-2.5 py-0.5 text-hint text-badge-ink">
                 {t('drop.queueBadge', { current: index + 1, total })}
               </span>
             ) : null}
@@ -68,6 +72,7 @@ export function ReceiveDialog({
           types={types}
           folders={folders}
           canCreateContact={canCreateContact}
+          onCreateFolder={onCreateFolder}
           initialSender={initialSender}
           initialAbout={initialAbout}
           defaultTypeKey={defaultTypeKey}

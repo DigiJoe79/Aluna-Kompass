@@ -676,7 +676,7 @@ export async function seedFinance(deps: Deps, ctx: CallContext): Promise<void> {
   // Modul-Tests, andere Installation), bleibt der Schritt aus — der Kern erfindet keine Nutzer.
   await grantAuditorRoleToMiraKlein(deps, ctx);
 
-  // F3a-N Task 2: „Jonas Feld“ (Kernseed-Rolle „Schatzmeisterin“, ohne Finanzrechte) bekommt zusätzlich
+  // F3a-N Task 2: „Jonas Feld“ (Kernseed-Rolle „Geschäftsstelle“, ohne Finanzrechte) bekommt zusätzlich
   // die Finanzrolle „Freigeber Finanzen“ — sonst gibt es außer der geschützten Verwaltung niemanden mit
   // `finance.approve`, und der Korrigieren-Dialog könnte nie zeigen, wer eine wartende Änderung freigeben
   // kann.
@@ -1079,8 +1079,13 @@ const officeSupplyReceipt = (date: string) =>
       { text: 'Namensschilder 50 St.', cents: 451 },
     ],
   });
-/** Die Spende, die auf dem § 60a-Bescheid bestätigt wird — im Vorjahr der Geschichte, wie die Bescheide (`seedNotices`). */
-const provisionalDonation = (storyYear: number) => ({ text: 'Spende Greta Sommer März', entryDate: `${storyYear - 1}-03-14`, issuedOn: `${storyYear - 1}-04-15`, amountCents: 12000 });
+/**
+ * Die Spende, die auf dem § 60a-Bescheid bestätigt wird — im Vorjahr der Geschichte, wie die Bescheide (`seedNotices`).
+ * Bestätigt wird sie erst im Stichjahr: Die Akte vergibt die Nummer im Jahr des Ausstellens, ein Datum im Vorjahr
+ * stünde neben „ZWB-‹Stichjahr›-001“ (Runde 3, 205, Joe 2026-10-17). Der Seed stellt sie aus, bevor der
+ * Freistellungsbescheid den § 60a-Bescheid ersetzt; „zu korrigieren“ folgt aus dem Ersetzen, nicht aus dem Datum.
+ */
+const provisionalDonation = (storyYear: number) => ({ text: 'Spende Greta Sommer März', entryDate: `${storyYear - 1}-03-14`, issuedOn: `${storyYear}-02-10`, amountCents: 12000 });
 
 /**
  * F6a Task 9: Greta Sommer spendet im März des Vorjahrs — das Jahr, in dem der
@@ -1102,7 +1107,7 @@ async function seedProvisionalNoticeDonation(deps: Deps, ctx: CallContext, story
 
 /**
  * Die Bescheide in ihrer Geschichte (Stichjahr 2026 in Klammern): erst der § 60a-Bescheid vom 01.03. zwei Jahre
- * vor dem Stichjahr (2024), darauf die Bestätigung für Greta Sommer (15.04.2025), dann der
+ * vor dem Stichjahr (2024), darauf die Bestätigung für Greta Sommer (10.02.2026), dann der
  * Freistellungsbescheid vom 02.05. des Vorjahrs (2025), der den § 60a-Bescheid am selben Tag
  * ersetzt — Gretas Bestätigung ist damit „zu korrigieren“. Nur beim ersten
  * Lauf; die Reihenfolge ist Pflicht, weil ein § 60a-Bescheid nach einem
@@ -1373,8 +1378,11 @@ async function ensureExpenseClerkPerson(deps: Deps, ctx: CallContext): Promise<s
 async function addApprovalsPendingTileForJonas(deps: Deps, ctx: CallContext, jonasUserId: string): Promise<void> {
   const jonasCtx: CallContext = { ...ctx, userId: jonasUserId, permissions: getEffectivePermissions(deps.db, deps.registry, jonasUserId) };
   const layout = unwrap(await getDashboardLayout(deps, jonasCtx));
-  if (layout.tiles.some((t) => t.module === 'finance' && t.key === 'approvalsPending')) return;
-  unwrap(await setDashboardLayout(deps, jonasCtx, { tiles: [...layout.tiles, { module: 'finance', key: 'approvalsPending', options: {} }] }));
+  if (layout.columns.flat().some((t) => t.module === 'finance' && t.key === 'approvalsPending')) return;
+  // Unten in die letzte Spalte des aktiven Layouts (0.2.12): eine Zahl gehört in die schmale bzw. dritte Spalte.
+  const last = layout.columns.length - 1;
+  const columns = layout.columns.map((column, index) => (index === last ? [...column, { module: 'finance', key: 'approvalsPending', options: {} }] : column));
+  unwrap(await setDashboardLayout(deps, jonasCtx, { layout: layout.layout, columns }));
 }
 
 /** Ob schon eine Auslage mit dieser (erfundenen, eindeutigen) Positions-Beschreibung besteht — Idempotenz ohne eigene Zähltabelle. */

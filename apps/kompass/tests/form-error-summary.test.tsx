@@ -71,3 +71,36 @@ describe('FormErrorSummary', () => {
     expect(container.textContent).toBe('');
   });
 });
+
+// Runde 3, 188: Bei einem einzigen Feld stand der Fehler zweimal — als Kasten oben und wortgleich am Feld. Der Kasten
+// erscheint erst ab zwei Fehlern oder wenn das eine Feld außer Sicht ist (anderer Reiter, weiter unten, kein Feld).
+describe('FormErrorSummary: ein Fehler am sichtbaren Feld', () => {
+  const place = (rect: Partial<DOMRect>) => {
+    const input = document.createElement('input');
+    input.id = 'email';
+    input.getBoundingClientRect = () => ({ top: 0, bottom: 0, left: 0, right: 0, width: 0, height: 0, x: 0, y: 0, toJSON: () => ({}), ...rect }) as DOMRect;
+    document.body.appendChild(input);
+    return () => input.remove();
+  };
+
+  it('steht das eine Feld im Blick, gibt es keinen Kasten', () => {
+    const remove = place({ top: 100, bottom: 130, width: 200, height: 30 });
+    render(<FormErrorSummary errors={{ email: 'Bitte eine E-Mail-Adresse.' }} labels={{ email: 'E-Mail' }} />, { wrapper: Intl });
+    expect(screen.queryByRole('alert')).toBeNull();
+    remove();
+  });
+
+  it('liegt es außer Sicht, steht der Kasten', () => {
+    const remove = place({ top: 2000, bottom: 2030, width: 200, height: 30 });
+    render(<FormErrorSummary errors={{ email: 'Bitte eine E-Mail-Adresse.' }} labels={{ email: 'E-Mail' }} />, { wrapper: Intl });
+    expect(box()).toBeTruthy();
+    remove();
+  });
+
+  it('ab zwei Fehlern steht der Kasten immer', () => {
+    const remove = place({ top: 100, bottom: 130, width: 200, height: 30 });
+    render(<FormErrorSummary errors={{ email: 'Bitte eine E-Mail-Adresse.', name: 'Zu lang.' }} labels={{ email: 'E-Mail', name: 'Name' }} />, { wrapper: Intl });
+    expect(lines()).toHaveLength(2);
+    remove();
+  });
+});

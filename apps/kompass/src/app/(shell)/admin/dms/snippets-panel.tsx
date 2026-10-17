@@ -9,13 +9,15 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Table, TableBody, TableCell, TableHead, TableEmpty, TableHeader, TableRow } from '@/components/ui/table';
+import { RowButton, Table, TableBody, TableCell, TableEmpty, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Textarea } from '@/components/ui/textarea';
 import { idleState, type ActionState } from '@/lib/actions';
 import { createSnippetAction, deleteSnippetAction, updateSnippetAction } from './actions';
 import { ActionForm } from '@/components/forms/action-form';
 import { FormField } from '@/components/forms/form-field';
 import { FormGrid } from '@/components/forms/form-grid';
+import { Empty } from '@/components/empty-value';
+import { RowMenu } from '@/components/row-menu';
 
 export interface SnippetRow {
   id: string;
@@ -29,6 +31,7 @@ export interface SnippetRow {
 /** Absätze und Standardbriefe, die der Editor auf Wunsch einfügt. Ohne Platzhalter. */
 export function SnippetsPanel({ snippets }: { snippets: SnippetRow[] }) {
   const t = useTranslations('dms.admin');
+  const tMuted = useTranslations('common.muted');
   const tCommon = useTranslations('common');
   const [editing, setEditing] = useState<SnippetRow | null>(null);
   const [creating, setCreating] = useState(false);
@@ -60,28 +63,30 @@ export function SnippetsPanel({ snippets }: { snippets: SnippetRow[] }) {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>{t('snippetColumns.name')}</TableHead>
-              <TableHead>{t('snippetColumns.subject')}</TableHead>
-              <TableHead>{t('snippetColumns.active')}</TableHead>
-              <TableHead className="text-right">{t('snippetColumns.actions')}</TableHead>
+              <TableHead col="title">{t('snippetColumns.name')}</TableHead>
+              <TableHead col="meta">{t('snippetColumns.subject')}</TableHead>
+              <TableHead col="actions" className="w-11"><span className="sr-only">{t('snippetColumns.actions')}</span></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {snippets.length === 0 ? (
-              <TableEmpty colSpan={4}>{t('emptySnippets')}</TableEmpty>
+              <TableEmpty colSpan={3}>{t('emptySnippets')}</TableEmpty>
             ) : (
               snippets.map((snippet) => (
-                <TableRow key={snippet.id}>
-                  <TableCell className="font-semibold text-ink">{snippet.name}</TableCell>
-                  <TableCell className="text-ink-2">{snippet.subject ?? '—'}</TableCell>
-                  <TableCell className="text-ink-2">{snippet.isActive ? tCommon('yes') : tCommon('no')}</TableCell>
-                  <TableCell className="text-right">
-                    <Button variant="ghost" size="sm" onClick={() => setEditing(snippet)}>
-                      {t('edit')}
-                    </Button>
-                    <Button variant="ghost" size="sm" onClick={() => setToDelete(snippet)}>
-                      {t('delete')}
-                    </Button>
+                // Ja/Nein-Liste (Joe 11.8): inaktiv ist die gedämpfte Zeile mit Marke hinter dem Namen, keine Statusspalte.
+                <TableRow key={snippet.id} muted={snippet.isActive ? undefined : tMuted('deactivated')}>
+                  <TableCell col="title">
+                    <RowButton aria-haspopup="dialog" onClick={() => setEditing(snippet)}>{snippet.name}</RowButton>
+                  </TableCell>
+                  <TableCell col="meta" className="text-ink-2">{snippet.subject ?? <Empty />}</TableCell>
+                  <TableCell col="actions" className="text-right">
+                    <RowMenu
+                      name={snippet.name}
+                      items={[
+                        { key: 'edit', label: t('edit'), onSelect: () => setEditing(snippet) },
+                        { key: 'delete', label: t('delete'), kind: 'delete', onSelect: () => setToDelete(snippet) },
+                      ]}
+                    />
                   </TableCell>
                 </TableRow>
               ))
@@ -121,7 +126,7 @@ export function SnippetsPanel({ snippets }: { snippets: SnippetRow[] }) {
                     rows={6}
                     defaultValue={editing?.body ?? ''}
                     required
-                    className="font-mono text-meta"
+                    className="text-meta"
                   />
                 </FormField>
                 <FormField id="snippet-sortOrder" label={t('snippetFields.sortOrder')} size="s">

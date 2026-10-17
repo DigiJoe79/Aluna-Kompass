@@ -82,7 +82,7 @@ export function MiniEntryForm({
         );
       })}
 
-      <Button type="button" variant="secondary" size="sm" onClick={() => setRows([...value.rows, emptyRow()])}>
+      <Button type="button" variant="outline" size="sm" onClick={() => setRows([...value.rows, emptyRow()])}>
         {t('addRow')}
       </Button>
 

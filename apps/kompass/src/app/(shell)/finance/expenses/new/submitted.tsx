@@ -24,7 +24,7 @@ export async function SubmittedView({ claim }: { claim: ExpenseClaimView }) {
         {/* Der Titel ist das `h1` der Seite (Spec Seitenkopf § 2.2); der Kopf bringt seinen Abstand nach unten mit. */}
         <PageHeader title={t('title')} description={t('text', { number: claim.number ?? '', at: fmt.dateTime(claim.submittedAt) })} />
         <p className="text-meta text-muted-ink">{t('amount')}</p>
-        <p className="font-mono text-figure font-semibold tabular-nums">{formatEuro(claim.totalCents)}</p>
+        <p className="text-figure font-semibold tabular-nums">{formatEuro(claim.totalCents)}</p>
         {claim.waiver ? <p className="mt-1 text-body text-ink-2">{t('waiver')}</p> : null}
       </div>
 
@@ -35,7 +35,7 @@ export async function SubmittedView({ claim }: { claim: ExpenseClaimView }) {
               {claim.positions.map((p) => (
                 <li key={p.id} className="flex items-baseline justify-between gap-3 py-2 text-body">
                   <span className="min-w-0 text-ink">{p.kind === 'trip' ? t('trip', { from: p.tripFrom ?? '', to: p.tripTo ?? '', km: p.tripKm ?? 0 }) : p.purpose}</span>
-                  <span className="shrink-0 font-mono tabular-nums">{formatEuro(p.amountCents)}</span>
+                  <span className="shrink-0 tabular-nums">{formatEuro(p.amountCents)}</span>
                 </li>
               ))}
             </ul>

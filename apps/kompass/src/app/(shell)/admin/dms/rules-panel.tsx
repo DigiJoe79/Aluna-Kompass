@@ -5,11 +5,10 @@ import { useActionState, useState, useTransition } from 'react';
 import { toast } from 'sonner';
 import { FormActionBar } from '@/components/forms/form-action-bar';
 import { useActionFeedback } from '@/components/forms/use-action-feedback';
-import { StatusBadge } from '@/components/status-badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Table, TableBody, TableCell, TableHead, TableEmpty, TableHeader, TableRow } from '@/components/ui/table';
+import { RowButton, Table, TableBody, TableCell, TableEmpty, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { idleState } from '@/lib/actions';
 import { cn } from '@/lib/utils';
 import { createDocumentRuleAction, deleteDocumentRuleAction, updateDocumentRuleAction } from './actions';
@@ -20,6 +19,9 @@ import { FormField } from '@/components/forms/form-field';
 import { FormGrid } from '@/components/forms/form-grid';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Section } from '@/components/section';
+import { Empty } from '@/components/empty-value';
+import { nameOrEmpty } from '@/lib/name-or-empty';
+import { RowMenu } from '@/components/row-menu';
 
 export interface DocumentRuleItem {
   id: string;
@@ -41,6 +43,7 @@ export function RulesPanel({
   folders: string[];
 }) {
   const t = useTranslations('dms.admin');
+  const tMuted = useTranslations('common.muted');
   const tCommon = useTranslations('common');
 
   const [createOpen, setCreateOpen] = useState(false);
@@ -92,42 +95,38 @@ export function RulesPanel({
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>{t('ruleColumns.matchField')}</TableHead>
-              <TableHead>{t('ruleColumns.matchContains')}</TableHead>
-              <TableHead>{t('ruleColumns.thenType')}</TableHead>
-              <TableHead>{t('ruleColumns.thenFolder')}</TableHead>
-              <TableHead>{t('ruleColumns.status')}</TableHead>
-              <TableHead className="text-right">{t('ruleColumns.actions')}</TableHead>
+              <TableHead col="meta">{t('ruleColumns.matchField')}</TableHead>
+              <TableHead col="title">{t('ruleColumns.matchContains')}</TableHead>
+              <TableHead col="meta">{t('ruleColumns.thenType')}</TableHead>
+              <TableHead col="meta">{t('ruleColumns.thenFolder')}</TableHead>
+              {/* Zeilenaktionen im ⋯-Menü (Joe 11.8); der Kopf ist nur für Vorleser da (112). */}
+              <TableHead col="actions" className="w-11"><span className="sr-only">{t('ruleColumns.actions')}</span></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {rules.length === 0 ? (
-              <TableEmpty colSpan={6}>{t('emptyRules')}</TableEmpty>
+              <TableEmpty colSpan={5}>{t('emptyRules')}</TableEmpty>
             ) : (
               rules.map((row, i) => (
-                <TableRow key={row.id}>
-                  <TableCell className="text-meta text-ink">
+                <TableRow key={row.id} muted={row.isActive ? undefined : tMuted('deactivated')}>
+                  <TableCell col="meta" className="text-meta text-ink">
                     {t(`ruleFields.${row.matchField}`)}
                   </TableCell>
-                  <TableCell className="font-mono text-ink">{row.matchContains}</TableCell>
-                  <TableCell className="text-ink-2">
-                    {row.thenTypeKey ? typeMap.get(row.thenTypeKey) ?? row.thenTypeKey : '—'}
+                  <TableCell col="title" className="font-mono">
+                    <RowButton aria-haspopup="dialog" onClick={() => setEditingRule(row)}>{row.matchContains}</RowButton>
                   </TableCell>
-                  <TableCell className="text-ink-2">{row.thenFolder ?? '—'}</TableCell>
-                  <TableCell>
-                    <StatusBadge tone={row.isActive ? 'success' : 'neutral'}>
-                      {row.isActive ? t('active') : t('inactive')}
-                    </StatusBadge>
+                  <TableCell col="meta" className="text-ink-2">
+                    {row.thenTypeKey ? nameOrEmpty(typeMap.get(row.thenTypeKey), row.thenTypeKey) : <Empty />}
                   </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex items-center justify-end gap-1">
-                      <Button variant="ghost" size="sm" onClick={() => setEditingRule(row)}>
-                        {t('edit')}
-                      </Button>
-                      <Button variant="ghost" size="sm" onClick={() => setRuleToDelete(row)}>
-                        {t('delete')}
-                      </Button>
-                    </div>
+                  <TableCell col="meta" className="text-ink-2">{row.thenFolder ?? <Empty />}</TableCell>
+                  <TableCell col="actions" className="text-right">
+                    <RowMenu
+                      name={row.matchContains}
+                      items={[
+                        { key: 'edit', label: t('edit'), onSelect: () => setEditingRule(row) },
+                        { key: 'delete', label: t('delete'), kind: 'delete', onSelect: () => setRuleToDelete(row) },
+                      ]}
+                    />
                   </TableCell>
                 </TableRow>
               ))

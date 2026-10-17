@@ -15,12 +15,13 @@ import { AmountField } from '@/components/finance/amount-field';
 import { LimitProgress } from '@/components/finance/limit-progress';
 import { Notice } from '@/components/notice';
 import { ReceiptDrop } from '@/components/finance/receipt-drop';
-import { GuidedSteps, guidedSteps } from '@/components/guided-steps';
+import { Steps, stepsFrom } from '@/components/steps';
 import { RequirementList, type RequirementListItem } from '@/components/requirement-list';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
-import { formatEuro, parseAmount } from '@/lib/finance/amount';
+import { formatAmount, formatEuro, parseAmount } from '@/lib/finance/amount';
+import { cn } from '@/lib/utils';
 import { AMOUNT_EVIDENCE_KINDS, coverageRequired, evidenceCoverage, evidenceKindLabelKey, missingEvidence, type EvidenceKind, type PartnerBasis } from '@/lib/finance/partners';
 import { acknowledgeEvidenceAction, addEvidenceLinkAction, addEvidenceUploadAction, copyPartnerPaymentAction, removeEvidenceAction, updateEvidenceAction } from '../../../actions';
 import { DraftForm, type LineOption } from './draft-form';
@@ -99,13 +100,29 @@ export function PaymentDetail({
     paid: payment.paidOn ? fmt.date(payment.paidOn) : undefined,
     acknowledged: detail(payment.acknowledgedAt, people.acknowledger),
   };
-  const steps = payment.activeStep ? guidedSteps(STEP_KEYS.map((key) => ({ key, label: t(`steps.${key}`), detail: stepDetail[key] })), payment.activeStep) : null;
+  // Runde 3, 118: Der Balken zeigt nur die Zustände, ohne Daten — bei nachträglicher Freigabe liegt „gezahlt“ vor dem
+  // Entwurf, die Reihenfolge der Schritte stimmte dann nicht mit den Daten. Die Daten stehen im Verlauf darunter, nach
+  // Datum. Ein anerkannter Nachweis schließt den Vorgang ab: alle Schritte mit Haken, „Fertig.“ mit dem Ergebnis.
+  const steps = payment.activeStep
+    ? stepsFrom(
+        STEP_KEYS.map((key) => ({ key, label: t(`steps.${key}`) })),
+        payment.activeStep === 'acknowledged' ? null : payment.activeStep,
+      )
+    : null;
+  const historyAt: Record<(typeof STEP_KEYS)[number], string | null> = {
+    draft: payment.createdAt,
+    submitted: payment.submittedAt,
+    approved: payment.approvedAt,
+    paid: payment.paidOn,
+    acknowledged: payment.acknowledgedAt,
+  };
+  const history = STEP_KEYS.filter((key) => historyAt[key] && stepDetail[key]).sort((a, b) => historyAt[a]!.localeCompare(historyAt[b]!));
   const categoryLabel = new Map(categories.map((c) => [c.id, c.label]));
   const purposeLabel = new Map(purposes.map((p) => [p.id, p.label]));
 
   return (
     <div className="space-y-6" data-testid="payment-detail">
-      {steps ? <GuidedSteps steps={steps} label={t('steps.label')} /> : null}
+      {steps ? <Steps steps={steps} label={t('steps.label')} done={t('evidence.acknowledged')} /> : null}
       <section className="space-y-2 rounded-md border border-line bg-surface p-4" data-testid="payment-head">
         <p className="text-body font-semibold text-ink">
           {payment.proofDueOn
@@ -122,7 +139,7 @@ export function PaymentDetail({
                 {p.categoryId && categoryLabel.get(p.categoryId) ? ` · ${categoryLabel.get(p.categoryId)}` : ''}
                 {p.kind === 'money' ? ` · ${t('positions.paidFrom')} ${p.purposeId ? purposeLabel.get(p.purposeId) ?? '' : t('positions.freeFunds')}` : ''}
               </span>
-              <span className="font-mono tabular-nums text-ink">{formatEuro(p.amountCents)}</span>
+              <span className="tabular-nums text-ink">{formatEuro(p.amountCents)}</span>
             </li>
           ))}
         </ul>
@@ -136,7 +153,7 @@ export function PaymentDetail({
           <RefusalNotice action state={copyFb.state} />
           <Button
             type="button"
-            variant="secondary"
+            variant="outline"
             data-testid="payment-copy"
             onClick={async () => {
               const result = await copyFb.run(() => copyPartnerPaymentAction(payment.id));
@@ -150,6 +167,22 @@ export function PaymentDetail({
           </>
         ) : null}
       </section>
+
+      {history.length > 0 ? (
+        // Wie der Verlauf einer Auslage: Schritt links, Datum und Person rechts.
+        <section aria-labelledby="payment-history-title" className="rounded-md border border-line bg-surface p-4" data-testid="payment-history">
+          <Section title={t('history')} headingId="payment-history-title">
+            <ol className="space-y-1.5 text-body">
+              {history.map((key) => (
+                <li key={key} className="flex justify-between gap-3">
+                  <span className="text-ink">{t(`steps.${key}`)}</span>
+                  <span className="text-meta tabular-nums text-ink-2">{stepDetail[key]}</span>
+                </li>
+              ))}
+            </ol>
+          </Section>
+        </section>
+      ) : null}
 
       {payment.state !== 'rejected' ? <EvidenceSection payment={payment} basis={basis} canWrite={canWrite} canApprove={canApprove} evidence={evidence} people={people} /> : null}
     </div>
@@ -222,7 +255,7 @@ function EvidenceSection({ payment, basis, canWrite, canApprove, evidence, peopl
           {/* W (Prüfer Block 2): jeder Nachweis mit Nummer und Link auf das PDF — auch für Leser, soweit die Akte es zeigt. */}
           {rows.map((e) =>
             e.document && e.documentId ? (
-              <a key={e.id} href={`/dms/${e.documentId}/file`} target="_blank" rel="noreferrer" className="font-mono text-hint font-semibold underline underline-offset-2" data-testid={`evidence-document-${e.id}`}>
+              <a key={e.id} href={`/dms/${e.documentId}/file`} target="_blank" rel="noreferrer" className={cn(e.document.number && 'font-mono', 'text-hint underline underline-offset-2')} data-testid={`evidence-document-${e.id}`}>
                 {e.document.number ?? e.document.subject}
               </a>
             ) : null,
@@ -235,7 +268,7 @@ function EvidenceSection({ payment, basis, canWrite, canApprove, evidence, peopl
             </Button>
           ) : null}
           {rows.length > 0 ? (
-            <Button type="button" variant="ghost" size="sm" aria-label={t('evidence.removeKind', { kind: label(kind) })} onClick={() => void remove(kind)}>
+            <Button type="button" variant="outline" size="sm" aria-label={t('evidence.removeKind', { kind: label(kind) })} onClick={() => void remove(kind)}>
               {t('evidence.remove')}
             </Button>
           ) : null}
@@ -278,7 +311,15 @@ function EvidenceSection({ payment, basis, canWrite, canApprove, evidence, peopl
       <Section title={t('evidence.title')}
         actions={
           <>
-            <span className="text-meta text-muted-ink">{t('evidence.count', { done: required.filter((k) => kindDone(k, rowsOf(k))).length, total: required.length })}</span>
+            <span className="text-meta text-muted-ink">
+              {/* Pflicht und zusätzlich getrennt gezählt (Runde 3, 118). */}
+              {t('evidence.count', {
+                done: required.filter((k) => kindDone(k, rowsOf(k))).length,
+                total: required.length,
+                complete: required.every((k) => kindDone(k, rowsOf(k))) ? 'yes' : 'no',
+                extra: extraKinds.filter((k) => rowsOf(k).length > 0).length,
+              })}
+            </span>
           </>
         }
       >
@@ -304,11 +345,8 @@ function EvidenceSection({ payment, basis, canWrite, canApprove, evidence, peopl
           ) : null}
 
           <div className="space-y-2" data-testid="evidence-acknowledge-area">
-            {acknowledged ? (
-              <p className="text-meta text-success" data-testid="evidence-acknowledged">
-                {t('evidence.acknowledged')}
-              </p>
-            ) : (
+            {/* Anerkannt sagt der Schrittbalken („Fertig. Nachweise anerkannt.“), kein zweiter Satz hier (Runde 3, 118). */}
+            {acknowledged ? null : (
               <>
                 {payment.readyToAcknowledge ? (
                   <div data-testid="payment-ready-to-acknowledge">
@@ -416,7 +454,7 @@ function EvidenceForm({ paymentId, kind, label, onDone, onCancel }: { paymentId:
 function CompleteForm({ row, onDone, onCancel }: { row: EvidenceRow; onDone: () => void; onCancel: () => void }) {
   const t = useTranslations('finance.partners.payment');
   const [explanationDe, setExplanationDe] = useState(row.explanationDe ?? '');
-  const [amountText, setAmountText] = useState(row.coveredCents !== null ? (row.coveredCents / 100).toFixed(2).replace('.', ',') : '');
+  const [amountText, setAmountText] = useState(row.coveredCents !== null ? formatAmount(row.coveredCents) : '');
   const withAmount = AMOUNT_KINDS.includes(row.kind);
   const feedback = useActionFeedback();
   const save = async () => {

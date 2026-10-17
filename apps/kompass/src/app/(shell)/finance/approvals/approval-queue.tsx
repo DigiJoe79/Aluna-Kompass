@@ -20,7 +20,7 @@ export interface QueueRow {
 
 /**
  * Die Warteschlange „Wartet auf Ihre Freigabe“ (Designer-README 3h): älteste
- * oben, je Eintrag die Art als umrandetes Kennzeichen, Person, Betrag und
+ * oben, je Eintrag die Art als Text, Person, Betrag und
  * „seit …“. Pfeil hoch/runter wechselt wie in der Akte; der Fokus bleibt in
  * der Liste. Kein Kürzel für Freigeben — das ist bewusst ein Klick.
  */
@@ -64,10 +64,11 @@ export function ApprovalQueue({ rows, selectedId }: { rows: QueueRow[]; selected
                   >
                     <span className="flex items-center justify-between gap-2">
                       <span className="flex min-w-0 items-center gap-2">
-                        <span className="rounded-sm border border-line-strong px-1.5 py-0.5 text-hint font-semibold">{t(`kind.${row.kind}`)}</span>
-                        <span className="font-mono text-meta font-semibold">{row.number}</span>
+                        {/* Art als Text wie im Kopf der Freigabe, ohne Rahmen (Runde 3, 103/104, 206/207). */}
+                        <span className="text-meta font-semibold">{t(`kind.${row.kind}`)}</span>
+                        <span className="font-mono text-meta">{row.number}</span>
                       </span>
-                      <span className="shrink-0 font-mono text-body font-semibold tabular-nums">{row.amount}</span>
+                      <span className="shrink-0 text-body font-semibold tabular-nums">{row.amount}</span>
                     </span>
                     <span className="flex items-baseline justify-between gap-2 text-meta">
                       <span className="min-w-0 truncate">{row.person}</span>

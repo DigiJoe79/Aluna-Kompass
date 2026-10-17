@@ -8,6 +8,7 @@ import { useDateFormat } from '@/components/date-format-provider';
 import { ActionForm } from '@/components/forms/action-form';
 import { FormActionBar } from '@/components/forms/form-action-bar';
 import { Button } from '@/components/ui/button';
+import { Notice } from '@/components/notice';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
@@ -68,7 +69,7 @@ export function ReclassifyDialog({
           <ActionForm action={action} state={state} className="flex flex-col gap-4">
             <input type="hidden" name="expectedVersion" value={doc.updatedAt} />
             <FormGrid>
-              <FormField id="reclassify-type" label={t('type')}>
+              <FormField id="reclassify-type" label={t('type')} required>
                 <Select id="reclassify-type" name="typeKey" value={typeKey} onChange={(e) => setTypeKey(e.target.value)}>
                   {types.map((type) => (
                     <option key={type.key} value={type.key}>
@@ -78,14 +79,17 @@ export function ReclassifyDialog({
                 </Select>
               </FormField>
               {/* Datum neben der Art: beide steuern die Vorschau darunter (Inventar § 3 C). */}
-              <FormField id="reclassify-date" label={t('date')} size="s">
-                <Input id="reclassify-date" name="documentDate" type="date" value={documentDate} onChange={(e) => setDocumentDate(e.target.value)} required className="font-mono" />
+              <FormField id="reclassify-date" label={t('date')} size="s" required>
+                <Input id="reclassify-date" name="documentDate" type="date" value={documentDate} onChange={(e) => setDocumentDate(e.target.value)} required />
               </FormField>
-              <FormField id="reclassify-subject" label={t('subject')}>
+              {/* Pflichtfelder mit Stern, Betreff über die volle Breite wie in „Post ablegen“ (Runde 3, 034). */}
+              <FormField id="reclassify-subject" label={t('subject')} size="full" required>
                 <Input id="reclassify-subject" name="subject" defaultValue={doc.subject} required maxLength={300} />
               </FormField>
               {preview ? (
-                <FormCell size="full" className="space-y-1 rounded-md bg-surface-2 p-3 text-meta text-ink-2" aria-live="polite">
+                // Eine neue Nummer oder Frist ist eine Folge vor dem Handeln → `warn`; bleibt alles, ein Hinweis (03 B38, MUSTER § A).
+                <FormCell size="full" aria-live="polite">
+                  <Notice level={preview.number.next || retentionChanges ? 'warn' : 'hint'}>
                   <p>
                     {preview.number.next
                       ? t('newNumber', { next: preview.number.next, current: preview.number.current ?? '' })
@@ -96,6 +100,7 @@ export function ReclassifyDialog({
                   {retentionChanges ? (
                     <p>{t('retentionChange', { current: retention(preview.retention.current), next: retention(preview.retention.next) })}</p>
                   ) : null}
+                  </Notice>
                 </FormCell>
               ) : null}
             </FormGrid>

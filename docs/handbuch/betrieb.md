@@ -85,7 +85,8 @@ Container ohnehin erst startet, wenn er direkt davorsitzt, braucht das nicht.
 Wer vor einer Änderung ausprobieren will, wie sie sich auswirkt, betreibt eine
 zweite Installation als Testumgebung — eigener Port, eigene Verzeichnisse,
 eigene Umgebungsdatei mit `APP_ENV=test`. Außerhalb der Produktion zeigt
-Kompass einen Umgebungsbalken, damit niemand die beiden verwechselt.
+Kompass einen Umgebungsbalken, damit niemand die beiden verwechselt: im Test
+ocker mit Schraffur (echte Daten, Vorsicht), in der Entwicklung dunkelgrau.
 
 Daten aus der Produktion in den Test holen: dort exportieren, hier importieren
 (Verwaltung → Backup). Danach sind im Test alle Sitzungen beendet, die
@@ -282,6 +283,36 @@ Sonst ist nichts von Hand zu tun. Wer sich wundert:
 - **Template-Autoren** können mit den neuen Feldoptionen `size` und `group` die
   Eingabemaske ordnen; ohne sie bekommt jedes Feld eine Breite nach seinem Typ.
 - MCP-Clients sind nicht betroffen.
+
+### Von 0.2.11 auf 0.2.12
+
+Die Fassung 0.2.12 bringt keine Migration mit; `/api/health` meldet weiter
+`migrationCount: 9`. Vor dem Update gehört wie immer ein Backup (Schritt 1)
+dazu. Wer von 0.2.10 kommt, aktualisiert direkt auf 0.2.12 – die Migration aus
+0.2.11 läuft beim Start mit – und erledigt danach auch die Schritte aus „Von
+0.2.10 auf 0.2.11“.
+
+Nach dem Update:
+
+- **Vergütung des Vorstands beantworten.** Unter Einrichtung → Finanzen →
+  Steuerliches steht die Frage „Sind Pauschalen an Vorstandsmitglieder
+  vorgesehen?“ mit Ja und Nein. Der Schritt der Checkliste steht nach dem
+  Update einmal offen, auch wenn schon etwas gespeichert war – einmal
+  beantworten.
+- **Checkliste ansehen.** „Konto mit Anfangsbestand“ ist erst erledigt, wenn
+  jedes aktive Bankkonto einen Anfangsbestand hat.
+
+Wer sich wundert:
+
+- **Startseite.** Wer keine eigene Anordnung gespeichert hat, sieht die neue
+  Vorgabe: Wer „Finanzen: zu tun“ sieht, bekommt breit und schmal, und fünf
+  Kacheln, die Zeilen aus „Finanzen: zu tun“ wiederholen, sind aus – unter
+  „Anpassen“ lassen sie sich wieder einschalten. Eine gespeicherte Anordnung
+  bleibt erhalten und wird auf Spalten verteilt.
+- **„Konten“.** Die Seite „Bankkonten und Kassen“ heißt jetzt „Konten“; die
+  Adresse ist gleich.
+- **Zeilenaktionen.** Bearbeiten und Löschen stehen im Menü ⋯ am Ende einer
+  Zeile.
 
 ### Von 0.2.10 auf 0.2.11
 
@@ -499,7 +530,7 @@ Vorlage des Moduls. Zeichnet die eigene Fassung das Anschriftfeld, trägt sie im
 ohne Kennzeichen setzen die Vorlagen Anschrift und Aussteller wie bisher selbst
 in den Text. Daneben optional
 `fonts/` für eigene Schriften und `assets/` für Grafiken, die eine Basis
-einbindet — das Vereinslogo kommt weiter aus Einrichtung → Stammdaten → Branding.
+einbindet — das Vereinslogo kommt weiter aus Einrichtung → Stammdaten → Darstellung.
 
 **Ein leeres Verzeichnis ist gültig** — dann gelten die mitgelieferten Basen.
 Auch dies ist eine Vertrauensgrenze: Jede `.typ` läuft beim Rendern als Code im

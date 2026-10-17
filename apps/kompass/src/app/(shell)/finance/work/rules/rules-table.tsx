@@ -6,10 +6,11 @@ import { useState } from 'react';
 import { ConfirmDialog } from '@/components/forms/confirm-dialog';
 import { StatusBadge } from '@/components/status-badge';
 import { Button } from '@/components/ui/button';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { RowButton, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ruleFormFromRule, type RuleFormState, type SavedRule } from '@/lib/finance/work-dialogs';
 import { deleteImportRuleAction } from '../actions';
 import { RuleDialog, type RuleDialogOptions } from '../rule-dialog';
+import { RowMenu } from '@/components/row-menu';
 
 export interface RuleRow {
   rule: SavedRule;
@@ -24,6 +25,8 @@ export interface RuleRow {
 /** Die Regeln in ihrer Reihenfolge (die erste treffende gewinnt), mit Bearbeiten und Löschen. */
 export function RulesTable({ rows, canWrite, options }: { rows: RuleRow[]; canWrite: boolean; options: RuleDialogOptions }) {
   const t = useTranslations('finance.work.pages.rules');
+  const tMuted = useTranslations('common.muted');
+  const tCommon = useTranslations('common');
   const router = useRouter();
   const [editing, setEditing] = useState<RuleFormState | null>(null);
   const [deleting, setDeleting] = useState<RuleRow | null>(null);
@@ -33,39 +36,43 @@ export function RulesTable({ rows, canWrite, options }: { rows: RuleRow[]; canWr
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>{t('name')}</TableHead>
-            <TableHead>{t('condition')}</TableHead>
-            <TableHead>{t('result')}</TableHead>
-            <TableHead className="text-right">{t('hits')}</TableHead>
-            <TableHead>{t('active')}</TableHead>
-            <TableHead />
+            <TableHead col="title">{t('name')}</TableHead>
+            <TableHead col="meta">{t('condition')}</TableHead>
+            <TableHead col="meta">{t('result')}</TableHead>
+            <TableHead col="status">{t('state')}</TableHead>
+            <TableHead col="meta" className="text-right">{t('hits')}</TableHead>
+            <TableHead col="actions" className="w-11"><span className="sr-only">{tCommon('rowActionsColumn')}</span></TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {rows.map((row) => (
-            <TableRow key={row.rule.id} className="align-top">
-              <TableCell className="py-2.5 text-ink">{row.rule.name}</TableCell>
-              <TableCell className="py-2.5 text-ink-2">{row.conditionTexts.join(' · ')}</TableCell>
-              <TableCell className="py-2.5 text-ink-2">
-                <span className="flex flex-wrap items-center gap-2">
-                  {row.categoryName}
-                  {row.categoryInactive ? <StatusBadge tone="error">{t('categoryInactive')}</StatusBadge> : null}
-                </span>
+            // Ja/Nein-Liste (Joe 11.8): inaktiv ist die gedämpfte Zeile mit Marke hinter dem Namen, keine Statusspalte.
+            <TableRow key={row.rule.id} className="align-top" muted={row.rule.isActive ? undefined : tMuted('deactivated')}>
+              <TableCell col="title" className="py-2.5 text-ink">
+                {canWrite ? (
+                  <RowButton aria-haspopup="dialog" onClick={() => setEditing(ruleFormFromRule(row.rule, row.contactName))}>{row.rule.name}</RowButton>
+                ) : (
+                  row.rule.name
+                )}
               </TableCell>
-              <TableCell data-testid="rule-hits" className="py-2.5 text-right font-mono tabular-nums">
+              <TableCell col="meta" className="py-2.5 text-ink-2">{row.conditionTexts.join(' · ')}</TableCell>
+              <TableCell col="meta" className="py-2.5 text-ink-2">{row.categoryName}</TableCell>
+              {/* Runde 3, 072: Die Marke steht im Zustand, nicht im „Dann“; ohne Marke fällt die Spalte weg (Joe 11.8). */}
+              <TableCell col="status" className="py-2.5">
+                {row.categoryInactive ? <StatusBadge tone="error">{t('categoryInactive')}</StatusBadge> : null}
+              </TableCell>
+              <TableCell col="meta" data-testid="rule-hits" className="py-2.5 text-right tabular-nums">
                 {row.hitCount}
               </TableCell>
-              <TableCell className="py-2.5">{row.rule.isActive ? t('yes') : t('no')}</TableCell>
-              <TableCell className="py-2.5 text-right">
+              <TableCell col="actions" className="py-2.5 text-right">
                 {canWrite ? (
-                  <span className="flex justify-end gap-2">
-                    <Button type="button" size="sm" variant="secondary" onClick={() => setEditing(ruleFormFromRule(row.rule, row.contactName))}>
-                      {t('edit')}
-                    </Button>
-                    <Button type="button" size="sm" variant="ghost" onClick={() => setDeleting(row)}>
-                      {t('delete')}
-                    </Button>
-                  </span>
+                  <RowMenu
+                    name={row.rule.name}
+                    items={[
+                      { key: 'edit', label: t('edit'), onSelect: () => setEditing(ruleFormFromRule(row.rule, row.contactName)) },
+                      { key: 'delete', label: t('delete'), kind: 'delete', onSelect: () => setDeleting(row) },
+                    ]}
+                  />
                 ) : null}
               </TableCell>
             </TableRow>

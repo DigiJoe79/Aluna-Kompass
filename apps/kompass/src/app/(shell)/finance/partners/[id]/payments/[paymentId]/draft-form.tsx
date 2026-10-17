@@ -19,7 +19,7 @@ import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import type { ActionState } from '@/lib/actions';
-import { formatEuro, parseAmount } from '@/lib/finance/amount';
+import { formatAmount, formatEuro, parseAmount } from '@/lib/finance/amount';
 import { evidenceKindLabelKey, proofDueDate, requiredEvidenceKinds, type PartnerBasis } from '@/lib/finance/partners';
 import { savePartnerPaymentDraftAction, submitPartnerPaymentAction } from '../../../actions';
 import { FormField } from '@/components/forms/form-field';
@@ -131,7 +131,7 @@ export function DraftForm({
     basisOverrideReason: payment.basisOverrideReason ?? '',
     retroactive: payment.retroactive,
     agreementDocument,
-    positions: payment.positions.map((p) => ({ key: newKey(), kind: p.kind, amountText: p.kind === 'money' ? (p.amountCents / 100).toFixed(2).replace('.', ',') : '', categoryId: p.categoryId ?? '', purposeId: p.purposeId ?? '', projectId: p.projectId ?? '', goodsLineId: p.goodsLineId ?? '', note: p.note ?? '' })),
+    positions: payment.positions.map((p) => ({ key: newKey(), kind: p.kind, amountText: p.kind === 'money' ? formatAmount(p.amountCents) : '', categoryId: p.categoryId ?? '', purposeId: p.purposeId ?? '', projectId: p.projectId ?? '', goodsLineId: p.goodsLineId ?? '', note: p.note ?? '' })),
     paidLineIds: payment.paidLines.map((l) => l.paidLineId),
     proofMonths: payment.proofMonths,
   };
@@ -253,7 +253,7 @@ export function DraftForm({
                   ))}
                 </Select>
                 {/* Task 6c (Joe 28.09.): die Frist läuft ab dem Zahlungstag — ein Datum gibt es erst, wenn er feststeht (nachträglich: die gewählte Zeile). */}
-                {d.retroactive && chosenLines.length > 0 ? <span className="font-mono text-body tabular-nums text-ink">{fmt.date(proofDueDate(paymentDay, months))}</span> : null}
+                {d.retroactive && chosenLines.length > 0 ? <span className="text-body tabular-nums text-ink">{fmt.date(proofDueDate(paymentDay, months))}</span> : null}
               </div>
             </FormField>
           </FormCell>
@@ -286,8 +286,8 @@ export function DraftForm({
                           disabled={!canWrite}
                           onCheckedChange={(v) => update((prev) => ({ ...prev, paidLineIds: v === true ? [...prev.paidLineIds, line.id] : prev.paidLineIds.filter((id) => id !== line.id) }))}
                         />
-                        <span className="font-mono">
-                          {line.entryNumber ? `${line.entryNumber} · ` : ''}
+                        <span className="tabular-nums">
+                          {line.entryNumber ? <><span className="font-mono">{line.entryNumber}</span>{' · '}</> : null}
                           {fmt.date(line.entryDate)} · {formatEuro(Math.abs(line.amountCents))}
                         </span>
                       </label>
@@ -305,10 +305,10 @@ export function DraftForm({
               <>
                 {canWrite ? (
                   <span className="flex flex-wrap gap-2">
-                    <Button type="button" variant="secondary" size="sm" onClick={() => addPosition('money')} data-testid="position-add-money">
+                    <Button type="button" variant="outline" size="sm" onClick={() => addPosition('money')} data-testid="position-add-money">
                       {t('positions.add')} ({t('positions.money')})
                     </Button>
-                    <Button type="button" variant="secondary" size="sm" onClick={() => addPosition('goods')} data-testid="position-add-goods">
+                    <Button type="button" variant="outline" size="sm" onClick={() => addPosition('goods')} data-testid="position-add-goods">
                       {t('positions.add')} ({t('positions.goods')})
                     </Button>
                   </span>
@@ -360,7 +360,7 @@ export function DraftForm({
                     </Select>
                   )}
                   {canWrite ? (
-                    <Button type="button" variant="ghost" size="sm" onClick={() => update((prev) => ({ ...prev, positions: prev.positions.filter((x) => x.key !== p.key) }))} data-testid="position-remove">
+                    <Button type="button" variant="outline" size="sm" onClick={() => update((prev) => ({ ...prev, positions: prev.positions.filter((x) => x.key !== p.key) }))} data-testid="position-remove">
                       {t('positions.remove')}
                     </Button>
                   ) : null}

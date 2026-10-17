@@ -21,7 +21,7 @@ export function ProposalBand({ proposal }: { proposal: { id: string; sourceName:
     <Notice level="hint" title={t('title', { source: proposal.sourceName })} testId="animal-proposal-band">
       <span className="flex flex-wrap items-center justify-between gap-2">
         <span>{parts.join(', ') || p(`kinds.${proposal.kind}`)}</span>
-        <Link href={`/animals/proposals/${proposal.id}`} className={buttonVariants({ variant: 'secondary', size: 'sm' })}>
+        <Link href={`/animals/proposals/${proposal.id}`} className={buttonVariants({ variant: 'outline', size: 'sm' })}>
           {t('review')}
         </Link>
       </span>

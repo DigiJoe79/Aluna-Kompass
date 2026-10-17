@@ -95,7 +95,8 @@ test.describe('finance purposes (F8b)', () => {
     await expect(page.getByTestId('reopen-save')).toBeDisabled();
     await page.locator('#purpose-reopen-reason').fill('Weitere Behandlungen zugesagt');
     await page.getByTestId('reopen-save').click();
-    await expect(row(page, 'Tierarztfonds E2E')).toContainText('aktiv');
+    // G3: der Normalzustand „aktiv“ trägt in der Liste keine Marke mehr.
+    await expect(row(page, 'Tierarztfonds E2E')).not.toContainText('erfüllt');
     await expect(row(page, 'Tierarztfonds E2E')).not.toContainText('Rest');
   });
 
@@ -179,6 +180,8 @@ test.describe('finance purposes (F8b)', () => {
     await form.locator('#transfer-reason').focus();
     await page.keyboard.type('Rest in die freien Mittel');
     await form.locator('#transfer-from').selectOption({ index: 1 });
+    // 09 A4: „Nach“ beginnt mit „Bitte wählen“ — die freien Mittel wählt man ausdrücklich.
+    await form.locator('#transfer-to').selectOption({ label: 'Freie Mittel' });
     await page.getByTestId('transfer-save').focus();
     await page.keyboard.press('Enter');
     const refusal = page.getByTestId('transfer-footer');

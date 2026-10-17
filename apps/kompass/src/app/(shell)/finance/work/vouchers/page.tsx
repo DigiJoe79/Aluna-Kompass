@@ -8,12 +8,13 @@ import { ListPager } from '@/components/list-pager';
 import { Page } from '@/components/page';
 import { PageHeader } from '@/components/page-header';
 import { Table, TableBody, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { nameOrEmpty } from '@/lib/name-or-empty';
 import { requireSession } from '@/lib/request-context';
 import { VoucherRows } from './voucher-rows';
 
 /**
  * „Belege ohne Buchung“ (F5 Task 8, Spec 6.5): Finanzbelege der Akte, die an
- * keiner Buchung hängen — je mit „Zu Buchung machen“. Was der Betrachter in
+ * keiner Buchung hängen; die Zeile klappt auf, darin „Zu Buchung machen“. Was der Betrachter in
  * der Akte nicht lesen darf, fehlt (die Akte prüft). Je Zeile klappt die
  * Karte „Aus der Rechnung“ auf (F5b), wenn das PDF eine ZUGFeRD-Rechnung trägt.
  */
@@ -42,16 +43,15 @@ export default async function FinanceVouchersWithoutEntryPage({ searchParams }: 
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>{t('pages.vouchers.number')}</TableHead>
-                  <TableHead>{t('pages.vouchers.subject')}</TableHead>
-                  <TableHead>{t('pages.vouchers.date')}</TableHead>
-                  <TableHead>{t('pages.vouchers.type')}</TableHead>
-                  <TableHead />
+                  <TableHead col="meta">{t('pages.vouchers.number')}</TableHead>
+                  <TableHead col="title">{t('pages.vouchers.subject')}</TableHead>
+                  <TableHead col="meta">{t('pages.vouchers.date')}</TableHead>
+                  <TableHead col="meta">{t('pages.vouchers.type')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 <VoucherRows
-                  rows={documents.map((doc) => ({ id: doc.id, number: doc.number, subject: doc.subject, documentDate: doc.documentDate, typeLabel: documentTypeFor(deps.db, doc.typeKey)?.label ?? doc.typeKey }))}
+                  rows={documents.map((doc) => ({ id: doc.id, number: doc.number, subject: doc.subject, documentDate: doc.documentDate, typeLabel: nameOrEmpty(documentTypeFor(deps.db, doc.typeKey)?.label, doc.typeKey) }))}
                   canOpenDocument={canOpenDocument}
                   canWrite={canWrite}
                   canCreateContact={hasPermission(ctx, 'contacts.manage')}

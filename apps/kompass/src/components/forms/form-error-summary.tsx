@@ -2,6 +2,7 @@
 
 import { AlertTriangle } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import { useLayoutEffect, useState } from 'react';
 import { invalidFields } from '@/lib/form-errors';
 
 /**
@@ -17,11 +18,20 @@ import { invalidFields } from '@/lib/form-errors';
  * `labels`: die Feldnamen des Formulars, je Schlüssel des Fehlers — ein
  * Sprachfeld unter seinem Rumpf (`summary`, nicht `summary.de`). Fehlt ein
  * Name, steht „Ein Feld“ da, nie der technische Schlüssel.
+ *
+ * Erst ab zwei Fehlern oder wenn das eine Feld außer Sicht ist (Designer Runde 3, 188): Steht der einzige Fehler an
+ * einem Feld im Blick, sagt das Feld ihn selbst — der Kasten wiederholte ihn sonst wortgleich. Außer Sicht heißt: kein
+ * Feld mit dieser Kennung, ein verborgenes (anderer Reiter) oder eines außerhalb des Fensters.
  */
 export function FormErrorSummary({ errors, labels }: { errors: Record<string, string>; labels: Record<string, string> }) {
   const t = useTranslations('common');
   const fields = invalidFields(errors, labels);
-  if (fields.length === 0) return null;
+  const single = fields.length === 1 ? fields[0]!.key : null;
+  const [singleInView, setSingleInView] = useState(false);
+  useLayoutEffect(() => {
+    setSingleInView(single !== null && fieldInView(single));
+  }, [single, errors]);
+  if (fields.length === 0 || singleInView) return null;
 
   return (
     <div
@@ -39,6 +49,16 @@ export function FormErrorSummary({ errors, labels }: { errors: Record<string, st
       </div>
     </div>
   );
+}
+
+/** Ob das Feld zum Schlüssel sichtbar im Fenster steht (Kennung oder Name). */
+function fieldInView(key: string): boolean {
+  if (typeof document === 'undefined') return false;
+  const element = document.getElementById(key) ?? document.querySelector(`[name="${CSS.escape(key)}"]`);
+  if (!element) return false;
+  const rect = element.getBoundingClientRect();
+  if (rect.width === 0 && rect.height === 0) return false;
+  return rect.top >= 0 && rect.bottom <= window.innerHeight;
 }
 
 /** Der Punkt am Reiter, der sagt: Hier drin steckt einer. */

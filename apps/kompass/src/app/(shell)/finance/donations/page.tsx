@@ -62,6 +62,10 @@ export default async function FinanceDonationsPage({ searchParams }: { searchPar
   // „{Treffer} von {alle}“ für „Noch nicht bestätigt“: alle Personen ohne Mindestbetrag.
   const uncertifiedAllRes = tab === 'uncertified' && minCents !== null ? await listUncertifiedDonations(deps, ctx, { limit: 1 }) : null;
   const uncertifiedAll = uncertifiedAllRes?.ok ? uncertifiedAllRes.value.total : listTotal;
+  // 105, 203: Auch „Noch nicht bestätigt“ ist ein Arbeitsreiter und trägt seine Zahl (Personen ohne Mindestbetrag, wie ein
+  // Klick sie zeigt). Die Zählung rechnet dieselbe Liste wie der Reiter — eine Abfrage mit Joins, bei Vereinsgrößen billig.
+  const uncertifiedCountRes = tab === 'uncertified' ? null : await listUncertifiedDonations(deps, ctx, { limit: 1 });
+  const uncertifiedCount = tab === 'uncertified' ? uncertifiedAll : uncertifiedCountRes?.ok ? uncertifiedCountRes.value.total : undefined;
   const pageHref = (next: number) => {
     const params = new URLSearchParams();
     if (tab !== 'issued') params.set('tab', tab);
@@ -96,10 +100,10 @@ export default async function FinanceDonationsPage({ searchParams }: { searchPar
   });
 
   // Die Zahl steht als Marke am Reiter (ViewTabs), nicht mehr als „({count})“ im Text.
-  const tabCount = (key: DonationTab) => (key === 'toCorrect' ? counts.toCorrect : key === 'needsSignature' ? counts.needsSignature : undefined);
+  const tabCount = (key: DonationTab) => (key === 'toCorrect' ? counts.toCorrect : key === 'needsSignature' ? counts.needsSignature : key === 'uncertified' ? uncertifiedCount : undefined);
 
   return (
-    <Page width="standard" header={<PageHeader title={t('title')} description={t('description')} />}>
+    <Page width="full" header={<PageHeader title={t('title')} description={t('description')} />}>
       <div className="space-y-4">
 
         <ViewTabs

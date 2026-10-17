@@ -1,6 +1,5 @@
 'use client';
 
-import { Trash2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useState, useTransition } from 'react';
 import { FormActionBar } from '@/components/forms/form-action-bar';
@@ -16,15 +15,19 @@ import { Input } from '@/components/ui/input';
 import { setContactChannelsAction } from '../actions';
 import { Select } from '@/components/ui/select';
 import { Section } from '@/components/section';
+import { Empty } from '@/components/empty-value';
 
 type ChannelKind = 'email' | 'phone' | 'mobile' | 'fax' | 'web';
 
 export function ChannelsEditor({
   contactId,
+  contactName,
   channels,
   canManage,
 }: {
   contactId: string;
+  /** Der Untertitel des Dialogs nennt den Kontakt statt den Abschnitt zu wiederholen (04 A3). */
+  contactName: string;
   channels: { id: string; kind: string; value: string; label: string | null; isPrimary: boolean }[];
   canManage: boolean;
 }) {
@@ -92,9 +95,7 @@ export function ChannelsEditor({
                 <DialogContent size="sm" className="bg-surface shadow-md">
                   <form onSubmit={handleAdd}>
                     <DialogTitle>{t('channels.add')}</DialogTitle>
-                    <DialogDescription>
-                      {t('channels.title')}
-                    </DialogDescription>
+                    <DialogDescription>{t('forContact', { name: contactName })}</DialogDescription>
 
                     <div className="mt-4">
                       <FormGrid>
@@ -112,7 +113,7 @@ export function ChannelsEditor({
                           </Select>
                         </FormField>
 
-                        <FormField id="channel-value" label={t('channels.value')}>
+                        <FormField id="channel-value" label={t('channels.value')} required>
                           <Input
                             id="channel-value"
                             value={value}
@@ -152,7 +153,7 @@ export function ChannelsEditor({
         <RefusalNotice action state={removeFb.state} />
 
         {channels.length === 0 ? (
-          <p className="text-meta text-muted-ink">—</p>
+          <p className="text-meta text-muted-ink"><Empty /></p>
         ) : (
           <ul className="divide-y divide-line-2">
             {channels.map((ch) => (
@@ -162,23 +163,19 @@ export function ChannelsEditor({
                     um, die Adresse notfalls in sich. Kein Layout-Test für diese Einzelstelle (AGENTS.md). */}
                 <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
                   <StatusBadge tone="neutral">{t(`channels.kinds.${ch.kind}`)}</StatusBadge>
-                  <span className="min-w-0 font-mono text-meta wrap-anywhere text-ink">{ch.value}</span>
+                  <span className="min-w-0 text-meta wrap-anywhere text-ink">{ch.value}</span>
                   {ch.label ? <span className="text-hint text-muted-ink">({ch.label})</span> : null}
                   {ch.isPrimary ? (
-                    <StatusBadge tone="accent" dot>
+                    <StatusBadge tone="brand" dot>
                       {t('channels.isPrimary')}
                     </StatusBadge>
                   ) : null}
                 </div>
+                {/* „Entfernen“ in einer Kartenliste ist ein Textknopf, wie bei den Bezügen der Akte (Runde 3, 039; ersetzt
+                    den Rahmenknopf aus 04 B14). Neutral nach § C. */}
                 {canManage ? (
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => handleRemove(ch.id)}
-                    disabled={pending}
-                    className="size-7 shrink-0 p-0 text-muted-ink"
-                  >
-                    <Trash2 className="size-3.5" aria-hidden />
+                  <Button size="sm" variant="outline" onClick={() => handleRemove(ch.id)} disabled={pending} className="shrink-0">
+                    {t('channels.remove')}
                   </Button>
                 ) : null}
               </li>

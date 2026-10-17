@@ -310,10 +310,11 @@ function CropEditorBody({ onOpenChange, src, width, height, formats, fixedReason
         ) : null}
         {/* Format: fest als ruhige Zeile in gleicher Höhe wie die Reihe — kein ausgegrautes Segment (Board 1b). */}
         <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-          <Overline as="span">{t('format')}</Overline>
+          <Overline as="span" field>{t('format')}</Overline>
           {fixed ? (
             <>
-              <span data-testid="crop-format-fixed" className="inline-flex h-[var(--field-h)] items-center rounded-md border border-line bg-surface-2 px-3 text-meta font-semibold text-ink-2 max-sm:h-[46px]">
+              {/* 148: Ein festes Format ist ein Wert, kein Knopf — Text ohne Rahmen in Feldhöhe (E2). */}
+              <span data-testid="crop-format-fixed" className="inline-flex h-[var(--field-h)] items-center text-body text-ink max-sm:h-[46px]">
                 {ratioLabel(formats[0]!)}
               </span>
               <span className="text-meta text-muted-ink">{t('fixed', { place: fixedReason ?? places[0]?.label ?? '' })}</span>
@@ -348,7 +349,11 @@ function CropEditorBody({ onOpenChange, src, width, height, formats, fixedReason
                 ref={stage}
                 data-testid="crop-stage"
                 className="relative mx-auto touch-none select-none"
-                style={{ aspectRatio: `${width} / ${height}`, width: `min(100%, calc(55vh * ${width / height}))` }}
+                // Höhe des Bildes = verfügbarer Raum minus Kopf, Formatzeile, Zoom-Leiste und Fußleiste (Designer 2026-10-16,
+                // Teil 3 Nr. 5; 05 B27): Der Dialog ist höchstens 85 % hoch, das Drumherum rund 25 rem — so liegt die
+                // Zoom-Leiste bei jeder Fensterhöhe frei, ohne zu scrollen. Mindestens 10 rem, höchstens 55 % wie bisher.
+                // Kein Layout-Test: Einzelstelle, Laufzeit zählt (Projektregel).
+                style={{ aspectRatio: `${width} / ${height}`, width: `min(100%, calc(clamp(10rem, 85dvh - 25rem, 55vh) * ${width / height}))` }}
                 onPointerDown={onPointerDown}
                 onPointerMove={onPointerMove}
                 onPointerUp={onPointerEnd}
@@ -405,7 +410,7 @@ function CropEditorBody({ onOpenChange, src, width, height, formats, fixedReason
             </div>
             {fine ? null : <p className="text-hint text-muted-ink">{t('touchHint')}</p>}
             <div className="flex items-center gap-2">
-              <Overline as="span">{t('zoom')}</Overline>
+              <Overline as="span" field>{t('zoom')}</Overline>
               <Button type="button" variant="outline" size="icon" aria-label={t('smaller')} disabled={zoom <= 1 + 1e-6} onClick={() => resize(-STEP_ZOOM)}>
                 <Minus aria-hidden />
               </Button>
@@ -429,20 +434,14 @@ function CropEditorBody({ onOpenChange, src, width, height, formats, fixedReason
                 {small ? <AlertTriangle aria-hidden className="size-3.5 shrink-0" /> : null}
                 {t('pixels', { width: String(pxW), height: String(pxH) })}
               </span>
-              {fine ? <span className="font-mono text-key text-muted-ink">{t('keysHint')}</span> : null}
+              {/* Tastenhilfe in der Textschrift wie in der Befehlspalette (Runde 3: 148). */}
+              {fine ? <span className="text-hint text-muted-ink">{t('keysHint')}</span> : null}
               {/* „Ganzes Format“, sobald gezoomt ist — auch ohne gespeicherten Ausschnitt (Designer 2026-10-10, e). */}
-              {crop || zoomed ? (
+              {zoomed ? (
                 <span className="ml-auto flex flex-wrap gap-1">
-                  {zoomed ? (
-                    <Button type="button" variant="ghost" onClick={() => setRect((c) => fullFormat(c, g))}>
-                      {t('full')}
-                    </Button>
-                  ) : null}
-                  {crop ? (
-                    <Button type="button" variant="ghost" onClick={remove}>
-                      {t('remove')}
-                    </Button>
-                  ) : null}
+                  <Button type="button" variant="outline" onClick={() => setRect((c) => fullFormat(c, g))}>
+                    {t('full')}
+                  </Button>
                 </span>
               ) : null}
             </div>
@@ -462,7 +461,7 @@ function CropEditorBody({ onOpenChange, src, width, height, formats, fixedReason
           */}
           {shown.length > 0 ? (
             <div className="flex w-44 shrink-0 flex-col gap-3 max-sm:hidden">
-              <Overline as="span">{t('preview')}</Overline>
+              <Overline as="span" field>{t('preview')}</Overline>
               {shown.map((p, i) => (
                 <figure key={i} className="flex flex-col gap-1">
                   <CroppedImage src={src} crop={rect} ratio={p.ratio === 'original' ? `${Math.max(1, pxW)}:${Math.max(1, pxH)}` : p.ratio} />
@@ -476,7 +475,8 @@ function CropEditorBody({ onOpenChange, src, width, height, formats, fixedReason
           {announced}
         </p>
       </DialogBody>
-      <FormActionBar placement="dialog" cancel={() => onOpenChange(false)} onSave={apply} saveLabel={t('apply')} note={note} />
+      {/* 148: „Ausschnitt entfernen“ ist eine Aktion am ganzen Ausschnitt und steht links im Fuß wie „Löschen …“ (146). */}
+      <FormActionBar placement="dialog" cancel={() => onOpenChange(false)} onSave={apply} saveLabel={t('apply')} note={note} recordAction={crop ? { key: 'remove', label: t('remove'), kind: 'undoing', onSelect: remove } : undefined} />
     </>
   );
 }

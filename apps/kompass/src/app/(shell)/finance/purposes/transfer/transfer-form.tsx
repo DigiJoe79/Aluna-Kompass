@@ -4,6 +4,7 @@ import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { toast } from 'sonner';
+import { Label } from '@/components/ui/label';
 import { DocumentPicker } from '@/app/(shell)/dms/document-picker';
 import type { PickedDocument } from '@/app/(shell)/dms/search-action';
 import { ReceiptDrop } from '@/components/finance/receipt-drop';
@@ -35,6 +36,9 @@ export interface TransferPurposeOption {
  * Fußleiste klebt — eine schlichte, lokale Fassung; die gemeinsame baut
  * Teil A des Design-Nachtrags.
  */
+/** Wert der Option „Freie Mittel“ in „Nach“; leer heißt dort „noch nicht gewählt“. */
+const FREE_FUNDS = 'free';
+
 export function TransferForm({ purposes, defaultFromId, today, approverNames }: { purposes: TransferPurposeOption[]; defaultFromId?: string; today: string; approverNames: string[] }) {
   const t = useTranslations('finance.purposes.transferDialog');
   const router = useRouter();
@@ -55,24 +59,17 @@ export function TransferForm({ purposes, defaultFromId, today, approverNames }: 
   const loaded = { fromId: defaultFromId ?? '', toId: '', amountText: '', date: today, reason: '', document: null as PickedDocument | null, file: null as File | null };
   const current = { fromId, toId, amountText, date, reason, document, file: file ? `${file.name}:${file.size}` : null };
   const changed = countChangedValues(loaded, current);
-  const discard = () => {
-    setFromId(loaded.fromId);
-    setToId(loaded.toId);
-    setAmountText(loaded.amountText);
-    setDate(loaded.date);
-    setReason(loaded.reason);
-    setDocument(loaded.document);
-    setFile(loaded.file);
-    setRefusal(null);
-  };
 
   const amountCents = amountText.trim() === '' ? null : parseAmount(amountText);
+  // 09 A4: „Nach“ beginnt mit „Bitte wählen“ statt mit „Freie Mittel“ — sonst stünde es vorbelegt gleich „Von“.
+  const toValue = toId === FREE_FUNDS ? '' : toId;
   const option = (p: TransferPurposeOption) => t('fromOption', { name: p.name, balance: formatEuro(p.balanceCents) });
 
   // „Zur Freigabe geben“ ist nie ausgegraut: Was fehlt, sagt die Ablehnung darüber (Muster D1).
   const missing = (): string | null => {
-    if (!fromId && !toId) return t('missing.purposes');
-    if (fromId === toId) return t('missing.same');
+    if (toId === '') return t('missing.to');
+    if (!fromId && !toValue) return t('missing.purposes');
+    if (fromId === toValue) return t('missing.same');
     if (amountCents === null || amountCents <= 0) return t('missing.amount');
     if (!date) return t('missing.date');
     if (reason.trim() === '') return t('missing.reason');
@@ -88,7 +85,7 @@ export function TransferForm({ purposes, defaultFromId, today, approverNames }: 
     }
     setPending(true);
     setRefusal(null);
-    const base = { fromPurposeId: fromId || null, toPurposeId: toId || null, amountCents: amountCents ?? 0, transferDate: date, reason: reason.trim() };
+    const base = { fromPurposeId: fromId || null, toPurposeId: toValue || null, amountCents: amountCents ?? 0, transferDate: date, reason: reason.trim() };
     let result;
     if (file) {
       const formData = new FormData();
@@ -127,7 +124,8 @@ export function TransferForm({ purposes, defaultFromId, today, approverNames }: 
           </FormField>
           <FormField id="transfer-to" label={t('to')} required>
             <Select id="transfer-to" value={toId} onChange={(e) => setToId(e.target.value)}>
-              <option value="">{t('freeFunds')}</option>
+              <option value="">{t('choose')}</option>
+              <option value={FREE_FUNDS}>{t('freeFunds')}</option>
               {purposes
                 .filter((p) => p.open)
                 .map((p) => (
@@ -138,7 +136,7 @@ export function TransferForm({ purposes, defaultFromId, today, approverNames }: 
             </Select>
           </FormField>
           <FormField id="transfer-amount" label={t('amount')} required size="s">
-            <Input id="transfer-amount" inputMode="decimal" value={amountText} onChange={(e) => setAmountText(e.target.value)} placeholder={formatAmount(0)} />
+            <Input id="transfer-amount" unit="€" inputMode="decimal" value={amountText} onChange={(e) => setAmountText(e.target.value)} placeholder={formatAmount(0)} />
           </FormField>
           <FormField id="transfer-date" label={t('date')} required size="s">
             <Input id="transfer-date" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
@@ -147,9 +145,10 @@ export function TransferForm({ purposes, defaultFromId, today, approverNames }: 
             <Textarea id="transfer-reason" rows={2} value={reason} onChange={(e) => setReason(e.target.value)} placeholder={t('reasonPlaceholder')} />
           </FormField>
           <FormCell size="full" className="space-y-1.5" data-testid="transfer-document">
-            <p className="text-meta font-semibold text-ink">
-              {t('documentLabel')} <span aria-hidden>*</span>
-            </p>
+            {/* Der Stern wie an jedem Feld: aus `Label required`, mit Abstand und in der Sternfarbe (Runde 3, 121). */}
+            <Label required className="text-meta font-semibold text-ink-2">
+              {t('documentLabel')}
+            </Label>
             {document || file ? (
               <p className="flex flex-wrap items-center gap-2 rounded-sm border border-line bg-surface-2 px-2.5 py-1.5 text-meta" data-testid="transfer-document-chosen">
                 {document ? <span className="font-mono text-hint">{document.number}</span> : null}
@@ -157,7 +156,7 @@ export function TransferForm({ purposes, defaultFromId, today, approverNames }: 
                 <Button
                   type="button"
                   size="sm"
-                  variant="ghost"
+                  variant="outline"
                   onClick={() => {
                     setDocument(null);
                     setFile(null);
@@ -197,7 +196,6 @@ export function TransferForm({ purposes, defaultFromId, today, approverNames }: 
         back={{ href: '/finance/purposes', label: t('cancel') }}
         count={changed}
         countHidden
-        onDiscard={discard}
         note={<span data-testid="transfer-approvers">{approverNames.length > 0 ? t('hint', { names: approverNames.join(' · ') }) : t('noApprover')}</span>}
         saveLabel={t('submit')}
         onSave={() => void submit()}

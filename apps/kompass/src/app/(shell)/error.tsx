@@ -19,7 +19,7 @@ export default function ShellError({ error, reset }: { error: Error & { digest?:
         {error.digest ? <code className="w-fit rounded-md bg-code px-2 py-1 font-mono text-hint">{error.digest}</code> : null}
         <div className="mt-auto flex gap-2">
           <Button onClick={reset}>{t('retry')}</Button>
-          <Link href="/" className={buttonVariants({ variant: 'secondary' })}>{t('home')}</Link>
+          <Link href="/" className={buttonVariants({ variant: 'outline' })}>{t('home')}</Link>
         </div>
       </section>
     </Page>

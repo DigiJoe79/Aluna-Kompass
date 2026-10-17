@@ -1,3 +1,7 @@
+import { spawnSync } from 'node:child_process';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 import { isoDay, type DocumentRenderContext } from '@kompass/core';
 import { DEFAULT_THEME } from '@kompass/core/themes';
 import { describe, expect, it } from 'vitest';
@@ -69,6 +73,24 @@ describe('generic bases render', () => {
     const plain = await renderer.renderDocument({ baseId: 'a4-plain', bases, bodyTypst: 'Absatz eins.\n\nAbsatz zwei.', payload: payload() });
     const draft = await renderer.renderDocument({ baseId: 'a4-plain', bases, bodyTypst: 'Absatz eins.\n\nAbsatz zwei.', payload: payload({ slots: { ...payload().slots, draft: true } }) });
     expect(draft.byteLength).not.toBe(plain.byteLength);
+  });
+
+  it('a4-mit-briefkopf gruppiert die IBAN im Fuß selbst, aus dem rohen Wert', async () => {
+    // Stufe 1, Korrektur 2026-10-11: `org("iban")` bleibt roh (Vertrag mit den Basen der Vereine); die Basis gruppiert.
+    const footer = async (iban: string) => {
+      const pdf = await renderer.renderDocument({ baseId: 'a4-mit-briefkopf', bases, bodyTypst: 'Absatz.', payload: payload({ organization: { ...payload().organization, 'organization.iban': iban } }) });
+      const dir = mkdtempSync(path.join(tmpdir(), 'kompass-iban-'));
+      try {
+        writeFileSync(path.join(dir, 'x.pdf'), pdf);
+        const out = spawnSync('pdftotext', [path.join(dir, 'x.pdf'), '-'], { encoding: 'utf8' });
+        if (out.status !== 0) throw new Error(`pdftotext: ${out.stderr}`);
+        return out.stdout.replace(/\s+/g, ' ');
+      } finally {
+        rmSync(dir, { recursive: true, force: true });
+      }
+    };
+    expect(await footer('DE02999999990532013000')).toContain('IBAN DE02 9999 9999 0532 0130 00');
+    expect(await footer('DE02 9999 9999 0532 0130 00')).toContain('IBAN DE02 9999 9999 0532 0130 00');
   });
 
   it('a4-plain shows the issue date in the header when a document has no number', async () => {

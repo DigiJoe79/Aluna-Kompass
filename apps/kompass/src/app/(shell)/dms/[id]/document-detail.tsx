@@ -9,7 +9,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useTransition, type ReactNode } from 'react';
 import { RefusalNotice } from '@/components/forms/refusal-notice';
 import { useActionFeedback } from '@/components/forms/use-action-feedback';
-import { StatusBadge } from '@/components/status-badge';
+import { StatusBadge, statusTone } from '@/components/status-badge';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { createResponseDraftAction, rereadDocumentAction } from '../actions';
 import { FileDialog } from './file-dialog';
@@ -22,6 +22,8 @@ import { FollowUpsPanel, type FollowUpView } from './follow-ups-panel';
 import { NotesPanel, type NoteView } from './notes-panel';
 import { RelationsPanel, type RelationView } from './relations-panel';
 import { Section } from '@/components/section';
+import { EMPTY } from '@/components/empty-value';
+import { pdfFrameSrc } from '@/lib/pdf-frame-src';
 
 export interface DocumentDetailProps {
   document: {
@@ -133,16 +135,19 @@ export function DocumentDetail({
           {/* Der Rückweg steht am `PageHeader`, wie auf jeder Seite abseits der Navigation. */}
           {doc.number ? (
             <span className="font-mono text-section text-ink">{doc.number}</span>
-          ) : null}
+          ) : (
+            // Ein Entwurf hat noch keine Nummer; ohne Satz wirkte die Karte leer (03 B32).
+            <span className="text-meta text-muted-ink">{t('noNumberYet')}</span>
+          )}
           {doc.formerNumbers.length > 0 ? (
             <span className="font-mono text-hint text-muted-ink">{t('formerNumbers', { numbers: doc.formerNumbers.join(', ') })}</span>
           ) : null}
           {doc.status === 'voided' ? (
-            <StatusBadge tone="error">{t('statuses.voided')}</StatusBadge>
+            <StatusBadge tone={statusTone('document', 'voided')}>{t('statuses.voided')}</StatusBadge>
           ) : doc.phase === 'draft' ? (
-            <StatusBadge tone="warning">{t('phases.draft')}</StatusBadge>
+            <StatusBadge tone={statusTone('document', 'draft')}>{t('phases.draft')}</StatusBadge>
           ) : (
-            <StatusBadge tone="success">{t('phases.issued')}</StatusBadge>
+            <StatusBadge tone={statusTone('document', 'issued')}>{t('phases.issued')}</StatusBadge>
           )}
         </div>
 
@@ -162,7 +167,7 @@ export function DocumentDetail({
                   {t('edit')}
                 </Link>
               ) : null}
-              {permissions.canFile ? <FileDialog documentId={doc.id} /> : null}
+              {permissions.canFile ? <FileDialog documentId={doc.id} typeKey={doc.typeKey} /> : null}
             </>
           ) : (
             <>
@@ -191,7 +196,10 @@ export function DocumentDetail({
       {/* Metadata & Details Grid */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         {/* Left 2 columns: PDF preview */}
-        <div className="lg:col-span-2">
+        {/* Telefon: Die Vorschau steht direkt unter der Kopfkarte auf 60 % Höhe, „PDF öffnen“ zeigt die ganze Seite;
+            danach die Details, die Notizen zuletzt (Runde 3, 031). Bis `lg` gilt sonst 03 B33. Kein Layout-Test. */}
+        <div className="lg:col-span-2 max-sm:contents">
+          <div className="max-sm:order-1">
           {fileState === 'altered' || fileState === 'missing' ? (
             /*
              * Kein `<iframe>`: Er zeigte den Meldungstext der Route als rohen
@@ -202,20 +210,26 @@ export function DocumentDetail({
               {t(fileState === 'altered' ? 'fileAltered.body' : 'fileMissing.body')}
             </Notice>
           ) : (
+            // Höhe nach der Seite (A4), Seite auf Breite: Die dunkle Fläche des Browser-Betrachters um eine zu kleine
+            // Seite fällt weg (Runde 3, 030–035). Die Fläche selbst färben wir nicht (Stufe 2 Nr. 8).
             <div className="overflow-hidden rounded-md border border-line bg-surface shadow-xs">
               <iframe
-                src={doc.phase === 'draft' ? `/dms/${doc.id}/preview` : `/dms/${doc.id}/file`}
-                className="h-[720px] w-full border-none"
+                src={pdfFrameSrc(doc.phase === 'draft' ? `/dms/${doc.id}/preview` : `/dms/${doc.id}/file`, { fit: 'width' })}
+                className="aspect-[210/297] w-full border-none max-sm:aspect-auto max-sm:h-[60dvh]"
                 title={doc.subject}
               />
             </div>
           )}
+          </div>
 
-          <NotesPanel documentId={doc.id} notes={notes} canEdit={permissions.canEdit} canManage={permissions.canManage} />
+          <div className="max-sm:order-3">
+            <NotesPanel documentId={doc.id} notes={notes} canEdit={permissions.canEdit} canManage={permissions.canManage} />
+          </div>
         </div>
 
-        {/* Right column: Metadaten & Aufbewahrung */}
-        <div className="space-y-6">
+        {/* Right column: Metadaten & Aufbewahrung. Gestapelt (unter `lg`) stehen die Details direkt nach der Kopfkarte,
+            vor Vorschau und Notizen (03 B33). Kein Layout-Test (AGENTS.md). */}
+        <div className="space-y-6 max-lg:order-first max-sm:order-2">
           <section className="rounded-md border border-line bg-surface p-5 shadow-xs">
             <Section title={t('detailsTitle')}>
               <dl className="space-y-3 text-meta">
@@ -271,9 +285,26 @@ export function DocumentDetail({
             />
           ) : null}
 
-          {/* Aufbewahrung: nur die Frist; Löschen steht im Seitenkopf unter „Weitere Aktionen“ (`document-actions.tsx`). */}
-          {retentionInfo ? (
+          {/* Bezüge und Dokumentbezüge in einer Karte, als zwei Abschnitte (03 B29). */}
+          <section className="rounded-md border border-line bg-surface p-5 shadow-xs">
+            <LinksPanel
+              documentId={doc.id}
+              links={doc.links}
+              canEdit={permissions.canEdit}
+              canCreateContact={canCreateContact}
+              animals={animals}
+              projects={projects}
+            />
+            <RelationsPanel documentId={doc.id} relations={doc.relations} canEdit={permissions.canEdit} />
+          </section>
+
+          {invoicePanel}
+
+          {/* Aufbewahrung und Volltext sind technische Angaben: eine Karte am Ende der Spalte, nach Versand,
+              Wiedervorlagen und Bezügen (03 B29). Löschen steht im Seitenkopf unter „Weitere Aktionen“. */}
+          {retentionInfo || doc.textStatus ? (
             <section className="rounded-md border border-line bg-surface p-5 shadow-xs">
+              {retentionInfo ? (
               <Section title={t('retentionTitle')}>
                 <p className="text-meta text-ink-2">
                   {retentionInfo.retentionClass === 'permanent'
@@ -284,19 +315,15 @@ export function DocumentDetail({
                 </p>
 
               </Section>
-            </section>
-          ) : null}
-
-          {/* Volltext */}
-          {doc.textStatus ? (
-            <section className="rounded-md border border-line bg-surface p-5 shadow-xs">
+              ) : null}
+              {doc.textStatus ? (
               <Section title={t('text.heading')}>
                 <p className="text-meta text-ink-2">
                   {doc.textStatus === 'done'
                     ? t('text.done', {
                         date: doc.textExtractedAt
                           ? fmt.dateTime(doc.textExtractedAt)
-                          : '—',
+                          : EMPTY,
                       })
                     : doc.textStatus === 'failed'
                       ? t('text.failed', { reason: doc.textError ?? '' })
@@ -311,21 +338,10 @@ export function DocumentDetail({
                   </div>
                 ) : null}
               </Section>
+              ) : null}
             </section>
           ) : null}
 
-          <LinksPanel
-            documentId={doc.id}
-            links={doc.links}
-            canEdit={permissions.canEdit}
-            canCreateContact={canCreateContact}
-            animals={animals}
-            projects={projects}
-          />
-
-          <RelationsPanel documentId={doc.id} relations={doc.relations} canEdit={permissions.canEdit} />
-
-          {invoicePanel}
         </div>
       </div>
     </div>

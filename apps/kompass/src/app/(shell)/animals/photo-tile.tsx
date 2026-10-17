@@ -87,7 +87,7 @@ export function CropLine({ crop, width, isPrimary, places }: { crop: PhotoCrop |
  * der Zeile statt einer neuen Größe am Button. Kein dauerhafter Test: Höhe misst jsdom nicht (Feedback Layout-Tests).
  */
 export function PhotoActions({ className, children }: { className?: string; children: ReactNode }) {
-  return <span className={cn('flex flex-wrap items-center gap-1 pointer-coarse:[&>button]:h-11 pointer-coarse:[&>button]:min-w-11 pointer-coarse:[&>label]:min-h-11', className)}>{children}</span>;
+  return <span className={cn('flex flex-wrap items-center gap-1 pointer-coarse:[&_button]:h-11 pointer-coarse:[&_button]:min-w-11 pointer-coarse:[&>label]:min-h-11', className)}>{children}</span>;
 }
 
 /**

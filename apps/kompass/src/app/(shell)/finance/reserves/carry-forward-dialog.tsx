@@ -11,6 +11,7 @@ import { formatAmount, parseAmount } from '@/lib/finance/amount';
 import { withUnplacedFieldErrors } from '@/lib/feedback';
 import { carryForwardAction } from './actions';
 import { ResolutionField } from './resolution-field';
+import { reserveSaveBlocker } from '@/lib/finance/reserves';
 import { DocumentLabel, type ReserveRow } from './reserve-table';
 import { FormField } from '@/components/forms/form-field';
 import { FormGrid } from '@/components/forms/form-grid';
@@ -22,6 +23,7 @@ import { FormGrid } from '@/components/forms/form-grid';
  */
 export function CarryForwardDialog({ reserve, onClose, onSaved }: { reserve: ReserveRow; onClose: () => void; onSaved: () => void }) {
   const t = useTranslations('finance.reserves.carryForward');
+  const tReserves = useTranslations('finance.reserves');
   const [amountText, setAmountText] = useState(reserve.carryForwardCents !== null ? formatAmount(reserve.carryForwardCents) : '');
   const [date, setDate] = useState(reserve.carryForwardDate ?? '');
   const [document, setDocument] = useState<PickedDocument | null>(null);
@@ -31,8 +33,10 @@ export function CarryForwardDialog({ reserve, onClose, onSaved }: { reserve: Res
 
   const amountCents = amountText.trim() === '' ? null : parseAmount(amountText);
   // Ein schon hinterlegter Vortragsbeschluss genügt; sonst ist einer Pflicht.
-  const hasDocument = !!reserve.carryForwardDocument || !!document || !!file;
-  const canSave = amountCents !== null && amountCents >= 0 && !!date && hasDocument && !(document && file);
+  const chosen = Number(!!document) + Number(!!file);
+  // Runde 3, 125: Der gesperrte Knopf nennt, was fehlt.
+  const blocker = reserveSaveBlocker({ amountOk: amountCents !== null && amountCents >= 0, date, documents: chosen === 0 && reserve.carryForwardDocument ? 1 : chosen });
+  const canSave = blocker === null;
 
   const submit = async () => {
     setPending(true);
@@ -67,7 +71,7 @@ export function CarryForwardDialog({ reserve, onClose, onSaved }: { reserve: Res
         <div className="space-y-3.5" data-testid="carry-forward-dialog">
           <FormGrid>
             <FormField id="carry-forward-amount" label={t('amount')} required size="s">
-              <Input id="carry-forward-amount" inputMode="decimal" value={amountText} onChange={(e) => setAmountText(e.target.value)} placeholder={formatAmount(0)} />
+              <Input id="carry-forward-amount" unit="€" inputMode="decimal" value={amountText} onChange={(e) => setAmountText(e.target.value)} placeholder={formatAmount(0)} />
             </FormField>
             <FormField id="carry-forward-date" label={t('date')} required size="s">
               <Input id="carry-forward-date" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
@@ -81,7 +85,17 @@ export function CarryForwardDialog({ reserve, onClose, onSaved }: { reserve: Res
           <ResolutionField id="carry-forward-resolution" document={document} onDocument={setDocument} onFile={setFile} />
           <p className="text-hint text-muted-ink">{t('documentRequired')}</p>
         </div>
-        <FormActionBar placement="dialog" cancel={onClose} pending={pending} saveDisabled={!canSave} saveLabel={t('save')} saveTestId="carry-forward-save" onSave={() => void submit()} state={withUnplacedFieldErrors(feedback.state, [])} />
+        <FormActionBar
+          placement="dialog"
+          cancel={onClose}
+          pending={pending}
+          saveDisabled={!canSave}
+          extraActions={blocker ? <span data-testid="carry-forward-blocker" className="self-center text-meta text-ink-2">{tReserves(`missing.${blocker}`)}</span> : undefined}
+          saveLabel={t('save')}
+          saveTestId="carry-forward-save"
+          onSave={() => void submit()}
+          state={withUnplacedFieldErrors(feedback.state, [])}
+        />
       </DialogContent>
     </Dialog>
   );

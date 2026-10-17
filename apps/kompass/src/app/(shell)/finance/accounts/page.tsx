@@ -65,6 +65,8 @@ export default async function FinanceAccountsPage() {
 
   return (
     <Page width="standard" header={<PageHeader title={t('title')} />}>
+      {/* Gleichartige Karten in einem festen Raster sind je Zeile gleich hoch (Joe 11.6, nimmt 07-2 C25 zurück): das Raster
+          streckt, kein `items-start`. Kein Layout-Test (AGENTS.md). */}
       <div className="space-y-5">
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           {active.map((a) => (

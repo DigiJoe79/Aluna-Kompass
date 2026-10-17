@@ -1,6 +1,6 @@
 import path from 'node:path';
 import { expect, test } from './fixtures';
-import { loginAsAdmin, resetDatabase } from './helpers';
+import { loginAsAdmin, resetDatabase, rowAction } from './helpers';
 import { story, storyFile, storyFiles, storyPattern } from './story-year';
 
 /**
@@ -160,7 +160,8 @@ test.describe('finance import', () => {
     const same = page.getByRole('button', { name: 'Dieselbe Zahlung — nicht übernehmen' });
     const own = page.getByRole('button', { name: 'Eigene Zahlung — übernehmen' });
     await expect(same).toHaveClass(/(^|\s)bg-brand(\s|$)/);
-    await expect(own).toHaveClass(/(^|\s)bg-surface-2(\s|$)/);
+    // Eine sekundäre Stufe, `outline` mit Rand (Runde 3, 044, 195).
+    await expect(own).toHaveClass(/(^|\s)border-line-strong(\s|$)/);
     await expect(own).not.toHaveClass(/(^|\s)bg-brand(\s|$)/);
   });
 
@@ -168,11 +169,13 @@ test.describe('finance import', () => {
     await loginAsAdmin(page);
     await page.goto('/finance/imports');
     const row = page.getByTestId('import-run').filter({ hasText: story('10.02.2026 – 28.02.2026') });
-    await row.getByRole('button', { name: 'Verwerfen' }).click();
+    await rowAction(page, row, 'Verwerfen');
     const dialog = page.getByRole('alertdialog');
     await expect(dialog.getByText(/Kontoumsatz wird gelöscht/)).toBeVisible();
-    // Ohne Notiz lässt sich nicht bestätigen.
-    await expect(dialog.getByRole('button', { name: 'Verwerfen' })).toBeDisabled();
+    // Ohne Notiz lässt sich nicht bestätigen: Der Knopf bleibt frei, der Fehler steht am Feld (07-1 B29, MUSTER § B).
+    await dialog.getByRole('button', { name: 'Verwerfen' }).click();
+    await expect(dialog.getByText('Pflichtfeld.')).toBeVisible();
+    await expect(dialog).toBeVisible();
     await dialog.locator('textarea').fill('Testauszug versehentlich geladen');
     await dialog.getByRole('button', { name: 'Verwerfen' }).click();
     await expect(page.getByText('Auszug verworfen.')).toBeVisible();
@@ -183,7 +186,7 @@ test.describe('finance import', () => {
     await loginAsAdmin(page);
     await page.goto('/finance/imports');
     const row = page.getByTestId('import-run').filter({ hasText: story('01.01.2026 – 31.01.2026') });
-    await row.getByRole('button', { name: 'Verwerfen' }).click();
+    await rowAction(page, row, 'Verwerfen');
     const dialog = page.getByRole('alertdialog');
     await expect(dialog.getByText('Festgeschriebene Buchungen sperren das Verwerfen.')).toBeVisible();
     await expect(dialog.getByRole('button', { name: 'Verwerfen' })).toHaveCount(0);
@@ -204,7 +207,8 @@ test.describe('finance import', () => {
     // N3 Nachtrag A: die Kontokarte zeigt das deutsche Format, kein rohes ISO-Datum mehr.
     await expect(card.getByText(storyPattern('Auszug importiert bis 31\\.08\\.2026'))).toBeVisible();
     await expect(card).not.toContainText(/\d{4}-\d{2}-\d{2}/);
-    await expect(card.getByText(/Kein Auszug für heute|Stimmt mit dem Auszug|Differenz zum Auszug/)).toBeVisible();
+    // 07-2 B8: „Kein Auszug für heute“ steht nicht mehr unter jedem Konto.
+    await expect(card).not.toContainText('Kein Auszug für heute');
   });
 
   test('ohne finance.entriesWrite sieht man die Läufe, aber weder Ablagefläche noch Verwerfen', async ({ page }) => {

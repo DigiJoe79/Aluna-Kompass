@@ -46,12 +46,13 @@ export async function ProjectFinanceSection({ deps, ctx, projectId }: { deps: De
       >
         <div className="space-y-3">
           {progressValue !== null ? (
+            // 062: Der Zielbetrag steht nur in der Zeile unter dem Balken, nicht noch einmal darüber.
             <div className="space-y-1">
-              <div className="flex items-baseline justify-between text-meta">
-                <span className="text-ink-2">{t('target')}</span>
-                <span className="font-mono text-ink">{formatEuro(settings.targetCents!)}</span>
-              </div>
               <Progress value={progressValue} data-testid="project-finance-progress" />
+              {/* Die Zahl zum Balken (06 B5): „850,00 € von 2.500,00 € (34 %)“. */}
+              <p data-testid="project-finance-progress-text" className="tabular-nums text-meta text-ink-2">
+                {t('progress', { income: formatEuro(result.incomeCents), target: formatEuro(settings.targetCents!), percent: Math.round((result.incomeCents / settings.targetCents!) * 100) })}
+              </p>
             </div>
           ) : (
             <p className="text-meta text-muted-ink">{t('noTarget')}</p>
@@ -60,15 +61,15 @@ export async function ProjectFinanceSection({ deps, ctx, projectId }: { deps: De
           <dl className="grid grid-cols-3 gap-3 text-meta">
             <div>
               <dt className="text-ink-2">{t('income')}</dt>
-              <dd className="font-mono text-ink">{formatEuro(result.incomeCents)}</dd>
+              <dd className="tabular-nums text-ink">{formatEuro(result.incomeCents)}</dd>
             </div>
             <div>
               <dt className="text-ink-2">{t('expense')}</dt>
-              <dd className="font-mono text-ink">{formatEuro(result.expenseCents)}</dd>
+              <dd className="tabular-nums text-ink">{formatEuro(result.expenseCents)}</dd>
             </div>
             <div>
               <dt className="text-ink-2">{t('result')}</dt>
-              <dd className="font-mono text-ink">{formatEuro(result.resultCents)}</dd>
+              <dd className="tabular-nums text-ink">{formatEuro(result.resultCents)}</dd>
             </div>
           </dl>
         </div>

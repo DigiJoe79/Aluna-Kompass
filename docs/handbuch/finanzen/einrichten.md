@@ -18,11 +18,14 @@ verschwindet aus der Liste:
    steht das als eigenes Kennzeichen mit Zeitraum daneben — nicht in der
    Bezeichnung selbst.
 2. **Bankkonto oder Kasse mit Anfangsbestand anlegen** — ohne ein
-   Geschäftsjahr wartet dieser Schritt. Für jedes Bankkonto braucht der
+   Geschäftsjahr wartet dieser Schritt. Erledigt ist er erst, wenn jedes
+   aktive Bankkonto einen Anfangsbestand hat — ohne ihn stimmt sein Saldo
+   nicht. Für jedes Bankkonto braucht der
    spätere Jahresabschluss mindestens einen Kontoauszug des Jahres.
 3. **Wer welche Rolle trägt** — jede Finanzrolle braucht einen aktiven
    Nutzer, und jeder Nutzer mit einer Finanzrolle einen verknüpften
-   Kontakt. Die eigene Verknüpfung darf man beim ersten Mal selbst setzen;
+   Kontakt. Ausgenommen ist der „Finanz-Agent“: Die Rolle braucht nur, wer
+   einen Agenten Buchungen vorbereiten lässt. Die eigene Verknüpfung darf man beim ersten Mal selbst setzen;
    danach braucht es dafür das Recht „Nutzer verwalten“.
 4. **Kategorien durchsehen** — ein Knopf „Kategorien durchgesehen“
    bestätigt, dass die mitgelieferten Kategorien passen oder angepasst
@@ -30,8 +33,13 @@ verschwindet aus der Liste:
 5. **Steuerliches bestätigen** — ist der Verein Unternehmer oder hat eine
    Umsatzsteuer-Identifikationsnummer, sind Mitgliedsbeiträge
    bescheinigungsfähig, werden Aufwandsspenden angeboten. Ein Knopf
-   „Vorgaben übernehmen“ setzt die mitgelieferten Standardwerte in einem
-   Zug; wer abweicht, ändert die einzelnen Felder danach von Hand.
+   „Vorgaben übernehmen“ — in der Checkliste und auf der Seite
+   „Steuerliches“ neben „Noch nicht bestätigt.“ — setzt die mitgelieferten
+   Standardwerte in einem Zug; wer abweicht, ändert die einzelnen Felder
+   danach von Hand. Jeder Abschnitt der Seite hat eine eigene
+   Speicherleiste: Die Antworten auf die Fragen gelten erst mit
+   „Speichern“, nur der Schalter „Darf ein Agent festschreiben?“ gilt
+   sofort.
    Aufwandsspenden sind in der Vorgabe aus: Ein Verein, der sie anbietet,
    schaltet sie bewusst ein. Erst dann erscheint das Feld
    „Anspruchsgrundlage für Aufwandsspenden“ — ein Vertrag oder die Satzung,
@@ -61,7 +69,8 @@ Archivkopie neben der neuen Art stehen.
 
 ## Sätze und Grenzen
 
-Unter „Steuerliches“ stehen drei Werte, die sich einstellen lassen:
+Unter „Steuerliches“ stehen im Abschnitt „Grenzen“ Werte, die sich
+einstellen lassen; eine Speicherleiste speichert alle zusammen:
 
 - **Bis zu welchem Betrag genügt der Kontoauszug als Beleg?** — darunter
   reicht der Kontoauszug als Nachweis, ein eigener Beleg ist nicht
@@ -82,15 +91,19 @@ Geld](zwecke-und-ruecklagen.md) und [Personen](personen.md)).
 
 ## Vergütung des Vorstands
 
-Unter „Steuerliches“ steht ein optionaler Punkt **Vergütung des Vorstands**.
-Zahlt der Verein Vorstandsmitgliedern eine Pauschale, bestätigen Sie hier,
-dass die Satzung das erlaubt, nennen die Fundstelle und wählen, wenn
-vorhanden, den Beschluss der Mitgliederversammlung aus der Akte. Unter
-**Gilt ab** steht der Tag, seit dem die Grundlage gilt — ohne ihn bleibt der
-Punkt offen. Solange er nicht bestätigt ist, zeigt die
-[Personenübersicht](personen.md) bei jeder Pauschale an ein
-Vorstandsmitglied eine Warnung, danach bei jeder, die vor diesem Tag gezahlt
-wurde.
+Unter „Steuerliches“ steht ein optionaler Punkt **Vergütung des Vorstands**
+mit der Frage „Sind Pauschalen an Vorstandsmitglieder vorgesehen?“. Solange
+sie nicht beantwortet ist, ist nichts vorgewählt, und der Schritt der
+Checkliste bleibt offen.
+
+- **Nein:** Speichern genügt. Der Schritt ist erledigt und nennt den Tag der
+  Entscheidung. Zahlt der Verein trotzdem eine Pauschale an ein
+  Vorstandsmitglied, warnt die [Personenübersicht](personen.md) weiter — es
+  gibt dann keine Grundlage.
+- **Ja:** Sie nennen die Fundstelle in der Satzung und unter **Gilt ab** den
+  Tag, seit dem die Grundlage gilt — ohne ihn bleibt der Punkt offen. Die
+  Personenübersicht warnt danach nur noch bei Pauschalen, die vor diesem Tag
+  gezahlt wurden.
 
 ## Vorstand am Kontakt
 

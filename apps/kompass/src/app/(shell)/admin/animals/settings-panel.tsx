@@ -27,7 +27,6 @@ type Values = { frame: PhotoFrame; profileUrl: string; proposalsEnabled: boolean
 export function AnimalSettingsPanel({ initial, folders, canManage }: { initial: Values; folders: FolderEntry[] | null; canManage: boolean }) {
   const t = useTranslations('animals.admin');
   const c = useTranslations('common');
-  const tTree = useTranslations('folderTree');
   const tMove = useTranslations('moveDialog');
   const [values, setValues] = useState(initial);
   const [pending, start] = useTransition();
@@ -61,10 +60,10 @@ export function AnimalSettingsPanel({ initial, folders, canManage }: { initial: 
               </Select>
             </FormField>
             <FormField id="photo-focus-x" label={t('frame.focusX')} hint={t('frame.focusXHint')} size="s">
-              <Input id="photo-focus-x" type="number" min={0} max={100} value={frame.focusX} disabled={!canManage} onChange={(e) => setFrame({ ...frame, focusX: percent(e.target.value) })} className="font-mono" />
+              <Input id="photo-focus-x" type="number" min={0} max={100} value={frame.focusX} disabled={!canManage} onChange={(e) => setFrame({ ...frame, focusX: percent(e.target.value) })} />
             </FormField>
             <FormField id="photo-focus-y" label={t('frame.focusY')} hint={t('frame.focusYHint')} size="s">
-              <Input id="photo-focus-y" type="number" min={0} max={100} value={frame.focusY} disabled={!canManage} onChange={(e) => setFrame({ ...frame, focusY: percent(e.target.value) })} className="font-mono" />
+              <Input id="photo-focus-y" type="number" min={0} max={100} value={frame.focusY} disabled={!canManage} onChange={(e) => setFrame({ ...frame, focusY: percent(e.target.value) })} />
             </FormField>
             {/* Eine Skizze des Rahmens, damit man das Format sieht, ohne einen Hund zu öffnen; die vierte Zelle der Zeile. */}
             <div aria-hidden className="relative w-28 rounded-sm border border-line-strong bg-surface-2" style={{ aspectRatio: `${w} / ${h}` }}>
@@ -75,7 +74,7 @@ export function AnimalSettingsPanel({ initial, folders, canManage }: { initial: 
         <Section title={t('profileUrl.title')} intro={t('profileUrl.intro')}>
           <FormGrid>
             <FormField id="profile-url" label={t('profileUrl.label')} hint={t('profileUrl.hint')} error={urlError} size="l">
-              <Input id="profile-url" value={values.profileUrl} disabled={!canManage} onChange={(e) => setValues({ ...values, profileUrl: e.target.value })} className="font-mono" />
+              <Input id="profile-url" value={values.profileUrl} disabled={!canManage} onChange={(e) => setValues({ ...values, profileUrl: e.target.value })} />
             </FormField>
           </FormGrid>
         </Section>
@@ -93,10 +92,6 @@ export function AnimalSettingsPanel({ initial, folders, canManage }: { initial: 
                 folders={folders ?? []}
                 label={t('proposals.photoFolder')}
                 emptyLabel={tMove('root')}
-                moveLabel={tTree('change')}
-                dialogTitle={tTree('pickTitle')}
-                showLocation={false}
-                verb="pick"
                 variant="field"
                 kind="assets"
                 readOnly={!canManage || folders === null}

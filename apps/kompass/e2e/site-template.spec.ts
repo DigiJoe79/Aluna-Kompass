@@ -1,5 +1,5 @@
 import { expect, test } from './fixtures';
-import { loginAsAdmin, resetDatabase } from './helpers';
+import { loginAsAdmin, resetDatabase, readTemplate } from './helpers';
 
 const PNG = Buffer.from(
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==',
@@ -11,20 +11,17 @@ test('reads a template, fills a variable and keeps a collection entry', async ({
   await loginAsAdmin(page);
 
   await page.goto('/site/template');
-  await page.getByRole('button', { name: 'Vorlage einlesen' }).click();
-  await expect(page.getByRole('region', { name: 'Befunde' })).toBeVisible();
-  await page.getByRole('button', { name: 'Übernehmen' }).click();
-  await expect(page.getByRole('status')).toContainText('eingelesen');
+  await readTemplate(page);
 
   await page.goto('/site/variables');
   await page.locator('[name="claim.de"]').fill('Wir bauen Modelle');
   await page.getByRole('button', { name: 'Speichern' }).click();
-  await expect(page.getByRole('status')).toContainText('Gespeichert');
+  await expect(page.getByRole('status').filter({ hasText: 'Gespeichert' })).toHaveCount(1); // Ansage für Vorleser; daneben steht die Zeile „nicht publiziert“
 
   await page.getByRole('link', { name: 'Aktuelles' }).click();
   await expect(page).toHaveURL('/site/c/news');
-  await page.getByRole('link', { name: 'Neu', exact: true }).click();
-  await page.getByLabel('Slug (URL-Teil)').fill('erste-notiz');
+  await page.getByRole('link', { name: 'Eintrag anlegen', exact: true }).click();
+  await page.getByLabel('URL-Teil').fill('erste-notiz');
   await page.locator('[name="title.de"]').fill('Erste Notiz');
   await page.getByRole('button', { name: 'Speichern' }).click();
   await expect(page).toHaveURL('/site/c/news');
@@ -35,9 +32,7 @@ test('shows no starting-content card when the template has no seed/', async ({ p
   await resetDatabase(page, 'seeded');
   await loginAsAdmin(page);
   await page.goto('/site/template');
-  await page.getByRole('button', { name: 'Vorlage einlesen' }).click();
-  await page.getByRole('button', { name: 'Übernehmen' }).click();
-  await expect(page.getByRole('status')).toContainText('eingelesen');
+  await readTemplate(page);
   await page.reload();
   await expect(page.getByText('Die Vorlage der Webseite bringt Startinhalte mit')).toHaveCount(0);
   await expect(page.getByText('Startinhalte übernommen am')).toHaveCount(0);
@@ -48,23 +43,21 @@ test('a reference variable is a choice, and a withdrawn record shows as stale un
   await loginAsAdmin(page);
 
   await page.goto('/site/template');
-  await page.getByRole('button', { name: 'Vorlage einlesen' }).click();
-  await page.getByRole('button', { name: 'Übernehmen' }).click();
-  await expect(page.getByRole('status')).toContainText('eingelesen');
+  await readTemplate(page);
 
   await page.goto('/site/variables');
   const choice = page.getByLabel('Projekt auf der Startseite');
   await expect(choice.locator('option')).toContainText(['Keine Auswahl', 'Winterhilfe für Streuner']);
   await choice.selectOption('winterhilfe');
   await page.getByRole('button', { name: 'Speichern' }).click();
-  await expect(page.getByRole('status')).toContainText('Gespeichert');
+  await expect(page.getByRole('status').filter({ hasText: 'Gespeichert' })).toHaveCount(1); // Ansage für Vorleser; daneben steht die Zeile „nicht publiziert“
   await page.reload();
   await expect(page.getByLabel('Projekt auf der Startseite')).toHaveValue('winterhilfe');
 
   await page.goto('/projects');
   const row = page.getByRole('row', { name: /Winterhilfe/ });
   await row.getByRole('switch').click();
-  await expect(row).not.toContainText('Veröffentlicht');
+  await expect(row.getByRole('switch')).not.toBeChecked();
 
   await page.goto('/site/variables');
   await expect(page.getByText('„winterhilfe“ steht nicht mehr zur Auswahl.')).toBeVisible();
@@ -72,14 +65,14 @@ test('a reference variable is a choice, and a withdrawn record shows as stale un
   // Ein veralteter Wert, den niemand anfasst, blockiert die übrigen Felder nicht (Spec § 4.3).
   await page.locator('[name="claim.de"]').fill('Trotz veraltetem Verweis gespeichert');
   await page.getByRole('button', { name: 'Speichern' }).click();
-  await expect(page.getByRole('status')).toContainText('Gespeichert');
+  await expect(page.getByRole('status').filter({ hasText: 'Gespeichert' })).toHaveCount(1); // Ansage für Vorleser; daneben steht die Zeile „nicht publiziert“
   await page.reload();
   await expect(page.locator('[name="claim.de"]')).toHaveValue('Trotz veraltetem Verweis gespeichert');
   await expect(page.getByText('„winterhilfe“ steht nicht mehr zur Auswahl.')).toBeVisible();
 
   await page.getByRole('button', { name: 'Leeren' }).click();
   await page.getByRole('button', { name: 'Speichern' }).click();
-  await expect(page.getByRole('status')).toContainText('Gespeichert');
+  await expect(page.getByRole('status').filter({ hasText: 'Gespeichert' })).toHaveCount(1); // Ansage für Vorleser; daneben steht die Zeile „nicht publiziert“
   await page.reload();
   await expect(page.getByLabel('Projekt auf der Startseite')).toHaveValue('');
   await expect(page.getByText('steht nicht mehr zur Auswahl')).toHaveCount(0);
@@ -94,9 +87,7 @@ test('a variable of type asset is chosen from the library', async ({ page }) => 
   await expect(page.getByRole('row', { name: /startbild-/ })).toBeVisible();
 
   await page.goto('/site/template');
-  await page.getByRole('button', { name: 'Vorlage einlesen' }).click();
-  await page.getByRole('button', { name: 'Übernehmen' }).click();
-  await expect(page.getByRole('status')).toContainText('eingelesen');
+  await readTemplate(page);
 
   await page.goto('/site/variables');
   await page.getByRole('button', { name: 'Bild auf der Startseite: Wählen' }).click();

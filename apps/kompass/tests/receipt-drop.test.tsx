@@ -27,4 +27,16 @@ describe('ReceiptDrop', () => {
     expect(alert.id).not.toBe('');
     expect(screen.getByRole('button').getAttribute('aria-describedby')).toBe(alert.id);
   });
+
+  it('`compact`: ein Textlink „Beleg nachreichen“ statt der großen Ablagefläche, Ziehen geht weiter (Runde 3, 089)', () => {
+    const got: File[][] = [];
+    const { container } = render(<ReceiptDrop compact onFiles={(files) => got.push(files)} />, { wrapper });
+    expect(screen.getByRole('button', { name: 'Beleg nachreichen' })).toBeTruthy();
+    expect(screen.queryByText('PDF hierher ziehen oder auswählen')).toBeNull();
+    const zone = container.querySelector('[role="presentation"]')!;
+    expect(zone.className).not.toMatch(/h-24/);
+    const pdf = new File(['%PDF'], 'beleg.pdf', { type: 'application/pdf' });
+    fireEvent.drop(zone, { dataTransfer: { files: [pdf] } });
+    expect(got).toEqual([[pdf]]);
+  });
 });

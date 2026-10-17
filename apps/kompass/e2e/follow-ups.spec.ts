@@ -24,13 +24,16 @@ test.describe('follow-ups', () => {
     await page.getByRole('button', { name: 'Anpassen' }).click();
     const sheet = page.getByTestId('dashboard-customize');
     // „Nur meine“ gibt es auch bei „Entwürfe“ — die Zeile der Kachel „Fällig“
-    // grenzt die Wahl ein.
-    const followUpsRow = sheet.getByRole('listitem').filter({ hasText: 'Fällig' });
+    // grenzt die Wahl ein („Löschfällig“ enthält „fällig“, darum die Kennung).
+    const followUpsRow = sheet.getByTestId('customize-tile-core-followUps');
+    // Die Optionen stehen hinter „Einstellungen“ (Designer 2026-10-17, Frage 3).
+    await followUpsRow.getByText('Einstellungen', { exact: true }).click();
     await followUpsRow.getByRole('switch', { name: 'Nur meine' }).click();
-    // Der Seed setzt keine Zuständige: „gilt allen“ ist nicht „meine“.
+    // Der Seed setzt keine Zuständige: „niemand Bestimmtes“ ist nicht „meine“.
     await expect(page.getByTestId('dashboard-tile-core-followUps').getByText('Nichts fällig.')).toBeVisible();
     await page.reload();
     await page.getByRole('button', { name: 'Anpassen' }).click();
-    await expect(sheet.getByRole('listitem').filter({ hasText: 'Fällig' }).getByRole('switch', { name: 'Nur meine' })).toBeChecked();
+    await followUpsRow.getByText('Einstellungen', { exact: true }).click();
+    await expect(followUpsRow.getByRole('switch', { name: 'Nur meine' })).toBeChecked();
   });
 });

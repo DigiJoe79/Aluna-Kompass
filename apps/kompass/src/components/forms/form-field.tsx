@@ -1,5 +1,6 @@
 import { Children, cloneElement, isValidElement, type ReactElement, type ReactNode } from 'react';
 import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
 import { FieldError } from './field-error';
 import { FormCell } from './form-grid';
@@ -70,10 +71,18 @@ export function FormField({
   return (
     <FormCell size={size} className={cn('flex flex-col gap-1.5', toggle && 'self-end', className)}>
       {toggle ? (
-        <div className="flex h-[var(--field-h)] items-center gap-2.5">
-          {control}
-          <Label htmlFor={id} required={required} className="text-body font-normal text-ink">{label}</Label>
-        </div>
+        // Ein Schalter steht rechts vom Text wie in den Einstellungszeilen, ein Haken links (Runde 3, 174).
+        isValidElement(children) && children.type === Switch ? (
+          <div className="flex h-[var(--field-h)] items-center justify-between gap-2.5">
+            <Label htmlFor={id} required={required} className="text-body font-normal text-ink">{label}</Label>
+            {control}
+          </div>
+        ) : (
+          <div className="flex h-[var(--field-h)] items-center gap-2.5">
+            {control}
+            <Label htmlFor={id} required={required} className="text-body font-normal text-ink">{label}</Label>
+          </div>
+        )
       ) : (
         <>
           <Label htmlFor={id} required={required} className="text-meta font-semibold text-ink-2">{label}</Label>

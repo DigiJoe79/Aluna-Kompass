@@ -4,20 +4,21 @@ import { useTranslations } from 'next-intl';
 import { QrCode } from '@/components/ui/qr-code';
 import { CopyButton } from '@/components/copy-button';
 import { formatEuro } from '@/lib/finance/amount';
-import { groupIban } from '@/lib/finance/iban-check';
+import { compactIban, formatIban } from '@kompass/module-finance/format';
 import { cn } from '@/lib/utils';
 
 /** Kante des QR-Codes (Plan N5 Annahme 2, Review Focus 4). */
 const QR_SIZE = 160;
 
-function CopyField({ label, value }: { label: string; value: string }) {
+/** `copyValue`: was in die Zwischenablage geht, wenn es von der Anzeige abweicht (IBAN ohne Leerräume). */
+function CopyField({ label, value, copyValue = value }: { label: string; value: string; copyValue?: string }) {
   return (
     <div className="flex items-center justify-between gap-2 border-b border-line-2 py-1.5 last:border-0">
       <div className="min-w-0">
         <p className="text-hint text-muted-ink">{label}</p>
         <p className="truncate text-meta text-ink">{value}</p>
       </div>
-      <CopyButton value={value} label={label} />
+      <CopyButton value={copyValue} label={label} />
     </div>
   );
 }
@@ -52,7 +53,7 @@ export function TransferBlock({
     <div data-testid="transfer-block" className={cn('rounded-md border border-line bg-surface-2 p-3', epcPayload && 'flex flex-col gap-3 md:flex-row md:items-start md:justify-between')}>
       <div className="min-w-0 flex-1 space-y-1">
         <CopyField label={t('recipient')} value={recipient} />
-        {iban ? <CopyField label={t('iban')} value={groupIban(iban)} /> : null}
+        {iban ? <CopyField label={t('iban')} value={formatIban(iban)} copyValue={compactIban(iban)} /> : null}
         <CopyField label={t('amount')} value={formatEuro(amountCents)} />
         <CopyField label={t('reference')} value={reference} />
         {iban ? null : <p className="pt-2 text-hint text-muted-ink">{t('noIban')}</p>}

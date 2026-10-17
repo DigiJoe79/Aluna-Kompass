@@ -49,6 +49,9 @@ export function JournalFilters({ accounts, categories, years, count }: JournalFi
 
   return (
     <FilterBar
+      // Platz für „Ausklappen“ des Panels „Bestände“: am rechten Rand der Werkzeugleiste, nicht über dem Titel (Runde 3,
+      // 086). Der Knopf kommt per Portal aus `SidePanel`, das seinen Zustand mit der Spalte teilt.
+      view={<span id="finance-side-panel-toggle" className="contents" />}
       search={<SearchField value={search.q} onChange={(q) => apply({ q })} placeholder={t('textPlaceholder')} />}
       searchActive={search.q.trim() ? { chip: search.q.trim(), onClear: () => apply({ q: null }) } : undefined}
       filters={[

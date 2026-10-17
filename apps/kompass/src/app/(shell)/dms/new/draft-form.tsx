@@ -1,6 +1,8 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
+import Link from 'next/link';
+import { FixedValue } from '@/components/fixed-value';
 import { useActionState, useEffect, useRef, useState } from 'react';
 import { ContactPicker, type PickedContact } from '@/components/contact-picker';
 import { SuggestionFlag } from '../receive/suggestion-flag';
@@ -70,7 +72,6 @@ export function DraftForm({
 }: DraftFormProps) {
   const t = useTranslations('dms');
   const tCommon = useTranslations('common');
-  const tTree = useTranslations('folderTree');
   const [state, formAction] = useActionState(
     draft ? updateDraftAction.bind(null, draft.id) : createDraftAction,
     idleState,
@@ -171,10 +172,21 @@ export function DraftForm({
           value={body}
           onChange={(e) => setBody(e.target.value)}
           aria-describedby="body-hint"
-          className="shrink-0 grow resize-none font-mono text-meta"
+          className="shrink-0 grow resize-none text-meta"
         />
         <FieldError id="body-error" message={errors.body} />
-        {errors.body ? null : <p id="body-hint" className="text-hint text-muted-ink">{t('fields.bodyHint')}</p>}
+        {/* Ein kurzer Satz und die Handbuchseite statt roher Markdown-Zeichen (03 B24). */}
+        {errors.body ? null : (
+          <p id="body-hint" className="text-hint text-muted-ink">
+            {t.rich('fields.bodyHint', {
+              link: (chunks) => (
+                <Link href="/help/akte/brief-schreiben" target="_blank" className="underline underline-offset-2 hover:text-link">
+                  {chunks}
+                </Link>
+              ),
+            })}
+          </p>
+        )}
       </div>
 
       {/* Die Angaben unter einer Trennlinie im `FormGrid`: In der Schreibspalte (innen rund 430 px) zwei Spalten,
@@ -204,10 +216,6 @@ export function DraftForm({
             label={t('fields.folder')}
             emptyLabel={t('noFolder')}
             name="folder"
-            moveLabel={tTree('change')}
-            dialogTitle={tTree('pickTitle')}
-            showLocation={false}
-            verb="pick"
             variant="field"
             kind="documents"
             onChange={(path) => setFolder(path ?? '')}
@@ -216,22 +224,25 @@ export function DraftForm({
           <FieldError id="folder-error" message={errors.folder} />
         </FormCell>
 
-        <FormField id="typeKey" label={t('fields.type')} required size="m">
-          <Select
+        {draft ? (
+          // Die Art steht beim Entwurf fest (Nummernkreis): fester Wert statt gesperrter Auswahl (E2, 03 B26).
+          <FixedValue
             id="typeKey"
-            name="typeKey"
-            required
-            value={typeKey}
-            onChange={(e) => setTypeKey(e.target.value)}
-            disabled={Boolean(draft)}
-          >
-            {types.map((type) => (
-              <option key={type.key} value={type.key}>
-                {type.label}
-              </option>
-            ))}
-          </Select>
-        </FormField>
+            label={t('fields.type')}
+            value={types.find((type) => type.key === typeKey)?.label ?? null}
+            reason={t('fields.typeFixed')}
+          />
+        ) : (
+          <FormField id="typeKey" label={t('fields.type')} required size="m">
+            <Select id="typeKey" name="typeKey" required value={typeKey} onChange={(e) => setTypeKey(e.target.value)}>
+              {types.map((type) => (
+                <option key={type.key} value={type.key}>
+                  {type.label}
+                </option>
+              ))}
+            </Select>
+          </FormField>
+        )}
 
         <FormField id="documentDate" label={t('fields.documentDate')} required error={errors.documentDate} size="s">
           <Input
@@ -243,13 +254,6 @@ export function DraftForm({
             onChange={(e) => setDocumentDate(e.target.value)}
           />
         </FormField>
-
-        {/* Über die ganze Zeile, nicht in der Zelle: In der Zelle streckt der
-            Hinweis nur seine Spalte, neben „Art“ bleibt ein Loch, und die
-            vier Felder lesen sich als zwei lose Paare statt als Raster. */}
-        {draft ? (
-          <FormCell as="p" size="full" className="text-hint text-muted-ink">{t('typeFixedHint')}</FormCell>
-        ) : null}
 
       </FormGrid>
       </div>

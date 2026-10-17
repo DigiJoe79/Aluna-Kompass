@@ -5,7 +5,7 @@ import { localizedConflict, requireHumanChannel, type CallContext, type Deps, ty
  * je Code die Parameter, die der Dienst setzt, mit ihrer Art: `date` (`YYYY-MM-DD`), `cents` (Betrag in Cent) oder
  * `text`. Grund und Abhilfe selbst stehen in der Sprachdatei unter `finance.errors.<code>.reason`/`.remedy`
  * (A6); Oberfläche und MCP setzen daraus denselben Text zusammen und formatieren Datum und Betrag dort, an einer
- * Stelle (ICU). `financeConflict` ist die einzige Stelle im Modul, die einen Konflikt erzeugt (Wächter:
+ * Stelle (`apps/kompass/src/lib/error-text.ts`; Beträge nennt `financeConflict` dafür in `amounts`). `financeConflict` ist die einzige Stelle im Modul, die einen Konflikt erzeugt (Wächter:
  * `tests/errors.test.ts`); `apps/kompass/tests/finance-error-messages.test.ts` hält Tabelle und Sprachdatei gleich.
  */
 export const FINANCE_ERRORS = {
@@ -43,7 +43,7 @@ export const FINANCE_ERRORS = {
   cashNegativeNeedsReason: { account: 'text', date: 'date', amount: 'cents' },
   entryAlreadyReversed: { number: 'text', by: 'text' },
   entryIsReversal: { number: 'text' },
-  notReviewed: { count: 'text' },
+  notReviewed: { count: 'count' },
   noTaxRateForDate: { date: 'date' },
   voucherTypeNotAllowed: { type: 'text' },
   documentNotFinal: {},
@@ -64,10 +64,10 @@ export const FINANCE_ERRORS = {
   section153Unacknowledged: {},
   correctionNotPending: {},
   correctionPendingExists: {},
-  draftsInPeriod: { count: 'text' },
-  unbookedStatementLines: { count: 'text' },
+  draftsInPeriod: { count: 'count' },
+  unbookedStatementLines: { count: 'count' },
   accountsWithoutStatement: { accounts: 'text' },
-  undocumentedEntries: { count: 'text' },
+  undocumentedEntries: { count: 'count' },
   previousYearOpen: {},
   fiscalYearAlreadyClosed: { year: 'text' },
   fiscalYearNotEnded: { year: 'text' },
@@ -184,12 +184,12 @@ export const FINANCE_ERRORS = {
   expenseNotDraft: {},
   expenseNotSubmitted: {},
   expenseNothingToSubmit: {},
-  expensePositionNeedsReceipt: { position: 'text' },
+  expensePositionNeedsReceipt: { position: 'count' },
   expenseTripNeedsKm: {},
   expenseIbanOrWaiver: {},
   expenseOwnClaim: { names: 'text' },
   expenseSameContact: { names: 'text' },
-  expenseCategoryRequired: { position: 'text' },
+  expenseCategoryRequired: { position: 'count' },
   expenseWaiversDisabled: {},
   waiverAgreedAfterPosition: {},
   waiverLateNeedsReason: {},
@@ -248,10 +248,15 @@ export const FINANCE_ERRORS = {
   resolutionFileTooLarge: { file: 'text', limit: 'text' },
 } as const satisfies Record<string, Record<string, FinanceErrorParamKind>>;
 
-/** `evidenceKind`: der Schlüssel einer Nachweisart (P, Prüfer Block 2) — die Sprachdatei nennt ihn per ICU-`select` in Worten. */
-export type FinanceErrorParamKind = 'text' | 'date' | 'cents' | 'evidenceKind';
+/**
+ * `evidenceKind`: der Schlüssel einer Nachweisart (P, Prüfer Block 2) — die Sprachdatei nennt ihn per ICU-`select` in Worten.
+ * `count`: eine Anzahl oder Positionsnummer, als Zahl wie bisher (MCP `params`), im Satz schlicht (Befund 4, 0.2.12).
+ */
+export type FinanceErrorParamKind = 'text' | 'date' | 'cents' | 'count' | 'evidenceKind';
 export type FinanceErrorCode = keyof typeof FINANCE_ERRORS;
-type ParamsOf<C extends FinanceErrorCode> = { [K in keyof (typeof FINANCE_ERRORS)[C]]: string | number };
+/** Der Wert je Art (Befund 4, 0.2.12): ein Betrag nur als Zahl in Cent — als Text käme er roh („1250“) in den Satz. */
+type ParamValue<Kind> = Kind extends 'cents' | 'count' ? number : Kind extends 'date' | 'text' | 'evidenceKind' ? string : never;
+type ParamsOf<C extends FinanceErrorCode> = { [K in keyof (typeof FINANCE_ERRORS)[C]]: ParamValue<(typeof FINANCE_ERRORS)[C][K]> };
 
 /** Die Codes, mit denen eine Sperre an einer Buchung antwortet (`EntryLock`, Befund 49). */
 export type EntryLockCode =
@@ -269,7 +274,8 @@ export function lockConflict(hit: { code: EntryLockCode; params: Record<string, 
 
 /** Der Konflikt `code` mit den Parametern, die sein Text braucht — der Text selbst kommt aus der Sprachdatei. */
 export function financeConflict<C extends FinanceErrorCode>(code: C, ...params: keyof (typeof FINANCE_ERRORS)[C] extends never ? [] : [ParamsOf<C>]): Failure {
-  return localizedConflict(code, `finance.errors.${code}`, (params[0] ?? {}) as Record<string, string | number>);
+  const amounts = Object.entries(FINANCE_ERRORS[code] as Record<string, string>).flatMap(([name, kind]) => (kind === 'cents' ? [name] : []));
+  return localizedConflict(code, `finance.errors.${code}`, (params[0] ?? {}) as Record<string, string | number>, amounts);
 }
 
 /**

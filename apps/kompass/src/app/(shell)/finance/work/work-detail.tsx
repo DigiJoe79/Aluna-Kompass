@@ -11,6 +11,7 @@ import type { RuleDialogOptions } from './rule-dialog';
 import { SuggestionCard } from './suggestion-card';
 import type { VoucherTypeOption } from './voucher-panel';
 import type { WorkPartnerOption } from './partner-payment-dialog';
+import { formatIban } from '@kompass/module-finance/format';
 
 /** Was der Server zum gewählten Kontoumsatz liefert — Namen schon aufgelöst, Gründe schon als Sätze. */
 export interface WorkDetailData {
@@ -72,7 +73,7 @@ export function WorkDetail({
   if (!detail) {
     acceptRef.current = null;
     return (
-      <aside data-testid="work-detail" aria-label={t('label')} className="w-full shrink-0 rounded-md border border-line bg-surface p-4 text-meta text-muted-ink lg:w-[420px]">
+      <aside data-testid="work-detail" aria-label={t('label')} className="w-full shrink-0 rounded-md border border-line bg-surface p-4 text-meta text-muted-ink @min-[48rem]:w-[360px] @min-[64rem]:w-[420px]">
         {t('loading')}
       </aside>
     );
@@ -84,7 +85,7 @@ export function WorkDetail({
     ['valueDate', raw.valueDate ? date(raw.valueDate) : null],
     ['amount', formatEuro(raw.amountCents)],
     ['counterparty', raw.counterpartyName],
-    ['iban', raw.counterpartyIban],
+    ['iban', raw.counterpartyIban ? formatIban(raw.counterpartyIban) : null],
     ['email', raw.counterpartyEmail],
     ['purpose', raw.purpose],
     ['bankReference', raw.bankReference],
@@ -94,15 +95,20 @@ export function WorkDetail({
   ];
 
   return (
-    <aside data-testid="work-detail" aria-label={t('label')} className="w-full shrink-0 space-y-4 lg:w-[420px]">
+    <aside data-testid="work-detail" aria-label={t('label')} className="w-full shrink-0 space-y-4 @min-[48rem]:w-[360px] @min-[64rem]:w-[420px]">
       <section className="rounded-md border border-line bg-surface p-4">
-        <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-meta">
+        {/* Runde 3, 064: Unter `md` steht der Wert unter der Bezeichnung, damit lange Werte (IBAN, Verwendungszweck) die
+            ganze Breite haben; die IBAN bricht nur zwischen ihren Gruppen (`formatIban`, kein `break-all`). Layout an
+            einer Stelle, ohne dauerhaften Test (Projektregel). Die Spalte der Bezeichnungen ist fest breit: Mit `auto`
+            folgte sie der längsten Bezeichnung des gewählten Umsatzes (nur manche tragen „Ende-zu-Ende-Referenz“), und
+            die Werte sprangen beim Wechsel der Zeile hin und her (Joe 2026-10-17). */}
+        <dl className="grid grid-cols-1 gap-y-2 text-meta md:grid-cols-[9rem_minmax(0,1fr)] md:gap-x-3 md:gap-y-1">
           {fields
             .filter(([, value]) => value !== null && value !== '')
             .map(([key, value]) => (
-              <div key={key} className="contents">
+              <div key={key} className="md:contents">
                 <dt className="text-muted-ink">{t(`fields.${key}`)}</dt>
-                <dd className={key === 'iban' || key === 'bankReference' || key === 'endToEndId' || key === 'relatedReference' || key === 'bookingDate' || key === 'valueDate' || key === 'amount' ? 'break-all font-mono tabular-nums text-ink' : 'text-ink'}>{value}</dd>
+                <dd className={key === 'iban' || key === 'bankReference' || key === 'endToEndId' || key === 'relatedReference' ? `${key === 'iban' ? '' : 'break-all '}font-mono text-ink` : key === 'bookingDate' || key === 'valueDate' || key === 'amount' ? 'tabular-nums text-ink' : 'text-ink'}>{value}</dd>
               </div>
             ))}
         </dl>

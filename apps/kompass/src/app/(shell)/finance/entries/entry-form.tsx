@@ -14,6 +14,7 @@ import { ReceiptList, type ReceiptListItem } from '@/components/finance/receipt-
 import { SplitRow, type SplitRowCategoryOption, type SplitRowOption } from '@/components/finance/split-row';
 import { ConfirmDialog } from '@/components/forms/confirm-dialog';
 import { FormActionBar } from '@/components/forms/form-action-bar';
+import { FormErrorSummary } from '@/components/forms/form-error-summary';
 import { FormField } from '@/components/forms/form-field';
 import { FormCell, FormGrid } from '@/components/forms/form-grid';
 import { Notice } from '@/components/notice';
@@ -146,7 +147,7 @@ function MoneySettlements({
                     errorText={errorCode ? tAmount(errorCode) : undefined}
                   />
                 </div>
-                <Button type="button" variant="ghost" size="sm" onClick={() => remove(settlement.openItemId)}>
+                <Button type="button" variant="outline" size="sm" onClick={() => remove(settlement.openItemId)}>
                   {ts('remove')}
                 </Button>
               </div>
@@ -163,7 +164,7 @@ function MoneySettlements({
                     className="flex w-full items-center justify-between gap-2 rounded-sm border border-line px-2.5 py-1.5 text-left text-meta"
                   >
                     <span>{item.label}</span>
-                    <span className="font-mono tabular-nums text-ink-2">{ts('rest', { amount: formatEuro(item.openCents) })}</span>
+                    <span className="tabular-nums text-ink-2">{ts('rest', { amount: formatEuro(item.openCents) })}</span>
                   </button>
                 </li>
               ))}
@@ -194,6 +195,9 @@ export function EntryForm({ initial, accounts, categories, purposes, projects, t
   const [entryId, setEntryId] = useState<string | undefined>(initial.id);
   const [vouchers, setVouchers] = useState<ReceiptListItem[]>(initialVouchers);
   const [confirmFinalize, setConfirmFinalize] = useState(false);
+  // 088: Nach einer Ablehnung im Festschreiben-Dialog ist der Knopf dort gesperrt — ändern lässt sich nur die Maske
+  // dahinter; der Grund steht direkt über dem Knopf. Jedes Öffnen beginnt frei.
+  const [finalizeRefused, setFinalizeRefused] = useState(false);
   const [archiveOpen, setArchiveOpen] = useState(false);
   const [pendingVoucher, setPendingVoucher] = useState<PendingVoucher | null>(initialPending);
   const [actionState, setActionState] = useState<ActionState>({ status: 'idle' });
@@ -209,6 +213,22 @@ export function EntryForm({ initial, accounts, categories, purposes, projects, t
 
   const validation = toServiceInput(state);
   const remainder = remainderCents(state);
+  // Meldungsregel A (MUSTER.md): Nach einem abgewiesenen Speichern stehen die Feldfehler am Feld und oben in der
+  // Zusammenfassung — und folgen der Eingabe, bis die Maske stimmt. Bis 0.2.12 lagen sie nur in `fieldErrors`,
+  // sichtbar allein in der Begleicht-Zeile; „Als Entwurf speichern“ auf der leeren Maske zeigte nichts.
+  const tSplit = useTranslations('finance.splitRow');
+  const tAmount = useTranslations('finance.amount');
+  const shownCodes = actionState.status === 'error' && actionState.fieldErrors !== undefined && !validation.ok ? validation.fieldErrors : {};
+  const messageOf = (code: string) => (code === 'required' ? tRoot('errors.fields.required') : tAmount(code as 'format' | 'exceeds'));
+  const fieldErrors = Object.fromEntries(Object.entries(shownCodes).map(([key, code]) => [key, messageOf(code)]));
+  const fieldLabels = Object.fromEntries(
+    Object.keys(shownCodes).map((key) => {
+      const [group, index, field] = key.split('.');
+      if (group === 'splitRows') return [key, `${tSplit('rowLabel', { n: Number(index) + 1 })}, ${tSplit(field === 'categoryId' ? 'category' : 'amount')}`];
+      if (group === 'moneyRows') return [key, field === 'accountId' ? t('account') : t('amount')];
+      return [key, key === 'entryDate' ? t('date') : t('text')];
+    }),
+  );
 
   // Festschreiben führt auf die Buchung (Task 4) — Entwurf speichern/prüfen bleibt im Journal.
   /** Der Beleg aus `?voucher=` hängt sich an, sobald die Buchung eine ID hat — einmal. */
@@ -327,19 +347,21 @@ export function EntryForm({ initial, accounts, categories, purposes, projects, t
           setActionState({ status: 'error', message: t('toast.fieldsInvalid'), fieldErrors: validation.fieldErrors });
           return;
         }
+        setFinalizeRefused(false);
         setConfirmFinalize(true);
       }}
       className="space-y-4"
     >
+      <FormErrorSummary errors={fieldErrors} labels={fieldLabels} />
       <section className="space-y-3 rounded-md border border-line bg-surface p-4">
         {/* Raster nur innerhalb der Karte (Entscheidung zum Inventar): Datum `s` und Text `l` ergeben eine Zeile. */}
         <FormGrid>
-          <FormField id="entry-date" label={t('date')} size="s">
+          <FormField id="entry-date" label={t('date')} size="s" error={fieldErrors.entryDate} required>
             <Input ref={dateRef} id="entry-date" type="date" value={state.entryDate} onChange={(e) => setState((s) => ({ ...s, entryDate: e.target.value }))} required />
             {/* Befund 20: warnt, sperrt aber nicht — erst Festschreiben lehnt ein Datum nach heute ab. */}
             {state.entryDate > today ? <p className="text-hint text-warning">{t('futureDate')}</p> : null}
           </FormField>
-          <FormField id="entry-text" label={t('text')} size="l">
+          <FormField id="entry-text" label={t('text')} size="l" error={fieldErrors.text} required>
             <Input id="entry-text" value={state.text} onChange={(e) => setState((s) => ({ ...s, text: e.target.value }))} required />
           </FormField>
           <FormCell size="full">
@@ -361,14 +383,14 @@ export function EntryForm({ initial, accounts, categories, purposes, projects, t
               {state.moneyRows.map((row, index) => (
                 <FormGrid key={row.key}>
                   {row.rawTransactionId ? (
-                    <FormCell as="p" data-testid="bound-money-line" size="full" className="rounded-sm border border-line bg-surface-2 px-2.5 py-1.5 font-mono text-meta tabular-nums text-ink">
+                    <FormCell as="p" data-testid="bound-money-line" size="full" className="rounded-sm border border-line bg-surface-2 px-2.5 py-1.5 text-meta tabular-nums text-ink">
                       {(() => {
                         const cents = (parseAmount(row.amountText) ?? 0) * (row.direction === 'out' ? -1 : 1);
                         return row.rawBookingDate ? t('boundLine', { date: date(row.rawBookingDate), amount: formatEuro(cents) }) : t('boundLineNoDate', { amount: formatEuro(cents) });
                       })()}
                     </FormCell>
                   ) : null}
-                  <FormField id={`account-${row.key}`} label={state.template === 'transfer' ? t(row.direction === 'out' ? 'transferFrom' : 'transferTo') : t('account')}>
+                  <FormField id={`account-${row.key}`} label={state.template === 'transfer' ? t(row.direction === 'out' ? 'transferFrom' : 'transferTo') : t('account')} error={fieldErrors[`moneyRows.${index}.accountId`]} required>
                     <Select id={`account-${row.key}`} value={row.accountId} disabled={!!row.rawTransactionId} onChange={(e) => setState((s) => ({ ...s, moneyRows: s.moneyRows.map((r, i) => (i === index ? { ...r, accountId: e.target.value } : r)) }))} required>
                       <option value="" disabled>
                         {t('accountPlaceholder')}
@@ -378,7 +400,7 @@ export function EntryForm({ initial, accounts, categories, purposes, projects, t
                       ))}
                     </Select>
                   </FormField>
-                  <FormField id={`amount-${row.key}`} label={t('amount')} size="s">
+                  <FormField id={`amount-${row.key}`} label={t('amount')} size="s" required>
                     <AmountField
                       id={`amount-${row.key}`}
                       name={`amount-${row.key}`}
@@ -386,6 +408,8 @@ export function EntryForm({ initial, accounts, categories, purposes, projects, t
                       onChange={(amountText) => setState((s) => ({ ...s, moneyRows: s.moneyRows.map((r, i) => (i === index ? { ...r, amountText } : r)) }))}
                       disabled={!!row.rawTransactionId}
                       required
+                      invalid={!!fieldErrors[`moneyRows.${index}.amountText`]}
+                      errorText={fieldErrors[`moneyRows.${index}.amountText`]}
                       balanceHint={accountsById.get(row.accountId) ? t('balanceHint', { amount: formatEuro(accountsById.get(row.accountId)!.balanceCents) }) : undefined}
                     />
                   </FormField>
@@ -451,11 +475,12 @@ export function EntryForm({ initial, accounts, categories, purposes, projects, t
                     projects={projects}
                     taxCodeOptions={taxCodeOptions}
                     showTax={showTax}
+                    errors={{ categoryId: fieldErrors[`splitRows.${index}.categoryId`], amountText: fieldErrors[`splitRows.${index}.amountText`] }}
                   />
                 );
               })}
               {state.template !== 'inKind' ? (
-                <Button type="button" variant="secondary" onClick={() => setState((s) => ({ ...s, splitRows: [...s.splitRows, emptySplitRow()] }))}>
+                <Button type="button" variant="outline" onClick={() => setState((s) => ({ ...s, splitRows: [...s.splitRows, emptySplitRow()] }))}>
                   {t('addRow')}
                 </Button>
               ) : null}
@@ -481,7 +506,7 @@ export function EntryForm({ initial, accounts, categories, purposes, projects, t
                 <span className="font-mono text-hint">{pendingVoucher.number}</span>
                 <span className="min-w-0 flex-1 truncate">{pendingVoucher.subject}</span>
                 <span className="text-hint text-muted-ink">{pendingVoucher.typeLabel}</span>
-                <span className="font-mono text-hint text-muted-ink">{date(pendingVoucher.date)}</span>
+                <span className="tabular-nums text-hint text-muted-ink">{date(pendingVoucher.date)}</span>
                 <span className="text-hint font-semibold text-ink-2">{t('pendingVoucher')}</span>
               </p>
             ) : null}
@@ -515,6 +540,9 @@ export function EntryForm({ initial, accounts, categories, purposes, projects, t
 
       <FormActionBar
         mode="create"
+        // Runde 3 (087, 091): „Verwerfen“ wie überall nur mit Änderung, beim Anlegen nur „Abbrechen“. Der Ladestand sagt der
+        // Leiste, dass ein Entwurf schon besteht; `create` bleibt, damit ein unveränderter Entwurf festgeschrieben werden kann.
+        loadedVersion={state.expectedVersion}
         back={{ href: returnTo, label: t('cancel') }}
         // Verborgen gezählt: Der Kassenhinweis bleibt stehen, die Rückfrage beim Verlassen kommt nur nach einer Eingabe.
         count={countEntryChanges(saved, state)}
@@ -523,10 +551,10 @@ export function EntryForm({ initial, accounts, categories, purposes, projects, t
         extraActions={
           !isCash ? (
             <>
-              <Button type="button" variant="secondary" onClick={() => runAction((input) => saveDraftAction(input))}>
+              <Button type="button" variant="outline" onClick={() => runAction((input) => saveDraftAction(input))}>
                 {t('actions.saveDraft')}
               </Button>
-              <Button type="button" variant="secondary" onClick={() => runAction((input) => saveReviewedAction(input))}>
+              <Button type="button" variant="outline" onClick={() => runAction((input) => saveReviewedAction(input))}>
                 {t('actions.saveReviewed')}
               </Button>
             </>
@@ -538,7 +566,11 @@ export function EntryForm({ initial, accounts, categories, purposes, projects, t
 
       <ConfirmDialog
         open={confirmFinalize}
-        onOpenChange={setConfirmFinalize}
+        onOpenChange={(next) => {
+          setConfirmFinalize(next);
+          if (next) setFinalizeRefused(false);
+        }}
+        confirmDisabled={finalizeRefused}
         title={t('confirmFinalize.title')}
         description={t('confirmFinalize.description')}
         confirmLabel={t('actions.finalize')}
@@ -546,6 +578,7 @@ export function EntryForm({ initial, accounts, categories, purposes, projects, t
           if (!validation.ok) return { status: 'error', message: t('toast.fieldsInvalid'), fieldErrors: {} };
           const result = await finalizeAction(validation.input);
           await afterSuccess(result, 'entry');
+          if (result.status === 'error' && result.kind !== 'network') setFinalizeRefused(true);
           // Die Ablehnung steht im Dialog, samt Ausweg (er schließt den Dialog und führt ihn aus); dieselbe steht auch über der Leiste.
           if (result.status === 'error' && result.code && !REASON_CODES.has(result.code)) {
             return {

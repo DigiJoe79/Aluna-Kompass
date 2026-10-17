@@ -15,7 +15,7 @@ import { Dialog, DialogContent, DialogFooter, DialogTitle } from '@/components/u
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import type { ActionState } from '@/lib/actions';
 import { stashCsvHandoff } from '@/lib/finance/csv-handoff';
-import { groupIban } from '@/lib/finance/iban-check';
+import { formatIban } from '@kompass/module-finance/format';
 import { remediesFor } from '@/lib/finance/remedies';
 import { cn } from '@/lib/utils';
 import { detectStatementAccountAction, uploadStatementAction } from './actions';
@@ -69,7 +69,8 @@ const newKey = (name: string) => `${name}-${Date.now()}-${Math.random().toString
  * Bestätigungsdialog (Entschieden 1) und lädt erst danach dieselbe Datei
  * erneut, mit `confirmFormatChange: true`.
  */
-export function ImportUpload({ accounts }: { accounts: ImportAccountOption[] }) {
+/** `compact`: Stehen schon Umsätze da (Arbeitsliste), ist die Ablagefläche eine Zeile statt eines hohen Kastens (07-1 B9). */
+export function ImportUpload({ accounts, compact = false }: { accounts: ImportAccountOption[]; compact?: boolean }) {
   const t = useTranslations('finance.imports.upload');
   const tRoot = useTranslations();
   const tCommon = useTranslations('common');
@@ -197,7 +198,8 @@ export function ImportUpload({ accounts }: { accounts: ImportAccountOption[] }) 
           if (!busy) void processFiles(Array.from(e.dataTransfer.files));
         }}
         className={cn(
-          'flex min-h-24 flex-col items-center justify-center gap-1 rounded-md border-2 border-dashed px-3 py-2 text-center text-meta',
+          'flex items-center justify-center gap-1 rounded-md border-2 border-dashed px-3 py-2 text-center text-meta',
+          compact ? 'min-h-11 flex-row gap-2' : 'min-h-24 flex-col',
           dragging ? 'border-brand bg-brand-soft' : 'border-line-strong bg-surface',
         )}
       >
@@ -205,9 +207,11 @@ export function ImportUpload({ accounts }: { accounts: ImportAccountOption[] }) 
         {dragging ? (
           <p className="font-semibold text-ink">{t('dropHere')}</p>
         ) : (
-          // 390 px: Der Satz bricht um statt über den Rand zu laufen (Pipeline-Warnung fl-arbeitsliste, 401 > 390; ohne Layout-Test, Projektregel).
+          // 07-1 C38: Am Telefon gibt es kein Ziehen — dort der kurze Satz „Kontoauszug auswählen“ statt eines unterstrichenen
+          // Satzes über zwei Zeilen (ohne Layout-Test, Projektregel).
           <Button type="button" variant="link" className="h-auto max-w-full p-0 whitespace-normal underline underline-offset-2" disabled={busy} onClick={() => inputRef.current?.click()}>
-            {t('dragOrPick')}
+            <span className="max-sm:hidden">{t('dragOrPick')}</span>
+            <span className="sm:hidden">{t('pickOnPhone')}</span>
           </Button>
         )}
         <input
@@ -295,7 +299,7 @@ export function ImportUpload({ accounts }: { accounts: ImportAccountOption[] }) 
           {pending && doubt?.kind === 'none' && doubt.format === 'camt053' ? (
             <>
               <DialogTitle>{t('noneCamt.title')}</DialogTitle>
-              <p className="text-body text-ink-2">{t('noneCamt.text', { file: pending.file.name, iban: groupIban(doubt.iban ?? '') })}</p>
+              <p className="text-body text-ink-2">{t('noneCamt.text', { file: pending.file.name, iban: formatIban(doubt.iban ?? '') })}</p>
               <p className="text-body text-ink-2">{t('noneCamt.hint')}</p>
               <DialogFooter>
                 <Button type="button" variant="ghost" onClick={() => answer(null)}>

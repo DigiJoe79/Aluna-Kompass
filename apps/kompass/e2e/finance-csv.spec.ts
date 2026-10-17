@@ -93,7 +93,7 @@ test.describe('finance csv', () => {
     await startAssistant(page, 'Hausbank CSV-Test');
     await page.getByRole('button', { name: 'Weiter' }).click();
     await page.getByRole('button', { name: 'Weiter' }).click();
-    await expect(page.getByText(/50,00 €.*Erika Beispiel.*Ist das eine Ausgabe\?/)).toBeVisible();
+    await expect(page.getByText(/50,00\s€.*Erika Beispiel.*Ist das eine Ausgabe\?/)).toBeVisible();
     await expect(page.getByRole('button', { name: 'Weiter' })).toBeDisabled();
     await page.getByRole('radio', { name: 'Nein, Geld kam herein' }).check();
     await expect(page.getByRole('button', { name: 'Weiter' })).toBeEnabled();

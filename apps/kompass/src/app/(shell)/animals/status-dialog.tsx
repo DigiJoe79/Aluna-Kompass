@@ -7,13 +7,13 @@ import { FormField } from '@/components/forms/form-field';
 import { FormGrid } from '@/components/forms/form-grid';
 import { useActionFeedback } from '@/components/forms/use-action-feedback';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { setAnimalStatusAction } from './actions';
 import { Select } from '@/components/ui/select';
 
 /** `triggerVariant`: auf der Hinweisseite steht der Knopf gleichrangig neben „Von der Webseite nehmen“ (`outline`). */
-export function StatusDialog({ animalId, current, triggerVariant = 'secondary' }: { animalId: string; current: string; triggerVariant?: 'secondary' | 'outline' }) {
+export function StatusDialog({ animalId, current, triggerVariant = 'outline' }: { animalId: string; current: string; triggerVariant?: 'outline' }) {
   const t = useTranslations('animals.status');
   const [open, setOpen] = useState(false);
   const [status, setStatus] = useState(current);
@@ -26,6 +26,8 @@ export function StatusDialog({ animalId, current, triggerVariant = 'secondary' }
       <DialogTrigger render={<Button variant={triggerVariant}>{t('change')}</Button>} />
       <DialogContent size="sm" className="bg-surface shadow-md">
         <DialogTitle>{t('title')}</DialogTitle>
+        {/* Was der Status bewirkt (05 B28). */}
+        <DialogDescription>{t('description')}</DialogDescription>
         <FormGrid>
           <FormField id="status" label={t('next')} size="s">
             <Select id="status" aria-label={t('next')} value={status} onChange={(e) => setStatus(e.target.value)}>
@@ -36,7 +38,7 @@ export function StatusDialog({ animalId, current, triggerVariant = 'secondary' }
           </FormField>
           {status === 'adopted' ? (
             <FormField id="year" label={t('year')} hint={t('yearHint')} size="s">
-              <Input id="year" type="number" value={year} onChange={(e) => setYear(e.target.value)} className="font-mono" />
+              <Input id="year" type="number" value={year} onChange={(e) => setYear(e.target.value)} />
             </FormField>
           ) : null}
         </FormGrid>

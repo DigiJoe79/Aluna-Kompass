@@ -44,7 +44,6 @@ export function RelationsPanel({
   canEdit: boolean;
 }) {
   const t = useTranslations('dms.relations');
-  const tCommon = useTranslations('common');
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [kind, setKind] = useState<(typeof KINDS)[number]>('repliesTo');
@@ -72,8 +71,8 @@ export function RelationsPanel({
     });
 
   return (
-    <section className="rounded-md border border-line bg-surface p-5 shadow-xs">
-      <Section title={t('title')}
+    // Ohne eigene Karte: Bezüge und Dokumentbezüge stehen in einer Karte der Dokumentseite (03 B29).
+    <Section title={t('title')}
         actions={
           <>
             {canEdit ? (
@@ -92,7 +91,7 @@ export function RelationsPanel({
           <ul data-testid="document-relations" className="space-y-2 text-meta text-ink-2">
             {relations.map((relation) => (
               <li key={relation.id} className="flex items-center gap-2">
-                <span className="size-1.5 shrink-0 rounded-full bg-muted-ink" aria-hidden />
+                {/* Ohne Aufzählungspunkt wie die Bezüge darüber (Runde 3, 031). */}
                 <span className="flex-1">
                   {t(`kinds.${relation.kind}.${relation.direction}`)}{' '}
                   <Link href={`/dms/${relation.otherId}`} className="underline underline-offset-2">
@@ -100,7 +99,7 @@ export function RelationsPanel({
                   </Link>
                 </span>
                 {canEdit ? (
-                  <Button type="button" variant="ghost" size="sm" disabled={pending} onClick={() => remove(relation.id)}>
+                  <Button type="button" variant="outline" size="sm" disabled={pending} onClick={() => remove(relation.id)}>
                     {t('remove')}
                   </Button>
                 ) : null}
@@ -140,10 +139,9 @@ export function RelationsPanel({
               </FormGrid>
             </div>
 
-            <FormActionBar placement="dialog" cancel={() => setOpen(false)} pending={pending} saveDisabled={!other} saveLabel={t('submit')} onSave={submit} state={addFb.state} note={<span className="text-hint text-muted-ink">{tCommon('requiredLegend')}</span>} />
+            <FormActionBar placement="dialog" cancel={() => setOpen(false)} pending={pending} saveDisabled={!other} saveLabel={t('submit')} onSave={submit} state={addFb.state} />
           </DialogContent>
         </Dialog>
       </Section>
-    </section>
   );
 }

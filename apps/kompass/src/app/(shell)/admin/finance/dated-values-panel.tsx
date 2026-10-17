@@ -6,7 +6,9 @@ import { useRouter } from 'next/navigation';
 import { FormActionBar } from '@/components/forms/form-action-bar';
 import { RefusalNotice } from '@/components/forms/refusal-notice';
 import { useActionFeedback } from '@/components/forms/use-action-feedback';
-import { DatedValueRow } from '@/components/finance/dated-value-row';
+import { useDateFormat } from '@/components/date-format-provider';
+import { StatusBadge } from '@/components/status-badge';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -15,6 +17,7 @@ import { formatAmount, formatEuro, parseAmount } from '@/lib/finance/amount';
 import { removeDatedValueAction, setDatedValueAction } from './actions';
 import { FormField } from '@/components/forms/form-field';
 import { FormGrid } from '@/components/forms/form-grid';
+import { RowMenu } from '@/components/row-menu';
 
 export interface DatedValueListEntry {
   key: string;
@@ -31,10 +34,11 @@ const display = (unit: DatedValueListEntry['unit'], value: number | string, t: (
   return t('unitDays', { value });
 };
 
-/** H6 — je Wert eine `DatedValueRow`; Besteuerungsform als taggenaue Reihe mit Erklärsatz. */
+/** H6 — je Wert eine Gruppe in einer Tabelle, je Stichtag eine Zeile; Besteuerungsform taggenau mit Erklärsatz. */
 export function DatedValuesPanel({ entries }: { entries: DatedValueListEntry[] }) {
   const t = useTranslations('finance.admin.datedValues');
   const router = useRouter();
+  const fmt = useDateFormat();
   const [editing, setEditing] = useState<DatedValueListEntry | null>(null);
   const [pending, setPending] = useState(false);
   // „Zurücksetzen“ steht in der Zeile eines Werts: Die Ablehnung steht im Kasten des Werts, dessen Zeile gedrückt wurde.
@@ -49,40 +53,58 @@ export function DatedValuesPanel({ entries }: { entries: DatedValueListEntry[] }
     if (result.status === 'success') router.refresh();
   };
 
+  // 11-1 B30: eine Tabelle statt 17 Karten — je Wert eine Gruppe, je Stichtag eine Zeile; der jüngste Stichtag ist
+  // der heutige Stand, ein eigenes „Aktuell: …“ wiederholte ihn nur. Die Vorgabe ist der Normalfall (keine Marke).
   return (
     <section className="space-y-4" data-testid="dated-values-panel">
-      <div className="space-y-3">
-        {entries.map((entry) => {
-          const latest = entry.entries.at(-1)!;
-          return (
-            <div key={entry.key} className="rounded-md border border-line">
-              <div className="flex items-center justify-between px-3 pt-2.5">
-                <p className="text-meta font-semibold text-ink">{t(`keys.${entry.key}`)}</p>
-                <Button variant="ghost" size="sm" onClick={() => setEditing(entry)} data-testid={`dated-value-edit-${entry.key}`}>
-                  {t('change')}
-                </Button>
-              </div>
-              {revertKey === entry.key ? (
-                <div className="px-3 pb-2">
-                  <RefusalNotice action state={revertFb.state} />
-                </div>
-              ) : null}
-              {entry.key === 'taxation' ? <p className="px-3 pb-1 text-hint text-muted-ink">{t('taxationHint')}</p> : null}
-              {entry.entries.map((row) => (
-                <DatedValueRow
-                  key={row.validFrom}
-                  entry={{ validFrom: row.validFrom, display: display(entry.unit, row.value, t), source: row.source }}
-                  shippedLabel={t('shipped')}
-                  overrideLabel={t('override')}
-                  revertLabel={t('revert')}
-                  pending={pending}
-                  onRevert={row.source === 'override' ? () => void revert(entry.key, row.validFrom) : undefined}
-                />
+      {revertKey ? <RefusalNotice action state={revertFb.state} /> : null}
+      <div className="overflow-hidden rounded-md border border-line">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead col="title">{t('columns.name')}</TableHead>
+              <TableHead col="meta">{t('validFrom')}</TableHead>
+              <TableHead col="amount" className="text-right">{t('value')}</TableHead>
+              <TableHead col="status">{t('columns.source')}</TableHead>
+              <TableHead col="actions" className="text-right"><span className="sr-only">{t('columns.actions')}</span></TableHead>
+            </TableRow>
+          </TableHeader>
+          {entries.map((entry) => (
+            <TableBody key={entry.key}>
+              {entry.entries.map((row, index) => (
+                <TableRow key={row.validFrom} data-testid="dated-value-row">
+                  <TableCell col="title" className="text-ink">
+                    {index === 0 ? (
+                      <>
+                        <span>{t(`keys.${entry.key}`)}</span>
+                        {/* Unterzeile, wo der Name allein nicht sagt, worauf der Wert wirkt (Runde 3, 171: Warnmarke). */}
+                        {entry.key === 'taxation' ? <span className="block text-hint text-muted-ink">{t('taxationHint')}</span> : null}
+                        {entry.key === 'warnAtPercent' ? <span className="block text-hint text-muted-ink">{t('warnAtPercentHint')}</span> : null}
+                      </>
+                    ) : (
+                      <span className="sr-only">{t(`keys.${entry.key}`)}</span>
+                    )}
+                  </TableCell>
+                  <TableCell col="meta" className="tabular-nums text-ink-2">{fmt.date(row.validFrom)}</TableCell>
+                  <TableCell col="amount" className="text-right tabular-nums text-ink">{display(entry.unit, row.value, t)}</TableCell>
+                  <TableCell col="status">
+                    {row.source === 'override' ? <StatusBadge tone="brand">{t('override')}</StatusBadge> : <span className="text-meta text-muted-ink">{t('shipped')}</span>}
+                  </TableCell>
+                  <TableCell col="actions" className="text-right">
+                    <RowMenu
+                      name={t(`keys.${entry.key}`)}
+                      testId={index === 0 ? `dated-value-menu-${entry.key}` : undefined}
+                      items={[
+                        { key: 'change', label: t('change'), hidden: index !== 0, onSelect: () => setEditing(entry), testId: `dated-value-edit-${entry.key}` },
+                        { key: 'revert', label: t('revert'), hidden: row.source !== 'override', onSelect: () => void revert(entry.key, row.validFrom) },
+                      ]}
+                    />
+                  </TableCell>
+                </TableRow>
               ))}
-              <p className="px-3 py-1.5 text-hint text-muted-ink">{t('currentValue', { display: display(entry.unit, latest.value, t) })}</p>
-            </div>
-          );
-        })}
+            </TableBody>
+          ))}
+        </Table>
       </div>
 
       {editing ? (

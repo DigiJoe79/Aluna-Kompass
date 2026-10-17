@@ -60,6 +60,13 @@ describe('defineTemplate', () => {
     }
   });
 
+  // Einheit im Feld (Runde 3, 135; MUSTER § E): Das Template nennt sie, Kompass zeigt sie rechts im Feld statt in der
+  // Bezeichnung („Mitgliedsbeitrag im Jahr (Euro)“).
+  it('carries unit of a number into the schema, and leaves it out without one', () => {
+    expect((z.toJSONSchema(number({ label: 'Beitrag', unit: '€' }), { io: 'input' }) as { unit?: string }).unit).toBe('€');
+    expect('unit' in (z.toJSONSchema(number({ label: 'Beitrag' }), { io: 'input' }) as object)).toBe(false);
+  });
+
   // Größe und Abschnitt der Maske (docs/MUSTER.md § J): Das Template sagt, wie breit ein Feld steht und unter
   // welchem Titel es mit seinen Nachbarn erscheint; ohne Angabe wählt Kompass nach dem Feldtyp.
   it('carries size and group into the schema, for every field helper', () => {

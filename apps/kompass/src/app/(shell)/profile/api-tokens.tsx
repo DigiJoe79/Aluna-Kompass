@@ -21,6 +21,7 @@ import { createTokenAction, revokeTokenAction } from './actions';
 import { ActionForm } from '@/components/forms/action-form';
 import { KeyLine } from '@/components/key-line';
 import { Section } from '@/components/section';
+import { RowMenu } from '@/components/row-menu';
 
 export function ApiTokens({ tokens }: { tokens: ApiTokenSummary[] }) {
   const t = useTranslations('profile.tokens');
@@ -46,7 +47,8 @@ export function ApiTokens({ tokens }: { tokens: ApiTokenSummary[] }) {
         intro={t('intro')}
         actions={
           <>
-            <Button onClick={() => setOpen(true)}>{t('create')}</Button>
+            {/* Runde 3, 186: Zwei unabhängige Karten, eine Hauptaktion je Seite — „Token erstellen“ ist sekundär. */}
+            <Button variant="outline" onClick={() => setOpen(true)}>{t('create')}</Button>
             <Dialog open={open} onOpenChange={setOpen}>
               <DialogContent size="sm" className="bg-surface shadow-md">
                 <ActionForm action={action} state={state} className="flex flex-col gap-4">
@@ -65,10 +67,10 @@ export function ApiTokens({ tokens }: { tokens: ApiTokenSummary[] }) {
           <Table className="w-full text-body">
             <TableHeader>
               <TableRow>
-                <TableHead>{t('columns.name')}</TableHead>
-                <TableHead>{t('columns.created')}</TableHead>
-                <TableHead>{t('columns.lastUsed')}</TableHead>
-                <TableHead />
+                <TableHead col="title">{t('columns.name')}</TableHead>
+                <TableHead col="meta">{t('columns.created')}</TableHead>
+                <TableHead col="meta">{t('columns.lastUsed')}</TableHead>
+                <TableHead col="actions" className="w-11"><span className="sr-only">{c('rowActionsColumn')}</span></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -76,17 +78,18 @@ export function ApiTokens({ tokens }: { tokens: ApiTokenSummary[] }) {
                 const days = token.daysSinceLastUsed;
                 return (
                   <TableRow key={token.id}>
-                    <TableCell className={cn(token.revokedAt && 'text-disabled-ink')}>
+                    <TableCell col="title" className={cn(token.revokedAt && 'text-disabled-ink')}>
                       <div className="font-semibold">{token.name}</div>
                       <KeyLine>{token.prefix}…</KeyLine>
                     </TableCell>
-                    <TableCell className="font-mono text-hint">
+                    <TableCell col="meta" className="tabular-nums text-hint">
                       {fmt.date(token.createdAt)}
                     </TableCell>
-                    <TableCell
+                    <TableCell col="meta"
                       className={cn(
-                        'font-mono text-hint',
-                        !token.revokedAt && (days === null || days > 90) && 'text-warning'
+                        'tabular-nums text-hint',
+                        // Runde 3, 186: Ein nie genutzter Token ist keine Arbeit (gedämpft); lange nicht genutzt bleibt ocker.
+                        !token.revokedAt && days !== null && days > 90 ? 'text-warning' : !token.revokedAt && days === null ? 'text-muted-ink' : undefined
                       )}
                     >
                       {token.revokedAt
@@ -95,16 +98,8 @@ export function ApiTokens({ tokens }: { tokens: ApiTokenSummary[] }) {
                           ? t('neverUsed')
                           : t('lastUsedDays', { days })}
                     </TableCell>
-                    <TableCell className="text-right">
-                      {token.revokedAt ? null : (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setRevoke(token)}
-                        >
-                          {t('revoke')}
-                        </Button>
-                      )}
+                    <TableCell col="actions" className="text-right">
+                      <RowMenu name={token.name} items={[{ key: 'revoke', label: t('revoke'), kind: 'delete', hidden: !!token.revokedAt, onSelect: () => setRevoke(token) }]} />
                     </TableCell>
                   </TableRow>
                 );
@@ -130,7 +125,7 @@ export function ApiTokens({ tokens }: { tokens: ApiTokenSummary[] }) {
                     {created.token}
                   </code>
                   <Button
-                    variant="secondary"
+                    variant="outline"
                     size="sm"
                     onClick={async () => {
                       if (await copyToClipboard(created.token)) setCopied(true);

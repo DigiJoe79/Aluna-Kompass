@@ -79,3 +79,25 @@ describe('FormField', () => {
     expect(screen.getByRole('textbox')).toHaveProperty('value', 'mühsam getippt');
   });
 });
+
+/** Runde 3, 174: Ein Schalter steht rechts vom Text wie in den Einstellungszeilen (172, 154), ein Haken links. */
+describe('FormField toggle', () => {
+  it('Schalter nach dem Label, Haken davor', async () => {
+    const { Switch } = await import('@/components/ui/switch');
+    const { Checkbox } = await import('@/components/ui/checkbox');
+    render(
+      <>
+        <FormField id="s" label="Schalter" toggle>
+          <Switch id="s" checked={false} onCheckedChange={() => {}} />
+        </FormField>
+        <FormField id="c" label="Haken" toggle>
+          <Checkbox id="c" />
+        </FormField>
+      </>,
+    );
+    const switchRow = screen.getByText('Schalter').parentElement!;
+    expect(switchRow.firstElementChild?.textContent).toBe('Schalter');
+    const checkRow = screen.getByText('Haken').parentElement!;
+    expect(checkRow.lastElementChild?.textContent).toBe('Haken');
+  });
+});

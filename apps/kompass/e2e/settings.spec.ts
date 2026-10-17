@@ -98,7 +98,8 @@ test.describe('settings', () => {
     await page.goto('/admin/settings?panel=organization');
     await page.getByLabel('Vereinsname').fill('Testverein Reiter e.V.');
     await nav.getByRole('link', { name: 'Darstellung' }).click();
-    await expect(page).toHaveURL(/panel=display/);
+    // Datumsformat steht im Reiter Darstellung (Branding), 11-1 B21.
+    await expect(page).toHaveURL(/panel=branding/);
     await page.getByLabel('Datumsformat').selectOption('iso');
     await expect(page.getByText('2 Änderungen noch nicht gespeichert')).toBeVisible();
     await page.getByRole('button', { name: 'Speichern' }).click();
@@ -138,23 +139,22 @@ test.describe('settings', () => {
     await expect(page.getByLabel('Satzungszweck')).toHaveCount(0);
   });
 
-  test('geführte Felder zeigen Wert, Kennzeichen und den Weg, kein Eingabefeld', async ({ page }) => {
+  test('geführte Felder zeigen den Wert, der Satz darüber nennt den Weg als Link, kein Eingabefeld', async ({ page }) => {
     await page.getByRole('navigation', { name: NAV }).getByRole('link', { name: 'Bank' }).click();
-    await expect(page.getByText('Wird unter Einrichtung → Finanzen → Bankkonten und Kassen am Hauptkonto geführt.')).toHaveCount(1);
-    for (const label of ['IBAN', 'BIC', 'Bankname']) await expect(page.getByLabel(label)).toHaveCount(0);
+    await expect(page.getByText('Wird unter Einrichtung → Finanzen → Konten am Hauptkonto geführt.')).toHaveCount(1);
+    for (const label of ['IBAN', 'BIC', 'Bankname']) await expect(page.getByRole('textbox', { name: label })).toHaveCount(0);
     const bankValues = page.getByTestId('managed-field-value');
     await expect(bankValues).toHaveCount(3);
     for (const value of await bankValues.all()) await expect(value).not.toHaveText('');
-    const bankLinks = page.getByRole('link', { name: /^geführt unter Bankkonten$/ });
-    await expect(bankLinks).toHaveCount(3);
-    await expect(bankLinks.first()).toHaveAttribute('href', '/admin/finance?panel=accounts');
+    // Runde 3, 150/151: kein „Geführt in …“ je Feld, ein Link im Satz darüber.
+    await expect(page.getByTestId('managed-field').getByRole('link')).toHaveCount(0);
+    await expect(page.getByRole('link', { name: 'Einrichtung → Finanzen → Konten' })).toHaveAttribute('href', '/admin/finance?panel=accounts');
 
     await page.getByRole('navigation', { name: NAV }).getByRole('link', { name: 'Steuer & Bescheide' }).click();
     await expect(page.getByText('Wird unter Finanzen → Spenden → Bescheide geführt.')).toHaveCount(1);
-    await expect(page.getByLabel('Steuernummer')).toHaveCount(0);
-    const noticeLinks = page.getByRole('link', { name: /^geführt unter Bescheide$/ });
-    await expect(noticeLinks).toHaveCount(4);
-    await expect(noticeLinks.first()).toHaveAttribute('href', '/finance/donations/notices');
+    await expect(page.getByRole('textbox', { name: 'Steuernummer' })).toHaveCount(0);
+    await expect(page.getByTestId('managed-field')).toHaveCount(4);
+    await expect(page.getByRole('link', { name: 'Finanzen → Spenden → Bescheide' })).toHaveAttribute('href', '/finance/donations/notices');
   });
 
   test('der Hinweis Steuer unvollständig zählt geführte Felder nicht', async ({ page }) => {
@@ -184,7 +184,7 @@ test.describe('settings', () => {
     await expect(page.getByRole('row', { name: /logo-/ })).toBeVisible();
 
     await page.goto('/admin/settings');
-    await page.getByRole('navigation', { name: NAV }).getByRole('link', { name: 'Branding' }).click();
+    await page.getByRole('navigation', { name: NAV }).getByRole('link', { name: 'Darstellung' }).click();
     await page.getByRole('button', { name: 'Logo: Wählen' }).click();
     const chooser = page.getByRole('dialog', { name: 'Bild wählen' });
     await chooser.getByRole('button', { name: /logo-/ }).click();

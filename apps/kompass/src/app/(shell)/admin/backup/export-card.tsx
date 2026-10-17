@@ -10,6 +10,7 @@ import { RefusalNotice } from '@/components/forms/refusal-notice';
 import { Button } from '@/components/ui/button';
 import type { ActionState } from '@/lib/actions';
 import { Section } from '@/components/section';
+import { Empty } from '@/components/empty-value';
 
 export function ExportCard({ lastExportAt }: { lastExportAt: string | null }) {
   const t = useTranslations('backup.export');
@@ -52,7 +53,7 @@ export function ExportCard({ lastExportAt }: { lastExportAt: string | null }) {
     <section className="grid grid-cols-[minmax(0,1fr)_220px] gap-4 rounded-lg border border-line bg-surface p-5 max-sm:grid-cols-1">
       <Section title={t('title')}>
         <p className="text-body text-ink-2">{t('text')}</p>
-        <dl className="mt-3 grid grid-cols-[max-content_1fr] gap-x-6 gap-y-1 text-meta"><dt className="text-muted-ink">{t('last')}</dt><dd className="font-mono font-semibold">{lastExportAt ? fmt.dateTime(lastExportAt) : '—'}</dd></dl>
+        <dl className="tabular-nums mt-3 grid grid-cols-[max-content_1fr] gap-x-6 gap-y-1 text-meta"><dt className="text-muted-ink">{t('last')}</dt><dd className="font-semibold">{lastExportAt ? fmt.dateTime(lastExportAt) : <Empty />}</dd></dl>
       </Section>
       <div className="flex flex-col items-end gap-1 max-sm:items-start">
         <RefusalNotice action state={refusal} />

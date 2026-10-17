@@ -2,7 +2,7 @@
 
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { FieldError } from '@/components/forms/field-error';
 import { FormCard, FormCardBody } from '@/components/forms/form-card';
 import { FormActionBar } from '@/components/forms/form-action-bar';
@@ -12,14 +12,14 @@ import { RefusalNotice } from '@/components/forms/refusal-notice';
 import { useActionFeedback } from '@/components/forms/use-action-feedback';
 import { AmountField } from '@/components/finance/amount-field';
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { withUnplacedFieldErrors } from '@/lib/feedback';
 import { formatAmount, parseAmount } from '@/lib/finance/amount';
-import { setBoardRemunerationAction, setExpenseWaiverBasisAction, setFinanceLimitAction, setFinanceSwitchAction } from './actions';
+import { applyTaxDefaultsAction, setBoardRemunerationAction, setExpenseWaiverBasisAction, setFinanceLimitsAction, setFinanceSwitchAction, setFinanceSwitchesAction } from './actions';
 import { useDateFormat } from '@/components/date-format-provider';
 import { Section } from '@/components/section';
 
@@ -38,207 +38,277 @@ export interface TaxLimits {
   proofGraceDays: number;
 }
 
+/** Die drei Steuer-Schalter, die mit der Leiste des Abschnitts gelten; der Agent-Schalter steht für sich. */
+const TAX_SWITCH_KEYS = ['isEntrepreneurOrHasVatId', 'membershipFeesCertifiable', 'expenseWaiversEnabled'] as const;
+type TaxSwitchKey = (typeof TAX_SWITCH_KEYS)[number];
+
+const AMOUNT_LIMIT_KEYS = ['statementSufficesBelowCents', 'cashDonationAlertCents', 'roundAmountFromCents'] as const;
+const LIMIT_IDS: Record<keyof TaxLimits, string> = {
+  statementSufficesBelowCents: 'tax-limit-statement-suffices',
+  cashDonationAlertCents: 'tax-limit-cash-donation',
+  roundAmountFromCents: 'tax-limit-round-amount',
+  proofGraceDays: 'tax-limit-proof-grace-days',
+};
+
 /**
- * Eine Einstellungszeile, die beim Umlegen sofort speichert — dafür ist der Schalter das Bedienelement. Ein Haken
- * steht für Werte, die erst mit „Speichern“ gelten (Joe, 05.10.2026; siehe `BoardRemunerationForm`).
+ * Eine Einstellungszeile: Frage links, Bedienelement rechts (Entscheidung zum Inventar, 05.10.2026; K9-Befund 1). Die
+ * Zeilen stehen in einer Formularkarte mit Trennlinien.
  */
-function SwitchRow({ id, label, checked, onToggle, disabled }: { id: string; label: string; checked: boolean; onToggle: (value: boolean) => void; disabled?: boolean }) {
+function SettingRow({ htmlFor, labelId, label, testId, children }: { htmlFor?: string; labelId?: string; label: string; testId?: string; children: React.ReactNode }) {
   return (
-    <div className="flex items-center justify-between gap-3 py-2.5">
-      <Label htmlFor={id} className="cursor-pointer text-body font-normal text-ink">{label}</Label>
-      <Switch id={id} checked={checked} disabled={disabled} onCheckedChange={onToggle} />
+    <div className="flex items-center justify-between gap-3 py-2.5" data-testid={testId}>
+      <Label id={labelId} htmlFor={htmlFor} className="text-body font-normal text-ink">{label}</Label>
+      <div className="flex shrink-0 items-start gap-2">{children}</div>
     </div>
   );
 }
 
 /**
- * K9-Befund 10: Die Einzelzeilen speichern je für sich (Entscheidung zum Inventar), ihr Knopf ist aber nie ausgegraut
- * (MUSTER § B). Ohne Änderung meldet die Zeile „Nichts geändert“ wie die `FormActionBar` — gleicher Text, gleiche Zeile
- * links neben dem Knopf, nach drei Sekunden verschwunden.
+ * Runde 3, 172 (Joe 2026-10-17): Die drei Steuer-Schalter gelten erst mit „Speichern“ in der Leiste des Abschnitts —
+ * deshalb Ja/Nein wie die Frage nach den Pauschalen, kein Schalter (der speichert sofort, Joe 05.10.2026). Die Leiste
+ * ruft einen Dienst (`setFinanceSwitch`) für jeden geänderten Schalter.
  */
-function useNothingChanged(): [boolean, () => void] {
-  const [nothing, setNothing] = useState(false);
-  useEffect(() => {
-    if (!nothing) return;
-    const timer = setTimeout(() => setNothing(false), 3000);
-    return () => clearTimeout(timer);
-  }, [nothing]);
-  return [nothing, () => setNothing(true)];
-}
-
-function NothingChanged({ show }: { show: boolean }) {
-  const tCommon = useTranslations('common');
-  return (
-    <span aria-live="polite" className="self-center text-meta text-ink-2">
-      {show ? tCommon('nothingChanged') : null}
-    </span>
-  );
-}
-
-/** F7 Task 5 (Annahme 18): eine Anzahl Tage statt eines Betrags — Muster `LimitRow`, ohne `AmountField`. */
-function DaysRow({ id, label, days, onSave }: { id: string; label: string; days: number; onSave: (days: number) => Promise<void> }) {
-  const tLimits = useTranslations('finance.admin.tax.limits');
-  const [text, setText] = useState(String(days));
+function SwitchesForm({ switches }: { switches: TaxSwitches }) {
+  const t = useTranslations('finance.admin.tax');
+  const router = useRouter();
+  const initial = Object.fromEntries(TAX_SWITCH_KEYS.map((k) => [k, switches[k]])) as Record<TaxSwitchKey, boolean>;
+  const [values, setValues] = useState(initial);
   const [pending, setPending] = useState(false);
-  const [attempted, setAttempted] = useState(false);
-  const [nothing, flagNothing] = useNothingChanged();
-  const parsed = /^\d+$/.test(text.trim()) ? Number(text.trim()) : null;
-  const invalid = parsed === null || parsed < 0 || parsed > 365;
-  const showError = invalid && (attempted || text.trim().length > 0);
-
+  const feedback = useActionFeedback();
+  const changedKeys = TAX_SWITCH_KEYS.filter((k) => values[k] !== initial[k]);
+  const save = async () => {
+    if (changedKeys.length === 0) return;
+    setPending(true);
+    const result = await feedback.run(() => setFinanceSwitchesAction(changedKeys.map((k) => ({ key: `finance.${k}`, value: values[k] }))));
+    setPending(false);
+    if (result.status === 'success') router.refresh();
+  };
   return (
-    <div className="flex items-center justify-between gap-3 py-2.5" data-testid={id}>
-      <Label htmlFor={id} className="text-body font-normal text-ink">{label}</Label>
-      <div className="flex shrink-0 items-start gap-2">
-        <NothingChanged show={nothing} />
-        <div className="w-24">
-          <Input id={id} name={id} type="number" min={0} max={365} step={1} value={text} disabled={pending} aria-invalid={showError || undefined} aria-describedby={showError ? `${id}-error` : undefined} onChange={(e) => setText(e.target.value)} className="w-24" />
-          <FieldError id={`${id}-error`} message={showError ? tLimits('daysFormat') : undefined} />
-        </div>
-        <Button
-          type="button"
-          disabled={pending}
-          onClick={async () => {
-            if (invalid || parsed === null) return setAttempted(true);
-            if (parsed === days) return flagNothing();
-            setPending(true);
-            await onSave(parsed);
-            setPending(false);
-          }}
-        >
-          {tLimits('save')}
-        </Button>
-      </div>
-    </div>
-  );
-}
-
-function LimitRow({ id, label, cents, onSave }: { id: string; label: string; cents: number; onSave: (cents: number) => Promise<void> }) {
-  const tLimits = useTranslations('finance.admin.tax.limits');
-  const [text, setText] = useState(formatAmount(cents));
-  const [pending, setPending] = useState(false);
-  const [attempted, setAttempted] = useState(false);
-  const [nothing, flagNothing] = useNothingChanged();
-  const parsed = parseAmount(text);
-  const invalid = parsed === null || parsed < 0;
-
-  return (
-    <div className="flex items-center justify-between gap-3 py-2.5" data-testid={id}>
-      <Label htmlFor={id} className="text-body font-normal text-ink">{label}</Label>
-      <div className="flex shrink-0 items-start gap-2">
-        <NothingChanged show={nothing} />
-        <div className="w-32">
-          <AmountField id={id} name={id} value={text} onChange={setText} invalid={invalid && (attempted || text.trim().length > 0)} disabled={pending} />
-        </div>
-        <Button
-          type="button"
-          disabled={pending}
-          onClick={async () => {
-            if (invalid || parsed === null) return setAttempted(true);
-            if (parsed === cents) return flagNothing();
-            setPending(true);
-            await onSave(parsed);
-            setPending(false);
-          }}
-        >
-          {tLimits('save')}
-        </Button>
-      </div>
-    </div>
+    <FormCard data-testid="tax-switches">
+      <FormCardBody className="divide-y divide-line-2 py-2.5">
+        {TAX_SWITCH_KEYS.map((key) => (
+          <SettingRow key={key} labelId={`tax-switch-${key}`} label={t(key)}>
+            <RadioGroup aria-labelledby={`tax-switch-${key}`} value={values[key] ? 'yes' : 'no'} disabled={pending} onValueChange={(v) => setValues((prev) => ({ ...prev, [key]: v === 'yes' }))} className="flex-row gap-4">
+              {(['yes', 'no'] as const).map((option) => (
+                <label key={option} className="flex items-center gap-2 text-body text-ink">
+                  <RadioGroupItem value={option} />
+                  {t(`boardRemuneration.${option}`)}
+                </label>
+              ))}
+            </RadioGroup>
+          </SettingRow>
+        ))}
+      </FormCardBody>
+      <FormActionBar
+        count={changedKeys.length}
+        pending={pending}
+        saveTestId="tax-switches-save"
+        state={feedback.state}
+        onDiscard={() => {
+          setValues(initial);
+          feedback.reset();
+        }}
+        onSave={() => void save()}
+      />
+    </FormCard>
   );
 }
 
 /**
- * Die Anspruchsgrundlage des Vereins für Aufwandsspenden (Checklisten-Schritt
- * `waiverBasis`, F8a) — nur, solange Aufwandsspenden eingeschaltet sind. Ein
- * Vertrag oder die Satzung; ein Beschluss ohne Satzungsermächtigung reicht nicht.
- * Befund J: Mit Text gehört ein Datum dazu — das meldet der Dienst am Feld „Gilt seit“; der Knopf bleibt bedienbar
- * (K9-Befund 10, MUSTER § B).
+ * Runde 3, 172: die vier Grenzen mit einer Leiste statt vier Knöpfen; die Leiste ruft `setFinanceLimit` für jede
+ * geänderte Grenze. Unlesbare Werte meldet die Zeile am Feld, bevor etwas abgeschickt wird.
  */
-function WaiverBasisRow({ text, agreedOn }: { text: string; agreedOn: string | null }) {
+function LimitsForm({ limits }: { limits: TaxLimits }) {
+  const t = useTranslations('finance.admin.tax');
+  const tLimits = useTranslations('finance.admin.tax.limits');
+  const router = useRouter();
+  const initial: Record<keyof TaxLimits, string> = {
+    statementSufficesBelowCents: formatAmount(limits.statementSufficesBelowCents),
+    cashDonationAlertCents: formatAmount(limits.cashDonationAlertCents),
+    roundAmountFromCents: formatAmount(limits.roundAmountFromCents),
+    proofGraceDays: String(limits.proofGraceDays),
+  };
+  const [texts, setTexts] = useState(initial);
+  const [attempted, setAttempted] = useState(false);
+  const [pending, setPending] = useState(false);
+  const feedback = useActionFeedback();
+  const parse = (key: keyof TaxLimits): number | null => {
+    if (key === 'proofGraceDays') {
+      const raw = texts.proofGraceDays.trim();
+      const days = /^\d+$/.test(raw) ? Number(raw) : null;
+      return days !== null && days <= 365 ? days : null;
+    }
+    const cents = parseAmount(texts[key]);
+    return cents !== null && cents >= 0 ? cents : null;
+  };
+  const keys = Object.keys(LIMIT_IDS) as (keyof TaxLimits)[];
+  const changed = keys.filter((k) => texts[k].trim() !== initial[k]);
+  const invalid = (key: keyof TaxLimits) => parse(key) === null && (attempted || texts[key].trim().length > 0);
+  const save = async () => {
+    if (changed.some((k) => parse(k) === null)) return setAttempted(true);
+    const entries = changed.map((k) => ({ key: `finance.${k}`, cents: parse(k)! })).filter((e, i) => e.cents !== limits[changed[i]!]);
+    if (entries.length === 0) return;
+    setPending(true);
+    const result = await feedback.run(() => setFinanceLimitsAction(entries));
+    setPending(false);
+    if (result.status === 'success') router.refresh();
+  };
+  return (
+    <FormCard data-testid="tax-limits">
+      <FormCardBody className="divide-y divide-line-2 py-2.5">
+        {AMOUNT_LIMIT_KEYS.map((key) => (
+          <SettingRow key={key} htmlFor={LIMIT_IDS[key]} label={t(`limits.${key}`)} testId={LIMIT_IDS[key]}>
+            <div className="w-32">
+              <AmountField id={LIMIT_IDS[key]} name={LIMIT_IDS[key]} value={texts[key]} onChange={(v) => setTexts((prev) => ({ ...prev, [key]: v }))} invalid={invalid(key)} disabled={pending} />
+            </div>
+          </SettingRow>
+        ))}
+        <SettingRow htmlFor={LIMIT_IDS.proofGraceDays} label={t('limits.proofGraceDays')} testId={LIMIT_IDS.proofGraceDays}>
+          <div className="w-32">
+            {/* Runde 3, 172: „Tage“ steht im Feld (`Input unit`), wie „€“ bei den Beträgen. */}
+            <Input id={LIMIT_IDS.proofGraceDays} name={LIMIT_IDS.proofGraceDays} type="number" min={0} max={365} step={1} unit={tLimits('days')} value={texts.proofGraceDays} disabled={pending} aria-invalid={invalid('proofGraceDays') || undefined} aria-describedby={invalid('proofGraceDays') ? `${LIMIT_IDS.proofGraceDays}-error` : undefined} onChange={(e) => setTexts((prev) => ({ ...prev, proofGraceDays: e.target.value }))} />
+            <FieldError id={`${LIMIT_IDS.proofGraceDays}-error`} message={invalid('proofGraceDays') ? tLimits('daysFormat') : undefined} />
+          </div>
+        </SettingRow>
+      </FormCardBody>
+      <FormActionBar
+        count={changed.length}
+        pending={pending}
+        saveTestId="tax-limits-save"
+        state={feedback.state}
+        onDiscard={() => {
+          setTexts(initial);
+          setAttempted(false);
+          feedback.reset();
+        }}
+        onSave={() => void save()}
+      />
+    </FormCard>
+  );
+}
+
+/**
+ * Die Anspruchsgrundlage des Vereins für Aufwandsspenden (Checklisten-Schritt `waiverBasis`, F8a) — nur, solange
+ * Aufwandsspenden eingeschaltet sind. Ein Vertrag oder die Satzung; ein Beschluss ohne Satzungsermächtigung reicht
+ * nicht. Befund J: Mit Text gehört ein Datum dazu — das meldet der Dienst am Feld „Gilt ab“. Runde 3, 172: ein eigener
+ * Abschnitt mit eigener Leiste (eigener Dienst), nicht mehr ein Knopf zwischen den Schaltern.
+ */
+function WaiverBasisForm({ text, agreedOn }: { text: string; agreedOn: string | null }) {
   const t = useTranslations('finance.admin.tax');
   const router = useRouter();
   const [value, setValue] = useState(text);
   const [date, setDate] = useState(agreedOn ?? '');
   const [pending, setPending] = useState(false);
-  const [nothing, flagNothing] = useNothingChanged();
   const feedback = useActionFeedback();
   const errors = feedback.state.status === 'error' ? feedback.state.fieldErrors : {};
-  return (
-    <div className="space-y-3 py-2.5" data-testid="waiver-basis">
-      <FormGrid>
-        <FormField id="tax-waiver-basis" label={t('waiverBasis.label')} hint={t('waiverBasis.hint')} error={errors.text} size="l">
-          <Textarea id="tax-waiver-basis" rows={2} maxLength={500} value={value} disabled={pending} onChange={(e) => setValue(e.target.value)} />
-        </FormField>
-        <FormField id="tax-waiver-basis-agreed-on" label={t('waiverBasis.agreedOnLabel')} hint={t('waiverBasis.agreedOnHint')} error={errors.agreedOn} size="s">
-          <Input id="tax-waiver-basis-agreed-on" type="date" value={date} disabled={pending} onChange={(e) => setDate(e.target.value)} />
-        </FormField>
-      </FormGrid>
-      <RefusalNotice action state={withUnplacedFieldErrors(feedback.state, ['text', 'agreedOn'])} />
-      <div className="flex justify-end gap-2">
-        <NothingChanged show={nothing} />
-        <Button
-          type="button"
-          disabled={pending}
-          onClick={async () => {
-            if (value.trim() === text.trim() && date === (agreedOn ?? '')) return flagNothing();
-            setPending(true);
-            const result = await feedback.run(() => setExpenseWaiverBasisAction(value, date === '' ? null : date));
-            setPending(false);
-            if (result.status === 'success') router.refresh();
-          }}
-        >
-          {t('waiverBasis.save')}
-        </Button>
-      </div>
-    </div>
-  );
-}
-
-/**
- * F8b Annahme 10: Einrichtungspunkt „Vergütung des Vorstands“ — ohne ihn warnt jede Pauschale an ein Vorstandsmitglied.
- * Ein eigener Abschnitt mit `FormActionBar` (K9-Befund 2/3): Haken, Fundstelle und Datum gelten erst zusammen mit
- * „Speichern“; ein fehlendes „Gilt ab“ meldet der Dienst am Feld, der Knopf bleibt bedienbar (MUSTER § B).
- */
-function BoardRemunerationForm({ allowed, basisText, validFrom }: { allowed: boolean; basisText: string; validFrom: string | null }) {
-  const t = useTranslations('finance.admin.tax');
-  const router = useRouter();
-  const [checked, setChecked] = useState(allowed);
-  const [text, setText] = useState(basisText);
-  const [date, setDate] = useState(validFrom ?? '');
-  const [pending, setPending] = useState(false);
-  const feedback = useActionFeedback();
-  const changed = (checked !== allowed ? 1 : 0) + (text.trim() !== basisText.trim() ? 1 : 0) + (date !== (validFrom ?? '') ? 1 : 0);
-  const errors = feedback.state.status === 'error' ? feedback.state.fieldErrors : {};
+  const changed = (value.trim() !== text.trim() ? 1 : 0) + (date !== (agreedOn ?? '') ? 1 : 0);
   const save = async () => {
     setPending(true);
-    const result = await feedback.run(() => setBoardRemunerationAction(checked, text, date === '' ? null : date));
+    const result = await feedback.run(() => setExpenseWaiverBasisAction(value, date === '' ? null : date));
     setPending(false);
     if (result.status === 'success') router.refresh();
   };
   return (
-    <FormCard data-testid="board-remuneration">
+    <FormCard data-testid="waiver-basis">
       <FormCardBody>
         <FormGrid>
-          {/* Ein Haken, kein Schalter: Er gilt erst mit „Speichern“, zusammen mit Grundlage und Datum. */}
-          <FormField id="tax-board-remuneration" label={t('boardRemuneration.switch')} size="full" toggle>
-            <Checkbox id="tax-board-remuneration" checked={checked} disabled={pending} onCheckedChange={(value) => setChecked(value === true)} />
+          <FormField id="tax-waiver-basis" label={t('waiverBasis.label')} hint={t('waiverBasis.hint')} error={errors.text} size="l">
+            <Textarea id="tax-waiver-basis" rows={2} maxLength={500} value={value} disabled={pending} onChange={(e) => setValue(e.target.value)} />
           </FormField>
-          <FormField id="tax-board-remuneration-basis" label={t('boardRemuneration.basisLabel')} hint={t('boardRemuneration.hint')} error={errors.basisText} size="l">
-            <Textarea id="tax-board-remuneration-basis" rows={2} maxLength={500} value={text} disabled={pending} onChange={(e) => setText(e.target.value)} />
-          </FormField>
-          <FormField id="tax-board-remuneration-valid-from" label={t('boardRemuneration.validFromLabel')} hint={t('boardRemuneration.validFromHint')} error={errors.validFrom} size="s">
-            <Input id="tax-board-remuneration-valid-from" type="date" value={date} disabled={pending} onChange={(e) => setDate(e.target.value)} />
+          <FormField id="tax-waiver-basis-agreed-on" label={t('waiverBasis.agreedOnLabel')} hint={t('waiverBasis.agreedOnHint')} error={errors.agreedOn} size="s">
+            <Input id="tax-waiver-basis-agreed-on" type="date" value={date} disabled={pending} onChange={(e) => setDate(e.target.value)} />
           </FormField>
         </FormGrid>
       </FormCardBody>
       <FormActionBar
         count={changed}
         pending={pending}
-        saveTestId="board-remuneration-save"
-        state={withUnplacedFieldErrors(feedback.state, ['basisText', 'validFrom'])}
+        saveTestId="waiver-basis-save"
+        state={withUnplacedFieldErrors(feedback.state, ['text', 'agreedOn'])}
         onDiscard={() => {
-          setChecked(allowed);
+          setValue(text);
+          setDate(agreedOn ?? '');
+          feedback.reset();
+        }}
+        onSave={() => void save()}
+      />
+    </FormCard>
+  );
+}
+
+/** Die Frage steht als Beschriftung der Einstellungszeile; die Ja/Nein-Gruppe heißt nach ihr. */
+const BOARD_QUESTION_ID = 'tax-board-remuneration-question';
+
+export interface BoardRemunerationState {
+  allowed: boolean;
+  basisText: string;
+  validFrom: string | null;
+  /** Joe 11.9: Tag der Entscheidung; ohne ihn ist die Frage offen und hat keine Vorauswahl. */
+  decidedOn: string | null;
+}
+
+/**
+ * F8b Annahme 10: Einrichtungspunkt „Vergütung des Vorstands“ — ohne ihn warnt jede Pauschale an ein Vorstandsmitglied.
+ * Joe 11.9: eine Ja/Nein-Frage statt eines Hakens, ohne Vorauswahl, solange nichts entschieden ist — „Nein“ ist eine
+ * Entscheidung und erledigt den Schritt. Fundstelle und „Gilt ab“ nur bei „Ja“; ein fehlendes „Gilt ab“ meldet der
+ * Dienst am Feld, der Knopf bleibt bedienbar (MUSTER § B). Eigener Abschnitt mit `FormActionBar` (K9-Befund 2/3).
+ */
+function BoardRemunerationForm({ allowed, basisText, validFrom, decidedOn }: BoardRemunerationState) {
+  const t = useTranslations('finance.admin.tax');
+  const router = useRouter();
+  const initial: 'yes' | 'no' | null = decidedOn ? (allowed ? 'yes' : 'no') : null;
+  const [answer, setAnswer] = useState<'yes' | 'no' | null>(initial);
+  const [text, setText] = useState(basisText);
+  const [date, setDate] = useState(validFrom ?? '');
+  const [pending, setPending] = useState(false);
+  const feedback = useActionFeedback();
+  const yes = answer === 'yes';
+  // Die erste Antwort ist eine Änderung; Fundstelle und Datum zählen nur, solange sie zu sehen sind.
+  const changed = (answer !== initial ? 1 : 0) + (yes && text.trim() !== basisText.trim() ? 1 : 0) + (yes && date !== (validFrom ?? '') ? 1 : 0);
+  const errors = feedback.state.status === 'error' ? feedback.state.fieldErrors : {};
+  const save = async () => {
+    if (answer === null) return;
+    setPending(true);
+    const result = await feedback.run(() => setBoardRemunerationAction(yes, yes ? text : '', yes && date !== '' ? date : null));
+    setPending(false);
+    if (result.status === 'success') router.refresh();
+  };
+  return (
+    <FormCard data-testid="board-remuneration">
+      {/* Dieselbe Form wie die übrigen Ja/Nein-Fragen (Runde 4, 172): Frage links, Ja/Nein rechts in einer Zeile, der
+          Hinweis darunter. Fundstelle und „Gilt ab“ erscheinen nur bei „Ja“. */}
+      <FormCardBody className="py-2.5">
+        <SettingRow labelId={BOARD_QUESTION_ID} label={t('boardRemuneration.question')}>
+          <RadioGroup aria-labelledby={BOARD_QUESTION_ID} value={answer} disabled={pending} onValueChange={(value) => setAnswer(value as 'yes' | 'no')} className="flex-row gap-4">
+            {(['yes', 'no'] as const).map((option) => (
+              <label key={option} className="flex items-center gap-2 text-body text-ink">
+                <RadioGroupItem value={option} />
+                {t(`boardRemuneration.${option}`)}
+              </label>
+            ))}
+          </RadioGroup>
+        </SettingRow>
+        <p className="pb-2.5 text-hint text-muted-ink">{t('boardRemuneration.hint')}</p>
+        {yes ? (
+          <div className="border-t border-line-2 pb-2.5 pt-4">
+            <FormGrid>
+              <FormField id="tax-board-remuneration-basis" label={t('boardRemuneration.basisLabel')} error={errors.basisText} size="l">
+                <Textarea id="tax-board-remuneration-basis" rows={2} maxLength={500} value={text} disabled={pending} onChange={(e) => setText(e.target.value)} />
+              </FormField>
+              <FormField id="tax-board-remuneration-valid-from" label={t('boardRemuneration.validFromLabel')} hint={t('boardRemuneration.validFromHint')} error={errors.validFrom} size="s">
+                <Input id="tax-board-remuneration-valid-from" type="date" value={date} disabled={pending} onChange={(e) => setDate(e.target.value)} />
+              </FormField>
+            </FormGrid>
+          </div>
+        ) : null}
+      </FormCardBody>
+      <FormActionBar
+        count={changed}
+        pending={pending}
+        saveTestId="board-remuneration-save"
+        state={withUnplacedFieldErrors(feedback.state, yes ? ['basisText', 'validFrom'] : [])}
+        onDiscard={() => {
+          setAnswer(initial);
           setText(basisText);
           setDate(validFrom ?? '');
           feedback.reset();
@@ -249,90 +319,93 @@ function BoardRemunerationForm({ allowed, basisText, validFrom }: { allowed: boo
   );
 }
 
-/** H7 — Steuerliches, Grenzen und Schalter; „Darf ein Agent festschreiben?“ deutlich abgesetzt. */
+/**
+ * H7 — Steuerliches. Runde 3, 172 (Joe 2026-10-17): je Abschnitt eine Speicherleiste mit einem Dienst — Schalter,
+ * Anspruchsgrundlage, Pauschalen, Grenzen. Nur „Darf ein Agent festschreiben?“ bleibt ein Schalter, der sofort gilt.
+ */
 export function TaxPanel({
   switches,
   limits,
   confirmedAt,
   waiverBasisText,
   waiverBasisAgreedOn,
-  boardRemunerationAllowed,
-  boardRemunerationBasisText,
-  boardRemunerationValidFrom,
+  boardRemuneration,
 }: {
   switches: TaxSwitches;
   limits: TaxLimits;
   confirmedAt: string | null;
   waiverBasisText: string;
   waiverBasisAgreedOn: string | null;
-  boardRemunerationAllowed: boolean;
-  boardRemunerationBasisText: string;
-  boardRemunerationValidFrom: string | null;
+  boardRemuneration: BoardRemunerationState;
 }) {
   const t = useTranslations('finance.admin.tax');
+  const tChecklist = useTranslations('finance.admin.checklist');
   const fmt = useDateFormat();
   const router = useRouter();
   const [pending, setPending] = useState(false);
-  // Schalter und Grenzen speichern je für sich; die Ablehnung steht über dem Block, dessen Knopf sie ausgelöst hat.
-  const toggleFb = useActionFeedback();
-  const limitFb = useActionFeedback();
+  const agentFb = useActionFeedback();
+  const defaultsFb = useActionFeedback();
 
-  const toggle = async (key: keyof TaxSwitches, value: boolean) => {
+  const toggleAgent = async (value: boolean) => {
     setPending(true);
-    const result = await toggleFb.run(() => setFinanceSwitchAction(`finance.${key}`, value));
+    const result = await agentFb.run(() => setFinanceSwitchAction('finance.mcpHumanOnlyAllowed', value));
     setPending(false);
     if (result.status === 'success') router.refresh();
   };
 
-  const saveLimit = async (key: keyof TaxLimits, cents: number) => {
-    const result = await limitFb.run(() => setFinanceLimitAction(`finance.${key}`, cents));
+  // Runde 3, 172: derselbe Dienst wie „Vorgaben übernehmen“ in der Checkliste.
+  const applyDefaults = async () => {
+    setPending(true);
+    const result = await defaultsFb.run(() => applyTaxDefaultsAction(), { retry: () => void applyDefaults() });
+    setPending(false);
     if (result.status === 'success') router.refresh();
   };
 
+  // Die Formulare tragen den gespeicherten Stand im `key`: Nach dem Speichern und `router.refresh()` beginnen sie neu.
+  const switchesKey = TAX_SWITCH_KEYS.map((k) => String(switches[k])).join('-');
+  const limitsKey = Object.values(limits).join('-');
+
   return (
     <section data-testid="tax-panel">
-      <p className="text-meta text-muted-ink">{confirmedAt ? t('confirmedAt', { date: fmt.date(confirmedAt) }) : t('notConfirmed')}</p>
-      {/* Einstellungszeilen statt Raster (Entscheidung zum Inventar, 05.10.2026): Frage links, Bedienelement rechts,
-          je Zeile eigenes Speichern. Die Kästen gehen über die volle Breite, bündig mit den Trennlinien (K9-Befund 1,
-          Joe 05.10.2026: das Seitenformat stört mehr als der Weg von der Frage zum Bedienelement). */}
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+        <p className="text-meta text-muted-ink">{confirmedAt ? t('confirmedAt', { date: fmt.date(confirmedAt) }) : t('notConfirmed')}</p>
+        {confirmedAt ? null : (
+          <Button type="button" variant="outline" size="sm" disabled={pending} onClick={() => void applyDefaults()} data-testid="tax-apply-defaults">
+            {tChecklist('applyTaxDefaults')}
+          </Button>
+        )}
+      </div>
+      <RefusalNotice action state={defaultsFb.state} />
       <div className="mt-5">
-      <Section title={t('sections.switches')}>
+        <Section title={t('sections.switches')}>
+          <SwitchesForm key={switchesKey} switches={switches} />
+        </Section>
+        {switches.expenseWaiversEnabled ? (
+          <Section title={t('sections.waiverBasis')}>
+            <WaiverBasisForm key={`${waiverBasisText}-${waiverBasisAgreedOn}`} text={waiverBasisText} agreedOn={waiverBasisAgreedOn} />
+          </Section>
+        ) : null}
+        <Section title={t('sections.boardRemuneration')}>
+          <BoardRemunerationForm key={`${boardRemuneration.allowed}-${boardRemuneration.basisText}-${boardRemuneration.validFrom}-${boardRemuneration.decidedOn}`} {...boardRemuneration} />
+        </Section>
+        <Section title={t('sections.limits')}>
+          <LimitsForm key={limitsKey} limits={limits} />
+        </Section>
+        {/* Runde 3, 172: ohne eigene Fläche und Linie — ein Abschnitt wie die anderen; der Schalter speichert sofort. */}
+        <Section title={t('sections.agent')}>
           <FormGrid>
             <FormCell size="full" className="space-y-3">
-              <RefusalNotice action state={toggleFb.state} />
-              <div className="divide-y divide-line-2 rounded-md border border-line bg-surface px-3.5">
-                <SwitchRow id="tax-entrepreneur" label={t('isEntrepreneurOrHasVatId')} checked={switches.isEntrepreneurOrHasVatId} disabled={pending} onToggle={(v) => void toggle('isEntrepreneurOrHasVatId', v)} />
-                <SwitchRow id="tax-membership-fees" label={t('membershipFeesCertifiable')} checked={switches.membershipFeesCertifiable} disabled={pending} onToggle={(v) => void toggle('membershipFeesCertifiable', v)} />
-                <SwitchRow id="tax-expense-waivers" label={t('expenseWaiversEnabled')} checked={switches.expenseWaiversEnabled} disabled={pending} onToggle={(v) => void toggle('expenseWaiversEnabled', v)} />
-                {switches.expenseWaiversEnabled ? <WaiverBasisRow key={`${waiverBasisText}-${waiverBasisAgreedOn}`} text={waiverBasisText} agreedOn={waiverBasisAgreedOn} /> : null}
+              <RefusalNotice action state={agentFb.state} />
+              <div className="rounded-md border border-line bg-surface px-3.5" data-testid="mcp-human-only-row">
+                <div className="flex items-center justify-between gap-3 py-2.5">
+                  <Label htmlFor="tax-mcp-human-only" className="cursor-pointer text-body font-normal text-ink">{t('mcpHumanOnlyAllowed')}</Label>
+                  <Switch id="tax-mcp-human-only" checked={switches.mcpHumanOnlyAllowed} disabled={pending} onCheckedChange={(v) => void toggleAgent(v)} />
+                </div>
+                <p className="pb-2.5 text-hint text-muted-ink">{t('mcpHumanOnlyAllowedHint')}</p>
               </div>
             </FormCell>
           </FormGrid>
-      </Section>
-      <Section title={t('sections.boardRemuneration')}>
-        <BoardRemunerationForm key={`${boardRemunerationAllowed}-${boardRemunerationBasisText}-${boardRemunerationValidFrom}`} allowed={boardRemunerationAllowed} basisText={boardRemunerationBasisText} validFrom={boardRemunerationValidFrom} />
-      </Section>
-      <Section title={t('sections.limits')}>
-        <FormGrid>
-          <FormCell size="full" className="space-y-3">
-            <RefusalNotice action state={limitFb.state} />
-            <div className="divide-y divide-line-2 rounded-md border border-line bg-surface px-3.5" data-testid="tax-limits">
-              <LimitRow id="tax-limit-statement-suffices" label={t('limits.statementSufficesBelowCents')} cents={limits.statementSufficesBelowCents} onSave={(cents) => saveLimit('statementSufficesBelowCents', cents)} />
-              <LimitRow id="tax-limit-cash-donation" label={t('limits.cashDonationAlertCents')} cents={limits.cashDonationAlertCents} onSave={(cents) => saveLimit('cashDonationAlertCents', cents)} />
-              <LimitRow id="tax-limit-round-amount" label={t('limits.roundAmountFromCents')} cents={limits.roundAmountFromCents} onSave={(cents) => saveLimit('roundAmountFromCents', cents)} />
-              <DaysRow id="tax-limit-proof-grace-days" label={t('limits.proofGraceDays')} days={limits.proofGraceDays} onSave={(days) => saveLimit('proofGraceDays', days)} />
-            </div>
-          </FormCell>
-        </FormGrid>
-      </Section>
-      <Section title={t('sections.agent')}>
-        <FormGrid>
-          <FormCell size="full" className="space-y-1.5 rounded-md border-t-2 border-line-strong bg-surface-2 p-3.5" data-testid="mcp-human-only-row">
-            <SwitchRow id="tax-mcp-human-only" label={t('mcpHumanOnlyAllowed')} checked={switches.mcpHumanOnlyAllowed} disabled={pending} onToggle={(v) => void toggle('mcpHumanOnlyAllowed', v)} />
-            <p className="text-hint text-muted-ink">{t('mcpHumanOnlyAllowedHint')}</p>
-          </FormCell>
-        </FormGrid>
-      </Section>
+        </Section>
       </div>
     </section>
   );

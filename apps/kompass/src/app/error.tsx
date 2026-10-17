@@ -32,7 +32,7 @@ export default function AuthError({
       ) : null}
       <div className="flex gap-2">
         <Button onClick={reset}>{t('retry')}</Button>
-        <Link href="/login" className={buttonVariants({ variant: 'secondary' })}>
+        <Link href="/login" className={buttonVariants({ variant: 'outline' })}>
           {t('login')}
         </Link>
       </div>

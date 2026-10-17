@@ -6,17 +6,18 @@ import { listProjects } from '@kompass/module-projects';
 import { getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
-import { Table, TableBody, TableCell, TableRow } from '@/components/ui/table';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { AmountCell } from '@/components/finance/amount-cell';
 import { ConfirmationSection, type ConfirmationSectionLine } from '@/components/finance/confirmation-section';
 import { EntryStateBadge } from '@/components/finance/entry-state-badge';
-import { LockLine } from '@/components/finance/lock-line';
 import { ForbiddenCard } from '@/components/forbidden-card';
 import { Page } from '@/components/page';
 import { PageHeader } from '@/components/page-header';
+import { lockLineText } from '@/lib/finance/lock-line';
 import { dateFormatOf } from '@/lib/date-format';
 import { formatEuro } from '@/lib/finance/amount';
 import { taxTextKey } from '@/lib/finance/tax-text';
+import { voucherDetails } from '@/lib/finance/voucher-details';
 import { readAllPages } from '@/lib/read-all-pages';
 import { requireSession } from '@/lib/request-context';
 import { CorrectDialog } from './correct-dialog';
@@ -25,6 +26,7 @@ import { EntryHistory } from './history';
 import { NotReturnCard } from './not-return';
 import { EntryVouchers } from './vouchers';
 import { Section } from '@/components/section';
+import { Empty } from '@/components/empty-value';
 
 export default async function ViewFinanceEntryPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -105,12 +107,14 @@ export default async function ViewFinanceEntryPage({ params }: { params: Promise
   // AC: eine Auszahlung an eine Person — sie gilt als möglicher Rückläufer ihrer Spenden, bis sie verknüpft oder als „keine Rückgabe“ gekennzeichnet ist.
   const paysPerson = entry.status === 'final' && !reversed && !entry.reversesEntryId && entry.moneyLines.some((l) => l.amountCents < 0) && entry.allocationLines.some((l) => l.amountCents < 0 && l.contactId !== null && l.originLineId === null);
 
+  // 07-2 A5: Nummer einmal, daneben der Betreff aus der Akte.
+  const voucherDocs = await voucherDetails(deps, ctx, entry.vouchers.map((v) => v.documentId));
   const vouchers = entry.vouchers.map((v) => ({
     linkId: v.linkId,
     documentNumber: v.documentNumber,
-    title: v.documentNumber,
-    typeLabel: '',
-    date: entry.entryDate,
+    title: voucherDocs.get(v.documentId)?.subject ?? '',
+    typeLabel: voucherDocs.get(v.documentId)?.typeLabel ?? '',
+    date: voucherDocs.get(v.documentId)?.date ?? entry.entryDate,
     viewHref: `/finance/entries/${id}/voucher/${v.documentId}`,
     revoked: v.revokedAt !== null,
     replacedByNumber: v.replacedByLinkId ? (entry.vouchers.find((o) => o.linkId === v.replacedByLinkId)?.documentNumber ?? null) : null,
@@ -135,15 +139,21 @@ export default async function ViewFinanceEntryPage({ params }: { params: Promise
     </EntryActions>
   ) : undefined;
 
+  // Runde 3, 089: Die Marke „festgeschrieben“ steht neben der Nummer; Zeit, Person und Weg stehen als Unterzeile darunter
+  // statt als zweiter Kasten mit Schloss.
+  const tLock = await getTranslations('finance.lockLine');
+  const tChannel = await getTranslations('finance.channel');
+  const lockLine =
+    finalizedEvent && finalizedEvent.kind === 'finalized'
+      ? lockLineText((key, values) => tLock(key, values), (key) => tChannel(key), finalizedEvent, dateFormatOf(deps))
+      : undefined;
+
   return (
-    <Page width="standard" header={<PageHeader back={{ href: '/finance/entries', label: t('back') }} title={entry.number ?? undefined} status={<EntryStateBadge entry={entry} />} actions={actions} />}>
+    <Page width="standard" header={<PageHeader back={{ href: '/finance/entries', label: t('back') }} title={entry.number ?? undefined} status={<EntryStateBadge entry={entry} />} description={lockLine} actions={actions} />}>
       <div className="space-y-4">
         <section className="space-y-2 rounded-md border border-line bg-surface p-4">
           {/* Nummer und Stand stehen im Seitenkopf (`PageHeader title`/`status`, Board § K Ziel 5). */}
           <p className="text-body text-ink">{entry.text}</p>
-          {finalizedEvent && finalizedEvent.kind === 'finalized' ? (
-            <LockLine at={finalizedEvent.at} userName={finalizedEvent.userName} channel={finalizedEvent.channel} fmt={dateFormatOf(deps)} />
-          ) : null}
           {entry.purposeNegativeReason ? (
             <p data-testid="entry-purpose-negative-reason" className="text-meta text-ink-2">
               {t('purposeNegativeReason', { reason: entry.purposeNegativeReason })}
@@ -190,14 +200,24 @@ export default async function ViewFinanceEntryPage({ params }: { params: Promise
             <section className="rounded-md border border-line bg-surface p-4">
               <Section title={t('allocation')}>
                 <div className="space-y-2">
+                  {/* 07-2 B20: Vier Spalten brauchen einen Kopf. */}
                   <Table data-testid="finance-allocation-table" className="text-meta">
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead col="title">{t('allocationColumns.category')}</TableHead>
+                        <TableHead col="meta">{t('allocationColumns.contact')}</TableHead>
+                        <TableHead col="meta">{t('allocationColumns.purpose')}</TableHead>
+                        <TableHead col="amount" className="text-right">{t('allocationColumns.amount')}</TableHead>
+                        <TableHead col="status"><span className="sr-only">{t('allocationColumns.state')}</span></TableHead>
+                      </TableRow>
+                    </TableHeader>
                     <TableBody>
                       {entry.allocationLines.map((line) => (
                         <TableRow key={line.id}>
-                          <TableCell className="text-ink-2">{categoryNames.get(line.categoryId) ?? line.categoryId}</TableCell>
-                          <TableCell className="text-ink-2">{line.contactId ? (contactNames.get(line.contactId) ?? '') : '—'}</TableCell>
-                          <TableCell className="text-ink-2">{line.purposeId ? (purposeNames.get(line.purposeId) ?? '') : '—'}</TableCell>
-                          <TableCell className="whitespace-normal">
+                          <TableCell col="title" className="text-ink-2">{categoryNames.get(line.categoryId) ?? line.categoryId}</TableCell>
+                          <TableCell col="meta" className="text-ink-2">{line.contactId ? (contactNames.get(line.contactId) ?? '') : <Empty />}</TableCell>
+                          <TableCell col="meta" className="text-ink-2">{line.purposeId ? (purposeNames.get(line.purposeId) ?? '') : <Empty />}</TableCell>
+                          <TableCell col="amount" className="whitespace-normal">
                             <AmountCell cents={line.amountCents} />
                             {line.amountCents !== 0 && taxTextKey(line.tax) ? (
                               <p className="text-right text-hint text-muted-ink">
@@ -205,7 +225,7 @@ export default async function ViewFinanceEntryPage({ params }: { params: Promise
                               </p>
                             ) : null}
                           </TableCell>
-                          <TableCell className="text-right text-hint">
+                          <TableCell col="status" className="text-right text-hint">
                             {line.corrected ? <span className="text-info">{t('corrected')}</span> : null}
                             {line.pendingCorrectionId ? <span className="text-warning">{t('pendingCorrection')}</span> : null}
                           </TableCell>
@@ -231,7 +251,7 @@ export default async function ViewFinanceEntryPage({ params }: { params: Promise
                           ) : (
                             <span className="text-ink-2">{t('related.unnamedItem')}</span>
                           )}
-                          <span className="font-mono tabular-nums text-ink-2">
+                          <span className="tabular-nums text-ink-2">
                             {t('related.settlement', { amount: formatEuro(settlement.amountCents), rest: formatEuro(item?.openCents ?? 0) })}
                           </span>
                         </li>

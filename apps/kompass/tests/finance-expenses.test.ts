@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import {
   applySaved,
   approveInput,
-  CLAIM_BADGE_TONE,
+  claimAmountMissing,
   claimHistory,
   claimHref,
   claimSentence,
@@ -195,9 +195,6 @@ describe('own claims (D2)', () => {
       ...over,
     }) as unknown as ExpenseClaimView;
 
-  it('gives every state its badge tone — rejected is never red', () => {
-    expect(CLAIM_BADGE_TONE).toEqual({ draft: 'warning', submitted: 'info', approved: 'success', paid: 'final', rejected: 'neutral' });
-  });
 
   it('says in everyday words what is going on, with the date that matters', () => {
     expect(claimSentence(claim({ state: 'draft', stateLabelKey: 'draft', submittedAt: null }))).toEqual({ key: 'draft', date: '2026-09-20T08:00:00.000Z' });
@@ -252,5 +249,14 @@ describe('approval input (D3)', () => {
   it('Q Rest: sends the reason for a purpose going negative only when one was typed', () => {
     expect(approveInput({ claimId: 'c1', version: 'v3', positions, decisions: {}, purposeReason: ' Zuschuss zugesagt ' })).toMatchObject({ purposeReason: 'Zuschuss zugesagt' });
     expect(approveInput({ claimId: 'c1', version: 'v3', positions, decisions: {}, purposeReason: '  ' })).not.toHaveProperty('purposeReason');
+  });
+});
+
+/** 08 A2 (Joe 2026-10-16): Ein Entwurf ohne Betrag sagt „Betrag fehlt“ statt 0,00 €. */
+describe('claimAmountMissing', () => {
+  it('nur beim Entwurf ohne Betrag', () => {
+    expect(claimAmountMissing({ state: 'draft', totalCents: 0 })).toBe(true);
+    expect(claimAmountMissing({ state: 'draft', totalCents: 1250 })).toBe(false);
+    expect(claimAmountMissing({ state: 'submitted', totalCents: 0 })).toBe(false);
   });
 });

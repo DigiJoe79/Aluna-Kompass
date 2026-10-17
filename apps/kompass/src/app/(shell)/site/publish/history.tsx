@@ -7,17 +7,18 @@ import { useState } from 'react';
 import { ListTruncated } from '@/components/list-truncated';
 import { StatusBadge } from '@/components/status-badge';
 import { Button } from '@/components/ui/button';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { RowButton, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { LogDialog, subjectOfPublish } from './log-dialog';
 import { SourceMark } from './source-mark';
 import { StatusMark } from './status-mark';
 import { Section } from '@/components/section';
+import { countParts } from '@/lib/count-parts';
 
 const SHOWN = 5;
 
 /**
- * Die letzten Publishes: Zeit, Ergebnis, Änderungen in Worten, wer, und das
- * Protokoll hinter einem Knopf. Am Telefon ist die ganze Zeile der Knopf.
+ * Die letzten Publishes: Zeit, Ergebnis, Änderungen in Worten, wer. Die Zeile öffnet ihr Protokoll (die Zeit ist der
+ * `RowButton`, 137); das Ergebnis steht nur, wenn es vom Normalfall „Publiziert“ abweicht.
  * `highlightId` ist der Publish, der gerade zu Ende ging — er trägt „neu“.
  */
 export function PublishHistory({ items, total = items.length, highlightId = null }: { items: PublishSummary[]; /** Alle Publishes; mehr als `items` nennt `ListTruncated`. */ total?: number; highlightId?: string | null }) {
@@ -36,39 +37,33 @@ export function PublishHistory({ items, total = items.length, highlightId = null
             <p className="text-meta text-muted-ink">{t('empty')}</p>
           ) : (
             <Table aria-label={t('title')} className="text-meta">
-              <TableHeader className="max-sm:hidden">
+              <TableHeader>
                 <TableRow>
-                  <TableHead>{t('columns.time')}</TableHead>
-                  <TableHead>{t('columns.status')}</TableHead>
-                  <TableHead>{t('columns.changes')}</TableHead>
-                  <TableHead>{t('columns.by')}</TableHead>
-                  <TableHead>{t('columns.log')}</TableHead>
+                  <TableHead col="title">{t('columns.time')}</TableHead>
+                  <TableHead col="status">{t('columns.status')}</TableHead>
+                  <TableHead col="meta">{t('columns.changes')}</TableHead>
+                  <TableHead col="meta">{t('columns.by')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {shown.map((row) => (
-                  // Am Telefon wird die Zeile ein Raster aus zwei Spalten; die feste Zeilenhöhe gibt sie dort frei.
-                  <TableRow
-                    key={row.id}
-                    data-state={row.id === highlightId ? 'selected' : undefined}
-                    className="max-sm:grid max-sm:h-auto max-sm:min-h-14 max-sm:grid-cols-2 max-sm:items-center max-sm:gap-x-3 max-sm:py-2"
-                  >
-                    <TableCell className="max-sm:py-0">
-                      {when(row.startedAt)}
+                  // Am Telefon Kartenzeile über die Spaltenrollen (E1).
+                  <TableRow key={row.id} data-state={row.id === highlightId ? 'selected' : undefined}>
+                    <TableCell col="title">
+                      {row.hasLog ? (
+                        <RowButton aria-haspopup="dialog" aria-label={t('logFor', { when: when(row.startedAt) })} onClick={() => setSelected(row)}>
+                          {when(row.startedAt)}
+                        </RowButton>
+                      ) : (
+                        when(row.startedAt)
+                      )}
                       {row.id === highlightId ? <StatusBadge tone="brand" className="ml-2">{t('new')}</StatusBadge> : null}
                     </TableCell>
-                    <TableCell className="max-sm:py-0">
-                      <StatusMark status={row.status} />
+                    <TableCell col="status">
+                      {row.status === 'success' ? null : <StatusMark status={row.status} />}
                     </TableCell>
-                    <TableCell className="tabular-nums max-sm:py-0">{t('changes', { changed: row.pagesChanged, added: row.pagesAdded, removed: row.pagesRemoved })}</TableCell>
-                    <TableCell className="text-ink-2 max-sm:py-0"><SourceMark source={row.source} name={row.triggeredByName} /></TableCell>
-                    <TableCell className="text-right max-sm:col-span-2 max-sm:py-0 sm:text-left">
-                      {row.hasLog && (
-                        <Button variant="ghost" size="sm" className="max-sm:h-11" onClick={() => setSelected(row)}>
-                          {t('log')}
-                        </Button>
-                      )}
-                    </TableCell>
+                    <TableCell col="meta" className="tabular-nums">{countParts([[row.pagesChanged, t('changed', { count: row.pagesChanged })], [row.pagesAdded, t('added', { count: row.pagesAdded })], [row.pagesRemoved, t('removed', { count: row.pagesRemoved })]])}</TableCell>
+                    <TableCell col="meta" className="text-ink-2"><SourceMark source={row.source} name={row.triggeredByName} /></TableCell>
                   </TableRow>
                 ))}
               </TableBody>

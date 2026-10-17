@@ -14,8 +14,8 @@ test.describe('users', () => {
     // Kopf + 5 Kernseed-Personen + Nadja Vogt (F8a Task 7, Rolle „Auslagen einreichen“) + die Beispielquelle der Tiervorschläge (0.2.10).
     await expect(table.getByRole('row')).toHaveCount(8);
     const jonas = table.getByRole('row', { name: /Jonas Feld/ });
-    await expect(jonas).toContainText('Schatzmeisterin');
-    await expect(jonas).toContainText('Aktiv');
+    await expect(jonas).toContainText('Geschäftsstelle');
+    await expect(jonas).not.toContainText(/deaktiviert|Erstlogin offen/); // Normalzustand ohne Marke in Listen (Designer Stufe 2 Nr. 6a).
     await expect(page.getByText('7 Nutzer', { exact: true })).toBeVisible();
   });
 
@@ -70,8 +70,10 @@ test.describe('users', () => {
     // Peter Lang ist im Seed schon verknüpft, Mira Klein nicht.
     await expect(page.getByRole('row', { name: /Peter Lang/ }).getByRole('link', { name: 'Peter Lang' })).toBeVisible();
     const row = page.getByRole('row', { name: /Mira Klein/ });
-    await expect(row).toContainText('nicht verknüpft');
-    await row.getByRole('button', { name: 'Verknüpfen' }).click();
+    // Runde 3, 155: Verknüpfen und Lösen stehen im Zeilenmenü, die Spalte zeigt den Namen oder „—“.
+    await expect(row.getByRole('link', { name: 'Tomas Leitner' })).toHaveCount(0);
+    await row.getByRole('button', { name: 'Aktionen für Mira Klein' }).click();
+    await page.getByRole('menuitem', { name: 'Mit Kontakt verknüpfen …' }).click();
     const dialog = page.getByRole('dialog');
     // Getippt statt nur geöffnet (F7 Task 7): die ungefilterte Liste zeigt nur die ersten 20 Kontakte —
     // seit dem Partner-Seed reicht das ohne Suchbegriff nicht mehr sicher bis „Tomas Leitner“.
@@ -81,15 +83,17 @@ test.describe('users', () => {
     await option.click();
     await dialog.getByRole('button', { name: 'Verknüpfen' }).click();
     await expect(page.getByRole('row', { name: /Mira Klein/ }).getByRole('link', { name: 'Tomas Leitner' })).toBeVisible();
-    await page.getByRole('row', { name: /Mira Klein/ }).getByRole('button', { name: 'Lösen' }).click();
-    await expect(page.getByRole('row', { name: /Mira Klein/ })).toContainText('nicht verknüpft');
+    await page.getByRole('row', { name: /Mira Klein/ }).getByRole('button', { name: 'Aktionen für Mira Klein' }).click();
+    await page.getByRole('menuitem', { name: 'Verknüpfung lösen' }).click();
+    await expect(page.getByRole('row', { name: /Mira Klein/ }).getByRole('link', { name: 'Tomas Leitner' })).toHaveCount(0);
   });
 
   test('Kontakt-Picker: ohne Suchbegriff sagt er, dass es mehr gibt; der ganze Name trifft (Befund 39)', async ({ page, baseURL }) => {
     const client = await mcpClient(page, baseURL);
     for (let i = 1; i <= 21; i++) await callTool(client, 'contacts_create', { kind: 'person', lastName: `Füllkontakt ${i}` });
     await page.goto('/admin/users');
-    await page.getByRole('row', { name: /Mira Klein/ }).getByRole('button', { name: 'Verknüpfen' }).click();
+    await page.getByRole('row', { name: /Mira Klein/ }).getByRole('button', { name: 'Aktionen für Mira Klein' }).click();
+    await page.getByRole('menuitem', { name: 'Mit Kontakt verknüpfen …' }).click();
     const dialog = page.getByRole('dialog');
     const picker = dialog.getByRole('combobox', { name: 'Kontakt wählen' });
     await picker.click();
@@ -119,7 +123,8 @@ test.describe('users', () => {
     await page.getByRole('menuitem', { name: 'Deaktivieren' }).click();
     await expect(page.getByRole('alertdialog')).toContainText('Jonas Feld kann sich danach nicht mehr anmelden.');
     await page.getByRole('alertdialog').getByRole('button', { name: 'Deaktivieren' }).click();
-    await expect(page.getByRole('row', { name: /Jonas Feld/ })).toContainText('Inaktiv');
+    // Deaktiviert: gedämpfte Zeile mit Marke hinter dem Namen (Joe 11.8).
+    await expect(page.getByRole('row', { name: /Jonas Feld/ })).toContainText('deaktiviert');
 
     await page.getByRole('row', { name: /Anna Berger/ }).getByRole('button', { name: 'Aktionen' }).click();
     await page.getByRole('menuitem', { name: 'Deaktivieren' }).click();
@@ -145,7 +150,8 @@ test.describe('users', () => {
     await page.getByRole('button', { name: 'Passwort setzen und fortfahren' }).click();
     await expect(page).toHaveURL('/');
     await page.goto('/admin/users');
-    await expect(page.getByText('403', { exact: true })).toBeVisible();
+    // Zustandskarte (G7): kein „403“ mehr, sondern Titel und Recht.
+    await expect(page.getByText('Diese Seite ist für Ihre Rolle nicht freigegeben.')).toBeVisible();
     await expect(page.getByText('users.manage')).toBeVisible();
   });
 
@@ -155,6 +161,8 @@ test.describe('users', () => {
     await page.getByRole('dialog').getByLabel('Rollenname').fill('Zugänge');
     await page.getByRole('dialog').getByRole('button', { name: 'Anlegen' }).click();
     await page.getByRole('list', { name: 'Rollen' }).getByRole('button', { name: /Zugänge/ }).click();
+    // Rechtegruppen sind zugeklappt, teilweise gesetzte offen (Runde 3, 158).
+    await page.getByRole('button', { name: 'Alle aufklappen' }).click();
     await page.getByRole('checkbox', { name: 'Nutzer verwalten' }).check();
     await page.getByRole('checkbox', { name: 'Rollen verwalten' }).check();
     await page.getByRole('button', { name: 'Rolle speichern' }).click();
@@ -193,6 +201,8 @@ test.describe('users', () => {
 
     await page.goto('/admin/roles');
     await page.getByRole('list', { name: 'Rollen' }).getByRole('button', { name: /Interne Revision/ }).click();
+    // Rechtegruppen sind zugeklappt, teilweise gesetzte offen (Runde 3, 158).
+    await page.getByRole('button', { name: 'Alle aufklappen' }).click();
     await expect(page.getByRole('checkbox', { name: 'Nutzer verwalten' })).toBeEnabled();
     await expect(page.getByRole('checkbox', { name: 'Einstellungen verwalten' })).toBeDisabled();
     // Was die Rolle schon hat, darf auch entfernt werden, wer es selbst nicht hat.

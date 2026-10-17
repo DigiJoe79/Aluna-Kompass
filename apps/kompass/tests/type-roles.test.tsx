@@ -121,15 +121,16 @@ describe('Titel und Beschreibung', () => {
     expect(description).not.toContain('text-sm');
   });
 
-  it('Dateiname im Mediendetail: mono in der Rolle Text, gekürzt nur optisch (Designer 2026-10-10 § 9.6)', () => {
+  it('Dateiname im Mediendetail: Rolle Text ohne Mono, gekürzt nur optisch (Designer 2026-10-10 § 9.6, Auftrag 5)', () => {
     const source = readFileSync(path.resolve(import.meta.dirname, '../src/app/(shell)/admin/media/asset-detail-dialog.tsx'), 'utf8');
     const cls = /<DialogTitle className="([^"]+)">\{item\.filename\}/.exec(source)?.[1];
-    expect(cls).toBe('truncate font-mono text-body');
+    expect(cls).toBe('truncate text-body');
     const name = `${'ein-sehr-langer-dateiname-'.repeat(8)}.pdf`;
     render(<Dialog open><DialogContent size="md"><DialogTitle className={cls}>{name}</DialogTitle></DialogContent></Dialog>, { wrapper });
     const title = screen.getByRole('heading', { name });
     expect(title.textContent).toBe(name);
-    expect(title.className.split(' ')).toEqual(expect.arrayContaining(['truncate', 'font-mono', 'text-body']));
+    expect(title.className.split(' ')).toEqual(expect.arrayContaining(['truncate', 'text-body']));
+    expect(title.className).not.toContain('font-mono');
     expect(title.className).not.toContain('font-medium');
     expect(title.className).not.toContain('text-dialog-title');
   });

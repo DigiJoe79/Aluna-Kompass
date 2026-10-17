@@ -79,23 +79,28 @@ export function BasesPanel({ bases, groups, gaps = [], canManage }: { bases: Bas
         <Table className="text-meta">
           <TableHeader>
             <TableRow>
-              <TableHead>{t('columns.base')}</TableHead>
-              <TableHead>{t('columns.id')}</TableHead>
-              <TableHead>{t('columns.origin')}</TableHead>
-              <TableHead>{t('columns.state')}</TableHead>
+              <TableHead col="title">{t('columns.base')}</TableHead>
+              <TableHead col="status">{t('columns.state')}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {bases.map((b) => (
               <TableRow key={b.id}>
-                <TableCell>{b.label}</TableCell>
-                <TableCell className="font-mono text-hint text-ink-2">{b.id}</TableCell>
-                <TableCell>
-                  <StatusBadge tone={b.own ? 'brand' : 'neutral'}>{b.own ? t('own') : t('shipped')}</StatusBadge>
+                {/* Kennung als `KeyLine` unter dem Namen statt eigener Spalte (11-1 B9). */}
+                <TableCell col="title">
+                  <span className="block">{b.label}</span>
+                  <KeyLine>{b.id}</KeyLine>
                 </TableCell>
-                <TableCell>
-                  <StatusBadge tone={b.ok ? 'success' : 'error'}>{b.ok ? t('ready') : t('broken')}</StatusBadge>
-                  {b.error ? <span className="ml-2 text-hint text-error" title={b.error}>{b.error}</span> : null}
+                {/* Runde 3, 165: Der Normalfall (mitgeliefert, bereit) trägt keine Marke; nur eine eigene Basis und ein
+                    Fehler. Ohne beides fällt die Spalte weg. */}
+                <TableCell col="status">
+                  {b.own || !b.ok ? (
+                    <span className="flex flex-wrap items-center gap-2">
+                      {b.own ? <StatusBadge tone="brand">{t('own')}</StatusBadge> : null}
+                      {b.ok ? null : <StatusBadge tone="error">{t('broken')}</StatusBadge>}
+                      {b.error ? <span className="text-hint text-error" title={b.error}>{b.error}</span> : null}
+                    </span>
+                  ) : null}
                 </TableCell>
               </TableRow>
             ))}
@@ -113,9 +118,9 @@ export function BasesPanel({ bases, groups, gaps = [], canManage }: { bases: Bas
         <Table className="text-meta">
           <TableHeader>
             <TableRow>
-              <TableHead>{t('columns.type')}</TableHead>
-              <TableHead>{t('columns.effective')}</TableHead>
-              <TableHead>{t('columns.choice')}</TableHead>
+              <TableHead col="title">{t('columns.type')}</TableHead>
+              <TableHead col="status">{t('columns.effective')}</TableHead>
+              <TableHead col="actions">{t('columns.choice')}</TableHead>
             </TableRow>
           </TableHeader>
           {groups.map((group) => (
@@ -123,19 +128,25 @@ export function BasesPanel({ bases, groups, gaps = [], canManage }: { bases: Bas
               <TableGroupRow colSpan={3}>{group.moduleLabel}</TableGroupRow>
               {group.rows.map((row) => (
                 <TableRow key={row.key}>
-                  <TableCell>
+                  <TableCell col="title">
                     <span className="block">{row.label}</span>
                     {row.label === row.key ? null : <KeyLine>{row.key}</KeyLine>}
                   </TableCell>
-                  <TableCell data-testid="effective-base">
-                    <span className="flex flex-wrap items-center gap-2">
-                      <span>{row.effectiveLabel}</span>
-                      <span className="font-mono text-key text-ink-2">{row.effectiveBase}</span>
-                      {row.override ? <StatusBadge tone="warning">{t('overridden')}</StatusBadge> : null}
-                      {row.available ? null : <StatusBadge tone="error">{t('unavailable')}</StatusBadge>}
-                    </span>
+                  {/* Runde 3, 165: Solange die Vorgabe gilt, sagt die Auswahl daneben dasselbe; die Zelle bleibt leer und
+                      fällt ohne Abweichung in der ganzen Liste weg. */}
+                  <TableCell col="status" data-testid="effective-base">
+                    {row.override || !row.available ? (
+                      <span className="flex flex-wrap items-center gap-2">
+                        <span>
+                          <span className="block">{row.effectiveLabel}</span>
+                          <KeyLine>{row.effectiveBase}</KeyLine>
+                        </span>
+                        {row.override ? <StatusBadge tone="warning">{t('overridden')}</StatusBadge> : null}
+                        {row.available ? null : <StatusBadge tone="error">{t('unavailable')}</StatusBadge>}
+                      </span>
+                    ) : null}
                   </TableCell>
-                  <TableCell>
+                  <TableCell col="actions">
                     <span className="flex items-center gap-2">
                       <Select
                         aria-label={t('choiceFor', { type: row.label })}
@@ -144,17 +155,17 @@ export function BasesPanel({ bases, groups, gaps = [], canManage }: { bases: Bas
                         className="w-auto"
                         onChange={(e) => setBase(row.key, e.target.value || null)}
                       >
-                        <option value="">{t('useDefault', { base: row.defaultBase })}</option>
+                        <option value="">{t('useDefault', { base: bases.find((b) => b.id === row.defaultBase)?.label ?? row.defaultBase })}</option>
                         {/* Eine Übersteuerung auf eine Basis, die es nicht mehr gibt, bleibt wählbar sichtbar – sonst zeigte das Feld die Vorgabe. */}
                         {row.override && !usable.some((b) => b.id === row.override) ? <option value={row.override}>{row.override}</option> : null}
                         {usable.map((b) => (
                           <option key={b.id} value={b.id}>
-                            {b.label} ({b.id})
+                            {b.label}
                           </option>
                         ))}
                       </Select>
                       {row.override && canManage ? (
-                        <Button type="button" variant="ghost" size="sm" disabled={pending} onClick={() => setBase(row.key, null)}>
+                        <Button type="button" variant="outline" size="sm" disabled={pending} onClick={() => setBase(row.key, null)}>
                           {t('reset')}
                         </Button>
                       ) : null}

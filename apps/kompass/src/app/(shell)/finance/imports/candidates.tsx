@@ -11,8 +11,8 @@ import { useActionFeedback } from '@/components/forms/use-action-feedback';
 import { Button } from '@/components/ui/button';
 import { formatEuro } from '@/lib/finance/amount';
 import { decideCandidateAction } from './actions';
-import { Overline } from '@/components/overline';
 import { Section } from '@/components/section';
+import { Empty } from '@/components/empty-value';
 
 export interface CandidateRow {
   id: string;
@@ -55,7 +55,8 @@ export function CandidatesSection({ candidates, canDecide }: { candidates: Candi
         <div className="space-y-4">
           {candidates.map((c) => (
             <div key={c.id} className="space-y-2 rounded-md border border-line bg-surface p-3">
-              <Overline>{c.accountName}</Overline>
+              {/* 07-1 B21: Das Konto ist der Name des Blocks, kein drittes Versalien-Etikett über „Im Auszug“/„Bereits vorhanden“. */}
+              <p className="text-body font-semibold text-ink">{c.accountName}</p>
               <BeforeAfter
                 layout="cards"
                 columnLabels={{ before: t('inStatement'), after: t('existing') }}
@@ -64,12 +65,12 @@ export function CandidatesSection({ candidates, canDecide }: { candidates: Candi
                     label: '',
                     before: (
                       <span>
-                        {date(c.line.bookingDate)} · {c.line.counterpartyName ?? '—'} · {c.line.purpose || '—'} · <span className="font-mono tabular-nums">{formatEuro(c.line.amountCents)}</span>
+                        {date(c.line.bookingDate)} · {c.line.counterpartyName ?? <Empty />} · {c.line.purpose || <Empty />} · <span className="tabular-nums">{formatEuro(c.line.amountCents)}</span>
                       </span>
                     ),
                     after: c.existing ? (
                       <span>
-                        {date(c.existing.bookingDate)} · {c.existing.counterpartyName ?? '—'} · {c.existing.purpose || '—'} · <span className="font-mono tabular-nums">{formatEuro(c.existing.amountCents)}</span> ·{' '}
+                        {date(c.existing.bookingDate)} · {c.existing.counterpartyName ?? <Empty />} · {c.existing.purpose || <Empty />} · <span className="tabular-nums">{formatEuro(c.existing.amountCents)}</span> ·{' '}
                         {c.existing.state === 'booked' && c.existing.entryId ? (
                           <Link href={`/finance/entries/${c.existing.entryId}`} className="text-link">
                             {c.existing.entryNumber}
@@ -79,7 +80,7 @@ export function CandidatesSection({ candidates, canDecide }: { candidates: Candi
                         )}
                       </span>
                     ) : (
-                      '—'
+                      <Empty />
                     ),
                   },
                 ]}
@@ -90,7 +91,7 @@ export function CandidatesSection({ candidates, canDecide }: { candidates: Candi
                   <Button type="button" disabled={pending && decidingId === c.id} onClick={() => decide(c.id, 'same')}>
                     {t('same')}
                   </Button>
-                  <Button type="button" variant="secondary" disabled={pending && decidingId === c.id} onClick={() => decide(c.id, 'own')}>
+                  <Button type="button" variant="outline" disabled={pending && decidingId === c.id} onClick={() => decide(c.id, 'own')}>
                     {t('own')}
                   </Button>
                 </div>

@@ -2,9 +2,11 @@
 
 import { MoreVertical } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import { FieldError } from '@/components/forms/field-error';
 import { ContactPicker, type PickedContact } from '@/components/contact-picker';
 import { Notice } from '@/components/notice';
 import { FormField } from '@/components/forms/form-field';
+import { FormGrid } from '@/components/forms/form-grid';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Label } from '@/components/ui/label';
@@ -60,6 +62,8 @@ export interface SplitRowProps {
   /** „Zweck im Minus“ — Warnung ohne Begründungsfeld. */
   purposeOverspent?: boolean;
   onFreeFundsRemainder?: () => void;
+  /** Feldfehler der Zeile, schon übersetzt (Meldungsregel A: am Feld und oben in `FormErrorSummary`). */
+  errors?: { categoryId?: string; amountText?: string };
 }
 
 /**
@@ -87,6 +91,7 @@ export function SplitRow({
   density = 'default',
   purposeOverspent,
   onFreeFundsRemainder,
+  errors,
 }: SplitRowProps) {
   const t = useTranslations('finance.splitRow');
   const narrow = density === 'narrow';
@@ -96,7 +101,8 @@ export function SplitRow({
   const set = (patch: Partial<SplitRowValue>) => onChange({ ...value, ...patch });
 
   return (
-    <div data-testid="split-row" data-density={density} className="space-y-3 rounded-md border border-line bg-surface-2 p-3">
+    // 07-1 B15 · 07-2 B16: Die Zeile ist keine graue Karte in der Formularkarte (§ E) — nur eine Linie trennt sie.
+    <div data-testid="split-row" data-density={density} className="space-y-3 border-t border-line pt-3">
       {/* Kopf der Zeilenkarte: links „Zeile n“, rechts das Zeilenmenü — in breiter und schmaler Spalte gleich,
           32 px hoch, keine leere Zeile mit nur dem Menü (HANDOFF Konsistenz § 8c). */}
       <div className="-mt-1 -mr-1 flex h-8 items-center justify-between gap-2">
@@ -120,7 +126,9 @@ export function SplitRow({
       </div>
       <div className={cn('grid gap-3', narrow ? 'grid-cols-2 items-start' : 'grid-cols-1 sm:grid-cols-[2fr_1.2fr_repeat(3,1fr)] sm:items-start')}>
         <div className={cn('space-y-1', narrow && 'col-span-2')}>
-          <Label htmlFor={`${value.key}-category`}>{t('category')}</Label>
+          {/* Runde 3, 087: Kategorie und Betrag sind Pflicht und tragen den Stern; die Legende setzt die Leiste der Maske.
+              Die schmale Form der Arbeitsliste hat keine Speicherleiste und keine Sterne. */}
+          <Label htmlFor={`${value.key}-category`} required={!narrow}>{t('category')}</Label>
           <Select
             id={`${value.key}-category`}
             name={`${value.key}-category`}
@@ -128,6 +136,8 @@ export function SplitRow({
             disabled={value.locked}
             value={value.categoryId}
             onChange={(e) => set({ categoryId: e.target.value })}
+            aria-invalid={errors?.categoryId ? true : undefined}
+            aria-describedby={errors?.categoryId ? `${value.key}-category-error` : undefined}
           >
             <option value="" disabled>
               {t('categoryPlaceholder')}
@@ -149,11 +159,12 @@ export function SplitRow({
               {category.explanation ? ` · ${category.explanation}` : ''}
             </p>
           ) : null}
+          <FieldError id={`${value.key}-category-error`} message={errors?.categoryId} />
         </div>
 
         <div className={cn('space-y-1', narrow && !showTax && 'col-span-2', narrow && 'row-start-2')}>
-          <Label htmlFor={`${value.key}-amount`}>{t('amount')}</Label>
-          <AmountField id={`${value.key}-amount`} name={`${value.key}-amount`} value={value.amountText} onChange={(amountText) => set({ amountText })} allowNegative disabled={value.locked} required />
+          <Label htmlFor={`${value.key}-amount`} required={!narrow}>{t('amount')}</Label>
+          <AmountField id={`${value.key}-amount`} name={`${value.key}-amount`} value={value.amountText} onChange={(amountText) => set({ amountText })} allowNegative disabled={value.locked} required invalid={!!errors?.amountText} errorText={errors?.amountText} />
         </div>
 
         {showTax ? (
@@ -193,7 +204,7 @@ export function SplitRow({
             disabled={value.locked}
             onChange={(e) => set({ projectId: e.target.value || null })}
           >
-            <option value="">{t('none')}</option>
+            <option value="">{t('noProject')}</option>
             {projects.map((p) => (
               <option key={p.id} value={p.id}>{p.name}</option>
             ))}
@@ -203,25 +214,24 @@ export function SplitRow({
       </div>
 
       {purposes.length > 0 || allowsAddsToAssets ? (
-        <div className={cn('grid grid-cols-1 gap-3 border-t border-line pt-3', !narrow && 'sm:grid-cols-3')}>
+        // 07-2 B17: Zweck und Schalter im `FormGrid` statt eines handgebauten Rasters; der Schalter bleibt `FormField toggle`.
+        <div className="border-t border-line pt-3">
+        <FormGrid>
           {purposes.length > 0 ? (
-            <div className="space-y-1">
-              <Label htmlFor={`${value.key}-purpose`}>{purposeLabel}</Label>
+            <FormField id={`${value.key}-purpose`} label={purposeLabel}>
               <Select
                 id={`${value.key}-purpose`}
                 name={`${value.key}-purpose`}
                 value={value.purposeId ?? ''}
                 onChange={(e) => set({ purposeId: e.target.value || null })}
               >
-                <option value="">{t('none')}</option>
+                <option value="">{t('noPurpose')}</option>
                 {purposes.map((p) => (
                   <option key={p.id} value={p.id}>{p.name}</option>
                 ))}
               </Select>
-            </div>
+            </FormField>
           ) : null}
-          {/* Schalter als `FormField toggle`: unten bündig mit den Feldern der Zeile, ohne `pt-6`. `size="s"`, weil die
-              Zeile ihr eigenes Raster hat und keine Spannweite des FormGrid gilt. */}
           <FormField id={`${value.key}-abroad`} label={t('abroad')} toggle size="s">
             <Switch id={`${value.key}-abroad`} checked={value.abroad} onCheckedChange={(checked) => set({ abroad: checked === true })} />
           </FormField>
@@ -230,11 +240,12 @@ export function SplitRow({
               <Switch id={`${value.key}-adds-to-assets`} checked={value.addsToAssets} onCheckedChange={(checked) => set({ addsToAssets: checked === true })} />
             </FormField>
           ) : null}
+        </FormGrid>
         </div>
       ) : null}
 
       {purposeOverspent ? (
-        <Notice level="warn" action={onFreeFundsRemainder ? <Button type="button" variant="secondary" size="sm" onClick={onFreeFundsRemainder}>{t('freeFundsRemainder')}</Button> : undefined}>
+        <Notice level="warn" action={onFreeFundsRemainder ? <Button type="button" variant="outline" size="sm" onClick={onFreeFundsRemainder}>{t('freeFundsRemainder')}</Button> : undefined}>
           {t('purposeOverspent')}
         </Notice>
       ) : null}

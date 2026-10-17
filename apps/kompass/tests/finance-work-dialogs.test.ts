@@ -53,15 +53,15 @@ describe('rule dialog („Künftig immer so?“)', () => {
     expect(ruleConditionParts(rule, new Map([['bank', 'Importkonto']]))).toEqual([
       { key: 'account', values: { account: 'Importkonto' } },
       { key: 'out', values: {} },
-      { key: 'iban', values: { iban: 'DE69999999990000445566' } },
+      { key: 'iban', values: { iban: ['DE69', '9999', '9999', '0000', '4455', '66'].join(' ') } },
       { key: 'text', values: { text: 'futter' } },
-      { key: 'amountFrom', values: { amount: '10,00 €' } },
+      { key: 'amountFrom', values: { amount: '10,00\u00a0€' } },
     ]);
     expect(ruleConditionParts({ accountId: null, direction: 'in', counterpartyIban: null, textContains: null, amountMinCents: 1000, amountMaxCents: 2000 }, new Map())).toEqual([
       { key: 'in', values: {} },
-      { key: 'amountBetween', values: { min: '10,00 €', max: '20,00 €' } },
+      { key: 'amountBetween', values: { min: '10,00\u00a0€', max: '20,00\u00a0€' } },
     ]);
-    expect(ruleConditionParts({ accountId: null, direction: null, counterpartyIban: null, textContains: null, amountMinCents: null, amountMaxCents: 900 }, new Map())).toEqual([{ key: 'amountUpTo', values: { amount: '9,00 €' } }]);
+    expect(ruleConditionParts({ accountId: null, direction: null, counterpartyIban: null, textContains: null, amountMinCents: null, amountMaxCents: 900 }, new Map())).toEqual([{ key: 'amountUpTo', values: { amount: '9,00\u00a0€' } }]);
   });
 });
 
@@ -72,5 +72,21 @@ describe('batch finalize preview (Sammel-Festschreiben)', () => {
     expect(batchAccountState({ ...row, statementClosingCents: 116500, matches: true })).toEqual({ state: 'matches', differenceCents: 0 });
     expect(batchAccountState({ ...row, statementClosingCents: null, statementDate: null, matches: null })).toEqual({ state: 'noStatement', differenceCents: null });
     expect(batchAccountState({ ...row, kind: 'cash', statementClosingCents: null, statementDate: null, matches: null })).toEqual({ state: 'cash', differenceCents: null });
+  });
+});
+
+describe('contact dialog: kind from the counterparty (067)', () => {
+  it('presets “organization” when the name carries a legal form as a word', async () => {
+    const { contactKindFromName } = await import('@/lib/finance/work-dialogs');
+    for (const name of ['Buerobedarf Muster GmbH', 'Tierschutz Beispiel gGmbH', 'Muster AG', 'Freunde der Tiere e. V.', 'Freunde der Tiere e.V.', 'Hundeverein eV', 'Start UG (haftungsbeschränkt)', 'Futterhaus Beispiel KG', 'Muster & Söhne OHG', 'Praxis Muster GbR', 'Stiftung Beispiel', 'Beispiel-Stiftung']) {
+      expect(contactKindFromName(name), name).toBe('organization');
+    }
+  });
+
+  it('stays at “person” for plain names and for legal forms inside other words', async () => {
+    const { contactKindFromName } = await import('@/lib/finance/work-dialogs').then((m) => m);
+    for (const name of ['Anna Berger', 'Agathe Kugler', 'Ugur Kaya', 'Gabi Stiftungsrat', null, '']) {
+      expect(contactKindFromName(name), String(name)).toBe('person');
+    }
   });
 });

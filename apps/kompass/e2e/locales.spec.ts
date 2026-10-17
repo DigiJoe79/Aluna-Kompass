@@ -1,5 +1,5 @@
 import { expect, test } from './fixtures';
-import { loginAsAdmin, resetDatabase } from './helpers';
+import { loginAsAdmin, resetDatabase, readTemplate } from './helpers';
 
 test('adds a locale, fills it, and sees what removing it would cost', async ({ page }) => {
   await resetDatabase(page, 'seeded');
@@ -13,7 +13,7 @@ test('adds a locale, fills it, and sees what removing it would cost', async ({ p
   // Seite des Webseiten-Moduls.
   await page.goto('/projects');
   await page.getByRole('link', { name: 'Projekt anlegen' }).click();
-  await page.getByLabel('Slug (URL-Teil)').fill('grundversorgung');
+  await page.getByLabel('URL-Teil').fill('grundversorgung');
   await page.getByLabel('Typ').selectOption('ongoing');
   await page.locator('[name="name.de"]').fill('Grundversorgung');
   await page.locator('[name="summary.de"]').fill('Futter und Wärme.');
@@ -26,7 +26,8 @@ test('adds a locale, fills it, and sees what removing it would cost', async ({ p
   await expect(page.getByRole('status')).toContainText('Gespeichert');
 
   await page.goto('/admin/locales');
-  await page.getByRole('button', { name: 'fr entfernen' }).click();
+  await page.getByRole('button', { name: 'Aktionen für Französisch' }).click();
+  await page.getByRole('menuitem', { name: 'Entfernen …' }).click();
   await expect(page.getByRole('dialog')).toContainText('1 Feld');
 });
 
@@ -34,12 +35,11 @@ test('refuses to remove a locale the active template needs and names the reason'
   await resetDatabase(page, 'seeded');
   await loginAsAdmin(page);
   await page.goto('/site/template');
-  await page.getByRole('button', { name: 'Vorlage einlesen' }).click();
-  await page.getByRole('button', { name: 'Übernehmen' }).click();
-  await expect(page.getByRole('status')).toContainText('eingelesen');
+  await readTemplate(page);
 
   await page.goto('/admin/locales');
-  await page.getByRole('button', { name: 'en entfernen' }).click();
+  await page.getByRole('button', { name: 'Aktionen für Englisch' }).click();
+  await page.getByRole('menuitem', { name: 'Entfernen …' }).click();
   // Die Ablehnung steht über der Liste, kein Dialog öffnet sich, und die Sprache bleibt.
   await expect(page.getByRole('alert').filter({ hasText: 'wird noch gebraucht' })).toContainText('site');
   await expect(page.getByRole('dialog')).toHaveCount(0);

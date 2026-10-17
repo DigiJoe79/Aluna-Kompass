@@ -23,6 +23,9 @@ const ALLOWED_VALUE_SUBPATHS = new Set([
   '@kompass/module-site/client',
   '@kompass/module-contacts/address',
   '@kompass/core/themes',
+  '@kompass/core/format',
+  '@kompass/core/dashboard-arrangement',
+  '@kompass/module-finance/format',
 ]);
 
 /** Datei → Modul, mit Begründung, warum ein Wert-Import dort ausnahmsweise unbedenklich ist. */

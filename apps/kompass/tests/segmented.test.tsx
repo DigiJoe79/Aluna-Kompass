@@ -64,4 +64,9 @@ describe('Segmented', () => {
     render(<Segmented aria-label="Breite" options={[{ value: 'm', label: <svg aria-hidden />, ariaLabel: 'Telefon' }]} defaultValue="m" />);
     expect(screen.getByRole('radio', { name: 'Telefon' })).toBeTruthy();
   });
+  // 10 B27: Wer sieht, bekommt den Namen eines Symbols als Titel beim Verweilen.
+  it('Symbol-Optionen nennen ihren Namen auch als title', () => {
+    render(<Segmented aria-label="Breite" options={[{ value: 'm', label: <svg aria-hidden />, ariaLabel: 'Telefon' }]} defaultValue="m" />);
+    expect(screen.getByRole('radio', { name: 'Telefon' }).getAttribute('title')).toBe('Telefon');
+  });
 });

@@ -26,9 +26,13 @@ const photos = (n: number) => Array.from({ length: n }, (_, i) => ({ assetId: `a
 
 /** Befund 6 (0.2.4): Die Grenze war erst beim Speichern zu erfahren, und dann nirgends am Feld. */
 describe('PhotosEditor', () => {
-  it('shows how many of the allowed photos are in use', () => {
+  // 045: „1 von 12 Fotos“ las sich wie „Foto 1 von 12“; gemeint ist die Obergrenze.
+  it('shows how many photos are in use and the upper limit', () => {
     render(<PhotosEditor photos={photos(10)} max={12} onChange={() => {}} onChoose={() => {}} places={places} />, { wrapper: Intl });
-    expect(screen.getByText('10 von 12 Fotos')).toBeTruthy();
+    expect(screen.getByText('10 Fotos, höchstens 12')).toBeTruthy();
+    cleanup();
+    render(<PhotosEditor photos={photos(1)} max={12} onChange={() => {}} onChoose={() => {}} places={places} />, { wrapper: Intl });
+    expect(screen.getByText('1 Foto, höchstens 12')).toBeTruthy();
   });
 
   it('shows the field error at the field', () => {
@@ -37,7 +41,7 @@ describe('PhotosEditor', () => {
     // K10 § 4.5: Feldfehler über `FieldError`, also mit role="alert" und verbunden mit dem Knopf.
     expect(screen.getByRole('alert')).toBe(line);
     expect(screen.getByRole('button', { name: 'Fotos wählen' }).getAttribute('aria-describedby')).toBe(line.id);
-    expect(screen.getByText('13 von 12 Fotos')).toBeTruthy();
+    expect(screen.getByText('13 Fotos, höchstens 12')).toBeTruthy();
   });
 
   it('shows no error line without an error', () => {
@@ -63,11 +67,14 @@ describe('PhotosEditor', () => {
     expect(screen.getByText('Ausschnitt · nur 800 px breit')).toBeTruthy();
   });
 
-  it('offers „Ausschnitt …“ before „Entfernen“, only when the pixel size is known', () => {
+  // 045/046: dieselben Fotoaktionen wie am Bildfeld — eine Stufe (`outline`), ein Name („Bild entfernen“).
+  it('offers „Ausschnitt …“ before „Bild entfernen“, only when the pixel size is known, both outline like the image field', () => {
     render(<PhotosEditor photos={[{ assetId: 'a0', isPrimary: true, crop: null, width: 4000, height: 3000 }, { assetId: 'a1', isPrimary: false, crop: null }]} max={12} onChange={() => {}} onChoose={() => {}} places={places} />, { wrapper: Intl });
     const [known, unknown] = screen.getAllByTestId('animal-photo');
     const buttons = within(known!).getAllByRole('button').map((b) => b.textContent);
-    expect(buttons.indexOf('Ausschnitt …')).toBe(buttons.indexOf('Entfernen') - 1);
+    expect(buttons.indexOf('Ausschnitt …')).toBe(buttons.indexOf('Bild entfernen') - 1);
+    expect(within(known!).getByRole('button', { name: 'Bild entfernen' }).className).toContain('border-line-strong');
+    expect(within(known!).getByRole('button', { name: 'Ausschnitt …' }).className).toContain('border-line-strong');
     expect(within(unknown!).queryByRole('button', { name: 'Ausschnitt …' })).toBeNull();
   });
 
@@ -116,7 +123,7 @@ describe('PhotosEditor', () => {
     expect(screen.getByText('fest für das Titelbild')).toBeTruthy();
   });
 
-  it('marks the main photo with a badge and offers „Als Hauptfoto“ as ghost on the others (Befund 10, wie in der Prüfung)', () => {
+  it('marks the main photo with a badge and offers „Als Hauptfoto“ as a button on the others (Befund 10, wie in der Prüfung)', () => {
     const onChange = vi.fn();
     render(<PhotosEditor photos={photos(2)} max={12} onChange={onChange} onChoose={() => {}} places={places} />, { wrapper: Intl });
     const [first, second] = screen.getAllByTestId('animal-photo');
@@ -192,7 +199,7 @@ describe('PhotosEditor: Titelbild wechseln', () => {
   it('removing the main photo keeps no crop to announce and gives the next one nothing', () => {
     const spy = vi.fn();
     render(<Harness initial={start()} spy={spy} />, { wrapper: Intl });
-    fireEvent.click(within(tiles()[0]!).getByRole('button', { name: 'Entfernen' }));
+    fireEvent.click(within(tiles()[0]!).getByRole('button', { name: 'Bild entfernen' }));
     expect(spy).toHaveBeenLastCalledWith([expect.objectContaining({ assetId: 'a1', crop: null })]);
     expect(screen.getByTestId('primary-crop-announcement').textContent).toBe('');
   });

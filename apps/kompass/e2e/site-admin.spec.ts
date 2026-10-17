@@ -1,5 +1,5 @@
 import { expect, test } from './fixtures';
-import { loginAsAdmin, resetDatabase } from './helpers';
+import { loginAsAdmin, resetDatabase, readTemplate } from './helpers';
 
 test('das alte Lesezeichen führt auf den Template-Reiter der Webseiten-Einrichtung', async ({ page }) => {
   await resetDatabase(page, 'seeded');
@@ -10,9 +10,7 @@ test('das alte Lesezeichen führt auf den Template-Reiter der Webseiten-Einricht
   const tabs = page.getByRole('navigation', { name: 'Bereiche der Webseite' });
   await expect(tabs.getByRole('link')).toHaveText(['Vorlage', 'Verbindung', 'Cache', 'Gesperrte Begriffe']);
   await expect(tabs.getByRole('link', { name: 'Vorlage' })).toHaveAttribute('aria-current', 'page');
-  await page.getByRole('button', { name: 'Vorlage einlesen' }).click();
-  await page.getByRole('button', { name: 'Übernehmen' }).click();
-  await expect(page.getByRole('status')).toContainText('eingelesen');
+  await readTemplate(page);
   const nav = page.getByRole('navigation', { name: 'Unternavigation' });
   await expect(nav.getByRole('link', { name: 'Webseite', exact: true })).toHaveAttribute('aria-current', 'page');
 });
@@ -52,9 +50,7 @@ test('Cache leeren unter Einrichtung → Webseite', async ({ page }) => {
   await resetDatabase(page, 'seeded');
   await loginAsAdmin(page);
   await page.goto('/admin/site?panel=template');
-  await page.getByRole('button', { name: 'Vorlage einlesen' }).click();
-  await page.getByRole('button', { name: 'Übernehmen' }).click();
-  await expect(page.getByRole('status')).toContainText('eingelesen');
+  await readTemplate(page);
   // Die Vorschau füllt die Bildvarianten.
   await page.goto('/site/publish');
   await page.getByRole('button', { name: 'Vorschau bauen' }).click();
@@ -71,9 +67,10 @@ test('Cache leeren unter Einrichtung → Webseite', async ({ page }) => {
   }
   await expect.poll(running, { timeout: 120_000 }).toBe(false);
   await page.goto('/admin/site?panel=cache');
-  await expect(page.getByText(/[1-9]\d* Bildvarianten/)).toBeVisible();
+  // Begriff und Wert als dl (11-2 B18): „Bildvarianten“ · „12 Dateien, 3 MB“ (Runde 3, 177).
+  await expect(page.getByText(/^[1-9][\d.]* Dateien?, [\d,]+ MB$/)).toBeVisible();
   await page.getByRole('button', { name: 'Cache leeren' }).click();
   await page.getByRole('alertdialog').getByRole('button', { name: 'Cache leeren' }).click();
   await expect(page.getByRole('status')).toContainText('gelöscht');
-  await expect(page.getByText('0 Bildvarianten')).toBeVisible();
+  await expect(page.getByText(/^0 Dateien, 0 MB$/)).toBeVisible();
 });

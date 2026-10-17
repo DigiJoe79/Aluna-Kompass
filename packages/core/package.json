@@ -1,14 +1,16 @@
 {
   "name": "@kompass/core",
-  "version": "0.2.11",
+  "version": "0.2.12",
   "private": true,
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
     "./testing": "./src/testing/index.ts",
     "./dates": "./src/dates.ts",
+    "./format": "./src/format/index.ts",
     "./themes": "./src/themes/index.ts",
-    "./image-places": "./src/media/image-place-resolve.ts"
+    "./image-places": "./src/media/image-place-resolve.ts",
+    "./dashboard-arrangement": "./src/dashboard/arrangement.ts"
   },
   "scripts": {
     "test": "vitest run",

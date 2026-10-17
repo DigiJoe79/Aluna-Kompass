@@ -21,13 +21,14 @@ export default async function EntryPage(props: { params: Promise<{ collection: s
   if (!col) notFound();
 
   const t = await getTranslations('site.entries');
-  const c = await getTranslations('common');
-  const back = { href: `/site/c/${collection}`, label: c('backToList') };
+  const back = { href: `/site/c/${collection}`, label: col.label };
   const locales = deps.locales();
 
   if (id === 'new') {
     return (
-      <Page width="standard" header={<PageHeader title={`${col.label} — ${t('new')}`} back={back} />}>
+      // „Eintrag anlegen“, die Sammlung als Unterzeile (14 A2, Designer 2026-10-16): Einen Einzahl-Namen je Sammlung
+      // liefert das Template nicht.
+      <Page width="standard" header={<PageHeader title={t('create')} description={col.label} back={back} />}>
         <EntryForm collection={collection} fields={col.fields} hasSlug={col.slug} entry={null} locales={locales} collectionLabel={col.label} />
       </Page>
     );
@@ -36,10 +37,12 @@ export default async function EntryPage(props: { params: Promise<{ collection: s
   const result = await getEntry(deps, ctx, id);
   if (!result.ok) notFound();
 
+  // 10 B10: Der Eintrag heißt wie er selbst („Jonas Feld“), die Sammlung steht im Zurück-Link.
+  const label = entryLabel(col, result.value, locales[0] ?? 'de');
   return (
     <Page
       width="standard"
-      header={<PageHeader title={col.label} back={back} actions={<EntryActions collection={collection} id={result.value.id} label={entryLabel(col, result.value, locales[0] ?? 'de')} publishable={col.publishable} />} />}
+      header={<PageHeader title={label} back={back} actions={<EntryActions collection={collection} id={result.value.id} label={label} publishable={col.publishable} />} />}
     >
       <PendingPublishLine href={`/site/c/${collection}/${result.value.id}`} className="-mt-3 mb-4 block" />
       <EntryForm

@@ -1,7 +1,6 @@
 'use client';
 
 import { readCsv } from '@kompass/module-finance/csv';
-import { Check } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -10,7 +9,10 @@ import { toast } from 'sonner';
 import { useDateFormat } from '@/components/date-format-provider';
 import { ChoiceCards } from '@/components/choice-cards';
 import { ConfirmDialog } from '@/components/forms/confirm-dialog';
+import { FormActionBar } from '@/components/forms/form-action-bar';
+import { FormCard, FormCardBody } from '@/components/forms/form-card';
 import { FormField } from '@/components/forms/form-field';
+import { Steps, stepsFrom } from '@/components/steps';
 import { FormGrid } from '@/components/forms/form-grid';
 import { FileDropzone } from '@/app/(shell)/dms/receive/file-dropzone';
 import { Notice } from '@/components/notice';
@@ -26,6 +28,7 @@ import {
   buildFormat,
   canAdvance,
   COLUMN_ROLES,
+  defaultFormatName,
   initialState,
   loadState,
   previewRecords,
@@ -38,6 +41,8 @@ import {
 import { cn } from '@/lib/utils';
 import { saveCsvFormatAction } from './actions';
 import { Section } from '@/components/section';
+import { Empty } from '@/components/empty-value';
+import { formatIban } from '@kompass/module-finance/format';
 
 export interface AssistantAccount {
   id: string;
@@ -129,7 +134,7 @@ export function CsvAssistant({ accounts, initialAccountId, canLoad, reselect = f
     if (!account) return;
     const key = assistantFileKey(name, bytes);
     setFile({ name, bytes, key });
-    setState(loadState(browserStorage(), storageKey(account.id, key)) ?? initialState(bytes, t('defaultName', { account: account.name })));
+    setState(loadState(browserStorage(), storageKey(account.id, key)) ?? initialState(bytes, defaultFormatName(account.name, (name) => t('defaultName', { account: name }))));
   };
 
   const chooseFile = async (chosen: File) => {
@@ -191,19 +196,11 @@ export function CsvAssistant({ accounts, initialAccountId, canLoad, reselect = f
   const hasBalanceColumn = built?.ok ? built.format.columns.balance !== null : false;
 
   return (
-    <div className="space-y-6">
-      <ol aria-label={t('stepsLabel')} className="flex flex-wrap gap-2 text-meta">
-        {STEPS.map((s) => (
-          <li
-            key={s}
-            aria-current={s === step ? 'step' : undefined}
-            className={cn('flex items-center gap-1.5 rounded-full border px-3 py-1', s === step ? 'border-brand bg-brand-soft font-semibold text-ink' : 'border-line text-muted-ink')}
-          >
-            {s < step ? <Check className="size-3.5" aria-hidden /> : <span className="font-mono">{s}</span>}
-            {t(`steps.${s}`)}
-          </li>
-        ))}
-      </ol>
+    // Assistent in einer Karte mit der Leiste als Fuß (Entwurf E3): Schritte oben, „← Zurück · Schritt n von m ·
+    // Abbrechen · Weiter“ unten, klebend wie die Speicherleiste.
+    <FormCard>
+    <FormCardBody className="space-y-6">
+      <Steps label={t('stepsLabel')} testId="csv-steps" steps={stepsFrom(STEPS.map((s) => ({ key: String(s), label: t(`steps.${s}`) })), String(step))} />
 
       {step === 1 ? (
         <section className="space-y-4">
@@ -218,16 +215,15 @@ export function CsvAssistant({ accounts, initialAccountId, canLoad, reselect = f
               </Select>
             </FormField>
           </FormGrid>
-          <div className="rounded-md border border-line bg-surface p-4">
-            <Section title={t('camt.title')}>
-              <div className="space-y-2">
-                <p className="text-body text-ink-2">{t('camt.text')}</p>
-                <Link href="/help/finanzen/auszug-bei-der-bank-holen" className="text-link text-body">
-                  {t('camt.link')}
-                </Link>
-              </div>
-            </Section>
-          </div>
+          {/* 07-1 B22: Jeder Schritt steht in derselben Karte (E3); keine Karte in der Karte (§ E). */}
+          <Section title={t('camt.title')}>
+            <div className="space-y-2">
+              <p className="text-body text-ink-2">{t('camt.text')}</p>
+              <Link href="/help/finanzen/auszug-bei-der-bank-holen" className="text-body text-link underline underline-offset-2">
+                {t('camt.link')}
+              </Link>
+            </div>
+          </Section>
           {handoff ? (
             <div className="space-y-2 rounded-md border border-brand bg-brand-soft p-4 text-body">
               <p className="font-semibold text-ink">{t('handoff.text', { name: handoff.name })}</p>
@@ -239,7 +235,7 @@ export function CsvAssistant({ accounts, initialAccountId, canLoad, reselect = f
           ) : null}
           {reselect && !handoff ? <Notice level="hint">{t('handoff.lost')}</Notice> : null}
           {!csvChosen ? (
-            <Button type="button" variant="secondary" onClick={() => setCsvChosen(true)}>
+            <Button type="button" variant="outline" onClick={() => setCsvChosen(true)}>
               {t('camt.csvAnyway')}
             </Button>
           ) : (
@@ -312,16 +308,23 @@ export function CsvAssistant({ accounts, initialAccountId, canLoad, reselect = f
         <Section title={t('columns.title')}>
           <div className="space-y-3">
             <p className="max-w-prose text-body text-ink-2">{t('columns.text')}</p>
-            <div className="overflow-x-auto rounded-md border border-line">
+            {/* Runde 3, 083: Die Vorschau ist eine Datei, keine Liste — sie darf waagerecht scrollen, zeigt das aber mit einem
+                Verlauf am rechten Rand. */}
+            <div className="scroll-fade-x overflow-x-auto rounded-md border border-line">
               <Table data-testid="csv-preview" className="text-meta">
                 <TableHeader>
                   <TableRow>
                     {preview.header.map((column, i) => {
                       const ignored = (state.roles[i] ?? 'ignore') === 'ignore';
                       return (
-                        // `h-auto`: Die Rollenwahl steht im Kopf und ist höher als die Kopfzeile.
-                        <TableHead key={i} data-column={column} data-ignored={ignored ? 'true' : 'false'} className={cn('h-auto space-y-1 py-2 align-top', ignored && 'text-muted-ink')}>
+                        // `h-auto`: Die Rollenwahl steht im Kopf und ist höher als die Kopfzeile. 07-1 A1: Mindestbreite je Spalte,
+                        // damit die Auswahl nicht abgeschnitten ist; der Spaltenname steht über der Auswahl (ohne Layout-Test).
+                        <TableHead key={i} data-column={column} data-ignored={ignored ? 'true' : 'false'} className={cn('h-auto min-w-44 space-y-1 py-2 align-top', ignored && 'text-muted-ink')}>
+                          <p className="font-semibold">{column}</p>
+                          {/* Runde 3, 083: Die Auswahl steht im Tabellenkopf, erbt aber nicht dessen Etikettenschrift — sie ist ein
+                              Feld wie jedes andere. */}
                           <Select
+                            className="font-normal normal-case tracking-normal"
                             aria-label={t('columns.roleLabel', { column })}
                             value={state.roles[i] ?? 'ignore'}
                             onChange={(e) => update({ roles: preview.header.map((_, j) => (j === i ? (e.target.value as AssistantState['roles'][number]) : (state.roles[j] ?? 'ignore'))) })}
@@ -332,7 +335,6 @@ export function CsvAssistant({ accounts, initialAccountId, canLoad, reselect = f
                               </option>
                             ))}
                           </Select>
-                          <p className="font-semibold">{column}</p>
                         </TableHead>
                       );
                     })}
@@ -408,19 +410,19 @@ export function CsvAssistant({ accounts, initialAccountId, canLoad, reselect = f
             {first ? (
               <dl data-testid="csv-probe" className="grid grid-cols-[max-content_1fr] gap-x-4 gap-y-1.5 rounded-md border border-line bg-surface p-4 text-body">
                 <dt className="text-muted-ink">{t('probe.date')}</dt>
-                <dd className="font-mono">{date(first.bookingDate)}</dd>
+                <dd className="tabular-nums">{date(first.bookingDate)}</dd>
                 <dt className="text-muted-ink">{t('probe.counterparty')}</dt>
-                <dd>{first.counterpartyName ?? '—'}</dd>
+                <dd>{first.counterpartyName ?? <Empty />}</dd>
                 <dt className="text-muted-ink">{t('probe.iban')}</dt>
-                <dd className="font-mono">{first.counterpartyIban ?? '—'}</dd>
+                <dd className="font-mono">{first.counterpartyIban ? formatIban(first.counterpartyIban) : <Empty />}</dd>
                 <dt className="text-muted-ink">{t('probe.purpose')}</dt>
-                <dd>{first.purpose || '—'}</dd>
+                <dd>{first.purpose || <Empty />}</dd>
                 <dt className="text-muted-ink">{t('probe.amount')}</dt>
-                <dd className="font-mono tabular-nums">{formatEuro(first.amountCents)}</dd>
+                <dd className="tabular-nums">{formatEuro(first.amountCents)}</dd>
                 {fee ? (
                   <>
                     <dt className="text-muted-ink">{t('probe.fee')}</dt>
-                    <dd className="font-mono tabular-nums">{formatEuro(fee.amountCents)}</dd>
+                    <dd className="tabular-nums">{formatEuro(fee.amountCents)}</dd>
                   </>
                 ) : null}
               </dl>
@@ -431,36 +433,37 @@ export function CsvAssistant({ accounts, initialAccountId, canLoad, reselect = f
               </FormField>
               {!hasBalanceColumn && read?.ok ? (
                 <FormField id="csv-balance" label={t('probe.balanceLabel', { date: date(read.statement.to) })} size="s">
-                  <Input id="csv-balance" inputMode="decimal" value={balanceText} onChange={(e) => setBalanceText(e.target.value)} />
+                  <Input id="csv-balance" unit="€" inputMode="decimal" value={balanceText} onChange={(e) => setBalanceText(e.target.value)} />
                 </FormField>
               ) : null}
             </FormGrid>
             {error ? <Notice level="refuse">{error}</Notice> : null}
-            <div className="flex flex-wrap gap-3">
-              {canLoad ? (
-                <Button type="button" disabled={busy || !read?.ok || !canAdvance(5, state, preview.header)} onClick={() => requestSave(true)}>
-                  {t('probe.saveAndLoad')}
-                </Button>
-              ) : null}
-              <Button type="button" variant={canLoad ? 'secondary' : 'default'} disabled={busy || !read?.ok || !canAdvance(5, state, preview.header)} onClick={() => requestSave(false)}>
-                {t('probe.saveOnly')}
-              </Button>
-            </div>
           </div>
         </Section>
       ) : null}
 
+    </FormCardBody>
       {state && step > 1 ? (
-        <div className="flex gap-3">
-          <Button type="button" variant="secondary" onClick={() => (step === 2 ? (setState(null), setFile(null)) : goTo((step - 1) as AssistantStep))}>
-            {t('back')}
-          </Button>
-          {step < 5 ? (
-            <Button type="button" disabled={!canAdvance(step, state, preview.header)} onClick={() => goTo((step + 1) as AssistantStep)}>
-              {t('next')}
-            </Button>
-          ) : null}
-        </div>
+        <FormActionBar
+          variant="wizard"
+          wizard={{ step, total: STEPS.length, onBack: () => (step === 2 ? (setState(null), setFile(null)) : goTo((step - 1) as AssistantStep)) }}
+          back={{ href: '/finance/imports', label: t('cancelTarget') }}
+          testId="csv-wizard-bar"
+          {...(step < 5
+            ? { onSave: () => goTo((step + 1) as AssistantStep), saveLabel: t('next'), saveDisabled: !canAdvance(step, state, preview.header) }
+            : {
+                // Im letzten Schritt nennt der Primärknopf die Handlung (E3); „Nur speichern“ daneben, wo Einlesen geht.
+                onSave: () => requestSave(canLoad),
+                saveLabel: canLoad ? t('probe.saveAndLoad') : t('probe.saveOnly'),
+                pending: busy,
+                saveDisabled: !read?.ok || !canAdvance(5, state, preview.header),
+                extraActions: canLoad ? (
+                  <Button type="button" variant="outline" disabled={busy || !read?.ok || !canAdvance(5, state, preview.header)} onClick={() => requestSave(false)}>
+                    {t('probe.saveOnly')}
+                  </Button>
+                ) : undefined,
+              })}
+        />
       ) : null}
 
       <ConfirmDialog
@@ -471,6 +474,6 @@ export function CsvAssistant({ accounts, initialAccountId, canLoad, reselect = f
         confirmLabel={t('switchDialog.confirm')}
         action={() => save(pendingLoad ?? false, true)}
       />
-    </div>
+    </FormCard>
   );
 }

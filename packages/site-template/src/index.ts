@@ -72,10 +72,11 @@ export function markdown(opts: TextOptions = {}): z.ZodType<unknown> {
   return wrap(z.string().max(opts.max ?? 20_000), opts, 'markdown', { max: opts.max ?? 20_000 });
 }
 
-export const number = (opts: FieldOptions & { min?: number; max?: number; integer?: boolean } = {}): z.ZodType<number> => {
+/** `unit`: die Einheit, die Kompass rechts im Feld zeigt („€“, „Tage“), statt sie in die Bezeichnung zu schreiben. */
+export const number = (opts: FieldOptions & { min?: number; max?: number; integer?: boolean; unit?: string } = {}): z.ZodType<number> => {
   const base = opts.integer ? z.number().int() : z.number();
   const bounded = opts.max === undefined ? base.min(opts.min ?? 0) : base.min(opts.min ?? 0).max(opts.max);
-  return bounded.meta(meta(opts, 'number')) as z.ZodType<number>;
+  return bounded.meta(meta(opts, 'number', opts.unit === undefined ? {} : { unit: opts.unit })) as z.ZodType<number>;
 };
 
 // ---------------------------------------------------------------------------

@@ -13,6 +13,7 @@ import { hitsOf, STYLE_TYPE, TYPE_STYLE } from './type-scan';
 const ALLOWED: CountedAllowlist = {
   'app/(shell)/admin/media/asset-detail-dialog.tsx': { count: 1, reason: 'Grafik, keine Schrift: Dateiendung als Platzhalterbild (Versalien)' },
   'app/(shell)/admin/media/library-client.tsx': { count: 1, reason: 'Grafik, keine Schrift: Datei-Symbol (Versalien)' },
+  'app/(shell)/finance/imports/format/csv-assistant.tsx': { count: 1, reason: 'Feld im Tabellenkopf: die Auswahl setzt Gewicht, Versalien und Sperrung des Kopfs zurück (Runde 3, 083)' },
   'app/(shell)/admin/users/start-password-dialog.tsx': { count: 1, reason: 'Zeichen einzeln ablesbar: Startpasswort (Designer § 6)' },
   'app/(shell)/profile/page.tsx': { count: 1, reason: 'Grafik, keine Schrift: Initialen (font-bold)' },
   'app/global-error.tsx': { count: 4, reason: 'Ersetzt das Wurzel-Layout samt Schale, ohne Tokens und Bausteine (style mit lineHeight, letterSpacing, textTransform)' },
@@ -20,6 +21,7 @@ const ALLOWED: CountedAllowlist = {
   'components/forms/media-picker.tsx': { count: 1, reason: 'Grafik, keine Schrift: Dateiart als Platzhalterbild (Versalien)' },
   'components/media/asset-grid.tsx': { count: 1, reason: 'Grafik, keine Schrift: Dateiendung als Platzhalterbild (Versalien)' },
   'components/shell/user-menu.tsx': { count: 1, reason: 'Grafik, keine Schrift: Initialen (font-bold)' },
+  'components/sortable-head.tsx': { count: 1, reason: 'Versalien des Tabellenkopfs: der Browser setzt sie am <button> zurück (03 B9, 04 B7)' },
 };
 
 /** Orte für Versalien und Sperrung (Spec § 6, § 9.3): `Overline` und der Tabellenkopf in `ui/table.tsx`. */

@@ -43,7 +43,7 @@ export default async function AdminFinancePage({ searchParams }: { searchParams:
     const statusRes = await getSetupStatus(deps, ctx);
     content = statusRes.ok ? (
       <ChecklistPanel
-        steps={statusRes.value.steps.map((s) => ({ key: s.key, done: s.done, blocked: s.blocked, detail: s.detail, canDo: s.canDo, canSelf: hasPermission(ctx, s.permission) }))}
+        steps={statusRes.value.steps.map((s) => ({ key: s.key, required: s.required, done: s.done, blocked: s.blocked, detail: s.detail, canDo: s.canDo, canSelf: hasPermission(ctx, s.permission) }))}
         complete={statusRes.value.complete}
       />
     ) : null;
@@ -88,9 +88,12 @@ export default async function AdminFinancePage({ searchParams }: { searchParams:
         confirmedAt={readSetting<string | null>(deps, 'finance.setupTaxConfirmedAt')}
         waiverBasisText={readSetting<string>(deps, 'finance.expenseWaiverBasisText')}
         waiverBasisAgreedOn={readSetting<string | null>(deps, 'finance.expenseWaiverBasisAgreedOn')}
-        boardRemunerationAllowed={readSetting<boolean>(deps, 'finance.boardRemunerationAllowed')}
-        boardRemunerationBasisText={readSetting<string>(deps, 'finance.boardRemunerationBasisText')}
-        boardRemunerationValidFrom={readSetting<string | null>(deps, 'finance.boardRemunerationValidFrom')}
+        boardRemuneration={{
+          allowed: readSetting<boolean>(deps, 'finance.boardRemunerationAllowed'),
+          basisText: readSetting<string>(deps, 'finance.boardRemunerationBasisText'),
+          validFrom: readSetting<string | null>(deps, 'finance.boardRemunerationValidFrom'),
+          decidedOn: readSetting<string | null>(deps, 'finance.boardRemunerationDecidedOn'),
+        }}
       />
     );
   } else if (panel === 'permissions') {

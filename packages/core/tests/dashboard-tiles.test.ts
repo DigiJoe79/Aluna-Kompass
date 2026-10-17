@@ -39,6 +39,11 @@ describe('core tiles are registered and declare their form', () => {
     ]);
   });
 
+  it('Fällig ist die Art `due`, Backup trägt bei einer Warnung einen Knopf (Briefing Startseite § 4)', () => {
+    expect(coreModule.dashboardTiles?.filter((t) => t.variant).map((t) => `${t.key}:${t.variant}`)).toEqual(['followUps:due']);
+    expect(coreModule.dashboardTiles?.filter((t) => t.warningAction).map((t) => t.key)).toEqual(['backup']);
+  });
+
   it('jede Kachel liefert die deklarierte Form', async () => {
     const { deps, ctx } = setup();
     for (const t of CORE_DASHBOARD_TILES) {

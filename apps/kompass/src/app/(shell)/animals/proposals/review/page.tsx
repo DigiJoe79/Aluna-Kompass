@@ -87,7 +87,7 @@ export default async function ProposalStackPage(props: { searchParams: Promise<P
     <Page width="task" header={<PageHeader title={t('animals.proposals.stack.title')} back={back} />}>
       {/* Immer der Stapel, auch leer: Nach einer Entscheidung rendert der Server neu, und der Abschluss mit den Zahlen
           lebt im Stapel (er zeigt „Keine offenen Vorschläge“ nur, wenn schon beim Öffnen nichts da war). */}
-      <SwipeStack cards={cards} backHref={back.href} query={query} frame={photoFrameStyle(effectivePhotoFrame(deps))} />
+      <SwipeStack cards={cards} query={query} frame={photoFrameStyle(effectivePhotoFrame(deps))} />
     </Page>
   );
 }

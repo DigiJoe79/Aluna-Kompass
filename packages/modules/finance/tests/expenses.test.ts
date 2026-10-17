@@ -65,7 +65,7 @@ describe('saveExpenseDraft', () => {
 
     // Idempotent über die ID: derselbe Antrag, dieselbe Position, nichts verworfen.
     const again = unwrap(await saveExpenseDraft(f.deps, f.hanna.ctx, { id: draft.id, expectedVersion: draft.version, waiver: false, iban: 'de66 9999 9999 1234 5678 90', positions: [{ id: draft.positions[0]!.id, kind: 'receipt', amountCents: 1250, purpose: 'Futter' }] }));
-    expect(again).toMatchObject({ id: draft.id, totalCents: 1250, iban: IBAN, ibanMasked: 'DE66 **** **** **** **78 90', positions: [{ id: draft.positions[0]!.id, amountCents: 1250, purpose: 'Futter' }] });
+    expect(again).toMatchObject({ id: draft.id, totalCents: 1250, iban: IBAN, ibanMasked: 'DE\u00a0\u00b7\u00b7\u00a07890', positions: [{ id: draft.positions[0]!.id, amountCents: 1250, purpose: 'Futter' }] });
     expect(f.deps.db.select().from(financeExpenseClaims).all()).toHaveLength(1);
 
     const refused = await saveExpenseDraft(f.deps, f.unlinked, { waiver: false, positions: [] });

@@ -17,17 +17,18 @@ test.describe('handbook and help', () => {
     await page.goto('/dms/new');
     await page.getByRole('button', { name: 'Hilfe zu dieser Seite' }).click();
     const panel = page.getByTestId('help-panel');
-    await expect(panel.getByRole('heading', { name: 'Brief schreiben' })).toBeVisible();
+    await expect(panel.getByRole('heading', { name: 'Hilfe: Brief schreiben' })).toBeVisible();
     await expect(panel).toContainText('Ein Brief entsteht als Entwurf');
-    await panel.getByRole('link', { name: 'Ganze Seite lesen' }).click();
+    // „Im Handbuch öffnen“ steht im Kopf und öffnet einen neuen Tab (Entwurf E4).
+    await expect(panel.getByRole('link', { name: 'Im Handbuch öffnen' })).toHaveAttribute('target', '_blank');
+    await page.goto(await panel.getByRole('link', { name: 'Im Handbuch öffnen' }).getAttribute('href') ?? '');
     await expect(page).toHaveURL('/help/akte/brief-schreiben');
-    await expect(panel).toBeHidden();
     const toc = page.getByRole('navigation', { name: 'Inhaltsverzeichnis' });
     await expect(toc.getByRole('link', { name: 'Brief schreiben' })).toHaveAttribute('aria-current', 'page');
     await expect(page.getByRole('heading', { level: 1 })).toHaveCount(1);
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('Brief schreiben');
     const crumbs = page.getByRole('navigation', { name: 'Brotkrume' });
-    await expect(crumbs).toContainText('Hilfe');
+    await expect(crumbs).toContainText('Handbuch');
     await expect(crumbs).toContainText('Akte');
     await expect(crumbs.getByText('Brief schreiben')).toHaveAttribute('aria-current', 'page');
   });
@@ -42,6 +43,34 @@ test.describe('handbook and help', () => {
     await page.getByRole('combobox').fill('?');
     await expect(page.getByTestId('help-panel')).toBeHidden();
     await page.keyboard.press('Escape');
+  });
+
+  // E4 „Hilfe neben der Seite“ (Designer 2026-10-17): ab `lg` eine Nebenspalte ohne Abdunkeln; sie verdrängt das
+  // Seitenpanel „Bestände“, bleibt beim Seitenwechsel offen und gibt den Fokus beim Schließen an den Knopf zurück.
+  test('Journal mit Hilfe daneben: Nebenspalte statt Blatt, Seitenpanel eingeklappt, bleibt beim Seitenwechsel offen', async ({ page }) => {
+    // Ab 1680 px steht das Seitenpanel von selbst neben dem Journal (07-1 B33).
+    await page.setViewportSize({ width: 1720, height: 900 });
+    await page.goto('/finance/entries');
+    await expect(page.getByTestId('finance-side-panel')).toBeVisible();
+    const button = page.getByRole('button', { name: 'Hilfe zu dieser Seite' });
+    await button.click();
+    const aside = page.getByRole('complementary', { name: 'Hilfe' });
+    await expect(aside).toBeVisible();
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    await expect(button).toHaveAttribute('aria-expanded', 'true');
+    await expect(aside.getByRole('heading', { level: 2 }).first()).toBeFocused();
+    await expect(page.getByTestId('finance-side-panel')).toBeHidden();
+    // Die Seite bleibt bedienbar: ein Link im Inhalt führt weiter, die Hilfe folgt.
+    await page.getByRole('link', { name: 'Offene Zahlungen', exact: true }).first().click();
+    await expect(page).toHaveURL(/\/finance\/open-items/);
+    await expect(aside).toBeVisible();
+    await expect(button).not.toBeFocused();
+    await page.goto('/finance/entries');
+    await expect(aside).toBeVisible();
+    await aside.getByRole('button', { name: 'Hilfe schließen' }).click();
+    await expect(aside).toBeHidden();
+    await expect(button).toBeFocused();
+    await expect(page.getByTestId('finance-side-panel')).toBeVisible();
   });
 
   test('images load and links between pages work', async ({ page }) => {

@@ -81,7 +81,7 @@ export function FileDropzone({
           <FilePlaceholder label={kind(file)} />
           <div className="min-w-0 flex-1">
             <p className="truncate text-body font-semibold text-ink">{file.name}</p>
-            <p className="font-mono text-hint text-muted-ink">{pdfOnly ? t('upload.meta', { size: size(file.size) }) : t('upload.metaOf', { kind: kind(file), size: size(file.size) })}</p>
+            <p className="tabular-nums text-hint text-muted-ink">{pdfOnly ? t('upload.meta', { size: size(file.size) }) : t('upload.metaOf', { kind: kind(file), size: size(file.size) })}</p>
             {pdfOnly ? <p className="text-hint text-ink-2">{t('upload.ocrPending')}</p> : null}
           </div>
           <div className="flex shrink-0 gap-2">

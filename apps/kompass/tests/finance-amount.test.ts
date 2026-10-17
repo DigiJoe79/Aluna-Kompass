@@ -29,8 +29,18 @@ describe('formatAmount', () => {
 });
 
 describe('formatEuro', () => {
-  it('adds the euro sign after the formatted amount', () => {
-    expect(formatEuro(123456)).toBe('1.234,56 €');
-    expect(formatEuro(-6000)).toBe('−60,00 €');
+  it('adds the euro sign after the formatted amount, with a non-breaking space', () => {
+    expect(formatEuro(123456)).toBe('1.234,56\u00a0€');
+    expect(formatEuro(-6000)).toBe('−60,00\u00a0€');
+    expect(formatEuro(1200, { sign: 'always' })).toBe('+12,00\u00a0€');
+  });
+});
+
+describe('Feldfehler am Betrag (Runde 3, 087)', () => {
+  it('enden mit Punkt wie „Pflichtfeld.“', async () => {
+    const messages = (await import('../messages/de.json')).default as { finance: { amount: Record<string, unknown> }; errors: { fields: { required: string } } };
+    expect(messages.errors.fields.required.endsWith('.')).toBe(true);
+    expect(messages.finance.amount.format).toBe('Bitte einen Betrag wie 12,50 eingeben.');
+    expect(String(messages.finance.amount.exceeds).endsWith('.')).toBe(true);
   });
 });

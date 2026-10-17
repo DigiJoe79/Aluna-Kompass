@@ -47,7 +47,7 @@ test.describe('media library', () => {
   test('opens the detail dialog and blocks deleting an asset that is in use', async ({ page }) => {
     await page.goto('/projects');
     await page.getByRole('link', { name: 'Projekt anlegen' }).click();
-    await page.getByLabel('Slug (URL-Teil)').fill('hofprojekt');
+    await page.getByLabel('URL-Teil').fill('hofprojekt');
     await page.locator('[name="name.de"]').fill('Hofprojekt');
     await page.locator('[name="summary.de"]').fill('Kurztext.');
     await page.getByRole('button', { name: 'Bild: Wählen' }).click();
@@ -61,11 +61,11 @@ test.describe('media library', () => {
     await page.goto('/admin/media');
     await page.getByRole('row', { name: /hof-/ }).click();
     const dialog = page.getByRole('dialog');
-    await expect(dialog).toContainText('Projekt „hofprojekt“');
+    await expect(dialog).toContainText('Projekt „Hofprojekt“');
     // Keine Sperre ohne Grund: „Löschen …“ bleibt, die Rückfrage nennt, wo die Datei verwendet wird.
     await dialog.getByRole('button', { name: 'Löschen …' }).click();
     const refusal = page.getByRole('alertdialog', { name: 'Diese Datei löschen?' });
-    await expect(refusal).toContainText('Die Datei wird noch verwendet: Projekt „hofprojekt“');
+    await expect(refusal).toContainText('Die Datei wird noch verwendet: Projekt „Hofprojekt“');
     await expect(refusal.getByRole('button', { name: 'Löschen' })).toHaveCount(0);
     await refusal.getByRole('button', { name: 'Schließen' }).click();
     await expect(refusal).toBeHidden();
@@ -186,8 +186,8 @@ test.describe('media library', () => {
     await expect(page.getByRole('row', { name: /rex-foto-/ })).toBeVisible();
 
     await page.goto('/admin/media?sort=name');
-    // Nur der Dateiname, nicht die Typ-Badge davor (die für PDF „PDF“ zeigt).
-    const names = await page.locator('tbody tr td:first-child span.font-mono').allInnerTexts();
+    // Nur der Dateiname, nicht die Typ-Badge davor (die für PDF „PDF“ zeigt) und nicht die Verwendung darüber (10 A6).
+    const names = await page.locator('tbody tr td:first-child [data-file-name]').allInnerTexts();
     expect(names.map((n) => n.trim())).toEqual([...names.map((n) => n.trim())].sort((a, b) => a.localeCompare(b)));
 
     await page.goto('/admin/media');
@@ -323,10 +323,11 @@ test.describe('Ordnerbaum der Mediathek', () => {
     await expect(detail.locator('[data-folder-path]')).toHaveText('Bilder › 2026');
     await expect(detail.locator('select')).toHaveCount(0);
 
+    // Der Baum klappt im Detaildialog auf, kein zweiter Dialog (Entwurf E5); ein Klick verschiebt.
     await detail.getByRole('button', { name: 'Verschieben nach…' }).click();
-    const move = page.getByRole('dialog', { name: /verschieben nach…$/ });
-    await move.getByRole('treeitem', { name: /^Dokumente,/ }).click();
-    await move.getByRole('button', { name: 'Nach „Dokumente“ verschieben' }).click();
+    await expect(page.getByRole('dialog')).toHaveCount(1);
+    await detail.getByRole('treeitem', { name: /^Dokumente(,|$)/ }).click();
+    // Nach dem Verschieben schließt der Detaildialog wie bisher.
     await expect(page.getByRole('dialog')).toHaveCount(0);
 
     await toastWith(page, /„hoftor-[0-9a-f]+\.png“ nach Dokumente verschoben/i).getByRole('button', { name: 'Rückgängig' }).click();
@@ -340,14 +341,14 @@ test.describe('Ordnerbaum der Mediathek', () => {
     await page.getByRole('button', { name: 'Bild: Wählen' }).click();
     const chooser = page.getByRole('dialog', { name: 'Bild wählen' });
     const tree = chooser.getByRole('tree', { name: 'Ordner' });
-    await expect(tree.getByRole('treeitem', { name: /^Bilder,/ })).toBeVisible();
+    await expect(tree.getByRole('treeitem', { name: /^Bilder(,|$)/ })).toBeVisible();
     // „Dokumente“ hält nur ein PDF: Im Bild-Dialog hat er nichts zu bieten (Handoff § 9.2).
-    await expect(tree.getByRole('treeitem', { name: /^Dokumente,/ })).toHaveCount(0);
+    await expect(tree.getByRole('treeitem', { name: /^Dokumente(,|$)/ })).toHaveCount(0);
     await expect(chooser.locator('[data-fixed="all"]')).toHaveAttribute('aria-pressed', 'true');
     await expect(tree.locator('a, [data-row-menu], [draggable="true"]')).toHaveCount(0);
 
-    await tree.getByRole('treeitem', { name: /^Bilder,/ }).click();
-    await expect(tree.getByRole('treeitem', { name: /^Bilder,/ })).toHaveAttribute('aria-selected', 'true');
+    await tree.getByRole('treeitem', { name: /^Bilder(,|$)/ }).click();
+    await expect(tree.getByRole('treeitem', { name: /^Bilder(,|$)/ })).toHaveAttribute('aria-selected', 'true');
     await expect(chooser.getByRole('button', { name: /sommerfest-wiese-/i })).toBeVisible();
     await expect(chooser.getByRole('button', { name: /haken-/i })).toHaveCount(0);
 
@@ -465,7 +466,10 @@ test.describe('Ziehen in der Mediathek', () => {
     await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
     await page.mouse.down();
     await page.mouse.move(from.x + from.width / 2 + 10, from.y + from.height / 2 + 10, { steps: 3 });
-    await page.mouse.move(to.x + 60, to.y + to.height / 2, { steps: 12 });
+    // Direkt auf das Ziel, ohne über andere Ordner zu streichen: Mit den 4:3-Kacheln (145) führte der schrittweise Weg
+    // über „Bilder“, und der Baum verschob sich unter dem Zeiger. Zwei kleine Schritte auf dem Ziel lösen `dragover` aus.
+    await page.mouse.move(to.x + 60, to.y + to.height / 2);
+    await page.mouse.move(to.x + 62, to.y + to.height / 2, { steps: 2 });
     await page.mouse.up();
 
     await expect(toastWith(page, /„vereinsbanner-.*“ nach Dokumente verschoben/)).toBeVisible();
@@ -484,7 +488,7 @@ test.describe('Ziehen in der Mediathek', () => {
     const row = assetRows(page).filter({ hasText: /vereinsbanner-/i });
     await expect(row).toBeVisible();
     const before = await assetTotal(page);
-    const from = (await row.locator('span.font-mono').boundingBox())!;
+    const from = (await row.locator('[data-file-name]').boundingBox())!;
     const to = (await page.locator('[data-folder="Dokumente"]').boundingBox())!;
     await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
     await page.mouse.down();

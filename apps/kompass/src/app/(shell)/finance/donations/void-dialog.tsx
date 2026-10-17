@@ -19,13 +19,13 @@ export interface VoidableConfirmation {
   id: string;
   number: string;
   lineCount: number;
-  /** Schon ein Versandvermerk da? Dann ist „Bereits versandt?“ vorbelegt. */
+  /** Schon ein Versandvermerk da? Dann ist „Bereits versandt“ vorbelegt. */
   sent: boolean;
 }
 
 /**
  * „Bestätigung zurücknehmen“ (C1, F6a Task 7): Grund (Pflicht), „Bereits
- * versandt?“ und die Rückholspur — Original zurück am, Finanzamt informiert
+ * versandt“ und die Rückholspur — Original zurück am, Finanzamt informiert
  * am —, dazu, was passiert und was bleibt. Als Formular, damit der
  * Korrigieren-Dialog es als Schritt 1 des Dreischritts einbetten kann.
  */
@@ -83,8 +83,19 @@ export function VoidForm({ confirmation, onDone, onCancel }: { confirmation: Voi
           </FormGrid>
         </Section>
       ) : null}
-      <ConsequenceList items={[{ number: confirmation.lineCount, label: t('consequences.lines', { count: confirmation.lineCount }) }]} stays={[t('stays.copy'), t('stays.number', { number: confirmation.number })]} />
-      <FormActionBar placement="dialog" cancel={onCancel} destructive pending={pending} saveDisabled={note.trim().length === 0} saveLabel={t('submit')} onSave={() => void submit()} state={feedback.state} />
+      <ConsequenceList items={[{ label: t('consequences.lines', { count: confirmation.lineCount }) }]} stays={[t('stays.copy'), t('stays.number', { number: confirmation.number })]} />
+      {/* Der Grund der Sperre steht als Text neben dem Knopf (E2, Runde 3, 108). */}
+      <FormActionBar
+        placement="dialog"
+        cancel={onCancel}
+        destructive
+        pending={pending}
+        saveDisabled={note.trim().length === 0}
+        extraActions={note.trim().length === 0 ? <span data-testid="void-reason-missing" className="self-center text-meta text-ink-2">{t('reasonMissing')}</span> : undefined}
+        saveLabel={t('submit')}
+        onSave={() => void submit()}
+        state={feedback.state}
+      />
     </div>
   );
 }

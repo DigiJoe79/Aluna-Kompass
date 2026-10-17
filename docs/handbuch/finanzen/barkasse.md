@@ -1,7 +1,7 @@
-# Barkasse
+# Kassen
 
 Bargeld lässt sich nicht im Nachhinein nachvollziehen wie ein Kontoauszug —
-darum verlangt „Barkasse“ mehr Sorgfalt: gezählt wird zu zweit, jede
+darum verlangt „Kassen“ mehr Sorgfalt: gezählt wird zu zweit, jede
 Bewegung wird sofort festgeschrieben, und ein Fehlbetrag braucht eine
 Erklärung.
 

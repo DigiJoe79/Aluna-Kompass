@@ -6,7 +6,7 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 import { Notice } from '@/components/notice';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogTitle } from '@/components/ui/dialog';
 import { copyToClipboard } from '@/lib/clipboard';
 import { Overline } from '@/components/overline';
 
@@ -16,7 +16,10 @@ export function StartPasswordDialog({
   name,
   email,
   startPassword,
+  kind,
 }: {
+  /** `created` nach dem Anlegen, `reset` nach „Neues Startpasswort“ — je ein eigener Titel (Befund 1 Nr. 3, 0.2.12). */
+  kind: 'created' | 'reset';
   open: boolean;
   onClose: () => void;
   name: string;
@@ -44,17 +47,18 @@ export function StartPasswordDialog({
         size="md"
         className="bg-surface shadow-md"
       >
-        <DialogTitle>{t('title', { name })}</DialogTitle>
+        <DialogTitle>{t(kind === 'reset' ? 'titleReset' : 'title', { name })}</DialogTitle>
         <DialogDescription tone="body">{t('text')}</DialogDescription>
-        <div className="rounded-md border border-line-strong bg-code p-3 font-mono">
-          <Overline as="div">{t('emailLabel')}</Overline>
+        {/* Feldbezeichnungen in der Textschrift, keine Kapitälchen; Monospace nur am Passwort (Runde 3: 157). */}
+        <div className="rounded-md border border-line-strong bg-code p-3">
+          <Overline as="div" field>{t('emailLabel')}</Overline>
           <div className="text-meta">{email}</div>
-          <Overline as="div" className="mt-2">{t('passwordLabel')}</Overline>
+          <Overline as="div" field className="mt-2">{t('passwordLabel')}</Overline>
           <div data-testid="start-password" className="text-section font-mono tracking-[.04em] select-all">{startPassword}</div>
         </div>
         <div className="flex gap-2">
           <Button
-            variant="secondary"
+            variant="outline"
             onClick={async () => {
               if (await copyToClipboard(`${email}\n${startPassword}`)) setCopied(true);
               else toast.error(c('copyFailed'), { duration: Infinity, closeButton: true });
@@ -65,7 +69,11 @@ export function StartPasswordDialog({
           </Button>
         </div>
         <Notice level="hint">{t('info', { name })}</Notice>
-        <Button onClick={onClose}>{t('done')}</Button>
+        {/* Der Primärknopf steht rechts im Fuß wie in jedem Dialog, nicht über die volle Breite (Runde 3, 157). Ein Fuß
+            ohne Leiste: Der Dialog hat nichts zu speichern, nur zu bestätigen. */}
+        <DialogFooter>
+          <Button onClick={onClose}>{t('done')}</Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

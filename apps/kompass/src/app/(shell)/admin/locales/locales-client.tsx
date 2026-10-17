@@ -1,17 +1,20 @@
 'use client';
 
 import type { LocaleRemovalPreview } from '@kompass/core';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { useActionState, useEffect, useRef, useState, useMemo } from 'react';
 import { toast } from 'sonner';
 import { ConfirmDialog } from '@/components/forms/confirm-dialog';
+import { useLanguageName } from '@/components/forms/localized-field';
 import { FormField } from '@/components/forms/form-field';
 import { FormGrid } from '@/components/forms/form-grid';
 import { RefusalNotice } from '@/components/forms/refusal-notice';
 import { ReorderButtons } from '@/components/forms/reorder-buttons';
 import { SubmitButton } from '@/components/forms/submit-button';
 import { StatusBadge } from '@/components/status-badge';
-import { Button } from '@/components/ui/button';
+import { KeyLine } from '@/components/key-line';
+import { RowMenu } from '@/components/row-menu';
+import { languageOptions } from '@/lib/settings-options';
 import { Input } from '@/components/ui/input';
 import { idleState, type ActionState } from '@/lib/actions';
 import { addLocaleAction, previewLocaleRemovalAction, removeLocaleAction, reorderLocalesAction } from './actions';
@@ -19,6 +22,9 @@ import { Section } from '@/components/section';
 
 export function LocalesClient({ locales }: { locales: string[] }) {
   const t = useTranslations('admin.locales');
+  const languageName = useLanguageName();
+  const uiLocale = useLocale();
+  const suggestions = useMemo(() => languageOptions(uiLocale, locales), [uiLocale, locales]);
   const [state, action] = useActionState(addLocaleAction, idleState);
   const formRef = useRef<HTMLFormElement>(null);
   // `useMemo`, weil `errors` sonst bei jedem Render ein neues Objekt waere und
@@ -71,21 +77,21 @@ export function LocalesClient({ locales }: { locales: string[] }) {
               }`}
             >
               <div className="flex items-center gap-3">
-                <span className="font-mono text-section text-ink">{code}</span>
+                {/* Sprachname mit dem Code als Schlüsselzeile darunter (11-2 A4). */}
+                <span>
+                  <span className="block text-body text-ink">{languageName(code)}</span>
+                  <KeyLine>{code}</KeyLine>
+                </span>
                 {index === 0 ? <StatusBadge tone="neutral">{t('leading')}</StatusBadge> : null}
               </div>
               <div className="flex items-center gap-2">
                 <ReorderButtons ids={locales} index={index} action={reorderLocalesAction} />
-                {locales.length > 1 ? (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    aria-label={t('remove', { code })}
-                    onClick={() => openRemove(code)}
-                  >
-                    {t('remove', { code })}
-                  </Button>
-                ) : null}
+                {/* Runde 3, 180: Entfernen im ⋯-Menü, die Pfeile bleiben (wie 129). Auch die Leitsprache darf weg; der
+                    Dialog nennt dann die neue (`nextLeading`). */}
+                <RowMenu
+                  name={languageName(code)}
+                  items={[{ key: 'remove', label: t('removeItem'), kind: 'delete', hidden: locales.length <= 1, onSelect: () => void openRemove(code) }]}
+                />
               </div>
             </li>
           ))}
@@ -97,19 +103,29 @@ export function LocalesClient({ locales }: { locales: string[] }) {
         <RefusalNotice state={state} />
         <form ref={formRef} action={action} className="mt-3">
           <FormGrid>
-            <FormField id="code" label={t('code')} hint={t('codeHint')} error={errors.code} size="s">
-              <Input
-                id="code"
-                name="code"
-                placeholder={t('codePlaceholder')}
-                required
-                pattern="[a-z]{2}(-[a-z]{2})?"
-                className="font-mono"
-              />
+            {/* Vorschläge mit Namen (`Intl.DisplayNames`), ein freier Code bleibt möglich; der Knopf steht in der Zeile
+                des Felds, nicht unter dem Hinweis (Runde 3, 180). */}
+            <FormField id="code" label={t('code')} hint={t('codeHint')} error={errors.code}>
+              <div className="flex items-center gap-2">
+                <Input
+                  id="code"
+                  name="code"
+                  list="locale-suggestions"
+                  placeholder={t('codePlaceholder')}
+                  required
+                  pattern="[a-z]{2}(-[a-z]{2})?"
+                  autoComplete="off"
+                  // Der eingegebene Code ist eine Kennung (Mono), der Platzhalter „z. B. fr“ steht in der Feldschrift (Runde 4, 180).
+                  className="font-mono placeholder:font-body"
+                />
+                <SubmitButton>{t('add')}</SubmitButton>
+              </div>
             </FormField>
-            <div className="self-end">
-              <SubmitButton>{t('add')}</SubmitButton>
-            </div>
+            <datalist id="locale-suggestions">
+              {suggestions.map((o) => (
+                <option key={o.value} value={o.value} label={o.label} />
+              ))}
+            </datalist>
           </FormGrid>
         </form>
         </Section>
@@ -124,12 +140,13 @@ export function LocalesClient({ locales }: { locales: string[] }) {
             setPreview(null);
           }
         }}
-        title={t('removeTitle', { code: toRemove ?? '' })}
+        title={t('removeTitle', { language: toRemove ? languageName(toRemove) : '' })}
         description={
           loadingPreview
             ? '...'
             : preview
-              ? t('removeWarning', { count: preview.filled, locale: toRemove ?? '' })
+              ? // Die Leitsprache darf weg; die Folge nennt die Vorschau des Dienstes (11-2 A4, Joe 2026-10-16).
+                [t('removeWarning', { count: preview.filled, locale: toRemove ?? '' }), preview.nextLeading ? t('nextLeading', { language: languageName(preview.nextLeading) }) : null].filter(Boolean).join(' ')
               : ''
         }
         confirmLabel={t('removeConfirm')}

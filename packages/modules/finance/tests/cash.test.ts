@@ -218,7 +218,7 @@ describe('emptyDonationBox', () => {
     const res = unwrap(await emptyDonationBox(f.deps, f.ctx, { accountId: f.cash.id, date: '2026-03-10', amountCents: 8740, counterOneContactId: f.donor.id, counterTwoContactId: f.wrongDonor.id, boxLabel: 'Sammeldose Empfang' }));
     const doc = f.deps.db.select().from(documents).where(eq(documents.id, res.entry.vouchers[0]!.documentId!)).get()!;
     const input = JSON.parse(doc.inputSnapshot!).input;
-    expect(input).toMatchObject({ variant: 'donationBox', boxLabel: 'Sammeldose Empfang', amount: '87,40 €', countedOn: '2026-03-10' });
+    expect(input).toMatchObject({ variant: 'donationBox', boxLabel: 'Sammeldose Empfang', amount: '87,40\u00a0€', countedOn: '2026-03-10' });
     expect(input).not.toHaveProperty('bookAmount');
   });
 });

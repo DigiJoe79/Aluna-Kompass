@@ -2,11 +2,12 @@
 
 import { Section } from '@/components/section';
 import { Info } from 'lucide-react';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
+import { countryOptions, timeZoneOptions } from '@/lib/settings-options';
 import Link from 'next/link';
 import { useMemo, useState, useTransition } from 'react';
 import { FormField } from '@/components/forms/form-field';
-import { FormCell, FormGrid } from '@/components/forms/form-grid';
+import { FormGrid } from '@/components/forms/form-grid';
 import { FormCard } from '@/components/forms/form-card';
 import { FormActionBar } from '@/components/forms/form-action-bar';
 import { useActionFeedback } from '@/components/forms/use-action-feedback';
@@ -20,9 +21,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { MediaPicker } from '@/components/forms/media-picker';
 import { useDateFormat } from '@/components/date-format-provider';
 import { managedHintKey, managedTarget, SETTINGS_TABS, settingsSections, TAX_REQUIRED, type SettingsField } from '@/lib/settings-fields';
-import { formatDate, type DateFormatMode } from '@/lib/dates';
 import { cn } from '@/lib/utils';
 import { saveSettingsAction } from './actions';
+import { formatIban } from '@kompass/module-finance/format';
 
 const SETTINGS_TAB_KEYS = SETTINGS_TABS.map((tab) => tab.key);
 type Values = Record<string, unknown>;
@@ -45,7 +46,8 @@ export function SettingsForm({
 }) {
   const t = useTranslations('settings');
   const c = useTranslations('common');
-  const { timeZone } = useDateFormat();
+  const locale = useLocale();
+  const { date } = useDateFormat();
   const [values, setValues] = useState<Values>(initial);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, start] = useTransition();
@@ -56,6 +58,7 @@ export function SettingsForm({
     [values, initial]
   );
   const pendingCount = Object.keys(changes).length;
+  const activeTab = SETTINGS_TABS.find((tab) => tab.key === panel);
   // Die Namen für die Fehlerbox, je Einstellung unter ihrem ganzen Schlüssel (`organization.name`).
   const labels = Object.fromEntries(SETTINGS_TABS.flatMap((tab) => tab.fields).map((f) => [f.key, t(`fields.${f.key}`)]));
   const invalidTabs = new Set(
@@ -84,11 +87,9 @@ export function SettingsForm({
     // E-1: kein Eingabeelement für geführte Felder — Wert, Kennzeichen und der Weg dorthin, statt readOnly/disabled.
     if (isManaged && target) {
       // Befund 32 (0.2.1): ein Datum wie überall im Format des Vereins, nicht als ISO.
-      const display = field.kind === 'select' && value ? t(`options.${field.key}.${String(value)}`) : field.kind === 'date' && value ? formatDate(String(value), (initial['ui.dateFormat'] as DateFormatMode | undefined) ?? 'locale', timeZone) : value === null || value === undefined ? '' : String(value);
+      const display = field.kind === 'select' && value ? t(`options.${field.key}.${String(value)}`) : field.kind === 'date' && value ? date(String(value)) : field.key === 'organization.iban' && value ? formatIban(String(value)) : value === null || value === undefined ? '' : String(value);
       return (
-        <FormCell key={field.key} size={field.size}>
-          <ManagedField label={label} value={display} managedBy={{ label: t(`managedTarget.${target.targetKey}`), href: target.href }} />
-        </FormCell>
+        <ManagedField key={field.key} id={id} size={field.size} mono={field.kind === 'mono'} label={label} value={display} describedBy={`managed-hint-${panel}`} />
       );
     }
 
@@ -133,6 +134,26 @@ export function SettingsForm({
             ))}
           </Select>
         );
+      case 'country':
+        return wrap(
+          <Select id={id} value={String(value ?? '')} onChange={(e) => set(field.key, e.target.value)}>
+            {countryOptions(locale).map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
+          </Select>
+        );
+      case 'timeZone':
+        return wrap(
+          <Select id={id} value={String(value ?? '')} onChange={(e) => set(field.key, e.target.value)}>
+            {timeZoneOptions(value ? String(value) : null, locale).map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
+          </Select>
+        );
       case 'theme':
         return wrap(
           <Select id={id} value={String(value ?? 'default')} onChange={(e) => set(field.key, e.target.value)}>
@@ -151,7 +172,7 @@ export function SettingsForm({
             type="date"
             value={String(value ?? '')}
             onChange={(e) => set(field.key, e.target.value)}
-            className="font-mono"
+           
             aria-invalid={!!errors[field.key] || undefined}
           />
         );
@@ -179,25 +200,34 @@ export function SettingsForm({
     });
 
   return (
+    // Die Reiter stehen über der Karte wie in Akte, Finanzen und Webseite (Runde 3, 149). Layout, kein Test.
+    // `data-form-scope`: Der Reiterwechsel behält die Eingaben (alle Bereiche sind ein Formular), also keine Rückfrage.
+    <div className="space-y-5" data-form-scope>
+    <PanelNav
+      basePath="/admin/settings"
+      panels={SETTINGS_TAB_KEYS}
+      active={panel}
+      labels={Object.fromEntries(SETTINGS_TAB_KEYS.map((key) => [key, t(`tabs.${key}`)])) as Record<SettingsTabKey, string>}
+      invalid={invalidTabs}
+      invalidLabel={t('tabInvalid')}
+      ariaLabel={t('tabsLabel')}
+    />
     <FormCard>
     <FormErrorSummary errors={errors} labels={labels} />
-    <div className="px-6">
-      <PanelNav
-        basePath="/admin/settings"
-        panels={SETTINGS_TAB_KEYS}
-        active={panel}
-        labels={Object.fromEntries(SETTINGS_TAB_KEYS.map((key) => [key, t(`tabs.${key}`)])) as Record<SettingsTabKey, string>}
-        invalid={invalidTabs}
-        invalidLabel={t('tabInvalid')}
-        ariaLabel={t('tabsLabel')}
-      />
-    </div>
       {SETTINGS_TABS.filter((tab) => tab.key === panel).map((tab) => {
         const tabManagedFields = tab.fields.filter((f) => managed.includes(f.key));
         const tabManagedHintKey = tabManagedFields.length > 0 ? managedHintKey(tabManagedFields[0]!.key) : null;
+        const tabManagedHref = tabManagedFields.length > 0 ? managedTarget(tabManagedFields[0]!.key)?.href : undefined;
         return (
         <div key={tab.key} className="p-5">
-          {tabManagedHintKey ? <p className="mb-4 text-meta text-ink-2">{t(tabManagedHintKey)}</p> : null}
+          {/* Ein Satz mit Link für alle geführten Felder des Reiters, nicht „Geführt in …“ an jedem Feld (Runde 3, 150/151). */}
+          {tabManagedHintKey ? (
+            <p id={`managed-hint-${tab.key}`} className="mb-4 text-meta text-ink-2">
+              {t.rich(tabManagedHintKey, {
+                link: (chunks) => (tabManagedHref ? <Link href={tabManagedHref} className="text-link underline underline-offset-2">{chunks}</Link> : chunks),
+              })}
+            </p>
+          ) : null}
           {tab.key === 'tax' && taxMissingUnmanaged > 0 ? (
             <div className="mb-4">
               <Notice level="warn" title={t('taxIncomplete', { count: taxMissingUnmanaged })} testId="tax-incomplete">
@@ -240,6 +270,9 @@ export function SettingsForm({
         </div>
         );
       })}
+      {/* Ein Reiter, dessen Felder alle ein Modul führt (Bank, Steuer mit Finanzen), hat nichts zu speichern (11-1 B18) —
+          außer es liegen Änderungen aus anderen Reitern an: Dann bleibt die Leiste samt Rückfrage beim Verlassen. */}
+      {activeTab && pendingCount === 0 && activeTab.fields.every((f) => managed.includes(f.key)) ? null : (
       <FormActionBar
         count={pendingCount}
         pending={saving}
@@ -252,6 +285,8 @@ export function SettingsForm({
         }}
         onSave={save}
       />
+      )}
     </FormCard>
+    </div>
   );
 }

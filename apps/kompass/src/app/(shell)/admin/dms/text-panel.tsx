@@ -1,6 +1,7 @@
 'use client';
 
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
+import { ocrLanguageName } from '@/lib/ocr-language';
 import { useState, useTransition } from 'react';
 import { X } from 'lucide-react';
 import { RefusalNotice } from '@/components/forms/refusal-notice';
@@ -25,6 +26,7 @@ export function TextPanel({
 }: TextPanelProps) {
   const t = useTranslations('dms.admin');
   const tDms = useTranslations('dms');
+  const locale = useLocale();
 
   const [selectedLangs, setSelectedLangs] = useState<string[]>(() =>
     currentLanguages.split('+').map((s) => s.trim()).filter(Boolean),
@@ -76,11 +78,12 @@ export function TextPanel({
               {selectedLangs.map((lang) => (
                 <span
                   key={lang}
-                  className="inline-flex items-center gap-1.5 rounded-md bg-brand-soft px-2.5 py-1 font-mono text-meta text-brand-ink"
+                  className="inline-flex items-center gap-1.5 rounded-md bg-brand-soft px-2.5 py-1 text-meta text-brand-ink"
                 >
-                  {lang}
+                  {/* Klarname statt „deu“ (11-1 C36). */}
+                  {ocrLanguageName(lang, locale)}
                   {canManageSettings && selectedLangs.length > 1 ? (
-                    <Button type="button" variant="ghost" size="icon-xs" onClick={() => handleRemoveLanguage(lang)} aria-label={t('removeLanguage', { lang })}>
+                    <Button type="button" variant="ghost" size="icon-xs" onClick={() => handleRemoveLanguage(lang)} aria-label={t('removeLanguage', { lang: ocrLanguageName(lang, locale) })}>
                       <X aria-hidden />
                     </Button>
                   ) : null}
@@ -97,7 +100,7 @@ export function TextPanel({
                   onChange={(e) => {
                     if (e.target.value) handleAddLanguage(e.target.value);
                   }}
-                  className="w-auto font-mono"
+                  className="w-auto"
                   aria-label={t('textPanel.languages')}
                 >
                   <option value="">{t('textPanel.addLanguage')}</option>
@@ -105,7 +108,7 @@ export function TextPanel({
                     .filter((l) => !selectedLangs.includes(l))
                     .map((l) => (
                       <option key={l} value={l}>
-                        {l}
+                        {ocrLanguageName(l, locale)}
                       </option>
                     ))}
                 </Select>

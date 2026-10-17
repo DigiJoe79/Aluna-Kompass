@@ -8,8 +8,8 @@ import { Fragment, useState } from 'react';
 import { useDateFormat } from '@/components/date-format-provider';
 import { InvoiceCard } from '@/components/finance/invoice-card';
 import { Notice } from '@/components/notice';
-import { Button, buttonVariants } from '@/components/ui/button';
-import { TableCell, TableRow } from '@/components/ui/table';
+import { buttonVariants } from '@/components/ui/button';
+import { RowButton, TableCell, TableRow } from '@/components/ui/table';
 import { invoiceProposalAction } from '../actions';
 
 export interface VoucherRowData {
@@ -23,7 +23,7 @@ export interface VoucherRowData {
 type Loaded = { state: 'loading' } | { state: 'ready'; proposal: InvoiceProposal } | { state: 'failed'; message: string };
 
 /**
- * Die Zeilen von „Belege ohne Buchung“, je aufklappbar: „Aus der Rechnung“
+ * Die Zeilen von „Belege ohne Buchung“, je aufklappbar (Klick auf die Zeile): „Aus der Rechnung“
  * liest die Karte erst auf Abruf (Server Action), weil jedes Lesen das PDF
  * nach Anhängen durchsucht. Ohne Rechnung im PDF steht ein Satz statt einer
  * Karte.
@@ -51,35 +51,31 @@ export function VoucherRows({ rows, canOpenDocument, canWrite, canCreateContact 
         return (
           <Fragment key={doc.id}>
             <TableRow>
-              <TableCell className="font-mono text-hint text-ink-2">{doc.number}</TableCell>
-              <TableCell className="text-ink">
+              {/* 07-1 B31: Die Nummer öffnet das Dokument — ein eigener Link über der Zeilenfläche. */}
+              <TableCell col="meta" className="font-mono text-hint text-ink-2">
                 {canOpenDocument ? (
-                  <Link href={`/dms/${doc.id}`} className="underline underline-offset-2">
-                    {doc.subject}
+                  <Link href={`/dms/${doc.id}`} className="text-link underline-offset-2 hover:underline">
+                    {doc.number}
                   </Link>
                 ) : (
-                  doc.subject
+                  doc.number
                 )}
               </TableCell>
-              <TableCell className="font-mono text-hint tabular-nums text-ink-2">{date(doc.documentDate)}</TableCell>
-              <TableCell className="text-ink-2">{doc.typeLabel}</TableCell>
-              <TableCell className="text-right">
-                <span className="inline-flex items-center gap-2">
-                  <Button type="button" size="sm" variant="ghost" aria-expanded={!!loaded} aria-controls={`invoice-${doc.id}`} onClick={() => toggle(doc.id)}>
-                    {loaded ? <ChevronDown className="size-4" aria-hidden /> : <ChevronRight className="size-4" aria-hidden />}
-                    {t('invoice.toggle')}
-                  </Button>
-                  {canWrite ? (
-                    <Link href={`/finance/entries/new?voucher=${doc.id}`} className={buttonVariants({ size: 'sm', variant: 'secondary' })}>
-                      {t('toEntry')}
-                    </Link>
-                  ) : null}
-                </span>
+              {/* Runde 3, 071/076: Ein Klick auf die Zeile klappt sie auf (`RowButton`); „Aus der Rechnung“ und „Zu Buchung
+                  machen“ stehen nur im aufgeklappten Teil, statt als Knopfpaar in jeder Zeile. */}
+              <TableCell col="title" truncate title={doc.subject}>
+                <RowButton aria-expanded={!!loaded} aria-controls={`invoice-${doc.id}`} onClick={() => toggle(doc.id)} className="inline-flex max-w-full items-start gap-1 align-middle md:items-center">
+                  {loaded ? <ChevronDown className="mt-0.5 size-4 shrink-0 md:mt-0" aria-hidden /> : <ChevronRight className="mt-0.5 size-4 shrink-0 md:mt-0" aria-hidden />}
+                  {/* Am Telefon bricht der Betreff um (Kartenzeile, Designer 005), ab `md` kürzt er. */}
+                  <span className="min-w-0 md:truncate">{doc.subject}</span>
+                </RowButton>
               </TableCell>
+              <TableCell col="meta" className="text-hint tabular-nums text-ink-2">{date(doc.documentDate)}</TableCell>
+              <TableCell col="meta" className="text-ink-2">{doc.typeLabel}</TableCell>
             </TableRow>
             {loaded ? (
               <TableRow id={`invoice-${doc.id}`} className="bg-surface-2 even:bg-surface-2 hover:bg-surface-2">
-                <TableCell colSpan={5} className="py-3">
+                <TableCell col="span" colSpan={4} className="space-y-3 py-3">
                   {loaded.state === 'loading' ? (
                     <p className="text-meta text-muted-ink">{t('invoice.loading')}</p>
                   ) : loaded.state === 'failed' ? (
@@ -89,6 +85,14 @@ export function VoucherRows({ rows, canOpenDocument, canWrite, canCreateContact 
                   ) : (
                     <InvoiceCard documentId={doc.id} proposal={loaded.proposal} canWrite={canWrite} canCreateContact={canCreateContact} />
                   )}
+                  {/* Die Arbeit der Liste (MUSTER § G, Ausnahme der ⋯-Regel): bleibt ein sichtbarer Knopf. */}
+                  {canWrite ? (
+                    <div>
+                      <Link href={`/finance/entries/new?voucher=${doc.id}`} className={buttonVariants({ size: 'sm', variant: 'outline' })}>
+                        {t('toEntry')}
+                      </Link>
+                    </div>
+                  ) : null}
                 </TableCell>
               </TableRow>
             ) : null}

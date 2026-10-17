@@ -15,6 +15,8 @@ const siteTile: DashboardTile<Record<string, never>> = {
   key: 'site',
   permission: 'site.view',
   kind: 'status',
+  // Gesperrtes Publizieren (Vorlage ungeprüft, letzter Lauf gescheitert oder abgebrochen) ist eine Warnung mit Verb.
+  warningAction: true,
   defaultOn: true,
   options: z.object({}),
   messageKeys: ['running', 'templateUnreviewed', 'lastFailed', 'lastAborted', 'changed', 'never', 'current'],

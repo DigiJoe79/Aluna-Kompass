@@ -7,7 +7,9 @@ test('module page shows the locked core and the count', async ({ page }) => {
   await page.goto('/admin/modules');
   await expect(page.getByText('Beim Deaktivieren bleiben alle Daten des Moduls erhalten.')).toBeVisible();
   const core = page.getByRole('region', { name: 'Kern' });
-  await expect(core).toContainText('Immer aktiv');
+  // Keine Marke „Immer aktiv“ mehr: Schalter „Gesperrt“ und der Satz reichen (Runde 3, 014).
+  await expect(core).not.toContainText('Immer aktiv');
+  await expect(core).toContainText('Gesperrt');
   await expect(core.getByRole('switch')).toBeDisabled();
   await expect(core).toContainText('core');
   await expect(page.getByText('7 von 7 aktiv')).toBeVisible();

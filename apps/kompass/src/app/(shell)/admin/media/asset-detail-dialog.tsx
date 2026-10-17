@@ -5,11 +5,12 @@ import { useEffect, useRef, useState } from 'react';
 import { useDateFormat } from '@/components/date-format-provider';
 import { FolderField } from '@/components/folder-tree/folder-field';
 import { ConfirmDialog } from '@/components/forms/confirm-dialog';
+import { buttonVariants } from '@/components/ui/button';
 import { RecordActions } from '@/components/record-actions';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import type { ActionState } from '@/lib/actions';
 import type { FolderEntry } from '@/lib/folder-tree-model';
-import { formatBytes, type Item } from './types';
+import { formatBytes, mimeKey, type Item } from './types';
 import { UsageLines } from './usage-lines';
 
 /**
@@ -29,6 +30,7 @@ export function AssetDetailDialog({
   onOpenChange,
   onMove,
   onDelete,
+  onCreateFolder,
 }: {
   item: Item | null;
   /** Die Ordner wie im Baum, samt noch nicht bestätigter Züge. */
@@ -36,11 +38,12 @@ export function AssetDetailDialog({
   assetFolder: string | null;
   onOpenChange: (open: boolean) => void;
   onMove: (id: string, folder: string | null) => Promise<ActionState>;
+  /** Legt einen Ordner an (die Mediathek verlangt `media.upload`, das Recht für Ordner); im Feld „Neuer Ordner in …“. */
+  onCreateFolder?: (parent: string | null, name: string) => Promise<ActionState>;
   /** Löscht nach der Rückfrage; bei Erfolg schließt der Aufrufer den Detaildialog. */
   onDelete: (id: string) => Promise<ActionState>;
 }) {
   const t = useTranslations('media');
-  const tMove = useTranslations('moveDialog');
   const fmt = useDateFormat();
   const isImage = item?.mimeType.startsWith('image/') ?? false;
   const trigger = useRef<HTMLButtonElement>(null);
@@ -53,7 +56,7 @@ export function AssetDetailDialog({
       <DialogContent size="md">
         {item ? (
           <>
-            <DialogTitle className="truncate font-mono text-body">{item.filename}</DialogTitle>
+            <DialogTitle className="truncate text-body">{item.filename}</DialogTitle>
 
             <div className="grid place-items-center rounded-md border border-line bg-surface-2 p-3">
               {isImage ? (
@@ -65,7 +68,7 @@ export function AssetDetailDialog({
 
             <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-meta">
               <dt className="text-ink-2">{t('type')}</dt>
-              <dd>{item.mimeType}</dd>
+              <dd>{mimeKey(item.mimeType) ? t(`mimeTypes.${mimeKey(item.mimeType)!}`) : item.mimeType}</dd>
               <dt className="text-ink-2">{t('columns.size')}</dt>
               <dd>{formatBytes(item.bytes)}</dd>
               {item.width && item.height ? (
@@ -95,15 +98,16 @@ export function AssetDetailDialog({
               folders={folders}
               label={t('folder')}
               emptyLabel={t('noFolder')}
-              dialogTitle={tMove('titleOne', { title: item.filename })}
               kind="assets"
               onChange={(target) => onMove(item.id, target)}
+              onCreate={onCreateFolder}
             />
 
             {/* Wie der Fuß der `FormActionBar`: Aktion am Datensatz links, „Öffnen“ rechts. */}
             <div className="flex flex-wrap items-center justify-between gap-2 border-t border-line-2 pt-3">
               <RecordActions single="button" triggerRef={trigger} actions={[{ key: 'delete', label: t('deleteItem'), kind: 'delete', onSelect: () => setConfirming(true), testId: 'media-delete-trigger' }]} />
-              <a href={`/media/${item.id}`} target="_blank" rel="noopener" className="text-meta text-link underline">
+              {/* 146: „Öffnen“ als `outline`-Knopf, nicht als Link im Fuß. */}
+              <a href={`/media/${item.id}`} target="_blank" rel="noopener" className={buttonVariants({ variant: 'outline' })}>
                 {t('open')}
               </a>
             </div>

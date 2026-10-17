@@ -21,8 +21,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { formatEuro } from '@/lib/finance/amount';
 import { savePartnerNoticeAction, savePartnerPaymentDraftAction, savePartnerProfileAction, voidPartnerNoticeAction } from '../actions';
 import { FormField } from '@/components/forms/form-field';
+import { FormActionBar } from '@/components/forms/form-action-bar';
+import { FormCard, FormCardBody } from '@/components/forms/form-card';
 import { FormCell, FormGrid } from '@/components/forms/form-grid';
-import { Section, SectionHeading } from '@/components/section';
+import { Section } from '@/components/section';
 
 type Status = PartnerView['status'];
 type Basis = 'transfer58' | 'agent57';
@@ -96,22 +98,22 @@ export function PartnerDetail({ partner, notices, payments, registerDocument, ag
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>{t('payments.columns.number')}</TableHead>
-                        <TableHead className="text-right">{t('payments.columns.amount')}</TableHead>
-                        <TableHead>{t('payments.columns.state')}</TableHead>
-                        <TableHead className="hidden text-right sm:table-cell">{t('payments.columns.date')}</TableHead>
+                        <TableHead col="title">{t('payments.columns.number')}</TableHead>
+                        <TableHead col="amount" className="text-right">{t('payments.columns.amount')}</TableHead>
+                        <TableHead col="status">{t('payments.columns.state')}</TableHead>
+                        <TableHead col="meta" className="text-right">{t('payments.columns.date')}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {payments.map((p) => (
                         <TableRow key={p.id} data-testid={`payment-row-${p.id}`}>
-                          <TableCell className="whitespace-normal">
+                          <TableCell col="title" className="whitespace-normal">
                             <Link href={`/finance/partners/${partner.id}/payments/${p.id}`} className="font-mono text-ink underline-offset-2 hover:underline">
                               {p.number ?? (p.purposeText || t('payments.new'))}
                             </Link>
                           </TableCell>
-                          <TableCell className="text-right font-mono tabular-nums">{formatEuro(p.totalCents)}</TableCell>
-                          <TableCell className="whitespace-normal text-ink-2">
+                          <TableCell col="amount" className="text-right tabular-nums">{formatEuro(p.totalCents)}</TableCell>
+                          <TableCell col="status" className="whitespace-normal text-ink-2">
                             {t(`payments.state.${paymentStateKey(p)}`)}
                             {p.readyToAcknowledge ? (
                               <>
@@ -120,7 +122,7 @@ export function PartnerDetail({ partner, notices, payments, registerDocument, ag
                               </>
                             ) : null}
                           </TableCell>
-                          <TableCell className="hidden text-right font-mono tabular-nums sm:table-cell">{fmt.date(p.date)}</TableCell>
+                          <TableCell col="meta" className="text-right tabular-nums">{fmt.date(p.date)}</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
@@ -148,6 +150,26 @@ function ProfileSection({ partner, documents, canWrite, t, tStatus, tBasis, rout
 
   const derived = status !== 'foreignBody';
 
+  // 09 B31: Speichern über die `FormActionBar` der Karte (Stammdaten-Muster), gezählt gegen den geladenen Stand.
+  const initial = { status: partner.status, usualBasis: (partner.usualBasis ?? 'transfer58') as Basis, usualProofMonths: partner.usualProofMonths, note: partner.note ?? '', register: pickable(documents.register)?.id ?? null, agreement: pickable(documents.agreement)?.id ?? null };
+  const changedCount = [
+    status !== initial.status,
+    usualBasis !== initial.usualBasis,
+    usualProofMonths !== initial.usualProofMonths,
+    note !== initial.note,
+    (registerDocument?.id ?? null) !== initial.register,
+    (agreementDocument?.id ?? null) !== initial.agreement,
+  ].filter(Boolean).length;
+  const discard = () => {
+    setStatus(partner.status);
+    setUsualBasis(initial.usualBasis);
+    setUsualProofMonths(partner.usualProofMonths);
+    setNote(initial.note);
+    setRegisterDocument(pickable(documents.register));
+    setAgreementDocument(pickable(documents.agreement));
+    saveFb.reset();
+  };
+
   const save = async () => {
     setPending(true);
     const result = await saveFb.run(() => savePartnerProfileAction({
@@ -166,7 +188,8 @@ function ProfileSection({ partner, documents, canWrite, t, tStatus, tBasis, rout
   };
 
   return (
-    <section className="rounded-md border border-line bg-surface p-4" data-testid="partner-profile">
+    <FormCard as="section" data-testid="partner-profile">
+      <FormCardBody>
       <Section title={t('profile.title')}
         actions={
           <>
@@ -177,20 +200,22 @@ function ProfileSection({ partner, documents, canWrite, t, tStatus, tBasis, rout
         }
       >
         <div className="space-y-3">
-          {/* Rechtsform als Anzeige in der Zeile des Abschnitts, kein Feld (Entscheidung zum Inventar § E). */}
-          <section>
-            {/* Rechtsform in der Zeile des Titels: SectionHeading nimmt Kinder, Section nur Text (K10 Charge 3). */}
-            <SectionHeading>
-              {t('profile.sections.classification')}
-              <span className="font-normal text-ink-2" data-testid="partner-legal-form">
+          {/* Eine Überschrift reicht: „Einordnung“ unter „Angaben zum Partner“ fällt weg, die Rechtsform steht als Zeile
+              darüber (Runde 3, 117). Fehlt sie, ist das Arbeit: ocker, „am Kontakt pflegen“ als Link dahinter. */}
+          <section aria-label={t('profile.sections.classification')}>
+            {partner.contactLegalForm ? (
+              <p className="text-meta text-ink-2" data-testid="partner-legal-form">
+                {t('profile.legalForm', { legalForm: partner.contactLegalForm })}
+              </p>
+            ) : (
+              <p className="text-meta" data-testid="partner-legal-form">
+                <span className="text-warning">{t('profile.legalFormNone')}</span>
                 {' · '}
-                {partner.contactLegalForm ?? (
-                  <Link href={`/contacts/${partner.contactId}`} className="underline underline-offset-2">
-                    {t('profile.legalFormNone')}
-                  </Link>
-                )}
-              </span>
-            </SectionHeading>
+                <Link href={`/contacts/${partner.contactId}`} className="text-link underline underline-offset-2">
+                  {t('profile.legalFormEdit')}
+                </Link>
+              </p>
+            )}
             <div className="mt-3">
               <FormGrid>
                 <FormField id="partner-status" label={t('profile.status')} required>
@@ -268,17 +293,13 @@ function ProfileSection({ partner, documents, canWrite, t, tStatus, tBasis, rout
             </FormGrid>
           </Section>
           </div>
-          <RefusalNotice state={saveFb.state} />
-          {canWrite ? (
-            <div className="flex items-center justify-end">
-              <Button type="button" disabled={pending} onClick={() => void save()} data-testid="partner-profile-save">
-                {t('profile.save')}
-              </Button>
-            </div>
-          ) : null}
         </div>
       </Section>
-    </section>
+      </FormCardBody>
+      {canWrite ? (
+        <FormActionBar count={changedCount} onSave={() => void save()} onDiscard={discard} pending={pending} state={saveFb.state} saveLabel={t('profile.save')} saveTestId="partner-profile-save" />
+      ) : null}
+    </FormCard>
   );
 }
 
@@ -325,7 +346,7 @@ function NoticesSection({ partnerId, abroad, notices, canWrite, t, router }: { p
         actions={
           <>
             {canWrite && !adding ? (
-              <Button type="button" variant="secondary" size="sm" onClick={() => setAdding(true)} data-testid="notice-add-trigger">
+              <Button type="button" variant="outline" size="sm" onClick={() => setAdding(true)} data-testid="notice-add-trigger">
                 {t('notices.new')}
               </Button>
             ) : null}
@@ -377,16 +398,16 @@ function NoticesSection({ partnerId, abroad, notices, canWrite, t, router }: { p
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>{t('notices.kind')}</TableHead>
-                  <TableHead>{t('notices.validUntil')}</TableHead>
-                  <TableHead className="hidden sm:table-cell">{t('notices.receivedColumn')}</TableHead>
-                  <TableHead>{t('notices.stateColumn')}</TableHead>
+                  <TableHead col="title">{t('notices.kind')}</TableHead>
+                  <TableHead col="meta">{t('notices.validUntil')}</TableHead>
+                  <TableHead col="meta">{t('notices.receivedColumn')}</TableHead>
+                  <TableHead col="status">{t('notices.stateColumn')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {notices.map((n) => (
                   <TableRow key={n.id} data-testid={`notice-row-${n.id}`}>
-                    <TableCell className="whitespace-normal">
+                    <TableCell col="title" className="whitespace-normal">
                       {kindLabel(n.kind)}
                       <span className="block text-hint text-muted-ink">{t('notices.dated', { date: fmt.date(n.noticeDate) })}</span>
                       {canWrite && n.state !== 'voided' ? (
@@ -395,9 +416,9 @@ function NoticesSection({ partnerId, abroad, notices, canWrite, t, router }: { p
                         </Button>
                       ) : null}
                     </TableCell>
-                    <TableCell className="font-mono tabular-nums">{fmt.date(n.validUntil)}</TableCell>
-                    <TableCell className="hidden font-mono tabular-nums sm:table-cell">{fmt.date(n.receivedOn)}</TableCell>
-                    <TableCell className="whitespace-normal text-ink-2">{t(`notices.state.${n.state}`)}</TableCell>
+                    <TableCell col="meta" className="tabular-nums">{fmt.date(n.validUntil)}</TableCell>
+                    <TableCell col="meta" className="tabular-nums">{fmt.date(n.receivedOn)}</TableCell>
+                    <TableCell col="status" className="whitespace-normal text-ink-2">{t(`notices.state.${n.state}`)}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>

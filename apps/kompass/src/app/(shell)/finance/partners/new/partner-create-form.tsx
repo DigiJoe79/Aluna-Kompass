@@ -52,7 +52,7 @@ export function PartnerCreateForm() {
               <ContactPicker id="partner-new-contact" name="contactId" label={t('create.contact')} value={contact} onChange={setContact} canCreate required />
               <FieldError id="partner-new-contact-error" message={errors.contactId} />
             </FormCell>
-            <FormField id="partner-new-status" label={t('create.status')} error={errors.status}>
+            <FormField id="partner-new-status" label={t('create.status')} error={errors.status} required>
               <Select id="partner-new-status" value={status} onChange={(e) => setStatus(e.target.value as (typeof STATUSES)[number])}>
                 {STATUSES.map((s) => (
                   <option key={s} value={s}>{tStatus(s)}</option>
@@ -62,17 +62,12 @@ export function PartnerCreateForm() {
           </FormGrid>
         </section>
       </FormCardBody>
-      {/* Ohne `<form>` zählt die Leiste nicht selbst: Der Stand kommt mit, damit sie zählt, verwirft und beim Verlassen nachfragt. */}
+      {/* Ohne `<form>` zählt die Leiste nicht selbst: Der Stand kommt mit, damit sie zählt und beim Verlassen nachfragt; Verwerfen gibt es beim Anlegen nicht (Designer 2026-10-16). */}
       <FormActionBar
         mode="create"
         back={{ href: '/finance/partners', label: c('backToList') }}
         state={state}
         count={Number(contact !== null) + Number(status !== INITIAL_STATUS)}
-        onDiscard={() => {
-          setContact(null);
-          setStatus(INITIAL_STATUS);
-          feedback.reset();
-        }}
         onSave={() => void create()}
         pending={pending}
         saveLabel={t('create.save')}

@@ -1,4 +1,4 @@
-import { activeUserChoices, hasPermission, isModuleEnabled, readSetting, retentionEnd, retentionMonths, userNamesFor, todayIn } from '@kompass/core';
+import { activeUserChoices, hasPermission, isModuleEnabled, readSetting, retentionEnd, retentionMonths, todayIn, userNamesFor } from '@kompass/core';
 import { listProjects } from '@kompass/module-projects';
 import { listAnimals } from '@kompass/module-animals';
 import { invoiceProposal } from '@kompass/module-finance';
@@ -13,6 +13,7 @@ import { Notice } from '@/components/notice';
 import { Page } from '@/components/page';
 import { PageHeader } from '@/components/page-header';
 import { buttonVariants } from '@/components/ui/button';
+import { nameOrEmpty } from '@/lib/name-or-empty';
 import { requireSession } from '@/lib/request-context';
 import { DocumentActions } from './document-actions';
 import { DocumentDetail } from './document-detail';
@@ -23,6 +24,7 @@ export default async function DocumentDetailPage(props: {
 }) {
   const { deps, ctx } = await requireSession();
   const tCommon = await getTranslations('common');
+  const nav = await getTranslations('nav');
   const tDms = await getTranslations('dms');
   if (requireDmsGate(deps, ctx)) return <Page width="standard"><ForbiddenCard permission="dms.view" /></Page>;
 
@@ -35,7 +37,7 @@ export default async function DocumentDetailPage(props: {
 
   const doc = result.value;
   const docType = documentTypeFor(deps.db, doc.typeKey);
-  const typeLabel = docType?.label ?? doc.typeKey;
+  const typeLabel = nameOrEmpty(docType?.label, doc.typeKey);
 
   const today = todayIn(deps);
   let retentionInfo: { retentionClass: string; until: string | null; due: boolean } | null = null;
@@ -136,7 +138,7 @@ export default async function DocumentDetailPage(props: {
       header={
         <PageHeader
           title={doc.subject}
-          back={{ href: '/dms', label: tCommon('backToList') }}
+          back={{ href: '/dms', label: nav('dms.list') }}
           actions={
             <>
               {canMakeEntry ? (

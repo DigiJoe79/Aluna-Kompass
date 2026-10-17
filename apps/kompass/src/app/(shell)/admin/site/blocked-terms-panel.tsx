@@ -42,7 +42,7 @@ export function BlockedTermsPanel({ terms, canPublish }: { terms: string[]; canP
             <div className="flex flex-col gap-3">
               <FormGrid>
                 <FormField id="blocked-terms" label={t('label')} hint={t('hint')} size="l">
-                  <Textarea id="blocked-terms" name="terms" rows={4} readOnly={!canPublish} defaultValue={terms.join('\n')} className="font-mono text-meta" />
+                  <Textarea id="blocked-terms" name="terms" rows={4} readOnly={!canPublish} defaultValue={terms.join('\n')} className="text-meta" />
                 </FormField>
               </FormGrid>
               {canPublish ? null : (

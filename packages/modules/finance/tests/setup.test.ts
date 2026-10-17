@@ -85,6 +85,33 @@ describe('finance setup status', () => {
     expect(unwrap(await getSetupStatus(deps, ctx)).steps.find((s) => s.key === 'boardRemuneration')!.done).toBe(false);
   });
 
+  it('a decided "no" settles the board remuneration step, with the day of the decision (Joe 11.9)', async () => {
+    const { deps, ctx } = setupFinance();
+    deps.clock.set('2026-06-15T10:00:00.000Z');
+    const stepOf = async () => unwrap(await getSetupStatus(deps, ctx)).steps.find((s) => s.key === 'boardRemuneration')!;
+    expect((await stepOf()).done).toBe(false);
+
+    const saved = unwrap(await setBoardRemuneration(deps, ctx, { allowed: false, basisText: '' }));
+    expect(saved).toMatchObject({ allowed: false, validFrom: null, decidedOn: '2026-06-15' });
+    expect(readSetting<string | null>(deps, 'finance.boardRemunerationDecidedOn')).toBe('2026-06-15');
+    expect(await stepOf()).toMatchObject({ done: true, detail: { decision: 'no', decidedOn: '2026-06-15' } });
+
+    deps.clock.set('2026-07-01T10:00:00.000Z');
+    unwrap(await setBoardRemuneration(deps, ctx, { allowed: true, basisText: 'Satzung § 12', validFrom: '2026-07-01' }));
+    expect(await stepOf()).toMatchObject({ done: true, detail: { decision: 'yes', decidedOn: '2026-07-01', validFrom: '2026-07-01' } });
+  });
+
+  it('keeps the board remuneration step open for a stored answer without a decision day (Bestand, Joe 11.9)', async () => {
+    const { deps, ctx } = setupFinance();
+    // Bestand vor 0.2.12: `allowed: false` gespeichert, aber nie entschieden — die Frage kommt einmal neu.
+    await deps.db.transaction((tx) => writeSettingInternal(tx, deps, systemContext(), 'finance.boardRemunerationAllowed', false));
+    expect(unwrap(await getSetupStatus(deps, ctx)).steps.find((s) => s.key === 'boardRemuneration')).toMatchObject({ done: false, detail: {} });
+    // Ebenso ein „ja“ mit „gilt ab“, aber ohne Entscheidungstag.
+    await deps.db.transaction((tx) => writeSettingInternal(tx, deps, systemContext(), 'finance.boardRemunerationAllowed', true));
+    await deps.db.transaction((tx) => writeSettingInternal(tx, deps, systemContext(), 'finance.boardRemunerationValidFrom', '2026-01-01'));
+    expect(unwrap(await getSetupStatus(deps, ctx)).steps.find((s) => s.key === 'boardRemuneration')!.done).toBe(false);
+  });
+
   it('checklist names the board at the contact as optional step: open until a contact holds an active board-member role (T)', async () => {
     const { deps, ctx } = setupFinance();
     deps.clock.set('2026-06-15T10:00:00.000Z');
@@ -97,6 +124,16 @@ describe('finance setup status', () => {
     const role = deps.db.select().from(contactRoles).where(eq(contactRoles.contactId, board.id)).get()!;
     unwrap(await endContactRole(deps, manage, { roleId: role.id, until: '2026-03-31' }));
     expect((await stepOf()).done).toBe(false);
+  });
+
+  it('the import format step is open, not blocked, while a second bank account still lacks its opening balance (11-1 A8)', async () => {
+    const { deps, ctx } = setupFinance();
+    unwrap(await createFirstFiscalYear(deps, ctx, { startsOn: '2026-01-01', endsOn: '2026-12-31' }));
+    unwrap(await createAccount(deps, ctx, { name: 'Vereinskonto', kind: 'bank', iban: 'DE23999999990000202051', isMain: true, importFormat: 'camt053', openingBalanceCents: 0, openingDate: '2026-01-01' }));
+    unwrap(await createAccount(deps, ctx, { name: 'Zweitkonto', kind: 'bank', iban: 'DE66999999990000303030', isMain: false }));
+    const steps = unwrap(await getSetupStatus(deps, ctx)).steps;
+    expect(steps.find((s) => s.key === 'account')!.done).toBe(false);
+    expect(steps.find((s) => s.key === 'importFormat')!).toMatchObject({ done: false, blocked: false, detail: { missing: 1 } });
   });
 
   it('the import format step counts bank and payment-service accounts and names how many lack a format (F4b)', async () => {
@@ -130,6 +167,18 @@ describe('finance setup status', () => {
     const withOpening = unwrap(await getSetupStatus(deps, ctx)).steps.find((s) => s.key === 'account')!;
     expect(withOpening.done).toBe(true);
     expect(withOpening.detail).toEqual({ accounts: 2, withoutOpening: 1 });
+  });
+
+  // 11-1 A8 (Joe 2026-10-16): erledigt erst, wenn jedes aktive Bankkonto einen Anfangsbestand hat — ein Konto ohne
+  // rechnet seinen Saldo falsch. Eine Kasse ohne Anfangsbestand hält den Schritt nicht auf.
+  it('is done only when every active bank account has an opening balance', async () => {
+    const { deps, ctx } = setupFinance();
+    unwrap(await createFirstFiscalYear(deps, ctx, { startsOn: '2026-01-01', endsOn: '2026-12-31' }));
+    unwrap(await createAccount(deps, ctx, { name: 'Vereinskonto', kind: 'bank', iban: 'DE23999999990000202051', isMain: true, openingBalanceCents: 10000, openingDate: '2026-01-01' }));
+    unwrap(await createAccount(deps, ctx, { name: 'Tagesgeld', kind: 'bank', iban: 'DE66999999991234567890' }));
+    const missing = unwrap(await getSetupStatus(deps, ctx)).steps.find((s) => s.key === 'account')!;
+    expect(missing.done).toBe(false);
+    expect(missing.detail).toEqual({ accounts: 2, withoutOpening: 1 });
   });
 
   it('adds the optional import format step, done when every active bank account has a format, without touching completeness', async () => {
@@ -193,6 +242,22 @@ describe('finance setup status', () => {
     const afterLink = unwrap(await getSetupStatus(deps, ctx)).steps.find((s) => s.key === 'roles')!;
     expect(afterLink.done).toBe(true);
     expect(afterLink.detail).toEqual({});
+  });
+
+  it('treats the finance agent role as optional: done without a holder, never named as missing (Joe 11.1)', async () => {
+    const { deps, ctx } = setupFinance();
+    deps.db.transaction((tx) => installFinance(tx, deps, systemContext()));
+    const holderId = insertUser(deps, { name: 'Rollen-Halterin' });
+    for (const originKey of FINANCE_ROLE_ORIGIN_KEYS.filter((k) => k !== 'finance:agent')) {
+      deps.db.insert(schema.userRoles).values({ userId: holderId, roleId: roleIdByOrigin(deps.db, originKey)! }).run();
+    }
+    const adminCtx = ctxWith(['users.manage', 'contacts.manage'], 'ADMIN-USER');
+    const contact = unwrap(await createContact(deps, adminCtx, { kind: 'person', lastName: 'Musterhalterin' }));
+    unwrap(await linkUserToContact(deps, adminCtx, { userId: holderId, contactId: contact.id }));
+
+    const step = unwrap(await getSetupStatus(deps, ctx)).steps.find((s) => s.key === 'roles')!;
+    expect(step.done).toBe(true);
+    expect(step.detail.rolesWithoutUser).toBeUndefined();
   });
 
   it('the checklist step follows the status and depends on the notice step', async () => {

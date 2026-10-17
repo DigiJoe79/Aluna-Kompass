@@ -5,7 +5,6 @@ import { useTranslations } from 'next-intl';
 import { useActionState, useEffect, useState, useTransition } from 'react';
 import { FileDropzone } from '@/app/(shell)/dms/receive/file-dropzone';
 import { Notice } from '@/components/notice';
-import { StatusBadge } from '@/components/status-badge';
 import { FormField } from '@/components/forms/form-field';
 import { FormGrid } from '@/components/forms/form-grid';
 import { FormActionBar } from '@/components/forms/form-action-bar';
@@ -42,13 +41,14 @@ export function ImportCard({ environmentName }: { environmentName: string }) {
   };
   return (
     <section className="rounded-lg border border-line bg-surface p-5">
-      <div className="flex items-center gap-2"><SectionHeading>{t('title')}</SectionHeading><StatusBadge tone="warning">{t('badge')}</StatusBadge></div>
+      {/* Keine Marke „Überschreibt alles“: Die Warnung darunter sagt dasselbe (11-2 B10). */}
+      <SectionHeading>{t('title')}</SectionHeading>
       <div className="mt-3"><Notice level="warn">{t('warning')}</Notice></div>
       <form action={inspectAction} className="mt-4 flex flex-col gap-3">
         <FormGrid>
           <FormField id="archive" label={t('file')} error={error ?? undefined} size="m"><FileDropzone id="archive" name="archive" accept=".tar.gz,application/gzip" hint={t('fileHint')} required onFile={setFile} /></FormField>
         </FormGrid>
-        <div className="flex justify-end gap-2 border-t border-line pt-3"><SubmitButton variant="secondary" className="bg-warning text-on-brand">{t('prepare')}</SubmitButton></div>
+        <div className="flex justify-end gap-2 border-t border-line pt-3"><SubmitButton variant="outline">{t('prepare')}</SubmitButton></div>
       </form>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent role="alertdialog" size="md" className="bg-surface shadow-md">

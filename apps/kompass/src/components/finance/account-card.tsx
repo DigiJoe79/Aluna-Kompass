@@ -7,7 +7,8 @@ import { useState } from 'react';
 import { useDateFormat } from '@/components/date-format-provider';
 import { formatEuro } from '@/lib/finance/amount';
 import { formatDateOrDash } from '@/lib/finance/dates';
-import { maskIban } from '@/lib/finance/open-item-state';
+import { ibanLastFour } from '@/lib/finance/iban-check';
+import { formatIban, maskIban } from '@kompass/module-finance/format';
 
 export interface AccountCardData {
   accountId: string;
@@ -33,16 +34,19 @@ export interface AccountCardData {
  * Eine Konto-Karte (HANDOFF § 5.5, Task 3): Bestand festgeschrieben groß,
  * geprüfte Entwürfe nur, wenn sie abweichen; eine Kasse nennt neutral, wann
  * sie zuletzt gezählt wurde — ohne Warnfarbe, ohne Badge. Die ganze Karte ist
- * das Klickziel ins gefilterte Journal (HANDOFF § 5.5) — der Aufdeck-Knopf
+ * das Klickziel ins gefilterte Journal (HANDOFF § 5.5), bei einer Kasse auf die Kassenseite — der Aufdeck-Knopf
  * stoppt seinen eigenen Klick, statt in einem verschachtelten Link zu stecken
  * (Muster `journal.tsx`).
  */
 export function AccountCard({ account }: { account: AccountCardData }) {
   const t = useTranslations('finance.accounts');
+  const tf = useTranslations('finance.common');
   const router = useRouter();
   const { date } = useDateFormat();
   const [revealed, setRevealed] = useState(false);
-  const href = `/finance/entries?account=${account.accountId}`;
+  // Eine Kasse steht in „Konten“ und in „Kassen“; ihre Karte führt auf die Arbeitsseite der Kasse (zählen, bewegen),
+  // ein Bank- oder Zahlungsdienstkonto ins gefilterte Journal (Joe 2026-10-17).
+  const href = account.kind === 'cash' ? `/finance/cash?account=${account.accountId}` : `/finance/entries?account=${account.accountId}`;
 
   return (
     <div
@@ -63,7 +67,17 @@ export function AccountCard({ account }: { account: AccountCardData }) {
 
       {account.kind === 'bank' && account.iban ? (
         <div className="mt-2 flex items-center gap-2 font-mono text-meta text-ink-2">
-          <span data-testid="iban-value">{revealed ? account.iban : maskIban(account.iban)}</span>
+          {revealed ? (
+            <span data-testid="iban-value">{formatIban(account.iban)}</span>
+          ) : (
+            // Verdeckt: sehend „DE ·· 2051“, für Vorleser ein Satz statt zweier Punkte (Designer 2026-10-16, Teil 1 Nr. 3).
+            <>
+              <span data-testid="iban-value" aria-hidden="true">
+                {maskIban(account.iban)}
+              </span>
+              <span className="sr-only">{tf('ibanEndsWith', { last: ibanLastFour(account.iban) })}</span>
+            </>
+          )}
           <button
             type="button"
             aria-label={revealed ? t('ibanHide') : t('ibanReveal')}
@@ -79,7 +93,7 @@ export function AccountCard({ account }: { account: AccountCardData }) {
       ) : null}
 
       <div className="mt-3">
-        <p className="font-mono text-amount font-semibold tabular-nums text-ink">{formatEuro(account.balanceCents)}</p>
+        <p className="text-amount font-semibold tabular-nums text-ink">{formatEuro(account.balanceCents)}</p>
         {account.withReviewedCents !== account.balanceCents ? (
           <p className="text-hint text-muted-ink">{t('withReviewed', { amount: formatEuro(account.withReviewedCents) })}</p>
         ) : null}
@@ -105,13 +119,12 @@ export function AccountCard({ account }: { account: AccountCardData }) {
                   : ''}
             </p>
           )}
-          {account.statement.reconciliation ? (
+          {/* 07-2 B8: „Kein Auszug für heute“ unter jedem Konto sagt nichts — die Zeile steht nur mit einem Abgleich. */}
+          {account.statement.reconciliation && account.statement.reconciliation.state !== 'noStatement' ? (
             <p className={account.statement.reconciliation.state === 'differs' ? 'text-hint font-semibold text-warning' : 'text-hint text-muted-ink'}>
               {account.statement.reconciliation.state === 'matches'
                 ? t('reconciliation.matches', { date: formatDateOrDash(date, account.statement.reconciliation.statementDate) })
-                : account.statement.reconciliation.state === 'differs'
-                  ? t('reconciliation.differs', { date: formatDateOrDash(date, account.statement.reconciliation.statementDate), amount: formatEuro(account.statement.reconciliation.differenceCents ?? 0) })
-                  : t('reconciliation.noStatement')}
+                : t('reconciliation.differs', { date: formatDateOrDash(date, account.statement.reconciliation.statementDate), amount: formatEuro(account.statement.reconciliation.differenceCents ?? 0) })}
             </p>
           ) : null}
         </div>

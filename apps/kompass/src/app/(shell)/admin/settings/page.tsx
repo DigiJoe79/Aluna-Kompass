@@ -7,6 +7,7 @@ import { panelFromQuery } from '@/components/panel-nav';
 import { requireSession } from '@/lib/request-context';
 import { SETTINGS_TABS } from '@/lib/settings-fields';
 import { PendingPublishLine } from '@/components/site/pending-publish';
+import { themeDisplayName } from '@/lib/theme-name';
 import { SettingsForm } from './settings-form';
 
 const SETTINGS_TAB_KEYS = SETTINGS_TABS.map((tab) => tab.key);
@@ -15,6 +16,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
   const { deps, ctx } = await requireSession();
   if (requirePermission(ctx, 'settings.manage')) return <Page width="standard"><ForbiddenCard permission="settings.manage" /></Page>;
   const t = await getTranslations('settings');
+  const tThemes = await getTranslations('themes');
   const panel = panelFromQuery((await searchParams).panel, SETTINGS_TAB_KEYS, 'organization');
   const all = readAllSettings(deps);
   const editable = Object.fromEntries(
@@ -27,7 +29,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
       <SettingsForm
         panel={panel}
         initial={editable}
-        themes={listThemes(deps).themes.map((th) => ({ key: th.key, name: th.name }))}
+        themes={listThemes(deps).themes.map((th) => ({ key: th.key, name: themeDisplayName(th, tThemes('defaultName')) }))}
         lastSaved={null}
         managed={Object.keys(managedSettings(deps))}
       />

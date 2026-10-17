@@ -100,7 +100,7 @@ function CommandInput({
   }
   return (
     <div data-slot="command-input-wrapper" className={cn("p-1 pb-0", wrapperClassName)}>
-      <InputGroup className={cn("h-8 rounded-lg! border-line-strong bg-line-strong shadow-none! *:data-[slot=input-group-addon]:pl-2!", fieldClassName)}>
+      <InputGroup className={cn("h-8 rounded-md! border-line-strong bg-field shadow-none! *:data-[slot=input-group-addon]:pl-2!", fieldClassName)}>
         <CommandPrimitive.Input
           ref={setRef}
           data-slot="command-input"
@@ -195,6 +195,11 @@ function CommandSeparator({
   )
 }
 
+/**
+ * Zeile einer Auswahl: Fläche `rounded-md`, nach innen abgesetzt — `Command` und `CommandGroup` geben je `p-1`, so steht
+ * die aktive Zeile mit Abstand zum Rand der runden Palette; das Suchfeld ebenso (Designer 2026-10-16, Teil 3 Nr. 2).
+ * Kein Layout-Test (Einzelstelle, Laufzeit zählt).
+ */
 function CommandItem({
   className,
   children,
@@ -204,7 +209,7 @@ function CommandItem({
     <CommandPrimitive.Item
       data-slot="command-item"
       className={cn(
-        "group/command-item relative flex cursor-default items-center gap-2 rounded-sm px-2 py-1.5 text-body outline-hidden select-none in-data-[slot=dialog-content]:rounded-lg! data-[disabled=true]:pointer-events-none data-[disabled=true]:opacity-50 data-selected:bg-surface-2 data-selected:text-ink [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 data-selected:*:[svg]:text-ink",
+        "group/command-item relative flex cursor-default items-center gap-2 rounded-md px-2 py-1.5 text-body outline-hidden select-none data-[disabled=true]:pointer-events-none data-[disabled=true]:opacity-50 data-[selected=true]:bg-surface-2 data-[selected=true]:text-ink [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 data-[selected=true]:*:[svg]:text-ink",
         className
       )}
       {...props}
@@ -223,7 +228,7 @@ function CommandShortcut({
     <span
       data-slot="command-shortcut"
       className={cn(
-        "ml-auto font-mono text-key text-muted-ink group-data-selected/command-item:text-ink",
+        "ml-auto font-mono text-key text-muted-ink group-data-[selected=true]/command-item:text-ink",
         className
       )}
       {...props}

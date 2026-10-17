@@ -35,12 +35,13 @@ export interface SetupStep {
  * Startplan-Kategorien mit, die dieser Dienst nicht braucht, und eine eigene,
  * kleine Liste hält den Einrichtungsstand unabhängig vom Startplan.
  */
-const FINANCE_ROLE_ORIGINS: readonly { originKey: string; name: string }[] = [
+const FINANCE_ROLE_ORIGINS: readonly { originKey: string; name: string; optional?: true }[] = [
   { originKey: 'finance:treasurer', name: 'Schatzmeister' },
   { originKey: 'finance:approver', name: 'Freigeber Finanzen' },
   { originKey: 'finance:clerk', name: 'Auslagen einreichen' },
   { originKey: 'finance:auditor', name: 'Kassenprüfer' },
-  { originKey: 'finance:agent', name: 'Finanz-Agent' },
+  // Joe 11.1: Kaum ein Verein lässt einen Agenten buchen — die Rolle zählt nicht für den Schritt.
+  { originKey: 'finance:agent', name: 'Finanz-Agent', optional: true },
 ];
 
 /**
@@ -79,9 +80,17 @@ function hasAnyFiscalYear(db: DbOrTx): boolean {
   return !!db.select({ id: financeFiscalYears.id }).from(financeFiscalYears).limit(1).get();
 }
 
-function accountStepDetail(db: DbOrTx): { accounts: number; withoutOpening: number } {
-  const rows = db.select({ openingBalanceCents: financeAccounts.openingBalanceCents }).from(financeAccounts).where(eq(financeAccounts.isActive, true)).all();
-  return { accounts: rows.length, withoutOpening: rows.filter((r) => r.openingBalanceCents === null).length };
+/**
+ * Konten mit und ohne Anfangsbestand (aktive Konten). `bankWithoutOpening` entscheidet den Schritt: Ein Bankkonto ohne
+ * Anfangsbestand rechnet seinen Saldo falsch, genau das soll die Checkliste fangen (11-1 A8, Joe 2026-10-16).
+ */
+function accountStepDetail(db: DbOrTx): { accounts: number; withoutOpening: number; bankWithoutOpening: number } {
+  const rows = db.select({ kind: financeAccounts.kind, openingBalanceCents: financeAccounts.openingBalanceCents }).from(financeAccounts).where(eq(financeAccounts.isActive, true)).all();
+  return {
+    accounts: rows.length,
+    withoutOpening: rows.filter((r) => r.openingBalanceCents === null).length,
+    bankWithoutOpening: rows.filter((r) => r.kind === 'bank' && r.openingBalanceCents === null).length,
+  };
 }
 
 /**
@@ -108,7 +117,7 @@ function activeFinanceUsers(deps: Deps): { id: string; name: string }[] {
 function rolesStepDetail(deps: Deps): { done: boolean; detail: Record<string, string | number> } {
   const db = deps.db;
   const rolesWithoutUser: string[] = [];
-  for (const origin of FINANCE_ROLE_ORIGINS) {
+  for (const origin of FINANCE_ROLE_ORIGINS.filter((o) => !o.optional)) {
     const roleRow = db.select({ id: schema.roles.id, name: schema.roles.name }).from(schema.roles).where(eq(schema.roles.originKey, origin.originKey)).get();
     const hasActiveHolder = roleRow
       ? !!db
@@ -129,6 +138,19 @@ function rolesStepDetail(deps: Deps): { done: boolean; detail: Record<string, st
 }
 
 /**
+ * Joe 11.9: Erledigt ist der Schritt, wenn entschieden ist — „nein“ oder „ja mit gilt ab“. Ohne Entscheidungstag
+ * (Bestand vor 0.2.12) bleibt er offen, auch bei gespeichertem `false`: Die Frage kommt einmal neu. Befund AK: ein
+ * „ja“ ohne „gilt ab“ bleibt ebenfalls offen.
+ */
+function boardRemunerationDecision(deps: Deps): { done: boolean; detail: Record<string, string> } {
+  const decidedOn = readSetting<string | null>(deps, 'finance.boardRemunerationDecidedOn');
+  if (!decidedOn) return { done: false, detail: {} };
+  if (!readSetting<boolean>(deps, 'finance.boardRemunerationAllowed')) return { done: true, detail: { decision: 'no', decidedOn } };
+  const validFrom = readSetting<string | null>(deps, 'finance.boardRemunerationValidFrom');
+  return validFrom ? { done: true, detail: { decision: 'yes', decidedOn, validFrom } } : { done: false, detail: {} };
+}
+
+/**
  * Der Einrichtungsstand — komplett berechnet, nie gespeichert (Spec 10.5). Nur
  * `categories` und `tax` sind Bestätigungen; ihr Zeitpunkt steht in den
  * Einstellungen `finance.setupCategoriesConfirmedAt` / `…TaxConfirmedAt`.
@@ -138,9 +160,11 @@ export async function getSetupStatus(deps: Deps, ctx: CallContext): Promise<Resu
   if (denied) return denied;
 
   const fiscalYearDone = hasAnyFiscalYear(deps.db);
-  const account = accountStepDetail(deps.db);
+  const { bankWithoutOpening, ...account } = accountStepDetail(deps.db);
   const missingImportFormats = accountsWithoutImportFormat(deps.db);
-  const accountDone = account.accounts - account.withoutOpening > 0;
+  // Erledigt: mindestens ein Konto mit Anfangsbestand und kein aktives Bankkonto ohne (11-1 A8).
+  const anyOpening = account.accounts - account.withoutOpening > 0;
+  const accountDone = anyOpening && bankWithoutOpening === 0;
   const roles = rolesStepDetail(deps);
   const categoriesConfirmedAt = readSetting<string | null>(deps, 'finance.setupCategoriesConfirmedAt');
   const taxConfirmedAt = readSetting<string | null>(deps, 'finance.setupTaxConfirmedAt');
@@ -188,7 +212,8 @@ export async function getSetupStatus(deps: Deps, ctx: CallContext): Promise<Resu
       required: false,
       done: missingImportFormats === 0,
       dependsOn: 'account',
-      blocked: !accountDone,
+      // Das Format braucht nur ein Konto, nicht den Anfangsbestand jedes Bankkontos (11-1 A8 sperrte es sonst mit).
+      blocked: !anyOpening,
       detail: { missing: missingImportFormats },
       permission: 'finance.setup',
       canDo: listUserNamesWithPermission(deps, 'finance.setup'),
@@ -231,14 +256,14 @@ export async function getSetupStatus(deps: Deps, ctx: CallContext): Promise<Resu
     });
   }
   // F8b Annahme 10: optional — sonst Warnung bei Pauschalen an Vorstandsmitglieder (`relatedPartyPayments`).
+  const board = boardRemunerationDecision(deps);
   steps.push({
     key: 'boardRemuneration',
     required: false,
-    // Befund AK: bestätigt ohne „gilt ab“ (Bestand) bleibt offen.
-    done: readSetting<boolean>(deps, 'finance.boardRemunerationAllowed') && !!readSetting<string | null>(deps, 'finance.boardRemunerationValidFrom'),
+    done: board.done,
     dependsOn: null,
     blocked: false,
-    detail: {},
+    detail: board.detail,
     permission: 'finance.setup',
     canDo: listUserNamesWithPermission(deps, 'finance.setup'),
   });
@@ -428,7 +453,7 @@ export const boardRemunerationSchema = boardRemunerationBaseSchema
  * ein Vorstandsmitglied in `relatedPartyPayments`. Ins Protokoll nur, *dass*
  * bestätigt wurde, nie der Wortlaut.
  */
-export async function setBoardRemuneration(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<{ allowed: boolean; basisText: string; validFrom: string | null; documentId: string | null }>> {
+export async function setBoardRemuneration(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<{ allowed: boolean; basisText: string; validFrom: string | null; documentId: string | null; decidedOn: string }>> {
   const denied = requirePermission(ctx, 'finance.setup');
   if (denied) return denied;
   const parsed = validate(deps, boardRemunerationSchema, input);
@@ -450,8 +475,12 @@ export async function setBoardRemuneration(deps: Deps, ctx: CallContext, input: 
     const validFrom = parsed.value.allowed ? (parsed.value.validFrom ?? null) : null;
     const w4 = writeSettingInternal(tx, deps, ctx, 'finance.boardRemunerationValidFrom', validFrom, 'finance.setup.setting');
     if (!w4.ok) return w4;
+    // Joe 11.9: jedes Speichern ist eine Entscheidung, ob ja oder nein — der Tag macht den Schritt erledigt.
+    const decidedOn = todayIn(deps);
+    const w5 = writeSettingInternal(tx, deps, ctx, 'finance.boardRemunerationDecidedOn', decidedOn, 'finance.setup.setting');
+    if (!w5.ok) return w5;
     financeAudit(tx, deps, ctx, { action: 'finance.setup.boardRemuneration', entity: 'financeSetup', id: 'finance.boardRemunerationAllowed', after: { step: 'boardRemuneration', confirmedAt: isoNow(deps.clock), applied: parsed.value.allowed, validFrom } });
-    return ok({ allowed: parsed.value.allowed, basisText: parsed.value.basisText, validFrom, documentId });
+    return ok({ allowed: parsed.value.allowed, basisText: parsed.value.basisText, validFrom, documentId, decidedOn });
   });
 }
 

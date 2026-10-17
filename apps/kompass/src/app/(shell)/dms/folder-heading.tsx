@@ -16,18 +16,21 @@ import { folderHref } from './folder-href';
 export async function FolderHeading({
   folder,
   inbox,
+  unfiled = false,
   keep,
   className,
 }: {
   folder: string | null;
   inbox: boolean;
+  /** „Ohne Ordner“: ausgehende Dokumente ohne Ordner (Stufe 1, Auftrag 7). */
+  unfiled?: boolean;
   /** Suche, Filter und Sortierung der Liste: Der Weg nach oben behält sie wie ein Klick im Baum. */
   keep: URLSearchParams;
   className?: string;
 }) {
   const t = await getTranslations('dms');
   const ancestors = folder === null ? [] : ancestorsOf(folder);
-  const title = inbox ? t('inbox') : folder === null ? t('allDocuments') : nameOf(folder);
+  const title = inbox ? t('inbox') : unfiled ? t('noFolder') : folder === null ? t('allDocuments') : nameOf(folder);
   return (
     <div data-testid="folder-heading" className={cn('mb-3 flex flex-col gap-[3px] wrap-anywhere', className)}>
       {ancestors.length > 0 ? (

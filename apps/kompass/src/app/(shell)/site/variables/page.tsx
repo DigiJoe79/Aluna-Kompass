@@ -21,7 +21,7 @@ export default async function SiteVariablesPage() {
   const values = readValues(deps);
   return (
     <Page width="standard" header={<PageHeader title={t('title')} />}>
-      <PendingVariablesLine className="-mt-3 mb-4 block" />
+      <PendingVariablesLine className="mb-4" />
       {template && Object.keys(template.schema.variables).length > 0 ? (
         <VariablesForm schema={template.schema.variables} value={values} version={valuesVersion(deps)} locales={deps.locales()} options={options?.ok ? options.value : {}} mediaSizes={mediaPixelSizes(deps, values)} />
       ) : (

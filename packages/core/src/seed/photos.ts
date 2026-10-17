@@ -49,6 +49,8 @@ export const SEED_PHOTOS: readonly SeedPhoto[] = [
   { file: 'auslauf-am-heim.jpg', folder: SEED_PHOTO_FOLDER.projects, ratio: 16 / 9 },
   { file: 'startseite.jpg', folder: SEED_PHOTO_FOLDER.website, ratio: 16 / 9 },
   { file: 'aktuelles-1.jpg', folder: SEED_PHOTO_FOLDER.website, ratio: 16 / 10 },
+  // Runde 3, 144: Der Site-Seed vergibt die Porträts absteigend nach Namen an „Anna Berger“, „Jonas Feld“, … — darum
+  // zeigt `team-2` eine Frau und `team-1` einen Mann.
   { file: 'team-1.jpg', folder: SEED_PHOTO_FOLDER.website, ratio: 1 },
   { file: 'team-2.jpg', folder: SEED_PHOTO_FOLDER.website, ratio: 1 },
 ];

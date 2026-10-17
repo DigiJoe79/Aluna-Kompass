@@ -1,4 +1,6 @@
 import type { ServiceError } from '@kompass/core';
+import { formatEuro, formatIban } from '@kompass/module-finance/format';
+import { formatDate } from './dates';
 
 type Translate = ((key: string, values?: Record<string, string | number | Date>) => string) & { has?: (key: string) => boolean };
 type ConflictError = Extract<ServiceError, { type: 'conflict' }>;
@@ -6,14 +8,21 @@ type ConflictError = Extract<ServiceError, { type: 'conflict' }>;
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 /**
- * Die Parameter eines Konflikts für ICU: ein Datum (`YYYY-MM-DD`) wird zum Zeitpunkt **Mittag UTC** dieses Tages,
- * damit `{date, date, ::ddMMyyyy}` in jeder Zeitzone von −12 bis +12 Stunden denselben Kalendertag zeigt. Beträge
- * kommen in Cent und formatiert das ICU-Skelett (`::currency/EUR scale/0.01`). Alles andere bleibt, wie es kommt.
+ * Die Parameter eines Konflikts oder einer Beschriftung für die Sprachdatei, fertig geschrieben (Stufe 1, Aufträge 1
+ * und 2): Ein Tag (`YYYY-MM-DD`) wird fest zu TT.MM.JJJJ (`formatDate` im Modus `locale`, wie vorher ICU `::ddMMyyyy`)
+ * — ein Kalendertag, ohne Zeitzone, also in jeder Zone derselbe; Beträge (`amounts`, in Cent) schreibt `formatEuro`
+ * (MUSTER § Beträge). Die Sprachdatei hat dafür schlichte Platzhalter, kein ICU-Skelett. Alles andere bleibt, wie es
+ * kommt.
  */
-export function messageValues(params: Record<string, string | number> = {}): Record<string, string | number | Date> {
+export function messageValues(params: Record<string, string | number> = {}, amounts: readonly string[] = []): Record<string, string | number | Date> {
   // Ein Wert auf `…Text` hat der Dienst schon für den Bildschirm geschrieben (`messageDate`) — er bleibt Text, auch wenn
   // er bei Datumsformat „ISO“ wie ein ISO-Datum aussieht (Backlog 55).
-  return Object.fromEntries(Object.entries(params).map(([key, value]) => [key, typeof value === 'string' && !key.endsWith('Text') && ISO_DATE.test(value) ? new Date(`${value}T12:00:00.000Z`) : value]));
+  return Object.fromEntries(
+    Object.entries(params).map(([key, value]) => {
+      if (amounts.includes(key) && typeof value === 'number') return [key, formatEuro(value)];
+      return [key, typeof value === 'string' && !key.endsWith('Text') && ISO_DATE.test(value) ? formatDate(value, 'locale', 'UTC') : value];
+    }),
+  );
 }
 
 const listOf = (items: string[]): string => new Intl.ListFormat('de', { type: 'conjunction' }).format(items);
@@ -21,7 +30,7 @@ const listOf = (items: string[]): string => new Intl.ListFormat('de', { type: 'c
 /**
  * Backlog 55: `permissionKeys` („users.manage,finance.read“) wird zu `permissions` („Nutzer verwalten und Finanzen
  * lesen“), `matches` und `holders` (getrennt durch U+001F, damit ein Komma nichts zerschneidet) zu `matchList` und
- * `holderList`, jeder Eintrag in „…“.
+ * `holderList`, jeder Eintrag in „…“; `ibans` wird gruppiert.
  */
 function withListValues(values: Record<string, string | number | Date>, t: Translate): Record<string, string | number | Date> {
   const next = { ...values };
@@ -30,6 +39,8 @@ function withListValues(values: Record<string, string | number | Date>, t: Trans
   }
   if (typeof values.matches === 'string') next.matchList = listOf(values.matches.split('\u001f').map((m) => `„${m}“`));
   if (typeof values.holders === 'string') next.holderList = listOf(values.holders.split('\u001f').map((h) => `„${h}“`));
+  // `ibans` („DE60…, DE12…“) kommt kompakt (Daten, MCP); im Text in Vierergruppen (MUSTER § IBAN).
+  if (typeof values.ibans === 'string') next.ibans = values.ibans.split(', ').map(formatIban).join(', ');
   return next;
 }
 
@@ -47,8 +58,8 @@ function withModuleNames(values: Record<string, string | number | Date>, t: Tran
  */
 export function conflictReasons(error: ConflictError, t: Translate): string[] {
   if (!error.messageKey) return [];
-  return [{ messageKey: error.messageKey, params: error.params }, ...(error.also ?? [])].map((r) => {
-    const values = withListValues(withModuleNames(messageValues(r.params), t), t);
+  return [{ messageKey: error.messageKey, params: error.params, amounts: error.amounts }, ...(error.also ?? [])].map((r) => {
+    const values = withListValues(withModuleNames(messageValues(r.params, r.amounts), t), t);
     return `${t(`${r.messageKey}.reason`, values)} ${t(`${r.messageKey}.remedy`, values)}`;
   });
 }
@@ -95,7 +106,7 @@ export function localizeError(error: ServiceError, t: Translate): ServiceError {
     return { type: 'validation', issues: error.issues.map((issue) => ({ path: issue.path, code: issue.message, message: fieldMessage(issue.message, t, issue.params) })) };
   }
   if (error.type !== 'conflict') return error;
-  return { type: 'conflict', code: error.code, message: conflictMessage(error, t) ?? error.message, ...(error.params && Object.keys(error.params).length > 0 ? { params: error.params } : {}), ...(error.also ? { also: error.also } : {}) };
+  return { type: 'conflict', code: error.code, message: conflictMessage(error, t) ?? error.message, ...(error.params && Object.keys(error.params).length > 0 ? { params: error.params } : {}), ...(error.also ? { also: error.also.map(({ amounts: _amounts, ...reason }) => reason) } : {}) };
 }
 
 const KNOWN_CONFLICTS = new Set([
@@ -111,7 +122,6 @@ const KNOWN_CONFLICTS = new Set([
   'followUpOpen',
   'linkExists',
   'emailTaken',
-  'roleNameTaken',
   'roleProtected',
   'lastAdministrator',
   'settingSystemOnly',

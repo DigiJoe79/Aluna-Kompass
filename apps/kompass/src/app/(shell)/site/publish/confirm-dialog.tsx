@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/compone
 import type { DetailView } from '@/lib/site-job-view';
 import { checkContentHashAction } from './actions';
 import { hintCount } from './flow-state';
+import { EMPTY } from '@/components/empty-value';
 
 type Check = 'checking' | 'fresh' | 'stale';
 
@@ -58,9 +59,9 @@ export function PublishConfirmDialog({
 
   const host = (() => {
     try {
-      return publicUrl ? new URL(publicUrl).host : '—';
+      return publicUrl ? new URL(publicUrl).host : EMPTY;
     } catch {
-      return publicUrl ?? '—';
+      return publicUrl ?? EMPTY;
     }
   })();
   const bold = { b: (chunks: React.ReactNode) => <strong>{chunks}</strong> };
@@ -91,9 +92,6 @@ export function PublishConfirmDialog({
         {check === 'stale' ? (
           <Notice level="refuse">{t.rich('confirm.stale', { ...bold, time: fmt.time(preview.finishedAt) })}</Notice>
         ) : null}
-        <p className="rounded-md border border-line bg-surface-2 p-3 text-meta text-ink-2">
-          {env === 'test' ? t('publish.test') : t('publish.live')} · {host}
-        </p>
         <FormActionBar
           placement="dialog"
           mode="run"

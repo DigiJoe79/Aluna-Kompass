@@ -41,6 +41,7 @@ export function ReceiptDrop({
   maxBytes,
   previewSrc,
   previewAlt,
+  compact,
 }: {
   onFiles: (files: File[]) => void;
   onPickFromArchive?: () => void;
@@ -50,6 +51,11 @@ export function ReceiptDrop({
   /** Nur `kind="image"`: liegt schon ein Bild vor, zeigt die Fläche die Vorschau statt der Ablage — mit „ersetzen“. */
   previewSrc?: string | null;
   previewAlt?: string;
+  /**
+   * Nur `kind="pdf"`: Beleg an einer festgeschriebenen Buchung (Runde 3, 089) — statt der großen Ablagefläche ein
+   * Textlink „Beleg nachreichen“; die Zeile bleibt Ablage, beim Ziehen trägt sie den Rahmen.
+   */
+  compact?: boolean;
 }) {
   const t = useTranslations('finance.receipt');
   const errorId = useId();
@@ -104,7 +110,7 @@ export function ReceiptDrop({
         <div className="flex h-16 w-[240px] items-center justify-between gap-2 rounded-md border border-line bg-paper p-1.5">
           {/* Kein next/image: Die Bytes kommen nur über den Faksimile-Handler des Dienstes, nie zwischengespeichert. */}
           <img src={previewSrc} alt={previewAlt ?? ''} className="h-full max-w-[160px] object-contain" />
-          <Button type="button" variant="ghost" size="sm" disabled={disabled} onClick={() => setReplacing(true)}>
+          <Button type="button" variant="outline" size="sm" disabled={disabled} onClick={() => setReplacing(true)}>
             {t('replace')}
           </Button>
         </div>
@@ -119,21 +125,23 @@ export function ReceiptDrop({
             if (!disabled) accept(e.dataTransfer.files);
           }}
           className={cn(
-            'flex flex-col items-center justify-center gap-1 rounded-md border-2 border-dashed text-center text-meta',
-            kind === 'image' ? 'h-16 w-[240px]' : 'h-24',
-            dragging ? 'border-brand bg-brand-soft' : 'border-line-strong bg-surface',
+            compact
+              ? 'flex items-center gap-2 rounded-md border-2 border-dashed px-2 py-1.5 text-meta'
+              : 'flex flex-col items-center justify-center gap-1 rounded-md border-2 border-dashed text-center text-meta',
+            compact ? '' : kind === 'image' ? 'h-16 w-[240px]' : 'h-24',
+            dragging ? 'border-brand bg-brand-soft' : compact ? 'border-transparent' : 'border-line-strong bg-surface',
           )}
         >
-          <FileUp className="size-5 text-muted-ink" aria-hidden />
+          <FileUp className={cn(compact ? 'size-4' : 'size-5', 'text-muted-ink')} aria-hidden />
           {dragging ? (
             <p className="font-semibold text-ink">{t('dropHere')}</p>
           ) : (
             <>
               <button type="button" disabled={disabled} aria-describedby={error ? errorId : undefined} onClick={() => inputRef.current?.click()} className="font-semibold text-ink underline underline-offset-2">
-                {kind === 'image' ? t('dragOrPickImage') : t('dragOrPick')}
+                {compact ? t('add') : kind === 'image' ? t('dragOrPickImage') : t('dragOrPick')}
               </button>
               {onPickFromArchive ? (
-                <Button type="button" variant="ghost" size="sm" disabled={disabled} onClick={onPickFromArchive}>
+                <Button type="button" variant="outline" size="sm" disabled={disabled} onClick={onPickFromArchive}>
                   {t('pickFromArchive')}
                 </Button>
               ) : null}

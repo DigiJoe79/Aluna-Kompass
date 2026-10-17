@@ -8,12 +8,37 @@ import { Button, buttonVariants } from '@/components/ui/button';
 type Filtered = ({ noun: string; onReset: () => void } | { noun: string; resetHref: string }) & { text?: string };
 
 /**
+ * Zustandskarte für 404, 403 und „Modul aus“ (Designer Stufe 2 Nr. 13): dieselbe Karte wie der Leerzustand — Marke,
+ * Titel, Text, höchstens zwei Aktionen, die primäre rechts. Sie ersetzt den Seiteninhalt, ihr Titel ist deshalb das
+ * `h1` der Seite (in der Rolle Seitentitel), und sie hat eine feste Breite (`task`), egal wie breit die Seite ist.
+ */
+type StateCard = { mark?: ReactNode; title: string; text: ReactNode; detail?: ReactNode; primary?: ReactNode; secondary?: ReactNode };
+
+/**
  * Leerzustand einer Liste in zwei Fällen (Board § L Ziel 3, HANDOFF § 8e.1): ganz leer — Titel, Text und eine
  * Aktion zum Anlegen vom Aufrufer — oder gefiltert leer: „{Nomen} passt zu diesen Filtern.“ mit „Filter
  * zurücksetzen“ als Aktion, nie „Noch keine …“ und nie Anlegen.
  */
-export function EmptyState(props: { title: string; text: string; action?: ReactNode } | { filtered: Filtered }) {
+export function EmptyState(props: { title: string; text: string; action?: ReactNode } | { filtered: Filtered } | { state: StateCard }) {
+  if ('state' in props) return <StateFrame {...props.state} />;
   return 'filtered' in props ? <FilteredEmpty filtered={props.filtered} /> : <Frame {...props} />;
+}
+
+function StateFrame({ mark, title, text, detail, primary, secondary }: StateCard) {
+  return (
+    <section className="flex w-full max-w-task flex-col items-center gap-2 rounded-lg border border-dashed border-line-strong bg-surface p-7 text-center">
+      {mark}
+      <h1 className="font-heading text-page-title">{title}</h1>
+      <p className="max-w-[480px] text-body text-ink-2">{text}</p>
+      {detail}
+      {primary || secondary ? (
+        <div className="mt-2 flex flex-wrap items-center justify-center gap-2">
+          {secondary}
+          {primary}
+        </div>
+      ) : null}
+    </section>
+  );
 }
 
 function FilteredEmpty({ filtered }: { filtered: Filtered }) {

@@ -22,9 +22,11 @@ import { Textarea } from '@/components/ui/textarea';
 import { formatAmount, formatEuro, parseAmount } from '@/lib/finance/amount';
 import { issueAllowed, signatureMode } from '@/lib/finance/donations';
 import { issueConfirmationAction, loadIssueCheckAction, saveInKindDetailsAction } from './actions';
+import { FixedValue } from '@/components/fixed-value';
 import { FormField } from '@/components/forms/form-field';
 import { FormCell, FormGrid, FormRowBreak } from '@/components/forms/form-grid';
 import { Section } from '@/components/section';
+import { pdfFrameSrc } from '@/lib/pdf-frame-src';
 
 type Loaded = { check: ConfirmationCheckResult; inKindDetails: FinanceInKindDetailsRow | null };
 type Preview = { state: 'idle' } | { state: 'loading' } | { state: 'ready'; url: string } | { state: 'failed'; message: string };
@@ -208,7 +210,7 @@ export function IssueDialog({ lineId, contactName, open, onOpenChange, today, ca
           {check ? (
             <p className="text-meta text-ink-2">
               {contactName ? <span className="font-semibold text-ink">{contactName} · </span> : null}
-              <span className="font-mono tabular-nums text-ink">{formatEuro(netCents)}</span>
+              <span className="tabular-nums text-ink">{formatEuro(netCents)}</span>
               {entryNumbers.length > 0 ? <span> · {t('headLines', { count: entryNumbers.length, numbers: entryNumbers.join(', ') })}</span> : null}
             </p>
           ) : null}
@@ -222,7 +224,22 @@ export function IssueDialog({ lineId, contactName, open, onOpenChange, today, ca
             <p className="px-5 py-4 text-meta text-muted-ink lg:col-span-2">{t('loading')}</p>
           ) : (
             <>
-              <div data-testid="issue-requirements" className="min-h-0 px-5 py-4 lg:overflow-auto">
+              <div data-testid="issue-requirements" className="min-h-0 space-y-5 px-5 py-4 lg:overflow-auto">
+                {/* Felder gehören in den Inhalt, der Fuß trägt nur Hinweis und Aktionen; die Unterschrift ist ein fester Wert mit
+                    dem Grund darunter (Runde 3, 106). */}
+                <FormGrid>
+                  <FormField id="issue-date" label={t('issuedOn')} required size="s">
+                    <Input id="issue-date" type="date" value={issuedOn} max={today} onChange={(e) => setIssuedOn(e.target.value)} required />
+                  </FormField>
+                  {mode ? (
+                    <FixedValue
+                      id="issue-signature"
+                      label={t('signatureLabel')}
+                      value={<span data-testid="issue-signature-mode">{t(`signatureMode.${mode}`)}</span>}
+                      reason={t(`signatureReason.${mode}`)}
+                    />
+                  ) : null}
+                </FormGrid>
                 <Section title={t('requirements')}>
                   <div className="space-y-4">
                     <RequirementList items={items} grouping="open-first" />
@@ -232,13 +249,14 @@ export function IssueDialog({ lineId, contactName, open, onOpenChange, today, ca
                   </div>
                 </Section>
               </div>
-              <div className="min-h-[420px] border-t border-line px-5 py-4 lg:min-h-0 lg:border-t-0 lg:border-l">
+              {/* Die ganze Seite im A4-Rahmen, auf Breite; die Spalte rollt in der Höhe des Dialogs (Runde 3, 106; wie 030–035). */}
+              <div className="border-t border-line px-5 py-4 lg:min-h-0 lg:overflow-auto lg:border-t-0 lg:border-l">
                 <Section title={t('preview')}>
                   <div className="flex flex-col gap-2">
                     {preview.state === 'ready' ? (
-                      <iframe data-testid="confirmation-preview" title={t('previewTitle')} src={preview.url} className="min-h-0 w-full flex-1 rounded-md border border-line bg-surface-2" />
+                      <iframe data-testid="confirmation-preview" title={t('previewTitle')} src={pdfFrameSrc(preview.url, { fit: 'width' })} className="aspect-[210/297] w-full rounded-md border border-line bg-surface-2" />
                     ) : (
-                      <div className="flex min-h-0 flex-1 items-center justify-center rounded-md border border-dashed border-line-strong bg-surface-2 p-6 text-center text-meta text-muted-ink">
+                      <div className="flex aspect-[210/297] items-center justify-center rounded-md border border-dashed border-line-strong bg-surface-2 p-6 text-center text-meta text-muted-ink">
                         {preview.state === 'loading' ? t('previewLoading') : preview.state === 'failed' ? t('previewFailed', { message: preview.message }) : t('previewWaiting')}
                       </div>
                     )}
@@ -256,20 +274,7 @@ export function IssueDialog({ lineId, contactName, open, onOpenChange, today, ca
           saveLabel={t('submit')}
           onSave={() => void submit()}
           state={feedback.state}
-          note={
-            check ? (
-              <div className="flex flex-wrap items-end gap-5">
-                <FormField id="issue-date" label={t('issuedOn')} required>
-                  <Input id="issue-date" type="date" value={issuedOn} max={today} onChange={(e) => setIssuedOn(e.target.value)} required />
-                </FormField>
-                <div className="space-y-1 text-meta">
-                  <p className="text-hint font-semibold text-muted-ink">{t('signatureLabel')}</p>
-                  <p data-testid="issue-signature-mode" className="font-semibold text-ink">{mode ? t(`signatureMode.${mode}`) : ''}</p>
-                </div>
-                <p className="max-w-prose text-hint text-muted-ink">{t('humanOnly')}</p>
-              </div>
-            ) : undefined
-          }
+          note={check ? <p className="max-w-prose text-hint text-muted-ink">{t('humanOnly')}</p> : undefined}
         />
       </DialogContent>
     </Dialog>
@@ -321,7 +326,7 @@ function InKindForm({ lineId, valueCents, details, canDescribe, onSaved }: { lin
         </FormField>
         <FormCell size="full" className="space-y-1">
           <p className="text-meta font-semibold text-ink-2">{tk('value')}</p>
-          <p className="font-mono tabular-nums text-ink">{formatEuro(valueCents)}</p>
+          <p className="tabular-nums text-ink">{formatEuro(valueCents)}</p>
           <p className="text-hint text-muted-ink">{tk('valueHint')}</p>
         </FormCell>
         <FormField id="in-kind-valuation" label={tk('valuation')} required size="l">

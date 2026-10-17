@@ -25,13 +25,14 @@ export function PreviewFrameClient() {
         value={width}
         onValueChange={setWidth}
       />
-      <div className="overflow-x-auto rounded-md border border-line bg-paper">
-        <iframe
-          src="/site/preview/"
-          title={t('frameTitle')}
-          style={{ width: PREVIEW_WIDTHS[width] ? `${PREVIEW_WIDTHS[width]}px` : '100%', maxWidth: '100%' }}
-          className="block h-[80vh] border-0"
-        />
+      {/* Leichter Schatten, damit sich die Webseite von der Seite abhebt (10 B26); kein Test, reines Aussehen. Der
+          Rahmen ist so breit wie die gewählte Gerätebreite: Über die ganze Seite stand rechts neben der Telefon- und
+          Tablet-Ansicht eine weiße Fläche in Papierfarbe, im Dunkeln grell (Joe 2026-10-17). */}
+      <div
+        className="overflow-x-auto rounded-md border border-line bg-paper shadow-md"
+        style={{ width: PREVIEW_WIDTHS[width] ? `${PREVIEW_WIDTHS[width] + 2}px` : '100%', maxWidth: '100%' }}
+      >
+        <iframe src="/site/preview/" title={t('frameTitle')} className="block h-[80vh] w-full border-0" />
       </div>
     </div>
   );

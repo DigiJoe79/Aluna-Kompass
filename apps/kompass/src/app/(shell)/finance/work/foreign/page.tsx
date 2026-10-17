@@ -22,6 +22,7 @@ export default async function FinanceForeignMoneyPage() {
   const { deps, ctx } = await requireSession();
   if (!hasPermission(ctx, 'finance.read')) return <Page width="full"><ForbiddenCard permission="finance.read" /></Page>;
   const t = await getTranslations('finance.work.pages.foreign');
+  const tCommon = await getTranslations('common');
   const fmt = dateFormatOf(deps);
   const result = await listForeignMoney(deps, ctx);
   if (!result.ok) return <Page width="full"><ForbiddenCard permission="finance.read" /></Page>;
@@ -38,19 +39,19 @@ export default async function FinanceForeignMoneyPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>{t('date')}</TableHead>
-                  <TableHead>{t('holder')}</TableHead>
-                  <TableHead className="text-right">{t('amount')}</TableHead>
-                  <TableHead>{t('entry')}</TableHead>
-                  <TableHead />
+                  <TableHead col="meta">{t('date')}</TableHead>
+                  <TableHead col="title">{t('holder')}</TableHead>
+                  <TableHead col="amount" className="text-right">{t('amount')}</TableHead>
+                  <TableHead col="meta">{t('entry')}</TableHead>
+                  <TableHead col="actions"><span className="sr-only">{tCommon('rowActionsColumn')}</span></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {items.map((item) => (
                   <TableRow key={item.lineId}>
-                    <TableCell className="font-mono text-hint tabular-nums text-ink-2">{fmt.date(item.entryDate)}</TableCell>
-                    <TableCell className="text-ink">{item.holderText}</TableCell>
-                    <TableCell className="text-right font-mono tabular-nums">
+                    <TableCell col="meta" className="text-hint tabular-nums text-ink-2">{fmt.date(item.entryDate)}</TableCell>
+                    <TableCell col="title" truncate className="text-ink">{item.holderText}</TableCell>
+                    <TableCell col="amount" className="text-right tabular-nums">
                       {formatEuro(item.openCents)}
                       {item.passedOnCents > 0 && (
                         <span className="block text-hint text-muted-ink" data-testid="foreign-partly-passed-on">
@@ -58,12 +59,14 @@ export default async function FinanceForeignMoneyPage() {
                         </span>
                       )}
                     </TableCell>
-                    <TableCell>
-                      <Link href={`/finance/entries/${item.entryId}`} className="font-mono text-hint underline underline-offset-2">
-                        {item.entryNumber ?? t('draft')}
+                    <TableCell col="meta">
+                      {/* 07-1 C39: Nur die Nummer ist eine Kennung (Mono); „Entwurf“ steht in der Textschrift. */}
+                      <Link href={`/finance/entries/${item.entryId}`} className="text-hint underline underline-offset-2">
+                        {/* Runde 3, 074: Ein Entwurf hat keine Nummer — der Link sagt, wohin er führt, statt einen Zustand zu zeigen. */}
+                        {item.entryNumber ? <span className="font-mono">{item.entryNumber}</span> : t('openEntry')}
                       </Link>
                     </TableCell>
-                    <TableCell className="text-right">
+                    <TableCell col="actions" className="text-right">
                       <PassedOnButton holder={item.holderText} amount={formatEuro(item.openCents)} />
                     </TableCell>
                   </TableRow>

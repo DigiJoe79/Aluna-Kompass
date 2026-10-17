@@ -1,6 +1,7 @@
 import { existsSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
+import messages from '../../messages/de.json';
 import { checkCountedAllowlist, type CountedAllowlist, isCommentLine, matchingLines, read, relative, sourceFiles, SRC } from './source';
 
 /**
@@ -10,6 +11,8 @@ import { checkCountedAllowlist, type CountedAllowlist, isCommentLine, matchingLi
  * mit `toLocaleString('de-DE')` an der Einstellung vorbei, und Dienste schrieben `bis 2036-12-31` in ihre
  * Meldungen. Alle vier Teile sind Heuristiken: Rechnen, Schlüssel, Dateinamen und gespeicherte Werte stehen mit
  * Grund in der Erlaubnisliste. Teil 4 (K10 Charge 2): Zeiten nicht über den Formatierer von next-intl.
+ * Teile 5–7 (Durchsicht 0.2.11, Stufe 1, Auftrag 2): kein eigenes `Intl.DateTimeFormat`, kein ICU-Datum in der
+ * Sprachdatei (fest TT.MM.JJJJ, an `ui.dateFormat` vorbei), kein ISO-Feld (`…On`/`…At`/`…Date`) roh im JSX.
  */
 
 /** Teil 1 — Oberfläche: kein Abschneiden und kein Formatieren von Hand. */
@@ -213,5 +216,76 @@ describe('keine Zeiten über next-intl in der Oberfläche (Teil 4)', () => {
 
   it('jede Ausnahme ist noch nötig', () => {
     expect(checkCountedAllowlist(hits, INTL_ALLOWED).stale).toEqual([]);
+  });
+});
+
+/** Teil 5 — kein eigenes `Intl.DateTimeFormat`: Formatieren gehört in `packages/core/src/dates.ts`. */
+const INTL_DATE = /\bIntl\.DateTimeFormat\(/;
+const INTL_DATE_OWNERS = new Set(['packages/core/src/dates.ts']);
+const INTL_DATE_ALLOWED: CountedAllowlist = {
+  'apps/kompass/src/lib/audit-export.ts': { count: 1, reason: 'Export des Protokolls: festes TT.MM.JJJJ HH:mm:ss wie Papier, unabhängig von `ui.dateFormat` (Kommentar dort).' },
+  'packages/core/src/today.ts': { count: 1, reason: 'Prüft, ob eine Zeitzone gültig ist; formatiert nichts.' },
+  'apps/kompass/src/lib/settings-options.ts': { count: 1, reason: 'Nennt eine Zeitzone in der Auswahl der Stammdaten („Berlin (Mitteleuropäische Zeit)“, Runde 3, 149); formatiert kein Datum.' },
+};
+
+const REPO = path.resolve(SRC, '../../..');
+const fromRepo = (file: string) => path.relative(REPO, file).split(path.sep).join('/');
+
+describe('kein eigenes Intl.DateTimeFormat (Teil 5)', () => {
+  const hits = [SRC, ...packageSourceDirs()]
+    .flatMap((dir) => sourceFiles(dir))
+    .filter((file) => !/\.test\.tsx?$/.test(file) && !file.includes('__e2e') && !fromRepo(file).includes('/src/testing/') && !INTL_DATE_OWNERS.has(fromRepo(file)))
+    .flatMap((file) => matchingLines(file, read(file), INTL_DATE).map((where) => ({ where: `${fromRepo(file)}:${where.split(':').pop()}`, file: fromRepo(file) })));
+
+  it('Datum und Uhrzeit über formatDate/formatDateTime/formatTime aus dem Kern', () => {
+    expect(checkCountedAllowlist(hits, INTL_DATE_ALLOWED).unexpected).toEqual([]);
+  });
+
+  it('jede Ausnahme ist noch nötig', () => {
+    expect(checkCountedAllowlist(hits, INTL_DATE_ALLOWED).stale).toEqual([]);
+  });
+});
+
+describe('kein ICU-Datum in der Sprachdatei (Teil 6)', () => {
+  it('Daten gehen als fertiger Text an einen schlichten Platzhalter (messageValues in lib/error-text.ts)', () => {
+    const found: string[] = [];
+    const walk = (node: unknown, at: string) => {
+      if (typeof node === 'string') {
+        if (/,\s*(?:date|time)\s*[,}]/.test(node)) found.push(at);
+      } else if (node && typeof node === 'object') for (const [k, v] of Object.entries(node)) walk(v, at ? `${at}.${k}` : k);
+    };
+    walk(messages, '');
+    expect(found).toEqual([]);
+  });
+});
+
+/**
+ * Teil 7 — Heuristik: ein Feld `…On`/`…At`/`…Date` als Kind im JSX (`{year.startsOn}`, `{x.filedOn ?? '—'}`), nicht als
+ * Attribut und nicht in einem Formatierer. Ein Treffer, der kein Datum zeigt, kommt mit Grund in die Erlaubnisliste.
+ */
+const RAW_JSX_DATE = /(?<![=\w$])\{\s*[A-Za-z_][\w.?]*\.\w+(?:On|At|Date)\s*(?:\?\?[^}]*)?\}/;
+const JSX_DATE_ALLOWED: CountedAllowlist = {};
+
+describe('Heuristik Teil 7', () => {
+  it('trifft ein rohes ISO-Feld im JSX, nicht Attribut und Formatierer', () => {
+    for (const hit of ['<td>{year.startsOn} – {year.endsOn}</td>', "<TableCell>{year.taxReturnFiledOn ?? '—'}</TableCell>", '<span>{doc?.sentAt}</span>'])
+      expect(RAW_JSX_DATE.test(hit), hit).toBe(true);
+    for (const miss of ['<input value={project.updatedAt} />', '{fmt.date(year.startsOn)}', '`${row.createdAt}`', 'key={`${a.id}-${a.updatedAt}`}'])
+      expect(RAW_JSX_DATE.test(miss), miss).toBe(false);
+  });
+});
+
+describe('kein rohes ISO-Feld im JSX (Teil 7)', () => {
+  const hits = [path.join(SRC, 'app'), path.join(SRC, 'components')]
+    .flatMap((dir) => sourceFiles(dir))
+    .filter((file) => file.endsWith('.tsx'))
+    .flatMap((file) => matchingLines(file, read(file), RAW_JSX_DATE).map((where) => ({ where, file: relative(file) })));
+
+  it('Datum im JSX nur über fmt.date/fmt.dateTime', () => {
+    expect(checkCountedAllowlist(hits, JSX_DATE_ALLOWED).unexpected).toEqual([]);
+  });
+
+  it('jede Ausnahme ist noch nötig', () => {
+    expect(checkCountedAllowlist(hits, JSX_DATE_ALLOWED).stale).toEqual([]);
   });
 });

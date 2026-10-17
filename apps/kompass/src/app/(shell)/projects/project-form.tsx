@@ -53,9 +53,10 @@ export function ProjectForm({ project, locales, imagePlaces, mediaSizes = {} }: 
         <FormCardBody>
           <Section title={t('sections.display')}>
             <FormGrid>
-              <FormField id="slug" label={c('slug')} hint={c('slugHint')} error={errors.slug} required><Input id="slug" name="slug" defaultValue={project?.slug ?? ''} required pattern="[a-z0-9][a-z0-9-]{0,80}" className="font-mono" /></FormField>
               <FormField id="type" label={t('type')} size="s"><Select id="type" name="type" defaultValue={project?.type ?? 'ongoing'}><option value="ongoing">{t('types.ongoing')}</option><option value="shortTerm">{t('types.shortTerm')}</option></Select></FormField>
               <FormField id="status" label={t('status')} size="s"><Select id="status" name="status" defaultValue={project?.status ?? 'active'}><option value="active">{t('statuses.active')}</option><option value="completed">{t('statuses.completed')}</option></Select></FormField>
+              {/* Der URL-Teil am Ende des Abschnitts, nicht als erstes Feld (06 B11). */}
+              <FormField id="slug" label={c('slug')} hint={c('slugHint')} error={errors.slug} required><Input id="slug" name="slug" defaultValue={project?.slug ?? ''} required pattern="[a-z0-9][a-z0-9-]{0,80}" className="font-mono" /></FormField>
             </FormGrid>
           </Section>
           <Section title={t('sections.content')}>

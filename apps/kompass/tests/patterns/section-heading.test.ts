@@ -11,6 +11,7 @@ import { type Allowlist, classNameValue, openingTags, read, relative, sourceFile
 const HOMES = new Set(['components/section.tsx', 'components/page-header.tsx', 'components/auth-card.tsx', 'components/forbidden-card.tsx', 'components/module-inactive-card.tsx', 'components/ui/dialog.tsx', 'components/ui/sheet.tsx']);
 
 const ALLOWED: Allowlist = {
+  'components/shell/help-panel.tsx': 'Titel der Hilfe als Nebenspalte (Entwurf E4): wie `SheetTitle`, aber ohne Dialog, deshalb ein eigenes h2 mit tabIndex für den Fokus beim Öffnen.',
 };
 
 function hits(): { file: string; where: string }[] {

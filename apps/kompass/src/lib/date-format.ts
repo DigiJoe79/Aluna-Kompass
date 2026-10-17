@@ -1,5 +1,5 @@
 import { readSetting, timeZoneOf, type Deps } from '@kompass/core';
-import { formatDate, formatDateTime, type DateFormatMode, type DateTimeOptions } from '@/lib/dates';
+import { formatDate, formatDateTime, formatTime, type DateFormatMode, type DateTimeOptions } from '@/lib/dates';
 
 /** Was `useDateFormat()` den Client-Bausteinen gibt — hier für Server-Seiten und -Bausteine. */
 export type DateFormatter = {
@@ -7,6 +7,8 @@ export type DateFormatter = {
   timeZone: string;
   date: (value: string | null | undefined) => string;
   dateTime: (value: string | null | undefined, options?: DateTimeOptions) => string;
+  /** Uhrzeit fest HH:mm in der Zone des Vereins, wie `useDateFormat().time` (MUSTER § Datum). */
+  time: (value: string | Date | null | undefined) => string;
 };
 
 /**
@@ -16,5 +18,5 @@ export type DateFormatter = {
 export function dateFormatOf(deps: Deps): DateFormatter {
   const mode = readSetting<DateFormatMode>(deps, 'ui.dateFormat');
   const timeZone = timeZoneOf(deps);
-  return { mode, timeZone, date: (value) => formatDate(value, mode, timeZone), dateTime: (value, options) => formatDateTime(value, mode, timeZone, undefined, options) };
+  return { mode, timeZone, date: (value) => formatDate(value, mode, timeZone), dateTime: (value, options) => formatDateTime(value, mode, timeZone, undefined, options), time: (value) => formatTime(value, timeZone) };
 }

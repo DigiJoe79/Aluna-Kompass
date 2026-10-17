@@ -63,9 +63,8 @@ Vorstand darf nur vergütet werden, wenn die Satzung das ausdrücklich erlaubt
 — sonst droht die Gemeinnützigkeit. Deshalb steht bei einer Pauschale an ein
 Vorstandsmitglied das Warnwort **Pauschale ohne bestätigte Grundlage**,
 solange in der Einrichtung unter Steuerliches der Punkt **Vergütung des
-Vorstands** nicht bestätigt ist. Dort tragen Sie die Fundstelle in der
-Satzung ein und wählen, wenn vorhanden, den Beschluss der
-Mitgliederversammlung aus der Akte. Danach verschwindet das Warnwort — für
+Vorstands** nicht mit „Ja“ beantwortet ist. Dort tragen Sie die Fundstelle in
+der Satzung ein. Danach verschwindet das Warnwort — für
 alle Zahlungen ab dem Tag unter **Gilt ab**. Was davor gezahlt wurde, bleibt
 markiert: Eine später eingetragene Grundlage deckt keine frühere Zahlung.
 

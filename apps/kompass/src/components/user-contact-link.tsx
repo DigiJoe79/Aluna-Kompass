@@ -1,15 +1,14 @@
 import { hasPermission, isModuleEnabled, type CallContext, type Deps } from '@kompass/core';
 import { getUserLink, hasLinkHistoryInternal } from '@kompass/module-contacts';
-import { linkControls } from '@/lib/user-contact-link';
-import { UserContactLinkForm } from './user-contact-link-form';
+import { linkControls, type UserContactLinkData } from '@/lib/user-contact-link';
 
 /**
- * Die Spalte „Kontakt“ der Nutzerverwaltung. Lebt in der App-Schicht, weil die
- * Nutzerverwaltung dem Kern gehört und die Verknüpfung dem Modul Kontakte — wie
- * `RelatedDocuments` von der anderen Seite. Ist das Modul aus oder fehlt das
- * Recht, gibt es die Zelle nicht.
+ * Die Spalte „Kontakt“ der Nutzerverwaltung, als Daten für die Tabelle. Lebt in der App-Schicht, weil die
+ * Nutzerverwaltung dem Kern gehört und die Verknüpfung dem Modul Kontakte — wie `RelatedDocuments` von der anderen
+ * Seite. Ist das Modul aus oder fehlt das Recht, gibt es nichts. „Verknüpfen“ und „Lösen“ stehen im Zeilenmenü der
+ * Tabelle (Runde 3, 155), der Dialog in `user-contact-link-form.tsx`.
  */
-export async function UserContactLink({ deps, ctx, userId }: { deps: Deps; ctx: CallContext; userId: string }) {
+export async function userContactLinkData(deps: Deps, ctx: CallContext, userId: string): Promise<UserContactLinkData | null> {
   const moduleOn = isModuleEnabled(deps, 'contacts');
   const canManageUsers = hasPermission(ctx, 'users.manage');
   if (!moduleOn || !canManageUsers) return null;
@@ -29,5 +28,5 @@ export async function UserContactLink({ deps, ctx, userId }: { deps: Deps; ctx: 
 
   // Den Namen sieht nur, wer Kontakte sehen darf; sonst steht dort „verknüpft“.
   const linkedName = link && canViewContacts && res.ok ? res.value.contactName : null;
-  return <UserContactLinkForm userId={userId} linked={link !== null} linkedName={linkedName} linkedHref={link && canViewContacts ? `/contacts/${link.contactId}` : null} controls={controls} />;
+  return { linked: link !== null, linkedName, linkedHref: link && canViewContacts ? `/contacts/${link.contactId}` : null, controls };
 }

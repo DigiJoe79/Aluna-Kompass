@@ -86,7 +86,9 @@ describe('FormGrid und FormField size', () => {
     render(<FormField id="t" label="Im Ausland" toggle><Switch id="t" /></FormField>);
     const row = screen.getByText('Im Ausland').parentElement!;
     expect(row.className).toContain('h-[var(--field-h)]');
-    expect(row.firstElementChild).toBe(screen.getByRole('switch'));
+    // Runde 3, 174: Ein Schalter steht rechts vom Text.
+    expect(row.firstElementChild?.textContent).toBe('Im Ausland');
+    expect(row.contains(screen.getByRole('switch'))).toBe(true);
     expect(row.parentElement!.className).toContain('self-end');
     expect(screen.getByRole('switch', { name: 'Im Ausland' })).toBeTruthy();
   });

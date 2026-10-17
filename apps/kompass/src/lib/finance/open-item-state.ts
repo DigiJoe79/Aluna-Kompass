@@ -15,13 +15,14 @@ export function openItemState(
   return { word, overdue };
 }
 
-/** 'DE•• •••• •••• •••• ••20 51' — Ländercode und die letzten vier Ziffern bleiben sichtbar, in Vierergruppen. */
-export function maskIban(iban: string): string {
-  const normalized = iban.replace(/\s+/g, '').toUpperCase();
-  const len = normalized.length;
-  const revealed = normalized
-    .split('')
-    .map((ch, i) => (i < 2 || i >= len - 4 ? ch : '•'))
-    .join('');
-  return (revealed.match(/.{1,4}/g) ?? []).join(' ');
+export const OPEN_ITEM_FILTER_STATES = ['open', 'settled', 'overpaid', 'cancelled'] as const;
+export type OpenItemsStateFilter = (typeof OPEN_ITEM_FILTER_STATES)[number] | 'all';
+
+/**
+ * Der Zustandsfilter der offenen Zahlungen aus der Adresse (`?state=`, 07-2 A1, Joe 2026-10-16): ohne Angabe „offen“ —
+ * Erledigtes steht nicht mehr unter „Wir zahlen“; `all` zeigt alles. Der Dienst filtert (`listOpenItems state`).
+ */
+export function openItemsStateFilter(param: string | undefined): OpenItemsStateFilter {
+  if (param === 'all') return 'all';
+  return (OPEN_ITEM_FILTER_STATES as readonly string[]).includes(param ?? '') ? (param as OpenItemsStateFilter) : 'open';
 }

@@ -22,7 +22,7 @@ das Kennzeichen **Ausland**. Zwei Kennzeichen verlangen Aufmerksamkeit:
   Zahlung an Partner genügt eine Begründung vom Einreichen auch für die
   Freigabe.
 - **erfüllt, … Rest** — der Zweck ist als erfüllt gekennzeichnet, aber es ist
-  noch Geld übrig. Ordnen Sie den Rest über „Zweck ändern“ einem anderen
+  noch Geld übrig. Ordnen Sie den Rest über „Umwidmen“ einem anderen
   Zweck oder den freien Mitteln zu.
 
 Ein Klick auf den Namen öffnet das Detail mit Projekt, Ziel, Bezug und allen
@@ -37,11 +37,11 @@ nach. Ein erfüllter oder aufgelöster Zweck lässt sich über dasselbe Menü mi
 **Wieder öffnen …** zurückholen; die Begründung ist
 Pflicht und steht am Zweck, nicht im Änderungsprotokoll.
 
-## Zweck ändern (Umwidmung)
+## Umwidmung
 
 Manchmal muss Geld den Zweck wechseln — ein Vorhaben ist abgeschlossen und
 es bleibt etwas übrig, oder die Spenderin ist mit einer anderen Verwendung
-einverstanden. Unter **Zweck ändern (Umwidmung)** wählen Sie, von welchem
+einverstanden. Unter **Umwidmen** wählen Sie, von welchem
 Zweck (oder aus den freien Mitteln) nach welchem Zweck (oder in die freien
 Mittel) welcher Betrag an welchem Tag wechselt, und warum. Das ist ein
 eigenes Formular, auch am Telefon in einer Spalte; neben jedem Zweck steht

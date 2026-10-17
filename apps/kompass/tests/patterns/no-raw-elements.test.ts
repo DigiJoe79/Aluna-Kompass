@@ -16,14 +16,16 @@ export function rawElementLines(text: string): number[] {
       const at = text.indexOf(tag);
       if (at > 0 && text[at - 1] === '`') return false; // `<table>` in Kommentar oder Doku
       if (isCommentLine(lines[line - 1] ?? '')) return false;
-      if (/^<input\b/.test(tag) && /\btype=["'](?:hidden|file)["']/.test(tag)) return false;
+      if (/^<input\b/.test(tag) && /\btype=["']hidden["']/.test(tag)) return false;
+      // Ein Datei-Feld steht nur versteckt hinter Knopf oder Ablagefläche, nie sichtbar (09 A3: die Lücke im Wächter).
+      if (/^<input\b/.test(tag) && /\btype=["']file["']/.test(tag) && /\b(?:sr-only|hidden)\b/.test(tag)) return false;
       return true;
     })
     .map(({ line }) => line);
 }
 
 const ALLOWED: CountedAllowlist = {
-  'app/(shell)/admin/themes/theme-preview.tsx': { count: 18, reason: 'Bildet Knöpfe und Tabelle nach, um die Theme-Farben zu zeigen.' },
+  'app/(shell)/admin/themes/theme-preview.tsx': { count: 19, reason: 'Bildet Knöpfe und Tabelle nach, um die Theme-Farben zu zeigen.' },
   'app/global-error.tsx': { count: 1, reason: 'Ersetzt `<html>`, ohne Theme-Bausteine.' },
   'app/(shell)/admin/themes/theme-editor.tsx': { count: 2, reason: 'Listen-Auswahl der Themes, zweizeilig (Backlog: Baustein); Farbwert im Chip, der Chip ist der Rahmen (`Input` brächte Höhe, Rahmen, Fläche und Polster mit, die der Chip selbst trägt).' },
   'app/(shell)/admin/roles/role-editor.tsx': { count: 1, reason: 'Listen-Auswahl der Rollen, zweizeilig (Backlog: Baustein).' },
@@ -37,6 +39,10 @@ describe('Heuristik', () => {
     expect(rawElementLines('<button\n  onClick={() => a > b}\n>x</button>')).toEqual([1]);
     expect(rawElementLines('<div>\n<table className="x"><tr><td>1</td></tr></table>\n</div>')).toEqual([2, 2, 2]);
     expect(rawElementLines('<input type="number" />')).toEqual([1]);
+  });
+  it('trifft ein sichtbares Datei-Feld (09 A3): `type="file"` nur `sr-only` oder `hidden` hinter Knopf oder Ablagefläche', () => {
+    expect(rawElementLines('<input type="file" accept="application/pdf" />')).toEqual([1]);
+    expect(rawElementLines('<input type="file" className="hidden" />')).toEqual([]);
   });
   it('trifft keine Bausteine, versteckte und Datei-Felder, Kommentare und Backticks', () => {
     expect(rawElementLines('<Button>x</Button><TableRow /><Input />')).toEqual([]);

@@ -155,7 +155,7 @@ export function followFolder(selected: string | null, from: string, to: string):
  * `incomingOnly`: Der Eingangskorb nimmt nur eingegangene Post (setzt der
  * feste Eintrag selbst, siehe `FolderTreeFixedEntry.refuse`).
  */
-export type BlockReason = 'here' | 'self' | 'depth' | 'nameLength' | 'exists' | 'forbidden' | 'notCreated' | 'incomingOnly';
+export type BlockReason = 'here' | 'self' | 'depth' | 'nameLength' | 'exists' | 'forbidden' | 'notCreated' | 'incomingOnly' | 'outgoingOnly';
 
 /** Was gezogen wird. `sources[i]` ist der Ordner von `ids[i]`; leer, wenn unbekannt (aus einem anderen Tab). */
 export type DragItem =
@@ -253,4 +253,13 @@ export function deleteBlock(node: FolderNode): { reason: 'hasItems' | 'hasChildr
   if (node.direct > 0) return { reason: 'hasItems', count: node.direct };
   if (node.children.length > 0) return { reason: 'hasChildren', count: node.children.length };
   return null;
+}
+
+/**
+ * Der gekürzte Weg im geschlossenen Ordnerfeld (Designer Runde 3, Frage 2): ab drei Ebenen „…“ (`null`), die Eltern
+ * und der Ordner. Die letzte Ebene fällt nie weg; gekürzt wird nur, wenn der volle Weg nicht passt (das misst das
+ * Feld). `parts` sind die Wege von der obersten Ebene bis zum Ordner.
+ */
+export function collapsedPath(parts: readonly string[]): (string | null)[] {
+  return parts.length <= 2 ? [...parts] : [null, parts[parts.length - 2]!, parts[parts.length - 1]!];
 }

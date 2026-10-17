@@ -1,5 +1,6 @@
 import { hasPermission, imagePlaces, requirePermission } from '@kompass/core';
 import { effectivePhotoFrame, getProposal, listProposals, MAX_ANIMAL_PHOTOS, photoPixelSizes, PRIMARY_PHOTO_PLACE } from '@kompass/module-animals';
+import { activeTemplate } from '@kompass/module-site';
 import { getTranslations } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 import { ForbiddenCard } from '@/components/forbidden-card';
@@ -40,7 +41,9 @@ export default async function ProposalPage(props: { params: Promise<{ id: string
   const decided = proposal.state !== 'open';
   const state = proposal.kind === 'notice' && proposal.state === 'accepted' ? t('states.acknowledged') : t(`states.${proposal.state}`);
   // Vorschau nur für Änderung und neuen Hund, solange offen (Board 2a, 4a, 7b).
-  const preview = !decided && (proposal.kind === 'update' || proposal.kind === 'create') ? <PreviewSheet proposalId={proposal.id} name={name} kind={proposal.kind} /> : null;
+  // Ohne Tierseite in der Vorlage (sie nutzt die Sicht `animals` nicht) gibt es nichts vorzuschauen: kein Knopf (05 A3).
+  const hasAnimalPage = activeTemplate(deps)?.schema.uses.includes('animals') ?? false;
+  const preview = hasAnimalPage && !decided && (proposal.kind === 'update' || proposal.kind === 'create') ? <PreviewSheet proposalId={proposal.id} name={name} kind={proposal.kind} /> : null;
   const header = (title: string) => (
     <PageHeader
       title={title}

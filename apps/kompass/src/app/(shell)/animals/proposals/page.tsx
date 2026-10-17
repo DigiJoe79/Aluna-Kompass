@@ -36,18 +36,17 @@ export default async function ProposalsPage(props: { searchParams: Promise<Propo
       header={
         <PageHeader
           title={t('list.title')}
-          actions={
-            <>
-              {/* „Durchgehen“ secondary nur auf diesem Reiter; „Hund anlegen“ bleibt die Hauptaktion (Board 1a). Nur mit
-                  eingeschaltetem Stapel (Einrichtung → Tiere, Vorgabe aus). */}
-              {list.value.open.count > 0 && readSetting<boolean>(deps, PROPOSAL_STACK_KEY) === true ? (
-                <Link href={`/animals/proposals/review${query ? `?${query}` : ''}`} className={buttonVariants({ variant: 'secondary' })}>
-                  {t('proposals.walkThrough')}
-                </Link>
-              ) : null}
-              <Link href="/animals/new" className={buttonVariants()}>{t('list.create')}</Link>
-            </>
-          }
+          // „Durchgehen“ outline nur auf diesem Reiter, am Telefon im ⋯ (018); „Hund anlegen“ bleibt die Hauptaktion
+          // (Board 1a). Nur mit eingeschaltetem Stapel (Einrichtung → Tiere, Vorgabe aus).
+          more={[
+            {
+              key: 'walkThrough',
+              label: t('proposals.walkThrough'),
+              href: `/animals/proposals/review${query ? `?${query}` : ''}`,
+              hidden: !(list.value.open.count > 0 && readSetting<boolean>(deps, PROPOSAL_STACK_KEY) === true),
+            },
+          ]}
+          actions={<Link href="/animals/new" className={buttonVariants()}>{t('list.create')}</Link>}
         />
       }
     >

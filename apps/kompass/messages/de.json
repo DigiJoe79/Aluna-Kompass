@@ -9,11 +9,12 @@
       "title": "Sprachen",
       "description": "Verwalten Sie die Sprachen, in denen Inhalte für Webseite und Dokumente gepflegt werden.",
       "code": "Sprachcode",
-      "codeHint": "BCP-47-Sprachcode (z. B. de, en, fr, nl, es, pt-br).",
+      "codeHint": "Sprache aus der Liste wählen oder einen Sprachcode eintippen (BCP-47, z. B. pt-br).",
       "add": "Sprache hinzufügen",
       "leading": "Leitsprache",
-      "remove": "{code} entfernen",
-      "removeTitle": "Sprache „{code}“ entfernen",
+      "removeItem": "Entfernen …",
+      "removeTitle": "Sprache „{language}“ entfernen",
+      "nextLeading": "{language} wird Leitsprache.",
       "removeWarning": "{count, plural, =0 {In keinem Feld steht Text auf {locale}.} one {In # Feld steht Text auf {locale}. Beim Entfernen geht er verloren.} other {In # Feldern steht Text auf {locale}. Beim Entfernen geht er verloren.}}",
       "removeConfirm": "Sprache unwiderruflich entfernen",
       "added": "Sprache hinzugefügt.",
@@ -22,12 +23,42 @@
     }
   },
   "common": {
+    "muted": {
+      "deactivated": "deaktiviert",
+      "archived": "archiviert",
+      "retired": "stillgelegt",
+      "closed": "abgeschlossen"
+    },
     "leave": {
       "title": "Seite verlassen?",
       "description": "{count, plural, one {Eine Änderung ist} other {# Änderungen sind}} noch nicht gespeichert. Wenn Sie die Seite verlassen, {count, plural, one {geht sie} other {gehen sie}} verloren.",
-      "confirm": "Seite verlassen"
+      "confirm": "Seite verlassen",
+      "wizardDescription": "Der Assistent ist noch nicht fertig. Wenn Sie die Seite verlassen, gehen die Angaben dieses Durchgangs verloren."
     },
+    "wizardBack": "← Zurück",
     "sortBy": "Sortieren nach {column}",
+    "steps": {
+      "label": "Schritte",
+      "state": {
+        "todo": "offen",
+        "active": "aktiv",
+        "done": "erledigt",
+        "failed": "fehlgeschlagen"
+      },
+      "stepOf": "Schritt {n} von {total}",
+      "doneOf": "{n} von {total} erledigt",
+      "next": "Danach: {label}",
+      "progress": "Schritt {n} von {total}, {label}",
+      "failed": "fehlgeschlagen",
+      "finished": "Fertig."
+    },
+    "sortMenu": {
+      "label": "Sortieren",
+      "current": "Sortieren: {column}",
+      "none": "Sortieren: Vorgabe",
+      "desc": "{column}, absteigend",
+      "asc": "{column}, aufsteigend"
+    },
     "search": "Suchen",
     "clearSearch": "Suche leeren",
     "filterBar": {
@@ -60,6 +91,8 @@
     "discard": "Verwerfen",
     "close": "Schließen",
     "moreActions": "Weitere Aktionen",
+    "rowActions": "Aktionen für {name}",
+    "rowActionsColumn": "Aktionen",
     "undo": "Rückgängig",
     "copy": "Kopieren",
     "copied": "Kopiert",
@@ -68,11 +101,11 @@
     "loading": "Wird geladen …",
     "yes": "Ja",
     "no": "Nein",
-    "none": "—",
+    "empty": "keine Angabe",
     "changesPending": "{count, plural, one {# Änderung noch nicht gespeichert} other {# Änderungen noch nicht gespeichert}}",
     "lastSaved": "zuletzt gespeichert am {date} von {name}",
     "audited": "Wird protokolliert.",
-    "backToList": "Zurück zur Übersicht",
+    "backToList": "Übersicht",
     "requiredLegend": "* Pflichtfeld",
     "nothingChanged": "Nichts geändert",
     "retry": "Erneut versuchen",
@@ -100,10 +133,6 @@
     "blocked": {
       "notPossible": "nicht möglich"
     },
-    "managedField": {
-      "badge": "geführt",
-      "linkText": "geführt unter {label}"
-    },
     "beforeAfter": {
       "before": "Vorher",
       "after": "Nachher"
@@ -111,7 +140,7 @@
     "consequenceList": {
       "stays": "Was bleibt"
     },
-    "edit": "Ändern",
+    "edit": "Bearbeiten",
     "requirements": {
       "groups": {
         "missing": "Fehlt noch",
@@ -132,7 +161,6 @@
   "folderTree": {
     "label": "Ordner",
     "heading": "ORDNER",
-    "keyHelp": "Tastenkürzel",
     "keyHelpTitle": "Tasten im Ordnerbaum",
     "countTooltip": "{total} insgesamt · {direct} direkt in diesem Ordner",
     "accessibleName": "{name}, {total} {unit}, davon {direct} direkt",
@@ -153,6 +181,17 @@
     "pickTitle": "Ordner wählen",
     "pickConfirm": "„{target}“ übernehmen",
     "pickConfirmEmpty": "Übernehmen",
+    "field": {
+      "search": "Ordner suchen",
+      "noMatch": "Kein Ordner mit „{query}“.",
+      "newIn": "Neuer Ordner in „{name}“",
+      "newTop": "Neuer Ordner auf oberster Ebene",
+      "back": "← Zurück",
+      "close": "Schließen",
+      "chosen": "Gewählt: {name}",
+      "apply": "Übernehmen",
+      "keys": "↑↓ wählen · ← → auf und zu · Enter übernehmen · Esc zu"
+    },
     "chosen": "gewählt",
     "delete": "Löschen",
     "deleteBlocked": "Enthält {count} {unit}. Löschen lassen sich nur leere Ordner.",
@@ -185,8 +224,8 @@
       "undoFailed": "Nicht rückgängig gemacht: {name}",
       "quoted": "„{title}“",
       "documents": "{count} Dokumente",
-      "placeMoved": "{where, select, inbox {in den Eingangskorb verschoben} none {nach „Kein Ordner“ verschoben} loose {aus ihren Ordnern genommen} other {nach {target} verschoben}}",
-      "placeLies": "{where, select, inbox {im Eingangskorb} none {in „Kein Ordner“} loose {ohne Ordner} other {in {target}}}",
+      "placeMoved": "{where, select, inbox {in den Eingangskorb verschoben} none {nach „Ohne Ordner“ verschoben} loose {aus ihren Ordnern genommen} other {nach {target} verschoben}}",
+      "placeLies": "{where, select, inbox {im Eingangskorb} none {in „Ohne Ordner“} loose {ohne Ordner} other {in {target}}}",
       "movedDocument": "„{title}“ {place}",
       "movedDocuments": "{count} Dokumente {place}",
       "movedDocumentsSkipped": "{count, plural, one {# Dokument} other {# Dokumente}} {place}, {skipped, plural, one {# lag} other {# lagen}} schon dort",
@@ -213,7 +252,8 @@
       "exists": "Einen Ordner „{name}“ gibt es dort schon",
       "forbidden": "Keine Berechtigung für diesen Ordner",
       "notCreated": "Diesen Ordner gibt es nur als Weg — legen Sie ihn zuerst an.",
-      "incomingOnly": "In den Eingangskorb kommt nur eingegangene Post."
+      "incomingOnly": "Im Eingangskorb liegen nur eingehende Dokumente.",
+      "outgoingOnly": "Unter ‚Ohne Ordner‘ liegen nur ausgehende Dokumente."
     },
     "announce": {
       "pickUp": "{name} aufgenommen. Wählen Sie mit den Pfeiltasten ein Ziel. Eingabetaste legt ab, Escape bricht ab.",
@@ -262,7 +302,8 @@
     }
   },
   "moveDialog": {
-    "titleOne": "„{title}“ verschieben nach…",
+    "titleOne": "Verschieben nach…",
+    "subjectOne": "„{title}“.",
     "titleMany": "{count} Dokumente verschieben nach…",
     "titleManyAssets": "{count} Dateien verschieben nach…",
     "titleFolder": "„{name}“ verschieben nach…",
@@ -301,7 +342,14 @@
     },
     "unused": "nicht verwendet",
     "listTruncated": "Es werden die ersten {shown} von {matching} Dateien gezeigt. Grenzen Sie die Liste mit einem Ordner, der Suche oder der Art ein.",
-    "used": "verwendet",
+    "mimeTypes": {
+      "png": "PNG-Bild",
+      "jpeg": "JPEG-Bild",
+      "webp": "WebP-Bild",
+      "svg": "SVG-Grafik",
+      "pdf": "PDF-Dokument"
+    },
+    "captionMore": "{label} und {count, plural, one {# weitere} other {# weitere}}",
     "view": {
       "list": "Liste",
       "grid": "Raster"
@@ -437,7 +485,6 @@
       "has": "Ausschnitt",
       "none": "ohne Ausschnitt",
       "small": "Ausschnitt · nur {px} px breit",
-      "hasLine": "· Ausschnitt",
       "smallLine": "· nur {px} px breit",
       "trimmedLine": "· zugeschnitten",
       "smallNotice": "Der Ausschnitt ist nur {px} px breit.",
@@ -456,22 +503,26 @@
     }
   },
   "content": {
-    "preview": "Vorschau",
+    "preview": "Vorschau {label}",
     "previewEmpty": "Noch kein Text.",
     "untranslated": "unübersetzt",
     "localizedName": "{label} ({language})",
-    "published": "Veröffentlicht",
-    "unpublished": "Nicht veröffentlicht",
+    "published": "Publiziert",
+    "unpublished": "Nicht publiziert",
+    "onWebsite": "auf der Webseite",
     "moveUp": "Nach oben",
     "moveDown": "Nach unten",
     "choose": "Wählen",
     "removeImage": "Bild entfernen",
+    "removePdf": "PDF entfernen",
+    "noImage": "Noch kein Bild",
+    "noPdf": "Noch kein PDF",
     "noFile": "Bitte eine Datei auswählen.",
-    "moduleInactiveTitle": "Modul Webseite ist nicht aktiv",
+    "moduleInactiveTitle": "Modul Webseite ist nicht aktiv.",
     "moduleInactiveText": "Aktivieren Sie das Modul unter Einrichtung → Module. Vorhandene Inhalte bleiben erhalten.",
     "openModules": "Module öffnen",
     "saved": "Gespeichert.",
-    "slug": "Slug (URL-Teil)",
+    "slug": "URL-Teil",
     "slugHint": "Kleinbuchstaben, Ziffern, Bindestrich. Sprachneutral."
   },
   "errors": {
@@ -491,6 +542,10 @@
       "reason": "Dieses Modul wird noch gebraucht von: {modules}.",
       "remedy": "Schalten Sie zuerst {modules} aus."
     },
+    "roleNameTaken": {
+      "reason": "Eine Rolle „{name}“ gibt es schon.",
+      "remedy": "Wählen Sie einen anderen Namen."
+    },
     "localeRequired": {
       "reason": "Die Sprache „{locale}“ wird noch gebraucht: Das Modul „{module}“ verlangt sie (bei der Webseite: die eingelesene Vorlage).",
       "remedy": "Ändern Sie zuerst die Vorlage der Webseite oder schalten Sie das Modul aus."
@@ -505,7 +560,7 @@
       "parentMissing": { "reason": "Den übergeordneten Ordner „{name}“ gibt es nicht.", "remedy": "Legen Sie ihn zuerst an." },
       "movedInBetween": { "reason": "Inzwischen wurde es an anderer Stelle verschoben.", "remedy": "Laden Sie die Seite neu und verschieben Sie es von dort." }
     },
-    "humanOnly": "Diese Aktion ist über MCP gesperrt. Ein Mensch löst sie in der Oberfläche aus.",
+    "humanOnly": "Das geht nur hier in Kompass, nicht über einen Agenten.",
     "settingManaged": "Diese Einstellung wird im Modul „{module}“ geführt und dort geändert.",
     "settingUiOnly": "Diese Einstellung lässt sich nur in der Oberfläche ändern.",
     "insufficientPrivileges": {
@@ -513,7 +568,7 @@
       "remedy": "Bitten Sie jemanden, der diese Rechte hat."
     },
     "siteJobRunning": {
-      "reason": "{kind, select, publish {Die Webseite wird gerade veröffentlicht.} preview {Es läuft gerade eine Vorschau der Webseite.} deployCheck {Es läuft gerade ein Verbindungstest der Webseite.} other {Es läuft gerade ein Lauf der Webseite.}}",
+      "reason": "{kind, select, publish {Die Webseite wird gerade publiziert.} preview {Es läuft gerade eine Vorschau der Webseite.} deployCheck {Es läuft gerade ein Verbindungstest der Webseite.} other {Es läuft gerade ein Lauf der Webseite.}}",
       "remedy": "Warten Sie, bis der Lauf fertig ist."
     },
     "documentTypeHasRules": {
@@ -525,7 +580,7 @@
       "remedy": "Löschen ist nach Ablauf der Frist möglich; welche Fristen gelten, steht unter „Aufbewahrung“."
     },
     "conflict": {
-      "staleVersion": "Inzwischen wurde dieser Eintrag an anderer Stelle geändert — etwa über MCP oder in einem zweiten Fenster. Gespeichert wurde nichts; Ihre Eingaben stehen noch in der Maske. Kopieren Sie, was Sie behalten wollen, laden Sie die Seite neu und tragen Sie es auf dem aktuellen Stand erneut ein.",
+      "staleVersion": "Inzwischen wurde dieser Eintrag an anderer Stelle geändert — etwa über einen Agenten oder in einem zweiten Fenster. Gespeichert wurde nichts; Ihre Eingaben stehen noch in der Maske. Kopieren Sie, was Sie behalten wollen, laden Sie die Seite neu und tragen Sie es auf dem aktuellen Stand erneut ein.",
       "reviewUiOnly": "Die Prüfung bestätigt ein Mensch in der Oberfläche.",
       "noReviewPending": "Für dieses Profil ist keine Prüfung offen.",
       "documentIsDraft": "Das ist noch ein Entwurf.",
@@ -539,17 +594,16 @@
       "followUpOpen": "Die Wiedervorlage ist noch offen.",
       "linkExists": "Dieser Bezug besteht bereits.",
       "emailTaken": "Diese E-Mail-Adresse ist bereits vergeben.",
-      "roleNameTaken": "Eine Rolle mit diesem Namen existiert bereits.",
       "roleProtected": "Die Rolle „Administration“ kann nicht geändert werden.",
       "lastAdministrator": "Mindestens ein aktiver Nutzer muss die Rolle „Administration“ behalten.",
       "settingSystemOnly": "Diese Einstellung setzt nur das System.",
       "themeKeyTaken": "Ein Theme mit diesem Schlüssel existiert bereits.",
-      "themeReadOnly": "Das Default-Theme ist schreibgeschützt.",
+      "themeReadOnly": "Das Vorgabe-Theme ist schreibgeschützt.",
       "themeActive": "Das aktive Theme kann nicht gelöscht werden.",
       "moduleLocked": "Der Kern kann nicht deaktiviert werden.",
       "setupAlreadyDone": "Die Einrichtung wurde bereits abgeschlossen.",
       "publicUrlMissing": "SITE_PUBLIC_URL ist nicht gesetzt.",
-      "publishTargetMissing": "Kein Publish-Ziel konfiguriert.",
+      "publishTargetMissing": "Kein Ziel zum Publizieren eingerichtet.",
       "publishNotAllowedHere": "Aus der Entwicklungsumgebung wird nicht publiziert.",
       "blockedTermsPresent": "Sperrworttreffer: {detail}",
       "siteBuildFailed": "Der Build ist fehlgeschlagen: {detail}",
@@ -568,7 +622,7 @@
       "userNotLinked": "Dieses Nutzerkonto ist mit keinem Kontakt verknüpft.",
       "ownLinkNeedsSecondPerson": "Die eigene Verknüpfung ändert nur eine zweite Person mit dem Recht, Nutzer zu verwalten.",
       "retentionUnknown": "Für diesen Kontakt ist keine Frist nachgewiesen.",
-      "stillPublished": "Das ist noch veröffentlicht. Ziehen Sie es erst zurück, dann lässt es sich löschen.",
+      "stillPublished": "Das ist noch publiziert. Ziehen Sie es erst zurück, dann lässt es sich löschen.",
       "recordHeld": "Noch gehalten von: {detail}",
       "stillReferenced": "Es zeigt noch etwas darauf: {detail}. Lösen Sie erst den Bezug.",
       "belongsToNotAnOrganization": "Ein Kontakt kann nur einer Organisation zugeordnet werden.",
@@ -583,7 +637,7 @@
       "alreadySeeded": "Die Startinhalte wurden bereits übernommen.",
       "noSeed": "Die Vorlage der Webseite bringt keine Startinhalte mit.",
       "noTemplate": "Es ist noch keine Vorlage der Webseite eingelesen. Lesen Sie sie zuerst ein.",
-      "pendingUnavailable": "Was seit dem letzten Veröffentlichen geändert wurde, lässt sich gerade nicht ermitteln. Die Ursache steht im Serverprotokoll.",
+      "pendingUnavailable": "Was seit dem letzten Publizieren geändert wurde, lässt sich gerade nicht ermitteln. Die Ursache steht im Serverprotokoll.",
       "siteNotEmpty": "Es sind schon Inhalte vorhanden. Startinhalte werden nur in eine leere Webseite übernommen.",
       "templateMissing": "Im Verzeichnis der Vorlage fehlt die Datei kompass.template.ts.",
       "templateResolutionMissing": "Das Verzeichnis der Vorlage hat noch keine Modulauflösung; sie wird beim Einrichten angelegt.",
@@ -604,7 +658,7 @@
         "remedy": "Bauen Sie die Vorschau neu, sehen Sie sie an und publizieren Sie dann."
       },
       "duplicateSlug": {
-        "reason": "Der Slug „{slug}“ ist in „{collection}“ schon vergeben.",
+        "reason": "Der URL-Teil „{slug}“ ist in „{collection}“ schon vergeben.",
         "remedy": "Wählen Sie einen anderen."
       },
       "tooManyEntries": {
@@ -612,7 +666,7 @@
         "remedy": "Löschen Sie zuerst einen Eintrag."
       },
       "notPublishable": {
-        "reason": "Die Sammlung „{collection}“ kennt keinen Veröffentlicht-Schalter.",
+        "reason": "Die Sammlung „{collection}“ kennt keinen Schalter zum Publizieren.",
         "remedy": "Ihre Einträge erscheinen ohne Freigabe auf der Webseite."
       },
       "moduleDisabled": {
@@ -629,6 +683,8 @@
       }
     },
     "fields": {
+      "tilesOrLayout": "Entweder die Liste der Kacheln oder das Layout mit Spalten, nicht beides.",
+      "columnCount": "Dieses Layout hat {count} Spalten.",
       "unknownDispatchChannel": "Unbekannter Versandweg.",
       "sentBeforeDocumentDate": "Der Versand liegt vor dem Datum des Dokuments.",
       "sentInFuture": "Der Versand liegt in der Zukunft.",
@@ -678,6 +734,7 @@
       "multiplePrimary": "Nur ein Foto kann das Hauptfoto sein.",
       "notAnImage": "Diese Datei ist kein Bild.",
       "exactlyOneSelection": "Wählen Sie genau eines: Dokumente, einen Ordner oder einen Jahrgang.",
+      "onePlaceFilter": "Wählen Sie höchstens eines: Eingangskorb, „Ohne Ordner“ oder einen Ordner.",
       "exactlyOneSource": "Geben Sie die Datei genau einmal an — als Bytes oder als Base64, nicht beides.",
       "invalidBytes": "Ungültige Datei.",
       "missingBytes": "Die Datei fehlt.",
@@ -734,8 +791,9 @@
       "carryForwardCentsRequired": "Pflichtfeld.",
       "invalidBase64": "Die Datei ist nicht gültig Base64-kodiert.",
       "invalidSlug": "Nur Kleinbuchstaben, Ziffern und Bindestrich.",
+      "slugRequired": "Bitte einen URL-Teil eingeben.",
       "slugGenerated": "Den URL-Teil bildet Kompass beim Anlegen selbst; er bleibt danach fest.",
-      "slugNotAllowed": "Diese Sammlung hat keinen Slug.",
+      "slugNotAllowed": "Diese Sammlung hat keinen URL-Teil.",
       "invalidJson": "Die Datei ist kein gültiges JSON.",
       "unknownVariable": "Diese Variable kennt die Vorlage der Webseite nicht.",
       "cropOutOfBounds": "Der Ausschnitt ragt über das Bild hinaus.",
@@ -752,23 +810,31 @@
       "forbidden": {
         "kicker": "Kein Recht",
         "title": "Diese Seite ist für Ihre Rolle nicht freigegeben.",
-        "text": "Das nötige Recht steht unten. Damit kann die Administration Ihre Rolle anpassen.",
-        "home": "Zurück zur Startseite",
-        "footnote": "Rechte ändert die Administration unter Rollen."
+        "text": "Ihrer Rolle fehlt das Recht „{permission}“. Die Administration kann es Ihrer Rolle geben.",
+        "home": "Zur Startseite"
       },
       "notFound": {
         "kicker": "Nicht gefunden",
         "title": "Diesen Eintrag gibt es nicht mehr.",
         "text": "Protokollierte Daten werden nicht gelöscht — wenn Sie einen Vorgang suchen, hilft das Änderungsprotokoll.",
-        "home": "Startseite",
+        "home": "Zur Startseite",
         "audit": "Protokoll öffnen"
+      },
+      "routeNotFound": {
+        "kicker": "Nicht gefunden",
+        "title": "Diese Seite gibt es nicht.",
+        "text": "Prüfen Sie die Adresse oder wählen Sie einen Bereich in der Navigation.",
+        "home": "Zur Startseite"
+      },
+      "moduleInactive": {
+        "kicker": "Modul aus"
       },
       "technical": {
         "kicker": "Technischer Fehler",
         "title": "Der Vorgang wurde abgebrochen.",
         "text": "Es wurde nichts gespeichert. Die Vorgangsnummer erscheint identisch im Serverprotokoll.",
         "retry": "Erneut versuchen",
-        "home": "Startseite",
+        "home": "Zur Startseite",
         "login": "Zur Anmeldung"
       }
     },
@@ -805,7 +871,7 @@
     "profile": "Profil",
     "settingsArea": "System",
     "sectionAria": "Unternavigation",
-    "help": "Hilfe",
+    "help": "Handbuch",
     "groups": {
       "admin": "Verwaltung",
       "config": "Einrichtung",
@@ -857,9 +923,9 @@
       "rules": "Regeln",
       "imports": "Hochgeladene Auszüge",
       "entries": "Journal",
-      "accounts": "Bankkonten und Kassen",
+      "accounts": "Konten",
       "openItems": "Offene Zahlungen",
-      "cash": "Barkasse",
+      "cash": "Kassen",
       "donations": "Bestätigungen",
       "donationRun": "Serienlauf",
       "donationBook": "Spendenbuch",
@@ -877,8 +943,9 @@
         "work": "Arbeit",
         "entries": "Buchungen",
         "donations": "Spenden",
+        "allocation": "Zweckmittel",
         "expenses": "Auslagen",
-        "allocation": "Partner und Zweckmittel"
+        "parties": "Beteiligte"
       }
     },
     "media": "Mediathek"
@@ -899,14 +966,20 @@
       "breadcrumb": "Brotkrume"
     },
     "help": {
-      "readAll": "Ganze Seite lesen",
+      "label": "Hilfe",
+      "titleFor": "Hilfe: {title}",
+      "close": "Hilfe schließen",
+      "openHandbook": "Im Handbuch öffnen",
       "none": "Zu dieser Seite gibt es noch keine Hilfe.",
-      "unavailable": "Die Hilfe ist gerade nicht erreichbar."
+      "noneText": "Im Handbuch finden Sie alle Kapitel:",
+      "failed": "Die Hilfe konnte nicht geladen werden.",
+      "retry": "Erneut versuchen"
     },
     "userMenu": {
       "aria": "Nutzermenü",
       "profile": "Profil",
       "dark": "Dunkles Design",
+      "density": "Zeilenhöhe",
       "densityCompact": "Kompakte Zeilen",
       "densityDefault": "Normale Zeilen",
       "densityComfortable": "Komfortable Zeilen",
@@ -948,7 +1021,7 @@
       "credentialWarning": "Nach dem Einspielen melden Sie sich mit den Zugangsdaten aus diesem Backup an. Ohne diese kommen Sie nicht mehr hinein.",
       "confirm": "Diesen Bestand einspielen",
       "running": "Wird eingespielt …",
-      "back": "Zurück zur Einrichtung",
+      "back": "Einrichtung",
       "tooLarge": "Die Datei ist größer als 2 GB.",
       "unreadable": "Die Datei ist kein Kompass-Backup."
     },
@@ -974,7 +1047,7 @@
       "strength": "{count} Zeichen — mindestens 12 sind nötig.",
       "mismatch": "Die Passwörter stimmen nicht überein.",
       "submit": "Passwort setzen und fortfahren",
-      "footer": "Kein Überspringen, kein Abmelden-Knopf: ohne eigenes Passwort gibt es keinen Zugang. Der Wechsel wird protokolliert."
+      "footer": "Ohne eigenes Passwort geht es nicht weiter. Der Wechsel wird protokolliert."
     }
   },
   "home": {
@@ -984,6 +1057,7 @@
   },
   "dashboard": {
     "tileError": "Diese Kachel konnte nicht geladen werden.",
+    "toneWarning": "Warnung",
     "showAll": "Alle {count} anzeigen",
     "complete": "{title} erledigen",
     "completed": "Wiedervorlage erledigt",
@@ -991,6 +1065,18 @@
       "title": "Startseite anpassen",
       "hint": "Was hier steht, sehen nur Sie. Jede Änderung wird sofort gespeichert.",
       "off": "Ausgeschaltet",
+      "layout": "Aufteilung",
+      "layouts": {
+        "thirds": "Drei gleiche Spalten",
+        "wide-narrow": "Breit und schmal"
+      },
+      "column": "Spalte",
+      "settings": "Einstellungen",
+      "columns": {
+        "thirds": "Spalte {n}",
+        "wide": "Breite Spalte",
+        "narrow": "Schmale Spalte"
+      },
       "reset": "Vorgabe wiederherstellen",
       "resetDone": "Startseite auf die Vorgabe zurückgesetzt"
     },
@@ -999,7 +1085,6 @@
         "followUps": {
           "title": "Fällig",
           "empty": "Nichts fällig.",
-          "open": "Alle Wiedervorlagen",
           "messages": {
             "protectedTitle": "Wiedervorlage an einem geschützten Datensatz"
           },
@@ -1020,7 +1105,6 @@
         "setup": {
           "title": "Einrichtung",
           "empty": "Der Verein ist eingerichtet.",
-          "open": "Zur Einrichtung",
           "messages": {
             "settingName": "Vereinsname fehlt",
             "settingStreet": "Straße fehlt",
@@ -1040,7 +1124,7 @@
         "backup": {
           "title": "Backup",
           "empty": "",
-          "open": "Zum Backup",
+          "action": "Backup erstellen",
           "messages": {
             "never": "Noch kein Backup erstellt. Der erste Export dauert unter einer Minute.",
             "stale": "Das letzte Backup ist {days, plural, one {# Tag} other {# Tage}} alt — älter als die eingestellte Frist.",
@@ -1048,33 +1132,28 @@
           }
         },
         "accounts": {
-          "title": "Konten",
-          "empty": "Alle Konten sind eingerichtet.",
-          "open": "Zu den Nutzern"
+          "title": "Nutzerkonten",
+          "empty": "Alle Nutzerkonten sind eingerichtet."
         },
         "retention": {
           "title": "Löschfällig",
-          "empty": "Nichts zur Löschung fällig.",
-          "open": "Zur Aufbewahrung"
+          "empty": "Nichts zur Löschung fällig."
         },
         "translations": {
-          "title": "Übersetzungslücken",
-          "empty": "Alles übersetzt.",
-          "open": "Zu den Sprachen"
+          "title": "Übersetzungs\u00adlücken",
+          "empty": "Alles übersetzt."
         }
       },
       "animals": {
         "reviewPending": {
           "title": "Tiere: Prüfung offen",
-          "empty": "Kein Profil wartet auf eine Prüfung.",
-          "open": "Zur Prüfliste"
+          "empty": "Kein Profil wartet auf eine Prüfung."
         },
         "proposalsOpen": {
           "title": "Vorschläge offen",
           "empty": "Kein Vorschlag wartet auf eine Prüfung.",
-          "open": "Zu den Vorschlägen",
           "messages": {
-            "oldest": "ältester seit {days, plural, =0 {heute} one {# Tag} other {# Tagen}}{conflicts, plural, =0 {} other { · davon # mit Konflikt}}"
+            "oldest": "{conflicts, plural, =0 {} other {# mit Konflikt · }}ältester seit {days, plural, =0 {heute} one {# Tag} other {# Tagen}}"
           }
         }
       },
@@ -1082,7 +1161,6 @@
         "inbox": {
           "title": "Eingangskorb",
           "empty": "Keine Post im Eingangskorb.",
-          "open": "Zum Eingangskorb",
           "options": {
             "rows": {
               "label": "Zeilen"
@@ -1092,7 +1170,6 @@
         "drafts": {
           "title": "Entwürfe",
           "empty": "Keine offenen Entwürfe.",
-          "open": "Zu den Entwürfen",
           "options": {
             "onlyMine": {
               "label": "Nur meine"
@@ -1101,36 +1178,33 @@
         },
         "unsent": {
           "title": "Unversandt",
-          "empty": "Alles versandt.",
-          "open": "Zur Akte"
+          "empty": "Alles versandt."
         },
         "textFailed": {
           "title": "Texterkennung",
-          "empty": "Keine fehlgeschlagene Texterkennung.",
-          "open": "Zur Akte"
+          "empty": "Keine fehlgeschlagene Texterkennung."
         }
       },
       "finance": {
         "todo": {
           "title": "Finanzen: zu tun",
           "empty": "Nichts zu tun.",
-          "open": "Zum Journal",
           "messages": {
-            "reviewedNotFinal": "{count, plural, one {# geprüfte, noch nicht festgeschriebene Buchung} other {# geprüfte, noch nicht festgeschriebene Buchungen}}",
+            "reviewedNotFinal": "{count, plural, one {# geprüfte, noch nicht festgeschriebene Buchung} other {# geprüfte, noch nicht festgeschriebene Buchungen}} seit {sinceOn}",
             "withoutVoucher": "{count, plural, one {# festgeschriebene Buchung ohne Beleg} other {# festgeschriebene Buchungen ohne Beleg}}",
-            "overdueItems": "{count, plural, one {# überfällige offene Zahlung} other {# überfällige offene Zahlungen}}, zusammen {sum}",
+            "overdueItems": "{count, plural, one {# überfällige offene Zahlung} other {# überfällige offene Zahlungen}}",
             "rawOpen": "{count, plural, one {# Kontoumsatz ohne Zuordnung} other {# Kontoumsätze ohne Zuordnung}}",
             "foreignMoney": "{count, plural, one {# Zahlung gehört nicht dem Verein und ist noch nicht weitergegeben} other {# Zahlungen gehören nicht dem Verein und sind noch nicht weitergegeben}}",
             "vouchersWithoutEntry": "{count, plural, one {# Finanzbeleg ohne Buchung} other {# Finanzbelege ohne Buchung}}",
-            "lastStatement": "Letzter Auszug vor {days, plural, one {einem Tag} other {# Tagen}}",
+            "lastStatement": "Kontoauszüge fehlen für bis zu {days, plural, one {einen Tag} other {# Tage}}",
             "noticeExpiring": "{kind, select, section60a {Die vorläufige Feststellung} other {Der Bescheid}} des Finanzamts läuft {months, plural, =0 {in weniger als einem Monat} one {in einem Monat} other {in # Monaten}} ab",
             "noNotice": "Kein gültiger Bescheid des Finanzamts — ohne Bescheid keine Zuwendungsbestätigungen",
             "confirmationsToCorrect": "{count, plural, one {# Zuwendungsbestätigung zu korrigieren} other {# Zuwendungsbestätigungen zu korrigieren}}",
             "confirmationsNeedSignature": "{count, plural, one {# Zuwendungsbestätigung ohne Unterschrift} other {# Zuwendungsbestätigungen ohne Unterschrift}}",
             "expenseClaimsPending": "{count, plural, one {# Antrag wartet auf Freigabe} other {# Anträge warten auf Freigabe}}",
-            "negativeBalance": "Kontostand negativ: {account} {amount}",
+            "negativeBalance": "Kontostand negativ: {account}",
             "partnerPaymentsPending": "{count, plural, one {# Zahlung an Partner wartet auf Freigabe} other {# Zahlungen an Partner warten auf Freigabe}}",
-            "partnerPaymentsWithoutProof": "{count, plural, one {# Zahlung an Partner ohne anerkannten Nachweis} other {# Zahlungen an Partner ohne anerkannten Nachweis}}, zusammen {sum}",
+            "partnerPaymentsWithoutProof": "{count, plural, one {# Zahlung an Partner ohne anerkannten Nachweis} other {# Zahlungen an Partner ohne anerkannten Nachweis}}",
             "partnerPaymentsOverdue": "{count, plural, one {# Nachweis einer Zahlung an Partner überfällig} other {# Nachweise von Zahlungen an Partner überfällig}}",
             "evidenceReadyToAcknowledge": "Nachweise bereit zum Anerkennen: {count}",
             "purposeTransfersPending": "{count, plural, one {# Umwidmung wartet auf Freigabe} other {# Umwidmungen warten auf Freigabe}}"
@@ -1138,38 +1212,34 @@
         },
         "withoutVoucher": {
           "title": "Buchungen ohne Beleg",
-          "empty": "Keine festgeschriebene Buchung ohne Beleg.",
-          "open": "Zum Journal"
+          "empty": "Keine festgeschriebene Buchung ohne Beleg."
         },
         "staleDrafts": {
           "title": "Entwürfe zu alt",
-          "empty": "Kein Entwurf älter als 14 Tage.",
-          "open": "Zum Journal"
+          "empty": "Kein Entwurf älter als 14 Tage."
         },
         "overdueItems": {
           "title": "Überfällige offene Zahlungen",
-          "empty": "Keine überfällige offene Zahlung.",
-          "open": "Zu den offenen Zahlungen"
+          "empty": "Keine überfällige offene Zahlung."
         },
         "purposesNegative": {
           "title": "Zwecke im Minus",
           "empty": "Kein Zweck im Minus.",
-          "open": "Zu den Zwecken",
+          "action": "Zwecke ansehen",
           "messages": {
             "ok": "Kein Zweck im Minus.",
             "negative": "{count, plural, one {# Zweck} other {# Zwecke}} im Minus, zusammen {sum}",
-            "line": "{name} {amount}"
+            "line": "{name}"
           }
         },
         "accountsNegative": {
           "title": "Konten im Minus",
-          "empty": "Kein Bank- oder Zahlungsdienstkonto im Minus.",
-          "open": "Zu den Konten"
+          "empty": "Kein Bank- oder Zahlungsdienstkonto im Minus."
         },
         "setupIncomplete": {
-          "title": "Einrichtung",
+          "title": "Finanzen einrichten",
           "empty": "",
-          "open": "Zur Einrichtung",
+          "action": "Einrichtung fortsetzen",
           "messages": {
             "incomplete": "{count, plural, one {# Schritt offen} other {# Schritte offen}}",
             "complete": "Die Einrichtung ist vollständig."
@@ -1177,13 +1247,12 @@
         },
         "rawOpen": {
           "title": "Umsätze ohne Zuordnung",
-          "empty": "Keine Kontoumsätze ohne Zuordnung.",
-          "open": "Zu den hochgeladenen Auszügen"
+          "empty": "Keine Kontoumsätze ohne Zuordnung."
         },
         "balanceDifference": {
           "title": "Saldodifferenz",
           "empty": "Keine Kontoauszüge geladen.",
-          "open": "Zu den hochgeladenen Auszügen",
+          "action": "Auszüge prüfen",
           "messages": {
             "ok": "Alle Kontostände stimmen mit dem Auszug überein.",
             "differs": "{count, plural, one {# Konto weicht vom Auszug ab} other {# Konten weichen vom Auszug ab}}"
@@ -1192,7 +1261,7 @@
         "lastStatement": {
           "title": "Letzter Auszug",
           "empty": "Keine Kontoauszüge geladen.",
-          "open": "Zu den hochgeladenen Auszügen",
+          "action": "Auszüge hochladen",
           "messages": {
             "ok": "Die Kontoauszüge sind aktuell.",
             "stale": "{count, plural, one {# Konto ohne aktuellen Auszug} other {# Konten ohne aktuellen Auszug}}"
@@ -1200,30 +1269,28 @@
         },
         "confirmationsToCorrect": {
           "title": "Bestätigungen zu korrigieren",
-          "empty": "Keine Zuwendungsbestätigung zu korrigieren.",
-          "open": "Zu den Bestätigungen"
+          "empty": "Keine Zuwendungsbestätigung zu korrigieren."
         },
         "approvalsPending": {
           "title": "Wartet auf Ihre Freigabe",
-          "empty": "Nichts wartet auf Ihre Freigabe.",
-          "open": "Zu den Freigaben"
+          "empty": "Nichts wartet auf Ihre Freigabe."
         },
         "myExpenses": {
           "title": "Ihre Auslagen",
           "empty": "Noch kein Antrag.",
-          "open": "Zu Ihren Auslagen",
           "messages": {
-            "draft": "{number} — Entwurf",
-            "submitted": "{number} · {amount} — wartet auf Freigabe",
-            "approved": "{number} · {amount} — wird überwiesen",
-            "paid": "{number} · {amount} — überwiesen",
-            "rejected": "{number} — abgelehnt"
+            "draft": "{title} — Entwurf",
+            "draftUntitled": "Entwurf, noch ohne Zweck",
+            "submitted": "{title} — wartet auf Freigabe",
+            "approved": "{title} — wird überwiesen",
+            "paid": "{title} — überwiesen",
+            "rejected": "{title} — abgelehnt"
           }
         },
         "nobodyCanApprove": {
-          "title": "Niemand kann freigeben",
+          "title": "Freigabe von Auslagen",
           "empty": "",
-          "open": "Zu den Rollen",
+          "action": "Rollen bearbeiten",
           "messages": {
             "ok": "Mindestens eine Person kann Auslagen freigeben.",
             "nobody": "Niemand trägt das Recht, Auslagen freizugeben."
@@ -1232,18 +1299,18 @@
         "partnerPaymentsWithoutProof": {
           "title": "Zahlungen an Partner ohne Nachweis",
           "empty": "Keine Zahlung an Partner wartet auf einen anerkannten Nachweis.",
-          "open": "Zu den Partnern",
+          "action": "Zahlungen ansehen",
           "messages": {
             "ok": "Keine Zahlung an Partner wartet auf einen anerkannten Nachweis.",
             "open": "{count, plural, one {# Zahlung} other {# Zahlungen}} an Partner ohne anerkannten Nachweis, zusammen {sum}{overdue, plural, =0 {} other {, # überfällig}}",
-            "lineOpen": "{partner} · {number} {amount} — offen",
-            "lineOverdue": "{partner} · {number} {amount} — seit {days, plural, one {# Tag} other {# Tagen}} überfällig"
+            "lineOpen": "{partner} · {number} — offen",
+            "lineOverdue": "{partner} · {number} — seit {days, plural, one {# Tag} other {# Tagen}} überfällig"
           }
         },
         "reserveCapNear": {
           "title": "Höchstbetrag der freien Rücklage",
           "empty": "",
-          "open": "Zum zurückgelegten Geld",
+          "action": "Rücklagen ansehen",
           "messages": {
             "ok": "Die freie Rücklage nähert sich ihrem Höchstbetrag nicht.",
             "near": "Freie Rücklage: {percent} % des Höchstbetrags genutzt"
@@ -1254,13 +1321,13 @@
         "site": {
           "title": "Webseite",
           "empty": "",
-          "open": "Zum Publizieren",
+          "action": "Webseite prüfen",
           "messages": {
-            "running": "{kind, select, preview {Die Vorschau} deployCheck {Der Verbindungstest} other {Der Publish}} läuft gerade.",
-            "templateUnreviewed": "Die Vorlage der Webseite ist seit dem Import ungeprüft. Das Veröffentlichen ist gesperrt, bis sie eingelesen wurde.",
-            "lastFailed": "Der letzte Publish ist fehlgeschlagen.",
-            "lastAborted": "Der letzte Publish wurde abgebrochen.",
-            "changed": "{count, plural, one {# Änderung} other {# Änderungen}} seit dem letzten Publish.",
+            "running": "{kind, select, preview {Die Vorschau} deployCheck {Der Verbindungstest} other {Das Publizieren}} läuft gerade.",
+            "templateUnreviewed": "Die Vorlage der Webseite ist seit dem Import ungeprüft. Das Publizieren ist gesperrt, bis sie eingelesen wurde.",
+            "lastFailed": "Das letzte Publizieren ist fehlgeschlagen.",
+            "lastAborted": "Das letzte Publizieren wurde abgebrochen.",
+            "changed": "{count, plural, one {# Änderung} other {# Änderungen}} seit dem letzten Publizieren.",
             "never": "Noch nie publiziert.",
             "current": "Stand vom {date}. Keine Änderungen seither."
           }
@@ -1270,7 +1337,8 @@
   },
   "help": {
     "title": "Handbuch",
-    "toc": "Inhaltsverzeichnis"
+    "toc": "Inhaltsverzeichnis",
+    "otherAreas": "Weitere Bereiche"
   },
   "users": {
     "title": "Nutzer",
@@ -1284,9 +1352,9 @@
     },
     "contactLink": {
       "column": "Kontakt",
-      "none": "nicht verknüpft",
       "link": "Verknüpfen",
-      "unlink": "Lösen",
+      "menuLink": "Mit Kontakt verknüpfen …",
+      "menuUnlink": "Verknüpfung lösen",
       "choose": "Kontakt wählen",
       "saved": "Verknüpfung gespeichert.",
       "ended": "Verknüpfung gelöst. Der Verlauf bleibt erhalten.",
@@ -1309,14 +1377,15 @@
     },
     "actions": {
       "menu": "Aktionen",
+      "notControllable": "Dieses Konto hat Rechte, die Sie selbst nicht haben.",
       "roles": "Rollen ändern",
       "resetPassword": "Neues Startpasswort",
       "deactivate": "Deaktivieren",
       "activate": "Aktivieren"
     },
     "deactivate": {
-      "title": "Nutzer deaktivieren?",
-      "text": "{name} kann sich danach nicht mehr anmelden. Bereits protokollierte Vorgänge bleiben erhalten und bleiben ihm zugeordnet."
+      "title": "{name} deaktivieren?",
+      "text": "{name} kann sich danach nicht mehr anmelden. Bereits protokollierte Vorgänge bleiben erhalten."
     },
     "create": {
       "button": "Nutzer anlegen",
@@ -1330,6 +1399,7 @@
     },
     "startPassword": {
       "title": "Nutzer „{name}“ angelegt",
+      "titleReset": "Neues Startpasswort für „{name}“",
       "text": "Geben Sie diese Zugangsdaten weiter. Das Startpasswort wird nach dem Schließen nicht mehr angezeigt; ein neues können Sie jederzeit setzen.",
       "copyBoth": "Beides kopieren",
       "info": "Beim ersten Login muss {name} ein eigenes Passwort setzen. Bis dahin steht in der Liste „Erstlogin offen“.",
@@ -1361,7 +1431,13 @@
       "name": "Rollenname",
       "description": "Beschreibung"
     },
-    "groupCount": "{active} von {total} aktiv",
+    "all": "Alle",
+    "selectAll": "Alle: {group}",
+    "expandAll": "Alle aufklappen",
+    "collapseAll": "Alle zuklappen",
+    "holders": "Trägt diese Rolle",
+    "nobody": "niemand",
+    "groupCount": "{active} von {total}",
     "save": "Rolle speichern",
     "create": {
       "button": "Rolle anlegen",
@@ -1463,7 +1539,7 @@
         },
         "publish": {
           "label": "Webseite publizieren",
-          "description": "Inhalt exportieren und die Veröffentlichung starten."
+          "description": "Inhalt exportieren und das Publizieren starten."
         }
       },
       "animals": {
@@ -1487,7 +1563,7 @@
         },
         "manage": {
           "label": "Projekte verwalten",
-          "description": "Projekte anlegen, bearbeiten, sortieren und veröffentlichen."
+          "description": "Projekte anlegen, bearbeiten, sortieren und publizieren."
         }
       },
       "retention": {
@@ -1583,8 +1659,7 @@
       "organization": "Verein",
       "tax": "Steuer & Bescheide",
       "bank": "Bank",
-      "branding": "Branding",
-      "display": "Darstellung"
+      "branding": "Darstellung"
     },
     "tabInvalid": "Enthält Fehler",
     "counter": "{count} von {max} Zeichen",
@@ -1628,7 +1703,7 @@
           "photoFolder": "Ordner für Fotos aus Vorschlägen"
         },
         "review": {
-          "onMcpWrite": "Schreiben über MCP zur Prüfung vormerken"
+          "onMcpWrite": "Änderungen von Agenten zur Prüfung vormerken"
         }
       }
     },
@@ -1649,14 +1724,11 @@
       "logoHint": "Logo-Upload folgt mit der Mediathek.",
       "themeHint": "Themes werden unter Einrichtung → Erscheinungsbild bearbeitet."
     },
-    "placeholders": {
-      "timeZone": "Name nach IANA, z. B. Europe/Berlin"
-    },
     "options": {
       "ui": {
         "dateFormat": {
-          "locale": "Aus der Sprache (12.09.2026)",
-          "iso": "ISO 8601 (2026-09-12)"
+          "locale": "Aus der Sprache (28.09.2026)",
+          "iso": "ISO 8601 (2026-09-28)"
         }
       },
       "organization": {
@@ -1688,25 +1760,22 @@
     },
     "logo": {
       "label": "Logo",
-      "hint": "PNG oder SVG, mindestens 256 px. Erscheint in Sidebar, Login und Briefkopf."
+      "hint": "PNG oder SVG, mindestens 256 px. Erscheint in der Seitenleiste, bei der Anmeldung und im Briefkopf."
     },
     "managedHint": {
-      "tax": "Wird unter Finanzen → Spenden → Bescheide geführt.",
-      "bank": "Wird unter Einrichtung → Finanzen → Bankkonten und Kassen am Hauptkonto geführt."
-    },
-    "managedTarget": {
-      "notices": "Bescheide",
-      "accounts": "Bankkonten"
+      "tax": "Wird unter <link>Finanzen → Spenden → Bescheide</link> geführt.",
+      "bank": "Wird unter <link>Einrichtung → Finanzen → Konten</link> am Hauptkonto geführt."
     },
     "taxNoticeMissing": "Es ist noch kein Bescheid erfasst.",
     "taxNoticeMissingLink": "Bescheid erfassen"
   },
   "themes": {
     "title": "Erscheinungsbild",
+    "defaultName": "Vorgabe",
     "listAria": "Themes",
     "active": "Aktiv",
     "readOnly": "Schreibgeschützt",
-    "deleteHint": "Themes dürfen gelöscht werden — außer dem aktiven und dem Default. Module werden nie gelöscht, nur deaktiviert.",
+    "deleteHint": "Themes dürfen gelöscht werden — außer dem aktiven und der Vorgabe. Module werden nie gelöscht, nur deaktiviert.",
     "name": "Name",
     "key": "Schlüssel",
     "keyHint": "Kleinbuchstaben, Ziffern und Bindestrich.",
@@ -1717,8 +1786,8 @@
     "save": "Theme speichern",
     "duplicateTitle": "„{name}“ duplizieren",
     "deleteTitle": "Theme „{name}“ löschen?",
-    "deleteText": "Das Theme wird entfernt. Es ist weder aktiv noch das Default-Theme.",
-    "noInheritance": "Jedes Theme enthält alle Tokens vollständig — keine Vererbung, damit eine Änderung am Default kein anderes Theme verschiebt. „Duplizieren“ füllt die Werte des Ausgangsthemes vor.",
+    "deleteText": "Das Theme wird entfernt. Es ist weder aktiv noch das Vorgabe-Theme.",
+    "noInheritance": "Jedes Theme enthält alle Tokens vollständig — keine Vererbung, damit eine Änderung an der Vorgabe kein anderes Theme verschiebt. „Duplizieren“ füllt die Werte des Ausgangsthemes vor.",
     "contrastTitle": "Kontrast unter AA: {ratio}:1",
     "contrastPair": "{fg} auf {bg} ({mode}): {ratio}:1, nötig {minimum}:1",
     "mode": {
@@ -1728,6 +1797,20 @@
     "columns": {
       "token": "Token"
     },
+    "groups": {
+      "brand": "Marke",
+      "status": "Status",
+      "surfaces": "Flächen",
+      "text": "Text",
+      "lines": "Linien",
+      "states": "Zustände",
+      "fields": "Tabellen und Felder",
+      "tree": "Ordnerbaum",
+      "shapes": "Schrift und Formen"
+    },
+    "groupCount": "{count, plural, one {# Wert} other {# Werte}}",
+    "expandAll": "Alle aufklappen",
+    "collapseAll": "Alle zuklappen",
     "preview": {
       "title": "Live-Vorschau",
       "modeGroup": "Modus der Vorschau",
@@ -1741,6 +1824,10 @@
       "badgeOpen": "Offen",
       "badgeError": "Fehler",
       "badgeInactive": "Inaktiv",
+      "badgeAgent": "Vorschlag",
+      "badgeInfo": "In Arbeit",
+      "badgeFinal": "Festgeschrieben",
+      "locked": "Gesperrt",
       "inputValue": "Musterverein e.V.",
       "col1": "Position",
       "col2": "Betrag",
@@ -1756,7 +1843,7 @@
       "color-primary": "Primäre Aktion, aktiver Navigationseintrag",
       "color-primary-ink": "Hover/Pressed auf Primary, Text auf -soft",
       "color-primary-soft": "Aktive Nav-Fläche, Rollen-Badge, Auswahl",
-      "color-accent": "Zweitakzent: MCP-Badge, Akzentflächen",
+      "color-accent": "Zweitakzent: Akzentflächen",
       "color-accent-deep": "Text auf color-accent-soft",
       "color-accent-soft": "Hintergrund für Akzentflächen",
       "color-success": "Aktiv, gespeichert, erfolgreicher Export",
@@ -1783,7 +1870,7 @@
       "bg": "Fensterhintergrund, Login, Inhaltsbereich",
       "surface": "Karte, Tabelle, Dialog",
       "surface-2": "Speicherleiste, eingebettete Blöcke",
-      "sidebar-bg": "Sidebar",
+      "sidebar-bg": "Seitenleiste",
       "topbar-bg": "Topbar",
       "ink": "Primärtext, Titel",
       "ink-2": "Labels, Sekundärtext",
@@ -1830,7 +1917,6 @@
     "title": "Module",
     "count": "{active} von {total} aktiv",
     "hint": "Beim Deaktivieren bleiben alle Daten des Moduls erhalten. Die Navigationsgruppe verschwindet, Berichte und protokollierte Vorgänge bleiben lesbar. Aktivieren stellt den Zustand unverändert wieder her.",
-    "alwaysActive": "Immer aktiv",
     "enabled": "Aktiv",
     "disabled": "Inaktiv",
     "locked": "Gesperrt",
@@ -1890,7 +1976,7 @@
       "to": "Bis",
       "channels": {
         "ui": "Oberfläche",
-        "mcp": "MCP",
+        "mcp": "Agent",
         "system": "System"
       },
       "period": "Zeitraum",
@@ -1997,7 +2083,7 @@
       "siteCollection": "Sammlung der Webseite",
       "siteEntry": "Eintrag der Webseite",
       "siteJob": "Lauf der Webseite",
-      "sitePublish": "Veröffentlichung der Webseite",
+      "sitePublish": "Publizieren der Webseite",
       "siteTemplate": "Vorlage der Webseite",
       "siteValues": "Inhalte der Webseite",
       "user": "Nutzer"
@@ -2006,7 +2092,7 @@
       "animals_confirmReview": "Prüfung des Hundes bestätigt",
       "animals_create": "Hund angelegt",
       "animals_delete": "Hund gelöscht",
-      "animals_publish": "Hund veröffentlicht",
+      "animals_publish": "Hund publiziert",
       "animals_requestReview": "Prüfung des Hundes angefordert",
       "animals_setPhotos": "Hund geändert (Fotos)",
       "animals_setStatus": "Hund geändert (Status)",
@@ -2225,7 +2311,7 @@
       "site_entry_reorder": "Einträge der Webseite umsortiert",
       "site_entry_update": "Eintrag der Webseite geändert",
       "site_jobCancel": "Lauf der Webseite abgebrochen",
-      "site_publish": "Veröffentlichen der Webseite",
+      "site_publish": "Publizieren der Webseite",
       "site_seed_apply": "Startinhalte der Webseite übernommen",
       "site_template_read": "Vorlage der Webseite eingelesen",
       "site_template_settled": "Vorlage der Webseite übernommen",
@@ -2251,10 +2337,10 @@
       "themes_duplicate": "Theme dupliziert",
       "themes_delete": "Theme gelöscht",
       "animals_unpublish": "Hund zurückgezogen",
-      "projects_publish": "Projekt veröffentlicht",
+      "projects_publish": "Projekt publiziert",
       "projects_unpublish": "Projekt zurückgezogen",
       "dms_install_setting": "Einstellung der Akte bei der Einrichtung eingetragen",
-      "site_entry_publish": "Eintrag der Webseite veröffentlicht",
+      "site_entry_publish": "Eintrag der Webseite publiziert",
       "site_entry_unpublish": "Eintrag der Webseite zurückgezogen",
       "site_blockedTerms_set": "Sperrwörter der Webseite geändert",
       "finance_setup_setting": "Einstellung der Finanzen gesetzt",
@@ -2271,8 +2357,8 @@
       "animals_confirmReview": "Prüfung von Hund „{name}“ bestätigt",
       "animals_create": "Hund „{name}“ angelegt",
       "animals_delete": "Hund „{name}“ gelöscht",
-      "animals_publish": "Hund „{name}“ veröffentlicht",
-      "animals_requestReview": "{viaMcp, select, true {Hund „{name}“ beim Schreiben über MCP zur Prüfung vorgemerkt} other {Prüfung von Hund „{name}“ angefordert}}",
+      "animals_publish": "Hund „{name}“ publiziert",
+      "animals_requestReview": "{viaMcp, select, true {Hund „{name}“ beim Schreiben über einen Agenten zur Prüfung vorgemerkt} other {Prüfung von Hund „{name}“ angefordert}}",
       "animals_setPhotos": "Fotos von Hund „{name}“ geändert",
       "animals_setStatus": "Status von Hund „{name}“ auf „{status, select, lookingForHome {Sucht ein Zuhause} reserved {Reserviert} adopted {Vermittelt} other {{status}}}“ gesetzt",
       "animals_setStory": "Geschichte von Hund „{name}“ geändert",
@@ -2309,7 +2395,7 @@
       "dms_install": "Akte mit Dokumentarten „{incomingLabel}“ und „{outgoingLabel}“ eingerichtet",
       "dms_issue": "Dokument „{number}“ ausgestellt",
       "dms_link": "Dokument „{number}“ verknüpft",
-      "dms_move": "Dokument „{number}“ {toInbox, select, true {in den Eingangskorb} other {nach „{folder}“}} verschoben",
+      "dms_move": "Dokument „{number}“ {place, select, inbox {in den Eingangskorb verschoben} out {aus dem Ordner genommen} other {nach „{folder}“ verschoben}}",
       "dms_note_add": "Notiz an Dokument „{number}“ angefügt",
       "dms_receive": "{via, select, recordWithNumber {Dokument „{number}“ zu Vorgang „{recordNumber}“ abgelegt} record {Dokument „{number}“ in einem Vorgang abgelegt} other {Post als Dokument „{number}“ abgelegt}}",
       "dms_reclassify": "{retyped, select, true {Art von Dokument „{previousNumber}“ geändert, neue Nummer „{number}“} other {Angaben zu Dokument „{number}“ berichtigt}}",
@@ -2393,7 +2479,7 @@
       "media_upload": "Datei „{filename}“ hochgeladen",
       "projects_create": "Projekt „{name}“ angelegt",
       "projects_delete": "Projekt „{name}“ gelöscht",
-      "projects_publish": "Projekt „{name}“ veröffentlicht",
+      "projects_publish": "Projekt „{name}“ publiziert",
       "projects_unpublish": "Projekt „{name}“ zurückgezogen",
       "projects_update": "Projekt „{name}“ geändert",
       "roles_create": "Rolle „{roleName}“ angelegt",
@@ -2404,12 +2490,12 @@
       "site_cacheClear": "Zwischenspeicher der Webseite mit {fileCount, plural, one {# Datei} other {# Dateien}} geleert",
       "site_entry_create": "Eintrag in „{collection}“ angelegt",
       "site_entry_delete": "Eintrag aus „{collection}“ gelöscht",
-      "site_entry_publish": "Eintrag in „{collection}“ veröffentlicht",
+      "site_entry_publish": "Eintrag in „{collection}“ publiziert",
       "site_entry_reorder": "Reihenfolge in „{collection}“ geändert",
       "site_entry_unpublish": "Eintrag in „{collection}“ zurückgezogen",
       "site_entry_update": "Eintrag in „{collection}“ geändert",
-      "site_jobCancel": "{kind, select, preview {Vorschau der Webseite} publish {Veröffentlichen der Webseite} deployCheck {Prüfung der Webseite} other {Lauf der Webseite}} abgebrochen",
-      "site_publish": "{status, select, success {Webseite veröffentlicht{changed, plural, =0 {} one {, # Datei geändert} other {, # Dateien geändert}}{added, plural, =0 {} one {, # Datei neu} other {, # Dateien neu}}{removed, plural, =0 {} one {, # Datei entfernt} other {, # Dateien entfernt}}} failed {Veröffentlichen der Webseite fehlgeschlagen} other {Veröffentlichen der Webseite abgebrochen}}",
+      "site_jobCancel": "{kind, select, preview {Vorschau der Webseite} publish {Publizieren der Webseite} deployCheck {Prüfung der Webseite} other {Lauf der Webseite}} abgebrochen",
+      "site_publish": "{status, select, success {Webseite publiziert{changed, plural, =0 {} one {, # Datei geändert} other {, # Dateien geändert}}{added, plural, =0 {} one {, # Datei neu} other {, # Dateien neu}}{removed, plural, =0 {} one {, # Datei entfernt} other {, # Dateien entfernt}}} failed {Publizieren der Webseite fehlgeschlagen} other {Publizieren der Webseite abgebrochen}}",
       "site_seed_apply": "{items} aus der Vorlage der Webseite übernommen",
       "site_template_read": "Vorlage der Webseite „{templateName}“ eingelesen",
       "site_values_update": "{variableCount, plural, one {Variable} other {Variablen}} {variables} geändert",
@@ -2445,8 +2531,8 @@
       "wrongCurrent": "Das aktuelle Passwort stimmt nicht."
     },
     "tokens": {
-      "title": "API-Tokens (MCP-Zugang)",
-      "intro": "Ein Token wirkt mit Ihren Rechten. Vorgänge über MCP erscheinen im Änderungsprotokoll mit dem Kanal „MCP“ und dem Namen des Tokens.",
+      "title": "API-Tokens",
+      "intro": "Ein Token wirkt mit Ihren Rechten. Vorgänge über MCP erscheinen im Änderungsprotokoll mit dem Kanal „Agent“ und dem Namen des Tokens.",
       "create": "Token erstellen",
       "createTitle": "Token erstellen",
       "name": "Name",
@@ -2495,16 +2581,12 @@
       "intro": "Die Seitenrahmen, auf denen Dokumente erscheinen: Kopf, Ränder, Schrift, Fußzeile. Eine eigene Basis mit derselben Kennung ersetzt die mitgelieferte.",
       "columns": {
         "base": "Basis",
-        "id": "Kennung",
-        "origin": "Herkunft",
         "state": "Zustand",
         "type": "Dokumentart",
         "effective": "Erscheint auf",
         "choice": "Auswahl"
       },
       "own": "eigene",
-      "shipped": "mitgeliefert",
-      "ready": "bereit",
       "broken": "fehlerhaft",
       "typesTitle": "Dokumentarten",
       "typesIntro": "Jede Dokumentart bringt eine Basis als Vorgabe mit. Hier steht, worauf sie tatsächlich erscheint; eine Abweichung von der Vorgabe ist markiert und lässt sich zurücksetzen.",
@@ -2529,7 +2611,8 @@
         "finance-confirmation-in-kind": "Zuwendungsbestätigung für Sachzuwendungen",
         "finance-confirmation-collective": "Sammelbestätigung",
         "finance-simplified-receipt": "Vereinfachter Zuwendungsnachweis",
-        "finance-waiver-declaration": "Verzichtserklärung"
+        "finance-waiver-declaration": "Verzichtserklärung",
+        "animals-profile": "Tierprofil"
       }
     }
   },
@@ -2548,16 +2631,18 @@
     "footnote": "Gelöscht wird auf der Seite des jeweiligen Eintrags — dort steht, was dabei verschwindet.",
     "settings": {
       "title": "Fristen",
-      "statutory10Y": "Gesetzliche Aufbewahrung 10 Jahre",
+      "statutory10Y": "Gesetzliche Aufbewahrung {duration}",
       "statutory10YHint": "§ 147 Abs. 1 Nr. 1, 4a AO (z. B. Bücher, Aufzeichnungen, Jahresabschlüsse)",
-      "statutory8Y": "Gesetzliche Aufbewahrung 8 Jahre",
+      "statutory8Y": "Gesetzliche Aufbewahrung {duration}",
       "statutory8YHint": "§ 147 Abs. 3 AO (Buchungsbelege, seit 2025)",
-      "statutory6Y": "Gesetzliche Aufbewahrung 6 Jahre",
+      "statutory6Y": "Gesetzliche Aufbewahrung {duration}",
       "statutory6YHint": "§ 147 Abs. 1 Nr. 2, 3, 5 AO (z. B. empfangene Handels- und Geschäftsbriefe)",
       "consent": "Einwilligung / berechtigtes Interesse",
       "consentHint": "ohne gesetzliche Grundlage (z. B. Interessenten)",
       "save": "Speichern",
-      "months": "Monate"
+      "months": "Monate",
+      "durationYears": "{n, plural, one {# Jahr} other {# Jahre}}",
+      "durationMonths": "{n, plural, one {# Monat} other {# Monate}}"
     }
   },
   "backup": {
@@ -2573,7 +2658,6 @@
     },
     "import": {
       "title": "Import",
-      "badge": "Überschreibt alles",
       "warning": "Der Import ersetzt den gesamten Bestand dieser Umgebung, einschließlich Änderungsprotokoll. Erstellen Sie vorher einen Export. Der Vorgang selbst wird im neuen Bestand als Systemeintrag protokolliert.",
       "file": "Backup-Datei",
       "fileHint": "Ein Kompass-Backup (.tar.gz) aus „Export“.",
@@ -2607,7 +2691,8 @@
     "columns": {
       "name": "Projekt",
       "type": "Typ",
-      "status": "Status",
+      "website": "Webseite",
+      "order": "Reihenfolge",
       "links": "Verweise"
     },
     "types": {
@@ -2649,7 +2734,7 @@
       "title": "{name} löschen?"
     },
     "common": {
-      "moduleInactiveTitle": "Modul Projekte ist nicht aktiv",
+      "moduleInactiveTitle": "Modul Projekte ist nicht aktiv.",
       "moduleInactiveText": "Aktivieren Sie das Modul unter Einrichtung → Module. Vorhandene Daten bleiben erhalten.",
       "openModules": "Module öffnen"
     },
@@ -2659,7 +2744,7 @@
   },
   "animals": {
     "common": {
-      "moduleInactiveTitle": "Modul Tiere ist nicht aktiv",
+      "moduleInactiveTitle": "Modul Tiere ist nicht aktiv.",
       "moduleInactiveText": "Aktivieren Sie das Modul unter Einrichtung → Module. Vorhandene Daten bleiben erhalten.",
       "openModules": "Module öffnen"
     },
@@ -2704,8 +2789,8 @@
       "filterStatus": "Status",
       "filterLocation": "Aufenthalt",
       "filterPublished": "Webseite",
-      "publishedYes": "Veröffentlicht",
-      "publishedNo": "Nicht veröffentlicht",
+      "publishedYes": "Publiziert",
+      "publishedNo": "Nicht publiziert",
       "noMatchTitle": "Kein Hund passt zu dieser Auswahl.",
       "noMatchText": "Ändern Sie die Filter oder wechseln Sie auf „Alle“.",
       "noMatchNoun": "Kein Hund",
@@ -2723,7 +2808,7 @@
     },
     "review": {
       "pendingSince": "Prüfung offen seit {date}",
-      "publishOnConfirm": "Beim Bestätigen veröffentlichen",
+      "publishOnConfirm": "Beim Bestätigen publizieren",
       "confirm": "Geprüft",
       "confirmNext": "Geprüft und weiter",
       "confirmed": "Prüfung bestätigt."
@@ -2786,19 +2871,19 @@
       },
       "year": "Vermittlungsjahr",
       "yearHint": "Erscheint bei den Glücklichen Vermittlungen.",
+      "description": "Der Status steht auf der Webseite am Hund. „Vermittelt“ legt dazu die Geschichte mit dem Vermittlungsjahr an.",
       "submit": "Status setzen",
       "saved": "Status gesetzt."
     },
     "photos": {
       "choose": "Fotos wählen",
       "label": "Fotos",
-      "count": "{count} von {max} Fotos",
+      "count": "{count, plural, one {# Foto} other {# Fotos}}, höchstens {max}",
       "tooMany": "Höchstens {max} Fotos. Entfernen Sie eines, bevor Sie ein neues hinzufügen.",
       "primary": "Hauptfoto",
       "makePrimary": "Als Hauptfoto",
       "moveLeft": "Nach vorn",
       "moveRight": "Nach hinten",
-      "remove": "Entfernen",
       "open": "Foto in neuem Tab öffnen",
       "afterCreate": "Fotos lassen sich wählen, sobald der Hund angelegt ist.",
       "nth": "Foto {n}"
@@ -2869,8 +2954,8 @@
       "review": {
         "title": "Prüfung",
         "intro": "Ob Änderungen eines Agenten auf eine Durchsicht durch einen Menschen warten.",
-        "onMcpWrite": "Schreiben über MCP zur Prüfung vormerken",
-        "onMcpWriteHint": "Wie bis 0.2.9: Was ein Agent über MCP schreibt, wartet auf eine Durchsicht. Aus: kein Merker; schon markierte Tiere bleiben markiert, bis sie geprüft sind."
+        "onMcpWrite": "Änderungen von Agenten zur Prüfung vormerken",
+        "onMcpWriteHint": "Was ein Agent schreibt, wartet auf eine Durchsicht. Aus: kein Merker; schon markierte Tiere bleiben markiert, bis sie geprüft sind."
       }
     },
     "proposals": {
@@ -2952,9 +3037,9 @@
         "photos": "Fotos",
         "keptConflict": "{field} (in Kompass geändert)",
         "website": "Auf der Webseite",
-        "publish": "Veröffentlichen",
+        "publish": "Publizieren",
         "publishHint": "Erscheint mit dem nächsten Publizieren der Webseite.",
-        "keepUnpublished": "Unveröffentlicht lassen",
+        "keepUnpublished": "Nicht publiziert lassen",
         "keepUnpublishedHint": "Erst in Kompass fertig machen.",
         "adoptedYear": "Vermittlungsjahr",
         "adoptedYearHint": "Der Status wird „vermittelt“.",
@@ -2979,7 +3064,7 @@
       },
       "review": {
         "backToProposals": "Zu den Vorschlägen",
-        "backToList": "Zurück zur Liste",
+        "backToList": "Vorschläge",
         "titleUpdate": "Änderung an {name}",
         "received": "eingegangen {at}",
         "atSource": "Eintrag bei {source}",
@@ -3031,10 +3116,7 @@
         "primary": "Titelbild",
         "fromSource": "von {source}",
         "fromKompass": "aus Kompass",
-        "take": "übernehmen",
-        "keep": "behalten",
-        "remove": "entfernen",
-        "deselect": "abwählen",
+        "stays": "danach dabei",
         "kompassPhoto": "Foto aus Kompass",
         "sourcePhoto": "Foto der Quelle",
         "withCrop": "{name}, mit Ausschnitt",
@@ -3062,7 +3144,7 @@
       "held": {
         "undo": "Rückgängig · {seconds}",
         "accepted": "{name} angenommen",
-        "acceptedOnline": "{name} angenommen und veröffentlicht",
+        "acceptedOnline": "{name} angenommen und publiziert",
         "rejected": "{name} abgelehnt"
       },
       "notice": {
@@ -3085,15 +3167,15 @@
         "reason": "Begründung der Quelle: {reason}",
         "kompass": "Kompass",
         "photoOf": "Titelbild von {name}",
+        "noSourcePhoto": "Kein Foto der Quelle",
+        "noOwnPhoto": "Kein Foto in Kompass",
         "origin": "Herkunft",
-        "none": "keine",
         "explain": "„Gleicher Hund“ verknüpft {proposed} mit {name}. Künftige Änderungen von {source} kommen dann als Änderung an {name}.",
         "same": "Gleicher Hund",
         "different": "Anderer Hund"
       },
       "stack": {
         "title": "Vorschläge durchgehen",
-        "done": "Fertig",
         "position": "{index} von {total}",
         "reject": "Ablehnen",
         "review": "Prüfen",
@@ -3113,6 +3195,15 @@
           "missingPrimaryPhoto": "Kein Titelbild",
           "missingSummary": "Kein Kurztext",
           "adoptedYear": "Status wird „vermittelt“, das Vermittlungsjahr fehlt"
+        },
+        "blocked": {
+          "conflict": "Konflikt klären",
+          "hints": "Zweifel klären",
+          "notice": "Hinweis lesen",
+          "sameAs": "Zuordnung klären",
+          "missingPrimaryPhoto": "Titelbild fehlt",
+          "missingSummary": "Kurztext fehlt",
+          "adoptedYear": "Jahr fehlt"
         },
         "refusedTitle": "{name}: nicht entschieden",
         "tally": "{accepted} angenommen · {rejected} abgelehnt · {open} offen gelassen",
@@ -3156,11 +3247,15 @@
       "cache": {
         "title": "Cache der Webseite",
         "intro": "Bildvarianten und Vorschau lassen sich jederzeit neu erzeugen. Leeren lohnt sich, wenn Bilder oder Vorschau offensichtlich nicht mehr stimmen.",
-        "images": "{count, plural, one {# Bildvariante} other {# Bildvarianten}}, {size} MB",
+        "terms": {
+          "images": "Bildvarianten",
+          "age": "Zeitraum",
+          "preview": "Vorschau"
+        },
+        "images": "{count, plural, one {# Datei} other {# Dateien}}, {size} MB",
         "age": "älteste {oldest} · neueste {newest}",
-        "noAge": "keine Bildvarianten",
-        "preview": "Vorschau {size} MB, gebaut {date}",
-        "noPreview": "keine Vorschau",
+        "preview": "{size} MB, gebaut {date}",
+        "noPreview": "noch nicht gebaut",
         "clear": "Cache leeren",
         "blocked": "Während eines Laufs lässt sich der Cache nicht leeren.",
         "confirmTitle": "Cache leeren?",
@@ -3173,7 +3268,7 @@
         "publicUrl": "Öffentliche Adresse",
         "target": "Ziel",
         "targetRemote": "{user}@{host}:{path}",
-        "targetLocal": "lokales Verzeichnis: {path}",
+        "targetLocal": "{path} (lokales Verzeichnis)",
         "notConfigured": "nicht eingerichtet",
         "auth": "Anmeldung",
         "authValues": {
@@ -3188,7 +3283,7 @@
           "missing": "fehlt",
           "unreadable": "nicht lesbar"
         },
-        "staging": "Staging",
+        "staging": "Testumgebung",
         "yes": "ja",
         "no": "nein",
         "none": "nicht gesetzt",
@@ -3207,7 +3302,7 @@
       "remove": "Entfernen",
       "moveUp": "Nach oben",
       "moveDown": "Nach unten",
-      "preview": "Vorschau",
+      "preview": "Vorschau {label}",
       "atMost": "höchstens {max}",
       "untranslated": "noch nicht übersetzt",
       "noChoice": "Keine Auswahl – die Vorlage entscheidet",
@@ -3220,12 +3315,13 @@
       "title": "Vorlage der Webseite",
       "lastRead": "Zuletzt eingelesen: {when}",
       "neverRead": "Noch keine Vorlage eingelesen.",
-      "needsReview": "Diese Vorlage kam mit einem eingespielten Backup und unterscheidet sich von der, die zuvor lief. Eine Vorlage der Webseite ist ausführbarer Code: Sie wird erst beim Einlesen ausgeführt und erst danach wieder veröffentlicht. Lesen Sie sie ein, wenn Sie wissen, woher das Backup stammt.",
+      "needsReview": "Diese Vorlage kam mit einem eingespielten Backup und unterscheidet sich von der, die zuvor lief. Eine Vorlage der Webseite ist ausführbarer Code: Sie wird erst beim Einlesen ausgeführt und erst danach wieder publiziert. Lesen Sie sie ein, wenn Sie wissen, woher das Backup stammt.",
       "read": "Vorlage einlesen",
       "apply": "Übernehmen",
       "cancel": "Abbrechen",
       "findings": "Befunde",
       "noFindings": "Keine Änderungen gegenüber dem eingelesenen Stand.",
+      "filesChanged": "Felder und Inhalte bleiben; die Dateien der Vorlage haben sich geändert.",
       "blocking": "Blockiert — erst aufräumen:",
       "lossy": "Kostet Inhalt:",
       "harmless": "Unkritisch:",
@@ -3260,16 +3356,23 @@
       "saved": "Gespeichert."
     },
     "entries": {
-      "new": "Neu",
+      "new": "Eintrag anlegen",
+      "create": "Eintrag anlegen",
       "saved": "Gespeichert.",
       "delete": "Eintrag löschen …",
       "deleteTitle": "„{label}“ löschen?",
-      "count": "{n, plural, =0 {keine Einträge} one {ein Eintrag} other {# Einträge}}"
+      "count": "{n, plural, =0 {keine Einträge} one {ein Eintrag} other {# Einträge}}",
+    "total": "{n, plural, one {# Eintrag} other {# Einträge}}",
+    "columns": {
+      "entry": "Eintrag",
+      "website": "Webseite",
+      "order": "Reihenfolge"
+    }
     },
     "publish": {
       "title": "Publizieren",
       "empty": {
-        "text": "Es ist noch keine Vorlage der Webseite eingelesen. Erst danach lassen sich Inhalte pflegen und veröffentlichen.",
+        "text": "Es ist noch keine Vorlage der Webseite eingelesen. Erst danach lassen sich Inhalte pflegen und publizieren.",
         "action": "Zu Einrichtung → Webseite"
       },
       "target": {
@@ -3282,7 +3385,7 @@
         "added": "<b>{count, number}</b> neu",
         "removed": "<b>{count, number}</b> entfallen",
         "hints": "{count, plural, one {# Hinweis} other {# Hinweise}}",
-        "hintsText": "{list}. Hinweise halten den Publish nicht auf — wer publiziert, übernimmt sie.",
+        "hintsText": "{list}. Hinweise halten das Publizieren nicht auf — wer publiziert, übernimmt sie.",
         "gaps": "{count, plural, one {# Übersetzungslücke} other {# Übersetzungslücken}}",
         "stale": "{count, plural, one {# veralteter Verweis} other {# veraltete Verweise}}",
         "pendingReview": "{count, plural, one {# offene Prüfung} other {# offene Prüfungen}}",
@@ -3297,7 +3400,7 @@
         "stale": "Veraltete Verweise",
         "staleHint": "Wird im Export leer ausgeliefert; die Vorlage zeigt dann ihre Automatik.",
         "pendingReview": "Noch zu prüfen",
-        "pendingReviewHint": "Diese Einträge sind veröffentlicht und seit der letzten Änderung von niemandem geprüft. Der Publish nimmt sie mit.",
+        "pendingReviewHint": "Diese Einträge sind publiziert und seit der letzten Änderung von niemandem geprüft. Das Publizieren nimmt sie mit.",
         "skippedImages": "Bilder nicht lesbar",
         "clear": {
           "gaps": "keine fehlenden Übersetzungen",
@@ -3311,7 +3414,7 @@
         "intro": "Begriffe, die nie auf der Webseite erscheinen dürfen — etwa ein alter Vereinsname oder ein Platzhalter aus der Einrichtung. Die Vorschau meldet jeden Treffer, und solange einer da ist, lässt sich nicht publizieren.",
         "label": "Begriffe, einer je Zeile",
         "hint": "2 bis 80 Zeichen je Begriff, höchstens 50. Groß- und Kleinschreibung zählt nicht; Leerzeichen, Bindestrich und Unterstrich gelten als gleich.",
-        "save": "Sperrwörter speichern",
+        "save": "Speichern",
         "saved": "Sperrwörter gespeichert."
       },
       "connection": {
@@ -3335,7 +3438,7 @@
           "targetMissing": "Das Verzeichnis gibt es am Ziel nicht. Prüfen Sie SITE_DEPLOY_PATH.",
           "notWritable": "Am Ziel lässt sich nichts schreiben. Prüfen Sie die Rechte des Benutzers im Zielverzeichnis.",
           "diskFull": "Auf dem Webserver ist kein Platz mehr. Schaffen Sie Platz oder erhöhen Sie das Kontingent.",
-          "probeLeft": "Die Probedatei ließ sich nicht wieder löschen: Anlegen geht, Löschen nicht, und ein Publish würde scheitern. Prüfen Sie die Rechte im Zielverzeichnis.",
+          "probeLeft": "Die Probedatei ließ sich nicht wieder löschen: Anlegen geht, Löschen nicht, und das Publizieren würde scheitern. Prüfen Sie die Rechte im Zielverzeichnis.",
           "unknown": "Der Punkt ist gescheitert; die Meldung steht im Protokoll."
         },
         "ok": "Verbindung steht. Am Ziel liegen {count, number} Dateien.",
@@ -3348,25 +3451,26 @@
         "changed": "Geändert",
         "added": "Neu",
         "removed": "Entfallen",
-        "none": "Keine Änderungen gegenüber dem letzten Publish.",
+        "none": "Keine Änderungen seit dem letzten Publizieren.",
         "more": "… und {count} weitere"
       },
       "done": "Publiziert: {changed} geändert, {added} neu, {removed} entfallen.",
       "history": {
-        "title": "Letzte Publishes",
+        "title": "Zuletzt publiziert",
         "columns": {
           "time": "Zeit",
           "status": "Ergebnis",
           "changes": "Änderungen",
-          "by": "Von",
-          "log": "Protokoll"
+          "by": "Von"
         },
-        "changes": "{changed, number} geändert · {added, number} neu · {removed, number} entfallen",
-        "log": "Protokoll",
+        "changed": "{count, number} geändert",
+        "added": "{count, number} neu",
+        "removed": "{count, number} entfallen",
+        "logFor": "Protokoll vom {when}",
         "new": "neu",
         "older": "Ältere anzeigen",
-        "truncated": "Es werden die letzten {shown} von {total} Publishes gezeigt.",
-        "empty": "Bislang keine Veröffentlichungen.",
+        "truncated": "Es werden die letzten {shown} von {total} Läufen gezeigt.",
+        "empty": "Bislang nichts publiziert.",
         "status": {
           "success": "Publiziert",
           "failed": "Gescheitert",
@@ -3383,6 +3487,7 @@
       },
       "log": {
         "title": "Protokoll · {when}",
+        "technical": "Technisches Protokoll",
         "short": "Kurz:",
         "copy": "Kopieren",
         "copied": "Protokoll kopiert"
@@ -3412,7 +3517,7 @@
             "remedy": "Laden Sie die Seite neu, um den aktuellen Stand zu sehen."
           },
           "jobNotCancellable": {
-            "reason": "Der Publish überträgt gerade; ein Abbruch ließe die Webseite halb aktualisiert zurück.",
+            "reason": "Das Publizieren überträgt gerade; ein Abbruch ließe die Webseite halb aktualisiert zurück.",
             "remedy": "Warten Sie, bis die Übertragung fertig ist."
           }
         },
@@ -3461,17 +3566,17 @@
         "openLog": "Protokoll"
       },
       "flow": {
-        "step1": "Schritt 1 von 2 · Vorschau",
-        "step2": "Schritt 2 von 2 · Publizieren",
+        "stepPreview": "Änderungen prüfen",
+        "stepPublish": "Publizieren",
         "startPreview": "Vorschau bauen",
         "rebuild": "Vorschau neu bauen",
         "openPreview": "Vorschau öffnen",
         "notHere": "Hier wird nicht publiziert. Vorschau bauen und ansehen geht.",
-        "noTarget": "Es ist kein Publish-Ziel eingerichtet.",
+        "noTarget": "Es ist kein Ziel zum Publizieren eingerichtet.",
         "noTargetLink": "Verbindung einrichten",
         "none": {
           "title": "Noch keine Vorschau",
-          "text": "Seit dem letzten Publish am {date} wurde keine Vorschau gebaut. Die Vorschau prüft die Inhalte und zeigt, was sich auf der Webseite ändert. Publiziert wird danach genau dieser Stand.",
+          "text": "Seit dem letzten Publizieren am {date} wurde keine Vorschau gebaut. Die Vorschau prüft die Inhalte und zeigt, was sich auf der Webseite ändert. Publiziert wird danach genau dieser Stand.",
           "textNever": "Noch nie publiziert. Die Vorschau prüft die Inhalte und zeigt, wie die Webseite aussehen wird. Publiziert wird danach genau dieser Stand."
         },
         "outdated": {
@@ -3480,8 +3585,8 @@
         },
         "ready": {
           "title": "Vorschau bereit",
-          "meta": "Gebaut {when}, von {name} · Stand {hash}",
-          "metaNoName": "Gebaut {when} · Stand {hash}"
+          "meta": "Gebaut {when}, von {name}",
+          "metaNoName": "Gebaut {when}"
         },
         "publish": {
           "live": "Jetzt publizieren",
@@ -3502,7 +3607,7 @@
           "failed": {
             "title": "Publizieren gescheitert",
             "untouched": "Es wurde nichts übertragen; die Webseite zeigt weiter den bisherigen Stand.",
-            "partial": "Ein Teil wurde übertragen. Die Webseite kann gemischt aussehen, bis ein Publish gelingt."
+            "partial": "Ein Teil wurde übertragen. Die Webseite kann gemischt aussehen, bis das Publizieren gelingt."
           },
           "failedPreview": {
             "title": "Vorschau gescheitert"
@@ -3559,7 +3664,7 @@
           "publishTest": "Wird auf Test publiziert",
           "deployCheck": "Verbindung wird getestet",
           "cacheEmpty": "Nach dem Update ist der Bild-Cache leer. Dieser erste Bau rechnet alle Bildvarianten neu und dauert einige Minuten. Sie können die Seite verlassen; der Lauf geht im Hintergrund weiter.",
-          "agentBadge": "MCP",
+          "agentBadge": "Agent",
           "byAgent": "{token} · für {name} um {time} Uhr",
           "byAgentNoToken": "für {name} um {time} Uhr",
           "byPerson": "Gestartet von {name} um {time} Uhr",
@@ -3591,7 +3696,7 @@
           "interrupted": "Kompass wurde während des Laufs neu gestartet."
         },
         "lastStep": "Zuletzt im Schritt „{step}“.",
-        "logTruncated": "Nur das Ende des Protokolls; vollständig über MCP (site_job_result, log: full) oder in der Publish-Historie."
+        "logTruncated": "Nur das Ende des Protokolls; vollständig in der Liste „Zuletzt publiziert“ oder über einen Agenten."
       }
     },
     "pending": {
@@ -3604,31 +3709,33 @@
       "toPublish": "Zum Publizieren",
       "note": "{count, plural, one {# Änderung ist} other {# Änderungen sind}} noch nicht auf der Webseite.",
       "line": "Änderung noch nicht publiziert",
+      "mark": "nicht publiziert",
       "variables": "{count, plural, one {# Variable} other {# Variablen}} nicht publiziert",
       "variablesNamed": "{count, plural, one {# Variable} other {# Variablen}} nicht publiziert: {names}",
-      "since": "Seit dem letzten Publish am {date} geändert:",
+      "since": "Seit dem letzten Publizieren am {date} geändert:",
       "and": "und",
       "more": "und {count} weitere"
     },
     "previewFrame": {
       "title": "Webseiten-Vorschau",
       "description": "Vollständige Vorschau der statischen Webseite unter dem aktuellen Kompass-Datenstand.",
-      "back": "Zurück zu Publizieren",
+      "back": "Publizieren",
       "frameTitle": "Vorschau",
       "widths": {
         "label": "Breite",
-        "mobile": "Mobil",
+        "mobile": "Telefon",
         "tablet": "Tablet",
         "desktop": "Desktop"
       }
     }
   },
   "contacts": {
+    "moreRoles": "+{count}",
     "emptyFilteredNoun": "Kein Kontakt",
     "picker": {
       "placeholder": "Name eingeben …",
       "empty": "Kein Kontakt gefunden.",
-      "clear": "— Kein Kontakt —",
+      "clear": "Kein Kontakt",
       "create": "Neu anlegen …",
       "searching": "Suche …",
       "more": "Weitere Treffer — bitte suchen."
@@ -3711,7 +3818,7 @@
     "roles": {
       "title": "Rollen",
       "add": "Rolle hinzufügen",
-      "submit": "Übernehmen",
+      "submit": "Speichern",
       "field": "Rolle",
       "since": "Seit",
       "until": "Bis",
@@ -3720,6 +3827,7 @@
     "channels": {
       "title": "Kommunikationswege",
       "add": "Weg hinzufügen",
+      "remove": "Entfernen",
       "save": "Speichern",
       "kind": "Typ",
       "value": "Wert",
@@ -3738,6 +3846,9 @@
       "roleHold": "Rolle {role}",
       "heldUntil": "gehalten bis {date}",
       "heldPermanently": "dauerhaft gehalten",
+      "summaryUntil": "Gehalten bis {date}, wegen {reason}",
+      "summaryPermanent": "Dauerhaft gehalten, wegen {reason}",
+      "details": "Einzelheiten",
       "delete": "Kontakt löschen",
       "deleteItem": "Kontakt löschen …",
       "refusedUntil": "Löschen ist erst nach Ablauf der Aufbewahrung möglich: bis {date}.",
@@ -3748,9 +3859,10 @@
     },
     "channelLabelPlaceholder": "z. B. Privat, Büro",
     "legalFormPlaceholder": "z. B. e. V., GmbH",
-    "countryPlaceholder": "DE",
+    "countryHint": "Leer heißt: Land des Vereins.",
+    "forContact": "Für {name}",
     "common": {
-      "moduleInactiveTitle": "Modul Kontakte ist nicht aktiv",
+      "moduleInactiveTitle": "Modul Kontakte ist nicht aktiv.",
       "moduleInactiveText": "Aktivieren Sie das Modul unter Einrichtung → Module. Vorhandene Daten bleiben erhalten.",
       "openModules": "Module öffnen"
     },
@@ -3758,6 +3870,7 @@
       "forbidden": "Kontakt (kein Zugriff)"
     },
     "searchPlaceholder": "Name, Ort, E-Mail oder Telefon",
+    "searchPlaceholderShort": "Name, E-Mail …",
     "nounOne": "Kontakt",
     "nounOther": "Kontakte",
     "nounDative": "Kontakten"
@@ -3765,7 +3878,7 @@
   "deletion": {
     "loading": "Es wird geprüft, ob etwas dagegen spricht …",
     "failed": "Die Prüfung ist fehlgeschlagen. Bitte schließen Sie den Dialog und versuchen Sie es erneut.",
-    "published": "Das ist noch veröffentlicht. Ziehen Sie es erst zurück — danach lässt es sich löschen.",
+    "published": "Das ist noch publiziert. Ziehen Sie es erst zurück — danach lässt es sich löschen.",
     "unpublish": "Zurückziehen",
     "blocked": "Das lässt sich noch nicht löschen, weil etwas daran hängt:",
     "blockedHint": "Lösen Sie erst den Bezug in der Akte oder haken Sie die Wiedervorlage ab.",
@@ -3788,7 +3901,8 @@
     "title": "Akte",
     "description": "Schriftverkehr und Dokumente des Vereins",
     "inbox": "Eingangskorb",
-    "noFolder": "Kein Ordner",
+    "noFolder": "Ohne Ordner",
+    "outOfFolder": "Aus dem Ordner nehmen",
     "allDocuments": "Alle Dokumente",
     "heading": {
       "path": "Weg"
@@ -3813,7 +3927,7 @@
     "duplicateOfToast": "Abgelegt. Dieselbe Datei liegt schon vor als {numbers}.",
     "export": {
       "open": "Akte exportieren",
-      "title": "Dokumente als Bündel",
+      "title": "Akte exportieren",
       "thisFolder": "Diesen Ordner: „{folder}“ (samt Unterordnern)",
       "year": "Einen Jahrgang",
       "yearLabel": "Jahr des Dokumentdatums",
@@ -3849,7 +3963,9 @@
     },
     "empty": {
       "title": "Keine Dokumente gefunden",
-      "text": "In dieser Ansicht liegen keine Dokumente vor."
+      "text": "In dieser Ansicht liegen keine Dokumente vor.",
+      "folderTitle": "Dieser Ordner ist leer",
+      "folderText": "Legen Sie Post hier ab oder ziehen Sie ein PDF auf den Ordner."
     },
     "newDraftDescription": "Verfassen Sie ein Schreiben mit Briefkopf auf Basis der Vorlagen.",
     "receiveDescription": "Legen Sie eingehende Schreiben ab. Einsortierregeln belegen Art, Ordner und Datum automatisch vor.",
@@ -3880,7 +3996,7 @@
       "overlayHint": "Auf einen Ordner ziehen, um dort einzusortieren — oder hier loslassen für den Eingangskorb.",
       "overlayFolder": "{count, plural, one {# Datei} other {# Dateien}} in „{folder}“ ablegen",
       "overlayFolderUnknown": "Dateien in „{folder}“ ablegen",
-      "overlayHintFolder": "Die Akte nimmt nur PDF. Hier loslassen legt in den Eingangskorb.",
+      "overlayHintFolder": "Die Akte nimmt nur PDF.",
       "skippedNamed": "„{name}“ ist kein PDF und wurde nicht übernommen. Die Akte nimmt nur PDF.",
       "queueBadge": "{current} von {total}",
       "queueHint": "Gezogen auf {folder}. Nach dem Ablegen folgt die nächste Datei.",
@@ -3898,14 +4014,14 @@
     },
     "number": {
       "pending": "Die Nummer <mono>{number}</mono> wird beim Ablegen gezogen. Wählen Sie später eine andere Art, bekommt das Dokument eine neue Nummer, und die bisherige bleibt vermerkt.",
-      "numberOnFiling": "Die Nummer wird beim Ablegen gezogen."
+      "numberOnFiling": "Die Nummer wird beim Ablegen gezogen.",
+      "onFile": "Beim Festschreiben bekommt das Dokument die Nummer <mono>{number}</mono>."
     },
     "saveDraft": "Entwurf speichern",
     "edit": "Bearbeiten",
     "editDraft": "Entwurf bearbeiten",
     "editDraftDescription": "Solange nichts festgeschrieben ist, lässt sich jeder Teil des Schreibens ändern.",
     "saveChanges": "Änderungen speichern",
-    "typeFixedHint": "Die Dokumentart steht seit dem Anlegen fest — sie bestimmt Nummernkreis und Aufbewahrung.",
     "preview": "Vorschau",
     "draft": {
       "saveAndPreview": "Speichern und Vorschau aktualisieren",
@@ -3924,7 +4040,7 @@
     },
     "file": "Festschreiben",
     "fileConfirmTitle": "Dokument festschreiben",
-    "fileConfirmDescription": "Beim Festschreiben wird dem Dokument eine fortlaufende Nummer zugewiesen und der Inhalt wird unveränderlich eingefroren.",
+    "fileConfirmDescription": "Beim Festschreiben wird dem Dokument eine fortlaufende Nummer zugewiesen. Der Inhalt kann danach nicht mehr geändert werden.",
     "fileConfirmSubmit": "Festschreiben bestätigen",
     "openPdf": "PDF öffnen",
     "fileAltered": {
@@ -4025,7 +4141,7 @@
       "dueAt": "Fällig am",
       "titleField": "Anlass",
       "assignee": "Zuständig",
-      "everyone": "— Alle —",
+      "unassigned": "Niemand Bestimmtes",
       "submit": "Anlegen",
       "complete": "{title} erledigen",
       "reopen": "{title} wieder öffnen",
@@ -4056,7 +4172,7 @@
       "addDescription": "Ein Kontakt, Tier oder Projekt, zu dem dieses Dokument gehört.",
       "entityType": "Art des Bezugs",
       "contact": "Kontakt",
-      "choose": "— Bitte wählen —",
+      "choose": "Bitte wählen",
       "role": "Rolle",
       "submit": "Hinzufügen",
       "remove": "Entfernen"
@@ -4104,8 +4220,9 @@
       "documentDate": "Datum auf dem Dokument",
       "subject": "Betreff",
       "body": "Text",
-      "bodyHint": "Markdown: **fett**, _kursiv_, ## Überschrift, - Liste, > Hinweis, | Tabelle |. Bilder, Fußnoten und HTML erscheinen nicht im PDF.",
+      "bodyHint": "Fett, Listen, Überschriften und Tabellen schreiben Sie mit wenigen Zeichen. <link>So formatieren Sie einen Brief</link>",
       "type": "Dokumentart",
+      "typeFixed": "Steht beim Entwurf fest. Für eine andere Art einen neuen Entwurf anlegen.",
       "folder": "Ordner",
       "recipient": "Empfänger",
       "sender": "Absender",
@@ -4141,12 +4258,11 @@
       "panels": {
         "types": "Arten",
         "rules": "Regeln",
-        "folders": "Ordner",
         "snippets": "Textbausteine",
         "channels": "Versand",
         "text": "Texterkennung"
       },
-      "description": "Dokumentarten, Ordnerstruktur und Einsortierregeln der Sachakte",
+      "description": "Dokumentarten, Einsortierregeln, Textbausteine, Versand und Texterkennung der Sachakte",
       "typesDescription": "Verwalten Sie die Dokumentarten für Vorlagen, Nummernkreis-Präfixe und Aufbewahrungsfristen.",
       "createType": "Dokumentart anlegen",
       "createTypeTitle": "Neue Dokumentart",
@@ -4156,7 +4272,7 @@
       "typeImmutableHint": "Der Schlüssel ist unveränderlich.",
       "prefixHint": "Änderbar, solange die Art noch kein Dokument hat.",
       "area": "Schutzbereich",
-      "areaNone": "keiner",
+      "areaNone": "Keiner",
       "areaUnknown": "Bereich „{key}“ nicht angemeldet – die Dokumente dieser Art sind für alle gesperrt, bis das Modul wieder da ist.",
       "areaNotHeld": "Ändern kann den Schutzbereich nur, wer selbst das Recht „{permission}“ hat.",
       "areaSetHint": "Danach sehen {count, plural, =0 {Dokumente dieser Art} one {das eine Dokument dieser Art} other {die # Dokumente dieser Art}} nur noch Personen mit dem Recht „{permission}“ und die Administration. Das Recht „Akte lesen“ allein genügt nicht mehr.",
@@ -4173,7 +4289,6 @@
         "direction": "Richtung",
         "retention": "Aufbewahrung",
         "folder": "Standardordner",
-        "status": "Status",
         "actions": "Aktionen"
       },
       "retentionClasses": {
@@ -4183,8 +4298,7 @@
         "permanent": "Dauerhaft",
         "consent": "Einwilligung"
       },
-      "foldersMoved": "Ordner legen Sie jetzt direkt in der Akte an: oben in der Ordnerspalte „Neuer Ordner“, an jedem Ordner über „…“ oder mit Rechtsklick. Dort benennen Sie sie auch um, verschieben und löschen sie.",
-      "toFile": "Zur Akte",
+      "foldersInFile": "Ordner in der Akte",
       "snippetsDescription": "Absätze und Standardbriefe, die der Editor auf Wunsch einfügt. Ohne Platzhalter.",
       "createSnippet": "Baustein anlegen",
       "createSnippetTitle": "Baustein anlegen",
@@ -4214,7 +4328,6 @@
         "label": "Beschriftung"
       },
       "channelColumns": {
-        "key": "Schlüssel",
         "label": "Beschriftung",
         "actions": "Aktionen"
       },
@@ -4237,7 +4350,6 @@
         "matchContains": "Suchbegriff",
         "thenType": "Dokumentart",
         "thenFolder": "Ordner",
-        "status": "Status",
         "actions": "Aktionen"
       },
       "typeSections": {
@@ -4255,9 +4367,9 @@
         "matchContains": "Muss enthalten",
         "matchContainsPlaceholder": "z. B. Finanzamt oder Rechnung",
         "thenType": "Ziel-Dokumentart",
-        "noType": "— Keine Änderung —",
+        "noType": "Keine Änderung",
         "thenFolder": "Ziel-Ordner",
-        "noFolder": "— Keine Änderung —",
+        "noFolder": "Keine Änderung",
         "sortOrder": "Reihenfolge",
         "activeCheckbox": "Regel ist aktiv"
       },
@@ -4293,8 +4405,9 @@
       "typeShortPlaceholder": "z. B. NOT",
       "removeLanguage": "{lang} entfernen"
     },
-    "backToDocument": "Zurück zum Dokument",
+    "backToDocument": "Dokument",
     "formerNumbers": "Früher: {numbers}",
+    "noNumberYet": "Noch ohne Nummer",
     "reclassify": {
       "open": "Angaben ändern",
       "title": "Angaben ändern",
@@ -4312,7 +4425,7 @@
       "saved": "Angaben gespeichert."
     },
     "common": {
-      "moduleInactiveTitle": "Modul Dokumentenmanagement ist nicht aktiv",
+      "moduleInactiveTitle": "Modul Dokumentenmanagement ist nicht aktiv.",
       "moduleInactiveText": "Aktivieren Sie das Modul unter Einrichtung → Module. Vorhandene Daten bleiben erhalten.",
       "openModules": "Module öffnen"
     },
@@ -4324,9 +4437,10 @@
   },
   "finance": {
     "common": {
-      "moduleInactiveTitle": "Modul Finanzen ist nicht aktiv",
+      "moduleInactiveTitle": "Modul Finanzen ist nicht aktiv.",
       "moduleInactiveText": "Aktivieren Sie das Modul unter Einrichtung → Module. Vorhandene Daten bleiben erhalten.",
-      "openModules": "Module öffnen"
+      "openModules": "Module öffnen",
+      "ibanEndsWith": "IBAN endet auf {last}"
     },
     "remedy": {
       "restIntoLastRow": "Rest in diese Zeile eintragen",
@@ -4352,7 +4466,7 @@
       "agentPrepared": "vom Agenten vorbereitet"
     },
     "agent": {
-      "tooltip": "Festschreiben darf nur ein Mensch."
+      "tooltip": "Festschreiben geht nur hier in Kompass, nicht über einen Agenten."
     },
     "channel": {
       "ui": "Oberfläche",
@@ -4369,7 +4483,7 @@
       "reverseCharge": "Sie schulden {amount} Umsatzsteuer (§ 13b) — auch als Kleinunternehmer"
     },
     "amount": {
-      "format": "Bitte einen Betrag wie 12,50 eingeben",
+      "format": "Bitte einen Betrag wie 12,50 eingeben.",
       "exceeds": "Der Teilbetrag übersteigt den Betrag des Kontos.",
       "directionGroup": "Richtung",
       "direction": {
@@ -4387,17 +4501,18 @@
       "photo": "Das ist ein Foto. Kompass nimmt nur PDF — so machen Sie in einer Minute eins daraus: in der Scan-App oder Kamera-App „Als PDF speichern“ wählen, dann hier ablegen.",
       "wrongType": "Kompass nimmt nur PDF-Dateien als Beleg.",
       "dropHere": "Loslassen, um als Beleg anzuhängen",
+      "add": "Beleg nachreichen",
       "dragOrPick": "PDF hierher ziehen oder auswählen",
       "pickFromArchive": "Aus der Akte wählen",
       "none": "Noch kein Beleg.",
-      "open": "öffnen",
-      "remove": "entfernen",
+      "open": "Öffnen",
+      "remove": "Entfernen",
       "replacedBy": "ersetzt durch {number}",
       "dragOrPickImage": "Unterschrift als Bild hierher ziehen oder auswählen",
       "isPdf": "Das ist ein PDF. Hier braucht es ein Bild der Unterschrift (PNG oder JPEG).",
       "wrongTypeImage": "Kompass nimmt nur PNG oder JPEG als Bild der Unterschrift.",
       "tooLarge": "Diese Datei ist größer als {mb} MB.",
-      "replace": "ersetzen"
+      "replace": "Ersetzen"
     },
     "splitRow": {
       "category": "Kategorie",
@@ -4412,29 +4527,30 @@
         "business": "Wirtschaftlicher Geschäftsbetrieb"
       },
       "tax": "Umsatzsteuer",
-      "taxNone": "keine Angabe",
+      "taxNone": "Keine Angabe",
       "taxCode": {
-        "none": "keine Umsatzsteuer",
-        "exemptCounted": "steuerfrei, zählt zur Kleinunternehmergrenze",
-        "exemptNotCounted": "steuerfrei, zählt nicht zur Kleinunternehmergrenze",
-        "reduced": "ermäßigter Satz",
-        "standard": "regulärer Satz",
+        "none": "Keine Umsatzsteuer",
+        "exemptCounted": "Steuerfrei, zählt zur Kleinunternehmergrenze",
+        "exemptNotCounted": "Steuerfrei, zählt nicht zur Kleinunternehmergrenze",
+        "reduced": "Ermäßigter Satz",
+        "standard": "Regulärer Satz",
         "rc13b": "Reverse Charge (§ 13b)",
-        "icAcquisition": "innergemeinschaftlicher Erwerb"
+        "icAcquisition": "Innergemeinschaftlicher Erwerb"
       },
       "contact": "Spender/Empfänger",
       "project": "Projekt",
-      "none": "—",
+      "noProject": "Kein Projekt",
+      "noPurpose": "Kein Zweck",
       "rowMenu": "Zeilenmenü",
       "rowLabel": "Zeile {n}",
       "restIntoHereWithAmount": "Rest hierher — {amount}",
       "restIntoHere": "Rest hierher",
-      "splitEvenly": "gleichmäßig auf {n} teilen",
+      "splitEvenly": "Gleichmäßig auf {n} teilen",
       "duplicate": "Zeile duplizieren",
-      "removeRow": "entfernen",
-      "purposePaidFrom": "bezahlt aus",
+      "removeRow": "Entfernen",
+      "purposePaidFrom": "Bezahlt aus",
       "purposeDeterminedBy": "Spender hat bestimmt für",
-      "abroad": "wird im Ausland verwendet",
+      "abroad": "Wird im Ausland verwendet",
       "addsToAssets": "Zuführung zum Vermögen",
       "purposeOverspent": "Dieser Zweck ist im Minus.",
       "freeFundsRemainder": "Rest aus freien Mitteln"
@@ -4451,9 +4567,9 @@
       "allocationsCount": "{count} Aufteilungen",
       "contactsCount": "{count} Personen",
       "selectRow": "Buchung {number} auswählen",
-      "reversedByLink": "zurückgenommen durch {number}",
-      "reversesLink": "nimmt zurück: {number}",
-      "correctionOfLink": "Ersatz-Entwurf zur Gegenbuchung von {number} — dort weiterarbeiten",
+      "reversedByLink": "zurückgenommen durch <nr>{number}</nr>",
+      "reversesLink": "nimmt zurück: <nr>{number}</nr>",
+      "correctionOfLink": "Ersatz-Entwurf zur Gegenbuchung von <nr>{number}</nr> — dort weiterarbeiten",
       "standing": {
         "text": "festgeschrieben bis {date} · {count, plural, one {# Entwurf} other {# Entwürfe}}, davon {reviewed} geprüft",
         "textUnfinalized": "noch nichts festgeschrieben · {count, plural, one {# Entwurf} other {# Entwürfe}}, davon {reviewed} geprüft"
@@ -4465,7 +4581,7 @@
       "empty": {
         "title": "Noch keine Buchung.",
         "text": "Beginnen Sie mit dem Anfangsbestand Ihres Kontos oder der ersten Einnahme.",
-        "setupAction": "Bankkonten und Kassen einrichten",
+        "setupAction": "Konten einrichten",
         "filteredNoun": "Keine Buchung"
       },
       "columns": {
@@ -4539,7 +4655,7 @@
         "title": "Bestände und vorläufige Summen",
         "collapse": "Einklappen",
         "expand": "Ausklappen",
-        "withReviewed": "einschließlich geprüfter Entwürfe: {amount}",
+        "withReviewed": "einschließlich geprüfter Entwürfe",
         "preliminary": "vorläufig",
         "sphere": {
           "ideal": "Ideeller Bereich",
@@ -4577,7 +4693,7 @@
       "settlement": {
         "toggle": "begleicht offene Zahlung",
         "searchPlaceholder": "Zahlungsreferenz oder Kontakt suchen",
-        "remove": "entfernen",
+        "remove": "Entfernen",
         "unnamed": "Posten vom {date}",
         "amount": "Teilbetrag",
         "rest": "Rest {amount}",
@@ -4613,9 +4729,16 @@
       "pendingVoucher": "wird verknüpft beim Speichern"
     },
     "entryView": {
-      "back": "Zurück zum Journal",
+      "back": "Journal",
       "account": "Konto",
       "allocation": "Wofür?",
+      "allocationColumns": {
+        "category": "Kategorie",
+        "contact": "Spender/Empfänger",
+        "purpose": "Zweck",
+        "amount": "Betrag",
+        "state": "Hinweis"
+      },
       "corrected": "Zuordnung geändert",
       "pendingCorrection": "wartet auf Freigabe",
       "reversedBy": "Zurückgenommen durch die Gegenbuchung.",
@@ -4694,11 +4817,13 @@
           "contact": "Spender/Empfänger",
           "project": "Projekt",
           "purpose": "Zweck",
-          "abroad": "wird im Ausland verwendet"
+          "abroad": "Wird im Ausland verwendet",
+          "noProject": "Kein Projekt",
+          "noPurpose": "Kein Zweck"
         },
         "pathAllocation": "Das ändert die Zuordnung.",
         "numbersElsewhere": "Stimmen Betrag, Datum, Konto, Kategorie oder Umsatzsteuer nicht, nehmen Sie die Buchung über <reverse>Zurücknehmen …</reverse> zurück und erfassen sie neu.",
-        "currentlyValue": "bisher: {value}",
+        "currentContact": "Spender/Empfänger bisher: {value}",
         "pickLine": {
           "title": "Welche Aufteilung?",
           "pending": "wartet auf Freigabe"
@@ -4710,7 +4835,7 @@
         "purposeReasonLabel": "Warum geht der Zweck ins Minus?",
         "proof": {
           "label": "Dokument, das belegt, was die Spenderin bestimmt hat",
-          "hint": "Ohne ein solches Dokument ist es ein „Zweck ändern (Umwidmung)“.",
+          "hint": "Ohne ein solches Dokument ist es eine Umwidmung.",
           "attached": "Dokument angehängt."
         },
         "section153": {
@@ -4732,10 +4857,10 @@
       }
     },
     "cash": {
-      "title": "Barkasse",
+      "title": "Kassen",
       "noAccount": {
         "title": "Noch keine Barkasse",
-        "text": "Für die Barkasse ist noch kein Konto eingerichtet. Legen Sie unter Bankkonten und Kassen eine Kasse an.",
+        "text": "Für die Barkasse ist noch kein Konto eingerichtet. Legen Sie unter Einrichtung → Finanzen → Konten eine Kasse an.",
         "textNoRight": "Für die Barkasse ist noch kein Konto eingerichtet. Anlegen kann es, wer Finanzen einrichten darf.",
         "textNoRightWithNames": "Für die Barkasse ist noch kein Konto eingerichtet. Anlegen kann es, wer Finanzen einrichten darf — das können: {names}.",
         "action": "Barkasse einrichten"
@@ -4753,7 +4878,13 @@
       "lastMovements": {
         "title": "Letzte Kassenbewegungen",
         "toJournal": "Zum Journal",
-        "empty": "Noch keine Bewegung."
+        "empty": "Noch keine Bewegung.",
+        "columns": {
+          "number": "Nr.",
+          "date": "Datum",
+          "text": "Text",
+          "amount": "Betrag"
+        }
       },
       "counts": {
         "title": "Zählungen",
@@ -4780,6 +4911,7 @@
         "counterOne": "Erste zählende Person",
         "counterTwo": "Zweite zählende Person",
         "sameCounter": "Bitte zwei unterschiedliche Personen wählen.",
+        "countersRequired": "Bitte beide Zählenden wählen.",
         "resultLine": "Buchbestand {book} · gezählt {counted}",
         "kind": {
           "surplus": "Kassendifferenz",
@@ -4817,7 +4949,7 @@
       "accountsGroup": "Kassen"
     },
     "accounts": {
-      "title": "Bankkonten und Kassen",
+      "title": "Konten",
       "kind": {
         "bank": "Bankkonto",
         "cash": "Kasse",
@@ -4832,8 +4964,7 @@
       "statementInFuture": "Auszug reicht bis in die Zukunft",
       "reconciliation": {
         "matches": "Stimmt mit dem Auszug vom {date} überein",
-        "differs": "Differenz zum Auszug vom {date}: {amount}",
-        "noStatement": "Kein Auszug für heute"
+        "differs": "Differenz zum Auszug vom {date}: {amount}"
       },
       "ibanReveal": "IBAN aufdecken",
       "ibanHide": "IBAN wieder verbergen",
@@ -4841,7 +4972,7 @@
       "empty": {
         "title": "Noch keine Konten",
         "text": "Legen Sie mindestens ein Bankkonto oder eine Kasse an, um mit Finanzen zu beginnen.",
-        "action": "Bankkonten und Kassen einrichten"
+        "action": "Konten einrichten"
       }
     },
     "imports": {
@@ -4855,11 +4986,11 @@
         "through": "Auszug importiert bis {date}",
         "none": "Noch kein Auszug geladen.",
         "matches": "Stimmt mit dem Auszug vom {date} überein",
-        "differs": "Differenz zum Auszug vom {date}: {amount}",
-        "noStatement": "Kein Auszug für heute"
+        "differs": "Differenz zum Auszug vom {date}: {amount}"
       },
       "upload": {
         "dragOrPick": "Kontoauszug hierher ziehen (CAMT oder CSV, auch mehrere)",
+        "pickOnPhone": "Kontoauszug auswählen",
         "dropHere": "Datei hier ablegen",
         "result": "{new} neu, {known} bereits vorhanden, {held} zurückgehalten",
         "formatChangeDialog": {
@@ -4892,12 +5023,12 @@
       },
       "runs": {
         "empty": "Noch keine Auszüge geladen.",
-        "period": "{from} – {to}",
+        "period": "{from}\u00a0– {to}",
         "opening": "Anfang {amount}",
         "closing": "Ende {amount}",
-        "counts": "{new} neu · {known} bereits vorhanden · {held} zurückgehalten",
-        "loadedBy": "geladen von {name} am {date}",
-        "loadedByUnknown": "geladen am {date}",
+        "countNew": "{count} neu",
+        "countKnown": "{count} bereits vorhanden",
+        "countHeld": "{count} zurückgehalten",
         "state": {
           "finished": "fertig",
           "failed": "fehlgeschlagen",
@@ -4931,6 +5062,7 @@
         },
         "detail": {
           "trigger": "Kontoumsätze anzeigen",
+          "format": "Format: {format}",
           "empty": "Keine Kontoumsätze.",
           "state": {
             "open": "offen"
@@ -4938,9 +5070,20 @@
         },
         "discard": "Verwerfen",
         "amendBalance": "Kontostand nachtragen",
+        "amendBalanceShort": "nachtragen",
         "formatCamt": "CAMT.053",
         "formatCsv": "CSV",
-        "noBalance": "ohne Kontostand"
+        "noBalance": "ohne Kontostand",
+        "columns": {
+          "account": "Konto",
+          "period": "Zeitraum",
+          "format": "Format",
+          "balances": "Kontostand",
+          "counts": "Umsätze",
+          "loaded": "Geladen",
+          "state": "Zustand",
+          "actions": "Aktionen"
+        }
       },
       "amendBalance": {
         "title": "Kontostand nachtragen",
@@ -4957,7 +5100,7 @@
         "failed": "Die Folgen lassen sich gerade nicht ermitteln.",
         "consequence": {
           "rawTransactions": "{count, plural, one {# Kontoumsatz wird gelöscht} other {# Kontoumsätze werden gelöscht}}",
-          "drafts": "{count, plural, one {# Entwurf wird gelöscht} other {# Entwürfe werden gelöscht}} ({reviewed} geprüft)"
+          "drafts": "{count, plural, one {# Entwurf wird gelöscht} other {# Entwürfe werden gelöscht}}{reviewed, plural, =0 {} other { (# geprüft)}}"
         },
         "stays": {
           "vouchers": "{count, plural, one {# Beleg bleibt in der Akte} other {# Belege bleiben in der Akte}}"
@@ -4985,8 +5128,21 @@
       "new": "Offene Zahlung anlegen",
       "tabsGroup": "Wir zahlen noch oder wir erwarten",
       "tabs": {
-        "payable": "Wir zahlen noch",
-        "receivable": "Wir erwarten"
+        "payable": "Wir zahlen",
+        "receivable": "Wir bekommen"
+      },
+      "filter": {
+        "state": "Zustand",
+        "states": {
+          "open": "Offen",
+          "settled": "Erledigt",
+          "overpaid": "Überzahlt",
+          "cancelled": "Erledigt ohne Zahlung"
+        },
+        "nounOne": "Posten",
+        "nounOther": "Posten",
+        "nounDative": "Posten",
+        "emptyNoun": "Kein Posten"
       },
       "columns": {
         "dueOn": "Fällig am",
@@ -5005,6 +5161,7 @@
       },
       "overdue": "überfällig",
       "draftSettlement": "Zahlung liegt als Entwurf vor",
+      "noContact": "Ohne Kontakt",
       "hasOrigin": "eigener Vorgang",
       "empty": {
         "title": "Noch keine offenen Zahlungen",
@@ -5041,8 +5198,10 @@
         "settledByTitle": "Wird beglichen durch",
         "settledByEmpty": "Noch keine Zahlung.",
         "bookNow": "Jetzt buchen",
-        "change": "Ändern",
-        "hasOriginText": "Was mit dem Vorgang geschieht, entscheidet sich an ihm selbst."
+        "change": "Bearbeiten",
+        "origin": "Gehört zu {reference}, <link>dort ändern</link>.",
+        "originNoLink": "Gehört zu {reference} und wird dort geändert.",
+        "originUnnamed": "einem eigenen Vorgang"
       },
       "settleWithoutPayment": {
         "trigger": "Erledigt ohne Zahlung",
@@ -5071,11 +5230,11 @@
     },
     "projectSection": {
       "title": "Finanzen",
-      "target": "Zielbetrag",
       "income": "Einnahmen",
       "expense": "Ausgaben",
       "result": "Ergebnis",
       "noTarget": "Kein Zielbetrag hinterlegt.",
+      "progress": "{income} von {target} ({percent} %)",
       "dialog": {
         "title": "Finanzfelder ändern",
         "target": "Zielbetrag",
@@ -5092,10 +5251,10 @@
     "admin": {
       "title": "Finanzen",
       "tabsLabel": "Bereiche der Finanzen",
-      "description": "Geschäftsjahr, Bankkonten und Kassen, wer welche Rolle trägt, Kategorien, Zwecke, Sätze und Grenzen sowie das Steuerliche.",
+      "description": "Geschäftsjahr, Konten, wer welche Rolle trägt, Kategorien, Zwecke, Sätze und Grenzen sowie das Steuerliche.",
       "tabs": {
         "checklist": "Checkliste",
-        "accounts": "Bankkonten und Kassen",
+        "accounts": "Konten",
         "categories": "Kategorien",
         "purposes": "Zwecke",
         "fiscalYears": "Geschäftsjahre",
@@ -5110,13 +5269,23 @@
           "roles": "Wer welche Rolle trägt",
           "categories": "Kategorien durchsehen",
           "tax": "Steuerliches bestätigen",
-          "importFormat": "Auszugsformat je Bank- und Zahlungsdienstkonto (optional bis zum ersten Auszug)",
-          "notice": "Bescheid des Finanzamts erfassen (optional — ohne Bescheid keine Zuwendungsbestätigungen)",
-          "machineProcedure": "Maschinelles Verfahren einrichten (optional — sonst tragen Bestätigungen ein Unterschriftsfeld)",
-          "waiverBasis": "Aufwandsspenden: Anspruchsgrundlage hinterlegt (optional — nur solange Aufwandsspenden eingeschaltet sind)",
-          "boardRemuneration": "Vergütung des Vorstands bestätigen (optional — sonst Warnung bei Pauschalen an Vorstandsmitglieder)",
-          "boardMembers": "Vorstand am Kontakt: die Rolle „Vorstand“ an den Kontakten der Vorstandsmitglieder (optional — sonst bleiben die Zahlungen an Vorstandsmitglieder leer)",
-          "documentBases": "Eigene Basis für Formulare (optional — nur wenn die Installation eigene Basis-Vorlagen führt)"
+          "importFormat": "Auszugsformat je Bank- und Zahlungsdienstkonto",
+          "notice": "Bescheid des Finanzamts erfassen",
+          "machineProcedure": "Maschinelles Verfahren einrichten",
+          "waiverBasis": "Aufwandsspenden: Anspruchsgrundlage hinterlegt",
+          "boardRemuneration": "Vergütung des Vorstands bestätigen",
+          "boardMembers": "Vorstand am Kontakt: die Rolle „Vorstand“ an den Kontakten der Vorstandsmitglieder",
+          "documentBases": "Eigene Basis für Formulare"
+        },
+        "optional": "Optional",
+        "optionalNotes": {
+          "importFormat": "Bis zum ersten Auszug.",
+          "notice": "Ohne Bescheid keine Zuwendungsbestätigungen.",
+          "machineProcedure": "Sonst tragen Bestätigungen ein Unterschriftsfeld.",
+          "waiverBasis": "Nur solange Aufwandsspenden eingeschaltet sind.",
+          "boardRemuneration": "Sonst Warnung bei Pauschalen an Vorstandsmitglieder.",
+          "boardMembers": "Sonst bleiben die Zahlungen an Vorstandsmitglieder leer.",
+          "documentBases": "Nur wenn die Installation eigene Basis-Vorlagen führt."
         },
         "open": "Erledigen",
         "done": "Erledigt",
@@ -5132,7 +5301,9 @@
           "importFormat": "{missing, plural, one {# Konto} other {# Konten}} ohne Auszugsformat — nehmen Sie CAMT, wenn die Bank es anbietet, sonst richten Sie das CSV-Format ein.",
           "notice": "gültig bis {validUntil}",
           "machineProcedure": "es fehlt: {missing}",
-          "documentBases": "Eigene Basis für Formulare fehlt — Bestätigungen erscheinen im Standardkopf ({missing})"
+          "documentBases": "Eigene Basis für Formulare fehlt — Bestätigungen erscheinen im Standardkopf ({missing})",
+          "boardRemunerationNo": "keine Pauschalen vorgesehen (seit {date})",
+          "boardRemunerationYes": "Pauschalen vorgesehen, gilt ab {date}"
         },
         "machineMissing": {
           "signer": "ein Unterzeichner für heute",
@@ -5151,7 +5322,6 @@
       "accounts": {
         "create": "Konto anlegen",
         "edit": "Konto ändern",
-        "active": "Aktiv",
         "inactiveState": "Stillgelegt",
         "deactivate": "Stilllegen",
       "activate": "Wieder aktivieren",
@@ -5200,7 +5370,6 @@
         },
         "create": "Kategorie anlegen",
         "edit": "Kategorie ändern",
-        "inactiveState": "Stillgelegt",
         "explanation": "Erläuterung",
         "sphere": "Steuerlicher Bereich",
         "spherePlaceholder": "Bitte wählen",
@@ -5306,7 +5475,7 @@
           "dissolved": "Aufgelöst"
         },
         "actions": {
-          "fulfill": "Erfüllt",
+          "fulfill": "Als erfüllt markieren",
           "dissolve": "Auflösen",
           "reopen": "Wieder öffnen"
         },
@@ -5327,14 +5496,9 @@
         "edit": "Geschäftsjahr ändern",
         "designation": "Bezeichnung",
         "range": "Von – bis",
-        "status": "Zustand",
         "taxReturnFiledOn": "Steuererklärung abgegeben am",
         "startsOn": "Beginnt am",
         "endsOn": "Endet am",
-        "statusValues": {
-          "open": "Offen",
-          "closed": "Abgeschlossen"
-        },
         "toast": {
           "created": "Geschäftsjahr angelegt."
         }
@@ -5345,15 +5509,20 @@
         "changeTitle": "{name}: Wert ab Stichtag ändern",
         "validFrom": "Gültig ab",
         "value": "Wert",
-        "shipped": "Ausgeliefert",
+        "shipped": "Vorgabe",
         "override": "Vom Verein überschrieben",
         "revert": "Zurücknehmen",
-        "currentValue": "Aktuell: {display}",
+        "columns": {
+          "name": "Satz oder Grenze",
+          "source": "Herkunft",
+          "actions": "Aktionen"
+        },
         "taxationHint": "Die Besteuerungsform gilt taggenau — eine Änderung wirkt ab dem gewählten Stichtag.",
+        "warnAtPercentHint": "Anteil einer Grenze, ab dem sie als „nähert sich“ gilt: Pauschalen je Person, Zielbetrag eines Zwecks, Höchstbetrag der freien Rücklage.",
         "unitPercent": "{value} %",
         "unitCentsPerKm": "{value} / km",
-        "unitMonths": "{value} Monate",
-        "unitDays": "{value} Tage",
+        "unitMonths": "{value, plural, one {# Monat} other {# Monate}}",
+        "unitDays": "{value, plural, one {# Tag} other {# Tage}}",
         "taxation": {
           "smallBusiness": "Kleinunternehmer",
           "regular": "Regelbesteuerung"
@@ -5385,74 +5554,49 @@
       "tax": {
         "confirmedAt": "Zuletzt bestätigt am {date}.",
         "sections": {
-          "switches": "Schalter",
+          "switches": "Einordnung des Vereins",
+          "waiverBasis": "Aufwandsspenden",
           "boardRemuneration": "Pauschalen an Vorstandsmitglieder",
           "limits": "Grenzen",
           "agent": "Agent"
         },
         "notConfirmed": "Noch nicht bestätigt.",
+        "switchesSaved": "Schalter gespeichert.",
         "isEntrepreneurOrHasVatId": "Ist der Verein Unternehmer oder hat eine Umsatzsteuer-Identifikationsnummer?",
         "membershipFeesCertifiable": "Sind Mitgliedsbeiträge bescheinigungsfähig?",
         "expenseWaiversEnabled": "Werden Aufwandsspenden angeboten?",
         "mcpHumanOnlyAllowed": "Darf ein Agent festschreiben?",
-        "mcpHumanOnlyAllowedHint": "Dieser Schalter lässt sich nur hier am Bildschirm ändern — nie über einen Agenten.",
+        "mcpHumanOnlyAllowedHint": "Dieser Schalter lässt sich nur hier in Kompass ändern, nicht über einen Agenten.",
         "limits": {
           "statementSufficesBelowCents": "Bis zu welchem Betrag genügt der Kontoauszug als Beleg?",
           "cashDonationAlertCents": "Ab welchem Betrag soll eine Barspende auffallen?",
           "roundAmountFromCents": "Ab welchem Betrag ist ein runder Betrag auffällig?",
           "proofGraceDays": "Wie viele Tage Kulanz nach der Nachweisfrist einer Zahlung an Partner, bevor sie als überfällig gilt?",
-          "save": "Speichern",
-          "saved": "Grenze gespeichert.",
+          "saved": "{count, plural, one {Grenze} other {Grenzen}} gespeichert.",
+          "days": "Tage",
           "daysFormat": "Eine ganze Zahl von 0 bis 365."
         },
         "waiverBasis": {
           "label": "Anspruchsgrundlage für Aufwandsspenden",
-          "agreedOnLabel": "Gilt seit",
+          "agreedOnLabel": "Gilt ab",
           "agreedOnHint": "Tag der Vereinbarung oder des Satzungsbeschlusses. Kompass prüft damit, ob der Anspruch vor der Aufwendung vereinbart war.",
           "hint": "Vereinbarung vom … / Satzung § … — ein Vertrag oder die Satzung. Ein Vorstandsbeschluss ohne Ermächtigung in der Satzung genügt nicht. Kompass kopiert den Text beim Einreichen an jeden Antrag mit Verzicht.",
-          "save": "Speichern",
           "saved": "Anspruchsgrundlage gespeichert."
         },
         "boardRemuneration": {
-          "switch": "Pauschalen an Vorstandsmitglieder sind vorgesehen",
+          "question": "Sind Pauschalen an Vorstandsmitglieder vorgesehen?",
+          "yes": "Ja",
+          "no": "Nein",
           "basisLabel": "Satzungsfundstelle",
           "validFromLabel": "Gilt ab",
           "validFromHint": "Ab diesem Tag trägt die Grundlage Pauschalen an Vorstandsmitglieder; frühere Zahlungen bleiben als „ohne Grundlage“ markiert.",
-          "hint": "Ohne diese Bestätigung warnt die Personenübersicht bei jeder Pauschale an ein Vorstandsmitglied."
+          "hint": "Ohne „Ja“ mit Satzungsfundstelle warnt die Personenübersicht bei jeder Pauschale an ein Vorstandsmitglied."
         }
       },
       "permissions": {
         "activity": "Tätigkeit",
-        "granted": "Erlaubt",
-        "yes": "Ja",
-        "navigation": "Sichtbare Navigationseinträge",
-        "navigationNone": "keine",
-        "holders": "Trägt diese Rolle",
-        "nobody": "niemand",
-        "navKeys": {
-          "finance": {
-            "work": "Arbeitsliste",
-            "workForeign": "Fremdes Geld",
-            "workVouchers": "Belege ohne Buchung",
-            "rules": "Regeln",
-            "imports": "Hochgeladene Auszüge",
-            "entries": "Journal",
-            "accounts": "Bankkonten und Kassen",
-            "openItems": "Offene Zahlungen",
-            "cash": "Barkasse",
-            "donations": "Bestätigungen",
-            "donationRun": "Serienlauf",
-            "donationBook": "Spendenbuch",
-            "donationNotices": "Bescheide",
-            "expenses": "Eigene Anträge",
-            "approvals": "Freigaben",
-            "partners": "Partner",
-            "purposes": "Zwecke",
-            "reserves": "Zurückgelegtes Geld",
-            "people": "Personen",
-            "admin": "Finanzen einrichten"
-          }
-        }
+        "grantedTo": "erteilt an {roles}",
+        "grantedToNone": "an keine Rolle erteilt"
       }
     },
     "csvAssistant": {
@@ -5578,7 +5722,7 @@
         "saveAndLoad": "Speichern und Auszug laden",
         "saveOnly": "Nur speichern"
       },
-      "back": "Zurück",
+      "cancelTarget": "Hochgeladene Auszüge",
       "next": "Weiter",
       "switchDialog": {
         "title": "Auszugsformat wechseln?",
@@ -5638,6 +5782,15 @@
         "contactEmail": "Kontakt über E-Mail",
         "contactName": "Kontakt über Namen",
         "paymentFee": "Gebühr des Zahlungsdienstes"
+      },
+      "legend": {
+        "link": "passt zu einer Buchung",
+        "pair": "Umbuchung",
+        "cash": "Barkasse",
+        "return": "Rückgabe",
+        "openItem": "offene Zahlung",
+        "rule": "Regel",
+        "contact": "Kontakt erkannt"
       },
       "keys": {
         "label": "Tastenkürzel",
@@ -5719,7 +5872,7 @@
       },
       "actions": {
         "accept": "Übernehmen und geprüft",
-        "edit": "Ändern",
+        "edit": "Bearbeiten",
         "skip": "Überspringen",
         "rule": "Künftig immer so?",
         "foreign": "Gehört nicht dem Verein",
@@ -5791,7 +5944,7 @@
         "chooseCategory": "Kategorie wählen",
         "project": "Projekt",
         "purpose": "Zweck",
-        "none": "– keines –",
+        "none": "Keines",
         "contact": "Kontakt",
         "taxCode": "Umsatzsteuer",
         "taxFromCategory": "wie bei der Kategorie",
@@ -5811,7 +5964,7 @@
         "holder": "Für wen ist das Geld?",
         "holderHint": "Der Satz steht im Buchungstext.",
         "returns": "Rückzahlung von",
-        "returnsNone": "– keine: neues fremdes Geld –",
+        "returnsNone": "Keine: neues fremdes Geld",
         "returnsOption": "{date} · {holder} · {amount}",
         "save": "Als fremdes Geld buchen"
       },
@@ -5862,7 +6015,7 @@
         "statementOf": "{amount} (Auszug bis {date})",
         "matches": "stimmt",
         "cash": "kein Auszug — Kasse wird gezählt",
-        "noStatement": "noch kein Auszug",
+        "noStatement": "kein Auszug für diesen Zeitraum",
         "differs": "Nach dem Festschreiben weicht der Buchbestand von {account} um {difference} vom Auszug bis {date} ab. Das kann richtig sein, wenn noch Umsätze offen sind.",
         "negative": "Das Konto {account} stünde danach bei {amount}. Meist fehlt ein Auszug.",
         "numbers": "{count, plural, one {# Nummer wird} other {# Nummern werden}} vergeben.",
@@ -5885,7 +6038,7 @@
           "holder": "Für wen",
           "amount": "Offen",
           "entry": "Buchung",
-          "draft": "Entwurf",
+          "openEntry": "Buchung öffnen",
           "passedOn": "Weitergegeben",
           "passedOnTitle": "Geld weitergegeben?",
           "passedOnText": "Der Ausgang erscheint mit dem nächsten Auszug. Wählen Sie ihn in der Arbeitsliste, dann „Gehört nicht dem Verein“ und unter „Rückzahlung von“ diesen Eingang ({holder}, {amount}).",
@@ -5911,9 +6064,7 @@
           "condition": "Wenn",
           "result": "Dann",
           "hits": "Treffer",
-          "active": "Aktiv",
-          "yes": "ja",
-          "no": "nein",
+          "state": "Zustand",
           "categoryInactive": "Kategorie stillgelegt",
           "edit": "Bearbeiten",
           "delete": "Löschen",
@@ -5936,7 +6087,6 @@
       "toEntry": "Zu Buchung machen",
       "invoice": {
         "title": "Aus der Rechnung",
-        "toggle": "Aus der Rechnung",
         "loading": "Kompass liest die Rechnung aus dem PDF …",
         "noInvoice": "Dieses PDF enthält keine elektronische Rechnung.",
         "seller": "Lieferant",
@@ -6021,7 +6171,6 @@
         "contact": "Spender",
         "kind": "Art",
         "amount": "Betrag",
-        "period": "Zeitraum",
         "sent": "Versandt",
         "state": "Zustand"
       },
@@ -6031,7 +6180,6 @@
         "collective": "Sammel"
       },
       "state": {
-        "valid": "gültig",
         "voided": "zurückgenommen",
         "toCorrect": "zu korrigieren",
         "needsSignature": "Unterschrift fehlt"
@@ -6184,7 +6332,11 @@
           "machine": "maschinell erstellt",
           "signatureField": "mit Unterschriftsfeld"
         },
-        "humanOnly": "Ausstellen kann nur ein Mensch — nicht über ein Werkzeug für Agenten.",
+        "humanOnly": "Ausstellen geht nur hier in Kompass, nicht über einen Agenten.",
+        "signatureReason": {
+          "machine": "Kompass setzt Name und Unterschrift der unterzeichnenden Person ein.",
+          "signatureField": "Die Bestätigung wird nach dem Ausdruck von Hand unterschrieben."
+        },
         "submit": "Ausstellen",
         "toast": {
           "issued": "Bestätigung {number} ausgestellt"
@@ -6216,14 +6368,15 @@
         "title": "Bestätigung {number} zurücknehmen",
       "description": "Die Bestätigung verliert ihre Gültigkeit. Das lässt sich nicht zurücknehmen.",
         "reason": "Grund",
-        "alreadySent": "Bereits versandt?",
+        "alreadySent": "Bereits versandt",
+        "reasonMissing": "Zuerst einen Grund angeben.",
         "alreadySentFixed": "Der Versand ist vermerkt — die Rückholspur gehört dazu. Fehlende Daten lassen sich später nachtragen.",
         "trailTitle": "Rückholspur",
         "trailHint": "Ist die Bestätigung schon beim Spender, gehört die Rückholspur dazu: Original zurückfordern und das Finanzamt informieren.",
         "originalReturnedOn": "Original zurück am",
         "taxOfficeInformedOn": "Finanzamt informiert am",
         "consequences": {
-          "lines": "{count, plural, one {Zuwendung wird wieder bestätigbar} other {Zuwendungen werden wieder bestätigbar}}"
+          "lines": "{count, plural, one {# Zuwendung wird wieder bestätigbar} other {# Zuwendungen werden wieder bestätigbar}}"
         },
         "stays": {
           "copy": "Unser Exemplar bleibt in der Akte.",
@@ -6265,14 +6418,12 @@
       },
       "signature": {
         "done": "erledigt",
-        "open": "offen",
         "steps": {
           "created": "Bestätigung erzeugt",
           "print": "Drucken und unterschreiben",
-          "printHint": "Unser Exemplar ausdrucken und von Hand unterschreiben lassen.",
           "printAction": "Unser Exemplar öffnen",
           "upload": "Unterschriebene Fassung als Eingang ablegen",
-          "linked": "Mit der Bestätigung verknüpft"
+          "uploadHint": "Wird als eigenes Dokument in der Akte abgelegt und mit {number} verknüpft."
         },
         "empty": {
           "title": "Keine Unterschrift offen",
@@ -6286,9 +6437,9 @@
       "entrySection": {
         "title": "Bestätigung",
         "confirmed": "Bestätigung {number} vom {date}",
-        "none": "keine",
-        "noContact": "keine — ohne Spender nicht bestätigbar",
-        "noDonation": "keine — kein Spendeneingang",
+        "none": "Noch keine Bestätigung",
+        "noContact": "Keine Bestätigung — ohne Spender nicht bestätigbar",
+        "noDonation": "Kein Spendeneingang, nichts zu bestätigen.",
         "issue": "Ausstellen"
       },
       "notices": {
@@ -6296,6 +6447,7 @@
         "description": "Die Bescheide des Finanzamts, auf die sich Zuwendungsbestätigungen berufen — gültig taggenau, nie gelöscht.",
         "add": "Bescheid erfassen",
         "tableLabel": "Bescheide des Finanzamts",
+        "withoutDocument": "ohne Dokument",
         "columns": {
           "notice": "Bescheid",
           "noticeDate": "Vom",
@@ -6309,11 +6461,12 @@
           "endsOn": "gültig — endet mit Ablauf des {date}",
           "expired": "abgelaufen",
           "superseded": "aufgehoben oder ersetzt am {date}",
+          "supersededShort": "ersetzt",
+          "supersededOn": "am {date}",
           "supersededByFinal": "durch den endgültigen Bescheid ersetzt",
           "voided": "irrtümlich erfasst",
           "future": "künftig"
         },
-        "noDocument": "keins",
         "assessmentPeriodLine": "Veranlagungszeitraum {period}",
         "empty": {
           "title": "Noch kein Bescheid erfasst",
@@ -6324,8 +6477,7 @@
         "actions": {
           "supersede": "Aufgehoben oder ersetzt am …",
           "void": "Irrtümlich erfasst",
-          "attach": "Dokument nachreichen",
-          "menu": "Aktionen zu {name}"
+          "attach": "Dokument nachreichen"
         },
         "dialog": {
           "title": "Bescheid erfassen",
@@ -6427,6 +6579,7 @@
           "notifiedOn": "Angezeigt beim Finanzamt am",
           "save": "Speichern"
         },
+        "replaceFacsimile": "Ersetzen",
         "letter": "Anzeigeschreiben als Entwurf erzeugen",
         "letterHint": "Das Schreiben an das Finanzamt entsteht als Entwurf in der Akte; Sie prüfen, drucken und versenden es dort.",
         "letterBlockedTitle": "Das Anzeigeschreiben braucht die Akte",
@@ -6459,7 +6612,10 @@
           "include": "{name} wieder aufnehmen",
           "unknownContact": "Kontakt ohne Leserecht",
           "show": "Vorschau zeigen",
-          "apply": "Neu rechnen",
+          "change": "Ändern",
+          "summaryYear": "Jahr {year}",
+          "summaryMinimum": "Mindestbetrag {amount}",
+          "summaryNoMinimum": "ohne Mindestbetrag",
           "followUp": "Nachzügler-Lauf zum Serienlauf vom {date} — die Vorschau zeigt nur, was noch fehlt."
         },
         "groups": {
@@ -6467,7 +6623,8 @@
           "needsSignature": "braucht Unterschrift",
           "addressMissing": "Anschrift fehlt",
           "blocked": "blockiert",
-          "heading": "{group} · {count, plural, one {# Bestätigung} other {# Bestätigungen}}"
+          "heading": "{group} · {count, plural, one {# Bestätigung} other {# Bestätigungen}}",
+          "count": "{count, plural, one {# Bestätigung} other {# Bestätigungen}}"
         },
         "lines": "{count, plural, one {# Zuwendung} other {# Zuwendungen}}",
         "linesWithSingly": "{count} von {all} Zuwendungen; {singly} bereits einzeln bestätigt",
@@ -6532,6 +6689,8 @@
           "rangeNone": "keine Nummer",
           "issuedOn": "Ausstellungsdatum {date}",
           "submit": "{count, plural, one {# Bestätigung ausstellen} other {# Bestätigungen ausstellen}}",
+          "submitNone": "Bestätigungen ausstellen",
+          "open": "Offen: {count} ({reasons})",
           "noPermission": "Ausstellen braucht das Recht „Zuwendungsbestätigungen ausstellen“."
         },
         "progress": {
@@ -6543,6 +6702,7 @@
         },
         "result": {
           "summary": "{issued} von {total, plural, one {# Bestätigung} other {# Bestätigungen}} ausgestellt",
+          "summaryWithSkipped": "{issued} ausgestellt, {skipped} übersprungen",
           "startedOn": "Serienlauf {year}, ausgestellt am {date}",
           "followUpOf": "Nachzügler-Lauf",
           "bundles": "Zum Drucken",
@@ -6579,17 +6739,15 @@
             "startedOn": "Ausgestellt am",
             "issued": "Ausgestellt",
             "state": "Stand",
-            "dispatched": "Versand",
-            "open": "Lauf"
+            "dispatched": "Versand"
           },
           "issued": "{issued} von {total}",
+          "issuedWithSkipped": "{issued} ausgestellt, {skipped} übersprungen",
           "state": {
             "running": "läuft",
-            "finished": "abgeschlossen",
             "withFailures": "abgeschlossen, {count} nicht ausgestellt"
           },
-          "followUp": "Nachzügler",
-          "open": "Öffnen"
+          "followUp": "Nachzügler"
         },
         "errorCode": {
           "confirmationLineNotFinal": "Buchung nicht festgeschrieben",
@@ -6631,9 +6789,7 @@
           "purpose": "Zweck",
           "confirmed": "Bestätigt mit"
         },
-        "anonymous": "anonym",
-        "noPurpose": "—",
-        "notConfirmed": "—",
+        "anonymous": "Anonym",
         "collectiveSuffix": "Sammel",
         "filter": {
           "anonymous": "Nur anonyme Zuwendungen"
@@ -6643,11 +6799,16 @@
           "text": "Für dieses Jahr stehen noch keine bescheinigungsfähigen Zuwendungen im Buch."
         },
         "reconciliation": {
-          "title": "Abstimmung: Zuwendungen ↔ Bestätigungen",
+          "title": "Abstimmung mit den Bestätigungen",
           "donations": "Zuwendungen",
           "confirmed": "Bestätigt",
           "difference": "Differenz",
           "reasonsTitle": "Differenz nach Gründen",
+          "columns": {
+            "reason": "Grund",
+            "count": "Anzahl",
+            "amount": "Betrag"
+          },
           "reason": {
             "belowMinimum": "Unter dem Mindestbetrag",
             "addressMissing": "Anschrift fehlt",
@@ -6674,9 +6835,17 @@
     "expenses": {
       "new": {
         "title": "Auslage einreichen",
+        "deleteDraft": {
+          "item": "Entwurf löschen …",
+          "title": "Entwurf löschen?",
+          "description": "Der Entwurf verschwindet mit seinen Positionen. Hochgeladene Belege bleiben in der Akte.",
+          "confirm": "Entwurf löschen"
+        },
         "intro": "Kompass sichert Ihre Eingaben laufend. Sie können jederzeit aufhören und später weitermachen – auch an einem anderen Gerät.",
         "back": "Eigene Anträge",
         "forWhom": "Für wen?",
+        "forWhomValue": "{name} (Sie selbst)",
+        "forWhomFixed": "Sie reichen Auslagen nur für sich selbst ein.",
         "positions": "Positionen",
         "position": "Position {n}",
         "kind": {
@@ -6721,7 +6890,7 @@
         },
         "pdf": {
           "choose": "PDF wählen",
-          "replace": "ersetzen",
+          "replace": "Ersetzen",
           "uploading": "Wird abgelegt …",
           "photo": "Das ist ein Foto. Kompass nimmt nur PDF.",
           "notPdf": "Das ist kein PDF. Kompass nimmt nur PDF.",
@@ -6779,9 +6948,9 @@
         "rejected": "abgelehnt"
       },
       "sentence": {
-        "draft": "Entwurf vom {date} — noch nicht eingereicht",
-        "submitted": "am {date} — wartet auf Freigabe",
-        "approved": "freigegeben am {date} — wird überwiesen",
+        "draft": "vom {date}, noch nicht eingereicht",
+        "submitted": "am {date}, wartet auf Freigabe",
+        "approved": "am {date}, wird überwiesen",
         "paid": "überwiesen am {date}",
         "rejected": "{note}"
       },
@@ -6792,15 +6961,13 @@
         "open": "Offen",
         "done": "Erledigt",
         "draftNumber": "Entwurf",
+        "amountMissing": "Betrag fehlt",
         "openTruncated": "Es werden die jüngsten {shown} von {total} offenen Anträgen gezeigt.",
         "emptyTitle": "Noch kein Antrag",
         "emptyText": "Was Sie für den Verein ausgelegt haben, reichen Sie hier ein – mit Beleg als PDF oder als Fahrt.",
         "next": {
-          "draft": "Weiter ausfüllen und einreichen",
           "submitted": "Freigeben kann: {names}",
           "submittedNobody": "Zurzeit kann niemand außer Ihnen freigeben.",
-          "approved": "Die Überweisung folgt.",
-          "paid": "Erledigt.",
           "rejected": "Sie können den Antrag neu einreichen."
         },
         "blocked": {
@@ -6812,10 +6979,12 @@
         "back": "Eigene Anträge",
         "title": "Antrag {number}",
         "amount": "Betrag",
-        "waiver": "Sie verzichten auf die Erstattung und bekommen dafür eine Zuwendungsbestätigung.",
+        "waiverLabel": "Verzicht auf Erstattung",
+        "waiverYes": "Ja. Statt Geld bekommen Sie eine Zuwendungsbestätigung über den Betrag.",
+        "waiverFixed": "Festgelegt beim Einreichen am {date}.",
         "hint": {
           "submitted": "Ein eingereichter Antrag lässt sich nicht mehr ändern. Er wartet auf die Freigabe; bei Fragen wenden Sie sich an die Person, die freigibt.",
-          "approved": "Der Antrag ist freigegeben. Die Überweisung auf {iban} folgt.",
+          "approved": "Der Antrag ist freigegeben. Die Überweisung auf <iban></iban> folgt.",
           "approvedWaiver": "Der Antrag ist freigegeben. Ihre Zuwendungsbestätigung stellt der Verein aus.",
           "paid": "Der Betrag ist überwiesen.",
           "rejected": "Der Antrag ist abgelehnt. Sie können ihn als Entwurf kopieren, ändern und neu einreichen."
@@ -6860,18 +7029,18 @@
         "inactive": "deaktiviert",
         "columns": {
           "partner": "Partner",
-          "status": "Status",
+          "status": "Einordnung",
           "usualBasis": "übliche Art",
           "openProofs": "offene Nachweise",
           "lastPaid": "zuletzt gezahlt"
         },
         "overdue": "{count} überfällig",
         "emptyTitle": "Noch kein Partner.",
-        "emptyText": "Noch kein Partner angelegt.",
+        "emptyText": "Partner sind Organisationen oder Personen, an die der Verein Geld oder Sachen weitergibt.",
         "create": {
           "title": "Partner anlegen",
           "contact": "Kontakt",
-          "status": "Status",
+          "status": "Einordnung",
           "save": "Anlegen"
         }
       },
@@ -6883,12 +7052,14 @@
             "documents": "Unterlagen"
           },
           "title": "Angaben zum Partner",
-          "status": "Status",
+          "status": "Einordnung",
           "usualBasis": "Übliche Art",
           "usualBasisDerived": "ergibt sich aus dem Status",
           "usualProofMonths": "Übliche Nachweisfrist",
           "months": "{count, plural, one {# Monat} other {# Monate}}",
-          "legalFormNone": "Rechtsform nicht angegeben – am Kontakt pflegen",
+          "legalFormNone": "Rechtsform nicht angegeben",
+          "legalFormEdit": "am Kontakt pflegen",
+          "legalForm": "Rechtsform: {legalForm}",
           "basisQuestion": "Wie arbeitet der Partner mit Ihrem Geld?",
           "basisCards": {
             "transfer58": "Der Partner entscheidet selbst, wofür er das Geld einsetzt",
@@ -7007,10 +7178,10 @@
           "amount": "Betrag",
           "category": "Kategorie",
           "project": "Projekt",
-          "paidFrom": "bezahlt aus",
+          "paidFrom": "Bezahlt aus",
           "freeFunds": "freie Mittel",
           "goodsLine": "Ausgabe",
-          "remove": "entfernen"
+          "remove": "Entfernen"
         },
         "paidLines": {
           "title": "Bezahlte Zeile wählen",
@@ -7033,6 +7204,7 @@
           "paid": "gezahlt",
           "acknowledged": "Nachweis anerkannt"
         },
+        "history": "Verlauf",
         "head": {
           "withDue": "{basis} · {amount} · Nachweisfrist {date}",
           "withMonths": "{basis} · {amount} · Nachweisfrist {count, plural, one {# Monat} other {# Monate}} nach der Zahlung",
@@ -7082,7 +7254,7 @@
           "linkSave": "Verknüpfen",
           "done": "belegt",
           "optional": "zusätzlich",
-          "count": "{done} von {total} Pflicht-Nachweisen",
+          "count": "{complete, select, yes {{done, plural, one {# Pflicht-Nachweis} other {# Pflicht-Nachweise}} belegt} other {{done} von {total} Pflicht-Nachweisen belegt}}{extra, plural, =0 {} other {, # zusätzlich}}",
           "documentHidden": "Dokument ohne Zugriff auf die Akte",
           "explanationShort": "Erläuterung: „{text}“",
           "missingExplanation": "deutsche Erläuterung fehlt",
@@ -7120,9 +7292,9 @@
         "expenseClaim": "Auslage",
         "waiver": "Verzicht",
         "partnerPayment": "Zahlung an Partner",
-        "purposeTransfer": "Zweck ändern"
+        "purposeTransfer": "Umwidmung"
       },
-      "partnerNoNumber": "Nummer mit der Freigabe",
+      "partnerNoNumber": "Noch ohne Nummer — sie kommt mit der Freigabe",
       "partnerCreatedBy": "angelegt von {name}",
       "partnerRetroactive": "nachträglich",
       "partnerOverride": "Art übersteuert: {reason}",
@@ -7152,7 +7324,7 @@
       },
       "head": {
         "receivedAt": "eingegangen am {at}",
-        "iban": "Erstattung auf {iban}",
+        "iban": "Erstattung auf <iban></iban>",
         "noIban": "Verzicht – es wird nichts überwiesen."
       },
       "ibanUnknown": "IBAN ist neu für diese Person.",
@@ -7162,7 +7334,7 @@
       "trip": "Fahrt {from} – {to}, {km} km",
       "category": "Kategorie",
       "categoryPlaceholder": "Kategorie wählen",
-      "paidFrom": "bezahlt aus",
+      "paidFrom": "Bezahlt aus",
       "freeFunds": "freie Mittel",
       "project": "Projekt: {name}",
       "suggestion": {
@@ -7205,7 +7377,7 @@
       "footer": {
         "payable": "Nach der Freigabe entsteht eine offene Zahlung an {name} über {amount}.",
         "waiver": "Nach der Freigabe steht eine Aufwandsspende von {name} über {amount} als Buchung.",
-        "humanOnly": "Freigeben kann nur ein Mensch.",
+        "humanOnly": "Freigeben geht nur hier in Kompass, nicht über einen Agenten.",
         "approve": "Freigeben",
         "reject": "Ablehnen",
         "refused": "Noch nicht freigegeben"
@@ -7253,7 +7425,7 @@
       "transferReject": {
         "trigger": "Ablehnen",
         "title": "Umwidmung {number} ablehnen",
-        "who": "Den Grund liest {name} am Antrag „Zweck ändern“."
+        "who": "Den Grund liest {name} an der Umwidmung."
       },
       "transferApprove": {
         "trigger": "Umwidmung freigeben"
@@ -7286,7 +7458,7 @@
       },
       "detail": {
         "movements": "Bewegungen",
-        "transfer": "Zweck ändern (Umwidmung)",
+        "transfer": "Umwidmen",
         "fulfill": "Als erfüllt kennzeichnen",
         "fulfillWithRest": "Als erfüllt kennzeichnen …",
         "fulfillConfirmTitle": "„{name}“ als erfüllt kennzeichnen?",
@@ -7305,7 +7477,7 @@
           "text": "Text",
           "counterparty": "Spender/Empfänger"
         },
-        "fulfillConfirm": "Es bleiben {amount} Rest. Der Zweck zeigt danach „erfüllt, {amount} Rest“ — über „Zweck ändern“ lässt sich der Rest einem anderen Zweck oder den freien Mitteln zuordnen.",
+        "fulfillConfirm": "Es bleiben {amount} Rest. Der Zweck zeigt danach „erfüllt, {amount} Rest“ — über „Umwidmen“ lässt sich der Rest einem anderen Zweck oder den freien Mitteln zuordnen.",
         "fulfillConfirmButton": "Trotzdem als erfüllt kennzeichnen",
         "fulfilled": "Als erfüllt gekennzeichnet.",
         "reopened": "Der Zweck ist wieder offen."
@@ -7323,10 +7495,11 @@
         "save": "Wieder öffnen"
       },
       "transferDialog": {
-        "title": "Zweck ändern (Umwidmung)",
+        "title": "Umwidmung",
         "from": "Von",
         "to": "Nach",
-        "freeFunds": "freie Mittel",
+        "choose": "Bitte wählen",
+        "freeFunds": "Freie Mittel",
         "amount": "Betrag",
         "date": "Datum",
         "reason": "Begründung",
@@ -7340,10 +7513,11 @@
         "reasonPlaceholder": "z. B. Zweck erfüllt, Rest laut Beschluss in die freien Mittel",
         "documentLabel": "Dokument",
         "documentRequired": "Pflicht — ohne Beleg für die Entscheidung keine Umwidmung.",
-        "documentRemove": "entfernen",
+        "documentRemove": "Entfernen",
         "refuseTitle": "So geht es noch nicht",
         "submit": "Zur Freigabe geben",
         "missing": {
+          "to": "Wählen Sie, wohin das Geld wechselt.",
           "purposes": "Wählen Sie, von welchem Zweck oder nach welchem Zweck das Geld wechselt — beides „freie Mittel“ geht nicht.",
           "same": "„Von“ und „Nach“ sind derselbe Zweck.",
           "amount": "Der Betrag fehlt oder ist nicht größer als null.",
@@ -7369,6 +7543,9 @@
       "empty": "Noch kein Geld zurückgelegt.",
       "create": "Geld zurücklegen",
       "cap": {
+        "approximation": "Näherung, den genauen Wert nennt Ihre Steuerberatung.",
+        "derivation": "{assetShare} % des Überschusses der Vermögensverwaltung ({asset}) plus {otherShare} % der übrigen zeitnah zu verwendenden Mittel ({other}).",
+        "derivationInfo": "Rechnung zum Höchstbetrag {year}",
         "label": "Höchstbetrag der freien Rücklage {year}: {cap}",
         "labelProvisional": "Höchstbetrag der freien Rücklage {year} (vorläufig, Jahr nicht abgeschlossen): {cap}",
         "heading": "Höchstbetrag der freien Rücklage {year}",
@@ -7376,7 +7553,6 @@
         "noCapYet": "noch kein Höchstbetrag",
         "figure": "{used} von {cap} genutzt",
         "over": "{over} über dem Höchstbetrag — jede Zuführung darüber steht mit ihrer Begründung am Vorgang.",
-        "derivation": "Näherung: {assetShare} % des Überschusses der Vermögensverwaltung ({asset}) plus {otherShare} % der übrigen zeitnah zu verwendenden Mittel ({other}); den genauen Wert nennt Ihre Steuerberatung.",
         "noYear": "Für heute gibt es kein Geschäftsjahr — der Höchstbetrag lässt sich nicht rechnen."
       },
       "columns": {
@@ -7385,7 +7561,7 @@
         "purpose": "Zweck",
         "resolution": "Beschluss",
         "balance": "Bestand",
-        "action": "Vorgang"
+        "action": "Aktionen"
       },
       "kinds": {
         "projectFunds": "Projekt- und Betriebsmittel",
@@ -7400,10 +7576,17 @@
         "participation": "§ 62 Abs. 1 Nr. 4 AO"
       },
       "dissolved": "aufgelöst",
-      "movementTrigger": "Vorgang",
+      "movementTrigger": "Vorgang …",
       "resolution": {
+        "label": "Beschluss",
         "pick": "Beschluss auswählen",
-        "upload": "oder als PDF hochladen"
+        "chosenFile": "Gewählt: {name}"
+      },
+      "missing": {
+        "amount": "Zuerst einen Betrag angeben.",
+        "date": "Zuerst ein Datum angeben.",
+        "resolution": "Zuerst einen Beschluss wählen oder hochladen.",
+        "resolutionTwice": "Nur einen Beschluss: aus der Akte oder hochgeladen."
       },
       "movement": {
         "title": "Vorgang: {name}",
@@ -7442,7 +7625,6 @@
       "inactive": "stillgelegt",
       "carryForwardLine": "Vortrag {amount} zum {date}",
       "menu": {
-        "label": "Aktionen zu {name}",
         "edit": "Bearbeiten",
         "replaceResolution": "Beschluss ersetzen",
         "carryForward": "Vortrag erfassen",
@@ -7506,6 +7688,7 @@
         "columns": {
           "date": "Datum",
           "person": "Person",
+          "state": "Zustand",
           "role": "Rolle am Kontakt",
           "amount": "Betrag",
           "approvedBy": "freigegeben von",
@@ -7525,7 +7708,7 @@
           "partnerPayment": "Zahlung an Partner {number}"
         }
       },
-      "pageTitle": "Personenübersicht {year}",
+      "pageTitle": "Personenübersicht",
       "yearChoice": "Jahr",
       "allowancesHeading": "Pauschalen und Erstattungen",
       "allowancesHeadingCalendar": "Pauschalen und Erstattungen {year} (Kalenderjahr)",
@@ -7534,8 +7717,8 @@
     },
     "errors": {
       "humanOnly": {
-        "reason": "Diesen Schritt führt ein Mensch in der Oberfläche aus.",
-        "remedy": "Der Verein kann ihn für MCP freigeben: Einrichtung → Finanzen → Steuerliches → „Darf ein Agent festschreiben?“ einschalten."
+        "reason": "Dieser Schritt geht nur hier in Kompass, nicht über einen Agenten.",
+        "remedy": "Der Verein kann ihn für Agenten freigeben: Einrichtung → Finanzen → Steuerliches → „Darf ein Agent festschreiben?“ einschalten."
       },
       "accountInUse": {
         "reason": "Auf dieses Konto ist bereits gebucht.",
@@ -7586,7 +7769,7 @@
         "remedy": "Ein Entwurf wird gelöscht, nicht zurückgenommen."
       },
       "entryUnbalanced": {
-        "reason": "Es sind noch {rest, number, ::currency/EUR scale/0.01} zu verteilen: Die Konten ergeben {money, number, ::currency/EUR scale/0.01}, die Zuordnungen {allocated, number, ::currency/EUR scale/0.01}.",
+        "reason": "Es sind noch {rest} zu verteilen: Die Konten ergeben {money}, die Zuordnungen {allocated}.",
         "remedy": "Ergänzen oder ändern Sie eine Aufteilung, bis beide Summen gleich sind."
       },
       "entryEmpty": {
@@ -7594,12 +7777,12 @@
         "remedy": "Fügen Sie mindestens ein Konto oder ein Zuordnungspaar hinzu."
       },
       "entryDateInFuture": {
-        "reason": "Das Buchungsdatum {date, date, ::ddMMyyyy} liegt nach heute ({today, date, ::ddMMyyyy}).",
+        "reason": "Das Buchungsdatum {date} liegt nach heute ({today}).",
         "remedy": "Ändern Sie das Datum, oder warten Sie, bis der Tag erreicht ist."
       },
       "accountInactive": {
         "reason": "Das Konto {account} ist stillgelegt.",
-        "remedy": "Wählen Sie ein aktives Konto oder aktivieren Sie es unter Einrichtung → Finanzen → Bankkonten und Kassen."
+        "remedy": "Wählen Sie ein aktives Konto oder aktivieren Sie es unter Einrichtung → Finanzen → Konten."
       },
       "categoryInactive": {
         "reason": "Die Kategorie {category} ist stillgelegt.",
@@ -7610,7 +7793,7 @@
         "remedy": "Buchen Sie im laufenden Jahr, oder öffnen Sie das Jahr wieder (Recht „Geschäftsjahr abschließen“)."
       },
       "noFiscalYearForDate": {
-        "reason": "Für den {date, date, ::ddMMyyyy} gibt es noch kein Geschäftsjahr.",
+        "reason": "Für den {date} gibt es noch kein Geschäftsjahr.",
         "remedy": "Ein Geschäftsjahr anlegen kann {names}."
       },
       "cashDraftNotAllowed": {
@@ -7618,11 +7801,11 @@
         "remedy": "Buchen Sie den Vorgang in einem Zug (festschreiben beim Speichern)."
       },
       "cashWouldGoNegative": {
-        "reason": "Das Barkonto {account} wäre am {date, date, ::ddMMyyyy} mit {amount, number, ::currency/EUR scale/0.01} im Minus.",
+        "reason": "Das Barkonto {account} stünde am {date} bei {amount}.",
         "remedy": "Prüfen Sie Datum und Betrag, oder buchen Sie zuerst die fehlende Einnahme oder Abhebung."
       },
       "cashNegativeNeedsReason": {
-        "reason": "Durch diese Rücknahme wäre das Barkonto {account} am {date, date, ::ddMMyyyy} mit {amount, number, ::currency/EUR scale/0.01} im Minus.",
+        "reason": "Durch diese Rücknahme stünde das Barkonto {account} am {date} bei {amount}.",
         "remedy": "Geben Sie eine Begründung an; der Zeitraum steht dann im Prüfpaket."
       },
       "entryAlreadyReversed": {
@@ -7638,7 +7821,7 @@
         "remedy": "Der Sammellauf nimmt nur geprüfte Entwürfe: Prüfen Sie sie zuerst, oder schreiben Sie sie einzeln fest."
       },
       "noTaxRateForDate": {
-        "reason": "Für den {date, date, ::ddMMyyyy} ist kein Umsatzsteuersatz hinterlegt.",
+        "reason": "Für den {date} ist kein Umsatzsteuersatz hinterlegt.",
         "remedy": "Tragen Sie den Satz unter Einrichtung → Finanzen → Sätze und Grenzen mit seinem Stichtag ein."
       },
       "voucherTypeNotAllowed": {
@@ -7774,7 +7957,7 @@
         "remedy": "Wählen Sie den heutigen Tag oder einen vergangenen."
       },
       "cashCountDenominationsMismatch": {
-        "reason": "Die Stückelung ergibt {denominationSum, number, ::currency/EUR scale/0.01}, gezählt wurden {countedCents, number, ::currency/EUR scale/0.01}.",
+        "reason": "Die Stückelung ergibt {denominationSum}, gezählt wurden {countedCents}.",
         "remedy": "Prüfen Sie die Stückelung oder die gezählte Summe."
       },
       "cashMoveNeedsOneCash": {
@@ -7886,7 +8069,7 @@
         "remedy": "Tragen Sie ein, wem das Geld gehört — der Satz steht im Buchungstext."
       },
       "foreignMoneyOverpaid": {
-        "reason": "Weitergegeben würden {amount, number, ::currency/EUR scale/0.01}, vom Eingang offen sind nur {open, number, ::currency/EUR scale/0.01}.",
+        "reason": "Weitergegeben würden {amount}, vom Eingang offen sind nur {open}.",
         "remedy": "Geben Sie als Rückzahlung höchstens den offenen Betrag an. Was darüber hinaus abfließt, ist Geld des Vereins — buchen Sie es als eigene Ausgabe mit ihrer Kategorie."
       },
       "contactIbanTaken": {
@@ -7902,11 +8085,11 @@
         "remedy": "Öffnen Sie die vorhandene offene Zahlung, statt eine zweite anzulegen."
       },
       "purposeGoesNegative": {
-        "reason": "Der Zweck „{purpose}“ stünde danach bei {balance, number, ::currency/EUR scale/0.01} — mehr ausgegeben, als dafür da ist.",
+        "reason": "Der Zweck „{purpose}“ stünde danach bei {balance} — mehr ausgegeben, als dafür da ist.",
         "remedy": "Begründen Sie es (etwa ein zugesagter Zuschuss oder ein Vorschuss aus freien Mitteln) — die Begründung steht am Vorgang. Oder wählen Sie einen anderen Zweck."
       },
       "freeReserveCapExceeded": {
-        "reason": "Die freie Rücklage läge damit {over, number, ::currency/EUR scale/0.01} über dem Höchstbetrag von {cap, number, ::currency/EUR scale/0.01} für dieses Jahr.",
+        "reason": "Die freie Rücklage läge damit {over} über dem Höchstbetrag von {cap} für dieses Jahr.",
         "remedy": "Begründen Sie die Zuführung — die Begründung steht am Vorgang. Der Höchstbetrag ist eine Näherung nach § 62 Abs. 1 Nr. 3 AO; im Zweifel fragen Sie Ihre Steuerberatung."
       },
       "reserveYearAmbiguous": {
@@ -7914,15 +8097,15 @@
         "remedy": "Geben Sie an, für welches Geschäftsjahr die Zuführung zählt — {previous}, wenn sie aus dessen Mitteln beim Jahresabschluss beschlossen wurde, sonst {current}."
       },
       "boardAllowanceNeedsReason": {
-        "reason": "{contact} ist am {date, date, ::ddMMyyyy} Vorstandsmitglied, und für eine Pauschale an Vorstandsmitglieder gilt an diesem Tag keine bestätigte Grundlage. Ohne Erlaubnis in der Satzung gefährdet eine Vergütung des Vorstands die Gemeinnützigkeit.",
+        "reason": "{contact} ist am {date} Vorstandsmitglied, und für eine Pauschale an Vorstandsmitglieder gilt an diesem Tag keine bestätigte Grundlage. Ohne Erlaubnis in der Satzung gefährdet eine Vergütung des Vorstands die Gemeinnützigkeit.",
         "remedy": "Begründen Sie die Buchung — die Begründung steht an der Buchung. Oder tragen Sie unter Einrichtung → Finanzen → Steuerliches die Vergütung des Vorstands mit dem Tag ein, ab dem sie gilt."
       },
       "invoiceProbablyPaidNeedsReason": {
-        "reason": "Die Rechnung ist wahrscheinlich schon bezahlt: Eine Buchung vom {date, date, ::ddMMyyyy} über denselben Betrag passt dazu.",
+        "reason": "Die Rechnung ist wahrscheinlich schon bezahlt: Eine Buchung vom {date} über denselben Betrag passt dazu.",
         "remedy": "Hängen Sie die Rechnung als Beleg an diese Buchung. Braucht es trotzdem eine offene Zahlung, begründen Sie das."
       },
       "openItemExistsForInvoice": {
-        "reason": "Zur Rechnung {reference} gibt es beim selben Kontakt schon eine offene Zahlung vom {date, date, ::ddMMyyyy}.",
+        "reason": "Zur Rechnung {reference} gibt es beim selben Kontakt schon eine offene Zahlung vom {date}.",
         "remedy": "Öffnen Sie die vorhandene offene Zahlung unter Finanzen → Offene Zahlungen, statt die Rechnung ein zweites Mal zu erfassen. Ist die vorhandene ein Irrtum, erledigen Sie sie dort zuerst ohne Zahlung."
       },
       "invoiceCurrencyUnsupported": {
@@ -7950,15 +8133,15 @@
         "remedy": "Ein ersetzter Bescheid bleibt, wie er ist — erfassen Sie den neuen Bescheid."
       },
       "noticeNotValidAt": {
-        "reason": "Der gewählte Bescheid gilt am {date, date, ::ddMMyyyy} nicht.",
+        "reason": "Der gewählte Bescheid gilt am {date} nicht.",
         "remedy": "Prüfen Sie das Datum, oder erfassen Sie den Bescheid, der an diesem Tag galt."
       },
       "noNoticeValidAt": {
-        "reason": "Am {date, date, ::ddMMyyyy} gilt kein Bescheid des Finanzamts — ohne Bescheid keine Zuwendungsbestätigung.",
+        "reason": "Am {date} gilt kein Bescheid des Finanzamts — ohne Bescheid keine Zuwendungsbestätigung.",
         "remedy": "Erfassen Sie den Bescheid unter Spenden → Bescheide."
       },
       "noticeAfterExemption": {
-        "reason": "Es gibt schon einen endgültigen Bescheid vom {date, date, ::ddMMyyyy}; eine vorläufige Feststellung danach gibt es nicht.",
+        "reason": "Es gibt schon einen endgültigen Bescheid vom {date}; eine vorläufige Feststellung danach gibt es nicht.",
         "remedy": "Erfassen Sie stattdessen den neuen endgültigen Bescheid des Finanzamts."
       },
       "confirmationLineNotFinal": {
@@ -8022,7 +8205,7 @@
         "remedy": "Schalten Sie sie unter Einrichtung → Finanzen → Steuerliches ein, wenn der Verein sie bestätigt."
       },
       "confirmationBeforeExemptionStart": {
-        "reason": "Die Zuwendung vom {entryDate, date, ::ddMMyyyy} liegt vor dem Beginn der Steuerbefreiung am {exemptFrom, date, ::ddMMyyyy}; dafür darf keine Bestätigung ausgestellt werden.",
+        "reason": "Die Zuwendung vom {entryDate} liegt vor dem Beginn der Steuerbefreiung am {exemptFrom}; dafür darf keine Bestätigung ausgestellt werden.",
         "remedy": "Prüfen Sie unter Spenden → Bescheide, ab wann der Bescheid die Befreiung ausspricht."
       },
       "confirmationAlreadyVoided": {
@@ -8038,7 +8221,7 @@
         "remedy": "Hängen Sie zuerst die unterschriebene Fassung an und vermerken Sie dann den Versand."
       },
       "confirmationWasSent": {
-        "reason": "Die Bestätigung wurde laut Vermerk am {sentAt, date, ::ddMMyyyy} versandt.",
+        "reason": "Die Bestätigung wurde laut Vermerk am {sentAt} versandt.",
         "remedy": "Setzen Sie „Bereits versandt?“ und tragen Sie die Rückholspur ein: Original zurück am, Finanzamt informiert am."
       },
       "confirmationNoRecall": {
@@ -8186,7 +8369,7 @@
         "remedy": "Geben Sie eine Begründung an; sie steht am Antrag."
       },
       "waiverFundsInsufficient": {
-        "reason": "Am {date, date, ::ddMMyyyy} hatte der Verein nur {free, number, ::currency/EUR scale/0.01} frei verfügbar — weniger als die {amount, number, ::currency/EUR scale/0.01} des Antrags.",
+        "reason": "Am {date} hatte der Verein nur {free} frei verfügbar — weniger als die {amount} des Antrags.",
         "remedy": "Ein Verzicht setzt voraus, dass der Verein hätte zahlen können: Zahlen Sie die Auslage aus, statt den Verzicht anzunehmen."
       },
       "waiverDeclarationMissing": {
@@ -8271,7 +8454,7 @@
       },
       "evidenceExplanationMissing": {
         "reason": "Für den fremdsprachigen Nachweis „{kind, select, agreement {Vereinbarung} agreementAgent57 {Auftrag je Vorhaben} paymentProof {Zahlungsnachweis} recipientReceipt {Empfangsbestätigung} invoice {Rechnung oder Abrechnung} settlement {Abrechnung mit Belegen} report {Bericht} other {Nachweis}}“ fehlt die deutsche Erläuterung.",
-        "remedy": "Bitte die deutsche Erläuterung am Nachweis ergänzen (am Vorgang „ergänzen“, per MCP finance_partner_evidence_update)."
+        "remedy": "Bitte die deutsche Erläuterung am Nachweis ergänzen (am Vorgang „ergänzen“, über einen Agenten mit finance_partner_evidence_update)."
       },
       "evidenceKindMissing": {
         "reason": "Der Nachweis „{kind, select, agreement {Vereinbarung} agreementAgent57 {Auftrag je Vorhaben} paymentProof {Zahlungsnachweis} recipientReceipt {Empfangsbestätigung} invoice {Rechnung oder Abrechnung} settlement {Abrechnung mit Belegen} report {Bericht} other {Nachweis}}“ fehlt noch.",
@@ -8322,7 +8505,7 @@
         "remedy": "Tragen Sie ein, wofür das Geld zurückgelegt ist."
       },
       "reserveInsufficient": {
-        "reason": "Am {date, date, ::ddMMyyyy} stehen bei „{name}“ nur {available, number, ::currency/EUR scale/0.01}, {amount, number, ::currency/EUR scale/0.01} sind zu viel.",
+        "reason": "Am {date} stehen bei „{name}“ nur {available}, {amount} sind zu viel.",
         "remedy": "Verringern Sie den Betrag, oder wählen Sie ein späteres Datum."
       },
       "reserveDissolved": {
@@ -8330,7 +8513,7 @@
         "remedy": "Nach der Auflösung gibt es keine weiteren Vorgänge."
       },
       "reserveMovementOutOfOrder": {
-        "reason": "Der {date, date, ::ddMMyyyy} liegt vor dem jüngsten Vorgang dieses zurückgelegten Geldes.",
+        "reason": "Der {date} liegt vor dem jüngsten Vorgang dieses zurückgelegten Geldes.",
         "remedy": "Erfassen Sie Vorgänge in der Reihenfolge ihres Datums."
       },
       "reserveInUse": {
@@ -8343,10 +8526,10 @@
       },
       "reserveCarryForwardOwnStep": {
         "reason": "Einen Vortrag erfassen Sie zusammen mit seinem Beschluss in einem eigenen Schritt.",
-        "remedy": "Nutzen Sie im Zeilenmenü „Vortrag erfassen“ (per MCP finance_reserve_carry_forward)."
+        "remedy": "Nutzen Sie im Zeilenmenü „Vortrag erfassen“ (über einen Agenten: finance_reserve_carry_forward)."
       },
       "movementDateInFuture": {
-        "reason": "Das Datum {date, date, ::ddMMyyyy} liegt nach heute ({today, date, ::ddMMyyyy}).",
+        "reason": "Das Datum {date} liegt nach heute ({today}).",
         "remedy": "Ändern Sie das Datum, oder warten Sie, bis der Tag erreicht ist."
       },
       "transferSamePurpose": {
@@ -8370,7 +8553,7 @@
         "remedy": "Bitten Sie eine zweite Person mit dem Recht „Freigeben“, den Vorgang zu entscheiden."
       },
       "transferDateInFuture": {
-        "reason": "Das Datum {date, date, ::ddMMyyyy} liegt nach heute ({today, date, ::ddMMyyyy}).",
+        "reason": "Das Datum {date} liegt nach heute ({today}).",
         "remedy": "Ändern Sie das Datum, oder warten Sie, bis der Tag erreicht ist."
       },
       "purposeReopenNeedsReason": {
@@ -8397,8 +8580,8 @@
       "openItem": "Offene Zahlung {id}",
       "cashCount": "Kassenzählung {number}",
       "confirmation": "Bestätigung {number}",
-      "notice": "Bescheid vom {date, date, ::ddMMyyyy}",
-      "partnerNotice": "Bescheid des Partners vom {date, date, ::ddMMyyyy}",
+      "notice": "Bescheid vom {date}",
+      "partnerNotice": "Bescheid des Partners vom {date}",
       "claim": "Antrag {number}",
       "claimDraft": "Auslage (Entwurf) {id}",
       "reserve": "Zurückgelegtes Geld {id}",

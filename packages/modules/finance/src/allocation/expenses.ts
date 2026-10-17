@@ -1,8 +1,8 @@
-import { yearIn, expectedVersionField, forbidden, hasPermission, invalid, isoNow, listUserNamesWithPermission, newId, notFound, ok, readSetting, requirePermission, schema, staleVersion, systemContext, todayIn, validate, type CallContext, type DbOrTx, type Deps, type Result, type ValidationIssue } from '@kompass/core';
+import { type CallContext, type DbOrTx, type Deps, EMPTY, expectedVersionField, forbidden, hasPermission, invalid, isoNow, listUserNamesWithPermission, newId, notFound, ok, readSetting, requirePermission, type Result, schema, staleVersion, systemContext, todayIn, validate, type ValidationIssue, yearIn } from '@kompass/core';
 import { addContactRole, contactIdForUserInternal, contactRoles, contacts, displayName, userIdForContactInternal } from '@kompass/module-contacts';
 import { abortReceive, DOCUMENT_MAX_BYTES, documentLinks, linkDocumentInternal, readLinkedDocument, receiveGeneratedUpload } from '@kompass/module-dms';
 import { listProjects, projects } from '@kompass/module-projects';
-import { and, asc, desc, eq, isNotNull, isNull, ne } from 'drizzle-orm';
+import { and, asc, desc, eq, isNotNull, isNull } from 'drizzle-orm';
 import { z } from 'zod';
 import { basisInForceOn } from './basis-rules';
 import { financeAudit } from '../audit';
@@ -12,6 +12,7 @@ import { DATED_SERIES } from '../ledger/dated-series';
 import { isValidIban, maskIban, normalizeIban } from '../ledger/iban';
 import { openCentsInternal, openItemSettlementsInternal } from '../ledger/open-items';
 import { tripAmountCents } from '../ledger/trip-amount';
+import { contactsForIbanInternal } from '../iban-holders';
 import { expenseReceiptSubject } from './subjects';
 import {
   financeContactBankAccounts,
@@ -61,17 +62,24 @@ export interface ExpenseClaimView extends FinanceExpenseClaimRow {
   warnings: ExpenseClaimWarning[];
 }
 
+/**
+ * Der Titel eines Antrags für Listen und Kacheln: der Zweck der ersten Position (bei einer Fahrt ihr Anlass),
+ * `null`, wenn noch nichts eingetragen ist. Ein Entwurf hat keine Nummer — ohne Titel hieß er „— — Entwurf“ (02 A1, 08 A1).
+ */
+export function expenseClaimTitle(claim: { positions: readonly Pick<ExpensePositionView, 'purpose' | 'tripReason'>[] }): string | null {
+  const first = claim.positions[0];
+  if (!first) return null;
+  const title = first.purpose.trim() || (first.tripReason ?? '').trim();
+  return title === '' ? null : title;
+}
+
 /** `waiverAgreedAfterPosition` (Prüfer-Fixrunde 28.09.): ein Verzichtsentwurf, dessen Grundlage jünger ist als die früheste Position — das Einreichen als Verzicht wird verweigert, als Erstattung geht es. */
 export type ExpenseClaimWarning = 'ibanBelongsToOtherContact' | 'waiverAgreedAfterPosition';
 
 /** Befund 35: Ist die IBAN über `finance_contact_bank_accounts` einem anderen Kontakt als `contactId` zugeordnet? */
 export function ibanBelongsToOtherContactInternal(db: DbOrTx, contactId: string, iban: string | null): boolean {
   if (!iban) return false;
-  return !!db
-    .select({ id: financeContactBankAccounts.id })
-    .from(financeContactBankAccounts)
-    .where(and(eq(financeContactBankAccounts.iban, iban), ne(financeContactBankAccounts.contactId, contactId)))
-    .get();
+  return contactsForIbanInternal(db, iban).some((id) => id !== contactId);
 }
 
 // ── Hilfen ──────────────────────────────────────────────────────────────────
@@ -94,7 +102,7 @@ function ownContactInternal(deps: Deps, ctx: CallContext): Result<string> {
   const contactId = ctx.userId ? contactIdForUserInternal(deps.db, ctx.userId) : null;
   if (contactId) return ok(contactId);
   const names = listUserNamesWithPermission(deps, 'users.manage');
-  return financeConflict('expenseNeedsContactLink', { names: names.length > 0 ? names.join(', ') : '—' });
+  return financeConflict('expenseNeedsContactLink', { names: names.length > 0 ? names.join(', ') : EMPTY });
 }
 
 /** Ist der Aufrufer die antragstellende Person? Ohne Verknüpfung nie. */

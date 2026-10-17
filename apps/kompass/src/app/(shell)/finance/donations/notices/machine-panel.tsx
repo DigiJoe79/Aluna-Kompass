@@ -22,6 +22,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { withUnplacedFieldErrors } from '@/lib/feedback';
 import { createNotificationLetterAction, saveSignerAction, uploadFacsimileAction } from './actions';
 import { Section } from '@/components/section';
+import { RowMenu } from '@/components/row-menu';
 
 /**
  * „Maschinell erstellte Bestätigungen“ (C3, F6a Task 8): die Unterzeichner
@@ -35,6 +36,8 @@ export function MachinePanel({ signers, status, canIssue, canDraftLetter, draftN
   const { date } = useDateFormat();
   const router = useRouter();
   const [editing, setEditing] = useState<SignerView | 'new' | null>(null);
+  // „Ersetzen“ steht im Zeilenmenü neben „Bearbeiten“; erst dann erscheint die Ablage statt des Bilds (Runde 3, 112).
+  const [replacingId, setReplacingId] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   // Das Hochladen steht in den Tabellenzeilen: Die Ablehnung steht über der Tabelle. Das Anzeigeschreiben hat seine eigene.
   const uploadFb = useActionFeedback();
@@ -52,7 +55,10 @@ export function MachinePanel({ signers, status, canIssue, canDraftLetter, draftN
     formData.append('file', file);
     const result = await uploadFb.run(() => uploadFacsimileAction(formData), { retry: () => void upload(signerId, file) });
     setPending(false);
-    if (result.status === 'success') router.refresh();
+    if (result.status === 'success') {
+      setReplacingId(null);
+      router.refresh();
+    }
   };
 
   const draftLetter = async () => {
@@ -86,41 +92,56 @@ export function MachinePanel({ signers, status, canIssue, canDraftLetter, draftN
         <Table aria-label={t('tableLabel')}>
           <TableHeader>
             <TableRow>
-              <TableHead>{t('columns.name')}</TableHead>
-              <TableHead>{t('columns.period')}</TableHead>
-              <TableHead>{t('columns.notifiedOn')}</TableHead>
-              <TableHead>{t('columns.facsimile')}</TableHead>
-              {canIssue ? <TableHead className="text-right">{t('columns.actions')}</TableHead> : null}
+              <TableHead col="title">{t('columns.name')}</TableHead>
+              <TableHead col="meta">{t('columns.period')}</TableHead>
+              <TableHead col="meta">{t('columns.notifiedOn')}</TableHead>
+              <TableHead col="meta">{t('columns.facsimile')}</TableHead>
+              {/* Der Kopf über ⋯ ist nur für Vorleser da (Runde 4, 112). */}
+              {canIssue ? <TableHead col="actions" className="w-11"><span className="sr-only">{t('columns.actions')}</span></TableHead> : null}
             </TableRow>
           </TableHeader>
           <TableBody>
             {signers.map((signer) => (
               <TableRow key={signer.id} data-testid="signer-row">
-                <TableCell>
+                <TableCell col="title">
                   <span className="font-semibold text-ink">{signer.signerName}</span>{' '}
                   <StatusBadge tone={signer.state === 'current' ? 'success' : 'neutral'}>{t(`state.${signer.state}`)}</StatusBadge>
                 </TableCell>
-                <TableCell className="font-mono tabular-nums">{t('period', { from: date(signer.validFrom), to: signer.validTo ? date(signer.validTo) : t('openEnd') })}</TableCell>
-                <TableCell className="font-mono tabular-nums">{signer.notifiedOn ? date(signer.notifiedOn) : <span className="font-sans text-muted-ink">{t('notNotified')}</span>}</TableCell>
-                <TableCell>
+                <TableCell col="meta" className="tabular-nums">{t('period', { from: date(signer.validFrom), to: signer.validTo ? date(signer.validTo) : t('openEnd') })}</TableCell>
+                <TableCell col="meta" className="tabular-nums">{signer.notifiedOn ? date(signer.notifiedOn) : <span className="text-muted-ink">{t('notNotified')}</span>}</TableCell>
+                <TableCell col="meta">
                   <div className="flex flex-col gap-1.5">
                     {!signer.hasFacsimile ? <span className="text-meta text-muted-ink">{t('noFacsimile')}</span> : null}
-                    {canIssue ? (
+                    {canIssue && (!signer.hasFacsimile || replacingId === signer.id) ? (
                       <ReceiptDrop
                         key={signer.facsimileChecksum ?? 'none'}
                         kind="image"
                         maxBytes={facsimileMaxBytes}
                         disabled={pending}
-                        previewSrc={signer.hasFacsimile ? `/finance/donations/facsimile?signerId=${encodeURIComponent(signer.id)}&v=${encodeURIComponent((signer.facsimileChecksum ?? '').slice(0, 12))}` : null}
-                        previewAlt={t('facsimileAlt', { name: signer.signerName })}
                         onFiles={(files) => void upload(signer.id, files[0])}
                       />
+                    ) : signer.hasFacsimile ? (
+                      // Das Bild allein, auf Papierfarbe wie in der Ablage (die Unterschrift ist schwarz auf weiß). Kein
+                      // next/image: Die Bytes kommen nur über den Faksimile-Handler, nie zwischengespeichert.
+                      <span className="flex h-16 w-[240px] items-center rounded-md border border-line bg-paper p-1.5">
+                        <img
+                          src={`/finance/donations/facsimile?signerId=${encodeURIComponent(signer.id)}&v=${encodeURIComponent((signer.facsimileChecksum ?? '').slice(0, 12))}`}
+                          alt={t('facsimileAlt', { name: signer.signerName })}
+                          className="h-full max-w-full object-contain"
+                        />
+                      </span>
                     ) : null}
                   </div>
                 </TableCell>
                 {canIssue ? (
-                  <TableCell className="text-right">
-                    <Button type="button" size="sm" variant="outline" onClick={() => setEditing(signer)}>{t('edit')}</Button>
+                  <TableCell col="actions" className="text-right">
+                    <RowMenu
+                      name={signer.signerName}
+                      items={[
+                        { key: 'edit', label: t('edit'), onSelect: () => setEditing(signer) },
+                        { key: 'replace', label: t('replaceFacsimile'), onSelect: () => setReplacingId(signer.id), hidden: !signer.hasFacsimile || replacingId === signer.id },
+                      ]}
+                    />
                   </TableCell>
                 ) : null}
               </TableRow>
@@ -131,16 +152,21 @@ export function MachinePanel({ signers, status, canIssue, canDraftLetter, draftN
       {canIssue ? <p className="text-hint text-muted-ink">{t('facsimilePrivacy')} {t('uploadHint')}</p> : null}
 
       {canIssue ? (
-        <div className="flex flex-wrap items-start gap-3">
-          <Button type="button" variant="outline" onClick={() => setEditing('new')}>{t('add')}</Button>
+        // 09 B27: Beide Knöpfe in einer Flucht; Ablehnung, Hinweis und Link stehen darunter.
+        <div className="space-y-2">
+          {letterSigner && canDraftLetter ? <RefusalNotice action state={letterFb.state} /> : null}
+          <div className="flex flex-wrap items-center gap-3">
+            <Button type="button" variant="outline" onClick={() => setEditing('new')}>{t('add')}</Button>
+            {letterSigner && canDraftLetter ? (
+              <Button type="button" variant="outline" disabled={pending} onClick={() => void draftLetter()}>{t('letter')}</Button>
+            ) : null}
+          </div>
           {letterSigner ? (
             canDraftLetter ? (
-              <div className="space-y-1">
-                <RefusalNotice action state={letterFb.state} />
-                <Button type="button" variant="outline" disabled={pending} onClick={() => void draftLetter()}>{t('letter')}</Button>
+              <>
                 <p className="max-w-prose text-hint text-muted-ink">{t('letterHint')}</p>
                 {draftId ? <Link href={`/dms/${draftId}`} className="text-meta font-semibold text-ink underline underline-offset-2">{t('openDraft')}</Link> : null}
-              </div>
+              </>
             ) : (
               <BlockedState step={t('letter')} title={t('letterBlockedTitle')}>
                 {draftNames.length > 0 ? t('letterBlockedText', { names: draftNames.join(', ') }) : t('letterBlockedNobody')}
@@ -186,13 +212,13 @@ function SignerDialog({ signer, onClose }: { signer: SignerView | null; onClose:
           </FormField>
           <FormRowBreak />
           <FormField id="signer-valid-from" label={td('validFrom')} required error={errors.validFrom} size="s">
-            <Input id="signer-valid-from" type="date" className="font-mono" value={validFrom} onChange={(e) => setValidFrom(e.target.value)} />
+            <Input id="signer-valid-from" type="date" value={validFrom} onChange={(e) => setValidFrom(e.target.value)} />
           </FormField>
           <FormField id="signer-valid-to" label={td('validTo')} error={errors.validTo} size="s">
-            <Input id="signer-valid-to" type="date" className="font-mono" aria-describedby="signer-valid-to-note" value={validTo} onChange={(e) => setValidTo(e.target.value)} />
+            <Input id="signer-valid-to" type="date" aria-describedby="signer-valid-to-note" value={validTo} onChange={(e) => setValidTo(e.target.value)} />
           </FormField>
           <FormField id="signer-notified-on" label={td('notifiedOn')} error={errors.notifiedOn} size="s">
-            <Input id="signer-notified-on" type="date" className="font-mono" value={notifiedOn} onChange={(e) => setNotifiedOn(e.target.value)} />
+            <Input id="signer-notified-on" type="date" value={notifiedOn} onChange={(e) => setNotifiedOn(e.target.value)} />
           </FormField>
         </FormGrid>
         {/* Der lange Hinweis zu „Gültig bis“ steht unter der Zeile, nicht in der schmalen Spalte (Entscheidung zum Inventar). */}

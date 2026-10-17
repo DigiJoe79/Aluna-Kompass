@@ -34,7 +34,8 @@ export const DEFAULT_THEME: Theme = {
     'color-drop-ink': { light: '#183A42', dark: '#CDE8ED' },
     'color-drop-blocked-ring': { light: '#6F757C', dark: '#8B9199' },
     'color-drop-blocked-hatch': { light: '#D6D6D0', dark: '#353B42' },
-    'color-tree-guide': { light: '#D2D2CB', dark: '#30353C' },
+    // Führungslinien im Ordnerbaum: hell in der Stärke vor Lauf 2, dunkel so kräftig wie der Trenner (Runde 3, Kleinpunkt 1).
+    'color-tree-guide': { light: '#D2D2CB', dark: '#3E444C' },
     bg: { light: '#F6F6F4', dark: '#14161A' },
     surface: { light: '#FFFFFF', dark: '#1B1E23' },
     'surface-2': { light: '#F1F1EE', dark: '#22262C' },
@@ -46,8 +47,10 @@ export const DEFAULT_THEME: Theme = {
     'muted-2': { light: '#8B9199', dark: '#6F767E' },
     'on-primary': { light: '#FFFFFF', dark: '#0D1A1D' },
     'on-primary-muted': { light: '#C6DDE2', dark: '#2C4A50' },
-    line: { light: '#E4E4E0', dark: '#2C3138' },
-    'line-2': { light: '#EEEEEA', dark: '#22262C' },
+    // Kartenrand: dunkel so kräftig wie der Trenner `line-2` (Runde 3, Kleinpunkt 1).
+    line: { light: '#E4E4E0', dark: '#3E444C' },
+    // Der Trenner: Tabellenzeilen und Führungslinien im Ordnerbaum (Designer 2026-10-16), dunkel ≥ 1,6:1 zur Fläche.
+    'line-2': { light: '#EEEEEA', dark: '#3E444C' },
     'line-strong': { light: '#C8C8C2', dark: '#414851' },
     'focus-ring': { light: '#2F5D68', dark: '#74B4C0' },
     'hover-surface': { light: '#EDEDE9', dark: '#262B31' },
@@ -56,8 +59,9 @@ export const DEFAULT_THEME: Theme = {
     'selected-ink': { light: '#20454E', dark: '#A9D5DC' },
     link: { light: '#2F5D68', dark: '#74B4C0' },
     'link-hover': { light: '#20454E', dark: '#A9D5DC' },
-    'disabled-ink': { light: '#A3A8AE', dark: '#5C636B' },
-    'disabled-bg': { light: '#F1F1EE', dark: '#22262C' },
+    // Dunkel hebt sich die gesperrte Fläche von `surface` ab, das Paar hält ≥ 3:1 (Runde 3, Punkt 7); hell unverändert.
+    'disabled-ink': { light: '#A3A8AE', dark: '#7A828B' },
+    'disabled-bg': { light: '#F1F1EE', dark: '#2A2F36' },
     'table-head-bg': { light: '#F1F1EE', dark: '#22262C' },
     'table-zebra': { light: '#FAFAF8', dark: '#1E2227' },
     'table-row-hover': { light: '#F3F3F0', dark: '#262B31' },

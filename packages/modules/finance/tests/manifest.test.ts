@@ -21,31 +21,27 @@ describe('finance module', () => {
 
   it('puts the journal, accounts, open items and the cash box into the rail with the euro icon, readable with finance.read, in the same section', () => {
     // F4 Task 7: „Hochgeladene Auszüge“ führt einen eigenen Abschnitt „Arbeit“ — über „Buchungen“.
+    // Sechs Gruppen (Designer Stufe 2 Nr. 12): Arbeit · Buchungen · Zweckmittel · Spenden · Auslagen · Beteiligte.
     expect(financeModule.navigation).toEqual([
-      // F5 Task 6: die Arbeitsliste und ihre Nebenlisten stehen vor „Hochgeladene Auszüge“.
       { key: 'finance.work', href: '/finance/work', icon: 'euro', group: 'finance', section: 'finance.work', permission: 'finance.read' },
       { key: 'finance.workForeign', href: '/finance/work/foreign', icon: 'euro', group: 'finance', section: 'finance.work', permission: 'finance.read' },
       { key: 'finance.workVouchers', href: '/finance/work/vouchers', icon: 'euro', group: 'finance', section: 'finance.work', permission: 'finance.read' },
-      { key: 'finance.rules', href: '/finance/work/rules', icon: 'euro', group: 'finance', section: 'finance.work', permission: 'finance.read' },
       { key: 'finance.imports', href: '/finance/imports', icon: 'euro', group: 'finance', section: 'finance.work', permission: 'finance.read' },
+      { key: 'finance.rules', href: '/finance/work/rules', icon: 'euro', group: 'finance', section: 'finance.work', permission: 'finance.read' },
       { key: 'finance.entries', href: '/finance/entries', icon: 'euro', group: 'finance', section: 'finance.entries', permission: 'finance.read' },
-      { key: 'finance.accounts', href: '/finance/accounts', icon: 'euro', group: 'finance', section: 'finance.entries', permission: 'finance.read' },
       { key: 'finance.openItems', href: '/finance/open-items', icon: 'euro', group: 'finance', section: 'finance.entries', permission: 'finance.read' },
+      { key: 'finance.accounts', href: '/finance/accounts', icon: 'euro', group: 'finance', section: 'finance.entries', permission: 'finance.read' },
       { key: 'finance.cash', href: '/finance/cash', icon: 'euro', group: 'finance', section: 'finance.entries', permission: 'finance.read' },
-      // F6a Task 6: ein eigener Abschnitt „Spenden“ — Bestätigungen und Bescheide.
+      { key: 'finance.purposes', href: '/finance/purposes', icon: 'euro', group: 'finance', section: 'finance.allocation', permission: ['finance.read', 'finance.overview'] },
+      { key: 'finance.reserves', href: '/finance/reserves', icon: 'euro', group: 'finance', section: 'finance.allocation', permission: 'finance.read' },
       { key: 'finance.donations', href: '/finance/donations', icon: 'euro', group: 'finance', section: 'finance.donations', permission: 'finance.read' },
-      // F6b Task 6: Serienlauf und Spendenbuch zwischen Bestätigungen und Bescheiden.
       { key: 'finance.donationRun', href: '/finance/donations/run', icon: 'euro', group: 'finance', section: 'finance.donations', permission: 'finance.read' },
       { key: 'finance.donationBook', href: '/finance/donations/book', icon: 'euro', group: 'finance', section: 'finance.donations', permission: 'finance.read' },
       { key: 'finance.donationNotices', href: '/finance/donations/notices', icon: 'euro', group: 'finance', section: 'finance.donations', permission: 'finance.read' },
-      // F8a Task 4: ein eigener Abschnitt „Auslagen“ — eigene Anträge und die Freigaben.
       { key: 'finance.expenses', href: '/finance/expenses', icon: 'euro', group: 'finance', section: 'finance.expenses', permission: 'finance.expensesSubmit' },
       { key: 'finance.approvals', href: '/finance/approvals', icon: 'euro', group: 'finance', section: 'finance.expenses', permission: 'finance.approve' },
-      { key: 'finance.partners', href: '/finance/partners', icon: 'euro', group: 'finance', section: 'finance.allocation', permission: 'finance.read' },
-      // F8b Task 5 (Annahme 13): Zwecke reduziert offen für finance.overview; zurückgelegtes Geld und Personen unter finance.read.
-      { key: 'finance.purposes', href: '/finance/purposes', icon: 'euro', group: 'finance', section: 'finance.allocation', permission: ['finance.read', 'finance.overview'] },
-      { key: 'finance.reserves', href: '/finance/reserves', icon: 'euro', group: 'finance', section: 'finance.allocation', permission: 'finance.read' },
-      { key: 'finance.people', href: '/finance/people', icon: 'euro', group: 'finance', section: 'finance.allocation', permission: 'finance.read' },
+      { key: 'finance.partners', href: '/finance/partners', icon: 'euro', group: 'finance', section: 'finance.parties', permission: 'finance.read' },
+      { key: 'finance.people', href: '/finance/people', icon: 'euro', group: 'finance', section: 'finance.parties', permission: 'finance.read' },
     ]);
     expect(financeModule.moduleIcon).toBe('euro');
   });

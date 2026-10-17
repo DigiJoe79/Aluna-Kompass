@@ -10,7 +10,7 @@ import {
   type FinanceAllocationLineRow, type FinanceCategoryRow, type FinanceImportRuleRow, type FinanceOpenItemRow, type FinancePurposeRow, type FinanceRawTransactionRow,
 } from '../schema';
 import { contactChannels, contacts, displayName } from '@kompass/module-contacts';
-import { contactForIbanInternal } from './contact-ibans';
+import { contactForIbanInternal, contactsForIbanInternal } from './contact-ibans';
 import { activeImportRulesInternal } from './rules';
 import { daysApart, findPair, isCashKeyword } from './suggest/pair';
 import { findByReference } from './suggest/reference';
@@ -542,11 +542,12 @@ function proposeInternal(deps: Deps, data: SuggestionData, raw: FinanceRawTransa
 /**
  * Befund 14: kein Hinweis, wenn das eigene Konto selbst ein Zahlungsdienst
  * ist (der sitzt ohnehin nicht in Deutschland) oder die Gegen-IBAN einem
- * Kontakt gehört (dann ist sie schon eingeordnet, nicht bloß fremd).
+ * Kontakt gehört (dann ist sie schon eingeordnet, nicht bloß fremd) — auch
+ * einem archivierten oder mehreren (Gemeinschaftskonto).
  */
 function suppressForeignIbanHint(deps: Deps, data: SuggestionData, raw: FinanceRawTransactionRow): boolean {
   if (data.paymentServiceAccountIds.includes(raw.accountId)) return true;
-  return raw.counterpartyIban !== null && contactForIbanInternal(deps.db, raw.counterpartyIban) !== null;
+  return raw.counterpartyIban !== null && contactsForIbanInternal(deps.db, raw.counterpartyIban).length > 0;
 }
 
 function suggestInternal(deps: Deps, data: SuggestionData, raw: FinanceRawTransactionRow): SuggestionView {

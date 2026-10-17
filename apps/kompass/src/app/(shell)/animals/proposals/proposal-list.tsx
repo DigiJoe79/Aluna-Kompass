@@ -18,6 +18,7 @@ import { fieldLabelKey } from './field-format';
 import { KindBadge } from './kind-badge';
 import { PROPOSAL_KIND_FILTER, PROPOSAL_STATE_FILTER, proposalQueryString } from './list-params';
 import { mediaPreviewUrl, proposalImageUrl } from '../crop-frame';
+import { EMPTY, Empty } from '@/components/empty-value';
 
 type Filters = { text: string; kind: string; source: string; state: string };
 
@@ -78,11 +79,11 @@ export function ProposalList({
   const openCount = list.open.count - hidden;
 
   const content = (p: ProposalListItem) => {
-    if (p.cleared) return '—';
+    if (p.cleared) return EMPTY;
     if (p.kind === 'notice') return p.noticeKind === 'delisted' ? t('delistedLine', { source: p.sourceName }) : shorten(p.reason ?? '');
     if (p.kind === 'sameAs') return t('sameAsLine', { name: p.proposedName || p.name });
     // Neuer Hund: Alle Felder sind vorgeschlagen; die Zeile nennt nur die Fotos (Board 1a), die Marken das Übrige.
-    if (p.kind === 'create') return p.photoCount > 0 ? t('photos', { count: p.photoCount }) : '—';
+    if (p.kind === 'create') return p.photoCount > 0 ? t('photos', { count: p.photoCount }) : EMPTY;
     const names = p.fields.map((f) => root(fieldLabelKey(f)));
     if (p.photoCount > 0) names.push(t('photos', { count: p.photoCount }));
     return names.join(', ');
@@ -128,15 +129,15 @@ export function ProposalList({
           <Table className="text-body">
             <TableHeader>
               <TableRow>
-                <TableHead>{t('columns.kind')}</TableHead>
-                <TableHead>{t('columns.animal')}</TableHead>
+                <TableHead col="meta">{t('columns.kind')}</TableHead>
+                <TableHead col="title">{t('columns.animal')}</TableHead>
                 <TableHead>{t('columns.content')}</TableHead>
-                <TableHead>{t('columns.source')}</TableHead>
+                <TableHead col="meta">{t('columns.source')}</TableHead>
                 {open ? (
-                  <TableHead>{t('columns.received')}</TableHead>
+                  <TableHead col="meta">{t('columns.received')}</TableHead>
                 ) : (
                   <>
-                    <TableHead>{t('columns.state')}</TableHead>
+                    <TableHead col="status">{t('columns.state')}</TableHead>
                     <TableHead>{t('columns.decided')}</TableHead>
                     <TableHead>{t('columns.reason')}</TableHead>
                   </>
@@ -146,15 +147,15 @@ export function ProposalList({
             <TableBody>
               {proposals.map((p) => (
                 <TableRow key={p.id} data-testid="proposal-row">
-                  <TableCell className="w-0 whitespace-nowrap">
+                  <TableCell col="meta" className="w-0 whitespace-nowrap">
                     <KindBadge kind={p.kind} />
                   </TableCell>
-                  <TableCell>
+                  <TableCell col="title">
                     <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
                       <ProposalThumb item={p} />
                       <RowLink href={`/animals/proposals/${p.id}${rowQs}`}>{p.name || t('unnamed')}</RowLink>
                       {p.conflictCount > 0 ? <StatusBadge tone="warning">{t('conflicts', { count: p.conflictCount })}</StatusBadge> : null}
-                      {/* Neutral: Das Violett der Herkunft trägt schon die Art-Marke daneben (Befund 10). */}
+                      {/* Neutral: Ein Hinweis ist keine Abweichung, die Arbeit verlangt (Befund 10). */}
                       {p.hintCount > 0 ? <StatusBadge tone="neutral">{t('hints', { count: p.hintCount })}</StatusBadge> : null}
                       {p.missing.map((m) => (
                         <StatusBadge key={m} tone="warning">{t(`missing.${m}`)}</StatusBadge>
@@ -162,16 +163,16 @@ export function ProposalList({
                     </span>
                   </TableCell>
                   <TableCell className="text-ink-2">{content(p)}</TableCell>
-                  <TableCell className="text-ink-2">{p.sourceName}</TableCell>
+                  <TableCell col="meta" className="text-ink-2">{p.sourceName}</TableCell>
                   {open ? (
-                    <TableCell className="whitespace-nowrap text-ink-2">{dates.dateTime(p.createdAt)}</TableCell>
+                    <TableCell col="meta" className="whitespace-nowrap text-ink-2">{dates.dateTime(p.createdAt)}</TableCell>
                   ) : (
                     <>
-                      <TableCell>
+                      <TableCell col="status">
                         <StatusBadge tone={p.state === 'accepted' || p.state === 'acceptedWithChanges' ? 'success' : 'neutral'}>{stateWord(p)}</StatusBadge>
                       </TableCell>
                       <TableCell className="whitespace-nowrap text-ink-2">
-                        {p.decisionReason === 'animalDeleted' ? t('animalDeleted') : p.decidedAt ? [p.decidedByName, dates.dateTime(p.decidedAt)].filter(Boolean).join(' · ') : '—'}
+                        {p.decisionReason === 'animalDeleted' ? t('animalDeleted') : p.decidedAt ? [p.decidedByName, dates.dateTime(p.decidedAt)].filter(Boolean).join(' · ') : <Empty />}
                       </TableCell>
                       <TableCell className="text-ink-2">{p.decisionNote ?? ''}</TableCell>
                     </>

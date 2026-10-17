@@ -22,6 +22,7 @@ import { CropFrame } from '../../crop-frame';
 import { acceptProposalAction, rejectProposalAction } from '../actions';
 import { KindBadge } from '../kind-badge';
 import type { StackReason, StackRight } from './stack-route';
+import { Empty } from '@/components/empty-value';
 
 export interface StackCard {
   id: string;
@@ -48,7 +49,7 @@ const fitHeight = (ratio: number | null) => (ratio ? `calc(50svh * ${ratio})` : 
  * MUSTER § C): Die Karte geht sofort und zählt sofort (sonst stünde am Ende 5 s lang „0 angenommen“, M3); „Rückgängig“
  * nimmt die Zählung zurück, eine Ablehnung des Dienstes verschiebt sie nach „offen gelassen“ und steht über dem Stapel.
  */
-export function SwipeStack({ cards, backHref, query, frame }: { cards: StackCard[]; backHref: string; query: string; frame: { aspectRatio: string; objectPosition: string } }) {
+export function SwipeStack({ cards, query, frame }: { cards: StackCard[]; query: string; frame: { aspectRatio: string; objectPosition: string } }) {
   const t = useTranslations('animals.proposals.stack');
   const onlineNoteId = useId();
   const [frameW, frameH] = frame.aspectRatio.split('/').map(Number);
@@ -69,6 +70,9 @@ export function SwipeStack({ cards, backHref, query, frame }: { cards: StackCard
     mounted.current = true;
     return () => {
       mounted.current = false;
+      // 059: Der einzige Rückweg ist „← Vorschläge“ im Seitenkopf. Wer den Stapel verlässt, schickt die zurückgehaltene
+      // Entscheidung sofort ab, wie früher „Zur Liste“; schließt jemand die Seite, verfällt sie (MUSTER § C).
+      flushHeldDecision();
     };
   }, []);
   // Fest vom Öffnen an: Nach jeder Entscheidung rendert der Server die Seite mit weniger Karten neu (revalidate).
@@ -156,6 +160,9 @@ export function SwipeStack({ cards, backHref, query, frame }: { cards: StackCard
   };
   const stamp = drag ? (drag.x > THRESHOLD / 2 ? (card?.right.kind === 'review' ? t('stampReview') : card?.right.kind === 'accept' && card.right.publish ? t('stampOnline') : t('stampAccept')) : drag.x < -THRESHOLD / 2 ? t('stampReject') : drag.y < -THRESHOLD / 2 ? t('stampReview') : null) : null;
   const stampTone = !stamp ? 'neutral' : stamp === t('stampReject') ? 'error' : stamp === t('stampReview') ? 'info' : 'success';
+  // Dieselbe Reihenfolge wie im Hinweis: erst Konflikt, Zweifel, Hinweis, Zuordnung, Jahr, dann die Lücken.
+  const firstReason = (reasons: StackReason[]): StackReason =>
+    reasons.find((r) => r !== 'missingPrimaryPhoto' && r !== 'missingSummary') ?? reasons[0]!;
   const reasonText = (reasons: StackReason[]) => {
     const missing = reasons.filter((r) => r === 'missingPrimaryPhoto' || r === 'missingSummary').map((r) => t(`reasons.${r}`));
     const other = reasons.filter((r) => r !== 'missingPrimaryPhoto' && r !== 'missingSummary').map((r) => t(`reasons.${r}`));
@@ -166,17 +173,7 @@ export function SwipeStack({ cards, backHref, query, frame }: { cards: StackCard
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between">
-        <Button
-          type="button"
-          variant="ghost"
-          onClick={() => {
-            flushHeldDecision();
-            router.push(backHref);
-          }}
-        >
-          {t('done')}
-        </Button>
+      <div className="flex items-center justify-end">
         <span className="text-meta text-ink-2" aria-live="polite">
           {card ? t('position', { index: total - queue.length + 1, total }) : null}
         </span>
@@ -202,7 +199,7 @@ export function SwipeStack({ cards, backHref, query, frame }: { cards: StackCard
             <div className="bg-surface-2">
               <div className="mx-auto w-full" style={{ maxWidth: fitHeight(card.image?.crop ? card.image.ratio : frameRatio) }}>
                 {card.image?.crop ? (
-                  <CropFrame src={card.image.url} crop={card.image.crop} label={p('photoReview.withCrop', { name: card.name || p('unnamed') })} className="rounded-none" />
+                  <CropFrame src={card.image.url} crop={card.image.crop} label={p('photoReview.withCrop', { name: card.name || p('unnamed') })} className="rounded-none" framed={false} />
                 ) : card.image ? (
                   <img src={card.image.url} alt="" draggable={false} style={frame} className="block w-full object-cover" />
                 ) : (
@@ -221,8 +218,8 @@ export function SwipeStack({ cards, backHref, query, frame }: { cards: StackCard
                   {card.lines.map((l) => (
                     <li key={l.label}>
                       <span className="font-semibold text-ink-2">{l.label}: </span>
-                      {l.from !== null ? <><span className="text-ink-2">{l.from || '—'}</span> → </> : null}
-                      <span className="text-ink">{l.to || '—'}</span>
+                      {l.from !== null ? <><span className="text-ink-2">{l.from || <Empty />}</span> → </> : null}
+                      <span className="text-ink">{l.to || <Empty />}</span>
                     </li>
                   ))}
                 </ul>
@@ -240,10 +237,19 @@ export function SwipeStack({ cards, backHref, query, frame }: { cards: StackCard
               <ArrowLeft aria-hidden data-icon="inline-start" />
               {t('reject')}
             </Button>
-            <Button type="button" variant="ghost" onClick={() => toReview(card)}>
-              <ArrowUp aria-hidden data-icon="inline-start" />
-              {t('review')}
-            </Button>
+            {/* Führt schon der Hauptknopf zur Prüfseite (Konflikt, Lücke), stünde „Prüfen“ zweimal da (Befund 1 Nr. 6,
+                0.2.12): Die Mitte bleibt dann leer, damit „Ablehnen“ und „Prüfen“ an ihren Plätzen stehen. */}
+            {card.right.kind === 'review' ? (
+              // Die Mitte sagt, warum hier nichts geht (Designer Stufe 2 Nr. 16): der erste Grund als kurzer Auftrag.
+              <span data-testid="stack-blocked" className="flex items-center justify-center text-center text-meta text-ink-2">
+                {t(`blocked.${firstReason(card.right.reasons)}`)}
+              </span>
+            ) : (
+              <Button type="button" variant="outline" onClick={() => toReview(card)}>
+                <ArrowUp aria-hidden data-icon="inline-start" />
+                {t('review')}
+              </Button>
+            )}
             <Button
               type="button"
               onClick={() => right(card)}

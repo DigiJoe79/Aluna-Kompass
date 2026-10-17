@@ -164,6 +164,17 @@ describe('relatedPartyPayments (E21, Annahme 10, Review Focus 6)', () => {
     expect(after[0]!.boardAllowanceWithoutBasis).toBe(false);
   });
 
+  it('keeps the warning after a decided "no" — without allowances there is no basis (Joe 11.9)', async () => {
+    const f = await expenseFixture();
+    unwrap(await addContactRole(f.deps, contactsManage(f), { id: f.hanna.contactId, role: 'board-member', since: '2026-01-01' }));
+    const volunteer = categoryByKey(f.deps, 'volunteer-allowance');
+    unwrap(await bookEntry(f.deps, f.ctx, { entryDate: '2026-03-01', text: 'Ehrenamtspauschale an Vorstand', moneyLines: [{ accountId: f.bank.id, amountCents: -1000 }], allocationLines: [{ categoryId: volunteer.id, amountCents: -1000, contactId: f.hanna.contactId }], reason: 'Grundlage folgt' }));
+
+    unwrap(await setBoardRemuneration(f.deps, f.ctx, { allowed: false, basisText: '' }));
+    const rows = unwrap(await relatedPartyPayments(f.deps, f.ctx, { fiscalYearId: f.year.id })).rows;
+    expect(rows[0]!.boardAllowanceWithoutBasis).toBe(true);
+  });
+
   it('Befund AK: the basis applies from its date — a payment before it keeps the mark, one on or after loses it', async () => {
     const f = await expenseFixture();
     unwrap(await addContactRole(f.deps, contactsManage(f), { id: f.hanna.contactId, role: 'board-member', since: '2026-01-01' }));

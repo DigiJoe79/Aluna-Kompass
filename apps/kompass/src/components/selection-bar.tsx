@@ -14,6 +14,7 @@ export function SelectionBar({ count, label, children }: { count: number; label:
       </span>
       {count > 0 ? (
         <div
+          data-slot="selection-bar"
           data-testid="selection-bar"
           role="toolbar"
           aria-label={label}

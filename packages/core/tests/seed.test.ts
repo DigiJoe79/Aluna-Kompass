@@ -14,7 +14,7 @@ describe('seedDevelopment', () => {
     const first = await seedDevelopment(deps);
     const second = await seedDevelopment(deps);
     expect(second).toEqual(first);
-    expect(deps.db.select().from(roles).all().map((r) => r.name).sort()).toEqual(['Administration', 'Interne Revision', 'Schatzmeisterin', 'Schriftführung']);
+    expect(deps.db.select().from(roles).all().map((r) => r.name).sort()).toEqual(['Administration', 'Geschäftsstelle', 'Interne Revision', 'Schriftführung']);
     expect(deps.db.select().from(users).all()).toHaveLength(4);
     const session = await login(deps, { email: first.adminEmail, password: first.adminPassword, ipAddress: null, requestId: 'R' });
     expect(session.ok).toBe(true);
@@ -86,16 +86,16 @@ describe('seedDevelopment', () => {
     const row = deps.db.select().from(dashboardLayouts).where(eq(dashboardLayouts.userId, jonas.id)).get();
     expect(row).toBeDefined();
     // Nur der Kern ist installiert: Fällig (30 Tage) und Backup; Unversandt gehört der Akte und fehlt hier.
-    expect(JSON.parse(row!.tiles)).toEqual([
-      { module: 'core', key: 'followUps', options: { horizonDays: '30', onlyMine: false } },
-      { module: 'core', key: 'backup', options: {} },
-    ]);
+    // Gespeichert in Spalten (0.2.12): die flache Liste nach Reihenfolge auf drei verteilt, 2:1 daraus abgeleitet.
+    const followUps = { module: 'core', key: 'followUps', options: { horizonDays: '30', onlyMine: false } };
+    const backup = { module: 'core', key: 'backup', options: {} };
+    expect(JSON.parse(row!.tiles)).toEqual({ v: 2, layout: 'thirds', arrangements: { thirds: [[followUps], [backup], []], 'wide-narrow': [[followUps, backup], []] } });
   });
 
-  it('gibt der Schatzmeisterin nur Rechte, die die Registry kennt', async () => {
+  it('gibt der Geschäftsstelle nur Rechte, die die Registry kennt (156: nicht „Schatzmeisterin“ neben „Schatzmeister“)', async () => {
     const deps = createTestDeps({ env: 'development' });
     await seedDevelopment(deps);
-    const role = deps.db.select().from(roles).where(eq(roles.name, 'Schatzmeisterin')).get()!;
+    const role = deps.db.select().from(roles).where(eq(roles.name, 'Geschäftsstelle')).get()!;
     const keys = deps.db.select().from(rolePermissions).where(eq(rolePermissions.roleId, role.id)).all().map((r) => r.permissionKey).sort();
     expect(keys).toEqual(['audit.view', 'backup.export', 'documents.export', 'followUps.manage', 'followUps.view', 'media.upload']);
   });

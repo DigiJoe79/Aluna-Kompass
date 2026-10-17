@@ -1,7 +1,6 @@
 'use client';
 
 import type { NoticeView } from '@kompass/module-finance';
-import { MoreHorizontal } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
@@ -12,20 +11,19 @@ import { FormActionBar } from '@/components/forms/form-action-bar';
 import { FormField } from '@/components/forms/form-field';
 import { FormCell, FormGrid } from '@/components/forms/form-grid';
 import { useActionFeedback } from '@/components/forms/use-action-feedback';
-import { StatusBadge } from '@/components/status-badge';
+import { isNormalInList, StatusBadge, statusTone } from '@/components/status-badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { MutedMark, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Textarea } from '@/components/ui/textarea';
 import { noticeActions, noticeStateDisplay } from '@/lib/finance/notices';
 import { supersedeNoticeAction, voidNoticeAction } from './actions';
 import { NoticeDialog, type SavedNotice } from './notice-dialog';
+import { Empty } from '@/components/empty-value';
+import { RowMenu } from '@/components/row-menu';
 
 export type NoticeRow = Pick<NoticeView, 'id' | 'kind' | 'taxOffice' | 'taxNumber' | 'noticeDate' | 'exemptFrom' | 'assessmentPeriod' | 'purposesText' | 'purposesTextAccusative' | 'validUntil' | 'state' | 'supersededOn' | 'voidedAt' | 'documentId' | 'documentNumber' | 'supersededDocumentNumber'>;
-
-const TONE = { valid: 'success', endsOn: 'warning', expired: 'neutral', superseded: 'neutral', supersededByFinal: 'neutral', voided: 'neutral', future: 'neutral' } as const;
 
 /**
  * Die Reihe der Bescheide (C3), verdichtet auf sechs Spalten (K9-Befund 8),
@@ -49,55 +47,63 @@ export function NoticesTable({ rows, canIssue, canPickDocument }: { rows: Notice
       <Table aria-label={t('tableLabel')}>
         <TableHeader>
           <TableRow>
-            <TableHead>{t('columns.notice')}</TableHead>
-            <TableHead>{t('columns.noticeDate')}</TableHead>
-            <TableHead>{t('columns.validity')}</TableHead>
-            <TableHead>{t('columns.document')}</TableHead>
-            <TableHead>{t('columns.state')}</TableHead>
-            {canIssue ? <TableHead className="text-right">{t('columns.actions')}</TableHead> : null}
+            <TableHead col="title">{t('columns.notice')}</TableHead>
+            <TableHead col="meta">{t('columns.noticeDate')}</TableHead>
+            <TableHead col="meta">{t('columns.validity')}</TableHead>
+            <TableHead col="meta">{t('columns.document')}</TableHead>
+            <TableHead col="status">{t('columns.state')}</TableHead>
+            {/* Der Kopf über ⋯ ist nur für Vorleser da (112). */}
+            {canIssue ? <TableHead col="actions" className="w-11"><span className="sr-only">{t('columns.actions')}</span></TableHead> : null}
           </TableRow>
         </TableHeader>
         <TableBody>
           {rows.map((row) => {
             const state = noticeStateDisplay(row);
             const actions = noticeActions(row);
+            // Endzustand gedämpft (MUSTER § G, Runde 4, 112): Ein ersetzter oder irrtümlich erfasster Bescheid ist eine graue
+            // Zeile mit Marke am Namen; die Statusspalte zeigt nur die übrigen Zustände.
+            const ended = state.key === 'superseded' || state.key === 'supersededByFinal' || state.key === 'voided';
+            const mutedLabel = !ended ? undefined : state.key === 'voided' ? t('state.voided') : t('state.supersededShort');
             return (
-              <TableRow key={row.id} data-testid="notice-row">
+              <TableRow key={row.id} data-testid="notice-row" muted={mutedLabel}>
                 {/* Bescheid und Geltung dürfen umbrechen (Unterzeilen): Einzeilig liefen
                     die sechs Spalten bei 1440 px seitlich über (release-0.2.7.md, Befund 14). */}
-                <TableCell className="whitespace-normal">
+                <TableCell col="title" className="whitespace-normal" mutedMark="inline">
                   {tk(row.kind)}
+                  <MutedMark />
+                  {/* 09 B25: Das Datum der Ersetzung steht klein hinter der Marke. */}
+                  {state.key === 'superseded' && state.date ? <span data-testid="notice-state-date" className="ml-1 text-hint text-muted-ink">{t('state.supersededOn', { date: date(state.date) })}</span> : null}
                   <span className="block text-hint text-muted-ink">{row.taxOffice} · <span className="font-mono">{row.taxNumber}</span></span>
                 </TableCell>
-                <TableCell className="font-mono tabular-nums">{date(row.noticeDate)}</TableCell>
-                <TableCell className="whitespace-normal">
-                  <span className="whitespace-nowrap font-mono tabular-nums"><span data-testid="notice-exempt-from">{date(row.exemptFrom)}</span> – {date(row.validUntil)}</span>
+                <TableCell col="meta" className="tabular-nums">{date(row.noticeDate)}</TableCell>
+                <TableCell col="meta" className="whitespace-normal">
+                  <span className="whitespace-nowrap tabular-nums"><span data-testid="notice-exempt-from">{date(row.exemptFrom)}</span> – {date(row.validUntil)}</span>
                   {row.assessmentPeriod ? <span className="block text-hint text-muted-ink">{t('assessmentPeriodLine', { period: row.assessmentPeriod })}</span> : null}
                 </TableCell>
-                <TableCell data-testid="notice-document" className="font-mono">{row.documentNumber ?? <span className="font-sans text-muted-ink">{t('noDocument')}</span>}</TableCell>
-                <TableCell>
-                  <StatusBadge tone={TONE[state.key]}>
-                    <span data-testid="notice-state">{t(`state.${state.key}`, { date: state.date ? date(state.date) : '' })}</span>
-                  </StatusBadge>
+                <TableCell col="meta" data-testid="notice-document">
+                  {/* 112 (Joe 2026-10-17): Ein Bescheid ohne Dokument in der Akte ist Arbeit — das Original gehört abgelegt. Nur
+                      solange er gilt: Ein ersetzter oder irrtümlich erfasster Bescheid zeigt „—“ (Joe, nach Runde 4).
+                      Mono trägt nur die Nummer; Marke und Leerwert stehen in der Textschrift (Runde 4, 194). */}
+                  {row.documentNumber ? <span className="font-mono">{row.documentNumber}</span> : ended ? <Empty /> : <StatusBadge tone="warning" dot>{t('withoutDocument')}</StatusBadge>}
+                </TableCell>
+                <TableCell col="status">
+                  {isNormalInList('notice', state.key) || ended ? null : (
+                    <StatusBadge tone={statusTone('notice', state.key)}>
+                      <span data-testid="notice-state">{t(`state.${state.key}`, { date: state.date ? date(state.date) : '' })}</span>
+                    </StatusBadge>
+                  )}
                 </TableCell>
                 {canIssue ? (
-                  <TableCell className="text-right">
-                    {actions.attach || actions.supersede || actions.void ? (
-                      <DropdownMenu>
-                        <DropdownMenuTrigger
-                          render={
-                            <Button variant="ghost" size="icon" aria-label={t('actions.menu', { name: tk(row.kind) })} data-testid="notice-menu">
-                              <MoreHorizontal className="size-4" />
-                            </Button>
-                          }
-                        />
-                        <DropdownMenuContent align="end" className="w-auto bg-surface shadow-md">
-                          {actions.attach ? <DropdownMenuItem onSelect={() => setAttach(row)}>{t('actions.attach')}</DropdownMenuItem> : null}
-                          {actions.supersede ? <DropdownMenuItem onSelect={() => setSupersede(row)}>{t('actions.supersede')}</DropdownMenuItem> : null}
-                          {actions.void ? <DropdownMenuItem onSelect={() => setVoiding(row)}>{t('actions.void')}</DropdownMenuItem> : null}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    ) : null}
+                  <TableCell col="actions" className="text-right">
+                    <RowMenu
+                      name={tk(row.kind)}
+                      testId="notice-menu"
+                      items={[
+                        { key: 'attach', label: t('actions.attach'), hidden: !actions.attach, onSelect: () => setAttach(row) },
+                        { key: 'supersede', label: t('actions.supersede'), hidden: !actions.supersede, onSelect: () => setSupersede(row) },
+                        { key: 'void', label: t('actions.void'), hidden: !actions.void, onSelect: () => setVoiding(row) },
+                      ]}
+                    />
                   </TableCell>
                 ) : null}
               </TableRow>
@@ -137,7 +143,7 @@ function SupersedeDialog({ notice, canPickDocument, onClose }: { notice: NoticeR
         <p className="text-meta text-ink-2">{ts('hint')}</p>
         <FormGrid>
           <FormField id="notice-superseded-on" label={ts('date')} required size="s">
-            <Input id="notice-superseded-on" type="date" className="font-mono" value={supersededOn} onChange={(e) => setSupersededOn(e.target.value)} />
+            <Input id="notice-superseded-on" type="date" value={supersededOn} onChange={(e) => setSupersededOn(e.target.value)} />
           </FormField>
           {canPickDocument ? (
             <FormCell size="m">

@@ -61,7 +61,8 @@ export default async function PeoplePage({ searchParams }: { searchParams: Promi
   const sameYear = !!fiscalYear && fiscalYear.startsOn === `${year}-01-01` && fiscalYear.endsOn === `${year}-12-31`;
 
   return (
-    <Page width="standard" header={<PageHeader title={t('pageTitle', { year })} description={t('intro')} />}>
+    // 09 B36: Das Jahr steht im Rahmenfilter, nicht noch einmal im Titel.
+    <Page width="full" header={<PageHeader title={t('pageTitle')} description={t('intro')} />}>
       <div className="space-y-5">
         {boardMembersMissing ? (
           <div data-testid="people-board-missing">

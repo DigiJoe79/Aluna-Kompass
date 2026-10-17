@@ -40,7 +40,7 @@ export async function EntryHistory({ events, fmt }: { events: EntryHistoryEvent[
               return (
                 <li key={index} className="space-y-1.5 border-t border-line-2 pt-2 first:border-0 first:pt-0">
                   <p className="text-meta">
-                    <span className="mr-2 font-mono text-hint text-muted-ink">{fmt.dateTime(event.at)}</span>
+                    <span className="tabular-nums mr-2 text-hint text-muted-ink">{fmt.dateTime(event.at)}</span>
                     {summaryOf(event, t)}
                     {channel ? <span className="text-muted-ink"> {t('via', { channel: tc(channel) })}</span> : null}
                   </p>

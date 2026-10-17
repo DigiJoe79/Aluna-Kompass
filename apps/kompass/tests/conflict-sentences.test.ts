@@ -19,7 +19,7 @@ describe('Ablehnungen mit Satz statt Detail (Backlog 55)', () => {
   });
 
   it('sagt, welcher Lauf der Webseite schon läuft', () => {
-    expect(detail('siteJobRunning', { kind: 'publish' })).toBe('Die Webseite wird gerade veröffentlicht. Warten Sie, bis der Lauf fertig ist.');
+    expect(detail('siteJobRunning', { kind: 'publish' })).toBe('Die Webseite wird gerade publiziert. Warten Sie, bis der Lauf fertig ist.');
     expect(detail('siteJobRunning', { kind: 'preview' })).toBe('Es läuft gerade eine Vorschau der Webseite. Warten Sie, bis der Lauf fertig ist.');
     expect(detail('siteJobRunning', { kind: 'unknown' })).toBe('Es läuft gerade ein Lauf der Webseite. Warten Sie, bis der Lauf fertig ist.');
   });

@@ -1,6 +1,6 @@
 import { expect, test } from './fixtures';
 import { associationYear } from './association-day';
-import { resetDatabase } from './helpers';
+import { resetDatabase, rowAction } from './helpers';
 
 /**
  * F3b Task 5 — Finanzen einrichten (H1–H8). Die ganze Spec läuft auf einer
@@ -60,7 +60,7 @@ test.describe('finance setup', () => {
     await expect(row).toBeVisible();
     await delayRefresh(page);
     for (let i = 0; i < 2; i += 1) {
-      await row.getByRole('button', { name: 'Ändern' }).click();
+      await rowAction(page, row, 'Bearbeiten');
       const dialog = page.getByRole('dialog');
       await dialog.getByRole('button', { name: 'Speichern' }).click();
       await expect(dialog).toBeHidden();
@@ -77,12 +77,12 @@ test.describe('finance setup', () => {
     await expect(row).toBeVisible();
     await delayRefresh(page);
     for (let i = 0; i < 2; i += 1) {
-      await row.getByRole('button', { name: 'Ändern' }).click();
+      await rowAction(page, row, 'Bearbeiten');
       const dialog = page.getByRole('dialog');
       await dialog.getByRole('button', { name: 'Speichern' }).click();
       await expect(dialog).toBeHidden();
     }
-    await row.getByRole('button', { name: 'Erfüllt' }).click();
+    await rowAction(page, row, 'Als erfüllt markieren');
     await expect(row.getByText('Erfüllt', { exact: true })).toBeVisible();
     await expect(page.getByText(/wurde inzwischen geändert/)).toHaveCount(0);
   });
@@ -95,10 +95,11 @@ test.describe('finance setup', () => {
     await create.getByLabel('Endet am').fill(thisYear('12-31'));
     await create.getByRole('button', { name: 'Speichern' }).click();
     const panel = page.getByTestId('fiscal-years-panel');
-    await expect(panel.getByRole('button', { name: 'Ändern' })).toBeVisible();
+    const yearRow = panel.getByRole('row').nth(1);
+    await expect(yearRow.getByRole('button', { name: /^Aktionen für / })).toBeVisible();
     await delayRefresh(page);
     for (let i = 0; i < 2; i += 1) {
-      await panel.getByRole('button', { name: 'Ändern' }).click();
+      await rowAction(page, yearRow, 'Bearbeiten');
       const dialog = page.getByRole('dialog');
       await dialog.getByRole('button', { name: 'Speichern' }).click();
       await expect(dialog).toBeHidden();
@@ -121,7 +122,7 @@ test.describe('finance setup', () => {
 
   test('der Bereich steht im Reiter, nicht noch einmal als Überschrift darunter', async ({ page }) => {
     for (const [panel, name] of [
-      ['accounts', 'Bankkonten und Kassen'],
+      ['accounts', 'Konten'],
       ['categories', 'Kategorien'],
       ['purposes', 'Zwecke'],
       ['fiscalYears', 'Geschäftsjahre'],
@@ -183,7 +184,7 @@ test.describe('finance setup', () => {
     await dialog.getByRole('button', { name: 'Speichern' }).click();
     await expect(page.getByText('Konto angelegt.')).toBeVisible();
 
-    await page.getByTestId('account-row-Vereinskonto').getByRole('button', { name: 'Ändern' }).click();
+    await rowAction(page, page.getByTestId('account-row-Vereinskonto'), 'Bearbeiten');
     dialog = page.getByRole('dialog');
     // Das Hauptkonto hat keinen Eintrag zum Stilllegen, sondern den Grund als Hinweis im Kopf (Spec Seitenkopf § 3.4).
     await expect(dialog.getByRole('button', { name: 'Stilllegen' })).toHaveCount(0);
@@ -199,26 +200,26 @@ test.describe('finance setup', () => {
     await dialog.getByRole('button', { name: 'Speichern' }).click();
     await expect(page.getByText('Konto angelegt.')).toBeVisible();
 
-    await page.getByTestId('account-row-Spendenkonto ohne Buchungen').getByRole('button', { name: 'Ändern' }).click();
+    await rowAction(page, page.getByTestId('account-row-Spendenkonto ohne Buchungen'), 'Bearbeiten');
     const editDialog = page.getByRole('dialog');
     await editDialog.getByRole('button', { name: 'Stilllegen' }).click();
     await expect(editDialog).toBeHidden();
-    await expect(page.getByTestId('account-row-Spendenkonto ohne Buchungen')).toContainText('Stillgelegt');
+    await expect(page.getByTestId('account-row-Spendenkonto ohne Buchungen')).toContainText('stillgelegt');
     // Ohne Rückfrage, aber mit „Rückgängig“; der Gegenweg steht danach dauerhaft im Dialog.
     const toast = page.locator('[data-sonner-toast]').filter({ hasText: 'Konto stillgelegt.' });
     await expect(toast.getByRole('button', { name: 'Rückgängig' })).toBeVisible();
     await toast.getByRole('button', { name: 'Rückgängig' }).click();
-    await expect(page.getByTestId('account-row-Spendenkonto ohne Buchungen')).not.toContainText('Stillgelegt');
-    await page.getByTestId('account-row-Spendenkonto ohne Buchungen').getByRole('button', { name: 'Ändern' }).click();
+    await expect(page.getByTestId('account-row-Spendenkonto ohne Buchungen')).not.toContainText('stillgelegt');
+    await rowAction(page, page.getByTestId('account-row-Spendenkonto ohne Buchungen'), 'Bearbeiten');
     await page.getByRole('dialog').getByRole('button', { name: 'Stilllegen' }).click();
-    await expect(page.getByTestId('account-row-Spendenkonto ohne Buchungen')).toContainText('Stillgelegt');
-    await page.getByTestId('account-row-Spendenkonto ohne Buchungen').getByRole('button', { name: 'Ändern' }).click();
+    await expect(page.getByTestId('account-row-Spendenkonto ohne Buchungen')).toContainText('stillgelegt');
+    await rowAction(page, page.getByTestId('account-row-Spendenkonto ohne Buchungen'), 'Bearbeiten');
     await expect(page.getByRole('dialog').getByText('Stillgelegt', { exact: true })).toBeVisible();
     await page.getByRole('dialog').getByRole('button', { name: 'Wieder aktivieren' }).click();
-    await expect(page.getByTestId('account-row-Spendenkonto ohne Buchungen')).not.toContainText('Stillgelegt');
-    await page.getByTestId('account-row-Spendenkonto ohne Buchungen').getByRole('button', { name: 'Ändern' }).click();
+    await expect(page.getByTestId('account-row-Spendenkonto ohne Buchungen')).not.toContainText('stillgelegt');
+    await rowAction(page, page.getByTestId('account-row-Spendenkonto ohne Buchungen'), 'Bearbeiten');
     await page.getByRole('dialog').getByRole('button', { name: 'Stilllegen' }).click();
-    await expect(page.getByTestId('account-row-Spendenkonto ohne Buchungen')).toContainText('Stillgelegt');
+    await expect(page.getByTestId('account-row-Spendenkonto ohne Buchungen')).toContainText('stillgelegt');
 
     await page.goto('/finance/accounts');
     await expect(page.locator('[role="link"]', { hasText: 'Spendenkonto ohne Buchungen' })).not.toBeVisible();
@@ -234,6 +235,8 @@ test.describe('finance setup', () => {
     await page.getByRole('dialog').getByLabel('Rollenname').fill('Finanzen ohne Akte');
     await page.getByRole('dialog').getByRole('button', { name: 'Anlegen' }).click();
     await page.getByRole('list', { name: 'Rollen' }).getByRole('button', { name: /Finanzen ohne Akte/ }).click();
+    // Rechtegruppen sind zugeklappt, teilweise gesetzte offen (Runde 3, 158).
+    await page.getByRole('button', { name: 'Alle aufklappen' }).click();
     await page.getByRole('checkbox', { name: 'Finanzen lesen' }).check();
     await page.getByRole('checkbox', { name: 'Finanzen einrichten' }).check();
     await page.getByRole('button', { name: 'Rolle speichern' }).click();
@@ -282,6 +285,8 @@ test.describe('finance setup', () => {
     await page.getByRole('dialog').getByLabel('Rollenname').fill('Nur Einrichtung');
     await page.getByRole('dialog').getByRole('button', { name: 'Anlegen' }).click();
     await page.getByRole('list', { name: 'Rollen' }).getByRole('button', { name: /Nur Einrichtung/ }).click();
+    // Rechtegruppen sind zugeklappt, teilweise gesetzte offen (Runde 3, 158).
+    await page.getByRole('button', { name: 'Alle aufklappen' }).click();
     await page.getByRole('checkbox', { name: 'Finanzen einrichten' }).check();
     await page.getByRole('button', { name: 'Rolle speichern' }).click();
     await expect(page.getByRole('status')).toContainText('Rolle gespeichert.');
@@ -310,12 +315,12 @@ test.describe('finance setup', () => {
     await page.goto('/admin/finance?panel=accounts');
     const row = page.getByTestId('account-row-Vereinskonto');
     await expect(row).toBeVisible();
-    await expect(row.getByText('DE23999999990000202051')).toBeVisible();
+    await expect(row.getByText('DE23 9999 9999 0000 2020 51')).toBeVisible();
   });
 
-  test('„Bankkonten und Kassen einrichten“ führt aus der Kontenübersicht in das Konten-Panel', async ({ page }) => {
+  test('„Konten einrichten“ führt aus der Kontenübersicht in das Konten-Panel', async ({ page }) => {
     await page.goto('/finance/accounts');
-    await page.getByRole('link', { name: 'Bankkonten und Kassen einrichten' }).click();
+    await page.getByRole('link', { name: 'Konten einrichten' }).click();
     await expect(page).toHaveURL('/admin/finance?panel=accounts');
     await expect(page.getByRole('button', { name: 'Konto anlegen' })).toBeVisible();
   });
@@ -329,17 +334,25 @@ test.describe('finance setup', () => {
     await expect(page.getByText('Zweck angelegt.')).toBeVisible();
 
     const row = page.locator('tr', { hasText: 'Neues Katzenhaus' });
-    await expect(row.getByText('Offen', { exact: true })).toBeVisible();
-    await row.getByRole('button', { name: 'Erfüllt' }).click();
+    // Offen ist der Normalzustand: in der Liste ohne Marke (Designer Stufe 2 Nr. 6a). Die Zustandswechsel stehen im
+    // ⋯-Menü der Zeile (Joe 11.8).
+    const menu = row.getByRole('button', { name: /^Aktionen für / });
+    await expect(row.getByText('Offen', { exact: true })).toHaveCount(0);
+    await rowAction(page, row, 'Als erfüllt markieren');
     await expect(row.getByText('Erfüllt', { exact: true })).toBeVisible();
-    await expect(row.getByRole('button', { name: 'Erfüllt' })).toHaveCount(0);
-    await expect(row.getByRole('button', { name: 'Auflösen' })).toHaveCount(0);
-    await row.getByRole('button', { name: 'Wieder öffnen' }).click();
+    await menu.click();
+    await expect(page.getByRole('menuitem', { name: 'Als erfüllt markieren' })).toHaveCount(0);
+    await expect(page.getByRole('menuitem', { name: 'Auflösen' })).toHaveCount(0);
+    await page.getByRole('menuitem', { name: 'Wieder öffnen' }).click();
     const reopenDialog = page.getByRole('dialog');
     await reopenDialog.getByLabel('Begründung').fill('Doch noch Bedarf');
     await reopenDialog.getByRole('button', { name: 'Wieder öffnen' }).click();
-    await expect(row.getByText('Offen', { exact: true })).toBeVisible();
-    await expect(row.getByRole('button', { name: 'Wieder öffnen' })).toHaveCount(0);
+    await expect(reopenDialog).toBeHidden();
+    await expect(row.getByText('Offen', { exact: true })).toHaveCount(0);
+    await menu.click();
+    await expect(page.getByRole('menuitem', { name: 'Als erfüllt markieren' })).toBeVisible();
+    await expect(page.getByRole('menuitem', { name: 'Wieder öffnen' })).toHaveCount(0);
+    await page.keyboard.press('Escape');
   });
 
   test('die Besteuerungsform steht als Zeitreihe mit Erklärsatz unter „Sätze und Grenzen“', async ({ page }) => {
@@ -347,8 +360,10 @@ test.describe('finance setup', () => {
     const panel = page.getByTestId('dated-values-panel');
     await expect(panel.getByText('Besteuerungsform', { exact: true })).toBeVisible();
     await expect(panel.getByText('Die Besteuerungsform gilt taggenau — eine Änderung wirkt ab dem gewählten Stichtag.')).toBeVisible();
-    await expect(panel.getByText(/Aktuell: (Kleinunternehmer|Regelbesteuerung)/)).toBeVisible();
+    // Der jüngste Stichtag ist der Stand; ein eigenes „Aktuell: …“ gibt es nicht mehr (11-1 B30).
+    await expect(panel.getByText(/^(Kleinunternehmer|Regelbesteuerung)/).first()).toBeVisible();
 
+    await page.getByTestId('dated-value-menu-taxation').click();
     await page.getByTestId('dated-value-edit-taxation').click();
     const dialog = page.getByRole('dialog');
     await dialog.getByLabel('Gültig ab').fill(thisYear('01-01', 1));
@@ -386,17 +401,17 @@ test.describe('finance setup', () => {
         await route.continue().catch(() => undefined);
       },
     );
-    await row.getByRole('button', { name: 'Ändern' }).click();
+    await rowAction(page, row, 'Bearbeiten');
     let dialog = page.getByRole('dialog');
     await dialog.getByRole('button', { name: 'Speichern' }).click();
     await expect(page.getByText('Kategorie geändert.')).toBeVisible();
     await expect(dialog).toBeHidden();
-    await row.getByRole('button', { name: 'Ändern' }).click();
+    await rowAction(page, row, 'Bearbeiten');
     dialog = page.getByRole('dialog');
     await dialog.getByLabel('Aktiv').uncheck();
     await dialog.getByRole('button', { name: 'Speichern' }).click();
     await expect(dialog).toBeHidden();
-    await expect(row.getByText('Stillgelegt')).toBeVisible();
+    await expect(row.getByText('stillgelegt')).toBeVisible();
   });
 
   test('Kategorien: Suche in der Adresse, Zählzeile, ohne Treffer steht „Filter zurücksetzen“', async ({ page }) => {
@@ -469,7 +484,7 @@ test.describe('finance setup', () => {
     await expect(page).toHaveURL(/\/finance\/entries\/[^/]+$/);
 
     await page.goto('/admin/finance?panel=fiscalYears');
-    await page.getByRole('button', { name: 'Ändern' }).click();
+    await rowAction(page, page.getByTestId('fiscal-years-panel').getByRole('row').nth(1), 'Bearbeiten');
     const editDialog = page.getByRole('dialog');
     await editDialog.getByLabel('Bezeichnung').fill('Anders');
     await editDialog.getByRole('button', { name: 'Speichern' }).click();
@@ -502,30 +517,33 @@ test.describe('finance setup', () => {
     await page.goto('/admin/finance?panel=tax');
     const panel = page.getByTestId('tax-panel');
     await expect(panel.getByLabel('Anspruchsgrundlage für Aufwandsspenden')).toHaveCount(0);
-    // Der Schalter ist gesteuert: Er steht erst nach dem Speichern um — also klicken und warten.
-    await panel.getByRole('switch', { name: 'Werden Aufwandsspenden angeboten?' }).click();
-    await expect(panel.getByRole('switch', { name: 'Werden Aufwandsspenden angeboten?' })).toBeChecked();
-    const field = panel.getByLabel('Anspruchsgrundlage für Aufwandsspenden');
+    // Runde 3, 172: Die Schalter gelten mit der Leiste des Abschnitts; der Abschnitt der Grundlage erscheint danach.
+    const switches = panel.getByTestId('tax-switches');
+    await switches.getByRole('radiogroup', { name: 'Werden Aufwandsspenden angeboten?' }).getByRole('radio', { name: 'Ja' }).click();
+    await switches.getByTestId('tax-switches-save').click();
+    await expect(page.getByText('Schalter gespeichert.')).toBeVisible();
+    const waiver = panel.getByTestId('waiver-basis');
+    const field = waiver.getByLabel('Anspruchsgrundlage für Aufwandsspenden');
     await expect(field).toBeVisible();
-    await expect(panel.getByTestId('waiver-basis')).toContainText('Vereinbarung vom … / Satzung § …');
+    await expect(waiver).toContainText('Vereinbarung vom … / Satzung § …');
     await field.fill('Satzung § 9 Abs. 2');
-    // Befund J: ohne „Gilt seit“ nennt der Dienst das Feld; der Knopf ist nie ausgegraut (K9-Befund 10, MUSTER § B).
-    await panel.getByTestId('waiver-basis').getByRole('button', { name: 'Speichern' }).click();
-    await expect(panel.getByLabel('Gilt seit')).toHaveAttribute('aria-invalid', 'true');
-    await panel.getByLabel('Gilt seit').fill(thisYear('01-01'));
-    await panel.getByTestId('waiver-basis').getByRole('button', { name: 'Speichern' }).click();
+    // Befund J: ohne „Gilt ab“ nennt der Dienst das Feld; der Knopf ist nie ausgegraut (K9-Befund 10, MUSTER § B).
+    await waiver.getByTestId('waiver-basis-save').click();
+    await expect(waiver.getByLabel('Gilt ab')).toHaveAttribute('aria-invalid', 'true');
+    await waiver.getByLabel('Gilt ab').fill(thisYear('01-01'));
+    await waiver.getByTestId('waiver-basis-save').click();
     await expect(page.getByText('Anspruchsgrundlage gespeichert.')).toBeVisible();
 
     await page.goto('/admin/finance?panel=checklist');
     await expect(page.getByTestId('requirement-waiverBasis')).toHaveAttribute('data-done', 'true');
     await page.goto('/admin/finance?panel=tax');
     await expect(page.getByTestId('tax-panel').getByLabel('Anspruchsgrundlage für Aufwandsspenden')).toHaveValue('Satzung § 9 Abs. 2');
-    await expect(page.getByTestId('tax-panel').getByLabel('Gilt seit')).toHaveValue(thisYear('01-01'));
+    await expect(page.getByTestId('waiver-basis').getByLabel('Gilt ab')).toHaveValue(thisYear('01-01'));
   });
 
   test('Barkasse und Journal ohne Einrichtung: Seitenkopf, leerer Zustand und der Weg zum Einrichten (K9-Befund 6)', async ({ page }) => {
     await page.goto('/finance/cash');
-    await expect(page.getByRole('heading', { name: 'Barkasse', level: 1 })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Kassen', level: 1 })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Noch keine Barkasse' })).toBeVisible();
     // Kein gesperrter Schritt, sondern noch nichts da (MUSTER Seitenrahmen).
     await expect(page.getByText('nicht möglich', { exact: true })).toHaveCount(0);
@@ -552,7 +570,9 @@ test.describe('finance setup', () => {
     const panel = page.getByTestId('tax-panel');
     await expect(panel.getByRole('heading', { name: 'Pauschalen an Vorstandsmitglieder', level: 2 })).toBeVisible();
     const form = panel.getByTestId('board-remuneration');
-    await form.getByLabel('Pauschalen an Vorstandsmitglieder sind vorgesehen').check();
+    // Joe 11.9: eine Ja/Nein-Frage ohne Vorauswahl; Fundstelle und „Gilt ab“ erst bei „Ja“.
+    await expect(form.getByLabel('Satzungsfundstelle')).toHaveCount(0);
+    await form.getByRole('radio', { name: 'Ja' }).click();
     await form.getByLabel('Satzungsfundstelle').fill('Satzung § 7 Abs. 3');
     // Speichern ist nie ausgegraut (MUSTER § B); das fehlende Datum nennt der Dienst am Feld.
     const save = form.getByTestId('board-remuneration-save');
@@ -569,6 +589,7 @@ test.describe('finance setup', () => {
 
   test('einen Satz ab Stichtag überschreiben und wieder zurücknehmen', async ({ page }) => {
     await page.goto('/admin/finance?panel=datedValues');
+    await page.getByTestId('dated-value-menu-vatStandard').click();
     await page.getByTestId('dated-value-edit-vatStandard').click();
     const dialog = page.getByRole('dialog');
     await dialog.getByLabel('Gültig ab').fill(thisYear('01-01', 1));
@@ -577,7 +598,7 @@ test.describe('finance setup', () => {
     await expect(dialog).toBeHidden();
     await expect(page.getByText('Vom Verein überschrieben')).toBeVisible();
 
-    await page.getByRole('button', { name: 'Zurücknehmen' }).click();
+    await rowAction(page, page.getByTestId('dated-value-row').filter({ hasText: 'Vom Verein überschrieben' }), 'Zurücknehmen');
     await expect(page.getByText('Vom Verein überschrieben')).not.toBeVisible();
   });
 
@@ -592,11 +613,12 @@ test.describe('finance setup', () => {
     const row = page.getByTestId('tax-limit-statement-suffices');
     try {
       await page.goto('/admin/finance?panel=tax');
-      // K9-Befund 10: ohne Änderung meldet die Zeile „Nichts geändert“ wie die Speicherleiste, statt ausgegraut zu sein.
-      await row.getByRole('button', { name: 'Speichern' }).click();
-      await expect(row.getByText('Nichts geändert')).toBeVisible();
+      // Runde 3, 172: eine Leiste für alle Grenzen; ohne Änderung meldet sie „Nichts geändert“, statt ausgegraut zu sein.
+      const save = page.getByTestId('tax-limits-save');
+      await save.click();
+      await expect(page.getByTestId('tax-limits').getByText('Nichts geändert')).toBeVisible();
       await row.getByLabel('Bis zu welchem Betrag genügt der Kontoauszug als Beleg?').fill('50,00');
-      await row.getByRole('button', { name: 'Speichern' }).click();
+      await save.click();
       await expect(page.getByText('Grenze gespeichert.')).toBeVisible();
 
       await page.reload();
@@ -604,32 +626,18 @@ test.describe('finance setup', () => {
     } finally {
       await page.goto('/admin/finance?panel=tax');
       await row.getByLabel('Bis zu welchem Betrag genügt der Kontoauszug als Beleg?').fill('0,00');
-      await row.getByRole('button', { name: 'Speichern' }).click();
+      await page.getByTestId('tax-limits-save').click();
       await expect(page.getByText('Grenze gespeichert.')).toBeVisible();
     }
   });
 
-  test('die Matrix nennt je Rolle die Navigationseinträge, die sie sieht', async ({ page }) => {
+  // Runde 3 (Designer Frage 4, 173): „Wer darf was“ ist eine Liste je Tätigkeit mit „erteilt an …“; Navigation und
+  // Träger stehen nicht mehr hier (Träger im Rolleneditor).
+  test('„Wer darf was“ nennt je Tätigkeit die Rollen, denen sie erteilt ist', async ({ page }) => {
     await page.goto('/admin/finance?panel=permissions');
-    // Reihenfolge wie das Manifest: Abschnitt „Arbeit“ (F5: Arbeitsliste und Nebenlisten vor den Auszügen),
-    // dann „Buchungen“, dann „Spenden“ (F6a), dann „Auslagen“ (F8a), zuletzt die Verwaltung.
-    const treasurer = page.getByTestId('permission-role-Schatzmeister');
-    await expect(treasurer.getByText(/^Sichtbare Navigationseinträge:/)).toHaveText('Sichtbare Navigationseinträge: Arbeitsliste, Fremdes Geld, Belege ohne Buchung, Regeln, Hochgeladene Auszüge, Journal, Bankkonten und Kassen, Offene Zahlungen, Barkasse, Bestätigungen, Serienlauf, Spendenbuch, Bescheide, Eigene Anträge, Freigaben, Partner, Zwecke, Zurückgelegtes Geld, Personen, Finanzen einrichten');
-
-    const auditor = page.getByTestId('permission-role-Kassenprüfer');
-    await expect(auditor.getByText(/^Sichtbare Navigationseinträge:/)).toHaveText('Sichtbare Navigationseinträge: Arbeitsliste, Fremdes Geld, Belege ohne Buchung, Regeln, Hochgeladene Auszüge, Journal, Bankkonten und Kassen, Offene Zahlungen, Barkasse, Bestätigungen, Serienlauf, Spendenbuch, Bescheide, Partner, Zwecke, Zurückgelegtes Geld, Personen');
-
-    const clerk = page.getByTestId('permission-role-Auslagen einreichen');
-    // F8a: „Auslagen einreichen“ sieht genau die eigenen Anträge — sonst nichts aus den Finanzen.
-    await expect(clerk.getByText(/^Sichtbare Navigationseinträge:/)).toHaveText('Sichtbare Navigationseinträge: Eigene Anträge');
-  });
-
-  test('die Matrix nennt je Rolle, wer sie trägt, und „niemand“ als Wort', async ({ page }) => {
-    await page.goto('/admin/finance?panel=permissions');
-    const treasurer = page.getByTestId('permission-role-Schatzmeister');
-    await expect(treasurer).toBeVisible();
-    await expect(treasurer.getByText('niemand')).toBeVisible();
-    const admin = page.getByTestId('permission-role-Administration');
-    await expect(admin.getByText('Anna Berger')).toBeVisible();
+    const rows = page.getByTestId('permission-activity');
+    await expect(rows.filter({ hasText: 'Finanzen lesen' })).toContainText(/erteilt an .*Schatzmeister/);
+    await expect(page.getByText('Sichtbare Navigationseinträge')).toHaveCount(0);
+    await expect(page.getByText('Trägt diese Rolle')).toHaveCount(0);
   });
 });

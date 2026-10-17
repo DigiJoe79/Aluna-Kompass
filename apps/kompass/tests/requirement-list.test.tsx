@@ -44,3 +44,34 @@ describe('RequirementList gruppiert', () => {
     expect(screen.queryByRole('region', { name: 'Fehlt noch' })).toBeNull();
   });
 });
+
+/** 11-1 B33: „(optional — …)“ stand im Titel. Jetzt: Marke „Optional“ und die Erklärung als Unterzeile. */
+describe('RequirementList optional', () => {
+  it('zeigt die Marke und die Erklärung unter dem Titel', () => {
+    render(
+      <NextIntlClientProvider locale="de" messages={messages} timeZone="Europe/Berlin">
+        <RequirementList items={[item('n', { title: 'Bescheid erfassen', optional: { label: 'Optional', note: 'Ohne Bescheid keine Zuwendungsbestätigungen.' } })]} />
+      </NextIntlClientProvider>,
+    );
+    expect(screen.getByText('Bescheid erfassen').textContent).toBe('Bescheid erfassen');
+    expect(screen.getByText('Optional')).toBeTruthy();
+    expect(screen.getByText('Ohne Bescheid keine Zuwendungsbestätigungen.')).toBeTruthy();
+  });
+});
+
+/** Runde 3, 166: Ein Zustand, eine Form — erledigt ist ein Haken (offen ein Kreis), die Zeile gedämpft; keine Marke „Erledigt“. */
+describe('RequirementList erledigt', () => {
+  it('Haken statt Marke, Wort für Vorleser, gedämpfte Zeile', () => {
+    render(
+      <NextIntlClientProvider locale="de" messages={messages} timeZone="Europe/Berlin">
+        <RequirementList items={[item('d', { done: true }), item('o')]} />
+      </NextIntlClientProvider>,
+    );
+    const done = screen.getByTestId('requirement-d');
+    expect(within(done).queryByText('Erledigt', { selector: '[data-slot="status-badge"], .rounded-sm' })).toBeNull();
+    expect(within(done).getByText('Erledigt').className).toContain('sr-only');
+    expect(done.querySelector('svg.lucide-check')).not.toBeNull();
+    expect(within(done).getByText('Punkt d').className).toContain('text-muted-ink');
+    expect(screen.getByTestId('requirement-o').querySelector('svg.lucide-circle-dashed')).not.toBeNull();
+  });
+});

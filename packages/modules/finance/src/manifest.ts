@@ -69,6 +69,8 @@ const FINANCE_SETTINGS: readonly SettingDefinition[] = [
   { key: 'finance.boardRemunerationDocumentId', schema: z.string().nullable(), default: null },
   /** Befund AK: ab wann die Grundlage gilt — die Markierung „ohne Grundlage“ vergleicht mit dem Zahlungstag. */
   { key: 'finance.boardRemunerationValidFrom', schema: z.string().date().nullable(), default: null },
+  /** Joe 11.9: der Tag der Entscheidung, ob ja oder nein — ohne ihn gilt der Schritt als offen (Bestand eingeschlossen). */
+  { key: 'finance.boardRemunerationDecidedOn', schema: z.string().date().nullable(), default: null },
 ];
 
 export const financeModule: ModuleManifest = defineModule({
@@ -105,32 +107,33 @@ export const financeModule: ModuleManifest = defineModule({
     { href: '/admin/finance', doc: 'finanzen/einrichten' },
   ],
   navigation: [
-    // F4 Task 7: ein eigener Abschnitt „Arbeit“ über „Buchungen“ — F5 stellt die Arbeitsliste davor.
-    // F5 Task 6: die Arbeitsliste führt den Abschnitt an, ihre drei Nebenlisten folgen.
+    // Sechs Gruppen (Designer Stufe 2 Nr. 12, Nachtrag 2026-10-16): Arbeit · Buchungen · Zweckmittel · Spenden · Auslagen ·
+    // Beteiligte. Reihenfolge der Gruppen = erstes Auftreten; Einträge, Rechte und Routen unverändert. Eine Gruppe ohne
+    // sichtbaren Eintrag fällt samt Kopf weg (`sectionsFor`).
+    // Arbeit folgt dem Tageslauf: hochladen, zuordnen, Regeln pflegen.
     { key: 'finance.work', href: '/finance/work', icon: 'euro', group: 'finance', section: 'finance.work', permission: 'finance.read' },
     { key: 'finance.workForeign', href: '/finance/work/foreign', icon: 'euro', group: 'finance', section: 'finance.work', permission: 'finance.read' },
     { key: 'finance.workVouchers', href: '/finance/work/vouchers', icon: 'euro', group: 'finance', section: 'finance.work', permission: 'finance.read' },
-    { key: 'finance.rules', href: '/finance/work/rules', icon: 'euro', group: 'finance', section: 'finance.work', permission: 'finance.read' },
     { key: 'finance.imports', href: '/finance/imports', icon: 'euro', group: 'finance', section: 'finance.work', permission: 'finance.read' },
+    { key: 'finance.rules', href: '/finance/work/rules', icon: 'euro', group: 'finance', section: 'finance.work', permission: 'finance.read' },
+    // Buchungen: offene Zahlungen direkt hinter dem Journal, danach die Kontenseiten.
     { key: 'finance.entries', href: '/finance/entries', icon: 'euro', group: 'finance', section: 'finance.entries', permission: 'finance.read' },
-    { key: 'finance.accounts', href: '/finance/accounts', icon: 'euro', group: 'finance', section: 'finance.entries', permission: 'finance.read' },
     { key: 'finance.openItems', href: '/finance/open-items', icon: 'euro', group: 'finance', section: 'finance.entries', permission: 'finance.read' },
+    { key: 'finance.accounts', href: '/finance/accounts', icon: 'euro', group: 'finance', section: 'finance.entries', permission: 'finance.read' },
     { key: 'finance.cash', href: '/finance/cash', icon: 'euro', group: 'finance', section: 'finance.entries', permission: 'finance.read' },
-    // F6a Task 6: ein eigener Abschnitt „Spenden“ — Bestätigungen und Bescheide.
+    // Zweckmittel: Geld nach Zweck. Zwecke sieht auch, wer nur `finance.overview` hat (F8b Annahme 13).
+    { key: 'finance.purposes', href: '/finance/purposes', icon: 'euro', group: 'finance', section: 'finance.allocation', permission: ['finance.read', 'finance.overview'] },
+    { key: 'finance.reserves', href: '/finance/reserves', icon: 'euro', group: 'finance', section: 'finance.allocation', permission: 'finance.read' },
     { key: 'finance.donations', href: '/finance/donations', icon: 'euro', group: 'finance', section: 'finance.donations', permission: 'finance.read' },
-    // F6b Task 6: Serienlauf und Spendenbuch zwischen Bestätigungen und Bescheiden.
     { key: 'finance.donationRun', href: '/finance/donations/run', icon: 'euro', group: 'finance', section: 'finance.donations', permission: 'finance.read' },
     { key: 'finance.donationBook', href: '/finance/donations/book', icon: 'euro', group: 'finance', section: 'finance.donations', permission: 'finance.read' },
     { key: 'finance.donationNotices', href: '/finance/donations/notices', icon: 'euro', group: 'finance', section: 'finance.donations', permission: 'finance.read' },
-    // F8a Task 4: ein eigener Abschnitt „Auslagen“ — eigene Anträge und die Freigaben.
+    // Auslagen bleibt eine eigene Gruppe: Wer nur einreicht, sieht genau sie.
     { key: 'finance.expenses', href: '/finance/expenses', icon: 'euro', group: 'finance', section: 'finance.expenses', permission: 'finance.expensesSubmit' },
     { key: 'finance.approvals', href: '/finance/approvals', icon: 'euro', group: 'finance', section: 'finance.expenses', permission: 'finance.approve' },
-    // F7 Task 5: ein eigener Abschnitt „Partner und Zweckmittel“.
-    { key: 'finance.partners', href: '/finance/partners', icon: 'euro', group: 'finance', section: 'finance.allocation', permission: 'finance.read' },
-    // F8b Task 5 (Annahme 13): Zwecke — reduziert offen für finance.overview (E3, Design Phase 4c).
-    { key: 'finance.purposes', href: '/finance/purposes', icon: 'euro', group: 'finance', section: 'finance.allocation', permission: ['finance.read', 'finance.overview'] },
-    { key: 'finance.reserves', href: '/finance/reserves', icon: 'euro', group: 'finance', section: 'finance.allocation', permission: 'finance.read' },
-    { key: 'finance.people', href: '/finance/people', icon: 'euro', group: 'finance', section: 'finance.allocation', permission: 'finance.read' },
+    // Beteiligte: die Gegenüber — Partner und Personen.
+    { key: 'finance.partners', href: '/finance/partners', icon: 'euro', group: 'finance', section: 'finance.parties', permission: 'finance.read' },
+    { key: 'finance.people', href: '/finance/people', icon: 'euro', group: 'finance', section: 'finance.parties', permission: 'finance.read' },
   ],
   // Task 5 — eine Seite mit Panels nach dem Muster von /admin/dms, ?panel= reitert.
   adminNavigation: [{ key: 'finance.admin', href: '/admin/finance', icon: 'euro', permission: 'finance.setup' }],

@@ -20,13 +20,16 @@ export async function TemplatePanel({ deps }: { deps: Deps }) {
 
   return (
     <>
-      <p className="text-meta text-ink-2">
-        {state ? t('lastRead', { when: fmt.dateTime(state.readAt) }) : t('neverRead')}
-      </p>
+      {state ? null : <p className="text-meta text-ink-2">{t('neverRead')}</p>}
       {needsReview ? (
         <Notice level="warn">{t('needsReview')}</Notice>
       ) : null}
-      <SyncClient name={state?.name ?? null} />
+      <SyncClient
+        name={state?.name ?? null}
+        lastRead={state ? t('lastRead', { when: fmt.dateTime(state.readAt) }) : null}
+        currentChecksum={state?.checksum ?? null}
+        needsReview={needsReview}
+      />
       {showSeedCard ? (
         seedAppliedAt ? (
           <p className="rounded-lg border border-line bg-surface p-5 text-body text-ink-2">

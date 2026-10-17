@@ -15,6 +15,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import type { ActionState } from '@/lib/actions';
 import { formatEuro } from '@/lib/finance/amount';
 import { Overline } from '@/components/overline';
+import { Empty } from '@/components/empty-value';
 
 const SUM_KINDS = ['donation', 'membershipFee', 'inKindDonation', 'expenseWaiver'] as const;
 
@@ -135,15 +136,17 @@ export function BookTable({
         {SUM_KINDS.filter((kind) => kind !== 'membershipFee' || membershipFeesCertifiable).map((kind) => (
           <span key={kind} className="flex flex-col">
             <Overline as="span">{t(`sums.${kind}`)}</Overline>
-            <span data-testid={`book-sum-${kind}`} className="font-mono text-section tabular-nums text-ink">{formatEuro(sums[kind])}</span>
+            <span data-testid={`book-sum-${kind}`} className="text-section tabular-nums text-ink">{formatEuro(sums[kind])}</span>
           </span>
         ))}
         <span className="flex flex-col">
           <Overline as="span">{t('sums.total')}</Overline>
-          <span data-testid="book-sum-total" className="font-mono text-section tabular-nums text-ink">{formatEuro(sums.total)}</span>
+          <span data-testid="book-sum-total" className="text-section tabular-nums text-ink">{formatEuro(sums.total)}</span>
         </span>
+        {/* Der Hinweis zu den Mitgliedsbeiträgen steht unter der Summenzeile, damit er die Kennzahlen nicht auseinanderschiebt
+            (Runde 3, 111; ersetzt 09 B23). */}
+        {membershipFeesCertifiable ? <p className="basis-full text-hint text-muted-ink">{t('sums.membershipFeeHint')}</p> : null}
       </div>
-      {membershipFeesCertifiable ? <p className="text-hint text-muted-ink">{t('sums.membershipFeeHint')}</p> : null}
 
       {rows.length === 0 && filterAnonymous ? (
         <EmptyState filtered={{ noun: t('emptyFilteredNoun'), onReset: () => go({ year, anonymous: false }) }} />
@@ -154,32 +157,33 @@ export function BookTable({
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>{t('columns.date')}</TableHead>
-                <TableHead>{t('columns.contact')}</TableHead>
+                <TableHead col="meta">{t('columns.date')}</TableHead>
+                <TableHead col="title">{t('columns.contact')}</TableHead>
                 <TableHead>{t('columns.kind')}</TableHead>
-                <TableHead className="text-right">{t('columns.amount')}</TableHead>
-                <TableHead>{t('columns.purpose')}</TableHead>
-                <TableHead>{t('columns.confirmed')}</TableHead>
+                <TableHead col="amount" className="text-right">{t('columns.amount')}</TableHead>
+                <TableHead col="meta">{t('columns.purpose')}</TableHead>
+                <TableHead col="meta">{t('columns.confirmed')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {rows.map((row) => (
                 <TableRow key={row.lineId} data-testid="book-row">
-                  <TableCell>{date(row.entryDate)}</TableCell>
-                  <TableCell>{row.contactName ?? t('anonymous')}</TableCell>
+                  <TableCell col="meta">{date(row.entryDate)}</TableCell>
+                  <TableCell col="title">{row.contactName ?? t('anonymous')}</TableCell>
                   <TableCell>{t(`sums.${row.kind}`)}</TableCell>
-                  <TableCell className="text-right font-mono tabular-nums">{formatEuro(row.amountCents)}</TableCell>
-                  <TableCell>{row.purposeName ?? t('noPurpose')}</TableCell>
-                  <TableCell data-testid="book-confirmed">
+                  <TableCell col="amount" className="text-right tabular-nums">{formatEuro(row.amountCents)}</TableCell>
+                  <TableCell col="meta">{row.purposeName ?? <Empty />}</TableCell>
+                  <TableCell col="meta" data-testid="book-confirmed">
                     {row.confirmation ? (
                       <span className="inline-flex items-center gap-1">
-                        <Link href={`/finance/donations?confirmation=${row.confirmation.id}`} className="font-mono text-link underline">
+                        {/* Nummern als Link wie die aufklappbaren Nummern der Bestätigungen: Linkfarbe, Unterstrich beim Zeigen (Runde 3, 111). */}
+                        <Link href={`/finance/donations?confirmation=${row.confirmation.id}`} className="font-mono text-link underline-offset-2 hover:underline">
                           {row.confirmation.number}
                         </Link>
                         {row.confirmation.kind === 'collective' ? <span className="text-ink-2">{t('collectiveSuffix')}</span> : null}
                       </span>
                     ) : (
-                      t('notConfirmed')
+                      <Empty />
                     )}
                   </TableCell>
                 </TableRow>

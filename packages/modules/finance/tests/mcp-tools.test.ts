@@ -285,6 +285,6 @@ describe('finance MCP tools', () => {
     const second = camt('DE12999999990000606060');
     const two = first.replace('</Stmt>', `</Stmt>${second.slice(second.indexOf('<Stmt>'), second.indexOf('</Stmt>') + 7)}`);
     const res = await tool.handler(f.deps, f.ctx, { fileName: 'q1.xml', contentBase64: Buffer.from(two).toString('base64') });
-    expect(res).toMatchObject({ ok: false, error: { type: 'conflict', code: 'statementMultipleAccounts', params: { ibans: expect.stringMatching(/DE23 9999.*DE12 9999/) } } });
+    expect(res).toMatchObject({ ok: false, error: { type: 'conflict', code: 'statementMultipleAccounts', params: { ibans: expect.stringMatching(/^DE23999999990000202051, DE12999999990000606060$/) } } });
   });
 });

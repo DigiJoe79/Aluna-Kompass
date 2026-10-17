@@ -13,11 +13,13 @@ test.describe('finance', () => {
     await resetDatabase(page, 'seeded');
   });
 
-  test('das Journal zeigt die Buchungen des Seeds mit Zustand als Wort', async ({ page }) => {
+  test('das Journal zeigt die Buchungen des Seeds, festgeschrieben ohne Marke', async ({ page }) => {
     await loginAsAdmin(page);
     await page.goto('/finance/entries');
     await expect(page.getByRole('heading', { name: 'Journal' })).toBeVisible();
-    await expect(page.getByRole('row', { name: /festgeschrieben/ }).first()).toBeVisible();
+    await expect(page.getByRole('row').nth(1)).toBeVisible();
+    // Normalzustand ohne Marke in Listen (Designer Stufe 2 Nr. 6a).
+    await expect(page.getByRole('row', { name: /festgeschrieben/ })).toHaveCount(0);
   });
 
   test('der Zustandsfilter zeigt nur Entwürfe und überlebt das Sortieren', async ({ page }) => {
@@ -100,6 +102,21 @@ test.describe('finance', () => {
     await expect(page).toHaveURL(/\/finance\/entries\/[0-9A-Z]{26}/);
   });
 
+  // E1 „Tabelle am Telefon“: Haken in der Kartenzeile, die Auswahlleiste klebt unten, die Summe steht nach der Liste.
+  test('am Telefon: Buchung in der Kartenzeile auswählen, Auswahlleiste und Summenzeile', async ({ page }) => {
+    await loginAsAdmin(page);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/finance/entries');
+    const item = page.getByRole('listitem').filter({ hasText: 'Entwurf ungeprüft zwei' });
+    await item.getByRole('checkbox').click();
+    await expect(page).toHaveURL(/\/finance\/entries$/);
+    await expect(page.getByTestId('selection-bar')).toContainText('1 Buchung ausgewählt');
+    await expect(page.getByTestId('selection-bar').getByRole('button', { name: 'als geprüft markieren' })).toBeInViewport();
+    await expect(page.locator('tfoot')).toContainText(/Einnahmen/);
+    const overflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth);
+    expect(overflow).toBe(false);
+  });
+
   test('Mehrfachauswahl: zwei Entwürfe als geprüft markieren, dann festschreiben; die Nummern erscheinen', async ({ page }) => {
     await loginAsAdmin(page);
     await page.goto('/finance/entries');
@@ -172,6 +189,20 @@ test.describe('finance', () => {
     await page.getByRole('button', { name: 'Als Entwurf speichern' }).click();
     await expect(page).toHaveURL('/finance/entries');
     await expect(page.locator('tr', { hasText: 'Testausgabe Büromaterial' })).toBeVisible();
+  });
+
+  test('leerer Entwurf nennt die fehlenden Angaben am Feld und oben (Befund 1 Nr. 2, 0.2.12)', async ({ page }) => {
+    await loginAsAdmin(page);
+    await page.goto('/finance/entries/new?template=expense');
+    await page.getByLabel('Text', { exact: true }).waitFor();
+    await page.getByRole('button', { name: 'Als Entwurf speichern' }).click();
+    // Meldungsregel A (MUSTER.md): Feldfehler am Feld und die Zusammenfassung oben.
+    const summary = page.getByRole('alert').filter({ hasText: 'Bitte prüfen Sie' });
+    await expect(summary).toContainText('Text: Pflichtfeld.');
+    await expect(summary).toContainText('Betrag: Bitte einen Betrag wie 12,50 eingeben.');
+    await expect(page.getByLabel('Text', { exact: true })).toHaveAttribute('aria-invalid', 'true');
+    await expect(page.getByTestId('finance-account-card').getByLabel('Betrag')).toHaveAttribute('aria-invalid', 'true');
+    await expect(page).toHaveURL(/\/finance\/entries\/new/);
   });
 
   test('Auszahlung einer Spendenplattform: „Noch 85,00 € zu verteilen“, dann „Rest hierher“, „Ausgeglichen“', async ({ page }) => {
@@ -340,7 +371,7 @@ test.describe('finance', () => {
     await page.locator('tr', { hasText: 'Teilzahlung Lieferant' }).click();
     await expect(page.getByText('Hängt zusammen mit')).toBeVisible();
     await expect(page.getByText(storyPattern('RE-2026-055'))).toBeVisible();
-    await expect(page.getByText(/Rest 120,00 €/)).toBeVisible();
+    await expect(page.getByText(/Rest 120,00\s€/)).toBeVisible();
     // F3b Task 3 (A6): der Eintrag verlinkt jetzt auf die offene Zahlung.
     await page.getByRole('link', { name: storyPattern('RE-2026-055') }).click();
     await expect(page).toHaveURL(/\/finance\/open-items\?tab=payable&item=/);
@@ -429,7 +460,7 @@ test.describe('finance', () => {
 
     await amount.fill('12.50');
     await amount.blur();
-    await expect(page.getByText('Bitte einen Betrag wie 12,50 eingeben')).toBeVisible();
+    await expect(page.getByText('Bitte einen Betrag wie 12,50 eingeben.')).toBeVisible();
   });
 
   test('eine festgeschriebene Buchung hat kein Eingabefeld und genau einen Knopf „Korrigieren“', async ({ page }) => {
@@ -584,7 +615,7 @@ test.describe('finance', () => {
     await page.getByRole('combobox', { name: 'Zweck' }).selectOption({ label: 'Flutlicht' });
     await page.getByLabel('Begründung').fill('Testkorrektur Zweck ohne Nachweis');
     await page.getByRole('button', { name: 'Zuordnung ändern' }).click();
-    await expect(page.getByText('Ohne ein solches Dokument ist es ein „Zweck ändern (Umwidmung)“.')).toBeVisible();
+    await expect(page.getByText('Ohne ein solches Dokument ist es eine Umwidmung.')).toBeVisible();
     await expect(page.getByRole('checkbox', { name: 'Zweck' })).toBeChecked();
     await expect(page.getByLabel('Begründung')).toHaveValue('Testkorrektur Zweck ohne Nachweis');
   });
@@ -660,7 +691,7 @@ test.describe('finance', () => {
 
   // F3b Task 3 (A5, A6): Bankkonten und Kassen, offene Zahlungen mit Überweisungsblock.
 
-  test('Bankkonten und Kassen zeigen den festgeschriebenen Bestand und, wenn abweichend, den mit geprüften Entwürfen', async ({ page }) => {
+  test('Konten zeigen den festgeschriebenen Bestand und, wenn abweichend, den mit geprüften Entwürfen', async ({ page }) => {
     await loginAsAdmin(page);
     await page.goto('/finance/accounts');
     const card = page.locator('[role="link"]', { hasText: 'Vereinskonto' });
@@ -672,7 +703,7 @@ test.describe('finance', () => {
     await expect(card.getByText(/^Auszug importiert bis \d{2}\.\d{2}\.\d{4}/)).toBeVisible();
     // Navigationseinträge im Abschnitt „Buchungen“ (Task 3).
     const sectionNav = page.getByRole('navigation', { name: 'Unternavigation' });
-    await expect(sectionNav.getByRole('link', { name: 'Bankkonten und Kassen' })).toBeVisible();
+    await expect(sectionNav.getByRole('link', { name: 'Konten', exact: true })).toBeVisible();
     await expect(sectionNav.getByRole('link', { name: 'Offene Zahlungen' })).toBeVisible();
   });
 
@@ -681,11 +712,11 @@ test.describe('finance', () => {
     await page.goto('/finance/accounts');
     // F4 Task 8: „Importkonto“ (Seed) steht alphabetisch vor „Vereinskonto“ — die Karte gezielt wählen statt `.first()`.
     const card = page.locator('[role="link"]', { hasText: 'Vereinskonto' });
-    await expect(card.getByTestId('iban-value')).toHaveText('DE•• •••• •••• •••• ••20 51');
+    await expect(card.getByTestId('iban-value')).toHaveText('DE ·· 2051');
     await card.getByRole('button', { name: 'IBAN aufdecken' }).click();
-    await expect(card.getByTestId('iban-value')).toHaveText('DE23999999990000202051');
+    await expect(card.getByTestId('iban-value')).toHaveText('DE23 9999 9999 0000 2020 51');
     await card.getByRole('button', { name: 'IBAN wieder verbergen' }).click();
-    await expect(card.getByTestId('iban-value')).toHaveText('DE•• •••• •••• •••• ••20 51');
+    await expect(card.getByTestId('iban-value')).toHaveText('DE ·· 2051');
   });
 
   test('eine Kasse nennt neutral, wann sie zuletzt gezählt wurde', async ({ page }) => {
@@ -725,7 +756,7 @@ test.describe('finance', () => {
     }
     await page.goto('/finance/accounts');
     await expect(page.getByText('Noch keine Konten')).toBeVisible();
-    await expect(page.getByRole('link', { name: 'Bankkonten und Kassen einrichten' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Konten einrichten' })).toBeVisible();
   });
 
   test('ein Klick auf das Konto öffnet das Journal gefiltert auf dieses Konto', async ({ page }) => {
@@ -764,15 +795,18 @@ test.describe('finance', () => {
     const bankRow = page.locator('[data-row-id]', { hasText: 'Bargeld abgehoben Testfall' });
     await expect(bankRow).toContainText('−50,00 €');
 
-    // Auf der Kasse: dieselbe Buchung, positiv.
+    // Auf der Kasse: dieselbe Buchung, positiv. Die Karte einer Kasse führt seit Lauf 3 auf die Kassenseite (Joe), von
+    // dort „Zum Journal“ ins Kontoblatt der Kasse.
     await page.goto('/finance/accounts');
     await page.locator('[role="link"]', { hasText: 'Barkasse' }).click();
+    await expect(page).toHaveURL(/\/finance\/cash\?account=/);
+    await page.getByRole('link', { name: 'Zum Journal' }).click();
     const cashRow = page.locator('[data-row-id]', { hasText: 'Bargeld abgehoben Testfall' });
     await expect(cashRow).toContainText('50,00 €');
     await expect(cashRow).not.toContainText('−50,00 €');
   });
 
-  test('offene Zahlung anlegen, im Reiter „Wir zahlen noch“ finden, überfällig steht als Wort da', async ({ page }) => {
+  test('offene Zahlung anlegen, im Reiter „Wir zahlen“ finden, überfällig steht als Wort da', async ({ page }) => {
     await loginAsAdmin(page);
     await page.goto('/finance/open-items');
     await page.getByRole('button', { name: 'Offene Zahlung anlegen' }).click();
@@ -789,30 +823,30 @@ test.describe('finance', () => {
     await expect(row).toBeVisible();
     await expect(row).toContainText('überfällig');
     await expect(row).toContainText('Mira Sandberg');
-    // Das Datum ist gefärbt, wenn der Posten überfällig ist — deutsches Format, kein rohes ISO-Datum (N3 Nachtrag A).
-    await expect(row.getByText(story('20.01.2026'))).toHaveClass(/text-error/);
+    // Überfällig sagt die Marke, das Datum ist nicht noch einmal rot (07-2 B9) — deutsches Format, kein rohes ISO-Datum (N3 Nachtrag A).
+    await expect(row.getByText(story('20.01.2026'))).not.toHaveClass(/text-error/);
     await expect(row).not.toContainText(/\d{4}-\d{2}-\d{2}/);
 
-    // Zwei Reiter in der URL: unter „Wir erwarten“ steht der neue Posten nicht.
-    await page.getByRole('link', { name: 'Wir erwarten', exact: true }).click();
+    // Zwei Reiter in der URL: unter „Wir bekommen“ steht der neue Posten nicht.
+    await page.getByRole('link', { name: 'Wir bekommen', exact: true }).click();
     await expect(page).toHaveURL(/tab=receivable/);
     await expect(page.getByRole('row', { name: storyPattern('RE-2026-999') })).toHaveCount(0);
-    await page.getByRole('link', { name: 'Wir zahlen noch', exact: true }).click();
+    await page.getByRole('link', { name: 'Wir zahlen', exact: true }).click();
     await expect(page).toHaveURL(/tab=payable/);
     await expect(page.getByRole('row', { name: storyPattern('RE-2026-999') })).toBeVisible();
 
     // Anlegen/Ändern-Dialog: derselbe Dialog ändert einen vorhandenen Posten.
     await row.click();
-    const sheet = page.getByRole('dialog', { name: story('RE-2026-999') });
+    const sheet = page.getByRole('dialog', { name: 'Mira Sandberg' });
     await expect(sheet.getByText(story('20.01.2026'))).toBeVisible();
     await expect(sheet).not.toContainText(/\d{4}-\d{2}-\d{2}/);
-    await page.getByRole('button', { name: 'Ändern' }).click();
+    await page.getByRole('button', { name: 'Bearbeiten' }).click();
     const editDialog = page.getByRole('dialog');
     await editDialog.getByLabel('Betrag', { exact: true }).fill('90,00');
     await editDialog.getByRole('button', { name: 'Speichern' }).click();
     await expect(page.getByText('Offene Zahlung geändert.')).toBeVisible();
     // Die Seitenleiste bleibt offen und verdeckt die Tabelle für Hilfstechnik — der neue Betrag steht dort.
-    await expect(page.getByRole('dialog', { name: story('RE-2026-999') })).toContainText('90,00 €');
+    await expect(page.getByRole('dialog', { name: 'Mira Sandberg' })).toContainText('90,00 €');
   });
 
   test('eine Zahlung als Entwurf an einer überfälligen Zahlung steht als eigenes Wort da, nicht nur „überfällig“ (Befund 6)', async ({ page }) => {
@@ -904,7 +938,11 @@ test.describe('finance', () => {
     await expect(page).toHaveURL(/\/finance\/entries\/[0-9A-Z]{26}$/);
     const bookedNumber = (await page.getByRole('heading', { level: 1 }).textContent())!.trim();
 
+    // Erledigtes steht nicht mehr unter der Vorgabe „offen“ (07-2 A1), sondern unter „Zustand: Erledigt“.
     await page.goto('/finance/open-items');
+    await expect(page.getByRole('row', { name: storyPattern('RE-2026-041') })).toHaveCount(0);
+    await page.getByTestId('open-items-state').selectOption({ label: 'Erledigt' });
+    await expect(page).toHaveURL(/state=settled/);
     const row = page.getByRole('row', { name: storyPattern('RE-2026-041') });
     await expect(row).toContainText('erledigt');
 
@@ -926,6 +964,7 @@ test.describe('finance', () => {
     await expect(confirm).toBeEnabled();
     await confirm.click();
     await expect(page.getByText('Ohne Zahlung erledigt.')).toBeVisible();
+    await page.goto('/finance/open-items?state=all');
     const row = page.getByRole('row', { name: storyPattern('RE-2026-041') });
     await expect(row).toContainText('erledigt ohne Zahlung');
   });
@@ -936,7 +975,8 @@ test.describe('finance', () => {
     await page.getByRole('row', { name: storyPattern('ANT-2026-014') }).click();
     await expect(page).toHaveURL(/item=/);
     await expect(page.getByRole('button', { name: 'Ohne Zahlung erledigen …' })).toHaveCount(0);
-    await expect(page.getByText('Was mit dem Vorgang geschieht, entscheidet sich an ihm selbst.')).toBeVisible();
+    // 07-2 A3: Der Posten nennt seinen Vorgang (der Seed-Vorgang hat keine Seite, also ohne Link).
+    await expect(page.getByText(story('Gehört zu ANT-2026-014 und wird dort geändert.'))).toBeVisible();
   });
 
   test('ohne finance.entriesFinalize steht dort, wer es erledigen kann', async ({ page }) => {
@@ -1006,7 +1046,7 @@ test.describe('finance', () => {
     await expect(empty).toBeVisible();
     await expect(page.getByText('Noch keine Buchung.')).toHaveCount(0);
     await expect(empty.getByRole('link', { name: 'Neue Buchung' })).toHaveCount(0);
-    await expect(page.getByRole('link', { name: 'Bankkonten und Kassen einrichten' })).toHaveCount(0);
+    await expect(page.getByRole('link', { name: 'Konten einrichten' })).toHaveCount(0);
     await empty.getByRole('link', { name: 'Filter zurücksetzen' }).click();
     await expect(page).toHaveURL(/\/finance\/entries$/);
     await expect(page.getByRole('table')).toBeVisible();
@@ -1029,7 +1069,7 @@ test.describe('finance', () => {
     // Mira Klein hat finance.read (Kassenprüfer), aber kein finance.setup.
     await page.goto('/finance/entries?q=zzz');
     await expect(page.getByText('Keine Buchung passt zu diesen Filtern.')).toBeVisible();
-    await expect(page.getByRole('link', { name: 'Bankkonten und Kassen einrichten' })).toHaveCount(0);
+    await expect(page.getByRole('link', { name: 'Konten einrichten' })).toHaveCount(0);
   });
 
   // Ist erst eine Buchung festgeschrieben, hält Finanzen Kontakte, Belege und
@@ -1132,16 +1172,15 @@ test.describe('finance', () => {
     await expect(page.getByRole('heading', { name: 'Journal' })).toBeVisible();
   });
 
-  test('auf 390 px steht das Datum unter dem Satz und nichts läuft seitlich über', async ({ page }) => {
+  // Runde 3 (005, 016): Die Arten von Arbeit haben kein gemeinsames Datum — das Datum der geprüften Buchungen steht im
+  // Satz („seit …“), eine Datumsspalte gibt es nicht. Am Telefon bricht der Satz um, statt gekürzt zu werden.
+  test('auf 390 px: keine Datumsspalte, das Datum steht im Satz, nichts läuft seitlich über', async ({ page }) => {
     await loginAsAdmin(page);
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto('/');
     const tile = page.getByTestId('dashboard-tile-finance-todo');
-    const line = tile.locator('li').first();
-    const titleBox = (await line.getByTestId('tile-line-title').boundingBox())!;
-    const dateBox = (await line.getByTestId('tile-line-date').boundingBox())!;
-    // Unter 391 px steht das Datum unter dem Satz: seine Kante liegt tiefer, nicht daneben.
-    expect(dateBox.y).toBeGreaterThan(titleBox.y);
+    await expect(tile.getByRole('link', { name: /geprüfte, noch nicht festgeschriebene Buchung.* seit \d{2}\.\d{2}\.\d{4}/ })).toBeVisible();
+    await expect(tile.getByTestId('tile-line-date')).toHaveCount(0);
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth);
     expect(overflow).toBe(false);
   });
@@ -1152,7 +1191,8 @@ test.describe('finance', () => {
     await page.getByRole('link', { name: 'Winterhilfe für Streuner' }).click();
     await expect(page).toHaveURL(/\/projects\/[A-Z0-9]+$/);
     const section = page.getByTestId('project-finance-section');
-    await expect(section.getByText('Zielbetrag')).toBeVisible();
+    // 062: Der Zielbetrag steht einmal, in der Zeile unter dem Balken.
+    await expect(section.getByTestId('project-finance-progress-text')).toContainText('von 2.500,00 €');
     await expect(section).toContainText('2.500,00 €');
     await expect(section.getByText('Einnahmen')).toBeVisible();
     await expect(section.getByText('Ausgaben')).toBeVisible();
@@ -1166,7 +1206,7 @@ test.describe('finance', () => {
     await page.goto('/projects');
     await page.getByRole('link', { name: 'Winterhilfe für Streuner' }).click();
     const section = page.getByTestId('project-finance-section');
-    await section.getByRole('button', { name: 'Ändern' }).click();
+    await section.getByRole('button', { name: 'Finanzfelder ändern' }).click();
     const dialog = page.getByRole('dialog');
     await dialog.getByLabel('Zielbetrag').fill('3.000,00');
     await dialog.getByLabel('Wird im Ausland verwendet').check();
@@ -1175,7 +1215,7 @@ test.describe('finance', () => {
     await expect(page.getByText('Finanzfelder geändert.')).toBeVisible();
     await expect(section).toContainText('3.000,00 €');
 
-    await section.getByRole('button', { name: 'Ändern' }).click();
+    await section.getByRole('button', { name: 'Finanzfelder ändern' }).click();
     const dialogAgain = page.getByRole('dialog');
     await expect(dialogAgain.getByLabel('Wird im Ausland verwendet')).toBeChecked();
     await expect(dialogAgain.getByLabel('Spendenstand auf der Webseite zeigen')).toBeChecked();
@@ -1190,6 +1230,8 @@ test.describe('finance', () => {
     await page.getByRole('dialog').getByLabel('Rollenname').fill('Nur Projekte');
     await page.getByRole('dialog').getByRole('button', { name: 'Anlegen' }).click();
     await page.getByRole('list', { name: 'Rollen' }).getByRole('button', { name: /Nur Projekte/ }).click();
+    // Rechtegruppen sind zugeklappt, teilweise gesetzte offen (Runde 3, 158).
+    await page.getByRole('button', { name: 'Alle aufklappen' }).click();
     await page.getByRole('checkbox', { name: 'Projekte ansehen' }).check();
     await page.getByRole('button', { name: 'Rolle speichern' }).click();
     await expect(page.getByRole('status')).toContainText('Rolle gespeichert.');

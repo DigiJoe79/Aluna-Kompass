@@ -3,6 +3,7 @@ import {
   assistantFileKey,
   buildFormat,
   canAdvance,
+  defaultFormatName,
   initialState,
   loadState,
   previewRecords,
@@ -90,5 +91,17 @@ describe('saveState and loadState', () => {
     expect(() => saveState(throwingStorage, key, s)).not.toThrow();
     expect(loadState(throwingStorage, key)).toBeNull();
     expect(loadState(null, key)).toBeNull();
+  });
+});
+
+describe('defaultFormatName (07-1 A2)', () => {
+  const suffix = (account: string) => `${account} CSV`;
+  it('hängt „CSV“ an den Kontonamen', () => {
+    expect(defaultFormatName('Hausbank', suffix)).toBe('Hausbank CSV');
+    expect(defaultFormatName('Hausbank CSV-Test', suffix)).toBe('Hausbank CSV-Test CSV');
+  });
+  it('hängt nichts an, wenn der Name schon auf CSV endet', () => {
+    expect(defaultFormatName('Zweitbank CSV', suffix)).toBe('Zweitbank CSV');
+    expect(defaultFormatName('Zweitbank csv ', suffix)).toBe('Zweitbank csv');
   });
 });

@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import messages from '../messages/de.json';
 import { FormActionBar } from '@/components/forms/form-action-bar';
 import { FormCard } from '@/components/forms/form-card';
+import { Label } from '@/components/ui/label';
 
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
@@ -115,8 +116,59 @@ describe('FormActionBar', () => {
     expect(screen.getByRole('link', { name: 'Abbrechen' }).className).toContain('max-sm:col-span-2');
   });
 
+  describe('Verwerfen nur bei Änderungen (Designer 2026-10-16, Teil 2 Nr. 1)', () => {
+    it('beim Bearbeiten ohne Änderung kein Verwerfen', () => {
+      render(<form><input name="a" aria-label="a" defaultValue="x" /><FormActionBar back={{ href: '/x', label: 'Zurück' }} /></form>, { wrapper });
+      expect(screen.queryByRole('button', { name: 'Verwerfen' })).toBeNull();
+      expect(screen.getByRole('link', { name: 'Abbrechen' })).toBeTruthy();
+    });
+
+    it('mit Änderung erscheint Verwerfen als Textknopf', () => {
+      render(<form><input name="a" aria-label="a" defaultValue="x" /><FormActionBar back={{ href: '/x', label: 'Zurück' }} /></form>, { wrapper });
+      fireEvent.input(screen.getByLabelText('a'), { target: { value: 'y' } });
+      const discard = screen.getByRole('button', { name: 'Verwerfen' });
+      expect(discard.hasAttribute('disabled')).toBe(false);
+      // Textknopf: ohne Rahmen und ohne Fläche (ghost), nie ein zweiter Hauptknopf.
+      expect(discard.className).toContain('hover:bg-hover');
+      expect(discard.className).not.toContain('bg-brand');
+      expect(discard.className).not.toContain('border-line-strong');
+    });
+
+    it('beim Anlegen nur Abbrechen, auch mit Eingaben', () => {
+      render(<form><input name="a" aria-label="a" /><FormActionBar mode="create" back={{ href: '/x', label: 'Zurück' }} /></form>, { wrapper });
+      fireEvent.input(screen.getByLabelText('a'), { target: { value: 'y' } });
+      expect(screen.queryByRole('button', { name: 'Verwerfen' })).toBeNull();
+      expect(screen.getByRole('link', { name: 'Abbrechen' })).toBeTruthy();
+    });
+
+    // Z7 (Designer Stufe 2 Nr. 7): Beim Anlegen steht statt des Zählers die Pflichtfeld-Legende; die Rückfrage beim
+    // Verlassen bleibt.
+    it('beim Anlegen kein Zähler, sondern „* Pflichtfeld“ — auch mit Eingaben', () => {
+      render(<form><Label htmlFor="a" required>a</Label><input id="a" name="a" required /><FormActionBar mode="create" back={{ href: '/x', label: 'Zurück' }} /></form>, { wrapper });
+      fireEvent.input(screen.getByLabelText('a'), { target: { value: 'y' } });
+      expect(screen.queryByText(/noch nicht gespeichert/)).toBeNull();
+      expect(screen.getByText('* Pflichtfeld')).toBeTruthy();
+    });
+
+    it('ein bestehender Datensatz mit `create` (Prüfung) zählt weiter', () => {
+      render(<form><input name="a" aria-label="a" /><FormActionBar mode="create" loadedVersion="v1" back={{ href: '/x', label: 'Zurück' }} /></form>, { wrapper });
+      fireEvent.input(screen.getByLabelText('a'), { target: { value: 'y' } });
+      expect(screen.getByText('1 Änderung noch nicht gespeichert')).toBeTruthy();
+    });
+
+    it('Buchungsmaske (087, 091): beim Anlegen nur Abbrechen, ein bestehender Entwurf zeigt Verwerfen erst mit Änderung', () => {
+      const { rerender } = render(<form><FormActionBar mode="create" back={{ href: '/x', label: 'Zurück' }} count={2} countHidden /></form>, { wrapper });
+      expect(screen.queryByRole('button', { name: 'Verwerfen' })).toBeNull();
+      rerender(<form><FormActionBar mode="create" loadedVersion="v1" back={{ href: '/x', label: 'Zurück' }} count={0} countHidden /></form>);
+      expect(screen.queryByRole('button', { name: 'Verwerfen' })).toBeNull();
+      rerender(<form><FormActionBar mode="create" loadedVersion="v1" back={{ href: '/x', label: 'Zurück' }} count={2} countHidden /></form>);
+      expect(screen.getByRole('button', { name: 'Verwerfen' }).hasAttribute('disabled')).toBe(false);
+    });
+  });
+
   it('Telefon: Speichern über die volle Breite zuerst, Verwerfen und Abbrechen darunter nebeneinander', () => {
-    render(<form><input name="a" /><FormActionBar back={{ href: '/x', label: 'Zurück' }} extraActions={<button type="button">Speichern und neu</button>} /></form>, { wrapper });
+    render(<form><input name="a" aria-label="a" /><FormActionBar back={{ href: '/x', label: 'Zurück' }} extraActions={<button type="button">Speichern und neu</button>} /></form>, { wrapper });
+    fireEvent.input(screen.getByLabelText('a'), { target: { value: 'y' } });
     const save = screen.getByRole('button', { name: 'Speichern' });
     const discard = screen.getByRole('button', { name: 'Verwerfen' });
     const cancel = screen.getByRole('link', { name: 'Abbrechen' });
@@ -135,7 +187,8 @@ describe('FormActionBar', () => {
   });
 
   it('Telefon: steht nur einer der beiden Nebenknöpfe da, nimmt er die volle Breite', () => {
-    render(<form><input name="a" /><FormActionBar /></form>, { wrapper });
+    render(<form><input name="a" aria-label="a" /><FormActionBar /></form>, { wrapper });
+    fireEvent.input(screen.getByLabelText('a'), { target: { value: 'y' } });
     expect(screen.getByRole('button', { name: 'Verwerfen' }).className).toContain('max-sm:col-span-2');
   });
 
@@ -192,7 +245,8 @@ describe('FormActionBar', () => {
       rerender(page(<FormActionBar mode="create" count={2} countHidden note="Bargeld wird am selben Tag festgehalten." />));
       expect(screen.getByText('Bargeld wird am selben Tag festgehalten.')).toBeTruthy();
       expect(screen.queryByText(/nicht gespeichert/)).toBeNull();
-      expect(screen.getByRole('button', { name: 'Verwerfen' }).hasAttribute('disabled')).toBe(false);
+      // Anlegen: nur Abbrechen, kein Verwerfen (Designer 2026-10-16).
+      expect(screen.queryByRole('button', { name: 'Verwerfen' })).toBeNull();
       expect(unload()).toBe(true);
       fireEvent.click(screen.getByRole('link', { name: 'Anderswo' }));
       expect(followed).not.toHaveBeenCalled();
@@ -273,5 +327,39 @@ describe('FormActionBar', () => {
     void (<FormActionBar recordAction={{ key: 'd', label: 'x', kind: 'delete', onSelect: () => {} }} />);
     // @ts-expect-error — auch ausdrücklich `page` nicht
     void (<FormActionBar placement="page" recordAction={{ key: 'd', label: 'x', kind: 'delete', onSelect: () => {} }} />);
+  });
+});
+
+// Stern ⇔ Fußhinweis (Designer Runde 3: 034, 040, 094, 186, 188): Die Leiste nennt „* Pflichtfeld“ genau dann, wenn ein
+// Feld darüber einen Stern trägt — auch neben einer Notiz und in einem Dialog ohne <form>.
+describe('FormActionBar: Pflichtfeld-Legende', () => {
+  it('ohne Stern keine Legende, auch wenn ein Feld technisch Pflicht ist', () => {
+    render(<form><input name="a" aria-label="a" required /><FormActionBar mode="create" back={{ href: '/x', label: 'Zurück' }} /></form>, { wrapper });
+    expect(screen.queryByText('* Pflichtfeld')).toBeNull();
+  });
+
+  it('mit Stern steht die Legende neben der Notiz', () => {
+    render(
+      <form>
+        <Label htmlFor="n" required>Nachname</Label>
+        <input id="n" name="n" />
+        <FormActionBar cancel={() => {}} note="Wird protokolliert." />
+      </form>,
+      { wrapper },
+    );
+    expect(screen.getByText('Wird protokolliert.')).toBeTruthy();
+    expect(screen.getByText('* Pflichtfeld')).toBeTruthy();
+  });
+
+  it('im Dialog ohne <form> zählt der Stern im Dialog', () => {
+    render(
+      <div data-slot="dialog-content">
+        <Label htmlFor="b" required>Betrag</Label>
+        <input id="b" />
+        <FormActionBar cancel={() => {}} onSave={() => {}} pending={false} />
+      </div>,
+      { wrapper },
+    );
+    expect(screen.getByText('* Pflichtfeld')).toBeTruthy();
   });
 });

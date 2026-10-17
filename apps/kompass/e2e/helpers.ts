@@ -1,4 +1,4 @@
-import { expect, type Page } from '@playwright/test';
+import { expect, type Locator, type Page } from '@playwright/test';
 
 export const ADMIN = { email: 'admin@kompass.local', password: 'kompass-entwicklung-2026' };
 
@@ -48,4 +48,29 @@ export async function waitForHydration(page: Page, selector: string): Promise<vo
     },
     selector,
   );
+}
+
+/**
+ * Zeilenaktion über das ⋯-Menü der Zeile (`RowMenu`, Joe 11.8): „Aktionen für …“ öffnen, dann den Eintrag wählen.
+ */
+export async function rowAction(page: Page, row: Locator, label: string | RegExp): Promise<void> {
+  await row.getByRole('button', { name: /^Aktionen für / }).click();
+  await page.getByRole('menuitem', { name: label }).click();
+}
+
+/**
+ * Liest die Vorlage der Webseite ein und übernimmt sie, wenn es etwas zu übernehmen gibt. Ist der Stand schon
+ * eingelesen (Seed), bietet die Seite kein „Übernehmen“ an (Runde 4, 175) — dann ist nichts zu tun.
+ */
+export async function readTemplate(page: Page): Promise<void> {
+  await page.getByRole('button', { name: 'Vorlage einlesen' }).click();
+  const findings = page.getByRole('region', { name: 'Befunde' });
+  await expect(findings).toBeVisible();
+  const apply = findings.getByRole('button', { name: 'Übernehmen' });
+  if ((await apply.count()) > 0) {
+    await apply.click();
+    await expect(page.getByRole('status')).toContainText('eingelesen');
+  } else {
+    await expect(findings.getByText('Keine Änderungen gegenüber dem eingelesenen Stand.')).toBeVisible();
+  }
 }

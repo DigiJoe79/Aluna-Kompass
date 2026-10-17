@@ -14,11 +14,11 @@ import { Textarea } from '@/components/ui/textarea';
 import type { ActionState } from '@/lib/actions';
 import { formatAmount, formatEuro, parseAmount } from '@/lib/finance/amount';
 import { withUnplacedFieldErrors } from '@/lib/feedback';
-import { reserveBalanceAfter, type ReserveMovementKind } from '@/lib/finance/reserves';
+import { reserveBalanceAfter, reserveSaveBlocker, type ReserveMovementKind } from '@/lib/finance/reserves';
 import { recordReserveMovementAction, recordReserveMovementUploadAction } from './actions';
 import { ResolutionField } from './resolution-field';
 import { FormField } from '@/components/forms/form-field';
-import { FormCell, FormGrid } from '@/components/forms/form-grid';
+import { FormCell, FormGrid, FormRowBreak } from '@/components/forms/form-grid';
 
 export interface MovementReserve {
   id: string;
@@ -52,6 +52,7 @@ export function MovementDialog({
   onSaved: () => void;
 }) {
   const t = useTranslations('finance.reserves.movement');
+  const tReserves = useTranslations('finance.reserves');
   const [kind, setKind] = useState<ReserveMovementKind>('allocate');
   const [date, setDate] = useState(today);
   const [forYear, setForYear] = useState(defaultFiscalYearId ?? '');
@@ -67,7 +68,9 @@ export function MovementDialog({
 
   const amountCents = kind === 'dissolve' || amountText.trim() === '' ? null : parseAmount(amountText);
   const showForYear = kind === 'allocate' && reserve.kind === 'free';
-  const canSave = !!date && (kind === 'dissolve' || (amountCents !== null && amountCents > 0)) && !!document !== !!file;
+  // Runde 3, 124: Der gesperrte Knopf nennt, was fehlt.
+  const blocker = reserveSaveBlocker({ amountOk: kind === 'dissolve' || (amountCents !== null && amountCents > 0), date, documents: Number(!!document) + Number(!!file) });
+  const canSave = blocker === null;
   const after = reserveBalanceAfter(reserve.balanceCents, kind, amountCents);
 
   // Segment als Radiogruppe (HANDOFF § 6): ein Tab-Halt, Pfeiltasten wechseln und wandern ringsum.
@@ -127,12 +130,14 @@ export function MovementDialog({
                   onValueChange={setKind}
                 />
               </FormCell>
+              {/* 09 B40: Art allein in der ersten Zeile, darunter Datum und Betrag nebeneinander (ohne Layout-Test). */}
+              <FormRowBreak />
               <FormField id="movement-date" label={t('date')} required size="s">
                 <Input id="movement-date" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
               </FormField>
               {kind === 'dissolve' ? null : (
                 <FormField id="movement-amount" label={t('amount')} required size="s">
-                  <Input id="movement-amount" value={amountText} onChange={(e) => setAmountText(e.target.value)} placeholder={formatAmount(0)} />
+                  <Input id="movement-amount" unit="€" inputMode="decimal" value={amountText} onChange={(e) => setAmountText(e.target.value)} placeholder={formatAmount(0)} />
                 </FormField>
               )}
               {showForYear ? (
@@ -166,7 +171,17 @@ export function MovementDialog({
             </p>
           </div>
         </DialogBody>
-        <FormActionBar placement="dialog" cancel={onClose} pending={pending} saveDisabled={!canSave} saveLabel={t('save')} saveTestId="movement-save" onSave={() => void submit()} state={withUnplacedFieldErrors(feedback.state, [])} />
+        <FormActionBar
+          placement="dialog"
+          cancel={onClose}
+          pending={pending}
+          saveDisabled={!canSave}
+          extraActions={blocker ? <span data-testid="movement-blocker" className="self-center text-meta text-ink-2">{tReserves(`missing.${blocker}`)}</span> : undefined}
+          saveLabel={t('save')}
+          saveTestId="movement-save"
+          onSave={() => void submit()}
+          state={withUnplacedFieldErrors(feedback.state, [])}
+        />
       </DialogContent>
     </Dialog>
   );

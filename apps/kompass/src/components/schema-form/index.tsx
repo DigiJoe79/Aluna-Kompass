@@ -19,8 +19,8 @@ export interface SchemaFormProps {
   onChange: (next: Record<string, unknown>) => void;
   /** Wählbare Datensätze je Referenzfeld (Wert und Beschriftung). */
   options?: Record<string, { value: string; label: string }[]>;
-  /** Felder vor dem Schema im selben Raster (der Slug eines Sammlungseintrags). */
-  leading?: ReactNode;
+  /** Felder am Ende des ersten Abschnitts im selben Raster (der URL-Teil eines Sammlungseintrags, 10 B14). */
+  trailing?: ReactNode;
   /** Bildfelder mit Ausschnitt: Pixelmaße, womit gespeichert wird, Name der Stelle. */
   media?: SchemaMedia;
 }
@@ -30,17 +30,16 @@ export interface SchemaFormProps {
  * (docs/MUSTER.md § E und § J). Aufeinanderfolgende Felder mit gleichem `group` bilden einen Abschnitt mit Titel;
  * die Reihenfolge des Templates bleibt.
  */
-export function SchemaForm({ schema, value, errors = {}, locales, onChange, options, leading, media }: SchemaFormProps) {
+export function SchemaForm({ schema, value, errors = {}, locales, onChange, options, trailing, media }: SchemaFormProps) {
   const filled = withBlanks(schema, value, locales);
   const groups: { group: string | undefined; keys: string[] }[] = fieldGroups(schema);
-  // Was vorne steht, gehört in den ersten Abschnitt ohne Titel — hat der erste einen, bekommt es einen eigenen.
-  if (leading && (groups.length === 0 || groups[0]!.group !== undefined)) groups.unshift({ group: undefined, keys: [] });
+  // Der URL-Teil gehört in den ersten Abschnitt ohne Titel — hat der erste einen, bekommt er einen eigenen.
+  if (trailing && (groups.length === 0 || groups[0]!.group !== undefined)) groups.unshift({ group: undefined, keys: [] });
   return (
     <>
       {groups.map(({ group, keys }, index) => {
         const grid = (
           <FormGrid>
-            {index === 0 ? leading : null}
             {keys.map((key) => (
               <SchemaField
                 key={key}
@@ -54,6 +53,7 @@ export function SchemaForm({ schema, value, errors = {}, locales, onChange, opti
                 media={media}
               />
             ))}
+            {index === 0 ? trailing : null}
           </FormGrid>
         );
         const key = `${group ?? ''}-${index}`;

@@ -1,9 +1,10 @@
 'use client';
 
 import type { Role } from '@kompass/core';
-import { Lock } from 'lucide-react';
+import { ChevronRight, Lock } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useActionState, useEffect, useMemo, useState, useTransition } from 'react';
+import { FormErrorSummary } from '@/components/forms/form-error-summary';
 import { FormField } from '@/components/forms/form-field';
 import { FormGrid } from '@/components/forms/form-grid';
 import { FormCard } from '@/components/forms/form-card';
@@ -14,6 +15,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { idleState } from '@/lib/actions';
+import { conflictAtField } from '@/lib/feedback';
 import type { PermissionGroup } from '@/lib/permission-groups';
 import { cn } from '@/lib/utils';
 import { createRoleAction, saveRoleAction } from './actions';
@@ -26,12 +28,15 @@ export function RoleEditor({
   groups,
   allPermissionKeys,
   grantablePermissionKeys,
+  holders,
 }: {
   roles: Role[];
   groups: PermissionGroup[];
   allPermissionKeys: string[];
   /** Rechte, die der Aufrufer selbst hat. Nur diese lassen sich hinzufügen; was eine Rolle schon hat, lässt sich entfernen. */
   grantablePermissionKeys: string[];
+  /** Je Rolle die aktiven Personen, die sie tragen („Trägt diese Rolle“); fehlt ohne das Recht, Nutzer zu sehen. */
+  holders?: Record<string, string[]>;
 }) {
   const tRoot = useTranslations();
   const t = useTranslations('roles');
@@ -41,12 +46,36 @@ export function RoleEditor({
   const [draft, setDraft] = useState<{ name: string; description: string; keys: Set<string> } | null>(null);
   const [saving, start] = useTransition();
   const saveFb = useActionFeedback();
-  const [createState, createAction] = useActionState(createRoleAction, idleState);
+  const [createRaw, createAction] = useActionState(createRoleAction, idleState);
+  // „Rolle existiert bereits“ steht am Feld „Rollenname“ und in der Übersicht, nicht über der Leiste (13 #4).
+  const createState = conflictAtField(createRaw, 'roleNameTaken', 'name');
+  const saveState = conflictAtField(saveFb.state, 'roleNameTaken', 'name');
+  const nameLabels = { name: t('fields.name') };
   const [createOpen, setCreateOpen] = useState(false);
 
   useEffect(() => {
     setDraft(null);
   }, [selectedId, roles]);
+
+  // Auf- und zugeklappt wird nur beim Öffnen einer Rolle (Designer Frage 3, 158): teilweise gesetzte Gruppen offen, ganz
+  // gesetzte und leere zu. Ein Haken klappt nichts — sonst klappte die Gruppe mit dem letzten Recht zu, und der Blick auf
+  // das, was man gerade bearbeitet, wäre weg.
+  const openFor = (role: Role | undefined) =>
+    new Set(
+      role && !role.isProtected
+        ? groups.filter((g) => {
+            const n = g.keys.filter((k) => role.permissionKeys.includes(k)).length;
+            return n > 0 && n < g.keys.length;
+          }).map((g) => g.key)
+        : [],
+    );
+  const [openGroups, setOpenGroups] = useState<Set<string>>(() => openFor(selected));
+  const [openedFor, setOpenedFor] = useState(selected?.id);
+  if (selected && openedFor !== selected.id) {
+    setOpenedFor(selected.id);
+    setOpenGroups(openFor(selected));
+  }
+  const allOpen = groups.length > 0 && groups.every((g) => openGroups.has(g.key));
 
   useEffect(() => {
     if (createState.status === 'success') setCreateOpen(false);
@@ -113,10 +142,11 @@ export function RoleEditor({
         </ul>
         <p className="mt-3 px-3 text-hint text-muted-ink">{t('noDelete')}</p>
         <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-          <DialogTrigger render={<Button variant="outline" className="mt-auto border-dashed">{t('create.button')}</Button>} />
+          <DialogTrigger render={<Button variant="outline" className="mt-auto">{t('create.button')}</Button>} />
           <DialogContent size="sm" className="bg-surface shadow-md">
             <ActionForm action={createAction} state={createState} className="flex flex-col gap-4">
               <DialogTitle>{t('create.title')}</DialogTitle>
+              {createState.status === 'error' ? <FormErrorSummary errors={createState.fieldErrors} labels={nameLabels} /> : null}
               <FormGrid>
                 <FormField id="new-role-name" label={t('fields.name')} error={createState.status === 'error' ? createState.fieldErrors.name : undefined}>
                   <Input id="new-role-name" name="name" required />
@@ -132,8 +162,13 @@ export function RoleEditor({
       </aside>
       <section className="flex min-w-0 flex-col">
         <div className="border-b border-line px-6 pb-4 pt-5">
+          {saveState.status === 'error' ? (
+            <div className="mb-4">
+              <FormErrorSummary errors={saveState.fieldErrors} labels={nameLabels} />
+            </div>
+          ) : null}
           <FormGrid>
-            <FormField id="role-name" label={t('fields.name')}>
+            <FormField id="role-name" label={t('fields.name')} error={saveState.status === 'error' ? saveState.fieldErrors.name : undefined}>
               <Input
                 id="role-name"
                 value={name}
@@ -150,16 +185,38 @@ export function RoleEditor({
               />
             </FormField>
           </FormGrid>
+          {/* „Alle aufklappen“ rechts neben „Trägt diese Rolle“ statt in einer eigenen Zeile (Runde 4, 158). */}
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+            {holders ? (
+              <p className="text-meta">
+                <span className="text-muted-ink">{t('holders')}: </span>
+                {(holders[selected.id] ?? []).length > 0 ? <span className="text-ink">{holders[selected.id]!.join(', ')}</span> : <span className="text-muted-ink">{t('nobody')}</span>}
+              </p>
+            ) : <span />}
+            <Button type="button" variant="outline" size="sm" onClick={() => setOpenGroups(allOpen ? new Set() : new Set(groups.map((g) => g.key)))}>
+              {allOpen ? t('collapseAll') : t('expandAll')}
+            </Button>
+          </div>
         </div>
         <div className="flex-1 overflow-auto">
           {groups.map((group) => {
             const active = group.keys.filter((k) => effectiveKeys.has(k)).length;
             const state = active === 0 ? 'none' : active === group.keys.length ? 'all' : 'some';
+            const isOpen = openGroups.has(group.key);
+            const toggleOpen = () =>
+              setOpenGroups((current) => {
+                const next = new Set(current);
+                if (next.has(group.key)) next.delete(group.key);
+                else next.add(group.key);
+                return next;
+              });
             return (
               <div key={group.key}>
                 <div className="flex items-center gap-3 border-b border-line bg-table-head px-6 py-2.5">
+                  {/* Sichtbar „Alle“ an der Kopf-Checkbox: Sie wählt alle Rechte der Gruppe (11-1 B25). */}
+                  <label className="flex shrink-0 cursor-pointer items-center gap-1.5 text-hint text-ink-2">
                   <Checkbox
-                    aria-label={tRoot(group.labelKey)}
+                    aria-label={t('selectAll', { group: tRoot(group.labelKey) })}
                     checked={state === 'all'}
                     indeterminate={state === 'some'}
                     disabled={selected.isProtected}
@@ -172,12 +229,27 @@ export function RoleEditor({
                       edit({ keys });
                     }}
                   />
-                  <Overline as="span">{tRoot(group.labelKey)}</Overline>
-                  <span className="text-hint text-muted-ink">
-                    {t('groupCount', { active, total: group.keys.length })}
-                  </span>
+                  <span aria-hidden>{t('all')}</span>
+                  </label>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    aria-expanded={isOpen}
+                    aria-controls={`role-group-${group.key}`}
+                    onClick={toggleOpen}
+                    // Aufgeklappt ohne eigene Fläche: Sonst stand im Kopf eine schmalere zweite Fläche, und die Kopfzeile
+                    // einer offenen Gruppe wirkte schmaler als die einer geschlossenen (Runde 4, 158). Der Winkel sagt den
+                    // Zustand. Ohne Layout-Test (Einzelstelle).
+                    className="min-w-0 flex-1 justify-start gap-3 px-1 aria-expanded:bg-transparent"
+                  >
+                    <ChevronRight className={cn('size-4 shrink-0 text-muted-ink transition-transform', isOpen && 'rotate-90')} aria-hidden />
+                    <Overline as="span">{tRoot(group.labelKey)}</Overline>
+                    <span className="text-hint font-normal text-muted-ink">{t('groupCount', { active, total: group.keys.length })}</span>
+                  </Button>
                 </div>
-                {group.keys.map((key) => (
+                <div id={`role-group-${group.key}`} hidden={!isOpen}>
+                {isOpen ? group.keys.map((key) => (
                   <label
                     key={key}
                     className="grid cursor-pointer grid-cols-[26px_260px_minmax(0,1fr)] items-center gap-3 border-b border-line-2 px-6 py-2.5 hover:bg-row-hover"
@@ -194,7 +266,8 @@ export function RoleEditor({
                     </span>
                     <span className="text-meta text-ink-2">{p(`keys.${key}.description`)}</span>
                   </label>
-                ))}
+                )) : null}
+                </div>
               </div>
             );
           })}
@@ -203,7 +276,7 @@ export function RoleEditor({
           <FormActionBar
             count={pendingCount}
             pending={saving}
-            state={saveFb.state}
+            state={saveState}
             onDiscard={() => {
               setDraft(null);
               saveFb.reset();

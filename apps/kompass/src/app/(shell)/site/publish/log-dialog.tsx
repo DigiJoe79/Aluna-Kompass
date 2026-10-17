@@ -8,8 +8,10 @@ import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogBody, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Disclosure } from '@/components/ui/disclosure';
 import { Skeleton } from '@/components/ui/skeleton';
 import { copyToClipboard } from '@/lib/clipboard';
+import { countParts } from '@/lib/count-parts';
 import type { DetailView } from '@/lib/site-job-view';
 import { SourceMark } from './source-mark';
 import { StatusMark } from './status-mark';
@@ -25,6 +27,8 @@ export interface LogSubject {
   source: PublishSource;
   hash: string;
   summary: string;
+  /** Die Zahlen eines Publishs: Die Kurzfassung spricht dann wie die Liste (142), statt den gespeicherten Satz zu zeigen. */
+  counts?: { changed: number; added: number; removed: number };
   /** Steht im Protokoll nichts, hilft die Fehlermeldung des Laufs. */
   fallback: string;
 }
@@ -39,6 +43,7 @@ export const subjectOfPublish = (p: PublishSummary): LogSubject => ({
   source: p.source,
   hash: p.contentHash,
   summary: p.summary,
+  counts: { changed: p.pagesChanged, added: p.pagesAdded, removed: p.pagesRemoved },
   fallback: '',
 });
 
@@ -87,13 +92,20 @@ export function LogDialog({ item, onClose }: { item: LogSubject | null; onClose(
     };
   }, [item]);
 
+  const raw = (
+    <pre ref={pre} tabIndex={0} className="rounded-md bg-code p-4 font-mono text-hint whitespace-pre-wrap text-ink-2 outline-none focus-visible:ring-2 focus-visible:ring-focus">
+      {log}
+    </pre>
+  );
+
   const copy = async () => {
     if (log !== null && (await copyToClipboard(log))) toast.success(t('copied'));
   };
 
   return (
     <Dialog open={item !== null} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent size="lg" layout="fixed-footer" initialFocus={pre} className="bg-surface">
+      {/* Mit Kurzfassung ist die Rohausgabe zugeklappt (10 A2); dann bekommt der Dialog den Fokus wie üblich. */}
+      <DialogContent size="lg" layout="fixed-footer" initialFocus={item?.summary ? undefined : pre} className="bg-surface">
         <DialogHeader>
           <DialogTitle>{item ? t('title', { when: fmt.dateTime(item.startedAt) }) : ''}</DialogTitle>
           {item ? (
@@ -107,7 +119,14 @@ export function LogDialog({ item, onClose }: { item: LogSubject | null; onClose(
           ) : null}
           {item?.summary ? (
             <p className="text-meta text-ink-2">
-              <span className="font-semibold">{t('short')}</span> {item.summary}
+              <span className="font-semibold">{t('short')}</span>{' '}
+              {item.counts
+                ? countParts([
+                    [item.counts.changed, tHistory('changed', { count: item.counts.changed })],
+                    [item.counts.added, tHistory('added', { count: item.counts.added })],
+                    [item.counts.removed, tHistory('removed', { count: item.counts.removed })],
+                  ])
+                : item.summary}
             </p>
           ) : null}
         </DialogHeader>
@@ -119,10 +138,13 @@ export function LogDialog({ item, onClose }: { item: LogSubject | null; onClose(
               <Skeleton className="h-4 w-2/3" />
               <span className="sr-only">{tHistory('loading')}</span>
             </div>
+          ) : item?.summary ? (
+            // 10 A2: Die Kurzfassung steht oben; die Rohausgabe (rsync, Dateiliste) ist das technische Protokoll dahinter.
+            <Disclosure label={t('technical')} bounded={false}>
+              {raw}
+            </Disclosure>
           ) : (
-            <pre ref={pre} tabIndex={0} className="rounded-md bg-code p-4 font-mono text-hint whitespace-pre-wrap text-ink-2 outline-none focus-visible:ring-2 focus-visible:ring-focus">
-              {log}
-            </pre>
+            raw
           )}
         </DialogBody>
         <DialogFooter>

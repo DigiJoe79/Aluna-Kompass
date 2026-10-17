@@ -13,7 +13,7 @@ import { FormActionBar } from '@/components/forms/form-action-bar';
 import { SubmitButton } from '@/components/forms/submit-button';
 import { FormErrorSummary, TabInvalidDot } from '@/components/forms/form-error-summary';
 import { invalidTabs } from '@/lib/form-errors';
-import { StatusBadge } from '@/components/status-badge';
+import { StatusBadge, statusTone } from '@/components/status-badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { ActionForm } from '@/components/forms/action-form';
@@ -22,11 +22,10 @@ import { cn } from '@/lib/utils';
 import { idleState } from '@/lib/actions';
 import { saveAnimalAction } from './actions';
 import { MediaChooserDialog } from '@/components/media/media-chooser-dialog';
-import type { AnimalQueue, FormTab } from './list-params';
+import { primaryIntent, type AnimalQueue, type FormTab } from './list-params';
 import { PhotosEditor, type AnimalPhotoPlaces, type EditorPhoto } from './photos-editor';
 import { ProfileFields, TextFields } from './animal-fields';
 import { ReviewBand } from './review-band';
-import { OriginLine } from './origin-line';
 import { ProposalBand } from './proposal-band';
 import { mergePhotos } from './photos-merge';
 import { StatusDialog } from './status-dialog';
@@ -129,18 +128,19 @@ export function AnimalForm({ animal, locales, queue, initialTab, backHref, photo
   const position = queue?.position ?? openedAt;
   const pending = !!animal?.reviewRequestedAt;
   // Eine primäre Aktion; sobald sie mehr tut als speichern, bleibt „Speichern“ als zweiter Weg daneben.
-  const primary = pending
-    ? { intent: 'confirm', label: position ? r('confirmNext') : r('confirm') }
-    : position
-      ? { intent: 'next', label: t('saveNext') }
+  // „… und weiter“ nur, wenn es einen nächsten Eintrag gibt — bei „1 von 1“ nicht (05 B12).
+  const intent = primaryIntent(pending, position);
+  const primary = intent === 'confirm'
+    ? { intent, label: position?.nextId ? r('confirmNext') : r('confirm') }
+    : intent === 'next'
+      ? { intent, label: t('saveNext') }
       : null;
   return (
     <div className="flex flex-col gap-4">
       {animal ? (
         <div className="flex flex-wrap items-center gap-3 rounded-lg border border-line bg-surface px-4 py-3">
-          <StatusBadge tone={animal.status === 'adopted' ? 'success' : animal.status === 'reserved' ? 'warning' : 'info'} dot>{t(`status.${animal.status}`)}</StatusBadge>
+          <StatusBadge tone={statusTone('animal', animal.status)} dot>{t(`status.${animal.status}`)}</StatusBadge>
           <StatusDialog animalId={animal.id} current={animal.status} />
-          <OriginLine origins={origins} />
           <label className="ml-auto flex items-center gap-2 text-meta">
             {/* Text vor dem Schalter: rechtsbündig sitzt der Schalter so immer an derselben Stelle, wie in der Liste. */}
             <span className="flex flex-col items-end">
@@ -168,9 +168,9 @@ export function AnimalForm({ animal, locales, queue, initialTab, backHref, photo
             {animal ? <input ref={hiddenField} type="hidden" name="photos" value={JSON.stringify(photos)} /> : null}
             {animal ? <input type="hidden" name="isPublished" value={published ? '1' : '0'} /> : null}
             {/* Der Nachfolger steht beim Rendern fest: Fällt dieser Hund mit dem Bestätigen aus dem Filter, stimmt das Ziel trotzdem. */}
-            {position ? <><input type="hidden" name="queue" value={queue?.query ?? ''} /><input type="hidden" name="nextId" value={position.nextId ?? ''} /></> : null}
+            {position?.nextId ? <><input type="hidden" name="queue" value={queue?.query ?? ''} /><input type="hidden" name="nextId" value={position.nextId ?? ''} /></> : null}
             <TabsContent keepMounted value="profile" className="p-5">
-              <ProfileFields values={animal ?? {}} slug={animal?.slug} locales={locales} errors={errors} />
+              <ProfileFields values={animal ?? {}} slug={animal?.slug} locales={locales} errors={errors} origins={origins} />
             </TabsContent>
             {/*
               Texte links, Fotos rechts: Wer prüft, sieht beides nebeneinander und speichert einmal. Eigenes Zwei-Block-
@@ -208,7 +208,7 @@ export function AnimalForm({ animal, locales, queue, initialTab, backHref, photo
               saveName="intent"
               saveValue={primary?.intent ?? 'save'}
               saveLabel={primary?.label}
-              extraActions={primary ? <SubmitButton variant="secondary" name="intent" value="save">{tCommon('save')}</SubmitButton> : undefined}
+              extraActions={primary ? <SubmitButton variant="outline" name="intent" value="save">{tCommon('save')}</SubmitButton> : undefined}
             />
           </ActionForm>
         </Tabs>

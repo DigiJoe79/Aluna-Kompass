@@ -140,21 +140,25 @@ export function MediaPicker({
               {tc('smallLine', { px })}
             </span>
           ) : crop ? (
-            <span className="text-hint text-muted-ink">{tc('hasLine')}</span>
+            <span className="text-hint text-muted-ink">{tc('trimmedLine')}</span>
           ) : null}
         </span>
-        <div className="flex gap-2">
-          <Button type="button" variant="secondary" size="sm" aria-label={`${label}: ${t('choose')}`} onClick={() => setOpen(true)}>
+        {/* 10 A3, 11-1 B22: Der leere Platz sagt, was fehlt, statt nur eine gestrichelte Box zu sein. */}
+        {assetId ? null : <span className="text-hint text-muted-ink">{isImage ? t('noImage') : t('noPdf')}</span>}
+        {/* `flex-wrap`: „Bild entfernen“ lief am Telefon aus dem Bild (05 B21). Kein Layout-Test (AGENTS.md). */}
+        <div className="flex flex-wrap gap-2">
+          {/* 10 B16: alle Bildaktionen in einer Stufe (`outline`). */}
+          <Button type="button" variant="outline" size="sm" aria-label={`${label}: ${t('choose')}`} onClick={() => setOpen(true)}>
             {t('choose')}
           </Button>
           {isImage && places && assetId && size ? (
-            <Button type="button" variant="ghost" size="sm" aria-label={`${label}: ${tc('edit')}`} onClick={() => setEditing(true)}>
+            <Button type="button" variant="outline" size="sm" aria-label={`${label}: ${tc('edit')}`} onClick={() => setEditing(true)}>
               {tc('edit')}
             </Button>
           ) : null}
           {assetId ? (
-            <Button type="button" variant="ghost" size="sm" onClick={() => set(null)}>
-              {t('removeImage')}
+            <Button type="button" variant="outline" size="sm" onClick={() => set(null)}>
+              {isImage ? t('removeImage') : t('removePdf')}
             </Button>
           ) : null}
         </div>

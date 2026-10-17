@@ -64,6 +64,13 @@ describe('defineModule with dashboardTiles', () => {
     expect(() => module([tile({ kind: 'chart' as never })])).toThrow(/invalid dashboard tile kind: chart/);
   });
 
+  it('nimmt die Art Fällig oder Arbeit an einer Liste an und lehnt sie sonst ab (Briefing Startseite § 4)', () => {
+    expect(module([tile({ kind: 'list', variant: 'work' })]).dashboardTiles).toHaveLength(1);
+    expect(module([tile({ kind: 'list', variant: 'due' })]).dashboardTiles).toHaveLength(1);
+    expect(() => module([tile({ kind: 'count', variant: 'work' })])).toThrow(/variant work needs kind list/);
+    expect(() => module([tile({ kind: 'list', variant: 'chart' as never })])).toThrow(/invalid dashboard tile variant: chart/);
+  });
+
   it('lehnt ein Optionsschema ohne Vorgabe ab', () => {
     expect(() => module([tile({ options: z.object({ a: z.boolean() }) })])).toThrow(/without default/);
   });

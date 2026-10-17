@@ -52,7 +52,7 @@ describe('Journal leer', () => {
   it('ganz leer: „Noch keine Buchung.“ mit „Neue Buchung“ und dem Weg zur Einrichtung', () => {
     show(false, true);
     expect(screen.getByRole('heading', { name: 'Noch keine Buchung.' })).toBeTruthy();
-    expect(screen.getByRole('link', { name: 'Bankkonten und Kassen einrichten' })).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'Konten einrichten' })).toBeTruthy();
   });
 
   it('gefiltert leer: Zurücksetzen statt Anlegen und Einrichtung', () => {
@@ -60,7 +60,7 @@ describe('Journal leer', () => {
     expect(screen.getByRole('heading', { name: 'Keine Buchung passt zu diesen Filtern.' })).toBeTruthy();
     expect(screen.getByRole('link', { name: 'Filter zurücksetzen' }).getAttribute('href')).toBe('/finance/entries');
     expect(screen.queryByText('Noch keine Buchung.')).toBeNull();
-    expect(screen.queryByRole('link', { name: 'Bankkonten und Kassen einrichten' })).toBeNull();
+    expect(screen.queryByRole('link', { name: 'Konten einrichten' })).toBeNull();
     // „Neue Buchung“ steht nur noch im Seitenkopf, nicht im Leerzustand.
     expect(screen.getAllByRole('link', { name: 'Neue Buchung' })).toHaveLength(1);
   });

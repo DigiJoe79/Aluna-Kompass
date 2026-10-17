@@ -21,12 +21,16 @@ const list = <T,>(items: T[], total = items.length) => ({ items, total, truncate
 const detail = (over: Partial<DetailView> = {}) => ({ counts: zero, diff: { changed: list([]), added: list([]), removed: list([]) }, ...over }) as DetailView;
 
 describe('PreviewSummary', () => {
-  it('keeps all three counts and names the hints', () => {
+  it('names the counts without zeros (137, 140, 141) and the hints', () => {
     const html = render(<PreviewSummary counts={{ ...zero, changed: 12, added: 3, gaps: 2, pendingReview: 1 }} />);
-    expect(text(html)).toContain('12 geändert · 3 neu · 0 entfallen');
+    expect(text(html)).toContain('12 geändert · 3 neu');
+    expect(text(html)).not.toContain('entfallen');
     expect(text(html)).toContain('3 Hinweise');
     expect(text(html)).toContain('2 Übersetzungslücken');
-    expect(text(html)).toContain('Hinweise halten den Publish nicht auf');
+    expect(text(html)).toContain('Hinweise halten das Publizieren nicht auf');
+    // 10 B21: die Hinweise als Notice (warn = status), nicht als fetter Text in Warnfarbe.
+    expect(html).toContain('role="status"');
+    expect(html).not.toContain('text-warning">3 Hinweise');
   });
   it('says nothing about hints when there are none', () => {
     expect(text(render(<PreviewSummary counts={{ ...zero, changed: 1 }} />))).not.toContain('Hinweis');

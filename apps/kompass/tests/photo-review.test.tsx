@@ -4,7 +4,7 @@ import { NextIntlClientProvider } from 'next-intl';
 import { useState, type ReactNode } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { resolvePlaces } from '@kompass/core/image-places';
-import { initialPhotoState, PhotoReview, type PhotoState, type ReviewPhotoRow } from '@/app/(shell)/animals/proposals/[id]/photo-review';
+import { initialPhotoState, photoChoices, PhotoReview, type PhotoState, type ReviewPhotoRow } from '@/app/(shell)/animals/proposals/[id]/photo-review';
 import messages from '../messages/de.json';
 
 function Intl({ children }: { children: ReactNode }) {
@@ -54,7 +54,7 @@ describe('Fotoprüfung einer Änderung', () => {
     render(<Harness />, { wrapper: Intl });
     expect(within(tiles()[0]!).getByRole('button', { name: 'Ausschnitt …' })).toBeTruthy();
     expect(within(tiles()[2]!).getByRole('button', { name: 'Ausschnitt …' })).toBeTruthy();
-    fireEvent.click(within(tiles()[2]!).getByRole('checkbox', { name: 'abwählen: Foto aus Kompass' }));
+    fireEvent.click(within(tiles()[2]!).getByRole('checkbox', { name: 'danach dabei: Foto aus Kompass' }));
     expect(within(tiles()[2]!).queryByRole('button', { name: 'Ausschnitt …' })).toBeNull();
   });
 
@@ -91,9 +91,39 @@ describe('Fotoprüfung einer Änderung', () => {
   it('deselecting the primary runs through the same rule: the old one keeps its crop, nothing is announced', () => {
     render(<Harness />, { wrapper: Intl });
     fireEvent.click(within(screen.getByTestId('proposal-primary-choice')).getByRole('radio', { name: /Heute behalten/ }));
-    fireEvent.click(within(tiles()[1]!).getByRole('checkbox', { name: 'abwählen: Foto aus Kompass' }));
+    fireEvent.click(within(tiles()[1]!).getByRole('checkbox', { name: 'danach dabei: Foto aus Kompass' }));
     expect(screen.getByTestId('primary-crop-announcement').textContent).toBe('');
-    fireEvent.click(within(tiles()[1]!).getByRole('checkbox', { name: 'abwählen: Foto aus Kompass' }));
+    fireEvent.click(within(tiles()[1]!).getByRole('checkbox', { name: 'danach dabei: Foto aus Kompass' }));
     expect(within(tiles()[1]!).getByTestId('cropped-image')).toBeTruthy();
+  });
+
+  /**
+   * 051 (Review Focus 5): Jedes Kästchen fragt „danach dabei“ — angehakt, wenn das Foto nach dem Annehmen da ist. Die
+   * Richtung des Hakens dreht sich bei „entfernen“ und „abwählen“, gespeichert wird beim Annehmen dasselbe wie vorher.
+   */
+  it('051: every checkbox asks „danach dabei“, checked means the photo stays; accepting stores the same as before', () => {
+    const mixed: ReviewPhotoRow[] = [
+      { ...base, key: 'image:i1', imageId: 'i1', mediaId: null, change: 'new', proposedPrimary: true, sourceRef: 'hb-1.jpg' },
+      { ...base, key: 'media:d1', imageId: null, mediaId: 'd1', change: 'dropped', inProposal: false, defaultSelected: false, sourceRef: 'hb-alt.jpg' },
+      { ...base, key: 'media:k2', imageId: null, mediaId: 'k2', origin: 'kompass', change: 'kept', inProposal: false },
+    ];
+    let last: PhotoState = initialPhotoState(mixed);
+    function Mixed() {
+      const [state, setState] = useState(() => initialPhotoState(mixed));
+      return <PhotoReview rows={mixed} state={state} onChange={(s) => { last = s; setState(s); }} sourceName="Quelle" max={12} places={places} sizes={sizes} />;
+    }
+    render(<Mixed />, { wrapper: Intl });
+    const boxes = screen.getAllByRole('checkbox');
+    expect(boxes.map((b) => b.getAttribute('aria-label'))).toEqual(['danach dabei: hb-1.jpg', 'danach dabei: hb-alt.jpg', 'danach dabei: Foto aus Kompass']);
+    // Angehakt heißt: nach dem Annehmen dabei. Das wegfallende Foto ist leer, das neue und das aus Kompass angehakt.
+    expect(boxes.map((b) => b.getAttribute('aria-checked') ?? String((b as HTMLInputElement).checked))).toEqual(['true', 'false', 'true']);
+    // Vorher hieß dieselbe Wahl „entfernen“ ab- und „abwählen“ angehakt: Das wegfallende Foto bleibt doch, das aus Kompass geht.
+    fireEvent.click(boxes[1]!);
+    fireEvent.click(boxes[2]!);
+    expect(last.selected).toEqual({ 'image:i1': true, 'media:d1': true, 'media:k2': false });
+    expect(photoChoices(mixed, last)).toEqual([
+      { imageId: 'i1', isPrimary: true, crop: null },
+      { mediaId: 'd1', isPrimary: false, crop: null },
+    ]);
   });
 });

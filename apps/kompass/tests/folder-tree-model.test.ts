@@ -305,3 +305,18 @@ describe('namesBelow', () => {
     expect(namesBelow('behoerden_alt/x', 'behoerden')).toEqual(['behoerden_alt', 'x']);
   });
 });
+
+// Runde 3 (Designer Frage 2, 029, 036): Der geschlossene Wert des Ordnerfelds kürzt den Weg nur, wenn er nicht passt —
+// dann zu „… › Eltern › Ordner“. Die letzte Ebene wird nie weggelassen.
+describe('collapsedPath', () => {
+  it('ein Weg bis zu zwei Ebenen bleibt ganz', async () => {
+    const { collapsedPath } = await import('@/lib/folder-tree-model');
+    expect(collapsedPath(['Behörden'])).toEqual(['Behörden']);
+    expect(collapsedPath(['Behörden', 'Behörden/Finanzamt'])).toEqual(['Behörden', 'Behörden/Finanzamt']);
+  });
+
+  it('ab drei Ebenen: „…“, Eltern, Ordner', async () => {
+    const { collapsedPath } = await import('@/lib/folder-tree-model');
+    expect(collapsedPath(['A', 'A/B', 'A/B/C', 'A/B/C/D'])).toEqual([null, 'A/B/C', 'A/B/C/D']);
+  });
+});

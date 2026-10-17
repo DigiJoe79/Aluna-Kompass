@@ -10,7 +10,7 @@ import { PageHeader } from '@/components/page-header';
 import { StatusBadge } from '@/components/status-badge';
 import { formatEuro } from '@/lib/finance/amount';
 import { requireSession } from '@/lib/request-context';
-import { ReserveTable, type ReserveDocument, type ReserveRow } from './reserve-table';
+import { CapDerivation, CreateReserveButton, ReserveTable, type ReserveDocument, type ReserveRow } from './reserve-table';
 
 /**
  * E4 „Zurückgelegtes Geld“ (F8b Task 6b, Designer-README 4d): Kopfsatz,
@@ -65,9 +65,10 @@ export default async function ReservesPage() {
   );
 
   const capCard = (y: FreeReserveCapYearView): ReactNode => {
+    // Eine Zeile auf der Seite, die Rechnung mit den Zahlen des Jahres hinter dem Infoknopf (Runde 3, 123, Joe).
     const assetShare = (valueAt(deps.db, 'freeReserveAssetShare', y.endsOn) as number | null) ?? 0;
     const otherShare = (valueAt(deps.db, 'freeReserveOtherShare', y.endsOn) as number | null) ?? 0;
-    const derivation = t('cap.derivation', { assetShare, asset: formatEuro(Math.max(0, y.assetManagementSurplusCents)), otherShare, other: formatEuro(y.otherTimelyFundsCents) });
+    const derivation = <CapDerivation year={y.designation} derivation={t('cap.derivation', { assetShare, asset: formatEuro(Math.max(0, y.assetManagementSurplusCents)), otherShare, other: formatEuro(y.otherTimelyFundsCents) })} />;
     // Noch keine Einnahmen im Jahr und nichts zugeführt: ein Zustandswort statt eines leeren Balkens. Mit Zuführung
     // bleibt es beim Balken und der Zeile „über dem Höchstbetrag“ (`limitState` kennt bei Grenze 0 keinen Zustand).
     const noCapYet = y.capCents <= 0 && y.usedCents === 0;
@@ -80,7 +81,7 @@ export default async function ReservesPage() {
               <p className="text-meta text-ink-2">{t(y.provisional ? 'cap.headingProvisional' : 'cap.heading', { year: y.designation })}</p>
               <StatusBadge tone="neutral">{t('cap.noCapYet')}</StatusBadge>
             </div>
-            <p className="text-hint text-muted-ink">{derivation}</p>
+            {derivation}
           </div>
         ) : (
           <LimitProgress
@@ -90,9 +91,9 @@ export default async function ReservesPage() {
             state={state}
             stateLabel={state ? tLimit(`states.${state}`) : undefined}
             figure={t('cap.figure', { used: formatEuro(y.usedCents), cap: formatEuro(y.capCents) })}
-            remainder={derivation}
           />
         )}
+        {noCapYet ? null : derivation}
         {/* Befund S: das Kennzeichen des Dienstes, mit dem Betrag darüber. */}
         {y.exceeded ? (
           <p className="mt-2 text-meta font-semibold text-error" data-testid="reserve-cap-over">
@@ -104,7 +105,7 @@ export default async function ReservesPage() {
   };
 
   return (
-    <Page width="standard" header={<PageHeader title={t('title')} description={t('intro')} />}>
+    <Page width="full" header={<PageHeader title={t('title')} description={t('intro')} actions={canSetup ? <CreateReserveButton purposes={purposes} /> : undefined} />}>
       <div className="space-y-4">
         {capYears.length === 0 ? <p className="text-meta text-muted-ink">{t('cap.noYear')}</p> : capYears.map(capCard)}
         <ReserveTable

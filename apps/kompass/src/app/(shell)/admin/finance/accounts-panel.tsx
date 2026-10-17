@@ -14,7 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogBody, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { RowButton, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { formatAmount, parseAmount } from '@/lib/finance/amount';
 import { checkIban, type IbanCheckResult } from '@/lib/finance/iban-check';
 import { saveAccountAction, setAccountActiveAction, type AccountInput } from './actions';
@@ -24,6 +24,9 @@ import { FormField } from '@/components/forms/form-field';
 import { FormCell, FormGrid } from '@/components/forms/form-grid';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Section } from '@/components/section';
+import { Empty } from '@/components/empty-value';
+import { formatIban } from '@kompass/module-finance/format';
+import { RowMenu } from '@/components/row-menu';
 
 export interface AccountRow {
   id: string;
@@ -50,6 +53,7 @@ const IBAN_STATE_KEY: Record<IbanCheckResult['state'], string> = { empty: '', va
  */
 export function AccountsPanel({ accounts, canPickDocument }: { accounts: AccountRow[]; canPickDocument: boolean }) {
   const t = useTranslations('finance.admin.accounts');
+  const tMuted = useTranslations('common.muted');
   const tCommon = useTranslations('common');
   const router = useRouter();
   const [editing, setEditing] = useState<AccountRow | null | 'new'>(null);
@@ -68,28 +72,23 @@ export function AccountsPanel({ accounts, canPickDocument }: { accounts: Account
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>{t('dialog.name')}</TableHead>
-              <TableHead>{t('dialog.kind')}</TableHead>
-              <TableHead>{t('dialog.iban')}</TableHead>
-              <TableHead>{t('active')}</TableHead>
-              <TableHead className="text-right">{tCommon('edit')}</TableHead>
+              <TableHead col="title">{t('dialog.name')}</TableHead>
+              <TableHead col="meta">{t('dialog.kind')}</TableHead>
+              <TableHead col="meta">{t('dialog.iban')}</TableHead>
+              {/* Zeilenaktionen im ⋯-Menü (Joe 11.8); der Kopf ist nur für Vorleser da (112). */}
+              <TableHead col="actions" className="w-11"><span className="sr-only">{tCommon('rowActionsColumn')}</span></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {accounts.map((row) => (
-              <TableRow key={row.id} data-testid={`account-row-${row.name}`}>
-                <TableCell className="text-ink">
-                  {row.name} {row.isMain ? <StatusBadge tone="brand">{t('dialog.isMain')}</StatusBadge> : null}
+              <TableRow key={row.id} data-testid={`account-row-${row.name}`} muted={row.isActive ? undefined : tMuted('retired')}>
+                <TableCell col="title">
+                  <RowButton aria-haspopup="dialog" onClick={() => openFor(row)}>{row.name}</RowButton> {row.isMain ? <StatusBadge tone="brand">{t('dialog.isMain')}</StatusBadge> : null}
                 </TableCell>
-                <TableCell className="text-ink-2">{t(`kind.${row.kind}`)}</TableCell>
-                <TableCell className="font-mono text-meta text-muted-ink">{row.iban ?? '—'}</TableCell>
-                <TableCell>
-                  <StatusBadge tone={row.isActive ? 'success' : 'neutral'}>{row.isActive ? t('active') : t('inactiveState')}</StatusBadge>
-                </TableCell>
-                <TableCell className="text-right">
-                  <Button variant="ghost" size="sm" onClick={() => openFor(row)}>
-                    {tCommon('edit')}
-                  </Button>
+                <TableCell col="meta" className="text-ink-2">{t(`kind.${row.kind}`)}</TableCell>
+                <TableCell col="meta" className="font-mono text-meta text-muted-ink">{row.iban ? formatIban(row.iban) : <Empty />}</TableCell>
+                <TableCell col="actions" className="text-right">
+                  <RowMenu name={row.name} items={[{ key: 'edit', label: tCommon('edit'), onSelect: () => openFor(row) }]} />
                 </TableCell>
               </TableRow>
             ))}

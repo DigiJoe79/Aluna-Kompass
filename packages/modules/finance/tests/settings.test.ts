@@ -50,6 +50,8 @@ describe('finance settings', () => {
       'finance.boardRemunerationDocumentId',
       // Befund AK — ab wann sie gilt.
       'finance.boardRemunerationValidFrom',
+      // Joe 11.9 — wann entschieden wurde; ohne ihn bleibt der Schritt offen.
+      'finance.boardRemunerationDecidedOn',
     ].sort());
     expect(financeModule.settings!.find((s) => s.key === 'finance.mcpHumanOnlyAllowed')).toMatchObject({ default: false, uiOnly: true });
   });

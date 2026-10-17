@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 /**
  * Prüfergebnis fürs Feld (H2, Befund A5: kein Bankname aus der IBAN — nur
  * das Prüfergebnis). Die Prüfziffernrechnung steht hier noch einmal klein für
@@ -43,5 +44,22 @@ export function checkIban(text: string): IbanCheckResult {
   return { state: checksumOk(iban) ? 'valid' : 'checksum', country };
 }
 
-/** Zum Lesen in Vierergruppen — dieselbe Anzeige wie `formatIban` im Modul (Test). */
-export const groupIban = (iban: string): string => normalize(iban).replace(/(.{4})(?=.)/g, '$1 ');
+/** Zum Lesen und Maskieren: `formatIban`/`maskIban`/`compactIban` aus `@kompass/module-finance/format` (MUSTER § IBAN). */
+
+/**
+ * Die letzten vier Zeichen einer IBAN, offen oder verdeckt (`DE ·· 2051`) — für den Vorleser-Satz „IBAN endet auf
+ * 2051“ neben der verdeckten Form, die sehend bleibt (Designer 2026-10-16, Teil 1 Nr. 3).
+ */
+export function ibanLastFour(iban: string): string {
+  return iban.replace(/\s+/g, '').slice(-4);
+}
+
+/** Verdeckte IBAN im Satz: sehend „DE ·· 2051“, für Vorleser `label` („IBAN endet auf 2051“). */
+export function maskedIban(masked: string, label: string): ReactNode {
+  return (
+    <>
+      <span aria-hidden="true">{masked}</span>
+      <span className="sr-only">{label}</span>
+    </>
+  );
+}

@@ -3,6 +3,7 @@
 import type { ExpenseClaimView } from '@kompass/module-finance';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
+import { FixedValue } from '@/components/fixed-value';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { FormActionBar } from '@/components/forms/form-action-bar';
 import { FormField } from '@/components/forms/form-field';
@@ -17,7 +18,8 @@ import { Switch } from '@/components/ui/switch';
 import type { ActionState } from '@/lib/actions';
 import { formatEuro } from '@/lib/finance/amount';
 import { applySaved, draftInput, emptyPosition, receiptProblem, totalCents, type Device, type ExpenseForm as FormState, type MileageRate, type PositionForm } from '@/lib/finance/expenses';
-import { checkIban, groupIban } from '@/lib/finance/iban-check';
+import { checkIban } from '@/lib/finance/iban-check';
+import { compactIban, formatIban } from '@kompass/module-finance/format';
 import { saveExpenseDraftAction, submitExpenseClaimAction, uploadExpenseReceiptAction } from '../actions';
 import type { PdfFieldError } from './pdf-field';
 import { countPdfPages } from '@/lib/finance/pdf-pages';
@@ -220,10 +222,10 @@ export function ExpenseForm({
 
   return (
     <div className="space-y-5">
-      <div data-testid="expense-for-whom" className="flex min-h-[var(--field-h)] items-center justify-between gap-3 rounded-md border border-line bg-surface-2 px-3 py-2">
-        <span className="text-meta text-muted-ink">{t('forWhom')}</span>
-        <span className="text-body font-semibold text-ink">{contactName}</span>
-      </div>
+      {/* Es gibt kein Recht, für andere einzureichen (der Dienst nimmt den eigenen Kontakt): fester Wert (E2, 08 B18). */}
+      <FormGrid>
+        <FixedValue id="expense-for-whom" testId="expense-for-whom" label={t('forWhom')} value={t('forWhomValue', { name: contactName })} reason={t('forWhomFixed')} />
+      </FormGrid>
 
       <section aria-labelledby="expense-positions" className="space-y-3">
         <h3 id="expense-positions" className="sr-only">{t('positions')}</h3>
@@ -247,7 +249,8 @@ export function ExpenseForm({
             />
           ))}
         </ol>
-        <Button type="button" variant="outline" className="w-full" onClick={addPosition}>
+        {/* Gleiches Muster wie „Zeile hinzufügen“ der Buchung: `outline` in Inhaltsbreite (Runde 3, 101). */}
+        <Button type="button" variant="outline" onClick={addPosition}>
           {t('addPosition')}
         </Button>
       </section>
@@ -257,7 +260,7 @@ export function ExpenseForm({
           <div className="space-y-4">
             <div data-testid="expense-total" className="flex items-baseline justify-between gap-3">
               <span className="text-meta font-semibold text-muted-ink">{t('total')}</span>
-              <span className="font-mono text-amount font-semibold tabular-nums">{formatEuro(totalCents(form, mileageRates))}</span>
+              <span className="text-amount font-semibold tabular-nums">{formatEuro(totalCents(form, mileageRates))}</span>
             </div>
 
             {waiversEnabled && waiverAvailable ? (
@@ -289,17 +292,19 @@ export function ExpenseForm({
             {form.waiver ? null : (
               <FormGrid>
                 {ibanLocked ? (
-                  <FormCell size="m" className="space-y-1">
-                    <p id="expense-iban-label" className="text-body font-semibold">
+                  // Wert als Text wie ein fester Wert (E2), „andere IBAN“ als Textknopf daneben, kein Kasten (Runde 3, 101).
+                  // Kein `FixedValue`: Die IBAN lässt sich hier ändern, der Knopf gehört nicht in den Namen der Gruppe.
+                  <FormCell size="m" className="flex flex-col gap-1.5">
+                    <p id="expense-iban-label" className="text-meta font-semibold text-ink-2">
                       {t('iban')}
                     </p>
-                    <div className="flex min-h-[var(--field-h)] items-center justify-between gap-2 rounded-md border border-line bg-surface-2 px-3">
-                      <span data-testid="iban-fixed" aria-labelledby="expense-iban-label" className="font-mono text-body tabular-nums">
-                        {groupIban(form.iban)}
+                    <div className="flex min-h-[var(--field-h)] flex-wrap items-center gap-x-3 gap-y-1">
+                      <span data-testid="iban-fixed" aria-labelledby="expense-iban-label" className="font-mono text-body text-ink">
+                        {formatIban(form.iban)}
                       </span>
                       <Button
                         type="button"
-                        variant="ghost"
+                        variant="outline"
                         size="sm"
                         onClick={() => {
                           setIbanLocked(false);
@@ -349,6 +354,3 @@ export function ExpenseForm({
 }
 
 /** Wie der Dienst die IBAN speichert: ohne Leerzeichen, in Großbuchstaben. */
-function compactIban(iban: string): string {
-  return iban.replace(/\s+/g, '').toUpperCase();
-}

@@ -5,13 +5,15 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useTransition } from 'react';
 import { checkFilter, FilterBar, selectFilter } from '@/components/filter-bar';
 import { SearchField } from '@/components/search-field';
-import { StatusBadge } from '@/components/status-badge';
+import { StatusBadge, statusTone } from '@/components/status-badge';
 import { SortableHead } from '@/components/sortable-head';
-import { RowLink, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { withoutProtocol } from '@/lib/without-protocol';
+import { MutedMark, RowLink, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { roleLabel } from '@/lib/contact-roles';
 import { useUrlFilters } from '@/lib/use-url-filters';
 import { EmptyState } from '@/components/empty-state';
 import { ListPager } from '@/components/list-pager';
+import { Empty } from '@/components/empty-value';
 
 export interface ContactListItem {
   id: string;
@@ -26,6 +28,7 @@ export interface ContactListItem {
 
 export function ContactList({ contacts, roles, total, unfiltered, offset, pageSize }: { contacts: ContactListItem[]; roles: string[]; total: number; unfiltered: number; offset: number; pageSize: number }) {
   const t = useTranslations('contacts');
+  const tMuted = useTranslations('common.muted');
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
@@ -69,7 +72,7 @@ export function ContactList({ contacts, roles, total, unfiltered, offset, pageSi
   return (
     <div className="flex flex-col gap-3">
       <FilterBar
-        search={<SearchField value={query} onChange={(text) => applyFilters({ text })} placeholder={t('searchPlaceholder')} />}
+        search={<SearchField value={query} onChange={(text) => applyFilters({ text })} placeholder={t('searchPlaceholder')} placeholderShort={t('searchPlaceholderShort')} />}
         searchActive={query.trim() ? { chip: query.trim(), onClear: () => applyFilters({ text: '' }) } : undefined}
         filters={[
           selectFilter({
@@ -98,19 +101,23 @@ export function ContactList({ contacts, roles, total, unfiltered, offset, pageSi
           <Table>
             <TableHeader>
               <TableRow>
-                <SortableHead field="name" label={t('columns.name')} />
+                <SortableHead col="title" field="name" label={t('columns.name')} byDefault="asc" />
                 <SortableHead field="kind" label={t('columns.kind')} />
-                <TableHead>{t('columns.roles')}</TableHead>
-                <SortableHead field="city" label={t('columns.city')} />
-                <TableHead>{t('columns.contact')}</TableHead>
+                <TableHead col="meta">{t('columns.roles')}</TableHead>
+                <SortableHead col="meta" field="city" label={t('columns.city')} />
+                <TableHead col="meta">{t('columns.contact')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {contacts.map((c) => (
-                <TableRow key={c.id}>
-                  <TableCell>
+                // Archiviert ist die gedämpfte Zeile mit Marke hinter dem Namen (Joe 11.8, ersetzt „Art wird Statusspalte“).
+                <TableRow key={c.id} muted={c.status === 'archived' ? tMuted('archived') : undefined}>
+                  <TableCell col="title" mutedMark="inline">
                     <div className="flex flex-col">
-                      <RowLink href={`/contacts/${c.id}`}>{c.name}</RowLink>
+                      <span>
+                        <RowLink href={`/contacts/${c.id}`}>{c.name}</RowLink>
+                        <MutedMark />
+                      </span>
                       {c.affiliation ? (
                         <span className="text-hint text-muted-ink">{c.affiliation}</span>
                       ) : null}
@@ -118,23 +125,32 @@ export function ContactList({ contacts, roles, total, unfiltered, offset, pageSi
                   </TableCell>
                   <TableCell className="text-ink-2">
                     {c.kind === 'organization' ? t('fields.organization') : t('fields.person')}
-                    {c.status === 'archived' ? (
-                      <StatusBadge tone="neutral" className="ml-2">
-                        {t('archived')}
-                      </StatusBadge>
-                    ) : null}
                   </TableCell>
-                  <TableCell>
-                    <div className="flex flex-wrap gap-1">
-                      {c.roles.map((r) => (
-                        <StatusBadge key={r} tone="info">
-                          {roleLabel(t, r)}
-                        </StatusBadge>
-                      ))}
-                    </div>
+                  <TableCell col="meta">
+                    {c.roles.length > 0 ? (
+                      // Am Telefon (Kartenzeile) die erste Rolle und „+n“, damit keine Marke mitten im Wort abbricht; ab `md`
+                      // alle (Runde 3, 038). Kein Layout-Test (Einzelstelle).
+                      <div className="flex flex-wrap gap-1">
+                        {c.roles.map((r, i) => (
+                          <StatusBadge key={r} tone={statusTone('role', 'current')} className={i > 0 ? 'max-md:hidden' : 'shrink-0'}>
+                            {roleLabel(t, r)}
+                          </StatusBadge>
+                        ))}
+                        {c.roles.length > 1 ? (
+                          <span className="text-meta text-muted-ink md:hidden" title={c.roles.slice(1).map((r) => roleLabel(t, r)).join(', ')}>
+                            {t('moreRoles', { count: c.roles.length - 1 })}
+                          </span>
+                        ) : null}
+                      </div>
+                    ) : (
+                      <Empty />
+                    )}
                   </TableCell>
-                  <TableCell className="text-ink-2">{c.city || '—'}</TableCell>
-                  <TableCell selectable className="text-ink-2 font-mono text-meta">{c.primaryChannel || '—'}</TableCell>
+                  <TableCell col="meta" className="text-ink-2">{c.city || <Empty />}</TableCell>
+                  <TableCell col="meta" selectable className="text-ink-2 text-meta" title={c.primaryChannel || undefined}>
+                    {/* Webadressen ohne „https://“, der volle Wert im `title` (Runde 3, 038). */}
+                    {c.primaryChannel ? withoutProtocol(c.primaryChannel) : <Empty />}
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>

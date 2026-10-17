@@ -12,6 +12,7 @@ import { stepCounter } from '@/lib/site-job-steps';
 import { cancelSiteJobAction } from './actions';
 import { McpBadge } from './source-mark';
 import { SectionHeading } from '@/components/section';
+import { EMPTY } from '@/components/empty-value';
 
 const clock = (ms: number) => {
   const seconds = Math.floor(ms / 1000);
@@ -47,7 +48,7 @@ export function RunCard({ embedded = false, notice, headingRef }: { embedded?: b
             {running.source === 'mcp' ? (
               <>
                 <McpBadge />
-                {running.tokenName ? t('flow.run.byAgent', { token: running.tokenName, name: running.userName ?? '—', time }) : t('flow.run.byAgentNoToken', { name: running.userName ?? '—', time })}
+                {running.tokenName ? t('flow.run.byAgent', { token: running.tokenName, name: running.userName ?? EMPTY, time }) : t('flow.run.byAgentNoToken', { name: running.userName ?? EMPTY, time })}
               </>
             ) : running.userName ? (
               t('flow.run.byPerson', { name: running.userName, time })

@@ -1,7 +1,7 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { Notice } from '@/components/notice';
 import { previewNumberAction } from '../actions';
 
@@ -12,7 +12,7 @@ import { previewNumberAction } from '../actions';
  * ins Feld zurück und verliert das Zeichen. Hier zeichnet nur dieser Absatz
  * neu, die Felder daneben bleiben unberührt.
  */
-export function NumberHint({ typeKey }: { typeKey: string }) {
+export function NumberHint({ typeKey, on = 'receive' }: { typeKey: string; on?: 'receive' | 'file' }) {
   const t = useTranslations('dms');
   const [preview, setPreview] = useState<{ number: string | null } | null>(null);
 
@@ -27,13 +27,21 @@ export function NumberHint({ typeKey }: { typeKey: string }) {
   }, [typeKey]);
 
   if (!preview) return null;
+  const mono = (chunks: ReactNode) => <span className="font-mono">{chunks}</span>;
+  // Festschreiben eines Entwurfs (Runde 3, 035): Die Nummer nennen, sonst sagt der Dialog es schon allgemein.
+  if (on === 'file') {
+    return preview.number ? (
+      <Notice level="hint">{t.rich('number.onFile', { number: preview.number, mono })}</Notice>
+    ) : null;
+  }
 
   return (
-    <Notice level="warn">
+    // Ein Hinweis, keine Warnung: Nichts ist falsch, die Nummer wird nur angekündigt (03 B17, MUSTER § A).
+    <Notice level="hint">
       {preview.number
         ? t.rich('number.pending', {
             number: preview.number,
-            mono: (chunks) => <span className="font-mono">{chunks}</span>,
+            mono,
           })
         : t('number.numberOnFiling')}
     </Notice>

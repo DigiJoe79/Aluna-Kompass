@@ -1,101 +1,128 @@
 'use client';
 
-import type { AvailableTile, DashboardLayout, DashboardOptionField, LayoutTile } from '@kompass/core';
+import type { AvailableTile, DashboardLayout, DashboardLayoutKind, DashboardOptionField, LayoutTile } from '@kompass/core';
+import { shortestColumn, tileLength } from '@kompass/core/dashboard-arrangement';
 import { ArrowDown, ArrowUp, SlidersHorizontal } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
-import { useState, useTransition } from 'react';
+import { Fragment, useState, useTransition } from 'react';
 import { RefusalNotice } from '@/components/forms/refusal-notice';
 import { useActionFeedback } from '@/components/forms/use-action-feedback';
 import { Button } from '@/components/ui/button';
+import { Disclosure } from '@/components/ui/disclosure';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Overline } from '@/components/overline';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select } from '@/components/ui/select';
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
 import { Switch } from '@/components/ui/switch';
+import { cn } from '@/lib/utils';
 import { resetDashboardLayoutAction, saveDashboardLayoutAction } from './actions';
 
 const id = (t: { module: string; key: string }) => `${t.module}.${t.key}`;
 
 /**
- * Knopf und Seitenleiste (Spec 2026-09-17, § 6): eingeschaltete Kacheln in
- * Reihenfolge mit Schalter, Pfeilen und Optionen; ausgeschaltete gedämpft am
- * Ende. Jede Änderung speichert sofort — kein Speichern-Knopf, weil das
- * Ergebnis hinter der Leiste sichtbar sein soll.
+ * Knopf und Seitenleiste (Spec 2026-09-17, § 6; Zwischenlösung 0.2.12, Entscheid Joe 2026-10-17): oben die Aufteilung
+ * (drei gleiche Spalten oder breit und schmal), darunter je Spalte ihre Kacheln mit Schalter, Pfeilen (ordnen nur in
+ * der Spalte), darunter hinter „Einstellungen“ die Wahl „Spalte“ und die Optionen; ausgeschaltete gedämpft am Ende.
+ * Eingeschaltet kommt eine Kachel ans Ende der kürzesten Spalte — ein und aus gilt für beide Aufteilungen, die Anordnung merkt sich jede für sich.
+ * Jede Änderung speichert sofort — kein Speichern-Knopf, weil das Ergebnis hinter der Leiste sichtbar sein soll. Das
+ * Ziehen kommt mit dem Entwurf des Designers.
  */
-export function DashboardCustomize({ layout, available }: { layout: DashboardLayout; available: AvailableTile[] }) {
+export function DashboardCustomize({ layout: initial, available }: { layout: DashboardLayout; available: AvailableTile[] }) {
   const t = useTranslations('dashboard');
   const tHome = useTranslations('home');
   const tContent = useTranslations('content');
   const router = useRouter();
   const [open, setOpen] = useState(false);
-  const [tiles, setTiles] = useState<LayoutTile[]>(layout.tiles);
+  const [layout, setLayout] = useState<DashboardLayoutKind>(initial.layout);
+  const [columns, setColumns] = useState<LayoutTile[][]>(initial.columns);
   const [pending, start] = useTransition();
   // Alles hier speichert sofort: Die Ablehnung steht oben in der Leiste der Anpassung.
   const feedback = useActionFeedback();
 
   const title = (tile: { module: string; key: string }) => t(`tiles.${tile.module}.${tile.key}.title`);
-  const off = available.filter((a) => !tiles.some((x) => id(x) === id(a)));
+  const on = new Set(columns.flat().map(id));
+  const off = available.filter((a) => !on.has(id(a)));
+  const lengthOf = (tile: LayoutTile) => tileLength(available.find((a) => id(a) === id(tile))?.kind ?? 'count');
+  const columnName = (index: number) => (layout === 'thirds' ? t('customize.columns.thirds', { n: index + 1 }) : t(index === 0 ? 'customize.columns.wide' : 'customize.columns.narrow'));
 
-  const persist = (next: LayoutTile[]) => {
-    setTiles(next);
-    start(async () => {
-      const s = await feedback.run(() => saveDashboardLayoutAction(next));
-      if (s.status === 'success') router.refresh();
-    });
+  const apply = (s: { status: string; data?: unknown }) => {
+    if (s.status !== 'success') return;
+    const saved = s.data as DashboardLayout;
+    setLayout(saved.layout);
+    setColumns(saved.columns);
+    router.refresh();
   };
-  const toggle = (tile: AvailableTile, on: boolean) => {
-    if (on) {
+  const persist = (next: LayoutTile[][]) => {
+    setColumns(next);
+    start(async () => apply(await feedback.run(() => saveDashboardLayoutAction({ layout, columns: next }))));
+  };
+  // Umschalten speichert nur das Layout: Der Kern liefert dessen gemerkte Anordnung (beim ersten Wechsel abgeleitet).
+  const switchLayout = (next: DashboardLayoutKind) => {
+    setLayout(next);
+    start(async () => apply(await feedback.run(() => saveDashboardLayoutAction({ layout: next }))));
+  };
+  const toggle = (tile: AvailableTile, turnOn: boolean) => {
+    if (turnOn) {
       const defaults = Object.fromEntries(tile.options.map((f) => [f.name, f.default]));
-      persist([...tiles, { module: tile.module, key: tile.key, options: defaults }]);
-    } else persist(tiles.filter((x) => id(x) !== id(tile)));
+      const target = shortestColumn(columns, lengthOf);
+      persist(columns.map((column, c) => (c === target ? [...column, { module: tile.module, key: tile.key, options: defaults }] : column)));
+    } else persist(columns.map((column) => column.filter((x) => id(x) !== id(tile))));
   };
-  const move = (index: number, delta: number) => {
-    const next = [...tiles];
-    const [item] = next.splice(index, 1);
-    next.splice(index + delta, 0, item!);
-    persist(next);
+  const move = (c: number, index: number, delta: number) => {
+    const column = [...columns[c]!];
+    const [item] = column.splice(index, 1);
+    column.splice(index + delta, 0, item!);
+    persist(columns.map((each, i) => (i === c ? column : each)));
   };
-  const setOption = (index: number, name: string, value: unknown) => {
-    const next = tiles.map((x, i) => (i === index ? { ...x, options: { ...x.options, [name]: value } } : x));
-    persist(next);
+  // In eine andere Spalte: ans Ende der gewählten.
+  const moveTo = (c: number, index: number, target: number) => {
+    const item = columns[c]![index]!;
+    persist(columns.map((each, i) => (i === c ? each.filter((_, j) => j !== index) : i === target ? [...each, item] : each)));
+  };
+  const setOption = (c: number, index: number, name: string, value: unknown) => {
+    persist(columns.map((each, i) => (i === c ? each.map((x, j) => (j === index ? { ...x, options: { ...x.options, [name]: value } } : x)) : each)));
   };
   const reset = () =>
     start(async () => {
       const s = await feedback.run(() => resetDashboardLayoutAction());
-      if (s.status === 'success') {
-        setTiles((s.data as DashboardLayout).tiles);
-        router.refresh();
-      }
+      apply(s);
     });
 
-  const optionField = (tile: LayoutTile, index: number, field: DashboardOptionField) => {
+  // Beschriftung und Feld je Option als zwei Zellen im gemeinsamen Raster der Einstellungen (wie `FormGrid`, 208).
+  const optionField = (tile: LayoutTile, c: number, index: number, field: DashboardOptionField) => {
     const ns = `tiles.${tile.module}.${tile.key}.options.${field.name}`;
     const inputId = `opt-${id(tile)}-${field.name}`;
     const value = tile.options[field.name] ?? field.default;
+    const label = (
+      <Label htmlFor={inputId} className={cn('text-meta text-ink-2', field.type === 'boolean' && 'cursor-pointer')}>{t(`${ns}.label`)}</Label>
+    );
     if (field.type === 'boolean') {
+      // Schalter rechts vom Text wie in den Einstellungszeilen (MUSTER § J, Runde 4).
       return (
-        <div key={field.name} className="flex items-center gap-2">
-          <Switch id={inputId} size="sm" checked={Boolean(value)} disabled={pending} onCheckedChange={(v) => setOption(index, field.name, v)} />
-          <Label htmlFor={inputId} className="cursor-pointer text-meta text-ink-2">{t(`${ns}.label`)}</Label>
-        </div>
+        <Fragment key={field.name}>
+          {label}
+          <Switch id={inputId} size="sm" className="justify-self-start" checked={Boolean(value)} disabled={pending} onCheckedChange={(v) => setOption(c, index, field.name, v)} />
+        </Fragment>
       );
     }
     if (field.type === 'enum') {
       return (
-        <div key={field.name} className="flex items-center gap-2">
-          <Label htmlFor={inputId} className="text-meta text-ink-2">{t(`${ns}.label`)}</Label>
-          <Select id={inputId} value={String(value)} disabled={pending} onChange={(e) => setOption(index, field.name, e.target.value)} className="w-32">
+        <Fragment key={field.name}>
+          {label}
+          <Select id={inputId} value={String(value)} disabled={pending} onChange={(e) => setOption(c, index, field.name, e.target.value)} className="w-40">
             {field.values.map((v) => (
               <option key={v} value={v}>{t(`${ns}.values.${v}`)}</option>
             ))}
           </Select>
-        </div>
+        </Fragment>
       );
     }
     return (
-      <div key={field.name} className="flex items-center gap-2">
-        <Label htmlFor={inputId} className="text-meta text-ink-2">{t(`${ns}.label`)}</Label>
+      <Fragment key={field.name}>
+        {label}
         <Input
           id={inputId}
           type="number"
@@ -103,19 +130,19 @@ export function DashboardCustomize({ layout, available }: { layout: DashboardLay
           max={field.max}
           defaultValue={Number(value)}
           disabled={pending}
-          className="w-20 font-mono"
+          className="w-20"
           onBlur={(e) => {
             const n = parseInt(e.target.value, 10);
-            if (!Number.isNaN(n) && n !== value) setOption(index, field.name, n);
+            if (!Number.isNaN(n) && n !== value) setOption(c, index, field.name, n);
           }}
         />
-      </div>
+      </Fragment>
     );
   };
 
   return (
     <>
-      <Button variant="secondary" onClick={() => setOpen(true)}>
+      <Button variant="outline" onClick={() => setOpen(true)}>
         <SlidersHorizontal className="size-4" data-icon="inline-start" />
         {tHome('customize')}
       </Button>
@@ -127,31 +154,69 @@ export function DashboardCustomize({ layout, available }: { layout: DashboardLay
             <div className="mb-3">
               <RefusalNotice action state={feedback.state} />
             </div>
-            <ul className="divide-y divide-line-2">
-              {tiles.map((tile, index) => {
-                const def = available.find((a) => id(a) === id(tile));
-                if (!def) return null;
-                return (
-                  <li key={id(tile)} className="flex flex-col gap-2 py-3">
-                    <div className="flex items-center gap-2">
-                      <Switch id={`tile-${id(tile)}`} checked disabled={pending} onCheckedChange={() => toggle(def, false)} />
-                      <Label htmlFor={`tile-${id(tile)}`} className="flex-1 cursor-pointer text-body">{title(tile)}</Label>
-                      <Button variant="ghost" size="icon-sm" aria-label={tContent('moveUp')} disabled={pending || index === 0} onClick={() => move(index, -1)}><ArrowUp className="size-4" /></Button>
-                      <Button variant="ghost" size="icon-sm" aria-label={tContent('moveDown')} disabled={pending || index === tiles.length - 1} onClick={() => move(index, 1)}><ArrowDown className="size-4" /></Button>
-                    </div>
-                    {def.options.length > 0 ? <div className="flex flex-col gap-2 pl-10">{def.options.map((f) => optionField(tile, index, f))}</div> : null}
-                  </li>
-                );
-              })}
-              {off.map((tile) => (
-                <li key={id(tile)} className="flex items-center gap-2 py-3 opacity-60">
-                  <Switch id={`tile-${id(tile)}`} checked={false} disabled={pending} onCheckedChange={() => toggle(tile, true)} />
-                  <Label htmlFor={`tile-${id(tile)}`} className="flex-1 cursor-pointer text-body">{title(tile)}</Label>
-                  <span className="text-hint text-muted-ink">{t('customize.off')}</span>
-                </li>
+            <Overline as="div" field>
+              <span id="dashboard-layout-label">{t('customize.layout')}</span>
+            </Overline>
+            <RadioGroup aria-labelledby="dashboard-layout-label" value={layout} onValueChange={(v) => switchLayout(v as DashboardLayoutKind)} disabled={pending} className="mt-2">
+              {(['thirds', 'wide-narrow'] as const).map((each) => (
+                <label key={each} className="flex cursor-pointer items-center gap-2 text-body">
+                  <RadioGroupItem value={each} />
+                  {t(`customize.layouts.${each}`)}
+                </label>
               ))}
-            </ul>
-            <Button variant="secondary" className="mt-6 w-fit" disabled={pending || !layout.custom} onClick={reset}>{t('customize.reset')}</Button>
+            </RadioGroup>
+            {columns.map((column, c) => (
+              <div key={c} data-testid={`customize-column-${c}`} className="mt-5">
+                <Overline>{columnName(c)}</Overline>
+                <ul className="divide-y divide-line-2">
+                  {column.map((tile, index) => {
+                    const def = available.find((a) => id(a) === id(tile));
+                    if (!def) return null;
+                    const columnId = `col-${id(tile)}`;
+                    return (
+                      <li key={id(tile)} data-testid={`customize-tile-${tile.module}-${tile.key}`} className="flex flex-col gap-2 py-3">
+                        {/* Schalter rechts vom Text (MUSTER § J, Runde 4); die Pfeile davor, damit alle Schalter eine Spalte bilden. */}
+                        <div className="flex items-center gap-2">
+                          <Label htmlFor={`tile-${id(tile)}`} className="flex-1 cursor-pointer text-body">{title(tile)}</Label>
+                          <Button variant="ghost" size="icon-sm" aria-label={tContent('moveUp')} disabled={pending || index === 0} onClick={() => move(c, index, -1)}><ArrowUp className="size-4" /></Button>
+                          <Button variant="ghost" size="icon-sm" aria-label={tContent('moveDown')} disabled={pending || index === column.length - 1} onClick={() => move(c, index, 1)}><ArrowDown className="size-4" /></Button>
+                          <Switch id={`tile-${id(tile)}`} checked disabled={pending} onCheckedChange={() => toggle(def, false)} />
+                        </div>
+                        {/* Spalte und Optionen eingerückt hinter „Einstellungen“ (Zwischenlösung, Designer 2026-10-17, Frage 3);
+                            die Beschriftungen stehen in einer gemeinsamen Spalte. `pl-10` liest die Bild-Pipeline (02-start). */}
+                        <div className="pl-10">
+                          <Disclosure label={t('customize.settings')} bounded={false}>
+                            <div className="grid grid-cols-[max-content_minmax(0,1fr)] items-center gap-x-3 gap-y-2 pt-1">
+                              <Label htmlFor={columnId} className="text-meta text-ink-2">{t('customize.column')}</Label>
+                              <Select id={columnId} value={String(c)} disabled={pending} onChange={(e) => moveTo(c, index, Number(e.target.value))} className="w-40">
+                                {columns.map((_, target) => (
+                                  <option key={target} value={target}>{columnName(target)}</option>
+                                ))}
+                              </Select>
+                              {def.options.map((f) => optionField(tile, c, index, f))}
+                            </div>
+                          </Disclosure>
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            ))}
+            {off.length > 0 ? (
+              <div className="mt-5">
+                <Overline>{t('customize.off')}</Overline>
+                <ul className="divide-y divide-line-2">
+                  {off.map((tile) => (
+                    <li key={id(tile)} className="flex items-center gap-2 py-3 opacity-60">
+                      <Label htmlFor={`tile-${id(tile)}`} className="flex-1 cursor-pointer text-body">{title(tile)}</Label>
+                      <Switch id={`tile-${id(tile)}`} checked={false} disabled={pending} onCheckedChange={() => toggle(tile, true)} />
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+            <Button variant="outline" className="mt-6 w-fit" disabled={pending || !initial.custom} onClick={reset}>{t('customize.reset')}</Button>
           </div>
         </SheetContent>
       </Sheet>

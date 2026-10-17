@@ -9,7 +9,7 @@ import { RefusalNotice } from '@/components/forms/refusal-notice';
 import { useActionFeedback } from '@/components/forms/use-action-feedback';
 import { Notice } from '@/components/notice';
 import { useSiteJobStatus } from '@/components/site/site-job-provider';
-import { StatusBadge } from '@/components/status-badge';
+import { StatusBadge, statusTone } from '@/components/status-badge';
 import { Button } from '@/components/ui/button';
 import type { ActionState } from '@/lib/actions';
 import { toastRefusal } from '@/lib/feedback';
@@ -19,7 +19,6 @@ import { mediaPreviewUrl } from '../../crop-frame';
 import { StatusDialog } from '../../status-dialog';
 import { acceptProposalAction, rejectProposalAction, resolveDelistedAction } from '../actions';
 import { RejectDialog } from '../reject-dialog';
-import { statusTone } from './review-values';
 import { useDecisionDone } from './use-decision';
 
 /**
@@ -81,7 +80,7 @@ export function NoticeReview({ review, nextHref }: { review: ProposalReview; nex
       <div className="flex flex-wrap items-center gap-3 rounded-lg border border-line bg-surface p-4" data-testid="notice-animal">
         {animal.photos[0] ? <img src={mediaPreviewUrl((animal.photos.find((p) => p.isPrimary) ?? animal.photos[0]).assetId)} alt="" className="size-10 shrink-0 rounded-full object-cover" /> : <span className="size-10 shrink-0 rounded-full bg-surface-2" aria-hidden />}
         <Link href={`/animals/${animal.id}`} className="font-semibold text-ink underline-offset-2 hover:underline">{animal.name}</Link>
-        <StatusBadge tone={statusTone(animal.status)} dot>{f(`status.${animal.status}`)}</StatusBadge>
+        <StatusBadge tone={statusTone('animal', animal.status)} dot>{f(`status.${animal.status}`)}</StatusBadge>
         <span className={animal.isPublished ? 'text-meta text-success' : 'text-meta text-muted-ink'}>{animal.isPublished ? c('published') : c('unpublished')}</span>
         {proposal.externalUrl ? (
           <a href={proposal.externalUrl} target="_blank" rel="noreferrer" className="ml-auto text-meta underline underline-offset-2 hover:text-link">{t('atSource', { source: proposal.sourceName })}</a>
@@ -116,9 +115,9 @@ export function NoticeReview({ review, nextHref }: { review: ProposalReview; nex
       </div>
       <RefusalNotice action state={acknowledge.state} />
       <div className="flex flex-wrap items-center gap-2 border-t border-line pt-4">
-        <Button type="button" variant="ghost" onClick={() => setRejecting(true)}>{s('reject.open')}</Button>
+        <Button type="button" variant="outline" onClick={() => setRejecting(true)}>{s('reject.open')}</Button>
         <span className="ml-auto flex flex-wrap gap-2">
-          <Button type="button" variant={delisted ? 'secondary' : 'default'} onClick={async () => done(await acknowledge.run(() => acceptProposalAction({ id: proposal.id }, animal.name).then((r) => (r.status === 'success' ? { ...r, message: t('acknowledgedToast', { name: animal.name }) } : r))))}>
+          <Button type="button" variant={delisted ? 'outline' : 'default'} onClick={async () => done(await acknowledge.run(() => acceptProposalAction({ id: proposal.id }, animal.name).then((r) => (r.status === 'success' ? { ...r, message: t('acknowledgedToast', { name: animal.name }) } : r))))}>
             {delisted ? t('acknowledgeOnly') : t('acknowledge')}
           </Button>
           {delisted ? (

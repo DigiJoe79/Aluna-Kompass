@@ -12,7 +12,7 @@ import { Notice } from '@/components/notice';
 import { Page } from '@/components/page';
 import { EmptyState } from '@/components/empty-state';
 import { PageHeader } from '@/components/page-header';
-import { StatusBadge } from '@/components/status-badge';
+import { StatusBadge, statusTone } from '@/components/status-badge';
 import { buttonVariants } from '@/components/ui/button';
 import { dateFormatOf } from '@/lib/date-format';
 import { formatEuro } from '@/lib/finance/amount';
@@ -23,6 +23,7 @@ import { ApprovalQueue, type QueueRow } from './approval-queue';
 import { PartnerPaymentDetail } from './partner-payment-detail';
 import { PurposeTransferDetail } from './purpose-transfer-detail';
 import { conflictText } from '@/lib/error-text';
+import { EMPTY } from '@/components/empty-value';
 
 /**
  * D3 „Freigaben“ (F8a Task 6, Designer-README 3h): zweispaltig wie die Akte —
@@ -67,7 +68,7 @@ export default async function ApprovalsPage({ searchParams }: { searchParams: Pr
     const paymentRes = await getPartnerPayment(deps, ctx, { id: selectedId });
     if (!paymentRes.ok) notFound();
     const evidenceRes = await listEvidence(deps, ctx, { paymentId: selectedId });
-    const creatorName = userNamesFor(deps, [paymentRes.value.createdByUserId]).get(paymentRes.value.createdByUserId) ?? '—';
+    const creatorName = userNamesFor(deps, [paymentRes.value.createdByUserId]).get(paymentRes.value.createdByUserId) ?? EMPTY;
     detail = (
       <PartnerPaymentDetail
         payment={paymentRes.value}
@@ -79,7 +80,7 @@ export default async function ApprovalsPage({ searchParams }: { searchParams: Pr
   } else if (selectedId && selectedKind === 'purposeTransfer') {
     const transferRes = await getPurposeTransfer(deps, ctx, { id: selectedId });
     if (!transferRes.ok) notFound();
-    const creatorName = userNamesFor(deps, [transferRes.value.createdByUserId]).get(transferRes.value.createdByUserId) ?? '—';
+    const creatorName = userNamesFor(deps, [transferRes.value.createdByUserId]).get(transferRes.value.createdByUserId) ?? EMPTY;
     detail = <PurposeTransferDetail transfer={transferRes.value} creatorName={creatorName} nextHref={nextRow?.href ?? null} />;
   } else if (selectedId) {
     const approval = await getApproval(deps, ctx, { claimId: selectedId });
@@ -172,10 +173,10 @@ export default async function ApprovalsPage({ searchParams }: { searchParams: Pr
       <section data-testid="approval-result" aria-live="polite" className="space-y-4 rounded-lg border border-line bg-surface p-5">
         <div className="flex flex-wrap items-center gap-2">
           <span className="font-mono text-section">{claim.number}</span>
-          <StatusBadge tone={approved ? 'success' : 'neutral'}>{approved ? t('result.approved') : t('result.rejected')}</StatusBadge>
+          <StatusBadge tone={statusTone('claim', approved ? 'approved' : 'rejected')}>{approved ? t('result.approved') : t('result.rejected')}</StatusBadge>
           {claim.stateLabelKey === 'paid' ? <StatusBadge tone="final">{tState('paid')}</StatusBadge> : null}
         </div>
-        <p className="font-mono text-figure font-semibold tabular-nums">{formatEuro(claim.totalCents)}</p>
+        <p className="text-figure font-semibold tabular-nums">{formatEuro(claim.totalCents)}</p>
         <p className="text-body text-ink">{claim.contactName}</p>
         {approved && claim.openItemId ? (
           <div className="space-y-2">

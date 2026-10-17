@@ -6,13 +6,15 @@ import { ConfirmDialog } from '@/components/forms/confirm-dialog';
 import { FormActionBar } from '@/components/forms/form-action-bar';
 import { useActionFeedback } from '@/components/forms/use-action-feedback';
 import { Button } from '@/components/ui/button';
+import { KeyLine } from '@/components/key-line';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { withUnplacedFieldErrors } from '@/lib/feedback';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { RowButton, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { saveDispatchChannelsAction } from './actions';
 import { FormField } from '@/components/forms/form-field';
 import { FormGrid } from '@/components/forms/form-grid';
+import { RowMenu } from '@/components/row-menu';
 
 export interface DispatchChannelRow {
   key: string;
@@ -77,33 +79,46 @@ export function DispatchChannelsPanel({
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>{t('channelColumns.key')}</TableHead>
-              <TableHead>{t('channelColumns.label')}</TableHead>
-              <TableHead className="text-right">{t('channelColumns.actions')}</TableHead>
+              <TableHead col="title">{t('channelColumns.label')}</TableHead>
+              <TableHead col="actions" className="w-11"><span className="sr-only">{t('channelColumns.actions')}</span></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {channels.map((channel) => (
               <TableRow key={channel.key}>
-                <TableCell className="font-mono text-meta text-ink-2">{channel.key}</TableCell>
-                <TableCell className="font-semibold text-ink">{channel.label}</TableCell>
-                <TableCell className="text-right">
+                {/* Schlüssel als `KeyLine` unter dem Namen statt eigener Spalte (11-1 B9). */}
+                <TableCell col="title" className="text-ink">
                   {canManageSettings ? (
-                    <>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          setLabel(channel.label);
-                          setRenaming(channel);
-                        }}
-                      >
-                        {t('edit')}
-                      </Button>
-                      <Button variant="ghost" size="sm" disabled={channels.length <= 1} onClick={() => setToRemove(channel)}>
-                        {t('delete')}
-                      </Button>
-                    </>
+                    <RowButton
+                      aria-haspopup="dialog"
+                      onClick={() => {
+                        setLabel(channel.label);
+                        setRenaming(channel);
+                      }}
+                    >
+                      {channel.label}
+                    </RowButton>
+                  ) : (
+                    channel.label
+                  )}
+                  <KeyLine>{channel.key}</KeyLine>
+                </TableCell>
+                <TableCell col="actions" className="text-right">
+                  {canManageSettings ? (
+                    <RowMenu
+                      name={channel.label}
+                      items={[
+                        {
+                          key: 'edit',
+                          label: t('edit'),
+                          onSelect: () => {
+                            setLabel(channel.label);
+                            setRenaming(channel);
+                          },
+                        },
+                        { key: 'delete', label: t('delete'), kind: 'delete', disabledReason: channels.length <= 1 ? t('lastChannel') : undefined, onSelect: () => setToRemove(channel) },
+                      ]}
+                    />
                   ) : null}
                 </TableCell>
               </TableRow>
@@ -160,7 +175,6 @@ export function DispatchChannelsPanel({
             pending={pending}
             saveDisabled={!label.trim() || (!renaming && !key.trim())}
             saveLabel={tCommon('save')}
-            note={<span className="text-hint text-muted-ink">{tCommon('requiredLegend')}</span>}
             state={withUnplacedFieldErrors(feedback.state, [])}
             onSave={() =>
               save(

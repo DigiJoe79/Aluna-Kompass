@@ -16,3 +16,12 @@ export function linkControls(s: { moduleOn: boolean; canManageUsers: boolean; ca
   if (!s.canViewContacts) return { canLink: false, canUnlink: false, reason: 'needsContactsView' };
   return { canLink: true, canUnlink: false, reason: s.isSelf ? 'ownOnce' : null };
 }
+
+/** Was die Nutzertabelle je Konto über die Verknüpfung weiß (einfache Daten vom Server, Runde 3, 155). */
+export interface UserContactLinkData {
+  linked: boolean;
+  /** Nur mit dem Recht, Kontakte zu sehen; sonst steht „verknüpft“. */
+  linkedName: string | null;
+  linkedHref: string | null;
+  controls: LinkControls;
+}

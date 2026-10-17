@@ -1,6 +1,7 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
+import { useCallback } from 'react';
 import { useAssetDrag } from './use-asset-drag';
 import { StatusBadge } from '@/components/status-badge';
 
@@ -9,14 +10,26 @@ export interface GridItem {
   filename: string;
   mimeType: string;
   used: boolean;
+  /** Wofür die Datei steht (erste Verwendung, z. B. „Team: Mira“); ohne sie heißt die Karte nach dem Dateinamen (10 A6). */
+  caption?: string;
   /** Der Ort unter dem geöffneten Ordner, als Namen mit „›“; leer oder weggelassen = keine Zeile (Spec § 9). */
   place?: string;
   /** Wo die Datei liegt (`null` = ohne Ordner) — beim Ziehen sagt der Baum damit schon beim Überfahren „Liegt schon hier“. */
   folder?: string | null;
 }
 
+/** Beschriftung aus den Verwendungen: die erste, und wie viele es noch gibt (10 A6). */
+export function useMediaCaption(): (references: readonly { label: string }[]) => string | undefined {
+  const t = useTranslations('media');
+  return useCallback(
+    (references: readonly { label: string }[]) =>
+      references.length === 0 ? undefined : references.length === 1 ? references[0]!.label : t('captionMore', { label: references[0]!.label, count: references.length - 1 }),
+    [t],
+  );
+}
+
 /**
- * Die Kacheln der Mediathek — Vorschau, Dateiname, Verwendungs-Marke. Dieselbe
+ * Die Kacheln der Mediathek — Vorschau, Verwendung als Beschriftung, Dateiname, Marke „nicht verwendet“. Dieselbe
  * Komponente zeigt die Mediathek-Seite und der Auswahl-Dialog; der Dialog gibt
  * `selected` mit, damit angehakte Kacheln als solche erscheinen. Mit
  * `draggable` lässt sich jede Kachel einzeln auf einen Ordner ziehen
@@ -60,35 +73,43 @@ export function AssetGrid({
               disabled={isBlocked || undefined}
               aria-describedby={isBlocked ? blocked?.reasonId : undefined}
               {...dragProps(it)}
-              className={`flex w-full flex-col overflow-hidden rounded-md border bg-surface text-left hover:border-line-strong disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-line ${
+              className={`flex h-full w-full flex-col overflow-hidden rounded-md border bg-surface text-left hover:border-line-strong disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-line ${
                 dragging === it.id ? 'border-2 border-dashed border-line-strong opacity-50' : isSelected ? 'border-brand border-2' : 'border-line'
               }`}
             >
-              <span className="grid aspect-square place-items-center bg-surface-2">
+              {/* 145: ein festes Format für alle Vorschaubilder (4:3, zugeschnitten); das Bild liegt absolut, damit ein hohes
+                  Foto die Fläche nicht streckt — so sind alle Karten einer Zeile gleich hoch (`h-full`). Kein Layout-Test. */}
+              <span data-asset-thumb className="relative grid aspect-[4/3] min-h-0 grid-rows-[minmax(0,1fr)] place-items-center overflow-hidden bg-surface-2">
                 {it.mimeType.startsWith('image/') ? (
                   // Nicht selbst ziehbar: Sonst zieht der Browser das Bild und legt es als Datei bei.
                   <img src={previewSrc(it.id)} alt="" loading="lazy" draggable={false} className="size-full object-cover" />
                 ) : (
                   <span className="text-[20px] font-semibold uppercase text-ink-2">{it.filename.split('.').at(-1)}</span>
                 )}
+                {/* 147: „Ausgewählt“ auf dem Bild oben rechts, statt den Titel zu kürzen. */}
+                {selected && isSelected ? (
+                  <StatusBadge tone="neutral" className="absolute top-1.5 right-1.5">
+                    {t('chooser.selected')}
+                  </StatusBadge>
+                ) : null}
               </span>
               <span className="flex items-center justify-between gap-1 px-2 py-1.5 text-hint">
+                {/* 144/145: Titel ist der Dateiname, die Verwendung steht gedämpft darunter (vorher umgekehrt, 10 A6). */}
                 <span className="flex min-w-0 flex-col">
-                  <span className="truncate font-mono">{it.filename}</span>
+                  <span className="truncate text-ink">{it.filename}</span>
+                  {it.caption ? <span className="truncate text-muted-ink">{it.caption}</span> : null}
                   {it.place ? (
                     <span data-folder-cell className="truncate text-hint text-ink-2">
                       {it.place}
                     </span>
                   ) : null}
                 </span>
-                {/* „benutzt“ als Marke, sonst Text (K10 Charge 3, Designer § 6: 10 px → StatusBadge, damit 12). */}
-                {it.used ? (
+                {/* 10 B30: Nur die Abweichung trägt eine Marke („nicht verwendet“); verwendet ist der Normalfall. */}
+                {!(selected && isSelected) && !it.used ? (
                   <StatusBadge tone="neutral" className="shrink-0">
-                    {selected && isSelected ? t('chooser.selected') : t('used')}
+                    {t('unused')}
                   </StatusBadge>
-                ) : (
-                  <span className="shrink-0 text-hint text-ink-2">{selected && isSelected ? t('chooser.selected') : t('unused')}</span>
-                )}
+                ) : null}
               </span>
             </button>
           </li>

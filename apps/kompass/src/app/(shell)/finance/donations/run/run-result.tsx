@@ -19,11 +19,12 @@ import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import type { ActionState } from '@/lib/actions';
 import { formatEuro } from '@/lib/finance/amount';
-import { runProgress } from '@/lib/finance/run';
+import { runSummary } from '@/lib/finance/run';
 import { dispatchRunConfirmationsAction } from './actions';
 import { FormField } from '@/components/forms/form-field';
 import { FormGrid } from '@/components/forms/form-grid';
 import { Overline } from '@/components/overline';
+import { EMPTY } from '@/components/empty-value';
 
 type SentVia = 'post' | 'email' | 'handed';
 
@@ -43,11 +44,11 @@ export function RunResult({ run, canIssue, today, missing, followUpHref }: { run
   const [refusal, setRefusal] = useState<ActionState>({ status: 'idle' });
   const tCommon = useTranslations('common');
   const emptyId = useId();
-  const { total } = runProgress(run.counts);
+  const summary = runSummary(run.counts);
 
   const errorText = (code: string | null) => {
     const key = `errorCode.${code ?? 'unknown'}`;
-    return code && t.has(key) ? t(key) : t('errorCode.unknown', { code: code ?? '—' });
+    return code && t.has(key) ? t(key) : t('errorCode.unknown', { code: code ?? EMPTY });
   };
 
   const download = async (part: 'machine' | 'signature') => {
@@ -88,11 +89,11 @@ export function RunResult({ run, canIssue, today, missing, followUpHref }: { run
         {run.followUpOfRunId ? <StatusBadge tone="neutral">{t('result.followUpOf')}</StatusBadge> : null}
       </div>
       <p data-testid="run-summary" className="text-body text-ink">
-        {t('result.summary', { issued: run.counts.issued, total })}
+        {summary.key === 'summary' ? t('result.summary', summary.values) : t('result.summaryWithSkipped', summary.values)}
       </p>
 
       <div className="space-y-2">
-        <Overline>{t('result.bundles')}</Overline>
+        <Overline field>{t('result.bundles')}</Overline>
         <RefusalNotice action state={refusal} />
         {/* Ein leeres Paket ist nicht stumm gesperrt, sondern nennt den Grund (Vorbild `site/publish/run-card.tsx`, Spec Seitenkopf § 3.6). */}
         <div className="flex flex-wrap gap-2">
@@ -139,7 +140,8 @@ export function RunResult({ run, canIssue, today, missing, followUpHref }: { run
           <Button type="button" onClick={() => setDispatching(true)}>{t('result.dispatchAll')}</Button>
         ) : null}
         {run.counts.missingSignedVersion > 0 ? (
-          <Link href="/finance/donations?tab=needsSignature" className="text-link underline">
+          // Fehlende unterschriebene Fassungen sind Arbeit: ocker, als Link zum Reiter (Runde 3, 210).
+          <Link href="/finance/donations?tab=needsSignature" className="text-warning underline underline-offset-2">
             {t('result.missingSigned', { count: run.counts.missingSignedVersion })}
           </Link>
         ) : null}
@@ -170,7 +172,7 @@ function ItemList({ testId, title, items, reason }: { testId: string; title: str
   const t = useTranslations('finance.donations.run');
   return (
     <div data-testid={testId} className="space-y-1.5">
-      <Overline>{title} · {items.length}</Overline>
+      <Overline field>{title} · {items.length}</Overline>
       <ul className="divide-y divide-line-2 rounded-md border border-line text-meta">
         {items.map((item) => (
           <li key={item.id} className="flex flex-wrap items-center justify-between gap-3 px-3 py-1.5">
@@ -179,7 +181,7 @@ function ItemList({ testId, title, items, reason }: { testId: string; title: str
               <span className="text-ink-2">{t(`itemKind.${runItemKindKey(item.kind, item.lineCount)}`)}</span>
               <span className="text-ink-2">{reason(item)}</span>
             </span>
-            <span className="font-mono tabular-nums text-ink">{formatEuro(item.totalCents)}</span>
+            <span className="tabular-nums text-ink">{formatEuro(item.totalCents)}</span>
           </li>
         ))}
       </ul>

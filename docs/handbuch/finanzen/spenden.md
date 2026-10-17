@@ -85,7 +85,8 @@ richtet das ein:
    bis“. Zeiträume zweier Unterzeichner dürfen sich nicht überschneiden.
 2. **Unterschrift als Bild hochladen** — PNG oder JPEG, höchstens 1 MB. Das
    Bild liegt nicht in der Mediathek; sehen und ersetzen können es nur
-   Personen, die Zuwendungsbestätigungen ausstellen dürfen.
+   Personen, die Zuwendungsbestätigungen ausstellen dürfen. Ein neues Bild
+   legen Sie über **Ersetzen** im Menü ⋯ der Zeile ab.
 3. **Angezeigt beim Finanzamt am** — der Tag, an dem Sie das Verfahren dem
    Finanzamt angezeigt haben. **Anzeigeschreiben als Entwurf erzeugen** legt
    das Schreiben an das Finanzamt des geltenden Bescheids als Entwurf in der
@@ -170,16 +171,15 @@ Voraussetzungen dafür prüft, steht unter [Auslagen](auslagen.md).
 ## Unterschrift fehlt
 
 Eine Bestätigung mit Unterschriftsfeld steht im Reiter **Unterschrift fehlt**,
-bis die unterschriebene Fassung abgelegt ist. Je Bestätigung vier Schritte:
+bis die unterschriebene Fassung abgelegt ist. Je Bestätigung drei Schritte:
 
 1. **Bestätigung erzeugt** — erledigt, sobald sie ausgestellt ist.
 2. **Drucken und unterschreiben** — unser Exemplar öffnen, ausdrucken und
    von Hand unterschreiben lassen.
 3. **Unterschriebene Fassung als Eingang ablegen** — den Scan als PDF in die
    Ablagefläche ziehen. Er wird in der Akte als eigenes Dokument (Präfix
-   `ZWU`) abgelegt.
-4. **Mit der Bestätigung verknüpft** — erledigt, sobald der Scan liegt; die
-   Bestätigung verlässt den Reiter.
+   `ZWU`) abgelegt und mit der Bestätigung verknüpft; sie verlässt dann den
+   Reiter.
 
 ## Versand
 

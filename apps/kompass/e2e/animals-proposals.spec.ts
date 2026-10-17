@@ -23,7 +23,7 @@ test.describe('Vorschläge prüfen', () => {
     await expect(page).toHaveURL(/\/animals\/proposals$/);
     await expect(page.getByRole('row', { name: /Baxter/ })).toContainText('1 Konflikt');
     await page.goto('/');
-    await expect(page.getByTestId('dashboard-tile-animals-proposalsOpen')).toContainText('davon 1 mit Konflikt');
+    await expect(page.getByTestId('dashboard-tile-animals-proposalsOpen')).toContainText('1 mit Konflikt · ältester seit');
   });
 
   test('nimmt eine Änderung mit Konflikt an: Konfliktfeld bleibt, Status wird übernommen, Wiedervorlage entsteht', async ({ page }) => {
@@ -86,7 +86,7 @@ test.describe('Vorschläge prüfen', () => {
     await tiles.nth(0).getByRole('button', { name: 'Als Titelbild' }).click();
     await page.getByRole('button', { name: 'Annehmen …' }).click();
     const dialog = page.getByRole('dialog');
-    await expect(dialog.getByRole('radio', { name: /Veröffentlichen/ })).toBeChecked();
+    await expect(dialog.getByRole('radio', { name: /Publizieren/ })).toBeChecked();
     await dialog.getByRole('button', { name: 'Annehmen', exact: true }).click();
     await expect(dialog).toBeHidden();
     await page.goto('/animals?text=Wilma');

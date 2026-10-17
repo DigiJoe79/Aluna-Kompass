@@ -24,6 +24,7 @@ import { useDecisionDone } from './use-decision';
 import { LOCALE_CODE } from '@/components/forms/localized-field';
 import { cn } from '@/lib/utils';
 import { Overline } from '@/components/overline';
+import { Empty } from '@/components/empty-value';
 
 const LONG = 200;
 const LONG_FIELDS: readonly ProposalField[] = ['summary', 'body'];
@@ -140,8 +141,8 @@ export function UpdateReview({ review, locales, nextHref, backHref, canFollowUp,
             actions={
               open ? (
                 <span className="flex gap-1">
-                  <Button type="button" variant="ghost" size="sm" onClick={() => setAll('proposal')}>{t('takeAll')}</Button>
-                  <Button type="button" variant="ghost" size="sm" onClick={() => setAll('current')}>{t('keepAll')}</Button>
+                  <Button type="button" variant="outline" size="sm" onClick={() => setAll('proposal')}>{t('takeAll')}</Button>
+                  <Button type="button" variant="outline" size="sm" onClick={() => setAll('current')}>{t('keepAll')}</Button>
                 </span>
               ) : undefined
             }
@@ -175,7 +176,7 @@ export function UpdateReview({ review, locales, nextHref, backHref, canFollowUp,
                           <span className="flex flex-col gap-1 text-meta text-warning" data-testid="proposal-conflict-trail">
                             <span>{by ? (by.userName ? t('changedBy', { name: by.userName, at: dates.dateTime(by.at) }) : t('changedAt', { at: dates.dateTime(by.at) })) : t('changedSince')}</span>
                             <span>
-                              {t('baseline')} <s>{formatProposalValue(row.field, row.baseline, { t: (k) => root(k), locales }).map((l) => l.text).filter(Boolean).join(' / ') || '—'}</s>
+                              {t('baseline')} <s>{formatProposalValue(row.field, row.baseline, { t: (k) => root(k), locales }).map((l) => l.text).filter(Boolean).join(' / ') || <Empty />}</s>
                             </span>
                           </span>
                         ) : undefined
@@ -215,7 +216,7 @@ export function UpdateReview({ review, locales, nextHref, backHref, canFollowUp,
             saveDisabled={noEffect}
             back={{ href: backHref, label: t('backToList') }}
             extraActions={
-              <Button type="button" variant="secondary" onClick={() => setRejecting(true)}>
+              <Button type="button" variant="outline" onClick={() => setRejecting(true)}>
                 {root('animals.proposals.reject.open')}
               </Button>
             }

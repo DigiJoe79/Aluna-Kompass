@@ -6,6 +6,7 @@ import { HandbookToc } from '@/components/handbook-toc';
 import { Page } from '@/components/page';
 import { PageHeader } from '@/components/page-header';
 import { runtimeEnv } from '@/lib/deps';
+import { overviewChapters } from '@/lib/handbook-overview';
 import { requireSession } from '@/lib/request-context';
 
 export default async function HelpPage({ params }: { params: Promise<{ doc?: string[] }> }) {
@@ -18,11 +19,10 @@ export default async function HelpPage({ params }: { params: Promise<{ doc?: str
 
   if (!doc) {
     return (
-      <Page width="standard">
-        <div className="max-w-[72ch]">
-          <PageHeader title={t('title')} />
-          <HandbookToc chapters={chapters} current={null} />
-        </div>
+      // Das Verzeichnis in bis zu drei CSS-Spalten statt einer schmalen Spalte auf breitem Grund (01 B22); Einzelseiten
+      // unter „Weitere Bereiche“, damit sie nicht wie Überschriften im Raster stehen (Runde 3, 009). Kein Layout-Test (AGENTS.md).
+      <Page width="standard" header={<PageHeader title={t('title')} />}>
+        <HandbookToc chapters={overviewChapters(chapters, t('otherAreas'))} current={null} columns className="gap-x-8 sm:columns-2 lg:columns-3" />
       </Page>
     );
   }

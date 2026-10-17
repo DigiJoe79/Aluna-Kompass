@@ -141,8 +141,9 @@
 /*
  * Schriftrollen (K10 Charge 1, docs/MUSTER.md „Schrift“; Designer und Joe 2026-10-06): Größe, Zeilenhöhe und bei
  * Titeln das Gewicht. Tailwind v4 nimmt in `--text-*` keine Schriftfamilie — `font-heading` steht im Baustein,
- * `font-mono tabular-nums` an der Kennzahl. Eine neue Rolle gehört auch in `TYPE_ROLES` (`lib/utils.ts`).
+ * `tabular-nums` an der Kennzahl. Eine neue Rolle gehört auch in `TYPE_ROLES` (`lib/utils.ts`).
  * Charge 3 (Designer 2026-10-10): zehn Rollen; Familie und Versalien stehen im Baustein.
+ * Auftrag 5 (0.2.12): Mono nur für Kennungen (`text-key`); `text-figure`/`text-amount` stehen in der Textschrift.
  */
 @theme {
   --text-page-title: 22px;
@@ -183,6 +184,24 @@
 @utility h-row {
   height: var(--row-h-density, var(--row-h));
 }
+
+/* Waagerecht scrollender Streifen (Vorschau im CSV-Assistenten; Reiter siehe `data-scroll-strip` unten): Ein Verlauf am rechten Rand zeigt,
+   dass es weitergeht (Runde 3, 064, 083). Über eine Scroll-Zeitleiste nur, solange wirklich etwas rechts liegt — passt
+   der Inhalt, ist die Zeitleiste inaktiv und nichts blendet aus; am rechten Ende fällt der Verlauf weg. Ohne
+   Unterstützung bleibt der Streifen ohne Verlauf. Kein Layout-Test (Laufzeit, Projektregel). */
+@utility scroll-fade-x {
+  animation: scroll-fade-x linear;
+  animation-timeline: scroll(self inline);
+}
+@keyframes scroll-fade-x {
+  from, 97% { mask-image: linear-gradient(to right, black calc(100% - 2rem), transparent); }
+  to { mask-image: none; }
+}
+/* Reiter (`PanelNav`, `ViewTabs`): Verlauf an dem Rand, auf dem es weitergeht — `data-fade` misst `PanelNavScroll`
+   (Runde 4, Frage 5; 064). Kein Layout-Test (Laufzeit, Projektregel); das Attribut prüft `scroll-fade.test.tsx`. */
+[data-scroll-strip][data-fade="end"] { mask-image: linear-gradient(to right, black calc(100% - 2rem), transparent); }
+[data-scroll-strip][data-fade="start"] { mask-image: linear-gradient(to left, black calc(100% - 2rem), transparent); }
+[data-scroll-strip][data-fade="start end"] { mask-image: linear-gradient(to right, transparent, black 2rem, black calc(100% - 2rem), transparent); }
 
 @layer base {
   * { border-color: var(--line); }
@@ -261,4 +280,203 @@
   .prose-preview h2 { font-size: 22px; }
   .prose-preview h3 { font-size: 17px; margin-top: 1.4em; }
   .prose-preview h4 { font-size: 15px; }
+}
+/*
+ * Kartenzeile (Entwurf E1 „Tabelle am Telefon“, Designer 2026-10-17; MUSTER.md § G). Gilt nur für eine Tabelle mit
+ * Titelspalte (`col="title"` an Kopf und Zelle, `ui/table.tsx`). Ohne `@layer`, damit es die Breiten- und
+ * Ausrichtungsklassen der Aufrufstellen schlägt. Kein Layout-Test (Projektregel): Das Bild prüft die Bild-Pipeline;
+ * Rollen, Vorleser und die drei meta-Plätze prüft `tests/table-cards.test.tsx`, die Rollen je Liste `table-roles`.
+ *
+ * - unter `lg`: Spalten ohne Rolle fallen weg — nie waagerechtes Scrollen.
+ * - unter `md`: jede Zeile eine Karte. Raster: Haken | Titel (über die meta-Plätze) | rechts | Menü,
+ *   2. Zeile meta 1–3 und Betrag. Ohne Status rückt der Betrag in die 1. Zeile. Eine meta mit `wrap` steht darunter
+ *   in einer eigenen Zeile über die volle Breite (Kompromiss b).
+ */
+/* Statusspalte ohne Marke (Joe 11.8): Trägt keine Zeile der Ansicht etwas, fallen Kopf und Zellen weg — schon vor der
+   Hydration; danach setzt `ui/table.tsx` dasselbe als `hidden`. */
+table:not(:has(> tbody > tr > [data-col="status"]:not(:empty))) [data-col="status"] { display: none; }
+/* Ja/Nein-Listen (Joe 11.8): Die gedämpfte Zeile ist grau; Marken behalten ihren Ton. */
+tr[data-muted] > :is(td, th) { color: var(--muted); }
+/* Klar erkennbar, aber lesbar (Runde 4, 192): Auch der Name tritt in `muted` zurück (≥ 4,5:1 auf Fläche und Zebra,
+   `table-rules.test.tsx`), Fotos verlieren Farbe. Link bleibt Link (Unterstrich beim Überfahren), Marken behalten ihren Ton. */
+tr[data-muted] [data-row-link] { color: var(--muted); }
+tr[data-muted] img { opacity: 0.55; filter: grayscale(1); }
+@media (max-width: 1023.98px) {
+  table:has([data-col="title"]) :is(th, td):not([data-col]) { display: none; }
+  /* Der Titel bricht um, statt die Tabelle über den Rand zu schieben (die Karte schneidet sonst Betrag und Status ab). */
+  table:has([data-col="title"]) > tbody > tr > [data-col="title"]:not([data-truncate]) { white-space: normal; overflow-wrap: break-word; }
+  /* Summenzeile, solange Spalten fehlen: Ihre `colSpan` zählen die weggefallenen Spalten mit und schufen leere
+     Geisterspalten am rechten Rand, die der Titelspalte den Platz nahmen (Journal, Lauf 3 Teil E). Sie steht dann
+     als eigene Zeile unter der Tabelle wie in der Kartenzeile: Etikett links, Beträge rechts. */
+  table:has([data-col="title"]) > tfoot { display: table-caption; caption-side: bottom; }
+  table:has([data-col="title"]) > tfoot > tr { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 12px; }
+  table:has([data-col="title"]) > tfoot > tr > [data-col="amount"] { text-align: right; }
+}
+/* Steht die Hilfe als Nebenspalte daneben (E4), bleiben der Liste rund 760 px: Sie zeigt ihre Rollen-Spalten wie
+   von `md` bis `lg`, statt Betrag und Status aus der Karte zu schieben. */
+body:has(#help-panel) table:has([data-col="title"]) :is(th, td):not([data-col]) { display: none; }
+/* Eine kürzende Titelspalte (`truncate`, Joe 11.5) kürzt weiter: Umbrechen bei `max-w-0` drückte sie auf wenige
+   Zeichen je Zeile (Journal mit Hilfe, gefunden in Lauf 3, Teil E). Am Telefon bricht sie um (Kartenzeile, unten). */
+body:has(#help-panel) table:has([data-col="title"]) > tbody > tr > [data-col="title"]:not([data-truncate]) { white-space: normal; overflow-wrap: break-word; }
+body:has(#help-panel) table:has([data-col="title"]) > tfoot { display: table-caption; caption-side: bottom; }
+body:has(#help-panel) table:has([data-col="title"]) > tfoot > tr { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 12px; }
+body:has(#help-panel) table:has([data-col="title"]) > tfoot > tr > [data-col="amount"] { text-align: right; }
+/* Ein Seitenpanel neben der Liste („Bestände“ im Journal, ab 1680 px) ist dieselbe Spalte wie die Hilfe (Designer Runde 3,
+   Punkt 9): Die Liste zeigt dann ebenso nur ihre Rollen-Spalten (Runde 4, 086). Das Panel nennt seinen Stand in
+   `data-list-aside`; „auto“ steht ab 1680 px daneben. */
+@media (min-width: 1680px) {
+  body:has([data-list-aside="open"], [data-list-aside="auto"]) table:has([data-col="title"]) :is(th, td):not([data-col]) { display: none; }
+  body:has([data-list-aside="open"], [data-list-aside="auto"]) table:has([data-col="title"]) > tfoot { display: table-caption; caption-side: bottom; }
+  body:has([data-list-aside="open"], [data-list-aside="auto"]) table:has([data-col="title"]) > tfoot > tr { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 12px; }
+  body:has([data-list-aside="open"], [data-list-aside="auto"]) table:has([data-col="title"]) > tfoot > tr > [data-col="amount"] { text-align: right; }
+}
+/* Journal, schmaler als seine zehn Spalten (Runde 4, 086): Konto und Beleg weichen (`journal.tsx`, TIGHT_HIDE); die
+   Summenzeile steht dann wie oben als eigene Zeile, sonst schüfen ihre `colSpan` leere Geisterspalten. */
+@container journal (max-width: 80rem) {
+  table:has([data-col="title"]) > tfoot { display: table-caption; caption-side: bottom; }
+  table:has([data-col="title"]) > tfoot > tr { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 12px; }
+  table:has([data-col="title"]) > tfoot > tr > [data-col="amount"] { text-align: right; }
+}
+@media (max-width: 767.98px) {
+  table:has([data-col="title"]),
+  table:has([data-col="title"]) > :is(tbody, tfoot) { display: block; }
+  table:has([data-col="title"]) > thead { display: none; }
+  table:has([data-col="title"]) > tbody > tr {
+    display: grid;
+    /* meta 1 und 2 nehmen ihren Platz, meta 3 den Rest; wird es eng, bricht jede an Wortgrenzen um statt zu kürzen
+       (Designer 005: Arbeit nie abschneiden; Runde 4, 018, 043, 061). Vorher kappte `fit-content` meta 1 und 2
+       bei 45 % der Zeile und schnitt mit „…“ ab, auch wenn rechts Platz frei war. */
+    grid-template-columns: [check] auto [m1] minmax(min-content, max-content) [m2] minmax(min-content, max-content) [m3] minmax(min-content, 1fr) [right] auto [menu] auto;
+    align-items: start;
+    height: auto;
+    padding: 10px 12px 10px 16px;
+  }
+  /* Keine Zebra-Streifen in der Kartenliste; Hover und Auswahl bleiben (Artboard). */
+  table:has([data-col="title"]) > tbody > tr:nth-child(even):not(:hover):not([data-state="selected"]) { background: transparent; }
+  /* Tastaturfokus: Ring an der ganzen Zeile — das macht die Fläche des RowLink (`ROW_TARGET`), hier nichts zu tun. */
+  table:has([data-col="title"]) > tbody > tr > :is(td, th) {
+    padding: 0;
+    min-width: 0;
+    height: auto;
+    white-space: nowrap;
+    text-align: left;
+  }
+  table:has([data-col="title"]) > tbody > tr > [data-col="select"] {
+    grid-column: check; grid-row: 1 / span 2;
+    display: flex; align-items: flex-start; width: 32px; min-height: 44px; padding-top: 3px;
+  }
+  /* Trefferfläche des Hakens 32 × 44 (der Kasten bleibt 16 px). */
+  table:has([data-col="title"]) > tbody > tr > [data-col="select"] [data-slot="checkbox"]::after { inset: -14px -8px; }
+  table:has([data-col="title"]) > tbody > tr > [data-col="title"] {
+    grid-column: m1 / right; grid-row: 1;
+    font-size: var(--text-body); line-height: var(--text-body--line-height);
+    white-space: normal; overflow-wrap: anywhere; padding-right: 8px;
+    display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden;
+  }
+  /* Eine kürzende Titelspalte (Joe 11.5) bricht am Telefon um, statt zu kürzen (Designer 005: Arbeit nie abschneiden). */
+  table:has([data-col="title"]) > tbody > tr > [data-col="title"][data-truncate] {
+    max-width: none; width: auto; display: block; overflow: visible; text-overflow: clip; -webkit-line-clamp: none; line-clamp: none;
+  }
+  /* Text mit Unterzeilen (Journal: Verweise, Konto): Am Telefon bricht auch der Text in seiner Zeile um. Die Anzeige
+     (`block`, `hidden`) bleibt bei der Aufrufstelle. */
+  table:has([data-col="title"]) > tbody > tr > [data-col="title"][data-truncate] > span { white-space: normal; overflow: visible; text-overflow: clip; }
+  /* Marke, Betrag, Haken und Menü kürzen nie: Titel und meta geben Platz ab. */
+  table:has([data-col="title"]) > tbody > tr > :is([data-col="status"], [data-col="amount"], [data-col="select"], [data-col="actions"]) { min-width: max-content; }
+  table:has([data-col="title"]) > tbody > tr > [data-col="status"] { grid-column: right; grid-row: 1; justify-self: end; }
+  table:has([data-col="title"]) > tbody > tr > [data-col="amount"] {
+    grid-column: right; grid-row: 2; justify-self: end; padding-top: 2px;
+    font-variant-numeric: tabular-nums; text-align: right;
+  }
+  table:has([data-col="title"]) > tbody > tr:not(:has(> [data-col="status"])) > [data-col="amount"] { grid-row: 1; padding-top: 0; }
+  table:has([data-col="title"]) > tbody > tr > [data-col="meta"] {
+    grid-row: 2; padding-top: 2px;
+    font-size: var(--text-meta); line-height: var(--text-meta--line-height); color: var(--muted);
+    white-space: normal;
+  }
+  /* Marken in meta (Rollen, Merkmale) stehen in einer Zeile wie der Text daneben; mehrere brechen gemeinsam um, jede
+     bleibt ganz. */
+  table:has([data-col="title"]) > tbody > tr > [data-col="meta"] > :is(div, span) { display: inline-flex; flex-wrap: wrap; vertical-align: middle; }
+  table:has([data-col="title"]) > tbody > tr > :nth-child(1 of [data-col="meta"]:not([data-wrap])) { grid-column: m1; }
+  table:has([data-col="title"]) > tbody > tr > :nth-child(2 of [data-col="meta"]:not([data-wrap])) { grid-column: m2; }
+  table:has([data-col="title"]) > tbody > tr > :nth-child(3 of [data-col="meta"]:not([data-wrap])) { grid-column: m3; }
+  /* Ohne Betrag gehört der Platz rechts in der 2. Zeile der letzten meta (sonst hielte ihn die Marke der 1. Zeile frei). */
+  table:has([data-col="title"]) > tbody > tr:not(:has(> [data-col="amount"])) > :nth-last-child(1 of [data-col="meta"]:not([data-wrap])) { grid-column-end: menu; }
+  /* Leere Werte fallen samt Trenner weg (038, 043): Der Trenner steht nur vor einem Wert, dem schon ein Wert vorausgeht. */
+  table:has([data-col="title"]) > tbody > tr > [data-col="meta"]:is(:empty, :has(> [data-empty]:only-child)) { display: none; }
+  /* Kompromiss (b) (Designer 2026-10-17, Frage 4): Eine meta mit Text (`wrap`, „1 neu · 1 zurückgehalten“, Zeitraum)
+     steht in einer eigenen Zeile unter Titel und Kennwerten, von der Titelkante bis zum Rand — kein Hängeeinzug mehr,
+     auch wenn sie neben die Kennwerte gepasst hätte. Betrag, Status, Haken und Menü bleiben, wo sie sind. Echter
+     Fließtext über mehrere Werte (Kartenzeile aus eigenen Elementen statt `td`) steht im Backlog. */
+  table:has([data-col="title"]) > tbody > tr > [data-col="meta"][data-wrap] { grid-column: m1 / -1; }
+  table:has([data-col="title"]) > tbody > tr > :nth-child(1 of [data-col="meta"][data-wrap]:not(:empty, :has(> [data-empty]:only-child))) { grid-row: 3; }
+  table:has([data-col="title"]) > tbody > tr > :nth-child(2 of [data-col="meta"][data-wrap]:not(:empty, :has(> [data-empty]:only-child))) { grid-row: 4; }
+  table:has([data-col="title"]) > tbody > tr > :nth-child(3 of [data-col="meta"][data-wrap]:not(:empty, :has(> [data-empty]:only-child))) { grid-row: 5; }
+  /* Steht in der 2. Zeile sonst nichts (keine Kennwert-meta, kein Betrag dort), rücken sie eine Zeile hoch — sonst hielte
+     das Zeilenmenü (44 px über Zeile 1 und 2) eine leere Zeile offen (217). Dort endet die Zeile vor dem Menü. Ohne die
+     Prüfung auf `<Empty />`: `:has()` darf kein `:has()` enthalten, sonst gilt die ganze Regel nicht. */
+  table:has([data-col="title"]) > tbody > tr:not(:has(> [data-col="meta"]:not([data-wrap], :empty))):not(:has(> [data-col="amount"]):has(> [data-col="status"])) > :nth-child(1 of [data-col="meta"][data-wrap]:not(:empty, :has(> [data-empty]:only-child))) { grid-row: 2; grid-column: m1 / menu; }
+  table:has([data-col="title"]) > tbody > tr:not(:has(> [data-col="meta"]:not([data-wrap], :empty))):not(:has(> [data-col="amount"]):has(> [data-col="status"])) > :nth-child(2 of [data-col="meta"][data-wrap]:not(:empty, :has(> [data-empty]:only-child))) { grid-row: 3; }
+  table:has([data-col="title"]) > tbody > tr:not(:has(> [data-col="meta"]:not([data-wrap], :empty))):not(:has(> [data-col="amount"]):has(> [data-col="status"])) > :nth-child(3 of [data-col="meta"][data-wrap]:not(:empty, :has(> [data-empty]:only-child))) { grid-row: 4; }
+  /* Der Trenner steht nur zwischen Kennwerten derselben Zeile; eine eigene Zeile (`wrap`) beginnt ohne „·“. */
+  table:has([data-col="title"]) > tbody > tr > [data-col="meta"]:not([data-wrap], :empty, :has(> [data-empty]:only-child)) ~ [data-col="meta"]:not([data-wrap], :empty, :has(> [data-empty]:only-child))::before { content: "·"; padding: 0 6px; }
+  table:has([data-col="title"]) > tbody > tr > [data-col="actions"] {
+    grid-column: menu; grid-row: 1 / span 2; justify-self: end; margin: -10px -4px 0 4px;
+    display: flex; align-items: flex-start;
+  }
+  table:has([data-col="title"]) > tbody > tr > [data-col="actions"] :is(button, a) { min-width: 44px; min-height: 44px; }
+  table:has([data-col="title"]) > tbody > tr > [data-col="span"] { grid-column: 1 / -1; white-space: normal; }
+  /* Summenzeile: nach der letzten Zeile, Fläche `surface-2`, links das Etikett, rechts der Betrag; klebt nicht. */
+  table:has([data-col="title"]) > tfoot > tr {
+    display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 12px;
+    height: auto; padding: 10px 12px 10px 16px;
+  }
+  table:has([data-col="title"]) > tfoot > tr > :is(td, th) { padding: 0; white-space: normal; }
+  table:has([data-col="title"]) > tfoot > tr > [data-col="amount"] { font-variant-numeric: tabular-nums; text-align: right; }
+}
+
+/* Unter dem Inhalt so viel Abstand, wie die klebende Speicherleiste hoch ist (Runde 3, 189): Ein fokussiertes oder
+   angesprungenes Feld rollt über die Leiste, statt unter ihr zu verschwinden. Nur wo die Leiste klebt (`stickybar`).
+   Kein Layout-Test (Einzelstelle, Laufzeit zählt). */
+@media (min-width: 640px) and (min-height: 600px) {
+  html:has([data-slot="form-action-bar"][data-placement="page"]) { scroll-padding-bottom: 5.5rem; }
+}
+
+/* Seitenkopf am Telefon (Runde 3, Kleinpunkt 2; 031, 062): ⋯ „Weitere Aktionen“ steht rechts in der Titelzeile, der Titel
+   bricht davor um; steht sonst nichts in den Aktionen, bleibt keine leere Zeile. Kein Layout-Test (Einzelstelle). */
+@media (max-width: 639.98px) {
+  [data-slot="page-header-row"]:has([data-record-actions]) { position: relative; }
+  [data-slot="page-header-row"]:has([data-record-actions]) > [data-slot="page-header-title"] { padding-right: 3rem; }
+  [data-slot="page-header-actions"] > [data-record-actions] { position: absolute; top: 0; right: 0; }
+  [data-slot="page-header-actions"]:not(:has(> :not([data-record-actions], [data-header-more-button]))) { display: contents; }
+}
+/* Kopfaktionen am Telefon (Runde 3, 018): Hat die Seite ein `RecordActions`, nimmt es die Nebenaktionen (`PageHeader
+   more`) in sein Menü; das eigene ⋯ des Kopfs fällt dann weg. Kein Layout-Test (Einzelstelle; das Verhalten prüft
+   `page-header.test.tsx`). */
+[data-slot="page-header-actions"]:has([data-record-actions]:not([data-header-more])) [data-header-more] { display: none; }
+
+
+/* Vorschlagsliste (`<input list>`, Anrede): derselbe Winkel wie am Auswahlfeld statt des gefüllten ▼ des Browsers
+   (Runde 3, 040). Kein Layout-Test (Einzelstelle). */
+input[list]::-webkit-calendar-picker-indicator {
+  color: transparent;
+  opacity: 1;
+  width: 1rem;
+  height: 1rem;
+  cursor: pointer;
+  background: var(--color-muted-ink);
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+
+/* Auswahlfeld: derselbe dünne Winkel wie am Ordnerfeld und an der Vorschlagsliste statt des Pfeils des Browsers
+   (Runde 3, 174, siehe 040). Zwei schmale Verläufe zeichnen den Winkel in `muted-ink`, ohne Bild mit fester Farbe.
+   Kein Layout-Test (Einzelstelle, am Bild geprüft). */
+select[data-slot="select"]:not([multiple]) {
+  appearance: none;
+  padding-right: 2.25rem;
+  background-image:
+    linear-gradient(45deg, transparent calc(50% - 0.7px), var(--color-muted-ink) calc(50% - 0.7px), var(--color-muted-ink) calc(50% + 0.7px), transparent calc(50% + 0.7px)),
+    linear-gradient(135deg, transparent calc(50% - 0.7px), var(--color-muted-ink) calc(50% - 0.7px), var(--color-muted-ink) calc(50% + 0.7px), transparent calc(50% + 0.7px));
+  background-size: 5px 5px;
+  background-position: calc(100% - 17px) 50%, calc(100% - 12.5px) 50%;
+  background-repeat: no-repeat;
 }

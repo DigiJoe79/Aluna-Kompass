@@ -7,7 +7,7 @@ import { describe, expect, it } from 'vitest';
 import { EXAMPLE_DOCUMENT_TYPES } from '../src/catalog';
 import { countDocumentText } from '../src/index-store';
 import { dmsModule } from '../src/manifest';
-import { documentFolders, documentFormerNumbers, documentLinks, documentRelations, documents, documentTypes } from '../src/schema';
+import { documentFolders, documentFormerNumbers, documentLinks, documentRelations, documentRules, documents, documentTypes } from '../src/schema';
 import { seedDms } from '../src/seed';
 import { getDocument } from '../src/service';
 import { ALL_DMS } from './helpers';
@@ -59,8 +59,12 @@ describe('seedDms', () => {
     }
     expect(paths.some((p) => p.split('/').length >= 3)).toBe(true);
     expect(paths.some((p) => p.split('/').some((segment) => segment.length > 40))).toBe(true);
-    const deep = deps.db.select().from(documents).all().filter((d) => d.folder === 'behoerden/amtsgericht/vereinsregister-2026');
-    expect(deep.length).toBeGreaterThan(0);
+    const deep = deps.db.select().from(documents).all().filter((d) => d.folder === 'Behörden/Amtsgericht/Vereinsregister 2026');
+    expect(deep.length).toBeGreaterThan(0);    // Lesbare Namen statt Kürzeln (0.2.12, Joe 2026-10-16): Ordner haben keinen Anzeigenamen, das Pfadsegment ist der Name.
+    expect(paths).toContain('Behörden/Finanzamt');
+    expect(paths.some((p) => /^[a-z]/.test(p))).toBe(false);
+    const rule = deps.db.select().from(documentRules).where(eq(documentRules.matchContains, 'Finanzamt')).get();
+    expect(rule?.thenFolder).toBe('Behörden/Finanzamt');
   });
 
   it('legt die Briefe aus 0.1 ins Stichjahr, keine feste Jahreszahl (Befund 0.2.8/20)', async () => {
@@ -71,7 +75,7 @@ describe('seedDms', () => {
     const bescheid = docs.find((d) => d.subject === 'Freistellungsbescheid');
     expect(bescheid?.documentDate).toBe('2031-02-15');
     expect(docs.some((d) => d.subject === 'Steuererklärung 2029 und Antrag auf Freistellung')).toBe(true);
-    expect(docs.filter((d) => d.folder === 'behoerden/amtsgericht/vereinsregister-2031').length).toBeGreaterThan(0);
+    expect(docs.filter((d) => d.folder === 'Behörden/Amtsgericht/Vereinsregister 2031').length).toBeGreaterThan(0);
     const texts = [...docs.flatMap((d) => [d.subject, d.folder ?? '', d.fileName ?? '']), ...deps.db.select().from(documentFolders).all().map((f) => f.path)];
     // Jede Jahreszahl hängt am Stichjahr: höchstens drei Jahre davor, nie die von 2026.
     expect(texts.flatMap((text) => text.match(/\b20\d\d\b/g) ?? []).filter((year) => Number(year) < 2028 || Number(year) > 2031)).toEqual([]);
@@ -160,7 +164,7 @@ describe('seedDms', () => {
     expect(related('Eintragungsnachricht Vereinsregister', 'Anmeldung der Vorstandsänderung zum Vereinsregister', 'repliesTo')).toBe(true);
     // Bis 0.2.6 „antwortete“ das Finanzamt auf die Einladung zur Mitgliederversammlung.
     expect(relations.some((r) => r.relatedDocumentId === by('Einladung zur ordentlichen Mitgliederversammlung').id)).toBe(false);
-    for (const folder of ['behoerden/finanzamt', 'behoerden/amtsgericht', 'partner/tieraerzte', 'partner/pflegestellen', 'mitglieder', 'protokolle', 'korrespondenz-mit-dem-landesverband-und-den-kreisgruppen']) {
+    for (const folder of ['Behörden/Finanzamt', 'Behörden/Amtsgericht', 'Partner/Tierärzte', 'Partner/Pflegestellen', 'Mitglieder', 'Protokolle', 'Korrespondenz mit dem Landesverband und den Kreisgruppen']) {
       expect(docs.some((d) => d.folder === folder), folder).toBe(true);
     }
     // Der Dank geht an die Praxis, nicht an den ersten Kontakt der Liste.
@@ -172,7 +176,7 @@ describe('seedDms', () => {
     const { deps, ctx } = await setupWithContacts();
     await seedDms(deps, ctx);
     const draft = deps.db.select().from(documents).all().find((d) => d.subject === 'Winterhilfe: Bitte um Unterstützung')!;
-    expect(draft).toMatchObject({ phase: 'draft', typeKey: 'letter', folder: 'partner/pflegestellen' });
+    expect(draft).toMatchObject({ phase: 'draft', typeKey: 'letter', folder: 'Partner/Pflegestellen' });
     expect(draft.draftBody!.length).toBeGreaterThan(600);
     expect(draft.draftBody).toMatch(/^- /m);
     expect(draft.draftBody).toMatch(/\*\*[^*]+\*\*/);

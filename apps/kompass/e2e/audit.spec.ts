@@ -39,7 +39,8 @@ test.describe('audit log', () => {
     // Die Aktion in Worten (Spec Protokoll § 4), nicht als Schlüssel.
     await expect(rows.nth(1)).toContainText('Einstellung');
     await expect(rows.nth(1)).not.toContainText('settings.update');
-    await expect(rows.nth(1)).toContainText('Oberfläche');
+    // Runde 3, 183: „Oberfläche“ ist der Normalfall ohne Marke; System und Agent tragen eine.
+    await expect(rows.nth(1).getByText('Oberfläche', { exact: true })).toHaveCount(0);
     await page.getByLabel('Kanal', { exact: true }).selectOption('system');
     await expect(page.getByRole('table').getByRole('row').nth(1)).toContainText('System');
     await page.getByLabel('Kanal', { exact: true }).selectOption('ui');

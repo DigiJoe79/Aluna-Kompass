@@ -30,13 +30,13 @@ export default defineTemplate({
     claim: text({ max: 120, localized: true, label: 'Claim' }),
     intro: markdown({ max: 2000, localized: true, label: 'Text auf der Startseite' }),
     heroImage: asset({ label: 'Bild auf der Startseite' }),
-    memberFee: number({ min: 0, label: 'Mitgliedsbeitrag im Jahr (Euro)' }),
+    memberFee: number({ min: 0, label: 'Mitgliedsbeitrag im Jahr', unit: '€' }),
     featuredProject: reference({ view: 'projects', label: 'Projekt auf der Startseite' }),
   },
   collections: {
     news: {
       label: 'Aktuelles', slug: true, publishable: true,
-      fields: { title: text({ localized: true, label: 'Titel' }), body: markdown({ localized: true, label: 'Text' }), image: asset({ label: 'Bild' }) },
+      fields: { title: text({ localized: true, label: 'Titel' }), body: markdown({ localized: true, label: 'Text' }), image: asset({ label: 'Foto' }) },
     },
     team: {
       label: 'Team', sortable: true, max: 60,
@@ -64,7 +64,7 @@ export default defineTemplate({
 |---|---|---|
 | `text()` | eine Zeile | `max`, `localized`, `label` |
 | `markdown()` | Text mit Formatierung | `max`, `localized`, `label` |
-| `number()` | Zahl | `min`, `max`, `integer`, `label` |
+| `number()` | Zahl | `min`, `max`, `integer`, `unit` (Einheit rechts im Feld, etwa `'€'`), `label` |
 | `select([...])` | Auswahl aus festen Werten | `label` |
 | `asset()` | Bild oder Datei aus der Mediathek; gespeichert wird die Asset-ID | `accept` (MIME-Typ, etwa `application/pdf`), `ratio`, `width`, `label` |
 | `date()` | Datum | `label` |

@@ -1,12 +1,15 @@
 import { isoNow, newId, notFound, ok, requirePermission, validate, type CallContext, type DbOrTx, type Deps, type Result } from '@kompass/core';
 import { contacts, createContact, displayName, type ContactRecord } from '@kompass/module-contacts';
-import { and, asc, desc, eq } from 'drizzle-orm';
+import { and, asc, eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { financeAudit } from '../audit';
 import { financeConflict } from '../errors';
 import { requireFinanceRead } from '../ledger/access';
 import { isValidIban, normalizeIban } from '../ledger/iban';
+import { contactsForIbanInternal } from '../iban-holders';
 import { financeContactBankAccounts, financeRawTransactions, type FinanceContactBankAccountRow } from '../schema';
+
+export { contactsForIbanInternal };
 
 /**
  * Kontakt ↔ IBAN (F5, Spec 6.4 Vorschlag 5; Annahme 2): Kompass lernt die
@@ -57,27 +60,31 @@ function insertLinkInternal(tx: DbOrTx, deps: Deps, ctx: CallContext, contactId:
 }
 
 /**
- * Der Kontakt, dem eine IBAN zuletzt zugeordnet wurde — `null`, wenn keiner
- * (oder nur ein inzwischen gelöschter Kontakt) sie trägt. Ohne Rechteprüfung:
- * für die Vorschläge (Task 4).
+ * Der eine aktive Kontakt, der eine IBAN trägt — `null`, wenn keiner, nur
+ * archivierte oder gelöschte, oder mehrere aktive sie tragen. Ein
+ * Gemeinschaftskonto (Eheleute, beide Mitglied) nennt so keinen Kontakt statt
+ * still den zuletzt verknüpften: dieselbe Regel wie bei Name und E-Mail
+ * (`contactForPartyInternal`, Befund 3 in 0.2.12). Ohne Rechteprüfung: für die
+ * Vorschläge und ZUGFeRD.
  */
 export function contactForIbanInternal(db: DbOrTx, iban: string): { contactId: string } | null {
-  const row = db
+  const rows = db
     .select({ contactId: financeContactBankAccounts.contactId })
     .from(financeContactBankAccounts)
     .innerJoin(contacts, eq(contacts.id, financeContactBankAccounts.contactId))
-    .where(eq(financeContactBankAccounts.iban, normalizeIban(iban)))
-    .orderBy(desc(financeContactBankAccounts.createdAt), desc(financeContactBankAccounts.id))
-    .limit(1)
-    .get();
-  return row ? { contactId: row.contactId } : null;
+    .where(and(eq(financeContactBankAccounts.iban, normalizeIban(iban)), eq(contacts.status, 'active')))
+    .limit(2)
+    .all();
+  return rows.length === 1 ? { contactId: rows[0]!.contactId } : null;
 }
 
 /**
  * Lernt eine Zuordnung in der Transaktion des Aufrufers (`bookFromTransaction`,
  * `createContactFromTransaction`). Nichts, wenn es sie schon gibt oder die IBAN
  * ungültig ist. Trägt die IBAN schon ein anderer Kontakt, entsteht trotzdem
- * eine zweite Zuordnung — ein Gemeinschaftskonto — und die jüngste gewinnt.
+ * eine zweite Zuordnung — ein Gemeinschaftskonto. Dann schlägt der Import
+ * keinen Kontakt mehr vor, solange mehr als einer davon aktiv ist
+ * (`contactForIbanInternal`).
  */
 export function learnContactIbanInternal(tx: DbOrTx, deps: Deps, ctx: CallContext, input: { contactId: string; iban: string; learnedFrom: ContactIbanSource }): void {
   if (!isValidIban(input.iban)) return;
@@ -102,9 +109,9 @@ export async function linkContactIban(deps: Deps, ctx: CallContext, input: unkno
 
   const existing = pairRow(deps.db, contactId, iban);
   if (existing) return ok(viewOf(existing));
-  const other = contactForIbanInternal(deps.db, iban);
-  if (other && other.contactId !== contactId) {
-    const owner = deps.db.select().from(contacts).where(eq(contacts.id, other.contactId)).get()!;
+  const other = contactsForIbanInternal(deps.db, iban).find((id) => id !== contactId);
+  if (other) {
+    const owner = deps.db.select().from(contacts).where(eq(contacts.id, other)).get()!;
     return financeConflict('contactIbanTaken', { contact: displayName(owner) });
   }
   return deps.db.transaction((tx: DbOrTx) => ok(viewOf(insertLinkInternal(tx, deps, ctx, contactId, iban, 'manual'))));

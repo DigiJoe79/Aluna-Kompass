@@ -2,16 +2,14 @@
 
 import type { PurposeOverviewRow } from '@kompass/module-finance';
 import { useTranslations } from 'next-intl';
-import Link from 'next/link';
 import { useState } from 'react';
 import { LimitProgress, limitState } from '@/components/finance/limit-progress';
-import { StatusBadge, type BadgeTone } from '@/components/status-badge';
-import { buttonVariants } from '@/components/ui/button';
+import { isNormalInList, StatusBadge, statusTone } from '@/components/status-badge';
 import { RowButton, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { formatEuro } from '@/lib/finance/amount';
 import { PurposeDetail } from './purpose-detail';
+import { Empty } from '@/components/empty-value';
 
-const STATE_TONE: Record<PurposeOverviewRow['state'], BadgeTone> = { open: 'info', fulfilled: 'success', dissolved: 'neutral' };
 
 /**
  * E3 „Zwecke“ (F8b Task 6a, Designer-README 4c): Zweck · Projekt · Ziel ·
@@ -41,7 +39,7 @@ export function PurposesTable({
   const selected = full ? rows.find((r) => r.id === selectedId) ?? null : null;
 
   const target = (row: PurposeOverviewRow) => {
-    if (row.targetCents === null) return <span className="text-muted-ink">—</span>;
+    if (row.targetCents === null) return <span className="text-muted-ink"><Empty /></span>;
     const state = limitState({ valueCents: row.balanceCents, limitCents: row.targetCents, warnAtPercent: 100, kind: 'target' });
     return (
       <div className="min-w-[120px]">
@@ -60,37 +58,32 @@ export function PurposesTable({
 
   const stateCell = (row: PurposeOverviewRow) => (
     <div className="flex flex-wrap gap-1">
-      <StatusBadge tone={STATE_TONE[row.state]}>{t(`states.${row.state}`)}</StatusBadge>
-      {row.negative ? <StatusBadge tone="warning" dot>{t('badges.negative')}</StatusBadge> : null}
-      {row.fulfilledWithRest ? <StatusBadge tone="warning" dot>{t('badges.fulfilledWithRest', { amount: formatEuro(row.balanceCents) })}</StatusBadge> : null}
+      {/* 09 A2 · 09 A1: Bei „erfüllt mit Rest“ steht „erfüllt“ nur einmal — in der Marke mit dem Rest. */}
+      {isNormalInList('purpose', row.state) || row.fulfilledWithRest ? null : <StatusBadge tone={statusTone('purpose', row.state)}>{t(`states.${row.state}`)}</StatusBadge>}
+      {row.negative ? <StatusBadge tone={statusTone('purposeBalance', 'negative')} dot>{t('badges.negative')}</StatusBadge> : null}
+      {row.fulfilledWithRest ? <StatusBadge tone={statusTone('purposeBalance', 'fulfilledWithRest')} dot>{t('badges.fulfilledWithRest', { amount: formatEuro(row.balanceCents) })}</StatusBadge> : null}
     </div>
   );
 
-  const money = (cents: number) => <span className="font-mono tabular-nums">{formatEuro(cents)}</span>;
+  const money = (cents: number) => <span className="tabular-nums">{formatEuro(cents)}</span>;
+  const movement = (cents: number | null | undefined) => (cents ? money(cents) : <span className="text-muted-ink"><Empty /></span>);
   const net = (row: PurposeOverviewRow) => {
     const transfersIn = row.transfersInCents ?? 0;
     const transfersOut = row.transfersOutCents ?? 0;
     const n = transfersIn - transfersOut;
-    if (transfersIn === 0 && transfersOut === 0) return <span className="text-muted-ink">—</span>;
-    return <span className="font-mono tabular-nums">{n > 0 ? `+${formatEuro(n)}` : formatEuro(n)}</span>;
+    if (transfersIn === 0 && transfersOut === 0) return <span className="text-muted-ink"><Empty /></span>;
+    return <span className="tabular-nums">{formatEuro(n, { sign: 'always' })}</span>;
   };
 
   return (
     <div className="space-y-4">
-      {canTransfer ? (
-        <div className="flex justify-end">
-          <Link href="/finance/purposes/transfer" className={buttonVariants()} data-testid="purposes-transfer-trigger">
-            {t('detail.transfer')}
-          </Link>
-        </div>
-      ) : null}
       <div className="overflow-x-auto rounded-md border border-line">
         <Table data-testid="purposes-table">
           <TableHeader>
             <TableRow>
-              <TableHead className="px-3">{t('columns.name')}</TableHead>
+              <TableHead col="title" className="px-3">{t('columns.name')}</TableHead>
               {full ? <TableHead className="px-3">{t('columns.project')}</TableHead> : null}
-              <TableHead className="px-3">{t('columns.target')}</TableHead>
+              <TableHead col="meta" className="px-3">{t('columns.target')}</TableHead>
               {full ? (
                 <>
                   <TableHead className="px-3 text-right">{t('columns.carryForward')}</TableHead>
@@ -99,8 +92,8 @@ export function PurposesTable({
                   <TableHead className="px-3 text-right">{t('columns.transfers')}</TableHead>
                 </>
               ) : null}
-              <TableHead className="px-3 text-right">{t('columns.balance')}</TableHead>
-              <TableHead className="px-3">{t('columns.state')}</TableHead>
+              <TableHead col="amount" className="px-3 text-right">{t('columns.balance')}</TableHead>
+              <TableHead col="status" className="px-3">{t('columns.state')}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -111,33 +104,36 @@ export function PurposesTable({
                 data-selected={row.id === selectedId ? 'true' : undefined}
                 data-state={row.id === selectedId ? 'selected' : undefined}
               >
-                <TableCell className="px-3 text-ink">
+                <TableCell col="title" className="px-3 text-ink">
                   {full ? (
-                    <span className="inline-flex flex-wrap items-center gap-1.5">
+                    <>
                       <RowButton aria-expanded={row.id === selectedId} onClick={() => setSelectedId(row.id === selectedId ? null : row.id)}>
                         {row.name}
                       </RowButton>
-                      {/* Entscheidung 7: Ausland als Kennzeichen am Namen statt eigener Spalte. */}
-                      {row.abroad ? <span data-testid="purpose-abroad"><StatusBadge tone="neutral">{t('abroadYes')}</StatusBadge></span> : null}
-                    </span>
+                      {/* Ausland ist eine Eigenschaft, keine Abweichung: Text in der Unterzeile statt Marke (Runde 3, 120;
+                          Entscheidung 7: keine eigene Spalte). */}
+                      {row.abroad ? <span data-testid="purpose-abroad" className="block text-hint text-muted-ink">{t('abroadYes')}</span> : null}
+                    </>
                   ) : (
                     row.name
                   )}
                 </TableCell>
-                {full ? <TableCell className="px-3 text-ink-2">{row.projectId ? projects[row.projectId] ?? '—' : '—'}</TableCell> : null}
-                <TableCell className="px-3">{target(row)}</TableCell>
+                {full ? <TableCell className="px-3 text-ink-2">{row.projectId ? projects[row.projectId] ?? <Empty /> : <Empty />}</TableCell> : null}
+                <TableCell col="meta" className="px-3">{target(row)}</TableCell>
                 {full ? (
                   <>
-                    <TableCell className="px-3 text-right text-ink-2">{money(row.carryForwardCents ?? 0)}</TableCell>
-                    <TableCell className="px-3 text-right text-ink-2">{money(row.inflowCents ?? 0)}</TableCell>
-                    <TableCell className="px-3 text-right text-ink-2">{money(row.outflowCents ?? 0)}</TableCell>
+                    {/* Leere Bewegungen einheitlich „—“ wie die Umwidmungen, keine 0,00 € (Runde 3, 120). Der Bestand bleibt ein
+                        Betrag, auch bei 0. */}
+                    <TableCell className="px-3 text-right text-ink-2">{movement(row.carryForwardCents)}</TableCell>
+                    <TableCell className="px-3 text-right text-ink-2">{movement(row.inflowCents)}</TableCell>
+                    <TableCell className="px-3 text-right text-ink-2">{movement(row.outflowCents)}</TableCell>
                     <TableCell className="px-3 text-right text-ink-2">{net(row)}</TableCell>
                   </>
                 ) : null}
-                <TableCell className={`px-3 text-right font-semibold ${row.negative ? 'text-warning' : 'text-ink'}`} data-testid="purpose-balance">
+                <TableCell col="amount" className="px-3 text-right font-semibold text-ink" data-testid="purpose-balance">
                   {money(row.balanceCents)}
                 </TableCell>
-                <TableCell className="px-3">{stateCell(row)}</TableCell>
+                <TableCell col="status" className="px-3">{stateCell(row)}</TableCell>
               </TableRow>
             ))}
           </TableBody>

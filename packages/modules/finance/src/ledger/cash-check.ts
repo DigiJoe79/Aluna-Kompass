@@ -42,13 +42,3 @@ export function firstNegativeCashDay(
   }
   return null;
 }
-
-/** „-12,50 €“ — für Fehlermeldungen (Finanz-Spec 5.4). */
-export function formatEuro(cents: number): string {
-  const sign = cents < 0 ? '-' : '';
-  const abs = Math.abs(cents);
-  const euros = Math.floor(abs / 100);
-  const rest = String(abs % 100).padStart(2, '0');
-  const withThousands = euros.toLocaleString('de-DE');
-  return `${sign}${withThousands},${rest} €`;
-}

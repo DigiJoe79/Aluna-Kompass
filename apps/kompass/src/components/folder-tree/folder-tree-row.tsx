@@ -98,8 +98,12 @@ interface FolderTreeRowProps {
   dimmed?: boolean;
   /** Marke statt Zahl, etwa „wird verschoben“ oder im Dialog „liegt hier“. */
   badge?: string;
+  /** Treffer der Suche im Ordnerfeld (Entwurf E5): Fläche `warning-bg` am Namen. */
+  highlight?: boolean;
   /** Eine Änderung an diesem Ziel ist unterwegs: kleiner Kreis vor der Zahl (README § 3, Artboard 3). */
   saving?: boolean;
+  /** Zähler zeigen (Vorgabe ja); im Ordnerfeld und in „Verschieben nach…“ nicht (Runde 3, Kleinpunkt 10). */
+  counts?: boolean;
   /** Im Modus `navigate` der Link des Namens; im Modus `pick` fehlt er (kein Link). */
   href?: string;
   /** Nur im Modus `pick`: gesperrt mit Grund (README § 6). */
@@ -138,7 +142,7 @@ export type RowMenuButton = { visible: 'always' | 'hover'; open: boolean; onOpen
  * Knopf und der Name als Link — kein Knopf im Link, und ein Mittelklick auf
  * den Namen öffnet den Ordner im neuen Tab.
  */
-export function FolderTreeRow({ node, level, isFolder, isExpanded, isSelected, drop = null, dimmed = false, badge, saving = false, isLockedOpen = false, href, pick, density, itemProps, label, onToggle, onRowClick, menu = null }: FolderTreeRowProps) {
+export function FolderTreeRow({ node, level, isFolder, isExpanded, isSelected, drop = null, dimmed = false, badge, highlight = false, saving = false, counts = true, isLockedOpen = false, href, pick, density, itemProps, label, onToggle, onRowClick, menu = null }: FolderTreeRowProps) {
   const t = useTranslations('folderTree');
   const { indent, base, chevron } = DENSITY[density];
   const placeholder = !itemProps;
@@ -216,7 +220,7 @@ export function FolderTreeRow({ node, level, isFolder, isExpanded, isSelected, d
       ) : (
         <span className="flex min-w-0 flex-1 flex-col gap-0.5">
           {href === undefined ? (
-            <span className="wrap-anywhere text-pretty">{node.name}</span>
+            <span className="wrap-anywhere text-pretty">{highlight ? <mark className="rounded-sm bg-warning-bg px-0.5 text-current">{node.name}</mark> : node.name}</span>
           ) : (
             <Link href={href} tabIndex={-1} draggable={false} className="wrap-anywhere text-pretty outline-none">
               {node.name}
@@ -238,10 +242,11 @@ export function FolderTreeRow({ node, level, isFolder, isExpanded, isSelected, d
         ) : (
           <>
             {saving ? <SavingMark /> : null}
-            <Count node={node} tone={isSelected ? 'text-current' : node.total === 0 ? 'text-muted-ink-2' : dimmed ? 'text-muted-ink-2' : 'text-muted-ink'} />
+            {/* Im Ordnerfeld und in „Verschieben nach…“ keine Zähler (Runde 3, Kleinpunkt 10): Dort wählt man einen Ort. */}
+            {!counts ? null : <Count node={node} tone={isSelected ? 'text-current' : node.total === 0 ? 'text-muted-ink-2' : dimmed ? 'text-muted-ink-2' : 'text-muted-ink'} />}
           </>
         )}
-        {menu && !drop ? <MenuDots menu={menu} density={density} /> : null}
+        {menu && !drop ? <MenuDots menu={menu} density={density} /> : !pick && !drop ? <MenuSpacer density={density} /> : null}
       </span>
       {drop?.opening ? <DwellBar left={base + level * indent} /> : null}
     </div>
@@ -292,6 +297,14 @@ function MenuDots({ menu, density }: { menu: RowMenuButton; density: FolderTreeD
   );
 }
 
+/**
+ * Der Platz von „…“ in Zeilen ohne Menü (kein Recht, feste Einträge): Die Zähler stehen so in jeder Zeile auf
+ * derselben Flucht, ob ein Menü da ist oder nicht (03 B14). Kein Layout-Test (AGENTS.md).
+ */
+export function MenuSpacer({ density }: { density: FolderTreeDensity }) {
+  return <span aria-hidden className={cn('shrink-0', density === 'touch' ? '-my-[5px] -mr-0.5 size-8' : '-my-[3px] -mr-0.5 size-6')} />;
+}
+
 /** „Wird gespeichert“: ein kleiner offener Kreis, der sich dreht, bis der Server antwortet. */
 function SavingMark() {
   const t = useTranslations('folderTree');
@@ -301,7 +314,7 @@ function SavingMark() {
 /** Die Summe; „direkt“ steht im Tooltip (README § 2, Zähler). */
 function Count({ node, tone }: { node: FolderNode; tone: string }) {
   const t = useTranslations('folderTree');
-  const number = <span className={cn('font-mono text-hint font-normal tabular-nums', tone)}>{node.total}</span>;
+  const number = <span className={cn(' text-hint font-normal tabular-nums', tone)}>{node.total}</span>;
   return (
     <Tooltip>
       <TooltipTrigger render={number} />

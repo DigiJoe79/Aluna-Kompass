@@ -37,6 +37,16 @@ describe('ui/table Standard', () => {
     expect(m).toMatch(/<a[^>]*href="\/x\/1"[^>]*data-row-link|<a[^>]*data-row-link[^>]*href="\/x\/1"/);
     expect(m).toMatch(/<a[^>]*after:absolute[^>]*after:inset-0|<a[^>]*after:inset-0[^>]*after:absolute/);
   });
+  // Z4 (Designer Stufe 2 Nr. 4): Das Öffnen-Element ist normal gewichtet, nur in Linkfarbe — auch die Belegnummern.
+  it('RowLink und RowButton: Gewicht 400, nur die Linkfarbe', () => {
+    for (const m of [
+      renderToStaticMarkup(<RowLink href="/x/1">Bello</RowLink>),
+      renderToStaticMarkup(<RowButton aria-expanded={false}>Mehr</RowButton>),
+    ]) {
+      expect(m).toContain('text-link');
+      expect(m).not.toMatch(/font-semibold|font-medium|font-bold/);
+    }
+  });
   it('RowButton ist ein Knopf mit derselben Fläche', () => {
     const m = renderToStaticMarkup(<RowButton aria-expanded={false}>Mehr</RowButton>);
     expect(m).toMatch(/<button[^>]*type="button"/);

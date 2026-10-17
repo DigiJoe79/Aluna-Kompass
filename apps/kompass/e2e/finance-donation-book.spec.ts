@@ -58,7 +58,7 @@ test.describe('finance donation book', () => {
     expect(donations - confirmed).toBe(difference);
     const reasonRows = page.getByTestId('reconciliation-reason');
     expect(await reasonRows.count()).toBeGreaterThan(0);
-    const reasonCents = await reasonRows.evaluateAll((items) => items.map((item) => item.lastElementChild!.lastElementChild!.textContent ?? ''));
+    const reasonCents = await reasonRows.evaluateAll((items) => items.map((item) => item.lastElementChild!.textContent ?? ''));
     expect(reasonCents.reduce((sum, text) => sum + parseEuro(text), 0)).toBe(difference);
 
     // Tobias Adler hat keine Anschrift — „Anschrift fehlt“ steht sicher in der Abstimmung, mit Sprung zum Serienlauf.

@@ -28,6 +28,9 @@ export function auditExportEntries(
     actionLabel: (action: string) => string;
   },
 ) {
+  // Papier, nicht Bildschirm (MUSTER § Datum): Der Export ist ein Prüfdokument und steht fest in TT.MM.JJJJ HH:mm:ss,
+  // unabhängig von `ui.dateFormat` — wie `paperDate`, nur mit Uhrzeit und Sekunden zum Abgleich mit Serverprotokollen.
+  // Eigenes Intl, weil der Kern dafür keine Funktion hat; steht in der Erlaubnisliste von `no-raw-date` (Teil 5).
   const format = new Intl.DateTimeFormat('de-DE', { timeZone: opts.timeZone, day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' });
   return entries.map((e) => {
     const object = opts.entity(e);

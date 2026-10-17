@@ -6,16 +6,14 @@ import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { formatEuro } from '@/lib/finance/amount';
 import { groupRunItems, type RunGroupKey } from '@/lib/finance/run';
-import { cn } from '@/lib/utils';
+import { StatusBadge } from '@/components/status-badge';
 import { SectionHeading } from '@/components/section';
 
-/** Wort und farbiger Oberstrich unterscheiden die Gruppen (README 3i) — nie die Farbe allein. */
-const STROKE: Record<RunGroupKey, string> = {
-  ready: 'border-t-success',
-  needsSignature: 'border-t-warning',
-  addressMissing: 'border-t-error',
-  blocked: 'border-t-line-strong',
-};
+/**
+ * Runde 3, 110: Gruppen ohne farbigen Oberstrich — ein Randakzent ist nicht Teil der Tontabelle und las sich bei
+ * „Anschrift fehlt“ wie ein Fehler. Arbeit (Anschrift fehlt, braucht Unterschrift) steht als ockerfarbene Marke im Kopf.
+ */
+const WORK_GROUPS: readonly RunGroupKey[] = ['addressMissing', 'needsSignature'];
 
 /**
  * Die Vorschau des Serienlaufs in Gruppen, gezählt in Bestätigungen: bereit ·
@@ -42,10 +40,18 @@ export function PreviewGroups({ items, excluded = [] }: { items: readonly RunPre
       {groups.map((group) => {
         const headingId = `run-group-${group.key}-heading`;
         return (
-          <section key={group.key} data-testid={`run-group-${group.key}`} aria-labelledby={headingId} className={cn('rounded-md border border-line border-t-[3px] bg-surface', STROKE[group.key])}>
+          <section key={group.key} data-testid={`run-group-${group.key}`} aria-labelledby={headingId} className="rounded-md border border-line bg-surface">
             {/* Titel in der Kopfzeile der Karte, die Liste darunter geht über die volle Breite (K10 Charge 3). */}
             <div className="px-4 pt-3 pb-2">
-              <SectionHeading id={headingId}>{t('groups.heading', { group: t(`groups.${group.key}`), count: group.items.length })}</SectionHeading>
+              <SectionHeading id={headingId}>
+                {WORK_GROUPS.includes(group.key) ? (
+                  <>
+                    <StatusBadge tone="warning" dot>{t(`groups.${group.key}`)}</StatusBadge> · {t('groups.count', { count: group.items.length })}
+                  </>
+                ) : (
+                  t('groups.heading', { group: t(`groups.${group.key}`), count: group.items.length })
+                )}
+              </SectionHeading>
             </div>
             <ul className="divide-y divide-line-2 border-t border-line-2 text-meta">
               {group.items.map((item) => (
@@ -74,7 +80,7 @@ export function PreviewGroups({ items, excluded = [] }: { items: readonly RunPre
                         <Link href="/finance/donations?tab=uncertified" className="text-hint text-link underline">{t('openUncertified')}</Link>
                       </>
                     ) : null}
-                    <span className="font-mono tabular-nums text-ink">{formatEuro(item.totalCents)}</span>
+                    <span className="tabular-nums text-ink">{formatEuro(item.totalCents)}</span>
                   </span>
                 </li>
               ))}
@@ -83,7 +89,7 @@ export function PreviewGroups({ items, excluded = [] }: { items: readonly RunPre
         );
       })}
       {excluded.length > 0 ? (
-        <section data-testid="run-group-excluded" aria-labelledby="run-group-excluded-heading" className="rounded-md border border-line border-t-[3px] border-t-line-strong bg-surface">
+        <section data-testid="run-group-excluded" aria-labelledby="run-group-excluded-heading" className="rounded-md border border-line bg-surface">
           <div className="px-4 pt-3 pb-2">
             <SectionHeading id="run-group-excluded-heading">{t('excluded.heading', { count: excluded.length })}</SectionHeading>
           </div>
@@ -101,7 +107,7 @@ export function PreviewGroups({ items, excluded = [] }: { items: readonly RunPre
                       {b.entryNumber ? t('excluded.openEntry', { number: b.entryNumber }) : t('excluded.openDraft')}
                     </Link>
                   ))}
-                  <span className="font-mono tabular-nums text-ink">{formatEuro(e.excludedCents)}</span>
+                  <span className="tabular-nums text-ink">{formatEuro(e.excludedCents)}</span>
                 </span>
               </li>
             ))}

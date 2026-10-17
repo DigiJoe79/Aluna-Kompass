@@ -104,9 +104,9 @@ describe('detectStatementAccount', () => {
     const res = await detectStatementAccount(f.deps, f.ctx, { fileName: 'auszug_q1.xml', bytes: camtWithTwoStatements(VEREIN_IBAN, OTHER_IBAN) });
     expect(res).toMatchObject({ ok: false, error: { type: 'conflict', code: 'statementMultipleAccounts' } });
     if (res.ok) return;
-    // Der Grund nennt beide IBANs, die Abhilfe den Weg: je Konto eine Datei.
-    expect(res.error).toMatchObject({ params: { ibans: expect.stringContaining('DE60 9999 9999 0201 0512 34') } });
-    expect(res.error).toMatchObject({ params: { ibans: expect.stringContaining('DE12 9999 9999 0000 1122 33') } });
+    // Der Grund nennt beide IBANs, die Abhilfe den Weg: je Konto eine Datei. `params` bleiben Daten (kompakt);
+    // gruppiert wird erst im Text (`lib/error-text.ts`).
+    expect(res.error).toMatchObject({ params: { ibans: 'DE60999999990201051234, DE12999999990000112233' } });
     expect(res.error).toMatchObject({ messageKey: 'finance.errors.statementMultipleAccounts' });
     // Auch wenn nur eines der Konten eingerichtet ist — die Datei bleibt die falsche.
     const partly = await detectStatementAccount(f.deps, f.ctx, { fileName: 'auszug_q1.xml', bytes: camtWithTwoStatements(VEREIN_IBAN, 'DE18999999990000710712') });

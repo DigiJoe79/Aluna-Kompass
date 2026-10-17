@@ -55,7 +55,12 @@ async function loginAs(page: Page, name: string, email: string): Promise<void> {
   await expect(page).toHaveURL('/');
 }
 
-const step = (page: Page, key: string) => page.getByTestId(`guided-step-${key}`);
+const step = (page: Page, key: string) => page.getByTestId(`steps-${key}`);
+// Auf dem Ergebnis ist der Lauf durch: alle Schritte erledigt, „Fertig.“ (Entwurf E3).
+const finished = async (page: Page, timeout?: number) => {
+  await expect(step(page, 'result')).toHaveAttribute('data-state', 'done', { timeout });
+  await expect(page.getByTestId('steps').getByRole('status')).toContainText('Fertig.');
+};
 const runItem = (page: Page, name: string) => page.getByTestId('run-item').filter({ hasText: name });
 const issuedRow = (page: Page, name: string) => page.getByTestId('confirmation-row').filter({ hasText: name });
 
@@ -63,7 +68,7 @@ const issuedRow = (page: Page, name: string) => page.getByTestId('confirmation-r
 async function runToResult(page: Page): Promise<void> {
   await page.goto(`/finance/donations/run?year=${YEAR}`);
   await page.getByTestId('run-footer').getByRole('button', { name: '4 Bestätigungen ausstellen' }).click();
-  await expect(step(page, 'result')).toHaveAttribute('aria-current', 'step', { timeout: 20_000 });
+  await finished(page, 20_000);
 }
 
 test.describe('finance donation run', () => {
@@ -101,12 +106,18 @@ test.describe('finance donation run', () => {
     const range = (await footer.getByTestId('run-number-range').textContent())!.trim();
     const [, first, last] = /^ZWB-\d{4}-(\d{3}) bis ZWB-\d{4}-(\d{3})$/.exec(range) ?? [];
     expect(Number(last) - Number(first), range).toBe(3);
-    await expect(footer).toContainText('Ausstellen kann nur ein Mensch');
+    await expect(footer).toContainText('Ausstellen geht nur hier in Kompass');
     await expect(footer.getByRole('button', { name: '4 Bestätigungen ausstellen' })).toBeEnabled();
 
-    // Ausschließen rechnet neu und steht in der Adresse — ein Neuladen zeigt dieselbe Vorschau.
+    // Runde 3, 109/110: In Schritt 2 steht die Auswahl als Zusammenfassung; „Ändern“ führt zurück in Schritt 1.
+    await expect(page.getByRole('combobox', { name: 'Ausschließen' })).toHaveCount(0);
+    await expect(page.getByTestId('run-selection-summary')).toContainText(`Jahr ${YEAR}`);
+    await page.getByTestId('run-selection-summary').getByRole('button', { name: 'Ändern' }).click();
+    await expect(step(page, 'selection')).toHaveAttribute('aria-current', 'step');
+    // Ausschließen gilt mit „Vorschau zeigen“ und steht in der Adresse — ein Neuladen zeigt dieselbe Vorschau.
     await page.getByRole('combobox', { name: 'Ausschließen' }).fill('Sportfreunde');
     await page.getByRole('option', { name: /Sportfreunde Beispieltal/ }).click();
+    await page.getByRole('button', { name: 'Vorschau zeigen' }).click();
     await expect(footer.getByRole('button', { name: '3 Bestätigungen ausstellen' })).toBeVisible();
     await expect(page.getByTestId('run-excluded')).toContainText('Sportfreunde Beispieltal');
     await expect(page).toHaveURL(/exclude=/);
@@ -134,9 +145,9 @@ test.describe('finance donation run', () => {
 
     await page.unroute(continueUrl);
     await page.goto(page.url());
-    await expect(step(page, 'result')).toHaveAttribute('aria-current', 'step', { timeout: 20_000 });
+    await finished(page, 20_000);
     const result = page.getByTestId('run-result');
-    await expect(result.getByTestId('run-summary')).toHaveText('4 von 4 Bestätigungen ausgestellt');
+    await expect(result.getByTestId('run-summary')).toHaveText('4 ausgestellt, 4 übersprungen'); // 14 A4
 
     const [machine] = await Promise.all([page.waitForEvent('download'), result.getByRole('button', { name: 'Maschinelle Bestätigungen (PDF) · 2' }).click()]);
     expect(machine.suggestedFilename()).toMatch(/maschinell\.pdf$/);
@@ -224,8 +235,8 @@ test.describe('finance donation run', () => {
     await expect(page.getByTestId('run-group-ready').getByTestId('run-item')).toHaveCount(1);
     await expect(runItem(page, 'Tobias Adler')).toBeVisible();
     await page.getByTestId('run-footer').getByRole('button', { name: '1 Bestätigung ausstellen' }).click();
-    await expect(step(page, 'result')).toHaveAttribute('aria-current', 'step', { timeout: 20_000 });
-    await expect(page.getByTestId('run-summary')).toHaveText('1 von 1 Bestätigung ausgestellt');
+    await finished(page, 20_000);
+    await expect(page.getByTestId('run-summary')).toHaveText('1 ausgestellt, 3 übersprungen'); // 14 A4
     // Dazu der abgeschlossene Serienlauf des Vorjahrs aus dem Seed — eine Zeile, die hier immer mitzählt.
     const rows = page.getByTestId('run-row');
     await expect(rows).toHaveCount(3);
@@ -248,8 +259,9 @@ test.describe('finance donation run', () => {
     // ihn von diesem Lauf, der noch keinen trägt.
     const row = page.getByTestId('run-row');
     await expect(row).toHaveCount(2);
-    await row.filter({ hasNotText: 'Post' }).getByRole('link', { name: 'Öffnen' }).click();
-    await expect(page.getByTestId('run-summary')).toHaveText('4 von 4 Bestätigungen ausgestellt');
+    // 09 B17: Das Jahr in der ersten Spalte öffnet den Lauf.
+    await row.filter({ hasNotText: 'Post' }).getByRole('link').first().click();
+    await expect(page.getByTestId('run-summary')).toHaveText('4 ausgestellt, 4 übersprungen'); // 14 A4
     await expect(page.getByRole('button', { name: 'Maschinelle Bestätigungen (PDF) · 2' })).toBeEnabled();
     await expect(page.getByRole('button', { name: 'Versand für alle vermerken' })).toHaveCount(0);
   });

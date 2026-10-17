@@ -1,15 +1,16 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
+import { FixedValue } from '@/components/fixed-value';
 import { type ChangeEvent, useActionState, useState, useTransition } from 'react';
 import { Notice } from '@/components/notice';
 import { FormActionBar } from '@/components/forms/form-action-bar';
 import { useActionFeedback } from '@/components/forms/use-action-feedback';
-import { StatusBadge } from '@/components/status-badge';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
+import { KeyLine } from '@/components/key-line';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { MutedMark, RowButton, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { idleState } from '@/lib/actions';
 import { cn } from '@/lib/utils';
 import { createDocumentTypeAction, deleteDocumentTypeAction, updateDocumentTypeAction } from './actions';
@@ -19,6 +20,8 @@ import { FormField } from '@/components/forms/form-field';
 import { FormGrid } from '@/components/forms/form-grid';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Section } from '@/components/section';
+import { nameOrEmpty } from '@/lib/name-or-empty';
+import { RowMenu } from '@/components/row-menu';
 
 export interface DocumentTypeItem {
   key: string;
@@ -62,12 +65,16 @@ export function TypesPanel({
   areas?: AreaItem[];
 }) {
   const t = useTranslations('dms.admin');
+  const tMuted = useTranslations('common.muted');
   const tDms = useTranslations('dms');
   const tCommon = useTranslations('common');
   const tPerm = useTranslations('permissions.keys');
-  // Das Label eines Bereichs bringt das Modul mit, das ihn anmeldet (`dms.areas.<key>`); ohne fällt es auf den Schlüssel zurück.
-  const areaLabel = (key: string) => (tDms.has(`areas.${key}`) ? tDms(`areas.${key}`) : key);
-  const permissionLabel = (permission: string) => (tPerm.has(`${permission}.label`) ? tPerm(`${permission}.label`) : permission);
+  const tModules = useTranslations('modules.names');
+  // Stufe 1, Auftrag 6: der Name des Moduls, nie sein Schlüssel.
+  const moduleName = (key: string) => nameOrEmpty(tModules.has(key) ? tModules(key) : null, key);
+  // Das Label eines Bereichs bringt das Modul mit, das ihn anmeldet (`dms.areas.<key>`); ohne steht „—“, nie der Schlüssel.
+  const areaLabel = (key: string) => nameOrEmpty(tDms.has(`areas.${key}`) ? tDms(`areas.${key}`) : null, key);
+  const permissionLabel = (permission: string) => nameOrEmpty(tPerm.has(`${permission}.label`) ? tPerm(`${permission}.label`) : null, permission);
 
   const [createOpen, setCreateOpen] = useState(false);
   const [editingType, setEditingType] = useState<DocumentTypeItem | null>(null);
@@ -165,50 +172,50 @@ export function TypesPanel({
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>{t('typeColumns.prefix')}</TableHead>
-              <TableHead>{t('typeColumns.label')}</TableHead>
-              <TableHead>{t('typeColumns.direction')}</TableHead>
+              <TableHead col="meta">{t('typeColumns.prefix')}</TableHead>
+              <TableHead col="title">{t('typeColumns.label')}</TableHead>
+              <TableHead col="meta">{t('typeColumns.direction')}</TableHead>
               <TableHead>{t('typeColumns.retention')}</TableHead>
-              <TableHead>{t('typeColumns.folder')}</TableHead>
-              <TableHead>{t('typeColumns.status')}</TableHead>
-              <TableHead className="text-right">{t('typeColumns.actions')}</TableHead>
+              {/* Zeilenaktionen im ⋯-Menü (Joe 11.8); der Kopf ist nur für Vorleser da (112). */}
+              <TableHead col="actions" className="w-11"><span className="sr-only">{t('typeColumns.actions')}</span></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {types.map((row, i) => (
-              <TableRow key={row.key}>
-                <TableCell className="font-mono font-semibold text-ink">{row.prefix}</TableCell>
-                {/* Schlüssel als zweite Zeile unter der Bezeichnung: acht Spalten scrollten auf der standard-Seite waagerecht (K9-Befund 8). */}
-                <TableCell>
-                  <span className="text-ink">{row.label}</span>
-                  <span className="block font-mono text-hint text-muted-ink">{row.key}</span>
+              <TableRow key={row.key} muted={row.isActive ? undefined : tMuted('deactivated')}>
+                {/* Präfix ist eine Kennung: mono, aber nicht fett (11-1 B14). */}
+                <TableCell col="meta" className="font-mono text-ink">{row.prefix}</TableCell>
+                {/* Schlüssel als `KeyLine` unter der Bezeichnung (11-1 B9); acht Spalten scrollten auf der standard-Seite waagerecht (K9-Befund 8). */}
+                <TableCell col="title" mutedMark="inline">
+                  <RowButton
+                    aria-haspopup="dialog"
+                    onClick={() => {
+                      setAreaValue(row.protectionArea ?? '');
+                      setEditingType(row);
+                    }}
+                  >
+                    {row.label}
+                  </RowButton>
+                  <MutedMark />
+                  <KeyLine>{row.key}</KeyLine>
                 </TableCell>
-                <TableCell className="text-ink-2">{tDms(`directions.${row.defaultDirection}`)}</TableCell>
+                <TableCell col="meta" className="text-ink-2">{tDms(`directions.${row.defaultDirection}`)}</TableCell>
                 <TableCell className="text-ink-2">{t(`retentionClasses.${row.retentionClass}`)}</TableCell>
-                <TableCell className="text-ink-2">{row.defaultFolder ?? '—'}</TableCell>
-                <TableCell>
-                  <StatusBadge tone={row.isActive ? 'success' : 'neutral'}>
-                    {row.isActive ? t('active') : t('inactive')}
-                  </StatusBadge>
-                </TableCell>
-                <TableCell className="text-right">
-                  <div className="flex items-center justify-end gap-1">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        setAreaValue(row.protectionArea ?? '');
-                        setEditingType(row);
-                      }}
-                    >
-                      {t('edit')}
-                    </Button>
-                    {row.deletable ? (
-                      <Button variant="ghost" size="sm" onClick={() => setTypeToDelete(row)}>
-                        {t('delete')}
-                      </Button>
-                    ) : null}
-                  </div>
+                <TableCell col="actions" className="text-right">
+                  <RowMenu
+                    name={row.label}
+                    items={[
+                      {
+                        key: 'edit',
+                        label: t('edit'),
+                        onSelect: () => {
+                          setAreaValue(row.protectionArea ?? '');
+                          setEditingType(row);
+                        },
+                      },
+                      { key: 'delete', label: t('delete'), kind: 'delete', hidden: !row.deletable, onSelect: () => setTypeToDelete(row) },
+                    ]}
+                  />
                 </TableCell>
               </TableRow>
             ))}
@@ -305,24 +312,23 @@ export function TypesPanel({
 
               <Section title={t('typeSections.identity')}>
                 <FormGrid>
-                  <FormField id="edit-key" label={t('typeColumns.key')} hint={t('typeImmutableHint')} size="s">
-                    <Input id="edit-key" value={editingType.key} disabled />
+                  {/* Schlüssel und Kürzel eines Moduls stehen fest: fester Wert statt gesperrtem Feld (E2). */}
+                  <FixedValue id="edit-key" label={t('typeColumns.key')} value={editingType.key} reason={t('typeImmutableHint')} mono size="s" />
+                  {editingType.ownerModule ? (
+                    <FixedValue id="edit-prefix" label={t('typeColumns.prefix')} value={editingType.prefix} reason={t('ownedByModule', { module: moduleName(editingType.ownerModule) })} mono size="s" />
+                  ) : (
+                  <FormField id="edit-prefix" label={t('typeColumns.prefix')} hint={t('prefixHint')} size="s">
+                    <Input
+                      id="edit-prefix"
+                      name="prefix"
+                      maxLength={3}
+                      className="font-mono"
+                      defaultValue={editingType.prefix}
+                      required
+                      onChange={toUpper}
+                    />
                   </FormField>
-                  <FormField id="edit-prefix" label={t('typeColumns.prefix')} hint={editingType.ownerModule ? undefined : t('prefixHint')} size="s">
-                    {editingType.ownerModule ? (
-                      <Input id="edit-prefix" value={editingType.prefix} disabled />
-                    ) : (
-                      <Input
-                        id="edit-prefix"
-                        name="prefix"
-                        maxLength={3}
-                        className="font-mono"
-                        defaultValue={editingType.prefix}
-                        required
-                        onChange={toUpper}
-                      />
-                    )}
-                  </FormField>
+                  )}
                   <FormField id="edit-label" label={t('typeColumns.label')}>
                     <Input id="edit-label" name="label" defaultValue={editingType.label} required />
                   </FormField>
@@ -330,7 +336,7 @@ export function TypesPanel({
               </Section>
               <Section title={t('typeSections.filing')}>
                 {editingType.ownerModule ? (
-                  <p className="mt-3 text-meta text-muted-ink">{t('ownedByModule', { module: editingType.ownerModule })}</p>
+                  <p className="mt-3 text-meta text-muted-ink">{t('ownedByModule', { module: moduleName(editingType.ownerModule) })}</p>
                 ) : null}
                 <div className="mt-3">
                   <FormGrid>

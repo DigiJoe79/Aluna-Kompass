@@ -2,7 +2,9 @@
 
 import { Download } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import type { ReactNode } from 'react';
 import { RefusalNotice } from '@/components/forms/refusal-notice';
+import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
 import { useFileDownload } from '@/lib/use-file-download';
 
@@ -22,5 +24,53 @@ export function ProfileExportButton({ ids, size }: { ids: readonly string[]; siz
         {busy ? t('running') : t('export')}
       </Button>
     </div>
+  );
+}
+
+/**
+ * Seitenkopf des Tiers mit „Als PDF“ als Nebenaktion (`PageHeader more`; Runde 3, 018): ab `sm` der Knopf, am Telefon
+ * ein Eintrag im ⋯ neben „Löschen …“. Die Ablehnung steht über den Kopfaktionen (MUSTER A). Client, weil der Auslöser
+ * eine Funktion ist; Titel, Rückweg und die übrigen Aktionen (`children`) reicht die Seite durch.
+ */
+export function AnimalPageHeader({
+  id,
+  canExport,
+  title,
+  description,
+  back,
+  children,
+}: {
+  id: string;
+  canExport: boolean;
+  title: string;
+  description?: string;
+  back: { href: string; label: string };
+  children?: ReactNode;
+}) {
+  const t = useTranslations('animals.print');
+  const { busy, refusal, download } = useFileDownload({ forbidden: t('refused.forbidden'), notFound: t('refused.notFound'), failed: t('refused.failed') });
+  return (
+    <PageHeader
+      title={title}
+      description={description}
+      back={back}
+      more={[
+        {
+          key: 'export',
+          label: busy ? t('running') : t('export'),
+          icon: <Download className="size-4" aria-hidden />,
+          disabled: busy,
+          onSelect: () => void download(`/animals/export?ids=${id}`, 'profile.pdf'),
+          hidden: !canExport,
+          testId: 'animals-export',
+        },
+      ]}
+      actions={
+        <>
+          <RefusalNotice action state={refusal} />
+          {children}
+        </>
+      }
+    />
   );
 }

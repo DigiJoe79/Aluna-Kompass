@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogFooter, DialogTitle } from '@/components/u
 import { Input } from '@/components/ui/input';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { createContactFromTransactionAction } from './actions';
+import { contactKindFromName } from '@/lib/finance/work-dialogs';
 import { FormField } from '@/components/forms/form-field';
 import { FormCell, FormGrid } from '@/components/forms/form-grid';
 
@@ -39,7 +40,8 @@ export function ContactDialog({
 }) {
   const t = useTranslations('finance.work.contact');
   const tCommon = useTranslations('common');
-  const [kind, setKind] = useState<'person' | 'organization'>('person');
+  // 067: Eine Rechtsform im Namen belegt „Organisation“ vor.
+  const [kind, setKind] = useState<'person' | 'organization'>(contactKindFromName(counterpartyName));
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [name, setName] = useState(counterpartyName ?? '');
@@ -49,7 +51,7 @@ export function ContactDialog({
 
   useEffect(() => {
     if (!open) return;
-    setKind('person');
+    setKind(contactKindFromName(counterpartyName));
     setFirstName('');
     setLastName('');
     setName(counterpartyName ?? '');
@@ -77,7 +79,8 @@ export function ContactDialog({
             <p className="text-ink-2">{t('intro')}</p>
             {kind === 'person' && counterpartyName ? <p className="text-ink-2">{t('fromCounterparty', { name: counterpartyName })}</p> : null}
             <FormGrid>
-              <FormCell as={RadioGroup} aria-label={t('kind')} value={kind} onValueChange={(value) => setKind(value as 'person' | 'organization')} size="m" className="flex-row gap-4">
+              {/* 07-1 B27: Die Art steht in einer eigenen Zeile, nicht neben „Vorname“. */}
+              <FormCell as={RadioGroup} aria-label={t('kind')} value={kind} onValueChange={(value) => setKind(value as 'person' | 'organization')} size="full" className="flex-row gap-4">
                 {(['person', 'organization'] as const).map((k) => (
                   <label key={k} className="flex items-center gap-2">
                     <RadioGroupItem value={k} />

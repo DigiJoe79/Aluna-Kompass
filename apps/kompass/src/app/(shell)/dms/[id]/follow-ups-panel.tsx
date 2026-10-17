@@ -151,7 +151,8 @@ export function FollowUpsPanel({
                   </FormField>
                   <FormField id="assigneeUserId" label={t('assignee')}>
                     <Select id="assigneeUserId" name="assigneeUserId" defaultValue="">
-                      <option value="">{t('everyone')}</option>
+                      {/* `null` heißt: niemand Bestimmtes zuständig — nicht „alle“ (03 B37, Joe 2026-10-16). */}
+                      <option value="">{t('unassigned')}</option>
                       {users.map((user) => (
                         <option key={user.id} value={user.id}>
                           {user.name}

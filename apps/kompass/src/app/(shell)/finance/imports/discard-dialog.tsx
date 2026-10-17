@@ -34,6 +34,9 @@ export function DiscardRunDialog({ open, onOpenChange, run }: { open: boolean; o
   const router = useRouter();
   const [loaded, setLoaded] = useState<Loaded>({ state: 'loading' });
   const [note, setNote] = useState('');
+  // 07-1 B29 (§ B): Speichern bleibt frei; fehlt die Notiz, steht der Fehler am Feld.
+  const [missing, setMissing] = useState(false);
+  const tFields = useTranslations('errors.fields');
   const [pending, start] = useTransition();
   const feedback = useActionFeedback();
   const resetFeedback = feedback.reset;
@@ -41,6 +44,7 @@ export function DiscardRunDialog({ open, onOpenChange, run }: { open: boolean; o
   useEffect(() => {
     if (!open || !run) return;
     setNote('');
+    setMissing(false);
     resetFeedback();
     setLoaded({ state: 'loading' });
     void previewDiscardRunAction(run.id).then((preview) => setLoaded(preview ? { state: 'ready', preview } : { state: 'failed' }));
@@ -63,8 +67,8 @@ export function DiscardRunDialog({ open, onOpenChange, run }: { open: boolean; o
           <>
             <ConsequenceList
               items={[
-                { number: preview.rawTransactions, label: t('consequence.rawTransactions', { count: preview.rawTransactions }) },
-                { number: preview.drafts, label: t('consequence.drafts', { count: preview.drafts, reviewed: preview.reviewedDrafts }) },
+                { label: t('consequence.rawTransactions', { count: preview.rawTransactions }), count: preview.rawTransactions },
+                { label: t('consequence.drafts', { count: preview.drafts, reviewed: preview.reviewedDrafts }), count: preview.drafts },
               ]}
               stays={preview.vouchersKept > 0 ? [t('stays.vouchers', { count: preview.vouchersKept })] : undefined}
             />
@@ -85,8 +89,17 @@ export function DiscardRunDialog({ open, onOpenChange, run }: { open: boolean; o
               </div>
             ) : (
               <FormGrid>
-                <FormField id="discardNote" label={t('noteLabel')} required size="l">
-                  <Textarea id="discardNote" required value={note} onChange={(e) => setNote(e.target.value)} rows={2} />
+                <FormField id="discardNote" label={t('noteLabel')} required size="l" error={missing ? tFields('required') : undefined}>
+                  <Textarea
+                    id="discardNote"
+                    required
+                    value={note}
+                    onChange={(e) => {
+                      setNote(e.target.value);
+                      setMissing(false);
+                    }}
+                    rows={2}
+                  />
                 </FormField>
               </FormGrid>
             )}
@@ -106,17 +119,21 @@ export function DiscardRunDialog({ open, onOpenChange, run }: { open: boolean; o
             cancel={() => onOpenChange(false)}
             destructive
             pending={pending}
-            saveDisabled={!preview || note.trim().length === 0}
+            saveDisabled={!preview}
             saveLabel={tCommon('discard')}
             state={feedback.state}
-            onSave={() =>
+            onSave={() => {
+              if (note.trim().length === 0) {
+                setMissing(true);
+                return;
+              }
               start(async () => {
                 const result = await feedback.run(() => discardRunAction(run.id, note));
                 if (result.status !== 'success') return;
                 onOpenChange(false);
                 router.refresh();
-              })
-            }
+              });
+            }}
           />
         )}
       </DialogContent>

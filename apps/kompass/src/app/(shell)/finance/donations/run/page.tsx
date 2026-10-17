@@ -143,7 +143,7 @@ export default async function DonationRunPage({ searchParams }: { searchParams: 
   }
 
   return (
-    <Page width="standard" header={<PageHeader title={t('title')} description={t('description')} />}>
+    <Page width="full" header={<PageHeader title={t('title')} description={t('description')} />}>
       <div className="space-y-6">
         <div className="space-y-4">{body}</div>
         <RunsList runs={runs} currentId={run?.id ?? null} footer={runsPager} />

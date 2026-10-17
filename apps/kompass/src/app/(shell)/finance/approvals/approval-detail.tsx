@@ -9,6 +9,7 @@ import { Notice } from '@/components/notice';
 import { Button } from '@/components/ui/button';
 import { Select } from '@/components/ui/select';
 import { useDateFormat } from '@/components/date-format-provider';
+import { ibanLastFour, maskedIban } from '@/lib/finance/iban-check';
 import { formatEuro } from '@/lib/finance/amount';
 import { approveInput, type ApprovalDecision } from '@/lib/finance/expenses';
 import { cn } from '@/lib/utils';
@@ -17,6 +18,7 @@ import { RejectDialog } from './reject-dialog';
 import { WaiverChecks, type WaiverState } from './waiver-checks';
 import { FormField } from '@/components/forms/form-field';
 import { FormGrid } from '@/components/forms/form-grid';
+import { pdfFrameSrc } from '@/lib/pdf-frame-src';
 
 /** Ob in dieser Sitzung schon ein Antrag rechts stand — erst ab dem zweiten wandert der Fokus auf den Kopf. */
 let shownBefore = false;
@@ -54,6 +56,7 @@ export function ApprovalDetail({
   today: string;
 }) {
   const t = useTranslations('finance.approvals');
+  const tFinance = useTranslations('finance.common');
   const tCommon = useTranslations('common');
   const tRow = useTranslations('finance.splitRow');
   const fmt = useDateFormat();
@@ -158,7 +161,7 @@ export function ApprovalDetail({
                     {p.projectId && projects[p.projectId] ? ` · ${t('project', { name: projects[p.projectId]! })}` : ''}
                   </p>
                 </div>
-                <span className="shrink-0 font-mono text-section tabular-nums">{formatEuro(p.amountCents)}</span>
+                <span className="shrink-0 text-section tabular-nums">{formatEuro(p.amountCents)}</span>
               </div>
 
               <FormGrid>
@@ -193,7 +196,9 @@ export function ApprovalDetail({
               </FormGrid>
 
               {suggestion && suggestion.categoryId !== decision.categoryId ? (
-                <p data-testid="category-suggestion" className="flex flex-wrap items-center gap-x-2 gap-y-1 text-hint text-muted-ink">
+                // Ein Muster für „Vorschlag, weil …“: die Fläche im Ton `agent` wie in der Arbeitsliste (064, 070), „übernehmen“
+                // als unterstrichener Textlink im Satz (Runde 3, 103).
+                <p data-testid="category-suggestion" className="flex flex-wrap items-baseline gap-x-2 gap-y-1 rounded-md bg-agent-bg px-3 py-2 text-meta text-agent">
                   <span>
                     {t('suggestion.because')}{' '}
                     {suggestion.reason.kind === 'rule'
@@ -204,7 +209,7 @@ export function ApprovalDetail({
                     {' → '}
                     {categoryName(suggestion.categoryId)}
                   </span>
-                  <Button type="button" variant="link" size="xs" onClick={() => decide(p.id, { categoryId: suggestion.categoryId })}>
+                  <Button type="button" variant="link" size="xs" className="h-auto px-0 text-meta font-semibold text-agent underline underline-offset-2" onClick={() => decide(p.id, { categoryId: suggestion.categoryId })}>
                     {t('suggestion.take')}
                   </Button>
                 </p>
@@ -223,10 +228,11 @@ export function ApprovalDetail({
     </section>
   );
 
+  // Höhe nach der Seite, Seite auf Breite wie in der Akte: keine dunkle Fläche des Betrachters (Runde 3, 103; 030–035).
   const receiptPane = preview?.documentId ? (
     <figure data-testid="receipt-preview" className="hidden space-y-1 lg:block">
       <figcaption className="text-hint text-muted-ink">{t('receipt.preview', { n: claim.positions.indexOf(preview) + 1 })}</figcaption>
-      <iframe title={t('receipt.preview', { n: claim.positions.indexOf(preview) + 1 })} src={receiptHref(preview.documentId)} className="h-[520px] w-full rounded-md border border-line bg-paper" />
+      <iframe title={t('receipt.preview', { n: claim.positions.indexOf(preview) + 1 })} src={pdfFrameSrc(receiptHref(preview.documentId), { fit: 'width' })} className="aspect-[210/297] w-full rounded-md border border-line bg-paper" />
     </figure>
   ) : null;
 
@@ -263,7 +269,7 @@ export function ApprovalDetail({
           amount,
           person: claim.contactName,
           received: t('head.receivedAt', { at: fmt.dateTime(claim.submittedAt) }),
-          note: claim.waiver ? t('head.noIban') : claim.ibanMasked ? t('head.iban', { iban: claim.ibanMasked }) : undefined,
+          note: claim.waiver ? t('head.noIban') : claim.ibanMasked ? t.rich('head.iban', { iban: () => maskedIban(claim.ibanMasked!, tFinance('ibanEndsWith', { last: ibanLastFour(claim.ibanMasked!) })) }) : undefined,
         }}
         requirements={
           claim.waiver && checks ? (

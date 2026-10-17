@@ -120,6 +120,14 @@ type BaseProps = {
    * zurückwill, bricht ab und öffnet neu. Wächter `patterns/hide-discard.test.ts` hält die Option dort.
    */
   hideDiscard?: boolean;
+  /**
+   * Fuß eines Assistenten (Entwurf E3, Designer 2026-10-17): links „← Zurück“ (im ersten Schritt unsichtbar, damit
+   * nichts springt), daneben „Schritt n von m“ statt des Zählers — „Weiter“ speichert den Schritt —, rechts
+   * „Abbrechen“ (`back`) und der Primärknopf (`onSave`, `saveLabel` nennt im letzten Schritt die Handlung). Klebt wie
+   * auf einer Seite; ab Schritt 2 fragt Verlassen nach.
+   */
+  variant?: 'wizard';
+  wizard?: { step: number; total: number; onBack: () => void };
 };
 
 /**
@@ -180,8 +188,11 @@ export function FormActionBar({
   note,
   extraActions,
   hideDiscard = false,
+  variant,
+  wizard: wizardProp,
   recordAction,
 }: FormActionBarProps) {
+  const wizard = variant === 'wizard' ? wizardProp : undefined;
   const t = useTranslations('common');
   const anchor = useRef<HTMLDivElement>(null);
   const initial = useRef<Snapshot | null>(null);
@@ -200,12 +211,12 @@ export function FormActionBar({
   const [nothing, setNothing] = useState(false);
   // Eigene Eingaben aus einem Versionskonflikt (Neuladen mit „neben den neuen Stand legen“), gegen den jetzt gespeicherten Stand.
   const [compare, setCompare] = useState<{ label: string; yours: string; current: string }[] | null>(null);
-  const blocks = mode === 'edit' && placement === 'page' && changed === 0;
+  const blocks = !wizard && mode === 'edit' && placement === 'page' && changed === 0;
   // Ob die Leiste gerade klebt — nur dann trägt sie einen Schatten (Designer 2026-10-08).
   const [stuck, setStuck] = useState(false);
   // Rückfrage beim Verlassen: nur auf einer Seite, nur mit Ungespeichertem. Ausführen hat nichts zu verlieren, eine
   // laufend gesicherte Maske (`status`) hat es schon gesichert, ein Dialog führt mit „Abbrechen“ nirgendwohin.
-  const guarded = placement === 'page' && mode !== 'run' && !status && changed > 0;
+  const guarded = wizard ? wizard.step > 1 : placement === 'page' && mode !== 'run' && !status && changed > 0;
   const [leaveTo, setLeaveTo] = useState<HTMLAnchorElement | null>(null);
   // Der eigene Weg hinaus (Verwerfen lädt neu, der Konflikt auch, „Seite verlassen“ klickt den Link) fragt nicht.
   const leaving = useRef(false);
@@ -259,7 +270,10 @@ export function FormActionBar({
     // In der Einfangphase am Dokument: vor dem Router (`next/link` horcht an der React-Wurzel).
     const onClick = (event: MouseEvent) => {
       if (leaving.current) return;
-      const link = leavingLink(event, window.location, anchor.current?.closest('[data-slot="form-card"]') ?? anchor.current?.closest('form'));
+      // `data-form-scope`: ein Bereich um die Karte, dessen Links auf dieselbe Seite die Eingaben behalten (Reiter der
+      // Stammdaten über der Karte, Runde 3, 149).
+      const scope = anchor.current?.closest('[data-form-scope]') ?? anchor.current?.closest('[data-slot="form-card"]') ?? anchor.current?.closest('form');
+      const link = leavingLink(event, window.location, scope);
       if (!link) return;
       event.preventDefault();
       // Auch andere Leisten derselben Seite fragen nicht ein zweites Mal.
@@ -279,9 +293,17 @@ export function FormActionBar({
     window.location.reload();
   };
 
-  // Die Legende erklärt das Sternchen an den Feldern — nur dort, wo eines steht.
+  // Stern ⇔ Fußhinweis (Designer Runde 3: 034, 040, 094, 186, 188): Die Legende erklärt das Sternchen an den Feldern —
+  // genau dann, wenn eines im Formular bzw. Dialog steht. Felder erscheinen bedingt, darum horcht ein Beobachter mit.
   useEffect(() => {
-    setHasRequired(!!anchor.current?.closest('form')?.querySelector('[required]'));
+    const scope = anchor.current?.closest('form, [data-slot="dialog-content"], [data-slot="sheet-content"]');
+    if (!scope) return;
+    const check = () => setHasRequired(!!scope.querySelector('[data-slot="label-required"]'));
+    check();
+    if (typeof MutationObserver === 'undefined') return;
+    const observer = new MutationObserver(check);
+    observer.observe(scope, { childList: true, subtree: true });
+    return () => observer.disconnect();
   }, []);
 
   useEffect(() => {
@@ -361,16 +383,26 @@ export function FormActionBar({
         }
       : state;
 
-  const showDiscard = !(hideDiscard || cancel || mode === 'run' || (onSave && !onDiscard && count === undefined));
+  // Der Zähler nur beim Bearbeiten: Beim Anlegen ist jede Eingabe neu, dort steht die Pflichtfeld-Legende (Designer
+  // Stufe 2 Nr. 7). Die Rückfrage beim Verlassen (`guarded`) zählt trotzdem mit. Ein bestehender Datensatz
+  // (`loadedVersion`), der nur `create` nutzt, damit er auch ohne Änderung abschickt (Prüfung der Tiere, Entwurf einer
+  // Buchung), zählt weiter.
+  const counts = mode === 'edit' || (mode === 'create' && loadedVersion !== undefined);
+  // „Verwerfen“ nur mit Änderungen an einem bestehenden Datensatz, nie beim Anlegen — dort gibt es nur „Abbrechen“
+  // (Designer 2026-10-16, Teil 2 Nr. 1). Ohne Änderung wäre der Knopf ein Versprechen, das ins Leere greift. Seit Runde 3
+  // (087, 091) ohne Ausnahme, auch in der Buchungsmaske.
+  const canDiscard = !(hideDiscard || cancel || mode === 'run' || (onSave && !onDiscard && count === undefined));
+  const showDiscard = !wizard && canDiscard && counts && changed > 0;
   // Nur einer der beiden Nebenknöpfe: Am Telefon nimmt er die ganze Zeile.
   const lone = Number(showDiscard) + Number(!!(cancel || back)) === 1;
-
-  const line =
+  // Runde 3, 083/085: „Schritt n von m“ sagt der Schrittbalken (`Steps`) über dem Assistenten — auf jeder Breite; der
+  // Fuß wiederholt es nicht und zeigt auch keinen Zähler.
+  const main = wizard ? null :
     nothing ? (
       <span aria-live="polite" className="text-meta text-ink-2">
         {t('nothingChanged')}
       </span>
-    ) : mode !== 'run' && changed > 0 && !countHidden ? (
+    ) : counts && changed > 0 && !countHidden ? (
       <span aria-live="polite" className="text-meta font-semibold text-warning">
         {t('changesPending', { count: changed })}
       </span>
@@ -378,9 +410,16 @@ export function FormActionBar({
       <div className="text-meta text-ink-2">{note}</div>
     ) : status ? (
       <SaveStatus state={status.state} pending={status.pending} />
-    ) : hasRequired ? (
-      <span className="text-hint text-muted-ink">{t('requiredLegend')}</span>
     ) : null;
+  const legend = !wizard && hasRequired ? <span className="text-hint text-muted-ink">{t('requiredLegend')}</span> : null;
+  const line = main && legend ? (
+    <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+      {main}
+      {legend}
+    </div>
+  ) : (
+    main ?? legend
+  );
 
   return (
     // `px-5` wie das Polster von Formularkarte und Dialog (20 px, docs/MUSTER.md § I): Zähler und „Speichern“
@@ -389,6 +428,7 @@ export function FormActionBar({
     <div
       ref={anchor}
       data-slot="form-action-bar"
+      data-placement={placement}
       data-testid={testId}
       data-stuck={placement === 'page' && stuck ? '' : undefined}
       className={cn(
@@ -401,7 +441,7 @@ export function FormActionBar({
           <Notice level="hint" title={t('conflict.compareTitle')}>
             <BeforeAfter layout="cards" columnLabels={{ before: t('conflict.yours'), after: t('conflict.current') }} rows={compare.map((row) => ({ label: row.label, before: row.yours, after: row.current }))} />
             <div className="pt-2">
-              <Button type="button" variant="ghost" onClick={() => setCompare(null)}>
+              <Button type="button" variant="outline" onClick={() => setCompare(null)}>
                 {t('conflict.dismiss')}
               </Button>
             </div>
@@ -419,6 +459,18 @@ export function FormActionBar({
           <div className="max-sm:order-last max-sm:mt-3">
             <RecordActions actions={recordActions} single="button" />
           </div>
+        ) : null}
+        {wizard ? (
+          <Button
+            type="button"
+            variant="outline"
+            className={cn('max-sm:order-last', wizard.step <= 1 && 'invisible')}
+            aria-hidden={wizard.step <= 1 || undefined}
+            tabIndex={wizard.step <= 1 ? -1 : undefined}
+            onClick={wizard.onBack}
+          >
+            {t('wizardBack')}
+          </Button>
         ) : null}
         {line}
         {/*
@@ -447,8 +499,6 @@ export function FormActionBar({
               type="button"
               variant="ghost"
               className={cn('max-sm:order-3', lone && 'max-sm:col-span-2')}
-              // Ohne Änderungen wäre der Knopf ein Versprechen, das ins Leere greift.
-              disabled={changed === 0}
               onClick={() => (onDiscard ? onDiscard() : reload())}
             >
               {t('discard')}
@@ -495,7 +545,7 @@ export function FormActionBar({
             if (!open) setLeaveTo(null);
           }}
           title={t('leave.title')}
-          description={t('leave.description', { count: changed })}
+          description={wizard ? t('leave.wizardDescription') : t('leave.description', { count: changed })}
           confirmLabel={t('leave.confirm')}
           destructive
           action={async () => {

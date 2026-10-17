@@ -12,7 +12,6 @@ const ALLOWED: Allowlist = {
   'components/ui/table.tsx': 'Hier steht der Standard.',
   'app/(shell)/admin/locales/locales-client.tsx': 'Raster aus `div` mit Zeilen zum Umsortieren, keine Tabelle.',
   'app/(shell)/admin/roles/role-editor.tsx': 'Raster aus `div` (Rechte-Matrix mit Beschriftungen), keine Tabelle.',
-  'app/(shell)/admin/finance/permissions-panel.tsx': 'Köpfe der Rechte-Gruppen als `div`-Bänder über einer Tabelle.',
   'app/(shell)/admin/themes/theme-editor.tsx': 'Raster aus `div` für die Farbwerte, keine Tabelle.',
   'app/(shell)/admin/themes/theme-preview.tsx': 'Vorschau, die einen Tabellenkopf nachbildet, um die Theme-Farben zu zeigen.',
   'components/shell/rail.tsx': '`h-[52px]` ist die Höhe eines Navigationspunkts, keine Tabellenzeile.',

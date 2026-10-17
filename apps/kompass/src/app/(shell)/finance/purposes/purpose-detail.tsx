@@ -17,6 +17,7 @@ import { formatEuro } from '@/lib/finance/amount';
 import { fulfillPurposeAction, purposeMovementsAction, reopenPurposeAction } from './actions';
 import { ReopenDialog } from './reopen-dialog';
 import { SectionHeading, Section } from '@/components/section';
+import { Empty } from '@/components/empty-value';
 
 /**
  * Detail eines Zwecks (Designer-README 4c): Kopf mit Projekt, Ziel und Bezug;
@@ -76,9 +77,9 @@ export function PurposeDetail({
           <SectionHeading>{row.name}</SectionHeading>
           <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 text-meta">
             <dt className="text-muted-ink">{t('detail.project')}</dt>
-            <dd className="text-ink">{projectName ?? '—'}</dd>
+            <dd className="text-ink">{projectName ?? <Empty />}</dd>
             <dt className="text-muted-ink">{t('detail.target')}</dt>
-            <dd className="font-mono tabular-nums text-ink">{row.targetCents !== null ? formatEuro(row.targetCents) : t('detail.noTarget')}</dd>
+            <dd className="tabular-nums text-ink">{row.targetCents !== null ? formatEuro(row.targetCents) : t('detail.noTarget')}</dd>
             {row.referenceNote ? (
               <>
                 <dt className="text-muted-ink">{t('detail.reference')}</dt>
@@ -140,31 +141,31 @@ export function PurposeDetail({
                 <Table data-testid="purpose-movements">
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="px-3">{t('detail.movementColumns.date')}</TableHead>
-                      <TableHead className="px-3">{t('detail.movementColumns.entry')}</TableHead>
-                      <TableHead className="px-3">{t('detail.movementColumns.text')}</TableHead>
-                      <TableHead className="px-3">{t('detail.movementColumns.counterparty')}</TableHead>
-                      <TableHead className="px-3 text-right">{t('detail.movementColumns.amount')}</TableHead>
+                      <TableHead col="meta" className="px-3">{t('detail.movementColumns.date')}</TableHead>
+                      <TableHead col="meta" className="px-3">{t('detail.movementColumns.entry')}</TableHead>
+                      <TableHead col="title" className="px-3">{t('detail.movementColumns.text')}</TableHead>
+                      <TableHead col="meta" className="px-3">{t('detail.movementColumns.counterparty')}</TableHead>
+                      <TableHead col="amount" className="px-3 text-right">{t('detail.movementColumns.amount')}</TableHead>
                       <TableHead className="px-3 text-right">{t('detail.movementColumns.running')}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {movements.map((m, i) => (
                       <TableRow key={`${m.kind}-${m.entryId ?? m.transferId ?? 'cf'}-${i}`}>
-                        <TableCell className="px-3 text-ink-2">{fmt.date(m.date)}</TableCell>
-                        <TableCell className="px-3 font-mono text-hint">
+                        <TableCell col="meta" className="px-3 text-ink-2">{fmt.date(m.date)}</TableCell>
+                        <TableCell col="meta" className="px-3 font-mono text-hint">
                           {m.kind === 'line' && m.entryId ? (
                             <Link href={`/finance/entries/${m.entryId}`} className="underline-offset-2 hover:underline">
-                              {m.entryNumber ?? '—'}
+                              {m.entryNumber ?? <Empty />}
                             </Link>
                           ) : (
-                            <span className="text-muted-ink">{m.transferNumber ?? '—'}</span>
+                            <span className="text-muted-ink">{m.transferNumber ?? <Empty />}</span>
                           )}
                         </TableCell>
-                        <TableCell className="px-3 text-ink">{m.kind === 'line' ? m.text : m.text ? `${t(`movementKind.${m.kind}`)}: ${m.text}` : t(`movementKind.${m.kind}`)}</TableCell>
-                        <TableCell className="px-3 text-ink-2">{m.counterpartyName ?? '—'}</TableCell>
-                        <TableCell className="px-3 text-right font-mono tabular-nums">{formatEuro(m.amountCents)}</TableCell>
-                        <TableCell className="px-3 text-right font-mono tabular-nums">{formatEuro(m.runningBalanceCents)}</TableCell>
+                        <TableCell col="title" className="px-3 text-ink">{m.kind === 'line' ? m.text : m.text ? `${t(`movementKind.${m.kind}`)}: ${m.text}` : t(`movementKind.${m.kind}`)}</TableCell>
+                        <TableCell col="meta" className="px-3 text-ink-2">{m.counterpartyName ?? <Empty />}</TableCell>
+                        <TableCell col="amount" className="px-3 text-right tabular-nums">{formatEuro(m.amountCents)}</TableCell>
+                        <TableCell className="px-3 text-right tabular-nums">{formatEuro(m.runningBalanceCents)}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>

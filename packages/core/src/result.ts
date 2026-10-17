@@ -7,7 +7,7 @@ export type ValidationIssue = { path: string; message: string; params?: Record<s
 export type UnauthorizedReason = 'invalidCredentials' | 'locked' | 'inactive' | 'passwordChangeRequired' | 'throttled';
 
 /** Ein weiterer Grund eines Konflikts: Code und Schlüssel der Sprachdatei wie beim ersten. */
-export type ConflictReason = { code: string; messageKey: string; params?: Record<string, string | number> };
+export type ConflictReason = { code: string; messageKey: string; params?: Record<string, string | number>; amounts?: string[] };
 
 export type ServiceError =
   | { type: 'forbidden'; permission: string }
@@ -20,10 +20,15 @@ export type ServiceError =
       message: string;
       /**
        * Schlüssel in der Sprachdatei mit `reason` (Grund) und `remedy` (Abhilfe). Oberfläche und MCP setzen daraus
-       * denselben Text zusammen; `params` füllt die ICU-Platzhalter (Daten als `YYYY-MM-DD`, Beträge in Cent).
+       * denselben Text zusammen; `params` füllt die Platzhalter (Daten als `YYYY-MM-DD`, Beträge in Cent, siehe `amounts`).
        */
       messageKey?: string;
       params?: Record<string, string | number>;
+      /**
+       * Namen der `params`, die Beträge in Cent sind. Die Übersetzung schreibt sie über `formatEuro` (MUSTER § Beträge)
+       * und reicht den fertigen Text an den Platzhalter; `params` selbst bleiben in Cent (MCP). Nicht nach außen.
+       */
+      amounts?: string[];
       /** N6: weitere Gründe desselben Vorgangs (etwa alle fehlenden Voraussetzungen einer Freigabe) — Oberfläche und MCP nennen sie alle. */
       also?: ConflictReason[];
     }
@@ -38,9 +43,9 @@ export const fail = (error: ServiceError): Failure => ({ ok: false, error });
 export const forbidden = (permission: string): Failure => fail({ type: 'forbidden', permission });
 export const notFound = (entity: string, id: string): Failure => fail({ type: 'notFound', entity, id });
 export const conflict = (code: string, message: string): Failure => fail({ type: 'conflict', code, message });
-/** Ein Konflikt, dessen Text aus der Sprachdatei kommt (`<messageKey>.reason` und `.remedy`). */
-export const localizedConflict = (code: string, messageKey: string, params: Record<string, string | number> = {}): Failure =>
-  fail({ type: 'conflict', code, message: code, messageKey, params });
+/** Ein Konflikt, dessen Text aus der Sprachdatei kommt (`<messageKey>.reason` und `.remedy`); `amounts` nennt die Beträge in Cent. */
+export const localizedConflict = (code: string, messageKey: string, params: Record<string, string | number> = {}, amounts: string[] = []): Failure =>
+  fail({ type: 'conflict', code, message: code, messageKey, params, ...(amounts.length > 0 ? { amounts } : {}) });
 export const invalid = (issues: ValidationIssue[]): Failure => fail({ type: 'validation', issues });
 export const unauthorized = (
   reason: UnauthorizedReason,
@@ -55,7 +60,7 @@ export function combineConflicts(failures: readonly Failure[]): Failure | null {
   const [first, ...rest] = failures;
   if (!first) return null;
   if (first.error.type !== 'conflict') return first;
-  const also: ConflictReason[] = rest.flatMap((f) => (f.error.type === 'conflict' && f.error.messageKey ? [{ code: f.error.code, messageKey: f.error.messageKey, params: f.error.params ?? {} }] : []));
+  const also: ConflictReason[] = rest.flatMap((f) => (f.error.type === 'conflict' && f.error.messageKey ? [{ code: f.error.code, messageKey: f.error.messageKey, params: f.error.params ?? {}, ...(f.error.amounts ? { amounts: f.error.amounts } : {}) }] : []));
   return also.length > 0 ? fail({ ...first.error, also }) : first;
 }
 

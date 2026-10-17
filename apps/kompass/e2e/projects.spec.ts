@@ -45,7 +45,7 @@ test.describe('projects', () => {
   test('create with an external link, then publish from the list', async ({ page }) => {
     await page.goto('/projects');
     await page.getByRole('link', { name: 'Projekt anlegen' }).click();
-    await page.getByLabel('Slug (URL-Teil)').fill('grundversorgung');
+    await page.getByLabel('URL-Teil').fill('grundversorgung');
     await page.locator('[name="name.de"]').fill('Grundversorgung');
     await page.getByLabel('Typ').selectOption('ongoing');
     await page.getByRole('button', { name: 'Verweis hinzufügen' }).click();
@@ -60,7 +60,8 @@ test.describe('projects', () => {
     await expect(row).toContainText('Dauerprojekt');
     await expect(row).toContainText('Spendenseite');
     await row.getByRole('switch').click();
-    await expect(row).toContainText('Veröffentlicht');
+    // Der Schalter zeigt keinen Text mehr, nur seinen Zustand (Designer Stufe 2 Nr. 6d).
+    await expect(row.getByRole('switch')).toBeChecked();
     // Der Schalter liegt über der Zeilenfläche und öffnet das Projekt nicht nebenbei.
     await expect(page).toHaveURL(/\/projects$/);
 
@@ -72,6 +73,43 @@ test.describe('projects', () => {
     await expect(page).toHaveURL(/\/projects\/[A-Z0-9]+$/);
   });
 
+  // Durchsicht 0.2.11 (06 A2, 06 B8, 06 B12, 14 B15): Die Spalte des Schalters heißt „Webseite“, der Typ steht als Text
+  // statt Marke, und die Spalte der Pfeile hat einen (unsichtbaren) Kopf. Lauf 3 (Joe 11.8, 061): keine Statusspalte,
+  // ein abgeschlossenes Projekt ist die gedämpfte Zeile mit Marke hinter dem Namen.
+  test('Liste: „Webseite“ für den Schalter, Typ als Text, keine Statusspalte, Kopf über den Pfeilen', async ({ page }) => {
+    await page.goto('/projects');
+    await expect(page.getByRole('columnheader', { name: 'Webseite' })).toBeVisible();
+    await expect(page.getByRole('columnheader', { name: 'Reihenfolge' })).toHaveCount(1);
+    await expect(page.getByRole('columnheader', { name: 'Status' })).toHaveCount(0);
+    const row = page.getByRole('row', { name: /Kastrationsaktion 2026/ });
+    await expect(row).not.toContainText('Aktiv');
+    // Der Typ steht als Text direkt in der Zelle, nicht in einer Marke.
+    await expect(row.getByRole('cell', { name: /^(Dauerprojekt|Kurzzeitprojekt)$/ }).locator('span')).toHaveCount(0);
+  });
+
+  // E1 „Tabelle am Telefon“ (Designer 2026-10-17): Unter `md` ist jede Zeile eine Karte; die Liste scrollt nie
+  // seitlich, sortiert wird über „Sortieren: …“. Der Schalter „Webseite“ steht am Telefon nicht in der Karte, ein
+  // publiziertes Projekt sagt „auf der Webseite“ in der Unterzeile; geschaltet wird am Projekt (061).
+  test('am Telefon: Kartenzeilen, Webseite als Text, Sortieren über der Liste, kein seitliches Scrollen', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/projects');
+    await waitForHydration(page, '[role="switch"]');
+    const list = page.getByRole('list').filter({ has: page.getByRole('link', { name: 'Kastrationsaktion 2026' }) });
+    const item = list.getByRole('listitem').filter({ hasText: 'Kastrationsaktion 2026' });
+    await expect(item).toBeInViewport();
+    await expect(list.getByRole('switch', { includeHidden: false })).toHaveCount(0);
+    const published = await item.getByRole('switch', { includeHidden: true }).getAttribute('aria-checked');
+    if (published === 'true') await expect(item).toContainText('auf der Webseite');
+    else await expect(item).not.toContainText('auf der Webseite');
+    const overflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth);
+    expect(overflow).toBe(false);
+
+    await page.getByRole('combobox', { name: /Sortieren/ }).click();
+    await page.getByRole('option', { name: 'Projekt, aufsteigend' }).click();
+    await expect(page).toHaveURL(/sort=name&dir=asc/);
+    await expect(page.getByRole('combobox', { name: 'Sortieren: Projekt' })).toBeVisible();
+  });
+
   test('picks an existing image from the library for a project', async ({ page }) => {
     await page.goto('/admin/media');
     await page.getByLabel('Datei hochladen').setInputFiles({ name: 'bestand.png', mimeType: 'image/png', buffer: PNG });
@@ -79,7 +117,7 @@ test.describe('projects', () => {
 
     await page.goto('/projects');
     await page.getByRole('link', { name: 'Projekt anlegen' }).click();
-    await page.getByLabel('Slug (URL-Teil)').fill('bestandsprojekt');
+    await page.getByLabel('URL-Teil').fill('bestandsprojekt');
     await page.locator('[name="name.de"]').fill('Bestandsprojekt');
     await page.getByRole('button', { name: 'Bild: Wählen' }).click();
     const chooser = page.getByRole('dialog', { name: 'Bild wählen' });
@@ -95,7 +133,7 @@ test.describe('projects', () => {
   test('löscht ein reines Verweis-Projekt, solange es nicht veröffentlicht ist', async ({ page }) => {
     await page.goto('/projects');
     await page.getByRole('link', { name: 'Projekt anlegen' }).click();
-    await page.getByLabel('Slug (URL-Teil)').fill('partneraktion');
+    await page.getByLabel('URL-Teil').fill('partneraktion');
     await page.locator('[name="name.de"]').fill('Partneraktion');
     await page.getByLabel('Typ').selectOption('shortTerm');
     await page.getByRole('button', { name: 'Speichern' }).click();
@@ -129,7 +167,7 @@ test.describe('projects', () => {
   test('Speichern ohne Änderung sagt „Nichts geändert“; auf dem Telefon Speichern oben, Verwerfen und Abbrechen darunter nebeneinander', async ({ page }) => {
     await page.goto('/projects');
     await page.getByRole('link', { name: 'Projekt anlegen' }).click();
-    await page.getByLabel('Slug (URL-Teil)').fill('telefonprojekt');
+    await page.getByLabel('URL-Teil').fill('telefonprojekt');
     await page.locator('[name="name.de"]').fill('Telefonprojekt');
     await page.getByRole('button', { name: 'Speichern' }).click();
     await expect(page).toHaveURL(/\/projects\/[A-Z0-9]+$/);
@@ -138,6 +176,11 @@ test.describe('projects', () => {
     await bar.getByRole('button', { name: 'Speichern' }).click();
     await expect(bar.getByText('Nichts geändert')).toBeVisible();
     await expect(page).toHaveURL(/\/projects\/[A-Z0-9]+$/);
+
+    // Ohne Änderung kein „Verwerfen“ (Designer 2026-10-16); mit einer Änderung erscheint es.
+    await expect(bar.getByRole('button', { name: 'Verwerfen' })).toHaveCount(0);
+    await page.locator('[name="name.de"]').fill('Telefonprojekt geändert');
+    await expect(bar.getByRole('button', { name: 'Verwerfen' })).toBeVisible();
 
     await page.setViewportSize({ width: 390, height: 844 });
     // Die Umbruchlage greift erst nach dem Neuzeichnen: bis dahin wiederholen.
@@ -161,7 +204,7 @@ test.describe('projects', () => {
   test('Konflikt beim Speichern: zwei Auswege, die eigenen Eingaben erscheinen neben dem neuen Stand', async ({ page, context }) => {
     await page.goto('/projects');
     await page.getByRole('link', { name: 'Projekt anlegen' }).click();
-    await page.getByLabel('Slug (URL-Teil)').fill('konfliktprojekt');
+    await page.getByLabel('URL-Teil').fill('konfliktprojekt');
     await page.locator('[name="name.de"]').fill('Konfliktprojekt');
     await page.getByRole('button', { name: 'Speichern' }).click();
     await expect(page).toHaveURL(/\/projects\/[A-Z0-9]+$/);

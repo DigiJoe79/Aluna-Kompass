@@ -8,16 +8,19 @@ import { FormActionBar } from '@/components/forms/form-action-bar';
 import { FormField } from '@/components/forms/form-field';
 import { FormGrid } from '@/components/forms/form-grid';
 import { useActionFeedback } from '@/components/forms/use-action-feedback';
-import { StatusBadge } from '@/components/status-badge';
+import { StatusBadge, statusTone } from '@/components/status-badge';
 import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 import { Dialog, DialogContent, DialogDescription, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { addContactRoleAction, endContactRoleAction } from '../actions';
 import { Select } from '@/components/ui/select';
 import { Section } from '@/components/section';
+import { Empty } from '@/components/empty-value';
 
 export function RolesPanel({
   contactId,
+  contactName,
   roles,
   roleDefinitions,
   canManage,
@@ -26,6 +29,8 @@ export function RolesPanel({
   /** „Heute“ in der Zeitzone des Vereins, vom Server (Befund 47) — Vorgabe für „Seit“ und „Bis“. */
   today: string;
   contactId: string;
+  /** Der Untertitel des Dialogs nennt den Kontakt (04 A3). */
+  contactName: string;
   roles: { id: string; role: string; since: string; until: string | null }[];
   roleDefinitions: { key: string; retention: string }[];
   canManage: boolean;
@@ -80,13 +85,11 @@ export function RolesPanel({
                 <DialogContent size="sm" className="bg-surface shadow-md">
                   <form onSubmit={handleAddSubmit}>
                     <DialogTitle>{t('roles.add')}</DialogTitle>
-                    <DialogDescription>
-                      {t('roles.title')}
-                    </DialogDescription>
+                    <DialogDescription>{t('forContact', { name: contactName })}</DialogDescription>
 
                     <div className="mt-4">
                       <FormGrid>
-                        <FormField id="role" label={t('roles.field')}>
+                        <FormField id="role" label={t('roles.field')} required>
                           <Select
                             id="role"
                             name="role"
@@ -102,7 +105,7 @@ export function RolesPanel({
                           </Select>
                         </FormField>
 
-                        <FormField id="since" label={t('roles.since')} size="s">
+                        <FormField id="since" label={t('roles.since')} size="s" required>
                           <Input
                             id="since"
                             name="since"
@@ -124,25 +127,24 @@ export function RolesPanel({
         }
       >
         {roles.length === 0 ? (
-          <p className="text-meta text-muted-ink">—</p>
+          <p className="text-meta text-muted-ink"><Empty /></p>
         ) : (
           <ul className="divide-y divide-line-2">
-            {roles.map((r) => (
-              <li key={r.id} className="flex items-center justify-between gap-4 py-2.5">
-                <div className="flex items-center gap-3">
-                  <StatusBadge tone={r.until ? 'neutral' : 'info'}>{roleLabel(t, r.role)}</StatusBadge>
-                  <span className="text-meta text-ink-2">
+            {/* Laufende zuerst, beendete gedämpft darunter (Runde 3, 039). */}
+            {[...roles.filter((r) => !r.until), ...roles.filter((r) => r.until)].map((r) => (
+              <li key={r.id} data-state={r.until ? 'ended' : 'current'} className={cn('flex items-center justify-between gap-4 py-2.5', r.until && 'text-muted-ink')}>
+                {/* Die Marke steht in einer Spalte fester Mindestbreite, damit die Daten nicht hinter verschieden breiten
+                    Marken springen (04 B13). Kein Layout-Test für diese Einzelstelle (AGENTS.md). */}
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                  <span className="min-w-36"><StatusBadge tone={statusTone('role', r.until ? 'ended' : 'current')}>{roleLabel(t, r.role)}</StatusBadge></span>
+                  <span className={cn('text-meta', r.until ? 'text-muted-ink' : 'text-ink-2')}>
                     {t('roles.since')}: {fmt.date(r.since)}
                     {r.until ? ` · ${t('roles.until')}: ${fmt.date(r.until)}` : ''}
                   </span>
                 </div>
                 {canManage && !r.until ? (
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => setEndingRoleId(r.id)}
-                    className="h-7 text-hint text-muted-ink hover:text-ink"
-                  >
+                  // Rahmenknopf wie „Entfernen“ bei den Wegen; der graue Textknopf wirkte gesperrt (04 B13, 04 B14).
+                  <Button size="sm" variant="outline" onClick={() => setEndingRoleId(r.id)} className="shrink-0">
                     {t('roles.end')}
                   </Button>
                 ) : null}
@@ -158,7 +160,7 @@ export function RolesPanel({
                 <DialogTitle>{t('roles.end')}</DialogTitle>
                 <div className="mt-4">
                   <FormGrid>
-                    <FormField id="until" label={t('roles.until')} size="s">
+                    <FormField id="until" label={t('roles.until')} size="s" required>
                       <Input
                         id="until"
                         name="until"

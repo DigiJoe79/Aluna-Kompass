@@ -1,4 +1,4 @@
-import { hasPermission, listUserNamesWithPermission, readSetting, type LocalizedText } from '@kompass/core';
+import { hasPermission, listUserNamesWithPermission, type LocalizedText, readSetting } from '@kompass/core';
 import { displayName, getContact } from '@kompass/module-contacts';
 import { documentTypeFor } from '@kompass/module-dms';
 import { getWorkCounts, listAccounts, listCategories, listForeignMoney, listPartners, listPurposes, listWorkItems, readInvoiceFromDocument, suggestForTransaction, TAX_CODES, type SuggestionReason, type SuggestionView } from '@kompass/module-finance';
@@ -14,6 +14,7 @@ import { dateFormatOf } from '@/lib/date-format';
 import { formatEuro } from '@/lib/finance/amount';
 import { formatDateOrDash } from '@/lib/finance/dates';
 import { parseWorkTab, WORK_TABS, workHref } from '@/lib/finance/work';
+import { nameOrEmpty } from '@/lib/name-or-empty';
 import { requireSession } from '@/lib/request-context';
 import { cn } from '@/lib/utils';
 import { ImportUpload } from '../imports/upload';
@@ -168,7 +169,7 @@ export default async function FinanceWorkPage({ searchParams }: { searchParams: 
             taxCodeOptions: [...TAX_CODES],
             showTax,
           },
-          voucherTypes: readSetting<string[]>(deps, 'finance.voucherTypes').map((key) => ({ key, label: documentTypeFor(deps.db, key)?.label ?? key })),
+          voucherTypes: readSetting<string[]>(deps, 'finance.voucherTypes').map((key) => ({ key, label: nameOrEmpty(documentTypeFor(deps.db, key)?.label, key) })),
           canCreateContact: hasPermission(ctx, 'contacts.manage'),
           contactGrantNames: hasPermission(ctx, 'contacts.manage') ? [] : listUserNamesWithPermission(deps, 'users.manage'),
           partners: partnerOptions,
@@ -213,10 +214,14 @@ export default async function FinanceWorkPage({ searchParams }: { searchParams: 
         <PageHeader title={t('title')} description={t('description')} />
 
         {/* Klebt erst ab 640 px: Am Telefon nahm der Block (Ablagefläche, Reiter, Filter, „Festschreiben“) gut die Hälfte
-            des Bildschirms ein (gemessen 344 von 664 px, Joe/Designer 2026-10-08). Kein Layout-Test (Projektregel). */}
-        <div className="z-10 space-y-3 bg-bg pb-2 sm:sticky sm:top-0">
+            des Bildschirms ein (gemessen 344 von 664 px, Joe/Designer 2026-10-08). Kein Layout-Test (Projektregel).
+            Der Block klebt an der Inhaltskante des Arbeitsbereichs; darüber liegt das Polster `--shell-pad`, durch das
+            die Liste und das Detail beim Scrollen durchschienen (Joe 2026-10-17). Ein Streifen in Seitenfarbe deckt
+            es ab; in Ruhe liegt er im Abstand über dem Block (`mt` wie das Polster), wo nichts steht. */}
+        <div className="relative z-10 space-y-3 bg-bg pb-2 sm:sticky sm:top-0 sm:mt-(--shell-pad) sm:before:absolute sm:before:inset-x-0 sm:before:bottom-full sm:before:h-(--shell-pad) sm:before:bg-bg">
           {/* N3, W-1: die Ablagefläche erkennt das Konto selbst — „Liste für Konto“ filtert nur die Liste. */}
-          {canWrite && importable.length > 0 ? <ImportUpload accounts={importable} /> : null}
+          {/* 07-1 B9: Stehen schon Umsätze da, ist die Ablagefläche eine Zeile statt eines hohen Kastens. */}
+          {canWrite && importable.length > 0 ? <ImportUpload accounts={importable} compact={counts.open + counts.unsure + counts.agent + counts.reviewed > 0} /> : null}
 
           <ViewTabs
             label={t('tabsGroup')}
@@ -225,18 +230,23 @@ export default async function FinanceWorkPage({ searchParams }: { searchParams: 
           />
           <AccountFilter accounts={filterAccounts} value={account} tab={tab} count={{ shown: itemsRes.value.total, total: counts[tab] }} />
 
-          {counts.heldCandidates > 0 ? (
-            <p className="text-meta text-ink-2">
-              {t('held', { count: counts.heldCandidates })}{' '}
-              <Link href="/finance/imports" className="font-semibold underline underline-offset-2">
-                {t('heldLink')}
-              </Link>
-            </p>
-          ) : null}
-          {counts.reviewed > 0 ? (
-            <div className="flex items-center justify-between gap-3 rounded-md border border-line bg-surface px-3 py-2 text-meta">
-              <span className="text-ink-2">{t('reviewedLine', { count: counts.reviewed })}</span>
-              {hasPermission(ctx, 'finance.entriesFinalize') ? <BatchFinalizeDialog reviewedCount={counts.reviewed} /> : null}
+          {/* 07-1 B9: „zurückgehalten“ und Festschreiben stehen in einer Leiste. */}
+          {counts.heldCandidates > 0 || counts.reviewed > 0 ? (
+            <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-md border border-line bg-surface px-3 py-2 text-meta">
+              {counts.heldCandidates > 0 ? (
+                <p className="text-ink-2">
+                  {t('held', { count: counts.heldCandidates })}{' '}
+                  <Link href="/finance/imports" className="font-semibold underline underline-offset-2">
+                    {t('heldLink')}
+                  </Link>
+                </p>
+              ) : null}
+              {counts.reviewed > 0 ? (
+                <span className="ml-auto flex flex-wrap items-center gap-3">
+                  <span className="text-ink-2">{t('reviewedLine', { count: counts.reviewed })}</span>
+                  {hasPermission(ctx, 'finance.entriesFinalize') ? <BatchFinalizeDialog reviewedCount={counts.reviewed} /> : null}
+                </span>
+              ) : null}
             </div>
           ) : null}
         </div>

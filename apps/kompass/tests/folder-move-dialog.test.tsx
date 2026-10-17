@@ -76,19 +76,19 @@ describe('FolderMoveDialog, for a folder', () => {
     renderDialog();
     expect(screen.getByRole('dialog', { name: '„Amtsgericht“ verschieben nach…' })).toBeTruthy();
     await screen.findAllByRole('treeitem');
-    const self = row(/^Amtsgericht,/);
+    const self = row(/^Amtsgericht$/);
     expect(self.getAttribute('aria-disabled')).toBe('true');
     expect(describedBy(self)).toContain('Ordner kann nicht in sich selbst');
-    const child = row(/^Vereinsregister 2026,/);
+    const child = row(/^Vereinsregister 2026$/);
     expect(child.getAttribute('aria-disabled')).toBe('true');
     expect(describedBy(child)).toContain('Ordner kann nicht in sich selbst');
-    expect(row(/^Finanzen,/).getAttribute('aria-disabled')).toBeNull();
+    expect(row(/^Finanzen$/).getAttribute('aria-disabled')).toBeNull();
   });
 
   it('marks the current place „liegt hier“, in the name too, and does not let it be picked', async () => {
     renderDialog();
     await screen.findAllByRole('treeitem');
-    const here = screen.getByRole('treeitem', { name: 'Behörden, 18 Dokumente, davon 0 direkt, liegt hier' });
+    const here = screen.getByRole('treeitem', { name: 'Behörden, liegt hier' });
     expect(here.getAttribute('aria-disabled')).toBe('true');
     expect(describedBy(here)).toContain('Liegt schon hier');
     fireEvent.click(here);
@@ -120,7 +120,7 @@ describe('FolderMoveDialog, for a folder', () => {
   it('opens with the path to the current place expanded and the focus on it', async () => {
     renderDialog();
     await screen.findAllByRole('treeitem');
-    const here = row(/^Behörden,/);
+    const here = row(/^Behörden(,|$)/);
     expect(here.getAttribute('aria-expanded')).toBe('true');
     await waitFor(() => expect(document.activeElement).toBe(here));
   });
@@ -128,7 +128,7 @@ describe('FolderMoveDialog, for a folder', () => {
   it('does not let a folder that exists only as a path be picked', async () => {
     renderDialog();
     await screen.findAllByRole('treeitem');
-    const archive = row(/^Archiv,/);
+    const archive = row(/^Archiv$/);
     expect(archive.getAttribute('aria-disabled')).toBe('true');
     expect(describedBy(archive)).toContain('nur als Weg');
   });
@@ -145,12 +145,14 @@ describe('FolderMoveDialog, for documents', () => {
 
   it('names the document, offers „Eingangskorb“ and focuses the folder it lies in, with its path open', async () => {
     renderDialog({ subject: one, rootLabel: 'Eingangskorb' });
-    expect(screen.getByRole('dialog', { name: '„Registerauszug 2026“ verschieben nach…' })).toBeTruthy();
+    // Kurzer Titel, der Betreff steht in der Beschreibung (03 B36).
+    const dialog = screen.getByRole('dialog', { name: 'Verschieben nach…' });
+    expect(dialog.getAttribute('aria-describedby') && document.getElementById(dialog.getAttribute('aria-describedby')!)?.textContent).toBe('„Registerauszug 2026“. Liegt in Vereinsregister 2026.');
     await screen.findAllByRole('treeitem');
     expect(screen.getByRole('button', { name: 'Eingangskorb' })).toBeTruthy();
-    const here = screen.getByRole('treeitem', { name: 'Vereinsregister 2026, 6 Dokumente, liegt hier' });
+    const here = screen.getByRole('treeitem', { name: 'Vereinsregister 2026, liegt hier' });
     expect(here.getAttribute('aria-disabled')).toBe('true');
-    expect(row(/^Amtsgericht,/).getAttribute('aria-expanded')).toBe('true');
+    expect(row(/^Amtsgericht$/).getAttribute('aria-expanded')).toBe('true');
     await waitFor(() => expect(document.activeElement).toBe(here));
   });
 
@@ -158,9 +160,9 @@ describe('FolderMoveDialog, for documents', () => {
     const { onConfirm } = renderDialog({ subject: five, rootLabel: 'Eingangskorb' });
     expect(screen.getByRole('dialog', { name: '5 Dokumente verschieben nach…' })).toBeTruthy();
     await screen.findAllByRole('treeitem');
-    const three = screen.getByRole('treeitem', { name: 'Vereinsregister 2026, 6 Dokumente, 3 liegen hier' });
+    const three = screen.getByRole('treeitem', { name: 'Vereinsregister 2026, 3 liegen hier' });
     expect(three.getAttribute('aria-disabled')).toBeNull();
-    expect(screen.getByRole('treeitem', { name: 'Finanzamt, 9 Dokumente, 2 liegen hier' })).toBeTruthy();
+    expect(screen.getByRole('treeitem', { name: 'Finanzamt, 2 liegen hier' })).toBeTruthy();
     fireEvent.click(three);
     expect(three.getAttribute('aria-selected')).toBe('true');
     expect(confirmButton().textContent).toBe('Nach „Vereinsregister 2026“ verschieben');
@@ -173,17 +175,17 @@ describe('FolderMoveDialog, for documents', () => {
     await screen.findAllByRole('treeitem');
     expect(confirmButton().textContent).toBe('Verschieben');
     expect((confirmButton() as HTMLButtonElement).disabled).toBe(true);
-    fireEvent.click(row(/^Finanzen,/));
+    fireEvent.click(row(/^Finanzen$/));
     expect(confirmButton().textContent).toBe('Nach „Finanzen“ verschieben');
     expect((confirmButton() as HTMLButtonElement).disabled).toBe(false);
-    expect(row(/^Finanzen,/).getAttribute('aria-selected')).toBe('true');
-    expect(row(/^Finanzen,/).getAttribute('aria-current')).toBeNull();
+    expect(row(/^Finanzen$/).getAttribute('aria-selected')).toBe('true');
+    expect(row(/^Finanzen$/).getAttribute('aria-current')).toBeNull();
   });
 
   it('picks with Enter; the rows are no links and have no „…“', async () => {
     renderDialog({ subject: one, rootLabel: 'Eingangskorb' });
     await screen.findAllByRole('treeitem');
-    const target = row(/^Verträge,/);
+    const target = row(/^Verträge$/);
     expect(target.querySelector('a')).toBeNull();
     expect(document.querySelector('[data-row-menu]')).toBeNull();
     expect(target.getAttribute('draggable')).not.toBe('true');
@@ -196,7 +198,7 @@ describe('FolderMoveDialog, for documents', () => {
     const onConfirm = vi.fn(async (): Promise<ActionState> => ({ status: 'error', message: 'Nicht verschoben.', fieldErrors: {}, detail: 'In Finanzen gibt es das schon.' }));
     const { onOpenChange } = renderDialog({ subject: one, rootLabel: 'Eingangskorb', onConfirm });
     await screen.findAllByRole('treeitem');
-    fireEvent.click(row(/^Finanzen,/));
+    fireEvent.click(row(/^Finanzen$/));
     await act(async () => fireEvent.click(confirmButton()));
     expect(await screen.findByText('In Finanzen gibt es das schon.')).toBeTruthy();
     expect(onOpenChange).not.toHaveBeenCalledWith(false);
@@ -215,7 +217,7 @@ describe('FolderMoveDialog, when moving throws', () => {
     });
     const { onOpenChange } = renderDialog({ onConfirm });
     await screen.findAllByRole('treeitem');
-    fireEvent.click(row(/^Verträge,/));
+    fireEvent.click(row(/^Verträge$/));
     await act(async () => fireEvent.click(confirmButton()));
     await waitFor(() => expect(toastMock.error).toHaveBeenCalled());
     const [message, options] = toastMock.error.mock.calls[0]!;
@@ -245,52 +247,39 @@ describe('FolderField', () => {
     expect((document.querySelector('input[name="folder"]') as HTMLInputElement).value).toBe('');
   });
 
-  it('picks in the dialog, reports the path and writes the hidden field', async () => {
+  // Entwurf E5: Das Feld klappt den Baum selbst auf, ein Klick wählt — kein Dialog.
+  it('picks in the field, reports the path and writes the hidden field', async () => {
     const onChange = vi.fn();
     render(<Field value="Behörden/Amtsgericht" name="folder" onChange={onChange} />, { wrapper: Intl });
     expect((document.querySelector('input[name="folder"]') as HTMLInputElement).value).toBe('Behörden/Amtsgericht');
     fireEvent.click(screen.getByRole('button', { name: 'Verschieben nach…' }));
     await screen.findAllByRole('treeitem');
-    expect(screen.getByRole('treeitem', { name: 'Amtsgericht, 9 Dokumente, davon 3 direkt, liegt hier' })).toBeTruthy();
-    fireEvent.click(row(/^Finanzen,/));
-    await act(async () => fireEvent.click(confirmButton()));
+    expect(screen.queryByRole('dialog')).toBeNull();
+    await act(async () => fireEvent.click(row(/^Finanzen$/)));
     expect(onChange).toHaveBeenCalledWith('Finanzen');
-    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(screen.queryByRole('tree')).toBeNull();
     expect((document.querySelector('input[name="folder"]') as HTMLInputElement).value).toBe('Finanzen');
     expect(document.querySelector('[data-folder-path]')!.textContent).toBe('Finanzen');
   });
 
-  it('waits for a saving onChange: the button is locked, an error keeps the dialog open, the place changes only on success', async () => {
+  it('waits for a saving onChange: an error keeps the field open with the reason, the place changes only on success', async () => {
     let settle: (state: ActionState) => void = () => {};
     const onChange = vi.fn(() => new Promise<ActionState>((resolve) => (settle = resolve)));
     render(<Field value="Verträge" name="folder" onChange={onChange} />, { wrapper: Intl });
     fireEvent.click(screen.getByRole('button', { name: 'Verschieben nach…' }));
     await screen.findAllByRole('treeitem');
-    fireEvent.click(row(/^Finanzen,/));
-    await act(async () => fireEvent.click(confirmButton()));
+    await act(async () => fireEvent.click(row(/^Finanzen$/)));
     expect(onChange).toHaveBeenCalledWith('Finanzen');
-    expect(confirmButton().hasAttribute('disabled')).toBe(true);
     await act(async () => settle({ status: 'error', message: 'Nicht verschoben.', fieldErrors: {}, detail: 'Das Dokument ist gesperrt.' }));
     expect(await screen.findByText('Das Dokument ist gesperrt.')).toBeTruthy();
-    expect(screen.getByRole('dialog')).toBeTruthy();
+    expect(screen.getByRole('tree')).toBeTruthy();
     expect((document.querySelector('input[name="folder"]') as HTMLInputElement).value).toBe('Verträge');
     expect(document.querySelector('[data-folder-path]')!.textContent).toBe('Verträge');
 
-    await act(async () => fireEvent.click(confirmButton()));
+    await act(async () => fireEvent.click(row(/^Finanzen$/)));
     await act(async () => settle(ok));
-    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    await waitFor(() => expect(screen.queryByRole('tree')).toBeNull());
     expect(document.querySelector('[data-folder-path]')!.textContent).toBe('Finanzen');
-  });
-
-  it('takes a plain onChange at once (form with a hidden field)', async () => {
-    const onChange = vi.fn((_path: string | null) => undefined);
-    render(<Field value="Verträge" name="folder" onChange={onChange} />, { wrapper: Intl });
-    fireEvent.click(screen.getByRole('button', { name: 'Verschieben nach…' }));
-    await screen.findAllByRole('treeitem');
-    fireEvent.click(row(/^Finanzen,/));
-    await act(async () => fireEvent.click(confirmButton()));
-    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
-    expect((document.querySelector('input[name="folder"]') as HTMLInputElement).value).toBe('Finanzen');
   });
 
   it('follows a new value from outside', () => {
@@ -332,12 +321,12 @@ describe('FolderMoveDialog, where it lies now (Artboard 5)', () => {
   });
 
   it('says „in keinem Ordner“ where there is no inbox', () => {
-    renderDialog({ subject: docs({ '': 2 }), rootLabel: 'Kein Ordner' });
+    renderDialog({ subject: docs({ '': 2 }), rootLabel: 'Ohne Ordner' });
     expect(screen.getByText('Liegen in keinem Ordner.')).toBeTruthy();
   });
 
   it('counts the place without a folder in a list like any other place', () => {
-    renderDialog({ subject: docs({ '': 2, 'Behörden/Finanzamt': 1 }), rootLabel: 'Kein Ordner' });
+    renderDialog({ subject: docs({ '': 2, 'Behörden/Finanzamt': 1 }), rootLabel: 'Ohne Ordner' });
     expect(screen.getByText('2 liegen in keinem Ordner, 1 in Finanzamt.')).toBeTruthy();
   });
 
@@ -346,20 +335,9 @@ describe('FolderMoveDialog, where it lies now (Artboard 5)', () => {
     expect(screen.getByText('Aus 4 verschiedenen Orten.')).toBeTruthy();
   });
 
-  it('is left out for a folder field in a form that has not filed anything yet', () => {
-    render(<FolderField value="Verträge" folders={folders} label="Ordner" emptyLabel="Eingangskorb" name="folder" showLocation={false} />, { wrapper: Intl });
-    fireEvent.click(screen.getByRole('button', { name: 'Verschieben nach…' }));
-    expect(within(screen.getByRole('dialog')).queryByText(/^Liegt (in|im) /)).toBeNull();
-  });
 });
 
 describe('FolderField, labels and read-only', () => {
-  it('can call the button „Ändern…“ and title the dialog separately', () => {
-    render(<FolderField value={null} folders={folders} label="Ordner" emptyLabel="Eingangskorb" moveLabel="Ändern…" dialogTitle="Ordner wählen" />, { wrapper: Intl });
-    fireEvent.click(screen.getByRole('button', { name: 'Ändern…' }));
-    expect(screen.getByRole('dialog', { name: 'Ordner wählen' })).toBeTruthy();
-  });
-
   it('shows only the place without the right to move', () => {
     render(<FolderField value="Behörden/Finanzamt" folders={folders} label="Ordner" emptyLabel="Eingangskorb" readOnly />, { wrapper: Intl });
     expect(document.querySelector('[data-folder-path]')!.textContent).toBe('Behörden › Finanzamt');
@@ -390,34 +368,11 @@ describe('FolderField as a term in a description list (labelAs="dt")', () => {
   });
 });
 
-describe('FolderField for a form that only picks (verb „pick“)', () => {
-  it('says „übernehmen“, marks the current folder „gewählt“ and lets it be picked again', async () => {
-    const onChange = vi.fn();
-    render(<FolderField value="Verträge" folders={folders} label="Ordner" emptyLabel="Eingangskorb" name="folder" verb="pick" onChange={onChange} />, { wrapper: Intl });
-    fireEvent.click(screen.getByRole('button', { name: 'Verschieben nach…' }));
-    await screen.findAllByRole('treeitem');
-    expect(confirmButton().textContent).toBe('Übernehmen');
-    const current = screen.getByRole('treeitem', { name: 'Verträge, 6 Dokumente, gewählt' });
-    expect(current.getAttribute('aria-disabled')).toBeNull();
-    fireEvent.click(row(/^Finanzen,/));
-    expect(confirmButton().textContent).toBe('„Finanzen“ übernehmen');
-    fireEvent.click(current);
-    await act(async () => fireEvent.click(confirmButton()));
-    expect(onChange).toHaveBeenCalledWith('Verträge');
-  });
-
-  it('keeps „verschieben“ and the blocked current place by default', async () => {
-    render(<FolderField value="Verträge" folders={folders} label="Ordner" emptyLabel="Eingangskorb" />, { wrapper: Intl });
-    fireEvent.click(screen.getByRole('button', { name: 'Verschieben nach…' }));
-    await screen.findAllByRole('treeitem');
-    expect(screen.getByRole('treeitem', { name: 'Verträge, 6 Dokumente, liegt hier' }).getAttribute('aria-disabled')).toBe('true');
-    fireEvent.click(row(/^Finanzen,/));
-    expect(confirmButton().textContent).toBe('Nach „Finanzen“ verschieben');
-  });
-
+// Auswahl im Feld statt im Dialog (Entwurf E5): Verhalten in `folder-field.test.tsx`.
+describe('FolderField als Feld', () => {
   it('frames the place as a field and colours the frame for a suggestion', () => {
     const { rerender } = render(<FolderField value="Verträge" folders={folders} label="Ordner" emptyLabel="Eingangskorb" variant="field" />, { wrapper: Intl });
-    const place = () => document.querySelector('[data-folder-path]')!;
+    const place = () => document.querySelector('[data-folder-path]')!.closest('.border')!;
     expect(place().className).toContain('border-line-strong');
     rerender(<FolderField value="Verträge" folders={folders} label="Ordner" emptyLabel="Eingangskorb" variant="field" suggested />);
     expect(place().className).toContain('border-agent');

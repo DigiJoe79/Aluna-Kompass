@@ -15,8 +15,8 @@ import { AmountField } from '@/components/finance/amount-field';
 import { Notice } from '@/components/notice';
 import { Button } from '@/components/ui/button';
 import { Select } from '@/components/ui/select';
-import { formatAmount, parseAmount } from '@/lib/finance/amount';
-import { numberRangeText, runIssueCount, runQueryString } from '@/lib/finance/run';
+import { formatAmount, formatEuro, parseAmount } from '@/lib/finance/amount';
+import { numberRangeText, openRunSummary, runIssueCount, runQueryString } from '@/lib/finance/run';
 import { previewConfirmationRunAction, startConfirmationRunAction } from './actions';
 import { PreviewGroups } from './preview-groups';
 import { RunSteps } from './run-steps';
@@ -74,18 +74,21 @@ export function RunSelection(props: RunSelectionProps) {
     }
   };
 
+  // Runde 3, 109/110: Die Auswahl gilt erst mit „Vorschau zeigen“ — Schritt 1 rechnet nicht nebenbei.
   const exclude = (contact: PickedContact | null) => {
     setPicker(null);
     if (!contact || excluded.some((c) => c.id === contact.id)) return;
-    const next = [...excluded, { id: contact.id, name: contact.name }];
-    setExcluded(next);
-    void recompute({ year, min, excluded: next });
+    setExcluded([...excluded, { id: contact.id, name: contact.name }]);
   };
 
   const include = (id: string) => {
-    const next = excluded.filter((c) => c.id !== id);
-    setExcluded(next);
-    void recompute({ year, min, excluded: next });
+    setExcluded(excluded.filter((c) => c.id !== id));
+  };
+
+  // „Ändern“ führt zurück in Schritt 1; die Auswahl bleibt, die Vorschau rechnet beim nächsten „Vorschau zeigen“ neu.
+  const change = () => {
+    setPreview(null);
+    startFb.reset();
   };
 
   const start = async () => {
@@ -112,6 +115,7 @@ export function RunSelection(props: RunSelectionProps) {
 
   const count = preview ? runIssueCount(preview) : 0;
   const range = preview ? numberRangeText(preview.numberRange.from, count) : null;
+  const open = preview ? openRunSummary(preview.items) : { count: 0, reasons: [] };
   const canStart = props.canIssue && preview !== null && preview.blockedRun === null && count > 0 && !starting && !loading;
 
   return (
@@ -122,6 +126,21 @@ export function RunSelection(props: RunSelectionProps) {
 
       <RefusalNotice action state={previewFb.state} />
 
+      {preview ? (
+        // Runde 3, 109/110 (Joe 2026-10-17): In Schritt 2 steht die Auswahl als Zusammenfassung, „Ändern“ führt zurück.
+        <div data-testid="run-selection-summary" className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-line bg-surface px-4 py-3">
+          <p className="flex flex-wrap items-baseline gap-x-3 gap-y-1 text-meta text-ink">
+            <span>{t('selection.summaryYear', { year: preview.year })}</span>
+            <span className="text-ink-2">{preview.minCents !== null && preview.minCents > 0 ? t('selection.summaryMinimum', { amount: formatEuro(preview.minCents) }) : t('selection.summaryNoMinimum')}</span>
+            {excluded.length > 0 ? (
+              <span data-testid="run-excluded" className="text-ink-2">{t('selection.excluded')}: {excluded.map((c) => c.name).join(', ')}</span>
+            ) : null}
+          </p>
+          <Button type="button" variant="outline" size="sm" onClick={change} disabled={starting}>
+            {t('selection.change')}
+          </Button>
+        </div>
+      ) : (
       <form
         aria-label={t('selection.label')}
         className="flex flex-wrap items-end gap-4 rounded-md border border-line bg-surface p-4"
@@ -135,10 +154,7 @@ export function RunSelection(props: RunSelectionProps) {
             id="run-year"
             className="w-auto"
             value={year}
-            onChange={(e) => {
-              setYear(e.target.value);
-              if (preview) void recompute({ year: e.target.value, min, excluded });
-            }}
+            onChange={(e) => setYear(e.target.value)}
           >
             {props.years.map((y) => (
               <option key={y} value={String(y)}>{y}</option>
@@ -152,8 +168,8 @@ export function RunSelection(props: RunSelectionProps) {
         <div className="w-[220px]">
           <ContactPicker id="run-exclude" name="exclude" label={t('selection.exclude')} value={picker} onChange={exclude} />
         </div>
-        <Button type="submit" variant={preview ? 'outline' : 'default'} disabled={loading}>
-          {preview ? t('selection.apply') : t('selection.show')}
+        <Button type="submit" disabled={loading}>
+          {t('selection.show')}
         </Button>
         <p className="basis-full text-hint text-muted-ink">{t('selection.minimumHint')}</p>
         {excluded.length > 0 ? (
@@ -170,6 +186,7 @@ export function RunSelection(props: RunSelectionProps) {
           </div>
         ) : null}
       </form>
+      )}
 
       {preview ? (
         <>
@@ -191,17 +208,28 @@ export function RunSelection(props: RunSelectionProps) {
               testId="run-footer"
               note={
                 <div className="flex flex-wrap items-center gap-x-6 gap-y-1">
-                  <span>
-                    <span className="text-muted-ink">{t('footer.range')}: </span>
-                    <span data-testid="run-number-range" className="font-mono text-ink">
-                      {range ? (range.to ? t('footer.rangeValue', { from: range.from, to: range.to }) : range.from) : t('footer.rangeNone')}
+                  {count === 0 && open.count > 0 ? null : (
+                    <span>
+                      <span className="text-muted-ink">{t('footer.range')}: </span>
+                      <span data-testid="run-number-range" className="font-mono text-ink">
+                        {range ? (range.to ? t('footer.rangeValue', { from: range.from, to: range.to }) : range.from) : t('footer.rangeNone')}
+                      </span>
                     </span>
-                  </span>
+                  )}
                   <span className="text-ink-2">{t('footer.issuedOn', { date: date(preview.issuedOn) })}</span>
                   <span className="max-w-prose text-hint text-muted-ink">{td('issue.humanOnly')}</span>
                 </div>
               }
-              saveLabel={t('footer.submit', { count })}
+              // 09 A5, Runde 3 110: Ist nichts ausstellbar, steht der Grund als Text neben dem gesperrten Knopf (E2) — was offen
+              // ist und warum, nicht „keine Nummer“.
+              extraActions={
+                count === 0 && open.count > 0 ? (
+                  <span data-testid="run-open-summary" className="self-center text-meta text-ink">
+                    {t('footer.open', { count: open.count, reasons: open.reasons.map((r) => t(`blockedBy.${r}`)).join(', ') })}
+                  </span>
+                ) : undefined
+              }
+              saveLabel={count > 0 ? t('footer.submit', { count }) : t('footer.submitNone')}
               saveDisabled={!canStart}
               pending={starting}
               onSave={() => void start()}

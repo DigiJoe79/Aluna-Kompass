@@ -1,98 +1,51 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import Link from 'next/link';
-import { useActionState, useState, useTransition } from 'react';
-import { toast } from 'sonner';
-import { linkUserAction, unlinkUserAction } from '@/app/(shell)/admin/users/actions';
+import { useActionState, useState } from 'react';
+import { linkUserAction } from '@/app/(shell)/admin/users/actions';
 import { ContactPicker, type PickedContact } from '@/components/contact-picker';
 import { ActionForm } from '@/components/forms/action-form';
 import { FormActionBar } from '@/components/forms/form-action-bar';
-import { RefusalNotice } from '@/components/forms/refusal-notice';
-import { useActionFeedback } from '@/components/forms/use-action-feedback';
-import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { idleState } from '@/lib/actions';
 import type { LinkControls } from '@/lib/user-contact-link';
 
-/** Nur einfache Daten von der Server-Komponente: IDs, Texte, die Entscheidung `controls`. */
-export function UserContactLinkForm({
+/**
+ * Dialog „Kontakt wählen“ der Nutzerverwaltung; geöffnet aus dem Zeilenmenü (Runde 3, 155). Der Satz zur eigenen
+ * Verknüpfung steht hier, nicht in der Zeile (11-1 B27).
+ */
+export function UserContactLinkDialog({
   userId,
-  linked,
-  linkedName,
-  linkedHref,
-  controls,
+  reason,
+  open,
+  onOpenChange,
 }: {
   userId: string;
-  linked: boolean;
-  linkedName: string | null;
-  linkedHref: string | null;
-  controls: LinkControls;
+  reason: LinkControls['reason'];
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }) {
   const t = useTranslations('users.contactLink');
-  const [open, setOpen] = useState(false);
   const [picked, setPicked] = useState<PickedContact | null>(null);
-  const [pending, start] = useTransition();
-  // „Lösen“ steht in der Zeile: Die Ablehnung steht darüber.
-  const unlinkFb = useActionFeedback();
-
   const [state, action] = useActionState(async (prev: Parameters<typeof linkUserAction>[1], formData: FormData) => {
     const res = await linkUserAction(userId, prev, formData);
     if (res.status === 'success') {
-      setOpen(false);
+      onOpenChange(false);
       setPicked(null);
     }
     return res;
   }, idleState);
 
   return (
-    <div className="flex flex-col gap-1" data-testid="user-contact-link">
-      <RefusalNotice action state={unlinkFb.state} />
-      <div className="flex flex-wrap items-center gap-2">
-        {linked ? (
-          linkedName && linkedHref ? (
-            <Link href={linkedHref} className="underline underline-offset-2">
-              {linkedName}
-            </Link>
-          ) : (
-            <span className="text-ink-2">{t('linkedWithoutView')}</span>
-          )
-        ) : (
-          <span className="text-muted-ink">{t('none')}</span>
-        )}
-        {controls.canLink ? (
-          <Button type="button" variant="ghost" size="sm" onClick={() => setOpen(true)}>
-            {t('link')}
-          </Button>
-        ) : null}
-        {controls.canUnlink ? (
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            disabled={pending}
-            onClick={() =>
-              start(async () => {
-                const res = await unlinkFb.run(() => unlinkUserAction(userId));
-                if (res.status === 'success' && !res.message) toast.success(t('ended'));
-              })
-            }
-          >
-            {t('unlink')}
-          </Button>
-        ) : null}
-      </div>
-      {controls.reason ? <p className="text-hint text-muted-ink">{t(controls.reason)}</p> : null}
-
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent size="sm" className="bg-surface shadow-md">
-          <ActionForm action={action} state={state} className="space-y-4">
-            <DialogTitle>{t('choose')}</DialogTitle>
-            <ContactPicker id={`link-contact-${userId}`} name="contactId" label={t('choose')} value={picked} onChange={setPicked} required />
-            <FormActionBar placement="dialog" mode="create" cancel={() => setOpen(false)} saveDisabled={!picked} saveLabel={t('link')} state={state} />
-          </ActionForm>
-        </DialogContent>
-      </Dialog>
-    </div>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent size="sm" className="bg-surface shadow-md">
+        <ActionForm action={action} state={state} className="space-y-4">
+          <DialogTitle>{t('choose')}</DialogTitle>
+          {reason ? <DialogDescription>{t(reason)}</DialogDescription> : null}
+          <ContactPicker id={`link-contact-${userId}`} name="contactId" label={t('choose')} value={picked} onChange={setPicked} required />
+          <FormActionBar placement="dialog" mode="create" cancel={() => onOpenChange(false)} saveDisabled={!picked} saveLabel={t('link')} state={state} />
+        </ActionForm>
+      </DialogContent>
+    </Dialog>
   );
 }

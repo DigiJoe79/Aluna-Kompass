@@ -1,5 +1,8 @@
 // @vitest-environment jsdom
-import { cleanup, render } from '@testing-library/react';
+import { cleanup, render, screen } from '@testing-library/react';
+import { NextIntlClientProvider } from 'next-intl';
+import messages from '../messages/de.json';
+import { KindBadge } from '@/app/(shell)/animals/proposals/kind-badge';
 import { afterEach, describe, expect, it } from 'vitest';
 import { ProposalThumb } from '@/app/(shell)/animals/proposals/proposal-list';
 
@@ -18,5 +21,20 @@ describe('ProposalThumb', () => {
   it('shows the empty circle without any image', () => {
     const { container } = render(<ProposalThumb item={{ primaryAssetId: null, primaryImageId: null }} />);
     expect(container.querySelector('img')).toBeNull();
+  });
+});
+
+/** 049: Die Art ist eine Einordnung, keine Abweichung — Symbol und Wort als Text, ohne Marke und ohne Violett. */
+describe('KindBadge', () => {
+  it('shows the kind as text with a symbol, not as a badge', () => {
+    render(
+      <NextIntlClientProvider locale="de" messages={messages} timeZone="Europe/Berlin">
+        <KindBadge kind="update" />
+      </NextIntlClientProvider>,
+    );
+    const kind = screen.getByTestId('proposal-kind');
+    expect(kind.textContent).toBe('Änderung');
+    expect(kind.querySelector('svg')).toBeTruthy();
+    expect(kind.className).not.toMatch(/agent|font-semibold|rounded/);
   });
 });

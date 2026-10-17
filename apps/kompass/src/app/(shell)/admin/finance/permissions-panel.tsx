@@ -1,5 +1,6 @@
 import { getTranslations } from 'next-intl/server';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { nameOrEmpty } from '@/lib/name-or-empty';
 
 export interface PermissionMatrixActivity {
   key: string;
@@ -14,47 +15,43 @@ export interface PermissionMatrixRole {
   holders: string[];
 }
 
-/** H8 — lesende Matrix: je Rolle ihre Tätigkeiten, wer sie trägt, „niemand“ als Wort und in Warnfarbe. */
+/**
+ * „Wer darf was“ (Designer Frage 4, 173): eine Liste je Tätigkeit, keine Matrix und keine Tabelle je Rolle — eine Zeile
+ * je Tätigkeit mit der Unterzeile „erteilt an …“; ist keine Rolle erteilt, „an keine Rolle erteilt“ in Ocker. Wer eine
+ * Rolle trägt, steht im Rolleneditor. Der Dienst `getPermissionMatrix` liefert weiter Navigation und Träger (MCP).
+ */
 export async function PermissionsPanel({ activities, roles }: { activities: PermissionMatrixActivity[]; roles: PermissionMatrixRole[] }) {
   const t = await getTranslations('finance.admin.permissions');
   const tPerm = await getTranslations('permissions.keys');
-  const activityLabel = (permission: string) => (tPerm.has(`${permission}.label`) ? tPerm(`${permission}.label`) : permission);
+  const activityLabel = (permission: string) => nameOrEmpty(tPerm.has(`${permission}.label`) ? tPerm(`${permission}.label`) : null, permission);
 
   return (
     <section className="space-y-4" data-testid="permissions-panel">
-      <div className="space-y-4">
-        {roles.map((role) => (
-          <div key={role.id} className="overflow-hidden rounded-md border border-line" data-testid={`permission-role-${role.name}`}>
-            <div className="bg-table-head px-4 py-2.5">
-              <p className="font-semibold text-ink">{role.name}</p>
-            </div>
-            <Table>
-              <TableHeader>
-                <TableRow className="h-8">
-                  <TableHead>{t('activity')}</TableHead>
-                  <TableHead>{t('granted')}</TableHead>
+      <div className="overflow-hidden rounded-md border border-line">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead col="title">{t('activity')}</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {activities.map((activity) => {
+              const granted = roles.filter((role) => role.permissions.includes(activity.permission)).map((role) => role.name);
+              return (
+                <TableRow key={activity.key} data-testid="permission-activity">
+                  <TableCell col="title" className="whitespace-normal">
+                    <span className="block text-ink">{activityLabel(activity.permission)}</span>
+                    {granted.length > 0 ? (
+                      <span className="block text-hint text-muted-ink">{t('grantedTo', { roles: granted.join(', ') })}</span>
+                    ) : (
+                      <span className="block text-hint font-semibold text-warning">{t('grantedToNone')}</span>
+                    )}
+                  </TableCell>
                 </TableRow>
-              </TableHeader>
-              <TableBody>
-                {activities.map((activity) => (
-                  <TableRow key={activity.key}>
-                    <TableCell className="text-ink-2">{activityLabel(activity.permission)}</TableCell>
-                    <TableCell>{role.permissions.includes(activity.permission) ? t('yes') : '—'}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-            <div className="space-y-1 border-t border-line px-4 py-2.5 text-hint">
-              <p className="text-muted-ink">
-                {t('navigation')}: {role.navigation.length > 0 ? role.navigation.map((key) => t(`navKeys.${key}`)).join(', ') : t('navigationNone')}
-              </p>
-              <p>
-                <span className="text-muted-ink">{t('holders')}: </span>
-                {role.holders.length > 0 ? <span className="text-ink">{role.holders.join(', ')}</span> : <span className="font-semibold text-warning">{t('nobody')}</span>}
-              </p>
-            </div>
-          </div>
-        ))}
+              );
+            })}
+          </TableBody>
+        </Table>
       </div>
     </section>
   );

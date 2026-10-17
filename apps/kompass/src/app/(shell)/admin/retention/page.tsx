@@ -8,7 +8,7 @@ import { PageHeader } from '@/components/page-header';
 import { dateFormatOf } from '@/lib/date-format';
 import { requireSession } from '@/lib/request-context';
 import { RetentionSettings } from './retention-settings';
-import { Overline } from '@/components/overline';
+import { Section } from '@/components/section';
 
 export default async function RetentionPage() {
   const { deps, ctx } = await requireSession();
@@ -40,19 +40,22 @@ export default async function RetentionPage() {
         <EmptyState title={t('empty.title')} text={t('empty.text')} />
       ) : (
         [...byEntity.entries()].map(([entity, items]) => (
-          <section key={entity} aria-label={t.has(`entities.${entity}`) ? t(`entities.${entity}`) : entity} className="mb-6">
-            <Overline className="mb-2">{t.has(`entities.${entity}`) ? t(`entities.${entity}`) : entity}</Overline>
-            <ul className="divide-y divide-line rounded-md border border-line">
-              {items.map((item) => {
-                const href = item.href;
-                return (
-                  <li key={`${item.entity}:${item.id}`} className="flex items-center justify-between gap-4 px-3 py-2">
-                    <span>{href ? <Link href={href} className="underline underline-offset-2">{item.label}</Link> : item.label}</span>
-                    <span className="text-hint text-muted-ink">{t('dueSince', { date: fmt.date(item.dueSince) })}</span>
-                  </li>
-                );
-              })}
-            </ul>
+          // Runde 3, 181: eine Form für Überschriften — jede Art als Karte mit Abschnittstitel wie „Fristen“; „fällig
+          // seit …“ ist Arbeit und steht ocker. Layout und Farbe, kein Test.
+          <section key={entity} aria-labelledby={`retention-${entity}`} className="mb-6 mt-6 rounded-lg border border-line bg-surface p-5">
+            <Section title={t.has(`entities.${entity}`) ? t(`entities.${entity}`) : entity} headingId={`retention-${entity}`}>
+              <ul className="divide-y divide-line-2">
+                {items.map((item) => {
+                  const href = item.href;
+                  return (
+                    <li key={`${item.entity}:${item.id}`} className="flex items-center justify-between gap-4 py-2">
+                      <span>{href ? <Link href={href} className="underline underline-offset-2">{item.label}</Link> : item.label}</span>
+                      <span className="text-meta text-warning">{t('dueSince', { date: fmt.date(item.dueSince) })}</span>
+                    </li>
+                  );
+                })}
+              </ul>
+            </Section>
           </section>
         ))
       )}

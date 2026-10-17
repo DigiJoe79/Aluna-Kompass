@@ -13,6 +13,7 @@ import { requireSession } from '@/lib/request-context';
 import { readSort } from '@/lib/sort';
 import { Journal, type JournalRow } from './journal';
 import { SidePanel } from './side-panel';
+import { EMPTY } from '@/components/empty-value';
 
 export interface EntriesQuery {
   year?: string;
@@ -118,8 +119,8 @@ export default async function FinanceEntriesPage({ searchParams }: { searchParam
 
   const rows: JournalRow[] = entriesRes.value.entries.map((entry) => {
     const distinctAccounts = new Set(entry.moneyLines.map((l) => l.accountId));
-    const accountLabel = distinctAccounts.size === 0 ? '—' : distinctAccounts.size === 1 ? (accountNames.get([...distinctAccounts][0]!) ?? '') : t('accountsCount', { count: distinctAccounts.size });
-    const allocationLabel = entry.allocationLines.length === 0 ? '—' : entry.allocationLines.length === 1 ? (categoryNames.get(entry.allocationLines[0]!.categoryId) ?? '') : t('allocationsCount', { count: entry.allocationLines.length });
+    const accountLabel = distinctAccounts.size === 0 ? EMPTY : distinctAccounts.size === 1 ? (accountNames.get([...distinctAccounts][0]!) ?? '') : t('accountsCount', { count: distinctAccounts.size });
+    const allocationLabel = entry.allocationLines.length === 0 ? EMPTY : entry.allocationLines.length === 1 ? (categoryNames.get(entry.allocationLines[0]!.categoryId) ?? '') : t('allocationsCount', { count: entry.allocationLines.length });
     const contacts = [...new Set(entry.allocationLines.map((l) => l.contactId).filter((id): id is string => !!id))];
     const contactLabel = contacts.length === 0 ? null : contacts.length === 1 ? (contactNames.get(contacts[0]!) ?? null) : t('contactsCount', { count: contacts.length });
 
@@ -163,30 +164,25 @@ export default async function FinanceEntriesPage({ searchParams }: { searchParam
 
   return (
     <Page width="full">
-      <div className="flex gap-5">
-        <div className="min-w-0 flex-1">
-          <Journal
-            rows={rows}
-            total={entriesRes.value.total}
-            totals={entriesRes.value.totals}
-            page={page}
-            pageSize={PAGE_SIZE}
-            standing={balancesRes.ok ? balancesRes.value.standing : { finalizedThrough: null, draftCount: 0, reviewedDraftCount: 0 }}
-            accounts={activeAccounts.map((a) => ({ id: a.id, name: a.name }))}
-            categories={categories.map((c) => ({ id: c.id, name: c.name }))}
-            years={fiscalYears.map((y) => ({ id: y.id, label: y.designation }))}
-            unfiltered={unfiltered}
-            canWrite={canWrite}
-            canFinalize={canFinalize}
-            showSetupLink={showSetupLink}
-            filtered={filtered}
-            accountFilter={filteredAccount ? { name: filteredAccount.name, openingBalanceCents: filteredAccount.openingBalanceCents } : null}
-          />
-        </div>
-        {balancesRes.ok ? (
-          <SidePanel balances={balancesRes.value} incomeStatement={incomeRes.ok ? incomeRes.value : null} />
-        ) : null}
-      </div>
+      {/* Das Seitenpanel „Bestände“ steht im Journal unter dem Seitentitel (Runde 4, A3), ab 1680 px daneben. */}
+      <Journal
+        rows={rows}
+        total={entriesRes.value.total}
+        totals={entriesRes.value.totals}
+        page={page}
+        pageSize={PAGE_SIZE}
+        standing={balancesRes.ok ? balancesRes.value.standing : { finalizedThrough: null, draftCount: 0, reviewedDraftCount: 0 }}
+        accounts={activeAccounts.map((a) => ({ id: a.id, name: a.name }))}
+        categories={categories.map((c) => ({ id: c.id, name: c.name }))}
+        years={fiscalYears.map((y) => ({ id: y.id, label: y.designation }))}
+        unfiltered={unfiltered}
+        canWrite={canWrite}
+        canFinalize={canFinalize}
+        showSetupLink={showSetupLink}
+        filtered={filtered}
+        accountFilter={filteredAccount ? { name: filteredAccount.name, openingBalanceCents: filteredAccount.openingBalanceCents } : null}
+        aside={balancesRes.ok ? <SidePanel balances={balancesRes.value} incomeStatement={incomeRes.ok ? incomeRes.value : null} /> : null}
+      />
     </Page>
   );
 }

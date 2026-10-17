@@ -17,7 +17,7 @@ export function PassedOnButton({ holder, amount }: { holder: string; amount: str
   const [open, setOpen] = useState(false);
   return (
     <>
-      <Button type="button" size="sm" variant="secondary" onClick={() => setOpen(true)}>
+      <Button type="button" size="sm" variant="outline" onClick={() => setOpen(true)}>
         {t('passedOn')}
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>

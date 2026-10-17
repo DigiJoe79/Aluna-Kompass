@@ -1,4 +1,5 @@
 import type { PermissionSpec } from '@kompass/core';
+import { defaultFilter } from 'cmdk';
 import { hasAnyOf, type NavGroup } from './navigation';
 
 export interface CommandEntry {
@@ -49,4 +50,17 @@ export function buildCommandIndex(input: {
     entries.push({ id: `help:${page.doc}`, group: 'help', label: page.title, hint: page.chapter, href: `/help/${page.doc}` });
   }
   return entries;
+}
+
+/**
+ * Filter der Befehlspalette (01 C36): Ein Eintrag gilt nur, wenn jedes Suchwort als Wortteil in ihm steht —
+ * die unscharfe Suche von cmdk fand sonst „Speichern und Meldungen“ für „Spende“. Die Rangfolge unter den
+ * Treffern bleibt die von cmdk; Wörter in anderer Reihenfolge zählen mit kleinem Rang.
+ */
+export function paletteFilter(value: string, search: string): number {
+  const words = search.toLocaleLowerCase('de').split(/\s+/).filter(Boolean);
+  if (words.length === 0) return 1;
+  const haystack = value.toLocaleLowerCase('de');
+  if (!words.every((word) => haystack.includes(word))) return 0;
+  return Math.max(defaultFilter!(value, search), 0.01);
 }

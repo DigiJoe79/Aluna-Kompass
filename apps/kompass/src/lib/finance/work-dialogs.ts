@@ -1,5 +1,6 @@
 import { formatAmount, formatEuro, parseAmount } from './amount';
 import type { MiniFormState, WorkRaw } from './work';
+import { formatIban } from '@kompass/module-finance/format';
 
 /**
  * Die Dialoge der Arbeitsliste (F5 Task 8): „Künftig immer so?“ und das
@@ -181,7 +182,7 @@ export function ruleConditionParts(rule: RuleConditionsInput, accountNames: Read
   const parts: RuleConditionPart[] = [];
   if (rule.accountId) parts.push({ key: 'account', values: { account: accountNames.get(rule.accountId) ?? '' } });
   if (rule.direction) parts.push({ key: rule.direction, values: {} });
-  if (rule.counterpartyIban) parts.push({ key: 'iban', values: { iban: rule.counterpartyIban } });
+  if (rule.counterpartyIban) parts.push({ key: 'iban', values: { iban: formatIban(rule.counterpartyIban) } });
   if (rule.textContains) parts.push({ key: 'text', values: { text: rule.textContains } });
   if (rule.amountMinCents !== null && rule.amountMaxCents !== null) parts.push({ key: 'amountBetween', values: { min: formatEuro(rule.amountMinCents), max: formatEuro(rule.amountMaxCents) } });
   else if (rule.amountMinCents !== null) parts.push({ key: 'amountFrom', values: { amount: formatEuro(rule.amountMinCents) } });
@@ -203,4 +204,17 @@ export function batchAccountState(row: BatchAccountRow): { state: 'matches' | 'd
   if (row.matches === null || row.statementClosingCents === null) return { state: 'noStatement', differenceCents: null };
   const differenceCents = row.bookCentsAfter - row.statementClosingCents;
   return { state: differenceCents === 0 ? 'matches' : 'differs', differenceCents };
+}
+
+/**
+ * „Kontakt anlegen“ aus einem Umsatz (Runde 3, 067; Joe 2026-10-17): Trägt die Gegenpartei eine Rechtsform im Namen,
+ * ist „Organisation“ vorbelegt — nur eine Vorbelegung, man kann umstellen. Feste Liste, als eigenes Wort erkannt (nicht
+ * in „Stiftungsrat“ oder „Ugur“). Abkürzungen in ihrer Schreibung, „GmbH“ und „Stiftung“ auch klein.
+ */
+const LEGAL_FORM_EXACT = /(?<![\p{L}\p{N}])(?:AG|UG|KG|OHG|GbR|eV|e\.\s?V\.)(?![\p{L}\p{N}])/u;
+const LEGAL_FORM_ANY_CASE = /(?<![\p{L}\p{N}])(?:g?GmbH|Stiftung)(?![\p{L}\p{N}])/iu;
+
+export function contactKindFromName(name: string | null | undefined): 'person' | 'organization' {
+  if (!name) return 'person';
+  return LEGAL_FORM_EXACT.test(name) || LEGAL_FORM_ANY_CASE.test(name) ? 'organization' : 'person';
 }

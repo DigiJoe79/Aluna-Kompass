@@ -12,8 +12,10 @@ export type SortDirection = 'asc' | 'desc';
 export function readSort<F extends string>(
   params: { sort?: string; dir?: string },
   allowed: readonly F[],
+  /** Die Vorgabe der Seite ohne `?sort` (04 B8); `SortableHead byDefault` zeigt sie im Kopf an. */
+  fallback?: { field: F; direction: SortDirection },
 ): { field: F; direction: SortDirection } | undefined {
   const field = params.sort;
-  if (!field || !allowed.includes(field as F)) return undefined;
+  if (!field || !allowed.includes(field as F)) return fallback;
   return { field: field as F, direction: params.dir === 'asc' ? 'asc' : 'desc' };
 }

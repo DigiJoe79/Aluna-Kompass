@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import type { ReactElement, ReactNode } from 'react';
+import { type HeaderAction, HeaderMore } from '@/components/record-actions';
 import { buttonVariants } from '@/components/ui/button';
 
 /**
@@ -15,12 +16,19 @@ export function PageHeader({
   title,
   description,
   actions,
+  more,
   back,
   status,
 }: {
   title?: string;
   description?: string;
+  /** Primärknopf und `RecordActions` (als letztes). Nebenaktionen (`outline`) gehören in `more` (Wächter `header-more`). */
   actions?: ReactNode;
+  /**
+   * Nebenaktionen (Runde 3, 018, Joe 2026-10-17): ab `sm` `outline`-Knöpfe vor `actions`, am Telefon im ⋯ — dem
+   * `RecordActions` der Seite, sonst einem eigenen. So bleibt am Telefon im Kopf nur der Primärknopf.
+   */
+  more?: readonly HeaderAction[];
   back?: { href: string; label: string };
   /**
    * Zustand des Datensatzes (archiviert, inaktiv) — nur eine `StatusBadge` (Freigabe Designer 2026-10-08, Wächter
@@ -43,10 +51,12 @@ export function PageHeader({
       {/* Telefon (`max-sm`): Titel und Aktionen untereinander, die Aktionen brechen um — nebeneinander drückten
           „Als PDF“ und das Blättern die Tieradresse in eine Spalte von wenigen Zeichen (release-0.2.7.md,
           Befund 15). Ab 640 px wie bisher nebeneinander. Kein Layout-Test für diese Einzelstelle. */}
-      <div className="flex items-start justify-between gap-4 max-sm:flex-col max-sm:gap-3">
+      {/* Telefon: ⋯ „Weitere Aktionen“ steht rechts in der Titelzeile, der Titel bricht davor um (Runde 3, Kleinpunkt 2) —
+          `globals.css` („Seitenkopf am Telefon“) über `data-slot` und `data-record-actions`. */}
+      <div data-slot="page-header-row" className="flex items-start justify-between gap-4 max-sm:flex-col max-sm:gap-3">
         {/* `min-w-0` und `break-words`: Eine lange Adresse in der Beschreibung (Tier) schob auf dem Telefon die Kopfaktionen
             23 px über die Inhaltskante (Abnahme K8/K9, 390 px). Kein Layout-Test für diese Einzelstelle. */}
-        <div className="min-w-0">
+        <div data-slot="page-header-title" className="min-w-0">
           {title ? (
             // Mit `status`: Marke auf der Grundlinie des Titels, 10 px Abstand; Telefon darunter. Ohne `status` derselbe
             // Aufbau, damit der Titel nicht springt, wenn ein Datensatz archiviert wird.
@@ -57,7 +67,11 @@ export function PageHeader({
           ) : null}
           {description ? <p className="mt-1 text-body break-words text-ink-2">{description}</p> : null}
         </div>
-        {actions ? <div className="flex shrink-0 items-center gap-2 max-sm:flex-wrap">{actions}</div> : null}
+        {actions || more?.some((item) => !item.hidden) ? (
+          <div data-slot="page-header-actions" className="flex shrink-0 items-center gap-2 max-sm:flex-wrap">
+            {more ? <HeaderMore items={more}>{actions}</HeaderMore> : actions}
+          </div>
+        ) : null}
       </div>
     </div>
   );
