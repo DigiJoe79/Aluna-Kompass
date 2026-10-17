@@ -26,7 +26,7 @@ test('adds a locale, fills it, and sees what removing it would cost', async ({ p
   await expect(page.getByRole('status')).toContainText('Gespeichert');
 
   await page.goto('/admin/locales');
-  await page.getByRole('button', { name: 'fr entfernen' }).click();
+  await page.getByRole('button', { name: 'Französisch entfernen' }).click();
   await expect(page.getByRole('dialog')).toContainText('1 Feld');
 });
 
@@ -39,7 +39,7 @@ test('refuses to remove a locale the active template needs and names the reason'
   await expect(page.getByRole('status')).toContainText('eingelesen');
 
   await page.goto('/admin/locales');
-  await page.getByRole('button', { name: 'en entfernen' }).click();
+  await page.getByRole('button', { name: 'Englisch entfernen' }).click();
   // Die Ablehnung steht über der Liste, kein Dialog öffnet sich, und die Sprache bleibt.
   await expect(page.getByRole('alert').filter({ hasText: 'wird noch gebraucht' })).toContainText('site');
   await expect(page.getByRole('dialog')).toHaveCount(0);

@@ -27,15 +27,25 @@ describe('Sprache entfernen', () => {
   it('nennt beim Entfernen der Leitsprache die neue', async () => {
     previewLocaleRemovalAction.mockResolvedValue({ status: 'success', data: { code: 'de', nextLeading: 'en', filled: 0, tables: [] } });
     wrap();
-    fireEvent.click(screen.getByRole('button', { name: 'de entfernen' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Deutsch entfernen' }));
     expect(await screen.findByText(/Englisch wird Leitsprache\./)).toBeTruthy();
   });
 
   it('schweigt dazu bei einer anderen Sprache', async () => {
     previewLocaleRemovalAction.mockResolvedValue({ status: 'success', data: { code: 'en', nextLeading: null, filled: 0, tables: [] } });
     wrap();
-    fireEvent.click(screen.getByRole('button', { name: 'en entfernen' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Englisch entfernen' }));
     expect(await screen.findByRole('dialog')).toBeTruthy();
     expect(screen.queryByText(/wird Leitsprache/)).toBeNull();
+  });
+});
+
+/** 11-2 A4: Sprachnamen in Liste und Knopf, der Code als Schlüsselzeile darunter. */
+describe('Sprachenliste', () => {
+  it('nennt die Sprache beim Namen', () => {
+    wrap();
+    const first = screen.getAllByRole('listitem')[0]!;
+    expect(first.textContent).toContain('Deutsch');
+    expect(first.querySelector('.font-mono')?.textContent).toBe('de');
   });
 });

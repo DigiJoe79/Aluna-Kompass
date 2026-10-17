@@ -12,8 +12,8 @@
       "codeHint": "BCP-47-Sprachcode (z. B. de, en, fr, nl, es, pt-br).",
       "add": "Sprache hinzufügen",
       "leading": "Leitsprache",
-      "remove": "{code} entfernen",
-      "removeTitle": "Sprache „{code}“ entfernen",
+      "remove": "{language} entfernen",
+      "removeTitle": "Sprache „{language}“ entfernen",
       "nextLeading": "{language} wird Leitsprache.",
       "removeWarning": "{count, plural, =0 {In keinem Feld steht Text auf {locale}.} one {In # Feld steht Text auf {locale}. Beim Entfernen geht er verloren.} other {In # Feldern steht Text auf {locale}. Beim Entfernen geht er verloren.}}",
       "removeConfirm": "Sprache unwiderruflich entfernen",
@@ -2616,16 +2616,18 @@
     "footnote": "Gelöscht wird auf der Seite des jeweiligen Eintrags — dort steht, was dabei verschwindet.",
     "settings": {
       "title": "Fristen",
-      "statutory10Y": "Gesetzliche Aufbewahrung 10 Jahre",
+      "statutory10Y": "Gesetzliche Aufbewahrung {duration}",
       "statutory10YHint": "§ 147 Abs. 1 Nr. 1, 4a AO (z. B. Bücher, Aufzeichnungen, Jahresabschlüsse)",
-      "statutory8Y": "Gesetzliche Aufbewahrung 8 Jahre",
+      "statutory8Y": "Gesetzliche Aufbewahrung {duration}",
       "statutory8YHint": "§ 147 Abs. 3 AO (Buchungsbelege, seit 2025)",
-      "statutory6Y": "Gesetzliche Aufbewahrung 6 Jahre",
+      "statutory6Y": "Gesetzliche Aufbewahrung {duration}",
       "statutory6YHint": "§ 147 Abs. 1 Nr. 2, 3, 5 AO (z. B. empfangene Handels- und Geschäftsbriefe)",
       "consent": "Einwilligung / berechtigtes Interesse",
       "consentHint": "ohne gesetzliche Grundlage (z. B. Interessenten)",
       "save": "Speichern",
-      "months": "Monate"
+      "months": "Monate",
+      "durationYears": "{n, plural, one {# Jahr} other {# Jahre}}",
+      "durationMonths": "{n, plural, one {# Monat} other {# Monate}}"
     }
   },
   "backup": {
@@ -2641,7 +2643,6 @@
     },
     "import": {
       "title": "Import",
-      "badge": "Überschreibt alles",
       "warning": "Der Import ersetzt den gesamten Bestand dieser Umgebung, einschließlich Änderungsprotokoll. Erstellen Sie vorher einen Export. Der Vorgang selbst wird im neuen Bestand als Systemeintrag protokolliert.",
       "file": "Backup-Datei",
       "fileHint": "Ein Kompass-Backup (.tar.gz) aus „Export“.",

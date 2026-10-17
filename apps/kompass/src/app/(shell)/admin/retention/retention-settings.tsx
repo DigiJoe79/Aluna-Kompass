@@ -57,6 +57,8 @@ export function RetentionSettings({ statutory10Y, statutory8Y, statutory6Y, cons
   }, [state]);
 
   const errors = state.status === 'error' ? state.fieldErrors : {};
+  // Die Überschrift folgt dem gespeicherten Wert, gespeichert bleiben Monate (11-2 B13).
+  const duration = (months: number) => (months % 12 === 0 ? t('durationYears', { n: months / 12 }) : t('durationMonths', { n: months }));
   return (
     <FormCard as="section" aria-labelledby={titleId} className="mb-6">
       <ActionForm action={formAction} state={state}>
@@ -64,7 +66,7 @@ export function RetentionSettings({ statutory10Y, statutory8Y, statutory6Y, cons
           <Section title={t('title')} headingId={titleId}>
           <FormGrid>
             {FIELDS.map(({ key, hintKey, setting }) => (
-              <FormField key={key} id={key} label={t(key)} hint={t(hintKey)} error={errors[setting]} size="s">
+              <FormField key={key} id={key} label={key === 'consent' ? t(key) : t(key, { duration: duration(current[key]) })} hint={t(hintKey)} error={errors[setting]} size="s">
                 <div className="flex items-center gap-2">
                   <Input id={key} name={setting} type="number" min={0} defaultValue={current[key]} readOnly={!canManage} className="w-24" />
                   <span className="text-meta text-muted-ink">{t('months')}</span>

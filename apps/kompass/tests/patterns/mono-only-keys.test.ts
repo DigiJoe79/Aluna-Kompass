@@ -29,7 +29,7 @@ const ALLOWED: CountedAllowlist = {
   'app/(shell)/error.tsx': { count: 2, reason: STATUS },
   'app/setup/setup-form.tsx': { count: 1, reason: LOCALE },
   'app/setup/import/import-form.tsx': { count: 1, reason: 'Umgebungsname des Backups (`production`, …) — Schlüssel.' },
-  'app/(shell)/admin/locales/locales-client.tsx': { count: 2, reason: LOCALE },
+  'app/(shell)/admin/locales/locales-client.tsx': { count: 1, reason: LOCALE },
   'components/forms/localized-field.tsx': { count: 3, reason: `${LOCALE} \`LOCALE_CODE\`, Umschalter der Vorschau.` },
   'components/schema-form/field.tsx': { count: 2, reason: `${LOCALE} Umschalter der Sprachen und der Vorschau (wie LocalizedField, 10 B12).` },
   'app/(shell)/admin/settings/settings-form.tsx': { count: 1, reason: "Feldart `kind: 'mono'` — nur Kennungen, siehe Test unten." },

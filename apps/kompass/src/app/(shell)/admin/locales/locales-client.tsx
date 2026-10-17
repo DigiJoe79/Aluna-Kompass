@@ -12,6 +12,7 @@ import { RefusalNotice } from '@/components/forms/refusal-notice';
 import { ReorderButtons } from '@/components/forms/reorder-buttons';
 import { SubmitButton } from '@/components/forms/submit-button';
 import { StatusBadge } from '@/components/status-badge';
+import { KeyLine } from '@/components/key-line';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { idleState, type ActionState } from '@/lib/actions';
@@ -73,7 +74,11 @@ export function LocalesClient({ locales }: { locales: string[] }) {
               }`}
             >
               <div className="flex items-center gap-3">
-                <span className="font-mono text-section text-ink">{code}</span>
+                {/* Sprachname mit dem Code als Schlüsselzeile darunter (11-2 A4). */}
+                <span>
+                  <span className="block text-body text-ink">{languageName(code)}</span>
+                  <KeyLine>{code}</KeyLine>
+                </span>
                 {index === 0 ? <StatusBadge tone="neutral">{t('leading')}</StatusBadge> : null}
               </div>
               <div className="flex items-center gap-2">
@@ -82,10 +87,9 @@ export function LocalesClient({ locales }: { locales: string[] }) {
                   <Button
                     variant="ghost"
                     size="sm"
-                    aria-label={t('remove', { code })}
                     onClick={() => openRemove(code)}
                   >
-                    {t('remove', { code })}
+                    {t('remove', { language: languageName(code) })}
                   </Button>
                 ) : null}
               </div>
@@ -126,7 +130,7 @@ export function LocalesClient({ locales }: { locales: string[] }) {
             setPreview(null);
           }
         }}
-        title={t('removeTitle', { code: toRemove ?? '' })}
+        title={t('removeTitle', { language: toRemove ? languageName(toRemove) : '' })}
         description={
           loadingPreview
             ? '...'
