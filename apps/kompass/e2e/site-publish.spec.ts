@@ -151,7 +151,7 @@ test('preview build, diff and publish to the local staging target', async ({ pag
   await confirmDialog.getByRole('button', { name: 'Auf Test publizieren' }).click();
   // Der Dialog schließt beim Start; den Lauf zeigen Karte und Kopfzeile.
   await expect(confirmDialog).toBeHidden();
-  await expect(page.getByRole('region', { name: 'Laufender Lauf' }).or(cardTitle(page, 'Publiziert'))).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Laufender Lauf' }).or(cardTitle(page, 'Publiziert')).first()).toBeVisible(); // beim Übergang stehen kurz beide
   await expect(cardTitle(page, 'Publiziert')).toBeVisible({ timeout: 180_000 });
   await expect(page.getByTestId('site-job')).toHaveCount(0);
   const history = page.getByRole('table', { name: 'Zuletzt publiziert' });
@@ -208,7 +208,7 @@ test('publishing is blocked when content changed after the preview was built', a
   // Neu bauen schließt den Dialog und zeigt den Lauf in der Karte.
   await dialog.getByRole('button', { name: 'Vorschau neu bauen' }).click();
   await expect(dialog).toBeHidden();
-  await expect(page.getByRole('region', { name: 'Laufender Lauf' }).or(cardTitle(page, 'Vorschau bereit'))).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Laufender Lauf' }).or(cardTitle(page, 'Vorschau bereit')).first()).toBeVisible(); // beim Übergang stehen kurz beide
   await expect(cardTitle(page, 'Vorschau bereit')).toBeVisible({ timeout: 180_000 });
 
   // Mit Neuladen: Die Karte nennt es gleich beim Öffnen der Seite.
