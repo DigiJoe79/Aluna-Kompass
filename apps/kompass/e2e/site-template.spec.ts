@@ -19,7 +19,7 @@ test('reads a template, fills a variable and keeps a collection entry', async ({
   await page.goto('/site/variables');
   await page.locator('[name="claim.de"]').fill('Wir bauen Modelle');
   await page.getByRole('button', { name: 'Speichern' }).click();
-  await expect(page.getByRole('status')).toContainText('Gespeichert');
+  await expect(page.getByRole('status').filter({ hasText: 'Gespeichert' })).toHaveCount(1); // Ansage für Vorleser; daneben steht die Zeile „nicht publiziert“
 
   await page.getByRole('link', { name: 'Aktuelles' }).click();
   await expect(page).toHaveURL('/site/c/news');
@@ -57,7 +57,7 @@ test('a reference variable is a choice, and a withdrawn record shows as stale un
   await expect(choice.locator('option')).toContainText(['Keine Auswahl', 'Winterhilfe für Streuner']);
   await choice.selectOption('winterhilfe');
   await page.getByRole('button', { name: 'Speichern' }).click();
-  await expect(page.getByRole('status')).toContainText('Gespeichert');
+  await expect(page.getByRole('status').filter({ hasText: 'Gespeichert' })).toHaveCount(1); // Ansage für Vorleser; daneben steht die Zeile „nicht publiziert“
   await page.reload();
   await expect(page.getByLabel('Projekt auf der Startseite')).toHaveValue('winterhilfe');
 
@@ -72,14 +72,14 @@ test('a reference variable is a choice, and a withdrawn record shows as stale un
   // Ein veralteter Wert, den niemand anfasst, blockiert die übrigen Felder nicht (Spec § 4.3).
   await page.locator('[name="claim.de"]').fill('Trotz veraltetem Verweis gespeichert');
   await page.getByRole('button', { name: 'Speichern' }).click();
-  await expect(page.getByRole('status')).toContainText('Gespeichert');
+  await expect(page.getByRole('status').filter({ hasText: 'Gespeichert' })).toHaveCount(1); // Ansage für Vorleser; daneben steht die Zeile „nicht publiziert“
   await page.reload();
   await expect(page.locator('[name="claim.de"]')).toHaveValue('Trotz veraltetem Verweis gespeichert');
   await expect(page.getByText('„winterhilfe“ steht nicht mehr zur Auswahl.')).toBeVisible();
 
   await page.getByRole('button', { name: 'Leeren' }).click();
   await page.getByRole('button', { name: 'Speichern' }).click();
-  await expect(page.getByRole('status')).toContainText('Gespeichert');
+  await expect(page.getByRole('status').filter({ hasText: 'Gespeichert' })).toHaveCount(1); // Ansage für Vorleser; daneben steht die Zeile „nicht publiziert“
   await page.reload();
   await expect(page.getByLabel('Projekt auf der Startseite')).toHaveValue('');
   await expect(page.getByText('steht nicht mehr zur Auswahl')).toHaveCount(0);

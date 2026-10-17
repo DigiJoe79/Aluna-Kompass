@@ -628,7 +628,7 @@ test.describe('finance donation notices', () => {
     await expect(page.getByTestId('requirement-notice')).toHaveAttribute('data-done', 'true');
     const machineStep = page.getByTestId('requirement-machineProcedure');
     await expect(machineStep).toHaveAttribute('data-done', 'false');
-    await expect(machineStep).toContainText('sonst tragen Bestätigungen ein Unterschriftsfeld');
+    await expect(machineStep).toContainText('Sonst tragen Bestätigungen ein Unterschriftsfeld');
     await expect(machineStep.getByRole('link', { name: 'Erledigen' })).toHaveAttribute('href', '/finance/donations/notices');
 
     await page.goto('/finance/donations/notices');
@@ -640,7 +640,8 @@ test.describe('finance donation notices', () => {
     await expect(page.getByTestId('machine-status')).toContainText('Vollständig');
 
     await page.goto('/admin/finance?panel=checklist');
-    await expect(page.getByTestId('requirement-notice')).toContainText('ohne Bescheid keine Zuwendungsbestätigungen');
+    await expect(page.getByTestId('requirement-notice')).toContainText('Ohne Bescheid keine Zuwendungsbestätigungen');
+    await expect(page.getByTestId('requirement-notice')).not.toContainText(/\d{4}-\d{2}-\d{2}/); // Datum im Format des Vereins, nie ISO
     await expect(page.getByTestId('requirement-machineProcedure')).toHaveAttribute('data-done', 'true');
   });
 

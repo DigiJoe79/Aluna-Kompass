@@ -28,6 +28,7 @@ test.describe('finance: Rechnungen mit ZUGFeRD', () => {
   const option = (page: Page, text: string) => page.getByRole('listbox', { name: 'Kontoumsätze' }).getByRole('option').filter({ hasText: text });
   const card = (page: Page) => page.getByRole('region', { name: 'Aus der Rechnung' });
 
+  // Den Link trägt die Belegnummer, der Betreff steht in eigener Spalte (H1, 07-2 A5).
   async function openCardInVouchers(page: Page, subject: RegExp) {
     await page.goto('/finance/work/vouchers');
     await page.getByRole('row', { name: subject }).getByRole('button', { name: 'Aus der Rechnung' }).click();
@@ -57,7 +58,7 @@ test.describe('finance: Rechnungen mit ZUGFeRD', () => {
 
     // Dieselbe Karte in der Akte — jetzt mit der vorhandenen offenen Zahlung statt eines zweiten Knopfs.
     await page.goto('/finance/work/vouchers');
-    await page.getByRole('link', { name: storyPattern('Rechnung TM-2026-0042') }).click();
+    await page.getByRole('row', { name: storyPattern('Rechnung TM-2026-0042') }).getByRole('link').first().click();
     await expect(page).toHaveURL(/\/dms\/[0-9A-Z]{26}$/);
     await expect(card(page)).toContainText('Zu dieser Rechnung gibt es schon eine offene Zahlung.');
     await expect(card(page).getByRole('button', { name: 'Offene Zahlung anlegen' })).toHaveCount(0);
@@ -110,7 +111,7 @@ test.describe('finance: Rechnungen mit ZUGFeRD', () => {
     await expect(option(page, 'Buerobedarf Muster GmbH')).toHaveCount(0);
 
     await page.goto('/finance/work/vouchers');
-    const documentHref = await page.getByRole('link', { name: /Rechnung BM-7781/ }).getAttribute('href');
+    const documentHref = await page.getByRole('row', { name: /Rechnung BM-7781/ }).getByRole('link').first().getAttribute('href');
     await openCardInVouchers(page, /Rechnung BM-7781/);
     await expect(card(page)).toContainText('Wahrscheinlich schon bezahlt');
     await expect(card(page).getByRole('list', { name: 'Buchungen, die zur Rechnung passen' })).toContainText(story('Entwurf vom 10.01.2026'));
@@ -133,7 +134,7 @@ test.describe('finance: Rechnungen mit ZUGFeRD', () => {
   test('ein PDF ohne Anhang zeigt keine Karte', async ({ page }) => {
     await loginAsAdmin(page);
     await page.goto('/finance/work/vouchers');
-    await page.getByRole('link', { name: 'Rechnung Büromaterial über 35,00 €' }).click();
+    await page.getByRole('row', { name: /Rechnung Büromaterial über 35,00 €/ }).getByRole('link').first().click();
     await expect(page).toHaveURL(/\/dms\/[0-9A-Z]{26}$/);
     await expect(page.getByRole('heading', { name: 'Rechnung Büromaterial über 35,00 €' })).toBeVisible();
     await expect(card(page)).toHaveCount(0);
