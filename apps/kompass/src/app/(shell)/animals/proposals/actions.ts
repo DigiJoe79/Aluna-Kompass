@@ -73,7 +73,7 @@ export async function buildProposalPreviewAction(id: string, side: 'current' | '
     const { deps, ctx } = await requireSession();
     const review = await getProposal(deps, ctx, id);
     if (!review.ok) return toActionState(review, t);
-    const failed = (key: string): ActionState => ({ status: 'error', message: t(`animals.proposals.preview.${key}`), fieldErrors: {} });
+    const failed = (key: string): ActionState => ({ status: 'error', code: key, message: t(`animals.proposals.preview.${key}`), fieldErrors: {} });
     if (side === 'choice' && foreignPreviewPhotos(review.value, choice)) return failed('invalid');
     const input = previewRowInput(review.value, side, choice);
     let row: { slug: string };

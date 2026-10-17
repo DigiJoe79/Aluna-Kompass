@@ -87,8 +87,11 @@ export function PhotosEditor({ photos, max, error, onChange, onChoose, places }:
               )}
               <Button type="button" size="icon-sm" variant="ghost" disabled={i === 0} aria-label={t('moveLeft')} onClick={() => move(i, -1)}><ArrowLeft aria-hidden /></Button>
               <Button type="button" size="icon-sm" variant="ghost" disabled={i === photos.length - 1} aria-label={t('moveRight')} onClick={() => move(i, 1)}><ArrowRight aria-hidden /></Button>
-              {p.width && p.height ? <Button type="button" size="sm" variant="ghost" onClick={() => setEditing(i)}>{tc('edit')}</Button> : null}
-              <Button type="button" size="sm" variant="ghost" onClick={() => change(photos.filter((_, j) => j !== i))}>{t('remove')}</Button>
+              {/* „Ausschnitt …“ und „Entfernen“ brechen zusammen um; „Entfernen“ stand sonst allein in der zweiten Zeile (05 B20). */}
+              <span className="flex items-center gap-1">
+                {p.width && p.height ? <Button type="button" size="sm" variant="ghost" onClick={() => setEditing(i)}>{tc('edit')}</Button> : null}
+                <Button type="button" size="sm" variant="ghost" onClick={() => change(photos.filter((_, j) => j !== i))}>{t('remove')}</Button>
+              </span>
             </PhotoActions>
           </li>
         ))}

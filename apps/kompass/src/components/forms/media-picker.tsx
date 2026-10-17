@@ -143,7 +143,8 @@ export function MediaPicker({
             <span className="text-hint text-muted-ink">{tc('hasLine')}</span>
           ) : null}
         </span>
-        <div className="flex gap-2">
+        {/* `flex-wrap`: „Bild entfernen“ lief am Telefon aus dem Bild (05 B21). Kein Layout-Test (AGENTS.md). */}
+        <div className="flex flex-wrap gap-2">
           <Button type="button" variant="secondary" size="sm" aria-label={`${label}: ${t('choose')}`} onClick={() => setOpen(true)}>
             {t('choose')}
           </Button>

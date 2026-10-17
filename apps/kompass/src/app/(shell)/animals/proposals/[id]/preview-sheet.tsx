@@ -23,7 +23,7 @@ export function PreviewSheet({ proposalId, name, kind }: { proposalId: string; n
   const choice = usePreviewChoice(proposalId);
   const [open, setOpen] = useState(false);
   const [side, setSide] = useState<Side>('choice');
-  const [state, setState] = useState<{ url: string | null; loading: boolean; error: string | null }>({ url: null, loading: false, error: null });
+  const [state, setState] = useState<{ url: string | null; loading: boolean; error: string | null; hint?: boolean }>({ url: null, loading: false, error: null });
   const network = t('network');
 
   useEffect(() => {
@@ -34,7 +34,8 @@ export function PreviewSheet({ proposalId, name, kind }: { proposalId: string; n
       const result = await runAction(() => buildProposalPreviewAction(proposalId, side, choice), network);
       if (!current) return;
       if (result.status === 'success') setState({ url: (result.data as { url: string }).url, loading: false, error: null });
-      else setState({ url: null, loading: false, error: result.status === 'error' ? result.message : null });
+      // Ohne Tierseite in der Vorlage ist das ein Zustand der Webseite, keine Ablehnung (05 A3).
+      else setState({ url: null, loading: false, error: result.status === 'error' ? result.message : null, hint: result.status === 'error' && result.code === 'noAnimalPage' });
     }, DEBOUNCE_MS);
     return () => {
       current = false;
@@ -63,7 +64,7 @@ export function PreviewSheet({ proposalId, name, kind }: { proposalId: string; n
                 ]}
               />
             )}
-            {state.error ? <Notice level="refuse">{state.error}</Notice> : null}
+            {state.error ? <Notice level={state.hint ? 'hint' : 'refuse'}>{state.error}</Notice> : null}
             {state.loading ? <p className="text-meta text-ink-2" aria-live="polite">{t('building')}</p> : null}
             {state.url && !state.error ? (
               <iframe key={state.url} src={state.url} title={t('frame', { name })} sandbox="allow-same-origin" className={`h-[70vh] w-full rounded-md border border-line ${state.loading ? 'opacity-60' : ''}`} />

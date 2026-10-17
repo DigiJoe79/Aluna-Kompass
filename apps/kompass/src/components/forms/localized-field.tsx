@@ -140,8 +140,9 @@ export function LocalizedField({
           {isLeading && !tabbed ? fieldLabel : undefined}
         </LocaleLabel>
         {kind === 'input' ? <Input {...props} type="text" /> : <Textarea {...props} rows={rows} className={cn(kind === 'markdown' && ' text-meta')} />}
+        {/* „Nicht übersetzt“ ist ein Hinweis, keine Warnung (§ A, 05 B16). */}
         {isUntranslated ? (
-          <p id={hintId} className="text-hint text-warning">
+          <p id={hintId} className="text-hint text-muted-ink">
             {t('untranslated')}
           </p>
         ) : null}

@@ -2847,6 +2847,7 @@
       },
       "year": "Vermittlungsjahr",
       "yearHint": "Erscheint bei den Glücklichen Vermittlungen.",
+      "description": "Der Status steht auf der Webseite am Hund. „Vermittelt“ legt dazu die Geschichte mit dem Vermittlungsjahr an.",
       "submit": "Status setzen",
       "saved": "Status gesetzt."
     },
@@ -3146,6 +3147,8 @@
         "reason": "Begründung der Quelle: {reason}",
         "kompass": "Kompass",
         "photoOf": "Titelbild von {name}",
+        "noSourcePhoto": "Kein Foto der Quelle",
+        "noOwnPhoto": "Kein Foto in Kompass",
         "origin": "Herkunft",
         "explain": "„Gleicher Hund“ verknüpft {proposed} mit {name}. Künftige Änderungen von {source} kommen dann als Änderung an {name}.",
         "same": "Gleicher Hund",
@@ -3153,7 +3156,7 @@
       },
       "stack": {
         "title": "Vorschläge durchgehen",
-        "done": "Fertig",
+        "done": "Zur Liste",
         "position": "{index} von {total}",
         "reject": "Ablehnen",
         "review": "Prüfen",

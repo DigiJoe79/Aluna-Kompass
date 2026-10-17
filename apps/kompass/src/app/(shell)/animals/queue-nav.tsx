@@ -22,7 +22,8 @@ export function QueueNav({ queue, basePath = '/animals', keepTab = true }: { que
   const [openedAt] = useState(queue.position);
   const position = queue.position ?? openedAt;
   const { query } = queue;
-  if (!position) return null;
+  // „‹ 1 von 1 ›“ blättert nirgendwohin (05 B18).
+  if (!position || position.total <= 1) return null;
   const href = (id: string) => `${basePath}/${id}${query ? `?${query}` : ''}${keepTab && tab ? `${query ? '&' : '?'}tab=${encodeURIComponent(tab)}` : ''}`;
   const arrow = (id: string | null, label: string, Icon: typeof ChevronLeft) =>
     id ? (

@@ -1,7 +1,7 @@
 'use client';
 
 import type { AnimalListItem } from '@kompass/module-animals';
-import { Inbox } from 'lucide-react';
+import { Inbox, PawPrint } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useTransition } from 'react';
@@ -170,7 +170,7 @@ export function AnimalList({
                   <TableCell col="title">
                     <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
                       {/* Die Vorschau statt des Originals: Bei einigen hundert Hunden lüde die Liste sonst jedes Foto in voller Größe. */}
-                      {a.primaryAssetId ? <img src={`/media/${a.primaryAssetId}/preview`} loading="lazy" alt="" className="size-9 shrink-0 rounded-full object-cover" /> : <span className="size-9 shrink-0 rounded-full bg-surface-2" aria-hidden />}
+                      {a.primaryAssetId ? <img src={`/media/${a.primaryAssetId}/preview`} loading="lazy" alt="" className="size-9 shrink-0 rounded-full object-cover" /> : <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-surface-2 text-muted-ink" aria-hidden><PawPrint className="size-4" /></span>}
                       <RowLink href={`/animals/${a.id}${listQs ? `?${listQs}` : ''}`}>{a.name}</RowLink>
                       {proposalIds.has(a.id) ? (
                         <StatusBadge tone="agent" icon={Inbox} testId="animal-proposal-badge">{t('proposalBadge')}</StatusBadge>

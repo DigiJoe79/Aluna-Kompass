@@ -56,11 +56,12 @@ export function SameAsReview({ review, locales, nextHref }: { review: ProposalRe
           {[
             { key: 'source', head: proposal.sourceName, name: proposed, photo: sourcePhoto ? <img src={sourcePhoto.imageId ? proposalImageUrl(sourcePhoto.imageId) : mediaPreviewUrl(sourcePhoto.mediaId!)} alt={t('photoOf', { name: proposed })} className={PHOTO} /> : null },
             { key: 'kompass', head: t('kompass'), name: animal.name, photo: ownPhoto ? <img src={mediaPreviewUrl(ownPhoto.assetId)} alt={t('photoOf', { name: animal.name })} className={PHOTO} /> : null },
-          ].map((col) => (
+          ].map((col) => ({ ...col, missing: col.key === 'source' ? t('noSourcePhoto') : t('noOwnPhoto') })).map((col) => (
             <div key={col.key} className="flex min-w-0 flex-col gap-2">
               <Overline as="span">{col.head}</Overline>
               <SectionHeading>{col.name}</SectionHeading>
-              {col.photo ?? <span className={cn(PHOTO, 'bg-surface-2')} aria-hidden />}
+              {/* Fehlt ein Foto, sagt die Fläche es (05 A4), statt grau zu bleiben. */}
+              {col.photo ?? <span className={cn(PHOTO, 'flex items-center justify-center bg-surface-2 p-3 text-center text-meta text-muted-ink')}>{col.missing}</span>}
             </div>
           ))}
           {rows.map((f) => (

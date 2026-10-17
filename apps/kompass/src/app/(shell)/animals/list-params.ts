@@ -65,6 +65,15 @@ export interface AnimalQueue {
   position: QueuePosition | null;
 }
 
+/**
+ * Die Hauptaktion der Maske neben „Speichern“: Bestätigen, solange eine Prüfung offen ist; sonst „Speichern und weiter“,
+ * aber nur, wenn die Warteschlange einen nächsten Eintrag hat (05 B12: nicht bei „1 von 1“).
+ */
+export function primaryIntent(reviewPending: boolean, position: QueuePosition | null): 'confirm' | 'next' | null {
+  if (reviewPending) return 'confirm';
+  return position?.nextId ? 'next' : null;
+}
+
 /** Die Reiter der Maske; der gewählte reist als `tab` in der URL zum nächsten Hund mit. */
 export const FORM_TABS = ['profile', 'content', 'story'] as const;
 export type FormTab = (typeof FORM_TABS)[number];

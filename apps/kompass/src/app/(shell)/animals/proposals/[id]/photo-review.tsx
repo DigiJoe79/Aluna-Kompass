@@ -158,15 +158,17 @@ export function PhotoReview({ rows, state, onChange, sourceName, max, readOnly, 
             <li key={row.key} data-testid="proposal-photo" className={`flex min-w-0 flex-col gap-1.5 rounded-md border p-2 ${on ? 'border-line' : 'border-line opacity-60'}`}>
               <PhotoTileImage src={srcOf(row)} crop={crop} isPrimary={isPrimary} places={at} label={crop ? t('withCrop', { name: name(row) }) : name(row)} />
               <CropLine crop={crop} width={sizeOf(row)?.width ?? null} isPrimary={isPrimary} places={at} />
+              {/* Marken und Herkunft in einer Zeile, die Aktionen unten bündig: Die Karten standen mit vier Textzeilen und
+                  verschiedenen Bildhöhen unruhig nebeneinander (05 B23). Kein Layout-Test (AGENTS.md). */}
               <span className="flex flex-wrap items-center gap-1">
                 {row.change === 'new' ? <StatusBadge tone="agent">{t('new')}</StatusBadge> : row.change === 'dropped' ? <StatusBadge tone="warning">{t('dropped')}</StatusBadge> : <StatusBadge tone="neutral">{t('kept')}</StatusBadge>}
                 {isPrimary ? <StatusBadge tone="neutral">{t('primary')}</StatusBadge> : null}
                 {row.conflict ? <StatusBadge tone="warning">{r('changedSince')}</StatusBadge> : null}
+                <span className="text-hint text-ink-2">{row.origin === 'source' ? t('fromSource', { source: sourceName }) : t('fromKompass')}</span>
               </span>
-              <span className="text-hint text-ink-2">{row.origin === 'source' ? t('fromSource', { source: sourceName }) : t('fromKompass')}</span>
               {readOnly ? null : (
                 // Checkbox und Knopf stehen beide für „was passiert mit diesem Foto“ (Board 2a); bricht die Zeile um, steht der Knopf darunter.
-                <PhotoActions className="justify-between gap-x-2 gap-y-1">
+                <PhotoActions className="mt-auto justify-between gap-x-2 gap-y-1">
                   <label className="flex items-center gap-2 text-meta text-ink">
                     <Checkbox checked={toggle.checked} onCheckedChange={(v) => toggle.set(v === true)} aria-label={`${toggle.label}: ${name(row)}`} />
                     {toggle.label}

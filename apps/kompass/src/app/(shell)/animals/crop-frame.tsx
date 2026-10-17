@@ -15,7 +15,8 @@ const pct = (n: number) => `${Math.round(n * 10_000) / 100}%`;
  * das Rechteck hell gerahmt. Nur Anzeige — bearbeitet wird der Ausschnitt mit Backlog 24. Ohne Ausschnitt das Foto
  * ohne Abdunklung. `img` statt `next/image`: Die Vorschauen sind privat.
  */
-export function CropFrame({ src, crop, label, className }: { src: string; crop: PhotoCrop | null; alt?: string; label: string; className?: string }) {
+/** `framed={false}`: nur abdunkeln, ohne hellen Rahmen — im Stapel sah der Rahmen wie ein Fehler aus (05 C31). */
+export function CropFrame({ src, crop, label, className, framed = true }: { src: string; crop: PhotoCrop | null; alt?: string; label: string; className?: string; framed?: boolean }) {
   const shades = crop
     ? [
         { left: '0%', top: '0%', width: '100%', height: pct(crop.y) },
@@ -30,7 +31,7 @@ export function CropFrame({ src, crop, label, className }: { src: string; crop: 
       {shades.map((style, i) => (
         <span key={i} data-testid="crop-shade" aria-hidden className="absolute bg-overlay/45" style={style} />
       ))}
-      {crop ? (
+      {crop && framed ? (
         <span
           data-testid="crop-rect"
           aria-hidden

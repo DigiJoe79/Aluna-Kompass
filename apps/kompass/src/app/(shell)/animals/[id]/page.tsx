@@ -50,7 +50,8 @@ export default async function AnimalEditPage(props: { params: Promise<{ id: stri
     <Page width="standard" header={<PageHeader title={animal.value.name} description={address} back={back} actions={actions} />}>
       {/* `key`: Beim Wechsel zum nächsten Hund behielte React sonst den Zustand der Felder und der Fotos. */}
       <AnimalForm key={animal.value.id} animal={animal.value} locales={deps.locales()} queue={queue} initialTab={formTab(q.tab)} backHref={back.href} photoPlaces={photoPlaces} storyPlaces={imagePlaces(deps, 'animals.story')} photoSizes={photoPixelSizes(deps, [...animal.value.photos.map((p) => p.assetId), ...(animal.value.story ? [animal.value.story.beforeAssetId, animal.value.story.afterAssetId].filter((x): x is string => !!x) : [])])} maxPhotos={MAX_ANIMAL_PHOTOS} origins={origins.ok ? origins.value : []} openProposal={openProposal} />
-      <div className="mt-6">
+      {/* Abstand wie zwischen zwei Karten einer Seite: Das Dokumente-Panel gehört nicht zum Reiter darüber (05 B22). */}
+      <div className="mt-8">
         <RelatedDocuments deps={deps} ctx={ctx} entityType="animal" entityId={animal.value.id} />
       </div>
     </Page>

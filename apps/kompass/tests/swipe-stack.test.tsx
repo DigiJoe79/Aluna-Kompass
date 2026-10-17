@@ -130,7 +130,9 @@ describe('SwipeStack (Board 3b–3e, 8b)', () => {
     cleanup();
     render(<SwipeStack frame={frame} cards={[card('P1', 'Mira', { image: { url: '/animals/proposal-images/I1', crop: { x: 0, y: 0.1, w: 1, h: 0.8 }, ratio: 0.75 } })]} backHref="/x" query="" />, { wrapper: Intl });
     expect(screen.getByRole('img', { name: 'Mira, mit Ausschnitt' })).toBeTruthy();
-    expect(screen.getByTestId('crop-rect')).toBeTruthy();
+    // Im Stapel nur abgedunkelt, ohne hellen Rahmen — der sah wie ein Fehler aus (05 C31).
+    expect(screen.getAllByTestId('crop-shade').length).toBeGreaterThan(0);
+    expect(screen.queryByTestId('crop-rect')).toBeNull();
   });
 
   it('keeps the three buttons short and says on the card that accepting puts a new dog online', () => {
@@ -168,7 +170,7 @@ describe('SwipeStack (Board 3b–3e, 8b)', () => {
   it('Fertig sends a held decision at once and goes back', async () => {
     render(<SwipeStack frame={frame} cards={[card('P1', 'Mira'), card('P2', 'Nala')]} backHref="/animals/proposals" query="" />, { wrapper: Intl });
     fireEvent.click(screen.getByRole('button', { name: 'Annehmen' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Fertig' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Zur Liste' }));
     expect(actions.accept).toHaveBeenCalledOnce();
     expect(nav.push).toHaveBeenCalledWith('/animals/proposals');
   });
@@ -192,7 +194,7 @@ describe('SwipeStack (Board 3b–3e, 8b)', () => {
     actions.accept.mockResolvedValueOnce({ status: 'error', message: 'Der Vorschlag ist nicht mehr offen.', fieldErrors: {} });
     const { unmount } = render(<SwipeStack frame={frame} cards={[card('P1', 'Mira'), card('P2', 'Nala')]} backHref="/x" query="" />, { wrapper: Intl });
     fireEvent.click(screen.getByRole('button', { name: 'Annehmen' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Fertig' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Zur Liste' }));
     unmount();
     await settle();
     expect(toastMock.error).toHaveBeenCalledWith('Der Vorschlag ist nicht mehr offen.', expect.objectContaining({ duration: Infinity }));

@@ -206,7 +206,7 @@ export function SwipeStack({ cards, backHref, query, frame }: { cards: StackCard
             <div className="bg-surface-2">
               <div className="mx-auto w-full" style={{ maxWidth: fitHeight(card.image?.crop ? card.image.ratio : frameRatio) }}>
                 {card.image?.crop ? (
-                  <CropFrame src={card.image.url} crop={card.image.crop} label={p('photoReview.withCrop', { name: card.name || p('unnamed') })} className="rounded-none" />
+                  <CropFrame src={card.image.url} crop={card.image.crop} label={p('photoReview.withCrop', { name: card.name || p('unnamed') })} className="rounded-none" framed={false} />
                 ) : card.image ? (
                   <img src={card.image.url} alt="" draggable={false} style={frame} className="block w-full object-cover" />
                 ) : (

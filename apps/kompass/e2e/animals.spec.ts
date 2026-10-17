@@ -203,7 +203,9 @@ test.describe('animals', () => {
     await expect(page).toHaveURL(/review=1/);
     await expect(page).toHaveURL(/tab=content/);
     await expect(page.getByRole('tab', { name: 'Texte und Fotos' })).toHaveAttribute('aria-selected', 'true');
-    await expect(page.getByText('1 von 1')).toBeVisible();
+    // „1 von 1“ blättert nirgendwohin und steht nicht mehr da (05 B18); ohne nächsten Hund kein „… und weiter“ (05 B12).
+    await expect(page.getByText('1 von 1')).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Geprüft und weiter' })).toHaveCount(0);
     // Mika ist schon veröffentlicht: kein Haken, und die Fotos sind ihre eigenen, nicht Pelles Auswahl.
     await expect(page.getByLabel('Beim Bestätigen publizieren')).toHaveCount(0);
     await expect(page.getByTestId('animal-photo')).toHaveCount(3);

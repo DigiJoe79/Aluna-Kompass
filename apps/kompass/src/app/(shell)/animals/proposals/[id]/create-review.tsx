@@ -159,7 +159,7 @@ export function CreateReview({ review, locales, nextHref, backHref, canFollowUp,
                   </span>
                   <HintLines hints={[{ ...h, title: undefined }]} />
                   {h.field ? (
-                    <Button type="button" variant="ghost" size="sm" className="w-fit" onClick={() => goTo(h.field!)}>
+                    <Button type="button" variant="ghost" size="sm" className="-ml-2 w-fit" onClick={() => goTo(h.field!)}>
                       {t('toField')}
                     </Button>
                   ) : null}
