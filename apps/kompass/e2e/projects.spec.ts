@@ -73,6 +73,18 @@ test.describe('projects', () => {
     await expect(page).toHaveURL(/\/projects\/[A-Z0-9]+$/);
   });
 
+  // Durchsicht 0.2.11 (06 A2, 06 B8, 06 B12, 14 B15): Die Spalte des Schalters heißt „Webseite“, der Projektstatus steht
+  // als Text daneben, der Typ als Text statt Marke, und die Spalte der Pfeile hat einen (unsichtbaren) Kopf.
+  test('Liste: „Webseite“ für den Schalter, Status und Typ als Text, Kopf über den Pfeilen', async ({ page }) => {
+    await page.goto('/projects');
+    await expect(page.getByRole('columnheader', { name: 'Webseite' })).toBeVisible();
+    await expect(page.getByRole('columnheader', { name: 'Reihenfolge' })).toHaveCount(1);
+    const row = page.getByRole('row', { name: /Kastrationsaktion 2026/ });
+    await expect(row.getByRole('cell', { name: 'Aktiv', exact: true })).toBeVisible();
+    // Der Typ steht als Text direkt in der Zelle, nicht in einer Marke.
+    await expect(row.getByRole('cell', { name: /^(Dauerprojekt|Kurzzeitprojekt)$/ }).locator('span')).toHaveCount(0);
+  });
+
   // E1 „Tabelle am Telefon“ (Designer 2026-10-17): Unter `md` ist jede Zeile eine Karte; der Status (Schalter) ist
   // erreichbar, die Liste scrollt nie seitlich, sortiert wird über „Sortieren: …“.
   test('am Telefon: Kartenzeilen, Status erreichbar, Sortieren über der Liste, kein seitliches Scrollen', async ({ page }) => {

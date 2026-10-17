@@ -29,7 +29,7 @@ test('the preview blocks on a blocked term and says where to change it', async (
   await page.goto('/admin/site?panel=blockedTerms');
   const terms = page.getByRole('region', { name: 'Sperrwörter' });
   await terms.getByLabel('Begriffe, einer je Zeile').fill('Popescu\nLorem ipsum');
-  await terms.getByRole('button', { name: 'Sperrwörter speichern' }).click();
+  await terms.getByRole('button', { name: 'Speichern' }).click();
   await expect(page.getByRole('status')).toContainText('Sperrwörter gespeichert');
   await page.reload();
   await expect(page.getByRole('region', { name: 'Sperrwörter' }).getByLabel('Begriffe, einer je Zeile')).toHaveValue('Popescu\nLorem ipsum');

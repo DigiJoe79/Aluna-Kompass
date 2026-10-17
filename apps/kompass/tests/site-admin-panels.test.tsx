@@ -52,13 +52,13 @@ describe('Reiter Gesperrte Begriffe', () => {
   it('lässt mit site.publish speichern', () => {
     render(<BlockedTermsPanel terms={['Popescu']} canPublish />, { wrapper: Intl });
     // K9-Befund 4: Speichern über die Leiste am Ende der Karte (MUSTER § B), nicht als eigener Knopf.
-    expect(screen.getByRole('button', { name: 'Sperrwörter speichern' }).closest('[data-slot="form-action-bar"]')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Speichern' }).closest('[data-slot="form-action-bar"]')).toBeTruthy();
     expect((screen.getByLabelText('Begriffe, einer je Zeile') as HTMLTextAreaElement).readOnly).toBe(false);
   });
 
   it('zeigt ohne site.publish nur lesend und nennt das fehlende Recht', () => {
     render(<BlockedTermsPanel terms={['Popescu']} canPublish={false} />, { wrapper: Intl });
-    expect(screen.queryByRole('button', { name: 'Sperrwörter speichern' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Speichern' })).toBeNull();
     const field = screen.getByLabelText('Begriffe, einer je Zeile') as HTMLTextAreaElement;
     expect(field.readOnly).toBe(true);
     expect(field.value).toBe('Popescu');

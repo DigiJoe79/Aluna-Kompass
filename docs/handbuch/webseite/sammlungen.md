@@ -8,7 +8,7 @@ Vorlage dafür vorsieht.
 ## Die Seiten
 
 Jede Sammlung ist eine eigene Seite unter Webseite, benannt, wie die Vorlage
-sie nennt. Die Liste zeigt alle Einträge; „Neu“ legt einen an, ein Klick auf
+sie nennt. Die Liste zeigt alle Einträge; „Eintrag anlegen“ legt einen an, ein Klick auf
 einen Eintrag öffnet ihn. Die Felder sind dieselben Typen wie bei den
 [Variablen](variablen.md).
 
@@ -25,7 +25,7 @@ einen Eintrag öffnet ihn. Die Felder sind dieselben Typen wie bei den
 - **Veröffentlicht.** Hat die Sammlung den Schalter, können Sie einen
   Eintrag vorbereiten, ohne dass er ausgeliefert wird. Ohne den Schalter ist
   jeder Eintrag beim nächsten Publish auf der Seite.
-- **Höchstzahl.** Ist sie erreicht, ist „Neu“ gesperrt, bis ein Eintrag
+- **Höchstzahl.** Ist sie erreicht, ist „Eintrag anlegen“ gesperrt, bis ein Eintrag
   geht.
 - **Bilder.** Ein Bildfeld hat neben „Wählen“ den Knopf „Ausschnitt …“ — auch
   in Listen innerhalb eines Eintrags. Gibt die Vorlage dem Feld ein Format vor,

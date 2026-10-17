@@ -30,7 +30,8 @@ export function ExternalLinksField({ value, errors }: { value: ExternalLink[]; e
           <FormField id={`externalLinks.${index}.url`} label={t('url')} error={errors[`externalLinks.${index}.url`]}>
             <Input id={`externalLinks.${index}.url`} name={`externalLinks.${index}.url`} value={link.url} onChange={(e) => update(index, { url: e.target.value })} />
           </FormField>
-          <Button type="button" variant="outline" aria-label={t('remove')} onClick={() => setLinks(links.filter((_, i) => i !== index))}>×</Button>
+          {/* Symbolknopf neben dem Adressfeld, nicht über die volle Breite (06 A3). */}
+          <Button type="button" variant="outline" size="icon" className="justify-self-start" aria-label={t('remove')} onClick={() => setLinks(links.filter((_, i) => i !== index))}>×</Button>
         </div>
       ))}
       <div><Button type="button" variant="outline" onClick={() => setLinks([...links, { label: '', url: '' }])}>{t('add')}</Button></div>

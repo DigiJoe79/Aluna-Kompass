@@ -52,6 +52,10 @@ export async function ProjectFinanceSection({ deps, ctx, projectId }: { deps: De
                 <span className="tabular-nums text-ink">{formatEuro(settings.targetCents!)}</span>
               </div>
               <Progress value={progressValue} data-testid="project-finance-progress" />
+              {/* Die Zahl zum Balken (06 B5): „850,00 € von 2.500,00 € (34 %)“. */}
+              <p data-testid="project-finance-progress-text" className="tabular-nums text-meta text-ink-2">
+                {t('progress', { income: formatEuro(result.incomeCents), target: formatEuro(settings.targetCents!), percent: Math.round((result.incomeCents / settings.targetCents!) * 100) })}
+              </p>
             </div>
           ) : (
             <p className="text-meta text-muted-ink">{t('noTarget')}</p>

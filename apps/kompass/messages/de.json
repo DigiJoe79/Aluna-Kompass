@@ -2669,6 +2669,8 @@
       "name": "Projekt",
       "type": "Typ",
       "status": "Status",
+      "website": "Webseite",
+      "order": "Reihenfolge",
       "links": "Verweise"
     },
     "types": {
@@ -3332,7 +3334,7 @@
       "saved": "Gespeichert."
     },
     "entries": {
-      "new": "Neu",
+      "new": "Eintrag anlegen",
       "create": "Eintrag anlegen",
       "saved": "Gespeichert.",
       "delete": "Eintrag löschen …",
@@ -3384,7 +3386,7 @@
         "intro": "Begriffe, die nie auf der Webseite erscheinen dürfen — etwa ein alter Vereinsname oder ein Platzhalter aus der Einrichtung. Die Vorschau meldet jeden Treffer, und solange einer da ist, lässt sich nicht publizieren.",
         "label": "Begriffe, einer je Zeile",
         "hint": "2 bis 80 Zeichen je Begriff, höchstens 50. Groß- und Kleinschreibung zählt nicht; Leerzeichen, Bindestrich und Unterstrich gelten als gleich.",
-        "save": "Sperrwörter speichern",
+        "save": "Speichern",
         "saved": "Sperrwörter gespeichert."
       },
       "connection": {
@@ -5175,6 +5177,7 @@
       "expense": "Ausgaben",
       "result": "Ergebnis",
       "noTarget": "Kein Zielbetrag hinterlegt.",
+      "progress": "{income} von {target} ({percent} %)",
       "dialog": {
         "title": "Finanzfelder ändern",
         "target": "Zielbetrag",

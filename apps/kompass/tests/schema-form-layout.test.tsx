@@ -218,9 +218,11 @@ describe('SchemaForm', () => {
     expect(cellOf('Platz 2').contains(note)).toBe(true);
   });
 
-  it('setzt Felder vor dem ersten Abschnitt ins selbe Raster', () => {
-    wrap(<SchemaForm schema={{ count: schema.count! }} value={{}} locales={['de']} onChange={() => {}} leading={<span>Slug-Feld</span>} />);
-    expect(screen.getByText('Slug-Feld').closest('.grid')).toBe(cellOf('Anzahl').parentElement);
+  it('setzt den URL-Teil ans Ende des ersten Abschnitts, im selben Raster (10 B14)', () => {
+    wrap(<SchemaForm schema={{ count: schema.count! }} value={{}} locales={['de']} onChange={() => {}} trailing={<span>Slug-Feld</span>} />);
+    const slug = screen.getByText('Slug-Feld');
+    expect(slug.closest('.grid')).toBe(cellOf('Anzahl').parentElement);
+    expect(cellOf('Anzahl').compareDocumentPosition(slug) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 });
 

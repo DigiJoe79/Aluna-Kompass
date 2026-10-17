@@ -14,7 +14,7 @@ import { Select } from '@/components/ui/select';
 import { formatAmount, parseAmount } from '@/lib/finance/amount';
 import { setProjectFinanceAction } from './finance-actions';
 import { FormField } from '@/components/forms/form-field';
-import { FormGrid } from '@/components/forms/form-grid';
+import { FormCell, FormGrid } from '@/components/forms/form-grid';
 
 export interface FinanceSectionValues {
   targetCents: number | null;
@@ -72,12 +72,16 @@ export function FinanceSectionEditor({ projectId, initial, purposes }: { project
                   ))}
                 </Select>
               </FormField>
-              <FormField id="project-finance-abroad" label={t('abroad')} size="m" toggle>
-                <Checkbox id="project-finance-abroad" checked={abroad} onCheckedChange={(checked) => setAbroad(checked)} />
-              </FormField>
-              <FormField id="project-finance-publish" label={t('publishDonationStatus')} size="m" toggle>
-                <Checkbox id="project-finance-publish" checked={publishDonationStatus} onCheckedChange={(checked) => setPublishDonationStatus(checked)} />
-              </FormField>
+              {/* Beide Haken als eine Gruppe ohne Zeilenabstand des Rasters dazwischen: Sie standen weit auseinander (06 B13).
+                  Kein Layout-Test für diese Einzelstelle (AGENTS.md). */}
+              <FormCell size="full" className="flex flex-col">
+                <FormField id="project-finance-abroad" label={t('abroad')} size="full" toggle className="self-stretch">
+                  <Checkbox id="project-finance-abroad" checked={abroad} onCheckedChange={(checked) => setAbroad(checked)} />
+                </FormField>
+                <FormField id="project-finance-publish" label={t('publishDonationStatus')} size="full" toggle className="self-stretch">
+                  <Checkbox id="project-finance-publish" checked={publishDonationStatus} onCheckedChange={(checked) => setPublishDonationStatus(checked)} />
+                </FormField>
+              </FormCell>
             </FormGrid>
             <FormActionBar placement="dialog" cancel={() => setOpen(false)} pending={pending} saveLabel={t('save')} onSave={() => void submit()} state={withUnplacedFieldErrors(feedback.state, [])} />
           </DialogContent>
