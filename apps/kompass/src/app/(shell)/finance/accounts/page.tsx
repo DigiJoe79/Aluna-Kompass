@@ -65,15 +65,16 @@ export default async function FinanceAccountsPage() {
 
   return (
     <Page width="standard" header={<PageHeader title={t('title')} />}>
+      {/* `items-start`: Eine Karte nur so hoch wie ihr Inhalt (07-2 C25). Kein Layout-Test (AGENTS.md). */}
       <div className="space-y-5">
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div className="grid grid-cols-1 items-start gap-3 sm:grid-cols-2">
           {active.map((a) => (
             <AccountCard key={a.id} account={toCardData(a)} />
           ))}
         </div>
         {inactive.length > 0 ? (
           <Disclosure label={t('inactive')} count={inactive.length}>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="grid grid-cols-1 items-start gap-3 sm:grid-cols-2">
               {inactive.map((a) => (
                 <AccountCard key={a.id} account={toCardData(a)} />
               ))}

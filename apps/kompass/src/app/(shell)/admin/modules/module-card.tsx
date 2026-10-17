@@ -19,6 +19,7 @@ export function ModuleCard({ module }: { module: ModuleStatus }) {
   // Stufe 1, Auftrag 6: Namen statt Schlüssel — auch für die Abhängigkeiten.
   const nameOf = (key: string) => nameOrEmpty(t.has(`names.${key}`) ? t(`names.${key}`) : null, key);
   const name = nameOf(module.key);
+  const note = module.locked ? t('coreNote') : t.has(`notes.${module.key}`) ? t(`notes.${module.key}`) : null;
   return (
     <section
       aria-label={name}
@@ -38,6 +39,8 @@ export function ModuleCard({ module }: { module: ModuleStatus }) {
           {t('meta', { version: module.version })}
           {module.dependsOn.length > 0 ? ` · ${t('dependsOn', { list: module.dependsOn.map(nameOf).join(', ') })}` : ''}
         </p>
+        {/* Die Notiz links unter der Beschreibung, nicht rechtsbündig unter dem Schalter (01 B21). Kein Layout-Test. */}
+        {note ? <p className="mt-1 max-w-prose text-hint text-muted-ink">{note}</p> : null}
       </div>
       <div className="flex flex-col items-end gap-1">
         <RefusalNotice action state={feedback.state} />
@@ -54,9 +57,6 @@ export function ModuleCard({ module }: { module: ModuleStatus }) {
             }
           />
         </div>
-        <span className="text-right text-hint text-muted-ink">
-          {module.locked ? t('coreNote') : t.has(`notes.${module.key}`) ? t(`notes.${module.key}`) : ''}
-        </span>
       </div>
     </section>
   );
