@@ -137,6 +137,8 @@ export function BookTable({
           <span key={kind} className="flex flex-col">
             <Overline as="span">{t(`sums.${kind}`)}</Overline>
             <span data-testid={`book-sum-${kind}`} className="text-section tabular-nums text-ink">{formatEuro(sums[kind])}</span>
+            {/* 09 B23: Der Hinweis zu den Mitgliedsbeiträgen steht an ihrer Kennzahl, nicht frei darunter. */}
+            {kind === 'membershipFee' ? <span className="text-hint text-muted-ink">{t('sums.membershipFeeHint')}</span> : null}
           </span>
         ))}
         <span className="flex flex-col">
@@ -144,7 +146,6 @@ export function BookTable({
           <span data-testid="book-sum-total" className="text-section tabular-nums text-ink">{formatEuro(sums.total)}</span>
         </span>
       </div>
-      {membershipFeesCertifiable ? <p className="text-hint text-muted-ink">{t('sums.membershipFeeHint')}</p> : null}
 
       {rows.length === 0 && filterAnonymous ? (
         <EmptyState filtered={{ noun: t('emptyFilteredNoun'), onReset: () => go({ year, anonymous: false }) }} />

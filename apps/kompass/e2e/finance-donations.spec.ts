@@ -458,7 +458,8 @@ test.describe('finance donation notices', () => {
     // K9-Befund 8: sechs Spalten — Befreiung ab und gültig bis stehen zusammen unter „Gilt“, der Veranlagungszeitraum darunter.
     await expect(page.getByRole('table', { name: 'Bescheide des Finanzamts' }).getByRole('columnheader', { name: 'Gilt' })).toBeVisible();
     await expect(page.getByRole('table', { name: 'Bescheide des Finanzamts' }).getByRole('columnheader')).toHaveCount(6);
-    await expect(noticeRow(page, 'vorläufige Anerkennung (§ 60a)').getByTestId('notice-state')).toContainText(story('02.05.2025'));
+    await expect(noticeRow(page, 'vorläufige Anerkennung (§ 60a)').getByTestId('notice-state')).toHaveText('ersetzt'); // 09 B25
+    await expect(noticeRow(page, 'vorläufige Anerkennung (§ 60a)').getByTestId('notice-state-date')).toContainText(story('02.05.2025'));
 
     await page.getByRole('button', { name: 'Bescheid erfassen' }).click();
     const dialog = page.getByRole('dialog');

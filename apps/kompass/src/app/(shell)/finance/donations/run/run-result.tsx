@@ -19,7 +19,7 @@ import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import type { ActionState } from '@/lib/actions';
 import { formatEuro } from '@/lib/finance/amount';
-import { runProgress } from '@/lib/finance/run';
+import { runSummary } from '@/lib/finance/run';
 import { dispatchRunConfirmationsAction } from './actions';
 import { FormField } from '@/components/forms/form-field';
 import { FormGrid } from '@/components/forms/form-grid';
@@ -44,7 +44,7 @@ export function RunResult({ run, canIssue, today, missing, followUpHref }: { run
   const [refusal, setRefusal] = useState<ActionState>({ status: 'idle' });
   const tCommon = useTranslations('common');
   const emptyId = useId();
-  const { total } = runProgress(run.counts);
+  const summary = runSummary(run.counts);
 
   const errorText = (code: string | null) => {
     const key = `errorCode.${code ?? 'unknown'}`;
@@ -89,7 +89,7 @@ export function RunResult({ run, canIssue, today, missing, followUpHref }: { run
         {run.followUpOfRunId ? <StatusBadge tone="neutral">{t('result.followUpOf')}</StatusBadge> : null}
       </div>
       <p data-testid="run-summary" className="text-body text-ink">
-        {t('result.summary', { issued: run.counts.issued, total })}
+        {summary.key === 'summary' ? t('result.summary', summary.values) : t('result.summaryWithSkipped', summary.values)}
       </p>
 
       <div className="space-y-2">

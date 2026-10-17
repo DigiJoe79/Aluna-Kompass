@@ -6,7 +6,7 @@ import { Notice, type NoticeReason } from '@/components/notice';
 import { StatusBadge } from '@/components/status-badge';
 import { Disclosure } from '@/components/ui/disclosure';
 import { groupOpenFirst, type RequirementGroup } from '@/lib/requirement-groups';
-import { cn } from '@/lib/utils';
+import { buttonVariants } from '@/components/ui/button';
 import { Overline } from '@/components/overline';
 
 export interface RequirementListItem {
@@ -68,10 +68,9 @@ function OpenRow({ item, symbolOnly = false }: { item: RequirementListItem; symb
       data-testid={`requirement-${item.key}`}
       data-done={item.done}
       data-blocked={item.blocked}
-      className={cn(
-        'flex flex-col gap-2 rounded-md border border-line p-3.5 sm:flex-row sm:items-center sm:justify-between',
-        item.done ? 'bg-surface' : 'bg-surface-2',
-      )}
+      // 09 B11: Keine graue Fläche je Zeile — im Dialog stapelten sich sonst drei Grauflächen-Ebenen (gilt auch für
+      // Verzicht und Partner). Offen sagt das Zeichen bzw. die Marke.
+      className="flex flex-col gap-2 rounded-md border border-line bg-surface p-3.5 sm:flex-row sm:items-center sm:justify-between"
     >
       <div className="min-w-0 space-y-1">
         <div className="flex items-center gap-2">
@@ -104,7 +103,7 @@ function OpenRow({ item, symbolOnly = false }: { item: RequirementListItem; symb
 
 function ActionLink({ item }: { item: RequirementListItem }) {
   return (
-    <Link href={item.href} className="rounded-sm border border-line bg-surface px-3 py-1.5 text-meta font-semibold text-ink hover:bg-surface-2">
+    <Link href={item.href} className={buttonVariants({ variant: 'outline', size: 'sm' })}>
       {item.actionLabel}
     </Link>
   );

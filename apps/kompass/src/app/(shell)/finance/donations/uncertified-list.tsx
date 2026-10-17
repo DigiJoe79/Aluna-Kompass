@@ -119,7 +119,8 @@ export function UncertifiedList({
                   {group.contactComplete ? null : <StatusBadge tone="warning">{t('addressMissing')}</StatusBadge>}
                 </div>
                 <div className="flex items-center gap-3">
-                  <span className="tabular-nums text-ink-2">{t('sum', { amount: formatEuro(group.sumCents) })}</span>
+                  {/* 14 B9: Eine Summe nur bei mehreren Zeilen — bei einer stünde derselbe Betrag zweimal. */}
+                  {group.lines.length > 1 ? <span className="tabular-nums text-ink-2">{t('sum', { amount: formatEuro(group.sumCents) })}</span> : null}
                   {group.contactComplete ? null : (
                     <Link href={`/contacts/${group.contactId}`} className="rounded-sm border border-line bg-surface px-3 py-1.5 text-meta font-semibold text-ink hover:bg-surface-2">
                       {t('completeAddress')}

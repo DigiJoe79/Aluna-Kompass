@@ -6443,6 +6443,8 @@
           "endsOn": "gültig — endet mit Ablauf des {date}",
           "expired": "abgelaufen",
           "superseded": "aufgehoben oder ersetzt am {date}",
+          "supersededShort": "ersetzt",
+          "supersededOn": "am {date}",
           "supersededByFinal": "durch den endgültigen Bescheid ersetzt",
           "voided": "irrtümlich erfasst",
           "future": "künftig"
@@ -6665,6 +6667,8 @@
           "rangeNone": "keine Nummer",
           "issuedOn": "Ausstellungsdatum {date}",
           "submit": "{count, plural, one {# Bestätigung ausstellen} other {# Bestätigungen ausstellen}}",
+          "submitNone": "Bestätigungen ausstellen",
+          "open": "Offen: {count} ({reasons})",
           "noPermission": "Ausstellen braucht das Recht „Zuwendungsbestätigungen ausstellen“."
         },
         "progress": {
@@ -6676,6 +6680,7 @@
         },
         "result": {
           "summary": "{issued} von {total, plural, one {# Bestätigung} other {# Bestätigungen}} ausgestellt",
+          "summaryWithSkipped": "{issued} ausgestellt, {skipped} übersprungen",
           "startedOn": "Serienlauf {year}, ausgestellt am {date}",
           "followUpOf": "Nachzügler-Lauf",
           "bundles": "Zum Drucken",
@@ -6712,16 +6717,14 @@
             "startedOn": "Ausgestellt am",
             "issued": "Ausgestellt",
             "state": "Stand",
-            "dispatched": "Versand",
-            "open": "Lauf"
+            "dispatched": "Versand"
           },
           "issued": "{issued} von {total}",
           "state": {
             "running": "läuft",
             "withFailures": "abgeschlossen, {count} nicht ausgestellt"
           },
-          "followUp": "Nachzügler",
-          "open": "Öffnen"
+          "followUp": "Nachzügler"
         },
         "errorCode": {
           "confirmationLineNotFinal": "Buchung nicht festgeschrieben",
@@ -6763,7 +6766,7 @@
           "purpose": "Zweck",
           "confirmed": "Bestätigt mit"
         },
-        "anonymous": "anonym",
+        "anonymous": "Anonym",
         "collectiveSuffix": "Sammel",
         "filter": {
           "anonymous": "Nur anonyme Zuwendungen"
@@ -6778,6 +6781,11 @@
           "confirmed": "Bestätigt",
           "difference": "Differenz",
           "reasonsTitle": "Differenz nach Gründen",
+          "columns": {
+            "reason": "Grund",
+            "count": "Anzahl",
+            "amount": "Betrag"
+          },
           "reason": {
             "belowMinimum": "Unter dem Mindestbetrag",
             "addressMissing": "Anschrift fehlt",
@@ -6999,18 +7007,18 @@
         "inactive": "deaktiviert",
         "columns": {
           "partner": "Partner",
-          "status": "Status",
+          "status": "Einordnung",
           "usualBasis": "übliche Art",
           "openProofs": "offene Nachweise",
           "lastPaid": "zuletzt gezahlt"
         },
         "overdue": "{count} überfällig",
         "emptyTitle": "Noch kein Partner.",
-        "emptyText": "Noch kein Partner angelegt.",
+        "emptyText": "Partner sind Organisationen oder Personen, an die der Verein Geld oder Sachen weitergibt.",
         "create": {
           "title": "Partner anlegen",
           "contact": "Kontakt",
-          "status": "Status",
+          "status": "Einordnung",
           "save": "Anlegen"
         }
       },
@@ -7022,7 +7030,7 @@
             "documents": "Unterlagen"
           },
           "title": "Angaben zum Partner",
-          "status": "Status",
+          "status": "Einordnung",
           "usualBasis": "Übliche Art",
           "usualBasisDerived": "ergibt sich aus dem Status",
           "usualProofMonths": "Übliche Nachweisfrist",
@@ -7261,7 +7269,7 @@
         "partnerPayment": "Zahlung an Partner",
         "purposeTransfer": "Zweck ändern"
       },
-      "partnerNoNumber": "Nummer mit der Freigabe",
+      "partnerNoNumber": "Noch ohne Nummer — sie kommt mit der Freigabe",
       "partnerCreatedBy": "angelegt von {name}",
       "partnerRetroactive": "nachträglich",
       "partnerOverride": "Art übersteuert: {reason}",
@@ -7544,7 +7552,8 @@
       "movementTrigger": "Vorgang",
       "resolution": {
         "pick": "Beschluss auswählen",
-        "upload": "oder als PDF hochladen"
+        "upload": "oder als PDF hochladen",
+        "chosenFile": "Gewählt: {name}"
       },
       "movement": {
         "title": "Vorgang: {name}",
@@ -7666,7 +7675,7 @@
           "partnerPayment": "Zahlung an Partner {number}"
         }
       },
-      "pageTitle": "Personenübersicht {year}",
+      "pageTitle": "Personenübersicht",
       "yearChoice": "Jahr",
       "allowancesHeading": "Pauschalen und Erstattungen",
       "allowancesHeadingCalendar": "Pauschalen und Erstattungen {year} (Kalenderjahr)",

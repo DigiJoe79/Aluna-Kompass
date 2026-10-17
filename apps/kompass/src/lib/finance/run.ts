@@ -86,3 +86,21 @@ export function missingDonors(items: readonly Pick<RunPreviewItem, 'contactId' |
 export function runProgress(counts: Pick<RunCounts, 'total' | 'pending' | 'issued' | 'failed' | 'skipped'>): { done: number; total: number } {
   return { done: counts.issued + counts.failed, total: counts.total - counts.skipped };
 }
+
+/**
+ * Was der Lauf nicht ausstellen kann (09 A5): Steht „0 Bestätigungen ausstellen“ an, nennt die Leiste stattdessen
+ * „Offen: n (Anschrift fehlt)“ — gezählt die gesperrten Posten, die Gründe je einmal in der Reihenfolge des Dienstes.
+ */
+export function openRunSummary(items: readonly Pick<RunPreviewItem, 'blockedBy'>[]): { count: number; reasons: NonNullable<RunPreviewItem['blockedBy']>[] } {
+  const blocked = items.filter((i) => i.blockedBy !== null);
+  return { count: blocked.length, reasons: [...new Set(blocked.map((i) => i.blockedBy!))] };
+}
+
+/**
+ * Der Ergebnissatz (14 A4): Der Fortschritt zählt Übersprungene nicht mit — „4 von 4 ausgestellt“ neben „Übersprungen · 4“
+ * las sich wie ein Widerspruch. Mit Übersprungenen nennt der Satz beide Zahlen.
+ */
+export function runSummary(counts: Pick<RunCounts, 'total' | 'pending' | 'issued' | 'failed' | 'skipped'>): { key: 'summary'; values: { issued: number; total: number } } | { key: 'summaryWithSkipped'; values: { issued: number; skipped: number } } {
+  if (counts.skipped > 0) return { key: 'summaryWithSkipped', values: { issued: counts.issued, skipped: counts.skipped } };
+  return { key: 'summary', values: { issued: counts.issued, total: runProgress(counts).total } };
+}

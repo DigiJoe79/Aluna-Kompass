@@ -2,11 +2,10 @@
 
 import type { RunSummary } from '@kompass/module-finance';
 import { useTranslations } from 'next-intl';
-import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { useDateFormat } from '@/components/date-format-provider';
 import { StatusBadge, statusTone } from '@/components/status-badge';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { RowLink, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { runProgress } from '@/lib/finance/run';
 import { Section } from '@/components/section';
 import { Empty } from '@/components/empty-value';
@@ -39,7 +38,6 @@ export function RunsList({ runs, currentId, footer }: { runs: RunSummary[]; curr
                   <TableHead col="meta">{t('columns.issued')}</TableHead>
                   <TableHead col="status">{t('columns.state')}</TableHead>
                   <TableHead col="meta">{t('columns.dispatched')}</TableHead>
-                  <TableHead col="actions"><span className="sr-only">{t('columns.open')}</span></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -47,7 +45,8 @@ export function RunsList({ runs, currentId, footer }: { runs: RunSummary[]; curr
                   <TableRow key={run.id} data-testid="run-row" aria-current={run.id === currentId ? 'true' : undefined}>
                     <TableCell col="title">
                       <span className="inline-flex items-center gap-2">
-                        <span className="tabular-nums">{run.year}</span>
+                        {/* 09 B17: Das Jahr in der ersten Spalte öffnet den Lauf (`RowLink`, § G), kein „Öffnen“ in der letzten. */}
+                        <RowLink href={`/finance/donations/run?run=${run.id}`} className="tabular-nums">{run.year}</RowLink>
                         {run.followUpOfRunId ? <StatusBadge tone="neutral">{t('followUp')}</StatusBadge> : null}
                       </span>
                     </TableCell>
@@ -55,9 +54,6 @@ export function RunsList({ runs, currentId, footer }: { runs: RunSummary[]; curr
                     <TableCell col="meta" className="tabular-nums">{t('issued', { issued: run.counts.issued, total: runProgress(run.counts).total })}</TableCell>
                     <TableCell col="status">{stateOf(run)}</TableCell>
                     <TableCell col="meta">{run.dispatchedAt && run.dispatchedVia ? `${date(run.dispatchedAt)} · ${tv(run.dispatchedVia)}` : <Empty />}</TableCell>
-                    <TableCell col="actions" className="text-right">
-                      <Link href={`/finance/donations/run?run=${run.id}`} className="text-link underline">{t('open')}</Link>
-                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>

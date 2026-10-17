@@ -41,4 +41,10 @@ describe('NoticesTable', () => {
     render(<NoticesTable rows={[row()]} canIssue={false} canPickDocument={false} />, { wrapper: Intl });
     expect(screen.queryByTestId('notice-menu')).toBeNull();
   });
+
+  it('09 B25: zeigt „ersetzt“ als kurze Marke und das Datum in einer Unterzeile', () => {
+    render(<NoticesTable rows={[row({ state: 'superseded', supersededOn: '2026-03-04' })]} canIssue={false} canPickDocument={false} />, { wrapper: Intl });
+    expect(screen.getByTestId('notice-state').textContent).toBe('ersetzt');
+    expect(screen.getByTestId('notice-state-date').textContent).toBe('am 04.03.2026');
+  });
 });

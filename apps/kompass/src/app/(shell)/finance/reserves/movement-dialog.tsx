@@ -18,7 +18,7 @@ import { reserveBalanceAfter, type ReserveMovementKind } from '@/lib/finance/res
 import { recordReserveMovementAction, recordReserveMovementUploadAction } from './actions';
 import { ResolutionField } from './resolution-field';
 import { FormField } from '@/components/forms/form-field';
-import { FormCell, FormGrid } from '@/components/forms/form-grid';
+import { FormCell, FormGrid, FormRowBreak } from '@/components/forms/form-grid';
 
 export interface MovementReserve {
   id: string;
@@ -127,6 +127,8 @@ export function MovementDialog({
                   onValueChange={setKind}
                 />
               </FormCell>
+              {/* 09 B40: Art allein in der ersten Zeile, darunter Datum und Betrag nebeneinander (ohne Layout-Test). */}
+              <FormRowBreak />
               <FormField id="movement-date" label={t('date')} required size="s">
                 <Input id="movement-date" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
               </FormField>

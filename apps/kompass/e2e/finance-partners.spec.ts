@@ -34,7 +34,7 @@ test.describe('finance partners (F7)', () => {
     await expect(page).toHaveURL(/\/finance\/partners\/new$/);
     await page.getByRole('combobox', { name: 'Kontakt' }).click();
     await page.getByTestId('contact-option').filter({ hasText: 'Beispielhilfe gGmbH' }).click();
-    await page.getByLabel('Status').selectOption({ label: 'öffentliche Stelle' });
+    await page.getByLabel('Einordnung').selectOption({ label: 'öffentliche Stelle' }); // 09 A6
     await page.getByTestId('partner-create-form').getByRole('button', { name: 'Anlegen' }).click();
     await expect(page).toHaveURL(/\/finance\/partners\/[^/]+$/);
     await expect(page.getByRole('heading', { name: 'Beispielhilfe gGmbH' })).toBeVisible();
@@ -633,7 +633,7 @@ test.describe('finance partners (F7)', () => {
 
     await page.goto('/finance/partners');
     const table = page.getByRole('table');
-    for (const column of ['Partner', 'Status', 'übliche Art', 'offene Nachweise', 'zuletzt gezahlt']) await expect(table.getByRole('columnheader', { name: column })).toBeVisible();
+    for (const column of ['Partner', 'Einordnung', 'übliche Art', 'offene Nachweise', 'zuletzt gezahlt']) await expect(table.getByRole('columnheader', { name: column })).toBeVisible();
     const row = table.getByRole('row').filter({ hasText: 'Partnerorganisation Tabelle' });
     await expect(row).toContainText('Organisation im Ausland');
     await expect(row).toContainText('Auftrag');

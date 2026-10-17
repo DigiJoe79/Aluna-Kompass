@@ -16,7 +16,7 @@ import { Notice } from '@/components/notice';
 import { Button } from '@/components/ui/button';
 import { Select } from '@/components/ui/select';
 import { formatAmount, parseAmount } from '@/lib/finance/amount';
-import { numberRangeText, runIssueCount, runQueryString } from '@/lib/finance/run';
+import { numberRangeText, openRunSummary, runIssueCount, runQueryString } from '@/lib/finance/run';
 import { previewConfirmationRunAction, startConfirmationRunAction } from './actions';
 import { PreviewGroups } from './preview-groups';
 import { RunSteps } from './run-steps';
@@ -112,6 +112,7 @@ export function RunSelection(props: RunSelectionProps) {
 
   const count = preview ? runIssueCount(preview) : 0;
   const range = preview ? numberRangeText(preview.numberRange.from, count) : null;
+  const open = preview ? openRunSummary(preview.items) : { count: 0, reasons: [] };
   const canStart = props.canIssue && preview !== null && preview.blockedRun === null && count > 0 && !starting && !loading;
 
   return (
@@ -191,17 +192,24 @@ export function RunSelection(props: RunSelectionProps) {
               testId="run-footer"
               note={
                 <div className="flex flex-wrap items-center gap-x-6 gap-y-1">
-                  <span>
-                    <span className="text-muted-ink">{t('footer.range')}: </span>
-                    <span data-testid="run-number-range" className="font-mono text-ink">
-                      {range ? (range.to ? t('footer.rangeValue', { from: range.from, to: range.to }) : range.from) : t('footer.rangeNone')}
+                  {/* 09 A5: Ist nichts ausstellbar, nennt die Leiste, was offen ist und warum — nicht „keine Nummer“. */}
+                  {count === 0 && open.count > 0 ? (
+                    <span data-testid="run-open-summary" className="text-ink">
+                      {t('footer.open', { count: open.count, reasons: open.reasons.map((r) => t(`blockedBy.${r}`)).join(', ') })}
                     </span>
-                  </span>
+                  ) : (
+                    <span>
+                      <span className="text-muted-ink">{t('footer.range')}: </span>
+                      <span data-testid="run-number-range" className="font-mono text-ink">
+                        {range ? (range.to ? t('footer.rangeValue', { from: range.from, to: range.to }) : range.from) : t('footer.rangeNone')}
+                      </span>
+                    </span>
+                  )}
                   <span className="text-ink-2">{t('footer.issuedOn', { date: date(preview.issuedOn) })}</span>
                   <span className="max-w-prose text-hint text-muted-ink">{td('issue.humanOnly')}</span>
                 </div>
               }
-              saveLabel={t('footer.submit', { count })}
+              saveLabel={count > 0 ? t('footer.submit', { count }) : t('footer.submitNone')}
               saveDisabled={!canStart}
               pending={starting}
               onSave={() => void start()}

@@ -5,9 +5,11 @@ import { StatusBadge } from '@/components/status-badge';
 import type { ActionState } from '@/lib/actions';
 
 export interface ApprovalDetailHead {
-  /** Die Art als umrandetes Kennzeichen („Auslage“, „Verzicht“, später „Zahlung an Partner“, „Zweck ändern“) — wertet nicht. */
+  /** Die Art als Marke mit Symbol („Auslage“, „Verzicht“, später „Zahlung an Partner“, „Zweck ändern“) — wertet nicht. */
   kind: string;
-  number: string;
+  /** `null`: noch keine Nummer (Zahlung an Partner vor der Freigabe) — dann steht `numberMissing` grau in der Textschrift (14 A1). */
+  number: string | null;
+  numberMissing?: string;
   amount: string;
   person: string;
   /** „eingegangen am …“ */
@@ -44,9 +46,15 @@ export function ApprovalDetailFrame({ head, headRef, children, requirements, foo
         <div className="flex flex-wrap items-center gap-2">
           {/* 08 B24 · 14 B11: Die Art ist eine Marke (`StatusBadge` mit Symbol für eine Art, § F), kein roher Rahmen. */}
           <StatusBadge tone="neutral" icon={Tag}>{head.kind}</StatusBadge>
-          <p id="approval-number" data-testid="approval-number" className="font-mono text-section text-ink">
-            {head.number}
-          </p>
+          {head.number ? (
+            <p id="approval-number" data-testid="approval-number" className="font-mono text-section text-ink">
+              {head.number}
+            </p>
+          ) : (
+            <p id="approval-number" data-testid="approval-number" className="text-meta text-muted-ink">
+              {head.numberMissing}
+            </p>
+          )}
         </div>
         <p className="text-figure font-semibold tabular-nums text-ink">{head.amount}</p>
         <p className="text-body text-ink">{head.person}</p>

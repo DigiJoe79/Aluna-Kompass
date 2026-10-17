@@ -75,7 +75,15 @@ export function NoticesTable({ rows, canIssue, canPickDocument }: { rows: Notice
                 </TableCell>
                 <TableCell col="meta" data-testid="notice-document" className="font-mono">{row.documentNumber ?? <span className="font-sans"><Empty /></span>}</TableCell>
                 <TableCell col="status">
-                  {isNormalInList('notice', state.key) ? null : (
+                  {/* 09 B25: „ersetzt“ ist eine kurze Marke, das Datum steht in einer Unterzeile. */}
+                  {isNormalInList('notice', state.key) ? null : state.key === 'superseded' ? (
+                    <>
+                      <StatusBadge tone={statusTone('notice', state.key)}>
+                        <span data-testid="notice-state">{t('state.supersededShort')}</span>
+                      </StatusBadge>
+                      {state.date ? <span data-testid="notice-state-date" className="block text-hint text-muted-ink">{t('state.supersededOn', { date: date(state.date) })}</span> : null}
+                    </>
+                  ) : (
                     <StatusBadge tone={statusTone('notice', state.key)}>
                       <span data-testid="notice-state">{t(`state.${state.key}`, { date: state.date ? date(state.date) : '' })}</span>
                     </StatusBadge>

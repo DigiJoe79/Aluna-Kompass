@@ -77,7 +77,8 @@ function KindInfo({ kind }: { kind: ReserveKind }) {
 }
 
 /** „A-2026-0090 · Betreff · 12.02.2026“ (Designer-README 4d) statt „Beschluss öffnen“. */
-export function DocumentLabel({ document, testId }: { document: ReserveDocument | null; testId?: string }) {
+/** `subject={false}`: nur Nummer und Datum — in der Tabelle (09 B38); die Dialoge nennen den Betreff. */
+export function DocumentLabel({ document, testId, subject = true }: { document: ReserveDocument | null; testId?: string; subject?: boolean }) {
   const t = useTranslations('finance.reserves');
   const fmt = useDateFormat();
   if (!document) return <span data-testid={testId}><Empty /></span>;
@@ -91,7 +92,7 @@ export function DocumentLabel({ document, testId }: { document: ReserveDocument 
   return (
     <a href={`/dms/${document.id}`} className="text-meta underline-offset-2 hover:underline" data-testid={testId}>
       <span className="font-mono">{document.number}</span>
-      {document.subject ? ` · ${document.subject}` : ''}
+      {subject && document.subject ? ` · ${document.subject}` : ''}
       {document.date ? ` · ${fmt.date(document.date)}` : ''}
     </a>
   );
@@ -201,24 +202,24 @@ export function ReserveTable({
                     <div className="flex flex-wrap items-center gap-1.5">
                       <span className="text-ink">{row.name}</span>
                       {row.isActive ? null : <StatusBadge tone="neutral">{t('inactive')}</StatusBadge>}
+                      {/* 09 B39: „aufgelöst“ ist ein Zustand am Namen, nicht an der Stelle des Knopfes. */}
+                      {row.isDissolved ? <StatusBadge tone="neutral">{t('dissolved')}</StatusBadge> : null}
                     </div>
                     {row.carryForwardCents !== null && row.carryForwardDate ? (
                       <p className="text-hint text-muted-ink">{t('carryForwardLine', { amount: formatEuro(row.carryForwardCents), date: fmt.date(row.carryForwardDate) })}</p>
                     ) : null}
                   </TableCell>
                   <TableCell col="meta" className="px-3 align-top text-ink-2">{row.purposeLabel ?? <Empty />}</TableCell>
-                  {/* Nummer · Betreff · Datum darf umbrechen: einzeilig trieb der Betreff die Tabelle auf einer standard-Seite ins waagerechte Scrollen (K9-Befund 8). */}
+                  {/* Nummer · Datum (09 B38) darf umbrechen: mit Betreff trieb der Betreff die Tabelle auf einer standard-Seite ins waagerechte Scrollen (K9-Befund 8). */}
                   <TableCell col="meta" className="whitespace-normal px-3 align-top">
-                    <DocumentLabel document={row.resolution} testId="reserve-resolution" />
+                    <DocumentLabel document={row.resolution} testId="reserve-resolution" subject={false} />
                   </TableCell>
                   <TableCell col="amount" className="px-3 text-right align-top font-semibold tabular-nums" data-testid="reserve-balance">
                     {formatEuro(row.balanceCents)}
                   </TableCell>
                   <TableCell col="actions" className="px-3 text-right align-top">
                     <div className="flex items-center justify-end gap-1">
-                      {row.isDissolved ? (
-                        <StatusBadge tone="neutral">{t('dissolved')}</StatusBadge>
-                      ) : canWrite && row.isActive ? (
+                      {!row.isDissolved && canWrite && row.isActive ? (
                         <Button type="button" size="sm" variant="outline" onClick={() => setOpen({ kind: 'movement', row })} data-testid="reserve-movement-trigger">
                           {t('movementTrigger')}
                         </Button>

@@ -5,6 +5,7 @@ import { useDateFormat } from '@/components/date-format-provider';
 import { StatusBadge } from '@/components/status-badge';
 import { RowLink, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Empty } from '@/components/empty-value';
+import { EmptyState } from '@/components/empty-state';
 
 export interface PartnerRow {
   id: string;
@@ -33,7 +34,10 @@ export function PartnerList({ partners }: { partners: PartnerRow[] }) {
   return (
     <div className="space-y-4">
       {partners.length === 0 ? (
-        <p className="rounded-md border border-dashed border-line-strong bg-surface p-4 text-body text-muted-ink" data-testid="partners-empty">{t('emptyText')}</p>
+        // 09 B28: Leer über `EmptyState`, nicht von Hand gebaut.
+        <div data-testid="partners-empty">
+          <EmptyState title={t('emptyTitle')} text={t('emptyText')} />
+        </div>
       ) : (
         <Table data-testid="partner-rows">
           <TableHeader>
@@ -49,7 +53,8 @@ export function PartnerList({ partners }: { partners: PartnerRow[] }) {
             {partners.map((p) => (
               <TableRow key={p.id} data-testid={`partner-row-${p.id}`}>
                 <TableCell col="title" className="whitespace-normal">
-                  <RowLink href={`/finance/partners/${p.id}`} className="text-ink">
+                  {/* 09 B28: Der Name in Linkfarbe — `text-ink` überschrieb den `RowLink`. */}
+                  <RowLink href={`/finance/partners/${p.id}`}>
                     {p.contactName}
                   </RowLink>
                   {!p.isActive ? (

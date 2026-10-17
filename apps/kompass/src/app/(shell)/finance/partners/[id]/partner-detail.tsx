@@ -21,6 +21,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { formatEuro } from '@/lib/finance/amount';
 import { savePartnerNoticeAction, savePartnerPaymentDraftAction, savePartnerProfileAction, voidPartnerNoticeAction } from '../actions';
 import { FormField } from '@/components/forms/form-field';
+import { FormActionBar } from '@/components/forms/form-action-bar';
+import { FormCard, FormCardBody } from '@/components/forms/form-card';
 import { FormCell, FormGrid } from '@/components/forms/form-grid';
 import { Section, SectionHeading } from '@/components/section';
 
@@ -148,6 +150,26 @@ function ProfileSection({ partner, documents, canWrite, t, tStatus, tBasis, rout
 
   const derived = status !== 'foreignBody';
 
+  // 09 B31: Speichern über die `FormActionBar` der Karte (Stammdaten-Muster), gezählt gegen den geladenen Stand.
+  const initial = { status: partner.status, usualBasis: (partner.usualBasis ?? 'transfer58') as Basis, usualProofMonths: partner.usualProofMonths, note: partner.note ?? '', register: pickable(documents.register)?.id ?? null, agreement: pickable(documents.agreement)?.id ?? null };
+  const changedCount = [
+    status !== initial.status,
+    usualBasis !== initial.usualBasis,
+    usualProofMonths !== initial.usualProofMonths,
+    note !== initial.note,
+    (registerDocument?.id ?? null) !== initial.register,
+    (agreementDocument?.id ?? null) !== initial.agreement,
+  ].filter(Boolean).length;
+  const discard = () => {
+    setStatus(partner.status);
+    setUsualBasis(initial.usualBasis);
+    setUsualProofMonths(partner.usualProofMonths);
+    setNote(initial.note);
+    setRegisterDocument(pickable(documents.register));
+    setAgreementDocument(pickable(documents.agreement));
+    saveFb.reset();
+  };
+
   const save = async () => {
     setPending(true);
     const result = await saveFb.run(() => savePartnerProfileAction({
@@ -166,7 +188,8 @@ function ProfileSection({ partner, documents, canWrite, t, tStatus, tBasis, rout
   };
 
   return (
-    <section className="rounded-md border border-line bg-surface p-4" data-testid="partner-profile">
+    <FormCard as="section" data-testid="partner-profile">
+      <FormCardBody>
       <Section title={t('profile.title')}
         actions={
           <>
@@ -179,18 +202,24 @@ function ProfileSection({ partner, documents, canWrite, t, tStatus, tBasis, rout
         <div className="space-y-3">
           {/* Rechtsform als Anzeige in der Zeile des Abschnitts, kein Feld (Entscheidung zum Inventar § E). */}
           <section>
-            {/* Rechtsform in der Zeile des Titels: SectionHeading nimmt Kinder, Section nur Text (K10 Charge 3). */}
+            {/* Rechtsform in der Zeile des Titels: SectionHeading nimmt Kinder, Section nur Text (K10 Charge 3). Fehlt sie,
+                steht der Link unter der Überschrift, nicht in ihr (09 A7). */}
             <SectionHeading>
               {t('profile.sections.classification')}
-              <span className="font-normal text-ink-2" data-testid="partner-legal-form">
-                {' · '}
-                {partner.contactLegalForm ?? (
-                  <Link href={`/contacts/${partner.contactId}`} className="underline underline-offset-2">
-                    {t('profile.legalFormNone')}
-                  </Link>
-                )}
-              </span>
+              {partner.contactLegalForm ? (
+                <span className="font-normal text-ink-2" data-testid="partner-legal-form">
+                  {' · '}
+                  {partner.contactLegalForm}
+                </span>
+              ) : null}
             </SectionHeading>
+            {partner.contactLegalForm ? null : (
+              <p className="mt-1 text-meta" data-testid="partner-legal-form">
+                <Link href={`/contacts/${partner.contactId}`} className="text-link underline underline-offset-2">
+                  {t('profile.legalFormNone')}
+                </Link>
+              </p>
+            )}
             <div className="mt-3">
               <FormGrid>
                 <FormField id="partner-status" label={t('profile.status')} required>
@@ -268,17 +297,13 @@ function ProfileSection({ partner, documents, canWrite, t, tStatus, tBasis, rout
             </FormGrid>
           </Section>
           </div>
-          <RefusalNotice state={saveFb.state} />
-          {canWrite ? (
-            <div className="flex items-center justify-end">
-              <Button type="button" disabled={pending} onClick={() => void save()} data-testid="partner-profile-save">
-                {t('profile.save')}
-              </Button>
-            </div>
-          ) : null}
         </div>
       </Section>
-    </section>
+      </FormCardBody>
+      {canWrite ? (
+        <FormActionBar count={changedCount} onSave={() => void save()} onDiscard={discard} pending={pending} state={saveFb.state} saveLabel={t('profile.save')} saveTestId="partner-profile-save" />
+      ) : null}
+    </FormCard>
   );
 }
 

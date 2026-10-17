@@ -62,7 +62,7 @@ test.describe('finance people (F8b)', () => {
 
     await page.goto('/finance/people');
     // Design-Nachtrag Phase 4 (D4): Titel mit Jahr; Geschäftsjahr = Kalenderjahr → keine zwei Zeiträume.
-    await expect(page.getByRole('heading', { level: 1 })).toHaveText(`Personenübersicht ${year()}`);
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Personenübersicht'); // 09 B36: Jahr nur im Rahmenfilter
     // Spec Filterleisten § 4: Jahr ist ein Filter der Leiste, keine Links mehr.
     await expect(page.getByTestId('people-year').getByRole('combobox', { name: 'Jahr' })).toHaveValue(String(year()));
     await expect(page.getByTestId('people-year').getByRole('link')).toHaveCount(0);

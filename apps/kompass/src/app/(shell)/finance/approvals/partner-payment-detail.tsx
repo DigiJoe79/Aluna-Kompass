@@ -161,7 +161,8 @@ export function PartnerPaymentDetail({ payment, creatorName, evidence, nextHref 
       <ApprovalDetailFrame
         head={{
           kind: t('kind.partnerPayment'),
-          number: payment.number ?? t('partnerNoNumber'),
+          number: payment.number,
+          numberMissing: t('partnerNoNumber'),
           amount: formatEuro(payment.totalCents),
           person: payment.partnerName,
           received: t('head.receivedAt', { at: payment.submittedAt ? fmt.dateTime(payment.submittedAt) : '' }),

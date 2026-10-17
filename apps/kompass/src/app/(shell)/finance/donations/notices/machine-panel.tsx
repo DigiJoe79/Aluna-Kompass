@@ -131,16 +131,21 @@ export function MachinePanel({ signers, status, canIssue, canDraftLetter, draftN
       {canIssue ? <p className="text-hint text-muted-ink">{t('facsimilePrivacy')} {t('uploadHint')}</p> : null}
 
       {canIssue ? (
-        <div className="flex flex-wrap items-start gap-3">
-          <Button type="button" variant="outline" onClick={() => setEditing('new')}>{t('add')}</Button>
+        // 09 B27: Beide Knöpfe in einer Flucht; Ablehnung, Hinweis und Link stehen darunter.
+        <div className="space-y-2">
+          {letterSigner && canDraftLetter ? <RefusalNotice action state={letterFb.state} /> : null}
+          <div className="flex flex-wrap items-center gap-3">
+            <Button type="button" variant="outline" onClick={() => setEditing('new')}>{t('add')}</Button>
+            {letterSigner && canDraftLetter ? (
+              <Button type="button" variant="outline" disabled={pending} onClick={() => void draftLetter()}>{t('letter')}</Button>
+            ) : null}
+          </div>
           {letterSigner ? (
             canDraftLetter ? (
-              <div className="space-y-1">
-                <RefusalNotice action state={letterFb.state} />
-                <Button type="button" variant="outline" disabled={pending} onClick={() => void draftLetter()}>{t('letter')}</Button>
+              <>
                 <p className="max-w-prose text-hint text-muted-ink">{t('letterHint')}</p>
                 {draftId ? <Link href={`/dms/${draftId}`} className="text-meta font-semibold text-ink underline underline-offset-2">{t('openDraft')}</Link> : null}
-              </div>
+              </>
             ) : (
               <BlockedState step={t('letter')} title={t('letterBlockedTitle')}>
                 {draftNames.length > 0 ? t('letterBlockedText', { names: draftNames.join(', ') }) : t('letterBlockedNobody')}

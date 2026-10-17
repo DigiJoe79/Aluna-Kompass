@@ -38,7 +38,7 @@ test.describe('finance reserves (F8b)', () => {
     await expect(dialog.locator('#movement-for-year option:checked')).toHaveText(String(STORY_YEAR));
     // Weit über jedem Höchstbetrag der Entwicklungsdaten: Befund S fragt nach einer Begründung, sperrt aber nicht.
     await dialog.locator('#movement-amount').fill('1000000,00');
-    await page.getByTestId('movement-resolution-upload').setInputFiles(BIG_PDF);
+    await page.getByTestId('movement-resolution-upload').getByTestId('voucher-file-input').setInputFiles(BIG_PDF);
     await expect(page.getByTestId('movement-after')).toHaveText('Danach: Bestand 1.000.000,00 €. Auf den Bankkonten und Kassen ändert sich nichts.');
     await page.getByTestId('movement-save').click();
     const capReason = dialog.getByTestId('movement-cap-reason');
@@ -75,7 +75,7 @@ test.describe('finance reserves (F8b)', () => {
     await page.getByTestId('movement-kind-withdraw').click();
     await dialog.locator('#movement-date').fill(tomorrow);
     await dialog.locator('#movement-amount').fill('10,00');
-    await page.getByTestId('movement-resolution-upload').setInputFiles({ name: 'protokoll.pdf', mimeType: 'application/pdf', buffer: PDF.buffer });
+    await page.getByTestId('movement-resolution-upload').getByTestId('voucher-file-input').setInputFiles({ name: 'protokoll.pdf', mimeType: 'application/pdf', buffer: PDF.buffer });
     await page.getByTestId('movement-save').click();
     await expect(page.getByTestId('movement-dialog').locator('xpath=ancestor::*[@data-slot="dialog-content"]').getByRole('alert')).toContainText('liegt nach heute');
   });
@@ -88,7 +88,7 @@ test.describe('finance reserves (F8b)', () => {
     await page.goto('/finance/reserves');
     const row = page.getByTestId('reserve-row').filter({ hasText: 'Stammsatz E2E' });
     // Beschluss mit Nummer, Betreff und Datum statt „Beschluss öffnen“.
-    await expect(row.getByTestId('reserve-resolution')).toHaveText(`${doc.number} · Protokoll Rücklagenbeschluss · ${story('15.01.2026')}`);
+    await expect(row.getByTestId('reserve-resolution')).toHaveText(`${doc.number} · ${story('15.01.2026')}`); // 09 B38: nur Nummer und Datum
 
     // § 62 AO als Infoknopf: per Tastatur erreichbar, kein title-Attribut.
     const info = row.getByTestId('reserve-kind-info');
@@ -114,7 +114,7 @@ test.describe('finance reserves (F8b)', () => {
     const cf = page.getByTestId('carry-forward-dialog');
     await cf.locator('#carry-forward-amount').fill('250,00');
     await cf.locator('#carry-forward-date').fill(`${year}-01-01`);
-    await page.getByTestId('carry-forward-resolution-upload').setInputFiles({ name: 'vortrag.pdf', mimeType: 'application/pdf', buffer: PDF.buffer });
+    await page.getByTestId('carry-forward-resolution-upload').getByTestId('voucher-file-input').setInputFiles({ name: 'vortrag.pdf', mimeType: 'application/pdf', buffer: PDF.buffer });
     await page.getByTestId('carry-forward-save').click();
     await expect(cf).toHaveCount(0);
     await expect(renamed.getByTestId('reserve-balance')).toHaveText('250,00 €');
@@ -123,7 +123,7 @@ test.describe('finance reserves (F8b)', () => {
     // Beschluss ersetzen.
     await renamed.getByTestId('reserve-menu').click();
     await page.getByRole('menuitem', { name: 'Beschluss ersetzen' }).click();
-    await page.getByTestId('replace-resolution-upload').setInputFiles({ name: 'neu.pdf', mimeType: 'application/pdf', buffer: PDF.buffer });
+    await page.getByTestId('replace-resolution-upload').getByTestId('voucher-file-input').setInputFiles({ name: 'neu.pdf', mimeType: 'application/pdf', buffer: PDF.buffer });
     await page.getByTestId('replace-resolution-save').click();
     await expect(renamed.getByTestId('reserve-resolution')).not.toContainText(doc.number);
     // Seit über der Liste zwei Jahreskarten stehen (0.2.7), liegt das Zeilenmenü tiefer, und die Meldung

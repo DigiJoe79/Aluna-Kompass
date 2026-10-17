@@ -2,8 +2,7 @@
 
 import type { DonationReconciliation } from '@kompass/module-finance';
 import { useTranslations } from 'next-intl';
-import Link from 'next/link';
-import { StatusBadge } from '@/components/status-badge';
+import { RowLink, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { formatEuro } from '@/lib/finance/amount';
 import { Overline } from '@/components/overline';
 import { Section } from '@/components/section';
@@ -43,29 +42,38 @@ export function Reconciliation({ data }: { data: DonationReconciliation }) {
           ) : (
             <div className="space-y-1.5">
               {data.reasons.length > 0 ? <Overline>{t('reasonsTitle')}</Overline> : null}
-              <ul className="divide-y divide-line-2 rounded-md border border-line text-meta">
-                {data.reasons.map((reason) => (
-                  <li key={reason.key} data-testid="reconciliation-reason" className="flex flex-wrap items-center justify-between gap-3 px-3 py-1.5">
-                    <Link href={reason.href} className="text-link underline">{t(`reason.${reason.key}`)}</Link>
-                    <span className="flex items-center gap-3 text-ink-2">
-                      <span>{reason.count}</span>
-                      <span className="tabular-nums text-ink">{formatEuro(reason.cents)}</span>
-                    </span>
-                  </li>
-                ))}
-                {data.toCorrect.count > 0 ? (
-                  <li data-testid="reconciliation-to-correct" className="flex flex-wrap items-center justify-between gap-3 px-3 py-1.5">
-                    <span className="flex items-center gap-2">
-                      <StatusBadge tone="warning">{t('toCorrect')}</StatusBadge>
-                      <Link href={data.toCorrect.href} className="text-link underline">{t('toCorrect')}</Link>
-                    </span>
-                    <span className="flex items-center gap-3 text-ink-2">
-                      <span>{data.toCorrect.count}</span>
-                      <span className="tabular-nums text-ink">{formatEuro(data.toCorrect.cents)}</span>
-                    </span>
-                  </li>
-                ) : null}
-              </ul>
+              {/* 09 B22: Die Gründe stehen in einer Tabelle mit Spaltenkopf. */}
+              <div className="overflow-hidden rounded-md border border-line">
+                <Table className="text-meta">
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead col="title">{t('columns.reason')}</TableHead>
+                      <TableHead col="meta" className="text-right">{t('columns.count')}</TableHead>
+                      <TableHead col="amount" className="text-right">{t('columns.amount')}</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {data.reasons.map((reason) => (
+                      <TableRow key={reason.key} data-testid="reconciliation-reason">
+                        <TableCell col="title">
+                          <RowLink href={reason.href}>{t(`reason.${reason.key}`)}</RowLink>
+                        </TableCell>
+                        <TableCell col="meta" className="text-right tabular-nums text-ink-2">{reason.count}</TableCell>
+                        <TableCell col="amount" className="text-right tabular-nums text-ink">{formatEuro(reason.cents)}</TableCell>
+                      </TableRow>
+                    ))}
+                    {data.toCorrect.count > 0 ? (
+                      <TableRow data-testid="reconciliation-to-correct">
+                        <TableCell col="title">
+                          <RowLink href={data.toCorrect.href}>{t('toCorrect')}</RowLink>
+                        </TableCell>
+                        <TableCell col="meta" className="text-right tabular-nums text-ink-2">{data.toCorrect.count}</TableCell>
+                        <TableCell col="amount" className="text-right tabular-nums text-ink">{formatEuro(data.toCorrect.cents)}</TableCell>
+                      </TableRow>
+                    ) : null}
+                  </TableBody>
+                </Table>
+              </div>
             </div>
           )}
         </div>
