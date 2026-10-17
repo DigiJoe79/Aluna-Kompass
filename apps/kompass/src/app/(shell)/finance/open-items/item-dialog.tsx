@@ -55,11 +55,16 @@ export function ItemDialog({ open, onOpenChange, item, defaultKind, canCreateCon
   const [document, setDocument] = useState<PickedDocument | null>(null);
   const [pending, setPending] = useState(false);
   const feedback = useActionFeedback();
+  // 07-2 B21 (§ B): Speichern bleibt frei; fehlen Betrag oder Datum, steht der Fehler am Feld.
+  const [missing, setMissing] = useState({ amount: false, date: false });
+  const tFields = useTranslations('errors.fields');
 
   const amountCents = parseAmount(amountText);
 
   const submit = async () => {
-    if (amountCents === null) return;
+    const miss = { amount: amountCents === null, date: !itemDate };
+    setMissing(miss);
+    if (amountCents === null || miss.date) return;
     setPending(true);
     const result = await feedback.run(() => saveOpenItemAction({
       id: item?.id,
@@ -91,10 +96,10 @@ export function ItemDialog({ open, onOpenChange, item, defaultKind, canCreateCon
                 <option value="receivable">{t('kindOptions.receivable')}</option>
               </Select>
             </FormField>
-            <FormField id="open-item-amount" label={t('amount')} required size="s">
+            <FormField id="open-item-amount" label={t('amount')} required size="s" error={missing.amount ? tFields('required') : undefined}>
               <AmountField id="open-item-amount" name="amount" value={amountText} onChange={setAmountText} required />
             </FormField>
-            <FormField id="open-item-date" label={t('itemDate')} required size="s">
+            <FormField id="open-item-date" label={t('itemDate')} required size="s" error={missing.date ? tFields('required') : undefined}>
               <Input id="open-item-date" type="date" value={itemDate} onChange={(e) => setItemDate(e.target.value)} required />
             </FormField>
             <FormField id="open-item-due" label={t('dueOn')} size="s">
@@ -115,7 +120,7 @@ export function ItemDialog({ open, onOpenChange, item, defaultKind, canCreateCon
             </FormCell>
           </FormGrid>
         </Section>
-        <FormActionBar placement="dialog" cancel={() => onOpenChange(false)} pending={pending} saveDisabled={amountCents === null || !itemDate} saveLabel={t('save')} onSave={() => void submit()} state={withUnplacedFieldErrors(feedback.state, [])} />
+        <FormActionBar placement="dialog" cancel={() => onOpenChange(false)} pending={pending} saveLabel={t('save')} onSave={() => void submit()} state={withUnplacedFieldErrors(feedback.state, [])} />
       </DialogContent>
     </Dialog>
   );
