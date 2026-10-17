@@ -56,7 +56,9 @@ test.describe('finance cash', () => {
     await page.getByLabel('Gezählter Betrag').fill('195,00');
     await pickCounters(page, 'Mira Sandberg', 'Tomas Leitner');
     const submit = page.getByRole('button', { name: 'Zählung speichern' });
-    await expect(submit).toBeDisabled();
+    // 07-2 B21 (§ B): Speichern sperrt nicht; ohne Satz nennt die Ablehnung den Grund, der Dialog bleibt offen.
+    await submit.click();
+    await expect(page.getByRole('dialog').getByText('Bei einem Fehlbetrag ist ein Satz zur Erklärung Pflicht.')).toBeVisible();
     await page.getByLabel('Erklärung zum Fehlbetrag').fill('Wechselgeld verauslagt');
     await submit.click();
     await expect(page.getByText(/Zählprotokoll KZP-\S+ erstellt/)).toBeVisible();
@@ -115,7 +117,7 @@ test.describe('finance cash', () => {
     await expect(page.getByTestId('cash-balance')).toContainText('150,00 €');
     // N3 Nachtrag A: „Letzte Kassenbewegungen“ zeigt das Datum im deutschen Format, nicht mehr roh als ISO
     // (der Buchungstext selbst kann eine ISO-Kennung tragen, z. B. „Bargeldbewegung 2026-09-25“ — eigener Fund).
-    await expect(page.getByRole('region', { name: 'Letzte Kassenbewegungen' }).getByText(/^\d{2}\.\d{2}\.\d{4} ·/).first()).toBeVisible();
+    await expect(page.getByRole('region', { name: 'Letzte Kassenbewegungen' }).getByText(/^\d{2}\.\d{2}\.\d{4}$/).first()).toBeVisible();
   });
 
   test('Bar bezahlt aus der Vereinskasse öffnet die Buchungsmaske mit der Kasse und nur „Festschreiben“', async ({ page }) => {

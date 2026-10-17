@@ -34,6 +34,8 @@ export const STATUS_TONES = {
   /** Kanal im Protokoll: ein Agent trägt den Ton der Agenten (wie „von Agent vorbereitet“). */
   auditChannel: { ui: 'info', mcp: 'agent', system: 'neutral' },
   workRow: { open: 'neutral', proposed: 'info', booked: 'final' },
+  /** Offene Zahlung (07-2 B10): überfällig ist eine zweite Marke neben dem Zustand; offen ist der Normalzustand. */
+  openItem: { open: 'neutral', partlyPaid: 'info', settled: 'success', settledWithoutPayment: 'neutral', overdue: 'warning', draftSettlement: 'info' },
   /** Hochgeladener Auszug: fehlgeschlagen ist `error` (07-1 A6). */
   importRun: { finished: 'neutral', failed: 'error', discarded: 'neutral' },
   /** Rollen (Nutzer, Kontakte) sind neutral (Designer Stufe 2 Nr. 6e). */
@@ -61,6 +63,7 @@ const NORMAL_IN_LIST: { [K in StatusKind]?: readonly (keyof (typeof STATUS_TONES
   confirmationRun: ['finished'],
   document: ['issued'],
   importRun: ['finished'],
+  openItem: ['open'],
 };
 
 export function isNormalInList<K extends StatusKind>(kind: K, status: keyof (typeof STATUS_TONES)[K]): boolean {

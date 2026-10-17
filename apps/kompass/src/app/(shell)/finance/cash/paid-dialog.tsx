@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { ChoiceCards } from '@/components/choice-cards';
 import { Notice } from '@/components/notice';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogFooter, DialogTitle } from '@/components/ui/dialog';
 
 /**
  * „Bar bezahlt“ (HANDOFF § 5.4, Task 2): fragt zuerst Kasse oder eigene
@@ -15,6 +15,7 @@ import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
  */
 export function PaidDialog({ cashId }: { cashId: string }) {
   const t = useTranslations('finance.cash.paid');
+  const tCommon = useTranslations('common');
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [showPocketHint, setShowPocketHint] = useState(false);
@@ -26,7 +27,8 @@ export function PaidDialog({ cashId }: { cashId: string }) {
 
   return (
     <>
-      <Button type="button" variant="secondary" onClick={() => setOpen(true)}>
+      {/* 07-2 B12: Die drei Kassenaktionen sind gleichrangig (`outline`). */}
+      <Button type="button" variant="outline" onClick={() => setOpen(true)}>
         {t('trigger')}
       </Button>
       <Dialog open={open} onOpenChange={close}>
@@ -47,6 +49,12 @@ export function PaidDialog({ cashId }: { cashId: string }) {
             />
             {showPocketHint ? <Notice level="hint">{t('pocketHint')}</Notice> : null}
           </div>
+          {/* 07-2 B23 (§ B): Ein Dialog ohne Hauptaktion — die Wahl ist die Handlung — behält einen Fuß mit „Abbrechen“. */}
+          <DialogFooter>
+            <Button type="button" variant="ghost" onClick={() => close(false)}>
+              {tCommon('cancel')}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </>

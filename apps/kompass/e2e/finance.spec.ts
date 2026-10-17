@@ -820,8 +820,8 @@ test.describe('finance', () => {
     await expect(row).toBeVisible();
     await expect(row).toContainText('überfällig');
     await expect(row).toContainText('Mira Sandberg');
-    // Das Datum ist gefärbt, wenn der Posten überfällig ist — deutsches Format, kein rohes ISO-Datum (N3 Nachtrag A).
-    await expect(row.getByText(story('20.01.2026'))).toHaveClass(/text-error/);
+    // Überfällig sagt die Marke, das Datum ist nicht noch einmal rot (07-2 B9) — deutsches Format, kein rohes ISO-Datum (N3 Nachtrag A).
+    await expect(row.getByText(story('20.01.2026'))).not.toHaveClass(/text-error/);
     await expect(row).not.toContainText(/\d{4}-\d{2}-\d{2}/);
 
     // Zwei Reiter in der URL: unter „Wir bekommen“ steht der neue Posten nicht.
@@ -834,7 +834,7 @@ test.describe('finance', () => {
 
     // Anlegen/Ändern-Dialog: derselbe Dialog ändert einen vorhandenen Posten.
     await row.click();
-    const sheet = page.getByRole('dialog', { name: story('RE-2026-999') });
+    const sheet = page.getByRole('dialog', { name: 'Mira Sandberg' });
     await expect(sheet.getByText(story('20.01.2026'))).toBeVisible();
     await expect(sheet).not.toContainText(/\d{4}-\d{2}-\d{2}/);
     await page.getByRole('button', { name: 'Ändern' }).click();
@@ -843,7 +843,7 @@ test.describe('finance', () => {
     await editDialog.getByRole('button', { name: 'Speichern' }).click();
     await expect(page.getByText('Offene Zahlung geändert.')).toBeVisible();
     // Die Seitenleiste bleibt offen und verdeckt die Tabelle für Hilfstechnik — der neue Betrag steht dort.
-    await expect(page.getByRole('dialog', { name: story('RE-2026-999') })).toContainText('90,00 €');
+    await expect(page.getByRole('dialog', { name: 'Mira Sandberg' })).toContainText('90,00 €');
   });
 
   test('eine Zahlung als Entwurf an einer überfälligen Zahlung steht als eigenes Wort da, nicht nur „überfällig“ (Befund 6)', async ({ page }) => {
@@ -972,7 +972,8 @@ test.describe('finance', () => {
     await page.getByRole('row', { name: storyPattern('ANT-2026-014') }).click();
     await expect(page).toHaveURL(/item=/);
     await expect(page.getByRole('button', { name: 'Ohne Zahlung erledigen …' })).toHaveCount(0);
-    await expect(page.getByText('Was mit dem Vorgang geschieht, entscheidet sich an ihm selbst.')).toBeVisible();
+    // 07-2 A3: Der Posten nennt seinen Vorgang (der Seed-Vorgang hat keine Seite, also ohne Link).
+    await expect(page.getByText(story('Gehört zu ANT-2026-014 und wird dort geändert.'))).toBeVisible();
   });
 
   test('ohne finance.entriesFinalize steht dort, wer es erledigen kann', async ({ page }) => {

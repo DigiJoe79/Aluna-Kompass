@@ -6,6 +6,7 @@ import { useDateFormat } from '@/components/date-format-provider';
 import { EmptyState } from '@/components/empty-state';
 import { FilterBar, selectFilter } from '@/components/filter-bar';
 import { PageHeader } from '@/components/page-header';
+import { isNormalInList, StatusBadge, statusTone } from '@/components/status-badge';
 import { Button } from '@/components/ui/button';
 import { ListPager } from '@/components/list-pager';
 import { ViewTabs } from '@/components/view-tabs';
@@ -17,6 +18,21 @@ import { useUrlFilters } from '@/lib/use-url-filters';
 import { usePathname, useRouter } from 'next/navigation';
 import { ItemDialog } from './item-dialog';
 import { Empty } from '@/components/empty-value';
+
+/**
+ * Zustand einer offenen Zahlung als Marken (07-2 B10): der Zustand, bei überfällig eine zweite Marke. In der Liste steht
+ * „offen“ ohne Marke (Normalzustand, § F); im Seitenfenster immer.
+ */
+export function OpenItemStateBadges({ word, overdue, draftSettlement, inList = false }: { word: OpenItemRow['word']; overdue: boolean; draftSettlement: boolean; inList?: boolean }) {
+  const t = useTranslations('finance.openItems');
+  const due = draftSettlement ? 'draftSettlement' : 'overdue';
+  return (
+    <span className="inline-flex flex-wrap gap-1">
+      {inList && isNormalInList('openItem', word) ? null : <StatusBadge tone={statusTone('openItem', word)}>{t(`state.${word}`)}</StatusBadge>}
+      {overdue ? <StatusBadge tone={statusTone('openItem', due)} dot>{t(due)}</StatusBadge> : null}
+    </span>
+  );
+}
 
 export interface OpenItemRow {
   id: string;
@@ -127,7 +143,8 @@ export function OpenItemsList({ rows, tab, state, page, total, tabTotal, pageSiz
               {rows.map((row) => (
                 <TableRow key={row.id}>
                   <TableCell col="meta">
-                    <RowLink href={`${pageHref(page)}&item=${row.id}`} className={row.overdue ? 'text-error' : 'text-ink'}>
+                    {/* 07-2 B9: Überfällig sagt die Marke; das Datum ist nicht noch einmal rot. */}
+                    <RowLink href={`${pageHref(page)}&item=${row.id}`}>
                       {formatDateOrDash(date, row.dueOn)}
                     </RowLink>
                   </TableCell>
@@ -137,8 +154,7 @@ export function OpenItemsList({ rows, tab, state, page, total, tabTotal, pageSiz
                   <TableCell>{row.hasOrigin ? t('hasOrigin') : <Empty />}</TableCell>
                   <TableCell col="meta" selectable>{row.paymentReference ?? <Empty />}</TableCell>
                   <TableCell col="status">
-                    {t(`state.${row.word}`)}
-                    {row.overdue ? ` · ${row.draftSettlementCents > 0 ? t('draftSettlement') : t('overdue')}` : ''}
+                    <OpenItemStateBadges word={row.word} overdue={row.overdue} draftSettlement={row.draftSettlementCents > 0} inList />
                   </TableCell>
                 </TableRow>
               ))}

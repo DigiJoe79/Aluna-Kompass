@@ -17,6 +17,8 @@ import { CountDialog } from './count-dialog';
 import { MoveDialog } from './move-dialog';
 import { PaidDialog } from './paid-dialog';
 import { Section } from '@/components/section';
+import { Empty } from '@/components/empty-value';
+import { RowLink, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 export interface CashPageQuery {
   account?: string;
@@ -118,19 +120,36 @@ export default async function FinanceCashPage({ searchParams }: { searchParams: 
           >
             <div className="space-y-2">
               {entriesRes.ok && entriesRes.value.entries.length > 0 ? (
-                <ul className="divide-y divide-line rounded-md border border-line">
-                  {entriesRes.value.entries.map((entry) => {
-                    const amount = entry.moneyLines.filter((l) => l.accountId === selected.accountId).reduce((s, l) => s + l.amountCents, 0);
-                    return (
-                      <li key={entry.id} className="flex items-center justify-between px-3 py-2 text-meta">
-                        <span>
-                          {fmt.date(entry.entryDate)} · {entry.text}
-                        </span>
-                        <span className="tabular-nums">{formatEuro(amount)}</span>
-                      </li>
-                    );
-                  })}
-                </ul>
+                // 07-2 B14: eine Tabelle wie das Journal — die Nummer öffnet die Buchung (§ G).
+                <div className="overflow-hidden rounded-md border border-line bg-surface">
+                  <Table data-testid="cash-last-movements">
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead col="meta">{t('lastMovements.columns.number')}</TableHead>
+                        <TableHead col="meta">{t('lastMovements.columns.date')}</TableHead>
+                        <TableHead col="title">{t('lastMovements.columns.text')}</TableHead>
+                        <TableHead col="amount" className="text-right">{t('lastMovements.columns.amount')}</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {entriesRes.value.entries.map((entry) => {
+                        const amount = entry.moneyLines.filter((l) => l.accountId === selected.accountId).reduce((s, l) => s + l.amountCents, 0);
+                        return (
+                          <TableRow key={entry.id}>
+                            <TableCell col="meta" className="font-mono text-meta">
+                              <RowLink href={`/finance/entries/${entry.id}`} aria-label={entry.number ? `${entry.number} · ${entry.text}` : entry.text}>
+                                {entry.number ?? <Empty />}
+                              </RowLink>
+                            </TableCell>
+                            <TableCell col="meta" className="tabular-nums text-meta text-ink-2">{fmt.date(entry.entryDate)}</TableCell>
+                            <TableCell col="title">{entry.text}</TableCell>
+                            <TableCell col="amount" className="text-right tabular-nums">{formatEuro(amount)}</TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
               ) : (
                 <p className="text-meta text-muted-ink">{t('lastMovements.empty')}</p>
               )}

@@ -11,6 +11,7 @@ import { PageHeader } from '@/components/page-header';
 import { readAllPages } from '@/lib/read-all-pages';
 import { requireSession } from '@/lib/request-context';
 import { fromEntryView } from '@/lib/finance/entry-form';
+import { voucherDetails } from '@/lib/finance/voucher-details';
 import { EntryForm } from '../../entry-form';
 
 export default async function EditFinanceEntryPage({ params }: { params: Promise<{ id: string }> }) {
@@ -42,12 +43,14 @@ export default async function EditFinanceEntryPage({ params }: { params: Promise
   const projects = (projectsRes.ok ? projectsRes.value : []).map((p) => ({ id: p.id, name: (p.name as LocalizedText)[leading] || p.slug }));
   const showTax = readSetting<boolean>(deps, 'finance.isEntrepreneurOrHasVatId');
 
+  // 07-2 A5: Nummer einmal, daneben der Betreff aus der Akte.
+  const voucherDocs = await voucherDetails(deps, ctx, entry.vouchers.map((v) => v.documentId));
   const vouchers: ReceiptListItem[] = entry.vouchers.map((v) => ({
     linkId: v.linkId,
     documentNumber: v.documentNumber,
-    title: v.documentNumber,
-    typeLabel: '',
-    date: entry.entryDate,
+    title: voucherDocs.get(v.documentId)?.subject ?? '',
+    typeLabel: voucherDocs.get(v.documentId)?.typeLabel ?? '',
+    date: voucherDocs.get(v.documentId)?.date ?? entry.entryDate,
     viewHref: `/finance/entries/${id}/voucher/${v.documentId}`,
     revoked: v.revokedAt !== null,
     replacedByNumber: null,

@@ -51,6 +51,9 @@ export function CountDialog({ account, today, canCreateContact }: { account: Cas
   const [note, setNote] = useState('');
   const [pending, setPending] = useState(false);
   const [fieldError, setFieldError] = useState<string | null>(null);
+  // 07-2 B21 (§ B): Speichern bleibt frei; was fehlt, steht am Feld (die fehlende Notiz bei Fehlbetrag nennt der Dienst).
+  const [missing, setMissing] = useState<{ amount: boolean; box: boolean }>({ amount: false, box: false });
+  const tFields = useTranslations('errors.fields');
   const feedback = useActionFeedback();
 
   const helperCents = useMemo(() => sumDenominations(pieces), [pieces]);
@@ -70,11 +73,15 @@ export function CountDialog({ account, today, canCreateContact }: { account: Cas
     setCounterTwo(null);
     setNote('');
     setFieldError(null);
+    setMissing({ amount: false, box: false });
     feedback.reset();
   };
 
   const submit = async () => {
-    if (countedCents === null || !counterOne || !counterTwo) return;
+    const miss = { amount: countedCents === null, box: mode === 'box' && !boxLabel.trim() };
+    setMissing(miss);
+    if (!counterOne || !counterTwo) setFieldError(t('countersRequired'));
+    if (countedCents === null || miss.box || !counterOne || !counterTwo) return;
     if (counterOne.id === counterTwo.id) {
       setFieldError(t('sameCounter'));
       return;
@@ -112,7 +119,8 @@ export function CountDialog({ account, today, canCreateContact }: { account: Cas
 
   return (
     <>
-      <Button type="button" onClick={() => setOpen(true)}>
+      {/* 07-2 B12: Die drei Kassenaktionen sind gleichrangig (`outline`). */}
+      <Button type="button" variant="outline" onClick={() => setOpen(true)}>
         {t('trigger')}
       </Button>
       <Dialog open={open} onOpenChange={(next) => (next ? setOpen(true) : close())}>
@@ -129,7 +137,7 @@ export function CountDialog({ account, today, canCreateContact }: { account: Cas
                 />
               </FormCell>
               {mode === 'box' ? (
-                <FormField id="countBoxLabel" label={t('boxLabel')} required>
+                <FormField id="countBoxLabel" label={t('boxLabel')} required error={missing.box ? tFields('required') : undefined}>
                   <Input id="countBoxLabel" value={boxLabel} onChange={(e) => setBoxLabel(e.target.value)} required />
                 </FormField>
               ) : null}
@@ -138,7 +146,7 @@ export function CountDialog({ account, today, canCreateContact }: { account: Cas
                 <Input id="countedOn" type="date" value={countedOn} max={today} onChange={(e) => setCountedOn(e.target.value)} />
               </FormField>
               {!useHelper ? (
-                <FormField id="countedCents" label={t('countedAmount')} required size="s">
+                <FormField id="countedCents" label={t('countedAmount')} required size="s" error={missing.amount ? tFields('required') : undefined}>
                   <AmountField id="countedCents" name="countedCents" value={amountText} onChange={setAmountText} required />
                 </FormField>
               ) : (
@@ -203,7 +211,6 @@ export function CountDialog({ account, today, canCreateContact }: { account: Cas
             placement="dialog"
             cancel={close}
             pending={pending}
-            saveDisabled={countedCents === null || !counterOne || !counterTwo || (mode === 'box' && !boxLabel.trim()) || (mode === 'cash' && preview?.kind === 'shortage' && !note.trim())}
             saveLabel={t('submit')}
             onSave={() => void submit()}
             state={feedback.state}

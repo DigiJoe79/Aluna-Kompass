@@ -252,11 +252,16 @@ export function CorrectDialog({
                         id={`correct-party-${key}`}
                         label={t(`party.${key}`)}
                         toggle
-                        hint={key === 'contact' && pickedLine.contactId ? t('currentlyValue', { value: contactNames.get(pickedLine.contactId) ?? '' }) : undefined}
                       >
                         <Checkbox id={`correct-party-${key}`} checked={party[key]} onCheckedChange={(next) => setParty((p) => ({ ...p, [key]: next === true }))} />
                       </FormField>
                     ))}
+                    {/* 07-2 B22: „bisher: …“ in einer eigenen Zelle — als Hinweis am Haken verschob er das Raster der Schalter. */}
+                    {pickedLine.contactId ? (
+                      <FormCell as="p" size="full" className="text-hint text-muted-ink">
+                        {t('currentContact', { value: contactNames.get(pickedLine.contactId) ?? '' })}
+                      </FormCell>
+                    ) : null}
                   </FormGrid>
                 </div>
               </Section>

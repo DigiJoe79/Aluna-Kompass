@@ -112,6 +112,7 @@ export default async function FinanceOpenItemsPage({ searchParams }: { searchPar
             dueOn: selected.dueOn,
             paymentReference: selected.paymentReference,
             originType: selected.originType,
+            originId: selected.originId,
             cancelledAt: selected.cancelledAt,
             draftSettlementCents: selected.draftSettlementCents,
           }}

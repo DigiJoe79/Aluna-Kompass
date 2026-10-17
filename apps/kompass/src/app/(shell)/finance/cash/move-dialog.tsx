@@ -32,6 +32,10 @@ export function MoveDialog({ cashId, bankAccounts, today }: { cashId: string; ba
   const [amountText, setAmountText] = useState('');
   const [pending, setPending] = useState(false);
   const feedback = useActionFeedback();
+  // 07-2 B21 (§ B): Speichern bleibt frei; fehlt der Betrag, steht der Fehler am Feld.
+  const [missing, setMissing] = useState(false);
+  const tFields = useTranslations('errors.fields');
+  const fieldErrors = feedback.state.status === 'error' ? feedback.state.fieldErrors : {};
 
   const amountCents = parseAmount(amountText);
 
@@ -40,11 +44,15 @@ export function MoveDialog({ cashId, bankAccounts, today }: { cashId: string; ba
     setDirection('toBank');
     setDate(today);
     setAmountText('');
+    setMissing(false);
     feedback.reset();
   };
 
   const submit = async () => {
-    if (amountCents === null || amountCents <= 0 || !bankAccountId) return;
+    if (amountCents === null) {
+      setMissing(true);
+      return;
+    }
     setPending(true);
     const result = await feedback.run(
       () =>
@@ -65,7 +73,8 @@ export function MoveDialog({ cashId, bankAccounts, today }: { cashId: string; ba
 
   return (
     <>
-      <Button type="button" variant="secondary" onClick={() => setOpen(true)}>
+      {/* 07-2 B12: Die drei Kassenaktionen sind gleichrangig (`outline`). */}
+      <Button type="button" variant="outline" onClick={() => setOpen(true)}>
         {t('trigger')}
       </Button>
       <Dialog open={open} onOpenChange={(next) => (next ? setOpen(true) : close())}>
@@ -92,11 +101,11 @@ export function MoveDialog({ cashId, bankAccounts, today }: { cashId: string; ba
             <FormField id="moveDate" label={t('date')} size="s">
               <Input id="moveDate" type="date" value={date} max={today} onChange={(e) => setDate(e.target.value)} />
             </FormField>
-            <FormField id="moveAmount" label={t('amount')} required size="s">
-              <AmountField id="moveAmount" name="moveAmount" value={amountText} onChange={setAmountText} required />
+            <FormField id="moveAmount" label={t('amount')} required size="s" error={missing ? tFields('required') : fieldErrors.amountCents}>
+              <AmountField id="moveAmount" name="moveAmount" value={amountText} onChange={(next) => { setAmountText(next); setMissing(false); }} required />
             </FormField>
           </FormGrid>
-          <FormActionBar placement="dialog" cancel={close} pending={pending} saveDisabled={amountCents === null || amountCents <= 0 || !bankAccountId} saveLabel={t('submit')} onSave={() => void submit()} state={feedback.state} />
+          <FormActionBar placement="dialog" cancel={close} pending={pending} saveLabel={t('submit')} onSave={() => void submit()} state={feedback.state} />
         </DialogContent>
       </Dialog>
     </>

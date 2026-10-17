@@ -76,6 +76,7 @@ const ALLOWED: CountedAllowlist = {
   'app/(shell)/finance/donations/signature-steps.tsx': { count: 1, reason: NUMBER },
   'app/(shell)/finance/donations/uncertified-list.tsx': { count: 1, reason: NUMBER },
   'app/(shell)/finance/entries/entry-form.tsx': { count: 1, reason: NUMBER },
+  'app/(shell)/finance/cash/page.tsx': { count: 1, reason: `${NUMBER} Letzte Kassenbewegungen wie das Journal (07-2 B14).` },
   'app/(shell)/finance/entries/journal.tsx': { count: 1, reason: NUMBER },
   'app/(shell)/finance/expenses/claims-list.tsx': { count: 1, reason: NUMBER },
   'app/(shell)/finance/expenses/new/expense-form.tsx': { count: 1, reason: IBAN },

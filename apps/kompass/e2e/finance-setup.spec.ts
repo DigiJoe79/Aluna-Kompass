@@ -528,7 +528,7 @@ test.describe('finance setup', () => {
 
   test('Barkasse und Journal ohne Einrichtung: Seitenkopf, leerer Zustand und der Weg zum Einrichten (K9-Befund 6)', async ({ page }) => {
     await page.goto('/finance/cash');
-    await expect(page.getByRole('heading', { name: 'Barkasse', level: 1 })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Kassen', level: 1 })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Noch keine Barkasse' })).toBeVisible();
     // Kein gesperrter Schritt, sondern noch nichts da (MUSTER Seitenrahmen).
     await expect(page.getByText('nicht möglich', { exact: true })).toHaveCount(0);

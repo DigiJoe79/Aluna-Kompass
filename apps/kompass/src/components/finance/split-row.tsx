@@ -6,6 +6,7 @@ import { FieldError } from '@/components/forms/field-error';
 import { ContactPicker, type PickedContact } from '@/components/contact-picker';
 import { Notice } from '@/components/notice';
 import { FormField } from '@/components/forms/form-field';
+import { FormGrid } from '@/components/forms/form-grid';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Label } from '@/components/ui/label';
@@ -100,7 +101,8 @@ export function SplitRow({
   const set = (patch: Partial<SplitRowValue>) => onChange({ ...value, ...patch });
 
   return (
-    <div data-testid="split-row" data-density={density} className="space-y-3 rounded-md border border-line bg-surface-2 p-3">
+    // 07-1 B15 · 07-2 B16: Die Zeile ist keine graue Karte in der Formularkarte (§ E) — nur eine Linie trennt sie.
+    <div data-testid="split-row" data-density={density} className="space-y-3 border-t border-line pt-3">
       {/* Kopf der Zeilenkarte: links „Zeile n“, rechts das Zeilenmenü — in breiter und schmaler Spalte gleich,
           32 px hoch, keine leere Zeile mit nur dem Menü (HANDOFF Konsistenz § 8c). */}
       <div className="-mt-1 -mr-1 flex h-8 items-center justify-between gap-2">
@@ -210,10 +212,11 @@ export function SplitRow({
       </div>
 
       {purposes.length > 0 || allowsAddsToAssets ? (
-        <div className={cn('grid grid-cols-1 gap-3 border-t border-line pt-3', !narrow && 'sm:grid-cols-3')}>
+        // 07-2 B17: Zweck und Schalter im `FormGrid` statt eines handgebauten Rasters; der Schalter bleibt `FormField toggle`.
+        <div className="border-t border-line pt-3">
+        <FormGrid>
           {purposes.length > 0 ? (
-            <div className="space-y-1">
-              <Label htmlFor={`${value.key}-purpose`}>{purposeLabel}</Label>
+            <FormField id={`${value.key}-purpose`} label={purposeLabel}>
               <Select
                 id={`${value.key}-purpose`}
                 name={`${value.key}-purpose`}
@@ -225,10 +228,8 @@ export function SplitRow({
                   <option key={p.id} value={p.id}>{p.name}</option>
                 ))}
               </Select>
-            </div>
+            </FormField>
           ) : null}
-          {/* Schalter als `FormField toggle`: unten bündig mit den Feldern der Zeile, ohne `pt-6`. `size="s"`, weil die
-              Zeile ihr eigenes Raster hat und keine Spannweite des FormGrid gilt. */}
           <FormField id={`${value.key}-abroad`} label={t('abroad')} toggle size="s">
             <Switch id={`${value.key}-abroad`} checked={value.abroad} onCheckedChange={(checked) => set({ abroad: checked === true })} />
           </FormField>
@@ -237,6 +238,7 @@ export function SplitRow({
               <Switch id={`${value.key}-adds-to-assets`} checked={value.addsToAssets} onCheckedChange={(checked) => set({ addsToAssets: checked === true })} />
             </FormField>
           ) : null}
+        </FormGrid>
         </div>
       ) : null}
 

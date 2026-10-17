@@ -21,6 +21,15 @@ import { cancelOpenItemAction } from './actions';
 import { ItemDialog, type OpenItemEditable } from './item-dialog';
 import { Overline } from '@/components/overline';
 import { Empty } from '@/components/empty-value';
+import { OpenItemStateBadges } from './list';
+
+/** Wo ein Posten mit Herkunft geändert wird (07-2 A3): Auslage und Zahlung an einen Partner haben ihre Freigabeseite. */
+function originHref(originType: string | null, originId: string | null): string | null {
+  if (!originId) return null;
+  if (originType === 'financeExpenseClaim') return `/finance/approvals?claim=${originId}`;
+  if (originType === 'financePartnerPayment') return `/finance/approvals?payment=${originId}`;
+  return null;
+}
 
 export interface OpenItemDetailData {
   id: string;
@@ -34,6 +43,8 @@ export interface OpenItemDetailData {
   dueOn: string | null;
   paymentReference: string | null;
   originType: string | null;
+  /** Der Vorgang, zu dem der Posten gehört (07-2 A3) — nur für den Link „dort ändern“. */
+  originId: string | null;
   cancelledAt: string | null;
   /** Befund 6: > 0, solange eine Zahlung dafür als Entwurf vorliegt — dann steht das statt „überfällig“. */
   draftSettlementCents: number;
@@ -106,11 +117,14 @@ export function DetailSheet({
       >
         <SheetContent side="right" size="md" className="gap-0 overflow-y-auto bg-surface shadow-md">
           <div className="p-5">
-            <SheetTitle>{item.paymentReference ?? t('detail.unnamed')}</SheetTitle>
+            {/* 07-2 C27: Der Kontakt ist der Titel, die Referenz steht darunter. */}
+            <SheetTitle>{item.contactLabel ?? item.paymentReference ?? t('detail.unnamed')}</SheetTitle>
+            {item.contactLabel && item.paymentReference ? <p className="mt-1 text-meta text-muted-ink">{item.paymentReference}</p> : null}
             <div className="mt-4 space-y-4">
               <div>
                 <p className="text-amount font-semibold tabular-nums text-ink">{formatEuro(item.openCents)}</p>
-                <p className="text-hint text-muted-ink">{t('detail.ofTotal', { amount: formatEuro(item.amountCents) })}</p>
+                {/* 07-2 A2: „von …“ nur bei einer Teilzahlung — sonst stünde derselbe Betrag zweimal da. */}
+                {item.openCents !== item.amountCents ? <p className="text-hint text-muted-ink">{t('detail.ofTotal', { amount: formatEuro(item.amountCents) })}</p> : null}
               </div>
               <dl className="space-y-1.5 text-meta">
                 <div className="flex justify-between gap-2">
@@ -119,13 +133,13 @@ export function DetailSheet({
                 </div>
                 <div className="flex justify-between gap-2">
                   <dt className="text-muted-ink">{t('columns.dueOn')}</dt>
-                  <dd className={state.overdue ? 'font-semibold text-error' : undefined}>{formatDateOrDash(date, item.dueOn)}</dd>
+                  {/* 07-2 B9: Überfällig sagt die Marke im Zustand, das Datum ist nicht rot. */}
+                  <dd>{formatDateOrDash(date, item.dueOn)}</dd>
                 </div>
                 <div className="flex justify-between gap-2">
                   <dt className="text-muted-ink">{t('columns.state')}</dt>
                   <dd>
-                    {t(`state.${state.word}`)}
-                    {state.overdue ? ` · ${item.draftSettlementCents > 0 ? t('draftSettlement') : t('overdue')}` : ''}
+                    <OpenItemStateBadges word={state.word} overdue={state.overdue} draftSettlement={item.draftSettlementCents > 0} />
                   </dd>
                 </div>
               </dl>
@@ -150,7 +164,14 @@ export function DetailSheet({
                 )}
               </section>
 
-              {!done && item.originType ? <p className="text-meta text-ink-2">{t('detail.hasOriginText')}</p> : null}
+              {/* 07-2 A3: „Gehört zu KE-…, dort ändern“ mit Link auf den Vorgang. */}
+              {!done && item.originType ? (
+                <p className="text-meta text-ink-2">
+                  {originHref(item.originType, item.originId)
+                    ? t.rich('detail.origin', { reference: item.paymentReference ?? t('detail.originUnnamed'), link: (chunks) => <Link href={originHref(item.originType, item.originId)!} className="text-link underline">{chunks}</Link> })
+                    : t('detail.originNoLink', { reference: item.paymentReference ?? t('detail.originUnnamed') })}
+                </p>
+              ) : null}
               {!done && !item.originType && !canFinalize ? (
                 <BlockedState step={t('settleWithoutPayment.trigger')} title={t('settleWithoutPayment.noRight.title')}>
                   {finalizeNames.length > 0

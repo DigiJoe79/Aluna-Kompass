@@ -909,7 +909,7 @@
       "entries": "Journal",
       "accounts": "Bankkonten und Kassen",
       "openItems": "Offene Zahlungen",
-      "cash": "Barkasse",
+      "cash": "Kassen",
       "donations": "Bestätigungen",
       "donationRun": "Serienlauf",
       "donationBook": "Spendenbuch",
@@ -4475,14 +4475,14 @@
       "dragOrPick": "PDF hierher ziehen oder auswählen",
       "pickFromArchive": "Aus der Akte wählen",
       "none": "Noch kein Beleg.",
-      "open": "öffnen",
-      "remove": "entfernen",
+      "open": "Öffnen",
+      "remove": "Entfernen",
       "replacedBy": "ersetzt durch {number}",
       "dragOrPickImage": "Unterschrift als Bild hierher ziehen oder auswählen",
       "isPdf": "Das ist ein PDF. Hier braucht es ein Bild der Unterschrift (PNG oder JPEG).",
       "wrongTypeImage": "Kompass nimmt nur PNG oder JPEG als Bild der Unterschrift.",
       "tooLarge": "Diese Datei ist größer als {mb} MB.",
-      "replace": "ersetzen"
+      "replace": "Ersetzen"
     },
     "splitRow": {
       "category": "Kategorie",
@@ -4515,12 +4515,12 @@
       "rowLabel": "Zeile {n}",
       "restIntoHereWithAmount": "Rest hierher — {amount}",
       "restIntoHere": "Rest hierher",
-      "splitEvenly": "gleichmäßig auf {n} teilen",
+      "splitEvenly": "Gleichmäßig auf {n} teilen",
       "duplicate": "Zeile duplizieren",
-      "removeRow": "entfernen",
-      "purposePaidFrom": "bezahlt aus",
+      "removeRow": "Entfernen",
+      "purposePaidFrom": "Bezahlt aus",
       "purposeDeterminedBy": "Spender hat bestimmt für",
-      "abroad": "wird im Ausland verwendet",
+      "abroad": "Wird im Ausland verwendet",
       "addsToAssets": "Zuführung zum Vermögen",
       "purposeOverspent": "Dieser Zweck ist im Minus.",
       "freeFundsRemainder": "Rest aus freien Mitteln"
@@ -4663,7 +4663,7 @@
       "settlement": {
         "toggle": "begleicht offene Zahlung",
         "searchPlaceholder": "Zahlungsreferenz oder Kontakt suchen",
-        "remove": "entfernen",
+        "remove": "Entfernen",
         "unnamed": "Posten vom {date}",
         "amount": "Teilbetrag",
         "rest": "Rest {amount}",
@@ -4702,6 +4702,13 @@
       "back": "Journal",
       "account": "Konto",
       "allocation": "Wofür?",
+      "allocationColumns": {
+        "category": "Kategorie",
+        "contact": "Spender/Empfänger",
+        "purpose": "Zweck",
+        "amount": "Betrag",
+        "state": "Hinweis"
+      },
       "corrected": "Zuordnung geändert",
       "pendingCorrection": "wartet auf Freigabe",
       "reversedBy": "Zurückgenommen durch die Gegenbuchung.",
@@ -4780,13 +4787,13 @@
           "contact": "Spender/Empfänger",
           "project": "Projekt",
           "purpose": "Zweck",
-          "abroad": "wird im Ausland verwendet",
+          "abroad": "Wird im Ausland verwendet",
           "noProject": "Kein Projekt",
           "noPurpose": "Kein Zweck"
         },
         "pathAllocation": "Das ändert die Zuordnung.",
         "numbersElsewhere": "Stimmen Betrag, Datum, Konto, Kategorie oder Umsatzsteuer nicht, nehmen Sie die Buchung über <reverse>Zurücknehmen …</reverse> zurück und erfassen sie neu.",
-        "currentlyValue": "bisher: {value}",
+        "currentContact": "Spender/Empfänger bisher: {value}",
         "pickLine": {
           "title": "Welche Aufteilung?",
           "pending": "wartet auf Freigabe"
@@ -4820,7 +4827,7 @@
       }
     },
     "cash": {
-      "title": "Barkasse",
+      "title": "Kassen",
       "noAccount": {
         "title": "Noch keine Barkasse",
         "text": "Für die Barkasse ist noch kein Konto eingerichtet. Legen Sie unter Bankkonten und Kassen eine Kasse an.",
@@ -4841,7 +4848,13 @@
       "lastMovements": {
         "title": "Letzte Kassenbewegungen",
         "toJournal": "Zum Journal",
-        "empty": "Noch keine Bewegung."
+        "empty": "Noch keine Bewegung.",
+        "columns": {
+          "number": "Nr.",
+          "date": "Datum",
+          "text": "Text",
+          "amount": "Betrag"
+        }
       },
       "counts": {
         "title": "Zählungen",
@@ -4868,6 +4881,7 @@
         "counterOne": "Erste zählende Person",
         "counterTwo": "Zweite zählende Person",
         "sameCounter": "Bitte zwei unterschiedliche Personen wählen.",
+        "countersRequired": "Bitte beide Zählenden wählen.",
         "resultLine": "Buchbestand {book} · gezählt {counted}",
         "kind": {
           "surplus": "Kassendifferenz",
@@ -5154,7 +5168,9 @@
         "settledByEmpty": "Noch keine Zahlung.",
         "bookNow": "Jetzt buchen",
         "change": "Ändern",
-        "hasOriginText": "Was mit dem Vorgang geschieht, entscheidet sich an ihm selbst."
+        "origin": "Gehört zu {reference}, <link>dort ändern</link>.",
+        "originNoLink": "Gehört zu {reference} und wird dort geändert.",
+        "originUnnamed": "einem eigenen Vorgang"
       },
       "settleWithoutPayment": {
         "trigger": "Erledigt ohne Zahlung",
@@ -5551,7 +5567,7 @@
             "entries": "Journal",
             "accounts": "Bankkonten und Kassen",
             "openItems": "Offene Zahlungen",
-            "cash": "Barkasse",
+            "cash": "Kassen",
             "donations": "Bestätigungen",
             "donationRun": "Serienlauf",
             "donationBook": "Spendenbuch",
@@ -6404,9 +6420,9 @@
       "entrySection": {
         "title": "Bestätigung",
         "confirmed": "Bestätigung {number} vom {date}",
-        "none": "keine",
-        "noContact": "keine — ohne Spender nicht bestätigbar",
-        "noDonation": "keine — kein Spendeneingang",
+        "none": "Noch keine Bestätigung",
+        "noContact": "Keine Bestätigung — ohne Spender nicht bestätigbar",
+        "noDonation": "Kein Spendeneingang, nichts zu bestätigen.",
         "issue": "Ausstellen"
       },
       "notices": {
@@ -7133,10 +7149,10 @@
           "amount": "Betrag",
           "category": "Kategorie",
           "project": "Projekt",
-          "paidFrom": "bezahlt aus",
+          "paidFrom": "Bezahlt aus",
           "freeFunds": "freie Mittel",
           "goodsLine": "Ausgabe",
-          "remove": "entfernen"
+          "remove": "Entfernen"
         },
         "paidLines": {
           "title": "Bezahlte Zeile wählen",
@@ -7288,7 +7304,7 @@
       "trip": "Fahrt {from} – {to}, {km} km",
       "category": "Kategorie",
       "categoryPlaceholder": "Kategorie wählen",
-      "paidFrom": "bezahlt aus",
+      "paidFrom": "Bezahlt aus",
       "freeFunds": "freie Mittel",
       "project": "Projekt: {name}",
       "suggestion": {
@@ -7466,7 +7482,7 @@
         "reasonPlaceholder": "z. B. Zweck erfüllt, Rest laut Beschluss in die freien Mittel",
         "documentLabel": "Dokument",
         "documentRequired": "Pflicht — ohne Beleg für die Entscheidung keine Umwidmung.",
-        "documentRemove": "entfernen",
+        "documentRemove": "Entfernen",
         "refuseTitle": "So geht es noch nicht",
         "submit": "Zur Freigabe geben",
         "missing": {

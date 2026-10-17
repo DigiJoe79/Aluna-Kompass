@@ -48,7 +48,8 @@ test.describe('handbook and help', () => {
   // E4 „Hilfe neben der Seite“ (Designer 2026-10-17): ab `lg` eine Nebenspalte ohne Abdunkeln; sie verdrängt das
   // Seitenpanel „Bestände“, bleibt beim Seitenwechsel offen und gibt den Fokus beim Schließen an den Knopf zurück.
   test('Journal mit Hilfe daneben: Nebenspalte statt Blatt, Seitenpanel eingeklappt, bleibt beim Seitenwechsel offen', async ({ page }) => {
-    await page.setViewportSize({ width: 1440, height: 900 });
+    // Ab 1680 px steht das Seitenpanel von selbst neben dem Journal (07-1 B33).
+    await page.setViewportSize({ width: 1720, height: 900 });
     await page.goto('/finance/entries');
     await expect(page.getByTestId('finance-side-panel')).toBeVisible();
     const button = page.getByRole('button', { name: 'Hilfe zu dieser Seite' });
