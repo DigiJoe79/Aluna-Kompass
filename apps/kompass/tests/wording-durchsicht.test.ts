@@ -56,4 +56,11 @@ describe('Wortlaut der Durchsicht 0.2.11', () => {
     // Die Gruppe der Zeilenhöhen im Nutzermenü hat eine Überschrift (01 C31).
     expect(at('shell.userMenu.density')).toBe('Zeilenhöhe');
   });
+
+  it('Akte, Liste und Baum (Teil C: 03 A2, 03 B11, 03 B13)', () => {
+    // Über einem Ordner gilt die Ablage in diesen Ordner, nicht in den Eingangskorb (03 B13).
+    expect(at('dms.drop.overlayHintFolder')).toBe('Die Akte nimmt nur PDF.');
+    expect(at('dms.list.folderHere')).toBe('direkt hier');
+    expect(at('dms.empty.folderTitle')).toBe('Dieser Ordner ist leer');
+  });
 });

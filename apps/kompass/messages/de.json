@@ -3865,6 +3865,7 @@
       "path": "Weg"
     },
     "list": {
+      "folderHere": "direkt hier",
       "truncated": "Es werden die ersten {shown} von {total} Dokumenten gezeigt. Grenzen Sie die Liste mit Suche oder Filtern ein.",
       "noun": {
         "one": "Dokument",
@@ -3920,7 +3921,9 @@
     },
     "empty": {
       "title": "Keine Dokumente gefunden",
-      "text": "In dieser Ansicht liegen keine Dokumente vor."
+      "text": "In dieser Ansicht liegen keine Dokumente vor.",
+      "folderTitle": "Dieser Ordner ist leer",
+      "folderText": "Legen Sie Post hier ab oder ziehen Sie ein PDF auf den Ordner."
     },
     "newDraftDescription": "Verfassen Sie ein Schreiben mit Briefkopf auf Basis der Vorlagen.",
     "receiveDescription": "Legen Sie eingehende Schreiben ab. Einsortierregeln belegen Art, Ordner und Datum automatisch vor.",
@@ -3951,7 +3954,7 @@
       "overlayHint": "Auf einen Ordner ziehen, um dort einzusortieren — oder hier loslassen für den Eingangskorb.",
       "overlayFolder": "{count, plural, one {# Datei} other {# Dateien}} in „{folder}“ ablegen",
       "overlayFolderUnknown": "Dateien in „{folder}“ ablegen",
-      "overlayHintFolder": "Die Akte nimmt nur PDF. Hier loslassen legt in den Eingangskorb.",
+      "overlayHintFolder": "Die Akte nimmt nur PDF.",
       "skippedNamed": "„{name}“ ist kein PDF und wurde nicht übernommen. Die Akte nimmt nur PDF.",
       "queueBadge": "{current} von {total}",
       "queueHint": "Gezogen auf {folder}. Nach dem Ablegen folgt die nächste Datei.",

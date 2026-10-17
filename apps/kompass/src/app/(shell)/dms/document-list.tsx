@@ -18,7 +18,8 @@ import { listKeyOf, useListSelection } from '@/lib/use-list-selection';
 import { useUrlFilters } from '@/lib/use-url-filters';
 import { cn } from '@/lib/utils';
 import { setDragPreview } from '@/components/folder-tree/drag-preview';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
+import Link from 'next/link';
 import { Checkbox } from '@/components/ui/checkbox';
 import { DOCUMENTS_MIME, beginDrag } from '@/lib/drag-types';
 import { isWithin, namesBelow } from '@/lib/folder-tree-model';
@@ -234,6 +235,19 @@ export function DocumentList({ documents, currentFolder, total, unfiltered, read
 
       {shown.length === 0 && filtered ? (
         <EmptyState filtered={{ noun: t('list.emptyFilteredNoun'), onReset: resetFilters }} />
+      ) : shown.length === 0 && openFolder ? (
+        // Ein leerer Ordner ist kein Suchergebnis: eigener Titel und, mit Recht, der Weg zur Ablage (03 B11).
+        <EmptyState
+          title={t('empty.folderTitle')}
+          text={t('empty.folderText')}
+          action={
+            canMove ? (
+              <Link href={`/dms/receive?folder=${encodeURIComponent(openFolder)}`} className={buttonVariants({ variant: 'outline' })}>
+                {t('receivePost')}
+              </Link>
+            ) : undefined
+          }
+        />
       ) : shown.length === 0 ? (
         <EmptyState title={t('empty.title')} text={t('empty.text')} />
       ) : (
@@ -292,22 +306,18 @@ export function DocumentList({ documents, currentFolder, total, unfiltered, read
                       {doc.number ?? <Empty />}
                     </TableCell>
                     {/* Betreff, Art und Ordner brechen um, damit „Ordner“ auch auf dem Tablet ohne Querscrollen sichtbar bleibt (Spec § 9). */}
-                    <TableCell col="title" className="min-w-[160px] whitespace-normal hyphens-auto wrap-anywhere max-[1100px]:min-w-[140px]">
+                    <TableCell col="title" className="min-w-[160px] whitespace-normal wrap-anywhere max-[1100px]:min-w-[140px]">
                       <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                         <RowLink href={`/dms/${doc.id}`} className="text-ink hover:text-link">
                           {doc.subject}
                         </RowLink>
-                        {/* Auch hier, nicht nur am rechten Rand: Die
-                            Statusspalte steht zu weit weg, um beim Überfliegen
-                            zu wirken. */}
-                        {doc.phase === 'draft' && doc.status !== 'voided' ? (
-                          <StatusBadge tone="warning">{t('phases.draft')}</StatusBadge>
-                        ) : null}
+                        {/* „Entwurf“ steht nur in der Spalte Zustand, nicht noch einmal am Betreff (03 A3). */}
                         {doc.direction === 'outgoing' && doc.phase === 'issued' && doc.status !== 'voided' && !doc.sentAt ? (
                           <StatusBadge tone="neutral">{t('dispatch.unsentBadge')}</StatusBadge>
                         ) : null}
                         {doc.openFollowUp ? (
-                          <StatusBadge tone={doc.openFollowUp.dueAt < today ? 'warning' : 'info'}>
+                          // Neutral statt Info-Blau: Blau ist die Linkfarbe und unterscheidet hier nichts (03 C43).
+                          <StatusBadge tone={doc.openFollowUp.dueAt < today ? 'warning' : 'neutral'}>
                             {t('followUpBadge', { date: fmt.date(doc.openFollowUp.dueAt) })}
                           </StatusBadge>
                         ) : null}
@@ -320,11 +330,19 @@ export function DocumentList({ documents, currentFolder, total, unfiltered, read
                         ) : null}
                       </div>
                     </TableCell>
-                    <TableCell className="min-w-[110px] whitespace-normal hyphens-auto wrap-anywhere text-ink-2 max-[1100px]:hidden">{doc.typeLabel}</TableCell>
+                    {/* Ohne Silbentrennung: „Zuwendungsbestäti-gung“ las sich schlecht; der Umbruch selbst bleibt (Spec § 9, 03 B7). */}
+                    <TableCell className="min-w-[110px] whitespace-normal wrap-anywhere text-ink-2 max-[1100px]:hidden">{doc.typeLabel}</TableCell>
                     <TableCell col="meta" className="tabular-nums text-meta text-ink-2">{fmt.date(doc.documentDate)}</TableCell>
                     {/* Der Ort unter dem geöffneten Ordner, als Namen mit „›“; leer heißt „direkt hier“. */}
                     <TableCell col="meta" data-folder-cell className="min-w-[110px] whitespace-normal text-ink-2">
-                      {doc.folder === null ? (doc.direction === 'incoming' ? t('inbox') : t('noFolder')) : namesBelow(doc.folder, openFolder).join(' › ')}
+                      {/* Direkt im geöffneten Ordner sagt die Zelle „direkt hier“, statt leer zu bleiben (03 A2). */}
+                      {doc.folder === null ? (
+                        doc.direction === 'incoming' ? t('inbox') : t('noFolder')
+                      ) : namesBelow(doc.folder, openFolder).length === 0 ? (
+                        <span className="text-muted-ink">{t('list.folderHere')}</span>
+                      ) : (
+                        namesBelow(doc.folder, openFolder).join(' › ')
+                      )}
                     </TableCell>
                     <TableCell className="text-ink-2">{t(`directions.${doc.direction}`)}</TableCell>
                     <TableCell col="status">

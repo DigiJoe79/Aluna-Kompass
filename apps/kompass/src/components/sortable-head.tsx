@@ -51,7 +51,9 @@ export function SortableHead({ field, label, className, col }: { field: string; 
 
   return (
     <TableHead col={col} className={cn('', className)} aria-sort={active ? (direction === 'asc' ? 'ascending' : 'descending') : 'none'}>
-      <button type="button" onClick={toggle} className="inline-flex items-center gap-1 hover:text-ink" aria-label={t('sortBy', { column: label })}>
+      {/* Versalien am Knopf: Der Browser setzt die Versalien des Kopfs an `<button>` zurück — ohne stand ein sortierbarer Kopf in
+          gemischter Schreibung neben den Versalien der übrigen (03 B9, 04 B7). Kein Layout-Test (AGENTS.md). */}
+      <button type="button" onClick={toggle} className="inline-flex items-center gap-1 uppercase hover:text-ink" aria-label={t('sortBy', { column: label })}>
         {label}
         <Icon className={cn('size-3', !active && 'opacity-50')} aria-hidden />
       </button>

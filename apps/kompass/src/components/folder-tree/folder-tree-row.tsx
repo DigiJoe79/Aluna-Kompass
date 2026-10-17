@@ -243,7 +243,7 @@ export function FolderTreeRow({ node, level, isFolder, isExpanded, isSelected, d
             <Count node={node} tone={isSelected ? 'text-current' : node.total === 0 ? 'text-muted-ink-2' : dimmed ? 'text-muted-ink-2' : 'text-muted-ink'} />
           </>
         )}
-        {menu && !drop ? <MenuDots menu={menu} density={density} /> : null}
+        {menu && !drop ? <MenuDots menu={menu} density={density} /> : !pick && !drop ? <MenuSpacer density={density} /> : null}
       </span>
       {drop?.opening ? <DwellBar left={base + level * indent} /> : null}
     </div>
@@ -292,6 +292,14 @@ function MenuDots({ menu, density }: { menu: RowMenuButton; density: FolderTreeD
       <MoreHorizontal className="size-4" />
     </button>
   );
+}
+
+/**
+ * Der Platz von „…“ in Zeilen ohne Menü (kein Recht, feste Einträge): Die Zähler stehen so in jeder Zeile auf
+ * derselben Flucht, ob ein Menü da ist oder nicht (03 B14). Kein Layout-Test (AGENTS.md).
+ */
+export function MenuSpacer({ density }: { density: FolderTreeDensity }) {
+  return <span aria-hidden className={cn('shrink-0', density === 'touch' ? '-my-[5px] -mr-0.5 size-8' : '-my-[3px] -mr-0.5 size-6')} />;
 }
 
 /** „Wird gespeichert“: ein kleiner offener Kreis, der sich dreht, bis der Server antwortet. */

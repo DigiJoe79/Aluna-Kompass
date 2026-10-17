@@ -690,10 +690,11 @@ test.describe('dms', () => {
     const subject = page.getByRole('link', { name: 'Freistellungsbescheid' });
     expect(await subject.evaluate((el) => getComputedStyle(el).textDecorationLine)).toBe('none');
 
-    // Der Entwurf steht beim Betreff, nicht nur am rechten Rand.
+    // Der Entwurf steht nur in der Spalte Zustand, nicht noch einmal am Betreff (03 A3).
     const draftRow = page.getByRole('row', { name: /Protokoll Vorstandssitzung/ });
     // Spalte 0 ist das Kästchen der Auswahl.
-    await expect(draftRow.getByRole('cell').nth(2)).toContainText('Entwurf');
+    await expect(draftRow.getByRole('cell').nth(2)).not.toContainText('Entwurf');
+    await expect(draftRow.getByRole('cell').last()).toHaveText('Entwurf');
   });
 
   test('führt die Ordnerspalte bis zum unteren Rand der Fläche', async ({ page }) => {
@@ -813,7 +814,7 @@ test.describe('dms', () => {
       for (const type of ['dragenter', 'dragover']) row.dispatchEvent(new DragEvent(type, { dataTransfer: transfer, bubbles: true, cancelable: true }));
     });
     await expect(page.getByText('2 Dateien in „Finanzamt“ ablegen', { exact: true })).toBeVisible();
-    await expect(page.getByText('Die Akte nimmt nur PDF. Hier loslassen legt in den Eingangskorb.', { exact: true })).toBeVisible();
+    await expect(page.getByText('Die Akte nimmt nur PDF.', { exact: true })).toBeVisible();
 
     await page.evaluate(() => {
       const transfer = new DataTransfer();
@@ -2145,11 +2146,11 @@ test.describe('Weg und Teilbaum', () => {
     await expect(heading(page).getByRole('heading', { name: 'Amtsgericht' })).toBeVisible();
     await expect(deep.locator('[data-folder-cell]')).toHaveText(story('Vereinsregister 2026'));
 
-    // Wo das Dokument selbst liegt, bleibt die Spalte leer.
+    // Wo das Dokument selbst liegt, sagt die Spalte „direkt hier“ (03 A2).
     await page.goto(story('/dms?folder=Beh%C3%B6rden%2FAmtsgericht%2FVereinsregister%202026'));
     await expect(heading(page).getByRole('heading', { name: story('Vereinsregister 2026') })).toBeVisible();
     await expect(heading(page).getByRole('navigation', { name: 'Weg' }).getByRole('link')).toHaveText(['Behörden', 'Amtsgericht']);
-    await expect(deep.locator('[data-folder-cell]')).toHaveText('');
+    await expect(deep.locator('[data-folder-cell]')).toHaveText('direkt hier');
   });
 
   test('nur mit Bereichsrecht: der kurze Baum mit Hinweis darunter', async ({ page, baseURL }) => {

@@ -38,6 +38,7 @@ import { TYPE_AHEAD_MS, nextTypeAheadMatch } from './type-ahead';
 import { useEdgeScroll } from './use-edge-scroll';
 import { useFolderTreeExpanded, type FolderTreeStorageKey } from './use-folder-tree-expanded';
 import { Overline } from '@/components/overline';
+import { Button } from '@/components/ui/button';
 
 export type { FolderTreeFixedEntry } from './fixed-entry';
 export type { BlockReason, DragItem } from '@/lib/folder-tree-model';
@@ -866,20 +867,21 @@ export function FolderTree({
   return (
     <div className="flex min-h-full flex-1 flex-col">
       <div className={cn('mb-1 flex items-center gap-2 pr-1 pl-2', density === 'touch' ? 'h-11' : 'h-7', pick && 'hidden')}>
-        <Overline className="flex-1">{t('heading')}</Overline>
+        {/* Im Seitenblatt am Telefon (`touch`) sagt der Blatttitel schon „Ordner“ (03 B15). */}
+        {density === 'touch' ? <span className="flex-1" /> : <Overline className="flex-1">{t('heading')}</Overline>}
         {canManage && onCreate ? (
           // Legt immer auf der obersten Ebene an; im Ordner anlegen geht über „Neuer Unterordner“ (Artboard 4d).
-          <button
+          // Ein schlichter Textknopf statt einer handgebauten grauen Fläche (03 C41).
+          <Button
             type="button"
+            variant="ghost"
+            size={density === 'touch' ? 'sm' : 'xs'}
             onClick={() => startCreate(null)}
-            className={cn(
-              'inline-flex h-7 items-center gap-[5px] rounded-sm border border-line-strong bg-active px-[9px] text-meta whitespace-nowrap text-ink hover:bg-hover focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-focus',
-              // Am Telefon 44 px Klickfläche bei gleicher Optik (HANDOFF § 6).
-              density === 'touch' && 'relative after:absolute after:-inset-x-px after:-inset-y-[9px]'
-            )}
+            // Am Telefon 44 px Klickfläche bei gleicher Optik (HANDOFF § 6).
+            className={cn('whitespace-nowrap', density === 'touch' && 'relative after:absolute after:-inset-x-px after:-inset-y-1.5')}
           >
             {t('newFolder')}
-          </button>
+          </Button>
         ) : null}
       </div>
 

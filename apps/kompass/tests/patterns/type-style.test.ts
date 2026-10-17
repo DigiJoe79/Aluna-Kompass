@@ -20,6 +20,7 @@ const ALLOWED: CountedAllowlist = {
   'components/forms/media-picker.tsx': { count: 1, reason: 'Grafik, keine Schrift: Dateiart als Platzhalterbild (Versalien)' },
   'components/media/asset-grid.tsx': { count: 1, reason: 'Grafik, keine Schrift: Dateiendung als Platzhalterbild (Versalien)' },
   'components/shell/user-menu.tsx': { count: 1, reason: 'Grafik, keine Schrift: Initialen (font-bold)' },
+  'components/sortable-head.tsx': { count: 1, reason: 'Versalien des Tabellenkopfs: der Browser setzt sie am <button> zurück (03 B9, 04 B7)' },
 };
 
 /** Orte für Versalien und Sperrung (Spec § 6, § 9.3): `Overline` und der Tabellenkopf in `ui/table.tsx`. */
