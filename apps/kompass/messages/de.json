@@ -1431,6 +1431,8 @@
       "name": "Rollenname",
       "description": "Beschreibung"
     },
+    "all": "Alle",
+    "selectAll": "Alle: {group}",
     "groupCount": "{active} von {total} aktiv",
     "save": "Rolle speichern",
     "create": {

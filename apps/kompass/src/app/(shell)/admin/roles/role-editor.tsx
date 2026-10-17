@@ -170,8 +170,10 @@ export function RoleEditor({
             return (
               <div key={group.key}>
                 <div className="flex items-center gap-3 border-b border-line bg-table-head px-6 py-2.5">
+                  {/* Sichtbar „Alle“ an der Kopf-Checkbox: Sie wählt alle Rechte der Gruppe (11-1 B25). */}
+                  <label className="flex shrink-0 cursor-pointer items-center gap-1.5 text-hint text-ink-2">
                   <Checkbox
-                    aria-label={tRoot(group.labelKey)}
+                    aria-label={t('selectAll', { group: tRoot(group.labelKey) })}
                     checked={state === 'all'}
                     indeterminate={state === 'some'}
                     disabled={selected.isProtected}
@@ -184,6 +186,8 @@ export function RoleEditor({
                       edit({ keys });
                     }}
                   />
+                  <span aria-hidden>{t('all')}</span>
+                  </label>
                   <Overline as="span">{tRoot(group.labelKey)}</Overline>
                   <span className="text-hint text-muted-ink">
                     {t('groupCount', { active, total: group.keys.length })}

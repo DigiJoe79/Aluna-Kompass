@@ -11,7 +11,7 @@ import { FormActionBar } from '@/components/forms/form-action-bar';
 import { RefusalNotice } from '@/components/forms/refusal-notice';
 import { useActionFeedback } from '@/components/forms/use-action-feedback';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { idleState } from '@/lib/actions';
 import type { LinkControls } from '@/lib/user-contact-link';
 
@@ -82,12 +82,14 @@ export function UserContactLinkForm({
           </Button>
         ) : null}
       </div>
-      {controls.reason ? <p className="text-hint text-muted-ink">{t(controls.reason)}</p> : null}
+      {/* Ohne Knopf erklärt der Satz in der Zeile, warum; mit Knopf steht er im Dialog, sonst wird die Zeile doppelt hoch (11-1 B27). */}
+      {controls.reason && !controls.canLink ? <p className="text-hint text-muted-ink">{t(controls.reason)}</p> : null}
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent size="sm" className="bg-surface shadow-md">
           <ActionForm action={action} state={state} className="space-y-4">
             <DialogTitle>{t('choose')}</DialogTitle>
+            {controls.reason ? <DialogDescription>{t(controls.reason)}</DialogDescription> : null}
             <ContactPicker id={`link-contact-${userId}`} name="contactId" label={t('choose')} value={picked} onChange={setPicked} required />
             <FormActionBar placement="dialog" mode="create" cancel={() => setOpen(false)} saveDisabled={!picked} saveLabel={t('link')} state={state} />
           </ActionForm>

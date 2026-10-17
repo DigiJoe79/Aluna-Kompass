@@ -44,3 +44,16 @@ describe('roleNameTaken am Feld', () => {
     expect(screen.getAllByText(/gibt es schon/).length).toBeGreaterThan(0);
   });
 });
+
+/** 11-1 B25: Die Kopf-Checkbox einer Gruppe sagt sichtbar „Alle“. */
+describe('Gruppenkopf im Rolleneditor', () => {
+  it('beschriftet die Kopf-Checkbox sichtbar', () => {
+    render(
+      <NextIntlClientProvider locale="de" messages={messages} timeZone="Europe/Berlin">
+        <RoleEditor roles={[role('R1', 'Vorstand')] as never} groups={[{ key: 'g', labelKey: 'roles.title', keys: ['users.manage'] }] as never} allPermissionKeys={['users.manage']} grantablePermissionKeys={['users.manage']} />
+      </NextIntlClientProvider>,
+    );
+    const head = screen.getByRole('checkbox', { name: 'Alle: Rollen' });
+    expect(head.closest('label')?.textContent).toContain('Alle');
+  });
+});
