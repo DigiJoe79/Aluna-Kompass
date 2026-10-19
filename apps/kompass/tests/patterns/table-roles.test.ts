@@ -29,6 +29,7 @@ const BADGE_NOT_STATUS: Allowlist = {
   'app/(shell)/finance/work/rules/rules-table.tsx': 'Die Marke „Kategorie inaktiv“ gehört zum Ergebnis (meta); „deaktiviert“ ist die gedämpfte Zeile (`TableRow muted`, Joe 11.8).',
   'app/(shell)/admin/finance/fiscal-years-panel.tsx': 'Die Marke „Rumpfjahr“ ist eine Eigenschaft am Namen; „abgeschlossen“ ist die gedämpfte Zeile (`TableRow muted`, Runde 3, 170).',
   'app/(shell)/admin/finance/accounts-panel.tsx': 'Die Marke „Hauptkonto“ ist eine Eigenschaft am Namen; „stillgelegt“ ist die gedämpfte Zeile (`TableRow muted`, Joe 11.8).',
+  'app/(shell)/contacts/[id]/bank-accounts-panel.tsx': 'Die Marke „Gemeinschaftskonto“ gehört zum Wert „Auch bei“ (meta), kein Zustand der Zeile (Nachtrag MCP-Test § 3, Designer 2026-10-19).',
 };
 
 type Table = { file: string; line: number; text: string };

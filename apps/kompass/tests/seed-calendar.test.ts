@@ -1,8 +1,9 @@
-import { coreModule, seedDevelopment, unwrap } from '@kompass/core';
+import { collectRetentionDue, coreModule, seedDevelopment, unwrap } from '@kompass/core';
 import { createTestDeps, ctxWith } from '@kompass/core/testing';
 import { contacts } from '@kompass/module-contacts';
 import { documents } from '@kompass/module-dms';
-import { financeEntries, financeFiscalYears, financeImportRuns, freeReserveCapOverview, SEED_STORY_LAST_DAY, seedStoryYear } from '@kompass/module-finance';
+import { financeEntries, financeFiscalYears, financeImportRuns, freeReserveCapOverview, listPledges, SEED_STORY_LAST_DAY, seedStoryYear } from '@kompass/module-finance';
+import { listFees } from '@kompass/module-members';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { installedModules } from '@/modules';
 
@@ -38,7 +39,13 @@ const FUTURE_ALLOWED: Readonly<Record<string, string>> = {
   'finance_partner_payments.proof_due_on': 'Frist für den Verwendungsnachweis.',
   'finance_signers.valid_to': 'Ende einer Zeichnungsberechtigung, darf geplant sein.',
   'contact_roles.until': 'Ende einer Rolle, darf geplant sein.',
+  'member_memberships.ends_on': 'Ende einer Mitgliedschaft, darf geplant sein (Austritt zum Jahresende).',
   'finance_dated_values.valid_from': 'Ein Rechtswert darf ab einem künftigen Stichtag gelten.',
+  'member_fee_charges.period_start': 'Der Beitragslauf legt das ganze Stichjahr an, auch die Monate nach heute.',
+  'member_fee_charges.period_end': 'Ende eines Beitragszeitraums im Stichjahr.',
+  'member_fee_charges.due_on': 'Fälligkeit eines Beitrags, wie die des offenen Postens.',
+  'member_fee_charges.deferred_to': 'Gestundet bis: eine Frist.',
+  'finance_pledges.paused_until': 'Eine Zusage ruht bis zu einem Tag, der nach heute liegen darf (Plan L1).',
 };
 
 /**
@@ -59,17 +66,35 @@ function futureValues(deps: SeedDeps, day: string): string[] {
   );
 }
 
+/**
+ * Was der Seed an Zuständen zeigt, die von „heute“ abhängen: Löschfälliges, ruhende Zusagen, Mitglieder mit
+ * überfälligem Beitrag. Solange dasselbe Stichjahr gilt, ist es an jedem Tag dasselbe — bis 0.3.0 kippten am
+ * 1. Januar eine gestundete Frist, eine Pause und eine Aufbewahrung (Lauf `scripts/e2e-kalender.sh` vom 2026-10-18).
+ */
+async function storyState(deps: SeedDeps, day: string) {
+  const ctx = ctxWith([...deps.registry.permissionKeys]);
+  const fees = unwrap(await listFees(deps, ctx, { year: seedStoryYear(day), limit: 200 })).items;
+  const pledges = unwrap(await listPledges(deps, ctx, { limit: 50, offset: 0 })).items;
+  return {
+    retentionDue: collectRetentionDue(deps).map((d) => `${d.entity} ${d.label}`).sort(),
+    pledges: pledges.map((p) => `${p.contactName} ${p.state}`).sort(),
+    overdueMembers: [...new Set(fees.filter((f) => f.overdue).map((f) => f.name))].sort(),
+  };
+}
+
 const fiscalYears = (deps: SeedDeps) => deps.db.select().from(financeFiscalYears).all().map((y) => y.designation).sort();
 
 describe('the development seed on any calendar day', () => {
   let baseline: ReturnType<typeof counts>;
+  let baselineState: Awaited<ReturnType<typeof storyState>>;
   beforeAll(async () => {
     const deps = seedDeps('2026-10-06');
     await seedDevelopment(deps);
     baseline = counts(deps);
+    baselineState = await storyState(deps, '2026-10-06');
   }, 30_000);
 
-  it.each(['2026-03-01', '2026-10-06', '2027-01-02', '2027-03-01', '2027-08-31', '2027-12-31', '2028-02-29'])(
+  it.each(['2026-03-01', '2026-10-06', '2027-01-02', '2027-03-01', '2027-08-30', '2027-08-31', '2027-12-31', '2028-02-29'])(
     'runs on %s, and a second run adds nothing',
     async (day) => {
       const deps = seedDeps(day);
@@ -90,7 +115,10 @@ describe('the development seed on any calendar day', () => {
       // Vor dem 31.08.2026 fiele das Stichjahr auf 2025, für das die ausgelieferten Rechtswerte fehlen (ab 2026,
       // `ledger/dated-series.ts`) — ohne Höchstbetrag keine freie Rücklage, ein Dokument weniger. Dieser Tag kehrt
       // nicht wieder; ab da erzählt der Seed an jedem Tag dieselbe Geschichte.
-      if (day >= '2026-08-31') expect(first).toEqual(baseline);
+      if (day >= '2026-08-31') {
+        expect(first).toEqual(baseline);
+        expect(await storyState(deps, day)).toEqual(baselineState);
+      }
     },
     30_000,
   );

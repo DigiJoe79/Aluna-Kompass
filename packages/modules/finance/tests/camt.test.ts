@@ -67,6 +67,26 @@ describe('parseCamt053', () => {
     expect(result.statements[0]!.lines[0]).toMatchObject({ returnCode: 'MD01', amountCents: -2500 });
   });
 
+  it('reads mandate reference and creditor id of a direct debit, with and without transaction details, and of a return (Plan L3)', () => {
+    const result = parseCamt053(bytes('camt053-direct-debit.xml'), MAX);
+    if (!result.ok) throw new Error(JSON.stringify(result.error));
+    const lines = result.statements[0]!.lines;
+    expect(lines).toHaveLength(4);
+    expect(lines[0]).toMatchObject({ amountCents: 1200, endToEndId: 'RUN1-1', mandateReference: 'MND-0001', creditorId: 'DE98ZZZ09999999999', counterpartyName: 'Erika Beispiel', counterpartyIban: 'DE44999999990532013000' });
+    expect(lines[1]).toMatchObject({ amountCents: 1200, endToEndId: 'RUN1-2', mandateReference: 'MND-0002', creditorId: 'DE98ZZZ09999999999', counterpartyName: 'Max Muster' });
+    // Die Sammelgutschrift ohne Einzelzeilen: eine Zeile, ohne Mandat.
+    expect(lines[2]).toMatchObject({ amountCents: 11050, endToEndId: null, mandateReference: null, creditorId: null, bankReference: 'REF-LS-2' });
+    // M19: ohne Einzelzeilen ist die Zusatzinfo der Buchung der Zweck.
+    expect(lines[2]!.purpose).toBe('SEPA-Sammel-Gutschrift');
+    expect(lines[3]).toMatchObject({ amountCents: -1200, returnCode: 'MD06', endToEndId: 'RUN1-1', mandateReference: 'MND-0001', creditorId: 'DE98ZZZ09999999999', counterpartyName: 'Erika Beispiel' });
+  });
+
+  it('a line without mandate carries null for both', () => {
+    const result = parseCamt053(bytes('einfach-001-02.xml'), MAX);
+    if (!result.ok) throw new Error(JSON.stringify(result.error));
+    expect(result.statements[0]!.lines[0]).toMatchObject({ mandateReference: null, creditorId: null });
+  });
+
   it('drops the placeholder NOTPROVIDED instead of keeping it as a reference', () => {
     const xml = readFileSync(path.join(FIXTURES, 'einfach-001-02.xml'), 'utf8').replace('<EndToEndId>E2E-0001</EndToEndId>', '<EndToEndId>NOTPROVIDED</EndToEndId>');
     const result = parseCamt053(new TextEncoder().encode(xml), MAX);

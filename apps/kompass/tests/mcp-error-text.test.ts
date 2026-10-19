@@ -61,15 +61,32 @@ describe('Sperren des Kerns über MCP als Satz (MB)', () => {
     const { client } = await connectAsAdministrator();
     const error = await callError(client, 'finance_entry_finalize', { id: 'gibt-es-nicht' });
     expect(error).toMatchObject({ type: 'conflict', code: 'humanOnly' });
-    expect(error.message).toMatch(/nur hier in Kompass, nicht über einen Agenten/);
+    // R12: wie Mitglieder und Akte ohne „hier in Kompass“ — der Agent ist nicht „hier“.
+    expect(error.message).toMatch(/über einen Agenten erst, wenn der Verein es freigibt/);
+    expect(error.message).not.toContain('hier in Kompass');
     expect(error.message).not.toContain('finance.');
     await client.close();
   });
 
   it('die allgemeine humanOnly-Sperre des Kerns bekommt denselben Satz wie in der Oberfläche', () => {
     expect(mcpError(conflict('humanOnly', 'some.setting'))).toMatchObject({ code: 'humanOnly', message: errors.humanOnly });
+  });
+
+  it('die Sperre der Mitglieder und der Akte nennt Menüpfad und Schalter, nicht „hier in Kompass“ (M31)', () => {
+    for (const key of ['members.mcpHumanOnlyAllowed', 'dms.mcpHumanOnlyAllowed']) {
+      const message = (mcpError(conflict('humanOnly', key)) as { message: string }).message;
+      expect(message).toContain('Einrichtung →');
+      expect(message).toContain('„Darf ein Agent');
+      expect(message).not.toContain('hier in Kompass');
+    }
     const ui = toActionState(conflict('settingUiOnly', 'x'), t);
     expect(mcpError(conflict('settingUiOnly', 'x')).message).toBe(ui.status === 'error' ? ui.message : '');
+  });
+
+  it('V1: „nur per Post“ rät je Grund, nicht immer zur E-Mail-Adresse', () => {
+    const remedy = (reason: string) => t('dms.errors.mailRecipientPost.remedy', { reason });
+    expect(remedy('noEmail')).toContain('E-Mail-Adresse');
+    for (const reason of ['preference', 'notMachineProcedure', 'manual', 'mailOff']) expect(remedy(reason)).not.toContain('E-Mail-Adresse');
   });
 
   it('N1: eine verletzte Datenbankregel kommt in Oberfläche und MCP als derselbe deutsche Satz, nie roh', () => {

@@ -37,6 +37,11 @@ const TABLE_OF_UNDELETABLE_ENTITY: Record<string, string> = {
   financePartnerPayment: 'finance_partner_payments',
   financeReserveMovement: 'finance_reserve_movements',
   financePurposeTransfer: 'finance_purpose_transfers',
+  financeMandate: 'finance_sepa_mandates',
+  financePledge: 'finance_pledges',
+  financeDirectDebitRun: 'finance_direct_debit_runs',
+  financeDirectDebitItem: 'finance_direct_debit_items',
+  financePrenotification: 'finance_sepa_prenotifications',
 };
 /** Tabellen ohne eigene Regel, die A5 trotzdem nannte (Importlauf mit Rohumsätzen und Kandidaten, Positionen, bezahlte Zeilen, Ausgleiche). */
 const EXTRA_LOCKED_TABLES = ['finance_import_runs', 'finance_raw_transactions', 'finance_import_candidates', 'finance_expense_positions', 'finance_partner_paid_lines', 'finance_open_item_settlements'];

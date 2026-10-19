@@ -24,6 +24,12 @@ describe('the public surface of the file module', () => {
       requeueUnavailable: 'Worker: reiht wartende Aufträge ein, gibt keine Dokumentdaten aus',
       processNextDocument: 'Worker: liest den nächsten Auftrag in den Index, gibt keine Dokumentdaten aus',
       templateKeyForType: 'bildet einen Artschlüssel auf einen Vorlagenschlüssel ab, keine Dokumentdaten',
+      mailBodyFor: 'Begleittext: füllt Platzhalter mit dem, was der Aufrufer übergibt',
+      mailBodySnippetFor: 'Begleittext: liest Einstellung und Baustein, keine Dokumentdaten',
+      mailSender: 'Einstellung',
+      mailNotReady: 'Zustand des Transports und Einstellung, keine Dokumentdaten',
+      processOutbox: 'Sender: arbeitet den Ausgangskorb ab, gibt keine Dokumentdaten aus',
+      purgeOutboxAddresses: 'Aufräumen: leert Adressen, gibt nichts aus',
       refuseReservedLinks: 'prüft Bezugstypen der Eingabe und liefert nur einen Fehler, keine Dokumentdaten',
     };
     const offenders = Object.entries(dms)

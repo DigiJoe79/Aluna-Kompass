@@ -4,6 +4,7 @@ import { getDocumentRecord } from '@kompass/module-dms';
 import { and, eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { financeAudit } from '../audit';
+import { sepaSetupState } from '../direct-debit/settings';
 import { financeConflict } from '../errors';
 import { FINANCE_PERMISSIONS } from '../permissions';
 import { financeAccounts, financeFiscalYears, financeNotices, financeSigners } from '../schema';
@@ -11,7 +12,7 @@ import { boardMembersMaintainedInternal } from './board';
 import { machineStatusOf } from './machine-status';
 import { noticeValidAt } from './notice-validity';
 
-export type SetupStepKey = 'fiscalYear' | 'account' | 'roles' | 'categories' | 'tax' | 'importFormat' | 'notice' | 'machineProcedure' | 'waiverBasis' | 'boardRemuneration' | 'boardMembers' | 'documentBases';
+export type SetupStepKey = 'fiscalYear' | 'account' | 'roles' | 'categories' | 'tax' | 'importFormat' | 'notice' | 'machineProcedure' | 'waiverBasis' | 'boardRemuneration' | 'boardMembers' | 'documentBases' | 'directDebit';
 
 export interface SetupStep {
   key: SetupStepKey;
@@ -59,6 +60,8 @@ const FINANCE_NAV_ENTRIES: readonly { key: string; permission: string }[] = [
   { key: 'finance.entries', permission: 'finance.read' },
   { key: 'finance.accounts', permission: 'finance.read' },
   { key: 'finance.openItems', permission: 'finance.read' },
+  // Plan U2: „Lastschrift“ fest mit dem Recht zum Vorbereiten (eingeschaltet sehen es auch Lesende, `navigationFor`).
+  { key: 'finance.directDebit', permission: 'finance.directDebit' },
   { key: 'finance.cash', permission: 'finance.read' },
   { key: 'finance.donations', permission: 'finance.read' },
   { key: 'finance.donationRun', permission: 'finance.read' },
@@ -280,6 +283,19 @@ export async function getSetupStatus(deps: Deps, ctx: CallContext): Promise<Resu
     permission: 'contacts.manage',
     canDo: listUserNamesWithPermission(deps, 'contacts.manage'),
   });
+  // L1 Task 1: optional — erfüllt, solange die Lastschrift aus ist; sonst Gläubiger-ID und Konto mit IBAN. Das Recht
+  // `finance.directDebit` kommt an keine vorhandene Rolle (Backlog 29), darum nennt der Schritt es.
+  const sepa = sepaSetupState(deps);
+  steps.push({
+    key: 'directDebit',
+    required: false,
+    done: !sepa.enabled || sepa.missing.length === 0,
+    dependsOn: null,
+    blocked: false,
+    detail: sepa.enabled ? { ...(sepa.missing.length > 0 ? { missing: sepa.missing.join(',') } : {}), permission: 'finance.directDebit' } : {},
+    permission: 'finance.setup',
+    canDo: listUserNamesWithPermission(deps, 'finance.setup'),
+  });
   // Befund 51 b: nur sichtbar, wenn die Installation überhaupt eigene Basen führt — dann fiele eine
   // Bestätigung auf der generischen Formularbasis neben Briefen im Vereinskopf auf.
   const bases = documentBaseGaps(deps);
@@ -359,7 +375,7 @@ export async function applyTaxDefaults(deps: Deps, ctx: CallContext): Promise<Re
 
 /**
  * Die vier Schalter der Einrichtung (H7): die drei Steuer-Schalter und
- * „Darf ein Agent festschreiben?“ — bewusst über `finance.setup`, nicht über
+ * „Darf ein Agent festschreiben und Lastschriften bearbeiten?“ — bewusst über `finance.setup`, nicht über
  * `settings.manage`: Das ist der Hebel der Finanzeinrichtung, nicht der
  * allgemeinen Einstellungen. `finance.mcpHumanOnlyAllowed` bleibt zusätzlich
  * an den Kanal gebunden (`uiOnly`) — hier stets erfüllt, weil der Aufruf aus

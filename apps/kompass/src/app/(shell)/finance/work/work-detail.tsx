@@ -21,6 +21,8 @@ export interface WorkDetailData {
         reasonTexts: string[];
         /** Weitere Geldzeilen (Umbuchung, Kasse) und Begleichungen als Satz — die Mini-Maske zeigt sie, ändert sie nicht. */
         extraLineTexts: string[];
+        /** Die Werte der Probleme, schon formatiert (Tag des Einzugs, Betrag der Überzahlung — Plan N1 Task 2). */
+        problemValues: Partial<Record<SuggestionView['problems'][number], Record<string, string | number>>>;
       })
     | null;
   contactNames: Record<string, string>;

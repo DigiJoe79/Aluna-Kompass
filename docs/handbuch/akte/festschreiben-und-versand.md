@@ -21,16 +21,16 @@ falsch ist, wird storniert und neu geschrieben.
 
 ## Versand
 
-Ein festgeschriebener Brief zeigt „Noch nicht versandt“, bis Sie „Als
-versandt vermerken“ klicken: Datum, Weg (Post, Einschreiben, E-Mail,
+Ein festgeschriebener Brief zeigt „Noch nicht versandt“, bis Sie „Versand
+vermerken …“ klicken: Datum, Weg (Post, Einschreiben, E-Mail,
 persönlich übergeben, Portal — die Liste ist eine Einstellung), eine
 Bemerkung. Der Vermerk ist freiwillig, aber die Liste markiert Briefe ohne
 ihn, und der Filter „nicht versandt“ zeigt, was noch auf den Weg muss. Ein
 Vermerk lässt sich ändern und entfernen; das Protokoll behält jede Fassung.
 
-Kompass verschickt nichts selbst. Ein Brief verlässt Kompass als PDF — Sie
-drucken ihn oder hängen ihn an eine E-Mail — und der Vermerk hält fest, dass
-und wie es geschehen ist.
+Ein Brief verlässt Kompass als PDF — auf Papier, das Sie drucken, oder als
+Anhang einer E-Mail, die Kompass selbst sendet (siehe [Briefe per
+E-Mail](briefe-per-email.md)); dann entsteht der Vermerk von selbst.
 
 ## Stornieren
 

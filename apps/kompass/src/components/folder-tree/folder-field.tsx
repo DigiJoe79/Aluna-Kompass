@@ -14,6 +14,7 @@ import type { ActionState } from '@/lib/actions';
 import { ancestorsOf, collapsedPath, nameOf, type FolderEntry } from '@/lib/folder-tree-model';
 import { cn } from '@/lib/utils';
 import { FolderTree } from './folder-tree';
+import { useHiddenInputEvent } from '@/lib/use-hidden-input-event';
 
 export interface FolderFieldProps {
   value: string | null;
@@ -96,6 +97,7 @@ export function FolderField({
   const [seen, setSeen] = useState(value);
   const [open, setOpen] = useState(false);
   const head = useRef<HTMLButtonElement>(null);
+  const hiddenRef = useHiddenInputEvent(current ?? '');
   /** Der geschlossene Wert passt nicht in eine Zeile: „… › Eltern › Ordner“ (Runde 3, Frage 2). */
   const [collapsed, setCollapsed] = useState(false);
   const valueBox = useRef<HTMLSpanElement>(null);
@@ -223,7 +225,7 @@ export function FolderField({
         <Row data-folder-path className="flex flex-wrap items-center gap-x-1 text-body">
           {pathText(linkToAkte)}
         </Row>
-        {name ? <input type="hidden" name={name} value={current ?? ''} /> : null}
+        {name ? <input ref={hiddenRef} type="hidden" name={name} value={current ?? ''} /> : null}
       </div>
     );
   }

@@ -24,7 +24,7 @@ const variants = cva(
         // Gefahr in voller Fläche; die Schrift in Flächenfarbe hält 4,5:1 (Paar color-error/surface, Designer Stufe 2
         // Nr. 3). Ablehnen (Auslage, Vorschlag) ist keine Gefahr und bleibt neutral.
         destructive:
-          "bg-error text-surface hover:bg-[color-mix(in_oklch,var(--color-error),var(--color-ink)_14%)]",
+          "bg-error text-surface hover:bg-[color-mix(in_oklch,var(--color-error),var(--ink)_14%)]",
         link: "text-link underline-offset-4 hover:underline hover:text-link-hover",
       },
       size: {

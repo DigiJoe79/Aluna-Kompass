@@ -26,6 +26,12 @@ export const FINANCE_ERRORS = {
   entryUnbalanced: { rest: 'cents', money: 'cents', allocated: 'cents' },
   entryEmpty: {},
   entryDateInFuture: { date: 'date', today: 'date' },
+  // Plan N2 Task 2 (R2, R3): Festschreiben trotz Warnung nur mit Bestätigung.
+  inSubmittedRunNotAcknowledged: { date: 'date' },
+  // U9 (Plan N3): derselbe Name wie in `warningParams`. U5: Trägt die Gutschrift eines Einzugs einen schon anders
+  // bezahlten Posten (`via: directDebit`), eigener Code mit eigenem Rat (Erstattung oder Rückgabe).
+  overpaidNotAcknowledged: { amountCents: 'cents' },
+  overpaidByCollectionNotAcknowledged: { amountCents: 'cents' },
   // Befund AH: Pauschale an ein Vorstandsmitglied ohne Grundlage — Pflichtbegründung, kein Verbot.
   boardAllowanceNeedsReason: { contact: 'text', date: 'date' },
   // Befund Q: ein Zweck ginge ins Minus — Pflichtbegründung, kein Verbot.
@@ -56,7 +62,14 @@ export const FINANCE_ERRORS = {
   openItemCancelled: {},
   openItemInUse: {},
   openItemHasPayments: {},
+  openItemBelowSettled: {},
   openItemHasOrigin: {},
+  // Plan M2: Posten mit der Herkunft eines anderen Moduls entstehen, verschieben und erledigen sich nur über dessen Vorgang.
+  openItemOriginOwned: {},
+  openItemOriginUnknown: {},
+  // Spec Mitglieder und Lastschrift § 6.2: Rück-Ausgleich an der Geldzeile einer Rückgabe.
+  reversalTargetInvalid: {},
+  reversalExceedsSettled: {},
   lineNotFinal: {},
   correctionChangesNothing: {},
   purposeChangeNeedsProof: {},
@@ -116,6 +129,8 @@ export const FINANCE_ERRORS = {
   // AF: mehr weitergegeben, als vom Eingang fremden Gelds offen ist.
   foreignMoneyOverpaid: { amount: 'cents', open: 'cents' },
   contactIbanTaken: { contact: 'text' },
+  // Plan U4 Task 3: `mandateId` steht nicht im Satz, nur als Wert — der Weg „Mandat ansehen“.
+  ibanHasMandate: { contact: 'text', mandateId: 'text' },
   voucherSearchNeedsRead: {},
   // F5b — Rechnungen mit ZUGFeRD/Factur-X.
   // `openItemId` und `reference` stehen nicht im Satz, sondern nur als `params` (MCP): der Verweis auf den vorhandenen Posten.
@@ -179,6 +194,7 @@ export const FINANCE_ERRORS = {
   bundleToolsMissing: {},
   bundleEmpty: {},
   dispatchNothingMachine: {},
+  runNotFinished: {},
   // F8a — Auslagen: einreichen, freigeben, Verzicht (Spec 8.2).
   expenseNeedsContactLink: { names: 'text' },
   expenseNotDraft: {},
@@ -246,6 +262,49 @@ export const FINANCE_ERRORS = {
   resolutionTypeInactive: { names: 'text' },
   resolutionFileNotPdf: { file: 'text' },
   resolutionFileTooLarge: { file: 'text', limit: 'text' },
+  // L1 — Lastschrift (Handoff Phase 2a § 3).
+  mandateSigned: {},
+  mandateNotActive: {},
+  mandateEnded: { reference: 'text', date: 'date' },
+  mandateInOpenRun: {},
+  mandateDocumentUnrelated: {},
+  sepaCreditorIdMissing: {},
+  mandateRequired: {},
+  mandateNotUsable: { reference: 'text' },
+  pledgeEnded: {},
+  pledgeRateInRun: { dueOn: 'date', date: 'date' },
+  // L2 — Einzug (Handoff Phase 2a § 1.2, § 3).
+  sepaNotReady: {},
+  directDebitAccountUnusable: { account: 'text' },
+  invalidCollectionDate: { earliest: 'date', latest: 'date' },
+  nothingToCollect: { date: 'date' },
+  runItemRemoved: {},
+  runSubmitted: {},
+  runCancelled: {},
+  runFileCreated: {},
+  runFileMissing: {},
+  mandateEndedInRun: { reference: 'text', date: 'date' },
+  mandateInactiveInRun: { reference: 'text' },
+  runItemChanged: { reference: 'text' },
+  fileNotForAgents: {},
+  runNotSubmitted: {},
+  runResetTooLate: { date: 'date' },
+  // Plan N1: Mandat nach der Datei geändert (M15); Mandat beenden während eines eingereichten Einzugs (M28).
+  runFileOutdated: { reference: 'text' },
+  mandateInSubmittedRun: { date: 'date', earliest: 'date' },
+  // Einreichfenster der Bank (Nacharbeit L2): frühestens maxLeadDays, spätestens leadBusinessDays vor Fälligkeit.
+  submitTooEarly: { date: 'date', collectionOn: 'date' },
+  submitTooLate: { date: 'date', collectionOn: 'date' },
+  // Plan N1 E1: Eine Ankündigung nennt den Tag der Belastung, frühestens heute plus Frist der Vorabankündigung.
+  prenotificationTooLate: { date: 'date', earliest: 'date' },
+  // L3 — Rückgabe klären (Handoff Phase 2a § 1.3 13d).
+  returnResolved: {},
+  recollectNeedsMandate: {},
+  // Plan N1 (M38): erneut einziehen nach Widerspruch nur mit Bestätigung; nichts mehr offen.
+  recollectNeedsConfirmation: { returnCode: 'text' },
+  nothingOpen: {},
+  // Plan N3 (U4): „War schon bezahlt“ nur für einen Beitrag, der nicht mehr offen ist.
+  notPaidOtherwise: {},
 } as const satisfies Record<string, Record<string, FinanceErrorParamKind>>;
 
 /**

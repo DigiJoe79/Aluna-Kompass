@@ -1,4 +1,4 @@
-import { newId, unwrap, writeSettingInternal, coreModule, type CallContext } from '@kompass/core';
+import { newId, unwrap, writeSettingInternal, coreModule, type CallContext, type ModuleManifest } from '@kompass/core';
 import { createTestDeps, ctxWith, insertUser, systemContext } from '@kompass/core/testing';
 import { contactsModule, createContact } from '@kompass/module-contacts';
 import { dmsModule, documentLinks, documents, documentTypes } from '@kompass/module-dms';
@@ -17,10 +17,13 @@ export function pdfBytes(): Uint8Array {
   return new TextEncoder().encode('%PDF-1.4\n1 0 obj<</Type/Catalog>>endobj\ntrailer<</Root 1 0 R>>\n%%EOF\n');
 }
 
-/** Das Modul ist **eingeschaltet** — sonst kennt der Kern weder seine Rollen noch seine Haken. */
-export function setupFinance(permissions: readonly string[] = FINANCE_PERMISSIONS) {
-  const deps = createTestDeps({ manifests: [coreModule, contactsModule, dmsModule, projectsModule, financeModule] });
-  deps.db.transaction((tx) => writeSettingInternal(tx, deps, systemContext(), 'modules.enabled', ['contacts', 'dms', 'projects', 'finance']));
+/**
+ * Das Modul ist **eingeschaltet** — sonst kennt der Kern weder seine Rollen noch seine Haken. `extraModules` werden
+ * installiert und eingeschaltet (etwa ein Testmodul, das Herkünfte offener Posten anmeldet).
+ */
+export function setupFinance(permissions: readonly string[] = FINANCE_PERMISSIONS, extraModules: readonly ModuleManifest[] = []) {
+  const deps = createTestDeps({ manifests: [coreModule, contactsModule, dmsModule, projectsModule, financeModule, ...extraModules] });
+  deps.db.transaction((tx) => writeSettingInternal(tx, deps, systemContext(), 'modules.enabled', ['contacts', 'dms', 'projects', 'finance', ...extraModules.map((m) => m.key)]));
   const userId = insertUser(deps, { name: 'Test', email: 'test@kompass.local' });
   return { deps, ctx: ctxWith(permissions, userId), userId };
 }
@@ -42,8 +45,8 @@ export function allowHumanOnlyOverMcp(deps: ReturnType<typeof setupFinance>['dep
  * `ensureFiscalYearFor` (nur der unmittelbare Nachfolger entsteht von
  * selbst) — abrufbar über `years['2026']` usw.
  */
-export async function ledgerFixture(opts: { years?: readonly string[] } = {}) {
-  const { deps, ctx, userId } = setupFinance();
+export async function ledgerFixture(opts: { years?: readonly string[]; extraModules?: readonly ModuleManifest[] } = {}) {
+  const { deps, ctx, userId } = setupFinance(FINANCE_PERMISSIONS, opts.extraModules);
   deps.db.transaction((tx) => installFinance(tx, deps, systemContext()));
 
   const categoryByKey = (key: string): FinanceCategoryRow => {
@@ -116,7 +119,7 @@ export function insertRun(f: Pick<LedgerFixture, 'deps' | 'userId'>, accountId: 
 export function insertRaw(
   f: Pick<LedgerFixture, 'deps'>,
   runId: string,
-  o: { accountId: string; amountCents: number; purpose?: string; name?: string | null; iban?: string | null; date?: string; returnCode?: string | null; lineIndex?: number; endToEndId?: string | null; bankReference?: string | null; relatedReference?: string | null; email?: string | null },
+  o: { accountId: string; amountCents: number; purpose?: string; name?: string | null; iban?: string | null; date?: string; returnCode?: string | null; lineIndex?: number; endToEndId?: string | null; bankReference?: string | null; relatedReference?: string | null; email?: string | null; mandateReference?: string | null },
 ): string {
   const id = newId();
   f.deps.db
@@ -124,7 +127,7 @@ export function insertRaw(
     .values({
       id, runId, accountId: o.accountId, bookingDate: o.date ?? '2026-03-05', valueDate: null, amountCents: o.amountCents,
       counterpartyName: o.name === undefined ? 'Erika Beispiel' : o.name, counterpartyIban: o.iban === undefined ? 'DE66999999991234567890' : o.iban, purpose: o.purpose ?? 'Zahlung',
-      bankReference: o.bankReference ?? null, relatedReference: o.relatedReference ?? null, counterpartyEmail: o.email ?? null, endToEndId: o.endToEndId ?? null, returnCode: o.returnCode ?? null, dedupKey: `k-${id}`, lineIndex: o.lineIndex ?? 1, createdAt: '2026-03-05T09:00:00.000Z',
+      bankReference: o.bankReference ?? null, relatedReference: o.relatedReference ?? null, counterpartyEmail: o.email ?? null, mandateReference: o.mandateReference ?? null, endToEndId: o.endToEndId ?? null, returnCode: o.returnCode ?? null, dedupKey: `k-${id}`, lineIndex: o.lineIndex ?? 1, createdAt: '2026-03-05T09:00:00.000Z',
     })
     .run();
   return id;

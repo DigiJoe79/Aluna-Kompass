@@ -115,6 +115,19 @@ describe('remainderCents', () => {
     expect(result.input.moneyLines[0]!.rawTransactionId).toBe('RAW1');
   });
 
+  it('carries the reversal of a settlement through the form round trip, so a return draft can be edited (Plan M2)', () => {
+    const roundTripped = fromEntryView({
+      id: 'E2', entryDate: '2026-03-10', text: 'Rücklastschrift',
+      moneyLines: [{ accountId: 'bank', amountCents: -1200, rawTransactionId: 'RAW2', settlements: [{ openItemId: 'OI1', amountCents: 1200, reversesSettlementId: 'S1' }] }],
+      allocationLines: [{ categoryId: 'donations', amountCents: -1200 }],
+    });
+    expect(roundTripped.moneyRows[0]!.settlements).toEqual([{ openItemId: 'OI1', amountText: '12,00', reversesSettlementId: 'S1' }]);
+
+    const result = toServiceInput(roundTripped);
+    if (!result.ok) throw new Error('expected ok');
+    expect(result.input.moneyLines[0]!.settlements).toEqual([{ openItemId: 'OI1', amountCents: 1200, reversesSettlementId: 'S1' }]);
+  });
+
   it('puts the rest into the chosen row', () => {
     let state = emptyForm('income', '2026-03-01');
     state = { ...state, moneyRows: [{ ...state.moneyRows[0]!, accountId: 'bank', amountText: '485,00' }] };

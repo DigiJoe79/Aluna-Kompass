@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { financeConflict } from '../errors';
 import { requireFinanceRead } from '../ledger/access';
 import { entryViewInternal, type EntryView } from '../ledger/entries';
-import { checkFinalizableInternal } from '../ledger/finalize';
+import { checkFinalizableInternal, unacknowledgedWarningsOf, type HeldEntry } from '../ledger/finalize';
 import { accountBalancesAt } from '../ledger/queries';
 import { financeAccounts, financeEntries, financeImportRuns } from '../schema';
 
@@ -37,6 +37,8 @@ export interface BatchFinalizePreview {
   byAccount: BatchAccountPreview[];
   numbersToBeAssigned: number;
   problems: { entryId: string; code: string }[];
+  /** Plan N2 Task 2: Entwürfe mit einer Warnung, die eine Bestätigung braucht — sie bleiben Entwurf, die übrigen gehen durch. */
+  held: HeldEntry[];
 }
 
 const previewSchema = z.object({ ids: z.array(z.string().min(1)).min(1).optional() });
@@ -90,6 +92,12 @@ export async function previewBatchFinalize(deps: Deps, ctx: CallContext, input: 
     entries = ids.map((r) => entryViewInternal(deps.db, r.id)!);
   }
 
+  const held: HeldEntry[] = entries.flatMap((e) => {
+    const warnings = unacknowledgedWarningsOf(e);
+    return warnings.length > 0 ? [{ entryId: e.id, warnings, warningParams: e.warningParams }] : [];
+  });
+  entries = entries.filter((e) => !held.some((h) => h.entryId === e.id));
+
   const problems: { entryId: string; code: string }[] = [];
   for (const entry of entries) {
     const problem = checkFinalizableInternal(deps.db, entry.id, todayIn(deps));
@@ -125,5 +133,5 @@ export async function previewBatchFinalize(deps: Deps, ctx: CallContext, input: 
     };
   });
 
-  return ok({ entries: entries.length, byAccount, numbersToBeAssigned: entries.length, problems });
+  return ok({ entries: entries.length, byAccount, numbersToBeAssigned: entries.length, problems, held });
 }

@@ -24,7 +24,10 @@ export function ChannelsEditor({
   contactName,
   channels,
   canManage,
+  extraAction,
 }: {
+  /** Ein zweiter Knopf im Kopf: „Person anlegen“ bei einer Organisation ohne Ansprechpersonen (Nachtrag § 2, 23c). */
+  extraAction?: React.ReactNode;
   contactId: string;
   /** Der Untertitel des Dialogs nennt den Kontakt statt den Abschnitt zu wiederholen (04 A3). */
   contactName: string;
@@ -147,6 +150,7 @@ export function ChannelsEditor({
                 </DialogContent>
               </Dialog>
             ) : null}
+            {extraAction}
           </>
         }
       >

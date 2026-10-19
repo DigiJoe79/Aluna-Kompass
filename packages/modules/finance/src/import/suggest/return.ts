@@ -53,3 +53,42 @@ export function findReturnOriginsByName<T extends RawLike & { counterpartyName: 
     .filter((b) => b.bookingDate <= target.bookingDate && daysApart(b.bookingDate, target.bookingDate) <= RETURN_WINDOW_DAYS)
     .sort((a, b) => b.bookingDate.localeCompare(a.bookingDate));
 }
+
+/** Plan L3: Wie weit eine Rückgabe ohne Mandat (`MD01`, nicht autorisiert) hinter dem Einzug liegen kann — 13 Monate. */
+export const UNAUTHORISED_RETURN_WINDOW_DAYS = 396;
+
+/** Was die Suche vom Posten eines Einzugs braucht. */
+export interface DebitItemLike {
+  id: string;
+  endToEndId: string;
+  mandateReference: string;
+  amountCents: number;
+  collectionDate: string;
+  accountId: string;
+}
+
+/**
+ * Plan L3 (Spec § 7.7): der Posten eines Einzugs, den eine Rücklastschrift zurückgibt. Zuerst über die End-to-End-ID
+ * (sie ist je Posten eindeutig), sonst über die Mandatsreferenz und den Betrag — der Rückbetrag ist der Posten, oder
+ * mehr um ein Rückgabeentgelt bis zur Toleranz —, eingezogen höchstens 60 Tage vor der Rückgabe, bei `MD01` 13 Monate.
+ * Bei mehreren der jüngste Einzug.
+ */
+export function findReturnedItem<T extends DebitItemLike>(
+  target: RawLike & { returnCode: string | null; endToEndId?: string | null; mandateReference?: string | null },
+  items: readonly T[],
+  opts: { feeToleranceCents: number },
+): T | null {
+  if (!target.returnCode || target.amountCents >= 0) return null;
+  const sameAccount = items.filter((i) => i.accountId === target.accountId && i.collectionDate <= target.bookingDate);
+  if (target.endToEndId) {
+    const byEndToEnd = sameAccount.find((i) => i.endToEndId === target.endToEndId);
+    if (byEndToEnd) return byEndToEnd;
+  }
+  if (!target.mandateReference) return null;
+  const back = -target.amountCents;
+  const window = target.returnCode === 'MD01' ? UNAUTHORISED_RETURN_WINDOW_DAYS : RETURN_WINDOW_DAYS;
+  return sameAccount
+    .filter((i) => i.mandateReference === target.mandateReference && back >= i.amountCents && back - i.amountCents <= opts.feeToleranceCents)
+    .filter((i) => daysApart(i.collectionDate, target.bookingDate) <= window)
+    .reduce<T | null>((best, i) => (!best || i.collectionDate > best.collectionDate ? i : best), null);
+}

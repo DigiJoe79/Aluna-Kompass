@@ -1,5 +1,7 @@
 import { createHash } from 'node:crypto';
-import { coreModule } from '@kompass/core';
+import { coreModule, unwrap } from '@kompass/core';
+import { eq } from 'drizzle-orm';
+import { documents } from '../src/schema';
 import { createTestDeps, ctxWith, fakeDocumentEngine, insertUser } from '@kompass/core/testing';
 import { contactsModule } from '@kompass/module-contacts';
 import { describe, expect, it } from 'vitest';
@@ -46,6 +48,18 @@ describe('fileDocument', () => {
     expect(filed.value.number).toMatch(/^BRF-\d{4}-\d{3}$/);
     expect(filed.value.fileName).not.toBeNull();
     expect(filed.value.draftBody).toBeNull();
+  });
+
+  it('hält den Zeitpunkt des Festschreibens fest (filed_at), beim Entwurf und beim Empfang', async () => {
+    const { deps, ctx } = setupWithTypes();
+    const draft = await createDraft(deps, ctx, { typeKey: 'letter', subject: 'Einladung', body: 'x', documentDate: '2026-02-10' });
+    if (!draft.ok) throw new Error('setup');
+    const row = (id: string) => deps.db.select().from(documents).where(eq(documents.id, id)).get()!;
+    expect(row(draft.value.id).filedAt).toBeNull();
+    unwrap(await fileDocument(deps, ctx, { id: draft.value.id }));
+    expect(row(draft.value.id)).toMatchObject({ filedAt: deps.clock.now().toISOString(), documentDate: '2026-02-10' });
+    const received = unwrap(await receiveDocument(deps, ctx, { filename: 'r.pdf', bytes: pdfBytes(), typeKey: 'invoice', subject: 'Rechnung', documentDate: '2026-01-01' }));
+    expect(row(received.id).filedAt).toBe(deps.clock.now().toISOString());
   });
 
   it('hält die Prüfsumme der abgelegten Datei fest', async () => {

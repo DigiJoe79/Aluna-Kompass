@@ -169,4 +169,50 @@ test.describe('contacts', () => {
     const cities = await page.getByRole('row').locator('td:nth-child(4)').allTextContents();
     expect([...cities].sort((a, b) => a.localeCompare(b, 'de'))).toEqual(cities);
   });
+
+  /** Nachtrag Ansprechpersonen § 1–2: „Gehört zu“ im Dialog, die Organisation zeigt die Person in einer eigenen Karte. */
+  test('eine Person einer Organisation zuordnen: Unterzeile an der Person, Karte „Ansprechpersonen“ an der Organisation', async ({ page }) => {
+    await page.goto('/contacts?text=Sandberg');
+    await page.getByRole('link', { name: /Sandberg/ }).click();
+    await page.getByRole('button', { name: 'Kontakt bearbeiten' }).click();
+    const dialog = page.getByRole('dialog');
+    await dialog.getByRole('combobox', { name: 'Gehört zu' }).fill('Amtsgericht');
+    await page.getByTestId('contact-option').filter({ hasText: 'Amtsgericht Musterstadt' }).click();
+    await dialog.getByRole('button', { name: 'Speichern' }).click();
+    await expect(dialog).toBeHidden();
+    await expect(page.getByText('Person bei Amtsgericht Musterstadt')).toBeVisible();
+
+    await page.getByRole('link', { name: 'Amtsgericht Musterstadt' }).click();
+    const people = page.getByTestId('contact-people');
+    await expect(people.getByRole('heading', { name: 'Ansprechpersonen' })).toBeVisible();
+    await expect(people.getByRole('link', { name: 'Mira Sandberg' })).toBeVisible();
+  });
+
+  /** Plan U4 Task 3 (Nachtrag MCP-Test § 3): IBAN am Kontakt hinzufügen, als Gemeinschaftskonto bestätigen, entfernen. */
+  test('Bankverbindungen: IBAN eines anderen Kontakts als Gemeinschaftskonto zuordnen und wieder entfernen', async ({ page }) => {
+    await page.goto('/contacts?text=Hofmann');
+    await page.getByRole('link', { name: /Lukas Hofmann/ }).click();
+    const box = page.getByTestId('contact-bank-accounts');
+    await box.getByRole('button', { name: 'IBAN hinzufügen …' }).click();
+    const dialog = page.getByRole('dialog', { name: 'IBAN hinzufügen' });
+    await dialog.getByLabel('IBAN').fill('DE59 9999 9999 0000 7777 77');
+    await dialog.getByRole('button', { name: 'Hinzufügen' }).click();
+    await expect(dialog.getByTestId('bank-account-taken')).toContainText('Diese IBAN gehört schon zu');
+    await expect(dialog.getByTestId('bank-account-taken')).toContainText('Clara Neumann');
+    await expect(dialog.getByRole('button', { name: 'Auch Lukas Hofmann zuordnen' })).toBeDisabled();
+    await dialog.getByRole('radio', { name: 'Gemeinschaftskonto: auch Lukas Hofmann zuordnen' }).click();
+    await dialog.getByRole('button', { name: 'Auch Lukas Hofmann zuordnen' }).click();
+    await expect(dialog).toBeHidden();
+    const row = box.getByTestId('bank-account-row').filter({ hasText: 'DE59 9999 9999 0000 7777 77' });
+    await expect(row).toContainText('von Hand');
+    await expect(row).toContainText('Gemeinschaftskonto');
+    await expect(row.getByRole('link', { name: 'Clara Neumann' })).toBeVisible();
+
+    await row.getByRole('button', { name: 'Aktionen für DE59 9999 9999 0000 7777 77' }).click();
+    await page.getByRole('menuitem', { name: 'Entfernen …' }).click();
+    const confirm = page.getByRole('alertdialog', { name: 'IBAN bei Lukas Hofmann entfernen?' });
+    await confirm.getByRole('button', { name: 'Entfernen' }).click();
+    await expect(confirm).toBeHidden();
+    await expect(box.getByTestId('bank-account-row').filter({ hasText: 'DE59 9999 9999 0000 7777 77' })).toHaveCount(0);
+  });
 });

@@ -4,18 +4,20 @@ import { contacts, displayName } from '@kompass/module-contacts';
 import { z } from 'zod';
 import { financeAudit } from '../audit';
 import { financeConflict, requireHumanChannelFinance } from '../errors';
-import { financeAccounts, financeCategories, financeEntries, type FinanceAccountRow } from '../schema';
+import { financeAccounts, financeCategories, financeEntries, financeOpenItems, type FinanceAccountRow } from '../schema';
 import { boardAllowanceProblemInternal } from './board';
 import { inheritedPurposeReasonOfEntryInternal, inheritedPurposeReasonOfOpenItemsInternal, purposeGoingNegative, purposeNegativeProblemInternal } from './purpose-negative';
 import { firstNegativeCashDay } from './cash-check';
 import { valueAt } from './dated-values';
-import { entryLinesSchema, entryViewInternal, resolveEntryLines, writeLinesInternal, type AllowanceExceededNotice, type EntryNotice, type EntryView } from './entries';
+import { checkReversal, entryLinesSchema, entryViewInternal, resolveEntryLines, writeLinesInternal, type AllowanceExceededNotice, type EntryNotice, type EntryView } from './entries';
 import { allowanceCapCents, allowanceTotalCents, overCapCents } from './allowances';
-import { attachSettledItemDocumentsInternal } from './vouchers';
+import { attachRunSummariesInternal, attachSettledItemDocumentsInternal } from './vouchers';
 import { certifiableOutflowInternal } from './not-return';
 import { foreignMoneyOverpaidInternal } from './foreign-money';
 import { allocateEntryNumber, ensureFiscalYearFor, fiscalYearForInternal, fiscalYearStatusInternal } from './fiscal-years';
 import type { TaxCode } from './tax';
+import { recordReturnsInternal } from '../direct-debit/booking';
+import { SETTLEMENT_WARNINGS, type SettlementWarning, type SettlementWarningParams } from './settlement-warnings';
 
 const RATE_REQUIRING_CODES = new Set<TaxCode>(['reduced', 'standard', 'rc13b', 'icAcquisition']);
 
@@ -65,6 +67,35 @@ export interface FinalizeOptions {
    * hier erst vergebene Nummer).
    */
   textFromNumber?: (number: string) => string;
+  /**
+   * Plan N2 Task 2: die Warnungen des Entwurfs, die der Mensch ausdrücklich bestätigt hat (`inSubmittedRun`,
+   * `overpaid`). Fehlt eine, lehnt das Festschreiben ab; die bestätigten stehen im Protokoll.
+   */
+  acknowledgedWarnings?: readonly SettlementWarning[];
+}
+
+const isSettlementWarning = (w: string): w is SettlementWarning => (SETTLEMENT_WARNINGS as readonly string[]).includes(w);
+
+/** Die Warnungen eines Entwurfs, die noch eine Bestätigung brauchen — für das Sammel-Festschreiben und seine Vorschau. */
+export function unacknowledgedWarningsOf(entry: EntryView, acknowledged: readonly SettlementWarning[] = []): SettlementWarning[] {
+  return entry.warnings.filter(isSettlementWarning).filter((w) => !acknowledged.includes(w));
+}
+
+/** Ein festzuschreibender Entwurf, der wegen einer offenen Warnung Entwurf bleibt (Review Focus 1). */
+export interface HeldEntry {
+  entryId: string;
+  warnings: SettlementWarning[];
+  warningParams: SettlementWarningParams;
+}
+
+function warningProblem(entry: EntryView, acknowledged: readonly SettlementWarning[] = []): Failure | null {
+  const missing = unacknowledgedWarningsOf(entry, acknowledged);
+  if (missing.includes('inSubmittedRun')) return financeConflict('inSubmittedRunNotAcknowledged', { date: entry.warningParams.inSubmittedRun!.date });
+  if (missing.includes('overpaid')) {
+    const { amountCents, via } = entry.warningParams.overpaid!;
+    return financeConflict(via === 'directDebit' ? 'overpaidByCollectionNotAcknowledged' : 'overpaidNotAcknowledged', { amountCents });
+  }
+  return null;
 }
 
 /**
@@ -92,6 +123,18 @@ export function checkFinalizableInternal(tx: DbOrTx, entryId: string, today?: st
 
   for (const account of accountsOf(tx, entry).values()) {
     if (!account.isActive) return financeConflict('accountInactive', { account: account.name });
+  }
+
+  // Plan M2: Ein Posten, der nach dem Speichern des Entwurfs ohne Zahlung erledigt wurde, nimmt keine Zahlung mehr an.
+  const settledItemIds = [...new Set(entry.moneyLines.flatMap((l) => l.settlements.map((s) => s.openItemId)))];
+  if (settledItemIds.length > 0 && tx.select({ cancelledAt: financeOpenItems.cancelledAt }).from(financeOpenItems).where(inArray(financeOpenItems.id, settledItemIds)).all().some((i) => i.cancelledAt !== null)) {
+    return financeConflict('openItemCancelled');
+  }
+  // Spec Mitglieder und Lastschrift § 6.2: Ist die zurückgegebene Zahlung inzwischen selbst zurückgenommen, öffnete ein Rück-Ausgleich doppelt.
+  for (const settlement of entry.moneyLines.flatMap((l) => l.settlements)) {
+    if (!settlement.reversesSettlementId) continue;
+    const problem = checkReversal(tx, { openItemId: settlement.openItemId, amountCents: settlement.amountCents, reversesSettlementId: settlement.reversesSettlementId }, entry.id);
+    if (problem) return problem;
   }
 
   const categories = new Map<string, { name: string; isActive: boolean }>();
@@ -174,6 +217,9 @@ export function finalizeInternal(tx: DbOrTx, deps: Deps, ctx: CallContext, entry
   const problem = checkFinalizableInternal(tx, entryId, todayIn(deps));
   if (problem) return problem;
   const entry = entryViewInternal(tx, entryId)!;
+  const unacknowledged = warningProblem(entry, opts.acknowledgedWarnings);
+  if (unacknowledged) return unacknowledged;
+  const acknowledged = entry.warnings.filter(isSettlementWarning);
 
   const yearResult = ensureFiscalYearFor(tx, deps, ctx, entry.entryDate);
   if (!yearResult.ok) return yearResult;
@@ -188,7 +234,10 @@ export function finalizeInternal(tx: DbOrTx, deps: Deps, ctx: CallContext, entry
     }
   }
 
-  if (!entry.reversesEntryId) attachSettledItemDocumentsInternal(tx, deps, ctx, entryId);
+  if (!entry.reversesEntryId) {
+    attachSettledItemDocumentsInternal(tx, deps, ctx, entryId);
+    attachRunSummariesInternal(tx, deps, ctx, entryId);
+  }
   // Befund 1: Die Begründung „Zweck im Minus“ vom Antrag, über dessen Posten diese Buchung läuft, steht danach auch an der Buchung.
   const inheritedReason = !entry.reversesEntryId && !entry.purposeNegativeReason && purposeGoingNegative(tx, entry.allocationLines) ? inheritedPurposeReasonOfEntryInternal(tx, entryId) : null;
   const number = allocateEntryNumber(tx, year.id);
@@ -197,13 +246,15 @@ export function finalizeInternal(tx: DbOrTx, deps: Deps, ctx: CallContext, entry
     .set({ status: 'final', number, finalizedAt: now, finalizedByUserId: ctx.userId, finalizedChannel: ctx.channel, fiscalYearId: year.id, updatedAt: now, ...(inheritedReason ? { purposeNegativeReason: inheritedReason } : {}), ...(opts.textFromNumber ? { text: opts.textFromNumber(number) } : {}) })
     .where(eq(financeEntries.id, entryId))
     .run();
+  // Plan L3: Eine Rücklastschrift wird ein Fall „Rückgabe zu klären“.
+  if (!entry.reversesEntryId) recordReturnsInternal(tx, deps, entryId);
   const after = entryViewInternal(tx, entryId)!;
   const notices: EntryNotice[] = cashDonationAboveAlertInternal(tx, deps, after) ? ['cashDonationAboveAlert'] : [];
   const exceeded = after.reversesEntryId ? [] : allowanceExceededInternal(tx, after);
   if (exceeded.length > 0) notices.push('allowanceExceeded');
   // N2: eine Rückgabe auf einer Spenden-Kategorie ohne Bezug — Hinweis, keine Sperre.
   if (!after.reversesEntryId && certifiableOutflowInternal(tx, entryId, { withoutOrigin: true })) notices.push('returnWithoutOrigin');
-  financeAudit(tx, deps, ctx, { action: 'finance.entry.finalize', entity: 'financeEntry', id: entryId, after: auditFields(after, ctx), params: { number } });
+  financeAudit(tx, deps, ctx, { action: 'finance.entry.finalize', entity: 'financeEntry', id: entryId, after: { ...auditFields(after, ctx), ...(acknowledged.length > 0 ? { acknowledgedWarnings: acknowledged } : {}) }, params: { number } });
   return ok(notices.length > 0 ? { ...after, notices, ...(exceeded.length > 0 ? { allowanceExceeded: exceeded } : {}) } : after);
 }
 
@@ -214,7 +265,8 @@ function boardAllowanceProblemOf(deps: Deps, entry: EntryView): Failure | null {
     ?? purposeNegativeProblemInternal(deps.db, { reason: entry.purposeNegativeReason ?? inheritedPurposeReasonOfEntryInternal(deps.db, entry.id), lines: entry.allocationLines });
 }
 
-const finalizeEntrySchema = z.object({ id: z.string().min(1), expectedVersion: z.string().min(1).optional() });
+const acknowledgedWarningsField = z.array(z.enum(SETTLEMENT_WARNINGS)).optional();
+const finalizeEntrySchema = z.object({ id: z.string().min(1), expectedVersion: z.string().min(1).optional(), acknowledgedWarnings: acknowledgedWarningsField });
 
 /** `finance.entriesFinalize`, **`humanOnly`**. */
 export async function finalizeEntry(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<EntryView>> {
@@ -230,13 +282,17 @@ export async function finalizeEntry(deps: Deps, ctx: CallContext, input: unknown
     const boardProblem = boardAllowanceProblemOf(deps, before);
     if (boardProblem) return boardProblem;
   }
-  return deps.db.transaction((tx: DbOrTx) => finalizeInternal(tx, deps, ctx, parsed.value.id));
+  return deps.db.transaction((tx: DbOrTx) => finalizeInternal(tx, deps, ctx, parsed.value.id, { acknowledgedWarnings: parsed.value.acknowledgedWarnings }));
 }
 
 const finalizeReviewedSchema = z.object({ ids: z.array(z.string().min(1)).min(1) });
 
-/** `finance.entriesFinalize`, **`humanOnly`**: Sammellauf, nur geprüfte Entwürfe, alle oder keiner. */
-export async function finalizeReviewed(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<{ entries: EntryView[]; sumsByAccount: { accountId: string; sumCents: number }[] }>> {
+/**
+ * `finance.entriesFinalize`, **`humanOnly`**: Sammellauf, nur geprüfte Entwürfe, alle oder keiner. Ein Entwurf mit
+ * einer Warnung, die eine Bestätigung braucht (Plan N2 Task 2), bleibt Entwurf und steht unter `held` — er wird
+ * einzeln festgeschrieben, mit Bestätigung; die übrigen gehen durch (Review Focus 1).
+ */
+export async function finalizeReviewed(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<{ entries: EntryView[]; sumsByAccount: { accountId: string; sumCents: number }[]; held: HeldEntry[] }>> {
   const denied = requirePermission(ctx, 'finance.entriesFinalize');
   if (denied) return denied;
   const humanOnly = requireHumanChannelFinance(deps, ctx);
@@ -259,7 +315,12 @@ export async function finalizeReviewed(deps: Deps, ctx: CallContext, input: unkn
     if (boardProblem) return boardProblem;
   }
 
-  const sorted = [...loaded].sort((a, b) => a.entryDate.localeCompare(b.entryDate) || a.createdAt.localeCompare(b.createdAt));
+  const held: HeldEntry[] = loaded.flatMap((v) => {
+    const warnings = unacknowledgedWarningsOf(v);
+    return warnings.length > 0 ? [{ entryId: v.id, warnings, warningParams: v.warningParams }] : [];
+  });
+  const heldIds = new Set(held.map((h) => h.entryId));
+  const sorted = loaded.filter((v) => !heldIds.has(v.id)).sort((a, b) => a.entryDate.localeCompare(b.entryDate) || a.createdAt.localeCompare(b.createdAt));
 
   try {
     return deps.db.transaction((tx: DbOrTx) => {
@@ -271,13 +332,16 @@ export async function finalizeReviewed(deps: Deps, ctx: CallContext, input: unkn
       }
       const sums = new Map<string, number>();
       for (const entry of finalized) for (const line of entry.moneyLines) sums.set(line.accountId, (sums.get(line.accountId) ?? 0) + line.amountCents);
-      return ok({ entries: finalized, sumsByAccount: [...sums.entries()].map(([accountId, sumCents]) => ({ accountId, sumCents })) });
+      return ok({ entries: finalized, sumsByAccount: [...sums.entries()].map(([accountId, sumCents]) => ({ accountId, sumCents })), held });
     });
   } catch (error) {
     if (error instanceof FinalizeAborted) return error.failure;
     throw error;
   }
 }
+
+/** `bookEntry`: die Zeilen wie beim Entwurf, dazu die bestätigten Warnungen (Plan N2 Task 2). */
+export const bookEntrySchema = entryLinesSchema.extend({ acknowledgedWarnings: acknowledgedWarningsField });
 
 /** `finance.entriesWrite` und `finance.entriesFinalize`, **`humanOnly`**: Anlegen und Festschreiben in einer Transaktion — der einzige Weg für Bargeld. */
 export async function bookEntry(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<EntryView>> {
@@ -287,7 +351,7 @@ export async function bookEntry(deps: Deps, ctx: CallContext, input: unknown): P
   if (deniedFinalize) return deniedFinalize;
   const humanOnly = requireHumanChannelFinance(deps, ctx);
   if (humanOnly) return humanOnly;
-  const parsed = validate(deps, entryLinesSchema, input);
+  const parsed = validate(deps, bookEntrySchema, input);
   if (!parsed.ok) return parsed;
   const resolved = resolveEntryLines(deps, parsed.value);
   if (!resolved.ok) return resolved;
@@ -303,7 +367,7 @@ export async function bookEntry(deps: Deps, ctx: CallContext, input: unknown): P
 
   try {
     return deps.db.transaction((tx: DbOrTx) => {
-      const result = bookEntryInternal(tx, deps, ctx, { entryDate: v.entryDate, text: v.text, lines: resolved.value, boardAllowanceReason, purposeNegativeReason });
+      const result = bookEntryInternal(tx, deps, ctx, { entryDate: v.entryDate, text: v.text, lines: resolved.value, boardAllowanceReason, purposeNegativeReason, acknowledgedWarnings: v.acknowledgedWarnings });
       if (!result.ok) abortFinalize(result);
       return result;
     });
@@ -325,7 +389,7 @@ export function bookEntryInternal(
   tx: DbOrTx,
   deps: Deps,
   ctx: CallContext,
-  input: { entryDate: string; text: string; lines: ReturnType<typeof resolveEntryLines> extends Result<infer L> ? L : never; beforeFinalize?: (entryId: string) => void; boardAllowanceReason?: string | null; purposeNegativeReason?: string | null },
+  input: { entryDate: string; text: string; lines: ReturnType<typeof resolveEntryLines> extends Result<infer L> ? L : never; beforeFinalize?: (entryId: string) => void; boardAllowanceReason?: string | null; purposeNegativeReason?: string | null; acknowledgedWarnings?: readonly SettlementWarning[] },
 ): Result<EntryView> {
   const now = isoNow(deps.clock);
   const id = newId();
@@ -334,5 +398,5 @@ export function bookEntryInternal(
     .run();
   writeLinesInternal(tx, id, input.lines);
   input.beforeFinalize?.(id);
-  return finalizeInternal(tx, deps, ctx, id);
+  return finalizeInternal(tx, deps, ctx, id, { acknowledgedWarnings: input.acknowledgedWarnings });
 }

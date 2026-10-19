@@ -99,7 +99,7 @@ export async function issueGeneratedDocument<T = undefined>(deps: Deps, ctx: Cal
               subject: input.subject, documentDate: input.documentDate, folder: folderRes.value, draftBody: null, templateKey: template.key,
               inputSnapshot: JSON.stringify(snapshot), fileName: stored.value.fileName, fileChecksum: stored.value.fileChecksum, fileBytes: stored.value.fileBytes,
               textStatus: 'pending', textAttempts: 0, textError: null, textExtractedAt: null,
-              status: 'issued', createdByUserId: ctx.userId ?? 'system', createdAt: now, updatedAt: now,
+              status: 'issued', filedAt: now, createdByUserId: ctx.userId ?? 'system', createdAt: now, updatedAt: now,
             })
             .run();
           for (const link of input.links ?? []) {

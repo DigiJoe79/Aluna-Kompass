@@ -1,6 +1,6 @@
 'use client';
 
-import { Files, FolderMinus, Inbox, Package } from 'lucide-react';
+import { Files, FolderMinus, Inbox, Package, Send } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
@@ -57,8 +57,11 @@ export function DmsWorkspace({
   initialAbout,
   defaultTypeKey,
   receiveOpen,
+  outboxCount = 0,
   children,
 }: {
+  /** Sendungen im Ausgang — für den Ortsknopf am Telefon (Handoff 2b E4). */
+  outboxCount?: number;
   folders: FolderEntry[];
   inboxCount: number;
   /** Ausgehende Dokumente ohne Ordner (Stufe 1, Auftrag 7); bei 0 fehlt die Zeile. */
@@ -97,14 +100,15 @@ export function DmsWorkspace({
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
-  const isInbox = params.get('inbox') === '1';
-  const isUnfiled = !isInbox && params.get('unfiled') === '1';
+  const isOutbox = params.get('outbox') === '1';
+  const isInbox = !isOutbox && params.get('inbox') === '1';
+  const isUnfiled = !isOutbox && !isInbox && params.get('unfiled') === '1';
   const hrefFor = (path: string | null) => folderHref(new URLSearchParams(params.toString()), { folder: path });
   // Die Adresse sofort (ein Klick markiert, bevor der Server antwortet), aber
   // nur, wenn es den Ordner gibt; sonst, was der Server stattdessen öffnet.
   const known = useMemo(() => new Set(folders.flatMap((f) => [...ancestorsOf(f.path), f.path])), [folders]);
   const requested = params.get('folder') || null;
-  const openFolder = isInbox || isUnfiled ? null : requested && known.has(requested) ? requested : currentFolder;
+  const openFolder = isOutbox || isInbox || isUnfiled ? null : requested && known.has(requested) ? requested : currentFolder;
   const { folders: shownFolders, selected: selectedFolder, saving, placed, moveFolder, renameFolder, deleteFolder, createFolder, moveDocuments } = useFolderMoves({
     folders,
     selected: openFolder,
@@ -285,7 +289,7 @@ export function DmsWorkspace({
     mode: 'navigate',
     selected: selectedFolder,
     fixed: [
-      { key: 'all', label: t('allDocuments'), icon: Files, count: total, href: hrefFor(null), dropTarget: false, folder: null, current: !isInbox && !isUnfiled && !selectedFolder },
+      { key: 'all', label: t('allDocuments'), icon: Files, count: total, href: hrefFor(null), dropTarget: false, folder: null, current: !isOutbox && !isInbox && !isUnfiled && !selectedFolder },
       {
         key: 'inbox',
         label: t('inbox'),
@@ -299,6 +303,8 @@ export function DmsWorkspace({
         refuse: (item) =>
           item.kind === 'documents' && item.ids.some((id) => rows.current.get(id)?.direction === 'outgoing') ? 'incomingOnly' : null,
       },
+      // Der Ausgang der E-Mails unter dem Eingangskorb (Handoff 2b E4): ein Ort, kein Ziel zum Ablegen.
+      { key: 'outbox', label: t('outbox.title'), icon: Send, href: '/dms?outbox=1', dropTarget: false, folder: null, current: isOutbox },
       // Stufe 1, Auftrag 7: Ausgänge ohne Ordner, sonst unsichtbar. Ohne Inhalt keine Zeile (außer man steht darauf).
       ...(unfiledCount > 0 || isUnfiled
         ? [
@@ -339,7 +345,9 @@ export function DmsWorkspace({
 
   // Der Ortsknopf am Telefon nennt, was die Spalte am Schreibtisch zeigt: Ort und Summe (wie die Mediathek). Die
   // Zahl der Treffer steht in der Zählzeile der Leiste, auch am Telefon.
-  const place = isInbox
+  const place = isOutbox
+    ? { path: [], title: t('outbox.title'), count: outboxCount }
+    : isInbox
     ? { path: [], title: t('inbox'), count: inboxCount }
     : isUnfiled
       ? { path: [], title: t('noFolder'), count: unfiledCount }
@@ -355,8 +363,8 @@ export function DmsWorkspace({
     <DocumentMovesContext value={documentMoves}>
       <div className="flex min-h-full flex-col">
         <PageHeader
-          title={t('title')}
-          description={t('description')}
+          title={isOutbox ? t('outbox.title') : t('title')}
+          description={isOutbox ? t('outbox.desc') : t('description')}
           // Am Telefon bleibt nur „Neuer Entwurf“ sichtbar; Exportieren und Post ablegen stehen im ⋯ (Runde 3, 018).
           more={[
             { key: 'export', label: tExport('open'), onSelect: () => setHeaderExport(true), hidden: !canExport },

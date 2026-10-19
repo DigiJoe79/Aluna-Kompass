@@ -119,6 +119,21 @@ export function BatchFinalizeDialog({ reviewedCount }: { reviewedCount: number }
                   ) : null,
                 )}
                 <p className="font-semibold text-ink">{t('numbers', { count: preview.numbersToBeAssigned })}</p>
+                {/* Plan N2 Task 2 (Review Focus 1): Entwürfe mit offener Warnung bleiben Entwurf, die übrigen gehen durch. */}
+                {preview.held.length > 0 ? (
+                  <Notice level="warn" title={t('heldTitle')} testId="batch-held">
+                    <ul className="space-y-1">
+                      {preview.held.map((h) => (
+                        <li key={h.entryId}>
+                          {h.warnings.map((w) => (w === 'inSubmittedRun' ? t('held.inSubmittedRun', { date: formatDateOrDash(date, h.warningParams.inSubmittedRun?.date ?? null) }) : t('held.overpaid', { amount: formatEuro(h.warningParams.overpaid?.amountCents ?? 0), via: h.warningParams.overpaid?.via ?? 'payment' }))).join(' ')}{' '}
+                          <Link href={`/finance/entries/${h.entryId}`} className="font-semibold underline underline-offset-2">
+                            {t('openEntry')}
+                          </Link>
+                        </li>
+                      ))}
+                    </ul>
+                  </Notice>
+                ) : null}
                 {blocked ? (
                   <Notice level="refuse" title={t('problemsTitle')}>
                     <ul className="space-y-1">

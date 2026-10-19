@@ -45,6 +45,19 @@ describe('importStatement', () => {
     expect(new TextDecoder().decode(stored)).toContain('DE60999999990201051234');
   });
 
+  it('keeps mandate reference and creditor id of a direct debit at the raw transaction (Plan L3)', async () => {
+    const { deps, ctx } = setupFinance();
+    const account = unwrap(await createAccount(deps, ctx, { name: 'Einzugskonto', kind: 'bank', iban: 'DE23999999990000202051', isMain: true }));
+    const res = unwrap(await importStatement(deps, ctx, { accountId: account.id, fileName: 'lastschrift.xml', bytes: bytes('camt053-direct-debit.xml') }));
+    const raws = deps.db.select().from(financeRawTransactions).where(eq(financeRawTransactions.runId, res.runs[0]!.id)).all().sort((a, b) => a.lineIndex - b.lineIndex);
+    expect(raws.map((r) => [r.mandateReference, r.creditorId])).toEqual([
+      ['MND-0001', 'DE98ZZZ09999999999'],
+      ['MND-0002', 'DE98ZZZ09999999999'],
+      [null, null],
+      ['MND-0001', 'DE98ZZZ09999999999'],
+    ]);
+  });
+
   it('sets the account format to camt053 on the first import and asks for confirmation when the account was csv', async () => {
     const f = await importFixture();
     expect((f.deps.db.select().from(financeAccounts).where(eq(financeAccounts.id, f.account.id)).get()!).importFormat).toBeNull();

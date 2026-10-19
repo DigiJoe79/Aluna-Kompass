@@ -1,10 +1,10 @@
 import { isoDay, isoNow, newId, notFound, ok, paperDate, readSetting, requirePermission, validate, type CallContext, type DbOrTx, type Deps, type Result } from '@kompass/core';
 import { abortReceive, documents, getDocumentRecord, linkDocumentInternal, listDocuments, readLinkedDocument, receiveGeneratedUpload, type DocumentRecord } from '@kompass/module-dms';
-import { and, eq, inArray } from 'drizzle-orm';
+import { and, eq, gt, inArray } from 'drizzle-orm';
 import { z } from 'zod';
 import { financeAudit } from '../audit';
 import { financeConflict, requireHumanChannelFinance } from '../errors';
-import { financeEntryDocuments, financeFiscalYears, financeMoneyLines, financeOpenItems, financeOpenItemSettlements } from '../schema';
+import { financeAllocationLines, financeDirectDebitItems, financeDirectDebitRuns, financeEntryDocuments, financeFiscalYears, financeMoneyLines, financeOpenItems, financeOpenItemSettlements } from '../schema';
 import { requireFinanceRead } from './access';
 import { entryViewInternal } from './entries';
 import { fiscalYearStatusInternal } from './fiscal-years';
@@ -202,14 +202,35 @@ export function attachSettledItemDocumentsInternal(tx: DbOrTx, deps: Deps, ctx: 
   if (itemIds.length === 0) return;
   const items = tx.select({ documentId: financeOpenItems.documentId, originType: financeOpenItems.originType }).from(financeOpenItems).where(inArray(financeOpenItems.id, itemIds)).all();
   const documentIds = [...new Set(items.filter((i) => i.documentId && !(i.originType && ORIGIN_TYPES_WITH_OWN_VOUCHERS.has(i.originType))).map((i) => i.documentId!))];
-  for (const documentId of documentIds) {
-    const known = tx.select({ id: financeEntryDocuments.id }).from(financeEntryDocuments).where(and(eq(financeEntryDocuments.entryId, entryId), eq(financeEntryDocuments.documentId, documentId))).get();
-    if (known) continue;
-    const doc = tx.select().from(documents).where(eq(documents.id, documentId)).get();
-    if (!doc || doc.phase !== 'issued' || doc.status === 'voided') continue;
-    writeVoucherLink(tx, deps, ctx, { entryId, documentId: doc.id, documentNumber: doc.number ?? '', documentChecksum: doc.fileChecksum, viaUpload: false });
-    linkDocumentInternal(tx, deps, { documentId: doc.id, entityType: 'financeEntry', entityId: entryId });
-  }
+  for (const documentId of documentIds) attachIssuedDocumentInternal(tx, deps, ctx, entryId, documentId);
+}
+
+/** Ein festgeschriebenes, nicht storniertes Dokument als Beleg an die Buchung — einmal. */
+function attachIssuedDocumentInternal(tx: DbOrTx, deps: Deps, ctx: CallContext, entryId: string, documentId: string): void {
+  const known = tx.select({ id: financeEntryDocuments.id }).from(financeEntryDocuments).where(and(eq(financeEntryDocuments.entryId, entryId), eq(financeEntryDocuments.documentId, documentId))).get();
+  if (known) return;
+  const doc = tx.select().from(documents).where(eq(documents.id, documentId)).get();
+  if (!doc || doc.phase !== 'issued' || doc.status === 'voided') return;
+  writeVoucherLink(tx, deps, ctx, { entryId, documentId: doc.id, documentNumber: doc.number ?? '', documentChecksum: doc.fileChecksum, viaUpload: false });
+  linkDocumentInternal(tx, deps, { documentId: doc.id, entityType: 'financeEntry', entityId: entryId });
+}
+
+/**
+ * L3 Nacharbeit (Spec § 7.4 Schritt 3): Beim Festschreiben der Gutschrift eines Einzugs hängt sein Begleitzettel als
+ * Beleg der Sammelbuchung an — wie die Dokumente der ausgeglichenen Posten (Befund AA). Nur die Zeilen der Gutschrift
+ * (Betrag > 0), nicht die einer Rückgabe.
+ */
+export function attachRunSummariesInternal(tx: DbOrTx, deps: Deps, ctx: CallContext, entryId: string): void {
+  const summaryIds = tx
+    .select({ documentId: financeDirectDebitRuns.summaryDocumentId })
+    .from(financeAllocationLines)
+    .innerJoin(financeDirectDebitItems, eq(financeDirectDebitItems.id, financeAllocationLines.directDebitItemId))
+    .innerJoin(financeDirectDebitRuns, eq(financeDirectDebitRuns.id, financeDirectDebitItems.runId))
+    .where(and(eq(financeAllocationLines.entryId, entryId), gt(financeAllocationLines.amountCents, 0)))
+    .all()
+    .map((r) => r.documentId)
+    .filter((id): id is string => !!id);
+  for (const documentId of new Set(summaryIds)) attachIssuedDocumentInternal(tx, deps, ctx, entryId, documentId);
 }
 
 export interface VoucherWithoutEntry {

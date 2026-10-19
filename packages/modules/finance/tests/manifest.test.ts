@@ -12,10 +12,11 @@ describe('finance module', () => {
     expect([...(financeModule.dependsOn ?? [])].sort()).toEqual(['contacts', 'dms', 'projects']);
   });
 
-  it('declares all ten permissions from the start — role proposals are never topped up later', () => {
+  it('declares all eleven permissions from the start — role proposals are never topped up later', () => {
     expect(financeModule.permissions).toEqual([
       'finance.read', 'finance.overview', 'finance.entriesWrite', 'finance.entriesFinalize', 'finance.periodClose',
       'finance.setup', 'finance.expensesSubmit', 'finance.approve', 'finance.donationsIssue', 'finance.reportsFinalize',
+      'finance.directDebit',
     ]);
   });
 
@@ -30,6 +31,7 @@ describe('finance module', () => {
       { key: 'finance.rules', href: '/finance/work/rules', icon: 'euro', group: 'finance', section: 'finance.work', permission: 'finance.read' },
       { key: 'finance.entries', href: '/finance/entries', icon: 'euro', group: 'finance', section: 'finance.entries', permission: 'finance.read' },
       { key: 'finance.openItems', href: '/finance/open-items', icon: 'euro', group: 'finance', section: 'finance.entries', permission: 'finance.read' },
+      { key: 'finance.directDebit', href: '/finance/direct-debit', icon: 'euro', group: 'finance', section: 'finance.entries', permission: 'finance.directDebit' },
       { key: 'finance.accounts', href: '/finance/accounts', icon: 'euro', group: 'finance', section: 'finance.entries', permission: 'finance.read' },
       { key: 'finance.cash', href: '/finance/cash', icon: 'euro', group: 'finance', section: 'finance.entries', permission: 'finance.read' },
       { key: 'finance.purposes', href: '/finance/purposes', icon: 'euro', group: 'finance', section: 'finance.allocation', permission: ['finance.read', 'finance.overview'] },
@@ -80,6 +82,8 @@ describe('finance module', () => {
       { entityType: 'financePartnerPayment', readPermission: 'finance.read', receivePermission: 'finance.entriesWrite' },
       { entityType: 'financeReserve', readPermission: 'finance.read', receivePermission: 'finance.entriesWrite' },
       { entityType: 'financePurposeTransfer', readPermission: 'finance.read', receivePermission: 'finance.entriesWrite' },
+      { entityType: 'financeMandate', readPermission: 'finance.read', receivePermission: 'finance.directDebit' },
+      { entityType: 'financeDirectDebitRun', readPermission: 'finance.read', receivePermission: 'finance.directDebit' },
     ]);
   });
 
@@ -121,6 +125,8 @@ describe('finance module', () => {
       financeExpenseClaimDraft: true, financeExpenseClaim: false, financeContactWaiverTerms: true,
       financePartnerProfile: true, financePartnerNotice: false, financePartnerPaymentPosition: false, financePartnerPaymentDraft: true, financePartnerPayment: false, financePartnerEvidence: true,
       financeReserve: true, financeReserveMovement: false, financePurposeTransfer: false,
+      financeMandate: false, financePledge: false,
+      financeDirectDebitRun: false, financeDirectDebitItem: false, financePrenotification: false,
     });
   });
 

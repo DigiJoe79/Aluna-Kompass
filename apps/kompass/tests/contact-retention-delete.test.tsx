@@ -9,6 +9,8 @@ import messages from '../messages/de.json';
 const deleteContactAction = vi.fn(async (_id: string) => ({ status: 'success' as const }));
 vi.mock('@/app/(shell)/contacts/actions', () => ({ deleteContactAction: (id: string) => deleteContactAction(id) }));
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
+// „Als Mitglied aufnehmen …“ führt über den Router auf die Anlage-Seite der Mitglieder.
+vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn(), refresh: vi.fn(), replace: vi.fn() }) }));
 
 function Intl({ children }: { children: ReactNode }) {
   return (

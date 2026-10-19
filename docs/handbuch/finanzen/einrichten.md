@@ -38,14 +38,18 @@ verschwindet aus der Liste:
    Standardwerte in einem Zug; wer abweicht, ändert die einzelnen Felder
    danach von Hand. Jeder Abschnitt der Seite hat eine eigene
    Speicherleiste: Die Antworten auf die Fragen gelten erst mit
-   „Speichern“, nur der Schalter „Darf ein Agent festschreiben?“ gilt
-   sofort.
+   „Speichern“, auch der Schalter „Darf ein Agent festschreiben und
+   Lastschriften bearbeiten?“ am Ende der Karte „Einordnung des Vereins“.
    Aufwandsspenden sind in der Vorgabe aus: Ein Verein, der sie anbietet,
    schaltet sie bewusst ein. Erst dann erscheint das Feld
    „Anspruchsgrundlage für Aufwandsspenden“ — ein Vertrag oder die Satzung,
    nie ein Vorstandsbeschluss allein (siehe [Auslagen](auslagen.md)).
 
 Wer einen Schritt nicht selbst erledigen kann, liest an ihm, wer es kann.
+
+Optional steht darunter **Lastschrift einrichten**: erledigt, solange die Lastschrift aus ist; eingeschaltet erst mit
+Gläubiger-Identifikationsnummer und einem Konto mit IBAN. Der Schritt führt zu Einrichtung → Finanzen → Lastschrift
+(siehe [Lastschrift einrichten](lastschrift-einrichten.md)).
 
 ## Mitten im Vereinsleben einsteigen
 
@@ -113,13 +117,15 @@ Vorstand nur an dieser Rolle am Kontakt — nie an Nutzerrollen —, und ohne si
 bleibt die Liste der Zahlungen an Vorstandsmitglieder in der
 [Personenübersicht](personen.md) leer. Der Schritt führt zu den Kontakten.
 
-## Darf ein Agent festschreiben?
+## Darf ein Agent festschreiben und Lastschriften bearbeiten?
 
-Ein eigener Schalter entscheidet, ob eine Schnittstelle Buchungen
-festschreiben darf. Er lässt sich nur hier am Bildschirm ändern — nie über
-einen Agenten selbst. Voreingestellt ist: nein. Ein Agent darf ohne diesen
-Schalter Buchungen anlegen und vorbereiten, aber nie festschreiben; das
-bleibt einem Menschen vorbehalten.
+Ein eigener Schalter im Abschnitt „Agent“ der Karte „Einordnung des Vereins“
+entscheidet, ob ein Agent Buchungen festschreiben, freigeben, Bestätigungen
+ausstellen und Mandate, Lastschriftdateien und Einzüge bearbeiten darf. Er
+gilt wie die Fragen darüber erst mit „Speichern“ und lässt sich nur hier am
+Bildschirm ändern — nie über einen Agenten selbst. Voreingestellt ist: nein.
+Ein Agent darf ohne diesen Schalter Buchungen anlegen und vorbereiten, aber
+nie festschreiben; das bleibt einem Menschen vorbehalten.
 
 ## Der Finanzabschnitt am Projekt
 

@@ -51,6 +51,16 @@ const CORE_CONFIG: { key: string; href: string; icon: string; permission?: Permi
   { key: 'documents', href: '/admin/documents', icon: 'file-text', permission: 'documents.export' },
 ];
 
+/**
+ * Feste Einträge und die zur Laufzeit ermittelten (`navigationFor`): Ein Laufzeiteintrag mit dem Schlüssel eines festen
+ * ersetzt ihn an seiner Stelle (etwa ein Recht, das von einer Einstellung abhängt), die übrigen hängen hinten an.
+ */
+function mergeExtras(fixed: readonly NavigationItem[], extras: readonly NavigationItem[]): NavigationItem[] {
+  const byKey = new Map(extras.map((item) => [item.key, item]));
+  const merged = fixed.map((item) => byKey.get(item.key) ?? item);
+  return [...merged, ...extras.filter((item) => !fixed.some((f) => f.key === item.key))];
+}
+
 export function buildNavigation(input: {
   manifests: readonly ModuleManifest[];
   enabledKeys: ReadonlySet<string>;
@@ -113,7 +123,7 @@ export function buildNavigation(input: {
         key: m.key,
         labelKey: `nav.groups.${m.key}`,
         disabled: false,
-        items: [...(m.navigation ?? []).map(toItem), ...(input.extraItems?.[m.key] ?? []).map(toItem)],
+        items: mergeExtras(m.navigation ?? [], input.extraItems?.[m.key] ?? []).map(toItem),
         icon: m.moduleIcon,
       };
     });

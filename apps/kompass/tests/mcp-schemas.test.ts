@@ -1,4 +1,4 @@
-import { assignRole, coreModule, createApiToken, createRole, setModuleEnabled, setRolePermissions, unwrap } from '@kompass/core';
+import { assignRole, coreModule, createApiToken, createRole, installOrder, setModuleEnabled, setRolePermissions, unwrap } from '@kompass/core';
 import { createTestDeps, ctxWith, insertUser } from '@kompass/core/testing';
 import { coreMcpTools, createKompassMcpHandler } from '@kompass/mcp';
 import { siteTemplateState } from '@kompass/module-site';
@@ -45,7 +45,8 @@ async function listAllTools() {
   const handler = createKompassMcpHandler(deps, { extraTools: coreMcpTools });
   const userId = insertUser(deps, {});
   const admin = ctxWith([...deps.registry.permissionKeys], userId);
-  for (const module of installedModules) unwrap(await setModuleEnabled(deps, admin, { key: module.key, enabled: true }));
+  // Abhängigkeiten zuerst: Die Reihenfolge von `installedModules` ist die der Schiene, nicht die der Abhängigkeiten.
+  for (const module of installOrder(installedModules)) unwrap(await setModuleEnabled(deps, admin, { key: module.key, enabled: true }));
   const role = unwrap(await createRole(deps, admin, { name: 'Alles' }));
   unwrap(await setRolePermissions(deps, admin, { roleId: role.id, permissionKeys: [...deps.registry.permissionKeys] }));
   unwrap(await assignRole(deps, admin, { userId, roleId: role.id }));

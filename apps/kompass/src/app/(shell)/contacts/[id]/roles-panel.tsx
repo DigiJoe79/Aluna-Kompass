@@ -9,7 +9,8 @@ import { FormField } from '@/components/forms/form-field';
 import { FormGrid } from '@/components/forms/form-grid';
 import { useActionFeedback } from '@/components/forms/use-action-feedback';
 import { StatusBadge, statusTone } from '@/components/status-badge';
-import { Button } from '@/components/ui/button';
+import Link from 'next/link';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { Dialog, DialogContent, DialogDescription, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -25,22 +26,30 @@ export function RolesPanel({
   roleDefinitions,
   canManage,
   today,
+  membership,
 }: {
+  /** Mitgliedschaft als Zeile in „Rollen“ (Handoff Mitglieder D4, 8a): Marke, Nummer · Art · seit, rechts „Öffnen“. */
+  membership?: { href: string; summary: string; badge: { tone: 'info' | 'warning'; label: string } | null } | null;
   /** „Heute“ in der Zeitzone des Vereins, vom Server (Befund 47) — Vorgabe für „Seit“ und „Bis“. */
   today: string;
   contactId: string;
   /** Der Untertitel des Dialogs nennt den Kontakt (04 A3). */
   contactName: string;
   roles: { id: string; role: string; since: string; until: string | null }[];
-  roleDefinitions: { key: string; retention: string }[];
+  roleDefinitions: { key: string; retention: string; managed?: boolean }[];
   canManage: boolean;
 }) {
+  // Geführte Rollen (z. B. „Mitglied“) setzt und beendet nur ihr Modul: nicht wählbar, ohne „Beenden“ (Spec § 3.2).
+  const managed = new Set(roleDefinitions.filter((d) => d.managed).map((d) => d.key));
+  const choosable = roleDefinitions.filter((d) => !d.managed);
+  // Die laufende Rolle der Mitgliedschaft steht als eigene Zeile oben, nicht doppelt.
+  const listed = membership ? roles.filter((r) => !(managed.has(r.role) && (!r.until || r.until >= today))) : roles;
   const t = useTranslations('contacts');
   const c = useTranslations('common');
   const fmt = useDateFormat();
 
   const [addOpen, setAddOpen] = useState(false);
-  const [selectedRole, setSelectedRole] = useState(roleDefinitions[0]?.key ?? '');
+  const [selectedRole, setSelectedRole] = useState(roleDefinitions.find((d) => !d.managed)?.key ?? '');
   const [since, setSince] = useState(today);
   const [addPending, startAdd] = useTransition();
   const addFb = useActionFeedback();
@@ -97,7 +106,7 @@ export function RolesPanel({
                             onChange={(e) => setSelectedRole(e.target.value)}
                             required
                           >
-                            {roleDefinitions.map((d) => (
+                            {choosable.map((d) => (
                               <option key={d.key} value={d.key}>
                                 {roleLabel(t, d.key)}
                               </option>
@@ -126,12 +135,26 @@ export function RolesPanel({
           </>
         }
       >
-        {roles.length === 0 ? (
+        {listed.length === 0 && !membership ? (
           <p className="text-meta text-muted-ink"><Empty /></p>
         ) : (
           <ul className="divide-y divide-line-2">
+            {membership ? (
+              <li data-testid="contact-membership" className="flex items-center justify-between gap-4 py-2.5">
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                  <span className="flex min-w-36 flex-wrap items-center gap-1.5">
+                    <StatusBadge tone={statusTone('role', 'current')}>{roleLabel(t, 'member')}</StatusBadge>
+                    {membership.badge ? <StatusBadge tone={membership.badge.tone} dot>{membership.badge.label}</StatusBadge> : null}
+                  </span>
+                  <span className="text-meta text-ink-2">{membership.summary}</span>
+                </div>
+                <Link href={membership.href} className={cn(buttonVariants({ size: 'sm', variant: 'outline' }), 'shrink-0')}>
+                  {t('roles.open')}
+                </Link>
+              </li>
+            ) : null}
             {/* Laufende zuerst, beendete gedämpft darunter (Runde 3, 039). */}
-            {[...roles.filter((r) => !r.until), ...roles.filter((r) => r.until)].map((r) => (
+            {[...listed.filter((r) => !r.until), ...listed.filter((r) => r.until)].map((r) => (
               <li key={r.id} data-state={r.until ? 'ended' : 'current'} className={cn('flex items-center justify-between gap-4 py-2.5', r.until && 'text-muted-ink')}>
                 {/* Die Marke steht in einer Spalte fester Mindestbreite, damit die Daten nicht hinter verschieden breiten
                     Marken springen (04 B13). Kein Layout-Test für diese Einzelstelle (AGENTS.md). */}
@@ -142,7 +165,7 @@ export function RolesPanel({
                     {r.until ? ` · ${t('roles.until')}: ${fmt.date(r.until)}` : ''}
                   </span>
                 </div>
-                {canManage && !r.until ? (
+                {canManage && !r.until && !managed.has(r.role) ? (
                   // Rahmenknopf wie „Entfernen“ bei den Wegen; der graue Textknopf wirkte gesperrt (04 B13, 04 B14).
                   <Button size="sm" variant="outline" onClick={() => setEndingRoleId(r.id)} className="shrink-0">
                     {t('roles.end')}

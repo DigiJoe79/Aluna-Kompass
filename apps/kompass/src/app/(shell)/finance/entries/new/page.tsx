@@ -13,6 +13,7 @@ import { requireSession } from '@/lib/request-context';
 import { formatAmount } from '@/lib/finance/amount';
 import { emptyForm, type EntryFormState, type EntryTemplate } from '@/lib/finance/entry-form';
 import { formFromTransaction } from '@/lib/finance/work';
+import { settlementOptions } from '@/lib/finance/open-item-options';
 import { EntryForm, type PendingVoucher } from '../entry-form';
 
 export default async function NewFinanceEntryPage({ searchParams }: { searchParams: Promise<{ template?: string; account?: string; settles?: string; raw?: string; back?: string; voucher?: string }> }) {
@@ -41,7 +42,7 @@ export default async function NewFinanceEntryPage({ searchParams }: { searchPara
   const projects = (projectsRes.ok ? projectsRes.value : []).map((p) => ({ id: p.id, name: (p.name as LocalizedText)[leading] || p.slug }));
   const showTax = readSetting<boolean>(deps, 'finance.isEntrepreneurOrHasVatId');
   const t = await getTranslations('finance.entryForm');
-  const openItems = (openItemsRes.ok ? openItemsRes.value : []).map((i) => ({ id: i.id, kind: i.kind as 'receivable' | 'payable', label: i.paymentReference ?? t('settlement.unnamed', { date: i.itemDate }), openCents: i.openCents }));
+  const openItems = await settlementOptions(deps, ctx, openItemsRes.ok ? openItemsRes.value : [], (date) => t('settlement.unnamed', { date }));
 
   // `?account=` belegt das Konto der ersten Geldzeile vor — von der Barkasse aus „Bar bezahlt“ (F3b Task 2).
   let initial: EntryFormState = emptyForm(template, today);

@@ -34,6 +34,30 @@ E-Mail, Telefon, Mobil, Fax, Webseite — je Kontakt beliebig viele, jeder mit
 einer Bezeichnung („privat“, „Praxis“). Einer ist der **Hauptkontaktweg**;
 er steht in der Liste und wird vorgeschlagen, wo Kompass einen braucht.
 
+## Briefe
+
+Im Abschnitt **Briefe** von „Kontakt bearbeiten“ steht, wie Briefe den
+Kontakt erreichen: „Automatisch“ (per E-Mail, wenn eine Adresse da ist,
+sonst per Post) oder „Immer per Post“. „Zurzeit“ sagt, was das gerade
+ergibt. Bei „Immer per Post“ trägt die Anschrift auf der Kontaktseite die
+Marke „Briefe immer per Post“. Mehr unter [Briefe per
+E-Mail](akte/briefe-per-email.md).
+
+## Ansprechpersonen
+
+Eine Person kann zu einer Organisation gehören: Feld **Gehört zu** im
+Abschnitt „Name“ (nur Organisationen; leer, wenn die Person für sich
+steht). Ihre Seite zeigt dann „Person bei …“ mit Link. Hat sie keine eigene
+Anschrift, gilt die der Organisation — so steht sie auch im Brief —, und
+ohne eigene E-Mail-Adresse geht eine Mail an die der Organisation.
+
+Die Seite einer Organisation zeigt ihre Personen in der Karte
+**Ansprechpersonen**, je Zeile mit dem Hauptkontaktweg; „Person anlegen“
+belegt „Gehört zu“ schon vor. Ohne Personen gibt es keine Karte, und „Person
+anlegen“ steht bei den Kommunikationswegen. In der Kontaktauswahl steht die
+Organisation hinter dem Namen, und die Suche findet eine Person auch über
+den Namen ihrer Organisation.
+
 ## Rollen über die Zeit
 
 Eine Rolle sagt, was jemand für den Verein ist: Interessiert, Partner,
@@ -45,6 +69,27 @@ Wer 2024 Pate war, war es, auch wenn er es heute nicht mehr ist.
 Rollen sind keine freien Schlagwörter, und das hat einen Grund: An der Rolle
 hängt die Aufbewahrungsfrist. Eine Frist, die an einem selbst getippten Wort
 hinge, wäre keine.
+
+## Bankverbindungen
+
+Mit dem Recht „Finanzen lesen“ zeigt ein Kontakt seine **Bankverbindungen**:
+die IBANs, an denen Kompass ihn in Kontoauszügen erkennt, mit ihrer Herkunft
+— „aus Buchung vom …“ (gelernt, als ein Umsatz mit diesem Kontakt gebucht
+wurde), „von Hand, Person, Datum“ oder „aus Mandat“. Ein Einzug oder eine
+Rückgabe über ein Mandat bringt die IBAN nur dem Kontoinhaber, nie dem Mitglied,
+dessen Beitrag eingezogen wurde. Zuordnungen aus der Zeit,
+bevor Kompass die Herkunft festhielt, heißen „Herkunft unbekannt“. Trägt ein
+anderer Kontakt dieselbe IBAN, steht er unter „Auch bei“ mit der Marke
+„Gemeinschaftskonto“.
+
+Wer Kontakte in Buchungen zuordnen darf, trägt mit **IBAN hinzufügen …** eine
+IBAN ein; Kompass prüft die Prüfziffer. Gehört sie schon jemand anderem, fragt
+der Dialog nach: **Gemeinschaftskonto** (beide behalten sie) oder **nur noch
+diesem Kontakt** (beim anderen entfernt). **Entfernen …** im Menü der Zeile löst
+die Zuordnung; Kompass ordnet neue Buchungen mit dieser IBAN dann nicht mehr
+diesem Kontakt zu, Gebuchtes bleibt, wie es ist. Läuft ein gültiges Mandat
+über die IBAN, lässt sie sich weder entfernen noch umhängen — der Weg führt
+zum Mandat.
 
 ## Aufbewahrung
 

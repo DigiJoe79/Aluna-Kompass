@@ -23,9 +23,10 @@ const rootVersion = (JSON.parse(readFileSync(path.join(__dirname, '../../../pack
  * `0004_finance_0_2_1` die der Fassung 0.2.1. `0005_animals_review` ist die eine Migration der Fassung 0.2.2
  * (nie zusammengelegt: Der Branch hatte nur diese). `0006_audit_params` ist die der Fassung 0.2.9 (Protokoll in Sätzen),
  * `0007_animal_proposals_site_manifest` die zusammengelegte der Fassung 0.2.10 (Vorschlags-Eingang, „nicht publiziert“),
- * `0008_image_crops` die eine der Fassung 0.2.11 (Bildausschnitt an Geschichte und Projektbild).
+ * `0008_image_crops` die eine der Fassung 0.2.11 (Bildausschnitt an Geschichte und Projektbild),
+ * `0009_members_direct_debit_0_3_0` die zusammengelegte der Fassung 0.3.0 (Mitglieder, Lastschrift, Versand per E-Mail).
  */
-const RELEASED = ['0000_init.sql', '0001_dashboard_layouts.sql', '0002_document_former_numbers.sql', '0003_finance.sql', '0004_finance_0_2_1.sql', '0005_animals_review.sql', '0006_audit_params.sql', '0007_animal_proposals_site_manifest.sql', '0008_image_crops.sql'];
+const RELEASED = ['0000_init.sql', '0001_dashboard_layouts.sql', '0002_document_former_numbers.sql', '0003_finance.sql', '0004_finance_0_2_1.sql', '0005_animals_review.sql', '0006_audit_params.sql', '0007_animal_proposals_site_manifest.sql', '0008_image_crops.sql', '0009_members_direct_debit_0_3_0.sql'];
 
 /**
  * Was eine Produktion schon ausgeführt hat, bleibt Byte für Byte, wie es war:
@@ -45,6 +46,8 @@ const SHIPPED_HASHES: Record<string, string> = {
   '0006_audit_params.sql': 'b34144ee8d237925c4d3e4432d2fac66f6ca69f6ca0c806ccf376e6f830cdb78',
   // Seit dem Release der Fassung 0.2.10.
   '0007_animal_proposals_site_manifest.sql': '7a818b30bbc0395f4439557116e47e12f1887da0f472ee16865979875e5f5a71',
+  // Seit dem Release der Fassung 0.2.11.
+  '0008_image_crops.sql': '4c5b6a76677c943b0d3c0a5316b1d421d64ee9c51822b28a601da784c529f7c3',
 };
 
 /**
@@ -65,6 +68,12 @@ const LAST_WHEN_BEFORE_SQUASH_0_2_1 = 1790702142322;
  * unzusammengelegten Reihe (9 Migrationszeilen) als aktuell und bekommt nichts doppelt.
  */
 const LAST_WHEN_BEFORE_SQUASH_0_2_10 = 1791590317073;
+/**
+ * `when` der letzten Migration vor dem Zusammenlegen der Fassung 0.3.0 (`0032_freezing_justin_hammer`, 2026-10-19).
+ * Wie oben: Trägt `0009_members_direct_debit_0_3_0` denselben Wert, gilt eine Testinstanz aus der
+ * unzusammengelegten Reihe (33 Migrationszeilen) als aktuell und bekommt nichts doppelt.
+ */
+const LAST_WHEN_BEFORE_SQUASH_0_3_0 = 1792425401332;
 const journal = JSON.parse(readFileSync(path.join(MIGRATIONS_DIR, 'meta/_journal.json'), 'utf8')) as { entries: { idx: number; when: number; tag: string }[] };
 
 /**
@@ -247,6 +256,17 @@ describe('hand-written SQL survives', () => {
     // Design-Nachtrag Phase 4 (Entscheidung 2): die Nachweisfrist in Monaten ist ab dem Einreichen fest.
     expect(lastTrigger('finance_partner_payments_submitted_immutable')).toContain('NEW.proof_months IS NOT OLD.proof_months');
   });
+
+  it('keeps mandates, pledges, pre-notifications and direct debit runs permanent (0.3.0, L1/L2)', () => {
+    for (const name of ['finance_sepa_mandates_no_delete', 'finance_pledges_no_delete', 'finance_sepa_prenotifications_no_delete', 'finance_direct_debit_runs_no_delete', 'finance_direct_debit_items_no_delete']) {
+      expect(allSql, name).toContain(`CREATE TRIGGER ${name} `);
+    }
+  });
+
+  it('freezes mandate reference, creditor id and the direct debit item of a final line (0.3.0, L3)', () => {
+    expect(lastTrigger('finance_raw_transactions_no_update')).toContain('mandate_reference, creditor_id');
+    expect(lastTrigger('finance_allocation_lines_final_no_update')).toContain('direct_debit_item_id');
+  });
 });
 
 describe('the migrations of this version', () => {
@@ -279,6 +299,12 @@ describe('the migrations of this version', () => {
   it('let a database from the unsquashed 0.2.10 series count as current (same `when` as its last migration)', () => {
     const squashed = journal.entries.find((e) => e.tag === '0007_animal_proposals_site_manifest');
     expect(squashed?.when).toBe(LAST_WHEN_BEFORE_SQUASH_0_2_10);
+    expect(journal.entries.map((e) => `${e.tag}.sql`)).toEqual(files);
+  });
+
+  it('let a database from the unsquashed 0.3.0 series count as current (same `when` as its last migration)', () => {
+    const squashed = journal.entries.find((e) => e.tag === '0009_members_direct_debit_0_3_0');
+    expect(squashed?.when).toBe(LAST_WHEN_BEFORE_SQUASH_0_3_0);
     expect(journal.entries.map((e) => `${e.tag}.sql`)).toEqual(files);
   });
 
@@ -340,6 +366,22 @@ describe('migration 0007 (Vorschlags-Eingang der Tiere, Publish-Stand je Datensa
     insert.run('P1', 'k1', 'open');
     expect(() => insert.run('P2', 'k2', 'open')).toThrow(/UNIQUE/);
     insert.run('P3', 'k3', 'replaced');
+    db.close();
+  });
+});
+
+describe('migration 0009 (Mitglieder, Lastschrift, Versand per E-Mail)', () => {
+  it('backfills the filing date of issued documents and leaves drafts alone', () => {
+    const db = new Database(':memory:');
+    applyMigrationsUpTo(db, '0008_image_crops.sql');
+    db.exec(`INSERT INTO document_types (key, label, prefix, default_direction, retention_class) VALUES ('letter', 'Brief', 'BR', 'outgoing', 'business');
+      INSERT INTO documents (id, phase, type_key, document_date, created_by_user_id, created_at, updated_at) VALUES ('D1', 'issued', 'letter', '2026-08-01', 'U1', '2026-08-01T10:00:00.000Z', 't');
+      INSERT INTO documents (id, phase, type_key, document_date, created_by_user_id, created_at, updated_at) VALUES ('D2', 'draft', 'letter', '2026-08-02', 'U1', '2026-08-02T10:00:00.000Z', 't');`);
+    applyMigration(db, '0009_members_direct_debit_0_3_0.sql');
+    expect(db.prepare(`SELECT id, filed_at FROM documents ORDER BY id`).all()).toEqual([
+      { id: 'D1', filed_at: '2026-08-01T10:00:00.000Z' },
+      { id: 'D2', filed_at: null },
+    ]);
     db.close();
   });
 });

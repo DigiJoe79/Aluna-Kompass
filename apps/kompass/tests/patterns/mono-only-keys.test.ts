@@ -42,6 +42,7 @@ const ALLOWED: CountedAllowlist = {
   'app/(shell)/admin/dms/rules-panel.tsx': { count: 1, reason: 'Suchtext der Regel, der wörtlich (mit Leerzeichen) verglichen wird.' },
   'app/(shell)/admin/dms/types-panel.tsx': { count: 2, reason: `${KEY} Kürzel des Nummernkreises und Schlüssel der Dokumentart.` },
   'app/(shell)/admin/finance/accounts-panel.tsx': { count: 1, reason: IBAN },
+  'app/(shell)/contacts/[id]/bank-accounts-panel.tsx': { count: 2, reason: `${IBAN} In der Liste „Bankverbindungen“ und im Feld des Dialogs (Nachtrag MCP-Test § 3).` },
   'app/(shell)/admin/site/connection-card.tsx': { count: 1, reason: LOG },
   'app/(shell)/admin/themes/theme-editor.tsx': { count: 2, reason: `${KEY} Name des Theme-Tokens und sein Farbwert.` },
   'app/(shell)/admin/users/start-password-dialog.tsx': { count: 1, reason: 'Startpasswort — wird abgetippt.' },

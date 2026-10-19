@@ -3,7 +3,7 @@ import path from 'node:path';
 import type { Locator, Page } from '@playwright/test';
 import { expect, test } from './fixtures';
 import { callTool, mcpClient, switchTo, switchToJonas } from './expense-helpers';
-import { loginAsAdmin, resetDatabase, setE2ESetting, rowAction } from './helpers';
+import { loginAsAdmin, resetDatabase, setE2ESetting, setMailState, rowAction } from './helpers';
 import { story } from './story-year';
 
 const login = loginAsAdmin;
@@ -434,6 +434,35 @@ test.describe('dms', () => {
     // Die rohen Bezeichner haben auf dem Bildschirm nichts verloren.
     await expect(links).not.toContainText('contact');
     await expect(links).not.toContainText('recipient');
+  });
+
+  test('tauscht im Entwurf nur den Empfänger und speichert ihn (Joe 2026-10-18)', async ({ page }) => {
+    await login(page);
+    await page.goto('/dms/new');
+    await page.getByLabel('Betreff').fill('Brief mit getauschtem Empfänger');
+    await page.getByLabel('Text').fill('Text.');
+    const picker = page.getByRole('combobox', { name: 'Empfänger' });
+    await picker.click();
+    const options = page.getByTestId('contact-option');
+    await expect(options.nth(1)).toBeVisible();
+    const first = (await options.nth(0).getAttribute('data-name'))?.trim() ?? '';
+    const second = (await options.nth(1).getAttribute('data-name'))?.trim() ?? '';
+    await options.nth(0).click();
+    await page.getByRole('button', { name: 'Entwurf speichern' }).click();
+    await expect(page).toHaveURL(/\/edit$/);
+
+    // Nur der Empfänger ändert sich: Die Leiste muss das zählen, sonst sagt sie „Nichts geändert“ und speichert nicht.
+    // Das Feld zeigt den ersten Namen; gesucht wird nach dem zweiten.
+    await picker.fill(second);
+    await page.locator(`[data-testid="contact-option"][data-name="${second}"]`).first().click();
+    await expect(page.getByText('1 Änderung', { exact: false })).toBeVisible();
+    await page.getByRole('button', { name: 'Speichern und Vorschau aktualisieren' }).click();
+    await expect(page.getByText(/Vorschau aktuell/)).toBeVisible();
+
+    await page.getByRole('link', { name: 'Dokument', exact: true }).click();
+    const links = page.getByTestId('document-links');
+    await expect(links).toContainText(second);
+    await expect(links).not.toContainText(first);
   });
 
   test('bietet für ein festgeschriebenes Dokument kein Bearbeiten an', async ({ page }) => {
@@ -1325,9 +1354,10 @@ test.describe('dms', () => {
     page.on('console', (m) => { if (m.type() === 'error' || m.type() === 'warning') warnings.push(m.text()); });
     await login(page);
     await page.goto('/dms');
-    // Der zweite Brief des Seeds ist festgeschrieben und noch nicht versandt.
-    await page.getByRole('link', { name: 'Dankschreiben an die Tierarztpraxis' }).click();
-    await page.getByRole('button', { name: 'Als versandt vermerken' }).click();
+    // Die Anmeldung beim Amtsgericht ist festgeschrieben und per Post vermerkt; der Vermerk lässt sich ändern und
+    // entfernen. Danach nennt die Karte den Zustellweg (Gericht ohne E-Mail: Post, Handoff 2b E2).
+    await page.getByRole('link', { name: 'Anmeldung der Vorstandsänderung zum Vereinsregister' }).click();
+    await page.getByTestId('dispatch-panel').getByRole('button', { name: 'Ändern' }).click();
     const dialog = page.getByRole('dialog', { name: 'Als versandt vermerken' });
     // Nach dem Brief (story('03-02')) und nicht in der Zukunft — beides prüft der Dienst (dispatch.ts).
     await dialog.getByLabel('Versandt am').fill(story('2026-09-06'));
@@ -1337,8 +1367,68 @@ test.describe('dms', () => {
     await expect(panel).toContainText('E-Mail');
     await panel.getByRole('button', { name: 'Vermerk entfernen' }).click();
     await page.getByRole('button', { name: 'Entfernen', exact: true }).click();
-    await expect(panel).toContainText('Noch nicht versandt.');
+    await expect(panel).toContainText('Noch nicht versandt. Amtsgericht Musterstadt bekommt Briefe per Post.');
+    await expect(panel.getByRole('button').first()).toHaveText('Versand vermerken …');
     expect(warnings.filter((w) => w.includes('Base UI'))).toEqual([]);
+  });
+
+  /** Handoff 2b E2: senden mit dem Test-Transport (Umleitung) — Dialog nennt die Umleitung, die Karte zeigt den Vermerk. */
+  test('sendet einen Brief per E-Mail: Testumgebung im Dialog, danach Vermerk „E-Mail an …“', async ({ page }) => {
+    await setMailState(page, 'redirect');
+    await login(page);
+    await page.goto('/dms');
+    await page.getByRole('link', { name: 'Einladung zur ordentlichen Mitgliederversammlung' }).click();
+    const panel = page.getByTestId('dispatch-panel');
+    // Die Einladung ist per Post vermerkt; ohne Vermerk bekommt Mira Sandberg sie per E-Mail.
+    await panel.getByRole('button', { name: 'Vermerk entfernen' }).click();
+    await page.getByRole('button', { name: 'Entfernen', exact: true }).click();
+    await expect(panel).toContainText('Mira Sandberg bekommt Briefe per E-Mail.');
+    await panel.getByRole('button', { name: 'Per E-Mail senden …' }).click();
+    const dialog = page.getByRole('dialog', { name: 'Per E-Mail senden' });
+    await expect(dialog.getByTestId('mail-to')).toContainText('Mira Sandberg · mira.sandberg@example.org');
+    await expect(dialog.getByTestId('mail-send-redirect')).toContainText('Die Mail geht an umleitung@example.org, nicht an den Kontakt.');
+    await dialog.getByRole('button', { name: 'Senden' }).click();
+    await expect(page.getByText('Wird gesendet.', { exact: true })).toBeVisible();
+    // Der Sender läuft im Hintergrund; die Karte fragt nach und zeigt dann den Vermerk.
+    await expect(panel.getByTestId('dispatch-sending')).toHaveAttribute('data-status', 'sent', { timeout: 30_000 });
+    await expect(panel).toContainText('E-Mail an mira.sandberg@example.org');
+    await expect(panel.getByRole('button', { name: 'Erneut senden …' })).toBeVisible();
+  });
+
+  /** Handoff 2b E4 (21a, 21d): der Ausgang mit den Sendungen des Seeds, Filter „nicht zugestellt“, Zahl auf der Startseite. */
+  test('Ausgang: Seed-Sendungen, Filter nicht zugestellt, Zahl auf der Startseite', async ({ page }) => {
+    await login(page);
+    await page.goto('/');
+    await page.getByRole('link', { name: /Nicht zugestellte E-Mails/ }).click();
+    await expect(page).toHaveURL(/outbox=1&state=failed/);
+    await expect(page.getByRole('heading', { level: 1, name: 'Ausgang' })).toBeVisible();
+    const failed = page.getByTestId('outbox-row');
+    await expect(failed).toHaveCount(1);
+    await expect(failed).toContainText('Recipient address rejected');
+    await expect(failed).toContainText('Tierarztpraxis am Stadtpark');
+    await page.getByTestId('outbox-filters').getByRole('button', { name: 'Filter zurücksetzen' }).click();
+    await expect(page.getByTestId('outbox-row')).toHaveCount(3);
+  });
+
+  /**
+   * Handoff 2b E5 (22a): Absender speichern; die Verbindung steht als fester Wert mit der Umleitung. Plan U4 Task 1:
+   * Der Agentenschalter ist der letzte Abschnitt der Karte und geht mit „Speichern“.
+   */
+  test('Einstellungen › Versand: E-Mail-Absender und Agentenschalter speichern', async ({ page }) => {
+    await setMailState(page, 'redirect');
+    await login(page);
+    await page.goto('/admin/dms?panel=channels');
+    const box = page.getByTestId('mail-settings');
+    await expect(box.getByTestId('mail-connection')).toContainText('Umleitung an umleitung@example.org');
+    await box.getByLabel('Absender-Name').fill('Musterverein Versand');
+    const agent = box.getByRole('switch', { name: 'Darf ein Agent Dokumente per E-Mail senden?' });
+    await expect(agent).not.toBeChecked();
+    await agent.click();
+    await box.getByRole('button', { name: 'Speichern' }).click();
+    await expect(page.getByText('E-Mail-Einstellungen gespeichert.')).toBeVisible();
+    await page.reload();
+    await expect(page.getByTestId('mail-settings').getByLabel('Absender-Name')).toHaveValue('Musterverein Versand');
+    await expect(page.getByTestId('mail-settings').getByRole('switch', { name: 'Darf ein Agent Dokumente per E-Mail senden?' })).toBeChecked();
   });
 
   test('legt eine Wiedervorlage an und hakt sie ab', async ({ page }) => {
@@ -2155,7 +2245,8 @@ test.describe('Weg und Teilbaum', () => {
     await expect(deep.locator('[data-folder-cell]')).toHaveText(story('Vereinsregister 2026'));
 
     // Ohne Unterordner fehlt die Spalte „Ordner“ ganz; sie sagte nur „direkt hier“ (Runde 3, 022).
-    await page.goto(story('/dms?folder=Beh%C3%B6rden%2FAmtsgericht%2FVereinsregister%202026'));
+    // Erst verschieben, dann kodieren: In „%202026“ hängt die Jahreszahl an der „20“ des Leerzeichens, `story` sähe sie nicht.
+    await page.goto(`/dms?folder=${encodeURIComponent(story('Behörden/Amtsgericht/Vereinsregister 2026'))}`);
     await expect(heading(page).getByRole('heading', { name: story('Vereinsregister 2026') })).toBeVisible();
     await expect(heading(page).getByRole('navigation', { name: 'Weg' }).getByRole('link')).toHaveText(['Behörden', 'Amtsgericht']);
     await expect(deep).toBeVisible();

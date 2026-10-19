@@ -30,7 +30,12 @@ export function contactsRetentionHolds(deps: Deps, entityType: string, id: strin
   // würde nie fällig. Das ist der Spender, dessen Buchungen abgelaufen sind.
   // Grundfrist: `consent` ab dem Ende der letzten solchen Rolle, mindestens ab
   // dem Anlagejahr. Hält ein Modul länger, sticht sein Halter.
-  const unheld = rows.filter((row) => definitions.get(row.role)?.retention === 'none');
+  // Eine geführte Rolle zählt nicht mit: Ihr Modul bringt den Halter selbst (Mitglieder: bis Ende des Jahres nach dem
+  // Austritt, Spec § 3.2) — die Grundfrist hielte den Kontakt sonst länger, als die DSGVO-Regel des Moduls erlaubt.
+  const unheld = rows.filter((row) => {
+    const definition = definitions.get(row.role);
+    return definition?.retention === 'none' && definition.managedBy === undefined;
+  });
   if (unheld.length > 0) {
     const months = retentionMonths(deps, 'consent');
     const contact = deps.db.select({ createdAt: contacts.createdAt }).from(contacts).where(eq(contacts.id, id)).get();

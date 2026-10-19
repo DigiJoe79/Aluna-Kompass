@@ -23,7 +23,14 @@ const RULES: Record<string, Rule> = {
   publish: { pattern: /Publish/ },
   veroeffentlichen: { pattern: /[Vv]eröffentlich/ },
   slug: { pattern: /Slug/ },
-  zurueckZu: { pattern: /Zurück zu[mr]? / },
+  zurueckZu: {
+    pattern: /Zurück zu[mr]? /,
+    allowed: {
+      'dispatchStep.toEmail': 'Zeilenaktion „Zurück zu E-Mail“ im Versand-Schritt (Nachtrag MCP-Test § 2, Designer 2026-10-19), keine Rücknavigation.',
+      'dms.errors.mailNotMovedToPost.remedy': 'Nennt die Zeilenaktion „Zurück zu E-Mail“ beim Namen.',
+      'dms.errors.mailRecipientPost.remedy': 'Nennt die Zeilenaktion „Zurück zu E-Mail“ beim Namen (Grund manual, Retest N3 V1).',
+    },
+  },
   ok: { pattern: /^(OK|Ok)$/ },
   default: { pattern: /Default/ },
   staging: { pattern: /Staging/ },

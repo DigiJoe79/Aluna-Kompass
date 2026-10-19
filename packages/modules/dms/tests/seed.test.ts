@@ -1,4 +1,4 @@
-import { coreModule, isoNow, unwrap, writeSettingInternal } from '@kompass/core';
+import { coreModule, isoNow, readSetting, unwrap, writeSettingInternal } from '@kompass/core';
 import { createTestDeps, ctxWith, insertUser } from '@kompass/core/testing';
 import { contactsModule, seedContacts } from '@kompass/module-contacts';
 import { eq, isNotNull } from 'drizzle-orm';
@@ -7,7 +7,7 @@ import { describe, expect, it } from 'vitest';
 import { EXAMPLE_DOCUMENT_TYPES } from '../src/catalog';
 import { countDocumentText } from '../src/index-store';
 import { dmsModule } from '../src/manifest';
-import { documentFolders, documentFormerNumbers, documentLinks, documentRelations, documentRules, documents, documentTypes } from '../src/schema';
+import { dmsMailOutbox, documentFolders, documentFormerNumbers, documentLinks, documentRelations, documentRules, documents, documentTypes } from '../src/schema';
 import { seedDms } from '../src/seed';
 import { getDocument } from '../src/service';
 import { ALL_DMS } from './helpers';
@@ -89,6 +89,22 @@ describe('seedDms', () => {
     const doc = deps.db.select().from(documents).all().find((d) => d.id === former[0]!.documentId)!;
     expect(doc).toMatchObject({ direction: 'incoming', typeKey: 'contract' });
     expect(former[0]!.number).toMatch(/^[A-Z]{3}-\d{4}-\d{3}$/);
+  });
+
+  it('bringt den Ausgang mit drei Zuständen: gesendet, nicht zugestellt, wartend', async () => {
+    const { deps, ctx } = await setupWithContacts();
+    await seedDms(deps, ctx);
+    const rows = deps.db.select().from(dmsMailOutbox).all();
+    expect(rows.map((r) => r.status).sort()).toEqual(['failed', 'queued', 'sent']);
+    expect(rows.find((r) => r.status === 'failed')).toMatchObject({ lastErrorCode: 'rejected', attempts: 3 });
+    expect(rows.find((r) => r.status === 'failed')!.lastErrorText).not.toContain('@');
+    expect(rows.every((r) => r.toAddress.endsWith('example.org'))).toBe(true);
+    expect(readSetting(deps, 'dms.mail.fromAddress')).toBe('post@musterverein.example.org');
+    // Der gesendete trägt den Vermerk am Dokument.
+    const sent = rows.find((r) => r.status === 'sent')!;
+    expect(deps.db.select().from(documents).where(eq(documents.id, sent.documentId)).get()!.sentVia).toBe('email');
+    await seedDms(deps, ctx);
+    expect(deps.db.select().from(dmsMailOutbox).all()).toHaveLength(3);
   });
 
   it('läuft zweimal, ohne zu verdoppeln', async () => {

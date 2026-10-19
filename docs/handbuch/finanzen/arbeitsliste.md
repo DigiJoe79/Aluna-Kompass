@@ -93,6 +93,12 @@ den ersten, der passt:
    der Gegenseite“ im CSV-Format) — ein Treffer ist sicher — oder über den
    Namen, wenn genau ein Kontakt so heißt; das bleibt unsicher.
 
+Gehört die IBAN mehreren Kontakten (ein **Gemeinschaftskonto**), nennt der
+Vorschlag alle: „IBAN gehört zu X und Y“. Einen Kontakt trägt er dann nur
+ein, wenn genau einer von ihnen eine offene Zahlung über genau diesen Betrag
+hat; sonst wählen Sie den Kontakt selbst. Welche IBAN zu wem gehört, steht am
+Kontakt unter **Bankverbindungen** (siehe [Kontakte](../kontakte.md)).
+
 Die Gebühr eines Zahlungsdienstes, die der Import als eigenen Umsatz neben
 die Zahlung stellt, schlägt Kompass sicher als „Gebühren Zahlungsdienst“ vor.
 
@@ -248,6 +254,11 @@ stillgelegte Kategorie, ein abgeschlossenes Geschäftsjahr —, nennt der
 Dialog ihn mit einem Link, und nichts wird festgeschrieben. Danach nennt
 Kompass die vergebenen Nummern.
 
+Ein Entwurf mit einem Hinweis, der eine Bestätigung braucht — Zahlung auf
+einen Posten im eingereichten Einzug, Zahlung über dem offenen Betrag —, bleibt
+Entwurf; der Dialog nennt ihn, die übrigen werden festgeschrieben. Öffnen Sie
+ihn und schreiben Sie ihn einzeln fest (siehe [Buchen](buchen.md)).
+
 ## Wenn ein KI-Agent vorbereitet
 
 Ein KI-Agent kann die Arbeitsliste über die Schnittstelle lesen und zu
@@ -258,7 +269,7 @@ markiert sie als geprüft oder löscht sie.
 
 Prüfen und Festschreiben bleiben einem Menschen am Bildschirm vorbehalten:
 Nur ein Mensch drückt Enter. Das ist die Voreinstellung; ändern lässt sie
-sich nur mit dem Schalter „Darf ein Agent festschreiben?“ unter [Finanzen
-einrichten](einrichten.md), und der Schalter selbst lässt sich nur am
+sich nur mit dem Schalter „Darf ein Agent festschreiben und Lastschriften
+bearbeiten?“ unter [Finanzen einrichten](einrichten.md), und der Schalter selbst lässt sich nur am
 Bildschirm umlegen, nie über einen Agenten. Was es für den Datenschutz bedeutet, wenn ein Agent
 Bankdaten liest, steht unter [Kontoauszug laden](kontoauszug-laden.md).

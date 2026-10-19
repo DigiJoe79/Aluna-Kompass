@@ -88,7 +88,7 @@ export async function decideCandidate(deps: Deps, ctx: CallContext, input: unkno
           id: rawTransactionId, runId: before.runId, accountId: before.accountId,
           bookingDate: line.bookingDate, valueDate: line.valueDate, amountCents: line.amountCents,
           counterpartyName: line.counterpartyName, counterpartyIban: line.counterpartyIban, purpose: line.purpose,
-          bankReference: line.bankReference, relatedReference: line.relatedReference ?? null, counterpartyEmail: line.counterpartyEmail ?? null, endToEndId: line.endToEndId, returnCode: line.returnCode,
+          bankReference: line.bankReference, relatedReference: line.relatedReference ?? null, counterpartyEmail: line.counterpartyEmail ?? null, endToEndId: line.endToEndId, returnCode: line.returnCode, mandateReference: line.mandateReference ?? null, creditorId: line.creditorId ?? null,
           // Ein eigener Schlüssel, nicht der des Kandidaten: der bezog sich auf den vorhandenen Umsatz, nicht auf diesen neuen.
           dedupKey: `${before.dedupKey}#own`, lineIndex: line.index, createdAt: now,
         })

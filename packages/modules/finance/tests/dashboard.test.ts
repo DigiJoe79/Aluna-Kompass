@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
-import { EMPTY, roleIdByOrigin, schema, unwrap, writeSettingInternal } from '@kompass/core';
+import { EMPTY, fixedClock, roleIdByOrigin, schema, unwrap, writeSettingInternal } from '@kompass/core';
 import { ctxWith, insertRole, insertUser, systemContext } from '@kompass/core/testing';
 import { createContact, linkUserToContact } from '@kompass/module-contacts';
 import { describe, expect, it } from 'vitest';
@@ -27,6 +27,9 @@ import { requestPurposeTransfer } from '../src/allocation/transfers';
 import { bookEntry } from '../src/ledger/finalize';
 import { createPurpose } from '../src/ledger/purposes';
 import { insertDocument, insertRaw, insertRun, ledgerFixture, setupFinance } from './helpers';
+import { bookAndFinalize, creditScene, suggest } from './direct-debit-credit-fixture';
+import { directDebitFixture } from './direct-debit-fixture';
+import { buildDirectDebitFile, createDirectDebitRun, markDirectDebitRunSubmitted } from '../src/direct-debit/runs';
 import { donationFixture, EXEMPTION } from './donation-fixture';
 import { approverCtx, expenseFixture, expenseReadyDraft, expenseSubmitted } from './expense-fixture';
 import { saveExpenseDraft } from '../src/allocation/expenses';
@@ -47,12 +50,12 @@ function tileByKey(key: string) {
 
 describe('finance dashboard tiles', () => {
   it('registers fourteen tiles, five of them on by default, each under exactly one permission', () => {
-    expect(FINANCE_DASHBOARD_TILES).toHaveLength(16);
+    expect(FINANCE_DASHBOARD_TILES).toHaveLength(19);
     expect(FINANCE_DASHBOARD_TILES.map((t) => t.key).sort()).toEqual([
-      'accountsNegative', 'approvalsPending', 'balanceDifference', 'confirmationsToCorrect', 'lastStatement', 'myExpenses', 'nobodyCanApprove', 'overdueItems', 'partnerPaymentsWithoutProof', 'purposesNegative', 'rawOpen',
+      'accountsNegative', 'approvalsPending', 'balanceDifference', 'confirmationsToCorrect', 'directDebitDue', 'directDebitReturns', 'lastStatement', 'mandatesUnsigned', 'myExpenses', 'nobodyCanApprove', 'overdueItems', 'partnerPaymentsWithoutProof', 'purposesNegative', 'rawOpen',
       'reserveCapNear', 'setupIncomplete', 'staleDrafts', 'todo', 'withoutVoucher',
     ]);
-    expect(FINANCE_DASHBOARD_TILES.filter((t) => t.defaultOn).map((t) => t.key).sort()).toEqual(['approvalsPending', 'myExpenses', 'nobodyCanApprove', 'partnerPaymentsWithoutProof', 'purposesNegative', 'setupIncomplete', 'todo']);
+    expect(FINANCE_DASHBOARD_TILES.filter((t) => t.defaultOn).map((t) => t.key).sort()).toEqual(['approvalsPending', 'directDebitDue', 'directDebitReturns', 'mandatesUnsigned', 'myExpenses', 'nobodyCanApprove', 'partnerPaymentsWithoutProof', 'purposesNegative', 'setupIncomplete', 'todo']);
     for (const tile of FINANCE_DASHBOARD_TILES) expect(typeof tile.permission).toBe('string');
   });
 
@@ -60,7 +63,7 @@ describe('finance dashboard tiles', () => {
     const byKey = (key: string) => FINANCE_DASHBOARD_TILES.find((t) => t.key === key)!;
     expect(FINANCE_DASHBOARD_TILES.filter((t) => t.variant).map((t) => `${t.key}:${t.variant}`)).toEqual(['todo:work']);
     // Jede Warnung hat ein Verb (Vorgaben Teil M, Entscheidung 2): dazu Saldodifferenz, Freigabe, Zwecke und Partnerzahlungen.
-    expect(FINANCE_DASHBOARD_TILES.filter((t) => t.warningAction).map((t) => t.key).sort()).toEqual(['balanceDifference', 'lastStatement', 'nobodyCanApprove', 'partnerPaymentsWithoutProof', 'purposesNegative', 'reserveCapNear', 'setupIncomplete']);
+    expect(FINANCE_DASHBOARD_TILES.filter((t) => t.warningAction).map((t) => t.key).sort()).toEqual(['balanceDifference', 'directDebitDue', 'lastStatement', 'nobodyCanApprove', 'partnerPaymentsWithoutProof', 'purposesNegative', 'reserveCapNear', 'setupIncomplete']);
     // Vier Zahlen wiederholen Zeilen aus „Finanzen: zu tun“, „Letzter Auszug“ wiederholt „Kontoauszüge fehlen …“ (§ 6).
     for (const key of ['withoutVoucher', 'overdueItems', 'rawOpen', 'confirmationsToCorrect', 'lastStatement']) expect(byKey(key).defaultOn, key).toBe(false);
   });
@@ -543,5 +546,68 @@ describe('finance partner payment dashboard tiles (F7 Task 5, Annahme 6, 13)', (
     const result = await todo.load(f.deps, f.ctx, {});
     if (result.kind !== 'list') throw new Error('expected list');
     expect(result.lines.find((l) => l.titleKey === 'purposeTransfersPending')).toEqual({ titleKey: 'purposeTransfersPending', values: { count: 1 }, href: '/finance/approvals' });
+  });
+});
+
+describe('direct debit tiles (Plan L2 Task 5, Handoff 2.8)', () => {
+  it('„Lastschrift fällig“ warns once a created run can be submitted, with the action to create the file', async () => {
+    const f = await directDebitFixture();
+    const tile = FINANCE_DASHBOARD_TILES.find((t) => t.key === 'directDebitDue')!;
+    expect(tile.available?.(f.deps)).toBe(true);
+    expect(await tile.load(f.deps, f.ctx, {})).toEqual({ kind: 'status', tone: 'neutral', messageKey: 'ok', href: '/finance/direct-debit' });
+    const p = await f.payer('Beispiel');
+    await f.fee(p, 1200, '2026-10-30');
+    f.announce(p.mandateId, [{ dueOn: '2026-10-30', amountCents: 1200 }]);
+    const run = unwrap(await createDirectDebitRun(f.deps, f.ctx, { collectionDate: '2026-10-30' }));
+    expect(await tile.load(f.deps, f.ctx, {})).toEqual({ kind: 'status', tone: 'warning', messageKey: 'due', values: { date: '30.10.2026' }, href: `/finance/direct-debit/runs/${run.id}` });
+    unwrap(await buildDirectDebitFile(f.deps, f.ctx, { runId: run.id }));
+    // release #1: Auch mit Datei wartet der Einzug — jetzt auf die Einreichung bei der Bank.
+    expect(await tile.load(f.deps, f.ctx, {})).toEqual({ kind: 'status', tone: 'warning', messageKey: 'submit', values: { date: '30.10.2026' }, href: `/finance/direct-debit/runs/${run.id}` });
+    unwrap(await markDirectDebitRunSubmitted(f.deps, f.ctx, { runId: run.id, submittedOn: '2026-10-20' }));
+    expect(await tile.load(f.deps, f.ctx, {})).toMatchObject({ tone: 'neutral', messageKey: 'ok' });
+    f.write('finance.sepa.enabled', false);
+    expect(tile.available?.(f.deps)).toBe(false);
+  });
+
+  it('„Lastschrift fällig“ waits for the submission window: from submitFrom to submitBy, not from creating the run', async () => {
+    const f = await directDebitFixture();
+    const tile = FINANCE_DASHBOARD_TILES.find((t) => t.key === 'directDebitDue')!;
+    const p = await f.payer('Vorlauf');
+    await f.fee(p, 1200, '2026-11-16');
+    f.announce(p.mandateId, [{ dueOn: '2026-11-16', amountCents: 1200 }]);
+    // 16.11. minus 14 Tage = 01.11. (Sonntag) → Fenster 02.11. bis 12.11.
+    const run = unwrap(await createDirectDebitRun(f.deps, f.ctx, { collectionDate: '2026-11-16' }));
+    const on = (day: string) => ({ ...f.deps, clock: fixedClock(`${day}T08:00:00.000Z`) });
+    expect(await tile.load(f.deps, f.ctx, {})).toMatchObject({ tone: 'neutral', messageKey: 'ok' });
+    expect(await tile.load(on('2026-10-30'), f.ctx, {})).toMatchObject({ tone: 'neutral', messageKey: 'ok' });
+    expect(await tile.load(on('2026-11-02'), f.ctx, {})).toEqual({ kind: 'status', tone: 'warning', messageKey: 'due', values: { date: '16.11.2026' }, href: `/finance/direct-debit/runs/${run.id}` });
+    expect(await tile.load(on('2026-11-12'), f.ctx, {})).toMatchObject({ tone: 'warning', messageKey: 'due' });
+    // M41: Nach dem Fenster ist der Einzug verfallen — die Kachel sagt es, statt still zu werden.
+    expect(await tile.load(on('2026-11-13'), f.ctx, {})).toEqual({ kind: 'status', tone: 'warning', messageKey: 'expired', values: { date: '16.11.2026' }, href: `/finance/direct-debit/runs/${run.id}` });
+  });
+
+  it('„Mandate ohne Unterschrift“ lists pending mandates with the day they were prepared', async () => {
+    const f = await directDebitFixture();
+    const tile = FINANCE_DASHBOARD_TILES.find((t) => t.key === 'mandatesUnsigned')!;
+    await f.payer('Aktiv');
+    const pending = await f.payer('Offen', { signedOn: null });
+    expect(await tile.load(f.deps, f.ctx, {})).toEqual({
+      kind: 'list',
+      lines: [{ date: '2026-10-20', titleKey: 'line', values: { name: 'Erika Offen', reference: pending.reference }, href: `/finance/direct-debit/mandates/${pending.mandateId}` }],
+      total: 1,
+      href: '/finance/direct-debit?view=mandates',
+    });
+  });
+
+  it('„Rückgaben zu klären“ (Plan L3): the open returns with their sum; quiet without one', async () => {
+    const f = await creditScene();
+    const tile = FINANCE_DASHBOARD_TILES.find((t) => t.key === 'directDebitReturns')!;
+    expect(tile.available?.(f.deps)).toBe(true);
+    expect(await tile.load(f.deps, f.ctx, {})).toEqual({ kind: 'count', count: 0, href: '/finance/direct-debit' });
+    const credit = f.raw(11200);
+    await bookAndFinalize(f, credit, await suggest(f, credit));
+    const back = f.raw(-6200, { date: '2026-11-04', returnCode: 'MD06', endToEndId: f.itemOf('pledge').endToEndId });
+    await bookAndFinalize(f, back, await suggest(f, back));
+    expect(await tile.load(f.deps, f.ctx, {})).toEqual({ kind: 'count', count: 1, href: '/finance/direct-debit', note: { messageKey: 'sum', values: { sum: formatEuro(6200) } } });
   });
 });

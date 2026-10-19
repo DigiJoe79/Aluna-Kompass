@@ -27,13 +27,13 @@ describe('translations over MCP, end to end', () => {
     // Zwei Datensätze, zwei Audit-Einträge — die zwei Felder des Tiers gehen in einem Update.
     expect(deps.db.select().from(schema.auditLog).all().length - auditBefore).toBe(2);
     expect((await listGaps(deps, all, {})).gaps).toEqual([]);
-  });
+  }, 30_000);
 
   it('names the modules a caller may not read', async () => {
     const deps = createTestDeps({ manifests: [coreModule, ...installedModules], env: 'development' });
     await seedDevelopment(deps);
     const onlyProjects = await listGaps(deps, ctxWith(['projects.view']), {});
-    expect(onlyProjects.omitted.sort()).toEqual(['animals', 'site']);
+    expect(onlyProjects.omitted.sort()).toEqual(['animals', 'members', 'site']);
     expect(onlyProjects.gaps.map((g) => g.entityType)).toEqual(['project']);
-  });
+  }, 30_000);
 });

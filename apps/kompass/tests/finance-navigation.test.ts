@@ -32,4 +32,20 @@ describe('Unternavigation Finanzen', () => {
       ['finance.expenses', ['finance.expenses']],
     ]);
   });
+
+  it('„Lastschrift“ nach „Offene Zahlungen“: fest nur mit finance.directDebit, eingeschaltet auch für Lesende (Handoff 2a § 1)', () => {
+    const entries = (permissions: string[], enabled: boolean) =>
+      sectionsFor(
+        buildNavigation({
+          manifests: [coreModule, financeModule],
+          enabledKeys: new Set(['core', 'finance']),
+          permissions: new Set(permissions),
+          extraItems: enabled ? { finance: [{ key: 'finance.directDebit', href: '/finance/direct-debit', icon: 'euro', group: 'finance', section: 'finance.entries', permission: ['finance.read', 'finance.directDebit'] }] } : {},
+        }),
+        '/finance/entries',
+      ).find((s) => s.key === 'finance.entries')!.items.map((i) => i.href);
+    expect(entries(['finance.read'], false)).toEqual(['/finance/entries', '/finance/open-items', '/finance/accounts', '/finance/cash']);
+    expect(entries(['finance.read', 'finance.directDebit'], false)).toEqual(['/finance/entries', '/finance/open-items', '/finance/direct-debit', '/finance/accounts', '/finance/cash']);
+    expect(entries(['finance.read'], true)).toEqual(['/finance/entries', '/finance/open-items', '/finance/direct-debit', '/finance/accounts', '/finance/cash']);
+  });
 });

@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { searchDocumentsAction, type PickedDocument } from './search-action';
 import { FormField } from '@/components/forms/form-field';
+import { useHiddenInputEvent } from '@/lib/use-hidden-input-event';
 
 /**
  * Dasselbe Suchfeld wie für Kontakte, nur gegen die Akte: Ein Dokument wird
@@ -54,6 +55,8 @@ export function DocumentPicker({
     return () => clearTimeout(handle);
   }, [query, open, exceptId]);
 
+  const hiddenRef = useHiddenInputEvent(value?.id ?? '');
+
   const pick = (doc: PickedDocument | null) => {
     onChange(doc);
     setQuery(doc ? labelOf(doc) : '');
@@ -62,7 +65,7 @@ export function DocumentPicker({
 
   return (
     <FormField id={id} label={label} required={required}>
-      <input type="hidden" name={name} value={value?.id ?? ''} />
+      <input ref={hiddenRef} type="hidden" name={name} value={value?.id ?? ''} />
       {/* Der Rahmen sitzt am Feld, nicht an der Hülle: `h-auto` gegen das
           `size-full` der Palette, sonst nimmt die Hülle in einer Rasterzelle
           neben einem höheren Nachbarn die Zellenhöhe und rahmt das 38-px-Feld

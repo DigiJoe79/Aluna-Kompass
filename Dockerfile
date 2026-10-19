@@ -21,6 +21,7 @@ COPY packages/modules/animals/package.json packages/modules/animals/
 COPY packages/modules/contacts/package.json packages/modules/contacts/
 COPY packages/modules/dms/package.json packages/modules/dms/
 COPY packages/modules/finance/package.json packages/modules/finance/
+COPY packages/modules/members/package.json packages/modules/members/
 COPY packages/modules/projects/package.json packages/modules/projects/
 COPY packages/modules/site/package.json packages/modules/site/
 COPY templates/verein-basis/package.json templates/verein-basis/
@@ -33,7 +34,9 @@ COPY . .
 # next build rendert Seiten vor und laeuft dabei durch (shell)/layout.tsx,
 # das readEnv() aufruft. Zur Bauzeit gibt es keine .env, deshalb ein
 # Platzhalter — zur Laufzeit wird die Umgebung erneut gelesen, aus env_file.
-RUN SESSION_SECRET=build-time-only-not-a-real-secret-0000000000 pnpm --filter @kompass/app build
+# Node richtet seine Heap-Grenze nach dem Speicher des Containers; in einer Docker-VM mit 8 GB reichte sie mit
+# 0.3.0 nicht mehr für `next build` („heap out of memory“, 2026-10-18). 4 GB nur für diesen Schritt.
+RUN NODE_OPTIONS=--max-old-space-size=4096 SESSION_SECRET=build-time-only-not-a-real-secret-0000000000 pnpm --filter @kompass/app build
 
 # Nur die Laufzeitabhaengigkeiten, fuer das Laufzeit-Image. Der Bau oben
 # braucht TypeScript, Tailwind und Co.; der Container braucht sie nicht, und

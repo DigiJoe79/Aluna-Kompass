@@ -99,6 +99,8 @@ export const documents = sqliteTable(
     voidedAt: text('voided_at'),
     voidedByUserId: text('voided_by_user_id'),
     voidReason: text('void_reason'),
+    /** Zeitpunkt des Festschreibens (Entwurf festgeschrieben, ausgestellt, als Eingang abgelegt); beim Entwurf leer. */
+    filedAt: text('filed_at'),
     createdByUserId: text('created_by_user_id').notNull(),
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),
@@ -216,3 +218,73 @@ export const documentCounters = sqliteTable(
 export type DocumentRelationRow = typeof documentRelations.$inferSelect;
 export type DocumentNoteRow = typeof documentNotes.$inferSelect;
 export type DocumentSnippetRow = typeof documentSnippets.$inferSelect;
+
+export const MAIL_OUTBOX_STATUSES = ['queued', 'sending', 'sent', 'failed', 'blocked', 'withdrawn'] as const;
+export type MailOutboxStatus = (typeof MAIL_OUTBOX_STATUSES)[number];
+
+/**
+ * Ausgangskorb der E-Mails (Spec PDF per E-Mail § 4.2). Ein Eintrag ist eine
+ * Sendung: ein festgeschriebenes Dokument an einen Kontakt. Die Adresse steht
+ * nur hier, nie im Protokoll, und wird 90 Tage nach dem Versand geleert
+ * (`addressPurgedAt`); der Eintrag selbst bleibt.
+ *
+ * - `blocked`: Der Sender durfte nicht senden (Testumgebung ohne Umleitung,
+ *   Versand nicht eingerichtet); er nimmt den Eintrag wieder auf, sobald er darf.
+ * - `withdrawn`: auf Post umgestellt — kein Fehler, keine offene Arbeit.
+ */
+export const dmsMailOutbox = sqliteTable(
+  'dms_mail_outbox',
+  {
+    id: text('id').primaryKey(),
+    documentId: text('document_id').notNull().references(() => documents.id),
+    contactId: text('contact_id').notNull(),
+    toAddress: text('to_address').notNull(),
+    subject: text('subject').notNull(),
+    /** Der Textbaustein des Begleittexts; `null` = der mitgelieferte Text. */
+    bodySnippetId: text('body_snippet_id'),
+    status: text('status', { enum: MAIL_OUTBOX_STATUSES }).notNull().default('queued'),
+    attempts: integer('attempts').notNull().default(0),
+    /** Frühester nächster Versuch; `null` = sofort. */
+    nextAttemptAt: text('next_attempt_at'),
+    /** Seit wann der Sender den Eintrag hält — wer länger als zehn Minuten hält, ist abgestürzt. */
+    sendingSince: text('sending_since'),
+    /** Kategorie (`auth`, `connection`, `rejected`, `tls`, `other`). */
+    lastErrorCode: text('last_error_code'),
+    /** Antwort des Servers, höchstens 200 Zeichen, Adressen darin durch „…“ ersetzt. */
+    lastErrorText: text('last_error_text'),
+    messageId: text('message_id'),
+    queuedByUserId: text('queued_by_user_id'),
+    queuedAt: text('queued_at').notNull(),
+    sentAt: text('sent_at'),
+    /** Lauf eines Moduls, aus dem die Sendung stammt (`financeConfirmationRun:<id>`). */
+    runRef: text('run_ref'),
+    addressPurgedAt: text('address_purged_at'),
+  },
+  (t) => [index('dms_mail_outbox_document_contact_idx').on(t.documentId, t.contactId), index('dms_mail_outbox_status_idx').on(t.status)],
+);
+
+export type DmsMailOutboxRow = typeof dmsMailOutbox.$inferSelect;
+
+/**
+ * Von Hand in die Post-Gruppe verschoben (Nachtrag MCP-Test § 2, Plan U4 Task 2): ein Brief an einen Kontakt, der per
+ * E-Mail ginge, geht per Post — Grund „von Hand verschoben“ (`manual`). „Zurück zu E-Mail“ setzt `returnedAt`; die
+ * Zeile bleibt als Verlauf. Eine wartende, gesperrte oder nicht zugestellte Sendung im Ausgang wird beim Verschieben
+ * zurückgezogen (`withdrawn`). Keine Adresse, nur die Kennung des Kontakts.
+ */
+export const dmsMailPostMoves = sqliteTable(
+  'dms_mail_post_moves',
+  {
+    id: text('id').primaryKey(),
+    documentId: text('document_id').notNull().references(() => documents.id),
+    contactId: text('contact_id').notNull(),
+    /** Lauf eines Moduls, in dessen Versand-Schritt verschoben wurde. */
+    runRef: text('run_ref'),
+    movedAt: text('moved_at').notNull(),
+    movedByUserId: text('moved_by_user_id'),
+    returnedAt: text('returned_at'),
+    returnedByUserId: text('returned_by_user_id'),
+  },
+  (t) => [index('dms_mail_post_moves_document_contact_idx').on(t.documentId, t.contactId)],
+);
+
+export type DmsMailPostMoveRow = typeof dmsMailPostMoves.$inferSelect;

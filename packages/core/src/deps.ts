@@ -3,6 +3,7 @@ import type { Clock } from './clock';
 import type { Db } from './db/client';
 import type { DocumentEngine } from './documents/engine';
 import type { FileStore } from './files/store';
+import type { MailTransport } from './mail';
 import type { Registry } from './modules/registry';
 import type { PdfTools } from './pdf/tools';
 import type { TextExtraction } from './text/extraction';
@@ -34,6 +35,11 @@ export interface Deps {
    * Texterkennung. Der Kern ruft sie selbst nie — heute benutzt sie nur `finance`.
    */
   pdf: PdfTools;
+  /**
+   * Mailversand (`nodemailer` in der App), durchgereicht wie die Texterkennung.
+   * Der Kern ruft ihn selbst nie — heute benutzt ihn nur `dms`.
+   */
+  mail: MailTransport;
   /** Gepflegte Sprachen, erste ist Leitsprache. Als Funktion, damit eine Änderung sofort wirkt. */
   locales: () => string[];
   /**

@@ -8,9 +8,9 @@ describe('dms module', () => {
     expect(dmsModule.dependsOn).toContain('contacts');
   });
 
-  it('führt die sechs Rechte der Akte', () => {
+  it('führt die sieben Rechte der Akte', () => {
     expect(dmsModule.permissions).toEqual([
-      'dms.view', 'dms.create', 'dms.file', 'dms.void', 'dms.deleteDraft', 'dms.manage',
+      'dms.view', 'dms.create', 'dms.file', 'dms.void', 'dms.deleteDraft', 'dms.manage', 'dms.send',
     ]);
   });
 

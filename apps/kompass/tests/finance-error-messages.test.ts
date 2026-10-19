@@ -29,7 +29,7 @@ const mcpText = (failure: Failure) => {
   return (JSON.parse((res.content[0] as { text: string }).text) as { error: { message: string } }).error.message;
 };
 
-const DATA_ONLY_PARAMS: Partial<Record<FinanceErrorCode, string[]>> = { openItemExistsForDocument: ['openItemId', 'reference'] };
+const DATA_ONLY_PARAMS: Partial<Record<FinanceErrorCode, string[]>> = { openItemExistsForDocument: ['openItemId', 'reference'], ibanHasMandate: ['mandateId'] };
 
 describe('Finanzfehler aus der Sprachdatei (A6)', () => {
   it('jeder Code hat Grund und Abhilfe in de.json, und de.json kennt keinen anderen', () => {
@@ -82,7 +82,9 @@ describe('Finanzfehler aus der Sprachdatei (A6)', () => {
     }
     expect(uiText(financeConflict('humanOnly'))).toBe(`${texts.humanOnly!.reason} ${texts.humanOnly!.remedy}`);
     // Befund 13 (Spec 10.2): Grund und Abhilfe statt des rohen Einstellungsschlüssels.
-    expect(mcpText(financeConflict('humanOnly'))).toMatch(/nur hier in Kompass.*Einrichtung → Finanzen → Steuerliches.*Darf ein Agent festschreiben\?/);
+    expect(mcpText(financeConflict('humanOnly'))).toMatch(/über einen Agenten erst, wenn der Verein es freigibt.*Einrichtung → Finanzen → Steuerliches.*Darf ein Agent festschreiben und Lastschriften bearbeiten\?/);
+    // R12: ohne „hier in Kompass“; die Beschriftung des Schalters nennt seit U4, was er außer dem Festschreiben freigibt.
+    expect(mcpText(financeConflict('humanOnly'))).not.toContain('hier in Kompass');
   });
 
   it('Datum und Betrag werden beim Übersetzen formatiert (Befund 38), Wortlaut sonst unverändert', () => {

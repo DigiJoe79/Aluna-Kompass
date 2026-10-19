@@ -1,6 +1,6 @@
 import type { DbOrTx } from '@kompass/core';
 import { and, eq, isNull } from 'drizzle-orm';
-import { openCentsInternal, openItemSettlementsInternal } from '../ledger/open-items';
+import { countingPaymentsInternal, openCentsInternal } from '../ledger/open-items';
 import { DEFAULT_PROOF_MONTHS, financeAllocationLines, financeEntries, financePartnerEvidence, financePartnerPaidLines, financePartnerPaymentPositions, financePartnerPayments, financePartnerProfiles, type FinancePartnerPaidLineRow, type FinancePartnerPaymentPositionRow, type FinancePartnerPaymentRow } from '../schema';
 import { coverageRequired, evidenceCoverage, missingEvidence, proofDueDate, requiredEvidenceKinds } from './evidence-rules';
 
@@ -89,7 +89,7 @@ export function paidOnOf(db: DbOrTx, row: FinancePartnerPaymentRow): string | nu
   if (step !== 'paid' && step !== 'acknowledged') return null;
   if (row.retroactive) return [...paidLineViewsOf(db, row.id)].sort((a, b) => a.entryDate.localeCompare(b.entryDate))[0]?.entryDate ?? null;
   if (!row.openItemId) return null;
-  return openItemSettlementsInternal(db, row.openItemId).map((s) => s.entryDate).sort().at(-1) ?? null;
+  return countingPaymentsInternal(db, row.openItemId).map((s) => s.entryDate).sort().at(-1) ?? null;
 }
 
 /** Tage auf ein ISO-Datum — wie in `allocation/approvals.ts`. */

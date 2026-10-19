@@ -8,6 +8,7 @@ import { bookEntry, finalizeEntry } from '../src/ledger/finalize';
 import { attachDocument } from '../src/ledger/vouchers';
 import { cancelOpenItem, createOpenItem, listOpenItems, listOpenItemSettlements, openCentsInternal, openItemsAtInternal, updateOpenItem } from '../src/ledger/open-items';
 import { reverseEntry } from '../src/ledger/reverse';
+import { financeRetentionHolds } from '../src/ledger/holds';
 import { financeEntryDocuments, financeOpenItemSettlements } from '../src/schema';
 import { allowHumanOnlyOverMcp, insertDocument, ledgerFixture } from './helpers';
 
@@ -62,7 +63,7 @@ describe('open items', () => {
   it('an overpayment shows as overpaid with a negative open amount', async () => {
     const f = await ledgerFixture();
     const item = unwrap(await createOpenItem(f.deps, f.ctx, { kind: 'receivable', itemDate: '2026-03-01', amountCents: 5000 }));
-    unwrap(await bookEntry(f.deps, f.ctx, { entryDate: '2026-03-05', text: 'Überzahlung', moneyLines: [{ accountId: f.bank.id, amountCents: 6000, settlements: [{ openItemId: item.id, amountCents: 6000 }] }], allocationLines: [{ categoryId: f.donations.id, amountCents: 6000 }] }));
+    unwrap(await bookEntry(f.deps, f.ctx, { entryDate: '2026-03-05', text: 'Überzahlung', moneyLines: [{ accountId: f.bank.id, amountCents: 6000, settlements: [{ openItemId: item.id, amountCents: 6000 }] }], allocationLines: [{ categoryId: f.donations.id, amountCents: 6000 }], acknowledgedWarnings: ['overpaid'] }));
     expect(openCentsInternal(f.deps.db, item.id)).toBe(-1000);
     expect(unwrap(await listOpenItems(f.deps, f.ctx, { state: 'all' })).items[0]).toMatchObject({ state: 'overpaid' });
   });
@@ -269,7 +270,7 @@ describe('Befund 27 — ein stornierter Posten hat keinen offenen Betrag', () =>
     const open = unwrap(await createOpenItem(f.deps, f.ctx, { ...base, amountCents: 2000 }));
     const partial = unwrap(await createOpenItem(f.deps, f.ctx, { ...base, amountCents: 3000 }));
     const over = unwrap(await createOpenItem(f.deps, f.ctx, { ...base, amountCents: 4000 }));
-    const pay = (item: { id: string }, cents: number) => bookEntry(f.deps, f.ctx, { entryDate: '2026-03-05', text: 'x', moneyLines: [{ accountId: f.bank.id, amountCents: -cents, settlements: [{ openItemId: item.id, amountCents: cents }] }], allocationLines: [{ categoryId: f.programCosts.id, amountCents: -cents }] });
+    const pay = (item: { id: string }, cents: number) => bookEntry(f.deps, f.ctx, { entryDate: '2026-03-05', text: 'x', moneyLines: [{ accountId: f.bank.id, amountCents: -cents, settlements: [{ openItemId: item.id, amountCents: cents }] }], allocationLines: [{ categoryId: f.programCosts.id, amountCents: -cents }], acknowledgedWarnings: ['overpaid'] });
     unwrap(await pay(partial, 1000));
     unwrap(await pay(over, 4500));
     const all = unwrap(await listOpenItems(f.deps, f.ctx, { state: 'all' })).items;
@@ -327,5 +328,16 @@ describe('Befund 3 — höchstens eine aktive offene Zahlung je Dokument', () =>
         .prepare(`insert into finance_open_items (id, kind, item_date, amount_cents, document_id, created_by_user_id, created_at, updated_at) values (?, 'payable', '2026-03-01', 100, ?, 'U', 'x', 'x')`)
         .run(id, doc);
     expect(() => insert('RAW1')).toThrow(/UNIQUE/);
+  });
+});
+
+describe('retention holds of open items (Plan N1, M13)', () => {
+  it('a hold names the open item by its payment reference, not by its id', async () => {
+    const f = await ledgerFixture();
+    const withRef = unwrap(await createOpenItem(f.deps, f.ctx, { kind: 'receivable', itemDate: '2026-03-01', amountCents: 1200, contactId: f.donor.id, paymentReference: 'Beitrag 2026 Mitglied 0006' }));
+    const without = unwrap(await createOpenItem(f.deps, f.ctx, { kind: 'receivable', itemDate: '2026-03-01', amountCents: 500, contactId: f.donor.id }));
+    const holds = financeRetentionHolds(f.deps, 'contact', f.donor.id).filter((h) => h.entity === 'financeOpenItem');
+    expect(holds.find((h) => h.id === withRef.id)!.label).toEqual({ key: 'finance.records.openItemRef', params: { reference: 'Beitrag 2026 Mitglied 0006' } });
+    expect(holds.find((h) => h.id === without.id)!.label).toEqual({ key: 'finance.records.openItem', params: { id: without.id } });
   });
 });

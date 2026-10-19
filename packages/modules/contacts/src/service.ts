@@ -2,6 +2,7 @@ import { conflict, expectedVersionField, isoNow, localizedConflict, newId, notFo
 import { and, asc, count, desc, eq, inArray, isNull, like, or, sql, type SQL, type SQLWrapper } from 'drizzle-orm';
 import { z } from 'zod';
 import { displayName } from './address';
+import { automaticDeliveryInternal, DELIVERY_PREFERENCES, deliveryForContactInternal, type ContactDelivery } from './delivery';
 import { contactChannels, contactRoles, contacts, type ContactChannelRow, type ContactRoleRow, type ContactRow } from './schema';
 
 /** `lower()` in SQL, damit die Suche auch Umlaute in Großschreibung findet. */
@@ -32,6 +33,8 @@ const address = {
   city: z.string().trim().max(200).nullable().optional(),
   country: z.string().trim().length(2).toUpperCase().nullable().optional(),
   notes: z.string().trim().max(5000).nullable().optional(),
+  /** Spec PDF per E-Mail § 4.1: `auto` oder immer `post`. */
+  deliveryPreference: z.enum(DELIVERY_PREFERENCES).optional(),
 };
 
 /**
@@ -112,8 +115,10 @@ function changedFields(before: Record<string, unknown>, changes: Record<string, 
 const NAME_FIELDS = new Set(['salutation', 'firstName', 'lastName', 'name']);
 
 /** Was eine Änderung betraf, als Code für den Satz im Protokoll (Spec Protokoll § 2) — ohne Werte. */
-function updateScope(fields: string[]): 'name' | 'address' | 'other' {
+function updateScope(fields: string[]): 'name' | 'address' | 'delivery' | 'other' {
   if (fields.length > 0 && fields.every((f) => NAME_FIELDS.has(f))) return 'name';
+  // Spec PDF per E-Mail § 4.1: der Zustellweg für Briefe.
+  if (fields.length === 1 && fields[0] === 'deliveryPreference') return 'delivery';
   return fields.length > 0 && fields.every((f) => ADDRESS_FIELDS.has(f)) ? 'address' : 'other';
 }
 
@@ -170,11 +175,54 @@ export async function setContactStatus(deps: Deps, ctx: CallContext, input: unkn
   });
 }
 
-export async function getContact(deps: Deps, ctx: CallContext, id: string): Promise<Result<ContactRecord>> {
+/** Eine Ansprechperson einer Organisation: Name und Hauptkontaktweg (Nachtrag Ansprechpersonen § 2). */
+export interface ContactPerson {
+  id: string;
+  name: string;
+  channel: { kind: string; value: string } | null;
+}
+
+/**
+ * Die Detailsicht: der Kontakt mit dem Weg, auf dem ein Brief ihn erreicht
+ * (`current`), und dem, was „Automatisch“ ergäbe (`automatic`); bei einer
+ * Organisation die laufenden Personen, die zu ihr gehören, nach Nachname.
+ */
+export type ContactDetail = ContactRecord & {
+  delivery: { current: ContactDelivery; automatic: ContactDelivery };
+  people: ContactPerson[];
+};
+
+/** Hauptkontaktweg: der primäre, sonst der zuerst angelegte. */
+function mainChannel(db: DbOrTx, contactId: string): ContactPerson['channel'] {
+  const row = db
+    .select({ kind: contactChannels.kind, value: contactChannels.value })
+    .from(contactChannels)
+    .where(eq(contactChannels.contactId, contactId))
+    .orderBy(desc(contactChannels.isPrimary), sql`rowid`)
+    .get();
+  return row ?? null;
+}
+
+function peopleOf(db: DbOrTx, organizationId: string): ContactPerson[] {
+  return db
+    .select()
+    .from(contacts)
+    .where(and(eq(contacts.belongsToId, organizationId), eq(contacts.kind, 'person'), eq(contacts.status, 'active')))
+    .orderBy(sql`lower(coalesce(${contacts.lastName}, ''))`, sql`lower(coalesce(${contacts.firstName}, ''))`)
+    .all()
+    .map((p) => ({ id: p.id, name: displayName(p), channel: mainChannel(db, p.id) }));
+}
+
+export async function getContact(deps: Deps, ctx: CallContext, id: string): Promise<Result<ContactDetail>> {
   const denied = requirePermission(ctx, 'contacts.view');
   if (denied) return denied;
   const record = loadContact(deps.db, id);
-  return record ? ok(record) : notFound('contact', id);
+  if (!record) return notFound('contact', id);
+  return ok({
+    ...record,
+    delivery: { current: deliveryForContactInternal(deps.db, id), automatic: automaticDeliveryInternal(deps.db, id) },
+    people: record.kind === 'organization' ? peopleOf(deps.db, id) : [],
+  });
 }
 
 export async function listContacts(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<{ contacts: ContactRecord[]; total: number }>> {
@@ -204,8 +252,16 @@ export async function listContacts(deps: Deps, ctx: CallContext, input: unknown)
         .where(like(sqlLower(contactChannels.value), needle))
         .all()
         .map((r) => r.id);
+      // Eine Person findet man auch über den Namen ihrer Organisation (Nachtrag Ansprechpersonen § 4).
+      const byOrganization = deps.db
+        .select({ id: contacts.id })
+        .from(contacts)
+        .where(and(eq(contacts.kind, 'organization'), like(sqlLower(contacts.name), needle)))
+        .all()
+        .map((r) => r.id);
       const clauses: SQL[] = [hit(contacts.lastName), hit(contacts.firstName), hit(contacts.name), hit(contacts.city)];
       if (byChannel.length > 0) clauses.push(inArray(contacts.id, byChannel));
+      if (byOrganization.length > 0) clauses.push(inArray(contacts.belongsToId, byOrganization));
       conditions.push(or(...clauses)!);
     }
   }
@@ -234,6 +290,7 @@ export async function listContacts(deps: Deps, ctx: CallContext, input: unknown)
   return ok({ contacts: rows.map((r) => loadContact(deps.db, r.id)!), total });
 }
 
+import { managedRoleRefusal } from './managed-roles';
 import { contactRoleDefinitions } from './roles';
 
 export const contactChannelsSchema = z.object({
@@ -301,6 +358,8 @@ export async function addContactRole(deps: Deps, ctx: CallContext, input: unknow
   if (!known.has(parsed.value.role)) {
     return validate(deps, z.object({ role: z.enum([...known.keys()] as [string, ...string[]]) }), { role: parsed.value.role }) as Result<ContactRecord>;
   }
+  const managed = managedRoleRefusal(known.get(parsed.value.role)!);
+  if (managed) return managed;
   const contact = loadContact(deps.db, parsed.value.id);
   if (!contact) return notFound('contact', parsed.value.id);
   if (contact.roles.some((r) => r.role === parsed.value.role && r.until === null)) {
@@ -322,6 +381,9 @@ export async function endContactRole(deps: Deps, ctx: CallContext, input: unknow
   if (!parsed.ok) return parsed;
   const row = deps.db.select().from(contactRoles).where(eq(contactRoles.id, parsed.value.roleId)).get();
   if (!row) return notFound('contactRole', parsed.value.roleId);
+  const definition = contactRoleDefinitions(deps).get(row.role);
+  const managed = definition ? managedRoleRefusal(definition) : null;
+  if (managed) return managed;
   return deps.db.transaction((tx: DbOrTx) => {
     tx.update(contactRoles).set({ until: parsed.value.until }).where(eq(contactRoles.id, row.id)).run();
     const after = loadContact(tx, row.contactId)!;

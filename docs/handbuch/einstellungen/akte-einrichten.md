@@ -55,3 +55,25 @@ eingefügt und sind danach normaler Text.
 Die Liste der Wege für den [Versandvermerk](../akte/festschreiben-und-versand.md):
 Post, Einschreiben, E-Mail, persönlich übergeben, Portal, sonstiges. Sie
 lässt sich ergänzen; ein entfernter Weg bleibt an alten Vermerken stehen.
+
+## E-Mail
+
+Unter den Versandwegen steht der Abschnitt **E-Mail**. Die Verbindung zum
+Mailserver wird bei der Installation festgelegt (Betriebshandbuch); hier
+steht nur, ob sie eingerichtet ist, ob es eine Testumgebung mit Umleitung
+ist oder ob der Versand gesperrt ist. Ohne Verbindung sind die Felder
+gesperrt, und alle Briefe gehen per Post.
+
+- **Absender-Adresse** und **Absender-Name** (Pflicht): Die Adresse muss zum
+  Mailserver passen, sonst landen die Mails im Spam — das richtet der
+  Anbieter des Postfachs ein, Kompass prüft es nicht.
+- **Antwortadresse** (optional): Antworten gehen dorthin; Kompass liest sie
+  nicht.
+- **Höchstens je Minute**: verlangsamt den Ausgang, sperrt nichts.
+
+„Testmail an mich senden“ schickt eine kurze Mail an die Adresse Ihres
+Nutzerkontos. Die Tabelle **Begleittext je Dokumentart** wählt je Art den
+[Textbaustein](#textbausteine) für den Text der Mail; ohne Wahl gilt die
+Vorgabe. Platzhalter im Baustein: {Anrede}, {Name}, {Betreff}, {Datum},
+{Nummer}, {Verein}. Wer senden darf, regelt das Recht „Dokumente per E-Mail
+versenden“.

@@ -28,6 +28,8 @@ export const contacts = sqliteTable(
     city: text('city'),
     country: text('country'),
     notes: text('notes'),
+    /** Wie Briefe den Kontakt erreichen: `auto` (E-Mail, wenn eine Adresse da ist, sonst Post) oder immer `post`. */
+    deliveryPreference: text('delivery_preference', { enum: ['auto', 'post'] }).notNull().default('auto'),
     status: text('status', { enum: ['active', 'archived'] }).notNull().default('active'),
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),

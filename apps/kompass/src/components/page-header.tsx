@@ -21,7 +21,7 @@ export function PageHeader({
   status,
 }: {
   title?: string;
-  description?: string;
+  description?: ReactNode;
   /** Primärknopf und `RecordActions` (als letztes). Nebenaktionen (`outline`) gehören in `more` (Wächter `header-more`). */
   actions?: ReactNode;
   /**

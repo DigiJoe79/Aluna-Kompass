@@ -1,6 +1,7 @@
-import { type DashboardLine, type DashboardTile, EMPTY, hasPermission, isoDayIn, listUserNamesWithPermission, readSetting, todayIn } from '@kompass/core';
+import { type DashboardLine, type DashboardTile, EMPTY, hasPermission, isoDayIn, listUserNamesWithPermission, messageDate, readSetting, todayIn } from '@kompass/core';
 import { contacts, displayName } from '@kompass/module-contacts';
-import { and, eq, isNull, lt, or } from 'drizzle-orm';
+import { and, asc, desc, eq, gte, inArray, isNull, lt, lte, or } from 'drizzle-orm';
+import { paidOtherwiseItemIdsInternal, runItemsInternal, submitWindowInternal } from './direct-debit/runs';
 import { z } from 'zod';
 import { listApprovals } from './allocation/approvals';
 import { expenseClaimTitle, listMyExpenseClaims } from './allocation/expenses';
@@ -18,7 +19,7 @@ import { listEntries } from './ledger/entries';
 import { overdueOpenItemsInternal } from './ledger/open-items';
 import { accountBalancesAt, purposeBalancesAt } from './ledger/queries';
 import { listVouchersWithoutEntry } from './ledger/vouchers';
-import { financeAccounts, financeEntries, financeExpenseClaims, financePartnerPayments, financePartnerProfiles, financePurposes, financePurposeTransfers, type FinanceAccountRow } from './schema';
+import { financeAccounts, financeDirectDebitItems, financeDirectDebitReturns, financeDirectDebitRuns, financeSepaMandates, financeEntries, financeExpenseClaims, financePartnerPayments, financePartnerProfiles, financePurposes, financePurposeTransfers, type FinanceAccountRow } from './schema';
 import { formatEuro } from './format';
 
 /**
@@ -471,6 +472,93 @@ const partnerPaymentsWithoutProofTile: DashboardTile<Record<string, never>> = {
   },
 };
 
+/**
+ * Plan L2, Handoff 2.8 „Lastschrift fällig“: Ein angelegter Einzug wartet auf die Datei (`due`) oder mit Datei auf die
+ * Einreichung (`submit`, release #1), und heute liegt in seinem Einreichfenster (`submitWindowInternal`) — vorher ist
+ * nichts zu tun. Danach nimmt die Bank ihn nicht mehr: verfallen (`expired`, M41), zu verwerfen. Verfallene zuerst, sonst
+ * der früheste. Vor allem anderen steht ein eingereichter Einzug mit einem schon anders bezahlten Posten
+ * (`paidOtherwise`): Er hat eine Frist (die Bank zieht am Einzugstag ein), ein verfallener Einzug ist Aufräumarbeit ohne
+ * Frist. Liegt beides vor, nennt der Satz den verfallenen mit (`paidOtherwiseAndExpired`, U2 Plan N3). Nur mit Lastschrift.
+ */
+const directDebitDueTile: DashboardTile<Record<string, never>> = {
+  key: 'directDebitDue',
+  permission: 'finance.directDebit',
+  kind: 'status',
+  warningAction: true,
+  defaultOn: true,
+  options: z.object({}),
+  messageKeys: ['ok', 'due', 'submit', 'expired', 'paidOtherwise', 'paidOtherwiseAndExpired'],
+  available: (deps) => readSetting<boolean>(deps, 'finance.sepa.enabled'),
+  load(deps) {
+    const today = todayIn(deps);
+    const waiting = deps.db
+      .select()
+      .from(financeDirectDebitRuns)
+      .where(inArray(financeDirectDebitRuns.status, ['draft', 'fileCreated']))
+      .orderBy(asc(financeDirectDebitRuns.collectionDate))
+      .all();
+    const expired = waiting.find((r) => submitWindowInternal(deps, r.collectionDate, today).submitBy < today);
+    // Plan N2 Task 2 (R2): Ein eingereichter Einzug zieht einen Posten ein, der schon anders bezahlt ist. U2 (Plan N3):
+    // Die Frist schlägt die Aufräumarbeit — ein verfallener Einzug verdrängt diese Warnung nicht, er wird mitgenannt.
+    for (const submitted of deps.db.select().from(financeDirectDebitRuns).where(eq(financeDirectDebitRuns.status, 'submitted')).orderBy(asc(financeDirectDebitRuns.collectionDate)).all()) {
+      const count = paidOtherwiseItemIdsInternal(deps.db, submitted, runItemsInternal(deps.db, submitted.id)).size;
+      if (count === 0) continue;
+      const values: Record<string, string | number> = { date: messageDate(deps, submitted.collectionDate), count };
+      const href = `/finance/direct-debit/runs/${submitted.id}`;
+      if (expired) return { kind: 'status', tone: 'warning', messageKey: 'paidOtherwiseAndExpired', values: { ...values, expiredDate: messageDate(deps, expired.collectionDate) }, href };
+      return { kind: 'status', tone: 'warning', messageKey: 'paidOtherwise', values, href };
+    }
+    const run = expired ?? waiting.find((r) => {
+      const window = submitWindowInternal(deps, r.collectionDate, today);
+      return window.submitFrom <= today && today <= window.submitBy;
+    });
+    if (!run) return { kind: 'status', tone: 'neutral', messageKey: 'ok', href: '/finance/direct-debit' };
+    const messageKey = expired ? 'expired' : run.status === 'fileCreated' ? 'submit' : 'due';
+    return { kind: 'status', tone: 'warning', messageKey, values: { date: messageDate(deps, run.collectionDate) }, href: `/finance/direct-debit/runs/${run.id}` };
+  },
+};
+
+/** Plan L2, Handoff 2.8 „Mandate ohne Unterschrift“: vorbereitete Mandate, Datum = vorbereitet am. Nur mit Lastschrift. */
+const mandatesUnsignedTile: DashboardTile<Record<string, never>> = {
+  key: 'mandatesUnsigned',
+  permission: 'finance.directDebit',
+  kind: 'list',
+  defaultOn: true,
+  options: z.object({}),
+  messageKeys: ['line'],
+  available: (deps) => readSetting<boolean>(deps, 'finance.sepa.enabled'),
+  load(deps) {
+    const rows = deps.db.select().from(financeSepaMandates).where(and(isNull(financeSepaMandates.signedOn), isNull(financeSepaMandates.endedOn))).orderBy(desc(financeSepaMandates.preparedOn), desc(financeSepaMandates.reference)).all();
+    const lines: DashboardLine[] = rows.map((m) => ({ date: m.preparedOn, titleKey: 'line', values: { name: m.debtorName, reference: m.reference }, href: `/finance/direct-debit/mandates/${m.id}` }));
+    return { kind: 'list', lines, total: lines.length, href: '/finance/direct-debit?view=mandates' };
+  },
+};
+
+/**
+ * Plan L3, Spec § 7.7: Rücklastschriften, die noch zu klären sind — Zahl, dazu die Summe der zurückgegebenen Posten
+ * (ohne Bankentgelt). Ruhe: „Keine Rückgabe offen.“ Nur mit Lastschrift.
+ */
+const directDebitReturnsTile: DashboardTile<Record<string, never>> = {
+  key: 'directDebitReturns',
+  permission: 'finance.directDebit',
+  kind: 'count',
+  defaultOn: true,
+  options: z.object({}),
+  messageKeys: ['sum'],
+  available: (deps) => readSetting<boolean>(deps, 'finance.sepa.enabled'),
+  load(deps) {
+    const open = deps.db
+      .select({ amountCents: financeDirectDebitItems.amountCents })
+      .from(financeDirectDebitReturns)
+      .innerJoin(financeDirectDebitItems, eq(financeDirectDebitItems.id, financeDirectDebitReturns.itemId))
+      .where(eq(financeDirectDebitReturns.status, 'open'))
+      .all();
+    const href = '/finance/direct-debit';
+    if (open.length === 0) return { kind: 'count', count: 0, href };
+    return { kind: 'count', count: open.length, href, note: { messageKey: 'sum', values: { sum: formatEuro(open.reduce((sum, r) => sum + r.amountCents, 0)) } } };
+  },
+};
+
 export const FINANCE_DASHBOARD_TILES: readonly DashboardTile[] = [
   todoTile as DashboardTile,
   withoutVoucherTile as DashboardTile,
@@ -488,4 +576,7 @@ export const FINANCE_DASHBOARD_TILES: readonly DashboardTile[] = [
   approvalsPendingTile as DashboardTile,
   myExpensesTile as DashboardTile,
   nobodyCanApproveTile as DashboardTile,
+  directDebitDueTile as DashboardTile,
+  mandatesUnsignedTile as DashboardTile,
+  directDebitReturnsTile as DashboardTile,
 ];

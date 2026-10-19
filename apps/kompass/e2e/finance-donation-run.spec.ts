@@ -1,7 +1,7 @@
 import { Client, StreamableHTTPClientTransport } from '@modelcontextprotocol/client';
 import type { Page } from '@playwright/test';
 import { expect, test } from './fixtures';
-import { loginAsAdmin, resetDatabase } from './helpers';
+import { loginAsAdmin, resetDatabase, setMailState } from './helpers';
 import { STORY_YEAR } from './story-year';
 
 /**
@@ -16,6 +16,13 @@ import { STORY_YEAR } from './story-year';
  * das maschinelle Verfahren ist vollständig.
  */
 const YEAR = String(STORY_YEAR);
+/**
+ * „bereit“ sind drei Spender: Henrik Brandt, die Sportfreunde und — seit den Entwicklungsdaten der Lastschrift
+ * (8137ee1e) — Jonas Regenfeld mit der gebuchten ersten Rate seiner Dauerspende. Mit den zwei Aufwandsspenden
+ * (Lukas Hofmann, Nadja Vogt) stellt der Lauf fünf Bestätigungen aus, drei davon maschinell.
+ */
+const READY = 3;
+const ISSUED = READY + 2;
 
 async function mcpClient(page: Page, baseURL: string | undefined): Promise<Client> {
   await page.goto('/profile');
@@ -67,7 +74,7 @@ const issuedRow = (page: Page, name: string) => page.getByTestId('confirmation-r
 /** Die Vorschau des laufenden Jahres, vier Bestätigungen ausstellen, warten, bis das Ergebnis steht. */
 async function runToResult(page: Page): Promise<void> {
   await page.goto(`/finance/donations/run?year=${YEAR}`);
-  await page.getByTestId('run-footer').getByRole('button', { name: '4 Bestätigungen ausstellen' }).click();
+  await page.getByTestId('run-footer').getByRole('button', { name: `${ISSUED} Bestätigungen ausstellen` }).click();
   await finished(page, 20_000);
 }
 
@@ -86,8 +93,9 @@ test.describe('finance donation run', () => {
     await expect(page).toHaveURL(new RegExp(`year=${YEAR}`));
 
     const ready = page.getByTestId('run-group-ready');
-    await expect(ready.getByRole('heading')).toHaveText('bereit · 2 Bestätigungen');
-    await expect(ready.getByTestId('run-item')).toHaveCount(2);
+    await expect(ready.getByRole('heading')).toHaveText(`bereit · ${READY} Bestätigungen`);
+    await expect(ready.getByTestId('run-item')).toHaveCount(READY);
+    await expect(runItem(page, 'Jonas Regenfeld')).toBeVisible();
     await expect(runItem(page, 'Henrik Brandt')).toContainText('1 Zuwendung');
 
     const signature = page.getByTestId('run-group-needsSignature');
@@ -105,9 +113,9 @@ test.describe('finance donation run', () => {
     const footer = page.getByTestId('run-footer');
     const range = (await footer.getByTestId('run-number-range').textContent())!.trim();
     const [, first, last] = /^ZWB-\d{4}-(\d{3}) bis ZWB-\d{4}-(\d{3})$/.exec(range) ?? [];
-    expect(Number(last) - Number(first), range).toBe(3);
+    expect(Number(last) - Number(first), range).toBe(ISSUED - 1);
     await expect(footer).toContainText('Ausstellen geht nur hier in Kompass');
-    await expect(footer.getByRole('button', { name: '4 Bestätigungen ausstellen' })).toBeEnabled();
+    await expect(footer.getByRole('button', { name: `${ISSUED} Bestätigungen ausstellen` })).toBeEnabled();
 
     // Runde 3, 109/110: In Schritt 2 steht die Auswahl als Zusammenfassung; „Ändern“ führt zurück in Schritt 1.
     await expect(page.getByRole('combobox', { name: 'Ausschließen' })).toHaveCount(0);
@@ -118,11 +126,11 @@ test.describe('finance donation run', () => {
     await page.getByRole('combobox', { name: 'Ausschließen' }).fill('Sportfreunde');
     await page.getByRole('option', { name: /Sportfreunde Beispieltal/ }).click();
     await page.getByRole('button', { name: 'Vorschau zeigen' }).click();
-    await expect(footer.getByRole('button', { name: '3 Bestätigungen ausstellen' })).toBeVisible();
+    await expect(footer.getByRole('button', { name: `${ISSUED - 1} Bestätigungen ausstellen` })).toBeVisible();
     await expect(page.getByTestId('run-excluded')).toContainText('Sportfreunde Beispieltal');
     await expect(page).toHaveURL(/exclude=/);
     await page.goto(page.url());
-    await expect(page.getByTestId('run-footer').getByRole('button', { name: '3 Bestätigungen ausstellen' })).toBeVisible();
+    await expect(page.getByTestId('run-footer').getByRole('button', { name: `${ISSUED - 1} Bestätigungen ausstellen` })).toBeVisible();
     await expect(page.getByTestId('run-excluded')).toContainText('Sportfreunde Beispieltal');
     await expect(runItem(page, 'Sportfreunde Beispieltal')).toHaveCount(0);
   });
@@ -133,13 +141,13 @@ test.describe('finance donation run', () => {
     const continueUrl = '**/finance/donations/run/*/continue';
     await page.route(continueUrl, (route) => route.fulfill({ status: 503, body: '' }));
     await page.goto(`/finance/donations/run?year=${YEAR}`);
-    await page.getByTestId('run-footer').getByRole('button', { name: '4 Bestätigungen ausstellen' }).click();
+    await page.getByTestId('run-footer').getByRole('button', { name: `${ISSUED} Bestätigungen ausstellen` }).click();
     await expect(page).toHaveURL(/run=/);
     await expect(step(page, 'run')).toHaveAttribute('aria-current', 'step');
     const progress = page.getByTestId('run-progress');
-    await expect(progress.getByRole('progressbar')).toHaveAttribute('max', '4');
+    await expect(progress.getByRole('progressbar')).toHaveAttribute('max', String(ISSUED));
     const status = progress.getByTestId('run-progress-status');
-    await expect(status).toHaveText('0 von 4 Bestätigungen ausgestellt');
+    await expect(status).toHaveText(`0 von ${ISSUED} Bestätigungen ausgestellt`);
     await expect(status).toHaveAttribute('aria-live', 'polite');
     await expect(progress).toContainText('Sie können die Seite verlassen');
 
@@ -147,9 +155,9 @@ test.describe('finance donation run', () => {
     await page.goto(page.url());
     await finished(page, 20_000);
     const result = page.getByTestId('run-result');
-    await expect(result.getByTestId('run-summary')).toHaveText('4 ausgestellt, 4 übersprungen'); // 14 A4
+    await expect(result.getByTestId('run-summary')).toHaveText(`${ISSUED} ausgestellt, 4 übersprungen`); // 14 A4
 
-    const [machine] = await Promise.all([page.waitForEvent('download'), result.getByRole('button', { name: 'Maschinelle Bestätigungen (PDF) · 2' }).click()]);
+    const [machine] = await Promise.all([page.waitForEvent('download'), result.getByRole('button', { name: `Maschinelle Bestätigungen (PDF) · ${READY}` }).click()]);
     expect(machine.suggestedFilename()).toMatch(/maschinell\.pdf$/);
     const [signature] = await Promise.all([page.waitForEvent('download'), result.getByRole('button', { name: 'Zum Unterschreiben (PDF) · 2' }).click()]);
     expect(signature.suggestedFilename()).toMatch(/zum-unterschreiben\.pdf$/);
@@ -157,6 +165,53 @@ test.describe('finance donation run', () => {
     await page.goto('/finance/donations');
     // Befund 21: eine einzige Zeile ergibt im Lauf die Einzelbestätigung (Art „Geld“), keine Sammelbestätigung.
     await expect(issuedRow(page, 'Sportfreunde Beispieltal')).toContainText('Geld');
+  });
+
+  /** Handoff 2b E3 (20c): Versand im Ergebnis — Henrik per E-Mail (Test-Transport mit Umleitung), die Sportfreunde per Post. */
+  test('Versand im Ergebnis: eine Bestätigung per E-Mail, eine per Post vermerkt', async ({ page }) => {
+    await setMailState(page, 'redirect');
+    await loginAsAdmin(page);
+    await page.goto(`/finance/donations/run?year=${YEAR}`);
+    await page.getByTestId('run-footer').getByRole('button', { name: /\d+ Bestätigungen ausstellen/ }).click();
+    await finished(page, 20_000);
+    const stepBox = page.getByTestId('dispatch-step');
+    await expect(stepBox).toContainText('Die Mails gehen an umleitung@example.org');
+    const mail = stepBox.getByTestId('dispatch-mail');
+    const henrik = mail.getByTestId('dispatch-mail-row').filter({ hasText: 'Henrik Brandt' });
+    await expect(henrik).toContainText('henrik.brandt@example.org');
+    await mail.getByRole('button', { name: /^\d+ per E-Mail senden$/ }).click();
+    await expect(page.getByText(/E-Mails? w(ird|erden) gesendet\./)).toBeVisible();
+    await expect(henrik).toContainText(/wartet|wird gesendet|gesendet/);
+
+    const post = stepBox.getByTestId('dispatch-post');
+    const club = post.getByTestId('dispatch-post-row').filter({ hasText: 'Sportfreunde Beispieltal' });
+    await expect(club).toContainText('keine E-Mail-Adresse');
+    await club.getByRole('button', { name: 'Versand vermerken …' }).click();
+    await page.getByRole('dialog', { name: 'Versand vermerken' }).getByRole('button', { name: 'Vermerken' }).click();
+    await expect(club).toContainText('versandt');
+  });
+
+  /** Plan U4 Task 2 (Nachtrag MCP-Test § 2): eine Zeile der Mail-Gruppe per Zeilenmenü in die Post-Gruppe, dort drucken und vermerken. */
+  test('Versand im Ergebnis: eine Zeile der Mail-Gruppe per Post schicken und vermerken', async ({ page }) => {
+    await setMailState(page, 'redirect');
+    await loginAsAdmin(page);
+    await page.goto(`/finance/donations/run?year=${YEAR}`);
+    await page.getByTestId('run-footer').getByRole('button', { name: /\d+ Bestätigungen ausstellen/ }).click();
+    await finished(page, 20_000);
+    const stepBox = page.getByTestId('dispatch-step');
+    const mail = stepBox.getByTestId('dispatch-mail');
+    await mail.getByRole('button', { name: 'Aktionen für Henrik Brandt' }).click();
+    await page.getByRole('menuitem', { name: 'Per Post schicken' }).click();
+    await expect(page.getByText('In die Post-Gruppe verschoben.')).toBeVisible();
+    const henrik = stepBox.getByTestId('dispatch-post').getByTestId('dispatch-post-row').filter({ hasText: 'Henrik Brandt' });
+    await expect(henrik).toContainText('von Hand verschoben');
+    await expect(mail.getByTestId('dispatch-mail-row').filter({ hasText: 'Henrik Brandt' })).toHaveCount(0);
+    await expect(stepBox.getByTestId('dispatch-print')).toBeVisible();
+    await henrik.getByRole('button', { name: 'Versand vermerken …' }).click();
+    await page.getByRole('dialog', { name: 'Versand vermerken' }).getByRole('button', { name: 'Vermerken' }).click();
+    await expect(henrik).toContainText('versandt');
+    // Vermerkt: kein „Zurück zu E-Mail“ mehr.
+    await expect(henrik.getByRole('button', { name: 'Aktionen für Henrik Brandt' })).toHaveCount(0);
   });
 
   test('Versandvermerk für alle setzt nur die maschinellen; die zu unterschreibenden bleiben in „Unterschrift fehlt“', async ({ page }) => {
@@ -209,7 +264,7 @@ test.describe('finance donation run', () => {
     await expect(henrik).toContainText('Rückgabe liegt als Entwurf vor');
     await expect(henrik).toContainText('1 von 1 Zeile ausgeschlossen');
     await expect(henrik.getByRole('link', { name: 'Entwurf öffnen' })).toHaveAttribute('href', `/finance/entries/${draft.id}`);
-    await expect(page.getByTestId('run-footer').getByRole('button', { name: '3 Bestätigungen ausstellen' })).toBeVisible();
+    await expect(page.getByTestId('run-footer').getByRole('button', { name: `${ISSUED - 1} Bestätigungen ausstellen` })).toBeVisible();
   });
 
   test('ein Nachzügler-Lauf zeigt nur, was noch fehlt', async ({ page, baseURL }) => {
@@ -223,7 +278,7 @@ test.describe('finance donation run', () => {
     await expect(page).toHaveURL(/followUp=/);
     await expect(step(page, 'preview')).toHaveAttribute('aria-current', 'step');
     await expect(page.getByTestId('run-group-ready')).toHaveCount(0);
-    for (const name of ['Henrik Brandt', 'Sportfreunde Beispieltal', 'Lukas Hofmann']) await expect(runItem(page, name)).toHaveCount(0);
+    for (const name of ['Henrik Brandt', 'Sportfreunde Beispieltal', 'Jonas Regenfeld', 'Lukas Hofmann']) await expect(runItem(page, name)).toHaveCount(0);
     const followUpUrl = page.url();
     const contactHref = (await runItem(page, 'Tobias Adler').getByRole('link', { name: 'Anschrift ergänzen' }).getAttribute('href'))!;
 
@@ -261,8 +316,8 @@ test.describe('finance donation run', () => {
     await expect(row).toHaveCount(2);
     // 09 B17: Das Jahr in der ersten Spalte öffnet den Lauf.
     await row.filter({ hasNotText: 'Post' }).getByRole('link').first().click();
-    await expect(page.getByTestId('run-summary')).toHaveText('4 ausgestellt, 4 übersprungen'); // 14 A4
-    await expect(page.getByRole('button', { name: 'Maschinelle Bestätigungen (PDF) · 2' })).toBeEnabled();
+    await expect(page.getByTestId('run-summary')).toHaveText(`${ISSUED} ausgestellt, 4 übersprungen`); // 14 A4
+    await expect(page.getByRole('button', { name: `Maschinelle Bestätigungen (PDF) · ${READY}` })).toBeEnabled();
     await expect(page.getByRole('button', { name: 'Versand für alle vermerken' })).toHaveCount(0);
   });
 });

@@ -1,4 +1,4 @@
-import { expectedVersionField, isoNow, newId, notFound, ok, requirePermission, staleVersion, validate, type CallContext, type DbOrTx, type Deps, type Result } from '@kompass/core';
+import { expectedVersionField, invalid, isoNow, newId, notFound, ok, requirePermission, staleVersion, validate, type CallContext, type DbOrTx, type Deps, type Result } from '@kompass/core';
 import { contacts } from '@kompass/module-contacts';
 import { getDocumentRecord, linkDocumentInternal } from '@kompass/module-dms';
 import { and, desc, eq, isNull, lte, ne } from 'drizzle-orm';
@@ -8,6 +8,7 @@ import { financeConflict, requireHumanChannelFinance } from '../errors';
 import { financeEntries, financeMoneyLines, financeOpenItems, financeOpenItemSettlements, type FinanceOpenItemRow } from '../schema';
 import { requireFinanceRead } from './access';
 import { TAX_CODES } from './codes';
+import { registeredOpenItemOrigins } from './origins';
 
 /** Eine Zeile der Zuordnungsvorlage — die Vorbelegung, mit der `bookFromTransaction` einen offenen Posten begleicht. */
 
@@ -29,31 +30,40 @@ function contactExists(db: DbOrTx, id: string): boolean {
  * Σ Settlements festgeschriebener, nicht stornierter Buchungen — ein Storno
  * gibt den Posten wieder frei, ohne dass eine Zeile gelöscht wird. Mit `asOf`
  * zählen nur Settlements, deren Buchungsdatum nicht danach liegt (Prüfstein 3:
- * am 31.12. ist die Zahlung vom Januar noch nicht „passiert“).
+ * am 31.12. ist die Zahlung vom Januar noch nicht „passiert“). Rück-Ausgleiche
+ * (Spec Mitglieder und Lastschrift § 6.2) ziehen ab — aber nur, solange der
+ * Ausgleich, den sie zurücknehmen, selbst noch zählt: Ist die zurückgegebene
+ * Zahlung zurückgenommen, öffnete der Rück-Ausgleich sonst doppelt.
  */
 function settledCentsFor(db: DbOrTx, itemId: string, asOf?: string): number {
   const rows = db
-    .select({ amountCents: financeOpenItemSettlements.amountCents, entryDate: financeEntries.entryDate, status: financeEntries.status, reversedByEntryId: financeEntries.reversedByEntryId })
+    .select({ id: financeOpenItemSettlements.id, amountCents: financeOpenItemSettlements.amountCents, reversesSettlementId: financeOpenItemSettlements.reversesSettlementId, entryDate: financeEntries.entryDate, status: financeEntries.status, reversedByEntryId: financeEntries.reversedByEntryId })
     .from(financeOpenItemSettlements)
     .innerJoin(financeMoneyLines, eq(financeOpenItemSettlements.moneyLineId, financeMoneyLines.id))
     .innerJoin(financeEntries, eq(financeMoneyLines.entryId, financeEntries.id))
     .where(eq(financeOpenItemSettlements.openItemId, itemId))
     .all();
+  const live = (r: (typeof rows)[number]) => r.status === 'final' && r.reversedByEntryId === null;
+  const liveIds = new Set(rows.filter(live).map((r) => r.id));
   return rows
-    .filter((r) => r.status === 'final' && r.reversedByEntryId === null && (asOf === undefined || r.entryDate <= asOf))
-    .reduce((s, r) => s + r.amountCents, 0);
+    .filter((r) => live(r) && (asOf === undefined || r.entryDate <= asOf))
+    .filter((r) => r.reversesSettlementId === null || liveIds.has(r.reversesSettlementId))
+    .reduce((s, r) => s + (r.reversesSettlementId === null ? r.amountCents : -r.amountCents), 0);
 }
 
-/** Befund 6: Σ Settlements an einem Entwurf (noch nicht festgeschrieben) — „Zahlung liegt als Entwurf vor“ statt nur „überfällig“. */
-function draftSettlementCentsFor(db: DbOrTx, itemId: string): number {
+/**
+ * Befund 6: Σ Settlements an einem Entwurf (noch nicht festgeschrieben) — „Zahlung liegt als Entwurf vor“ statt nur
+ * „überfällig“. Ein Rück-Ausgleich im Entwurf ist keine Zahlung und zählt nicht.
+ */
+export function draftSettlementCentsInternal(db: DbOrTx, itemId: string): number {
   const rows = db
-    .select({ amountCents: financeOpenItemSettlements.amountCents, status: financeEntries.status })
+    .select({ amountCents: financeOpenItemSettlements.amountCents, reversesSettlementId: financeOpenItemSettlements.reversesSettlementId, status: financeEntries.status })
     .from(financeOpenItemSettlements)
     .innerJoin(financeMoneyLines, eq(financeOpenItemSettlements.moneyLineId, financeMoneyLines.id))
     .innerJoin(financeEntries, eq(financeMoneyLines.entryId, financeEntries.id))
     .where(eq(financeOpenItemSettlements.openItemId, itemId))
     .all();
-  return rows.filter((r) => r.status === 'draft').reduce((s, r) => s + r.amountCents, 0);
+  return rows.filter((r) => r.status === 'draft' && r.reversesSettlementId === null).reduce((s, r) => s + r.amountCents, 0);
 }
 
 /**
@@ -117,7 +127,7 @@ function openItemViewOf(db: DbOrTx, row: FinanceOpenItemRow): OpenItemView {
   // Befund 27: Ein Storno ist kein Betrag, der noch aussteht. Nur die Sicht sagt 0; `openCentsInternal` rechnet weiter mit dem Rest, weil seine Aufrufer `<= 0` als bezahlt lesen.
   const openCents = row.cancelledAt !== null ? 0 : row.amountCents - settledCents;
   const state: OpenItemView['state'] = row.cancelledAt !== null ? 'cancelled' : settledCents === row.amountCents ? 'settled' : settledCents > row.amountCents ? 'overpaid' : 'open';
-  return { ...row, settledCents, openCents, state, lineTemplate: parsedLineTemplate(row.lineTemplate), draftSettlementCents: draftSettlementCentsFor(db, row.id) };
+  return { ...row, settledCents, openCents, state, lineTemplate: parsedLineTemplate(row.lineTemplate), draftSettlementCents: draftSettlementCentsInternal(db, row.id) };
 }
 
 /** Nur Zählwerte und IDs (Spec 10.3): nie die Zahlungsreferenz, nie die Notiz, nie der Kontakt. */
@@ -181,6 +191,7 @@ export async function createOpenItem(deps: Deps, ctx: CallContext, input: unknow
   const parsed = validate(deps, createSchema, input);
   if (!parsed.ok) return parsed;
   const v = parsed.value;
+  if (isOwnedOrigin(deps, v.originType)) return financeConflict('openItemOriginOwned');
   if (v.contactId && !contactExists(deps.db, v.contactId)) return notFound('contact', v.contactId);
   const doc = await checkOptionalDocument(deps, ctx, v.documentId);
   if (!doc.ok) return doc;
@@ -213,6 +224,14 @@ export function createOpenItemInternal(tx: DbOrTx, deps: Deps, ctx: CallContext,
   return openItemViewOf(tx, row);
 }
 
+/**
+ * Ob ein Herkunftstyp einem anderen Modul gehört (Spec Mitglieder und Lastschrift § 6.1) — über alle installierten
+ * Module, damit das Ausschalten eines Moduls seine Posten nicht für die öffentlichen Dienste freigibt.
+ */
+function isOwnedOrigin(deps: Deps, originType: string | null | undefined): boolean {
+  return !!originType && registeredOpenItemOrigins(deps, { includeDisabled: true }).has(originType);
+}
+
 const updateSchema = z.object({
   id: z.string().min(1),
   expectedVersion: expectedVersionField,
@@ -236,6 +255,7 @@ export async function updateOpenItem(deps: Deps, ctx: CallContext, input: unknow
   const v = parsed.value;
   const before = deps.db.select().from(financeOpenItems).where(eq(financeOpenItems.id, v.id)).get();
   if (!before) return notFound('financeOpenItem', v.id);
+  if (isOwnedOrigin(deps, before.originType) || isOwnedOrigin(deps, v.originType)) return financeConflict('openItemOriginOwned');
   const stale = staleVersion(v.expectedVersion, before.updatedAt);
   if (stale) return stale;
   if (openItemHasAnySettlementInternal(deps.db, before.id)) return financeConflict('openItemInUse');
@@ -294,6 +314,99 @@ export async function cancelOpenItem(deps: Deps, ctx: CallContext, input: unknow
     financeAudit(tx, deps, ctx, { action: 'finance.openItem.cancel', entity: 'financeOpenItem', id: before.id, before: auditFields(before), after: auditFields(after) });
     return ok(openItemViewOf(tx, after));
   });
+}
+
+const originCreateSchema = z.object({
+  originType: z.string().min(1),
+  originId: z.string().min(1),
+  contactId: z.string().min(1),
+  amountCents: z.number().int().positive(),
+  itemDate: z.string().date(),
+  dueOn: z.string().date(),
+  paymentReference: z.string().trim().min(1).max(120).nullable(),
+  lineTemplate: z.array(lineTemplateEntrySchema),
+});
+
+/** Ein offener Posten mit Herkunft aus einem anderen Modul — immer eine Forderung (Spec Mitglieder und Lastschrift § 6.1). */
+export type OriginOpenItemInput = z.infer<typeof originCreateSchema>;
+
+/**
+ * Interne API für Module mit `dependsOn: ['finance']` (Spec Mitglieder und Lastschrift § 6.1): eine Forderung mit
+ * angemeldeter Herkunft anlegen, in der Transaktion des aufrufenden Dienstes. **Keine eigene Rechteprüfung** — der
+ * Dienst des Moduls, der hier hereinruft, hat sein Recht geprüft (Prinzip 6 gilt für ihn). Protokolliert wie
+ * `createOpenItem`.
+ */
+export function createOriginOpenItem(tx: DbOrTx, deps: Deps, ctx: CallContext, input: OriginOpenItemInput): Result<OpenItemView> {
+  const parsed = validate(deps, originCreateSchema, input);
+  if (!parsed.ok) return parsed;
+  const v = parsed.value;
+  if (!registeredOpenItemOrigins(deps).has(v.originType)) return financeConflict('openItemOriginUnknown');
+  if (!contactExists(tx, v.contactId)) return notFound('contact', v.contactId);
+  return ok(createOpenItemInternal(tx, deps, ctx, { ...v, kind: 'receivable' }));
+}
+
+/** Der Posten mit dieser Herkunft, nicht storniert — sonst der Grund. */
+function ownOriginItem(tx: DbOrTx, openItemId: string, originType: string): Result<FinanceOpenItemRow> {
+  const row = tx.select().from(financeOpenItems).where(eq(financeOpenItems.id, openItemId)).get();
+  if (!row) return notFound('financeOpenItem', openItemId);
+  if (row.originType !== originType) return financeConflict('openItemOriginOwned');
+  if (row.cancelledAt !== null) return financeConflict('openItemCancelled');
+  return ok(row);
+}
+
+const rescheduleSchema = z.object({ openItemId: z.string().min(1), originType: z.string().min(1), dueOn: z.string().date() });
+
+/** Interne API (wie `createOriginOpenItem`, ohne eigene Rechteprüfung): die Fälligkeit eines eigenen Postens verschieben. */
+export function rescheduleOriginOpenItem(tx: DbOrTx, deps: Deps, ctx: CallContext, input: z.infer<typeof rescheduleSchema>): Result<OpenItemView> {
+  const parsed = validate(deps, rescheduleSchema, input);
+  if (!parsed.ok) return parsed;
+  const before = ownOriginItem(tx, parsed.value.openItemId, parsed.value.originType);
+  if (!before.ok) return before;
+  const after: FinanceOpenItemRow = { ...before.value, dueOn: parsed.value.dueOn, updatedAt: isoNow(deps.clock) };
+  tx.update(financeOpenItems).set({ dueOn: after.dueOn, updatedAt: after.updatedAt }).where(eq(financeOpenItems.id, after.id)).run();
+  financeAudit(tx, deps, ctx, { action: 'finance.openItem.reschedule', entity: 'financeOpenItem', id: after.id, before: { dueOn: before.value.dueOn }, after: { dueOn: after.dueOn } });
+  return ok(openItemViewOf(tx, after));
+}
+
+const originCancelSchema = z.object({ openItemId: z.string().min(1), originType: z.string().min(1), note: z.string().trim().min(1).max(500).nullable() });
+
+/**
+ * Interne API (wie `createOriginOpenItem`, ohne eigene Rechteprüfung): einen eigenen Posten ohne Zahlung erledigen —
+ * nur, solange keine festgeschriebene, nicht zurückgenommene Zahlung daran hängt. Ein bloßer Entwurf hindert nicht;
+ * er scheitert beim Festschreiben an `openItemCancelled`. Protokolliert wie `cancelOpenItem`.
+ */
+export function cancelOriginOpenItem(tx: DbOrTx, deps: Deps, ctx: CallContext, input: z.infer<typeof originCancelSchema>): Result<OpenItemView> {
+  const parsed = validate(deps, originCancelSchema, input);
+  if (!parsed.ok) return parsed;
+  const before = ownOriginItem(tx, parsed.value.openItemId, parsed.value.originType);
+  if (!before.ok) return before;
+  if (settledCentsFor(tx, before.value.id) > 0) return financeConflict('openItemHasPayments');
+  const now = isoNow(deps.clock);
+  const after: FinanceOpenItemRow = { ...before.value, cancelledAt: now, cancelledByUserId: ctx.userId, cancelNote: parsed.value.note, updatedAt: now };
+  tx.update(financeOpenItems).set(after).where(eq(financeOpenItems.id, after.id)).run();
+  financeAudit(tx, deps, ctx, { action: 'finance.openItem.cancel', entity: 'financeOpenItem', id: after.id, before: auditFields(before.value), after: auditFields(after) });
+  return ok(openItemViewOf(tx, after));
+}
+
+const originReduceSchema = z.object({ openItemId: z.string().min(1), originType: z.string().min(1), amountCents: z.number().int().min(1).max(100_000_000) });
+
+/**
+ * Interne API (wie `cancelOriginOpenItem`, ohne eigene Rechteprüfung): einen eigenen Posten auf einen kleineren Betrag
+ * kürzen — den Rest erlassen (Plan M4 Task 5b). Nicht unter die Summe der festgeschriebenen Zahlungen; ist er danach
+ * ausgeglichen, ist er erledigt. Protokoll: der neue Betrag, keine Person, kein Freitext.
+ */
+export function reduceOriginOpenItem(tx: DbOrTx, deps: Deps, ctx: CallContext, input: z.infer<typeof originReduceSchema>): Result<OpenItemView> {
+  const parsed = validate(deps, originReduceSchema, input);
+  if (!parsed.ok) return parsed;
+  const before = ownOriginItem(tx, parsed.value.openItemId, parsed.value.originType);
+  if (!before.ok) return before;
+  const { amountCents } = parsed.value;
+  if (amountCents >= before.value.amountCents) return invalid([{ path: 'amountCents', message: 'notLower' }]);
+  if (amountCents < settledCentsFor(tx, before.value.id)) return financeConflict('openItemBelowSettled');
+  const after: FinanceOpenItemRow = { ...before.value, amountCents, updatedAt: isoNow(deps.clock) };
+  tx.update(financeOpenItems).set({ amountCents, updatedAt: after.updatedAt }).where(eq(financeOpenItems.id, after.id)).run();
+  financeAudit(tx, deps, ctx, { action: 'finance.openItem.reduce', entity: 'financeOpenItem', id: after.id, before: { amountCents: before.value.amountCents }, after: { amountCents }, params: { amountCents } });
+  return ok(openItemViewOf(tx, after));
 }
 
 const listSchema = z.object({
@@ -355,7 +468,7 @@ export function openItemSettlementsInternal(db: DbOrTx, openItemId: string): Ope
   const rows = db
     .select({
       entryId: financeEntries.id, entryNumber: financeEntries.number, entryDate: financeEntries.entryDate,
-      amountCents: financeOpenItemSettlements.amountCents, status: financeEntries.status, reversedByEntryId: financeEntries.reversedByEntryId,
+      amountCents: financeOpenItemSettlements.amountCents, reversesSettlementId: financeOpenItemSettlements.reversesSettlementId, status: financeEntries.status, reversedByEntryId: financeEntries.reversedByEntryId,
     })
     .from(financeOpenItemSettlements)
     .innerJoin(financeMoneyLines, eq(financeOpenItemSettlements.moneyLineId, financeMoneyLines.id))
@@ -364,5 +477,27 @@ export function openItemSettlementsInternal(db: DbOrTx, openItemId: string): Ope
     .all();
   return rows
     .filter((r) => r.status === 'final' && r.reversedByEntryId === null)
-    .map((r) => ({ entryId: r.entryId, entryNumber: r.entryNumber, amountCents: r.amountCents, entryDate: r.entryDate }));
+    // Eine Rückgabe (Rück-Ausgleich, Spec Mitglieder und Lastschrift § 6.2) steht mit negativem Betrag darin — die Summe bleibt die von `settledCentsFor`.
+    .map((r) => ({ entryId: r.entryId, entryNumber: r.entryNumber, amountCents: r.reversesSettlementId === null ? r.amountCents : -r.amountCents, entryDate: r.entryDate }));
+}
+
+/**
+ * Die Zahlungen eines Postens, die noch zählen, ohne Rechteprüfung — für „ausgezahlt am“ von Auslagen und
+ * Partnerzahlungen: gewöhnliche Ausgleiche an festgeschriebenen, nicht zurückgenommenen Buchungen, abzüglich der
+ * Rück-Ausgleiche, die selbst zählen (Spec Mitglieder und Lastschrift § 6.2). Ganz zurückgegebene fallen weg; der
+ * Betrag ist der Rest.
+ */
+export function countingPaymentsInternal(db: DbOrTx, openItemId: string): { entryDate: string; amountCents: number }[] {
+  const rows = db
+    .select({ id: financeOpenItemSettlements.id, amountCents: financeOpenItemSettlements.amountCents, reversesSettlementId: financeOpenItemSettlements.reversesSettlementId, entryDate: financeEntries.entryDate, status: financeEntries.status, reversedByEntryId: financeEntries.reversedByEntryId })
+    .from(financeOpenItemSettlements)
+    .innerJoin(financeMoneyLines, eq(financeOpenItemSettlements.moneyLineId, financeMoneyLines.id))
+    .innerJoin(financeEntries, eq(financeMoneyLines.entryId, financeEntries.id))
+    .where(eq(financeOpenItemSettlements.openItemId, openItemId))
+    .all()
+    .filter((r) => r.status === 'final' && r.reversedByEntryId === null);
+  return rows
+    .filter((r) => r.reversesSettlementId === null)
+    .map((r) => ({ entryDate: r.entryDate, amountCents: r.amountCents - rows.filter((b) => b.reversesSettlementId === r.id).reduce((s, b) => s + b.amountCents, 0) }))
+    .filter((r) => r.amountCents > 0);
 }

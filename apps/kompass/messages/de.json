@@ -156,6 +156,9 @@
       "saved": "Zwischenstand gespeichert · {time}",
       "offline": "Nicht gespeichert – keine Verbindung. Ihre Eingaben bleiben auf diesem Gerät, bis die Verbindung wieder da ist.",
       "failed": "Nicht gespeichert: {detail}"
+    },
+    "agentSwitch": {
+      "title": "Agent"
     }
   },
   "folderTree": {
@@ -561,11 +564,19 @@
       "movedInBetween": { "reason": "Inzwischen wurde es an anderer Stelle verschoben.", "remedy": "Laden Sie die Seite neu und verschieben Sie es von dort." }
     },
     "humanOnly": "Das geht nur hier in Kompass, nicht über einen Agenten.",
+    "humanOnlyFor": {
+      "members": "Das geht über einen Agenten erst, wenn der Verein es freigibt: Einrichtung → Mitglieder → Nummern und Fristen → „Darf ein Agent Mitglieder aufnehmen, Läufe starten und Briefe ausstellen?“ einschalten.",
+      "dms": "Das geht über einen Agenten erst, wenn der Verein es freigibt: Einrichtung → Akte → Versand → „Darf ein Agent Dokumente per E-Mail senden?“ einschalten."
+    },
     "settingManaged": "Diese Einstellung wird im Modul „{module}“ geführt und dort geändert.",
     "settingUiOnly": "Diese Einstellung lässt sich nur in der Oberfläche ändern.",
     "insufficientPrivileges": {
       "reason": "Dafür fehlen Ihnen selbst Rechte: {permissions}.",
       "remedy": "Bitten Sie jemanden, der diese Rechte hat."
+    },
+    "documentAlreadySent": {
+      "reason": "Der Brief {number} ist schon versandt und lässt sich nicht mehr stornieren.",
+      "remedy": "Schreiben Sie eine Berichtigung als neuen Brief."
     },
     "siteJobRunning": {
       "reason": "{kind, select, publish {Die Webseite wird gerade publiziert.} preview {Es läuft gerade eine Vorschau der Webseite.} deployCheck {Es läuft gerade ein Verbindungstest der Webseite.} other {Es läuft gerade ein Lauf der Webseite.}}",
@@ -574,6 +585,10 @@
     "documentTypeHasRules": {
       "reason": "Die Dokumentart „{label}“ wird noch von Ablageregeln genutzt: {matchList}.",
       "remedy": "Löschen oder ändern Sie zuerst diese Regeln."
+    },
+    "roleManagedByModule": {
+      "reason": "Diese Rolle führt das Modul „{modules}“.",
+      "remedy": "Ändern Sie sie dort."
     },
     "retentionHoldActive": {
       "reason": "{permanent, select, yes {Der Kontakt wird dauerhaft aufbewahrt} other {Der Kontakt wird noch bis {untilText} aufbewahrt}}, gehalten von {holderList}.",
@@ -683,6 +698,12 @@
       }
     },
     "fields": {
+      "feeExemptType": "Für eine beitragsfreie Art gibt es keine Regel.",
+      "duplicateLevelKey": "Jede Mahnstufe nur einmal.",
+      "notLower": "Der neue Betrag muss kleiner sein als der bisherige.",
+      "intervalNotAllowed": "Der Rhythmus muss unter den erlaubten sein.",
+      "duplicateMemberType": "Jede Art nur einmal je Stand.",
+      "unknownMemberType": "Diese Mitgliedsart gibt es nicht.",
       "tilesOrLayout": "Entweder die Liste der Kacheln oder das Layout mit Spalten, nicht beides.",
       "columnCount": "Dieses Layout hat {count} Spalten.",
       "unknownDispatchChannel": "Unbekannter Versandweg.",
@@ -772,6 +793,13 @@
       "membershipFeeNotCertifiable": "Mitgliedsbeiträge sind bei diesem Verein nicht bescheinigbar.",
       "totalTooLarge": "Die Summe ist zu groß, um sie in Worten zu schreiben.",
       "invalidIban": "Diese IBAN ist ungültig.",
+      "invalidBic": "Diese BIC ist ungültig.",
+      "invalidCreditorId": "Diese Gläubiger-Identifikationsnummer ist ungültig.",
+      "invalidCharacters": "Erlaubt sind Buchstaben ohne Umlaute, Ziffern, Leerzeichen und + ? / - : ( ) . , '",
+      "beforeSigned": "Das Datum liegt vor der Unterschrift des Mandats.",
+      "beforeFirstDue": "Das Datum liegt vor der ersten Rate.",
+      "untilBeforeFrom": "Das Ende liegt vor dem Beginn.",
+      "nothingChanged": "Ändern Sie mindestens ein Feld.",
       "amountOrDebitCredit": "Wählen Sie entweder eine Spalte „Betrag mit Vorzeichen“ oder beide Spalten „Ausgang (Soll)“ und „Eingang (Haben)“.",
       "nameOrPurpose": "Wählen Sie mindestens den Namen der Gegenseite oder den Verwendungszweck.",
       "ruleNeedsCondition": "Eine Regel braucht mindestens eine Bedingung.",
@@ -784,6 +812,11 @@
       "unknownDatedValueKey": "Diesen Wert gibt es nicht.",
       "amountCentsRequired": "Der Betrag darf nicht 0 sein.",
       "endBeforeStart": "Das Ende liegt vor dem Beginn.",
+      "beforeJoined": "Das Datum liegt vor dem Eintritt.",
+      "beforeApplied": "Das Datum liegt vor dem Antrag.",
+      "guardianIsMember": "Die gesetzliche Vertretung ist eine andere Person als das Mitglied.",
+      "deferNotLater": "Eine Stundung verschiebt die Fälligkeit nach hinten — wählen Sie einen späteren Tag.",
+      "beforeToday": "Das Datum liegt vor heute.",
       "fiscalYearTooLong": "Ein Geschäftsjahr dauert höchstens zwölf Monate.",
       "periodNeedsBothDates": "Ein Zeitraum braucht Beginn und Ende.",
       "fiscalYearOrPeriod": "Wählen Sie entweder ein Geschäftsjahr oder einen Zeitraum.",
@@ -804,7 +837,8 @@
       "emptyProposal": "Eine Änderung braucht mindestens einen Wert oder Fotos.",
       "notAnimalPhoto": "Das ist kein Foto dieses Hundes.",
       "mediaNotAllowed": "Ein neuer Hund hat noch keine Fotos in Kompass.",
-      "notProposed": "Dieses Feld steht nicht im Vorschlag."
+      "notProposed": "Dieses Feld steht nicht im Vorschlag.",
+      "unknownAccount": "Dieses Konto gibt es nicht oder es ist stillgelegt."
     },
     "pages": {
       "forbidden": {
@@ -936,7 +970,8 @@
       "purposes": "Zwecke",
       "reserves": "Zurückgelegtes Geld",
       "people": "Personen",
-      "admin": "Finanzen"
+      "admin": "Finanzen",
+      "directDebit": "Lastschrift"
     },
     "sections": {
       "finance": {
@@ -948,7 +983,12 @@
         "parties": "Beteiligte"
       }
     },
-    "media": "Mediathek"
+    "media": "Mediathek",
+    "members": {
+      "list": "Mitglieder",
+      "fees": "Beiträge",
+      "admin": "Mitglieder"
+    }
   },
   "shell": {
     "version": "Version {version} ({build})",
@@ -1158,6 +1198,13 @@
         }
       },
       "dms": {
+        "mailFailed": {
+          "title": "Nicht zugestellte E-Mails",
+          "empty": "Alle E-Mails zugestellt.",
+          "messages": {
+            "since": "seit {date}"
+          }
+        },
         "inbox": {
           "title": "Eingangskorb",
           "empty": "Keine Post im Eingangskorb.",
@@ -1287,6 +1334,33 @@
             "rejected": "{title} — abgelehnt"
           }
         },
+        "directDebitDue": {
+          "title": "Lastschrift fällig",
+          "empty": "Kein Einzug wartet auf die Datei.",
+          "action": "Datei erzeugen",
+          "messages": {
+            "ok": "Kein Einzug wartet auf die Datei.",
+            "due": "Lastschrift fällig: Datei für den {date} erzeugen",
+            "submit": "Lastschrift fällig: Datei für den {date} bei der Bank einreichen",
+            "expired": "Einzug zum {date} nicht eingereicht – verfallen, bitte verwerfen",
+            "paidOtherwise": "Einzug zum {date}: {count, plural, one {ein Posten ist} other {# Posten sind}} schon bezahlt – Rückgabe bei der Bank veranlassen oder erstatten",
+            "paidOtherwiseAndExpired": "Einzug zum {date}: {count, plural, one {ein Posten ist} other {# Posten sind}} schon bezahlt – Rückgabe bei der Bank veranlassen oder erstatten. Außerdem ist der Einzug zum {expiredDate} verfallen, bitte verwerfen"
+          }
+        },
+        "mandatesUnsigned": {
+          "title": "Mandate ohne Unterschrift",
+          "empty": "Alle Mandate unterschrieben.",
+          "messages": {
+            "line": "{name} · {reference}"
+          }
+        },
+        "directDebitReturns": {
+          "title": "Rückgaben zu klären",
+          "empty": "Keine Rückgabe offen.",
+          "messages": {
+            "sum": "zusammen {sum}"
+          }
+        },
         "nobodyCanApprove": {
           "title": "Freigabe von Auslagen",
           "empty": "",
@@ -1315,6 +1389,24 @@
             "ok": "Die freie Rücklage nähert sich ihrem Höchstbetrag nicht.",
             "near": "Freie Rücklage: {percent} % des Höchstbetrags genutzt"
           }
+        }
+      },
+      "members": {
+        "arrears": {
+          "title": "Beitragsrückstände",
+          "empty": "Alle Beiträge bezahlt.",
+          "messages": { "line": "{name} · {level}", "overdue": "{name} · überfällig" }
+        },
+        "applications": {
+          "title": "Offene Anträge",
+          "empty": "Kein Antrag offen.",
+          "messages": { "oldest": "ältester seit {days, plural, one {einem Tag} other {# Tagen}}" }
+        },
+        "feesYear": {
+          "title": "Beiträge des Jahres",
+          "empty": "",
+          "action": "Beiträge anlegen",
+          "messages": { "missing": "Beiträge {year} sind noch nicht angelegt.", "ok": "Beiträge {year} sind angelegt." }
         }
       },
       "site": {
@@ -1606,6 +1698,24 @@
         "manage": {
           "label": "Akte verwalten",
           "description": "Dokumentarten, Ordner und Einsortierregeln pflegen; fällige Löschungen bestätigen."
+        },
+        "send": {
+          "label": "Dokumente per E-Mail versenden",
+          "description": "Festgeschriebene Briefe als PDF per E-Mail an den Kontakt senden, erneut senden oder auf Post umstellen."
+        }
+      },
+      "members": {
+        "read": {
+          "label": "Mitglieder lesen",
+          "description": "Mitgliederliste, Mitglieder und ihre Beiträge lesen, auch die geschützten Dokumente der Mitgliedschaft."
+        },
+        "manage": {
+          "label": "Mitglieder verwalten",
+          "description": "Anträge erfassen, aufnehmen, Art wechseln, Austritt und Ende erfassen."
+        },
+        "fees": {
+          "label": "Mitgliedsarten und Beiträge",
+          "description": "Mitgliedsarten, Beitragsordnung, Beitrags- und Mahnläufe pflegen."
         }
       },
       "finance": {
@@ -1648,6 +1758,10 @@
         "reportsFinalize": {
           "label": "Berichte festschreiben",
           "description": "Berichte festschreiben, Prüfpaket erstellen"
+        },
+        "directDebit": {
+          "label": "Lastschrift vorbereiten",
+          "description": "Lastschrift vorbereiten – Mandate, Zusagen, Einzüge"
         }
       }
     }
@@ -1938,7 +2052,7 @@
     "descriptions": {
       "core": "Anmeldung, Rollen, Stammdaten, Änderungsprotokoll, Dokumente und Backup.",
       "finance": "Konten, Buchungen, Rücklagen, Zuwendungsbestätigungen.",
-      "members": "Mitgliederstamm, Beiträge, Versammlungen.",
+      "members": "Mitgliederstamm und Beiträge.",
       "animals": "Tiere, Vermittlung, Patenschaften.",
       "site": "Inhalte der Webseite und ihr Aufbau als statische Seiten.",
       "projects": "Projekte des Vereins und ihre Darstellung auf der Webseite.",
@@ -2066,6 +2180,11 @@
       "financeProjectSettings": "Finanzangaben zum Projekt",
       "financePurpose": "Zweck",
       "financePurposeTransfer": "Umwidmung",
+      "financeMandate": "Mandat",
+      "financePledge": "Zusage",
+      "financePrenotification": "Lastschriftankündigung",
+      "financeDirectDebitRun": "Einzug",
+      "financeDirectDebitReturn": "Rückgabe einer Lastschrift",
       "financeRawTransaction": "Kontoumsatz",
       "financeReserve": "Rücklage",
       "financeReserveMovement": "Rücklagenbewegung",
@@ -2076,6 +2195,15 @@
       "mediaAsset": "Datei",
       "mediaFolder": "Ordner der Mediathek",
       "module": "Modul",
+      "memberFeeCharge": "Beitrag",
+      "memberFeeSchedule": "Stand der Beitragsordnung",
+      "memberFeeRun": "Beitragslauf",
+      "memberDunningRun": "Mahnlauf",
+      "memberRun": "Lauf der Mitglieder",
+      "memberList": "Mitgliederliste",
+      "memberNumber": "Mitgliedsnummer",
+      "memberType": "Mitgliedsart",
+      "membership": "Mitgliedschaft",
       "project": "Projekt",
       "role": "Rolle",
       "setting": "Einstellung",
@@ -2130,6 +2258,13 @@
       "dms_delete": "Dokument gelöscht",
       "dms_dispatch": "Dokument versandt",
       "dms_dispatch_clear": "Versand des Dokuments zurückgenommen",
+      "dms_mail_queue": "Dokument zum Versand per E-Mail eingereiht",
+      "dms_mail_sent": "Dokument per E-Mail gesendet",
+      "dms_mail_failed": "E-Mail nicht zugestellt",
+      "dms_mail_resend": "Dokument erneut per E-Mail eingereiht",
+      "dms_mail_toPost": "Brief auf Post umgestellt",
+      "dms_mail_toEmail": "Brief zurück auf E-Mail gestellt",
+      "dms_mail_test": "Testmail gesendet",
       "dms_draft_create": "Entwurf angelegt",
       "dms_draft_delete": "Entwurf gelöscht",
       "dms_draft_preview": "Vorschau des Entwurfs erzeugt",
@@ -2181,11 +2316,32 @@
       "finance_confirmation_signed": "Zuwendungsbestätigung unterschrieben",
       "finance_confirmation_void": "Zuwendungsbestätigung zurückgenommen",
       "finance_confirmationRun_dispatch": "Serienlauf versandt",
+      "finance_confirmationRun_toPost": "Bestätigungen eines Serienlaufs in die Post-Gruppe verschoben",
+      "finance_confirmationRun_toEmail": "Bestätigungen eines Serienlaufs zurück in die Mail-Gruppe verschoben",
       "finance_confirmationRun_finish": "Serienlauf abgeschlossen",
+      "finance_confirmationRun_mail": "Bestätigungen des Serienlaufs per E-Mail eingereiht",
       "finance_confirmationRun_item": "Bestätigung im Serienlauf erstellt",
       "finance_confirmationRun_start": "Serienlauf gestartet",
       "finance_contactIban_delete": "IBAN vom Kontakt gelöst",
       "finance_contactIban_link": "IBAN mit Kontakt verknüpft",
+      "finance_mandate_prepare": "Mandat vorbereitet",
+      "finance_mandate_correct": "Mandat korrigiert",
+      "finance_mandate_activate": "Mandat aktiv gesetzt",
+      "finance_mandate_amend": "Änderung am Mandat erfasst",
+      "finance_mandate_end": "Mandat beendet",
+      "finance_mandate_form": "Mandatsformular ausgestellt",
+      "finance_pledge_save": "Zusage gespeichert",
+      "finance_pledge_pause": "Zusage ruht",
+      "finance_pledge_end": "Zusage beendet",
+      "finance_pledge_skipRates": "Raten einer Zusage ausgelassen",
+      "finance_prenotification_issue": "Lastschriftankündigung ausgestellt",
+      "finance_directDebit_create": "Einzug angelegt",
+      "finance_directDebit_removeItem": "Posten aus dem Einzug genommen",
+      "finance_directDebit_file": "Datei für die Bank erzeugt",
+      "finance_directDebit_submit": "Einzug als eingereicht markiert",
+      "finance_directDebit_resetSubmit": "Einzug als nicht eingereicht zurückgesetzt",
+      "finance_directDebit_cancel": "Einzug verworfen",
+      "finance_directDebit_returnResolve": "Rückgabe geklärt",
       "finance_contactWaiverTerms_delete": "Verzichtsvereinbarung gelöscht",
       "finance_contactWaiverTerms_save": "Verzichtsvereinbarung gespeichert",
       "finance_correction_apply": "Korrektur übernommen",
@@ -2232,6 +2388,8 @@
       "finance_notice_void": "Bescheid zurückgenommen",
       "finance_openItem_cancel": "Offene Zahlung ohne Zahlung erledigt",
       "finance_openItem_create": "Offene Zahlung angelegt",
+      "finance_openItem_reschedule": "Fälligkeit der offenen Zahlung verschoben",
+      "finance_openItem_reduce": "Offene Zahlung gekürzt, Rest erlassen",
       "finance_openItem_update": "Offene Zahlung geändert",
       "finance_partnerEvidence_add": "Nachweis des Partners angelegt",
       "finance_partnerEvidence_documentGone": "Nachweis des Partners entfallen",
@@ -2295,6 +2453,41 @@
       "media_folder_rename": "Ordner der Mediathek umbenannt",
       "media_move": "Datei verschoben",
       "media_upload": "Datei hochgeladen",
+      "members_export": "Mitgliederliste exportiert",
+      "members_fee_defer": "Beitrag gestundet",
+      "members_fee_waive": "Beitrag erlassen",
+      "members_letter_issue": "Brief an ein Mitglied ausgestellt",
+      "members_countCertificate_issue": "Bescheinigung über die Mitgliederzahl ausgestellt",
+      "members_run_mail": "Briefe eines Laufs per E-Mail eingereiht",
+      "members_run_markPost": "Briefe eines Laufs als per Post versandt vermerkt",
+      "members_run_toPost": "Briefe eines Laufs in die Post-Gruppe verschoben",
+      "members_run_toEmail": "Briefe eines Laufs zurück in die Mail-Gruppe verschoben",
+      "members_install_setting": "Einstellung der Mitglieder bei der Einrichtung eingetragen",
+      "members_dunningRun_start": "Mahnlauf gestartet",
+      "members_dunningRun_finish": "Mahnlauf abgeschlossen",
+      "members_feeAgreement_set": "Beitragsvereinbarung gesetzt",
+      "members_feeRun_finish": "Beitragslauf abgeschlossen",
+      "members_feeRun_start": "Beitragslauf gestartet",
+      "members_feeSchedule_create": "Stand der Beitragsordnung angelegt",
+      "members_feeSchedule_delete": "Stand der Beitragsordnung gelöscht",
+      "members_feeSchedule_update": "Stand der Beitragsordnung geändert",
+      "members_fees_recalculate": "Beiträge eines Mitglieds nachgerechnet",
+      "members_fees_paymentMethod": "Zahlweg von Beiträgen umgestellt",
+      "members_membership_admit": "Mitglied aufgenommen",
+      "members_membership_apply": "Aufnahmeantrag erfasst",
+      "members_membership_delete": "Mitgliedschaft gelöscht",
+      "members_membership_changeType": "Mitgliedsart eines Mitglieds gewechselt",
+      "members_membership_end": "Mitgliedschaft beendet",
+      "members_membership_reject": "Aufnahmeantrag abgelehnt",
+      "members_membership_resign": "Austritt erfasst",
+      "members_membership_revokeEnd": "Ende der Mitgliedschaft zurückgenommen",
+      "members_numbers_setNext": "Nächste Mitgliedsnummer festgelegt",
+      "members_type_activate": "Mitgliedsart aktiviert",
+      "members_type_create": "Mitgliedsart angelegt",
+      "members_type_deactivate": "Mitgliedsart deaktiviert",
+      "members_type_delete": "Mitgliedsart gelöscht",
+      "members_type_reorder": "Mitgliedsarten umsortiert",
+      "members_type_update": "Mitgliedsart geändert",
       "projects_create": "Projekt angelegt",
       "projects_delete": "Projekt gelöscht",
       "projects_reorder": "Projekte umsortiert",
@@ -2346,7 +2539,8 @@
       "finance_setup_setting": "Einstellung der Finanzen gesetzt",
       "finance_notice": "Einstellung zum Bescheid gesetzt",
       "settings_financeMainAccount": "Bankverbindung des Vereins aus dem Hauptkonto übernommen",
-      "modules_enable": "Modul eingeschaltet"
+      "modules_enable": "Modul eingeschaltet",
+      "members_setting_set": "Einstellung der Mitglieder geändert"
     },
     "fields": {
       "email": "E-Mail-Adresse",
@@ -2379,7 +2573,7 @@
       "backup_export": "Backup mit {sizeBytes} erstellt",
       "backup_import": "Backup vom {createdAt} eingespielt",
       "contacts_setStatus": "Kontakt {archived, select, true {archiviert} other {wieder aktiviert}}",
-      "contacts_update": "{scope, select, name {Name des Kontakts geändert} address {Anschrift des Kontakts geändert} other {Kontakt geändert}}",
+      "contacts_update": "{scope, select, name {Name des Kontakts geändert} address {Anschrift des Kontakts geändert} delivery {Zustellweg des Kontakts geändert} other {Kontakt geändert}}",
       "contacts_userLink_create": "Kontakt {contact} mit Nutzer verknüpft",
       "contacts_userLink_end": "Verknüpfung von Kontakt {contact} mit Nutzer gelöst",
       "dashboard_setLayout": "Startseite mit {tileCount, plural, one {# Kachel} other {# Kacheln}} angepasst",
@@ -2387,6 +2581,12 @@
       "dms_delete": "Dokument „{number}“ gelöscht",
       "dms_dispatch": "Dokument „{number}“ am {sentOn} {sentVia, select, post {per Post versandt} registeredMail {per Einschreiben versandt} email {per E-Mail versandt} inPerson {persönlich übergeben} portal {über ein Portal versandt} other {auf anderem Weg versandt}}",
       "dms_dispatch_clear": "Versand von Dokument „{number}“ zurückgenommen",
+      "dms_mail_queue": "Dokument „{documentNumber}“ zum Versand per E-Mail eingereiht",
+      "dms_mail_sent": "Dokument „{documentNumber}“ per E-Mail gesendet",
+      "dms_mail_failed": "E-Mail mit Dokument „{documentNumber}“ {code, select, auth {wegen abgelehnter Anmeldung} connection {mangels Verbindung} rejected {wegen Ablehnung durch den Server} tls {mangels gesicherter Verbindung} other {}} nicht zugestellt",
+      "dms_mail_resend": "Dokument „{documentNumber}“ erneut per E-Mail eingereiht",
+      "dms_mail_toPost": "Dokument „{documentNumber}“ auf Post umgestellt",
+      "dms_mail_toEmail": "Dokument „{documentNumber}“ zurück auf E-Mail gestellt",
       "dms_export": "{included} von {total, plural, one {# Dokument} other {# Dokumenten}} der Akte exportiert",
       "dms_file": "Entwurf als Dokument „{number}“ festgeschrieben",
       "dms_folder_create": "Ordner „{path}“ angelegt",
@@ -2417,7 +2617,10 @@
       "document_textExtractionUnavailable": "Texterkennung für Dokument „{number}“ übersprungen",
       "finance_cashCount_record": "Kasse gezählt, Zählprotokoll „{documentNumber}“",
       "finance_confirmationRun_dispatch": "Versand von {count, plural, one {# Bestätigung} other {# Bestätigungen}} des Serienlaufs {year} vermerkt",
+      "finance_confirmationRun_toPost": "{count, plural, one {# Bestätigung} other {# Bestätigungen}} des Serienlaufs {year} in die Post-Gruppe verschoben",
+      "finance_confirmationRun_toEmail": "{count, plural, one {# Bestätigung} other {# Bestätigungen}} des Serienlaufs {year} zurück in die Mail-Gruppe verschoben",
       "finance_confirmationRun_finish": "Serienlauf {year} abgeschlossen",
+      "finance_confirmationRun_mail": "{count, plural, one {# Bestätigung} other {# Bestätigungen}} des Serienlaufs {year} per E-Mail eingereiht",
       "finance_confirmationRun_item": "Bestätigung im Serienlauf {issued, select, true {ausgestellt} other {gescheitert}}",
       "finance_confirmationRun_start": "Serienlauf {year} gestartet",
       "finance_confirmation_dispatch": "Versand der Zuwendungsbestätigung „{documentNumber}“ vermerkt",
@@ -2464,6 +2667,21 @@
       "finance_purposeTransfer_reject": "Umwidmung „{number}“ abgelehnt",
       "finance_purposeTransfer_request": "Umwidmung „{number}“ beantragt",
       "finance_reserve_uploadResolution": "Beschluss „{documentNumber}“ zur Rücklage hochgeladen",
+      "finance_mandate_prepare": "Mandat „{reference}“ vorbereitet",
+      "finance_mandate_correct": "Mandat „{reference}“ korrigiert",
+      "finance_mandate_activate": "Mandat „{reference}“ aktiv gesetzt, unterschrieben am {signedOn}",
+      "finance_mandate_form": "Formular „{documentNumber}“ zum Mandat „{reference}“ ausgestellt",
+      "finance_pledge_pause": "Zusage ruht vom {fromOn} bis {untilOn}",
+      "finance_pledge_end": "Zusage zum {endedOn} beendet",
+      "finance_pledge_skipRates": "{count, plural, one {Eine Rate} other {# Raten}} einer Zusage ausgelassen, weil sie sich nicht mehr rechtzeitig ankündigen {count, plural, one {ließ} other {ließen}}",
+      "finance_prenotification_issue": "Lastschriftankündigung zum Mandat „{reference}“ ausgestellt, {count, plural, one {ein Einzug} other {# Einzüge}}",
+      "finance_directDebit_create": "Einzug zum {collectionOn} angelegt, {count, plural, one {ein Posten} other {# Posten}}",
+      "finance_directDebit_removeItem": "Posten aus dem Einzug zum {collectionOn} genommen",
+      "finance_directDebit_file": "Datei für den Einzug zum {collectionOn} erzeugt, {count, plural, one {ein Posten} other {# Posten}}",
+      "finance_directDebit_submit": "Einzug zum {collectionOn} als eingereicht markiert",
+      "finance_directDebit_resetSubmit": "Einzug zum {collectionOn} als nicht eingereicht zurückgesetzt",
+      "finance_directDebit_cancel": "Einzug zum {collectionOn} verworfen",
+      "finance_directDebit_returnResolve": "Rückgabe „{returnCode}“ geklärt: {resolution, select, recollect {erneut einziehen} requestTransfer {zur Überweisung auffordern} waive {nicht mehr einfordern} alreadyPaid {war schon bezahlt} other {{resolution}}}",
       "finance_setup_confirm": "Einrichtungsschritt „{step, select, categories {Kategorien} tax {Steuern} other {{step}}}“ bestätigt",
       "followUps_complete": "Wiedervorlage {onRecord, select, true {zu „{label}“} other {„{label}“}} erledigt",
       "followUps_create": "Wiedervorlage {onRecord, select, true {zu „{label}“} other {„{label}“}} zum {dueOn} angelegt",
@@ -2477,6 +2695,28 @@
       "media_folder_rename": "Ordner „{from}“ in „{to}“ umbenannt",
       "media_move": "Datei „{filename}“ {toRoot, select, true {in die oberste Ebene} other {nach „{folder}“}} verschoben",
       "media_upload": "Datei „{filename}“ hochgeladen",
+      "members_export": "Mitgliederliste mit {count, plural, one {einer Zeile} other {# Zeilen}} exportiert",
+      "members_fee_defer": "Beitrag von Mitglied „{memberNumber}“ bis {dueOn} gestundet",
+      "members_fee_waive": "Beitrag von Mitglied „{memberNumber}“ erlassen",
+      "members_letter_issue": "Brief {documentNumber} an Mitglied „{memberNumber}“ ausgestellt",
+      "members_countCertificate_issue": "Bescheinigung {documentNumber} über {count, plural, one {ein Mitglied} other {# Mitglieder}} zum {countedOn} ausgestellt",
+      "members_run_mail": "{count, plural, one {Ein Brief} other {# Briefe}} eines Laufs per E-Mail eingereiht",
+      "members_run_markPost": "{count, plural, one {Ein Brief} other {# Briefe}} eines Laufs am {sentOn} als per Post versandt vermerkt",
+      "members_run_toPost": "{count, plural, one {Ein Brief} other {# Briefe}} eines Laufs in die Post-Gruppe verschoben",
+      "members_run_toEmail": "{count, plural, one {Ein Brief} other {# Briefe}} eines Laufs zurück in die Mail-Gruppe verschoben",
+      "members_dunningRun_start": "Mahnlauf zum {asOfOn} mit {count, plural, one {einem Mitglied} other {# Mitgliedern}} gestartet",
+      "members_dunningRun_finish": "Mahnlauf zum {asOfOn} mit {count, plural, one {einem Brief} other {# Briefen}} abgeschlossen",
+      "members_feeAgreement_set": "Beitragsvereinbarung von Mitglied „{memberNumber}“ gesetzt",
+      "members_feeRun_finish": "Beitragslauf {year} mit {count, plural, one {einem Beitrag} other {# Beiträgen}} abgeschlossen",
+      "members_feeRun_start": "Beitragslauf {year} mit {count, plural, one {einem Beitrag} other {# Beiträgen}} gestartet",
+      "members_fees_recalculate": "Beiträge von Mitglied „{memberNumber}“ nachgerechnet, {replaced, plural, one {einer} other {#}} ersetzt und {added, plural, one {einer} other {#}} angelegt",
+      "members_fees_paymentMethod": "Zahlweg von {count, plural, one {einem Beitrag} other {# Beiträgen}} von Mitglied „{memberNumber}“ mit der Vereinbarung umgestellt",
+      "members_membership_admit": "Mitglied „{memberNumber}“ aufgenommen",
+      "members_membership_delete": "Mitgliedschaft „{memberNumber}“ gelöscht",
+      "members_membership_end": "Mitgliedschaft „{memberNumber}“ zum {endsOn} beendet",
+      "members_membership_resign": "Austritt von Mitglied „{memberNumber}“ zum {endsOn} erfasst",
+      "members_membership_revokeEnd": "Ende der Mitgliedschaft „{memberNumber}“ zurückgenommen{voided, plural, =0 {} one {, eine unversandte Austrittsbestätigung storniert} other {, # unversandte Austrittsbestätigungen storniert}}",
+      "members_numbers_setNext": "Nächste Mitgliedsnummer auf „{next}“ festgelegt",
       "projects_create": "Projekt „{name}“ angelegt",
       "projects_delete": "Projekt „{name}“ gelöscht",
       "projects_publish": "Projekt „{name}“ publiziert",
@@ -2612,7 +2852,17 @@
         "finance-confirmation-collective": "Sammelbestätigung",
         "finance-simplified-receipt": "Vereinfachter Zuwendungsnachweis",
         "finance-waiver-declaration": "Verzichtserklärung",
-        "animals-profile": "Tierprofil"
+        "sepa-mandate": "SEPA-Lastschriftmandat",
+        "sepa-prenotification": "Lastschriftankündigung",
+        "sepa-run-summary": "Lastschrift-Sammelauftrag",
+        "animals-profile": "Tierprofil",
+        "member-admission": "Aufnahmebestätigung",
+        "member-resignation": "Austrittsbestätigung",
+        "member-rejection": "Ablehnung eines Aufnahmeantrags",
+        "member-reminder": "Beitragsmahnung",
+        "member-payment-request": "Zahlungsaufforderung nach Rückgabe",
+        "member-fee-notice": "Beitragsmitteilung",
+        "member-count-certificate": "Bescheinigung über die Mitgliederzahl"
       }
     }
   },
@@ -3730,6 +3980,30 @@
     }
   },
   "contacts": {
+    "letters": {
+      "title": "Briefe",
+      "label": "Briefe zustellen",
+      "auto": "Automatisch",
+      "post": "Immer per Post",
+      "hint": "Automatisch: per E-Mail, wenn eine E-Mail-Adresse hinterlegt ist, sonst per Post.",
+      "now": "Zurzeit",
+      "nowMail": "per E-Mail an {address}",
+      "nowOrgMail": "per E-Mail an {address} <aside>(Adresse der Organisation)</aside>",
+      "nowPost": "per Post, keine E-Mail-Adresse",
+      "nowReason": "Ergibt sich aus den Kommunikationswegen; „Immer per Post“ geht vor.",
+      "badgePost": "Briefe immer per Post"
+    },
+    "belongsTo": "Gehört zu",
+    "belongsToHint": "Nur Organisationen. Leer lassen, wenn die Person für sich steht.",
+    "personAt": "Person bei <link>{org}</link>",
+    "people": {
+      "title": "Ansprechpersonen",
+      "create": "Person anlegen",
+      "more": "Alle {n} anzeigen"
+    },
+    "address": {
+      "ofOrg": "Anschrift der Organisation"
+    },
     "moreRoles": "+{count}",
     "emptyFilteredNoun": "Kein Kontakt",
     "picker": {
@@ -3749,7 +4023,8 @@
       "grant-recipient": "Zuwendungsempfänger",
       "claimant": "Antragsteller (Auslagen)",
       "board-member": "Vorstandsmitglied",
-      "related-party": "Nahestehende Person"
+      "related-party": "Nahestehende Person",
+      "member": "Mitglied"
     },
     "title": "Kontakte",
     "description": "Personen und Organisationen, ihre Rollen und Kommunikationswege.",
@@ -3813,7 +4088,8 @@
       "city": "Ort",
       "country": "Land",
       "addressExtra": "Adresszusatz",
-      "notes": "Notizen"
+      "notes": "Notizen",
+      "deliveryPreference": "Briefe zustellen"
     },
     "roles": {
       "title": "Rollen",
@@ -3822,7 +4098,10 @@
       "field": "Rolle",
       "since": "Seit",
       "until": "Bis",
-      "end": "Beenden"
+      "end": "Beenden",
+      "open": "Öffnen",
+      "memberSummary": "Nr. {number} · {type} · seit {date}",
+      "applicationSummary": "Antrag vom {date} · {type}"
     },
     "channels": {
       "title": "Kommunikationswege",
@@ -3873,7 +4152,8 @@
     "searchPlaceholderShort": "Name, E-Mail …",
     "nounOne": "Kontakt",
     "nounOther": "Kontakte",
-    "nounDative": "Kontakten"
+    "nounDative": "Kontakten",
+    "makeMember": "Als Mitglied aufnehmen …"
   },
   "deletion": {
     "loading": "Es wird geprüft, ob etwas dagegen spricht …",
@@ -3891,6 +4171,75 @@
     "deletedWithMedia": "{count, plural, =0 {Gelöscht.} one {Gelöscht, samt einem Foto.} other {Gelöscht, samt # Fotos.}}"
   },
   "dms": {
+    "outbox": {
+      "title": "Ausgang",
+      "desc": "Briefe, die per E-Mail hinausgehen. Das Dokument bleibt das PDF in der Akte.",
+      "empty": "Noch nichts per E-Mail versandt.",
+      "emptyText": "Briefe gehen per E-Mail hinaus, wenn der Kontakt eine E-Mail-Adresse hat. Hier sehen Sie, was gesendet ist und was nicht ankam.",
+      "filterState": "Zustand",
+      "filterPeriod": "Zeitraum",
+      "period": {
+        "30": "Letzte 30 Tage",
+        "90": "Letzte 90 Tage",
+        "365": "Letzte 12 Monate"
+      },
+      "columns": {
+        "document": "Dokument",
+        "recipient": "Empfänger",
+        "time": "Zeit",
+        "state": "Zustand",
+        "actions": "Aktionen"
+      },
+      "noun": {
+        "one": "E-Mail",
+        "other": "E-Mails",
+        "dative": "E-Mails"
+      },
+      "filteredNoun": "Keine E-Mail",
+      "resend": "Erneut senden",
+      "open": "Dokument öffnen"
+    },
+    "send": {
+      "mail": "Per E-Mail senden …",
+      "mailTitle": "Per E-Mail senden",
+      "mailText": "{nr} geht als PDF-Anhang hinaus. Der Versandvermerk entsteht, sobald die Mail draußen ist.",
+      "to": "An",
+      "subject": "Betreff",
+      "body": "Begleittext",
+      "bodyEdit": "Textbaustein ändern",
+      "attachment": "Anhang",
+      "submit": "Senden",
+      "resend": "Erneut senden",
+      "resendMore": "Erneut senden …",
+      "resendText": "Die Mail geht noch einmal an {address}. Die bisherige Sendung bleibt im Ausgang stehen.",
+      "fixAddress": "E-Mail-Adresse korrigieren",
+      "notSent": "Noch nicht versandt. {name} bekommt Briefe per E-Mail.",
+      "notSentPost": "Noch nicht versandt. {name} bekommt Briefe per Post.",
+      "pendingNote": "Der Vermerk entsteht, sobald die Mail draußen ist.",
+      "mailTo": "Per E-Mail an",
+      "triggered": "Ausgelöst",
+      "triggeredBy": "Ausgelöst von",
+      "sentAt": "Versandt am",
+      "way": "Weg",
+      "wayMail": "E-Mail an {address}",
+      "reason": "Grund",
+      "ofOrg": "(Adresse der Organisation)",
+      "noAddressShort": "keine E-Mail-Adresse",
+      "sending": "Wird gesendet.",
+      "refuseTitle": "Nicht möglich",
+      "noAddress": "Am Kontakt {name} ist keine E-Mail-Adresse hinterlegt.",
+      "addAddress": "E-Mail-Adresse ergänzen",
+      "wantsPost": "{name} möchte Briefe per Post.",
+      "changeWay": "Zustellweg ändern",
+      "off": "Der E-Mail-Versand ist nicht eingerichtet.",
+      "noSender": "Es ist keine Absender-Adresse für E-Mails hinterlegt.",
+      "toSettings": "Zur Einrichtung der Akte",
+      "notFinal": "Nur ein festgeschriebenes Dokument kann versandt werden.",
+      "noRecipient": "Das Dokument hat keinen Empfänger.",
+      "redirectTitle": "Testumgebung",
+      "redirect": "Die Mail geht an {to}, nicht an den Kontakt.",
+      "blocked": "Testumgebung ohne Umleitung: Die Mail bleibt im Ausgang."
+    },
     "documentUnit": { "one": "Dokument", "many": "Dokumente" },
     "selection": {
       "count": "{count} ausgewählt",
@@ -4010,7 +4359,8 @@
     "folderGone": "Den Ordner „{name}“ gibt es nicht mehr, vielleicht wurde er verschoben oder umbenannt. Sie sehen den Ordner „{target}“.",
     "folderGoneAll": "Den Ordner „{name}“ gibt es nicht mehr, vielleicht wurde er verschoben oder umbenannt. Sie sehen alle Dokumente.",
     "areas": {
-      "finance": "Finanzen"
+      "finance": "Finanzen",
+      "members": "Mitglieder"
     },
     "number": {
       "pending": "Die Nummer <mono>{number}</mono> wird beim Ablegen gezogen. Wählen Sie später eine andere Art, bekommt das Dokument eine neue Nummer, und die bisherige bleibt vermerkt.",
@@ -4118,6 +4468,7 @@
       "outgoing": "Folgeschreiben"
     },
     "dispatch": {
+      "markButton": "Versand vermerken …",
       "title": "Versand",
       "none": "Noch nicht versandt.",
       "description": "Wann und auf welchem Weg das Dokument das Haus verlassen hat.",
@@ -4237,7 +4588,43 @@
     },
     "errors": {
       "noFile": "Bitte wählen Sie eine Datei aus.",
-      "folderGone": "Den Ordner „{name}“ gibt es nicht mehr. Wählen Sie einen anderen."
+      "folderGone": "Den Ordner „{name}“ gibt es nicht mehr. Wählen Sie einen anderen.",
+      "mailNotReady": {
+        "reason": "{state, select, blocked {Testumgebung ohne Umleitung: Die Mail darf nicht hinaus.} other {Der E-Mail-Versand ist nicht eingerichtet.}}",
+        "remedy": "{state, select, blocked {Die Umleitung wird bei der Installation festgelegt. Bis dahin geht der Brief per Post.} other {Der Mailserver wird bei der Installation festgelegt. Bis dahin geht der Brief per Post.}}"
+      },
+      "mailNoSender": {
+        "reason": "Es ist keine Absender-Adresse für E-Mails hinterlegt.",
+        "remedy": "Tragen Sie unter Einrichtung → Akte eine Absender-Adresse für E-Mails ein."
+      },
+      "noUserEmail": {
+        "reason": "An Ihrem Nutzerkonto ist keine E-Mail-Adresse hinterlegt.",
+        "remedy": "Tragen Sie in Ihrem Profil eine E-Mail-Adresse ein."
+      },
+      "mailNotResendable": {
+        "reason": "Diese E-Mail ist noch unterwegs oder wurde auf Post umgestellt.",
+        "remedy": "Erneut senden geht erst, wenn sie gesendet oder nicht zugestellt ist."
+      },
+      "mailNotPending": {
+        "reason": "Diese E-Mail ist schon unterwegs, gesendet oder auf Post umgestellt.",
+        "remedy": "Auf Post umstellen geht nur, solange sie wartet, gesperrt oder nicht zugestellt ist."
+      },
+      "mailAlreadyDispatched": {
+        "reason": "Dieser Brief trägt schon einen Versandvermerk.",
+        "remedy": "Ein vermerkter Brief bleibt in seiner Gruppe. Stimmt der Vermerk nicht, nehmen Sie ihn am Dokument zurück."
+      },
+      "mailNotMovedToPost": {
+        "reason": "Dieser Brief kam nicht von Hand in die Post-Gruppe.",
+        "remedy": "„Zurück zu E-Mail“ geht nur für Briefe, die mit „Per Post schicken“ dorthin kamen."
+      },
+      "mailRecipientPost": {
+        "reason": "{reason, select, preference {Der Kontakt möchte Briefe per Post.} noEmail {Am Kontakt ist keine E-Mail-Adresse hinterlegt.} notMachineProcedure {Die Bestätigung ist nicht maschinell erstellt und geht nur per Post.} manual {Der Brief steht schon in der Post-Gruppe.} mailOff {Der E-Mail-Versand ist ausgeschaltet.} other {Dieser Brief kann nicht per E-Mail hinausgehen.}}",
+        "remedy": "{reason, select, noEmail {Ergänzen Sie die E-Mail-Adresse am Kontakt oder vermerken Sie den Versand per Post.} preference {Ändern Sie den Versandwunsch am Kontakt oder vermerken Sie den Versand per Post.} manual {Mit „Zurück zu E-Mail“ geht er wieder per E-Mail.} other {Drucken Sie den Brief und vermerken Sie den Versand per Post.}}"
+      },
+      "mailTestFailed": {
+        "reason": "Der Mailserver hat die Testmail nicht angenommen ({code, select, auth {Anmeldung abgelehnt} connection {keine Verbindung} rejected {Empfänger abgelehnt} tls {keine gesicherte Verbindung} other {anderer Fehler}}).",
+        "remedy": "Prüfen Sie die Einrichtung des Mailservers bei der Installation."
+      }
     },
     "toast": {
       "filed": "Dokument festgeschrieben",
@@ -4253,8 +4640,53 @@
       "unrelated": "Dokumentbezug entfernt"
     },
     "admin": {
+      "mail": {
+        "title": "E-Mail",
+        "test": "Testmail an mich senden",
+        "testSent": "Testmail an {address} gesendet.",
+        "sender": "Absender",
+        "connection": "Verbindung",
+        "connectionReason": "Bei der Installation festgelegt.",
+        "state": {
+          "ready": "eingerichtet · {host}",
+          "redirect": "Testumgebung · Umleitung an {to}",
+          "blocked": "Testumgebung ohne Umleitung · gesperrt",
+          "off": "nicht eingerichtet"
+        },
+        "fromAddress": "Absender-Adresse",
+        "fromName": "Absender-Name",
+        "replyTo": "Antwortadresse",
+        "replyToPlaceholder": "wie Absender",
+        "replyToHint": "Optional. Antworten gehen an diese Adresse, Kompass liest sie nicht.",
+        "rate": "Höchstens je Minute",
+        "rateHint": "Verlangsamt den Ausgang, sperrt nichts.",
+        "saved": "E-Mail-Einstellungen gespeichert.",
+        "redirectTitle": "Testumgebung",
+        "redirectText": "Mails gehen an {to}. Ohne Umleitung sind sie gesperrt und bleiben im Ausgang.",
+        "blockedText": "Ohne Umleitung sind Mails gesperrt und bleiben im Ausgang. Die Umleitung wird bei der Installation festgelegt.",
+        "offTitle": "Nicht eingerichtet",
+        "offText": "Der E-Mail-Versand wird bei der Installation festgelegt. Bis dahin gehen alle Briefe per Post; „Per E-Mail senden“ nennt diesen Grund.",
+        "bodies": "Begleittext je Dokumentart",
+        "bodiesIntro": "Der Text der Mail. Das Dokument ist der Anhang.",
+        "columns": {
+          "type": "Dokumentart",
+          "snippet": "Textbaustein",
+          "actions": "Aktionen"
+        },
+        "defaultSuffix": "{name} (Vorgabe)",
+        "builtIn": "Mitgelieferter Begleittext",
+        "choose": "Textbaustein wählen …",
+        "chooseTitle": "Textbaustein wählen",
+        "chooseText": "Der Begleittext für Mails mit Dokumenten der Art „{type}“.",
+        "snippet": "Textbaustein",
+          "bodySaved": "Begleittext gespeichert."
+      },
       "title": "Akte",
       "tabsLabel": "Bereiche der Akte",
+      "agent": {
+        "label": "Darf ein Agent Dokumente per E-Mail senden?",
+        "hint": "Eingeschaltet darf ein Agent Dokumente der Akte und die Briefe eines Laufs per E-Mail senden; ob er das darf, entscheidet der Verein nur hier in Kompass, nicht über einen Agenten."
+      },
       "panels": {
         "types": "Arten",
         "rules": "Regeln",
@@ -4630,7 +5062,8 @@
       },
       "toast": {
         "reviewed": "Als geprüft markiert.",
-        "finalized": "Festgeschrieben: {numbers}."
+        "finalized": "Festgeschrieben: {numbers}.",
+        "held": "{count, plural, one {Ein Entwurf bleibt} other {# Entwürfe bleiben}} Entwurf, bis Sie den Hinweis daran einzeln bestätigen."
       },
       "filters": {
         "textPlaceholder": "Text, Nummer oder Betrag",
@@ -4697,7 +5130,8 @@
         "unnamed": "Posten vom {date}",
         "amount": "Teilbetrag",
         "rest": "Rest {amount}",
-        "noMatches": "Keine passende offene Zahlung."
+        "noMatches": "Keine passende offene Zahlung.",
+        "overpaid": "{amount} mehr als offen. Wählen Sie für den Rest unter „Wofür?“ die Kategorie, etwa Spende oder Rückzahlung."
       },
       "allocationCard": "Wofür?",
       "addRow": "Zeile hinzufügen",
@@ -4709,7 +5143,8 @@
       "actions": {
         "saveDraft": "Als Entwurf speichern",
         "saveReviewed": "Speichern und als geprüft markieren",
-        "finalize": "Festschreiben"
+        "finalize": "Festschreiben",
+        "finalizeAnyway": "Trotzdem festschreiben"
       },
       "confirmFinalize": {
         "title": "Buchung festschreiben",
@@ -5260,7 +5695,8 @@
         "fiscalYears": "Geschäftsjahre",
         "datedValues": "Sätze und Grenzen",
         "tax": "Steuerliches",
-        "permissions": "Wer darf was"
+        "permissions": "Wer darf was",
+        "directDebit": "Lastschrift"
       },
       "checklist": {
         "steps": {
@@ -5275,7 +5711,8 @@
           "waiverBasis": "Aufwandsspenden: Anspruchsgrundlage hinterlegt",
           "boardRemuneration": "Vergütung des Vorstands bestätigen",
           "boardMembers": "Vorstand am Kontakt: die Rolle „Vorstand“ an den Kontakten der Vorstandsmitglieder",
-          "documentBases": "Eigene Basis für Formulare"
+          "documentBases": "Eigene Basis für Formulare",
+          "directDebit": "Lastschrift einrichten"
         },
         "optional": "Optional",
         "optionalNotes": {
@@ -5285,7 +5722,8 @@
           "waiverBasis": "Nur solange Aufwandsspenden eingeschaltet sind.",
           "boardRemuneration": "Sonst Warnung bei Pauschalen an Vorstandsmitglieder.",
           "boardMembers": "Sonst bleiben die Zahlungen an Vorstandsmitglieder leer.",
-          "documentBases": "Nur wenn die Installation eigene Basis-Vorlagen führt."
+          "documentBases": "Nur wenn die Installation eigene Basis-Vorlagen führt.",
+          "directDebit": "Nur wenn der Verein per Lastschrift einzieht."
         },
         "open": "Erledigen",
         "done": "Erledigt",
@@ -5303,7 +5741,14 @@
           "machineProcedure": "es fehlt: {missing}",
           "documentBases": "Eigene Basis für Formulare fehlt — Bestätigungen erscheinen im Standardkopf ({missing})",
           "boardRemunerationNo": "keine Pauschalen vorgesehen (seit {date})",
-          "boardRemunerationYes": "Pauschalen vorgesehen, gilt ab {date}"
+          "boardRemunerationYes": "Pauschalen vorgesehen, gilt ab {date}",
+          "directDebitMissing": "es fehlt: {missing}. Das Recht „Lastschrift vorbereiten“ geben Sie einer Rolle.",
+          "directDebitRight": "Das Recht „Lastschrift vorbereiten“ geben Sie einer Rolle."
+        },
+        "sepaMissing": {
+          "creditorId": "die Gläubiger-Identifikationsnummer",
+          "account": "ein Konto für Einzüge",
+          "accountIban": "die IBAN des Kontos für Einzüge"
         },
         "machineMissing": {
           "signer": "ein Unterzeichner für heute",
@@ -5557,16 +6002,15 @@
           "switches": "Einordnung des Vereins",
           "waiverBasis": "Aufwandsspenden",
           "boardRemuneration": "Pauschalen an Vorstandsmitglieder",
-          "limits": "Grenzen",
-          "agent": "Agent"
+          "limits": "Grenzen"
         },
         "notConfirmed": "Noch nicht bestätigt.",
         "switchesSaved": "Schalter gespeichert.",
         "isEntrepreneurOrHasVatId": "Ist der Verein Unternehmer oder hat eine Umsatzsteuer-Identifikationsnummer?",
         "membershipFeesCertifiable": "Sind Mitgliedsbeiträge bescheinigungsfähig?",
         "expenseWaiversEnabled": "Werden Aufwandsspenden angeboten?",
-        "mcpHumanOnlyAllowed": "Darf ein Agent festschreiben?",
-        "mcpHumanOnlyAllowedHint": "Dieser Schalter lässt sich nur hier in Kompass ändern, nicht über einen Agenten.",
+        "mcpHumanOnlyAllowed": "Darf ein Agent festschreiben und Lastschriften bearbeiten?",
+        "mcpHumanOnlyAllowedHint": "Eingeschaltet darf ein Agent auch festschreiben, freigeben, Bestätigungen ausstellen und Mandate, Lastschriftdateien und Einzüge bearbeiten; ob er das darf, entscheidet der Verein nur hier in Kompass, nicht über einen Agenten.",
         "limits": {
           "statementSufficesBelowCents": "Bis zu welchem Betrag genügt der Kontoauszug als Beleg?",
           "cashDonationAlertCents": "Ab welchem Betrag soll eine Barspende auffallen?",
@@ -5597,6 +6041,38 @@
         "activity": "Tätigkeit",
         "grantedTo": "erteilt an {roles}",
         "grantedToNone": "an keine Rolle erteilt"
+      },
+      "directDebit": {
+        "use": "Lastschrift",
+        "useIntro": "Beiträge und Dauerspenden per SEPA-Basislastschrift einziehen. Ohne Schalter bleiben Mandate und Einzüge aus.",
+        "enabled": "Lastschrift nutzen",
+        "creditor": "Gläubiger",
+        "creditorIntro": "So steht der Verein im Mandat und in der Datei für die Bank.",
+        "creditorId": "Gläubiger-Identifikationsnummer",
+        "creditorIdHint": "Von der Deutschen Bundesbank, etwa DE98ZZZ09999999999.",
+        "creditorName": "Name des Gläubigers",
+        "creditorNameHint": "Leer lassen für den Namen des Vereins. Höchstens 70 Zeichen.",
+        "account": "Konto für Einzüge",
+        "accountHint": "Ein Bankkonto mit IBAN.",
+        "mainAccount": "Hauptkonto (Vorgabe)",
+        "deadlines": "Fristen",
+        "deadlinesIntro": "Zwei Fristen, die nichts miteinander zu tun haben: Die Vorabankündigung geht an die Zahler, die Datei an die Bank.",
+        "preNotificationDays": "Vorabankündigung: Tage vor dem Einzug",
+        "preNotificationHint": "Vorgabe 14 Tage nach SEPA-Regelwerk; kürzer nur, wenn mit den Zahlern vereinbart.",
+        "leadBusinessDays": "Bank: spätestens einreichen",
+        "leadHint": "Bankarbeitstage vor Fälligkeit. Steht in der Lastschriftvereinbarung mit der Bank.",
+        "maxLeadDays": "Bank: frühestens einreichen",
+        "maxLeadHint": "Tage vor Fälligkeit. Steht in der Lastschriftvereinbarung mit der Bank.",
+        "batchBooking": "Sammelbuchung",
+        "batchBookingHint": "Die Bank schreibt einen Einzug als eine Summe gut.",
+        "days": "Tage",
+        "businessDays": "Bankarbeitstage",
+        "reference": "Mandatsreferenz",
+        "referenceIntro": "Jedes Mandat bekommt eine fortlaufende Nummer. Eine vergebene Referenz bleibt.",
+        "prefix": "Präfix",
+        "digits": "Stellen",
+        "example": "Beispiel: {example}",
+        "saved": "Lastschrift-Einstellungen gespeichert."
       }
     },
     "csvAssistant": {
@@ -5774,6 +6250,7 @@
         "pair": "Umbuchung zwischen eigenen Konten",
         "cashKeyword": "Umbuchung mit der Barkasse",
         "returnCode": "zurückgegebene Zahlung",
+        "directDebitReturn": "Rückgabe einer Lastschrift",
         "relatedReference": "Rückzahlung",
         "paymentReference": "offene Zahlung",
         "amountAndContact": "offene Zahlung",
@@ -5781,7 +6258,9 @@
         "contactIban": "Kontakt über IBAN",
         "contactEmail": "Kontakt über E-Mail",
         "contactName": "Kontakt über Namen",
-        "paymentFee": "Gebühr des Zahlungsdienstes"
+        "paymentFee": "Gebühr des Zahlungsdienstes",
+        "directDebitRun": "Gutschrift eines Einzugs",
+        "directDebitReturnFee": "Entgelt einer Rückgabe"
       },
       "legend": {
         "link": "passt zu einer Buchung",
@@ -5833,7 +6312,10 @@
         "openEntry": "Buchung ansehen",
         "problems": {
           "categoryInactive": "Die Kategorie dieses Vorschlags ist stillgelegt. Übernehmen gelingt erst mit einer aktiven Kategorie.",
-          "purposeClosed": "Der Zweck dieses Vorschlags ist abgeschlossen. Wählen Sie einen anderen Zweck."
+          "purposeClosed": "Der Zweck dieses Vorschlags ist abgeschlossen. Wählen Sie einen anderen Zweck.",
+          "inSubmittedRun": "Dieser Posten steckt im Einzug zum {date}, der bei der Bank eingereicht ist. Die Bank zieht ihn trotzdem ein — gleichen Sie ihn hier aus, zahlt das Mitglied doppelt.",
+          "overpaid": "{amount} mehr als offen. Wählen Sie für den Rest die Kategorie, etwa Spende oder Rückzahlung.",
+          "paidOtherwise": "{count, plural, one {Ein Posten dieses Einzugs war} other {# Posten dieses Einzugs waren}} schon anders bezahlt; die Bank hat {amount} trotzdem eingezogen. Erstatten Sie den Betrag oder veranlassen Sie eine Rückgabe. Das Festschreiben verlangt eine Bestätigung."
         },
         "foreignIban": "Die IBAN ist nicht deutsch. Prüfen Sie, ob es eine Zahlung ins Ausland ist.",
         "originIsDraft": "Ursprung noch nicht festgeschrieben: Die zurückgegebene Zahlung ist erst ein Entwurf. Schreiben Sie ihn zuerst fest, dann bezieht sich die Rückgabe auf seine Zeilen.",
@@ -5853,13 +6335,27 @@
         "paymentReferenceCandidates": "mehrere offene Zahlungen {reference} ({items}) — dieselbe Rechnung zweimal erfasst? Bitte prüfen und selbst zuordnen",
         "paymentReferenceCandidate": "vom {date} über {amount}",
         "amountAndContact": "Betrag und Kontakt {contact} passen zu einer offenen Zahlung",
+        "sharedIban": "IBAN gehört zu {contacts}",
+        "and": "und",
         "rule": "Regel „{name}“",
         "contactIban": "IBAN gehört zu Kontakt {contact}",
         "contactEmail": "E-Mail gehört zu Kontakt {contact}",
         "contactName": "Name passt nur zu Kontakt {contact} — bitte prüfen",
         "paymentFee": "Gebühr des Zahlungsdienstes zu einer Zahlung",
+        "directDebitReturnFee": "Entgelt der Bank zur Rückgabe aus dem Einzug zum {date} — bitte prüfen",
+        "directDebitReturnFeeUndated": "Entgelt der Bank zu einer Rückgabe — bitte prüfen",
+        "directDebitRun": "Gutschrift des Einzugs zum {date}: die Summe der {count, plural, one {# Posten} other {# Posten}} passt",
+        "directDebitReturn": "Rückgabe zum Einzug zum {date}: {match}. Grund der Bank: {reason}",
+        "directDebitRunCandidates": "mehrere Einzüge mit dieser Summe (zum {dates}) — bitte prüfen und selbst zuordnen",
         "hiddenContact": "(ohne Leserecht für Kontakte)",
-        "noNumber": "ohne Nummer"
+        "noNumber": "ohne Nummer",
+        "directDebitRunItem": "Gutschrift aus dem Einzug zum {date}: die End-to-End-Referenz passt",
+        "directDebitMatch": {
+          "endToEnd": "End-to-End-Referenz passt",
+          "mandateAndAmount": "Mandatsreferenz und Betrag passen",
+          "sum": "Summe passt"
+        },
+        "noReturnCode": "nicht angegeben"
       },
       "mini": {
         "label": "Buchung aus dem Kontoumsatz",
@@ -5868,7 +6364,10 @@
         "addRow": "Zeile hinzufügen",
         "transferLine": "Gegenbuchung auf {account}: {amount}",
         "cashLine": "Gegenbuchung in der Kasse {account}: {amount}",
-        "settles": "begleicht eine offene Zahlung: {amount}"
+        "settles": "begleicht eine offene Zahlung: {amount}",
+        "returnedRate": "Rate vom {date}, {name}: {amount} — die Rate wird „zurückgegeben“, keine Forderung",
+        "returnedFee": "Beitrag, {name}: {amount} — der Beitrag wird wieder offen",
+        "bankFee": "Gebühr der Bank: {amount} — Kategorie Bankgebühren"
       },
       "actions": {
         "accept": "Übernehmen und geprüft",
@@ -6026,6 +6525,11 @@
           "entryUnbalanced": "Der Entwurf ist nicht ausgeglichen.",
           "fiscalYearClosed": "Das Geschäftsjahr des Entwurfs ist abgeschlossen.",
           "other": "Der Entwurf lässt sich so nicht festschreiben."
+        },
+        "heldTitle": "Bleibt Entwurf, bis Sie den Hinweis einzeln bestätigen:",
+        "held": {
+          "inSubmittedRun": "Die Zahlung trifft einen Posten im eingereichten Einzug zum {date}.",
+          "overpaid": "{via, select, directDebit {Der Einzug hat {amount} für einen schon anders bezahlten Posten eingezogen.} other {Die Zahlung ist um {amount} höher als der offene Betrag.}}"
         },
         "openEntry": "Entwurf ansehen",
         "confirm": "Festschreiben"
@@ -6593,6 +7097,7 @@
         "openDraft": "Entwurf öffnen"
       },
       "run": {
+        "dispatchCount": "{count, plural, one {# Bestätigung} other {# Bestätigungen}}",
         "title": "Serienlauf",
         "description": "Alle Zuwendungsbestätigungen eines Jahres in einem Lauf: je Spender eine Sammelbestätigung, Aufwandsspenden gesondert, Sachspenden einzeln.",
         "steps": {
@@ -7715,10 +8220,470 @@
       "nounOne": "Person",
       "nounOther": "Personen"
     },
+    "directDebit": {
+      "returnCodes": {
+        "AC01": "IBAN fehlerhaft",
+        "AC04": "Konto erloschen",
+        "AC06": "Konto gesperrt",
+        "AG01": "Lastschrift auf diesem Konto nicht erlaubt",
+        "AM04": "Deckung fehlt",
+        "MD01": "Kein Mandat",
+        "MD06": "Widerspruch des Zahlers",
+        "MS02": "Ablehnung durch den Zahler",
+        "MS03": "Ablehnung ohne Angabe von Gründen",
+        "SL01": "Ablehnung durch einen Dienst der Bank des Zahlers",
+        "unknown": "Grund {code}"
+      },
+      "states": {
+        "run": {
+          "draft": "angelegt",
+          "fileCreated": "Datei erzeugt",
+          "submitted": "eingereicht",
+          "booked": "gebucht",
+          "expired": "verfallen",
+          "cancelled": "verworfen"
+        },
+        "return": {
+          "open": "Rückgabe zu klären",
+          "resolved": "geklärt"
+        },
+        "mandate": {
+          "pending": "Unterschrift fehlt",
+          "active": "aktiv",
+          "ended": "beendet",
+          "expired": "abgelaufen"
+        },
+        "pledge": {
+          "active": "aktiv",
+          "paused": "ruht",
+          "ended": "beendet"
+        },
+        "rate": {
+          "expected": "erwartet",
+          "inRun": "im Einzug",
+          "booked": "gebucht",
+          "returned": "zurückgegeben",
+          "skipped": "ausgelassen",
+          "missed": "verpasst"
+        }
+      },
+      "pledge": {
+        "intervals": {
+          "monthly": "monatlich",
+          "quarterly": "vierteljährlich",
+          "halfYearly": "halbjährlich",
+          "yearly": "jährlich"
+        },
+        "methods": {
+          "directDebit": "Lastschrift",
+          "transfer": "Überweisung",
+          "standingOrder": "Dauerauftrag"
+        },
+        "saved": "Zusage gespeichert.",
+        "savedWithMandate": "Zusage gespeichert. Mandat und Ankündigung liegen bereit.",
+        "paused": "Zusage ruht.",
+        "ended": "Zusage beendet.",
+        "newTitle": "Zusage anlegen",
+        "since": "Dauerspende seit {date}",
+        "pledge": "Zusage",
+        "donor": "Spenderin oder Spender",
+        "donorReason": "am Kontakt pflegen",
+        "amount": "Betrag",
+        "interval": "Rhythmus",
+        "firstDueOn": "Erste Rate",
+        "lastDueOn": "Letzte Rate",
+        "lastDueOnHint": "Leer lassen, solange die Zusage gilt.",
+        "binding": "Zweck",
+        "bindingHint": "Oder ein Projekt. Die Raten werden diesem Zweck zugeordnet.",
+        "general": "Allgemein (ohne Zweck)",
+        "payment": "Zahlung",
+        "method": "Zahlweg",
+        "mandate": "Mandat",
+        "openMandate": "Mandat öffnen",
+        "iban": "IBAN",
+        "debtorName": "Kontoinhaber",
+        "debtorNameHint": "Leer lassen, wenn die Spenderin selbst das Konto führt.",
+        "backToList": "Zusagen",
+        "rates": "Raten",
+        "ratesIntro": "Erwartet {amount} {interval} · {year} bisher {booked} gebucht",
+        "ratesEmpty": "In diesem Jahr ist keine Rate fällig.",
+        "ratesYear": "{year} · {count, plural, one {# Rate} other {# Raten}}",
+        "ratesNote": "Für die Raten eines Jahres stellt der Serienlauf eine Sammelbestätigung aus.",
+        "columns": {
+          "dueOn": "Fällig",
+          "amount": "Betrag",
+          "run": "Einzug",
+          "state": "Zustand",
+          "actions": "Aktionen"
+        },
+        "entry": "Buchung {number}",
+        "recollect": "wird erneut eingezogen",
+        "byTransfer": "per Überweisung",
+        "resolveReturn": "Rückgabe klären …",
+        "pause": "Zusage ruhen lassen …",
+        "end": "Zusage beenden …",
+        "pauseTitle": "Zusage ruhen lassen",
+        "pauseText": "Raten in dieser Zeit werden ausgelassen, nicht erwartet.",
+        "pauseFrom": "Ab",
+        "pauseUntil": "Bis",
+        "pauseConfirm": "Ruhen lassen",
+        "endTitle": "Zusage beenden?",
+        "endText": "Nach diesem Tag wird keine Rate mehr erwartet oder eingezogen. Die gebuchten Raten bleiben.",
+        "endedOn": "Beendet zum",
+        "endConfirm": "Beenden"
+      },
+      "list": {
+        "title": "Lastschrift",
+        "newRun": "Neuer Einzug",
+        "newPledge": "Zusage anlegen",
+        "views": "Ansichten der Lastschrift",
+        "tabs": {
+          "runs": "Einzüge",
+          "mandates": "Mandate",
+          "pledges": "Zusagen"
+        },
+        "year": "Jahr",
+        "filterState": "Zustand",
+        "filterBound": "Zweck",
+        "general": "Allgemein",
+        "search": {
+          "mandates": "Name oder Mandatsreferenz",
+          "pledges": "Name"
+        },
+        "searchShort": "Name …",
+        "noun": {
+          "runs": {
+            "one": "Einzug",
+            "other": "Einzüge",
+            "dative": "Einzügen"
+          },
+          "mandates": {
+            "one": "Mandat",
+            "other": "Mandate",
+            "dative": "Mandaten"
+          },
+          "pledges": {
+            "one": "Zusage",
+            "other": "Zusagen",
+            "dative": "Zusagen"
+          }
+        },
+        "columns": {
+          "run": "Einzug",
+          "items": "Posten",
+          "submittedOn": "Eingereicht",
+          "account": "Konto",
+          "sum": "Summe",
+          "state": "Zustand",
+          "payer": "Zahler",
+          "reference": "Mandatsreferenz",
+          "iban": "IBAN",
+          "signedOn": "Unterschrieben",
+          "usedFor": "Verwendet für",
+          "name": "Name",
+          "interval": "Rhythmus",
+          "bound": "Zweck",
+          "nextDueOn": "Nächste Rate",
+          "paymentMethod": "Zahlweg",
+          "amount": "Betrag"
+        },
+        "runOn": "zum {date}",
+        "itemCount": "{count, plural, one {# Posten} other {# Posten}}",
+        "usedFor": {
+          "membership": "Beitrag",
+          "application": "Beitrag (Antrag offen)",
+          "pledge": "Zusage"
+        },
+        "empty": {
+          "runs": {
+            "title": "Noch kein Einzug",
+            "text": "Ein Einzug sammelt die fälligen Beiträge und Raten mit aktivem Mandat für einen Fälligkeitstag."
+          },
+          "mandates": {
+            "title": "Noch kein Mandat",
+            "text": "Mandate entstehen am Mitglied oder an einer Zusage mit Zahlweg Lastschrift."
+          },
+          "pledges": {
+            "title": "Noch keine Zusage",
+            "text": "Eine Zusage hält fest, wer regelmäßig spendet, wie viel und wie oft."
+          },
+          "filtered": {
+            "runs": "Kein Einzug",
+            "mandates": "Kein Mandat",
+            "pledges": "Keine Zusage"
+          }
+        },
+        "setup": {
+          "title": "Lastschrift ist noch nicht eingerichtet",
+          "text": "Für Einzüge braucht der Verein eine Gläubiger-Identifikationsnummer der Bundesbank und ein Konto, auf das eingezogen wird.",
+          "action": "Lastschrift einrichten"
+        },
+        "rateOf": "Zusage · Rate vom {date}"
+      },
+      "newRun": {
+        "title": "Neuer Einzug",
+        "description": "Sammelt alle fälligen Beiträge und Raten mit aktivem Mandat für einen Fälligkeitstag.",
+        "steps": {
+          "label": "Schritte des Einzugs",
+          "date": "Fälligkeitstag",
+          "preview": "Vorschau",
+          "created": "Angelegt"
+        },
+        "day": "Fälligkeitstag",
+        "dayHint": "Die Vorabankündigung muss rechtzeitig vor diesem Tag beim Zahler sein. Die Datei reichen Sie im Fenster der Bank ein, das am Einzug steht.",
+        "month": "{month, select, 1 {Januar} 2 {Februar} 3 {März} 4 {April} 5 {Mai} 6 {Juni} 7 {Juli} 8 {August} 9 {September} 10 {Oktober} 11 {November} other {Dezember}} {year}",
+        "account": "Konto",
+        "show": "Vorschau zeigen",
+        "change": "Ändern",
+        "summaryDue": "Fällig am {date}",
+        "summarySubmitBy": "Datei frühestens am {from}, spätestens am {by} an die Bank",
+        "footer": "Einzug zum {date} · {count, plural, one {# Posten} other {# Posten}} · {amount}",
+        "create": "Einzug anlegen"
+      },
+      "preview": {
+        "groups": {
+          "included": "Wird eingezogen",
+          "inOtherRun": "Schon in einem Einzug",
+          "mandateInactive": "Mandat nicht aktiv",
+          "noticeLate": "Ankündigung zu spät"
+        },
+        "count": "{count, plural, one {# Posten} other {# Posten}}",
+        "countSum": "{count, plural, one {# Posten} other {# Posten}} · {amount}",
+        "mandateState": "{reference}, {state}",
+        "mandateStates": {
+          "pending": "Unterschrift fehlt",
+          "active": "aktiv",
+          "ended": "beendet",
+          "expired": "abgelaufen"
+        },
+        "noticeFrom": "neue Ankündigung nötig, frühestens zum {date}",
+        "openMandate": "Mandat öffnen",
+        "createNotice": "Ankündigung erzeugen",
+        "setDay": "Fälligkeit auf den {date} setzen",
+        "announceToday": "Heute ankündigen, dann ist der {date} gedeckt",
+        "missedRates": "{count, plural, one {Eine Rate} other {# Raten}} von Zusagen liegen mehr als 30 Tage zurück und {count, plural, one {wird} other {werden}} nicht mehr eingezogen (verpasst).",
+        "noticeDone": "Ankündigung erzeugt",
+        "noticeIssued": "Ankündigung {number} erzeugt.",
+        "inOtherRunHint": "steckt in einem Einzug, der noch nicht gebucht ist",
+        "note": "Angelegt wird nur, was eingezogen werden kann. Die übrigen Posten bleiben offen.",
+        "emptyTitle": "Nichts einzuziehen",
+        "empty": "Zum {date} ist nichts fällig, das eingezogen werden kann."
+      },
+      "run": {
+        "title": "Einzug zum {date}",
+        "createdOn": "angelegt am {date}",
+        "created": "Einzug zum {date} angelegt, {count, plural, one {# Posten} other {# Posten}}.",
+        "sameDayDraft": "Für den {date} gibt es schon einen Einzug im Entwurf — prüfen Sie, ob einer genügt.",
+        "steps": {
+          "label": "Schritte des Einzugs",
+          "file": "Datei erzeugen",
+          "submit": "Bei der Bank einreichen",
+          "submitWindow": "frühestens am {from}, spätestens am {by}",
+          "credit": "Gutschrift",
+          "creditWait": "kommt mit dem Kontoauszug",
+          "creditDone": "Gutschrift gebucht.",
+          "creditDoneReturns": "Gutschrift gebucht. {count, plural, one {# Rückgabe} other {# Rückgaben}} am {date}."
+        },
+        "createFile": "Datei erzeugen",
+        "downloadXml": "XML für die Bank",
+        "downloadCsv": "CSV",
+        "markSubmitted": "Als eingereicht markieren",
+        "submitTitle": "Als eingereicht markieren",
+        "submitText": "An welchem Tag haben Sie die Datei bei der Bank hochgeladen und freigegeben?",
+        "submittedOn": "Eingereicht am",
+        "fileCreated": "Datei erzeugt.",
+        "submitted": "Als eingereicht markiert.",
+        "reset": "Als nicht eingereicht zurücksetzen …",
+        "resetTitle": "Als nicht eingereicht zurücksetzen?",
+        "resetText": "Das geht nur am Tag der Einreichung. Rufen Sie den Einzug auch bei der Bank zurück, sonst zieht sie ihn trotzdem ein.",
+        "resetConfirm": "Zurücksetzen",
+        "cancel": "Verwerfen …",
+        "cancelTitle": "Einzug verwerfen?",
+        "cancelText": "Die Posten werden wieder frei und erscheinen im nächsten Einzug. Die Datei wird gelöscht, der Begleitzettel bleibt in der Akte.",
+        "cancelConfirm": "Verwerfen",
+        "cancelled": "Einzug verworfen.",
+        "cancelledOn": "Der Einzug wurde am {date} verworfen. Seine Posten erscheinen im nächsten Einzug.",
+        "expiredHint": "Nicht eingereicht: Das Einreichfenster endete am {date}. Die Posten sind wieder frei; verwerfen Sie den Einzug. Bucht die Bank ihn doch noch, erkennt die Arbeitsliste die Gutschrift.",
+        "paidOtherwise": "schon bezahlt",
+        "paidOtherwiseHint": "{count, plural, one {Ein Posten ist} other {# Posten sind}} schon bezahlt, die Bank zieht {count, plural, one {ihn} other {sie}} trotzdem ein. Veranlassen Sie eine Rückgabe bei der Bank, oder erstatten Sie den Betrag nach der Gutschrift.",
+        "resolveReturn": "Rückgabe klären …",
+        "returnText": "Die Lastschrift von {name} über {amount} kam am {date} zurück. Grund der Bank: {reason}.",
+        "returnFee": "Gebühr der Bank: {amount}.",
+        "noCode": "nicht angegeben",
+        "items": "Posten",
+        "columns": {
+          "payer": "Zahler",
+          "for": "Wofür",
+          "reference": "Mandatsreferenz",
+          "amount": "Betrag",
+          "state": "Zustand",
+          "actions": "Aktionen"
+        },
+        "total": "Summe",
+        "removeItem": "Posten aus dem Einzug nehmen",
+        "removeTitle": "Posten von {name} aus dem Einzug nehmen?",
+        "removeText": "Der Posten bleibt offen und erscheint im nächsten Einzug. Eine schon erzeugte Datei entsteht neu.",
+        "removeConfirm": "Herausnehmen",
+        "itemRemoved": "Posten aus dem Einzug genommen.",
+        "resetDone": "Als nicht eingereicht zurückgesetzt."
+      },
+      "return": {
+        "title": "Rückgabe von {name} klären",
+        "descriptionRate": "Die Rate über {amount} ist zurückgegeben. Wie geht es weiter?",
+        "descriptionFee": "Der Beitrag über {amount} ist zurückgegeben und wieder offen. Wie geht es weiter?",
+        "way": "Weiter mit",
+        "ways": {
+          "recollect": "Mit dem nächsten Einzug erneut einziehen",
+          "recollectHint": "Braucht eine neue Ankündigung; die Vorschau des nächsten Einzugs bietet sie an.",
+          "requestTransfer": "Zur Überweisung auffordern",
+          "requestTransferHint": "Der Posten wird nicht mehr eingezogen. Eine Rate wird wieder erwartet, ein Beitrag bleibt offen.",
+          "waive": "Nicht mehr einfordern",
+          "waiveHint": "Die Rate gilt als ausgelassen. Bei einem Beitrag: Er wird erlassen.",
+          "alreadyPaid": "War schon bezahlt – nichts zu tun",
+          "alreadyPaidHint": "Der Beitrag ist inzwischen anders bezahlt. Die Rückgabe hebt die doppelte Zahlung auf."
+        },
+        "endMandate": "Mandat beenden",
+        "codeHint": "{code} heißt: {reason}.",
+        "codeHintEnd": "{code} heißt: {reason}. Mit diesem Mandat besser nicht mehr einziehen — bitte erst nachfragen.",
+        "recollectKeepsMandate": "Erneut einziehen braucht das Mandat.",
+        "recollectConfirmTitle": "Wirklich erneut einziehen?",
+        "recollectConfirmDescription": "Die Bank hat mit {code} zurückgegeben ({reason}). Ziehen Sie nur erneut ein, wenn Sie mit dem Zahler gesprochen haben – sonst folgt die nächste Rückgabe samt Entgelt.",
+        "recollectConfirm": "Rücksprache erfolgt, erneut einziehen",
+        "fee": "Gebühr der Bank",
+        "feeReason": "als Bankgebühr gebucht, nicht weiterberechnet",
+        "feeNone": "Die Bank hat keine Gebühr berechnet.",
+        "save": "Speichern",
+        "resolved": "Rückgabe geklärt."
+      },
+      "mandate": {
+        "activated": "Mandat aktiv.",
+        "corrected": "Mandat korrigiert.",
+        "amended": "Änderung erfasst.",
+        "ended": "Mandat beendet.",
+        "usage": {
+          "membership": "den Mitgliedsbeitrag",
+          "pledge": "die Zusage"
+        },
+        "and": "und",
+        "for": "für {usage}",
+        "preparedOn": "vorbereitet am {date}",
+        "stepsTitle": "Bis zum ersten Einzug",
+        "sign": "Formular unterschreiben lassen",
+        "prefilled": "vorausgefüllt",
+        "openForm": "Formular öffnen (PDF)",
+        "file": "Unterschrift ablegen",
+        "activeSince": "Aktiv seit {date}.",
+        "correct": "Korrigieren",
+        "amend": "Änderung erfassen …",
+        "end": "Mandat beenden …",
+        "details": "Angaben",
+        "detailsReason": "So steht es im Mandat. Ändern über „Korrigieren“ bzw. „Änderung erfassen …“.",
+        "payer": "Zahler",
+        "open": {
+          "membership": "Mitglied öffnen",
+          "pledge": "Zusage öffnen"
+        },
+        "debtorName": "Kontoinhaber",
+        "iban": "IBAN",
+        "reference": "Mandatsreferenz",
+        "creditorId": "Gläubiger-ID",
+        "kind": "Art",
+        "sequence": {
+          "recurring": "Basislastschrift, wiederkehrend",
+          "oneOff": "Basislastschrift, einmalig"
+        },
+        "lastCollected": "Zuletzt eingezogen",
+        "notYet": "noch nicht",
+        "expires": "ohne Einzug verfällt es am {date}",
+        "endedOn": "Beendet am",
+        "changes": "Änderungen",
+        "collections": "Einzüge",
+        "returns": "Rückgaben",
+        "columns": {
+          "changedOn": "Datum",
+          "change": "Änderung",
+          "validFrom": "Gilt ab",
+          "run": "Einzug",
+          "for": "Wofür",
+          "amount": "Betrag",
+          "returnedOn": "Zurück am",
+          "reason": "Grund",
+          "state": "Zustand"
+        },
+        "changeText": "{field}: {before} → {after}",
+        "fields": {
+          "iban": "IBAN",
+          "bic": "BIC",
+          "debtorName": "Kontoinhaber"
+        },
+        "signTitle": "Unterschrift ablegen",
+        "signText": "„{file}“ kommt als unterschriebenes Mandat in die Akte. Ab dem Tag der Unterschrift ist das Mandat aktiv.",
+        "signedOn": "Unterschrieben am",
+        "signSave": "Ablegen",
+        "correctTitle": "Mandat korrigieren",
+        "correctText": "Vor der Unterschrift lässt sich das Mandat selbst korrigieren; öffnen Sie danach das Formular neu.",
+        "amendTitle": "Änderung erfassen",
+        "amendText": "Das Mandat ist unterschrieben. Eine neue IBAN oder ein neuer Kontoinhaber kommt in den Verlauf; der nächste Einzug trägt den Hinweis an die Bank.",
+        "newIban": "Neue IBAN",
+        "newIbanHint": "Leer lassen, wenn nur der Kontoinhaber wechselt.",
+        "validFrom": "Gilt ab",
+        "validFromHint": "Ab dem nächsten Einzug an oder nach diesem Tag.",
+        "save": "Speichern",
+        "endTitle": "Mandat beenden?",
+        "endText": "Mit diesem Mandat wird danach nicht mehr eingezogen. Für weitere Einzüge braucht es ein neues Mandat.",
+        "endReason": "Grund",
+        "endReasons": {
+          "debtor": "Widerruf des Zahlers",
+          "creditor": "Der Verein beendet es",
+          "superseded": "Durch ein neues Mandat ersetzt"
+        },
+        "endConfirm": "Beenden"
+      }
+    },
+    "contactIbans": {
+      "title": "Bankverbindungen",
+      "add": "IBAN hinzufügen …",
+      "emptyTitle": "Noch keine Bankverbindung.",
+      "emptyText": "Kompass lernt sie aus Buchungen, oder Sie tragen sie ein.",
+      "columns": {
+        "iban": "IBAN",
+        "origin": "Herkunft",
+        "alsoAt": "Auch bei",
+        "actions": "Aktionen"
+      },
+      "origin": {
+        "learned": "aus Buchung vom {date}",
+        "learnedUndated": "aus Buchung",
+        "manual": "von Hand, {person}, {date}",
+        "manualUndated": "von Hand, {date}",
+        "mandate": "aus Mandat",
+        "unknown": "Herkunft unbekannt"
+      },
+      "shared": "Gemeinschaftskonto",
+      "remove": "Entfernen …",
+      "removeTitle": "IBAN bei {name} entfernen?",
+      "removeText": "Kompass ordnet neue Buchungen mit dieser IBAN nicht mehr {name} zu. Gebuchtes bleibt, wie es ist.",
+      "removeConfirm": "Entfernen",
+      "removed": "IBAN entfernt.",
+      "dialog": {
+        "title": "IBAN hinzufügen",
+        "iban": "IBAN",
+        "submit": "Hinzufügen",
+        "takenBy": "Diese IBAN gehört schon zu <b>{names}</b>.",
+        "choice": "Wie soll Kompass zuordnen?",
+        "shared": "Gemeinschaftskonto: auch {name} zuordnen",
+        "move": "Nur noch {name} zuordnen",
+        "sharedSubmit": "Auch {name} zuordnen",
+        "moveSubmit": "Zu {name} umhängen",
+        "otherIban": "Andere IBAN"
+      },
+      "added": "IBAN hinzugefügt.",
+      "openMandate": "Mandat ansehen"
+    },
     "errors": {
       "humanOnly": {
-        "reason": "Dieser Schritt geht nur hier in Kompass, nicht über einen Agenten.",
-        "remedy": "Der Verein kann ihn für Agenten freigeben: Einrichtung → Finanzen → Steuerliches → „Darf ein Agent festschreiben?“ einschalten."
+        "reason": "Dieser Schritt geht über einen Agenten erst, wenn der Verein es freigibt.",
+        "remedy": "Einrichtung → Finanzen → Steuerliches → „Darf ein Agent festschreiben und Lastschriften bearbeiten?“ einschalten."
       },
       "accountInUse": {
         "reason": "Auf dieses Konto ist bereits gebucht.",
@@ -7779,6 +8744,18 @@
       "entryDateInFuture": {
         "reason": "Das Buchungsdatum {date} liegt nach heute ({today}).",
         "remedy": "Ändern Sie das Datum, oder warten Sie, bis der Tag erreicht ist."
+      },
+      "inSubmittedRunNotAcknowledged": {
+        "reason": "Die Zahlung gleicht einen Posten aus, der im eingereichten Einzug zum {date} steckt. Die Bank zieht ihn trotzdem ein.",
+        "remedy": "Prüfen Sie, ob es eine Doppelzahlung ist. Wenn Sie trotzdem festschreiben, bestätigen Sie den Hinweis und veranlassen danach eine Rückgabe bei der Bank oder erstatten den Betrag."
+      },
+      "overpaidNotAcknowledged": {
+        "reason": "Die Zahlung ist um {amountCents} höher als der offene Betrag, und der Rest steht auf der Kategorie des Postens.",
+        "remedy": "Legen Sie den Rest auf eine eigene Zeile (etwa Spende oder Rückzahlung), oder bestätigen Sie den Hinweis und schreiben trotzdem fest."
+      },
+      "overpaidByCollectionNotAcknowledged": {
+        "reason": "Der Einzug hat {amountCents} für einen Posten eingezogen, der schon anders bezahlt war.",
+        "remedy": "Erstatten Sie den doppelt gezahlten Betrag oder veranlassen Sie eine Rückgabe bei der Bank. Bestätigen Sie den Hinweis, um die Gutschrift trotzdem festzuschreiben."
       },
       "accountInactive": {
         "reason": "Das Konto {account} ist stillgelegt.",
@@ -7868,9 +8845,29 @@
         "reason": "Auf diesen Posten ist bereits eine festgeschriebene Zahlung zugeordnet.",
         "remedy": "Stornieren Sie zuerst die Zahlung, bevor Sie den Posten ohne Zahlung erledigen."
       },
+      "openItemBelowSettled": {
+        "reason": "Auf diesen Posten ist schon mehr gezahlt als der neue Betrag.",
+        "remedy": "Kürzen Sie höchstens bis auf den bezahlten Betrag."
+      },
       "openItemHasOrigin": {
         "reason": "Dieser Posten hat eine Herkunft.",
         "remedy": "Er wird über seinen Vorgang erledigt."
+      },
+      "openItemOriginOwned": {
+        "reason": "Dieser Posten gehört zu einem Vorgang eines anderen Moduls.",
+        "remedy": "Legen Sie ihn dort an, verschieben oder erledigen Sie ihn über diesen Vorgang."
+      },
+      "openItemOriginUnknown": {
+        "reason": "Diese Herkunft hat kein eingeschaltetes Modul angemeldet.",
+        "remedy": "Schalten Sie das Modul ein, zu dem der Vorgang gehört."
+      },
+      "reversalTargetInvalid": {
+        "reason": "Die Rückgabe verweist auf keine festgeschriebene, nicht zurückgenommene Zahlung dieses Postens.",
+        "remedy": "Wählen Sie die Zahlung, die zurückgegeben wurde, oder buchen Sie die Rückgabe ohne Bezug auf den Posten."
+      },
+      "reversalExceedsSettled": {
+        "reason": "Die Rückgabe nimmt mehr zurück, als die Zahlung auf diesem Posten ausgeglichen hat.",
+        "remedy": "Verringern Sie den Betrag der Rückgabe auf diesem Posten."
       },
       "lineNotFinal": {
         "reason": "Die Zeile gehört zu einem Entwurf.",
@@ -8073,8 +9070,12 @@
         "remedy": "Geben Sie als Rückzahlung höchstens den offenen Betrag an. Was darüber hinaus abfließt, ist Geld des Vereins — buchen Sie es als eigene Ausgabe mit ihrer Kategorie."
       },
       "contactIbanTaken": {
-        "reason": "Diese IBAN gehört bereits zum Kontakt {contact}.",
-        "remedy": "Lösen Sie zuerst die vorhandene Zuordnung, wenn die IBAN jetzt jemand anderem gehört."
+        "reason": "Diese IBAN gehört schon zu {contact}.",
+        "remedy": "Ordnen Sie sie als Gemeinschaftskonto zusätzlich zu, oder hängen Sie sie um, wenn sie jetzt nur noch diesem Kontakt gehört."
+      },
+      "ibanHasMandate": {
+        "reason": "Ein Mandat von {contact} läuft über diese IBAN.",
+        "remedy": "Solange es gilt, bleibt die IBAN bei {contact}. Endet das Mandat, lässt sie sich entfernen oder umhängen."
       },
       "voucherSearchNeedsRead": {
         "reason": "Die Suche nach Belegen braucht das Recht, Finanzen mit Namen zu lesen.",
@@ -8315,6 +9316,10 @@
       "dispatchNothingMachine": {
         "reason": "In diesem Serienlauf gibt es keine maschinelle Bestätigung ohne Versandvermerk.",
         "remedy": "Zu unterschreibende Bestätigungen bekommen den Vermerk erst, wenn die unterschriebene Fassung abgelegt ist."
+      },
+      "runNotFinished": {
+        "reason": "Dieser Serienlauf ist noch nicht abgeschlossen.",
+        "remedy": "Setzen Sie den Lauf fort, bis keine Bestätigung mehr wartet; dann lassen sich die Bestätigungen per E-Mail senden."
       },
       "expenseNeedsContactLink": {
         "reason": "Ihr Nutzerkonto ist mit keinem Kontakt verknüpft — ohne ihn weiß Kompass nicht, wem die Auslage erstattet wird.",
@@ -8571,6 +9576,146 @@
       "resolutionFileTooLarge": {
         "reason": "Die Datei {file} ist größer als {limit}.",
         "remedy": "Wählen Sie eine kleinere Datei — Ihre Eingaben bleiben stehen."
+      },
+      "mandateSigned": {
+        "reason": "Das Mandat ist unterschrieben. Eine neue IBAN ist eine Änderung.",
+        "remedy": "Erfassen Sie sie über „Änderung erfassen …“."
+      },
+      "mandateNotActive": {
+        "reason": "Das Mandat ist nicht aktiv.",
+        "remedy": "Eine Änderung braucht ein unterschriebenes, gültiges Mandat. Vor der Unterschrift korrigieren Sie es."
+      },
+      "mandateEnded": {
+        "reason": "Das Mandat {reference} ist seit {date} beendet.",
+        "remedy": "Für weitere Einzüge braucht es ein neues Mandat."
+      },
+      "mandateInOpenRun": {
+        "reason": "Das Mandat steckt in einem Einzug, der noch nicht gebucht ist.",
+        "remedy": "Öffnen Sie den Einzug und nehmen Sie den Posten dort heraus."
+      },
+      "mandateDocumentUnrelated": {
+        "reason": "Das Dokument gehört nicht zu diesem Mandat.",
+        "remedy": "Legen Sie die Unterschrift als unterschriebene Fassung des Formulars ab oder als Eingang am Kontakt, der zahlt."
+      },
+      "sepaCreditorIdMissing": {
+        "reason": "Für die Lastschrift fehlt die Gläubiger-Identifikationsnummer.",
+        "remedy": "Tragen Sie sie unter Einrichtung → Finanzen ein; die Bundesbank vergibt sie."
+      },
+      "mandateRequired": {
+        "reason": "Für den Zahlweg Lastschrift fehlt das Mandat.",
+        "remedy": "Wählen Sie ein vorhandenes Mandat oder geben Sie IBAN und Kontoinhaber an; dann entsteht eines."
+      },
+      "mandateNotUsable": {
+        "reason": "Das Mandat {reference} ist beendet oder verfallen.",
+        "remedy": "Für weitere Einzüge braucht es ein neues Mandat: Geben Sie IBAN und Kontoinhaber an."
+      },
+      "pledgeEnded": {
+        "reason": "Die Zusage ist beendet.",
+        "remedy": "Legen Sie für neue Raten eine neue Zusage an."
+      },
+      "pledgeRateInRun": {
+        "reason": "Die Rate vom {dueOn} steckt im Einzug zum {date}.",
+        "remedy": "Öffnen Sie den Einzug und nehmen Sie die Rate dort heraus, oder beenden Sie die Zusage zum Monatsende."
+      },
+      "sepaNotReady": {
+        "reason": "Die Lastschrift ist noch nicht eingerichtet.",
+        "remedy": "Schalten Sie unter Einrichtung → Finanzen → Lastschrift die Lastschrift ein und tragen Sie die Gläubiger-Identifikationsnummer und das Konto ein."
+      },
+      "directDebitAccountUnusable": {
+        "reason": "Auf das Konto „{account}“ kann nicht eingezogen werden.",
+        "remedy": "Wählen Sie ein aktives Bankkonto mit IBAN."
+      },
+      "invalidCollectionDate": {
+        "reason": "An diesem Tag kann nicht eingezogen werden.",
+        "remedy": "Wählen Sie einen Bankarbeitstag zwischen dem {earliest} und dem {latest}."
+      },
+      "nothingToCollect": {
+        "reason": "Zum {date} ist nichts fällig, das eingezogen werden kann.",
+        "remedy": "Prüfen Sie in der Vorschau, welche Posten aus welchem Grund nicht eingezogen werden."
+      },
+      "runItemRemoved": {
+        "reason": "Der Posten ist schon aus dem Einzug genommen.",
+        "remedy": "Er erscheint in der Vorschau des nächsten Einzugs."
+      },
+      "runSubmitted": {
+        "reason": "Der Einzug ist bei der Bank eingereicht. Verwerfen geht nur dort.",
+        "remedy": "Setzen Sie ihn als nicht eingereicht zurück (nur am selben Tag) oder lassen Sie Posten einzeln zurückgeben."
+      },
+      "runCancelled": {
+        "reason": "Der Einzug ist verworfen.",
+        "remedy": "Legen Sie einen neuen Einzug an."
+      },
+      "runFileCreated": {
+        "reason": "Die Datei für die Bank ist schon erzeugt.",
+        "remedy": "Laden Sie sie am Einzug herunter. Nehmen Sie einen Posten heraus, entsteht sie neu."
+      },
+      "runFileMissing": {
+        "reason": "Für den Einzug gibt es keine Datei.",
+        "remedy": "Erzeugen Sie zuerst die Datei."
+      },
+      "mandateEndedInRun": {
+        "reason": "Das Mandat {reference} ist seit {date} beendet.",
+        "remedy": "Nehmen Sie den Posten aus dem Einzug."
+      },
+      "mandateInactiveInRun": {
+        "reason": "Vom Mandat {reference} darf nicht mehr eingezogen werden.",
+        "remedy": "Nehmen Sie den Posten aus dem Einzug."
+      },
+      "runItemChanged": {
+        "reason": "Ein Posten zum Mandat {reference} ist nicht mehr so offen wie beim Anlegen des Einzugs.",
+        "remedy": "Nehmen Sie den Posten aus dem Einzug; der offene Rest erscheint im nächsten Einzug."
+      },
+      "fileNotForAgents": {
+        "reason": "Die Datei für die Bank enthält die Bankverbindungen aller Zahler und wird nicht an Agenten ausgegeben.",
+        "remedy": "Laden Sie sie in der Oberfläche am Einzug herunter."
+      },
+      "runNotSubmitted": {
+        "reason": "Der Einzug ist nicht als eingereicht markiert.",
+        "remedy": "Zurücksetzen geht nur bei einem eingereichten Einzug."
+      },
+      "runResetTooLate": {
+        "reason": "Der Einzug ist seit {date} eingereicht. Zurücksetzen geht nur am selben Tag.",
+        "remedy": "Rufen Sie den Einzug bei der Bank zurück oder lassen Sie Posten einzeln zurückgeben."
+      },
+      "prenotificationTooLate": {
+        "reason": "Eine Ankündigung für den {date} käme zu spät: Zwischen Ankündigung und Einzug liegt die vereinbarte Frist.",
+        "remedy": "Nennen Sie als Tag der Belastung frühestens den {earliest}."
+      },
+      "runFileOutdated": {
+        "reason": "Das Mandat {reference} hat sich geändert, nachdem die Datei erzeugt wurde; sie trägt noch die alten Angaben.",
+        "remedy": "Erzeugen Sie die Datei neu und reichen Sie die neue bei der Bank ein."
+      },
+      "mandateInSubmittedRun": {
+        "reason": "Der Einzug zum {date} ist bei der Bank eingereicht.",
+        "remedy": "Beenden Sie das Mandat frühestens zum {earliest} — dem Tag nach dem Einzug — oder nach der Gutschrift."
+      },
+      "submitTooEarly": {
+        "reason": "Für den Einzug zum {collectionOn} nimmt die Bank die Datei erst ab dem {date} an.",
+        "remedy": "Reichen Sie die Datei frühestens am {date} ein und markieren Sie den Einzug dann als eingereicht."
+      },
+      "submitTooLate": {
+        "reason": "Für den Einzug zum {collectionOn} musste die Datei spätestens am {date} bei der Bank sein.",
+        "remedy": "Verwerfen Sie den Einzug und legen Sie einen neuen mit einem späteren Fälligkeitstag an."
+      },
+      "returnResolved": {
+        "reason": "Die Rückgabe ist schon geklärt.",
+        "remedy": "Ein anderer Weg geht jetzt nur noch am Beitrag oder an der Zusage."
+      },
+      "recollectNeedsConfirmation": {
+        "reason": "Die Bank hat die Lastschrift mit {returnCode} zurückgegeben: Der Zahler hat widersprochen, oder Konto oder Mandat fehlen.",
+        "remedy": "Ziehen Sie erst nach Rücksprache mit dem Zahler erneut ein und bestätigen Sie das; sonst kommt die nächste Rückgabe samt Entgelt."
+      },
+      "nothingOpen": {
+        "reason": "Für diesen Beitrag ist nichts mehr offen.",
+        "remedy": "Er ist inzwischen bezahlt. Wählen Sie „War schon bezahlt – nichts zu tun“, um die Rückgabe abzuschließen."
+      },
+      "notPaidOtherwise": {
+        "reason": "Der zurückgegebene Posten ist nicht anders bezahlt.",
+        "remedy": "Wählen Sie „erneut einziehen“, „zur Überweisung auffordern“ oder „nicht mehr einfordern“."
+      },
+      "recollectNeedsMandate": {
+        "reason": "Erneut einziehen braucht ein aktives Mandat.",
+        "remedy": "Wählen Sie „zur Überweisung auffordern“ oder „nicht mehr einfordern“, wenn das Mandat endet."
       }
     },
     "records": {
@@ -8578,6 +9723,7 @@
       "entryDraft": "Buchungsentwurf {id}",
       "entryDocument": "Beleg (Halter läuft)",
       "openItem": "Offene Zahlung {id}",
+      "openItemRef": "Offene Zahlung „{reference}“",
       "cashCount": "Kassenzählung {number}",
       "confirmation": "Bestätigung {number}",
       "notice": "Bescheid vom {date}",
@@ -8592,8 +9738,676 @@
       "partnerProfile": "Angaben zum Partner {id}",
       "purpose": "Zweck {id}",
       "yearPersonalData": "Finanzen {year}: personenbezogene Inhalte",
+      "mandate": "Mandat {reference}",
+      "pledge": "Dauerspenden-Zusage",
       "importPersonalData": "Finanzen {year}: importierte Kontoumsätze",
       "fiscalYear": "Geschäftsjahr {designation}"
     }
+  },
+  "members": {
+    "retention": {
+      "holdLabel": "Mitgliedschaft {memberNumber}",
+      "applicationLabel": "Aufnahmeantrag"
+    },
+    "records": {
+      "member": "Mitglied {memberNumber}",
+      "application": "Aufnahmeantrag",
+      "forbidden": "Mitgliedschaft (kein Zugriff)",
+      "feeCharge": "Beitrag {period} · Mitglied {memberNumber}"
+    },
+    "errors": {
+      "memberTypeKeyTaken": { "reason": "Den Schlüssel „{key}“ trägt schon eine Mitgliedsart.", "remedy": "Wählen Sie einen anderen Schlüssel." },
+      "memberTypeInUse": { "reason": "Diese Mitgliedsart steht an {count, plural, one {einer Mitgliedschaft} other {# Mitgliedschaften}}.", "remedy": "Deaktivieren Sie sie, statt sie zu löschen." },
+      "memberTypeInactive": { "reason": "Diese Mitgliedsart ist deaktiviert.", "remedy": "Wählen Sie eine aktive Art oder aktivieren Sie sie wieder." },
+      "memberNumberTooLow": { "reason": "Bis zur Nummer {last} sind Mitgliedsnummern schon vergeben.", "remedy": "Wählen Sie eine höhere Nummer." },
+      "membershipRunning": { "reason": "Für diesen Kontakt läuft schon eine Mitgliedschaft oder ein Antrag.", "remedy": "Öffnen Sie die bestehende Mitgliedschaft." },
+      "membershipNotApplied": { "reason": "Das ist kein offener Antrag mehr.", "remedy": "Laden Sie die Seite neu." },
+      "membershipNotActive": { "reason": "Diese Mitgliedschaft läuft nicht.", "remedy": "Das geht nur bei einer laufenden Mitgliedschaft." },
+      "membershipEnded": { "reason": "Diese Mitgliedschaft ist schon beendet oder hat kein Ende.", "remedy": "Ein Ende lässt sich nur zurücknehmen, solange es in der Zukunft liegt." },
+      "membershipNotDue": { "reason": "{retainUntil, select, none {Die Mitgliedschaft läuft noch.} other {Die Mitgliedschaft wird noch bis {retainUntil} aufbewahrt.}}", "remedy": "Löschen ist nach Ablauf der Frist möglich." },
+      "feeScheduleLocked": { "reason": "Nach diesem Stand {count, plural, one {ist schon ein Beitrag} other {sind schon # Beiträge}} angelegt.", "remedy": "Legen Sie einen neuen Stand an." },
+      "feeScheduleDateTaken": { "reason": "Ab {validFrom} gilt schon ein Stand der Beitragsordnung.", "remedy": "Ändern Sie diesen Stand oder wählen Sie einen anderen Tag." },
+      "feeScheduleLast": { "reason": "Das ist der einzige Stand der Beitragsordnung.", "remedy": "Ändern Sie ihn, statt ihn zu löschen." },
+      "feeBelowMinimum": { "reason": "Der Beitrag liegt unter dem Mindestbetrag von {minimumCents}.", "remedy": "Wählen Sie mindestens den Mindestbetrag oder vermerken Sie eine Ermäßigung." },
+      "intervalNotAllowed": { "reason": "Diesen Rhythmus sieht die Beitragsordnung für die Art nicht vor.", "remedy": "Wählen Sie einen der erlaubten Rhythmen." },
+      "feeRunRunning": { "reason": "Für {year} läuft schon ein Beitragslauf.", "remedy": "Setzen Sie den laufenden fort." },
+      "feeRunNothingToCreate": { "reason": "Für {year} sind die Beiträge schon angelegt.", "remedy": "Öffnen Sie die Beiträge {year}." },
+      "feeRunDone": { "reason": "Dieser Beitragslauf ist schon abgeschlossen.", "remedy": "Laden Sie die Seite neu." },
+      "membershipFeeCategoryMissing": { "reason": "Die Kategorie für Mitgliedsbeiträge fehlt oder ist deaktiviert.", "remedy": "Aktivieren Sie sie unter Einrichtung → Finanzen → Kategorien." },
+      "feeHasPayment": { "reason": "Auf diesen Beitrag ist schon eine Zahlung gebucht.", "remedy": "Erlassen geht nur ohne Zahlung. Für einen Teilerlass nehmen Sie die Zahlung zurück oder vereinbaren einen anderen Beitrag." },
+      "feeChargeNotOpen": { "reason": "Dieser Beitrag ist nicht mehr offen.", "remedy": "Laden Sie die Seite neu." },
+      "membershipHasFees": { "reason": "Gelöscht werden kann nur ein Antrag ohne Beitrag.", "remedy": "Beenden Sie die Mitgliedschaft, statt sie zu löschen." },
+      "membershipHasOpenFees": { "reason": "{count, plural, one {Ein Beitrag dieser Mitgliedschaft ist} other {# Beiträge dieser Mitgliedschaft sind}} noch offen.", "remedy": "Offene Beiträge zuerst erlassen." },
+      "addressMissing": { "reason": "Am Kontakt fehlen Anschrift und E-Mail-Adresse.", "remedy": "Ergänzen Sie am Kontakt die Anschrift oder eine E-Mail-Adresse." },
+      "runNothingToPrint": { "reason": "In diesem Lauf geht kein Brief per Post.", "remedy": "Senden Sie die Briefe per E-Mail." },
+      "runNothingToDispatch": { "reason": "Die gewählten Briefe tragen schon einen Versandvermerk.", "remedy": "Ein falscher Vermerk lässt sich am Dokument ändern." },
+      "runLetterVoided": { "reason": "Dieser Brief ist storniert.", "remedy": "Ein stornierter Brief geht nicht hinaus; wählen Sie nur die übrigen Briefe." },
+      "runRestVoided": { "reason": "Die übrigen Briefe dieses Laufs sind storniert oder tragen schon einen Versandvermerk.", "remedy": "Hier ist nichts mehr zu vermerken." },
+      "runPostGroupEmpty": { "reason": "Die Post-Gruppe ist leer.", "remedy": "Briefe der Mail-Gruppe wählen Sie einzeln, um sie als gedruckt zu vermerken." },
+      "runLetterQueued": { "reason": "Dieser Brief steht schon im Postausgang und geht per E-Mail.", "remedy": "Wollen Sie ihn drucken, nehmen Sie ihn zuerst mit „Per Post schicken“ aus dem Postausgang." },
+      "dunningRunRunning": { "reason": "Ein Mahnlauf ist noch nicht abgeschlossen.", "remedy": "Setzen Sie ihn fort, bevor Sie einen neuen starten." },
+      "dunningRunNothingReady": { "reason": "Kein Beitrag ist reif für eine Mahnstufe.", "remedy": "Prüfen Sie die übersprungenen Mitglieder in der Vorschau." },
+      "dunningRunWaitingForMatch": { "reason": "{count, plural, one {Ein Mitglied wartet} other {# Mitglieder warten}} auf die Zuordnung einer Zahlung, die passen könnte.", "remedy": "Ordnen Sie die Umsätze in der Arbeitsliste der Finanzen zu; danach ist der Mahnlauf möglich." },
+      "membershipNotInYear": { "reason": "Im Jahr {year} läuft diese Mitgliedschaft nicht.", "remedy": "Eine Beitragsmitteilung gibt es nur für ein Jahr, in dem das Mitglied aufgenommen ist und die Mitgliedschaft noch nicht geendet hat." },
+      "resignationExists": { "reason": "Für diese Mitgliedschaft ist schon ein Austritt zum {endsOn} erfasst.", "remedy": "Nehmen Sie ihn zuerst zurück („Ende zurücknehmen“), dann erfassen Sie den neuen." },
+      "paymentRequestNeedsReturn": { "reason": "Für mindestens einen dieser Beiträge ist keine Rücklastschrift festgeschrieben.", "remedy": "Die Zahlungsaufforderung nach einer Rücklastschrift gibt es nur für zurückgegebene Beiträge; für andere entsteht die Mahnung im Mahnlauf." },
+      "dunningRunDone": { "reason": "Dieser Mahnlauf ist abgeschlossen.", "remedy": "Starten Sie bei Bedarf einen neuen." }
+    },
+    "common": {
+      "moduleInactiveTitle": "Modul Mitglieder ist nicht aktiv.",
+      "moduleInactiveText": "Aktivieren Sie das Modul unter Einrichtung → Module. Vorhandene Daten bleiben erhalten.",
+      "openModules": "Module öffnen"
+    },
+    "list": {
+      "title": "Mitglieder",
+      "create": "Mitglied anlegen",
+      "exportCsv": "Liste exportieren (CSV)",
+      "countCertificate": "Bescheinigung Mitgliederzahl …",
+      "views": "Ansicht",
+      "tabs": {
+        "members": "Mitglieder",
+        "applications": "Anträge",
+        "left": "Ausgetreten"
+      },
+      "search": "Name oder Nummer",
+      "searchShort": "Name, Nr. …",
+      "searchApplications": "Name",
+      "filterType": "Art",
+      "filterPayment": "Zahlweg",
+      "onlyArrears": "Nur mit Rückstand",
+      "noun": {
+        "one": "Mitglied",
+        "other": "Mitglieder",
+        "dative": "Mitgliedern"
+      },
+      "nounApplications": {
+        "one": "Antrag",
+        "other": "Anträge",
+        "dative": "Anträgen"
+      },
+      "columns": {
+        "name": "Name",
+        "number": "Nr.",
+        "type": "Art",
+        "joinedOn": "Eintritt",
+        "appliedOn": "Antrag am",
+        "endsOn": "Austritt",
+        "payment": "Zahlweg",
+        "yearly": "Beitrag je Jahr",
+        "state": "Zustand",
+        "papers": "Unterlagen"
+      },
+      "exempt": "beitragsfrei",
+      "endsOn": "endet am {date}",
+      "overdue": "überfällig",
+      "papers": {
+        "application": "Antrag in der Akte",
+        "mandatePrepared": "Mandat vorbereitet"
+      },
+      "empty": {
+        "title": "Noch keine Mitglieder",
+        "setup": "Bevor Sie das erste Mitglied anlegen, braucht der Verein mindestens eine Mitgliedsart und eine Beitragsordnung.",
+        "setupAction": "Mitglieder einrichten",
+        "text": "Legen Sie das erste Mitglied an oder erfassen Sie einen Antrag.",
+        "applications": "Kein Antrag offen.",
+        "applicationsText": "Einen Antrag erfassen Sie über „Mitglied anlegen“, ohne Tag der Aufnahme.",
+        "left": "Noch niemand ausgetreten.",
+        "leftText": "Hier stehen Mitglieder, deren Mitgliedschaft geendet hat.",
+        "filteredNoun": "Kein Mitglied"
+      },
+      "alsoRejected": "Auch abgelehnte",
+      "rejected": "abgelehnt"
+    },
+    "payment": {
+      "transfer": "Überweisung",
+      "directDebit": "Lastschrift"
+    },
+    "certificate": {
+      "title": "Bescheinigung Mitgliederzahl",
+      "text": "Kompass zählt die Mitglieder zum Stichtag, gesamt und je Art, und legt die Bescheinigung als Dokument in die Akte. Namen stehen nicht darin.",
+      "date": "Stichtag",
+      "submit": "Bescheinigung erstellen",
+      "done": "Bescheinigung {number} erstellt.",
+      "open": "Öffnen"
+    },
+    "export": {
+      "number": "Nummer",
+      "name": "Name",
+      "type": "Art",
+      "votingRight": "Stimmrecht",
+      "joinedOn": "Eintritt",
+      "endsOn": "Ende",
+      "payment": "Zahlweg",
+      "yes": "ja",
+      "no": "nein",
+      "fileName": "Mitglieder",
+      "period": "Zeitraum",
+      "due": "Fällig",
+      "amount": "Soll",
+      "paid": "Bezahlt",
+      "open": "Offen",
+      "state": "Zustand",
+      "feesFileName": "Beitraege"
+    },
+    "interval": {
+      "yearly": "jährlich",
+      "halfYearly": "halbjährlich",
+      "quarterly": "vierteljährlich",
+      "monthly": "monatlich"
+    },
+    "form": {
+      "createTitle": "Mitglied anlegen",
+      "person": "Person",
+      "contact": "Kontakt",
+      "contactHint": "Anschrift und Kommunikationswege pflegen Sie am Kontakt.",
+      "number": "Mitgliedsnummer",
+      "numberReason": "Wird bei der Aufnahme vergeben.",
+      "membership": "Mitgliedschaft",
+      "type": "Mitgliedsart",
+      "appliedOn": "Antrag am",
+      "admittedOn": "Aufnahme am",
+      "admittedOnHint": "Leer lassen, solange der Vorstand entscheidet.",
+      "fee": "Beitrag",
+      "feeValue": "{amount} {interval}",
+      "feeExempt": "beitragsfrei",
+      "feeFromSchedule": "Aus der Beitragsordnung ab {date}.",
+      "feeExemptReason": "Die Mitgliedsart ist beitragsfrei.",
+      "feeNoRule": "Für diese Art und diesen Tag gilt keine Beitragsordnung.",
+      "feeOverride": "abweichend festlegen",
+      "feeOverrideUndo": "Beitragsordnung verwenden",
+      "amount": "Betrag {interval}",
+      "reduction": "Grund",
+      "reductionNone": "Höherer Beitrag (freiwillig)",
+      "reductionReduced": "Ermäßigt (Härtefall)",
+      "reductionHint": "Einen Härtefall-Antrag legen Sie als Dokument in die Akte, nicht als Text hier.",
+      "payment": "Zahlweg",
+      "iban": "IBAN",
+      "debtorName": "Kontoinhaber",
+      "debtorNameHint": "Nur ausfüllen, wenn das Konto nicht dem Mitglied gehört. Nach dem Speichern liegt das Mandat vorbereitet bereit; gültig wird es mit der Unterschrift.",
+      "openMember": "Mitglied öffnen",
+      "alreadyMember": "{name} ist schon Mitglied (Nr. {number}).",
+      "alreadyApplied": "Für {name} liegt schon ein Antrag vor."
+    },
+    "admit": {
+      "action": "Aufnehmen …",
+      "title": "{name} aufnehmen",
+      "text": "Mit der Aufnahme wird {name} Mitglied und bekommt eine Nummer.",
+      "admittedOn": "Aufnahme am",
+      "number": "Mitgliedsnummer",
+      "numberReason": "Nächste freie Nummer.",
+      "createFees": "Beitrag {year} anlegen: {amount}, fällig am {due}",
+      "createFeesMany": "Beiträge {year} anlegen: {count} zu zusammen {amount}, erster fällig am {due}",
+      "createFeesProRata": "Beitrag {year} anlegen: {amount} ({months, plural, one {# Monat} other {# Monate}}), fällig am {due}",
+      "createFeesHint": "Nach der Beitragsordnung. Den Betrag können Sie danach am Mitglied ändern.",
+      "noFees": "Für {year} fällt nach der Beitragsordnung kein Beitrag an.",
+      "feesLater": "Die Beiträge für {year} entstehen mit dem Beitragslauf.",
+      "letter": "Aufnahmebestätigung als PDF in die Akte",
+      "noAddress": "Am Kontakt fehlen Anschrift und E-Mail-Adresse. Aufnehmen geht trotzdem; die Aufnahmebestätigung lässt sich erst danach erstellen.",
+      "addAddress": "Anschrift am Kontakt ergänzen",
+      "mandatePending": "Das Mandat ist noch nicht unterschrieben. Bis dahin wird nichts eingezogen; der Beitrag bleibt offen.",
+      "feeNoSchedule": "Für {year} gilt kein Stand der Beitragsordnung – die Aufnahme legt keinen Beitrag an. Legen Sie unter Einrichtung → Mitglieder → Beitragsordnung einen Stand an.",
+      "feeNoRule": "Der Stand der Beitragsordnung für {year} hat keine Regel für diese Mitgliedsart – die Aufnahme legt keinen Beitrag an.",
+      "submit": "Aufnehmen",
+      "done": "{name} aufgenommen, Nr. {number}.",
+      "letterRefused": "Die Aufnahmebestätigung wurde nicht erstellt: {reason}"
+    },
+    "detail": {
+      "subtitle": "Mitglied {number} · {type} · seit {date}",
+      "subtitleApplication": "Antrag vom {date} · {type}",
+      "status": {
+        "applied": "Antrag offen",
+        "active": "aktiv",
+        "ending": "endet",
+        "ended": "ausgetreten",
+        "rejected": "abgelehnt"
+      },
+      "subtitlePlain": "Mitglied {number} · {type}",
+      "endsOn": "endet am {date}",
+      "membership": "Mitgliedschaft",
+      "contact": "Kontakt",
+      "contactReason": "Name und Anschrift pflegen Sie am Kontakt.",
+      "number": "Mitgliedsnummer",
+      "numberApplied": "Wird bei der Aufnahme vergeben.",
+      "numberAdmitted": "Vergeben bei der Aufnahme.",
+      "type": "Mitgliedsart",
+      "typeApplied": "Die Art steht mit dem Antrag fest; ändern lässt sie sich nach der Aufnahme.",
+      "typeFrom": "Art gilt ab",
+      "appliedOn": "Antrag am",
+      "appliedReason": "Tag des Antrags.",
+      "admittedOn": "Aufnahme am",
+      "admittedReason": "Festgelegt beim Aufnehmen.",
+      "admittedPending": "Über „Aufnehmen …“.",
+      "fee": "Beitrag",
+      "feeFromSchedule": "Aus der Beitragsordnung ab {date}.",
+      "feeFromAgreement": "Abweichend vereinbart ab {date}.",
+      "feeReduced": "Ermäßigt ab {date}.",
+      "feeExemptReason": "Die Mitgliedsart ist beitragsfrei.",
+      "feeNoRule": "Für diese Art gilt keine Beitragsordnung.",
+      "feeFrom": "Beitrag gilt ab",
+      "payment": "Zahlweg",
+      "paymentReason": "Den Zahlweg ändert, wer Beiträge verwaltet.",
+      "mandate": "Mandat",
+      "mandateReason": "Das Mandat führt die Lastschrift der Finanzen.",
+      "recalc": "{count, plural, one {# Beitrag wird ersetzt.} other {# Beiträge werden ersetzt.}}",
+      "recalcNew": "{count, plural, one {# Beitrag kommt neu dazu.} other {# Beiträge kommen neu dazu.}}",
+      "recalcTransferKept": "{count, plural, one {# Beitrag bleibt Überweisung} other {# Beiträge bleiben Überweisung}}: Brief vom {date}.",
+      "recalcDebitAnnounced": "{count, plural, one {# Beitrag war} other {# Beiträge waren}} im Brief vom {date} als Einzug angekündigt – stellen Sie danach eine neue Beitragsmitteilung mit den Überweisungsdaten aus.",
+      "saved": "Gespeichert.",
+      "fees": "Beiträge",
+      "feesEmpty": "Noch kein Beitrag angelegt.",
+      "documents": "Briefe",
+      "applicationHint": "Beiträge und Briefe erscheinen hier nach der Aufnahme.",
+      "columns": {
+        "year": "Jahr",
+        "amount": "Betrag",
+        "state": "Zustand",
+        "due": "Fällig",
+        "paidOn": "Bezahlt am"
+      },
+      "feeState": {
+        "open": "offen",
+        "partlyPaid": "teilweise bezahlt",
+        "paid": "bezahlt",
+        "waived": "erlassen",
+        "overdue": "überfällig"
+      },
+      "openItem": "Offene Zahlung zu {period} öffnen",
+      "arrears": {
+        "title": "{amount} offen",
+        "charge": "Beitrag {period}, fällig seit {date}.",
+        "step": "{level} am {date}",
+        "next": "Die nächste Stufe kommt mit dem Mahnlauf.",
+        "last": "Die letzte Mahnstufe ist erreicht."
+      },
+      "ending": {
+        "title": "Endet am {date}",
+        "resignation": "Austritt erklärt am {notice}. Für die Zeit danach wird kein Beitrag mehr angelegt.",
+        "other": "Ende eingetragen: {reason}. Für die Zeit danach wird kein Beitrag mehr angelegt.",
+        "undo": "Ende zurücknehmen",
+        "undone": "Ende zurückgenommen."
+      },
+      "mandateExpired": "Das Mandat {reference} gilt nicht mehr. Bis ein neues unterschrieben ist, wird nichts eingezogen.",
+      "reasons": {
+        "resignation": "Austritt",
+        "exclusion": "Ausschluss",
+        "struckOff": "Streichung",
+        "death": "Tod",
+        "other": "Sonstiges"
+      },
+      "actions": {
+        "reject": "Antrag ablehnen …",
+        "delete": "Löschen …",
+        "end": "Mitgliedschaft beenden …"
+      },
+      "reject": {
+        "title": "Antrag ablehnen",
+        "description": "Der Antrag von {name} wird abgelehnt. Eine Nummer wird nicht vergeben; ein Grund ist nicht nötig.",
+        "date": "Abgelehnt am",
+        "letter": "Ablehnung als Brief in die Akte",
+        "confirm": "Ablehnen",
+        "done": "Antrag abgelehnt."
+      },
+      "delete": {
+        "title": "Antrag löschen",
+        "description": "Der Antrag von {name} verschwindet. Das geht nur, solange kein Beitrag angelegt ist; der Kontakt bleibt.",
+        "confirm": "Löschen"
+      },
+      "end": {
+        "title": "Mitgliedschaft beenden",
+        "description": "Die Mitgliedschaft von {name} endet mit Ablauf des Tages. Beiträge, die danach fällig wären und nicht bezahlt sind, werden storniert.",
+        "reason": "Grund",
+        "noticeOn": "Kündigung eingegangen am",
+        "endsOn": "Endet am",
+        "endsOnHint": "Vorgeschlagen nach der Kündigungsfrist.",
+        "letter": "Austrittsbestätigung als Brief in die Akte",
+        "decision": "Beschluss über den Ausschluss (Dokument der Akte)",
+        "confirm": "Beenden",
+        "done": "Ende eingetragen."
+      },
+      "recalcKept": "{count, plural, one {# bleibt, weil bezahlt oder gestundet.} other {# bleiben, weil bezahlt oder gestundet.}}",
+      "recalcCancelled": "{count, plural, one {# angelegter Beitrag wird storniert.} other {# angelegte Beiträge werden storniert.}}"
+    },
+    "mandateState": {
+      "pending": "Unterschrift fehlt",
+      "active": "aktiv",
+      "ended": "beendet",
+      "expired": "abgelaufen"
+    },
+    "fees": {
+      "title": "Beiträge",
+      "dunningRun": "Mahnlauf",
+      "createRun": "Beiträge anlegen",
+      "exportCsv": "Liste exportieren (CSV)",
+      "year": "Jahr",
+      "search": "Name oder Nummer",
+      "searchShort": "Name, Nr. …",
+      "filterState": "Zustand",
+      "filterType": "Art",
+      "noun": {
+        "one": "Beitrag",
+        "other": "Beiträge",
+        "dative": "Beiträgen"
+      },
+      "sums": {
+        "due": "Soll",
+        "paid": "Bezahlt",
+        "open": "Offen",
+        "dunned": "Davon gemahnt"
+      },
+      "columns": {
+        "member": "Mitglied",
+        "type": "Art",
+        "due": "Fällig",
+        "amount": "Soll",
+        "paid": "Bezahlt",
+        "open": "Offen",
+        "state": "Zustand",
+        "actions": "Aktionen"
+      },
+      "total": "Summe",
+      "totalLine": "Soll {due} · Bezahlt {paid} · Offen {open}",
+      "state": {
+        "open": "offen",
+        "partlyPaid": "teilweise bezahlt",
+        "paid": "bezahlt",
+        "waived": "erlassen",
+        "overdue": "überfällig"
+      },
+      "empty": {
+        "year": "Für {year} sind noch keine Beiträge angelegt.",
+        "yearText": "Nach der Beitragsordnung ab {from} werden {count, plural, one {# Beitrag} other {# Beiträge}} fällig, zusammen {sum}, ab {due}.",
+        "yearNothing": "Nach der Beitragsordnung fällt für {year} kein Beitrag an.",
+        "filteredNoun": "Kein Beitrag"
+      },
+      "row": {
+        "defer": "Stunden …",
+        "waive": "Erlassen …"
+      },
+      "defer": {
+        "title": "Beitrag stunden",
+        "description": "Die Fälligkeit von {period} für {name} wird verschoben; bis dahin wird nicht gemahnt.",
+        "dueOn": "Neu fällig am",
+        "confirm": "Stunden",
+        "done": "Gestundet."
+      },
+      "waive": {
+        "title": "Beitrag erlassen",
+        "description": "Der offene Rest von {period} für {name} ({amount}) wird erlassen. Das lässt sich nicht zurücknehmen; ein Grund steht, wenn überhaupt, als Dokument in der Akte.",
+        "confirm": "Erlassen",
+        "done": "Erlassen."
+      },
+      "exemptLine": "Ohne Beitrag: {list} (beitragsfrei).",
+      "exemptPart": "{count} × {type}"
+    },
+    "feeRun": {
+      "title": "Beitragslauf",
+      "description": "Legt die Beiträge eines Jahres für alle Mitglieder an und erzeugt die Beitragsmitteilungen.",
+      "selectionLabel": "Auswahl",
+      "year": "Jahr",
+      "notices": "Beitragsmitteilungen",
+      "noticesDirectDebit": "Nur Lastschrift",
+      "noticesAll": "An alle",
+      "noticesHint": "Bei Lastschrift ist die Mitteilung zugleich die Vorabankündigung und geht immer hinaus.",
+      "show": "Vorschau zeigen",
+      "summary": "Jahr {year}",
+      "change": "Ändern",
+      "groups": {
+        "create": "Wird angelegt",
+        "exists": "Schon angelegt",
+        "exempt": "Beitragsfrei",
+        "noRule": "Ohne Beitragsordnung"
+      },
+      "groupCount": "{count, plural, one {# Beitrag} other {# Beiträge}} · {sum}",
+      "groupMembers": "{count, plural, one {# Mitglied} other {# Mitglieder}}",
+      "noRuleHint": "Für die Art gilt keine Regel der Beitragsordnung.",
+      "prenotificationLate": "Die Mitteilung kommt für {count, plural, one {ein Mitglied} other {# Mitglieder}} mit Lastschrift zu spät, um den ersten Einzug anzukündigen.",
+      "footer": "{count, plural, one {# Beitrag} other {# Beiträge}} anlegen",
+      "footerNone": "Nichts anzulegen",
+      "humanOnly": "Anlegen geht nur hier in Kompass, nicht über einen Agenten.",
+      "noPermission": "Beiträge anlegen darf, wer Beiträge verwaltet.",
+      "started": "Beitragslauf gestartet.",
+      "empty": "Für {year} ist nichts anzulegen.",
+      "noticeDetail": "Beitragsmitteilung"
+    },
+    "runDispatch": {
+      "voided": "{count, plural, one {Ein Brief des Laufs ist} other {# Briefe des Laufs sind}} storniert und {count, plural, one {geht} other {gehen}} nicht hinaus: {letters}."
+    },
+    "dunningRun": {
+      "title": "Mahnlauf",
+      "description": "Erzeugt Erinnerungen und Mahnungen für überfällige Beiträge, je Mitglied ein Brief.",
+      "asOf": "Stichtag",
+      "show": "Vorschau zeigen",
+      "summary": "Stichtag {date}",
+      "summaryTerm": "Zahlungsziel {days} Tage",
+      "change": "Ändern",
+      "groups": {
+        "paymentMayMatch": "Zahlung könnte passen",
+        "skipped": "Übersprungen"
+      },
+      "groupLetters": "{count, plural, one {# Brief} other {# Briefe}}",
+      "groupMembers": "{count, plural, one {# Mitglied} other {# Mitglieder}}",
+      "matchHint": "Ein Umsatz ohne Zuordnung könnte die Zahlung sein.",
+      "assign": "Zuordnen",
+      "openMember": "Mitglied öffnen",
+      "skip": {
+        "lastLevelReached": "Letzte Stufe erreicht, weiter nur von Hand",
+        "previousNotSent": "Die vorige Stufe ist noch nicht als versandt vermerkt",
+        "directDebit": "Zahlt per Lastschrift; erst nach einer Rückgabe gemahnt",
+        "deferred": "Gestundet",
+        "paymentDraft": "Eine Zahlung liegt als Entwurf vor – erst festschreiben oder löschen"
+      },
+      "returned": "Lastschrift vom {date} zurückgegeben",
+      "footer": "{count, plural, one {# Brief} other {# Briefe}} erzeugen",
+      "footerNone": "Kein Brief zu erzeugen",
+      "footerHeld": "Offen: {count} (Zahlung könnte passen)",
+      "humanOnly": "Mahnen geht nur hier in Kompass, nicht über einen Agenten.",
+      "noPermission": "Mahnen darf, wer Beiträge verwaltet.",
+      "started": "Mahnlauf gestartet.",
+      "empty": "Kein Beitrag ist reif für eine Mahnstufe."
+    },
+    "runs": {
+      "steps": {
+        "label": "Schritte des Laufs",
+        "selection": "Auswahl",
+        "preview": "Vorschau",
+        "run": "Lauf",
+        "dispatch": "Versand"
+      },
+      "progress": {
+        "title": "Lauf",
+        "fees": "{done} von {total} Beiträgen angelegt",
+        "notices": "{count, plural, one {# Mitteilung} other {# Mitteilungen}} erzeugt",
+        "letters": "{done} von {total} Briefen erzeugt",
+        "leave": "Der Lauf geht weiter, wenn Sie die Seite verlassen und wiederkommen. Das Ergebnis steht danach unter „Frühere Läufe“.",
+        "noPermission": "Fortsetzen darf, wer Beiträge verwaltet.",
+        "stalled": "Der Lauf hält an."
+      },
+      "result": {
+        "fees": "{created, plural, one {# Beitrag} other {# Beiträge}} angelegt, {notices, plural, one {# Mitteilung} other {# Mitteilungen}} erzeugt.",
+        "letters": "{count, plural, one {# Brief} other {# Briefe}} erzeugt.",
+        "noLetters": "Keine Briefe zu versenden."
+      },
+      "earlier": {
+        "title": "Frühere Läufe",
+        "empty": "Noch kein Lauf.",
+        "year": "Jahr",
+        "asOf": "Stichtag",
+        "createdOn": "Angelegt am",
+        "result": "Ergebnis",
+        "state": "Zustand",
+        "running": "läuft",
+        "feesResult": "{created, plural, one {# Beitrag} other {# Beiträge}}, {notices, plural, one {# Mitteilung} other {# Mitteilungen}}",
+        "lettersResult": "{count, plural, one {# Brief} other {# Briefe}}"
+      }
+    },
+    "admin": {
+      "title": "Mitglieder",
+      "description": "Mitgliedsarten, die Beitragsordnung mit ihren Ständen, Mahnstufen sowie Nummern und Fristen.",
+      "tabsLabel": "Bereiche der Einstellungen",
+      "agent": {
+        "label": "Darf ein Agent Mitglieder aufnehmen, Läufe starten und Briefe ausstellen?",
+        "hint": "Eingeschaltet darf ein Agent auch aufnehmen, ablehnen, Beitrags- und Mahnläufe starten, Briefe ausstellen, stunden und erlassen; ob er das darf, entscheidet der Verein nur hier in Kompass, nicht über einen Agenten."
+      },
+      "tabs": {
+        "types": "Mitgliedsarten",
+        "feeSchedule": "Beitragsordnung",
+        "dunning": "Mahnstufen",
+        "numbers": "Nummern und Fristen"
+      },
+      "types": {
+        "title": "Mitgliedsarten",
+        "create": "Art anlegen",
+        "columns": {
+          "name": "Name",
+          "voting": "Stimmrecht",
+          "fee": "Beitrag",
+          "count": "Mitglieder"
+        },
+        "yes": "Ja",
+        "no": "Nein",
+        "bySchedule": "nach Beitragsordnung",
+        "exempt": "beitragsfrei",
+        "inactive": "deaktiviert",
+        "edit": "Bearbeiten",
+        "deactivate": "Deaktivieren",
+        "activate": "Wieder aktivieren",
+        "delete": "Löschen …",
+        "dialogNew": "Art anlegen",
+        "dialogEdit": "Art bearbeiten",
+        "name": "Name",
+        "voting": "Mit Stimmrecht",
+        "feeExempt": "Beitragsfrei",
+        "saved": "Gespeichert.",
+        "deleteTitle": "Art löschen",
+        "deleteDescription": "Die Art „{name}“ verschwindet. Das geht nur, solange sie an keiner Mitgliedschaft stand.",
+        "deleteConfirm": "Löschen",
+        "deactivated": "Deaktiviert.",
+        "activated": "Wieder aktiviert."
+      },
+      "schedule": {
+        "newScale": "Neuen Stand anlegen …",
+        "edit": "Bearbeiten …",
+        "current": "Gilt seit {date}",
+        "future": "Ab {date}",
+        "coming": "kommt",
+        "resolved": "Beschlossen am {date}",
+        "document": "Beschluss",
+        "earlier": "Frühere Stände",
+        "locked": "Ein Stand, nach dem schon Beiträge angelegt sind, bleibt fest. Für eine Änderung legen Sie einen neuen Stand an.",
+        "empty": "Noch keine Beitragsordnung.",
+        "emptyText": "Legen Sie den ersten Stand an: je Mitgliedsart Betrag und Rhythmus.",
+        "columns": {
+          "type": "Mitgliedsart",
+          "amount": "Betrag",
+          "interval": "Rhythmus",
+          "minimum": "Mindestbetrag"
+        },
+        "changed": "geändert: vorher {amount}",
+        "dialogNew": "Neuen Stand anlegen",
+        "dialogEdit": "Stand bearbeiten",
+        "dialogText": "Vorbelegt mit dem letzten Stand. Ein Stand gilt ab seinem Tag bis zum nächsten.",
+        "validFrom": "Gilt ab",
+        "resolvedOn": "Beschlossen am",
+        "isMinimum": "Mindestbetrag",
+        "saved": "Stand gespeichert.",
+        "remedyNew": "Neuen Stand anlegen"
+      },
+      "dunning": {
+        "title": "Mahnstufen",
+        "intro": "Je Stufe ein Brief. Nach der letzten Stufe geht es nur von Hand weiter.",
+        "create": "Stufe anlegen",
+        "columns": {
+          "name": "Name",
+          "earliest": "Frühestens",
+          "snippet": "Textbaustein",
+          "level": "Stufe"
+        },
+        "afterDue": "{days, plural, one {# Tag} other {# Tage}} nach Fälligkeit",
+        "afterPrevious": "{days, plural, one {# Tag} other {# Tage}} nach „{previous}“",
+        "edit": "Bearbeiten",
+        "delete": "Entfernen",
+        "dialogNew": "Stufe anlegen",
+        "dialogEdit": "Stufe bearbeiten",
+        "name": "Name",
+        "days": "Frühestens nach",
+        "daysHint": "Die erste Stufe zählt ab der Fälligkeit, jede weitere ab dem Versand der vorigen.",
+        "snippet": "Textbaustein",
+        "snippetNone": "Kein Textbaustein",
+        "saved": "Mahnstufen gespeichert.",
+        "daysUnit": "Tage"
+      },
+      "numbers": {
+        "title": "Nummern und Fristen",
+        "nextNumber": "Nächste Nummer",
+        "nextNumberHint": "Für Gründungsmitglieder mit vorhandenen Nummern. Nur nach vorn; eine Nummer wird nie zweimal vergeben.",
+        "noticeMonths": "Kündigungsfrist",
+        "noticeAt": "Zum",
+        "anchors": {
+          "fiscalYearEnd": "Jahresende",
+          "quarterEnd": "Quartalsende",
+          "monthEnd": "Monatsende",
+          "any": "Tag genau"
+        },
+        "paymentTerm": "Zahlungsziel in Briefen",
+        "joinYear": "Beitrag im Eintrittsjahr",
+        "joinYearRules": {
+          "full": "voll",
+          "proRataMonths": "anteilig je Monat",
+          "nextYear": "ab Folgejahr"
+        },
+        "months": "Monate",
+        "days": "Tage",
+        "saved": "Gespeichert."
+      }
+    }
+  },
+  "dispatchStep": {
+    "mailGroup": "Per E-Mail",
+    "postGroup": "Per Post",
+    "count": "{count, plural, one {# Brief} other {# Briefe}}",
+    "sendAll": "{count} per E-Mail senden",
+    "print": "Als PDF zum Drucken",
+    "markSent": "Versand vermerken …",
+    "markTitle": "Versand vermerken",
+    "markText": "Vermerkt wird der Versand per Post am gewählten Tag. Er zählt für die Frist der nächsten Mahnstufe.",
+    "markDate": "Versandt am",
+    "markSubmit": "Vermerken",
+    "markDone": "Versand vermerkt.",
+    "resend": "Erneut senden",
+    "toPost": "Per Post schicken",
+    "toPostAll": "Alle offenen per Post schicken",
+    "toEmail": "Zurück zu E-Mail",
+    "sending": "{count, plural, one {# E-Mail wird} other {# E-Mails werden}} gesendet.",
+    "resent": "Wird gesendet.",
+    "movedToPost": "In die Post-Gruppe verschoben.",
+    "movedToEmail": "Zurück in der Mail-Gruppe.",
+    "reason": {
+      "preference": "Kontakt will Post",
+      "noEmail": "keine E-Mail-Adresse",
+      "mailOff": "E-Mail-Versand aus",
+      "notFinal": "nicht festgeschrieben",
+      "voided": "storniert",
+      "notOutgoing": "kein ausgehender Brief",
+      "tooLarge": "zu groß für eine E-Mail",
+      "noRecipient": "kein Empfänger",
+      "manual": "von Hand verschoben",
+      "notMachineProcedure": "nur auf Papier"
+    },
+    "state": {
+      "notQueued": "nicht gesendet",
+      "queued": "wartet",
+      "sending": "wird gesendet",
+      "sent": "gesendet",
+      "failed": "nicht zugestellt",
+      "blocked": "gesperrt",
+      "withdrawn": "auf Post umgestellt"
+    },
+    "dispatched": "versandt",
+    "sentOn": "versandt am {date}",
+    "openTitle": "Noch nicht fertig",
+    "openText": "Der Lauf ist fertig, wenn jeder Brief gesendet oder vermerkt ist. Offen: {names}.",
+    "redirect": "Testumgebung: Die Mails gehen an {to}, nicht an die Kontakte.",
+    "blocked": "Testumgebung ohne Umleitung: Die Mails bleiben im Ausgang.",
+    "off": "Der E-Mail-Versand ist nicht eingerichtet; alle Briefe gehen per Post."
   }
 }

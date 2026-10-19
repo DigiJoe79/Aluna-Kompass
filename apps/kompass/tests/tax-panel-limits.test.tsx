@@ -13,7 +13,6 @@ vi.mock('@/app/(shell)/admin/finance/actions', () => ({
   setBoardRemunerationAction: vi.fn(),
   setExpenseWaiverBasisAction: vi.fn(),
   setFinanceLimitsAction: vi.fn(async () => ({ status: 'success' })),
-  setFinanceSwitchAction: vi.fn(),
   setFinanceSwitchesAction: vi.fn(async () => ({ status: 'success' })),
 }));
 afterEach(() => {
@@ -40,7 +39,7 @@ function renderPanel(confirmedAt: string | null = null) {
 
 /**
  * Steuerliches (Runde 3, 172; Joe 2026-10-17): je Abschnitt eine Speicherleiste — Schalter eine, Grenzen eine statt vier
- * Knöpfe. Jede Leiste ruft einen Dienst; der Agent-Schalter speichert weiter sofort.
+ * Knöpfe. Jede Leiste ruft einen Dienst; der Agentenschalter geht seit Plan U4 mit der Leiste der Schalter.
  */
 describe('TaxPanel Steuerliches', () => {
   it('die Grenzen haben eine Speicherleiste statt eines Knopfs je Zeile, die Tage stehen im Feld', async () => {
@@ -74,9 +73,9 @@ describe('TaxPanel Steuerliches', () => {
     expect(screen.queryByRole('button', { name: 'Vorgaben übernehmen' })).toBeNull();
   });
 
-  it('der Agent-Schalter bleibt ein Schalter, „Gilt ab“ statt „Gilt seit“', () => {
+  it('der Agentenschalter bleibt ein Schalter, „Gilt ab“ statt „Gilt seit“', () => {
     renderPanel();
-    expect(within(screen.getByTestId('mcp-human-only-row')).getByRole('switch', { name: 'Darf ein Agent festschreiben?' })).toBeTruthy();
+    expect(within(screen.getByTestId('tax-switches')).getByRole('switch', { name: 'Darf ein Agent festschreiben und Lastschriften bearbeiten?' })).toBeTruthy();
     expect(JSON.stringify(messages.finance.admin.tax)).not.toContain('Gilt seit');
   });
 });

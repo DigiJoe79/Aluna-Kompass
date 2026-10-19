@@ -284,6 +284,80 @@ Sonst ist nichts von Hand zu tun. Wer sich wundert:
   Eingabemaske ordnen; ohne sie bekommt jedes Feld eine Breite nach seinem Typ.
 - MCP-Clients sind nicht betroffen.
 
+### Von 0.2.12 auf 0.3.0
+
+Die Fassung 0.3.0 bringt eine Migration mit (`0009`): neue Tabellen für
+Mitglieder, Lastschrift und den Ausgang der Akte sowie neue Spalten an
+Kontakten, Dokumenten und Finanzen. Sie ändert keine bestehenden Werte;
+Dokumente, die schon festgeschrieben oder abgelegt sind, bekommen nur ihren
+Ablagezeitpunkt nachgetragen (den Zeitpunkt, an dem sie angelegt wurden).
+`/api/health` meldet danach `migrationCount: 10`. Vor dem Update ist nichts
+Besonderes zu prüfen; ein Backup (Schritt 1) gehört wie immer dazu. Ein Backup aus 0.3.0 lässt sich in
+0.2.12 nicht mehr einspielen. Wer von 0.2.10 oder älter kommt, aktualisiert
+direkt auf 0.3.0 und erledigt danach auch die Schritte der Abschnitte
+dazwischen.
+
+Nichts Neues ist nach dem Update von selbst an. Was der Verein nutzen will,
+richtet er so ein:
+
+- **E-Mail-Versand: Mailserver eintragen.** Die Variablen
+  `KOMPASS_SMTP_HOST`, `KOMPASS_SMTP_TLS`, `KOMPASS_SMTP_USER` und
+  `KOMPASS_SMTP_PASSWORD` gehören in die Umgebungsdatei der Installation
+  (Abschnitt „E-Mail-Versand einrichten“ weiter unten); die
+  Compose-Vorlagen nennen sie als Kommentar. Eine geänderte Umgebungsdatei
+  liest der Container erst beim Neuerstellen
+  (`docker compose -f docker-compose.prod.yml up -d --force-recreate`), nicht
+  bei einem bloßen Neustart. Ohne `KOMPASS_SMTP_HOST` bleibt der Versand aus,
+  und Kompass bietet weiter nur Post.
+- **Testumgebung: Umleitung setzen.** Außerhalb der Produktion sendet Kompass
+  nur mit `KOMPASS_MAIL_REDIRECT`, und dann jede Mail an diese Adresse. Ohne
+  sie bleiben Briefe als „gesperrt“ im Ausgang. Wer Daten aus der Produktion
+  in den Test holt, schreibt so keine echten Kontakte an.
+- **Absender eintragen.** Unter Einrichtung → Akte → Versand Absender-Adresse
+  und -Name, nach Wunsch Antwortadresse und Begleittext je Dokumentart, dann
+  „Testmail an mich senden“.
+- **Rechte vergeben.** Die neuen Rechte „Dokumente per E-Mail versenden“
+  (`dms.send`) und „Lastschrift vorbereiten“ (`finance.directDebit`) kommen an
+  keine bestehende Rolle von selbst; geben Sie sie unter Verwaltung → Rollen
+  den Rollen, die Briefe verschicken bzw. die Kasse führen.
+- **Modul Mitglieder einschalten**, wenn der Verein es nutzen will:
+  Einrichtung → Module. Es braucht Kontakte, Finanzen und Akte. Beim
+  Einschalten legt es die Rolle „Mitgliederverwaltung“ (mit Versand und
+  Festschreiben von Briefen der Akte), drei Mitgliedsarten, die Briefarten und
+  die Textbausteine der Mahnstufen an; die Rolle vergeben Sie unter
+  Verwaltung → Rollen bzw. Nutzer. Vor dem ersten Mitglied unter Einrichtung →
+  Mitglieder eine Beitragsordnung anlegen, die Mitgliedsarten prüfen und für
+  Mitglieder mit vorhandenen Nummern die nächste Nummer setzen. Die
+  Textbausteine der Mahnstufen sind neutral; was die Satzung nach einer
+  letzten Mahnung vorsieht, schreibt der Verein selbst hinein. Wer das Modul
+  schon mit einer Vorabfassung (`0.3.0-dev`) eingeschaltet hatte: Die Rolle
+  „Mitgliederverwaltung“ entsteht nur einmal; fehlen ihr „Dokumente per
+  E-Mail versenden“ und „Dokumente festschreiben“, ergänzen Sie beide unter
+  Verwaltung → Rollen.
+- **Lastschrift einrichten**, wenn der Verein selbst einzieht: Einrichtung →
+  Finanzen → Lastschrift, „Lastschrift nutzen“ einschalten, Gläubiger-ID,
+  Konto, die Fristen aus der Lastschriftvereinbarung der Bank und das Format
+  der Mandatsreferenz eintragen (siehe
+  [Lastschrift einrichten](finanzen/lastschrift-einrichten.md)). Bis dahin
+  zeigt Finanzen → Lastschrift nur den Weg dorthin.
+- **Agentenschalter prüfen.** Der Schalter der Finanzen heißt jetzt „Darf ein
+  Agent festschreiben und Lastschriften bearbeiten?“ (Einrichtung → Finanzen
+  → Steuerliches); wer ihn schon eingeschaltet hatte, gibt einem Agenten
+  damit auch Mandate, Lastschriftdateien und Einzüge frei. Mitglieder
+  (Einrichtung → Mitglieder → Nummern und Fristen) und Akte (Einrichtung →
+  Akte → Versand) haben eigene Schalter, beide aus.
+
+Wer sich wundert:
+
+- **Summen an Projekten und Zwecken.** Eine zurückgegebene oder
+  zurückgenommene Spende mindert jetzt die Einnahmen, statt als Ausgabe zu
+  zählen. Einnahmen und Ausgaben älterer Rückgaben stehen deshalb anders da,
+  ohne dass etwas nachzubuchen ist.
+- **Bankverbindungen am Kontakt.** Zuordnungen von vor dem Update heißen
+  „Herkunft unbekannt“.
+- MCP-Clients sehen die Werkzeuge der Mitglieder erst, wenn das Modul
+  eingeschaltet ist.
+
 ### Von 0.2.11 auf 0.2.12
 
 Die Fassung 0.2.12 bringt keine Migration mit; `/api/health` meldet weiter
@@ -548,3 +622,51 @@ bleibt der Lauf selbst unberührt, nur der Sammeldruck weist auf das fehlende
 Werkzeug hin.
 Startet der Container mitten in einem Lauf neu, erkennt er die unterbrochene
 Arbeit beim nächsten Start und nimmt sie wieder auf.
+
+## E-Mail-Versand einrichten
+
+Briefe der Akte können als PDF-Anhang einer E-Mail an den Kontakt gehen. Kompass
+sendet dabei nur; es empfängt keine Mails, Antworten landen im Postfach des
+Vereins. Den Zugang zum Mailserver legt die Installation fest, in der
+Umgebungsdatei:
+
+| Variable | Bedeutung |
+|---|---|
+| `KOMPASS_SMTP_HOST` | Mailserver des Postfachs. Fehlt die Variable, ist der Versand aus: Kompass bietet dann nur Post. |
+| `KOMPASS_SMTP_TLS` | `implicit` (Vorgabe, Port 465) oder `starttls` (Port 587). Ohne gesicherte Verbindung sendet Kompass nicht. |
+| `KOMPASS_SMTP_PORT` | Nur, wenn der Server einen anderen Port nennt. |
+| `KOMPASS_SMTP_USER`, `KOMPASS_SMTP_PASSWORD` | Anmeldung am Mailserver. Das Passwort gehört in die Umgebungsdatei, nicht in die Compose-Datei. |
+| `KOMPASS_MAIL_REDIRECT` | Außerhalb der Produktion Pflicht: Jede Mail geht an diese Adresse, nie an einen Kontakt. Der Betreff nennt die ursprüngliche Adresse. |
+
+**Testumgebung.** Mit `APP_ENV=test` oder `development` sendet Kompass ohne
+`KOMPASS_MAIL_REDIRECT` gar nichts: Briefe bleiben als „gesperrt“ im Ausgang.
+So schreibt eine Testumgebung mit Daten aus der Produktion nie echte Kontakte
+an. Als Umleitung eignet sich ein eigenes Postfach für Tests.
+
+**Absender.** Unter Einrichtung → Akte stehen Absender-Adresse,
+Absender-Name (Vorgabe: der Name des Vereins) und eine Antwortadresse. Die
+Absender-Adresse muss zum Postfach passen, an dem sich Kompass anmeldet;
+sonst lehnen viele Empfänger die Mail ab. SPF und DKIM richtet der Anbieter
+des Postfachs ein, Kompass prüft das nicht. „Testmail an mich senden“ schickt
+eine Mail an die eigene Adresse und zeigt, ob alles stimmt.
+
+**Recht.** Senden dürfen Rollen mit dem Recht „Dokumente per E-Mail
+versenden“ (`dms.send`). Bestehende Rollen bekommen es nicht von selbst;
+geben Sie es unter Verwaltung → Rollen der Rolle, die Briefe verschickt.
+Agenten bereiten den Versand vor; senden dürfen sie erst, wenn der Verein
+unter Einrichtung → Akte → Versand „Darf ein Agent Dokumente per E-Mail
+senden?“ einschaltet.
+
+**Ablauf.** Kompass reiht Briefe in einen Ausgang ein und sendet im
+Hintergrund, höchstens so viele je Minute, wie die Einstellung sagt (Vorgabe
+20). Scheitert eine Sendung, versucht Kompass es nach einer und nach fünf
+Minuten erneut; danach steht sie als „nicht zugestellt“ im Ausgang, mit dem
+Grund des Servers. Der Versandvermerk am Brief entsteht erst, wenn der
+Mailserver die Mail angenommen hat. Rückläufer, die später als Mail kommen,
+sieht Kompass nicht.
+
+**Datenschutz.** Das Änderungsprotokoll nennt nur die Nummer des Briefs, keine
+Adresse und keinen Namen. Die Empfängeradresse steht im Ausgang und wird 90
+Tage nach dem Versand dort entfernt. Mit dem Anbieter des Postfachs braucht
+der Verein einen Vertrag zur Auftragsverarbeitung, und seine
+Datenschutzhinweise sollten den Versand per E-Mail nennen.

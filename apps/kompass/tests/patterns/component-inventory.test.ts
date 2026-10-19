@@ -48,6 +48,8 @@ const INVENTORY: Readonly<Record<string, Entry>> = {
   'contact-picker.tsx': bestand('E'),
   'date-format-provider.tsx': bestand('Fachbaustein'),
   'drop-overlay.tsx': bestand('Fachbaustein'),
+  // Schritt „Versand“ der Läufe: Beitrags- und Mahnlauf (Plan U1), Serienlauf der Bestätigungen (Plan U3).
+  'dispatch-step.tsx': neu('Fachbaustein', 'Handoff Mitglieder Phase 2b E3, Designer 2026-10-18; Entscheid Joe N4 (Schritt „Versand“ in allen Läufen)'),
   // Fall „gefiltert leer“: Designer 2026-10-08, HANDOFF § 8e.1.
   'copy-button.tsx': neu('Grundbaustein', 'Designer 2026-10-09, Kopier-Knopf für IDs im Protokoll'),
   'empty-state.tsx': bestand('G'),

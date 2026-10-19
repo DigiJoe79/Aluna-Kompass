@@ -20,8 +20,11 @@ export function pollTextStatus(options: {
   onUnauthorized?: () => void;
   maxFailures?: number;
   timeoutMs?: number;
+  /** Ob der Stand noch läuft; Vorgabe: Texterkennung (`textStatus` pending/running). Auch für den Mailversand. */
+  isPending?: (body: Record<string, unknown>) => boolean;
 }): () => void {
   const { url, onDone, onUnauthorized, maxFailures = 5, timeoutMs = 10_000 } = options;
+  const isPending = options.isPending ?? ((b) => b.textStatus === 'pending' || b.textStatus === 'running');
   let active = true;
   let delay = 1000;
   let failures = 0;
@@ -33,10 +36,10 @@ export function pollTextStatus(options: {
     const abort = controller;
     const deadline = setTimeout(() => abort.abort(), timeoutMs);
     let response: Response | null = null;
-    let body: { textStatus: string | null } | null = null;
+    let body: Record<string, unknown> | null = null;
     try {
       response = await fetch(url, { cache: 'no-store', signal: abort.signal });
-      if (response.ok) body = (await response.json()) as { textStatus: string | null };
+      if (response.ok) body = (await response.json()) as Record<string, unknown>;
     } catch {
       response = null;
     } finally {
@@ -47,7 +50,7 @@ export function pollTextStatus(options: {
     if (response && (response.status === 403 || response.status === 404)) return;
     if (body) {
       failures = 0;
-      if (body.textStatus !== 'pending' && body.textStatus !== 'running') return onDone();
+      if (!isPending(body)) return onDone();
     } else if (++failures >= maxFailures) {
       return;
     }

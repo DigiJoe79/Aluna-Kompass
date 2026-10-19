@@ -38,6 +38,9 @@ const SHARED_ENV: Record<string, string> = {
   SITE_DEPLOY_HOST: '',
   SITE_DEPLOY_USER: '',
   SITE_DEPLOY_KEY_FILE: '',
+  // Test-Transport statt Mailserver (nur in APP_ENV=test wirksam): beginnt „nicht eingerichtet“, ein Test schaltet ihn
+  // über `/__e2e/mail` auf Umleitung oder gesperrt (`setMailState`). Nie eine echte Verbindung.
+  KOMPASS_MAIL_FAKE: '1',
 };
 
 export function workerEnvironment(kind: ServerKind, index: number, root: string): WorkerEnvironment {

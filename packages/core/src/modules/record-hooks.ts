@@ -9,6 +9,11 @@ export function notifyRecordDeleted(tx: DbOrTx, deps: Deps, ctx: CallContext, en
   for (const manifest of enabledManifests(deps)) manifest.recordDeleted?.(tx, deps, ctx, entityType, id);
 }
 
+/** Ruft `documentDispatched` aller eingeschalteten Module — die Akte, wenn ein Versandvermerk entsteht. */
+export function notifyDocumentDispatched(tx: DbOrTx, deps: Deps, ctx: CallContext, input: { documentId: string; sentAt: string; channel: string }): void {
+  for (const manifest of enabledManifests(deps)) manifest.documentDispatched?.(tx, deps, ctx, input);
+}
+
 /**
  * K2: der Text einer Bezeichnung — ein Satz bleibt, wie er ist; ein Schlüssel geht über `deps.labels` in die
  * Sprachdatei. Ohne Übersetzer (Tests, Skripte) stehen Schlüssel und Parameter da, nie ein leerer Text.

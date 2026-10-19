@@ -19,12 +19,13 @@ import { AccountsPanel } from './accounts-panel';
 import { CategoriesPanel } from './categories-panel';
 import { ChecklistPanel } from './checklist-panel';
 import { DatedValuesPanel } from './dated-values-panel';
+import { DirectDebitPanel } from './direct-debit-panel';
 import { FiscalYearsPanel } from './fiscal-years-panel';
 import { PermissionsPanel } from './permissions-panel';
 import { PurposesPanel } from './purposes-panel';
 import { TaxPanel } from './tax-panel';
 
-const PANELS = ['checklist', 'accounts', 'categories', 'purposes', 'fiscalYears', 'datedValues', 'tax', 'permissions'] as const;
+const PANELS = ['checklist', 'accounts', 'categories', 'purposes', 'fiscalYears', 'datedValues', 'tax', 'directDebit', 'permissions'] as const;
 
 export default async function AdminFinancePage({ searchParams }: { searchParams: Promise<{ panel?: string }> }) {
   const { deps, ctx } = await requireSession();
@@ -96,6 +97,28 @@ export default async function AdminFinancePage({ searchParams }: { searchParams:
         }}
       />
     );
+  } else if (panel === 'directDebit') {
+    const accountsRes = await listAccounts(deps, ctx, {});
+    const format = readSetting<{ prefix: string; digits: number }>(deps, 'finance.sepa.mandateReferenceFormat');
+    content = accountsRes.ok ? (
+      <DirectDebitPanel
+        values={{
+          enabled: readSetting<boolean>(deps, 'finance.sepa.enabled'),
+          creditorId: readSetting<string | null>(deps, 'finance.sepa.creditorId') ?? '',
+          creditorName: readSetting<string | null>(deps, 'finance.sepa.creditorName') ?? '',
+          accountId: readSetting<string | null>(deps, 'finance.sepa.accountId') ?? '',
+          leadBusinessDays: readSetting<number>(deps, 'finance.sepa.leadBusinessDays'),
+          maxLeadDays: readSetting<number>(deps, 'finance.sepa.maxLeadDays'),
+          preNotificationDays: readSetting<number>(deps, 'finance.sepa.preNotificationDays'),
+          batchBooking: readSetting<boolean>(deps, 'finance.sepa.batchBooking'),
+          prefix: format.prefix,
+          digits: format.digits,
+        }}
+        // Eingezogen wird nur auf ein Bankkonto mit IBAN (`sepaSetupState`).
+        accounts={accountsRes.value.filter((a) => a.kind === 'bank' && a.iban).map((a) => ({ id: a.id, name: a.name, isMain: a.isMain }))}
+        organizationName={readSetting<string>(deps, 'organization.name')}
+      />
+    ) : null;
   } else if (panel === 'permissions') {
     const matrixRes = await getPermissionMatrix(deps, ctx);
     content = matrixRes.ok ? <PermissionsPanel activities={matrixRes.value.activities} roles={matrixRes.value.roles} /> : null;

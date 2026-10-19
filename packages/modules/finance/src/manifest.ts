@@ -1,14 +1,19 @@
-import { defineModule, type ModuleManifest, type SettingDefinition } from '@kompass/core';
+import { defineModule, readSetting, type ModuleManifest, type NavigationItem, type SettingDefinition } from '@kompass/core';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { FINANCE_DASHBOARD_TILES } from './dashboard';
 import { cashCountTemplate } from './ledger/cash-count-template';
+import { SEPA_SETTINGS } from './direct-debit/settings';
+import { financeDocumentDispatched } from './donations/confirmations';
 import { confirmationContactLock, confirmationEntryLock } from './donations/locks';
 import { partnerPaidLineContactLock, partnerPaidLineEntryLock, partnerPayingEntryLock } from './allocation/locks';
 import { collectiveConfirmationTemplate } from './donations/templates/collective';
 import { inKindConfirmationTemplate } from './donations/templates/in-kind';
 import { moneyConfirmationTemplate } from './donations/templates/money';
 import { simplifiedReceiptTemplate } from './donations/templates/simplified';
+import { mandateFormTemplate } from './direct-debit/templates/mandate-form';
+import { prenotificationTemplate } from './direct-debit/templates/prenotification';
+import { runSummaryTemplate } from './direct-debit/templates/run-summary';
 import { waiverDeclarationTemplate } from './allocation/templates/waiver-declaration';
 import { financeRecordDeleted, financeRecordReferences, financeRetentionDue, financeRetentionHolds } from './ledger/holds';
 import { installFinance } from './install';
@@ -71,7 +76,12 @@ const FINANCE_SETTINGS: readonly SettingDefinition[] = [
   { key: 'finance.boardRemunerationValidFrom', schema: z.string().date().nullable(), default: null },
   /** Joe 11.9: der Tag der Entscheidung, ob ja oder nein — ohne ihn gilt der Schritt als offen (Bestand eingeschlossen). */
   { key: 'finance.boardRemunerationDecidedOn', schema: z.string().date().nullable(), default: null },
+  // L1 — Lastschrift: Gläubiger-Daten, Fristen, Format der Mandatsreferenz (Spec Mitglieder und Lastschrift § 7.1).
+  ...SEPA_SETTINGS,
 ];
+
+/** Der Eintrag „Lastschrift“ (Handoff 2a § 1) — fest und, je nach Einstellung, aus `navigationFor`. */
+const DIRECT_DEBIT_NAV: NavigationItem = { key: 'finance.directDebit', href: '/finance/direct-debit', icon: 'euro', group: 'finance', section: 'finance.entries', permission: 'finance.directDebit' };
 
 export const financeModule: ModuleManifest = defineModule({
   key: 'finance',
@@ -92,6 +102,10 @@ export const financeModule: ModuleManifest = defineModule({
     { href: '/finance/entries', doc: 'finanzen/buchen' },
     { href: '/finance/accounts', doc: 'finanzen/konten-und-offene-zahlungen' },
     { href: '/finance/open-items', doc: 'finanzen/konten-und-offene-zahlungen' },
+    { href: '/finance/direct-debit/runs', doc: 'finanzen/einzug' },
+    { href: '/finance/direct-debit/mandates', doc: 'finanzen/mandate' },
+    { href: '/finance/direct-debit/pledges', doc: 'finanzen/dauerspenden' },
+    { href: '/finance/direct-debit', doc: 'finanzen/einzug' },
     { href: '/finance/cash', doc: 'finanzen/barkasse' },
     { href: '/finance/donations/run', doc: 'finanzen/spenden' },
     { href: '/finance/donations/book', doc: 'finanzen/spenden' },
@@ -119,6 +133,9 @@ export const financeModule: ModuleManifest = defineModule({
     // Buchungen: offene Zahlungen direkt hinter dem Journal, danach die Kontenseiten.
     { key: 'finance.entries', href: '/finance/entries', icon: 'euro', group: 'finance', section: 'finance.entries', permission: 'finance.read' },
     { key: 'finance.openItems', href: '/finance/open-items', icon: 'euro', group: 'finance', section: 'finance.entries', permission: 'finance.read' },
+    // Handoff 2a § 1: Lastschrift nach „Offene Zahlungen“. Fest nur mit dem Recht zum Vorbereiten; ist die Lastschrift
+    // eingeschaltet, sehen sie auch die Lesenden (`navigationFor` ersetzt den Eintrag an seiner Stelle).
+    DIRECT_DEBIT_NAV,
     { key: 'finance.accounts', href: '/finance/accounts', icon: 'euro', group: 'finance', section: 'finance.entries', permission: 'finance.read' },
     { key: 'finance.cash', href: '/finance/cash', icon: 'euro', group: 'finance', section: 'finance.entries', permission: 'finance.read' },
     // Zweckmittel: Geld nach Zweck. Zwecke sieht auch, wer nur `finance.overview` hat (F8b Annahme 13).
@@ -135,6 +152,7 @@ export const financeModule: ModuleManifest = defineModule({
     { key: 'finance.partners', href: '/finance/partners', icon: 'euro', group: 'finance', section: 'finance.parties', permission: 'finance.read' },
     { key: 'finance.people', href: '/finance/people', icon: 'euro', group: 'finance', section: 'finance.parties', permission: 'finance.read' },
   ],
+  navigationFor: (deps) => (readSetting<boolean>(deps, 'finance.sepa.enabled') ? [{ ...DIRECT_DEBIT_NAV, permission: ['finance.read', 'finance.directDebit'] }] : []),
   // Task 5 — eine Seite mit Panels nach dem Muster von /admin/dms, ?panel= reitert.
   adminNavigation: [{ key: 'finance.admin', href: '/admin/finance', icon: 'euro', permission: 'finance.setup' }],
   // Dokumentarten mit diesem Bereich sieht nur, wer Finanzen mit Namen lesen darf — nicht jeder mit `dms.view`.
@@ -157,9 +175,13 @@ export const financeModule: ModuleManifest = defineModule({
     // F8b: der Beschluss (Protokoll), im Namen des zurückgelegten Geldes hochgeladen — auch für seine Vorgänge (Annahme 11).
     { entityType: 'financeReserve', readPermission: 'finance.read', receivePermission: 'finance.entriesWrite' },
     { entityType: 'financePurposeTransfer', readPermission: 'finance.read', receivePermission: 'finance.entriesWrite' },
+    // L1: Formular und unterschriebene Fassung am Mandat.
+    { entityType: 'financeMandate', readPermission: 'finance.read', receivePermission: 'finance.directDebit' },
+    // L2: der Begleitzettel am Einzug.
+    { entityType: 'financeDirectDebitRun', readPermission: 'finance.read', receivePermission: 'finance.directDebit' },
   ],
   // F6b: der vereinfachte Nachweis — `filed: false`, ein Vordruck auf Abruf.
-  documentTemplates: [cashCountTemplate, moneyConfirmationTemplate, inKindConfirmationTemplate, collectiveConfirmationTemplate, simplifiedReceiptTemplate, waiverDeclarationTemplate],
+  documentTemplates: [cashCountTemplate, moneyConfirmationTemplate, inKindConfirmationTemplate, collectiveConfirmationTemplate, simplifiedReceiptTemplate, waiverDeclarationTemplate, mandateFormTemplate, prenotificationTemplate, runSummaryTemplate],
   documentBases: ['a4-formular', 'a4-mit-briefkopf'],
   /**
    * Alle `none`: Finanzen hält seine Kontakte über Buchungen und Bestätigungen
@@ -177,6 +199,8 @@ export const financeModule: ModuleManifest = defineModule({
   retentionHolds: financeRetentionHolds,
   recordReferences: financeRecordReferences,
   recordDeleted: financeRecordDeleted,
+  /** Versandvermerk der Akte am Dokument einer Bestätigung → Bestätigung versandt (Plan E1, Nacharbeit). */
+  documentDispatched: financeDocumentDispatched,
   retentionDue: financeRetentionDue,
   /**
    * Aktionen des Änderungsprotokolls mit ihren Werten (Spec Protokoll § 3). Strenger als die übrigen Module (Spec
@@ -201,8 +225,11 @@ export const financeModule: ModuleManifest = defineModule({
     'finance.confirmation.void': { params: ['documentNumber'] },
     'finance.confirmationRun.dispatch': { params: ['year', 'count'] },
     'finance.confirmationRun.finish': { params: ['year'] },
+    'finance.confirmationRun.mail': { params: ['year', 'count'] },
     'finance.confirmationRun.item': { params: ['issued'] },
     'finance.confirmationRun.start': { params: ['year'] },
+    'finance.confirmationRun.toPost': { params: ['year', 'count'] },
+    'finance.confirmationRun.toEmail': { params: ['year', 'count'] },
     'finance.contactIban.delete': { params: ['withContact'] },
     'finance.contactIban.link': { params: [] },
     'finance.contactWaiverTerms.delete': { params: [] },
@@ -243,6 +270,29 @@ export const financeModule: ModuleManifest = defineModule({
     'finance.import.runBalance': { params: [] },
     'finance.importProfile.save': { params: [] },
     'finance.importRule.delete': { params: [] },
+    // L1 — Mandate nennen ihre Referenz; Grund und Feld sind Codes.
+    'finance.mandate.prepare': { params: ['reference'] },
+    'finance.mandate.correct': { params: ['reference'] },
+    'finance.mandate.activate': { params: ['reference', 'signedOn'] },
+    'finance.mandate.amend': { params: ['reference', 'field'] },
+    'finance.mandate.end': { params: ['reference', 'reason'] },
+    'finance.mandate.form': { params: ['reference', 'documentNumber'] },
+    // L1 — Zusagen ohne Betrag und ohne Spender in den Werten.
+    'finance.pledge.save': { params: [] },
+    'finance.pledge.pause': { params: ['fromOn', 'untilOn'] },
+    'finance.pledge.end': { params: ['endedOn'] },
+    // Plan N1 (M14): Raten, die sich beim Anlegen nicht mehr rechtzeitig ankündigen ließen.
+    'finance.pledge.skipRates': { params: ['count'] },
+    // L2 — Ankündigung und Einzug: Referenz, Tage, Zahlen; nie Zahler oder IBAN.
+    'finance.prenotification.issue': { params: ['reference', 'count'] },
+    'finance.directDebit.create': { params: ['collectionOn', 'count', 'sumCents'] },
+    'finance.directDebit.removeItem': { params: ['collectionOn'] },
+    'finance.directDebit.file': { params: ['collectionOn', 'count'] },
+    'finance.directDebit.submit': { params: ['collectionOn'] },
+    'finance.directDebit.resetSubmit': { params: ['collectionOn'] },
+    'finance.directDebit.cancel': { params: ['collectionOn'] },
+    // L3 — Rückgabe klären: Weg und Rückgabe-Code der Bank; nie Zahler oder Betrag.
+    'finance.directDebit.returnResolve': { params: ['resolution', 'returnCode'] },
     'finance.importRule.save': { params: [] },
     'finance.inKindDetails.save': { params: ['created'] },
     'finance.notice.document': { params: ['documentNumber'] },
@@ -251,6 +301,8 @@ export const financeModule: ModuleManifest = defineModule({
     'finance.notice.void': { params: [] },
     'finance.openItem.cancel': { params: [] },
     'finance.openItem.create': { params: [] },
+    'finance.openItem.reschedule': { params: [] },
+    'finance.openItem.reduce': { params: ['amountCents'] },
     'finance.openItem.update': { params: [] },
     'finance.partnerEvidence.add': { params: ['paymentNumber', 'way'] },
     'finance.partnerEvidence.documentGone': { params: [] },
@@ -396,6 +448,13 @@ export const financeModule: ModuleManifest = defineModule({
       deletable: false,
       reason: 'Eine Umwidmung wird nie gelöscht — freigegeben, abgelehnt oder wartend, sie ist der Nachweis, warum sich ein Zweckbestand änderte. Nach Ablauf der Frist wird der Personenbezug entfernt; Nummer, Datum und Betrag bleiben.',
     },
+    // L1 — Lastschrift (Trigger `finance_sepa_mandates_no_delete`, `finance_pledges_no_delete`).
+    { entity: 'financeMandate', deletable: false, reason: 'Beleg der Einzüge; der Personenbezug fällt mit den Finanzdaten des Jahres weg.' },
+    { entity: 'financePledge', deletable: false, reason: 'Vorgang, an dem Spenden hängen; der Personenbezug fällt mit den Finanzdaten weg.' },
+    // L2 — Einzug und Ankündigung (Trigger `finance_direct_debit_runs_no_delete`, `…_items_no_delete`, `finance_sepa_prenotifications_no_delete`).
+    { entity: 'financeDirectDebitRun', deletable: false, reason: 'Vorgang einer Einreichung bei der Bank; wird storniert, nie gelöscht. Der Begleitzettel in der Akte ist Beleg der Sammelbuchung.' },
+    { entity: 'financeDirectDebitItem', deletable: false, reason: 'Posten eines Einzugs; herausgenommen wird er mit Zeitpunkt, damit die Referenz der Bank auffindbar bleibt.' },
+    { entity: 'financePrenotification', deletable: false, reason: 'Nachweis, dass ein Einzug rechtzeitig angekündigt war.' },
     {
       entity: 'financeYearPersonalData',
       deletable: true,

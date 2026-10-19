@@ -1,5 +1,5 @@
 import { assignRole, changeOwnPassword, createRole, createUser, getDashboardLayout, getEffectivePermissions, isoDayIn, login, readSetting, schema, SEED_ADMIN_PASSWORD, seedClockAt, seedMoment, setDashboardLayout, setRolePermissions, todayIn, unwrap, type CallContext, type Deps } from '@kompass/core';
-import { addContactRole, contactRoles, contacts, createContact, endContactRole, hasLinkHistoryInternal, linkUserToContact, updateContact } from '@kompass/module-contacts';
+import { addContactRole, contactChannels, contactRoles, contacts, createContact, endContactRole, hasLinkHistoryInternal, linkUserToContact, setContactChannels, updateContact } from '@kompass/module-contacts';
 import { documents as dmsDocuments, receiptPdf, receiveDocument, textPdf } from '@kompass/module-dms';
 import { projects } from '@kompass/module-projects';
 import { and, asc, eq } from 'drizzle-orm';
@@ -25,6 +25,7 @@ import { uploadVoucher, revokeVoucher } from './ledger/vouchers';
 import { setDatedValue } from './ledger/dated-values';
 import { installFinance } from './install';
 import { seedStoryYear } from './seed-calendar';
+import { seedDirectDebit } from './direct-debit/seed';
 import { checkConfirmable } from './donations/check';
 import { attachSignedConfirmation, issueConfirmation, recordConfirmationDispatch, voidConfirmation } from './donations/confirmations';
 import { saveInKindDetails } from './donations/in-kind';
@@ -710,6 +711,9 @@ export async function seedFinance(deps: Deps, ctx: CallContext): Promise<void> {
 
   // Spec 2026-10-06 § 4: Clara Neumann kommt bei der Mitgliederversammlung in den Vorstand, Bernd Hagedorn geht.
   await seedBoardHistory(deps, ctx, storyYear);
+
+  // Plan L1 Task 7: Lastschrift mit Testkennung, Mandaten in jedem Zustand und zwei Zusagen.
+  await seedDirectDebit(deps, ctx, storyYear, seedProject(deps)?.id ?? null);
 }
 
 async function grantAuditorRoleToMiraKlein(deps: Deps, ctx: CallContext): Promise<void> {
@@ -1155,6 +1159,10 @@ async function seedDonations(deps: Deps, ctx: CallContext, storyYear: number): P
   const clara = await ensureDonationContact(deps, ctx, { kind: 'person', firstName: 'Clara', lastName: 'Neumann' }, { street: 'Rosengasse 5', postalCode: '12347', city: 'Musterstadt' });
   const tobias = await ensureDonationContact(deps, ctx, { kind: 'person', firstName: 'Tobias', lastName: 'Adler' });
   const club = await ensureDonationContact(deps, ctx, { kind: 'organization', name: 'Sportfreunde Beispieltal e. V.' }, { street: 'Am Sportplatz 1', postalCode: '12349', city: 'Beispieltal' });
+  // Plan U4 Task 3: ein Gemeinschaftskonto, von Hand — Clara Neumann und Tobias Adler tragen dieselbe IBAN (frei
+  // erfunden, kein Umsatz des Seeds nutzt sie). Idempotent: Ein zweiter Lauf findet beide Zuordnungen schon vor.
+  unwrap(await linkContactIban(deps, ctx, { contactId: clara, iban: 'DE59999999990000777777' }));
+  unwrap(await linkContactIban(deps, ctx, { contactId: tobias, iban: 'DE59999999990000777777', mode: 'shared' }));
 
   const bank = accountByName(deps, 'Vereinskonto');
   const donations = categoryByKey(deps, 'donations');
@@ -1196,6 +1204,9 @@ async function seedDonations(deps: Deps, ctx: CallContext, storyYear: number): P
   await proof('Wertnachweis Laptop', `${storyYear}-08-21`);
 
   const henrik = await ensureDonationContact(deps, ctx, { kind: 'person', firstName: 'Henrik', lastName: 'Brandt' }, { street: 'Birkenstraße 9', postalCode: '12344', city: 'Musterstadt' });
+  // Eine E-Mail-Adresse, damit der Serienlauf im Schritt „Ergebnis“ eine Bestätigung per E-Mail zeigt (Handoff 2b E3); erfunden.
+  const henrikChannels = deps.db.select({ id: contactChannels.id }).from(contactChannels).where(eq(contactChannels.contactId, henrik)).all();
+  if (henrikChannels.length === 0) unwrap(await setContactChannels(deps, { ...ctx, permissions: new Set([...ctx.permissions, 'contacts.manage']) }, { id: henrik, channels: [{ kind: 'email', value: 'henrik.brandt@example.org', isPrimary: true }] }));
   await money('Spende Henrik Brandt März', `${storyYear}-03-20`, 7500, henrik);
 
   if (!organizationAddressComplete(deps)) return;

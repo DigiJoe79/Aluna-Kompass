@@ -223,6 +223,17 @@ export function freeReserveInputsAt(db: DbOrTx, range: { from: string; to: strin
 }
 
 /**
+ * Einnahmen und Ausgaben einer Zeilenmenge nach der Richtung der **Kategorie**, nicht nach dem Vorzeichen der Zeile
+ * (L3 Nacharbeit): Eine zurückgegebene oder stornierte Spende (negative Zeile auf einer Einnahmekategorie) mindert die
+ * Einnahmen und ist keine Ausgabe; eine Erstattung auf einer Ausgabenkategorie mindert die Ausgaben. Nur Umbuchungs-
+ * kategorien (`transit`) zählen nach dem Vorzeichen. Wie die EÜR (`incomeStatement`).
+ */
+const incomeSql = () =>
+  sql<number>`coalesce(sum(case when ${financeCategories.direction} = 'income' then ${financeAllocationLines.amountCents} when ${financeCategories.direction} = 'expense' then 0 when ${financeAllocationLines.amountCents} > 0 then ${financeAllocationLines.amountCents} else 0 end), 0)`;
+const expenseSql = () =>
+  sql<number>`coalesce(sum(case when ${financeCategories.direction} = 'expense' then -${financeAllocationLines.amountCents} when ${financeCategories.direction} = 'income' then 0 when ${financeAllocationLines.amountCents} < 0 then -${financeAllocationLines.amountCents} else 0 end), 0)`;
+
+/**
  * Zweckbestand je Zweck am Stichtag: Vortrag (ab seinem Stichtag) + Σ Zeilen
  * mit diesem Zweck ± freigegebene Umwidmungen (F8b Annahme 6). Alle Zwecke,
  * auch ohne je eine Zeile gesehen zu haben — die Vermögensübersicht summiert
@@ -233,11 +244,12 @@ export function purposeBalancesAt(db: DbOrTx, date: string): PurposeBalance[] {
   const sums = db
     .select({
       purposeId: financeAllocationLines.purposeId,
-      inflowCents: sql<number>`coalesce(sum(case when ${financeAllocationLines.amountCents} > 0 then ${financeAllocationLines.amountCents} else 0 end), 0)`,
-      outflowCents: sql<number>`coalesce(sum(case when ${financeAllocationLines.amountCents} < 0 then -${financeAllocationLines.amountCents} else 0 end), 0)`,
+      inflowCents: incomeSql(),
+      outflowCents: expenseSql(),
     })
     .from(financeAllocationLines)
     .innerJoin(financeEntries, eq(financeAllocationLines.entryId, financeEntries.id))
+    .innerJoin(financeCategories, eq(financeAllocationLines.categoryId, financeCategories.id))
     .where(and(eq(financeEntries.status, 'final'), lte(financeEntries.entryDate, date)))
     .groupBy(financeAllocationLines.purposeId)
     .all();
@@ -273,11 +285,12 @@ export function projectBalances(db: DbOrTx, range: { from?: string; to?: string 
   const rows = db
     .select({
       projectId: financeAllocationLines.projectId,
-      incomeCents: sql<number>`coalesce(sum(case when ${financeAllocationLines.amountCents} > 0 then ${financeAllocationLines.amountCents} else 0 end), 0)`,
-      expenseCents: sql<number>`coalesce(sum(case when ${financeAllocationLines.amountCents} < 0 then -${financeAllocationLines.amountCents} else 0 end), 0)`,
+      incomeCents: incomeSql(),
+      expenseCents: expenseSql(),
     })
     .from(financeAllocationLines)
     .innerJoin(financeEntries, eq(financeAllocationLines.entryId, financeEntries.id))
+    .innerJoin(financeCategories, eq(financeAllocationLines.categoryId, financeCategories.id))
     .where(and(...conditions))
     .groupBy(financeAllocationLines.projectId)
     .all();

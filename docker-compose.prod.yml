@@ -38,6 +38,11 @@ services:
     ports: ["3000:3000"]
     environment:
       APP_ENV: production
+      # E-Mail-Versand (betrieb.md, „E-Mail-Versand einrichten“). Ohne
+      # KOMPASS_SMTP_HOST ist er aus. Passwort in die .env-Datei.
+      # KOMPASS_SMTP_HOST: smtp.example.org
+      # KOMPASS_SMTP_TLS: implicit        # oder starttls (Port 587)
+      # KOMPASS_SMTP_USER: verein@example.org
     env_file: [/pfad/zu/kompass-prod/.env.prod]
     volumes:
       # Ein Volume für alles, was gesichert wird: darunter liegt je Modul ein

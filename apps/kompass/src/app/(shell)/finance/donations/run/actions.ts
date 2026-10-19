@@ -1,7 +1,9 @@
 'use server';
 
 import { guardAction } from '@/lib/action-guard';
-import { dispatchRunConfirmations, previewConfirmationRun, startConfirmationRun } from '@kompass/module-finance';
+import { dispatchRunConfirmations, markRunPostConfirmations, moveConfirmationRunLetters, previewConfirmationRun, sendConfirmationRunEmails, startConfirmationRun } from '@kompass/module-finance';
+import { resendDocumentEmail } from '@kompass/module-dms';
+import { kickMailSender } from '@/lib/background';
 import { getTranslations } from 'next-intl/server';
 import { revalidatePath } from 'next/cache';
 import { toActionState, type ActionState } from '@/lib/actions';
@@ -56,5 +58,52 @@ export async function dispatchRunConfirmationsAction(input: { runId: string; sen
     revalidate();
     if (!result.ok) return toActionState(result, t);
     return { status: 'success', message: t('finance.donations.run.dispatch.toast') };
+  });
+}
+
+/** „{n} per E-Mail senden“ im Schritt „Ergebnis“ (Handoff 2b E3) — `finance.donationsIssue` und `dms.send`, nur ein Mensch. */
+export async function sendRunMailsAction(runId: string): Promise<ActionState> {
+  return guardAction('(shell)/finance/donations/run/actions.ts#sendRunMailsAction', async () => {
+    const t = await getTranslations();
+    const { deps, ctx } = await requireSession();
+    const result = await sendConfirmationRunEmails(deps, ctx, { runId });
+    revalidate();
+    if (!result.ok) return toActionState(result, t);
+    kickMailSender();
+    return { status: 'success', message: t('dispatchStep.sending', { count: result.value.queued }) };
+  });
+}
+
+/** „Versand vermerken …“ an Zeilen der Post-Gruppe. */
+export async function markRunPostAction(input: { runId: string; documentIds: string[]; sentAt: string }): Promise<ActionState> {
+  return guardAction('(shell)/finance/donations/run/actions.ts#markRunPostAction', async () => {
+    const t = await getTranslations();
+    const { deps, ctx } = await requireSession();
+    const result = await markRunPostConfirmations(deps, ctx, input);
+    revalidate();
+    return toActionState(result, t);
+  });
+}
+
+/** „Erneut senden“ an einer nicht zugestellten Zeile: eine neue Sendung, die alte bleibt im Ausgang. */
+export async function resendRunMailAction(outboxId: string): Promise<ActionState> {
+  return guardAction('(shell)/finance/donations/run/actions.ts#resendRunMailAction', async () => {
+    const t = await getTranslations();
+    const { deps, ctx } = await requireSession();
+    const result = await resendDocumentEmail(deps, ctx, { outboxId });
+    if (result.ok) kickMailSender();
+    revalidate();
+    return toActionState(result, t, t('dispatchStep.resent'));
+  });
+}
+
+/** „Per Post schicken“ / „Zurück zu E-Mail“ je Zeile des Versand-Schritts (Plan U4 Task 2). */
+export async function moveRunLettersAction(input: { runId: string; documentIds: string[]; to: 'post' | 'email' }): Promise<ActionState> {
+  return guardAction('(shell)/finance/donations/run/actions.ts#moveRunLettersAction', async () => {
+    const t = await getTranslations();
+    const { deps, ctx } = await requireSession();
+    const result = await moveConfirmationRunLetters(deps, ctx, input);
+    revalidate();
+    return toActionState(result, t, t(input.to === 'post' ? 'dispatchStep.movedToPost' : 'dispatchStep.movedToEmail'));
   });
 }

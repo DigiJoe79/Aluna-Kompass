@@ -31,7 +31,7 @@ describe('Hauptaktion in der Kopfzeile ist primär', () => {
   });
 
   it('„Kontakt bearbeiten“, einzige Aktion der Detailseite, ist primär', () => {
-    const contact = { id: 'c1', kind: 'person' as const, salutation: null, firstName: 'A', lastName: 'B', name: null, legalForm: null, addressExtra: null, street: null, postalCode: null, city: null, country: null, notes: null, updatedAt: '2026-01-01T00:00:00Z' };
+    const contact = { id: 'c1', kind: 'person' as const, salutation: null, firstName: 'A', lastName: 'B', name: null, legalForm: null, addressExtra: null, street: null, postalCode: null, city: null, country: null, notes: null, updatedAt: '2026-01-01T00:00:00Z', belongsTo: null, deliveryPreference: 'auto' as const, automaticDelivery: { channel: 'post' as const } };
     render(<CreateContactDialog contact={contact} />, { wrapper: Intl });
     expect(screen.getByRole('button', { name: /bearbeiten/ }).className).toContain('bg-brand');
   });

@@ -43,6 +43,24 @@ export const STATUS_TONES = {
   importRun: { finished: 'neutral', failed: 'error', discarded: 'neutral' },
   /** Rollen (Nutzer, Kontakte) sind neutral (Designer Stufe 2 Nr. 6e). */
   role: { current: 'neutral', ended: 'neutral' },
+  /** Mitgliedschaft (Handoff Mitglieder D2, N1): „Antrag offen“ ist ein Zwischenstand, „endet am …“ Arbeit. */
+  membership: { applied: 'info', active: 'success', ending: 'warning', ended: 'neutral', rejected: 'error' },
+  /** Beitrag (D2): überfällig ist eine zweite Marke wie bei `openItem`; eine Mahnstufe ersetzt sie (`dunning`). */
+  fee: { open: 'neutral', partlyPaid: 'info', paid: 'success', waived: 'neutral', overdue: 'warning' },
+  /** Mahnstufe (D2): jede Stufe vor der letzten ist Arbeit, die letzte `error`. Das Wort ist der Name aus den Einstellungen. */
+  dunning: { level: 'warning', lastLevel: 'error' },
+  /** Mandat (D2): „Unterschrift fehlt“ ist Arbeit; abgelaufen ist `neutral`, die Arbeit steht dann am Mitglied. */
+  mandate: { pending: 'warning', active: 'success', ended: 'neutral', expired: 'neutral' },
+  /** Einzug (D2): angelegt ist Arbeit, Datei und eingereicht sind Zwischenstände, gebucht ist festgeschrieben; verworfen beendet. */
+  debitRun: { draft: 'warning', fileCreated: 'info', submitted: 'info', booked: 'final', expired: 'warning', cancelled: 'neutral' },
+  /** Rückgabe einer Lastschrift (D2): offen ist ein Fehler, der eine Entscheidung braucht. */
+  debitReturn: { open: 'error', resolved: 'neutral' },
+  /** Dauerspenden-Zusage (D2): ruhend und beendet sind gedämpfte Zeilen. */
+  pledge: { active: 'success', paused: 'neutral', ended: 'neutral' },
+  /** Rate einer Zusage (Nachtrag Phase 2 § 2): gebucht ist eine Buchung (`final`), zurückgegeben wie „Rückgabe zu klären“. */
+  pledgeRate: { expected: 'neutral', inRun: 'info', booked: 'final', returned: 'error', skipped: 'neutral', missed: 'neutral' },
+  /** Ausgang der Mails (Handoff Phase 2b § 1): wartet und wird gesendet teilen `info`, gesperrt ist Einrichtung (`warning`). */
+  outbox: { queued: 'info', sending: 'info', sent: 'success', failed: 'error', blocked: 'warning', withdrawn: 'neutral' },
 } as const satisfies Record<string, Record<string, BadgeTone>>;
 
 export type StatusKind = keyof typeof STATUS_TONES;
@@ -75,6 +93,15 @@ const NORMAL_IN_LIST: { [K in StatusKind]?: readonly (keyof (typeof STATUS_TONES
   document: ['issued'],
   importRun: ['finished'],
   openItem: ['open'],
+  membership: ['active'],
+  fee: ['open', 'paid'],
+  mandate: ['active'],
+  debitRun: ['booked'],
+  debitReturn: ['resolved'],
+  pledge: ['active'],
+  // „erwartet“ trägt in der Ratenliste eine Marke: Sie unterscheidet die künftige von der gebuchten Zeile (Nachtrag § 2).
+  pledgeRate: ['booked'],
+  outbox: ['sent'],
 };
 
 export function isNormalInList<K extends StatusKind>(kind: K, status: keyof (typeof STATUS_TONES)[K]): boolean {

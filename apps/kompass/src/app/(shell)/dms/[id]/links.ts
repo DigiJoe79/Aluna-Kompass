@@ -1,4 +1,4 @@
-import type { CallContext, Deps } from '@kompass/core';
+import { resolveRecordLabel, type CallContext, type Deps } from '@kompass/core';
 import { getProject } from '@kompass/module-projects';
 import { getAnimal } from '@kompass/module-animals';
 import { displayName, getContact } from '@kompass/module-contacts';
@@ -62,6 +62,11 @@ export async function resolveLinks(
         const project = await getProject(deps, ctx, link.entityId);
         return fromResult(base, project, (p) => p.name[leading] || p.slug, () => `/projects/${link.entityId}`);
       }
+      // Alle übrigen Typen benennt das Modul, dem sie gehören, über den Haken `recordLabels` (Mitgliedschaft, Posten,
+      // Mandat …). Ohne diesen Weg stand ein Bezug auf eine Mitgliedschaft als „nicht mehr vorhanden“ da (Joe 2026-10-18).
+      const named = resolveRecordLabel(deps, ctx, link.entityType, link.entityId);
+      if (named?.state === 'ok') return { ...base, label: named.label, href: named.href, reason: null };
+      if (named?.state === 'forbidden') return { ...base, label: null, href: null, reason: 'forbidden' as const };
       return { ...base, label: null, href: null, reason: 'missing' as const };
     }),
   );

@@ -75,3 +75,22 @@ describe('RequirementList erledigt', () => {
     expect(screen.getByTestId('requirement-o').querySelector('svg.lucide-circle-dashed')).not.toBeNull();
   });
 });
+
+/**
+ * Joe 2026-10-19: `sr-only` ist `position: absolute`. Ohne positionierten Vorfahren ist sein Bezugsrahmen das Fenster,
+ * nicht der scrollende `main` der Shell — liegt die Zeile unter dem Falz, verlängert das Wort für Vorleser das Dokument
+ * (Einrichtung › Finanzen: leere Fläche unter der Checkliste, Schiene und Zweitebene endeten darüber). Jede Zeile ist
+ * deshalb selbst der Bezugsrahmen.
+ */
+describe('RequirementList Vorleser-Text', () => {
+  it('jedes `sr-only` liegt in einer positionierten Zeile (`relative`)', () => {
+    render(
+      <NextIntlClientProvider locale="de" messages={messages} timeZone="Europe/Berlin">
+        <RequirementList items={[item('o'), item('d', { done: true })]} />
+      </NextIntlClientProvider>,
+    );
+    const hidden = Array.from(document.querySelectorAll('.sr-only'));
+    expect(hidden.length).toBe(2);
+    for (const el of hidden) expect(el.closest('li')?.className.split(' ')).toContain('relative');
+  });
+});

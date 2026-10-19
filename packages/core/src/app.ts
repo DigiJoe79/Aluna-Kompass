@@ -15,6 +15,7 @@ import { readLocales } from './i18n/locales';
 import { runModuleInstalls } from './modules/installs';
 import { noopTextExtraction, type TextExtraction } from './text/extraction';
 import { noopPdfTools, type PdfTools } from './pdf/tools';
+import { noopMailTransport, type MailTransport } from './mail';
 
 export interface CreateDepsOptions {
   /**
@@ -34,6 +35,8 @@ export interface CreateDepsOptions {
   textExtraction?: TextExtraction;
   /** Ohne Angabe lassen sich keine PDFs zusammenfügen (Skripte, Tests ohne Modul). */
   pdf?: PdfTools;
+  /** Ohne Angabe ist Mailversand nicht eingerichtet (`off`). */
+  mail?: MailTransport;
   clock?: Clock;
   /**
    * Grundausstattung der eingeschalteten Module beim Öffnen nachliefern
@@ -123,6 +126,7 @@ export function createDeps(opts: CreateDepsOptions): AppDeps {
     documents: opts.documents ?? noopDocumentEngine,
     textExtraction: opts.textExtraction ?? noopTextExtraction,
     pdf: opts.pdf ?? noopPdfTools,
+    mail: opts.mail ?? noopMailTransport,
     locales: () => readLocales(deps),
     dataPath: opts.dataPath,
     databasePath,

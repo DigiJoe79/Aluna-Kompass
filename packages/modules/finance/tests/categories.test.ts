@@ -1,6 +1,8 @@
 import { unwrap } from '@kompass/core';
 import { describe, expect, it } from 'vitest';
-import { createCategory, deleteCategory, listCategories, updateCategory } from '../src/ledger/categories';
+import { categoryIdByKeyInternal, createCategory, deleteCategory, listCategories, setCategoryActive, updateCategory } from '../src/ledger/categories';
+import { installFinance } from '../src/install';
+import { systemContext } from '@kompass/core/testing';
 import { financeAllocationLines, financeEntries, financeExpenseClaims, financeExpensePositions } from '../src/schema';
 import { setupFinance } from './helpers';
 
@@ -63,5 +65,15 @@ describe('categories', () => {
     deps.db.insert(financeExpenseClaims).values({ id: 'EC1', contactId: 'CONTACT-1', submittedByUserId: 'U1', createdAt: now, updatedAt: now }).run();
     deps.db.insert(financeExpensePositions).values({ id: 'P1', claimId: 'EC1', sortOrder: 0, kind: 'receipt', categoryId: row.id }).run();
     expect(err(await deleteCategory(deps, ctx, { id: row.id }))).toMatchObject({ type: 'conflict', code: 'categoryInUse' });
+  });
+
+  it('categoryIdByKeyInternal finds an active category of the start plan by key, a deactivated one not (Plan M3)', async () => {
+    const { deps, ctx } = setupFinance();
+    deps.db.transaction((tx) => installFinance(tx, deps, systemContext()));
+    const id = categoryIdByKeyInternal(deps.db, 'membership-fees');
+    expect(id).toEqual(expect.any(String));
+    expect(categoryIdByKeyInternal(deps.db, 'no-such-key')).toBeNull();
+    unwrap(await setCategoryActive(deps, ctx, { id: id!, isActive: false }));
+    expect(categoryIdByKeyInternal(deps.db, 'membership-fees')).toBeNull();
   });
 });

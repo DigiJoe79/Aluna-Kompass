@@ -41,8 +41,8 @@ describe('suggestion functions purity', () => {
     expect(rule).not.toMatch(/function ruleMatches/);
   });
 
-  it('holds the five building blocks of the suggestions', () => {
+  it('holds the six building blocks of the suggestions (Plan L3: the credit of a direct debit run)', () => {
     const files = readdirSync(DIR).filter((f) => f.endsWith('.ts')).sort();
-    expect(files).toEqual(['pair.ts', 'reference.ts', 'return.ts', 'rule.ts', 'text.ts']);
+    expect(files).toEqual(['direct-debit.ts', 'pair.ts', 'reference.ts', 'return.ts', 'rule.ts', 'text.ts']);
   });
 });

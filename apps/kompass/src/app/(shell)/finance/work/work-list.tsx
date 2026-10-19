@@ -44,14 +44,18 @@ const ORIGIN_GROUP = {
   pair: 'pair',
   cashKeyword: 'cash',
   returnCode: 'return',
+  directDebitReturn: 'return',
   relatedReference: 'return',
   paymentReference: 'openItem',
   amountAndContact: 'openItem',
+  directDebitRun: 'openItem',
   rule: 'rule',
   contactIban: 'contact',
   contactEmail: 'contact',
   contactName: 'contact',
+  sharedIban: 'contact',
   paymentFee: 'rule',
+  directDebitReturnFee: 'return',
 } as const;
 
 const GROUP_ICON = {

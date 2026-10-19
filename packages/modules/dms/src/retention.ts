@@ -1,4 +1,4 @@
-import { retentionEnd, retentionMonths, todayIn, type Deps, type DueItem, type RetentionHold } from '@kompass/core';
+import { holdsFor, retentionEnd, retentionMonths, todayIn, type Deps, type DueItem, type RetentionHold } from '@kompass/core';
 import { and, eq } from 'drizzle-orm';
 import { documentTypeFor } from './catalog';
 import { documentLinks, documents } from './schema';
@@ -43,7 +43,8 @@ export function dmsRetentionHolds(deps: Deps, entityType: string, id: string): R
 }
 
 /**
- * Festgeschriebene Dokumente, deren eigene Frist abgelaufen ist.
+ * Festgeschriebene Dokumente, deren eigene Frist abgelaufen ist — und die kein Halter eines Moduls länger hält
+ * (Mitglieder: der Aufnahmeantrag bleibt, solange die Mitgliedschaft aufbewahrt wird, Spec Mitglieder § 3.2).
  */
 export function dmsRetentionDue(deps: Deps): DueItem[] {
   const today = todayIn(deps);
@@ -57,7 +58,11 @@ export function dmsRetentionDue(deps: Deps): DueItem[] {
     const months = retentionMonths(deps, docType.retentionClass);
     if (months === null) continue;
 
-    const until = retentionEnd(doc.documentDate, months);
+    const own = retentionEnd(doc.documentDate, months);
+    if (own >= today) continue;
+    const held = holdsFor(deps, 'document', doc.id);
+    if (held.some((h) => h.until === null)) continue;
+    const until = [own, ...held.map((h) => h.until!)].sort().at(-1)!;
     if (until < today) {
       due.push({
         entity: 'document',

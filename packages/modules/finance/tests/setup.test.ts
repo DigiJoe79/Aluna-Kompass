@@ -21,9 +21,10 @@ describe('finance setup status', () => {
     const { deps, ctx } = setupFinance();
     const status = unwrap(await getSetupStatus(deps, ctx));
     expect(status.complete).toBe(false);
-    expect(status.steps.map((s) => s.key)).toEqual(['fiscalYear', 'account', 'roles', 'categories', 'tax', 'importFormat', 'notice', 'machineProcedure', 'boardRemuneration', 'boardMembers']);
-    // importFormat ist ohne Bankkonto vakuos erfüllt (nichts, was ein Format bräuchte) — die übrigen sind offen.
-    for (const step of status.steps.filter((s) => s.key !== 'importFormat')) expect(step.done, step.key).toBe(false);
+    expect(status.steps.map((s) => s.key)).toEqual(['fiscalYear', 'account', 'roles', 'categories', 'tax', 'importFormat', 'notice', 'machineProcedure', 'boardRemuneration', 'boardMembers', 'directDebit']);
+    // importFormat ist ohne Bankkonto vakuos erfüllt (nichts, was ein Format bräuchte), directDebit bei ausgeschalteter
+    // Lastschrift (L1) — die übrigen sind offen.
+    for (const step of status.steps.filter((s) => s.key !== 'importFormat' && s.key !== 'directDebit')) expect(step.done, step.key).toBe(false);
     const account = status.steps.find((s) => s.key === 'account')!;
     expect(account.dependsOn).toBe('fiscalYear');
     expect(account.blocked).toBe(true);
@@ -35,7 +36,7 @@ describe('finance setup status', () => {
     expect(importFormat.required).toBe(false);
     expect(importFormat.dependsOn).toBe('account');
     expect(importFormat.blocked).toBe(true);
-    for (const step of status.steps.filter((s) => s.key !== 'importFormat' && s.key !== 'notice' && s.key !== 'machineProcedure' && s.key !== 'boardRemuneration' && s.key !== 'boardMembers')) expect(step.required, step.key).toBe(true);
+    for (const step of status.steps.filter((s) => s.key !== 'importFormat' && s.key !== 'notice' && s.key !== 'machineProcedure' && s.key !== 'boardRemuneration' && s.key !== 'boardMembers' && s.key !== 'directDebit')) expect(step.required, step.key).toBe(true);
   });
 
   it('zeigt „Eigene Basis für Formulare“ nur, wenn die Installation eigene Basen führt, aber nicht jede von Finanzen genutzte (Befund 51 b)', async () => {
@@ -348,11 +349,11 @@ describe('finance setup status', () => {
     expect(await applyTaxDefaults(deps, readerCtx)).toMatchObject({ ok: false, error: { type: 'forbidden', permission: 'finance.setup' } });
   });
 
-  it('maps ten activities to the ten permissions and lists holders per role; a role nobody holds has an empty list', async () => {
+  it('maps eleven activities to the eleven permissions and lists holders per role; a role nobody holds has an empty list', async () => {
     const { deps, ctx } = setupFinance();
     deps.db.transaction((tx) => installFinance(tx, deps, systemContext()));
     const matrix = unwrap(await getPermissionMatrix(deps, ctx));
-    expect(matrix.activities).toHaveLength(10);
+    expect(matrix.activities).toHaveLength(11);
     expect(matrix.activities.map((a) => a.permission)).toEqual([...FINANCE_PERMISSIONS]);
     expect(matrix.activities[0]).toEqual({ key: 'read', permission: 'finance.read' });
 

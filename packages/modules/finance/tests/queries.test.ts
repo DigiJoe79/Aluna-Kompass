@@ -167,6 +167,21 @@ describe('queries', () => {
     expect(projects).toEqual([{ projectId: project.id, incomeCents: 25000, expenseCents: 0, resultCents: 25000 }]);
   });
 
+  it('a returned donation lowers income and is no expense — by the direction of the category, not the sign of the line (L3 Nacharbeit)', async () => {
+    const f = await ledgerFixture();
+    const project = await seedProject(f.deps, f.userId, 'rueckgabe');
+    const purpose = unwrap(await createPurpose(f.deps, f.ctx, { name: 'Zweck R' }));
+    const donations = categoryByKey(f.deps, 'donations');
+    const donation = unwrap(await bookEntry(f.deps, f.ctx, { entryDate: '2026-02-01', text: 'Spende', moneyLines: [{ accountId: f.bank.id, amountCents: 10000 }], allocationLines: [{ categoryId: donations.id, amountCents: 10000, projectId: project.id, purposeId: purpose.id }] }));
+    unwrap(await bookEntry(f.deps, f.ctx, { entryDate: '2026-02-05', text: 'Rückgabe', moneyLines: [{ accountId: f.bank.id, amountCents: -3000 }], allocationLines: [{ categoryId: donations.id, amountCents: -3000, projectId: project.id, purposeId: purpose.id, originLineId: donation.allocationLines[0]!.id }] }));
+    unwrap(await bookEntry(f.deps, f.ctx, { entryDate: '2026-02-06', text: 'Rückgabe ohne Bezug', moneyLines: [{ accountId: f.bank.id, amountCents: -1000 }], allocationLines: [{ categoryId: donations.id, amountCents: -1000, projectId: project.id, purposeId: purpose.id }] }));
+
+    expect(projectBalances(f.deps.db, { from: '2026-01-01', to: '2026-12-31' })).toEqual([{ projectId: project.id, incomeCents: 6000, expenseCents: 0, resultCents: 6000 }]);
+    expect(purposeBalancesAt(f.deps.db, '2026-03-01').find((p) => p.purposeId === purpose.id)).toMatchObject({ inflowCents: 6000, outflowCents: 0, balanceCents: 6000 });
+    const statement = incomeStatement(f.deps.db, { from: '2026-01-01', to: '2026-12-31' });
+    expect([statement.totalIncomeCents, statement.totalExpenseCents]).toEqual([6000, 0]);
+  });
+
   it('asset overview: accounts plus receivables minus payables; earmarked is the sum of positive purpose balances', async () => {
     const { f, bank, cash, payable } = await buildMainScenario();
     void payable;

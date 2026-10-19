@@ -6,6 +6,7 @@ import { CreateContactDialog } from '@/app/(shell)/contacts/contact-form';
 import { searchContactsAction } from '@/app/(shell)/contacts/search-action';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Label } from '@/components/ui/label';
+import { useHiddenInputEvent } from '@/lib/use-hidden-input-event';
 import { cn } from '@/lib/utils';
 
 export interface PickedContact {
@@ -13,7 +14,12 @@ export interface PickedContact {
   name: string;
   /** Nur in der Trefferliste: sagt, warum ein Treffer da ist. */
   city?: string | null;
+  /** Die Organisation einer Person: „Sabine Klein · Finanzamt“ (Nachtrag Ansprechpersonen § 4). */
+  organization?: string | null;
 }
+
+/** Was im gewählten Feld steht: der Name, bei einer Person mit Organisation „Name · Organisation“. */
+const pickedLabel = (contact: PickedContact | null) => (contact ? (contact.organization ? `${contact.name} · ${contact.organization}` : contact.name) : '');
 
 /**
  * Ein Suchfeld statt einer Auswahlliste über die ersten 200 Kontakte. Die ID
@@ -44,7 +50,7 @@ export function ContactPicker({
   kind?: 'person' | 'organization';
 }) {
   const t = useTranslations('contacts.picker');
-  const [query, setQuery] = useState(value?.name ?? '');
+  const [query, setQuery] = useState(pickedLabel(value));
   const [options, setOptions] = useState<PickedContact[]>([]);
   const [more, setMore] = useState(false);
   const [open, setOpen] = useState(false);
@@ -57,10 +63,12 @@ export function ContactPicker({
    */
   const [loaded, setLoaded] = useState(false);
   const latest = useRef(0);
+  const hiddenRef = useHiddenInputEvent(value?.id ?? '');
 
   useEffect(() => {
-    setQuery(value?.name ?? '');
-  }, [value?.id, value?.name]);
+    setQuery(pickedLabel(value));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value?.id, value?.name, value?.organization]);
 
   useEffect(() => {
     if (!open) return;
@@ -78,7 +86,7 @@ export function ContactPicker({
 
   const pick = (contact: PickedContact | null) => {
     onChange(contact);
-    setQuery(contact?.name ?? '');
+    setQuery(pickedLabel(contact));
     setOpen(false);
   };
 
@@ -89,7 +97,7 @@ export function ContactPicker({
       <Label htmlFor={id} required={required}>
         {label}
       </Label>
-      <input type="hidden" name={name} value={value?.id ?? ''} />
+      <input ref={hiddenRef} type="hidden" name={name} value={value?.id ?? ''} />
       {/* Der Rahmen sitzt am Feld, nicht an der Hülle: `h-auto` gegen das
           `size-full` der Palette, sonst nimmt die Hülle in einer Rasterzelle
           neben einem höheren Nachbarn die Zellenhöhe und rahmt das 38-px-Feld
@@ -103,7 +111,7 @@ export function ContactPicker({
           value={query}
           onValueChange={(next) => {
             setQuery(next);
-            if (value && next !== value.name) onChange(null);
+            if (value && next !== pickedLabel(value)) onChange(null);
             setOpen(true);
           }}
           onFocus={() => setOpen(true)}
@@ -132,7 +140,10 @@ export function ContactPicker({
                     <CommandItem key={option.id} value={option.id} data-testid="contact-option" data-name={option.name} onSelect={() => pick(option)}>
                       {/* Einzeilig: Der Name wird gekürzt, der Ort bleibt stehen. Ein
                           zweizeiliger Treffer verschiebt die Liste unter der Maus. */}
-                      <span className="min-w-0 truncate">{option.name}</span>
+                      <span className="min-w-0 truncate">
+                        {option.name}
+                        {option.organization ? <span className="text-muted-ink"> · {option.organization}</span> : null}
+                      </span>
                       {option.city ? <span className="ml-auto shrink-0 pl-2 text-hint text-muted-ink">{option.city}</span> : null}
                     </CommandItem>
                   ))}
@@ -165,7 +176,7 @@ export function ContactPicker({
       </p>
       {hint ? <p className="text-hint text-muted-ink">{hint}</p> : null}
       {canCreate ? (
-        <CreateContactDialog withTrigger={false} open={creating} onOpenChange={setCreating} onCreated={(contact) => pick(contact)} />
+        <CreateContactDialog withTrigger={false} open={creating} onOpenChange={setCreating} onCreated={(contact) => pick(contact)} initialKind={kind ?? 'person'} />
       ) : null}
     </div>
   );

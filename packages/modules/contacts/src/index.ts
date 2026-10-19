@@ -1,4 +1,6 @@
 export * from './address';
+export * from './delivery';
+export * from './managed-roles';
 export * from './manifest';
 export * from './mcp-tools';
 export * from './retention';

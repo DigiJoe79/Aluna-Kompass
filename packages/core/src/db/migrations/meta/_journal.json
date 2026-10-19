@@ -64,6 +64,13 @@
       "when": 1791651921467,
       "tag": "0008_image_crops",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1792425401332,
+      "tag": "0009_members_direct_debit_0_3_0",
+      "breakpoints": true
     }
   ]
 }

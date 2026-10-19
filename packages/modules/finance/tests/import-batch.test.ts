@@ -48,6 +48,7 @@ describe('previewBatchFinalize', () => {
       entries: 2,
       numbersToBeAssigned: 2,
       problems: [],
+      held: [],
       byAccount: [{ accountId: f.bank.id, accountName: 'Vereinskonto', kind: 'bank', sumCents: 2500, bookCentsNow: 5000, bookCentsAfter: 7500, statementClosingCents: 7500, statementDate: '2026-03-31', matches: true, negative: false }],
     });
 

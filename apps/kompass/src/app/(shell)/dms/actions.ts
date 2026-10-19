@@ -1,7 +1,10 @@
 'use server';
 
 import { guardAction } from '@/lib/action-guard';
+import { kickMailSender } from '@/lib/background';
 import {
+  resendDocumentEmail,
+  sendDocuments,
   addNote,
   clearDispatch,
   createDocumentFolder,
@@ -460,6 +463,30 @@ export async function recordDispatchAction(id: string, _prev: ActionState, formD
     revalidatePath(`/dms/${id}`);
     revalidatePath('/dms');
     return toActionState(result, t, t('dms.toast.dispatched'));
+  });
+}
+
+/** „Senden“ im Dialog am Dokument (Handoff 2b E2): reiht die Mail an den gewählten Empfänger ein und weckt den Sender. */
+export async function sendDocumentMailAction(id: string, contactId: string): Promise<ActionState> {
+  return guardAction('(shell)/dms/actions.ts#sendDocumentMailAction', async () => {
+    const t = await getTranslations();
+    const { deps, ctx } = await requireSession();
+    const result = await sendDocuments(deps, ctx, { documentIds: [id], contactIds: [contactId] });
+    if (result.ok) kickMailSender();
+    revalidatePath(`/dms/${id}`);
+    return toActionState(result, t, t('dms.send.sending'));
+  });
+}
+
+/** „Erneut senden“ an einer Sendung: eine neue Sendung, die alte bleibt im Ausgang. */
+export async function resendDocumentMailAction(id: string, outboxId: string): Promise<ActionState> {
+  return guardAction('(shell)/dms/actions.ts#resendDocumentMailAction', async () => {
+    const t = await getTranslations();
+    const { deps, ctx } = await requireSession();
+    const result = await resendDocumentEmail(deps, ctx, { outboxId });
+    if (result.ok) kickMailSender();
+    revalidatePath(`/dms/${id}`);
+    return toActionState(result, t, t('dms.send.sending'));
   });
 }
 

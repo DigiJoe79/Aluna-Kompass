@@ -82,7 +82,11 @@ export function conflictText(error: ConflictError, t: Translate): string {
  */
 export function conflictMessage(error: ConflictError, t: Translate): string | null {
   if (error.messageKey) return conflictText(error, t);
-  if (error.code === 'humanOnly') return t('errors.humanOnly');
+  if (error.code === 'humanOnly') {
+    // M31: Der Satz nennt den Weg zum Schalter des Moduls (die Meldung trägt den Schlüssel der Einstellung), nicht „hier“.
+    const key = `errors.humanOnlyFor.${error.message.split('.')[0]}`;
+    return (t.has?.(key) ?? false) ? t(key) : t('errors.humanOnly');
+  }
   if (error.code === 'settingManaged') return t('errors.settingManaged', { module: error.message });
   if (error.code === 'settingUiOnly') return t('errors.settingUiOnly');
   if (error.code === 'moduleRefusesDisable') {

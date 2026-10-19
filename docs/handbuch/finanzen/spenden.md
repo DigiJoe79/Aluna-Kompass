@@ -317,6 +317,11 @@ Schritten:
    bekommen ihren Vermerk erst, nachdem die unterschriebene Fassung abgelegt
    ist (siehe „Unterschrift fehlt“). Fehlt danach noch jemand, bereitet
    **Nachzügler-Lauf vorbereiten** den nächsten Lauf vor.
+   Im maschinellen Verfahren teilt der Schritt die Bestätigungen in die
+   Gruppen **Per E-Mail** und **Per Post**, wie die Läufe der Mitglieder:
+   Eine Zeile der Mail-Gruppe, die wartet oder nicht zugestellt ist, geht
+   über das Menü ⋯ mit **Per Post schicken** in die Post-Gruppe und mit
+   **Zurück zu E-Mail** zurück, solange sie keinen Versandvermerk trägt.
 
 Frühere Läufe stehen unterhalb der Seite mit Jahr, Ausstellungsdatum, Stand
 und Versand.

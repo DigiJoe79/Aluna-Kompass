@@ -1,10 +1,10 @@
-import { conflict, invalid, isoNow, notFound, ok, readSetting, recordAudit, requirePermission, todayIn, validate, type CallContext, type DbOrTx, type Deps, type Result } from '@kompass/core';
+import { conflict, invalid, isoNow, notFound, notifyDocumentDispatched, ok, readSetting, recordAudit, requirePermission, todayIn, validate, type CallContext, type DbOrTx, type Deps, type Result } from '@kompass/core';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { requireAreaAccess } from './access';
 import { auditDocumentRef } from './audit-ref';
 import type { DispatchChannel } from './install';
-import { documents } from './schema';
+import { documents, type DocumentRow } from './schema';
 import { toRecord, type DocumentRecord } from './service';
 
 export const dispatchSchema = z.object({
@@ -44,21 +44,32 @@ export async function recordDispatch(deps: Deps, ctx: CallContext, input: unknow
   if (v.sentAt > todayIn(deps)) return invalid([{ path: 'sentAt', message: 'sentInFuture' }]);
 
   return deps.db.transaction((tx: DbOrTx) => {
-    const now = isoNow(deps.clock);
-    tx.update(documents).set({ sentAt: v.sentAt, sentVia: v.sentVia, sentNote: v.note ?? null, updatedAt: now }).where(eq(documents.id, row.id)).run();
-    const after = tx.select().from(documents).where(eq(documents.id, row.id)).get()!;
-    // Die Anmerkung ist frei getippt: Bei einer geschützten Art bleibt sie am Dokument.
-    const hidden = auditDocumentRef(tx, row).hidden;
-    recordAudit(tx, deps, ctx, {
-      action: 'dms.dispatch',
-      entityType: 'document',
-      entityId: row.id,
-      before: { sentAt: row.sentAt, sentVia: row.sentVia, ...(hidden ? {} : { sentNote: row.sentNote }) },
-      after: { sentAt: after.sentAt, sentVia: after.sentVia, ...(hidden ? {} : { sentNote: after.sentNote }) },
-      params: { number: row.number, sentOn: v.sentAt, sentVia: v.sentVia },
-    });
+    const after = applyDispatchInternal(tx, deps, ctx, row, { sentAt: v.sentAt, sentVia: v.sentVia, note: v.note ?? null });
     return ok(toRecord(deps, ctx, after, tx));
   });
+}
+
+/**
+ * Der Kern des Versandvermerks, ohne Prüfungen — für den Sender der E-Mails,
+ * der ihn setzt, sobald der Mailserver die Mail angenommen hat. Protokolliert
+ * wie `recordDispatch`.
+ */
+export function applyDispatchInternal(tx: DbOrTx, deps: Deps, ctx: CallContext, row: DocumentRow, v: { sentAt: string; sentVia: string; note: string | null }): DocumentRow {
+  tx.update(documents).set({ sentAt: v.sentAt, sentVia: v.sentVia, sentNote: v.note, updatedAt: isoNow(deps.clock) }).where(eq(documents.id, row.id)).run();
+  const after = tx.select().from(documents).where(eq(documents.id, row.id)).get()!;
+  // Die Anmerkung ist frei getippt: Bei einer geschützten Art bleibt sie am Dokument.
+  const hidden = auditDocumentRef(tx, row).hidden;
+  recordAudit(tx, deps, ctx, {
+    action: 'dms.dispatch',
+    entityType: 'document',
+    entityId: row.id,
+    before: { sentAt: row.sentAt, sentVia: row.sentVia, ...(hidden ? {} : { sentNote: row.sentNote }) },
+    after: { sentAt: after.sentAt, sentVia: after.sentVia, ...(hidden ? {} : { sentNote: after.sentNote }) },
+    params: { number: row.number, sentOn: v.sentAt, sentVia: v.sentVia },
+  });
+  // Module mit eigenem Vorgang am Dokument (Zuwendungsbestätigung) halten ihren Versand nach — in dieser Transaktion.
+  notifyDocumentDispatched(tx, deps, ctx, { documentId: row.id, sentAt: v.sentAt, channel: v.sentVia });
+  return after;
 }
 
 export async function clearDispatch(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<DocumentRecord>> {

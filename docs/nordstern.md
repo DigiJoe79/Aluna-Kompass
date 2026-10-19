@@ -1,6 +1,6 @@
 # Nordstern
 
-Stand 2026-09-20. Das Gesamtbild von Aluna Kompass und die Reihenfolge, in der
+Stand 2026-10-18. Das Gesamtbild von Aluna Kompass und die Reihenfolge, in der
 es entsteht. Regeln stehen in `AGENTS.md`, das Was einzelner Vorhaben in
 `docs/intern/specs/`, bewusst zurückgestellte Kleinigkeiten in
 `docs/intern/backlog.md` (beides Arbeitsdokumente, nicht im öffentlichen
@@ -48,10 +48,12 @@ Dokument, nicht die Spec eines Moduls.
 
 - **Kein Newsletter.** Massenversand ist ein eigenes Handwerk mit eigenen
   Pflichten (Einwilligung, Abmeldung, Zustellbarkeit). Dafür gibt es Dienste.
-- **Kein Mailprogramm.** Kompass verschickt und empfängt keine E-Mails. Ein
-  Brief verlässt Kompass als PDF; eine Mail, die in die Akte gehört, wird als
-  PDF gedruckt und abgelegt. Das hält die Akte bei einem Dateiformat und
-  Kompass aus dem Postfach heraus.
+- **Kein Mailprogramm.** Kompass empfängt keine E-Mails und schreibt keine.
+  Ein Brief entsteht als PDF in der Akte und verlässt Kompass als dieses PDF:
+  auf Papier oder als Anhang einer E-Mail an den Kontakt, mit Versandvermerk
+  (seit 0.3.0). Eine Mail, die in die Akte gehört, wird als PDF gedruckt und
+  abgelegt. Das hält die Akte bei einem Dateiformat und Kompass aus dem
+  Postfach heraus.
 - **Kein Kalender.** Termine ohne Bezug zu einem Vorgang gehören in den
   Kalender, den der Vorstand ohnehin hat. Kompass kennt Fristen und
   Wiedervorlagen, und beide hängen immer an etwas: an einem Dokument, einem
@@ -165,7 +167,8 @@ Bankimport, Zweckbindung als eigene Dimension neben dem Projekt, Rücklagen
 nach § 62 AO, Zuwendungsbestätigungen nach amtlichem Muster,
 Kostenerstattungen mit Freigabe durch eine zweite Person, Mittelweitergabe an
 Partner und Aufträge an Hilfspersonen mit Nachweisakte, Projekte mit
-Finanzseite. Am Ende:
+Finanzseite, SEPA-Lastschrift als Zahlungsweg für Beiträge und
+Dauerspenden. Am Ende:
 Einnahmen-Überschuss-Rechnung, Vermögensübersicht, Mittelverwendungsrechnung,
 Kassenprüfungsunterlagen. Das Modell ist ein Einnahmen-Ausgaben-Journal mit
 ausgeglichenen Zeilen, keine doppelte Buchführung; Vereine mit
@@ -174,11 +177,13 @@ Bilanzierungspflicht sind nicht die Zielgruppe.
 Spec: `2026-09-20-finanzen-design.md` in `docs/intern/specs/`, eine für das
 ganze Modul, umgesetzt in neunzehn Plänen; davor
 `2026-09-20-vorarbeiten-fachmodule-design.md` mit dem, was Kern, Akte und
-Kontakte dafür lernen müssen — und was Schritt 4 genauso braucht.
+Kontakte dafür lernen müssen — und was die Schritte 4 und 6 genauso brauchen.
 Festgeschriebenes wird nie gelöscht; nach Ablauf der Aufbewahrung verschwindet
 der Personenbezug, nicht die Buchung.
 
-**Stand: in Arbeit.** Schritt 3 der Roadmap, Fassung 0.2.0.
+**Stand: Alltag steht, Berichte offen.** Schritt 3 der Roadmap (Fassung 0.2.0)
+ist ausgeliefert; die Lastschrift kommt mit Schritt 4 (0.3.0), Jahresabschluss
+und Berichte mit Schritt 5 (0.4.0).
 
 ### Mitglieder und Gremien
 
@@ -190,7 +195,8 @@ verlangen.
 
 Spec: noch keine.
 
-**Stand: offen.** Schritt 4 der Roadmap.
+**Stand: offen.** Zwei Schritte der Roadmap: Mitgliederstamm und Beiträge in
+Schritt 4 (0.3.0), Gremien in Schritt 6.
 
 ### Vereinsspezifische Module
 
@@ -209,7 +215,7 @@ Rechte, Protokoll, MCP, Seed.
 Spec: das Profil hat eine, siehe `docs/intern/specs/`; die Vollstufe hat noch
 keine.
 
-**Stand: Profil steht, Vollstufe offen.** Schritt 5 der Roadmap. Seit 0.2.2
+**Stand: Profil steht, Vollstufe offen.** Schritt 7 der Roadmap. Seit 0.2.2
 tragen die Profile einen Prüfmerker, die Liste filtert und sortiert auch
 einige hundert Tiere, und geprüft wird am Stück von Profil zu Profil.
 
@@ -260,14 +266,27 @@ Gremien die Einladungsfristen — und der Nutzer wählt, was er sehen will.
 
 ## 4. Roadmap
 
-Fünf Schritte in dieser Reihenfolge. Jeder Schritt hat ein Fertig-Kriterium,
+Sieben Schritte in dieser Reihenfolge. Jeder Schritt hat ein Fertig-Kriterium,
 damit er abgeschlossen werden kann, statt zu verlaufen. Die beiden
 Querschnitte wachsen mit jedem Schritt, sie stehen nicht einzeln.
 
-Was die Reihenfolge treibt: Aluna Tierhilfe e.V. wird gerade eingetragen. Ab
-dem ersten Tag soll der Verein in Kompass arbeiten, nichts soll nachträglich
-einsortiert werden. Deshalb erst die beiden Säulen fertig, die schon stehen,
+Was die Reihenfolge trieb: Aluna Tierhilfe e.V. wurde gerade eingetragen. Ab
+dem ersten Tag sollte der Verein in Kompass arbeiten, nichts sollte nachträglich
+einsortiert werden. Deshalb erst die beiden Säulen fertig, die schon standen,
 dann das Geld, dann das, was die Gründung selbst an Vorgängen erzeugt.
+
+Neu geordnet am 2026-10-18, nach Schritt 3. Die Eintragung ist durch, die
+erste Mitgliederversammlung lief schon (eine Satzungsänderung), und kein
+äußerer Termin drängt: Für den ersten Jahresabschluss reicht das Ende des
+Jahres. Die Reihenfolge folgt jetzt den Abhängigkeiten. Mitglieder und
+Lastschrift hängen an nichts Offenem und nützen sofort; die Berichte danach
+kennen die Beitragsforderungen schon; die Gremien brauchen beides, die
+Mitglieder für Einladung und Stimmrecht, den Kassenbericht für die
+Entlastung. Die Lastschrift gehört zur Säule Finanzen, weil sie ein
+Zahlungsweg ist und nicht nur Beiträge einzieht; sie kommt mit den
+Mitgliedern, weil das Beitragssoll ihre erste Quelle ist. Kompass ist für
+mehr Vereine als Aluna gedacht; deshalb kommt sie früh, auch wenn Aluna sie
+mit wenigen Mitgliedern noch kaum braucht.
 
 ### Schritt 1: Akte fertig
 
@@ -319,17 +338,17 @@ CMS ist abgeschaltet, und der Kern kennt weder Spendenplattform noch
 Vereinsnamen (`no-association-content.test.ts`). Der Handybreite-Test des
 Basis-Templates bleibt als Backlog-Punkt, nicht als Bedingung.
 
-### Schritt 3: Finanzen
+### Schritt 3: Finanzen im Alltag
 
-**Fassung 0.2.0, vollständig** — nicht auf Teilfassungen verteilt; was
-dazwischen kommt, wird als 0.1.x eingeschoben. Eigene Spec, eigenes
-Brainstorming. Was heute schon feststeht:
+**Fassung 0.2.0.** Eigene Spec, eigenes Brainstorming. Ursprünglich als eine
+Fassung bis zum Prüfpaket geplant; am 2026-09-25 vor den Berichten
+geschnitten (Plan F9). Was hier fehlt, ist Schritt 5.
 
 - **Zuerst die Vorarbeiten** (eigene Spec, Pläne VP1–VP5): Schutzbereiche und
   Ausstelldienst der Akte, `install` bei jedem Start, Nutzer-Kontakt-Verknüpfung,
   Kontaktrollen ohne eigenen Halter, „nur ein Mensch über die Oberfläche" als
   Kernhelfer. Sie gehören zu Fundament und Akte, nicht zu den Finanzen, und
-  Schritt 4 braucht sie genauso.
+  die Schritte 4 und 6 brauchen sie genauso.
 
 - Konten, Buchungen nach Sphären, Belege als Bezug in die Akte, Storno statt
   Löschen. Projekte bekommen ihre Finanzfelder. Finanzen meldet sich als
@@ -345,53 +364,98 @@ Brainstorming. Was heute schon feststeht:
   Person, Mittelweitergabe an Partner und Aufträge an Hilfspersonen mit
   Nachweisakte.
 - Zweckbindung als eigene Dimension der Buchung, mit Umwidmung als
-  dokumentiertem Vorgang. Der Spendenstand je Projekt als veröffentlichte
-  Sicht für die Webseite.
+  dokumentiertem Vorgang.
 - Zuwendungsbestätigungen nach amtlichem Muster, einzeln und als
   Serienerzeugung zum Jahresende.
 - Aktenexport für Prüfer: ein Ordner oder Jahrgang als Bündel aus PDFs mit
-  Inhaltsverzeichnis, Nummern, Daten und Prüfsummen. Kommt hier und nicht in
-  Schritt 1, weil der Prüfer die Belege dazu will.
+  Inhaltsverzeichnis, Nummern, Daten und Prüfsummen.
+
+**Ausgeliefert am 2026-09-28** mit Fassung 0.2.0. Woran erkannt: Ein Verein
+bucht seinen Alltag in Kompass, vom Kontoauszug über die Auslage bis zur
+Zuwendungsbestätigung. Das Fertig-Kriterium der ganzen Säule — ein
+gebuchtes Geschäftsjahr und die Kassenprüfung aus Kompass — trägt jetzt
+Schritt 5.
+
+### Schritt 4: Mitglieder und Lastschrift
+
+**Fassung 0.3.0.** Eigene Spec, eigenes Brainstorming. Was heute feststeht:
+
+- Mitglieder sind Kontakte mit einer Mitgliedschaft: Eintritt, Austritt,
+  Mitgliedsart (ordentlich, Fördermitglied — die Arten bestimmt die Satzung
+  des Vereins, nicht der Kern), Aufnahmeantrag als Dokument der Akte.
+- Beitragsordnung mit Ständen. Daraus das Beitragssoll je Mitglied und Jahr,
+  als **offener Posten der Finanzen** und nicht in einer eigenen Tabelle: So
+  sieht die Vermögensübersicht die Beitragsrückstände, und der Bankimport
+  gleicht Überweisungen über die vorhandenen Regeln aus. Seit 0.2.0 ist der
+  Beitrag eine Einnahmeart.
+- Mahnlauf: Erinnerung und Mahnung als Briefe aus der Akte, mit
+  Wiedervorlage.
+- **SEPA-Lastschrift als Zahlungsweg der Finanzen**, nicht der Mitglieder.
+  Mandat am Kontakt, unterschrieben und als Dokument in der Akte;
+  Gläubiger-ID und Vorlaufzeiten als Einstellung der Installation;
+  Einzugslauf mit Datei für die Bank; Vorabankündigung; Rückgaben als Fall
+  der Arbeitsliste. Quellen des Einzugs sind das Beitragssoll und die
+  Dauerspenden-Zusage (Betrag, Rhythmus, Zweck). Die Zusage braucht kein
+  Mitglied.
+- Kein Online-Mandat. Ohne Unterschrift kann der Zahler 13 Monate
+  zurückgeben, eine fremde IBAN prüft niemand, und jede Rückgabe kostet
+  Gebühren — bei kleinen Spenden mehr, als die Spende bringt. Spenden über
+  die Webseite laufen per Überweisung. Das Datenmodell schließt ein
+  Online-Mandat als bewusst eingeschaltete Option für andere Vereine nicht
+  aus.
+
+**Fertig, wenn:** die Beiträge eines Jahres als Soll in Kompass stehen, jeder
+Eingang — Überweisung oder Lastschrift — daran ausgeglichen ist, und wer
+nicht zahlt, eine Erinnerung aus Kompass bekommt.
+
+### Schritt 5: Jahresabschluss und Berichte
+
+**Fassung 0.4.0.** Spec ist die Finanz-Spec (§ 9 Rechenschaft), Pläne F9a
+bis F10b; vor den Plänen wird die Spec gegen den Stand nach 0.2.x
+abgeglichen.
+
 - Rechenschaft: EÜR, Vermögensübersicht, Mittelverwendungsrechnung,
-  Kassenprüfungsunterlagen.
+  Kassenbericht, Kassenprüfungsunterlagen.
 - Fristen: Steuererklärung, Freistellungsbescheid. Dazu Schwellenwächter
   (zeitnahe Mittelverwendung, Freigrenze, Kleinunternehmer), ein geführter
   Jahresabschluss, ein Lesezugang für Kassenprüfer und ein Datenexport.
+- Der Spendenstand je Projekt als veröffentlichte Sicht für die Webseite.
+
+Nach den Mitgliedern, weil kein äußerer Termin drängt und die Berichte
+dann die Beitragsforderungen schon kennen. Vor den Gremien, weil die
+Entlastung den Kassenbericht braucht.
 
 **Fertig, wenn:** ein Geschäftsjahr vollständig in Kompass gebucht ist und
 die Kassenprüfung ihre Unterlagen aus Kompass bekommt, ohne dass jemand etwas
-nachträgt. Das liegt zwangsläufig nach dem Release: Die Fassung 0.2.0 ist
+nachträgt. Das liegt zwangsläufig nach dem Release: Die Fassung ist
 auslieferbar, wenn ihre Prüfsteine grün sind; der Schritt ist abgeschlossen
 mit dem ersten echten Prüfpaket.
 
-### Schritt 4: Mitglieder und Gremien
+### Schritt 6: Gremien
 
 Eigene Spec, eigenes Brainstorming. Was heute feststeht:
 
-- Mitglieder sind Kontakte mit einer Rolle und einem Beitrag; Beiträge sind
-  Buchungen. Seit 0.2.0 ist der Beitrag eine Einnahmeart; hier kommen
-  Beitragssoll, Mahnlauf und SEPA-Lastschrift dazu, die Forderung je Mitglied
-  als offener Posten der Finanzen.
 - Die Kontaktrollen für Organmitglieder und Nahestehende, die Finanzen für
   seine Prüfliste mitbringt, gehen an die Gremien über. Entlastung und
   Prüfbericht hängen am Geschäftsjahr.
 - Das Gremien-Modul meldet den Schutzbereich für Vorstands- und
   Mitgliedersachen an (Protokolle, Aufnahmeanträge, Ausschlussverfahren); die
   Nutzer-Kontakt-Verknüpfung aus den Vorarbeiten trägt Mitglieder mit Zugang.
-- Satzung und Beitragsordnung mit Ständen, ab der Gründungsfassung.
+- Satzung mit Ständen, ab der Gründungsfassung.
 - Mitgliederversammlung: Einladung mit Frist, Anwesenheit, Protokoll.
   Vorstandssitzungen und Beschlüsse.
 - Ehrenamt als Kontaktrolle, dazu, was ein Helfer außer der Rolle braucht.
 - Rechenschaft: Protokolle, Tätigkeitsbericht, Meldungen an Registergericht
   und Transparenzregister, Verzeichnis der Verarbeitungstätigkeiten.
 
-Vor Tiere, weil die Gründung selbst diese Vorgänge erzeugt und sie sonst
-nachträglich einsortiert werden.
+Erster Fall sind die Unterlagen, die es bei Aluna schon gibt: Gründungssatzung,
+die erste Mitgliederversammlung mit Satzungsänderung (2026), die
+Registereintragung. Sie werden nachgetragen, nicht neu geführt.
 
-**Fertig, wenn:** die erste ordentliche Mitgliederversammlung von der Einladung
-bis zum Protokoll in Kompass geführt wurde.
+**Fertig, wenn:** eine ordentliche Mitgliederversammlung von der Einladung
+über die Entlastung bis zum Protokoll in Kompass geführt wurde.
 
-### Schritt 5: Tiere Vollstufe
+### Schritt 7: Tiere Vollstufe
 
 Eigene Spec, eigenes Brainstorming. Das Modul bildet den Prozess von Anfang
 bis Ende ab, nicht nur das Profil und das Bestandsbuch. Was heute feststeht,
@@ -439,7 +503,7 @@ kommt.
 
 ## 5. Später
 
-Entschieden als sinnvoll, bewusst nicht in den fünf Schritten. Kommt, wenn
+Entschieden als sinnvoll, bewusst nicht in den sieben Schritten. Kommt, wenn
 die Säulen stehen.
 
 - **Agent schlägt vor, der Mensch schreibt fest.** Post wird abgelegt, ein

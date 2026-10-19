@@ -72,6 +72,15 @@ export function categoryInUseInternal(db: DbOrTx, categoryId: string): boolean {
   );
 }
 
+/**
+ * Die ID einer aktiven Kategorie nach Schlüssel, sonst `null` — für Module, die Posten auf einer Kategorie der
+ * Grundausstattung anlegen (Mitglieder: `membership-fees`, Plan M3). Ohne Rechteprüfung.
+ */
+export function categoryIdByKeyInternal(db: DbOrTx, key: string): string | null {
+  const row = db.select({ id: financeCategories.id, isActive: financeCategories.isActive }).from(financeCategories).where(eq(financeCategories.key, key)).get();
+  return row?.isActive ? row.id : null;
+}
+
 function keyTaken(db: DbOrTx, key: string): boolean {
   return !!db.select({ id: financeCategories.id }).from(financeCategories).where(eq(financeCategories.key, key)).get();
 }

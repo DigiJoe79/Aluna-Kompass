@@ -20,7 +20,7 @@ describe('installFinance — roles', () => {
     run(deps);
     expect(rolePermissions(deps, 'finance:treasurer')).toEqual([
       'contacts.manage', 'contacts.view', 'dms.create', 'dms.view', 'documents.export',
-      'finance.approve', 'finance.donationsIssue', 'finance.entriesFinalize', 'finance.entriesWrite', 'finance.expensesSubmit', 'finance.overview', 'finance.periodClose', 'finance.read', 'finance.reportsFinalize', 'finance.setup',
+      'finance.approve', 'finance.directDebit', 'finance.donationsIssue', 'finance.entriesFinalize', 'finance.entriesWrite', 'finance.expensesSubmit', 'finance.overview', 'finance.periodClose', 'finance.read', 'finance.reportsFinalize', 'finance.setup',
       'followUps.manage', 'followUps.view', 'projects.view',
     ]);
     expect(rolePermissions(deps, 'finance:approver')).toEqual(['contacts.view', 'finance.approve', 'finance.expensesSubmit', 'finance.overview', 'finance.read', 'projects.view']);

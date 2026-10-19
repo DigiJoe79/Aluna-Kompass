@@ -13,10 +13,12 @@ import { createTestDb } from './test-db';
 import { readLocales } from '../i18n/locales';
 import { fakeTextExtraction, type TextExtraction } from '../text/extraction';
 import { fakePdfTools, type PdfTools } from '../pdf/tools';
+import { noopMailTransport, type MailTransport } from '../mail';
 
 export { systemContext } from '../context';
 export { loadAllViews } from './views';
 export { fakePdfTools } from '../pdf/tools';
+export { fakeMailTransport, type FakeMailTransport } from '../mail';
 
 export const TEST_NOW = '2026-09-05T08:00:00.000Z';
 
@@ -55,6 +57,8 @@ export function createTestDeps(
     documents?: DocumentEngine;
     textExtraction?: TextExtraction;
     pdf?: PdfTools;
+    /** Vorgabe `off`: ein Test, der senden will, reicht `fakeMailTransport()` herein. */
+    mail?: MailTransport;
     locales?: string[];
   } = {},
 ): TestDeps {
@@ -81,6 +85,7 @@ export function createTestDeps(
     documents: opts.documents ?? fakeDocumentEngine(),
     textExtraction: opts.textExtraction ?? fakeTextExtraction(),
     pdf: opts.pdf ?? fakePdfTools(),
+    mail: opts.mail ?? noopMailTransport,
     locales: () => readLocales(deps),
   };
   return deps;

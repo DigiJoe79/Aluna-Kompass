@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { backgroundStarted, resetBackgroundForTests, startBackgroundWork, stopBackgroundWork, textWorker } from '@/lib/background';
+import { backgroundStarted, kickMailSender, registerMailSender, resetBackgroundForTests, startBackgroundWork, stopBackgroundWork, textWorker } from '@/lib/background';
 
 describe('startBackgroundWork', () => {
   it('startet einmal und bleibt beim zweiten Aufruf stumm', () => {
@@ -59,5 +59,19 @@ describe('startBackgroundWork', () => {
     release();
     await stopping;
     expect(stopped).toBe(true);
+  });
+});
+
+describe('kickMailSender', () => {
+  it('stößt den angemeldeten Sender an und schweigt ohne ihn', async () => {
+    resetBackgroundForTests();
+    let wakes = 0;
+    kickMailSender();
+    registerMailSender({ wake: () => (wakes += 1) });
+    kickMailSender();
+    expect(wakes).toBe(1);
+    await stopBackgroundWork();
+    kickMailSender();
+    expect(wakes).toBe(1);
   });
 });

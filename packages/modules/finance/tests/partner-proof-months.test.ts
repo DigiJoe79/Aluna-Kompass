@@ -139,6 +139,33 @@ describe('Schritte mit Datum (Design-Nachtrag Phase 4, Task 2)', () => {
   });
 });
 
+describe('Rückgabe einer Auszahlung (Plan M2)', () => {
+  it('zählt nur Ausgleiche, die noch gelten: zurückgegebene Überzahlung nennt den Tag der Auszahlung, volle Rückgabe keinen', async () => {
+    const f = await ledgerFixture();
+    const approvedPayment = async (name: string) => {
+      const { partner } = await orgPartner(f, name);
+      const draft = unwrap(await savePartnerPaymentDraft(f.deps, f.ctx, { partnerId: partner.id, basis: 'transfer58', purposeText: 'Förderung', retroactive: false, positions: [{ kind: 'money', amountCents: 1000, categoryId: f.programCosts.id }] }));
+      const submitted = unwrap(await submitPartnerPayment(f.deps, f.ctx, { id: draft.id, expectedVersion: draft.version }));
+      return unwrap(await approvePartnerPayment(f.deps, f.secondPerson, { id: submitted.id, expectedVersion: submitted.version }));
+    };
+    const pay = (itemId: string, date: string, cents: number) =>
+      bookEntry(f.deps, f.ctx, { entryDate: date, text: 'Förderung', moneyLines: [{ accountId: f.bank.id, amountCents: -cents, settlements: [{ openItemId: itemId, amountCents: cents }] }], allocationLines: [{ categoryId: f.programCosts.id, amountCents: -cents }], acknowledgedWarnings: ['overpaid'] }).then(unwrap);
+    const giveBack = (itemId: string, settlementId: string, date: string, cents: number) =>
+      bookEntry(f.deps, f.ctx, { entryDate: date, text: 'Rückgabe', moneyLines: [{ accountId: f.bank.id, amountCents: cents, settlements: [{ openItemId: itemId, amountCents: cents, reversesSettlementId: settlementId }] }], allocationLines: [{ categoryId: f.programCosts.id, amountCents: cents }] }).then(unwrap);
+
+    const over = await approvedPayment('Überzahlungspartner e.V.');
+    await pay(over.openItemId!, '2026-04-10', 1000);
+    const extra = await pay(over.openItemId!, '2026-04-12', 200);
+    await giveBack(over.openItemId!, extra.moneyLines[0]!.settlements[0]!.id, '2026-04-20', 200);
+    expect(unwrap(await getPartnerPayment(f.deps, f.ctx, { id: over.id }))).toMatchObject({ activeStep: 'paid', paidOn: '2026-04-10' });
+
+    const back = await approvedPayment('Rückgabepartner e.V.');
+    const payout = await pay(back.openItemId!, '2026-04-10', 1000);
+    await giveBack(back.openItemId!, payout.moneyLines[0]!.settlements[0]!.id, '2026-04-20', 1000);
+    expect(unwrap(await getPartnerPayment(f.deps, f.ctx, { id: back.id }))).toMatchObject({ activeStep: 'approved', paidOn: null });
+  });
+});
+
 describe('N (Prüfer Block 2): nachträgliche Zahlung übernimmt Kategorie, Zweck und Projekt der gebuchten Zeile', () => {
   it('legt je bezahlter Zeile eine Geldposition mit deren Kategorie und Zweck an', async () => {
     const f = await ledgerFixture();

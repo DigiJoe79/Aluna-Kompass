@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { contactsModule } from '../src/manifest';
 import { contactChannels, contactRoles, contacts, contactUserLinks } from '../src/schema';
 import { contactsRetentionDue } from '../src/retention';
+import { deliveryForContactInternal } from '../src/delivery';
 
 describe('contacts seed', () => {
   it('lässt keinen Namen, keine Anschrift, keine E-Mail und keine Notiz im Protokoll — es ist unlöschbar (Befund 48, W4)', async () => {
@@ -31,6 +32,18 @@ describe('contacts seed', () => {
     expect(rows.length).toBeGreaterThanOrEqual(3);
     expect(rows.some((c) => c.kind === 'organization')).toBe(true);
     expect(deps.db.select().from(contactRoles).all().length).toBeGreaterThan(0);
+  });
+
+  it('seeds a person at an organization and one who wants post (Nachtrag Ansprechpersonen, Handoff 2b E1)', async () => {
+    const deps = createTestDeps({ manifests: [coreModule, contactsModule], env: 'development' });
+    await seedDevelopment(deps);
+    const rows = deps.db.select().from(contacts).all();
+    const verband = rows.find((c) => c.name === 'Landesverband Musterland e.V.')!;
+    const ole = rows.find((c) => c.lastName === 'Petersen')!;
+    expect(ole.belongsToId).toBe(verband.id);
+    expect(deliveryForContactInternal(deps.db, ole.id)).toMatchObject({ channel: 'email', via: 'organization' });
+    const greta = rows.find((c) => c.lastName === 'Hoff')!;
+    expect(deliveryForContactInternal(deps.db, greta.id)).toEqual({ channel: 'post', reason: 'preference' });
   });
 
   it('is idempotent', async () => {

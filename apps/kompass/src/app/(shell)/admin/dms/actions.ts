@@ -1,8 +1,10 @@
 'use server';
 
 import { guardAction } from '@/lib/action-guard';
-import { setSetting } from '@kompass/core';
+import { readSetting, setSetting } from '@kompass/core';
 import {
+  saveMailSettings,
+  sendTestMail,
   createSnippet,
   deleteSnippet,
   updateSnippet,
@@ -274,5 +276,52 @@ export async function saveDispatchChannelsAction(channels: { key: string; label:
     const result = await setSetting(deps, ctx, { key: 'dms.dispatchChannels', value: channels });
     revalidatePath('/admin/dms');
     return toActionState(result, t, t('dms.admin.toast.channelsSaved'));
+  });
+}
+
+/** Absender der Mails in einem Zug (Handoff 2b E5) — `settings.manage`. */
+/**
+ * Die Karte „Absender“ unter Versand. Plan U4 Task 1 (M36): Mit `agent` (nur wenn geändert) geht der Agentenschalter
+ * mit — erst nach den Absenderfeldern, über `setSetting`, das Recht und Kanal prüft (`uiOnly`) und protokolliert.
+ */
+export async function saveMailSettingsAction(input: { fromAddress: string; fromName: string; replyTo: string | null; ratePerMinute: number }, agent?: boolean): Promise<ActionState> {
+  return guardAction('(shell)/admin/dms/actions.ts#saveMailSettingsAction', async () => {
+    const t = await getTranslations();
+    const { deps, ctx } = await requireSession();
+    const result = await saveMailSettings(deps, ctx, input);
+    if (result.ok && agent !== undefined) {
+      const switched = await setSetting(deps, ctx, { key: 'dms.mcpHumanOnlyAllowed', value: agent });
+      if (!switched.ok) {
+        revalidatePath('/admin/dms');
+        return toActionState(switched, t);
+      }
+    }
+    revalidatePath('/admin/dms');
+    return toActionState(result, t, t('dms.admin.mail.saved'));
+  });
+}
+
+/** „Testmail an mich senden“ — an die Adresse des angemeldeten Nutzers, ohne Ausgang. */
+export async function sendTestMailAction(): Promise<ActionState> {
+  return guardAction('(shell)/admin/dms/actions.ts#sendTestMailAction', async () => {
+    const t = await getTranslations();
+    const { deps, ctx } = await requireSession();
+    const result = await sendTestMail(deps, ctx);
+    if (!result.ok) return toActionState(result, t);
+    return { status: 'success', message: t('dms.admin.mail.testSent', { address: result.value.address }) };
+  });
+}
+
+/** Begleittext einer Dokumentart: ein Baustein oder (`null`) die Vorgabe. */
+export async function setMailBodySnippetAction(typeKey: string, snippetId: string | null): Promise<ActionState> {
+  return guardAction('(shell)/admin/dms/actions.ts#setMailBodySnippetAction', async () => {
+    const t = await getTranslations();
+    const { deps, ctx } = await requireSession();
+    const current = { ...readSetting<Record<string, string>>(deps, 'dms.mail.bodySnippetByType') };
+    if (snippetId) current[typeKey] = snippetId;
+    else delete current[typeKey];
+    const result = await setSetting(deps, ctx, { key: 'dms.mail.bodySnippetByType', value: current });
+    revalidatePath('/admin/dms');
+    return toActionState(result, t, t('dms.admin.mail.bodySaved'));
   });
 }

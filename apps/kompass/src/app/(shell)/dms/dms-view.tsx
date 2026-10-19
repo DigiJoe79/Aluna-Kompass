@@ -7,8 +7,12 @@ import {
   listDocumentFolders,
   listDocuments,
   listDocumentTypes,
+  listOutbox,
   requireDmsGate,
 } from '@kompass/module-dms';
+import type { ReactNode } from 'react';
+import { EmptyState } from '@/components/empty-state';
+import { OutboxList } from './outbox-list';
 import { getTranslations } from 'next-intl/server';
 import { FiledAnnouncement } from './filed-announcement';
 import { Notice } from '@/components/notice';
@@ -57,6 +61,33 @@ export interface DmsQuery {
   about?: string;
   /** Nach dem Ablegen in eine geschützte Art: die Nummer, die das Dokument bekam. */
   filed?: string;
+  /** Der feste Eintrag „Ausgang“ (Handoff 2b E4) mit seinen Filtern Zustand und Zeitraum (Tage). */
+  outbox?: string;
+  state?: string;
+  period?: string;
+  page?: string;
+}
+
+const OUTBOX_PAGE = 50;
+const OUTBOX_STATES = ['queued', 'sending', 'sent', 'failed', 'blocked', 'withdrawn'] as const;
+
+async function outboxTotal(deps: Deps, ctx: CallContext): Promise<number> {
+  const res = await listOutbox(deps, ctx, { limit: 1 });
+  return res.ok ? res.value.total : 0;
+}
+
+/** Der Ausgang als Liste in der Arbeitsfläche der Akte; leer `EmptyState` mit Satz (21c). */
+async function outboxView(deps: Deps, ctx: CallContext, query: DmsQuery): Promise<ReactNode> {
+  const tOutbox = await getTranslations('dms.outbox');
+  const state = (OUTBOX_STATES as readonly string[]).includes(query.state ?? '') ? (query.state as (typeof OUTBOX_STATES)[number]) : undefined;
+  const days = ['30', '90', '365'].includes(query.period ?? '') ? Number(query.period) : null;
+  const offset = (Math.max(1, Number(query.page) || 1) - 1) * OUTBOX_PAGE;
+  const res = await listOutbox(deps, ctx, { ...(state ? { status: state } : {}), ...(days ? { days } : {}), limit: OUTBOX_PAGE, offset });
+  if (!res.ok) return <ForbiddenCard permission="dms.view" />;
+  const all = state || days ? await listOutbox(deps, ctx, { limit: 1 }) : res;
+  const unfiltered = all.ok ? all.value.total : res.value.total;
+  if (unfiltered === 0) return <EmptyState title={tOutbox('empty')} text={tOutbox('emptyText')} />;
+  return <OutboxList rows={res.value.items} total={res.value.total} unfiltered={unfiltered} offset={offset} pageSize={OUTBOX_PAGE} canSend={hasPermission(ctx, 'dms.send')} />;
 }
 
 /** Die Spalten, nach denen die Liste sortieren darf — mehr nimmt der Service nicht. */
@@ -94,14 +125,15 @@ export async function DmsView({ query, receive }: { query: DmsQuery; receive?: b
   const allRes = await listDocuments(deps, ctx, { limit: 1 });
   const total = allRes.ok ? allRes.value.total : 0;
 
-  const isInbox = query.inbox === '1';
-  const isUnfiled = !isInbox && query.unfiled === '1';
+  const isOutbox = query.outbox === '1';
+  const isInbox = !isOutbox && query.inbox === '1';
+  const isUnfiled = !isOutbox && !isInbox && query.unfiled === '1';
   // Ein Ordner aus der Adresse, den es nicht mehr gibt (von anderer Hand
   // verschoben, alter Link): der nächste vorhandene Vorfahr mit Hinweis, ohne
   // ihn „Alle Dokumente“ (Spec § 5.3). Vorfahren zählen mit, auch wenn sie nur
   // als Weg bestehen — der Baum zeigt sie ebenso.
   const known = new Set(folderPaths.flatMap((path) => [...ancestorsOf(path), path]));
-  const requestedFolder = isInbox || isUnfiled ? null : query.folder || null;
+  const requestedFolder = isOutbox || isInbox || isUnfiled ? null : query.folder || null;
   const folderGone = requestedFolder !== null && !known.has(requestedFolder);
   const currentFolder = folderGone ? (ancestorsOf(requestedFolder).reverse().find((path) => known.has(path)) ?? null) : requestedFolder;
   const docsRes = await listDocuments(deps, ctx, {
@@ -189,7 +221,12 @@ export async function DmsView({ query, receive }: { query: DmsQuery; receive?: b
       initialSender={initialSender}
       initialAbout={initialAbout}
       receiveOpen={receive || Boolean(initialSender) || Boolean(initialAbout)}
+      outboxCount={isOutbox ? await outboxTotal(deps, ctx) : 0}
     >
+      {isOutbox ? (
+        await outboxView(deps, ctx, query)
+      ) : (
+      <>
       {filedNumber ? (
         <div className="mb-3">
           <FiledAnnouncement message={t('filedToast', { number: filedNumber })} number={filedNumber} />
@@ -228,6 +265,8 @@ export async function DmsView({ query, receive }: { query: DmsQuery; receive?: b
         hits={docsRes.value.hits}
         fulltextTooShort={docsRes.value.fulltextTooShort}
       />
+      </>
+      )}
     </DmsWorkspace>
   );
 }

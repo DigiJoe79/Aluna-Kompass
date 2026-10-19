@@ -158,7 +158,7 @@ export async function storeIncoming<T>(deps: Deps, ctx: CallContext, bytes: Uint
           subject: fields.subject, documentDate: fields.documentDate, folder: fields.folder, draftBody: null, templateKey: null, inputSnapshot: null,
           fileName: stored.value.fileName, fileChecksum: stored.value.fileChecksum, fileBytes: stored.value.fileBytes,
           textStatus: 'pending', textAttempts: 0, textError: null, textExtractedAt: null,
-          status: 'issued', createdByUserId: ctx.userId ?? 'system', createdAt: now, updatedAt: now,
+          status: 'issued', filedAt: now, createdByUserId: ctx.userId ?? 'system', createdAt: now, updatedAt: now,
         })
         .run();
       for (const link of fields.links) {

@@ -1,7 +1,7 @@
 import { hasPermission, listUserNamesWithPermission, type LocalizedText, readSetting } from '@kompass/core';
 import { displayName, getContact } from '@kompass/module-contacts';
 import { documentTypeFor } from '@kompass/module-dms';
-import { getWorkCounts, listAccounts, listCategories, listForeignMoney, listPartners, listPurposes, listWorkItems, readInvoiceFromDocument, suggestForTransaction, TAX_CODES, type SuggestionReason, type SuggestionView } from '@kompass/module-finance';
+import { getWorkCounts, listAccounts, listCategories, listForeignMoney, listPartners, listPurposes, listWorkItems, readInvoiceFromDocument, returnCodeInfo, suggestForTransaction, TAX_CODES, type SuggestionReason, type SuggestionView } from '@kompass/module-finance';
 import { listProjects } from '@kompass/module-projects';
 import { getTranslations } from 'next-intl/server';
 import Link from 'next/link';
@@ -110,7 +110,7 @@ export default async function FinanceWorkPage({ searchParams }: { searchParams: 
       const suggestionRes = await suggestForTransaction(deps, ctx, { rawTransactionId: selectedItem.transaction.id });
       const suggestion = suggestionRes.ok ? suggestionRes.value : null;
       await loadContacts([
-        ...(suggestion?.reasons.map((r) => r.contactId).filter((id): id is string => !!id) ?? []),
+        ...(suggestion?.reasons.flatMap((r) => [r.contactId, ...(r.contactIds ?? [])]).filter((id): id is string => !!id) ?? []),
         ...(suggestion?.draft?.allocationLines.map((l) => l.contactId).filter((id): id is string => !!id) ?? []),
       ]);
       const raw = selectedItem.transaction;
@@ -257,6 +257,11 @@ export default async function FinanceWorkPage({ searchParams }: { searchParams: 
   );
 }
 
+/** „X“, „X und Y“, „X, Y und Z“. */
+function joinNames(names: string[], and: string): string {
+  return names.length <= 1 ? (names[0] ?? '') : `${names.slice(0, -1).join(', ')} ${and} ${names.at(-1)}`;
+}
+
 /** Die Gründe als Sätze und die weiteren Geldzeilen als Text — die Namen löst der Server auf, der Client zeigt nur. */
 async function describeSuggestion(
   suggestion: SuggestionView,
@@ -265,6 +270,8 @@ async function describeSuggestion(
   fmtDate: (value: string | null | undefined) => string,
 ): Promise<NonNullable<WorkDetailData['suggestion']>> {
   const t = await getTranslations('finance.work');
+  const tAll = await getTranslations();
+  const returnReason = (code: string | null | undefined) => (code ? tAll(returnCodeInfo(code).textKey, { code }) : '');
   const contact = (id?: string) => (id ? (contactNames.get(id) ?? t('reasons.hiddenContact')) : t('reasons.hiddenContact'));
   const account = (id?: string) => (id ? (accountName.get(id) ?? '') : '');
   const linkDate = formatDateOrDash(fmtDate, suggestion.linkEntry?.entryDate);
@@ -294,6 +301,9 @@ async function describeSuggestion(
         return t('reasons.paymentReference', { reference: r.paymentReference ?? '' });
       case 'amountAndContact':
         return t('reasons.amountAndContact', { contact: contact(r.contactId) });
+      case 'sharedIban':
+        // Plan U4 Task 3: Gemeinschaftskonto — der Grund nennt immer alle Inhaber.
+        return t('reasons.sharedIban', { contacts: joinNames((r.contactIds ?? []).map((id) => contact(id)), t('reasons.and')) });
       case 'rule':
         return t('reasons.rule', { name: r.ruleName ?? '' });
       case 'contactIban':
@@ -304,13 +314,31 @@ async function describeSuggestion(
         return t('reasons.contactName', { contact: contact(r.contactId) });
       case 'paymentFee':
         return t('reasons.paymentFee');
+      case 'directDebitReturnFee':
+        // U3 (Plan N3): der Tag des Einzugs, nur wenn die Rückgaben des Tages aus genau einem stammen.
+        return r.collectionDate ? t('reasons.directDebitReturnFee', { date: formatDateOrDash(fmtDate, r.collectionDate) }) : t('reasons.directDebitReturnFeeUndated');
+      case 'directDebitReturn':
+        // Handoff 2a § 1.6: woran Kompass die Rückgabe erkennt, dann der Grund der Bank.
+        return t('reasons.directDebitReturn', { date: formatDateOrDash(fmtDate, r.collectionDate), match: t(`reasons.directDebitMatch.${r.matchedBy ?? 'mandateAndAmount'}`), reason: returnReason(r.returnCode) || t('reasons.noReturnCode') });
+      case 'directDebitRun':
+        if (r.runCandidates && r.runCandidates.length > 0) return t('reasons.directDebitRunCandidates', { dates: r.runCandidates.map((c) => formatDateOrDash(fmtDate, c.collectionDate)).join(', ') });
+        return t(r.matchedBy === 'endToEnd' ? 'reasons.directDebitRunItem' : 'reasons.directDebitRun', { date: formatDateOrDash(fmtDate, r.collectionDate), count: r.itemCount ?? 0 });
     }
   };
   const extraLines = (suggestion.draft?.moneyLines.slice(1) ?? []).map((line) =>
     t(suggestion.kind === 'cashTransfer' ? 'mini.cashLine' : 'mini.transferLine', { account: account(line.accountId), amount: formatEuro(line.amountCents) }),
   );
   const settled = suggestion.draft?.moneyLines[0]?.settlements?.reduce((sum, s) => sum + s.amountCents, 0) ?? 0;
-  if (settled > 0) extraLines.push(t('mini.settles', { amount: formatEuro(settled) }));
+  // Handoff 2a § 1.6, Nachtrag § 1: Was die Rückgabe mit dem Posten macht — eine Rate wird „zurückgegeben“ (keine
+  // Forderung), ein Beitrag wieder offen — und das Entgelt der Bank als eigene Zeile. Die Gutschrift nennt ihr Entgelt.
+  for (const r of suggestion.reasons) {
+    if (r.kind === 'directDebitReturn' && r.returnedItem) {
+      const item = r.returnedItem;
+      extraLines.push(item.source === 'pledge' ? t('mini.returnedRate', { name: item.debtorName, date: formatDateOrDash(fmtDate, item.installmentOn), amount: formatEuro(-item.amountCents) }) : t('mini.returnedFee', { name: item.debtorName, amount: formatEuro(-item.amountCents) }));
+    }
+    if ((r.kind === 'directDebitReturn' || r.kind === 'directDebitRun') && r.feeCents) extraLines.push(t('mini.bankFee', { amount: formatEuro(-r.feeCents) }));
+  }
+  if (settled > 0 && !suggestion.reasons.some((r) => r.kind === 'directDebitReturn')) extraLines.push(t('mini.settles', { amount: formatEuro(settled) }));
   return {
     kind: suggestion.kind,
     confidence: suggestion.confidence,
@@ -318,6 +346,11 @@ async function describeSuggestion(
     draft: suggestion.draft,
     linkEntry: suggestion.linkEntry,
     problems: suggestion.problems,
+    problemValues: {
+      ...(suggestion.problemParams.inSubmittedRun ? { inSubmittedRun: { date: formatDateOrDash(fmtDate, suggestion.problemParams.inSubmittedRun.date) } } : {}),
+      ...(suggestion.problemParams.overpaid ? { overpaid: { amount: formatEuro(suggestion.problemParams.overpaid.amountCents) } } : {}),
+      ...(suggestion.problemParams.paidOtherwise ? { paidOtherwise: { count: suggestion.problemParams.paidOtherwise.count, amount: formatEuro(suggestion.problemParams.paidOtherwise.amountCents) } } : {}),
+    },
     hints: suggestion.hints,
     extraLineTexts: extraLines,
   };

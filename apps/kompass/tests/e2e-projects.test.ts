@@ -2,6 +2,7 @@ import { readdirSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { installedModuleKeys, parseVerifyArgs, scopeFromPaths, specProject, testMatchFor } from '../e2e/projects';
+import { installedModules } from '@/modules';
 
 const ROOT = path.resolve(import.meta.dirname, '..');
 const modules = installedModuleKeys(ROOT);
@@ -9,7 +10,7 @@ const specs = readdirSync(path.join(ROOT, 'e2e')).filter((name) => name.endsWith
 
 describe('installedModuleKeys', () => {
   it('liest die Module aus packages/modules', () => {
-    expect(modules).toEqual(['animals', 'contacts', 'dms', 'finance', 'projects', 'site']);
+    expect(modules).toEqual(['animals', 'contacts', 'dms', 'finance', 'members', 'projects', 'site']);
   });
 });
 
@@ -78,7 +79,10 @@ describe('specProject', () => {
       project.push(file);
       byProject.set(specProject(file, modules), project);
     }
-    for (const key of modules) expect(byProject.get(key)?.length, key).toBeGreaterThan(0);
+    // Ein Modul ohne Seiten (keine Navigation) hat noch nichts, was ein Browser prüfen könnte — Mitglieder bis U1. Sein
+    // Projekt bleibt leer; Playwright findet darin nichts und läuft mit den übrigen Projekten weiter.
+    const withPages = new Set(installedModules.filter((m) => (m.navigation?.length ?? 0) > 0 || (m.adminNavigation?.length ?? 0) > 0).map((m) => m.key));
+    for (const key of modules.filter((k) => withPages.has(k))) expect(byProject.get(key)?.length, key).toBeGreaterThan(0);
     const total = [...byProject.values()].reduce((sum, files) => sum + files.length, 0);
     expect(total).toBe(specs.length);
   });

@@ -43,8 +43,14 @@ import { freeReserveCap, listReserves } from '../src/allocation/reserves';
 import { listPurposeTransfers, purposeOverview } from '../src/allocation/transfers';
 import { relatedPartyPayments } from '../src/allocation/people';
 import { listPartnerNotices, listPartners } from '../src/allocation/partners';
-import { financeReserveMovements } from '../src/schema';
+import { financeRawTransactions, financeReserveMovements } from '../src/schema';
 import { seedStoryYear } from '../src/seed-calendar';
+import { listMandates } from '../src/direct-debit/mandates';
+import { listPledges } from '../src/direct-debit/pledges';
+import { financeSepaMandates, financeSepaPrenotifications } from '../src/schema';
+import { listDirectDebitReturns } from '../src/direct-debit/returns';
+import { listDirectDebitRuns, previewDirectDebitRun } from '../src/direct-debit/runs';
+import { addCalendarDays, isTargetBusinessDay } from '../src/direct-debit/business-days';
 import { setupFinance } from './helpers';
 
 describe('seedFinance', () => {
@@ -119,8 +125,10 @@ describe('seedFinance', () => {
     await seedFinance(deps, ctx);
     const read = unwrap(await getProjectFinance(deps, ctx, { projectId: winter.id }));
     expect(read.settings.targetCents).toBe(250000);
+    // Plan L3: dazu die März-Rate der Dauerspende (15,00 €) auf das Projekt und ihre Rücklastschrift — die mindert die Einnahmen.
     expect(read.result).toEqual({ incomeCents: 85000, expenseCents: 42000, resultCents: 43000 });
-    const lines = deps.db.select().from(financeAllocationLines).all().filter((l) => l.projectId === winter.id);
+    // Lastschrift (Plan L3): Gutschrift und Rückgabe belegt der Kontoauszug, den Einzug der Begleitzettel am Einzug.
+    const lines = deps.db.select().from(financeAllocationLines).all().filter((l) => l.projectId === winter.id && !l.directDebitItemId);
     for (const line of lines) expect(deps.db.select().from(financeEntryDocuments).where(eq(financeEntryDocuments.entryId, line.entryId)).all().length).toBeGreaterThan(0);
   });
 
@@ -216,6 +224,11 @@ describe('seedFinance', () => {
     expect(erika).toHaveLength(1);
     const ibans = unwrap(await listContactIbans(deps, ctx, { contactId: erika[0]!.id }));
     expect(ibans.items.map((i) => i.iban)).toEqual(['DE66999999991234567890']);
+    expect(ibans.items[0]!.source).toBe('manual');
+    // Plan U4 Task 3: ein Gemeinschaftskonto von Hand, Clara Neumann und Tobias Adler.
+    const clara = deps.db.select().from(contacts).where(eq(contacts.lastName, 'Neumann')).get()!;
+    const claraIbans = unwrap(await listContactIbans(deps, ctx, { contactId: clara.id }));
+    expect(claraIbans.items).toEqual([expect.objectContaining({ iban: 'DE59999999990000777777', source: 'manual', coHolders: [expect.objectContaining({ name: 'Tobias Adler' })] })]);
 
     // Die Handbuchung ohne Kontoumsatz: Entwurf, auf den der Zuschuss aus Lauf B passt (Vorschlag 0).
     const work = unwrap(await listWorkItems(deps, ctx, { tab: 'open', accountId: importkonto.id, limit: 50, offset: 0 }));
@@ -353,6 +366,9 @@ describe('seedFinance', () => {
     // Ausnahmen, je mit Grund: Wörter, die zugleich fester Wortlaut einer Protokoll-Zusammenfassung sind.
     const allowed = new Set([
       'Aufwandsspenden', // Kategorie des Startplans; die Zusammenfassung „Anspruchsgrundlage für Aufwandsspenden gesetzt“ ist Code.
+      'DE98ZZZ09999999999', // Gläubiger-ID des Vereins (L1): wie `organization.*` der Stamm des Vereins, kein Personenbezug.
+      'AM04', // Rückgabe-Code der Bank (L3): ein Code des SEPA-Regelwerks, kein Freitext und kein Personenbezug.
+      'MD06', // ebenso.
     ]);
     // Ganze Wörter: „Post“ (Versandweg) steckt in „Posten“, ist aber nicht dasselbe.
     const escape = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -871,6 +887,58 @@ describe('seedFinance', () => {
  * IDs, Zeitstempel und Hashes sind keine Freitexte und bleiben draußen: Was ein Freitext ist, beginnt mit einem
  * Großbuchstaben oder enthält ein Leerzeichen.
  */
+describe('seedFinance — direct debit (Plan L1 Task 7)', () => {
+  it('turns direct debit on with the test creditor id; mandates active, pending, ended and amended; two pledges, one resting — once', async () => {
+    const { deps, ctx, userId } = setupFinance();
+    deps.db.transaction((tx) => installFinance(tx, deps, systemContext()));
+    unwrap(await createProject(deps, ctxWith(['projects.manage', 'projects.view'], userId), { slug: 'winterhilfe', name: { de: 'Winterhilfe' }, type: 'ongoing', summary: { de: 'Kurz' }, body: { de: 'Text' } }));
+    await seedFinance(deps, ctx);
+    await seedFinance(deps, ctx);
+    expect(readSetting(deps, 'finance.sepa.enabled')).toBe(true);
+    expect(readSetting(deps, 'finance.sepa.creditorId')).toBe('DE98ZZZ09999999999');
+    const mandates = unwrap(await listMandates(deps, ctx, { limit: 50, offset: 0 })).items;
+    expect(mandates.map((m) => m.state).sort()).toEqual(['active', 'active', 'active', 'ended', 'pending']);
+    expect(mandates.filter((m) => m.pendingAmendment !== null)).toHaveLength(1);
+    expect(mandates.every((m) => /^DE\d{2}999999990000300\d{3}$/.test(deps.db.select().from(financeSepaMandates).where(eq(financeSepaMandates.id, m.id)).get()!.iban))).toBe(true);
+    const pledges = unwrap(await listPledges(deps, ctx, { limit: 50, offset: 0 })).items;
+    expect(pledges.map((p) => [p.interval, p.paymentMethod]).sort()).toEqual([['monthly', 'directDebit'], ['yearly', 'directDebit'], ['yearly', 'standingOrder']]);
+    expect(pledges.find((p) => p.interval === 'monthly')!.projectId).not.toBeNull();
+    const today = todayIn(deps);
+    const rested = pledges.find((p) => p.paymentMethod === 'standingOrder')!;
+    expect(rested.pausedFrom).not.toBeNull();
+    expect(rested.state).toBe(today >= rested.pausedFrom! && today <= rested.pausedUntil! ? 'paused' : 'active');
+    expect(deps.db.select().from(dmsDocuments).all().filter((d) => d.typeKey === 'sepa-prenotification' && d.phase === 'draft')).toHaveLength(1);
+  });
+
+  it('adds a booked run and a run only created in the story year, both announced in time (Plan L2 Task 5, Plan L3 Task 5) — once', async () => {
+    const { deps, ctx, userId } = setupFinance();
+    deps.db.transaction((tx) => installFinance(tx, deps, systemContext()));
+    unwrap(await createProject(deps, ctxWith(['projects.manage', 'projects.view'], userId), { slug: 'winterhilfe', name: { de: 'Winterhilfe' }, type: 'ongoing', summary: { de: 'Kurz' }, body: { de: 'Text' } }));
+    await seedFinance(deps, ctx);
+    await seedFinance(deps, ctx);
+    const runs = unwrap(await listDirectDebitRuns(deps, ctx, {})).items;
+    // Der April-Einzug wurde nie eingereicht: im Stichjahr angelegt, längst verfallen (Plan N1, M41).
+    expect(runs.map((r) => [r.status, r.count])).toEqual([['expired', 1], ['booked', 2]]);
+    const year = String(seedStoryYear(todayIn(deps)));
+    for (const run of runs) expect(run.collectionDate.startsWith(year)).toBe(true);
+    expect(runs[1]!.summaryDocumentId).not.toBeNull();
+    expect(deps.db.select().from(dmsDocuments).all().filter((d) => d.typeKey === 'sepa-prenotification' && d.phase === 'issued')).toHaveLength(3);
+    // Die ausgestellten Ankündigungen und die Zeile zum Entwurf der Zusage (deckt erst festgeschrieben).
+    expect(deps.db.select().from(financeSepaPrenotifications).all()).toHaveLength(4);
+    // Plan N1 E1: Der späteste Bankarbeitstag bis heute + 9 ist angekündigt — ein Einzug dort zieht die jüngste Rate ein.
+    let upcoming = addCalendarDays(todayIn(deps), 9);
+    while (!isTargetBusinessDay(upcoming)) upcoming = addCalendarDays(upcoming, -1);
+    expect(unwrap(await previewDirectDebitRun(deps, ctx, { collectionDate: upcoming })).included).toMatchObject([{ source: 'pledge', amountCents: 1500 }]);
+    // Plan L3: über eine Sammelgutschrift gebucht; die Rückgabe MD06 offen. Plan U2: die AM04 wartet ungebucht in der Arbeitsliste.
+    const returns = unwrap(await listDirectDebitReturns(deps, ctx, {})).items;
+    expect(returns.map((r) => [r.returnCode, r.status, r.resolution])).toEqual([['MD06', 'open', null]]);
+    const waiting = deps.db.select().from(financeRawTransactions).all().filter((r) => r.returnCode === 'AM04' && r.amountCents < 0);
+    expect(waiting).toHaveLength(1);
+    expect(unwrap(await suggestForTransaction(deps, ctx, { rawTransactionId: waiting[0]!.id }))).toMatchObject({ kind: 'return', reasons: [{ kind: 'directDebitReturn', returnCode: 'AM04', feeCents: 300 }] });
+    expect(returns.every((r) => r.runId === runs[1]!.id)).toBe(true);
+  });
+});
+
 function seededTexts(deps: ReturnType<typeof setupFinance>['deps']): Set<string> {
   const out = new Set<string>();
   const collect = (value: unknown): void => {
@@ -888,6 +956,7 @@ function seededTexts(deps: ReturnType<typeof setupFinance>['deps']): Set<string>
       if (/^[0-9A-HJKMNP-TV-Z]{26}$/.test(text)) return; // ULID
       if (/^\d{4}-\d{2}-\d{2}/.test(text)) return; // Datum, Zeitstempel
       if (/^[A-Z]{1,5}-\d{4}-\d+$/.test(text)) return; // Belegnummer — „Nummer statt Betreff“ (AGENTS.md, Prinzip 3)
+      if (/^MND-\d+$/.test(text)) return; // Mandatsreferenz — die Finanzen nennen sie wie eine Nummer (Plan L1)
       if (!/\s/.test(text) && !/^\p{Lu}/u.test(text)) return; // Code, Schlüssel, Hash
       out.add(text);
     } else if (Array.isArray(value)) value.forEach(collect);

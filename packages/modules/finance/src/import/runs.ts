@@ -327,7 +327,7 @@ function importLines(tx: DbOrTx, deps: Deps, args: { runId: string; accountId: s
       .values({
         id: newId(), runId, accountId, bookingDate: line.bookingDate, valueDate: line.valueDate, amountCents: line.amountCents,
         counterpartyName: line.counterpartyName, counterpartyIban: line.counterpartyIban, purpose: line.purpose,
-        bankReference: line.bankReference, relatedReference: line.relatedReference ?? null, counterpartyEmail: line.counterpartyEmail ?? null, endToEndId: line.endToEndId, returnCode: line.returnCode,
+        bankReference: line.bankReference, relatedReference: line.relatedReference ?? null, counterpartyEmail: line.counterpartyEmail ?? null, endToEndId: line.endToEndId, returnCode: line.returnCode, mandateReference: line.mandateReference ?? null, creditorId: line.creditorId ?? null,
         dedupKey: key, lineIndex: line.index, createdAt: now,
       })
       .run();

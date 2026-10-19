@@ -1,5 +1,5 @@
-import { completeFollowUp, isoDayIn, isoNow, newId, seedClockAt, seedMoment, seedStoryYear, storyDay, todayIn, unwrap, type CallContext, type Deps } from '@kompass/core';
-import { contacts } from '@kompass/module-contacts';
+import { completeFollowUp, isoDayIn, isoNow, newId, readSetting, seedClockAt, seedMoment, seedStoryYear, storyDay, todayIn, unwrap, writeSettingInternal, type CallContext, type DbOrTx, type Deps } from '@kompass/core';
+import { contacts, deliveryForContactInternal } from '@kompass/module-contacts';
 import { and, eq } from 'drizzle-orm';
 import { EXAMPLE_DOCUMENT_TYPES } from './catalog';
 import { recordDispatch } from './dispatch';
@@ -9,7 +9,7 @@ import { receiveDocument, reclassifyDocument } from './incoming';
 import { DEFAULT_TYPE_INCOMING } from './install';
 import { addNote } from './notes';
 import { relateDocuments } from './relations';
-import { documentFolders, documentRules, documentSnippets, documents, documentTypes, type RelationKind } from './schema';
+import { dmsMailOutbox, documentFolders, documentRules, documentSnippets, documents, documentTypes, type RelationKind } from './schema';
 import { textPdf } from './seed-pdf';
 import { createSnippet } from './snippets';
 
@@ -337,6 +337,8 @@ export async function seedDms(deps: Deps, ctx: CallContext): Promise<void> {
   ];
   for (const step of [...steps].sort((a, b) => a.at.getTime() - b.at.getTime())) await step.run(seedClockAt(deps, step.at));
 
+  seedOutbox(deps, ctx, { zusage: doc.zusage ?? null, dank: doc.dank ?? null }, { landesverband: who.landesverband, praxis: who.praxis });
+
   // Bausteine je Name — der Abbruch oben zählt Dokumente, nicht Bausteine.
   for (const snippet of [
     { name: 'Grußformel', body: 'Mit freundlichen Grüßen\n\nDer Vorstand' },
@@ -353,4 +355,36 @@ export async function seedDms(deps: Deps, ctx: CallContext): Promise<void> {
   const done = unwrap(await createDocumentFollowUp(deps, ctx, { documentId: id('einladung'), dueAt: addDays(deps, -3), title: 'Unterlagen beilegen' }));
   unwrap(await completeFollowUp(deps, ctx, { id: done.id }));
   unwrap(await createDocumentFollowUp(deps, ctx, { documentId: id('baxter'), dueAt: addDays(deps, 12), title: 'Kennenlernen auf der Pflegestelle vereinbaren' }));
+}
+
+/**
+ * Der Ausgang der E-Mails mit seinen drei wichtigen Zuständen (Plan E1, Task 7),
+ * direkt geschrieben, ohne Transport: Die Zusage an den Landesverband ist
+ * gesendet (der Vermerk per E-Mail steht schon am Dokument), das Dankschreiben
+ * an die Praxis kam nicht an — die Adresse war falsch — und wartet nach der
+ * Berichtigung erneut. Ohne Kontakte (Modultest) bleibt der Ausgang leer.
+ */
+function seedOutbox(deps: Deps, ctx: CallContext, docs: { zusage: string | null; dank: string | null }, people: { landesverband: string | null; praxis: string | null }): void {
+  // Ein Absender, damit „Per E-Mail senden“ und die Einstellungen etwas zeigen (Handoff 2b E2, E5); erfunden.
+  if (!readSetting<string | null>(deps, 'dms.mail.fromAddress')) {
+    deps.db.transaction((tx: DbOrTx) => unwrap(writeSettingInternal(tx, deps, ctx, 'dms.mail.fromAddress', 'post@musterverein.example.org')));
+  }
+  if (deps.db.select({ id: dmsMailOutbox.id }).from(dmsMailOutbox).get()) return;
+  const at = (minutesAgo: number) => new Date(deps.clock.now().getTime() - minutesAgo * 60_000).toISOString();
+  const subjectOf = (id: string) => deps.db.select({ subject: documents.subject }).from(documents).where(eq(documents.id, id)).get()?.subject ?? '';
+  const addressOf = (contactId: string, fallback: string) => {
+    const delivery = deliveryForContactInternal(deps.db, contactId);
+    return delivery.channel === 'email' ? delivery.address : fallback;
+  };
+  const base = (documentId: string, contactId: string, toAddress: string) => ({ documentId, contactId, toAddress, subject: subjectOf(documentId), bodySnippetId: null, queuedByUserId: ctx.userId });
+
+  if (docs.zusage && people.landesverband) {
+    deps.db.insert(dmsMailOutbox).values({ id: newId(), ...base(docs.zusage, people.landesverband, addressOf(people.landesverband, 'info@landesverband-musterland.example.org')), status: 'sent', attempts: 1, queuedAt: at(29), sentAt: at(29), messageId: '<seed-zusage@example.org>' }).run();
+  }
+  if (docs.dank && people.praxis) {
+    const dankDoc = deps.db.select({ createdAt: documents.createdAt }).from(documents).where(eq(documents.id, docs.dank)).get();
+    const queuedAt = dankDoc?.createdAt ?? at(60 * 24);
+    deps.db.insert(dmsMailOutbox).values({ id: newId(), ...base(docs.dank, people.praxis, 'praxis-stadtpark@example.org'), status: 'failed', attempts: 3, queuedAt, lastErrorCode: 'rejected', lastErrorText: '550 5.1.1 <…>: Recipient address rejected: User unknown' }).run();
+    deps.db.insert(dmsMailOutbox).values({ id: newId(), ...base(docs.dank, people.praxis, addressOf(people.praxis, 'praxis@tierarzt-stadtpark.example.org')), status: 'queued', attempts: 0, queuedAt: at(10) }).run();
+  }
 }

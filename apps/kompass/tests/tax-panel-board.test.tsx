@@ -12,7 +12,6 @@ vi.mock('@/app/(shell)/admin/finance/actions', () => ({
   setBoardRemunerationAction: vi.fn(async () => ({ status: 'success' })),
   setExpenseWaiverBasisAction: vi.fn(),
   setFinanceLimitAction: vi.fn(),
-  setFinanceSwitchAction: vi.fn(),
   confirmSetupStepAction: vi.fn(),
   applyTaxDefaultsAction: vi.fn(),
 }));

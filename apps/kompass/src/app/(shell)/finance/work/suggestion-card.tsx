@@ -183,7 +183,7 @@ export function SuggestionCard({
 
       {suggestion?.problems.map((problem) => (
         <Notice key={problem} level="refuse" remedies={problem === 'categoryInactive' ? remediesFor('categoryInactive').map(remedyProps) : undefined}>
-          {t(`suggestion.problems.${problem}`)}
+          {t(`suggestion.problems.${problem}`, suggestion.problemValues[problem] ?? {})}
         </Notice>
       ))}
       {suggestion?.hints.includes('foreignIban') ? <p className="text-hint text-muted-ink">{t('suggestion.foreignIban')}</p> : null}

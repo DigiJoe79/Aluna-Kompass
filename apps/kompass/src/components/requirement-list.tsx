@@ -26,7 +26,8 @@ export interface RequirementListItem {
   /** Namen derer, die es erledigen können, wenn der Betrachter es nicht selbst kann. */
   canDoNames: string[];
   canDoText: string;
-  href: string;
+  /** Ohne Ziel (`null`) steht nur der Text — etwa solange die Seite des Schritts noch fehlt. */
+  href: string | null;
   actionLabel: string;
   doneLabel: string;
   /** Zusätzliche Aktion neben dem Sprung-Knopf, z. B. „Vorgaben übernehmen“. */
@@ -73,7 +74,10 @@ function OpenRow({ item, symbolOnly = false }: { item: RequirementListItem; symb
       data-blocked={item.blocked}
       // 09 B11: Keine graue Fläche je Zeile — im Dialog stapelten sich sonst drei Grauflächen-Ebenen (gilt auch für
       // Verzicht und Partner). Offen sagt das Zeichen bzw. die Marke.
-      className="flex flex-col gap-2 rounded-md border border-line bg-surface p-3.5 sm:flex-row sm:items-center sm:justify-between"
+      // `relative`: Die Zeile ist Bezugsrahmen ihres `sr-only` (absolut). Ohne ihn hing es am Fenster statt am scrollenden
+      // `main` und verlängerte unter dem Falz das Dokument — leere Fläche unter der Finanz-Checkliste (Joe 2026-10-19).
+      // Kein Layout-E2E für die Stelle (MUSTER), Komponententest in `tests/requirement-list.test.tsx`.
+      className="relative flex flex-col gap-2 rounded-md border border-line bg-surface p-3.5 sm:flex-row sm:items-center sm:justify-between"
     >
       <div className="min-w-0 space-y-1">
         <div className="flex items-center gap-2">
@@ -104,13 +108,13 @@ function OpenRow({ item, symbolOnly = false }: { item: RequirementListItem; symb
       </div>
       <div className="flex shrink-0 items-center gap-2">
         {item.extra}
-        {!item.done && (symbolOnly || !item.blocked) && item.canSelf && item.href ? <ActionLink item={item} /> : null}
+        {!item.done && (symbolOnly || !item.blocked) && item.canSelf && item.href ? <ActionLink item={{ ...item, href: item.href }} /> : null}
       </div>
     </li>
   );
 }
 
-function ActionLink({ item }: { item: RequirementListItem }) {
+function ActionLink({ item }: { item: RequirementListItem & { href: string } }) {
   return (
     <Link href={item.href} className={buttonVariants({ variant: 'outline', size: 'sm' })}>
       {item.actionLabel}
@@ -142,7 +146,7 @@ function GroupedRequirementList({ items }: { items: RequirementListItem[] }) {
               <Overline>{label(group)}</Overline>
               {rows.map((item) => {
                 // Sperrt die Zeile außerdem, steht ihre Abhilfe schon unter „Fehlt noch“ — hier nicht noch einmal.
-                const action = !item.done && !item.blocked && item.canSelf && item.href ? <ActionLink item={item} /> : undefined;
+                const action = !item.done && !item.blocked && item.canSelf && item.href ? <ActionLink item={{ ...item, href: item.href }} /> : undefined;
                 return (
                   <div key={item.key} data-testid={`requirement-review-${item.key}`}>
                     <Notice level="warn" title={item.title} reason={item.warning?.reason} action={action}>

@@ -109,10 +109,11 @@ if [ "$MODUS" != "erzeugen" ]; then
 
   # Lizenzen, die ein npm-Paket im Image tragen darf. Freizuegige Lizenzen,
   # dazu MPL-2.0 (Datei-Copyleft, unveraendert mitgeliefert) und die
-  # Schriftlizenz OFL. Alles andere — AGPL, GPL, eine fehlende Angabe — soll
+  # Schriftlizenz OFL. MIT-0 (nodemailer) ist MIT ohne Hinweispflicht.
+  # Alles andere — AGPL, GPL, eine fehlende Angabe — soll
   # jemand ansehen, bevor es verteilt wird. Die Pruefung vergleicht bewusst
   # nicht mit einer Datei: Ein Update aendert Versionen, keine Lizenzen.
-  ERLAUBT='MIT ISC Apache-2.0 BSD-2-Clause BSD-3-Clause 0BSD BlueOak-1.0.0 CC0-1.0 CC-BY-4.0 Python-2.0 OFL-1.1 MPL-2.0 Unlicense'
+  ERLAUBT='MIT MIT-0 ISC Apache-2.0 BSD-2-Clause BSD-3-Clause 0BSD BlueOak-1.0.0 CC0-1.0 CC-BY-4.0 Python-2.0 OFL-1.1 MPL-2.0 Unlicense'
   # Einzeln angesehen: libvips, dynamisch geladen und austauschbar (NOTICE).
   AUSNAHMEN='@img/sharp-libvips-*=LGPL-3.0-or-later'
 

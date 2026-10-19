@@ -5,7 +5,9 @@ import { financeAudit } from '../audit';
 import { financeConflict, requireHumanChannelFinance } from '../errors';
 import { entryLinesSchema, entryViewInternal, saveDraft, setReviewed, type EntryLinesInput, type EntryView } from '../ledger/entries';
 import { bookEntry } from '../ledger/finalize';
+import { SETTLEMENT_WARNINGS } from '../ledger/settlement-warnings';
 import { financeAccounts, financeCategories, financeEntries, financeImportRuns, financeMoneyLines, financeRawTransactions, type FinanceRawTransactionRow } from '../schema';
+import { mandateHoldersForLineInternal } from '../direct-debit/mandate-state';
 import { learnContactIbanInternal } from './contact-ibans';
 
 /**
@@ -17,7 +19,7 @@ import { learnContactIbanInternal } from './contact-ibans';
 
 type MoneyLineInput = EntryLinesInput['moneyLines'][number];
 
-const settlementSchema = z.object({ openItemId: z.string().min(1), amountCents: z.number().int().positive() });
+const settlementSchema = z.object({ openItemId: z.string().min(1), amountCents: z.number().int().positive(), reversesSettlementId: z.string().min(1).nullable().optional() });
 
 /** Die Zeilen wie bei `saveDraft` — dieselben Felder, damit ein Vorschlag (`SuggestionView.draft`) unverändert hineinpasst. */
 const lineSchemas = entryLinesSchema.shape;
@@ -35,6 +37,8 @@ export const bookFromTransactionSchema = z.object({
   reviewed: z.boolean(),
   /** Der Entwurf, den die Arbeitsliste an diesem Umsatz zeigte — er wird ersetzt, statt einen zweiten anzulegen. */
   expectedDraftId: z.string().min(1).optional(),
+  /** Plan N2 Task 2: bestätigte Warnungen, wenn die Buchung sofort festgeschrieben wird (Kasse). */
+  acknowledgedWarnings: z.array(z.enum(SETTLEMENT_WARNINGS)).optional(),
 });
 
 const linkSchema = z.object({ rawTransactionId: z.string().min(1), entryId: z.string().min(1) });
@@ -78,7 +82,8 @@ function touchesCash(db: DbOrTx, moneyLines: readonly { accountId: string }[]): 
  * nichts parken: mit `reviewed` schreibt `bookEntry` in einem Zug fest (braucht
  * `finance.entriesFinalize`), ohne wird `cashDraftNotAllowed` gemeldet.
  * Danach lernt Kompass je Zuordnung mit Kontakt die IBAN des Umsatzes
- * (`learnedFrom: 'booking'`, Annahme 2).
+ * (`learnedFrom: 'booking'`, Annahme 2) — bei einem Umsatz über ein Mandat des
+ * Vereins nur für dessen Inhaber (U1).
  */
 export async function bookFromTransaction(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<EntryView>> {
   const denied = requirePermission(ctx, 'finance.entriesWrite');
@@ -118,17 +123,20 @@ export async function bookFromTransaction(deps: Deps, ctx: CallContext, input: u
   let result: Result<EntryView>;
   if (touchesCash(deps.db, moneyLines)) {
     if (!v.reviewed) return financeConflict('cashDraftNotAllowed');
-    result = await bookEntry(deps, ctx, lines);
+    result = await bookEntry(deps, ctx, { ...lines, ...(v.acknowledgedWarnings ? { acknowledgedWarnings: v.acknowledgedWarnings } : {}) });
   } else {
     result = await saveDraft(deps, ctx, v.expectedDraftId ? { ...lines, id: v.expectedDraftId } : lines);
     if (result.ok && v.reviewed) result = await setReviewed(deps, ctx, { id: result.value.id, reviewed: true, expectedVersion: result.value.updatedAt });
   }
   if (!result.ok) return result;
 
-  const contactIds = [...new Set(v.allocationLines.map((l) => l.contactId).filter((id): id is string => !!id))];
+  // U1 (Plan N3): Läuft der Umsatz über ein Mandat des Vereins, gehört das Konto dem Mandatsgeber — die IBAN lernt nur
+  // er, nie das Mitglied, dessen Beitrag eingezogen oder zurückgegeben wurde. Sonst entstünde still ein Gemeinschaftskonto.
+  const holders = mandateHoldersForLineInternal(deps.db, raw);
+  const contactIds = [...new Set(v.allocationLines.map((l) => l.contactId).filter((id): id is string => !!id))].filter((id) => holders === null || holders.includes(id));
   if (raw.counterpartyIban && contactIds.length > 0) {
     deps.db.transaction((tx: DbOrTx) => {
-      for (const contactId of contactIds) learnContactIbanInternal(tx, deps, ctx, { contactId, iban: raw.counterpartyIban!, learnedFrom: 'booking' });
+      for (const contactId of contactIds) learnContactIbanInternal(tx, deps, ctx, { contactId, iban: raw.counterpartyIban!, learnedFrom: 'booking', learnedOn: lines.entryDate });
     });
   }
   return result;

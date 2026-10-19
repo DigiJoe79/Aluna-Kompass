@@ -6,7 +6,8 @@ import { installedModules } from '@/modules';
 describe('installed modules', () => {
   it('registers installed modules without clashes', () => {
     const registry = createRegistry([coreModule, ...installedModules]);
-    expect(installedModules.map((m) => m.key)).toEqual(['site', 'projects', 'animals', 'contacts', 'dms', 'finance']);
+    expect(installedModules.map((m) => m.key)).toEqual(['site', 'projects', 'animals', 'contacts', 'members', 'dms', 'finance']);
+    expect(registry.permissionKeys.has('members.read')).toBe(true);
     expect(registry.permissionKeys.has('animals.manage')).toBe(true);
     expect(registry.permissionKeys.has('projects.manage')).toBe(true);
     expect(registry.permissionKeys.has('site.publish')).toBe(true);

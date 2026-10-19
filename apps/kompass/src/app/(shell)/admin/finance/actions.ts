@@ -11,6 +11,7 @@ import {
   dissolvePurpose,
   fulfillPurpose,
   removeDatedValue,
+  saveSepaSettings,
   reopenPurpose,
   setAccountActive,
   setBoardRemuneration,
@@ -58,19 +59,10 @@ export async function applyTaxDefaultsAction(): Promise<ActionState> {
   });
 }
 
-export async function setFinanceSwitchAction(key: string, value: boolean): Promise<ActionState> {
-  return guardAction('(shell)/admin/finance/actions.ts#setFinanceSwitchAction', async () => {
-    const t = await getTranslations();
-    const { deps, ctx } = await requireSession();
-    const result = await setFinanceSwitch(deps, ctx, { key, value });
-    revalidateFinanceAdmin();
-    return toActionState(result, t);
-  });
-}
-
 /**
  * Runde 3, 172: die Leiste der Schalter — ein Dienst (`setFinanceSwitch`) je geändertem Schalter, in der Reihenfolge
- * der Seite; die erste Ablehnung hält an und steht an der Leiste.
+ * der Seite; die erste Ablehnung hält an und steht an der Leiste. Seit Plan U4 Task 1 geht der Agentenschalter
+ * (`finance.mcpHumanOnlyAllowed`, `uiOnly`) als letzter mit.
  */
 export async function setFinanceSwitchesAction(entries: { key: string; value: boolean }[]): Promise<ActionState> {
   return guardAction('(shell)/admin/finance/actions.ts#setFinanceSwitchesAction', async () => {
@@ -299,5 +291,17 @@ export async function setPurposeActiveAction(id: string, isActive: boolean, expe
     const result = await setPurposeActive(deps, ctx, { id, isActive, expectedVersion });
     revalidateFinanceAdmin();
     return toActionState(result, t);
+  });
+}
+
+/** Einstellungen › Finanzen › Lastschrift (Handoff 2a § 2): ein Dienst, `saveSepaSettings` (`finance.setup`). */
+export async function saveSepaSettingsAction(input: unknown): Promise<ActionState> {
+  return guardAction('(shell)/admin/finance/actions.ts#saveSepaSettingsAction', async () => {
+    const t = await getTranslations();
+    const { deps, ctx } = await requireSession();
+    const result = await saveSepaSettings(deps, ctx, input);
+    revalidateFinanceAdmin();
+    revalidatePath('/finance/direct-debit');
+    return toActionState(result, t, t('finance.admin.directDebit.saved'));
   });
 }

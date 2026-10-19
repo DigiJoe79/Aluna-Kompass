@@ -88,6 +88,23 @@ export interface LabelRef {
   params?: Record<string, string | number>;
 }
 export type LabelText = string | LabelRef;
+/** Eine Verwendung eines SEPA-Mandats, gemeldet über `mandateUsages`. */
+export interface MandateUsageInput {
+  kind: string;
+  id: string;
+  label: LabelRef;
+}
+/**
+ * Ein offener Posten, der per Lastschrift eingezogen werden soll — gemeldet über `directDebitSources` (Plan L2). Der
+ * Betrag ist der noch offene Rest, `remittance` der Verwendungszweck (die Zahlungsreferenz des Postens).
+ */
+export interface DirectDebitSourceItem {
+  openItemId: string;
+  mandateId: string;
+  amountCents: number;
+  dueOn: string;
+  remittance: string;
+}
 /** Was ein Haken liefert: dieselbe Form, nur die Bezeichnung darf ein Schlüssel sein. */
 export type WithLabelRef<T extends { label: string }> = Omit<T, 'label'> & { label: LabelText };
 export type RetentionHoldInput = WithLabelRef<RetentionHold>;
@@ -95,6 +112,15 @@ export type RecordReferenceInput = WithLabelRef<RecordReference>;
 export type DueItemInput = WithLabelRef<DueItem>;
 export type FollowUpTargetInput = WithLabelRef<FollowUpTarget>;
 export type RecordLabelInput = Omit<RecordLabel, 'label' | 'auditLabel'> & { label: LabelText; auditLabel?: LabelText };
+
+/**
+ * Ein Herkunftstyp offener Posten der Finanzen, den ein Modul anmeldet (`ModuleManifest.openItemOrigins`, Spec
+ * Mitglieder und Lastschrift § 6.1). Beschriftung und Link liefert der Haken `recordLabels` des Moduls mit
+ * `entityType = type`.
+ */
+export interface OpenItemOriginDefinition {
+  type: string;
+}
 
 /** Eine Bildstelle einer Modul-Sicht (`ModuleManifest.imagePlaces`). */
 export interface ImagePlaceDeclaration {
@@ -188,6 +214,11 @@ export type ContactRoleRetention = RetentionClass | 'none';
 export interface ContactRoleDefinition {
   key: string;
   retention: ContactRoleRetention;
+  /**
+   * Schlüssel des Moduls, das diese Rolle führt: Rolle setzt und beendet nur dieses Modul (Mitglieder: `member` läuft
+   * von Eintritt bis Ende der Mitgliedschaft). Von Hand lehnen die Dienste der Kontakte sie ab.
+   */
+  managedBy?: string;
 }
 
 export interface NavigationItem {
@@ -408,6 +439,12 @@ export interface ModuleManifest {
    */
   documentAreas?: readonly DocumentArea[];
   /**
+   * Plan N2 (F7): Eigene Dokumentarten, die die Akte wie freie Dokumente stornieren darf — solange sie keinen
+   * Versandvermerk tragen. Was das Modul aus ihnen ableitet (Mahnstufe, Überweisungsaufforderung), muss ein storniertes
+   * Dokument ohnehin übergehen. Andere eigene Arten storniert nur das Modul selbst.
+   */
+  voidableDocumentTypes?: readonly string[];
+  /**
    * Ein fremder Datensatz wurde gelöscht — in dieser Transaktion. Das Modul
    * räumt mit, was nur an ihm hing (Finanzfelder eines Projekts ohne Buchung),
    * und protokolliert es. Richtung Kern → Modul, nur eingeschaltete Module.
@@ -415,6 +452,15 @@ export interface ModuleManifest {
    * Ein Verweis blockiert das Löschen, dann käme dieser Haken nie an die Reihe.
    */
   recordDeleted?: (tx: DbOrTx, deps: Deps, ctx: CallContext, entityType: string, id: string) => void;
+  /**
+   * Ein Dokument der Akte hat einen Versandvermerk bekommen — von Hand oder
+   * durch den Mailversand, in derselben Transaktion. `sentAt` ist der Tag,
+   * `channel` der Schlüssel des Versandwegs (`dms.dispatchChannels`). Ein Modul,
+   * das zu dem Dokument einen eigenen Vorgang führt (Zuwendungsbestätigung,
+   * Mahnstufe), hält damit seinen Versand nach; ein zweiter Vermerk darf nichts
+   * überschreiben, was schon steht. Wirft der Haken, rollt der Vermerk zurück.
+   */
+  documentDispatched?: (tx: DbOrTx, deps: Deps, ctx: CallContext, input: { documentId: string; sentAt: string; channel: string }) => void;
   /**
    * Aufräumen im Hintergrund (Spec Vorschlags-Eingang § 7): Der Kern ruft den Haken in einem Takt für **jedes
    * installierte** Modul, auch ausgeschaltete — Fristen zum Leeren laufen weiter, wenn ein Modul ruht. Läuft mit
@@ -528,6 +574,30 @@ export interface ModuleManifest {
    * Kern → Modul, damit Kern und Fachmodule die Bildstellen auflösen, ohne das Site-Modul zu kennen.
    */
   imagePlaceSpecs?: (deps: Deps) => Readonly<Record<string, unknown>> | undefined;
+  /**
+   * Herkunftstypen offener Posten der Finanzen, die diesem Modul gehören (Spec Mitglieder und Lastschrift § 6.1).
+   * Ein Posten mit so einer Herkunft entsteht, verschiebt und storniert sich nur über den Vorgang im Modul; die
+   * öffentlichen Dienste der Finanzen lehnen ihn ab. Je Installation gehört jeder Typ genau einem Modul.
+   */
+  openItemOrigins?: readonly OpenItemOriginDefinition[];
+  /**
+   * Wofür ein SEPA-Mandat der Finanzen steht (Plan L1, Spec Mitglieder und Lastschrift § 7.2): die Datensätze dieses
+   * Moduls, die das Mandat nutzen — etwa Mitgliedschaften mit Zahlweg Lastschrift. Die Finanzen sammeln es für
+   * `usedFor`; beschriftet über einen Schlüssel der Sprachdatei, nie mit Namen.
+   */
+  mandateUsages?: (deps: Deps, mandateId: string) => readonly MandateUsageInput[];
+  /**
+   * Offene Posten dieses Moduls, die per Lastschrift eingezogen werden (Plan L2, Spec Mitglieder und Lastschrift § 7.4):
+   * fällig bis `until`, mit dem Mandat, das die Vereinbarung nennt — gleich in welchem Zustand; ob eingezogen werden
+   * darf, entscheidet die Vorschau des Einzugs und nennt den Grund. So kennen die Finanzen die Mitglieder nicht.
+   */
+  directDebitSources?: (deps: Deps, input: { until: string }) => readonly DirectDebitSourceItem[];
+  /**
+   * „Rückgabe klären“ → „nicht mehr einfordern“ (Plan L3): Der offene Posten dieses Moduls, den eine Rücklastschrift
+   * wieder geöffnet hat, wird erlassen — auf dem Weg des Moduls (bei den Mitgliedern `waiveCharge`), in der Transaktion
+   * der Finanzen. `null`: Der Posten gehört nicht diesem Modul. Ein Fehlschlag kommt als `Result` zurück.
+   */
+  directDebitWaive?: (tx: DbOrTx, deps: Deps, ctx: CallContext, openItemId: string) => Result<unknown> | null;
   install?: (tx: DbOrTx, deps: Deps, ctx: CallContext) => void;
 }
 
@@ -542,6 +612,7 @@ const TEMPLATE_TYPE = /^[a-z][a-z0-9-]*$/;
 const ROLE_KEY = /^[a-z][a-z0-9-]*$/;
 const TILE_KEY = /^[a-z][a-zA-Z0-9]*$/;
 const IMAGE_PLACE_KEY = /^[a-z][a-z0-9-]*\.[a-z][a-zA-Z0-9]*$/;
+const OPEN_ITEM_ORIGIN_TYPE = /^[a-z][A-Za-z0-9]{2,59}$/;
 const TILE_KINDS: ReadonlySet<string> = new Set(['count', 'list', 'status']);
 const TILE_VARIANTS: ReadonlySet<string> = new Set(['due', 'work']);
 
@@ -559,6 +630,7 @@ export function defineModule(manifest: ModuleManifest): ModuleManifest {
   for (const role of manifest.contactRoles ?? []) {
     if (!ROLE_KEY.test(role.key)) throw new Error(`invalid contact role key: ${role.key}`);
     if (role.retention !== 'none' && !RETENTION_CLASSES.includes(role.retention)) throw new Error(`invalid contact role retention class: ${role.retention}`);
+    if (role.managedBy !== undefined && !MODULE_KEY.test(role.managedBy)) throw new Error(`invalid contact role manager: ${role.managedBy}`);
   }
   const seenTiles = new Set<string>();
   for (const tile of manifest.dashboardTiles ?? []) {
@@ -591,6 +663,12 @@ export function defineModule(manifest: ModuleManifest): ModuleManifest {
   }
   for (const area of manifest.documentAreas ?? []) {
     if (!manifest.permissions.includes(area.permission)) throw new Error(`document area ${manifest.key}/${area.key} names a foreign permission: ${area.permission}`);
+  }
+  const seenOrigins = new Set<string>();
+  for (const origin of manifest.openItemOrigins ?? []) {
+    if (!OPEN_ITEM_ORIGIN_TYPE.test(origin.type)) throw new Error(`invalid open item origin type: ${manifest.key}/${origin.type}`);
+    if (seenOrigins.has(origin.type)) throw new Error(`duplicate open item origin: ${manifest.key}/${origin.type}`);
+    seenOrigins.add(origin.type);
   }
   return manifest;
 }

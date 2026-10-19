@@ -222,9 +222,15 @@ export const financeAllocationLines = sqliteTable(
     originLineId: text('origin_line_id'),
     /** „Zuführung zum Vermögen“ (§ 62 Abs. 3 AO) — bei Erbschaften vorbelegt. */
     addsToAssets: integer('adds_to_assets', { mode: 'boolean' }).notNull().default(false),
+    /**
+     * Plan L3: der Posten eines Einzugs, den diese Zeile bucht (Beitrag oder Rate) — so ist eine Rate „gebucht“, ein
+     * Einzug gebucht, und eine Rückgabe nimmt genau diese Zeile zurück. Kein Fremdschlüssel wie bei `projectId`.
+     */
+    directDebitItemId: text('direct_debit_item_id'),
   },
   (t) => [
     index('finance_allocation_lines_entry_idx').on(t.entryId),
+    index('finance_allocation_lines_direct_debit_item_idx').on(t.directDebitItemId),
     index('finance_allocation_lines_category_idx').on(t.categoryId),
     index('finance_allocation_lines_contact_idx').on(t.contactId),
     index('finance_allocation_lines_purpose_idx').on(t.purposeId),
@@ -320,7 +326,13 @@ export const financeOpenItems = sqliteTable(
 );
 export type FinanceOpenItemRow = typeof financeOpenItems.$inferSelect;
 
-/** Eine Geldzeile erledigt einen Posten ganz oder teilweise — Sammelüberweisung, Teil- und Überzahlung. Betrag immer > 0. */
+/**
+ * Eine Geldzeile erledigt einen Posten ganz oder teilweise — Sammelüberweisung, Teil- und Überzahlung. Betrag immer > 0.
+ * Ein **Rück-Ausgleich** (`reversesSettlementId` gesetzt, Spec Mitglieder und Lastschrift § 6.2) nimmt an der
+ * Geldzeile einer Rückgabe einen festgeschriebenen Ausgleich ganz oder teilweise zurück: Die Richtung steht im
+ * Verweis, nicht im Vorzeichen, und sein Betrag zählt vom Ausgeglichenen ab — der offene Rest wird berechnet, nie
+ * gespeichert (`settledCentsFor`).
+ */
 export const financeOpenItemSettlements = sqliteTable(
   'finance_open_item_settlements',
   {
@@ -328,8 +340,13 @@ export const financeOpenItemSettlements = sqliteTable(
     moneyLineId: text('money_line_id').notNull().references(() => financeMoneyLines.id),
     openItemId: text('open_item_id').notNull().references(() => financeOpenItems.id),
     amountCents: integer('amount_cents').notNull(),
+    reversesSettlementId: text('reverses_settlement_id'),
   },
-  (t) => [uniqueIndex('finance_open_item_settlements_pair_idx').on(t.moneyLineId, t.openItemId), index('finance_open_item_settlements_item_idx').on(t.openItemId)],
+  (t) => [
+    uniqueIndex('finance_open_item_settlements_pair_idx').on(t.moneyLineId, t.openItemId),
+    index('finance_open_item_settlements_item_idx').on(t.openItemId),
+    index('finance_open_item_settlements_reverses_idx').on(t.reversesSettlementId),
+  ],
 );
 export type FinanceOpenItemSettlementRow = typeof financeOpenItemSettlements.$inferSelect;
 
@@ -497,6 +514,10 @@ export const financeRawTransactions = sqliteTable(
     bankReference: text('bank_reference'),
     endToEndId: text('end_to_end_id'),
     returnCode: text('return_code'),
+    /** Plan L3: `MndtId` einer Lastschrift oder ihrer Rückgabe — damit eine Rückgabe ihr Mandat sicher findet. Nur aus CAMT. */
+    mandateReference: text('mandate_reference'),
+    /** Plan L3: die Gläubiger-ID (`CdtrSchmeId`) einer Lastschrift. Nur aus CAMT. */
+    creditorId: text('creditor_id'),
     /** AC: Bezug auf eine frühere Transaktion desselben Dienstes (PayPal „Zugehöriger Transaktionscode“) — bei einer Rückzahlung die Spende. Nur aus CSV. */
     relatedReference: text('related_reference'),
     /** AB: E-Mail der Gegenseite (PayPal „Absender E-Mail-Adresse“), klein geschrieben — personenbezogen wie Name und IBAN. Nur aus CSV. */
@@ -590,9 +611,15 @@ export const financeImportRules = sqliteTable(
 );
 export type FinanceImportRuleRow = typeof financeImportRules.$inferSelect;
 
+/** Woher Kompass eine Zuordnung Kontakt ↔ IBAN kennt (Plan U4 Task 3): aus einem Umsatz gelernt, von Hand, aus einem Mandat. */
+export const CONTACT_IBAN_SOURCES = ['learned', 'manual', 'mandate'] as const;
+export type ContactIbanSourceKind = (typeof CONTACT_IBAN_SOURCES)[number];
+
 /**
  * Kontakt ↔ IBAN (F5): gelernt aus Handlungen, nie rückwirkend. Arbeitsmaterial,
  * löschbar. Kein Fremdschlüssel: Kontakte gehören einem anderen Modul.
+ * `source` und `learnedFromEntryDate` (Plan U4 Task 3): die Herkunft für die Liste am Kontakt; Zuordnungen von davor
+ * haben keine (`null`). Von Hand: Person und Tag stehen in `createdByUserId`/`createdAt`.
  */
 export const financeContactBankAccounts = sqliteTable(
   'finance_contact_bank_accounts',
@@ -602,6 +629,9 @@ export const financeContactBankAccounts = sqliteTable(
     iban: text('iban').notNull(),
     createdAt: text('created_at').notNull(),
     createdByUserId: text('created_by_user_id').notNull(),
+    source: text('source', { enum: CONTACT_IBAN_SOURCES }),
+    /** Bei `learned`: der Tag des Umsatzes bzw. der Buchung, aus der Kompass die Zuordnung kennt. */
+    learnedFromEntryDate: text('learned_from_entry_date'),
   },
   (t) => [uniqueIndex('finance_contact_bank_accounts_pair_idx').on(t.contactId, t.iban), index('finance_contact_bank_accounts_iban_idx').on(t.iban)],
 );
@@ -1218,3 +1248,279 @@ export const financePurposeTransferCounters = sqliteTable('finance_purpose_trans
   last: integer('last').notNull(),
 });
 export type FinancePurposeTransferCounterRow = typeof financePurposeTransferCounters.$inferSelect;
+
+// ── Lastschrift (Plan L1, Spec Mitglieder und Lastschrift § 7.2, § 7.3) ─────────────────────────────────────────────
+
+export const MANDATE_SEQUENCES = ['recurring', 'oneOff'] as const;
+export const MANDATE_END_REASONS = ['debtor', 'creditor', 'superseded', 'returned'] as const;
+export type MandateEndReason = (typeof MANDATE_END_REASONS)[number];
+export const MANDATE_CHANGE_FIELDS = ['iban', 'debtorName', 'bic'] as const;
+export type MandateChangeField = (typeof MANDATE_CHANGE_FIELDS)[number];
+
+/** Der Änderungshinweis für den nächsten Einzug (`AmdmntInd`, `OrgnlDbtrAcct` bzw. `OrgnlMndtId`); L2 liest und quittiert ihn. */
+export interface PendingAmendment {
+  originalIban?: string;
+  originalReference?: string;
+  since: string;
+}
+
+/**
+ * Ein SEPA-Mandat (Spec § 7.2). Gehört dem Kontakt, der zahlt (`contactId`, ohne Fremdschlüssel: Kontakte gehören einem
+ * anderen Modul) — nicht zwingend dem Mitglied. Der Zustand (vorbereitet, aktiv, beendet, verfallen) wird berechnet
+ * (`direct-debit/mandates.ts`), nie gespeichert. Die Referenz kommt aus dem Zähler und wird nie wiederverwendet.
+ */
+export const financeSepaMandates = sqliteTable(
+  'finance_sepa_mandates',
+  {
+    id: text('id').primaryKey(),
+    contactId: text('contact_id').notNull(),
+    reference: text('reference').notNull(),
+    /** Kontoinhaber, kann vom Kontakt abweichen (höchstens 70 Zeichen). */
+    debtorName: text('debtor_name').notNull(),
+    iban: text('iban').notNull(),
+    bic: text('bic'),
+    sequence: text('sequence', { enum: MANDATE_SEQUENCES }).notNull().default('recurring'),
+    preparedOn: text('prepared_on').notNull(),
+    signedOn: text('signed_on'),
+    /** Das unterschriebene Mandat in der Akte. */
+    signedDocumentId: text('signed_document_id'),
+    endedOn: text('ended_on'),
+    endReason: text('end_reason', { enum: MANDATE_END_REASONS }),
+    /** Setzt L2 mit jedem gebuchten Einzug; Maßstab für den Verfall nach 36 Monaten. */
+    lastCollectedOn: text('last_collected_on'),
+    pendingAmendment: text('pending_amendment', { mode: 'json' }).$type<PendingAmendment>(),
+    createdAt: text('created_at').notNull(),
+    updatedAt: text('updated_at').notNull(),
+  },
+  (t) => [uniqueIndex('finance_sepa_mandates_reference_idx').on(t.reference), index('finance_sepa_mandates_contact_idx').on(t.contactId)],
+);
+export type FinanceSepaMandateRow = typeof financeSepaMandates.$inferSelect;
+
+/** Verlauf von IBAN, Kontoinhaber und BIC eines unterschriebenen Mandats (Spec § 7.2). */
+export const financeSepaMandateChanges = sqliteTable(
+  'finance_sepa_mandate_changes',
+  {
+    id: text('id').primaryKey(),
+    mandateId: text('mandate_id')
+      .notNull()
+      .references(() => financeSepaMandates.id),
+    field: text('field', { enum: MANDATE_CHANGE_FIELDS }).notNull(),
+    before: text('before'),
+    after: text('after'),
+    validFrom: text('valid_from').notNull(),
+    createdAt: text('created_at').notNull(),
+    createdByUserId: text('created_by_user_id').notNull(),
+  },
+  (t) => [index('finance_sepa_mandate_changes_mandate_idx').on(t.mandateId, t.validFrom)],
+);
+export type FinanceSepaMandateChangeRow = typeof financeSepaMandateChanges.$inferSelect;
+
+/** Der Zähler der Mandatsreferenzen, eine Zeile `id = 'mandate'` — eigene Tabelle, damit keine Nummer wiederkommt. */
+export const financeSepaCounter = sqliteTable('finance_sepa_counter', {
+  id: text('id').primaryKey(),
+  last: integer('last').notNull(),
+});
+
+export const PLEDGE_INTERVALS = ['monthly', 'quarterly', 'halfYearly', 'yearly'] as const;
+export type PledgeInterval = (typeof PLEDGE_INTERVALS)[number];
+export const PLEDGE_PAYMENT_METHODS = ['directDebit', 'transfer', 'standingOrder'] as const;
+export type PledgePaymentMethod = (typeof PLEDGE_PAYMENT_METHODS)[number];
+
+/**
+ * Eine Dauerspenden-Zusage (Spec § 7.3). Erzeugt nie einen offenen Posten: Eine Spende ist keine Forderung. Die Raten
+ * werden berechnet (`direct-debit/rates.ts`); gespeichert ist nur, was entschieden wurde (`finance_pledge_rate_marks`).
+ */
+export const financePledges = sqliteTable(
+  'finance_pledges',
+  {
+    id: text('id').primaryKey(),
+    contactId: text('contact_id').notNull(),
+    amountCents: integer('amount_cents').notNull(),
+    interval: text('interval', { enum: PLEDGE_INTERVALS }).notNull(),
+    firstDueOn: text('first_due_on').notNull(),
+    lastDueOn: text('last_due_on'),
+    paymentMethod: text('payment_method', { enum: PLEDGE_PAYMENT_METHODS }).notNull(),
+    mandateId: text('mandate_id').references(() => financeSepaMandates.id),
+    purposeId: text('purpose_id').references(() => financePurposes.id),
+    projectId: text('project_id'),
+    pausedFrom: text('paused_from'),
+    pausedUntil: text('paused_until'),
+    endedOn: text('ended_on'),
+    /** Frei getippt — steht hier, nie im Protokoll. */
+    note: text('note'),
+    createdAt: text('created_at').notNull(),
+    updatedAt: text('updated_at').notNull(),
+  },
+  (t) => [index('finance_pledges_contact_idx').on(t.contactId), index('finance_pledges_mandate_idx').on(t.mandateId)],
+);
+export type FinancePledgeRow = typeof financePledges.$inferSelect;
+
+/** `notAnnounced` (Plan N1, M14): die Rate lag beim Anlegen der Zusage schon innerhalb der Frist der Vorabankündigung. */
+export const PLEDGE_RATE_MARK_REASONS = ['paused', 'waivedAfterReturn', 'notAnnounced'] as const;
+
+/** Eine ausgelassene Rate — die einzige gespeicherte Ratenangabe, weil sie eine Entscheidung ist. */
+export const financePledgeRateMarks = sqliteTable(
+  'finance_pledge_rate_marks',
+  {
+    id: text('id').primaryKey(),
+    pledgeId: text('pledge_id')
+      .notNull()
+      .references(() => financePledges.id),
+    dueOn: text('due_on').notNull(),
+    mark: text('mark', { enum: ['skipped'] }).notNull(),
+    reason: text('reason', { enum: PLEDGE_RATE_MARK_REASONS }).notNull(),
+  },
+  (t) => [uniqueIndex('finance_pledge_rate_marks_rate_idx').on(t.pledgeId, t.dueOn)],
+);
+export type FinancePledgeRateMarkRow = typeof financePledgeRateMarks.$inferSelect;
+
+// ── Einzug (Plan L2, Spec Mitglieder und Lastschrift § 7.4, § 7.5) ──────────────────────────────────────────────────
+
+/** `booked` und `expired` (Plan N1, M41: nie eingereicht, Einreichfenster vorbei) werden berechnet, nie gespeichert. */
+export const DIRECT_DEBIT_RUN_STATUSES = ['draft', 'fileCreated', 'submitted', 'booked', 'expired', 'cancelled'] as const;
+export type DirectDebitRunStatus = (typeof DIRECT_DEBIT_RUN_STATUSES)[number];
+export const DIRECT_DEBIT_SOURCES = ['openItem', 'pledge'] as const;
+export type DirectDebitSource = (typeof DIRECT_DEBIT_SOURCES)[number];
+
+/**
+ * Ein Einzug zu einem Fälligkeitstag (Spec § 7.4). Der Zustand ist gespeichert, weil er die Schritte eines Vorgangs
+ * festhält (Datei erzeugt, eingereicht, storniert), keine abgeleitete Größe; Summen werden berechnet. „Gebucht“ ist
+ * berechnet (L3 Nacharbeit, `runStatusInternal`): gespeichert endet der Zustand bei `submitted`. Die Sequenz
+ * (`RCUR`/`OOFF`) steht am Mandat — ein Einzug kann beide tragen, die Datei hat dann je eine Gruppe.
+ */
+export const financeDirectDebitRuns = sqliteTable(
+  'finance_direct_debit_runs',
+  {
+    id: text('id').primaryKey(),
+    collectionDate: text('collection_date').notNull(),
+    accountId: text('account_id')
+      .notNull()
+      .references(() => financeAccounts.id),
+    status: text('status', { enum: DIRECT_DEBIT_RUN_STATUSES }).notNull(),
+    /** `MsgId` der Datei: eindeutig, höchstens 35 Zeichen aus dem SEPA-Zeichensatz. */
+    messageId: text('message_id').notNull(),
+    fileName: text('file_name'),
+    fileCreatedAt: text('file_created_at'),
+    fileCreatedByUserId: text('file_created_by_user_id'),
+    /** M15: je Mandat der Stand (Prüfsumme von IBAN, BIC, Name, Änderungshinweis), mit dem die Datei entstand. */
+    fileMandates: text('file_mandates', { mode: 'json' }).$type<Record<string, string>>(),
+    submittedOn: text('submitted_on'),
+    submittedByUserId: text('submitted_by_user_id'),
+    cancelledAt: text('cancelled_at'),
+    cancelledByUserId: text('cancelled_by_user_id'),
+    /** Der Begleitzettel in der Akte (Art `sepa-run-summary`). */
+    summaryDocumentId: text('summary_document_id'),
+    createdByUserId: text('created_by_user_id').notNull(),
+    createdAt: text('created_at').notNull(),
+    updatedAt: text('updated_at').notNull(),
+  },
+  (t) => [uniqueIndex('finance_direct_debit_runs_message_idx').on(t.messageId), index('finance_direct_debit_runs_date_idx').on(t.collectionDate)],
+);
+export type FinanceDirectDebitRunRow = typeof financeDirectDebitRuns.$inferSelect;
+
+/**
+ * Ein Posten eines Einzugs: ein offener Posten (Beitrag) oder eine Rate einer Zusage (`installmentOn`). Herausgenommen
+ * wird er über `removedAt`, nie gelöscht. Dass ein Posten in höchstens einem nicht stornierten Einzug steckt, prüft der
+ * Dienst — SQLite kennt keinen Index über den Zustand des Laufs.
+ */
+export const financeDirectDebitItems = sqliteTable(
+  'finance_direct_debit_items',
+  {
+    id: text('id').primaryKey(),
+    runId: text('run_id')
+      .notNull()
+      .references(() => financeDirectDebitRuns.id),
+    mandateId: text('mandate_id')
+      .notNull()
+      .references(() => financeSepaMandates.id),
+    source: text('source', { enum: DIRECT_DEBIT_SOURCES }).notNull(),
+    /** Der offene Posten bzw. die Zusage. */
+    sourceId: text('source_id').notNull(),
+    /** Nur bei einer Zusage: der Tag der Rate. */
+    installmentOn: text('installment_on'),
+    amountCents: integer('amount_cents').notNull(),
+    endToEndId: text('end_to_end_id').notNull(),
+    /** Verwendungszweck (höchstens 140 Zeichen). */
+    remittance: text('remittance').notNull(),
+    /** Der Änderungshinweis des Mandats, übernommen beim Anlegen (erste Zeile je Mandat). */
+    amendment: text('amendment', { mode: 'json' }).$type<PendingAmendment>(),
+    removedAt: text('removed_at'),
+    removedByUserId: text('removed_by_user_id'),
+    createdAt: text('created_at').notNull(),
+  },
+  (t) => [
+    uniqueIndex('finance_direct_debit_items_e2e_idx').on(t.endToEndId),
+    index('finance_direct_debit_items_run_idx').on(t.runId),
+    index('finance_direct_debit_items_source_idx').on(t.source, t.sourceId),
+    index('finance_direct_debit_items_mandate_idx').on(t.mandateId),
+  ],
+);
+export type FinanceDirectDebitItemRow = typeof financeDirectDebitItems.$inferSelect;
+
+export const DIRECT_DEBIT_RETURN_STATUSES = ['open', 'resolved'] as const;
+export type DirectDebitReturnStatus = (typeof DIRECT_DEBIT_RETURN_STATUSES)[number];
+/** `alreadyPaid` (U4, Plan N3): der Beitrag war inzwischen anders bezahlt — nichts mehr zu tun. */
+export const DIRECT_DEBIT_RETURN_RESOLUTIONS = ['recollect', 'requestTransfer', 'waive', 'alreadyPaid'] as const;
+export type DirectDebitReturnResolution = (typeof DIRECT_DEBIT_RETURN_RESOLUTIONS)[number];
+
+/**
+ * Eine Rücklastschrift als Fall (Plan L3, Spec § 7.7): Sie entsteht, wenn die Buchung der Rückgabe festgeschrieben
+ * wird, und ist offen, bis „Rückgabe klären“ den Weg entscheidet. Gespeichert, weil „geklärt“ eine Entscheidung ist —
+ * Rückgabe-Code und Gebühr stehen hier, nie im Änderungsprotokoll als Satz.
+ */
+export const financeDirectDebitReturns = sqliteTable(
+  'finance_direct_debit_returns',
+  {
+    id: text('id').primaryKey(),
+    itemId: text('item_id')
+      .notNull()
+      .references(() => financeDirectDebitItems.id),
+    rawTransactionId: text('raw_transaction_id').notNull(),
+    /** Die festgeschriebene Buchung der Rückgabe. */
+    entryId: text('entry_id').notNull(),
+    returnCode: text('return_code'),
+    /** Das Rückgabeentgelt der Bank, als eigene Zeile gebucht; wird nicht weiterberechnet. */
+    feeCents: integer('fee_cents').notNull().default(0),
+    status: text('status', { enum: DIRECT_DEBIT_RETURN_STATUSES }).notNull(),
+    resolution: text('resolution', { enum: DIRECT_DEBIT_RETURN_RESOLUTIONS }),
+    mandateEnded: integer('mandate_ended', { mode: 'boolean' }).notNull().default(false),
+    resolvedAt: text('resolved_at'),
+    resolvedByUserId: text('resolved_by_user_id'),
+    createdAt: text('created_at').notNull(),
+  },
+  (t) => [
+    uniqueIndex('finance_direct_debit_returns_raw_item_idx').on(t.rawTransactionId, t.itemId),
+    index('finance_direct_debit_returns_item_idx').on(t.itemId),
+    index('finance_direct_debit_returns_status_idx').on(t.status),
+  ],
+);
+export type FinanceDirectDebitReturnRow = typeof financeDirectDebitReturns.$inferSelect;
+
+/** Ein angekündigter Einzug: Tag und Betrag. */
+export interface PrenotificationPlanEntry {
+  dueOn: string;
+  amountCents: number;
+  /** R11: wofür (Verwendungszweck); fehlt bei Ankündigungen ohne Bezug, etwa älteren. */
+  remittance?: string;
+}
+
+/**
+ * Eine Vorabankündigung (Spec § 7.5): welches Dokument welche Einzüge eines Mandats ankündigt. Der abgedeckte Zeitraum
+ * folgt aus dem Plan, der Tag der Ankündigung aus dem Dokument (Datum des festgeschriebenen Briefs) — beides wird nicht
+ * gespeichert. Die Zeile entsteht auch schon zum Entwurf (`savePledge`); sie deckt erst, wenn der Brief festgeschrieben ist.
+ */
+export const financeSepaPrenotifications = sqliteTable(
+  'finance_sepa_prenotifications',
+  {
+    id: text('id').primaryKey(),
+    mandateId: text('mandate_id')
+      .notNull()
+      .references(() => financeSepaMandates.id),
+    documentId: text('document_id').notNull(),
+    plan: text('plan', { mode: 'json' }).$type<PrenotificationPlanEntry[]>().notNull(),
+    createdByUserId: text('created_by_user_id').notNull(),
+    createdAt: text('created_at').notNull(),
+  },
+  (t) => [index('finance_sepa_prenotifications_mandate_idx').on(t.mandateId)],
+);
+export type FinanceSepaPrenotificationRow = typeof financeSepaPrenotifications.$inferSelect;

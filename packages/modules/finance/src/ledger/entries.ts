@@ -6,7 +6,7 @@ import { and, asc, desc, eq, gte, inArray, isNotNull, isNull, like, lte, or, typ
 import { z } from 'zod';
 import { financeAudit } from '../audit';
 import { financeConflict, requireHumanChannelFinance } from '../errors';
-import { financeAccounts, financeAllocationCorrections, financeAllocationLines, financeCategories, financeEntries, financeEntryDocuments, financeEntryJustifications, financeImportRuns, financeInKindDetails, financeMoneyLines, financeOpenItems, financeOpenItemSettlements, financePartnerPaidLines, financePartnerPayments, financePurposes, financeRawTransactions, type FinanceAllocationLineRow, type FinanceEntryRow, type FinanceMoneyLineRow } from '../schema';
+import { financeAccounts, financeAllocationCorrections, financeAllocationLines, financeCategories, financeDirectDebitItems, financeEntries, financeEntryDocuments, financeEntryJustifications, financeImportRuns, financeInKindDetails, financeMoneyLines, financeOpenItems, financeOpenItemSettlements, financePartnerPaidLines, financePartnerPayments, financePurposes, financeRawTransactions, type FinanceAllocationLineRow, type FinanceEntryRow, type FinanceMoneyLineRow } from '../schema';
 import { boardAllowanceProblemInternal } from './board';
 import { purposeGoingNegative } from './purpose-negative';
 import { notReturnMarkInternal, type NotReturnMarkView } from './not-return';
@@ -16,12 +16,15 @@ import { ensureFiscalYearFor } from './fiscal-years';
 import { projectFinanceInternal } from './project-settings';
 import { accountLedgerInternal } from './queries';
 import { taxContextAt, taxOf, type TaxCode, type TaxResult } from './tax';
+import { settlementWarningsInternal, type SettlementWarning, type SettlementWarningParams } from './settlement-warnings';
 
 /** Eine Geldzeile erledigt einen offenen Posten ganz oder teilweise (Spec 5.3). */
 export interface MoneyLineSettlementView {
   id: string;
   openItemId: string;
   amountCents: number;
+  /** Rück-Ausgleich (Spec Mitglieder und Lastschrift § 6.2): der Ausgleich, den diese Zeile zurücknimmt. */
+  reversesSettlementId: string | null;
 }
 export type MoneyLineView = FinanceMoneyLineRow & { settlements: MoneyLineSettlementView[] };
 export type AllocationLineView = FinanceAllocationLineRow & {
@@ -77,6 +80,8 @@ export interface EntryView extends FinanceEntryRow {
    * (`entryViewInternal`s dritter Parameter) — sonst immer leer.
    */
   warnings: readonly EntryWarning[];
+  /** Plan N2 Task 2: zu `inSubmittedRun` der Einzugstag, zu `overpaid` der Betrag über dem offenen. */
+  warningParams: SettlementWarningParams;
   /**
    * Befund 25: ein Hinweis ohne Sperre — anders als `warnings` kein Zeichen
    * für einen möglichen Fehler, nur etwas, das die Kassenprüfung sehen soll.
@@ -87,7 +92,11 @@ export interface EntryView extends FinanceEntryRow {
   allowanceExceeded?: AllowanceExceededNotice[];
 }
 
-export type EntryWarning = 'futureDate';
+/**
+ * `futureDate` sperrt nicht. `inSubmittedRun` und `overpaid` (Plan N2 Task 2) verlangen beim Festschreiben eine
+ * Bestätigung (`acknowledgedWarnings`) — berechnet an jedem Entwurf, nie gespeichert.
+ */
+export type EntryWarning = 'futureDate' | SettlementWarning;
 export type EntryNotice = 'cashDonationAboveAlert' | 'allowanceExceeded' | 'returnWithoutOrigin';
 
 /** Befund AI: eine Person liegt nach dieser Buchung über der Jahresgrenze einer Pauschale — eine Warnung, keine Sperre. */
@@ -105,7 +114,7 @@ export interface MoneyLineWrite {
   amountCents: number;
   rawTransactionId?: string | null;
   /** Fehlt beim Storno (F2a) bewusst: Ein Storno kopiert keine Settlements. */
-  settlements?: readonly { openItemId: string; amountCents: number }[];
+  settlements?: readonly MoneyLineSettlementInput[];
 }
 export interface AllocationLineWrite {
   categoryId: string;
@@ -118,9 +127,18 @@ export interface AllocationLineWrite {
   abroad: boolean;
   originLineId: string | null;
   addsToAssets: boolean;
+  /** Plan L3: der Posten eines Einzugs, den die Zeile bucht. Fehlt beim Storno. */
+  directDebitItemId?: string | null;
 }
 
-const settlementInputSchema = z.object({ openItemId: z.string().min(1), amountCents: z.number().int().positive() });
+const settlementInputSchema = z.object({
+  openItemId: z.string().min(1),
+  amountCents: z.number().int().positive(),
+  /** Rück-Ausgleich: nimmt diesen festgeschriebenen Ausgleich des Postens ganz oder teilweise zurück (Rückgabe einer Zahlung). */
+  reversesSettlementId: z.string().min(1).nullable().optional(),
+});
+/** Ein Ausgleich an einer Geldzeile; mit `reversesSettlementId` ein Rück-Ausgleich (Spec Mitglieder und Lastschrift § 6.2). */
+export type MoneyLineSettlementInput = z.infer<typeof settlementInputSchema>;
 
 const moneyLineSchema = z.object({
   accountId: z.string().min(1),
@@ -141,6 +159,8 @@ const allocationLineSchema = z.object({
   abroad: z.boolean().optional(),
   originLineId: z.string().min(1).nullable().optional(),
   addsToAssets: z.boolean().optional(),
+  /** Plan L3: der Posten eines Einzugs, den diese Zeile bucht (aus dem Vorschlag „Einzug“). */
+  directDebitItemId: z.string().min(1).nullable().optional(),
 });
 
 /** Auch von `bookEntry` (finalize.ts) benutzt — dort ohne `id`/`expectedVersion`. */
@@ -232,7 +252,7 @@ export function writeLinesInternal(tx: DbOrTx, entryId: string, lines: { moneyLi
     const id = newId();
     tx.insert(financeMoneyLines).values({ id, entryId, position, accountId: line.accountId, amountCents: line.amountCents, rawTransactionId: line.rawTransactionId ?? null, rawReleasedAt: null }).run();
     for (const settlement of line.settlements ?? []) {
-      tx.insert(financeOpenItemSettlements).values({ id: newId(), moneyLineId: id, openItemId: settlement.openItemId, amountCents: settlement.amountCents }).run();
+      tx.insert(financeOpenItemSettlements).values({ id: newId(), moneyLineId: id, openItemId: settlement.openItemId, amountCents: settlement.amountCents, reversesSettlementId: settlement.reversesSettlementId ?? null }).run();
     }
   });
   lines.allocationLines.forEach((line, position) => {
@@ -251,6 +271,7 @@ export function writeLinesInternal(tx: DbOrTx, entryId: string, lines: { moneyLi
         abroad: line.abroad,
         originLineId: line.originLineId,
         addsToAssets: line.addsToAssets,
+        directDebitItemId: line.directDebitItemId ?? null,
       })
       .run();
   });
@@ -365,7 +386,7 @@ export function entryViewInternal(db: DbOrTx, id: string, today?: string): Entry
   if (!row) return null;
   const moneyLineRows = db.select().from(financeMoneyLines).where(eq(financeMoneyLines.entryId, id)).orderBy(asc(financeMoneyLines.position)).all();
   const settlementRows = moneyLineRows.length > 0 ? db.select().from(financeOpenItemSettlements).where(inArray(financeOpenItemSettlements.moneyLineId, moneyLineRows.map((l) => l.id))).all() : [];
-  const moneyLines: MoneyLineView[] = moneyLineRows.map((l) => ({ ...l, settlements: settlementRows.filter((s) => s.moneyLineId === l.id).map((s) => ({ id: s.id, openItemId: s.openItemId, amountCents: s.amountCents })) }));
+  const moneyLines: MoneyLineView[] = moneyLineRows.map((l) => ({ ...l, settlements: settlementRows.filter((s) => s.moneyLineId === l.id).map((s) => ({ id: s.id, openItemId: s.openItemId, amountCents: s.amountCents, reversesSettlementId: s.reversesSettlementId })) }));
   const allocationLineRows = db.select().from(financeAllocationLines).where(eq(financeAllocationLines.entryId, id)).orderBy(asc(financeAllocationLines.position)).all();
   const moneySum = moneyLines.reduce((s, l) => s + l.amountCents, 0);
   const allocationSum = allocationLineRows.reduce((s, l) => s + l.amountCents, 0);
@@ -397,8 +418,14 @@ export function entryViewInternal(db: DbOrTx, id: string, today?: string): Entry
   const justified = !!db.select({ entryId: financeEntryJustifications.entryId }).from(financeEntryJustifications).where(eq(financeEntryJustifications.entryId, id)).get();
 
   const warnings: EntryWarning[] = today !== undefined && row.status === 'draft' && row.entryDate > today ? ['futureDate'] : [];
+  let warningParams: SettlementWarningParams = {};
+  if (row.status === 'draft' && !row.reversesEntryId) {
+    const settlement = settlementWarningsInternal(db, { moneyLines, allocationLines });
+    warnings.push(...settlement.warnings);
+    warningParams = settlement.params;
+  }
   const notReturn = notReturnMarkInternal(db, id);
-  return { ...row, moneyLines, allocationLines, remainderCents: moneySum - allocationSum, taxTotals, vouchers, documentation, justified, notReturn, warnings, notices: [] };
+  return { ...row, moneyLines, allocationLines, remainderCents: moneySum - allocationSum, taxTotals, vouchers, documentation, justified, notReturn, warnings, warningParams, notices: [] };
 }
 
 /** Nur Nummern und Zähler — nie Text, nie Kontakt (Spec 10.3). */
@@ -459,9 +486,13 @@ function contactExists(db: DbOrTx, id: string): boolean {
  * Prüft die Settlements einer Geldzeile (Spec 5.3): Der Posten muss existieren
  * und darf nicht ohne Zahlung erledigt sein, die Summe darf den Betrag der
  * Zeile nicht übersteigen, und die Richtung muss stimmen — eine Verbindlichkeit
- * wird durch eine Ausgabe beglichen, eine Forderung durch eine Einnahme.
+ * wird durch eine Ausgabe beglichen, eine Forderung durch eine Einnahme. Ein
+ * Rück-Ausgleich (Spec Mitglieder und Lastschrift § 6.2) läuft umgekehrt und
+ * zeigt auf einen festgeschriebenen Ausgleich desselben Postens
+ * (`checkReversal`). `ownEntryId`: die Buchung, die gerade gespeichert wird —
+ * ihre alten Zeilen zählen nicht mit.
  */
-function checkSettlements(db: DbOrTx, line: { amountCents: number; settlements?: readonly { openItemId: string; amountCents: number }[] }): Failure | null {
+function checkSettlements(db: DbOrTx, line: { amountCents: number; settlements?: readonly MoneyLineSettlementInput[] }, ownEntryId: string | undefined): Failure | null {
   const settlements = line.settlements ?? [];
   if (settlements.length === 0) return null;
   const sum = settlements.reduce((s, x) => s + x.amountCents, 0);
@@ -470,9 +501,41 @@ function checkSettlements(db: DbOrTx, line: { amountCents: number; settlements?:
     const item = db.select().from(financeOpenItems).where(eq(financeOpenItems.id, settlement.openItemId)).get();
     if (!item) return notFound('financeOpenItem', settlement.openItemId);
     if (item.cancelledAt !== null) return financeConflict('openItemCancelled');
-    if (item.kind === 'payable' && line.amountCents >= 0) return financeConflict('settlementWrongDirection');
-    if (item.kind === 'receivable' && line.amountCents <= 0) return financeConflict('settlementWrongDirection');
+    const outflow = settlement.reversesSettlementId ? item.kind === 'receivable' : item.kind === 'payable';
+    if (outflow && line.amountCents >= 0) return financeConflict('settlementWrongDirection');
+    if (!outflow && line.amountCents <= 0) return financeConflict('settlementWrongDirection');
+    if (settlement.reversesSettlementId) {
+      const problem = checkReversal(db, { openItemId: settlement.openItemId, amountCents: settlement.amountCents, reversesSettlementId: settlement.reversesSettlementId }, ownEntryId);
+      if (problem) return problem;
+    }
   }
+  return null;
+}
+
+/**
+ * Ein Rück-Ausgleich zeigt auf einen gewöhnlichen Ausgleich desselben Postens an einer festgeschriebenen, nicht
+ * zurückgenommenen Buchung (`reversalTargetInvalid`), und alle Rück-Ausgleiche darauf zusammen — aus Buchungen,
+ * die nicht zurückgenommen sind, Entwürfe eingeschlossen — übersteigen dessen Betrag nicht (`reversalExceedsSettled`).
+ */
+export function checkReversal(db: DbOrTx, settlement: { openItemId: string; amountCents: number; reversesSettlementId: string }, ownEntryId: string | undefined): Failure | null {
+  const target = db
+    .select({ openItemId: financeOpenItemSettlements.openItemId, amountCents: financeOpenItemSettlements.amountCents, reversesSettlementId: financeOpenItemSettlements.reversesSettlementId, status: financeEntries.status, reversedByEntryId: financeEntries.reversedByEntryId })
+    .from(financeOpenItemSettlements)
+    .innerJoin(financeMoneyLines, eq(financeOpenItemSettlements.moneyLineId, financeMoneyLines.id))
+    .innerJoin(financeEntries, eq(financeMoneyLines.entryId, financeEntries.id))
+    .where(eq(financeOpenItemSettlements.id, settlement.reversesSettlementId))
+    .get();
+  if (!target || target.openItemId !== settlement.openItemId || target.reversesSettlementId !== null || target.status !== 'final' || target.reversedByEntryId !== null) return financeConflict('reversalTargetInvalid');
+  const earlier = db
+    .select({ amountCents: financeOpenItemSettlements.amountCents, entryId: financeEntries.id, reversedByEntryId: financeEntries.reversedByEntryId })
+    .from(financeOpenItemSettlements)
+    .innerJoin(financeMoneyLines, eq(financeOpenItemSettlements.moneyLineId, financeMoneyLines.id))
+    .innerJoin(financeEntries, eq(financeMoneyLines.entryId, financeEntries.id))
+    .where(eq(financeOpenItemSettlements.reversesSettlementId, settlement.reversesSettlementId))
+    .all()
+    .filter((r) => r.reversedByEntryId === null && r.entryId !== ownEntryId)
+    .reduce((s, r) => s + r.amountCents, 0);
+  if (earlier + settlement.amountCents > target.amountCents) return financeConflict('reversalExceedsSettled');
   return null;
 }
 
@@ -502,7 +565,7 @@ function checkReferences(deps: Deps, input: EntryLinesInput): Failure | null {
   const accounts = accountsById(deps.db, input.moneyLines.map((l) => l.accountId));
   for (const line of input.moneyLines) {
     if (!accounts.has(line.accountId)) return notFound('financeAccount', line.accountId);
-    const settlementProblem = checkSettlements(deps.db, line);
+    const settlementProblem = checkSettlements(deps.db, line, input.id);
     if (settlementProblem) return settlementProblem;
     const rawProblem = checkRawTransaction(deps.db, line, input.id);
     if (rawProblem) return rawProblem;
@@ -513,6 +576,7 @@ function checkReferences(deps: Deps, input: EntryLinesInput): Failure | null {
     if (!categories.has(line.categoryId)) return notFound('financeCategory', line.categoryId);
     if (line.contactId && !contactExists(deps.db, line.contactId)) return notFound('contact', line.contactId);
     if (line.projectId && !projectExists(deps.db, line.projectId)) return notFound('project', line.projectId);
+    if (line.directDebitItemId && !deps.db.select({ id: financeDirectDebitItems.id }).from(financeDirectDebitItems).where(eq(financeDirectDebitItems.id, line.directDebitItemId)).get()) return notFound('financeDirectDebitItem', line.directDebitItemId);
     if (line.purposeId && !purposeExists(deps.db, line.purposeId)) return notFound('financePurpose', line.purposeId);
   }
   return null;
@@ -542,6 +606,7 @@ function resolvedLines(deps: Deps, input: EntryLinesInput): { moneyLines: MoneyL
         abroad: l.abroad ?? ((l.purposeId ? purposeAbroad(deps.db, l.purposeId) : false) || (l.projectId ? projectAbroad(deps.db, l.projectId) : false)),
         originLineId: l.originLineId ?? null,
         addsToAssets: l.addsToAssets ?? category.incomeKind === 'inheritance',
+        directDebitItemId: l.directDebitItemId ?? null,
       };
     }),
   };

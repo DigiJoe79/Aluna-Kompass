@@ -4,7 +4,7 @@ import { useRef, useState, useTransition } from 'react';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import type { EntryLinesInput } from '@kompass/module-finance';
+import type { EntryLinesInput, SettlementWarning } from '@kompass/module-finance';
 import { DocumentPicker } from '@/app/(shell)/dms/document-picker';
 import { useDateFormat } from '@/components/date-format-provider';
 import { AmountField } from '@/components/finance/amount-field';
@@ -29,7 +29,7 @@ import { applyTemplate, countEntryChanges, remainderCents, restInto, toServiceIn
 import { RefusalNotice } from '@/components/forms/refusal-notice';
 import { runAction as guarded, toastNetwork, toastRefusal } from '@/lib/feedback';
 import { remediesFor, type RemedyAction } from '@/lib/finance/remedies';
-import { matchesDirection, suggestSettlementCents } from '@/lib/finance/settlement';
+import { settlementCandidates, suggestSettlementCents, withOpenItemTemplate, type SettlementOption } from '@/lib/finance/settlement';
 import { splitEvenly } from '@/lib/finance/split';
 import { attachDocumentAction, finalizeAction, saveDraftAction, saveReviewedAction, uploadVoucherAction } from './actions';
 import { Section } from '@/components/section';
@@ -45,12 +45,7 @@ export interface EntryFormAccount {
 }
 
 /** Ein offener Posten, wie ihn die Suche „begleicht offene Zahlung“ an einer Geldzeile anbietet (Task 5). */
-export interface EntryFormOpenItem {
-  id: string;
-  kind: 'receivable' | 'payable';
-  label: string;
-  openCents: number;
-}
+export type EntryFormOpenItem = SettlementOption;
 
 export interface EntryFormProps {
   initial: EntryFormState;
@@ -93,12 +88,15 @@ function MoneySettlements({
   openItems,
   fieldErrors,
   onChange,
+  onAdd,
 }: {
   row: MoneyRow;
   rowIndex: number;
   openItems: EntryFormOpenItem[];
   fieldErrors: Record<string, string>;
   onChange: (settlements: MoneyRow['settlements']) => void;
+  /** Ein Posten wurde gewählt — die Maske übernimmt dann auch seine Vorlage für „Wofür?“, wenn dort noch nichts steht. */
+  onAdd: (item: EntryFormOpenItem, settlementCents: number) => void;
 }) {
   // Eigener Name statt `t`: Der Wächter `message-keys` liest Übersetzer-Namensräume je Datei, nicht je
   // Funktion — ein zweites `const t = …` in derselben Datei würde seine Bindung überschreiben.
@@ -110,13 +108,14 @@ function MoneySettlements({
   const lineCents = parseAmount(row.amountText) ?? 0;
   const alreadySettled = row.settlements.reduce((sum, s) => sum + (parseAmount(s.amountText) ?? 0), 0);
   const chosenIds = new Set(row.settlements.map((s) => s.openItemId));
-  const candidates = openItems
-    .filter((item) => matchesDirection(item.kind, row.direction) && !chosenIds.has(item.id))
-    .filter((item) => query.trim().length === 0 || item.label.toLowerCase().includes(query.trim().toLowerCase()));
+  const allFull = row.settlements.length > 0 && row.settlements.every((s) => (parseAmount(s.amountText) ?? 0) >= (openItems.find((o) => o.id === s.openItemId)?.openCents ?? Infinity));
+  const overpaidCents = allFull ? Math.abs(lineCents) - alreadySettled : 0;
+  // Suche über Referenz und Kontakt, unempfindlich für Groß/klein, Umlaute und ß/ss (Befund Joe 2026-10-18).
+  const candidates = settlementCandidates(openItems, { direction: row.direction, chosenIds, query });
 
   const add = (item: EntryFormOpenItem) => {
     const suggestion = suggestSettlementCents({ openCents: item.openCents, lineCents, alreadySettledCents: alreadySettled });
-    onChange([...row.settlements, { openItemId: item.id, amountText: formatAmount(suggestion) }]);
+    onAdd(item, suggestion);
   };
   const remove = (openItemId: string) => onChange(row.settlements.filter((s) => s.openItemId !== openItemId));
   const setAmountText = (openItemId: string, amountText: string) => onChange(row.settlements.map((s) => (s.openItemId === openItemId ? { ...s, amountText } : s)));
@@ -153,6 +152,8 @@ function MoneySettlements({
               </div>
             );
           })}
+          {/* Plan N1 E4 (M16): Jeder gewählte Posten ist ganz beglichen, und die Geldzeile bringt mehr — der Rest ist keine Zahlung auf ihn. */}
+          {overpaidCents > 0 ? <Notice level="hint">{ts('overpaid', { amount: formatEuro(overpaidCents) })}</Notice> : null}
           <Input placeholder={ts('searchPlaceholder')} value={query} onChange={(e) => setQuery(e.target.value)} />
           {candidates.length > 0 ? (
             <ul className="space-y-1">
@@ -163,7 +164,10 @@ function MoneySettlements({
                     onClick={() => add(item)}
                     className="flex w-full items-center justify-between gap-2 rounded-sm border border-line px-2.5 py-1.5 text-left text-meta"
                   >
-                    <span>{item.label}</span>
+                    <span className="min-w-0">
+                      {item.label}
+                      {item.contactName ? <span className="text-muted-ink"> · {item.contactName}</span> : null}
+                    </span>
                     <span className="tabular-nums text-ink-2">{ts('rest', { amount: formatEuro(item.openCents) })}</span>
                   </button>
                 </li>
@@ -181,6 +185,8 @@ function MoneySettlements({
 /** Die Buchungsmaske (HANDOFF § 5.1): Karten Kopf · Konto · Wofür? · Beleg, Fußleiste klebt. */
 /** Befund AH und Q: Konflikte, die eine Begründung verlangen statt zu sperren. */
 const REASON_CODES = new Set(['boardAllowanceNeedsReason', 'purposeGoesNegative']);
+/** Plan N2 Task 2: Ablehnungen, die eine Bestätigung im Festschreiben-Dialog aufheben kann. */
+const WARNING_CODES: Record<string, SettlementWarning> = { inSubmittedRunNotAcknowledged: 'inSubmittedRun', overpaidNotAcknowledged: 'overpaid', overpaidByCollectionNotAcknowledged: 'overpaid' };
 
 export function EntryForm({ initial, accounts, categories, purposes, projects, taxCodeOptions, showTax, canFinalize, voucherTypeKey, vouchers: initialVouchers, openItems, returnTo = '/finance/entries', pendingVoucher: initialPending = null, today }: EntryFormProps) {
   const t = useTranslations('finance.entryForm');
@@ -198,6 +204,9 @@ export function EntryForm({ initial, accounts, categories, purposes, projects, t
   // 088: Nach einer Ablehnung im Festschreiben-Dialog ist der Knopf dort gesperrt — ändern lässt sich nur die Maske
   // dahinter; der Grund steht direkt über dem Knopf. Jedes Öffnen beginnt frei.
   const [finalizeRefused, setFinalizeRefused] = useState(false);
+  // Plan N2 Task 2: Hinweise, die das Festschreiben bestätigt haben will (Doppelzahlung im Einzug, Überzahlung). Der
+  // Dialog nennt den Grund, und der Knopf heißt dann „Trotzdem festschreiben“. Jedes Öffnen beginnt ohne Bestätigung.
+  const [acknowledged, setAcknowledged] = useState<SettlementWarning[]>([]);
   const [archiveOpen, setArchiveOpen] = useState(false);
   const [pendingVoucher, setPendingVoucher] = useState<PendingVoucher | null>(initialPending);
   const [actionState, setActionState] = useState<ActionState>({ status: 'idle' });
@@ -421,6 +430,17 @@ export function EntryForm({ initial, accounts, categories, purposes, projects, t
                       openItems={openItems}
                       fieldErrors={validation.ok ? {} : validation.fieldErrors}
                       onChange={(settlements) => setState((s) => ({ ...s, moneyRows: s.moneyRows.map((r, i) => (i === index ? { ...r, settlements } : r)) }))}
+                      onAdd={(item, cents) =>
+                        setState((s) =>
+                          withOpenItemTemplate(
+                            { ...s, moneyRows: s.moneyRows.map((r, i) => (i === index ? { ...r, settlements: [...r.settlements, { openItemId: item.id, amountText: formatAmount(cents) }] } : r)) },
+                            item,
+                            cents,
+                            // Was die Geldzeile über die schon gewählten Ausgleiche hinaus bringt (Plan N1 E4): ein Rest wird eine eigene Zeile.
+                            Math.abs(parseAmount(row.amountText) ?? 0) - row.settlements.reduce((sum, x) => sum + (parseAmount(x.amountText) ?? 0), 0),
+                          ),
+                        )
+                      }
                     />
                   </FormCell>
                 </FormGrid>
@@ -568,16 +588,25 @@ export function EntryForm({ initial, accounts, categories, purposes, projects, t
         open={confirmFinalize}
         onOpenChange={(next) => {
           setConfirmFinalize(next);
-          if (next) setFinalizeRefused(false);
+          if (next) {
+            setFinalizeRefused(false);
+            setAcknowledged([]);
+          }
         }}
         confirmDisabled={finalizeRefused}
         title={t('confirmFinalize.title')}
         description={t('confirmFinalize.description')}
-        confirmLabel={t('actions.finalize')}
+        confirmLabel={acknowledged.length > 0 ? t('actions.finalizeAnyway') : t('actions.finalize')}
         action={async () => {
           if (!validation.ok) return { status: 'error', message: t('toast.fieldsInvalid'), fieldErrors: {} };
-          const result = await finalizeAction(validation.input);
+          const result = await finalizeAction(validation.input, acknowledged);
           await afterSuccess(result, 'entry');
+          const warning = result.status === 'error' ? WARNING_CODES[result.code ?? ''] : undefined;
+          if (warning) {
+            // Kein Sperren: Der Grund steht im Dialog, der nächste Klick bestätigt ihn.
+            setAcknowledged((prev) => [...new Set([...prev, warning])]);
+            return result;
+          }
           if (result.status === 'error' && result.kind !== 'network') setFinalizeRefused(true);
           // Die Ablehnung steht im Dialog, samt Ausweg (er schließt den Dialog und führt ihn aus); dieselbe steht auch über der Leiste.
           if (result.status === 'error' && result.code && !REASON_CODES.has(result.code)) {

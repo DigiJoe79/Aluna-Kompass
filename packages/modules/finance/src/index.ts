@@ -87,6 +87,7 @@ export {
 } from './ledger/accounts';
 export {
   categoryFieldsSchema,
+  categoryIdByKeyInternal,
   categoryInUseInternal,
   createCategory,
   createCategoryInternal,
@@ -97,6 +98,7 @@ export {
   type CategoryView,
 } from './ledger/categories';
 export { START_PLAN } from './ledger/start-plan';
+export { registeredOpenItemOrigins } from './ledger/origins';
 export {
   createPurpose,
   deletePurpose,
@@ -141,7 +143,9 @@ export {
   type SetupStepKey,
 } from './ledger/setup';
 export { taxContextAt, taxOf, type Taxation, type TaxCode, type TaxInput, type TaxResult } from './ledger/tax';
-export { abortFinalize, bookEntry, checkFinalizableInternal, finalizeEntry, finalizeInternal, finalizeReviewed, FinalizeAborted, type FinalizeOptions } from './ledger/finalize';
+export { abortFinalize, bookEntry, checkFinalizableInternal, finalizeEntry, finalizeInternal, finalizeReviewed, FinalizeAborted, type FinalizeOptions, type HeldEntry } from './ledger/finalize';
+export { SETTLEMENT_WARNINGS, settlementWarningsInternal, type SettlementWarning, type SettlementWarningParams } from './ledger/settlement-warnings';
+export { paidOtherwiseItemIdsInternal } from './direct-debit/runs';
 export { reverseEntry, reverseInternal } from './ledger/reverse';
 export {
   deleteDraft,
@@ -198,7 +202,7 @@ export {
 export { financeRecordDeleted, financeRecordReferences, financeRetentionDue, financeRetentionHolds, yearAnchorInternal } from './ledger/holds';
 export { getEntryHistory, type EntryHistoryEvent } from './ledger/history';
 export { getProjectFinance, projectFinanceInternal, setProjectFinance, type ProjectFinanceSettings } from './ledger/project-settings';
-export { cancelOpenItem, createOpenItem, listOpenItems, listOpenItemSettlements, openCentsInternal, openItemHasAnySettlementInternal, openItemsAtInternal, overdueOpenItemsInternal, saveOpenItem, updateOpenItem, type OpenItemSettlementView, type OpenItemView } from './ledger/open-items';
+export { cancelOpenItem, cancelOriginOpenItem, countingPaymentsInternal, createOpenItem, createOriginOpenItem, draftSettlementCentsInternal, listOpenItems, listOpenItemSettlements, openCentsInternal, openItemHasAnySettlementInternal, openItemsAtInternal, overdueOpenItemsInternal, reduceOriginOpenItem, rescheduleOriginOpenItem, saveOpenItem, updateOpenItem, type OpenItemSettlementView, type OpenItemView, type OriginOpenItemInput } from './ledger/open-items';
 export { applyCorrectionInternal, approveAllocationCorrection, decideAllocationCorrection, listAllocationCorrections, rejectAllocationCorrection, requestAllocationCorrection, type CorrectionView } from './ledger/corrections';
 
 // F8a — Auslagen: einreichen, freigeben, Verzicht (allocation/).
@@ -381,7 +385,7 @@ export {
 } from './donations/confirmations';
 export { getInKindDetails, saveInKindDetails } from './donations/in-kind';
 // Serienlauf (F6b): Dienste mit ihren MCP-Werkzeugen; `readRunBundle` liefert Bytes und bleibt ohne Werkzeug (Route Handler der Serienlauf-Seite).
-export { continueConfirmationRun, continueRunSchema, dispatchRunConfirmations, getConfirmationRun, listConfirmationRuns, previewConfirmationRun, startConfirmationRun, dispatchRunSchema, previewConfirmationRunInternal, readRunBundle, runArgsSchema, startRunSchema, type RunBlocked, type RunBlockedBy, type RunCounts, type RunExcludedContact, type RunExclusionReason, type RunItemKind, type RunItemState, type RunSummary, type RunView, type RunViewItem, type RunPreview, type RunPreviewArgs, type RunPreviewGroup, type RunPreviewItem, type RunSignatureReason } from './donations/runs';
+export { confirmationRunDispatchState, markRunPostConfirmations, moveConfirmationRunLetters, runMoveSchema as confirmationRunMoveSchema, sendConfirmationRunEmails, type ConfirmationRunDispatchState, type RunMailState, continueConfirmationRun, continueRunSchema, dispatchRunConfirmations, getConfirmationRun, listConfirmationRuns, previewConfirmationRun, startConfirmationRun, dispatchRunSchema, previewConfirmationRunInternal, readRunBundle, runArgsSchema, startRunSchema, type RunBlocked, type RunBlockedBy, type RunCounts, type RunExcludedContact, type RunExclusionReason, type RunItemKind, type RunItemState, type RunSummary, type RunView, type RunViewItem, type RunPreview, type RunPreviewArgs, type RunPreviewGroup, type RunPreviewItem, type RunSignatureReason } from './donations/runs';
 // Spendenbuch (F6b): Buch und Abstimmung mit ihren MCP-Werkzeugen; der vereinfachte Nachweis liefert Bytes (nur Route Handler).
 export { getDonationBook, getDonationReconciliation, readSimplifiedReceipt, type DonationBook, type DonationBookKind, type DonationBookRow, type DonationBookSums, type DonationReconciliation, type ReconciliationReasonKey } from './donations/book';
 export { SIMPLIFIED_RECEIPT_TEMPLATE_KEY, simplifiedReceiptTemplate, type SimplifiedReceiptInput } from './donations/templates/simplified';
@@ -390,3 +394,60 @@ export { confirmationContactLock, confirmationEntryLock } from './donations/lock
 export { ENTRY_LOCKS, registerEntryLocks, type EntryLock } from './locks';
 // A6: Codes und Parameterarten der Fehlerbilder — die Texte stehen in der Sprachdatei der App.
 export { FINANCE_ERRORS, financeConflict, type FinanceErrorCode, type FinanceErrorParamKind } from './errors';
+// L1 — Lastschrift: Einstellungen, Bankarbeitstage, Mandate.
+export { financePledgeRateMarks, financePledges, financeSepaMandateChanges, financeSepaMandates, type FinancePledgeRow, type FinanceSepaMandateRow, type PendingAmendment } from './schema';
+export { financeDirectDebitItems, financeDirectDebitReturns, financeDirectDebitRuns, financeSepaPrenotifications, type DirectDebitRunStatus, type FinanceDirectDebitItemRow, type FinanceDirectDebitRunRow } from './schema';
+export { activeRunItemsInternal, expiredRunIdsInternal, openItemInSubmittedRunInternal, openItemReturnStateInternal, returnsByItemInternal, unreturnedRunItemsInternal } from './direct-debit/run-items';
+export {
+  collectionWindow,
+  createDirectDebitRun,
+  getCollectionWindow,
+  getDirectDebitRun,
+  listDirectDebitRuns,
+  previewDirectDebitRun,
+  removeRunItem,
+  buildDirectDebitFile,
+  cancelDirectDebitRun,
+  directDebitFileStream,
+  markDirectDebitRunSubmitted,
+  resetDirectDebitRunSubmitted,
+  type DirectDebitPreview,
+  type DirectDebitPreviewItem,
+  type DirectDebitRunItemView,
+  type DirectDebitRunSummary,
+  type DirectDebitRunView,
+} from './direct-debit/runs';
+export { isValidCreditorId, normalizeCreditorId } from './direct-debit/creditor-id';
+export { addBusinessDays, addCalendarDays, addCalendarMonths, isTargetBusinessDay } from './direct-debit/business-days';
+export { getSepaSetupState, saveSepaSettings, sepaSettingsSaveSchema, sepaSetupState, type SepaSetupGap } from './direct-debit/settings';
+export {
+  activateMandate,
+  amendMandate,
+  correctMandate,
+  endMandate,
+  getMandate,
+  listMandates,
+  mandateDetailsSchema,
+  mandateExpiresOn,
+  mandateRowInternal,
+  mandateState,
+  prepareMandate,
+  prepareMandateInternal,
+  type MandateDetailView,
+  type MandateDetails,
+  type MandateState,
+  type MandateUsage,
+  type MandateView,
+} from './direct-debit/mandates';
+export { fileSignedMandate, MANDATE_SIGNED_DOCUMENT_TYPE, mandateFormPdf, mandateSignedSchema } from './direct-debit/forms';
+export { sepaText } from './direct-debit/charset';
+export { buildPain008, type Pain008Run } from './direct-debit/pain008';
+export { buildLastschriftCsv, LASTSCHRIFT_CSV_HEADER } from './direct-debit/csv';
+export { runSummaryTemplate } from './direct-debit/templates/run-summary';
+export { mandateFormTemplate, MANDATE_FORM_TEMPLATE_KEY } from './direct-debit/templates/mandate-form';
+export { greetingFor, prenotificationBody, prenotificationTemplate, PRENOTIFICATION_TEMPLATE_KEY } from './direct-debit/templates/prenotification';
+export { bankDayOnOrAfter, coveringEntriesInternal, issuePrenotification, prenotificationCovers, prenotificationIssueSchema, prenotificationPlanSchema, recordPrenotificationInternal } from './direct-debit/prenotifications';
+export { pledgeDueDates, pledgeRates, type PledgeRate, type RateState } from './direct-debit/rates';
+export { RETURN_CODES, returnCodeInfo, type ReturnCodeDefinition } from './direct-debit/return-codes';
+export { directDebitReturnListSchema, directDebitReturnResolveSchema, listDirectDebitReturns, resolveDirectDebitReturn, type DirectDebitReturnView } from './direct-debit/returns';
+export { endPledge, getPledge, listPledges, pausePledge, pledgeState, savePledge, type PledgeDetailView, type PledgeState, type PledgeView } from './direct-debit/pledges';

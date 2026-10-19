@@ -11,6 +11,7 @@ import { PageHeader } from '@/components/page-header';
 import { readAllPages } from '@/lib/read-all-pages';
 import { requireSession } from '@/lib/request-context';
 import { fromEntryView } from '@/lib/finance/entry-form';
+import { settlementOptions } from '@/lib/finance/open-item-options';
 import { voucherDetails } from '@/lib/finance/voucher-details';
 import { EntryForm } from '../../entry-form';
 
@@ -57,7 +58,7 @@ export default async function EditFinanceEntryPage({ params }: { params: Promise
   }));
 
   const t = await getTranslations('finance.entryForm');
-  const openItems = (openItemsRes.ok ? openItemsRes.value : []).map((i) => ({ id: i.id, kind: i.kind as 'receivable' | 'payable', label: i.paymentReference ?? t('settlement.unnamed', { date: i.itemDate }), openCents: i.openCents }));
+  const openItems = await settlementOptions(deps, ctx, openItemsRes.ok ? openItemsRes.value : [], (date) => t('settlement.unnamed', { date }));
 
   return (
     <Page width="standard" header={<PageHeader title={t('editTitle')} back={{ href: '/finance/entries', label: t('cancel') }} />}>

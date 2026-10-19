@@ -408,6 +408,7 @@ export async function fileDocument(deps: Deps, ctx: CallContext, input: unknown)
             textExtractedAt: null,
             inputSnapshot: JSON.stringify(snapshot),
             draftBody: null,
+            filedAt: now,
             updatedAt: now,
           })
           .where(eq(documents.id, row.id))

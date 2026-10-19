@@ -13,6 +13,8 @@ interface BackgroundState {
   worker: TextWorker | null;
   /** Wie der Dienst angelassen wird — gemerkt, damit er sich neu starten lässt. */
   start: (() => TextWorker | void | unknown) | null;
+  /** Der Sender des Ausgangskorbs der Akte; `onStart` meldet ihn über `registerMailSender`. */
+  mailSender?: { wake(): void } | null;
 }
 
 const state: BackgroundState = ((
@@ -21,6 +23,19 @@ const state: BackgroundState = ((
 
 export function textWorker(): TextWorker | null {
   return state.worker;
+}
+
+/** Meldet den Sender der E-Mails an, damit `kickMailSender` ihn erreicht. */
+export function registerMailSender(sender: { wake(): void } | null): void {
+  state.mailSender = sender;
+}
+
+/**
+ * Den Sender sofort anstoßen — nach dem Einreihen, damit eine Mail nicht bis
+ * zum nächsten Takt (30 s) wartet. Läuft kein Hintergrunddienst, tut es nichts.
+ */
+export function kickMailSender(): void {
+  state.mailSender?.wake();
 }
 
 export function resetBackgroundForTests(): void {
@@ -60,6 +75,7 @@ export function startBackgroundWork(
 export async function stopBackgroundWork(): Promise<void> {
   const stopping = state.worker?.stop();
   state.worker = null;
+  state.mailSender = null;
   state.started = false;
   // Erst zurückkommen, wenn ein laufender Durchlauf fertig ist: Der Reset
   // schliesst gleich danach die Datenbank, und ein Durchlauf, der noch

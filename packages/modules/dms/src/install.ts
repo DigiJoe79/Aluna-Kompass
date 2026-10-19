@@ -1,6 +1,8 @@
-import { recordAudit, writeSettingInternal, type CallContext, type DbOrTx, type Deps, type SettingDefinition } from '@kompass/core';
+import { newId, provisionOnce, recordAudit, writeSettingInternal, type CallContext, type DbOrTx, type Deps, type SettingDefinition } from '@kompass/core';
+import { eq } from 'drizzle-orm';
 import { z } from 'zod';
-import { documentTypes } from './schema';
+import { MAIL_BODY_DEFAULTS } from './mail/defaults';
+import { documentSnippets, documentTypes } from './schema';
 
 export interface DispatchChannel {
   key: string;
@@ -39,7 +41,41 @@ export const DMS_SETTINGS: SettingDefinition[] = [
   { key: 'dms.ocrLanguages', schema: z.string().regex(/^[a-z]{3}(\+[a-z]{3})*$/), default: 'deu+eng' },
   /** Die Wege, die ein Versandvermerk kennt (Entscheidung 34). */
   { key: 'dms.dispatchChannels', schema: dispatchChannelsSchema, default: DEFAULT_DISPATCH_CHANNELS },
+  /**
+   * Absender der E-Mails (Spec PDF per E-Mail § 3). Die Adresse muss zum
+   * Mailserver passen; Kompass prüft das nicht. Ohne Adresse wird nicht gesendet.
+   */
+  { key: 'dms.mail.fromAddress', schema: z.email().nullable(), default: null },
+  /** `null` = Vereinsname (`organization.name`). */
+  { key: 'dms.mail.fromName', schema: z.string().trim().min(1).max(120).nullable(), default: null },
+  { key: 'dms.mail.replyTo', schema: z.email().nullable(), default: null },
+  /** Schutz gegen die Grenzen des Providers: Der Sender verlangsamt, er sperrt nichts. */
+  { key: 'dms.mail.ratePerMinute', schema: z.number().int().min(1).max(120), default: 20 },
+  /** Begleittext je Dokumentart: Schlüssel der Art → ID eines Textbausteins. */
+  { key: 'dms.mail.bodySnippetByType', schema: z.record(z.string(), z.string()), default: {} },
+  /** Der Baustein der Grundausstattung; die Einrichtung setzt ihn. */
+  { key: 'dms.mail.defaultBodySnippetId', schema: z.string().nullable(), default: null },
+  /** Ein Agent darf humanOnly-Dienste der Akte (Senden) erst freigeschaltet nutzen — und das nur ein Mensch am Bildschirm. */
+  { key: 'dms.mcpHumanOnlyAllowed', schema: z.boolean(), default: false, uiOnly: true },
 ];
+
+/**
+ * Der Begleittext der E-Mails als Textbaustein der Grundausstattung — genau
+ * einmal je Installation (`provisionOnce`), auch in einer Akte, die längst
+ * eingerichtet ist. Trägt schon ein Baustein den Namen, hat der Verein
+ * entschieden: übersprungen.
+ */
+function provisionMailBody(tx: DbOrTx, deps: Deps, ctx: CallContext, locale: string): void {
+  provisionOnce(tx, deps, { module: 'dms', kind: 'snippet', key: 'mailBody' }, () => {
+    const text = MAIL_BODY_DEFAULTS[locale] ?? MAIL_BODY_DEFAULTS.de!;
+    if (tx.select({ id: documentSnippets.id }).from(documentSnippets).where(eq(documentSnippets.name, text.name)).get()) return 'skipped';
+    const id = newId();
+    tx.insert(documentSnippets).values({ id, name: text.name, subject: null, body: text.body, sortOrder: 0, isActive: true }).run();
+    recordAudit(tx, deps, ctx, { action: 'dms.snippet.create', entityType: 'documentSnippet', entityId: id, after: { name: text.name, subject: null }, params: { name: text.name } });
+    writeSettingInternal(tx, deps, ctx, 'dms.mail.defaultBodySnippetId', id, 'dms.install.setting');
+    return 'created';
+  });
+}
 
 /**
  * Die Beschriftung der beiden Startarten, in der führenden Sprache der
@@ -64,9 +100,10 @@ const LABELS: Record<string, { incoming: string; outgoing: string }> = {
  * das zweite lässt sich nicht mehr heilen.
  */
 export function installDms(tx: DbOrTx, deps: Deps, ctx: CallContext): void {
+  const locale = deps.locales()[0] ?? 'de';
+  provisionMailBody(tx, deps, ctx, locale);
   if (tx.select().from(documentTypes).get()) return;
 
-  const locale = deps.locales()[0] ?? 'de';
   const labels = LABELS[locale] ?? LABELS.de!;
 
   const starters = [

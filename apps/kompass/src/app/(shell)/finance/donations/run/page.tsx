@@ -1,6 +1,6 @@
 import { hasPermission, todayIn } from '@kompass/core';
 import { displayName, getContact } from '@kompass/module-contacts';
-import { getConfirmationRun, listConfirmationRuns, previewConfirmationRun, type RunView } from '@kompass/module-finance';
+import { confirmationRunDispatchState, getConfirmationRun, listConfirmationRuns, previewConfirmationRun, type RunView } from '@kompass/module-finance';
 import { getTranslations } from 'next-intl/server';
 import type { ReactNode } from 'react';
 import { EmptyState } from '@/components/empty-state';
@@ -12,6 +12,7 @@ import { missingDonors, parseRunQuery, runQueryString, runStep } from '@/lib/fin
 import { requireSession } from '@/lib/request-context';
 import { RunProgress } from './run-progress';
 import { RunResult } from './run-result';
+import { ConfirmationRunDispatch } from './run-dispatch';
 import { RunSelection } from './run-selection';
 import { RunSteps } from './run-steps';
 import { RunsList } from './runs-list';
@@ -91,6 +92,8 @@ export default async function DonationRunPage({ searchParams }: { searchParams: 
     // „Wer fehlt“: dieselbe Vorschau als Nachzügler — bestätigte Zeilen fallen ohnehin heraus (Annahme 6).
     const followUpRes = await previewConfirmationRun(deps, ctx, { year: run.year, minCents: run.minCents, followUpOfRunId: run.id });
     const missing = followUpRes.ok ? missingDonors(followUpRes.value.items) : { count: 0, names: [] };
+    // Der Versand (Handoff 2b E3): Gruppen E-Mail und Post mit dem gemeinsamen Baustein der Läufe.
+    const dispatchRes = await confirmationRunDispatchState(deps, ctx, { runId: run.id });
     body = (
       <>
         <RunSteps active="result" />
@@ -100,6 +103,7 @@ export default async function DonationRunPage({ searchParams }: { searchParams: 
           today={today}
           missing={missing}
           followUpHref={`/finance/donations/run${runQueryString({ year: run.year, minCents: run.minCents, excluded: [], followUp: run.id })}`}
+          dispatch={dispatchRes.ok ? <ConfirmationRunDispatch runId={run.id} state={dispatchRes.value} canSend={canIssue && hasPermission(ctx, 'dms.send')} canMark={canIssue} today={today} /> : null}
         />
       </>
     );

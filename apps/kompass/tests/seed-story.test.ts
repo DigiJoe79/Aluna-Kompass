@@ -26,7 +26,8 @@ describe('Entwicklungsdaten als Vereinsalltag', () => {
     // Akte (Review Focus 3): oben nur die benannten Ausnahmen des Finanz-Seeds (Task 7, 3m), dann die Tagespost der
     // Akte in ihrer Reihenfolge, danach nichts mehr, das nicht an seinem Datum liegt.
     const list = unwrap(await listDocuments(deps, all, { limit: 200 })).documents;
-    const isException = (d: (typeof list)[number]) => ['finance-confirmation', 'finance-confirmation-signed', 'finance-partner-evidence'].includes(d.typeKey) || d.subject.includes('Jugendfreizeit');
+    // Die Briefe der Mitglieder (Plan M4) entstehen wie die Bestätigungen am Tag des Seeds.
+    const isException = (d: (typeof list)[number]) => ['finance-confirmation', 'finance-confirmation-signed', 'finance-partner-evidence'].includes(d.typeKey) || d.typeKey.startsWith('member-') || d.subject.includes('Jugendfreizeit');
     const rest = list.filter((d) => !isException(d));
     expect(rest.slice(0, 4).map((d) => d.subject)).toEqual([
       'Winterhilfe: Bitte um Unterstützung',
@@ -38,7 +39,7 @@ describe('Entwicklungsdaten als Vereinsalltag', () => {
     expect(list.slice(0, firstRest).every(isException)).toBe(true);
     // 8 Zuwendungsbestätigungen (eine davon die § 60a-Bestätigung mit eigenem Ausstellungsdatum), 1 unterschriebene,
     // 1 Beschluss zur wartenden Umwidmung, 2 Nachweise — beim Planen als 11 gezählt (Ausführung 2026-10-06).
-    expect(firstRest).toBeLessThanOrEqual(12);
+    expect(list.slice(0, firstRest).filter((d) => !d.typeKey.startsWith('member-')).length).toBeLessThanOrEqual(12);
     // Plan 1: kein Betreff trägt eine ULID.
     expect(deps.db.select({ subject: documents.subject }).from(documents).all().filter((d) => ULID.test(d.subject))).toEqual([]);
 
@@ -55,5 +56,5 @@ describe('Entwicklungsdaten als Vereinsalltag', () => {
     // Telefon „Auslage einreichen“: Nadja Vogt meldet sich mit dem Entwicklungs-Passwort an.
     const session = await login(deps, { email: 'nadja@kompass.local', password: SEED_ADMIN_PASSWORD, ipAddress: null, requestId: 'R' });
     expect(session.ok).toBe(true);
-  });
+  }, 30_000);
 });

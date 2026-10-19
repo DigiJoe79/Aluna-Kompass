@@ -41,6 +41,18 @@ Ein Entwurf mit einem Datum nach heute lässt sich speichern, warnt aber am
 Datumsfeld — festschreiben lässt sich das erst, sobald der Tag erreicht
 ist; heute selbst genügt bereits.
 
+Zwei Fälle verlangen beim Festschreiben eine Bestätigung, weil sonst Geld doppelt
+fließt: Die Zahlung gleicht eine offene Zahlung aus, die schon in einem bei der
+Bank eingereichten Einzug steckt (die Bank zieht sie trotzdem ein), oder sie ist
+höher als der offene Betrag und der Rest steht auf derselben Kategorie (etwa
+„Mitgliedsbeiträge“). Der Dialog nennt den Grund; **Trotzdem festschreiben**
+bestätigt ihn, und das Protokoll hält die Bestätigung fest. Legen Sie einen Rest
+besser auf eine eigene Zeile, etwa als Spende. Nach einer Doppelzahlung zeigt der
+Einzug den Posten als „schon bezahlt“, und die Startseite erinnert daran:
+Veranlassen Sie eine Rückgabe bei der Bank oder erstatten Sie den Betrag. Diese
+Erinnerung steht vor einem verfallenen Einzug, denn sie hat eine Frist; den
+verfallenen nennt die Kachel dann im selben Satz mit.
+
 Stünde ein Bank- oder Zahlungsdienstkonto nach dem Festschreiben im Minus,
 weist die Vorschau des Sammel-Festschreibens darauf hin — das sperrt nicht,
 meist fehlt nur noch ein Auszug; eine Barkasse lässt sich dagegen nie ins

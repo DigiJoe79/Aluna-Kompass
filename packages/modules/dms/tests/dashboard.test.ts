@@ -7,7 +7,7 @@ import { createDraft } from '../src/drafts';
 import { receiveDocument } from '../src/incoming';
 import { linkDocument } from '../src/service';
 import { dmsModule } from '../src/manifest';
-import { documents } from '../src/schema';
+import { dmsMailOutbox, documents } from '../src/schema';
 import { ALL_DMS, fileFixture, pdfBytes, setupWithTypes } from './helpers';
 
 const tile = (key: string) => {
@@ -24,6 +24,7 @@ describe('dms tiles', () => {
       'drafts:count:dms.view:true',
       'unsent:count:dms.view:true',
       'textFailed:count:dms.manage:false',
+      'mailFailed:count:dms.view:true',
     ]);
   });
 
@@ -89,5 +90,20 @@ describe('textFailed tile', () => {
     if (!received.ok) throw new Error('receive');
     deps.db.update(documents).set({ textStatus: 'failed' }).where(eq(documents.id, received.value.id)).run();
     expect(await tile('textFailed').load(deps, ctx, {})).toEqual({ kind: 'count', count: 1, href: '/dms' });
+  });
+});
+
+describe('mailFailed tile (Handoff 2b E4, 21d)', () => {
+  it('zählt nicht zugestellte Mails, nennt die älteste und verlinkt den Ausgang mit Filter', async () => {
+    const { deps, ctx } = setupWithTypes();
+    const empty = await tile('mailFailed').load(deps, ctx, defaults('mailFailed'));
+    expect(empty).toEqual({ kind: 'count', count: 0, href: '/dms?outbox=1&state=failed' });
+    const doc = await fileFixture(deps, ctx);
+    const contact = await createContact(deps, ctx, { kind: 'person', lastName: 'Kim' });
+    if (!contact.ok) throw new Error('contact');
+    const row = (status: 'failed' | 'sent' | 'withdrawn', queuedAt: string) => ({ id: `${status}${queuedAt}`, documentId: doc.id, contactId: contact.value.id, toAddress: 'kim@example.org', subject: 'S', bodySnippetId: null, status, attempts: 1, queuedByUserId: null, queuedAt });
+    deps.db.insert(dmsMailOutbox).values([row('failed', '2026-03-02T10:00:00.000Z'), row('failed', '2026-03-05T10:00:00.000Z'), row('sent', '2026-03-01T10:00:00.000Z'), row('withdrawn', '2026-02-01T10:00:00.000Z')]).run();
+    const content = await tile('mailFailed').load(deps, ctx, defaults('mailFailed'));
+    expect(content).toMatchObject({ kind: 'count', count: 2, href: '/dms?outbox=1&state=failed', note: { messageKey: 'since', values: { date: '02.03.2026' } } });
   });
 });

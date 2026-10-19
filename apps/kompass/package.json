@@ -1,6 +1,6 @@
 {
   "name": "@kompass/app",
-  "version": "0.2.12",
+  "version": "0.3.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -31,6 +31,7 @@
     "@kompass/module-contacts": "workspace:*",
     "@kompass/module-dms": "workspace:*",
     "@kompass/module-finance": "workspace:*",
+    "@kompass/module-members": "workspace:*",
     "@kompass/module-projects": "workspace:*",
     "@kompass/module-site": "workspace:*",
     "@kompass/site-template": "workspace:*",
@@ -43,6 +44,7 @@
     "next": "^16.3.8",
     "next-intl": "^4.14.9",
     "next-themes": "^0.4.6",
+    "nodemailer": "10.1.0",
     "qrcode-generator": "2.0.4",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",

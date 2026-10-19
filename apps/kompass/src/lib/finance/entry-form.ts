@@ -9,7 +9,8 @@ export interface MoneyRow {
   accountId: string;
   amountText: string;
   direction: 'in' | 'out';
-  settlements: { openItemId: string; amountText: string }[];
+  /** `reversesSettlementId` (Rück-Ausgleich einer Rückgabe, Plan M2): ohne eigene Oberfläche, nur durchgereicht — wie `rawTransactionId`. */
+  settlements: { openItemId: string; amountText: string; reversesSettlementId?: string | null }[];
   /** F4 Task 4: der Kontoumsatz, den diese Zeile bucht — keine eigene Oberfläche dafür, kommt mit F5; nur durchgereicht, damit das Bearbeiten eines Entwurfs die Bindung nicht verliert. */
   rawTransactionId?: string | null;
   /** F5: das Buchungsdatum des gebundenen Kontoumsatzes — nur zur Anzeige („Kontoumsatz vom …“), wenn es bekannt ist. */
@@ -53,7 +54,7 @@ export interface EntryViewLike {
   text: string;
   boardAllowanceReason?: string | null;
   purposeNegativeReason?: string | null;
-  moneyLines: { accountId: string; amountCents: number; settlements?: { openItemId: string; amountCents: number }[]; rawTransactionId?: string | null }[];
+  moneyLines: { accountId: string; amountCents: number; settlements?: { openItemId: string; amountCents: number; reversesSettlementId?: string | null }[]; rawTransactionId?: string | null }[];
   allocationLines: {
     categoryId: string;
     amountCents: number;
@@ -155,7 +156,7 @@ export function toServiceInput(state: EntryFormState): { ok: true; input: EntryL
       fieldErrors[`moneyRows.${index}.accountId`] = 'required';
       return;
     }
-    const settlements: { openItemId: string; amountCents: number }[] = [];
+    const settlements: NonNullable<EntryLinesInput['moneyLines'][number]['settlements']> = [];
     let settlementSum = 0;
     let settlementProblem = false;
     row.settlements.forEach((s, sIndex) => {
@@ -173,7 +174,7 @@ export function toServiceInput(state: EntryFormState): { ok: true; input: EntryL
         settlementProblem = true;
         return;
       }
-      settlements.push({ openItemId: s.openItemId, amountCents: settlementCents });
+      settlements.push({ openItemId: s.openItemId, amountCents: settlementCents, ...(s.reversesSettlementId ? { reversesSettlementId: s.reversesSettlementId } : {}) });
     });
     if (settlementProblem) return;
     moneyLines.push({ accountId: row.accountId, amountCents: row.direction === 'in' ? parsed : -parsed, settlements: settlements.length > 0 ? settlements : undefined, rawTransactionId: row.rawTransactionId ?? undefined });
@@ -222,7 +223,7 @@ export function fromEntryView(view: EntryViewLike): EntryFormState {
     accountId: line.accountId,
     direction: line.amountCents >= 0 ? 'in' : 'out',
     amountText: formatAmount(Math.abs(line.amountCents)),
-    settlements: (line.settlements ?? []).map((s) => ({ openItemId: s.openItemId, amountText: formatAmount(s.amountCents) })),
+    settlements: (line.settlements ?? []).map((s) => ({ openItemId: s.openItemId, amountText: formatAmount(s.amountCents), ...(s.reversesSettlementId ? { reversesSettlementId: s.reversesSettlementId } : {}) })),
     rawTransactionId: line.rawTransactionId ?? null,
   }));
 

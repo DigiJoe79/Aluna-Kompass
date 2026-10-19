@@ -6,7 +6,7 @@ import { z } from 'zod';
 import { profileUrl } from '../profile-url';
 import { loadAnimal, type AnimalRecord } from '../service';
 import { effectivePhotoFrame, PROFILE_URL_KEY } from '../settings';
-import { qrRows } from './qr';
+import { qrRows } from '@kompass/documents/qr';
 import { PROFILE_MAX_PAGES, PROFILE_TEMPLATE_KEY, type ProfileImage, type ProfileInput, type ProfilePage } from './template';
 
 /** Beschriftungen der Seite. Die Route übersetzt sie, damit in der Vorlage kein Text steht (Prinzip 7). */

@@ -10,6 +10,7 @@ import { dmsRecordReferences } from './record-references';
 import { dmsRetentionDue, dmsRetentionHolds } from './retention';
 import { documents } from './schema';
 import { seedDms } from './seed';
+import { purgeOutboxAddresses } from './mail/sender';
 import { letterTemplate } from './templates';
 import { bundleIndexTemplate } from './bundle-index';
 
@@ -92,7 +93,7 @@ export const dmsModule: ModuleManifest = defineModule({
   files: true,
   settings: DMS_SETTINGS,
   install: installDms,
-  permissions: ['dms.view', 'dms.create', 'dms.file', 'dms.void', 'dms.deleteDraft', 'dms.manage'],
+  permissions: ['dms.view', 'dms.create', 'dms.file', 'dms.void', 'dms.deleteDraft', 'dms.manage', 'dms.send'],
   documentTemplates: [letterTemplate, bundleIndexTemplate],
   documentBases: ['a4-mit-briefkopf'],
   // Zur Laufzeit, nicht fest: Welche Bereichsrechte die Akte öffnen, steht in den
@@ -149,6 +150,15 @@ export const dmsModule: ModuleManifest = defineModule({
     /** `sentVia`: Schlüssel des Versandwegs aus `dms.dispatchChannels`. */
     'dms.dispatch': { params: ['number', 'sentOn', 'sentVia'] },
     'dms.dispatch.clear': { params: ['number'] },
+    /** Versand per E-Mail (Spec PDF per E-Mail § 5): nur die Nummer, nie Adresse oder Name. */
+    'dms.mail.queue': { params: ['documentNumber'] },
+    'dms.mail.sent': { params: ['documentNumber'] },
+    /** `code`: Kategorie des Fehlers (`auth`, `connection`, `rejected`, `tls`, `other`). */
+    'dms.mail.failed': { params: ['documentNumber', 'code'] },
+    'dms.mail.resend': { params: ['documentNumber'] },
+    'dms.mail.toPost': { params: ['documentNumber'] },
+    'dms.mail.toEmail': { params: ['documentNumber'] },
+    'dms.mail.test': { params: [] },
     'dms.link': { params: ['number'] },
     'dms.unlink': { params: [] },
     'dms.relate': { params: ['number', 'relatedNumber', 'kind'] },
@@ -166,5 +176,9 @@ export const dmsModule: ModuleManifest = defineModule({
   // Dokument hält, würden löschbar. Entwürfe zählen nicht — sie halten nichts.
   canDisable: (deps) => (deps.db.select({ id: documents.id }).from(documents).where(eq(documents.phase, 'issued')).get() ? 'hasFinalRecords' : null),
   mcpTools: DMS_MCP_TOOLS,
+  /** Adressen im Ausgangskorb 90 Tage nach dem Versand leeren (Spec PDF per E-Mail § 3). */
+  housekeeping: async (deps) => {
+    await purgeOutboxAddresses(deps);
+  },
   seed: seedDms,
 });

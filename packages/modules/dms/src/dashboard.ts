@@ -1,9 +1,9 @@
-import type { DashboardLine, DashboardTile } from '@kompass/core';
+import { messageDate, type DashboardLine, type DashboardTile } from '@kompass/core';
 import { contacts, displayName } from '@kompass/module-contacts';
 import { and, count, eq, inArray } from 'drizzle-orm';
 import { z } from 'zod';
-import { manageableTypeFilter } from './access';
-import { documentLinks, documents } from './schema';
+import { manageableTypeFilter, requireAreaAccess } from './access';
+import { dmsMailOutbox, documentLinks, documents } from './schema';
 import { listDocuments } from './service';
 
 /**
@@ -85,9 +85,36 @@ const textFailedTile: DashboardTile<Record<string, never>> = {
   },
 };
 
+/**
+ * „Nicht zugestellte E-Mails“ (Handoff 2b E4, 21d): Zahl mit „seit {ältestes Datum}“, Link auf den Ausgang mit Filter;
+ * bei 0 die Ruhe-Zeile. „Auf Post umgestellt“ zählt nicht. Sendungen geschützter Dokumente nur mit deren Recht.
+ */
+const mailFailedTile: DashboardTile<Record<string, never>> = {
+  key: 'mailFailed',
+  permission: 'dms.view',
+  kind: 'count',
+  defaultOn: true,
+  messageKeys: ['since'],
+  options: z.object({}),
+  load(deps, ctx) {
+    const href = '/dms?outbox=1&state=failed';
+    const rows = deps.db
+      .select({ queuedAt: dmsMailOutbox.queuedAt, doc: documents })
+      .from(dmsMailOutbox)
+      .innerJoin(documents, eq(documents.id, dmsMailOutbox.documentId))
+      .where(eq(dmsMailOutbox.status, 'failed'))
+      .all()
+      .filter(({ doc }) => !requireAreaAccess(deps, ctx, doc));
+    if (rows.length === 0) return { kind: 'count', count: 0, href };
+    const oldest = rows.map((r) => r.queuedAt).sort()[0]!;
+    return { kind: 'count', count: rows.length, href, note: { messageKey: 'since', values: { date: messageDate(deps, oldest) } } };
+  },
+};
+
 export const DMS_DASHBOARD_TILES: readonly DashboardTile[] = [
   inboxTile as DashboardTile,
   draftsTile as DashboardTile,
   unsentTile as DashboardTile,
   textFailedTile as DashboardTile,
+  mailFailedTile as DashboardTile,
 ];

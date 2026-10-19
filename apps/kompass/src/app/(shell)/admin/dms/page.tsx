@@ -8,6 +8,7 @@ import { PageHeader } from '@/components/page-header';
 import { PanelNav, panelFromQuery } from '@/components/panel-nav';
 import { requireSession } from '@/lib/request-context';
 import { DispatchChannelsPanel } from './dispatch-channels-panel';
+import { MailSettingsPanel } from './mail-settings-panel';
 import { SnippetsPanel } from './snippets-panel';
 import { RulesPanel } from './rules-panel';
 import { TextPanel } from './text-panel';
@@ -78,7 +79,31 @@ export default async function AdminDmsPage({ searchParams }: { searchParams: Pro
     const snippetsRes = await listSnippets(deps, ctx, { includeInactive: true });
     content = <SnippetsPanel snippets={snippetsRes.ok ? snippetsRes.value : []} />;
   } else if (panel === 'channels') {
-    content = <DispatchChannelsPanel channels={dispatchChannels(deps)} canManageSettings={canManageSettings} />;
+    // Unter den Versandwegen der Abschnitt „E-Mail“ (Handoff 2b E5): Verbindung aus dem Transport, Absender aus den Einstellungen.
+    const state = deps.mail.state();
+    const outgoingTypes = await listDocumentTypes(deps, ctx, { includeInactive: false });
+    const activeSnippets = await listSnippets(deps, ctx, {});
+    content = (
+      <div className="space-y-8">
+        <DispatchChannelsPanel channels={dispatchChannels(deps)} canManageSettings={canManageSettings} />
+        <MailSettingsPanel
+          mail={{ kind: state.kind, host: state.kind === 'ready' || state.kind === 'redirect' ? state.host : null, redirectTo: state.kind === 'redirect' ? state.to : null }}
+          values={{
+            fromAddress: readSetting<string | null>(deps, 'dms.mail.fromAddress') ?? '',
+            fromName: readSetting<string | null>(deps, 'dms.mail.fromName') ?? readSetting<string>(deps, 'organization.name') ?? '',
+            replyTo: readSetting<string | null>(deps, 'dms.mail.replyTo') ?? '',
+            ratePerMinute: readSetting<number>(deps, 'dms.mail.ratePerMinute'),
+          }}
+          types={(outgoingTypes.ok ? outgoingTypes.value : []).filter((type) => type.defaultDirection !== 'incoming').map((type) => ({ key: type.key, label: type.label }))}
+          snippets={(activeSnippets.ok ? activeSnippets.value : []).map((snippet) => ({ id: snippet.id, name: snippet.name }))}
+          byType={readSetting<Record<string, string>>(deps, 'dms.mail.bodySnippetByType')}
+          defaultSnippetId={readSetting<string | null>(deps, 'dms.mail.defaultBodySnippetId')}
+          canManageSettings={canManageSettings}
+          canSend={hasPermission(ctx, 'dms.send')}
+          agentAllowed={readSetting<boolean>(deps, 'dms.mcpHumanOnlyAllowed') === true}
+        />
+      </div>
+    );
   } else {
     const probe = await deps.textExtraction.probe();
     const unreadRes = countUnreadDocuments(deps, ctx);

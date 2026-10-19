@@ -43,7 +43,12 @@ describe('Seitenbreite über Page', () => {
 const WIDE_ALLOWED: Allowlist = {
   'app/(shell)/admin/dms/page.tsx': 'Einstellungsseite (PanelNav), die Tabellen der Arten und Regeln sind Abschnitte (MUSTER § D).',
   'app/(shell)/admin/finance/page.tsx': 'Einstellungsseite (PanelNav), Konten, Kategorien und Zwecke sind Abschnitte (MUSTER § D).',
+  'app/(shell)/admin/members/page.tsx': 'Einstellungsseite (PanelNav), Mitgliedsarten und Mahnstufen sind Abschnitte (MUSTER § D, Handoff Mitglieder 7b/7c).',
+  'app/(shell)/members/[id]/page.tsx': 'Detail eines Mitglieds (Stammdaten wie Partner), die Beiträge sind eine Nebenliste neben dem Formular (Handoff Mitglieder D1, 3c).',
   'app/(shell)/finance/entries/[id]/page.tsx': 'Detail einer Buchung, die Aufteilungen sind ein Abschnitt der Lesesicht.',
+  'app/(shell)/finance/direct-debit/mandates/[id]/page.tsx': 'Mandat (Vorgang in einer Spalte, Handoff 2a § 1.4): die Rückgaben sind eine Nebenliste unter den Angaben.',
+  'app/(shell)/finance/direct-debit/pledges/[id]/page.tsx': 'Zusage (Stammdaten wie das Mitglied, Handoff 2a § 1.5): die Raten sind eine Nebenliste neben dem Formular.',
+  'app/(shell)/finance/direct-debit/runs/[id]/page.tsx': 'Einzug (Vorgang, Handoff 2a § 1.3): die Posten mit Summe sind ein Abschnitt unter den Schritten.',
 };
 
 /** Die Datei und die Dateien ihres Ordners, die sie über `./name` einbindet, auch über mehrere Stufen. */

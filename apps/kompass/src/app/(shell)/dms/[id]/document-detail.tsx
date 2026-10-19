@@ -18,6 +18,7 @@ import { FolderPanel } from './folder-panel';
 import { ReclassifyDialog } from './reclassify-dialog';
 import { LinksPanel, type ResolvedLink } from './links-panel';
 import { DispatchPanel } from './dispatch-panel';
+import type { DocumentMailDraft } from '@kompass/module-dms';
 import { FollowUpsPanel, type FollowUpView } from './follow-ups-panel';
 import { NotesPanel, type NoteView } from './notes-panel';
 import { RelationsPanel, type RelationView } from './relations-panel';
@@ -86,6 +87,8 @@ export interface DocumentDetailProps {
   fileState: 'ok' | 'altered' | 'missing' | 'none';
   /** Die Karte „Aus der Rechnung“ des Finanzmoduls (F5b) — unter den Bezügen, nur an Finanzbelegen mit Rechnung im PDF. */
   invoicePanel?: ReactNode;
+  /** „Per E-Mail senden“ an einem ausgehenden, festgeschriebenen Brief (Handoff 2b E2). */
+  mail?: { draft: DocumentMailDraft | null; canSend: boolean; userNames: Record<string, string> };
 }
 
 export function DocumentDetail({
@@ -106,6 +109,7 @@ export function DocumentDetail({
   permissions,
   fileState,
   invoicePanel,
+  mail,
 }: DocumentDetailProps) {
   const t = useTranslations('dms');
   const fmt = useDateFormat();
@@ -272,6 +276,9 @@ export function DocumentDetail({
               channels={channels}
               today={today}
               canEdit={permissions.canEdit}
+              mail={mail?.draft ?? null}
+              canSend={mail?.canSend ?? false}
+              userNames={mail?.userNames ?? {}}
             />
           ) : null}
 

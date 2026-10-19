@@ -1,7 +1,7 @@
-import { yearIn, invalid, isoNow, newId, notFound, ok, readSetting, requirePermission, todayIn, validate, type CallContext, type DbOrTx, type Deps, type Result } from '@kompass/core';
-import { contacts, displayName } from '@kompass/module-contacts';
-import { documentTypeFor, peekDocumentNumber, readLinkedDocument } from '@kompass/module-dms';
-import { and, desc, eq, inArray, isNull } from 'drizzle-orm';
+import { yearIn, invalid, isoNow, newId, notFound, ok, readSetting, requirePermission, todayIn, validate, type CallContext, type DbOrTx, type Deps, type Failure, type Result } from '@kompass/core';
+import { contacts, deliveryForContactInternal, displayName } from '@kompass/module-contacts';
+import { dmsMailOutbox, documentTypeFor, mailNotReady, manualChannelInternal, movePairToPostInternal, peekDocumentNumber, queueDocumentEmailsInternal, readLinkedDocument, returnPairToEmailInternal, type MailOutboxStatus, type SendPlanItem, type SendPlanReason } from '@kompass/module-dms';
+import { and, desc, eq, inArray, isNull, ne } from 'drizzle-orm';
 import { z } from 'zod';
 import { financeAudit } from '../audit';
 import { financeConflict, requireHumanChannelFinance } from '../errors';
@@ -15,9 +15,11 @@ import {
   financeConfirmationRuns,
   financeConfirmations,
   financeEntries,
+  type FinanceConfirmationRow,
   type FinanceConfirmationRunItemRow,
   type FinanceConfirmationRunRow,
 } from '../schema';
+import { machineProcedureStatusAt } from './machine';
 import { checkConfirmableInternal, openConfirmationsForLinesInternal, possibleReturnsWithoutOriginInternal, returnDraftsInternal, returnedCentsInternal, type ConfirmationCheckKey } from './check';
 import { issueConfirmation, recordDispatchInternal } from './confirmations';
 import { noticeValidAtInternal } from './notices';
@@ -731,7 +733,9 @@ export async function dispatchRunConfirmations(deps: Deps, ctx: CallContext, inp
     const run = tx.select().from(financeConfirmationRuns).where(eq(financeConfirmationRuns.id, v.runId)).get();
     if (!run) return notFound('financeConfirmationRun', v.runId);
     const confirmationIds = itemRowsInternal(tx, [run.id]).filter((i) => i.state === 'issued' && i.confirmationId).map((i) => i.confirmationId!);
-    const due = confirmationIds.length === 0 ? [] : tx.select().from(financeConfirmations).where(and(inArray(financeConfirmations.id, confirmationIds), eq(financeConfirmations.machine, true), isNull(financeConfirmations.sentAt), isNull(financeConfirmations.voidedAt))).all();
+    // Was per E-Mail hinausgeht, vermerkt der Sender der Akte, sobald die Mail draußen ist — hier nur die Post-Posten.
+    const mailed = new Set(tx.select({ documentId: dmsMailOutbox.documentId }).from(dmsMailOutbox).where(and(eq(dmsMailOutbox.runRef, runRefOf(run.id)), ne(dmsMailOutbox.status, 'withdrawn'))).all().map((r) => r.documentId));
+    const due = (confirmationIds.length === 0 ? [] : tx.select().from(financeConfirmations).where(and(inArray(financeConfirmations.id, confirmationIds), eq(financeConfirmations.machine, true), isNull(financeConfirmations.sentAt), isNull(financeConfirmations.voidedAt))).all()).filter((row) => !mailed.has(row.documentId));
     const dispatched = due.filter((row) => recordDispatchInternal(tx, deps, ctx, row, v.sentAt, v.sentVia)).length;
     if (dispatched === 0) return financeConflict('dispatchNothingMachine');
     if (!run.dispatchedAt) {
@@ -742,9 +746,208 @@ export async function dispatchRunConfirmations(deps: Deps, ctx: CallContext, inp
   });
 }
 
-export const runBundleSchema = z.object({ runId: z.string().min(1), part: z.enum(['machine', 'signature']) });
+/** Der Verweis eines Laufs im Ausgangskorb der Akte. */
+const runRefOf = (runId: string) => `financeConfirmationRun:${runId}`;
 
-const BUNDLE_PART_LABEL: Record<z.infer<typeof runBundleSchema>['part'], string> = { machine: 'maschinell', signature: 'zum-unterschreiben' };
+export const runMailSchema = z.object({ runId: z.string().min(1) });
+
+/**
+ * Die Bestätigungen eines abgeschlossenen Laufs per E-Mail (Plan E1, Spec PDF
+ * per E-Mail § 5) — `finance.donationsIssue` und `dms.send`, nur ein Mensch.
+ * Nur im maschinellen Verfahren und nur maschinell erstellte Bestätigungen:
+ * Eine, die unterschrieben werden muss, geht auf Papier. Ohne vollständiges
+ * Verfahren gehen alle Posten per Post, mit Grund. Eingereiht wird über den
+ * Ausgangskorb der Akte, in derselben Transaktion; was schon dort steht, kein
+ * zweites Mal. Der Versandvermerk entsteht erst beim Senden.
+ */
+export async function sendConfirmationRunEmails(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<{ queued: number; post: SendPlanItem[] }>> {
+  const denied = requirePermission(ctx, 'finance.donationsIssue') ?? requirePermission(ctx, 'dms.send');
+  if (denied) return denied;
+  const human = requireHumanChannelFinance(deps, ctx);
+  if (human) return human;
+  const parsed = validate(deps, runMailSchema, input);
+  if (!parsed.ok) return parsed;
+  const run = deps.db.select().from(financeConfirmationRuns).where(eq(financeConfirmationRuns.id, parsed.value.runId)).get();
+  if (!run) return notFound('financeConfirmationRun', parsed.value.runId);
+  if (!run.finishedAt) return financeConflict('runNotFinished');
+  const notReady = mailNotReady(deps);
+  if (notReady) return notReady;
+
+  const confirmationIds = itemRowsInternal(deps.db, [run.id]).filter((i) => i.state === 'issued' && i.confirmationId).map((i) => i.confirmationId!);
+  const rows = confirmationIds.length === 0 ? [] : deps.db.select().from(financeConfirmations).where(and(inArray(financeConfirmations.id, confirmationIds), isNull(financeConfirmations.voidedAt))).all();
+  const machineActive = machineProcedureStatusAt(deps.db, todayIn(deps)).complete;
+  const post: SendPlanItem[] = [];
+  const items: { documentId: string; contactId: string }[] = [];
+  for (const row of rows) {
+    if (machineActive && row.machine) items.push({ documentId: row.documentId, contactId: row.contactId });
+    else post.push({ documentId: row.documentId, contactId: row.contactId, channel: 'post', reason: 'notMachineProcedure' });
+  }
+  return deps.db.transaction((tx: DbOrTx) => {
+    const { queued, skipped } = queueDocumentEmailsInternal(tx, deps, ctx, { items, runRef: runRefOf(run.id) });
+    financeAudit(tx, deps, ctx, { action: 'finance.confirmationRun.mail', entity: 'financeConfirmationRun', id: run.id, after: { queued: queued.length }, params: { year: run.year, count: queued.length } });
+    return ok({ queued: queued.length, post: [...skipped, ...post] });
+  });
+}
+
+/** Zustand einer Mail-Zeile: noch nicht eingereiht oder der Zustand im Ausgang der Akte. */
+export type RunMailState = MailOutboxStatus | 'notQueued';
+
+interface RunDispatchRowBase {
+  documentId: string;
+  documentNumber: string | null;
+  confirmationId: string;
+  contactId: string;
+  /** Name des Spenders (nur Anzeige; das Protokoll nennt ihn nicht). */
+  name: string;
+  /** Art des Postens wie in der Liste des Laufs (`single`, `collective` …) und Zahl der Zeilen. */
+  kind: RunItemKind;
+  lineCount: number;
+  /** Versandvermerk der Bestätigung (Tag). */
+  sentAt: string | null;
+}
+
+export interface ConfirmationRunDispatchState {
+  mail: (RunDispatchRowBase & { state: RunMailState; address: string; outboxId: string | null; errorCode: string | null; errorText: string | null })[];
+  post: (RunDispatchRowBase & { reason: SendPlanReason; dispatched: boolean })[];
+  /** Jede Zeile gesendet oder vermerkt; ein „nicht zugestellt“ ist kein Vermerk (Handoff 2b E3). */
+  done: boolean;
+  mailState: { kind: 'off' | 'ready' | 'redirect' | 'blocked'; redirectTo: string | null };
+}
+
+export const runDispatchStateSchema = z.object({ runId: z.string().min(1) });
+
+/**
+ * Die Gruppen E-Mail und Post eines Laufs, wie `sendConfirmationRunEmails` sie bildet: per E-Mail nur im
+ * maschinellen Verfahren und nur maschinell erstellte Bestätigungen, deren Kontakt eine Adresse hat und nicht Post
+ * will; was von Hand in die Post-Gruppe kam (`manual`, Plan U4 Task 2), geht per Post. Ohne Rechte — die prüft der Dienst.
+ */
+function runDispatchInternal(deps: Deps, run: FinanceConfirmationRunRow): Omit<ConfirmationRunDispatchState, 'mailState'> & { postConfirmations: FinanceConfirmationRow[] } {
+  const issued = itemRowsInternal(deps.db, [run.id]).filter((i) => i.state === 'issued' && i.confirmationId !== null).sort(byRunOrder);
+  const ids = issued.map((i) => i.confirmationId!);
+  const rows = new Map((ids.length === 0 ? [] : deps.db.select().from(financeConfirmations).where(inArray(financeConfirmations.id, ids)).all()).map((c) => [c.id, c] as const));
+  const contactIds = [...new Set([...rows.values()].map((c) => c.contactId))];
+  const names = new Map((contactIds.length === 0 ? [] : deps.db.select().from(contacts).where(inArray(contacts.id, contactIds)).all()).map((c) => [c.id, displayName(c)] as const));
+  const machineActive = machineProcedureStatusAt(deps.db, todayIn(deps)).complete;
+  const mailOff = deps.mail.state().kind === 'off';
+  const mail: ConfirmationRunDispatchState['mail'] = [];
+  const post: ConfirmationRunDispatchState['post'] = [];
+  const postConfirmations: FinanceConfirmationRow[] = [];
+  for (const item of issued) {
+    const c = rows.get(item.confirmationId!);
+    if (!c || c.voidedAt) continue;
+    const base: RunDispatchRowBase = { documentId: c.documentId, documentNumber: c.documentNumber, confirmationId: c.id, contactId: c.contactId, name: names.get(c.contactId) ?? '', kind: item.kind, lineCount: (JSON.parse(item.lineIds) as string[]).length, sentAt: c.sentAt };
+    const toPost = (reason: SendPlanReason) => {
+      post.push({ ...base, reason, dispatched: c.sentAt !== null });
+      postConfirmations.push(c);
+    };
+    if (!machineActive || !c.machine) { toPost('notMachineProcedure'); continue; }
+    if (mailOff) { toPost('mailOff'); continue; }
+    const delivery = deliveryForContactInternal(deps.db, c.contactId);
+    if (delivery.channel === 'post') { toPost(delivery.reason); continue; }
+    const entry = deps.db.select().from(dmsMailOutbox).where(and(eq(dmsMailOutbox.documentId, c.documentId), eq(dmsMailOutbox.contactId, c.contactId))).orderBy(desc(dmsMailOutbox.queuedAt), desc(dmsMailOutbox.id)).get();
+    const manual = manualChannelInternal(deps.db, c.documentId, c.contactId, entry);
+    if (manual === 'post') { toPost('manual'); continue; }
+    // Zurück zu E-Mail: Die zurückgezogene Sendung zählt nicht mehr, die Zeile ist wieder offen.
+    const live = manual === 'returned' ? undefined : entry;
+    mail.push({ ...base, state: live?.status ?? 'notQueued', address: delivery.address, outboxId: live?.id ?? null, errorCode: live?.lastErrorCode ?? null, errorText: live?.lastErrorText ?? null });
+  }
+  const done = mail.every((m) => m.state === 'sent' || m.sentAt !== null) && post.every((p) => p.dispatched);
+  return { mail, post, done, postConfirmations };
+}
+
+/** Der Schritt „Ergebnis“ als Versand (Handoff 2b E3): Mail-Gruppe mit Zustand im Ausgang, Post-Gruppe mit Grund und Vermerk. `finance.read`. */
+export async function confirmationRunDispatchState(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<ConfirmationRunDispatchState>> {
+  const denied = requireFinanceRead(ctx, 'read');
+  if (denied) return denied;
+  const parsed = validate(deps, runDispatchStateSchema, input);
+  if (!parsed.ok) return parsed;
+  const run = deps.db.select().from(financeConfirmationRuns).where(eq(financeConfirmationRuns.id, parsed.value.runId)).get();
+  if (!run) return notFound('financeConfirmationRun', parsed.value.runId);
+  const { mail, post, done } = runDispatchInternal(deps, run);
+  const state = deps.mail.state();
+  return ok({ mail, post, done, mailState: { kind: state.kind, redirectTo: state.kind === 'redirect' ? state.to : null } });
+}
+
+export const runMarkPostSchema = z.object({ runId: z.string().min(1), sentAt: z.iso.date(), documentIds: z.array(z.string().min(1)).min(1).max(500).optional() });
+
+/**
+ * „Versand vermerken …“ an Zeilen der Post-Gruppe (Weg Post) — `finance.donationsIssue`, in einer Transaktion. Ohne
+ * `documentIds` alle offenen der Gruppe. Nie in der Zukunft; mit Unterschriftsfeld erst nach der unterschriebenen
+ * Fassung (wie `recordConfirmationDispatch`).
+ */
+export async function markRunPostConfirmations(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<{ count: number }>> {
+  const denied = requirePermission(ctx, 'finance.donationsIssue');
+  if (denied) return denied;
+  const parsed = validate(deps, runMarkPostSchema, input);
+  if (!parsed.ok) return parsed;
+  const v = parsed.value;
+  if (v.sentAt > todayIn(deps)) return invalid([{ path: 'sentAt', message: 'inFuture' }]);
+  const run = deps.db.select().from(financeConfirmationRuns).where(eq(financeConfirmationRuns.id, v.runId)).get();
+  if (!run) return notFound('financeConfirmationRun', v.runId);
+  const due = runDispatchInternal(deps, run).postConfirmations.filter((c) => !c.sentAt && (!v.documentIds || v.documentIds.includes(c.documentId)));
+  if (due.length === 0) return financeConflict('dispatchNothingMachine');
+  if (due.some((c) => !c.machine && !c.signedDocumentId)) return financeConflict('confirmationSignedMissing');
+  return deps.db.transaction((tx: DbOrTx) => {
+    const count = due.filter((row) => recordDispatchInternal(tx, deps, ctx, row, v.sentAt, 'post')).length;
+    financeAudit(tx, deps, ctx, { action: 'finance.confirmationRun.dispatch', entity: 'financeConfirmationRun', id: run.id, after: { dispatchedVia: 'post' }, params: { year: run.year, count } });
+    return ok({ count });
+  });
+}
+
+export const runMoveSchema = z.object({ runId: z.string().min(1), documentIds: z.array(z.string().min(1)).min(1).max(500), to: z.enum(['post', 'email']) });
+
+/** Bricht die Transaktion des Verschiebens mit dem Grund der Akte ab — alle oder keine. */
+class MoveAborted extends Error {
+  constructor(readonly failure: Failure) {
+    super('confirmation run move aborted');
+  }
+}
+
+/**
+ * „Per Post schicken“ / „Zurück zu E-Mail“ je Zeile (Nachtrag MCP-Test § 2, Plan U4 Task 2) — `finance.donationsIssue`,
+ * wie der Vermerk. `post`: Zeilen der Mail-Gruppe, die warten oder nicht zugestellt sind, wandern mit Grund `manual` in
+ * die Post-Gruppe (eine eingereihte Mail wird zurückgezogen), unterwegs oder gesendet lehnt die Akte ab
+ * (`mailNotPending`). `email`: nur von Hand verschobene Zeilen ohne Versandvermerk. Alle oder keine; Protokoll mit der
+ * Zahl, je Dokument dazu der Eintrag der Akte.
+ */
+export async function moveConfirmationRunLetters(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<{ count: number }>> {
+  const denied = requirePermission(ctx, 'finance.donationsIssue');
+  if (denied) return denied;
+  const parsed = validate(deps, runMoveSchema, input);
+  if (!parsed.ok) return parsed;
+  const { runId, documentIds, to } = parsed.value;
+  const run = deps.db.select().from(financeConfirmationRuns).where(eq(financeConfirmationRuns.id, runId)).get();
+  if (!run) return notFound('financeConfirmationRun', runId);
+  const { mail, post } = runDispatchInternal(deps, run);
+  const lineOf = new Map([...mail, ...post].map((row) => [row.documentId, row] as const));
+  const postReason = new Map(post.map((row) => [row.documentId, row.reason] as const));
+  const missing = documentIds.find((id) => !lineOf.has(id));
+  if (missing) return notFound('document', missing);
+  try {
+    return deps.db.transaction((tx: DbOrTx) => {
+      for (const documentId of documentIds) {
+        const line = lineOf.get(documentId)!;
+        // Der Versandvermerk einer Bestätigung steht an ihr, nicht am Dokument der Akte.
+        // U7 (Plan N3): Steht die Zeile schon in der Post-Gruppe, nennt die Ablehnung den Grund des Versandplans.
+        const planReason = postReason.get(documentId);
+        const pair = { documentId, contactId: line.contactId, runRef: runRefOf(run.id), dispatched: line.sentAt !== null, ...(planReason ? { planReason } : {}) };
+        const moved = to === 'post' ? movePairToPostInternal(tx, deps, ctx, pair) : returnPairToEmailInternal(tx, deps, ctx, pair);
+        if (!moved.ok) throw new MoveAborted(moved);
+      }
+      const entry = { entity: 'financeConfirmationRun' as const, id: run.id, after: { count: documentIds.length }, params: { year: run.year, count: documentIds.length } };
+      if (to === 'post') financeAudit(tx, deps, ctx, { action: 'finance.confirmationRun.toPost', ...entry });
+      else financeAudit(tx, deps, ctx, { action: 'finance.confirmationRun.toEmail', ...entry });
+      return ok({ count: documentIds.length });
+    });
+  } catch (error) {
+    if (error instanceof MoveAborted) return error.failure;
+    throw error;
+  }
+}
+
+export const runBundleSchema = z.object({ runId: z.string().min(1), part: z.enum(['machine', 'signature', 'post']) });
+
+const BUNDLE_PART_LABEL: Record<z.infer<typeof runBundleSchema>['part'], string> = { machine: 'maschinell', signature: 'zum-unterschreiben', post: 'per-post' };
 
 /**
  * Sammel-PDF eines Serienlaufs (F6b Task 4, Annahme 7) — `finance.read`. Die
@@ -771,9 +974,11 @@ export async function readRunBundle(deps: Deps, ctx: CallContext, input: unknown
   const confirmations = new Map(
     (confirmationIds.length === 0 ? [] : deps.db.select().from(financeConfirmations).where(inArray(financeConfirmations.id, confirmationIds)).all()).map((c) => [c.id, c] as const),
   );
+  // „Als PDF zum Drucken“ im Versand-Schritt: die Post-Gruppe in der Reihenfolge des Laufs.
+  const postIds = part === 'post' ? new Set(runDispatchInternal(deps, run).postConfirmations.map((c) => c.id)) : null;
   const selected = issued
     .map((i) => confirmations.get(i.confirmationId!))
-    .filter((c): c is NonNullable<typeof c> => c !== undefined && !c.voidedAt && c.machine === (part === 'machine'));
+    .filter((c): c is NonNullable<typeof c> => c !== undefined && !c.voidedAt && (postIds ? postIds.has(c.id) : c.machine === (part === 'machine')));
   if (selected.length === 0) return financeConflict('bundleEmpty');
 
   const files: Uint8Array[] = [];

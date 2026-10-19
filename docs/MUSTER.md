@@ -81,6 +81,10 @@ Bausteine: `record-actions.tsx`, `forms/confirm-dialog.tsx` (`refusal`, `finalFo
 - Unterbereiche über `components/panel-nav.tsx` (`?panel=`). Keine eigenen Reiter, keine gestapelten Bereiche. Ein Link von einer anderen Seite auf einen Bereich geht über `panelHref(basePath, panel)`; das `?panel=` selbst steht nur in diesem Baustein.
 - Breite über `Page width="standard"` wie jede Formularseite (§ I); keine eigene Grenze im Panel.
 - Pillen (`bg-brand-soft`) nur für Ansichten einer Liste, nie für Navigation.
+- Erlaubnis für Agenten → `AgentSwitchSection` als letzter Abschnitt des Panels. Beschriftung „Darf ein Agent …?“,
+  Hinweis nennt, was ein Mensch weiter entscheidet. Kein eigener Schalter-Nachbau. (Nachtrag MCP-Test, Designer
+  2026-10-19; gespeichert mit dem Formular, nicht sofort. Baustein `app/(shell)/admin/agent-switch-section.tsx`, Wächter
+  `agent-switch-section.test.ts`.)
 
 Bausteine: `panel-nav.tsx` (mit dem Hilfsteil `panel-nav-scroll.tsx`, der den gewählten Reiter auf dem Telefon ganz in den Blick schiebt und am Rand, auf dem es weitergeht, einen Verlauf zeigt — derselbe Streifen in `ViewTabs`; Runde 4, Frage 5).
 

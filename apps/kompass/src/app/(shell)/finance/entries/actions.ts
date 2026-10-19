@@ -2,7 +2,7 @@
 
 import { guardAction } from '@/lib/action-guard';
 import { guardConstraint, listUserNamesWithPermission, todayIn } from '@kompass/core';
-import { attachDocument, bookEntry, deleteDraft, finalizeEntry, finalizeReviewed, listEntries, markNotReturn, requestAllocationCorrection, reverseEntry, revokeVoucher, saveDraft, setReviewed, uploadVoucher, type EntryLinesInput } from '@kompass/module-finance';
+import { attachDocument, bookEntry, deleteDraft, finalizeEntry, finalizeReviewed, listEntries, markNotReturn, requestAllocationCorrection, reverseEntry, revokeVoucher, saveDraft, setReviewed, uploadVoucher, type EntryLinesInput, type SettlementWarning } from '@kompass/module-finance';
 import { receiveGeneratedUpload } from '@kompass/module-dms';
 import { getTranslations } from 'next-intl/server';
 import { revalidatePath } from 'next/cache';
@@ -36,8 +36,10 @@ export async function saveReviewedAction(input: EntryLinesInput): Promise<Action
   });
 }
 
-/** Entwurf vorhanden: `saveDraft` + `finalizeEntry` (ein Bearbeiten kurz vor dem Festschreiben zählt noch). Sonst `bookEntry` — der einzige Weg für Bargeld. */
-export async function finalizeAction(input: EntryLinesInput): Promise<ActionState> {
+/**
+ * Plan N2 Task 2: `acknowledgedWarnings` sind die Hinweise, die der Mensch im Festschreiben-Dialog bestätigt hat.
+ * Entwurf vorhanden: `saveDraft` + `finalizeEntry` (ein Bearbeiten kurz vor dem Festschreiben zählt noch). Sonst `bookEntry` — der einzige Weg für Bargeld. */
+export async function finalizeAction(input: EntryLinesInput, acknowledgedWarnings: SettlementWarning[] = []): Promise<ActionState> {
   return guardAction('(shell)/finance/entries/actions.ts#finalizeAction', async () => {
     const t = await getTranslations();
     const { deps, ctx } = await requireSession();
@@ -45,9 +47,9 @@ export async function finalizeAction(input: EntryLinesInput): Promise<ActionStat
     if (input.id) {
       const draft = await saveDraft(deps, ctx, input);
       if (!draft.ok) return toActionState(draft, t);
-      result = await finalizeEntry(deps, ctx, { id: draft.value.id });
+      result = await finalizeEntry(deps, ctx, { id: draft.value.id, acknowledgedWarnings });
     } else {
-      result = await bookEntry(deps, ctx, input);
+      result = await bookEntry(deps, ctx, { ...input, acknowledgedWarnings });
     }
     revalidatePath('/finance/entries');
     if (!result.ok) return toActionState(result, t);
@@ -127,7 +129,9 @@ export async function finalizeReviewedAction(ids: string[]): Promise<ActionState
     revalidatePath('/finance/entries');
     if (!result.ok) return toActionState(result, t);
     const numbers = result.value.entries.map((e) => e.number).filter((n): n is string => !!n);
-    return toActionState(result, t, t('finance.journal.toast.finalized', { numbers: numbers.join(', ') }));
+    // Plan N2 Task 2: Entwürfe mit offener Warnung bleiben Entwurf — die Meldung sagt es.
+    const held = result.value.held.length > 0 ? ` ${t('finance.journal.toast.held', { count: result.value.held.length })}` : '';
+    return toActionState(result, t, `${t('finance.journal.toast.finalized', { numbers: numbers.join(', ') })}${held}`);
   });
 }
 
@@ -149,7 +153,9 @@ export async function finalizeAllReviewedAction(): Promise<ActionState> {
     revalidatePath('/finance/entries');
     if (!result.ok) return toActionState(result, t);
     const numbers = result.value.entries.map((e) => e.number).filter((n): n is string => !!n);
-    return toActionState(result, t, t('finance.journal.toast.finalized', { numbers: numbers.join(', ') }));
+    // Plan N2 Task 2: Entwürfe mit offener Warnung bleiben Entwurf — die Meldung sagt es.
+    const held = result.value.held.length > 0 ? ` ${t('finance.journal.toast.held', { count: result.value.held.length })}` : '';
+    return toActionState(result, t, `${t('finance.journal.toast.finalized', { numbers: numbers.join(', ') })}${held}`);
   });
 }
 

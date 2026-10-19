@@ -7,6 +7,15 @@ export async function resetDatabase(page: Page, mode: 'empty' | 'seeded'): Promi
   expect(response.ok()).toBe(true);
 }
 
+/**
+ * Schaltet den Test-Transport des Servers (`KOMPASS_MAIL_FAKE=1`): „nicht eingerichtet“ (Vorgabe nach jedem Zurücksetzen),
+ * Testumgebung mit Umleitung an umleitung@example.org, oder gesperrt. Nie eine echte Verbindung.
+ */
+export async function setMailState(page: Page, state: 'off' | 'redirect' | 'blocked'): Promise<void> {
+  const response = await page.request.post('/__e2e/mail', { headers: { 'x-e2e-token': 'e2e-reset' }, data: { state } });
+  expect(response.ok()).toBe(true);
+}
+
 export async function loginAsAdmin(page: Page): Promise<void> {
   await page.goto('/login');
   await page.getByLabel('E-Mail').fill(ADMIN.email);

@@ -88,4 +88,5 @@ export * from './dashboard/tiles';
 export * from './users/names';
 export * from './text/extraction';
 export { noopPdfTools, type PdfTools } from './pdf/tools';
+export { noopMailTransport, type MailErrorCode, type MailMessage, type MailSendResult, type MailState, type MailTransport } from './mail';
 export { buildPdfWithAttachments, type PdfAttachment } from './text/pdf-with-attachments';

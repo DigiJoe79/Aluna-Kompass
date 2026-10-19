@@ -5,7 +5,7 @@ import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 import { contactForIbanInternal, contactsForIbanInternal, createContactFromTransaction, learnContactIbanInternal, linkContactIban, listContactIbans, unlinkContactIban } from '../src/import/contact-ibans';
 import { FINANCE_PERMISSIONS } from '../src/manifest';
-import { financeContactBankAccounts } from '../src/schema';
+import { financeContactBankAccounts, financeSepaMandates } from '../src/schema';
 import { insertRaw, insertRun, ledgerFixture } from './helpers';
 
 const IBAN = 'DE66999999991234567890';
@@ -50,6 +50,49 @@ describe('linkContactIban', () => {
     expect(await linkContactIban(f.deps, f.ctx, { contactId: f.donor.id, iban: IBAN })).toMatchObject({ ok: true });
   });
 
+  it('with mode shared a second person gets the iban as joint account — the same rule as learning (M18)', async () => {
+    const f = await ledgerFixture();
+    unwrap(await linkContactIban(f.deps, f.ctx, { contactId: f.donor.id, iban: IBAN }));
+    const shared = unwrap(await linkContactIban(f.deps, f.ctx, { contactId: f.wrongDonor.id, iban: IBAN, mode: 'shared' }));
+    expect(f.deps.db.select().from(financeContactBankAccounts).all().map((r) => r.contactId).sort()).toEqual([f.donor.id, f.wrongDonor.id].sort());
+    // U10 (Plan N3): Das Ergebnis nennt die Mitinhaber wie die Liste.
+    expect(shared.coHolders).toEqual([{ contactId: f.donor.id, name: expect.stringContaining('Musterspenderin') }]);
+    expect(unwrap(await linkContactIban(f.deps, f.ctx, { contactId: f.wrongDonor.id, iban: IBAN })).coHolders).toEqual(shared.coHolders);
+  });
+
+  it('without mode the refusal names every holder of a joint account (U4)', async () => {
+    const f = await ledgerFixture();
+    unwrap(await linkContactIban(f.deps, f.ctx, { contactId: f.donor.id, iban: IBAN }));
+    unwrap(await linkContactIban(f.deps, f.ctx, { contactId: f.rightDonor.id, iban: IBAN, mode: 'shared' }));
+    const refused = await linkContactIban(f.deps, f.ctx, { contactId: f.wrongDonor.id, iban: IBAN });
+    expect(refused).toMatchObject({ ok: false, error: { type: 'conflict', code: 'contactIbanTaken' } });
+    expect(JSON.stringify(refused)).toContain('Musterspenderin');
+    expect(JSON.stringify(refused)).toContain('Richtigspenderin');
+  });
+
+  it('with mode move the iban leaves the former holders and goes only to this contact, recorded (U4)', async () => {
+    const f = await ledgerFixture();
+    unwrap(await linkContactIban(f.deps, f.ctx, { contactId: f.donor.id, iban: IBAN }));
+    unwrap(await linkContactIban(f.deps, f.ctx, { contactId: f.wrongDonor.id, iban: IBAN, mode: 'move' }));
+    expect(f.deps.db.select().from(financeContactBankAccounts).all().map((r) => r.contactId)).toEqual([f.wrongDonor.id]);
+    expect(ibanLog(f).map((e) => e.action)).toEqual(['finance.contactIban.link', 'finance.contactIban.delete', 'finance.contactIban.link']);
+  });
+
+  it('move and unlink are refused while a valid mandate of a holder runs over the iban (U4)', async () => {
+    const f = await ledgerFixture();
+    const link = unwrap(await linkContactIban(f.deps, f.ctx, { contactId: f.donor.id, iban: IBAN }));
+    f.deps.db.insert(financeSepaMandates).values({ id: 'MANDATE-1', contactId: f.donor.id, reference: 'M-0001', debtorName: 'Musterspenderin', iban: IBAN, preparedOn: '2026-01-02', signedOn: '2026-01-05', createdAt: '2026-01-02T00:00:00.000Z', updatedAt: '2026-01-05T00:00:00.000Z' }).run();
+    const moved = await linkContactIban(f.deps, f.ctx, { contactId: f.wrongDonor.id, iban: IBAN, mode: 'move' });
+    expect(moved).toMatchObject({ ok: false, error: { type: 'conflict', code: 'ibanHasMandate', params: { mandateId: 'MANDATE-1' } } });
+    expect(await unlinkContactIban(f.deps, f.ctx, { id: link.id })).toMatchObject({ ok: false, error: { type: 'conflict', code: 'ibanHasMandate' } });
+    expect(f.deps.db.select().from(financeContactBankAccounts).all().map((r) => r.contactId)).toEqual([f.donor.id]);
+    // Ein Gemeinschaftskonto lässt das Mandat unberührt — es geht.
+    expect(await linkContactIban(f.deps, f.ctx, { contactId: f.wrongDonor.id, iban: IBAN, mode: 'shared' })).toMatchObject({ ok: true });
+    // Ein beendetes Mandat sperrt nicht mehr.
+    f.deps.db.update(financeSepaMandates).set({ endedOn: '2026-02-01' }).run();
+    expect(await unlinkContactIban(f.deps, f.ctx, { id: link.id })).toMatchObject({ ok: true });
+  });
+
   it('needs finance.entriesWrite', async () => {
     const f = await ledgerFixture();
     expect(await linkContactIban(f.deps, ctxWith(['finance.read']), { contactId: f.donor.id, iban: IBAN })).toMatchObject({ ok: false, error: { type: 'forbidden', permission: 'finance.entriesWrite' } });
@@ -81,6 +124,30 @@ describe('unlinkContactIban', () => {
 });
 
 describe('listContactIbans', () => {
+  it('names the origin — from a booking with its date, by hand with person and date, from a mandate — and the co-holders (U4)', async () => {
+    const f = await ledgerFixture();
+    f.deps.db.transaction((tx) => learnContactIbanInternal(tx, f.deps, f.ctx, { contactId: f.donor.id, iban: IBAN, learnedFrom: 'booking', learnedOn: '2026-03-12' }));
+    unwrap(await linkContactIban(f.deps, f.ctx, { contactId: f.donor.id, iban: 'DE23999999990000202051' }));
+    f.deps.db.transaction((tx) => learnContactIbanInternal(tx, f.deps, f.ctx, { contactId: f.donor.id, iban: 'DE93999999990000202052', learnedFrom: 'mandate' }));
+    unwrap(await linkContactIban(f.deps, f.ctx, { contactId: f.rightDonor.id, iban: IBAN, mode: 'shared' }));
+    const { items } = unwrap(await listContactIbans(f.deps, ctxWith(['finance.read']), { contactId: f.donor.id }));
+    expect(items.map((i) => [i.iban, i.source, i.learnedFromEntryDate])).toEqual([
+      [IBAN, 'learned', '2026-03-12'],
+      ['DE23999999990000202051', 'manual', null],
+      ['DE93999999990000202052', 'mandate', null],
+    ]);
+    expect(items[1]).toMatchObject({ createdByUserId: f.userId, createdAt: expect.any(String) });
+    expect(items[0]!.coHolders).toEqual([{ contactId: f.rightDonor.id, name: 'Richtigspenderin' }]);
+    expect(items[1]!.coHolders).toEqual([]);
+  });
+
+  it('a link from before the origin was recorded has no source — and no error (U4)', async () => {
+    const f = await ledgerFixture();
+    f.deps.db.insert(financeContactBankAccounts).values({ id: 'CBA-OLD', contactId: f.donor.id, iban: IBAN, createdAt: '2026-01-01T00:00:00.000Z', createdByUserId: f.userId }).run();
+    const { items } = unwrap(await listContactIbans(f.deps, f.ctx, { contactId: f.donor.id }));
+    expect(items).toEqual([expect.objectContaining({ id: 'CBA-OLD', source: null, learnedFromEntryDate: null })]);
+  });
+
   it('lists the ibans of one contact under finance.read', async () => {
     const f = await ledgerFixture();
     unwrap(await linkContactIban(f.deps, f.ctx, { contactId: f.donor.id, iban: IBAN }));

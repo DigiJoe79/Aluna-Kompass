@@ -2,12 +2,12 @@
 
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { FieldError } from '@/components/forms/field-error';
 import { FormCard, FormCardBody } from '@/components/forms/form-card';
 import { FormActionBar } from '@/components/forms/form-action-bar';
 import { FormField } from '@/components/forms/form-field';
-import { FormCell, FormGrid } from '@/components/forms/form-grid';
+import { FormGrid } from '@/components/forms/form-grid';
 import { RefusalNotice } from '@/components/forms/refusal-notice';
 import { useActionFeedback } from '@/components/forms/use-action-feedback';
 import { AmountField } from '@/components/finance/amount-field';
@@ -15,11 +15,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { withUnplacedFieldErrors } from '@/lib/feedback';
 import { formatAmount, parseAmount } from '@/lib/finance/amount';
-import { applyTaxDefaultsAction, setBoardRemunerationAction, setExpenseWaiverBasisAction, setFinanceLimitsAction, setFinanceSwitchAction, setFinanceSwitchesAction } from './actions';
+import { AgentSwitchSection, agentSwitchChange } from '../agent-switch-section';
+import { applyTaxDefaultsAction, setBoardRemunerationAction, setExpenseWaiverBasisAction, setFinanceLimitsAction, setFinanceSwitchesAction } from './actions';
 import { useDateFormat } from '@/components/date-format-provider';
 import { Section } from '@/components/section';
 
@@ -38,9 +38,10 @@ export interface TaxLimits {
   proofGraceDays: number;
 }
 
-/** Die drei Steuer-Schalter, die mit der Leiste des Abschnitts gelten; der Agent-Schalter steht für sich. */
+/** Die drei Steuer-Schalter, die mit der Leiste des Abschnitts gelten; der Agentenschalter steht als letzter Abschnitt in derselben Karte. */
 const TAX_SWITCH_KEYS = ['isEntrepreneurOrHasVatId', 'membershipFeesCertifiable', 'expenseWaiversEnabled'] as const;
 type TaxSwitchKey = (typeof TAX_SWITCH_KEYS)[number];
+const AGENT_KEY = 'finance.mcpHumanOnlyAllowed';
 
 const AMOUNT_LIMIT_KEYS = ['statementSufficesBelowCents', 'cashDonationAlertCents', 'roundAmountFromCents'] as const;
 const LIMIT_IDS: Record<keyof TaxLimits, string> = {
@@ -66,46 +67,68 @@ function SettingRow({ htmlFor, labelId, label, testId, children }: { htmlFor?: s
 /**
  * Runde 3, 172 (Joe 2026-10-17): Die drei Steuer-Schalter gelten erst mit „Speichern“ in der Leiste des Abschnitts —
  * deshalb Ja/Nein wie die Frage nach den Pauschalen, kein Schalter (der speichert sofort, Joe 05.10.2026). Die Leiste
- * ruft einen Dienst (`setFinanceSwitch`) für jeden geänderten Schalter.
+ * ruft einen Dienst (`setFinanceSwitch`) für jeden geänderten Schalter. Plan U4 Task 1 (Nachtrag MCP-Test § 1): Der
+ * Agentenschalter ist der letzte Abschnitt dieser Karte (`AgentSwitchSection`) und geht mit derselben Leiste.
  */
 function SwitchesForm({ switches }: { switches: TaxSwitches }) {
   const t = useTranslations('finance.admin.tax');
   const router = useRouter();
+  const form = useRef<HTMLFormElement>(null);
   const initial = Object.fromEntries(TAX_SWITCH_KEYS.map((k) => [k, switches[k]])) as Record<TaxSwitchKey, boolean>;
   const [values, setValues] = useState(initial);
+  const [agent, setAgent] = useState(switches.mcpHumanOnlyAllowed);
   const [pending, setPending] = useState(false);
   const feedback = useActionFeedback();
   const changedKeys = TAX_SWITCH_KEYS.filter((k) => values[k] !== initial[k]);
+  const agentChanged = agent !== switches.mcpHumanOnlyAllowed;
+  const entries = [...changedKeys.map((k) => ({ key: `finance.${k}`, value: values[k] })), ...(agentChanged ? [{ key: AGENT_KEY, value: agent }] : [])];
   const save = async () => {
-    if (changedKeys.length === 0) return;
+    if (entries.length === 0) return;
     setPending(true);
-    const result = await feedback.run(() => setFinanceSwitchesAction(changedKeys.map((k) => ({ key: `finance.${k}`, value: values[k] }))));
+    const result = await feedback.run(() => setFinanceSwitchesAction(entries));
     setPending(false);
     if (result.status === 'success') router.refresh();
   };
   return (
-    <FormCard data-testid="tax-switches">
-      <FormCardBody className="divide-y divide-line-2 py-2.5">
-        {TAX_SWITCH_KEYS.map((key) => (
-          <SettingRow key={key} labelId={`tax-switch-${key}`} label={t(key)}>
-            <RadioGroup aria-labelledby={`tax-switch-${key}`} value={values[key] ? 'yes' : 'no'} disabled={pending} onValueChange={(v) => setValues((prev) => ({ ...prev, [key]: v === 'yes' }))} className="flex-row gap-4">
-              {(['yes', 'no'] as const).map((option) => (
-                <label key={option} className="flex items-center gap-2 text-body text-ink">
-                  <RadioGroupItem value={option} />
-                  {t(`boardRemuneration.${option}`)}
-                </label>
-              ))}
-            </RadioGroup>
-          </SettingRow>
-        ))}
+    <FormCard
+      as="form"
+      ref={form}
+      data-testid="tax-switches"
+      onSubmit={(e: React.FormEvent) => {
+        e.preventDefault();
+        void save();
+      }}
+      onChange={(e: React.FormEvent) => {
+        const next = agentSwitchChange(e, AGENT_KEY);
+        if (next !== null) setAgent(next);
+      }}
+    >
+      <FormCardBody className="pt-2.5">
+        <div className="divide-y divide-line-2 pb-2.5">
+          {TAX_SWITCH_KEYS.map((key) => (
+            <SettingRow key={key} labelId={`tax-switch-${key}`} label={t(key)}>
+              <RadioGroup aria-labelledby={`tax-switch-${key}`} value={values[key] ? 'yes' : 'no'} disabled={pending} onValueChange={(v) => setValues((prev) => ({ ...prev, [key]: v === 'yes' }))} className="flex-row gap-4">
+                {(['yes', 'no'] as const).map((option) => (
+                  <label key={option} className="flex items-center gap-2 text-body text-ink">
+                    <RadioGroupItem value={option} />
+                    {t(`boardRemuneration.${option}`)}
+                  </label>
+                ))}
+              </RadioGroup>
+            </SettingRow>
+          ))}
+        </div>
+        <AgentSwitchSection name={AGENT_KEY} label={t('mcpHumanOnlyAllowed')} hint={t('mcpHumanOnlyAllowedHint')} checked={switches.mcpHumanOnlyAllowed} disabled={pending} />
       </FormCardBody>
       <FormActionBar
-        count={changedKeys.length}
+        count={entries.length}
         pending={pending}
         saveTestId="tax-switches-save"
         state={feedback.state}
         onDiscard={() => {
           setValues(initial);
+          setAgent(switches.mcpHumanOnlyAllowed);
+          form.current?.reset();
           feedback.reset();
         }}
         onSave={() => void save()}
@@ -321,7 +344,8 @@ function BoardRemunerationForm({ allowed, basisText, validFrom, decidedOn }: Boa
 
 /**
  * H7 — Steuerliches. Runde 3, 172 (Joe 2026-10-17): je Abschnitt eine Speicherleiste mit einem Dienst — Schalter,
- * Anspruchsgrundlage, Pauschalen, Grenzen. Nur „Darf ein Agent festschreiben?“ bleibt ein Schalter, der sofort gilt.
+ * Anspruchsgrundlage, Pauschalen, Grenzen. Der Agentenschalter steht seit Plan U4 Task 1 als letzter Abschnitt in der
+ * Karte der Schalter und gilt wie sie erst mit „Speichern“.
  */
 export function TaxPanel({
   switches,
@@ -343,15 +367,7 @@ export function TaxPanel({
   const fmt = useDateFormat();
   const router = useRouter();
   const [pending, setPending] = useState(false);
-  const agentFb = useActionFeedback();
   const defaultsFb = useActionFeedback();
-
-  const toggleAgent = async (value: boolean) => {
-    setPending(true);
-    const result = await agentFb.run(() => setFinanceSwitchAction('finance.mcpHumanOnlyAllowed', value));
-    setPending(false);
-    if (result.status === 'success') router.refresh();
-  };
 
   // Runde 3, 172: derselbe Dienst wie „Vorgaben übernehmen“ in der Checkliste.
   const applyDefaults = async () => {
@@ -362,7 +378,7 @@ export function TaxPanel({
   };
 
   // Die Formulare tragen den gespeicherten Stand im `key`: Nach dem Speichern und `router.refresh()` beginnen sie neu.
-  const switchesKey = TAX_SWITCH_KEYS.map((k) => String(switches[k])).join('-');
+  const switchesKey = [...TAX_SWITCH_KEYS, 'mcpHumanOnlyAllowed' as const].map((k) => String(switches[k])).join('-');
   const limitsKey = Object.values(limits).join('-');
 
   return (
@@ -390,21 +406,6 @@ export function TaxPanel({
         </Section>
         <Section title={t('sections.limits')}>
           <LimitsForm key={limitsKey} limits={limits} />
-        </Section>
-        {/* Runde 3, 172: ohne eigene Fläche und Linie — ein Abschnitt wie die anderen; der Schalter speichert sofort. */}
-        <Section title={t('sections.agent')}>
-          <FormGrid>
-            <FormCell size="full" className="space-y-3">
-              <RefusalNotice action state={agentFb.state} />
-              <div className="rounded-md border border-line bg-surface px-3.5" data-testid="mcp-human-only-row">
-                <div className="flex items-center justify-between gap-3 py-2.5">
-                  <Label htmlFor="tax-mcp-human-only" className="cursor-pointer text-body font-normal text-ink">{t('mcpHumanOnlyAllowed')}</Label>
-                  <Switch id="tax-mcp-human-only" checked={switches.mcpHumanOnlyAllowed} disabled={pending} onCheckedChange={(v) => void toggleAgent(v)} />
-                </div>
-                <p className="pb-2.5 text-hint text-muted-ink">{t('mcpHumanOnlyAllowedHint')}</p>
-              </div>
-            </FormCell>
-          </FormGrid>
         </Section>
       </div>
     </section>

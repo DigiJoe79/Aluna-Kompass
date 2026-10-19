@@ -23,7 +23,7 @@ const VOUCHER_TYPES = [
 
 /** Rollenvorschläge (Spec 10.1). Namen sind Nutzdaten des Vereins und umbenennbar; wiedergefunden wird über `originKey`. */
 const ROLES = [
-  { originKey: 'finance:treasurer', name: 'Schatzmeister', description: 'Führt die Finanzen: bucht, schreibt fest, schließt das Jahr ab, stellt Bestätigungen aus.', permissions: [...F('read', 'overview', 'entriesWrite', 'entriesFinalize', 'periodClose', 'setup', 'expensesSubmit', 'approve', 'donationsIssue', 'reportsFinalize'), 'dms.view', 'dms.create', 'documents.export', 'contacts.view', 'contacts.manage', 'projects.view', 'followUps.view', 'followUps.manage'] },
+  { originKey: 'finance:treasurer', name: 'Schatzmeister', description: 'Führt die Finanzen: bucht, schreibt fest, schließt das Jahr ab, stellt Bestätigungen aus.', permissions: [...F('read', 'overview', 'entriesWrite', 'entriesFinalize', 'periodClose', 'setup', 'expensesSubmit', 'approve', 'donationsIssue', 'reportsFinalize', 'directDebit'), 'dms.view', 'dms.create', 'documents.export', 'contacts.view', 'contacts.manage', 'projects.view', 'followUps.view', 'followUps.manage'] },
   { originKey: 'finance:approver', name: 'Freigeber Finanzen', description: 'Gibt Auslagen, Zahlungen an Partner und Umwidmungen frei – nie die eigenen.', permissions: [...F('overview', 'read', 'approve', 'expensesSubmit'), 'contacts.view', 'projects.view'] },
   { originKey: 'finance:clerk', name: 'Auslagen einreichen', description: 'Reicht eigene Auslagen ein und sieht nur diese.', permissions: F('expensesSubmit') },
   { originKey: 'finance:auditor', name: 'Kassenprüfer', description: 'Liest alles, ändert nichts, zieht das Prüfpaket.', permissions: [...F('read', 'overview'), 'documents.export'] },
@@ -80,6 +80,17 @@ export function installFinance(tx: DbOrTx, deps: Deps, ctx: CallContext): void {
 
   // F7 — modul-eigen: die Nachweise einer Zahlung an einen Partner (Annahme 9), im eigenen Namen des Vorgangs abgelegt.
   ensureDocumentType(tx, deps, ctx, { module: 'finance', key: 'finance-partner-evidence', label: 'Nachweis Zahlung an Partner', prefix: 'PNW', defaultDirection: 'incoming', retentionClass: 'statutory10Y', owned: true, protectionArea: 'finance' });
+
+  // L1 — modul-eigen: das Mandatsformular, das Finanzen ausstellt. Zehn Jahre: Das Mandat ist Beleg aller Einzüge, die
+  // auf ihm beruhen (Claude, Plan L1 Task 4).
+  ensureDocumentType(tx, deps, ctx, { module: 'finance', key: 'sepa-mandate', label: 'SEPA-Lastschriftmandat', prefix: 'SLM', defaultDirection: 'outgoing', retentionClass: 'statutory10Y', owned: true, protectionArea: 'finance' });
+  // L1 — modul-eigen: die unterschriebene Rücksendung, abgelegt im Namen des Mandats (wie ZWU und VZU).
+  ensureDocumentType(tx, deps, ctx, { module: 'finance', key: 'sepa-mandate-signed', label: 'SEPA-Lastschriftmandat, unterschrieben', prefix: 'SLU', defaultDirection: 'incoming', retentionClass: 'statutory10Y', owned: true, protectionArea: 'finance' });
+  // L1 — als Vorschlag (nicht modul-eigen): Die Lastschriftankündigung entsteht als Entwurf der Akte, und Entwürfe gibt
+  // es nur für Arten, die keinem Modul gehören. Ihre Vorlage bringt Finanzen mit (gleicher Schlüssel).
+  // L2 — modul-eigen: der Begleitzettel eines Einzugs, Beleg der Sammelbuchung (zehn Jahre wie die Buchung).
+  ensureDocumentType(tx, deps, ctx, { module: 'finance', key: 'sepa-run-summary', label: 'Lastschrift-Sammelauftrag', prefix: 'LSS', defaultDirection: 'outgoing', retentionClass: 'statutory10Y', owned: true, protectionArea: 'finance' });
+  ensureDocumentType(tx, deps, ctx, { module: 'finance', key: 'sepa-prenotification', label: 'Lastschriftankündigung', prefix: 'LSA', defaultDirection: 'outgoing', retentionClass: 'statutory6Y', owned: false, protectionArea: 'finance' });
 
   // F8b — als Vorschlag (nicht modul-eigen): der Beschluss für zurückgelegtes Geld und für eine Umwidmung ist das
   // Protokoll des Vorstands. Kein Schutzbereich (Joe 2026-09-26): jede Person mit dms.view liest ein Protokoll.

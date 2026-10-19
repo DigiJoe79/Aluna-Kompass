@@ -29,6 +29,10 @@ export interface CamtLine {
   counterpartyEmail?: string | null;
   /** RtrInf/Rsn/Cd — „zurückgegebene Zahlung“. */
   returnCode: string | null;
+  /** Plan L3: `TxDtls/Refs/MndtId` — die Mandatsreferenz einer Lastschrift (auch ihrer Rückgabe). Nur aus CAMT; ältere zurückgehaltene Kandidaten tragen sie nicht. */
+  mandateReference?: string | null;
+  /** Plan L3: die Gläubiger-ID (`RltdPties/Cdtr/…/PrvtId/Othr/Id` mit `SchmeNm/Prtry` `SEPA`). Nur aus CAMT. */
+  creditorId?: string | null;
   /** Sts ≠ BOOK. */
   pending: boolean;
 }
@@ -109,6 +113,8 @@ interface RawTx {
   counterpartyIban: string | null;
   purpose: string;
   returnCode: string | null;
+  mandateReference: string | null;
+  creditorId: string | null;
 }
 
 /** Ein Textwert für Menschen oder Abgleich: vordefinierte Entitäten aufgelöst (der Parser läuft ohne, `./xml.ts`). */
@@ -118,9 +124,26 @@ function decoded(value: string | null): string | null {
 
 type PartySide = 'Dbtr' | 'Cdtr';
 
+/** Die Partei einer Seite: in 001.08 hinter `Pty` (Party40Choice), in 001.02 direkt. */
+function partyOf(rltdPties: Record<string, unknown>, side: PartySide): Record<string, unknown> | undefined {
+  const party = rltdPties[side] as Record<string, unknown> | undefined;
+  return party && typeof party.Pty === 'object' && party.Pty !== null ? (party.Pty as Record<string, unknown>) : party;
+}
+
+/** Die Gläubiger-ID einer Lastschrift: die private Kennung des Gläubigers mit dem Schema `SEPA`. */
+function creditorIdOf(rltdPties: Record<string, unknown>): string | null {
+  const othr = ((partyOf(rltdPties, 'Cdtr')?.Id as Record<string, unknown> | undefined)?.PrvtId as Record<string, unknown> | undefined)?.Othr;
+  for (const o of (Array.isArray(othr) ? othr : othr ? [othr] : []) as Record<string, unknown>[]) {
+    const scheme = textOf((o.SchmeNm as Record<string, unknown> | undefined)?.Prtry);
+    const id = textOf(o.Id);
+    if (id && (scheme === null || scheme.toUpperCase() === 'SEPA')) return decodeXmlEntities(id.trim());
+  }
+  return null;
+}
+
 /** Name und IBAN einer Seite der `RltdPties` — `null`, wo nichts steht. */
 function sideOf(rltdPties: Record<string, unknown>, side: PartySide): { name: string | null; iban: string | null } {
-  const party = rltdPties[side] as Record<string, unknown> | undefined;
+  const party = partyOf(rltdPties, side);
   const acct = rltdPties[`${side}Acct`] as Record<string, unknown> | undefined;
   return {
     name: party && typeof party.Nm === 'string' ? decodeXmlEntities(party.Nm) : null,
@@ -162,6 +185,8 @@ function readTxDtls(node: Record<string, unknown>, direction: 'CRDT' | 'DBIT', o
     counterpartyIban: party.iban,
     purpose: joinUstrd((node.RmtInf as Record<string, unknown> | undefined)?.Ustrd),
     returnCode: rtrInf ? textOf((rtrInf.Rsn as Record<string, unknown> | undefined)?.Cd) : null,
+    mandateReference: typeof refs.MndtId === 'string' && refs.MndtId.trim() !== '' && refs.MndtId.trim() !== 'NOTPROVIDED' ? decodeXmlEntities(refs.MndtId.trim()) : null,
+    creditorId: creditorIdOf(rltdPties),
   };
 }
 
@@ -268,7 +293,8 @@ export function parseCamt053(bytes: Uint8Array, opts: { maxBytes: number }): Par
       if (entryAmount === null) return fail('lineUnreadable', { line: lineIndex });
 
       const txDtlsList = ((ntry.NtryDtls as Record<string, unknown> | undefined)?.TxDtls ?? []) as Record<string, unknown>[];
-      const txs = txDtlsList.length > 0 ? txDtlsList.map((t) => readTxDtls(t, direction, iban)) : [readTxDtls({}, direction, iban)];
+      // M19: Ohne Einzelzeilen (Sammelgutschrift) ist die Zusatzinfo der Buchung (`AddtlNtryInf`) der Zweck.
+      const txs = txDtlsList.length > 0 ? txDtlsList.map((t) => readTxDtls(t, direction, iban)) : [{ ...readTxDtls({}, direction, iban), purpose: joinUstrd(ntry.AddtlNtryInf) }];
 
       const resolvedTxs = txs.map((tx) => {
         const amountText = tx.amountText ?? (txs.length === 1 ? textOf(ntry.Amt) ?? undefined : undefined);
@@ -295,6 +321,8 @@ export function parseCamt053(bytes: Uint8Array, opts: { maxBytes: number }): Par
           bankReference: tx.bankReference ?? entryAcctSvcrRef,
           endToEndId: tx.endToEndId,
           returnCode: tx.returnCode ?? entryReturnCode,
+          mandateReference: tx.mandateReference,
+          creditorId: tx.creditorId,
           pending,
         };
         lines.push(line);

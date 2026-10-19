@@ -206,5 +206,20 @@ async function seedExampleContacts(deps: Deps, ctx: CallContext): Promise<void> 
       }
     }
     unwrap(await setContactChannels(deps, ctx, { id: created.id, channels: [c.channel] }));
+  }  await seedPeopleAndDelivery(deps, ctx);
+}
+
+/**
+ * Ansprechpersonen und Zustellweg (Nachtrag Ansprechpersonen, Handoff 2b E1): Ole Petersen sitzt beim Landesverband,
+ * ohne eigene Anschrift und E-Mail — Briefe nehmen dessen Anschrift, Mails dessen Adresse. Greta Hoff hat eine
+ * E-Mail-Adresse und will Briefe trotzdem per Post.
+ */
+async function seedPeopleAndDelivery(deps: Deps, ctx: CallContext): Promise<void> {
+  const verband = deps.db.select({ id: contacts.id }).from(contacts).where(eq(contacts.name, 'Landesverband Musterland e.V.')).get();
+  if (verband) {
+    const ole = unwrap(await createContact(deps, ctx, { kind: 'person', salutation: 'Herr', firstName: 'Ole', lastName: 'Petersen', belongsToId: verband.id }));
+    unwrap(await setContactChannels(deps, ctx, { id: ole.id, channels: [{ kind: 'phone', value: '+49 5432 1010-12', isPrimary: true }] }));
   }
+  const greta = unwrap(await createContact(deps, ctx, { kind: 'person', salutation: 'Frau', firstName: 'Greta', lastName: 'Hoff', street: 'Am Teich 6', postalCode: '12345', city: 'Musterstadt', deliveryPreference: 'post' }));
+  unwrap(await setContactChannels(deps, ctx, { id: greta.id, channels: [{ kind: 'email', value: 'greta.hoff@example.org', isPrimary: true }] }));
 }

@@ -6,7 +6,7 @@ import { Download } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useId, useState } from 'react';
+import { useId, useState, type ReactNode } from 'react';
 import { toast } from 'sonner';
 import { FormActionBar } from '@/components/forms/form-action-bar';
 import { useActionFeedback } from '@/components/forms/use-action-feedback';
@@ -35,7 +35,7 @@ type SentVia = 'post' | 'email' | 'handed';
  * Liste der Bestätigungen, nicht ausgestellte und übersprungene Spender mit
  * Grund und der Nachzügler-Lauf mit dem Satz, wer noch fehlt.
  */
-export function RunResult({ run, canIssue, today, missing, followUpHref }: { run: RunView; canIssue: boolean; today: string; missing: { count: number; names: string[] }; followUpHref: string }) {
+export function RunResult({ run, canIssue, today, missing, followUpHref, dispatch }: { run: RunView; canIssue: boolean; today: string; missing: { count: number; names: string[] }; followUpHref: string; /** Der Versand-Schritt (Handoff 2b E3): Gruppen E-Mail und Post. */ dispatch?: ReactNode }) {
   const t = useTranslations('finance.donations.run');
   const tv = useTranslations('finance.donations.sentVia');
   const { date } = useDateFormat();
@@ -137,7 +137,8 @@ export function RunResult({ run, canIssue, today, missing, followUpHref }: { run
         {run.dispatchedAt && run.dispatchedVia ? (
           <p data-testid="run-dispatched" className="text-ink">{t('result.dispatched', { date: date(run.dispatchedAt), via: tv(run.dispatchedVia) })}</p>
         ) : canIssue && run.counts.machine > 0 ? (
-          <Button type="button" onClick={() => setDispatching(true)}>{t('result.dispatchAll')}</Button>
+          // `outline`: Der Hauptschritt des Ergebnisses ist „{n} per E-Mail senden“ im Versand darunter (Handoff 2b E3).
+          <Button type="button" variant="outline" onClick={() => setDispatching(true)}>{t('result.dispatchAll')}</Button>
         ) : null}
         {run.counts.missingSignedVersion > 0 ? (
           // Fehlende unterschriebene Fassungen sind Arbeit: ocker, als Link zum Reiter (Runde 3, 210).
@@ -146,6 +147,8 @@ export function RunResult({ run, canIssue, today, missing, followUpHref }: { run
           </Link>
         ) : null}
       </div>
+
+      {dispatch}
 
       {failed.length > 0 ? <ItemList testId="run-failed" title={t('result.failed')} items={failed} reason={(i) => errorText(i.errorCode)} /> : null}
       {skipped.length > 0 ? <ItemList testId="run-skipped" title={t('result.skipped')} items={skipped} reason={(i) => errorText(i.errorCode)} /> : null}

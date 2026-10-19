@@ -68,6 +68,8 @@ const PACKAGES_ALLOWED: CountedAllowlist = {
   'modules/finance/src/allocation/partner-proof.ts': { count: 1, reason: 'Rechnen: ISO-Tag zum Zeitpunkt.' },
   'modules/finance/src/allocation/templates/shared.ts': { count: 1, reason: 'Wortlaut der Verzichtserklärung; das Datum kommt schon als `paperDate`.' },
   'modules/finance/src/dashboard.ts': { count: 1, reason: 'Rechnen: Tage zwischen zwei ISO-Tagen.' },
+  'modules/finance/src/direct-debit/runs.ts': { count: 1, reason: 'Dateiname der Bankdatei beim Herunterladen, ISO sortiert richtig.' },
+  'modules/finance/src/direct-debit/seed.ts': { count: 1, reason: 'Dateiname des erfundenen Kontoauszugs (Plan L3), ISO sortiert richtig.' },
   'modules/finance/src/donations/templates/shared.ts': { count: 1, reason: '`placeDate` ist schon „Ort, paperDate“.' },
   'modules/finance/src/donations/templates/wording.ts': { count: 4, reason: 'Amtlicher Wortlaut; die Daten kommen schon als `paperDate`.' },
   'modules/finance/src/import/accounts.ts': { count: 1, reason: 'Rechnen: Tage zwischen zwei ISO-Tagen.' },

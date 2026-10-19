@@ -8,7 +8,7 @@ import { createAccount } from '../src/ledger/accounts';
 import { setCategoryActive } from '../src/ledger/categories';
 import { getEntry, saveDraft } from '../src/ledger/entries';
 import { bookEntry } from '../src/ledger/finalize';
-import { financeEntries, financeMoneyLines } from '../src/schema';
+import { financeEntries, financeMoneyLines, financeSepaMandates } from '../src/schema';
 import { allowHumanOnlyOverMcp, insertRaw, insertRun, ledgerFixture } from './helpers';
 
 type Fixture = Awaited<ReturnType<typeof ledgerFixture>>;
@@ -80,6 +80,36 @@ describe('bookFromTransaction', () => {
     const noIban = await openRaw(f, { amountCents: 1000, iban: null });
     unwrap(await bookFromTransaction(f.deps, f.ctx, { rawTransactionId: noIban, text: 'Spende', allocationLines: [{ categoryId: f.donations.id, amountCents: 1000, contactId: f.rightDonor.id }], reviewed: false }));
     expect(unwrap(await listContactIbans(f.deps, f.ctx, { contactId: f.rightDonor.id })).items).toEqual([]);
+  });
+
+  it('never learns the iban of a mandate for a contact other than its holder (U1)', async () => {
+    const f = await ledgerFixture();
+    // Der Kontoinhaber (Mandat) ist ein anderer Kontakt als das Mitglied, dessen Beitrag eingezogen wird.
+    const holder = f.wrongDonor;
+    const member = f.rightDonor;
+    f.deps.db.insert(financeSepaMandates).values({ id: 'm1', contactId: holder.id, reference: 'MND-000003', debtorName: 'Kontoinhaber', iban: IBAN, preparedOn: '2026-01-01', signedOn: '2026-01-02', createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' }).run();
+    const ibansOf = async (contactId: string) => unwrap(await listContactIbans(f.deps, f.ctx, { contactId })).items.map((i) => i.iban);
+
+    // (a) Rückgabe ohne Mandatsreferenz vom Konto des Mandats: nichts für das Mitglied.
+    const back = insertRaw(f, insertRun(f, f.bank.id), { accountId: f.bank.id, amountCents: -1200, iban: IBAN, returnCode: 'MD06' });
+    unwrap(await bookFromTransaction(f.deps, f.ctx, { rawTransactionId: back, text: 'Rückgabe', allocationLines: [{ categoryId: f.donations.id, amountCents: -1200, contactId: member.id }], reviewed: false }));
+    expect(await ibansOf(member.id)).toEqual([]);
+
+    // (b) Einzugszeile mit Mandatsreferenz: ebenso nicht; der Inhaber selbst darf sie lernen.
+    const credit = insertRaw(f, insertRun(f, f.bank.id), { accountId: f.bank.id, amountCents: 1200, iban: IBAN, mandateReference: 'MND-000003' });
+    unwrap(await bookFromTransaction(f.deps, f.ctx, { rawTransactionId: credit, text: 'Einzug', allocationLines: [{ categoryId: f.donations.id, amountCents: 600, contactId: member.id }, { categoryId: f.donations.id, amountCents: 600, contactId: holder.id }], reviewed: false }));
+    expect(await ibansOf(member.id)).toEqual([]);
+    expect(await ibansOf(holder.id)).toEqual([IBAN]);
+
+    // (c) Eine gewöhnliche Überweisung vom selben Konto lernt weiter — ein echtes Gemeinschaftskonto bleibt möglich.
+    const transfer = insertRaw(f, insertRun(f, f.bank.id), { accountId: f.bank.id, amountCents: 1200, iban: IBAN });
+    unwrap(await bookFromTransaction(f.deps, f.ctx, { rawTransactionId: transfer, text: 'Beitrag', allocationLines: [{ categoryId: f.donations.id, amountCents: 1200, contactId: member.id }], reviewed: false }));
+    expect(await ibansOf(member.id)).toEqual([IBAN]);
+
+    // Eine fremde Mandatsreferenz (Lastschrift eines Lieferanten) lernt wie bisher.
+    const vendor = insertRaw(f, insertRun(f, f.bank.id), { accountId: f.bank.id, amountCents: -900, iban: 'DE44999999990532013000', mandateReference: 'FREMD-1' });
+    unwrap(await bookFromTransaction(f.deps, f.ctx, { rawTransactionId: vendor, text: 'Telefon', allocationLines: [{ categoryId: f.fees.id, amountCents: -900, contactId: f.donor.id }], reviewed: false }));
+    expect(await ibansOf(f.donor.id)).toEqual(['DE44999999990532013000']);
   });
 
   it('books a transfer with the paired transaction as second money line', async () => {

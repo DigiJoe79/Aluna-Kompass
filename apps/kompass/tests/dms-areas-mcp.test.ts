@@ -10,6 +10,9 @@ const READS: Record<string, (ids: { secretId: string }) => unknown> = {
   dms_folders: () => ({}),
   dms_count_type: () => ({ key: 'secret' }),
   dms_preview_reclassification: ({ secretId }) => ({ id: secretId, typeKey: 'letter', documentDate: '2026-09-01' }),
+  dms_send_preview: ({ secretId }) => ({ documentIds: [secretId] }),
+  dms_outbox_list: () => ({}),
+  dms_mail_draft: ({ secretId }) => ({ documentId: secretId }),
 };
 
 describe('MCP and protected document types', () => {
@@ -24,7 +27,7 @@ describe('MCP and protected document types', () => {
   });
 
   it('the list above names every reading tool of the file module', () => {
-    const writing = /_(create|update|delete|file|receive|reclassify|link|unlink|relate|unrelate|move|void|dispatch|add|reindex)/;
+    const writing = /_(create|update|delete|file|receive|reclassify|link|unlink|relate|unrelate|move|void|dispatch|add|reindex|send$|send_retry|send_to_post)/;
     const reading = DMS_MCP_TOOLS.map((t) => t.name).filter((n) => !writing.test(n) && !['dms_types', 'dms_rules', 'dms_snippets', 'dms_suggest_classification', 'dms_areas'].includes(n));
     expect(reading.sort()).toEqual(Object.keys(READS).sort());
   });

@@ -507,6 +507,21 @@ export async function recordConfirmationDispatch(deps: Deps, ctx: CallContext, i
  * nur, wenn noch keiner steht; `false`, wenn ein anderer schneller war. Auch
  * für den Versandvermerk für alle des Serienlaufs.
  */
+/**
+ * Haken `documentDispatched`: Bekommt das Dokument einer Bestätigung in der
+ * Akte einen Versandvermerk — von Hand oder durch den Mailversand —, gilt die
+ * Bestätigung als versandt, sofern sie es nicht schon ist (dann bleibt der
+ * erste Vermerk). Der Serienlauf-Vermerk der Finanzen läuft nicht über die
+ * Akte; doppelt gesetzt wird nichts, weil `recordDispatchInternal` nur leere
+ * Vermerke füllt.
+ */
+export function financeDocumentDispatched(tx: DbOrTx, deps: Deps, ctx: CallContext, input: { documentId: string; sentAt: string; channel: string }): void {
+  const row = tx.select().from(financeConfirmations).where(and(eq(financeConfirmations.documentId, input.documentId), isNull(financeConfirmations.sentAt), isNull(financeConfirmations.voidedAt))).get();
+  if (!row) return;
+  const sentVia = input.channel === 'email' ? 'email' : input.channel === 'inPerson' ? 'handed' : 'post';
+  recordDispatchInternal(tx, deps, ctx, row, input.sentAt, sentVia);
+}
+
 export function recordDispatchInternal(tx: DbOrTx, deps: Deps, ctx: CallContext, row: Pick<FinanceConfirmationRow, 'id' | 'documentNumber'>, sentAt: string, sentVia: 'post' | 'email' | 'handed'): boolean {
   const changed = tx.update(financeConfirmations).set({ sentAt, sentVia }).where(and(eq(financeConfirmations.id, row.id), isNull(financeConfirmations.sentAt), isNull(financeConfirmations.voidedAt))).run().changes;
   if (changed !== 1) return false;

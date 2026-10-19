@@ -81,7 +81,7 @@ describe('write services and protected document types', () => {
   });
 
   it('the list above is complete: every exported service is a read, a write, or exempt with a reason', () => {
-    const READS = ['listDocuments', 'getDocumentRecord', 'getDocument', 'getDocumentText', 'getDocumentTextStatus', 'countUnreadDocuments', 'previewDraft', 'previewNextNumber', 'previewReclassification', 'listDocumentTypes', 'listDocumentFolders', 'listDocumentRules', 'listSnippets', 'suggestClassification', 'readLinkedDocument', 'listDocumentAreas', 'countDocumentsOfType', 'exportBundle', 'resolveBundle'];
+    const READS = ['listDocuments', 'getDocumentRecord', 'getDocument', 'getDocumentText', 'getDocumentTextStatus', 'countUnreadDocuments', 'previewDraft', 'previewNextNumber', 'previewReclassification', 'listDocumentTypes', 'listDocumentFolders', 'listDocumentRules', 'listSnippets', 'suggestClassification', 'readLinkedDocument', 'listDocumentAreas', 'countDocumentsOfType', 'exportBundle', 'resolveBundle', 'previewSend', 'listOutbox', 'documentMailDraft'];
     const EXEMPT: Record<string, string> = {
       createDraft: 'legt an; verlangt bei geschützter Art das Bereichsrecht (Task 4)',
       receiveDocument: 'legt an; Ablegen in eine geschützte Art ist erlaubt (Task 4)',
@@ -96,6 +96,12 @@ describe('write services and protected document types', () => {
       createDocumentType: 'Katalog', updateDocumentType: 'Katalog, V14 in Task 5', createDocumentFolder: 'Katalog', deleteDocumentFolder: 'Katalog, achtet geschützte Dokumente (VP3a)',
       moveDocumentFolder: 'Katalog, schreibt nur den Pfad um; geschützte Dokumente ziehen mit (Spec 6.3), das Protokoll zählt nur',
       deleteDocumentType: 'Katalog, verlangt schon keine Dokumente — geschützt oder nicht (Task 4)',
+      sendDocuments: 'Versand: verlangt dms.send, prüft das Bereichsrecht je Dokument (planDocuments)',
+      resendDocumentEmail: 'Versand: verlangt dms.send, prüft das Bereichsrecht des Dokuments der Sendung',
+      retryFailedEmails: 'Versand: verlangt dms.send, prüft das Bereichsrecht des Dokuments jeder Sendung',
+      switchToPost: 'Versand: verlangt dms.send, prüft das Bereichsrecht des Dokuments jeder Sendung',
+      sendTestMail: 'Versand: berührt kein Dokument',
+      saveMailSettings: 'Einstellungen: berührt kein Dokument',
       createDocumentRule: 'Katalog', updateDocumentRule: 'Katalog', deleteDocumentRule: 'Katalog', createSnippet: 'Katalog', updateSnippet: 'Katalog', deleteSnippet: 'Katalog',
     };
     const services = Object.entries(dms).filter(([, v]) => typeof v === 'function' && /^(async\s+)?function\s*\w*\s*\(\s*deps\s*,\s*ctx\b/.test(String(v))).map(([name]) => name);

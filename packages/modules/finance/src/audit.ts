@@ -1,6 +1,6 @@
 import { recordAudit, type AuditParam, type CallContext, type DbOrTx, type Deps } from '@kompass/core';
 
-export type FinanceEntity = 'financeAccount' | 'financeCategory' | 'financePurpose' | 'financeFiscalYear' | 'financePeriodEvent' | 'financeDatedValue' | 'financeEntry' | 'financeEntryDocument' | 'financeOpenItem' | 'financeAllocationCorrection' | 'financeEntryJustification' | 'financeNotReturnMark' | 'financeProjectSettings' | 'financeCashCount' | 'financeSetup' | 'financeImportRun' | 'financeRawTransaction' | 'financeImportCandidate' | 'financeImportProfile' | 'financeImportRule' | 'financeContactBankAccount' | 'financeNotice' | 'financeConfirmation' | 'financeSigner' | 'financeInKindDetails' | 'financeConfirmationRun' | 'financeConfirmationRunItem' | 'financeExpenseClaim' | 'financeExpensePosition' | 'financeContactWaiverTerms' | 'financePartnerProfile' | 'financePartnerNotice' | 'financePartnerPayment' | 'financePartnerPaymentPosition' | 'financePartnerPaidLine' | 'financePartnerEvidence' | 'financeReserve' | 'financeReserveMovement' | 'financePurposeTransfer';
+export type FinanceEntity = 'financeAccount' | 'financeCategory' | 'financePurpose' | 'financeFiscalYear' | 'financePeriodEvent' | 'financeDatedValue' | 'financeEntry' | 'financeEntryDocument' | 'financeOpenItem' | 'financeAllocationCorrection' | 'financeEntryJustification' | 'financeNotReturnMark' | 'financeProjectSettings' | 'financeCashCount' | 'financeSetup' | 'financeImportRun' | 'financeRawTransaction' | 'financeImportCandidate' | 'financeImportProfile' | 'financeImportRule' | 'financeContactBankAccount' | 'financeNotice' | 'financeConfirmation' | 'financeSigner' | 'financeInKindDetails' | 'financeConfirmationRun' | 'financeConfirmationRunItem' | 'financeExpenseClaim' | 'financeExpensePosition' | 'financeContactWaiverTerms' | 'financePartnerProfile' | 'financePartnerNotice' | 'financePartnerPayment' | 'financePartnerPaymentPosition' | 'financePartnerPaidLine' | 'financePartnerEvidence' | 'financeReserve' | 'financeReserveMovement' | 'financePurposeTransfer' | 'financeMandate' | 'financePledge' | 'financePrenotification' | 'financeDirectDebitRun' | 'financeDirectDebitReturn';
 
 /**
  * Was vom Finanzmodul ins Änderungsprotokoll darf — je Entität eine Liste, und
@@ -26,7 +26,7 @@ export const AUDIT_FIELDS: Record<FinanceEntity, readonly string[]> = {
   financeDatedValue: ['key', 'validFrom', 'value'],
   // Nie Text, nie Kontakt-ID (Spec 10.3): `channel`, `reviewed` und `cashWarning`
   // sind bewusst so benannt, dass der Verbotstest oben sie nicht trifft.
-  financeEntry: ['status', 'number', 'entryDate', 'fiscalYearId', 'moneyLineCount', 'allocationLineCount', 'totalCents', 'reviewed', 'reversesEntryId', 'reversedByEntryId', 'correctionOfEntryId', 'channel', 'cashWarning', 'entryId', 'linkCount'],
+  financeEntry: ['status', 'number', 'entryDate', 'fiscalYearId', 'moneyLineCount', 'allocationLineCount', 'totalCents', 'reviewed', 'reversesEntryId', 'reversedByEntryId', 'correctionOfEntryId', 'channel', 'cashWarning', 'entryId', 'linkCount', 'acknowledgedWarnings'],
   // Nur IDs und Zählwerte (Spec 10.3): nie ein Dokumenttitel, nie eine Begründung.
   financeEntryDocument: ['entryId', 'documentId', 'viaUpload', 'withReplacement'],
   // Nie die Zahlungsreferenz, nie die Notiz, nie der Kontakt (Spec 10.3).
@@ -54,7 +54,7 @@ export const AUDIT_FIELDS: Record<FinanceEntity, readonly string[]> = {
   // Die Flags heißen `hasBankDetailsCondition`/`hasWordCondition`/`partySet` statt
   // `hasIbanCondition`/`hasTextCondition`/`contactSet`: Der Verbotstest greift auf „iban“, „text“ und „contact“ als Teilstring.
   financeImportRule: ['accountId', 'direction', 'categoryId', 'projectId', 'purposeId', 'taxCode', 'isActive', 'sortOrder', 'hasBankDetailsCondition', 'hasWordCondition', 'hasAmountCondition', 'partySet'],
-  // Nur woher die Zuordnung stammt: 'booking' | 'contactCreate' | 'manual'.
+  // Nur woher die Zuordnung stammt: 'booking' | 'contactCreate' | 'manual' | 'mandate'.
   financeContactBankAccount: ['learnedFrom'],
   // F6a — nie Finanzamt, Steuernummer, Zwecke im Wortlaut, Begründung (Spec 10.3): nur Art, Daten und Dokument-IDs.
   financeNotice: ['kind', 'noticeDate', 'exemptFrom', 'assessmentPeriod', 'documentId', 'supersededOn', 'supersededDocumentId', 'voided'],
@@ -88,6 +88,15 @@ export const AUDIT_FIELDS: Record<FinanceEntity, readonly string[]> = {
   financeReserveMovement: ['reserveId', 'kind', 'movementDate', 'amountCents', 'forFiscalYearId'],
   // Nie Begründung oder Ablehnungsgrund (Spec 10.3).
   financePurposeTransfer: ['state', 'number', 'fromPurposeId', 'toPurposeId', 'amountCents', 'transferDate', 'approvedAt', 'rejected', 'channel'],
+  // L1 — das Mandat nennt seine Referenz, nie Kontoinhaber, IBAN oder BIC. `endCause` und `changedField` sind Codes.
+  financeMandate: ['reference', 'sequence', 'preparedOn', 'signedOn', 'signedDocumentId', 'endedOn', 'endCause', 'changedField', 'validFrom'],
+  // L1 — die Zusage ohne Spender und ohne Notiz.
+  financePledge: ['amountCents', 'interval', 'firstDueOn', 'lastDueOn', 'paymentMethod', 'mandateId', 'purposeId', 'projectId', 'pausedFrom', 'pausedUntil', 'endedOn', 'created'],
+  // L2 — Ankündigung und Einzug ohne Zahler, IBAN oder Verwendungszweck: Tage, Zahlen, Zustände.
+  financePrenotification: ['mandateId', 'documentId', 'count'],
+  financeDirectDebitRun: ['collectionDate', 'accountId', 'status', 'count', 'sumCents', 'itemId', 'submittedOn', 'summaryDocumentId'],
+  // L3 — der Fall einer Rücklastschrift: Zustand und Weg, nie Zahler, IBAN oder Betrag.
+  financeDirectDebitReturn: ['status', 'resolution', 'mandateEnded'],
 };
 
 const pick = (entity: FinanceEntity, data?: Record<string, unknown>) => (data ? Object.fromEntries(Object.entries(data).filter(([field]) => AUDIT_FIELDS[entity].includes(field))) : undefined);

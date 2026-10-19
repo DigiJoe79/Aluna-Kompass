@@ -30,6 +30,8 @@ import {
   financeRawTransactions,
   financeReserveMovements,
   financeReserves,
+  financePledges,
+  financeSepaMandates,
   type FinanceEntryRow,
   type FinanceExpenseClaimRow,
   type FinanceFiscalYearRow,
@@ -148,6 +150,44 @@ function partnerPaymentLabel(payment: Pick<FinancePartnerPaymentRow, 'id' | 'num
 }
 
 /** Kontakt: ein Halter je Buchung — nie je Zeile, nie mit Text. */
+/** SEPA-Regelwerk: Mandatsunterlagen 14 Monate nach dem letzten Einzug aufbewahren (L1). */
+const MANDATE_KEEP_MONTHS = 14;
+
+function addMonthsIso(day: string, months: number): string {
+  const [y, m, d] = day.split('-').map(Number) as [number, number, number];
+  const total = y * 12 + (m - 1) + months;
+  const month = (total % 12) + 1;
+  const last = new Date(Date.UTC(Math.floor(total / 12), month, 0)).getUTCDate();
+  return `${Math.floor(total / 12)}-${String(month).padStart(2, '0')}-${String(Math.min(d, last)).padStart(2, '0')}`;
+}
+
+/**
+ * L1: Ein Mandat hält seinen Zahler, solange es nicht beendet ist; danach 14 Monate ab dem letzten Einzug, ohne
+ * Einzug ab dem Ende. Eine Zusage hält ihren Kontakt, solange sie nicht beendet ist (Ende oder letzte Rate).
+ */
+function directDebitContactHolds(deps: Deps, contactId: string): RetentionHold[] {
+  const mandates = deps.db.select().from(financeSepaMandates).where(eq(financeSepaMandates.contactId, contactId)).all();
+  const pledges = deps.db.select().from(financePledges).where(eq(financePledges.contactId, contactId)).all();
+  return [
+    ...mandates.map((m) => ({
+      label: label('finance.records.mandate', { reference: m.reference }),
+      until: m.endedOn ? addMonthsIso(m.lastCollectedOn ?? m.endedOn, MANDATE_KEEP_MONTHS) : null,
+      entity: 'financeMandate',
+      id: m.id,
+    })),
+    ...pledges.map((p) => ({ label: label('finance.records.pledge'), until: p.endedOn ?? p.lastDueOn ?? null, entity: 'financePledge', id: p.id })),
+  ];
+}
+
+/**
+ * M13: Ein offener Posten heißt in der Aufbewahrung nach seiner Zahlungsreferenz — bei einem Beitrag dieselbe, die das
+ * Modul der Herkunft als Beschriftung führt („Beitrag 2026 Mitglied 0006“) —, nicht nach seiner ID.
+ */
+function openItemLabel(item: { id: string; paymentReference: string | null }): LabelRef {
+  const reference = item.paymentReference?.trim();
+  return reference ? label('finance.records.openItemRef', { reference }) : label('finance.records.openItem', { id: item.id });
+}
+
 function contactHolds(deps: Deps, contactId: string): RetentionHold[] {
   const lines = deps.db
     .select({ entryId: financeAllocationLines.entryId })
@@ -164,7 +204,7 @@ function contactHolds(deps: Deps, contactId: string): RetentionHold[] {
 
   const openItems = deps.db.select().from(financeOpenItems).where(eq(financeOpenItems.contactId, contactId)).all();
   for (const item of openItems) {
-    holds.push({ label: label('finance.records.openItem', { id: item.id }), until: openItemHoldUntil(deps, item.itemDate), entity: 'financeOpenItem', id: item.id });
+    holds.push({ label: openItemLabel(item), until: openItemHoldUntil(deps, item.itemDate), entity: 'financeOpenItem', id: item.id });
   }
 
   // Wem der Verein Geld anvertraut, den führt er als Kontakt (Entschieden 1, F3b Task 1) — derselbe Anker wie eine Buchungszeile.
@@ -193,6 +233,7 @@ function contactHolds(deps: Deps, contactId: string): RetentionHold[] {
     const notices = deps.db.select().from(financePartnerNotices).where(eq(financePartnerNotices.partnerId, partner.id)).all();
     for (const notice of notices) holds.push({ label: label('finance.records.partnerNotice', { date: notice.noticeDate }), until: tenYearsFrom(deps, notice.receivedOn), entity: 'financePartnerNotice', id: notice.id });
   }
+  holds.push(...directDebitContactHolds(deps, contactId));
   return holds;
 }
 
@@ -212,7 +253,7 @@ function documentHolds(deps: Deps, documentId: string): RetentionHold[] {
 
   const openItems = deps.db.select().from(financeOpenItems).where(eq(financeOpenItems.documentId, documentId)).all();
   for (const item of openItems) {
-    holds.push({ label: label('finance.records.openItem', { id: item.id }), until: openItemHoldUntil(deps, item.itemDate), entity: 'financeOpenItem', id: item.id });
+    holds.push({ label: openItemLabel(item), until: openItemHoldUntil(deps, item.itemDate), entity: 'financeOpenItem', id: item.id });
   }
 
   const corrections = deps.db.select().from(financeAllocationCorrections).where(eq(financeAllocationCorrections.proofDocumentId, documentId)).all();

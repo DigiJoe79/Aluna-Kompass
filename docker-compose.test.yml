@@ -39,6 +39,14 @@ services:
     ports: ["3001:3000"]
     environment:
       APP_ENV: test
+      # E-Mail-Versand (betrieb.md, „E-Mail-Versand einrichten“). Ohne
+      # KOMPASS_SMTP_HOST ist er aus. In der Testumgebung ist die Umleitung
+      # PFLICHT: Ohne KOMPASS_MAIL_REDIRECT sendet sie nichts, mit ihr geht
+      # jede Mail dorthin, nie an einen Kontakt. Passwort in die .env-Datei.
+      # KOMPASS_SMTP_HOST: smtp.example.org
+      # KOMPASS_SMTP_TLS: implicit        # oder starttls (Port 587)
+      # KOMPASS_SMTP_USER: verein@example.org
+      # KOMPASS_MAIL_REDIRECT: test-postfach@example.org
     env_file: [/pfad/zu/kompass-test/.env.test]
     volumes:
       # Ein Volume für alles, was gesichert wird: darunter liegt je Modul ein

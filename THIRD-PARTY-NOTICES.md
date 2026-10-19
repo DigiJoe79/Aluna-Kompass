@@ -97,8 +97,11 @@ Paketautors liegt dem Paket bei und steht unter
 ## npm-Abhängigkeiten
 
 Rund 400 Pakete, fast alle unter MIT. Ein npm-Paket im Image darf nur eine
-dieser Lizenzen tragen: MIT, ISC, Apache-2.0, BSD-2-Clause, BSD-3-Clause, 0BSD,
+dieser Lizenzen tragen: MIT, MIT-0, ISC, Apache-2.0, BSD-2-Clause, BSD-3-Clause, 0BSD,
 BlueOak-1.0.0, CC0-1.0, CC-BY-4.0, Python-2.0, OFL-1.1, MPL-2.0, Unlicense —
 dazu LGPL-3.0-or-later allein für `@img/sharp-libvips-*` (siehe oben). Jede
 andere Lizenz, auch eine fehlende Angabe, hält die CI an, bevor das Image
 verteilt wird (`scripts/third-party-notices.sh --pruefen`).
+
+Den E-Mail-Versand übernimmt `nodemailer` (MIT-0,
+<https://github.com/nodemailer/nodemailer>).

@@ -6,6 +6,17 @@ import { loginAsAdmin, resetDatabase, setE2ESetting } from './helpers';
 import { story, storyPattern } from './story-year';
 
 /** > 1 MB (N9, Befundliste 0.2.0) — erzeugt mit `docs/intern/recherche/2026-09-26-upload-repro/mkpdf.py`. */
+/**
+ * Eine Buchung im Journal öffnen wie ein Mensch: über die Suche. Die Buchungen aus dem Vorjahr des Stichjahrs stehen
+ * nicht mehr auf der ersten Seite (50 je Seite, neueste zuerst), seit die Lastschrift und die Mitglieder im Seed buchen.
+ */
+async function openEntry(page: import('@playwright/test').Page, text: string): Promise<void> {
+  await page.goto('/finance/entries');
+  await page.getByRole('searchbox', { name: 'Suchen' }).fill(text);
+  await expect(page).toHaveURL(/[?&]q=/);
+  await page.locator('tr', { hasText: text }).click();
+}
+
 const BIG_PDF = path.resolve(import.meta.dirname, 'fixtures/beleg-1500k.pdf');
 
 test.describe('finance', () => {
@@ -448,6 +459,25 @@ test.describe('finance', () => {
     await expect(page.getByText('Der Teilbetrag übersteigt den Betrag des Kontos.')).toBeVisible();
   });
 
+  test('die Suche „begleicht offene Zahlung“ findet den Kontakt und füllt „Wofür?“ aus der Vorlage des Postens', async ({ page }) => {
+    await loginAsAdmin(page);
+    await page.goto('/finance/entries/new?template=income');
+    const accountCard = page.getByTestId('finance-account-card');
+    await accountCard.getByLabel('Konto').selectOption({ label: 'Vereinskonto' });
+    await accountCard.getByLabel('Betrag').fill('18,00');
+    await accountCard.getByRole('button', { name: 'begleicht offene Zahlung' }).click();
+    // Der Seed-Beitrag von Karl Ehrlinger ist zur Hälfte bezahlt; die Referenz nennt nur die Mitgliedsnummer.
+    await accountCard.getByPlaceholder('Zahlungsreferenz oder Kontakt suchen').fill('EHRLINGER');
+    const option = accountCard.getByRole('button').filter({ hasText: 'Ehrlinger' });
+    await expect(option).toHaveCount(1);
+    await option.click();
+    const rows = page.getByTestId('finance-allocation-card').getByTestId('split-row');
+    await expect(rows).toHaveCount(1);
+    await expect(rows.nth(0).getByLabel('Kategorie')).not.toHaveValue('');
+    await expect(rows.nth(0).getByLabel('Betrag')).toHaveValue('18,00');
+    await expect(rows.nth(0).getByRole('combobox', { name: 'Spender/Empfänger' })).toHaveValue('Karl Ehrlinger');
+  });
+
   test('Betragsfeld: 12,5 wird 12,50; 12.50 wird als Format abgelehnt', async ({ page }) => {
     await loginAsAdmin(page);
     await page.goto('/finance/entries/new?template=expense');
@@ -489,8 +519,7 @@ test.describe('finance', () => {
 
   test('der Verlauf nennt, über welchen Kanal eine Buchung angelegt und festgeschrieben wurde', async ({ page }) => {
     await loginAsAdmin(page);
-    await page.goto('/finance/entries');
-    await page.locator('tr', { hasText: 'Spende Altjahr' }).click();
+    await openEntry(page, 'Spende Altjahr');
     const history = page.locator('section', { has: page.getByRole('heading', { name: 'Verlauf' }) });
     // Der Seed bucht mit Kanal `system` (`bookEntry`: anlegen und festschreiben in einem Zug).
     await expect(history.getByText(/angelegt von .* über System/)).toBeVisible();
@@ -562,8 +591,7 @@ test.describe('finance', () => {
 
   test('eine Aufteilung, deren Änderung auf Freigabe wartet, lässt sich nicht erneut wählen', async ({ page }) => {
     await loginAsAdmin(page);
-    await page.goto('/finance/entries');
-    await page.locator('tr', { hasText: 'Sponsoring Altjahr' }).click();
+    await openEntry(page, 'Sponsoring Altjahr');
     await page.getByRole('button', { name: 'Korrigieren' }).click();
     const pendingRow = page.getByRole('button').filter({ hasText: 'wartet auf Freigabe' });
     await expect(pendingRow).toBeVisible();
@@ -622,8 +650,7 @@ test.describe('finance', () => {
 
   test('nach abgegebener Steuererklärung verlangt die Änderung die Kenntnisnahme zu § 153 AO', async ({ page }) => {
     await loginAsAdmin(page);
-    await page.goto('/finance/entries');
-    await page.locator('tr', { hasText: 'Bankgebühr Altjahr' }).click();
+    await openEntry(page, 'Bankgebühr Altjahr');
     await page.getByRole('button', { name: 'Korrigieren' }).click();
     await page.getByRole('checkbox', { name: 'wird im Ausland verwendet' }).check();
     await page.getByRole('switch', { name: 'wird im Ausland verwendet' }).click();
@@ -637,8 +664,7 @@ test.describe('finance', () => {
 
   test('im abgeschlossenen Jahr wartet die Änderung auf eine zweite Person, und der Dialog nennt, wer freigeben kann', async ({ page }) => {
     await loginAsAdmin(page);
-    await page.goto('/finance/entries');
-    await page.locator('tr', { hasText: 'Büromaterial Altjahr' }).click();
+    await openEntry(page, 'Büromaterial Altjahr');
     await page.getByRole('button', { name: 'Korrigieren' }).click();
     await page.getByRole('checkbox', { name: 'Projekt' }).check();
     await page.getByRole('combobox', { name: 'Projekt' }).selectOption({ index: 1 });
@@ -649,8 +675,7 @@ test.describe('finance', () => {
 
   test('Beleg nachreichen an einer festgeschriebenen Buchung; der Beleg lässt sich ansehen', async ({ page }) => {
     await loginAsAdmin(page);
-    await page.goto('/finance/entries');
-    await page.locator('tr', { hasText: 'Spende Altjahr' }).click();
+    await openEntry(page, 'Spende Altjahr');
     await page.getByTestId('voucher-file-input').setInputFiles({ name: 'beleg.pdf', mimeType: 'application/pdf', buffer: samplePdf() });
     await expect(page.getByRole('link', { name: 'öffnen' })).toBeVisible();
     const href = await page.getByRole('link', { name: 'öffnen' }).getAttribute('href');
@@ -661,8 +686,7 @@ test.describe('finance', () => {
 
   test('ein Beleg über 1 MB an einer festgeschriebenen Buchung kommt an (N9)', async ({ page }) => {
     await loginAsAdmin(page);
-    await page.goto('/finance/entries');
-    await page.locator('tr', { hasText: 'Spende Altjahr' }).click();
+    await openEntry(page, 'Spende Altjahr');
     await page.getByTestId('voucher-file-input').setInputFiles(BIG_PDF);
     await expect(page.getByRole('link', { name: 'öffnen' })).toBeVisible();
   });
@@ -684,8 +708,7 @@ test.describe('finance', () => {
     await page.getByLabel('Passwort wiederholen').fill('mira-hat-ein-neues-passwort');
     await page.getByRole('button', { name: 'Passwort setzen und fortfahren' }).click();
     await expect(page).toHaveURL('/');
-    await page.goto('/finance/entries');
-    await page.locator('tr', { hasText: 'Spende Altjahr' }).click();
+    await openEntry(page, 'Spende Altjahr');
     await expect(page.getByRole('button', { name: 'Korrigieren' })).toHaveCount(0);
   });
 
@@ -1098,8 +1121,7 @@ test.describe('finance', () => {
     await loginAsAdmin(page);
 
     // Beleg an einer Buchung.
-    await page.goto('/finance/entries');
-    await page.locator('tr', { hasText: 'Spende Altjahr' }).click();
+    await openEntry(page, 'Spende Altjahr');
     await page.getByTestId('voucher-file-input').setInputFiles({ name: 'beleg.pdf', mimeType: 'application/pdf', buffer: samplePdf() });
     await expect(page.getByRole('link', { name: 'öffnen' })).toBeVisible();
     const voucherHref = await page.getByRole('link', { name: 'öffnen' }).getAttribute('href');

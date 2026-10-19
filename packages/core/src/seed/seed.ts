@@ -10,6 +10,7 @@ import { readSetting, writeSettingInternal } from '../settings/service';
 import { completeSetup, isSetupRequired } from '../setup/service';
 import { todayIn } from '../today';
 import { createUser } from '../users/service';
+import { installOrder } from '../modules/installs';
 import { seedMedia } from './media';
 import { seedStoryYear } from './story-year';
 
@@ -69,7 +70,8 @@ export async function seedDevelopment(deps: Deps): Promise<{ adminEmail: string;
     // Derselbe Schritt, den `setModuleEnabled` beim Einschalten geht. Ohne ihn
     // stünde die Entwicklung auf einem anderen Zustand als eine echte
     // Installation — und genau solche Unterschiede fallen zuletzt auf.
-    for (const manifest of deps.registry.manifests) manifest.install?.(tx, deps, ctx);
+    // Abhängigkeiten zuerst: Die Reihenfolge der installierten Module ist die der Navigation, nicht die der Abhängigkeiten.
+    for (const manifest of installOrder(deps.registry.manifests)) manifest.install?.(tx, deps, ctx);
     // Ein erfundener Vereinsstamm — was schon eingetragen ist, bleibt.
     for (const [key, value] of exampleOrganization(deps)) {
       if (!String(readSetting(deps, key) ?? '').trim()) writeSettingInternal(tx, deps, ctx, key, value, 'seed.organization');
@@ -102,12 +104,12 @@ export async function seedDevelopment(deps: Deps): Promise<{ adminEmail: string;
 
   await seedMedia(deps, ctx);
 
-  for (const manifest of deps.registry.manifests) {
+  for (const manifest of installOrder(deps.registry.manifests)) {
     if (manifest.seed) {
       await manifest.seed(deps, ctx);
     }
   }
-  for (const manifest of deps.registry.manifests) {
+  for (const manifest of installOrder(deps.registry.manifests)) {
     if (manifest.seedLast) await manifest.seedLast(deps, ctx);
   }
 

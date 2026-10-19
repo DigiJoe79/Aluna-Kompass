@@ -8,6 +8,7 @@ import { coreModule, createDeps, databasePathIn, isProvided, providedPaths, read
 import { createPdfTools, createTextExtraction } from '@kompass/text-extraction';
 import { installedModules } from '../modules';
 import { resetMcpHandler } from './mcp';
+import { createMailTransport, readMailEnv } from './mail-transport';
 import { labelTranslator } from './record-labels';
 
 export type AppDeps = import('@kompass/core').AppDeps;
@@ -63,6 +64,8 @@ function openDeps(): AppDeps {
     documents: createDocumentEngine({ documentTemplatesDir: env.documentTemplatesDir }),
     textExtraction: createTextExtraction(),
     pdf: createPdfTools(),
+    // Außerhalb von Prod nur mit Umleitung, sonst `blocked` — die Regel sitzt im Transport.
+    mail: createMailTransport(readMailEnv()),
   });
   // K2: Bezeichnungen der Module kommen als Schlüssel der Sprachdatei — übersetzt für Oberfläche und MCP gleich.
   deps.labels = labelTranslator(deps);

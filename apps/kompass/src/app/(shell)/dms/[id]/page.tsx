@@ -2,7 +2,7 @@ import { activeUserChoices, hasPermission, isModuleEnabled, readSetting, retenti
 import { listProjects } from '@kompass/module-projects';
 import { listAnimals } from '@kompass/module-animals';
 import { invoiceProposal } from '@kompass/module-finance';
-import { dispatchChannels, documentTypeFor, getDocumentRecord, listDocumentFolders, listDocumentTypes, requireDmsGate } from '@kompass/module-dms';
+import { dispatchChannels, documentMailDraft, documentTypeFor, getDocumentRecord, listDocumentFolders, listDocumentTypes, requireDmsGate } from '@kompass/module-dms';
 import { getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 import { Fragment } from 'react';
@@ -58,6 +58,11 @@ export default async function DocumentDetailPage(props: {
   }
 
   const links = await resolveLinks(deps, ctx, doc.links);
+
+  // „Per E-Mail senden“ und die Sendungen nur an einem ausgehenden, festgeschriebenen Brief (Handoff 2b E2).
+  const mailDraftRes = doc.direction === 'outgoing' && doc.phase === 'issued' ? await documentMailDraft(deps, ctx, { documentId: doc.id }) : null;
+  const mailDraft = mailDraftRes?.ok ? mailDraftRes.value : null;
+  const mailUserNames = Object.fromEntries(userNamesFor(deps, mailDraft?.sendings.map((s) => s.queuedByUserId) ?? []));
 
   const foldersRes = await listDocumentFolders(deps, ctx);
   const folders = foldersRes.ok ? foldersRes.value.map((f) => ({ path: f.path, count: f.count })) : [];
@@ -210,6 +215,7 @@ export default async function DocumentDetailPage(props: {
         permissions={permissions}
         fileState={doc.fileState ?? 'none'}
         invoicePanel={invoicePanel}
+        mail={{ draft: mailDraft, canSend: hasPermission(ctx, 'dms.send'), userNames: mailUserNames }}
       />
     </Page>
   );

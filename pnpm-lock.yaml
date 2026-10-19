@@ -35,6 +35,9 @@ importers:
       '@kompass/module-finance':
         specifier: workspace:*
         version: link:packages/modules/finance
+      '@kompass/module-members':
+        specifier: workspace:*
+        version: link:packages/modules/members
       '@kompass/module-projects':
         specifier: workspace:*
         version: link:packages/modules/projects
@@ -89,6 +92,9 @@ importers:
       '@kompass/module-finance':
         specifier: workspace:*
         version: link:../../packages/modules/finance
+      '@kompass/module-members':
+        specifier: workspace:*
+        version: link:../../packages/modules/members
       '@kompass/module-projects':
         specifier: workspace:*
         version: link:../../packages/modules/projects
@@ -125,6 +131,9 @@ importers:
       next-themes:
         specifier: ^0.4.6
         version: 0.4.6(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
+      nodemailer:
+        specifier: 10.1.0
+        version: 10.1.0
       qrcode-generator:
         specifier: 2.0.4
         version: 2.0.4
@@ -262,6 +271,9 @@ importers:
       '@kompass/core':
         specifier: workspace:*
         version: link:../core
+      qrcode-generator:
+        specifier: 2.0.4
+        version: 2.0.4
       zod:
         specifier: ^4.6.5
         version: 4.6.5
@@ -355,22 +367,19 @@ importers:
       '@kompass/core':
         specifier: workspace:*
         version: link:../../core
+      '@kompass/documents':
+        specifier: workspace:*
+        version: link:../../documents
       '@kompass/markdown':
         specifier: workspace:*
         version: link:../../markdown
       drizzle-orm:
         specifier: ^0.45.3
         version: 0.45.3(@types/better-sqlite3@9.6.0)(better-sqlite3@13.0.3)
-      qrcode-generator:
-        specifier: 2.0.4
-        version: 2.0.4
       zod:
         specifier: ^4.6.5
         version: 4.6.5
     devDependencies:
-      '@kompass/documents':
-        specifier: workspace:*
-        version: link:../../documents
       '@kompass/module-projects':
         specifier: workspace:*
         version: link:../projects
@@ -473,6 +482,43 @@ importers:
         specifier: ^4.6.5
         version: 4.6.5
     devDependencies:
+      '@types/node':
+        specifier: ^26.6.4
+        version: 26.6.4
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
+      vitest:
+        specifier: ^5.0.3
+        version: 5.0.3(@types/node@26.6.4)(jsdom@30.1.1)(vite@8.2.2(@types/node@26.6.4)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.0))
+
+  packages/modules/members:
+    dependencies:
+      '@kompass/core':
+        specifier: workspace:*
+        version: link:../../core
+      '@kompass/documents':
+        specifier: workspace:*
+        version: link:../../documents
+      '@kompass/module-contacts':
+        specifier: workspace:*
+        version: link:../contacts
+      '@kompass/module-dms':
+        specifier: workspace:*
+        version: link:../dms
+      '@kompass/module-finance':
+        specifier: workspace:*
+        version: link:../finance
+      drizzle-orm:
+        specifier: ^0.45.3
+        version: 0.45.3(@types/better-sqlite3@9.6.0)(better-sqlite3@13.0.3)
+      zod:
+        specifier: ^4.6.5
+        version: 4.6.5
+    devDependencies:
+      '@kompass/module-projects':
+        specifier: workspace:*
+        version: link:../projects
       '@types/node':
         specifier: ^26.6.4
         version: 26.6.4
@@ -4954,6 +5000,10 @@ packages:
   node-releases@2.0.54:
     resolution: {integrity: sha512-YHs7BmmcsdAI5Ozuf8JZo6PT0mv2GIWC9vMfvUC3dp65M8hn7Ux8CPL+2oBI7juNuj9d0ndhTcznq2ODBps9cQ==}
     engines: {node: '>=18'}
+
+  nodemailer@10.1.0:
+    resolution: {integrity: sha512-fXW8AulB25aOTuwfRYV6lqHyfz2VM4rr4SGXH03mE7x5znEUpzL5mu6anARUpZN7744Ziwkmr4AxSLPJsBQspg==}
+    engines: {node: '>=20.0.0'}
 
   normalize-path@3.0.0:
     resolution: {integrity: sha512-6eZs5Ls3WtCisHWp9S2GUy8dqkpGi4BVSz3GaqiE6ezub0512ESztXUwUB6C6IKbQkY2Pnb/mD4WYojCRwcwLA==}
@@ -10763,6 +10813,8 @@ snapshots:
   node-mock-http@1.0.5: {}
 
   node-releases@2.0.54: {}
+
+  nodemailer@10.1.0: {}
 
   normalize-path@3.0.0: {}
 

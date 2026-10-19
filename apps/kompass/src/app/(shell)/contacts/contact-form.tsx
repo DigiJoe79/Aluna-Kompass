@@ -15,6 +15,10 @@ import { createContactAction, updateContactAction } from './actions';
 import { Select } from '@/components/ui/select';
 import { ActionForm } from '@/components/forms/action-form';
 import { Section } from '@/components/section';
+import { ContactPicker, type PickedContact } from '@/components/contact-picker';
+import { FixedValue } from '@/components/fixed-value';
+import { Segmented } from '@/components/ui/segmented';
+import { useHiddenInputEvent } from '@/lib/use-hidden-input-event';
 
 /** Was die Maske zum Bearbeiten braucht: die Felder und den Ladestand. */
 export type EditableContact = {
@@ -32,6 +36,11 @@ export type EditableContact = {
   country: string | null;
   notes: string | null;
   updatedAt: string;
+  /** Die Organisation, zu der eine Person gehört (Nachtrag Ansprechpersonen § 1). */
+  belongsTo: PickedContact | null;
+  deliveryPreference: 'auto' | 'post';
+  /** Was „Automatisch“ für diesen Kontakt ergibt — der feste Wert „Zurzeit“ (Handoff 2b E1). */
+  automaticDelivery: { channel: 'email'; address: string; via: 'self' | 'organization' } | { channel: 'post' };
 };
 
 /** Neuere von zwei ISO-Zeitstempeln — der Stand aus der Antwort, bis der Refresh ihn nachreicht. */
@@ -50,12 +59,21 @@ export function CreateContactDialog({
   onCreated,
   withTrigger = true,
   contact,
+  initialKind = 'person',
+  initialBelongsTo = null,
+  triggerLabel,
 }: {
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
   onCreated?: (contact: { id: string; name: string }) => void;
   withTrigger?: boolean;
   contact?: EditableContact;
+  /** Art beim Anlegen (Schnellanlage aus einer Auswahl nur für Organisationen). */
+  initialKind?: 'person' | 'organization';
+  /** „Person anlegen“ auf der Seite einer Organisation: „Gehört zu“ vorbelegt (Nachtrag Ansprechpersonen § 2). */
+  initialBelongsTo?: PickedContact | null;
+  /** Ein Knopf `outline` mit eigenem Wort statt des Primärknopfs „Kontakt anlegen“. */
+  triggerLabel?: string;
 } = {}) {
   const t = useTranslations('contacts');
   const c = useTranslations('common');
@@ -68,7 +86,10 @@ export function CreateContactDialog({
   const [state, action] = useActionState(contact ? updateContactAction : createContactAction, idleState);
   const [savedVersion, setSavedVersion] = useState<string | null>(null);
 
-  const [kind, setKind] = useState<'person' | 'organization'>(contact?.kind ?? 'person');
+  const [kind, setKind] = useState<'person' | 'organization'>(contact?.kind ?? initialKind);
+  const [belongsTo, setBelongsTo] = useState<PickedContact | null>(contact?.belongsTo ?? initialBelongsTo);
+  const [delivery, setDelivery] = useState<'auto' | 'post'>(contact?.deliveryPreference ?? 'auto');
+  const deliveryRef = useHiddenInputEvent(delivery);
   const [salutation, setSalutation] = useState(contact?.salutation ?? '');
   const [firstName, setFirstName] = useState(contact?.firstName ?? '');
   const [lastName, setLastName] = useState(contact?.lastName ?? '');
@@ -83,7 +104,9 @@ export function CreateContactDialog({
 
   // Beim Anlegen zurück auf leer, beim Bearbeiten zurück auf den geladenen Stand.
   const reset = () => {
-    setKind(contact?.kind ?? 'person');
+    setKind(contact?.kind ?? initialKind);
+    setBelongsTo(contact?.belongsTo ?? initialBelongsTo);
+    setDelivery(contact?.deliveryPreference ?? 'auto');
     setSalutation(contact?.salutation ?? '');
     setFirstName(contact?.firstName ?? '');
     setLastName(contact?.lastName ?? '');
@@ -155,6 +178,8 @@ export function CreateContactDialog({
             contact ? (
               // Ohne Symbol wie jeder Primärknopf im Kopf (04 B16).
               <Button>{t('edit.trigger')}</Button>
+            ) : triggerLabel ? (
+              <Button size="sm" variant="outline">{triggerLabel}</Button>
             ) : (
               <Button>
                 {t('create.trigger')}
@@ -206,6 +231,10 @@ export function CreateContactDialog({
                     <FormField id="lastName" label={t('fields.lastName')} error={errors.lastName} required>
                       <Input id="lastName" name="lastName" value={lastName} onChange={(e) => setLastName(e.target.value)} required />
                     </FormField>
+                    {/* „Gehört zu“ unter dem Nachnamen, nur Organisationen, leer erlaubt (Nachtrag Ansprechpersonen § 1, 23a). */}
+                    <FormCell size="m">
+                      <ContactPicker id="belongsToId" name="belongsToId" label={t('belongsTo')} hint={t('belongsToHint')} value={belongsTo} onChange={setBelongsTo} kind="organization" canCreate />
+                    </FormCell>
                   </>
                 ) : (
                   <>
@@ -248,6 +277,45 @@ export function CreateContactDialog({
                     {preview || <span className="italic text-muted-ink">{t('previewPlaceholder')}</span>}
                   </pre>
                 </FormCell>
+              </FormGrid>
+            </Section>
+
+            {/* Abschnitt „Briefe“ nach der Anschrift (Handoff 2b E1, 18a). */}
+            <Section title={t('letters.title')}>
+              <FormGrid>
+                <FormField id="deliveryPreference" label={t('letters.label')} hint={t('letters.hint')} size="l">
+                  <Segmented
+                    className="self-start"
+                    aria-label={t('letters.label')}
+                    value={delivery}
+                    onValueChange={setDelivery}
+                    testId="delivery-preference"
+                    options={[
+                      { value: 'auto', label: t('letters.auto') },
+                      { value: 'post', label: t('letters.post') },
+                    ]}
+                  />
+                </FormField>
+                <input ref={deliveryRef} type="hidden" name="deliveryPreference" value={delivery} />
+                {contact ? (
+                  <>
+                    <FormRowBreak />
+                    <FixedValue
+                      id="delivery-now"
+                      testId="delivery-now"
+                      label={t('letters.now')}
+                      value={
+                        contact.automaticDelivery.channel === 'email'
+                          ? contact.automaticDelivery.via === 'organization'
+                            ? t.rich('letters.nowOrgMail', { address: contact.automaticDelivery.address, aside: (chunks) => <span className="text-meta text-muted-ink">{chunks}</span> })
+                            : t('letters.nowMail', { address: contact.automaticDelivery.address })
+                          : t('letters.nowPost')
+                      }
+                      reason={t('letters.nowReason')}
+                      size="l"
+                    />
+                  </>
+                ) : null}
               </FormGrid>
             </Section>
 

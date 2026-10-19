@@ -1,9 +1,8 @@
 import { DEFAULT_THEME } from '@kompass/core/themes';
 import { isoDay, type DocumentRenderContext } from '@kompass/core';
-import { createDocumentEngine, pdfPageCount } from '@kompass/documents';
+import { createDocumentEngine, pdfPageCount, qrRows } from '@kompass/documents';
 import sharp from 'sharp';
 import { beforeAll, describe, expect, it } from 'vitest';
-import { qrRows } from '../src/print/qr';
 import { animalProfileTemplate, PROFILE_BASE, type ProfileImage, type ProfileInput, type ProfilePage } from '../src/print/template';
 
 const engine = createDocumentEngine();

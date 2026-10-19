@@ -484,7 +484,7 @@ describe('suggestForTransaction — (5) contact over the iban, and hints', () =>
   it('hints at a foreign iban without proposing anything else', async () => {
     const f = await ledgerFixture();
     const rawId = insertRaw(f, insertRun(f, f.bank.id), { accountId: f.bank.id, amountCents: -40000, iban: 'AT939999900001234567', name: 'Partnerverein', purpose: 'Futter' });
-    expect(await suggest(f, rawId)).toEqual({ rawTransactionId: rawId, kind: 'none', confidence: 'unsure', reasons: [], draft: null, linkEntry: null, problems: [], hints: ['foreignIban'] });
+    expect(await suggest(f, rawId)).toEqual({ rawTransactionId: rawId, kind: 'none', confidence: 'unsure', reasons: [], draft: null, linkEntry: null, problems: [], problemParams: {}, hints: ['foreignIban'] });
   });
 
   it('gives no foreign-iban hint for payment-service accounts and words it neutrally (Befund 14)', async () => {
@@ -505,12 +505,71 @@ describe('suggestForTransaction — (5) contact over the iban, and hints', () =>
     const shared = insertRaw(f, run, { accountId: f.bank.id, amountCents: 2500, iban: foreignIban, name: 'Eheleute', purpose: 'Beitrag' });
     const suggestion = await suggest(f, shared);
     expect(suggestion.kind).toBe('none');
-    expect(JSON.stringify(suggestion)).not.toContain(f.donor.id);
-    expect(JSON.stringify(suggestion)).not.toContain(f.rightDonor.id);
+    // U4 (Joe 2026-10-19): kein Kontakt vorbelegt, aber der Grund nennt beide Inhaber.
+    expect(suggestion.draft).toBeNull();
+    expect(suggestion.reasons).toEqual([{ kind: 'sharedIban', contactIds: [f.rightDonor.id, f.donor.id] }]);
     expect(suggestion.hints).toEqual([]);
     // Ist einer der beiden archiviert, nennt der Vorschlag den aktiven.
     f.deps.db.update(contacts).set({ status: 'archived' }).where(eq(contacts.id, f.rightDonor.id)).run();
     expect(await suggest(f, shared)).toMatchObject({ kind: 'contact', confidence: 'unsure', reasons: [{ kind: 'contactIban', contactId: f.donor.id }], hints: [] });
+  });
+
+  describe('joint account with an open item (2026-10-18)', () => {
+    const jointIban = 'AT939999900001234567';
+    async function jointFixture() {
+      const f = await ledgerFixture();
+      f.deps.db.transaction((tx) => learnContactIbanInternal(tx, f.deps, f.ctx, { contactId: f.donor.id, iban: jointIban, learnedFrom: 'booking' }));
+      f.deps.clock.advance(1000);
+      f.deps.db.transaction((tx) => learnContactIbanInternal(tx, f.deps, f.ctx, { contactId: f.rightDonor.id, iban: jointIban, learnedFrom: 'booking' }));
+      return { f, run: insertRun(f, f.bank.id) };
+    }
+
+    it('settles the open item of the one contact whose amount fits, as unsure', async () => {
+      const { f, run } = await jointFixture();
+      unwrap(await createOpenItem(f.deps, f.ctx, { kind: 'receivable', itemDate: '2026-02-01', amountCents: 3000, contactId: f.donor.id }));
+      const fee = unwrap(await createOpenItem(f.deps, f.ctx, { kind: 'receivable', itemDate: '2026-02-01', amountCents: 5000, contactId: f.rightDonor.id }));
+      // Eine Verbindlichkeit gleichen Betrags beim anderen zählt nicht — falsche Richtung.
+      unwrap(await createOpenItem(f.deps, f.ctx, { kind: 'payable', itemDate: '2026-02-01', amountCents: 5000, contactId: f.donor.id }));
+      const shared = insertRaw(f, run, { accountId: f.bank.id, amountCents: 5000, iban: jointIban, name: 'Eheleute', purpose: 'Beitrag' });
+      expect(await suggest(f, shared)).toMatchObject({
+        kind: 'openItem', confidence: 'unsure',
+        // U4: Die Vorbelegung bleibt (968500b9), der Grund nennt dazu beide Inhaber.
+        reasons: [{ kind: 'amountAndContact', openItemId: fee.id, contactId: f.rightDonor.id }, { kind: 'sharedIban', contactIds: [f.rightDonor.id, f.donor.id] }],
+        draft: { moneyLines: [{ accountId: f.bank.id, amountCents: 5000, rawTransactionId: shared, settlements: [{ openItemId: fee.id, amountCents: 5000 }] }] },
+        hints: [],
+      });
+    });
+
+    it('proposes no open item when both contacts have one of that amount', async () => {
+      const { f, run } = await jointFixture();
+      const first = unwrap(await createOpenItem(f.deps, f.ctx, { kind: 'receivable', itemDate: '2026-02-01', amountCents: 5000, contactId: f.donor.id }));
+      const second = unwrap(await createOpenItem(f.deps, f.ctx, { kind: 'receivable', itemDate: '2026-02-01', amountCents: 5000, contactId: f.rightDonor.id }));
+      const shared = insertRaw(f, run, { accountId: f.bank.id, amountCents: 5000, iban: jointIban, name: 'Eheleute', purpose: 'Beitrag' });
+      const suggestion = await suggest(f, shared);
+      expect(suggestion.kind).toBe('none');
+      expect(JSON.stringify(suggestion)).not.toContain(first.id);
+      expect(JSON.stringify(suggestion)).not.toContain(second.id);
+      expect(suggestion.reasons).toEqual([{ kind: 'sharedIban', contactIds: [f.rightDonor.id, f.donor.id] }]);
+    });
+
+    it('stays as before when no contact has an open item of that amount', async () => {
+      const { f, run } = await jointFixture();
+      unwrap(await createOpenItem(f.deps, f.ctx, { kind: 'receivable', itemDate: '2026-02-01', amountCents: 3000, contactId: f.donor.id }));
+      const shared = insertRaw(f, run, { accountId: f.bank.id, amountCents: 5000, iban: jointIban, name: 'Eheleute', purpose: 'Beitrag' });
+      const suggestion = await suggest(f, shared);
+      expect(suggestion.kind).toBe('none');
+      // Kein Kontakt vorbelegt; der Grund nennt beide (U4).
+      expect(suggestion.draft).toBeNull();
+      expect(suggestion.reasons).toEqual([{ kind: 'sharedIban', contactIds: [f.rightDonor.id, f.donor.id] }]);
+    });
+
+    it('leaves a single-holder iban as it was: only its own contact counts', async () => {
+      const f = await ledgerFixture();
+      unwrap(await linkContactIban(f.deps, f.ctx, { contactId: f.donor.id, iban: jointIban }));
+      unwrap(await createOpenItem(f.deps, f.ctx, { kind: 'receivable', itemDate: '2026-02-01', amountCents: 5000, contactId: f.rightDonor.id }));
+      const raw = insertRaw(f, insertRun(f, f.bank.id), { accountId: f.bank.id, amountCents: 5000, iban: jointIban, name: 'Musterspenderin', purpose: 'Beitrag' });
+      expect(await suggest(f, raw)).toMatchObject({ kind: 'contact', confidence: 'unsure', reasons: [{ kind: 'contactIban', contactId: f.donor.id }] });
+    });
   });
 
   it('gives no foreign-iban hint when the counterparty iban belongs to a contact (Befund 14)', async () => {

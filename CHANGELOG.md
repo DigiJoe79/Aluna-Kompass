@@ -9,6 +9,95 @@ die Nummern folgen [Semantic Versioning](https://semver.org/lang/de/). Vor
 1.0.0 kann jede Minor-Fassung Brüche enthalten — was bricht, steht unter
 **Geändert** mit dem, was zu tun ist.
 
+## [0.3.0] - 2026-10-19
+
+Diese Fassung bringt drei große Stücke: das Modul **Mitglieder** mit
+Beiträgen und Mahnungen, die **SEPA-Lastschrift** für Beiträge und
+Dauerspenden und den Versand von **Briefen per E-Mail**. Eine Migration
+(`0009`, `migrationCount` 10): neue Tabellen für Mitglieder, Lastschrift und
+den Ausgang der Akte, neue Spalten an Kontakten, Dokumenten und Finanzen.
+Bestehende Daten bleiben; festgeschriebene Dokumente bekommen ihren
+Ablagezeitpunkt nachgetragen. Nichts bricht, aber nichts davon ist von selbst
+an: Das Modul Mitglieder und die Lastschrift schalten Sie ein, den Mailserver
+trägt die Installation in ihre Umgebungsdatei ein, und die neuen Rechte
+„Dokumente per E-Mail versenden“ und „Lastschrift vorbereiten“ kommen an keine
+bestehende Rolle. Der Agentenschalter der Finanzen gibt jetzt auch die
+Lastschrift frei (Betriebshandbuch, „Von 0.2.12 auf 0.3.0“).
+
+### Hinzugefügt
+
+- **Mitglieder.** Neues Modul (braucht Kontakte, Finanzen und Akte):
+  Mitgliederliste mit Anträgen und Ausgetretenen, Aufnahme mit Nummer,
+  Ablehnung, Austritt mit Kündigungsfrist, CSV-Liste und Bescheinigung über die
+  Mitgliederzahl. Mitgliedsarten, Beitragsordnung mit Ständen, Mahnstufen und
+  Fristen unter Einrichtung → Mitglieder. Ein Beitragslauf je Jahr legt die
+  Beiträge als offene Zahlungen der Finanzen an; Stundung und Erlass, auch im
+  Rest. Der Mahnlauf mahnt je Beitrag in Stufen und lässt aus, wessen Zahlung
+  schon als Eingang da sein könnte. Briefe für Aufnahme, Ablehnung, Austritt,
+  Beitragsmitteilung und Mahnung, mit GiroCode, auch an eine gesetzliche
+  Vertretung; beide Läufe enden mit dem Versand per E-Mail oder Post. Am
+  Kontakt steht die Mitgliedschaft unter „Rollen“; beim Einschalten entsteht
+  die Rolle „Mitgliederverwaltung“.
+- **Lastschrift.** Unter Finanzen → Lastschrift, eingerichtet unter
+  Einrichtung → Finanzen → Lastschrift (Gläubiger-ID, Konto, Fristen der Bank,
+  Format der Mandatsreferenz). SEPA-Mandate mit vorausgefülltem Formular,
+  auch per E-Mail zur Unterschrift; aktiv erst mit der unterschriebenen
+  Rücksendung in der Akte. Dauerspenden-Zusagen mit Raten. Ein Einzug zeigt
+  vorab, was eingezogen wird und was nicht (mit Grund), erlaubt nur Tage im
+  Fenster der Bank und führt durch Datei (pain.008 oder CSV für
+  Lastschriftvorlagen), Einreichen und Gutschrift; die Vorabankündigungen
+  entstehen dabei mit. Die Arbeitsliste
+  erkennt Gutschrift und Rückgaben samt Entgelt; eine Rückgabe klären Sie am
+  Einzug oder an der Rate. Ein Beitrag merkt sich seinen Zahlweg, und
+  Festschreiben fragt nach, bevor ein Beitrag doppelt oder zu hoch bezahlt
+  wird.
+- **Briefe per E-Mail.** „Per E-Mail senden …“ am festgeschriebenen Brief; der
+  Versandvermerk entsteht, sobald der Mailserver die Mail angenommen hat. Die
+  Läufe (Beiträge, Mahnungen, Zuwendungsbestätigungen) senden ihre Briefe
+  gesammelt und geben den Rest als ein PDF zum Drucken; jede Zeile lässt sich
+  zwischen E-Mail und Post verschieben. In der Akte der „Ausgang“ mit allen
+  Sendungen. Absender, Begleittext je Dokumentart und „Testmail an mich
+  senden“ unter Einrichtung → Akte → Versand, der Zustellweg je Kontakt
+  (automatisch oder immer per Post) unter „Briefe“. Eine Testumgebung sendet
+  nur an eine Umleitung.
+- **Startseite.** Neue Kacheln für Mitglieder (Anträge, Rückstände, Beiträge
+  des Jahres), „Lastschrift fällig“ (Dateien, Einreichung, Mandate ohne
+  Unterschrift, offene Rückgaben) und „Nicht zugestellte E-Mails“.
+- **Kontakte.** Eine Person kann zu einer Organisation gehören („Gehört zu“);
+  die Organisation zeigt ihre Ansprechpersonen, die Kontaktauswahl findet
+  Personen auch über die Organisation. Wer Finanzen lesen darf, sieht die
+  Bankverbindungen eines Kontakts mit Herkunft und trägt eine IBAN von Hand
+  ein, auch als Gemeinschaftskonto mehrerer Kontakte. Ältere Zuordnungen
+  heißen „Herkunft unbekannt“.
+- **Eine zurückgebuchte Zahlung** öffnet die offene Zahlung wieder, die sie
+  ausgeglichen hatte.
+
+### Geändert
+
+- **Agenten.** Der Schalter der Finanzen heißt „Darf ein Agent festschreiben
+  und Lastschriften bearbeiten?“ und steht unter Einrichtung → Finanzen →
+  Steuerliches in der Karte „Einordnung des Vereins“; eingeschaltet gibt er
+  auch Mandate, Dateien und Einzüge frei. Mitglieder und Akte haben eigene
+  Schalter („Darf ein Agent …“), beide aus. Lehnt Kompass einen Agenten ab,
+  nennt der Satz den Schalter.
+- **Buchung erfassen.** „begleicht offene Zahlung“ findet einen Posten auch
+  über den Kontakt und füllt ein leeres „Wofür?“ aus dem Posten vor.
+- **Gemeinschaftskonto.** Ein Eingang von einer IBAN mehrerer Kontakte schlägt
+  die offene Zahlung vor, wenn genau einer von ihnen eine über genau diesen
+  Betrag hat – unsicher, zum Prüfen.
+
+### Behoben
+
+- Projekte und Zwecke: Eine zurückgegebene oder zurückgenommene Spende mindert
+  die Einnahmen, statt als Ausgabe zu zählen. Die Summen älterer Rückgaben
+  stimmen damit ohne Nacharbeit.
+- Akte: Wer im Brief-Entwurf nur den Empfänger, den Ordner oder den Bezug
+  wählt, ohne zu tippen, speichert die Änderung jetzt auch.
+- Rote Knöpfe (etwa „Seite verlassen“) verloren beim Überfahren mit der Maus
+  ihre Fläche.
+- Einrichtung → Finanzen: Unter der Checkliste ließ sich die ganze Seite über
+  eine leere Fläche hinaus scrollen.
+
 ## [0.2.12] - 2026-10-17
 
 Diese Fassung macht Kompass ruhiger und klarer: Eine Gestaltungsdurchsicht über

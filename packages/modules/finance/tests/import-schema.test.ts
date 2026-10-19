@@ -200,7 +200,7 @@ describe('finance_import_rules and finance_contact_bank_accounts', () => {
       'category_id', 'project_id', 'purpose_id', 'contact_id', 'tax_code', 'entry_text',
       'created_at', 'created_by_user_id', 'updated_at',
     ]);
-    expect(columns(deps, 'finance_contact_bank_accounts')).toEqual(['id', 'contact_id', 'iban', 'created_at', 'created_by_user_id']);
+    expect(columns(deps, 'finance_contact_bank_accounts')).toEqual(['id', 'contact_id', 'iban', 'created_at', 'created_by_user_id', 'source', 'learned_from_entry_date']);
     expect(indexes(deps, 'finance_contact_bank_accounts')).toEqual([
       { name: 'finance_contact_bank_accounts_iban_idx', unique: 0 },
       { name: 'finance_contact_bank_accounts_pair_idx', unique: 1 },

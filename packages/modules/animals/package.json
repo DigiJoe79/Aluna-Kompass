@@ -1,6 +1,6 @@
 {
   "name": "@kompass/module-animals",
-  "version": "0.2.12",
+  "version": "0.3.0",
   "private": true,
   "type": "module",
   "exports": {
@@ -12,13 +12,12 @@
   },
   "dependencies": {
     "@kompass/core": "workspace:*",
+    "@kompass/documents": "workspace:*",
     "@kompass/markdown": "workspace:*",
     "drizzle-orm": "^0.45.3",
-    "qrcode-generator": "2.0.4",
     "zod": "^4.6.5"
   },
   "devDependencies": {
-    "@kompass/documents": "workspace:*",
     "@kompass/module-projects": "workspace:*",
     "@types/node": "^26.6.4",
     "sharp": "^0.35.5",

@@ -1,7 +1,7 @@
 import { resolveRecordLabel, type CallContext, type Deps, type RecordLabelInput } from '@kompass/core';
 import { eq } from 'drizzle-orm';
 import { requireFinanceRead, requireMasterDataRead } from './access';
-import { financeAccounts, financeCategories, financeConfirmations, financeEntries, financeFiscalYears, financePartnerProfiles, financePeriodEvents, financePurposes, financeReserves } from '../schema';
+import { financeAccounts, financeCategories, financeConfirmations, financeEntries, financeFiscalYears, financePartnerProfiles, financePeriodEvents, financeDirectDebitRuns, financePurposes, financeReserves, financeSepaMandates } from '../schema';
 
 const missing: RecordLabelInput = { label: '', href: null, state: 'missing' };
 const forbiddenLabel: RecordLabelInput = { label: '', href: null, state: 'forbidden' };
@@ -15,6 +15,10 @@ const NAMES: Record<string, { master: boolean; read: (deps: Deps, id: string) =>
   // Ein Entwurf hat keine Nummer: dann nur die Art.
   financeEntry: { master: false, read: (deps, id) => { const row = deps.db.select({ number: financeEntries.number }).from(financeEntries).where(eq(financeEntries.id, id)).get(); return row ? (row.number ?? '') : undefined; } },
   financeConfirmation: { master: false, read: (deps, id) => deps.db.select({ number: financeConfirmations.documentNumber }).from(financeConfirmations).where(eq(financeConfirmations.id, id)).get()?.number },
+  // L1: das Mandat heißt nach seiner Referenz.
+  financeMandate: { master: false, read: (deps, id) => deps.db.select({ reference: financeSepaMandates.reference }).from(financeSepaMandates).where(eq(financeSepaMandates.id, id)).get()?.reference },
+  // L2: der Einzug heißt nach seinem Fälligkeitstag (TT.MM.JJJJ).
+  financeDirectDebitRun: { master: false, read: (deps, id) => { const day = deps.db.select({ day: financeDirectDebitRuns.collectionDate }).from(financeDirectDebitRuns).where(eq(financeDirectDebitRuns.id, id)).get()?.day; return day === undefined ? undefined : `${day.slice(8, 10)}.${day.slice(5, 7)}.${day.slice(0, 4)}`; } },
 };
 
 /**

@@ -28,3 +28,22 @@ describe('Normalzustand in Listen ohne Marke (6a)', () => {
     expect(isNormalInList('notice', 'valid')).toBe(false);
   });
 });
+
+// Handoff Mitglieder D2 (N1): nur Zuordnungen, keine neuen Töne.
+describe('Mitglieder', () => {
+  it('Antrag ist ein Zwischenstand, „endet am …“ Arbeit, abgelehnt error', () => {
+    expect(statusTone('membership', 'applied')).toBe('info');
+    expect(statusTone('membership', 'ending')).toBe('warning');
+    expect(statusTone('membership', 'rejected')).toBe('error');
+  });
+  it('aktiv, offen und bezahlt stehen in Listen ohne Marke', () => {
+    expect(isNormalInList('membership', 'active')).toBe(true);
+    expect(isNormalInList('fee', 'open')).toBe(true);
+    expect(isNormalInList('fee', 'paid')).toBe(true);
+    expect(isNormalInList('fee', 'partlyPaid')).toBe(false);
+  });
+  it('die letzte Mahnstufe ist error, die übrigen Arbeit', () => {
+    expect(statusTone('dunning', 'lastLevel')).toBe('error');
+    expect(statusTone('dunning', 'level')).toBe('warning');
+  });
+});

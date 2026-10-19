@@ -381,6 +381,26 @@ describe('listMyExpenseClaims and getExpenseClaim', () => {
     expect(err(await listMyExpenseClaims(f.deps, f.unlinked, {}))).toMatchObject({ code: 'expenseNeedsContactLink' });
   });
 
+  it('a returned payout does not count as paid: no date after a full return, the payout date after a partial one (Plan M2)', async () => {
+    const f = await expenseFixture();
+    const setup = async () => {
+      const claim = unwrap(await submitExpenseClaim(f.deps, f.hanna.ctx, { id: (await readyDraft(f)).id }));
+      const item = unwrap(await createOpenItem(f.deps, f.ctx, { kind: 'payable', itemDate: '2026-09-01', contactId: f.hanna.contactId, amountCents: claim.totalCents, originType: 'financeExpenseClaim', originId: claim.id, paymentReference: claim.number }));
+      f.deps.db.update(financeExpenseClaims).set({ state: 'approved', approvedAt: '2026-09-01T09:00:00.000Z', approvedByUserId: f.secondPersonId, openItemId: item.id }).where(eq(financeExpenseClaims.id, claim.id)).run();
+      const payout = unwrap(await bookEntry(f.deps, f.ctx, { entryDate: '2026-09-02', text: `Erstattung ${claim.number}`, moneyLines: [{ accountId: f.bank.id, amountCents: -claim.totalCents, settlements: [{ openItemId: item.id, amountCents: claim.totalCents }] }], allocationLines: [{ categoryId: f.programCosts.id, amountCents: -claim.totalCents }] }));
+      const giveBack = (cents: number) => bookEntry(f.deps, f.ctx, { entryDate: '2026-09-04', text: 'Rückgabe', moneyLines: [{ accountId: f.bank.id, amountCents: cents, settlements: [{ openItemId: item.id, amountCents: cents, reversesSettlementId: payout.moneyLines[0]!.settlements[0]!.id }] }], allocationLines: [{ categoryId: f.programCosts.id, amountCents: cents }] }).then(unwrap);
+      return { claim, giveBack };
+    };
+
+    const full = await setup();
+    await full.giveBack(full.claim.totalCents);
+    expect(unwrap(await getExpenseClaim(f.deps, f.hanna.ctx, { id: full.claim.id }))).toMatchObject({ stateLabelKey: 'approved', paid: { settledCents: 0, paidOn: null, state: 'unpaid' } });
+
+    const partial = await setup();
+    await partial.giveBack(500);
+    expect(unwrap(await getExpenseClaim(f.deps, f.hanna.ctx, { id: partial.claim.id }))).toMatchObject({ paid: { settledCents: partial.claim.totalCents - 500, paidOn: '2026-09-02', state: 'partly' } });
+  });
+
   it('names who can approve, without the person who created the claim and without the claimant', async () => {
     const f = await expenseFixture();
     const roleId = f.deps.db.select().from(schema.roles).all().find((r) => r.name === 'Verwaltung')!.id;

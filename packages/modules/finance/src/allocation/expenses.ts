@@ -10,7 +10,7 @@ import { financeConflict } from '../errors';
 import { valueAt } from '../ledger/dated-values';
 import { DATED_SERIES } from '../ledger/dated-series';
 import { isValidIban, maskIban, normalizeIban } from '../ledger/iban';
-import { openCentsInternal, openItemSettlementsInternal } from '../ledger/open-items';
+import { countingPaymentsInternal, openCentsInternal } from '../ledger/open-items';
 import { tripAmountCents } from '../ledger/trip-amount';
 import { contactsForIbanInternal } from '../iban-holders';
 import { expenseReceiptSubject } from './subjects';
@@ -136,7 +136,7 @@ function paidOf(db: DbOrTx, claim: FinanceExpenseClaimRow): ExpenseClaimPaid | n
   const item = db.select().from(financeOpenItems).where(eq(financeOpenItems.id, claim.openItemId)).get();
   if (!item) return null;
   const settledCents = item.amountCents - openCentsInternal(db, item.id);
-  const dates = openItemSettlementsInternal(db, item.id).map((s) => s.entryDate).sort();
+  const dates = countingPaymentsInternal(db, item.id).map((s) => s.entryDate).sort();
   const state: ExpenseClaimPaid['state'] = settledCents >= item.amountCents ? 'paid' : settledCents > 0 ? 'partly' : 'unpaid';
   return { settledCents, paidOn: dates.at(-1) ?? null, state };
 }

@@ -3,6 +3,7 @@ import * as animalsPkg from '@kompass/module-animals';
 import * as contactsPkg from '@kompass/module-contacts';
 import * as dmsPkg from '@kompass/module-dms';
 import * as financePkg from '@kompass/module-finance';
+import * as membersPkg from '@kompass/module-members';
 import * as projectsPkg from '@kompass/module-projects';
 import * as corePkg from '@kompass/core';
 import * as sitePkg from '@kompass/module-site';
@@ -142,7 +143,7 @@ describe('registered mcp tools', () => {
 
   it('every module whose tools carry localized fields offers both translation hooks', () => {
     const localized = installedModules.filter((m) => toolsOf(m).some((tool) => carriesLocalized(z.toJSONSchema(tool.inputSchema, { io: 'input' }))));
-    expect(localized.map((m) => m.key).sort()).toEqual(['animals', 'projects', 'site']);
+    expect(localized.map((m) => m.key).sort()).toEqual(['animals', 'members', 'projects', 'site']);
     const missing = localized.filter((m) => !m.translatables || !m.setTranslations).map((m) => m.key);
     expect(missing).toEqual([]);
   });
@@ -197,6 +198,8 @@ const WITHOUT_TOOL: Record<string, string> = {
   'dms.exportBundle': 'Liefert eine Datei mit vielen PDFs; ein Agent liest Dokumente über dms_list und dms_text.',
   'dms.resolveBundle': 'Innenleben von exportBundle.',
   'dms.canReadDocumentType': 'Rechteprüfung für die Seiten der Akte, kein Dienst.',
+  'dms.resendDocumentEmail': 'Erneut senden einer Sendung; ein Agent erreicht dasselbe über dms_send_retry (humanOnly wie dort).',
+  'dms.sendTestMail': 'Die Testmail geht an die Adresse des angemeldeten Menschen am Bildschirm; ein Agent hat keine eigene Adresse und sendet nicht.',
   'contacts.deleteContact': 'Löschung personenbezogener Daten bestätigt ein Mensch.',
   'contacts.seedContacts': 'Beispieldaten der Entwicklung.',
   'contacts.getUserLink': 'Lesehilfe der Nutzerverwaltung; über MCP liefert contacts_user_link_changes dasselbe mit Verlauf.',
@@ -262,9 +265,11 @@ const WITHOUT_TOOL: Record<string, string> = {
   'finance.readVoucher': 'Liefert Bytes, über die Seiten des Moduls (ab F3).',
   'finance.uploadResolution': 'Upload-Dienst hinter der Oberfläche (F8b, Global Constraints); ein vorhandenes Dokument verknüpft finance_reserve_resolution_link.',
   'finance.readCashCountProtocol': 'Liefert Bytes, über die Seiten des Moduls (F3b Task 2, Muster readVoucher).',
+  'finance.directDebitFileStream': 'Liefert die Datei für die Bank (pain.008 und CSV) mit der IBAN jedes Zahlers — sie gehört nie in den Modellkontext; nur der Route Handler der Einzugsseite liest sie, über MCP lehnt der Dienst ab (Plan L2, Spec § 8).',
   'finance.readFacsimile': 'Liefert die Bytes einer Unterschrift — sie gehören nie in den Modellkontext; nur der Route Handler der Bescheid-Seite liest sie (F6a, Annahme 8).',
   'finance.previewConfirmation': 'Liefert Bytes (Vorschau-PDF mit ENTWURF) für den Ausstellen-Dialog; ein Agent liest die Prüfliste über finance_confirmation_check (F6a).',
   'finance.readConfirmationCopy': 'Liefert Bytes (unser Exemplar), über den Route Handler der Spenden-Seite (F6a, Muster readCashCountProtocol).',
+  'members.runPrintPdf': 'Liefert Bytes (die Post-Briefe eines Laufs als ein PDF) für den Druck am Bildschirm; ein Agent liest den Versand-Schritt über members_run_dispatch_state (Plan M4 Task 3).',
   'finance.readRunBundle': 'Liefert Bytes (Sammel-PDF eines Serienlaufs), über den Route Handler der Serienlauf-Seite; ein Agent liest den Lauf über finance_confirmation_run_get (F6b Task 4).',
   'finance.readSimplifiedReceipt': 'Liefert Bytes (Vordruck des vereinfachten Nachweises ohne Personenbezug), über den Route Handler des Spendenbuchs (F6b Task 5, Muster readRunBundle).',
   'finance.readExpenseReceipt': 'Liefert Bytes (Beleg eines Antrags), über den Route Handler der Auslagen-Seite; die Eigentümerin liest ihre eigenen ohne finance.read, geprüft im Dienst (F8a Task 2, Review Focus 1).',
@@ -316,6 +321,7 @@ describe('every service has a tool', () => {
     ['site', sitePkg],
     ['dms', dmsPkg],
     ['finance', financePkg],
+    ['members', membersPkg],
     ['projects', projectsPkg],
     ['core', corePkg],
   ];

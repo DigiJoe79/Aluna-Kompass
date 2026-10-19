@@ -52,6 +52,16 @@ describe('finance settings', () => {
       'finance.boardRemunerationValidFrom',
       // Joe 11.9 — wann entschieden wurde; ohne ihn bleibt der Schritt offen.
       'finance.boardRemunerationDecidedOn',
+      // L1 — Lastschrift: Gläubiger-Daten, Fristen, Format der Mandatsreferenz.
+      'finance.sepa.enabled',
+      'finance.sepa.creditorId',
+      'finance.sepa.creditorName',
+      'finance.sepa.accountId',
+      'finance.sepa.leadBusinessDays',
+      'finance.sepa.maxLeadDays',
+      'finance.sepa.preNotificationDays',
+      'finance.sepa.batchBooking',
+      'finance.sepa.mandateReferenceFormat',
     ].sort());
     expect(financeModule.settings!.find((s) => s.key === 'finance.mcpHumanOnlyAllowed')).toMatchObject({ default: false, uiOnly: true });
   });
