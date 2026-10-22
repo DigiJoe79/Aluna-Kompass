@@ -1,6 +1,6 @@
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { checkCountedAllowlist, type CountedAllowlist, isCommentLine, openingTags, read, relative, sourceFiles, SRC } from './source';
+import { allowlistHygiene, checkCountedAllowlist, type CountedAllowlist, isCommentLine, openingTags, read, relative, sourceFiles, SRC } from './source';
 
 /**
  * Unter `src/app` keine rohen Bedien- und Tabellenelemente — `ui/*` bringt Höhe, Fokus, Dichte und Dunkelmodus
@@ -24,7 +24,7 @@ export function rawElementLines(text: string): number[] {
     .map(({ line }) => line);
 }
 
-const ALLOWED: CountedAllowlist = {
+export const ALLOWED: CountedAllowlist = {
   'app/(shell)/admin/themes/theme-preview.tsx': { count: 19, reason: 'Bildet Knöpfe und Tabelle nach, um die Theme-Farben zu zeigen.' },
   'app/global-error.tsx': { count: 1, reason: 'Ersetzt `<html>`, ohne Theme-Bausteine.' },
   'app/(shell)/admin/themes/theme-editor.tsx': { count: 2, reason: 'Listen-Auswahl der Themes, zweizeilig (Backlog: Baustein); Farbwert im Chip, der Chip ist der Rahmen (`Input` brächte Höhe, Rahmen, Fläche und Polster mit, die der Chip selbst trägt).' },
@@ -61,11 +61,5 @@ describe('keine rohen Elemente unter src/app', () => {
     expect(checkCountedAllowlist(hits, ALLOWED).unexpected).toEqual([]);
   });
 
-  it('keine vorläufigen Einträge mehr', () => {
-    expect(Object.entries(ALLOWED).filter(([, { reason }]) => reason.startsWith('OFFEN')).map(([file]) => file)).toEqual([]);
-  });
-
-  it('jede Ausnahme ist noch nötig', () => {
-    expect(checkCountedAllowlist(hits, ALLOWED).stale).toEqual([]);
-  });
+  allowlistHygiene(ALLOWED, () => checkCountedAllowlist(hits, ALLOWED).stale);
 });

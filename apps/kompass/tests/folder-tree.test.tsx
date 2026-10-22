@@ -472,6 +472,25 @@ describe('FolderTree, dragging', () => {
     fireEvent.dragEnd(window);
   });
 
+  // Backlog 45 (Restposten 0.2.4): Die eigene Sperre eines festen Eintrags galt nur beim Ablegen und in der Anzeige —
+  // der Cursor zeigte über dem gesperrten Eingangskorb weiter „erlaubt“.
+  it('a fixed entry that refuses the dragged items shows the browser „not here“', async () => {
+    const onMove = moved();
+    renderTree({
+      canDrop: true,
+      onMove,
+      fixed: [{ key: 'inbox', label: 'Eingangskorb', icon: Inbox, count: 2, href: '/dms?inbox=1', dropTarget: true, folder: null, refuse: () => 'incomingOnly' }],
+    });
+    await screen.findAllByRole('treeitem');
+    beginDrag({ kind: 'documents', ids: ['d1'], sources: ['Behörden/Finanzamt'], label: 'Brief' });
+    const inbox = document.querySelector('[data-fixed="inbox"]')!;
+    const dt = transfer([DOCUMENTS_MIME]);
+    fireEvent.dragOver(inbox, { dataTransfer: dt });
+    await waitFor(() => expect(inbox.getAttribute('data-drop')).toBe('blocked'));
+    expect(dt.dropEffect).toBe('none');
+    fireEvent.dragEnd(window);
+  });
+
   it('blocks a folder that exists only as a path, for documents and files alike', async () => {
     const onMove = moved();
     const onDropFiles = vi.fn();

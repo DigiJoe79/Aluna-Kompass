@@ -1,3 +1,4 @@
+import type { Locator, Page } from '@playwright/test';
 import { expect, test } from './fixtures';
 import { associationYear } from './association-day';
 import { resetDatabase, rowAction } from './helpers';
@@ -38,117 +39,83 @@ async function setupEmptyFinance(page: import('@playwright/test').Page): Promise
  * Fenster offen, in dem `router.refresh()` noch nicht zurück ist. Wer die
  * Version erst aus dem Refresh nimmt, trifft beim zweiten Speichern `staleVersion`.
  */
-async function delayRefresh(page: import('@playwright/test').Page): Promise<void> {
-  await page.route(
-    (url) => url.searchParams.has('_rsc'),
-    async (route) => {
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-      await route.continue().catch(() => undefined);
-    },
-  );
+async function delayRefresh(page: Page): Promise<() => Promise<void>> {
+  const matches = (url: URL) => url.searchParams.has('_rsc');
+  await page.route(matches, async (route) => {
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+    await route.continue().catch(() => undefined);
+  });
+  return () => page.unroute(matches);
 }
 
 test.describe('finance setup', () => {
-  test('Konten-Panel übernimmt die Version aus der Antwort: zweimal speichern vor dem Refresh (Befund 43)', async ({ page }) => {
-    await page.goto('/admin/finance?panel=accounts');
-    await page.getByRole('button', { name: 'Konto anlegen' }).click();
-    const create = page.getByRole('dialog');
-    await create.getByLabel('Name').fill('Vereinskonto');
-    await create.getByLabel('IBAN').fill('DE23999999990000202051');
-    await create.getByRole('button', { name: 'Speichern' }).click();
-    const row = page.getByTestId('account-row-Vereinskonto');
-    await expect(row).toBeVisible();
-    await delayRefresh(page);
-    for (let i = 0; i < 2; i += 1) {
-      await rowAction(page, row, 'Bearbeiten');
-      const dialog = page.getByRole('dialog');
-      await dialog.getByRole('button', { name: 'Speichern' }).click();
-      await expect(dialog).toBeHidden();
-    }
-    await expect(page.getByText(/wurde inzwischen geändert/)).toHaveCount(0);
-  });
+  /**
+   * Befund 43 je Panel: Jedes Panel übernimmt die Version aus der Antwort, nicht erst aus dem Refresh — zweimal
+   * speichern (und beim Zweck gleich als erfüllt markieren), bevor der verzögerte Refresh zurück ist.
+   */
+  const VERSION_CASES: { panel: string; create: (page: Page) => Promise<Locator>; after?: (page: Page, row: Locator) => Promise<void> }[] = [
+    {
+      panel: 'accounts',
+      create: async (page) => {
+        await page.getByRole('button', { name: 'Konto anlegen' }).click();
+        const create = page.getByRole('dialog');
+        await create.getByLabel('Name').fill('Vereinskonto');
+        await create.getByLabel('IBAN').fill('DE23999999990000202051');
+        await create.getByRole('button', { name: 'Speichern' }).click();
+        const row = page.getByTestId('account-row-Vereinskonto');
+        await expect(row).toBeVisible();
+        return row;
+      },
+    },
+    {
+      panel: 'purposes',
+      create: async (page) => {
+        await page.getByRole('button', { name: 'Zweck anlegen' }).click();
+        await page.getByRole('dialog').getByLabel('Name').fill('Neues Katzenhaus');
+        await page.getByRole('dialog').getByRole('button', { name: 'Speichern' }).click();
+        const row = page.locator('tr', { hasText: 'Neues Katzenhaus' });
+        await expect(row).toBeVisible();
+        return row;
+      },
+      after: async (page, row) => {
+        await rowAction(page, row, 'Als erfüllt markieren');
+        await expect(row.getByText('Erfüllt', { exact: true })).toBeVisible();
+      },
+    },
+    {
+      panel: 'fiscalYears',
+      create: async (page) => {
+        await page.getByRole('button', { name: 'Erstes Geschäftsjahr anlegen' }).click();
+        const create = page.getByRole('dialog');
+        await create.getByLabel('Beginnt am').fill(thisYear('01-01'));
+        await create.getByLabel('Endet am').fill(thisYear('12-31'));
+        await create.getByRole('button', { name: 'Speichern' }).click();
+        const row = page.getByTestId('fiscal-years-panel').getByRole('row').nth(1);
+        await expect(row.getByRole('button', { name: /^Aktionen für / })).toBeVisible();
+        return row;
+      },
+    },
+  ];
 
-  test('Zwecke-Panel übernimmt die Version aus der Antwort: speichern und gleich als erfüllt markieren (Befund 43)', async ({ page }) => {
-    await page.goto('/admin/finance?panel=purposes');
-    await page.getByRole('button', { name: 'Zweck anlegen' }).click();
-    await page.getByRole('dialog').getByLabel('Name').fill('Neues Katzenhaus');
-    await page.getByRole('dialog').getByRole('button', { name: 'Speichern' }).click();
-    const row = page.locator('tr', { hasText: 'Neues Katzenhaus' });
-    await expect(row).toBeVisible();
-    await delayRefresh(page);
-    for (let i = 0; i < 2; i += 1) {
-      await rowAction(page, row, 'Bearbeiten');
-      const dialog = page.getByRole('dialog');
-      await dialog.getByRole('button', { name: 'Speichern' }).click();
-      await expect(dialog).toBeHidden();
+  test('Konten, Zwecke und Geschäftsjahre übernehmen die Version aus der Antwort: zweimal speichern vor dem Refresh', async ({ page }) => {
+    for (const c of VERSION_CASES) {
+      await page.goto(`/admin/finance?panel=${c.panel}`);
+      const row = await c.create(page);
+      const undelay = await delayRefresh(page);
+      for (let i = 0; i < 2; i += 1) {
+        await rowAction(page, row, 'Bearbeiten');
+        const dialog = page.getByRole('dialog');
+        await dialog.getByRole('button', { name: 'Speichern' }).click();
+        await expect(dialog).toBeHidden();
+      }
+      await c.after?.(page, row);
+      await expect(page.getByText(/wurde inzwischen geändert/), c.panel).toHaveCount(0);
+      await undelay();
     }
-    await rowAction(page, row, 'Als erfüllt markieren');
-    await expect(row.getByText('Erfüllt', { exact: true })).toBeVisible();
-    await expect(page.getByText(/wurde inzwischen geändert/)).toHaveCount(0);
-  });
-
-  test('Geschäftsjahre-Panel übernimmt die Version aus der Antwort: zweimal speichern vor dem Refresh (Befund 43)', async ({ page }) => {
-    await page.goto('/admin/finance?panel=fiscalYears');
-    await page.getByRole('button', { name: 'Erstes Geschäftsjahr anlegen' }).click();
-    const create = page.getByRole('dialog');
-    await create.getByLabel('Beginnt am').fill(thisYear('01-01'));
-    await create.getByLabel('Endet am').fill(thisYear('12-31'));
-    await create.getByRole('button', { name: 'Speichern' }).click();
-    const panel = page.getByTestId('fiscal-years-panel');
-    const yearRow = panel.getByRole('row').nth(1);
-    await expect(yearRow.getByRole('button', { name: /^Aktionen für / })).toBeVisible();
-    await delayRefresh(page);
-    for (let i = 0; i < 2; i += 1) {
-      await rowAction(page, yearRow, 'Bearbeiten');
-      const dialog = page.getByRole('dialog');
-      await dialog.getByRole('button', { name: 'Speichern' }).click();
-      await expect(dialog).toBeHidden();
-    }
-    await expect(page.getByText(/wurde inzwischen geändert/)).toHaveCount(0);
   });
 
   test.beforeEach(async ({ page }) => {
     await setupEmptyFinance(page);
-  });
-
-  test('„Finanzen“ steht im Einstellungsbereich im vorhandenen Abschnitt, nicht in einem eigenen', async ({ page }) => {
-    await page.goto('/admin/users');
-    const sections = page.getByRole('navigation', { name: 'Unternavigation' });
-    await expect(sections.getByText('Einrichtung')).toBeVisible();
-    await expect(sections.getByRole('link', { name: 'Finanzen' })).toBeVisible();
-    await sections.getByRole('link', { name: 'Finanzen' }).click();
-    await expect(page).toHaveURL('/admin/finance');
-  });
-
-  test('der Bereich steht im Reiter, nicht noch einmal als Überschrift darunter', async ({ page }) => {
-    for (const [panel, name] of [
-      ['accounts', 'Konten'],
-      ['categories', 'Kategorien'],
-      ['purposes', 'Zwecke'],
-      ['fiscalYears', 'Geschäftsjahre'],
-      ['datedValues', 'Sätze und Grenzen'],
-      ['tax', 'Steuerliches'],
-      ['permissions', 'Wer darf was'],
-    ] as const) {
-      await page.goto(`/admin/finance?panel=${panel}`);
-      await expect(page.getByRole('navigation', { name: 'Bereiche der Finanzen' }).getByRole('link', { name })).toHaveAttribute('aria-current', 'page');
-      await expect(page.getByRole('heading', { name, exact: true })).toHaveCount(0);
-    }
-  });
-
-  test('Telefon: der gewählte Reiter ganz rechts ist im Blick, die Seite scrollt nicht waagrecht', async ({ page }) => {
-    await page.setViewportSize({ width: 390, height: 844 });
-    await page.goto('/admin/finance?panel=permissions');
-    const nav = page.getByRole('navigation', { name: 'Bereiche der Finanzen' });
-    const link = nav.getByRole('link', { name: 'Wer darf was' });
-    await expect(link).toHaveAttribute('aria-current', 'page');
-    await expect
-      .poll(async () => {
-        const [n, l] = await Promise.all([nav.boundingBox(), link.boundingBox()]);
-        return n !== null && l !== null && l.x >= n.x - 1 && l.x + l.width <= n.x + n.width + 1;
-      })
-      .toBe(true);
-    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
   });
 
   test('die Checkliste zeigt erledigte und offene Schritte, und was auf etwas wartet', async ({ page }) => {

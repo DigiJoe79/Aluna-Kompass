@@ -284,6 +284,40 @@ Sonst ist nichts von Hand zu tun. Wer sich wundert:
   Eingabemaske ordnen; ohne sie bekommt jedes Feld eine Breite nach seinem Typ.
 - MCP-Clients sind nicht betroffen.
 
+### Von 0.3.0 auf 0.3.1
+
+Die Fassung 0.3.1 bringt eine Migration mit (`0010`): eine neue Spalte an
+den Dateien der Mediathek (`ai_kind`, für alle bestehenden Dateien „keine“)
+und vier Sperren in den Finanzen, die bisher nur der Dienst hielt
+(Versandvermerk einer Zuwendungsbestätigung, Warnungen eines abgeschlossenen
+Einlesens, Herkunft und Treffer eingelesener Umsätze). Sie ändert keine
+bestehenden Werte. `/api/health` meldet danach `migrationCount: 11`. Vor dem
+Update ist nichts Besonderes zu prüfen; ein Backup (Schritt 1) gehört wie
+immer dazu. Ein Backup aus 0.3.1 lässt sich in 0.3.0 nicht mehr einspielen.
+
+Nichts Neues ist nach dem Update von selbst an. Wer die Bildkennzeichnung
+nutzen will:
+
+- **Einschalten** unter Einrichtung → Stammdaten → Medien, „Bildkennzeichnung
+  verwenden“. Die Marken („Bearbeitet“, „KI“) und Sätze für die Webseite
+  haben neutrale Vorgaben je Sprache; der Verein passt sie dort an.
+- **Webseiten-Vorlage prüfen.** Die mitgelieferte `verein-basis` zeigt die
+  Marken. Eine eigene Vorlage zeigt sie erst, wenn sie die Sicht
+  `aiLabeling` liest; an bearbeiteten Bildern steht bis zu ihrer Anpassung die
+  Marke erstellter Bilder (`mark`), nicht `editedMark`. Danach einmal
+  „Vorschau bauen“ und publizieren.
+- **Bestehende Bilder kennzeichnen**, wo nötig: in der Mediathek im
+  Detaildialog, an der Fotokachel eines Tiers oder am Bildfeld
+  („Kennzeichnen …“), oder per MCP (`media_set_ai_kind`). Neue Bilder fragt
+  Kompass gleich beim Hochladen. Kennzeichnen darf, wer Dateien hochladen
+  darf (`media.upload`); ein neues Recht gibt es nicht.
+
+Wer sich wundert:
+
+- Ist die Bildkennzeichnung eingeschaltet, folgt auf jedes Hochladen von
+  Bildern ein kurzer Schritt „Bildkennzeichnung“. Vorbelegt ist „Keine“;
+  „Fertig“ genügt, wenn nichts zu kennzeichnen ist.
+
 ### Von 0.2.12 auf 0.3.0
 
 Die Fassung 0.3.0 bringt eine Migration mit (`0009`): neue Tabellen für

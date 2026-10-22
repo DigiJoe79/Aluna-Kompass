@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { type Allowlist, lineOf, read, relative, sourceFiles } from './source';
+import { type Allowlist, allowlistHygiene, lineOf, read, relative, sourceFiles, staleKeys } from './source';
 
 /**
  * Spaltenrollen (Entwurf E1 „Tabelle am Telefon“, Designer 2026-10-17; docs/MUSTER.md § G): Jede Liste mit
@@ -17,16 +17,14 @@ const CELL = /<TableCell\b[^>]*?\bcol="(\w+)"/g;
 const STATUS = /<(?:StatusBadge|EntryStateBadge|PublishSwitch)\b/;
 
 /** Tabellen mit Kopf, bewusst ohne Kartenzeile — mit Grund. */
-const NO_CARDS: Allowlist = {
-  'app/(shell)/finance/imports/format/csv-assistant.tsx': 'Vorschau der Rohspalten einer CSV-Datei: Die Spalten kommen aus der Datei, Rollen gibt es nicht.',
+export const NO_CARDS: Allowlist = {
 };
 
 /** Tabellen, deren Marke kein Zustand der Zeile ist — mit Grund. */
-const BADGE_NOT_STATUS: Allowlist = {
+export const BADGE_NOT_STATUS: Allowlist = {
   'app/(shell)/finance/reserves/reserve-table.tsx': 'Keine Statusspalte: „inaktiv“ steht am Namen (Titel), „aufgelöst“ anstelle des Knopfs (Zeilenaktion).',
   'app/(shell)/finance/donations/notices/machine-panel.tsx': 'Die Marke „aktuell/früher“ steht im Titel neben dem Namen der unterzeichnenden Person, keine eigene Spalte.',
   'app/(shell)/contacts/contact-list.tsx': 'Rollen sind Marken in meta; „archiviert“ ist die gedämpfte Zeile mit Marke am Namen (`TableRow muted`, Joe 11.8).',
-  'app/(shell)/finance/work/rules/rules-table.tsx': 'Die Marke „Kategorie inaktiv“ gehört zum Ergebnis (meta); „deaktiviert“ ist die gedämpfte Zeile (`TableRow muted`, Joe 11.8).',
   'app/(shell)/admin/finance/fiscal-years-panel.tsx': 'Die Marke „Rumpfjahr“ ist eine Eigenschaft am Namen; „abgeschlossen“ ist die gedämpfte Zeile (`TableRow muted`, Runde 3, 170).',
   'app/(shell)/admin/finance/accounts-panel.tsx': 'Die Marke „Hauptkonto“ ist eine Eigenschaft am Namen; „stillgelegt“ ist die gedämpfte Zeile (`TableRow muted`, Joe 11.8).',
   'app/(shell)/contacts/[id]/bank-accounts-panel.tsx': 'Die Marke „Gemeinschaftskonto“ gehört zum Wert „Auch bei“ (meta), kein Zustand der Zeile (Nachtrag MCP-Test § 3, Designer 2026-10-19).',
@@ -54,13 +52,13 @@ describe('Spaltenrollen jeder Liste (E1)', () => {
     expect(checked.filter((t) => ![...t.text.matchAll(HEAD)].some((m) => m[1] === 'title')).map(where)).toEqual([]);
   });
 
+  const badgeWithoutStatus = checked.filter((t) => STATUS.test(t.text) && ![...t.text.matchAll(HEAD)].some((m) => m[1] === 'status'));
+
   it('eine Liste mit Marke oder Zustandsschalter nennt ihre Spalte `status`', () => {
-    expect(
-      checked
-        .filter((t) => !(t.file in BADGE_NOT_STATUS) && STATUS.test(t.text) && ![...t.text.matchAll(HEAD)].some((m) => m[1] === 'status'))
-        .map(where),
-    ).toEqual([]);
+    expect(badgeWithoutStatus.filter((t) => !(t.file in BADGE_NOT_STATUS)).map(where)).toEqual([]);
   });
+
+  allowlistHygiene(BADGE_NOT_STATUS, () => staleKeys(BADGE_NOT_STATUS, badgeWithoutStatus.map((t) => t.file)), 'Marken ohne Statusspalte');
 
   it('höchstens drei meta-Spalten', () => {
     expect(checked.filter((t) => [...t.text.matchAll(HEAD)].filter((m) => m[1] === 'meta').length > 3).map(where)).toEqual([]);
@@ -77,9 +75,6 @@ describe('Spaltenrollen jeder Liste (E1)', () => {
     expect(missing).toEqual([]);
   });
 
-  it('jede Ausnahme ist noch nötig', () => {
-    const files = new Set(all.map((t) => t.file));
-    expect(Object.keys(NO_CARDS).filter((f) => !files.has(f))).toEqual([]);
-    expect(Object.keys(BADGE_NOT_STATUS).filter((f) => !files.has(f))).toEqual([]);
-  });
+  // Ausgenommen vom ganzen Satz: nötig, solange die Datei eine Tabelle mit Kopf hat.
+  allowlistHygiene(NO_CARDS, () => staleKeys(NO_CARDS, all.map((t) => t.file)), 'Tabellen ohne Rollen');
 });

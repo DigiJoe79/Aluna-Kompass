@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { coreModule } from '../src/core-module';
 import { auditLog } from '../src/db/schema';
 import { defineModule } from '../src/modules/manifest';
-import { getMediaAsset, listMediaAssets, storeMediaAsset, storeMediaAssetDetailed } from '../src/media/service';
+import { getMediaAsset, getMediaAssetInfo, listMediaAssets, storeMediaAsset, storeMediaAssetDetailed } from '../src/media/service';
 import { unwrap } from '../src/result';
 import { writeSettingInternal } from '../src/settings/service';
 import { createTestDeps, ctxWith, insertUser } from '../src/testing';
@@ -118,6 +118,10 @@ describe('media service', () => {
     expect(unwrap(await listMediaAssets(deps, ctx, { query: 'logo des' })).map((m) => m.record.id)).toEqual([logo.id]);
     expect(unwrap(await listMediaAssets(deps, ctx, { query: 'gibtsnicht' }))).toEqual([]);
 
+    // Nur nicht verwendete (Joe 2026-10-22): das Logo ist in Gebrauch, Zeichen und Satzung nicht.
+    expect(unwrap(await listMediaAssets(deps, ctx, { unused: true })).map((m) => m.record.id).sort()).toEqual([svg.id, doc.id].sort());
+    expect(unwrap(await listMediaAssets(deps, ctx, { unused: true, kind: 'pdf' })).map((m) => m.record.id)).toEqual([doc.id]);
+
     // Sortierung: alle drei haben denselben Zeitstempel (feste Uhr), deshalb Name und Größe prüfen
     expect(unwrap(await listMediaAssets(deps, ctx, { sort: 'name' })).map((m) => m.record.filename.split('-')[0])).toEqual(['satzung', 'vereinslogo', 'zeichen']);
     const bySize = unwrap(await listMediaAssets(deps, ctx, { sort: 'size' })).map((m) => m.record.bytes);
@@ -166,6 +170,25 @@ describe('Assets unter dem Recht eines Moduls', () => {
     expect(denied.ok).toBe(false);
     if (denied.ok) return;
     expect(denied.error.type).toBe('forbidden');
+  });
+
+  it('Datensatz und Fundstellen ohne Bytes: dieselben Rechte wie die Auslieferung', async () => {
+    const deps = createTestDeps({ manifests: [coreModule, guarded] });
+    deps.db.transaction((tx) => {
+      writeSettingInternal(tx, deps, ctxWith(['settings.manage']), 'modules.enabled', ['guard']);
+    });
+    const uploader = ctxWith(['media.upload', 'guard.view'], insertUser(deps, {}));
+    const record = unwrap(await storeMediaAsset(deps, uploader, { originalName: 'a.png', bytes: PNG }));
+
+    const info = unwrap(await getMediaAssetInfo(deps, ctxWith(['guard.view'], 'someone'), record.id));
+    expect(info.record.id).toBe(record.id);
+    expect(info.references.map((r) => r.label)).toEqual(['Verschlossen']);
+    const denied = await getMediaAssetInfo(deps, ctxWith(['media.upload'], 'someone'), record.id);
+    expect(!denied.ok && denied.error.type).toBe('forbidden');
+    const anonymous = await getMediaAssetInfo(deps, ctxWith(['guard.view'], null), record.id);
+    expect(!anonymous.ok && anonymous.error.type).toBe('unauthorized');
+    const missing = await getMediaAssetInfo(deps, ctxWith(['guard.view'], 'someone'), 'nope');
+    expect(!missing.ok && missing.error.type).toBe('notFound');
   });
 
   it('lässt ein Asset ohne Anspruch weiterhin für jede angemeldete Person zu', async () => {

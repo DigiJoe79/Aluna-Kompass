@@ -1,58 +1,12 @@
-import { coreModule, setSetting, unwrap } from '@kompass/core';
-import { createTestDeps, ctxWith } from '@kompass/core/testing';
+import { unwrap } from '@kompass/core';
+import { ctxWith } from '@kompass/core/testing';
 import { describe, expect, it } from 'vitest';
-import { animalsModule } from '../src/manifest';
 import { animalsRecordLabels } from '../src/record-labels';
-import { createAnimal } from '../src/service';
 import { submitProposal } from '../src';
 import { createInput, manager, proposalDeps, source } from './proposal-fixture';
 
+/** Was alle Module zusagen (fremder Typ, ok, forbidden, missing), prüft `apps/kompass/tests/module-contracts.test.ts`. */
 describe('animalsRecordLabels', () => {
-  const base = {
-    name: 'Rocky',
-    sex: 'male' as const,
-    birthText: { de: '' },
-    sizeText: { de: '' },
-    summary: { de: 'Kurz' },
-    body: { de: 'Lang' },
-  };
-
-  const setup = async () => {
-    const deps = createTestDeps({ manifests: [coreModule, animalsModule] });
-    await setSetting(deps, ctxWith(['settings.manage']), { key: 'i18n.locales', value: ['de'] });
-    const manage = ctxWith(['animals.view', 'animals.manage']);
-    return { deps, manage };
-  };
-
-  it('answers only for animals', async () => {
-    const { deps } = await setup();
-    expect(animalsRecordLabels(deps, ctxWith(['animals.view']), 'contact', 'C1')).toBeNull();
-  });
-
-  it('labels an animal for a reader, and a neutral label for anyone else', async () => {
-    const { deps, manage } = await setup();
-    const animal = unwrap(await createAnimal(deps, manage, base));
-    expect(animalsRecordLabels(deps, ctxWith(['animals.view']), 'animal', animal.id)).toEqual({
-      label: 'Rocky',
-      href: `/animals/${animal.id}`,
-      state: 'ok',
-    });
-    expect(animalsRecordLabels(deps, ctxWith([]), 'animal', animal.id)).toEqual({
-      label: { key: 'animals.records.forbidden' },
-      href: null,
-      state: 'forbidden',
-    });
-  });
-
-  it('says missing for an unknown id', async () => {
-    const { deps } = await setup();
-    expect(animalsRecordLabels(deps, ctxWith(['animals.view']), 'animal', 'NOPE')).toEqual({
-      label: '',
-      href: null,
-      state: 'missing',
-    });
-  });
-
   it('labels a proposal for a manager, neutral without animals.manage, missing for an unknown id', async () => {
     const d = await proposalDeps();
     const p = unwrap(await submitProposal(d, source(), createInput())).proposal;

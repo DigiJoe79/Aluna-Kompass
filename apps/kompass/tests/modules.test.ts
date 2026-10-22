@@ -4,17 +4,11 @@ import { describe, expect, it } from 'vitest';
 import { installedModules } from '@/modules';
 
 describe('installed modules', () => {
-  it('registers installed modules without clashes', () => {
+  it('registers installed modules without clashes, each with permissions under its own key', () => {
     const registry = createRegistry([coreModule, ...installedModules]);
-    expect(installedModules.map((m) => m.key)).toEqual(['site', 'projects', 'animals', 'contacts', 'members', 'dms', 'finance']);
-    expect(registry.permissionKeys.has('members.read')).toBe(true);
-    expect(registry.permissionKeys.has('animals.manage')).toBe(true);
-    expect(registry.permissionKeys.has('projects.manage')).toBe(true);
-    expect(registry.permissionKeys.has('site.publish')).toBe(true);
-    expect(registry.permissionKeys.has('contacts.manage')).toBe(true);
-    expect(registry.permissionKeys.has('dms.view')).toBe(true);
-    expect(registry.permissionKeys.has('finance.read')).toBe(true);
-    expect(registry.settingDefinitions.has('site.blockedTerms')).toBe(true);
+    expect(registry.permissionKeys.size).toBe([coreModule, ...installedModules].reduce((n, m) => n + m.permissions.length, 0));
+    const foreign = installedModules.flatMap((m) => m.permissions.filter((key) => !key.startsWith(`${m.key}.`)).map((key) => `${m.key}: ${key}`));
+    expect(foreign).toEqual([]);
   });
 
   it('gives every installed module a COPY line in the Dockerfile', () => {

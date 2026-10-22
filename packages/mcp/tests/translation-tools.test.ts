@@ -1,4 +1,4 @@
-import { coreModule, defineModule, listTranslationGaps, ok, schema, setTranslations, type Translatable, type TranslationWrite } from '@kompass/core';
+import { coreModule, defineModule, ok, schema, type Translatable, type TranslationWrite } from '@kompass/core';
 import { createTestDeps, ctxWith, insertUser } from '@kompass/core/testing';
 import { describe, expect, it } from 'vitest';
 import { coreMcpTools } from '../src/core-tools';
@@ -27,9 +27,7 @@ function setup() {
 }
 
 describe('translation tools', () => {
-  it('are registered, name their services and the module rights', () => {
-    expect(tool('translations_list_gaps').service).toBe(listTranslationGaps);
-    expect(tool('translations_set').service).toBe(setTranslations);
+  it('name the module rights', () => {
     for (const right of ['animals.view', 'projects.view', 'site.view']) expect(tool('translations_list_gaps').description).toContain(right);
     for (const right of ['animals.manage', 'projects.manage', 'site.manage']) expect(tool('translations_set').description).toContain(right);
   });

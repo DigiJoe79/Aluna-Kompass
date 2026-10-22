@@ -93,7 +93,9 @@ export function ContactPicker({
   return (
     // `gap` statt `space-y`: Letzteres gibt jedem Kind außer dem letzten Abstand nach unten, und das unsichtbare
     // Statusfeld (`sr-only`) hinter dem Feld macht dieses zum „nicht letzten“ — es saß 6 px höher als Nachbarfelder.
-    <div className="flex flex-col gap-1.5">
+    // `relative`: Halt für das absolut positionierte Statusfeld unten, damit es das Dokument nicht verlängert (Arbeitsliste,
+    // 2026-10-20). Am Wurzelelement statt in einem eigenen Behälter: Ein Behälter im Fluss bekäme wieder ein `gap`.
+    <div className="relative flex flex-col gap-1.5">
       <Label htmlFor={id} required={required}>
         {label}
       </Label>

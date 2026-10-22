@@ -69,7 +69,7 @@ describe('receiveGeneratedUpload', () => {
   it('files in the name of the record — with the module’s permission and without dms.create', async () => {
     const { deps } = setupWithProbe();
     const { document } = unwrap(await receiveGeneratedUpload(deps, ctxWith(['probe.issue'], 'U-HELPER'), upload));
-    expect(deps.db.select().from(documents).where(eq(documents.id, document.id)).get()).toMatchObject({ phase: 'issued', direction: 'incoming', sourceKind: 'uploaded', number: document.number, documentDate: '2026-09-01', textStatus: 'pending', createdByUserId: 'U-HELPER' });
+    expect(deps.db.select().from(documents).where(eq(documents.id, document.id)).get()).toMatchObject({ phase: 'issued', direction: 'incoming', sourceKind: 'uploaded', number: document.number, documentDate: '2026-09-01', createdByUserId: 'U-HELPER' });
     expect(code(await readLinkedDocument(deps, ctxWith(['probe.read']), { documentId: document.id, entityType: 'probeThing', entityId: 'T1' }))).toBe('ok');
   });
 

@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import type { SettingDefinition } from '../modules/manifest';
 import { RETENTION_DEFAULT_MONTHS } from '../retention/classes';
+import { AI_LABELING_SETTINGS } from '../media/ai-labeling';
 import { DEFAULT_THEME } from '../themes/default-theme';
 import { themeSchema } from '../themes/tokens';
 import { DEFAULT_TIME_ZONE, isTimeZone } from '../today';
@@ -115,4 +116,7 @@ export const CORE_SETTINGS: SettingDefinition[] = [
   ...i18n,
   ...system,
   ...backup,
-  ...retention, ...ui];
+  ...retention,
+  ...ui,
+  ...AI_LABELING_SETTINGS,
+];

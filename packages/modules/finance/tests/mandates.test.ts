@@ -9,7 +9,7 @@ import { fileSignedMandate } from '../src/direct-debit/forms';
 import { maskIban } from '../src/format/iban';
 import { installFinance } from '../src/install';
 import { financeContactBankAccounts, financeSepaMandateChanges, financeSepaMandates, type FinanceSepaMandateRow } from '../src/schema';
-import { allowHumanOnlyOverMcp, insertDocument, setupFinance } from './helpers';
+import { insertDocument, setupFinance } from './helpers';
 
 // TEST_NOW: 2026-09-05
 const IBAN = 'DE44999999990532013000';
@@ -90,15 +90,11 @@ describe('activateMandate', () => {
     expect(fail(await activateMandate(f.deps, f.ctx, { mandateId: mandate.id, signedOn: '2026-09-01', signedDocumentId: 'NOPE' }))).toMatchObject({ type: 'notFound' });
   });
 
-  it('refuses a signature date in the future and works only for a human', async () => {
+  it('refuses a signature date in the future', async () => {
     const f = await setup();
     const mandate = unwrap(await f.prepare());
     const doc = signedReturn(f);
     expect(fail(await activateMandate(f.deps, f.ctx, { mandateId: mandate.id, signedOn: '2026-09-06', signedDocumentId: doc }))).toMatchObject({ type: 'validation' });
-    const mcp = { ...f.ctx, channel: 'mcp' as const };
-    expect(fail(await activateMandate(f.deps, mcp, { mandateId: mandate.id, signedOn: '2026-09-01', signedDocumentId: doc }))).toMatchObject({ code: 'humanOnly' });
-    allowHumanOnlyOverMcp(f.deps);
-    expect((await activateMandate(f.deps, mcp, { mandateId: mandate.id, signedOn: '2026-09-01', signedDocumentId: doc })).ok).toBe(true);
   });
 
   it('accepts the signed copy of the form, links the document to the mandate and logs reference and day', async () => {
@@ -161,11 +157,9 @@ describe('mandateState', () => {
 });
 
 describe('endMandate', () => {
-  it('ends a mandate once, for humans only, and logs reference and reason', async () => {
+  it('ends a mandate once and logs reference and reason', async () => {
     const f = await setup();
     const mandate = await active(f);
-    const mcp = { ...f.ctx, channel: 'mcp' as const };
-    expect(fail(await endMandate(f.deps, mcp, { mandateId: mandate.id, endedOn: '2026-09-05', reason: 'debtor' }))).toMatchObject({ code: 'humanOnly' });
     expect(unwrap(await endMandate(f.deps, f.ctx, { mandateId: mandate.id, endedOn: '2026-09-05', reason: 'debtor' }))).toMatchObject({ state: 'ended', endedOn: '2026-09-05', endReason: 'debtor' });
     expect(fail(await endMandate(f.deps, f.ctx, { mandateId: mandate.id, endedOn: '2026-09-05', reason: 'debtor' }))).toMatchObject({ code: 'mandateEnded', params: { reference: 'MND-000001', date: '2026-09-05' } });
     expect(auditOf(f, 'finance.mandate.end').map((e) => e.params)).toEqual([JSON.stringify({ reference: 'MND-000001', reason: 'debtor' })]);
@@ -205,7 +199,6 @@ describe('fileSignedMandate', () => {
     const mandate = unwrap(await f.prepare());
     const bytes = textPdf(['SEPA-Lastschriftmandat', 'unterschrieben']);
     expect(fail(await fileSignedMandate(f.deps, f.ctx, { mandateId: mandate.id, signedOn: '2026-09-06', bytes }))).toMatchObject({ type: 'validation' });
-    expect(fail(await fileSignedMandate(f.deps, { ...f.ctx, channel: 'mcp' }, { mandateId: mandate.id, signedOn: '2026-09-01', bytes }))).toMatchObject({ code: 'humanOnly' });
     expect(fail(await fileSignedMandate(f.deps, ctxWith(['finance.read'], f.userId), { mandateId: mandate.id, signedOn: '2026-09-01', bytes }))).toMatchObject({ type: 'forbidden' });
     const activated = unwrap(await fileSignedMandate(f.deps, f.ctx, { mandateId: mandate.id, signedOn: '2026-09-01', bytes }));
     expect(activated).toMatchObject({ state: 'active', signedOn: '2026-09-01' });

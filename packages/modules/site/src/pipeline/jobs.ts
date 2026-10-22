@@ -6,7 +6,7 @@ import { z } from 'zod';
 import { exportSiteContent, type SiteContentExport } from '../export';
 import { contentManifestOf } from '../public-content';
 import { lastSuccessfulPublish, recordPublish, type PublishDiff, type PublishRecord } from '../services/publishes';
-import { buildSite, removeLegacyStages, SiteBuildError } from './build';
+import { buildSite, SiteBuildError } from './build';
 import { copyTree, countFiles, type TreeHooks } from './copy';
 import { diffTrees, hashTree } from './diff';
 import { runDeployCheck, type DeployCheckResult } from './deploy-check';
@@ -128,9 +128,14 @@ function launch<T>(
   return { run: h.run, done };
 }
 
+/** Ein Lauf anderer Art läuft schon: Satz und Ausweg aus `errors.siteJobRunning` — für Dienst, Cache und die Oberfläche. */
+export function siteJobRunning(kind: SiteJobKind) {
+  return localizedConflict('siteJobRunning', 'errors.siteJobRunning', { kind });
+}
+
 async function runAndWait<T>(deps: Deps, ctx: CallContext, env: SiteEnv, kind: SiteJobKind, source: 'ui' | 'mcp', body: (h: RunHandle) => Promise<Result<T>>): Promise<Result<T>> {
   const started = launch(deps, ctx, env, kind, source, body);
-  if ('busy' in started) return localizedConflict('siteJobRunning', 'errors.siteJobRunning', { kind: started.busy.kind });
+  if ('busy' in started) return siteJobRunning(started.busy.kind);
   return started.done;
 }
 
@@ -360,7 +365,6 @@ async function exportAndBuild(
       if (toPreview) await rm(stampFile(env), { force: true });
       await rm(outDir, { recursive: true, force: true });
       await mkdir(outDir, { recursive: true });
-      await removeLegacyStages(env.templateDir);
       ({ log } = await step(h, 'build', limitFor(env, 'build'), (c) => buildSite({ siteDir: env.templateDir, stageRoot: env.cacheDir, contentDir: job, outDir, publicUrl, staging: env.staging, signal: c.signal, timeoutMs: limitFor(env, 'build').totalMs, onPage: (n) => c.progress(n) })));
     }
     await step(h, 'copyImages', limitFor(env, 'copyImages'), async (c) => {

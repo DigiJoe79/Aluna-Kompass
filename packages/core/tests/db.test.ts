@@ -1,133 +1,27 @@
 import { describe, expect, it } from 'vitest';
 import { runMigrations } from '../src/db/client';
+import { existsSync, readdirSync } from 'node:fs';
+import { is } from 'drizzle-orm';
+import { getTableConfig, SQLiteTable } from 'drizzle-orm/sqlite-core';
+import * as coreSchema from '../src/db/schema';
 import { sessions } from '../src/db/schema';
 import { createTestDb } from '../src/testing/test-db';
 
 describe('database', () => {
-  it('applies migrations and creates all core tables', () => {
+  /**
+   * Jede Tabelle, die ein Drizzle-Schema beschreibt (Kern und alle Module, wie `drizzle.config.ts` sie liest), steht
+   * nach den Migrationen in der Datenbank. Früher zählte der Test alle Tabellennamen von Hand auf; jede neue Tabelle
+   * brauchte hier eine Zeile, ohne dass der Test eine vergessene Migration besser fand als dieser Abgleich.
+   */
+  it('applies migrations and creates every table the schemas describe', async () => {
+    const modules = new URL('../../modules/', import.meta.url);
+    const files = readdirSync(modules).map((dir) => new URL(`${dir}/src/schema.ts`, modules)).filter((file) => existsSync(file));
+    const schemas = [coreSchema, ...(await Promise.all(files.map((file) => import(file.href) as Promise<unknown>)))];
+    const described = schemas.flatMap((mod) => Object.values(mod as Record<string, unknown>).filter((v) => is(v, SQLiteTable)).map((t) => getTableConfig(t as SQLiteTable).name));
+    expect(described.length).toBeGreaterThan(100);
     const { sqlite } = createTestDb();
-    const rows = sqlite
-      .prepare(
-        "select name from sqlite_master where type = 'table' and name not like 'sqlite_%' and name not like '__drizzle%' order by name",
-      )
-      .all() as { name: string }[];
-    expect(rows.map((r) => r.name)).toEqual([
-      'animal_origins',
-      'animal_photos',
-      'animal_proposal_images',
-      'animal_proposals',
-      'animal_stories',
-      'animals',
-      'api_tokens',
-      'audit_log',
-      'contact_channels',
-      'contact_roles',
-      'contacts',
-      'contacts_user_links',
-      'dashboard_layouts',
-      'dms_mail_outbox',
-      'dms_mail_post_moves',
-      'document_counters',
-      'document_folders',
-      'document_former_numbers',
-      'document_links',
-      'document_notes',
-      'document_relations',
-      'document_rules',
-      'document_snippets',
-      'document_text',
-      'document_text_config',
-      'document_text_content',
-      'document_text_data',
-      'document_text_docsize',
-      'document_text_idx',
-      'document_types',
-      'documents',
-      'finance_accounts',
-      'finance_allocation_corrections',
-      'finance_allocation_lines',
-      'finance_cash_counts',
-      'finance_categories',
-      'finance_confirmation_lines',
-      'finance_confirmation_run_items',
-      'finance_confirmation_runs',
-      'finance_confirmations',
-      'finance_contact_bank_accounts',
-      'finance_contact_waiver_terms',
-      'finance_dated_values',
-      'finance_direct_debit_items',
-      'finance_direct_debit_returns',
-      'finance_direct_debit_runs',
-      'finance_entries',
-      'finance_entry_counters',
-      'finance_entry_documents',
-      'finance_entry_justifications',
-      'finance_expense_claims',
-      'finance_expense_counters',
-      'finance_expense_positions',
-      'finance_fiscal_years',
-      'finance_import_candidates',
-      'finance_import_profiles',
-      'finance_import_rules',
-      'finance_import_runs',
-      'finance_in_kind_details',
-      'finance_money_lines',
-      'finance_not_return_marks',
-      'finance_notices',
-      'finance_open_item_settlements',
-      'finance_open_items',
-      'finance_partner_evidence',
-      'finance_partner_notices',
-      'finance_partner_paid_lines',
-      'finance_partner_payment_counters',
-      'finance_partner_payment_positions',
-      'finance_partner_payments',
-      'finance_partner_profiles',
-      'finance_period_events',
-      'finance_pledge_rate_marks',
-      'finance_pledges',
-      'finance_project_settings',
-      'finance_purpose_transfer_counters',
-      'finance_purpose_transfers',
-      'finance_purposes',
-      'finance_raw_transactions',
-      'finance_reserve_movements',
-      'finance_reserves',
-      'finance_sepa_counter',
-      'finance_sepa_mandate_changes',
-      'finance_sepa_mandates',
-      'finance_sepa_prenotifications',
-      'finance_signers',
-      'follow_ups',
-      'media_assets',
-      'media_folders',
-      'member_dunning_notices',
-      'member_dunning_runs',
-      'member_fee_agreements',
-      'member_fee_charges',
-      'member_fee_rules',
-      'member_fee_runs',
-      'member_fee_schedules',
-      'member_memberships',
-      'member_number_counter',
-      'member_run_letters',
-      'member_transfer_requests',
-      'member_type_periods',
-      'member_types',
-      'module_provisions',
-      'module_provisions_errors',
-      'projects',
-      'role_permissions',
-      'roles',
-      'sessions',
-      'settings',
-      'site_entries',
-      'site_publishes',
-      'site_template_state',
-      'site_values',
-      'user_roles',
-      'users',
-    ]);
+    const present = new Set((sqlite.prepare("select name from sqlite_master where type = 'table'").all() as { name: string }[]).map((r) => r.name));
+    expect(described.filter((name) => !present.has(name))).toEqual([]);
   });
 
   it('enforces foreign keys', () => {

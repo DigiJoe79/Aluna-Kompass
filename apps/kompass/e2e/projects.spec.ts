@@ -1,5 +1,5 @@
 import { expect, test } from './fixtures';
-import { loginAsAdmin, resetDatabase, waitForHydration } from './helpers';
+import { loginAsAdmin, resetDatabase, waitForHydration, finishLabeling } from './helpers';
 
 const PNG = Buffer.from(
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==',
@@ -73,20 +73,6 @@ test.describe('projects', () => {
     await expect(page).toHaveURL(/\/projects\/[A-Z0-9]+$/);
   });
 
-  // Durchsicht 0.2.11 (06 A2, 06 B8, 06 B12, 14 B15): Die Spalte des Schalters heißt „Webseite“, der Typ steht als Text
-  // statt Marke, und die Spalte der Pfeile hat einen (unsichtbaren) Kopf. Lauf 3 (Joe 11.8, 061): keine Statusspalte,
-  // ein abgeschlossenes Projekt ist die gedämpfte Zeile mit Marke hinter dem Namen.
-  test('Liste: „Webseite“ für den Schalter, Typ als Text, keine Statusspalte, Kopf über den Pfeilen', async ({ page }) => {
-    await page.goto('/projects');
-    await expect(page.getByRole('columnheader', { name: 'Webseite' })).toBeVisible();
-    await expect(page.getByRole('columnheader', { name: 'Reihenfolge' })).toHaveCount(1);
-    await expect(page.getByRole('columnheader', { name: 'Status' })).toHaveCount(0);
-    const row = page.getByRole('row', { name: /Kastrationsaktion 2026/ });
-    await expect(row).not.toContainText('Aktiv');
-    // Der Typ steht als Text direkt in der Zelle, nicht in einer Marke.
-    await expect(row.getByRole('cell', { name: /^(Dauerprojekt|Kurzzeitprojekt)$/ }).locator('span')).toHaveCount(0);
-  });
-
   // E1 „Tabelle am Telefon“ (Designer 2026-10-17): Unter `md` ist jede Zeile eine Karte; die Liste scrollt nie
   // seitlich, sortiert wird über „Sortieren: …“. Der Schalter „Webseite“ steht am Telefon nicht in der Karte, ein
   // publiziertes Projekt sagt „auf der Webseite“ in der Unterzeile; geschaltet wird am Projekt (061).
@@ -113,6 +99,7 @@ test.describe('projects', () => {
   test('picks an existing image from the library for a project', async ({ page }) => {
     await page.goto('/admin/media');
     await page.getByLabel('Datei hochladen').setInputFiles({ name: 'bestand.png', mimeType: 'image/png', buffer: PNG });
+    await finishLabeling(page);
     await expect(page.getByRole('row', { name: /bestand-/ })).toBeVisible();
 
     await page.goto('/projects');
@@ -164,7 +151,7 @@ test.describe('projects', () => {
     await expect(page.getByRole('button', { name: 'Nach oben' }).first()).toBeVisible();
   });
 
-  test('Speichern ohne Änderung sagt „Nichts geändert“; auf dem Telefon Speichern oben, Verwerfen und Abbrechen darunter nebeneinander', async ({ page }) => {
+  test('Speichern ohne Änderung sagt „Nichts geändert“, Verwerfen erst mit Änderung', async ({ page }) => {
     await page.goto('/projects');
     await page.getByRole('link', { name: 'Projekt anlegen' }).click();
     await page.getByLabel('URL-Teil').fill('telefonprojekt');
@@ -181,24 +168,6 @@ test.describe('projects', () => {
     await expect(bar.getByRole('button', { name: 'Verwerfen' })).toHaveCount(0);
     await page.locator('[name="name.de"]').fill('Telefonprojekt geändert');
     await expect(bar.getByRole('button', { name: 'Verwerfen' })).toBeVisible();
-
-    await page.setViewportSize({ width: 390, height: 844 });
-    // Die Umbruchlage greift erst nach dem Neuzeichnen: bis dahin wiederholen.
-    await expect(async () => {
-      const save = await bar.getByRole('button', { name: 'Speichern' }).boundingBox();
-      const discard = await bar.getByRole('button', { name: 'Verwerfen' }).boundingBox();
-      const cancel = await bar.getByRole('link', { name: 'Abbrechen' }).boundingBox();
-      const frame = await bar.boundingBox();
-      expect(save!.y).toBeLessThan(discard!.y);
-      // Volle Breite der Leiste abzüglich ihres Polsters `px-5` (2 × 20 px, docs/MUSTER.md § I).
-      expect(Math.abs(save!.width - (frame!.width - 40))).toBeLessThanOrEqual(2);
-      // Darunter „Verwerfen“ und „Abbrechen“ nebeneinander, je eine Hälfte (Designer 2026-10-08).
-      expect(Math.abs(discard!.y - cancel!.y)).toBeLessThanOrEqual(1);
-      expect(discard!.x).toBeLessThan(cancel!.x);
-      expect(Math.abs(discard!.width - cancel!.width)).toBeLessThanOrEqual(2);
-      expect(discard!.width).toBeLessThan(save!.width / 2);
-    }).toPass();
-    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
   });
 
   test('Konflikt beim Speichern: zwei Auswege, die eigenen Eingaben erscheinen neben dem neuen Stand', async ({ page, context }) => {

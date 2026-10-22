@@ -18,51 +18,9 @@ describe('finance settings', () => {
     expect(def?.default).toBe(false);
   });
 
-  it('declares every setting of the spec with a default', () => {
-    expect((financeModule.settings ?? []).map((s) => s.key).sort()).toEqual([
-      'finance.batchMinimumCents',
-      'finance.cashDonationAlertCents',
-      'finance.expenseWaiversEnabled',
-      // F8a — Anspruchsgrundlage der Aufwandsspenden.
-      'finance.expenseWaiverBasisText',
-      // Befund J — seit wann sie gilt.
-      'finance.expenseWaiverBasisAgreedOn',
-      'finance.isEntrepreneurOrHasVatId',
-      'finance.lastStatementWarnDays',
-      'finance.mcpHumanOnlyAllowed',
-      'finance.membershipFeesCertifiable',
-      'finance.noticeExpiryWarnMonths',
-      'finance.proofGraceDays',
-      'finance.roundAmountFromCents',
-      'finance.setupCategoriesConfirmedAt',
-      'finance.setupTaxConfirmedAt',
-      'finance.statementSufficesBelowCents',
-      'finance.uploadLimitMb',
-      'finance.voucherTypes',
-      // F5 — Vorschläge der Arbeitsliste.
-      'finance.pairMatchDays',
-      'finance.pairFeeToleranceCents',
-      'finance.matchEntryDays',
-      'finance.cashKeywords',
-      // F8b — Einrichtungspunkt „Vergütung des Vorstands“.
-      'finance.boardRemunerationAllowed',
-      'finance.boardRemunerationBasisText',
-      'finance.boardRemunerationDocumentId',
-      // Befund AK — ab wann sie gilt.
-      'finance.boardRemunerationValidFrom',
-      // Joe 11.9 — wann entschieden wurde; ohne ihn bleibt der Schritt offen.
-      'finance.boardRemunerationDecidedOn',
-      // L1 — Lastschrift: Gläubiger-Daten, Fristen, Format der Mandatsreferenz.
-      'finance.sepa.enabled',
-      'finance.sepa.creditorId',
-      'finance.sepa.creditorName',
-      'finance.sepa.accountId',
-      'finance.sepa.leadBusinessDays',
-      'finance.sepa.maxLeadDays',
-      'finance.sepa.preNotificationDays',
-      'finance.sepa.batchBooking',
-      'finance.sepa.mandateReferenceFormat',
-    ].sort());
+  // Dass jede Vorgabe ihr Schema besteht, prüft `apps/kompass/tests/module-contracts.test.ts` für alle Module.
+  it('gives every setting a default; the agent switch is for the screen only', () => {
+    expect((financeModule.settings ?? []).filter((s) => s.default === undefined).map((s) => s.key)).toEqual([]);
     expect(financeModule.settings!.find((s) => s.key === 'finance.mcpHumanOnlyAllowed')).toMatchObject({ default: false, uiOnly: true });
   });
 

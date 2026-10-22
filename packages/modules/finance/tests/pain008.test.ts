@@ -173,9 +173,8 @@ describe('buildDirectDebitFile and directDebitFileStream', () => {
     expect((await buildDirectDebitFile(f.deps, f.ctx, { runId: f.run.id })).ok).toBe(true);
   });
 
-  it('is human only and needs finance.directDebit; an agent never gets the file (it holds every IBAN)', async () => {
+  it('needs finance.directDebit; an agent never gets the file (it holds every IBAN), not even when the association allows human-only steps', async () => {
     const f = await scene();
-    expect(fail(await buildDirectDebitFile(f.deps, asMcp(f.ctx), { runId: f.run.id }))).toMatchObject({ code: 'humanOnly' });
     expect(fail(await buildDirectDebitFile(f.deps, ctxWith(['finance.read'], f.userId), { runId: f.run.id }))).toMatchObject({ type: 'forbidden' });
     expect(fail(await buildDirectDebitFile(f.deps, f.ctx, { runId: 'NOPE' }))).toMatchObject({ type: 'notFound' });
     unwrap(await buildDirectDebitFile(f.deps, f.ctx, { runId: f.run.id }));

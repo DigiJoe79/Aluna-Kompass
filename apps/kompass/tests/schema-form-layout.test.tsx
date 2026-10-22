@@ -6,7 +6,6 @@ import type { ReactNode } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import messages from '../messages/de.json';
 import { LocalizedField, languageColumns, localizedSize } from '@/components/forms/localized-field';
-import { FormGrid } from '@/components/forms/form-grid';
 import { SchemaForm } from '@/components/schema-form';
 
 // Der Medienwähler zieht die Mediathek samt Server Actions nach; für das Raster reicht ein Platzhalter.
@@ -47,93 +46,12 @@ describe('localizedSize', () => {
   });
 });
 
-describe('LocalizedField', () => {
-  it('spannt Größe je Sprache mal Zahl der Sprachen statt fest zwei Spalten', () => {
-    wrap(
-      <FormGrid>
-        <LocalizedField name="size" label="Größe als Text" size="s" value={{}} locales={['de', 'en']} />
-      </FormGrid>,
-    );
-    const cell = cellOf('Größe als Text');
-    expect(cell.className).toContain('@[880px]:col-span-2');
-    expect(cell.className).not.toContain('md:col-span-2');
-    expect(cell.className).not.toContain('col-span-4');
-  });
-
-  it('nimmt für Langtext die Größe l je Sprache', () => {
-    wrap(
-      <FormGrid>
-        <LocalizedField name="summary" label="Kurztext" kind="textarea" value={{}} locales={['de', 'en']} />
-      </FormGrid>,
-    );
-    expect(cellOf('Kurztext').className).toContain('@[880px]:col-span-4');
-  });
-});
-
 /**
  * Sprachspalten nach der Breite des Feldes, nicht des Fensters (Plan K8/K9 T2b): zwei Sprachen nebeneinander ab
  * 520 px Feldbreite, drei ab 800 px, darunter untereinander; ab vier Sprachen Reiter. Die Zelle selbst bleibt
  * dieselbe (Sprachkürzel am Label), nur die Anordnung wechselt.
  */
 describe('Sprachspalten', () => {
-  /**
-   * Das Raster der Sprachzellen: der Elternknoten der Zelle mit dem Sprachkürzel. Das letzte Vorkommen, weil die
-   * Reiter ab vier Sprachen das Kürzel seit K10 Charge 3 ebenfalls in Großbuchstaben tragen und davor stehen.
-   */
-  const languageGrid = (code: string) => {
-    let node: HTMLElement | null = screen.getAllByText(code).at(-1)!;
-    while (node && !node.className.includes('grid')) node = node.parentElement;
-    return node!;
-  };
-
-  const expectColumns = (grid: HTMLElement, count: number) => {
-    expect(grid.parentElement!.className).toContain('@container');
-    expect(grid.className).not.toMatch(/\bmd:grid-cols-/);
-    if (count === 2) {
-      expect(grid.className).toContain('@[520px]:grid-cols-2');
-      expect(grid.className).not.toContain('grid-cols-3');
-    } else if (count === 3) {
-      // Alle in einer Reihe oder alle untereinander, nie zwei oben und eine darunter.
-      expect(grid.className).not.toContain('grid-cols-2');
-      expect(grid.className).toContain('@[800px]:grid-cols-3');
-    } else {
-      expect(grid.className).not.toMatch(/grid-cols-[23]/);
-    }
-  };
-
-  it('Sprachspalten haben den Abstand des Formularrasters (K10 § 4.6)', () => {
-    wrap(<LocalizedField name="name" label="Name" value={{}} locales={['de', 'en']} />);
-    const cls = languageGrid('DE').className.split(' ');
-    expect(cls).toEqual(expect.arrayContaining(['gap-x-5', 'gap-y-4']));
-    expect(cls).not.toContain('gap-3');
-  });
-
-  it.each([2, 3, 4])('LocalizedField mit %i Sprachen', (count) => {
-    const locales = ['de', 'en', 'ro', 'fr'].slice(0, count);
-    wrap(<LocalizedField name="summary" label="Kurztext" value={{}} locales={locales} />);
-    expectColumns(languageGrid('DE'), count);
-  });
-
-  it.each([2, 3, 4])('schema-form localized mit %i Sprachen', (count) => {
-    const locales = ['de', 'en', 'ro', 'fr'].slice(0, count);
-    wrap(<SchemaForm schema={{ claim: { widget: 'localized', label: 'Claim' } }} value={{}} locales={locales} onChange={() => {}} />);
-    expectColumns(languageGrid('DE'), count);
-  });
-
-  // Befund K9 5a: Ist schon eine Sprache `full`, stehen die Sprachen immer untereinander, jede über die volle Breite.
-  it.each([2, 3])('LocalizedField der Größe full mit %i Sprachen steht erst in breiter Spalte nebeneinander', (count) => {
-    const locales = ['de', 'en', 'ro'].slice(0, count);
-    wrap(<LocalizedField name="lede" label="Einleitung" size="full" value={{}} locales={locales} />);
-    expect(languageGrid('DE').className).toContain(count === 2 ? '@[720px]:grid-cols-2' : '@[1080px]:grid-cols-3');
-  });
-
-  it.each([2, 3])('schema-form localized der Größe full mit %i Sprachen steht erst in breiter Spalte nebeneinander', (count) => {
-    const locales = ['de', 'en', 'ro'].slice(0, count);
-    wrap(<SchemaForm schema={{ lede: { widget: 'localized', label: 'Einleitung', size: 'full' } }} value={{}} locales={locales} onChange={() => {}} />);
-    expect(languageGrid('DE').className).toContain(count === 2 ? '@[720px]:grid-cols-2' : '@[1080px]:grid-cols-3');
-    expect(cellOf('Einleitung').className).toContain('@[880px]:col-span-4');
-  });
-
   // Runde 3 (128, 130, 190): auch ein Feld, das je Sprache schon die volle Breite nimmt, steht ab md nebeneinander —
   // erst ab einer breiteren Spalte, damit jede Sprache Platz behält.
   it('languageColumns stellt auch `full` ab md nebeneinander', () => {
@@ -154,17 +72,6 @@ describe('SchemaForm', () => {
     spotlight: { widget: 'references', view: 'animals', key: 'slug', labelField: 'name', maxItems: 2, label: 'Spotlight' },
   };
 
-  it('rastert jedes Feld nach seiner Größe', () => {
-    wrap(<SchemaForm schema={schema} value={{}} locales={['de', 'en']} onChange={() => {}} />);
-    expect(cellOf('Anzahl').className).not.toContain('col-span');
-    expect(cellOf('Projekt').className).toContain('@[880px]:col-span-3');
-    expect(cellOf('Vorher').className).toContain('@[880px]:col-span-2');
-    // Mehrsprachiger Text: m je Sprache, zwei Sprachen nebeneinander → ganze Zeile.
-    expect(cellOf('Claim').className).toContain('@[880px]:col-span-4');
-    // Mehrfachverweis: jeder Platz eine Zelle, Standard m.
-    expect(cellOf('Spotlight').className).toContain('@[880px]:col-span-2');
-  });
-
   it('bildet aus aufeinanderfolgenden Feldern mit gleichem group einen Abschnitt mit Titel, ohne umzusortieren', () => {
     wrap(<SchemaForm schema={schema} value={{}} locales={['de']} onChange={() => {}} />);
     // Ebene aus dem Umfeld (Section, K10 Charge 3): ohne Umfeld 2.
@@ -175,36 +82,12 @@ describe('SchemaForm', () => {
     expect(bilder.textContent).toContain('Nachher');
     expect(bilder.textContent).not.toContain('Anzahl');
     expect(bilder.textContent).not.toContain('Claim');
-    // Nach einem Abschnitt ohne Titel zieht der Rahmen um die Section die Linie.
-    expect(bilder.parentElement!.className).toContain('border-t');
-  });
-
-  // Befund K9 5b: Die Plätze stehen als einzelne Zellen direkt im Raster des Abschnitts, ohne eigenen Block.
-  it('stellt die Plätze eines Mehrfachverweises als Zellen ins Raster des Abschnitts, je m', () => {
-    wrap(<SchemaForm schema={{ count: schema.count!, spotlight: schema.spotlight! }} value={{}} locales={['de']} onChange={() => {}} />);
-    const grid = cellOf('Anzahl').parentElement!;
-    const first = cellOf('Spotlight');
-    const second = cellOf('Platz 2');
-    expect(first.parentElement).toBe(grid);
-    expect(second.parentElement).toBe(grid);
-    expect(first.className).toContain('@[880px]:col-span-2');
-    expect(second.className).toContain('@[880px]:col-span-2');
-    expect(document.querySelector('fieldset')).toBeNull();
-    expect(grid.querySelectorAll('.grid')).toHaveLength(0);
-    expect(screen.queryByText('Platz 1')).toBeNull();
   });
 
   it('gibt jedem Platz einen vollständigen zugänglichen Namen', () => {
     wrap(<SchemaForm schema={{ spotlight: schema.spotlight! }} value={{}} locales={['de']} onChange={() => {}} />);
     expect(screen.getByRole('combobox', { name: 'Spotlight, Platz 1' })).toBeTruthy();
     expect(screen.getByRole('combobox', { name: 'Spotlight, Platz 2' })).toBeTruthy();
-  });
-
-  it('nimmt size aus dem Template je Platz', () => {
-    wrap(<SchemaForm schema={{ spotlight: { ...schema.spotlight!, size: 's', maxItems: 3 } }} value={{}} locales={['de']} onChange={() => {}} />);
-    for (const label of ['Spotlight', 'Platz 2', 'Platz 3']) {
-      expect(cellOf(label).className).not.toContain('col-span');
-    }
   });
 
   it('zeigt den Hinweis auf einen veralteten Wert am Platz', () => {

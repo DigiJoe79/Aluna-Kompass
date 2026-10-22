@@ -51,6 +51,11 @@ export interface AssistantState {
   settings: AssistantSettings;
   /** Rolle je Spalte der Kopfzeile, in ihrer Reihenfolge. */
   roles: ColumnRole[];
+  /**
+   * Je Spalte: Die Rolle stammt aus der Vorbelegung und ist unverändert (Marke „vorbelegt“, Spec 2026-10-22).
+   * Ein Stand von vor 0.3.1 kennt das Feld nicht; `loadState` setzt dann `[]`, Leser nehmen `guessed[i] ?? false`.
+   */
+  guessed: boolean[];
   /** Werte des Kennzeichens, die „Ausgang“ bedeuten, durch Komma getrennt. */
   indicatorValues: string;
   /** Werte der Statusspalte, die „vorgemerkt“ bedeuten, durch Komma getrennt. */
@@ -113,10 +118,12 @@ export function initialState(bytes: Uint8Array, defaultName: string): AssistantS
       roleByName.set(value as string, role as ColumnRole);
     }
   }
+  const roles = guess.header.map((h) => roleByName.get(h) ?? 'ignore');
   return {
     step: 2,
     settings: { encoding: guess.encoding, delimiter: guess.delimiter, headerRow: guess.headerRow, dateFormat: guess.dateFormat, decimalSeparator: guess.decimalSeparator },
-    roles: guess.header.map((h) => roleByName.get(h) ?? 'ignore'),
+    roles,
+    guessed: roles.map((role) => role !== 'ignore'),
     indicatorValues: '',
     pendingValues: guess.columns.pending?.values.join(', ') ?? '',
     invertSign: null,
@@ -124,7 +131,16 @@ export function initialState(bytes: Uint8Array, defaultName: string): AssistantS
   };
 }
 
-const splitValues = (text: string) => text.split(',').map((v) => v.trim()).filter((v) => v !== '');
+/** Eine Rolle von Hand gesetzt: Die Marke „vorbelegt“ fällt weg, auch wenn die Rolle gleich bleibt. */
+export function setRole(state: AssistantState, index: number, role: ColumnRole): AssistantState {
+  const roles = state.roles.slice();
+  roles[index] = role;
+  const guessed = state.guessed.slice();
+  guessed[index] = false;
+  return { ...state, roles, guessed };
+}
+
+export const splitValues = (text: string) => text.split(',').map((v) => v.trim()).filter((v) => v !== '');
 
 /** Aus Einstellungen und Rollen ein Format — oder der Grund, warum noch nicht. */
 export function buildFormat(header: string[], state: AssistantState): { ok: true; format: CsvFormat } | { ok: false; reason: BuildFailure } {
@@ -215,7 +231,10 @@ export function saveState(storage: Storage | null, key: string, state: Assistant
 export function loadState(storage: Storage | null, key: string): AssistantState | null {
   try {
     const raw = storage?.getItem(key);
-    return raw ? (JSON.parse(raw) as AssistantState) : null;
+    if (!raw) return null;
+    const state = JSON.parse(raw) as AssistantState;
+    // Gespeichert vor 0.3.1: ohne `guessed` — gilt als „nichts vorbelegt“.
+    return { ...state, guessed: Array.isArray(state.guessed) ? state.guessed : [] };
   } catch {
     return null;
   }

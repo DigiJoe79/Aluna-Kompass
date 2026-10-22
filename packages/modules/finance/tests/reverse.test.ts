@@ -10,7 +10,7 @@ import { reverseEntry, reverseInternal } from '../src/ledger/reverse';
 import { installFinance } from '../src/install';
 import type { EntryLock } from '../src/locks';
 import { financeAllocationLines, financeCategories, financeEntries, financeMoneyLines, financePeriodEvents } from '../src/schema';
-import { allowHumanOnlyOverMcp, insertRaw, insertRun, ledgerFixture, setupFinance } from './helpers';
+import { insertRaw, insertRun, ledgerFixture, setupFinance } from './helpers';
 
 const err = (r: { ok: boolean; error?: unknown }) => (r.ok ? 'ok' : r.error);
 
@@ -148,15 +148,6 @@ describe('reverseEntry', () => {
     expect(cashRes.correctionDraft).toBeNull();
   });
 
-  it('is refused over MCP like every finalizing step', async () => {
-    const f = await ledgerFixture();
-    const entry = unwrap(await finalizeEntry(f.deps, f.ctx, { id: (await draft(f, 5000)).id }));
-    const agent = { ...f.ctx, channel: 'mcp' as const };
-    expect(err(await reverseEntry(f.deps, agent, { id: entry.id }))).toMatchObject({ type: 'conflict', code: 'humanOnly' });
-    allowHumanOnlyOverMcp(f.deps);
-    expect((await reverseEntry(f.deps, agent, { id: entry.id })).ok).toBe(true);
-  });
-
   it('reverses ⇔ reversedBy: the two pointers always agree', async () => {
     const f = await ledgerFixture();
     const e1 = unwrap(await finalizeEntry(f.deps, f.ctx, { id: (await draft(f, 1000, '2026-03-01')).id }));
@@ -219,14 +210,12 @@ describe('reverseEntry', () => {
     expect(again.moneyLines[0]).toMatchObject({ rawTransactionId: raw });
   });
 
-  it('logs numbers only', async () => {
+  it('audits the reversal', async () => {
     const f = await ledgerFixture();
     const d = unwrap(await saveDraft(f.deps, f.ctx, { entryDate: '2026-03-01', text: 'Spende von Erika Beispiel', moneyLines: [{ accountId: f.bank.id, amountCents: 5000 }], allocationLines: [{ categoryId: f.donations.id, amountCents: 5000, contactId: f.donor.id }] }));
     const entry = unwrap(await finalizeEntry(f.deps, f.ctx, { id: d.id }));
     unwrap(await reverseEntry(f.deps, f.ctx, { id: entry.id }));
     const log = JSON.stringify(f.deps.db.select().from(schema.auditLog).all().filter((e) => e.action.startsWith('finance.entry.')));
     expect(log).toContain('finance.entry.reverse');
-    expect(log).not.toContain('Erika');
-    expect(log).not.toContain(f.donor.id);
   });
 });

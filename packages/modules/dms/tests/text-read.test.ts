@@ -1,7 +1,21 @@
+import { unwrap } from '@kompass/core';
 import { describe, expect, it } from 'vitest';
+import { createDraft } from '../src/drafts';
+import { receiveDocument } from '../src/incoming';
 import { replaceDocumentText } from '../src/index-store';
 import { getDocumentText, getDocumentTextStatus } from '../src/text';
-import { fileFixture, setupWithTypes } from './helpers';
+import { fileFixture, pdfBytes, setupWithTypes } from './helpers';
+
+/** Der Anfangszustand der Texterkennung — hier und nur hier. */
+describe('Erkennungszustand am Dokument', () => {
+  it('eingegangene Post wartet auf Erkennung, ein Entwurf ohne Datei auf nichts', async () => {
+    const { deps, ctx } = setupWithTypes();
+    const received = unwrap(await receiveDocument(deps, ctx, { filename: 'post.pdf', typeKey: 'letter', subject: 'Eingang', documentDate: '2026-09-11', bytes: pdfBytes() }));
+    expect(received).toMatchObject({ textStatus: 'pending', textAttempts: 0, textError: null, textExtractedAt: null });
+    const draft = unwrap(await createDraft(deps, ctx, { typeKey: 'letter', subject: 'Entwurf', body: 'Text' }));
+    expect(draft.textStatus).toBeNull();
+  });
+});
 
 describe('getDocumentText', () => {
   it('liefert die Seiten aus dem Index, sobald gelesen wurde', async () => {

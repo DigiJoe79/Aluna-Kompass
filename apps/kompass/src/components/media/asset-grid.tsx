@@ -4,6 +4,8 @@ import { useTranslations } from 'next-intl';
 import { useCallback } from 'react';
 import { useAssetDrag } from './use-asset-drag';
 import { StatusBadge } from '@/components/status-badge';
+import { AiKindBadge } from './ai-kind-badge';
+import type { AiKind } from '@kompass/core';
 
 export interface GridItem {
   id: string;
@@ -16,6 +18,7 @@ export interface GridItem {
   place?: string;
   /** Wo die Datei liegt (`null` = ohne Ordner) — beim Ziehen sagt der Baum damit schon beim Überfahren „Liegt schon hier“. */
   folder?: string | null;
+  aiKind?: AiKind;
 }
 
 /** Beschriftung aus den Verwendungen: die erste, und wie viele es noch gibt (10 A6). */
@@ -92,24 +95,32 @@ export function AssetGrid({
                     {t('chooser.selected')}
                   </StatusBadge>
                 ) : null}
+                {it.aiKind && it.aiKind !== 'none' ? (
+                  <span className={`absolute ${selected && isSelected ? 'top-1.5 left-1.5' : 'top-1.5 right-1.5'}`}>
+                    <AiKindBadge kind={it.aiKind} />
+                  </span>
+                ) : null}
               </span>
-              <span className="flex items-center justify-between gap-1 px-2 py-1.5 text-hint">
+              <span className="flex items-center gap-1 px-2 py-1.5 text-hint">
                 {/* 144/145: Titel ist der Dateiname, die Verwendung steht gedämpft darunter (vorher umgekehrt, 10 A6). */}
                 <span className="flex min-w-0 flex-col">
                   <span className="truncate text-ink">{it.filename}</span>
-                  {it.caption ? <span className="truncate text-muted-ink">{it.caption}</span> : null}
+                  {/* 10 B30: Nur die Abweichung trägt eine Marke; sie steht an der Stelle der Verwendung, die eine unverwendete
+                      Datei nicht hat, damit der Name die ganze Breite behält (Designer 2026-10-22). `py-px` hält sie auf
+                      Zeilenhöhe, nur hier. */}
+                  {it.caption ? (
+                    <span className="truncate text-muted-ink">{it.caption}</span>
+                  ) : !it.used && !(selected && isSelected) ? (
+                    <StatusBadge tone="neutral" className="self-start py-px">
+                      {t('unused')}
+                    </StatusBadge>
+                  ) : null}
                   {it.place ? (
                     <span data-folder-cell className="truncate text-hint text-ink-2">
                       {it.place}
                     </span>
                   ) : null}
                 </span>
-                {/* 10 B30: Nur die Abweichung trägt eine Marke („nicht verwendet“); verwendet ist der Normalfall. */}
-                {!(selected && isSelected) && !it.used ? (
-                  <StatusBadge tone="neutral" className="shrink-0">
-                    {t('unused')}
-                  </StatusBadge>
-                ) : null}
               </span>
             </button>
           </li>

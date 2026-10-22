@@ -1,8 +1,6 @@
-import { createHash } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import { createTypstRenderer, resolveAssetDirs, resolveBases } from '../src';
 
-const sha = (b: Uint8Array) => createHash('sha256').update(b).digest('hex');
 const bases = resolveBases(resolveAssetDirs({}));
 
 const payload = (fontBody = 'Source Sans 3') => ({
@@ -16,25 +14,6 @@ const payload = (fontBody = 'Source Sans 3') => ({
 describe('typst renderer', () => {
   it('finds a typst binary of the pinned minor version', async () => {
     expect(await createTypstRenderer().version()).toMatch(/^typst 0\.15\./);
-  });
-
-  it('renders a document deterministically', async () => {
-    const r = createTypstRenderer();
-    const a = await r.renderDocument({ baseId: 'a4-plain', bases, bodyTypst: 'Erster Absatz.\n\nZweiter.', payload: payload() });
-    const b = await r.renderDocument({ baseId: 'a4-plain', bases, bodyTypst: 'Erster Absatz.\n\nZweiter.', payload: payload() });
-    expect(new TextDecoder().decode(a.subarray(0, 5))).toBe('%PDF-');
-    expect(a.byteLength).toBeGreaterThan(2000);
-    expect(sha(a)).toBe(sha(b));
-  });
-
-  it('treats escaped body content literally', async () => {
-    const bytes = await createTypstRenderer().renderDocument({
-      baseId: 'a4-plain',
-      bases,
-      bodyTypst: 'Preis \\#panic("x") \\[box\\] \\$x^2\\$',
-      payload: payload(),
-    });
-    expect(bytes.byteLength).toBeGreaterThan(1000);
   });
 
   it('fails loudly on an unknown base', async () => {

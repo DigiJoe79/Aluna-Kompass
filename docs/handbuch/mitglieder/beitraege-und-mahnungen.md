@@ -25,6 +25,11 @@ anderes per Lastschrift — etwa die Eltern —, nennt die Mitteilung das Konto,
 Ankündigung als eigenen Brief. Diese Ankündigung nennt je Einzug Tag und Verwendungszweck und steht im Versand
 desselben Laufs, nach dem Zustellweg des Kontoinhabers.
 
+Die Ankündigung ist ein Dokument der Finanzen. Wer den Lauf ohne Finanzrechte startet, bekommt sie nicht erzeugt;
+das Ergebnis des Laufs nennt, für wie viele Mitglieder sie fehlt, und die Einzugsvorschau der Finanzen hält diese
+Beiträge zurück, bis eine Ankündigung vorliegt. Wer ohne Finanzrechte versendet, sieht sie nur als Zahl; die übrigen
+Briefe gehen normal hinaus.
+
 Wechselt ein Mitglied von Lastschrift auf Überweisung, nennt die Vorschau beim Speichern die Beiträge, die ein Brief
 schon als Einzug angekündigt hat. Das Mitglied verlässt sich auf den Einzug: Stellen Sie danach eine neue
 Beitragsmitteilung mit den Überweisungsdaten aus.

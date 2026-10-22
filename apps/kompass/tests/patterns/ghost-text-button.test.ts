@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import messages from '../../messages/de.json';
-import { checkCountedAllowlist, type CountedAllowlist, openingTags, read, relative, sourceFiles } from './source';
+import { allowlistHygiene, checkCountedAllowlist, type CountedAllowlist, openingTags, read, relative, sourceFiles, translate, translators } from './source';
 
 /**
  * Textknopf (Designer Runde 4, „Eine Regel zur Klärung: Textknopf“; Entscheid Joe 2026-10-17; docs/MUSTER.md § B,
@@ -9,7 +8,7 @@ import { checkCountedAllowlist, type CountedAllowlist, openingTags, read, relati
  * ausgenommen. Der Wächter findet einen `Button` mit `variant="ghost"`, dessen Text — als Wort im Code oder über
  * `t('…')` aus der Sprachdatei — ein anderes Wort ist. Ausnahmen stehen gezählt mit Grund in der Liste.
  */
-const ALLOWED: CountedAllowlist = {
+export const ALLOWED: CountedAllowlist = {
   // Der Kopf einer aufklappbaren Gruppe ist eine ganze Zeile („Finanzen · 2 von 5“): kein Knopf neben anderen, sondern
   // die Überschrift, die aufklappt (Runde 3, 158/179).
   'app/(shell)/admin/roles/role-editor.tsx': { count: 1, reason: 'Kopfzeile der aufklappbaren Rechtegruppe' },
@@ -18,15 +17,6 @@ const ALLOWED: CountedAllowlist = {
 
 const WORDS = /^(Abbrechen|Schließen|Verwerfen)$/;
 
-function lookup(path: string): unknown {
-  return path.split('.').reduce<unknown>((node, key) => (node && typeof node === 'object' ? (node as Record<string, unknown>)[key] : undefined), messages);
-}
-
-/** Die Übersetzer der Datei: Variable → Namensraum (`const t = useTranslations('dms.admin')`, auch ohne Namensraum). */
-function translators(text: string): Map<string, string> {
-  return new Map([...text.matchAll(/const (\w+) = (?:await )?(?:useTranslations|getTranslations)\((?:'([^']*)')?\)/g)].map((m) => [m[1]!, m[2] ?? '']));
-}
-
 /** Der Text eines Knopfs: Wörter im Code und aufgelöste `t('…')`; ein unbekannter Schlüssel zählt als Text. */
 function texts(body: string, ts: Map<string, string>): string[] {
   const out: string[] = [];
@@ -34,9 +24,7 @@ function texts(body: string, ts: Map<string, string>): string[] {
   if (plain && plain !== '×') out.push(plain);
   for (const call of body.matchAll(/\{(\w+)\('([\w.]+)'/g)) {
     const ns = ts.get(call[1]!);
-    const key = ns ? `${ns}.${call[2]}` : call[2]!;
-    const value = ns !== undefined ? lookup(key) : undefined;
-    out.push(typeof value === 'string' ? value : `?${key}`);
+    out.push(translate(ts, call[1]!, call[2]!) ?? `?${ns ? `${ns}.` : ''}${call[2]}`);
   }
   // Ein Ausdruck, der kein `t('…')` ist (`{label}`), ist Text, den der Wächter nicht kennt.
   if (/\{(?!\s*\w+\(')(?!\s*\/\*)[^}]*\}/.test(body.replace(/<[^>]+>/g, '')) && out.length === 0) out.push('?ausdruck');
@@ -67,8 +55,8 @@ export function ghostHits(): { where: string; file: string; text: string }[] {
 
 describe('Textknopf nur für Abbrechen, Schließen, Verwerfen', () => {
   it('kein anderer `ghost`-Knopf mit Text', () => {
-    const { unexpected, stale } = checkCountedAllowlist(ghostHits(), ALLOWED);
-    expect(unexpected).toEqual([]);
-    expect(stale).toEqual([]);
+    expect(checkCountedAllowlist(ghostHits(), ALLOWED).unexpected).toEqual([]);
   });
+
+  allowlistHygiene(ALLOWED, () => checkCountedAllowlist(ghostHits(), ALLOWED).stale);
 });

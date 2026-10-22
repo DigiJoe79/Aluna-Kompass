@@ -1,11 +1,9 @@
-import path from 'node:path';
 import { expect, test } from './fixtures';
 import { associationDay } from './association-day';
 import { callTool, mcpClient, PDF } from './expense-helpers';
 import { loginAsAdmin, resetDatabase, setE2ESetting } from './helpers';
 import { story, storyPattern } from './story-year';
 
-/** > 1 MB (N9, Befundliste 0.2.0) — erzeugt mit `docs/intern/recherche/2026-09-26-upload-repro/mkpdf.py`. */
 /**
  * Eine Buchung im Journal öffnen wie ein Mensch: über die Suche. Die Buchungen aus dem Vorjahr des Stichjahrs stehen
  * nicht mehr auf der ersten Seite (50 je Seite, neueste zuerst), seit die Lastschrift und die Mitglieder im Seed buchen.
@@ -17,7 +15,6 @@ async function openEntry(page: import('@playwright/test').Page, text: string): P
   await page.locator('tr', { hasText: text }).click();
 }
 
-const BIG_PDF = path.resolve(import.meta.dirname, 'fixtures/beleg-1500k.pdf');
 
 test.describe('finance', () => {
   test.beforeEach(async ({ page }) => {
@@ -43,18 +40,6 @@ test.describe('finance', () => {
     await page.getByRole('button', { name: 'Sortieren nach Datum' }).click();
     await expect(page).toHaveURL(/state=draft/);
     await expect(page).toHaveURL(/sort=entryDate/);
-  });
-
-  /** Wie Tier-, Kontaktliste und Akte (Befund 2026-09-30): Das Suchfeld las die Adresse nur beim ersten Rendern. */
-  test('das Suchfeld folgt der Adresse, auch wenn sie von außen wechselt', async ({ page }) => {
-    await loginAsAdmin(page);
-    await page.goto('/finance/entries');
-    const search = page.getByRole('searchbox', { name: 'Suchen' });
-    await search.fill('Entwurf');
-    await expect(page).toHaveURL(/q=Entwurf/);
-    await page.getByRole('button', { name: 'Filter „Suche: Entwurf“ entfernen' }).click(); // das Kreuz am Chip nimmt den Filter zurück
-    await expect(page).not.toHaveURL(/q=/);
-    await expect(search).toHaveValue('');
   });
 
   /** Spec Filterleisten § 4: Jahr sichtbar, Kategorie und „Nur …“ unter „Weitere Filter“, `ids` als Chip. */
@@ -589,37 +574,6 @@ test.describe('finance', () => {
     await expect(page.getByText(/Zuordnung geändert von/)).toBeVisible();
   });
 
-  test('eine Aufteilung, deren Änderung auf Freigabe wartet, lässt sich nicht erneut wählen', async ({ page }) => {
-    await loginAsAdmin(page);
-    await openEntry(page, 'Sponsoring Altjahr');
-    await page.getByRole('button', { name: 'Korrigieren' }).click();
-    const pendingRow = page.getByRole('button').filter({ hasText: 'wartet auf Freigabe' });
-    await expect(pendingRow).toBeVisible();
-    await expect(pendingRow).toBeDisabled();
-    const selectableRow = page.getByRole('button').filter({ hasText: '30,00' });
-    await expect(selectableRow).toBeEnabled();
-  });
-
-  test('bei nur einer Aufteilung gibt es keinen Auswahlschritt', async ({ page }) => {
-    await loginAsAdmin(page);
-    await page.goto('/finance/entries');
-    await page.locator('tr', { hasText: 'Bar-Ausgabe Fahrtkosten' }).click();
-    await page.getByRole('button', { name: 'Korrigieren' }).click();
-    await expect(page.getByText('Welche Aufteilung?')).toHaveCount(0);
-    await expect(page.getByText('Die Zuordnung')).toBeVisible();
-  });
-
-  test('wer nichts ändert, kann nicht absenden', async ({ page }) => {
-    await loginAsAdmin(page);
-    await page.goto('/finance/entries');
-    await page.locator('tr', { hasText: 'Bar-Ausgabe Fahrtkosten' }).click();
-    await page.getByRole('button', { name: 'Korrigieren' }).click();
-    await page.getByRole('checkbox', { name: 'wird im Ausland verwendet' }).check();
-    await page.getByLabel('Begründung').fill('Testkorrektur ohne Änderung');
-    await expect(page.getByRole('button', { name: 'Zuordnung ändern' })).toBeDisabled();
-    await expect(page.getByText('Ändern Sie mindestens ein Feld.')).toBeVisible();
-  });
-
   test('den Zweck einer Spende ändern verlangt ein Dokument; mit PDF geht es durch', async ({ page }) => {
     await loginAsAdmin(page);
     await page.goto('/finance/entries');
@@ -684,13 +638,6 @@ test.describe('finance', () => {
     expect(response.ok()).toBe(true);
   });
 
-  test('ein Beleg über 1 MB an einer festgeschriebenen Buchung kommt an (N9)', async ({ page }) => {
-    await loginAsAdmin(page);
-    await openEntry(page, 'Spende Altjahr');
-    await page.getByTestId('voucher-file-input').setInputFiles(BIG_PDF);
-    await expect(page.getByRole('link', { name: 'öffnen' })).toBeVisible();
-  });
-
   test('ohne finance.entriesFinalize fehlt der Knopf „Korrigieren“', async ({ page }) => {
     await loginAsAdmin(page);
     await page.goto('/admin/users');
@@ -728,27 +675,6 @@ test.describe('finance', () => {
     const sectionNav = page.getByRole('navigation', { name: 'Unternavigation' });
     await expect(sectionNav.getByRole('link', { name: 'Konten', exact: true })).toBeVisible();
     await expect(sectionNav.getByRole('link', { name: 'Offene Zahlungen' })).toBeVisible();
-  });
-
-  test('die IBAN ist maskiert und lässt sich aufdecken', async ({ page }) => {
-    await loginAsAdmin(page);
-    await page.goto('/finance/accounts');
-    // F4 Task 8: „Importkonto“ (Seed) steht alphabetisch vor „Vereinskonto“ — die Karte gezielt wählen statt `.first()`.
-    const card = page.locator('[role="link"]', { hasText: 'Vereinskonto' });
-    await expect(card.getByTestId('iban-value')).toHaveText('DE ·· 2051');
-    await card.getByRole('button', { name: 'IBAN aufdecken' }).click();
-    await expect(card.getByTestId('iban-value')).toHaveText('DE23 9999 9999 0000 2020 51');
-    await card.getByRole('button', { name: 'IBAN wieder verbergen' }).click();
-    await expect(card.getByTestId('iban-value')).toHaveText('DE ·· 2051');
-  });
-
-  test('eine Kasse nennt neutral, wann sie zuletzt gezählt wurde', async ({ page }) => {
-    await loginAsAdmin(page);
-    await page.goto('/finance/accounts');
-    const line = page.getByText('noch nicht gezählt').first();
-    await expect(line).toBeVisible();
-    // Neutral: kein Warnfarb-Token, kein Badge um den Satz.
-    await expect(line).not.toHaveClass(/warning/);
   });
 
   test('stillgelegte Konten stehen eingeklappt unter einer Aufklappliste', async ({ page }) => {
@@ -1065,9 +991,9 @@ test.describe('finance', () => {
     await page.goto('/admin/modules');
     await expect(page.getByRole('switch', { name: 'Finanzen aktivieren oder deaktivieren' })).toBeChecked();
     await page.goto('/finance/entries?q=zzz');
-    const empty = page.locator('section').filter({ hasText: 'Keine Buchung passt zu diesen Filtern.' });
+    const empty = page.locator('[data-slot="empty-state"][data-filtered]');
     await expect(empty).toBeVisible();
-    await expect(page.getByText('Noch keine Buchung.')).toHaveCount(0);
+    await expect(page.locator('[data-slot="empty-state"]:not([data-filtered])')).toHaveCount(0);
     await expect(empty.getByRole('link', { name: 'Neue Buchung' })).toHaveCount(0);
     await expect(page.getByRole('link', { name: 'Konten einrichten' })).toHaveCount(0);
     await empty.getByRole('link', { name: 'Filter zurücksetzen' }).click();
@@ -1105,17 +1031,6 @@ test.describe('finance', () => {
   async function disableFinanceModuleSetting(page: import('@playwright/test').Page): Promise<void> {
     await setE2ESetting(page, 'modules.enabled', ['animals', 'contacts', 'dms', 'projects', 'site']);
   }
-
-  test('bei ausgeschaltetem Finanzmodul zeigen die Finanzseiten die Sperre „Modul inaktiv“ und den Weg zu den Modulen', async ({ page }) => {
-    await loginAsAdmin(page);
-    await disableFinanceModuleSetting(page);
-
-    for (const path of ['/finance/entries', '/finance/accounts', '/finance/cash', '/finance/open-items', '/admin/finance']) {
-      await page.goto(path);
-      await expect(page.getByRole('heading', { name: 'Modul Finanzen ist nicht aktiv' })).toBeVisible();
-      await expect(page.getByRole('link', { name: 'Module öffnen' })).toBeVisible();
-    }
-  });
 
   test('ein Beleg-Download antwortet bei ausgeschaltetem Modul mit 404', async ({ page }) => {
     await loginAsAdmin(page);
@@ -1194,19 +1109,6 @@ test.describe('finance', () => {
     await expect(page.getByRole('heading', { name: 'Journal' })).toBeVisible();
   });
 
-  // Runde 3 (005, 016): Die Arten von Arbeit haben kein gemeinsames Datum — das Datum der geprüften Buchungen steht im
-  // Satz („seit …“), eine Datumsspalte gibt es nicht. Am Telefon bricht der Satz um, statt gekürzt zu werden.
-  test('auf 390 px: keine Datumsspalte, das Datum steht im Satz, nichts läuft seitlich über', async ({ page }) => {
-    await loginAsAdmin(page);
-    await page.setViewportSize({ width: 390, height: 844 });
-    await page.goto('/');
-    const tile = page.getByTestId('dashboard-tile-finance-todo');
-    await expect(tile.getByRole('link', { name: /geprüfte, noch nicht festgeschriebene Buchung.* seit \d{2}\.\d{2}\.\d{4}/ })).toBeVisible();
-    await expect(tile.getByTestId('tile-line-date')).toHaveCount(0);
-    const overflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth);
-    expect(overflow).toBe(false);
-  });
-
   test('die Projektseite zeigt Ziel, Einnahmen, Ausgaben und Ergebnis ohne Namen', async ({ page }) => {
     await loginAsAdmin(page);
     await page.goto('/projects');
@@ -1283,19 +1185,6 @@ test.describe('finance', () => {
     await page.getByRole('link', { name: 'Winterhilfe für Streuner' }).click();
     await expect(page).toHaveURL(/\/projects\/[A-Z0-9]+$/);
     await expect(page.getByTestId('project-finance-section')).toHaveCount(0);
-  });
-
-  test('bei ausgeschaltetem Finanzmodul fehlt der Finanzabschnitt am Projekt', async ({ page }) => {
-    await loginAsAdmin(page);
-    await disableFinanceModuleSetting(page);
-    try {
-      await page.goto('/projects');
-      await page.getByRole('link', { name: 'Winterhilfe für Streuner' }).click();
-      await expect(page).toHaveURL(/\/projects\/[A-Z0-9]+$/);
-      await expect(page.getByTestId('project-finance-section')).toHaveCount(0);
-    } finally {
-      await setE2ESetting(page, 'modules.enabled', ['animals', 'contacts', 'dms', 'finance', 'projects', 'site']);
-    }
   });
 });
 

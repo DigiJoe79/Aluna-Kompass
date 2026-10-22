@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { openingTags, read, relative, sourceFiles } from './source';
+import { attributeExpression, openingTags, read, relative, sourceFiles } from './source';
 
 /**
  * Aktionen am ganzen Datensatz (Löschen, Archivieren, Stornieren) stehen auf einer Seite im Kopf (`RecordActions`),
@@ -15,35 +15,14 @@ export function misplacedRecordActions(text: string): number[] {
     .map(({ line }) => line);
 }
 
-/**
- * Der Ausdruck im Attribut `status={…}` des Tags selbst (bis zur passenden Klammer) — nicht ein `status=` eines
- * verschachtelten Elements in `actions={…}`. Jedes Element darin muss eine `StatusBadge` sein.
- */
-function statusExpression(tag: string): string | null {
-  let depth = 0;
-  for (let i = 0; i < tag.length; i += 1) {
-    const ch = tag[i]!;
-    if (ch === '{') depth += 1;
-    else if (ch === '}') depth -= 1;
-    else if (depth === 0 && /\sstatus=\{$/.test(tag.slice(Math.max(0, i - 8), i + 2))) {
-      let inner = 0;
-      for (let j = i + 1; j < tag.length; j += 1) {
-        if (tag[j] === '{') inner += 1;
-        else if (tag[j] === '}' && (inner -= 1) === 0) return tag.slice(i + 2, j);
-      }
-      return tag.slice(i + 2);
-    }
-  }
-  return null;
-}
-
 /** Die Marken-Bausteine aus MUSTER § F; `EntryStateBadge` baut auf `StatusBadge` auf (Board § K Ziel 5). */
 const BADGES = new Set(['StatusBadge', 'EntryStateBadge']);
 
 export function statusNotBadge(text: string): number[] {
   return openingTags(text, /PageHeader/)
     .filter(({ tag }) => {
-      const expression = statusExpression(tag);
+      // Nur `status={…}` des Tags selbst, nicht eines Elements in `actions={…}`; jedes Element darin ist eine Marke.
+      const expression = attributeExpression(tag, 'status');
       if (expression === null) return false;
       const elements = [...expression.matchAll(/<([A-Za-z][\w.]*)/g)].map((m) => m[1]);
       return elements.length === 0 || elements.some((name) => !BADGES.has(name!));

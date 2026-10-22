@@ -15,6 +15,9 @@ import { ManagedField } from '@/components/managed-field';
 import { Notice } from '@/components/notice';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
+import { LocalizedField } from '@/components/forms/localized-field';
+import type { LocalizedText } from '@kompass/core';
 import { FormErrorSummary } from '@/components/forms/form-error-summary';
 import { PanelNav } from '@/components/panel-nav';
 import { Textarea } from '@/components/ui/textarea';
@@ -29,12 +32,22 @@ const SETTINGS_TAB_KEYS = SETTINGS_TABS.map((tab) => tab.key);
 type Values = Record<string, unknown>;
 export type SettingsTabKey = (typeof SETTINGS_TABS)[number]['key'];
 
+function valuesEqual(a: unknown, b: unknown): boolean {
+  if (a === b) return true;
+  if (typeof a === 'object' && a !== null && typeof b === 'object' && b !== null) {
+    return JSON.stringify(a) === JSON.stringify(b);
+  }
+  return false;
+}
+
 export function SettingsForm({
   initial,
   themes,
   lastSaved,
   managed = [],
   panel,
+  locales = ['de'],
+  aiKindCount = 0,
 }: {
   initial: Values;
   themes: { key: string; name: string }[];
@@ -43,9 +56,12 @@ export function SettingsForm({
   managed?: string[];
   /** Der Bereich aus der Adresse (`?panel=`); die Werte aller Bereiche bleiben beim Wechsel erhalten. */
   panel: SettingsTabKey;
+  locales?: string[];
+  aiKindCount?: number;
 }) {
   const t = useTranslations('settings');
   const c = useTranslations('common');
+  const tCrop = useTranslations('media.crop');
   const locale = useLocale();
   const { date } = useDateFormat();
   const [values, setValues] = useState<Values>(initial);
@@ -54,7 +70,7 @@ export function SettingsForm({
   const feedback = useActionFeedback();
 
   const changes = useMemo(
-    () => Object.fromEntries(Object.entries(values).filter(([k, v]) => v !== initial[k])),
+    () => Object.fromEntries(Object.entries(values).filter(([k, v]) => !valuesEqual(v, initial[k]))),
     [values, initial]
   );
   const pendingCount = Object.keys(changes).length;
@@ -165,6 +181,42 @@ export function SettingsForm({
           </Select>,
           t('hints.themeHint')
         );
+      case 'switch':
+        return (
+          <FormField
+            key={field.key}
+            id={id}
+            label={label}
+            hint={hint}
+            error={errors[field.key]}
+            size={field.size}
+            toggle
+          >
+            <Switch
+              id={id}
+              checked={Boolean(value)}
+              onCheckedChange={(checked) => set(field.key, checked)}
+            />
+          </FormField>
+        );
+      case 'localized': {
+        const localizedValue = (typeof value === 'object' && value !== null ? value : {}) as LocalizedText;
+        return (
+          <LocalizedField
+            key={field.key}
+            name={field.key}
+            label={label}
+            kind={field.multiline ? 'textarea' : 'input'}
+            size={field.size}
+            rows={field.multiline ? 3 : undefined}
+            value={localizedValue}
+            hint={hint}
+            errors={errors}
+            locales={locales}
+            onChange={(next) => set(field.key, next)}
+          />
+        );
+      }
       case 'date':
         return wrap(
           <Input
@@ -251,22 +303,33 @@ export function SettingsForm({
                 value={String(values['branding.logoAssetId'] ?? '') || null}
                 label={t('logo.label')}
                 onChange={(id) => set('branding.logoAssetId', id)}
+                target={tCrop('targets.settings')}
               />
               <p className="text-hint text-ink-2">{t('logo.hint')}</p>
             </div>
           ) : null}
-          {settingsSections(tab).map(({ section, fields }, index) =>
-            section ? (
+          {settingsSections(tab).map(({ section, fields }, index) => {
+            const isAiSection = section === 'aiLabeling';
+            const aiEnabled = Boolean(values['media.aiLabeling.enabled']);
+            const visibleFields = isAiSection && !aiEnabled ? fields.filter((f) => f.key === 'media.aiLabeling.enabled') : fields;
+            return section ? (
               <Section key={section} title={t(`sections.${section}`)}>
-                <FormGrid>{fields.map(render)}</FormGrid>
+                <FormGrid>{visibleFields.map(render)}</FormGrid>
+                {isAiSection && !aiEnabled && aiKindCount > 0 ? (
+                  <div className="mt-4">
+                    <Notice level="hint">
+                      {t('hints.aiLabelingDisabledWithMedia', { count: aiKindCount })}
+                    </Notice>
+                  </div>
+                ) : null}
               </Section>
             ) : (
               // Felder ohne Abschnitt (Bank, Anzeige): kein Titel, also keine `Section`.
               <div key={index} className={cn(index > 0 && 'mt-5 border-t border-line pt-5')}>
                 <FormGrid>{fields.map(render)}</FormGrid>
               </div>
-            ),
-          )}
+            );
+          })}
         </div>
         );
       })}

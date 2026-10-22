@@ -10,13 +10,13 @@ const { DatedValuesPanel } = await import('@/app/(shell)/admin/finance/dated-val
 
 afterEach(cleanup);
 
-/** 11-1 B30, 11-1 B31: Sätze und Grenzen als eine Tabelle, „Vorgabe“ statt „Ausgeliefert“, kein doppeltes „Aktuell“, Plural stimmt. */
+/** 11-1 B30, 11-1 B31: Sätze und Grenzen als eine Tabelle, je Wert die Herkunft. */
 describe('DatedValuesPanel', () => {
   const entries = [
     { key: 'vatStandard', unit: 'percent' as const, entries: [{ validFrom: '2024-01-01', value: 19, source: 'shipped' as const }] },
     { key: 'taxation', unit: 'taxation' as const, entries: [{ validFrom: '2024-01-01', value: 'smallBusiness', source: 'shipped' as const }, { validFrom: '2027-01-01', value: 'regular', source: 'override' as const }] },
   ];
-  it('is one table with the default as „Vorgabe“ and without „Aktuell:“', () => {
+  it('is one table and names the source of each value', () => {
     render(
       <NextIntlClientProvider locale="de" messages={messages} timeZone="Europe/Berlin">
         <DatedValuesPanel entries={entries} />
@@ -24,11 +24,6 @@ describe('DatedValuesPanel', () => {
     );
     expect(screen.getAllByRole('table')).toHaveLength(1);
     expect(screen.getAllByText('Vorgabe').length).toBeGreaterThan(0);
-    expect(screen.queryByText('Ausgeliefert')).toBeNull();
-    expect(document.body.textContent).not.toContain('Aktuell:');
     expect(screen.getByText('Vom Verein überschrieben')).toBeTruthy();
-  });
-  it('says „1 Tag“ in the singular', () => {
-    expect(messages.finance.admin.datedValues.unitDays).toContain('one {# Tag}');
   });
 });

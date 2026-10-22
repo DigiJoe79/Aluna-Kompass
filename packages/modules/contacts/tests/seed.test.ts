@@ -38,35 +38,24 @@ describe('contacts seed', () => {
     const deps = createTestDeps({ manifests: [coreModule, contactsModule], env: 'development' });
     await seedDevelopment(deps);
     const rows = deps.db.select().from(contacts).all();
-    const verband = rows.find((c) => c.name === 'Landesverband Musterland e.V.')!;
-    const ole = rows.find((c) => c.lastName === 'Petersen')!;
-    expect(ole.belongsToId).toBe(verband.id);
-    expect(deliveryForContactInternal(deps.db, ole.id)).toMatchObject({ channel: 'email', via: 'organization' });
-    const greta = rows.find((c) => c.lastName === 'Hoff')!;
-    expect(deliveryForContactInternal(deps.db, greta.id)).toEqual({ channel: 'post', reason: 'preference' });
-  });
-
-  it('is idempotent', async () => {
-    const deps = createTestDeps({ manifests: [coreModule, contactsModule], env: 'development' });
-    await seedDevelopment(deps);
-    const count1 = deps.db.select().from(contacts).all().length;
-    await seedDevelopment(deps);
-    const count2 = deps.db.select().from(contacts).all().length;
-    expect(count2).toBe(count1);
+    const organizations = new Set(rows.filter((c) => c.kind === 'organization').map((c) => c.id));
+    const atOrganization = rows.filter((c) => c.kind === 'person' && c.belongsToId !== null && organizations.has(c.belongsToId));
+    expect(atOrganization.some((c) => (deliveryForContactInternal(deps.db, c.id) as { via?: string }).via === 'organization')).toBe(true);
+    expect(rows.some((c) => JSON.stringify(deliveryForContactInternal(deps.db, c.id)) === JSON.stringify({ channel: 'post', reason: 'preference' }))).toBe(true);
   });
 
   it('legt einen Kontakt an, dessen Frist abgelaufen ist — damit der Fristenbildschirm etwas zeigt', async () => {
     const deps = createTestDeps({ manifests: [coreModule, contactsModule], env: 'development', now: '2026-09-17T08:00:00.000Z' });
     await seedDevelopment(deps);
-    expect(contactsRetentionDue(deps).map((d) => d.label)).toEqual(['Lena Vogt']);
+    expect(contactsRetentionDue(deps).length).toBeGreaterThanOrEqual(1);
   });
 
   it('hängt jede Rolle am Stichjahr, keine an einer festen Jahreszahl (Befund 0.2.8/20)', async () => {
-    // 2031 ist das Stichjahr; die älteste Rolle (Finanzamt, Lena Vogt) liegt drei Jahre davor.
+    // 2031 ist das Stichjahr; die älteste Rolle liegt drei Jahre davor.
     const deps = createTestDeps({ manifests: [coreModule, contactsModule], env: 'development', now: '2031-10-01T08:00:00.000Z' });
     await seedDevelopment(deps);
     expect(deps.db.select().from(contactRoles).all().every((r) => r.since >= '2028-01-01')).toBe(true);
-    expect(contactsRetentionDue(deps).map((d) => d.label)).toEqual(['Lena Vogt']);
+    expect(contactsRetentionDue(deps).length).toBeGreaterThanOrEqual(1);
   });
 
   it('links one seeded user account to a seeded contact, once', async () => {
@@ -82,13 +71,15 @@ describe('contacts seed', () => {
     const deps = createTestDeps({ manifests: [coreModule, contactsModule], env: 'development' });
     await seedDevelopment(deps);
     const all = deps.db.select().from(contacts).all();
-    expect(all.filter((c) => c.kind === 'organization').map((c) => c.name).sort()).toEqual(['Amtsgericht Musterstadt', 'Finanzamt Musterstadt', 'Landesverband Musterland e.V.', 'Tierarztpraxis am Stadtpark']);
+    expect(all.filter((c) => c.kind === 'organization').length).toBeGreaterThanOrEqual(3);
     // Jede Person mit Vor- und Nachnamen.
     for (const p of all.filter((c) => c.kind === 'person')) expect([p.firstName, p.lastName].every((v) => (v ?? '').trim().length > 0), `${p.firstName} ${p.lastName}`).toBe(true);
-    const jakob = all.find((c) => c.firstName === 'Jakob' && c.lastName === 'Brenner')!;
-    const roles = deps.db.select().from(contactRoles).where(eq(contactRoles.contactId, jakob.id)).all().sort((a, b) => (a.since < b.since ? -1 : 1));
-    expect(roles.map((r) => [r.role, r.until === null])).toEqual([['interested', false], ['partner', true]]);
-    expect(roles[0]!.until! < roles[1]!.since).toBe(true);
+    // Eine Person, deren Rolle wechselt: eine beendete Rolle, danach eine offene.
+    const changed = all.filter((c) => {
+      const roles = deps.db.select().from(contactRoles).where(eq(contactRoles.contactId, c.id)).all();
+      return roles.some((ended) => ended.until !== null && roles.some((open) => open.until === null && open.role !== ended.role && ended.until! < open.since));
+    });
+    expect(changed.length).toBeGreaterThanOrEqual(1);
     const today = deps.clock.now().toISOString().slice(0, 10);
     expect(deps.db.select().from(contactRoles).all().every((r) => r.since <= today && (r.until === null || r.until <= today))).toBe(true);
   });

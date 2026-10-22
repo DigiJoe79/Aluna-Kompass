@@ -16,7 +16,7 @@ import {
 import { createDraft } from '../src/drafts';
 import { ensureDocumentType } from '../src/provision';
 import { documentTypes } from '../src/schema';
-import { ALL_DMS, auditActions, fileFixture, setupWithProbe, setupWithTypes } from './helpers';
+import { auditActions, fileFixture, setupWithProbe, setupWithTypes } from './helpers';
 
 const code = (r: { ok: boolean; error?: { type: string; code?: string } }) => (r.ok ? 'ok' : r.error!.type === 'conflict' ? r.error!.code : r.error!.type);
 
@@ -25,12 +25,6 @@ describe('document types', () => {
     const { deps } = setupWithTypes();
     expect(documentTypeFor(deps.db, 'letter')?.prefix).toBe('BRF');
     expect(documentTypeFor(deps.db, 'gibtsnicht')).toBeNull();
-  });
-
-  it('verlangt dms.view', async () => {
-    const { deps } = setupWithTypes();
-    const denied = await listDocumentTypes(deps, ctxWith(ALL_DMS.filter((p) => p !== 'dms.view')), {});
-    expect(denied.ok).toBe(false);
   });
 
   it('hat für jede Vorgabeart ein dreistelliges Präfix', () => {
@@ -168,25 +162,9 @@ describe('deleteDocumentType (Task 4)', () => {
     expect(documentTypeFor(deps.db, 'memo')).not.toBeNull();
   });
 
-  it('verlangt dms.manage', async () => {
-    const { deps, ctx } = setupWithTypes();
-    unwrap(await createDocumentType(deps, ctx, { key: 'memo', label: 'Vermerk', prefix: 'VMK', defaultDirection: 'outgoing', retentionClass: 'statutory6Y' }));
-    const denied = await deleteDocumentType(deps, ctxWith(ALL_DMS.filter((p) => p !== 'dms.manage')), { key: 'memo' });
-    expect(denied.ok).toBe(false);
-    expect(documentTypeFor(deps.db, 'memo')).not.toBeNull();
-  });
 });
 
 describe('document rules', () => {
-  it('verlangt dms.manage für Regeln', async () => {
-    const { deps } = setupWithTypes();
-    const denied = await createDocumentRule(
-      deps,
-      ctxWith(ALL_DMS.filter((p) => p !== 'dms.manage')),
-      { matchField: 'filename', matchContains: 'Finanzamt', thenTypeKey: 'authority' },
-    );
-    expect(denied.ok).toBe(false);
-  });
 
   it('legt eine Regel an, aktualisiert und löscht sie', async () => {
     const { deps, ctx } = setupWithTypes();

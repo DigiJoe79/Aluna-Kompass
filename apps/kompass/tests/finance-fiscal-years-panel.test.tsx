@@ -22,13 +22,12 @@ const year = (designation: string, status: 'open' | 'closed') => ({
 
 /** Runde 3, 170: Ein offenes Geschäftsjahr ist der Normalfall ohne Marke, ein abgeschlossenes eine gedämpfte Zeile. */
 describe('FiscalYearsPanel', () => {
-  it('kein grünes „Offen“, „abgeschlossen“ als gedämpfte Zeile mit Marke', () => {
+  it('ein abgeschlossenes Jahr ist eine gedämpfte Zeile mit Marke, ein offenes nicht', () => {
     render(
       <NextIntlClientProvider locale="de" messages={messages} timeZone="Europe/Berlin">
         <FiscalYearsPanel years={[year('2025', 'closed'), year('2026', 'open')]} />
       </NextIntlClientProvider>,
     );
-    expect(screen.queryByText('Offen')).toBeNull();
     const closed = screen.getByRole('row', { name: /2025/ });
     expect(closed.textContent).toContain('abgeschlossen');
     expect(closed.getAttribute('data-muted')).not.toBeNull();

@@ -1,9 +1,10 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { NextIntlClientProvider } from 'next-intl';
 import { useState, type ReactNode } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { PhotosEditor, type EditorPhoto } from '@/app/(shell)/animals/photos-editor';
+import { MediaLabelingProvider } from '@/components/media/media-labeling-provider';
 import messages from '../messages/de.json';
 
 function Intl({ children }: { children: ReactNode }) {
@@ -15,6 +16,12 @@ function Intl({ children }: { children: ReactNode }) {
 }
 
 afterEach(cleanup);
+
+const getMediaLabelingAction = vi.fn();
+vi.mock('@/app/(shell)/admin/media/actions', () => ({
+  getMediaLabelingAction: (...a: unknown[]) => getMediaLabelingAction(...a),
+  setMediaAiKindAction: vi.fn(async () => ({ status: 'success' })),
+}));
 
 import { resolvePlaces } from '@kompass/core/image-places';
 
@@ -67,14 +74,12 @@ describe('PhotosEditor', () => {
     expect(screen.getByText('Ausschnitt · nur 800 px breit')).toBeTruthy();
   });
 
-  // 045/046: dieselben Fotoaktionen wie am Bildfeld — eine Stufe (`outline`), ein Name („Bild entfernen“).
-  it('offers „Ausschnitt …“ before „Bild entfernen“, only when the pixel size is known, both outline like the image field', () => {
+  // N3 (Spec Bildkennzeichnung beim Hochladen § 5): rechts, was das Bild betrifft, in dieser Reihenfolge.
+  it('offers „Ausschnitt …“ before „Bild entfernen“, only when the pixel size is known', () => {
     render(<PhotosEditor photos={[{ assetId: 'a0', isPrimary: true, crop: null, width: 4000, height: 3000 }, { assetId: 'a1', isPrimary: false, crop: null }]} max={12} onChange={() => {}} onChoose={() => {}} places={places} />, { wrapper: Intl });
     const [known, unknown] = screen.getAllByTestId('animal-photo');
-    const buttons = within(known!).getAllByRole('button').map((b) => b.textContent);
-    expect(buttons.indexOf('Ausschnitt …')).toBe(buttons.indexOf('Bild entfernen') - 1);
-    expect(within(known!).getByRole('button', { name: 'Bild entfernen' }).className).toContain('border-line-strong');
-    expect(within(known!).getByRole('button', { name: 'Ausschnitt …' }).className).toContain('border-line-strong');
+    const names = within(known!).getAllByRole('button').map((b) => b.getAttribute('aria-label'));
+    expect(names.indexOf('Ausschnitt …')).toBe(names.indexOf('Bild entfernen') - 1);
     expect(within(unknown!).queryByRole('button', { name: 'Ausschnitt …' })).toBeNull();
   });
 
@@ -123,14 +128,19 @@ describe('PhotosEditor', () => {
     expect(screen.getByText('fest für das Titelbild')).toBeTruthy();
   });
 
-  it('marks the main photo with a badge and offers „Als Hauptfoto“ as a button on the others (Befund 10, wie in der Prüfung)', () => {
+  // Joe 2026-10-22: Der Stern am Hauptfoto ist gedrückt und ohne Wirkung, aber nicht gesperrt.
+  it('the star is pressed at the main photo, does nothing there and is not disabled; elsewhere it makes the main photo', () => {
     const onChange = vi.fn();
     render(<PhotosEditor photos={photos(2)} max={12} onChange={onChange} onChoose={() => {}} places={places} />, { wrapper: Intl });
     const [first, second] = screen.getAllByTestId('animal-photo');
-    expect(within(first!).getByText('Hauptfoto')).toBeTruthy();
-    expect(within(first!).queryByRole('button', { name: 'Hauptfoto' })).toBeNull();
-    expect(within(first!).queryByRole('button', { name: 'Als Hauptfoto' })).toBeNull();
-    fireEvent.click(within(second!).getByRole('button', { name: 'Als Hauptfoto' }));
+    const star = within(first!).getByRole('button', { name: 'Als Hauptfoto' });
+    expect(star.getAttribute('aria-pressed')).toBe('true');
+    expect(star.hasAttribute('disabled')).toBe(false);
+    fireEvent.click(star);
+    expect(onChange).not.toHaveBeenCalled();
+    const other = within(second!).getByRole('button', { name: 'Als Hauptfoto' });
+    expect(other.getAttribute('aria-pressed')).toBe('false');
+    fireEvent.click(other);
     expect(onChange).toHaveBeenCalledWith([{ assetId: 'a0', isPrimary: false }, { assetId: 'a1', isPrimary: true }]);
   });
 
@@ -208,5 +218,35 @@ describe('PhotosEditor: Titelbild wechseln', () => {
     render(<Harness initial={start().map(({ name: _n, ...p }) => p)} />, { wrapper: Intl });
     fireEvent.click(within(tiles()[1]!).getByRole('button', { name: 'Als Hauptfoto' }));
     expect(screen.getByTestId('primary-crop-announcement').textContent).toBe('Titelbild ist jetzt Foto 2. Ausschnitt von Foto 1 entfernt.');
+  });
+
+  it('shows the AI badge on a tile whose photo carries a kind, and none on the others (Spec KI-Transparenz)', () => {
+    render(<PhotosEditor photos={[{ assetId: 'a0', isPrimary: true, aiKind: 'generated' }, { assetId: 'a1', isPrimary: false }]} max={12} onChange={() => {}} onChoose={() => {}} places={places} />, { wrapper: Intl });
+    expect(screen.getAllByTestId('ai-kind-badge').map((b) => b.textContent)).toEqual(['KI erstellt']);
+  });
+});
+
+/** Spec Bildkennzeichnung beim Hochladen § 4: „Kennzeichnen …“ an der Kachel, nur wer kennzeichnen darf. */
+describe('PhotosEditor: Kennzeichnen', () => {
+  const Labeling = ({ children }: { children: ReactNode }) => (
+    <Intl>
+      <MediaLabelingProvider canLabel>{children}</MediaLabelingProvider>
+    </Intl>
+  );
+
+  it('without the permission or with labeling off there is no button', () => {
+    render(<PhotosEditor photos={photos(1)} max={12} onChange={() => {}} onChoose={() => {}} places={places} />, { wrapper: Intl });
+    expect(screen.queryByRole('button', { name: 'Kennzeichnen …' })).toBeNull();
+  });
+
+  it('opens the dialog with the usage and shows the new badge without reloading', async () => {
+    getMediaLabelingAction.mockResolvedValue({ status: 'success', data: { id: 'a0', filename: 'a0.jpg', mimeType: 'image/jpeg', aiKind: 'none', references: [{ label: 'Tier „Rex“' }] } });
+    render(<PhotosEditor photos={photos(1)} max={12} onChange={() => {}} onChoose={() => {}} places={places} />, { wrapper: Labeling });
+    fireEvent.click(screen.getByRole('button', { name: 'Kennzeichnen …' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Bildkennzeichnung' });
+    expect(getMediaLabelingAction).toHaveBeenCalledWith('a0');
+    expect(within(dialog).getByText('Tier „Rex“')).toBeTruthy();
+    fireEvent.click(within(dialog).getAllByRole('radio')[2]!);
+    await waitFor(() => expect(within(screen.getByTestId('animal-photo')).getByTestId('ai-kind-badge')).toBeTruthy());
   });
 });

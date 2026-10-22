@@ -49,23 +49,11 @@ function tileByKey(key: string) {
 }
 
 describe('finance dashboard tiles', () => {
-  it('registers fourteen tiles, five of them on by default, each under exactly one permission', () => {
-    expect(FINANCE_DASHBOARD_TILES).toHaveLength(19);
-    expect(FINANCE_DASHBOARD_TILES.map((t) => t.key).sort()).toEqual([
-      'accountsNegative', 'approvalsPending', 'balanceDifference', 'confirmationsToCorrect', 'directDebitDue', 'directDebitReturns', 'lastStatement', 'mandatesUnsigned', 'myExpenses', 'nobodyCanApprove', 'overdueItems', 'partnerPaymentsWithoutProof', 'purposesNegative', 'rawOpen',
-      'reserveCapNear', 'setupIncomplete', 'staleDrafts', 'todo', 'withoutVoucher',
-    ]);
-    expect(FINANCE_DASHBOARD_TILES.filter((t) => t.defaultOn).map((t) => t.key).sort()).toEqual(['approvalsPending', 'directDebitDue', 'directDebitReturns', 'mandatesUnsigned', 'myExpenses', 'nobodyCanApprove', 'partnerPaymentsWithoutProof', 'purposesNegative', 'setupIncomplete', 'todo']);
-    for (const tile of FINANCE_DASHBOARD_TILES) expect(typeof tile.permission).toBe('string');
-  });
-
-  it('Briefing Startseite: Arbeit ist „zu tun“, Warn-Knöpfe an Einrichtung, Auszug und Rücklage, die Doppelungen aus', () => {
-    const byKey = (key: string) => FINANCE_DASHBOARD_TILES.find((t) => t.key === key)!;
-    expect(FINANCE_DASHBOARD_TILES.filter((t) => t.variant).map((t) => `${t.key}:${t.variant}`)).toEqual(['todo:work']);
-    // Jede Warnung hat ein Verb (Vorgaben Teil M, Entscheidung 2): dazu Saldodifferenz, Freigabe, Zwecke und Partnerzahlungen.
-    expect(FINANCE_DASHBOARD_TILES.filter((t) => t.warningAction).map((t) => t.key).sort()).toEqual(['balanceDifference', 'directDebitDue', 'lastStatement', 'nobodyCanApprove', 'partnerPaymentsWithoutProof', 'purposesNegative', 'reserveCapNear', 'setupIncomplete']);
-    // Vier Zahlen wiederholen Zeilen aus „Finanzen: zu tun“, „Letzter Auszug“ wiederholt „Kontoauszüge fehlen …“ (§ 6).
-    for (const key of ['withoutVoucher', 'overdueItems', 'rawOpen', 'confirmationsToCorrect', 'lastStatement']) expect(byKey(key).defaultOn, key).toBe(false);
+  // Schlüssel, Rechte des Moduls, Form und Art prüft `defineModule` für jede Kachel (core/tests/dashboard-manifest);
+  // Finanzen legen jede Kachel unter genau ein Recht, nie unter eine Liste, von der eines genügt.
+  it('puts each tile under exactly one permission', () => {
+    expect(FINANCE_DASHBOARD_TILES.length).toBeGreaterThan(10);
+    expect(FINANCE_DASHBOARD_TILES.filter((t) => typeof t.permission !== 'string').map((t) => t.key)).toEqual([]);
   });
 
   it('lists only lines that have something to do, each with the link to its filter', async () => {

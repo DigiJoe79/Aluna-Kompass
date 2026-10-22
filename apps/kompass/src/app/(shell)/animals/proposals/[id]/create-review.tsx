@@ -1,7 +1,7 @@
 'use client';
 
 import type { AnimalRecord, PhotoChoice, PhotoCrop, ProposalHint, ProposalReview } from '@kompass/module-animals';
-import { ArrowLeft, ArrowRight } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Crop, Star, Trash2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
@@ -18,13 +18,13 @@ import { idleState, type ActionState } from '@/lib/actions';
 import { applyCrop, switchPrimaryCrop } from '@/lib/primary-crop';
 import { cn } from '@/lib/utils';
 import { ProfileFields, TextFields } from '../../animal-fields';
-import { CropLine, PhotoActions, PhotoCropDialog, PhotoTileImage, usePhotoPlaces, type AnimalPhotoPlaces } from '../../photo-tile';
+import { CropLine, PhotoActionButton, PhotoActions, PhotoCropDialog, PhotoTileImage, usePhotoPlaces, type AnimalPhotoPlaces } from '../../photo-tile';
 import { animalFieldsFromForm, changedFields, type AnimalFormFields } from '../../form-values';
 import { acceptProposalAction, rejectProposalAction } from '../actions';
 import { AcceptDialog } from '../accept-dialog';
 import { fieldLabelKey } from '../field-format';
 import { RejectDialog } from '../reject-dialog';
-import { choicesDiffer, srcOf, type ReviewPhotoRow } from './photo-review';
+import { choicesDiffer, photoName, srcOf, type ReviewPhotoRow } from './photo-review';
 import { HintLines } from './review-values';
 import { setPreviewChoice } from './preview-choice';
 import { useDecisionDone } from './use-decision';
@@ -77,7 +77,7 @@ export function CreateReview({ review, locales, nextHref, backHref, canFollowUp,
   // Beim Titelbildwechsel entfernte Ausschnitte (gemerkt bis zum Annehmen) und die letzte Ansage (Board 4).
   const [removed, setRemoved] = useState<Record<string, PhotoCrop>>({});
   const [announcement, setAnnouncement] = useState('');
-  const photoName = (row: ReviewPhotoRow) => row.sourceRef ?? ph('sourcePhoto');
+  const nameOfPhoto = (row: ReviewPhotoRow) => photoName(ph, review.photos ?? [], row, proposal.sourceName);
   // Jede Änderung der Liste läuft durch die Titelbild-Regel: „Als Titelbild“, weglassen, zurückholen, umsortieren.
   const changePhotos = (next: EditorRow[]) => {
     const before = primaryKeyOf(photos);
@@ -85,7 +85,7 @@ export function CreateReview({ review, locales, nextHref, backHref, canFollowUp,
     const res = switchPrimaryCrop({ crops: Object.fromEntries(next.map((p) => [p.row.key, p.crop])), removed }, before ? { key: before, stays: next.some((p) => p.row.key === before && !p.omitted) } : null, after);
     setRemoved(res.removed as Record<string, PhotoCrop>);
     if (before && after && before !== after) {
-      const nameOf = (key: string) => photoName(next.find((p) => p.row.key === key)!.row);
+      const nameOf = (key: string) => nameOfPhoto(next.find((p) => p.row.key === key)!.row);
       setAnnouncement(res.removedFrom ? pc('primaryMoved', { new: nameOf(after), old: nameOf(before) }) : '');
     }
     setPhotos(next.map((p) => ((res.crops[p.row.key] ?? null) === p.crop ? p : { ...p, crop: res.crops[p.row.key] ?? null })));
@@ -199,27 +199,53 @@ export function CreateReview({ review, locales, nextHref, backHref, canFollowUp,
                         <ul className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                           {photos.map((p, i) => (
                             <li key={p.row.key} data-testid="proposal-photo" className={cn('flex flex-col gap-1.5 rounded-md border p-2', p.primary && !p.omitted ? 'border-brand' : 'border-line', p.omitted && 'opacity-60')}>
-                              {/* Kachel wie im Tierformular (Board Ausschnitt in der Prüfung 1a): das Ergebnis im Format der Stelle. */}
-                              <PhotoTileImage src={srcOf(p.row)} crop={p.crop} isPrimary={!p.omitted && p.row.key === primaryKey} places={at} label={p.crop ? ph('withCrop', { name: photoName(p.row) }) : photoName(p.row)} />
+                              {/* Kachel wie im Tierformular (Board Ausschnitt in der Prüfung 1a): das Ergebnis im Format der Stelle;
+                                  die Marke „Titelbild“ auf dem Bild oben links wie am Tier. */}
+                              <span className="relative">
+                                <PhotoTileImage src={srcOf(p.row)} crop={p.crop} isPrimary={!p.omitted && p.row.key === primaryKey} places={at} label={p.crop ? ph('withCrop', { name: nameOfPhoto(p.row) }) : nameOfPhoto(p.row)} />
+                                {p.primary && !p.omitted ? (
+                                  <StatusBadge tone="neutral" testId="proposal-photo-primary" className="absolute top-1.5 left-1.5">
+                                    {ph('primary')}
+                                  </StatusBadge>
+                                ) : null}
+                              </span>
                               <CropLine crop={p.crop} width={p.row.width} isPrimary={!p.omitted && p.row.key === primaryKey} places={at} />
                               {p.omitted ? (
-                                <PhotoActions className="text-meta text-ink-2">
-                                  {t('omitted')}
-                                  <Button type="button" variant="outline" size="sm" onClick={() => changePhotos(photos.map((x, j) => (j === i ? { ...x, omitted: false } : x)))}>{t('restore')}</Button>
-                                </PhotoActions>
+                                <PhotoActions
+                                  className="mt-auto text-meta text-ink-2"
+                                  start={t('omitted')}
+                                  end={<Button type="button" variant="outline" size="sm" onClick={() => changePhotos(photos.map((x, j) => (j === i ? { ...x, omitted: false } : x)))}>{t('restore')}</Button>}
+                                />
                               ) : (
-                                <PhotoActions>
-                                  {/* Titelbild als Marke am gewählten Foto, nicht als Hauptknopf in jeder Kachel (Befund 10). */}
-                                  {p.primary ? (
-                                    <StatusBadge tone="neutral" testId="proposal-photo-primary">{ph('primary')}</StatusBadge>
-                                  ) : (
-                                    <Button type="button" size="sm" variant="outline" onClick={() => changePhotos(photos.map((x, j) => ({ ...x, primary: j === i })))}>{t('makePrimary')}</Button>
-                                  )}
-                                  <Button type="button" size="icon-sm" variant="ghost" disabled={i === 0} aria-label={t('moveLeft')} onClick={() => move(i, -1)}><ArrowLeft aria-hidden /></Button>
-                                  <Button type="button" size="icon-sm" variant="ghost" disabled={i === photos.length - 1} aria-label={t('moveRight')} onClick={() => move(i, 1)}><ArrowRight aria-hidden /></Button>
-                                  {p.row.width && p.row.height ? <Button type="button" size="sm" variant="outline" onClick={() => setEditing(p.row.key)}>{pc('edit')}</Button> : null}
-                                  <Button type="button" size="sm" variant="outline" onClick={() => changePhotos(photos.map((x, j) => (j === i ? { ...x, omitted: true, primary: false } : x)))}>{t('omit')}</Button>
-                                </PhotoActions>
+                                // Dieselbe Zeile wie am Tier, ohne „Kennzeichnen“: Das Bild gehört vor dem Übernehmen nicht dem Verein.
+                                <PhotoActions
+                                  className="mt-auto"
+                                  start={
+                                    <>
+                                      <PhotoActionButton label={t('makePrimary')} aria-pressed={p.primary} onClick={() => !p.primary && changePhotos(photos.map((x, j) => ({ ...x, primary: j === i })))}>
+                                        <Star aria-hidden className={p.primary ? 'fill-current text-brand' : undefined} />
+                                      </PhotoActionButton>
+                                      <PhotoActionButton label={t('moveLeft')} disabled={i === 0} onClick={() => move(i, -1)}>
+                                        <ArrowLeft aria-hidden />
+                                      </PhotoActionButton>
+                                      <PhotoActionButton label={t('moveRight')} disabled={i === photos.length - 1} onClick={() => move(i, 1)}>
+                                        <ArrowRight aria-hidden />
+                                      </PhotoActionButton>
+                                    </>
+                                  }
+                                  end={
+                                    <>
+                                      {p.row.width && p.row.height ? (
+                                        <PhotoActionButton label={pc('edit')} onClick={() => setEditing(p.row.key)}>
+                                          <Crop aria-hidden />
+                                        </PhotoActionButton>
+                                      ) : null}
+                                      <PhotoActionButton label={t('omit')} onClick={() => changePhotos(photos.map((x, j) => (j === i ? { ...x, omitted: true, primary: false } : x)))}>
+                                        <Trash2 aria-hidden />
+                                      </PhotoActionButton>
+                                    </>
+                                  }
+                                />
                               )}
                             </li>
                           ))}

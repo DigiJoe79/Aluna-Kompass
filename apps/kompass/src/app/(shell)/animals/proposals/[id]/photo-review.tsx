@@ -1,15 +1,15 @@
 'use client';
 
 import type { AnimalRecord, PhotoChoice, PhotoCrop, PhotoRow } from '@kompass/module-animals';
+import { Crop } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { ChoiceCompare } from '@/components/forms/choice-compare';
 import { StatusBadge } from '@/components/status-badge';
-import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { applyCrop, switchPrimaryCrop } from '@/lib/primary-crop';
 import { mediaPreviewUrl, proposalImageUrl } from '../../crop-frame';
-import { CropLine, PhotoActions, PhotoCropDialog, PhotoTileImage, usePhotoPlaces, type AnimalPhotoPlaces } from '../../photo-tile';
+import { CropLine, PhotoActionButton, PhotoActions, PhotoCropDialog, PhotoTileImage, usePhotoPlaces, type AnimalPhotoPlaces } from '../../photo-tile';
 
 export type ReviewPhotoRow = PhotoRow & { conflict: boolean };
 type AnimalPhoto = AnimalRecord['photos'][number];
@@ -27,6 +27,15 @@ export interface PhotoState {
 export type PhotoSizes = Record<string, { width: number; height: number }>;
 
 export const srcOf = (r: Pick<PhotoRow, 'imageId' | 'mediaId'>) => (r.imageId ? proposalImageUrl(r.imageId) : mediaPreviewUrl(r.mediaId!));
+
+/**
+ * Name eines Fotos für Menschen und Vorleser (Backlog 79): Herkunft und Stelle in der Liste der Prüfung. Die
+ * `sourceRef` der Quelle dient dem Abgleich; bei Hundeblicke-Sync ist sie eine Kennung, kein lesbarer Name.
+ */
+export function photoName(t: (key: 'kompassPhoto' | 'sourcePhoto', values: { n: number; source?: string }) => string, rows: readonly Pick<PhotoRow, 'key'>[], row: Pick<PhotoRow, 'key' | 'origin'>, source: string): string {
+  const n = rows.findIndex((r) => r.key === row.key) + 1;
+  return row.origin === 'kompass' ? t('kompassPhoto', { n }) : t('sourcePhoto', { n, source });
+}
 
 export function initialPhotoState(rows: readonly ReviewPhotoRow[]): PhotoState {
   return { selected: Object.fromEntries(rows.map((r) => [r.key, r.defaultSelected])), primary: 'proposal', crops: Object.fromEntries(rows.map((r) => [r.key, r.crop])), removed: {} };
@@ -124,7 +133,19 @@ export function PhotoReview({ rows, state, onChange, sourceName, max, readOnly, 
   const primaryKeyAfter = primaryKeyOf(rows, state);
   const proposedPrimary = rows.find((row) => row.proposedPrimary && state.selected[row.key]);
   const currentPrimary = rows.find((row) => row.currentPrimary && state.selected[row.key]);
-  const name = (row: ReviewPhotoRow) => row.sourceRef ?? (row.mediaId ? t('kompassPhoto') : t('sourcePhoto'));
+  const name = (row: ReviewPhotoRow) => photoName(t, rows, row, sourceName);
+  // Die Wahl zeigt beide Titelbilder im Format der Stelle, darunter den Namen (Backlog 79, Wunsch Joe 2026-10-20).
+  const preview = (row: ReviewPhotoRow) => {
+    const crop = cropOf(row, state);
+    return (
+      <span className="flex flex-col gap-1.5">
+        <span className="block w-24">
+          <PhotoTileImage src={srcOf(row)} crop={crop} isPrimary places={at} label={crop ? t('withCrop', { name: name(row) }) : name(row)} />
+        </span>
+        <span>{name(row)}</span>
+      </span>
+    );
+  };
   const sizeOf = (row: ReviewPhotoRow) => (row.width && row.height ? { width: row.width, height: row.height } : row.mediaId ? (sizes[row.mediaId] ?? null) : null);
   // Jede Wahl läuft durch die Titelbild-Regel: ChoiceCompare und Abwählen des Titelbilds (Board 4).
   const update = (next: PhotoState) => {
@@ -165,13 +186,22 @@ export function PhotoReview({ rows, state, onChange, sourceName, max, readOnly, 
               </span>
               {readOnly ? null : (
                 // Checkbox und Knopf stehen beide für „was passiert mit diesem Foto“ (Board 2a); bricht die Zeile um, steht der Knopf darunter.
-                <PhotoActions className="mt-auto justify-between gap-x-2 gap-y-1">
-                  <label className="flex items-center gap-2 text-meta text-ink">
-                    <Checkbox checked={toggle.checked} onCheckedChange={(v) => toggle.set(v === true)} aria-label={`${toggle.label}: ${name(row)}`} />
-                    {toggle.label}
-                  </label>
-                  {on && sizeOf(row) ? <Button type="button" size="sm" variant="outline" onClick={() => setEditing(row.key)}>{tc('edit')}</Button> : null}
-                </PhotoActions>
+                <PhotoActions
+                  className="mt-auto"
+                  start={
+                    <label className="flex items-center gap-2 text-meta text-ink">
+                      <Checkbox checked={toggle.checked} onCheckedChange={(v) => toggle.set(v === true)} aria-label={`${toggle.label}: ${name(row)}`} />
+                      {toggle.label}
+                    </label>
+                  }
+                  end={
+                    on && sizeOf(row) ? (
+                      <PhotoActionButton label={tc('edit')} onClick={() => setEditing(row.key)}>
+                        <Crop aria-hidden />
+                      </PhotoActionButton>
+                    ) : null
+                  }
+                />
               )}
             </li>
           );
@@ -185,8 +215,8 @@ export function PhotoReview({ rows, state, onChange, sourceName, max, readOnly, 
             value={state.primary}
             onValueChange={(primary) => update({ ...state, primary })}
             labels={{ current: t('keepPrimary'), proposal: t('switchPrimary') }}
-            current={name(currentPrimary)}
-            proposed={name(proposedPrimary)}
+            current={preview(currentPrimary)}
+            proposed={preview(proposedPrimary)}
             disabled={readOnly}
             testId="proposal-primary-choice"
           />

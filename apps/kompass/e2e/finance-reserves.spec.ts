@@ -1,12 +1,8 @@
-import path from 'node:path';
 import { expect, test } from './fixtures';
 import { associationDay } from './association-day';
 import { callTool, mcpClient, PDF, PHONE } from './expense-helpers';
 import { loginAsAdmin, resetDatabase } from './helpers';
 import { STORY_YEAR, story } from './story-year';
-
-/** > 1 MB (N9, Befundliste 0.2.0) — derselbe erfundene Beleg wie bei den Auslagen. */
-const BIG_PDF = path.resolve(import.meta.dirname, 'fixtures/beleg-1500k.pdf');
 
 /**
  * F8b Task 6b — Finanzen → Zurückgelegtes Geld (E4, HANDOFF 14.3 Punkte 6
@@ -39,7 +35,7 @@ test.describe('finance reserves (F8b)', () => {
     await expect(dialog.locator('#movement-for-year option:checked')).toHaveText(String(STORY_YEAR));
     // Weit über jedem Höchstbetrag der Entwicklungsdaten: Befund S fragt nach einer Begründung, sperrt aber nicht.
     await dialog.locator('#movement-amount').fill('1000000,00');
-    await page.getByTestId('movement-resolution-upload').getByTestId('voucher-file-input').setInputFiles(BIG_PDF);
+    await page.getByTestId('movement-resolution-upload').getByTestId('voucher-file-input').setInputFiles(PDF);
     await expect(page.getByTestId('movement-after')).toHaveText('Danach: Bestand 1.000.000,00 €. Auf den Bankkonten und Kassen ändert sich nichts.');
     await page.getByTestId('movement-save').click();
     const capReason = dialog.getByTestId('movement-cap-reason');

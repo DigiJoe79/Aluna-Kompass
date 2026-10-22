@@ -31,7 +31,6 @@ async function setup() {
 describe('Agenten-Werkzeuge des Mailversands', () => {
   it('gibt es für Vorschau, Senden, Erneut senden, Post und den Ausgang', () => {
     for (const name of ['dms_send_preview', 'dms_send', 'dms_send_retry', 'dms_send_to_post', 'dms_outbox_list']) expect(tool(name).inputSchema).toBeDefined();
-    expect(tool('dms_send').description).toMatch(/dms\.send/);
     expect(tool('dms_send').description).toMatch(/Human only/);
     expect(tool('dms_send_retry').description).toMatch(/Human only/);
   });

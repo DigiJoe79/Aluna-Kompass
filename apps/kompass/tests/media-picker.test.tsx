@@ -1,10 +1,11 @@
 // @vitest-environment jsdom
 import { resolvePlaces, derivedAssetId } from '@kompass/core/image-places';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { NextIntlClientProvider } from 'next-intl';
 import type { ComponentProps, ReactNode } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { MediaPicker } from '@/components/forms/media-picker';
+import { MediaLabelingProvider } from '@/components/media/media-labeling-provider';
 import messages from '../messages/de.json';
 
 vi.mock('@/components/media/media-chooser-dialog', () => ({
@@ -15,6 +16,12 @@ vi.mock('@/components/media/media-chooser-dialog', () => ({
         neu wählen
       </button>
     ) : null,
+}));
+
+const getMediaLabelingAction = vi.fn();
+vi.mock('@/app/(shell)/admin/media/actions', () => ({
+  getMediaLabelingAction: (...a: unknown[]) => getMediaLabelingAction(...a),
+  setMediaAiKindAction: vi.fn(async () => ({ status: 'success' })),
 }));
 
 function Intl({ children }: { children: ReactNode }) {
@@ -142,5 +149,59 @@ describe('MediaPicker leer und PDF', () => {
     pick({ kind: 'pdf' });
     expect(screen.getByRole('button', { name: 'PDF entfernen' })).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Bild entfernen' })).toBeNull();
+  });
+
+  it('zeigt die KI-Marke am gewählten Bild, wenn seine Maße eine Art tragen (Spec KI-Transparenz)', () => {
+    pick({ sizes: { A: { width: 10, height: 10, aiKind: 'edited' } } });
+    expect(screen.getByTestId('ai-kind-badge')).toBeTruthy();
+  });
+
+  it('zeigt keine KI-Marke ohne Art', () => {
+    pick({ sizes: { A: { width: 10, height: 10 } } });
+    expect(screen.queryByTestId('ai-kind-badge')).toBeNull();
+  });
+});
+
+/** Spec Bildkennzeichnung beim Hochladen § 4: „Kennzeichnen …“ am Bildfeld, nur wer kennzeichnen darf, nur bei Bildern. */
+describe('MediaPicker: Kennzeichnen', () => {
+  const labeling = (props: Partial<Props>) =>
+    render(
+      <MediaLabelingProvider canLabel>
+        <MediaPicker name="photo" value="A" label="Foto" {...props} />
+      </MediaLabelingProvider>,
+      { wrapper: Intl },
+    );
+
+  it('ohne „darf kennzeichnen“ kein Knopf', () => {
+    pick({});
+    expect(screen.queryByRole('button', { name: 'Foto: Kennzeichnen …' })).toBeNull();
+  });
+
+  it('nicht bei PDF und nicht ohne Datei', () => {
+    labeling({ kind: 'pdf' });
+    expect(screen.queryByRole('button', { name: 'Foto: Kennzeichnen …' })).toBeNull();
+    cleanup();
+    labeling({ value: null });
+    expect(screen.queryByRole('button', { name: 'Foto: Kennzeichnen …' })).toBeNull();
+  });
+
+  it('öffnet den Dialog mit „Verwendet“; die Marke folgt der Wahl ohne Neuladen', async () => {
+    getMediaLabelingAction.mockResolvedValue({ status: 'success', data: { id: 'A', filename: 'a.jpg', mimeType: 'image/jpeg', aiKind: 'none', references: [{ label: 'Projekt „Hof“' }] } });
+    labeling({ target: 'dem Projekt' });
+    fireEvent.click(screen.getByRole('button', { name: 'Foto: Kennzeichnen …' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Bildkennzeichnung' });
+    expect(getMediaLabelingAction).toHaveBeenCalledWith('A');
+    expect(within(dialog).getByText('Projekt „Hof“')).toBeTruthy();
+    fireEvent.click(within(dialog).getAllByRole('radio')[1]!);
+    await waitFor(() => expect(screen.getByTestId('ai-kind-badge')).toBeTruthy());
+  });
+
+  it('ließ sich die Datei nicht lesen, nennt der Dialog den Grund statt einer Zeile', async () => {
+    getMediaLabelingAction.mockResolvedValue({ status: 'error', message: 'Keine Berechtigung.', fieldErrors: {} });
+    labeling({});
+    fireEvent.click(screen.getByRole('button', { name: 'Foto: Kennzeichnen …' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Bildkennzeichnung' });
+    expect(within(dialog).getByText('Keine Berechtigung.')).toBeTruthy();
+    expect(within(dialog).queryByRole('radiogroup')).toBeNull();
   });
 });

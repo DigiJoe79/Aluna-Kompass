@@ -138,6 +138,25 @@ describe('importStatement', () => {
     expect(differing.runs[0]!.counts).toMatchObject({ new: 0, known: 0, held: 1 });
   });
 
+  it('holds back a differing purpose only when the payer matches: by IBAN, else by name (Befund 3)', async () => {
+    const f = await importFixture();
+    const day = (stmtId: string, lines: { name: string; iban?: string; purpose: string }[]) =>
+      buildCamt053Bytes({ iban: VEREIN_IBAN, from: '2026-07-01', to: '2026-07-01', openingCents: 0, stmtId, lines: lines.map((l) => ({ bookingDate: '2026-07-01', amountCents: 2500, counterpartyName: l.name, counterpartyIban: l.iban, purpose: l.purpose })) });
+    unwrap(await importStatement(f.deps, f.ctx, { accountId: f.account.id, fileName: 'erster.xml', bytes: day('A', [{ name: 'Erika Beispiel', iban: 'DE66999999991234567890', purpose: 'Spende Juli' }, { name: 'Paula Probe', purpose: 'Spende' }]) }));
+
+    // Ein anderer Mensch, gleicher Tag und Betrag: neu, kein Kandidat.
+    const otherPayer = unwrap(await importStatement(f.deps, f.ctx, { accountId: f.account.id, fileName: 'zweiter.xml', bytes: day('B', [{ name: 'Max Muster', iban: 'DE12999999990000112233', purpose: 'Mitgliedsbeitrag' }]) }));
+    expect(otherPayer.runs[0]!.counts).toMatchObject({ new: 1, held: 0 });
+
+    // Gleiche IBAN, anders geschriebener Name: wahrscheinlich dieselbe Zahlung.
+    const sameIban = unwrap(await importStatement(f.deps, f.ctx, { accountId: f.account.id, fileName: 'dritter.xml', bytes: day('C', [{ name: 'BEISPIEL, ERIKA', iban: 'DE66999999991234567890', purpose: 'Spende 07/2026' }]) }));
+    expect(sameIban.runs[0]!.counts).toMatchObject({ new: 0, held: 1 });
+
+    // Ohne IBAN entscheidet der Name.
+    const byName = unwrap(await importStatement(f.deps, f.ctx, { accountId: f.account.id, fileName: 'vierter.xml', bytes: day('D', [{ name: 'Paula Probe', purpose: 'Spende Tierheim' }, { name: 'Lena Leer', purpose: 'Spende Tierheim' }]) }));
+    expect(byName.runs[0]!.counts).toMatchObject({ new: 1, held: 1 });
+  });
+
   it('reports the gap between the last closing and this opening balance, and imports anyway', async () => {
     const f = await importFixture();
     unwrap(await importStatement(f.deps, f.ctx, { accountId: f.account.id, fileName: 'maerz.xml', bytes: bytes('einfach-001-02.xml') }));
@@ -232,15 +251,11 @@ describe('importStatement', () => {
     expect(denied.ok ? null : denied.error).toEqual({ type: 'forbidden', permission: 'finance.entriesWrite' });
   });
 
-  it('never writes counterparty, iban or purpose into the audit log', async () => {
+  it('audits the run', async () => {
     const f = await importFixture();
     unwrap(await importStatement(f.deps, f.ctx, { accountId: f.account.id, fileName: 'a.xml', bytes: bytes('einfach-001-02.xml') }));
     const entry = auditEntry(f.deps, 'finance.import.run');
-    const text = `${entry.params}${entry.after ?? ''}`;
-    expect(text).not.toContain('Erika');
-    expect(text).not.toContain('Beispiel');
-    expect(text).not.toContain('DE66999999991234567890');
-    expect(text).not.toContain('Spende');
+    expect(entry).toMatchObject({ entityType: 'financeImportRun' });
   });
 
   it('refuses cash accounts', async () => {

@@ -6,13 +6,16 @@ import { AlertTriangle } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useEffect, useRef, useState } from 'react';
 import { CropEditor } from '@/components/media/crop-editor';
+import { AiKindBadge } from '@/components/media/ai-kind-badge';
+import { useLabelLater } from '@/components/media/image-labeling-dialog';
+import { useCanLabelMedia } from '@/components/media/media-labeling-provider';
 import { CroppedImage, ratioCss } from '@/components/media/cropped-image';
 import { MediaChooserDialog } from '@/components/media/media-chooser-dialog';
 import { Button } from '@/components/ui/button';
 import { cropPixelWidth, type Crop } from '@/lib/crop-geometry';
 import { cropPlaces, thresholdOf } from '@/lib/crop-places';
 
-type Sizes = Readonly<Record<string, { width: number; height: number }>>;
+type Sizes = Readonly<Record<string, { width: number; height: number; aiKind?: 'edited' | 'generated' }>>;
 
 /**
  * Ein Medienfeld: Vorschau, „Wählen“, „Entfernen“. Hochladen gibt es hier
@@ -68,6 +71,11 @@ export function MediaPicker({
   const [known, setKnown] = useState<Sizes>(sizes);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(false);
+  // „Kennzeichnen …“ (Spec Bildkennzeichnung beim Hochladen § 4): speichert sofort; die Marke folgt ohne Neuladen.
+  const canLabel = useCanLabelMedia();
+  const tl = useTranslations('media.labeling');
+  const [labeled, setLabeled] = useState<Record<string, 'none' | 'edited' | 'generated'>>({});
+  const labelLater = useLabelLater({ target, onLabeled: (id, kind) => setLabeled((l) => ({ ...l, [id]: kind })) });
   const hidden = useRef<HTMLInputElement>(null);
   // Template-Felder halten ihren Wert in der Maske: „Verwerfen“ oder eine umsortierte Liste reichen einen anderen Wert
   // herein. Ändert sich der Wert von außen, folgt das Feld ihm — sonst wendete „Ausschnitt …“ den Schnitt auf das alte
@@ -142,6 +150,7 @@ export function MediaPicker({
           ) : crop ? (
             <span className="text-hint text-muted-ink">{tc('trimmedLine')}</span>
           ) : null}
+          {isImage ? <AiKindBadge kind={(assetId ? labeled[assetId] : undefined) ?? size?.aiKind} /> : null}
         </span>
         {/* 10 A3, 11-1 B22: Der leere Platz sagt, was fehlt, statt nur eine gestrichelte Box zu sein. */}
         {assetId ? null : <span className="text-hint text-muted-ink">{isImage ? t('noImage') : t('noPdf')}</span>}
@@ -161,8 +170,15 @@ export function MediaPicker({
               {isImage ? t('removeImage') : t('removePdf')}
             </Button>
           ) : null}
+          {/* Nach „Bild entfernen“, nur bei Bildern und nur, wer kennzeichnen darf (Board 2b). */}
+          {isImage && assetId && canLabel ? (
+            <Button type="button" variant="outline" size="sm" aria-label={`${label}: ${tl('label')}`} aria-haspopup="dialog" onClick={() => labelLater.open(assetId)}>
+              {tl('label')}
+            </Button>
+          ) : null}
         </div>
       </div>
+      {labelLater.dialog}
       <MediaChooserDialog open={open} onOpenChange={setOpen} kind={kind} multiple={false} selected={assetId ? [assetId] : []} onConfirm={(ids, more) => set(ids[0] ?? null, more)} />
       {isImage && places && assetId && size ? (
         <CropEditor

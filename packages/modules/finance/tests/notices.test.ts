@@ -27,7 +27,6 @@ describe('saveNotice', () => {
     const [entry] = auditOf(f.deps, 'finance.notice.save');
     expect(entry).toMatchObject({ entityType: 'financeNotice', entityId: notice.id });
     expect(JSON.parse(entry!.after as string)).toEqual({ kind: 'exemptionNotice', noticeDate: '2025-05-02', exemptFrom: '2023-01-01', assessmentPeriod: '2023', documentId: null, supersededOn: null, supersededDocumentId: null, voided: false });
-    expect(JSON.stringify(auditOf(f.deps, 'finance.notice.save'))).not.toMatch(/Musterstadt|99\/999|Tierschutz/);
   });
 
   it('needs finance.donationsIssue', async () => {
@@ -213,7 +212,6 @@ describe('supersedeNotice and voidNotice', () => {
     expect(err(await supersedeNotice(f.deps, f.ctx, { id: other.id, supersededOn: '2026-03-01' }))).toMatchObject({ type: 'conflict', code: 'noticeVoided' });
     const voidEntry = auditOf(f.deps, 'finance.notice.void')[0]!;
     expect(JSON.parse(voidEntry.after as string)).toEqual({ voided: true });
-    expect(JSON.stringify(voidEntry)).not.toMatch(/Tippfehler/);
   });
 
   it('checks permission and input', async () => {

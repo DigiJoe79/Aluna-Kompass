@@ -19,7 +19,6 @@ import { Notice } from '@/components/notice';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import type { ActionState } from '@/lib/actions';
 import { formatEuro, parseAmount } from '@/lib/finance/amount';
 import { takeCsvHandoff, type CsvHandoff } from '@/lib/finance/csv-handoff';
@@ -27,7 +26,6 @@ import {
   assistantFileKey,
   buildFormat,
   canAdvance,
-  COLUMN_ROLES,
   defaultFormatName,
   initialState,
   loadState,
@@ -38,8 +36,8 @@ import {
   type AssistantState,
   type AssistantStep,
 } from '@/lib/finance/csv-assistant-state';
-import { cn } from '@/lib/utils';
 import { saveCsvFormatAction } from './actions';
+import { columnsNote, ColumnsStep } from './columns-step';
 import { Section } from '@/components/section';
 import { Empty } from '@/components/empty-value';
 import { formatIban } from '@kompass/module-finance/format';
@@ -91,6 +89,7 @@ function sessionStore(): Storage | null {
 export function CsvAssistant({ accounts, initialAccountId, canLoad, reselect = false }: { accounts: AssistantAccount[]; initialAccountId: string; canLoad: boolean; reselect?: boolean }) {
   const t = useTranslations('finance.csvAssistant');
   const tCommon = useTranslations('common');
+  const tColumns = useTranslations('finance.csvAssistant.columns');
   const { date } = useDateFormat();
   const router = useRouter();
   /** Die Datei aus dem Zwischenschritt der Ablagefläche (N3, W-1): Konto wählen, dann mit ihr weiter. */
@@ -305,74 +304,11 @@ export function CsvAssistant({ accounts, initialAccountId, canLoad, reselect = f
       ) : null}
 
       {state && step === 3 ? (
-        <Section title={t('columns.title')}>
-          <div className="space-y-3">
-            <p className="max-w-prose text-body text-ink-2">{t('columns.text')}</p>
-            {/* Runde 3, 083: Die Vorschau ist eine Datei, keine Liste — sie darf waagerecht scrollen, zeigt das aber mit einem
-                Verlauf am rechten Rand. */}
-            <div className="scroll-fade-x overflow-x-auto rounded-md border border-line">
-              <Table data-testid="csv-preview" className="text-meta">
-                <TableHeader>
-                  <TableRow>
-                    {preview.header.map((column, i) => {
-                      const ignored = (state.roles[i] ?? 'ignore') === 'ignore';
-                      return (
-                        // `h-auto`: Die Rollenwahl steht im Kopf und ist höher als die Kopfzeile. 07-1 A1: Mindestbreite je Spalte,
-                        // damit die Auswahl nicht abgeschnitten ist; der Spaltenname steht über der Auswahl (ohne Layout-Test).
-                        <TableHead key={i} data-column={column} data-ignored={ignored ? 'true' : 'false'} className={cn('h-auto min-w-44 space-y-1 py-2 align-top', ignored && 'text-muted-ink')}>
-                          <p className="font-semibold">{column}</p>
-                          {/* Runde 3, 083: Die Auswahl steht im Tabellenkopf, erbt aber nicht dessen Etikettenschrift — sie ist ein
-                              Feld wie jedes andere. */}
-                          <Select
-                            className="font-normal normal-case tracking-normal"
-                            aria-label={t('columns.roleLabel', { column })}
-                            value={state.roles[i] ?? 'ignore'}
-                            onChange={(e) => update({ roles: preview.header.map((_, j) => (j === i ? (e.target.value as AssistantState['roles'][number]) : (state.roles[j] ?? 'ignore'))) })}
-                          >
-                            {COLUMN_ROLES.map((role) => (
-                              <option key={role} value={role}>
-                                {t(`columns.roles.${role}`)}
-                              </option>
-                            ))}
-                          </Select>
-                        </TableHead>
-                      );
-                    })}
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {preview.rows.map((row, r) => (
-                    <TableRow key={r}>
-                      {preview.header.map((column, i) => {
-                        const ignored = (state.roles[i] ?? 'ignore') === 'ignore';
-                        return (
-                          <TableCell key={i} data-column={column} data-ignored={ignored ? 'true' : 'false'} className={cn('font-mono', ignored && 'border-x border-dashed border-line text-muted-ink opacity-60')}>
-                            {row[i] ?? ''}
-                          </TableCell>
-                        );
-                      })}
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-            {state.roles.includes('indicator') || state.roles.includes('pending') ? (
-              <FormGrid>
-                {state.roles.includes('indicator') ? (
-                  <FormField id="csv-indicator-values" label={t('columns.indicatorValues')} hint={t('columns.valuesHint')}>
-                    <Input id="csv-indicator-values" value={state.indicatorValues} onChange={(e) => update({ indicatorValues: e.target.value })} />
-                  </FormField>
-                ) : null}
-                {state.roles.includes('pending') ? (
-                  <FormField id="csv-pending-values" label={t('columns.pendingValues')} hint={t('columns.valuesHint')}>
-                    <Input id="csv-pending-values" value={state.pendingValues} onChange={(e) => update({ pendingValues: e.target.value })} />
-                  </FormField>
-                ) : null}
-              </FormGrid>
-            ) : null}
-            {built && !built.ok ? <p className="text-meta text-error">{t(`columns.reasons.${built.reason}`)}</p> : null}
-          </div>
-        </Section>
+        <>
+          <ColumnsStep header={preview.header} rows={preview.rows} state={state} onChange={setState} />
+          {/* Aus Schritt 2: Ohne Datumsformat und Dezimalzeichen geht es nicht weiter — das sagt weder Pflichtblock noch Leiste. */}
+          {built && !built.ok && built.reason === 'settingsMissing' ? <p className="text-meta text-error">{t('columns.reasons.settingsMissing')}</p> : null}
+        </>
       ) : null}
 
       {state && step === 4 ? (
@@ -450,7 +386,13 @@ export function CsvAssistant({ accounts, initialAccountId, canLoad, reselect = f
           back={{ href: '/finance/imports', label: t('cancelTarget') }}
           testId="csv-wizard-bar"
           {...(step < 5
-            ? { onSave: () => goTo((step + 1) as AssistantStep), saveLabel: t('next'), saveDisabled: !canAdvance(step, state, preview.header) }
+            ? {
+                onSave: () => goTo((step + 1) as AssistantStep),
+                saveLabel: t('next'),
+                saveDisabled: !canAdvance(step, state, preview.header),
+                // Schritt 3: Die Leiste wiederholt, was im Pflichtblock offen ist — sichtbar auch weit unten in der Liste.
+                ...(step === 3 ? { note: columnsNote(preview.header, state, tColumns) } : {}),
+              }
             : {
                 // Im letzten Schritt nennt der Primärknopf die Handlung (E3); „Nur speichern“ daneben, wo Einlesen geht.
                 onSave: () => requestSave(canLoad),

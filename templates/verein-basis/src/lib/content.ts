@@ -95,6 +95,8 @@ export function organizationOf(content: SiteContent): Organization {
   return rows?.[0] ?? NO_ORGANIZATION;
 }
 
+export { aiLabelingOf } from './ai-label';
+
 /** Ein URL-tauglicher Bezeichner aus einem Titel — für Sammlungen ohne eigenen Slug. */
 export function slugify(value: string): string {
   return value

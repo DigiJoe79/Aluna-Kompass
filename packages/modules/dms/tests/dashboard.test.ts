@@ -6,7 +6,6 @@ import { DMS_DASHBOARD_TILES } from '../src/dashboard';
 import { createDraft } from '../src/drafts';
 import { receiveDocument } from '../src/incoming';
 import { linkDocument } from '../src/service';
-import { dmsModule } from '../src/manifest';
 import { dmsMailOutbox, documents } from '../src/schema';
 import { ALL_DMS, fileFixture, pdfBytes, setupWithTypes } from './helpers';
 
@@ -18,16 +17,7 @@ const tile = (key: string) => {
 const defaults = (key: string) => tile(key).options.parse({}) as Record<string, unknown>;
 
 describe('dms tiles', () => {
-  it('stehen am Manifest mit Form, Recht und Vorgabe', () => {
-    expect(dmsModule.dashboardTiles?.map((t) => `${t.key}:${t.kind}:${t.permission}:${t.defaultOn}`)).toEqual([
-      'inbox:list:dms.view:true',
-      'drafts:count:dms.view:true',
-      'unsent:count:dms.view:true',
-      'textFailed:count:dms.manage:false',
-      'mailFailed:count:dms.view:true',
-    ]);
-  });
-
+  // Welche Kacheln es gibt, pinnt kein Test; ihre Meldungen prüft `apps/kompass/tests/dashboard-messages.test.ts`.
   it('jede Kachel liefert die deklarierte Form, auch leer', async () => {
     const { deps, ctx } = setupWithTypes();
     for (const t of DMS_DASHBOARD_TILES) {

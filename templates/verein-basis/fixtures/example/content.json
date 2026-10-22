@@ -5,7 +5,8 @@
       "filename": "hero.jpg",
       "mimeType": "image/jpeg",
       "width": 1600,
-      "height": 900
+      "height": 900,
+      "aiKind": "edited"
     },
     {
       "id": "news-1",
@@ -19,7 +20,8 @@
       "filename": "team-1.jpg",
       "mimeType": "image/jpeg",
       "width": 960,
-      "height": 960
+      "height": 960,
+      "aiKind": "generated"
     },
     {
       "id": "doc-satzung",
@@ -146,6 +148,50 @@
         "bankName": "Beispielbank",
         "registerCourt": "Amtsgericht Beispielstadt",
         "registerNumber": "VR 4711"
+      }
+    ],
+    "aiLabeling": [
+      {
+        "mark": {
+          "de": "KI",
+          "en": "AI"
+        },
+        "editedMark": {
+          "de": "Bearbeitet",
+          "en": "Edited"
+        },
+        "editedLabel": {
+          "de": "Digital bearbeitet",
+          "en": "Digitally edited"
+        },
+        "generatedLabel": {
+          "de": "Mit KI erstellt",
+          "en": "Created with AI"
+        },
+        "editedNote": {
+          "de": "Einige Fotos von {name} sind digital bearbeitet.",
+          "en": "Some photos of {name} have been digitally edited."
+        },
+        "generatedNote": {
+          "de": "Einige Bilder von {name} sind mit KI erstellt.",
+          "en": "Some images of {name} were created with AI."
+        },
+        "mixedNote": {
+          "de": "Einige Fotos von {name} sind digital bearbeitet, andere mit KI erstellt.",
+          "en": "Some photos of {name} have been digitally edited, others were created with AI."
+        },
+        "editedNoteSingle": {
+          "de": "Dieses Foto ist digital bearbeitet.",
+          "en": "This photo has been digitally edited."
+        },
+        "generatedNoteSingle": {
+          "de": "Dieses Bild ist mit KI erstellt.",
+          "en": "This image was created with AI."
+        },
+        "moreLink": {
+          "de": "Mehr zu Bildbearbeitung und KI",
+          "en": "More about image editing and AI"
+        }
       }
     ]
   }

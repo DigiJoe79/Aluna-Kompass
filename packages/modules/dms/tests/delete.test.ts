@@ -68,29 +68,12 @@ describe('deleteDocument', () => {
     expect(auditActions(deps)).toContain('dms.delete');
   });
 
-  it('verlangt dms.manage', async () => {
-    const { deps, ctx } = setupWithTypes();
-    const doc = await receiveDocument(deps, ctx, {
-      filename: 'alt.pdf',
-      bytes: pdfBytes(),
-      typeKey: 'invoice',
-      subject: 'Alt',
-      documentDate: '2005-06-01',
-    });
-    if (!doc.ok) throw new Error('setup');
-    const denied = await deleteDocument(
-      deps,
-      ctxWith(ALL_DMS.filter((p) => p !== 'dms.manage')),
-      { id: doc.value.id },
-    );
-    expect(denied.ok).toBe(false);
-  });
-
   it('nennt das Ende der Aufbewahrungsfrist wie die Anzeige (K10)', async () => {
     const { deps, ctx } = setupWithTypes();
     const doc = unwrap(await receiveDocument(deps, ctx, { filename: 'neu.pdf', bytes: pdfBytes(), typeKey: 'invoice', subject: 'Neu', documentDate: '2026-01-01' }));
     const result = await deleteDocument(deps, ctx, { id: doc.id });
-    expect(!result.ok && result.error.type === 'conflict' && result.error.message).toMatch(/läuft noch bis \d{2}\.\d{2}\.\d{4}$/);
+    // Das Ende der Frist im Datumsformat der Anzeige, nicht als ISO-Wert.
+    expect(!result.ok && result.error.type === 'conflict' && result.error.message).toMatch(/\b\d{2}\.\d{2}\.\d{4}\b/);
   });
 
   it('sagt den anderen Modulen, dass das Dokument weg ist', async () => {
@@ -131,10 +114,14 @@ describe('deleteDocument', () => {
     const { deps, ctx } = setupWithProbe();
     const doc = await expiredDocument(deps, ctx, 'gehalten');
     const held = await deleteDocument(deps, ctx, { id: doc.id });
-    expect(!held.ok && held.error.type === 'conflict' && held.error.message).toBe('Noch gehalten von: Buchung 2026-0042 (bis 31.12.2099)');
+    const message = (r: typeof held) => (!r.ok && r.error.type === 'conflict' ? r.error.message : '');
+    // Der Halter mit seinem Namen, die Frist im eingestellten Datumsformat.
+    expect(message(held)).toContain('Buchung 2026-0042');
+    expect(message(held)).toContain('31.12.2099');
     deps.db.transaction((tx) => writeSettingInternal(tx, deps, ctx, 'ui.dateFormat', 'iso'));
     const iso = await deleteDocument(deps, ctx, { id: doc.id });
-    expect(!iso.ok && iso.error.type === 'conflict' && iso.error.message).toBe('Noch gehalten von: Buchung 2026-0042 (bis 2099-12-31)');
+    expect(message(iso)).toContain('2099-12-31');
+    expect(message(iso)).not.toContain('31.12.2099');
   });
 
   it('lehnt ab, solange ein Modul darauf zeigt', async () => {

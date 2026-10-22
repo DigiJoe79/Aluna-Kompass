@@ -181,7 +181,7 @@ export function WorkTransactions({
                   role="option"
                   aria-selected={isSelected}
                   onClick={() => select(row.id)}
-                  className={cn('flex cursor-pointer items-start gap-3 border-l-4 px-3 py-2.5 text-meta', isSelected ? 'border-l-brand bg-selected/40' : 'border-l-transparent hover:bg-row-hover')}
+                  className={cn('relative flex cursor-pointer items-start gap-3 border-l-4 px-3 py-2.5 text-meta', isSelected ? 'border-l-brand bg-selected/40' : 'border-l-transparent hover:bg-row-hover')}
                 >
                   {/* Runde 3, 064 (E1): Am Telefon steht das Datum in der Unterzeile und das Symbol am Namen, damit der Name
                       die Breite hat. Layout an einer Stelle, ohne dauerhaften Test (Projektregel). */}

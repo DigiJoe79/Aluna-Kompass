@@ -1,8 +1,10 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import sharp from 'sharp';
+import { eq } from 'drizzle-orm';
 import type { CallContext } from '../context';
 import type { Deps } from '../deps';
+import { mediaAssets } from '../db/schema';
 import { createMediaFolder, folderExists } from '../media/folders';
 import { storeMediaInternal } from '../media/service';
 import { unwrap } from '../result';
@@ -42,7 +44,10 @@ async function seedLibraryExamples(deps: Deps, ctx: CallContext): Promise<void> 
     const ext = image.name.toLowerCase().endsWith('.jpg') ? 'jpeg' : 'png';
     const base = sharp({ create: { width: image.width, height: image.height, channels: 3, background: image.color } });
     const bytes = new Uint8Array(await (ext === 'jpeg' ? base.jpeg({ quality: 85 }) : base.png()).toBuffer());
-    unwrap(await storeMediaInternal(deps, ctx, { originalName: image.name, bytes, folder: image.folder }));
+    const stored = unwrap(await storeMediaInternal(deps, ctx, { originalName: image.name, bytes, folder: image.folder }));
+    if (image.name === 'Vereinsbanner.png') {
+      deps.db.update(mediaAssets).set({ aiKind: 'generated' }).where(eq(mediaAssets.id, stored.id)).run();
+    }
   }
   unwrap(await storeMediaInternal(deps, ctx, { originalName: 'Satzung Entwurf.pdf', bytes: PDF, declaredMimeType: 'application/pdf', folder: 'Dokumente' }));
   unwrap(await storeMediaInternal(deps, ctx, { originalName: 'Haken.svg', bytes: SVG, declaredMimeType: 'image/svg+xml', folder: null }));
@@ -61,6 +66,9 @@ async function seedPhotos(deps: Deps, ctx: CallContext): Promise<void> {
   for (const folder of SEED_PHOTO_FOLDERS) unwrap(await createMediaFolder(deps, ctx, { path: folder }));
   for (const photo of SEED_PHOTOS) {
     const bytes = new Uint8Array(readFileSync(path.join(dir, photo.file)));
-    unwrap(await storeMediaInternal(deps, ctx, { originalName: photo.file, bytes, declaredMimeType: 'image/jpeg', folder: photo.folder }));
+    const stored = unwrap(await storeMediaInternal(deps, ctx, { originalName: photo.file, bytes, declaredMimeType: 'image/jpeg', folder: photo.folder }));
+    if (photo.file === 'pelle-1.jpg') {
+      deps.db.update(mediaAssets).set({ aiKind: 'edited' }).where(eq(mediaAssets.id, stored.id)).run();
+    }
   }
 }

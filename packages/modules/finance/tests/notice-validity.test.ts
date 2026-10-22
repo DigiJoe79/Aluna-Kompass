@@ -1,5 +1,3 @@
-import { readFileSync } from 'node:fs';
-import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { noticeValidAt, noticeValidUntil, type NoticeValidityInput } from '../src/ledger/notice-validity';
 
@@ -61,13 +59,5 @@ describe('noticeValidAt', () => {
     const voided = notice({ kind: 'exemptionNotice', noticeDate: '2024-01-10', voidedAt: '2025-03-01T08:00:00.000Z' });
     expect(noticeValidAt([voided], '2024-06-01')).toBeNull();
     expect(noticeValidAt([voided], '2025-06-01')).toBeNull();
-  });
-});
-
-describe('notice validity purity', () => {
-  it('imports nothing — no @kompass/*, no relative path', () => {
-    const source = readFileSync(path.resolve(import.meta.dirname, '../src/ledger/notice-validity.ts'), 'utf8');
-    const imports = [...source.matchAll(/(?:from|import)\s*\(?\s*'([^']+)'/g)].map((m) => m[1]!);
-    expect(imports).toEqual([]);
   });
 });

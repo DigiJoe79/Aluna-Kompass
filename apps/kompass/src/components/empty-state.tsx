@@ -53,12 +53,17 @@ function FilteredEmpty({ filtered }: { filtered: Filtered }) {
         {t('reset')}
       </Button>
     );
-  return <Frame title={t('title', { noun: filtered.noun })} text={filtered.text ?? t('text')} action={reset} />;
+  return <Frame title={t('title', { noun: filtered.noun })} text={filtered.text ?? t('text')} action={reset} filtered />;
 }
 
-function Frame({ title, text, action }: { title: string; text: string; action?: ReactNode }) {
+/** `data-slot`/`data-filtered` lassen Tests den Leerzustand am Baustein erkennen statt am Wortlaut. */
+function Frame({ title, text, action, filtered = false }: { title: string; text: string; action?: ReactNode; filtered?: boolean }) {
   return (
-    <section className="flex min-h-[240px] flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-line-strong bg-surface p-7 text-center">
+    <section
+      data-slot="empty-state"
+      data-filtered={filtered || undefined}
+      className="flex min-h-[240px] flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-line-strong bg-surface p-7 text-center"
+    >
       <SectionHeading>{title}</SectionHeading>
       <p className="max-w-[480px] text-body text-ink-2">{text}</p>
       {action ? <div className="mt-2 flex items-center gap-2">{action}</div> : null}

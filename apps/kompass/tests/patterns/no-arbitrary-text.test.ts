@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { checkCountedAllowlist, type CountedAllowlist } from './source';
+import { allowlistHygiene, checkCountedAllowlist, type CountedAllowlist } from './source';
 import { hitsOf, SIZE, STYLE_SIZE } from './type-scan';
 
 /**
@@ -10,7 +10,7 @@ import { hitsOf, SIZE, STYLE_SIZE } from './type-scan';
  * Spec § 9.3) und „Feldschrift wie ui/input“. Geltungsbereich einschließlich `components/ui` (Designer § 13).
  * Kein vorläufiger Eintrag (`OFFEN …`): Was bleibt, ist eine Ausnahme mit Grund.
  */
-const ALLOWED: CountedAllowlist = {
+export const ALLOWED: CountedAllowlist = {
   'app/(shell)/admin/media/asset-detail-dialog.tsx': { count: 1, reason: 'Grafik, keine Schrift: Dateiendung als Platzhalterbild' },
   'app/(shell)/admin/media/library-client.tsx': { count: 1, reason: 'Grafik, keine Schrift: Datei-Symbol (Dateiendung)' },
   'app/(shell)/dms/receive/file-dropzone.tsx': { count: 1, reason: 'Grafik, keine Schrift: Datei-Symbol' },
@@ -36,14 +36,7 @@ describe('keine Schriftgröße von Hand', () => {
     expect(checkCountedAllowlist(hits(), ALLOWED).unexpected).toEqual([]);
   });
 
-  it('kein vorläufiger Eintrag mehr', () => {
-    const open = Object.entries(ALLOWED).filter(([, { reason }]) => reason.startsWith('OFFEN'));
-    expect(open.map(([file]) => file)).toEqual([]);
-  });
-
-  it('jede Ausnahme ist noch nötig (Zahl sinkt mit)', () => {
-    expect(checkCountedAllowlist(hits(), ALLOWED).stale).toEqual([]);
-  });
+  allowlistHygiene(ALLOWED, () => checkCountedAllowlist(hits(), ALLOWED).stale);
 
   it('erkennt Größe in Variante, Bedingung und Feldschrift, nicht die Rolle', () => {
     const line = (s: string) => [...s.matchAll(SIZE)].map((m) => m[0]);

@@ -69,4 +69,12 @@ describe('seedMedia', () => {
     await seedDevelopment(deps);
     expect(deps.db.select().from(mediaFolders).all().length).toBeGreaterThanOrEqual(3);
   });
+
+  it('marks one photo edited and one library image generated', async () => {
+    const deps = createTestDeps({ env: 'development' });
+    await seedDevelopment(deps);
+    const assets = deps.db.select().from(mediaAssets).all();
+    expect(assets.filter((a) => a.aiKind === 'edited')).toHaveLength(1);
+    expect(assets.filter((a) => a.aiKind === 'generated')).toHaveLength(1);
+  });
 });

@@ -26,7 +26,7 @@ export function FallbackMark({ small = false }: { small?: boolean }) {
  */
 export function AuthCard({ brand, organization, title, width = 400, children, footer }: { brand: string; organization?: string; title: string; width?: number; children: ReactNode; footer?: ReactNode }) {
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center gap-5 bg-bg p-6">
+    <main className="flex min-h-dvh flex-col items-center justify-center gap-5 bg-bg p-6">
       <div className="flex items-center gap-3">
         <FallbackMark />
         <div>

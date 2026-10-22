@@ -14,7 +14,7 @@ import { Button, buttonVariants } from '@/components/ui/button';
 import { DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { DOCUMENTS_MIME, carriesOutsideFiles } from '@/lib/drag-types';
 import { ancestorsOf, isWithin, nameOf, type DragItem, type FolderEntry } from '@/lib/folder-tree-model';
-import { DocumentMovesContext, type DocumentMoves, type MovableDocument } from './document-moves';
+import { DocumentMovesContext, inboxShift, placeRows, type DocumentMoves, type MovableDocument } from './document-moves';
 import { DropOverlay } from '@/components/drop-overlay';
 import { FolderColumn } from '@/components/folder-column';
 import { ExportDialog } from './export-dialog';
@@ -109,7 +109,7 @@ export function DmsWorkspace({
   const known = useMemo(() => new Set(folders.flatMap((f) => [...ancestorsOf(f.path), f.path])), [folders]);
   const requested = params.get('folder') || null;
   const openFolder = isOutbox || isInbox || isUnfiled ? null : requested && known.has(requested) ? requested : currentFolder;
-  const { folders: shownFolders, selected: selectedFolder, saving, placed, moveFolder, renameFolder, deleteFolder, createFolder, moveDocuments } = useFolderMoves({
+  const { folders: shownFolders, selected: selectedFolder, saving, placed, steps, moveFolder, renameFolder, deleteFolder, createFolder, moveDocuments } = useFolderMoves({
     folders,
     selected: openFolder,
     hrefFor,
@@ -126,6 +126,8 @@ export function DmsWorkspace({
    * zieht der Ort mit, auch für Zeilen, die die Liste danach nicht mehr zeigt.
    */
   const rows = useRef(new Map<string, MovableDocument>());
+  /** Der Eingangskorb zählt laufende Züge mit, bis der Server neu zählt (Backlog 45). */
+  const shownInboxCount = Math.max(0, inboxCount + inboxShift(steps, (id) => rows.current.get(id)?.direction));
   /** Die Dokumente, für die „Verschieben nach…“ offen ist. */
   const [movingDocuments, setMovingDocuments] = useState<MovableDocument[] | null>(null);
   const documentMoves = useMemo<DocumentMoves>(
@@ -139,11 +141,15 @@ export function DmsWorkspace({
     [placed]
   );
   const moveDocumentsTo = async (items: DocumentMoveItem[], target: string | null, options?: { quiet?: boolean }) => {
-    const result = await moveDocuments(items, target, options);
-    if (result.status === 'success') {
-      for (const item of items) rows.current.set(item.id, { id: item.id, folder: target, subject: item.title, direction: item.direction });
+    const restore = placeRows(rows.current, items, target);
+    try {
+      const result = await moveDocuments(items, target, options);
+      if (result.status !== 'success') restore();
+      return result;
+    } catch (error) {
+      restore();
+      throw error;
     }
-    return result;
   };
 
   const [open, setOpen] = useState(!!receiveOpen);
@@ -294,7 +300,7 @@ export function DmsWorkspace({
         key: 'inbox',
         label: t('inbox'),
         icon: Inbox,
-        count: inboxCount,
+        count: shownInboxCount,
         href: folderHref(new URLSearchParams(params.toString()), { folder: null, inbox: true }),
         dropTarget: true,
         folder: null,
@@ -348,7 +354,7 @@ export function DmsWorkspace({
   const place = isOutbox
     ? { path: [], title: t('outbox.title'), count: outboxCount }
     : isInbox
-    ? { path: [], title: t('inbox'), count: inboxCount }
+    ? { path: [], title: t('inbox'), count: shownInboxCount }
     : isUnfiled
       ? { path: [], title: t('noFolder'), count: unfiledCount }
       : selectedFolder === null

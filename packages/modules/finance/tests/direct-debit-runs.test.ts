@@ -1,4 +1,4 @@
-import { fixedClock, schema, unwrap, type CallContext } from '@kompass/core';
+import { fixedClock, schema, unwrap } from '@kompass/core';
 import { ctxWith } from '@kompass/core/testing';
 import { eq, like } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
@@ -7,12 +7,10 @@ import { endPledge, getPledge, savePledge } from '../src/direct-debit/pledges';
 import { collectionWindow, createDirectDebitRun, earliestCoveredDay, getCollectionWindow, submitWindowInternal, type DirectDebitPreviewItem, getDirectDebitRun, listDirectDebitRuns, previewDirectDebitRun, removeRunItem } from '../src/direct-debit/runs';
 import { issuePrenotification } from '../src/direct-debit/prenotifications';
 import { financeDirectDebitItems, financePledges, financeSepaMandates } from '../src/schema';
-import { allowHumanOnlyOverMcp } from './helpers';
 import { directDebitFixture, IBANS } from './direct-debit-fixture';
 
 // Uhr: Dienstag, 20.10.2026 — Fälligkeitstage 22.10. (zwei Bankarbeitstage) bis 20.10.2027 (ein Jahr).
 const fail = <T>(res: { ok: boolean; error?: T }) => (res.ok ? null : res.error);
-const asMcp = (ctx: CallContext): CallContext => ({ ...ctx, channel: 'mcp' });
 
 /** Drei Beiträge zum 30.10.: angekündigt mit aktivem Mandat, mit vorbereitetem Mandat, ohne Ankündigung. */
 async function scene() {
@@ -227,7 +225,6 @@ describe('createDirectDebitRun', () => {
     expect(run.items[0]!.endToEndId).toMatch(/^[A-Za-z0-9-]{1,35}$/);
     const audit = f.deps.db.select().from(schema.auditLog).where(like(schema.auditLog.action, 'finance.directDebit.%')).all();
     expect(audit.map((a) => [a.action, a.params])).toEqual([['finance.directDebit.create', JSON.stringify({ collectionOn: '2026-10-30', count: 1, sumCents: 1200 })]]);
-    expect(JSON.stringify(audit)).not.toMatch(/DE\d{20}|Pünktlich/);
   });
 
   it('an item in a run that is not cancelled appears in no second one (Review Focus 2); nothing left is nothingToCollect', async () => {
@@ -250,13 +247,10 @@ describe('createDirectDebitRun', () => {
     expect(run.items.map((i) => i.amended)).toEqual([true, false]);
   });
 
-  it('is human only, needs finance.directDebit, a valid day', async () => {
+  it('needs finance.directDebit and a valid day', async () => {
     const f = await scene();
-    expect(fail(await createDirectDebitRun(f.deps, asMcp(f.ctx), { collectionDate: '2026-10-30' }))).toMatchObject({ code: 'humanOnly' });
     expect(fail(await createDirectDebitRun(f.deps, ctxWith(['finance.read'], f.userId), { collectionDate: '2026-10-30' }))).toMatchObject({ type: 'forbidden' });
     expect(fail(await createDirectDebitRun(f.deps, f.ctx, { collectionDate: '2026-10-21' }))).toMatchObject({ code: 'invalidCollectionDate' });
-    allowHumanOnlyOverMcp(f.deps);
-    expect((await createDirectDebitRun(f.deps, asMcp(f.ctx), { collectionDate: '2026-10-30' })).ok).toBe(true);
   });
 });
 

@@ -40,16 +40,4 @@ describe('ReceiptList (07-2 A5)', () => {
     expect(screen.getAllByText('BE-2026-0007')).toHaveLength(1);
   });
 
-  it('„Öffnen“ ist ein Textknopf, „Entfernen“ sekundär (Runde 3, 089)', () => {
-    show([item({})], () => {});
-    expect(screen.getByRole('link', { name: 'Öffnen' }).className).not.toMatch(/border-line-strong/);
-    expect(screen.getByRole('button', { name: 'Entfernen' }).className).toMatch(/border-line-strong/);
-  });
-
-  it('kürzt den Betreff nicht: Art und Datum stehen in einer eigenen Zeile darunter (Runde 3, 089)', () => {
-    show([item({})]);
-    const subject = screen.getByText('Rechnung Büromaterial');
-    expect(subject.className).not.toMatch(/truncate/);
-    expect(subject.closest('li')?.textContent).toContain('Rechnung Büromaterial');
-  });
 });

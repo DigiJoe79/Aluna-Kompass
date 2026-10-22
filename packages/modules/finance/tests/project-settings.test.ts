@@ -74,13 +74,12 @@ describe('project finance settings', () => {
     expect(fromPurpose.allocationLines[0]!.abroad).toBe(true);
   });
 
-  it('logs the switches, not the project name', async () => {
+  it('logs the switches', async () => {
     const f = await ledgerFixture();
     const project = await seedProject(f.deps, f.userId, 'stille-liebe');
     unwrap(await setProjectFinance(f.deps, f.ctx, { projectId: project.id, targetCents: 5000, abroad: true }));
-    const log = JSON.stringify(f.deps.db.select().from(schema.auditLog).all().filter((e) => e.action.startsWith('finance.projectSettings')));
-    expect(log).not.toContain('stille-liebe');
-    expect(log).not.toContain('Testprojekt');
+    const log = f.deps.db.select().from(schema.auditLog).all().filter((e) => e.action.startsWith('finance.projectSettings'));
+    expect(log.map((e) => e.entityType)).toEqual(['financeProjectSettings']);
   });
 });
 

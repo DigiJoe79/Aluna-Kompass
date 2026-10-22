@@ -52,8 +52,9 @@ export interface RequirementListItem {
  * „Fehlt noch“ voll, „Bitte ansehen“ als Warnkästen, „Erfüllt · n“ und
  * „Trifft nicht zu · n“ eingeklappt. Leere Gruppen fehlen.
  */
-export function RequirementList({ items, grouping }: { items: RequirementListItem[]; grouping?: 'open-first' }) {
+export function RequirementList({ items, grouping, variant }: { items: RequirementListItem[]; grouping?: 'open-first'; variant?: 'compact' }) {
   if (grouping === 'open-first') return <GroupedRequirementList items={items} />;
+  if (variant === 'compact') return <CompactRequirementList items={items} />;
   return (
     <ul className="space-y-2" data-testid="requirement-list">
       {items.map((item) => (
@@ -111,6 +112,37 @@ function OpenRow({ item, symbolOnly = false }: { item: RequirementListItem; symb
         {!item.done && (symbolOnly || !item.blocked) && item.canSelf && item.href ? <ActionLink item={{ ...item, href: item.href }} /> : null}
       </div>
     </li>
+  );
+}
+
+/**
+ * `variant="compact"` — N1, Freigabe Joe 2026-10-22, CSV-Assistent Schritt 3 („Pflicht“): eine Zeile je Punkt ohne
+ * Rahmen und ohne Fläche, Symbol (Haken bzw. Kreis wie MUSTER § F), Titel, daneben `detail` (die zugeordnete Spalte oder
+ * „fehlt“). Kein Knopf und keine Gruppen: `href`, `canSelf` und `extra` gelten hier nicht.
+ */
+function CompactRequirementList({ items }: { items: RequirementListItem[] }) {
+  const t = useTranslations('common.requirements');
+  return (
+    <ul className="space-y-1.5" data-testid="requirement-list">
+      {items.map((item) => (
+        // `relative`: Bezugsrahmen des `sr-only` wie in `OpenRow`.
+        <li key={item.key} data-testid={`requirement-${item.key}`} data-done={item.done} className="relative flex flex-wrap items-baseline gap-x-2.5 gap-y-0.5">
+          {item.done ? (
+            <>
+              <Check className="size-4 shrink-0 self-center text-success" aria-hidden />
+              <span className="sr-only">{item.doneLabel}</span>
+            </>
+          ) : (
+            <>
+              <CircleDashed className="size-4 shrink-0 self-center text-warning" aria-hidden />
+              <span className="sr-only">{t('open')}</span>
+            </>
+          )}
+          <span className={item.done ? 'font-semibold text-muted-ink' : 'font-semibold text-ink'}>{item.title}</span>
+          {item.detail ? <span className={item.done ? 'text-meta text-ink-2' : 'text-meta text-warning'}>{item.detail}</span> : null}
+        </li>
+      ))}
+    </ul>
   );
 }
 

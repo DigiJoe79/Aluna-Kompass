@@ -25,7 +25,7 @@ test.describe('users', () => {
     await expect(page.getByText('1 von 7 Nutzern')).toBeVisible();
     await search.fill('zzz');
     await expect(page.getByText('0 von 7 Nutzern')).toBeVisible();
-    await expect(page.getByText('Kein Nutzer passt zu diesen Filtern.')).toBeVisible();
+    await expect(page.locator('[data-slot="empty-state"][data-filtered]')).toBeVisible();
     await page.getByRole('button', { name: 'Filter zurücksetzen' }).last().click();
     await expect(search).toHaveValue('');
     await expect(page.getByText('7 Nutzer', { exact: true })).toBeVisible();

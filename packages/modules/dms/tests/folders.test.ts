@@ -1,10 +1,10 @@
-import { auditEntry, ctxWith } from '@kompass/core/testing';
+import { auditEntry } from '@kompass/core/testing';
 import { describe, expect, it } from 'vitest';
 import { createDocumentFolder, createDocumentRule, createDocumentType, deleteDocumentFolder, listDocumentFolders, moveDocumentFolder } from '../src/catalog';
 import { receiveDocument } from '../src/incoming';
 import { listDocuments, moveDocument, moveDocuments } from '../src/service';
 import { documentFolders, documents, documentRules, documentTypes } from '../src/schema';
-import { ALL_DMS, auditActions, pdfBytes, setupWithArea, setupWithTypes } from './helpers';
+import { auditActions, pdfBytes, setupWithArea, setupWithTypes } from './helpers';
 import { eq } from 'drizzle-orm';
 import type { CallContext, Deps } from '@kompass/core';
 
@@ -56,15 +56,6 @@ describe('folders', () => {
     expect(auditActions(deps)).toContain('dms.folder.delete');
   });
 
-  it('verlangt dms.manage', async () => {
-    const { deps } = setupWithTypes();
-    const denied = await createDocumentFolder(
-      deps,
-      ctxWith(ALL_DMS.filter((p) => p !== 'dms.manage')),
-      { path: 'x' },
-    );
-    expect(denied.ok).toBe(false);
-  });
 });
 
 describe('moveDocument', () => {
@@ -172,12 +163,6 @@ describe('moveDocumentFolder', () => {
     expect(JSON.parse(entry.after!)).toEqual({ path: 'archiv/behoerden', folders: 2, documents: 1, types: 1, rules: 1 });
   });
 
-  it('verlangt dms.manage', async () => {
-    const { deps } = await tree();
-    const denied = await moveDocumentFolder(deps, ctxWith(ALL_DMS.filter((p) => p !== 'dms.manage')), { from: 'behoerden', to: 'archiv/behoerden' });
-    expect(denied).toMatchObject({ ok: false, error: { type: 'forbidden' } });
-  });
-
   it('weist unzulässige Ziele ab', async () => {
     const { deps, ctx } = await tree();
     const code = async (from: string, to: string) => {
@@ -200,14 +185,6 @@ describe('moveDocumentFolder', () => {
     expect(deps.db.select().from(documents).where(eq(documents.id, secretId)).get()!.folder).toBe('archiv/sachen');
   });
 
-  it('lässt behoerden_alt unberührt', async () => {
-    const { deps, ctx } = await tree();
-    await folders(deps, ctx, ['behoerden_alt']);
-    const alt = await file(deps, ctx, 'behoerden_alt', 'authority', 'Alt');
-    await moveDocumentFolder(deps, ctx, { from: 'behoerden', to: 'archiv/behoerden' });
-    expect(deps.db.select().from(documents).where(eq(documents.id, alt.id)).get()!.folder).toBe('behoerden_alt');
-    expect(folderPaths(deps)).toContain('behoerden_alt');
-  });
 });
 
 describe('listDocumentFolders: count', () => {
@@ -230,18 +207,6 @@ describe('listDocumentFolders: count', () => {
     expect(list.value.map((f) => [f.path, f.count])).toEqual([['leer', 0]]);
   });
 
-  it('zählt mit Bereichsrecht nur Lesbares', async () => {
-    const { deps, all, auditor, viewer } = await setupWithArea();
-    await folders(deps, all, ['g']);
-    await file(deps, all, 'g', 'secret', 'Geheim');
-    await file(deps, all, 'g', 'authority', 'Offen');
-    const asViewer = await listDocumentFolders(deps, viewer);
-    if (!asViewer.ok) throw new Error('viewer');
-    expect(asViewer.value.find((f) => f.path === 'g')!.count).toBe(1);
-    const asAuditor = await listDocumentFolders(deps, auditor);
-    if (!asAuditor.ok) throw new Error('auditor');
-    expect(asAuditor.value.find((f) => f.path === 'g')!.count).toBe(1);
-  });
 });
 
 describe('erwarteter Ort beim Verschieben', () => {

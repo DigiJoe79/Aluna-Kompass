@@ -75,6 +75,18 @@ export function LocaleLabel({ htmlFor, locale, children }: { htmlFor: string; lo
   );
 }
 
+function areLocalizedEqual(a: LocalizedText | undefined, b: LocalizedText | undefined): boolean {
+  if (a === b) return true;
+  if (!a || !b) return a === b;
+  const keysA = Object.keys(a);
+  const keysB = Object.keys(b);
+  if (keysA.length !== keysB.length) return false;
+  for (const k of keysA) {
+    if (a[k] !== b[k]) return false;
+  }
+  return true;
+}
+
 export function LocalizedField({
   name,
   label,
@@ -86,6 +98,7 @@ export function LocalizedField({
   required,
   locales,
   size,
+  onChange,
 }: {
   name: string;
   label: string;
@@ -98,10 +111,18 @@ export function LocalizedField({
   locales: string[];
   /** Größe je Sprache; ohne Angabe `m` für eine Zeile, `l` für Langtext. */
   size?: FieldSize;
+  onChange?: (value: LocalizedText) => void;
 }) {
   const t = useTranslations('content');
   const languageName = useLanguageName();
   const [text, setText] = useState<LocalizedText>(value);
+  const [prevValue, setPrevValue] = useState<LocalizedText>(value);
+  // Nur ein gesteuertes Feld (mit `onChange`) folgt seinem Wert. Ohne hält das Formular die Eingaben selbst: Ein neuer
+  // Stand vom Server — etwa nach einem Versionskonflikt — überschriebe sonst, was die Person getippt hat.
+  if (onChange && !areLocalizedEqual(value, prevValue)) {
+    setPrevValue(value);
+    setText(value);
+  }
   const leading = locales[0] ?? 'de';
   const [previewLocale, setPreviewLocale] = useState<string>(leading);
   const [activeTab, setActiveTab] = useState<string>(leading);
@@ -127,8 +148,11 @@ export function LocalizedField({
       id,
       name: `${name}.${locale}`,
       value: text[locale] ?? '',
-      onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
-        setText({ ...text, [locale]: e.target.value }),
+      onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+        const next = { ...text, [locale]: e.target.value };
+        setText(next);
+        onChange?.(next);
+      },
       required: required && isLeading,
       'aria-invalid': isLeading && !!error ? true : undefined,
       'aria-label': t('localizedName', { label, language: languageName(locale) }),

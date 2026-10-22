@@ -9,6 +9,7 @@ import type { ReactNode } from 'react';
 export function SelectionBar({ count, label, children }: { count: number; label: string; children: ReactNode }) {
   return (
     <>
+      {/* Absolut wie jedes sr-only-Feld; Halt gibt ihm der Scrollbereich der Shell (`main` ist `relative`). */}
       <span data-testid="selection-live" role="status" className="sr-only">
         {count > 0 ? label : ''}
       </span>

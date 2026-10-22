@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { type Allowlist, matchingLines, read, relative, sourceFiles } from './source';
+import { type Allowlist, matchingLines, read, relative, sourceFiles, allowlistHygiene, staleKeys } from './source';
 
 /**
  * Breiten wählt die Seite über `Page`, der Dialog über `size`, das Feld über `FormField size` (docs/MUSTER.md
@@ -8,7 +8,7 @@ import { type Allowlist, matchingLines, read, relative, sourceFiles } from './so
  */
 const FIXED = /max-w-\[[\d.]+(px|ch|rem|em)\]/;
 
-const ALLOWED: Allowlist = {
+export const ALLOWED: Allowlist = {
   'app/(shell)/help/[[...doc]]/page.tsx': 'Lesetext Handbuch: 72 Zeichen je Zeile (Entscheidung zum Inventar, 05.10.2026).',
   'app/(shell)/dms/new/draft-preview.tsx': 'Papiermaß der Briefvorschau (A4 im Maßstab), keine Seitenbreite.',
   'components/empty-state.tsx': 'Textblock des leeren Zustands, wie `max-w-prose` (Entscheidung zum Inventar).',
@@ -29,8 +29,5 @@ describe('keine feste Breite in Seiten und Panels', () => {
     expect(hits().filter(({ file }) => !(file in ALLOWED)).map(({ where }) => where)).toEqual([]);
   });
 
-  it('jede Ausnahme ist noch nötig', () => {
-    const using = new Set(hits().map(({ file }) => file));
-    expect(Object.keys(ALLOWED).filter((file) => !using.has(file))).toEqual([]);
-  });
+  allowlistHygiene(ALLOWED, () => staleKeys(ALLOWED, hits().map(({ file }) => file)));
 });

@@ -87,7 +87,7 @@ export type SiteJobRunView = SiteJobRun & { elapsedMs: number; userName: string 
 
 type Parts = Partial<PreviewResult & DeployCheckResult & PublishResult>;
 
-/** Die Ergebnisformen der drei Arten auf einen Nenner; alte Dateien (0.2.4) ohne Felder zählen 0. */
+/** Die Ergebnisformen der drei Arten auf einen Nenner; ohne Ergebnis (Fehlschlag) zählt alles 0. */
 function parts(record: SiteJobRecord) {
   const r = (record.result ?? {}) as Parts;
   return { r, diff: r.diff };
@@ -117,7 +117,7 @@ function summarize(record: SiteJobRecord, names: Map<string, string>, lastPublis
     finishedAt: record.finishedAt,
     userId: record.userId ?? null,
     userName: record.userId ? (names.get(record.userId) ?? null) : null,
-    status: record.status ?? (record.error ? 'failed' : 'success'),
+    status: record.status,
     ...(record.reason ? { reason: record.reason } : {}),
     ...(record.lastStep ? { lastStep: record.lastStep } : {}),
     ...(record.error ? { error: record.error } : {}),

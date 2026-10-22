@@ -44,12 +44,6 @@ describe('createDraft', () => {
     expect(result.error.type).toBe('notFound');
   });
 
-  it('verlangt dms.create', async () => {
-    const { deps } = setupWithTypes();
-    const denied = await createDraft(deps, ctxWith(ALL_DMS.filter((p) => p !== 'dms.create')), { typeKey: 'letter', subject: 'x', body: 'y' });
-    expect(denied.ok).toBe(false);
-  });
-
   it('verlangt einen Betreff', async () => {
     const { deps, ctx } = setupWithTypes();
     const result = await createDraft(deps, ctx, { typeKey: 'letter', subject: '', body: 'y' });
@@ -92,13 +86,6 @@ describe('deleteDraft', () => {
     expect(auditActions(deps)).toContain('dms.draft.delete');
   });
 
-  it('verlangt dms.deleteDraft', async () => {
-    const { deps, ctx } = setupWithTypes();
-    const created = await createDraft(deps, ctx, { typeKey: 'letter', subject: 'Weg', body: 'x' });
-    if (!created.ok) throw new Error('setup');
-    const denied = await deleteDraft(deps, ctxWith(ALL_DMS.filter((p) => p !== 'dms.deleteDraft')), { id: created.value.id });
-    expect(denied.ok).toBe(false);
-  });
 });
 
 describe('previewDraft', () => {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { type Allowlist, openingTags, read, relative, sourceFiles } from './source';
+import { type Allowlist, openingTags, read, relative, sourceFiles, allowlistHygiene, staleKeys } from './source';
 
 /**
  * Dialoge haben vier Größen, Seitenfenster zwei (docs/MUSTER.md § I, Handoff Konsistenz § 8a.4 und § 8c):
@@ -9,7 +9,7 @@ import { type Allowlist, openingTags, read, relative, sourceFiles } from './sour
  */
 const FORBIDDEN = /max-w-|(?<![\w-])w-\[|--dialog-pad|(?<![\w-])p-[0-9]/;
 
-const ALLOWED: Allowlist = {
+export const ALLOWED: Allowlist = {
   'components/ui/command.tsx': 'Grundbaustein der Befehlsliste: Palette, oben verankert.',
   'components/shell/command-palette.tsx': 'Befehlspalette, oben verankert (Entscheidung zum Inventar, 05.10.2026).',
 };
@@ -28,8 +28,5 @@ describe('Dialog- und Fenstergröße über size', () => {
     expect(tags().filter((t) => wrong(t) && !(t.file in ALLOWED)).map(({ where }) => where)).toEqual([]);
   });
 
-  it('jede Ausnahme ist noch nötig', () => {
-    const using = new Set(tags().filter(wrong).map(({ file }) => file));
-    expect(Object.keys(ALLOWED).filter((file) => !using.has(file))).toEqual([]);
-  });
+  allowlistHygiene(ALLOWED, () => staleKeys(ALLOWED, tags().filter(wrong).map(({ file }) => file)));
 });

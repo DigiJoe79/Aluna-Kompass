@@ -44,7 +44,7 @@ describe('Fotoprüfung einer Änderung', () => {
     render(<Harness />, { wrapper: Intl });
     expect(screen.queryByTestId('crop-rect')).toBeNull();
     expect(within(tiles()[1]!).getByTestId('cropped-image')).toBeTruthy();
-    expect(within(tiles()[1]!).getByRole('img', { name: 'Foto aus Kompass, mit Ausschnitt' })).toBeTruthy();
+    expect(within(tiles()[1]!).getByRole('img', { name: 'Foto 2 aus Kompass, mit Ausschnitt' })).toBeTruthy();
     expect(within(tiles()[1]!).getByText('Ausschnitt')).toBeTruthy();
     expect(within(tiles()[0]!).getByText('ohne Ausschnitt')).toBeTruthy();
     expect(screen.queryByText(/Rahmen = Ausschnitt/)).toBeNull();
@@ -54,7 +54,7 @@ describe('Fotoprüfung einer Änderung', () => {
     render(<Harness />, { wrapper: Intl });
     expect(within(tiles()[0]!).getByRole('button', { name: 'Ausschnitt …' })).toBeTruthy();
     expect(within(tiles()[2]!).getByRole('button', { name: 'Ausschnitt …' })).toBeTruthy();
-    fireEvent.click(within(tiles()[2]!).getByRole('checkbox', { name: 'danach dabei: Foto aus Kompass' }));
+    fireEvent.click(within(tiles()[2]!).getByRole('checkbox', { name: 'danach dabei: Foto 3 aus Kompass' }));
     expect(within(tiles()[2]!).queryByRole('button', { name: 'Ausschnitt …' })).toBeNull();
   });
 
@@ -83,17 +83,26 @@ describe('Fotoprüfung einer Änderung', () => {
     expect(screen.getByTestId('primary-crop-announcement').textContent).toBe('');
     fireEvent.click(within(choice).getByRole('radio', { name: /Wechseln/ }));
     expect(within(tiles()[1]!).getByText('ohne Ausschnitt')).toBeTruthy();
-    expect(screen.getByTestId('primary-crop-announcement').textContent).toBe('Titelbild ist jetzt hb-1.jpg. Ausschnitt von Foto aus Kompass entfernt.');
+    expect(screen.getByTestId('primary-crop-announcement').textContent).toBe('Titelbild ist jetzt Foto 1 von Quelle. Ausschnitt von Foto 2 aus Kompass entfernt.');
     fireEvent.click(within(choice).getByRole('radio', { name: /Heute behalten/ }));
     expect(within(tiles()[1]!).getByTestId('cropped-image')).toBeTruthy();
+  });
+
+  /** Backlog 79: Die Kennung der Quelle (`sourceRef`) dient dem Abgleich, nicht dem Menschen; die Wahl zeigt beide Bilder. */
+  it('79: the primary choice shows both photos with source and position, never the source reference', () => {
+    render(<Harness />, { wrapper: Intl });
+    const choice = screen.getByTestId('proposal-primary-choice');
+    expect(within(choice).getAllByRole('img')).toHaveLength(2);
+    // Die Kennung der Quelle bleibt dem Abgleich vorbehalten — nirgends in Anzeige oder Namen für Vorleser.
+    expect(document.body.innerHTML).not.toContain('hb-1.jpg');
   });
 
   it('deselecting the primary runs through the same rule: the old one keeps its crop, nothing is announced', () => {
     render(<Harness />, { wrapper: Intl });
     fireEvent.click(within(screen.getByTestId('proposal-primary-choice')).getByRole('radio', { name: /Heute behalten/ }));
-    fireEvent.click(within(tiles()[1]!).getByRole('checkbox', { name: 'danach dabei: Foto aus Kompass' }));
+    fireEvent.click(within(tiles()[1]!).getByRole('checkbox', { name: 'danach dabei: Foto 2 aus Kompass' }));
     expect(screen.getByTestId('primary-crop-announcement').textContent).toBe('');
-    fireEvent.click(within(tiles()[1]!).getByRole('checkbox', { name: 'danach dabei: Foto aus Kompass' }));
+    fireEvent.click(within(tiles()[1]!).getByRole('checkbox', { name: 'danach dabei: Foto 2 aus Kompass' }));
     expect(within(tiles()[1]!).getByTestId('cropped-image')).toBeTruthy();
   });
 
@@ -114,7 +123,7 @@ describe('Fotoprüfung einer Änderung', () => {
     }
     render(<Mixed />, { wrapper: Intl });
     const boxes = screen.getAllByRole('checkbox');
-    expect(boxes.map((b) => b.getAttribute('aria-label'))).toEqual(['danach dabei: hb-1.jpg', 'danach dabei: hb-alt.jpg', 'danach dabei: Foto aus Kompass']);
+    expect(boxes.map((b) => b.getAttribute('aria-label'))).toEqual(['danach dabei: Foto 1 von Quelle', 'danach dabei: Foto 2 von Quelle', 'danach dabei: Foto 3 aus Kompass']);
     // Angehakt heißt: nach dem Annehmen dabei. Das wegfallende Foto ist leer, das neue und das aus Kompass angehakt.
     expect(boxes.map((b) => b.getAttribute('aria-checked') ?? String((b as HTMLInputElement).checked))).toEqual(['true', 'false', 'true']);
     // Vorher hieß dieselbe Wahl „entfernen“ ab- und „abwählen“ angehakt: Das wegfallende Foto bleibt doch, das aus Kompass geht.

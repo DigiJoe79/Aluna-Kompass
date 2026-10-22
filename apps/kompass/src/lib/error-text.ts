@@ -170,6 +170,25 @@ const KNOWN_CONFLICTS = new Set([
   'templateInvalid',
   'templateNeedsReview',
   'templateStale',
+  'animalNotAdopted',
+  'bundleEmpty',
+  'documentAlreadyVoided',
+  'documentAltered',
+  'documentHasNoFile',
+  'documentIsFiled',
+  'documentNumberContention',
+  'documentTypeExists',
+  'documentTypeHasDocuments',
+  'documentTypeInUse',
+  'documentTypeIsDefault',
+  'documentTypeOwnedByModule',
+  'documentTypePrefixTaken',
+  'documentTypeProvisioned',
+  'folderHasProtectedDocuments',
+  'linkTypeReserved',
+  'slugTaken',
+  'textExtractionGaveUp',
+  'noReviewPending',
 ]);
 
 const CONFLICTS_WITH_DETAIL = new Set([
@@ -188,6 +207,9 @@ const CONFLICTS_WITH_DETAIL = new Set([
   'previewFailed',
   'unknownView',
   'unknownViewField',
+  'bundleTooLarge',
+  'documentTooManyPages',
+  'retentionRunning',
 ]);
 
 const MEDIA_FIELD_CODES = ['unsupportedMediaType', 'notAPdf', 'fileTooLarge', 'svgContainsScript'];

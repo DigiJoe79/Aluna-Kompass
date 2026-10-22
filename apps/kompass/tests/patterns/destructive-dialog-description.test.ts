@@ -1,7 +1,6 @@
 import path from 'node:path';
-import { existsSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { openingTags, read, relative, sourceFiles, SRC, type Allowlist } from './source';
+import { type Allowlist, allowlistHygiene, openingTags, read, relative, sourceFiles, SRC, staleKeys } from './source';
 
 /**
  * Ein Dialog, der etwas Unumkehrbares tut, sagt die Folge in seiner Beschreibung (Spec Seitenkopf § 3.7, docs/MUSTER.md
@@ -13,7 +12,7 @@ import { openingTags, read, relative, sourceFiles, SRC, type Allowlist } from '.
  * `<DialogDescription`. `ConfirmDialog` zählt nicht: Dort ist `description` im Typ Pflicht, bei `refusal` ist die
  * Begründung die Beschreibung.
  */
-const ALLOWED: Allowlist = {
+export const ALLOWED: Allowlist = {
 };
 
 export function needsDescription(text: string): boolean {
@@ -28,15 +27,13 @@ export function needsDescription(text: string): boolean {
 const roots = ['app', 'components'].map((dir) => path.join(SRC, dir));
 
 describe('Löschdialog mit Beschreibung', () => {
+  const violations = roots.flatMap((root) => sourceFiles(root)).filter((file) => needsDescription(read(file))).map(relative);
+
   it('jeder Dialog mit unumkehrbarer Hauptaktion hat eine DialogDescription', () => {
-    const violations = roots.flatMap((root) => sourceFiles(root)).filter((file) => needsDescription(read(file))).map(relative);
     expect(violations.filter((file) => !(file in ALLOWED))).toEqual([]);
   });
 
-  it('jede Ausnahme ist noch nötig', () => {
-    const stale = Object.keys(ALLOWED).filter((file) => !existsSync(path.join(SRC, file)) || !needsDescription(read(path.join(SRC, file))));
-    expect(stale).toEqual([]);
-  });
+  allowlistHygiene(ALLOWED, () => staleKeys(ALLOWED, violations));
 
   it('Heuristik: je Signal ein Treffer ohne Beschreibung', () => {
     expect(needsDescription('<DialogContent size="sm"><FormActionBar placement="dialog" destructive /></DialogContent>')).toBe(true);

@@ -1,5 +1,3 @@
-import { readFileSync } from 'node:fs';
-import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { amountInWords, amountInWordsHyphenated } from '../src/ledger/amount-in-words';
 
@@ -55,13 +53,5 @@ describe('amountInWordsHyphenated', () => {
     // Die Trennstellen der Beispiele aus dem Befund.
     expect(amountInWordsHyphenated(euro(2760))).toBe('zwei­tausend­sieben­hundert­sechzig Euro');
     expect(amountInWordsHyphenated(euro(125))).toBe('ein­hundert­fünf­und­zwanzig Euro');
-  });
-});
-
-describe('amount in words purity', () => {
-  it('imports nothing — no @kompass/*, no relative path', () => {
-    const source = readFileSync(path.resolve(import.meta.dirname, '../src/ledger/amount-in-words.ts'), 'utf8');
-    const imports = [...source.matchAll(/(?:from|import)\s*\(?\s*'([^']+)'/g)].map((m) => m[1]!);
-    expect(imports).toEqual([]);
   });
 });

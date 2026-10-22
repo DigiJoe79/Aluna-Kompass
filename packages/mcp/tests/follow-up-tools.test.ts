@@ -1,4 +1,4 @@
-import { coreModule, createFollowUp, listDueFollowUpsWithTargets } from '@kompass/core';
+import { coreModule } from '@kompass/core';
 import { createTestDeps, ctxWith } from '@kompass/core/testing';
 import { describe, expect, it } from 'vitest';
 import { coreMcpTools } from '../src/core-tools';
@@ -15,8 +15,6 @@ describe('followups_* tools', () => {
       expect(tool(name).service, name).toBeTypeOf('function');
       expect(tool(name).description).toMatch(/followUps\.(view|manage)/);
     }
-    expect(tool('followups_create').service).toBe(createFollowUp);
-    expect(tool('followups_list_due').service).toBe(listDueFollowUpsWithTargets);
   });
 
   it('jedes Kernwerkzeug nennt einen Service', () => {

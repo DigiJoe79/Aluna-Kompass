@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { checkCountedAllowlist, type CountedAllowlist } from './source';
+import { allowlistHygiene, checkCountedAllowlist, type CountedAllowlist } from './source';
 import { hitsOf, STYLE_TYPE, TYPE_STYLE } from './type-scan';
 
 /**
@@ -10,10 +10,9 @@ import { hitsOf, STYLE_TYPE, TYPE_STYLE } from './type-scan';
  * Ausnahmen gezählt je Datei. Gruppen: „Grafik, keine Schrift“ (`font-bold` bei Initialen, Dateiendung),
  * „Zeichen einzeln ablesbar“ (Startpasswort). Kein vorläufiger Eintrag (`OFFEN …`).
  */
-const ALLOWED: CountedAllowlist = {
+export const ALLOWED: CountedAllowlist = {
   'app/(shell)/admin/media/asset-detail-dialog.tsx': { count: 1, reason: 'Grafik, keine Schrift: Dateiendung als Platzhalterbild (Versalien)' },
   'app/(shell)/admin/media/library-client.tsx': { count: 1, reason: 'Grafik, keine Schrift: Datei-Symbol (Versalien)' },
-  'app/(shell)/finance/imports/format/csv-assistant.tsx': { count: 1, reason: 'Feld im Tabellenkopf: die Auswahl setzt Gewicht, Versalien und Sperrung des Kopfs zurück (Runde 3, 083)' },
   'app/(shell)/admin/users/start-password-dialog.tsx': { count: 1, reason: 'Zeichen einzeln ablesbar: Startpasswort (Designer § 6)' },
   'app/(shell)/profile/page.tsx': { count: 1, reason: 'Grafik, keine Schrift: Initialen (font-bold)' },
   'app/global-error.tsx': { count: 4, reason: 'Ersetzt das Wurzel-Layout samt Schale, ohne Tokens und Bausteine (style mit lineHeight, letterSpacing, textTransform)' },
@@ -33,14 +32,7 @@ describe('keine Zeilenhöhe, Versalien, Sperrung oder Gewicht von Hand', () => {
     expect(checkCountedAllowlist(hits(), ALLOWED).unexpected).toEqual([]);
   });
 
-  it('kein vorläufiger Eintrag mehr', () => {
-    const open = Object.entries(ALLOWED).filter(([, { reason }]) => reason.startsWith('OFFEN'));
-    expect(open.map(([file]) => file)).toEqual([]);
-  });
-
-  it('jede Ausnahme ist noch nötig (Zahl sinkt mit)', () => {
-    expect(checkCountedAllowlist(hits(), ALLOWED).stale).toEqual([]);
-  });
+  allowlistHygiene(ALLOWED, () => checkCountedAllowlist(hits(), ALLOWED).stale);
 
   it('trifft Zeilenhöhe, Versalien, Sperrung, 500/700 — nicht normal-case, font-normal, font-semibold', () => {
     const line = (s: string) => [...s.matchAll(TYPE_STYLE)].map((m) => m[0]);

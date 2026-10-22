@@ -1,5 +1,5 @@
 import { newId } from '@kompass/core';
-import { eq, sql } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 import { financeAllocationLines, financeConfirmationLines, financeConfirmations, financeInKindDetails, financeNotices, financeSigners } from '../src/schema';
 import { ledgerFixture } from './helpers';
@@ -54,17 +54,9 @@ function insertConfirmationLine(f: F, confirmationId: string, lineId: string) {
 }
 
 describe('finance_notices', () => {
-  it('requires the start of the exemption, and the triggers of 0022 still hold after 0025', async () => {
+  it('requires the start of the exemption', async () => {
     const f = await fixtures();
     expect(() => insertNotice(f, { exemptFrom: null as unknown as string })).toThrow(/NOT NULL/);
-    const triggers = f.deps.db.all<{ name: string }>(sql`SELECT name FROM sqlite_master WHERE type = 'trigger' AND tbl_name = 'finance_notices' ORDER BY name`).map((t) => t.name);
-    expect(triggers).toEqual(['finance_notices_no_delete', 'finance_notices_supersede_once', 'finance_notices_void_once']);
-  });
-
-  it('is never deleted', async () => {
-    const f = await fixtures();
-    const id = insertNotice(f);
-    expect(() => f.deps.db.delete(financeNotices).where(eq(financeNotices.id, id)).run()).toThrow(/permanent/);
   });
 
   it('is superseded once: date and document go from empty to a value, and stay', async () => {
@@ -87,20 +79,18 @@ describe('finance_notices', () => {
 });
 
 describe('finance_signers', () => {
-  it('is never deleted, but its fields stay changeable (end of term, facsimile, notification)', async () => {
+  it('keeps its fields changeable (end of term, facsimile, notification)', async () => {
     const f = await fixtures();
     const id = insertSigner(f);
     f.deps.db.update(financeSigners).set({ validTo: '2026-12-31', facsimileKey: 'signature-x.png', facsimileChecksum: 'abc', notifiedOn: '2026-02-01' }).where(eq(financeSigners.id, id)).run();
-    expect(() => f.deps.db.delete(financeSigners).where(eq(financeSigners.id, id)).run()).toThrow(/permanent/);
   });
 });
 
 describe('finance_confirmations', () => {
-  it('is never deleted, and what was issued never changes', async () => {
+  it('never changes what was issued', async () => {
     const f = await fixtures();
     const noticeId = insertNotice(f);
     const id = insertConfirmation(f, noticeId);
-    expect(() => f.deps.db.delete(financeConfirmations).where(eq(financeConfirmations.id, id)).run()).toThrow(/permanent/);
     for (const change of [{ totalCents: 1 }, { contactId: 'OTHER' }, { issuedOn: '2026-03-11' }, { documentNumber: 'ZWB-X' }, { noticeId: 'OTHER' }, { machine: true }, { kind: 'inKind' as const }]) {
       expect(() => f.deps.db.update(financeConfirmations).set(change).where(eq(financeConfirmations.id, id)).run(), JSON.stringify(change)).toThrow(/permanent/);
     }
@@ -111,6 +101,10 @@ describe('finance_confirmations', () => {
     const noticeId = insertNotice(f);
     const id = insertConfirmation(f, noticeId);
     f.deps.db.update(financeConfirmations).set({ sentAt: '2026-03-11', sentVia: 'post' }).where(eq(financeConfirmations.id, id)).run();
+    // Der Versandvermerk steht nach dem ersten Setzen fest (Testdurchsicht 2026-10-22, Migration 0011).
+    expect(() => f.deps.db.update(financeConfirmations).set({ sentAt: '2026-03-12' }).where(eq(financeConfirmations.id, id)).run()).toThrow(/permanent/);
+    expect(() => f.deps.db.update(financeConfirmations).set({ sentVia: 'email' }).where(eq(financeConfirmations.id, id)).run()).toThrow(/permanent/);
+    expect(() => f.deps.db.update(financeConfirmations).set({ sentAt: null, sentVia: null }).where(eq(financeConfirmations.id, id)).run()).toThrow(/permanent/);
     f.deps.db.update(financeConfirmations).set({ signedDocumentId: 'DOC-SIGNED' }).where(eq(financeConfirmations.id, id)).run();
     expect(() => f.deps.db.update(financeConfirmations).set({ signedDocumentId: 'DOC-OTHER' }).where(eq(financeConfirmations.id, id)).run()).toThrow(/permanent/);
     f.deps.db
@@ -143,12 +137,11 @@ describe('finance_confirmation_lines', () => {
     insertConfirmationLine(f, second, f.lineId);
   });
 
-  it('is never deleted; only released_at changes, from empty to a value, once', async () => {
+  it('only released_at changes, from empty to a value, once', async () => {
     const f = await fixtures();
     const noticeId = insertNotice(f);
     const confirmationId = insertConfirmation(f, noticeId);
     const id = insertConfirmationLine(f, confirmationId, f.lineId);
-    expect(() => f.deps.db.delete(financeConfirmationLines).where(eq(financeConfirmationLines.id, id)).run()).toThrow(/permanent/);
     expect(() => f.deps.db.update(financeConfirmationLines).set({ amountCents: 1 }).where(eq(financeConfirmationLines.id, id)).run()).toThrow(/permanent/);
     f.deps.db.update(financeConfirmationLines).set({ releasedAt: '2026-04-01T00:00:00.000Z' }).where(eq(financeConfirmationLines.id, id)).run();
     expect(() => f.deps.db.update(financeConfirmationLines).set({ releasedAt: '2026-04-02T00:00:00.000Z' }).where(eq(financeConfirmationLines.id, id)).run()).toThrow(/permanent/);

@@ -1,4 +1,4 @@
-import { coreModule, getMediaAsset, schema, storeMediaAsset, unwrap } from '@kompass/core';
+import { AI_LABELING_ENABLED_KEY, coreModule, getMediaAsset, schema, setSetting, storeMediaAsset, unwrap } from '@kompass/core';
 import { createTestDeps, ctxWith, insertUser } from '@kompass/core/testing';
 import { describe, expect, it } from 'vitest';
 import { coreMcpTools } from '../src/core-tools';
@@ -19,8 +19,7 @@ const setup = () => {
 };
 
 describe('media_upload', () => {
-  it('is registered, names its service and the permission', () => {
-    expect(tool('media_upload').service).toBe(storeMediaAsset);
+  it('names the permission', () => {
     expect(tool('media_upload').description).toContain('media.upload');
   });
 
@@ -75,10 +74,6 @@ describe('media_upload', () => {
  * weil `/media/<id>` nur das Sitzungs-Cookie nimmt und MCP nur hochladen konnte.
  */
 describe('media_get', () => {
-  it('is registered and names its service', () => {
-    expect(tool('media_get').service).toBe(getMediaAsset);
-  });
-
   it('returns the record and the content as base64, byte for byte', async () => {
     const deps = setup();
     const ctx = ctxWith(['media.upload']);
@@ -135,11 +130,9 @@ describe('media_get', () => {
 });
 
 describe('media_list', () => {
-  it('shows the five filter fields and passes them to the service', async () => {
+  it('filters through the service', async () => {
     const deps = setup();
     const ctx = ctxWith(['media.upload']);
-    const shape = (tool('media_list').inputSchema as unknown as { shape: Record<string, unknown> }).shape;
-    expect(Object.keys(shape).sort()).toEqual(['folder', 'includeSubfolders', 'kind', 'query', 'sort']);
     expect(tool('media_list').description).toContain('media.upload');
     expect(tool('media_list').description).toContain('includeSubfolders');
 
@@ -153,5 +146,28 @@ describe('media_list', () => {
     expect(found.map((m) => m.record.filename)).toEqual([expect.stringMatching(/^punkt-/)]);
     const byName = unwrap(await tool('media_list').handler(deps, ctx, { sort: 'name' })) as { record: { filename: string } }[];
     expect(byName.map((m) => m.record.filename.split('-')[0])).toEqual(['punkt', 'zeichen']);
+    // `unused` kommt beim Dienst an: Ist der Punkt das Vereinslogo, bleibt nur das Zeichen.
+    const punkt = all.find((m) => m.record.filename.startsWith('punkt-')) as unknown as { record: { id: string } };
+    unwrap(await setSetting(deps, ctxWith(['settings.manage']), { key: 'branding.logoAssetId', value: punkt.record.id }));
+    const unused = unwrap(await tool('media_list').handler(deps, ctx, { unused: true })) as { record: { filename: string } }[];
+    expect(unused.map((m) => m.record.filename.split('-')[0])).toEqual(['zeichen']);
+  });
+});
+
+describe('media_set_ai_kind', () => {
+  it('names its permission', () => {
+    expect(tool('media_set_ai_kind').description).toContain('media.upload');
+  });
+
+  it('media_set_ai_kind sets the kind via the service', async () => {
+    const deps = setup();
+    const ctx = ctxWith(['settings.manage', 'media.upload']);
+    unwrap(await setSetting(deps, ctx, { key: AI_LABELING_ENABLED_KEY, value: true }));
+    const asset = unwrap(await storeMediaAsset(deps, ctx, { originalName: 'punkt.png', bytes: new Uint8Array(Buffer.from(PNG_BASE64, 'base64')) }));
+
+    const result = await tool('media_set_ai_kind').handler(deps, ctx, { id: asset.id, aiKind: 'edited' });
+    expect(unwrap(result)).toEqual({ changed: true });
+    const got = unwrap(await tool('media_get').handler(deps, ctx, { id: asset.id })) as { record: { aiKind: string } };
+    expect(got.record.aiKind).toBe('edited');
   });
 });

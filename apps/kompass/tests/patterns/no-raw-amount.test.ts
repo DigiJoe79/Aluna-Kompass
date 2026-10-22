@@ -1,8 +1,17 @@
-import { existsSync, readdirSync } from 'node:fs';
-import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import messages from '../../messages/de.json';
-import { checkCountedAllowlist, type CountedAllowlist, isCommentLine, read, sourceFiles, SRC } from './source';
+import {
+  allowlistHygiene,
+  checkCountedAllowlist,
+  type CountedAllowlist,
+  fromRepo,
+  isCommentLine,
+  isProductSource,
+  lineHits,
+  messageTexts,
+  packageSourceDirs,
+  sourceFiles,
+  SRC,
+} from './source';
 
 /**
  * Ein Betrag hat eine Stelle (Durchsicht 0.2.11, Stufe 1, Auftrag 1): `formatEuro`/`formatAmount` aus
@@ -20,7 +29,7 @@ export function rawAmountCount(line: string): number {
 /** Pfade relativ zum Repo. Ausgenommen ist nur die Funktion selbst. */
 const OWNER = 'packages/modules/finance/src/format/amount.ts';
 
-const ALLOWED: CountedAllowlist = {
+export const ALLOWED: CountedAllowlist = {
   'apps/kompass/src/components/finance/invoice-card.tsx': { count: 1, reason: 'Steuersatz in Prozent, kein Betrag.' },
   'apps/kompass/src/lib/audit-sentences.ts': { count: 1, reason: 'Dateigröße in Megabyte im Protokollsatz, kein Betrag.' },
   'apps/kompass/src/app/(shell)/admin/themes/theme-editor.tsx': { count: 2, reason: 'Kontrastverhältnis eines Themes, kein Betrag.' },
@@ -36,11 +45,6 @@ const ALLOWED: CountedAllowlist = {
   },
 };
 
-const ROOT = path.resolve(SRC, '../../..');
-const fromRoot = (file: string) => path.relative(ROOT, file).split(path.sep).join('/');
-const MODULES = path.join(ROOT, 'packages/modules');
-const scanDirs = () => [SRC, ...readdirSync(MODULES).map((m) => path.join(MODULES, m, 'src')).filter((dir) => existsSync(dir))];
-
 describe('Heuristik', () => {
   it('trifft Betragsformatierung von Hand', () => {
     for (const hit of ["(c / 100).toFixed(2).replace('.', ',')", "new Intl.NumberFormat('de-DE', { style: 'currency' })", "euros.toLocaleString('de-DE')", '{amount, number, ::currency/EUR scale/0.01}', "String(e).replace(/\\B(?=(\\d{3})+(?!\\d))/g, '.')"])
@@ -53,31 +57,17 @@ describe('Heuristik', () => {
 });
 
 describe('Beträge nur über formatEuro/formatAmount', () => {
-  const hits = scanDirs()
-    .flatMap((dir) => sourceFiles(dir))
-    .filter((file) => !/\.test\.tsx?$/.test(file) && !file.includes('__e2e') && fromRoot(file) !== OWNER)
-    .flatMap((file) =>
-      read(file)
-        .split('\n')
-        .flatMap((line, index) => Array.from({ length: rawAmountCount(line) }, () => ({ where: `${fromRoot(file)}:${index + 1}`, file: fromRoot(file) }))),
-    );
+  // App und Fachmodule; Kern und übrige Pakete liegen außerhalb dieses Wächters.
+  const files = [SRC, ...packageSourceDirs().filter((dir) => fromRepo(dir).startsWith('packages/modules/'))].flatMap((dir) => sourceFiles(dir)).filter((file) => isProductSource(file) && fromRepo(file) !== OWNER);
+  const hits = lineHits(files, rawAmountCount, fromRepo);
 
   it('keine eigene Betragsformatierung; Ausnahmen mit Grund', () => {
     expect(checkCountedAllowlist(hits, ALLOWED).unexpected).toEqual([]);
   });
 
-  it('jede Ausnahme ist noch nötig', () => {
-    expect(checkCountedAllowlist(hits, ALLOWED).stale).toEqual([]);
-  });
+  allowlistHygiene(ALLOWED, () => checkCountedAllowlist(hits, ALLOWED).stale);
 
   it('die Sprachdatei formatiert keine Beträge (kein ICU `::currency`)', () => {
-    const found: string[] = [];
-    const walk = (node: unknown, at: string) => {
-      if (typeof node === 'string') {
-        if (node.includes('::currency')) found.push(at);
-      } else if (node && typeof node === 'object') for (const [k, v] of Object.entries(node)) walk(v, at ? `${at}.${k}` : k);
-    };
-    walk(messages, '');
-    expect(found).toEqual([]);
+    expect(messageTexts().filter(([, text]) => text.includes('::currency')).map(([key]) => key)).toEqual([]);
   });
 });

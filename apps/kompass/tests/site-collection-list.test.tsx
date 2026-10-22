@@ -9,7 +9,7 @@ const { ListClient } = await import('@/app/(shell)/site/c/[collection]/list-clie
 
 afterEach(cleanup);
 
-/** 10 B7, 10 B9: Die Sammlungsliste hat einen Spaltenkopf (Reihenfolge nur für Vorleser) und einen Zähler. */
+/** 10 B7, 10 B9: Die Sammlungsliste hat einen Spaltenkopf und einen Zähler. */
 describe('ListClient', () => {
   const rows = [
     { id: 'E1', label: 'Jonas Feld', isPublished: true },
@@ -22,7 +22,6 @@ describe('ListClient', () => {
       </NextIntlClientProvider>,
     );
     expect(screen.getAllByRole('columnheader').map((h) => h.textContent)).toEqual(['Eintrag', 'Webseite', 'Reihenfolge']);
-    expect(screen.getByText('Reihenfolge').className).toContain('sr-only');
     expect(screen.getByText('2 Einträge')).toBeTruthy();
   });
 });

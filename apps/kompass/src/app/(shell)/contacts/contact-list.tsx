@@ -147,8 +147,9 @@ export function ContactList({ contacts, roles, total, unfiltered, offset, pageSi
                     )}
                   </TableCell>
                   <TableCell col="meta" className="text-ink-2">{c.city || <Empty />}</TableCell>
-                  <TableCell col="meta" selectable className="text-ink-2 text-meta" title={c.primaryChannel || undefined}>
-                    {/* Webadressen ohne „https://“, der volle Wert im `title` (Runde 3, 038). */}
+                  <TableCell col="meta" wrap selectable className="text-ink-2 text-meta" title={c.primaryChannel || undefined}>
+                    {/* Webadressen ohne „https://“, der volle Wert im `title` (Runde 3, 038). Lange Kontaktwege stehen am Telefon
+                        in einer eigenen Zeile (Backlog 72, Kompromiss b); kein Layout-Test (Einzelstelle, Laufzeit zählt). */}
                     {c.primaryChannel ? withoutProtocol(c.primaryChannel) : <Empty />}
                   </TableCell>
                 </TableRow>

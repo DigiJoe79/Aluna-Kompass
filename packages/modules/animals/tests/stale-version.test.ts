@@ -18,20 +18,9 @@ const setup = async () => {
 const manage = ctxWith(['animals.manage', 'animals.view']);
 const akiko = { name: 'Akiko', sex: 'female' as const, birthText: { de: '2022', en: '' }, sizeCm: 40, sizeText: { de: '40 cm', en: '' }, location: 'shelter' as const, isEmergency: false, isSponsorable: false, traits: { de: [], en: [] }, externalProfileUrl: '', summary: { de: 'Kurz', en: '' }, body: { de: 'Lang', en: '' } };
 
+// Dass ein veralteter Stand abgewiesen wird, prüft `apps/kompass/tests/module-contracts.test.ts` für jedes Werkzeug mit
+// `expectedVersion`; hier bleibt, was nur Tiere haben (Erfolgsgeschichte) und der Gutfall.
 describe('updateAnimal mit Ladestand', () => {
-  it('weist ein Speichern auf veraltetem Stand ab und lässt die Zwischenänderung stehen', async () => {
-    const d = await setup();
-    const loaded = unwrap(await createAnimal(d, manage, akiko));
-    d.clock.advance(60_000);
-    unwrap(await updateAnimal(d, manage, { id: loaded.id, summary: { de: 'Kurz', en: 'Short' } }));
-    d.clock.advance(60_000);
-
-    const stale = await updateAnimal(d, manage, { id: loaded.id, summary: { de: 'Kürzer', en: '' }, expectedVersion: loaded.updatedAt });
-
-    expect(stale).toMatchObject({ ok: false, error: { type: 'conflict', code: 'staleVersion' } });
-    expect(unwrap(await getAnimal(d, manage, loaded.id)).summary).toEqual({ de: 'Kurz', en: 'Short' });
-  });
-
   it('speichert, wer den aktuellen Stand nennt', async () => {
     const d = await setup();
     const loaded = unwrap(await createAnimal(d, manage, akiko));

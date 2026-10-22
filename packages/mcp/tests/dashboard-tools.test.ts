@@ -1,4 +1,4 @@
-import { coreModule, getDashboardLayout, listDashboardTiles, readDashboard, resetDashboardLayout, setDashboardLayout } from '@kompass/core';
+import { coreModule } from '@kompass/core';
 import { createTestDeps, ctxWith, insertUser } from '@kompass/core/testing';
 import { describe, expect, it } from 'vitest';
 import { coreMcpTools } from '../src/core-tools';
@@ -10,14 +10,6 @@ const tool = (name: string) => {
 };
 
 describe('dashboard_* tools', () => {
-  it('sind registriert und nennen ihren Service', () => {
-    expect(tool('dashboard_tiles').service).toBe(listDashboardTiles);
-    expect(tool('dashboard_get_layout').service).toBe(getDashboardLayout);
-    expect(tool('dashboard_set_layout').service).toBe(setDashboardLayout);
-    expect(tool('dashboard_reset_layout').service).toBe(resetDashboardLayout);
-    expect(tool('dashboard_read').service).toBe(readDashboard);
-  });
-
   it('setzt über das Werkzeug, flach und in Spalten, und liest die Inhalte über das andere', async () => {
     const deps = createTestDeps({ manifests: [coreModule] });
     const ctx = ctxWith(['backup.export', 'retention.view'], insertUser(deps, {}));

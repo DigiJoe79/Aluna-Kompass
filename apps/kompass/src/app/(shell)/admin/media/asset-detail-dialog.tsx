@@ -1,15 +1,20 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { useDateFormat } from '@/components/date-format-provider';
 import { FolderField } from '@/components/folder-tree/folder-field';
 import { ConfirmDialog } from '@/components/forms/confirm-dialog';
 import { buttonVariants } from '@/components/ui/button';
 import { RecordActions } from '@/components/record-actions';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
+import { Notice } from '@/components/notice';
+import { Overline } from '@/components/overline';
+import { AiKindBadge } from '@/components/media/ai-kind-badge';
+import { AiKindSegmented } from '@/components/media/image-labeling-dialog';
 import type { ActionState } from '@/lib/actions';
 import type { FolderEntry } from '@/lib/folder-tree-model';
+import type { AiKind } from '@kompass/core';
 import { formatBytes, mimeKey, type Item } from './types';
 import { UsageLines } from './usage-lines';
 
@@ -31,6 +36,8 @@ export function AssetDetailDialog({
   onMove,
   onDelete,
   onCreateFolder,
+  aiLabelingEnabled = false,
+  onSetAiKind,
 }: {
   item: Item | null;
   /** Die Ordner wie im Baum, samt noch nicht bestätigter Züge. */
@@ -42,25 +49,60 @@ export function AssetDetailDialog({
   onCreateFolder?: (parent: string | null, name: string) => Promise<ActionState>;
   /** Löscht nach der Rückfrage; bei Erfolg schließt der Aufrufer den Detaildialog. */
   onDelete: (id: string) => Promise<ActionState>;
+  aiLabelingEnabled?: boolean;
+  onSetAiKind?: (id: string, aiKind: AiKind) => Promise<ActionState>;
 }) {
   const t = useTranslations('media');
   const fmt = useDateFormat();
   const isImage = item?.mimeType.startsWith('image/') ?? false;
   const trigger = useRef<HTMLButtonElement>(null);
   const [confirming, setConfirming] = useState(false);
+  const [aiKind, setAiKind] = useState<AiKind>(item?.aiKind ?? 'none');
+  const [aiKindError, setAiKindError] = useState<string | null>(null);
+  const aiKindLabelId = useId();
+  const aiKindHintId = useId();
+
   // Ein anderes Element im Dialog beginnt ohne offene Rückfrage.
-  useEffect(() => setConfirming(false), [item?.id]);
+  const itemId = item?.id;
+  const itemAiKind = item?.aiKind;
+  useEffect(() => {
+    setConfirming(false);
+    setAiKindError(null);
+    if (itemId) setAiKind(itemAiKind ?? 'none');
+  }, [itemId, itemAiKind]);
+
+  // Gespeichert wird sofort; scheitert es, springt die Auswahl zurück und der Grund steht darunter.
+  const handleAiKindChange = async (next: AiKind) => {
+    if (!onSetAiKind || !item) return;
+    const before = aiKind;
+    setAiKind(next);
+    setAiKindError(null);
+    const state = await onSetAiKind(item.id, next);
+    if (state.status === 'error') {
+      setAiKind(before);
+      setAiKindError(state.message);
+    }
+  };
 
   return (
     <Dialog open={item !== null} onOpenChange={onOpenChange}>
-      <DialogContent size="md">
+      {/* Höchstens so hoch wie der Bildschirm, sonst scrollt der Dialog: Mit Vorschau, Bildkennzeichnung und aufgeklapptem
+          Ordnerbaum lag der Baum bei 800 px Höhe unter dem Rand und war nicht anklickbar (2026-10-20). */}
+      <DialogContent size="md" className="max-h-[calc(100dvh-2rem)] overflow-y-auto">
         {item ? (
           <>
             <DialogTitle className="truncate text-body">{item.filename}</DialogTitle>
 
-            <div className="grid place-items-center rounded-md border border-line bg-surface-2 p-3">
+            <div className="relative grid place-items-center rounded-md border border-line bg-surface-2 p-3">
               {isImage ? (
-                <img src={`/media/${item.id}/preview`} alt="" className="max-h-[55vh] w-auto object-contain" />
+                <>
+                  <img src={`/media/${item.id}/preview`} alt="" className="max-h-[55vh] w-auto object-contain" />
+                  {aiLabelingEnabled && aiKind !== 'none' ? (
+                    <span className="absolute top-2 right-2">
+                      <AiKindBadge kind={aiKind} />
+                    </span>
+                  ) : null}
+                </>
               ) : (
                 <span className="px-6 py-10 text-[24px] font-semibold uppercase text-ink-2">{item.filename.split('.').at(-1)}</span>
               )}
@@ -92,6 +134,16 @@ export function AssetDetailDialog({
                 <UsageLines references={item.references} linked />
               </dd>
             </dl>
+
+            {aiLabelingEnabled && isImage ? (
+              <div className="flex flex-col gap-1.5 border-t border-line-2 pt-3">
+                <Overline field as="span"><span id={aiKindLabelId}>{t('aiKind.label')}</span></Overline>
+                <AiKindSegmented aria-labelledby={aiKindLabelId} aria-describedby={aiKindHintId} value={aiKind} onValueChange={handleAiKindChange} testId="ai-kind-segmented" />
+                {/* Die Schwelle (Spec KI-Transparenz, Nachtrag 2026-10-22): Kompass prüft sie nicht, der Mensch entscheidet. */}
+                <p id={aiKindHintId} className="text-hint text-muted-ink">{t('aiKind.hint')}</p>
+                {aiKindError ? <Notice level="refuse">{aiKindError}</Notice> : null}
+              </div>
+            ) : null}
 
             <FolderField
               value={assetFolder}

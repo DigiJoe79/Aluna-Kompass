@@ -1,7 +1,5 @@
 import { collectRetentionDue, coreModule, seedDevelopment, unwrap } from '@kompass/core';
 import { createTestDeps, ctxWith } from '@kompass/core/testing';
-import { contacts } from '@kompass/module-contacts';
-import { documents } from '@kompass/module-dms';
 import { financeEntries, financeFiscalYears, financeImportRuns, freeReserveCapOverview, listPledges, SEED_STORY_LAST_DAY, seedStoryYear } from '@kompass/module-finance';
 import { listFees } from '@kompass/module-members';
 import { beforeAll, describe, expect, it } from 'vitest';
@@ -18,11 +16,21 @@ const at = (day: string) => `${day}T10:00:00.000Z`;
 const seedDeps = (day: string) => createTestDeps({ now: at(day), manifests: [coreModule, ...installedModules], env: 'development' });
 type SeedDeps = ReturnType<typeof seedDeps>;
 
-const counts = (deps: SeedDeps) => ({
-  entries: deps.db.select().from(financeEntries).all().length,
-  documents: deps.db.select().from(documents).all().length,
-  contacts: deps.db.select().from(contacts).all().length,
-});
+/**
+ * Zeilen je Tabelle, alle Tabellen (wie `futureValues`), auch das Protokoll: Ein zweiter Lauf legt in keinem Modul
+ * etwas an und schreibt keinen Eintrag, weil er nichts ändert.
+ */
+const tableNames = (deps: SeedDeps) =>
+  (deps.sqlite.prepare("select name from sqlite_master where type = 'table' and name not like 'sqlite_%' and name not like '__drizzle%' order by name").all() as { name: string }[])
+    .map((t) => t.name);
+const counts = (deps: SeedDeps) =>
+  Object.fromEntries(tableNames(deps).map((table) => [table, (deps.sqlite.prepare(`select count(*) as n from "${table}"`).get() as { n: number }).n]));
+/**
+ * Was mit dem Kalenderjahr wächst, nicht mit der Geschichte: das laufende Geschäftsjahr, seine Nummernkreise und
+ * die Protokolleinträge, die beides anlegen.
+ */
+const YEAR_BOUND = ['finance_fiscal_years', 'document_counters', 'finance_purpose_transfer_counters', 'audit_log'];
+const storyCounts = (all: ReturnType<typeof counts>) => Object.fromEntries(Object.entries(all).filter(([table]) => !YEAR_BOUND.includes(table)));
 /**
  * Datierte Seed-Daten, die in der Zukunft liegen dürfen (0.2.8, aus 0.2.7 Punkt 5). Bis dahin prüfte der Test
  * „nichts in der Zukunft“ nur an Buchungen und Auszugsenden; jetzt jede Spalte jeder Tabelle, deren Wert mit
@@ -116,7 +124,7 @@ describe('the development seed on any calendar day', () => {
       // `ledger/dated-series.ts`) — ohne Höchstbetrag keine freie Rücklage, ein Dokument weniger. Dieser Tag kehrt
       // nicht wieder; ab da erzählt der Seed an jedem Tag dieselbe Geschichte.
       if (day >= '2026-08-31') {
-        expect(first).toEqual(baseline);
+        expect(storyCounts(first)).toEqual(storyCounts(baseline));
         expect(await storyState(deps, day)).toEqual(baselineState);
       }
     },

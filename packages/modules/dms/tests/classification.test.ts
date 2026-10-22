@@ -1,10 +1,9 @@
-import { ctxWith } from '@kompass/core/testing';
 import { describe, expect, it } from 'vitest';
 import { createDocumentFolder, createDocumentRule } from '../src/catalog';
 import { dateFromFilename, suggestClassification } from '../src/classification';
 import { receiveDocument } from '../src/incoming';
 import { documents } from '../src/schema';
-import { ALL_DMS, pdfBytes, setupWithTypes } from './helpers';
+import { pdfBytes, setupWithTypes } from './helpers';
 
 describe('dateFromFilename', () => {
   it('erkennt ein ISO-Datum am Anfang', () => {
@@ -78,13 +77,4 @@ describe('suggestClassification', () => {
     expect(deps.db.select().from(documents).all().length).toBe(before);
   });
 
-  it('verlangt dms.view', async () => {
-    const { deps } = setupWithTypes();
-    const denied = await suggestClassification(
-      deps,
-      ctxWith(ALL_DMS.filter((p) => p !== 'dms.view')),
-      { filename: 'x.pdf' },
-    );
-    expect(denied.ok).toBe(false);
-  });
 });

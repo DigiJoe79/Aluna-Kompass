@@ -8,6 +8,7 @@ import {
   loadState,
   previewRecords,
   saveState,
+  setRole,
   signQuestionLine,
   storageKey,
   type AssistantState,
@@ -103,5 +104,32 @@ describe('defaultFormatName (07-1 A2)', () => {
   it('hängt nichts an, wenn der Name schon auf CSV endet', () => {
     expect(defaultFormatName('Zweitbank CSV', suffix)).toBe('Zweitbank CSV');
     expect(defaultFormatName('Zweitbank csv ', suffix)).toBe('Zweitbank csv');
+  });
+});
+
+describe('guessed (Schritt 3 als Liste)', () => {
+  it('marks every column Kompass filled from the guess', () => {
+    const s = initialState(BANK, 'Vereinskonto CSV');
+    expect(s.guessed).toEqual(s.roles.map((r) => r !== 'ignore'));
+    expect(s.guessed).toEqual([true, true, true, true, true]);
+  });
+
+  it('setRole sets the role and drops the mark, even for the same role', () => {
+    const s = initialState(BANK, 'Vereinskonto CSV');
+    const same = setRole(s, 0, 'bookingDate');
+    expect(same.roles[0]).toBe('bookingDate');
+    expect(same.guessed[0]).toBe(false);
+    expect(same.guessed[1]).toBe(true);
+    const other = setRole(s, 2, 'ignore');
+    expect(other.roles).toEqual(['bookingDate', 'counterpartyName', 'ignore', 'amount', 'balance']);
+    expect(other.guessed[2]).toBe(false);
+  });
+
+  it('a saved state from before this release has no marks', () => {
+    const storage = memoryStorage();
+    const key = storageKey('acc1', assistantFileKey('a.csv', BANK));
+    const { guessed: _dropped, ...old } = initialState(BANK, 'Vereinskonto CSV');
+    storage.setItem(key, JSON.stringify(old));
+    expect(loadState(storage, key)?.guessed).toEqual([]);
   });
 });

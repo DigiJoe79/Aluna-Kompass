@@ -31,7 +31,8 @@ nicht vorgesehen.
 ## Suchen, filtern, ansehen
 
 Über den Dateien steht die Filterleiste: das Suchfeld („Dateiname oder
-Verwendung“, gilt nach kurzer Pause), „Typ“ (Bilder, PDF), rechts die Zahl der
+Verwendung“, gilt nach kurzer Pause), „Typ“ (Bilder, PDF), „Nur nicht verwendete“
+(Dateien, die nirgends eingebunden sind — etwa zum Aufräumen), rechts die Zahl der
 Treffer, „Sortierung“ (Neueste zuerst, Älteste zuerst, Name, Größe) und der
 Umschalter zwischen „Liste“ und „Raster“; die Ansicht merkt sich der Browser.
 Suche und Filter gelten im geöffneten Ordner und bleiben beim Wechsel des
@@ -132,3 +133,33 @@ Braucht das Feld eine Datei, übernimmt ein Klick auf die Kachel sie sofort.
 Nimmt es mehrere („Bilder wählen“), haken Sie die Kacheln an und bestätigen
 mit „Übernehmen“. Was Sie im Dialog hochladen, landet im geöffneten Ordner und
 ist gleich ausgewählt.
+
+## Bildkennzeichnung
+
+Ist der Inhalt eines Bilds verändert oder ist es ganz mit KI entstanden, kennzeichnen Sie das am besten gleich beim
+Hochladen: Nach dem Hochladen von Bildern — in der Mediathek, per Ziehen oder im Auswahldialog eines Formulars — fragt
+der Dialog „Bildkennzeichnung“ mit einer Zeile je Bild; vorbelegt ist „Keine“, ändern Sie nur die Ausnahmen. PDFs
+fragt er nicht, und eine Datei, die schon gekennzeichnet in der Mediathek lag, zeigt nur ihre Marke. In der Mediathek
+schließt „Fertig“ den Schritt, danach kommt die Meldung zum Hochladen. Im Auswahldialog führt „Fertig“ zurück zur
+Auswahl; bei einem Bildfeld setzt „Übernehmen“ das Bild gleich ins Feld, mit × bleiben Sie im Auswahldialog.
+
+Nachträglich geht es im Detaildialog der Mediathek unter „Bildkennzeichnung“, an der Fotokachel eines Tiers (Symbol
+Etikett) und am Bildfeld mit „Kennzeichnen …“. Der Dialog zeigt dort auch, wo das Bild verwendet wird.
+
+- **Bearbeitet:** ein echtes Foto, dessen Inhalt verändert wurde, etwa Personen oder Gegenstände entfernt oder
+  unkenntlich gemacht, Bereiche retuschiert, mit welchem Werkzeug auch immer.
+- **Mit KI erstellt:** Das Bild ist ganz mit KI entstanden.
+- **Keine:** Korrekturen am ganzen Bild — Ausschnitt, Licht, Farbe, Schärfe — kennzeichnen Sie nicht.
+
+Gespeichert wird sofort, die Änderung steht im Änderungsprotokoll. Die Kennzeichnung hängt an der Datei und gilt damit
+an jeder Stelle, an der sie verwendet wird, auch in einem Ausschnitt.
+
+Gekennzeichnete Bilder tragen in der Mediathek, im Auswahldialog, an den Fotokacheln eines Tiers und am Bildfeld eine
+Marke „Bearbeitet“ oder „KI erstellt“. Die Webseite zeigt eine kleine Marke am Bild — an bearbeiteten Bildern
+„Bearbeitet“, an erstellten „KI“ — und nennt die Art im Alternativtext; unter einer Galerie steht ein Satz dazu.
+
+Den Schritt nach dem Hochladen und „Kennzeichnen …“ sieht nur, wer Medien hochladen darf, und nur bei eingeschalteter
+Funktion. Die Funktion ist zuerst aus. Eingeschaltet wird sie in den [Stammdaten](einstellungen/verein.md), Reiter „Medien“; dort stehen auch die
+Texte der beiden Marken und der Sätze, je Sprache. Schalten Sie sie wieder aus, bleiben die Kennzeichnungen gespeichert, die
+Webseite zeigt sie aber nicht mehr. Kompass prüft nicht, ob ein Bild wirklich so verändert ist, wie es gekennzeichnet
+ist — das entscheidet der Mensch, der es einstellt.

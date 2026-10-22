@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { type Allowlist, matchingLines, read, relative, sourceFiles } from './source';
+import { type Allowlist, matchingLines, read, relative, sourceFiles, allowlistHygiene, staleKeys } from './source';
 
 /**
  * Formulare rastern über `FormGrid` und `FormField size` (docs/MUSTER.md § J, Handoff Konsistenz § 8b): vier
@@ -9,7 +9,7 @@ import { type Allowlist, matchingLines, read, relative, sourceFiles } from './so
  */
 // Zwei Gruppen von Ausnahmen (Plan K8/K9 T6), damit sichtbar bleibt, welche aus welchem Grund besteht. Eine neue
 // kommt mit Grund in die passende Gruppe; passt sie in keine, ist sie vermutlich keine Ausnahme.
-const ALLOWED: Allowlist = {
+export const ALLOWED: Allowlist = {
   // — Werkzeug-Layout: Arbeitsflächen und Zeilen-Editoren mit eigenem Raster; ihre Felder stehen trotzdem im FormGrid.
   'app/(shell)/admin/roles/role-editor.tsx':
     'Werkzeug-Layout: Rollenliste neben dem Detail und die Rechte-Matrix als Tabellenraster; die Felder im Detailkopf stehen im FormGrid (Inventar § 3 A).',
@@ -34,6 +34,8 @@ const ALLOWED: Allowlist = {
     'Aufklapp-Detail einer Tabellenzeile (`md:grid-cols-[2fr_1fr]`), Anzeige, kein Formular; Versand- und Rückholdialog stehen im FormGrid (Inventar § 3 D).',
   'app/setup/import/import-form.tsx':
     'Inhalt des Archivs als Definitionsliste (`grid-cols-2`), Anzeige, kein Formular; die Dateiwahl darüber ist ein einzelnes FormField ohne Raster.',
+  'app/(shell)/finance/imports/format/column-role-row.tsx':
+    'Zeile je Spalte der CSV-Datei mit eigenem Zeilenraster (Name 168 · Beispielwerte · Rolle 216, Board CSV Spalten 1a–1f, N2 Freigabe Joe 2026-10-22); das Wertefeld darin ist ein einzelnes FormField ohne Raster.',
   'app/(shell)/finance/imports/format/csv-assistant.tsx':
     'Probezeile als Definitionsliste (`grid-cols-[max-content_1fr]`), Anzeige, kein Formular; die Felder der Schritte stehen im FormGrid (Inventar § 3 D).',
 };
@@ -60,8 +62,5 @@ describe('Formularraster über FormGrid', () => {
     expect(found).toEqual([]);
   });
 
-  it('jede Ausnahme ist noch nötig', () => {
-    const using = new Set(hits().map(({ file }) => file));
-    expect(Object.keys(ALLOWED).filter((file) => !using.has(file))).toEqual([]);
-  });
+  allowlistHygiene(ALLOWED, () => staleKeys(ALLOWED, hits().map(({ file }) => file)));
 });

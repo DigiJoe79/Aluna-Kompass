@@ -1,6 +1,6 @@
 import type { Page } from '@playwright/test';
 import { expect, test } from './fixtures';
-import { loginAsAdmin, resetDatabase, readTemplate } from './helpers';
+import { loginAsAdmin, resetDatabase, readTemplate, finishLabeling } from './helpers';
 
 /**
  * Nach dem Schließen eines Dialogs aus „Weitere Aktionen“ liegt der Fokus wieder auf ⋯ (Designer 2026-10-08): Das
@@ -112,6 +112,7 @@ test.describe('Aktion links im Dialogfuß: Fokus zurück', () => {
     const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==', 'base64');
     await page.goto('/admin/media');
     await page.getByLabel('Datei hochladen').setInputFiles({ name: 'fokus.png', mimeType: 'image/png', buffer: PNG });
+    await finishLabeling(page);
     await page.getByRole('row', { name: /fokus-/ }).click();
     const trigger = page.getByRole('dialog').getByRole('button', { name: 'Löschen …' });
     await trigger.click();

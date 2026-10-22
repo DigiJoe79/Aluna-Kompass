@@ -43,4 +43,9 @@ describe('FormActionBar variant="wizard"', () => {
     expect(back.className).toContain('invisible');
     expect(back.getAttribute('aria-hidden')).toBe('true');
   });
+
+  it('zeigt `note` links neben Zurück, solange sie gesetzt ist (CSV-Assistent Schritt 3, Spec 2026-10-22)', () => {
+    render(<FormActionBar variant="wizard" wizard={{ step: 3, total: 5, onBack: () => {} }} onSave={() => {}} saveLabel="Weiter" note="Noch offen: Betrag" />, { wrapper });
+    expect(screen.getByText('Noch offen: Betrag')).toBeTruthy();
+  });
 });

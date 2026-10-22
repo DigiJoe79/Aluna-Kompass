@@ -1,6 +1,6 @@
 import type { Page } from '@playwright/test';
 import { expect, test } from './fixtures';
-import { loginAsAdmin, resetDatabase, waitForHydration } from './helpers';
+import { loginAsAdmin, resetDatabase, waitForHydration, finishLabeling } from './helpers';
 
 const PNG = Buffer.from(
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==',
@@ -53,6 +53,7 @@ test.describe('media library', () => {
     await page.getByRole('button', { name: 'Bild: Wählen' }).click();
     const chooser = page.getByRole('dialog', { name: 'Bild wählen' });
     await chooser.getByLabel('Hochladen').setInputFiles({ name: 'hof.png', mimeType: 'image/png', buffer: PNG });
+    await finishLabeling(page, 'Übernehmen');
     await expect(chooser).toBeHidden();
     await expect(page.getByRole('button', { name: 'Bild entfernen' })).toBeVisible();
     await page.getByRole('button', { name: 'Speichern' }).click();
@@ -72,9 +73,32 @@ test.describe('media library', () => {
     await expect(dialog.getByRole('button', { name: 'Löschen …' })).toBeFocused();
   });
 
+  /** Spec Bildkennzeichnung beim Hochladen: gekennzeichnet wird dort, wo das Bild hochkommt, und es gilt sofort. */
+  test('kennzeichnet ein Foto gleich beim Hochladen am Tier', async ({ page }) => {
+    await page.goto('/animals');
+    await page.getByRole('link', { name: 'Hund anlegen' }).click();
+    await page.getByLabel('Name').fill('Kenny');
+    await page.getByRole('button', { name: 'Speichern' }).click();
+    await expect(page).toHaveURL(/\/animals\/[A-Z0-9]+$/);
+    await page.getByRole('tab', { name: 'Texte und Fotos' }).click();
+    await page.getByRole('button', { name: 'Fotos wählen' }).click();
+    const chooser = page.getByRole('dialog', { name: 'Bilder wählen' });
+    await chooser.getByLabel('Hochladen').setInputFiles({ name: 'kenny.png', mimeType: 'image/png', buffer: PNG });
+    const labeling = page.getByRole('dialog', { name: 'Bildkennzeichnung' });
+    // Zweite Wahl ist „Bearbeitet“ (keine · bearbeitet · erstellt), ohne Wortlaut.
+    const edited = labeling.getByRole('radio').nth(1);
+    await edited.click();
+    await expect(edited).toHaveAttribute('data-checked', '');
+    await labeling.getByRole('button', { name: 'Fertig' }).click();
+    await expect(labeling).toBeHidden();
+    await chooser.getByRole('button', { name: 'Übernehmen' }).click();
+    await expect(page.getByTestId('animal-photo').getByTestId('ai-kind-badge')).toBeVisible();
+  });
+
   test('uploads a file, inspects it in the dialog and deletes it while unused', async ({ page }) => {
     await page.goto('/admin/media');
     await page.getByLabel('Datei hochladen').setInputFiles({ name: 'frei.png', mimeType: 'image/png', buffer: PNG });
+    await finishLabeling(page);
 
     await page.getByRole('row', { name: /frei-/ }).click();
     const dialog = page.getByRole('dialog');
@@ -87,6 +111,7 @@ test.describe('media library', () => {
   test('serves a file sandboxed, so an SVG cannot run in the origin of the app', async ({ page }) => {
     await page.goto('/admin/media');
     await page.getByLabel('Datei hochladen').setInputFiles({ name: 'sandbox.png', mimeType: 'image/png', buffer: PNG });
+    await finishLabeling(page);
     const src = await page.getByRole('row', { name: /sandbox-/ }).locator('img').getAttribute('src');
     expect(src).toMatch(/^\/media\//);
     const response = await page.request.get(src!);
@@ -101,12 +126,14 @@ test.describe('media library', () => {
     await expect(page).toHaveURL(/folder=Dokumente$/);
     await waitForHydration(page, 'input[type=file]');
     await page.getByLabel('Datei hochladen').setInputFiles({ name: 'einmal.png', mimeType: 'image/png', buffer: PNG });
+    await finishLabeling(page);
     await expect(page.getByRole('row', { name: /einmal-/ })).toBeVisible();
 
     await page.getByRole('link', { name: /^Alle Dateien/ }).click();
     await expect(page).toHaveURL('/admin/media');
     await waitForHydration(page, 'input[type=file]');
     await page.getByLabel('Datei hochladen').setInputFiles({ name: 'zweimal.png', mimeType: 'image/png', buffer: PNG });
+    await finishLabeling(page);
     // Wie beim Ablegen: ein Fehler-Toast mit Grund, kein Erfolg.
     const refused = toastWith(page, /Keine Datei hochgeladen/);
     await expect(refused).toBeVisible();
@@ -125,6 +152,7 @@ test.describe('media library', () => {
   test('serves a webp preview for an uploaded image, sandboxed', async ({ page }) => {
     await page.goto('/admin/media');
     await page.getByLabel('Datei hochladen').setInputFiles({ name: 'vorschau.png', mimeType: 'image/png', buffer: PNG });
+    await finishLabeling(page);
     await page.getByRole('row', { name: /vorschau-/ }).click();
     const src = await page.getByRole('dialog').locator('img').getAttribute('src');
     const id = src!.replace(/\/preview$/, '').split('/').at(-1)!;
@@ -140,6 +168,7 @@ test.describe('media library', () => {
   test('GET /media answers the listing as JSON and refuses bad parameters', async ({ page }) => {
     await page.goto('/admin/media');
     await page.getByLabel('Datei hochladen').setInputFiles({ name: 'json.png', mimeType: 'image/png', buffer: PNG });
+    await finishLabeling(page);
     await expect(page.getByRole('row', { name: /json-/ })).toBeVisible();
     const ok = await page.request.get('/media?query=json&sort=name');
     expect(ok.status()).toBe(200);
@@ -161,6 +190,7 @@ test.describe('media library', () => {
     await page.getByRole('button', { name: 'Fotos wählen' }).click();
     const chooser = page.getByRole('dialog', { name: 'Bilder wählen' });
     await chooser.getByLabel('Hochladen').setInputFiles({ name: 'rex-foto.png', mimeType: 'image/png', buffer: PNG });
+    await finishLabeling(page);
     await expect(chooser.getByText('1 von 12 ausgewählt')).toBeVisible();
     await chooser.getByRole('button', { name: 'Übernehmen' }).click();
     await page.getByRole('button', { name: 'Speichern' }).click();
@@ -202,6 +232,7 @@ test.describe('media library', () => {
     await page.goto('/admin/media');
     await waitForHydration(page, 'input[type=file]');
     await page.getByLabel('Datei hochladen').setInputFiles({ name: 'lose.png', mimeType: 'image/png', buffer: PNG });
+    await finishLabeling(page);
     const row = page.getByRole('row', { name: /lose-/ });
     await expect(row).toContainText('Ohne Ordner');
     await row.click();
@@ -215,7 +246,7 @@ test.describe('Ordnerbaum der Mediathek', () => {
     await loginAsAdmin(page);
   });
 
-  test('zeigt oben „Alle Dateien“ und „Ohne Ordner“, und die Formulare unter dem alten Baum gibt es nicht mehr', async ({ page }) => {
+  test('zeigt oben „Alle Dateien“ und „Ohne Ordner“', async ({ page }) => {
     await page.goto('/admin/media');
     const fixed = page.locator('[data-fixed]');
     await expect(fixed).toHaveCount(2);
@@ -223,8 +254,6 @@ test.describe('Ordnerbaum der Mediathek', () => {
     await expect(fixed.nth(1)).toContainText('Ohne Ordner');
     await expect(fixed.nth(0)).toHaveAttribute('aria-current', 'page');
     await expect(treeRow(page, 'Bilder')).toBeVisible();
-    await expect(page.getByLabel('Ordnername')).toHaveCount(0);
-    await expect(page.getByRole('button', { name: 'Ordner löschen' })).toHaveCount(0);
     // „Hochladen“ steht als Knopf im Seitenkopf.
     await expect(page.getByRole('button', { name: 'Hochladen', exact: true })).toBeVisible();
   });
@@ -447,6 +476,17 @@ test.describe('Ziehen in der Mediathek', () => {
     await expect(tile(page, /vereinsbanner-/i).locator('[data-folder-cell]')).toHaveCount(0);
   });
 
+  // Joe 2026-10-22: ein Filter für alles, was nirgends verwendet wird.
+  test('„Nur nicht verwendete“ zeigt nur Dateien ohne Verwendung', async ({ page }) => {
+    await openGrid(page, '/admin/media');
+    const tiles = page.locator('[data-asset-id]');
+    const all = await tiles.count();
+    await page.getByRole('checkbox', { name: 'Nur nicht verwendete' }).check();
+    await expect(page).toHaveURL(/unused=1/);
+    await expect(tiles.filter({ hasNotText: 'nicht verwendet' })).toHaveCount(0);
+    expect(await tiles.count()).toBeLessThan(all);
+  });
+
   /** Wie viele Dateien die Mediathek hat — ein heimlicher Upload ließe die Zahl steigen. */
   const assetTotal = (page: Page) => page.evaluate(() => fetch('/media').then((r) => r.json()).then((j: { total: number }) => j.total));
 
@@ -574,6 +614,7 @@ test.describe('Ziehen in der Mediathek', () => {
     await dropFiles(page, '[data-folder="Vereinsheim"]', [png('Vereinsheim Eingang.png')], false);
     await expect(page.getByText('1 Datei in „Vereinsheim“ hochladen')).toBeVisible();
     await dropFiles(page, '[data-folder="Vereinsheim"]', [png('Vereinsheim Eingang.png')]);
+    await finishLabeling(page);
 
     const toast = toastWith(page, '1 Datei nach Vereinsheim hochgeladen');
     await expect(toast).toBeVisible();
@@ -590,9 +631,27 @@ test.describe('Ziehen in der Mediathek', () => {
     await dropFiles(page, 'main', [png('Plakat.png')], false);
     await expect(page.getByText('Lassen Sie hier im Raster los, landen die Dateien im geöffneten Ordner „Dokumente“.', { exact: false })).toBeVisible();
     await dropFiles(page, 'main', [png('Plakat.png')]);
+    await finishLabeling(page);
 
     await expect(toastWith(page, '1 Datei nach Dokumente hochgeladen')).toBeVisible();
     await expect(assetRows(page).filter({ hasText: /plakat/i })).toHaveCount(1);
+  });
+
+  /** Backlog 45 (Restposten 0.2.4): Eine Datei, über einem offenen Dialog losgelassen, lud trotzdem hoch. */
+  test('bei offenem Dialog nimmt die Mediathek keine Datei an', async ({ page }) => {
+    await page.goto('/admin/media?folder=Dokumente');
+    await waitForHydration(page, '[role="tree"]');
+    const before = await assetTotal(page);
+    await assetRows(page).first().click();
+    await expect(page.getByRole('dialog')).toBeVisible();
+
+    await dropFiles(page, '[role="dialog"]', [png('Heimlich.png')], false);
+    await expect(page.getByText('Lassen Sie hier im Raster los', { exact: false })).toBeHidden();
+    await dropFiles(page, '[role="dialog"]', [png('Heimlich.png')]);
+    await page.waitForLoadState('networkidle');
+
+    await expect(toastWith(page, /hochgeladen/)).toHaveCount(0);
+    expect(await assetTotal(page)).toBe(before);
   });
 
   test('die Ablagefläche verschwindet auch, wenn der Baum das Ablegen ohne Datei schluckt', async ({ page }) => {
@@ -617,6 +676,7 @@ test.describe('Ziehen in der Mediathek', () => {
     await waitForHydration(page, '[role="tree"]');
 
     await dropFiles(page, '[data-fixed="all"]', [png('Aushang.png')]);
+    await finishLabeling(page);
 
     await expect(toastWith(page, '1 Datei nach Dokumente hochgeladen')).toBeVisible();
     await expect(assetRows(page).filter({ hasText: /aushang/i })).toHaveCount(1);
@@ -628,6 +688,7 @@ test.describe('Ziehen in der Mediathek', () => {
     await createTopFolder(page, 'Vereinsheim');
 
     await dropFiles(page, '[data-folder="Vereinsheim"]', [png('Grundriss.png'), { name: 'liesmich.txt', type: 'text/plain', base64: Buffer.from('Hallo').toString('base64') }]);
+    await finishLabeling(page);
 
     const toast = toastWith(page, '1 Datei nach Vereinsheim hochgeladen');
     await expect(toast).toBeVisible();
@@ -636,5 +697,26 @@ test.describe('Ziehen in der Mediathek', () => {
     await page.goto('/admin/media?folder=Vereinsheim');
     await expect(assetRows(page)).toHaveCount(1);
     await expect(assetRows(page).filter({ hasText: /grundriss/i })).toHaveCount(1);
+  });
+
+  test('schaltet im Detaildialog die Bildkennzeichnung um und zeigt die Marke', async ({ page }) => {
+    await page.goto('/admin/media');
+    await waitForHydration(page, '[role="tree"]');
+    const row = page.getByRole('row', { name: /team-1-/ }).first();
+    await row.getByRole('button', { name: /team-1-/ }).click();
+    const dialog = page.getByRole('dialog');
+    await expect(dialog).toBeVisible();
+    const segmented = dialog.getByTestId('ai-kind-segmented');
+    await expect(segmented).toBeVisible();
+    // Zweite Wahl ist „bearbeitet“ (Reihenfolge keine · bearbeitet · erstellt), ohne Wortlaut.
+    const edited = segmented.getByRole('radio').nth(1);
+    await edited.click();
+    await expect(edited).toHaveAttribute('data-checked', '');
+    await page.keyboard.press('Escape');
+    await expect(dialog).toBeHidden();
+    await expect(page.getByRole('row', { name: /team-1-/ }).getByTestId('ai-kind-badge')).toBeVisible();
+    await page.getByRole('radio', { name: 'Raster' }).click();
+    const card = page.locator('li').filter({ hasText: 'team-1-' });
+    await expect(card.getByTestId('ai-kind-badge')).toBeVisible();
   });
 });

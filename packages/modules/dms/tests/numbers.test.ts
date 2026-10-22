@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { createDraft, fileDocument } from '../src/drafts';
 import { receiveDocument } from '../src/incoming';
 import { documentCounters } from '../src/schema';
-import { allocateDocumentNumber, deleteDocument, peekDocumentNumber } from '../src/service';
+import { allocateDocumentNumber, deleteDocument, peekDocumentNumber, previewNextNumber } from '../src/service';
 import { pdfBytes, setupWithTypes } from './helpers';
 
 describe('Nummern', () => {
@@ -15,6 +15,8 @@ describe('Nummern', () => {
     expect([first, second]).toEqual(['BRF-2026-001', 'BRF-2026-002']);
     expect(peekDocumentNumber(deps.db, 'BRF', 2026)).toBe('BRF-2026-003');
     expect(deps.db.select().from(documentCounters).all()).toEqual([{ prefix: 'BRF', year: 2026, last: 2 }]);
+    // Anderes Jahr, eigener Kreis.
+    expect(peekDocumentNumber(deps.db, 'BRF', 2027)).toBe('BRF-2027-001');
   });
 
   it('am 1.1. um 00:30 Uhr Ortszeit entsteht eine Nummer des neuen Jahres (Befund 46)', async () => {
@@ -51,5 +53,31 @@ describe('Nummern', () => {
     const fa = await fileDocument(deps, ctx, { id: a.value.id });
     const fb = await fileDocument(deps, ctx, { id: b.value.id });
     expect([fa.ok && fa.value.number, fb.ok && fb.value.number]).toEqual(['BRF-2026-001', 'BRF-2026-002']);
+  });
+});
+
+/**
+ * Die Nummer, die ein Dokument beim Ablegen bekommt, vorher zeigen zu können,
+ * nimmt dem Ablegen die Überraschung. Gezogen wird sie erst beim Ablegen —
+ * angesehen wird also eine Vorschau, kein Anspruch (dass Ansehen nicht zieht, prüft „Nummern“ oben).
+ */
+describe('previewNextNumber', () => {
+  it('nennt die Nummer, die als Nächstes vergeben würde, und zählt nach einem Eingang weiter', async () => {
+    const { deps, ctx } = setupWithTypes();
+    const year = deps.clock.now().getUTCFullYear();
+    const first = await previewNextNumber(deps, ctx, { typeKey: 'authority' });
+    expect(first.ok && first.value.number).toBe(`BEH-${year}-001`);
+    const received = await receiveDocument(deps, ctx, { filename: 'x.pdf', bytes: pdfBytes(), typeKey: 'authority', subject: 'X', documentDate: '2026-03-14' });
+    if (!received.ok) throw new Error('setup');
+    const second = await previewNextNumber(deps, ctx, { typeKey: 'authority' });
+    expect(second.ok && second.value.number).toBe(`BEH-${year}-002`);
+  });
+
+  it('meldet eine unbekannte und eine fehlende Dokumentart', async () => {
+    const { deps, ctx } = setupWithTypes();
+    const unknown = await previewNextNumber(deps, ctx, { typeKey: 'gibt-es-nicht' });
+    expect(unknown.ok === false && unknown.error.type).toBe('notFound');
+    const empty = await previewNextNumber(deps, ctx, { typeKey: '' });
+    expect(empty.ok === false && empty.error.type).toBe('validation');
   });
 });

@@ -23,7 +23,6 @@ describe('projects translations', () => {
     expect(unwrap(projectsTranslatables(deps, view))).toEqual([
       { entityType: 'project', id, label: 'Grundversorgung des Heims', href: `/projects/${id}`, fields: { name: base.name, summary: base.summary, body: base.body } },
     ]);
-    expect(projectsTranslatables(deps, ctxWith([])).ok).toBe(false);
   });
 
   it('writes only the named locales in one audited update', async () => {
@@ -38,19 +37,10 @@ describe('projects translations', () => {
     expect(deps.db.select().from(core.auditLog).all().slice(auditBefore).map((e) => e.action)).toEqual(['projects.update']);
   });
 
-  it('is null for foreign types, forbidden without manage, notFound for a foreign id or field', async () => {
+  // Fremder Typ, fehlendes Recht, fremde ID und unbekanntes Feld: `apps/kompass/tests/module-contracts.test.ts`.
+  it('does not translate a field that is not localized', async () => {
     const { deps, id } = await setup();
-    expect(projectsSetTranslations(deps, manage, { entityType: 'animal', id, items: [] })).toBeNull();
-    const denied = await projectsSetTranslations(deps, view, { entityType: 'project', id, items: [{ field: 'name', locale: 'en', text: 'x' }] });
-    expect(denied && !denied.ok && denied.error.type).toBe('forbidden');
-    const missing = await projectsSetTranslations(deps, manage, { entityType: 'project', id: 'nope', items: [{ field: 'name', locale: 'en', text: 'x' }] });
-    expect(missing && !missing.ok && missing.error).toEqual({ type: 'notFound', entity: 'project', id: 'nope' });
     const field = await projectsSetTranslations(deps, manage, { entityType: 'project', id, items: [{ field: 'slug', locale: 'en', text: 'x' }] });
     expect(field && !field.ok && field.error).toEqual({ type: 'notFound', entity: 'field', id: 'slug' });
-  });
-
-  it('is wired into the manifest', () => {
-    expect(projectsModule.translatables).toBe(projectsTranslatables);
-    expect(projectsModule.setTranslations).toBe(projectsSetTranslations);
   });
 });

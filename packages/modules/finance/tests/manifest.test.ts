@@ -20,47 +20,15 @@ describe('finance module', () => {
     ]);
   });
 
-  it('puts the journal, accounts, open items and the cash box into the rail with the euro icon, readable with finance.read, in the same section', () => {
-    // F4 Task 7: „Hochgeladene Auszüge“ führt einen eigenen Abschnitt „Arbeit“ — über „Buchungen“.
-    // Sechs Gruppen (Designer Stufe 2 Nr. 12): Arbeit · Buchungen · Zweckmittel · Spenden · Auslagen · Beteiligte.
-    expect(financeModule.navigation).toEqual([
-      { key: 'finance.work', href: '/finance/work', icon: 'euro', group: 'finance', section: 'finance.work', permission: 'finance.read' },
-      { key: 'finance.workForeign', href: '/finance/work/foreign', icon: 'euro', group: 'finance', section: 'finance.work', permission: 'finance.read' },
-      { key: 'finance.workVouchers', href: '/finance/work/vouchers', icon: 'euro', group: 'finance', section: 'finance.work', permission: 'finance.read' },
-      { key: 'finance.imports', href: '/finance/imports', icon: 'euro', group: 'finance', section: 'finance.work', permission: 'finance.read' },
-      { key: 'finance.rules', href: '/finance/work/rules', icon: 'euro', group: 'finance', section: 'finance.work', permission: 'finance.read' },
-      { key: 'finance.entries', href: '/finance/entries', icon: 'euro', group: 'finance', section: 'finance.entries', permission: 'finance.read' },
-      { key: 'finance.openItems', href: '/finance/open-items', icon: 'euro', group: 'finance', section: 'finance.entries', permission: 'finance.read' },
-      { key: 'finance.directDebit', href: '/finance/direct-debit', icon: 'euro', group: 'finance', section: 'finance.entries', permission: 'finance.directDebit' },
-      { key: 'finance.accounts', href: '/finance/accounts', icon: 'euro', group: 'finance', section: 'finance.entries', permission: 'finance.read' },
-      { key: 'finance.cash', href: '/finance/cash', icon: 'euro', group: 'finance', section: 'finance.entries', permission: 'finance.read' },
-      { key: 'finance.purposes', href: '/finance/purposes', icon: 'euro', group: 'finance', section: 'finance.allocation', permission: ['finance.read', 'finance.overview'] },
-      { key: 'finance.reserves', href: '/finance/reserves', icon: 'euro', group: 'finance', section: 'finance.allocation', permission: 'finance.read' },
-      { key: 'finance.donations', href: '/finance/donations', icon: 'euro', group: 'finance', section: 'finance.donations', permission: 'finance.read' },
-      { key: 'finance.donationRun', href: '/finance/donations/run', icon: 'euro', group: 'finance', section: 'finance.donations', permission: 'finance.read' },
-      { key: 'finance.donationBook', href: '/finance/donations/book', icon: 'euro', group: 'finance', section: 'finance.donations', permission: 'finance.read' },
-      { key: 'finance.donationNotices', href: '/finance/donations/notices', icon: 'euro', group: 'finance', section: 'finance.donations', permission: 'finance.read' },
-      { key: 'finance.expenses', href: '/finance/expenses', icon: 'euro', group: 'finance', section: 'finance.expenses', permission: 'finance.expensesSubmit' },
-      { key: 'finance.approvals', href: '/finance/approvals', icon: 'euro', group: 'finance', section: 'finance.expenses', permission: 'finance.approve' },
-      { key: 'finance.partners', href: '/finance/partners', icon: 'euro', group: 'finance', section: 'finance.parties', permission: 'finance.read' },
-      { key: 'finance.people', href: '/finance/people', icon: 'euro', group: 'finance', section: 'finance.parties', permission: 'finance.read' },
-    ]);
+  // Ob jede Route ihre Handbuchseite hat, prüft `apps/kompass/tests/handbook-complete.test.ts`.
+  it('puts every page into the finance rail with the module icon, under a permission of its own', () => {
+    const nav = financeModule.navigation ?? [];
+    expect(nav.length).toBeGreaterThan(5);
     expect(financeModule.moduleIcon).toBe('euro');
-  });
-
-  it('points the purposes and reserves routes at the same handbook page, people at its own', () => {
-    for (const href of ['/finance/purposes', '/finance/reserves']) expect(financeModule.help, href).toContainEqual({ href, doc: 'finanzen/zwecke-und-ruecklagen' });
-    expect(financeModule.help).toContainEqual({ href: '/finance/people', doc: 'finanzen/personen' });
-  });
-
-  it('points the donation routes at the handbook page on donations', () => {
-    for (const href of ['/finance/donations', '/finance/donations/notices', '/finance/donations/run', '/finance/donations/book']) expect(financeModule.help, href).toContainEqual({ href, doc: 'finanzen/spenden' });
-  });
-
-  it('points the four work list routes at the handbook page of the work list', () => {
-    for (const href of ['/finance/work', '/finance/work/foreign', '/finance/work/vouchers', '/finance/work/rules']) {
-      expect(financeModule.help, href).toContainEqual({ href, doc: 'finanzen/arbeitsliste' });
-    }
+    const own = new Set<string>(financeModule.permissions);
+    const offenders = nav.filter((n) => n.group !== 'finance' || n.icon !== financeModule.moduleIcon || !n.href.startsWith('/finance/') || ![n.permission].flat().every((p) => own.has(p as string)));
+    expect(offenders.map((n) => n.key)).toEqual([]);
+    expect(new Set(nav.map((n) => n.href)).size).toBe(nav.length);
   });
 
   it('registers the protection area finance, opened by finance.read', () => {

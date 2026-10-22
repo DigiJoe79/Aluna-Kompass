@@ -54,6 +54,7 @@ export const CORE_AUDIT_ACTIONS: Record<string, AuditActionDef> = {
   'media.upload': { params: ['filename'] },
   'media.delete': { params: ['filename'] },
   'media.move': { params: ['filename', 'folder', 'toRoot'] },
+  'media.aiKind': { params: ['filename', 'aiKind'] },
   'media.folder.create': { params: ['path'] },
   'media.folder.rename': { params: ['from', 'to'] },
   'media.folder.delete': { params: ['path'] },

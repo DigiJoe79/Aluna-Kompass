@@ -179,8 +179,10 @@ export async function seedProposals(deps: Deps, ctx: CallContext): Promise<void>
 
   // 11. Änderung an Pelles langem Text an drei Stellen, dazu die Geburt und ein Zweifelsfall mit Titel: Die Prüfseite
   //     zeigt den Wortunterschied („6 Stellen geändert“, je Sprache drei, aufklappbar).
+  //     Dazu ein neues Foto als Titelbild: Die Prüfseite bietet „Heute behalten / Wechseln“ mit beiden Bildern (Backlog 79).
   const pelle = idOf('Pelle');
   if (pelle) {
+    const cover = await stage(hoursAgo(deps, 60), 'pelle-3.jpg', 'tb-1005-c');
     const current = deps.db.select({ body: animals.body }).from(animals).where(eq(animals.id, pelle)).get()!.body as Record<string, string>;
     const edit = (text: string | undefined, swaps: readonly [string, string][]) => swaps.reduce((t, [from, to]) => t.replace(from, to), text ?? '');
     unwrap(
@@ -206,6 +208,7 @@ export async function seedProposals(deps: Deps, ctx: CallContext): Promise<void>
           },
         },
         hints: [{ title: 'Kastration', field: 'body', quote: 'Pelle wurde letzte Woche kastriert, Fäden sind gezogen', suggestion: 'inzwischen auch kastriert' }],
+        photos: [{ imageId: cover, isPrimary: true }],
       }),
     );
   }

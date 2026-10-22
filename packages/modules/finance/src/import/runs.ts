@@ -3,6 +3,8 @@ import { checksumOf } from '@kompass/module-dms';
 import { and, desc, eq, isNotNull, isNull, ne, type SQL } from 'drizzle-orm';
 import { z } from 'zod';
 import { financeAudit } from '../audit';
+import { compactIban } from '../format/iban';
+import { normalizeText } from '../rules-pure';
 import { financeConflict } from '../errors';
 import { setImportFormatInternal } from '../ledger/accounts';
 import { requireFinanceRead } from '../ledger/access';
@@ -84,19 +86,32 @@ function periodsOverlap(aFrom: string | null, aTo: string | null, bFrom: string,
 }
 
 /**
- * Dieselben Kerndaten (Konto, Datum, Betrag, IBAN), aber ein anderer Zweck —
- * „wahrscheinlich dieselbe Zahlung, anders beschriftet“ (Spec 6.1: „gleiche
- * referenzlose Kerndaten mit abweichendem Zweck"). Nur unter nicht
+ * Derselbe Zahler? Tragen beide Seiten eine IBAN, entscheidet allein sie — der Name ist zwischen Exportformaten zu
+ * unbeständig („MUSTER, MAX“, gekürzt), um sie zu überstimmen, und ein Fehltreffer kostet nur einen Kandidaten, ein
+ * verpasster eine stille Dublette. Fehlt sie auf einer Seite (PayPal, CSV ohne IBAN-Spalte), zählt der Name; ohne
+ * beides bleibt es offen (Befund 3, 2026-10-20).
+ */
+export function samePayer(a: { iban: string | null; name: string | null }, b: { iban: string | null; name: string | null }): boolean {
+  if (a.iban && b.iban) return compactIban(a.iban) === compactIban(b.iban);
+  const nameA = normalizeText(a.name ?? '');
+  return nameA !== '' && nameA === normalizeText(b.name ?? '');
+}
+
+/**
+ * Derselbe Zahler, dieselben Kerndaten (Konto, Datum, Betrag), aber ein anderer
+ * Zweck — „wahrscheinlich dieselbe Zahlung, anders beschriftet“ (Spec 6.1:
+ * „gleiche referenzlose Kerndaten mit abweichendem Zweck“). Nur unter nicht
  * verworfenen Läufen.
  */
 function findPurposeMismatch(tx: DbOrTx, accountId: string, ownRunId: string, line: CamtLine): { id: string } | null {
   const rows = tx
-    .select({ id: financeRawTransactions.id, purpose: financeRawTransactions.purpose, runId: financeRawTransactions.runId })
+    .select({ id: financeRawTransactions.id, purpose: financeRawTransactions.purpose, runId: financeRawTransactions.runId, iban: financeRawTransactions.counterpartyIban, name: financeRawTransactions.counterpartyName })
     .from(financeRawTransactions)
     .where(and(eq(financeRawTransactions.accountId, accountId), eq(financeRawTransactions.bookingDate, line.bookingDate), eq(financeRawTransactions.amountCents, line.amountCents), ne(financeRawTransactions.runId, ownRunId)))
     .all();
   for (const row of rows) {
     if (normalizePurpose(row.purpose) === normalizePurpose(line.purpose)) continue; // exakter Treffer läuft über den Dublettenschlüssel, nicht hier
+    if (!samePayer(row, { iban: line.counterpartyIban, name: line.counterpartyName })) continue;
     const run = tx.select({ discardedAt: financeImportRuns.discardedAt }).from(financeImportRuns).where(eq(financeImportRuns.id, row.runId)).get();
     if (run && run.discardedAt === null) return row;
   }

@@ -20,6 +20,10 @@ führt direkt auf „Bank“ oder „Steuer & Bescheide“.
 - **Darstellung** — Logo aus der [Mediathek](../mediathek.md), Schrift für
   Fließtext und Überschriften, das aktive [Theme](themes.md) und das
   Datumsformat der Oberfläche.
+- **Medien** — die [Bildkennzeichnung](../mediathek.md#bildkennzeichnung) von
+  Bildern: ein Schalter, die Texte der Marken an bearbeiteten und an
+  erstellten Bildern, die Bezeichnungen „bearbeitet“ und „erstellt“ und die
+  Sätze unter Galerie und Einzelbild, je Sprache. Die Texte stehen erst da, wenn der Schalter an ist.
 
 Jedes Feld hat einen Hinweis, wo es verwendet wird. Was leer ist, obwohl es
 gebraucht wird, zählt die [Startseite](../startseite.md) in der Kachel

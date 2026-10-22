@@ -93,10 +93,4 @@ describe('run state', () => {
     expect(readdirSync(e.workDir)).toEqual(['kompass-site-check-xyz']);
   });
 
-  it('understands the lock file of 0.2.4', () => {
-    const e = env();
-    writeFileSync(path.join(e.cacheDir, 'running-job.json'), JSON.stringify({ name: 'publish', runId: 'R0', startedAt: '2026-10-01T10:00:00.000Z', process: 'alt' }));
-    expect(runningSiteJob(e)).toBeNull();
-    expect(JSON.parse(readFileSync(path.join(e.cacheDir, 'publish-result.json'), 'utf8'))).toMatchObject({ kind: 'publish', status: 'interrupted', historyPending: true });
-  });
 });

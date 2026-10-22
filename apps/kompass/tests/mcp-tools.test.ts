@@ -226,6 +226,7 @@ const WITHOUT_TOOL: Record<string, string> = {
   'core.exportBackup': 'Ein Archiv von hunderten Megabyte durch JSON-RPC zu reichen, hilft niemandem.',
   'core.importBackup': 'Ersetzt die Datenbank als Datei — das bestätigt ein Mensch vor sich, nicht ein Agent für ihn.',
   'core.getMediaPreview': 'media_get mit variant: preview ruft es; das Werkzeug nennt getMediaAsset, den Weg zum Original.',
+  'core.getMediaAssetInfo': 'Datensatz und Fundstellen ohne Bytes für den Dialog „Bildkennzeichnung“; ein Agent liest dasselbe mit media_list (Art, Verwendungen).',
   'core.storeMediaInternal': 'Innenleben; media_upload ist der Weg von außen.',
   'core.countUnfiledMediaAssets': 'Ein Zähler für „Ohne Ordner“ in der Mediathek; media_list mit folder: null liefert dieselbe Menge.',
   'core.storeMediaAssetDetailed': 'Dieselbe Ablage wie media_upload, mit mehr Rückgabe für die Oberfläche.',

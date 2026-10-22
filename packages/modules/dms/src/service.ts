@@ -5,7 +5,7 @@ import { canReadType, isProtectedType, readableTypeFilter, requireAreaAccess, re
 import { auditDocumentRef } from './audit-ref';
 import { documentTypeFor } from './catalog';
 import { duplicatesOfInternal, type DuplicateRef } from './duplicates';
-import { refuseModuleOwned } from './owned';
+import { moduleReleasesVoid, refuseModuleOwned, refuseVoidOwned } from './owned';
 import { dmsMailOutbox, dmsMailPostMoves, documentCounters, documentFolders, documentFormerNumbers, documentLinks, documentRelations, documents, documentTypes, type DocumentLinkRow, type DocumentNoteRow, type DocumentRow } from './schema';
 import { checksumOf, readDocumentFile, removeDocumentFile } from './storage';
 import { removeDocumentText } from './index-store';
@@ -422,9 +422,8 @@ export async function voidDocument(deps: Deps, ctx: CallContext, input: unknown)
 
   const docType = documentTypeFor(deps.db, row.typeKey);
   // F7: Ein Modul kann eigene Arten zum Stornieren freigeben — aber nur, solange nichts hinausging.
-  const voidable = !!docType?.ownerModule && deps.registry.manifests.some((m) => m.key === docType.ownerModule && (m.voidableDocumentTypes ?? []).includes(row.typeKey));
-  if (voidable && row.sentAt !== null) return localizedConflict('documentAlreadySent', 'errors.documentAlreadySent', { number: row.number ?? '' });
-  const owned = docType && !voidable ? refuseModuleOwned(docType) : null;
+  if (docType && moduleReleasesVoid(deps, docType) && row.sentAt !== null) return localizedConflict('documentAlreadySent', 'errors.documentAlreadySent', { number: row.number ?? '' });
+  const owned = refuseVoidOwned(deps, docType);
   if (owned) return owned;
   return deps.db.transaction((tx: DbOrTx) => {
     tx.update(documents).set({ status: 'voided', voidedAt: isoNow(deps.clock), voidedByUserId: ctx.userId, voidReason: parsed.value.reason }).where(eq(documents.id, row.id)).run();

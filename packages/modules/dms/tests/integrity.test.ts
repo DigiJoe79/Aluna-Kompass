@@ -44,6 +44,8 @@ describe('Dokumente werden gegen ihre Prüfsumme gehalten', () => {
     expect(geholt.ok).toBe(true);
     if (!geholt.ok) return;
     expect(geholt.value.record.id).toBe(doc.id);
+    const unbekannt = await getDocument(deps, ctx, 'gibtsnicht');
+    expect(unbekannt.ok === false && unbekannt.error.type).toBe('notFound');
   });
 
   it('verweigert ein Dokument, dessen Datei nicht mehr zur Prüfsumme passt', async () => {

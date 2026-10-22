@@ -1,7 +1,7 @@
 import { eq } from 'drizzle-orm';
 import type { CallContext } from '../context';
 import { listDashboardTiles, setDashboardLayout } from '../dashboard/service';
-import { dashboardLayouts, roles, users } from '../db/schema';
+import { dashboardLayouts, roles, settings, users } from '../db/schema';
 import type { Deps } from '../deps';
 import { getEffectivePermissions } from '../roles/effective';
 import { unwrap } from '../result';
@@ -11,6 +11,7 @@ import { completeSetup, isSetupRequired } from '../setup/service';
 import { todayIn } from '../today';
 import { createUser } from '../users/service';
 import { installOrder } from '../modules/installs';
+import { AI_LABELING_ENABLED_KEY } from '../media/ai-labeling';
 import { seedMedia } from './media';
 import { seedStoryYear } from './story-year';
 
@@ -65,8 +66,11 @@ export async function seedDevelopment(deps: Deps): Promise<{ adminEmail: string;
 
   const installed = deps.registry.manifests.map((m) => m.key).filter((k) => k !== 'core').sort();
   deps.db.transaction((tx) => {
-    writeSettingInternal(tx, deps, ctx, 'modules.enabled', installed, 'seed.modules');
-    writeSettingInternal(tx, deps, ctx, 'i18n.locales', ['de', 'en'], 'seed.locales');
+    // Nur schreiben, was abweicht: Ein zweiter Lauf ändert nichts und protokolliert deshalb auch nichts.
+    const differs = (key: string, value: unknown) => tx.select({ value: settings.value }).from(settings).where(eq(settings.key, key)).get()?.value !== JSON.stringify(value);
+    if (differs('modules.enabled', installed)) writeSettingInternal(tx, deps, ctx, 'modules.enabled', installed, 'seed.modules');
+    if (differs('i18n.locales', ['de', 'en'])) writeSettingInternal(tx, deps, ctx, 'i18n.locales', ['de', 'en'], 'seed.locales');
+    if (differs(AI_LABELING_ENABLED_KEY, true)) writeSettingInternal(tx, deps, ctx, AI_LABELING_ENABLED_KEY, true);
     // Derselbe Schritt, den `setModuleEnabled` beim Einschalten geht. Ohne ihn
     // stünde die Entwicklung auf einem anderen Zustand als eine echte
     // Installation — und genau solche Unterschiede fallen zuletzt auf.

@@ -1,5 +1,5 @@
 import { schema, unwrap } from '@kompass/core';
-import { auditEntry, ctxWith } from '@kompass/core/testing';
+import { auditEntry } from '@kompass/core/testing';
 import { describe, expect, it } from 'vitest';
 import { receiveDocument, previewReclassification, reclassifyDocument } from '../src/incoming';
 import { deleteDocument, getDocumentRecord, listDocuments, voidDocument } from '../src/service';
@@ -61,13 +61,6 @@ describe('reclassifyDocument', () => {
     const after = unwrap(await reclassifyDocument(deps, ctx, { id: doc.id, typeKey: 'contract', subject: 'Schreiben' }));
     expect(after.updatedAt).toBe(doc.updatedAt);
     expect(deps.db.select().from(schema.auditLog).all()).toHaveLength(before);
-  });
-
-  it('verlangt dms.create', async () => {
-    const { deps, ctx } = setupWithTypes();
-    const doc = await received(deps, ctx);
-    const result = await reclassifyDocument(deps, ctxWith(['dms.view'], ctx.userId!), { id: doc.id, subject: 'X' });
-    expect(result.ok === false && result.error.type).toBe('forbidden');
   });
 
   it('prüft die Eingabe', async () => {

@@ -1,34 +1,8 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
-import { RowButton, RowLink, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-
-const markup = renderToStaticMarkup(
-  <Table>
-    <TableHeader><TableRow><TableHead>Name</TableHead></TableRow></TableHeader>
-    <TableBody><TableRow><TableCell>Bello</TableCell></TableRow></TableBody>
-  </Table>,
-);
+import { RowButton, RowLink, Table, TableBody, TableCell, TableRow } from '@/components/ui/table';
 
 describe('ui/table Standard', () => {
-  it('Kopf: Tabellenkopf-Fläche, Rolle Etikett in Versalien, 36 px (K10 Charge 3)', () => {
-    expect(markup).toMatch(/<thead[^>]*bg-table-head[^>]*text-label[^>]*uppercase/);
-    expect(markup.slice(markup.indexOf('<thead'), markup.indexOf('>', markup.indexOf('<thead')))).not.toContain('text-[12px]');
-    expect(markup).toMatch(/<th[^>]*h-9/);
-  });
-  it('Zeilen im Rumpf: Dichtehöhe, Zebra, Hover, Linie', () => {
-    expect(markup).toMatch(/<tbody[^>]*>\s*<tr[^>]*h-row[^>]*/);
-    expect(markup).toMatch(/<tbody[^>]*>\s*<tr[^>]*even:bg-zebra/);
-    expect(markup).toMatch(/<tbody[^>]*>\s*<tr[^>]*hover:bg-row-hover/);
-  });
-  it('Kopfzeile bekommt weder Zebra noch Hover', () => {
-    const head = markup.slice(markup.indexOf('<thead'), markup.indexOf('</thead>'));
-    expect(head).not.toContain('bg-zebra');
-    expect(head).not.toContain('hover:bg-row-hover');
-  });
-  it('keine shadcn-Farbnamen', () => {
-    expect(markup).not.toMatch(/bg-muted|text-foreground|text-muted-foreground/);
-  });
-
   it('RowLink ist ein echter Link mit Fläche über die Zeile', () => {
     const m = renderToStaticMarkup(
       <Table><TableBody><TableRow><TableCell><RowLink href="/x/1">Bello</RowLink></TableCell></TableRow></TableBody></Table>,
@@ -36,16 +10,6 @@ describe('ui/table Standard', () => {
     expect(m).toMatch(/<tr[^>]*relative/);
     expect(m).toMatch(/<a[^>]*href="\/x\/1"[^>]*data-row-link|<a[^>]*data-row-link[^>]*href="\/x\/1"/);
     expect(m).toMatch(/<a[^>]*after:absolute[^>]*after:inset-0|<a[^>]*after:inset-0[^>]*after:absolute/);
-  });
-  // Z4 (Designer Stufe 2 Nr. 4): Das Öffnen-Element ist normal gewichtet, nur in Linkfarbe — auch die Belegnummern.
-  it('RowLink und RowButton: Gewicht 400, nur die Linkfarbe', () => {
-    for (const m of [
-      renderToStaticMarkup(<RowLink href="/x/1">Bello</RowLink>),
-      renderToStaticMarkup(<RowButton aria-expanded={false}>Mehr</RowButton>),
-    ]) {
-      expect(m).toContain('text-link');
-      expect(m).not.toMatch(/font-semibold|font-medium|font-bold/);
-    }
   });
   it('RowButton ist ein Knopf mit derselben Fläche', () => {
     const m = renderToStaticMarkup(<RowButton aria-expanded={false}>Mehr</RowButton>);

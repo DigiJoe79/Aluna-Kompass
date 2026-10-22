@@ -257,6 +257,8 @@ export async function continueFeeRun(deps: Deps, ctx: CallContext, input: unknow
       afterHolderNotice: (tx, documentId, holderContactId) => recordRunLetterInternal(tx, deps, { runRef: feeRunRef(run.id), membershipId, documentId, contactId: holderContactId }),
     });
     if (!issued.ok) refused.push({ membershipId, code: 'code' in issued.error && typeof issued.error.code === 'string' ? issued.error.code : issued.error.type });
+    // Backlog 78: Die Mitteilung ging hinaus, die Ankündigung an den Kontoinhaber nicht (etwa ohne Finanzrechte) — festhalten statt still.
+    else if (issued.value.prenotification && 'refused' in issued.value.prenotification) refused.push({ membershipId, code: issued.value.prenotification.refused, letter: 'prenotification' });
   }
   return deps.db.transaction((tx: DbOrTx) => {
     let current: FeeRunRow = { ...run, noticeRefused: refused };

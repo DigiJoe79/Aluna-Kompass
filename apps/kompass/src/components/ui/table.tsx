@@ -299,6 +299,11 @@ function TableCell({
       role={cards ? "none" : undefined}
       className={cn(
         "px-4 py-[var(--row-pad-density,0.5rem)] align-middle [&:has([role=checkbox])]:pr-0",
+        // Der sr-only-Text der Kartenansicht (Betrag) ist absolut positioniert. Im Körper ist die Zeile sein positionierter
+        // Vorfahr; die Zeile im Fuß ist es nicht, ohne `relative` bezog er sich auf das Dokument und verlängerte den
+        // Scrollbereich über das Ende der Liste (Journal, 2026-10-20). Nicht an jeder Zelle: Dort begrenzte es die Fläche
+        // von RowLink/RowButton auf die eigene Zelle, ein Klick in die übrige Zeile öffnete nichts mehr.
+        inFooter && "relative",
         wrapsText(col, truncate, wrap, inFooter) ? "whitespace-normal" : "whitespace-nowrap",
         ABOVE_ROW_TARGET,
         selectable && "relative z-10 select-text",

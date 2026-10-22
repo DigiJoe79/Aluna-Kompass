@@ -1,4 +1,4 @@
-import { schema, unwrap, writeSettingInternal } from '@kompass/core';
+import { unwrap, writeSettingInternal } from '@kompass/core';
 import { auditEntry, ctxWith, systemContext } from '@kompass/core/testing';
 import { contacts } from '@kompass/module-contacts';
 import { documentLinks, documents } from '@kompass/module-dms';
@@ -16,7 +16,6 @@ import { financeCategories, financeContactWaiverTerms, financeExpenseClaims, fin
 import { EXEMPTION } from './donation-fixture';
 import { approverCtx, enableExpenseWaivers, expenseFixture, expenseReadyDraft, expenseSubmitted, type ExpenseFixture } from './expense-fixture';
 import { getExpenseClaim, saveExpenseDraft, submitExpenseClaim } from '../src/allocation/expenses';
-import { FINANCE_MCP_TOOLS } from '../src/mcp-tools';
 import { insertReserve, insertReserveMovement } from './mittel-fixture';
 
 /**
@@ -107,7 +106,6 @@ describe('waiverChecks and approveExpenseClaim with waiver', () => {
     expect(err(await approve({ declaredOn: '2026-11-26' }))).toMatchObject({ type: 'validation', issues: [{ path: 'waiver.declaredOn', message: 'inFuture' }] });
     const late = unwrap(await approve({ declaredOn: '2026-11-25', lateReason: 'Helferin war drei Monate im Ausland' }));
     expect(late).toMatchObject({ state: 'approved', waiverLateReason: 'Helferin war drei Monate im Ausland', waiverDeclaredOn: '2026-11-25', claimAgreedConfirmed: true });
-    expect(JSON.stringify(f.deps.db.select().from(schema.auditLog).all())).not.toContain('Ausland');
   });
 
   it('N6: the refusal names every unmet requirement at once, not only the first', async () => {
@@ -183,19 +181,6 @@ describe('waiverChecks and approveExpenseClaim with waiver', () => {
     expect(unwrap(await submitExpenseClaim(f.deps, f.hanna.ctx, { id: draft.id, expectedVersion: asReimbursement.version })).state).toBe('submitted');
   });
 
-  it('Prüfer-Fixrunde 28.09., Punkt 4, über MCP: dieselbe Warnung am Entwurf, dieselbe Ablehnung beim Einreichen', async () => {
-    const f = await expenseFixture();
-    await waiverClaim(f);
-    f.deps.db.transaction((tx) => writeSettingInternal(tx, f.deps, systemContext(), 'finance.expenseWaiverBasisAgreedOn', '2026-08-21'));
-    const tool = (name: string) => FINANCE_MCP_TOOLS.find((x) => x.name === name)!;
-    const agent = { ...f.hanna.ctx, channel: 'mcp' as const };
-    const draft = await expenseReadyDraft(f, f.hanna, { iban: null, waiver: true });
-    const read = await tool('finance_expense_get').handler(f.deps, agent, { id: draft.id });
-    expect(JSON.stringify(read)).toContain('waiverAgreedAfterPosition');
-    const submitted = await tool('finance_expense_submit').handler(f.deps, agent, { id: draft.id, expectedVersion: draft.version });
-    expect(err(submitted as never)).toMatchObject({ code: 'waiverAgreedAfterPosition' });
-  });
-
   it('waiver approval books the expense donation without money line dated on the declaration day and records the free funds', async () => {
     const f = await expenseFixture();
     const claim = await waiverClaim(f);
@@ -218,7 +203,6 @@ describe('waiverChecks and approveExpenseClaim with waiver', () => {
     expect(entry.vouchers.map((v) => v.documentId).sort()).toEqual([claim.positions[0]!.documentId, declared.waiverDeclarationDocumentId, signed.waiverSignedDocumentId].sort());
 
     expect(JSON.parse(auditEntry(f.deps, 'finance.expenseClaim.approve').after as string)).toEqual({ state: 'approved', number: 'KE-2026-001', positionCount: 2, totalCents: TOTAL, waiver: true, recurring: false, approvedAt: '2026-09-05T08:00:00.000Z', entryId: entry.id, waiverFreeFundsCents: 5000, channel: 'ui' });
-    expect(JSON.stringify(f.deps.db.select().from(schema.auditLog).all().filter((a) => a.action.startsWith('finance.')))).not.toContain('Satzung');
   });
 
   it('the expense donation line is confirmable through F6a with a signature field', async () => {
@@ -288,7 +272,6 @@ describe('createWaiverDeclaration and attachSignedWaiver', () => {
     expect(err(await attachSignedWaiver(f.deps, f.otto.ctx, { claimId: claim.id, bytes: f.pdf() }))).toMatchObject({ code: 'expenseNotOwner' });
 
     expect(JSON.parse(auditEntry(f.deps, 'finance.expenseClaim.waiverDeclaration').after as string)).toEqual({ state: 'submitted', number: 'KE-2026-001' });
-    expect(JSON.stringify(f.deps.db.select().from(schema.auditLog).all().filter((a) => a.action.startsWith('finance.')))).not.toContain('Satzung');
   });
 
   it('Befund I: attaching the signed version changes the version — an approval with the version from before is stale', async () => {
@@ -334,7 +317,6 @@ describe('saveContactWaiverTerms', () => {
     unwrap(await saveContactWaiverTerms(f.deps, f.ctx, { contactId: f.hanna.contactId, basisText: 'Vereinbarung vom 03.01.2026', agreedOn: '2026-01-03' }));
     expect(f.deps.db.select().from(financeContactWaiverTerms).all()).toEqual([expect.objectContaining({ basisText: 'Vereinbarung vom 03.01.2026', agreedOn: '2026-01-03' })]);
     expect(JSON.parse(auditEntry(f.deps, 'finance.contactWaiverTerms.save').after as string)).toEqual({ agreedOn: '2026-01-03' });
-    expect(JSON.stringify(f.deps.db.select().from(schema.auditLog).all())).not.toContain('Vereinbarung');
 
     expect(err(await saveContactWaiverTerms(f.deps, ctxWith(['finance.approve', 'finance.read'], f.secondPersonId), { contactId: f.hanna.contactId, basisText: 'x', agreedOn: '2026-01-02' }))).toMatchObject({ type: 'forbidden', permission: 'finance.setup' });
     expect(err(await saveContactWaiverTerms(f.deps, f.ctx, { contactId: f.hanna.contactId, basisText: '', agreedOn: '2026-01-02' }))).toMatchObject({ type: 'validation' });

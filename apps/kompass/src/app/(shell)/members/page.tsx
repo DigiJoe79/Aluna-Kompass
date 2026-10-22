@@ -75,7 +75,7 @@ export default async function MembersPage({ searchParams }: { searchParams: Prom
         total={result.value.total}
         unfiltered={unfiltered.value.total}
         offset={input.offset}
-        types={types.value.map((ty) => ({ id: ty.id, name: nameOrEmpty(ty.name[leading], ty.key) }))}
+        types={types.value.map((ty) => ({ id: ty.id, name: nameOrEmpty(ty.name[leading], ty.key), active: ty.active }))}
       />
     </Page>
   );

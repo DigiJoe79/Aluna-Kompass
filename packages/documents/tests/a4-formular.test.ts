@@ -4,7 +4,7 @@ import path from 'node:path';
 import { isoDay, type DocumentRenderContext } from '@kompass/core';
 import { DEFAULT_THEME } from '@kompass/core/themes';
 import { afterEach, describe, expect, it } from 'vitest';
-import { createDocumentEngine, createTypstRenderer, pdfPageCount, probeBase, resolveAssetDirs, resolveBases } from '../src';
+import { createDocumentEngine, createTypstRenderer, pdfPageCount, resolveAssetDirs, resolveBases } from '../src';
 
 const dirs: string[] = [];
 afterEach(() => dirs.splice(0).forEach((d) => rmSync(d, { recursive: true, force: true })));
@@ -33,31 +33,19 @@ const render = (p = payload(), body = 'Körper des Formulars.', images?: Record<
   renderer.renderDocument({ baseId: 'a4-formular', bases: set, bodyTypst: body, payload: p, images });
 
 describe('a4-formular base', () => {
-  it('is shipped with its label and kind', () => {
-    expect(bases.get('a4-formular')).toMatchObject({ label: 'Formular mit Vereinskopf', kind: 'form' });
+  it('is shipped as a form base', () => {
+    expect(bases.get('a4-formular')).toMatchObject({ kind: 'form' });
   });
 
-  it('renders the form base with the probe payload', async () => {
-    expect(await probeBase({ renderer, baseId: 'a4-formular', bases })).toEqual({ ok: true });
-    const pdf = await render();
-    expect(new TextDecoder().decode(pdf.subarray(0, 5))).toBe('%PDF-');
-    expect(pdfPageCount(pdf)).toBe(1);
-    // Die Fußzeile trägt die Nummer.
-    expect(same(pdf, await render(payload({ number: 'ZWB-2026-002' })))).toBe(false);
+  // Rendern, Probe, Determinismus und Wasserzeichen prüft bases-render.test.ts für jede Basis.
+  it('carries the number in the footer', async () => {
+    expect(same(await render(), await render(payload({ number: 'ZWB-2026-002' })))).toBe(false);
   });
 
   it('does not draw subject or date — the body owns them (the recipient opens the address zone, see a4-formular-address-zone.test.ts)', async () => {
     const plain = await render();
     const withLetterSlots = await render(payload({ issuedDate: '24.12.2031' }, { subject: 'Betreff', place: 'Anderswo' }));
     expect(same(plain, withLetterSlots)).toBe(true);
-  });
-
-  it('draws a draft watermark for previews', async () => {
-    expect(same(await render(), await render(payload({}, { draft: true })))).toBe(false);
-  });
-
-  it('renders deterministically', async () => {
-    expect(same(await render(), await render())).toBe(true);
   });
 
   it('renders a body image written into the job folder', async () => {

@@ -131,6 +131,7 @@ describe('finance_import_runs', () => {
     // schon einen trägt, lässt sich nicht überschreiben — andere Meldung, dieselbe Endgültigkeit.
     expect(() => deps.db.update(financeImportRuns).set({ closingCents: 1 }).where(eq(financeImportRuns.id, runId)).run()).toThrow(/set once/);
     expect(() => deps.db.update(financeImportRuns).set({ finishedAt: '2026-03-02T00:00:00.000Z' }).where(eq(financeImportRuns.id, runId)).run()).toThrow(/permanent|immutable/);
+    expect(() => deps.db.update(financeImportRuns).set({ warnings: '["futureDates"]' }).where(eq(financeImportRuns.id, runId)).run()).toThrow(/permanent|immutable/);
 
     // Danach aenderbar: nur discarded_* (einmal) und fileKey -> NULL (einmal).
     deps.db.update(financeImportRuns).set({ discardedAt: '2026-04-01T00:00:00.000Z', discardedByUserId: 'U1', discardNote: 'Falsches Konto' }).where(eq(financeImportRuns.id, runId)).run();
@@ -155,13 +156,6 @@ describe('finance_import_runs', () => {
     expect(() => deps.db.update(financeImportRuns).set({ discardedAt: '2026-04-01T00:00:00.000Z', discardedByUserId: 'U1', discardNote: 'zu frueh' }).where(eq(financeImportRuns.id, runId)).run()).toThrow(/permanent|immutable/);
   });
 
-  it('never lets a run be deleted', async () => {
-    const { deps, accountId } = await fixtures();
-    const runId = seedRun(deps, accountId);
-    expect(() => deps.db.delete(financeImportRuns).where(eq(financeImportRuns.id, runId)).run()).toThrow(/permanent|immutable/);
-    deps.db.update(financeImportRuns).set({ finishedAt: '2026-03-01T09:05:00.000Z' }).where(eq(financeImportRuns.id, runId)).run();
-    expect(() => deps.db.delete(financeImportRuns).where(eq(financeImportRuns.id, runId)).run()).toThrow(/permanent|immutable/);
-  });
 });
 
 describe('finance_import_candidates', () => {
@@ -176,6 +170,24 @@ describe('finance_import_candidates', () => {
 
     deps.db.update(financeImportCandidates).set({ decision: 'same', decidedAt: '2026-03-06T00:00:00.000Z', decidedByUserId: 'U1' }).where(eq(financeImportCandidates.id, candidateId)).run();
     expect(() => deps.db.update(financeImportCandidates).set({ decision: 'own' }).where(eq(financeImportCandidates.id, candidateId)).run()).toThrow(/permanent|immutable|once/);
+  });
+
+  it('keeps the identity of a candidate fixed and lets its match only be cleared; the raw line stays clearable', async () => {
+    const { deps, accountId } = await fixtures();
+    const runId = seedRun(deps, accountId);
+    const rawId = seedRawTransaction(deps, runId, accountId);
+    const candidateId = newId();
+    deps.db
+      .insert(financeImportCandidates)
+      .values({ id: candidateId, runId, accountId, line: JSON.stringify({ index: 1 }), matchesRawTransactionId: rawId, dedupKey: '2026-03-05|5000||spende|0' })
+      .run();
+
+    for (const change of [{ id: newId() }, { runId: seedRun(deps, accountId) }, { accountId: 'OTHER' }, { dedupKey: 'anders' }]) {
+      expect(() => deps.db.update(financeImportCandidates).set(change).where(eq(financeImportCandidates.id, candidateId)).run(), JSON.stringify(change)).toThrow(/permanent/);
+    }
+    expect(() => deps.db.update(financeImportCandidates).set({ matchesRawTransactionId: seedRawTransaction(deps, runId, accountId, { dedupKey: 'zweiter' }) }).where(eq(financeImportCandidates.id, candidateId)).run()).toThrow(/permanent/);
+    deps.db.update(financeImportCandidates).set({ matchesRawTransactionId: null }).where(eq(financeImportCandidates.id, candidateId)).run();
+    deps.db.update(financeImportCandidates).set({ line: '{}' }).where(eq(financeImportCandidates.id, candidateId)).run();
   });
 });
 

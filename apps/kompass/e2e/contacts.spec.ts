@@ -40,9 +40,9 @@ test.describe('contacts', () => {
     await expect(page.getByRole('row', { name: /Leitner/ })).toHaveCount(0);
   });
 
-  test('ohne Treffer: „Kein Kontakt passt zu diesen Filtern.“, Zurücksetzen zeigt wieder alle', async ({ page }) => {
+  test('ohne Treffer ist die Liste gefiltert leer, Zurücksetzen zeigt wieder alle', async ({ page }) => {
     await page.goto('/contacts?text=zzz');
-    await expect(page.getByText('Kein Kontakt passt zu diesen Filtern.')).toBeVisible();
+    await expect(page.locator('[data-slot="empty-state"][data-filtered]')).toBeVisible();
     await expect(page.getByRole('table')).toHaveCount(0);
     await expect(page.getByText(/^0 von \d+ Kontakten$/)).toBeVisible();
     await page.getByRole('button', { name: 'Filter zurücksetzen' }).last().click();
@@ -51,7 +51,10 @@ test.describe('contacts', () => {
     await expect(page.getByRole('table')).toBeVisible();
   });
 
-  /** Wie in der Tierliste (Befund Joe, 2026-09-30): Die Felder lasen die Adresse nur beim ersten Rendern. */
+  /**
+   * Einziger E2E-Vertreter für alle Listen mit `useUrlFilters` (Tiere, Akte, Protokoll, Journal …): Die Felder lasen die
+   * Adresse nur beim ersten Rendern (Befund 2026-09-30). Den Hook selbst prüft `tests/use-url-filters.test.tsx`.
+   */
   test('die Filterfelder folgen der Adresse, auch wenn sie von außen wechselt', async ({ page }) => {
     await page.goto('/contacts');
     await page.getByLabel('Rolle').selectOption('interested');

@@ -1,6 +1,7 @@
 import { localizedConflict } from '@kompass/core';
 import { createTranslator } from 'next-intl';
 import { describe, expect, it } from 'vitest';
+import { siteJobRunning } from '@kompass/module-site';
 import { toActionState } from '@/lib/actions';
 import messages from '../messages/de.json';
 
@@ -39,5 +40,12 @@ describe('Ablehnungen mit Satz statt Detail (Backlog 55)', () => {
     expect(detail('retentionHoldActive', { permanent: 'yes', holders: 'Mitglied' })).toBe(
       'Der Kontakt wird dauerhaft aufbewahrt, gehalten von „Mitglied“. Löschen ist nach Ablauf der Frist möglich; welche Fristen gelten, steht unter „Aufbewahrung“.',
     );
+  });
+
+  // Rest von Backlog 55 (2026-10-22): Der Start aus der Oberfläche baute den Konflikt ohne Satz („… nicht möglich: deployCheck“).
+  it('ein Lauf anderer Art läuft: die Oberfläche bekommt denselben Satzschlüssel wie der Dienst, mit der Art des Laufs', () => {
+    const failure = siteJobRunning('deployCheck');
+    expect(failure.ok).toBe(false);
+    expect(failure.ok ? null : failure.error).toMatchObject({ type: 'conflict', code: 'siteJobRunning', messageKey: 'errors.siteJobRunning', params: { kind: 'deployCheck' } });
   });
 });

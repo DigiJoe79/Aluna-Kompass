@@ -171,7 +171,7 @@ export const memberFeeRuns = sqliteTable(
     /** Wer eine Beitragsmitteilung bekommt (Plan M4 Task 5); Lastschrift-Zahler immer (Entscheid F3). */
     notices: text('notices', { enum: FEE_RUN_NOTICES }).notNull().default('directDebitOnly'),
     /** Mitteilungen, die der Lauf nicht ausstellen konnte (etwa `addressMissing`), damit er nicht an ihnen hängt. */
-    noticeRefused: text('notice_refused', { mode: 'json' }).$type<{ membershipId: string; code: string }[]>().notNull().default([]),
+    noticeRefused: text('notice_refused', { mode: 'json' }).$type<{ membershipId: string; code: string; letter?: 'prenotification' }[]>().notNull().default([]),
     createdByUserId: text('created_by_user_id'),
     createdAt: text('created_at').notNull(),
     finishedAt: text('finished_at'),

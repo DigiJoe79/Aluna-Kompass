@@ -1,6 +1,6 @@
 import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
-import { coreModule, defineModule } from '../src';
+import { coreModule, defineModule, AI_LABELING_ENABLED_KEY } from '../src';
 import { login } from '../src/auth/login';
 import { dashboardLayouts, rolePermissions, roles, users } from '../src/db/schema';
 import { seedDevelopment } from '../src/seed/seed';
@@ -41,6 +41,12 @@ describe('seedDevelopment', () => {
     deps.db.transaction((tx) => writeSettingInternal(tx, deps, systemContext(), 'organization.city', 'Anderswo'));
     await seedDevelopment(deps);
     expect(readSetting(deps, 'organization.city')).toBe('Anderswo');
+  });
+
+  it('switches AI labeling on', async () => {
+    const deps = createTestDeps({ env: 'development' });
+    await seedDevelopment(deps);
+    expect(readSetting(deps, AI_LABELING_ENABLED_KEY)).toBe(true);
   });
 
   it('refuses to run in production', async () => {
@@ -92,11 +98,11 @@ describe('seedDevelopment', () => {
     expect(JSON.parse(row!.tiles)).toEqual({ v: 2, layout: 'thirds', arrangements: { thirds: [[followUps], [backup], []], 'wide-narrow': [[followUps, backup], []] } });
   });
 
-  it('gibt der Geschäftsstelle nur Rechte, die die Registry kennt (156: nicht „Schatzmeisterin“ neben „Schatzmeister“)', async () => {
+  it('gibt jeder Rolle nur Rechte, die die Registry kennt — auch wenn ein Modul fehlt (156)', async () => {
     const deps = createTestDeps({ env: 'development' });
     await seedDevelopment(deps);
-    const role = deps.db.select().from(roles).where(eq(roles.name, 'Geschäftsstelle')).get()!;
-    const keys = deps.db.select().from(rolePermissions).where(eq(rolePermissions.roleId, role.id)).all().map((r) => r.permissionKey).sort();
-    expect(keys).toEqual(['audit.view', 'backup.export', 'documents.export', 'followUps.manage', 'followUps.view', 'media.upload']);
+    const keys = deps.db.select().from(rolePermissions).all().map((r) => r.permissionKey);
+    expect(keys.length).toBeGreaterThan(0);
+    expect(keys.filter((key) => !deps.registry.permissionKeys.has(key))).toEqual([]);
   });
 });

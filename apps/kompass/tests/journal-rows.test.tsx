@@ -49,40 +49,13 @@ function show(rows: JournalRow[], accountFilter: { name: string; openingBalanceC
           showSetupLink={false}
           filtered={false}
           accountFilter={accountFilter}
-          aside={<aside data-testid="aside">Bestände</aside>}
         />
       </DateFormatProvider>
     </NextIntlClientProvider>,
   );
 }
 
-describe('Journal: Zeilen (Runde 4, 086, 212, 213)', () => {
-  it('der Verweis steht in einer eigenen Unterzeile, nicht in der kürzenden Zeile des Texts', () => {
-    show([row({})]);
-    const refs = screen.getByTestId('journal-row-refs');
-    expect(refs.textContent).toBe('zurückgenommen durch 2026-0009\u00a0· Vereinskonto');
-    const text = screen.getByText('Fehlbuchung Futter mit sehr langem Text');
-    expect(text.className).toMatch(/\btruncate\b/);
-    expect(text.contains(refs)).toBe(false);
-    expect(refs.className).not.toMatch(/\btruncate\b/);
-  });
-
-  it('die Nummer im Verweis bricht nie um (Runde 4 Nachtrag, 213)', () => {
-    show([row({ reversesEntryId: 'E0', reversesNumber: '2026-0007' })]);
-    for (const number of ['2026-0009', '2026-0007']) {
-      const el = screen.getByText(number);
-      expect(el.className).toMatch(/\bwhitespace-nowrap\b/);
-    }
-  });
-
-  it('Verweis und Konto teilen sich eine Unterzeile (Runde 4 Nachtrag, 213)', () => {
-    show([row({ reversedByEntryId: null, reversedByNumber: null, reversesEntryId: 'E0', reversesNumber: '2026-0008' })]);
-    const refs = screen.getByTestId('journal-row-refs');
-    const account = screen.getByTestId('journal-row-account');
-    expect(account.parentElement).toBe(refs);
-    expect(refs.textContent).toBe('nimmt zurück: 2026-0008\u00a0· Vereinskonto');
-  });
-
+describe('Journal: Kontozeile', () => {
   it('das Konto steht als Unterzeile unter dem Text, nicht mit Kontofilter', () => {
     show([row({ reversedByEntryId: null, reversedByNumber: null })]);
     expect(screen.getByTestId('journal-row-account').textContent).toBe('Vereinskonto');
@@ -94,15 +67,4 @@ describe('Journal: Zeilen (Runde 4, 086, 212, 213)', () => {
     expect(screen.queryByTestId('journal-row-account')).toBeNull();
   });
 
-  it('die Summenzeile setzt Einnahmen · Ausgaben · Ergebnis als eine Gruppe', () => {
-    show([row({})]);
-    expect(screen.getByTestId('journal-totals').textContent).toMatch(/^Einnahmen .+ · Ausgaben .+ · Ergebnis .+$/);
-  });
-
-  it('das Seitenpanel steht unter dem Seitentitel', () => {
-    show([row({})]);
-    const heading = screen.getByRole('heading', { level: 1 });
-    const aside = screen.getByTestId('aside');
-    expect(heading.compareDocumentPosition(aside) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-  });
 });

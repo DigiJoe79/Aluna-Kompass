@@ -1,82 +1,46 @@
-import { fakeTextExtraction, getDashboardLayout, getEffectivePermissions, login, readSetting, schema, SEED_ADMIN_PASSWORD, todayIn, unwrap, writeSettingInternal } from '@kompass/core';
+import { todayIn, unwrap, writeSettingInternal } from '@kompass/core';
 import { ctxWith, insertUser, systemContext } from '@kompass/core/testing';
-import { contactRoles, contacts, createContact } from '@kompass/module-contacts';
 import { documents as dmsDocuments } from '@kompass/module-dms';
-import { createProject, projects } from '@kompass/module-projects';
-import { eq } from 'drizzle-orm';
-import { describe, expect, it } from 'vitest';
+import { createProject } from '@kompass/module-projects';
+import { beforeAll, describe, expect, it } from 'vitest';
+import { listConfirmations } from '../src/donations/confirmations';
+import { listNotices } from '../src/donations/notices';
 import { installFinance } from '../src/install';
 import { listAccounts } from '../src/ledger/accounts';
-import { listCategories } from '../src/ledger/categories';
-import { listAllocationCorrections } from '../src/ledger/corrections';
-import { getEntry } from '../src/ledger/entries';
-import { listFiscalYears } from '../src/ledger/fiscal-years';
-import { listCandidates } from '../src/import/candidates';
-import { listImportProfiles } from '../src/import/profiles';
-import { listImportRuns } from '../src/import/runs';
-import { listImportRules } from '../src/import/rules';
-import { listContactIbans } from '../src/import/contact-ibans';
-import { listForeignMoney } from '../src/import/transit';
-import { listVouchersWithoutEntry } from '../src/ledger/vouchers';
-import { listWorkItems } from '../src/import/work';
-import { suggestForTransaction } from '../src/import/suggestions';
-import { listRawTransactions } from '../src/import/queries';
-import { buildInvoiceXml, OFFICE_INVOICE, VET_INVOICE } from '../src/import/zugferd-fixture';
-import { invoiceProposal } from '../src/import/zugferd/read';
-import { listOpenItems } from '../src/ledger/open-items';
 import { getBalances } from '../src/ledger/overview';
-import { getProjectFinance } from '../src/ledger/project-settings';
 import { listPurposes } from '../src/ledger/purposes';
-import { financeAllocationLines, financeCategories, financeEntries, financeEntryDocuments, financeExpensePositions } from '../src/schema';
 import { seedFinance } from '../src/seed';
-import { listApprovals } from '../src/allocation/approvals';
-import { listMyExpenseClaims } from '../src/allocation/expenses';
-import { suggestExpenseCategories } from '../src/allocation/suggest';
-import { checkConfirmable } from '../src/donations/check';
-import { getInKindDetails } from '../src/donations/in-kind';
-import { listConfirmations, listUncertifiedDonations } from '../src/donations/confirmations';
-import { getMachineProcedure } from '../src/donations/machine';
-import { listNotices } from '../src/donations/notices';
-import { getDonationBook, getDonationReconciliation } from '../src/donations/book';
-import { listConfirmationRuns } from '../src/donations/runs';
-import { freeReserveCap, listReserves } from '../src/allocation/reserves';
-import { listPurposeTransfers, purposeOverview } from '../src/allocation/transfers';
-import { relatedPartyPayments } from '../src/allocation/people';
-import { listPartnerNotices, listPartners } from '../src/allocation/partners';
-import { financeRawTransactions, financeReserveMovements } from '../src/schema';
 import { seedStoryYear } from '../src/seed-calendar';
-import { listMandates } from '../src/direct-debit/mandates';
-import { listPledges } from '../src/direct-debit/pledges';
-import { financeSepaMandates, financeSepaPrenotifications } from '../src/schema';
-import { listDirectDebitReturns } from '../src/direct-debit/returns';
-import { listDirectDebitRuns, previewDirectDebitRun } from '../src/direct-debit/runs';
-import { addCalendarDays, isTargetBusinessDay } from '../src/direct-debit/business-days';
 import { setupFinance } from './helpers';
 
+/**
+ * Der Finanz-Seed als Struktur (Testdurchsicht 2026-10-22, Plan P4 Task 5): ein Lauf, danach Invarianten —
+ * erfundene Bankdaten, Stichjahr, jeder wichtige Zustand vertreten, jeder Bezug zeigt auf etwas, das es gibt.
+ * Bestimmte Personen, Belege und Kacheln, die nur ein E2E-Bild trägt, sichert das E2E selbst; Idempotenz und „nichts
+ * in der Zukunft“ prüft `apps/kompass/tests/seed-calendar.test.ts` über den ganzen Seed an Stichtagen, das Protokoll
+ * ohne Namen `audit.test.ts`. Gesät wird wie im echten Seed: mit Vereinsanschrift, Jonas Feld und Mira Klein aus dem
+ * Kernseed und dem Projekt „winterhilfe“.
+ */
 describe('seedFinance', () => {
-  it('builds an invented association year and is idempotent', async () => {
-    const { deps, ctx } = setupFinance();
-    deps.db.transaction((tx) => installFinance(tx, deps, systemContext()));
-    await seedFinance(deps, ctx);
-    await seedFinance(deps, ctx);
-    const accounts = unwrap(await listAccounts(deps, ctx, { includeInactive: true }));
-    // F4 Task 8: „Importkonto“ kommt als drittes Bankkonto dazu (eigens für die Kontoauszug-Fixtures);
-    // F4b: „Zweitbank CSV“ als viertes, mit selbst eingerichtetem CSV-Format.
-    expect(accounts.map((a) => a.kind).sort()).toEqual(['bank', 'bank', 'bank', 'bank', 'cash', 'cash', 'paymentService']);
-    expect(accounts.filter((a) => a.isMain)).toHaveLength(1);
-    expect(accounts.some((a) => !a.isActive)).toBe(true);
-    expect(unwrap(await listFiscalYears(deps, ctx))).toHaveLength(2);
-    const purposes = unwrap(await listPurposes(deps, ctx, { includeInactive: true }));
-    expect(purposes).toHaveLength(5);
-    expect(purposes.some((p) => p.abroad) && purposes.some((p) => p.fulfilledAt !== null)).toBe(true);
-    expect(unwrap(await listCategories(deps, ctx, {})).map((c) => c.key)).toContain('room-rental');
-  });
+  let f: ReturnType<typeof setupFinance>;
+  const rows = <T,>(sql: string) => f.deps.sqlite.prepare(sql).all() as T[];
+
+  beforeAll(async () => {
+    f = setupFinance();
+    insertUser(f.deps, { name: 'Jonas Feld', email: 'jonas@kompass.local' });
+    insertUser(f.deps, { name: 'Mira Klein', email: 'mira@kompass.local' });
+    f.deps.db.transaction((tx) => {
+      for (const [key, value] of [['organization.name', 'Musterverein e.V.'], ['organization.street', 'Vereinsweg 1'], ['organization.postalCode', '12345'], ['organization.city', 'Musterstadt']] as const) {
+        writeSettingInternal(tx, f.deps, systemContext(), key, value);
+      }
+      installFinance(tx, f.deps, systemContext());
+    });
+    unwrap(await createProject(f.deps, ctxWith(['projects.manage', 'projects.view'], f.userId), { slug: 'winterhilfe', name: { de: 'Winterhilfe' }, type: 'ongoing', summary: { de: 'Kurz' }, body: { de: 'Text' } }));
+    await seedFinance(f.deps, f.ctx);
+  }, 30_000);
 
   it('carries no real bank code — only the invented DE (99999999/00000000) and AT (99999/00000) ones', async () => {
-    const { deps, ctx } = setupFinance();
-    await seedFinance(deps, ctx);
-    const accounts = unwrap(await listAccounts(deps, ctx, { includeInactive: true }));
-    const ibans = accounts.map((a) => a.iban).filter((iban): iban is string => iban !== null);
+    const ibans = unwrap(await listAccounts(f.deps, f.ctx, { includeInactive: true })).map((a) => a.iban).filter((iban): iban is string => iban !== null);
     expect(ibans.length).toBeGreaterThan(0);
     for (const iban of ibans) {
       if (iban.startsWith('DE')) expect(['99999999', '00000000'], iban).toContain(iban.slice(4, 12));
@@ -85,890 +49,88 @@ describe('seedFinance', () => {
     }
   });
 
-  it('closes the previous fiscal year — a booking without a voucher is justified, not blocking', async () => {
-    const { deps, ctx } = setupFinance();
-    deps.db.transaction((tx) => installFinance(tx, deps, systemContext()));
-    await seedFinance(deps, ctx);
-    await seedFinance(deps, ctx);
-    const years = unwrap(await listFiscalYears(deps, ctx));
-    const previous = years.find((y) => y.designation !== years.reduce((a, b) => (a.designation > b.designation ? a : b)).designation)!;
-    expect(previous.status).toBe('closed');
-  });
-
-  it('flags a purpose in the red and a purpose fulfilled with rest', async () => {
-    const { deps, ctx } = setupFinance();
-    await seedFinance(deps, ctx);
-    const balances = unwrap(await getBalances(deps, ctx, {}));
-    const sommerfest = balances.purposes.find((p) => p.negative);
-    expect(sommerfest).toBeTruthy();
-    const floodlight = balances.purposes.find((p) => p.fulfilledWithRest);
-    expect(floodlight).toBeTruthy();
-  });
-
-  it('gives an existing project finance fields', async () => {
-    const { deps, ctx } = setupFinance();
-    await seedFinance(deps, ctx);
-    const existingProject = deps.db.select({ id: projects.id }).from(projects).limit(1).get();
-    if (!existingProject) return; // Kein Projekte-Seed installiert — nichts zu prüfen.
-    const read = unwrap(await getProjectFinance(deps, ctx, { projectId: existingProject.id }));
-    expect(read.settings.targetCents).toBe(250000);
-    expect(read.settings.defaultPurposeId).not.toBeNull();
-  });
-
-  it('books a grant and a receipted expense on „winterhilfe“, chosen by slug — the finance section shows income and expenses (Spec 2026-10-06 § 4)', async () => {
-    const { deps, ctx, userId } = setupFinance();
-    const projectCtx = ctxWith(['projects.manage', 'projects.view'], userId);
-    // Zuerst ein anderes Projekt: bis 0.2.6 nahm der Seed das erste beliebige (`limit(1)` ohne Ordnung).
-    unwrap(await createProject(deps, projectCtx, { slug: 'auslauf', name: { de: 'Auslauf' }, type: 'shortTerm', summary: { de: 'Kurz' }, body: { de: 'Text' } }));
-    const winter = unwrap(await createProject(deps, projectCtx, { slug: 'winterhilfe', name: { de: 'Winterhilfe' }, type: 'ongoing', summary: { de: 'Kurz' }, body: { de: 'Text' } }));
-    await seedFinance(deps, ctx);
-    await seedFinance(deps, ctx);
-    const read = unwrap(await getProjectFinance(deps, ctx, { projectId: winter.id }));
-    expect(read.settings.targetCents).toBe(250000);
-    // Plan L3: dazu die März-Rate der Dauerspende (15,00 €) auf das Projekt und ihre Rücklastschrift — die mindert die Einnahmen.
-    expect(read.result).toEqual({ incomeCents: 85000, expenseCents: 42000, resultCents: 43000 });
-    // Lastschrift (Plan L3): Gutschrift und Rückgabe belegt der Kontoauszug, den Einzug der Begleitzettel am Einzug.
-    const lines = deps.db.select().from(financeAllocationLines).all().filter((l) => l.projectId === winter.id && !l.directDebitItemId);
-    for (const line of lines) expect(deps.db.select().from(financeEntryDocuments).where(eq(financeEntryDocuments.entryId, line.entryId)).all().length).toBeGreaterThan(0);
-  });
-
-  it('records the change of the board at the members’ meeting for the contacts of the contacts seed (Spec 2026-10-06 § 4)', async () => {
-    const { deps, ctx } = setupFinance();
-    const contactCtx = { ...ctx, permissions: new Set([...ctx.permissions, 'contacts.manage']) };
-    const clara = unwrap(await createContact(deps, contactCtx, { kind: 'person', firstName: 'Clara', lastName: 'Neumann' }));
-    const bernd = unwrap(await createContact(deps, contactCtx, { kind: 'person', firstName: 'Bernd', lastName: 'Hagedorn' }));
-    await seedFinance(deps, ctx);
-    await seedFinance(deps, ctx);
-    const board = (id: string) => deps.db.select().from(contactRoles).where(eq(contactRoles.contactId, id)).all().filter((r) => r.role === 'board-member');
-    expect(board(clara.id).map((r) => r.until)).toEqual([null]);
-    expect(board(bernd.id)).toHaveLength(1);
-    expect(board(bernd.id)[0]!.until! < board(clara.id)[0]!.since).toBe(true);
-  });
-
-  it('gives the two donors of the payout full names', async () => {
-    const { deps, ctx } = setupFinance();
-    await seedFinance(deps, ctx);
-    const donors = deps.db.select().from(contactRoles).where(eq(contactRoles.role, 'donor')).all().map((r) => deps.db.select().from(contacts).where(eq(contacts.id, r.contactId)).get()!);
-    for (const d of donors.filter((c) => c.kind === 'person')) expect((d.firstName ?? '').length > 0 && (d.lastName ?? '').length > 0, d.lastName ?? '').toBe(true);
-  });
-
-  it('seeds two CSV accounts, each with its format and one finished CSV run, idempotently (F4b)', async () => {
-    const { deps, ctx } = setupFinance();
-    deps.db.transaction((tx) => installFinance(tx, deps, systemContext()));
-    await seedFinance(deps, ctx);
-    await seedFinance(deps, ctx);
-    const accounts = unwrap(await listAccounts(deps, ctx, { includeInactive: true }));
-    const { profiles } = unwrap(await listImportProfiles(deps, ctx, {}));
-    for (const [name, formatName] of [['Spendenplattform', 'Spendenplattform CSV'], ['Zweitbank CSV', 'Zweitbank CSV']] as const) {
-      const account = accounts.find((a) => a.name === name)!;
-      expect(account, name).toMatchObject({ importFormat: 'csv' });
-      expect(profiles.find((p) => p.id === account.importProfileId), name).toMatchObject({ name: formatName, runCount: 1 });
-      const { runs } = unwrap(await listImportRuns(deps, ctx, { accountId: account.id }));
-      expect(runs, name).toHaveLength(1);
-      expect(runs[0], name).toMatchObject({ format: 'csv', formatName, state: 'finished' });
-    }
-    const service = unwrap(await listImportRuns(deps, ctx, { accountId: accounts.find((a) => a.name === 'Spendenplattform')!.id })).runs[0]!;
-    expect(service).toMatchObject({ openingCents: 10000, closingCents: 785, counts: { new: 5, known: 0, held: 0, pendingSkipped: 2 } });
-  });
-
-  it('seeds "Importkonto" with two finished runs (one with a gap), an open candidate, a discarded and a failed run, one booked and several open raw transactions', async () => {
-    const { deps, ctx } = setupFinance();
-    deps.db.transaction((tx) => installFinance(tx, deps, systemContext()));
-    await seedFinance(deps, ctx);
-    await seedFinance(deps, ctx); // idempotent: kein zweiter Satz Läufe.
-
-    const accounts = unwrap(await listAccounts(deps, ctx, { includeInactive: true }));
-    const importkonto = accounts.find((a) => a.name === 'Importkonto')!;
-    expect(importkonto).toBeTruthy();
-    expect(importkonto.iban).toBe('DE60999999990201051234');
-
-    const runs = unwrap(await listImportRuns(deps, ctx, { accountId: importkonto.id }));
-    expect(runs.total).toBe(7); // A, B, C fertig; D verworfen; E fehlgeschlagen; dazu der Juli- und der August-Auszug (F5).
-    expect(runs.runs.filter((r) => r.state === 'finished')).toHaveLength(5);
-    expect(runs.runs.filter((r) => r.state === 'discarded')).toHaveLength(1);
-    expect(runs.runs.some((r) => r.gap !== null)).toBe(true);
-
-    const failed = runs.runs.filter((r) => r.state === 'failed');
-    expect(failed).toHaveLength(1);
-    expect(failed[0]!.failure?.code).toBe('sumMismatch');
-
-    const candidates = unwrap(await listCandidates(deps, ctx, { open: true }));
-    expect(candidates.candidates.filter((c) => c.accountId === importkonto.id)).toHaveLength(1);
-
-    const raws = unwrap(await listRawTransactions(deps, ctx, { accountId: importkonto.id }));
-    // Gebucht: die Spende aus Lauf A; gebunden an den Agenten-Entwurf (F5): „Spende April“; das fremde Geld aus dem Juli;
-    // der Mitgliedsbeitrag aus dem August, dessen Lastschrift zurückkommt (F5 Task 9).
-    expect(raws.items.filter((r) => r.state === 'booked')).toHaveLength(4);
-    expect(raws.items.filter((r) => r.state === 'open').length).toBeGreaterThanOrEqual(2);
-
-    // Zweiter Seed-Lauf legt nichts doppelt an (idempotent).
-    const runsAfterSecondSeed = unwrap(await listImportRuns(deps, ctx, { accountId: importkonto.id }));
-    // Fünf aus F4, dazu der Juli-Auszug mit dem fremden Geld (F5 Task 8) und der August-Auszug (F5 Task 9).
-    expect(runsAfterSecondSeed.total).toBe(7);
-  });
-
-  it('seeds the work list on "Importkonto": two rules (one with an inactive category), a contact iban, a hand draft without a transaction and an agent draft (F5, idempotent)', async () => {
-    const { deps, ctx } = setupFinance();
-    deps.db.transaction((tx) => installFinance(tx, deps, systemContext()));
-    await seedFinance(deps, ctx);
-    await seedFinance(deps, ctx); // idempotent
-
-    const importkonto = unwrap(await listAccounts(deps, ctx, { includeInactive: true })).find((a) => a.name === 'Importkonto')!;
-    const { rules } = unwrap(await listImportRules(deps, ctx, {}));
-    expect(rules).toHaveLength(2);
-    // Zuerst die enge Regel mit stillgelegter Kategorie (Review Focus 2) — sie trifft nur den Dezember-Auszug der E2E.
-    expect(rules[0]).toMatchObject({ name: 'Bürobedarf Dezember', accountId: importkonto.id, textContains: 'dezember', categoryInactive: true });
-    expect(rules[1]).toMatchObject({ name: 'Büromaterial', accountId: importkonto.id, textContains: 'bueromaterial', categoryInactive: false });
-
-    const erika = deps.db.select().from(contacts).where(eq(contacts.lastName, 'Beispiel')).all();
-    expect(erika).toHaveLength(1);
-    const ibans = unwrap(await listContactIbans(deps, ctx, { contactId: erika[0]!.id }));
-    expect(ibans.items.map((i) => i.iban)).toEqual(['DE66999999991234567890']);
-    expect(ibans.items[0]!.source).toBe('manual');
-    // Plan U4 Task 3: ein Gemeinschaftskonto von Hand, Clara Neumann und Tobias Adler.
-    const clara = deps.db.select().from(contacts).where(eq(contacts.lastName, 'Neumann')).get()!;
-    const claraIbans = unwrap(await listContactIbans(deps, ctx, { contactId: clara.id }));
-    expect(claraIbans.items).toEqual([expect.objectContaining({ iban: 'DE59999999990000777777', source: 'manual', coHolders: [expect.objectContaining({ name: 'Tobias Adler' })] })]);
-
-    // Die Handbuchung ohne Kontoumsatz: Entwurf, auf den der Zuschuss aus Lauf B passt (Vorschlag 0).
-    const work = unwrap(await listWorkItems(deps, ctx, { tab: 'open', accountId: importkonto.id, limit: 50, offset: 0 }));
-    const kinds = work.items.map((i) => (i.type === 'transaction' ? [i.transaction.purpose, i.suggestion.kind] : null));
-    expect(kinds).toEqual([
-      ['Bueromaterial', 'rule'],
-      ['Zuschuss', 'linkEntry'],
-      ['Bareinzahlung Spendendose', 'cashTransfer'],
-      ['Mitgliedsbeitrag August, Lastschrift zurueckgegeben', 'return'],
-    ]);
-    const handDrafts = deps.db.select().from(financeEntries).where(eq(financeEntries.text, 'Zuschuss')).all();
-    expect(handDrafts).toHaveLength(1);
-    expect(handDrafts[0]!.status).toBe('draft');
-
-    // Der Agenten-Entwurf: über MCP angelegt, bindet „Spende April“, ungeprüft.
-    const agent = unwrap(await listWorkItems(deps, ctx, { tab: 'agent', accountId: importkonto.id, limit: 50, offset: 0 }));
-    expect(agent.items).toHaveLength(1);
-    expect(agent.items[0]).toMatchObject({ type: 'entry', entry: { text: 'Spende April', createdChannel: 'mcp', reviewedAt: null } });
-  });
-
-  it('seeds money that does not belong to the association and a voucher without an entry (F5 Task 8, idempotent)', async () => {
-    const { deps, ctx } = setupFinance();
-    deps.db.transaction((tx) => installFinance(tx, deps, systemContext()));
-    await seedFinance(deps, ctx);
-    await seedFinance(deps, ctx); // idempotent
-
-    // Ein Eingang über 120,00 € für den Nachbarverein, noch nicht weitergegeben.
-    const foreign = unwrap(await listForeignMoney(deps, ctx));
-    expect(foreign.items).toHaveLength(1);
-    expect(foreign.items[0]).toMatchObject({ amountCents: 12000, holderText: 'Nachbarverein Beispielstadt', entryDate: '2026-07-06' });
-    const importkonto = unwrap(await listAccounts(deps, ctx, { includeInactive: true })).find((a) => a.name === 'Importkonto')!;
-    const raws = unwrap(await listRawTransactions(deps, ctx, { accountId: importkonto.id, limit: 200 }));
-    expect(raws.items.find((r) => r.purpose === 'Sammelbestellung Futter, für Nachbarverein')).toMatchObject({ amountCents: 12000, state: 'booked' });
-
-    // Eine Eingangsrechnung ohne Buchung — „Beleg suchen“ findet sie über den Betrag der Büromaterial-Zeile (−35,00 €).
-    const vouchers = unwrap(await listVouchersWithoutEntry(deps, ctx, {}));
-    expect(vouchers.documents.map((d) => [d.subject, d.typeKey])).toContainEqual(['Rechnung Büromaterial über 35,00 €', 'voucher-invoice']);
-  });
-
-  it('seeds two ZUGFeRD invoices without an entry — the vet invoice unpaid, the office invoice paid by the office-supply line on "Importkonto" (F5b, idempotent)', async () => {
-    const { deps, ctx } = setupFinance();
-    deps.db.transaction((tx) => installFinance(tx, deps, systemContext()));
-    await seedFinance(deps, ctx);
-    await seedFinance(deps, ctx); // idempotent
-
-    const vouchers = unwrap(await listVouchersWithoutEntry(deps, ctx, {})).documents;
-    const vet = vouchers.filter((d) => d.subject === 'Rechnung TM-2026-0042 Tierarztpraxis Muster');
-    const office = vouchers.filter((d) => d.subject === 'Rechnung BM-7781 Bürobedarf Muster GmbH');
-    expect(vet).toHaveLength(1);
-    expect(office).toHaveLength(1);
-    expect(vet[0]).toMatchObject({ typeKey: 'voucher-invoice', documentDate: '2026-04-01' });
-
-    // Die Anhänge liest in Unit-Tests eine Attrappe — sie liefert das XML, das im PDF steckt.
-    const withAttachment = (xml: string) => {
-      deps.textExtraction = fakeTextExtraction({ embedded: [{ name: 'factur-x.xml', bytes: new TextEncoder().encode(xml), mimeType: 'text/xml' }] });
-    };
-    withAttachment(buildInvoiceXml({ ...VET_INVOICE, taxes: [...VET_INVOICE.taxes] }));
-    expect(unwrap(await invoiceProposal(deps, ctx, { documentId: vet[0]!.id }))).toMatchObject({ kind: 'unpaid', existingOpenItemId: null, invoice: { grandTotalCents: 11900, dueDate: '2026-04-30' } });
-
-    withAttachment(buildInvoiceXml({ ...OFFICE_INVOICE, taxes: [...OFFICE_INVOICE.taxes] }));
-    const importkonto = unwrap(await listAccounts(deps, ctx, { includeInactive: true })).find((a) => a.name === 'Importkonto')!;
-    const officeLine = unwrap(await listRawTransactions(deps, ctx, { accountId: importkonto.id, limit: 200 })).items.find((r) => r.bankReference === 'IMP-0002')!;
-    expect(officeLine).toMatchObject({ amountCents: -3500, state: 'open' });
-    expect(unwrap(await invoiceProposal(deps, ctx, { documentId: office[0]!.id }))).toMatchObject({ kind: 'paid', rawTransactionId: officeLine.id, bookingDate: '2026-01-10' });
-  });
-
-  it('seeds an August statement with a cash deposit and a returned payment on "Importkonto" (F5 Task 9, idempotent)', async () => {
-    const { deps, ctx } = setupFinance();
-    deps.db.transaction((tx) => installFinance(tx, deps, systemContext()));
-    await seedFinance(deps, ctx);
-    await seedFinance(deps, ctx); // idempotent
-
-    const accounts = unwrap(await listAccounts(deps, ctx, { includeInactive: true }));
-    const importkonto = accounts.find((a) => a.name === 'Importkonto')!;
-    const cash = accounts.find((a) => a.name === 'Barkasse')!;
-    const runs = unwrap(await listImportRuns(deps, ctx, { accountId: importkonto.id }));
-    const august = runs.runs.filter((r) => r.fileName === 'kontoauszug-2026-08.xml');
-    expect(august).toHaveLength(1);
-    // Schließt an den Juli-Auszug an — keine Lücke.
-    expect(august[0]).toMatchObject({ state: 'finished', gap: null });
-
-    const raws = unwrap(await listRawTransactions(deps, ctx, { accountId: importkonto.id, limit: 200 }));
-    const deposit = raws.items.find((r) => r.purpose === 'Bareinzahlung Spendendose')!;
-    expect(deposit).toMatchObject({ amountCents: 20000, state: 'open' });
-    const fee = raws.items.find((r) => r.purpose === 'Mitgliedsbeitrag August')!;
-    expect(fee).toMatchObject({ amountCents: 2500, state: 'booked' });
-    const returned = raws.items.find((r) => r.purpose === 'Mitgliedsbeitrag August, Lastschrift zurueckgegeben')!;
-    expect(returned).toMatchObject({ amountCents: -2500, state: 'open', returnCode: 'AC04' });
-
-    // Die Bar-Kennung schlägt die Umbuchung gegen die Barkasse vor, der Rückgabe-Code die zurückgegebene Zahlung.
-    const deposited = unwrap(await suggestForTransaction(deps, ctx, { rawTransactionId: deposit.id }));
-    expect(deposited).toMatchObject({ kind: 'cashTransfer', confidence: 'sure', reasons: [{ kind: 'cashKeyword', otherAccountId: cash.id }] });
-    expect(deposited.draft!.moneyLines).toEqual([
-      expect.objectContaining({ accountId: importkonto.id, amountCents: 20000, rawTransactionId: deposit.id }),
-      expect.objectContaining({ accountId: cash.id, amountCents: -20000 }),
-    ]);
-    const back = unwrap(await suggestForTransaction(deps, ctx, { rawTransactionId: returned.id }));
-    expect(back).toMatchObject({ kind: 'return', confidence: 'sure', reasons: [{ kind: 'returnCode' }] });
-    expect(back.draft!.allocationLines).toEqual([expect.objectContaining({ amountCents: -2500, originLineId: expect.any(String) })]);
-  });
-
   it('uses no animal and no association-specific wording', async () => {
-    const { deps, ctx } = setupFinance();
-    await seedFinance(deps, ctx);
-    const all = JSON.stringify([unwrap(await listAccounts(deps, ctx, { includeInactive: true })), unwrap(await listPurposes(deps, ctx, { includeInactive: true }))]);
+    const all = JSON.stringify([unwrap(await listAccounts(f.deps, f.ctx, { includeInactive: true })), unwrap(await listPurposes(f.deps, f.ctx, { includeInactive: true }))]);
     expect(all).not.toMatch(/tier|hund|katze|aluna|futter/i);
   });
 
-  it('leaves no name, no IBAN and no free text in the audit log — the log cannot be deleted', async () => {
-    // W4 (Architektur-Review A1): generisch statt einer festen Liste. Jeder Freitext, den der Seed in eine
-    // Finanztabelle, in `contacts` oder in eine als `redact` markierte Einstellung schreibt, darf nirgends im
-    // Protokoll stehen — auch nicht unter `entityType: 'setting'`.
-    // Mit Jonas (Kernseed) und Vereinsanschrift läuft der Seed alle Wege, auch Auslagen und Anspruchsgrundlage.
-    const { deps, ctx } = setupFinance();
-    insertUser(deps, { name: 'Jonas Feld', email: 'jonas@kompass.local' });
-    deps.db.transaction((tx) => {
-      for (const [key, value] of [['organization.name', 'Musterverein e.V.'], ['organization.street', 'Vereinsweg 1'], ['organization.postalCode', '12345'], ['organization.city', 'Musterstadt']] as const) {
-        writeSettingInternal(tx, deps, systemContext(), key, value);
-      }
-      installFinance(tx, deps, systemContext());
-    });
-    await seedFinance(deps, ctx);
-    const texts = seededTexts(deps);
-    expect(texts.size).toBeGreaterThan(100);
-    // Geprüft wird, was Finanzen und Kontakte schreiben: jede `finance.*`- und `contacts.*`-Aktion und jede
-    // Einstellung (Kontakte seit Befund 48 nur mit Feldnamen). Zwei Ausnahmen mit Grund: Die Akte führt ihr eigenes
-    // Protokoll (Nummern), und die Einstellungen `organization.*` sind der Stamm des Vereins selbst — Hausbank, IBAN,
-    // Finanzamt stehen auf jeder Zuwendungsbestätigung und tragen keinen Personenbezug.
-    const entries = deps.db.select().from(schema.auditLog).all()
-      .filter((e) => e.action.startsWith('finance.') || e.action.startsWith('contacts.') || e.entityType === 'setting')
-      .filter((e) => !(e.entityType === 'setting' && e.entityId?.startsWith('organization.')));
-    expect(entries.some((e) => e.entityType === 'setting')).toBe(true);
-    const log = JSON.stringify(entries.map((e) => [e.before, e.after, e.params]));
-    expect(log.length).toBeGreaterThan(100);
-    // Ausnahmen, je mit Grund: Wörter, die zugleich fester Wortlaut einer Protokoll-Zusammenfassung sind.
-    const allowed = new Set([
-      'Aufwandsspenden', // Kategorie des Startplans; die Zusammenfassung „Anspruchsgrundlage für Aufwandsspenden gesetzt“ ist Code.
-      'DE98ZZZ09999999999', // Gläubiger-ID des Vereins (L1): wie `organization.*` der Stamm des Vereins, kein Personenbezug.
-      'AM04', // Rückgabe-Code der Bank (L3): ein Code des SEPA-Regelwerks, kein Freitext und kein Personenbezug.
-      'MD06', // ebenso.
-    ]);
-    // Ganze Wörter: „Post“ (Versandweg) steckt in „Posten“, ist aber nicht dasselbe.
-    const escape = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const occurs = (text: string) => [text, JSON.stringify(text).slice(1, -1)].some((t) => new RegExp(`(?<![\\p{L}\\d])${escape(t)}(?![\\p{L}\\d])`, 'u').test(log));
-    const leaked = [...texts].filter((text) => !allowed.has(text) && occurs(text));
-    expect(leaked).toEqual([]);
+  it('books in the story year and the year before, and closes the year before', () => {
+    const story = seedStoryYear(todayIn(f.deps));
+    const years = rows<{ y: string }>('select distinct substr(entry_date, 1, 4) as y from finance_entries').map((r) => Number(r.y));
+    expect(years.sort()).toEqual([story - 1, story]);
+    const closed = rows<{ designation: string }>("select y.designation from finance_fiscal_years y join finance_period_events e on e.fiscal_year_id = y.id where e.kind = 'closed'");
+    expect(closed.map((y) => y.designation)).toEqual([String(story - 1)]);
   });
 
-  it('files a voucher on three entries, revokes and replaces one, and leaves one deliberately without', async () => {
-    const { deps, ctx } = setupFinance();
-    await seedFinance(deps, ctx);
-    await seedFinance(deps, ctx);
-
-    const byText = (text: string) => deps.db.select().from(financeEntries).where(eq(financeEntries.text, text)).get()!;
-    const linksFor = (entryId: string) => deps.db.select().from(financeEntryDocuments).where(eq(financeEntryDocuments.entryId, entryId)).all();
-
-    expect(linksFor(byText('Büromaterial Altjahr').id)).toHaveLength(1);
-    expect(linksFor(byText('Bar-Ausgabe Fahrtkosten').id)).toHaveLength(1);
-    const bankgebuehrLinks = linksFor(byText('Bankgebühr Altjahr').id);
-    expect(bankgebuehrLinks).toHaveLength(2);
-    expect(bankgebuehrLinks.some((l) => l.revokedAt !== null && l.replacedByLinkId !== null)).toBe(true);
-    expect(linksFor(byText('Spende Altjahr').id)).toHaveLength(0);
+  it('shows every important state at least once', async () => {
+    const has = (sql: string, expected: unknown[]) => expect(rows<{ v: unknown }>(sql).map((r) => r.v), sql).toEqual(expect.arrayContaining(expected));
+    const some = (sql: string) => expect(rows(sql).length, sql).toBeGreaterThan(0);
+    has('select status as v from finance_entries', ['draft', 'final']);
+    some('select id from finance_entries where reverses_entry_id is not null');
+    has('select state as v from finance_allocation_corrections', ['applied', 'pending']);
+    has("select case when failed_at is not null then 'failed' when discarded_at is not null then 'discarded' when finished_at is not null then 'finished' end as v from finance_import_runs", ['discarded', 'failed', 'finished']);
+    has("select case when cancelled_at is not null then 'cancelled' else 'live' end as v from finance_open_items", ['cancelled', 'live']);
+    has('select state as v from finance_expense_claims', ['approved', 'draft', 'rejected', 'submitted']);
+    has('select state as v from finance_partner_payments', ['approved', 'draft', 'rejected', 'submitted']);
+    has('select state as v from finance_purpose_transfers', ['approved', 'submitted']);
+    has('select kind as v from finance_reserves', ['free', 'projectFunds', 'replacement']);
+    has('select kind as v from finance_confirmations', ['collective', 'inKind', 'money']);
+    has("select case when voided_at is not null then 'voided' when machine = 1 then 'machine' else 'signed' end as v from finance_confirmations", ['machine', 'signed', 'voided']);
+    some('select id from finance_confirmation_runs where finished_at is not null');
+    has("select case when superseded_on is not null then 'superseded' else 'valid' end as v from finance_notices", ['superseded', 'valid']);
+    has("select case when ended_on is not null then 'ended' when signed_on is not null then 'active' else 'pending' end as v from finance_sepa_mandates", ['active', 'ended', 'pending']);
+    some('select id from finance_pledges where paused_from is not null');
+    has('select status as v from finance_direct_debit_runs', ['draft', 'submitted']);
+    has('select status as v from finance_direct_debit_returns', ['open']);
+    has('select kind as v from finance_accounts', ['bank', 'cash', 'paymentService']);
+    const balances = unwrap(await getBalances(f.deps, f.ctx, {}));
+    expect(balances.purposes.some((p) => p.negative), 'Zweck im Minus').toBe(true);
+    expect(balances.purposes.some((p) => p.fulfilledWithRest), 'erfüllt mit Rest').toBe(true);
   });
 
-  it('seeds open items in every state: open, partially paid, settled, and cancelled without payment', async () => {
-    const { deps, ctx } = setupFinance();
-    await seedFinance(deps, ctx);
-    await seedFinance(deps, ctx);
-
-    const items = unwrap(await listOpenItems(deps, ctx, { state: 'all' })).items;
-    const byRef = new Map(items.map((i) => [i.paymentReference, i]));
-    expect(byRef.get('RE-2026-041')).toMatchObject({ state: 'open', settledCents: 0 });
-    expect(byRef.get('RE-2026-055')?.state).toBe('open');
-    expect(byRef.get('RE-2026-055')?.settledCents).toBeGreaterThan(0);
-    expect(byRef.get('SP-2026-003')).toMatchObject({ state: 'settled' });
-    expect(byRef.get('RE-2026-060')).toMatchObject({ state: 'cancelled' });
-  });
-
-  it('seeds an open item with an origin — F3b Task 3, A6 does not offer it "erledigt ohne Zahlung"', async () => {
-    const { deps, ctx } = setupFinance();
-    await seedFinance(deps, ctx);
-    await seedFinance(deps, ctx); // idempotent
-
-    const items = unwrap(await listOpenItems(deps, ctx, { state: 'all' })).items;
-    const withOrigin = items.find((i) => i.paymentReference === 'ANT-2026-014');
-    expect(withOrigin).toMatchObject({ originType: 'demoProcess', originId: 'demo-1', state: 'open' });
-  });
-
-  it('seeds an applied correction in the running year and a pending one in the closed previous year, and is idempotent', async () => {
-    const { deps, ctx } = setupFinance();
-    await seedFinance(deps, ctx);
-    await seedFinance(deps, ctx);
-
-    const corrections = unwrap(await listAllocationCorrections(deps, ctx, {})).items;
-    expect(corrections.filter((c) => c.state === 'applied').length).toBe(1);
-    expect(corrections.filter((c) => c.state === 'pending').length).toBe(1);
-  });
-
-  it('books an entry in every state of a booking year, and is idempotent', async () => {
-    const { deps, ctx } = setupFinance();
-    await seedFinance(deps, ctx);
-    await seedFinance(deps, ctx);
-
-    const entries = deps.db.select().from(financeEntries).all();
-    const byText = new Map(entries.map((e) => [e.text, e]));
-
-    // Vorjahr: vier festgeschriebene Buchungen — kein Duplikat beim zweiten Lauf.
-    for (const text of ['Spende Altjahr', 'Bankgebühr Altjahr', 'Büromaterial Altjahr', 'Sponsoring Altjahr']) {
-      expect(entries.filter((e) => e.text === text), text).toHaveLength(1);
-      expect(byText.get(text), text).toMatchObject({ status: 'final' });
-    }
-
-    // Laufendes Jahr: Split, Umbuchung, Barausgabe, Sachspende — alle festgeschrieben.
-    for (const text of ['Spende mit Zweck', 'Auszahlung Spendenplattform', 'Abhebung Barkasse', 'Bar-Ausgabe Fahrtkosten', 'Sachspende Werkzeug']) {
-      expect(byText.get(text), text).toMatchObject({ status: 'final' });
-    }
-
-    // Eine stornierte Buchung mit ihrem Storno.
-    const original = byText.get('Fehlerhafte Spendenbuchung')!;
-    expect(original).toMatchObject({ status: 'final' });
-    expect(original.reversedByEntryId).not.toBeNull();
-    const reversal = entries.find((e) => e.id === original.reversedByEntryId);
-    expect(reversal).toMatchObject({ status: 'final', reversesEntryId: original.id });
-
-    // Ein geprüfter, ein ungeprüfter, ein Entwurf vom Agenten — einer davon unausgeglichen.
-    expect(byText.get('Entwurf geprüft')).toMatchObject({ status: 'draft' });
-    expect(byText.get('Entwurf geprüft')!.reviewedAt).not.toBeNull();
-    expect(byText.get('Entwurf ungeprüft')).toMatchObject({ status: 'draft', reviewedAt: null });
-    // F3a: ein zweiter ausgeglichener, ungeprüfter Entwurf — die Mehrfachauswahl des Journals braucht zwei.
-    expect(byText.get('Entwurf ungeprüft zwei')).toMatchObject({ status: 'draft', reviewedAt: null });
-    const secondDraft = byText.get('Entwurf ungeprüft zwei')!;
-    expect(unwrap(await getEntry(deps, ctx, { id: secondDraft.id })).remainderCents).toBe(0);
-    const agentDraft = byText.get('Entwurf vom Agenten')!;
-    expect(agentDraft).toMatchObject({ status: 'draft', createdChannel: 'mcp' });
-    expect(unwrap(await getEntry(deps, ctx, { id: agentDraft.id })).remainderCents).not.toBe(0);
-
-    // Zwei erfundene Spender-Kontakte mit Rolle donor.
-    const donors = deps.db.select().from(contactRoles).where(eq(contactRoles.role, 'donor')).all();
-    expect(donors.length).toBeGreaterThanOrEqual(2);
-  });
-
-  it('seeds a finalized purpose-bound income in the open year for the proof case (F3a-N Task 2)', async () => {
-    const { deps, ctx } = setupFinance();
-    await seedFinance(deps, ctx);
-    const entry = deps.db.select().from(financeEntries).where(eq(financeEntries.text, 'Spende mit Zweck')).get()!;
-    expect(entry.status).toBe('final');
-    const view = unwrap(await getEntry(deps, ctx, { id: entry.id }));
-    expect(view.allocationLines).toHaveLength(1);
-    expect(view.allocationLines[0]!.purposeId).not.toBeNull();
-    expect(view.allocationLines[0]!.contactId).not.toBeNull();
-    const years = unwrap(await listFiscalYears(deps, ctx));
-    const openYear = years.find((y) => y.id === entry.fiscalYearId);
-    expect(openYear?.status).toBe('open');
-  });
-
-  it('seeds a closed year with a filed tax return and an entry in it for the section 153 case (F3a-N Task 2)', async () => {
-    const { deps, ctx } = setupFinance();
-    await seedFinance(deps, ctx);
-    const years = unwrap(await listFiscalYears(deps, ctx));
-    const closed = years.find((y) => y.status === 'closed')!;
-    expect(closed.taxReturnFiledOn).not.toBeNull();
-    const entriesInYear = deps.db.select().from(financeEntries).where(eq(financeEntries.fiscalYearId, closed.id)).all();
-    expect(entriesInYear.some((e) => e.status === 'final')).toBe(true);
-  });
-
-  it('gives an existing „Mira Klein“ (Kernseed) finance.read without finance.entriesFinalize — for the missing „Korrigieren“ button', async () => {
-    const { deps, ctx } = setupFinance();
-    insertUser(deps, { name: 'Mira Klein', email: 'mira@kompass.local' });
-    deps.db.transaction((tx) => installFinance(tx, deps, systemContext()));
-    await seedFinance(deps, ctx);
-    await seedFinance(deps, ctx);
-
-    const mira = deps.db.select({ id: schema.users.id }).from(schema.users).where(eq(schema.users.email, 'mira@kompass.local')).get()!;
-    const permissions = getEffectivePermissions(deps.db, deps.registry, mira.id);
-    expect(permissions.has('finance.read')).toBe(true);
-    expect(permissions.has('finance.entriesFinalize')).toBe(false);
-  });
-
-  it('gives an existing „Jonas Feld“ (Kernseed) finance.approve — so a waiting correction names someone besides the administration (F3a-N Task 2)', async () => {
-    const { deps, ctx } = setupFinance();
-    insertUser(deps, { name: 'Jonas Feld', email: 'jonas@kompass.local' });
-    deps.db.transaction((tx) => installFinance(tx, deps, systemContext()));
-    await seedFinance(deps, ctx);
-    await seedFinance(deps, ctx);
-
-    const jonas = deps.db.select({ id: schema.users.id }).from(schema.users).where(eq(schema.users.email, 'jonas@kompass.local')).get()!;
-    const permissions = getEffectivePermissions(deps.db, deps.registry, jonas.id);
-    expect(permissions.has('finance.approve')).toBe(true);
-  });
-
-  it('seeds a partner abroad with a six-month proof term and its recognition in the country of residence (Design-Nachtrag Phase 4), idempotently', async () => {
-    const { deps, ctx } = setupFinance();
-    insertUser(deps, { name: 'Jonas Feld', email: 'jonas@kompass.local' });
-    deps.db.transaction((tx) => installFinance(tx, deps, systemContext()));
-    await seedFinance(deps, ctx);
-    await seedFinance(deps, ctx);
-    const partner = unwrap(await listPartners(deps, ctx, {})).find((p) => p.contactName === 'Hilfswerk International e.V.')!;
-    expect(partner).toMatchObject({ status: 'foreignBody', usualProofMonths: 6 });
-    const notices = unwrap(await listPartnerNotices(deps, ctx, { partnerId: partner.id }));
-    expect(notices).toEqual([expect.objectContaining({ kind: 'recognitionAbroad' })]);
-  });
-
-  it('invents a cash-only person with finance.entriesFinalize but no contacts.view (F3b Schritt 0)', async () => {
-    const { deps, ctx } = setupFinance();
-    deps.db.transaction((tx) => installFinance(tx, deps, systemContext()));
-    await seedFinance(deps, ctx);
-    await seedFinance(deps, ctx); // idempotent
-
-    const ines = deps.db.select({ id: schema.users.id }).from(schema.users).where(eq(schema.users.email, 'ines@kompass.local')).get()!;
-    expect(ines).toBeDefined();
-    const permissions = getEffectivePermissions(deps.db, deps.registry, ines.id);
-    expect(permissions.has('finance.read')).toBe(true);
-    expect(permissions.has('finance.entriesFinalize')).toBe(true);
-    expect(permissions.has('contacts.view')).toBe(false);
-
-    // Die Rolle ist ad hoc angelegt, nicht Teil der fünf Rollenvorschläge aus `installFinance`.
-    const role = deps.db.select().from(schema.roles).where(eq(schema.roles.name, 'Kassenassistenz')).get()!;
-    expect(role.originKey).toBeNull();
-  });
-
-  describe('Spenden (F6a, aus Task 9 vorgezogen)', () => {
-    async function seededWithAddress() {
-      const f = setupFinance();
-      // Die Vereinsanschrift kommt im echten Seed aus dem Kern (`seedDevelopment`); hier steht sie vorab.
-      f.deps.db.transaction((tx) => {
-        for (const [key, value] of [['organization.name', 'Musterverein e.V.'], ['organization.street', 'Vereinsweg 1'], ['organization.postalCode', '12345'], ['organization.city', 'Musterstadt']] as const) {
-          writeSettingInternal(tx, f.deps, systemContext(), key, value);
-        }
-      });
-      await seedFinance(f.deps, f.ctx);
-      await seedFinance(f.deps, f.ctx);
-      return f;
-    }
-
-    it('records the exemption notice of the invented tax office, the section 60a notice it superseded, and a complete machine procedure', async () => {
-      const { deps, ctx } = await seededWithAddress();
-      const notices = unwrap(await listNotices(deps, ctx, { includeInactive: true }));
-      expect(notices.map((n) => [n.kind, n.taxOffice, n.taxNumber, n.noticeDate, n.exemptFrom, n.assessmentPeriod, n.supersededOn, n.state])).toEqual([
-        ['exemptionNotice', 'Finanzamt Musterstadt', '99/999/99999', '2025-05-02', '2023-01-01', '2023', null, 'valid'],
-        ['section60a', 'Finanzamt Musterstadt', '99/999/99999', '2024-03-01', '2024-01-01', null, '2025-05-02', 'superseded'],
-      ]);
-      const machine = unwrap(await getMachineProcedure(deps, ctx));
-      expect(machine.signers).toHaveLength(1);
-      expect(machine.status.complete).toBe(true);
-      expect(machine.status.signer?.signerName).toBe('Jonas Feld');
-      // Spec 2026-10-06 § 4: dieselben Zwecke wie der Bescheid in der Akte.
-      expect(notices[0]!.purposesText).toContain('Tierschutzes');
-    });
-
-    it('issues a machine money confirmation, an expense waiver without signature and a signed in-kind confirmation — once', async () => {
-      const { deps, ctx } = await seededWithAddress();
-      const issued = unwrap(await listConfirmations(deps, ctx, { tab: 'issued' }));
-      // F6b Task 9: dazu der Serienlauf des Vorjahrs — zwei maschinelle Sammelbestätigungen (Nora Lehmann,
-      // Paul Winter) und eine mit Unterschriftsfeld (Sina Krüger); Jan Moser bleibt ohne Anschrift draußen.
-      expect(issued.total).toBe(8);
-      // Befund E: Henriks zurückgenommene, versandte Bestätigung ohne „Finanzamt informiert“ zählt mit.
-      expect(issued.counts).toEqual({ issued: 8, toCorrect: 3, needsSignature: 2 });
-      const byName = new Map(issued.items.map((c) => [c.contactName, c]));
-      expect(byName.get('Erika Beispiel')).toMatchObject({ kind: 'money', machine: true, signatureState: 'machine', state: 'valid' });
-      expect(byName.get('Lukas Hofmann')).toMatchObject({ kind: 'money', expenseWaiver: true, signatureState: 'needsSignature' });
-      const inKind = byName.get('Clara Neumann')!;
-      expect(inKind).toMatchObject({ kind: 'inKind', signatureState: 'signed' });
-      const details = unwrap(await getInKindDetails(deps, ctx, { lineId: inKind.lines[0]!.lineId }));
-      expect(details).toMatchObject({ origin: 'private' });
-      expect(details?.proofDocumentId).toBeTruthy();
-      // Befund 21: eine einzige Zeile ergibt im Serienlauf die Einzelbestätigung, Pauls zwei Zeilen die Sammelbestätigung.
-      expect(byName.get('Nora Lehmann')).toMatchObject({ kind: 'money', machine: true, signatureState: 'machine', state: 'valid' });
-      expect(byName.get('Paul Winter')).toMatchObject({ kind: 'collective', machine: true, signatureState: 'machine', state: 'valid' });
-      expect(byName.get('Sina Krüger')).toMatchObject({ kind: 'money', expenseWaiver: true, signatureState: 'needsSignature' });
-      expect(byName.has('Jan Moser')).toBe(false);
-    });
-
-    it('marks the confirmation issued on the superseded section 60a notice as to be corrected', async () => {
-      const { deps, ctx } = await seededWithAddress();
-      const provisional = unwrap(await listNotices(deps, ctx, { includeInactive: true })).find((n) => n.kind === 'section60a')!;
-      const toCorrect = unwrap(await listConfirmations(deps, ctx, { tab: 'toCorrect' }));
-      expect(toCorrect.items).toHaveLength(3);
-      const byName = new Map(toCorrect.items.map((c) => [c.contactName, c]));
-      expect(byName.get('Greta Sommer')).toMatchObject({ noticeId: provisional.id, issuedOn: '2026-02-10', totalCents: 12000, state: 'valid' });
-      expect(byName.get('Greta Sommer')!.toCorrect).toEqual(['noticeSuperseded']);
-      // Gretas Zuwendung liegt nach dem Beginn der Befreiung laut § 60a-Bescheid — sonst gäbe es keine Bestätigung.
-      expect(provisional.exemptFrom <= '2025-03-14').toBe(true);
-      // Prüfstein 6: die Rücklastschrift auf Nora Lehmanns Bestätigung des Serienlaufs.
-      expect(byName.get('Nora Lehmann')).toMatchObject({ kind: 'money', totalCents: 6000, state: 'valid' });
-      expect(byName.get('Nora Lehmann')!.toCorrect).toEqual(['lineReturned']);
-      // Befund E: zurückgenommen, versandt, das Finanzamt noch nicht informiert.
-      expect(byName.get('Henrik Brandt')).toMatchObject({ state: 'voided', sentBeforeVoid: true, taxOfficeInformedOn: null, toCorrect: ['recallTrailMissing'] });
-    });
-
-    it('finishes a confirmation run for the previous year with a dispatch note, once (F6b Task 9)', async () => {
-      const { deps, ctx } = await seededWithAddress();
-      const previousYear = seedStoryYear(todayIn(deps)) - 1;
-      const runs = unwrap(await listConfirmationRuns(deps, ctx, {}));
-      expect(runs.items).toHaveLength(1);
-      const run = runs.items[0]!;
-      expect(run).toMatchObject({ year: previousYear, dispatchedVia: 'post' });
-      expect(run.finishedAt).not.toBeNull();
-      expect(run.dispatchedAt).not.toBeNull();
-      expect(run.counts).toMatchObject({ total: 4, issued: 3, skipped: 1, machine: 2, needsSignature: 1 });
-
-      const book = unwrap(await getDonationBook(deps, ctx, { year: previousYear }));
-      expect(book.rows.find((r) => r.contactName === 'Nora Lehmann')).toMatchObject({ amountCents: 6000, confirmation: { kind: 'money' } });
-
-      const reconciliation = unwrap(await getDonationReconciliation(deps, ctx, { year: previousYear }));
-      expect(reconciliation.toCorrect).toMatchObject({ count: 1, cents: 6000 });
-    });
-
-    it('voids a dispatched confirmation with its retrieval trail; the line is uncertified again', async () => {
-      const { deps, ctx } = await seededWithAddress();
-      const issued = unwrap(await listConfirmations(deps, ctx, { tab: 'issued' }));
-      const voided = issued.items.find((c) => c.contactName === 'Henrik Brandt')!;
-      expect(voided).toMatchObject({ state: 'voided', sentVia: 'post', sentBeforeVoid: true, voidNote: 'Betrag doppelt bestätigt' });
-      expect(voided.originalReturnedOn).toMatch(/^\d{4}-04-09$/);
-      expect(voided.taxOfficeInformedOn).toBeNull();
-      const groups = unwrap(await listUncertifiedDonations(deps, ctx, {})).groups;
-      expect(groups.find((g) => g.contactName === 'Henrik Brandt')?.lines.map((l) => l.netCents)).toEqual([7500]);
-    });
-
-    it('leaves a donation without address (blocked), an organization (warning), a second waiver and an undescribed in-kind donation unconfirmed', async () => {
-      const { deps, ctx } = await seededWithAddress();
-      const groups = unwrap(await listUncertifiedDonations(deps, ctx, {})).groups;
-      const byName = new Map(groups.map((g) => [g.contactName, g]));
-      expect(byName.get('Tobias Adler')?.contactComplete).toBe(false);
-      expect(byName.get('Lukas Hofmann')?.lines.map((l) => l.netCents)).toEqual([3600]);
-      expect(byName.get('Clara Neumann')?.lines.map((l) => l.netCents)).toEqual([20000]);
-
-      const adler = unwrap(await checkConfirmable(deps, ctx, { lineIds: [byName.get('Tobias Adler')!.lines[0]!.lineId] }));
-      expect(adler.ok).toBe(false);
-      expect(adler.checks.filter((c) => c.blocked).map((c) => c.key)).toEqual(['contactComplete']);
-
-      const club = unwrap(await checkConfirmable(deps, ctx, { lineIds: [byName.get('Sportfreunde Beispieltal e. V.')!.lines[0]!.lineId] }));
-      expect(club.ok).toBe(true);
-      expect(club.warnings).toContain('organization');
-
-      const laptop = unwrap(await checkConfirmable(deps, ctx, { lineIds: [byName.get('Clara Neumann')!.lines[0]!.lineId] }));
-      expect(laptop.checks.filter((c) => c.blocked).map((c) => c.key).sort()).toEqual(['documented', 'inKindDetails']);
-    });
-
-    it('issues nothing without the address of the association — a module test without the core seed stays green', async () => {
-      const { deps, ctx } = setupFinance();
-      await seedFinance(deps, ctx);
-      expect(unwrap(await listConfirmations(deps, ctx, { tab: 'issued' })).total).toBe(0);
-      expect(unwrap(await listNotices(deps, ctx, {}))).toHaveLength(1);
-      expect(unwrap(await listNotices(deps, ctx, { includeInactive: true }))).toHaveLength(2);
-    });
-  });
-
-  describe('Auslagen (F8a Task 7)', () => {
-    async function seededWithClerkAndApprover() {
-      const f = setupFinance();
-      insertUser(f.deps, { name: 'Jonas Feld', email: 'jonas@kompass.local' });
-      f.deps.db.transaction((tx) => installFinance(tx, f.deps, systemContext()));
-      await seedFinance(f.deps, f.ctx);
-      await seedFinance(f.deps, f.ctx); // idempotent
-      const nadja = f.deps.db.select({ id: schema.users.id }).from(schema.users).where(eq(schema.users.email, 'nadja@kompass.local')).get()!;
-      const jonas = f.deps.db.select({ id: schema.users.id }).from(schema.users).where(eq(schema.users.email, 'jonas@kompass.local')).get()!;
-      return { ...f, nadja, jonas };
-    }
-
-    it('seeds a claim in every state — draft, submitted, approved unpaid, paid, rejected, waiver approved —, idempotently', async () => {
-      const { deps, ctx, nadja } = await seededWithClerkAndApprover();
-      const nadjaCtx = { ...ctx, userId: nadja.id, permissions: new Set([...ctx.permissions, 'finance.expensesSubmit']) };
-      const claims = unwrap(await listMyExpenseClaims(deps, nadjaCtx, { limit: 50, offset: 0 }));
-      expect(claims.total).toBe(7);
-
-      // Zwei Entwürfe: einer ohne Beleg (laufende Sicherung), einer mit PDF-Beleg (Smartphone-Bild „Auslage einreichen“).
-      const drafts = claims.items.filter((c) => c.state === 'draft');
-      expect(drafts.map((c) => c.positions[0]!.documentId === null).sort()).toEqual([false, true]);
-
-      const submitted = claims.items.find((c) => c.state === 'submitted');
-      expect(submitted).toBeTruthy();
-      expect(submitted!.positions.some((p) => p.kind === 'trip' && p.amountCents > 0)).toBe(true);
-
-      const approvedUnpaid = claims.items.find((c) => c.stateLabelKey === 'approved' && !c.waiver);
-      expect(approvedUnpaid?.openItemId).toBeTruthy();
-      expect(approvedUnpaid?.paid?.state).toBe('unpaid');
-
-      const paid = claims.items.find((c) => c.stateLabelKey === 'paid');
-      expect(paid?.paid?.state).toBe('paid');
-
-      const rejected = claims.items.find((c) => c.state === 'rejected');
-      expect(rejected?.rejectNote).toBeTruthy();
-
-      const waiverClaim = claims.items.find((c) => c.waiver);
-      expect(waiverClaim).toMatchObject({ waiver: true, state: 'approved' });
-      expect(waiverClaim!.entryId).toBeTruthy();
-      expect(waiverClaim!.waiverDeclarationDocumentId).toBeTruthy();
-      expect(waiverClaim!.waiverSignedDocumentId).toBeTruthy();
-    });
-
-    it('gives Nadja Vogt (invented, not a Kernseed person) the role "Auslagen einreichen" — Jonas Feld keeps approving, never his own', async () => {
-      const { deps, nadja, jonas } = await seededWithClerkAndApprover();
-      const nadjaPermissions = getEffectivePermissions(deps.db, deps.registry, nadja.id);
-      expect(nadjaPermissions.has('finance.expensesSubmit')).toBe(true);
-      expect(nadjaPermissions.has('finance.approve')).toBe(false);
-      const jonasPermissions = getEffectivePermissions(deps.db, deps.registry, jonas.id);
-      expect(jonasPermissions.has('finance.approve')).toBe(true);
-    });
-
-    it('adds the "Wartet auf Ihre Freigabe" tile to Jonas Feld\'s saved layout, once', async () => {
-      const { deps, ctx, jonas } = await seededWithClerkAndApprover();
-      const jonasCtx = { ...ctx, userId: jonas.id, permissions: getEffectivePermissions(deps.db, deps.registry, jonas.id) };
-      const layout = unwrap(await getDashboardLayout(deps, jonasCtx));
-      expect(layout.columns.flat()).toContainEqual({ module: 'finance', key: 'approvalsPending', options: {} });
-      expect(layout.columns.flat().filter((t) => t.module === 'finance' && t.key === 'approvalsPending')).toHaveLength(1);
-    });
-
-    it('sets the association-wide waiver basis text — otherwise creating a declaration fails with waiverBasisMissing', async () => {
-      const { deps } = await seededWithClerkAndApprover();
-      expect(readSetting<string>(deps, 'finance.expenseWaiverBasisText')).toBeTruthy();
-    });
-
-    it('suggests the category of the finalized "Büromaterial Altjahr" entry for the submitted claim, never as a must', async () => {
-      const { deps, ctx, jonas } = await seededWithClerkAndApprover();
-      const approveCtx = { ...ctx, userId: jonas.id, permissions: new Set([...ctx.permissions, 'finance.approve']) };
-      const queue = unwrap(await listApprovals(deps, approveCtx, {}));
-      // Seit F7 Task 7 auch die eingereichte Zahlung an „Kinderhilfe Regional e.V.“ — die Warteschlange ist polymorph.
-      const onlyItem = queue.items.find((i) => i.kind === 'expenseClaim');
-      if (!onlyItem || onlyItem.kind !== 'expenseClaim') throw new Error('expected an expense claim');
-      const suggestions = unwrap(await suggestExpenseCategories(deps, approveCtx, { claimId: onlyItem.claimId }));
-      const office = deps.db.select().from(financeCategories).where(eq(financeCategories.key, 'office')).get()!;
-      const buromaterialAltjahr = deps.db.select().from(financeEntries).where(eq(financeEntries.text, 'Büromaterial Altjahr')).get()!;
-      expect(suggestions).toContainEqual(expect.objectContaining({ categoryId: office.id, reason: { kind: 'similarEntry', entryNumber: buromaterialAltjahr.number } }));
-    });
-
-    it('leaves no purpose text, IBAN or rejection note of the seeded claims in the finance audit log', async () => {
-      const { deps } = await seededWithClerkAndApprover();
-      // `entityType: 'setting'` ausgenommen: Das ist der Kern-Weg (`writeSettingInternal`), der jede
-      // Einstellung im Klartext protokolliert — auch `finance.expenseWaiverBasisText`, das erste
-      // Textfeld dieser Art in Finanzen (Befundliste § 4, Fund „Protokoll des Kerns“). Hier zählt nur,
-      // was Finanzen selbst in `financeAudit` schreibt (`AUDIT_FIELDS`-Weißliste).
-      const log = JSON.stringify(deps.db.select().from(schema.auditLog).all().filter((e) => e.action.startsWith('finance.') && e.entityType !== 'setting'));
-      for (const secret of [
-        'Deko für den Infoabend', 'Büromaterial für die Infotheke', 'Getränke für die Versammlung', 'Portokosten Mitgliederbrief', 'Blumenstrauß zum Jubiläum', 'Fahrtkosten Pflegestelle Juli',
-        'Kein Vereinszweck, bitte privat tragen', 'DE93999999990000000001', 'Druckerpatronen für die Geschäftsstelle',
-      ]) {
-        expect(log, secret).not.toContain(secret);
-      }
-    });
-
-    it('lets Nadja Vogt sign in with the development password — the phone picture „submit an expense“ is hers (Spec 2026-10-06 § 5.5)', async () => {
-      const { deps } = await seededWithClerkAndApprover();
-      const session = await login(deps, { email: 'nadja@kompass.local', password: SEED_ADMIN_PASSWORD, ipAddress: null, requestId: 'R' });
-      expect(session.ok).toBe(true);
-      expect(deps.db.select().from(schema.users).where(eq(schema.users.email, 'nadja@kompass.local')).get()!.mustChangePassword).toBe(false);
-    });
-
-    it('attaches a till receipt, not a placeholder, to the claim waiting for approval', async () => {
-      const { deps, ctx, jonas } = await seededWithClerkAndApprover();
-      const approveCtx = { ...ctx, userId: jonas.id, permissions: new Set([...ctx.permissions, 'finance.approve']) };
-      const queue = unwrap(await listApprovals(deps, approveCtx, {}));
-      const item = queue.items.find((i) => i.kind === 'expenseClaim');
-      if (!item || item.kind !== 'expenseClaim') throw new Error('expected an expense claim');
-      const position = deps.db.select().from(financeExpensePositions).where(eq(financeExpensePositions.claimId, item.claimId)).all().find((p) => p.kind === 'receipt')!;
-      const receipt = deps.db.select().from(dmsDocuments).where(eq(dmsDocuments.id, position.documentId!)).get()!;
-      // Ein `textPdf` mit drei Zeilen hat ~650 Byte, der Bon ~1350 (beim Planen gemessen).
-      expect(receipt.fileBytes).toBeGreaterThan(1000);
-    });
-  });
-
-  describe('Mittel (F8b Task 7)', () => {
-    async function seededTwice() {
-      const f = setupFinance();
-      insertUser(f.deps, { name: 'Jonas Feld', email: 'jonas@kompass.local' });
-      f.deps.db.transaction((tx) => installFinance(tx, f.deps, systemContext()));
-      await seedFinance(f.deps, f.ctx);
-      await seedFinance(f.deps, f.ctx); // idempotent
-      const jonas = f.deps.db.select({ id: schema.users.id }).from(schema.users).where(eq(schema.users.email, 'jonas@kompass.local')).get()!;
-      return { ...f, jonas };
-    }
-    const currentFiscalYear = (deps: ReturnType<typeof setupFinance>['deps'], ctx: ReturnType<typeof setupFinance>['ctx']) =>
-      listFiscalYears(deps, ctx).then((r) => {
-        const today = deps.clock.now().toISOString().slice(0, 10);
-        return unwrap(r).find((y) => y.startsOn <= today && today <= y.endsOn)!;
-      });
-
-    it('files every finance document at its own date through the services — except the named ones (Joe, 2026-10-06; Plan 2b Task 7, 3m)', async () => {
-      const { deps } = await seededTwice();
-      const today = deps.clock.now().toISOString().slice(0, 10);
-      const docs = deps.db.select().from(dmsDocuments).all();
-      const isException = (d: (typeof docs)[number]) => ['finance-confirmation', 'finance-confirmation-signed', 'finance-partner-evidence'].includes(d.typeKey) || d.subject.includes('Jugendfreizeit');
-      const minutes = docs.filter((d) => d.typeKey === 'minutes' && !isException(d));
-      expect(minutes.length).toBeGreaterThanOrEqual(8);
-      expect(minutes.every((d) => d.documentDate! < today)).toBe(true);
-      // Ablage am Tag des Dokuments, 10:00 UTC — so hat die verschobene Uhr sie angelegt.
-      const late = docs.filter((d) => !isException(d) && !d.createdAt.startsWith(d.documentDate!));
-      expect(late.map((d) => `${d.typeKey}: ${d.subject}`)).toEqual([]);
-      // Die Ausnahmen liegen heute, mit Datum und Ablage zusammen.
-      expect(docs.filter(isException).every((d) => d.documentDate === today && d.createdAt.startsWith(today))).toBe(true);
-    });
-
-    it('seeds a purpose-bound project reserve with minutes, a free reserve near the cap for its year, and a dissolved one — once', async () => {
-      const { deps, ctx } = await seededTwice();
-      const reserves = unwrap(await listReserves(deps, ctx, { includeInactive: true }));
-      expect(reserves).toHaveLength(3);
-      const project = reserves.find((r) => r.kind === 'projectFunds')!;
-      expect(project.purposeId).not.toBeNull();
-      expect(project.resolutionDocumentId).not.toBeNull();
-      expect(deps.db.select().from(dmsDocuments).where(eq(dmsDocuments.id, project.resolutionDocumentId!)).get()!.typeKey).toBe('minutes');
-      expect(reserves.filter((r) => r.isDissolved)).toHaveLength(1);
-
-      const year = await currentFiscalYear(deps, ctx);
-      const cap = unwrap(await freeReserveCap(deps, ctx, { fiscalYearId: year.id }));
-      expect(cap.capCents).toBeGreaterThan(0);
-      expect(cap.usedCents * 100).toBeGreaterThanOrEqual(cap.capCents * 80);
-      expect(cap.usedCents).toBeLessThanOrEqual(cap.capCents);
-      const free = reserves.find((r) => r.kind === 'free' && !r.isDissolved)!;
-      expect(deps.db.select().from(financeReserveMovements).where(eq(financeReserveMovements.reserveId, free.id)).all()[0]!.forFiscalYearId).toBe(year.id);
-    });
-
-    it('seeds a fulfilled purpose with rest and an approved transfer to free funds (Prüfstein 9), and a waiting transfer not created by Jonas Feld', async () => {
-      const { deps, ctx, jonas } = await seededTwice();
-      const overview = unwrap(await purposeOverview(deps, ctx));
-      const vet = overview.find((p) => p.name === 'Notfallhilfe Winter')!;
-      expect(vet).toMatchObject({ state: 'fulfilled', fulfilledWithRest: true });
-      expect(vet.transfersOutCents).toBeGreaterThan(0);
-      expect(overview.find((p) => p.name === 'Flutlicht')).toBeDefined();
-
-      const transfers = unwrap(await listPurposeTransfers(deps, ctx, {}));
-      expect(transfers.filter((t) => t.state === 'approved' && t.fromPurposeId === vet.id && t.toPurposeId === null)).toHaveLength(1);
-      const waiting = transfers.filter((t) => t.state === 'submitted');
-      expect(waiting).toHaveLength(1);
-      expect(waiting[0]!.createdByUserId).not.toBe(jonas.id);
-    });
-
-    it('seeds allowances to a board member without a confirmed basis and a related person whose role ends in the year', async () => {
-      const { deps, ctx } = await seededTwice();
-      expect(readSetting<boolean>(deps, 'finance.boardRemunerationAllowed')).toBeFalsy();
-      const year = await currentFiscalYear(deps, ctx);
-      const rows = unwrap(await relatedPartyPayments(deps, ctx, { fiscalYearId: year.id })).rows;
-      expect(rows.some((r) => r.role === 'board-member' && r.boardAllowanceWithoutBasis)).toBe(true);
-      expect(rows.some((r) => r.role === 'related-party')).toBe(true);
-      const ended = deps.db.select().from(contactRoles).where(eq(contactRoles.role, 'related-party')).all();
-      expect(ended.some((r) => r.until !== null)).toBe(true);
-    });
-
-    it('marks the fee paid to a donor as „not a return“ (AC)', async () => {
-      const { deps, ctx } = await seededTwice();
-      const honorar = deps.db.select().from(financeEntries).where(eq(financeEntries.text, 'Honorar Werkstattkurs')).get()!;
-      expect(unwrap(await getEntry(deps, ctx, { id: honorar.id })).notReturn).toMatchObject({ note: expect.stringContaining('Honorar') });
-    });
-
-    it('leaves no reason, name or purpose text of the F8b seed in the finance audit log', async () => {
-      const { deps } = await seededTwice();
-      const log = JSON.stringify(deps.db.select().from(schema.auditLog).all().filter((e) => e.action.startsWith('finance.') && e.entityType !== 'setting'));
-      for (const secret of ['Notfallhilfe Winter', 'Rest nach Abschluss der Hilfe', 'Neues Vereinsheimdach', 'Projektmittel Dach', 'Freie Rücklage', 'Ersatz Transporter', 'Zusage für die Herbstfahrt', 'Helga Sommer', 'Paul Winter']) {
-        expect(log, secret).not.toContain(secret);
-      }
-    });
+  /** Jede Spalte `…contact_id`, `…document_id`, `…project_id`, `…user_id` einer Finanztabelle zeigt auf eine Zeile, die es gibt. */
+  it('points every reference at a record that exists', () => {
+    const targets: [RegExp, string][] = [[/(^|_)contact_id$/, 'contacts'], [/(^|_)document_id$/, 'documents'], [/(^|_)project_id$/, 'projects'], [/(^|_)user_id$/, 'users']];
+    const tables = rows<{ name: string }>("select name from sqlite_master where type = 'table' and name like 'finance\\_%' escape '\\'").map((t) => t.name);
+    const checked: string[] = [];
+    const dangling = tables.flatMap((table) =>
+      rows<{ name: string }>(`pragma table_info("${table}")`).flatMap(({ name: column }) => {
+        const target = targets.find(([pattern]) => pattern.test(column))?.[1];
+        if (!target) return [];
+        checked.push(`${table}.${column}`);
+        return rows<{ v: string }>(`select distinct "${column}" as v from "${table}" where "${column}" is not null and "${column}" <> 'system' and "${column}" not in (select id from "${target}")`).map((r) => `${table}.${column}: ${r.v}`);
+      }),
+    );
+    expect(checked.length).toBeGreaterThan(50);
+    expect(dangling).toEqual([]);
   });
 });
 
-/**
- * Die Freitexte, die ein Seed hinterlassen hat: alle Zeichenketten (auch in JSON-Spalten) aus den Tabellen
- * `finance_*` und `contacts` sowie die Werte der Einstellungen außer dem Vereinsstamm. Codes, Schlüssel,
- * IDs, Zeitstempel und Hashes sind keine Freitexte und bleiben draußen: Was ein Freitext ist, beginnt mit einem
- * Großbuchstaben oder enthält ein Leerzeichen.
- */
-describe('seedFinance — direct debit (Plan L1 Task 7)', () => {
-  it('turns direct debit on with the test creditor id; mandates active, pending, ended and amended; two pledges, one resting — once', async () => {
-    const { deps, ctx, userId } = setupFinance();
+describe('seedFinance without the core seed', () => {
+  // Ohne Vereinsanschrift: dann stellt der Seed keine Bestätigung auf einen alten Bescheid aus, die ihr eigenes Datum trägt.
+  it('files every finance document at its own date through the services — except the named ones (Joe, 2026-10-06; Plan 2b Task 7, 3m)', async () => {
+    const { deps, ctx } = setupFinance();
+    insertUser(deps, { name: 'Jonas Feld', email: 'jonas@kompass.local' });
     deps.db.transaction((tx) => installFinance(tx, deps, systemContext()));
-    unwrap(await createProject(deps, ctxWith(['projects.manage', 'projects.view'], userId), { slug: 'winterhilfe', name: { de: 'Winterhilfe' }, type: 'ongoing', summary: { de: 'Kurz' }, body: { de: 'Text' } }));
     await seedFinance(deps, ctx);
-    await seedFinance(deps, ctx);
-    expect(readSetting(deps, 'finance.sepa.enabled')).toBe(true);
-    expect(readSetting(deps, 'finance.sepa.creditorId')).toBe('DE98ZZZ09999999999');
-    const mandates = unwrap(await listMandates(deps, ctx, { limit: 50, offset: 0 })).items;
-    expect(mandates.map((m) => m.state).sort()).toEqual(['active', 'active', 'active', 'ended', 'pending']);
-    expect(mandates.filter((m) => m.pendingAmendment !== null)).toHaveLength(1);
-    expect(mandates.every((m) => /^DE\d{2}999999990000300\d{3}$/.test(deps.db.select().from(financeSepaMandates).where(eq(financeSepaMandates.id, m.id)).get()!.iban))).toBe(true);
-    const pledges = unwrap(await listPledges(deps, ctx, { limit: 50, offset: 0 })).items;
-    expect(pledges.map((p) => [p.interval, p.paymentMethod]).sort()).toEqual([['monthly', 'directDebit'], ['yearly', 'directDebit'], ['yearly', 'standingOrder']]);
-    expect(pledges.find((p) => p.interval === 'monthly')!.projectId).not.toBeNull();
     const today = todayIn(deps);
-    const rested = pledges.find((p) => p.paymentMethod === 'standingOrder')!;
-    expect(rested.pausedFrom).not.toBeNull();
-    expect(rested.state).toBe(today >= rested.pausedFrom! && today <= rested.pausedUntil! ? 'paused' : 'active');
-    expect(deps.db.select().from(dmsDocuments).all().filter((d) => d.typeKey === 'sepa-prenotification' && d.phase === 'draft')).toHaveLength(1);
+    const docs = deps.db.select().from(dmsDocuments).all();
+    const isException = (d: (typeof docs)[number]) => ['finance-confirmation', 'finance-confirmation-signed', 'finance-partner-evidence'].includes(d.typeKey) || d.subject.includes('Jugendfreizeit');
+    const minutes = docs.filter((d) => d.typeKey === 'minutes' && !isException(d));
+    expect(minutes.length).toBeGreaterThanOrEqual(8);
+    expect(minutes.every((d) => d.documentDate! < today)).toBe(true);
+    // Ablage am Tag des Dokuments, 10:00 UTC — so hat die verschobene Uhr sie angelegt.
+    const late = docs.filter((d) => !isException(d) && !d.createdAt.startsWith(d.documentDate!));
+    expect(late.map((d) => `${d.typeKey}: ${d.subject}`)).toEqual([]);
+    // Die Ausnahmen liegen heute, mit Datum und Ablage zusammen.
+    expect(docs.filter(isException).every((d) => d.documentDate === today && d.createdAt.startsWith(today))).toBe(true);
   });
 
-  it('adds a booked run and a run only created in the story year, both announced in time (Plan L2 Task 5, Plan L3 Task 5) — once', async () => {
-    const { deps, ctx, userId } = setupFinance();
-    deps.db.transaction((tx) => installFinance(tx, deps, systemContext()));
-    unwrap(await createProject(deps, ctxWith(['projects.manage', 'projects.view'], userId), { slug: 'winterhilfe', name: { de: 'Winterhilfe' }, type: 'ongoing', summary: { de: 'Kurz' }, body: { de: 'Text' } }));
+  it('issues nothing without the address of the association — a module test without the core seed stays green', async () => {
+    const { deps, ctx } = setupFinance();
     await seedFinance(deps, ctx);
-    await seedFinance(deps, ctx);
-    const runs = unwrap(await listDirectDebitRuns(deps, ctx, {})).items;
-    // Der April-Einzug wurde nie eingereicht: im Stichjahr angelegt, längst verfallen (Plan N1, M41).
-    expect(runs.map((r) => [r.status, r.count])).toEqual([['expired', 1], ['booked', 2]]);
-    const year = String(seedStoryYear(todayIn(deps)));
-    for (const run of runs) expect(run.collectionDate.startsWith(year)).toBe(true);
-    expect(runs[1]!.summaryDocumentId).not.toBeNull();
-    expect(deps.db.select().from(dmsDocuments).all().filter((d) => d.typeKey === 'sepa-prenotification' && d.phase === 'issued')).toHaveLength(3);
-    // Die ausgestellten Ankündigungen und die Zeile zum Entwurf der Zusage (deckt erst festgeschrieben).
-    expect(deps.db.select().from(financeSepaPrenotifications).all()).toHaveLength(4);
-    // Plan N1 E1: Der späteste Bankarbeitstag bis heute + 9 ist angekündigt — ein Einzug dort zieht die jüngste Rate ein.
-    let upcoming = addCalendarDays(todayIn(deps), 9);
-    while (!isTargetBusinessDay(upcoming)) upcoming = addCalendarDays(upcoming, -1);
-    expect(unwrap(await previewDirectDebitRun(deps, ctx, { collectionDate: upcoming })).included).toMatchObject([{ source: 'pledge', amountCents: 1500 }]);
-    // Plan L3: über eine Sammelgutschrift gebucht; die Rückgabe MD06 offen. Plan U2: die AM04 wartet ungebucht in der Arbeitsliste.
-    const returns = unwrap(await listDirectDebitReturns(deps, ctx, {})).items;
-    expect(returns.map((r) => [r.returnCode, r.status, r.resolution])).toEqual([['MD06', 'open', null]]);
-    const waiting = deps.db.select().from(financeRawTransactions).all().filter((r) => r.returnCode === 'AM04' && r.amountCents < 0);
-    expect(waiting).toHaveLength(1);
-    expect(unwrap(await suggestForTransaction(deps, ctx, { rawTransactionId: waiting[0]!.id }))).toMatchObject({ kind: 'return', reasons: [{ kind: 'directDebitReturn', returnCode: 'AM04', feeCents: 300 }] });
-    expect(returns.every((r) => r.runId === runs[1]!.id)).toBe(true);
+    expect(unwrap(await listConfirmations(deps, ctx, { tab: 'issued' })).total).toBe(0);
+    expect(unwrap(await listNotices(deps, ctx, {}))).toHaveLength(1);
+    expect(unwrap(await listNotices(deps, ctx, { includeInactive: true }))).toHaveLength(2);
   });
 });
-
-function seededTexts(deps: ReturnType<typeof setupFinance>['deps']): Set<string> {
-  const out = new Set<string>();
-  const collect = (value: unknown): void => {
-    if (typeof value === 'string') {
-      if (value.startsWith('{') || value.startsWith('[')) {
-        try {
-          collect(JSON.parse(value));
-          return;
-        } catch {
-          /* kein JSON — als Text weiter */
-        }
-      }
-      const text = value.trim();
-      if (text.length < 4) return;
-      if (/^[0-9A-HJKMNP-TV-Z]{26}$/.test(text)) return; // ULID
-      if (/^\d{4}-\d{2}-\d{2}/.test(text)) return; // Datum, Zeitstempel
-      if (/^[A-Z]{1,5}-\d{4}-\d+$/.test(text)) return; // Belegnummer — „Nummer statt Betreff“ (AGENTS.md, Prinzip 3)
-      if (/^MND-\d+$/.test(text)) return; // Mandatsreferenz — die Finanzen nennen sie wie eine Nummer (Plan L1)
-      if (!/\s/.test(text) && !/^\p{Lu}/u.test(text)) return; // Code, Schlüssel, Hash
-      out.add(text);
-    } else if (Array.isArray(value)) value.forEach(collect);
-    else if (value && typeof value === 'object') Object.values(value).forEach(collect);
-  };
-  const tables = deps.sqlite
-    .prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND (name LIKE 'finance\\_%' ESCAPE '\\' OR name = 'contacts')")
-    .all() as { name: string }[];
-  expect(tables.length).toBeGreaterThan(20);
-  for (const { name } of tables) for (const row of deps.sqlite.prepare(`SELECT * FROM "${name}"`).all()) collect(row);
-  // Jede gespeicherte Einstellung außer dem Vereinsstamm — so fällt auch ein Freitext auf, dem das Kennzeichen
-  // `auditValue: 'redact'` noch fehlt.
-  for (const def of deps.registry.settingDefinitions.values()) if (!def.key.startsWith('organization.')) collect(readSetting(deps, def.key));
-  return out;
-}

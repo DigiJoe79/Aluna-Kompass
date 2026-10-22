@@ -3,7 +3,7 @@ import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { afterAll, describe, expect, it } from 'vitest';
 import template from '../kompass.template';
-import { build, buildMonolingual, cleanupDirs, fixtureWithout } from './helpers';
+import { build, buildMonolingual, cleanupDirs, FIXTURE, fixtureWithout, fixtureWithoutAiLabeling } from './helpers';
 
 afterAll(() => {
   cleanupDirs();
@@ -42,6 +42,39 @@ describe('verein-basis', () => {
   it('names two languages and the four club collections', () => {
     expect(Object.keys(template.collections).sort()).toEqual(['documents', 'faq', 'news', 'team']);
     expect(template.locales).toEqual(['de', 'en']);
+  });
+
+  it('marks the hero image and a team photo with kind, mark of the kind and alt text', () => {
+    // Werte aus der Fixture, nicht als Wortlaut: geprüft wird, dass jede Art ihre Marke und Bezeichnung bekommt.
+    const fixture = JSON.parse(readFileSync(path.join(FIXTURE, 'content.json'), 'utf8')) as {
+      views: { aiLabeling: Record<string, Record<string, string>>[] };
+    };
+    const l = fixture.views.aiLabeling[0]!;
+    const markOf = (html: string, kind: string) =>
+      html.match(new RegExp(`<span[^>]*data-kind="${kind}"[^>]*>[\\s\\S]*?<span>([^<]*)</span>`))?.[1];
+
+    const out = build();
+    for (const [prefix, locale] of [['', 'de'], ['en/', 'en']] as const) {
+      const home = readFileSync(path.join(out, prefix, 'index.html'), 'utf8');
+      expect(home).toContain(`alt="${l.editedLabel![locale]}"`);
+      expect(markOf(home, 'edited')).toBe(l.editedMark![locale]);
+
+      const team = readFileSync(path.join(out, prefix, 'team/index.html'), 'utf8');
+      expect(team).toContain(`alt="${l.generatedLabel![locale]}"`);
+      expect(markOf(team, 'generated')).toBe(l.mark![locale]);
+    }
+  });
+
+  it('builds without marks when the view row is missing', () => {
+    const out = build({ SITE_CONTENT_DIR: fixtureWithoutAiLabeling() });
+
+    const home = readFileSync(path.join(out, 'index.html'), 'utf8');
+    expect(home).not.toContain('data-kind=');
+    expect(home).toContain('class="hero-image"');
+    expect(home).toMatch(/<img[^>]*class="hero-image"[^>]*\salt/);
+
+    const team = readFileSync(path.join(out, 'team/index.html'), 'utf8');
+    expect(team).not.toContain('data-kind=');
   });
 
   it('builds against the fixture and renders every declared collection', () => {

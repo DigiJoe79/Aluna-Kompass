@@ -18,9 +18,9 @@ type ErrorState = Extract<ActionState, { status: 'error' }>;
  * Was Baum und Liste zeigen, solange eine Änderung unterwegs ist. `placed`:
  * wo ein Eintrag (Dokument, Datei) nach einem laufenden Zug liegt.
  */
-type View = { folders: FolderEntry[]; selected: string | null; saving: string[]; placed: Record<string, string | null> };
+type View = { folders: FolderEntry[]; selected: string | null; saving: string[]; placed: Record<string, string | null>; steps: ItemStep[] };
 /** Ein Eintrag auf dem Weg von `from` nach `to`. */
-type ItemStep = { id: string; from: string | null; to: string | null };
+export type ItemStep = { id: string; from: string | null; to: string | null };
 /** Eine vorweggenommene Änderung; `saving` ist die Zeile, die „wird gespeichert“ zeigt. */
 type Pending = ({ change: FolderChange } | { items: ItemStep[] }) & { saving: string | null };
 
@@ -91,6 +91,7 @@ function reduce(view: View, pending: Pending): View {
       ...view,
       folders: shiftCounts(view.folders, pending.items),
       placed: { ...view.placed, ...Object.fromEntries(pending.items.map((step) => [step.id, step.to])) },
+      steps: [...view.steps, ...pending.items],
       saving,
     };
   }
@@ -100,6 +101,7 @@ function reduce(view: View, pending: Pending): View {
     selected: change.kind === 'move' ? followFolder(view.selected, change.from, change.to) : view.selected,
     saving,
     placed: view.placed,
+    steps: view.steps,
   };
 }
 
@@ -138,7 +140,7 @@ export function useUndoableMoves<I extends UndoableItem>({
 }) {
   const t = useTranslations('folderTree');
   const router = useRouter();
-  const [view, apply] = useOptimistic<View, Pending>({ folders, selected, saving: [], placed: {} }, reduce);
+  const [view, apply] = useOptimistic<View, Pending>({ folders, selected, saving: [], placed: {}, steps: [] }, reduce);
   const latest = useRef({ folders, selected, hrefFor });
   useEffect(() => {
     latest.current = { folders, selected, hrefFor };
@@ -307,6 +309,8 @@ export function useUndoableMoves<I extends UndoableItem>({
     selected: view.selected,
     saving: view.saving,
     placed: view.placed,
+    /** Die laufenden Züge von Einträgen (vorweggenommen) — für Zähler außerhalb des Baums, etwa den Eingangskorb. */
+    steps: view.steps,
     moveFolder,
     renameFolder,
     deleteFolder,

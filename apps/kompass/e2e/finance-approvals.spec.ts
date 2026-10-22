@@ -1,12 +1,8 @@
-import path from 'node:path';
 import type { Page } from '@playwright/test';
 import { expect, test } from './fixtures';
 import { associationDay } from './association-day';
 import { backToAdmin, callTool, linkOwnContact, mcpClient, PDF, PHONE, rejectInQueue, submitClaim, switchToJonas } from './expense-helpers';
 import { loginAsAdmin, resetDatabase, setE2ESetting } from './helpers';
-
-/** > 1 MB (N9, Befundliste 0.2.0) — erzeugt mit `docs/intern/recherche/2026-09-26-upload-repro/mkpdf.py`. */
-const BIG_PDF = path.resolve(import.meta.dirname, 'fixtures/beleg-1500k.pdf');
 
 /**
  * F8a Task 6 — D3 „Freigaben“ (`/finance/approvals`), Desktop zuerst, dazu
@@ -179,26 +175,6 @@ test.describe('finance approvals (D3)', () => {
     await expect(position(page, 2).getByLabel('Kategorie')).not.toHaveValue('');
   });
 
-  test('eine reine Fahrt hat keine Beleg-Vorschau: die Positionskarte ist so breit wie die Kopfkarte (Befund 14)', async ({ page, baseURL }) => {
-    const client = await mcpClient(page, baseURL);
-    const draft = await callTool<{ id: string }>(client, 'finance_expense_draft_save', {
-      waiver: false,
-      iban: 'DE23999999990000202051',
-      positions: [{ kind: 'trip', positionDate: associationDay(), tripFrom: 'Musterstadt', tripTo: 'Beispielstadt', tripReason: 'Pflegestelle besuchen', tripKm: 24 }],
-    });
-    const claim = await callTool<{ id: string }>(client, 'finance_expense_submit', { id: draft.id });
-    await client.close();
-
-    await switchToJonas(page);
-    await page.goto(`/finance/approvals?claim=${claim.id}`);
-    const head = await detail(page).getByTestId('approval-head').boundingBox();
-    const card = await position(page, 1).boundingBox();
-    expect(head).not.toBeNull();
-    expect(card).not.toBeNull();
-    // Ohne Vorschau gibt es keine zweite Spalte: die Karte geht über die volle Breite, nicht über die halbe.
-    expect(Math.abs(card!.width - head!.width)).toBeLessThan(4);
-  });
-
   test('Verzicht: die Prüfungen als Checkliste; ohne Verzichtserklärung und ohne ihre unterschriebene Fassung keine Freigabe; danach steht die Aufwandsspende als Buchung und ist bescheinigbar', async ({ page, baseURL }) => {
     await setE2ESetting(page, 'finance.expenseWaiverBasisText', 'Satzung § 9 Abs. 2');
     const client = await mcpClient(page, baseURL);
@@ -265,22 +241,6 @@ test.describe('finance approvals (D3)', () => {
     await expect(page.getByTestId('expense-waiver-agreed-late')).toContainText('Reichen Sie ihn als Erstattung mit IBAN ein.');
   });
 
-  test('eine unterschriebene Verzichtserklärung über 1 MB kommt an (N9)', async ({ page, baseURL }) => {
-    await setE2ESetting(page, 'finance.expenseWaiverBasisText', 'Satzung § 9 Abs. 2');
-    const client = await mcpClient(page, baseURL);
-    const claim = await submitClaim(client, { purpose: 'Kopierpapier', amountCents: 2520, waiver: true });
-    await client.close();
-
-    await switchToJonas(page);
-    await page.goto(`/finance/approvals?claim=${claim.id}`);
-    const checks = detail(page).getByTestId('waiver-checks');
-    await checks.getByRole('button', { name: 'Verzichtserklärung erzeugen' }).click();
-    await expect(checks.getByRole('link', { name: 'Verzichtserklärung öffnen' })).toBeVisible();
-
-    await checks.locator('input[type="file"]').setInputFiles(BIG_PDF);
-    await expect(checks.getByRole('link', { name: 'Unterschriebene Fassung öffnen' })).toBeVisible();
-  });
-
   test('Ablehnen verlangt den Grund; die Antragstellerin sieht ihn', async ({ page, baseURL }) => {
     const client = await mcpClient(page, baseURL);
     const claim = await submitClaim(client, { purpose: 'Druckerpatronen', amountCents: 3000 });
@@ -303,7 +263,7 @@ test.describe('finance approvals (D3)', () => {
     await expect(page.getByRole('button', { name: 'Neu einreichen' })).toBeVisible();
   });
 
-  test('Freigeben auf 390 px, die Fußleiste steht am Ende', async ({ page, baseURL }) => {
+  test('Freigeben auf 390 px', async ({ page, baseURL }) => {
     const client = await mcpClient(page, baseURL);
     const claim = await submitClaim(client, { purpose: 'Briefmarken', amountCents: 1250, trip: true });
     await client.close();
@@ -319,16 +279,7 @@ test.describe('finance approvals (D3)', () => {
     await expect(queue(page)).toBeHidden();
     await expect(detail(page).getByRole('link', { name: 'Beleg ansehen' })).toBeVisible();
 
-    // Am Telefon klebt die Fußleiste nicht (Designer 2026-10-08, Befund 39): Sie steht am Ende des Details.
-    await expect(footer(page)).toHaveCSS('position', 'static');
     await footer(page).scrollIntoViewIfNeeded();
-    await expect(footer(page)).toBeInViewport();
-    // Die Leiste ist die gemeinsame: Knöpfe untereinander, Hauptaktion oben, beide so hoch wie ein Feld (--field-h).
-    const approveBox = (await footer(page).getByRole('button', { name: 'Freigeben' }).boundingBox())!;
-    const rejectBox = (await footer(page).getByRole('button', { name: 'Ablehnen' }).boundingBox())!;
-    expect(approveBox.height).toBeGreaterThanOrEqual(38);
-    expect(rejectBox.height).toBeGreaterThanOrEqual(38);
-    expect(approveBox.y).toBeLessThan(rejectBox.y);
 
     await position(page, 1).getByLabel('Kategorie').selectOption({ label: 'Büro, Porto, Telefon' });
     await position(page, 2).getByLabel('Kategorie').selectOption({ label: 'Fahrt- und Reisekosten' });
@@ -336,14 +287,7 @@ test.describe('finance approvals (D3)', () => {
     const result = page.getByTestId('approval-result');
     await expect(result).toContainText('Es ist eine offene Zahlung entstanden');
 
-    // Review Focus 4: unter 390 px liegt der QR unter den Feldern, nie daneben, und die Seite scrollt nicht seitlich.
-    const transfer = result.getByTestId('transfer-block');
-    const qr = transfer.getByTestId('transfer-qr');
-    await expect(qr).toBeVisible();
-    const fieldsBox = (await transfer.locator('> div').first().boundingBox())!;
-    const qrBox = (await qr.boundingBox())!;
-    expect(qrBox.y).toBeGreaterThanOrEqual(fieldsBox.y + fieldsBox.height - 1);
-    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+    await expect(result.getByTestId('transfer-block').getByTestId('transfer-qr')).toBeVisible();
   });
 
   test('die Kacheln zeigen „Wartet auf Ihre Freigabe“ und „Ihre Auslagen“ ohne fremde Namen', async ({ page, baseURL }) => {

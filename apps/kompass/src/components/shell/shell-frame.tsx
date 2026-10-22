@@ -143,7 +143,10 @@ export function ShellFrame({ organization, logoUrl, groups, build, version, user
               schmaler, sobald ihr Inhalt höher als das Fenster war, und alles rückte zur Seite — etwa in der
               Arbeitsliste beim Wechsel zwischen Umsätzen mit kurzem und langem Vorschlag (Joe 2026-10-17). Mit
               ausblendenden Bildlaufleisten (macOS-Vorgabe) wirkt es nicht und schadet nicht. */}
-          <main className="min-h-0 flex-1 overflow-auto p-(--shell-pad) [--shell-pad:--spacing(6)] [scrollbar-gutter:stable]">
+          {/* `relative`: Halt für jedes absolut positionierte Element ohne näheren Vorfahren, vor allem die sr-only-Texte.
+              Ohne ihn bezogen sie sich auf das Dokument und verlängerten es unter dem Scrollbereich, so weit sie im Inhalt
+              standen (Startseite, Journal, Backup, Konten; gemessen über alle Seiten 2026-10-20). */}
+          <main className="relative min-h-0 flex-1 overflow-auto p-(--shell-pad) [--shell-pad:--spacing(6)] [scrollbar-gutter:stable]">
             <HelpAsideContext.Provider value={aside}>{children}</HelpAsideContext.Provider>
           </main>
           {/* Nach `main` im DOM: Tab-Reihenfolge Kopfleiste → Inhalt → Hilfe (Notiz „Öffnen, Schließen, Fokus“). */}

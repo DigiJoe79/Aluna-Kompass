@@ -1,8 +1,11 @@
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync, statSync } from 'node:fs';
+import path from 'node:path';
 import { unwrap } from '@kompass/core';
+import { ctxWith } from '@kompass/core/testing';
 import { describe, expect, it } from 'vitest';
+import { z } from 'zod';
 import { FINANCE_MCP_TOOLS } from '../src/mcp-tools';
-import { insertRaw, insertRun, ledgerFixture, pdfBytes } from './helpers';
+import { allowHumanOnlyOverMcp, insertRaw, insertRun, ledgerFixture, pdfBytes } from './helpers';
 import { donationFixture, png } from './donation-fixture';
 import { buildCamt053 } from '../src/import/camt-fixture';
 
@@ -30,11 +33,8 @@ describe('finance MCP tools', () => {
     for (const kind of ['account', 'category', 'purpose', 'fiscalYear', 'datedValue']) expect(schema('finance_master_data').parse({ kind })).toEqual({ kind });
   });
 
-  it('every human-only tool says so, and answers an agent with the way out', async () => {
+  it('a refused agent learns why and what to do (Befund 13)', async () => {
     const f = await ledgerFixture();
-    const humanOnly = ['finance_entry_review', 'finance_entry_finalize', 'finance_entries_finalize_reviewed', 'finance_entry_book', 'finance_entry_reverse', 'finance_voucher_revoke', 'finance_correction_request', 'finance_correction_decide', 'finance_period_close', 'finance_period_reopen', 'finance_reserve_movement_record'];
-    for (const name of humanOnly) expect(FINANCE_MCP_TOOLS.find((t) => t.name === name)!.description, name).toMatch(/Human only/);
-
     const agent = { ...f.ctx, channel: 'mcp' as const };
     const BALANCED = { entryDate: '2026-03-01', text: 'Spende', moneyLines: [{ accountId: f.bank.id, amountCents: 5000 }], allocationLines: [{ categoryId: f.donations.id, amountCents: 5000 }] };
     const res = await FINANCE_MCP_TOOLS.find((t) => t.name === 'finance_entry_book')!.handler(f.deps, agent, BALANCED);
@@ -44,15 +44,6 @@ describe('finance MCP tools', () => {
       // A6: der Text kommt aus der Sprachdatei (`apps/kompass/tests/finance-error-messages.test.ts`).
       expect(res.error.messageKey).toBe('finance.errors.humanOnly');
     }
-
-    const revokeRes = await FINANCE_MCP_TOOLS.find((t) => t.name === 'finance_voucher_revoke')!.handler(f.deps, agent, { linkId: 'x', note: 'x' });
-    expect(revokeRes).toMatchObject({ ok: false, error: { type: 'conflict', code: 'humanOnly' } });
-
-    const requestRes = await FINANCE_MCP_TOOLS.find((t) => t.name === 'finance_correction_request')!.handler(f.deps, agent, { lineId: 'x', changes: {}, note: 'x' });
-    expect(requestRes).toMatchObject({ ok: false, error: { type: 'conflict', code: 'humanOnly' } });
-
-    const decideRes = await FINANCE_MCP_TOOLS.find((t) => t.name === 'finance_correction_decide')!.handler(f.deps, agent, { id: 'x', decision: 'approve' });
-    expect(decideRes).toMatchObject({ ok: false, error: { type: 'conflict', code: 'humanOnly' } });
   });
 
   it('the notice tool requires the start of the exemption; issuing and starting a run take no reason (N4)', () => {
@@ -65,20 +56,8 @@ describe('finance MCP tools', () => {
     expect(Object.keys(shape('finance_confirmation_run_start'))).not.toContain('preNoticeReason');
   });
 
-  it('registers nine new tools for vouchers, open items and the allocation correction', () => {
-    const names = [
-      'finance_voucher_upload', 'finance_voucher_attach', 'finance_voucher_revoke',
-      'finance_open_item_save', 'finance_open_item_cancel', 'finance_open_items_list',
-      'finance_correction_request', 'finance_correction_decide', 'finance_corrections_list',
-    ];
-    for (const name of names) expect(FINANCE_MCP_TOOLS.some((t) => t.name === name), name).toBe(true);
-  });
-
-  it('registers the year-close tools: preview dispatches by action, close and reopen refuse an agent, justify needs finance.periodClose', async () => {
+  it('the year-close preview dispatches by action, justify needs finance.periodClose', async () => {
     const f = await ledgerFixture({ years: ['2025'] });
-    for (const name of ['finance_period_preview', 'finance_period_close', 'finance_period_reopen', 'finance_entry_justify']) {
-      expect(FINANCE_MCP_TOOLS.some((t) => t.name === name), name).toBe(true);
-    }
     expect(FINANCE_MCP_TOOLS.find((t) => t.name === 'finance_period_reopen')!.description).toMatch(/allocation correction|correction in the current year/);
 
     const previewTool = FINANCE_MCP_TOOLS.find((t) => t.name === 'finance_period_preview')!;
@@ -87,12 +66,6 @@ describe('finance MCP tools', () => {
     f.closeYear(f.years['2025']!.id);
     const reopenPreview = unwrap(await previewTool.handler(f.deps, f.ctx, { id: f.years['2025']!.id, action: 'reopen' }));
     expect(reopenPreview).toHaveProperty('laterYearClosed');
-
-    const agent = { ...f.ctx, channel: 'mcp' as const };
-    const closeRes = await FINANCE_MCP_TOOLS.find((t) => t.name === 'finance_period_close')!.handler(f.deps, agent, { id: f.years['2025']!.id });
-    expect(closeRes).toMatchObject({ ok: false, error: { type: 'conflict', code: 'humanOnly' } });
-    const reopenRes = await FINANCE_MCP_TOOLS.find((t) => t.name === 'finance_period_reopen')!.handler(f.deps, agent, { id: f.years['2025']!.id, note: 'x' });
-    expect(reopenRes).toMatchObject({ ok: false, error: { type: 'conflict', code: 'humanOnly' } });
 
     const justifyRes = await FINANCE_MCP_TOOLS.find((t) => t.name === 'finance_entry_justify')!.handler(f.deps, { ...f.ctx, permissions: new Set(['finance.read']) }, { entryId: 'x', note: 'x' });
     expect(justifyRes).toMatchObject({ ok: false, error: { type: 'forbidden', permission: 'finance.periodClose' } });
@@ -108,34 +81,16 @@ describe('finance MCP tools', () => {
     expect(res).toMatchObject({ ok: false, error: { type: 'validation' } });
   });
 
-  it('registers the work list tools (F5); an argument-less tool takes (deps, ctx), the counts take an account', async () => {
-    const names = [
-      'finance_work_list', 'finance_work_counts', 'finance_suggestion_get', 'finance_transaction_book', 'finance_transaction_link_entry', 'finance_transaction_mark_foreign',
-      'finance_foreign_money_list', 'finance_import_rule_save', 'finance_import_rules_list', 'finance_import_rule_delete', 'finance_import_rule_preview',
-      'finance_contact_iban_link', 'finance_contact_iban_unlink', 'finance_contact_ibans_list', 'finance_contact_create_from_transaction',
-      'finance_batch_finalize_preview', 'finance_voucher_search', 'finance_voucher_upload_to_transaction', 'finance_vouchers_without_entry',
-      'finance_raw_transaction_get',
-    ];
+  it('the work list tools: an argument-less tool takes (deps, ctx), the counts take an account', async () => {
     const tool = (name: string) => FINANCE_MCP_TOOLS.find((t) => t.name === name)!;
-    for (const name of names) expect(FINANCE_MCP_TOOLS.some((t) => t.name === name), name).toBe(true);
     expect(tool('finance_foreign_money_list').handler.length).toBe(2);
     // Seit den Filterleisten (0.2.9) nimmt die Zählung ein Konto wie die Liste.
     expect(tool('finance_work_counts').handler.length).toBe(3);
-    expect(tool('finance_transaction_book').description).toMatch(/reviewed:true is human only/);
-    expect(tool('finance_transaction_mark_foreign').description).toMatch(/reviewed:true is human only/);
     expect(tool('finance_contact_create_from_transaction').description).toContain('contacts.manage');
 
     const f = await ledgerFixture();
     expect(unwrap(await tool('finance_work_counts').handler(f.deps, f.ctx, {}))).toMatchObject({ open: 0, unsure: 0 });
     expect(unwrap(await tool('finance_foreign_money_list').handler(f.deps, f.ctx, {}))).toEqual({ items: [] });
-
-    // Ein Agent legt vor, prüft aber nicht.
-    const agent = { ...f.ctx, channel: 'mcp' as const };
-    const rawId = insertRaw(f, insertRun(f, f.bank.id), { accountId: f.bank.id, amountCents: -1990 });
-    const book = tool('finance_transaction_book');
-    const input = { rawTransactionId: rawId, text: 'Büromaterial', allocationLines: [{ categoryId: f.programCosts.id, amountCents: -1990 }] };
-    expect(await book.handler(f.deps, agent, { ...input, reviewed: true })).toMatchObject({ ok: false, error: { type: 'conflict', code: 'humanOnly' } });
-    expect((await book.handler(f.deps, agent, { ...input, reviewed: false })).ok).toBe(true);
   });
 
   it('finance_voucher_upload_to_transaction takes base64 and the upload limit like finance_voucher_upload', async () => {
@@ -150,48 +105,11 @@ describe('finance MCP tools', () => {
   });
 
   describe('donations (F6a)', () => {
-    const DONATION_TOOLS = {
-      finance_notice_save: 'finance.donationsIssue',
-      finance_notice_supersede: 'finance.donationsIssue',
-      finance_notice_void: 'finance.donationsIssue',
-      finance_notices_list: 'finance.read',
-      finance_notice_attach_document: 'finance.donationsIssue',
-      finance_signer_save: 'finance.donationsIssue',
-      finance_facsimile_upload: 'finance.donationsIssue',
-      finance_machine_procedure_get: 'finance.read',
-      finance_notification_letter_draft: 'finance.donationsIssue',
-      finance_confirmation_check: 'finance.read',
-      finance_confirmation_issue: 'finance.donationsIssue',
-      finance_confirmation_void: 'finance.donationsIssue',
-      finance_confirmation_dispatch: 'finance.donationsIssue',
-      finance_confirmation_attach_signed: 'finance.donationsIssue',
-      finance_confirmations_list: 'finance.read',
-      finance_donations_uncertified: 'finance.read',
-      finance_in_kind_details_save: 'finance.entriesWrite',
-      finance_in_kind_details_get: 'finance.read',
-    } as const;
     const tool = (name: string) => FINANCE_MCP_TOOLS.find((t) => t.name === name)!;
 
-    it('registers eighteen donation tools, each naming its permission; the argument-less one takes (deps, ctx)', () => {
-      for (const [name, permission] of Object.entries(DONATION_TOOLS)) {
-        expect(FINANCE_MCP_TOOLS.some((t) => t.name === name), name).toBe(true);
-        expect(tool(name).description, name).toContain(permission);
-        expect(tool(name).description, name).toMatch(/^[\x20-\x7e]+$/);
-      }
+    it('the argument-less donation tool takes (deps, ctx); the letter names dms.create', () => {
       expect(tool('finance_machine_procedure_get').handler.length).toBe(2);
       expect(tool('finance_notification_letter_draft').description).toContain('dms.create');
-    });
-
-    it('issue and void are human only and answer an agent with the way out', async () => {
-      const f = await donationFixture();
-      const { line } = await f.donate();
-      for (const name of ['finance_confirmation_issue', 'finance_confirmation_void']) expect(tool(name).description, name).toMatch(/Human only/);
-      const agent = { ...f.ctx, channel: 'mcp' as const };
-      expect(await tool('finance_confirmation_issue').handler(f.deps, agent, { lineIds: [line.id] })).toMatchObject({ ok: false, error: { type: 'conflict', code: 'humanOnly' } });
-      expect(await tool('finance_confirmation_void').handler(f.deps, agent, { id: 'x', note: 'x', alreadySent: false })).toMatchObject({ ok: false, error: { type: 'conflict', code: 'humanOnly' } });
-      // Lesen und prüfen darf ein Agent.
-      expect(unwrap(await tool('finance_confirmation_check').handler(f.deps, agent, { lineIds: [line.id] }))).toMatchObject({ ok: true, kind: 'money' });
-      expect(unwrap(await tool('finance_donations_uncertified').handler(f.deps, agent, {}))).toMatchObject({ total: 1 });
     });
 
     it('finance_facsimile_upload takes base64, never returns the bytes and says so', async () => {
@@ -226,37 +144,16 @@ describe('finance MCP tools', () => {
   });
 
   describe('confirmation runs and donation book (F6b)', () => {
-    const RUN_TOOLS = {
-      finance_confirmation_run_preview: 'finance.read',
-      finance_confirmation_run_start: 'finance.donationsIssue',
-      finance_confirmation_run_continue: 'finance.donationsIssue',
-      finance_confirmation_run_get: 'finance.read',
-      finance_confirmation_runs_list: 'finance.read',
-      finance_confirmation_run_dispatch: 'finance.donationsIssue',
-      finance_donation_book: 'finance.read',
-      finance_donation_reconciliation: 'finance.read',
-    } as const;
     const tool = (name: string) => FINANCE_MCP_TOOLS.find((t) => t.name === name)!;
 
-    it('registers eight tools, each naming its permission; start and continue say human only, continue takes max', () => {
-      for (const [name, permission] of Object.entries(RUN_TOOLS)) {
-        expect(FINANCE_MCP_TOOLS.some((t) => t.name === name), name).toBe(true);
-        expect(tool(name).description, name).toContain(permission);
-        expect(tool(name).description, name).toMatch(/^[\x20-\x7e]+$/);
-      }
-      for (const name of ['finance_confirmation_run_start', 'finance_confirmation_run_continue']) expect(tool(name).description, name).toMatch(/Human only/);
-      for (const name of ['finance_confirmation_run_preview', 'finance_confirmation_run_get', 'finance_confirmation_runs_list', 'finance_confirmation_run_dispatch', 'finance_donation_book', 'finance_donation_reconciliation']) {
-        expect(tool(name).description, name).not.toMatch(/Human only/);
-      }
+    it('continue takes max', () => {
       expect(Object.keys((tool('finance_confirmation_run_continue').inputSchema as unknown as { shape: Record<string, unknown> }).shape)).toEqual(['runId', 'max']);
     });
 
-    it('refuses an agent to start or continue a run, lets it preview, read the runs, the book and the reconciliation', async () => {
+    it('lets an agent preview, read the runs, the book and the reconciliation', async () => {
       const f = await donationFixture();
       await f.donate({ date: '2026-02-01', cents: 5000 });
       const agent = { ...f.ctx, channel: 'mcp' as const };
-      expect(await tool('finance_confirmation_run_start').handler(f.deps, agent, { year: 2026 })).toMatchObject({ ok: false, error: { type: 'conflict', code: 'humanOnly' } });
-      expect(await tool('finance_confirmation_run_continue').handler(f.deps, agent, { runId: 'x', max: 5 })).toMatchObject({ ok: false, error: { type: 'conflict', code: 'humanOnly' } });
 
       expect(unwrap(await tool('finance_confirmation_run_preview').handler(f.deps, agent, { year: 2026 }))).toMatchObject({ counts: { ready: 0, needsSignature: 1 } });
       const run = unwrap(await tool('finance_confirmation_run_start').handler(f.deps, f.ctx, { year: 2026 })) as { id: string };
@@ -273,8 +170,6 @@ describe('finance MCP tools', () => {
   it('finance_statement_detect_account takes base64 like finance_import_statement and names both ibans of a file for two accounts (N3, W-1)', async () => {
     const f = await ledgerFixture();
     const tool = FINANCE_MCP_TOOLS.find((t) => t.name === 'finance_statement_detect_account')!;
-    expect(tool.description).toContain('finance.entriesWrite');
-    expect(tool.description).toMatch(/^[\x20-\x7e]+$/);
     expect(await tool.handler(f.deps, f.ctx, { fileName: 'a.xml', contentBase64: 'kein base64!' })).toMatchObject({ ok: false, error: { type: 'validation' } });
 
     const camt = (iban: string) => buildCamt053({ iban, from: '2026-03-01', to: '2026-03-31', openingCents: 0, lines: [] });
@@ -288,3 +183,87 @@ describe('finance MCP tools', () => {
     expect(res).toMatchObject({ ok: false, error: { type: 'conflict', code: 'statementMultipleAccounts', params: { ibans: expect.stringMatching(/^DE23999999990000202051, DE12999999990000606060$/) } } });
   });
 });
+
+/**
+ * „Nur für Menschen“ aus dem Quelltext abgeleitet (Testdurchsicht 2026-10-22, Plan P4 Task 2), statt einer Liste von
+ * Werkzeugnamen je Bereich: Ein Dienst ist es, wenn er `requireHumanChannelFinance` ruft — selbst oder über eine
+ * Funktion, die er ruft. Sein Werkzeug sagt es in der Beschreibung, und umgekehrt sagt es keines, dessen Dienst es nicht
+ * ist. Ruft der Dienst die Prüfung gleich nach dem Recht (nicht erst je nach Eingabe), weist das Werkzeug einen Agenten
+ * mit allen Rechten ab, ehe es die Eingabe ansieht.
+ */
+describe('human-only tools, derived from the services', () => {
+  const SRC = path.resolve(import.meta.dirname, '../src');
+  const files = (dir: string): string[] => readdirSync(dir).flatMap((n) => { const p = path.join(dir, n); return statSync(p).isDirectory() ? files(p) : [p]; });
+  /** Je Funktion im Modul ihr Quelltext bis zur nächsten Funktion auf oberster Ebene. */
+  const bodies = new Map<string, string>();
+  for (const file of files(SRC).filter((f) => f.endsWith('.ts'))) {
+    for (const part of readFileSync(file, 'utf8').split(/\n(?=(?:export )?(?:async )?function )/)) {
+      const name = /^(?:export )?(?:async )?function (\w+)/.exec(part)?.[1];
+      if (name && name !== 'requireHumanChannelFinance') bodies.set(name, part);
+    }
+  }
+  /** Ruft die Prüfung auf oberster Ebene des Rumpfs, also unabhängig von der Eingabe. */
+  const always = (name: string) => /\n {2}const \w+ = requireHumanChannelFinance\(/.test(bodies.get(name) ?? '');
+  const reaches = (name: string, seen = new Set<string>()): boolean => {
+    const body = bodies.get(name);
+    if (!body || seen.has(name)) return false;
+    seen.add(name);
+    if (body.includes('requireHumanChannelFinance(')) return true;
+    return [...bodies.keys()].some((other) => other !== name && new RegExp(`\\b${other}\\(`).test(body) && reaches(other, seen));
+  };
+  const MARKER = /human only: refused over MCP/i;
+  /** Werkzeuge, deren Dienst die Prüfung zwar erreicht, aber nie auslöst — mit Grund. */
+  const REACHES_BUT_NEVER_REFUSES: Record<string, string> = {
+    finance_voucher_upload_to_transaction: 'Legt den Entwurf über bookFromTransaction an, aber immer mit reviewed: false — die Prüfung greift dort nur für reviewed: true.',
+  };
+  const serviceOf = (tool: (typeof FINANCE_MCP_TOOLS)[number]) => (tool.service as { name?: string } | undefined)?.name ?? '';
+
+  it('finds the services that check the channel', () => {
+    expect([...bodies.keys()].filter((name) => bodies.get(name)!.includes('requireHumanChannelFinance(')).length).toBeGreaterThan(20);
+  });
+
+  it('every tool says human only exactly when its service checks the channel', () => {
+    const wrong = FINANCE_MCP_TOOLS.filter((tool) => MARKER.test(tool.description) !== (reaches(serviceOf(tool)) && !(tool.name in REACHES_BUT_NEVER_REFUSES))).map((tool) => `${tool.name} (${serviceOf(tool)})`);
+    expect(wrong).toEqual([]);
+    const stale = Object.keys(REACHES_BUT_NEVER_REFUSES).filter((name) => {
+      const tool = FINANCE_MCP_TOOLS.find((t) => t.name === name);
+      return !tool || !reaches(serviceOf(tool));
+    });
+    expect(stale, 'erreicht die Prüfung nicht mehr — aus der Liste nehmen').toEqual([]);
+  });
+
+  it('a tool whose service always checks refuses an agent with every permission before looking at the input — until the association allows it', async () => {
+    const f = await ledgerFixture();
+    const agent = { ...ctxWith([...f.deps.registry.permissionKeys], f.userId), channel: 'mcp' as const };
+    const checked = FINANCE_MCP_TOOLS.filter((tool) => always(serviceOf(tool)));
+    expect(checked.length).toBeGreaterThan(20);
+    const answerOf = async (tool: (typeof FINANCE_MCP_TOOLS)[number]) => {
+      const result = await tool.handler(f.deps, agent, sampleOf(z.toJSONSchema(tool.inputSchema, { io: 'input' }) as JsonSchema) as never).catch((error: unknown) => ({ ok: false as const, error: { type: `throws ${String(error).slice(0, 60)}` } }));
+      return result.ok ? 'ok' : `${result.error.type}${'code' in result.error ? `:${String(result.error.code)}` : ''}`;
+    };
+    const answers: string[] = [];
+    for (const tool of checked) if ((await answerOf(tool)) !== 'conflict:humanOnly') answers.push(`${tool.name}: ${await answerOf(tool)}`);
+    expect(answers).toEqual([]);
+    allowHumanOnlyOverMcp(f.deps);
+    const stillRefused: string[] = [];
+    for (const tool of checked) if ((await answerOf(tool)) === 'conflict:humanOnly') stillRefused.push(tool.name);
+    expect(stillRefused).toEqual([]);
+  });
+});
+
+type JsonSchema = { type?: string | string[]; properties?: Record<string, JsonSchema>; required?: string[]; enum?: unknown[]; const?: unknown; oneOf?: JsonSchema[]; anyOf?: JsonSchema[]; minimum?: number };
+
+/** Ein Wert, der der Form eines JSON Schemas genügt: nur Pflichtfelder, die erste Variante, Base64-taugliche Texte. */
+function sampleOf(s: JsonSchema): unknown {
+  if (s.const !== undefined) return s.const;
+  if (s.enum) return s.enum[0];
+  const branch = s.oneOf?.[0] ?? s.anyOf?.[0];
+  if (branch) return sampleOf(branch);
+  const type = Array.isArray(s.type) ? s.type[0] : s.type;
+  if (type === 'object') return Object.fromEntries((s.required ?? []).map((key) => [key, sampleOf(s.properties?.[key] ?? {})]));
+  if (type === 'array') return [];
+  if (type === 'string') return 'AA==';
+  if (type === 'number' || type === 'integer') return s.minimum ?? 1;
+  if (type === 'boolean') return false;
+  return null;
+}

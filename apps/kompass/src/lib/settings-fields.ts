@@ -1,6 +1,6 @@
 import type { FieldSize } from '@/components/forms/form-field';
 import { panelHref } from '@/components/panel-nav';
-export type FieldKind = 'text' | 'mono' | 'textarea' | 'select' | 'date' | 'theme' | 'font-body' | 'font-heading' | 'country' | 'timeZone';
+export type FieldKind = 'text' | 'mono' | 'textarea' | 'select' | 'date' | 'theme' | 'font-body' | 'font-heading' | 'country' | 'timeZone' | 'switch' | 'localized';
 
 /**
  * Ein Feld der Vereinseinstellungen. `size` ist die Spannweite im `FormGrid` (docs/MUSTER.md § J), `section` der
@@ -16,10 +16,11 @@ export interface SettingsField {
   maxLength?: number;
   hintKey?: string;
   placeholderKey?: string;
+  multiline?: boolean;
 }
 
 export interface SettingsTab {
-  key: 'organization' | 'tax' | 'bank' | 'branding';
+  key: 'organization' | 'tax' | 'bank' | 'branding' | 'media';
   fields: SettingsField[];
 }
 
@@ -69,6 +70,22 @@ export const SETTINGS_TABS: SettingsTab[] = [
       { key: 'branding.activeTheme', kind: 'theme', size: 'm', section: 'fontsAndColors' },
       // Ein Reiter „Darstellung“ mit Logo, Schrift, Theme und Datumsformat; vorher stand das Datumsformat allein (11-1 B21).
       { key: 'ui.dateFormat', kind: 'select', size: 'm', options: ['locale', 'iso'], hintKey: 'dateFormatHint' },
+    ],
+  },
+  {
+    key: 'media',
+    fields: [
+      { key: 'media.aiLabeling.enabled', kind: 'switch', size: 'full', section: 'aiLabeling', hintKey: 'aiLabelingEnabledHint' },
+      { key: 'media.aiLabeling.editedMark', kind: 'localized', size: 'm', section: 'aiLabeling', hintKey: 'aiLabelingEditedMarkHint' },
+      { key: 'media.aiLabeling.mark', kind: 'localized', size: 'm', section: 'aiLabeling', hintKey: 'aiLabelingMarkHint' },
+      { key: 'media.aiLabeling.editedLabel', kind: 'localized', size: 'm', section: 'aiLabeling', hintKey: 'aiLabelingEditedLabelHint' },
+      { key: 'media.aiLabeling.generatedLabel', kind: 'localized', size: 'm', section: 'aiLabeling', hintKey: 'aiLabelingGeneratedLabelHint' },
+      { key: 'media.aiLabeling.editedNote', kind: 'localized', size: 'full', multiline: true, section: 'aiLabeling', hintKey: 'aiLabelingEditedNoteHint' },
+      { key: 'media.aiLabeling.generatedNote', kind: 'localized', size: 'full', multiline: true, section: 'aiLabeling', hintKey: 'aiLabelingGeneratedNoteHint' },
+      { key: 'media.aiLabeling.mixedNote', kind: 'localized', size: 'full', multiline: true, section: 'aiLabeling', hintKey: 'aiLabelingMixedNoteHint' },
+      { key: 'media.aiLabeling.editedNoteSingle', kind: 'localized', size: 'full', multiline: true, section: 'aiLabeling', hintKey: 'aiLabelingEditedNoteSingleHint' },
+      { key: 'media.aiLabeling.generatedNoteSingle', kind: 'localized', size: 'full', multiline: true, section: 'aiLabeling', hintKey: 'aiLabelingGeneratedNoteSingleHint' },
+      { key: 'media.aiLabeling.moreLink', kind: 'localized', size: 'm', section: 'aiLabeling', hintKey: 'aiLabelingMoreLinkHint' },
     ],
   },
 ];

@@ -12,9 +12,10 @@ describe('SETTINGS_TABS', () => {
   });
   // 11-1 B21: Datumsformat und Branding in einem Reiter „Darstellung“.
   it('führt das Datumsformat im Reiter Darstellung, ohne eigenen Reiter', () => {
-    expect(SETTINGS_TABS.map((tab) => tab.key)).toEqual(['organization', 'tax', 'bank', 'branding']);
+    expect(SETTINGS_TABS.map((tab) => tab.key)).toEqual(['organization', 'tax', 'bank', 'branding', 'media']);
     expect(SETTINGS_TABS.find((tab) => tab.key === 'branding')!.fields.map((f) => f.key)).toContain('ui.dateFormat');
     expect(messages.settings.tabs.branding).toBe('Darstellung');
+    expect(messages.settings.tabs.media).toBe('Medien');
   });
   it('sagt am Datumsformat, dass es nur die Anzeige betrifft (K10)', () => {
     const field = SETTINGS_TABS.flatMap((tab) => tab.fields).find((f) => f.key === 'ui.dateFormat')!;
@@ -22,12 +23,21 @@ describe('SETTINGS_TABS', () => {
     expect((messages.settings.hints as Record<string, string>).dateFormatHint).toBe('Gilt für die Anzeige, nicht für Schriftstücke.');
   });
 
-  it('covers every organization, branding and ui setting exactly once', () => {
+  it('covers every organization, branding, ui and media setting exactly once', () => {
     const covered = SETTINGS_TABS.flatMap((tab) => tab.fields.map((f) => f.key));
     // branding.logoAssetId wird über den Logo-Upload verwaltet, nicht als Textfeld
-    const expected = CORE_SETTINGS.map((s) => s.key).filter((k) => (k.startsWith('organization.') || k.startsWith('branding.') || k.startsWith('ui.')) && k !== 'branding.logoAssetId');
+    const expected = CORE_SETTINGS.map((s) => s.key).filter((k) => (k.startsWith('organization.') || k.startsWith('branding.') || k.startsWith('ui.') || k.startsWith('media.')) && k !== 'branding.logoAssetId');
     expect([...covered].sort()).toEqual([...expected].sort());
     expect(new Set(covered).size).toBe(covered.length);
+  });
+
+  it('places media and ai labeling settings on the media tab', () => {
+    const media = SETTINGS_TABS.find((t) => t.key === 'media')!;
+    expect(media).toBeDefined();
+    expect(media.fields.map((f) => f.key)).toContain('media.aiLabeling.enabled');
+    expect(media.fields.find((f) => f.key === 'media.aiLabeling.enabled')?.kind).toBe('switch');
+    const sections = settingsSections(media);
+    expect(sections.map((s) => s.section)).toEqual(['aiLabeling']);
   });
   it('places tax fields on the tax tab', () => {
     const tax = SETTINGS_TABS.find((t) => t.key === 'tax')!;

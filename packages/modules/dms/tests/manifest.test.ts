@@ -3,17 +3,6 @@ import { dmsModule } from '../src/manifest';
 import { fileFixture, setupWithProbe, setupWithTypes } from './helpers';
 
 describe('dms module', () => {
-  it('hat den Schlüssel dms und hängt an den Kontakten', () => {
-    expect(dmsModule.key).toBe('dms');
-    expect(dmsModule.dependsOn).toContain('contacts');
-  });
-
-  it('führt die sieben Rechte der Akte', () => {
-    expect(dmsModule.permissions).toEqual([
-      'dms.view', 'dms.create', 'dms.file', 'dms.void', 'dms.deleteDraft', 'dms.manage', 'dms.send',
-    ]);
-  });
-
   it('refuses to be switched off once a document is filed — its links hold contacts', async () => {
     const { deps, ctx } = setupWithTypes();
     expect(dmsModule.canDisable!(deps)).toBeNull();

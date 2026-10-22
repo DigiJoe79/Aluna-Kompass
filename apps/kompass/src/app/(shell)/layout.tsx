@@ -1,6 +1,7 @@
-import { enabledManifests, hasPermission, parseHandbookIndex, readHandbookIndex, readSetting } from '@kompass/core';
+import { aiLabelingEnabled, enabledManifests, hasPermission, parseHandbookIndex, readHandbookIndex, readSetting } from '@kompass/core';
 import type { ReactNode } from 'react';
 import { DateFormatProvider } from '@/components/date-format-provider';
+import { MediaLabelingProvider } from '@/components/media/media-labeling-provider';
 import { SiteJobIndicator } from '@/components/site/site-job-indicator';
 import { SiteJobProvider } from '@/components/site/site-job-provider';
 import { EnvBanner } from '@/components/shell/env-banner';
@@ -28,10 +29,15 @@ export default async function ShellLayout({ children }: { children: ReactNode })
   // Die einzige modulbezogene Zeile der Hülle: Wer die Webseite veröffentlichen
   // darf, sieht in der Kopfzeile, was gerade läuft. Ein allgemeiner Haken im
   // Manifest lohnt erst bei einem zweiten Modul.
+  // Bildkennzeichnung nach dem Hochladen und an Fotokachel und Bildfeld (Spec Bildkennzeichnung beim Hochladen): nur wer
+  // speichern dürfte, sieht Schritt und Knöpfe.
+  const canLabel = aiLabelingEnabled(deps) && hasPermission(ctx, 'media.upload');
   const siteJobs = enabledManifests(deps).some((m) => m.key === 'site') && hasPermission(ctx, 'site.publish');
   const frame = (
     <ShellFrame organization={readSetting<string>(deps, 'organization.name')} logoUrl={logoId ? `/media/${logoId}` : null} groups={groups} build={buildId()} version={appVersion()} user={{ name: user.name }} permissions={[...ctx.permissions]} helpChapters={helpChapters} helpPages={helpPages} extras={siteJobs ? <SiteJobIndicator key="site-jobs" /> : undefined}>
-      <DateFormatProvider mode={fmt.mode} timeZone={fmt.timeZone}>{children}</DateFormatProvider>
+      <DateFormatProvider mode={fmt.mode} timeZone={fmt.timeZone}>
+        <MediaLabelingProvider canLabel={canLabel}>{children}</MediaLabelingProvider>
+      </DateFormatProvider>
     </ShellFrame>
   );
   // Feste Höhe, nicht „mindestens“: Gescrollt wird im Hauptbereich. Mit

@@ -55,9 +55,8 @@ describe('sendConfirmationRunEmails', () => {
     expect(outbox(f)).toEqual([]);
   });
 
-  it('is human only, needs both permissions and a finished run', async () => {
+  it('needs both permissions and a finished run', async () => {
     const { f, ctx, runId } = await fixture(true);
-    expect(err(await sendConfirmationRunEmails(f.deps, { ...ctx, channel: 'mcp' }, { runId }))).toMatchObject({ type: 'conflict', code: 'humanOnly' });
     expect(err(await sendConfirmationRunEmails(f.deps, f.ctx, { runId }))).toEqual({ type: 'forbidden', permission: 'dms.send' });
     expect(err(await sendConfirmationRunEmails(f.deps, ctx, {}))).toMatchObject({ type: 'validation' });
     f.deps.mail = fakeMailTransport({ state: { kind: 'blocked', reason: 'noRedirect' } });
@@ -71,7 +70,6 @@ describe('sendConfirmationRunEmails', () => {
 
   it('has an agent tool that names the lock', () => {
     const tool = FINANCE_MCP_TOOLS.find((t) => t.name === 'finance_confirmation_run_mail');
-    expect(tool?.description).toMatch(/Human only/);
     expect(tool?.description).toMatch(/dms\.send/);
   });
 });

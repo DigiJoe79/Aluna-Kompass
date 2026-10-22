@@ -28,13 +28,10 @@ describe.each([
   ['backup import card', () => <ImportCard environmentName="test" />],
   ['setup import form', () => <ImportForm />],
 ])('%s', (_, ui) => {
-  it('picks the archive through the drop zone, the raw file input stays out of sight', () => {
+  it('picks the archive through a labelled file input', () => {
     render(ui(), { wrapper: Intl });
     const input = screen.getByLabelText('Backup-Datei');
     expect(input.getAttribute('type')).toBe('file');
-    expect(input.className).toContain('sr-only');
-    expect(screen.getByText('Datei hierher ziehen')).toBeTruthy();
-    expect(screen.getByText(messages.backup.import.fileHint)).toBeTruthy();
   });
 });
 

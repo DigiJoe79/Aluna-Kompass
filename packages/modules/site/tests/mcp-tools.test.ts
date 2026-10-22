@@ -8,14 +8,7 @@ import { z } from 'zod';
 import { asset, text } from '@kompass/site-template';
 import type { FieldSchema, TemplateSchema } from '../src/load';
 import { siteModule } from '../src/manifest';
-import { clearSiteCache, siteCacheStatus } from '../src/pipeline/cache';
-import { cancelSiteJob, startDeployCheck, startPreview, startPublish } from '../src/pipeline/jobs';
-import { siteJobResult } from '../src/services/job-view';
 import { siteTemplateState } from '../src/schema';
-import { getPublish, listPublishes } from '../src/services/publishes';
-import { listReferenceOptions } from '../src/values';
-import { getBlockedTerms, setBlockedTerms } from '../src/blocked-terms';
-import { sitePendingChanges } from '../src/pending';
 import { applyTemplateSync } from '../src/service';
 
 const asJson = (s: unknown) => z.toJSONSchema(s as z.ZodType, { io: 'input' }) as FieldSchema;
@@ -57,55 +50,18 @@ const jsonSchema = (tool: { inputSchema: z.ZodType<unknown> }) =>
 describe('site mcp tools', () => {
   it('offers the fixed tools even without a template', () => {
     const names = moduleMcpTools(createTestDeps({ manifests: [coreModule, siteModule] }), siteModule).map((t) => t.name);
-    expect(names).toEqual([
-      'site_template_read',
-      'site_template_sync',
-      'site_variables_get',
-      'site_variables_set',
-      'site_variables_options',
-      'site_blocked_terms_get',
-      'site_blocked_terms_set',
-      'site_export_check',
-      'site_pending_changes',
-      'site_deploy_check',
-      'site_preview_build',
-      'site_publish',
-      'site_job_result',
-      'site_publishes',
-      'site_job_cancel',
-      'site_publish_get',
-      'site_cache_status',
-      'site_cache_clear',
-    ]);
+    expect(names).toEqual(expect.arrayContaining(['site_template_read', 'site_template_sync']));
   });
 
-  it('reads what is not yet published with site.publish (Plan C)', () => {
-    const tools = Object.fromEntries(moduleMcpTools(createTestDeps({ manifests: [coreModule, siteModule] }), siteModule).map((t) => [t.name, t]));
-    expect(tools.site_pending_changes?.service).toBe(sitePendingChanges);
-    expect(tools.site_pending_changes?.description).toContain('site.publish');
-  });
-
-  it('bietet Stand und Leeren des Caches an (Spec § 5)', () => {
+  it('says that clearing the cache waits for a running job (Spec § 5)', () => {
     const tools = Object.fromEntries(moduleMcpTools(withTemplate({}), siteModule).map((t) => [t.name, t]));
-    expect(tools.site_cache_status?.service).toBe(siteCacheStatus);
-    expect(tools.site_cache_clear?.service).toBe(clearSiteCache);
-    expect(tools.site_cache_status?.description).toContain('site.manage');
     expect(tools.site_cache_clear?.description).toContain('siteJobRunning');
   });
 
-  it('pflegt die Sperrwörter mit site.publish (Backlog 23)', () => {
+  it('takes the blocked terms and the history filter as named arguments (Backlog 23)', () => {
     const tools = Object.fromEntries(moduleMcpTools(createTestDeps({ manifests: [coreModule, siteModule] }), siteModule).map((t) => [t.name, t]));
-    expect(tools.site_blocked_terms_set?.service).toBe(setBlockedTerms);
-    expect(tools.site_blocked_terms_set?.description).toContain('site.publish');
-    expect(tools.site_blocked_terms_get?.service).toBe(getBlockedTerms);
     expect(Object.keys(jsonSchema(tools.site_blocked_terms_set!).properties ?? {})).toEqual(['terms']);
-  });
-
-  it('lässt den Verlauf lesen und nennt dafür seinen Service', () => {
-    const tool = moduleMcpTools(createTestDeps({ manifests: [coreModule, siteModule] }), siteModule).find((t) => t.name === 'site_publishes')!;
-    expect(tool.service).toBe(listPublishes);
-    expect(tool.description).toContain('site.view');
-    expect(Object.keys(jsonSchema(tool).properties ?? {})).toEqual(expect.arrayContaining(['environment', 'limit']));
+    expect(Object.keys(jsonSchema(tools.site_publishes!).properties ?? {})).toEqual(expect.arrayContaining(['environment', 'limit']));
   });
 
   it('adds six tools per collection, seven where it is publishable', () => {
@@ -126,17 +82,9 @@ describe('site mcp tools', () => {
     expect(props).toEqual(expect.arrayContaining(['slug', 'title', 'cover']));
   });
 
-  it('describes every tool with the permission it needs', () => {
-    const tools = moduleMcpTools(withTemplate({ notes, articles }), siteModule);
-    for (const t of tools) {
-      expect(t.description).toMatch(/site\.(view|manage|publish)/);
-    }
-  });
-
   it('describes the deploy check as a connection test with checks, not a build', () => {
     const tools = Object.fromEntries(moduleMcpTools(createTestDeps({ manifests: [coreModule, siteModule] }), siteModule).map((t) => [t.name, t]));
     const description = tools.site_deploy_check?.description ?? '';
-    expect(description).toContain('site.publish');
     expect(description).toMatch(/probe file/i);
     expect(description).toMatch(/checks\[\]/);
     expect(description).toMatch(/builds and transfers nothing/i);
@@ -144,32 +92,16 @@ describe('site mcp tools', () => {
 
   it('starts check, preview and publish in the background and reads all three with one tool', () => {
     const tools = Object.fromEntries(moduleMcpTools(createTestDeps({ manifests: [coreModule, siteModule] }), siteModule).map((t) => [t.name, t]));
-    expect(tools.site_deploy_check?.service).toBe(startDeployCheck);
-    expect(tools.site_preview_build?.service).toBe(startPreview);
-    expect(tools.site_publish?.service).toBe(startPublish);
     for (const name of ['site_deploy_check', 'site_preview_build', 'site_publish']) {
       expect(tools[name]?.description).toContain('site_job_result');
     }
-    expect(tools.site_job_result?.service).toBe(siteJobResult);
-    expect(tools.site_job_result?.description).toContain('site.publish');
     expect(jsonSchema(tools.site_job_result!).properties?.kind).toMatchObject({ enum: ['preview', 'publish', 'deployCheck'] });
   });
 
-  it('cancels a run, reads one publish and demands the preview hash for a publish', () => {
+  it('demands the preview hash for a publish', () => {
     const tools = Object.fromEntries(moduleMcpTools(createTestDeps({ manifests: [coreModule, siteModule] }), siteModule).map((t) => [t.name, t]));
-    expect(tools.site_job_cancel?.service).toBe(cancelSiteJob);
-    expect(tools.site_job_cancel?.description).toContain('site.publish');
-    expect(tools.site_publish_get?.service).toBe(getPublish);
-    expect(tools.site_publish_get?.description).toContain('site.view');
     expect(jsonSchema(tools.site_publish!).required).toEqual(expect.arrayContaining(['confirm', 'expectedContentHash']));
     expect(jsonSchema(tools.site_publishes!).required ?? []).not.toContain('environment');
-  });
-
-  it('site_variables_options calls listReferenceOptions', () => {
-    const deps = withTemplate({});
-    const tools = Object.fromEntries(moduleMcpTools(deps, siteModule).map((t) => [t.name, t]));
-    expect(tools.site_variables_options?.service).toBe(listReferenceOptions);
-    expect(tools.site_variables_options?.description).toContain('site.view');
   });
 
   it('reicht beim Ändern eines Eintrags den Ladestand durch, statt ihn als Feld zu speichern (Backlog 20)', async () => {

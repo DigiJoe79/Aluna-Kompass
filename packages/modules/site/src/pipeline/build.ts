@@ -1,4 +1,4 @@
-import { access, mkdir, mkdtemp, readdir, rm } from 'node:fs/promises';
+import { access, mkdir, mkdtemp } from 'node:fs/promises';
 import path from 'node:path';
 import { ChildTimeoutError, runChild } from './child';
 import { copyTree } from './copy';
@@ -108,13 +108,4 @@ async function runAstro(
     if (error instanceof ChildTimeoutError) throw new SiteBuildError('site build timed out', error.log);
     throw error;
   }
-}
-
-/** Reste aus Fassungen bis 0.2.4, die unter dem Template bauten. */
-export async function removeLegacyStages(siteDir: string): Promise<number> {
-  const dir = path.join(siteDir, '.astro');
-  const names = await readdir(dir).catch(() => [] as string[]);
-  const stale = names.filter((n) => n.startsWith('out-'));
-  await Promise.all(stale.map((n) => rm(path.join(dir, n), { recursive: true, force: true, maxRetries: 3 })));
-  return stale.length;
 }

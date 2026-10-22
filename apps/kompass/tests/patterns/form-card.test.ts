@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { lineOf, read, relative, sourceFiles, type Allowlist } from './source';
+import { type Allowlist, allowlistHygiene, lineOf, read, relative, sourceFiles, staleKeys } from './source';
 
 /**
  * Die Speicherleiste einer Seite klebt ab 640 × 600 px am unteren Rand (docs/MUSTER.md § B). Das tut sie nur, wenn
@@ -18,7 +18,7 @@ import { lineOf, read, relative, sourceFiles, type Allowlist } from './source';
  * Vorgangsmasken und Arbeitsflächen ohne Formularkarte: Die Leiste steht dort unter mehreren Karten oder am Ende
  * einer eigenen Scrollspalte. Eine `FormCard` darum wäre Karte in der Karte (MUSTER § E).
  */
-const WITHOUT_CARD: Allowlist = {
+export const WITHOUT_CARD: Allowlist = {
   'app/(shell)/dms/new/draft-form.tsx': 'Brief schreiben: Arbeitsfläche mit Vorschau; die Leiste klebt am Ende der eigenen Scrollspalte (draft-screen.tsx).',
   'app/(shell)/finance/direct-debit/runs/new/new-run-flow.tsx': 'Neuer Einzug (mode run, Handoff 2a § 1.2 wie der Serienlauf): Laufleiste unter Fälligkeitstag und Vorschau-Gruppen, keine Formularkarte.',
   'app/(shell)/finance/donations/run/run-selection.tsx': 'Sammelbestätigung (mode run): Fußleiste unter Auswahl und Vorschau-Gruppen, keine Formularkarte.',
@@ -115,10 +115,7 @@ describe('Formularkarte und klebende Speicherleiste', () => {
     expect(files.flatMap((file) => scrollingCards(read(file)).map((line) => `${relative(file)}:${line}`))).toEqual([]);
   });
 
-  it('die Erlaubnisliste ist nicht veraltet', () => {
-    const stale = Object.keys(WITHOUT_CARD).filter((file) => !findings.some((f) => f.file === file && f.problem === 'noCard'));
-    expect(stale).toEqual([]);
-  });
+  allowlistHygiene(WITHOUT_CARD, () => staleKeys(WITHOUT_CARD, findings.filter((f) => f.problem === 'noCard').map((f) => f.file)));
 
   describe('Heuristik', () => {
     it('erkennt die Leiste in einer FormCard, auch durch ein Formular hindurch', () => {

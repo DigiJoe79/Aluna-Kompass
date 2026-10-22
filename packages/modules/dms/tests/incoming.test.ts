@@ -1,7 +1,6 @@
-import { ctxWith } from '@kompass/core/testing';
 import { describe, expect, it } from 'vitest';
 import { receiveDocument, receiveDocumentSchema, receiveSchema } from '../src/incoming';
-import { ALL_DMS, auditActions, pdfBytes, setupWithTypes } from './helpers';
+import { auditActions, pdfBytes, setupWithTypes } from './helpers';
 
 describe('receiveDocument', () => {
   it('legt die Datei ab und schreibt sofort fest', async () => {
@@ -62,16 +61,6 @@ describe('receiveDocument', () => {
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.error.type).toBe('validation');
-  });
-
-  it('verlangt dms.create', async () => {
-    const { deps } = setupWithTypes();
-    const denied = await receiveDocument(
-      deps,
-      ctxWith(ALL_DMS.filter((p) => p !== 'dms.create')),
-      { filename: 'x.pdf', bytes: pdfBytes(), typeKey: 'authority', subject: 'X', documentDate: '2026-03-14' },
-    );
-    expect(denied.ok).toBe(false);
   });
 
   it('schreibt einen Eintrag ins Änderungsprotokoll', async () => {

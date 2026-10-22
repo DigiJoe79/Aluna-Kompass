@@ -1,5 +1,7 @@
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import path from 'node:path';
+import { expect, it } from 'vitest';
+import messages from '../../messages/de.json';
 
 /**
  * Gemeinsame Hilfe der Wächter unter `tests/patterns/` (docs/MUSTER.md, Fassung 0.2.6):
@@ -21,6 +23,64 @@ export function sourceFiles(dir: string = SRC): string[] {
 export const relative = (file: string): string => path.relative(SRC, file).split(path.sep).join('/');
 
 export const read = (file: string): string => readFileSync(file, 'utf8');
+
+/** Das Repo und Pfade relativ dazu, mit `/` getrennt — für Wächter, die App und Pakete lesen. */
+export const REPO = path.resolve(SRC, '../../..');
+export const fromRepo = (file: string): string => path.relative(REPO, file).split(path.sep).join('/');
+
+/** Die `src`-Ordner aller Pakete: `packages/<name>/src` und `packages/modules/<name>/src`. */
+export function packageSourceDirs(): string[] {
+  const packages = path.join(REPO, 'packages');
+  return readdirSync(packages)
+    .flatMap((name) => (name === 'modules' ? readdirSync(path.join(packages, 'modules')).map((m) => path.join(packages, 'modules', m, 'src')) : [path.join(packages, name, 'src')]))
+    .filter((dir) => existsSync(dir));
+}
+
+/** Ausgelieferter Quelltext: keine Tests, keine E2E-Hilfen (`__e2e`), keine Attrappen (`src/testing/`). */
+export const isProductSource = (file: string): boolean => !/\.test\.tsx?$/.test(file) && !file.includes('__e2e') && !fromRepo(file).includes('/src/testing/');
+
+/** Ein Treffer: `where` (`datei:zeile`) für die Meldung, `file` als Schlüssel der Erlaubnisliste. */
+export type Hit = { where: string; file: string };
+
+/**
+ * Die Treffer je Zeile: `count` liefert für eine Zeile `true` (ein Treffer) oder eine Zahl. Kommentarzeilen zählen nie.
+ * `name` macht aus dem absoluten Pfad den Schlüssel (Vorgabe: relativ zu `src/`).
+ */
+export function lineHits(files: string[], count: (line: string) => number | boolean, name: (file: string) => string = relative): Hit[] {
+  return files.flatMap((file) =>
+    read(file)
+      .split('\n')
+      .flatMap((line, index) => {
+        if (isCommentLine(line)) return [];
+        const n = Number(count(line));
+        return Array.from({ length: n }, () => ({ where: `${name(file)}:${index + 1}`, file: name(file) }));
+      }),
+  );
+}
+
+/** Jeder Text der Sprachdatei `messages/de.json` als `[Schlüssel, Text]`, der Schlüssel mit Punkten. */
+export function messageTexts(node: unknown = messages, prefix = ''): [string, string][] {
+  if (typeof node === 'string') return [[prefix, node]];
+  if (typeof node !== 'object' || node === null) return [];
+  return Object.entries(node).flatMap(([key, value]) => messageTexts(value, prefix ? `${prefix}.${key}` : key));
+}
+
+/** Der Eintrag der Sprachdatei unter `key` (mit Punkten), oder `undefined`. */
+export const messageAt = (key: string): unknown =>
+  key.split('.').reduce<unknown>((node, part) => (node && typeof node === 'object' ? (node as Record<string, unknown>)[part] : undefined), messages);
+
+/** Die Übersetzer einer Datei: Variable → Namensraum (`const t = useTranslations('dms.admin')`; ohne Namensraum `''`). */
+export function translators(text: string): Map<string, string> {
+  return new Map([...text.matchAll(/const (\w+) = (?:await )?(?:useTranslations|getTranslations)\((?:'([^']*)')?\)/g)].map((m) => [m[1]!, m[2] ?? '']));
+}
+
+/** Der Text von `variable('key')` aus der Sprachdatei — `undefined`, wenn die Variable kein Übersetzer ist oder der Schlüssel fehlt. */
+export function translate(ts: Map<string, string>, variable: string, key: string): string | undefined {
+  const ns = ts.get(variable);
+  if (ns === undefined) return undefined;
+  const value = messageAt(ns ? `${ns}.${key}` : key);
+  return typeof value === 'string' ? value : undefined;
+}
 
 /** Die Zeilennummer (ab 1) einer Stelle im Text. */
 export const lineOf = (text: string, index: number): number => text.slice(0, index).split('\n').length;
@@ -76,6 +136,29 @@ export function callArguments(text: string, prefix: string): { line: number; arg
 }
 
 /**
+ * Der Ausdruck im Attribut `name={…}` des Tags selbst, bis zur passenden Klammer — nicht ein gleichnamiges Attribut eines
+ * verschachtelten Elements (`actions={<X status={…} />}`). `null`, wenn der Tag das Attribut nicht trägt.
+ */
+export function attributeExpression(tag: string, name: string): string | null {
+  const opens = new RegExp(`\\s${name}=\\{$`);
+  let depth = 0;
+  for (let i = 0; i < tag.length; i += 1) {
+    const ch = tag[i]!;
+    if (ch === '{') depth += 1;
+    else if (ch === '}') depth -= 1;
+    else if (depth === 0 && opens.test(tag.slice(Math.max(0, i - name.length - 2), i + 2))) {
+      let inner = 0;
+      for (let j = i + 1; j < tag.length; j += 1) {
+        if (tag[j] === '{') inner += 1;
+        else if (tag[j] === '}' && (inner -= 1) === 0) return tag.slice(i + 2, j);
+      }
+      return tag.slice(i + 2);
+    }
+  }
+  return null;
+}
+
+/**
  * Eine Erlaubnisliste: Pfad (relativ zu `src/`) → Begründung. Der Wächter prüft beides — dass nichts
  * Unerlaubtes dasteht und dass keine Ausnahme veraltet ist (die Datei gibt es, der Verstoß ebenso).
  */
@@ -87,7 +170,6 @@ export type Allowlist = Readonly<Record<string, string>>;
  * (K10-Review, 2026-10-07). Weniger Treffer als erlaubt heißt: Die Ausnahme ist veraltet, die Zahl sinkt mit.
  */
 export type CountedAllowlist = Readonly<Record<string, { count: number; reason: string }>>;
-type Hit = { where: string; file: string };
 
 export function checkCountedAllowlist(hits: Hit[], allowed: CountedAllowlist): { unexpected: string[]; stale: string[] } {
   const byFile = new Map<string, Hit[]>();
@@ -105,23 +187,18 @@ export function checkCountedAllowlist(hits: Hit[], allowed: CountedAllowlist): {
   return { unexpected, stale };
 }
 
-/**
- * Ob die Datei — oder eine Liste aus ihrem Ordner, die sie einbindet, auch über weitere Dateien desselben Ordners
- * (Seite → Client → Tabelle) — `pattern` enthält.
- */
-export function inFileOrLocalImport(file: string, pattern: RegExp, seen: Set<string> = new Set()): boolean {
-  if (seen.has(file)) return false;
+/** Die Datei und die Dateien ihres Ordners, die sie über `./name` einbindet, auch über mehrere Stufen (Seite → Client → Tabelle). */
+export function localImports(file: string, seen: Set<string> = new Set()): string[] {
+  if (seen.has(file)) return [];
   seen.add(file);
-  const text = read(file);
-  if (pattern.test(text)) return true;
-  const imports = [...text.matchAll(/from '\.\/([\w-]+)'/g)].map((m) => m[1]!);
-  return imports.some((name) =>
-    ['.tsx', '.ts'].some((ext) => {
-      const candidate = path.join(path.dirname(file), name + ext);
-      return existsSync(candidate) && inFileOrLocalImport(candidate, pattern, seen);
-    }),
-  );
+  const next = [...read(file).matchAll(/from '\.\/([\w-]+)'/g)]
+    .flatMap((m) => ['.tsx', '.ts'].map((ext) => path.join(path.dirname(file), m[1]! + ext)))
+    .filter((candidate) => existsSync(candidate));
+  return [file, ...next.flatMap((candidate) => localImports(candidate, seen))];
 }
+
+/** Ob die Datei oder eine Datei ihres Ordners, die sie einbindet (`localImports`), `pattern` enthält. */
+export const inFileOrLocalImport = (file: string, pattern: RegExp): boolean => localImports(file).some((f) => pattern.test(read(f)));
 
 /** Der Wert von `className=` in einem öffnenden Tag: der Text eines Strings oder der Ausdruck in `{ … }`. */
 export function classNameValue(tag: string): string | null {
@@ -152,4 +229,33 @@ export function classNameValue(tag: string): string | null {
     else if (tag[i] === '}' && (depth -= 1) === 0) return tag.slice(start + 1, i);
   }
   return null;
+}
+
+type AnyAllowlist = Allowlist | CountedAllowlist;
+const reasonOf = (entry: AnyAllowlist[string]): string => (typeof entry === 'string' ? entry : entry.reason);
+
+/** Die Schlüssel einer Erlaubnisliste, die unter `using` (den Dateien bzw. Schlüsseln mit Verstoß) nicht vorkommen. */
+export function staleKeys(allowed: AnyAllowlist, using: Iterable<string>): string[] {
+  const set = new Set(using);
+  return Object.keys(allowed).filter((key) => !set.has(key));
+}
+
+/** Was an einer Erlaubnisliste nicht stimmt: Eintrag ohne Grund, vorläufiger Eintrag (`OFFEN …`), veraltete Ausnahme. */
+export function allowlistIssues(allowed: AnyAllowlist, stale: string[]): string[] {
+  return [
+    ...Object.entries(allowed).flatMap(([key, entry]) => (reasonOf(entry).trim() === '' ? [`${key}: ohne Grund`] : [])),
+    ...Object.entries(allowed).flatMap(([key, entry]) => (/^OFFEN\b/.test(reasonOf(entry).trim()) ? [`${key}: vorläufig (OFFEN)`] : [])),
+    ...stale.map((entry) => `${entry}: nicht mehr nötig`),
+  ];
+}
+
+/**
+ * Die Hygiene einer Erlaubnisliste, für alle Wächter gleich (`allowlists.test.ts` verlangt sie für jede): jeder Eintrag
+ * mit Grund, keiner vorläufig, jeder noch nötig. `stale` liefert die veralteten Einträge — bei gezählten Listen
+ * `checkCountedAllowlist(…).stale`, sonst `staleKeys(…)`.
+ */
+export function allowlistHygiene(allowed: AnyAllowlist, stale: () => string[], name = 'Erlaubnisliste'): void {
+  it(`${name}: jeder Eintrag mit Grund, keiner vorläufig, jeder noch nötig`, () => {
+    expect(allowlistIssues(allowed, stale())).toEqual([]);
+  });
 }

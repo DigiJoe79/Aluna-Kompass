@@ -86,6 +86,15 @@ const TRAEGT_TEXT = /\p{L}{2,}/u;
  */
 const SICHTBARE_FELDER = new Set(['label', 'title', 'message', 'description', 'summary', 'hint', 'placeholder', 'text']);
 
+/**
+ * Objekte, deren Werte alle sichtbar werden, gleich unter welchem Schlüssel: `fieldErrors` einer Server-Action steht
+ * unverändert am Feld (`fieldErrors: { name: '…' }`). Was dort steht, kommt aus `t(…)` oder `toActionState`.
+ */
+const SICHTBARE_BEHAELTER = new Set(['fieldErrors']);
+
+const imSichtbarenBehaelter = (node: ts.PropertyAssignment): boolean =>
+  ts.isObjectLiteralExpression(node.parent) && ts.isPropertyAssignment(node.parent.parent) && SICHTBARE_BEHAELTER.has(node.parent.parent.name.getText());
+
 function walk(dir: string): string[] {
   return readdirSync(dir).flatMap((name) => {
     const full = path.join(dir, name);
@@ -160,7 +169,7 @@ function offendersIn(file: string, source: string): string[] {
     if (ts.isPropertyAssignment(node) && (ts.isStringLiteral(node.initializer) || ts.isNoSubstitutionTemplateLiteral(node.initializer))) {
       const name = node.name.getText();
       const wert = node.initializer.text;
-      if (SICHTBARE_FELDER.has(name) && TRAEGT_TEXT.test(wert) && !ERLAUBT.has(wert) && !ENDONYM.test(wert)) {
+      if ((SICHTBARE_FELDER.has(name) || imSichtbarenBehaelter(node)) && TRAEGT_TEXT.test(wert) && !ERLAUBT.has(wert) && !ENDONYM.test(wert)) {
         found.push(`${zeile(node)}: ${name}: "${wert}"`);
       }
     }
@@ -195,5 +204,11 @@ describe('Komponenten schreiben keinen Oberflächentext', () => {
       ]),
     );
     expect(gefunden).toHaveLength(3);
+  });
+
+  /** Was eine Server-Action als `message` oder `fieldErrors` zurückgibt, landet unverändert auf dem Bildschirm. */
+  it('finds a literal message and fieldErrors in a server action', () => {
+    const probe = `export async function save() { return { ok: false, message: 'Fehlt', fieldErrors: { name: 'Pflicht' } }; }`;
+    expect(offendersIn('actions.ts', probe)).toEqual([expect.stringContaining('message: "Fehlt"'), expect.stringContaining('name: "Pflicht"')]);
   });
 });

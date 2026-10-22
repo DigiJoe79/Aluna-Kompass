@@ -76,14 +76,15 @@ test.describe('Vorschläge prüfen', () => {
     await expect(page.getByRole('tab', { name: 'Geschichte' })).toHaveCount(0);
     await page.getByRole('button', { name: 'Zum Feld' }).first().click();
     await expect(page.locator('#birthText-de')).toBeFocused();
-    // Titelbild: Marke am gewählten Foto, „Als Titelbild“ nur an den anderen (Befund 10).
+    // Titelbild: Stern gedrückt am gewählten Foto, Klick an einem anderen macht es zum Titelbild (N3, Joe 2026-10-22).
     await page.getByRole('tab', { name: 'Texte und Fotos' }).click();
     const tiles = page.getByTestId('proposal-photo');
-    await expect(tiles.nth(0).getByRole('button', { name: 'Als Titelbild' })).toHaveCount(0);
-    await expect(tiles.nth(0)).toContainText('Titelbild');
-    await tiles.nth(1).getByRole('button', { name: 'Als Titelbild' }).click();
-    await expect(tiles.nth(1).getByRole('button', { name: 'Als Titelbild' })).toHaveCount(0);
-    await tiles.nth(0).getByRole('button', { name: 'Als Titelbild' }).click();
+    const star = (i: number) => tiles.nth(i).getByRole('button', { name: 'Als Titelbild' });
+    await expect(star(0)).toHaveAttribute('aria-pressed', 'true');
+    await star(1).click();
+    await expect(star(1)).toHaveAttribute('aria-pressed', 'true');
+    await expect(star(0)).toHaveAttribute('aria-pressed', 'false');
+    await star(0).click();
     await page.getByRole('button', { name: 'Annehmen …' }).click();
     const dialog = page.getByRole('dialog');
     await expect(dialog.getByRole('radio', { name: /Publizieren/ })).toBeChecked();
@@ -107,7 +108,7 @@ test.describe('Vorschläge prüfen', () => {
     await expect(first.getByTestId('cropped-image')).toBeVisible();
     await second.getByRole('button', { name: 'Als Titelbild' }).click();
     await expect(first).toContainText('ohne Ausschnitt');
-    await expect(page.getByTestId('primary-crop-announcement')).toHaveText('Titelbild ist jetzt tb-2041-b. Ausschnitt von tb-2041-a entfernt.');
+    await expect(page.getByTestId('primary-crop-announcement')).toHaveText('Titelbild ist jetzt Foto 2 von Tierbörse Beispielstadt. Ausschnitt von Foto 1 von Tierbörse Beispielstadt entfernt.');
     await first.getByRole('button', { name: 'Als Titelbild' }).click();
     await expect(first.getByTestId('cropped-image')).toBeVisible();
 

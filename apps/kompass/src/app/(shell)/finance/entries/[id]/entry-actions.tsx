@@ -18,7 +18,7 @@ import { reverseEntryAction } from '../actions';
 
 /**
  * Seltene Aktionen an einer festgeschriebenen Buchung (MUSTER § C, Board § K Ziel 5): „Zurücknehmen …“ im Menü ⋯ —
- * das Board sagt „Stornieren“, die Finanzen sprechen aber „zurücknehmen“ (Verbotsliste `finance-wording.test.ts`).
+ * das Board sagt „Stornieren“, die Finanzen sprechen aber „zurücknehmen“ (Verbotsliste `patterns/terms.test.ts`).
  * „Korrigieren“ bleibt der sichtbare nächste Schritt und bucht nur noch um.
  *
  * Die Nummer der Gegenbuchung vergibt erst das Festschreiben im Dienst — die Seite kennt sie vorab nicht, deshalb nennt

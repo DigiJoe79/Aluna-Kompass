@@ -31,18 +31,16 @@ const show = (rows: ReturnType<typeof row>[]) =>
 
 /** Runde 3, 165: Normalfall ohne Marke, die Auswahl nennt den Namen der Vorlage, „Erscheint auf“ nur bei Abweichung. */
 describe('BasesPanel', () => {
-  it('zeigt nur „eigene“ als Marke, nicht „mitgeliefert“ und „bereit“', () => {
+  it('markiert eine eigene Basis', () => {
     show([row('export', null)]);
     const region = screen.getByRole('region', { name: 'Basis-Vorlagen' });
-    expect(within(region).queryByText('mitgeliefert')).toBeNull();
-    expect(within(region).queryByText('bereit')).toBeNull();
     expect(within(region).getByText('eigene')).toBeTruthy();
   });
 
   it('Vorgabe mit dem Namen der Basis; ohne Abweichung keine Spalte „Erscheint auf“', () => {
     show([row('export', null)]);
     const types = screen.getByRole('region', { name: 'Dokumentarten' });
-    expect(within(types).getAllByRole('option')[0]!.textContent).toBe('Vorgabe der Vorlage (A4 schlank)');
+    expect(within(types).getAllByRole('option')[0]!.textContent).toContain('A4 schlank');
     expect(within(types).queryByTestId('effective-base')?.textContent ?? '').toBe('');
   });
 

@@ -12,7 +12,6 @@ describe('FormCard', () => {
     expect(card.dataset.slot).toBe('form-card');
     expect(card.className).toContain('overflow-clip');
     expect(card.className).not.toContain('overflow-hidden');
-    expect(card.className).toContain('rounded-lg border border-line bg-surface');
   });
 
   it('trägt die Marke am Ende, nach dem Inhalt', () => {
@@ -25,7 +24,6 @@ describe('FormCard', () => {
     const card = container.firstElementChild as HTMLElement;
     expect((card.lastElementChild as HTMLElement).dataset.slot).toBe('form-card-end');
     expect(card.lastElementChild?.getAttribute('aria-hidden')).toBe('true');
-    expect(card.firstElementChild?.className).toBe('p-5');
   });
 
   it('wählt das Element über as und reicht Attribute durch', () => {

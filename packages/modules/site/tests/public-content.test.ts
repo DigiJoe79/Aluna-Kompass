@@ -1,4 +1,4 @@
-import { setModuleEnabled, unwrap } from '@kompass/core';
+import { AI_LABELING_ENABLED_KEY, setModuleEnabled, setSetting, unwrap } from '@kompass/core';
 import { createAnimal, requestAnimalReview, setAnimalPublished, updateAnimal } from '@kompass/module-animals';
 import { createProject, setProjectPublished, updateProject } from '@kompass/module-projects';
 import { describe, expect, it } from 'vitest';
@@ -59,5 +59,17 @@ describe('readPublicContent', () => {
     const deps = await setupPublicContent();
     unwrap(await setModuleEnabled(deps, admin, { key: 'animals', enabled: false }));
     expect(readPublicContent(deps, activeTemplate(deps)!)).toMatchObject({ ok: false, error: { type: 'conflict', code: 'moduleDisabled' } });
+  });
+
+  it('contains the aiLabeling view with texts pruned to the maintained locales', async () => {
+    const deps = await setupPublicContent(['de']);
+    unwrap(await setSetting(deps, admin, { key: AI_LABELING_ENABLED_KEY, value: true }));
+    const content = unwrap(readPublicContent(deps, activeTemplate(deps)!));
+    expect(content.views.aiLabeling).toBeDefined();
+    expect(content.views.aiLabeling).toHaveLength(1);
+    const row = content.views.aiLabeling![0] as Record<string, Record<string, string>>;
+    expect(row.mark).toEqual({ de: 'KI' });
+    expect(row.mark).not.toHaveProperty('en');
+    expect(row.editedNote?.de).toContain('Einige Fotos von {name}');
   });
 });

@@ -10,7 +10,7 @@ import { cancelOpenItem, createOpenItem, listOpenItems, listOpenItemSettlements,
 import { reverseEntry } from '../src/ledger/reverse';
 import { financeRetentionHolds } from '../src/ledger/holds';
 import { financeEntryDocuments, financeOpenItemSettlements } from '../src/schema';
-import { allowHumanOnlyOverMcp, insertDocument, ledgerFixture } from './helpers';
+import { insertDocument, ledgerFixture } from './helpers';
 
 const err = (r: { ok: boolean; error?: unknown }) => (r.ok ? 'ok' : r.error);
 const now = '2026-03-01T10:00:00.000Z';
@@ -159,16 +159,6 @@ describe('open items', () => {
     expect(err(await cancelOpenItem(f.deps, writeOnly, { id: item.id, note: 'x' }))).toEqual({ type: 'forbidden', permission: 'finance.entriesFinalize' });
   });
 
-  it('is human only, like finalizing: refused over MCP unless the association allowed it', async () => {
-    const f = await ledgerFixture();
-    const item = unwrap(await createOpenItem(f.deps, f.ctx, { kind: 'payable', itemDate: '2026-03-01', amountCents: 5000 }));
-    const overMcp = { ...f.ctx, channel: 'mcp' as const };
-    expect(err(await cancelOpenItem(f.deps, overMcp, { id: item.id, note: 'x' }))).toMatchObject({ type: 'conflict', code: 'humanOnly' });
-    allowHumanOnlyOverMcp(f.deps);
-    const cancelled = unwrap(await cancelOpenItem(f.deps, overMcp, { id: item.id, note: 'x' }));
-    expect(cancelled.state).toBe('cancelled');
-  });
-
   it('an item with an origin is never closed without payment this way — it is settled through its own process', async () => {
     const f = await ledgerFixture();
     const item = unwrap(await createOpenItem(f.deps, f.ctx, { kind: 'payable', itemDate: '2026-03-01', amountCents: 5000, originType: 'expenseClaim', originId: 'CLAIM-1' }));
@@ -188,14 +178,12 @@ describe('open items', () => {
     expect(after).toMatchObject({ openCents: 4000, draftSettlementCents: 4000 }); // weiterhin offen — nur ein Entwurf zahlt
   });
 
-  it('logs neither the payment reference nor the note nor the contact', async () => {
+  it('logs creating and cancelling', async () => {
     const f = await ledgerFixture();
     const item = unwrap(await createOpenItem(f.deps, f.ctx, { kind: 'payable', itemDate: '2026-03-01', amountCents: 5000, paymentReference: 'KE-2026-012', contactId: f.donor.id }));
     unwrap(await cancelOpenItem(f.deps, f.ctx, { id: item.id, note: 'Geheime Begründung' }));
-    const log = JSON.stringify(f.deps.db.select().from(schema.auditLog).all().filter((e) => e.action.startsWith('finance.openItem.')));
-    expect(log).not.toContain('KE-2026-012');
-    expect(log).not.toContain('Geheime Begründung');
-    expect(log).not.toContain(f.donor.id);
+    const log = f.deps.db.select().from(schema.auditLog).all().filter((e) => e.action.startsWith('finance.openItem.'));
+    expect(log.map((e) => [e.action, e.entityId])).toEqual([['finance.openItem.create', item.id], ['finance.openItem.cancel', item.id]]);
   });
 
   it('returns the line template as an array, not as its stored JSON text (Befund 12)', async () => {

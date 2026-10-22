@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import messages from '../../messages/de.json';
-import { type Allowlist, read, relative, sourceFiles } from './source';
+import { type Allowlist, allowlistHygiene, messageTexts, read, relative, sourceFiles, staleKeys } from './source';
 
 /**
  * Anlegen- und Hinzufügen-Knöpfe tragen kein „+“ (docs/MUSTER.md, „Seitenrahmen“; Entscheidung Joe
@@ -8,39 +7,30 @@ import { type Allowlist, read, relative, sourceFiles } from './source';
  * Der Wächter findet jeden Import eines Plus-Symbols; ein Plus, das etwas anderes ist (Zoom, Zähler),
  * steht mit Grund in der Erlaubnisliste.
  */
-const ALLOWED: Allowlist = {
+export const ALLOWED: Allowlist = {
   'components/media/crop-editor.tsx': 'Zoom: − / + am Schieber „Größe“ (Handover Ausschnitt, Board 2a), kein Anlegen.',
 };
 
 const PLUS_IMPORT = /import\s*\{[^}]*\b(?:Plus|PlusIcon|CirclePlus|SquarePlus|PlusCircle|PlusSquare)\b[^}]*\}\s*from\s*'lucide-react'/;
 
-/** Texte, die mit „+“ beginnen, ohne etwas anzulegen — Schlüssel (mit führendem Punkt) → Grund. */
-const ALLOWED_KEYS: Record<string, string> = {
-  '.contacts.moreRoles': 'Zähler weiterer Rollen in der Kartenzeile am Telefon („+1“, Runde 3, 038), kein Anlegen.',
+/** Texte, die mit „+“ beginnen, ohne etwas anzulegen — Schlüssel → Grund. */
+export const ALLOWED_KEYS: Allowlist = {
+  'contacts.moreRoles': 'Zähler weiterer Rollen in der Kartenzeile am Telefon („+1“, Runde 3, 038), kein Anlegen.',
 };
 
-function texts(value: unknown, path: string): { path: string; text: string }[] {
-  if (typeof value === 'string') return [{ path, text: value }];
-  if (value && typeof value === 'object') return Object.entries(value).flatMap(([key, child]) => texts(child, `${path}.${key}`));
-  return [];
-}
-
 describe('kein „+“ an Anlegen-Knöpfen', () => {
+  const using = sourceFiles().filter((file) => PLUS_IMPORT.test(read(file))).map(relative);
+  const plusTexts = messageTexts().filter(([, text]) => /^\+/.test(text.trim())).map(([key]) => key);
+
   it('kein Plus-Symbol aus lucide-react unter src/', () => {
-    const violations = sourceFiles()
-      .filter((file) => PLUS_IMPORT.test(read(file)))
-      .map(relative)
-      .filter((file) => !(file in ALLOWED));
-    expect(violations).toEqual([]);
+    expect(using.filter((file) => !(file in ALLOWED))).toEqual([]);
   });
 
-  it('jede Ausnahme ist noch nötig', () => {
-    const using = new Set(sourceFiles().filter((file) => PLUS_IMPORT.test(read(file))).map(relative));
-    expect(Object.keys(ALLOWED).filter((file) => !using.has(file))).toEqual([]);
-  });
+  allowlistHygiene(ALLOWED, () => staleKeys(ALLOWED, using));
 
   it('kein Text in de.json beginnt mit „+“', () => {
-    expect(texts(messages, '').filter(({ path, text }) => /^\+/.test(text.trim()) && !(path in ALLOWED_KEYS)).map(({ path }) => path)).toEqual([]);
-    expect(Object.keys(ALLOWED_KEYS).filter((key) => !texts(messages, '').some(({ path }) => path === key))).toEqual([]);
+    expect(plusTexts.filter((key) => !(key in ALLOWED_KEYS))).toEqual([]);
   });
+
+  allowlistHygiene(ALLOWED_KEYS, () => staleKeys(ALLOWED_KEYS, plusTexts), 'Erlaubnisliste der Texte');
 });

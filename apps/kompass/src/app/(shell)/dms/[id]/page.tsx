@@ -17,6 +17,7 @@ import { nameOrEmpty } from '@/lib/name-or-empty';
 import { requireSession } from '@/lib/request-context';
 import { DocumentActions } from './document-actions';
 import { DocumentDetail } from './document-detail';
+import { documentPermissions } from './permissions';
 import { resolveLinks } from './links';
 
 export default async function DocumentDetailPage(props: {
@@ -105,13 +106,7 @@ export default async function DocumentDetailPage(props: {
     mine: note.createdByUserId === ctx.userId,
   }));
 
-  const permissions = {
-    canFile: hasPermission(ctx, 'dms.file'),
-    canVoid: hasPermission(ctx, 'dms.void'),
-    canDeleteDraft: hasPermission(ctx, 'dms.deleteDraft'),
-    canEdit: hasPermission(ctx, 'dms.create'),
-    canManage: hasPermission(ctx, 'dms.manage'),
-  };
+  const permissions = documentPermissions(deps, ctx, docType);
 
   // Umklassifizieren nur am abgelegten, nicht stornierten Eingang (Spec 2026-09-19).
   const canReclassify = doc.direction === 'incoming' && doc.phase === 'issued' && doc.status !== 'voided' && permissions.canEdit;

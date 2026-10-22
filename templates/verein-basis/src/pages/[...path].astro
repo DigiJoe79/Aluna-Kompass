@@ -2,8 +2,10 @@
 import Base from '../layouts/Base.astro';
 import PageHeader from '../components/PageHeader.astro';
 import Markdown from '../components/Markdown.astro';
-import { loadContent, organizationOf, slugify, type NewsEntry } from '../lib/content';
+import AiMark from '../components/AiMark.astro';
+import { loadContent, organizationOf, type NewsEntry } from '../lib/content';
 import { loadImages, imageFor } from '../lib/images';
+import { aiKindOf, aiLabelingOf, withAiLabel, aiMark } from '../lib/ai-label';
 import { pageFor } from '../content/pages';
 import { paramFor, pathFor, type Kind } from '../lib/routes';
 import { LOCALES, pick, text, ui, type Locale } from '../lib/locale';
@@ -51,10 +53,13 @@ const euro = (value: number | undefined): string =>
 const article: NewsEntry | undefined = kind === 'article' ? news.find((n) => n.slug === slug) : undefined;
 const page = pageFor(locale, kind);
 const org = organizationOf(content);
+const labeling = aiLabelingOf(content);
 
 /** Das Impressum entsteht aus den Vereinsdaten, alle anderen Seiten aus `pages.ts`. */
 const body = kind === 'imprint' ? imprintBody(org, BOARD, locale) : (page?.body ?? '');
 
+const heroAiKind = aiKindOf(content, variables.heroImage ?? null);
+const heroAlt = withAiLabel('', heroAiKind, labeling, locale);
 const heroImage = imageFor(images, variables.heroImage ?? null);
 ---
 {kind === 'home' && (
@@ -69,7 +74,10 @@ const heroImage = imageFor(images, variables.heroImage ?? null);
         </p>
       </div>
       {heroImage && (
-        <img class="hero-image" src={heroImage.src} srcset={heroImage.srcset || undefined} sizes="(min-width: 800px) 480px, 100vw" width={heroImage.width} height={heroImage.height} alt="" />
+        <div class="hero-image-frame">
+          <img class="hero-image" src={heroImage.src} srcset={heroImage.srcset || undefined} sizes="(min-width: 800px) 480px, 100vw" width={heroImage.width} height={heroImage.height} alt={heroAlt} />
+          {heroAiKind && labeling && <AiMark kind={heroAiKind} label={aiMark(labeling, locale, heroAiKind)} />}
+        </div>
       )}
     </section>
 
@@ -123,9 +131,17 @@ const heroImage = imageFor(images, variables.heroImage ?? null);
   <Base title={t(article.title)} description={t(article.body).slice(0, 160)} active="article" locale={locale} slug={article.slug}>
     <article class="wrap wrap-narrow section">
       <PageHeader eyebrow={ui_.news.title} title={t(article.title)} lang={pick(article.title, locale).fallback ?? undefined} />
-      {imageFor(images, article.image) && (
-        <img class="article-image" src={imageFor(images, article.image)!.src} srcset={imageFor(images, article.image)!.srcset || undefined} sizes="(min-width: 720px) 680px, 100vw" width={imageFor(images, article.image)!.width} height={imageFor(images, article.image)!.height} alt="" />
-      )}
+      {imageFor(images, article.image) && (() => {
+        const img = imageFor(images, article.image)!;
+        const articleAiKind = aiKindOf(content, article.image);
+        const articleAlt = withAiLabel('', articleAiKind, labeling, locale);
+        return (
+          <div class="article-image-frame">
+            <img class="article-image" src={img.src} srcset={img.srcset || undefined} sizes="(min-width: 720px) 680px, 100vw" width={img.width} height={img.height} alt={articleAlt} />
+            {articleAiKind && labeling && <AiMark kind={articleAiKind} label={aiMark(labeling, locale, articleAiKind)} />}
+          </div>
+        );
+      })()}
       <Markdown markdown={pick(article.body, locale).value} lang={pick(article.body, locale).fallback ?? undefined} />
       <p><a href={pathFor(locale, 'news')}>{ui_.news.back}</a></p>
     </article>
@@ -142,9 +158,16 @@ const heroImage = imageFor(images, variables.heroImage ?? null);
         <ul class="team-grid">
           {team.map((member) => {
             const photo = imageFor(images, member.photo);
+            const memberAiKind = aiKindOf(content, member.photo);
+            const memberAlt = withAiLabel('', memberAiKind, labeling, locale);
             return (
               <li class="team-member">
-                {photo && <img src={photo.src} srcset={photo.srcset || undefined} sizes="220px" width={photo.width} height={photo.height} alt="" />}
+                {photo && (
+                  <div class="team-photo-frame">
+                    <img src={photo.src} srcset={photo.srcset || undefined} sizes="220px" width={photo.width} height={photo.height} alt={memberAlt} />
+                    {memberAiKind && labeling && <AiMark kind={memberAiKind} label={aiMark(labeling, locale, memberAiKind)} />}
+                  </div>
+                )}
                 <p class="team-name">{member.name}</p>
                 {pick(member.role, locale).value && <p class="team-role" lang={pick(member.role, locale).fallback ?? undefined}>{pick(member.role, locale).value}</p>}
               </li>

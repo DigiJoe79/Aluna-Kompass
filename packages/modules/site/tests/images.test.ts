@@ -102,7 +102,7 @@ describe('prepareImageVariants', () => {
     const bytes = await png('#336699');
     const key = createHash('sha256').update(bytes).digest('hex').slice(0, 16);
     const cache = tmp();
-    writeFileSync(path.join(cache, 'abcdef123456-480.webp'), 'alt'); // Fassung 0.2.4
+    writeFileSync(path.join(cache, `v0-${key}-480.webp`), 'alt'); // eine andere Cache-Version
     writeFileSync(path.join(cache, `v1-${key}-480.webp.tmp-999`), 'abgeschnitten'); // Rest eines Abbruchs
     const job = jobWith('hund-abcdef123456.png', bytes);
     const out = await prepareImageVariants({ jobDir: job, assets: [hund], cacheDir: cache });

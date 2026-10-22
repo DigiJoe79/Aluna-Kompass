@@ -8,10 +8,11 @@ import { read, relative, sourceFiles, matchingLines } from './source';
  * Live-Region anders ausfiel.
  */
 const ALLOWED = new Set(['components/forms/form-action-bar.tsx', 'components/selection-bar.tsx']);
-const STICKY_BOTTOM = /\bsticky\b[^"'`]*\bbottom-0\b|\bbottom-0\b[^"'`]*\bsticky\b/;
+// `bottom-0` oder ein berechneter Wert (`bottom-[…]`, die Speicherleiste sitzt klebend bündig am Rand, Designer 2026-10-22).
+const STICKY_BOTTOM = /\bsticky\b[^"'`]*\bbottom-(0\b|\[)|\bbottom-(0\b|\[)[^"'`]*\bsticky\b/;
 
 describe('keine eigene klebende Leiste', () => {
-  it('sticky bottom-0 steht nur in FormActionBar und SelectionBar', () => {
+  it('sticky am unteren Rand steht nur in FormActionBar und SelectionBar', () => {
     const violations = sourceFiles()
       .filter((file) => !ALLOWED.has(relative(file)))
       .flatMap((file) => matchingLines(file, read(file), STICKY_BOTTOM));

@@ -4,7 +4,7 @@ import { loginAsAdmin, resetDatabase, setE2ESetting } from './helpers';
 /**
  * Befund N4 (Befundliste 0.2.0): Ein ausgeschaltetes Modul sperrt seine Seiten
  * und Dateiwege — bisher taten das nur Tiere und Finanzen. Geschaltet wird die
- * Einstellung `modules.enabled` direkt (wie in finance.spec.ts): Finanzen hält
+ * Einstellung `modules.enabled` direkt: Finanzen hält
  * im Seed Kontakte, Belege und Projekte, die Dienste ließen das Ausschalten gar
  * nicht zu. Geprüft wird hier, dass die Seiten das Fehlen des Schlüssels
  * befolgen, nicht der Dienst `setModuleEnabled`.
@@ -24,6 +24,8 @@ test.describe('Modul inaktiv', () => {
     { key: 'projects', title: 'Modul Projekte ist nicht aktiv', paths: ['/projects'] },
     // Nur `/admin/site`: Die `/site/*`-Seiten zeigen heute keine Modul-Sperre.
     { key: 'site', title: 'Modul Webseite ist nicht aktiv', paths: ['/admin/site'] },
+    // `ALL` enthält finance nicht: `without('finance')` lässt alle übrigen Module an.
+    { key: 'finance', title: 'Modul Finanzen ist nicht aktiv', paths: ['/finance/entries', '/finance/accounts', '/finance/cash', '/finance/open-items', '/admin/finance'] },
   ];
 
   for (const c of cases) {
@@ -36,6 +38,14 @@ test.describe('Modul inaktiv', () => {
       }
     });
   }
+
+  test('ohne finance fehlt der Finanzabschnitt am Projekt', async ({ page }) => {
+    await setE2ESetting(page, 'modules.enabled', without('finance'));
+    await page.goto('/projects');
+    await page.getByRole('link', { name: 'Winterhilfe für Streuner' }).click();
+    await expect(page).toHaveURL(/\/projects\/[A-Z0-9]+$/);
+    await expect(page.getByTestId('project-finance-section')).toHaveCount(0);
+  });
 
   test('eine Detailseite ist ebenfalls gesperrt', async ({ page }) => {
     await page.goto('/contacts');

@@ -31,63 +31,40 @@ describe('theme token values', () => {
     expect(themeTokensSchema.safeParse(mitWert('#'.repeat(161))).success).toBe(false);
   });
 
-  it('carries the seven finance tokens in the default theme, light and dark', () => {
-    for (const token of ['color-final', 'color-final-bg', 'color-agent', 'color-agent-bg', 'color-amount-out', 'color-key-bg', 'color-key-ink'] as const) {
-      expect(DEFAULT_THEME.tokens[token].light).toMatch(/^#[0-9A-F]{6}$/i);
-      expect(DEFAULT_THEME.tokens[token].dark).toMatch(/^#[0-9A-F]{6}$/i);
+  it('gives every token a light and a dark value in the default theme', () => {
+    for (const token of THEME_TOKENS) {
+      expect(DEFAULT_THEME.tokens[token].light, token).toBeTruthy();
+      expect(DEFAULT_THEME.tokens[token].dark, token).toBeTruthy();
     }
+    expect(themeTokensSchema.safeParse(DEFAULT_THEME.tokens).success).toBe(true);
   });
 
-  it('checks the new ink/surface pairs for contrast', () => {
-    const pairs = CONTRAST_PAIRS.map((p) => `${p.fg}/${p.bg}`);
-    expect(pairs).toEqual(expect.arrayContaining(['color-final/color-final-bg', 'color-agent/color-agent-bg', 'color-amount-out/surface', 'color-amount-out/table-zebra', 'color-key-ink/color-key-bg']));
-    expect(checkThemeContrast(DEFAULT_THEME)).toEqual([]);
-  });
-
-  const TREE_TOKENS = ['color-drop-bg', 'color-drop-ring', 'color-drop-ink', 'color-drop-blocked-ring', 'color-drop-blocked-hatch', 'color-tree-guide'] as const;
-
-  it('carries the six folder-tree tokens, light and dark', () => {
-    for (const token of TREE_TOKENS) {
-      expect(THEME_TOKENS, token).toContain(token);
-      expect(DEFAULT_THEME.tokens[token].light).toMatch(/^#[0-9A-F]{6}$/i);
-      expect(DEFAULT_THEME.tokens[token].dark).toMatch(/^#[0-9A-F]{6}$/i);
-    }
-  });
-
-  it('checks drop target and blocked target for contrast', () => {
+  it('checks the ink/surface pairs of the default theme for contrast', () => {
     const pairs = CONTRAST_PAIRS.map((p) => `${p.fg}/${p.bg}:${p.minimum}`);
-    expect(pairs).toEqual(expect.arrayContaining(['color-drop-ink/color-drop-bg:4.5', 'color-drop-ring/surface:3', 'color-drop-blocked-ring/surface:3']));
+    expect(pairs).toEqual(
+      expect.arrayContaining([
+        'color-final/color-final-bg:4.5',
+        'color-agent/color-agent-bg:4.5',
+        'color-amount-out/surface:4.5',
+        'color-amount-out/table-zebra:4.5',
+        'color-key-ink/color-key-bg:4.5',
+        'color-drop-ink/color-drop-bg:4.5',
+        'color-drop-ring/surface:3',
+        'color-drop-blocked-ring/surface:3',
+        'line-2/surface:1.6',
+        'line-2/table-zebra:1.6',
+        'color-tree-guide/surface:1.6',
+        'disabled-ink/disabled-bg:3',
+      ]),
+    );
     expect(checkThemeContrast(DEFAULT_THEME)).toEqual([]);
   });
 
   // Designer 2026-10-16, Teil 3 Nr. 4: ein Trenner-Token für Tabellenzeilen und Ordnerbaum, im Dunkeln ≥ 1,6:1 zur Fläche.
-  it('checks the separator token line-2 against the surface in dark mode', () => {
-    const pairs = CONTRAST_PAIRS.map((p) => `${p.fg}/${p.bg}:${p.minimum}`);
-    expect(pairs).toEqual(expect.arrayContaining(['line-2/surface:1.6', 'line-2/table-zebra:1.6']));
-    expect(checkThemeContrast(DEFAULT_THEME)).toEqual([]);
+  it('holds the separator threshold only in dark mode', () => {
     const faint = { ...DEFAULT_THEME, tokens: { ...DEFAULT_THEME.tokens, 'line-2': { light: '#FAFAFA', dark: '#22262C' } } };
     const findings = checkThemeContrast(faint).filter((f) => f.fg === 'line-2');
     // Hell gilt die Schwelle nicht: Dort ist die Fläche weiß, und ein Trenner bleibt bewusst leise.
     expect(findings.map((f) => `${f.bg}:${f.mode}`)).toEqual(['surface:dark', 'table-zebra:dark']);
-  });
-
-  // Runde 3, Punkt 7: Der gesperrte Primärknopf verlor im Dunkeln seine Form (#22262C auf #1B1E23). Dunkel trägt er
-  // `disabled-bg` #2A2F36 und `disabled-ink` #7A828B, das Paar hält ≥ 3:1; hell bleibt es, wie es ist.
-  it('checks the disabled pair in dark mode (≥ 3:1) and uses the new dark values', () => {
-    const pairs = CONTRAST_PAIRS.map((p) => `${p.fg}/${p.bg}:${p.minimum}:${(p.modes ?? []).join('+')}`);
-    expect(pairs).toEqual(expect.arrayContaining(['disabled-ink/disabled-bg:3:dark']));
-    expect(DEFAULT_THEME.tokens['disabled-bg'].dark).toBe('#2A2F36');
-    expect(DEFAULT_THEME.tokens['disabled-ink'].dark).toBe('#7A828B');
-    expect(checkThemeContrast(DEFAULT_THEME)).toEqual([]);
-  });
-
-  // Runde 3, Kleinpunkt 1: hell tragen die Baumlinien wieder ihre alte Stärke (`color-tree-guide`), dunkel sind sie so
-  // kräftig wie der Trenner; der Kartenrand `line` hat dunkel dieselbe Stärke wie der Trenner `line-2`.
-  it('keeps the tree guides light as before and matches card border and separator in dark mode', () => {
-    expect(DEFAULT_THEME.tokens['color-tree-guide'].light).toBe('#D2D2CB');
-    expect(DEFAULT_THEME.tokens['color-tree-guide'].dark).toBe(DEFAULT_THEME.tokens['line-2'].dark);
-    expect(DEFAULT_THEME.tokens.line.dark).toBe(DEFAULT_THEME.tokens['line-2'].dark);
-    const pairs = CONTRAST_PAIRS.map((p) => `${p.fg}/${p.bg}:${p.minimum}`);
-    expect(pairs).toEqual(expect.arrayContaining(['color-tree-guide/surface:1.6']));
   });
 });

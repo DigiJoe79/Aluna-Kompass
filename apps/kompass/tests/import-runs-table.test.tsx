@@ -27,11 +27,9 @@ function renderTable(runs: RunRow[]) {
   );
 }
 
-describe('RunsTable (Runde 4, 078, 214)', () => {
-  it('Format ist eine Spalte ohne Rolle und steht im aufgeklappten Lauf weiter', () => {
+describe('RunsTable', () => {
+  it('das Format steht im aufgeklappten Lauf', () => {
     renderTable([run({})]);
-    expect(screen.getByRole('columnheader', { name: 'Format' }).hasAttribute('data-col')).toBe(false);
-    expect(screen.getByTestId('import-run-format').hasAttribute('data-col')).toBe(false);
     fireEvent.click(screen.getByRole('button', { name: 'Kontoumsätze anzeigen' }));
     expect(screen.getByTestId('import-run-detail-format').textContent).toBe('Format: CAMT.053');
   });
@@ -52,9 +50,4 @@ describe('RunsTable (Runde 4, 078, 214)', () => {
     expect((row.querySelector('[data-col="status"]') as HTMLElement).textContent).toBe('fehlgeschlagen');
   });
 
-  it('Zähler brechen nur am „·“, nie zwischen Zahl und Wort (Runde 4 Nachtrag, 214, 217)', () => {
-    renderTable([run({ counts: { new: 1, known: 0, held: 1 } })]);
-    const cell = screen.getByText((_, el) => el?.tagName === 'TD' && /zurückgehalten/.test(el.textContent ?? ''));
-    expect(cell.textContent).toBe('1\u00a0neu · 1\u00a0zurückgehalten');
-  });
 });

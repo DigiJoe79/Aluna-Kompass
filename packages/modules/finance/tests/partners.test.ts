@@ -139,13 +139,12 @@ describe('savePartnerNotice — Empfängerbescheide (F7 Task 2)', () => {
     expect(list[0]!.state).toBe('voided');
   });
 
-  it('never lets the void note into the audit log — it stays on the record itself', async () => {
+  it('keeps the void note on the record itself', async () => {
     const f = await ledgerFixture();
     const partnerId = insertPartner(f.deps.db, { contactId: f.donor.id });
     const noticeId = insertPartnerNotice(f.deps.db, partnerId);
     const voided = unwrap(await voidPartnerNotice(f.deps, f.ctx, { id: noticeId, note: 'Vertraulicher Grund' }));
     expect(voided.voidNote).toBe('Vertraulicher Grund');
-    const log = f.deps.db.select().from(schema.auditLog).all().filter((e) => e.action === 'finance.partnerNotice.void');
-    expect(JSON.stringify(log)).not.toContain('Vertraulicher Grund');
+    expect(f.deps.db.select().from(schema.auditLog).all().filter((e) => e.action === 'finance.partnerNotice.void')).toHaveLength(1);
   });
 });

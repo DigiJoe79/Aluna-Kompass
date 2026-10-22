@@ -24,9 +24,11 @@ const rootVersion = (JSON.parse(readFileSync(path.join(__dirname, '../../../pack
  * (nie zusammengelegt: Der Branch hatte nur diese). `0006_audit_params` ist die der Fassung 0.2.9 (Protokoll in Sätzen),
  * `0007_animal_proposals_site_manifest` die zusammengelegte der Fassung 0.2.10 (Vorschlags-Eingang, „nicht publiziert“),
  * `0008_image_crops` die eine der Fassung 0.2.11 (Bildausschnitt an Geschichte und Projektbild),
- * `0009_members_direct_debit_0_3_0` die zusammengelegte der Fassung 0.3.0 (Mitglieder, Lastschrift, Versand per E-Mail).
+ * `0009_members_direct_debit_0_3_0` die zusammengelegte der Fassung 0.3.0 (Mitglieder, Lastschrift, Versand per E-Mail),
+ * `0010_media_ai_kind_finance_locks_0_3_1` die zusammengelegte der Fassung 0.3.1 (Bildkennzeichnung, Trigger an
+ * gesperrten Finanzspalten).
  */
-const RELEASED = ['0000_init.sql', '0001_dashboard_layouts.sql', '0002_document_former_numbers.sql', '0003_finance.sql', '0004_finance_0_2_1.sql', '0005_animals_review.sql', '0006_audit_params.sql', '0007_animal_proposals_site_manifest.sql', '0008_image_crops.sql', '0009_members_direct_debit_0_3_0.sql'];
+const RELEASED = ['0000_init.sql', '0001_dashboard_layouts.sql', '0002_document_former_numbers.sql', '0003_finance.sql', '0004_finance_0_2_1.sql', '0005_animals_review.sql', '0006_audit_params.sql', '0007_animal_proposals_site_manifest.sql', '0008_image_crops.sql', '0009_members_direct_debit_0_3_0.sql', '0010_media_ai_kind_finance_locks_0_3_1.sql'];
 
 /**
  * Was eine Produktion schon ausgeführt hat, bleibt Byte für Byte, wie es war:
@@ -48,6 +50,8 @@ const SHIPPED_HASHES: Record<string, string> = {
   '0007_animal_proposals_site_manifest.sql': '7a818b30bbc0395f4439557116e47e12f1887da0f472ee16865979875e5f5a71',
   // Seit dem Release der Fassung 0.2.11.
   '0008_image_crops.sql': '4c5b6a76677c943b0d3c0a5316b1d421d64ee9c51822b28a601da784c529f7c3',
+  // Seit dem Release der Fassung 0.3.0.
+  '0009_members_direct_debit_0_3_0.sql': 'e094c020544cf97ba8c8642b3b7b5ea691c4e32266f3233f2531399dca2991d6',
 };
 
 /**
@@ -74,6 +78,12 @@ const LAST_WHEN_BEFORE_SQUASH_0_2_10 = 1791590317073;
  * unzusammengelegten Reihe (33 Migrationszeilen) als aktuell und bekommt nichts doppelt.
  */
 const LAST_WHEN_BEFORE_SQUASH_0_3_0 = 1792425401332;
+/**
+ * `when` der letzten Migration vor dem Zusammenlegen der Fassung 0.3.1 (`0011_finance_locked_columns`, 2026-10-22).
+ * Wie oben: Trägt `0010_media_ai_kind_finance_locks_0_3_1` denselben Wert, gilt eine Instanz aus der
+ * unzusammengelegten Reihe (12 Migrationszeilen, z. B. der Dev-Container) als aktuell und bekommt nichts doppelt.
+ */
+const LAST_WHEN_BEFORE_SQUASH_0_3_1 = 1792677288187;
 const journal = JSON.parse(readFileSync(path.join(MIGRATIONS_DIR, 'meta/_journal.json'), 'utf8')) as { entries: { idx: number; when: number; tag: string }[] };
 
 /**
@@ -305,6 +315,12 @@ describe('the migrations of this version', () => {
   it('let a database from the unsquashed 0.3.0 series count as current (same `when` as its last migration)', () => {
     const squashed = journal.entries.find((e) => e.tag === '0009_members_direct_debit_0_3_0');
     expect(squashed?.when).toBe(LAST_WHEN_BEFORE_SQUASH_0_3_0);
+    expect(journal.entries.map((e) => `${e.tag}.sql`)).toEqual(files);
+  });
+
+  it('let a database from the unsquashed 0.3.1 series count as current (same `when` as its last migration)', () => {
+    const squashed = journal.entries.find((e) => e.tag === '0010_media_ai_kind_finance_locks_0_3_1');
+    expect(squashed?.when).toBe(LAST_WHEN_BEFORE_SQUASH_0_3_1);
     expect(journal.entries.map((e) => `${e.tag}.sql`)).toEqual(files);
   });
 

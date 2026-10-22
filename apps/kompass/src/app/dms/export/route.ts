@@ -4,9 +4,10 @@ import { createReadStream } from 'node:fs';
 import { rm, stat } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { Readable } from 'node:stream';
+import { getTranslations } from 'next-intl/server';
 import { getDeps } from '@/lib/deps';
 import { optionalSession } from '@/lib/request-context';
-import { statusFor } from './status';
+import { conflictBody, statusFor } from './status';
 
 export const dynamic = 'force-dynamic';
 
@@ -27,7 +28,11 @@ export async function POST(request: Request): Promise<Response> {
   // Nur die drei Auswahlfelder: `linkedAccess` und `workDir` kommen nie vom Browser.
   const { folder, year, documentIds } = body as Record<string, unknown>;
   const result = await exportBundle(deps, session.ctx, { folder, year, documentIds, workDir: tmpdir() } as never);
-  if (!result.ok) return Response.json(result.error, { status: statusFor(result.error) });
+  if (!result.ok) {
+    const error = result.error;
+    if (error.type === 'conflict') return Response.json(conflictBody(error, await getTranslations()), { status: 409, headers: { 'cache-control': 'private, no-store' } });
+    return Response.json(error, { status: statusFor(error) });
+  }
 
   const { archivePath, filename } = result.value;
   const { size } = await stat(archivePath);

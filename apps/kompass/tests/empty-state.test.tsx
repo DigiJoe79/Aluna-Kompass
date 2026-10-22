@@ -42,6 +42,14 @@ describe('EmptyState', () => {
     expect(screen.queryByText(/Noch keine|anlegen|Neue/)).toBeNull();
   });
 
+  it('trägt `data-slot`, gefiltert leer zusätzlich `data-filtered` — daran erkennen E2E-Fälle den Zustand', () => {
+    const { container } = show(<EmptyState title="Leer" text="x" />);
+    expect(container.querySelector('[data-slot="empty-state"]:not([data-filtered])')).not.toBeNull();
+    cleanup();
+    const filtered = show(<EmptyState filtered={{ noun: 'Kein Kontakt', resetHref: '/contacts' }} />);
+    expect(filtered.container.querySelector('[data-slot="empty-state"][data-filtered]')).not.toBeNull();
+  });
+
   it('gefiltert leer mit Adresse: „Filter zurücksetzen“ ist ein Link', () => {
     show(<EmptyState filtered={{ noun: 'Keine Buchung', resetHref: '/finance/entries' }} />);
     expect(screen.getByRole('link', { name: 'Filter zurücksetzen' }).getAttribute('href')).toBe('/finance/entries');

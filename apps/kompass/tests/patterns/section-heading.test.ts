@@ -1,6 +1,6 @@
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { type Allowlist, classNameValue, openingTags, read, relative, sourceFiles, SRC } from './source';
+import { type Allowlist, classNameValue, openingTags, read, relative, sourceFiles, SRC, allowlistHygiene, staleKeys } from './source';
 
 /**
  * Überschriften kommen aus Bausteinen (K10 Charge 3, Spec § 6, Designer § 9.5): `PageHeader`, `DialogTitle`/
@@ -10,7 +10,7 @@ import { type Allowlist, classNameValue, openingTags, read, relative, sourceFile
 // Dazu `DialogTitle`/`SheetTitle` aus `components/ui` (Designer § 9.4); sonst gilt der Wächter auch dort (§ 14).
 const HOMES = new Set(['components/section.tsx', 'components/page-header.tsx', 'components/auth-card.tsx', 'components/forbidden-card.tsx', 'components/module-inactive-card.tsx', 'components/ui/dialog.tsx', 'components/ui/sheet.tsx']);
 
-const ALLOWED: Allowlist = {
+export const ALLOWED: Allowlist = {
   'components/shell/help-panel.tsx': 'Titel der Hilfe als Nebenspalte (Entwurf E4): wie `SheetTitle`, aber ohne Dialog, deshalb ein eigenes h2 mit tabIndex für den Fokus beim Öffnen.',
 };
 
@@ -33,14 +33,8 @@ describe('Überschriften aus Bausteinen', () => {
     expect(hits().filter(({ file }) => !(file in ALLOWED)).map(({ where }) => where)).toEqual([]);
   });
 
-  it('kein vorläufiger Eintrag mehr', () => {
-    expect(Object.entries(ALLOWED).filter(([, reason]) => reason.startsWith('OFFEN')).map(([file]) => file)).toEqual([]);
-  });
 
-  it('jede Ausnahme ist noch nötig', () => {
-    const using = new Set(hits().map(({ file }) => file));
-    expect(Object.keys(ALLOWED).filter((file) => !using.has(file))).toEqual([]);
-  });
+  allowlistHygiene(ALLOWED, () => staleKeys(ALLOWED, hits().map(({ file }) => file)));
 
   it('jedes aria-labelledby mit fester id hat sein Ziel in derselben Datei', () => {
     const files = [path.join(SRC, 'app'), path.join(SRC, 'components')].flatMap((dir) => sourceFiles(dir));

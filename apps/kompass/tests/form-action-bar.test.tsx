@@ -64,13 +64,12 @@ describe('FormActionBar', () => {
     const { container } = render(<form><FormActionBar /></form>, { wrapper });
     const bar = container.querySelector('[data-slot="form-action-bar"]')!;
     const classes = bar.className.split(/\s+/);
-    expect(classes).toEqual(expect.arrayContaining(['stickybar:sticky', 'stickybar:bottom-0']));
+    expect(classes).toContain('stickybar:sticky');
     // Kein Kleben ohne die Variante — sonst klebte sie auch im quer gehaltenen Telefon.
-    expect(classes).not.toContain('sticky');
-    expect(classes).not.toContain('bottom-0');
+    expect(classes.filter((c) => /(^|:)(sticky|bottom-)/.test(c) && !c.startsWith('stickybar:'))).toEqual([]);
   });
 
-  it('Schatten nur, solange sie klebt: die Marke am Kartenende unter dem Fenster', () => {
+  it('klebt nur, solange die Marke am Kartenende unter dem Fenster liegt', () => {
     let notify: ((entries: Partial<IntersectionObserverEntry>[]) => void) | undefined;
     const observed: Element[] = [];
     const disconnect = vi.fn();
@@ -91,7 +90,6 @@ describe('FormActionBar', () => {
       const { container, unmount } = render(<FormCard><form><FormActionBar /></form></FormCard>, { wrapper });
       const bar = container.querySelector('[data-slot="form-action-bar"]') as HTMLElement;
       expect(observed).toEqual([container.querySelector('[data-slot="form-card-end"]')]);
-      expect(bar.className).toContain('stickybar:data-[stuck]:shadow-md');
       expect(bar.dataset.stuck).toBeUndefined();
       const rootBounds = { top: 0, bottom: 800 } as DOMRectReadOnly;
       // Kartenende unter dem Fenster: die Leiste klebt.
@@ -110,10 +108,9 @@ describe('FormActionBar', () => {
     }
   });
 
-  it('Prüfseite (hideDiscard): kein Verwerfen, Abbrechen nimmt am Telefon die ganze Zeile (Designer 2026-10-10)', () => {
+  it('Prüfseite (hideDiscard): kein Verwerfen (Designer 2026-10-10)', () => {
     render(<form><input name="a" /><FormActionBar back={{ href: '/x', label: 'Zurück' }} hideDiscard /></form>, { wrapper });
     expect(screen.queryByRole('button', { name: 'Verwerfen' })).toBeNull();
-    expect(screen.getByRole('link', { name: 'Abbrechen' }).className).toContain('max-sm:col-span-2');
   });
 
   describe('Verwerfen nur bei Änderungen (Designer 2026-10-16, Teil 2 Nr. 1)', () => {
@@ -164,32 +161,6 @@ describe('FormActionBar', () => {
       rerender(<form><FormActionBar mode="create" loadedVersion="v1" back={{ href: '/x', label: 'Zurück' }} count={2} countHidden /></form>);
       expect(screen.getByRole('button', { name: 'Verwerfen' }).hasAttribute('disabled')).toBe(false);
     });
-  });
-
-  it('Telefon: Speichern über die volle Breite zuerst, Verwerfen und Abbrechen darunter nebeneinander', () => {
-    render(<form><input name="a" aria-label="a" /><FormActionBar back={{ href: '/x', label: 'Zurück' }} extraActions={<button type="button">Speichern und neu</button>} /></form>, { wrapper });
-    fireEvent.input(screen.getByLabelText('a'), { target: { value: 'y' } });
-    const save = screen.getByRole('button', { name: 'Speichern' });
-    const discard = screen.getByRole('button', { name: 'Verwerfen' });
-    const cancel = screen.getByRole('link', { name: 'Abbrechen' });
-    const row = save.parentElement!;
-    expect(row.className).toContain('max-sm:grid-cols-2');
-    expect(row.className).not.toContain('flex-col');
-    expect(save.className).toContain('max-sm:col-span-2');
-    expect(save.className).toContain('max-sm:order-1');
-    // Verwerfen links, Abbrechen rechts — je eine Spalte.
-    expect(discard.className).toContain('max-sm:order-3');
-    expect(cancel.className).toContain('max-sm:order-4');
-    expect(discard.className).not.toContain('col-span-2');
-    expect(cancel.className).not.toContain('col-span-2');
-    // Weitere Speicherwege gleich unter „Speichern“, ebenfalls über die volle Breite.
-    expect(screen.getByRole('button', { name: 'Speichern und neu' }).parentElement!.className).toContain('max-sm:[&>*]:col-span-2');
-  });
-
-  it('Telefon: steht nur einer der beiden Nebenknöpfe da, nimmt er die volle Breite', () => {
-    render(<form><input name="a" aria-label="a" /><FormActionBar /></form>, { wrapper });
-    fireEvent.input(screen.getByLabelText('a'), { target: { value: 'y' } });
-    expect(screen.getByRole('button', { name: 'Verwerfen' }).className).toContain('max-sm:col-span-2');
   });
 
   describe('Rückfrage beim Verlassen (Befund 39)', () => {

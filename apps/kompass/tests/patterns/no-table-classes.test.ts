@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { type Allowlist, matchingLines, read, relative, sourceFiles } from './source';
+import { type Allowlist, matchingLines, read, relative, sourceFiles, allowlistHygiene, staleKeys } from './source';
 
 /**
  * Kopf, Zebra und Zeilenhöhe einer Liste stehen in `components/ui/table.tsx` und nirgends sonst
@@ -8,7 +8,7 @@ import { type Allowlist, matchingLines, read, relative, sourceFiles } from './so
  */
 const PATTERN = /bg-table-head|bg-zebra|h-\[52px\]/;
 
-const ALLOWED: Allowlist = {
+export const ALLOWED: Allowlist = {
   'components/ui/table.tsx': 'Hier steht der Standard.',
   'app/(shell)/admin/locales/locales-client.tsx': 'Raster aus `div` mit Zeilen zum Umsortieren, keine Tabelle.',
   'app/(shell)/admin/roles/role-editor.tsx': 'Raster aus `div` (Rechte-Matrix mit Beschriftungen), keine Tabelle.',
@@ -25,8 +25,5 @@ describe('keine eigenen Tabellenklassen', () => {
     expect(hits.filter(({ file }) => !(file in ALLOWED)).map(({ where }) => where)).toEqual([]);
   });
 
-  it('jede Ausnahme ist noch nötig', () => {
-    const using = new Set(hits.map(({ file }) => file));
-    expect(Object.keys(ALLOWED).filter((file) => !using.has(file))).toEqual([]);
-  });
+  allowlistHygiene(ALLOWED, () => staleKeys(ALLOWED, hits.map(({ file }) => file)));
 });

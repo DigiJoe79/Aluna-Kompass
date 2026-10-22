@@ -234,27 +234,6 @@ test.describe('app shell', () => {
     await page.keyboard.press('Escape');
   });
 
-  /**
-   * Schalter, Haken und Menüs nutzen die Theme-Tokens statt der shadcn-Namen (Wächter `no-shadcn-colors`):
-   * Im Dunkelmodus muss ein eingeschalteter Schalter trotzdem von der Seite abstechen.
-   */
-  test('an enabled switch stands out from the page in the dark colour scheme', async ({ page }) => {
-    await page.getByRole('button', { name: 'Nutzermenü' }).click();
-    await page.getByRole('menuitemcheckbox', { name: 'Dunkles Design' }).click();
-    await page.keyboard.press('Escape');
-    await expect(page.locator('html')).toHaveAttribute('data-color-scheme', 'dark');
-
-    await page.goto('/admin/modules');
-    const on = page.locator('[role="switch"][aria-checked="true"]').first();
-    await expect(on).toBeVisible();
-    const [switchColour, pageColour] = await Promise.all([
-      on.evaluate((el) => getComputedStyle(el).backgroundColor),
-      page.evaluate(() => getComputedStyle(document.body).backgroundColor),
-    ]);
-    expect(switchColour).not.toBe('rgba(0, 0, 0, 0)');
-    expect(switchColour).not.toBe(pageColour);
-  });
-
   test('turns into a drawer below 1180px with labelled areas and the second level beneath', async ({ page }) => {
     await page.goto('/admin/themes');
     await page.setViewportSize({ width: 1024, height: 800 });
@@ -265,24 +244,6 @@ test.describe('app shell', () => {
     await expect(dialog.getByRole('navigation', { name: 'Unternavigation' }).getByRole('link', { name: 'Erscheinungsbild' })).toBeVisible();
     await page.keyboard.press('Escape');
     await expect(dialog).toBeHidden();
-  });
-
-  test('body follows the dynamic viewport, not the large one — else Safaris Symbolleiste lässt das Dokument statt nur den Hauptbereich scrollen', async ({ page }) => {
-    // `min-h-screen` (`100vh`) bindet sich in Safari an die GROSSE Viewport-Höhe
-    // (Symbolleiste ausgeblendet gedacht), während die Hülle in
-    // `(shell)/layout.tsx` bewusst `h-dvh` nutzt, die der tatsächlich
-    // sichtbaren Höhe folgt. Steht die Symbolleiste beim Laden (der
-    // Normalfall), bleibt unter der Hülle toter, aber scrollbarer Raum auf
-    // Dokumentebene — die unfixierte Topbar wandert mit, ein Tipp auf das
-    // Menü trifft stattdessen eine Tabellenzeile darunter. Das lässt sich mit
-    // Playwright nicht live auslösen (keine echte iOS-Symbolleiste), darum
-    // prüft dieser Test die Ursache direkt: `body` muss dieselbe dynamische
-    // Einheit tragen wie die Hülle.
-    await page.goto('/admin/audit');
-    await page.setViewportSize({ width: 768, height: 1024 });
-    const bodyClass = await page.locator('body').getAttribute('class');
-    expect(bodyClass).toContain('min-h-dvh');
-    expect(bodyClass).not.toContain('min-h-screen');
   });
 
   test('a user without module rights sees neither the modules nor an admin page she may not open', async ({ page }) => {

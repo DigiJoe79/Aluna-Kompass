@@ -1,38 +1,41 @@
 import { describe, expect, it } from 'vitest';
-import { classNameValue, openingTags, read, relative, sourceFiles } from './source';
+import { allowlistHygiene, checkCountedAllowlist, classNameValue, type CountedAllowlist, openingTags, read, relative, sourceFiles } from './source';
+import { SIZE, TYPE_STYLE } from './type-scan';
 
 /**
- * Schrift, Größe und Farbe von Dialog- und Seitenfenstertiteln, ihren Beschreibungen und von Abschnitten
- * stehen im Baustein (`components/ui/dialog.tsx`, `ui/sheet.tsx`, `components/section.tsx`) und nirgends
- * sonst (docs/MUSTER.md, „Schrift“; K10 Charge 1). Bis 0.2.7 trugen 66 Titel `font-heading text-[19px]`
- * von Hand, acht weitere 16–18 px, und 28 Beschreibungen eine eigene Größe — eine Änderung am Standard
- * erreichte sie nicht. Aufrufstellen ergänzen Layout: `flex`, `gap-*`, `items-*`, `truncate`, `sr-only`,
+ * Farbe und Rolle von Dialog- und Seitenfenstertiteln, ihren Beschreibungen und von Abschnitten stehen im Baustein
+ * (`components/ui/dialog.tsx`, `ui/sheet.tsx`, `components/section.tsx`) und nirgends sonst (docs/MUSTER.md,
+ * „Schrift“; K10 Charge 1). Aufrufstellen ergänzen Layout: `flex`, `gap-*`, `items-*`, `truncate`, `sr-only`,
  * `text-pretty`. Die Bausteine selbst (`components/ui/`) sind ausgenommen, dort steht der Standard.
+ *
+ * Was andere Wächter schon melden, lässt dieser aus: Größe (`no-arbitrary-text`), Zeilenhöhe, Versalien, Sperrung und
+ * Gewicht 500/700 (`type-style`), `font-heading` (`type-role-family`). Übrig bleiben Farbe und Rolle (`text-ink`,
+ * `text-body`, `text-section` …), `font-semibold`/`font-normal`/`font-mono` und Klassen in einer Variablen.
  */
 const TAGS = /DialogTitle|SheetTitle|DialogDescription|SheetDescription|Section/;
-const TYPE = /^(?:text|font|leading|tracking)-/;
-const LAYOUT = new Set(['text-pretty']);
+const OWN = /^(?:text|font)-/;
+const SIZE_ONLY = new RegExp(`^(?:${SIZE.source})$`);
+const STYLE_ONLY = new RegExp(`^(?:${TYPE_STYLE.source})$`);
+const elsewhere = (c: string): boolean => c === 'text-pretty' || c === 'font-heading' || SIZE_ONLY.test(c) || STYLE_ONLY.test(c);
 
-/** Datei → genau die Schriftklassen, die dort stehen dürfen, mit Grund. Eine zweite Überschreibung fällt auf. */
-type Allowed = Readonly<Record<string, { erwartet: readonly string[]; grund: string }>>;
-
-const ALLOWED: Allowed = {
-  'components/folder-tree/folder-sheet.tsx': {
-    erwartet: ['text-section'],
-    grund: 'Kopf des Ordnerblatts: 52 px wie seine Zeilen, Rolle Abschnitt (Designer 2026-10-10 § 3).',
+/** Schlüssel `datei klasse` → wie oft genau diese Klasse an Titel, Beschreibung oder Abschnitt dieser Datei steht. */
+export const ALLOWED: CountedAllowlist = {
+  'components/folder-tree/folder-sheet.tsx text-section': {
+    count: 1,
+    reason: 'Kopf des Ordnerblatts: 52 px wie seine Zeilen, Rolle Abschnitt (Designer 2026-10-10 § 3).',
   },
-  'app/(shell)/admin/media/asset-detail-dialog.tsx': {
-    erwartet: ['text-body'],
-    grund: 'Dateiname, kein Titel: Rolle Text, lange Namen per truncate nur optisch gekürzt (Designer 2026-10-10 § 9.6; 14/500 vom 2026-10-07 entfällt, nur 400/600). Seit Auftrag 5 (0.2.12) ohne Mono: Dateinamen sind keine Kennung.',
+  'app/(shell)/admin/media/asset-detail-dialog.tsx text-body': {
+    count: 1,
+    reason: 'Dateiname, kein Titel: Rolle Text, lange Namen per truncate nur optisch gekürzt (Designer 2026-10-10 § 9.6). Seit Auftrag 5 (0.2.12) ohne Mono: Dateinamen sind keine Kennung.',
   },
 };
 
 /**
- * Die Schriftklassen eines Tags; Varianten (`sm:`, `[&_a]:`) zählen mit, die erlaubten Layoutklassen nicht.
- * Ein Ausdruck ohne jede Zeichenkette (`className={titleClass}`) lässt sich nicht lesen und wird als
- * `<Name>` gemeldet — wer die Klassen in eine Variable legt, geht an der Prüfung vorbei.
+ * Die Farb- und Rollenklassen eines Tags; Varianten (`sm:`, `[&_a]:`) zählen mit. Ein Ausdruck ohne jede Zeichenkette
+ * (`className={titleClass}`) lässt sich nicht lesen und wird als `<Name>` gemeldet — wer die Klassen in eine Variable
+ * legt, geht an der Prüfung vorbei.
  */
-export function typeClasses(tag: string): string[] {
+export function ownClasses(tag: string): string[] {
   const value = classNameValue(tag);
   if (value === null) return [];
   const hasLiteral = /["'`]/.test(value);
@@ -41,44 +44,19 @@ export function typeClasses(tag: string): string[] {
   return literals
     .flatMap((s) => s.split(/\s+/))
     .map((c) => c.replace(/^["'`]+|["'`]+$/g, ''))
-    .filter(Boolean)
-    .filter((c) => {
-      const base = c.split(':').pop()!.replace(/^!/, '');
-      return TYPE.test(base) && !LAYOUT.has(base);
-    });
-}
-
-/** Die Fundstellen, die nicht durch die Erlaubnisliste gedeckt sind: unerlaubte Dateien und abweichende Klassen. */
-export function unexpected(hits: { file: string; where: string; classes: string[] }[], allowed: Allowed): string[] {
-  const byFile = new Map<string, { where: string[]; classes: string[] }>();
-  for (const { file, where, classes } of hits) {
-    const entry = byFile.get(file) ?? { where: [], classes: [] };
-    entry.where.push(where);
-    entry.classes.push(...classes);
-    byFile.set(file, entry);
-  }
-  const problems: string[] = [];
-  for (const [file, { where, classes }] of byFile) {
-    const rule = allowed[file];
-    if (!rule) problems.push(...where);
-    else if ([...classes].sort().join(' ') !== [...rule.erwartet].sort().join(' ')) problems.push(`${file}: erwartet ${rule.erwartet.join(' ')}, gefunden ${classes.join(' ')}`);
-  }
-  return problems;
+    .filter((c) => c && !elsewhere(c))
+    .filter((c) => OWN.test(c.split(':').pop()!.replace(/^!/, '')));
 }
 
 describe('Heuristik', () => {
   it.each([
-    ['<DialogTitle className="font-heading text-[19px]">', ['font-heading', 'text-[19px]']],
-    ['<SheetTitle className={cn(\'flex\', open && \'text-ink\')}>', ['text-ink']],
-    ['<DialogDescription className="sm:text-[14px]">', ['sm:text-[14px]']],
-    ['<Section title="A" className="leading-tight">', ['leading-tight']],
-    // Lücken, die der erste Entwurf ließ:
+    ["<SheetTitle className={cn('flex', open && 'text-ink')}>", ['text-ink']],
     ["<SheetTitle className={cn(`flex ${open ? 'text-error' : ''}`)}>", ['text-error']],
-    ['<DialogTitle className={`flex\n  text-[17px]\n  font-semibold`}>', ['text-[17px]', 'font-semibold']],
+    ['<DialogTitle className={`flex\n  text-meta\n  font-semibold`}>', ['text-meta', 'font-semibold']],
     ['<DialogTitle className={titleClass}>', ['<titleClass>']],
     ['<DialogDescription className={cn(descriptionClass)}>', ['<cn(descriptionClass)>']],
   ])('meldet %s', (tag, expected) => {
-    expect(typeClasses(tag)).toEqual(expected);
+    expect(ownClasses(tag)).toEqual(expected);
   });
 
   it.each([
@@ -88,43 +66,25 @@ describe('Heuristik', () => {
     '<DialogDescription tone="body">',
     '<DialogTitle onClick={() => setOpen(false)}>',
     '<SheetTitle>',
+    // Größe, Gewicht 500/700, Zeilenhöhe und Familie melden andere Wächter:
+    '<DialogTitle className="font-heading text-[19px] sm:text-sm leading-tight md:font-bold">',
   ])('lässt %s durch', (tag) => {
-    expect(typeClasses(tag)).toEqual([]);
+    expect(ownClasses(tag)).toEqual([]);
   });
 });
 
-describe('Erlaubnisliste genau', () => {
-  const allowed: Allowed = { 'a.tsx': { erwartet: ['text-[17px]'], grund: 'x' } };
-  it('lässt genau die erwarteten Klassen durch', () => {
-    expect(unexpected([{ file: 'a.tsx', where: 'a.tsx:1 text-[17px]', classes: ['text-[17px]'] }], allowed)).toEqual([]);
-  });
-  it('meldet eine zweite Überschreibung in einer erlaubten Datei', () => {
-    expect(unexpected([
-      { file: 'a.tsx', where: 'a.tsx:1 text-[17px]', classes: ['text-[17px]'] },
-      { file: 'a.tsx', where: 'a.tsx:9 text-error', classes: ['text-error'] },
-    ], allowed)).toHaveLength(1);
-  });
-  it('meldet eine Datei außerhalb der Liste', () => {
-    expect(unexpected([{ file: 'b.tsx', where: 'b.tsx:3 text-ink', classes: ['text-ink'] }], allowed)).toEqual(['b.tsx:3 text-ink']);
-  });
-});
-
-describe('keine eigene Schrift an Titel, Beschreibung und Abschnitt', () => {
+describe('keine eigene Farbe oder Rolle an Titel, Beschreibung und Abschnitt', () => {
   const hits = sourceFiles()
     .filter((file) => !relative(file).startsWith('components/ui/'))
     .flatMap((file) =>
-      openingTags(read(file), TAGS)
-        .map(({ line, tag }) => ({ line, classes: typeClasses(tag) }))
-        .filter(({ classes }) => classes.length > 0)
-        .map(({ line, classes }) => ({ file: relative(file), classes, where: `${relative(file)}:${line} ${classes.join(' ')}` })),
+      openingTags(read(file), TAGS).flatMap(({ line, tag }) =>
+        ownClasses(tag).map((c) => ({ file: `${relative(file)} ${c}`, where: `${relative(file)}:${line} ${c}` })),
+      ),
     );
 
-  it('Schriftklassen stehen nur im Baustein und in der Erlaubnisliste, genau wie dort erwartet', () => {
-    expect(unexpected(hits, ALLOWED)).toEqual([]);
+  it('nur im Baustein und in der Erlaubnisliste', () => {
+    expect(checkCountedAllowlist(hits, ALLOWED).unexpected).toEqual([]);
   });
 
-  it('jede Ausnahme ist noch nötig', () => {
-    const using = new Set(hits.map(({ file }) => file));
-    expect(Object.keys(ALLOWED).filter((file) => !using.has(file))).toEqual([]);
-  });
+  allowlistHygiene(ALLOWED, () => checkCountedAllowlist(hits, ALLOWED).stale);
 });

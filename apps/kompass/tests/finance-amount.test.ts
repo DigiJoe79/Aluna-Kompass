@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatAmount, formatEuro, parseAmount } from '@/lib/finance/amount';
+import { parseAmount } from '@/lib/finance/amount';
 
 describe('parseAmount', () => {
   it.each([
@@ -19,23 +19,8 @@ describe('parseAmount', () => {
   });
 });
 
-describe('formatAmount', () => {
-  it('groups thousands with a dot, two decimals with a comma, minus as U+2212', () => {
-    expect(formatAmount(123456)).toBe('1.234,56');
-    expect(formatAmount(1200)).toBe('12,00');
-    expect(formatAmount(-6000)).toBe('−60,00');
-    expect(formatAmount(0)).toBe('0,00');
-  });
-});
-
-describe('formatEuro', () => {
-  it('adds the euro sign after the formatted amount, with a non-breaking space', () => {
-    expect(formatEuro(123456)).toBe('1.234,56\u00a0€');
-    expect(formatEuro(-6000)).toBe('−60,00\u00a0€');
-    expect(formatEuro(1200, { sign: 'always' })).toBe('+12,00\u00a0€');
-  });
-});
-
+// formatAmount und formatEuro reicht die App nur aus `@kompass/module-finance/format` durch; geprüft im Modul
+// (packages/modules/finance/tests/format-amount.test.ts).
 describe('Feldfehler am Betrag (Runde 3, 087)', () => {
   it('enden mit Punkt wie „Pflichtfeld.“', async () => {
     const messages = (await import('../messages/de.json')).default as { finance: { amount: Record<string, unknown> }; errors: { fields: { required: string } } };

@@ -1,8 +1,8 @@
 'use server';
 
 import { guardAction } from '@/lib/action-guard';
-import { conflict, type Result } from '@kompass/core';
-import { cancelSiteJob, siteContentHash, startDeployCheck, startPreview, startPublish, type SiteJobKind, type SiteJobStart } from '@kompass/module-site';
+import type { Result } from '@kompass/core';
+import { cancelSiteJob, siteContentHash, siteJobRunning, startDeployCheck, startPreview, startPublish, type SiteJobKind, type SiteJobStart } from '@kompass/module-site';
 import { revalidatePath } from 'next/cache';
 import { getTranslations } from 'next-intl/server';
 import { toActionState, type ActionState } from '@/lib/actions';
@@ -31,7 +31,7 @@ async function startedState(result: Result<SiteJobStart>, kind: SiteJobKind): Pr
   if (result.value.started) return { status: 'success', data: { runId: result.value.runId } };
   const { running } = result.value;
   if (running.kind === kind) return { status: 'success', data: { runId: running.runId } };
-  return toActionState(conflict('siteJobRunning', running.kind), t);
+  return toActionState(siteJobRunning(running.kind), t);
 }
 
 export async function startPreviewAction(): Promise<ActionState> {

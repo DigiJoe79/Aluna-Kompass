@@ -1,4 +1,4 @@
-import { countUnfiledMediaAssets, listMediaAssets, listMediaFolders, mediaListFilterSchema, requirePermission, unwrap, userNamesFor } from '@kompass/core';
+import { aiLabelingEnabled, countUnfiledMediaAssets, listMediaAssets, listMediaFolders, mediaListFilterSchema, requirePermission, unwrap, userNamesFor } from '@kompass/core';
 import { getTranslations } from 'next-intl/server';
 import { ForbiddenCard } from '@/components/forbidden-card';
 import { Page } from '@/components/page';
@@ -7,7 +7,7 @@ import { LibraryClient } from './library-client';
 import { capItems, type ListQuery } from './types';
 import { listingReference } from '@/lib/media-listing';
 
-type Params = { folder?: string; unfiled?: string; q?: string; kind?: string; sort?: string };
+type Params = { folder?: string; unfiled?: string; q?: string; kind?: string; sort?: string; unused?: string };
 
 /** Unbekannte Werte fallen auf die Vorgabe zurück — eine getippte URL soll die Seite nie brechen. */
 function readQuery(params: Params): ListQuery {
@@ -15,7 +15,7 @@ function readQuery(params: Params): ListQuery {
   const parsed = mediaListFilterSchema.safeParse({ sort: params.sort });
   const sort = parsed.success && parsed.data.sort ? parsed.data.sort : 'newest';
   const unfiled = params.unfiled === '1';
-  return { folder: unfiled ? null : params.folder || null, unfiled, q: (params.q ?? '').trim().slice(0, 200), kind, sort };
+  return { folder: unfiled ? null : params.folder || null, unfiled, q: (params.q ?? '').trim().slice(0, 200), kind, sort, unused: params.unused === '1' };
 }
 
 export default async function MediaPage({ searchParams }: { searchParams: Promise<Params> }) {
@@ -31,6 +31,7 @@ export default async function MediaPage({ searchParams }: { searchParams: Promis
       ...(query.unfiled ? { folder: null } : query.folder !== null ? { folder: query.folder, includeSubfolders: true } : {}),
       ...(query.q ? { query: query.q } : {}),
       ...(query.kind !== 'all' ? { kind: query.kind } : {}),
+      ...(query.unused ? { unused: true } : {}),
       sort: query.sort,
     }),
   );
@@ -48,6 +49,7 @@ export default async function MediaPage({ searchParams }: { searchParams: Promis
     uploadedBy: it.record.uploadedByUserId ? (names.get(it.record.uploadedByUserId) ?? null) : null,
     folder: it.record.folder,
     references: it.references.map(listingReference),
+    aiKind: it.record.aiKind,
   }));
 
   // Die Zähler der festen Einträge: „Ohne Ordner“ zählt die losen Dateien, „Alle Dateien“ alles.
@@ -56,7 +58,7 @@ export default async function MediaPage({ searchParams }: { searchParams: Promis
 
   return (
     <Page width="full">
-      <LibraryClient title={t('title')} query={query} folders={folders} items={items} matching={matching} total={total} unfiledCount={unfiledCount} />
+      <LibraryClient title={t('title')} query={query} folders={folders} items={items} matching={matching} total={total} unfiledCount={unfiledCount} aiLabelingEnabled={aiLabelingEnabled(deps)} />
     </Page>
   );
 }

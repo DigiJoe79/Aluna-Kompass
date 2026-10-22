@@ -26,22 +26,11 @@ const classes = (el: HTMLElement) => el.className.split(/\s+/);
 
 /** K10 Charge 1, Spec § 3; Charge 3, Spec § 2 (Designer 2026-10-10): zehn Rollen. */
 describe('Schriftrollen', () => {
-  it.each([
-    ['page-title', '22px', '1.2', null],
-    ['dialog-title', '19px', '1.25', '600'],
-    ['section', '15px', '1.35', '600'],
-    ['body', '14px', '1.5', null],
-    ['meta', '13px', '1.45', null],
-    ['hint', '12px', '1.4', null],
-    ['label', '12px', '1.3', '600'],
-    ['key', '11px', '1.35', null],
-    ['figure', '32px', '1', null],
-    ['amount', '22px', '1.2', null],
-  ] as const)('%s', (role, size, leading, weight) => {
-    expect(CSS).toContain(`--text-${role}: ${size};`);
-    expect(CSS).toContain(`--text-${role}--line-height: ${leading};`);
-    if (weight) expect(CSS).toContain(`--text-${role}--font-weight: ${weight};`);
-    else expect(CSS).not.toContain(`--text-${role}--font-weight`);
+  // Die Werte je Rolle stehen in `globals.css` und werden dort entschieden; hier nur, dass Rollen und CSS zusammenpassen.
+  it('jede Rolle hat Größe und Zeilenhöhe, und jede Größe gehört zu einer Rolle', () => {
+    const defined = [...new Set([...CSS.matchAll(/--text-([a-z-]+?)(?:--[a-z-]+)?:/g)].map((m) => m[1]!))];
+    expect([...defined].sort()).toEqual([...TYPE_ROLES].sort());
+    expect(TYPE_ROLES.filter((role) => !CSS.includes(`--text-${role}--line-height:`))).toEqual([]);
   });
 
   it('nur das Etikett trägt eine Sperrung', () => {

@@ -6,8 +6,12 @@ type Prefs = {
   colorScheme: 'light' | 'dark';
   density: 'compact' | 'default' | 'comfortable';
   mediaView: 'list' | 'grid';
-  /** Der zuletzt im Auswahl-Dialog geöffnete Ordner; null = Alle Dateien, '' = Ohne Ordner. */
-  mediaChooserFolder: string | null;
+  /**
+   * Der zuletzt im Auswahl-Dialog geöffnete Ordner, je Art getrennt (Backlog 45: geteilt setzte der Rückfall der einen
+   * Art auch die andere zurück); null = Alle Dateien, '' = Ohne Ordner.
+   */
+  mediaChooserFolderImage: string | null;
+  mediaChooserFolderPdf: string | null;
   /** Randspalte des Journals (HANDOFF § 6). `'auto'` entscheidet über CSS am Breakpoint 1360 px — geschrieben wird nur die ausdrückliche Wahl. */
   financeSidePanel: 'auto' | 'open' | 'closed';
 };
@@ -15,7 +19,8 @@ const DEFAULTS: Prefs = {
   colorScheme: 'light',
   density: 'default',
   mediaView: 'list',
-  mediaChooserFolder: null,
+  mediaChooserFolderImage: null,
+  mediaChooserFolderPdf: null,
   financeSidePanel: 'auto',
 };
 

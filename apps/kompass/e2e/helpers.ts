@@ -16,12 +16,19 @@ export async function setMailState(page: Page, state: 'off' | 'redirect' | 'bloc
   expect(response.ok()).toBe(true);
 }
 
-export async function loginAsAdmin(page: Page): Promise<void> {
-  await page.goto('/login');
-  await page.getByLabel('E-Mail').fill(ADMIN.email);
-  await page.getByLabel('Passwort').fill(ADMIN.password);
-  await page.getByRole('button', { name: 'Anmelden' }).click();
+/**
+ * Meldet über `/__e2e/login` an (derselbe Kern-`login`, ohne Maske) und öffnet die Startseite. Die Maske kostete je
+ * Fall rund eine Sekunde; sie selbst prüft `auth.spec.ts`. Das Cookie landet im Kontext der Seite.
+ */
+export async function loginAs(page: Page, email: string, password: string): Promise<void> {
+  const response = await page.request.post('/__e2e/login', { headers: { 'x-e2e-token': 'e2e-reset' }, data: { email, password } });
+  expect(response.ok()).toBe(true);
+  await page.goto('/');
   await expect(page).toHaveURL('/');
+}
+
+export async function loginAsAdmin(page: Page): Promise<void> {
+  await loginAs(page, ADMIN.email, ADMIN.password);
 }
 
 export async function setE2ESetting(page: Page, key: string, value: unknown): Promise<void> {
@@ -82,4 +89,15 @@ export async function readTemplate(page: Page): Promise<void> {
   } else {
     await expect(findings.getByText('Keine Änderungen gegenüber dem eingelesenen Stand.')).toBeVisible();
   }
+}
+
+/**
+ * Der Schritt „Bildkennzeichnung“ nach dem Hochladen von Bildern (Spec Bildkennzeichnung beim Hochladen): Im Seed ist
+ * die Kennzeichnung eingeschaltet, also fragt der Dialog nach jedem Bild. `Fertig` (Mediathek, mehrere Fotos) führt
+ * zurück, `Übernehmen` (ein Bildfeld) setzt die Datei ins Feld.
+ */
+export async function finishLabeling(page: Page, button: 'Fertig' | 'Übernehmen' = 'Fertig'): Promise<void> {
+  const dialog = page.getByRole('dialog', { name: 'Bildkennzeichnung' });
+  await dialog.getByRole('button', { name: button }).click();
+  await expect(dialog).toBeHidden();
 }

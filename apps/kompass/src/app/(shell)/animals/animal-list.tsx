@@ -207,7 +207,9 @@ export function AnimalList({
                       <Empty />
                     )}
                   </TableCell>
-                  <TableCell col="meta" className="text-ink-2">{[f(`locations.${a.location}`), a.place].filter(Boolean).join(' · ')}</TableCell>
+                  {/* Backlog 72: Ort ist Text („im Shelter · Rumänien, Ploiești“), am Telefon eine eigene Zeile wie bei den Auszügen
+                      (Kompromiss b). Kein Layout-Test (Einzelstelle, Laufzeit zählt). */}
+                  <TableCell col="meta" wrap className="text-ink-2">{[f(`locations.${a.location}`), a.place].filter(Boolean).join(' · ')}</TableCell>
                   <TableCell className="tabular-nums text-right text-meta text-ink-2">{a.photoCount}</TableCell>
                   <TableCell col="meta" className="text-ink-2">
                     {dates.date(a.updatedAt)}

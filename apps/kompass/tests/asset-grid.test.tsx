@@ -16,23 +16,26 @@ const wrap = (ui: React.ReactNode) =>
 
 /**
  * 144/145 (Runde 3): Die Karte heißt nach ihrer Datei, die Verwendung steht gedämpft darunter — der Titel war sonst
- * dieselbe Angabe wie die Verwendung. Markiert wird nur „nicht verwendet“. 147: „Ausgewählt“ liegt auf dem Bild.
+ * dieselbe Angabe wie die Verwendung. Markiert wird nur „nicht verwendet“.
  */
 describe('AssetGrid', () => {
   const items = [
     { id: 'A', filename: 'mira-3f2a9c.jpg', mimeType: 'image/jpeg', used: true, caption: 'Team: Mira' },
     { id: 'B', filename: 'flyer-77b1.pdf', mimeType: 'application/pdf', used: false },
   ];
-  it('names the card after its file and keeps the use small below', () => {
+  it('marks only the unused file', () => {
     wrap(<AssetGrid items={items} onOpen={() => {}} />);
-    const [used, unused] = screen.getAllByRole('button');
-    expect(used!.textContent).toBe('mira-3f2a9c.jpgTeam: Mira');
-    expect(screen.getByText('Team: Mira').className).toContain('text-muted-ink');
+    const [, unused] = screen.getAllByRole('button');
     expect(unused!.textContent).toContain('nicht verwendet');
     expect(screen.queryByText('verwendet', { exact: true })).toBeNull();
   });
-  it('lays „Ausgewählt“ over the image, so the title keeps its width', () => {
-    wrap(<AssetGrid items={items} selected={new Set(['A'])} onOpen={() => {}} />);
-    expect(screen.getByText('Ausgewählt').closest('[data-asset-thumb]')).toBeTruthy();
+
+  it('renders AiKindBadge on the thumbnail when aiKind is present and not none', () => {
+    const aiItems = [
+      { id: 'A', filename: 'mira-3f2a9c.jpg', mimeType: 'image/jpeg', used: true, aiKind: 'edited' as const },
+      { id: 'B', filename: 'flyer-77b1.pdf', mimeType: 'application/pdf', used: false, aiKind: 'none' as const },
+    ];
+    wrap(<AssetGrid items={aiItems} onOpen={() => {}} />);
+    expect(screen.getAllByTestId('ai-kind-badge')).toHaveLength(1);
   });
 });

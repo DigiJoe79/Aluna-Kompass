@@ -17,7 +17,7 @@ function Intl({ children }: { children: ReactNode }) {
   );
 }
 
-const item = (id: string, folder: string | null) => ({ id, filename: `${id}.png`, mimeType: 'image/png', bytes: 1, width: 1, height: 1, createdAt: '2026-10-01T08:00:00.000Z', folder, references: [] });
+const item = (id: string, folder: string | null) => ({ id, filename: `${id}.png`, mimeType: 'image/png', bytes: 1, width: 1, height: 1, createdAt: '2026-10-01T08:00:00.000Z', folder, references: [], aiKind: 'none' as const });
 
 /** Was `GET /media?kind=image` liefert: Zähler nur für Bilder. „Dokumente“ hat keins, „Tiere“ nur im Unterordner. */
 const LISTING: MediaListing = {
@@ -113,7 +113,7 @@ describe('MediaChooserDialog', () => {
     await waitFor(() => expect(lastParams().get('folder')).toBe('Bilder'));
     expect(within(tree()).getByRole('treeitem', { name: /^Bilder,/ }).getAttribute('aria-selected')).toBe('true');
     expect(fixed('all').getAttribute('aria-pressed')).toBe('false');
-    expect(JSON.parse(localStorage.getItem('kompass.mediaChooserFolder') ?? 'null')).toBe('Bilder');
+    expect(JSON.parse(localStorage.getItem('kompass.mediaChooserFolderImage') ?? 'null')).toBe('Bilder');
   });
 
   it('tells „Alle Dateien“ and „Ohne Ordner“ apart, though neither is a folder', async () => {
@@ -136,15 +136,25 @@ describe('MediaChooserDialog', () => {
   });
 
   it('falls back to „Alle Dateien“ when the remembered folder is gone (renamed elsewhere)', async () => {
-    localStorage.setItem('kompass.mediaChooserFolder', JSON.stringify('Weg'));
+    localStorage.setItem('kompass.mediaChooserFolderImage', JSON.stringify('Weg'));
     renderChooser();
     await waitFor(() => expect(fixed('all').getAttribute('aria-pressed')).toBe('true'));
     await waitFor(() => expect(lastParams().has('folder')).toBe(false));
-    expect(JSON.parse(localStorage.getItem('kompass.mediaChooserFolder') ?? '"x"')).toBeNull();
+    expect(JSON.parse(localStorage.getItem('kompass.mediaChooserFolderImage') ?? '"x"')).toBeNull();
+  });
+
+  // Backlog 45 (Restposten 0.2.4): Bild und PDF teilten sich einen gemerkten Ordner; fand das Bild dort nichts, setzte
+  // der Rückfall auf „Alle Dateien“ auch den Ordner der PDFs zurück.
+  it('remembers the folder per kind: the fallback for images leaves the one for PDFs alone', async () => {
+    localStorage.setItem('kompass.mediaChooserFolderImage', JSON.stringify('Weg'));
+    localStorage.setItem('kompass.mediaChooserFolderPdf', JSON.stringify('Dokumente'));
+    renderChooser();
+    await waitFor(() => expect(JSON.parse(localStorage.getItem('kompass.mediaChooserFolderImage') ?? '"x"')).toBeNull());
+    expect(JSON.parse(localStorage.getItem('kompass.mediaChooserFolderPdf') ?? 'null')).toBe('Dokumente');
   });
 
   it('opens the path to the remembered folder', async () => {
-    localStorage.setItem('kompass.mediaChooserFolder', JSON.stringify('Tiere/Hunde'));
+    localStorage.setItem('kompass.mediaChooserFolderImage', JSON.stringify('Tiere/Hunde'));
     renderChooser();
     await waitFor(() => expect(within(tree()).getByRole('treeitem', { name: /^Hunde,/ }).getAttribute('aria-selected')).toBe('true'));
     expect(lastParams().get('folder')).toBe('Tiere/Hunde');

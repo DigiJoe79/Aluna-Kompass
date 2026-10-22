@@ -4,6 +4,7 @@ import { getTranslations } from 'next-intl/server';
 import type { ReactNode } from 'react';
 import { ForbiddenCard } from '@/components/forbidden-card';
 import { ListPager } from '@/components/list-pager';
+import { Notice } from '@/components/notice';
 import { Page } from '@/components/page';
 import { PageHeader } from '@/components/page-header';
 import { requireSession } from '@/lib/request-context';
@@ -54,13 +55,19 @@ export default async function FeeRunPage({ searchParams }: { searchParams: Promi
     } else {
       const runRef = `membersFeeRun:${run.value.id}`;
       const state = await runDispatchState(deps, ctx, { runRef });
+      const refusedPrenotifications = run.value.noticeRefused.filter((r) => r.letter === 'prenotification').length;
+      const refusedNotices = run.value.noticeRefused.length - refusedPrenotifications;
       body = (
         <>
           <RunSteps active={state.ok && state.value.done ? null : 'dispatch'} />
           <p data-testid="run-summary" className="text-body text-ink">{t('runs.result.fees', { created: run.value.created, notices: run.value.noticesIssued })}</p>
+          {/* Backlog 78: Was der Lauf nicht erzeugen oder diese Rolle nicht versenden konnte, steht hier statt still zu fehlen. */}
+          {refusedNotices > 0 ? <Notice level="hint" testId="run-notices-refused">{t('runs.result.noticesRefused', { count: refusedNotices })}</Notice> : null}
+          {refusedPrenotifications > 0 ? <Notice level="hint" testId="run-prenotifications-refused">{t('runs.result.prenotificationRefused', { count: refusedPrenotifications })}</Notice> : null}
+          {state.ok && state.value.restricted > 0 ? <Notice level="hint" testId="run-restricted">{t('runs.result.restricted', { count: state.value.restricted })}</Notice> : null}
           {state.ok && state.value.mail.length + state.value.post.length > 0 ? (
             <MemberRunDispatch runRef={runRef} state={state.value} detail={t('feeRun.noticeDetail')} canSend={canFees && hasPermission(ctx, 'dms.send')} canMark={canFees} today={today} />
-          ) : (
+          ) : state.ok && state.value.restricted > 0 ? null : (
             <p className="text-meta text-muted-ink">{t('runs.result.noLetters')}</p>
           )}
         </>

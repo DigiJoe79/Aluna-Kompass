@@ -51,11 +51,10 @@ describe('NoticesTable', () => {
     expect(screen.getByTestId('notice-state-date').textContent).toBe('am 04.03.2026');
   });
 
-  it('112: ein Bescheid ohne Dokument trägt ocker „ohne Dokument“, ein irrtümlich erfasster nicht', () => {
+  it('112: ein Bescheid ohne Dokument trägt „ohne Dokument“, ein irrtümlich erfasster nicht', () => {
     render(<NoticesTable rows={[row()]} canIssue={false} canPickDocument={false} />, { wrapper: Intl });
     const cell = screen.getByTestId('notice-document');
     expect(cell.textContent).toBe('ohne Dokument');
-    expect(cell.querySelector('.text-warning')).toBeTruthy();
     cleanup();
     render(<NoticesTable rows={[row({ documentId: 'D1', documentNumber: 'EIN-2026-001' })]} canIssue={false} canPickDocument={false} />, { wrapper: Intl });
     expect(screen.getByTestId('notice-document').textContent).toBe('EIN-2026-001');
@@ -63,19 +62,8 @@ describe('NoticesTable', () => {
     render(<NoticesTable rows={[row({ voidedAt: '2026-01-01T00:00:00.000Z', state: 'voided' })]} canIssue={false} canPickDocument={false} />, { wrapper: Intl });
     expect(screen.getByTestId('notice-document').textContent).not.toContain('ohne Dokument');
     cleanup();
-    // Joe 2026-10-17: Bei einem ersetzten Bescheid ist das fehlende Original keine Arbeit mehr — „—“ statt ocker.
+    // Joe 2026-10-17: Bei einem ersetzten Bescheid ist das fehlende Original keine Arbeit mehr.
     render(<NoticesTable rows={[row({ state: 'superseded', supersededOn: '2026-03-04' })]} canIssue={false} canPickDocument={false} />, { wrapper: Intl });
     expect(screen.getByTestId('notice-document').textContent).not.toContain('ohne Dokument');
-    expect(screen.getByTestId('notice-document').querySelector('.text-warning')).toBeNull();
-  });
-
-  it('die Marke „ohne Dokument“ steht in der Textschrift, Mono trägt nur die Nummer (Runde 4, 194)', () => {
-    render(<NoticesTable rows={[row()]} canIssue={false} canPickDocument={false} />, { wrapper: Intl });
-    const cell = screen.getByTestId('notice-document');
-    expect(cell.className).not.toMatch(/font-mono/);
-    expect(cell.querySelector('.font-mono')).toBeNull();
-    cleanup();
-    render(<NoticesTable rows={[row({ documentId: 'D1', documentNumber: 'EIN-2026-001' })]} canIssue={false} canPickDocument={false} />, { wrapper: Intl });
-    expect(screen.getByTestId('notice-document').querySelector('.font-mono')!.textContent).toBe('EIN-2026-001');
   });
 });

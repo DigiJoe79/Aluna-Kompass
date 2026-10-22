@@ -1,4 +1,4 @@
-import { fixedClock, schema, unwrap, type CallContext } from '@kompass/core';
+import { fixedClock, schema, unwrap } from '@kompass/core';
 import { ctxWith } from '@kompass/core/testing';
 import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
@@ -13,7 +13,6 @@ import { bookAndFinalize, creditScene, suggest } from './direct-debit-credit-fix
 
 // Plan L3 Task 4 (Handoff 2a § 1.3 13d, Nachtrag Phase 2): „Rückgabe klären“ mit drei Wegen. Uhr danach: 10.11.2026.
 const fail = <T>(res: { ok: boolean; error?: T }) => (res.ok ? null : res.error);
-const asMcp = (ctx: CallContext): CallContext => ({ ...ctx, channel: 'mcp' });
 
 /** Gutschrift gebucht, danach beide Posten zurückgegeben (Beitrag `AM04`, Rate `MD06`) und festgeschrieben. */
 async function scene() {
@@ -146,9 +145,8 @@ describe('resolveDirectDebitReturn — refusals', () => {
     expect(JSON.parse(audit.params!)).toMatchObject({ resolution: 'alreadyPaid', returnCode: 'AM04' });
   });
 
-  it('is human only, needs finance.directDebit, a known case and a valid way', async () => {
+  it('needs finance.directDebit, a known case and a valid way', async () => {
     const f = await scene();
-    expect(fail(await f.resolve('openItem', 'waive', false, asMcp(f.ctx)))).toMatchObject({ code: 'humanOnly' });
     expect(fail(await f.resolve('openItem', 'waive', false, ctxWith(['finance.read'], f.userId)))).toMatchObject({ type: 'forbidden' });
     expect(fail(await resolveDirectDebitReturn(f.later, f.ctx, { returnId: 'NOPE', resolution: 'waive', endMandate: false }))).toMatchObject({ type: 'notFound' });
     expect(fail(await resolveDirectDebitReturn(f.later, f.ctx, { returnId: f.caseOf('openItem').id, resolution: 'later', endMandate: false }))).toMatchObject({ type: 'validation' });

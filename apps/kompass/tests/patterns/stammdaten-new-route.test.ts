@@ -1,7 +1,7 @@
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { SRC } from './source';
+import { type Allowlist, allowlistHygiene, read, relative, sourceFiles, SRC } from './source';
 
 /**
  * Stammdaten (etwas, das man pflegt) werden auf einer eigenen Seite angelegt, nicht in einem Dialog
@@ -9,40 +9,50 @@ import { SRC } from './source';
  * Fehlermeldungen. Angelegt wird entweder auf `…/new/page.tsx` oder — wie bei Tieren und Projekten —
  * auf `…/[id]/page.tsx`, das die Kennung `new` kennt. Die Listenseite hat keine `Create…Dialog` als
  * Kopfzeilen-Aktion.
+ *
+ * Geprüft wird jede Liste unter `app/(shell)` mit einer Detailseite `[id]/page.tsx` — die Ziele kommen aus der
+ * Struktur, ein neues Modul fällt von selbst darunter (Testdurchsicht 2026-10-22).
  */
-const STAMMDATEN = ['animals', 'projects', 'finance/partners', 'site/c/[collection]'];
+const SHELL = path.join(SRC, 'app/(shell)');
 
-/** Ausnahmen von der Regel — Pfad → Grund. Der Test verlangt, dass sie wahr bleiben. */
-const EXCEPTIONS: Readonly<Record<string, string>> = {
+/** Ausnahmen von der Regel — Ordner relativ zu `app/(shell)` → Grund. */
+export const EXCEPTIONS: Allowlist = {
   contacts:
     'Kontakte sind noch Lesesicht mit Bearbeiten-Dialog und Anlegen im Dialog; die Umstellung auf das Stammdatenmuster ist zurückgestellt (Entscheidung des Maintainers, 2026-10-04).',
+  'animals/proposals': 'Vorschläge kommen über den Eingang (Agent, Abgleich), keiner wird von Hand angelegt; die Liste verweist zum Anlegen auf /animals/new.',
 };
 
-const MODULE_ROOT = path.join(SRC, 'app/(shell)');
-const dir = (module: string) => path.join(MODULE_ROOT, module);
+/** Die Listen: Ordner unter `app/(shell)` mit `page.tsx` und `[id]/page.tsx`. */
+export const lists = (): string[] =>
+  sourceFiles(SHELL)
+    .filter((file) => file.endsWith(`${path.sep}[id]${path.sep}page.tsx`))
+    .map((file) => path.dirname(path.dirname(file)))
+    .filter((dir) => existsSync(path.join(dir, 'page.tsx')))
+    .map((dir) => path.relative(SHELL, dir).split(path.sep).join('/'))
+    .sort();
 
-function createsOnItsOwnPage(module: string): boolean {
-  if (existsSync(path.join(dir(module), 'new/page.tsx'))) return true;
-  const detail = path.join(dir(module), '[id]/page.tsx');
-  return existsSync(detail) && /===\s*'new'/.test(readFileSync(detail, 'utf8'));
+const dir = (list: string) => path.join(SHELL, list);
+
+function createsOnItsOwnPage(list: string): boolean {
+  if (existsSync(path.join(dir(list), 'new/page.tsx'))) return true;
+  return /===\s*'new'/.test(read(path.join(dir(list), '[id]/page.tsx')));
 }
 
-function createsInDialogFromHeader(module: string): boolean {
-  const list = path.join(dir(module), 'page.tsx');
-  if (!existsSync(list)) return false;
-  return /actions=\{[^}]*Create\w*Dialog/.test(readFileSync(list, 'utf8'));
-}
+const createsInDialogFromHeader = (list: string): boolean => /actions=\{[^}]*Create\w*Dialog/.test(read(path.join(dir(list), 'page.tsx')));
+
+const breaksRule = (list: string): boolean => !createsOnItsOwnPage(list) || createsInDialogFromHeader(list);
 
 describe('Stammdaten legt man auf einer eigenen Seite an', () => {
-  it.each(STAMMDATEN)('%s hat eine Seite zum Anlegen und keinen Dialog in der Kopfzeile', (module) => {
-    expect(createsOnItsOwnPage(module), `${module}: weder new/page.tsx noch [id]/page.tsx mit 'new'`).toBe(true);
-    expect(createsInDialogFromHeader(module), `${module}: Create…Dialog als PageHeader-Aktion`).toBe(false);
+  it('findet die Listen aus der Struktur (Gegenprobe gegen die bekannten)', () => {
+    expect(lists()).toEqual(expect.arrayContaining(['animals', 'projects', 'finance/partners', 'site/c/[collection]', 'contacts']));
+    expect(relative(path.join(dir('animals'), 'page.tsx'))).toBe('app/(shell)/animals/page.tsx');
   });
 
-  it('jede Ausnahme gilt noch', () => {
-    // Sobald ein ausgenommenes Modul die Regel erfüllt, gehört es in STAMMDATEN und nicht hierher.
-    for (const module of Object.keys(EXCEPTIONS)) {
-      expect(createsOnItsOwnPage(module), `${module} erfüllt die Regel jetzt — aus EXCEPTIONS nach STAMMDATEN verschieben`).toBe(false);
-    }
+  it('jede Liste mit Detailseite hat eine Seite zum Anlegen und keinen Dialog in der Kopfzeile', () => {
+    const offenders = lists().filter((list) => !(list in EXCEPTIONS) && breaksRule(list));
+    expect(offenders, 'weder new/page.tsx noch [id]/page.tsx mit `new`, oder Create…Dialog als PageHeader-Aktion').toEqual([]);
   });
+
+  // Sobald eine ausgenommene Liste die Regel erfüllt, gehört sie nicht mehr hierher.
+  allowlistHygiene(EXCEPTIONS, () => Object.keys(EXCEPTIONS).filter((list) => !lists().includes(list) || !breaksRule(list)));
 });

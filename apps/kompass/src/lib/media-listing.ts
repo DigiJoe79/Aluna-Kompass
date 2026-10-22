@@ -1,4 +1,4 @@
-import { countUnfiledMediaAssets, listMediaAssets, listMediaFolders, mediaListFilterSchema, ok, type CallContext, type Deps, type MediaListFilter, type Result } from '@kompass/core';
+import { aiLabelingEnabled, countUnfiledMediaAssets, listMediaAssets, listMediaFolders, mediaListFilterSchema, ok, type AiKind, type CallContext, type Deps, type MediaListFilter, type Result } from '@kompass/core';
 
 export interface MediaListingItem {
   id: string;
@@ -9,8 +9,8 @@ export interface MediaListingItem {
   height: number | null;
   createdAt: string;
   folder: string | null;
-  /** Verwendungen; `cropped`: Die Fundstelle zeigt einen Ausschnitt („· zugeschnitten“). */
   references: { label: string; href?: string; cropped?: true }[];
+  aiKind: AiKind;
 }
 
 /** Eine Verwendung für die Oberfläche (Mediathek und Auswahl): Name, Weg dorthin, ob dort ein Ausschnitt gilt. */
@@ -58,6 +58,8 @@ export async function buildMediaListing(deps: Deps, ctx: CallContext, filter: Me
   if (!folders.ok) return folders;
   const unfiled = await countUnfiledMediaAssets(deps, ctx, { kind: filter.kind });
   if (!unfiled.ok) return unfiled;
+  // Ausgeschaltet zeigt die Oberfläche keine KI-Art, auch wenn sie gespeichert bleibt (Spec KI-Transparenz).
+  const labeling = aiLabelingEnabled(deps);
   return ok({
     items: assets.value.map(({ record, references }) => ({
       id: record.id,
@@ -69,6 +71,7 @@ export async function buildMediaListing(deps: Deps, ctx: CallContext, filter: Me
       createdAt: record.createdAt,
       folder: record.folder,
       references: references.map(listingReference),
+      aiKind: labeling ? record.aiKind : 'none',
     })),
     folders: folders.value,
     total: unfiled.value + folders.value.reduce((sum, f) => sum + f.assetCount, 0),

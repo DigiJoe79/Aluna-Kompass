@@ -1,6 +1,6 @@
 import { invalid, isoNow, newId, notFound, ok, readLocales, readSetting, recordAudit, requireHumanChannel, requirePermission, todayIn, validate, type CallContext, type DbOrTx, type Deps, type Failure, type Result } from '@kompass/core';
 import { contacts, displayName } from '@kompass/module-contacts';
-import { applyDispatchInternal, dmsMailOutbox, documents, mailNotReady, movePairToPostInternal, previewSend, queueDocumentEmailsInternal, readLinkedDocument, returnPairToEmailInternal, type MailOutboxStatus, type SendPlanItem, type SendPlanReason } from '@kompass/module-dms';
+import { applyDispatchInternal, canReadDocumentType, dmsMailOutbox, documents, mailNotReady, movePairToPostInternal, previewSend, queueDocumentEmailsInternal, readLinkedDocument, returnPairToEmailInternal, type MailOutboxStatus, type SendPlanItem, type SendPlanReason } from '@kompass/module-dms';
 import { and, asc, desc, eq, inArray } from 'drizzle-orm';
 import { z } from 'zod';
 import { membersConflict } from './errors';
@@ -48,6 +48,11 @@ export interface RunDispatchState {
   done: boolean;
   /** F7: Briefe des Laufs, die inzwischen storniert sind — sie gehen nicht hinaus und zählen nicht für „fertig“. */
   voided: RunLetterInfo[];
+  /**
+   * Briefe des Laufs, die der Aufrufer nicht lesen darf (Backlog 78): die Ankündigung an einen fremden Kontoinhaber ohne
+   * Finanzrechte. Nur gezählt, ohne Namen — sie versendet, wer die Rechte hat; für „fertig“ zählen sie hier nicht.
+   */
+  restricted: number;
   /** Zustand des Mailversands (Testumgebung mit Umleitung, gesperrt, aus) — für den Hinweis über den Gruppen. */
   mailState: { kind: 'off' | 'ready' | 'redirect' | 'blocked'; redirectTo: string | null };
 }
@@ -65,7 +70,7 @@ function runLetters(db: DbOrTx, runRef: string) {
 /** Alle Briefe eines Laufs, auch stornierte (F7: der Lauf zeigt sie als storniert). */
 function allRunLetters(db: DbOrTx, runRef: string) {
   return db
-    .select({ documentId: memberRunLetters.documentId, membershipId: memberRunLetters.membershipId, contactId: memberRunLetters.contactId, memberNumber: memberMemberships.memberNumber, number: documents.number, sentAt: documents.sentAt, status: documents.status })
+    .select({ documentId: memberRunLetters.documentId, membershipId: memberRunLetters.membershipId, contactId: memberRunLetters.contactId, memberNumber: memberMemberships.memberNumber, number: documents.number, sentAt: documents.sentAt, status: documents.status, typeKey: documents.typeKey })
     .from(memberRunLetters)
     .innerJoin(memberMemberships, eq(memberMemberships.id, memberRunLetters.membershipId))
     .innerJoin(documents, eq(documents.id, memberRunLetters.documentId))
@@ -93,7 +98,12 @@ async function planOf(deps: Deps, ctx: CallContext, documentIds: string[]): Prom
 }
 
 async function stateOf(deps: Deps, ctx: CallContext, runRef: string): Promise<Result<Omit<RunDispatchState, 'mailState'> & { plan: SendPlanItem[]; letters: ReturnType<typeof runLetters> }>> {
-  const all = allRunLetters(deps.db, runRef);
+  // Backlog 78: Was der Aufrufer nicht lesen darf, kommt nicht in den Plan — sonst scheiterte der ganze Plan daran.
+  const readable = new Map<string, boolean>();
+  const mayRead = (typeKey: string) => readable.get(typeKey) ?? readable.set(typeKey, canReadDocumentType(deps, ctx, typeKey)).get(typeKey)!;
+  const every = allRunLetters(deps.db, runRef);
+  const all = every.filter((r) => mayRead(r.typeKey));
+  const restricted = every.filter((r) => r.status !== 'voided').length - all.filter((r) => r.status !== 'voided').length;
   const letters = all.filter((r) => r.status !== 'voided');
   const plan = letters.length === 0 ? ok([] as SendPlanItem[]) : await planOf(deps, ctx, letters.map((l) => l.documentId));
   if (!plan.ok) return plan;
@@ -126,7 +136,7 @@ async function stateOf(deps: Deps, ctx: CallContext, runRef: string): Promise<Re
   const sentAt = (documentId: string) => byDoc.get(documentId)?.sentAt ?? null;
   const done = !runStillRunning(deps.db, runRef) && mail.every((m) => m.state === 'sent' || sentAt(m.documentId) !== null) && post.every((p) => p.dispatched);
   const voided = all.filter((l) => l.status === 'voided').map((l) => info(l.documentId));
-  return ok({ mail, post, done, voided, plan: plan.value, letters });
+  return ok({ mail, post, done, voided, restricted, plan: plan.value, letters });
 }
 
 /** Der Schritt „Versand“ eines Laufs: Mail-Gruppe mit Zustand, Post-Gruppe mit Grund und Vermerk. `members.read`. */
@@ -137,9 +147,9 @@ export async function runDispatchState(deps: Deps, ctx: CallContext, input: unkn
   if (!parsed.ok) return parsed;
   const state = await stateOf(deps, ctx, parsed.value.runRef);
   if (!state.ok) return state;
-  const { mail, post, done, voided } = state.value;
+  const { mail, post, done, voided, restricted } = state.value;
   const mailState = deps.mail.state();
-  return ok({ mail, post, done, voided, mailState: { kind: mailState.kind, redirectTo: mailState.kind === 'redirect' ? mailState.to : null } });
+  return ok({ mail, post, done, voided, restricted, mailState: { kind: mailState.kind, redirectTo: mailState.kind === 'redirect' ? mailState.to : null } });
 }
 
 /**

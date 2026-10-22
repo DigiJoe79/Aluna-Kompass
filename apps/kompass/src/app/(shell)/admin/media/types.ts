@@ -1,3 +1,5 @@
+import type { AiKind } from '@kompass/core';
+
 export interface Reference {
   label: string;
   href?: string;
@@ -16,6 +18,7 @@ export interface Item {
   uploadedBy: string | null;
   folder: string | null;
   references: Reference[];
+  aiKind: AiKind;
 }
 
 export interface Folder {
@@ -31,6 +34,8 @@ export interface ListQuery {
   q: string;
   kind: 'all' | 'image' | 'pdf';
   sort: 'newest' | 'oldest' | 'name' | 'size';
+  /** „Nur nicht verwendete“ (`?unused=1`): ein Filter, kein Ort. */
+  unused?: boolean;
 }
 
 /** Die URL der Mediathek für einen Zustand; leere Werte fallen weg. */
@@ -41,6 +46,7 @@ export function mediaHref(query: ListQuery): string {
   if (query.q) params.set('q', query.q);
   if (query.kind !== 'all') params.set('kind', query.kind);
   if (query.sort !== 'newest') params.set('sort', query.sort);
+  if (query.unused) params.set('unused', '1');
   const s = params.toString();
   return s ? `/admin/media?${s}` : '/admin/media';
 }

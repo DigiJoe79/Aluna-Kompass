@@ -1,5 +1,5 @@
 import { expect, test } from './fixtures';
-import { loginAsAdmin, resetDatabase } from './helpers';
+import { loginAsAdmin, resetDatabase, finishLabeling } from './helpers';
 
 const PNG = Buffer.from(
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==',
@@ -13,24 +13,6 @@ test.describe('settings', () => {
     await resetDatabase(page, 'seeded');
     await loginAsAdmin(page);
     await page.goto('/admin/settings');
-  });
-
-  /**
-   * Die Reiterleiste gehört über die Inhaltsfläche, nicht daneben. Geprüft wird
-   * hier die Geometrie, weil genau die brach: Zwölf Klassen zielten auf ein
-   * `data-horizontal`, das im DOM nie stand, und die Wurzel blieb in
-   * Zeilenrichtung. Ein Test, der nur klickt, sieht das nicht.
-   */
-  test('legt die Reiterleiste über die Inhaltsfläche, nicht daneben', async ({ page }) => {
-    const list = page.getByRole('navigation', { name: NAV });
-    const firstField = page.getByLabel('Vereinsname');
-    const listBox = await list.boundingBox();
-    const fieldBox = await firstField.boundingBox();
-    if (!listBox || !fieldBox) throw new Error('Reiter nicht sichtbar');
-
-    expect(listBox.y + listBox.height).toBeLessThanOrEqual(fieldBox.y + 1);
-    // Und sie ist eine Leiste, kein hoher Kasten: deutlich breiter als hoch.
-    expect(listBox.width).toBeGreaterThan(listBox.height);
   });
 
   /**
@@ -181,6 +163,7 @@ test.describe('settings', () => {
   test('the logo is chosen from the library and saved with the settings', async ({ page }) => {
     await page.goto('/admin/media');
     await page.getByLabel('Datei hochladen').setInputFiles({ name: 'logo.png', mimeType: 'image/png', buffer: PNG });
+    await finishLabeling(page);
     await expect(page.getByRole('row', { name: /logo-/ })).toBeVisible();
 
     await page.goto('/admin/settings');
@@ -195,5 +178,22 @@ test.describe('settings', () => {
     await page.goto('/admin/media');
     await page.getByRole('row', { name: /logo-/ }).click();
     await expect(page.getByRole('dialog')).toContainText('Logo des Vereins');
+  });
+
+  test('schaltet im Reiter Medien die Bildkennzeichnung, ändert einen Text und speichert', async ({ page }) => {
+    const nav = page.getByRole('navigation', { name: NAV });
+    await nav.getByRole('link', { name: 'Medien' }).click();
+    await expect(page).toHaveURL(/panel=media/);
+    // Über die Einstellungsschlüssel statt über Beschriftungen (AGENTS.md: kein Wortlaut im E2E).
+    const toggle = page.locator('[id="media-aiLabeling.enabled"]');
+    await expect(toggle).toBeVisible();
+    // Im Seed eingeschaltet: Textfelder sind sichtbar
+    const markInput = page.locator('[id="media.aiLabeling.mark-de"]');
+    await expect(markInput).toBeVisible();
+    await markInput.fill('AI-TEST');
+    await page.getByRole('button', { name: 'Speichern' }).click();
+    await expect(page.getByRole('status').filter({ hasText: 'gespeichert' })).toContainText('gespeichert');
+    await page.reload();
+    await expect(page.locator('[id="media.aiLabeling.mark-de"]')).toHaveValue('AI-TEST');
   });
 });

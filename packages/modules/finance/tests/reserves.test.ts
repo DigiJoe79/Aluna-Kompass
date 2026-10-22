@@ -5,6 +5,7 @@ import { documents, documentTypes } from '@kompass/module-dms';
 import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 import { deleteReserve, freeReserveCap, freeReserveCapOverview, linkResolution, listReserves, recordReserveCarryForward, recordReserveMovement, saveReserve, setReserveActive, uploadResolution } from '../src/allocation/reserves';
+import { requestPurposeTransfer } from '../src/allocation/transfers';
 import { setDatedValue } from '../src/ledger/dated-values';
 import { reopenFiscalYear } from '../src/ledger/period';
 import { bookEntry } from '../src/ledger/finalize';
@@ -12,7 +13,7 @@ import { incomeStatement } from '../src/ledger/queries';
 import { FINANCE_PERMISSIONS } from '../src/manifest';
 import { ULID_PATTERN } from '../src/allocation/subjects';
 import { financeAllocationLines, financeEntries, financeReserveMovements, financeReserves } from '../src/schema';
-import { allowHumanOnlyOverMcp, insertDocument, ledgerFixture, pdfBytes } from './helpers';
+import { insertDocument, ledgerFixture, pdfBytes } from './helpers';
 import { jpegBytes } from './expense-fixture';
 
 const err = (r: { ok: boolean; error?: unknown }) => (r.ok ? 'ok' : r.error);
@@ -85,19 +86,6 @@ describe('saveReserve, setReserveActive, deleteReserve, listReserves (F8b Task 2
     unwrap(await recordReserveMovement(f.deps, withDms(f), { reserveId: another.id, kind: 'allocate', movementDate: '2026-03-05', amountCents: 5000, capReason: 'Test: ohne Einnahmen im Jahr ist der Höchstbetrag 0', resolutionDocumentId: docId }));
     const usedDelete = await deleteReserve(f.deps, f.ctx, { id: another.id });
     expect(err(usedDelete)).toMatchObject({ code: 'reserveInUse' });
-  });
-
-  it('refuses a reserve movement over mcp without the human-only permission and names the remedy', async () => {
-    const f = await ledgerFixture();
-    const docId = insertDocument(f, { subject: 'Protokoll', typeKey: 'minutes' });
-    const reserve = unwrap(await saveReserve(f.deps, withDms(f), { kind: 'free', name: 'Freie Rücklage', resolutionDocumentId: docId }));
-    const movement = { reserveId: reserve.id, kind: 'allocate', movementDate: '2026-03-05', amountCents: 5000, capReason: 'Test: ohne Einnahmen im Jahr ist der Höchstbetrag 0', resolutionDocumentId: docId };
-    const agent = { ...withDms(f), channel: 'mcp' as const };
-    // A7 (E10): ein Rücklagenvorgang ist sofort unveränderlich — ein Agent erzeugt ihn nur mit der Freigabe des Vereins.
-    expect(await recordReserveMovement(f.deps, agent, movement)).toMatchObject({ ok: false, error: { type: 'conflict', code: 'humanOnly', messageKey: 'finance.errors.humanOnly' } });
-    expect(f.deps.db.select().from(financeReserveMovements).all()).toHaveLength(0);
-    allowHumanOnlyOverMcp(f.deps);
-    expect((await recordReserveMovement(f.deps, agent, movement)).ok).toBe(true);
   });
 
   it('lists reserves with their computed balance', async () => {
@@ -446,7 +434,7 @@ describe('Befund 6 (0.2.7): ein abgelehnter Vorgang lässt keinen hochgeladenen 
     expect(f.deps.db.select().from(financeReserveMovements).all()).toHaveLength(0);
   });
 
-  it('saveReserve, uploadResolution und recordReserveCarryForward lehnen vor dem Ablegen ab', async () => {
+  it('saveReserve, uploadResolution, recordReserveCarryForward und requestPurposeTransfer lehnen vor dem Ablegen ab', async () => {
     const f = await ledgerFixture();
     const docId = insertDocument(f, { subject: 'Protokoll', typeKey: 'minutes' });
     const reserve = unwrap(await saveReserve(f.deps, withDms(f), { kind: 'free', name: 'Freie Rücklage', resolutionDocumentId: docId }));
@@ -454,6 +442,7 @@ describe('Befund 6 (0.2.7): ein abgelehnter Vorgang lässt keinen hochgeladenen 
     expect(err(await saveReserve(f.deps, withDms(f), { kind: 'replacement', name: 'Ohne Zweck', resolutionUpload: upload() }))).toMatchObject({ code: 'reservePurposeTextRequired' });
     expect(err(await uploadResolution(f.deps, withDms(f), { id: 'fehlt', field: 'resolution', bytes: pdfBytes(), fileName: 'b.pdf' }))).toMatchObject({ type: 'notFound' });
     expect(err(await recordReserveCarryForward(f.deps, withDms(f), { id: reserve.id, expectedVersion: '2000-01-01T00:00:00.000Z', carryForwardCents: 100, carryForwardDate: '2026-01-01', upload: upload() }))).toMatchObject({ type: 'conflict' });
+    expect(err(await requestPurposeTransfer(f.deps, withDms(f), { fromPurposeId: f.abroadPurpose.id, toPurposeId: null, amountCents: 1000, transferDate: '2026-12-31', reason: 'Umschichtung', documentUpload: upload() }))).toMatchObject({ code: 'transferDateInFuture' });
     expect(trace(f)).toEqual(before);
   });
 });

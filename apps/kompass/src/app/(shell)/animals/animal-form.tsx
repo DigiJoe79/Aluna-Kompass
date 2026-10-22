@@ -54,7 +54,7 @@ const FORM_ID = 'animal-form';
 const TAB_LIST = cn(lineTabsListClass, 'px-5');
 const TAB = lineTabsTriggerClass;
 
-export function AnimalForm({ animal, locales, queue, initialTab, backHref, photoPlaces, storyPlaces, photoSizes = {}, maxPhotos, origins = [], openProposal = null }: { animal: AnimalRecord | null; locales: string[]; queue: AnimalQueue | null; initialTab: FormTab; backHref: string; photoPlaces: AnimalPhotoPlaces; storyPlaces?: ResolvedImagePlaces; photoSizes?: Readonly<Record<string, { width: number; height: number }>>; maxPhotos: number; origins?: readonly AnimalOrigin[]; openProposal?: ProposalListItem | null }) {
+export function AnimalForm({ animal, locales, queue, initialTab, backHref, photoPlaces, storyPlaces, photoSizes = {}, maxPhotos, origins = [], openProposal = null }: { animal: AnimalRecord | null; locales: string[]; queue: AnimalQueue | null; initialTab: FormTab; backHref: string; photoPlaces: AnimalPhotoPlaces; storyPlaces?: ResolvedImagePlaces; photoSizes?: Readonly<Record<string, { width: number; height: number; aiKind?: 'edited' | 'generated' }>>; maxPhotos: number; origins?: readonly AnimalOrigin[]; openProposal?: ProposalListItem | null }) {
   const t = useTranslations('animals.form');
   const p = useTranslations('animals.photos');
   const r = useTranslations('animals.review');
@@ -108,6 +108,13 @@ export function AnimalForm({ animal, locales, queue, initialTab, backHref, photo
   // Die Pixelmaße kommen je Render aus `photoSizes` dazu und reisen nicht im versteckten Feld mit.
   // Namen für die Ansage beim Titelbildwechsel: die Referenz der Quelle, sonst nennt der Editor den Platz.
   const photoNames: Record<string, string | undefined> = Object.fromEntries((animal?.photos ?? []).map((x) => [x.assetId, x.sourceRef ?? undefined]));
+  // Die Bildkennzeichnung frisch gewählter Fotos aus dem Auswahldialog (auch gleich beim Hochladen gesetzt): Die Kachel
+  // zeigt die Marke vor dem Speichern; `photoSizes` kennt sie erst danach.
+  const [chosenKinds, setChosenKinds] = useState<Record<string, 'none' | 'edited' | 'generated'>>({});
+  const aiKindOf = (id: string) => {
+    const kind = chosenKinds[id] ?? photoSizes[id]?.aiKind;
+    return kind && kind !== 'none' ? { aiKind: kind } : {};
+  };
   const changePhotos = (next: EditorPhoto[]) => { setPhotos(next.map(({ assetId, isPrimary, crop }) => ({ assetId, isPrimary, crop }))); hiddenEdited(); };
   // Bestätigen kann veröffentlichen, und die Liste schaltet sofort: Der Schalter folgt dem gespeicherten Stand.
   const savedPublished = animal?.isPublished ?? false;
@@ -187,7 +194,7 @@ export function AnimalForm({ animal, locales, queue, initialTab, backHref, photo
                     <Section title={t('sections.photos')}>
                       <FormGrid>
                         <FormCell size="full">
-                          {animal ? <PhotosEditor key={baseline} photos={photos.map((x) => ({ ...x, ...photoSizes[x.assetId], name: photoNames[x.assetId] }))} max={maxPhotos} error={errors.photos} onChange={changePhotos} onChoose={() => setChooserOpen(true)} places={photoPlaces} /> : <p className="h-fit rounded-md border border-line bg-surface-2 p-4 text-meta text-ink-2">{p('afterCreate')}</p>}
+                          {animal ? <PhotosEditor key={baseline} photos={photos.map((x) => ({ ...x, ...photoSizes[x.assetId], aiKind: undefined, ...aiKindOf(x.assetId), name: photoNames[x.assetId] }))} max={maxPhotos} error={errors.photos} onChange={changePhotos} onChoose={() => setChooserOpen(true)} places={photoPlaces} /> : <p className="h-fit rounded-md border border-line bg-surface-2 p-4 text-meta text-ink-2">{p('afterCreate')}</p>}
                         </FormCell>
                       </FormGrid>
                     </Section>
@@ -214,7 +221,10 @@ export function AnimalForm({ animal, locales, queue, initialTab, backHref, photo
         </Tabs>
       </FormCard>
       {/* Außerhalb des Formulars: Ein Dialog ist ein React-Portal, und was darin geschieht, stiege sonst ins Formular auf. */}
-      {animal ? <MediaChooserDialog open={chooserOpen} onOpenChange={setChooserOpen} kind="image" multiple max={maxPhotos} selected={photos.map((x) => x.assetId)} onConfirm={(ids) => changePhotos(mergePhotos(photos, ids))} /> : null}
+      {animal ? <MediaChooserDialog open={chooserOpen} onOpenChange={setChooserOpen} kind="image" multiple max={maxPhotos} selected={photos.map((x) => x.assetId)} onConfirm={(ids, sizes) => {
+        setChosenKinds((k) => ({ ...k, ...Object.fromEntries(Object.entries(sizes).map(([id, size]) => [id, size.aiKind ?? 'none'])) }));
+        changePhotos(mergePhotos(photos, ids));
+      }} /> : null}
     </div>
   );
 }

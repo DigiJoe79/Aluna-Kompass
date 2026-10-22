@@ -12,10 +12,21 @@ const t = Object.assign((key: string) => labels[key.replace(/^actions\./, '')]!,
 const REPO = path.resolve(import.meta.dirname, '../../..');
 /** Der Katalog einer Installation mit allen Modulen (Spec Protokoll § 3). */
 const catalog = createRegistry([coreModule, ...installedModules]).auditActions;
+function readIfPresent(file: string): string | null {
+  try {
+    return readFileSync(file, 'utf8');
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null;
+    throw error;
+  }
+}
+
 function sources(dir: string): string[] {
   return readdirSync(dir).flatMap((name) => {
     const full = path.join(dir, name);
-    if (statSync(full).isDirectory()) return ['node_modules', 'tests', 'dist', '.next', 'drizzle'].includes(name) ? [] : sources(full);
+    const stat = statSync(full, { throwIfNoEntry: false });
+    if (!stat) return [];
+    if (stat.isDirectory()) return ['node_modules', 'tests', 'dist', '.next', 'drizzle'].includes(name) ? [] : sources(full);
     return /\.tsx?$/.test(name) && !/\.test\./.test(name) ? [full] : [];
   });
 }
@@ -91,7 +102,9 @@ describe('Typen des Protokolls in Worten', () => {
     const offenders: string[] = [];
     for (const file of [...sources(path.join(REPO, 'packages')), ...sources(path.join(REPO, 'apps/kompass/src'))]) {
       const rel = path.relative(REPO, file);
-      const source = readFileSync(file, 'utf8');
+      // Andere Tests legen kurz Probedateien an (utc-days.test.ts); was zwischen Auflisten und Lesen verschwand, zählt nicht.
+      const source = readIfPresent(file);
+      if (source === null) continue;
       const scan = auditEntityTypes(source);
       scan.types.forEach((type) => found.add(type));
       if (!(rel in DYNAMIC_ENTITY_ALLOWED)) offenders.push(...scan.unknown.map((hit) => `${rel}: ${hit}`));

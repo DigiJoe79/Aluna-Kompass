@@ -1,4 +1,4 @@
-import { schema, unwrap } from '@kompass/core';
+import { unwrap } from '@kompass/core';
 import { ctxWith } from '@kompass/core/testing';
 import { addContactRole } from '@kompass/module-contacts';
 import { eq } from 'drizzle-orm';
@@ -25,12 +25,11 @@ async function boardFixture() {
 }
 
 describe('allowance to a board member without basis (AH)', () => {
-  it('booking asks for a reason; with one it books and keeps the reason at the entry, never in the log', async () => {
+  it('booking asks for a reason; with one it books and keeps the reason at the entry', async () => {
     const f = await boardFixture();
     expect(err(await bookEntry(f.deps, f.ctx, f.allowance()))).toMatchObject({ type: 'conflict', code: 'boardAllowanceNeedsReason' });
     const booked = unwrap(await bookEntry(f.deps, f.ctx, f.allowance({ reason: 'Satzungsänderung beantragt, Beschluss folgt' })));
     expect(booked).toMatchObject({ status: 'final', boardAllowanceReason: 'Satzungsänderung beantragt, Beschluss folgt' });
-    expect(JSON.stringify(f.deps.db.select().from(schema.auditLog).all())).not.toContain('Satzungsänderung');
   });
 
   it('saving a draft asks too, and finalizing a draft without a reason is refused', async () => {

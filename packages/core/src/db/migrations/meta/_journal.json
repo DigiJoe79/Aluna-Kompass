@@ -71,6 +71,13 @@
       "when": 1792425401332,
       "tag": "0009_members_direct_debit_0_3_0",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1792677288187,
+      "tag": "0010_media_ai_kind_finance_locks_0_3_1",
+      "breakpoints": true
     }
   ]
 }

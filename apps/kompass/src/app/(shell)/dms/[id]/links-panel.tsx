@@ -26,6 +26,7 @@ export interface ResolvedLink {
   label: string | null;
   href: string | null;
   reason: 'missing' | 'forbidden' | null;
+  removable: boolean;
 }
 
 const ROLES = ['sender', 'recipient', 'about'] as const;
@@ -117,7 +118,7 @@ export function LinksPanel({
                   {/* Nie der Schlüssel: Fehlt die Übersetzung, steht der Leerwert (MUSTER „Namen statt Schlüssel“). */}
                   <StatusBadge tone={statusTone('role', 'current')}>{nameOrEmpty(t.has(`roles.${link.role}`) ? t(`roles.${link.role}`) : null, link.role)}</StatusBadge>
                 </span>
-                {canEdit ? (
+                {canEdit && link.removable ? (
                   <Button type="button" variant="outline" size="sm" disabled={pending} onClick={() => remove(link.id)}>
                     {t('links.remove')}
                   </Button>

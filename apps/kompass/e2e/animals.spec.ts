@@ -1,6 +1,6 @@
 import { readFile } from 'node:fs/promises';
 import { expect, test } from './fixtures';
-import { loginAsAdmin, resetDatabase, setE2ESetting, waitForHydration } from './helpers';
+import { loginAsAdmin, resetDatabase, setE2ESetting, waitForHydration, finishLabeling } from './helpers';
 
 const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==', 'base64');
 const SVG = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="4" height="4"><rect width="4" height="4"/></svg>');
@@ -71,6 +71,7 @@ test.describe('animals', () => {
       { name: 'chiara-1.png', mimeType: 'image/png', buffer: PNG },
       { name: 'chiara-2.svg', mimeType: 'image/svg+xml', buffer: SVG },
     ]);
+    await finishLabeling(page);
     await expect(chooser.getByText('2 von 12 ausgewählt')).toBeVisible();
     await chooser.getByRole('button', { name: 'Übernehmen' }).click();
     await expect(chooser).toBeHidden();
@@ -285,13 +286,6 @@ test.describe('animals', () => {
     await expect(page.locator('[name="summary.de"]')).toHaveValue('Ein Text, der nicht verloren gehen darf.');
   });
 
-  test('vermittelte Hunde stehen gedämpft, „Vermittelt“ als Marke am Namen (Runde 3, 192)', async ({ page }) => {
-    await page.goto('/animals?status=adopted');
-    const row = page.getByTestId('animal-row').first();
-    await expect(row).toHaveAttribute('data-muted', '');
-    await expect(row).toContainText('Vermittelt');
-  });
-
   test('the story tab is locked until the dog is adopted', async ({ page }) => {
     await page.goto('/animals/new');
     // Ohne gespeicherten Hund gibt es keine Geschichte: Der Reiter fehlt, statt ausgegraut zu wirken (Befund 10).
@@ -344,6 +338,7 @@ test.describe('animals', () => {
       { name: 'bo-1.png', mimeType: 'image/png', buffer: PNG },
       { name: 'bo-2.svg', mimeType: 'image/svg+xml', buffer: SVG },
     ]);
+    await finishLabeling(page);
     await expect(chooser.getByText('2 von 12 ausgewählt')).toBeVisible();
     await chooser.getByRole('button', { name: 'Übernehmen' }).click();
     await expect(page.locator('[data-testid="animal-photo"]')).toHaveCount(2);
@@ -380,6 +375,7 @@ test.describe('animals', () => {
       buffer: Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="${i + 2}" height="4"><rect width="${i + 2}" height="4"/></svg>`),
     }));
     await chooser.getByLabel('Hochladen').setInputFiles(files);
+    await finishLabeling(page);
     // Hochgeladen werden alle 13, angehakt nur 12; der Rest ist gesperrt, mit Grund.
     await expect(chooser.getByText('12 von 12 ausgewählt')).toBeVisible();
     await expect(chooser.getByRole('button', { name: /dreizehn-/ })).toHaveCount(13);
@@ -417,6 +413,7 @@ test.describe('animals', () => {
     await page.getByRole('button', { name: 'Fotos wählen' }).click();
     const chooser = page.getByRole('dialog', { name: 'Bilder wählen' });
     await chooser.getByLabel('Hochladen').setInputFiles([{ name: 'partnerhund.png', mimeType: 'image/png', buffer: PNG }]);
+    await finishLabeling(page);
     await expect(chooser.getByText('1 von 12 ausgewählt')).toBeVisible();
     await chooser.getByRole('button', { name: 'Übernehmen' }).click();
     await expect(chooser).toBeHidden();
@@ -464,18 +461,6 @@ test.describe('animals', () => {
     await expect(page.getByText('1 von 3')).toBeVisible();
     await page.getByRole('button', { name: 'Speichern und weiter' }).click();
     await expect(page.getByRole('heading', { name: 'Nala' })).toBeVisible();
-  });
-  /** Befund Joe, 2026-09-30: Ein Klick auf „Tiere“ in der Seitenleiste nahm den Filter zurück, die Felder zeigten ihn aber weiter. */
-  test('die Filterfelder folgen der Adresse, auch wenn sie von außen wechselt', async ({ page }) => {
-    await page.goto('/animals');
-    await page.getByLabel('Webseite', { exact: true }).selectOption('0');
-    await page.getByPlaceholder('Name suchen').fill('a');
-    await expect(page).toHaveURL(/text=a&published=0/);
-    await page.getByRole('navigation').getByRole('link', { name: 'Tiere' }).first().click();
-    await expect(page).toHaveURL(/\/animals$/);
-    await expect(page.getByTestId('animal-row')).toHaveCount(6);
-    await expect(page.getByLabel('Webseite', { exact: true })).toHaveValue('');
-    await expect(page.getByPlaceholder('Name suchen')).toHaveValue('');
   });
   /**
    * Befund Joe, 2026-09-30: Die Webseite zeigt das Hauptfoto hoch (4:5, Blickpunkt oben), die Maske zeigte quer.

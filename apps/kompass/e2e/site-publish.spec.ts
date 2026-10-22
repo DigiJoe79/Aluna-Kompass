@@ -1,7 +1,7 @@
 import path from 'node:path';
 import { Client, StreamableHTTPClientTransport } from '@modelcontextprotocol/client';
 import { expect, test } from './fixtures';
-import { loginAsAdmin, resetDatabase, waitForHydration, readTemplate } from './helpers';
+import { loginAsAdmin, resetDatabase, waitForHydration, readTemplate, finishLabeling } from './helpers';
 
 const PNG = Buffer.from(
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==',
@@ -262,6 +262,7 @@ test('the preview rewrites every absolute path, srcset included', async ({ page 
   // `srcset` — ein SVG liefe an diesem Test vorbei.
   await page.goto('/admin/media');
   await page.getByLabel('Datei hochladen').setInputFiles({ name: 'hero.png', mimeType: 'image/png', buffer: PNG });
+  await finishLabeling(page);
   await expect(page.getByRole('row', { name: /hero-/ })).toBeVisible();
 
   await importTemplate(page);

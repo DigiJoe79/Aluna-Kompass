@@ -1,7 +1,6 @@
-import { describe, expect, it } from 'vitest';
-import { existsSync } from 'node:fs';
-import { type Allowlist, read, relative, sourceFiles, SRC } from './source';
 import path from 'node:path';
+import { describe, expect, it } from 'vitest';
+import { type Allowlist, allowlistHygiene, localImports, read, relative, sourceFiles, SRC, staleKeys } from './source';
 
 /**
  * Jede Seite der Schale wählt eine der drei Breiten über `<Page width>` (docs/MUSTER.md § I, Handoff Konsistenz
@@ -9,7 +8,7 @@ import path from 'node:path';
  * und Buchung wurden auf großen Schirmen überbreit. Geprüft wird jede `page.tsx` unter `app/(shell)` und die
  * Fehlerseiten der Schale.
  */
-const ALLOWED: Allowlist = {
+export const ALLOWED: Allowlist = {
   'app/(shell)/finance/page.tsx': 'Weiterleitung auf den ersten Finanzbereich, rendert nichts.',
   'app/(shell)/site/template/page.tsx': 'Weiterleitung (`redirect`), rendert nichts.',
   'app/(shell)/[...catchAll]/page.tsx': 'Ruft nur `notFound()`; die Seite dazu ist `not-found.tsx`.',
@@ -27,10 +26,7 @@ describe('Seitenbreite über Page', () => {
     expect(violations.map(({ file }) => file)).toEqual([]);
   });
 
-  it('jede Ausnahme ist noch nötig', () => {
-    const without = new Set(pages().filter(({ text }) => !/<Page\s+width=/.test(text)).map(({ file }) => file));
-    expect(Object.keys(ALLOWED).filter((file) => !without.has(file))).toEqual([]);
-  });
+  allowlistHygiene(ALLOWED, () => staleKeys(ALLOWED, pages().filter(({ text }) => !/<Page\s+width=/.test(text)).map(({ file }) => file)));
 });
 
 /**
@@ -40,7 +36,7 @@ describe('Seitenbreite über Page', () => {
  * Spaltenköpfe hat, rendert die Liste in `<Page width="full">` — Zweige ohne Liste (kein Recht, leer) dürfen schmal
  * bleiben. Sonst steht sie hier mit Grund: Detail- und Einstellungsseiten mit einer Tabelle als Abschnitt.
  */
-const WIDE_ALLOWED: Allowlist = {
+export const WIDE_ALLOWED: Allowlist = {
   'app/(shell)/admin/dms/page.tsx': 'Einstellungsseite (PanelNav), die Tabellen der Arten und Regeln sind Abschnitte (MUSTER § D).',
   'app/(shell)/admin/finance/page.tsx': 'Einstellungsseite (PanelNav), Konten, Kategorien und Zwecke sind Abschnitte (MUSTER § D).',
   'app/(shell)/admin/members/page.tsx': 'Einstellungsseite (PanelNav), Mitgliedsarten und Mahnstufen sind Abschnitte (MUSTER § D, Handoff Mitglieder 7b/7c).',
@@ -50,17 +46,6 @@ const WIDE_ALLOWED: Allowlist = {
   'app/(shell)/finance/direct-debit/pledges/[id]/page.tsx': 'Zusage (Stammdaten wie das Mitglied, Handoff 2a § 1.5): die Raten sind eine Nebenliste neben dem Formular.',
   'app/(shell)/finance/direct-debit/runs/[id]/page.tsx': 'Einzug (Vorgang, Handoff 2a § 1.3): die Posten mit Summe sind ein Abschnitt unter den Schritten.',
 };
-
-/** Die Datei und die Dateien ihres Ordners, die sie über `./name` einbindet, auch über mehrere Stufen. */
-function withLocalImports(file: string, seen: Set<string> = new Set()): string[] {
-  if (seen.has(file)) return [];
-  seen.add(file);
-  const text = read(file);
-  const next = [...text.matchAll(/from '\.\/([\w-]+)'/g)]
-    .flatMap((m) => ['.tsx', '.ts'].map((ext) => path.join(path.dirname(file), m[1]! + ext)))
-    .filter((candidate) => existsSync(candidate));
-  return [file, ...next.flatMap((candidate) => withLocalImports(candidate, seen))];
-}
 
 /** Die meisten Spaltenköpfe (`TableHead`, `SortableHead`) eines `TableHeader` in diesen Dateien. */
 export function widestTable(files: string[]): number {
@@ -75,7 +60,7 @@ export function widestTable(files: string[]): number {
 const standardPages = () =>
   sourceFiles(SHELL)
     .filter((file) => /\/page\.tsx$/.test(file) && !/<Page\s+width="full"/.test(read(file)))
-    .map((file) => ({ file: relative(file), columns: widestTable(withLocalImports(file)) }));
+    .map((file) => ({ file: relative(file), columns: widestTable(localImports(file)) }));
 
 describe('Listen ab fünf Spalten in voller Breite', () => {
   it('keine schmale Seite mit einer Tabelle ab fünf Spalten ohne Ausnahme', () => {
@@ -83,8 +68,5 @@ describe('Listen ab fünf Spalten in voller Breite', () => {
     expect(violations.map(({ file, columns }) => `${file} (${columns} Spalten)`)).toEqual([]);
   });
 
-  it('jede Ausnahme ist noch nötig', () => {
-    const wide = new Set(standardPages().filter(({ columns }) => columns >= 5).map(({ file }) => file));
-    expect(Object.keys(WIDE_ALLOWED).filter((file) => !wide.has(file))).toEqual([]);
-  });
+  allowlistHygiene(WIDE_ALLOWED, () => staleKeys(WIDE_ALLOWED, standardPages().filter(({ columns }) => columns >= 5).map(({ file }) => file)));
 });

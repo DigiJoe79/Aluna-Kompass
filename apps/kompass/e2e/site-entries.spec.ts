@@ -31,7 +31,8 @@ test('ein bestehender Eintrag lässt sich speichern, danach verwerfen und erneut
   // Zweites Speichern ohne Neuladen: kein „Inzwischen geändert“ (Review Focus 1).
   await title.fill('Zweiter Stand');
   await page.getByRole('button', { name: 'Speichern' }).click();
-  await expect(page.getByRole('status')).toContainText('Gespeichert');
+  // Nicht auf „Gespeichert“ warten: Das kann noch die Meldung des ersten Speicherns sein (Kalendertest 2026-10-22).
+  await expect(page.getByText(/noch nicht gespeichert/)).toHaveCount(0);
   await page.reload();
   await expect(page.locator('[name="title.de"]')).toHaveValue('Zweiter Stand');
 });

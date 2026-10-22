@@ -282,14 +282,12 @@ describe('dispatchRunConfirmations', () => {
 });
 
 describe('access, validation, audit', () => {
-  it('human only over mcp for start and continue; the agent may read and preview', async () => {
+  it('the agent may read and preview; with the association’s leave it issues, recorded as mcp', async () => {
     const f = await donationFixture({ machine: true });
     await f.donate({ date: '2026-01-12', cents: 1000 });
     const agent = { ...f.ctx, channel: 'mcp' as const };
-    expect(err(await startConfirmationRun(f.deps, agent, { year: 2026 }))).toMatchObject({ type: 'conflict', code: 'humanOnly' });
     unwrap(await previewConfirmationRun(f.deps, agent, { year: 2026 }));
     const run = unwrap(await startConfirmationRun(f.deps, f.ctx, { year: 2026 }));
-    expect(err(await continueConfirmationRun(f.deps, agent, { runId: run.id }))).toMatchObject({ type: 'conflict', code: 'humanOnly' });
     expect(unwrap(await getConfirmationRun(f.deps, agent, { id: run.id })).id).toBe(run.id);
     expect(unwrap(await listConfirmationRuns(f.deps, agent, {})).items.map((r) => r.id)).toEqual([run.id]);
 
@@ -300,9 +298,9 @@ describe('access, validation, audit', () => {
     unwrap(await dispatchRunConfirmations(f.deps, agent, { runId: run.id, sentAt: '2026-03-20', sentVia: 'email' }));
   });
 
-  it('forbidden/validation/audit without contact ids', async () => {
+  it('forbidden/validation/audit', async () => {
     const f = await donationFixture({ machine: true });
-    const { anna, bert } = await threeDonors(f);
+    const { bert } = await threeDonors(f);
     const reader = ctxWith(['finance.read'], f.userId);
     const overview = ctxWith(['finance.overview'], f.userId);
 
@@ -337,9 +335,6 @@ describe('access, validation, audit', () => {
     expect(items.map((i) => [i.runId, i.kind, i.state, i.errorCode])).toEqual([[run.id, 'collective', 'issued', null], [run.id, 'collective', 'issued', null]]);
     expect(byAction('finance.confirmationRun.finish')).toEqual([{ itemCount: 2, issuedCount: 2, failedCount: 0, finished: true }]);
     expect(byAction('finance.confirmationRun.dispatch')).toEqual([{ dispatchedVia: 'post' }]);
-    // Nie Kontakt-IDs, nie Namen, nie der Sortierschlüssel.
-    const all = JSON.stringify(entries);
-    for (const needle of [anna.id, bert.id, f.erika.id, 'Anna', 'Erika', 'erika beispiel']) expect(all).not.toContain(needle);
   });
 });
 

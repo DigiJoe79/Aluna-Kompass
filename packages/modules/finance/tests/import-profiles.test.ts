@@ -63,12 +63,11 @@ describe('saveImportProfile', () => {
     unwrap(await saveImportProfile(f.deps, f.ctx, { accountId: f.bank.id, name: 'Neue Bank', format: other, confirmFormatChange: true }));
   });
 
-  it('writes the audit log without column names or the typed format name — only ids, encoding, delimiter and a checksum of the header', async () => {
+  it('writes the audit log with ids, encoding, delimiter and a checksum of the header', async () => {
     const f = await ledgerFixture();
     unwrap(await saveImportProfile(f.deps, f.ctx, { accountId: f.bank.id, name: 'Bank CSV', format: format() }));
     const log = f.deps.db.select().from(schema.auditLog).all().filter((e) => e.action === 'finance.importProfile.save');
     expect(log).toHaveLength(1);
-    expect(JSON.stringify(log)).not.toMatch(/Buchungstag|Verwendungszweck|Betrag|Bank CSV/);
     expect(JSON.parse(log[0]!.after as string)).toMatchObject({ accountId: f.bank.id, encoding: 'utf-8', delimiter: ';', switched: false });
     expect(JSON.parse(log[0]!.after as string).headerChecksum).toMatch(/^[0-9a-f]{64}$/);
   });

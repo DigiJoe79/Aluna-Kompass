@@ -4,7 +4,7 @@ import { Files, FolderMinus, Upload } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { ListTruncated } from '@/components/list-truncated';
 import { useRouter } from 'next/navigation';
-import { FilterBar, selectFilter } from '@/components/filter-bar';
+import { checkFilter, FilterBar, selectFilter } from '@/components/filter-bar';
 import { SearchField } from '@/components/search-field';
 import { useEffect, useMemo, useRef, useState, useTransition, type ReactNode } from 'react';
 import { toast } from 'sonner';
@@ -31,7 +31,10 @@ import { usePreference } from '@/lib/preferences';
 import { useUrlFilters } from '@/lib/use-url-filters';
 import { AssetDetailDialog } from './asset-detail-dialog';
 import { formatBytes, mediaHref, type Folder, type Item, type ListQuery } from './types';
-import { createFolderAction, deleteFolderAction, deleteMediaAction, moveFolderAction, moveMediaAction, renameFolderAction, uploadMediaAction } from './actions';
+import { createFolderAction, deleteFolderAction, deleteMediaAction, moveFolderAction, moveMediaAction, renameFolderAction, setMediaAiKindAction, uploadMediaAction } from './actions';
+import { AiKindBadge } from '@/components/media/ai-kind-badge';
+import { ImageLabelingDialog, needsLabeling, type LabelingItem } from '@/components/media/image-labeling-dialog';
+import { useCanLabelMedia } from '@/components/media/media-labeling-provider';
 import { UsageLines } from './usage-lines';
 
 const KINDS = ['image', 'pdf'] as const;
@@ -67,6 +70,7 @@ export function LibraryClient({
   matching,
   total,
   unfiledCount,
+  aiLabelingEnabled = false,
 }: {
   title: string;
   query: ListQuery;
@@ -78,6 +82,7 @@ export function LibraryClient({
   total: number;
   /** Dateien ohne Ordner — der Zähler an „Ohne Ordner“. */
   unfiledCount: number;
+  aiLabelingEnabled?: boolean;
 }) {
   const t = useTranslations('media');
   const caption = useMediaCaption();
@@ -87,20 +92,26 @@ export function LibraryClient({
   const router = useRouter();
   const [view, setView] = usePreference('mediaView');
   // Suche, Typ und Sortierung stehen in der Adresse (Spec Filterleisten § 3); der Ordner ist Ort und bleibt beim Filtern.
-  const [filters, setFilters] = useUrlFilters<{ q: string; kind: string; sort: string }>({ q: query.q, kind: query.kind === 'all' ? '' : query.kind, sort: query.sort });
+  const [filters, setFilters] = useUrlFilters<{ q: string; kind: string; sort: string; unused: string }>({ q: query.q, kind: query.kind === 'all' ? '' : query.kind, sort: query.sort, unused: query.unused ? '1' : '' });
   const [, startNavigation] = useTransition();
   const applyFilters = (patch: Partial<typeof filters>) => {
     const merged = { ...filters, ...patch };
     setFilters(merged);
     const kind = merged.kind === 'image' || merged.kind === 'pdf' ? merged.kind : 'all';
     const sort = SORTS.find((s) => s === merged.sort) ?? 'newest';
-    startNavigation(() => router.replace(mediaHref({ ...query, q: merged.q.trim(), kind, sort })));
+    startNavigation(() => router.replace(mediaHref({ ...query, q: merged.q.trim(), kind, sort, unused: merged.unused === '1' })));
   };
-  const resetFilters = () => applyFilters({ q: '', kind: '' });
+  const resetFilters = () => applyFilters({ q: '', kind: '', unused: '' });
   /** Die Listenzeilen ziehen wie die Kacheln (gleiche Hilfe); die Zeile bleibt blass, solange sie gezogen wird. */
   const { dragging: rowDragging, dragProps } = useAssetDrag();
   const [detailId, setDetailId] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const canLabel = useCanLabelMedia();
+  /**
+   * Der Schritt „Bildkennzeichnung“ nach dem Hochladen (Spec Bildkennzeichnung beim Hochladen § 3): die Bilder des
+   * Laufs, der Ordner für die Beschreibung und die Meldung, die erst nach „Fertig“ kommt.
+   */
+  const [labeling, setLabeling] = useState<{ items: LabelingItem[]; folder: string | null; report: () => void } | null>(null);
   /** Der Ordner, für den „Verschieben nach…“ offen ist. */
   const [moving, setMoving] = useState<string | null>(null);
   const [, start] = useTransition();
@@ -158,6 +169,7 @@ export function LibraryClient({
     const id = toast.loading(progress(0));
     let done = 0;
     const failed: string[] = [];
+    const stored: LabelingItem[] = [];
     for (const [index, file] of list.entries()) {
       if (index > 0) toast.loading(progress(index), { id });
       const fd = new FormData();
@@ -165,6 +177,10 @@ export function LibraryClient({
       if (folder !== null) fd.set('folder', folder);
       // Eine geworfene Aktion (Netz weg) meldet `runAction` als Netzproblem mit eigenem Satz.
       const s = await runAction(() => uploadMediaAction(fd), tCommon('network'));
+      if (s.status === 'success' && s.data) {
+        const data = s.data as LabelingItem;
+        stored.push({ id: data.id, filename: data.filename, mimeType: data.mimeType, aiKind: data.aiKind, created: data.created });
+      }
       if (s.status === 'error') failed.push(t('drop.failed', { name: file.name, reason: reasonOf(s) }));
       else if (s.status === 'success' && (s.data as { created?: boolean } | undefined)?.created === false) failed.push(t('drop.failed', { name: file.name, reason: s.message ?? '' }));
       else if (s.status === 'success') done += 1;
@@ -174,18 +190,35 @@ export function LibraryClient({
     // Geöffnet wird der Ordner ohne Suche und Typfilter — sonst fehlte womöglich gerade, was eben hochkam.
     const href = mediaHref({ ...query, q: '', kind: 'all', folder, unfiled: folder === null });
     const action = done > 0 ? { label: t('drop.openFolder'), onClick: () => router.push(href) } : undefined;
-    if (failed.length === 0) {
-      toast.success(title, { id, action, duration: UPLOADED_MS });
+    // Nach dem Schritt eine neue Meldung: Die Fortschrittsmeldung ist da schon geschlossen, ihre Kennung wieder zu nutzen
+    // ließ den Toast im Ausblenden hängen.
+    const report = (fresh = false) => {
+      const toastId = fresh ? undefined : id;
+      if (failed.length === 0) {
+        toast.success(title, { id: toastId, action, duration: UPLOADED_MS });
+        return;
+      }
+      const description: ReactNode = (
+        <ul>
+          {failed.map((line) => (
+            <li key={line}>{line}</li>
+          ))}
+        </ul>
+      );
+      toast.error(title, { id: toastId, description, action, duration: Infinity, closeButton: true });
+    };
+    // Die Meldung kommt erst nach dem Schritt; ohne Bild zum Fragen bleibt alles wie bisher.
+    if (canLabel && stored.some(needsLabeling)) {
+      toast.dismiss(id);
+      setLabeling({ items: stored, folder, report: () => report(true) });
       return;
     }
-    const description: ReactNode = (
-      <ul>
-        {failed.map((line) => (
-          <li key={line}>{line}</li>
-        ))}
-      </ul>
-    );
-    toast.error(title, { id, description, action, duration: Infinity, closeButton: true });
+    report();
+  };
+  const closeLabeling = () => {
+    labeling?.report();
+    setLabeling(null);
+    start(() => router.refresh());
   };
 
   // Der Horcher hängt einmal am Fenster; was und wohin hochzuladen ist, liest er hier nach.
@@ -199,13 +232,16 @@ export function LibraryClient({
   useEffect(() => {
     // Nur Dateien von außen: Ein Bild aus der Seite trägt beim Ziehen auch `Files`.
     const carriesFiles = (e: DragEvent) => carriesOutsideFiles(e.dataTransfer);
+    // Backlog 45: Steht ein Dialog offen (Details, Verschieben), ist die Mediathek dahinter kein Ziel — sonst lud eine
+    // über dem Dialog losgelassene Datei still hoch.
+    const dialogOpen = () => document.querySelector('[role="dialog"], [role="alertdialog"]') !== null;
     const stop = () => {
       depth.current = 0;
       setDragging(false);
       setOverPlace(null);
     };
     const onEnter = (e: DragEvent) => {
-      if (!carriesFiles(e)) return;
+      if (!carriesFiles(e) || dialogOpen()) return;
       depth.current += 1;
       // Safari nennt beim Ziehen nicht, wie viele Dateien kommen; 0 heißt „unbekannt“.
       setFiles(e.dataTransfer?.items.length || null);
@@ -222,6 +258,10 @@ export function LibraryClient({
     const onOver = (e: DragEvent) => {
       if (!carriesFiles(e)) return;
       e.preventDefault();
+      if (dialogOpen()) {
+        if (e.dataTransfer) e.dataTransfer.dropEffect = 'none';
+        return;
+      }
       const el = e.target instanceof Element ? e.target : null;
       const row = el?.closest('[role="tree"] [data-folder]');
       setOverPlace(row ? nameOf(row.getAttribute('data-folder') ?? '') : el?.closest('[data-fixed="unfiled"]') ? t('noFolder') : null);
@@ -236,6 +276,7 @@ export function LibraryClient({
       if (!carriesFiles(e)) return;
       e.preventDefault();
       stop();
+      if (dialogOpen()) return;
       // Was auf einer Ordnerzeile oder auf „Ohne Ordner“ landet, hat der Baum
       // schon entgegengenommen oder als gesperrt geschluckt. Er stoppt das
       // Ereignis selbst, verspricht das aber nirgends; doppelt hochgeladen
@@ -390,7 +431,10 @@ export function LibraryClient({
             <FilterBar
               search={<SearchField value={filters.q} onChange={(q) => applyFilters({ q })} placeholder={t('searchPlaceholder')} />}
               searchActive={filters.q.trim() ? { chip: filters.q.trim(), onClear: () => applyFilters({ q: '' }) } : undefined}
-              filters={[selectFilter({ key: 'kind', label: t('kind.label'), value: filters.kind, options: KINDS.map((k) => ({ value: k, label: t(`kind.${k}`) })), onChange: (kind) => applyFilters({ kind }) })]}
+              filters={[
+                selectFilter({ key: 'kind', label: t('kind.label'), value: filters.kind, options: KINDS.map((k) => ({ value: k, label: t(`kind.${k}`) })), onChange: (kind) => applyFilters({ kind }) }),
+                checkFilter({ key: 'unused', label: t('unusedOnly'), value: filters.unused === '1', onChange: (on) => applyFilters({ unused: on ? '1' : '' }) }),
+              ]}
               onApply={(values) => applyFilters(values)}
               // „{Treffer} von {alle}“: „alle“ ist, was am Ort liegt — dieselbe Zahl wie im Baum.
               count={{ shown: matching, total: place.count, noun: { one: t('noun.one'), other: t('noun.other'), dative: t('noun.dative') } }}
@@ -415,14 +459,24 @@ export function LibraryClient({
             />
           </div>
 
-          {items.length === 0 && (query.q || query.kind !== 'all') ? (
+          {items.length === 0 && (query.q || query.kind !== 'all' || query.unused) ? (
             // Befund 7: Suche oder Art blenden alles aus — das ist nicht „Keine Dateien in diesem Ordner“. Der Ordner bleibt (Ort, kein Filter).
             <EmptyState filtered={{ noun: t('emptyFilteredNoun'), onReset: resetFilters }} />
           ) : items.length === 0 ? (
             <EmptyState title={t('emptyTitle')} text={t('empty')} />
           ) : view === 'grid' ? (
             <AssetGrid
-              items={items.map((it) => ({ id: it.id, filename: it.filename, mimeType: it.mimeType, used: it.references.length > 0, caption: caption(it.references), place: current === null ? '' : placeOf(it.folder), folder: it.folder }))}
+              items={items.map((it) => ({
+                id: it.id,
+                filename: it.filename,
+                mimeType: it.mimeType,
+                used: it.references.length > 0,
+                caption: caption(it.references),
+                // Wie die Liste: In „Alle Dateien“ der ganze Weg (Backlog 45); unter „Ohne Ordner“ wiederholte er nur den Ort der Seite.
+                place: query.unfiled ? '' : placeOf(it.folder),
+                folder: it.folder,
+                aiKind: aiLabelingEnabled ? it.aiKind : undefined,
+              }))}
               onOpen={(it) => setDetailId(it.id)}
               draggable
             />
@@ -453,7 +507,10 @@ export function LibraryClient({
                             aus der Verwendung und wiederholte sie. Unter lg fällt die Spalte weg; dort steht die Verwendung
                             klein darunter (10 B31). */}
                         <span className="flex min-w-0 flex-col">
-                          <span data-file-name className="text-meta">{it.filename}</span>
+                          <span className="flex items-center gap-1.5">
+                            <span data-file-name className="text-meta">{it.filename}</span>
+                            {aiLabelingEnabled && it.aiKind !== 'none' ? <AiKindBadge kind={it.aiKind} /> : null}
+                          </span>
                           {caption(it.references) ? <span className="text-hint text-muted-ink lg:hidden">{caption(it.references)}</span> : null}
                         </span>
                       </RowButton>
@@ -491,7 +548,34 @@ export function LibraryClient({
         </div>
       </div>
 
-      <AssetDetailDialog item={detail} folders={shownFolders} assetFolder={detail?.folder ?? null} onOpenChange={(open) => !open && setDetailId(null)} onMove={move} onDelete={deleteItem} onCreateFolder={createFolder} />
+      <AssetDetailDialog
+        item={detail}
+        folders={shownFolders}
+        assetFolder={detail?.folder ?? null}
+        onOpenChange={(open) => !open && setDetailId(null)}
+        onMove={move}
+        onDelete={deleteItem}
+        onCreateFolder={createFolder}
+        aiLabelingEnabled={aiLabelingEnabled}
+        onSetAiKind={setMediaAiKindAction}
+      />
+
+      {labeling ? (
+        <ImageLabelingDialog
+          open
+          items={labeling.items}
+          description={t('labeling.uploadedIn', {
+            count: labeling.items.filter((it) => it.mimeType.startsWith('image/')).length,
+            ...(labeling.folder === null ? { where: 'none', folder: '' } : { where: 'folder', folder: nameOf(labeling.folder) }),
+          })}
+          footer={t('labeling.footer')}
+          confirmLabel={t('labeling.done')}
+          onOpenChange={(next) => {
+            if (!next) closeLabeling();
+          }}
+          onConfirm={closeLabeling}
+        />
+      ) : null}
 
       {moving !== null ? (
         <FolderMoveDialog

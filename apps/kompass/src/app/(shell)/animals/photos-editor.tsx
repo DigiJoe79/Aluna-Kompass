@@ -4,12 +4,15 @@ import { useId, useState } from 'react';
 import { FieldError } from '@/components/forms/field-error';
 import { useTranslations } from 'next-intl';
 import type { PhotoCrop } from '@kompass/module-animals';
-import { ArrowLeft, ArrowRight } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Crop, Star, Tag, Trash2 } from 'lucide-react';
+import { AiKindBadge } from '@/components/media/ai-kind-badge';
+import { useLabelLater } from '@/components/media/image-labeling-dialog';
+import { useCanLabelMedia } from '@/components/media/media-labeling-provider';
 import { StatusBadge } from '@/components/status-badge';
 import { Button } from '@/components/ui/button';
 import { applyCrop, switchPrimaryCrop } from '@/lib/primary-crop';
 import { mediaPreviewUrl } from './crop-frame';
-import { CropLine, PhotoActions, PhotoCropDialog, PhotoTileImage, usePhotoPlaces, type AnimalPhotoPlaces } from './photo-tile';
+import { CropLine, PhotoActionButton, PhotoActions, PhotoCropDialog, PhotoTileImage, usePhotoPlaces, type AnimalPhotoPlaces } from './photo-tile';
 
 export type { AnimalPhotoPlaces } from './photo-tile';
 
@@ -19,7 +22,7 @@ export type { AnimalPhotoPlaces } from './photo-tile';
  * gespeichert), gibt es weder „Ausschnitt …“ noch den Hinweis auf die Breite. `name`: die Referenz der Quelle, für die
  * Ansage beim Titelbildwechsel; ohne sie heißt das Foto nach seinem Platz.
  */
-export type EditorPhoto = { assetId: string; isPrimary: boolean; crop?: PhotoCrop | null; width?: number | null; height?: number | null; name?: string };
+export type EditorPhoto = { assetId: string; isPrimary: boolean; crop?: PhotoCrop | null; width?: number | null; height?: number | null; name?: string; aiKind?: 'edited' | 'generated' };
 
 /**
  * Die Fotos eines Tiers als Raster: Hauptfoto wählen, umsortieren, entfernen.
@@ -37,6 +40,7 @@ export function PhotosEditor({ photos, max, error, onChange, onChoose, places }:
   const t = useTranslations('animals.photos');
   const tc = useTranslations('media.crop');
   const m = useTranslations('content');
+  const tl = useTranslations('media.labeling');
   const at = usePhotoPlaces(places);
   const errorId = useId();
   // Welches Foto der Dialog „Ausschnitt“ bearbeitet; `null` = zu.
@@ -45,6 +49,11 @@ export function PhotosEditor({ photos, max, error, onChange, onChoose, places }:
   // Beim Titelbildwechsel entfernte Ausschnitte je Foto (Spec Ausschnitt in der Prüfung § 2.4) und die letzte Ansage.
   const [removed, setRemoved] = useState<Record<string, PhotoCrop>>({});
   const [announcement, setAnnouncement] = useState('');
+  // „Kennzeichnen …“ speichert sofort (Spec Bildkennzeichnung beim Hochladen § 4); die Kachel zeigt die neue Marke ohne Neuladen.
+  const canLabel = useCanLabelMedia();
+  const [labeled, setLabeled] = useState<Record<string, 'none' | 'edited' | 'generated'>>({});
+  const labelLater = useLabelLater({ target: tc('targets.animal'), onLabeled: (id, kind) => setLabeled((l) => ({ ...l, [id]: kind })) });
+  const aiKindOf = (p: EditorPhoto) => labeled[p.assetId] ?? p.aiKind;
   const nameOf = (p: EditorPhoto, list: readonly EditorPhoto[]) => p.name ?? t('nth', { n: list.indexOf(p) + 1 });
   const primaryOf = (list: readonly EditorPhoto[]) => list.find((p) => p.isPrimary) ?? list[0];
   // Jede Änderung der Liste läuft durch die Titelbild-Regel: wählen, entfernen, umsortieren.
@@ -73,28 +82,56 @@ export function PhotosEditor({ photos, max, error, onChange, onChoose, places }:
       <ul className="grid gap-3 sm:grid-cols-2">
         {photos.map((p, i) => (
           <li key={p.assetId} data-testid="animal-photo" className={`flex flex-col gap-1 rounded-md border p-2 ${p.isPrimary ? 'border-brand' : 'border-line'}`}>
-            {/* Das Original in einem neuen Tab: Ob ein Mensch im Bild ist, zeigt die Vorschau nicht immer. */}
-            <a href={`/media/${p.assetId}`} target="_blank" rel="noreferrer" aria-label={t('open')}>
-              {/* Jede Kachel im Format der Webseite und mit dem, was sie zeigt; die Abdunklung gibt es nur im Dialog. */}
-              <PhotoTileImage src={mediaPreviewUrl(p.assetId)} crop={p.crop ?? null} isPrimary={p.isPrimary} places={at} />
-            </a>
-            <CropLine crop={p.crop ?? null} width={p.width ?? null} isPrimary={p.isPrimary} places={at} />
-            <PhotoActions>
-              {/* Hauptfoto als Marke am gewählten Foto, nicht als Hauptknopf in jeder Kachel — wie in der Prüfung (Befund 10). */}
+            {/* Das Original in einem neuen Tab: Ob ein Mensch im Bild ist, zeigt die Vorschau nicht immer. Die Marke
+                „Hauptfoto“ steht auf dem Bild oben links (Board 2a), die Bildkennzeichnung oben rechts wie an der Kachel der
+                Mediathek — so sind Kacheln mit und ohne Kennzeichnung gleich hoch (Joe 2026-10-22). */}
+            <span className="relative">
+              <a href={`/media/${p.assetId}`} target="_blank" rel="noreferrer" aria-label={t('open')}>
+                {/* Jede Kachel im Format der Webseite und mit dem, was sie zeigt; die Abdunklung gibt es nur im Dialog. */}
+                <PhotoTileImage src={mediaPreviewUrl(p.assetId)} crop={p.crop ?? null} isPrimary={p.isPrimary} places={at} />
+              </a>
               {p.isPrimary ? (
-                <StatusBadge tone="neutral">{t('primary')}</StatusBadge>
-              ) : (
-                <Button type="button" size="sm" variant="outline" onClick={() => change(photos.map((x, j) => ({ ...x, isPrimary: j === i })))}>{t('makePrimary')}</Button>
-              )}
-              <Button type="button" size="icon-sm" variant="ghost" disabled={i === 0} aria-label={t('moveLeft')} onClick={() => move(i, -1)}><ArrowLeft aria-hidden /></Button>
-              <Button type="button" size="icon-sm" variant="ghost" disabled={i === photos.length - 1} aria-label={t('moveRight')} onClick={() => move(i, 1)}><ArrowRight aria-hidden /></Button>
-              {/* „Ausschnitt …“ und „Bild entfernen“ brechen zusammen um; „Entfernen“ stand sonst allein in der zweiten Zeile (05 B20).
-                  Eine Stufe und ein Name wie am Bildfeld der Geschichte (`MediaPicker`, 045/046). */}
-              <span className="flex flex-wrap items-center gap-1">
-                {p.width && p.height ? <Button type="button" size="sm" variant="outline" onClick={() => setEditing(i)}>{tc('edit')}</Button> : null}
-                <Button type="button" size="sm" variant="outline" onClick={() => change(photos.filter((_, j) => j !== i))}>{m('removeImage')}</Button>
-              </span>
-            </PhotoActions>
+                <StatusBadge tone="neutral" className="absolute top-1.5 left-1.5">
+                  {t('primary')}
+                </StatusBadge>
+              ) : null}
+              <AiKindBadge kind={aiKindOf(p)} className="absolute top-1.5 right-1.5" />
+            </span>
+            <CropLine crop={p.crop ?? null} width={p.width ?? null} isPrimary={p.isPrimary} places={at} />
+            <PhotoActions
+              className="mt-auto"
+              start={
+                <>
+                  {/* Am Hauptfoto gedrückt und ohne Wirkung, aber nicht gesperrt: grau hieße „geht nicht“ (Joe 2026-10-22). */}
+                  <PhotoActionButton label={t('makePrimary')} aria-pressed={p.isPrimary} onClick={() => !p.isPrimary && change(photos.map((x, j) => ({ ...x, isPrimary: j === i })))}>
+                    <Star aria-hidden className={p.isPrimary ? 'fill-current text-brand' : undefined} />
+                  </PhotoActionButton>
+                  <PhotoActionButton label={t('moveLeft')} disabled={i === 0} onClick={() => move(i, -1)}>
+                    <ArrowLeft aria-hidden />
+                  </PhotoActionButton>
+                  <PhotoActionButton label={t('moveRight')} disabled={i === photos.length - 1} onClick={() => move(i, 1)}>
+                    <ArrowRight aria-hidden />
+                  </PhotoActionButton>
+                </>
+              }
+              end={
+                <>
+                  {p.width && p.height ? (
+                    <PhotoActionButton label={tc('edit')} onClick={() => setEditing(i)}>
+                      <Crop aria-hidden />
+                    </PhotoActionButton>
+                  ) : null}
+                  {canLabel ? (
+                    <PhotoActionButton label={tl('label')} aria-haspopup="dialog" onClick={() => labelLater.open(p.assetId)}>
+                      <Tag aria-hidden />
+                    </PhotoActionButton>
+                  ) : null}
+                  <PhotoActionButton label={m('removeImage')} onClick={() => change(photos.filter((_, j) => j !== i))}>
+                    <Trash2 aria-hidden />
+                  </PhotoActionButton>
+                </>
+              }
+            />
           </li>
         ))}
       </ul>
@@ -110,6 +147,7 @@ export function PhotosEditor({ photos, max, error, onChange, onChoose, places }:
           onChange(photos.map((x, j) => (j === editing ? { ...x, crop } : x)));
         }}
       />
+      {labelLater.dialog}
       <p data-testid="primary-crop-announcement" aria-live="polite" className="sr-only">{announcement}</p>
     </div>
   );

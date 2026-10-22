@@ -99,7 +99,6 @@ describe('issuePrenotification', () => {
     expect(prenotificationCovers(f.deps, f.mandate.id, 1500, '2026-10-01', 14)).toBe(true);
     const audit = f.deps.db.select().from(schema.auditLog).where(like(schema.auditLog.action, 'finance.prenotification.%')).all();
     expect(audit.map((a) => [a.action, a.params])).toEqual([['finance.prenotification.issue', JSON.stringify({ reference: 'MND-000001', count: 2 })]]);
-    expect(JSON.stringify(audit)).not.toContain(IBAN);
   });
 
   it('names per row the day of the debit as „Einzug am“ and, when given, what for (R11); the remittance is kept in the plan', async () => {

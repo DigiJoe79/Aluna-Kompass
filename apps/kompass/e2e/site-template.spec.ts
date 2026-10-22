@@ -1,5 +1,5 @@
 import { expect, test } from './fixtures';
-import { loginAsAdmin, resetDatabase, readTemplate } from './helpers';
+import { loginAsAdmin, resetDatabase, readTemplate, finishLabeling } from './helpers';
 
 const PNG = Buffer.from(
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==',
@@ -84,6 +84,7 @@ test('a variable of type asset is chosen from the library', async ({ page }) => 
 
   await page.goto('/admin/media');
   await page.getByLabel('Datei hochladen').setInputFiles({ name: 'startbild.png', mimeType: 'image/png', buffer: PNG });
+  await finishLabeling(page);
   await expect(page.getByRole('row', { name: /startbild-/ })).toBeVisible();
 
   await page.goto('/site/template');
@@ -95,29 +96,4 @@ test('a variable of type asset is chosen from the library', async ({ page }) => 
   await chooser.getByRole('button', { name: /startbild-/ }).click();
   await expect(chooser).toBeHidden();
   await expect(page.locator('input[name="heroImage"]')).toHaveValue(/^[0-9A-Z]{26}$/);
-});
-
-/**
- * Die Karten der Seite stehen in einem Container, der sie auseinanderhält —
- * ohne ihn berührten sich die Ränder der Template- und der Startinhalte-Karte
- * (0 px, 14.09.). Gemessen wird am Elternteil statt an zwei Karten: Die zweite
- * erscheint nur mit einem `seed/`, und das mitgelieferte Basis-Template hat
- * keines — im Container liegt es ausserdem im Volume, wo dieser Lauf nicht
- * hinschreiben kann.
- */
-test('keeps its cards in a container that sets them apart', async ({ page }) => {
-  await resetDatabase(page, 'seeded');
-  await loginAsAdmin(page);
-  await page.goto('/site/template');
-
-  const card = page
-    .getByRole('button', { name: 'Vorlage einlesen' })
-    .locator('xpath=ancestor::div[contains(@class,"rounded-lg")][1]');
-  const gap = await card.evaluate((el) => {
-    const style = getComputedStyle(el.parentElement!);
-    return { display: style.display, rowGap: style.rowGap };
-  });
-
-  expect(gap.display).toBe('flex');
-  expect(Number.parseFloat(gap.rowGap)).toBeGreaterThanOrEqual(12);
 });

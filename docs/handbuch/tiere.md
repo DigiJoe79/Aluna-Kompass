@@ -75,7 +75,14 @@ Drei Reiter:
   die Grenze erreicht, lässt der Auswahldialog kein weiteres Foto zu — heben
   Sie dort erst eines auf oder nehmen Sie eines heraus.
   Jede Kachel zeigt das Foto so, wie die Webseite es zeigt; darunter steht
-  „Ausschnitt“ oder „ohne Ausschnitt“.
+  „Ausschnitt“ oder „ohne Ausschnitt“. Die Marke „Hauptfoto“ steht oben links
+  auf dem Bild, eine Bildkennzeichnung („Bearbeitet“, „KI erstellt“) oben rechts. Unter dem Bild stehen die Aktionen als Symbole, ihr Name
+  erscheint beim Überfahren: links der Stern (macht das Foto zum Hauptfoto, am
+  Hauptfoto ist er gefüllt) und die Pfeile für die Reihenfolge, rechts
+  „Ausschnitt …“, „Kennzeichnen …“ und „Bild entfernen“. „Kennzeichnen …“ gibt
+  es nur bei eingeschalteter [Bildkennzeichnung](mediathek.md#bildkennzeichnung)
+  und mit dem Recht, Medien hochzuladen; die Wahl gilt sofort, nicht erst mit
+  „Speichern“.
 
 ### Bildausschnitt eines Fotos
 

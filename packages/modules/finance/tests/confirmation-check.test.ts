@@ -10,7 +10,7 @@ import { createCategory } from '../src/ledger/categories';
 import { saveDraft } from '../src/ledger/entries';
 import { bookEntry } from '../src/ledger/finalize';
 import { reverseEntry } from '../src/ledger/reverse';
-import { financeNotices } from '../src/schema';
+import { financeConfirmations, financeNotices } from '../src/schema';
 import { donationFixture, err, type DonationFixture } from './donation-fixture';
 import { insertRaw, insertRun } from './helpers';
 
@@ -74,7 +74,6 @@ describe('checkConfirmable', () => {
     const res = unwrap(await checkConfirmable(f.deps, f.ctx, { lineIds: [gift.line.id] }));
     expect(check(res, 'possibleReturnWithoutOrigin')).toMatchObject({ done: false, blocked: true });
     expect(res.ok).toBe(false);
-    expect(err(await issueConfirmation(f.deps, f.ctx, { lineIds: [gift.line.id] }))).toMatchObject({ type: 'conflict', code: 'confirmationPossibleReturnWithoutOrigin' });
   });
 
   it('blocks a donation while a return draft points to it — a precondition, not a warning (MA)', async () => {
@@ -90,7 +89,6 @@ describe('checkConfirmable', () => {
     const res = unwrap(await checkConfirmable(f.deps, f.ctx, { lineIds: [gift.line.id] }));
     expect(check(res, 'returnDraftPending')).toMatchObject({ done: false, blocked: true, remedy: { href: `/finance/entries/${draft.id}`, labelKey: 'openReturnDraft' } });
     expect(res.ok).toBe(false);
-    expect(err(await issueConfirmation(f.deps, f.ctx, { lineIds: [gift.line.id] }))).toMatchObject({ type: 'conflict', code: 'confirmationReturnDraftPending' });
 
     const uncertified = unwrap(await listUncertifiedDonations(f.deps, f.ctx, {}));
     const line = uncertified.groups.flatMap((g) => g.lines).find((l) => l.lineId === gift.line.id)!;
@@ -214,20 +212,6 @@ describe('checkConfirmable', () => {
     expect(check(same, 'issuedAfterDonation')).toMatchObject({ done: true, blocked: false });
   });
 
-  it('agrees with issuing on the same data', async () => {
-    const f = await donationFixture();
-    const { line } = await f.donate({ date: '2026-03-10' });
-    const fulfilled = unwrap(await checkConfirmable(f.deps, f.ctx, { lineIds: [line.id], issuedOn: '2026-03-10' }));
-    expect(fulfilled.ok).toBe(true);
-    unwrap(await issueConfirmation(f.deps, f.ctx, { lineIds: [line.id], issuedOn: '2026-03-10' }));
-
-    const { line: line2 } = await f.donate({ date: '2026-03-12' });
-    const blocked = unwrap(await checkConfirmable(f.deps, f.ctx, { lineIds: [line2.id], issuedOn: '2026-03-05' }));
-    expect(blocked.ok).toBe(false);
-    expect(check(blocked, 'issuedAfterDonation').blocked).toBe(true);
-    expect(err(await issueConfirmation(f.deps, f.ctx, { lineIds: [line2.id], issuedOn: '2026-03-05' }))).toMatchObject({ type: 'validation', issues: [{ path: 'issuedOn', message: 'beforeDonation' }] });
-  });
-
   it('reports the missing accusative purposes text of a section60a notice before issuing', async () => {
     const f = await donationFixture({ notice: false });
     insertLegacySection60aNotice(f);
@@ -236,19 +220,6 @@ describe('checkConfirmable', () => {
     expect(res.ok).toBe(false);
     expect(check(res, 'noticeComplete')).toMatchObject({ applies: true, done: false, blocked: true });
     expect(checkFailure(res)).toMatchObject({ ok: false, error: { type: 'validation', issues: [{ path: 'notice.purposesTextAccusative', message: 'purposesTextAccusativeRequired' }] } });
-  });
-
-  it('agrees with issuing on the same data', async () => {
-    const f = await donationFixture({ notice: false });
-    insertLegacySection60aNotice(f);
-    const { line } = await f.donate();
-    expect(err(await issueConfirmation(f.deps, f.ctx, { lineIds: [line.id] }))).toMatchObject({ type: 'validation', issues: [{ path: 'notice.purposesTextAccusative', message: 'purposesTextAccusativeRequired' }] });
-
-    // Mit dem Wortlaut ergänzt, stimmen Prüfliste und Ausstellen wieder zusammen.
-    f.deps.db.update(financeNotices).set({ purposesTextAccusative: 'den Tierschutz' }).run();
-    const fixed = unwrap(await checkConfirmable(f.deps, f.ctx, { lineIds: [line.id] }));
-    expect(fixed.ok).toBe(true);
-    unwrap(await issueConfirmation(f.deps, f.ctx, { lineIds: [line.id] }));
   });
 
   it('checks the notice on the day of issue', async () => {
@@ -303,5 +274,82 @@ describe('checkConfirmable', () => {
     const outside = unwrap(await checkConfirmable(f.deps, f.ctx, { lineIds: [line.id], issuedOn: '2026-03-20' }));
     const inside = f.deps.db.transaction((tx) => checkConfirmableInternal(tx, f.deps, { lineIds: [line.id], issuedOn: '2026-03-20' }));
     expect(unwrap(inside)).toEqual(outside);
+  });
+});
+
+/**
+ * Prüfliste und Ausstellen stimmen überein, je Prüfpunkt (Testdurchsicht 2026-10-22, Plan P4 Task 4): Sperrt ein Punkt
+ * in `checkConfirmable`, verweigert `issueConfirmation` mit genau dem Fehler, den `checkFailure` für dieselbe Liste
+ * nennt — und nichts wird ausgestellt. Je Punkt ein Bestand, der ihn sperrt.
+ */
+const BLOCKING: Record<Exclude<ConfirmationCheckKey, 'signerValid'>, (f: DonationFixture) => Promise<{ lineIds: string[]; issuedOn?: string }>> = {
+  final: async (f) => ({ lineIds: [unwrap(await saveDraft(f.deps, f.ctx, { entryDate: '2026-03-05', text: 'Spende', moneyLines: [{ accountId: f.bank.id, amountCents: 700 }], allocationLines: [{ categoryId: f.donations.id, amountCents: 700, contactId: f.erika.id }] })).allocationLines[0]!.id] }),
+  certifiable: async (f) => {
+    const sales = unwrap(await createCategory(f.deps, f.ctx, { key: 'sales-test', name: 'Flohmarkt', direction: 'income', sphere: 'purposeOperation', incomeKind: 'sales' }));
+    return { lineIds: [(await f.donate({ categoryKey: sales.key })).line.id] };
+  },
+  contactComplete: async (f) => ({ lineIds: [(await f.donate({ contactId: f.donor.id })).line.id] }),
+  organizationAddress: async (f) => {
+    f.deps.db.transaction((tx) => writeSettingInternal(tx, f.deps, systemContext(), 'organization.street', ''));
+    return { lineIds: [(await f.donate()).line.id] };
+  },
+  notConfirmed: async (f) => {
+    const { line } = await f.donate();
+    unwrap(await issueConfirmation(f.deps, f.ctx, { lineIds: [line.id] }));
+    return { lineIds: [line.id] };
+  },
+  noticeValid: async (f) => ({ lineIds: [(await f.donate()).line.id] }),
+  afterExemptionStart: async (f) => ({ lineIds: [(await f.donate({ date: '2025-03-01' })).line.id] }),
+  issuedAfterDonation: async (f) => ({ lineIds: [(await f.donate({ date: '2026-03-10' })).line.id], issuedOn: '2026-03-05' }),
+  noticeComplete: async (f) => {
+    insertLegacySection60aNotice(f);
+    return { lineIds: [(await f.donate()).line.id] };
+  },
+  amountPositive: async (f) => {
+    const { line } = await f.donate({ cents: 5000 });
+    await f.giveBack(line.id, 5000);
+    return { lineIds: [line.id] };
+  },
+  possibleReturnWithoutOrigin: async (f) => {
+    const gift = await f.donate({ cents: 5000 });
+    const raw = insertRaw(f, insertRun(f, f.bank.id), { accountId: f.bank.id, amountCents: -5000, date: '2026-03-12', purpose: 'Rückgabe', returnCode: 'AC04' });
+    unwrap(await bookEntry(f.deps, f.ctx, { entryDate: '2026-03-12', text: 'Rücklastschrift', moneyLines: [{ accountId: f.bank.id, amountCents: -5000, rawTransactionId: raw }], allocationLines: [{ categoryId: f.donations.id, amountCents: -5000, contactId: f.erika.id }] }));
+    return { lineIds: [gift.line.id] };
+  },
+  returnDraftPending: async (f) => {
+    const gift = await f.donate({ cents: 5000 });
+    unwrap(await saveDraft(f.deps, f.ctx, { entryDate: '2026-03-12', text: 'Rücklastschrift', moneyLines: [{ accountId: f.bank.id, amountCents: -5000 }], allocationLines: [{ categoryId: f.donations.id, amountCents: -5000, contactId: f.erika.id, originLineId: gift.line.id }] }));
+    return { lineIds: [gift.line.id] };
+  },
+  documented: async (f) => ({ lineIds: [(await f.donate({ documented: false })).line.id] }),
+  inKindDetails: async (f) => ({ lineIds: [(await f.giveInKind()).line.id] }),
+  typeActive: async (f) => {
+    f.deps.db.update(documentTypes).set({ isActive: false }).where(eq(documentTypes.key, 'finance-confirmation')).run();
+    return { lineIds: [(await f.donate()).line.id] };
+  },
+  expenseWaiverEnabled: async (f) => {
+    const { line } = await f.waive();
+    f.deps.db.transaction((tx) => writeSettingInternal(tx, f.deps, systemContext(), 'finance.expenseWaiversEnabled', false));
+    return { lineIds: [line.id] };
+  },
+};
+
+/** Ohne den Bescheid der Vorgabe: kein gültiger, oder nur ein alter ohne Akkusativ. */
+const WITHOUT_NOTICE = new Set(['noticeValid', 'noticeComplete']);
+
+describe('checklist and issuing agree', () => {
+  it('names a blocking situation for every check that can block', () => {
+    expect([...Object.keys(BLOCKING), 'signerValid'].sort()).toEqual([...CONFIRMATION_CHECK_KEYS].sort());
+  });
+
+  it.each(Object.entries(BLOCKING))('%s: blocked in the checklist ⇔ issuing refuses with the same error', async (key, situation) => {
+    const f = await donationFixture(WITHOUT_NOTICE.has(key) ? { notice: false } : {});
+    const input = await situation(f);
+    const res = unwrap(await checkConfirmable(f.deps, f.ctx, input));
+    expect(check(res, key as ConfirmationCheckKey).blocked).toBe(true);
+    expect(res.ok).toBe(false);
+    const issued = f.deps.db.select().from(financeConfirmations).all().length;
+    expect(await issueConfirmation(f.deps, f.ctx, input)).toEqual(checkFailure(res));
+    expect(f.deps.db.select().from(financeConfirmations).all()).toHaveLength(issued);
   });
 });

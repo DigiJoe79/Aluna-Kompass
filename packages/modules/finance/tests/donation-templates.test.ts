@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { collectiveConfirmationTemplate } from '../src/donations/templates/collective';
 import { inKindConfirmationTemplate } from '../src/donations/templates/in-kind';
 import { moneyConfirmationTemplate } from '../src/donations/templates/money';
-import { CONFIRMATION_ADDRESS_ZONE, CONFIRMATION_TEMPLATE_KEYS, typstText, yesNoBoxes } from '../src/donations/templates/shared';
+import { CONFIRMATION_TEMPLATE_KEYS, typstText, yesNoBoxes } from '../src/donations/templates/shared';
 import { simplifiedReceiptTemplate } from '../src/donations/templates/simplified';
 import { amountInWordsHyphenated } from '../src/ledger/amount-in-words';
 import { BASE_DRAWS_ADDRESS_ZONE } from '../src/typst-pure';
@@ -318,27 +318,11 @@ describe('official wording: Zweck des Bescheids im Genitiv und im Akkusativ (N8,
 
 describe('address zone for the window envelope (Plan 2026-09-27)', () => {
   // Kurskorrektur und Entscheidung Joe 2026-09-27: Geld- und Sammelbestätigung mit Zone, die Sachzuwendung ohne (sie passt mit der Zone nicht sicher auf Seite 1).
-  it('switches the zone per template: money and collective on, in-kind off', () => {
-    expect(CONFIRMATION_ADDRESS_ZONE).toEqual({ 'finance-confirmation-money': true, 'finance-confirmation-in-kind': false, 'finance-confirmation-collective': true });
-  });
-
+  // Wo die Zone, der Rückfall ohne Zone und der Satz landen, prüft der echte Satz in
+  // apps/kompass/tests/finance-donation-templates-render.test.ts; hier nur, was die Vorlage der Basis übergibt.
   it('hands donor and issuer of a money or collective confirmation to the address zone of the base', () => {
     expect(build(moneyConfirmationTemplate, money).slots).toEqual(zoneSlots(W.TITLE_MONEY));
     expect(build(collectiveConfirmationTemplate, collective).slots).toEqual(zoneSlots(W.TITLE_COLLECTIVE));
-  });
-
-  it('keeps the head block in the body only as a fallback for a base without the zone', () => {
-    for (const [template, input, title] of [[moneyConfirmationTemplate, money, W.TITLE_MONEY], [collectiveConfirmationTemplate, collective, W.TITLE_COLLECTIVE]] as const) {
-      const { typst } = build(template as DocumentTemplate<unknown>, input);
-      // Rückfall: Aussteller und Zuwendender im Körper nur, wenn die Basis die Zone nicht kennt.
-      const fallback = `#if not ${BASE_DRAWS_ADDRESS_ZONE} [`;
-      expect(typst.indexOf(fallback), title).toBeGreaterThanOrEqual(0);
-      expect(typst.indexOf(fallback), title).toBeLessThan(typst.indexOf(t(W.ISSUER_LABEL)));
-      expect(typst.lastIndexOf(fallback), title).toBeLessThan(typst.indexOf(t(W.DONOR_LABEL)));
-      // Titel und Untertitel stehen immer im Körper, genau einmal.
-      expect(typst.split(t(title)).length - 1, title).toBe(1);
-      expect(typst.split(t(W.SUBTITLE)).length - 1, title).toBe(1);
-    }
   });
 
   it('in-kind keeps the head in the body, without a zone and without the fallback switch', () => {
@@ -349,10 +333,6 @@ describe('address zone for the window envelope (Plan 2026-09-27)', () => {
       expect(b.typst).toContain(t(W.ISSUER_LABEL));
       expect(b.typst).toContain(t(W.DONOR_LABEL));
     }
-  });
-
-  it('the collective attachment shares the width between both text columns (no overflow of the kind or of "Aufwendungen")', () => {
-    expect(build(collectiveConfirmationTemplate, collective).typst).toContain('#table(columns: (auto, 1fr, 1fr, auto),');
   });
 
   it('keeps the official wording complete and in order', () => {
@@ -370,19 +350,6 @@ describe('address zone for the window envelope (Plan 2026-09-27)', () => {
   it('the simplified receipt stays without an address zone', () => {
     const parsed = simplifiedReceiptTemplate.schema.parse({ organization: common.organization, notice: common.notice, limitCents: 30000 });
     expect(simplifiedReceiptTemplate.build(parsed, ctx).slots).toEqual({ kind: 'form', title: W.SIMPLIFIED_TITLE });
-  });
-});
-
-describe('Blocksatz mit Silbentrennung im Kleingedruckten (Kursänderung 2026-09-27)', () => {
-  it('sets justify and hyphenate only around the notes block and the machine-note sentence, not around the rest of the body', () => {
-    const plain = build(moneyConfirmationTemplate, money).typst;
-    const auto = build(moneyConfirmationTemplate, { ...money, ...machine }).typst;
-    expect(plain).toContain('#set par(justify: true)');
-    expect(plain).toContain('#set text(hyphenate: true)');
-    expect(auto).toContain('#set par(justify: true)');
-    expect(auto).toContain('#set text(hyphenate: true)');
-    // Der Kopf (Titel, Untertitel, Anschriften) bleibt im Flattersatz.
-    expect(plain.indexOf('#set par(justify: true)')).toBeGreaterThan(plain.indexOf(t(W.SUBTITLE)));
   });
 });
 

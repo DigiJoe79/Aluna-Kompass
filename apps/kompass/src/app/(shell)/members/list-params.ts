@@ -50,3 +50,8 @@ export function hasMemberFilter(q: MemberListQuery): boolean {
   const { view: _v, orderBy: _o, offset: _off, ...filters } = memberListInput(q);
   return Object.keys(filters).length > 0;
 }
+
+/** Auswahl im Filter „Mitgliedsart“: nur aktive Arten; eine abgeschaltete bleibt, solange sie gewählt ist (alter Link). */
+export function typeFilterOptions(types: readonly { id: string; name: string; active: boolean }[], selected: string) {
+  return types.filter((ty) => ty.active || ty.id === selected).map((ty) => ({ value: ty.id, label: ty.name }));
+}

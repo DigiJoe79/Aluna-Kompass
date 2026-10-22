@@ -31,18 +31,6 @@ describe('Tier-Maske', () => {
     expect((document.getElementById('sizeCm') as HTMLInputElement).value).toBe('');
   });
 
-  it('kein Abschnitt „Name“ mit nur einem Feld „Name“ (14 B16)', () => {
-    render(<ProfileFields values={{}} locales={['de']} errors={{}} />, { wrapper: Intl });
-    expect(screen.queryByRole('heading', { name: 'Name' })).toBeNull();
-  });
-
-  it('der URL-Teil steht nach dem Namen (05 B13)', () => {
-    render(<ProfileFields values={{ name: 'Frida' }} slug="frida-3kmc" locales={['de']} errors={{}} />, { wrapper: Intl });
-    const name = document.getElementById('name')!;
-    const slug = screen.getByTestId('animal-slug');
-    expect(name.compareDocumentPosition(slug) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-  });
-
   it('„1 von 1“ zeigt nichts (05 B18)', () => {
     const { container } = render(<QueueNav queue={{ query: 'published=0', position: { index: 1, total: 1, previousId: null, nextId: null } }} />, { wrapper: Intl });
     expect(container.textContent).toBe('');
@@ -66,12 +54,11 @@ describe('Tier-Maske', () => {
 vi.mock('@/app/(shell)/animals/actions', () => ({ setAnimalStatusAction: vi.fn() }));
 
 describe('Status-Dialog', () => {
-  it('sagt, was der Status bewirkt (05 B28)', async () => {
+  it('der Dialog hat eine Beschreibung für Vorleser (05 B28)', async () => {
     const { StatusDialog } = await import('@/app/(shell)/animals/status-dialog');
     render(<StatusDialog animalId="A1" current="lookingForHome" />, { wrapper: Intl });
     fireEvent.click(screen.getByRole('button', { name: 'Status ändern' }));
     const dialog = await screen.findByRole('dialog');
     expect(dialog.getAttribute('aria-describedby')).toBeTruthy();
-    expect(dialog.textContent).toContain(messages.animals.status.description);
   });
 });

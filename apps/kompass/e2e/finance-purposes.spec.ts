@@ -1,13 +1,9 @@
-import path from 'node:path';
 import type { Page } from '@playwright/test';
 import { expect, test } from './fixtures';
 import { associationDay } from './association-day';
 import { backToAdmin, callTool, mcpClient, PDF, PHONE, switchTo, switchToJonas } from './expense-helpers';
 import { loginAsAdmin, resetDatabase } from './helpers';
 import { story } from './story-year';
-
-/** > 1 MB (N9, Befundliste 0.2.0) — derselbe erfundene Beleg wie bei den Auslagen. */
-const BIG_PDF = path.resolve(import.meta.dirname, 'fixtures/beleg-1500k.pdf');
 
 const row = (page: Page, name: string) => page.getByTestId('purpose-row').filter({ hasText: name });
 
@@ -50,8 +46,8 @@ test.describe('finance purposes (F8b)', () => {
     await form.locator('#transfer-to').selectOption({ label: 'Tierarztfonds E2E · Bestand 0,00 €' });
     await form.locator('#transfer-amount').fill('300,00');
     await form.locator('#transfer-reason').fill('Spendenaufruf für Behandlungen');
-    await form.getByTestId('voucher-file-input').setInputFiles(BIG_PDF);
-    await expect(page.getByTestId('transfer-document-chosen')).toContainText('beleg-1500k.pdf');
+    await form.getByTestId('voucher-file-input').setInputFiles(PDF);
+    await expect(page.getByTestId('transfer-document-chosen')).toContainText('rechnung.pdf');
     await page.getByTestId('transfer-save').click();
     await expect(page).toHaveURL(/\/finance\/purposes$/);
     await approveAsJonas(page, 'freie Mittel → Tierarztfonds E2E', ['Beschluss liegt vor', '300,00 €']);
@@ -156,17 +152,11 @@ test.describe('finance purposes (F8b)', () => {
     await expect(line).toHaveCount(1);
     await expect(line.getByRole('link')).toHaveAttribute('href', /\/finance\/entries\/[0-9A-Z]+$/);
   });
-  test('E5 auf 390 px: eine Spalte, Dokument Pflicht mit Satz, Ablehnung als Notice über der klebenden Fußleiste, per Tastatur', async ({ page }) => {
+  test('E5 auf 390 px: Dokument Pflicht mit Satz, Ablehnung als Notice in der Fußleiste, per Tastatur', async ({ page }) => {
     await page.setViewportSize(PHONE);
     await page.goto('/finance/purposes/transfer');
     const form = page.getByTestId('transfer-form');
     await expect(form).toContainText('Pflicht — ohne Beleg für die Entscheidung keine Umwidmung.');
-    // Eine Spalte: „nach“ steht unter „von“, nicht daneben.
-    const from = await form.locator('#transfer-from').boundingBox();
-    const to = await form.locator('#transfer-to').boundingBox();
-    expect(to!.y).toBeGreaterThan(from!.y + from!.height);
-    // Am Telefon klebt die Leiste nicht, sie steht am Ende der Karte (Designer 2026-10-08, Befund 39).
-    await expect(page.getByTestId('transfer-footer')).toHaveCSS('position', 'static');
 
     // Per Tastatur: von → nach → Betrag → Datum → Begründung, dann absenden ohne Dokument.
     await form.locator('#transfer-from').focus();

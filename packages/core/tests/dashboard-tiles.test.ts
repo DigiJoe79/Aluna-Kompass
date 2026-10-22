@@ -28,17 +28,7 @@ const setSetting = (deps: ReturnType<typeof setup>['deps'], key: string, value: 
   deps.db.transaction((tx) => writeSettingInternal(tx, deps, systemContext(), key, value));
 
 describe('core tiles are registered and declare their form', () => {
-  it('führt die sechs Kacheln am Kern-Manifest', () => {
-    expect(coreModule.dashboardTiles?.map((t) => `${t.key}:${t.kind}:${t.permission}:${t.defaultOn}`)).toEqual([
-      'followUps:list:followUps.view:true',
-      'setup:list:settings.manage:true',
-      'backup:status:backup.export:true',
-      'accounts:count:users.manage:false',
-      'retention:count:retention.view:true',
-      'translations:count:settings.manage:false',
-    ]);
-  });
-
+  // Schlüssel, Art und Recht jeder Kachel prüft `defineModule` beim Laden; welche Kacheln es gibt, pinnt kein Test.
   it('Fällig ist die Art `due`, Backup trägt bei einer Warnung einen Knopf (Briefing Startseite § 4)', () => {
     expect(coreModule.dashboardTiles?.filter((t) => t.variant).map((t) => `${t.key}:${t.variant}`)).toEqual(['followUps:due']);
     expect(coreModule.dashboardTiles?.filter((t) => t.warningAction).map((t) => t.key)).toEqual(['backup']);

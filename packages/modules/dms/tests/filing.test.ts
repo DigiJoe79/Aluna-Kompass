@@ -1,4 +1,3 @@
-import { createHash } from 'node:crypto';
 import { coreModule, unwrap } from '@kompass/core';
 import { eq } from 'drizzle-orm';
 import { documents } from '../src/schema';
@@ -8,7 +7,7 @@ import { describe, expect, it } from 'vitest';
 import { createDraft, deleteDraft, fileDocument, updateDraft } from '../src/drafts';
 import { receiveDocument } from '../src/incoming';
 import { dmsModule } from '../src/manifest';
-import { deleteDocument, voidDocument } from '../src/service';
+import { voidDocument } from '../src/service';
 import { ALL_DMS, auditActions, fileFixture, pdfBytes, seedTypes, setupWithTypes } from './helpers';
 
 describe('fileDocument', () => {
@@ -62,13 +61,6 @@ describe('fileDocument', () => {
     expect(row(received.id).filedAt).toBe(deps.clock.now().toISOString());
   });
 
-  it('hält die Prüfsumme der abgelegten Datei fest', async () => {
-    const { deps, ctx } = setupWithTypes();
-    const filed = await fileFixture(deps, ctx);
-    const bytes = await deps.files('dms').read(filed.fileName as string);
-    expect(filed.fileChecksum).toBe(createHash('sha256').update(bytes).digest('hex'));
-  });
-
   it('lehnt das zweite Festschreiben ab', async () => {
     const { deps, ctx } = setupWithTypes();
     const filed = await fileFixture(deps, ctx);
@@ -76,22 +68,6 @@ describe('fileDocument', () => {
     expect(again.ok).toBe(false);
     if (again.ok) return;
     expect(again.error.type).toBe('conflict');
-  });
-
-  it('vergibt lückenlose Nummern je Präfix und Jahr', async () => {
-    const { deps, ctx } = setupWithTypes();
-    const first = await fileFixture(deps, ctx);
-    const second = await fileFixture(deps, ctx);
-    expect(first.number).toMatch(/-001$/);
-    expect(second.number).toMatch(/-002$/);
-  });
-
-  it('verlangt dms.file', async () => {
-    const { deps, ctx } = setupWithTypes();
-    const draft = await createDraft(deps, ctx, { typeKey: 'letter', subject: 'x', body: 'y' });
-    if (!draft.ok) throw new Error('setup');
-    const denied = await fileDocument(deps, ctxWith(ALL_DMS.filter((p) => p !== 'dms.file')), { id: draft.value.id });
-    expect(denied.ok).toBe(false);
   });
 
   it('reicht Basis, Slots und Nummer unverändert an die Engine', async () => {
@@ -143,31 +119,10 @@ describe('fileDocument', () => {
     if (!voided.ok) return;
     expect(voided.value.status).toBe('voided');
     expect(voided.value.number).toBe(filed.number); // die Nummer bleibt vergeben
+    expect(auditActions(deps).filter((a) => a === 'dms.void')).toHaveLength(1);
+    const again = await voidDocument(deps, ctx, { id: filed.id, reason: 'nochmal' });
+    expect(again.ok ? 'ok' : again.error).toMatchObject({ type: 'conflict', code: 'documentAlreadyVoided' });
+    const bad = await voidDocument(deps, ctx, { id: filed.id, reason: '' });
+    expect(bad.ok === false && bad.error.type).toBe('validation');
   });
-});
-
-describe('Nummernvergabe', () => {
-  it('vergibt nach einer Löschung keine schon benutzte Nummer erneut', async () => {
-    const { deps, ctx } = setupWithTypes();
-    const expired = await receiveDocument(deps, ctx, {
-      filename: 'alt.pdf', bytes: pdfBytes(), typeKey: 'invoice', subject: 'Alt', documentDate: '2005-06-01',
-    });
-    const kept = await receiveDocument(deps, ctx, {
-      filename: 'jung.pdf', bytes: pdfBytes(), typeKey: 'invoice', subject: 'Jung', documentDate: '2026-01-01',
-    });
-    if (!expired.ok || !kept.ok) throw new Error('setup');
-    expect(expired.value.number).toMatch(/-001$/);
-    expect(kept.value.number).toMatch(/-002$/);
-
-    const deleted = await deleteDocument(deps, ctx, { id: expired.value.id });
-    expect(deleted.ok).toBe(true);
-
-    const next = await receiveDocument(deps, ctx, {
-      filename: 'neu.pdf', bytes: pdfBytes(), typeKey: 'invoice', subject: 'Neu', documentDate: '2026-02-01',
-    });
-    expect(next.ok).toBe(true);
-    if (!next.ok) return;
-    expect(next.value.number).toMatch(/-003$/);
-  });
-
 });

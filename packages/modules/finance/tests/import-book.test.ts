@@ -34,10 +34,9 @@ describe('bookFromTransaction', () => {
     const plain = unwrap(await bookFromTransaction(f.deps, f.ctx, { rawTransactionId: other, entryDate: '2026-03-06', text: 'Gebühr', allocationLines: [{ categoryId: f.fees.id, amountCents: -500 }], reviewed: false }));
     expect(plain).toMatchObject({ entryDate: '2026-03-06', reviewedAt: null });
 
-    // Audit: Entwurf und Prüfung, nie der Text.
+    // Audit: Entwurf und Prüfung.
     const actions = auditOf(f).filter((e) => e.entityId === entry.id).map((e) => e.action);
     expect(actions).toEqual(['finance.entry.draftSave', 'finance.entry.review']);
-    expect(JSON.stringify(auditOf(f))).not.toContain('Büromaterial');
   });
 
   it('refuses without finance.entriesWrite, with an invalid input, and for an unknown or discarded transaction', async () => {

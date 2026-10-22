@@ -1,4 +1,4 @@
-import { fixedClock, schema, unwrap, type CallContext } from '@kompass/core';
+import { fixedClock, schema, unwrap } from '@kompass/core';
 import { ctxWith } from '@kompass/core/testing';
 import { eq, like } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
@@ -9,7 +9,6 @@ import { directDebitFixture, IBANS } from './direct-debit-fixture';
 
 // Uhr: Dienstag, 20.10.2026. Plan L2 Task 4 — eingereicht, zurücksetzen, stornieren (Handoff 2a § 1.3, § 3).
 const fail = <T>(res: { ok: boolean; error?: T }) => (res.ok ? null : res.error);
-const asMcp = (ctx: CallContext): CallContext => ({ ...ctx, channel: 'mcp' });
 
 async function scene() {
   const f = await directDebitFixture();
@@ -57,10 +56,9 @@ describe('markDirectDebitRunSubmitted', () => {
     expect(audit.map((a) => a.params)).toEqual([JSON.stringify({ collectionOn: '2026-10-30' })]);
   });
 
-  it('is human only, needs finance.directDebit and a day not in the future', async () => {
+  it('needs finance.directDebit and a day not in the future', async () => {
     const f = await scene();
     unwrap(await buildDirectDebitFile(f.deps, f.ctx, { runId: f.run.id }));
-    expect(fail(await markDirectDebitRunSubmitted(f.deps, asMcp(f.ctx), { runId: f.run.id, submittedOn: '2026-10-20' }))).toMatchObject({ code: 'humanOnly' });
     expect(fail(await markDirectDebitRunSubmitted(f.deps, ctxWith(['finance.read'], f.userId), { runId: f.run.id, submittedOn: '2026-10-20' }))).toMatchObject({ type: 'forbidden' });
     expect(fail(await markDirectDebitRunSubmitted(f.deps, f.ctx, { runId: f.run.id, submittedOn: '2026-10-21' }))).toMatchObject({ type: 'validation' });
     expect(fail(await markDirectDebitRunSubmitted(f.deps, f.ctx, { runId: 'NOPE', submittedOn: '2026-10-20' }))).toMatchObject({ type: 'notFound' });
@@ -94,7 +92,6 @@ describe('resetDirectDebitRunSubmitted', () => {
     unwrap(await buildDirectDebitFile(f.deps, f.ctx, { runId: f.run.id }));
     unwrap(await markDirectDebitRunSubmitted(f.deps, f.ctx, { runId: f.run.id, submittedOn: '2026-10-20' }));
     expect(fail(await resetDirectDebitRunSubmitted(f.at('2026-10-21T08:00:00.000Z'), f.ctx, { runId: f.run.id }))).toMatchObject({ code: 'runResetTooLate', params: { date: '2026-10-20' } });
-    expect(fail(await resetDirectDebitRunSubmitted(f.deps, asMcp(f.ctx), { runId: f.run.id }))).toMatchObject({ code: 'humanOnly' });
   });
 });
 
@@ -117,7 +114,6 @@ describe('cancelDirectDebitRun', () => {
     unwrap(await buildDirectDebitFile(f.deps, f.ctx, { runId: f.run.id }));
     unwrap(await markDirectDebitRunSubmitted(f.deps, f.ctx, { runId: f.run.id, submittedOn: '2026-10-20' }));
     expect(fail(await cancelDirectDebitRun(f.deps, f.ctx, { runId: f.run.id }))).toMatchObject({ code: 'runSubmitted' });
-    expect(fail(await cancelDirectDebitRun(f.deps, asMcp(f.ctx), { runId: f.run.id }))).toMatchObject({ code: 'humanOnly' });
     expect(fail(await cancelDirectDebitRun(f.deps, ctxWith(['finance.read'], f.userId), { runId: f.run.id }))).toMatchObject({ type: 'forbidden' });
   });
 });

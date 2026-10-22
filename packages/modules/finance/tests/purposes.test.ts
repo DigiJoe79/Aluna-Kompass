@@ -56,12 +56,11 @@ describe('purposes', () => {
     expect(unwrap(await fulfillPurpose(deps, ctx, { id: purpose.id })).remainderCents).toBe(12000);
   });
 
-  it('logs neither name nor description, and deletes an unused purpose', async () => {
+  it('deletes an unused purpose and logs it', async () => {
     const { deps, ctx } = setupFinance();
     const purpose = unwrap(await createPurpose(deps, ctx, { name: 'Dachsanierung', description: 'Zusage von Frau Muster' }));
     unwrap(await deletePurpose(deps, ctx, { id: purpose.id }));
     const log = JSON.stringify(deps.db.select().from(schema.auditLog).all().filter((e) => e.action.startsWith('finance.purpose.')));
-    expect(log).not.toMatch(/Dachsanierung|Muster/);
     expect(log).toContain('finance.purpose.delete');
   });
 

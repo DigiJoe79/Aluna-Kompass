@@ -65,11 +65,11 @@ describe('siteJobOverview / siteJobResult', () => {
     expect(JSON.stringify(last.preview)).not.toContain('hund-0001');
     expect(last.publish).toBeNull();
   });
-  it('reads a 0.2.4 record without status and marks a preview superseded by a later publish', () => {
+  it('marks a preview superseded by a later publish and counts a failed run without result as 0', () => {
     const deps = createTestDeps();
     const e = env();
-    write(e, 'preview', { kind: 'preview', ...base, result: { contentHash: 'h' } });
-    write(e, 'deployCheck', { kind: 'deployCheck', ...base, error: { type: 'conflict', code: 'deployCheckFailed', message: 'x' } });
+    write(e, 'preview', { kind: 'preview', ...base, status: 'success', result: { contentHash: 'h' } });
+    write(e, 'deployCheck', { kind: 'deployCheck', ...base, status: 'failed', error: { type: 'conflict', code: 'deployCheckFailed', message: 'x' } });
     deps.db.insert(sitePublishes).values({ id: 'P1', environment: deps.env, startedAt: '2026-10-02T09:00:00.000Z', status: 'success' }).run();
     const { last } = unwrap(siteJobOverview(deps, ctx, e));
     expect(last.preview).toMatchObject({ status: 'success', superseded: true, counts: { changed: 0 } });
@@ -128,14 +128,6 @@ describe('end states and deploy check verdict', () => {
     expect(last.checks?.[1]).toEqual({ key: 'targetDir', outcome: 'failed', problem: 'targetMissing' });
     expect(last.diff).toBeUndefined();
     expect(unwrap(siteJobOverview(deps, ctx, e)).last.deployCheck!.passed).toBe(false);
-  });
-  it('reads an old deploy check result without checks', () => {
-    const e = env();
-    write(e, 'deployCheck', { ...base, kind: 'deployCheck', status: 'success', result: { target: '/z', filesAtTarget: ['a'], publishWould: { changed: [], added: [], removed: [] }, build: { ok: true }, log: '' } });
-    const last = unwrap(siteJobResult(deps, ctx, e, { kind: 'deployCheck' })).last!;
-    expect(last.passed).toBeUndefined();
-    expect(last.checks).toBeUndefined();
-    expect(last.diff).toBeUndefined();
   });
   it('carries the limit and the counter of a timed-out step', () => {
     const e = env();

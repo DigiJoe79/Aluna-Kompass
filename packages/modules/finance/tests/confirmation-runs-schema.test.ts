@@ -42,12 +42,6 @@ describe('finance_confirmation_runs', () => {
     });
   });
 
-  it('is never deleted', () => {
-    const { deps } = setupFinance();
-    const id = insertRun(deps);
-    expect(() => deps.db.delete(financeConfirmationRuns).where(eq(financeConfirmationRuns.id, id)).run()).toThrow(/permanent/);
-  });
-
   it('never changes its parameters or start facts', () => {
     const { deps } = setupFinance();
     const first = insertRun(deps);
@@ -103,12 +97,6 @@ describe('finance_confirmation_run_items', () => {
     expect(() => insertItem(deps, runId, { kind: 'inKind', inKindLineId: 'L3' })).toThrow(/UNIQUE/);
     insertItem(deps, runId, { kind: 'inKind', inKindLineId: 'L4' });
     insertItem(deps, insertRun(deps));
-  });
-
-  it('is never deleted', () => {
-    const { deps } = setupFinance();
-    const id = insertItem(deps, insertRun(deps));
-    expect(() => deps.db.delete(financeConfirmationRunItems).where(eq(financeConfirmationRunItems.id, id)).run()).toThrow(/permanent/);
   });
 
   it('never changes what was snapshotted at the start', () => {

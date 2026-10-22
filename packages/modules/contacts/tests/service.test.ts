@@ -88,16 +88,13 @@ describe('contacts service', () => {
     expect(missing.ok === false && missing.error.type === 'notFound').toBe(true);
   });
 
-  it('weist ein Speichern auf veraltetem Stand ab (expectedVersion) und speichert auf aktuellem', async () => {
+  // Den veralteten Stand weist ab, was `apps/kompass/tests/module-contracts.test.ts` prüft; hier der Gutfall.
+  it('speichert auf aktuellem Stand (expectedVersion)', async () => {
     const { deps, ctx } = setup();
     const loaded = unwrap(await createContact(deps, ctx, anna));
     deps.clock.advance(60_000);
     unwrap(await updateContact(deps, ctx, { id: loaded.id, city: 'Neustadt' }));
-    deps.clock.advance(60_000);
-    const stale = await updateContact(deps, ctx, { id: loaded.id, city: 'Altstadt', expectedVersion: loaded.updatedAt });
-    expect(stale).toMatchObject({ ok: false, error: { type: 'conflict', code: 'staleVersion' } });
     const current = unwrap(await getContact(deps, ctx, loaded.id));
-    expect(current.city).toBe('Neustadt');
     const saved = unwrap(await updateContact(deps, ctx, { id: loaded.id, street: 'Neuer Weg 3', expectedVersion: current.updatedAt }));
     expect(saved.street).toBe('Neuer Weg 3');
   });

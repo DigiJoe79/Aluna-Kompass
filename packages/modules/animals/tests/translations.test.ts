@@ -36,13 +36,6 @@ describe('animals translations', () => {
     expect(Object.keys(rows[0]!.fields)).not.toContain('place');
   });
 
-  it('is forbidden without animals.view and ignores foreign entity types', async () => {
-    const { deps, id } = await setup();
-    const denied = animalsTranslatables(deps, ctxWith([]));
-    expect(denied.ok === false && denied.error.type).toBe('forbidden');
-    expect(animalsSetTranslations(deps, manage, { entityType: 'project', id, items: [] })).toBeNull();
-  });
-
   it('writes only the named locales, in one update with one audit entry', async () => {
     const { deps, id } = await setup();
     const auditBefore = deps.db.select().from(schema.auditLog).all().length;
@@ -74,20 +67,12 @@ describe('animals translations', () => {
     expect(deps.db.select().from(schema.auditLog).all().at(-1)?.action).toBe('animals.setStory');
   });
 
-  it('is forbidden without animals.manage, notFound for a foreign id, an unknown field, or a story field without a story', async () => {
+  // Fremder Typ, fehlendes Recht, fremde ID und unbekanntes Feld: `apps/kompass/tests/module-contracts.test.ts`.
+  it('is notFound for a field that is not translatable, or a story field without a story', async () => {
     const { deps, id } = await setup();
-    const denied = await animalsSetTranslations(deps, view, { entityType: 'animal', id, items: [{ field: 'summary', locale: 'en', text: 'x' }] });
-    expect(denied && !denied.ok && denied.error.type).toBe('forbidden');
-    const missing = await animalsSetTranslations(deps, manage, { entityType: 'animal', id: 'nope', items: [{ field: 'summary', locale: 'en', text: 'x' }] });
-    expect(missing && !missing.ok && missing.error).toEqual({ type: 'notFound', entity: 'animal', id: 'nope' });
     const field = await animalsSetTranslations(deps, manage, { entityType: 'animal', id, items: [{ field: 'name', locale: 'en', text: 'x' }] });
     expect(field && !field.ok && field.error).toEqual({ type: 'notFound', entity: 'field', id: 'name' });
     const story = await animalsSetTranslations(deps, manage, { entityType: 'animal', id, items: [{ field: 'story.quote', locale: 'en', text: 'x' }] });
     expect(story && !story.ok && story.error).toEqual({ type: 'notFound', entity: 'field', id: 'story.quote' });
-  });
-
-  it('is wired into the manifest', () => {
-    expect(animalsModule.translatables).toBe(animalsTranslatables);
-    expect(animalsModule.setTranslations).toBe(animalsSetTranslations);
   });
 });

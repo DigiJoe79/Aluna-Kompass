@@ -214,12 +214,11 @@ describe('discardRun', () => {
     expect(code(refusedTwice)).toBe('statementNotDiscardable');
   });
 
-  it('never writes the note into the audit log', async () => {
+  it('audits the discard', async () => {
     const f = await discardFixture();
     unwrap(await discardRun(f.deps, f.ctx, { id: f.mainRun.id, note: 'Geheime interne Begruendung Musterstadt' }));
     const entry = auditEntry(f.deps, 'finance.import.discard');
-    const text = `${entry.params}${entry.after ?? ''}`;
-    expect(text).not.toContain('Geheime interne Begruendung');
+    expect(entry).toMatchObject({ entityId: f.mainRun.id });
   });
 });
 

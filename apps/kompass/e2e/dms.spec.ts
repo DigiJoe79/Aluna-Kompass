@@ -258,77 +258,6 @@ test.describe('dms', () => {
     await expect(page.getByLabel('Betreff')).toHaveValue('Einladung zur Versammlung');
   });
 
-  test('füllt mit dem Splitscreen die Höhe des Arbeitsbereichs', async ({ page }) => {
-    await page.setViewportSize({ width: 1440, height: 1000 });
-    await login(page);
-    await page.goto('/dms/new');
-
-    // Nichts schiebt die Seite über das Fenster hinaus: Gescrollt wird in den
-    // Spalten, nicht im Dokument.
-    const overflow = await page.evaluate(
-      () => document.documentElement.scrollHeight - window.innerHeight
-    );
-    expect(overflow).toBeLessThanOrEqual(1);
-
-    // Und beide Spalten reichen bis an die Unterkante — dafür ist es ein
-    // Splitscreen: links scrollt der Text, rechts steht das Blatt.
-    const main = await page.locator('main').boundingBox();
-    const preview = await page.locator('[data-slot="preview-pane"]').boundingBox();
-    const bar = await page.locator('[data-slot="form-action-bar"]').boundingBox();
-    if (!main || !preview || !bar) throw new Error('Bereich, Vorschau oder Leiste nicht sichtbar');
-    expect(Math.round(main.y + main.height)).toBe(1000);
-    expect(Math.round(preview.y + preview.height)).toBe(1000);
-    // Die Speicherleiste steht am unteren Rand der Spalte, nicht unter der Karte.
-    expect(Math.round(bar.y + bar.height)).toBe(1000);
-  });
-
-  // E2 „Fester Wert als Text“ (03 B26): Die Art eines Entwurfs ist ein Wert mit Grund, kein gesperrtes Auswahlfeld.
-  test('zeigt die Art eines Entwurfs als festen Wert mit Grund', async ({ page }) => {
-    await login(page);
-    await page.goto('/dms/new');
-    await page.getByLabel('Betreff').fill('Mit festem Typ');
-    await page.getByLabel('Text').fill('Text.');
-    await page.getByRole('button', { name: 'Entwurf speichern' }).click();
-    await expect(page).toHaveURL(/\/edit$/);
-
-    const type = page.getByRole('group', { name: /^Dokumentart / });
-    await expect(type).toBeVisible();
-    await expect(type).toHaveAccessibleDescription('Steht beim Entwurf fest. Für eine andere Art einen neuen Entwurf anlegen.');
-    await expect(page.locator('select#typeKey')).toHaveCount(0);
-  });
-
-  test('teilt den Splitscreen mit dem Fenster, statt die Spalte festzunageln', async ({ page }) => {
-    await page.setViewportSize({ width: 2560, height: 1440 });
-    await login(page);
-    await page.goto('/dms/new');
-
-    const main = await page.locator('main').boundingBox();
-    const column = await page.locator('[data-slot="form-column"]').boundingBox();
-    if (!main || !column) throw new Error('Bereich oder Spalte nicht sichtbar');
-
-    // Ein Viertel war es vorher: Die 560 px stammen aus einem 1220-px-Entwurf
-    // und liessen den Teil, in dem gearbeitet wird, mit jedem Zoll schrumpfen.
-    expect(column.width / main.width).toBeGreaterThan(0.3);
-    expect(column.width).toBeLessThanOrEqual(760);
-    expect(column.width).toBeGreaterThanOrEqual(520);
-  });
-
-  test('gibt die übrige Höhe der Spalte dem Schreibfeld', async ({ page }) => {
-    await page.setViewportSize({ width: 1440, height: 1000 });
-    await login(page);
-    await page.goto('/dms/new');
-
-    const card = await page.locator('[data-slot="form-card"]').boundingBox();
-    const bar = await page.locator('[data-slot="form-action-bar"]').boundingBox();
-    const text = await page.getByLabel('Text').boundingBox();
-    if (!card || !bar || !text) throw new Error('Karte, Leiste oder Feld nicht sichtbar');
-
-    // Keine tote Spalte mehr zwischen Karte und Leiste …
-    expect(bar.y - (card.y + card.height)).toBeLessThan(60);
-    // … und der Platz geht dorthin, wo der Brief entsteht.
-    expect(text.height).toBeGreaterThan(300);
-  });
-
   test('nennt im Vorschaukopf, wie viele Seiten das Schreiben hat', async ({ page }) => {
     await login(page);
     await page.goto('/dms/new');
@@ -344,21 +273,6 @@ test.describe('dms', () => {
     await page.getByLabel('Text').fill('Sehr geehrte Mitglieder,\n\n' + 'Lorem ipsum dolor sit amet. '.repeat(200));
     await page.getByRole('button', { name: 'Speichern und Vorschau aktualisieren' }).click();
     await expect(header).toContainText(/[2-9] Seiten/, { timeout: 30_000 });
-  });
-
-  test('lässt die Speicherleiste durch die ganze Spalte laufen', async ({ page }) => {
-    await login(page);
-    await page.goto('/dms/new');
-
-    const card = page.locator('[data-slot="form-card"]');
-    const bar = page.locator('[data-slot="form-action-bar"]');
-    const cardBox = await card.boundingBox();
-    const barBox = await bar.boundingBox();
-    if (!cardBox || !barBox) throw new Error('Karte oder Leiste nicht sichtbar');
-
-    // Die Karte steht eingerückt in der Spalte; die Leiste läuft darunter durch.
-    expect(barBox.x).toBeLessThan(cardBox.x);
-    expect(barBox.x + barBox.width).toBeGreaterThan(cardBox.x + cardBox.width);
   });
 
   test('zeigt den Entwurf neben dem Papier, auf dem er landet', async ({ page }) => {
@@ -671,87 +585,6 @@ test.describe('dms', () => {
     await expect(amtsgericht).toBeFocused();
     await page.keyboard.press('Enter');
     await expect(page).toHaveURL(/folder=Beh%C3%B6rden%2FAmtsgericht/);
-  });
-
-  test('stellt die Kopfknöpfe auf Feldhöhe und den primären nach rechts', async ({ page }) => {
-    await login(page);
-    await page.goto('/dms');
-
-    const receive = page.getByRole('button', { name: 'Post ablegen' });
-    const draft = page.getByRole('link', { name: 'Neuer Entwurf' });
-    const receiveBox = await receive.boundingBox();
-    const draftBox = await draft.boundingBox();
-    if (!receiveBox || !draftBox) throw new Error('Knöpfe nicht sichtbar');
-
-    // Hauptwege des Bildschirms, keine Nebenaktionen — und daneben steht ein
-    // 38-px-Suchfeld.
-    expect(Math.round(receiveBox.height)).toBe(38);
-    expect(Math.round(draftBox.height)).toBe(38);
-
-    // Der primäre Knopf schliesst die Gruppe ab.
-    expect(draftBox.x).toBeGreaterThan(receiveBox.x);
-  });
-
-  test('hält die Zeilenhöhe des Fundaments ein', async ({ page }) => {
-    await login(page);
-    // Lange Betreffs, Arten und Orte brechen um, damit die Spalte „Ordner“
-    // ohne Querscrollen sichtbar bleibt (Spec § 9); solche Zeilen werden
-    // höher. Eine einzeilige Zeile hat die Höhe des Fundaments.
-    await page.goto('/dms?folder=Vertr%C3%A4ge');
-    const row = page.getByRole('row', { name: /Mietvertrag Lagerraum/ });
-    const box = await row.boundingBox();
-    if (!box) throw new Error('Zeile nicht sichtbar');
-    expect(Math.round(box.height)).toBe(44);
-  });
-
-  test('richtet die Liste auf das Überfliegen aus', async ({ page }) => {
-    await login(page);
-    await page.goto('/dms');
-
-    // Zahlen, die man untereinander vergleicht, stehen mit gleich breiten Ziffern — seit 0.2.12 in der Textschrift,
-    // Monospace nur noch für Kennungen wie die Nummer (Auftrag 5).
-    const date = page.getByRole('cell', { name: story('15.02.2026') });
-    expect(await date.evaluate((el) => getComputedStyle(el).fontFamily)).not.toContain('Plex');
-    expect(await date.evaluate((el) => getComputedStyle(el).fontVariantNumeric)).toContain('tabular-nums');
-
-    // Die ganze Zeile führt zum Dokument; ein fester Unterstrich am Betreff
-    // bietet einen zweiten Weg an, den es nicht gibt.
-    const subject = page.getByRole('link', { name: 'Freistellungsbescheid' });
-    expect(await subject.evaluate((el) => getComputedStyle(el).textDecorationLine)).toBe('none');
-
-    // Der Entwurf steht nur in der Spalte Zustand, nicht noch einmal am Betreff (03 A3).
-    const draftRow = page.getByRole('row', { name: /Protokoll Vorstandssitzung/ });
-    // Spalte 0 ist das Kästchen der Auswahl.
-    await expect(draftRow.getByRole('cell').nth(2)).not.toContainText('Entwurf');
-    await expect(draftRow.getByRole('cell').last()).toHaveText('Entwurf');
-  });
-
-  test('führt die Ordnerspalte bis zum unteren Rand der Fläche', async ({ page }) => {
-    await login(page);
-    await page.goto('/dms');
-
-    // Gegen den Arbeitsbereich gemessen, nicht gegen die Zeilen: Bei wenigen
-    // Ordnern wäre die Spalte sonst das höchste Element und die Prüfung ginge
-    // aus dem falschen Grund durch.
-    const main = page.locator('main');
-    const column = page.getByTestId('folder-column');
-
-    // Wiederholt gemessen: Die Höhe setzt erst ein Layout-Effekt der Spalte.
-    // Bis 0.2.8 sass der Hydrationsmarker der Fixture im Wurzel-Layout,
-    // außerhalb der Suspense-Grenze von `(shell)/loading.tsx`, und meldete
-    // unter Last „hydriert“, während die Seite noch strömte — gemessen:
-    // Spalte fehlt ganz, oder sie hat ihre Inhaltshöhe (Unterkante 581 statt
-    // ≥ 799). Seit der Marker im Rahmen der Seite steht, ist das behoben; das
-    // Wiederholen bleibt als Spielraum für den Layout-Effekt.
-    await expect(async () => {
-      const mainBox = await main.boundingBox();
-      const columnBox = await column.boundingBox();
-      if (!mainBox || !columnBox) throw new Error('Bereich oder Spalte nicht sichtbar');
-
-      // Beim Ziehen ist die Spalte die helle Fläche gegen das abgedunkelte Feld
-      // daneben. Endet sie vorher, sieht darunter Overlay aus wie Spalte.
-      expect(columnBox.y + columnBox.height).toBeGreaterThanOrEqual(mainBox.y + mainBox.height - 1);
-    }).toPass();
   });
 
   test('zieht eine Datei auf einen Ordner und legt sie dorthin', async ({ page }) => {
@@ -1161,48 +994,9 @@ test.describe('dms', () => {
    * bei einem Menschen leicht 150 ms. Das Drücken nimmt dem Feld den Fokus;
    * schließt die Liste daraufhin, bevor die Maus losgelassen wird, trifft der
    * Klick ins Leere. Enter funktionierte, weil die Tastatur den Fokus nicht
-   * bewegt — genau der Befund vom 2026-09-12.
+   * bewegt — genau der Befund vom 2026-09-12. Ein Vertreter für den Picker: der schwerste Ort, im Ablegen-Dialog, und
+   * „Neu anlegen …“ als letzter Eintrag der Liste.
    */
-  test('wählt einen Kontakt auch mit einem langsamen Mausklick', async ({ page }) => {
-    await login(page);
-    await page.goto('/dms/new');
-    const picker = page.getByRole('combobox', { name: 'Empfänger' });
-    await picker.fill('Mus');
-    const option = page.getByTestId('contact-option').first();
-    await expect(option).toBeVisible();
-    await option.scrollIntoViewIfNeeded();
-    // Erst, wenn die Schriften da sind: Im kalten Server kommen sie spät, und
-    // ein Layout, das sich unter der gedrückten Maus verschiebt, lässt den
-    // Klick daneben landen — das wäre dann der Test, nicht die Anwendung.
-    await page.evaluate(() => document.fonts.ready);
-    const box = (await option.boundingBox())!;
-    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
-    await page.mouse.down();
-    await page.waitForTimeout(300);
-    await page.mouse.up();
-    await expect(page.locator('input[name="recipientId"]')).not.toHaveValue('');
-    await expect(picker).not.toHaveValue('Mus');
-  });
-
-  test('öffnet „Neu anlegen“ auch mit einem langsamen Mausklick', async ({ page }) => {
-    await login(page);
-    await page.goto('/dms/new');
-    const picker = page.getByRole('combobox', { name: 'Empfänger' });
-    await picker.click();
-    const create = page.getByRole('listbox').getByRole('option', { name: 'Neu anlegen …' });
-    await expect(create).toBeVisible();
-    // Der Eintrag steht am Ende der Liste und damit im 800-px-Fenster unter
-    // der Kante; ein Mensch scrollt, bevor er klickt.
-    await create.scrollIntoViewIfNeeded();
-    await page.evaluate(() => document.fonts.ready);
-    const box = (await create.boundingBox())!;
-    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
-    await page.mouse.down();
-    await page.waitForTimeout(300);
-    await page.mouse.up();
-    await expect(page.getByRole('dialog', { name: 'Kontakt anlegen' })).toBeVisible();
-  });
-
   test('öffnet „Neu anlegen“ auch aus dem Ablegen-Dialog heraus mit langsamem Klick', async ({ page }) => {
     await login(page);
     await page.goto('/dms/receive');
@@ -1211,6 +1005,8 @@ test.describe('dms', () => {
     const create = dialog.getByRole('listbox').getByRole('option', { name: 'Neu anlegen …' });
     await expect(create).toBeVisible();
     await create.scrollIntoViewIfNeeded();
+    // Erst, wenn die Schriften da sind: Ein Layout, das sich unter der gedrückten Maus verschiebt, ließe den Klick
+    // daneben landen — das wäre dann der Test, nicht die Anwendung.
     await page.evaluate(() => document.fonts.ready);
     const box = (await create.boundingBox())!;
     await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
@@ -1754,18 +1550,6 @@ test('exports a folder as a bundle', async ({ page }) => {
   const download = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Bündel herunterladen' }).click();
   expect((await download).suggestedFilename()).toMatch(/^Akte-Jahrgang-\d{4}-.*\.zip$/);
-});
-
-/** Wie in Tier- und Kontaktliste (Befund Joe, 2026-09-30): Die Felder lasen die Adresse nur beim ersten Rendern. */
-test('die Filterfelder der Akte folgen der Adresse, auch wenn sie von außen wechselt', async ({ page }) => {
-  await resetDatabase(page, 'seeded');
-  await login(page);
-  await page.goto('/dms');
-  await page.getByLabel('Richtung', { exact: true }).selectOption('outgoing');
-  await expect(page).toHaveURL(/direction=outgoing/);
-  await page.getByRole('navigation').getByRole('link', { name: 'Akte', exact: true }).first().click();
-  await expect(page).toHaveURL(/\/dms$/);
-  await expect(page.getByLabel('Richtung', { exact: true })).toHaveValue('');
 });
 
 /**

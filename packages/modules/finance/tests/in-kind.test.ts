@@ -32,7 +32,7 @@ describe('saveInKindDetails', () => {
     expect(f.deps.db.select().from(financeInKindDetails).all()).toEqual([]);
   });
 
-  it('stores the details at the in-kind line, hangs the valuation document on the entry as voucher, and logs no free text', async () => {
+  it('stores the details at the in-kind line, hangs the valuation document on the entry as voucher, and logs it', async () => {
     const f = await donationFixture();
     const gift = await f.giveInKind();
     const proof = insertDocument(f, { subject: 'Rechnung der Hundebox' });
@@ -51,7 +51,6 @@ describe('saveInKindDetails', () => {
     const [first] = auditOf(f, 'finance.inKindDetails.save');
     expect(first).toMatchObject({ entityType: 'financeInKindDetails', entityId: gift.line.id });
     expect(JSON.parse(first!.after as string)).toEqual({ lineId: gift.line.id, origin: 'private', withdrawalValueCents: null, vatCents: null, proofDocumentId: proof });
-    expect(JSON.stringify(auditOf(f, 'finance.inKindDetails.save'))).not.toMatch(/Hundebox|gebraucht|Kaufpreis|neuwertig/);
   });
 
   it('needs finance.entriesWrite; reading needs finance.read', async () => {
@@ -135,19 +134,19 @@ describe('one page only (BMF Nr. 2)', () => {
     f.deps.documents = fakeDocumentEngine({ render: async () => ({ bytes: new TextEncoder().encode('%PDF-fake'), pages: n }) });
   };
 
-  for (const [item, condition, valuation] of [[200, 200, 400], [500, 500, 1000]] as const) {
-    it(`refuses an in-kind confirmation that does not fit on one page (${item}/${condition}/${valuation} characters), and keeps nothing`, async () => {
-      const f = await donationFixture();
-      pages(f, 2);
-      const gift = await f.giveInKind();
-      const proof = insertDocument(f, { subject: 'Rechnung' });
-      unwrap(await saveInKindDetails(f.deps, f.ctx, { lineId: gift.line.id, origin: 'private', item: txt(item, 'Hundebox Alu '), condition: txt(condition, 'gebraucht gut '), valuation: txt(valuation, 'Kaufpreis laut Rechnung '), proofDocumentId: proof }));
-      const before = f.deps.db.select().from(schema.auditLog).all().length;
-      expect(err(await issueConfirmation(f.deps, f.ctx, { lineIds: [gift.line.id] }))).toMatchObject({ type: 'conflict', code: 'confirmationTooLong' });
-      expect(f.deps.db.select().from(financeConfirmations).all()).toHaveLength(0);
-      expect(f.deps.db.select().from(schema.auditLog).all().length).toBe(before);
-    });
-  }
+  // Die Seitenzahl kommt hier aus der gefälschten Engine; welche Textlängen echt auf zwei Seiten laufen, prüft
+  // `apps/kompass/tests/finance-donation-templates-render.test.ts` mit dem echten Satz.
+  it('refuses an in-kind confirmation that does not fit on one page, and keeps nothing', async () => {
+    const f = await donationFixture();
+    pages(f, 2);
+    const gift = await f.giveInKind();
+    const proof = insertDocument(f, { subject: 'Rechnung' });
+    unwrap(await saveInKindDetails(f.deps, f.ctx, { lineId: gift.line.id, origin: 'private', item: txt(500, 'Hundebox Alu '), condition: txt(500, 'gebraucht gut '), valuation: txt(1000, 'Kaufpreis laut Rechnung '), proofDocumentId: proof }));
+    const before = f.deps.db.select().from(schema.auditLog).all().length;
+    expect(err(await issueConfirmation(f.deps, f.ctx, { lineIds: [gift.line.id] }))).toMatchObject({ type: 'conflict', code: 'confirmationTooLong' });
+    expect(f.deps.db.select().from(financeConfirmations).all()).toHaveLength(0);
+    expect(f.deps.db.select().from(schema.auditLog).all().length).toBe(before);
+  });
 
   it('issues the in-kind confirmation when it fits on one page', async () => {
     const f = await donationFixture();

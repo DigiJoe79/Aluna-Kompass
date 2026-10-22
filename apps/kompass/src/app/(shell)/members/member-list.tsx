@@ -16,7 +16,7 @@ import { RowLink, Table, TableBody, TableCell, TableHead, TableHeader, TableRow 
 import { ViewTabs } from '@/components/view-tabs';
 import { formatEuro } from '@/lib/finance/amount';
 import { useUrlFilters } from '@/lib/use-url-filters';
-import { PAGE_SIZE, VIEW_FILTERS } from './list-params';
+import { PAGE_SIZE, VIEW_FILTERS, typeFilterOptions } from './list-params';
 
 type Filters = { text: string; type: string; pay: string; arrears: string; rejected: string };
 
@@ -28,7 +28,8 @@ export interface MemberListProps {
   total: number;
   unfiltered: number;
   offset: number;
-  types: { id: string; name: string }[];
+  /** Alle Arten, auch abgeschaltete: Zeilen nennen ihre Art, der Filter bietet nur die aktiven an. */
+  types: { id: string; name: string; active: boolean }[];
 }
 
 /**
@@ -79,7 +80,7 @@ export function MemberList({ view, rows, counts, total, unfiltered, offset, type
   const noun = view === 'applications' ? { one: t('nounApplications.one'), other: t('nounApplications.other'), dative: t('nounApplications.dative') } : { one: t('noun.one'), other: t('noun.other'), dative: t('noun.dative') };
   const filtered = allowed.some((key) => (key === 'text' ? filters.text.trim() : filters[key]) !== '');
 
-  const typeFilter = selectFilter({ key: 'type', label: t('filterType'), value: filters.type, options: types.map((ty) => ({ value: ty.id, label: ty.name })), onChange: (type) => applyFilters({ type }) });
+  const typeFilter = selectFilter({ key: 'type', label: t('filterType'), value: filters.type, options: typeFilterOptions(types, filters.type), onChange: (type) => applyFilters({ type }) });
   const payFilter = selectFilter({
     key: 'pay',
     label: t('filterPayment'),

@@ -1,6 +1,6 @@
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { checkCountedAllowlist, type CountedAllowlist, isCommentLine, read, relative, sourceFiles, SRC } from './source';
+import { allowlistHygiene, callArguments, checkCountedAllowlist, type CountedAllowlist, isCommentLine, openingTags, read, relative, sourceFiles, SRC } from './source';
 
 /**
  * Statusfarbe als Fläche oder Rahmen steht in `Notice`, `StatusBadge` und `components/ui` (K10 Charge 2, T4).
@@ -15,7 +15,7 @@ export function statusSurfaceCount(line: string): number {
   return isCommentLine(line) ? 0 : (line.match(STATUS_SURFACE) ?? []).length;
 }
 
-const ALLOWED: CountedAllowlist = {
+export const ALLOWED: CountedAllowlist = {
   // Endgültige Einträge (Spec § 3.6/§ 3.7):
   'app/(shell)/animals/proposals/[id]/same-as-review.tsx': { count: 1, reason: 'Markierung abweichender Werte der Zuordnung (Board Vorschläge 5b), keine Meldung und keine Wahl — wie die Diff-Markierung im Protokoll.' },
   'components/finance/balance-indicator.tsx': { count: 2, reason: 'Zustand eines Werts (Saldo), keine Meldung.' },
@@ -59,11 +59,25 @@ describe('keine Statusflächen außerhalb der Bausteine', () => {
     expect(checkCountedAllowlist(hits, ALLOWED).unexpected).toEqual([]);
   });
 
-  it('keine vorläufigen Einträge mehr', () => {
-    expect(Object.entries(ALLOWED).filter(([, { reason }]) => reason.startsWith('OFFEN')).map(([file]) => file)).toEqual([]);
-  });
+  allowlistHygiene(ALLOWED, () => checkCountedAllowlist(hits, ALLOWED).stale);
+});
 
-  it('jede Ausnahme ist noch nötig', () => {
-    expect(checkCountedAllowlist(hits, ALLOWED).stale).toEqual([]);
+/**
+ * Lösch- und Stornoknöpfe auf der Seite sind neutral (docs/MUSTER.md § C): ein schlichtes `outline` bzw. ein Eintrag in
+ * „Weitere Aktionen“ (`RecordActions`). Rot ergibt erst im Bestätigungsdialog Sinn (`destructive`) — und gesperrt wäre
+ * ein roter Rahmen irreführend. Anders als die Flächen oben gilt das auch für Schrift (`text-error`, `hover:text-error`)
+ * und in `components/ui`; Rahmen von Meldungen, Feldern und Karten bleiben unberührt.
+ */
+const RED_ON_BUTTON = /(?<![\w-])(?:[a-z-]+:)*(?:border|text)-error(?![\w-])/;
+
+describe('kein Rot an Knöpfen', () => {
+  it('<Button> und buttonVariants() tragen kein border-error und kein text-error', () => {
+    const violations = sourceFiles().flatMap((file) => {
+      const text = read(file);
+      const tags = openingTags(text, /Button/).filter(({ tag }) => RED_ON_BUTTON.test(tag));
+      const calls = callArguments(text, 'buttonVariants(').filter(({ args }) => RED_ON_BUTTON.test(args));
+      return [...tags, ...calls].map(({ line }) => `${relative(file)}:${line}`);
+    });
+    expect(violations).toEqual([]);
   });
 });

@@ -279,3 +279,29 @@ describe('Kein Überlauf: Fließtext bricht um, Kennwerte nicht (Joe 11.4, 11.5;
   });
 
 });
+
+describe('Zeilenlink über die ganze Zeile', () => {
+  it('die Zellen im Körper sind nicht positioniert, damit die Fläche des Zeilenlinks die Zeile deckt; der Fuß hält seinen sr-only-Text', () => {
+    // 2026-10-20: `relative` an jeder Zelle begrenzte die Fläche von RowLink/RowButton auf die erste Zelle — ein Klick
+    // in die übrige Zeile öffnete nichts mehr. Die Zeile im Körper ist selbst positioniert; nur der Fuß braucht es.
+    const { container } = show(
+      <Table>
+        <TableBody>
+          <TableRow>
+            <TableCell col="title"><RowLink href="/x">Eintrag</RowLink></TableCell>
+            <TableCell col="amount">1,00 €</TableCell>
+          </TableRow>
+        </TableBody>
+        <TableFooter>
+          <TableRow>
+            <TableCell col="amount">1,00 €</TableCell>
+          </TableRow>
+        </TableFooter>
+      </Table>,
+    );
+    const body = container.querySelectorAll('tbody td');
+    for (const td of body) expect(td.className.split(/\s+/)).not.toContain('relative');
+    expect(container.querySelector('tbody tr')!.className.split(/\s+/)).toContain('relative');
+    expect(container.querySelector('tfoot td')!.className.split(/\s+/)).toContain('relative');
+  });
+});

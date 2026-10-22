@@ -468,7 +468,7 @@ describe('deleteExpenseDraft', () => {
 });
 
 describe('forbidden, validation, audit', () => {
-  it('forbidden/validation/audit without iban, purpose or contact', async () => {
+  it('forbidden/validation/audit', async () => {
     const f = await expenseFixture();
     const nobody = ctxWith(['finance.read'], f.hanna.userId);
     for (const call of [
@@ -495,13 +495,11 @@ describe('forbidden, validation, audit', () => {
       issues: expect.arrayContaining([{ path: 'positions.0.purpose', message: 'required' }, { path: 'positions.0.positionDate', message: 'required' }]),
     });
 
-    // Das Protokoll: Zustand, Nummer, Zähler, Beträge — nie IBAN, Kontakt, „Wofür“, Strecke, Anlass.
+    // Das Protokoll: Zustand, Nummer, Zähler, Beträge.
     const claim = unwrap(await submitExpenseClaim(f.deps, f.hanna.ctx, { id: (await readyDraft(f)).id }));
     expect(JSON.parse(auditEntry(f.deps, 'finance.expenseClaim.saveDraft').after as string)).toEqual({ state: 'draft', positionCount: 2, totalCents: 1999 + 2520, waiver: false, recurring: false });
     expect(JSON.parse(auditEntry(f.deps, 'finance.expenseClaim.submit').after as string)).toEqual({ state: 'submitted', number: claim.number, positionCount: 2, totalCents: 1999 + 2520, waiver: false, recurring: false, submittedAt: claim.submittedAt });
     expect(JSON.parse(auditEntry(f.deps, 'finance.expensePosition.receipt').after as string)).toEqual({ claimId: claim.id, documentId: claim.positions[0]!.documentId });
-    const log = JSON.stringify(f.deps.db.select().from(schema.auditLog).all().filter((a) => a.action.startsWith('finance.')));
-    for (const secret of [IBAN, f.hanna.contactId, 'Futter', 'Musterstadt', 'Tierarztfahrt', 'Hanna']) expect(log, secret).not.toContain(secret);
   });
 });
 

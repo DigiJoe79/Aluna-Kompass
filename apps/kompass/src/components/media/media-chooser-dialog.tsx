@@ -21,6 +21,8 @@ import { ancestorsOf, isWithin, nameOf, namesBelow, type FolderEntry } from '@/l
 import type { MediaListing } from '@/lib/media-listing';
 import { usePreference } from '@/lib/preferences';
 import { AssetGrid, useMediaCaption } from './asset-grid';
+import { ImageLabelingDialog, needsLabeling, type LabelingItem } from './image-labeling-dialog';
+import { useCanLabelMedia } from './media-labeling-provider';
 
 export interface MediaChooserDialogProps {
   open: boolean;
@@ -39,14 +41,14 @@ export interface MediaChooserDialogProps {
    * Die gewählten IDs; dazu die Pixelmaße der Rasterbilder, soweit bekannt (aus der Liste oder dem Hochladen) —
    * ein Bildfeld bietet damit „Ausschnitt …“ gleich nach dem Wählen an (Spec Ausschnitt für alle Bilder § 4).
    */
-  onConfirm: (ids: string[], sizes: Record<string, { width: number; height: number }>) => void;
+  onConfirm: (ids: string[], sizes: Record<string, { width: number; height: number; aiKind?: 'edited' | 'generated' }>) => void;
 }
 
 const ACCEPT = { image: 'image/png,image/jpeg,image/webp,image/svg+xml', pdf: 'application/pdf' } as const;
 type Sort = 'newest' | 'oldest' | 'name' | 'size';
 const SORTS: Sort[] = ['newest', 'oldest', 'name', 'size'];
 
-/** Gemerkt als `mediaChooserFolder`: `null` = „Alle Dateien“, `''` = „Ohne Ordner“ (kein gültiger Pfad), sonst der Ordner. */
+/** Gemerkt je Art als `mediaChooserFolderImage` bzw. `mediaChooserFolderPdf`: `null` = „Alle Dateien“, `''` = „Ohne Ordner“ (kein gültiger Pfad), sonst der Ordner. */
 const UNFILED = '';
 
 /**
@@ -70,7 +72,7 @@ function foldersWithMatches(folders: MediaListing['folders']): FolderEntry[] {
 export function MediaChooserDialog({ open, onOpenChange, kind, multiple, max, selected, onConfirm }: MediaChooserDialogProps) {
   const t = useTranslations('media');
   const tMove = useTranslations('moveDialog');
-  const [folder, setFolder] = usePreference('mediaChooserFolder');
+  const [folder, setFolder] = usePreference(kind === 'pdf' ? 'mediaChooserFolderPdf' : 'mediaChooserFolderImage');
   const [query, setQuery] = useState('');
   const [sort, setSort] = useState<Sort>('newest');
   const [listing, setListing] = useState<MediaListing | null>(null);
@@ -81,6 +83,16 @@ export function MediaChooserDialog({ open, onOpenChange, kind, multiple, max, se
   const tCommon = useTranslations('common');
   const fileInput = useRef<HTMLInputElement>(null);
   const reasonId = useId();
+  const canLabel = useCanLabelMedia();
+  /**
+   * Der Schritt „Bildkennzeichnung“ nach dem Hochladen (Spec Bildkennzeichnung beim Hochladen § 3): die Bilder des
+   * Vorgangs, bei Einzelwahl dazu die Datei und ihre Maße für „Übernehmen“.
+   */
+  const [labeling, setLabeling] = useState<{ items: LabelingItem[]; last: string | null; lastSize: { width: number; height: number } | null } | null>(null);
+  /** Einzelwahl: die eben hochgeladene Datei, hervorgehoben, bis man sie wählt oder den Dialog schließt. */
+  const [uploaded, setUploaded] = useState<string | null>(null);
+  /** Was im Schritt gewählt wurde; ersetzt die Art aus der Liste, bis sie neu geladen ist. */
+  const [labeled, setLabeled] = useState<Record<string, 'none' | 'edited' | 'generated'>>({});
 
   // `selected` kommt vom aufrufenden Formular und bekommt bei jedem Render dort
   // (z. B. nach einem Server-Action-Refresh der Seite während des Uploads) eine
@@ -94,6 +106,10 @@ export function MediaChooserDialog({ open, onOpenChange, kind, multiple, max, se
   // jeder Änderung der (instabilen) `selected`-Referenz während der Dialog offen ist.
   useEffect(() => {
     if (open) setPicked(new Set(selectedRef.current));
+    else {
+      setUploaded(null);
+      setLabeling(null);
+    }
   }, [open]);
 
   const load = useCallback(async () => {
@@ -132,6 +148,7 @@ export function MediaChooserDialog({ open, onOpenChange, kind, multiple, max, se
         caption: caption(it.references),
         // Der Ort unter dem geöffneten Ordner, wie in der Mediathek (Spec § 9).
         place: openFolder === null || it.folder === null ? '' : namesBelow(it.folder, openFolder).join(' › '),
+        aiKind: it.aiKind,
       })),
     [listing, openFolder, caption]
   );
@@ -144,7 +161,10 @@ export function MediaChooserDialog({ open, onOpenChange, kind, multiple, max, se
 
   const sizesOf = (ids: readonly string[]) =>
     Object.fromEntries(
-      (listing?.items ?? []).flatMap((it) => (ids.includes(it.id) && it.width && it.height ? [[it.id, { width: it.width, height: it.height }]] : [])),
+      (listing?.items ?? []).flatMap((it) => {
+        const aiKind = labeled[it.id] ?? it.aiKind;
+        return ids.includes(it.id) && it.width && it.height ? [[it.id, { width: it.width, height: it.height, ...(aiKind !== 'none' ? { aiKind } : {}) }]] : [];
+      }),
     );
   const choose = (id: string) => {
     if (!multiple) {
@@ -166,6 +186,7 @@ export function MediaChooserDialog({ open, onOpenChange, kind, multiple, max, se
     try {
       let last: string | null = null;
       let lastSize: { width: number; height: number } | null = null;
+      const done: LabelingItem[] = [];
       for (const file of Array.from(files)) {
         const fd = new FormData();
         fd.set('file', file);
@@ -177,7 +198,8 @@ export function MediaChooserDialog({ open, onOpenChange, kind, multiple, max, se
           continue;
         }
         if (state.status === 'success') {
-          const data = state.data as { id: string; created: boolean; width?: number | null; height?: number | null };
+          const data = state.data as LabelingItem & { width?: number | null; height?: number | null };
+          done.push({ id: data.id, filename: data.filename, mimeType: data.mimeType, aiKind: data.aiKind, created: data.created });
           if (!data.created && state.message) toast.info(state.message);
           last = data.id;
           lastSize = data.width && data.height ? { width: data.width, height: data.height } : null;
@@ -186,6 +208,12 @@ export function MediaChooserDialog({ open, onOpenChange, kind, multiple, max, se
         }
       }
       await load();
+      // Nur wer kennzeichnen darf und wenn ein Bild zu fragen ist; sonst wie bisher.
+      if (canLabel && done.some(needsLabeling)) {
+        setLabeling({ items: done, last, lastSize });
+        if (!multiple) setUploaded(last);
+        return;
+      }
       if (!multiple && last) {
         onConfirm([last], lastSize ? { [last]: lastSize } : {});
         onOpenChange(false);
@@ -297,7 +325,7 @@ export function MediaChooserDialog({ open, onOpenChange, kind, multiple, max, se
             ) : listing && items.length === 0 ? (
               <EmptyState title={t('chooser.emptyTitle')} text={t('chooser.empty')} />
             ) : (
-              <AssetGrid items={items} selected={multiple ? picked : new Set(selected)} onOpen={(it) => choose(it.id)} blocked={blocked} />
+              <AssetGrid items={items} selected={multiple ? picked : new Set(uploaded ? [uploaded] : selected)} onOpen={(it) => choose(it.id)} blocked={blocked} />
             )}
           </div>
         </div>
@@ -328,6 +356,33 @@ export function MediaChooserDialog({ open, onOpenChange, kind, multiple, max, se
           </DialogFooter>
         )}
       </DialogContent>
+      {labeling ? (
+        <ImageLabelingDialog
+          open
+          items={labeling.items}
+          description={t('labeling.uploaded', { count: labeling.items.filter((it) => it.mimeType.startsWith('image/')).length })}
+          footer={t('labeling.footer')}
+          confirmLabel={multiple ? t('labeling.done') : t('labeling.apply')}
+          onLabeled={(id, kind) => setLabeled((l) => ({ ...l, [id]: kind }))}
+          // × und Esc: zurück in den Auswahldialog; die Datei ist gewählt und schon gespeichert (§ 3).
+          onOpenChange={(next) => {
+            if (next) return;
+            setLabeling(null);
+            void load();
+          }}
+          onConfirm={() => {
+            const { last, lastSize } = labeling;
+            setLabeling(null);
+            if (multiple || !last) {
+              void load();
+              return;
+            }
+            const aiKind = labeled[last] ?? labeling.items.find((it) => it.id === last)?.aiKind ?? 'none';
+            onConfirm([last], lastSize ? { [last]: { ...lastSize, ...(aiKind !== 'none' ? { aiKind } : {}) } } : {});
+            onOpenChange(false);
+          }}
+        />
+      ) : null}
     </Dialog>
   );
 }

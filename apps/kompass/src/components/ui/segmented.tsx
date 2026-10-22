@@ -31,6 +31,8 @@ type SegmentedProps<T extends string> = {
   testId?: string
   "aria-label"?: string
   "aria-labelledby"?: string
+  "aria-describedby"?: string
+  "aria-invalid"?: boolean
 }
 
 function Segmented<T extends string>({ options, onValueChange, className, testId, ...props }: SegmentedProps<T>) {

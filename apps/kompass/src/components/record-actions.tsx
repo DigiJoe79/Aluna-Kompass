@@ -149,7 +149,7 @@ function headerMenuItem(action: HeaderAction) {
       onSelect={action.onSelect}
       disabled={action.disabled}
       data-testid={action.testId ? `${action.testId}-item` : undefined}
-      render={action.href && !action.disabled ? <Link href={action.href} /> : undefined}
+      render={action.href && !action.disabled ? <Link href={action.href} prefetch={false} /> : undefined}
     >
       {action.label}
     </DropdownMenuItem>
@@ -168,7 +168,7 @@ export function HeaderMore({ items, children }: { items: readonly HeaderAction[]
     <HeaderMoreContext value={visible}>
       {visible.map((item) =>
         item.href && !item.disabled ? (
-          <Link key={item.key} href={item.href} className={`${buttonVariants({ variant: 'outline' })} max-sm:hidden`} data-header-more-button data-testid={item.testId}>
+          <Link key={item.key} href={item.href} prefetch={false} className={`${buttonVariants({ variant: 'outline' })} max-sm:hidden`} data-header-more-button data-testid={item.testId}>
             {item.icon}
             {item.label}
           </Link>

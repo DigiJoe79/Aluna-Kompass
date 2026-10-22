@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { checkCountedAllowlist, openingTags, read, relative, sourceFiles, type CountedAllowlist } from './source';
+import { allowlistHygiene, checkCountedAllowlist, type CountedAllowlist, openingTags, read, relative, sourceFiles } from './source';
 
 /**
  * Ein Schalter steht rechts von seinem Text, ein Haken links (docs/MUSTER.md § J, Runde 3, 174) — wie in den
  * Einstellungszeilen (Steuerliches, Module). `FormField toggle` ordnet das selbst (Test `tests/form-field.test.tsx`);
  * dieser Wächter findet eigene Zeilen, in denen ein `<Switch … />` direkt vor seinem `<Label>` bzw. `<label>` steht.
  */
-const ALLOWED: CountedAllowlist = {};
+export const ALLOWED: CountedAllowlist = {};
 
 /** Zeilen, in denen ein selbstschließender `<Switch … />` direkt vor einem Label steht. */
 export function switchBeforeLabel(text: string): number[] {
@@ -25,12 +25,11 @@ describe('Schalter rechts vom Text (174)', () => {
     expect(switchBeforeLabel('<div>\n  <Label htmlFor="a">A</Label>\n  <Switch id="a" />\n</div>')).toEqual([]);
   });
 
+  const hits = sourceFiles().flatMap((file) => switchBeforeLabel(read(file)).map((line) => ({ where: `${relative(file)}:${line}`, file: relative(file) })));
+
   it('kein Schalter links von seinem Label außerhalb der Erlaubnisliste', () => {
-    const hits = sourceFiles().flatMap((file) =>
-      switchBeforeLabel(read(file)).map((line) => ({ where: `${relative(file)}:${line}`, file: relative(file) })),
-    );
-    const { unexpected, stale } = checkCountedAllowlist(hits, ALLOWED);
-    expect(unexpected).toEqual([]);
-    expect(stale).toEqual([]);
+    expect(checkCountedAllowlist(hits, ALLOWED).unexpected).toEqual([]);
   });
+
+  allowlistHygiene(ALLOWED, () => checkCountedAllowlist(hits, ALLOWED).stale);
 });

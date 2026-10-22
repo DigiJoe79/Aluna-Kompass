@@ -1,7 +1,7 @@
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { SETTINGS_TABS } from '@/lib/settings-fields';
-import { checkCountedAllowlist, type CountedAllowlist, isCommentLine, read, relative, sourceFiles, SRC } from './source';
+import { allowlistHygiene, checkCountedAllowlist, type CountedAllowlist, isCommentLine, read, relative, sourceFiles, SRC } from './source';
 
 /**
  * Monospace nur für Kennungen (Durchsicht 0.2.11, Auftrag 5; Joe 2026-10-16): Belegnummern, technische Schlüssel,
@@ -24,7 +24,7 @@ const STATUS = 'HTTP-Code bzw. Fehlerkennung (digest) der Fehlerseite.';
 const LOG = 'Protokollausgabe/Pfad aus dem Webseitenbau — technischer Text, Zeichen für Zeichen.';
 const SHORTCUT = 'Tastenkürzel (MUSTER § Schrift).';
 
-const ALLOWED: CountedAllowlist = {
+export const ALLOWED: CountedAllowlist = {
   'app/error.tsx': { count: 2, reason: STATUS },
   'app/(shell)/error.tsx': { count: 2, reason: STATUS },
   'app/setup/setup-form.tsx': { count: 1, reason: LOCALE },
@@ -78,9 +78,10 @@ const ALLOWED: CountedAllowlist = {
   'app/(shell)/finance/entries/journal.tsx': { count: 1, reason: NUMBER },
   'app/(shell)/finance/expenses/claims-list.tsx': { count: 1, reason: NUMBER },
   'app/(shell)/finance/expenses/new/expense-form.tsx': { count: 1, reason: IBAN },
-  'app/(shell)/finance/imports/format/csv-assistant.tsx': {
-    count: 2,
-    reason: `${IBAN} Dazu die Rohzellen der CSV-Vorschau, wie sie in der Datei stehen (offen, siehe lauf-0.2.12-offen.md).`,
+  'app/(shell)/finance/imports/format/csv-assistant.tsx': { count: 1, reason: IBAN },
+  'app/(shell)/finance/imports/format/column-role-row.tsx': {
+    count: 1,
+    reason: 'Beispielwerte im Schritt „Spalten“: Rohzellen der CSV-Datei, wie sie in der Datei stehen (vorher Vorschau-Tabelle im Assistenten; offen, siehe lauf-0.2.12-offen.md).',
   },
   'app/(shell)/finance/partners/[id]/partner-detail.tsx': { count: 2, reason: NUMBER },
   'app/(shell)/finance/partners/[id]/payments/[paymentId]/draft-form.tsx': { count: 1, reason: `${NUMBER} Nur das Nummern-Span einer gemischten Zeile.` },
@@ -120,9 +121,7 @@ describe('Monospace nur für Kennungen', () => {
     expect(checkCountedAllowlist(hits, ALLOWED).unexpected).toEqual([]);
   });
 
-  it('jede Ausnahme ist noch nötig', () => {
-    expect(checkCountedAllowlist(hits, ALLOWED).stale).toEqual([]);
-  });
+  allowlistHygiene(ALLOWED, () => checkCountedAllowlist(hits, ALLOWED).stale);
 
   it('keine Schriftfamilie inline, außer der Fehlerseite ohne Theme', () => {
     const inline = files()

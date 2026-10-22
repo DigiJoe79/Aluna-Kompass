@@ -1,8 +1,20 @@
-import { existsSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import messages from '../../messages/de.json';
-import { checkCountedAllowlist, type CountedAllowlist, isCommentLine, matchingLines, read, relative, sourceFiles, SRC } from './source';
+import {
+  allowlistHygiene,
+  checkCountedAllowlist,
+  type CountedAllowlist,
+  fromRepo,
+  isCommentLine,
+  isProductSource,
+  lineHits,
+  messageTexts,
+  packageSourceDirs,
+  read,
+  relative,
+  sourceFiles,
+  SRC,
+} from './source';
 
 /**
  * Ein Datum hat zwei Wege (K10 Charge 1, Spec § 2): Bildschirm über `formatDate`/`formatDateTime`
@@ -54,44 +66,40 @@ function intlDateCallLines(source: string): number[] {
   return source.split('\n').flatMap((line, index) => (!isCommentLine(line) && callees.some((re) => re.test(line)) ? [index + 1] : []));
 }
 
-const UI_ALLOWED: CountedAllowlist = {
+export const UI_ALLOWED: CountedAllowlist = {
   'app/(shell)/dms/actions.ts': { count: 1, reason: 'Zeitstempel `savedAt` im Aktionszustand, keine Anzeige.' },
   'app/(shell)/dms/[id]/follow-ups-panel.tsx': { count: 1, reason: 'Rechnen: „in einer Woche“ als ISO-Vorgabewert.' },
 };
 
-const PACKAGES_ALLOWED: CountedAllowlist = {
-  'core/src/backup/import.ts': { count: 1, reason: '`system.lastImportSource` speichert Umgebung und Zeitstempel als Herkunftswert, keine Anzeige.' },
-  'core/src/documents/service.ts': { count: 1, reason: 'Rechnen: Ausstellungstag plus Uhrzeit zum Zeitstempel.' },
-  'modules/animals/src/print/service.ts': { count: 1, reason: 'Dateiname des Sammel-PDFs, ISO sortiert richtig.' },
-  'modules/dms/src/seed-pdf.ts': { count: 1, reason: '`xrefAt` ist ein Byte-Versatz im PDF, kein Datum.' },
-  'modules/finance/src/allocation/approvals.ts': { count: 1, reason: 'Rechnen: ISO-Tag zum Zeitpunkt.' },
-  'modules/finance/src/allocation/partner-proof.ts': { count: 1, reason: 'Rechnen: ISO-Tag zum Zeitpunkt.' },
-  'modules/finance/src/allocation/templates/shared.ts': { count: 1, reason: 'Wortlaut der Verzichtserklärung; das Datum kommt schon als `paperDate`.' },
-  'modules/finance/src/dashboard.ts': { count: 1, reason: 'Rechnen: Tage zwischen zwei ISO-Tagen.' },
-  'modules/finance/src/direct-debit/runs.ts': { count: 1, reason: 'Dateiname der Bankdatei beim Herunterladen, ISO sortiert richtig.' },
-  'modules/finance/src/direct-debit/seed.ts': { count: 1, reason: 'Dateiname des erfundenen Kontoauszugs (Plan L3), ISO sortiert richtig.' },
-  'modules/finance/src/donations/templates/shared.ts': { count: 1, reason: '`placeDate` ist schon „Ort, paperDate“.' },
-  'modules/finance/src/donations/templates/wording.ts': { count: 4, reason: 'Amtlicher Wortlaut; die Daten kommen schon als `paperDate`.' },
-  'modules/finance/src/import/accounts.ts': { count: 1, reason: 'Rechnen: Tage zwischen zwei ISO-Tagen.' },
-  'modules/finance/src/import/camt-fixture.ts': { count: 2, reason: 'XML-Beispielauszug; ISO ist das Format der Bank.' },
-  'modules/finance/src/import/runs.ts': { count: 1, reason: 'Abgleichschlüssel einer Umsatzzeile.' },
-  'modules/finance/src/import/zugferd-fixture.ts': { count: 1, reason: 'XML-Beispielrechnung; ISO ist das Format des Standards.' },
-  'modules/finance/src/ledger/notice-validity.ts': { count: 1, reason: 'Rechnen: ISO-Tag zusammensetzen.' },
-  'modules/finance/src/seed.ts': { count: 2, reason: 'Dateinamen der erfundenen Belege, ISO sortiert richtig.' },
+export const PACKAGES_ALLOWED: CountedAllowlist = {
+  'packages/core/src/backup/import.ts': { count: 1, reason: '`system.lastImportSource` speichert Umgebung und Zeitstempel als Herkunftswert, keine Anzeige.' },
+  'packages/core/src/documents/service.ts': { count: 1, reason: 'Rechnen: Ausstellungstag plus Uhrzeit zum Zeitstempel.' },
+  'packages/modules/animals/src/print/service.ts': { count: 1, reason: 'Dateiname des Sammel-PDFs, ISO sortiert richtig.' },
+  'packages/modules/dms/src/seed-pdf.ts': { count: 1, reason: '`xrefAt` ist ein Byte-Versatz im PDF, kein Datum.' },
+  'packages/modules/finance/src/allocation/approvals.ts': { count: 1, reason: 'Rechnen: ISO-Tag zum Zeitpunkt.' },
+  'packages/modules/finance/src/allocation/partner-proof.ts': { count: 1, reason: 'Rechnen: ISO-Tag zum Zeitpunkt.' },
+  'packages/modules/finance/src/allocation/templates/shared.ts': { count: 1, reason: 'Wortlaut der Verzichtserklärung; das Datum kommt schon als `paperDate`.' },
+  'packages/modules/finance/src/dashboard.ts': { count: 1, reason: 'Rechnen: Tage zwischen zwei ISO-Tagen.' },
+  'packages/modules/finance/src/direct-debit/runs.ts': { count: 1, reason: 'Dateiname der Bankdatei beim Herunterladen, ISO sortiert richtig.' },
+  'packages/modules/finance/src/direct-debit/seed.ts': { count: 1, reason: 'Dateiname des erfundenen Kontoauszugs (Plan L3), ISO sortiert richtig.' },
+  'packages/modules/finance/src/donations/templates/shared.ts': { count: 1, reason: '`placeDate` ist schon „Ort, paperDate“.' },
+  'packages/modules/finance/src/donations/templates/wording.ts': { count: 4, reason: 'Amtlicher Wortlaut; die Daten kommen schon als `paperDate`.' },
+  'packages/modules/finance/src/import/accounts.ts': { count: 1, reason: 'Rechnen: Tage zwischen zwei ISO-Tagen.' },
+  'packages/modules/finance/src/import/camt-fixture.ts': { count: 2, reason: 'XML-Beispielauszug; ISO ist das Format der Bank.' },
+  'packages/modules/finance/src/import/runs.ts': { count: 1, reason: 'Abgleichschlüssel einer Umsatzzeile.' },
+  'packages/modules/finance/src/import/zugferd-fixture.ts': { count: 1, reason: 'XML-Beispielrechnung; ISO ist das Format des Standards.' },
+  'packages/modules/finance/src/ledger/notice-validity.ts': { count: 1, reason: 'Rechnen: ISO-Tag zusammensetzen.' },
+  'packages/modules/finance/src/seed.ts': { count: 2, reason: 'Dateinamen der erfundenen Belege, ISO sortiert richtig.' },
 };
 
 /** Ausnahmen nur mit echtem Grund (Dateiname, Kennung). Bei Einführung leer: Die Probesuche fand nur Fehler. */
-const TODAY_ALLOWED: CountedAllowlist = {};
+export const TODAY_ALLOWED: CountedAllowlist = {};
 
-const PACKAGES = path.resolve(SRC, '../../../packages');
-const fromPackages = (file: string) => path.relative(PACKAGES, file).split(path.sep).join('/');
-const packageSourceDirs = () =>
-  readdirSync(PACKAGES)
-    .flatMap((name) => (name === 'modules' ? readdirSync(path.join(PACKAGES, 'modules')).map((m) => path.join(PACKAGES, 'modules', m, 'src')) : [path.join(PACKAGES, name, 'src')]))
-    .filter((dir) => existsSync(dir));
+const UI_FILES = () => [path.join(SRC, 'app'), path.join(SRC, 'components')].flatMap((dir) => sourceFiles(dir));
+const PACKAGE_FILES = () => packageSourceDirs().flatMap((dir) => sourceFiles(dir)).filter(isProductSource);
 
 describe('Heuristik des Wächters', () => {
-  it('die Erlaubnisliste zählt je Datei: ein Treffer mehr ist rot, einer weniger veraltet', () => {
+  it('die Erlaubnisliste zählt je Datei: ein Treffer mehr ist rot, einer weniger wird gemeldet', () => {
     const allowed: CountedAllowlist = { 'a.ts': { count: 2, reason: 'Rechnen.' } };
     const at = (file: string, line: number) => ({ where: `${file}:${line}`, file });
     expect(checkCountedAllowlist([at('a.ts', 1), at('a.ts', 2)], allowed)).toEqual({ unexpected: [], stale: [] });
@@ -153,111 +161,71 @@ describe('Heuristik des Wächters', () => {
 });
 
 describe('kein rohes Datum in der Oberfläche (Teil 1)', () => {
-  const hits = [path.join(SRC, 'app'), path.join(SRC, 'components')]
-    .flatMap((dir) => sourceFiles(dir))
-    .flatMap((file) => matchingLines(file, read(file), RAW_UI_DATE).map((where) => ({ where, file: relative(file) })));
+  const hits = lineHits(UI_FILES(), (line) => RAW_UI_DATE.test(line));
 
   it('Anzeigen gehen über formatDate/formatDateTime, Rechnen steht in der Erlaubnisliste', () => {
     expect(checkCountedAllowlist(hits, UI_ALLOWED).unexpected).toEqual([]);
   });
 
-  it('jede Ausnahme ist noch nötig', () => {
-    expect(checkCountedAllowlist(hits, UI_ALLOWED).stale).toEqual([]);
-  });
+  allowlistHygiene(UI_ALLOWED, () => checkCountedAllowlist(hits, UI_ALLOWED).stale);
 });
 
 describe('kein rohes Datum in Meldungen der Pakete (Teil 2)', () => {
-  const hits = packageSourceDirs()
-    .flatMap((dir) => sourceFiles(dir))
-    .filter((file) => !/\.test\.tsx?$/.test(file) && !fromPackages(file).includes('/src/testing/'))
-    .flatMap((file) =>
-      read(file)
-        .split('\n')
-        .flatMap((line, index) => (RAW_DATE_INTERPOLATION.test(line) && !SQL_TEMPLATE.test(line) && !isCommentLine(line) ? [{ where: `${fromPackages(file)}:${index + 1}`, file: fromPackages(file) }] : [])),
-    );
+  const hits = lineHits(PACKAGE_FILES(), (line) => RAW_DATE_INTERPOLATION.test(line) && !SQL_TEMPLATE.test(line), fromRepo);
 
   it('Meldungen nehmen messageDate, Papier paperDate; Rechnen steht in der Erlaubnisliste', () => {
     expect(checkCountedAllowlist(hits, PACKAGES_ALLOWED).unexpected).toEqual([]);
   });
 
-  it('jede Ausnahme ist noch nötig', () => {
-    expect(checkCountedAllowlist(hits, PACKAGES_ALLOWED).stale).toEqual([]);
-  });
+  allowlistHygiene(PACKAGES_ALLOWED, () => checkCountedAllowlist(hits, PACKAGES_ALLOWED).stale);
 });
 
 describe('kein „heute“ als UTC-Tag in den Paketen (Teil 3)', () => {
-  const hits = packageSourceDirs()
-    .flatMap((dir) => sourceFiles(dir))
-    .filter((file) => !/\.test\.tsx?$/.test(file) && !fromPackages(file).includes('/src/testing/'))
-    .flatMap((file) =>
-      read(file)
-        .split('\n')
-        .flatMap((line, index) => (RAW_TODAY.test(line) && !isCommentLine(line) ? [{ where: `${fromPackages(file)}:${index + 1}`, file: fromPackages(file) }] : [])),
-    );
+  const hits = lineHits(PACKAGE_FILES(), (line) => RAW_TODAY.test(line), fromRepo);
 
   it('„heute“ ist todayIn(deps), ein Zeitpunkt wird über isoDayIn zum Tag', () => {
     expect(checkCountedAllowlist(hits, TODAY_ALLOWED).unexpected).toEqual([]);
   });
 
-  it('jede Ausnahme ist noch nötig', () => {
-    expect(checkCountedAllowlist(hits, TODAY_ALLOWED).stale).toEqual([]);
-  });
+  allowlistHygiene(TODAY_ALLOWED, () => checkCountedAllowlist(hits, TODAY_ALLOWED).stale);
 });
 
 /** Ausnahmen nur mit echtem Grund. Bei Einführung leer: alle Stellen gehen über `useDateFormat`/`dateFormatOf`. */
-const INTL_ALLOWED: CountedAllowlist = {};
+export const INTL_ALLOWED: CountedAllowlist = {};
 
 describe('keine Zeiten über next-intl in der Oberfläche (Teil 4)', () => {
-  const hits = [path.join(SRC, 'app'), path.join(SRC, 'components')]
-    .flatMap((dir) => sourceFiles(dir))
-    .flatMap((file) => intlDateCallLines(read(file)).map((line) => ({ where: `${relative(file)}:${line}`, file: relative(file) })));
+  const hits = UI_FILES().flatMap((file) => intlDateCallLines(read(file)).map((line) => ({ where: `${relative(file)}:${line}`, file: relative(file) })));
 
   it('Zeiten gehen über useDateFormat bzw. dateFormatOf', () => {
     expect(checkCountedAllowlist(hits, INTL_ALLOWED).unexpected).toEqual([]);
   });
 
-  it('jede Ausnahme ist noch nötig', () => {
-    expect(checkCountedAllowlist(hits, INTL_ALLOWED).stale).toEqual([]);
-  });
+  allowlistHygiene(INTL_ALLOWED, () => checkCountedAllowlist(hits, INTL_ALLOWED).stale);
 });
 
 /** Teil 5 — kein eigenes `Intl.DateTimeFormat`: Formatieren gehört in `packages/core/src/dates.ts`. */
 const INTL_DATE = /\bIntl\.DateTimeFormat\(/;
 const INTL_DATE_OWNERS = new Set(['packages/core/src/dates.ts']);
-const INTL_DATE_ALLOWED: CountedAllowlist = {
+export const INTL_DATE_ALLOWED: CountedAllowlist = {
   'apps/kompass/src/lib/audit-export.ts': { count: 1, reason: 'Export des Protokolls: festes TT.MM.JJJJ HH:mm:ss wie Papier, unabhängig von `ui.dateFormat` (Kommentar dort).' },
   'packages/core/src/today.ts': { count: 1, reason: 'Prüft, ob eine Zeitzone gültig ist; formatiert nichts.' },
   'apps/kompass/src/lib/settings-options.ts': { count: 1, reason: 'Nennt eine Zeitzone in der Auswahl der Stammdaten („Berlin (Mitteleuropäische Zeit)“, Runde 3, 149); formatiert kein Datum.' },
 };
 
-const REPO = path.resolve(SRC, '../../..');
-const fromRepo = (file: string) => path.relative(REPO, file).split(path.sep).join('/');
-
 describe('kein eigenes Intl.DateTimeFormat (Teil 5)', () => {
-  const hits = [SRC, ...packageSourceDirs()]
-    .flatMap((dir) => sourceFiles(dir))
-    .filter((file) => !/\.test\.tsx?$/.test(file) && !file.includes('__e2e') && !fromRepo(file).includes('/src/testing/') && !INTL_DATE_OWNERS.has(fromRepo(file)))
-    .flatMap((file) => matchingLines(file, read(file), INTL_DATE).map((where) => ({ where: `${fromRepo(file)}:${where.split(':').pop()}`, file: fromRepo(file) })));
+  const files = [SRC, ...packageSourceDirs()].flatMap((dir) => sourceFiles(dir)).filter((file) => isProductSource(file) && !INTL_DATE_OWNERS.has(fromRepo(file)));
+  const hits = lineHits(files, (line) => INTL_DATE.test(line), fromRepo);
 
   it('Datum und Uhrzeit über formatDate/formatDateTime/formatTime aus dem Kern', () => {
     expect(checkCountedAllowlist(hits, INTL_DATE_ALLOWED).unexpected).toEqual([]);
   });
 
-  it('jede Ausnahme ist noch nötig', () => {
-    expect(checkCountedAllowlist(hits, INTL_DATE_ALLOWED).stale).toEqual([]);
-  });
+  allowlistHygiene(INTL_DATE_ALLOWED, () => checkCountedAllowlist(hits, INTL_DATE_ALLOWED).stale);
 });
 
 describe('kein ICU-Datum in der Sprachdatei (Teil 6)', () => {
   it('Daten gehen als fertiger Text an einen schlichten Platzhalter (messageValues in lib/error-text.ts)', () => {
-    const found: string[] = [];
-    const walk = (node: unknown, at: string) => {
-      if (typeof node === 'string') {
-        if (/,\s*(?:date|time)\s*[,}]/.test(node)) found.push(at);
-      } else if (node && typeof node === 'object') for (const [k, v] of Object.entries(node)) walk(v, at ? `${at}.${k}` : k);
-    };
-    walk(messages, '');
-    expect(found).toEqual([]);
+    expect(messageTexts().filter(([, text]) => /,\s*(?:date|time)\s*[,}]/.test(text)).map(([key]) => key)).toEqual([]);
   });
 });
 
@@ -266,7 +234,7 @@ describe('kein ICU-Datum in der Sprachdatei (Teil 6)', () => {
  * Attribut und nicht in einem Formatierer. Ein Treffer, der kein Datum zeigt, kommt mit Grund in die Erlaubnisliste.
  */
 const RAW_JSX_DATE = /(?<![=\w$])\{\s*[A-Za-z_][\w.?]*\.\w+(?:On|At|Date)\s*(?:\?\?[^}]*)?\}/;
-const JSX_DATE_ALLOWED: CountedAllowlist = {};
+export const JSX_DATE_ALLOWED: CountedAllowlist = {};
 
 describe('Heuristik Teil 7', () => {
   it('trifft ein rohes ISO-Feld im JSX, nicht Attribut und Formatierer', () => {
@@ -278,16 +246,11 @@ describe('Heuristik Teil 7', () => {
 });
 
 describe('kein rohes ISO-Feld im JSX (Teil 7)', () => {
-  const hits = [path.join(SRC, 'app'), path.join(SRC, 'components')]
-    .flatMap((dir) => sourceFiles(dir))
-    .filter((file) => file.endsWith('.tsx'))
-    .flatMap((file) => matchingLines(file, read(file), RAW_JSX_DATE).map((where) => ({ where, file: relative(file) })));
+  const hits = lineHits(UI_FILES().filter((file) => file.endsWith('.tsx')), (line) => RAW_JSX_DATE.test(line));
 
   it('Datum im JSX nur über fmt.date/fmt.dateTime', () => {
     expect(checkCountedAllowlist(hits, JSX_DATE_ALLOWED).unexpected).toEqual([]);
   });
 
-  it('jede Ausnahme ist noch nötig', () => {
-    expect(checkCountedAllowlist(hits, JSX_DATE_ALLOWED).stale).toEqual([]);
-  });
+  allowlistHygiene(JSX_DATE_ALLOWED, () => checkCountedAllowlist(hits, JSX_DATE_ALLOWED).stale);
 });

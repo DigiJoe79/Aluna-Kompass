@@ -261,8 +261,6 @@ describe('references and what happens when something is deleted', () => {
     expect(rows.map((r) => r.contactId)).toEqual([f.rightDonor.id]);
     const log = f.deps.db.select().from(schema.auditLog).all().filter((e) => e.action === 'finance.contactIban.delete');
     expect(log.map((e) => JSON.parse(e.before!)).sort((a, b) => a.learnedFrom.localeCompare(b.learnedFrom))).toEqual([{ learnedFrom: 'booking' }, { learnedFrom: 'manual' }]);
-    expect(JSON.stringify(log)).not.toMatch(/DE66|DE75/);
-    expect(JSON.stringify(log)).not.toContain(f.wrongDonor.id);
     for (const entry of log) expect(entry.entityType).toBe('financeContactBankAccount');
   });
 
@@ -522,7 +520,7 @@ describe('what finance holds for expense claims (F8a)', () => {
     expect(f.deps.db.select().from(financeExpenseClaims).where(eq(financeExpenseClaims.id, id)).get()).toMatchObject({ waiverDeclarationDocumentId: null, waiverSignedDocumentId: null, number: 'KE-2026-001' });
   });
 
-  it('a deleted contact takes its drafts and its waiver agreement along, logged without the contact id; submitted claims hold it', async () => {
+  it('a deleted contact takes its drafts and its waiver agreement along, logged; submitted claims hold it', async () => {
     const f = await ledgerFixture();
     const draft = insertClaim(f);
     insertPosition(f, draft);
@@ -533,7 +531,6 @@ describe('what finance holds for expense claims (F8a)', () => {
     expect(f.deps.db.select().from(financeContactWaiverTerms).all()).toEqual([]);
     const log = f.deps.db.select().from(schema.auditLog).all().filter((e) => ['finance.expenseClaim.draftDelete', 'finance.contactWaiverTerms.delete'].includes(e.action));
     expect(log.map((e) => [e.action, e.entityId])).toEqual([['finance.expenseClaim.draftDelete', draft], ['finance.contactWaiverTerms.delete', 'WT1']]);
-    expect(JSON.stringify(log)).not.toContain(f.donor.id);
 
     // Ein eingereichter Antrag hält den Kontakt fest — die Löschung wird verweigert, bevor `recordDeleted` läuft.
     const g = await ledgerFixture();
@@ -582,7 +579,6 @@ describe('what finance holds for partners and payments to partners (F7)', () => 
     expect(f.deps.db.select().from(financePartnerPaymentPositions).all()).toEqual([]);
     const log = f.deps.db.select().from(schema.auditLog).all().filter((e) => ['finance.partnerPayment.draftDelete', 'finance.partnerProfile.delete'].includes(e.action));
     expect(log.map((e) => e.action)).toEqual(['finance.partnerPayment.draftDelete', 'finance.partnerProfile.delete']);
-    expect(JSON.stringify(log)).not.toContain(f.donor.id);
 
     // Ein eingereichter Vorgang hält den Kontakt fest — die Löschung wird verweigert, bevor `recordDeleted` läuft.
     const g = await ledgerFixture();

@@ -5,7 +5,6 @@ import { describe, expect, it, vi } from 'vitest';
 const fake = vi.hoisted(() => ({ run: null as unknown }));
 vi.mock('../src/pipeline/run-state', async (orig) => ({ ...(await orig<object>()), runningSiteJob: () => fake.run }));
 import { SITE_DASHBOARD_TILES } from '../src/dashboard';
-import { siteModule } from '../src/manifest';
 import { siteEntries, sitePublishes, siteTemplateState, siteValues } from '../src/schema';
 
 const tile = SITE_DASHBOARD_TILES[0]!;
@@ -25,11 +24,6 @@ const publish = (deps: ReturnType<typeof setup>, startedAt: string, status: 'suc
   deps.db.insert(sitePublishes).values({ id: `P-${startedAt}-${status}`, environment: deps.env, startedAt, finishedAt: startedAt, status, contentHash: '', log: '', fileManifest: '{}' }).run();
 
 describe('site tile', () => {
-  it('steht am Manifest als status-Kachel mit site.view', () => {
-    expect(siteModule.dashboardTiles?.map((t) => `${t.key}:${t.kind}:${t.permission}:${t.defaultOn}`)).toEqual(['site:status:site.view:true']);
-    expect(tile.messageKeys).toEqual(['running', 'templateUnreviewed', 'lastFailed', 'lastAborted', 'changed', 'never', 'current']);
-  });
-
   it('meldet „nie publiziert“ ohne erfolgreichen Publish', async () => {
     const deps = setup();
     expect(await tile.load(deps, ctx, {})).toEqual({ kind: 'status', tone: 'info', messageKey: 'never', href: '/site/publish' });

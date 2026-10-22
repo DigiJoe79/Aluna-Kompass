@@ -83,7 +83,7 @@ describe('cancelSiteJob', () => {
   it('refuses while the transfer runs and still records success', async () => {
     const { deps, env, publish } = await setup();
     const bin = tmp();
-    writeFileSync(path.join(bin, 'rsync'), '#!/bin/sh\nsleep 2\n');
+    writeFileSync(path.join(bin, 'rsync'), '#!/bin/sh\nsleep 1\n');
     chmodSync(path.join(bin, 'rsync'), 0o755);
     const savedPath = process.env.PATH;
     process.env.PATH = `${bin}:${savedPath}`;

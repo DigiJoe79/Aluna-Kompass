@@ -4,7 +4,7 @@ import path from 'node:path';
 import { coreModule, setModuleEnabled, unwrap } from '@kompass/core';
 import { createTestDeps, ctxWith, insertUser } from '@kompass/core/testing';
 import { projectsModule } from '@kompass/module-projects';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 
 /** Was in `content.json` landet — der Ordner `job` ist nach dem Bau weg. */
 const written = vi.hoisted(() => ({ content: [] as string[] }));
@@ -40,11 +40,16 @@ const htmlWith = (dir: string, text: string): boolean =>
  * Mit `verein-basis` und der Sicht `organization` (Name im Seitenfuß) — die Tierseite gibt es nur in Vorlagen von Vereinen.
  */
 describe('buildSinglePage', () => {
-  it('builds the site with one row of a view in its own directory, fast, and leaves the normal runs alone', async () => {
-    const deps = createTestDeps({ manifests: [coreModule, projectsModule, siteModule], locales: ['de', 'en'] });
+  // Eine Installation für alle Fälle: Die Bauten schreiben nur in das eigene `env` je Fall, die Daten ändert keiner.
+  let deps: ReturnType<typeof createTestDeps>;
+  beforeAll(async () => {
+    deps = createTestDeps({ manifests: [coreModule, projectsModule, siteModule], locales: ['de', 'en'] });
     insertUser(deps, { id: 'USER-TEST' });
     unwrap(await setModuleEnabled(deps, ctxWith(['modules.manage']), { key: 'projects', enabled: true }));
     unwrap(await applyTemplateSync(deps, ctxWith(['site.manage', 'site.view']), { dir: TEMPLATE_DIR, confirm: true }));
+  });
+
+  it('builds the site with one row of a view in its own directory, fast, and leaves the normal runs alone', async () => {
     const row = { ...(unwrap(readPublicContent(deps, activeTemplate(deps)!)).views.organization![0] as Record<string, unknown>), name: 'Einzelvorschau Verein' };
 
     const base = tmp();
@@ -71,37 +76,9 @@ describe('buildSinglePage', () => {
     expect(htmlWith(unwrap(a).dir, 'Parallel A') && htmlWith(unwrap(b).dir, 'Parallel B')).toBe(true);
   }, 120_000);
 
-  it('cuts languages the installation or the template does not have out of the row, like the public state', async () => {
-    const deps = createTestDeps({ manifests: [coreModule, projectsModule, siteModule], locales: ['de', 'en'] });
-    insertUser(deps, { id: 'USER-TEST' });
-    unwrap(await setModuleEnabled(deps, ctxWith(['modules.manage']), { key: 'projects', enabled: true }));
-    unwrap(await applyTemplateSync(deps, ctxWith(['site.manage', 'site.view']), { dir: TEMPLATE_DIR, confirm: true }));
+  /** Backlog 67 im selben Bau: Der eigene Bild-Cache verliert danach, was alt und ungebraucht ist. */
+  it('cuts languages the installation or the template does not have out of the row, like the public state, and sweeps its own image cache', async () => {
     const row = { ...(unwrap(readPublicContent(deps, activeTemplate(deps)!)).views.organization![0] as Record<string, unknown>), motto: { de: 'Hallo', fr: 'Bonjour' } };
-    const base = tmp();
-    const env = { publicUrl: 'https://example.org', staging: true, deploy: null, templateDir: TEMPLATE_DIR, cacheDir: path.join(base, 'site-build'), previewDir: path.join(base, 'site-preview') };
-    written.content = [];
-    unwrap(await buildSinglePage(deps, env, { view: 'organization', row, key: 'locales1' }));
-    const content = JSON.parse(written.content.at(-1)!) as { views: { organization: { motto: Record<string, string> }[] } };
-    expect(content.views.organization[0]!.motto).toEqual({ de: 'Hallo' });
-  }, 120_000);
-
-  it('refuses a view the template does not use and a key that is not a plain name', async () => {
-    const deps = createTestDeps({ manifests: [coreModule, projectsModule, siteModule], locales: ['de', 'en'] });
-    insertUser(deps, { id: 'USER-TEST' });
-    unwrap(await setModuleEnabled(deps, ctxWith(['modules.manage']), { key: 'projects', enabled: true }));
-    unwrap(await applyTemplateSync(deps, ctxWith(['site.manage', 'site.view']), { dir: TEMPLATE_DIR, confirm: true }));
-    const base = tmp();
-    const env = { publicUrl: 'https://example.org', staging: true, deploy: null, templateDir: TEMPLATE_DIR, cacheDir: path.join(base, 'site-build'), previewDir: path.join(base, 'site-preview') };
-    expect(await buildSinglePage(deps, env, { view: 'animals', row: {}, key: 'k1' })).toMatchObject({ ok: false, error: { type: 'conflict', code: 'viewNotInTemplate' } });
-    expect(await buildSinglePage(deps, env, { view: 'organization', row: {}, key: '../x' })).toMatchObject({ ok: false, error: { type: 'validation' } });
-  });
-
-  it('sweeps unused old variants from its own image cache after each build (Backlog 67)', async () => {
-    const deps = createTestDeps({ manifests: [coreModule, projectsModule, siteModule], locales: ['de', 'en'] });
-    insertUser(deps, { id: 'USER-TEST' });
-    unwrap(await setModuleEnabled(deps, ctxWith(['modules.manage']), { key: 'projects', enabled: true }));
-    unwrap(await applyTemplateSync(deps, ctxWith(['site.manage', 'site.view']), { dir: TEMPLATE_DIR, confirm: true }));
-    const row = unwrap(readPublicContent(deps, activeTemplate(deps)!)).views.organization![0];
     const base = tmp();
     const env = { publicUrl: 'https://example.org', staging: true, deploy: null, templateDir: TEMPLATE_DIR, cacheDir: path.join(base, 'site-build'), previewDir: path.join(base, 'site-preview') };
     const cache = path.join(singlePageRoot(env), 'img-cache');
@@ -109,7 +86,17 @@ describe('buildSinglePage', () => {
     const old = new Date(Date.now() - 40 * 86_400_000);
     for (const name of ['v1-0123456789abcdef-480.webp', 'v1-fedcba9876543210-480.webp']) writeFileSync(path.join(cache, name), 'x');
     utimesSync(path.join(cache, 'v1-0123456789abcdef-480.webp'), old, old);
-    unwrap(await buildSinglePage(deps, env, { view: 'organization', row, key: 'sweep' }));
+    written.content = [];
+    unwrap(await buildSinglePage(deps, env, { view: 'organization', row, key: 'locales1' }));
+    const content = JSON.parse(written.content.at(-1)!) as { views: { organization: { motto: Record<string, string> }[] } };
+    expect(content.views.organization[0]!.motto).toEqual({ de: 'Hallo' });
     expect(readdirSync(cache)).toEqual(['v1-fedcba9876543210-480.webp']);
   }, 120_000);
+
+  it('refuses a view the template does not use and a key that is not a plain name', async () => {
+    const base = tmp();
+    const env = { publicUrl: 'https://example.org', staging: true, deploy: null, templateDir: TEMPLATE_DIR, cacheDir: path.join(base, 'site-build'), previewDir: path.join(base, 'site-preview') };
+    expect(await buildSinglePage(deps, env, { view: 'animals', row: {}, key: 'k1' })).toMatchObject({ ok: false, error: { type: 'conflict', code: 'viewNotInTemplate' } });
+    expect(await buildSinglePage(deps, env, { view: 'organization', row: {}, key: '../x' })).toMatchObject({ ok: false, error: { type: 'validation' } });
+  });
 });

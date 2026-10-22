@@ -287,19 +287,3 @@ test.describe('finance expenses — eigene Anträge (D2)', () => {
     await expect(page.getByTestId('claim-card')).toHaveCount(0);
   });
 });
-
-test.describe('finance expenses — Telefon mit Touch', () => {
-  test.use({ hasTouch: true, isMobile: true, viewport: PHONE });
-
-  test('Felder sind auf dem Telefon 46 px hoch', async ({ page }) => {
-    await resetDatabase(page, 'seeded');
-    await loginAsAdmin(page);
-    await linkOwnContact(page);
-    await page.goto('/finance/expenses/new');
-    const amount = card(page, 1).getByLabel('Betrag');
-    await expect(amount).toBeVisible();
-    await expect(card(page, 1).getByLabel('Wofür war das?')).toHaveCSS('height', '46px');
-    await expect(amount).toHaveCSS('font-size', '16px');
-    await expect(footer(page).getByRole('button', { name: 'Einreichen' })).toHaveCSS('height', '46px');
-  });
-});

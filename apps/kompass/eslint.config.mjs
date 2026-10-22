@@ -47,8 +47,8 @@ export default [
     rules: {
       'react-hooks/rules-of-hooks': 'error',
       'react-hooks/exhaustive-deps': 'error',
-      // Gestrichene Bausteine (Fassung 0.2.6, docs/MUSTER.md). `tests/patterns/deleted-paths.test.ts` prüft, dass
-      // es die Dateien nicht gibt; das hier greift, falls jemand sie zurückholt (etwa per shadcn-CLI).
+      // Gestrichene Bausteine (Fassung 0.2.6, docs/MUSTER.md). Holt jemand eine Datei zurück (etwa per shadcn-CLI), meldet
+      // sie `tests/patterns/component-inventory.test.ts` als nicht eingeordnet; das hier sperrt den Import.
       'no-restricted-imports': [
         'error',
         {

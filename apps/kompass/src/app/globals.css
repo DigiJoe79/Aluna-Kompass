@@ -438,7 +438,8 @@ body:has(#help-panel) table:has([data-col="title"]) > tfoot > tr > [data-col="am
    angesprungenes Feld rollt über die Leiste, statt unter ihr zu verschwinden. Nur wo die Leiste klebt (`stickybar`).
    Kein Layout-Test (Einzelstelle, Laufzeit zählt). */
 @media (min-width: 640px) and (min-height: 600px) {
-  html:has([data-slot="form-action-bar"][data-placement="page"]) { scroll-padding-bottom: 5.5rem; }
+  /* An `main`, nicht an `html`: Gescrollt wird der Inhaltsbereich der Shell (Designer 2026-10-22). */
+  main:has([data-slot="form-action-bar"][data-placement="page"]) { scroll-padding-bottom: 5.5rem; }
 }
 
 /* Seitenkopf am Telefon (Runde 3, Kleinpunkt 2; 031, 062): ⋯ „Weitere Aktionen“ steht rechts in der Titelzeile, der Titel

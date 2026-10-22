@@ -16,6 +16,7 @@ import { conflict, invalid, notFound, ok, unauthorized, type Result } from '../r
 import { folderExists, mediaKindCondition, withinSubtree } from './folders';
 import { ensurePreview, hasPreview, previewFilename, readImageMeta, renderPreview } from './preview';
 import { findMediaReferences, findMediaReferencesFor } from './references';
+import type { AiKind } from './ai-labeling';
 import { IMAGE_VARIANTS, variantFilename, type ImageVariant } from './variants';
 
 export const MEDIA_MAX_BYTES = 10 * 1024 * 1024;
@@ -141,17 +142,32 @@ export async function storeMediaAsset(deps: Deps, ctx: CallContext, input: Store
  */
 /** Angemeldet, und wo ein Modul das Asset unter ein Recht stellt, dieses Recht. */
 function loadReadable(deps: Deps, ctx: CallContext, id: string): Result<MediaAssetRecord> {
+  const loaded = loadReadableWithReferences(deps, ctx, id);
+  return loaded.ok ? ok(loaded.value.record) : loaded;
+}
+
+function loadReadableWithReferences(deps: Deps, ctx: CallContext, id: string): Result<{ record: MediaAssetRecord; references: MediaReference[] }> {
   if (!ctx.userId && ctx.channel !== 'system') return unauthorized('invalidCredentials');
   const record = deps.db.select().from(mediaAssets).where(eq(mediaAssets.id, id)).get();
   if (!record) return notFound('mediaAsset', id);
+  const references = findMediaReferences(deps, record.id);
   if (ctx.channel !== 'system') {
-    for (const reference of findMediaReferences(deps, record.id)) {
+    for (const reference of references) {
       if (!reference.permission) continue;
       const denied = requirePermission(ctx, reference.permission);
       if (denied) return denied;
     }
   }
-  return ok(record);
+  return ok({ record, references });
+}
+
+/**
+ * Datensatz und Fundstellen einer Datei, ohne die Bytes — mit denselben Rechten wie die Auslieferung. Für den Dialog
+ * „Bildkennzeichnung“ an Fotokachel und Bildfeld (Spec Bildkennzeichnung beim Hochladen § 4), der Name, Art und
+ * „Verwendet“ zeigt.
+ */
+export async function getMediaAssetInfo(deps: Deps, ctx: CallContext, id: string): Promise<Result<{ record: MediaAssetRecord; references: MediaReference[] }>> {
+  return loadReadableWithReferences(deps, ctx, id);
 }
 
 export async function getMediaAsset(deps: Deps, ctx: CallContext, id: string): Promise<Result<{ record: MediaAssetRecord; bytes: Uint8Array }>> {
@@ -178,6 +194,7 @@ export async function getMediaPreview(deps: Deps, ctx: CallContext, id: string):
 export interface MediaLibraryItem {
   record: MediaAssetRecord;
   references: MediaReference[];
+  aiKind: AiKind;
 }
 
 export interface MediaListFilter {
@@ -191,6 +208,8 @@ export interface MediaListFilter {
   kind?: 'image' | 'pdf';
   /** Vorgabe newest */
   sort?: 'newest' | 'oldest' | 'name' | 'size';
+  /** Nur Dateien, die nirgends verwendet werden. */
+  unused?: boolean;
 }
 
 /** Ein Schema für alle Kanäle: MCP-Werkzeug, Route Handler, Seite. */
@@ -200,6 +219,7 @@ export const mediaListFilterSchema = z.object({
   query: z.string().max(200).optional(),
   kind: z.enum(['image', 'pdf']).optional(),
   sort: z.enum(['newest', 'oldest', 'name', 'size']).optional(),
+  unused: z.boolean().optional(),
 });
 
 /**
@@ -225,10 +245,14 @@ export async function listMediaAssets(deps: Deps, ctx: CallContext, filter: Medi
   }[filter.sort ?? 'newest'];
   const rows = deps.db.select().from(mediaAssets).where(conditions.length ? and(...conditions) : undefined).orderBy(...order).all();
   const references = findMediaReferencesFor(deps, rows.map((record) => record.id));
-  const items = rows.map((record) => ({ record, references: references.get(record.id) ?? [] }));
+  const items: MediaLibraryItem[] = rows.map((record) => ({
+    record,
+    references: references.get(record.id) ?? [],
+    aiKind: (record.aiKind ?? 'none') as AiKind,
+  }));
   const q = filter.query?.trim().toLowerCase();
-  if (!q) return ok(items);
-  return ok(items.filter((it) => it.record.filename.toLowerCase().includes(q) || it.references.some((r) => r.label.toLowerCase().includes(q))));
+  const matching = q ? items.filter((it) => it.record.filename.toLowerCase().includes(q) || it.references.some((r) => r.label.toLowerCase().includes(q))) : items;
+  return ok(filter.unused ? matching.filter((it) => it.references.length === 0) : matching);
 }
 
 const deleteInput = z.object({ id: z.string().min(1) });

@@ -344,6 +344,7 @@
       "usage": "Verwendung"
     },
     "unused": "nicht verwendet",
+    "unusedOnly": "Nur nicht verwendete",
     "listTruncated": "Es werden die ersten {shown} von {matching} Dateien gezeigt. Grenzen Sie die Liste mit einem Ordner, der Suche oder der Art ein.",
     "mimeTypes": {
       "png": "PNG-Bild",
@@ -351,6 +352,29 @@
       "webp": "WebP-Bild",
       "svg": "SVG-Grafik",
       "pdf": "PDF-Dokument"
+    },
+    "aiKind": {
+      "label": "Bildkennzeichnung",
+      "none": "Keine",
+      "edited": "Bearbeitet",
+      "generated": "Mit KI erstellt",
+      "hint": "Bearbeitet: Der Bildinhalt wurde verändert, etwa Personen entfernt oder unkenntlich gemacht. Licht, Farbe und Ausschnitt allein kennzeichnen Sie nicht.",
+      "badgeEdited": "Bearbeitet",
+      "badgeGenerated": "KI erstellt"
+    },
+    "aiKindSaved": "Bildkennzeichnung gespeichert.",
+    "labeling": {
+      "title": "Bildkennzeichnung",
+      "uploaded": "{count, plural, one {1 Bild hochgeladen} other {# Bilder hochgeladen}}. Ändern Sie die Kennzeichnung nur, wenn ein Bild bearbeitet oder mit KI erstellt ist. Sie gilt überall, wo das Bild verwendet wird.",
+      "uploadedIn": "{count, plural, one {1 Bild hochgeladen} other {# Bilder hochgeladen}} {where, select, folder {in „{folder}“} other {ohne Ordner}}. Ändern Sie die Kennzeichnung nur, wenn ein Bild bearbeitet oder mit KI erstellt ist. Sie gilt überall, wo das Bild verwendet wird.",
+      "later": "Ändern Sie die Kennzeichnung nur, wenn das Bild bearbeitet oder mit KI erstellt ist.",
+      "footer": "Jede Wahl wird sofort gespeichert.",
+      "laterFooter": "Wird sofort gespeichert, nicht erst mit {target}. Gilt überall, wo das Bild verwendet wird.",
+      "done": "Fertig",
+      "apply": "Übernehmen",
+      "label": "Kennzeichnen …",
+      "alreadyLabeled": "Lag schon in der Mediathek, schon gekennzeichnet.",
+      "usage": "Verwendet"
     },
     "captionMore": "{label} und {count, plural, one {# weitere} other {# weitere}}",
     "view": {
@@ -563,6 +587,12 @@
       "parentMissing": { "reason": "Den übergeordneten Ordner „{name}“ gibt es nicht.", "remedy": "Legen Sie ihn zuerst an." },
       "movedInBetween": { "reason": "Inzwischen wurde es an anderer Stelle verschoben.", "remedy": "Laden Sie die Seite neu und verschieben Sie es von dort." }
     },
+    "media": {
+      "aiLabelingDisabled": {
+        "reason": "Die Bildkennzeichnung ist ausgeschaltet.",
+        "remedy": "Einschalten unter Einrichtung → Stammdaten → Medien."
+      }
+    },
     "humanOnly": "Das geht nur hier in Kompass, nicht über einen Agenten.",
     "humanOnlyFor": {
       "members": "Das geht über einen Agenten erst, wenn der Verein es freigibt: Einrichtung → Mitglieder → Nummern und Fristen → „Darf ein Agent Mitglieder aufnehmen, Läufe starten und Briefe ausstellen?“ einschalten.",
@@ -665,7 +695,28 @@
       "deployCredentialsUnusable": "Die Zugangsdaten für das Ziel sind nicht nutzbar: {detail}",
       "deployCheckFailed": "Der Verbindungstest ist fehlgeschlagen: {detail}",
       "previewFailed": "Die Vorschau ist fehlgeschlagen: {detail}",
-      "viewNotInTemplate": "Die Vorlage der Webseite nutzt diese Sicht nicht."
+      "viewNotInTemplate": "Die Vorlage der Webseite nutzt diese Sicht nicht.",
+      "animalNotAdopted": "Eine Erfolgsgeschichte gibt es nur für vermittelte Tiere. Setzen Sie den Status zuerst auf „Vermittelt“.",
+      "bundleEmpty": "In dieser Auswahl liegt kein festgeschriebenes Dokument. Wählen Sie einen anderen Ordner oder ein anderes Jahr.",
+      "bundleTooLarge": "{detail}",
+      "documentAlreadyVoided": "Das Dokument ist bereits storniert.",
+      "documentAltered": "Die Datei dieses Dokuments wurde außerhalb von Kompass verändert und wird deshalb nicht ausgeliefert. Wenden Sie sich an die Administration; der Vorfall steht im Änderungsprotokoll.",
+      "documentHasNoFile": "Dieses Dokument hat keine Datei, aus der sich Text lesen ließe.",
+      "documentIsFiled": "Das Dokument ist schon festgeschrieben und lässt sich nicht mehr ändern. Laden Sie die Seite neu.",
+      "documentNumberContention": "Die Nummer ließ sich gerade nicht vergeben, weil zur selben Zeit ein anderes Dokument abgelegt wurde. Versuchen Sie es noch einmal.",
+      "documentTooManyPages": "{detail}. Kürzen Sie den Inhalt und erzeugen Sie das Dokument erneut.",
+      "documentTypeExists": "Eine Dokumentart mit diesem Schlüssel gibt es schon. Wählen Sie einen anderen Schlüssel.",
+      "documentTypeHasDocuments": "Zu dieser Dokumentart gibt es schon Dokumente, deshalb lässt sie sich nicht löschen. Schalten Sie sie stattdessen ab.",
+      "documentTypeInUse": "Zu dieser Dokumentart gibt es schon Dokumente. Ihr Präfix steht in deren Nummern und bleibt deshalb, wie es ist.",
+      "documentTypeIsDefault": "Diese Dokumentart ist die Vorgabe für eingehende oder ausgehende Post. Stellen Sie dort zuerst eine andere Art ein.",
+      "documentTypeOwnedByModule": "Dokumente dieser Art verwaltet ein anderes Modul; ändern oder stornieren lassen sie sich nur dort.",
+      "documentTypePrefixTaken": "Dieses Präfix für die Nummern trägt schon eine andere Dokumentart. Wählen Sie ein anderes.",
+      "documentTypeProvisioned": "Diese Dokumentart hat ein Modul vorgeschlagen; sie bleibt deshalb bestehen. Schalten Sie sie ab, wenn sie nicht erscheinen soll.",
+      "folderHasProtectedDocuments": "Im Ordner liegen Dokumente, die Sie nicht sehen dürfen; deshalb lässt er sich nicht löschen. Bitten Sie jemanden mit dem passenden Recht darum.",
+      "linkTypeReserved": "Diesen Bezug verwaltet ein anderes Modul; setzen oder lösen lässt er sich nur dort.",
+      "retentionRunning": "{detail}.",
+      "slugTaken": "Diesen URL-Teil hat schon ein anderes Projekt. Wählen Sie einen anderen.",
+      "textExtractionGaveUp": "Kompass hat den Text dieses Dokuments mehrmals vergeblich zu lesen versucht und versucht es nicht weiter. Das PDF ist vermutlich beschädigt oder enthält nur Bilder ohne lesbaren Text."
     },
     "site": {
       "previewOutdated": {
@@ -1773,7 +1824,8 @@
       "organization": "Verein",
       "tax": "Steuer & Bescheide",
       "bank": "Bank",
-      "branding": "Darstellung"
+      "branding": "Darstellung",
+      "media": "Medien"
     },
     "tabInvalid": "Enthält Fehler",
     "counter": "{count} von {max} Zeichen",
@@ -1811,6 +1863,21 @@
       "ui": {
         "dateFormat": "Datumsformat"
       },
+      "media": {
+        "aiLabeling": {
+          "enabled": "Bildkennzeichnung verwenden",
+          "editedMark": "Marke an bearbeiteten Bildern",
+          "mark": "Marke an erstellten Bildern",
+          "editedLabel": "Bezeichnung „bearbeitet“",
+          "generatedLabel": "Bezeichnung „erstellt“",
+          "editedNote": "Satz bei bearbeiteten Fotos",
+          "generatedNote": "Satz bei erstellten Bildern",
+          "mixedNote": "Satz bei beidem",
+          "editedNoteSingle": "Satz unter einem bearbeiteten Einzelbild",
+          "generatedNoteSingle": "Satz unter einem erstellten Einzelbild",
+          "moreLink": "Text des Links zur Erklärung"
+        }
+      },
       "animals": {
         "proposals": {
           "enabled": "Vorschläge von Quellen annehmen",
@@ -1829,14 +1896,27 @@
       "contact": "Kontakt",
       "taxOffice": "Finanzamt",
       "notice": "Bescheid",
-      "fontsAndColors": "Schrift und Farben"
+      "fontsAndColors": "Schrift und Farben",
+      "aiLabeling": "Bildkennzeichnung auf der Webseite"
     },
     "hints": {
       "registerNumberHint": "Erscheint im Briefbogen-Fuß.",
       "timeZoneHint": "Bestimmt, welcher Tag „heute“ ist.",
       "dateFormatHint": "Gilt für die Anzeige, nicht für Schriftstücke.",
       "logoHint": "Logo-Upload folgt mit der Mediathek.",
-      "themeHint": "Themes werden unter Einrichtung → Erscheinungsbild bearbeitet."
+      "themeHint": "Themes werden unter Einrichtung → Erscheinungsbild bearbeitet.",
+      "aiLabelingEnabledHint": "In der Mediathek legt ein Mensch fest, welche Bilder bearbeitet oder mit KI erstellt sind. Die Webseite zeigt daran eine Marke und die Sätze unten.",
+      "aiLabelingMarkHint": "Steht in der Marke an erstellten Bildern, zum Beispiel „KI“.",
+      "aiLabelingEditedMarkHint": "Steht in der Marke an bearbeiteten Bildern, zum Beispiel „Bearbeitet“.",
+      "aiLabelingEditedLabelHint": "Für Vorleser, in der Bildzählung und in der Legende.",
+      "aiLabelingGeneratedLabelHint": "Für Vorleser, in der Bildzählung und in der Legende.",
+      "aiLabelingEditedNoteHint": "Unter der Galerie, wenn nur bearbeitete Fotos vorkommen. '{name}' steht für den Namen des Tiers oder Projekts.",
+      "aiLabelingGeneratedNoteHint": "Unter der Galerie, wenn nur erstellte Bilder vorkommen. '{name}' steht für den Namen des Tiers oder Projekts.",
+      "aiLabelingMixedNoteHint": "Unter der Galerie, wenn beides vorkommt. '{name}' steht für den Namen des Tiers oder Projekts.",
+      "aiLabelingEditedNoteSingleHint": "Unter einem einzelnen Bild, etwa auf einer Projektseite.",
+      "aiLabelingGeneratedNoteSingleHint": "Unter einem einzelnen Bild, etwa auf einer Projektseite.",
+      "aiLabelingMoreLinkHint": "Führt zur Erklärung auf der Webseite, wenn sie eine hat.",
+      "aiLabelingDisabledWithMedia": "Es {count, plural, one {trägt noch 1 Bild} other {tragen noch {count} Bilder}} eine Bildkennzeichnung. Diese bleibt gespeichert, wird aber auf der Webseite nicht angezeigt."
     },
     "options": {
       "ui": {
@@ -2452,6 +2532,7 @@
       "media_folder_delete": "Ordner der Mediathek gelöscht",
       "media_folder_rename": "Ordner der Mediathek umbenannt",
       "media_move": "Datei verschoben",
+      "media_aiKind": "Bildkennzeichnung geändert",
       "media_upload": "Datei hochgeladen",
       "members_export": "Mitgliederliste exportiert",
       "members_fee_defer": "Beitrag gestundet",
@@ -2694,6 +2775,7 @@
       "media_folder_delete": "Ordner „{path}“ gelöscht",
       "media_folder_rename": "Ordner „{from}“ in „{to}“ umbenannt",
       "media_move": "Datei „{filename}“ {toRoot, select, true {in die oberste Ebene} other {nach „{folder}“}} verschoben",
+      "media_aiKind": "Bildkennzeichnung der Datei „{filename}“ auf {aiKind, select, none {„keine“} edited {„bearbeitet“} generated {„mit KI erstellt“} other {„{aiKind}“}} geändert",
       "media_upload": "Datei „{filename}“ hochgeladen",
       "members_export": "Mitgliederliste mit {count, plural, one {einer Zeile} other {# Zeilen}} exportiert",
       "members_fee_defer": "Beitrag von Mitglied „{memberNumber}“ bis {dueOn} gestundet",
@@ -3367,8 +3449,8 @@
         "fromSource": "von {source}",
         "fromKompass": "aus Kompass",
         "stays": "danach dabei",
-        "kompassPhoto": "Foto aus Kompass",
-        "sourcePhoto": "Foto der Quelle",
+        "kompassPhoto": "Foto {n} aus Kompass",
+        "sourcePhoto": "Foto {n} von {source}",
         "withCrop": "{name}, mit Ausschnitt",
         "primaryChoice": "Titelbild",
         "keepPrimary": "Heute behalten",
@@ -6134,7 +6216,7 @@
       },
       "columns": {
         "title": "Welche Spalte ist was?",
-        "text": "Über jeder Spalte steht, wofür Kompass sie nimmt. Was Sie nicht brauchen, bleibt auf „ignorieren“.",
+        "text": "Wählen Sie für jede Spalte, wofür Kompass sie nimmt. Spalten ohne Rolle bleiben auf „ignorieren“.",
         "roleLabel": "Rolle der Spalte „{column}“",
         "roles": {
           "ignore": "ignorieren",
@@ -6157,7 +6239,32 @@
         },
         "indicatorValues": "Werte für „Ausgang“",
         "pendingValues": "Werte für „vorgemerkt“",
-        "valuesHint": "durch Komma getrennt",
+        "valuesHint": "Durch Komma getrennt. In der Spalte stehen: {values}.",
+        "valuesHintPlain": "Durch Komma getrennt.",
+        "required": "Pflicht",
+        "requiredItems": {
+          "bookingDate": "Buchungstag",
+          "amount": "Betrag",
+          "nameOrPurpose": "Name oder Verwendungszweck",
+          "indicatorValues": "Werte für „Ausgang“",
+          "pendingValues": "Werte für „vorgemerkt“"
+        },
+        "requiredColumn": "„{column}“",
+        "requiredDone": "erfüllt",
+        "missingItem": "fehlt",
+        "missing": "fehlt: eine Spalte mit Vorzeichen oder zwei für Ausgang und Eingang",
+        "guessed": "vorbelegt",
+        "guessedLine": "{count, plural, one {Eine Spalte hat Kompass aus ihrem Namen vorbelegt. Bitte prüfen Sie diese Zeile.} other {# Spalten hat Kompass aus ihren Namen vorbelegt. Bitte prüfen Sie diese Zeilen.}}",
+        "withRole": "Mit Rolle",
+        "withRoleOnEntry": "Beim Öffnen mit Rolle",
+        "more": "Weitere Spalten",
+        "moreSummary": "{withRole} mit Rolle, {ignored} ignoriert",
+        "search": "Spalte oder Wert suchen",
+        "searchShort": "Suchen",
+        "noMatch": "Keine Spalte passt zu „{query}“.",
+        "empty": "leer in allen {rows} Zeilen",
+        "barOpen": "Noch offen: {what}",
+        "barDone": "{count, plural, one {Alle Pflichtrollen vergeben · # Spalte mit Rolle} other {Alle Pflichtrollen vergeben · # Spalten mit Rolle}}",
         "reasons": {
           "settingsMissing": "Wählen Sie im Schritt davor Datumsformat und Dezimalzeichen.",
           "dateMissing": "Wählen Sie die Spalte mit dem Buchungstag.",
@@ -10225,7 +10332,10 @@
       "result": {
         "fees": "{created, plural, one {# Beitrag} other {# Beiträge}} angelegt, {notices, plural, one {# Mitteilung} other {# Mitteilungen}} erzeugt.",
         "letters": "{count, plural, one {# Brief} other {# Briefe}} erzeugt.",
-        "noLetters": "Keine Briefe zu versenden."
+        "noLetters": "Keine Briefe zu versenden.",
+          "restricted": "{count, plural, one {Eine Ankündigung an einen Kontoinhaber gehört} other {# Ankündigungen an Kontoinhaber gehören}} zu diesem Lauf. Dafür braucht es Finanzrechte; versenden kann sie, wer diese Rechte hat.",
+          "prenotificationRefused": "{count, plural, one {Für ein Mitglied fehlt} other {Für # Mitglieder fehlt}} die Ankündigung an den Kontoinhaber. Sie konnte nicht entstehen, meist fehlen Finanzrechte. Die Einzugsvorschau der Finanzen hält diese Beiträge zurück, bis eine Ankündigung vorliegt.",
+          "noticesRefused": "{count, plural, one {Eine Mitteilung konnte} other {# Mitteilungen konnten}} nicht erzeugt werden, etwa ohne Anschrift."
       },
       "earlier": {
         "title": "Frühere Läufe",

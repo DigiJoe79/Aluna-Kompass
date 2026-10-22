@@ -127,6 +127,7 @@ export const mediaAssets = sqliteTable('media_assets', {
   folder: text('folder'), // null = Wurzel; sonst ein Pfad aus media_folders
   /** Vollständige SHA-256, hexadezimal. Der Dateiname trägt nur die ersten zwölf Stellen. */
   checksum: text('checksum'),
+  aiKind: text('ai_kind', { enum: ['none', 'edited', 'generated'] }).notNull().default('none'),
 });
 
 /** Virtuelle Ordner der Mediathek. Die Dateien liegen flach unter MEDIA_PATH. */

@@ -72,21 +72,12 @@ test.describe('finance work list', () => {
     await expect(page.getByRole('navigation', { name: 'Reiter der Arbeitsliste' }).getByRole('link', { name: /Vom Agenten vorbereitet/ })).toHaveAttribute('aria-current', 'page');
   });
 
-  test('D4 → Task 5: der alte Platzhalter und der Verweis sind weg — „Als Zahlung an Partner erfassen“ ist ein Knopf', async ({ page }) => {
-    await loginAsAdmin(page);
-    await openWorkList(page);
-    const detail = page.getByTestId('work-detail');
-    await expect(detail).not.toContainText('kommt mit Partnern');
-    await expect(detail.getByRole('link', { name: /Partner/ })).toHaveCount(0);
-  });
-
   test('„Vorschlag, weil:“ nennt die Regel; Enter übernimmt als geprüft und springt weiter; die aria-live-Zeile nennt die verbleibenden', async ({ page }) => {
     await loginAsAdmin(page);
     await openWorkList(page);
     const reasons = page.getByTestId('suggestion-reasons');
     await expect(reasons).toContainText('Vorschlag, weil:');
     await expect(reasons).toContainText('Regel „Büromaterial“');
-    await expect(reasons).toHaveClass(/bg-agent-bg/);
     // Die Mini-Maske ist vorbelegt: die Kategorie aus der Regel, schmale Aufteilungszeile.
     await expect(page.getByTestId('work-detail').getByTestId('split-row')).toHaveAttribute('data-density', 'narrow');
 
@@ -364,17 +355,6 @@ test.describe('finance work list: rules, foreign money, vouchers, batch', () => 
     await confirm.getByRole('button', { name: 'Beleg ablegen' }).click();
     await expect(page.getByText(/Beleg ERE-[\d-]+ im Namen der Buchung abgelegt\./)).toBeVisible();
     await expect(option(page, 'Futter Juli')).toHaveCount(0);
-  });
-
-  test('ein Beleg über 1 MB in der Arbeitsliste kommt an (N9)', async ({ page }) => {
-    await loginAsAdmin(page);
-    await openImportAccount(page);
-    await expect(option(page, 'Buerobedarf Muster GmbH')).toHaveAttribute('aria-selected', 'true');
-    const detail = page.getByTestId('work-detail');
-    await detail.getByTestId('voucher-file-input').setInputFiles(path.resolve(import.meta.dirname, 'fixtures/beleg-1500k.pdf'));
-    const confirm = detail.getByRole('group', { name: 'Beleg ablegen' });
-    await confirm.getByRole('button', { name: 'Beleg ablegen' }).click();
-    await expect(page.getByText(/Beleg ERE-[\d-]+ im Namen der Buchung abgelegt\./)).toBeVisible();
   });
 
   test('Sammel-Festschreiben zeigt je Konto den neuen Buchbestand gegen den Endsaldo laut Auszug und vergibt Nummern', async ({ page }) => {

@@ -9,6 +9,70 @@ die Nummern folgen [Semantic Versioning](https://semver.org/lang/de/). Vor
 1.0.0 kann jede Minor-Fassung Brüche enthalten — was bricht, steht unter
 **Geändert** mit dem, was zu tun ist.
 
+## [0.3.1] - 2026-10-22
+
+Diese Fassung bringt die **Bildkennzeichnung**: Bilder lassen sich als „Bearbeitet“ (Bildinhalt verändert, etwa
+Personen unkenntlich gemacht) oder „Mit KI erstellt“ kennzeichnen, gleich beim Hochladen, und die Webseite zeigt es
+mit einer Marke am Bild und einem Satz unter der Galerie. Dazu ein übersichtlicherer Spaltenschritt im CSV-Assistenten,
+eine ruhigere Speicherleiste und eine Reihe kleiner Fehlerbehebungen. Eine Migration (`0010`, `migrationCount` 11):
+eine neue Spalte an den Dateien der Mediathek und Sperren in den Finanzen, damit sich der Versandvermerk einer
+Zuwendungsbestätigung, die Warnungen eines abgeschlossenen Einlesens und die Herkunft eingelesener Umsätze später nicht
+mehr ändern lassen. Bestehende Daten bleiben. Nichts bricht; die Bildkennzeichnung ist zuerst aus. Eigene
+Webseiten-Vorlagen zeigen an bearbeiteten Bildern die Marke erstellter Bilder, bis sie die neue Marke lesen
+(`editedMark` in der Sicht `aiLabeling`); die mitgelieferte `verein-basis` tut das schon.
+
+### Hinzugefügt
+
+- Mediathek: Bildkennzeichnung — Bilder lassen sich als „Bearbeitet“ (Bildinhalt verändert, etwa Personen unkenntlich
+  gemacht) oder „Mit KI erstellt“ kennzeichnen. Eingeschaltet wird das in den Stammdaten, Reiter „Medien“, mit den
+  Texten für die Webseite je Sprache. Die Webseite zeigt eine kleine Marke am Bild und einen Satz unter der Galerie;
+  die mitgelieferte Grundvorlage `verein-basis` zeigt die Marke. Gekennzeichnet wird gleich beim Hochladen: Ein kurzer
+  Schritt fragt je Bild; nachträglich geht es an der Fotokachel eines Tiers und am Bildfeld („Kennzeichnen …“).
+- Tiere: Die Fotokachel zeigt ihre Aktionen als Symbole in einer Zeile; die Marke „Hauptfoto“ steht auf dem Bild.
+- Mediathek: Filter „Nur nicht verwendete“ zeigt Dateien, die nirgends eingebunden sind, auch für Agenten.
+
+### Geändert
+
+- CSV-Format einrichten: Der Schritt „Spalten“ zeigt jede Spalte der Datei als Zeile, oben, was noch fehlt; unwichtige
+  Spalten liegen eingeklappt und lassen sich durchsuchen.
+- Betrieb: Ein Update von einer Fassung vor 0.3.0 geht über 0.3.0 — erst 0.3.0 einspielen und einmal starten, dann
+  diese Fassung. Die Webseite liest Lauf- und Sperrdateien aus 0.2.4 und älter nicht mehr.
+- Formulare: Die Speicherleiste sitzt beim Scrollen bündig am unteren Rand. Darunter scrollt nichts mehr durch, und der
+  Inhalt darüber blendet weich aus, statt abgeschnitten zu wirken.
+- Mediathek: „nicht verwendet“ steht an der Kachel an der Stelle der Verwendung, der Dateiname bleibt lesbar.
+- Prüfung: Die automatischen Tests sind verschlankt (doppelte und an Wortlaut gebundene Fälle gestrichen); ein
+  Prüflauf ist deutlich kürzer.
+
+### Behoben
+
+- Seiten ließen sich unten über das Ende hinaus scrollen, bis zu einer leeren Fläche unter Navigation und Inhalt (etwa Startseite, Journal, Backup, Konten).
+- Listen: Ein Klick in eine Zeile öffnete den Eintrag nur noch über den Link in der ersten Spalte.
+- Kontoauszug: Zwei Zahlungen verschiedener Menschen am selben Tag über denselben Betrag wurden als „wahrscheinlich
+  dieselbe Zahlung“ zurückgehalten. Jetzt muss der Zahler stimmen (IBAN, ohne IBAN der Name).
+- Mitglieder: Der Filter „Mitgliedsart“ bot auch abgeschaltete Arten an. Jetzt stehen dort nur die aktiven.
+- Vorschläge zu Tieren: Fotos einer angebundenen Quelle hießen nach ihrer internen Kennung. Jetzt heißen sie nach
+  Herkunft und Stelle („Foto 2 von …“), und die Wahl des Titelbilds zeigt beide Bilder.
+- Hunde- und Kontaktliste am Telefon: Ort und Kontaktweg stehen in einer eigenen Zeile, statt mit Einzug umzubrechen.
+- Beitragslauf ohne Finanzrechte: Eine Ankündigung an einen fremden Kontoinhaber ließ den ganzen Versand mit
+  „keine Briefe“ stehen. Jetzt gehen die übrigen Briefe hinaus, und der Lauf nennt, was Finanzrechte braucht oder
+  nicht entstehen konnte.
+- Webseite: Startete man eine Vorschau oder das Publizieren, während ein anderer Lauf lief, nannte die Meldung nur
+  einen Rohwert („deployCheck“). Jetzt sagt sie, welcher Lauf läuft.
+- Akte und Mediathek beim Ziehen: Der Eingangskorb zählt sofort mit, „Rückgängig“ trifft auch nach zwei schnellen
+  Zügen das richtige Ziel, ein gesperrtes Ziel zeigt den Sperr-Cursor, und eine über einem offenen Dialog losgelassene
+  Datei lädt nicht mehr still hoch. Der Auswahldialog merkt sich den Ordner für Bilder und PDFs getrennt, und
+  Kacheln in „Alle Dateien“ nennen ihren Ordner.
+- Akte, Webseite und Tiere: Rund zwanzig Ablehnungen zeigten einen technischen Text statt eines Satzes. „Stornieren“
+  und „Lösen“ stehen an einem Dokument nur noch, wo sie auch gehen.
+- Anmeldung am Telefon: Die Anmeldekarte passt sich der sichtbaren Höhe an, auch wenn die Adressleiste ein- und
+  ausfährt.
+
+### Sicherheit
+
+- Next.js auf 16.4.1: behebt eine Überlast über präparierte Anfragen an Server Actions und zwei Lücken,
+  die Kompass nicht betreffen (Bildoptimierung, `use cache`). Abhängigkeiten der Entwicklungswerkzeuge
+  (`vite`, MCP-SDK der shadcn-CLI, `hono`) sind ebenfalls aktualisiert; sie liegen nicht im Image.
+
 ## [0.3.0] - 2026-10-19
 
 Diese Fassung bringt drei große Stücke: das Modul **Mitglieder** mit

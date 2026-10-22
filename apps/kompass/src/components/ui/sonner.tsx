@@ -16,37 +16,51 @@ export const TOAST_CLASSES = {
   error: "border-error! bg-error-bg!",
 } as const
 
-/** Klebende Fußleisten, über denen ein Toast steht: die Speicherleiste, solange sie klebt, und die Auswahlleiste. */
-const STICKY_BARS = '[data-slot="form-action-bar"][data-stuck], [data-slot="selection-bar"]'
-
 /**
- * Abstand des Toasts nach unten (Designer 2026-10-16, Teil 3 Nr. 12): über einer klebenden Leiste Leistenhöhe + 16 px,
- * sonst die Vorgabe von sonner.
+ * Fußleisten, über denen ein Toast steht: die Speicherleiste einer Seite und die Auswahlleiste. Nicht nur, solange sie
+ * klebt — auch eine kurze Maske, die gar nicht scrollt, hat ihre Leiste unten am Fenster, und ein Toast mit dem
+ * Vorgabeabstand läge dann auf „Speichern“ (E2E site-entries, 2026-10-22).
+ */
+const BOTTOM_BARS = '[data-slot="form-action-bar"][data-placement="page"], [data-slot="selection-bar"]'
+/** Ab diesem Abstand zum unteren Fensterrand gilt eine Leiste als „unten“ (Vorgabeabstand von sonner + Toasthöhe). */
+const NEAR_BOTTOM_PX = 96
+/**
+ * Abstand des Toasts nach unten (Designer 2026-10-16, Teil 3 Nr. 12): über einer Leiste am unteren Rand deren Abstand
+ * vom Rand bis zu ihrer Oberkante + 16 px, sonst die Vorgabe von sonner.
  */
 export function toastBottomOffset(barHeight: number): number | undefined {
   return barHeight > 0 ? Math.round(barHeight) + 16 : undefined
 }
-
-/** Höhe der höchsten klebenden Leiste; folgt dem DOM, weil die Speicherleiste erst beim Scrollen klebt. */
-function useStickyBarHeight(): number {
-  const [height, setHeight] = useState(0)
+/** Wie weit die höchste Leiste am unteren Rand in das Fenster ragt; folgt DOM, Scrollen und Fenstergröße. */
+function useBottomBarReach(): number {
+  const [reach, setReach] = useState(0)
   useEffect(() => {
     const measure = () => {
-      const bars = Array.from(document.querySelectorAll<HTMLElement>(STICKY_BARS))
-      setHeight(Math.max(0, ...bars.map((bar) => bar.getBoundingClientRect().height)))
+      const height = window.innerHeight
+      const reaches = Array.from(document.querySelectorAll<HTMLElement>(BOTTOM_BARS))
+        .map((bar) => bar.getBoundingClientRect())
+        .filter((r) => r.height > 0 && r.top < height && height - r.bottom <= NEAR_BOTTOM_PX)
+        .map((r) => height - r.top)
+      setReach(Math.max(0, ...reaches))
     }
     const observer = new MutationObserver(measure)
     observer.observe(document.body, { subtree: true, childList: true, attributes: true, attributeFilter: ["data-stuck"] })
+    // Scrollen geschieht in `main`, nicht im Dokument: in der Erfassungsphase hören, damit jedes Scrollen zählt.
+    document.addEventListener("scroll", measure, { capture: true, passive: true })
+    window.addEventListener("resize", measure)
     measure()
-    return () => observer.disconnect()
+    return () => {
+      observer.disconnect()
+      document.removeEventListener("scroll", measure, { capture: true })
+      window.removeEventListener("resize", measure)
+    }
   }, [])
-  return height
+  return reach
 }
-
 // Kein Layout-Test der Lage (Einzelstelle, Laufzeit zählt — Projektregel); `toastBottomOffset` ist geprüft.
 const Toaster = ({ ...props }: ToasterProps) => {
   const { theme = "system" } = useTheme()
-  const bottom = toastBottomOffset(useStickyBarHeight())
+  const bottom = toastBottomOffset(useBottomBarReach())
 
   return (
     <div role="status">

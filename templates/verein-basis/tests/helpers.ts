@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process';
-import { cpSync, existsSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
@@ -9,7 +9,11 @@ const dirs: string[] = [];
 
 /** Baut das Template gegen die Beispiel-Fixture, wie es die Publish-Pipeline tut. */
 export function build(env: Record<string, string> = {}): string {
-  const out = mkdtempSync(path.join(tmpdir(), 'verein-basis-dist-'));
+  // Astro verschiebt fertige Dateien per rename aus `.astro/` in die Ausgabe. Liegt die auf einem anderen Dateisystem
+  // (GitHub-Runner: /tmp), scheitert das mit EXDEV — deshalb neben der Vorlage, nicht unter tmpdir() (CI 2026-10-22).
+  const base = path.join(ROOT, 'node_modules', '.cache');
+  mkdirSync(base, { recursive: true });
+  const out = mkdtempSync(path.join(base, 'verein-basis-dist-'));
   dirs.push(out);
   const contentDir = env.SITE_CONTENT_DIR ?? FIXTURE;
   const r = spawnSync('pnpm', ['exec', 'astro', 'build', '--outDir', out], {
@@ -46,6 +50,17 @@ export function fixtureWithout(overrides: Record<string, string>): string {
   const file = path.join(dir, 'content.json');
   const content = JSON.parse(readFileSync(file, 'utf8')) as { views: { organization: Record<string, string>[] } };
   content.views.organization[0] = { ...content.views.organization[0]!, ...overrides };
+  writeFileSync(file, JSON.stringify(content, null, 2));
+  return dir;
+}
+
+export function fixtureWithoutAiLabeling(): string {
+  const dir = mkdtempSync(path.join(tmpdir(), 'verein-basis-fixture-'));
+  dirs.push(dir);
+  cpSync(FIXTURE, dir, { recursive: true });
+  const file = path.join(dir, 'content.json');
+  const content = JSON.parse(readFileSync(file, 'utf8')) as { views: Record<string, unknown> };
+  delete content.views.aiLabeling;
   writeFileSync(file, JSON.stringify(content, null, 2));
   return dir;
 }

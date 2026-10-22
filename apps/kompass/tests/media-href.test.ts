@@ -13,6 +13,13 @@ describe('mediaHref', () => {
   });
 });
 
+describe('mediaHref: nur nicht verwendete', () => {
+  it('is a filter in the address, next to the place', () => {
+    expect(mediaHref({ folder: 'Bilder', unfiled: false, q: '', kind: 'all', sort: 'newest', unused: true })).toBe('/admin/media?folder=Bilder&unused=1');
+    expect(mediaHref({ folder: null, unfiled: false, q: '', kind: 'all', sort: 'newest', unused: false })).toBe('/admin/media');
+  });
+});
+
 describe('formatBytes', () => {
   it('shows KB below a megabyte and MB with one decimal above', () => {
     expect(formatBytes(500)).toBe('1 KB');

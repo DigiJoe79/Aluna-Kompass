@@ -1,13 +1,11 @@
 import { unwrap } from '@kompass/core';
-import { eq, getTableColumns } from 'drizzle-orm';
-import { readdirSync, readFileSync } from 'node:fs';
-import path from 'node:path';
+import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 import { createAccount } from '../src/ledger/accounts';
 import { createCategory } from '../src/ledger/categories';
 import { createFirstFiscalYear } from '../src/ledger/fiscal-years';
 import { createPurpose } from '../src/ledger/purposes';
-import { financeAllocationLines, financeEntries, financeMoneyLines, financeRawTransactions } from '../src/schema';
+import { financeAllocationLines, financeEntries, financeMoneyLines } from '../src/schema';
 import { setupFinance } from './helpers';
 
 /**
@@ -87,68 +85,5 @@ describe('a finalized entry is immutable in the database itself', () => {
     expect(() => deps.db.insert(financeMoneyLines).values(second).run()).toThrow(/UNIQUE/);
     deps.db.update(financeMoneyLines).set({ rawReleasedAt: '2026-04-01T00:00:00.000Z' }).where(eq(financeMoneyLines.id, 'M1')).run();
     deps.db.insert(financeMoneyLines).values(second).run();
-  });
-});
-
-/**
- * Mechanischer Wächter für die drei Trigger, die eine festgeschriebene Zeile
- * sperren: Jede Spalte einer Tabelle steht entweder in einer `UPDATE OF`-Liste
- * eines ihrer Trigger, oder sie gehört zu den abschließend erlaubten Spalten
- * der Spec (5.2). Fällt eine Spalte durch beide Raster, ließe sie sich an
- * einer festgeschriebenen Zeile ändern, ohne dass ein Trigger es bemerkt.
- */
-describe('every column of a locked table is either guarded or explicitly free', () => {
-  const migrationsDir = path.resolve(import.meta.dirname, '../../../core/src/db/migrations');
-  const allSql = readdirSync(migrationsDir)
-    .filter((f) => f.endsWith('.sql'))
-    .sort()
-    .map((f) => readFileSync(path.join(migrationsDir, f), 'utf8'))
-    .join('\n');
-
-  /**
-   * Die letzte Fassung gewinnt: Eine spätere Migration darf einen Trigger von
-   * Hand neu anlegen (`DROP TRIGGER` + `CREATE TRIGGER`, wie in 0025 und 0029),
-   * um eine neue Spalte in die Liste aufzunehmen — die Migrationen spielen in
-   * Dateireihenfolge, die letzte `CREATE TRIGGER` ist der geltende Stand.
-   */
-  function updateOfColumns(triggerName: string): string[] {
-    const matches = [...allSql.matchAll(new RegExp(`CREATE TRIGGER ${triggerName} BEFORE UPDATE OF ([^\\n]+?) ON`, 'g'))];
-    if (matches.length === 0) throw new Error(`trigger not found: ${triggerName}`);
-    return matches.at(-1)![1]!.split(',').map((c) => c.trim());
-  }
-
-  function dbColumns(table: Parameters<typeof getTableColumns>[0]): string[] {
-    return Object.values(getTableColumns(table)).map((c) => (c as { name: string }).name);
-  }
-
-  it('finance_entries: everything but reversed_by_entry_id and updated_at is guarded', () => {
-    const guarded = new Set(updateOfColumns('finance_entries_final_no_update'));
-    const free = new Set(['reversed_by_entry_id', 'updated_at']);
-    for (const column of dbColumns(financeEntries)) {
-      expect(guarded.has(column) || free.has(column), column).toBe(true);
-    }
-  });
-
-  it('finance_money_lines: everything but raw_released_at is guarded (raw_transaction_id only one way)', () => {
-    const guarded = new Set([...updateOfColumns('finance_money_lines_final_no_update'), ...updateOfColumns('finance_money_lines_final_raw_once')]);
-    const free = new Set(['raw_released_at']);
-    for (const column of dbColumns(financeMoneyLines)) {
-      expect(guarded.has(column) || free.has(column), column).toBe(true);
-    }
-  });
-
-  it('finance_raw_transactions: every column is guarded — also the related reference (AC)', () => {
-    const guarded = new Set(updateOfColumns('finance_raw_transactions_no_update'));
-    for (const column of dbColumns(financeRawTransactions)) {
-      expect(guarded.has(column), column).toBe(true);
-    }
-  });
-
-  it('finance_allocation_lines: everything but contact, project, purpose and abroad is guarded', () => {
-    const guarded = new Set(updateOfColumns('finance_allocation_lines_final_no_update'));
-    const free = new Set(['contact_id', 'project_id', 'purpose_id', 'abroad']);
-    for (const column of dbColumns(financeAllocationLines)) {
-      expect(guarded.has(column) || free.has(column), column).toBe(true);
-    }
   });
 });

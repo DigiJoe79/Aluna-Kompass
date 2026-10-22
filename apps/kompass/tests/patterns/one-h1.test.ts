@@ -1,6 +1,6 @@
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { type Allowlist, openingTags, read, relative, sourceFiles, SRC } from './source';
+import { type Allowlist, openingTags, read, relative, sourceFiles, SRC, allowlistHygiene, staleKeys } from './source';
 
 /**
  * Genau ein `h1` je Seite: der Titel im `PageHeader` (Spec Seitenkopf § 2). Bis 0.2.8 war die Brotkrume das
@@ -8,7 +8,7 @@ import { type Allowlist, openingTags, read, relative, sourceFiles, SRC } from '.
  * wäre ein zweites. Grenze: Eine Seite ganz ohne `PageHeader`-Titel fängt dieser Test nicht — das prüft der E2E
  * in `shell.spec.ts`, und nur auf den Seiten, die er besucht.
  */
-const ALLOWED: Allowlist = {
+export const ALLOWED: Allowlist = {
   'components/page-header.tsx': 'Hier steht der Seitentitel.',
   'components/auth-card.tsx': 'Anmelde- und Einrichtungsseiten außerhalb der Schale, ohne PageHeader.',
   'app/global-error.tsx': 'Ersetzt das Wurzel-Layout samt Schale, ohne Bausteine und Tokens; ihr Titel ist das einzige h1.',
@@ -29,8 +29,5 @@ describe('ein h1 je Seite', () => {
     expect(hits.filter(({ file }) => file === 'components/page-header.tsx')).toHaveLength(1);
   });
 
-  it('jede Ausnahme ist noch nötig', () => {
-    const using = new Set(hits.map(({ file }) => file));
-    expect(Object.keys(ALLOWED).filter((file) => !using.has(file))).toEqual([]);
-  });
+  allowlistHygiene(ALLOWED, () => staleKeys(ALLOWED, hits.map(({ file }) => file)));
 });

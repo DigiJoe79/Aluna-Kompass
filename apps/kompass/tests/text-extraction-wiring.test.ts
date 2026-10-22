@@ -5,12 +5,15 @@ import { describe, expect, it } from 'vitest';
 const root = path.join(import.meta.dirname, '../../..');
 const read = (p: string) => readFileSync(path.join(root, p), 'utf8');
 
+/** Dass Next das Paket übersetzt, prüft `transpile-packages.test.ts` für jede `@kompass`-Abhängigkeit der App. */
 describe('Texterkennung ist verpackt', () => {
-  it('das Image bringt Tesseract, die Sprachdaten und Poppler mit', () => {
+  it('Image und CI (vor dem E2E-Lauf) bringen Tesseract, die Sprachdaten und Poppler mit', () => {
     const dockerfile = read('Dockerfile');
+    const ci = read('.github/workflows/ci.yml');
 
     for (const pkg of ['tesseract-ocr', 'tesseract-ocr-deu', 'tesseract-ocr-eng', 'poppler-utils']) {
-      expect(dockerfile).toContain(pkg);
+      expect(dockerfile, pkg).toContain(pkg);
+      expect(ci, pkg).toContain(pkg);
     }
   });
 
@@ -41,10 +44,6 @@ describe('Texterkennung ist verpackt', () => {
     }
   });
 
-  it('das neue Paket wird von Next übersetzt', () => {
-    expect(read('apps/kompass/next.config.ts')).toContain('@kompass/text-extraction');
-  });
-
   it('die Anwendung setzt die echte Umsetzung ein, nicht die Attrappe', () => {
     const deps = read('apps/kompass/src/lib/deps.ts');
 
@@ -53,9 +52,5 @@ describe('Texterkennung ist verpackt', () => {
     // Sammel-PDFs (Finanzen F6b): ohne diese Zeile fiele `deps.pdf` auf die Attrappe, die wirft.
     expect(deps).toContain('pdf: createPdfTools()');
     expect(deps).not.toContain('noopPdfTools');
-  });
-
-  it('die CI installiert die Werkzeuge vor dem E2E-Lauf', () => {
-    expect(read('.github/workflows/ci.yml')).toContain('tesseract-ocr-deu');
   });
 });

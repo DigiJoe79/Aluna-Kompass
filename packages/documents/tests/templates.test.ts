@@ -33,49 +33,13 @@ describe('core document templates', () => {
   });
 
   it('exposes audit-log-export (type audit-export) as build() on a default base', () => {
-    const templates = coreDocumentTemplates();
-    expect(templates).toHaveLength(1);
-    const audit = templates[0]!;
-    expect([audit.key, audit.type, audit.permission, audit.base]).toEqual(['audit-log-export', 'audit-export', 'audit.view', 'a4-plain-slim']);
+    const audit = coreDocumentTemplates().find((t) => t.key === 'audit-log-export')!;
+    expect([audit.type, audit.permission, audit.base]).toEqual(['audit-export', 'audit.view', 'a4-plain-slim']);
     // Der Protokollauszug wird nur gezogen — keine Nummer, keine Ablage.
     expect(audit.filed).toBe(false);
 
     const a = audit.build({ title: 'Protokoll', filters: { Kanal: 'Alle' }, entries: [] }, { ...ctx, number: 'PRO-2026-001' });
     expect(a.slots).toMatchObject({ kind: 'report', title: 'Protokoll' });
     expect('typst' in a.body && a.body.typst).toContain('table(');
-  });
-  /**
-   * Befund 5 (0.2.2): Der Auszug war auf der Basis eines Vereins unbrauchbar – Spaltenköpfe unsichtbar, die
-   * inhaltstragende Spalte wenige Zeichen schmal, Silbentrennung in jedem Wort.
-   */
-  it('audit-log-export gives the content column the width and leaves styling of the header to the base', () => {
-    const [audit] = coreDocumentTemplates();
-    const built = audit!.build(
-      {
-        title: 'Protokoll',
-        filters: {},
-        entries: [
-          { occurredAt: '28.09.2026 21:49:27', userName: 'Anna Berger', channel: 'Oberfläche', entity: 'Bescheid · GRD-2026-003', sentence: 'Bescheid „BEH-2026-003“ geändert' },
-          { occurredAt: '28.09.2026 21:50:01', userName: null, channel: 'System', entity: 'Dokument', entityGone: 'gelöscht', sentence: 'Text erkannt' },
-        ],
-      },
-      ctx,
-    );
-    const typst = 'typst' in built.body ? built.body.typst : '';
-    // Kein Fettdruck in der Kopfzeile: Die Basis setzt sie selbst fett und hell. Eine Basis, die Fettes in ihrer
-    // Hauptfarbe setzt, machte die Köpfe sonst unsichtbar (dunkel auf dunkel).
-    expect(typst).toContain('table.header([Zeitpunkt], [Nutzer / Kanal], [Aktion], [Objekt])');
-    // Feste Breiten für die Metadaten, der Rest gehört dem Inhalt: die Aktion als Satz und das Objekt.
-    expect(typst).toMatch(/columns: \(\d+mm, \d+mm, [\d.]+fr, 1fr\)/);
-    expect(typst).toContain('hyphenate: false');
-    // Die Aktion steht als Satz (Spec Protokoll § 4), nicht als Schlüssel.
-    expect(typst).toContain('Bescheid „BEH-2026-003“ geändert');
-    expect(typst).not.toContain('finance.notice.save');
-    // Das Objekt kommt fertig vom Aufrufer: Typ in Worten und Name, ohne Namen nur der Typ (Joe 2026-10-09).
-    expect(typst).toContain('[Bescheid · GRD-2026-003]');
-    // „gelöscht“ kursiv, damit es nicht wie ein Name aussieht (Designer 2026-10-09).
-    expect(typst).toContain('[Dokument · #emph[gelöscht]]');
-    expect(typst).toContain('28.09.2026 21:49:27');
-    expect(typst).toContain('Oberfläche');
   });
 });

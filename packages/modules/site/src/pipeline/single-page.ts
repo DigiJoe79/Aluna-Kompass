@@ -1,7 +1,7 @@
 import { mkdir, readdir, rm, stat, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
-import { conflict, invalid, ok, type Deps, type Result } from '@kompass/core';
+import { aiLabelingEnabled, conflict, invalid, ok, type Deps, type Result } from '@kompass/core';
 import { contentAssetIds, gatherAssets, mediaAssetSource, type AssetSource } from '../export';
 import { canonical, pruneLocales, readPublicContent } from '../public-content';
 import { activeTemplate } from '../service';
@@ -75,7 +75,8 @@ async function build(deps: Deps, env: SiteEnv, input: { view: string; row: unkno
   // Bilder eines Vorschlags vor der Mediathek; eine abgeleitete ID setzt auf ihre Basis-ID auf.
   const extra = new Map((input.extraAssets ?? []).map((a) => [a.id, a]));
   const ids = contentAssetIds(template.schema, { variables, collections, views });
-  const assets = await gatherAssets(ids, (id) => extra.get(id) ?? mediaAssetSource(deps, id), path.join(job, 'assets'));
+  const labeling = aiLabelingEnabled(deps);
+  const assets = await gatherAssets(ids, (id) => extra.get(id) ?? mediaAssetSource(deps, id, labeling), path.join(job, 'assets'));
   await writeFile(path.join(job, 'content.json'), JSON.stringify(canonical({ variables, collections, views, assets }), null, 2));
   // `pruneOld` lässt `img-cache` stehen; ohne eigenes Aufräumen wüchse er mit jeder Vorschau (Backlog 67, gleiche Regel).
   const imgCache = path.join(root, 'img-cache');

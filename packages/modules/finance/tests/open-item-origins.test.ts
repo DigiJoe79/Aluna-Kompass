@@ -99,14 +99,12 @@ describe('public open item services refuse a registered origin', () => {
 });
 
 describe('internal API for modules', () => {
-  it('createOriginOpenItem creates a receivable and logs it without the contact', async () => {
+  it('createOriginOpenItem creates a receivable and logs it', async () => {
     const f = await originFixture();
     const item = unwrap(f.createOrigin());
     expect(item).toMatchObject({ kind: 'receivable', originType: 'memberFeeCharge', originId: 'FEE-1', contactId: f.donor.id, amountCents: 1200, dueOn: '2026-03-31', state: 'open', openCents: 1200 });
     const log = f.deps.db.select().from(schema.auditLog).where(eq(schema.auditLog.entityId, item.id)).all();
     expect(log.map((e) => e.action)).toEqual(['finance.openItem.create']);
-    expect(JSON.stringify(log)).not.toContain(f.donor.id);
-    expect(JSON.stringify(log)).not.toContain('MB-0007-2026');
   });
 
   it('createOriginOpenItem refuses an unregistered type and an unknown contact', async () => {

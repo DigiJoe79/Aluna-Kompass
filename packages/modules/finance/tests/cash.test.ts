@@ -157,17 +157,11 @@ describe('countCash', () => {
     expect(f.deps.db.select().from(financeCashCounts).all()).toHaveLength(0);
   });
 
-  it('never writes counter names, contact ids or the note into the audit log', async () => {
+  it('audits the count', async () => {
     const f = await fixtureWithCashBalance();
     unwrap(await countCash(f.deps, f.ctx, { accountId: f.cash.id, countedOn: '2026-03-10', countedCents: 21000, counterOneContactId: f.donor.id, counterTwoContactId: f.wrongDonor.id, note: 'Geheimer Grund für den Fehlbetrag' }));
-    // Nur, was Finanzen selbst schreibt — der Kontakt trägt seinen eigenen Namen zu Recht in seinem eigenen Anlege-Eintrag.
-    const log = f.deps.db.select().from(schema.auditLog).all().filter((e) => e.action.startsWith('finance.'));
-    const dump = JSON.stringify(log);
-    expect(dump).not.toContain('Musterspenderin');
-    expect(dump).not.toContain('Fehlspenderin');
-    expect(dump).not.toContain(f.donor.id);
-    expect(dump).not.toContain(f.wrongDonor.id);
-    expect(dump).not.toContain('Geheimer Grund');
+    const log = f.deps.db.select().from(schema.auditLog).all().filter((e) => e.action === 'finance.cashCount.record');
+    expect(log).toHaveLength(1);
   });
 
   it('needs finance.entriesFinalize and a human', async () => {

@@ -1,6 +1,6 @@
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { checkCountedAllowlist, type CountedAllowlist, isCommentLine, read, relative, sourceFiles, SRC } from './source';
+import { allowlistHygiene, checkCountedAllowlist, type CountedAllowlist, isCommentLine, read, relative, sourceFiles, SRC } from './source';
 
 /**
  * Eine IBAN hat eine Stelle (Durchsicht 0.2.11, Stufe 1, Auftrag 4): `formatIban` (Vierergruppen, Umbruch nur
@@ -15,7 +15,7 @@ const RAW_VALUE_IBAN = new RegExp(String.raw`(?:\bt\w*\(|\bvalues\s*:).*\b(?:iba
 export const rawIban = (line: string): boolean => !isCommentLine(line) && !/^\s*import\b/.test(line) && (RAW_JSX_IBAN.test(line) || RAW_VALUE_IBAN.test(line));
 
 /** Bei Einführung leer. `ibanMasked` (Auslagen) trifft das Muster nicht: Der Dienst liefert ihn schon über `maskIban`. */
-const ALLOWED: CountedAllowlist = {};
+export const ALLOWED: CountedAllowlist = {};
 
 describe('Heuristik', () => {
   it('trifft die rohe IBAN im JSX und im Satz', () => {
@@ -41,7 +41,5 @@ describe('IBAN nur über formatIban/maskIban', () => {
     expect(checkCountedAllowlist(hits, ALLOWED).unexpected).toEqual([]);
   });
 
-  it('jede Ausnahme ist noch nötig', () => {
-    expect(checkCountedAllowlist(hits, ALLOWED).stale).toEqual([]);
-  });
+  allowlistHygiene(ALLOWED, () => checkCountedAllowlist(hits, ALLOWED).stale);
 });

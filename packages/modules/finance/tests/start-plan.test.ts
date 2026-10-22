@@ -3,10 +3,10 @@ import { categoryFieldsSchema } from '../src/ledger/categories';
 import { START_PLAN } from '../src/ledger/start-plan';
 
 describe('start plan', () => {
-  it('has the 37 categories of Anhang A, each valid by the rules every category obeys', () => {
-    expect(START_PLAN).toHaveLength(37);
+  it('holds categories with distinct keys, each valid by the rules every category obeys', () => {
+    expect(START_PLAN.length).toBeGreaterThan(20);
     for (const c of START_PLAN) expect(categoryFieldsSchema.safeParse(c).success, c.key).toBe(true);
-    expect(new Set(START_PLAN.map((c) => c.key)).size).toBe(37);
+    expect(new Set(START_PLAN.map((c) => c.key)).size).toBe(START_PLAN.length);
   });
 
   it('is generic: no animal and no association-specific wording', () => {

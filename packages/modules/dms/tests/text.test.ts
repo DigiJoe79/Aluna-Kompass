@@ -103,16 +103,6 @@ describe('extractDocumentText', () => {
     expect(fourth.error.type).toBe('conflict');
   });
 
-  it('verweigert ohne Recht', async () => {
-    const { deps, documentId } = await withDocument();
-
-    const result = await extractDocumentText(deps, ctxWith(['dms.view']), { documentId });
-
-    expect(result.ok).toBe(false);
-    if (result.ok) return;
-    expect(result.error.type).toBe('forbidden');
-  });
-
   it('weist Unsinn als validation zurück', async () => {
     const { deps } = await withDocument();
 

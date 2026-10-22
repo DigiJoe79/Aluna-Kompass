@@ -7,7 +7,7 @@ import { describe, expect, it } from 'vitest';
 import { setFeeAgreement } from '../src/fee-agreement';
 import { continueFeeRun, previewFeeRun, startFeeRun } from '../src/fee-run';
 import { admitMember } from '../src/memberships';
-import { runDispatchState } from '../src/run-dispatch';
+import { runDispatchState, runPrintPdf } from '../src/run-dispatch';
 import { memberRunLetters } from '../src/schema';
 import { addressedPerson, MEMBERS_PERMISSIONS, setupFees, type MembersDeps } from './helpers';
 
@@ -72,6 +72,55 @@ describe('Beitragsmitteilung im Beitragslauf', () => {
     expect(deps.db.select().from(financeSepaPrenotifications).where(eq(financeSepaPrenotifications.documentId, notice.documentId)).get()!.plan).toEqual([
       { dueOn: '2027-01-04', amountCents: 1200, remittance: `Beitrag 2027 Mitglied ${kim.memberNumber}` },
     ]);
+  });
+
+  /**
+   * Backlog 78 (Retest U12): Die Ankündigung an einen fremden Kontoinhaber ist ein Finanzdokument. Eine Rolle ohne
+   * Finanzrechte versendet die eigenen Briefe des Laufs; die Ankündigung zählt sie nur, statt am ganzen Plan zu scheitern.
+   */
+  describe('role without finance rights (78)', () => {
+    async function withHolder() {
+      const env = await setup();
+      const all: CallContext = { ...env.ctx, permissions: new Set([...env.ctx.permissions, 'dms.create', 'dms.file']) };
+      const members: CallContext = { ...env.ctx, permissions: new Set([...MEMBERS_PERMISSIONS, 'dms.view', 'dms.create', 'dms.file']) };
+      env.deps.db.transaction((tx) => writeSettingInternal(tx, env.deps, systemContext(), 'finance.sepa.creditorId', 'DE98ZZZ09999999999'));
+      const kim = unwrap(await admitMember(env.deps, all, { contactId: await addressedPerson(env.deps, { lastName: 'Kind' }), typeId: env.types.regular, admittedOn: '2026-01-01' }));
+      const holder = await addressedPerson(env.deps, { lastName: 'Inhaber' });
+      unwrap(await setFeeAgreement(env.deps, all, { membershipId: kim.id, validFrom: '2027-01-01', paymentMethod: 'directDebit', iban: 'DE78999999990000300001', debtorName: 'Erika Inhaber', payerContactId: holder }));
+      return { ...env, all, members, kim, holder };
+    }
+
+    it('the dispatch plan shows the own letters and counts the prenotification it may not read', async () => {
+      const { deps, all, members, holder, kim } = await withHolder();
+      const run = await runAll(deps, all, {});
+      const runRef = `membersFeeRun:${run.id}`;
+      const notice = lettersOf(deps, run.id).find((l) => l.contactId === holder)!;
+      const state = unwrap(await runDispatchState(deps, members, { runRef }));
+      const rows = [...state.mail, ...state.post];
+      expect(rows.map((r) => r.documentId)).not.toContain(notice.documentId);
+      expect(rows.some((r) => r.membershipId === kim.id)).toBe(true);
+      expect(state.restricted).toBe(1);
+      // Wer Finanzrechte hat, sieht die Ankündigung wie bisher in der Gruppe ihres Wegs.
+      const full = unwrap(await runDispatchState(deps, all, { runRef }));
+      expect(full.restricted).toBe(0);
+      expect([...full.mail, ...full.post].map((r) => r.documentId)).toContain(notice.documentId);
+    });
+
+    it('printing leaves the prenotification out for that role', async () => {
+      const { deps, all, members } = await withHolder();
+      const run = await runAll(deps, all, {});
+      const runRef = `membersFeeRun:${run.id}`;
+      const state = unwrap(await runDispatchState(deps, members, { runRef }));
+      expect(unwrap(await runPrintPdf(deps, members, { runRef })).count).toBe(state.post.length);
+      expect(unwrap(await runPrintPdf(deps, all, { runRef })).count).toBe(state.post.length + 1);
+    });
+
+    it('a run started by that role records the prenotification it could not issue', async () => {
+      const { deps, members, kim } = await withHolder();
+      const run = await runAll(deps, members, {});
+      expect(run.status).toBe('done');
+      expect(run.noticeRefused).toEqual([{ membershipId: kim.id, code: 'forbidden', letter: 'prenotification' }]);
+    });
   });
 
   it('all: transfer payers get one too', async () => {

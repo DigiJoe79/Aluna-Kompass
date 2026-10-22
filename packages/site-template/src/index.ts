@@ -303,6 +303,8 @@ export interface ContentAsset {
   mimeType: string;
   width: number | null;
   height: number | null;
+  /** KI-Art, wenn die Kennzeichnung global eingeschaltet und das Bild nicht unbearbeitet ist. */
+  aiKind?: 'edited' | 'generated';
 }
 
 type EntryOf<C extends CollectionDefinition> = { [F in keyof C['fields']]: Infer<C['fields'][F]> } & (C['slug'] extends true ? { slug: string } : unknown) &

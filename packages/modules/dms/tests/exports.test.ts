@@ -31,6 +31,8 @@ describe('the public surface of the file module', () => {
       processOutbox: 'Sender: arbeitet den Ausgangskorb ab, gibt keine Dokumentdaten aus',
       purgeOutboxAddresses: 'Aufräumen: leert Adressen, gibt nichts aus',
       refuseReservedLinks: 'prüft Bezugstypen der Eingabe und liefert nur einen Fehler, keine Dokumentdaten',
+      moduleReleasesVoid: 'prüft Manifeste zu einer Dokumentart, keine Dokumentdaten',
+      refuseVoidOwned: 'prüft eine Dokumentart und liefert nur einen Fehler, keine Dokumentdaten',
     };
     const offenders = Object.entries(dms)
       .filter(([, value]) => typeof value === 'function')

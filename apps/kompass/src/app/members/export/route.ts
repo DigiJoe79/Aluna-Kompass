@@ -14,8 +14,12 @@ const cell = (value: string) => (/[;"\n\r]/.test(value) ? `"${value.replaceAll('
  * Mitgliederliste als CSV (Spec Mitglieder § 3.4, Handoff 2.1): die Liste wie auf dem Bildschirm — Reiter, Suche und
  * Art aus der Adresse —, ohne Anschrift, Bankdaten und Beiträge. Semikolon und BOM, damit eine Tabellenkalkulation
  * sie ohne Assistent öffnet. Das Protokoll nennt nur die Zahl der Zeilen (im Dienst).
+ *
+ * Ein Vorabladen des Links (Next.js, Header `next-router-prefetch`) erzeugt keine Datei und keinen Protokolleintrag:
+ * Sonst stünde bei jedem Filterwechsel ein „Export“ im Protokoll (2026-10-20, elf Einträge ohne Download).
  */
 export async function GET(request: Request): Promise<Response> {
+  if (request.headers.get('next-router-prefetch')) return new Response(null, { status: 204 });
   const session = await optionalSession();
   if (!session) return new Response(null, { status: 401 });
   const deps = getDeps();

@@ -6,11 +6,9 @@ import { readSetting } from '../src/settings/service';
 import { createTestDeps } from '../src/testing';
 
 describe('theme schema', () => {
-  it('defines 65 tokens including the design-round and finance additions', () => {
-    expect(THEME_TOKENS).toHaveLength(71);
-    for (const token of ['color-primary', 'focus-ring', 'table-zebra', 'input-bg', 'overlay', 'shadow-md', 'font-mono', 'radius-full', 'row-h']) {
-      expect(THEME_TOKENS).toContain(token);
-    }
+  it('names every token once, and the default theme fills exactly those', () => {
+    expect(new Set(THEME_TOKENS).size).toBe(THEME_TOKENS.length);
+    expect(Object.keys(DEFAULT_THEME.tokens).sort()).toEqual([...THEME_TOKENS].sort());
   });
 
   it('accepts the default theme and rejects incomplete or extended themes', () => {

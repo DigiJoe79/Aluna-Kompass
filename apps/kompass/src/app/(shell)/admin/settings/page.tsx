@@ -1,4 +1,4 @@
-import { listThemes, managedSettings, readAllSettings, requirePermission } from '@kompass/core';
+import { countMediaWithAiKindInternal, listThemes, managedSettings, readAllSettings, readLocales, requirePermission } from '@kompass/core';
 import { getTranslations } from 'next-intl/server';
 import { ForbiddenCard } from '@/components/forbidden-card';
 import { Page } from '@/components/page';
@@ -20,18 +20,20 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
   const panel = panelFromQuery((await searchParams).panel, SETTINGS_TAB_KEYS, 'organization');
   const all = readAllSettings(deps);
   const editable = Object.fromEntries(
-    Object.entries(all).filter(([k]) => k.startsWith('organization.') || k.startsWith('branding.') || k.startsWith('ui.'))
+    Object.entries(all).filter(([k]) => k.startsWith('organization.') || k.startsWith('branding.') || k.startsWith('ui.') || k.startsWith('media.'))
   );
   return (
     <Page width="standard" header={<PageHeader title={t('title')} />}>
-      {/* Nur der Bereich Verein steht in der Sicht der Webseite (`publishedOrganization`, editLink /admin/settings). */}
-      {panel === 'organization' ? <PendingPublishLine href="/admin/settings" className="-mt-3 mb-4 block" /> : null}
+      {/* Die Bereiche Verein und Medien stehen in den Sichten der Webseite (`publishedOrganization`, `publishedAiLabeling`, editLink /admin/settings). */}
+      {panel === 'organization' || panel === 'media' ? <PendingPublishLine href="/admin/settings" className="-mt-3 mb-4 block" /> : null}
       <SettingsForm
         panel={panel}
         initial={editable}
         themes={listThemes(deps).themes.map((th) => ({ key: th.key, name: themeDisplayName(th, tThemes('defaultName')) }))}
         lastSaved={null}
         managed={Object.keys(managedSettings(deps))}
+        locales={readLocales(deps)}
+        aiKindCount={countMediaWithAiKindInternal(deps.db)}
       />
     </Page>
   );

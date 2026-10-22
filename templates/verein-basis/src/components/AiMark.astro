@@ -1,0 +1,30 @@
+---
+import type { AiKind } from '../lib/ai-label';
+
+export interface Props {
+  kind: AiKind | undefined | null;
+  label?: string;
+  class?: string;
+}
+
+const { kind, label = 'KI', class: extraClass } = Astro.props;
+if (!kind || kind === 'none') {
+  return;
+}
+
+// Gestaltung je Art gleich, die Art steht als Attribut (Designer 2e): Pinsel für bearbeitet, Funkeln für erstellt.
+const cls = ['image-mark', extraClass].filter(Boolean).join(' ');
+---
+<span class={cls} data-kind={kind} aria-hidden="true">
+  {kind === 'edited' ? (
+    <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor" aria-hidden="true" class="icon icon-xs">
+      <path d="M18.6 2.6a1.9 1.9 0 0 1 2.8 2.8l-8 8-2.8-2.8z" />
+      <path d="M9.4 11.9l2.7 2.7c.1 3.2-2.3 5.9-6 6.2-1.5.1-2.8.6-3.9 1.7.1-2.6 1-4.3 2.6-5.1.4-3.2 2.4-5.3 4.6-5.5z" />
+    </svg>
+  ) : (
+    <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor" aria-hidden="true" class="icon icon-xs">
+      <path d="M12 1.5c.7 5.6 3 8 9.5 10.5-6.5 2.5-8.8 4.9-9.5 10.5-.7-5.6-3-8-9.5-10.5C9 9.5 11.3 7.1 12 1.5z" />
+    </svg>
+  )}
+  <span>{label}</span>
+</span>

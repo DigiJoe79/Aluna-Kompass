@@ -1,6 +1,6 @@
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { type Allowlist, inFileOrLocalImport, openingTags, read, relative, SRC, sourceFiles } from './source';
+import { type Allowlist, allowlistHygiene, inFileOrLocalImport, openingTags, read, relative, sourceFiles, SRC, staleKeys } from './source';
 
 /**
  * Filterleisten (docs/MUSTER.md § L, Spec 2026-10-08 § 5): Jede Liste mit Suche oder Filtern nutzt `FilterBar`,
@@ -30,12 +30,12 @@ export function linkTablists(text: string): number[] {
 
 const usesUrlFilters = (text: string) => /\buseUrlFilters\s*[<(]/.test(text);
 
-const RAW_SEARCH_ALLOWED: Allowlist = {
+export const RAW_SEARCH_ALLOWED: Allowlist = {
   'app/(shell)/finance/entries/entry-form.tsx':
     'Suche offener Posten im Formular der Buchung: wählt einen Wert (Spec § 3, „Nicht in FilterBar“), ist aber noch kein Kombobox-Baustein mit Lupe und ✕ — offen, Bericht Plan Lb.',
 };
-const TABLIST_ALLOWED: Allowlist = {};
-const URL_FILTERS_WITHOUT_BAR: Allowlist = {};
+export const TABLIST_ALLOWED: Allowlist = {};
+export const URL_FILTERS_WITHOUT_BAR: Allowlist = {};
 
 const appFiles = () => sourceFiles(APP).filter((file) => file.endsWith('.tsx'));
 
@@ -55,27 +55,25 @@ describe('Filterleisten', () => {
     });
   });
 
+  const search = appFiles().flatMap((file) => rawSearchInputs(read(file)).map((line) => ({ file: relative(file), where: `${relative(file)}:${line}` })));
+  const tablists = appFiles().flatMap((file) => linkTablists(read(file)).map((line) => ({ file: relative(file), where: `${relative(file)}:${line}` })));
+  const withoutBar = appFiles().filter((file) => usesUrlFilters(read(file)) && !inFileOrLocalImport(file, /<FilterBar\b/)).map(relative);
+
   it('unter src/app kein Suchfeld außerhalb von SearchField', () => {
-    const hits = appFiles().flatMap((file) => rawSearchInputs(read(file)).map((line) => ({ file: relative(file), where: `${relative(file)}:${line}` })));
-    expect(hits.filter(({ file }) => !(file in RAW_SEARCH_ALLOWED)).map(({ where }) => where)).toEqual([]);
+    expect(search.filter(({ file }) => !(file in RAW_SEARCH_ALLOWED)).map(({ where }) => where)).toEqual([]);
   });
+
+  allowlistHygiene(RAW_SEARCH_ALLOWED, () => staleKeys(RAW_SEARCH_ALLOWED, search.map(({ file }) => file)), 'Suchfelder');
 
   it('kein role="tablist" an Links — Reiter über Listen sind ViewTabs', () => {
-    const hits = appFiles().flatMap((file) => linkTablists(read(file)).map((line) => ({ file: relative(file), where: `${relative(file)}:${line}` })));
-    expect(hits.filter(({ file }) => !(file in TABLIST_ALLOWED)).map(({ where }) => where)).toEqual([]);
+    expect(tablists.filter(({ file }) => !(file in TABLIST_ALLOWED)).map(({ where }) => where)).toEqual([]);
   });
+
+  allowlistHygiene(TABLIST_ALLOWED, () => staleKeys(TABLIST_ALLOWED, tablists.map(({ file }) => file)), 'Reiter');
 
   it('wer Filter in der Adresse hält (useUrlFilters), rendert FilterBar', () => {
-    const missing = appFiles().filter((file) => usesUrlFilters(read(file)) && !inFileOrLocalImport(file, /<FilterBar\b/)).map(relative);
-    expect(missing.filter((file) => !(file in URL_FILTERS_WITHOUT_BAR))).toEqual([]);
+    expect(withoutBar.filter((file) => !(file in URL_FILTERS_WITHOUT_BAR))).toEqual([]);
   });
 
-  it('jede Ausnahme ist noch nötig', () => {
-    const stale = [
-      ...Object.keys(RAW_SEARCH_ALLOWED).filter((file) => rawSearchInputs(read(path.join(SRC, file))).length === 0),
-      ...Object.keys(TABLIST_ALLOWED).filter((file) => linkTablists(read(path.join(SRC, file))).length === 0),
-      ...Object.keys(URL_FILTERS_WITHOUT_BAR).filter((file) => inFileOrLocalImport(path.join(SRC, file), /<FilterBar\b/)),
-    ];
-    expect(stale).toEqual([]);
-  });
+  allowlistHygiene(URL_FILTERS_WITHOUT_BAR, () => staleKeys(URL_FILTERS_WITHOUT_BAR, withoutBar), 'Filter ohne Leiste');
 });

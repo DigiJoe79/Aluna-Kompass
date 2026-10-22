@@ -250,11 +250,19 @@ export function FormActionBar({
     const card = anchor.current?.closest('[data-slot="form-card"]');
     const end = card ? Array.from(card.children).find((el) => el instanceof HTMLElement && el.dataset.slot === 'form-card-end') : undefined;
     if (!end) return;
-    const observer = new IntersectionObserver(([entry]) => {
-      if (!entry) return;
-      const bottom = entry.rootBounds?.bottom ?? window.innerHeight;
-      setStuck(!entry.isIntersecting && entry.boundingClientRect.top >= bottom);
-    });
+    // Klebend sitzt die Leiste um das Polster von `main` tiefer (negatives `bottom`, Designer 2026-10-22). Endet die
+    // Karte in diesem Streifen, steht die Leiste schon fast am Rand: Sie gilt dann als klebend, damit ein Toast über
+    // sie rückt, statt „Speichern“ zu verdecken (E2E site-entries, 2026-10-22).
+    const offset = anchor.current ? -parseFloat(getComputedStyle(anchor.current).bottom) : 0;
+    const pad = Number.isFinite(offset) && offset > 0 ? Math.round(offset) : 0;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry) return;
+        const bottom = entry.rootBounds?.bottom ?? window.innerHeight - pad;
+        setStuck(!entry.isIntersecting && entry.boundingClientRect.top >= bottom);
+      },
+      { rootMargin: `0px 0px -${pad}px 0px` },
+    );
     observer.observe(end);
     return () => observer.disconnect();
   }, [placement]);
@@ -396,8 +404,9 @@ export function FormActionBar({
   // Nur einer der beiden Nebenknöpfe: Am Telefon nimmt er die ganze Zeile.
   const lone = Number(showDiscard) + Number(!!(cancel || back)) === 1;
   // Runde 3, 083/085: „Schritt n von m“ sagt der Schrittbalken (`Steps`) über dem Assistenten — auf jeder Breite; der
-  // Fuß wiederholt es nicht und zeigt auch keinen Zähler.
-  const main = wizard ? null :
+  // Fuß wiederholt es nicht und zeigt auch keinen Zähler. Ein Satz in `note` steht auch hier (CSV-Assistent Schritt 3:
+  // „Noch offen: …“, Spec 2026-10-22); `aria-live`, weil er sich mit jeder Auswahl ändert.
+  const main = wizard ? (note ? <div aria-live="polite" className="text-meta text-ink-2">{note}</div> : null) :
     nothing ? (
       <span aria-live="polite" className="text-meta text-ink-2">
         {t('nothingChanged')}
@@ -424,7 +433,9 @@ export function FormActionBar({
   return (
     // `px-5` wie das Polster von Formularkarte und Dialog (20 px, docs/MUSTER.md § I): Zähler und „Speichern“
     // stehen bündig mit den Feldern darüber. Auf einer Seite klebt sie erst ab 640 × 600 px (`stickybar`, MUSTER
-    // § B); im Telefon oder einem niedrigen Fenster nähme sie sonst ein Drittel der Höhe.
+    // § B); im Telefon oder einem niedrigen Fenster nähme sie sonst ein Drittel der Höhe. Klebend sitzt sie bündig am
+    // Rand von `main` (das Polster `--shell-pad` zählt beim Kleben mit, sonst scrollte darunter ein Streifen Inhalt),
+    // eckig, und ein Verlauf darüber blendet die Zeile aus, statt sie abzuschneiden (Designer 2026-10-22, Backlog 77).
     <div
       ref={anchor}
       data-slot="form-action-bar"
@@ -433,7 +444,7 @@ export function FormActionBar({
       data-stuck={placement === 'page' && stuck ? '' : undefined}
       className={cn(
         'border-t border-line bg-surface-2 px-5 py-3',
-        placement === 'page' ? 'rounded-b-lg stickybar:sticky stickybar:bottom-0 stickybar:data-[stuck]:shadow-md' : 'mx-[calc(var(--dialog-pad,0px)*-1)] mb-[calc(var(--dialog-pad,0px)*-1)] rounded-b-xl',
+        placement === 'page' ? "rounded-b-lg stickybar:sticky stickybar:bottom-[calc(var(--shell-pad,0px)*-1)] stickybar:data-[stuck]:rounded-b-none stickybar:data-[stuck]:before:pointer-events-none stickybar:data-[stuck]:before:absolute stickybar:data-[stuck]:before:inset-x-0 stickybar:data-[stuck]:before:bottom-full stickybar:data-[stuck]:before:h-6 stickybar:data-[stuck]:before:bg-linear-to-b stickybar:data-[stuck]:before:from-transparent stickybar:data-[stuck]:before:to-surface stickybar:data-[stuck]:before:content-['']" : 'mx-[calc(var(--dialog-pad,0px)*-1)] mb-[calc(var(--dialog-pad,0px)*-1)] rounded-b-xl',
       )}
     >
       {compare ? (

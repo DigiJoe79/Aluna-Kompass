@@ -52,6 +52,7 @@ import {
   financeAllocationLines,
   financeCategories,
   financeEntries,
+  financeDatedValues,
   financeEntryDocuments,
   financeFiscalYears,
   financeImportRules,
@@ -66,6 +67,7 @@ import {
   financePartnerPayments,
   financePartnerNotices,
   financePartnerProfiles,
+  financeProjectSettings,
   financePurposes,
   financePurposeTransfers,
   financeReserves,
@@ -281,7 +283,9 @@ export async function seedFinance(deps: Deps, ctx: CallContext): Promise<void> {
 
   await ensureCategory(deps, ctx, 'room-rental', { name: 'Raumvermietung', direction: 'income', sphere: 'assetManagement', incomeKind: 'fees' });
 
-  unwrap(await setDatedValue(deps, ctx, { key: 'mileageRate', validFrom: `${storyYear}-01-01`, value: 25 }));
+  const mileageFrom = `${storyYear}-01-01`;
+  const mileage = deps.db.select().from(financeDatedValues).where(and(eq(financeDatedValues.key, 'mileageRate'), eq(financeDatedValues.validFrom, mileageFrom))).get();
+  if (!mileage) unwrap(await setDatedValue(deps, ctx, { key: 'mileageRate', validFrom: mileageFrom, value: 25 }));
 
   // Buchungen in jedem Zustand (Spec 11.3) — über die Dienste, damit Trigger, Kassenprüfung und Nummernvergabe mitlaufen.
   const bank = accountByName(deps, 'Vereinskonto');
@@ -600,7 +604,8 @@ export async function seedFinance(deps: Deps, ctx: CallContext): Promise<void> {
 
   // F2c: Finanzfelder eines vorhandenen Projekts aus dem Projekte-Seed.
   if (existingProject) {
-    unwrap(await setProjectFinance(deps, ctx, { projectId: existingProject.id, targetCents: 250000, defaultPurposeId: dachsanierung.id }));
+    const projectFinance = deps.db.select().from(financeProjectSettings).where(eq(financeProjectSettings.projectId, existingProject.id)).get();
+    if (!projectFinance) unwrap(await setProjectFinance(deps, ctx, { projectId: existingProject.id, targetCents: 250000, defaultPurposeId: dachsanierung.id }));
     // Vor `seedMittel`: Der Höchstbetrag der freien Rücklage zählt diese Einnahme mit.
     await seedProjectBookings(deps, ctx, existingProject.id, storyYear);
   }

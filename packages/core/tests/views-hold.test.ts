@@ -7,7 +7,8 @@ describe('loadAllViews', () => {
   it('loads every view of a manifest and returns the rows by view name', () => {
     const deps = createTestDeps({ manifests: [coreModule] });
     const views = loadAllViews(deps, coreModule);
-    expect(Object.keys(views)).toEqual(['organization']);
+    // Kern bringt organization und die Sicht aiLabeling mit (Spec 2026-10-20 KI-Transparenz)
+    expect(Object.keys(views)).toEqual(['organization', 'aiLabeling']);
     expect(views.organization).toHaveLength(1);
   });
 

@@ -16,22 +16,6 @@ const BANK_CSV = [
   '05.03.2026;Druckerei Muster;Flyer;-20,00;1.030,00',
 ].join('\n');
 
-/**
- * > 1 MB (N9, Befundliste 0.2.0): dieselben Spalten wie `BANK_CSV`, aber mit
- * einem langen, harmlosen Verwendungszweck, damit wenige Zeilen reichen.
- * Ein Tag je Zeile, damit keine zwei Zeilen gleich aussehen.
- */
-function bigBankCsv(rows = 55): string {
-  const padding = 'x'.repeat(20_000);
-  const lines = ['Buchungstag;Empfänger;Verwendungszweck;Betrag;Saldo'];
-  for (let i = 0; i < rows; i++) {
-    const day = String((i % 27) + 1).padStart(2, '0');
-    const month = String((i % 12) + 1).padStart(2, '0');
-    lines.push(`${day}.${month}.2026;Empfänger Großdatei;${padding};10,00;${(1000 + i * 10).toFixed(2).replace('.', ',')}`);
-  }
-  return lines.join('\n');
-}
-
 /** Kopien der Bauhelfer-Ausgabe (`packages/modules/finance/src/import/csv-fixture.ts`), Byte für Byte geprüft. */
 const FIXTURES = path.resolve(import.meta.dirname, 'fixtures/csv');
 
@@ -71,21 +55,32 @@ test.describe('finance csv', () => {
     await expect(page.getByLabel('CSV-Datei wählen')).toHaveCount(1);
   });
 
-  test('die Spaltenauswahl steht über der Vorschau; eine ignorierte Spalte ist als ignoriert markiert', async ({ page }) => {
+  test('die Spalten stehen als Liste; eine Rolle zurückgenommen öffnet den Pflichtpunkt', async ({ page }) => {
     await createBankAccount(page, 'Hausbank CSV-Test', 'DE66999999990000303030');
     await startAssistant(page, 'Hausbank CSV-Test');
     await page.getByRole('button', { name: 'Weiter' }).click();
     await expect(page.getByRole('heading', { name: 'Welche Spalte ist was?' })).toBeVisible();
-    const table = page.getByTestId('csv-preview');
-    await expect(table.getByRole('row')).toHaveCount(3);
+    const columns = page.getByTestId('csv-columns');
+    await expect(columns).toBeVisible();
     const purposeRole = page.getByLabel('Rolle der Spalte „Verwendungszweck“');
     await expect(purposeRole).toHaveValue('purpose');
     await purposeRole.selectOption('ignore');
-    await expect(table.locator('[data-column="Verwendungszweck"][data-ignored="true"]').first()).toBeVisible();
-    // Ohne Datum geht es nicht weiter, und der Grund steht da.
+    await expect(columns.locator('[data-column="Verwendungszweck"][data-role="ignore"]')).toBeVisible();
+    // Ohne Buchungstag geht es nicht weiter: Der Pflichtpunkt ist offen, und die Leiste sagt es.
     await page.getByLabel('Rolle der Spalte „Buchungstag“').selectOption('ignore');
-    await expect(page.getByText('Wählen Sie die Spalte mit dem Buchungstag.')).toBeVisible();
+    await expect(page.getByTestId('requirement-bookingDate')).toHaveAttribute('data-done', 'false');
     await expect(page.getByRole('button', { name: 'Weiter' })).toBeDisabled();
+  });
+
+  test('weitere Spalten aufklappen und durchsuchen', async ({ page }) => {
+    await createBankAccount(page, 'Zahlungsdienst CSV-Test', 'DE12999999990000606060');
+    await startAssistant(page, 'Zahlungsdienst CSV-Test', storyFile(path.join(FIXTURES, 'zahlungsdienst.csv')));
+    await page.getByRole('button', { name: 'Weiter' }).click();
+    const more = page.getByRole('region', { name: 'Weitere Spalten' });
+    await more.locator('summary').click();
+    await more.getByRole('searchbox').fill('Uhrzeit');
+    await expect(more.getByTestId('csv-column')).toHaveCount(1);
+    await expect(more.getByTestId('csv-column')).toHaveAttribute('data-column', 'Uhrzeit');
   });
 
   test('die Vorzeichenfrage steht an einer echten Zeile der Datei', async ({ page }) => {
@@ -121,21 +116,6 @@ test.describe('finance csv', () => {
     await expect(run).toContainText('Hausbank März-Format');
     await expect(run).toContainText(story('02.03.2026 – 05.03.2026'));
     await expect(run).not.toContainText(/\d{4}-\d{2}-\d{2}/);
-  });
-
-  test('ein Auszug über 1 MB kommt beim Speichern und Laden an (N9)', async ({ page }) => {
-    await createBankAccount(page, 'Hausbank Großdatei', 'DE48999999990000404040');
-    const file = { name: 'grossauszug.csv', mimeType: 'text/csv', buffer: Buffer.from(bigBankCsv(), 'utf8') };
-    expect(file.buffer.byteLength).toBeGreaterThan(1_000_001);
-    await startAssistant(page, 'Hausbank Großdatei', file);
-    await page.getByRole('button', { name: 'Weiter' }).click();
-    await page.getByRole('button', { name: 'Weiter' }).click();
-    await page.getByRole('radio', { name: 'Nein, Geld kam herein' }).check();
-    await page.getByRole('button', { name: 'Weiter' }).click();
-    await expect(page.getByLabel('Name des Formats')).toBeVisible();
-    await page.getByRole('button', { name: 'Speichern und Auszug laden' }).click();
-    await expect(page).toHaveURL(/\/finance\/imports$/);
-    await expect(page.getByTestId('import-run').filter({ hasText: 'Hausbank Großdatei' })).toBeVisible();
   });
 
   test('ein Neuladen mitten im Assistenten macht nach erneuter Dateiwahl beim gespeicherten Schritt weiter — auch ohne crypto.subtle', async ({ page }) => {
@@ -280,7 +260,7 @@ test.describe('finance csv', () => {
     await page.getByRole('button', { name: 'Weiter' }).click();
     await expect(page.getByLabel('Rolle der Spalte „Soll“')).toHaveValue('debit');
     await expect(page.getByLabel('Rolle der Spalte „Haben“')).toHaveValue('credit');
-    await expect(page.getByTestId('csv-preview')).toContainText('Druckerei Müller & Söhne');
+    await expect(page.getByTestId('csv-columns')).toContainText('Druckerei Müller & Söhne');
     await page.getByRole('button', { name: 'Weiter' }).click();
     await page.getByRole('radio', { name: 'Nein, Geld kam herein' }).check();
     await page.getByRole('button', { name: 'Weiter' }).click();

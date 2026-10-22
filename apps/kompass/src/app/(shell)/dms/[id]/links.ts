@@ -1,4 +1,5 @@
 import { resolveRecordLabel, type CallContext, type Deps } from '@kompass/core';
+import { refuseReservedLinks } from '@kompass/module-dms';
 import { getProject } from '@kompass/module-projects';
 import { getAnimal } from '@kompass/module-animals';
 import { displayName, getContact } from '@kompass/module-contacts';
@@ -19,6 +20,8 @@ export interface ResolvedLink {
    * in die Irre.
    */
   reason: 'missing' | 'forbidden' | null;
+  /** Einen reservierten Bezug löst nur sein Modul — dieselbe Regel wie `unlinkDocument`, damit „Lösen“ dort fehlt. */
+  removable: boolean;
 }
 
 /** Aus einem `Result` eines fremden Dienstes wird Name, Weg und Grund. */
@@ -48,7 +51,7 @@ export async function resolveLinks(
 
   return Promise.all(
     links.map(async (link) => {
-      const base = { id: link.id, entityType: link.entityType, entityId: link.entityId, role: link.role };
+      const base = { id: link.id, entityType: link.entityType, entityId: link.entityId, role: link.role, removable: refuseReservedLinks(deps, [link]) === null };
 
       if (link.entityType === 'contact') {
         const contact = await getContact(deps, ctx, link.entityId);

@@ -1,7 +1,7 @@
 import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { coreModule, defineModule, definePublishedView, setModuleEnabled, setSetting, storeMediaAsset, unwrap, writeSettingInternal } from '@kompass/core';
+import { AI_LABELING_ENABLED_KEY, coreModule, defineModule, definePublishedView, setMediaAiKind, setModuleEnabled, setSetting, storeMediaAsset, unwrap, writeSettingInternal } from '@kompass/core';
 import { animalsModule, createAnimal, setAnimalPublished, setAnimalStatus } from '@kompass/module-animals';
 import { createProject, projectsModule, setProjectPublished } from '@kompass/module-projects';
 import { createTestDeps, ctxWith, insertUser } from '@kompass/core/testing';
@@ -69,7 +69,7 @@ describe('site export', () => {
     expect(content.collections.notes).toEqual([{ body: 'Notiz' }]);
     // Ohne `uses` bleiben nur die Sichten des Kerns; Projekte sind seit dem
     // 2026-09-12 ein Modul und kommen nur auf Anforderung.
-    expect(Object.keys(content.views).sort()).toEqual(['organization']);
+    expect(Object.keys(content.views).sort()).toEqual(['aiLabeling', 'organization']);
     expect(content.assets).toEqual([]);
   });
 
@@ -483,5 +483,91 @@ export default defineTemplate({ name: 'X', locales: ['de'], uses: ['pics'], vari
     ]);
     expect(read).toHaveBeenCalledTimes(1);
     expect(readdirSync(dir)).toEqual(['proposal-image-I1.png']);
+  });
+});
+
+describe('AI kind in the export', () => {
+  const PICS = `
+import { defineTemplate } from '@kompass/site-template';
+export default defineTemplate({ name: 'X', locales: ['de'], uses: ['pics'], variables: {}, collections: {} });`;
+  const rows: { slug: string; photoAssetId: string; otherAssetId?: string }[] = [];
+  const pics = defineModule({
+    key: 'pics',
+    version: '0',
+    permissions: [],
+    publishedViews: [definePublishedView({ name: 'pics', schema: z.object({ slug: z.string(), photoAssetId: z.string(), otherAssetId: z.string().optional() }), load: () => rows })],
+  });
+  const setup = async () => {
+    rows.length = 0;
+    const deps = createTestDeps({ locales: ['de'], manifests: [coreModule, pics, siteModule] });
+    insertUser(deps, { id: 'USER-TEST' });
+    unwrap(await setModuleEnabled(deps, ctxWith(['modules.manage']), { key: 'pics', enabled: true }));
+    const dir = templateDir(PICS);
+    unwrap(await applyTemplateSync(deps, manage, { dir, confirm: true }));
+    const sharp = (await import('sharp')).default;
+    const png = await sharp({ create: { width: 200, height: 100, channels: 3, background: '#c00' } }).png().toBuffer();
+    const m = unwrap(await storeMediaAsset(deps, ctxWith(['media.upload']), { originalName: 'pic.png', bytes: png }));
+    return { deps, dir, m };
+  };
+  const exportTo = async (deps: Awaited<ReturnType<typeof setup>>['deps'], dir: string) => {
+    const jobDir = tmp('kompass-exp-job-');
+    const result = unwrap(await exportSiteContent(deps, publish, { jobDir, templateDir: dir }));
+    return { result, jobDir, files: readdirSync(path.join(jobDir, 'assets')) };
+  };
+
+  it('exports the kind of an edited asset', async () => {
+    const { deps, dir, m } = await setup();
+    unwrap(await setSetting(deps, ctxWith(['settings.manage']), { key: AI_LABELING_ENABLED_KEY, value: true }));
+    unwrap(await setMediaAiKind(deps, ctxWith(['media.upload']), { id: m.id, aiKind: 'edited' }));
+    rows.push({ slug: 'a', photoAssetId: m.id });
+    const { result } = await exportTo(deps, dir);
+    expect(result.assets[0]?.aiKind).toBe('edited');
+  });
+
+  it('exports the kind of the original for a derived id', async () => {
+    const { deps, dir, m } = await setup();
+    unwrap(await setSetting(deps, ctxWith(['settings.manage']), { key: AI_LABELING_ENABLED_KEY, value: true }));
+    unwrap(await setMediaAiKind(deps, ctxWith(['media.upload']), { id: m.id, aiKind: 'edited' }));
+    rows.push({ slug: 'a', photoAssetId: `${m.id}~5000_0_5000_10000` });
+    const { result } = await exportTo(deps, dir);
+    expect(result.assets[0]?.aiKind).toBe('edited');
+  });
+
+  it('omits the field for none', async () => {
+    const { deps, dir, m } = await setup();
+    unwrap(await setSetting(deps, ctxWith(['settings.manage']), { key: AI_LABELING_ENABLED_KEY, value: true }));
+    rows.push({ slug: 'a', photoAssetId: m.id });
+    const { result } = await exportTo(deps, dir);
+    expect(result.assets[0]).not.toHaveProperty('aiKind');
+  });
+
+  it('omits the field while switched off, though kinds are stored', async () => {
+    const { deps, dir, m } = await setup();
+    unwrap(await setSetting(deps, ctxWith(['settings.manage']), { key: AI_LABELING_ENABLED_KEY, value: true }));
+    unwrap(await setMediaAiKind(deps, ctxWith(['media.upload']), { id: m.id, aiKind: 'edited' }));
+    unwrap(await setSetting(deps, ctxWith(['settings.manage']), { key: AI_LABELING_ENABLED_KEY, value: false }));
+    rows.push({ slug: 'a', photoAssetId: m.id });
+    const { result } = await exportTo(deps, dir);
+    expect(result.assets[0]).not.toHaveProperty('aiKind');
+  });
+
+  it('keeps the content hash when switched on and every asset is none', async () => {
+    const { deps, dir, m } = await setup();
+    unwrap(await setSetting(deps, ctxWith(['settings.manage']), { key: AI_LABELING_ENABLED_KEY, value: true }));
+    rows.push({ slug: 'a', photoAssetId: m.id });
+    const hash1 = unwrap(await siteContentHash(deps, publish, { templateDir: dir })).contentHash;
+    unwrap(await setMediaAiKind(deps, ctxWith(['media.upload']), { id: m.id, aiKind: 'none' }));
+    const hash2 = unwrap(await siteContentHash(deps, publish, { templateDir: dir })).contentHash;
+    expect(hash2).toBe(hash1);
+  });
+
+  it('changes the content hash when a kind changes', async () => {
+    const { deps, dir, m } = await setup();
+    unwrap(await setSetting(deps, ctxWith(['settings.manage']), { key: AI_LABELING_ENABLED_KEY, value: true }));
+    rows.push({ slug: 'a', photoAssetId: m.id });
+    const before = unwrap(await siteContentHash(deps, publish, { templateDir: dir })).contentHash;
+    unwrap(await setMediaAiKind(deps, ctxWith(['media.upload']), { id: m.id, aiKind: 'edited' }));
+    const after = unwrap(await siteContentHash(deps, publish, { templateDir: dir })).contentHash;
+    expect(after).not.toBe(before);
   });
 });

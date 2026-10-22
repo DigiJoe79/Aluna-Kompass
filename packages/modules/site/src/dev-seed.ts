@@ -170,13 +170,13 @@ export async function seedSitePublishedState(deps: Deps, ctx: CallContext): Prom
   });
 }
 
-/** Je Sicht eines Moduls der erste Datensatz (Schlüssel `views.<sicht>:<adresse>`); `organization` ist der Vereinsstamm des Kerns. */
+/** Je Sicht eines Moduls der erste Datensatz (Schlüssel `views.<sicht>:<adresse>`); `organization` und `aiLabeling` sind Sichten des Kerns. */
 function firstPerView(keys: readonly string[]): string[] {
   const seen = new Set<string>();
   return keys.filter((k) => {
     if (!k.startsWith('views.')) return false;
     const view = k.slice('views.'.length).split(':')[0]!;
-    if (view === 'organization' || seen.has(view)) return false;
+    if (view === 'organization' || view === 'aiLabeling' || seen.has(view)) return false;
     seen.add(view);
     return true;
   });

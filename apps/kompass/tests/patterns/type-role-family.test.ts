@@ -1,6 +1,6 @@
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { type Allowlist, classNameValue, isCommentLine, openingTags, read, relative, sourceFiles, SRC } from './source';
+import { type Allowlist, allowlistHygiene, classNameValue, isCommentLine, openingTags, read, relative, sourceFiles, SRC, staleKeys } from './source';
 import { scanFiles } from './type-scan';
 
 /**
@@ -70,7 +70,7 @@ const HEADING_HOMES = new Set([
   'components/empty-state.tsx',
   'components/shell/topbar.tsx',
 ]);
-const HEADING_ALLOWED: Allowlist = {
+export const HEADING_ALLOWED: Allowlist = {
   'components/shell/help-panel.tsx': 'Titel der Hilfe als Nebenspalte (Entwurf E4): Familie wie `SheetTitle`, ohne Dialog.',
   'app/(shell)/error.tsx': 'Fehlerseite der Schale ohne PageHeader; Titel als h1 in der Rolle Seitentitel (Designer § 9.4).',
   'app/(shell)/admin/settings/settings-form.tsx': 'Kein Klassenname: Feldart `font-heading` (Auswahl der Überschriftenschrift, `case \'font-heading\'`) — der Wächter liest den Text, nicht die Klasse.',
@@ -83,14 +83,7 @@ describe('Familie der Überschrift', () => {
     expect(using().filter((file) => !(file in HEADING_ALLOWED))).toEqual([]);
   });
 
-  it('kein vorläufiger Eintrag mehr', () => {
-    expect(Object.entries(HEADING_ALLOWED).filter(([, reason]) => reason.startsWith('OFFEN')).map(([file]) => file)).toEqual([]);
-  });
-
-  it('jede Ausnahme ist noch nötig', () => {
-    const set = new Set(using());
-    expect(Object.keys(HEADING_ALLOWED).filter((file) => !set.has(file))).toEqual([]);
-  });
+  allowlistHygiene(HEADING_ALLOWED, () => staleKeys(HEADING_ALLOWED, using()));
 });
 
 /**

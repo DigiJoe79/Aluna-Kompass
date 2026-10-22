@@ -26,11 +26,17 @@ Einrichten darf, wer „Finanzen einrichten“ darf.
 2. **Einstellungen** — Kompass schlägt Zeichensatz, Trennzeichen, die Zeile
    der Kopfzeile (manche Banken schreiben Kontodaten davor), Datumsformat
    und Dezimalzeichen vor. Meist stimmt der Vorschlag.
-3. **Spalten** — über jeder Spalte der Vorschau steht, wofür Kompass sie
-   nimmt: Buchungstag, Betrag (oder getrennte Spalten für Ausgang und
-   Eingang), Name der Gegenseite, Verwendungszweck und, wenn vorhanden,
-   IBAN, E-Mail, Referenz, Bezug auf Transaktion, Gebühr, Kontostand,
-   Währung und Status. Was Sie nicht brauchen, bleibt auf „ignorieren“.
+3. **Spalten** — jede Spalte der Datei steht als eine Zeile da: Name,
+   ein bis zwei Beispielwerte und eine Auswahl, wofür Kompass sie nimmt:
+   Buchungstag, Betrag (oder getrennte Spalten für Ausgang und Eingang),
+   Name der Gegenseite, Verwendungszweck und, wenn vorhanden, IBAN, E-Mail,
+   Referenz, Bezug auf Transaktion, Gebühr, Kontostand, Währung und Status.
+   Oben unter „Pflicht“ sehen Sie mit Haken, was schon zugeordnet ist, und
+   was noch fehlt; die Leiste unten sagt es auch. „vorbelegt“ heißt: Kompass
+   hat die Rolle aus dem Spaltennamen geraten — bitte prüfen Sie diese Zeilen.
+   Spalten ohne Rolle liegen eingeklappt unter „Weitere Spalten“; dort finden
+   Sie eine Spalte über die Suche nach ihrem Namen oder einem Wert. Was Sie
+   nicht brauchen, bleibt auf „ignorieren“.
 4. **Vorzeichen** — Kompass zeigt eine echte Zeile Ihrer Datei und fragt, ob
    das eine Ausgabe war. So weiß es, ob Ihre Bank Ausgänge mit Minus führt.
 5. **Probe** — die erste Zeile, so wie Kompass sie liest. Stimmt sie, geben

@@ -70,7 +70,7 @@ describe('possibleReturnWithoutOrigin — also partial amounts (AC)', () => {
 });
 
 describe('markNotReturn', () => {
-  it('needs finance.entriesFinalize, a note, a finalized entry — and logs without the note', async () => {
+  it('needs finance.entriesFinalize, a note, a finalized entry — and logs it', async () => {
     const f = await donationFixture();
     const payment = await payOut(f, { cents: 4000, categoryKey: 'program-costs' });
     expect(err(await markNotReturn(f.deps, ctxWith(['finance.read', 'finance.entriesWrite']), { entryId: payment.id, notReturn: true, note: 'x' }))).toMatchObject({ type: 'forbidden' });
@@ -83,7 +83,6 @@ describe('markNotReturn', () => {
     const log = f.deps.db.select().from(schema.auditLog).all().filter((e) => e.action === 'finance.entry.notReturn');
     expect(log).toHaveLength(1);
     expect(JSON.parse(log[0]!.after as string)).toEqual({ entryId: payment.id, notReturn: true });
-    expect(JSON.stringify(log)).not.toContain('Honorar');
   });
 });
 

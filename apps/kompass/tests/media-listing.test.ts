@@ -1,4 +1,4 @@
-import { coreModule, createMediaFolder, defineModule, storeMediaAsset, unwrap, writeSettingInternal } from '@kompass/core';
+import { AI_LABELING_ENABLED_KEY, coreModule, createMediaFolder, defineModule, setMediaAiKind, storeMediaAsset, unwrap, writeSettingInternal } from '@kompass/core';
 import { createTestDeps, ctxWith, insertUser } from '@kompass/core/testing';
 import { describe, expect, it } from 'vitest';
 import { buildMediaListing, parseMediaListParams } from '@/lib/media-listing';
@@ -41,6 +41,19 @@ describe('buildMediaListing', () => {
 
     const denied = await buildMediaListing(deps, ctxWith([], 'someone'), {});
     expect(denied.ok === false && denied.error.type === 'forbidden').toBe(true);
+  });
+});
+
+describe('buildMediaListing and the AI kind', () => {
+  it('reports the stored kind while AI labeling is on and none for every asset while it is off', async () => {
+    const deps = createTestDeps();
+    const ctx = ctxWith(['media.upload'], insertUser(deps, {}));
+    const a = unwrap(await storeMediaAsset(deps, ctx, { originalName: 'a.png', bytes: PNG }));
+    writeSettingInternal(deps.db, deps, ctx, AI_LABELING_ENABLED_KEY, true);
+    unwrap(await setMediaAiKind(deps, ctx, { id: a.id, aiKind: 'generated' }));
+    expect(unwrap(await buildMediaListing(deps, ctx, {})).items[0]!.aiKind).toBe('generated');
+    writeSettingInternal(deps.db, deps, ctx, AI_LABELING_ENABLED_KEY, false);
+    expect(unwrap(await buildMediaListing(deps, ctx, {})).items[0]!.aiKind).toBe('none');
   });
 });
 

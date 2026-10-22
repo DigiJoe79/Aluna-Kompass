@@ -92,18 +92,18 @@ export const workRoot = (env: SiteEnv): string => env.workDir ?? tmpdir();
 
 /**
  * Der Speicher ist die Quelle: Eine Riegeldatei ohne Lauf im Speicher — aus
- * einem neu gestarteten Prozess, auch mit derselben Prozessnummer, oder aus
- * 0.2.4 — war ein unterbrochener Lauf. Er bekommt ein Ergebnis, der Riegel
+ * einem neu gestarteten Prozess, auch mit derselben Prozessnummer — war ein
+ * unterbrochener Lauf. Er bekommt ein Ergebnis, der Riegel
  * und die Laufverzeichnisse werden geräumt.
  */
 function settleForeignLock(env: SiteEnv): void {
-  let lock: (Partial<SiteJobRun> & { name?: SiteJobKind; updatedAt?: string }) | undefined;
+  let lock: (Partial<SiteJobRun> & { updatedAt?: string }) | undefined;
   try {
     lock = JSON.parse(readFileSync(lockFile(env), 'utf8'));
   } catch {
     return;
   }
-  const kind = lock?.kind ?? lock?.name;
+  const kind = lock?.kind;
   if (lock && kind && lock.runId && lock.startedAt) {
     const steps = lock.steps ?? [];
     const lastStep = steps.find((s) => s.state === 'running')?.key;

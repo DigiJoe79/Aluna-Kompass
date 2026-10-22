@@ -1,4 +1,4 @@
-import { schema, unwrap, yearIn } from '@kompass/core';
+import { unwrap, yearIn } from '@kompass/core';
 import { ctxWith } from '@kompass/core/testing';
 import { documents } from '@kompass/module-dms';
 import { eq } from 'drizzle-orm';
@@ -132,7 +132,7 @@ describe('approvePurposeTransfer, rejectPurposeTransfer (Review Focus 1, 2)', ()
     expect(err(result)).toMatchObject({ code: 'transferOwn' });
   });
 
-  it('rejects a submitted transfer with a note, kept on the record, never in the log', async () => {
+  it('rejects a submitted transfer with a note, kept on the record', async () => {
     const f = await ledgerFixture();
     const a = await purposeWithBalance(f, 'Zweck A', 10000);
     const docId = insertDocument(f, { subject: 'Protokoll', typeKey: 'minutes' });
@@ -233,17 +233,5 @@ describe('listPurposeTransfers', () => {
     expect(all.length).toBeGreaterThan(0);
     const filtered = unwrap(await listPurposeTransfers(f.deps, f.ctx, { purposeId: a.id }));
     expect(filtered.every((t) => t.fromPurposeId === a.id || t.toPurposeId === a.id)).toBe(true);
-  });
-});
-
-describe('Befund 6 (0.2.7): eine abgelehnte Umwidmung lässt keinen hochgeladenen Beschluss in der Akte', () => {
-  it('Datum in der Zukunft: kein Dokument, kein Eingang im Protokoll', async () => {
-    const f = await ledgerFixture();
-    const a = await purposeWithBalance(f, 'Zweck A', 10000);
-    const trace = () => ({ documents: f.deps.db.select().from(documents).all().length, received: f.deps.db.select().from(schema.auditLog).all().filter((x) => x.action === 'dms.receive').length });
-    const before = trace();
-    const refused = await requestPurposeTransfer(f.deps, withDms(f), { fromPurposeId: a.id, toPurposeId: null, amountCents: 1000, transferDate: '2026-12-31', reason: 'Umschichtung', documentUpload: { bytes: pdfBytes(), fileName: 'protokoll.pdf' } });
-    expect(err(refused)).toMatchObject({ code: 'transferDateInFuture' });
-    expect(trace()).toEqual(before);
   });
 });

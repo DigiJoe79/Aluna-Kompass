@@ -7,6 +7,7 @@ import { like } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 import { financeModule } from '../src/manifest';
 import { financeCategories } from '../src/schema';
+import { START_PLAN } from '../src/ledger/start-plan';
 
 /**
  * Ersatz für die manuelle Prüfung aus Task 13 Step 2 (kein Bildschirm zur
@@ -14,7 +15,7 @@ import { financeCategories } from '../src/schema';
  * Einrichtung → Module täte, und prüft die vier sichtbaren Folgen.
  */
 describe('switching finance on, the way Einrichtung → Module would', () => {
-  it('provisions the five roles, the 37 categories, locks the bank details, and shows the protection area', async () => {
+  it('provisions the five roles, the categories of the start plan, locks the bank details, and shows the protection area', async () => {
     const deps = createTestDeps({ manifests: [coreModule, contactsModule, dmsModule, projectsModule, financeModule] });
     const admin = ctxWith(['modules.manage', 'settings.manage', 'dms.manage']);
 
@@ -28,7 +29,7 @@ describe('switching finance on, the way Einrichtung → Module would', () => {
     expect(financeRoles).toHaveLength(5);
 
     const categories = deps.db.select().from(financeCategories).all();
-    expect(categories).toHaveLength(37);
+    expect(categories.map((c) => c.key).sort()).toEqual(START_PLAN.map((c) => c.key).sort());
 
     const ibanChange = await setSetting(deps, admin, { key: 'organization.iban', value: 'DE23999999990000202051' });
     expect(ibanChange.ok ? null : ibanChange.error).toMatchObject({ type: 'conflict', code: 'settingManaged', message: 'finance' });

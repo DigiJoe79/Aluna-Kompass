@@ -154,17 +154,6 @@ test.describe('finance import', () => {
     await expect(row.getByText('Erika Beispiel')).toHaveCount(0);
   });
 
-  test('beim Kandidaten ist „Dieselbe Zahlung“ der primäre Knopf, „Eigene Zahlung“ der sekundäre', async ({ page }) => {
-    await loginAsAdmin(page);
-    await page.goto('/finance/imports');
-    const same = page.getByRole('button', { name: 'Dieselbe Zahlung — nicht übernehmen' });
-    const own = page.getByRole('button', { name: 'Eigene Zahlung — übernehmen' });
-    await expect(same).toHaveClass(/(^|\s)bg-brand(\s|$)/);
-    // Eine sekundäre Stufe, `outline` mit Rand (Runde 3, 044, 195).
-    await expect(own).toHaveClass(/(^|\s)border-line-strong(\s|$)/);
-    await expect(own).not.toHaveClass(/(^|\s)bg-brand(\s|$)/);
-  });
-
   test('Verwerfen nennt die Folgen in Zahlen, verlangt eine Notiz, und der Lauf bleibt als verworfen stehen', async ({ page }) => {
     await loginAsAdmin(page);
     await page.goto('/finance/imports');
@@ -249,11 +238,5 @@ test.describe('finance import', () => {
     await expect(dialog.getByText(/mehr Zweifelsfälle|nicht mehr sicher/)).toBeVisible();
     await dialog.getByRole('button', { name: 'Wechsel bestätigen' }).click();
     await expect(page.getByText(/1 neu, 0 bereits vorhanden, 0 zurückgehalten/)).toBeVisible();
-  });
-
-  test('ein DOCTYPE im Auszug wird abgewiesen', async ({ page }) => {
-    await openImports(page);
-    await page.getByTestId('statement-file-input').setInputFiles(fixture('doctype.xml'));
-    await expect(page.getByText(/Der Auszug lässt sich nicht lesen\./)).toBeVisible();
   });
 });

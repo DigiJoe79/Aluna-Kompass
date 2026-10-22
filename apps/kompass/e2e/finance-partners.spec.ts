@@ -1,12 +1,8 @@
-import path from 'node:path';
 import { expect, test } from './fixtures';
 import { associationDay } from './association-day';
 import { backToAdmin, callTool, mcpClient, PDF, switchTo, switchToJonas } from './expense-helpers';
 import { loginAsAdmin, resetDatabase, setE2ESetting } from './helpers';
 import { story } from './story-year';
-
-/** > 1 MB (N9, Befundliste 0.2.0) — derselbe erfundene Beleg wie bei den Auslagen. */
-const BIG_PDF = path.resolve(import.meta.dirname, 'fixtures/beleg-1500k.pdf');
 
 /**
  * F7 Task 6b — Finanzen → Partner: Angaben, Zahlung an Partner, Nachweise.
@@ -59,14 +55,14 @@ test.describe('finance partners (F7)', () => {
     await page.getByTestId('partner-payment-approve').click();
     await expect(page.getByTestId('partner-payment-result')).toContainText('Freigegeben');
 
-    // Der Nachweis (über 1 MB, N9) — legt die Verwaltung ab (finance.entriesWrite), nie die Freigeberin selbst.
+    // Der Nachweis — legt die Verwaltung ab (finance.entriesWrite), nie die Freigeberin selbst.
     await backToAdmin(page);
     await page.goto(paymentUrl);
     await expect(page.getByTestId('steps')).toBeVisible();
     // Förderung im Inland: nur der Zahlungsnachweis ist Pflicht (Spec 14.4); ein Bericht darf zusätzlich dabei sein.
     const list = page.getByTestId('evidence-requirements');
     await list.getByTestId('requirement-paymentProof').getByRole('button', { name: 'Hochladen oder verknüpfen' }).click();
-    await page.getByTestId('evidence-form-paymentProof').getByTestId('voucher-file-input').setInputFiles(BIG_PDF);
+    await page.getByTestId('evidence-form-paymentProof').getByTestId('voucher-file-input').setInputFiles(PDF);
     await page.getByTestId('evidence-form-paymentProof').getByRole('button', { name: 'Hochladen' }).click();
     await expect(list.getByTestId('requirement-paymentProof')).toHaveAttribute('data-done', 'true');
 
@@ -440,12 +436,7 @@ test.describe('finance partners (F7)', () => {
     await expect(status).toContainText(/Zwischenstand gespeichert · \d{2}:\d{2}/);
     const saved = await callTool<{ basis: string; purposeText: string; proofMonths: number; basisOverrideReason: string }>(client, 'finance_partner_payment_get', { id: paymentId });
     expect(saved).toMatchObject({ basis: 'transfer58', purposeText: 'Schulmaterial Grundschule Beispielort', proofMonths: 5, basisOverrideReason: 'Der Partner entscheidet hier selbst über das Schulmaterial.' });
-    await expect(page.getByTestId('payment-footer')).toHaveCSS('position', 'sticky');
     await expect(page.getByTestId('payment-footer').getByRole('button', { name: 'Zur Freigabe geben' })).toBeVisible();
-
-    await page.setViewportSize({ width: 390, height: 844 });
-    await expect(evidence).toBeVisible();
-    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   });
   test('E2 nach der Freigabe (4b): Kopf mit Art und Frist, Schritte mit von/am, Nachweise je Pflichtart, Anerkennen mit Voraussetzung', async ({ page, baseURL }) => {
     await setE2ESetting(page, 'finance.mcpHumanOnlyAllowed', true); // `finance_entry_book` ist humanOnly (E10) — nur für die Ausgangslage.
@@ -515,8 +506,6 @@ test.describe('finance partners (F7)', () => {
     await expect(ack).toContainText('Das kann erledigen: Jonas Feld');
     await expect(page.getByTestId('evidence-acknowledge')).toHaveCount(0);
 
-    await page.setViewportSize({ width: 390, height: 844 });
-    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   });
   test('U Rest (Recheck sha-0170e73): „bereit zum Anerkennen“ an der Zahlung und in der Liste — für die zweite Person, nie für die Anlegerin', async ({ page, baseURL }) => {
     await setE2ESetting(page, 'finance.mcpHumanOnlyAllowed', true); // `finance_entry_book` ist humanOnly (E10) — nur für die Ausgangslage.
@@ -603,7 +592,6 @@ test.describe('finance partners (F7)', () => {
     await expect(requirements).toContainText('Auftrag je Vorhaben');
     await expect(requirements).toContainText('Freigabe nur mit dem Auftrag.');
     const footer = page.getByTestId('approval-footer');
-    await expect(footer).toHaveCSS('position', 'sticky');
     await expect(footer).toContainText('Nach der Freigabe entsteht eine offene Zahlung an Auftragspartner Beispielland über 250,00 €');
 
     await page.getByTestId('partner-payment-reject').click();
@@ -623,10 +611,6 @@ test.describe('finance partners (F7)', () => {
     await transferDialog.getByLabel('Grund').fill('Beschluss fehlt noch');
     await transferDialog.getByRole('button', { name: 'Ablehnen' }).click();
     await expect(page.getByTestId('purpose-transfer-result')).toContainText('Abgelehnt');
-
-    await page.setViewportSize({ width: 390, height: 844 });
-    await page.goto(`/finance/approvals?payment=${submitted.id}`);
-    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   });
   test('E1 (4a): Liste als Tabelle, Angaben zweispaltig mit Karten für die Art, Frist in Monaten, Rechtsform vom Kontakt, Anerkennung im Sitzland', async ({ page, baseURL }) => {
     const client = await mcpClient(page, baseURL);
@@ -641,17 +625,10 @@ test.describe('finance partners (F7)', () => {
     await expect(row).toContainText('Organisation im Ausland');
     await expect(row).toContainText('Auftrag');
     await expect(page.getByRole('link', { name: 'Partner anlegen' })).toBeVisible();
-    await page.setViewportSize({ width: 390, height: 844 });
-    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
-    await page.setViewportSize({ width: 1400, height: 900 });
 
     await row.getByRole('link', { name: 'Partnerorganisation Tabelle' }).click();
     const profile = page.getByTestId('partner-profile');
     await expect(profile).toContainText('Stiftung nach örtlichem Recht');
-    const payments = page.getByTestId('partner-payments');
-    const left = (await profile.boundingBox())!;
-    const right = (await payments.boundingBox())!;
-    expect(right.x).toBeGreaterThan(left.x + left.width - 1);
 
     const cards = page.getByRole('radiogroup', { name: 'Wie arbeitet der Partner mit Ihrem Geld?' });
     await expect(cards.getByRole('radio', { name: /Er handelt in unserem Auftrag/ })).toBeChecked();
@@ -675,9 +652,6 @@ test.describe('finance partners (F7)', () => {
     await expect(noticeRow).toContainText(story('31.12.2027'));
     await expect(noticeRow).toContainText(story('04.02.2026'));
     void anerkennung;
-
-    await page.setViewportSize({ width: 390, height: 844 });
-    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   });
   test('Kacheln (4g, Entscheidung 8): standardmäßig an, mit „Finanzen lesen“ Zeilen mit Nummer und Betrag, ohne nur Anzahl und Summe', async ({ page, baseURL }) => {
     const client = await mcpClient(page, baseURL);

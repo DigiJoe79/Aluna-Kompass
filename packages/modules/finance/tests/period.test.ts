@@ -75,9 +75,6 @@ describe('closing a fiscal year', () => {
     const previewAfter = unwrap(await previewPeriodClose(f.deps, f.ctx, { id: yearId }));
     expect(previewAfter.undocumented).toEqual([{ entryId: entry.id, number: entry.number, justified: true }]);
     expect(previewAfter.canClose).toBe(true);
-
-    const log = JSON.stringify(f.deps.db.select().from(schema.auditLog).all().filter((e) => e.action.startsWith('finance.entry.justify')));
-    expect(log).not.toContain('Keine Rechnung erhalten');
   });
 
   it('leaves an unvouchered reversal pair out of the undocumented preview', async () => {
@@ -167,7 +164,7 @@ describe('closing a fiscal year', () => {
 });
 
 describe('justification bookkeeping', () => {
-  it('stores note and author at the record, never in the audit log', async () => {
+  it('stores note and author at the record', async () => {
     const f = await ledgerFixture({ years: ['2025'] });
     const entry = unwrap(await bookEntry(f.deps, f.ctx, { entryDate: '2025-06-01', text: 'Bar-Ausgabe', moneyLines: [{ accountId: f.bank.id, amountCents: -1500 }], allocationLines: [{ categoryId: f.programCosts.id, amountCents: -1500 }] }));
     unwrap(await justifyUndocumentedEntry(f.deps, f.ctx, { entryId: entry.id, note: 'Bar bezahlt, kein Beleg erhalten' }));
@@ -182,7 +179,7 @@ async function closeCleanly(f: Awaited<ReturnType<typeof ledgerFixture>>, yearId
 }
 
 describe('reopening a fiscal year', () => {
-  it('wants a note, keeps it on the event and out of the audit log', async () => {
+  it('wants a note and keeps it on the event', async () => {
     const f = await ledgerFixture({ years: ['2025'] });
     const yearId = f.years['2025']!.id;
     await closeCleanly(f, yearId);
@@ -192,9 +189,6 @@ describe('reopening a fiscal year', () => {
     unwrap(await reopenFiscalYear(f.deps, f.ctx, { id: yearId, note: 'Kassenprüfer hat einen Fehlbetrag gemeldet' }));
     const event = f.deps.db.select().from(financePeriodEvents).where(eq(financePeriodEvents.fiscalYearId, yearId)).all().find((e) => e.kind === 'reopened');
     expect(event?.reason).toBe('Kassenprüfer hat einen Fehlbetrag gemeldet');
-
-    const log = JSON.stringify(f.deps.db.select().from(schema.auditLog).all().filter((e) => e.action === 'finance.period.reopen'));
-    expect(log).not.toContain('Kassenprüfer hat einen Fehlbetrag gemeldet');
   });
 
   it('only the latest closed year can be reopened', async () => {

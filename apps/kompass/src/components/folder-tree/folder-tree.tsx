@@ -839,6 +839,9 @@ export function FolderTree({
             if (!item || item.kind === 'folder') return;
             e.preventDefault();
             hover(e, entry.folder, item);
+            // Die eigene Sperre des Eintrags (Eingangskorb nur für Eingänge) sagt dem Browser ebenso „hier nicht“; während
+            // des Ziehens kennt nur das gemerkte Ziehgut die Dokumente (Backlog 45).
+            if (entry.refuse?.(dragRef.current?.item ?? item)) e.dataTransfer.dropEffect = 'none';
             setOver(null);
             setOverFixed(entry.key);
           },

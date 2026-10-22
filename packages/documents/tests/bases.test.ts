@@ -30,9 +30,7 @@ describe('document bases', () => {
 
   it('probes a base and reports a broken one', async () => {
     const renderer = createTypstRenderer();
-    const shipped = resolveBases(resolveAssetDirs({}));
-    expect(await probeBase({ renderer, baseId: 'a4-plain', bases: shipped })).toEqual({ ok: true });
-
+    // Die ausgelieferten Basen bestehen die Probe (bases-render.test.ts); hier die kaputte.
     const vol = tmp();
     writeFileSync(path.join(vol, 'kaputt.typ'), '#let notbase() = 1');
     const bad = await probeBase({ renderer, baseId: 'kaputt', bases: resolveBases(resolveAssetDirs({ KOMPASS_DOCUMENT_TEMPLATES_DIR: vol })) });

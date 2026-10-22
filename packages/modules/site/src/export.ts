@@ -10,6 +10,7 @@ import {
   type CropRect,
   isModuleEnabled,
   parseDerivedAssetId,
+  aiLabelingEnabled,
   ok,
   readSetting,
   requirePermission,
@@ -35,6 +36,8 @@ export interface ExportedAsset {
   height: number | null;
   /** Nur bei einer abgeleiteten ID (`<assetId>~<rechteck>`, Spec Bildausschnitt § 2): das Rechteck als Anteile. */
   crop?: CropRect;
+  /** KI-Art, wenn die Kennzeichnung global eingeschaltet und das Bild nicht unbearbeitet ist. */
+  aiKind?: 'edited' | 'generated';
 }
 
 /** Eine Basis, auf die eine (abgeleitete) ID zeigt: aus der Mediathek oder der Zwischenablage eines Vorschlags. */
@@ -45,6 +48,7 @@ export interface AssetSource {
   width: number | null;
   height: number | null;
   read: () => Promise<Uint8Array>;
+  aiKind?: 'edited' | 'generated';
 }
 
 /**
@@ -70,9 +74,24 @@ export async function gatherAssets(
     if (derived) {
       const { crop } = derived;
       const scaled = (n: number | null, part: number) => (n === null ? null : Math.max(1, Math.round(part * n)));
-      assets.push({ id, filename: base.filename, mimeType: base.mimeType, width: scaled(base.width, crop.w), height: scaled(base.height, crop.h), crop });
+      assets.push({
+        id,
+        filename: base.filename,
+        mimeType: base.mimeType,
+        width: scaled(base.width, crop.w),
+        height: scaled(base.height, crop.h),
+        crop,
+        ...(base.aiKind ? { aiKind: base.aiKind } : {}),
+      });
     } else {
-      assets.push({ id: base.id, filename: base.filename, mimeType: base.mimeType, width: base.width, height: base.height });
+      assets.push({
+        id: base.id,
+        filename: base.filename,
+        mimeType: base.mimeType,
+        width: base.width,
+        height: base.height,
+        ...(base.aiKind ? { aiKind: base.aiKind } : {}),
+      });
     }
     if (assetsDir && !written.has(base.filename)) {
       written.add(base.filename);
@@ -82,10 +101,20 @@ export async function gatherAssets(
   return assets;
 }
 
-/** Die Basis einer ID aus der Mediathek. */
-export function mediaAssetSource(deps: Deps, id: string): AssetSource | null {
+/** Die Basis einer ID aus der Mediathek. `labeling`: der Schalter der Bildkennzeichnung, einmal je Export gelesen. */
+export function mediaAssetSource(deps: Deps, id: string, labeling = aiLabelingEnabled(deps)): AssetSource | null {
   const row = deps.db.select().from(core.mediaAssets).where(eq(core.mediaAssets.id, id)).get();
-  return row ? { id: row.id, filename: row.filename, mimeType: row.mimeType, width: row.width, height: row.height, read: () => deps.media.read(row.filename) } : null;
+  if (!row) return null;
+  const aiKind = labeling && (row.aiKind === 'edited' || row.aiKind === 'generated') ? row.aiKind : undefined;
+  return {
+    id: row.id,
+    filename: row.filename,
+    mimeType: row.mimeType,
+    width: row.width,
+    height: row.height,
+    read: () => deps.media.read(row.filename),
+    ...(aiKind ? { aiKind } : {}),
+  };
 }
 
 /** Wo ein Treffer zu bearbeiten ist: Variablen haben eine Seite, Sammlungseinträge je eine Maske, Zeilen einer Sicht ihre Adresse (`editLink` der Sicht). Dateinamen tragen keinen Verweis. */
@@ -333,7 +362,8 @@ async function collect(
 
   const ids = contentAssetIds(template.schema, { variables, collections, views });
   if (out) await mkdir(path.join(out.jobDir, 'assets'), { recursive: true });
-  const assets = await gatherAssets(ids, (id) => mediaAssetSource(deps, id), out ? path.join(out.jobDir, 'assets') : null, out?.hooks);
+  const labeling = aiLabelingEnabled(deps);
+  const assets = await gatherAssets(ids, (id) => mediaAssetSource(deps, id, labeling), out ? path.join(out.jobDir, 'assets') : null, out?.hooks);
 
   const contentPayload = { variables, collections, views };
   const json = JSON.stringify(canonical({ variables, collections, views, assets }), null, 2);

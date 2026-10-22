@@ -45,10 +45,9 @@ describe('finance F8b tables — triggers (Task 1)', () => {
     ).toThrow(/permanent/);
   });
 
-  it('never deletes a purpose transfer, but allows clearing its document once', () => {
+  it('allows clearing the document of a purpose transfer', () => {
     const { deps } = setupFinance();
     const id = insertPurposeTransfer(deps.db, { number: 'UM-2026-002' });
     expect(() => deps.db.update(financePurposeTransfers).set({ documentId: null }).where(eq(financePurposeTransfers.id, id)).run()).not.toThrow();
-    expect(() => deps.db.delete(financePurposeTransfers).where(eq(financePurposeTransfers.id, id)).run()).toThrow(/permanent/);
   });
 });

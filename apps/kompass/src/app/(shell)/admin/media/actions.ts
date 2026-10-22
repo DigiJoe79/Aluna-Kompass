@@ -1,10 +1,11 @@
 'use server';
 
 import { guardAction } from '@/lib/action-guard';
-import { createMediaFolder, deleteMediaAsset, deleteMediaFolder, moveMediaAsset, renameMediaFolder, storeMediaAssetDetailed } from '@kompass/core';
+import { aiLabelingEnabled, createMediaFolder, deleteMediaAsset, deleteMediaFolder, getMediaAssetInfo, moveMediaAsset, renameMediaFolder, setMediaAiKind, storeMediaAssetDetailed, type AiKind } from '@kompass/core';
 import { getTranslations } from 'next-intl/server';
 import { revalidatePath } from 'next/cache';
 import { toActionState, type ActionState } from '@/lib/actions';
+import { listingReference, type MediaListingItem } from '@/lib/media-listing';
 import { requireSession } from '@/lib/request-context';
 
 export async function uploadMediaAction(formData: FormData): Promise<ActionState> {
@@ -28,7 +29,9 @@ export async function uploadMediaAction(formData: FormData): Promise<ActionState
     // „hochgeladen“ wäre gelogen, und im offenen Ordner erschiene nichts.
     const { record, created } = result.value;
     const message = created ? t('media.uploaded') : t('media.alreadyStored', { filename: record.filename, folder: record.folder ?? t('media.noFolder') });
-    return { status: 'success', message, data: { id: record.id, filename: record.filename, folder: record.folder, created, width: record.width, height: record.height } };
+    // Art und Typ für den Schritt „Bildkennzeichnung“ danach; ausgeschaltet zeigt die Oberfläche keine Art (Spec KI-Transparenz).
+    const aiKind: AiKind = aiLabelingEnabled(deps) ? record.aiKind : 'none';
+    return { status: 'success', message, data: { id: record.id, filename: record.filename, folder: record.folder, created, width: record.width, height: record.height, mimeType: record.mimeType, aiKind } };
   });
 }
 
@@ -104,5 +107,42 @@ export async function deleteFolderAction(path: string): Promise<ActionState> {
     const result = await deleteMediaFolder(deps, ctx, { path });
     if (result.ok) revalidatePath('/admin/media');
     return toActionState(result, t);
+  });
+}
+
+export async function setMediaAiKindAction(id: string, aiKind: AiKind): Promise<ActionState> {
+  return guardAction('(shell)/admin/media/actions.ts#setMediaAiKindAction', async () => {
+    const t = await getTranslations();
+    const { deps, ctx } = await requireSession();
+    const result = await setMediaAiKind(deps, ctx, { id, aiKind });
+    revalidatePath('/admin/media');
+    return toActionState(result, t, t('media.aiKindSaved'));
+  });
+}
+
+/** Was der Dialog „Bildkennzeichnung“ nachträglich zeigt (Fotokachel, Bildfeld): Name, Typ, Art und „Verwendet“. */
+export interface MediaLabelingInfo {
+  id: string;
+  filename: string;
+  mimeType: string;
+  aiKind: AiKind;
+  references: MediaListingItem['references'];
+}
+
+export async function getMediaLabelingAction(id: string): Promise<ActionState> {
+  return guardAction('(shell)/admin/media/actions.ts#getMediaLabelingAction', async () => {
+    const t = await getTranslations();
+    const { deps, ctx } = await requireSession();
+    const result = await getMediaAssetInfo(deps, ctx, id);
+    if (!result.ok) return toActionState(result, t);
+    const { record, references } = result.value;
+    const data: MediaLabelingInfo = {
+      id: record.id,
+      filename: record.filename,
+      mimeType: record.mimeType,
+      aiKind: aiLabelingEnabled(deps) ? record.aiKind : 'none',
+      references: references.map(listingReference),
+    };
+    return { status: 'success', data };
   });
 }

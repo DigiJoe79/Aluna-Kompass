@@ -4,7 +4,9 @@ import { useTranslations } from 'next-intl';
 import type { PhotoCrop } from '@kompass/module-animals';
 import type { ResolvedImagePlaces } from '@kompass/core/image-places';
 import { AlertTriangle } from 'lucide-react';
-import type { ReactNode } from 'react';
+import type { ComponentProps, ReactNode } from 'react';
+import { Button } from '@/components/ui/button';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { CropEditor } from '@/components/media/crop-editor';
 import { CroppedImage, ratioCss } from '@/components/media/cropped-image';
 import { cropPixelWidth } from '@/lib/crop-geometry';
@@ -82,12 +84,30 @@ export function CropLine({ crop, width, isPrimary, places }: { crop: PhotoCrop |
 }
 
 /**
- * Die Aktionszeile der Kachel (Tierformular und Prüfung). Bei Touch (`pointer: coarse`, wie `--field-h`): Knöpfe 44 px hoch; eine Checkbox-Zeile ist als Ganzes
- * 44 px hoch und antippbar, das Kästchen bleibt klein. Mit Maus 32 px (`sm`). Designer 2026-10-11, Artboard 3 — an
- * der Zeile statt einer neuen Größe am Button. Kein dauerhafter Test: Höhe misst jsdom nicht (Feedback Layout-Tests).
+ * N3 (Freigabe Joe 2026-10-22, Spec Bildkennzeichnung beim Hochladen § 5): die Aktionszeile der Kachel (Tierformular
+ * und Prüfung). Links, was die Reihenfolge betrifft (`start`: Hauptfoto, Pfeile), rechts, was das Bild betrifft (`end`:
+ * Ausschnitt, Kennzeichnen, Entfernen). Jede Gruppe ist ein eigener Block: Wird die Kachel zu schmal, rutscht die rechte
+ * Gruppe geschlossen unter die linke, einzelne Knöpfe brechen nie allein um. Bei Touch (`pointer: coarse`, wie
+ * `--field-h`) sind die Knöpfe 44 px groß, eine Checkbox-Zeile 44 px hoch. Kein dauerhafter Test: Maße misst jsdom
+ * nicht (Feedback Layout-Tests).
  */
-export function PhotoActions({ className, children }: { className?: string; children: ReactNode }) {
-  return <span className={cn('flex flex-wrap items-center gap-1 pointer-coarse:[&_button]:h-11 pointer-coarse:[&_button]:min-w-11 pointer-coarse:[&>label]:min-h-11', className)}>{children}</span>;
+export function PhotoActions({ start, end, className }: { start: ReactNode; end?: ReactNode; className?: string }) {
+  return (
+    <div className={cn('flex flex-wrap items-center justify-between gap-x-2 gap-y-1 pointer-coarse:[&_button]:h-11 pointer-coarse:[&_button]:min-w-11 pointer-coarse:[&_label]:min-h-11', className)}>
+      <span className="flex items-center gap-1">{start}</span>
+      {end ? <span className="flex items-center gap-1">{end}</span> : null}
+    </div>
+  );
+}
+
+/** Ein Symbolknopf der Aktionszeile: `icon-sm ghost`, Name für Vorleser und als Tooltip beim Überfahren. */
+export function PhotoActionButton({ label, children, ...props }: Omit<ComponentProps<typeof Button>, 'aria-label' | 'size' | 'variant' | 'type'> & { label: string }) {
+  return (
+    <Tooltip>
+      <TooltipTrigger render={<Button type="button" size="icon-sm" variant="ghost" aria-label={label} {...props} />}>{children}</TooltipTrigger>
+      <TooltipContent>{label}</TooltipContent>
+    </Tooltip>
+  );
 }
 
 /**

@@ -1,6 +1,7 @@
-import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { isProductSource, sourceFiles, SRC } from './source';
 
 /**
  * Die Oberfläche besteht aus den Bausteinen unter `src/components/` (AGENTS.md, „Oberfläche nur aus
@@ -12,7 +13,7 @@ import { describe, expect, it } from 'vitest';
  *
  * Eine Datei in der Liste, die es nicht mehr gibt, macht den Test ebenfalls rot: Die Liste lügt sonst.
  */
-const COMPONENTS = path.resolve(import.meta.dirname, '../../src/components');
+const COMPONENTS = path.join(SRC, 'components');
 const MUSTER = path.resolve(import.meta.dirname, '../../../../docs/MUSTER.md');
 
 /** Abschnittskürzel → Überschrift in `docs/MUSTER.md`. */
@@ -116,10 +117,13 @@ const INVENTORY: Readonly<Record<string, Entry>> = {
   'managed-field.tsx': bestand('E'),
   'fixed-value.tsx': neu('E', 'Entwurf E2 „Fester Wert als Text“, Designer 2026-10-17 (durchsicht-0.2.11/entwuerfe)'),
   'markdown-preview.tsx': bestand('Fachbaustein'),
+  'media/ai-kind-badge.tsx': neu('F', 'StatusBadge neutral mit Symbol für die KI-Art, Spec KI-Transparenz 2026-10-20 (MUSTER § F), Joe 2026-10-20'),
   'media/asset-grid.tsx': bestand('Fachbaustein'),
   'media/crop-editor.tsx': neu('Fachbaustein', 'Designer 2026-10-10, Handover design_handoff_ausschnitt (Dialog Bildausschnitt)'),
   'media/cropped-image.tsx': neu('Fachbaustein', 'Designer 2026-10-10, Handover design_handoff_ausschnitt (Ergebnis eines Bildausschnitts im Rahmen)'),
+  'media/image-labeling-dialog.tsx': neu('Fachbaustein', 'Dialog Bildkennzeichnung: Zeile N1 und Umschalter mit Symbol N2, Spec Bildkennzeichnung beim Hochladen, Joe 2026-10-22'),
   'media/media-chooser-dialog.tsx': bestand('Fachbaustein'),
+  'media/media-labeling-provider.tsx': neu('Fachbaustein', 'Kontext „darf kennzeichnen“ ohne Oberfläche, Spec Bildkennzeichnung beim Hochladen, Joe 2026-10-22'),
   'media/use-asset-drag.ts': bestand('Fachbaustein'),
   'module-inactive-card.tsx': bestand('Seitenrahmen'),
   'notice.tsx': bestand('A'),
@@ -185,15 +189,7 @@ const INVENTORY: Readonly<Record<string, Entry>> = {
   'user-contact-link.tsx': bestand('Fachbaustein'),
 };
 
-function walk(dir: string): string[] {
-  return readdirSync(dir).flatMap((name) => {
-    const full = path.join(dir, name);
-    if (statSync(full).isDirectory()) return walk(full);
-    return /\.(ts|tsx)$/.test(name) && !/\.test\./.test(name) ? [full] : [];
-  });
-}
-
-const present = walk(COMPONENTS).map((file) => path.relative(COMPONENTS, file).split(path.sep).join('/'));
+const present = sourceFiles(COMPONENTS).filter(isProductSource).map((file) => path.relative(COMPONENTS, file).split(path.sep).join('/'));
 
 describe('Bausteine der Oberfläche', () => {
   it('jeder Baustein ist eingeordnet', () => {

@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { derivedAssetId } from '../src/media/derived-id';
+import { AI_LABELING_ENABLED_KEY } from '../src/media/ai-labeling';
+import { setMediaAiKind } from '../src/media/ai-kind';
 import { mediaPixelSizes } from '../src/media/pixel-sizes';
+import { writeSettingInternal } from '../src/settings/service';
 import { storeMediaAsset } from '../src/media/service';
 import { unwrap } from '../src/result';
 import { createTestDeps, ctxWith, insertUser } from '../src/testing';
@@ -31,5 +34,16 @@ describe('mediaPixelSizes', () => {
     // Nur Zeichenketten in Form einer ID gehen in die Abfrage, nicht jeder Absatz eines Textfelds.
     const many = { texts: Array.from({ length: 40_000 }, (_, i) => `Absatz ${i}`), image: png.id };
     expect(mediaPixelSizes(deps, many)).toEqual({ [png.id]: { width: 1, height: 1 } });
+  });
+
+  it('trägt die KI-Art eines gekennzeichneten Bilds mit, solange die Kennzeichnung an ist (Spec KI-Transparenz)', async () => {
+    const deps = createTestDeps();
+    const ctx = ctxWith(['media.upload'], insertUser(deps, {}));
+    const png = unwrap(await storeMediaAsset(deps, ctx, { originalName: 'a.png', bytes: PNG }));
+    writeSettingInternal(deps.db, deps, ctx, AI_LABELING_ENABLED_KEY, true);
+    unwrap(await setMediaAiKind(deps, ctx, { id: png.id, aiKind: 'edited' }));
+    expect(mediaPixelSizes(deps, [derivedAssetId(png.id, { x: 0, y: 0, w: 1, h: 1 })])).toEqual({ [png.id]: { width: 1, height: 1, aiKind: 'edited' } });
+    writeSettingInternal(deps.db, deps, ctx, AI_LABELING_ENABLED_KEY, false);
+    expect(mediaPixelSizes(deps, [png.id])).toEqual({ [png.id]: { width: 1, height: 1 } });
   });
 });

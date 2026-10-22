@@ -13,7 +13,6 @@ import {
   diffTrees,
   hashTree,
   readSiteEnv,
-  removeLegacyStages,
   rsyncCommand,
   REUSED_PREVIEW,
   runPreview,
@@ -174,10 +173,6 @@ describe('preview and publish against templates/verein-basis', () => {
       previewDir: tmp(),
     };
 
-    // Altlast aus Fassungen bis 0.2.4: Bauverzeichnis unter dem Template.
-    const legacy = path.join(TEMPLATE_DIR, '.astro', `out-legacy-${Date.now()}`);
-    mkdirSync(path.join(legacy, 'x'), { recursive: true });
-
     // 5. runPreview ausführen
     const preview = unwrap(await runPreview(deps, publishCtx, env));
     // Jeder Schritt kennt seinen Stand und zählt mit.
@@ -189,16 +184,19 @@ describe('preview and publish against templates/verein-basis', () => {
     expect(by(previewRun, 'build').done).toBeGreaterThan(0);
     expect(by(previewRun, 'build').total).toBeUndefined();
     expect(by(previewRun, 'checksums').done).toBe(by(previewRun, 'checksums').total);
-    // Gebaut wird im Cache; der erste Bau räumt die Altlast unter dem Template weg.
-    expect(existsSync(legacy)).toBe(false);
+    // Gebaut wird im Cache, Stufen bleiben nicht liegen.
     expect(readdirSync(env.cacheDir).filter((n) => n.startsWith('out-'))).toEqual([]);
     expect(preview.violations).toEqual([]);
     expect(preview.diff.added.length).toBeGreaterThan(0);
     expect(readFileSync(path.join(preview.previewDir, 'index.html'), 'utf8')).toContain('Verein Basis');
 
-    // 6. runPublish ausführen
-    const published = unwrap(await runPublish(deps, publishCtx, env, { confirm: true }));
+    // 6. runPublish ausführen — mit dem Inhalt, den die Vorschau zeigte, übernimmt er sie, statt ein zweites Mal zu bauen
+    // (der Bau kostete auf dem NAS Minuten, und dabei wartet ein Mensch).
+    const published = unwrap(await runPublish(deps, publishCtx, env, { confirm: true, expectedContentHash: preview.contentHash }));
     expect(published.status).toBe('success');
+    expect(published.record.log).toContain(REUSED_PREVIEW);
+    // Plan C: Der erfolgreiche Publish hält fest, was öffentlich war — hier die Variable des Basis-Templates.
+    expect(JSON.parse(published.record.contentManifest ?? 'null')).toMatchObject({ 'variables.claim': { href: '/site/variables' } });
     const publishRun = lastRecord(env, 'publish');
     // Die Vorschau wird übernommen: sofort „übersprungen“, das Kopieren zählt mit.
     expect(by(publishRun, 'build')).toMatchObject({ state: 'skipped' });
@@ -218,44 +216,11 @@ describe('preview and publish against templates/verein-basis', () => {
     // 8. Zweiter Preview-Lauf: kein Diff gegenüber dem publizierten Stand
     const again = unwrap(await runPreview(deps, publishCtx, env));
     expect(again.diff).toEqual({ changed: [], added: [], removed: [] });
-  }, 240_000);
 
-  /**
-   * Vorschau ansehen, dann publizieren ist der normale Ablauf — und er baute
-   * die Seite zweimal. Auf dem Läufer kostete allein dieser Test drei Minuten,
-   * auf dem NAS wartet dabei ein Mensch.
-   */
-  it('publishes the preview it just built instead of building a second time', async () => {
-    const deps = createTestDeps({ manifests: [coreModule, projectsModule, siteModule], locales: LOCALES });
-    insertUser(deps, { id: 'USER-TEST' });
-    unwrap(await enableProjects(deps));
-    const manageCtx = ctxWith(['site.manage', 'site.view', 'media.upload']);
-    const publishCtx = ctxWith(['site.publish', 'site.view']);
-    unwrap(await applyTemplateSync(deps, manageCtx, { dir: TEMPLATE_DIR, confirm: true }));
-    unwrap(await setValues(deps, manageCtx, { values: { claim: { de: 'Erster Stand' } } }));
-
-    const target = tmp();
-    const env = {
-      publicUrl: 'https://staging.example.org',
-      staging: true,
-      deploy: { host: '', user: '', path: target, auth: { kind: 'none' as const } },
-      templateDir: TEMPLATE_DIR,
-      cacheDir: tmp(),
-      previewDir: tmp(),
-    };
-
-    unwrap(await runPreview(deps, publishCtx, env));
-    const published = unwrap(await runPublish(deps, publishCtx, env, { confirm: true }));
-    // Plan C: Der erfolgreiche Publish hält fest, was öffentlich war — hier die Variable des Basis-Templates.
-    expect(JSON.parse(published.record.contentManifest ?? 'null')).toMatchObject({ 'variables.claim': { href: '/site/variables' } });
-    expect(published.record.log).toContain(REUSED_PREVIEW);
-    expect(readFileSync(path.join(target, 'index.html'), 'utf8')).toContain('Erster Stand');
-
-    // Nach einer Änderung ist die Vorschau nicht mehr der Stand, der publiziert
-    // werden soll — dann muss neu gebaut werden.
+    // 9. Nach einer Änderung ist die Vorschau nicht mehr der Stand, der publiziert werden soll — dann wird neu gebaut.
     unwrap(await setValues(deps, manageCtx, { values: { claim: { de: 'Zweiter Stand' } } }));
-    const again = unwrap(await runPublish(deps, publishCtx, env, { confirm: true }));
-    expect(again.record.log).not.toContain(REUSED_PREVIEW);
+    const changed = unwrap(await runPublish(deps, publishCtx, env, { confirm: true }));
+    expect(changed.record.log).not.toContain(REUSED_PREVIEW);
     expect(readFileSync(path.join(target, 'index.html'), 'utf8')).toContain('Zweiter Stand');
   }, 240_000);
 
@@ -292,8 +257,6 @@ describe('preview and publish against templates/verein-basis', () => {
       const aborted = await runPreview(deps, publishCtx, { ...env, limits: { build: { totalMs: 1 } } });
       expect(aborted).toMatchObject({ ok: false, error: { code: 'stepTimedOut' } });
       expect(existsSync(stamp)).toBe(false);
-      const published = unwrap(await runPublish(deps, publishCtx, env, { confirm: true }));
-      expect(published.record.log).not.toContain(REUSED_PREVIEW);
     }, 240_000);
 
     it('drops a stamp of another cache version', async () => {
@@ -344,17 +307,6 @@ describe('preview and publish against templates/verein-basis', () => {
     const blocked = await runPublish(deps, publishCtx, base, { confirm: true });
     expect(blocked.ok === false && blocked.error.type === 'conflict' && blocked.error.code === 'blockedTermsPresent').toBe(true);
   }, 240_000);
-});
-
-describe('removeLegacyStages', () => {
-  it('removes only out-* below .astro and survives a missing directory', async () => {
-    const site = tmp();
-    mkdirSync(path.join(site, '.astro', 'out-abc'), { recursive: true });
-    writeFileSync(path.join(site, '.astro', 'data-store.json'), '{}');
-    expect(await removeLegacyStages(site)).toBe(1);
-    expect(readdirSync(path.join(site, '.astro'))).toEqual(['data-store.json']);
-    expect(await removeLegacyStages(tmp())).toBe(0);
-  });
 });
 
 describe('checkDeployTarget', () => {
@@ -411,12 +363,6 @@ describe('publish content check', () => {
     expect(rec.steps.find((st) => st.key === 'build')!.state).toBe('pending');
   });
 
-  it('publishes when the hash is the one the preview showed', async () => {
-    const { deps, publishCtx, env } = await setup();
-    const preview = unwrap(await runPreview(deps, publishCtx, env));
-    const published = unwrap(await runPublish(deps, publishCtx, env, { confirm: true, expectedContentHash: preview.contentHash }));
-    expect(published.status).toBe('success');
-  }, 240_000);
 });
 
 describe('rsyncCommand', () => {
@@ -506,15 +452,15 @@ describe('one job at a time', () => {
     const outcomes = [first, second].map((r) => (r.ok ? 'ok' : r.error.type === 'conflict' ? r.error.code : r.error.type)).sort();
     expect(outcomes).toEqual(['ok', 'siteJobRunning']);
     // Danach ist der Riegel wieder offen.
-    expect((await runPreview(deps, publishCtx, env)).ok).toBe(true);
+    expect(runningSiteJob(env)).toBeNull();
   }, 240_000);
 
   it('releases the guard when a run fails', async () => {
     const { deps, env, publishCtx } = await setup();
     const failed = await runPreview(deps, publishCtx, { ...env, publicUrl: null });
     expect(failed.ok).toBe(false);
-    expect((await runPreview(deps, publishCtx, env)).ok).toBe(true);
-  }, 240_000);
+    expect(runningSiteJob(env)).toBeNull();
+  });
 });
 
 /** Backlog 67: Nur ein erfolgreicher Publish der Produktion räumt den Bild-Cache, und das Log nennt das Ergebnis. */
@@ -708,7 +654,7 @@ describe('background jobs', () => {
     expect(runningSiteJob(env)).toBeNull();
   }, 240_000);
 
-  it('builds the preview in the background and keeps what the page shows', async () => {
+  it('builds the preview and publishes it in the background, records the publish, and keeps both results', async () => {
     const deps = await withTemplate();
     const env = envFor(tmp());
     const ctx = ctxWith(['site.publish', 'site.view']);
@@ -724,21 +670,14 @@ describe('background jobs', () => {
     expect(result.diff.added.length).toBeGreaterThan(0);
     expect(result.previewDir).toBe(env.previewDir);
     expect(readFileSync(path.join(env.previewDir, 'index.html'), 'utf8')).toContain('<html');
-  }, 240_000);
 
-  it('publishes in the background, records the publish, and keeps the result', async () => {
-    const deps = await withTemplate();
-    const target = tmp();
-    const env = envFor(target);
-    const ctx = ctxWith(['site.publish', 'site.view']);
-
-    const run = started(await startPublish(deps, ctx, env, { confirm: true, source: 'ui' }));
+    // Danach publiziert, ebenfalls im Hintergrund — mit der Vorschau von eben.
+    const publish = started(await startPublish(deps, ctx, env, { confirm: true, source: 'ui' }));
     expect(runningSiteJob(env)?.kind).toBe('publish');
     await settle(env);
-
-    const { last } = unwrap(lastSiteJob(deps, ctx, env, { kind: 'publish' }));
-    expect(last).toMatchObject({ kind: 'publish', runId: run.runId, result: { status: 'success' } });
-    expect(readFileSync(path.join(target, 'index.html'), 'utf8')).toContain('<html');
+    const { last: published } = unwrap(lastSiteJob(deps, ctx, env, { kind: 'publish' }));
+    expect(published).toMatchObject({ kind: 'publish', runId: publish.runId, result: { status: 'success' } });
+    expect(readFileSync(path.join(env.deploy!.path, 'index.html'), 'utf8')).toContain('<html');
     const history = unwrap(await listPublishes(deps, ctx, { environment: 'test' }));
     expect(history.map((h) => h.status)).toEqual(['success']);
   }, 240_000);
@@ -803,30 +742,6 @@ describe('limits and abort', () => {
 
 describe('runningSiteJob', () => {
   /**
-   * Wer den Tab schliesst, sieht nicht, dass noch gebaut wird. Die Seite fragt
-   * deshalb nach, was gerade laeuft und seit wann — auch nach dem Neuladen.
-   */
-  it('names the running job with its start, and is empty afterwards', async () => {
-    const deps = createTestDeps({ manifests: [coreModule, projectsModule, siteModule], locales: LOCALES });
-    insertUser(deps, { id: 'USER-TEST' });
-    unwrap(await enableProjects(deps));
-    unwrap(await applyTemplateSync(deps, ctxWith(['site.manage']), { dir: TEMPLATE_DIR, confirm: true }));
-    const env = {
-      publicUrl: 'https://staging.example.org',
-      staging: true,
-      deploy: null,
-      templateDir: TEMPLATE_DIR,
-      cacheDir: tmp(),
-      previewDir: tmp(),
-    };
-    expect(runningSiteJob(env)).toBeNull();
-    const running = runPreview(deps, ctxWith(['site.publish', 'site.view']), env);
-    expect(runningSiteJob(env)).toMatchObject({ kind: 'preview', runId: expect.any(String), startedAt: deps.clock.now().toISOString() });
-    unwrap(await running);
-    expect(runningSiteJob(env)).toBeNull();
-  }, 240_000);
-
-  /**
    * Ein Neustart mitten im Lauf hinterlässt die Datei. Im Container bekommt
    * Node danach meist dieselbe Prozessnummer — die Datei darf trotzdem nicht
    * als laufender Job gelten, sonst stünde der Riegel für immer. Ihr Lauf
@@ -850,15 +765,6 @@ describe('runningSiteJob', () => {
     expect(history.map((h) => h.status)).toEqual(['aborted']);
     expect(history[0]!.summary).toContain('unterbrochen');
     expect(unwrap(await startPreview(deps, ctx, { ...env, publicUrl: null }, { source: 'ui' }))).toMatchObject({ started: true });
-  });
-
-  it('understands a job file of 0.2.4 without crashing', () => {
-    const deps = createTestDeps({ manifests: [coreModule, projectsModule, siteModule], locales: LOCALES });
-    const env = { publicUrl: null, staging: false, deploy: null, templateDir: TEMPLATE_DIR, cacheDir: tmp(), previewDir: tmp(), workDir: tmp() };
-    writeFileSync(path.join(env.cacheDir, 'running-job.json'), JSON.stringify({ name: 'preview', runId: 'R0', startedAt: '2026-10-01T10:00:00.000Z', process: 'alt' }));
-    const { running, last } = unwrap(lastSiteJob(deps, ctxWith(['site.publish']), env, { kind: 'preview' }));
-    expect(running).toBeNull();
-    expect(last).toMatchObject({ runId: 'R0', status: 'interrupted' });
   });
 });
 

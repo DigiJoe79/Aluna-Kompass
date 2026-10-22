@@ -1,7 +1,7 @@
 import { existsSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { type Allowlist, inFileOrLocalImport, isCommentLine, lineOf, read, relative, SRC, sourceFiles } from './source';
+import { type Allowlist, allowlistHygiene, inFileOrLocalImport, isCommentLine, lineOf, read, relative, sourceFiles, SRC, staleKeys } from './source';
 
 /**
  * Keine stille Grenze (docs/MUSTER.md § L, Spec 2026-10-08 § 5): Holt Seitencode unter `src/app` eine begrenzte
@@ -92,7 +92,7 @@ export function defaultLimitedCalls(text: string, services: Map<string, Set<stri
 
 const SERVICES = limitedServices();
 
-const ALLOWED: Allowlist = {
+export const ALLOWED: Allowlist = {
   'app/admin/audit/export/route.ts': 'PDF-Auszug des Protokolls, keine Liste der Oberfläche; die Grenze von 200 gehört zum Auszug (Backlog 34).',
   'app/(shell)/contacts/search-action.ts': 'Kontaktauswahl (Kombobox): höchstens 20 Treffer, darunter „Weitere Treffer — bitte suchen.“',
   'app/(shell)/dms/search-action.ts': 'Dokumentauswahl (Kombobox): höchstens 20 Treffer zum Wählen, keine Liste.',
@@ -139,31 +139,9 @@ describe('keine stille Grenze', () => {
       expect([...(SERVICES.get('@kompass/core') ?? [])]).toContain('queryAudit');
       expect([...(SERVICES.get('@kompass/module-contacts') ?? [])]).toContain('listContacts');
       expect([...(SERVICES.get('@kompass/module-dms') ?? [])]).toContain('listDocuments');
-      expect([...(SERVICES.get('@kompass/module-site') ?? [])]).toEqual(['listPublishes']);
-      expect([...(SERVICES.get('@kompass/module-finance') ?? [])].sort()).toEqual(
-        [
-          'getDonationBook',
-          'listAllocationCorrections',
-          'listApprovals',
-          'listCashCounts',
-          'listConfirmationRuns',
-          'listConfirmations',
-          'listDirectDebitReturns',
-          'listDirectDebitRuns',
-          'listEntries',
-          'listImportRuns',
-          'listMandates',
-          'listMyExpenseClaims',
-          'listOpenItems',
-          'listPledges',
-          'listRawTransactions',
-          'listUncertifiedDonations',
-          'listVouchersWithoutEntry',
-          'listWorkItems',
-          'searchVouchersForTransaction',
-        ].sort(),
-      );
-      expect(SERVICES.has('@kompass/module-animals')).toBe(false);
+      // Stichproben statt der vollständigen Liste: Ein neuer Listen-Dienst ist kein Fehler (Testdurchsicht 2026-10-22).
+      expect([...(SERVICES.get('@kompass/module-site') ?? [])]).toContain('listPublishes');
+      expect([...(SERVICES.get('@kompass/module-finance') ?? [])]).toEqual(expect.arrayContaining(['listConfirmations', 'listCashCounts']));
     });
 
     it('zählt Aufrufe ohne limit nach Paket und Name, auch umbenannt und mehrzeilig; nicht limit: 1 und readAllPages', () => {
@@ -196,8 +174,5 @@ describe('keine stille Grenze', () => {
     expect(offenders().filter((file) => !(file in ALLOWED))).toEqual([]);
   });
 
-  it('jede Ausnahme ist noch nötig', () => {
-    const hits = new Set(offenders());
-    expect(Object.keys(ALLOWED).filter((file) => !hits.has(file))).toEqual([]);
-  });
+  allowlistHygiene(ALLOWED, () => staleKeys(ALLOWED, offenders()));
 });
