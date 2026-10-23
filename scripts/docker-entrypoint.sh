@@ -10,5 +10,5 @@ fi
 mkdir -p "$DATA_PATH/core/db" "$DATA_PATH/core/media"
 seed-site-template.sh
 seed-document-templates.sh
-echo "Aluna Kompass · APP_ENV=$APP_ENV · DATA=$DATA_PATH · typst $(typst --version)"
+echo "Aluna Kompass · APP_ENV=$APP_ENV · DATA=$DATA_PATH · BACKUP=${BACKUP_PATH:-/backups} · typst $(typst --version)"
 exec "$@"

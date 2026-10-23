@@ -1,5 +1,10 @@
 import { and, eq } from 'drizzle-orm';
 import { z } from 'zod';
+import { backupScheduleOf, nightlyBackupMissing } from '../backup/schedule';
+import { messageDateTime } from '../message-date';
+import { newestVerifiedBackup } from '../backup/sidecar';
+import { readBackupState } from '../backup/state';
+import { backupStorageSync } from '../backup/storage';
 import { roles, users } from '../db/schema';
 import { listDueFollowUpsWithTargets } from '../follow-ups/targets';
 import { listTranslationGaps } from '../i18n/translations';
@@ -97,14 +102,27 @@ const backupTile: DashboardTile<Record<string, never>> = {
   warningAction: true,
   defaultOn: true,
   options: z.object({}),
-  messageKeys: ['never', 'stale', 'recent'],
+  messageKeys: ['never', 'stale', 'recent', 'failed', 'notMounted', 'nightlyMissing', 'storageLow'],
   load(deps) {
-    const last = readSetting<string | null>(deps, 'system.lastExportAt');
-    if (!last) return { kind: 'status', tone: 'warning', messageKey: 'never', href: '/admin/backup' };
+    // Vorrang (Spec Backup § Meldungen): letzter Fehler > nicht eingehängt > nächtliches fehlt > Platz knapp > Frist.
+    // Die Sätze nennen den letzten geprüften Stand mit Zeit statt „vor n Tagen“ (Designer Backup § 7, 5a–5c).
+    const warn = (messageKey: string, values?: Record<string, string | number>) =>
+      ({ kind: 'status', tone: 'warning', messageKey, ...(values ? { values } : {}), href: '/admin/backup' }) as const;
+    const bp = deps.backupPath ?? null;
+    // Das neueste geprüfte Backup gleich welcher Art, aus dem Verzeichnis (Spec Backup § Zeitplan).
+    const last = bp ? (newestVerifiedBackup(bp)?.createdAt ?? null) : null;
+    const when = last ? messageDateTime(deps, last) : 'none';
+    const schedule = backupScheduleOf(deps).enabled ? 'on' : 'off';
+    const lastError = bp ? readBackupState(bp).lastError : null;
+    if (lastError) return warn('failed', { kind: lastError.kind === 'automatic' ? 'automatic' : 'other', when });
+    if (deps.backupMountWarning === 'notMounted') return warn('notMounted');
+    if (nightlyBackupMissing(deps)) return warn('nightlyMissing', { when });
+    if (bp && backupStorageSync(bp)?.low) return warn('storageLow');
+    if (!last) return warn('never', { schedule });
     const days = Math.floor((deps.clock.now().getTime() - new Date(last).getTime()) / 86_400_000);
     const maxAge = readSetting<number>(deps, 'backup.maxAgeDays');
-    if (days > maxAge) return { kind: 'status', tone: 'warning', messageKey: 'stale', values: { days }, href: '/admin/backup' };
-    return { kind: 'status', tone: 'neutral', messageKey: 'recent', values: { days }, href: '/admin/backup' };
+    if (days > maxAge) return warn('stale', { days, schedule });
+    return { kind: 'status', tone: 'neutral', messageKey: 'recent', values: { when }, href: '/admin/backup' };
   },
 };
 

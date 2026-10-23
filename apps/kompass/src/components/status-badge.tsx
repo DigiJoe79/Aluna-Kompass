@@ -61,6 +61,8 @@ export const STATUS_TONES = {
   pledgeRate: { expected: 'neutral', inRun: 'info', booked: 'final', returned: 'error', skipped: 'neutral', missed: 'neutral' },
   /** Ausgang der Mails (Handoff Phase 2b § 1): wartet und wird gesendet teilen `info`, gesperrt ist Einrichtung (`warning`). */
   outbox: { queued: 'info', sending: 'info', sent: 'success', failed: 'error', blocked: 'warning', withdrawn: 'neutral' },
+  /** Prüfung eines Backups (N3, Freigabe Joe 2026-10-23); „festgehalten“ ist kein Zustand der Prüfung und steht als `neutral` ohne Tabelle. */
+  backupCheck: { verified: 'success', failed: 'error' },
 } as const satisfies Record<string, Record<string, BadgeTone>>;
 
 export type StatusKind = keyof typeof STATUS_TONES;
@@ -102,6 +104,7 @@ const NORMAL_IN_LIST: { [K in StatusKind]?: readonly (keyof (typeof STATUS_TONES
   // „erwartet“ trägt in der Ratenliste eine Marke: Sie unterscheidet die künftige von der gebuchten Zeile (Nachtrag § 2).
   pledgeRate: ['booked'],
   outbox: ['sent'],
+  backupCheck: ['verified'],
 };
 
 export function isNormalInList<K extends StatusKind>(kind: K, status: keyof (typeof STATUS_TONES)[K]): boolean {

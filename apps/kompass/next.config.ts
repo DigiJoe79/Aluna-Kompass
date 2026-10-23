@@ -32,9 +32,11 @@ const nextConfig: NextConfig = {
     '@kompass/text-extraction',
   ],
   serverExternalPackages: ['better-sqlite3', '@node-rs/argon2', 'tar', 'file-type', 'image-size', 'sharp'],
-  // Backups enthalten Datenbank und Medien; die Vorgabe von 1 MB reicht dafür
-  // nicht. Der Import läuft über eine Server Action, deren Body Next puffert,
-  // deshalb bewusst begrenzt statt unbeschränkt.
+  // Backups laufen nicht mehr über Server Actions (Hochladen und Einspielen sind
+  // Route Handler, Backup B3). Die Grenze tragen jetzt Mediathek, Akte und
+  // Finanzen, deren Uploads (mehrere Dateien bis je 10 MB bzw.
+  // `finance.uploadLimitMb`) über Server Actions gehen und deren Body Next
+  // puffert. Eine kleinere Zahl gehört in eine eigene Messung.
   experimental: { serverActions: { bodySizeLimit: '512mb' } },
   // Next blockiert im Entwicklungsmodus Anfragen an /_next/* von anderen
   // Ursprüngen als dem Starthost. Der Browser löst localhost je nach System

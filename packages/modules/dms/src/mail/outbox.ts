@@ -17,6 +17,7 @@ import {
   type Failure,
   type MailState,
   type Result,
+  type SystemMailHook,
 } from '@kompass/core';
 import { contacts, deliveryForContactInternal, displayName } from '@kompass/module-contacts';
 import { and, desc, eq, gte, inArray, lte, type SQL } from 'drizzle-orm';
@@ -483,6 +484,24 @@ export function mailSender(deps: Deps): { from: { address: string; name: string 
   const replyTo = readSetting<string | null>(deps, 'dms.mail.replyTo');
   return { from: { address, name }, ...(replyTo ? { replyTo } : {}) };
 }
+
+/**
+ * Systemmail des Kerns (Haken `systemMail`, Spec Backup § Meldungen): direkt über den Transport wie die Testmail,
+ * nicht über den Ausgangskorb, der an Dokumente gebunden ist. Kein Protokolleintrag — eine Systemmail ändert keinen
+ * Datensatz. Verfügbar nur mit Absender und eingerichtetem Versand (`ready` oder Umleitung).
+ */
+export const dmsSystemMail: SystemMailHook = {
+  available: (deps) => {
+    const kind = deps.mail.state().kind;
+    return mailSender(deps) !== null && (kind === 'ready' || kind === 'redirect');
+  },
+  send: async (deps, message) => {
+    const sender = mailSender(deps);
+    if (!sender) return { sent: false, reason: 'unavailable' };
+    const result = await deps.mail.send({ to: message.to, ...sender, subject: message.subject, text: message.text });
+    return result.ok ? { sent: true } : { sent: false, reason: 'sendFailed' };
+  },
+};
 
 /**
  * „Testmail an mich senden“: an die Adresse des angemeldeten Nutzers, direkt

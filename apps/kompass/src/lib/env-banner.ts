@@ -1,4 +1,4 @@
-import type { AppEnv } from '@kompass/core';
+import { confirmationNameFor, type AppEnv } from '@kompass/core';
 
 export interface BannerContext {
   lastImportAt: string | null;
@@ -18,9 +18,8 @@ export function bannerFor(env: AppEnv, _ctx: BannerContext): Banner | null {
   return { kind: env === 'test' ? 'test' : 'development' };
 }
 
-export function environmentConfirmationName(env: AppEnv): string {
-  return env === 'production' ? 'produktion' : env === 'test' ? 'test' : 'entwicklung';
-}
+/** Was zur Bestätigung eines Einspielens einzutippen ist — dieselbe Regel wie im Kern, der sie prüft. */
+export const environmentConfirmationName: (env: AppEnv) => string = confirmationNameFor;
 
 /** Schlüssel des Seitentitels: Prod heißt wie das Produkt, Test und Dev tragen die Art (Joe 2026-10-11). */
 export function titleKeyFor(env: AppEnv): 'app.name' | 'app.titleTest' | 'app.titleDevelopment' {

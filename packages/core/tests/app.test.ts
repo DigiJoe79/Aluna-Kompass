@@ -48,11 +48,44 @@ describe('createDeps', () => {
   });
 });
 
+describe('createDeps mit BACKUP_PATH', () => {
+  it('verweigert ein BACKUP_PATH unter DATA_PATH', () => {
+    const dir = mkdtempSync(path.join(tmpdir(), 'kompass-'));
+    dirs.push(dir);
+    expect(() => createDeps({ dataPath: dir, backupPath: path.join(dir, 'b'), env: 'test' })).toThrow(/BACKUP_PATH liegt in DATA_PATH/);
+  });
+
+  it('legt BACKUP_PATH neben DATA_PATH an und trägt Version und Pfad', () => {
+    const root = mkdtempSync(path.join(tmpdir(), 'kompass-'));
+    dirs.push(root);
+    const dataPath = path.join(root, 'data');
+    const backupPath = path.join(root, 'backups');
+    const deps = createDeps({ dataPath, backupPath, env: 'test' });
+    expect(deps.backupPath).toBe(path.resolve(backupPath));
+    expect(existsSync(backupPath)).toBe(true);
+    expect(deps.appVersion).toBe('0.0.0-dev');
+    expect(deps.backupMountWarning).toBeNull();
+    deps.close();
+    const versioned = createDeps({ dataPath, backupPath, env: 'test', appVersion: '1.2.3' });
+    expect(versioned.appVersion).toBe('1.2.3');
+    versioned.close();
+  });
+
+  it('ohne backupPath ist deps.backupPath null', () => {
+    const dir = mkdtempSync(path.join(tmpdir(), 'kompass-'));
+    dirs.push(dir);
+    const deps = createDeps({ dataPath: dir, env: 'test' });
+    expect(deps.backupPath).toBeNull();
+    deps.close();
+  });
+});
+
 describe('readEnv', () => {
   const base = { APP_ENV: 'production', DATA_PATH: '/data', PORT: '3000', SESSION_SECRET: 'x'.repeat(32) };
 
   it('parses a complete environment', () => {
-    expect(readEnv(base)).toEqual({ env: 'production', dataPath: '/data', port: 3000, sessionSecret: 'x'.repeat(32), documentTemplatesDir: null, handbookDir: null });
+    expect(readEnv(base)).toEqual({ env: 'production', dataPath: '/data', backupPath: './backups', inImage: false, port: 3000, sessionSecret: 'x'.repeat(32), documentTemplatesDir: null, handbookDir: null, skipUpdateBackup: false });
+    expect(readEnv({ ...base, KOMPASS_SKIP_UPDATE_BACKUP: '1' }).skipUpdateBackup).toBe(true);
   });
 
   it('defaults to development with local paths when only the secret is set', () => {

@@ -1,11 +1,17 @@
+import fs, { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 import { eq } from 'drizzle-orm';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { coreModule } from '../src/core-module';
+import { writeSidecar } from '../src/backup/sidecar';
+import { updateBackupState } from '../src/backup/state';
 import { CORE_DASHBOARD_TILES } from '../src/dashboard/tiles';
 import type { DashboardTile } from '../src/dashboard/types';
 import * as schema from '../src/db/schema';
 import { users } from '../src/db/schema';
 import { createFollowUp } from '../src/follow-ups/service';
+import { messageDateTime } from '../src/message-date';
 import { defineModule } from '../src/modules/manifest';
 import { writeSettingInternal } from '../src/settings/service';
 import { createTestDeps, ctxWith, insertRole, insertUser, systemContext, TEST_NOW } from '../src/testing';
@@ -122,14 +128,90 @@ describe('setup tile', () => {
 });
 
 describe('backup tile', () => {
-  it('warnt ohne Export, warnt bei Export älter als die Frist, ist sonst neutral', async () => {
-    const { deps, ctx } = setup();
+  const sidecar = (bp: string, name: string, createdAt: string, status: 'passed' | 'failed') => {
+    writeFileSync(path.join(bp, `${name}.tar`), 'x');
+    writeSidecar(bp, {
+      version: 1,
+      name,
+      kind: 'manual',
+      createdAt,
+      sizeBytes: 1,
+      sha256: null,
+      manifest: null,
+      verification: status === 'passed' ? { status, at: createdAt } : { status, at: createdAt, reason: 'backupCorrupt' },
+      pinned: false,
+      pinnedLabel: null,
+    });
+  };
+
+  it('liest das neueste geprüfte Backup aus dem Verzeichnis: ohne → never, älter als die Frist → stale, gescheitertes zählt nicht', async () => {
     const t = tile('backup');
-    expect(await t.load(deps, ctx, options(t))).toEqual({ kind: 'status', tone: 'warning', messageKey: 'never', href: '/admin/backup' });
-    setSetting(deps, 'system.lastExportAt', '2026-09-14T08:00:00.000Z');
-    expect(await t.load(deps, ctx, options(t))).toEqual({ kind: 'status', tone: 'neutral', messageKey: 'recent', values: { days: 3 }, href: '/admin/backup' });
-    setSetting(deps, 'backup.maxAgeDays', 2);
-    expect(await t.load(deps, ctx, options(t))).toEqual({ kind: 'status', tone: 'warning', messageKey: 'stale', values: { days: 3 }, href: '/admin/backup' });
+    const without = createTestDeps({ now: '2026-09-17T08:00:00.000Z' });
+    expect(await t.load(without, ctxWith(['backup.export']), options(t))).toEqual({ kind: 'status', tone: 'warning', messageKey: 'never', values: { schedule: 'off' }, href: '/admin/backup' });
+    const bp = mkdtempSync(path.join(tmpdir(), 'kompass-tile-'));
+    try {
+      const deps = createTestDeps({ now: '2026-09-17T08:00:00.000Z', backupPath: bp });
+      const ctx = ctxWith(['backup.export']);
+      expect(await t.load(deps, ctx, options(t))).toEqual({ kind: 'status', tone: 'warning', messageKey: 'never', values: { schedule: 'off' }, href: '/admin/backup' });
+      sidecar(bp, 'alt', '2026-08-08T08:00:00.000Z', 'passed');
+      sidecar(bp, 'kaputt', '2026-09-16T08:00:00.000Z', 'failed');
+      expect(await t.load(deps, ctx, options(t))).toEqual({ kind: 'status', tone: 'warning', messageKey: 'stale', values: { days: 40, schedule: 'off' }, href: '/admin/backup' });
+      sidecar(bp, 'gut', '2026-09-14T08:00:00.000Z', 'passed');
+      expect(await t.load(deps, ctx, options(t))).toEqual({ kind: 'status', tone: 'neutral', messageKey: 'recent', values: { when: messageDateTime(deps, '2026-09-14T08:00:00.000Z') }, href: '/admin/backup' });
+      // Zeitplan an, die Uhrzeit noch nicht erreicht: kein „fehlt“, die Kachel sagt nur nicht „aus“.
+      deps.db.transaction((tx) => writeSettingInternal(tx, deps, systemContext(), 'backup.schedule.enabled', true));
+      deps.db.transaction((tx) => writeSettingInternal(tx, deps, systemContext(), 'backup.schedule.time', '23:00'));
+      rmSync(path.join(bp, 'gut.tar'));
+      expect(await t.load(deps, ctx, options(t))).toMatchObject({ messageKey: 'stale', values: { days: 40, schedule: 'on' } });
+    } finally {
+      rmSync(bp, { recursive: true, force: true });
+    }
+  });
+});
+
+describe('backup tile — Warnungen', () => {
+  const passed = (bp: string, name: string, createdAt: string, kind: 'manual' | 'automatic' = 'manual', size = 1) => {
+    writeFileSync(path.join(bp, `${name}.tar`), Buffer.alloc(size));
+    writeSidecar(bp, { version: 1, name, kind, createdAt, sizeBytes: size, sha256: null, manifest: null, verification: { status: 'passed', at: createdAt }, pinned: false, pinnedLabel: null });
+  };
+  const warning = (messageKey: string) => ({ kind: 'status', tone: 'warning', messageKey, href: '/admin/backup' });
+
+  it('Vorrang failed > notMounted > nightlyMissing > storageLow > recent', async () => {
+    const t = tile('backup');
+    const bp = mkdtempSync(path.join(tmpdir(), 'kompass-tile-'));
+    try {
+      // 2026-10-23 10:00 UTC = 12:00 Berlin; ein Von Hand von heute 02:30, vor der Uhrzeit des Zeitplans
+      const deps = createTestDeps({ now: '2026-10-23T10:00:00.000Z', backupPath: bp });
+      const ctx = ctxWith(['backup.export']);
+      passed(bp, 'heute', '2026-10-23T00:30:00.000Z');
+      expect(await t.load(deps, ctx, options(t))).toMatchObject({ tone: 'neutral', messageKey: 'recent' });
+      const spy = vi.spyOn(fs, 'statfsSync').mockReturnValue({ bavail: 1, bsize: 1, blocks: 100 } as fs.StatsFs);
+      vi.spyOn(fs.promises, 'statfs').mockResolvedValue({ bavail: 1, bsize: 1, blocks: 100 } as fs.StatsFs);
+      expect(await t.load(deps, ctx, options(t))).toEqual(warning('storageLow'));
+      deps.db.transaction((tx) => writeSettingInternal(tx, deps, systemContext(), 'backup.schedule.enabled', true));
+      expect(await t.load(deps, ctx, options(t))).toEqual({ ...warning('nightlyMissing'), values: { when: messageDateTime(deps, '2026-10-23T00:30:00.000Z') } });
+      deps.backupMountWarning = 'notMounted';
+      expect(await t.load(deps, ctx, options(t))).toEqual(warning('notMounted'));
+      updateBackupState(bp, { lastError: { code: 'createFailed', at: '2026-10-23T01:00:00.000Z', kind: 'automatic', name: null, reason: 'writeFailed', mailed: true } });
+      expect(await t.load(deps, ctx, options(t))).toEqual({ ...warning('failed'), values: { kind: 'automatic', when: messageDateTime(deps, '2026-10-23T00:30:00.000Z') } });
+      spy.mockRestore();
+    } finally {
+      vi.restoreAllMocks();
+      rmSync(bp, { recursive: true, force: true });
+    }
+  });
+
+  it('ein geprüftes automatisches von heute: keine Warnung nightlyMissing', async () => {
+    const t = tile('backup');
+    const bp = mkdtempSync(path.join(tmpdir(), 'kompass-tile-'));
+    try {
+      const deps = createTestDeps({ now: '2026-10-23T10:00:00.000Z', backupPath: bp });
+      deps.db.transaction((tx) => writeSettingInternal(tx, deps, systemContext(), 'backup.schedule.enabled', true));
+      passed(bp, 'nacht', '2026-10-23T01:00:00.000Z', 'automatic');
+      expect(await t.load(deps, ctxWith(['backup.export']), options(t))).toMatchObject({ messageKey: 'recent' });
+    } finally {
+      rmSync(bp, { recursive: true, force: true });
+    }
   });
 });
 

@@ -8,7 +8,10 @@ import {
   updateRole, ok, invalid,
   createTheme, deleteTheme, duplicateTheme, getUser, listMediaFolders, previewLocaleRemoval, themeSchema, updateTheme, updateUser,
   listTranslationGaps, setTranslations, translationGapsFilterSchema, translationsSetSchema,
-  type McpToolDefinition,
+  backupJobStatus, backupNameSchema, backupRunIdSchema, cancelBackupJob, deleteBackup, isAppDeps, listBackupArchives,
+  localizedConflict, pinBackup, pinBackupSchema, restorePreview, restoreSchema, startBackup, startBackupVerification,
+  startRestore, unpinBackup,
+  type AppDeps, type CallContext, type Deps, type McpToolDefinition, type Result,
 } from '@kompass/core';
 import { z } from 'zod';
 
@@ -26,7 +29,110 @@ function decodeBase64(text: string): Uint8Array | null {
   return new Uint8Array(Buffer.from(compact, 'base64'));
 }
 
+/**
+ * Backup-Dienste brauchen die laufende App (Backup-Verzeichnis, Sicherung der Datenbank). Ein Aufruf mit anderen
+ * `Deps` (Skript, Test) bekommt dieselbe Ablehnung wie eine Installation ohne Verzeichnis, keinen Wurf. Rechte und
+ * fehlendes Verzeichnis prüft der Dienst selbst in seiner Reihenfolge.
+ */
+const withBackup = <I>(fn: (deps: AppDeps, ctx: CallContext, input: I) => Promise<Result<unknown>>) =>
+  async (deps: Deps, ctx: CallContext, input: I): Promise<Result<unknown>> => {
+    if (!isAppDeps(deps)) return localizedConflict('backupPathMissing', 'backup.errors.backupPathMissing');
+    const result = await fn(deps, ctx, input);
+    return result.ok ? ok(withoutFileLists(result.value)) : result;
+  };
+
+/**
+ * Die Dateiliste im Manifest eines Backups (bei einem Verein mit Akte und Mediathek Zehntausende Pfade) gehört nicht in
+ * ein Modell: `backup_list` brachte schon mit Seed-Daten 90 KB (Prüfung 2026-10-23). Statt `files` steht `fileCount`.
+ */
+function withoutFileLists(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(withoutFileLists);
+  if (value === null || typeof value !== 'object') return value;
+  const out: Record<string, unknown> = {};
+  for (const [key, inner] of Object.entries(value)) {
+    if (key === 'files' && Array.isArray(inner)) out.fileCount = inner.length;
+    else out[key] = withoutFileLists(inner);
+  }
+  return out;
+}
+
+const emptyInput = z.object({});
+
+const backupTools: McpToolDefinition[] = [
+  t({
+    name: 'backup_list',
+    description: 'List the backups in the backup directory, newest first: name, kind (automatic, manual, preUpdate, preRestore, upload, unknown), createdAt, size, Kompass version, migrationCount, verification, pinned and its label, counts, number of files (fileCount; the file list itself is not returned), restorable and retention (how long it stays). Also storage, last error, mount warning, schedule and whether e-mail alerts are available. No download over MCP — files of this size do not belong in a model. Requires backup.export. Read only.',
+    inputSchema: emptyInput,
+    handler: (deps, ctx) => withBackup(listBackupArchives)(deps, ctx, {}),
+    service: listBackupArchives,
+  }),
+  t({
+    name: 'backup_create',
+    description: 'Start a manual backup in the background; one backup job runs at a time. Returns runId, or the running job. The manual slot keeps one backup; the previous one goes only after the new one passed verification. Poll backup_job_status. Requires backup.export. Audited.',
+    inputSchema: emptyInput,
+    handler: (deps, ctx) => withBackup(startBackup)(deps, ctx, {}),
+    service: startBackup,
+  }),
+  t({
+    name: 'backup_job_status',
+    description: 'The running backup job (create, verify, restore) with steps and progress, and the last result of each kind. Requires backup.export. Read only.',
+    inputSchema: emptyInput,
+    handler: (deps, ctx) => withBackup(backupJobStatus)(deps, ctx, {}),
+    service: backupJobStatus,
+  }),
+  t({
+    name: 'backup_job_cancel',
+    description: 'Cancel the running backup job by runId. A restore can be cancelled only before it starts replacing data, and needs backup.import as well. Requires backup.export. Audited.',
+    inputSchema: backupRunIdSchema,
+    handler: withBackup(cancelBackupJob),
+    service: cancelBackupJob,
+  }),
+  t({
+    name: 'backup_verify',
+    description: 'Verify an existing backup again in the background: read it fully, check the file list and sizes, the database integrity and the checksum. Requires backup.export. Audited.',
+    inputSchema: backupNameSchema,
+    handler: withBackup(startBackupVerification),
+    service: startBackupVerification,
+  }),
+  t({
+    name: 'backup_pin',
+    description: 'Pin a backup with an optional label (at most 60 characters): it leaves every ring and stays until unpinned. At most 3 pinned. Pinning a backup that is already pinned only replaces its label (audited as a rename); otherwise it stays unchanged. Requires backup.export. Audited.',
+    inputSchema: pinBackupSchema,
+    handler: withBackup(pinBackup),
+    service: pinBackup,
+  }),
+  t({
+    name: 'backup_unpin',
+    description: 'Release a pinned backup; it returns to its ring and may be removed at the next cleanup. A backup that is not pinned stays unchanged (success, nothing audited). Requires backup.export. Audited.',
+    inputSchema: backupNameSchema,
+    handler: withBackup(unpinBackup),
+    service: unpinBackup,
+  }),
+  t({
+    name: 'backup_delete',
+    description: 'Delete one backup (archive and sidecar), pinned ones too. Refused for the newest verified backup and while a backup job runs. Requires backup.import. Audited.',
+    inputSchema: backupNameSchema,
+    handler: withBackup(deleteBackup),
+    service: deleteBackup,
+  }),
+  t({
+    name: 'backup_restore_preview',
+    description: "Before a restore: changes and distinct people in the audit log since the backup was made, the backup's counts and an estimated duration. Requires backup.import. Read only.",
+    inputSchema: backupNameSchema,
+    handler: withBackup(restorePreview),
+    service: restorePreview,
+  }),
+  t({
+    name: 'backup_restore',
+    description: 'Restore a backup from the list as a background job: first a backup of the current state (kind preRestore), then verification, then all data is replaced and migrated. Current API tokens and backup settings stay; all sessions end; the published website, sent e-mails and submitted direct-debit files do not go back. confirmation is the environment name (produktion, test, entwicklung). Human only: refused over MCP unless the association has set backup.mcpHumanOnlyAllowed at the screen. Requires backup.import. Audited.',
+    inputSchema: restoreSchema,
+    handler: withBackup(startRestore),
+    service: startRestore,
+  }),
+];
+
 export const coreMcpTools: McpToolDefinition[] = [
+  ...backupTools,
   t({
     name: 'media_upload',
     description: 'Upload a file into the media library: filename plus base64 content (no data-URL prefix), optional folder path (null or omitted = root). Same limits as the UI: 10 MB, PNG/JPEG/WebP/SVG/PDF. Identical bytes are deduplicated — the existing record comes back, with its own filename and folder. Requires media.upload. Audited.',

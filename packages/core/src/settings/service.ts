@@ -76,7 +76,8 @@ export function writeSettingInternal(
   ctx: CallContext,
   key: string,
   value: unknown,
-  action: string = 'settings.update',
+  /** `null`: ohne eigenen Eintrag — der Aufrufer protokolliert selbst (Einspielen: ein Eintrag für alle übernommenen). */
+  action: string | null = 'settings.update',
 ): Result<{ key: string; value: unknown }> {
   const def = definitionOf(deps, key);
   const parsed = validate(deps, def.schema, value);
@@ -90,6 +91,7 @@ export function writeSettingInternal(
       set: { value: JSON.stringify(parsed.value), updatedAt: isoNow(deps.clock), updatedByUserId: ctx.userId },
     })
     .run();
+  if (action === null) return ok({ key, value: parsed.value });
   recordAudit(tx, deps, ctx, {
     action,
     entityType: 'setting',

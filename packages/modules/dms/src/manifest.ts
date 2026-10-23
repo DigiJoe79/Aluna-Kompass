@@ -1,5 +1,5 @@
 import { defineModule, type DeletionRule, type ModuleManifest } from '@kompass/core';
-import { eq } from 'drizzle-orm';
+import { count, eq } from 'drizzle-orm';
 import { dmsGatePermissions } from './access';
 import { DMS_DASHBOARD_TILES } from './dashboard';
 import { dmsFollowUpTargets } from './follow-ups';
@@ -10,6 +10,7 @@ import { dmsRecordReferences } from './record-references';
 import { dmsRetentionDue, dmsRetentionHolds } from './retention';
 import { documents } from './schema';
 import { seedDms } from './seed';
+import { dmsSystemMail } from './mail/outbox';
 import { purgeOutboxAddresses } from './mail/sender';
 import { letterTemplate } from './templates';
 import { bundleIndexTemplate } from './bundle-index';
@@ -109,6 +110,7 @@ export const dmsModule: ModuleManifest = defineModule({
   retentionHolds: dmsRetentionHolds,
   recordReferences: dmsRecordReferences,
   retentionDue: dmsRetentionDue,
+  backupCounts: (deps) => ({ documents: deps.db.select({ n: count() }).from(documents).get()?.n ?? 0 }),
   recordLabels: dmsRecordLabels,
   followUpTargets: dmsFollowUpTargets,
   dashboardTiles: DMS_DASHBOARD_TILES,
@@ -180,5 +182,7 @@ export const dmsModule: ModuleManifest = defineModule({
   housekeeping: async (deps) => {
     await purgeOutboxAddresses(deps);
   },
+  /** Meldungen des Kerns (Backup) mit den Absender-Einstellungen der Akte. */
+  systemMail: dmsSystemMail,
   seed: seedDms,
 });

@@ -1,3 +1,4 @@
+import { lastSuccessfulPublish } from './services/publishes';
 import { defineModule, type ModuleManifest, type NavigationItem } from '@kompass/core';
 import { SITE_DASHBOARD_TILES } from './dashboard';
 import { SITE_MCP_TOOLS } from './mcp-tools';
@@ -57,6 +58,11 @@ export const siteModule: ModuleManifest = defineModule({
   seed: seedSiteDevelopment,
   seedLast: seedSitePublishedState,
   mediaReferences: siteMediaReferences,
+  // Wann zuletzt publiziert wurde — das Einspielen eines Backups liest es vor dem Austausch (Spec Backup § Einspielen).
+  lastPublishedAt: (deps) => {
+    const last = lastSuccessfulPublish(deps, deps.env);
+    return last ? (last.finishedAt ?? last.startedAt) : null;
+  },
   // Die Sprachen des eingelesenen Templates: Ohne sie filtert der Export Inhalte stillschweigend weg.
   requiredLocales: (deps) => activeTemplate(deps)?.schema.locales ?? [],
   // Format und Breite der Bildstellen der Modul-Sichten aus dem eingelesenen Template (Spec Ausschnitt für alle Bilder § 2).

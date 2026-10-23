@@ -15,7 +15,7 @@ import { Section } from '@/components/section';
 interface Manifest {
   environment: string;
   createdAt: string;
-  counts: { users: number; documents: number; mediaAssets: number };
+  counts: { users: number; mediaAssets: number; records: Record<string, number> };
 }
 
 export function ImportForm() {
@@ -58,7 +58,7 @@ export function ImportForm() {
         <FileDropzone
           id="archive"
           name="archive"
-          accept=".gz,.tgz,application/gzip"
+          accept=".tar,application/x-tar"
           hint={t('fileHint')}
           onFile={(file) => {
             if (file && !busy && !pending) void upload(file);
@@ -80,7 +80,7 @@ export function ImportForm() {
                 <dt className="text-muted-ink">{t('users')}</dt>
                 <dd className="tabular-nums">{manifest.counts.users}</dd>
                 <dt className="text-muted-ink">{t('documents')}</dt>
-                <dd className="tabular-nums">{manifest.counts.documents}</dd>
+                <dd className="tabular-nums">{manifest.counts.records['dms.documents'] ?? 0}</dd>
                 <dt className="text-muted-ink">{t('mediaAssets')}</dt>
                 <dd className="tabular-nums">{manifest.counts.mediaAssets}</dd>
               </dl>

@@ -42,7 +42,7 @@ describe('RunCard', () => {
     expect(markup).toContain('Bildvarianten');
     expect(markup).toContain('342 von 1.533');
     expect(markup).toContain('aria-valuetext="342 von 1.533"');
-    expect(markup).toContain('fertig');
+    expect(markup).toContain(messages.common.runSteps.state.done);
     expect(markup).toContain('läuft');
     expect(markup).toContain('wartet');
     expect(markup).toContain('Seite bauen');

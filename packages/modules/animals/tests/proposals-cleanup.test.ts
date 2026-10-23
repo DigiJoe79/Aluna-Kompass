@@ -48,7 +48,7 @@ describe('sweeping proposals', () => {
 
   it('writes no audit entry when nothing happened, and runs through the module hook', async () => {
     const d = await proposalDeps();
-    expect(await runHousekeeping(d)).toEqual([{ module: 'animals', error: null }]);
+    expect(await runHousekeeping(d)).toEqual([{ module: 'core', error: null }, { module: 'animals', error: null }]);
     expect(() => auditEntry(d, 'animals.proposal.clear')).toThrow();
   });
 });

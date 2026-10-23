@@ -60,6 +60,8 @@ export function createTestDeps(
     /** Vorgabe `off`: ein Test, der senden will, reicht `fakeMailTransport()` herein. */
     mail?: MailTransport;
     locales?: string[];
+    /** Ein Backup-Verzeichnis für Tests, die Backups auflisten. */
+    backupPath?: string;
   } = {},
 ): TestDeps {
   const { db, sqlite } = createTestDb();
@@ -87,6 +89,7 @@ export function createTestDeps(
     pdf: opts.pdf ?? fakePdfTools(),
     mail: opts.mail ?? noopMailTransport,
     locales: () => readLocales(deps),
+    backupPath: opts.backupPath ?? null,
   };
   return deps;
 }

@@ -1,4 +1,5 @@
 import type Database from 'better-sqlite3';
+import type { BackupMountWarning } from './backup/paths';
 import type { Clock } from './clock';
 import type { Db } from './db/client';
 import type { DocumentEngine } from './documents/engine';
@@ -47,4 +48,10 @@ export interface Deps {
    * belegt es; ohne Angabe (Tests, Skripte) bleibt es bei Schlüssel und Parametern (`resolveLabel`).
    */
   labels?: (key: string, params: Record<string, string | number>) => string;
+  /**
+   * Betriebsparameter: das Verzeichnis der Backups und ob es eingehängt ist. Nur `AppDeps` belegt sie;
+   * die Kachel und die Hauswirtschaft lesen sie über `Deps`.
+   */
+  backupPath?: string | null;
+  backupMountWarning?: BackupMountWarning;
 }

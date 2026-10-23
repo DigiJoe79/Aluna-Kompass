@@ -101,3 +101,19 @@ export async function finishLabeling(page: Page, button: 'Fertig' | 'Übernehmen
   await dialog.getByRole('button', { name: button }).click();
   await expect(dialog).toBeHidden();
 }
+
+/**
+ * Erstellt auf der Backup-Seite ein Backup von Hand, wartet auf die Zeile „von Hand“ und lädt sie über das Zeilenmenü
+ * herunter. Gibt den Pfad der Datei zurück.
+ */
+export async function createAndDownloadBackup(page: Page): Promise<string> {
+  await page.goto('/admin/backup');
+  await waitForHydration(page, '[data-testid="backup-create"]');
+  await page.getByRole('button', { name: 'Backup erstellen' }).click();
+  const row = page.getByRole('row').filter({ hasText: 'von Hand' }).first();
+  await expect(row).toBeVisible({ timeout: 60_000 });
+  const [download] = await Promise.all([page.waitForEvent('download'), rowAction(page, row, /^Herunterladen · /)]);
+  expect(download.suggestedFilename()).toMatch(/^kompass-backup-test-\d{8}-\d{6}-manual\.tar$/);
+  await expect(page.getByText(/Download gestartet/)).toBeVisible();
+  return (await download.path())!;
+}

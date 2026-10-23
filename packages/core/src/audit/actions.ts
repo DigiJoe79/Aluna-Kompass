@@ -41,6 +41,24 @@ export const CORE_AUDIT_ACTIONS: Record<string, AuditActionDef> = {
   /** `sizeBytes`: Größe der Sicherung in Byte; die Anzeige rechnet in MB. */
   'backup.export': { params: ['sizeBytes'] },
   'backup.import': { params: ['environment', 'createdAt'] },
+  /** Hintergrundläufe (Backup B2): `kind` ist die Art des Backups (`automatic`, `manual` …), `sizeBytes` in Byte. */
+  'backup.create': { params: ['kind', 'sizeBytes'] },
+  /** `reason`: ein `BackupFailureReason`. */
+  'backup.fail': { params: ['kind', 'reason'] },
+  /** `reason` ist `null`, wenn die Prüfung bestanden ist. */
+  'backup.verify': { params: ['passed', 'reason'] },
+  'backup.download': { params: [] },
+  /** `renamed`: schon festgehalten, nur der Name geändert (zählt nicht gegen die Grenze). */
+  'backup.pin': { params: ['renamed'] },
+  'backup.unpin': { params: [] },
+  'backup.delete': { params: ['kind'] },
+  /** Gesammelt je Lauf: wie viele Backups der Ring entfernt hat; die Namen stehen in `after`. */
+  'backup.prune': { params: ['count'] },
+  'backup.cancel': { params: ['jobKind'] },
+  /** Einspielen gestartet — im alten Bestand, steht damit im Backup „Vor Einspielen“. `createdAt`: Zeitpunkt des Backups. */
+  'backup.restoreStart': { params: ['createdAt'] },
+  /** Eine Backup-Datei hochgeladen (Umzug, Ersteinrichtung); `sizeBytes` in Byte. */
+  'backup.upload': { params: ['sizeBytes'] },
   'dashboard.resetLayout': { params: [] },
   'dashboard.setLayout': { params: ['tileCount'] },
   'documents.export': { params: [] },
@@ -75,6 +93,7 @@ export const CORE_AUDIT_ACTIONS: Record<string, AuditActionDef> = {
   'setup.organizationName': SETTING_AUDIT,
   'setup.locales': SETTING_AUDIT,
   'backup.export.mark': SETTING_AUDIT,
+  /** Bis 0.3.2-dev je übernommener Einstellung beim Einspielen; bleibt für die Anzeige vorhandener Einträge. */
   'backup.import.mark': SETTING_AUDIT,
   'modules.enable': SETTING_AUDIT,
   'modules.disable': SETTING_AUDIT,

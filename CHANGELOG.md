@@ -9,6 +9,38 @@ die Nummern folgen [Semantic Versioning](https://semver.org/lang/de/). Vor
 1.0.0 kann jede Minor-Fassung Brüche enthalten — was bricht, steht unter
 **Geändert** mit dem, was zu tun ist.
 
+## [0.3.2] - 2026-10-23
+
+Diese Fassung macht das **Backup** zu etwas, um das man sich nicht mehr kümmern muss: Es läuft im Hintergrund mit
+sichtbarem Fortschritt, auf Wunsch jede Nacht von selbst, wird nach dem Schreiben vollständig geprüft und lässt sich
+direkt aus der Liste wieder einspielen — während des Einspielens sehen alle eine Wartungsseite. Bisher lief ein Backup
+im Browser mit, und bei großen Beständen (Aluna: 641 MB) dauerte es Minuten oder brach ab. Keine Migration,
+`migrationCount` bleibt 11. **Was bricht:** Kompass braucht ein eigenes Verzeichnis für `/backups`, und das
+Backup-Format ist neu (`.tar` statt `.tar.gz`) — alte Backups lassen sich nur noch mit 0.3.1 einspielen.
+
+### Hinzugefügt
+
+- Backups laufen im Hintergrund; man sieht die Schritte mit Fortschritt und kann die Seite währenddessen verlassen.
+- Nächtliches Backup (Vorgabe aus, 03:00), das Tages-, Wochen- und Monatsstände vorhält (Vorgabe 7, 4 und 12) und
+  ältere selbst aufräumt. Vor jedem Update mit Datenbankänderung entsteht beim Start ein Backup.
+- Jedes Backup wird nach dem Schreiben vollständig geprüft. Die Liste sagt je Backup, wie lange es bleibt; bis zu drei
+  lassen sich mit Namen festhalten.
+- Einspielen direkt aus der Liste: Der Dialog nennt, was seit dem Backup verloren geht; vorher sichert Kompass den
+  jetzigen Stand. Backups lassen sich herunterladen (fortsetzbar) und hochladen, auch sehr große.
+- Gescheitertes oder fehlendes Backup und knapper Platz stehen auf der Backup-Seite und der Startseite; ist der
+  Mailversand eingerichtet, bekommen alle mit dem Recht „Backup exportieren“ eine Mail.
+- Agenten können Backups auflisten, starten, prüfen, festhalten und löschen; einspielen nur, wenn der Verein es in den
+  Backup-Einstellungen erlaubt.
+
+### Geändert
+
+- Die Backup-Seite ist neu: oben ein Satz zum letzten geprüften Backup, Reiter „Backups“ und „Einstellungen“, alle
+  Aktionen im Zeilenmenü.
+- Beim Einspielen bleiben API-Tokens und Backup-Einstellungen der Installation erhalten; alle Sitzungen enden.
+- Neues Backup-Format (`.tar` statt `.tar.gz`); alte Backups lassen sich nur noch mit 0.3.1 einspielen.
+- **Zu tun:** ein Verzeichnis für `/backups` einhängen, danach den Zeitplan einschalten (Betriebshandbuch, „Von 0.3.1
+  auf 0.3.2“).
+
 ## [0.3.1] - 2026-10-22
 
 Diese Fassung bringt die **Bildkennzeichnung**: Bilder lassen sich als „Bearbeitet“ (Bildinhalt verändert, etwa

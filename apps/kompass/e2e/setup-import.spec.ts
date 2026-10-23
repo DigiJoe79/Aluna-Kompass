@@ -1,16 +1,11 @@
 import { expect, test } from './fixtures';
-import { loginAsAdmin, resetDatabase, waitForHydration } from './helpers';
+import { createAndDownloadBackup, loginAsAdmin, resetDatabase, waitForHydration } from './helpers';
 
 test('restores a backup from the setup page and signs in with its credentials', async ({ page }) => {
   // Erst einen Bestand erzeugen und exportieren.
   await resetDatabase(page, 'seeded');
   await loginAsAdmin(page);
-  await page.goto('/admin/backup');
-  const [download] = await Promise.all([
-    page.waitForEvent('download'),
-    page.getByRole('button', { name: 'Export erstellen' }).click(),
-  ]);
-  const archivePath = await download.path();
+  const archivePath = await createAndDownloadBackup(page);
 
   // Dann eine leere Installation und der Weg ueber die Einrichtungsseite.
   await resetDatabase(page, 'empty');
@@ -21,7 +16,7 @@ test('restores a backup from the setup page and signs in with its credentials', 
   // Wählt der Test die Datei vorher, hängt noch kein onChange am Feld: kein Hochladen, kein „Inhalt des Archivs“.
   await waitForHydration(page, 'input[type="file"]');
 
-  await page.getByLabel('Backup-Datei').setInputFiles(archivePath!);
+  await page.getByLabel('Backup-Datei').setInputFiles(archivePath);
   await expect(page.getByText('Inhalt des Archivs')).toBeVisible();
   await expect(page.getByText(/Nach dem Einspielen melden Sie sich/)).toBeVisible();
 

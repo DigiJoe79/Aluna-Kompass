@@ -1,5 +1,6 @@
 import { CORE_AUDIT_ACTIONS } from './audit/actions';
 import { coreRecordLabels } from './audit/record-labels';
+import { checkBackupHealth, isAppDeps, runBackupSchedule } from './backup/schedule';
 import { CORE_DASHBOARD_TILES } from './dashboard/tiles';
 import { CORE_DELETION_RULES } from './deletion-policy';
 import { coreRecordReferences } from './deletion-guards';
@@ -22,6 +23,15 @@ export const coreModule = defineModule({
   deletionRules: CORE_DELETION_RULES,
   auditActions: CORE_AUDIT_ACTIONS,
   dashboardTiles: CORE_DASHBOARD_TILES,
+  /**
+   * Nächtliches Backup und Wache über die Backups (Spec Backup § Zeitplan, § Meldungen). Der Kern hat keinen
+   * Zeitplaner; ein verpasster Lauf wird im nächsten Takt nachgeholt. Ohne laufende App (Skripte, Tests) nichts.
+   */
+  housekeeping: async (deps) => {
+    if (!isAppDeps(deps) || !deps.backupPath) return;
+    await runBackupSchedule(deps);
+    await checkBackupHealth(deps);
+  },
   files: true,
   providedFiles: ['document-templates'],
 });

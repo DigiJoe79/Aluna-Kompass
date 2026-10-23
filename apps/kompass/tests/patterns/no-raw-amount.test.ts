@@ -34,6 +34,7 @@ export const ALLOWED: CountedAllowlist = {
   'apps/kompass/src/lib/audit-sentences.ts': { count: 1, reason: 'Dateigröße in Megabyte im Protokollsatz, kein Betrag.' },
   'apps/kompass/src/app/(shell)/admin/themes/theme-editor.tsx': { count: 2, reason: 'Kontrastverhältnis eines Themes, kein Betrag.' },
   'apps/kompass/src/app/(shell)/admin/media/types.ts': { count: 1, reason: 'Dateigröße in Megabyte, kein Betrag.' },
+  'apps/kompass/src/lib/format-size.ts': { count: 1, reason: 'Dateigröße in GB/TB, kein Betrag.' },
   'apps/kompass/src/lib/crop-geometry.ts': { count: 5, reason: 'Rechnen: Bildausschnitt runden, Seitenverhältnis als Schlüssel.' },
   'packages/modules/site/src/pipeline/jobs.ts': { count: 1, reason: 'Dateigröße in Megabyte im Protokoll des Webseitenbaus, kein Betrag.' },
   'packages/modules/finance/src/ledger/epc-qr.ts': { count: 1, reason: 'EPC-QR-Code: Der Standard verlangt „EUR12.50“ mit Punkt, keine Anzeige.' },

@@ -1,46 +1,39 @@
-import { mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import Database from 'better-sqlite3';
 import * as tar from 'tar';
 import { afterEach, describe, expect, it } from 'vitest';
 import { createDeps } from '../src/app';
-import { fixedClock } from '../src/clock';
 import { login } from '../src/auth/login';
-import { exportBackup, importBackup, importBackupForSetup, inspectBackup } from '../src/backup';
+import { launchBackupCreate } from '../src/backup/create';
 import { auditLog, users } from '../src/db/schema';
-import { storeMediaAsset } from '../src/media/service';
 import { unwrap } from '../src/result';
 import { seedDevelopment } from '../src/seed/seed';
-import { readSetting } from '../src/settings/service';
 import { ctxWith } from '../src/testing';
-import { isSetupRequired } from '../src/setup/service';
-
-// 1×1 PNG
-const PNG = Uint8Array.from(Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==', 'base64'));
 
 const dirs: string[] = [];
 const tmp = () => { const d = mkdtempSync(path.join(tmpdir(), 'kompass-backup-')); dirs.push(d); return d; };
 afterEach(() => { for (const d of dirs.splice(0)) rmSync(d, { recursive: true, force: true }); });
 
-function fileDeps(dir: string, env: 'test' | 'production' = 'test', clock?: ReturnType<typeof fixedClock>) {
-  return createDeps({ dataPath: dir, env, clock });
-}
-
-// Echte Ein- und Ausgabe (Migrationen, SQLite-Kopie, tar.gz): allein 1–1,7 s je Fall, im vollen `pnpm verify` neben den
+// Echte Ein- und Ausgabe (Migrationen, SQLite-Kopie, tar): allein 1–1,7 s je Fall, im vollen `pnpm verify` neben den
 // App-Tests mehrfach über den 5-s-Vorgabewert (2026-10-17, dreimal in vier Läufen). Mehr Zeit statt eines Wacklers.
 describe('backup', { timeout: 20_000 }, () => {
-  it('exports a tar.gz with manifest, db copy without sessions/tokens, and media; records lastExportAt', async () => {
+  it('exports an uncompressed tar (format 3) as a run into BACKUP_PATH, db copy without sessions/tokens', async () => {
     const dir = tmp();
-    const deps = fileDeps(dir);
+    const deps = createDeps({ dataPath: dir, backupPath: tmp(), env: 'test' });
     const seed = await seedDevelopment(deps);
     unwrap(await login(deps, { email: seed.adminEmail, password: seed.adminPassword, ipAddress: null, requestId: 'R' }));
     const admin = deps.db.select().from(users).all()[0]!;
-    const result = unwrap(await exportBackup(deps, ctxWith(['backup.export'], admin.id), { workDir: tmp() }));
-    expect(result.archivePath).toMatch(/kompass-backup-test-\d{8}-\d{6}\.tar\.gz$/);
-    expect(result.manifest).toMatchObject({ format: 2, environment: 'test', counts: { users: 4 } });
+    const started = launchBackupCreate(deps, ctxWith(['backup.export'], admin.id), 'manual', 'ui');
+    if ('busy' in started) throw new Error('busy');
+    const result = unwrap(await started.done);
+    const archivePath = path.join(deps.backupPath!, `${result.name}.tar`);
+    expect(result.sidecar.manifest).toMatchObject({ format: 3, appVersion: deps.appVersion, environment: 'test', counts: { users: 4 } });
+    const head = readFileSync(archivePath).subarray(0, 2);
+    expect([head[0], head[1]]).not.toEqual([0x1f, 0x8b]);
     const out = tmp();
-    await tar.extract({ file: result.archivePath, cwd: out });
+    await tar.extract({ file: archivePath, cwd: out });
     const manifest = JSON.parse(readFileSync(path.join(out, 'manifest.json'), 'utf8'));
     expect(manifest.migrationCount).toBe(deps.migrationCount);
     const copy = new Database(path.join(out, 'data', 'core', 'db', 'kompass.db'), { readonly: true });
@@ -48,140 +41,7 @@ describe('backup', { timeout: 20_000 }, () => {
     expect((copy.prepare('select count(*) as n from api_tokens').get() as { n: number }).n).toBe(0);
     expect((copy.prepare('select count(*) as n from users').get() as { n: number }).n).toBe(4);
     copy.close();
-    expect(typeof readSetting(deps, 'system.lastExportAt')).toBe('string');
-    expect(deps.db.select().from(auditLog).all().some((e) => e.action === 'backup.export')).toBe(true);
-    deps.close();
-  });
-
-  it('imports into another installation, invalidates sessions and logs a system entry', async () => {
-    const clock = fixedClock(new Date().toISOString());
-    const source = fileDeps(tmp(), 'test', clock);
-    const seed = await seedDevelopment(source);
-    const admin = source.db.select().from(users).all()[0]!;
-    // 22:30 UTC im Sommer ist 00:30 des Folgetags in der Vereinszeit (Europe/Berlin, Vorgabe).
-    clock.set('2026-07-14T22:30:00.000Z');
-    const exported = unwrap(await exportBackup(source, ctxWith(['backup.export'], admin.id), { workDir: tmp() }));
-    source.close();
-
-    const target = fileDeps(tmp());
-    expect(isSetupRequired(target)).toBe(true);
-    const inspected = unwrap(await inspectBackup({ archivePath: exported.archivePath, workDir: tmp() }));
-    expect(inspected.counts.users).toBe(4);
-    const importer = ctxWith(['backup.import'], null);
-    const wrong = await importBackup(target, importer, { archivePath: exported.archivePath, workDir: tmp(), confirmation: 'produktion', environmentName: 'test' });
-    expect(wrong.ok === false && wrong.error.type === 'validation' && wrong.error.issues[0]?.message === 'confirmationMismatch').toBe(true);
-    const done = unwrap(await importBackup(target, importer, { archivePath: exported.archivePath, workDir: tmp(), confirmation: 'test', environmentName: 'test' }));
-    expect(done.manifest.counts.users).toBe(4);
-    expect(isSetupRequired(target)).toBe(false);
-    expect((await login(target, { email: seed.adminEmail, password: seed.adminPassword, ipAddress: null, requestId: 'R' })).ok).toBe(true);
-    expect(readSetting(target, 'system.lastImportAt')).not.toBeNull();
-    const last = target.db.select().from(auditLog).all().filter((e) => e.action === 'backup.import').at(-1)!;
-    expect(last).toMatchObject({ action: 'backup.import', channel: 'system', userId: null });
-    // Herkunft und Zeit des Backups als Werte; wer importierte, steht nicht mehr darin (Spec Protokoll § 2).
-    expect(JSON.parse(last.params!)).toEqual({ environment: 'test', createdAt: expect.stringMatching(/^2026-07-14T22:30/) });
-    target.close();
-  });
-
-  it('rejects archives with an unsupported format and requires backup.import', async () => {
-    const dir = tmp();
-    const deps = fileDeps(dir);
-    const bad = path.join(dir, 'bad.tar.gz');
-    const work = tmp();
-    const { writeFileSync, mkdirSync } = await import('node:fs');
-    mkdirSync(path.join(work, 'src'), { recursive: true });
-    writeFileSync(path.join(work, 'src', 'manifest.json'), JSON.stringify({ format: 99 }));
-    await tar.create({ gzip: true, cwd: path.join(work, 'src'), file: bad }, ['manifest.json']);
-    const result = await importBackup(deps, ctxWith(['backup.import']), { archivePath: bad, workDir: tmp(), confirmation: 'test', environmentName: 'test' });
-    expect(result.ok === false && result.error.type === 'validation' && result.error.issues[0]?.message === 'backupFormatUnsupported').toBe(true);
-    expect((await exportBackup(deps, ctxWith([]), { workDir: tmp() })).ok).toBe(false);
-    deps.close();
-  });
-
-  it('legt den ganzen Bestand als eine Rueckfahrkarte beiseite und raeumt die vorige weg', async () => {
-    const source = tmp();
-    const sourceDeps = fileDeps(source);
-    const seed = await seedDevelopment(sourceDeps);
-    const admin = sourceDeps.db.select().from(users).all()[0]!;
-    const ctx = ctxWith(['backup.export', 'backup.import'], admin.id);
-    unwrap(await storeMediaAsset(sourceDeps, ctxWith(['media.upload'], admin.id), { originalName: 'neu.png', bytes: PNG }));
-    const archive = unwrap(await exportBackup(sourceDeps, ctx, { workDir: tmp() }));
-    sourceDeps.close();
-
-    const target = tmp();
-    const targetDeps = fileDeps(target);
-    await seedDevelopment(targetDeps);
-    const mediaRoot = path.join(target, 'core', 'media');
-    mkdirSync(mediaRoot, { recursive: true });
-    writeFileSync(path.join(mediaRoot, 'alt.png'), 'alt');
-    // Eine Rueckfahrkarte aus einem frueheren Lauf, die verschwinden soll.
-    mkdirSync(path.join(target, '.before-import-20250101T000000'), { recursive: true });
-
-    unwrap(await importBackup(targetDeps, ctx, {
-      archivePath: archive.archivePath,
-      workDir: tmp(),
-      confirmation: 'test',
-      environmentName: 'test',
-    }));
-
-    const entries = readdirSync(mediaRoot);
-    expect(entries.some((e) => e.startsWith('neu'))).toBe(true);
-    expect(entries).not.toContain('alt.png');
-
-    const asides = readdirSync(target).filter((e) => e.startsWith('.before-import-'));
-    expect(asides, 'genau eine Rueckfahrkarte').toHaveLength(1);
-    expect(asides[0]).not.toBe('.before-import-20250101T000000');
-    expect(readdirSync(path.join(target, asides[0]!, 'core', 'media'))).toContain('alt.png');
-    expect(seed.adminEmail).toContain('@');
-    targetDeps.close();
-  });
-});
-
-describe('importBackupForSetup', { timeout: 20_000 }, () => {
-  async function seededArchive(): Promise<string> {
-    const deps = fileDeps(tmp());
-    await seedDevelopment(deps);
-    const archive = unwrap(await exportBackup(deps, ctxWith(['backup.export']), { workDir: tmp() }));
-    deps.close();
-    return archive.archivePath;
-  }
-
-  it('imports into an empty installation and records a system entry without a user', async () => {
-    const archivePath = await seededArchive();
-    const deps = fileDeps(tmp());
-    expect(isSetupRequired(deps)).toBe(true);
-
-    const result = unwrap(await importBackupForSetup(deps, { archivePath, workDir: tmp() }));
-    expect(result.manifest.environment).toBe('test');
-    expect(isSetupRequired(deps)).toBe(false);
-
-    const entry = deps.db.select().from(auditLog).all().find((e) => e.action === 'backup.import');
-    expect(entry).toBeTruthy();
-    expect(entry!.userId).toBeNull();
-    expect(entry!.channel).toBe('system');
-    deps.close();
-  });
-
-  it('refuses once the installation has a user', async () => {
-    const archivePath = await seededArchive();
-    const deps = fileDeps(tmp());
-    await seedDevelopment(deps);
-    const result = await importBackupForSetup(deps, { archivePath, workDir: tmp() });
-    expect(result.ok).toBe(false);
-    if (!result.ok && result.error.type === 'conflict') expect(result.error.code).toBe('setupAlreadyDone');
-    deps.close();
-  });
-
-  it('refuses an archive without users, which would leave the installation open and unusable', async () => {
-    const empty = fileDeps(tmp());
-    const archive = unwrap(await exportBackup(empty, ctxWith(['backup.export']), { workDir: tmp() }));
-    empty.close();
-
-    const deps = fileDeps(tmp());
-    const result = await importBackupForSetup(deps, { archivePath: archive.archivePath, workDir: tmp() });
-    expect(result.ok).toBe(false);
-    if (!result.ok && result.error.type === 'validation') {
-      expect(result.error.issues[0]!.message).toBe('backupWithoutUsers');
-    }
+    expect(deps.db.select().from(auditLog).all().some((e) => e.action === 'backup.create')).toBe(true);
     deps.close();
   });
 });

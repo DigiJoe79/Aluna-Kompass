@@ -7,13 +7,16 @@ import { type Allowlist, allowlistHygiene, lineOf, read, relative, sourceFiles, 
  *
  * - eine Spalte `title` (sonst bleibt die Liste eine Tabelle und scrollt)
  * - hat die Liste eine Marke oder einen Zustandsschalter, heißt diese Spalte `status`
- * - höchstens drei `meta` (die Kartenzeile hat drei Plätze, `globals.css`)
+ * - höchstens drei `meta` (die Kartenzeile hat drei Plätze, `globals.css`); eine `meta` mit `wrap` am Kopf zählt nicht,
+ *   sie steht in eigener Zeile darunter
  * - jede Rolle im Kopf steht auch an einer Zelle
  *
  * Geprüft je Tabelle (`<Table>` bis zum nächsten `<Table>` derselben Datei) im Quelltext, nur mit `<TableHeader`.
  */
 const HEAD = /<(?:TableHead|SortableHead)\b[^>]*?\bcol="(\w+)"/g;
 const CELL = /<TableCell\b[^>]*?\bcol="(\w+)"/g;
+/** Ein Kopf `meta` ohne `wrap`: belegt einen der drei Plätze der Kartenzeile. */
+const PLACED_META = /<(?:TableHead|SortableHead)\b(?![^>]*\bwrap\b)[^>]*?\bcol="meta"/g;
 const STATUS = /<(?:StatusBadge|EntryStateBadge|PublishSwitch)\b/;
 
 /** Tabellen mit Kopf, bewusst ohne Kartenzeile — mit Grund. */
@@ -60,8 +63,8 @@ describe('Spaltenrollen jeder Liste (E1)', () => {
 
   allowlistHygiene(BADGE_NOT_STATUS, () => staleKeys(BADGE_NOT_STATUS, badgeWithoutStatus.map((t) => t.file)), 'Marken ohne Statusspalte');
 
-  it('höchstens drei meta-Spalten', () => {
-    expect(checked.filter((t) => [...t.text.matchAll(HEAD)].filter((m) => m[1] === 'meta').length > 3).map(where)).toEqual([]);
+  it('höchstens drei meta-Spalten (ohne `wrap`)', () => {
+    expect(checked.filter((t) => [...t.text.matchAll(PLACED_META)].length > 3).map(where)).toEqual([]);
   });
 
   it('jede Rolle im Kopf steht auch an einer Zelle', () => {

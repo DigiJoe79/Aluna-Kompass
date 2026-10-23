@@ -1,4 +1,4 @@
-import { rmSync } from 'node:fs';
+import { readdirSync, rmSync } from 'node:fs';
 import path from 'node:path';
 import { NextResponse } from 'next/server';
 import { resetDeps, runtimeEnv } from '@/lib/deps';
@@ -13,5 +13,8 @@ export async function POST(request: Request): Promise<Response> {
   // Die Ergebnisse der Webseiten-Läufe liegen im Cache, nicht in der Datenbank:
   // Ohne das zeigte ein Test das Ergebnis, das der vorige gebaut hat.
   for (const kind of ['preview', 'publish', 'deployCheck']) rmSync(path.join(siteEnv().cacheDir, `${kind}-result.json`), { force: true });
+  // Ebenso die Backups samt Laufergebnissen: Sonst sähe ein Test die Backups des vorigen. Das Verzeichnis bleibt.
+  const backupPath = runtimeEnv().backupPath;
+  if (backupPath) for (const entry of readdirSync(backupPath)) rmSync(path.join(backupPath, entry), { recursive: true, force: true });
   return NextResponse.json({ ok: true, mode });
 }

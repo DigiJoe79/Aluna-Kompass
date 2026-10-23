@@ -48,8 +48,8 @@ function archiveWith(entries: Record<string, string>): string {
     mkdirSync(path.dirname(file), { recursive: true });
     writeFileSync(file, content);
   }
-  const out = path.join(tmp(), 'backup.tar.gz');
-  tar.create({ file: out, cwd: src, gzip: true, sync: true }, Object.keys(entries));
+  const out = path.join(tmp(), 'backup.tar');
+  tar.create({ file: out, cwd: src, sync: true }, Object.keys(entries));
   return out;
 }
 

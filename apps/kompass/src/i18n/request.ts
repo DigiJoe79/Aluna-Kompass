@@ -1,6 +1,7 @@
-import { timeZoneOf } from '@kompass/core';
+import { DEFAULT_TIME_ZONE, timeZoneOf } from '@kompass/core';
 import { getRequestConfig } from 'next-intl/server';
 import { getDeps } from '@/lib/deps';
+import { maintenanceActive } from '@/lib/maintenance';
 
 /**
  * Ein fehlender Schlüssel fällt sonst niemandem auf: next-intl meldet ihn im
@@ -24,7 +25,8 @@ import { getDeps } from '@/lib/deps';
 export default getRequestConfig(async () => ({
   locale: 'de',
   // A4: dieselbe Zeitzone wie „heute“ im Fachcode (`todayIn`) — die des Vereins.
-  timeZone: timeZoneOf(getDeps()),
+  // Während des Einspielens gibt es keine Datenbank (Wartungsseite): die Vorgabe.
+  timeZone: maintenanceActive() ? DEFAULT_TIME_ZONE : timeZoneOf(getDeps()),
   messages: (await import('../../messages/de.json')).default,
   onError(error: unknown) {
     if (process.env.APP_ENV === 'test') throw error;

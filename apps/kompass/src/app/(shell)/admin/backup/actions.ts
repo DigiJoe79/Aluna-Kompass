@@ -1,62 +1,102 @@
 'use server';
 
-import { guardAction } from '@/lib/action-guard';
-import { importBackup, inspectBackup } from '@kompass/core';
-import { createWriteStream } from 'node:fs';
-import { mkdtemp, rm } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import path from 'node:path';
-import { Readable } from 'node:stream';
-import { pipeline } from 'node:stream/promises';
+import {
+  cancelBackupJob,
+  deleteBackup,
+  jobRunningConflict,
+  pinBackup,
+  restorePreview,
+  startBackup,
+  startBackupVerification,
+  startRestore,
+  unpinBackup,
+  type JobStart,
+  type Result,
+} from '@kompass/core';
+import { revalidatePath } from 'next/cache';
 import { getTranslations } from 'next-intl/server';
-import { redirect } from 'next/navigation';
+import { guardAction } from '@/lib/action-guard';
 import { toActionState, type ActionState } from '@/lib/actions';
-import { runtimeEnv } from '@/lib/deps';
-import { environmentConfirmationName } from '@/lib/env-banner';
-import { resetMcpHandler } from '@/lib/mcp';
-import { clearSessionCookie, requireSession } from '@/lib/request-context';
+import { requireSession } from '@/lib/request-context';
 
-async function stash(file: File): Promise<{ dir: string; archivePath: string }> {
-  const dir = await mkdtemp(path.join(tmpdir(), 'kompass-upload-'));
-  const archivePath = path.join(dir, 'backup.tar.gz');
-  // Strömen statt arrayBuffer(): sonst läge das ganze Archiv ein zweites Mal
-  // im Speicher, zusätzlich zu dem, was Next für die Action ohnehin puffert.
-  await pipeline(Readable.fromWeb(file.stream() as Parameters<typeof Readable.fromWeb>[0]), createWriteStream(archivePath));
-  return { dir, archivePath };
+/*
+ * Einmalige Aktionen der Backup-Seite (Plan U2). Den Laufstand fragt die Seite über den Route Handler
+ * `/admin/backup/job` ab, nie über eine Server Action — Actions einer Seite laufen nacheinander.
+ */
+
+const PAGE = '/admin/backup';
+
+/** Ein Start nennt `data.runId`; läuft schon ein Backup-Lauf, ist das eine Ablehnung mit Grund. */
+async function startedState(result: Result<JobStart>): Promise<ActionState> {
+  const t = await getTranslations();
+  if (!result.ok) return toActionState(result, t);
+  if (!result.value.started) return toActionState(jobRunningConflict(result.value.running), t);
+  return { status: 'success', data: { runId: result.value.runId } };
 }
 
-export async function inspectBackupAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  return guardAction('(shell)/admin/backup/actions.ts#inspectBackupAction', async () => {
-    const t = await getTranslations();
-    await requireSession();
-    const file = formData.get('archive');
-    if (!(file instanceof File) || file.size === 0) return { status: 'error', message: t('backup.import.noFile'), fieldErrors: { archive: t('backup.import.noFile') } };
-    const { dir, archivePath } = await stash(file);
-    try {
-      const result = await inspectBackup({ archivePath, workDir: dir });
-      return toActionState(result, t);
-    } finally {
-      await rm(dir, { recursive: true, force: true });
-    }
+export async function startBackupAction(): Promise<ActionState> {
+  return guardAction('(shell)/admin/backup/actions.ts#startBackupAction', async () => {
+    const { deps, ctx } = await requireSession();
+    return startedState(await startBackup(deps, ctx, {}));
   });
 }
 
-export async function importBackupAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  return guardAction('(shell)/admin/backup/actions.ts#importBackupAction', async () => {
+export async function cancelBackupJobAction(runId: string): Promise<ActionState> {
+  return guardAction('(shell)/admin/backup/actions.ts#cancelBackupJobAction', async () => {
     const t = await getTranslations();
     const { deps, ctx } = await requireSession();
-    const file = formData.get('archive');
-    if (!(file instanceof File) || file.size === 0) return { status: 'error', message: t('backup.import.noFile'), fieldErrors: { archive: t('backup.import.noFile') } };
-    const { dir, archivePath } = await stash(file);
-    let result;
-    try {
-      result = await importBackup(deps, ctx, { archivePath, workDir: dir, confirmation: String(formData.get('confirmation') ?? ''), environmentName: environmentConfirmationName(runtimeEnv().env) });
-    } finally {
-      await rm(dir, { recursive: true, force: true });
-    }
-    if (!result.ok) return toActionState(result, t);
-    await resetMcpHandler();
-    await clearSessionCookie();
-    redirect('/login?imported=1');
+    return toActionState(await cancelBackupJob(deps, ctx, { runId }), t);
+  });
+}
+
+export async function verifyBackupAction(name: string): Promise<ActionState> {
+  return guardAction('(shell)/admin/backup/actions.ts#verifyBackupAction', async () => {
+    const { deps, ctx } = await requireSession();
+    return startedState(await startBackupVerification(deps, ctx, { name }));
+  });
+}
+
+export async function pinBackupAction(input: { name: string; label?: string }): Promise<ActionState> {
+  return guardAction('(shell)/admin/backup/actions.ts#pinBackupAction', async () => {
+    const t = await getTranslations();
+    const { deps, ctx } = await requireSession();
+    const result = await pinBackup(deps, ctx, input);
+    if (result.ok) revalidatePath(PAGE);
+    return toActionState(result, t);
+  });
+}
+
+export async function unpinBackupAction(name: string): Promise<ActionState> {
+  return guardAction('(shell)/admin/backup/actions.ts#unpinBackupAction', async () => {
+    const t = await getTranslations();
+    const { deps, ctx } = await requireSession();
+    const result = await unpinBackup(deps, ctx, { name });
+    if (result.ok) revalidatePath(PAGE);
+    return toActionState(result, t);
+  });
+}
+
+export async function deleteBackupAction(name: string): Promise<ActionState> {
+  return guardAction('(shell)/admin/backup/actions.ts#deleteBackupAction', async () => {
+    const t = await getTranslations();
+    const { deps, ctx } = await requireSession();
+    const result = await deleteBackup(deps, ctx, { name });
+    if (result.ok) revalidatePath(PAGE);
+    return toActionState(result, t);
+  });
+}
+
+export async function restorePreviewAction(name: string): Promise<ActionState> {
+  return guardAction('(shell)/admin/backup/actions.ts#restorePreviewAction', async () => {
+    const t = await getTranslations();
+    const { deps, ctx } = await requireSession();
+    return toActionState(await restorePreview(deps, ctx, { name }), t);
+  });
+}
+
+export async function startRestoreAction(input: { name: string; confirmation: string }): Promise<ActionState> {
+  return guardAction('(shell)/admin/backup/actions.ts#startRestoreAction', async () => {
+    const { deps, ctx } = await requireSession();
+    return startedState(await startRestore(deps, ctx, input));
   });
 }

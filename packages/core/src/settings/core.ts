@@ -88,6 +88,15 @@ const system: SettingDefinition[] = [
 /** Ab wann die Startseite ein Backup als veraltet meldet — eine Regel des Vereins, keine Vorliebe (Spec 2026-09-17, Entscheidung 13). */
 const backup: SettingDefinition[] = [
   { key: 'backup.maxAgeDays', schema: z.number().int().min(1).max(365), default: 30 },
+  // Zeitplan und Ring (Spec Backup § Zeitplan). Schon hier registriert, weil das Einspielen (B3) sie aus dem laufenden
+  // Bestand übernimmt; das Verhalten bringt B4. Vorgabe aus: Eine neue Installation sichert nicht ungefragt.
+  { key: 'backup.schedule.enabled', schema: z.boolean(), default: false },
+  { key: 'backup.schedule.time', schema: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/), default: '03:00' },
+  { key: 'backup.ring.daily', schema: z.number().int().min(1).max(60), default: 7 },
+  { key: 'backup.ring.weekly', schema: z.number().int().min(0).max(52), default: 4 },
+  { key: 'backup.ring.monthly', schema: z.number().int().min(0).max(120), default: 12 },
+  // Darf ein Agent einspielen? Nur über die Oberfläche (`AgentSwitchSection` kommt mit der Designer-Seite).
+  { key: 'backup.mcpHumanOnlyAllowed', schema: z.boolean(), default: false, uiOnly: true },
 ];
 
 // `min(0)`: null ist ein gültiger Wert, etwa für `consent` — „löschen mit Ablauf

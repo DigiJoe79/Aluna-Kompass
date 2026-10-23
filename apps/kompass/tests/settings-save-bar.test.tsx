@@ -3,7 +3,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { NextIntlClientProvider } from 'next-intl';
 import type { ReactNode } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { MaxAgeSettings } from '@/app/(shell)/admin/backup/max-age-settings';
+import { BackupSettingsForm } from '@/app/(shell)/admin/backup/backup-settings-form';
 import { RetentionSettings } from '@/app/(shell)/admin/retention/retention-settings';
 import messages from '../messages/de.json';
 
@@ -27,7 +27,7 @@ afterEach(() => {
 /** K10 Charge 2, T3.3: Aufbewahrung und Backup-Alter speichern über die FormActionBar, nicht über eine eigene Zeile. */
 describe.each([
   ['Aufbewahrung', () => <RetentionSettings statutory10Y={120} statutory8Y={96} statutory6Y={72} consent={24} canManage />, messages.retention.settings.consent],
-  ['Backup-Alter', () => <MaxAgeSettings maxAgeDays={7} canManage />, messages.backup.settings.maxAgeDays],
+  ['Backup-Alter', () => <BackupSettingsForm values={{ enabled: false, time: '03:00', daily: 7, weekly: 4, monthly: 12, maxAgeDays: 7, agentAllowed: false }} referenceBytes={null} mailAvailable canManage />, messages.backup.settings.maxAge.label],
 ])('%s', (_, ui, label) => {
   it('zählt eine Änderung in der Leiste', () => {
     render(ui(), { wrapper: Intl });

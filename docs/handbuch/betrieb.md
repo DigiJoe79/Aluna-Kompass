@@ -2,7 +2,7 @@
 
 Kompass läuft als ein Docker-Image auf einem Rechner im Netz des Vereins — ein
 NAS, ein kleiner Server, was vorhanden ist. Diese Seite beschreibt
-Erstinstallation, Update, Backup und den Weg der Webseite zum Hoster, für die
+Erstinstallation, Update, Backups und den Weg der Webseite zum Hoster, für die
 Person, die diesen Rechner betreut.
 
 ## Voraussetzungen
@@ -14,7 +14,8 @@ Person, die diesen Rechner betreut.
 - **Arbeitsspeicher:** 1 GB reicht im Alltag. Beim Bauen der Webseite und bei
   der Texterkennung steigt der Bedarf kurzzeitig; auf einem Gerät mit 2 GB
   läuft beides ohne Enge.
-- Ein Verzeichnis für die Daten, das Neustarts und Updates überlebt.
+- Ein Verzeichnis für die Daten, das Neustarts und Updates überlebt, und ein
+  zweites für die Backups.
 
 ## Erstinstallation
 
@@ -47,7 +48,11 @@ Person, die diesen Rechner betreut.
    darin sind Beispiele und werden auf die eigenen angepasst. Die Vorlage legt
    neben `/data` ein benanntes Volume für `/cache` an (Bild-Cache und Vorschau
    der Webseite). Wer stattdessen ein Verzeichnis einhängt, gibt es UID 1000
-   wie das Datenverzeichnis.
+   wie das Datenverzeichnis. Dazu kommt das Verzeichnis für `/backups`, etwa
+   `kompass/backups`: Besitzer ebenfalls UID 1000 (`chown 1000:1000 backups`),
+   und **nie unter dem Datenverzeichnis** — sonst trüge jedes Backup die
+   vorigen mit, und Kompass verweigert den Start. Fehlt der Mount, startet
+   Kompass trotzdem, warnt aber (siehe „Backups“).
 
    ```
    docker compose -f docker-compose.prod.yml up -d
@@ -88,19 +93,27 @@ eigene Umgebungsdatei mit `APP_ENV=test`. Außerhalb der Produktion zeigt
 Kompass einen Umgebungsbalken, damit niemand die beiden verwechselt: im Test
 ocker mit Schraffur (echte Daten, Vorsicht), in der Entwicklung dunkelgrau.
 
-Daten aus der Produktion in den Test holen: dort exportieren, hier importieren
-(Verwaltung → Backup). Danach sind im Test alle Sitzungen beendet, die
-Anmeldung läuft mit den Zugangsdaten aus der Produktion. API-Tokens werden
-nicht mitkopiert.
+Daten aus der Produktion in den Test holen: dort ein Backup herunterladen, hier
+hochladen und einspielen (System › Backup). Danach sind im Test alle Sitzungen
+beendet, die Anmeldung läuft mit den Zugangsdaten aus der Produktion. API-Tokens
+und Backup-Einstellungen des Tests bleiben, wie sie waren.
 
 Der umgekehrte Weg ist keine gute Idee: Der Test enthält Probierdaten, und die
 gehören nicht in die Aufzeichnung, aus der der Verein Rechenschaft ablegt.
 
 ## Update
 
-1. **Backup exportieren** (Verwaltung → Backup → Export erstellen) und die
-   Datei sichern. Kompass tut das nicht von selbst — der Schritt ist die
-   Rückfahrkarte, wenn eine Migration schiefgeht.
+1. **Backup vor Update:** Kompass sichert sich beim Start selbst, wenn
+   Migrationen anstehen — ein Backup der Art „Vor Update“ im
+   Backup-Verzeichnis, bevor irgendetwas umgebaut wird. Der Start dauert
+   deshalb so lange wie ein Backup, und `/api/health` antwortet erst danach.
+   Scheitert dieses Backup, startet Kompass **nicht** und migriert nicht; die
+   Verantwortlichen bekommen eine Mail, sofern der Versand eingerichtet ist.
+   Dann das Log lesen und die Ursache beheben — meist fehlt Platz oder das
+   Recht an `/backups`. Nur wenn das nicht geht: einmal mit
+   `KOMPASS_SKIP_UPDATE_BACKUP=1` in der Umgebungsdatei starten (ein Start
+   ohne Sicherung) **und die Zeile danach wieder entfernen**, sonst fehlt die
+   Sicherung auch beim nächsten Update.
 
 2. **Neues Image holen und neu starten.**
 
@@ -283,6 +296,44 @@ Sonst ist nichts von Hand zu tun. Wer sich wundert:
 - **Template-Autoren** können mit den neuen Feldoptionen `size` und `group` die
   Eingabemaske ordnen; ohne sie bekommt jedes Feld eine Breite nach seinem Typ.
 - MCP-Clients sind nicht betroffen.
+
+### Von 0.3.1 auf 0.3.2
+
+Die Fassung 0.3.2 macht Backups zu einem Hintergrundlauf mit eigenem
+Verzeichnis, Ring und Prüfung (siehe „Backups“). Sie bringt **keine
+Migration** mit; `/api/health` meldet weiter `migrationCount: 11`. Deshalb
+entsteht beim Start auch kein Backup „vor Update“.
+
+Vor dem Update:
+
+1. **Ein letztes Backup mit 0.3.1** wie bisher unter System › Backup
+   exportieren und aufheben. Es ist das letzte im alten Format (`.tar.gz`);
+   0.3.2 spielt es nicht mehr ein, eine Instanz mit 0.3.1 schon.
+2. **Verzeichnis anlegen:** `backups` neben `data`, Besitzer UID 1000
+   (`chown 1000:1000 backups`), nicht unter `data`.
+3. **Mount ergänzen:** in der Compose-Datei unter `volumes` die Zeile
+   `- /pfad/zu/kompass/backups:/backups` (Vorlage: `docker-compose.prod.yml`).
+
+Dann das Image holen und starten wie unter „Update“. Danach:
+
+4. **Prüfen, dass das Verzeichnis eingehängt ist:** Die Backup-Seite zeigt
+   keine Warnung „nicht eingehängt“.
+5. **Ein Backup von Hand** erstellen (System › Backup, „Backup erstellen“);
+   es ist das erste im neuen Format und wird gleich geprüft.
+6. **Zeitplan einschalten:** im Reiter „Einstellungen“ unter „Automatisch
+   sichern“, Uhrzeit nach Wunsch (Vorgabe 03:00). Wie viele Tages-, Wochen-
+   und Monatsstände bleiben (Vorgabe 7, 4 und 12) und die Frist für die
+   Warnung (Vorgabe 30 Tage) stehen darunter. Per Agent geht es mit
+   `settings_set` und `backup.schedule.enabled`.
+7. **Kopie außer Haus** für das neue Verzeichnis einrichten (Abschnitt
+   „Backups“).
+
+Wer sich wundert:
+
+- Ein Agent darf ein Backup nur einspielen, wenn das in den
+  Backup-Einstellungen erlaubt ist („Darf ein Agent ein Backup einspielen?“,
+  Vorgabe aus); umschalten lässt sich das nur in der Oberfläche.
+- Die Ersteinrichtung aus einem Backup liest nur noch das neue Format.
 
 ### Von 0.3.0 auf 0.3.1
 
@@ -530,17 +581,90 @@ Wer sich wundert:
 
 ## Backups
 
-- **Aus der Anwendung** (Verwaltung → Backup): eine Datei
-  `kompass-backup-<umgebung>-<datum>.tar.gz` mit Datenbank, Medien und
-  Manifest. Sitzungen und API-Tokens bleiben bewusst draußen.
-- **Auf Dateiebene:** Snapshots des Datenverzeichnisses sind eine sinnvolle
-  Ergänzung, ersetzen den Export aber nicht — er ist die Form, die Kompass
-  auch wieder einlesen kann.
-- Das Archiv enthält alle personenbezogenen Daten des Vereins. Es gehört an
-  einen Ort, der so geschützt ist wie die Anwendung selbst, und nicht
-  unverschlüsselt in einen geteilten Ordner.
-- Nach einem Import bleibt der vorherige Stand als `.before-import-<zeit>`
-  neben den Daten liegen. Nach der Prüfung kann er gelöscht werden.
+Kompass sichert sich selbst: im Hintergrund, mit sichtbarem Fortschritt, in
+ein eigenes Verzeichnis. Die Seite dazu liegt unter System › Backup;
+Agenten erreichen dieselben Dienste über die Werkzeuge `backup_*`.
+
+**Ablage.** Das Verzeichnis nennt die Umgebungsvariable `BACKUP_PATH`, im Image
+`/backups`. Je Backup liegen dort zwei Dateien: das Archiv
+`kompass-backup-<umgebung>-<JJJJMMTT-HHMMSS>-<art>.tar` (Datenbank, Dokumente,
+Medien, Manifest; ohne Kompression, Format 3) und daneben eine Begleitdatei
+`.json` mit Art, Prüfergebnis und Prüfsumme. Sitzungen und API-Tokens bleiben
+draußen. Das Archiv enthält alle personenbezogenen Daten des Vereins und gehört
+an einen Ort, der so geschützt ist wie die Anwendung selbst.
+
+**Umgebungsvariablen.** `BACKUP_PATH` setzt das Image; ändern muss man es nur,
+wer ohne Container betreibt (Vorgabe dann `./backups`). Es darf nicht unter dem
+Datenverzeichnis liegen. `KOMPASS_SKIP_UPDATE_BACKUP=1` startet **einmal** ohne
+das Backup vor Update (siehe „Update“); die Zeile danach wieder entfernen.
+
+**Arten und Ring.** Automatische Backups laufen nachts, wenn der Zeitplan an
+ist; verpasst ein Neustart die Uhrzeit, holt Kompass das Backup im nächsten
+Takt nach. Vom Ring bleiben 7 Tages-, 4 Wochen- und 12 Monatsstände. „Von Hand“
+hat einen Platz: Das vorige geht erst, wenn das neue die Prüfung bestanden hat.
+„Vor Update“, „Vor Einspielen“ und „Hochgeladen“ bleiben 30 Tage; das neueste
+je Art bleibt immer. Höchstens drei Backups lassen sich **festhalten**, mit
+Namen; sie verlassen jeden Ring, bis man sie freigibt.
+
+**Prüfung.** Jedes Backup wird nach dem Schreiben vollständig gelesen:
+Dateiliste und Größen, Zustand der Datenbank, Prüfsumme. Ein gescheitertes
+Backup bietet Kompass nicht zum Einspielen an.
+
+**Warnungen und Mails.** Der letzte Fehler steht oben auf der Backup-Seite,
+bis wieder ein Backup gelingt, und die Kachel „Backup“ der Startseite wird zur
+Warnung. Eine Mail an alle aktiven Nutzer mit dem Recht „Backup exportieren“
+geht bei: gescheitertem Backup, gescheiterter Prüfung, gescheitertem Aufräumen,
+unterbrochenem Backup, gescheitertem Backup vor Update, nicht beschreibbarem
+Verzeichnis. Einmal am Tag zusätzlich: wenn der Platz nur noch für weniger als
+zwei weitere Backups reicht, und wenn das Verzeichnis nicht eingehängt ist.
+Versendet wird über die E-Mail-Einstellungen der Akte; ohne sie gibt es nur
+die Anzeige in Kompass.
+
+**Fehlender Mount.** Liegt `/backups` auf demselben Datenträger wie der
+Container selbst, fehlt vermutlich der Mount: Die Backups gingen beim
+Neuerstellen des Containers verloren. Kompass startet trotzdem, zeigt die
+Warnung aber dauerhaft auf Startseite und Backup-Seite, bis der Mount ergänzt
+ist (Erstinstallation, Schritt 4).
+
+**Einspielen.** Aus der Liste oder nach dem Hochladen einer Datei. Vorher legt
+Kompass ein Backup „Vor Einspielen“ an und prüft das gewählte. Währenddessen
+zeigt jede Anfrage die Wartungsseite, Agenten bekommen 503. API-Tokens und
+Backup-Einstellungen dieser Installation bleiben erhalten, alle Sitzungen
+enden. Die veröffentlichte Webseite, verschickte Mails und eingereichte
+Lastschriftdateien gehen nicht zurück. Scheitert das Einspielen, legt Kompass
+den vorigen Stand selbst zurück; nichts geht verloren. Der vorige Stand liegt
+während des Einspielens unter `<Datenverzeichnis>/.before-import-<zeit>` und
+wird nach Erfolg gelöscht.
+
+**Notfall: Einspielen und Zurücklegen gescheitert.** Dann bleibt Kompass in
+Wartung; die Seite nennt eine Kennung `restore-…` und den Ordner, in dem der
+vorige Stand liegt. Der Merker `<Backup-Verzeichnis>/.jobs/maintenance.json`
+nennt denselben Ordner unter `aside`. Nichts neu installieren, keine Dateien
+löschen:
+
+1. Container stoppen.
+2. Im Ordner aus `aside` nachsehen (`.before-import-<zeit>` im
+   Datenverzeichnis):
+   - **Er enthält Daten** (`core` und die Ordner der Module): Alles im
+     Datenverzeichnis außer den Einträgen mit Punkt am Anfang ist der halb
+     eingespielte Stand — in einen Ordner außerhalb des Datenverzeichnisses
+     verschieben. Dann den Inhalt des `aside`-Ordners zurück ins
+     Datenverzeichnis verschieben.
+   - **Er ist leer:** Kompass hatte den vorigen Stand schon zurückgelegt und
+     scheiterte erst danach beim Öffnen der Datenbank. Prüfen, ob das
+     Datenverzeichnis den alten Stand enthält (`core/db/kompass.db` und die
+     Ordner der Module, mit Änderungsdatum vor dem Einspielen). Dann ist
+     nichts zu verschieben.
+3. Den Merker `.jobs/maintenance.json` im Backup-Verzeichnis löschen.
+4. Container starten und das Log lesen. Startet Kompass nicht, liegt im
+   Backup-Verzeichnis das Backup „Vor Einspielen“ mit genau diesem Stand.
+
+**Kopie außer Haus.** Liegen die Backups auf demselben Gerät wie die Daten, sind
+bei einem Plattenschaden oder einem Verschlüsselungstrojaner beide weg. Das
+Verzeichnis `backups/` deshalb regelmäßig auf eine externe Platte oder in einen
+Cloud-Speicher kopieren, mit dem Werkzeug des Systems — Kompass kopiert nicht
+selbst. Snapshots des Datenverzeichnisses sind eine sinnvolle Ergänzung,
+ersetzen die Backups aber nicht: Nur sie kann Kompass wieder einspielen.
 
 ## Medien
 

@@ -72,7 +72,8 @@ export const UI_ALLOWED: CountedAllowlist = {
 };
 
 export const PACKAGES_ALLOWED: CountedAllowlist = {
-  'packages/core/src/backup/import.ts': { count: 1, reason: '`system.lastImportSource` speichert Umgebung und Zeitstempel als Herkunftswert, keine Anzeige.' },
+  'packages/core/src/backup/ring.ts': { count: 1, reason: 'Rechnen: Tage auf ISO-Tagen in UTC für die Prognose des Rings, keine Anzeige.' },
+  'packages/core/src/backup/restore.ts': { count: 1, reason: '`system.lastImportSource` speichert Umgebung und Zeitstempel als Herkunftswert, keine Anzeige.' },
   'packages/core/src/documents/service.ts': { count: 1, reason: 'Rechnen: Ausstellungstag plus Uhrzeit zum Zeitstempel.' },
   'packages/modules/animals/src/print/service.ts': { count: 1, reason: 'Dateiname des Sammel-PDFs, ISO sortiert richtig.' },
   'packages/modules/dms/src/seed-pdf.ts': { count: 1, reason: '`xrefAt` ist ein Byte-Versatz im PDF, kein Datum.' },

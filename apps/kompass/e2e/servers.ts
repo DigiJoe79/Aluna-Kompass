@@ -26,6 +26,8 @@ export interface WorkerEnvironment {
   /** Wohin der Publish auf dem Wirt schreibt — dort schaut `site-publish.spec.ts` nach. */
   siteTarget: string;
   containerName?: string;
+  /** Nur Container: das eingehängte `/backups` auf dem Wirt — wie in den Compose-Vorlagen, sonst warnt Kompass „nicht eingehängt“. */
+  backupTarget?: string;
   env: Record<string, string>;
 }
 
@@ -57,6 +59,8 @@ export function workerEnvironment(kind: ServerKind, index: number, root: string)
       env: {
         ...SHARED_ENV,
         DATA_PATH: path.join(tmp, 'data'),
+        // Je Worker ein eigenes, sonst teilten sich alle `./backups`.
+        BACKUP_PATH: path.join(tmp, 'backups'),
         // Unter `.next`, damit `pnpm e2e:cold` alle Worker mit leert.
         NEXT_DIST_DIR: path.join('.next', 'e2e', `w${index}`),
         SITE_DEPLOY_PATH: siteTarget,
@@ -79,6 +83,7 @@ export function workerEnvironment(kind: ServerKind, index: number, root: string)
     port,
     url: `http://localhost:${port}`,
     siteTarget: path.join(tmp, 'deploy'),
+    backupTarget: path.join(tmp, 'backups'),
     containerName: `kompass-e2e-${index}`,
     env: { ...SHARED_ENV, SITE_DEPLOY_PATH: '/deploy' },
   };
@@ -236,14 +241,16 @@ async function startContainer(w: WorkerEnvironment, image: string): Promise<Runn
   // Container, nicht auf dem Wirt: Was der letzte Lauf dorthin geschrieben
   // hat, gehört unter Linux `node` und liegt in Unterverzeichnissen, die der
   // Wirtsnutzer nicht leeren darf.
-  mkdirSync(w.siteTarget, { recursive: true });
-  try {
-    execFileSync('docker', ['run', '--rm', '--user', '0', '-v', `${w.siteTarget}:/x`, image, 'sh', '-c', 'rm -rf /x/..?* /x/.[!.]* /x/*'], { stdio: 'ignore' });
-  } catch {
-    // war leer
+  for (const dir of [w.siteTarget, w.backupTarget!]) {
+    mkdirSync(dir, { recursive: true });
+    try {
+      execFileSync('docker', ['run', '--rm', '--user', '0', '-v', `${dir}:/x`, image, 'sh', '-c', 'rm -rf /x/..?* /x/.[!.]* /x/*'], { stdio: 'ignore' });
+    } catch {
+      // war leer
+    }
+    // Damit der Container als `node` hineinschreiben kann.
+    execFileSync('chmod', ['0777', dir]);
   }
-  // Damit der Container als `node` hineinschreiben kann.
-  execFileSync('chmod', ['0777', w.siteTarget]);
 
   const child = spawn(
     'docker',
@@ -257,6 +264,8 @@ async function startContainer(w: WorkerEnvironment, image: string): Promise<Runn
       ...Object.entries(w.env).flatMap(([key, value]) => ['-e', `${key}=${value}`]),
       '-v',
       `${w.siteTarget}:/deploy`,
+      '-v',
+      `${w.backupTarget!}:/backups`,
       image,
     ],
     { stdio: ['ignore', 'pipe', 'pipe'] },

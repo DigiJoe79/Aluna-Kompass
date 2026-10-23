@@ -42,7 +42,7 @@ async function show(view: DashboardTileView): Promise<HTMLElement> {
 
 const base = { variant: null, warningAction: false, column: 0, options: {}, error: false };
 const backup = (tone: 'neutral' | 'warning', warningAction = true): DashboardTileView =>
-  ({ ...base, module: 'core', key: 'backup', kind: 'status', warningAction, content: { kind: 'status', tone, messageKey: tone === 'neutral' ? 'recent' : 'never', values: { days: 2 }, href: '/admin/backup' } }) as DashboardTileView;
+  ({ ...base, module: 'core', key: 'backup', kind: 'status', warningAction, content: { kind: 'status', tone, messageKey: tone === 'neutral' ? 'recent' : 'never', values: tone === 'neutral' ? { when: '23.10.2026, 03:00' } : { schedule: 'on' }, href: '/admin/backup' } }) as DashboardTileView;
 const drafts = (count: number): DashboardTileView => ({ ...base, module: 'dms', key: 'drafts', kind: 'count', content: { kind: 'count', count, href: '/dms?phase=draft' } }) as DashboardTileView;
 const site = (): DashboardTileView =>
   ({ ...base, module: 'site', key: 'site', kind: 'status', warningAction: true, content: { kind: 'status', tone: 'info', messageKey: 'changed', values: { count: 2 }, href: '/site/publish' } }) as DashboardTileView;

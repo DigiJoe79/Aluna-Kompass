@@ -1,3 +1,4 @@
+import type { SystemMailHook } from '../system-mail';
 import type { z } from 'zod';
 import { validateAuditActions, type AuditActionDef } from '../audit/actions';
 import type { CallContext } from '../context';
@@ -468,6 +469,13 @@ export interface ModuleManifest {
    */
   housekeeping?: (deps: Deps) => Promise<void>;
   /**
+   * Systemmail senden — Betreff, Text, Empfänger (Spec Backup § Meldungen). Richtung Kern → Modul: Der Kern kennt
+   * keine Absender-Einstellungen (Prinzip 1), ein Modul mit Mailversand bietet ihn an. `available` sagt, ob gerade
+   * gesendet werden kann (Versand eingerichtet, Absender gesetzt); `send` wirft nie. Wiederverwendbar für spätere
+   * Kern-Meldungen; der Kern nimmt das erste eingeschaltete Modul, das verfügbar ist (`sendSystemMail`).
+   */
+  systemMail?: SystemMailHook;
+  /**
    * Dieses Modul legt eigene Dateien ab. Es bekommt dann `<dataPath>/<key>`
    * über `deps.files(key)`. Die Anmeldung ist nicht Form, sondern Zweck: Das
    * Backup sichert genau die angemeldeten Verzeichnisse.
@@ -485,6 +493,17 @@ export interface ModuleManifest {
   retentionHolds?: (deps: Deps, entityType: string, id: string) => readonly RetentionHoldInput[];
   /** Was bei diesem Modul zur Löschung fällig ist. */
   retentionDue?: (deps: Deps) => readonly DueItemInput[];
+  /**
+   * Zählungen für das Manifest eines Backups; Richtung Kern → Modul wie `retentionDue`. Synchron, nur lesend.
+   * Schlüssel ohne Modulpräfix (`documents`); der Kern legt `<modul>.` davor.
+   */
+  backupCounts?: (deps: Deps) => Record<string, number>;
+  /**
+   * Wann dieses Modul zuletzt publiziert hat (ISO-Zeitpunkt), sonst `null`. Richtung Kern → Modul (Prinzip 1): Das
+   * Einspielen eines Backups liest es vor dem Austausch, damit die Backup-Seite danach sagen kann, dass die Webseite
+   * neuer ist als der eingespielte Stand. Synchron, nur lesend.
+   */
+  lastPublishedAt?: (deps: Deps) => string | null;
   /**
    * Beschriftung und Link für eine Entität dieses Moduls, an der eine
    * Wiedervorlage hängt. Richtung Kern → Modul, wie `retentionHolds`: Der Kern

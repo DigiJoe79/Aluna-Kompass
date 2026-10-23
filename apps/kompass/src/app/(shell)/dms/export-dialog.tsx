@@ -14,9 +14,9 @@ import { FormField } from '@/components/forms/form-field';
 
 /**
  * Einstieg in den Aktenexport: ein Ordner (samt Unterordnern) oder ein
- * Jahrgang als ZIP. Absenden wie `admin/backup/export-card.tsx` — ein Blob und
- * ein flüchtiger `<a download>`, kein Server Action, denn der Dienst liefert
- * Bytes, keinen Formularzustand.
+ * Jahrgang als ZIP. Ein Blob und ein flüchtiger `<a download>`, kein Server
+ * Action, denn der Dienst liefert Bytes, keinen Formularzustand. (Backups laden
+ * dagegen gestreamt über ihre Datei-Route, `lib/backup-download.ts`.)
  */
 export function ExportDialog({
   canExport,

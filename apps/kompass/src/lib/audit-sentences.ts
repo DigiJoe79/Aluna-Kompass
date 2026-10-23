@@ -53,6 +53,8 @@ const seedParts: Display = (_v, h) => {
   if (shown.length === 0 || shown.some((part) => part === null)) return null;
   return listOf(shown as string[], h.locale);
 };
+const backupKind: Display = (v, h) => h.label(`backup.kinds.${String(v)}`);
+const backupReason: Display = (v, h) => h.label(`backup.reasons.${String(v)}`);
 const megabytes: Display = (v, h) => `${new Intl.NumberFormat(h.locale, { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(Number(v) / (1024 * 1024))} MB`;
 
 /**
@@ -66,6 +68,12 @@ const DISPLAY: Record<string, Record<string, Display>> = {
   'locale.add': { code: languageName },
   'locale.remove': { code: languageName },
   'backup.export': { sizeBytes: megabytes },
+  'backup.create': { kind: backupKind, sizeBytes: megabytes },
+  'backup.fail': { kind: backupKind, reason: backupReason },
+  'backup.verify': { reason: backupReason },
+  'backup.delete': { kind: backupKind },
+  'backup.cancel': { jobKind: (v, h) => h.label(`backup.jobKinds.${String(v)}`) },
+  'backup.upload': { sizeBytes: megabytes },
   'site.values.update': { variables: quotedList },
 };
 
@@ -89,6 +97,8 @@ export const DERIVED: Record<string, Record<string, Display>> = {
 const LATER_PARAMS: Record<string, readonly string[]> = {
   // Stufe 1, Auftrag 7 (0.2.12): Ausgang aus dem Ordner genommen.
   'dms.move': ['outgoing'],
+  // Kein späterer Wert, aber derselbe Fall: Bei bestandener Prüfung ist `reason` `null`, und der Satz braucht ihn nicht.
+  'backup.verify': ['reason'],
 };
 
 const isUserParam = (p: string) => /(^u|U)serId$/.test(p);

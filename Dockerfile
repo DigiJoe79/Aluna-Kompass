@@ -76,6 +76,8 @@ ENV NODE_ENV=production \
     HOSTNAME=0.0.0.0 \
     PORT=3000 \
     DATA_PATH=/data \
+    BACKUP_PATH=/backups \
+    KOMPASS_IN_IMAGE=1 \
     CACHE_PATH=/cache \
     KOMPASS_MIGRATIONS_DIR=/app/packages/core/src/db/migrations \
     KOMPASS_TEMPLATES_DIR=/app/packages/documents/templates \
@@ -109,7 +111,9 @@ COPY --from=runtime-deps --chown=node:node /app/node_modules ./node_modules
 COPY --chown=node:node scripts/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 COPY --chown=node:node scripts/seed-site-template.sh /usr/local/bin/seed-site-template.sh
 COPY --chown=node:node scripts/seed-document-templates.sh /usr/local/bin/seed-document-templates.sh
-RUN mkdir -p /data /cache && chown node:node /data /cache \
+# /backups gehört node, sonst kann ein Container ohne Mount dort nicht sichern
+# (Kompass warnt dann, dass das Verzeichnis nicht eingehängt ist).
+RUN mkdir -p /data /cache /backups && chown node:node /data /cache /backups \
  && chmod +x /usr/local/bin/docker-entrypoint.sh /usr/local/bin/seed-site-template.sh /usr/local/bin/seed-document-templates.sh
 # Die Aufstellung der Software Dritter entsteht hier, aus genau dem, was im
 # Image liegt — und stimmt so fuer jede ausgelieferte Fassung, auch nach einem

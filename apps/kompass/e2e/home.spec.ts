@@ -21,7 +21,7 @@ test.describe('home', () => {
     // Seit 0.2.7 trägt der Seed den ganzen Vereinsstamm, Steuerdaten schreibt der Finanz-Seed über den Bescheid (E22):
     // Die Kachel meldet „eingerichtet“. Den Weg aus einer offenen Zeile prüft der Test an einer Lücke, die er selbst herstellt.
     await expect(setup.getByText('Der Verein ist eingerichtet.')).toBeVisible();
-    await expect(page.getByTestId('dashboard-tile-core-backup').getByText(/Noch kein Backup/)).toBeVisible();
+    await expect(page.getByTestId('dashboard-tile-core-backup').getByText(/Noch kein geprüftes Backup/)).toBeVisible();
     await expect(page.getByTestId('dashboard-tile-core-retention')).toContainText('1');
     await setE2ESetting(page, 'organization.registerCourt', '');
     await page.reload();

@@ -16,6 +16,7 @@ import { runModuleInstalls } from './modules/installs';
 import { noopTextExtraction, type TextExtraction } from './text/extraction';
 import { noopPdfTools, type PdfTools } from './pdf/tools';
 import { noopMailTransport, type MailTransport } from './mail';
+import { assertBackupPathOutsideData, backupMountWarning, type BackupMountWarning } from './backup/paths';
 
 export interface CreateDepsOptions {
   /**
@@ -26,6 +27,15 @@ export interface CreateDepsOptions {
    * das Backup sie nicht einsammeln kann.
    */
   dataPath: string;
+  /**
+   * Das Verzeichnis der Backups, neben `dataPath` und nie darin (sonst trüge
+   * jedes Backup die vorigen mit). Ohne Angabe (Skripte, Tests) gibt es keins.
+   */
+  backupPath?: string;
+  /** Die Fassung des Produkts für das Manifest der Backups; ohne Angabe `0.0.0-dev`. */
+  appVersion?: string;
+  /** Läuft Kompass im Image? Nur dort wird geprüft, ob `backupPath` eingehängt ist. */
+  inImage?: boolean;
   env: AppEnv;
   modules?: ModuleManifest[];
   coreTemplates?: DocumentTemplate[];
@@ -51,6 +61,11 @@ export type AppDeps = Deps & {
   dataPath: string;
   databasePath: string;
   migrationCount: number;
+  /** Aufgelöstes `BACKUP_PATH`; `null`, wenn die Installation keins kennt (Skripte). */
+  backupPath: string | null;
+  /** Fassung des Produkts, für das Manifest der Backups. */
+  appVersion: string;
+  backupMountWarning: BackupMountWarning;
   backupDatabase(destination: string): Promise<void>;
   reopen(): void;
   close(): void;
@@ -94,6 +109,17 @@ function checkpointAndClose(sqlite: Database.Database): void {
 }
 
 export function createDeps(opts: CreateDepsOptions): AppDeps {
+  let backupPath: string | null = null;
+  if (opts.backupPath) {
+    assertBackupPathOutsideData(opts.backupPath, opts.dataPath);
+    backupPath = path.resolve(opts.backupPath);
+    try {
+      mkdirSync(backupPath, { recursive: true });
+    } catch {
+      // Nicht fatal: Ein nicht beschreibbares Backup-Verzeichnis meldet die
+      // Backup-Seite als Fehler, der Start geht weiter.
+    }
+  }
   ensureWritableDir(opts.dataPath);
   const databasePath = databasePathIn(opts.dataPath);
   mkdirSync(path.dirname(databasePath), { recursive: true });
@@ -131,6 +157,9 @@ export function createDeps(opts: CreateDepsOptions): AppDeps {
     dataPath: opts.dataPath,
     databasePath,
     migrationCount: countMigrations(),
+    backupPath,
+    appVersion: opts.appVersion ?? '0.0.0-dev',
+    backupMountWarning: backupPath ? backupMountWarning(backupPath, { inImage: opts.inImage ?? false }) : null,
     backupDatabase: (destination) => handle.sqlite.backup(destination).then(() => undefined),
     reopen() {
       checkpointAndClose(handle.sqlite);
@@ -151,21 +180,33 @@ const envSchema = z.object({
   APP_ENV: z.enum(['development', 'test', 'production']).default('development'),
   /** Ein Volume für alles, was gesichert wird. Geheimnisse werden daneben eingehängt. */
   DATA_PATH: z.string().min(1).default('./data'),
+  /** Die Backups, außerhalb von `DATA_PATH` (sonst trüge jedes Backup die vorigen mit). */
+  BACKUP_PATH: z.string().min(1).default('./backups'),
+  /** Setzt das Dockerfile; nur dort wird geprüft, ob `BACKUP_PATH` eingehängt ist. */
+  KOMPASS_IN_IMAGE: z.enum(['0', '1']).optional(),
   PORT: z.coerce.number().int().min(1).max(65535).default(3000),
   SESSION_SECRET: z.string().min(32),
   KOMPASS_DOCUMENT_TEMPLATES_DIR: z.string().min(1).optional(),
   KOMPASS_HANDBOOK_DIR: z.string().min(1).optional(),
+  /** Ausweg: einmal ohne Backup vor Update starten (Spec Backup § Backup vor Update). */
+  KOMPASS_SKIP_UPDATE_BACKUP: z.enum(['0', '1']).optional(),
 });
 
 export interface RuntimeEnv {
   env: AppEnv;
   dataPath: string;
+  /** Volume der Backups, wie `dataPath` ein Betriebsparameter. */
+  backupPath: string;
+  /** Läuft im Image (`KOMPASS_IN_IMAGE=1`). */
+  inImage: boolean;
   port: number;
   sessionSecret: string;
   /** Volume mit den vereinseigenen Basis-Vorlagen; ohne = nur die mitgelieferten. */
   documentTemplatesDir: string | null;
   /** Das Handbuch; im Container gesetzt, in der Entwicklung `docs/handbuch` im Repo. */
   handbookDir: string | null;
+  /** `KOMPASS_SKIP_UPDATE_BACKUP=1`: Start ohne Backup vor Update. */
+  skipUpdateBackup: boolean;
 }
 
 export function readEnv(source: Record<string, string | undefined> = process.env): RuntimeEnv {
@@ -178,9 +219,12 @@ export function readEnv(source: Record<string, string | undefined> = process.env
   return {
     env: v.APP_ENV,
     dataPath: v.DATA_PATH,
+    backupPath: v.BACKUP_PATH,
+    inImage: v.KOMPASS_IN_IMAGE === '1',
     port: v.PORT,
     sessionSecret: v.SESSION_SECRET,
     documentTemplatesDir: v.KOMPASS_DOCUMENT_TEMPLATES_DIR ?? null,
     handbookDir: v.KOMPASS_HANDBOOK_DIR ?? null,
+    skipUpdateBackup: v.KOMPASS_SKIP_UPDATE_BACKUP === '1',
   };
 }

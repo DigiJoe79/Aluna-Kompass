@@ -1,7 +1,8 @@
 # Testumgebung. Vorlage — die Pfade unten sind Beispiele und werden auf die
 # eigenen angepasst.
 #
-# Vorher anlegen: ein Verzeichnis für die Daten, eines für die Medien, die
+# Vorher anlegen: ein Verzeichnis für die Daten, eines für die Medien, eines
+# für die Backups (`backups`, neben den Daten, Besitzer 1000), die
 # Datei .env.test (siehe .env.test.example) und — nur wenn die Webseite von
 # hier aus veröffentlicht wird — secret/site.pw (Rechte 600, Besitzer 1000).
 # Das Verzeichnis `secret` liegt **neben** den Daten, nicht darin: Das Backup
@@ -47,6 +48,9 @@ services:
       # KOMPASS_SMTP_TLS: implicit        # oder starttls (Port 587)
       # KOMPASS_SMTP_USER: verein@example.org
       # KOMPASS_MAIL_REDIRECT: test-postfach@example.org
+      # Nur einmal, wenn das Backup vor einem Update scheitert und sich die
+      # Ursache nicht beheben lässt; danach wieder entfernen (betrieb.md).
+      # KOMPASS_SKIP_UPDATE_BACKUP: "1"
     env_file: [/pfad/zu/kompass-test/.env.test]
     volumes:
       # Ein Volume für alles, was gesichert wird: darunter liegt je Modul ein
@@ -55,6 +59,12 @@ services:
       # Geheimnisse ausdrücklich daneben, nie unter /data — das Backup bildet
       # /data ab und darf das Webspace-Passwort nicht mit ausliefern.
       - /pfad/zu/kompass-test/secret:/secret:ro
+      # Backups: eigenes Verzeichnis, nie unter /data — sonst trüge jedes Backup
+      # die vorigen mit, und Kompass startet nicht. Besitzer UID 1000
+      # (chown 1000:1000). Ohne diesen Mount liegen die Backups im Container und
+      # gehen beim Neuerstellen verloren; Kompass warnt dann auf der Startseite
+      # und der Backup-Seite.
+      - /pfad/zu/kompass-test/backups:/backups
       # Bild-Cache und Vorschau der Webseite. Eigenes Volume, damit ein Update
       # die Bildvarianten nicht verwirft (sonst baut der erste Lauf danach alle
       # neu). Bewusst nicht unter /data: alles darin ist neu erzeugbar und

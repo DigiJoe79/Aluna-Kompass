@@ -9,7 +9,9 @@ import { createPdfTools, createTextExtraction } from '@kompass/text-extraction';
 import { installedModules } from '../modules';
 import { resetMcpHandler } from './mcp';
 import { createMailTransport, readMailEnv } from './mail-transport';
+import { appVersion } from './build';
 import { labelTranslator } from './record-labels';
+import { isMaintenanceActive } from '@kompass/core/maintenance';
 
 export type AppDeps = import('@kompass/core').AppDeps;
 
@@ -58,6 +60,9 @@ function openDeps(): AppDeps {
   const env = readEnv();
   const deps = createDeps({
     dataPath: env.dataPath,
+    backupPath: env.backupPath,
+    inImage: env.inImage,
+    appVersion: appVersion(),
     env: env.env,
     modules: installedModules,
     coreTemplates: coreDocumentTemplates(),
@@ -85,7 +90,17 @@ export async function depsReady(): Promise<void> {
   while (holder.resetting) await holder.resetting;
 }
 
+/** Während des Einspielens gibt es keine Datenbank für Anfragen (Spec Backup § Einspielen). */
+export class MaintenanceError extends Error {
+  constructor() {
+    super('maintenance: Kompass spielt gerade ein Backup ein');
+  }
+}
+
 export function getDeps(): AppDeps {
+  // Anfragen mit Körper laufen nicht durch den Proxy (`proxy.ts`); hier halten sie während des Einspielens an,
+  // statt mitten in den Austausch zu schreiben. Derselbe Pfad wie im Proxy, ohne die Prüfung von `readEnv`.
+  if (isMaintenanceActive(process.env.BACKUP_PATH ?? './backups')) throw new MaintenanceError();
   if (!holder.deps) holder.deps = openDeps();
   if (!holder.exitHooked) {
     holder.exitHooked = true;

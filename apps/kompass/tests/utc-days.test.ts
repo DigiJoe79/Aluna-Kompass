@@ -23,6 +23,7 @@ const ALLOWED: Record<string, string> = {
   'packages/modules/finance/src/ledger/period.ts': 'dayAfter auf ISO-Datum',
   'packages/modules/finance/src/allocation/partner-proof.ts': 'addDaysInternal auf ISO-Datum',
   'packages/modules/finance/src/allocation/approvals.ts': 'addDays auf ISO-Datum',
+  'packages/core/src/backup/ring.ts': 'plusDays/sundayOf auf ISO-Datum (Ring der Backups)',
 };
 
 function grep(pattern: string, ...dirs: string[]): string[] {

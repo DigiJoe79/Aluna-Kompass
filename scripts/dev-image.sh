@@ -43,6 +43,7 @@ case "${1:-up}" in
       -e SITE_STAGING=1 \
       -v "${name}-data:/data" \
       -v "${name}-media:/media" \
+      -v "${name}-backups:/backups" \
       "$image" >/dev/null
     printf 'Warte auf die Gesundheitsprüfung'
     i=0

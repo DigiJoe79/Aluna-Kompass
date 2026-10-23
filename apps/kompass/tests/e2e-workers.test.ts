@@ -43,7 +43,17 @@ describe('workerEnvironment', () => {
     expect(w.env.SITE_TEMPLATE_DIR).toBe(path.resolve(root, '../../templates/verein-basis'));
   });
 
-  it('gibt Containern eigenen Namen und Port ab 3200 und hängt nur das Publish-Ziel ein', () => {
+  it('hängt Containern ein eigenes Backup-Verzeichnis ein wie eine echte Installation', () => {
+    const a = workerEnvironment('container', 0, root);
+    const b = workerEnvironment('container', 1, root);
+    // Ohne Einhängung meldet Kompass „nicht eingehängt“ auf Startseite und Backup-Seite (Spec Backup § Ablage).
+    expect(a.backupTarget).toBe(path.join(root, '.e2e-container', 'w0', 'backups'));
+    expect(a.backupTarget).not.toBe(b.backupTarget);
+    expect(a.env.BACKUP_PATH).toBeUndefined(); // das Image setzt /backups
+    expect(workerEnvironment('dev', 0, root).backupTarget).toBeUndefined();
+  });
+
+  it('gibt Containern eigenen Namen und Port ab 3200 und hängt das Publish-Ziel ein', () => {
     const a = workerEnvironment('container', 0, root);
     const b = workerEnvironment('container', 1, root);
 

@@ -23,6 +23,16 @@
     }
   },
   "common": {
+    "runSteps": {
+      "label": "Schritte",
+      "state": {
+        "pending": "wartet",
+        "running": "läuft",
+        "done": "erledigt",
+        "skipped": "übersprungen",
+        "failed": "gescheitert"
+      }
+    },
     "muted": {
       "deactivated": "deaktiviert",
       "archived": "archiviert",
@@ -1101,7 +1111,7 @@
       "title": "Bestand wiederherstellen",
       "intro": "Spielen Sie ein Backup ein, statt neu zu beginnen. Die Datenbank ist noch leer, es geht nichts verloren.",
       "file": "Backup-Datei",
-      "fileHint": "Ein Kompass-Backup (.tar.gz) aus „Export“.",
+      "fileHint": "Ein Kompass-Backup (.tar), etwa über „Herunterladen“ auf der Backup-Seite einer anderen Installation.",
       "uploading": "Wird geprüft …",
       "manifestTitle": "Inhalt des Archivs",
       "environment": "Umgebung",
@@ -1217,9 +1227,13 @@
           "empty": "",
           "action": "Backup erstellen",
           "messages": {
-            "never": "Noch kein Backup erstellt. Der erste Export dauert unter einer Minute.",
-            "stale": "Das letzte Backup ist {days, plural, one {# Tag} other {# Tage}} alt — älter als die eingestellte Frist.",
-            "recent": "Letztes Backup vor {days, plural, =0 {weniger als einem Tag} one {# Tag} other {# Tagen}}."
+            "never": "Noch kein geprüftes Backup. {schedule, select, off {Automatische Backups sind aus.} other {}}",
+            "stale": "Letztes Backup vor {days, plural, one {# Tag} other {# Tagen}}. {schedule, select, off {Automatische Backups sind aus.} other {}}",
+            "recent": "Letztes Backup {when}, geprüft.",
+            "failed": "{kind, select, automatic {Das nächtliche Backup ist gescheitert.} other {Das letzte Backup ist gescheitert.}} {when, select, none {Es gibt noch kein geprüftes Backup.} other {Letzter geprüfter Stand: {when}.}}",
+            "notMounted": "Das Backup-Verzeichnis ist nicht eingehängt — Backups gingen beim Neuerstellen des Containers verloren.",
+            "nightlyMissing": "Das Backup heute Nacht fehlt. {when, select, none {Es gibt noch kein geprüftes Backup.} other {Letzter geprüfter Stand: {when}.}}",
+            "storageLow": "Der Platz für Backups reicht nur noch für weniger als zwei weitere."
           }
         },
         "accounts": {
@@ -1664,7 +1678,7 @@
       "backup": {
         "export": {
           "label": "Backup exportieren",
-          "description": "Vollständigen Datenexport herunterladen."
+          "description": "Backups erstellen, prüfen, festhalten und herunterladen."
         },
         "import": {
           "label": "Backup importieren",
@@ -1832,6 +1846,11 @@
     "taxIncomplete": "{count, plural, one {# Angabe ist unvollständig.} other {# Angaben sind unvollständig.}}",
     "taxIncompleteText": "Ohne Steuernummer und Freistellungsbescheid lassen sich keine Zuwendungsbestätigungen erzeugen.",
     "fields": {
+      "backup": {
+        "schedule": { "enabled": "Automatische Backups", "time": "Uhrzeit der automatischen Backups" },
+        "ring": { "daily": "Tägliche Backups behalten", "weekly": "Wöchentliche Backups behalten", "monthly": "Monatliche Backups behalten" },
+        "mcpHumanOnlyAllowed": "Darf ein Agent ein Backup einspielen?"
+      },
       "organization": {
         "name": "Vereinsname",
         "legalForm": "Rechtsform",
@@ -2323,6 +2342,17 @@
       "auth_throttled": "Anmeldung verzögert (zu viele Versuche)",
       "backup_export": "Backup erstellt",
       "backup_import": "Backup eingespielt",
+      "backup_create": "Backup erstellt",
+      "backup_fail": "Backup gescheitert",
+      "backup_verify": "Backup geprüft",
+      "backup_download": "Backup heruntergeladen",
+      "backup_pin": "Backup festgehalten",
+      "backup_unpin": "Backup freigegeben",
+      "backup_delete": "Backup gelöscht",
+      "backup_prune": "Backups vom Ring entfernt",
+      "backup_cancel": "Backup-Lauf abgebrochen",
+      "backup_restoreStart": "Einspielen gestartet",
+      "backup_upload": "Backup hochgeladen",
       "contacts_addRole": "Rolle des Kontakts vergeben",
       "contacts_create": "Kontakt angelegt",
       "contacts_delete": "Kontakt gelöscht",
@@ -2653,6 +2683,15 @@
       "auth_throttled": "Anmeldung nach {attempts, plural, one {# Fehlversuch} other {# Fehlversuchen}} in {minutes, plural, one {# Minute} other {# Minuten}} für alle verzögert",
       "backup_export": "Backup mit {sizeBytes} erstellt",
       "backup_import": "Backup vom {createdAt} eingespielt",
+      "backup_create": "Backup „{kind}“ mit {sizeBytes} erstellt",
+      "backup_fail": "Backup „{kind}“ gescheitert, {reason}",
+      "backup_verify": "{passed, select, true {Backup geprüft und bestanden} other {Backup bei der Prüfung durchgefallen, {reason}}}",
+      "backup_pin": "{renamed, select, true {Name des festgehaltenen Backups geändert} other {Backup festgehalten}}",
+      "backup_delete": "Backup „{kind}“ gelöscht",
+      "backup_restoreStart": "Einspielen des Backups vom {createdAt} gestartet",
+      "backup_upload": "Backup mit {sizeBytes} hochgeladen",
+      "backup_prune": "{count, plural, one {# Backup} other {# Backups}} vom Ring entfernt",
+      "backup_cancel": "Lauf „{jobKind}“ abgebrochen",
       "contacts_setStatus": "Kontakt {archived, select, true {archiviert} other {wieder aktiviert}}",
       "contacts_update": "{scope, select, name {Name des Kontakts geändert} address {Anschrift des Kontakts geändert} delivery {Zustellweg des Kontakts geändert} other {Kontakt geändert}}",
       "contacts_userLink_create": "Kontakt {contact} mit Nutzer verknüpft",
@@ -2977,41 +3016,304 @@
       "durationMonths": "{n, plural, one {# Monat} other {# Monate}}"
     }
   },
+  "jobs": {
+    "errors": {
+      "jobRunning": { "reason": "Gerade läuft schon {kind, select, create {ein Backup} verify {eine Prüfung} restore {ein Einspielen} other {ein anderer Lauf}}.", "remedy": "Warten Sie, bis {kind, select, create {es} verify {sie} restore {es} other {er}} fertig ist, und starten Sie dann erneut." },
+      "jobCancelled": { "reason": "Der Lauf wurde im Schritt „{step}“ abgebrochen.", "remedy": "Starten Sie ihn erneut, wenn Sie so weit sind." },
+      "stepTimedOut": { "reason": "Der Schritt „{step}“ hat sein Zeitlimit überschritten.", "remedy": "Starten Sie den Lauf erneut; bleibt es dabei, sehen Sie ins Containerprotokoll." },
+      "jobInterrupted": { "reason": "Der Lauf wurde durch einen Neustart von Kompass unterbrochen.", "remedy": "Starten Sie ihn erneut." },
+      "jobNotRunning": { "reason": "Dieser Lauf läuft nicht mehr.", "remedy": "Er ist schon zu Ende; sein Ergebnis steht im aktuellen Stand der Läufe." },
+      "jobNotCancellable": { "reason": "Dieser Lauf ist an einer Stelle, an der ein Abbruch einen halben Zustand zurückließe.", "remedy": "Warten Sie, bis er fertig ist." }
+    }
+  },
   "backup": {
     "title": "Backup",
-    "export": {
-      "title": "Export erstellen",
-      "text": "Vollständiger Datenbestand samt Dokumenten, Protokoll und Einstellungen als eine Datei. Themes und Module sind enthalten, Sitzungen und API-Tokens nicht.",
-      "last": "Letzter Export",
-      "button": "Export erstellen",
-      "running": "Export läuft …",
-      "duration": "Dauert etwa 40 Sekunden.",
-      "failed": "Export fehlgeschlagen."
+    "errors": {
+      "backupPathMissing": { "reason": "Für diese Installation ist kein Backup-Verzeichnis eingerichtet.", "remedy": "Setzen Sie BACKUP_PATH in der Installation und starten Sie Kompass neu (Betriebshandbuch, Abschnitt Backups)." },
+      "backupPinLimit": { "reason": "Es sind schon {max} Backups festgehalten.", "remedy": "Geben Sie zuerst eines davon frei." },
+      "backupLastVerified": { "reason": "Das ist das neueste geprüfte Backup; ohne es gäbe es keinen sicheren Stand.", "remedy": "Erstellen Sie zuerst ein neueres Backup." },
+      "backupVerifyFailed": { "reason": "Das Backup hat die Prüfung nicht bestanden: {reason, select, backupFormatUnsupported {unbekanntes Format} backupUnreadable {Archiv nicht lesbar} backupFileMissing {eine Datei fehlt im Archiv} backupFileSizeMismatch {eine Datei im Archiv hat die falsche Größe} backupCorrupt {die Datenbank im Archiv ist beschädigt} backupChecksumMismatch {die Prüfsumme weicht ab} other {{reason}}}.", "remedy": "Erstellen Sie ein neues Backup; bleibt es dabei, prüfen Sie den Datenträger des Backup-Verzeichnisses." },
+      "backupTooLarge": { "reason": "Die Datei ist größer als {gb} GB; so groß wird kein Kompass-Backup.", "remedy": "Prüfen Sie, ob Sie die richtige Datei gewählt haben." },
+      "restoreBlocked": { "reason": "Gerade läuft {reason, select, siteJobRunning {ein Lauf der Webseite (Vorschau, Publizieren oder Verbindungsprüfung)} other {{reason}}}; währenddessen lässt sich kein Backup einspielen.", "remedy": "Warten Sie, bis er fertig ist, und starten Sie das Einspielen dann erneut." },
+      "restoreSafeguardFailed": { "reason": "Das Backup „Vor Einspielen“ ließ sich nicht anlegen; ohne Weg zurück spielt Kompass nichts ein.", "remedy": "Sehen Sie in der Liste nach dem Grund (Speicherplatz, Verzeichnis) und versuchen Sie es dann erneut." },
+      "restoreFailed": { "reason": "Das Einspielen ist {step, select, replace {beim Ersetzen des Bestands} migrate {beim Anpassen der Datenbank} finish {beim Abschluss} other {}} gescheitert. Kompass hat den Stand davor zurückgelegt, es ist nichts verloren.", "remedy": "Prüfen Sie das Backup erneut; bleibt es dabei, wenden Sie sich mit dem Protokoll des Servers an die Technik." },
+      "restoreRollbackFailed": { "reason": "Das Einspielen ist gescheitert, und der Stand davor ließ sich nicht zurücklegen. Er liegt unverändert unter {aside}.", "remedy": "Kompass bleibt in Wartung, bis die Technik den Stand zurückgelegt hat (Betriebshandbuch, Abschnitt Backups)." }
     },
-    "import": {
-      "title": "Import",
-      "warning": "Der Import ersetzt den gesamten Bestand dieser Umgebung, einschließlich Änderungsprotokoll. Erstellen Sie vorher einen Export. Der Vorgang selbst wird im neuen Bestand als Systemeintrag protokolliert.",
-      "file": "Backup-Datei",
-      "fileHint": "Ein Kompass-Backup (.tar.gz) aus „Export“.",
-      "noFile": "Bitte eine Backup-Datei auswählen.",
-      "prepare": "Import vorbereiten",
-      "confirmTitle": "Bestand der Umgebung „{env}“ überschreiben?",
-      "confirmText": "{users} Nutzer, {audit} Protokolleinträge und {documents} Dokumente aus dem Backup ({source}) ersetzen den aktuellen Bestand. Dieser Schritt lässt sich nicht rückgängig machen.",
-      "confirmLabel": "Tippen Sie zur Bestätigung den Umgebungsnamen",
-      "notConfirmed": "Noch nicht bestätigt.",
-      "confirm": "Bestand überschreiben",
-      "steps": {
-        "writing": "Bestand wird ersetzt …",
-        "sessions": "Sitzungen werden beendet"
+    "kinds": { "automatic": "Automatisch", "manual": "Von Hand", "preUpdate": "Vor Update", "preRestore": "Vor Einspielen", "upload": "Hochgeladen", "unknown": "Unbekannt" },
+    "jobKinds": { "create": "Backup erstellen", "verify": "Backup prüfen", "restore": "Backup einspielen" },
+    "reasons": {
+      "backupFormatUnsupported": "unbekanntes Format",
+      "backupUnreadable": "Archiv nicht lesbar",
+      "backupFileMissing": "Datei fehlt im Archiv",
+      "backupFileSizeMismatch": "Datei im Archiv hat die falsche Größe",
+      "backupCorrupt": "Datenbank im Archiv beschädigt",
+      "backupChecksumMismatch": "Prüfsumme weicht ab",
+      "writeFailed": "Schreiben gescheitert",
+      "cancelled": "abgebrochen",
+      "timeout": "Zeitlimit überschritten",
+      "interrupted": "durch einen Neustart unterbrochen"
+    },
+    "maintenance": {
+      "running": {
+        "title": "Kompass wird auf einen früheren Stand gesetzt",
+        "text": "{name, select, none {Der Stand vom {createdAt} wird eingespielt.} other {{name} spielt den Stand vom {createdAt} ein.}} Bis es fertig ist, ist Kompass für alle gesperrt.",
+        "meta": "Seit {since}{minutes, select, none {} other { · dauert etwa {minutes} Minuten}}",
+        "foot": "Diese Seite lädt sich selbst neu. Danach melden Sie sich neu an. Was Sie seit {time} eingegeben haben, ist nicht mehr da."
       },
-      "noAbort": "Fenster nicht schließen. Ab hier lässt sich der Vorgang nicht mehr abbrechen; danach werden alle Sitzungen abgemeldet."
+      "done": {
+        "title": "Der Stand vom {createdAt} ist eingespielt",
+        "text": "Alle wurden abgemeldet. Melden Sie sich neu an.",
+        "foot": "Der Stand von vor dem Einspielen liegt als Backup „vor Einspielen“ in der Liste."
+      },
+      "failed": {
+        "title": "Einspielen gescheitert, nichts verloren",
+        "text": "{step, select, none {} other {Beim Schritt „{step}“ brach Kompass ab. }}Kompass ist wieder auf dem Stand von {since}, vor dem Einspielen.",
+        "foot": "Melden Sie sich neu an und arbeiten Sie weiter wie vorher."
+      },
+      "rollbackFailed": {
+        "title": "Kompass braucht jetzt die Technik",
+        "text": "Das Einspielen ist gescheitert, und Kompass konnte den Stand von {since} nicht zurückholen. Ihre Daten sind unverändert beiseitegelegt, gelöscht ist nichts. Kompass bleibt gesperrt, bis die Technik hilft.",
+        "contactTitle": "Technik erreichen",
+        "runId": "Geben Sie diese Kennung mit: <code>{runId}</code>",
+        "foot": "Bitte nichts neu installieren und keine Dateien auf dem Server löschen."
+      },
+      "steps": {
+        "safeguard": "Jetzigen Stand sichern",
+        "verify": "Prüfen",
+        "replace": "Dokumente und Bilder einspielen",
+        "migrate": "Datenbank einspielen",
+        "finish": "Kompass neu starten",
+        "rollback": "Stand von {since} zurückholen"
+      },
+      "login": "Anmelden"
     },
     "settings": {
-      "title": "Frist",
-      "maxAgeDays": "Warnen, wenn das letzte Backup älter ist als",
-      "maxAgeDaysHint": "Die Startseite meldet ein Backup als veraltet, sobald es diese Zahl von Tagen überschreitet.",
-      "days": "Tage",
-      "saved": "Frist gespeichert"
+      "saved": "Einstellungen gespeichert",
+      "schedule": {
+        "title": "Automatisch sichern",
+        "enabled": "Jede Nacht ein Backup erstellen",
+        "hintMail": "Scheitert eines, geht eine Mail an alle mit dem Recht „Backup exportieren“.",
+        "hintNoMail": "Scheitert eines, steht es nur hier und auf der Startseite: Kompass kann keine Mails senden.",
+        "time": "Uhrzeit"
+      },
+      "ring": {
+        "legend": "Aufheben",
+        "daily": "tägliche",
+        "weekly": "wöchentliche",
+        "monthly": "monatliche",
+        "dailyLabel": "Tägliche Backups aufheben",
+        "weeklyLabel": "Wöchentliche Backups aufheben",
+        "monthlyLabel": "Monatliche Backups aufheben",
+        "hint": "Das sind höchstens {count} automatische Backups{total, select, none {} other {, bei {reference} je Backup etwa {total}}}. Dazu kommen das letzte von Hand, bis zu drei festgehaltene und die Backups vor Updates und vor dem Einspielen."
+      },
+      "maxAge": {
+        "title": "Frist",
+        "label": "Warnen, wenn das letzte geprüfte Backup älter ist als",
+        "unit": "Tage",
+        "hint": "Die Startseite meldet das Backup als veraltet, sobald diese Zahl von Tagen überschritten ist."
+      },
+      "agent": {
+        "label": "Darf ein Agent ein Backup einspielen?",
+        "hint": "Backups erstellen und die Liste lesen darf ein Agent immer. Einspielen bleibt sonst einem Menschen auf dieser Seite vorbehalten."
+      }
+    },
+    "run": {
+      "elapsed": "seit {duration}",
+      "byPerson": "Von {name} um {time} gestartet. Sie können die Seite verlassen; der Lauf geht weiter.",
+      "byAgent": "Von einem Agenten im Namen von {name} um {time} gestartet. Sie können die Seite verlassen; der Lauf geht weiter.",
+      "bySystem": "Von Kompass selbst um {time} gestartet. Sie können die Seite verlassen; der Lauf geht weiter.",
+      "lastDuration": "Das letzte Backup dauerte {duration} Minuten.",
+      "cancel": "Abbrechen",
+      "cancelConfirmTitle": "Backup abbrechen?",
+      "cancelConfirmText": "Das angefangene Backup wird verworfen; in der Liste entsteht keine Zeile.",
+      "cancelConfirm": "Backup abbrechen",
+      "cancelLocked": "Ab hier lässt sich der Lauf nicht mehr abbrechen.",
+      "done": {
+        "create": "Backup erstellt",
+        "verify": "Prüfung bestanden"
+      },
+      "status": {
+        "failed": "Backup gescheitert",
+        "aborted": "Backup abgebrochen",
+        "interrupted": "Durch einen Neustart unterbrochen"
+      },
+      "lastStep": "Zuletzt im Schritt „{step}“.",
+      "restart": "Erneut starten",
+      "counter": "{done} von {total}",
+      "blocked": "Es läuft gerade ein Backup."
+    },
+    "steps": {
+      "create": {
+        "database": "Datenbank sichern",
+        "files": "Dokumente und Bilder packen",
+        "verify": "Archiv prüfen",
+        "prune": "Ablegen"
+      },
+      "verify": {
+        "verify": "Archiv prüfen"
+      }
+    },
+    "panels": {
+      "label": "Bereiche der Backup-Seite",
+      "backups": "Backups",
+      "settings": "Einstellungen"
+    },
+    "headline": {
+      "ok": "Letztes Backup {when}, geprüft. {enabled, select, on {Nächstes heute Nacht um {time}.} other {Automatische Backups sind aus.}}",
+      "lastVerified": "Letzter geprüfter Stand: {when}, {kind}.",
+      "none": "Noch kein geprüftes Backup."
+    },
+    "actions": {
+      "create": "Backup erstellen",
+      "upload": "Datei hochladen …"
+    },
+    "problem": {
+      "title": {
+        "createFailed": "{kind, select, automatic {Das Backup heute Nacht ist gescheitert} other {Das letzte Backup ist gescheitert}}",
+        "verifyFailed": "Ein Backup hat die Prüfung nicht bestanden",
+        "pruneFailed": "Kompass konnte alte Backups nicht aufräumen",
+        "interrupted": "Ein Backup wurde durch einen Neustart unterbrochen",
+        "preUpdateFailed": "Das Backup vor dem Update ist gescheitert",
+        "backupPathUnwritable": "Kompass kann nicht in das Backup-Verzeichnis schreiben"
+      },
+      "retry": "Kompass versucht es heute Nacht um {time} wieder.",
+      "mailed": "Die Verantwortlichen haben eine Mail bekommen.",
+      "noMail": "Mails kann Kompass nicht senden; dieser Fehler steht nur hier und auf der Startseite."
+    },
+    "missing": {
+      "title": "Das Backup heute Nacht fehlt",
+      "text": "Um {time} sollte ein Backup laufen, bis {until} kam kein geprüftes an. Meist lief Kompass um diese Zeit nicht, etwa wegen eines Neustarts des Servers. Erstellen Sie jetzt eines von Hand; heute Nacht versucht Kompass es wieder.",
+      "action": "Backup erstellen"
+    },
+    "mount": {
+      "title": "Das Backup-Verzeichnis ist nicht eingehängt",
+      "text": "Backups liegen im Container und gingen beim Neuerstellen verloren. Hängen Sie das Verzeichnis ein (Betriebshandbuch, Abschnitt Backups)."
+    },
+    "storageLow": {
+      "title": "Der Platz für Backups wird knapp",
+      "text": "Frei sind {free}, ein Backup braucht etwa {reference}. Löschen Sie ältere Backups oder erweitern Sie den Datenträger, bevor das nächste scheitert."
+    },
+    "restored": {
+      "text": "Der Stand vom {when} ist eingespielt.",
+      "published": "Seit diesem Stand wurde die Webseite publiziert; sie zeigt noch den neueren Inhalt.",
+      "publish": "Zum Publizieren"
+    },
+    "list": {
+      "title": "Backups",
+      "intro": "Einspielen, Herunterladen und Festhalten über das Menü ⋯ der Zeile.",
+      "columns": {
+        "when": "Zeitpunkt",
+        "kind": "Art",
+        "size": "Größe",
+        "version": "Version",
+        "keep": "Bleibt",
+        "check": "Prüfung",
+        "actions": "Aktionen"
+      },
+      "versionPrefix": "Kompass",
+      "keepPrefix": "bleibt",
+      "kind": {
+        "automatic": "automatisch",
+        "manual": "von Hand",
+        "preUpdate": "vor Update auf {version}",
+        "preRestore": "vor Einspielen",
+        "upload": "hochgeladen",
+        "unknown": "unbekannt"
+      },
+      "keep": {
+        "until": "bis {until}",
+        "weekly": "als Wochenstand bis {until}",
+        "monthly": "als Monatsstand bis {until}",
+        "untilNextManual": "bis zum nächsten von Hand",
+        "untilNewer": "{kind, select, preUpdate {bis zum nächsten vor Update} preRestore {bis zum nächsten vor Einspielen} other {bis zum nächsten hochgeladenen}}",
+        "untilNextVerified": "bis zum nächsten geprüften",
+        "kept": "bis Sie es löschen",
+        "prune": "beim nächsten Aufräumen",
+        "pinned": "festgehalten"
+      },
+      "checkFailed": "Prüfung gescheitert",
+      "empty": "Noch kein Backup. Erstellen Sie eines mit „Backup erstellen“.",
+      "older": "Ältere: {parts}",
+      "olderParts": {
+        "weekly": "{count, plural, one {# Wochenstand} other {# Wochenstände}}",
+        "monthly": "{count, plural, one {# Monatsstand} other {# Monatsstände}}",
+        "other": "{count, plural, one {# weiteres} other {# weitere}}"
+      },
+      "showAll": "Alle {total} anzeigen",
+      "storage": "Backups belegen {used} · frei {free}",
+      "storageLow": "Backups belegen {used} · frei {free}, {fits, plural, =0 {reicht nicht für ein weiteres} one {reicht nur für # weiteres} other {reicht nur für # weitere}}"
+    },
+    "menu": {
+      "restore": "Einspielen …",
+      "download": "Herunterladen · {size}",
+      "pin": "Festhalten …",
+      "rename": "Name ändern …",
+      "unpin": "Freigeben",
+      "verify": "Erneut prüfen",
+      "audit": "Protokoll",
+      "delete": "Löschen …",
+      "reasons": {
+        "failed": "Die Prüfung ist gescheitert; dieses Backup lässt sich nicht einspielen.",
+        "unverified": "Noch nicht geprüft. Prüfen Sie es zuerst.",
+        "newer": "Aus einer neueren Kompass-Fassung; einspielen geht erst nach einem Update.",
+        "running": "Es läuft gerade ein Backup.",
+        "pinLimit": "Höchstens {max}. Geben Sie zuerst eines frei.",
+        "lastVerified": "Das ist das neueste geprüfte Backup; es bleibt als sicherer Stand."
+      }
+    },
+    "download": {
+      "title": "Download gestartet · {size}",
+      "text": "Den Fortschritt zeigt Ihr Browser. Sie können hier weiterarbeiten."
+    },
+    "unpin": {
+      "done": "Backup freigegeben",
+      "title": "Freigeben und löschen?",
+      "text": "Ohne Festhalten fällt der Stand vom {when} sofort aus dem Ring und wird gelöscht.",
+      "confirm": "Freigeben und löschen"
+    },
+    "pin": {
+      "title": "Backup festhalten",
+      "renameTitle": "Name ändern",
+      "text": "Stand vom {when} bleibt, bis Sie es freigeben. Festgehalten sind {count} von {max}.",
+      "label": "Name (optional)",
+      "hint": "Zum Beispiel, wofür Sie den Stand brauchen. Höchstens 60 Zeichen.",
+      "counter": "{count} von 60",
+      "save": "Festhalten",
+      "saveRename": "Speichern"
+    },
+    "delete": {
+      "title": "Backup löschen?",
+      "text": "Der Stand vom {when} ({kind}, {size}) wird gelöscht. Das lässt sich nicht rückgängig machen.",
+      "confirm": "Löschen"
+    },
+    "restore": {
+      "title": "Stand vom {when}{label, select, none {} other { ({label})}} einspielen?",
+      "about": "{kind, select, automatic {Automatisches Backup} manual {Backup von Hand} preUpdate {Backup vor Update} preRestore {Backup vor Einspielen} upload {Hochgeladenes Backup} other {Backup}}, {size}, Kompass {version}, geprüft. Es enthält {users} Nutzer{documents, select, none {} other {, {documents} Dokumente}} und {audit} Protokolleinträge.",
+      "older": "{version, select, none {Aus einer älteren Kompass-Fassung.} other {Aus Kompass {version}.}} Kompass bringt den Stand beim Einspielen auf {current}.",
+      "lost": "Alles, was seit {since} in Kompass geändert wurde, geht verloren: {changes, plural, one {# Änderung} other {# Änderungen}}{persons, plural, =0 {} one { von # Person} other { von # Personen}}.",
+      "safeguard": "Vorher sichert Kompass den jetzigen Stand. Er steht danach in der Liste als „vor Einspielen“.",
+      "lock": "Kompass ist für alle etwa {minutes, plural, one {# Minute} other {# Minuten}} gesperrt. Danach sind alle abgemeldet, auch Sie.",
+      "staysSite": "Die publizierte Webseite bleibt, wie sie ist.",
+      "staysMail": "Verschickte E-Mails bleiben verschickt.",
+      "confirmLabel": "Zur Bestätigung den Namen der Umgebung eintippen",
+      "confirm": "Einspielen"
+    },
+    "upload": {
+      "title": "Backup-Datei hochladen",
+      "text": "Ein Kompass-Backup (.tar), etwa von einer anderen Installation. Hochladen spielt noch nichts ein.",
+      "file": "Backup-Datei",
+      "fileHint": "Nur .tar-Dateien.",
+      "progress": "{done} von {total}",
+      "eta": "noch etwa {minutes, plural, one {# Minute} other {# Minuten}}",
+      "keepOpen": "Lassen Sie dieses Fenster offen, bis die Datei oben ist.",
+      "done": "Hochgeladen und geprüft. Stand vom {when}, Umgebung „{env}“, Kompass {version}. Es steht jetzt in der Liste.",
+      "restore": "Einspielen …",
+      "refused": "Die Datei wurde nicht angenommen: {reason, select, backupFormatUnsupported {kein Kompass-Backup oder ein altes Format} backupUnreadable {Archiv nicht lesbar} backupFileMissing {eine Datei fehlt im Archiv} backupFileSizeMismatch {eine Datei im Archiv hat die falsche Größe} backupCorrupt {die Datenbank im Archiv ist beschädigt} backupTooLarge {die Datei ist zu groß} other {Hochladen gescheitert}}."
+    },
+    "environments": {
+      "development": "Entwicklung",
+      "test": "Test",
+      "production": "Produktion"
     }
   },
   "projects": {
@@ -3786,7 +4088,6 @@
         "none": "Keine Änderungen seit dem letzten Publizieren.",
         "more": "… und {count} weitere"
       },
-      "done": "Publiziert: {changed} geändert, {added} neu, {removed} entfallen.",
       "history": {
         "title": "Zuletzt publiziert",
         "columns": {
@@ -3865,12 +4166,6 @@
           "reusing": "Vorschau wird übernommen · {done, number} von {total, number}"
         },
         "buildSkipped": "Die Vorschau passt, sie wird übernommen.",
-        "stepState": {
-          "pending": "wartet",
-          "running": "läuft",
-          "done": "fertig",
-          "skipped": "übersprungen"
-        },
         "steps": {
           "export": "Inhalte prüfen",
           "images": "Bildvarianten",

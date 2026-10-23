@@ -138,6 +138,21 @@ Briefe, Zuwendungsbestätigungen, Verzichtserklärungen, Kassenzählungen und Au
 
 Kompass bringt generische Basen mit (`a4-mit-briefkopf`, `a4-formular`, `a4-plain` und weitere). Ein Verein legt eigene `.typ`-Dateien daneben und ersetzt damit Kopf und Fuß, nie den Wortlaut eines Formulars — der steht in der Vorlage des Moduls und folgt dem amtlichen Muster. Welche Basis für welche Dokumentart gilt, stellt man unter Einrichtung → Dokumentvorlagen ein. Mehr: [`docs/handbuch/einstellungen/dokumente.md`](docs/handbuch/einstellungen/dokumente.md) und der Abschnitt „Dokument-Basisvorlagen“ in [`betrieb.md`](docs/handbuch/betrieb.md).
 
+### Backup — jede Nacht, geprüft, mit einem Klick zurück
+
+Ein Verein merkt erst, dass sein Backup nichts taugt, wenn er es braucht. Kompass sichert sich deshalb auf Wunsch jede Nacht selbst in ein eigenes Verzeichnis, hält Tages-, Wochen- und Monatsstände vor und liest jedes Backup nach dem Schreiben vollständig gegen, bevor es als gut gilt. Oben auf der Seite steht in einem Satz, wann das letzte geprüfte Backup lief; fehlt eines oder wird der Platz knapp, meldet es die Startseite und, ist der Mailversand eingerichtet, eine Mail. Zurück geht es direkt aus der Liste: Der Dialog nennt, was seit dem Backup verloren geht, Kompass sichert vorher den jetzigen Stand, und während des Einspielens sehen alle eine Wartungsseite. Eine Kopie außer Haus bleibt Sache des Vereins — das Verzeichnis ist dafür gemacht ([`betrieb.md`](docs/handbuch/betrieb.md), „Backups“).
+
+<table>
+  <tr>
+    <td><img src="docs/screenshots/desktop/backup-liste.png" width="420" alt="Die Backup-Seite: oben der Satz zum letzten geprüften Backup, darunter die Liste mit Art, Größe, Version und wie lange jedes Backup bleibt" /></td>
+    <td><img src="docs/screenshots/desktop/backup-einstellungen.png" width="420" alt="Die Backup-Einstellungen: nächtliches Backup mit Uhrzeit, wie viele tägliche, wöchentliche und monatliche Backups bleiben, und die Frist für die Warnung" /></td>
+  </tr>
+  <tr>
+    <td>Backups mit Prüfung und „Bleibt“</td>
+    <td>Zeitplan und Aufheben</td>
+  </tr>
+</table>
+
 ### Rechenschaft und Verwaltung
 
 Rechte vergibt man je Rolle, Rollennamen sind frei — „Schatzmeisterin“, „Kassenprüfer“, „Finanz-Agent“. Jede Änderung, ob in der Oberfläche, über MCP oder vom System, steht im Änderungsprotokoll und lässt sich als PDF ausziehen. Löschfristen nach Abgabenordnung und DSGVO rechnet Kompass je Datensatz aus und meldet, was fällig ist.
@@ -171,7 +186,7 @@ Rechte vergibt man je Rolle, Rollennamen sind frei — „Schatzmeisterin“, �
 
 ### KI-Assistenten über MCP
 
-Was die Oberfläche kann, kann auch ein KI-Assistent über das [Model Context Protocol](https://modelcontextprotocol.io) — dieselben Dienste, dieselben Rechte, dasselbe Protokoll. Ein Token wirkt mit den Rechten der Person, die es erstellt hat; jeder Vorgang steht mit dem Kanal „MCP“ und dem Namen des Tokens im Änderungsprotokoll. Vier Dinge bewusst nicht: Backup ein- und ausspielen, Dateien abrufen, API-Token verwalten, das eigene Passwort ändern. In den Finanzen bleiben Festschreiben, Freigeben und Ausstellen Menschen vorbehalten, solange der Verein es nicht ausdrücklich erlaubt. Ein Test hält die Liste vollständig.
+Was die Oberfläche kann, kann auch ein KI-Assistent über das [Model Context Protocol](https://modelcontextprotocol.io) — dieselben Dienste, dieselben Rechte, dasselbe Protokoll. Ein Token wirkt mit den Rechten der Person, die es erstellt hat; jeder Vorgang steht mit dem Kanal „MCP“ und dem Namen des Tokens im Änderungsprotokoll. Drei Dinge bewusst nicht: Dateien abrufen (auch keine Backups herunterladen), API-Token verwalten, das eigene Passwort ändern. Das Einspielen eines Backups sowie in den Finanzen Festschreiben, Freigeben und Ausstellen bleiben Menschen vorbehalten, solange der Verein es nicht ausdrücklich erlaubt. Ein Test hält die Liste vollständig.
 
 ### Unterwegs
 
@@ -190,7 +205,7 @@ Kompass läuft auch auf dem Telefon: die Startseite, ein Kontakt, ein Tierprofil
 
 | Bereich | Inhalt |
 |---|---|
-| **Fundament** | Nutzer, Rollen und Rechte, Einstellungen statt Konstanten, Themes mit hellem und dunklem Modus, Änderungsprotokoll, Aufbewahrung und Löschfristen, Backup und Import, Modul-System, Dokument-Pipeline mit Basis-Vorlagen, Mediathek mit Ordnern |
+| **Fundament** | Nutzer, Rollen und Rechte, Einstellungen statt Konstanten, Themes mit hellem und dunklem Modus, Änderungsprotokoll, Aufbewahrung und Löschfristen, nächtliches und geprüftes Backup mit Einspielen aus der Liste, Modul-System, Dokument-Pipeline mit Basis-Vorlagen, Mediathek mit Ordnern |
 | **Webseite** | Pflege in Kompass, Bau mit Astro aus dem Template des Vereins, Prüfung auf Sperrwörter und Übersetzungslücken, Vorschau mit Vergleich zur Live-Seite, Publish per rsync auf einen gewöhnlichen Webspace |
 | **Kontakte und Akte** | Kontakte mit Rollen über die Zeit und berechneter Aufbewahrungsfrist. Die Akte für ein- und ausgehende Post: Entwurf, Festschreiben, Nummer, Storno statt Löschen, Ordnerbaum, Bezüge, Antworten und Folgeschreiben, Wiedervorlage, Volltext mit Texterkennung, Versand per E-Mail mit Ausgang |
 | **Finanzen** | Bankkonten und Kassen, Kontoauszüge (CAMT, CSV), Belege mit ZUGFeRD, Buchen und Festschreiben, Zuwendungsbestätigungen nach amtlichem Muster mit Serienlauf und Spendenbuch, maschinelle Bestätigungen, Auslagen mit Freigabe durch eine zweite Person, Aufwandsspenden, Zahlungen an Partner mit Nachweisen, Zwecke und Rücklagen, Pauschalen je Person. Für Vereine mit Einnahmen-Überschuss-Rechnung |

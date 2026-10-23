@@ -1,5 +1,6 @@
 import { coreModule, defineModule, runHousekeeping, startHousekeeping } from '../src';
-import { createTestDeps } from '../src/testing';
+import { writeSettingInternal } from '../src/settings/service';
+import { createTestDeps, systemContext } from '../src/testing';
 import { describe, expect, it, vi } from 'vitest';
 
 describe('housekeeping', () => {
@@ -10,6 +11,7 @@ describe('housekeeping', () => {
     const c = defineModule({ key: 'drei', version: '0', permissions: [], housekeeping: async () => { calls.push('drei'); } });
     const deps = createTestDeps({ manifests: [coreModule, a, b, c] }); // kein Modul eingeschaltet
     expect(await runHousekeeping(deps)).toEqual([
+      { module: 'core', error: null },
       { module: 'eins', error: null },
       { module: 'zwei', error: 'kaputt' },
       { module: 'drei', error: null },
@@ -37,5 +39,11 @@ describe('housekeeping', () => {
     await vi.advanceTimersByTimeAsync(5000);
     expect(runs).toBe(2);
     vi.useRealTimers();
+  });
+
+  it('Hauswirtschaft des Kernmoduls tut mit createTestDeps nichts (keine AppDeps)', async () => {
+    const deps = createTestDeps({ backupPath: '/gibt/es/nicht' });
+    deps.db.transaction((tx) => writeSettingInternal(tx, deps, systemContext(), 'backup.schedule.enabled', true));
+    await expect(coreModule.housekeeping!(deps)).resolves.toBeUndefined();
   });
 });

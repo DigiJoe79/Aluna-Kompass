@@ -12,7 +12,36 @@ export async function register(): Promise<void> {
     const { getDeps } = await import('@/lib/deps');
     const { startMailSender, startTextWorker } = await import('@kompass/module-dms');
     const { startHousekeeping } = await import('@kompass/core');
-    const { registerMailSender } = await import('@/lib/background');
+    const { registerMailSender, restartBackgroundWork, stopBackgroundWork } = await import('@/lib/background');
+    const { readEnv, recordPreUpdateBackup, recoverInterruptedRestore, registerRestoreHooks, runPreUpdateBackup } = await import('@kompass/core');
+    const { preUpdateGate } = await import('@/lib/pre-update');
+    const { runningSiteJob } = await import('@kompass/module-site');
+    const { siteEnv } = await import('@/lib/site-env');
+    const { resetMcpHandler } = await import('@/lib/mcp');
+    // Ein Neustart mitten im Einspielen: Rücklage zurück, bevor jemand die Datenbank öffnet (Spec Backup § Einspielen).
+    const env = readEnv();
+    const recovered = recoverInterruptedRestore({ dataPath: env.dataPath, backupPath: env.backupPath });
+    if (recovered !== 'none') console.warn('[kompass] Einspielen nach Neustart: %s', recovered);
+    // In Wartung festgehalten (Zurücklegen gescheitert): Der Bestand ist in unklarem Zustand, bis die Technik eingreift.
+    // Kein Backup vor Update, keine Migration, keine Hintergrundarbeit — der Proxy zeigt allen die Wartungsseite.
+    if (recovered === 'stuck') return;
+    // Backup vor Update: nur wenn Migrationen anstehen, vor dem ersten getDeps (das migriert). Scheitert es, endet der
+    // Prozess hier. /api/health antwortet erst danach; die NAS-Skripte warten 60 bzw. 120 s (Spec § Backup vor Update).
+    const sidecar = await preUpdateGate(env, { run: runPreUpdateBackup, exit: (code) => process.exit(code), log: console, now: () => new Date() });
+    if (sidecar) {
+      try {
+        recordPreUpdateBackup(getDeps(), sidecar);
+      } catch (error) {
+        console.error('[kompass] Backup vor Update nicht protokolliert: %s', String(error));
+      }
+    }
+    // Was ein Einspielen von der App braucht: ob ein Webseiten-Lauf es verbietet, wie der Hintergrund anhält, was danach neu aufzusetzen ist.
+    registerRestoreHooks({
+      busyReason: () => (runningSiteJob(siteEnv()) ? 'siteJobRunning' : null),
+      pauseBackground: stopBackgroundWork,
+      resumeBackground: restartBackgroundWork,
+      afterRestore: resetMcpHandler,
+    });
     startBackgroundWork({
       onStart: () => {
         const worker = startTextWorker(getDeps);

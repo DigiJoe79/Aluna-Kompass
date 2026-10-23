@@ -6,13 +6,14 @@ import '@fontsource/source-serif-4/600.css';
 import '@fontsource/ibm-plex-mono/400.css';
 import '@fontsource/ibm-plex-mono/500.css';
 import './globals.css';
-import { resolveActiveTheme } from '@kompass/core';
+import { DEFAULT_THEME, resolveActiveTheme } from '@kompass/core';
 import type { Metadata } from 'next';
 import { NextIntlClientProvider } from 'next-intl';
 import { getTranslations } from 'next-intl/server';
 import type { ReactNode } from 'react';
 import { Toaster } from '@/components/ui/sonner';
 import { depsReady, getDeps, runtimeEnv } from '@/lib/deps';
+import { maintenanceActive } from '@/lib/maintenance';
 import { titleKeyFor } from '@/lib/env-banner';
 import { PREFERENCE_BOOTSTRAP } from '@/lib/preference-bootstrap';
 import { themeToCss } from '@/lib/theme-css';
@@ -31,7 +32,8 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function RootLayout({ children }: { children: ReactNode }) {
   await depsReady();
-  const theme = resolveActiveTheme(getDeps());
+  // Während des Einspielens ist die Datenbank nicht da; die Wartungsseite zeigt das Vorgabe-Theme.
+  const theme = maintenanceActive() ? DEFAULT_THEME : resolveActiveTheme(getDeps());
   return (
     <html lang="de" suppressHydrationWarning>
       <head>

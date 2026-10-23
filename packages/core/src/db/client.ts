@@ -28,6 +28,11 @@ export function openDatabase(filePath: string): { db: Db; sqlite: Database.Datab
   return { db, sqlite };
 }
 
+/** Das Migrationsverzeichnis, dieselbe Auflösung wie `runMigrations` (auch für das Backup vor Update). */
+export function migrationsFolder(): string {
+  return resolveMigrationsDir();
+}
+
 export function runMigrations(db: Db): void {
-  migrate(db, { migrationsFolder: resolveMigrationsDir() });
+  migrate(db, { migrationsFolder: migrationsFolder() });
 }

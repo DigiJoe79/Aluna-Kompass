@@ -25,16 +25,16 @@ const modulesWithTools: [ModuleManifest, readonly McpToolDefinition[]][] = [
 ];
 
 /**
- * Rechte, die bewusst ohne MCP-Werkzeug bleiben. Backup hängt an Dateiströmen —
- * ein Backup von einigen hundert Megabyte durch JSON-RPC zu reichen, brächte
- * niemandem etwas; es läuft über Route Handler. Die sechs `dms.*`-Rechte sind
+ * Rechte, die bewusst ohne MCP-Werkzeug bleiben. Backup hat seit Plan B5
+ * Werkzeuge (`backup_*`); nur Up- und Download der Datei bleiben draußen
+ * (`WITHOUT_TOOL`), weil ein Archiv von einigen hundert Megabyte nicht durch
+ * JSON-RPC gehört. Die sechs `dms.*`-Rechte sind
  * mit dem Modul selbst nur umgezogen (Plan „dms-1-umzug“); ihre Werkzeuge
  * bringt Plan „dms-4-oberflaeche-mcp-seed“ (§ 7 der Spec). Wer hier einträgt,
  * entscheidet bewusst; wer ein Recht ergänzt, ohne es hier oder in einem
  * Werkzeug zu nennen, bekommt einen roten Test.
  */
 const WITHOUT_MCP = new Set([
-  'backup.export', 'backup.import',
   // Finanzen: Rechte stehen ab F1 im Manifest (Rollenvorschläge werden nie nachgefüllt),
   // ihre Werkzeuge kommen mit den genannten Plänen. Jeder Plan streicht seine Zeile.
   'finance.reportsFinalize',  // F9a
@@ -223,8 +223,8 @@ const WITHOUT_TOOL: Record<string, string> = {
   'core.buildContext': 'Baut den Aufrufkontext; kein Vorgang, sondern seine Voraussetzung.',
   'core.prepare': 'Innenleben des Dokument-Renderings; documents_render ruft es.',
   'core.exportDocument': 'Liefert Bytes; ein Agent liest den Datensatz.',
-  'core.exportBackup': 'Ein Archiv von hunderten Megabyte durch JSON-RPC zu reichen, hilft niemandem.',
-  'core.importBackup': 'Ersetzt die Datenbank als Datei — das bestätigt ein Mensch vor sich, nicht ein Agent für ihn.',
+  'core.receiveBackupUpload': 'Nimmt eine Datei von hunderten Megabyte als Strom an; die gehört nicht in ein Modell (Spec Backup § Agenten). Der Weg ist der Upload-Route-Handler.',
+  'core.openBackupDownload': 'Liefert eine Datei von hunderten Megabyte; die gehört nicht in ein Modell (Spec Backup § Agenten). Der Weg ist der Download-Route-Handler.',
   'core.getMediaPreview': 'media_get mit variant: preview ruft es; das Werkzeug nennt getMediaAsset, den Weg zum Original.',
   'core.getMediaAssetInfo': 'Datensatz und Fundstellen ohne Bytes für den Dialog „Bildkennzeichnung“; ein Agent liest dasselbe mit media_list (Art, Verwendungen).',
   'core.storeMediaInternal': 'Innenleben; media_upload ist der Weg von außen.',

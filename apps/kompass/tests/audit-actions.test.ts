@@ -86,6 +86,8 @@ describe('Aktionen des Protokolls in Worten', () => {
     expect(dynamicActions("writeSettingInternal(tx, deps, ctx, 'k', v, kind);")).toHaveLength(1);
     expect(dynamicActions("recordAudit(tx, deps, ctx, { action: 'a.b', entityType: 'a', entityId: null });")).toEqual([]);
     expect(dynamicActions("writeSettingInternal(tx, deps, ctx, 'k', v);")).toEqual([]);
+    // `null`: bewusst ohne eigenen Eintrag, ein umfassender Eintrag nennt den Schlüssel (Einspielen, `backup.import`).
+    expect(dynamicActions("writeSettingInternal(tx, deps, ctx, 'k', v, null);")).toEqual([]);
   });
 });
 
@@ -175,7 +177,7 @@ function dynamicActions(source: string): string[] {
   }
   for (const call of calls(source, /\bwriteSettingInternal\(/g)) {
     const args = splitArgs(call.slice(call.indexOf('(') + 1, -1));
-    if (args.length >= 6 && !/^'[^']*'$/.test(args[5]!.trim())) hits.push(`writeSettingInternal(…, ${args[5]!.trim()})`);
+    if (args.length >= 6 && !/^(?:'[^']*'|null)$/.test(args[5]!.trim())) hits.push(`writeSettingInternal(…, ${args[5]!.trim()})`);
   }
   return hits;
 }

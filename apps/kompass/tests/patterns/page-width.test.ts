@@ -37,6 +37,7 @@ describe('Seitenbreite über Page', () => {
  * bleiben. Sonst steht sie hier mit Grund: Detail- und Einstellungsseiten mit einer Tabelle als Abschnitt.
  */
 export const WIDE_ALLOWED: Allowlist = {
+  'app/(shell)/admin/backup/page.tsx': 'Einstellungsseite (PanelNav) mit der Liste der Backups als Abschnitt; `standard` nach Designer Backup 2026-10-23 (1a).',
   'app/(shell)/admin/dms/page.tsx': 'Einstellungsseite (PanelNav), die Tabellen der Arten und Regeln sind Abschnitte (MUSTER § D).',
   'app/(shell)/admin/finance/page.tsx': 'Einstellungsseite (PanelNav), Konten, Kategorien und Zwecke sind Abschnitte (MUSTER § D).',
   'app/(shell)/admin/members/page.tsx': 'Einstellungsseite (PanelNav), Mitgliedsarten und Mahnstufen sind Abschnitte (MUSTER § D, Handoff Mitglieder 7b/7c).',
