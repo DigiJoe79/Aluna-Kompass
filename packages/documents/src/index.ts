@@ -6,3 +6,4 @@ export * from './templates';
 export * from './page-count';
 export * from './qr';
 export * from './transfer-block';
+export * from './pdf-pages';

@@ -107,6 +107,33 @@ export function accountBalancesAt(db: DbOrTx, date: string, opts: { includeRevie
   }));
 }
 
+/**
+ * Die Konten eines Zeitraums `from`–`to` (Stichtag `to`), nach Namen: im Zeitraum bewegt (ohne Bewegung ist der
+ * Bestand am Anfang der am Ende), mit Bestand an `to`, oder aktiv und bis `to` eröffnet (eine aktive Kasse auch ohne Datum). Die eine Quelle für die Kontenlisten der Berichte und des
+ * Jahresabschlusses (Designer Runde 7, 248/244, 272/295).
+ */
+export function accountIdsOfPeriodInternal(db: DbOrTx, range: { from: string; to: string }): string[] {
+  const after = accountBalancesAt(db, range.to);
+  const balance = (list: AccountBalance[], id: string) => list.find((b) => b.accountId === id)?.balanceCents ?? 0;
+  const moved = new Set(
+    db
+      .select({ accountId: financeMoneyLines.accountId })
+      .from(financeMoneyLines)
+      .innerJoin(financeEntries, eq(financeMoneyLines.entryId, financeEntries.id))
+      .where(and(eq(financeEntries.status, 'final'), sql`${financeEntries.entryDate} >= ${range.from} and ${financeEntries.entryDate} <= ${range.to}`))
+      .all()
+      .map((r) => r.accountId),
+  );
+  return db
+    .select()
+    .from(financeAccounts)
+    .all()
+    // Eine aktive Kasse gehört immer dazu (Zählung, Schritt 2); ein Konto ohne Eröffnungsdatum nur mit Bewegung oder Bestand.
+    .filter((a) => moved.has(a.id) || balance(after, a.id) !== 0 || (a.isActive && (a.openingDate !== null ? a.openingDate <= range.to : a.kind === 'cash')))
+    .sort((a, b) => a.name.localeCompare(b.name, 'de'))
+    .map((a) => a.id);
+}
+
 export interface AccountLedgerLine {
   entryId: string;
   /** Laufender Saldo nach dieser Zeile — Anfangsbestand + Σ Geldzeilen dieses Kontos bis zu und mit dieser Zeile, in derselben Reihenfolge wie `accountBalancesAt`. */

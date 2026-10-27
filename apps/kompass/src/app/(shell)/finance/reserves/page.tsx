@@ -66,7 +66,8 @@ export default async function ReservesPage() {
 
   const capCard = (y: FreeReserveCapYearView): ReactNode => {
     // Eine Zeile auf der Seite, die Rechnung mit den Zahlen des Jahres hinter dem Infoknopf (Runde 3, 123, Joe).
-    const assetShare = (valueAt(deps.db, 'freeReserveAssetShare', y.endsOn) as number | null) ?? 0;
+    // Ein genauer Bruch („1/3“, § 62 Abs. 1 Nr. 3 AO), keine Prozentzahl.
+    const assetShare = String(valueAt(deps.db, 'freeReserveAssetShare', y.endsOn) ?? '0');
     const otherShare = (valueAt(deps.db, 'freeReserveOtherShare', y.endsOn) as number | null) ?? 0;
     const derivation = <CapDerivation year={y.designation} derivation={t('cap.derivation', { assetShare, asset: formatEuro(Math.max(0, y.assetManagementSurplusCents)), otherShare, other: formatEuro(y.otherTimelyFundsCents) })} />;
     // Noch keine Einnahmen im Jahr und nichts zugeführt: ein Zustandswort statt eines leeren Balkens. Mit Zuführung

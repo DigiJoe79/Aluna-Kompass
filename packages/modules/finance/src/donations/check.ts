@@ -8,6 +8,7 @@ import { requireFinanceRead } from '../ledger/access';
 import { CERTIFIABLE_INCOME_KINDS } from '../ledger/codes';
 import { entryViewInternal } from '../ledger/entries';
 import { noticeValidAt } from '../ledger/notice-validity';
+import { paymentMayReturnGift } from '../ledger/not-return';
 import {
   financeAllocationLines, financeCategories, financeConfirmationLines, financeConfirmations, financeEntries, financeInKindDetails, financeMoneyLines, financeNotices, financeNotReturnMarks,
   type FinanceAllocationLineRow, type FinanceInKindDetailsRow, type FinanceNoticeRow,
@@ -180,10 +181,11 @@ export function possibleReturnsWithoutOriginInternal(db: DbOrTx, lines: readonly
   for (const g of gifts) {
     const gift = giftEntries.get(g.lineId);
     if (!gift) continue;
-    const hit = ordered.find((p) => p.contactId === g.contactId && p.entryId !== gift.entryId && p.entryDate >= gift.entryDate && -p.amountCents <= g.amountCents);
+    const matches = (p: (typeof ordered)[number]) => paymentMayReturnGift(p, { entryId: gift.entryId, entryDate: gift.entryDate, contactId: g.contactId, amountCents: g.amountCents });
+    const hit = ordered.find(matches);
     if (hit) out.set(g.lineId, { entryId: hit.entryId, entryNumber: hit.entryNumber });
     if (all) {
-      const hits = ordered.filter((p) => p.contactId === g.contactId && p.entryId !== gift.entryId && p.entryDate >= gift.entryDate && -p.amountCents <= g.amountCents);
+      const hits = ordered.filter(matches);
       const seen = new Set<string>();
       all.set(g.lineId, hits.filter((p) => !seen.has(p.entryId) && seen.add(p.entryId)).map((p) => ({ entryId: p.entryId, entryNumber: p.entryNumber, entryDate: p.entryDate, amountCents: p.amountCents, href: entryHref(p.entryId) })));
     }

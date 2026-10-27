@@ -46,6 +46,13 @@
   - [Partner](finanzen/partner.md)
   - [Zwecke und zurückgelegtes Geld](finanzen/zwecke-und-ruecklagen.md)
   - [Personen](finanzen/personen.md)
+  - [Jahresabschluss](finanzen/jahresabschluss.md)
+  - [Amtsübergabe](finanzen/amtsuebergabe.md)
+  - [Kassenprüfung](finanzen/kassenpruefung.md)
+  - [Berichte](finanzen/berichte.md)
+  - [Steuererklärung](finanzen/steuererklaerung.md)
+  - [Umsatzsteuer-Voranmeldung](finanzen/umsatzsteuer.md)
+  - [Fristen und Schwellen](finanzen/fristen-und-schwellen.md)
 - System
   - [Stammdaten](einstellungen/verein.md)
   - [Nutzer und Rollen](einstellungen/nutzer-und-rollen.md)

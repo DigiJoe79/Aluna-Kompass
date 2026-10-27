@@ -251,7 +251,7 @@ function writeRun(
     .select({ periodTo: financeImportRuns.periodTo, closingCents: financeImportRuns.closingCents })
     .from(financeImportRuns)
     .where(and(eq(financeImportRuns.accountId, accountId), isNotNull(financeImportRuns.finishedAt), isNull(financeImportRuns.discardedAt), ne(financeImportRuns.id, runId)))
-    .orderBy(desc(financeImportRuns.periodTo))
+    .orderBy(desc(financeImportRuns.periodTo), desc(financeImportRuns.startedAt))
     .limit(1)
     .get();
   // Ohne eigenen Anfangssaldo (CSV ohne Saldo und ohne Antwort) lässt sich keine Lücke behaupten.

@@ -312,6 +312,8 @@ function TableCell({
         // gemessen am nächsten `@container` um die Liste (Journal), sonst am Fenster. Kein `@container` hier: Eine Tabelle
         // in einem schrumpfenden Behälter fiele sonst auf null Breite.
         truncate && "w-full max-w-0 min-w-[min(14rem,25cqw)] truncate",
+        // Die Mindestbreite einer umbrechenden meta-Spalte („Wofür“, Designer Runde 5, 262/263) steht in `globals.css`:
+        // nur neben einer kürzenden Titelspalte (Befund 47 — ohne sie schob sie Listen über den Rand).
         className
       )}
       {...props}
@@ -369,7 +371,7 @@ function TableEmpty({ colSpan, children }: { colSpan: number; children: React.Re
 /** Gruppenzeile im Rumpf (z. B. je Modul): ein Kopf über alle Spalten der Gruppe (K10 Charge 2, T3.5). */
 function TableGroupRow({ colSpan, children, testId }: { colSpan: number; children: React.ReactNode; testId?: string }) {
   return (
-    <TableRow data-testid={testId} className="bg-surface-2 even:bg-surface-2">
+    <TableRow data-testid={testId} data-group-row className="bg-surface-2 even:bg-surface-2">
       <TableHead col="span" colSpan={colSpan} scope="colgroup" className="text-hint font-semibold text-ink-2">
         {children}
       </TableHead>

@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
-import { newId, holdsFor, schema, unwrap } from '@kompass/core';
-import { ctxWith } from '@kompass/core/testing';
+import { newId, holdsFor, schema, unwrap, writeSettingInternal } from '@kompass/core';
+import { ctxWith, systemContext } from '@kompass/core/testing';
 import { deleteContact } from '@kompass/module-contacts';
 import { deleteDocument, documentTypes, documents } from '@kompass/module-dms';
 import { createProject, deleteProject } from '@kompass/module-projects';
@@ -13,7 +13,7 @@ import { createAccount } from '../src/ledger/accounts';
 import { countCash } from '../src/ledger/cash';
 import { approveAllocationCorrection, requestAllocationCorrection } from '../src/ledger/corrections';
 import { bookEntry } from '../src/ledger/finalize';
-import { financeRecordDeleted, financeRecordReferences, financeRetentionDue, financeRetentionHolds, yearAnchorInternal } from '../src/ledger/holds';
+import { financeRecordDeleted, financeRecordReferences, financeRetentionDue, financeRetentionHolds, retentionHoldReleasedInternal, yearAnchorInternal } from '../src/ledger/holds';
 import { createOpenItem } from '../src/ledger/open-items';
 import { saveDraft } from '../src/ledger/entries';
 import { closeFiscalYear, reopenFiscalYear } from '../src/ledger/period';
@@ -348,12 +348,52 @@ describe('references and what happens when something is deleted', () => {
   });
 });
 
+/** Rechenschaft C: die Ablaufhemmung endet mit dem Bescheid, dessen Veranlagungszeitraum das Jahr enthält. */
+function insertAssessment(f: Awaited<ReturnType<typeof ledgerFixture>>, assessmentPeriod: string, o: Partial<typeof financeNotices.$inferInsert> = {}) {
+  f.deps.db.insert(financeNotices).values({ id: newId(), kind: 'exemptionNotice', taxOffice: 'Finanzamt Musterstadt', taxNumber: '99/999/99999', noticeDate: '2012-05-02', exemptFrom: '2008-01-01', assessmentPeriod, purposesText: 'Sport', createdAt: '2012-05-02T10:00:00.000Z', createdByUserId: f.userId, updatedAt: '2012-05-02T10:00:00.000Z', ...o }).run();
+}
+
 describe('retention due — personal data of a closed year', () => {
+  it('Rechenschaft C: is not due while the year is not assessed (§ 147 Abs. 3 S. 5 AO)', async () => {
+    const f = await ledgerFixture({ years: ['2010'] });
+    // Kürzere Aufbewahrung, damit die Hemmung bei 2026 noch greifen kann (mit 10 Jahren macht die Obergrenze sie wirkungslos).
+    f.deps.db.transaction((tx) => writeSettingInternal(tx, f.deps, systemContext(), 'retention.statutory10Y', 12));
+    f.deps.clock.set('2010-06-01T10:00:00.000Z');
+    await f.finalDonation({ date: '2010-06-01', cents: 5000, contactId: f.donor.id });
+    f.closeYear(f.years['2010']!.id);
+    f.deps.clock.set('2016-09-05T08:00:00.000Z');
+    expect(financeRetentionDue(f.deps)).toEqual([]);
+    insertAssessment(f, '2011', { kind: 'corporateTaxNoticeAttachment' });
+    insertAssessment(f, '2008–2010', { voidedAt: '2012-06-01T00:00:00.000Z', voidedByUserId: f.userId, voidNote: 'falsch' });
+    insertAssessment(f, '2009', { kind: 'section60a' });
+    expect(financeRetentionDue(f.deps)).toEqual([]);
+    insertAssessment(f, '2008–2010', { kind: 'corporateTaxNoticeAttachment' });
+    expect(financeRetentionDue(f.deps).map((d) => d.entity)).toEqual(['financeYearPersonalData']);
+  });
+
+  it('ends the hold seven years after the year without a notice (§§ 169, 170 Abs. 2 Nr. 1 AO)', async () => {
+    const f = await ledgerFixture({ years: ['2026'] });
+    expect(retentionHoldReleasedInternal(f.deps.db, '2026-12-31', '2033-12-31')).toBe(false);
+    expect(retentionHoldReleasedInternal(f.deps.db, '2026-12-31', '2034-01-01')).toBe(true);
+    insertAssessment(f, '2026');
+    expect(retentionHoldReleasedInternal(f.deps.db, '2026-12-31', '2027-06-01')).toBe(true);
+    // Personendaten eines abgeschlossenen Jahres: mit kurzer Aufbewahrung zeigt sich die Grenze am Tag.
+    const g = await ledgerFixture({ years: ['2026'] });
+    g.deps.db.transaction((tx) => writeSettingInternal(tx, g.deps, systemContext(), 'retention.statutory10Y', 12));
+    await g.finalDonation({ date: '2026-06-01', cents: 5000, contactId: g.donor.id });
+    g.closeYear(g.years['2026']!.id);
+    g.deps.clock.set('2033-12-31T12:00:00.000Z');
+    expect(financeRetentionDue(g.deps)).toEqual([]);
+    g.deps.clock.set('2034-01-01T12:00:00.000Z');
+    expect(financeRetentionDue(g.deps).map((d) => d.entity)).toEqual(['financeYearPersonalData']);
+  });
+
   it('reports a closed year as due ten years after its anchor — one item per year, no link yet', async () => {
     const f = await ledgerFixture({ years: ['2010'] });
     f.deps.clock.set('2010-06-01T10:00:00.000Z');
     await f.finalDonation({ date: '2010-06-01', cents: 5000, contactId: f.donor.id });
     f.closeYear(f.years['2010']!.id); // at = 2010-12-31T23:59:59.000Z
+    insertAssessment(f, '2010');
     f.deps.clock.set('2026-09-05T08:00:00.000Z');
     const due = financeRetentionDue(f.deps);
     expect(due).toEqual([{ entity: 'financeYearPersonalData', id: f.years['2010']!.id, label: { key: 'finance.records.yearPersonalData', params: { year: f.years['2010']!.designation } }, dueSince: '2020-12-31' }]);
@@ -378,7 +418,10 @@ describe('retention due — imported bank data (F4 Task 6)', () => {
     f.deps.clock.set('2026-09-05T08:00:00.000Z');
     expect(financeRetentionDue(f.deps).filter((d) => d.entity === 'financeImportPersonalData')).toEqual([]);
 
-    f.deps.clock.set('2035-01-01T00:00:00.000Z'); // acht Jahre nach Jahresende 2026-12-31 sind um
+    f.deps.clock.set('2034-12-31T12:00:00.000Z'); // am letzten Tag der acht Jahre noch nicht
+    expect(financeRetentionDue(f.deps).filter((d) => d.entity === 'financeImportPersonalData')).toEqual([]);
+    // Ohne Bescheid endet die Hemmung nach dem 31.12.2033 (Obergrenze) — nach acht Jahren ist es fällig.
+    f.deps.clock.set('2035-01-01T00:00:00.000Z');
     const due = financeRetentionDue(f.deps).filter((d) => d.entity === 'financeImportPersonalData');
     expect(due).toEqual([{ entity: 'financeImportPersonalData', id: f.year.id, label: { key: 'finance.records.importPersonalData', params: { year: f.year.designation } }, dueSince: '2034-12-31' }]);
     expect(due[0]).not.toHaveProperty('href');

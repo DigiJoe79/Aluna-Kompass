@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -15,17 +15,23 @@ import type { ActionState } from '@/lib/actions';
 import { runAction, toastNetwork } from '@/lib/feedback';
 import { revokeVoucherAction, uploadVoucherAction } from '../actions';
 import { Section } from '@/components/section';
+import { ReplaceVoucherDialog } from './replace-voucher-dialog';
 
 /**
  * Belege einer festgeschriebenen Buchung (HANDOFF § 5.3): „Beleg nachreichen“
  * geht immer, auch im abgeschlossenen Jahr — dort verlangt Widerrufen einen
- * Ersatz.
+ * Ersatz: Das Zeilenmenü bietet dann statt „Entfernen“ „Beleg ersetzen …“
+ * (Designer Runde 6, vorläufig).
  */
 export function EntryVouchers({
   today,
   entryId,
   vouchers: initial,
   closedYear,
+  yearDesignation = '',
+  entryNumber = null,
+  canRevoke = true,
+  canUpload = true,
   documentationState,
   origin,
 }: {
@@ -34,6 +40,14 @@ export function EntryVouchers({
   entryId: string;
   vouchers: ReceiptListItem[];
   closedYear: boolean;
+  /** Bezeichnung des Geschäftsjahrs für den Satz im Dialog „Beleg ersetzen“. */
+  yearDesignation?: string;
+  /** Nummer der Buchung für den Titel „Beleg zu Buchung … ersetzen“ (15c). */
+  entryNumber?: string | null;
+  /** Recht des Dienstes `revokeVoucher` (`finance.entriesFinalize`) — ohne kein „Entfernen“ (267). */
+  canRevoke?: boolean;
+  /** Recht des Dienstes `uploadVoucher` (`finance.entriesWrite`) — ohne kein „Beleg nachreichen“ (267). */
+  canUpload?: boolean;
   /** Spec 5.2 — nur ohne Beleg zeigt „statementSuffices“ etwas an; mit Beleg, Storno oder fehlendem Nachweis bleibt der Hinweis stumm. */
   documentationState?: 'voucher' | 'statementSuffices' | 'notApplicable' | 'missing' | 'onOrigin';
   /** F7 Task 4 (Annahme 12): nur bei `onOrigin` — wohin der Link zeigt. */
@@ -43,6 +57,9 @@ export function EntryVouchers({
   const router = useRouter();
   const [vouchers, setVouchers] = useState(initial);
   const [revokeTarget, setRevokeTarget] = useState<string | null>(null);
+  const [replaceTarget, setReplaceTarget] = useState<string | null>(null);
+  // Nach `router.refresh()` kommt der neue Stand vom Server (widerrufen, ersetzt, nachgereicht).
+  useEffect(() => setVouchers(initial), [initial]);
   const [note, setNote] = useState('');
   const [refusal, setRefusal] = useState<ActionState>({ status: 'idle' });
   const tCommon = useTranslations('common');
@@ -84,16 +101,32 @@ export function EntryVouchers({
               </Link>
             </p>
           ) : null}
-          <ReceiptList items={vouchers} onRevoke={(linkId) => setRevokeTarget(linkId)} />
+          {/* Im abgeschlossenen Jahr verlangt der Dienst einen Ersatzbeleg (`revokeNeedsReplacement`) — dort statt „Entfernen“
+              nur „Beleg ersetzen …“ (Befund 11 b, Designer Runde 6); Recht und Zustand kommen vom Server. */}
+          <ReceiptList
+            items={vouchers}
+            onRevoke={canRevoke && !closedYear ? (linkId) => setRevokeTarget(linkId) : undefined}
+            onReplace={canRevoke && closedYear ? (linkId) => setReplaceTarget(linkId) : undefined}
+          />
           <RefusalNotice action state={refusal} />
           {/* Runde 3, 089: An einer festgeschriebenen Buchung ist Nachreichen die Ausnahme — ein Textlink statt der großen Fläche. */}
-          <ReceiptDrop compact onFiles={(files) => void uploadFiles(files)} />
+          {canUpload ? <ReceiptDrop compact onFiles={(files) => void uploadFiles(files)} /> : null}
 
+          {canRevoke && closedYear ? (
+            <ReplaceVoucherDialog
+              entryId={entryId}
+              voucher={vouchers.find((v) => v.linkId === replaceTarget) ?? null}
+              year={yearDesignation}
+              entryNumber={entryNumber}
+              canUpload={canUpload}
+              onOpenChange={(open) => !open && setReplaceTarget(null)}
+            />
+          ) : null}
           <ConfirmDialog
             open={revokeTarget !== null}
             onOpenChange={(open) => !open && setRevokeTarget(null)}
             title={t('revoke.title')}
-            description={closedYear ? t('revoke.descriptionClosed') : t('revoke.description')}
+            description={t('revoke.description')}
             confirmLabel={t('revoke.confirm')}
             destructive
             confirmDisabled={note.trim().length === 0}

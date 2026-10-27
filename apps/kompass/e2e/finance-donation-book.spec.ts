@@ -81,7 +81,7 @@ test.describe('finance donation book', () => {
     const toCorrect = page.getByTestId('reconciliation-to-correct');
     await expect(toCorrect).toContainText('1');
     await expect(toCorrect).toContainText('60,00 €');
-    await toCorrect.getByRole('link', { name: 'Zu korrigieren' }).click();
+    await toCorrect.getByRole('link', { name: 'in Bestätigungen zu korrigieren' }).click();
     await expect(page).toHaveURL('/finance/donations?tab=toCorrect');
   });
 

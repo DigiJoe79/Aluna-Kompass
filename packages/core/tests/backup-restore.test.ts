@@ -149,7 +149,8 @@ describe('startRestore', { timeout: 60_000 }, () => {
     expect(rec).toMatchObject({ status: 'success', steps: BACKUP_JOB_STEPS.restore.map((key) => ({ key, state: 'done' })) });
     expect(rec.result).toMatchObject({ name: a, backupCreatedAt: '2026-10-23T10:00:00.000Z', lastPublishedAt: null, publishedSinceBackup: false });
     expect(deps.db.select().from(users).all().some((u) => u.email === 'neu@example.org')).toBe(false);
-    const tokens = deps.db.select().from(apiTokens).all();
+    // Die festen Seed-Schlüssel (Anna, Mira) gehören der Installation wie „sync“ und bleiben ebenso.
+    const tokens = deps.db.select().from(apiTokens).all().filter((t) => t.name !== 'Seed MCP');
     expect(tokens.map((t) => t.name).sort()).toEqual(['alt', 'sync']);
     expect(tokens.find((t) => t.name === 'alt')!.revokedAt).not.toBeNull();
     expect(tokens.find((t) => t.name === 'sync')!.id).toBe(token.record.id);

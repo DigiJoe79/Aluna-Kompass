@@ -11,8 +11,11 @@ import { saveNotice } from '../src/donations/notices';
 import { saveSigner, uploadFacsimile } from '../src/donations/machine';
 import { applyTaxDefaults, confirmSetupStep, getPermissionMatrix, getSetupStatus, setBoardRemuneration, setExpenseWaiverBasisText, setFinanceLimit, setFinanceSwitch } from '../src/ledger/setup';
 import { installFinance } from '../src/install';
+import { saveVatSettings } from '../src/ledger/vat-settings';
 import { financeModule, FINANCE_PERMISSIONS } from '../src/manifest';
-import { setupFinance } from './helpers';
+import { bookEntry } from '../src/ledger/finalize';
+import { financeCategories } from '../src/schema';
+import { ledgerFixture, setupFinance } from './helpers';
 
 const FINANCE_ROLE_ORIGIN_KEYS = ['finance:treasurer', 'finance:approver', 'finance:clerk', 'finance:auditor', 'finance:agent'];
 
@@ -21,7 +24,7 @@ describe('finance setup status', () => {
     const { deps, ctx } = setupFinance();
     const status = unwrap(await getSetupStatus(deps, ctx));
     expect(status.complete).toBe(false);
-    expect(status.steps.map((s) => s.key)).toEqual(['fiscalYear', 'account', 'roles', 'categories', 'tax', 'importFormat', 'notice', 'machineProcedure', 'boardRemuneration', 'boardMembers', 'directDebit']);
+    expect(status.steps.map((s) => s.key)).toEqual(['fiscalYear', 'account', 'roles', 'categories', 'tax', 'vat', 'importFormat', 'notice', 'machineProcedure', 'boardRemuneration', 'boardMembers', 'directDebit']);
     // importFormat ist ohne Bankkonto vakuos erfüllt (nichts, was ein Format bräuchte), directDebit bei ausgeschalteter
     // Lastschrift (L1) — die übrigen sind offen.
     for (const step of status.steps.filter((s) => s.key !== 'importFormat' && s.key !== 'directDebit')) expect(step.done, step.key).toBe(false);
@@ -36,18 +39,19 @@ describe('finance setup status', () => {
     expect(importFormat.required).toBe(false);
     expect(importFormat.dependsOn).toBe('account');
     expect(importFormat.blocked).toBe(true);
-    for (const step of status.steps.filter((s) => s.key !== 'importFormat' && s.key !== 'notice' && s.key !== 'machineProcedure' && s.key !== 'boardRemuneration' && s.key !== 'boardMembers' && s.key !== 'directDebit')) expect(step.required, step.key).toBe(true);
+    for (const step of status.steps.filter((s) => s.key !== 'importFormat' && s.key !== 'vat' && s.key !== 'notice' && s.key !== 'machineProcedure' && s.key !== 'boardRemuneration' && s.key !== 'boardMembers' && s.key !== 'directDebit')) expect(step.required, step.key).toBe(true);
   });
 
-  it('zeigt „Eigene Basis für Formulare“ nur, wenn die Installation eigene Basen führt, aber nicht jede von Finanzen genutzte (Befund 51 b)', async () => {
+  it('zeigt „Eigene Basis für Formulare und Berichte“ nur, wenn die Installation eigene Basen führt, aber nicht jede von Finanzen genutzte (Befund 51 b)', async () => {
     const { deps, ctx } = setupFinance();
     expect(unwrap(await getSetupStatus(deps, ctx)).steps.map((s) => s.key)).not.toContain('documentBases');
     const inner = fakeDocumentEngine();
     const own = (ids: string[]) => fakeDocumentEngine({ bases: () => inner.bases().map((b) => ({ ...b, own: ids.includes(b.id) })) });
     deps.documents = own(['a4-mit-briefkopf', 'a4-ohne-briefkopf', 'a4-plain']);
     const step = unwrap(await getSetupStatus(deps, ctx)).steps.find((s) => s.key === 'documentBases')!;
-    expect(step).toMatchObject({ required: false, done: false, detail: { missing: 'a4-formular' }, permission: 'settings.manage' });
-    deps.documents = own(['a4-mit-briefkopf', 'a4-formular']);
+    expect(step).toMatchObject({ required: false, done: false, detail: { missing: 'a4-formular,a4-plain-slim,a4-quer-plain-slim' }, permission: 'settings.manage' });
+    // Rechenschaft A1: die Berichte erscheinen auf den schlanken Basen — eine Installation mit eigenen Basen führt sie mit.
+    deps.documents = own(['a4-mit-briefkopf', 'a4-formular', 'a4-plain-slim', 'a4-quer-plain-slim']);
     expect(unwrap(await getSetupStatus(deps, ctx)).steps.find((s) => s.key === 'documentBases')).toMatchObject({ done: true, detail: {} });
   });
 
@@ -306,8 +310,7 @@ describe('finance setup status', () => {
     expect(afterCategories.steps.find((s) => s.key === 'tax')!.done).toBe(false);
 
     const applied = unwrap(await applyTaxDefaults(deps, ctx));
-    expect(applied.applied).toEqual(['finance.isEntrepreneurOrHasVatId', 'finance.membershipFeesCertifiable', 'finance.expenseWaiversEnabled']);
-    expect(readSetting(deps, 'finance.isEntrepreneurOrHasVatId')).toBe(false);
+    expect(applied.applied).toEqual(['finance.membershipFeesCertifiable', 'finance.expenseWaiversEnabled']);
     expect(readSetting(deps, 'finance.membershipFeesCertifiable')).toBe(true);
     // Spec E13: Aufwandsspende ist Schalter, Vorgabe aus.
     expect(readSetting(deps, 'finance.expenseWaiversEnabled')).toBe(false);
@@ -349,11 +352,11 @@ describe('finance setup status', () => {
     expect(await applyTaxDefaults(deps, readerCtx)).toMatchObject({ ok: false, error: { type: 'forbidden', permission: 'finance.setup' } });
   });
 
-  it('maps eleven activities to the eleven permissions and lists holders per role; a role nobody holds has an empty list', async () => {
+  it('maps one activity to each permission and lists holders per role; a role nobody holds has an empty list', async () => {
     const { deps, ctx } = setupFinance();
     deps.db.transaction((tx) => installFinance(tx, deps, systemContext()));
     const matrix = unwrap(await getPermissionMatrix(deps, ctx));
-    expect(matrix.activities).toHaveLength(11);
+    expect(matrix.activities).toHaveLength(12);
     expect(matrix.activities.map((a) => a.permission)).toEqual([...FINANCE_PERMISSIONS]);
     expect(matrix.activities[0]).toEqual({ key: 'read', permission: 'finance.read' });
 
@@ -386,8 +389,8 @@ describe('finance setup status', () => {
 
   it('sets a finance switch (H7) with finance.setup, refuses an unknown key, and keeps the mcp-only switch bound to the ui channel', async () => {
     const { deps, ctx } = setupFinance();
-    unwrap(await setFinanceSwitch(deps, ctx, { key: 'finance.isEntrepreneurOrHasVatId', value: true }));
-    expect(readSetting(deps, 'finance.isEntrepreneurOrHasVatId')).toBe(true);
+    unwrap(await setFinanceSwitch(deps, ctx, { key: 'finance.expenseWaiversEnabled', value: true }));
+    expect(readSetting(deps, 'finance.expenseWaiversEnabled')).toBe(true);
 
     const invalid = await setFinanceSwitch(deps, ctx, { key: 'finance.uploadLimitMb', value: true });
     expect(invalid.ok).toBe(false);
@@ -397,7 +400,7 @@ describe('finance setup status', () => {
     expect(refused).toMatchObject({ ok: false, error: { type: 'conflict', code: 'switchUiOnly' } });
 
     const readerCtx = ctxWith(['finance.read'], 'READER');
-    expect(await setFinanceSwitch(deps, readerCtx, { key: 'finance.isEntrepreneurOrHasVatId', value: false })).toMatchObject({ ok: false, error: { type: 'forbidden', permission: 'finance.setup' } });
+    expect(await setFinanceSwitch(deps, readerCtx, { key: 'finance.expenseWaiversEnabled', value: false })).toMatchObject({ ok: false, error: { type: 'forbidden', permission: 'finance.setup' } });
   });
 
   it('sets one of the three finance limits with finance.setup, refuses other keys and negative amounts', async () => {
@@ -443,5 +446,20 @@ describe('finance setup status', () => {
     const entry = auditEntry(deps, 'finance.setup.applyTaxDefaults');
     expect(Object.keys(JSON.parse(entry.after as string)).sort()).toEqual(['applied', 'confirmedAt', 'step']);
     expect(entry.params).toBeNull();
+  });
+
+  it('has a vat step, required while Kompass suggests an entrepreneur, with a summary when done', async () => {
+    const f = await ledgerFixture();
+    f.deps.clock.set('2026-10-25T10:00:00.000Z');
+    const vatStep = async () => unwrap(await getSetupStatus(f.deps, f.ctx)).steps.find((s) => s.key === 'vat')!;
+    expect(await vatStep()).toMatchObject({ required: false, done: false, detail: {} });
+    const purposeIncome = f.deps.db.select().from(financeCategories).where(eq(financeCategories.key, 'purpose-income')).get()!;
+    unwrap(await bookEntry(f.deps, f.ctx, { entryDate: '2026-03-02', text: 'Schutzgebühr', moneyLines: [{ accountId: f.bank.id, amountCents: 12000 }], allocationLines: [{ categoryId: purposeIncome.id, amountCents: 12000 }] }));
+    expect(await vatStep()).toMatchObject({ required: true, done: false });
+    unwrap(await saveVatSettings(f.deps, f.ctx, { validFrom: '2026-01-01', vatEntrepreneur: true }));
+    expect(await vatStep()).toMatchObject({ required: false, done: true, detail: { entrepreneurSince: '2026-01-01', advancePeriod: 'quarter', obligations: 'section18_4a' } });
+    const other = setupFinance();
+    unwrap(await saveVatSettings(other.deps, other.ctx, { validFrom: '2026-01-01', vatEntrepreneur: false }));
+    expect(unwrap(await getSetupStatus(other.deps, other.ctx)).steps.find((s) => s.key === 'vat')!).toMatchObject({ done: true, detail: { advancePeriod: 'quarter', obligations: 'section18_4aLegalPerson' } });
   });
 });

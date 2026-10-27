@@ -1,8 +1,12 @@
+import { createHash } from 'node:crypto';
 import { eq } from 'drizzle-orm';
+import { tokenPrefixFor } from '../auth/tokens';
+import { isoNow } from '../clock';
 import type { CallContext } from '../context';
 import { listDashboardTiles, setDashboardLayout } from '../dashboard/service';
-import { dashboardLayouts, roles, settings, users } from '../db/schema';
-import type { Deps } from '../deps';
+import { apiTokens, dashboardLayouts, roles, settings, users } from '../db/schema';
+import type { AppEnv, Deps } from '../deps';
+import { newId } from '../ids';
 import { getEffectivePermissions } from '../roles/effective';
 import { unwrap } from '../result';
 import { createRole, setRolePermissions } from '../roles/service';
@@ -55,6 +59,26 @@ const EXAMPLE_USERS: { name: string; email: string; role: string }[] = [
   { name: 'Peter Lang', email: 'peter@kompass.local', role: 'Schriftführung' },
 ];
 
+/** Seed-Nutzer mit festem MCP-Schlüssel: Anna (Verwaltung) und Mira (Kassenprüferin) — zwei MCP-Server, stabile Testbedingungen. */
+export const SEED_MCP_USERS = [SEED_ADMIN_EMAIL, 'mira@kompass.local'] as const;
+
+/** Der feste Schlüssel eines Seed-Nutzers, z. B. `akx_test_seed-mira-kompass-entwicklung-2026` — erfunden wie das Seed-Passwort. */
+export function seedMcpToken(env: AppEnv, email: string): string {
+  return `akx_${tokenPrefixFor(env)}_seed-${email.split('@')[0]}-${SEED_ADMIN_PASSWORD}`;
+}
+
+/** Die festen Schlüssel eintragen, die noch fehlen (gleicher Hash wie `createApiToken`); ein zweiter Lauf ändert nichts. */
+function seedMcpTokens(deps: Deps): void {
+  for (const email of SEED_MCP_USERS) {
+    const user = deps.db.select({ id: users.id }).from(users).where(eq(users.email, email)).get();
+    if (!user) continue;
+    const token = seedMcpToken(deps.env, email);
+    const tokenHash = createHash('sha256').update(token).digest('hex');
+    if (deps.db.select({ id: apiTokens.id }).from(apiTokens).where(eq(apiTokens.tokenHash, tokenHash)).get()) continue;
+    deps.db.insert(apiTokens).values({ id: newId(), userId: user.id, name: 'Seed MCP', prefix: token.slice(0, 12), tokenHash, createdAt: isoNow(deps.clock) }).run();
+  }
+}
+
 export async function seedDevelopment(deps: Deps): Promise<{ adminEmail: string; adminPassword: string }> {
   if (deps.env === 'production') throw new Error('seedDevelopment must not run in production');
   if (isSetupRequired(deps)) {
@@ -105,6 +129,7 @@ export async function seedDevelopment(deps: Deps): Promise<{ adminEmail: string;
   }
 
   await seedDashboardLayout(deps);
+  seedMcpTokens(deps);
 
   await seedMedia(deps, ctx);
 

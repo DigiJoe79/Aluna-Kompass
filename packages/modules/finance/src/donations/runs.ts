@@ -736,6 +736,7 @@ export async function dispatchRunConfirmations(deps: Deps, ctx: CallContext, inp
     // Was per E-Mail hinausgeht, vermerkt der Sender der Akte, sobald die Mail draußen ist — hier nur die Post-Posten.
     const mailed = new Set(tx.select({ documentId: dmsMailOutbox.documentId }).from(dmsMailOutbox).where(and(eq(dmsMailOutbox.runRef, runRefOf(run.id)), ne(dmsMailOutbox.status, 'withdrawn'))).all().map((r) => r.documentId));
     const due = (confirmationIds.length === 0 ? [] : tx.select().from(financeConfirmations).where(and(inArray(financeConfirmations.id, confirmationIds), eq(financeConfirmations.machine, true), isNull(financeConfirmations.sentAt), isNull(financeConfirmations.voidedAt))).all()).filter((row) => !mailed.has(row.documentId));
+    if (due.some((row) => v.sentAt < row.issuedOn)) return invalid([{ path: 'sentAt', message: 'beforeIssued' }]);
     const dispatched = due.filter((row) => recordDispatchInternal(tx, deps, ctx, row, v.sentAt, v.sentVia)).length;
     if (dispatched === 0) return financeConflict('dispatchNothingMachine');
     if (!run.dispatchedAt) {
@@ -886,6 +887,8 @@ export async function markRunPostConfirmations(deps: Deps, ctx: CallContext, inp
   if (!run) return notFound('financeConfirmationRun', v.runId);
   const due = runDispatchInternal(deps, run).postConfirmations.filter((c) => !c.sentAt && (!v.documentIds || v.documentIds.includes(c.documentId)));
   if (due.length === 0) return financeConflict('dispatchNothingMachine');
+  // Nachttest N19: versandt wird frühestens am Tag der Ausstellung (wie `recordConfirmationDispatch`).
+  if (due.some((c) => v.sentAt < c.issuedOn)) return invalid([{ path: 'sentAt', message: 'beforeIssued' }]);
   if (due.some((c) => !c.machine && !c.signedDocumentId)) return financeConflict('confirmationSignedMissing');
   return deps.db.transaction((tx: DbOrTx) => {
     const count = due.filter((row) => recordDispatchInternal(tx, deps, ctx, row, v.sentAt, 'post')).length;

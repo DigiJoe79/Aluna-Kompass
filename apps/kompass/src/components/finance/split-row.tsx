@@ -1,5 +1,7 @@
 'use client';
 
+import { withoutReverseChargeSentences } from '@/lib/finance/reverse-charge-prompt';
+import { keepSectionSign } from '@kompass/module-finance/format';
 import { MoreVertical } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { FieldError } from '@/components/forms/field-error';
@@ -11,8 +13,12 @@ import { Button, buttonVariants } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Switch } from '@/components/ui/switch';
-import { formatEuro } from '@/lib/finance/amount';
+import { formatEuro, parseAmount } from '@/lib/finance/amount';
+import { isReverseChargeCode, reverseChargeLineFacts, type VatLineContext } from '@/lib/finance/reverse-charge-text';
+import { vatPeriodLabel } from '@/lib/finance/vat-period';
+import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { AmountField } from './amount-field';
 
@@ -21,6 +27,8 @@ export interface SplitRowCategoryOption {
   name: string;
   direction: 'income' | 'expense';
   sphere: string;
+  /** Einnahmeart: `bodyGrant` erlaubt die Vermögensausstattung, `inheritance` führt dem Vermögen zu (Anlage Gem, 15g). */
+  incomeKind?: string | null;
   explanation?: string;
 }
 export interface SplitRowOption {
@@ -32,13 +40,23 @@ export interface SplitRowValue {
   categoryId: string;
   amountText: string;
   taxCode?: string;
+  /** Satzart der Zeile (Vorgabe Regelsatz) — für den Satz zur Steuer bei § 13b/Erwerb. */
+  rateKind?: 'standard' | 'reduced';
   contactId: string | null;
   contactName?: string | null;
   projectId: string | null;
   purposeId: string | null;
   abroad: boolean;
   addsToAssets: boolean;
+  /** Vermögensausstattung nach § 58 Nr. 3 AO von einer anderen Körperschaft (nur bei `bodyGrant`). */
+  assetEndowment?: boolean;
+  /** Nicht dem Vermögen zuführen — der feste Grund je Art (Erbschaft: Erblasser, Ausstattung: Geber). */
+  addsToAssetsOptOut?: 'testatorDirectedCurrentUse' | 'donorAllowedCurrentUse' | null;
   locked?: boolean;
+  /** § 13b/Erwerb (E6a Task 11c): Tag der Leistung, bei „§ 13b, übrige“ der Rechnung — nur bei diesen Kennzeichen. */
+  serviceDate?: string | null;
+  /** Woher das Kennzeichen kam — nur Anzeige, nie gespeichert; eine Hand-Änderung löscht sie. */
+  taxCodeOrigin?: 'contact' | 'prompt' | null;
 }
 
 export interface SplitRowProps {
@@ -55,6 +73,8 @@ export interface SplitRowProps {
   projects: SplitRowOption[];
   taxCodeOptions: string[];
   showTax: boolean;
+  /** Die Prüffrage § 13b steht über den Zeilen: Die Hilfezeile der Kategorie wiederholt sie nicht (Designer Runde 8, 9c). */
+  reverseChargeAsked?: boolean;
   allowsAddsToAssets?: boolean;
   density?: 'default' | 'narrow';
   /** Nummer der Zeile ab 1, links im Kopf der Zeilenkarte („Zeile 2“). */
@@ -63,7 +83,13 @@ export interface SplitRowProps {
   purposeOverspent?: boolean;
   onFreeFundsRemainder?: () => void;
   /** Feldfehler der Zeile, schon übersetzt (Meldungsregel A: am Feld und oben in `FormErrorSummary`). */
-  errors?: { categoryId?: string; amountText?: string };
+  errors?: { categoryId?: string; amountText?: string; serviceDate?: string; taxCode?: string };
+  /** Für den Satz zur Steuer bei § 13b/Erwerb (Board Umsatzsteuer 3a): Besteuerung, Sätze und Zeitraumarten von heute. */
+  vatContext?: VatLineContext;
+  /** Der Buchungstag der Maske — Zeitraum der Buchung im Satz. */
+  entryDate?: string;
+  /** Richtung der Zeile, solange keine Kategorie gewählt ist (Vorlage der Maske bzw. Vorzeichen des Umsatzes). */
+  defaultDirection?: 'income' | 'expense';
 }
 
 /**
@@ -87,18 +113,50 @@ export function SplitRow({
   projects,
   taxCodeOptions,
   showTax,
+  reverseChargeAsked = false,
   allowsAddsToAssets,
   density = 'default',
   purposeOverspent,
   onFreeFundsRemainder,
   errors,
+  vatContext,
+  entryDate,
+  defaultDirection,
 }: SplitRowProps) {
   const t = useTranslations('finance.splitRow');
+  const tRoot = useTranslations();
   const narrow = density === 'narrow';
   const category = categories.find((c) => c.id === value.categoryId) ?? null;
+  const explanation = category?.explanation ? (reverseChargeAsked ? withoutReverseChargeSentences(category.explanation) : category.explanation) : '';
   const purposeLabel = category?.direction === 'expense' ? t('purposePaidFrom') : t('purposeDeterminedBy');
 
   const set = (patch: Partial<SplitRowValue>) => onChange({ ...value, ...patch });
+  // Anlage Gem (15g): Ausstattung nur bei einer Zuwendung einer anderen Organisation; Erbschaft und Ausstattung gehen ins
+  // Vermögen, außer der feste Grund erlaubt die laufende Verwendung — kein freies Textfeld, der Grund liegt rechtlich fest.
+  const endowmentPossible = category?.direction === 'income' && category.incomeKind === 'bodyGrant';
+  const toAssetsKind = category?.direction === 'income' && category.incomeKind === 'inheritance' ? 'inheritance' : endowmentPossible && value.assetEndowment ? 'endowment' : null;
+  const optOutReason = toAssetsKind === 'inheritance' ? 'testatorDirectedCurrentUse' : 'donorAllowedCurrentUse';
+  // Ohne Unternehmereigenschaft bietet die Maske nur Kennzeichen für Einkäufe (§ 13b, Erwerb): Das Feld steht dann nur an
+  // Ausgabezeilen — Richtung der Kategorie, sonst der Maske (Befund 39, Frage 1). Ein gesetztes Kennzeichen bleibt sichtbar.
+  const direction = category?.direction ?? defaultDirection;
+  const purchaseCodesOnly = taxCodeOptions.length > 0 && taxCodeOptions.every(isReverseChargeCode);
+  const taxShown = showTax && (!purchaseCodesOnly || direction === 'expense' || (!!value.taxCode && value.taxCode !== 'none'));
+  // E6a Task 11c (Board 3a): Leistungsdatum nur bei § 13b und Erwerb; bei „§ 13b, übrige“ heißt es Rechnungsdatum (Joe, Frage 1).
+  const reverseCharge = taxShown && isReverseChargeCode(value.taxCode);
+  // Ein Kennzeichen, das die Lage von heute nicht mehr anbietet (früher Unternehmer, Vorgabe vom Kontakt oder aus der
+  // E-Rechnung), bleibt wählbar, statt still als „keine“ zu erscheinen (Befund 37).
+  const codes = value.taxCode && value.taxCode !== 'none' && !taxCodeOptions.includes(value.taxCode) ? [...taxCodeOptions, value.taxCode] : taxCodeOptions;
+  const serviceLabel = value.taxCode === 'rc13bOther' ? t('invoiceDate') : t('serviceDate');
+  const facts = reverseCharge && vatContext && entryDate ? reverseChargeLineFacts({ amountCents: parseAmount(value.amountText) ?? 0, taxCode: value.taxCode, rateKind: value.rateKind ?? 'standard', entryDate, serviceDate: value.serviceDate ?? null, context: vatContext }) : null;
+  const periodText = (key: string) => vatPeriodLabel(key, tRoot);
+  const vatSentence = facts
+    ? [
+        facts.servicePeriod !== null && facts.servicePeriod !== facts.entryPeriod
+          ? t('vatSentenceSplit', { tax: formatEuro(facts.taxCents), rate: String(facts.ratePercent), base: formatEuro(facts.baseCents), kind: value.taxCode === 'rc13bOther' ? 'invoice' : 'service', serviceMonth: t('monthName', { month: (value.serviceDate ?? '').slice(5, 7) }), entryMonth: t('monthName', { month: (entryDate ?? '').slice(5, 7) }), period: periodText(facts.period) })
+          : t('vatSentence', { tax: formatEuro(facts.taxCents), rate: String(facts.ratePercent), base: formatEuro(facts.baseCents), period: periodText(facts.period) }),
+        facts.noInputTax ? t('vatNoInputTax') : null,
+      ].filter(Boolean).join(' ')
+    : null;
 
   return (
     // 07-1 B15 · 07-2 B16: Die Zeile ist keine graue Karte in der Formularkarte (§ E) — nur eine Linie trennt sie.
@@ -124,7 +182,9 @@ export function SplitRow({
           </DropdownMenu>
         )}
       </div>
-      <div className={cn('grid gap-3', narrow ? 'grid-cols-2 items-start' : 'grid-cols-1 sm:grid-cols-[2fr_1.2fr_repeat(3,1fr)] sm:items-start')}>
+      {/* Kategorie und Spender/Empfänger gleich breit (Designer Runde 8, 9c: „Hilfswerk Interr“ war abgeschnitten); reicht
+          es nicht, kürzt das Feld mit Tooltip. Kein Layout-Test (Einzelstelle). */}
+      <div className={cn('grid gap-3', narrow ? 'grid-cols-2 items-start' : taxShown ? 'grid-cols-1 sm:grid-cols-[2fr_1.2fr_1fr_2fr_1fr] sm:items-start' : 'grid-cols-1 sm:grid-cols-[2fr_1.2fr_2fr_1fr] sm:items-start')}>
         <div className={cn('space-y-1', narrow && 'col-span-2')}>
           {/* Runde 3, 087: Kategorie und Betrag sind Pflicht und tragen den Stern; die Legende setzt die Leiste der Maske.
               Die schmale Form der Arbeitsliste hat keine Speicherleiste und keine Sterne. */}
@@ -156,18 +216,18 @@ export function SplitRow({
           {category ? (
             <p className="text-hint text-muted-ink">
               {t(`sphere.${category.sphere}`)}
-              {category.explanation ? ` · ${category.explanation}` : ''}
+              {explanation ? ` · ${keepSectionSign(explanation)}` : ''}
             </p>
           ) : null}
           <FieldError id={`${value.key}-category-error`} message={errors?.categoryId} />
         </div>
 
-        <div className={cn('space-y-1', narrow && !showTax && 'col-span-2', narrow && 'row-start-2')}>
+        <div className={cn('space-y-1', narrow && !taxShown && 'col-span-2', narrow && 'row-start-2')}>
           <Label htmlFor={`${value.key}-amount`} required={!narrow}>{t('amount')}</Label>
           <AmountField id={`${value.key}-amount`} name={`${value.key}-amount`} value={value.amountText} onChange={(amountText) => set({ amountText })} allowNegative disabled={value.locked} required invalid={!!errors?.amountText} errorText={errors?.amountText} />
         </div>
 
-        {showTax ? (
+        {taxShown ? (
           <div className={cn('space-y-1', narrow && 'row-start-2')}>
             <Label htmlFor={`${value.key}-tax`}>{t('tax')}</Label>
             <Select
@@ -175,13 +235,25 @@ export function SplitRow({
               name={`${value.key}-tax`}
               value={value.taxCode ?? ''}
               disabled={value.locked}
-              onChange={(e) => set({ taxCode: e.target.value || undefined })}
+              aria-invalid={errors?.taxCode ? true : undefined}
+              aria-describedby={errors?.taxCode ? `${value.key}-tax-error` : undefined}
+              // Eine Hand-Änderung löscht die Herkunft; ein anderes Kennzeichen leert das Leistungsdatum (Task 11c).
+              onChange={(e) => set({ taxCode: e.target.value || undefined, taxCodeOrigin: null, ...(e.target.value !== value.taxCode ? { serviceDate: null } : {}) })}
             >
               <option value="">{t('taxNone')}</option>
-              {taxCodeOptions.map((code) => (
+              {codes.filter((code) => !isReverseChargeCode(code)).map((code) => (
                 <option key={code} value={code}>{t(`taxCode.${code}`)}</option>
               ))}
+              {codes.some(isReverseChargeCode) ? (
+                <optgroup label={t('taxOwedGroup')}>
+                  {codes.filter(isReverseChargeCode).map((code) => (
+                    <option key={code} value={code}>{t(`taxCode.${code}`)}</option>
+                  ))}
+                </optgroup>
+              ) : null}
             </Select>
+            {value.taxCodeOrigin ? <p className="text-hint text-muted-ink" data-tax-origin={value.taxCodeOrigin}>{t(`taxOrigin.${value.taxCodeOrigin}`)}</p> : null}
+            <FieldError id={`${value.key}-tax-error`} message={errors?.taxCode} />
           </div>
         ) : null}
 
@@ -213,7 +285,7 @@ export function SplitRow({
 
       </div>
 
-      {purposes.length > 0 || allowsAddsToAssets ? (
+      {purposes.length > 0 || allowsAddsToAssets || endowmentPossible || toAssetsKind || reverseCharge ? (
         // 07-2 B17: Zweck und Schalter im `FormGrid` statt eines handgebauten Rasters; der Schalter bleibt `FormField toggle`.
         <div className="border-t border-line pt-3">
         <FormGrid>
@@ -232,6 +304,11 @@ export function SplitRow({
               </Select>
             </FormField>
           ) : null}
+          {reverseCharge ? (
+            <FormField id={`${value.key}-service-date`} label={serviceLabel} error={errors?.serviceDate} size="s">
+              <Input id={`${value.key}-service-date`} type="date" value={value.serviceDate ?? ''} disabled={value.locked} onChange={(e) => set({ serviceDate: e.target.value || null })} />
+            </FormField>
+          ) : null}
           <FormField id={`${value.key}-abroad`} label={t('abroad')} toggle size="s">
             <Switch id={`${value.key}-abroad`} checked={value.abroad} onCheckedChange={(checked) => set({ abroad: checked === true })} />
           </FormField>
@@ -240,8 +317,22 @@ export function SplitRow({
               <Switch id={`${value.key}-adds-to-assets`} checked={value.addsToAssets} onCheckedChange={(checked) => set({ addsToAssets: checked === true })} />
             </FormField>
           ) : null}
+          {endowmentPossible ? (
+            <FormField id={`${value.key}-asset-endowment`} label={t('assetEndowment')} hint={t('assetEndowmentHint')} toggle size="l">
+              <Checkbox id={`${value.key}-asset-endowment`} checked={value.assetEndowment === true} disabled={value.locked} onCheckedChange={(on) => set({ assetEndowment: on === true, ...(on === true ? {} : { addsToAssetsOptOut: value.addsToAssetsOptOut === 'donorAllowedCurrentUse' ? null : value.addsToAssetsOptOut }) })} />
+            </FormField>
+          ) : null}
+          {toAssetsKind ? (
+            <FormField id={`${value.key}-not-to-assets`} label={t('notToAssets')} hint={t(`notToAssetsReason.${optOutReason}`)} toggle size="l">
+              <Checkbox id={`${value.key}-not-to-assets`} checked={value.addsToAssetsOptOut === optOutReason} disabled={value.locked} onCheckedChange={(on) => set(on === true ? { addsToAssetsOptOut: optOutReason, addsToAssets: false } : { addsToAssetsOptOut: null, addsToAssets: true })} />
+            </FormField>
+          ) : null}
         </FormGrid>
         </div>
+      ) : null}
+
+      {vatSentence ? (
+        <p className="text-meta text-ink-2" data-testid="split-row-vat-sentence">{vatSentence}</p>
       ) : null}
 
       {purposeOverspent ? (

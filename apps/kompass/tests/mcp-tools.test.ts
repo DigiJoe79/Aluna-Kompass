@@ -34,10 +34,10 @@ const modulesWithTools: [ModuleManifest, readonly McpToolDefinition[]][] = [
  * entscheidet bewusst; wer ein Recht ergänzt, ohne es hier oder in einem
  * Werkzeug zu nennen, bekommt einen roten Test.
  */
-const WITHOUT_MCP = new Set([
+const WITHOUT_MCP = new Set<string>([
   // Finanzen: Rechte stehen ab F1 im Manifest (Rollenvorschläge werden nie nachgefüllt),
   // ihre Werkzeuge kommen mit den genannten Plänen. Jeder Plan streicht seine Zeile.
-  'finance.reportsFinalize',  // F9a
+  // Rechenschaft A1 (0.4.0) hat `finance.reportsFinalize` gestrichen: finance_report_finalize.
 ]);
 
 /** Rechte, die kein Werkzeug nennt, als `modul: recht`. */
@@ -181,6 +181,7 @@ type ServiceFn = (...args: never[]) => unknown;
 
 /** Services, die bewusst ohne Werkzeug bleiben — jeder mit Grund. */
 const WITHOUT_TOOL: Record<string, string> = {
+  'finance.listVatPeriods': 'finance_vat_periods ruft listVatPeriodsWithPayments — dieselbe Sicht, dazu die Nachzahlung einer Berichtigung (Designer Runde 8, 345).',
   'dms.deleteDocument': 'Löschung nach Fristablauf bestätigt ein Mensch (Entscheidung 10).',
   'dms.previewDraft': 'Liefert Bytes; ein Agent liest den Volltext (Entscheidung 39).',
   'dms.getDocument': 'Liefert Bytes; dms_get ruft getDocumentRecord.',
@@ -240,6 +241,13 @@ const WITHOUT_TOOL: Record<string, string> = {
   'core.resolveRecordLabel': 'Hakenverteiler für Datensatzbeschriftungen, kein eigener Dienst.',
   'core.withTarget': 'Reichert Wiedervorlagen mit Zielbeschriftung an; Innenleben von listDueFollowUpsWithTargets.',
 
+  // Rechenschaft D1 — Kassenprüfung: Druck und Downloads bleiben in der Oberfläche; die Schreibschritte haben Werkzeuge (D1c).
+  'finance.printAuditReport': 'Liefert Bytes; ein Agent liest den Bericht mit finance_audit_report.',
+  'finance.printHandoverProtocol': 'Liefert Bytes; ein Agent liest die Übergabe mit finance_handover_get.',
+  'finance.printAuditReportBlank': 'Liefert Bytes; den Vordruck druckt ein Mensch für die Prüfer auf Papier.',
+  'finance.readAuditPackageFile': 'Liefert Bytes (PDF oder ZIP von bis zu 500 MB); ein Agent liest das Prüfpaket mit finance_audit_section.',
+  'finance.readDataExportFile': 'Liefert Bytes eines ZIP; den Inhalt lesen Agenten über die Datenwerkzeuge',
+
   // Finanzen: Stammdaten je Art laufen über die Verteilerdienste finance_master_data*
   // (ein Verteiler je Tätigkeit statt zwanzig Werkzeuge, Finanz-Spec 10.2).
   'finance.createAccount': 'Erreichbar über finance_master_data* (ein Verteiler je Tätigkeit statt zwanzig Werkzeuge, Finanz-Spec 10.2).',
@@ -268,6 +276,8 @@ const WITHOUT_TOOL: Record<string, string> = {
   'finance.readCashCountProtocol': 'Liefert Bytes, über die Seiten des Moduls (F3b Task 2, Muster readVoucher).',
   'finance.directDebitFileStream': 'Liefert die Datei für die Bank (pain.008 und CSV) mit der IBAN jedes Zahlers — sie gehört nie in den Modellkontext; nur der Route Handler der Einzugsseite liest sie, über MCP lehnt der Dienst ab (Plan L2, Spec § 8).',
   'finance.readFacsimile': 'Liefert die Bytes einer Unterschrift — sie gehören nie in den Modellkontext; nur der Route Handler der Bescheid-Seite liest sie (F6a, Annahme 8).',
+  'finance.previewFinanceReport': 'Liefert Bytes; Agenten lesen die Daten über finance_report',
+  'finance.readFinanceReportDocument': 'Liefert Bytes einer Akten-Datei; Agenten lesen die Fassungen über finance_report_versions',
   'finance.previewConfirmation': 'Liefert Bytes (Vorschau-PDF mit ENTWURF) für den Ausstellen-Dialog; ein Agent liest die Prüfliste über finance_confirmation_check (F6a).',
   'finance.readConfirmationCopy': 'Liefert Bytes (unser Exemplar), über den Route Handler der Spenden-Seite (F6a, Muster readCashCountProtocol).',
   'members.runPrintPdf': 'Liefert Bytes (die Post-Briefe eines Laufs als ein PDF) für den Druck am Bildschirm; ein Agent liest den Versand-Schritt über members_run_dispatch_state (Plan M4 Task 3).',

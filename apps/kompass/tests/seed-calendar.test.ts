@@ -1,6 +1,6 @@
 import { collectRetentionDue, coreModule, seedDevelopment, unwrap } from '@kompass/core';
 import { createTestDeps, ctxWith } from '@kompass/core/testing';
-import { financeEntries, financeFiscalYears, financeImportRuns, freeReserveCapOverview, listPledges, SEED_STORY_LAST_DAY, seedStoryYear } from '@kompass/module-finance';
+import { financeEntries, financeFiscalYears, financeImportRuns, freeReserveCapOverview, getClosingStatus, listPledges, SEED_CLOSED_YEARS, SEED_STORY_LAST_DAY, seedStoryYear } from '@kompass/module-finance';
 import { listFees } from '@kompass/module-members';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { installedModules } from '@/modules';
@@ -42,6 +42,7 @@ const FUTURE_ALLOWED: Readonly<Record<string, string>> = {
   'sessions.expires_at': 'Ablauf der Sitzung.',
   'users.locked_until': 'Ende einer Anmeldesperre.',
   'finance_fiscal_years.ends_on': 'Das laufende Geschäftsjahr endet nach heute.',
+  'finance_tax_periods.due_on': 'Abgabefrist der Steuererklärung des Stichjahres, liegt gewollt nach heute (Rechenschaft D2).',
   'finance_open_items.due_on': 'Fälligkeit eines offenen Postens.',
   'finance_partner_notices.valid_until': 'Ein Bescheid des Partners gilt über heute hinaus.',
   'finance_partner_payments.proof_due_on': 'Frist für den Verwendungsnachweis.',
@@ -111,9 +112,10 @@ describe('the development seed on any calendar day', () => {
       await seedDevelopment(deps);
       expect(counts(deps)).toEqual(first);
 
-      // Vorjahr (abgeschlossen), Stichjahr und das laufende Jahr — in dem die Dienste „heute“ buchen.
+      // Die abgeschlossenen Jahre, das Stichjahr und das laufende Jahr — in dem die Dienste „heute“ buchen.
       const story = seedStoryYear(day);
-      expect(fiscalYears(deps)).toEqual([...new Set([story - 1, story, Number(day.slice(0, 4))])].map(String));
+      const closedYears = Array.from({ length: SEED_CLOSED_YEARS }, (_, i) => story - SEED_CLOSED_YEARS + i);
+      expect(fiscalYears(deps)).toEqual([...new Set([...closedYears, story, Number(day.slice(0, 4))])].map(String));
       expect(deps.db.select().from(financeEntries).all().filter((e) => e.entryDate > day).map((e) => e.text)).toEqual([]);
       expect(futureValues(deps, day)).toEqual([]);
       const periodEnds = deps.db.select().from(financeImportRuns).all().flatMap((r) => (r.periodTo ? [r.periodTo] : [])).sort();
@@ -130,6 +132,20 @@ describe('the development seed on any calendar day', () => {
     },
     30_000,
   );
+
+  // Befund 34 a: Im Vorjahr bleibt nur Schritt 12 offen, weil die USt-Jahreserklärung bewusst nicht abgegeben ist
+  // (Joe, Motiv 323); das Jahr davor ist fertig.
+  it('der Jahresabschluss des Vorjahres ist im ganzen Seed bis auf die USt-Jahreserklärung fertig — auch mit den Vorstandsrollen der übrigen Seeds (C2, E2E)', async () => {
+    const deps = seedDeps('2026-10-24');
+    await seedDevelopment(deps);
+    const story = seedStoryYear('2026-10-24');
+    const yearOf = (designation: number) => deps.db.select().from(financeFiscalYears).all().find((y) => y.designation === String(designation))!;
+    const status = unwrap(await getClosingStatus(deps, ctxWith(['finance.read']), { fiscalYearId: yearOf(story - 1).id }));
+    expect(status.steps.filter((s) => !s.done).map((s) => s.key)).toEqual(['taxReturn']);
+    expect(status.steps.find((s) => s.key === 'taxReturn')!.facts).toMatchObject({ vat: { filedOn: null } });
+    const before = unwrap(await getClosingStatus(deps, ctxWith(['finance.read']), { fiscalYearId: yearOf(story - 2).id }));
+    expect(before.steps.filter((s) => !s.done).map((s) => s.key)).toEqual([]);
+  }, 30_000);
 
   it('names only columns that exist in the exceptions for future dates', () => {
     const deps = seedDeps('2026-10-06');

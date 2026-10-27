@@ -219,7 +219,8 @@ export function RuleDialog({
                 <FormField id="rule-tax" label={t('taxCode')}>
                   <Select id="rule-tax" value={form.taxCode} onChange={(e) => set({ taxCode: e.target.value })}>
                     <option value="">{t('taxFromCategory')}</option>
-                    {options.taxCodeOptions.map((code) => (
+                    {/* Ein Kennzeichen, das die Auswahl nicht mehr anbietet, bleibt sichtbar — die Regel ändert sich nicht still (Befund 40, Frage 3). */}
+                    {(form.taxCode && !options.taxCodeOptions.includes(form.taxCode) ? [...options.taxCodeOptions, form.taxCode] : options.taxCodeOptions).map((code) => (
                       <option key={code} value={code}>
                         {tTax(`taxCode.${code}`)}
                       </option>

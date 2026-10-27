@@ -342,7 +342,10 @@ nicht bestätigt, anonym oder sonstige. Jeder Grund verlinkt dorthin, wo sich
 etwas ergänzen lässt, meist in den Serienlauf. Bescheinigt eine Bestätigung
 mehr, als nach Rückgaben noch übrig ist — etwa nach einer Rücklastschrift —,
 steht der Überhang gesondert als „zu korrigieren“, mit Link zum gleichnamigen
-Reiter bei den Bestätigungen.
+Reiter bei den Bestätigungen. Gezählt werden dort alle Bestätigungen des Jahres,
+die zu korrigieren sind — dieselbe Zahl wie in Schritt 7 des Jahresabschlusses;
+die ohne Überhang (etwa nach einem ersetzten Bescheid) nennt der Satz als „davon
+ohne Auswirkung auf den Betrag“.
 
 ## Vereinfachter Nachweis
 

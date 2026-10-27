@@ -1,17 +1,19 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
-import { seedStoryYear } from '../../../packages/core/src/seed/story-year';
+import { SEED_CLOSED_YEARS, seedStoryYear } from '../../../packages/core/src/seed/story-year';
 import { associationDay } from './association-day';
 
 /**
  * Das Stichjahr des Entwicklungs-Seeds aus Sicht der E2E (Plan 2026-10-06-seed-kalender). Die Finanzgeschichte
- * des Seeds spielt im Stichjahr und seinem Vorjahr, nicht im laufenden Jahr. Die Specs schreiben ihre Daten so,
+ * des Seeds spielt im Stichjahr und den abgeschlossenen Jahren davor (`SEED_CLOSED_YEARS`), nicht im laufenden Jahr. Die Specs schreiben ihre Daten so,
  * wie sie im Stichjahr 2026 aussahen, und schieben sie mit `story` — so bleibt der Text lesbar, und bis zum
  * 30.08.2027 ist er Zeichen für Zeichen der alte. `story-year.ts` (Kern) ist rein, der Playwright-Lauf lädt damit
  * keine Datenbankschicht (wie `association-day.ts`).
  */
 export const WRITTEN_YEAR = 2026;
 export const STORY_YEAR = seedStoryYear(associationDay());
+/** Der abgegebene Erklärungszeitraum des Seeds: die abgeschlossenen Jahre vor dem Stichjahr („2023–2025“). */
+export const FILED_TAX_PERIOD = `${STORY_YEAR - SEED_CLOSED_YEARS}–${STORY_YEAR - 1}`;
 const SHIFT = STORY_YEAR - WRITTEN_YEAR;
 
 /** Jede alleinstehende Jahreszahl 2022–2029 um `shift` verschoben („RE-2026-041“, „01.04.2026“, „2026-01-05“, „2022–2024“). */

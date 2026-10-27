@@ -149,4 +149,40 @@ describe('Table: Spaltenrollen (E1)', () => {
     // Der Trenner steht nur zwischen Kennwerten derselben Zeile.
     expect(css()).toMatch(/\[data-col="meta"\]:not\(\[data-wrap\], :empty, :has\(> \[data-empty\]:only-child\)\) ~ \[data-col="meta"\]:not\(\[data-wrap\], :empty, :has\(> \[data-empty\]:only-child\)\)::before/);
   });
+
+  /** Der Block der Kartenzeile (unter `md`) und darin die Regeln, deren Selektor genau `selector` ist. */
+  const phoneRules = (selector: string) => {
+    const text = css();
+    const start = text.indexOf('@media (max-width: 767.98px)');
+    const block = text.slice(start, text.indexOf('\n}\n', start));
+    const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return [...block.matchAll(new RegExp(`(?:^|\\n)\\s*${escaped} \\{([^}]*)\\}`, 'g'))].map((m) => m[1]!);
+  };
+  const TITLE = 'table:has([data-col="title"]) > tbody > tr > [data-col="title"]';
+
+  it('Kartenzeile (Joe 2026-10-24): Titel und erste Unterzeile brechen um, ohne line-clamp', () => {
+    const rules = phoneRules(TITLE);
+    expect(rules.length).toBeGreaterThan(0);
+    for (const r of rules) {
+      expect(r).not.toMatch(/line-clamp/);
+      expect(r).not.toMatch(/overflow:\s*hidden/);
+      expect(r).toMatch(/white-space:\s*normal/);
+    }
+  });
+
+  // Nur kurze Zeilen (`span`) kürzen; ein Satz (`p`, Hinweis zur Unabhängigkeit) bricht um (Schlussdurchsicht D1e, I3).
+  it('Kartenzeile: erst ab der dritten Zeile der Titelzelle (zweite Unterzeile) einzeilig mit „…“; kürzende Titel (`truncate`) und Sätze (`p`) ausgenommen', () => {
+    const [rule] = phoneRules(`${TITLE}:not([data-truncate]) > span:nth-child(n+2 of :not(:first-child, [data-slot="status-badge"], .sr-only)):not(:has(a, button))`);
+    expect(rule).toBeDefined();
+    expect(rule).toMatch(/white-space:\s*nowrap/);
+    expect(rule).toMatch(/overflow:\s*hidden/);
+    expect(rule).toMatch(/text-overflow:\s*ellipsis/);
+  });
+
+  it('Kartenzeile: die Marke hat eigene Breite und kürzt nie', () => {
+    const rules = phoneRules('table:has([data-col="title"]) > tbody > tr > :is([data-col="status"], [data-col="amount"], [data-col="select"], [data-col="actions"])');
+    expect(rules.join(' ')).toMatch(/min-width:\s*max-content/);
+    for (const r of phoneRules('table:has([data-col="title"]) > tbody > tr > [data-col="status"]')) expect(r).not.toMatch(/overflow|text-overflow|line-clamp/);
+  });
 });
+

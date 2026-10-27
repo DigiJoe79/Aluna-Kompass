@@ -63,6 +63,14 @@ export const STATUS_TONES = {
   outbox: { queued: 'info', sending: 'info', sent: 'success', failed: 'error', blocked: 'warning', withdrawn: 'neutral' },
   /** Prüfung eines Backups (N3, Freigabe Joe 2026-10-23); „festgehalten“ ist kein Zustand der Prüfung und steht als `neutral` ohne Tabelle. */
   backupCheck: { verified: 'success', failed: 'error' },
+  /** Ausgabestufe eines Berichts (N2, Freigabe Joe 2026-10-24): nur im `PageHeader status`, in Listen nie (Stufe einmal als Satz im Kopf). */
+  reportStage: { preliminary: 'neutral', review: 'info', final: 'final' },
+  /** Vermerk der Kassenprüfung (N3, Freigabe Joe 2026-10-24): offen ist Arbeit, beantwortet ein Zwischenstand, geklärt ohne Marke und gedämpft. */
+  remark: { open: 'warning', answered: 'info', resolved: 'neutral' },
+  /** Prüfbericht (Runde 3, Freigabe Joe 2026-10-24): Entwurf, zum Unterschreiben, abgelegt. */
+  auditReport: { draft: 'neutral', readyToSign: 'info', filed: 'final' },
+  /** Stichprobe (N4, Freigabe Joe 2026-10-24): die Buchung hat sich seit dem Abhaken geändert. */
+  sample: { recheck: 'warning' },
 } as const satisfies Record<string, Record<string, BadgeTone>>;
 
 export type StatusKind = keyof typeof STATUS_TONES;
@@ -105,6 +113,7 @@ const NORMAL_IN_LIST: { [K in StatusKind]?: readonly (keyof (typeof STATUS_TONES
   pledgeRate: ['booked'],
   outbox: ['sent'],
   backupCheck: ['verified'],
+  // Kein `remark`: Geklärt steht mit Marke in der Spalte „Zustand“ (Designer Runde 7, 272/273).
 };
 
 export function isNormalInList<K extends StatusKind>(kind: K, status: keyof (typeof STATUS_TONES)[K]): boolean {
@@ -132,7 +141,7 @@ type Mark = { dot?: boolean; icon?: never } | { dot?: never; icon?: LucideIcon }
 export function StatusBadge({ tone, dot, icon: Icon, children, className, testId, stamp }: { tone: BadgeTone; children: React.ReactNode; className?: string; testId?: string; stamp?: boolean } & Mark) {
   const shape = stamp ? 'rounded-md border-2 border-current px-3 py-1.5 text-section shadow-sm' : 'rounded-sm px-2 py-0.5 text-hint';
   return (
-    <span data-testid={testId} className={cn('inline-flex items-center gap-1.5', shape, 'font-semibold', TONES[tone], className)}>
+    <span data-slot="status-badge" data-testid={testId} className={cn('inline-flex items-center gap-1.5', shape, 'font-semibold', TONES[tone], className)}>
       {dot ? <span className="size-[7px] rounded-full bg-current" aria-hidden /> : null}
       {Icon ? <Icon className="size-3 shrink-0" aria-hidden /> : null}
       {children}

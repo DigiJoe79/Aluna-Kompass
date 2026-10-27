@@ -1,7 +1,11 @@
-import { Check } from 'lucide-react';
+'use client';
+
+import { Check, ChevronRight } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
-import type { ReactNode } from 'react';
+import { useId, useState, type ReactNode } from 'react';
+import { Overline } from '@/components/overline';
+import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
 export type StepState = 'todo' | 'active' | 'done' | 'failed';
@@ -53,6 +57,9 @@ export function Steps({
   density = 'bar',
   label,
   done,
+  groups,
+  card,
+  collapsedWhenDone,
   testId = 'steps',
 }: {
   steps: readonly Step[];
@@ -61,46 +68,143 @@ export function Steps({
   label?: string;
   /** Ergebnis, wenn alle Schritte erledigt sind („128 Umsätze eingelesen.“). */
   done?: ReactNode;
+  /**
+   * Nur `compact` (Board 3a, Freigabe Joe 2026-10-24): Gruppen mit `Overline` darüber, je Gruppe eine Liste; die
+   * Nummern zählen über die Gruppen durch (Index in `steps` + 1). Jeder Schritt gehört zu genau einer Gruppe.
+   */
+  groups?: readonly { label: string; keys: readonly string[] }[];
+  /**
+   * Nur `compact` ohne `groups` (Designer Runde 6, vorläufig, Joe 2026-10-25): dieselbe Karte mit Zeilen und Trennern
+   * wie mit Gruppen, aber ohne `Overline` — bei nur einer Gruppe sagt der Seitentitel schon, worum es geht.
+   */
+  card?: boolean;
+  /** Nur `compact` (Board 3c): Sind alle erledigt, steht „Fertig.“ mit Ergebnis, die Liste zugeklappt hinter dem Knopf. */
+  collapsedWhenDone?: { label: string };
   testId?: string;
 }) {
   const t = useTranslations('common.steps');
+  const [expanded, setExpanded] = useState(false);
+  const listId = useId();
   const current = steps.filter((s) => s.state === 'active' || s.state === 'failed');
   if (current.length > 1) throw new Error(MANY_ACTIVE);
   const allDone = steps.length > 0 && steps.every((s) => s.state === 'done');
   const finished = allDone ? (
+    // Haken, „Fertig.“ und Ergebnis auf einer Grundlinie (Designer Runde 6, 301): Der Haken steht mittig für sich,
+    // das Wort ist ein eigenes Kind des `items-baseline` — in einem `inline-flex` mit dem Haken stand es 3 px höher.
     <p role="status" className="flex flex-wrap items-baseline gap-x-1.5 text-meta text-ink-2">
-      <span className="inline-flex items-center gap-1 font-semibold text-success">
-        <Check className="size-3.5" aria-hidden />
-        {t('finished')}
-      </span>
+      <Check className="size-3.5 self-center text-success" aria-hidden />
+      <span className="-ml-0.5 font-semibold text-success">{t('finished')}</span>
       {done}
     </p>
   ) : null;
 
   if (density === 'compact') {
-    return (
-      <div className="flex flex-col gap-1.5" data-testid={testId}>
-        <ol aria-label={label ?? t('label')} className="flex flex-col gap-1.5">
-          {steps.map((step, index) => (
-            <li key={step.key} data-testid={`${testId}-${step.key}`} data-state={step.state} aria-current={isCurrent(step) ? 'step' : undefined} className="flex flex-col gap-1.5">
-              <div className="flex min-h-7 items-center gap-2.5">
-                <Marker step={step} n={index + 1} size="compact" />
-                <span className={cn('min-w-0 text-meta', labelClass(step))}>
-                  {step.label}
-                  {step.detail ? <span className="font-normal text-muted-ink"> · {step.detail}</span> : null}
-                </span>
+    const carded = Boolean(groups) || card === true;
+    const item = (step: Step) => {
+      const index = steps.indexOf(step);
+      const common = { id: `step-${step.key}`, 'data-testid': `${testId}-${step.key}`, 'data-state': step.state, 'aria-current': isCurrent(step) ? ('step' as const) : undefined };
+      if (carded) {
+        // Board 3a: Zeile mit Trenner, Marke oben bündig; rechts Name, Ergebnis und Körper untereinander.
+        return (
+          // Der letzte Schritt der Karte hat keine Unterkante (Designer Runde 6, 15a): Darunter ist der Rand der Karte.
+          <li key={step.key} {...common} className={cn('flex scroll-mt-4 items-start gap-3 py-2.5', index < steps.length - 1 && 'border-b border-line-2')}>
+            <Marker step={step} n={index + 1} size="compact" />
+            <div className="flex min-w-0 flex-1 flex-col gap-1">
+              <div className="flex min-h-5 items-center gap-2.5">
+                <span className={cn('min-w-0 text-body', labelClass(step))}>{step.label}</span>
                 {step.action ? <span className="ml-auto shrink-0 text-meta">{step.action}</span> : null}
               </div>
+              {step.detail ? (
+                <div className="text-meta text-pretty text-muted-ink" data-testid={`${testId}-${step.key}-detail`}>
+                  {step.detail}
+                </div>
+              ) : null}
               {step.state === 'failed' && step.failure ? (
-                <p role="alert" className="pl-7.5 text-hint text-error">
+                <p role="alert" className="text-hint text-error">
                   {step.failure}
                 </p>
               ) : null}
-              {step.below ? <div className="pl-7.5">{step.below}</div> : null}
-            </li>
-          ))}
+              {step.below ? <div className="pt-1.5">{step.below}</div> : null}
+            </div>
+          </li>
+        );
+      }
+      return (
+        <li key={step.key} {...common} className="flex scroll-mt-4 flex-col gap-1.5">
+          <div className="flex min-h-7 items-center gap-2.5">
+            <Marker step={step} n={index + 1} size="compact" />
+            <span className={cn('min-w-0 text-meta', labelClass(step))}>
+              {step.label}
+              {step.detail ? <span className="font-normal text-muted-ink"> · {step.detail}</span> : null}
+            </span>
+            {step.action ? <span className="ml-auto shrink-0 text-meta">{step.action}</span> : null}
+          </div>
+          {step.state === 'failed' && step.failure ? (
+            <p role="alert" className="pl-7.5 text-hint text-error">
+              {step.failure}
+            </p>
+          ) : null}
+          {step.below ? <div className="pl-7.5">{step.below}</div> : null}
+        </li>
+      );
+    };
+    const lists = groups ? (
+      // Board 3a: alle Gruppen in einer Karte (`surface`, Rand `line`, 8/20/12, am Telefon seitlich 16).
+      <div className="flex flex-col rounded-lg border border-line bg-surface px-4 pt-2 pb-3 sm:px-5" data-testid={`${testId}-card`}>
+        {groups.map((group, g) => {
+          const members = steps.filter((s) => group.keys.includes(s.key));
+          const start = members[0] ? steps.indexOf(members[0]) + 1 : 1;
+          return (
+            <div key={group.label} className="flex flex-col">
+              <div className={cn('pb-1.5', g === 0 ? 'pt-3' : 'pt-4')}>
+                <Overline>{group.label}</Overline>
+              </div>
+              <ol aria-label={group.label} start={start > 1 ? start : undefined} className="flex flex-col">
+                {members.map(item)}
+              </ol>
+            </div>
+          );
+        })}
+      </div>
+    ) : card ? (
+      // Runde 6, Antwort 2: dieselbe Karte, eine Liste ohne Etikett darüber.
+      <div className="flex flex-col rounded-lg border border-line bg-surface px-4 pt-2 pb-3 sm:px-5" data-testid={`${testId}-card`}>
+        <ol aria-label={label ?? t('label')} className="flex flex-col">
+          {steps.map(item)}
         </ol>
-        {finished ? <div className="pl-7.5">{finished}</div> : null}
+      </div>
+    ) : (
+      <ol aria-label={label ?? t('label')} className="flex flex-col gap-1.5">
+        {steps.map(item)}
+      </ol>
+    );
+    if (groups) {
+      const grouped = new Set(groups.flatMap((g) => g.keys));
+      const loose = steps.find((s) => !grouped.has(s.key));
+      if (loose) throw new RangeError(loose.key); // ein Schritt ohne Gruppe
+    }
+    const collapsed = allDone && collapsedWhenDone;
+    return (
+      <div className={cn('flex flex-col', carded ? 'gap-4' : 'gap-1.5')} data-testid={testId}>
+        {collapsed ? (
+          <>
+            {finished}
+            <div>
+              <Button type="button" variant="outline" size="sm" aria-expanded={expanded} aria-controls={listId} onClick={() => setExpanded((v) => !v)} data-testid={`${testId}-toggle`}>
+                <ChevronRight className={cn('size-4 transition-transform', expanded && 'rotate-90')} aria-hidden />
+                {collapsedWhenDone.label}
+              </Button>
+            </div>
+            <div id={listId} hidden={!expanded}>
+              {lists}
+            </div>
+          </>
+        ) : (
+          <>
+            {lists}
+            {finished ? <div className={carded ? undefined : 'pl-7.5'}>{finished}</div> : null}
+          </>
+        )}
       </div>
     );
   }

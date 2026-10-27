@@ -153,6 +153,22 @@ export function importedThroughInternal(db: DbOrTx, accountId: string): string |
   return row?.periodTo ?? null;
 }
 
+/**
+ * Der Lauf, dessen Zeitraum den Tag deckt — fertig, nicht verworfen, der jüngste zuerst. Geteilt von der
+ * Kontenabstimmung hier und dem Bericht `accountReconciliation` (der wissen will, ob der Saldo eingegeben wurde).
+ */
+export function coveringRunInternal(db: DbOrTx, accountId: string, date: string): { id: string; periodTo: string | null; closingCents: number | null } | null {
+  return (
+    db
+      .select({ id: financeImportRuns.id, periodTo: financeImportRuns.periodTo, closingCents: financeImportRuns.closingCents })
+      .from(financeImportRuns)
+      .where(and(eq(financeImportRuns.accountId, accountId), isNotNull(financeImportRuns.finishedAt), isNull(financeImportRuns.discardedAt), lte(financeImportRuns.periodFrom, date), gte(financeImportRuns.periodTo, date)))
+      .orderBy(desc(financeImportRuns.startedAt))
+      .limit(1)
+      .get() ?? null
+  );
+}
+
 export interface BankReconciliation {
   state: 'matches' | 'differs' | 'noStatement';
   statementDate: string | null;
@@ -171,21 +187,7 @@ export interface BankReconciliation {
 export function reconcileBankInternal(db: DbOrTx, accountId: string, date: string): BankReconciliation {
   const bookCents = accountBalancesAt(db, date).find((a) => a.accountId === accountId)?.balanceCents ?? 0;
 
-  const covering = db
-    .select({ periodTo: financeImportRuns.periodTo, closingCents: financeImportRuns.closingCents })
-    .from(financeImportRuns)
-    .where(
-      and(
-        eq(financeImportRuns.accountId, accountId),
-        isNotNull(financeImportRuns.finishedAt),
-        isNull(financeImportRuns.discardedAt),
-        lte(financeImportRuns.periodFrom, date),
-        gte(financeImportRuns.periodTo, date),
-      ),
-    )
-    .orderBy(desc(financeImportRuns.startedAt))
-    .limit(1)
-    .get();
+  const covering = coveringRunInternal(db, accountId, date);
 
   if (!covering || covering.closingCents === null) return { state: 'noStatement', statementDate: null, bookCents, statementCents: null, differenceCents: null, basis: 'finalized' };
 

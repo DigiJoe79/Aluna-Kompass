@@ -1,7 +1,7 @@
 import { expect, test } from './fixtures';
 import { associationDay } from './association-day';
 import { callTool, mcpClient, PDF } from './expense-helpers';
-import { loginAsAdmin, resetDatabase, setE2ESetting } from './helpers';
+import { loginAsAdmin, resetDatabase, setE2EDatedValue, setE2ESetting } from './helpers';
 import { story, storyPattern } from './story-year';
 
 /**
@@ -339,7 +339,7 @@ test.describe('finance', () => {
 
   test('die Ansicht nennt die berechnete Umsatzsteuer je Aufteilung, wenn der Verein Unternehmer ist', async ({ page }) => {
     await loginAsAdmin(page);
-    await setE2ESetting(page, 'finance.isEntrepreneurOrHasVatId', true);
+    await setE2EDatedValue(page, 'vatEntrepreneur', '2000-01-01', true);
     try {
       await page.goto('/finance/entries/new?template=expense');
       await page.getByLabel('Text').fill('Testausgabe mit Reverse Charge');
@@ -351,13 +351,13 @@ test.describe('finance', () => {
       await allocationCard.getByRole('button', { name: 'Zeile hinzufügen' }).click();
       await rows.nth(0).getByLabel('Kategorie').selectOption({ label: 'Büro, Porto, Telefon' });
       await rows.nth(0).getByLabel('Betrag').fill('100,00');
-      await rows.nth(0).getByLabel('Umsatzsteuer').selectOption({ label: 'Reverse Charge (§ 13b)' });
+      await rows.nth(0).getByLabel('Umsatzsteuer').selectOption({ label: '§\u00a013b, Leistung aus der EU' });
       await page.getByRole('button', { name: 'Festschreiben', exact: true }).click();
       await page.getByRole('alertdialog').getByRole('button', { name: 'Festschreiben' }).click();
       await expect(page).toHaveURL(/\/finance\/entries\/[0-9A-Z]{26}$/);
-      await expect(page.getByText(/Sie schulden .* Umsatzsteuer \(§ 13b\) — auch als Kleinunternehmer/)).toBeVisible();
+      await expect(page.getByTestId('reverse-charge-line')).toContainText(/Der Verein schuldet .* Umsatzsteuer nach §\s13b, auch als Kleinunternehmer\./);
     } finally {
-      await setE2ESetting(page, 'finance.isEntrepreneurOrHasVatId', false);
+      await setE2EDatedValue(page, 'vatEntrepreneur', '2000-01-01');
     }
   });
 
@@ -504,7 +504,7 @@ test.describe('finance', () => {
 
   test('der Verlauf nennt, über welchen Kanal eine Buchung angelegt und festgeschrieben wurde', async ({ page }) => {
     await loginAsAdmin(page);
-    await openEntry(page, 'Spende Altjahr');
+    await openEntry(page, 'Spende Sommerfest');
     const history = page.locator('section', { has: page.getByRole('heading', { name: 'Verlauf' }) });
     // Der Seed bucht mit Kanal `system` (`bookEntry`: anlegen und festschreiben in einem Zug).
     await expect(history.getByText(/angelegt von .* über System/)).toBeVisible();
@@ -518,7 +518,7 @@ test.describe('finance', () => {
     await page.getByRole('button', { name: 'Korrigieren' }).click();
     await page.getByRole('button').filter({ hasText: 'Wagner' }).click();
     await page.getByRole('checkbox', { name: 'Spender/Empfänger' }).check();
-    await expect(page.getByText('Das ändert die Zuordnung.')).toBeVisible();
+    await expect(page.getByLabel('Begründung')).toBeVisible();
     await page.getByRole('combobox', { name: 'Spender/Empfänger' }).fill('Kruse');
     await page.getByTestId('contact-option').filter({ hasText: 'Kruse' }).click();
     await page.getByLabel('Begründung').fill('Testkorrektur Spender');
@@ -550,7 +550,7 @@ test.describe('finance', () => {
     const dialog = page.getByRole('dialog', { name: 'Was stimmt nicht?' });
     await expect(dialog.getByRole('checkbox', { name: 'Betrag' })).toHaveCount(0);
     await dialog.getByRole('checkbox', { name: 'Projekt' }).check();
-    await expect(dialog.getByText('Das ändert die Zuordnung.')).toBeVisible();
+    await expect(dialog.getByLabel('Begründung')).toBeVisible();
     await expect(dialog.getByRole('button', { name: /Stornieren|zurücknehmen\b/ })).toHaveCount(0);
     // Für Zahlen führt der Satz direkt zu „Zurücknehmen …“ (Joe 2026-10-08, statt der Weiche „Was ist falsch?“).
     await dialog.getByRole('button', { name: 'Zurücknehmen …' }).click();
@@ -565,7 +565,7 @@ test.describe('finance', () => {
     await page.getByRole('button', { name: 'Korrigieren' }).click();
     await page.getByRole('button').filter({ hasText: '100,00' }).click();
     await page.getByRole('checkbox', { name: 'Projekt' }).check();
-    await expect(page.getByText('Das ändert die Zuordnung.')).toBeVisible();
+    await expect(page.getByLabel('Begründung')).toBeVisible();
     await page.getByRole('combobox', { name: 'Projekt' }).selectOption({ index: 1 });
     await page.getByLabel('Begründung').fill('Testkorrektur Projekt der dritten Zeile');
     await page.getByRole('button', { name: 'Zuordnung ändern' }).click();
@@ -604,7 +604,7 @@ test.describe('finance', () => {
 
   test('nach abgegebener Steuererklärung verlangt die Änderung die Kenntnisnahme zu § 153 AO', async ({ page }) => {
     await loginAsAdmin(page);
-    await openEntry(page, 'Bankgebühr Altjahr');
+    await openEntry(page, 'Kontoführung April');
     await page.getByRole('button', { name: 'Korrigieren' }).click();
     await page.getByRole('checkbox', { name: 'wird im Ausland verwendet' }).check();
     await page.getByRole('switch', { name: 'wird im Ausland verwendet' }).click();
@@ -618,7 +618,7 @@ test.describe('finance', () => {
 
   test('im abgeschlossenen Jahr wartet die Änderung auf eine zweite Person, und der Dialog nennt, wer freigeben kann', async ({ page }) => {
     await loginAsAdmin(page);
-    await openEntry(page, 'Büromaterial Altjahr');
+    await openEntry(page, 'Büromaterial Mai');
     await page.getByRole('button', { name: 'Korrigieren' }).click();
     await page.getByRole('checkbox', { name: 'Projekt' }).check();
     await page.getByRole('combobox', { name: 'Projekt' }).selectOption({ index: 1 });
@@ -629,7 +629,7 @@ test.describe('finance', () => {
 
   test('Beleg nachreichen an einer festgeschriebenen Buchung; der Beleg lässt sich ansehen', async ({ page }) => {
     await loginAsAdmin(page);
-    await openEntry(page, 'Spende Altjahr');
+    await openEntry(page, 'Spende Sommerfest');
     await page.getByTestId('voucher-file-input').setInputFiles({ name: 'beleg.pdf', mimeType: 'application/pdf', buffer: samplePdf() });
     await expect(page.getByRole('link', { name: 'öffnen' })).toBeVisible();
     const href = await page.getByRole('link', { name: 'öffnen' }).getAttribute('href');
@@ -655,7 +655,7 @@ test.describe('finance', () => {
     await page.getByLabel('Passwort wiederholen').fill('mira-hat-ein-neues-passwort');
     await page.getByRole('button', { name: 'Passwort setzen und fortfahren' }).click();
     await expect(page).toHaveURL('/');
-    await openEntry(page, 'Spende Altjahr');
+    await openEntry(page, 'Spende Sommerfest');
     await expect(page.getByRole('button', { name: 'Korrigieren' })).toHaveCount(0);
   });
 
@@ -1036,7 +1036,7 @@ test.describe('finance', () => {
     await loginAsAdmin(page);
 
     // Beleg an einer Buchung.
-    await openEntry(page, 'Spende Altjahr');
+    await openEntry(page, 'Spende Sommerfest');
     await page.getByTestId('voucher-file-input').setInputFiles({ name: 'beleg.pdf', mimeType: 'application/pdf', buffer: samplePdf() });
     await expect(page.getByRole('link', { name: 'öffnen' })).toBeVisible();
     const voucherHref = await page.getByRole('link', { name: 'öffnen' }).getAttribute('href');

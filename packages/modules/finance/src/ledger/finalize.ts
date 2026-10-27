@@ -9,17 +9,19 @@ import { boardAllowanceProblemInternal } from './board';
 import { inheritedPurposeReasonOfEntryInternal, inheritedPurposeReasonOfOpenItemsInternal, purposeGoingNegative, purposeNegativeProblemInternal } from './purpose-negative';
 import { firstNegativeCashDay } from './cash-check';
 import { valueAt } from './dated-values';
-import { checkReversal, entryLinesSchema, entryViewInternal, resolveEntryLines, writeLinesInternal, type AllowanceExceededNotice, type EntryNotice, type EntryView } from './entries';
+import { checkReversal, entryLinesSchema, entryViewInternal, resolveEntryLines, writeLinesInternal, partnerPaymentMissingInternal, taxCodesNotOfferedInternal, type AllowanceExceededNotice, type EntryNotice, type EntryView } from './entries';
 import { allowanceCapCents, allowanceTotalCents, overCapCents } from './allowances';
 import { attachRunSummariesInternal, attachSettledItemDocumentsInternal } from './vouchers';
 import { certifiableOutflowInternal } from './not-return';
 import { foreignMoneyOverpaidInternal } from './foreign-money';
 import { allocateEntryNumber, ensureFiscalYearFor, fiscalYearForInternal, fiscalYearStatusInternal } from './fiscal-years';
 import type { TaxCode } from './tax';
+import { vatAmendmentDueForDaysInternal } from './vat-filings';
+import { vatTaxPointOn } from './vat-periods';
 import { recordReturnsInternal } from '../direct-debit/booking';
 import { SETTLEMENT_WARNINGS, type SettlementWarning, type SettlementWarningParams } from './settlement-warnings';
 
-const RATE_REQUIRING_CODES = new Set<TaxCode>(['reduced', 'standard', 'rc13b', 'icAcquisition']);
+const RATE_REQUIRING_CODES = new Set<TaxCode>(['reduced', 'standard', 'rc13bEu', 'rc13bOther', 'icAcquisition']);
 
 /** Ob für das Datum überhaupt gerechnet werden kann — Besteuerungsform und beide Sätze müssen hinterlegt sein. */
 function hasTaxRate(db: DbOrTx, date: string): boolean {
@@ -254,8 +256,16 @@ export function finalizeInternal(tx: DbOrTx, deps: Deps, ctx: CallContext, entry
   if (exceeded.length > 0) notices.push('allowanceExceeded');
   // N2: eine Rückgabe auf einer Spenden-Kategorie ohne Bezug — Hinweis, keine Sperre.
   if (!after.reversesEntryId && certifiableOutflowInternal(tx, entryId, { withoutOrigin: true })) notices.push('returnWithoutOrigin');
+  // N8: dieselbe Regel wie die Frist „Berichtigung“ — ein abgegebener Zeitraum einer Zeile weicht jetzt von der Abgabe ab.
+  const vatDays = after.allocationLines.filter((l) => l.taxCode !== 'none').map((l) => vatTaxPointOn({ taxCode: l.taxCode as TaxCode, entryDate: after.entryDate, serviceDate: l.serviceDate }));
+  if (vatDays.length > 0 && vatAmendmentDueForDaysInternal(tx, vatDays)) notices.push('vatAmendment');
+  // N11 a: ein Kennzeichen vom Entwurf, das der Buchungstag nicht mehr anbietet — Hinweis, keine Sperre.
+  const notOffered = after.reversesEntryId ? [] : taxCodesNotOfferedInternal(tx, after);
+  if (notOffered.length > 0) notices.push('taxCodeNotOffered');
+  // N20: Mittel an Partner ohne Zahlung an Partner — kein Verwendungsnachweis verfolgt. Hinweis, keine Sperre.
+  if (!after.reversesEntryId && partnerPaymentMissingInternal(tx, entryId)) notices.push('partnerPaymentMissing');
   financeAudit(tx, deps, ctx, { action: 'finance.entry.finalize', entity: 'financeEntry', id: entryId, after: { ...auditFields(after, ctx), ...(acknowledged.length > 0 ? { acknowledgedWarnings: acknowledged } : {}) }, params: { number } });
-  return ok(notices.length > 0 ? { ...after, notices, ...(exceeded.length > 0 ? { allowanceExceeded: exceeded } : {}) } : after);
+  return ok(notices.length > 0 ? { ...after, notices, ...(exceeded.length > 0 ? { allowanceExceeded: exceeded } : {}), ...(notOffered.length > 0 ? { taxCodeNotOffered: notOffered } : {}) } : after);
 }
 
 /** Befund AH für einen gespeicherten Entwurf: die Lage am Buchungstag, mit der am Entwurf gespeicherten Begründung. Nie für eine Rücknahme. */

@@ -18,6 +18,7 @@ import { evidenceKindLabelKey, missingEvidence, type EvidenceKind, type PartnerB
 import { approvePartnerPaymentAction, rejectPartnerPaymentAction } from '../partners/actions';
 import { RejectDialog } from './reject-dialog';
 import { Section } from '@/components/section';
+import { FormCard, FormCardBody } from '@/components/forms/form-card';
 
 interface EvidenceRow { kind: string; documentId: string | null; foreignLanguage: boolean; explanationDe: string | null; coveredCents: number | null }
 
@@ -124,16 +125,24 @@ export function PartnerPaymentDetail({ payment, creatorName, evidence, nextHref 
     router.refresh();
   };
 
+  // Designer Runde 8, Frage 3.1 (wie 17b): eine Karte mit Zeilen statt einer Karte je Nachweis; die Zählung steht im
+  // Kopf, der Hinweis als Unterzeile.
+  const doneCount = items.filter((i) => i.done).length;
   const requirements = (
-    <div data-testid="partner-payment-requirements">
-      <Section title={tPartner('requiredEvidence.title')}>
-        <div className="space-y-2">
-          <RequirementList items={items} />
-          <p className="text-hint text-muted-ink">{basis === 'agent57' ? tPartner('requiredEvidence.agentNote') : tPartner('requiredEvidence.foreignNote')}</p>
+    <FormCard as="section" data-testid="partner-payment-requirements">
+      <FormCardBody>
+      <Section
+        title={tPartner('requiredEvidence.title')}
+        intro={basis === 'agent57' ? tPartner('requiredEvidence.agentNote') : tPartner('requiredEvidence.foreignNote')}
+        actions={<span className="text-meta text-muted-ink">{tPartner('evidence.count', { done: doneCount, total: items.length, complete: doneCount === items.length ? 'yes' : 'no', extra: 0 })}</span>}
+      >
+        <div className="space-y-3">
+          <RequirementList variant="rows" items={items} />
           <PartnerReasonPrompt needs={reasonNeeds} noticeReason={noticeReason} overdueReason={overdueReason} onNoticeReason={setNoticeReason} onOverdueReason={setOverdueReason} noticeValidUntil={payment.reasonsNeeded.noticeValidUntil} purposeReason={purposeReason} onPurposeReason={setPurposeReason} purposeDetail={purposeDetail ?? t('purposeReason.hint')} />
         </div>
       </Section>
-    </div>
+      </FormCardBody>
+    </FormCard>
   );
 
   const footer: ApprovalFooter = {

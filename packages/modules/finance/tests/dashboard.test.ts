@@ -51,9 +51,9 @@ function tileByKey(key: string) {
 describe('finance dashboard tiles', () => {
   // Schlüssel, Rechte des Moduls, Form und Art prüft `defineModule` für jede Kachel (core/tests/dashboard-manifest);
   // Finanzen legen jede Kachel unter genau ein Recht, nie unter eine Liste, von der eines genügt.
-  it('puts each tile under exactly one permission', () => {
+  it('puts each tile under exactly one permission — the audit tile under „read or audit“ (Rechenschaft D1, Kassenprüfer)', () => {
     expect(FINANCE_DASHBOARD_TILES.length).toBeGreaterThan(10);
-    expect(FINANCE_DASHBOARD_TILES.filter((t) => typeof t.permission !== 'string').map((t) => t.key)).toEqual([]);
+    expect(FINANCE_DASHBOARD_TILES.filter((t) => typeof t.permission !== 'string').map((t) => t.key)).toEqual(['audit']);
   });
 
   it('lists only lines that have something to do, each with the link to its filter', async () => {

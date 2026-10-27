@@ -20,6 +20,40 @@ describe('Unternavigation Finanzen', () => {
       ['Spenden', ['/finance/donations', '/finance/donations/run', '/finance/donations/book', '/finance/donations/notices']],
       ['Auslagen', ['/finance/expenses', '/finance/approvals']],
       ['Beteiligte', ['/finance/partners', '/finance/people']],
+      ['Rechenschaft', ['/finance/closing', '/finance/audit', '/finance/reports', '/finance/other-assets', '/finance/tax', '/finance/deadlines', '/finance/fund-use']],
+    ]);
+  });
+
+  it('„Kassenprüfung“ vor „Berichte“ mit finance.read oder finance.audit — Prüfer sehen die Navigation nach ihren Rechten (Nachtrag Prüferzugang)', () => {
+    const accountability = (permissions: string[]) =>
+      buildNavigation({ manifests: [coreModule, financeModule], enabledKeys: new Set(['core', 'finance']), permissions: new Set(permissions) })
+        .flatMap((g) => g.items)
+        .filter((i) => i.section === 'finance.accountability' && i.visible)
+        .map((i) => i.href);
+    expect(accountability(['finance.audit'])).toEqual(['/finance/audit', '/finance/reports']);
+    expect(accountability(['finance.read', 'finance.overview', 'finance.audit'])).toEqual(['/finance/closing', '/finance/audit', '/finance/reports', '/finance/other-assets', '/finance/tax', '/finance/deadlines', '/finance/fund-use']);
+    // Steuererklärung nur mit Leserecht, Prüfer sehen sie nicht (Rechenschaft D2 Task 9).
+    expect(accountability(['finance.audit'])).not.toContain('/finance/tax');
+    expect(accountability(['finance.overview'])).not.toContain('/finance/tax');
+    expect(accountability(['finance.overview'])).not.toContain('/finance/audit');
+    // Jahresabschluss nur mit Leserecht (Review Focus 1); Fristen und Schwellen schon mit dem Überblick.
+    expect(accountability(['finance.overview'])).not.toContain('/finance/closing');
+    expect(accountability(['finance.overview'])).toContain('/finance/deadlines');
+  });
+
+  it('„Rechenschaft“: Berichte und Mittelverwendung (später) für Lesende mit und ohne Namen (Spec § Navigation, N1)', () => {
+    const items = buildNavigation({ manifests: [coreModule, financeModule], enabledKeys: new Set(['core', 'finance']), permissions: new Set(['finance.overview']) })
+      .flatMap((g) => g.items)
+      .filter((i) => i.section === 'finance.accountability');
+    expect(items.map((i) => [i.href, i.permission, i.later ?? false, i.visible])).toEqual([
+      ['/finance/closing', 'finance.read', false, false],
+      ['/finance/audit', ['finance.read', 'finance.audit'], false, false],
+      ['/finance/reports', ['finance.read', 'finance.overview', 'finance.audit'], false, true],
+      ['/finance/other-assets', ['finance.read', 'finance.overview'], false, true],
+      ['/finance/tax', 'finance.read', false, false],
+      ['/finance/vat', [], false, false],
+      ['/finance/deadlines', ['finance.read', 'finance.overview'], false, true],
+      ['/finance/fund-use', ['finance.read', 'finance.overview'], true, true],
     ]);
   });
 
@@ -30,6 +64,7 @@ describe('Unternavigation Finanzen', () => {
     expect(at(['finance.overview', 'finance.expensesSubmit'], '/finance/expenses')).toEqual([
       ['finance.allocation', ['finance.purposes']],
       ['finance.expenses', ['finance.expenses']],
+      ['finance.accountability', ['finance.reports', 'finance.otherAssets', 'finance.deadlines', 'finance.fundUse']],
     ]);
   });
 
@@ -47,5 +82,21 @@ describe('Unternavigation Finanzen', () => {
     expect(entries(['finance.read'], false)).toEqual(['/finance/entries', '/finance/open-items', '/finance/accounts', '/finance/cash']);
     expect(entries(['finance.read', 'finance.directDebit'], false)).toEqual(['/finance/entries', '/finance/open-items', '/finance/direct-debit', '/finance/accounts', '/finance/cash']);
     expect(entries(['finance.read'], true)).toEqual(['/finance/entries', '/finance/open-items', '/finance/direct-debit', '/finance/accounts', '/finance/cash']);
+  });
+
+  it('„Umsatzsteuer“ nach „Steuererklärung“ nur, wenn der Verein Unternehmer ist (Plan E6b Task 8)', () => {
+    const accountability = (entrepreneur: boolean) =>
+      sectionsFor(
+        buildNavigation({
+          manifests: [coreModule, financeModule],
+          enabledKeys: new Set(['core', 'finance']),
+          permissions: new Set(['finance.read']),
+          extraItems: entrepreneur ? { finance: [{ key: 'finance.vat', href: '/finance/vat', icon: 'euro', group: 'finance', section: 'finance.accountability', permission: 'finance.read' }] } : {},
+        }),
+        '/finance/tax',
+      ).find((s) => s.key === 'finance.accountability')!.items.map((i) => i.href);
+    expect(accountability(false)).not.toContain('/finance/vat');
+    const withVat = accountability(true);
+    expect(withVat.indexOf('/finance/vat')).toBe(withVat.indexOf('/finance/tax') + 1);
   });
 });

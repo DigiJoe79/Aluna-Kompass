@@ -3,7 +3,6 @@
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { toast } from 'sonner';
 import { FormActionBar } from '@/components/forms/form-action-bar';
 import { FormCard, FormCardBody } from '@/components/forms/form-card';
 import { FormField } from '@/components/forms/form-field';
@@ -63,7 +62,6 @@ export function DirectDebitPanel({ values, accounts, organizationName }: { value
     );
     setPending(false);
     if (result.status !== 'success') return;
-    toast.success(result.message);
     router.refresh();
   };
 

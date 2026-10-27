@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { CORE_PERMISSIONS } from '../src/permissions/core';
 import { auditLog } from '../src/db/schema';
 import { countActiveProtectedHolders, getEffectivePermissions } from '../src/roles/effective';
-import { assignRole, createRole, listRoles, removeRole, setRolePermissions, updateRole } from '../src/roles/service';
+import { assignRole, createRole, listRoles, removeRole, removeRoleInternal, setRolePermissions, updateRole } from '../src/roles/service';
 import { unwrap } from '../src/result';
 import { auditEntry, createTestDeps, ctxWith, insertRole, insertUser } from '../src/testing';
 
@@ -98,6 +98,27 @@ describe('roles service', () => {
     const second = insertUser(deps, { email: 'jonas@example.org' });
     unwrap(await assignRole(deps, admin, { userId: second, roleId: adminRoleId }));
     expect((await removeRole(deps, admin, { userId: only, roleId: adminRoleId })).ok).toBe(true);
+  });
+
+  it('removeRoleInternal takes exactly one role without users.manage, but keeps the last administrator', async () => {
+    const deps = createTestDeps();
+    const userId = insertUser(deps, { email: 'pia@example.org' });
+    const a = unwrap(await createRole(deps, admin, { name: 'A' }));
+    const b = unwrap(await createRole(deps, admin, { name: 'B' }));
+    unwrap(await setRolePermissions(deps, admin, { roleId: a.id, permissionKeys: ['audit.view'] }));
+    unwrap(await setRolePermissions(deps, admin, { roleId: b.id, permissionKeys: ['documents.export'] }));
+    unwrap(await assignRole(deps, admin, { userId, roleId: a.id }));
+    unwrap(await assignRole(deps, admin, { userId, roleId: b.id }));
+    const caller = ctxWith(['audit.view']);
+    unwrap(deps.db.transaction((tx) => removeRoleInternal(tx, deps, caller, { userId, roleId: b.id })));
+    expect([...getEffectivePermissions(deps.db, deps.registry, userId)]).toEqual(['audit.view']);
+    expect(auditEntry(deps, 'users.removeRole')).toMatchObject({ entityType: 'user', entityId: userId });
+
+    const only = insertUser(deps, { email: 'ole@example.org' });
+    const adminRoleId = insertRole(deps, { name: 'Administration', isProtected: true });
+    unwrap(await assignRole(deps, admin, { userId: only, roleId: adminRoleId }));
+    const refused = deps.db.transaction((tx) => removeRoleInternal(tx, deps, caller, { userId: only, roleId: adminRoleId }));
+    expect(refused.ok === false && refused.error.type === 'conflict' && refused.error.code === 'lastAdministrator').toBe(true);
   });
 
   it('lists roles with permission keys and user counts for users.manage or roles.manage', async () => {

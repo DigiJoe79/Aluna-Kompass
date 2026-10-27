@@ -5,7 +5,6 @@ import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { toast } from 'sonner';
 import { ContactPicker, type PickedContact } from '@/components/contact-picker';
 import { AmountField } from '@/components/finance/amount-field';
 import { FixedValue } from '@/components/fixed-value';
@@ -111,7 +110,6 @@ export function PledgeForm({ initial, bindings, canEdit }: { initial: PledgeForm
     );
     setPending(false);
     if (result.status !== 'success') return;
-    toast.success(result.message);
     if (create) router.push(`/finance/direct-debit/pledges/${(result.data as { id: string }).id}`);
     else router.refresh();
   };

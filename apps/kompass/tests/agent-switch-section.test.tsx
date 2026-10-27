@@ -50,7 +50,7 @@ const DMS_LABEL = 'Darf ein Agent Dokumente per E-Mail senden?';
 function renderTax(agent = false) {
   wrap(
     <TaxPanel
-      switches={{ isEntrepreneurOrHasVatId: false, membershipFeesCertifiable: false, expenseWaiversEnabled: false, mcpHumanOnlyAllowed: agent }}
+      switches={{ membershipFeesCertifiable: false, expenseWaiversEnabled: false, mcpHumanOnlyAllowed: agent }}
       limits={{ statementSufficesBelowCents: 30000, cashDonationAlertCents: 100000, roundAmountFromCents: 50000, proofGraceDays: 30 }}
       confirmedAt={null}
       waiverBasisText=""

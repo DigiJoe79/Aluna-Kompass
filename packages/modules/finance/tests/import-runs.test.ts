@@ -11,7 +11,7 @@ import { createAccount, setAccountActive } from '../src/ledger/accounts';
 import { discardRun } from '../src/import/discard';
 import { getImportRun, importStatement, listImportRuns, setRunClosingBalance } from '../src/import/runs';
 import { financeAccounts, financeImportRuns, financeRawTransactions, financeImportCandidates } from '../src/schema';
-import { setupFinance } from './helpers';
+import { insertRun, setupFinance } from './helpers';
 
 const FIXTURES = path.resolve(import.meta.dirname, 'fixtures/camt');
 const bytes = (name: string) => new Uint8Array(readFileSync(path.join(FIXTURES, name)));
@@ -163,6 +163,14 @@ describe('importStatement', () => {
     const gapped = unwrap(await importStatement(f.deps, f.ctx, { accountId: f.account.id, fileName: 'mai.xml', bytes: bytes('luecke.xml') }));
     expect(gapped.runs[0]!.gap).toEqual({ from: '2026-03-31', to: '2026-05-01' });
     expect(gapped.runs[0]!.state).toBe('finished');
+  });
+
+  it('checks the gap against the latest run when several end on the same day (Test-Abnahme 2026-10-27)', async () => {
+    const f = await importFixture();
+    insertRun(f, f.account.id, { periodFrom: '2026-03-01', periodTo: '2026-04-28', closingCents: 115300, startedAt: '2026-04-28T09:00:00.000Z' });
+    insertRun(f, f.account.id, { periodFrom: '2026-03-01', periodTo: '2026-04-28', closingCents: 200000, startedAt: '2026-04-28T14:00:00.000Z' });
+    const next = unwrap(await importStatement(f.deps, f.ctx, { accountId: f.account.id, fileName: 'mai.xml', bytes: bytes('luecke.xml') }));
+    expect(next.runs[0]!.gap).toBeNull();
   });
 
   it('writes nothing but a failed run as a fact when a line is unreadable, and never touches the file store', async () => {

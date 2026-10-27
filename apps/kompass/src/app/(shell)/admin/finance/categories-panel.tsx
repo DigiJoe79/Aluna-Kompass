@@ -26,6 +26,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useDateFormat } from '@/components/date-format-provider';
 import { Section } from '@/components/section';
 import { RowMenu } from '@/components/row-menu';
+import { TAX_CODES } from '@kompass/module-finance/codes';
 
 export interface CategoryRow {
   id: string;
@@ -43,6 +44,8 @@ export interface CategoryRow {
   inputTaxDeductible: string;
   countsTowardTurnover: boolean;
   isAssetSale: boolean;
+  /** Rechenschaft C: was die Freigrenze § 64 Abs. 3 AO nicht mitzählt (AEAO zu § 64 Nr. 17). */
+  thresholdExclusion: 'none' | 'notPerformance' | 'taxRefund';
   externalAccountNumber: string | null;
   isActive: boolean;
 }
@@ -51,8 +54,8 @@ const SPHERES = ['ideal', 'assetManagement', 'purposeOperation', 'business'] as 
 const INCOME_KINDS = ['donation', 'membershipFee', 'inKindDonation', 'expenseWaiver', 'bodyGrant', 'publicGrant', 'courtFine', 'sponsoring', 'sales', 'fees', 'interest', 'inheritance', 'other'] as const;
 const COST_FUNCTIONS = ['program', 'administration', 'fundraising'] as const;
 const ALLOWANCE_KINDS = ['none', 'volunteer', 'trainer'] as const;
-const TAX_CODES = ['none', 'exemptCounted', 'exemptNotCounted', 'reduced', 'standard', 'rc13b', 'icAcquisition'] as const;
 const INPUT_TAX = ['no', 'yes', 'partial'] as const;
+const THRESHOLD_EXCLUSIONS = ['none', 'notPerformance', 'taxRefund'] as const;
 
 /** H3 — gruppiert nach steuerlichem Bereich; Regelverstöße am Feld, „Erweitert“ als Disclosure. */
 export function CategoriesPanel({ categories, confirmedAt }: { categories: CategoryRow[]; confirmedAt: string | null }) {
@@ -195,6 +198,7 @@ function CategoryDialog({ category, onClose, onSaved }: { category: CategoryRow 
   const [inputTaxDeductible, setInputTaxDeductible] = useState(category?.inputTaxDeductible ?? 'no');
   const [countsTowardTurnover, setCountsTowardTurnover] = useState(category?.countsTowardTurnover ?? false);
   const [isAssetSale, setIsAssetSale] = useState(category?.isAssetSale ?? false);
+  const [thresholdExclusion, setThresholdExclusion] = useState<CategoryRow['thresholdExclusion']>(category?.thresholdExclusion ?? 'none');
   const [externalAccountNumber, setExternalAccountNumber] = useState(category?.externalAccountNumber ?? '');
   const [pending, setPending] = useState(false);
   const feedback = useActionFeedback();
@@ -218,6 +222,7 @@ function CategoryDialog({ category, onClose, onSaved }: { category: CategoryRow 
       inputTaxDeductible,
       countsTowardTurnover,
       isAssetSale,
+      thresholdExclusion,
       externalAccountNumber: externalAccountNumber || null,
       isActive,
     };
@@ -344,12 +349,21 @@ function CategoryDialog({ category, onClose, onSaved }: { category: CategoryRow 
                   <FormField id="cat-asset-sale" label={t('isAssetSale')} toggle>
                     <Checkbox id="cat-asset-sale" checked={isAssetSale} onCheckedChange={(checked) => setIsAssetSale(checked)} />
                   </FormField>
+                  <FormField id="cat-threshold" label={t('thresholdExclusion')} hint={t('thresholdExclusionHint')} error={fieldErrors.thresholdExclusion} size="m">
+                    <Select id="cat-threshold" value={thresholdExclusion} onChange={(e) => setThresholdExclusion(e.target.value as CategoryRow['thresholdExclusion'])}>
+                      {THRESHOLD_EXCLUSIONS.map((v) => (
+                        <option key={v} value={v}>
+                          {t(`thresholdExclusions.${v}`)}
+                        </option>
+                      ))}
+                    </Select>
+                  </FormField>
                 </FormGrid>
               </div>
             </Disclosure>
           </div>
         </DialogBody>
-        <FormActionBar placement="dialog" cancel={onClose} pending={pending} saveDisabled={!name || (!category && !key)} saveLabel={tCommon('save')} onSave={() => void submit()} state={withUnplacedFieldErrors(feedback.state, ['sphere', 'incomeKind', 'costFunction'])} />
+        <FormActionBar placement="dialog" cancel={onClose} pending={pending} saveDisabled={!name || (!category && !key)} saveLabel={tCommon('save')} onSave={() => void submit()} state={withUnplacedFieldErrors(feedback.state, ['sphere', 'incomeKind', 'costFunction', 'thresholdExclusion'])} />
       </DialogContent>
     </Dialog>
   );

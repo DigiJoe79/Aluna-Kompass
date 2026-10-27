@@ -3,6 +3,7 @@ import { contacts, displayName } from '@kompass/module-contacts';
 import { getDocumentRecord } from '@kompass/module-dms';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
+import { contactTaxDetailsInternal, type ContactTaxDetails } from './contact-tax-details';
 import { financeAudit } from '../audit';
 import { financeConflict } from '../errors';
 import { requireFinanceRead } from '../ledger/access';
@@ -45,6 +46,8 @@ export interface PartnerView extends FinancePartnerProfileRow {
   /** Davon über die Frist samt Kulanz (`finance.proofGraceDays`) hinaus. */
   overdueProofCount: number;
   lastPaidOn: string | null;
+  /** Rechenschaft D2: Finanzamt, Steuernummer und begünstigter Zweck des Kontakts (Anlage Gem Zeile 65), oder `null`. */
+  taxDetails: ContactTaxDetails | null;
 }
 
 function contactRow(db: DbOrTx, contactId: string) {
@@ -54,7 +57,7 @@ function contactRow(db: DbOrTx, contactId: string) {
 function toPartnerView(deps: Deps, db: DbOrTx, row: FinancePartnerProfileRow): PartnerView {
   const contact = contactRow(db, row.contactId)!;
   const stats = partnerProofStatsInternal(db, row.id, todayIn(deps), readSetting<number>(deps, 'finance.proofGraceDays'));
-  return { ...row, contactName: displayName(contact), contactKind: contact.kind, contactLegalForm: contact.kind === 'organization' ? contact.legalForm : null, basisDerived: derivedBasis(row.status) !== null, ...stats };
+  return { ...row, contactName: displayName(contact), contactKind: contact.kind, contactLegalForm: contact.kind === 'organization' ? contact.legalForm : null, basisDerived: derivedBasis(row.status) !== null, ...stats, taxDetails: contactTaxDetailsInternal(db, row.contactId) };
 }
 
 const auditFields = (row: FinancePartnerProfileRow) => ({ status: row.status, usualBasis: row.usualBasis, usualProofMonths: row.usualProofMonths, isActive: row.isActive });

@@ -1,5 +1,6 @@
 'use client';
 
+import type { VatLineContext } from '@/lib/finance/reverse-charge-text';
 import { useTranslations } from 'next-intl';
 import type { MutableRefObject } from 'react';
 import type { RawTransactionView, SuggestionView } from '@kompass/module-finance';
@@ -23,6 +24,8 @@ export interface WorkDetailData {
         extraLineTexts: string[];
         /** Die Werte der Probleme, schon formatiert (Tag des Einzugs, Betrag der Überzahlung — Plan N1 Task 2). */
         problemValues: Partial<Record<SuggestionView['problems'][number], Record<string, string | number>>>;
+        /** Hinweis `ruleTaxCodeNotOffered` als Satz mit Regel und Kennzeichen (Befund 40, Frage 3), sonst `null`. */
+        ruleTaxCodeHint: string | null;
       })
     | null;
   contactNames: Record<string, string>;
@@ -41,6 +44,8 @@ export interface WorkFormOptions {
   projects: SplitRowOption[];
   taxCodeOptions: string[];
   showTax: boolean;
+  /** E6a Task 11c: für den Satz zur Steuer bei § 13b/Erwerb. */
+  vatContext?: VatLineContext;
   /** Auswahllisten des Regel-Dialogs. */
   rule: RuleDialogOptions;
   /** Die Arten aus `finance.voucherTypes` mit ihrem Namen. */

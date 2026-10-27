@@ -128,6 +128,13 @@ type BaseProps = {
    */
   variant?: 'wizard';
   wizard?: { step: number; total: number; onBack: () => void };
+  /**
+   * `plain` (Designer Runde 6, vorläufig, Joe 2026-10-25): die Leiste am Ende eines Schritts in `Steps compact`, ohne
+   * eigene Karte — ohne Rand und Fläche, nur eine Trennlinie darüber, klebt nicht. Links „Speichern“ (mit „Verwerfen“
+   * und Zähler), rechts `extraActions` (Übergabeprotokoll: „Zum Unterschreiben drucken“, „Scan ablegen …“). Nur im
+   * Schritt nutzen.
+   */
+  surface?: 'plain';
 };
 
 /**
@@ -190,8 +197,10 @@ export function FormActionBar({
   hideDiscard = false,
   variant,
   wizard: wizardProp,
+  surface,
   recordAction,
 }: FormActionBarProps) {
+  const plain = surface === 'plain';
   const wizard = variant === 'wizard' ? wizardProp : undefined;
   const t = useTranslations('common');
   const anchor = useRef<HTMLDivElement>(null);
@@ -246,7 +255,7 @@ export function FormActionBar({
   // Klebt sie? Die Marke am Ende der `FormCard` sagt es: Liegt sie unter dem Fenster, steht die Leiste am unteren
   // Rand statt an ihrem Platz. Ob sie überhaupt klebt (ab 640 × 600 px), entscheidet die Variante `stickybar` im CSS.
   useEffect(() => {
-    if (placement !== 'page' || typeof IntersectionObserver === 'undefined') return;
+    if (placement !== 'page' || plain || typeof IntersectionObserver === 'undefined') return;
     const card = anchor.current?.closest('[data-slot="form-card"]');
     const end = card ? Array.from(card.children).find((el) => el instanceof HTMLElement && el.dataset.slot === 'form-card-end') : undefined;
     if (!end) return;
@@ -265,7 +274,7 @@ export function FormActionBar({
     );
     observer.observe(end);
     return () => observer.disconnect();
-  }, [placement]);
+  }, [placement, plain]);
 
   useEffect(() => {
     if (!guarded) return;
@@ -430,6 +439,53 @@ export function FormActionBar({
     main ?? legend
   );
 
+  const discardButton = !showDiscard ? null : (
+    <Button
+      type="button"
+      variant="ghost"
+      className={cn(!plain && 'max-sm:order-3', !plain && lone && 'max-sm:col-span-2')}
+      onClick={() => (onDiscard ? onDiscard() : reload())}
+    >
+      {t('discard')}
+    </Button>
+  );
+  const saveClass = plain ? undefined : 'max-sm:order-1 max-sm:col-span-2';
+  // Im Schritt (Designer Runde 6, 15a): ohne Änderung `outline` und gesperrt — dann trägt eine Handlung des Schritts
+  // (`extraActions`) die Hauptsache, und es gibt nie zwei primäre Knöpfe.
+  const plainIdle = plain && changed === 0;
+  const saveButton = onSave ? (
+    <Button
+      type="button"
+      variant={destructive ? 'destructive' : plainIdle ? 'outline' : 'default'}
+      className={saveClass}
+      disabled={pending || saveDisabled || plainIdle}
+      aria-busy={pending}
+      data-testid={saveTestId}
+      onClick={() => {
+        if (blocks) return setNothing(true);
+        onSave();
+      }}
+    >
+      {(changed > 0 ? saveLabelChanged : undefined) ?? saveLabel ?? t('save')}
+    </Button>
+  ) : (
+    <SubmitButton
+      disabled={saveDisabled}
+      name={saveName}
+      value={saveValue}
+      variant={destructive ? 'destructive' : 'default'}
+      className={saveClass}
+      data-testid={saveTestId}
+      onClick={(event) => {
+        if (!blocks) return;
+        event.preventDefault();
+        setNothing(true);
+      }}
+    >
+      {(changed > 0 ? saveLabelChanged : undefined) ?? saveLabel ?? t('save')}
+    </SubmitButton>
+  );
+
   return (
     // `px-5` wie das Polster von Formularkarte und Dialog (20 px, docs/MUSTER.md § I): Zähler und „Speichern“
     // stehen bündig mit den Feldern darüber. Auf einer Seite klebt sie erst ab 640 × 600 px (`stickybar`, MUSTER
@@ -442,9 +498,10 @@ export function FormActionBar({
       data-placement={placement}
       data-testid={testId}
       data-stuck={placement === 'page' && stuck ? '' : undefined}
+      data-surface={surface}
       className={cn(
-        'border-t border-line bg-surface-2 px-5 py-3',
-        placement === 'page' ? "rounded-b-lg stickybar:sticky stickybar:bottom-[calc(var(--shell-pad,0px)*-1)] stickybar:data-[stuck]:rounded-b-none stickybar:data-[stuck]:before:pointer-events-none stickybar:data-[stuck]:before:absolute stickybar:data-[stuck]:before:inset-x-0 stickybar:data-[stuck]:before:bottom-full stickybar:data-[stuck]:before:h-6 stickybar:data-[stuck]:before:bg-linear-to-b stickybar:data-[stuck]:before:from-transparent stickybar:data-[stuck]:before:to-surface stickybar:data-[stuck]:before:content-['']" : 'mx-[calc(var(--dialog-pad,0px)*-1)] mb-[calc(var(--dialog-pad,0px)*-1)] rounded-b-xl',
+        plain ? 'border-t border-line-2 pt-3' : 'border-t border-line bg-surface-2 px-5 py-3',
+        plain ? undefined : placement === 'page' ? "rounded-b-lg stickybar:sticky stickybar:bottom-[calc(var(--shell-pad,0px)*-1)] stickybar:data-[stuck]:rounded-b-none stickybar:data-[stuck]:before:pointer-events-none stickybar:data-[stuck]:before:absolute stickybar:data-[stuck]:before:inset-x-0 stickybar:data-[stuck]:before:bottom-full stickybar:data-[stuck]:before:h-6 stickybar:data-[stuck]:before:bg-linear-to-b stickybar:data-[stuck]:before:from-transparent stickybar:data-[stuck]:before:to-surface stickybar:data-[stuck]:before:content-['']" : 'mx-[calc(var(--dialog-pad,0px)*-1)] mb-[calc(var(--dialog-pad,0px)*-1)] rounded-b-xl',
       )}
     >
       {compare ? (
@@ -464,91 +521,61 @@ export function FormActionBar({
           <RefusalNotice state={shownState} />
         </div>
       ) : null}
-      <div className="flex items-center gap-3 max-sm:flex-col max-sm:items-stretch">
-        {recordActions.length > 0 ? (
-          // Telefon: die Aktion als letzte Zeile, durch Leerraum von den Knöpfen abgesetzt (Board § K, Ziel 3b).
-          <div className="max-sm:order-last max-sm:mt-3">
-            <RecordActions actions={recordActions} single="button" />
-          </div>
-        ) : null}
-        {wizard ? (
-          <Button
-            type="button"
-            variant="outline"
-            className={cn('max-sm:order-last', wizard.step <= 1 && 'invisible')}
-            aria-hidden={wizard.step <= 1 || undefined}
-            tabIndex={wizard.step <= 1 ? -1 : undefined}
-            onClick={wizard.onBack}
-          >
-            {t('wizardBack')}
-          </Button>
-        ) : null}
-        {line}
-        {/*
-          Telefon (Designer 2026-10-08): „Speichern“ über die volle Breite zuerst, weitere Speicherwege darunter,
-          dann „Verwerfen“ und „Abbrechen“ nebeneinander — steht nur einer da, nimmt er die Zeile.
-        */}
-        <div className="ml-auto flex items-center gap-2 max-sm:ml-0 max-sm:grid max-sm:grid-cols-2 max-sm:[&>*]:w-full">
-          {extraActions ? <div className="contents max-sm:[&>*]:order-2 max-sm:[&>*]:col-span-2 max-sm:[&>*]:w-full">{extraActions}</div> : null}
-          {cancel ? (
-            <Button type="button" variant="ghost" className={cn('max-sm:order-4', lone && 'max-sm:col-span-2')} onClick={cancel}>
-              {t('cancel')}
-            </Button>
-          ) : back ? (
-            <Link href={back.href} className={cn(buttonVariants({ variant: 'ghost' }), 'max-sm:order-4', lone && 'max-sm:col-span-2')}>
-              {t('cancel')}
-            </Link>
-          ) : null}
-          {/*
-            Im Dialog gibt es kein „Verwerfen“: Dort wirft „Abbrechen“ ohnehin
-            alles weg, und derselbe Vorgang unter zweitem Namen ist ein Weg zu
-            viel. Auf Seiten sind die beiden verschiedene Dinge — das eine nimmt
-            die Eingaben zurück, das andere führt weg.
-          */}
-          {!showDiscard ? null : (
-            <Button
-              type="button"
-              variant="ghost"
-              className={cn('max-sm:order-3', lone && 'max-sm:col-span-2')}
-              onClick={() => (onDiscard ? onDiscard() : reload())}
-            >
-              {t('discard')}
-            </Button>
-          )}
-          {onSave ? (
-            <Button
-              type="button"
-              variant={destructive ? 'destructive' : 'default'}
-              className="max-sm:order-1 max-sm:col-span-2"
-              disabled={pending || saveDisabled}
-              aria-busy={pending}
-              data-testid={saveTestId}
-              onClick={() => {
-                if (blocks) return setNothing(true);
-                onSave();
-              }}
-            >
-              {(changed > 0 ? saveLabelChanged : undefined) ?? saveLabel ?? t('save')}
-            </Button>
-          ) : (
-            <SubmitButton
-              disabled={saveDisabled}
-              name={saveName}
-              value={saveValue}
-              variant={destructive ? 'destructive' : 'default'}
-              className="max-sm:order-1 max-sm:col-span-2"
-              data-testid={saveTestId}
-              onClick={(event) => {
-                if (!blocks) return;
-                event.preventDefault();
-                setNothing(true);
-              }}
-            >
-              {(changed > 0 ? saveLabelChanged : undefined) ?? saveLabel ?? t('save')}
-            </SubmitButton>
-          )}
+      {plain ? (
+        // Runde 6: links „Speichern“, „Verwerfen“ und Zähler, rechts die Handlungen des Schritts; bricht als Ganzes um.
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+          {saveButton}
+          {discardButton}
+          {line}
+          {extraActions ? <div className="ml-auto flex flex-wrap items-center gap-2.5">{extraActions}</div> : null}
         </div>
-      </div>
+      ) : (
+        <div className="flex items-center gap-3 max-sm:flex-col max-sm:items-stretch">
+          {recordActions.length > 0 ? (
+            // Telefon: die Aktion als letzte Zeile, durch Leerraum von den Knöpfen abgesetzt (Board § K, Ziel 3b).
+            <div className="max-sm:order-last max-sm:mt-3">
+              <RecordActions actions={recordActions} single="button" />
+            </div>
+          ) : null}
+          {wizard ? (
+            <Button
+              type="button"
+              variant="outline"
+              className={cn('max-sm:order-last', wizard.step <= 1 && 'invisible')}
+              aria-hidden={wizard.step <= 1 || undefined}
+              tabIndex={wizard.step <= 1 ? -1 : undefined}
+              onClick={wizard.onBack}
+            >
+              {t('wizardBack')}
+            </Button>
+          ) : null}
+          {line}
+          {/*
+            Telefon (Designer 2026-10-08): „Speichern“ über die volle Breite zuerst, weitere Speicherwege darunter,
+            dann „Verwerfen“ und „Abbrechen“ nebeneinander — steht nur einer da, nimmt er die Zeile.
+          */}
+          <div className="ml-auto flex items-center gap-2 max-sm:ml-0 max-sm:grid max-sm:grid-cols-2 max-sm:[&>*]:w-full">
+            {extraActions ? <div className="contents max-sm:[&>*]:order-2 max-sm:[&>*]:col-span-2 max-sm:[&>*]:w-full">{extraActions}</div> : null}
+            {cancel ? (
+              <Button type="button" variant="ghost" className={cn('max-sm:order-4', lone && 'max-sm:col-span-2')} onClick={cancel}>
+                {t('cancel')}
+              </Button>
+            ) : back ? (
+              <Link href={back.href} className={cn(buttonVariants({ variant: 'ghost' }), 'max-sm:order-4', lone && 'max-sm:col-span-2')}>
+                {t('cancel')}
+              </Link>
+            ) : null}
+            {/*
+              Im Dialog gibt es kein „Verwerfen“: Dort wirft „Abbrechen“ ohnehin
+              alles weg, und derselbe Vorgang unter zweitem Namen ist ein Weg zu
+              viel. Auf Seiten sind die beiden verschiedene Dinge — das eine nimmt
+              die Eingaben zurück, das andere führt weg.
+            */}
+            {discardButton}
+            {saveButton}
+          </div>
+        </div>
+      )}
       {placement === 'page' ? (
         <ConfirmDialog
           open={leaveTo !== null}

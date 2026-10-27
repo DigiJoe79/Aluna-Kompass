@@ -15,6 +15,7 @@ const FREE: Record<string, { columns: readonly string[]; reason: string }> = {
   finance_money_lines: { columns: ['raw_released_at'], reason: 'Die Freigabe des Rohumsatzes nach einem Storno; raw_transaction_id nur von leer zu einem Wert.' },
   finance_allocation_lines: { columns: ['contact_id', 'project_id', 'purpose_id', 'abroad'], reason: 'Bezug, Projekt, Zweck und Ausland ändert die Bezugskorrektur (E18) an der festgeschriebenen Zeile.' },
   finance_entry_documents: { columns: ['document_deleted_at'], reason: 'Vermerk der Akte, wenn ihr Dokument gelöscht ist.' },
+  finance_vat_filings: { columns: ['filed_on', 'report_id', 'filed_return_document_id', 'transmission_protocol_document_id'], reason: 'E6b: Tag der letzten Abgabe, später verknüpfte Fassung und Ablage (Plan E6b Task 6); Zeitraum, Abbilder und Fingerabdruck bleiben.' },
   finance_allocation_corrections: {
     columns: ['id', 'state', 'proof_document_id', 'section_153', 'approved_by_user_id', 'approved_at', 'rejected_by_user_id', 'rejected_at', 'reject_note', 'purpose_negative_reason'],
     reason: 'Die Entscheidung über den Antrag; der Antrag selbst ist gesperrt.',

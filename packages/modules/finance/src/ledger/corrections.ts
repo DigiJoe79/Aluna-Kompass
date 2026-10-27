@@ -1,4 +1,4 @@
-import { isoNow, newId, notFound, ok, requirePermission, validate, type CallContext, type DbOrTx, type Deps, type Failure, type Result } from '@kompass/core';
+import { invalid, isoNow, newId, notFound, ok, requirePermission, validate, type CallContext, type DbOrTx, type Deps, type Failure, type Result } from '@kompass/core';
 import { contacts } from '@kompass/module-contacts';
 import { getDocumentRecord, linkDocumentInternal } from '@kompass/module-dms';
 import { projects } from '@kompass/module-projects';
@@ -10,20 +10,50 @@ import { ENTRY_LOCKS, type EntryLock } from '../locks';
 import { financeAllocationCorrections, financeAllocationLines, financeCategories, financeFiscalYears, financePurposes, type FinanceAllocationCorrectionRow } from '../schema';
 import { requireFinanceRead } from './access';
 import { purposeGoingNegative, purposeNegativeProblemInternal } from './purpose-negative';
-import { CERTIFIABLE_INCOME_KINDS } from './codes';
-import { entryViewInternal } from './entries';
+import { CERTIFIABLE_INCOME_KINDS, REVERSE_CHARGE_CODES, TAX_CODES } from './codes';
+import { contactReverseChargeCode, entryViewInternal } from './entries';
+import type { TaxCode } from './tax';
 import { fiscalYearStatusInternal } from './fiscal-years';
+import { taxReturnFiledForYearInternal } from './tax-periods';
+import { vatAmendmentDueForDaysInternal } from './vat-filings';
+import { vatTaxPointOn } from './vat-periods';
+import { taxCodeOptionsInternal } from './vat-settings';
 import { writeVoucherLink } from './vouchers';
 
 /** Teil C Task 2c: vorher/nachher als Objekte, wie sie gemeint sind — in der Datenbank liegen sie als JSON-Text. */
 export type CorrectionView = Omit<FinanceAllocationCorrectionRow, 'before' | 'after'> & { before: Partial<LineFields>; after: Partial<LineFields> };
 
-/** Vorher-/Nachher-Felder einer Zuordnungszeile, die eine Korrektur ändern darf — genau die vier, die die F2a-Trigger einer festgeschriebenen Zeile durchlassen. */
+/**
+ * Vorher-/Nachher-Felder einer Zuordnungszeile, die eine Korrektur ändern darf — genau die, die die Trigger einer
+ * festgeschriebenen Zeile durchlassen: Bezug, Projekt, Zweck, Ausland (F2a) und seit E6a Steuerkennzeichen (nur innerhalb
+ * `{none, rc13bEu, rc13bOther, icAcquisition}` an Ausgaben) und Leistungsdatum.
+ */
 interface LineFields {
   contactId: string | null;
   projectId: string | null;
   purposeId: string | null;
   abroad: boolean;
+  taxCode: TaxCode;
+  serviceDate: string | null;
+}
+
+/**
+ * E6a (Spec Teil 2): Diese Wechsel lassen das Netto gleich — bei § 13b und Erwerb ist Brutto = Netto, bei `none` auch —,
+ * also Ergebnis und Berichte; alle anderen Kennzeichen ändert nur ein Storno.
+ */
+const CORRECTABLE_TAX_CODES: readonly string[] = ['none', ...REVERSE_CHARGE_CODES];
+
+/**
+ * Ohne Rechteprüfung: die Kennzeichen, die eine Korrektur einer Ausgabezeile anbietet — `none`, was der Buchungstag
+ * anbietet (`taxCodeOptionsInternal`), das Kennzeichen der Zeile und die Vorgabe vom Kontakt (§ 13b), jeweils innerhalb
+ * der korrigierbaren. Dieselbe Regel prüft `requestAllocationCorrection`; der Korrekturdialog zeigt diese Liste
+ * (Befund 40, Frage 2).
+ */
+export function correctionTaxCodesInternal(db: DbOrTx, line: { entryDate: string; taxCode: string; contactId: string | null }): TaxCode[] {
+  const allowed = new Set<string>(['none', line.taxCode, ...taxCodeOptionsInternal(db, line.entryDate)]);
+  const fromContact = line.contactId ? contactReverseChargeCode(db, line.contactId) : null;
+  if (fromContact) allowed.add(fromContact);
+  return CORRECTABLE_TAX_CODES.filter((code): code is TaxCode => allowed.has(code));
 }
 
 class CorrectionAborted extends Error {
@@ -54,15 +84,20 @@ function correctionViewOf(db: DbOrTx, id: string): CorrectionView {
   return toCorrectionView(db.select().from(financeAllocationCorrections).where(eq(financeAllocationCorrections.id, id)).get()!);
 }
 
-/** Welche der vier Felder der Antrag überhaupt nennt — für Protokoll und Anwenden gleichermaßen. */
+/** Welche Felder der Antrag überhaupt nennt — für Protokoll und Anwenden gleichermaßen. */
 function changedFlags(correction: Pick<CorrectionView, 'after'>) {
   const after = correction.after;
-  return { partyChanged: 'contactId' in after, projectChanged: 'projectId' in after, purposeChanged: 'purposeId' in after, abroadChanged: 'abroad' in after };
+  return { partyChanged: 'contactId' in after, projectChanged: 'projectId' in after, purposeChanged: 'purposeId' in after, abroadChanged: 'abroad' in after, taxCodeChanged: 'taxCode' in after, serviceDateChanged: 'serviceDate' in after };
 }
 
 function auditFieldsFor(correction: CorrectionView, state: CorrectionView['state']): Record<string, unknown> {
   const flags = changedFlags(correction);
   return { entryId: correction.entryId, lineId: correction.lineId, state, ...flags, withProof: correction.proofDocumentId !== null, section153: correction.section153 };
+}
+
+/** E6a: das neue Kennzeichen (Code) und Leistungsdatum im Protokoll — beides kein Personenbezug. */
+function auditParamsFor(correction: CorrectionView): { taxCode: string | null; serviceOn: string | null } {
+  return { taxCode: correction.after.taxCode ?? null, serviceOn: correction.after.serviceDate ?? null };
 }
 
 /**
@@ -89,12 +124,14 @@ export function applyCorrectionInternal(tx: DbOrTx, deps: Deps, ctx: CallContext
   if ('projectId' in after) set.projectId = after.projectId ?? null;
   if ('purposeId' in after) set.purposeId = after.purposeId ?? null;
   if ('abroad' in after) set.abroad = after.abroad ?? false;
+  if ('taxCode' in after && after.taxCode) set.taxCode = after.taxCode;
+  if ('serviceDate' in after) set.serviceDate = after.serviceDate ?? null;
   tx.update(financeAllocationLines).set(set).where(eq(financeAllocationLines.id, correction.lineId)).run();
 
   const now = isoNow(deps.clock);
   tx.update(financeAllocationCorrections).set({ state: 'applied', approvedByUserId: ctx.userId, approvedAt: now }).where(eq(financeAllocationCorrections.id, correctionId)).run();
   const applied = correctionViewOf(tx, correctionId);
-  financeAudit(tx, deps, ctx, { action: 'finance.correction.apply', entity: 'financeAllocationCorrection', id: correctionId, after: auditFieldsFor(applied, 'applied') });
+  financeAudit(tx, deps, ctx, { action: 'finance.correction.apply', entity: 'financeAllocationCorrection', id: correctionId, after: auditFieldsFor(applied, 'applied'), params: auditParamsFor(applied) });
   return ok(applied);
 }
 
@@ -111,6 +148,10 @@ const changesSchema = z.object({
   projectId: z.string().min(1).nullable().optional(),
   purposeId: z.string().min(1).nullable().optional(),
   abroad: z.boolean().optional(),
+  /** E6a: nur innerhalb `{none, rc13bEu, rc13bOther, icAcquisition}` an einer Ausgabe (`notCorrectable`). */
+  taxCode: z.enum(TAX_CODES).optional(),
+  /** E6a: Leistungsdatum, nur mit § 13b-/Erwerbskennzeichen (alt oder neu); `null` nimmt es zurück. */
+  serviceDate: z.iso.date().nullable().optional(),
 });
 
 const requestSchema = z.object({
@@ -128,7 +169,7 @@ const requestSchema = z.object({
  * im abgeschlossenen wartet sie auf die Freigabe einer zweiten Person (Spec
  * 5.4, E18).
  */
-export async function requestAllocationCorrection(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<{ correction: CorrectionView; applied: boolean; notices: ('section153')[] }>> {
+export async function requestAllocationCorrection(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<{ correction: CorrectionView; applied: boolean; notices: ('section153' | 'vatAmendment')[] }>> {
   const denied = requirePermission(ctx, 'finance.entriesFinalize');
   if (denied) return denied;
   const humanOnly = requireHumanChannelFinance(deps, ctx);
@@ -152,6 +193,19 @@ export async function requestAllocationCorrection(deps: Deps, ctx: CallContext, 
   if ('projectId' in v.changes && v.changes.projectId !== line.projectId) changed.projectId = v.changes.projectId ?? null;
   if ('purposeId' in v.changes && v.changes.purposeId !== line.purposeId) changed.purposeId = v.changes.purposeId ?? null;
   if ('abroad' in v.changes && v.changes.abroad !== line.abroad) changed.abroad = v.changes.abroad;
+  if (v.changes.taxCode !== undefined && v.changes.taxCode !== line.taxCode) {
+    if (line.amountCents >= 0 || !CORRECTABLE_TAX_CODES.includes(line.taxCode) || !CORRECTABLE_TAX_CODES.includes(v.changes.taxCode)) return invalid([{ path: 'changes.taxCode', message: 'notCorrectable' }]);
+    // Befund 39, Frage 4: wie beim Buchen nur, was der Buchungstag anbietet, oder die Vorgabe vom Kontakt (§ 13b).
+    const contactId = 'contactId' in changed ? changed.contactId : line.contactId;
+    const offered = correctionTaxCodesInternal(deps.db, { entryDate: entry.entryDate, taxCode: line.taxCode, contactId: contactId ?? null }).includes(v.changes.taxCode);
+    if (!offered) return invalid([{ path: 'changes.taxCode', message: v.changes.taxCode === 'rc13bEu' ? 'rc13bEuNeedsVatId' : 'taxCodeNotOffered' }]);
+    changed.taxCode = v.changes.taxCode;
+  }
+  if (v.changes.serviceDate !== undefined && v.changes.serviceDate !== line.serviceDate) {
+    const reverseCharge = (code: string) => (REVERSE_CHARGE_CODES as readonly string[]).includes(code);
+    if (!reverseCharge(line.taxCode) && !reverseCharge(changed.taxCode ?? line.taxCode)) return invalid([{ path: 'changes.serviceDate', message: 'notApplicable' }]);
+    changed.serviceDate = v.changes.serviceDate;
+  }
   if (Object.keys(changed).length === 0) return financeConflict('correctionChangesNothing');
 
   const isIncomeLine = line.amountCents > 0;
@@ -181,13 +235,29 @@ export async function requestAllocationCorrection(deps: Deps, ctx: CallContext, 
   const certifiable = isIncomeLine && category !== undefined && (CERTIFIABLE_INCOME_KINDS as readonly string[]).includes(category.incomeKind ?? '');
   const partyChanges = 'contactId' in changed;
   const abroadChanges = 'abroad' in changed;
-  const year = entry.fiscalYearId ? deps.db.select().from(financeFiscalYears).where(eq(financeFiscalYears.id, entry.fiscalYearId)).get() : null;
-  const taxReturnFiled = !!year?.taxReturnFiledOn;
+  // § 153 AO: das Jahr liegt in einem abgegebenen Erklärungszeitraum (Rechenschaft D2, eine Quelle mit Schritt 12).
+  const taxReturnFiled = entry.fiscalYearId ? taxReturnFiledForYearInternal(deps.db, entry.fiscalYearId) !== null : false;
   const triggersSection153 = taxReturnFiled && ((certifiable && partyChanges) || abroadChanges || purposeChanges);
   if (triggersSection153 && !v.acknowledgeSection153) return financeConflict('section153Unacknowledged');
 
   const closed = entry.fiscalYearId !== null && fiscalYearStatusInternal(deps.db, entry.fiscalYearId) === 'closed';
-  const before: LineFields = { contactId: line.contactId, projectId: line.projectId, purposeId: line.purposeId, abroad: line.abroad };
+  // E6a/N8: Weicht ein abgegebener Umsatzsteuer-Zeitraum des alten oder neuen Entstehungstags mit der geänderten Zeile
+  // von seiner letzten Abgabe ab, ist eine Berichtigung fällig — ein Hinweis, keine Sperre, nach derselben Regel wie die
+  // Frist unter „Fristen“ (eine Rückkorrektur auf die abgegebenen Werte meldet nichts).
+  const vatChanges = 'taxCode' in changed || 'serviceDate' in changed;
+  const newTaxCode = changed.taxCode ?? (line.taxCode as TaxCode);
+  const newTaxPointOn = vatTaxPointOn({ taxCode: newTaxCode, entryDate: entry.entryDate, serviceDate: 'serviceDate' in changed ? (changed.serviceDate ?? null) : line.serviceDate });
+  const vatAmendment = vatChanges && vatAmendmentDueForDaysInternal(
+    deps.db,
+    [vatTaxPointOn({ taxCode: line.taxCode as TaxCode, entryDate: entry.entryDate, serviceDate: line.serviceDate }), newTaxPointOn],
+    { lineId: line.id, amountCents: line.amountCents, taxCode: newTaxCode, rateKind: line.rateKind as 'standard' | 'reduced', entryDate: entry.entryDate, taxPointOn: newTaxPointOn },
+  );
+  // Kennzeichen und Leistungsdatum stehen im Vorher nur, wenn der Antrag sie ändert (E6a) — wie bisher die vier Bezüge immer.
+  const before: Partial<LineFields> = {
+    contactId: line.contactId, projectId: line.projectId, purposeId: line.purposeId, abroad: line.abroad,
+    ...('taxCode' in changed ? { taxCode: line.taxCode as TaxCode } : {}),
+    ...('serviceDate' in changed ? { serviceDate: line.serviceDate } : {}),
+  };
 
   try {
     return deps.db.transaction((tx: DbOrTx) => {
@@ -206,9 +276,10 @@ export async function requestAllocationCorrection(deps: Deps, ctx: CallContext, 
         linkDocumentInternal(tx, deps, { documentId: proofDoc.id, entityType: 'financeEntry', entityId: line.entryId });
       }
       const requested = correctionViewOf(tx, id);
-      financeAudit(tx, deps, ctx, { action: 'finance.correction.request', entity: 'financeAllocationCorrection', id, after: auditFieldsFor(requested, 'pending') });
+      financeAudit(tx, deps, ctx, { action: 'finance.correction.request', entity: 'financeAllocationCorrection', id, after: auditFieldsFor(requested, 'pending'), params: auditParamsFor(requested) });
 
-      const notices: ('section153')[] = triggersSection153 ? ['section153'] : [];
+      const notices: ('section153' | 'vatAmendment')[] = triggersSection153 ? ['section153'] : [];
+      if (vatAmendment) notices.push('vatAmendment');
       if (!closed) {
         const applied = applyCorrectionInternal(tx, deps, ctx, id);
         if (!applied.ok) abortCorrection(applied);

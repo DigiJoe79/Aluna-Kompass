@@ -16,9 +16,10 @@ function summaryOf(event: EntryHistoryEvent, t: Awaited<ReturnType<typeof getTra
     case 'reversed':
       return t('events.reversed', { number: event.byNumber ?? '' });
     case 'voucherAdded':
-      return t('events.voucherAdded', { number: event.documentNumber });
+      return t(event.replacement ? 'events.voucherReplacement' : 'events.voucherAdded', { number: event.documentNumber });
     case 'voucherRevoked':
-      return t('events.voucherRevoked', { number: event.documentNumber });
+      // Mit Grund (Designer Runde 6, 15c); alte Widerrufe ohne Grund bleiben beim kurzen Satz.
+      return event.note ? t('events.voucherRevokedNote', { number: event.documentNumber, note: event.note }) : t('events.voucherRevoked', { number: event.documentNumber });
     case 'allocationChanged':
       return t(`events.allocationChanged.${event.state}`, { name: event.userName ?? t('unknownUser') });
   }

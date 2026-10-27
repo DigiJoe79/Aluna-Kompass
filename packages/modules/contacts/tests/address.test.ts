@@ -55,5 +55,7 @@ describe('formatPostalAddress', () => {
     const abroad: PostalAddressInput = { ...person, country: 'AT', city: 'Wien', postalCode: '1010' };
     expect(formatPostalAddress(abroad, null, 'DE')).toBe('Frau\nAnna Berger\nMusterweg 1\n1010 Wien\nAT');
     expect(formatPostalAddress(person, null, 'DE')).toBe('Frau\nAnna Berger\nMusterweg 1\n12345 Musterstadt');
+    // Designer Runde 8, 043: mit einem Namen für den Code steht das Land ausgeschrieben.
+    expect(formatPostalAddress(abroad, null, 'DE', (code) => (code === 'AT' ? 'Österreich' : code)).split('\n').at(-1)).toBe('Österreich');
   });
 });

@@ -1,7 +1,7 @@
 import { hasPermission, todayIn } from '@kompass/core';
 import type { LocalizedText } from '@kompass/core';
 import { displayName, getContact } from '@kompass/module-contacts';
-import { CERTIFIABLE_INCOME_KINDS, getEntry, getEntryHistory, listAccounts, listCategories, listConfirmations, listFiscalYears, listOpenItems, listPurposes } from '@kompass/module-finance';
+import { CERTIFIABLE_INCOME_KINDS, correctionTaxCodesInternal, getEntry, getEntryHistory, listAccounts, listCategories, listConfirmations, listFiscalYears, listOpenItems, listPurposes, listVatPeriods, vatLineContextInternal } from '@kompass/module-finance';
 import { listProjects } from '@kompass/module-projects';
 import { getTranslations } from 'next-intl/server';
 import Link from 'next/link';
@@ -17,6 +17,9 @@ import { lockLineText } from '@/lib/finance/lock-line';
 import { dateFormatOf } from '@/lib/date-format';
 import { formatEuro } from '@/lib/finance/amount';
 import { taxTextKey } from '@/lib/finance/tax-text';
+import { vatPeriodLabel } from '@/lib/finance/vat-period';
+import { vatPeriodOf, vatTaxPointOn } from '@kompass/module-finance/vat-calendar';
+import { Fragment } from 'react';
 import { voucherDetails } from '@/lib/finance/voucher-details';
 import { readAllPages } from '@/lib/read-all-pages';
 import { requireSession } from '@/lib/request-context';
@@ -25,11 +28,16 @@ import { EntryActions } from './entry-actions';
 import { EntryHistory } from './history';
 import { NotReturnCard } from './not-return';
 import { EntryVouchers } from './vouchers';
+import { EntrySampleLine } from './entry-audit';
+import { RemarksCard } from '@/app/(shell)/finance/audit/remarks-card';
+import { AUDIT_SECTION_ORDER, isAuditSection } from '@/lib/finance/audit-sections';
+import { loadEntryAudit } from '@/lib/finance/entry-audit';
 import { Section } from '@/components/section';
 import { Empty } from '@/components/empty-value';
 
-export default async function ViewFinanceEntryPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function ViewFinanceEntryPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ from?: string; section?: string; year?: string }> }) {
   const { id } = await params;
+  const query = await searchParams;
   const { deps, ctx } = await requireSession();
 
   const entryRes = await getEntry(deps, ctx, { id });
@@ -71,9 +79,15 @@ export default async function ViewFinanceEntryPage({ params }: { params: Promise
 
   const t = await getTranslations('finance.entryView');
   const tTax = await getTranslations('finance.taxText');
+  const tRoot = await getTranslations();
   const events = historyRes.ok ? historyRes.value.events : [];
   const finalizedEvent = events.find((e) => e.kind === 'finalized');
+  // Rechte wie die Dienste (Designer Runde 5, 265/267): Korrigieren und Widerrufen `requestAllocationCorrection` bzw.
+  // `revokeVoucher` (`finance.entriesFinalize`), Nachreichen `uploadVoucher` (`finance.entriesWrite`). Prüfer haben
+  // keins davon und sehen nur „Öffnen“.
   const canCorrect = hasPermission(ctx, 'finance.entriesFinalize');
+  // Sind Namen verborgen (ohne `contacts.view`), fällt die Spalte „Spender/Empfänger“ weg statt leer zu stehen (267).
+  const showContacts = hasPermission(ctx, 'contacts.view');
   const reversed = entry.status === 'final' && entry.reversedByEntryId !== null;
 
   // „Hängt zusammen mit“ (Task 4): jede offene Zahlung, die eine Geldzeile dieser Buchung begleicht.
@@ -104,8 +118,9 @@ export default async function ViewFinanceEntryPage({ params }: { params: Promise
     confirmation: confirmationByLine.get(l.id) ?? null,
   }));
   const today = todayIn(deps);
-  // AC: eine Auszahlung an eine Person — sie gilt als möglicher Rückläufer ihrer Spenden, bis sie verknüpft oder als „keine Rückgabe“ gekennzeichnet ist.
-  const paysPerson = entry.status === 'final' && !reversed && !entry.reversesEntryId && entry.moneyLines.some((l) => l.amountCents < 0) && entry.allocationLines.some((l) => l.amountCents < 0 && l.contactId !== null && l.originLineId === null);
+  const vatContext = vatLineContextInternal(deps.db, today);
+  // AC, Befund 30 b: nur eine Auszahlung, die nach der Regel der Sperre ein möglicher Rückläufer bescheinigbarer Zuwendungen ist (Dienst), bis sie verknüpft oder als „keine Rückgabe“ gekennzeichnet ist.
+  const paysDonor = entry.mayBeReturn === true;
 
   // 07-2 A5: Nummer einmal, daneben der Betreff aus der Akte.
   const voucherDocs = await voucherDetails(deps, ctx, entry.vouchers.map((v) => v.documentId));
@@ -120,6 +135,20 @@ export default async function ViewFinanceEntryPage({ params }: { params: Promise
     replacedByNumber: v.replacedByLinkId ? (entry.vouchers.find((o) => o.linkId === v.replacedByLinkId)?.documentNumber ?? null) : null,
   }));
 
+  // E6a Task 11c (Board 4a): die abgegebenen Voranmeldungen um den Buchungstag — für den Hinweis auf die Berichtigung.
+  const filedVatPeriods: Record<string, string> = {};
+  if (!reversed && canCorrect) {
+    const year = Number(entry.entryDate.slice(0, 4));
+    for (const y of [year - 1, year]) {
+      const periods = await listVatPeriods(deps, ctx, { year: y });
+      if (!periods.ok) continue;
+      for (const p of periods.value.advance) {
+        const last = p.filings.at(-1);
+        if (last) filedVatPeriods[p.key] = last.filedOn;
+      }
+    }
+  }
+
   // Wie der Dienst (`ledger/reverse.ts`): im offenen Geschäftsjahr am Datum der Buchung, sonst heute.
   const reversalDate = yearStatus === 'open' ? entry.entryDate : today;
   const correct = !reversed && canCorrect ? (
@@ -131,6 +160,10 @@ export default async function ViewFinanceEntryPage({ params }: { params: Promise
       categoryNames={categoryNames}
       confirmations={Object.fromEntries(confirmationByLine)}
       canVoidConfirmation={hasPermission(ctx, 'finance.donationsIssue')}
+      quiet={closedYear}
+      filedVatPeriods={filedVatPeriods}
+      vatContext={vatContext}
+      taxCodeOptions={Object.fromEntries(entry.allocationLines.filter((l) => l.amountCents < 0).map((l) => [l.id, correctionTaxCodesInternal(deps.db, { entryDate: entry.entryDate, taxCode: l.taxCode, contactId: l.contactId })]))}
     />
   ) : null;
   const actions = canCorrect ? (
@@ -148,8 +181,17 @@ export default async function ViewFinanceEntryPage({ params }: { params: Promise
       ? lockLineText((key, values) => tLock(key, values), (key) => tChannel(key), finalizedEvent, dateFormatOf(deps))
       : undefined;
 
+  // Kassenprüfung (Board 4c, 9b): Stichprobe und Vermerke; aus dem Prüfpaket zurück auf den Abschnitt.
+  const designation = (entry.fiscalYearId !== null && fiscalYearsRes.ok ? fiscalYearsRes.value.find((y) => y.id === entry.fiscalYearId)?.designation : undefined) ?? '';
+  const audit = await loadEntryAudit(deps, ctx, { id: entry.id, number: entry.number, text: entry.text, voucherIds: entry.vouchers.filter((v) => v.revokedAt === null).map((v) => v.documentId).filter((d): d is string => Boolean(d)), designation });
+  const tAudit = await getTranslations('finance.audit');
+  const fromAudit = query.from === 'audit' && query.section && isAuditSection(query.section) && query.year ? { section: query.section, year: query.year } : null;
+  const back = fromAudit
+    ? { href: `/finance/audit/${fromAudit.section}?year=${encodeURIComponent(fromAudit.year)}`, label: tAudit('package.numbered', { n: AUDIT_SECTION_ORDER.indexOf(fromAudit.section) + 1, title: tAudit(`sections.${fromAudit.section}.title`) }) }
+    : { href: '/finance/entries', label: t('back') };
+
   return (
-    <Page width="standard" header={<PageHeader back={{ href: '/finance/entries', label: t('back') }} title={entry.number ?? undefined} status={<EntryStateBadge entry={entry} />} description={lockLine} actions={actions} />}>
+    <Page width="standard" header={<PageHeader back={back} title={entry.number ?? undefined} status={<EntryStateBadge entry={entry} />} description={lockLine} actions={actions} />}>
       <div className="space-y-4">
         <section className="space-y-2 rounded-md border border-line bg-surface p-4">
           {/* Nummer und Stand stehen im Seitenkopf (`PageHeader title`/`status`, Board § K Ziel 5). */}
@@ -174,6 +216,7 @@ export default async function ViewFinanceEntryPage({ params }: { params: Promise
               {t('reverses')} <Link className="underline" href={`/finance/entries/${entry.reversesEntryId}`}>{t('open')}</Link>
             </p>
           ) : null}
+          {audit ? <EntrySampleLine audit={audit} entryId={entry.id} /> : null}
         </section>
 
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-[2fr_1fr]">
@@ -205,23 +248,29 @@ export default async function ViewFinanceEntryPage({ params }: { params: Promise
                     <TableHeader>
                       <TableRow>
                         <TableHead col="title">{t('allocationColumns.category')}</TableHead>
-                        <TableHead col="meta">{t('allocationColumns.contact')}</TableHead>
+                        {showContacts ? <TableHead col="meta">{t('allocationColumns.contact')}</TableHead> : null}
                         <TableHead col="meta">{t('allocationColumns.purpose')}</TableHead>
                         <TableHead col="amount" className="text-right">{t('allocationColumns.amount')}</TableHead>
                         <TableHead col="status"><span className="sr-only">{t('allocationColumns.state')}</span></TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {entry.allocationLines.map((line) => (
-                        <TableRow key={line.id}>
+                      {entry.allocationLines.map((line) => {
+                        // Designer Runde 8, 097: Die § 13b-Steuer steht als Satz unter der Zeile über die volle Breite, mit
+                        // der Voranmeldung, in der sie zählt.
+                        const owed = line.amountCents !== 0 && taxTextKey(line.tax)?.key === 'reverseCharge' ? taxTextKey(line.tax)! : null;
+                        const period = owed ? vatPeriodOf(vatTaxPointOn({ taxCode: line.taxCode as Parameters<typeof vatTaxPointOn>[0]['taxCode'], entryDate: entry.entryDate, serviceDate: line.serviceDate ?? null }), vatContext.periodKinds[Number(entry.entryDate.slice(0, 4))] ?? 'quarter').key : null;
+                        return (
+                        <Fragment key={line.id}>
+                        <TableRow>
                           <TableCell col="title" className="text-ink-2">{categoryNames.get(line.categoryId) ?? line.categoryId}</TableCell>
-                          <TableCell col="meta" className="text-ink-2">{line.contactId ? (contactNames.get(line.contactId) ?? '') : <Empty />}</TableCell>
+                          {showContacts ? <TableCell col="meta" className="text-ink-2">{line.contactId ? (contactNames.get(line.contactId) ?? '') : <Empty />}</TableCell> : null}
                           <TableCell col="meta" className="text-ink-2">{line.purposeId ? (purposeNames.get(line.purposeId) ?? '') : <Empty />}</TableCell>
                           <TableCell col="amount" className="whitespace-normal">
                             <AmountCell cents={line.amountCents} />
-                            {line.amountCents !== 0 && taxTextKey(line.tax) ? (
+                            {line.amountCents !== 0 && taxTextKey(line.tax)?.key === 'included' ? (
                               <p className="text-right text-hint text-muted-ink">
-                                {tTax(taxTextKey(line.tax)!.key, { amount: formatEuro(taxTextKey(line.tax)!.cents) })}
+                                {tTax('included', { amount: formatEuro(taxTextKey(line.tax)!.cents) })}
                               </p>
                             ) : null}
                           </TableCell>
@@ -230,7 +279,19 @@ export default async function ViewFinanceEntryPage({ params }: { params: Promise
                             {line.pendingCorrectionId ? <span className="text-warning">{t('pendingCorrection')}</span> : null}
                           </TableCell>
                         </TableRow>
-                      ))}
+                        {owed && period ? (
+                          <TableRow data-testid="reverse-charge-line">
+                            <TableCell col="span" colSpan={showContacts ? 5 : 4} className="whitespace-normal text-hint text-muted-ink">
+                              {tTax('reverseChargeLine', { amount: formatEuro(owed.cents), small: String(vatContext.taxation === 'smallBusiness') })}{' '}
+                              <Link href={`/finance/vat?period=${encodeURIComponent(period)}`} className="text-link underline-offset-2 hover:underline">
+                                {tTax('advanceReturn', { period: vatPeriodLabel(period, tRoot as never) })}
+                              </Link>
+                            </TableCell>
+                          </TableRow>
+                        ) : null}
+                        </Fragment>
+                        );
+                      })}
                     </TableBody>
                   </Table>
                 </div>
@@ -266,12 +327,14 @@ export default async function ViewFinanceEntryPage({ params }: { params: Promise
               <ConfirmationSection lines={confirmationLines} canIssue={!reversed && hasPermission(ctx, 'finance.donationsIssue')} canDescribe={hasPermission(ctx, 'finance.entriesWrite')} today={today} />
             ) : null}
 
-            {paysPerson ? <NotReturnCard entryId={id} mark={entry.notReturn} canMark={hasPermission(ctx, 'finance.entriesFinalize')} /> : null}
+            {paysDonor ? <NotReturnCard entryId={id} mark={entry.notReturn} canMark={hasPermission(ctx, 'finance.entriesFinalize')} /> : null}
+
+            {audit ? <RemarksCard audit={audit} /> : null}
 
             <EntryHistory events={events} fmt={dateFormatOf(deps)} />
           </div>
 
-          <EntryVouchers today={today} entryId={id} vouchers={vouchers} closedYear={closedYear} documentationState={entry.documentation.state} origin={entry.documentation.origin} />
+          <EntryVouchers today={today} entryId={id} vouchers={vouchers} closedYear={closedYear} yearDesignation={designation} entryNumber={entry.number} canRevoke={canCorrect} canUpload={hasPermission(ctx, 'finance.entriesWrite')} documentationState={entry.documentation.state} origin={entry.documentation.origin} />
         </div>
       </div>
     </Page>

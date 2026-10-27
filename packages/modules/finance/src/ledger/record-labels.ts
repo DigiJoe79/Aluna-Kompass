@@ -1,7 +1,8 @@
 import { resolveRecordLabel, type CallContext, type Deps, type RecordLabelInput } from '@kompass/core';
 import { eq } from 'drizzle-orm';
 import { requireFinanceRead, requireMasterDataRead } from './access';
-import { financeAccounts, financeCategories, financeConfirmations, financeEntries, financeFiscalYears, financePartnerProfiles, financePeriodEvents, financeDirectDebitRuns, financePurposes, financeReserves, financeSepaMandates } from '../schema';
+import { taxPeriodInternal } from './tax-periods';
+import { financeAccounts, financeCategories, financeConfirmations, financeEntries, financeFiscalYears, financePartnerProfiles, financePeriodEvents, financeDirectDebitRuns, financePurposes, financeReserves, financeSepaMandates, financeVatFilings } from '../schema';
 
 const missing: RecordLabelInput = { label: '', href: null, state: 'missing' };
 const forbiddenLabel: RecordLabelInput = { label: '', href: null, state: 'forbidden' };
@@ -31,6 +32,18 @@ export function financeRecordLabels(deps: Deps, ctx: CallContext, entityType: st
   if (entityType === 'financePeriodEvent') {
     const event = deps.db.select({ fiscalYearId: financePeriodEvents.fiscalYearId }).from(financePeriodEvents).where(eq(financePeriodEvents.id, id)).get();
     return event ? fiscalYearLabel(deps, ctx, event.fiscalYearId) : missing;
+  }
+  if (entityType === 'financeTaxPeriod') {
+    // Rechenschaft D2: der Zeitraum heißt nach seinen Jahren („2023–2025“) — wie die Jahresbezeichnung verrät er nichts.
+    const period = taxPeriodInternal(deps.db, id);
+    if (!period) return missing;
+    return { label: { key: 'finance.records.taxPeriod', params: { period: period.label } }, name: period.label, href: null, state: requireFinanceRead(ctx, 'overview') ? 'forbidden' : 'ok' };
+  }
+  if (entityType === 'financeVatFiling') {
+    // E6b: die Abgabe heißt nach ihrem Zeitraum („2026-Q2“) — er verrät nichts.
+    const period = deps.db.select({ period: financeVatFilings.period }).from(financeVatFilings).where(eq(financeVatFilings.id, id)).get()?.period;
+    if (!period) return missing;
+    return { label: { key: period.length === 4 ? 'finance.records.vatAnnualFiling' : 'finance.records.vatFiling', params: { period } }, name: period, href: null, state: requireFinanceRead(ctx, 'overview') ? 'forbidden' : 'ok' };
   }
   if (entityType === 'financePartnerProfile') {
     const row = deps.db.select({ contactId: financePartnerProfiles.contactId }).from(financePartnerProfiles).where(eq(financePartnerProfiles.id, id)).get();

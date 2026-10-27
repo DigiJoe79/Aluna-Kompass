@@ -123,7 +123,7 @@ export {
   type FiscalYearView,
 } from './ledger/fiscal-years';
 export { DATED_SERIES, type DatedValueKey } from './ledger/dated-series';
-export { listDatedValues, removeDatedValue, setDatedValue, valueAt, type DatedValueListEntry } from './ledger/dated-values';
+export { listDatedValues, previewDatedValueRemoval, removeDatedValue, setDatedValue, valueAt, type DatedValueListEntry, type DatedValueRemovalImpact } from './ledger/dated-values';
 export { closePurpose, deleteMasterData, readMasterData, saveMasterData, setMasterDataActive } from './ledger/master-data';
 export { firstNegativeCashDay } from './ledger/cash-check';
 export { countCash, emptyDonationBox, lastCountInternal, listCashCounts, moveCash, readCashCountProtocol, type CashCountKind, type CashCountView, type CountCashResult, type EmptyDonationBoxResult } from './ledger/cash';
@@ -137,6 +137,7 @@ export {
   setExpenseWaiverBasisText,
   setFinanceLimit,
   setFinanceSwitch,
+  setReportSettings,
   type PermissionMatrixActivity,
   type PermissionMatrixRole,
   type SetupStep,
@@ -194,16 +195,66 @@ export {
   previewPeriodClose,
   previewPeriodReopen,
   previewReopenInternal,
+  closePreviewInternal,
   reopenFiscalYear,
   reopenInternal,
   type PeriodClosePreview,
   type UndocumentedEntryPreview,
 } from './ledger/period';
+// Rechenschaft C — Jahresabschluss (closing/).
+export { CLOSING_STEPS, CONFIRMABLE_STEPS, type AssemblyResultView, type AssemblyWarning, type ClosingConfirmation, type ClosingGroup, type ClosingStatus, type ClosingStepFacts, type ClosingStepKey, type ClosingStepView, type DischargeOutcome, type HandoverSummary } from './closing/types';
+export { getClosingStatus } from './closing/status';
+export { confirmClosingStep } from './closing/confirmations';
+export { carryOverAuditFollowUp } from './closing/carry-over';
+export { FINANCE_FOLLOW_UP_ENTITIES, listFinanceDeadlines, type DeadlineKind, type DeadlineView, type FinanceDeadlines, type FinanceFollowUpView } from './closing/deadlines';
+export { getThresholds, type ThresholdKey, type ThresholdState, type ThresholdView } from './closing/thresholds';
+export { annualRevenueForGemInternal, type AnnualRevenue, type RevenuePartKey } from './reporting/revenue';
+// E6a — Einstellung „Umsatzsteuer“ als datierte Werte.
+export { entrepreneurSinceInternal, getVatSettings, isValidVatId, previewVatSettingsRemoval, removeVatSettings, saveVatSettings, LEGAL_PERSON_TAX_CODES, taxCodeOptionsInternal, VAT_DATED_KEYS, vatLineContextInternal, vatProfileAt, type VatProfile, type VatSettingsHint, type VatSettingsStand, type VatSettingsView } from './ledger/vat-settings';
+// E6a — Abgabe je Umsatzsteuer-Zeitraum und Berichtigung.
+export { listVatPeriods, VAT_FILING_DOCUMENT_SLOTS, vatAmendmentCauseInternal, vatPeriodViewsInternal, type VatAmendmentCause, type VatFilingDocumentSlot, type VatFilingView, type VatPeriodView } from './ledger/vat-filings';
+export { fileVatFilingDocument, linkVatFilingDocument, listVatPeriodsWithPayments, recordVatFiling, updateVatFiling, VAT_RETURN_DOCUMENT_TYPE, type VatAmendmentPayment, type VatPeriodWithPayment } from './reporting/vat-filing';
+// E6a — Umsatzsteuer-Zeiträume nach Entstehung, Jahreserklärung je Kalenderjahr.
+export { parseVatPeriod, vatAdvanceDueOn, vatAdvancePeriodKindInternal, vatAdvancePeriodsInternal, vatPeriodDigestInternal, vatPeriodLinesInternal, vatPeriodPartsInternal, vatPeriodOf, vatReturnDueOnInternal, vatReturnRequiredInternal, vatTaxPointOn, type VatPeriodAmounts, type VatPeriodKind, type VatPeriodLine, type VatPeriodRange, type VatPeriodState } from './ledger/vat-periods';
+// E6a — Werktage für Steuerfristen (§ 108 Abs. 3 AO).
+export { FEDERAL_STATES, nextWorkingDay, publicHolidays, type FederalState } from './ledger/working-days';
+// Rechenschaft D2 — Erklärungszeitraum der Steuererklärung (ledger/), Zuordnungstabelle der Anlage Gem (reporting/).
+export {
+  createTaxPeriod,
+  fileTaxPeriodDocument,
+  gemAnswersSchema,
+  linkTaxPeriodDocument,
+  linkTaxPeriodNotice,
+  listTaxPeriods,
+  declarationDueOn,
+  saveTaxPeriodAnswers,
+  suggestedDueOn,
+  TAX_PERIOD_DOCUMENT_SLOTS,
+  taxPeriodDefaults,
+  taxPeriodInternal,
+  taxPeriodOfYearInternal,
+  taxReturnFiledForYearInternal,
+  updateTaxPeriod,
+  type GemAnswers,
+  type TaxPeriodDocumentSlot,
+  type TaxPeriodView,
+} from './ledger/tax-periods';
+export { REVERSE_CHARGE_DECLINE_REASONS, type ReverseChargeDeclineReason } from './ledger/codes';
+export { clearReverseChargeDecline, contactTaxDetailsInternal, declineReverseCharge, getContactTaxDetails, saveContactTaxDetails, type ContactTaxDetails, type ReverseChargeDecline } from './allocation/contact-tax-details';
+export { ADDS_TO_ASSETS_OPT_OUTS, type AddsToAssetsOptOut } from './ledger/codes';
+export { getTaxReturn, type TaxReturnView } from './reporting/tax-return';
+export type { TaxIncomePost, TaxIncomeStatementSphere, TaxIncomeStatementYear, TaxReturnIncomeStatementReport } from './reporting/reports/tax-return-income-statement';
+export type { GemAttachment, GemAttachmentKey, GemHint, GemLineValue, GemOrigin, GemValue, TaxReturnGemReport } from './reporting/reports/tax-return-gem';
+export { assessmentYearOf, GEM_FORMS, GEM_SECTION_TITLES, GEM_UNVERIFIED_NOTE, gemFormFor, type GemForm, type GemLine, type GemLineKind, type GemSection, type GemSource } from './reporting/gem-forms';
+export { cancelHandover, countCashForHandover, fileHandoverProtocol, getHandover, handoverDefaults, listHandovers, printHandoverProtocol, recordHandoverInterimReport, saveHandoverItems, startHandover, updateHandover, type HandoverItemKey, type HandoverView } from './closing/handover';
+export { carriedIntoYearInternal, carryOverForBaselineInternal, carryOverOfYearInternal, recordCarryOverInternal, type CarryOverChange } from './auditing/carry-over';
+export { assemblyOfYearInternal, fileAssemblyMinutes, getAssemblyResult, saveAssemblyResult, type AssemblyPerson } from './closing/assembly';
+export { accountStatementsForYearInternal, confirmAccountForYear, fileAccountStatementDocument, linkAccountStatementDocument, missingStatementPdfsInternal, suggestStatementPeriod, STATEMENT_MAX_BYTES, type AccountYearConfirmationKind, type AccountYearStatementRow } from './ledger/statement-documents';
 export { financeRecordDeleted, financeRecordReferences, financeRetentionDue, financeRetentionHolds, yearAnchorInternal } from './ledger/holds';
 export { getEntryHistory, type EntryHistoryEvent } from './ledger/history';
 export { getProjectFinance, projectFinanceInternal, setProjectFinance, type ProjectFinanceSettings } from './ledger/project-settings';
 export { cancelOpenItem, cancelOriginOpenItem, countingPaymentsInternal, createOpenItem, createOriginOpenItem, draftSettlementCentsInternal, listOpenItems, listOpenItemSettlements, openCentsInternal, openItemHasAnySettlementInternal, openItemsAtInternal, overdueOpenItemsInternal, reduceOriginOpenItem, rescheduleOriginOpenItem, saveOpenItem, updateOpenItem, type OpenItemSettlementView, type OpenItemView, type OriginOpenItemInput } from './ledger/open-items';
-export { applyCorrectionInternal, approveAllocationCorrection, decideAllocationCorrection, listAllocationCorrections, rejectAllocationCorrection, requestAllocationCorrection, type CorrectionView } from './ledger/corrections';
+export { applyCorrectionInternal, approveAllocationCorrection, correctionTaxCodesInternal, decideAllocationCorrection, listAllocationCorrections, rejectAllocationCorrection, requestAllocationCorrection, type CorrectionView } from './ledger/corrections';
 
 // F8a — Auslagen: einreichen, freigeben, Verzicht (allocation/).
 export {
@@ -244,7 +295,6 @@ export {
 export {
   copyPartnerPayment,
   deletePartnerPaymentDraft,
-  evidenceUsedMultipleTimesInternal,
   getPartnerPayment,
   listEligibleLines,
   listPartnerPayments,
@@ -303,7 +353,7 @@ export { AUDIT_FIELDS, financeAudit, type FinanceEntity } from './audit';
 export { installFinance } from './install';
 export { FINANCE_MCP_TOOLS } from './mcp-tools';
 export { seedFinance } from './seed';
-export { SEED_STORY_LAST_DAY, seedStoryYear } from './seed-calendar';
+export { SEED_CLOSED_YEARS, SEED_STORY_LAST_DAY, seedStoryYear } from './seed-calendar';
 
 export { camtStatementIbans, parseCamt053, type CamtError, type CamtLine, type CamtStatement } from './import/camt';
 export { buildCamt053, buildCamt053Bytes, type CamtFixtureInput, type CamtFixtureLine } from './import/camt-fixture';
@@ -451,3 +501,38 @@ export { pledgeDueDates, pledgeRates, type PledgeRate, type RateState } from './
 export { RETURN_CODES, returnCodeInfo, type ReturnCodeDefinition } from './direct-debit/return-codes';
 export { directDebitReturnListSchema, directDebitReturnResolveSchema, listDirectDebitReturns, resolveDirectDebitReturn, type DirectDebitReturnView } from './direct-debit/returns';
 export { endPledge, getPledge, listPledges, pausePledge, pledgeState, savePledge, type PledgeDetailView, type PledgeState, type PledgeView } from './direct-debit/pledges';
+// Rechenschaft A1 — Berichtsmechanik (Spec Rechenschaft 0.4.0 § A).
+export { REPORT_CATALOG, reportDefinition } from './reporting/catalog';
+export { canonicalJson, reportHash } from './reporting/hash';
+export { releaseOfYearInternal, reportStageInternal } from './reporting/stage';
+export { listFinanceReports, listFinanceReportVersions, runFinanceReport } from './reporting/service';
+export { endOtherAsset, listOtherAssets, otherAssetsAtInternal, revalueOtherAsset, saveOtherAsset, type OtherAssetView } from './reporting/other-assets';
+export { financeOtherAssets, financeReports, type FinanceOtherAssetRow } from './schema';
+export { financeLinesSchema, listFinanceLines, type FinanceLineView } from './reporting/lines';
+export { AUDIT_REPORT_TYPE_KEY, finalizeFinanceReport, previewFinanceReport, readFinanceReportDocument, releaseReportsForFinalizing, releaseReportsInternal } from './reporting/finalize';
+export { reportPersonalTemplate, reportTemplate, REPORT_PERSONAL_TEMPLATE_KEY, REPORT_TEMPLATE_KEY, STAGE_TEXT } from './reporting/template';
+export { RELEASE_BASES, type ReleaseBasis, type ReportDefinition, type ReportFinalVersion, type ReportFinalizeBlock, type ReportGroup, type ReportKey, type ReportLinesFilter, type ReportListItem, type ReportParams, type ReportRelease, type ReportRenderContext, type ReportRun, type ReportStage, type ReportVersionView } from './reporting/types';
+// Rechenschaft D1 — Kassenprüfung (Spec 0.4.0 § D1). Innenleben (`auditing/access.ts`) bleibt draußen.
+export { AUDIT_CONFIDENTIALITY_TYPE_KEY, currentAuditYear, endAuditorAccess, fileConfidentialityDeclaration, listAuditors, listMyAuditYears, previewAuditor, removeAuditor, saveAuditor } from './auditing/auditors';
+export { getEntryAuditState, markSectionReviewed, setSample, unmarkSectionReviewed } from './auditing/samples';
+export { AUDIT_MODES, AUDIT_SECTIONS, type AuditMode, type AuditorAccess, type AuditorIndependence, type AuditorView, type AuditSection } from './auditing/types';
+export { financeAuditAuditors, type FinanceAuditAuditorRow } from './schema';
+export { getAuditSection, type AuditSampleState, type AuditSectionFilter, type AuditSectionRow } from './auditing/sections';
+export { ANOMALY_KINDS, type AnomalyKind } from './auditing/anomalies';
+export { getAuditStatus } from './auditing/status';
+export { createAuditReportDraft, getAuditReport, markAuditReportReadyToSign, revokeAuditReportReadyToSign, saveAuditReportDeviation, saveAuditReportExamination, saveAuditReportResult, saveAuditReportSignatures, type AuditReportKind, type AuditReportState, type AuditReportView, type SignatureMode } from './auditing/report';
+export { printAuditReport, printAuditReportBlank } from './auditing/print';
+// Rechenschaft B2 — Datenexport für eine Außenprüfung (§ 147 Abs. 6 AO).
+export { DATA_EXPORT_STEPS, cancelDataExport, dataExportRunStatus, dataExportStatusInternal, listDataExports, readDataExportFile, startDataExport, type DataExportRunStatus, type DataExportView } from './reporting/export/run';
+export { DATA_EXPORT_KEEP_DAYS } from './reporting/export/sweep';
+export { AUDIT_PACKAGE_STEPS, auditPackageRunStatus, cancelAuditPackageRun, readAuditPackageFile, startAuditPackageRun, type AuditPackageFile, type AuditPackageResult, type AuditPackageRunStatus } from './auditing/package-run';
+export { AUDIT_FOLDER_TEMPLATE_KEY, auditFolderTemplate } from './auditing/folder-template';
+export { AUDIT_SCAN_MAX_BYTES, fileAuditReportFromDocument, fileAuditReportScan, type AuditFilingResult } from './auditing/filing';
+export { AUDIT_REPORT_PRINT_TEMPLATE_KEY, auditReportPrintTemplate } from './auditing/report-template';
+export { answerAuditRemark, createAuditRemark, followUpAuditRemark, listAuditRemarks, resolveAuditRemark } from './auditing/remarks';
+export type { AuditCashCount, AuditRemarkView, AuditStatus } from './auditing/types';
+export { AO52_PURPOSES, AO52_VALUES, ao52NumbersIn, ao52PurposeOf } from './format/tax-purposes';
+export { checkReverseCharge, countryOfVatId, decideReverseChargePrompt, findReverseChargePhrase, REVERSE_CHARGE_PHRASES, type ReverseChargePromptView, type ReverseChargeTrigger } from './import/reverse-charge-check';
+export { euroBase, VAT_FIGURE_GROUP_TITLES, VAT_FORMS, vatFormFor, type VatFigure, type VatFigureGroup, type VatFigureSource, type VatForm, type VatFormKind } from './reporting/vat-forms';
+export { computeVatAdvanceReturn, VAT_FIGURE_SOURCES, vatAdvanceReturnReport, vatFigureText, vatFigureValuesInternal, vatFiguresFor, vatPeriodPaperLabel, type VatAdvanceReturnData, type VatFigureValue } from './reporting/reports/vat-advance-return';
+export { section19TurnoverInternal } from './ledger/turnover';

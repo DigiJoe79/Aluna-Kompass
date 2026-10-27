@@ -26,9 +26,10 @@ const rootVersion = (JSON.parse(readFileSync(path.join(__dirname, '../../../pack
  * `0008_image_crops` die eine der Fassung 0.2.11 (Bildausschnitt an Geschichte und Projektbild),
  * `0009_members_direct_debit_0_3_0` die zusammengelegte der Fassung 0.3.0 (Mitglieder, Lastschrift, Versand per E-Mail),
  * `0010_media_ai_kind_finance_locks_0_3_1` die zusammengelegte der Fassung 0.3.1 (Bildkennzeichnung, Trigger an
- * gesperrten Finanzspalten).
+ * gesperrten Finanzspalten; 0.3.2 brachte keine), `0011_finance_accountability_0_4_0` die zusammengelegte der
+ * Fassung 0.4.0 (Rechenschaftspflichten: Berichte, Kassenprüfung, Abschluss, Erklärungszeiträume, USt-Abgaben).
  */
-const RELEASED = ['0000_init.sql', '0001_dashboard_layouts.sql', '0002_document_former_numbers.sql', '0003_finance.sql', '0004_finance_0_2_1.sql', '0005_animals_review.sql', '0006_audit_params.sql', '0007_animal_proposals_site_manifest.sql', '0008_image_crops.sql', '0009_members_direct_debit_0_3_0.sql', '0010_media_ai_kind_finance_locks_0_3_1.sql'];
+const RELEASED = ['0000_init.sql', '0001_dashboard_layouts.sql', '0002_document_former_numbers.sql', '0003_finance.sql', '0004_finance_0_2_1.sql', '0005_animals_review.sql', '0006_audit_params.sql', '0007_animal_proposals_site_manifest.sql', '0008_image_crops.sql', '0009_members_direct_debit_0_3_0.sql', '0010_media_ai_kind_finance_locks_0_3_1.sql', '0011_finance_accountability_0_4_0.sql'];
 
 /**
  * Was eine Produktion schon ausgeführt hat, bleibt Byte für Byte, wie es war:
@@ -52,6 +53,8 @@ const SHIPPED_HASHES: Record<string, string> = {
   '0008_image_crops.sql': '4c5b6a76677c943b0d3c0a5316b1d421d64ee9c51822b28a601da784c529f7c3',
   // Seit dem Release der Fassung 0.3.0.
   '0009_members_direct_debit_0_3_0.sql': 'e094c020544cf97ba8c8642b3b7b5ea691c4e32266f3233f2531399dca2991d6',
+  // Seit dem Release der Fassung 0.3.1 (0.3.2 ohne Migration).
+  '0010_media_ai_kind_finance_locks_0_3_1.sql': '1d193e4dfae91ce53378f18c358a6e73870049ccb84531b94c82073f2758338e',
 };
 
 /**
@@ -84,6 +87,12 @@ const LAST_WHEN_BEFORE_SQUASH_0_3_0 = 1792425401332;
  * unzusammengelegten Reihe (12 Migrationszeilen, z. B. der Dev-Container) als aktuell und bekommt nichts doppelt.
  */
 const LAST_WHEN_BEFORE_SQUASH_0_3_1 = 1792677288187;
+/**
+ * `when` der letzten Migration vor dem Zusammenlegen der Fassung 0.4.0 (`0060_finance_vat_filings_update`, 2026-10-27).
+ * Wie oben: Trägt `0011_finance_accountability_0_4_0` denselben Wert, gilt eine Instanz aus der
+ * unzusammengelegten Reihe (61 Migrationszeilen: Dev-Container, Test, E2E) als aktuell und bekommt nichts doppelt.
+ */
+const LAST_WHEN_BEFORE_SQUASH_0_4_0 = 1792967481969;
 const journal = JSON.parse(readFileSync(path.join(MIGRATIONS_DIR, 'meta/_journal.json'), 'utf8')) as { entries: { idx: number; when: number; tag: string }[] };
 
 /**
@@ -324,6 +333,12 @@ describe('the migrations of this version', () => {
     expect(journal.entries.map((e) => `${e.tag}.sql`)).toEqual(files);
   });
 
+  it('let a database from the unsquashed 0.4.0 series count as current (same `when` as its last migration)', () => {
+    const squashed = journal.entries.find((e) => e.tag === '0011_finance_accountability_0_4_0');
+    expect(squashed?.when).toBe(LAST_WHEN_BEFORE_SQUASH_0_4_0);
+    expect(journal.entries.map((e) => `${e.tag}.sql`)).toEqual(files);
+  });
+
   it('keep a former document number unique across documents', () => {
     const sql = readFileSync(path.join(MIGRATIONS_DIR, '0002_document_former_numbers.sql'), 'utf8');
     expect(sql).toContain('CREATE TABLE `document_former_numbers`');
@@ -346,6 +361,24 @@ const applyMigration = (db: Database.Database, file: string) => {
 };
 const applyMigrationsUpTo = (db: Database.Database, last: string) => {
   for (const file of files.slice(0, files.indexOf(last) + 1)) applyMigration(db, file);
+};
+const SQUASHED_0_4_0 = '0011_finance_accountability_0_4_0.sql';
+/**
+ * Die zusammengelegte 0011 trägt vor jedem Stück `-- Quelle: <alte Datei>`. Für einen Übertrag, dessen
+ * Ausgangstabelle erst innerhalb von 0.4.0 entstand (`finance_vat_returns`), führt dies 0011 nur bis vor
+ * (`until`) oder ab (`from`) einer Quelle aus — Zeilen dazwischen stehen dann im Zwischenstand von damals.
+ */
+const applySquashedPart = (db: Database.Database, part: { from?: string; until?: string }) => {
+  const sql = readFileSync(path.join(MIGRATIONS_DIR, SQUASHED_0_4_0), 'utf8');
+  const at = (source: string) => {
+    const i = sql.indexOf(`-- Quelle: ${source}\n`);
+    if (i < 0) throw new Error(`Quelle ${source} fehlt in ${SQUASHED_0_4_0}`);
+    return i;
+  };
+  const slice = sql.slice(part.from ? at(part.from) : 0, part.until ? at(part.until) : sql.length);
+  for (const piece of slice.split('--> statement-breakpoint')) {
+    if (piece.replace(/^--.*$/gm, '').trim()) db.exec(piece);
+  }
 };
 
 describe('migration 0006 (Protokoll in Sätzen)', () => {
@@ -398,6 +431,95 @@ describe('migration 0009 (Mitglieder, Lastschrift, Versand per E-Mail)', () => {
       { id: 'D1', filed_at: '2026-08-01T10:00:00.000Z' },
       { id: 'D2', filed_at: null },
     ]);
+    db.close();
+  });
+});
+
+describe('migration 0011 (0.4.0), aus 0048/0049 (Rechenschaft D2: Erklärungszeitraum statt „Steuererklärung abgegeben am“)', () => {
+  it('turns every filed year into a one-year tax period with the id of the year, and drops the column', () => {
+    const db = new Database(':memory:');
+    applyMigrationsUpTo(db, '0010_media_ai_kind_finance_locks_0_3_1.sql');
+    db.exec(`INSERT INTO finance_fiscal_years (id, starts_on, ends_on, designation, tax_return_filed_on, created_at, updated_at) VALUES ('01JYEAR2025AAAAAAAAAAAAAAA', '2025-01-01', '2025-12-31', '2025', '2026-05-31', 't', 't');
+      INSERT INTO finance_fiscal_years (id, starts_on, ends_on, designation, tax_return_filed_on, created_at, updated_at) VALUES ('01JYEAR2026AAAAAAAAAAAAAAA', '2026-01-01', '2026-12-31', '2026', NULL, 't', 't');`);
+    applyMigration(db, SQUASHED_0_4_0);
+    expect(db.prepare('SELECT id, first_fiscal_year_id AS first, last_fiscal_year_id AS last, due_on AS dueOn, filed_on AS filedOn, filed_report_id AS report, answers_json AS answers, with_tax_advisor AS advisor FROM finance_tax_periods').all()).toEqual([
+      { id: '01JYEAR2025AAAAAAAAAAAAAAA', first: '01JYEAR2025AAAAAAAAAAAAAAA', last: '01JYEAR2025AAAAAAAAAAAAAAA', dueOn: '2026-07-31', filedOn: '2026-05-31', report: null, answers: '{}', advisor: 0 },
+    ]);
+    const columns = (db.prepare('PRAGMA table_info(finance_fiscal_years)').all() as { name: string }[]).map((c) => c.name);
+    expect(columns).not.toContain('tax_return_filed_on');
+    // Die Löschsperren am Geschäftsjahr und am Zeitraum überleben das DROP COLUMN.
+    expect(() => db.prepare(`DELETE FROM finance_fiscal_years WHERE id = '01JYEAR2026AAAAAAAAAAAAAAA'`).run()).toThrow(/permanent/);
+    expect(() => db.prepare('DELETE FROM finance_tax_periods').run()).toThrow(/permanent/);
+    db.close();
+  });
+});
+
+
+describe('migration 0011 (0.4.0), aus 0051 (E6a: „Unternehmer oder USt-IdNr.“ wird datierte Einstellung)', () => {
+  it('turns a set switch into vatEntrepreneur from 2000 and drops the setting', () => {
+    for (const [stored, expected] of [['true', [{ key: 'vatEntrepreneur', validFrom: '2000-01-01', value: 'true' }]], ['false', []]] as const) {
+      const db = new Database(':memory:');
+      applyMigrationsUpTo(db, '0010_media_ai_kind_finance_locks_0_3_1.sql');
+      db.prepare(`INSERT INTO settings (key, value, updated_at) VALUES ('finance.isEntrepreneurOrHasVatId', ?, 't')`).run(stored);
+      applyMigration(db, SQUASHED_0_4_0);
+      expect(db.prepare(`SELECT key, valid_from AS validFrom, value FROM finance_dated_values`).all()).toEqual(expected);
+      expect(db.prepare(`SELECT key FROM settings WHERE key = 'finance.isEntrepreneurOrHasVatId'`).all()).toEqual([]);
+      db.close();
+    }
+  });
+});
+
+describe('migration 0011 (0.4.0), aus 0053 (E6a: § 13b nach EU und übrigen Leistungen)', () => {
+  it('splits rc13b by the seat of the contact or the country of the counterparty IBAN, and keeps final lines locked', () => {
+    const db = new Database(':memory:');
+    applyMigrationsUpTo(db, '0010_media_ai_kind_finance_locks_0_3_1.sql');
+    // Nur die Spalten, die der Übertrag liest; Konten, Läufe und Nutzer fehlen bewusst.
+    db.pragma('foreign_keys = OFF');
+    db.exec(`INSERT INTO contacts (id, kind, country, created_at, updated_at) VALUES ('C-IE', 'organization', 'IE', 't', 't'), ('C-GB', 'organization', 'GB', 't', 't'), ('C-DE', 'organization', 'DE', 't', 't');
+      INSERT INTO finance_categories (id, key, name, direction, default_tax_code, created_at, updated_at) VALUES ('K1', 'ads', 'Werbung', 'expense', 'rc13b', 't', 't');
+      INSERT INTO finance_entries (id, entry_date, text, status, created_by_user_id, created_channel, created_at, updated_at) VALUES ('E1', '2026-05-12', 'x', 'draft', 'U', 'ui', 't', 't');
+      INSERT INTO finance_raw_transactions (id, run_id, account_id, booking_date, amount_cents, dedup_key, line_index, created_at, counterparty_iban) VALUES ('R1', 'RUN', 'A', '2026-05-12', -100, 'd', 0, 't', 'NL91ABNA0417164300');
+      INSERT INTO finance_money_lines (id, entry_id, position, account_id, amount_cents, raw_transaction_id) VALUES ('M1', 'E1', 0, 'A', -500, 'R1');
+      INSERT INTO finance_allocation_lines (id, entry_id, position, category_id, amount_cents, tax_code, contact_id) VALUES
+        ('L-IE', 'E1', 0, 'K1', -100, 'rc13b', 'C-IE'), ('L-NL', 'E1', 1, 'K1', -100, 'rc13b', NULL), ('L-GB', 'E1', 2, 'K1', -100, 'rc13b', 'C-GB'), ('L-DE', 'E1', 3, 'K1', -100, 'rc13b', 'C-DE'), ('L-STD', 'E1', 4, 'K1', -100, 'standard', NULL);
+      INSERT INTO finance_entries (id, entry_date, text, status, created_by_user_id, created_channel, created_at, updated_at) VALUES ('E2', '2026-05-12', 'y', 'draft', 'U', 'ui', 't', 't');
+      INSERT INTO finance_allocation_lines (id, entry_id, position, category_id, amount_cents, tax_code, contact_id) VALUES ('L-GB2', 'E2', 0, 'K1', -100, 'rc13b', 'C-GB'), ('L-DE2', 'E2', 1, 'K1', -100, 'rc13b', 'C-DE');
+      UPDATE finance_entries SET status = 'final';
+      INSERT INTO finance_import_rules (id, name, category_id, direction, tax_code, contact_id, created_at, created_by_user_id, updated_at) VALUES ('IR1', 'a', 'K1', 'expense', 'rc13b', NULL, 't', 'U', 't'), ('IR2', 'b', 'K1', 'expense', 'rc13b', 'C-GB', 't', 'U', 't');`);
+    applyMigration(db, SQUASHED_0_4_0);
+    // L-NL: ohne Kontakt, aber die Buchung trägt einen Umsatz mit niederländischer IBAN — gilt für alle Zeilen der Buchung E1.
+    expect(Object.fromEntries((db.prepare('SELECT id, tax_code AS code FROM finance_allocation_lines').all() as { id: string; code: string }[]).map((r) => [r.id, r.code]))).toEqual({
+      'L-IE': 'rc13bEu', 'L-NL': 'rc13bEu', 'L-GB': 'rc13bEu', 'L-DE': 'rc13bEu', 'L-STD': 'standard', 'L-GB2': 'rc13bOther', 'L-DE2': 'rc13bOther',
+    });
+    expect(db.prepare('SELECT default_tax_code AS code FROM finance_categories').get()).toEqual({ code: 'rc13bEu' });
+    expect(db.prepare('SELECT id, tax_code AS code FROM finance_import_rules ORDER BY id').all()).toEqual([{ id: 'IR1', code: 'rc13bEu' }, { id: 'IR2', code: 'rc13bOther' }]);
+    // Die festgeschriebene Zeile: Wechsel innerhalb der § 13b-Kennzeichen an einer Ausgabe geht, alles andere nicht.
+    db.prepare(`UPDATE finance_allocation_lines SET tax_code = 'rc13bOther', service_date = '2026-04-30' WHERE id = 'L-IE'`).run();
+    expect(() => db.prepare(`UPDATE finance_allocation_lines SET tax_code = 'standard' WHERE id = 'L-IE'`).run()).toThrow(/immutable/);
+    expect(() => db.prepare(`UPDATE finance_allocation_lines SET tax_code = 'rc13bEu' WHERE id = 'L-STD'`).run()).toThrow(/immutable/);
+    expect(() => db.prepare(`UPDATE finance_allocation_lines SET amount_cents = 1 WHERE id = 'L-IE'`).run()).toThrow(/immutable/);
+    db.close();
+  });
+});
+
+describe('migration 0011 (0.4.0), aus 0054–0056 (E6a: Abgabe je Umsatzsteuer-Zeitraum)', () => {
+  it('turns every filed VAT return of a fiscal year into an annual filing without digest, and drops the old table', () => {
+    // `finance_vat_returns` entstand erst in 0.4.0 (alte 0041) — keine Produktion hat Zeilen darin. Der Übertrag
+    // läuft daher im Zwischenstand vor der alten 0055 an, nicht ab 0.3.2.
+    const db = new Database(':memory:');
+    applyMigrationsUpTo(db, '0010_media_ai_kind_finance_locks_0_3_1.sql');
+    applySquashedPart(db, { until: '0055_finance_vat_filings_transfer.sql' });
+    db.exec(`INSERT INTO finance_fiscal_years (id, starts_on, ends_on, designation, created_at, updated_at) VALUES ('01JYEAR2025AAAAAAAAAAAAAAA', '2025-01-01', '2025-12-31', '2025', 't', 't');
+      INSERT INTO finance_vat_returns (fiscal_year_id, filed_on, at, by_user_id) VALUES ('01JYEAR2025AAAAAAAAAAAAAAA', '2026-07-20', '2026-07-20T10:00:00.000Z', 'U1');`);
+    applySquashedPart(db, { from: '0055_finance_vat_filings_transfer.sql' });
+    expect(db.prepare('SELECT id, period, filed_on AS filedOn, amendment, lines_digest AS linesDigest, by_user_id AS byUserId FROM finance_vat_filings').all()).toEqual([
+      { id: '01JYEAR2025AAAAAAAAAAAAAAA', period: '2025', filedOn: '2026-07-20', amendment: 0, linesDigest: null, byUserId: 'U1' },
+    ]);
+    const tables = (db.prepare(`SELECT name FROM sqlite_master WHERE type = 'table'`).all() as { name: string }[]).map((t) => t.name);
+    expect(tables).not.toContain('finance_vat_returns');
+    expect(() => db.prepare('DELETE FROM finance_vat_filings').run()).toThrow(/permanent/);
+    // Seit der alten 0060 (E6b) bleibt der Tag der Abgabe änderbar; Zeitraum und Berichtigung stehen fest.
+    expect(() => db.prepare(`UPDATE finance_vat_filings SET period = '2024'`).run()).toThrow(/permanent/);
     db.close();
   });
 });

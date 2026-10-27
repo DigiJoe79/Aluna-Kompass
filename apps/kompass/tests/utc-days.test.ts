@@ -21,7 +21,9 @@ const ALLOWED: Record<string, string> = {
   // Kalenderrechnung auf einem ISO-Datum: der Tag entsteht aus `T00:00:00.000Z`, kein Zeitpunkt ist beteiligt.
   'packages/modules/finance/src/ledger/fiscal-years.ts': 'dayAfter/yearEnd auf ISO-Daten',
   'packages/modules/finance/src/ledger/period.ts': 'dayAfter auf ISO-Datum',
+  'packages/modules/finance/src/auditing/anomalies.ts': 'dayAfter und Ende des Folgemonats auf ISO-Daten (Auffälligkeiten des Prüfpakets)',
   'packages/modules/finance/src/allocation/partner-proof.ts': 'addDaysInternal auf ISO-Datum',
+  'packages/modules/finance/src/reporting/other-assets.ts': 'dayBefore auf ISO-Datum (Ende am Vortag eines neuen Werts, Vortag des Geschäftsjahres)',
   'packages/modules/finance/src/allocation/approvals.ts': 'addDays auf ISO-Datum',
   'packages/core/src/backup/ring.ts': 'plusDays/sundayOf auf ISO-Datum (Ring der Backups)',
 };

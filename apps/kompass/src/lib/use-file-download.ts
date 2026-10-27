@@ -22,13 +22,16 @@ export function useFileDownload(messages: { forbidden: string; notFound: string;
   const [busy, setBusy] = useState(false);
   const [refusal, setRefusal] = useState<ActionState>({ status: 'idle' });
 
-  const download = async (href: string, fallbackName: string): Promise<void> => {
+  /** `init` für einen Download mit Nebenwirkung (Druck protokolliert): `{ method: 'POST' }`, nie über einen Link. */
+  const download = async (href: string, fallbackName: string, init?: { method: 'POST' }): Promise<void> => {
     setBusy(true);
     setRefusal({ status: 'idle' });
     try {
-      const res = await fetch(href);
+      const res = init ? await fetch(href, init) : await fetch(href);
       if (!res.ok) {
-        const message = res.status === 403 ? messages.forbidden : res.status === 404 ? messages.notFound : messages.failed;
+        // Eine fachliche Ablehnung (409, abgelaufen 410) bringt ihren Satz mit `{ code, message }` mit.
+        const refused = res.status === 409 || res.status === 410 ? ((await res.json().catch(() => null)) as { message?: unknown } | null) : null;
+        const message = typeof refused?.message === 'string' && refused.message ? refused.message : res.status === 403 ? messages.forbidden : res.status === 404 ? messages.notFound : messages.failed;
         setRefusal({ status: 'error', message, fieldErrors: {} });
         return;
       }
@@ -43,7 +46,7 @@ export function useFileDownload(messages: { forbidden: string; notFound: string;
       setTimeout(() => URL.revokeObjectURL(url), 60_000);
     } catch {
       // Der Server war nicht zu erreichen: keine Ablehnung, sondern ein Toast zum Wiederholen.
-      toastNetwork({ status: 'error', kind: 'network', message: tCommon('network'), fieldErrors: {} }, tCommon('retry'), () => void download(href, fallbackName));
+      toastNetwork({ status: 'error', kind: 'network', message: tCommon('network'), fieldErrors: {} }, tCommon('retry'), () => void download(href, fallbackName, init));
     } finally {
       setBusy(false);
     }

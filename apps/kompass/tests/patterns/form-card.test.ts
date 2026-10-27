@@ -21,6 +21,7 @@ import { type Allowlist, allowlistHygiene, lineOf, read, relative, sourceFiles, 
 export const WITHOUT_CARD: Allowlist = {
   'app/(shell)/dms/new/draft-form.tsx': 'Brief schreiben: Arbeitsfläche mit Vorschau; die Leiste klebt am Ende der eigenen Scrollspalte (draft-screen.tsx).',
   'app/(shell)/finance/direct-debit/runs/new/new-run-flow.tsx': 'Neuer Einzug (mode run, Handoff 2a § 1.2 wie der Serienlauf): Laufleiste unter Fälligkeitstag und Vorschau-Gruppen, keine Formularkarte.',
+  'app/(shell)/finance/closing/handover/handover-items.tsx': 'Übergabeprotokoll (Designer Runde 6, vorläufig, Joe 2026-10-25): Felder direkt im Schritt 3, Leiste `surface="plain"` ohne Fläche und ohne Kleben am Ende des Schritts.',
   'app/(shell)/finance/donations/run/run-selection.tsx': 'Sammelbestätigung (mode run): Fußleiste unter Auswahl und Vorschau-Gruppen, keine Formularkarte.',
   'app/(shell)/finance/entries/entry-form.tsx': 'Buchung: Vorgangsmaske aus mehreren Karten (Text, Konto, Aufteilung, Belege); die Leiste steht unter ihnen.',
   'app/(shell)/finance/expenses/new/expense-form.tsx': 'Auslage: Vorgangsmaske aus Positionen und Erstattungskarte; die Leiste steht unter ihnen.',

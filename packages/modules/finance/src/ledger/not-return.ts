@@ -1,9 +1,9 @@
-import { isoNow, notFound, ok, requirePermission, validate, type CallContext, type DbOrTx, type Deps, type Result } from '@kompass/core';
-import { and, eq, inArray, lt } from 'drizzle-orm';
+import { isoNow, notFound, ok, readSetting, requirePermission, validate, type CallContext, type DbOrTx, type Deps, type Result } from '@kompass/core';
+import { and, eq, gt, inArray, isNull, lt, ne } from 'drizzle-orm';
 import { z } from 'zod';
 import { financeAudit } from '../audit';
 import { financeConflict } from '../errors';
-import { financeAllocationLines, financeCategories, financeEntries, financeNotReturnMarks } from '../schema';
+import { financeAllocationLines, financeCategories, financeEntries, financeMoneyLines, financeNotReturnMarks } from '../schema';
 import { CERTIFIABLE_INCOME_KINDS } from './codes';
 
 export interface NotReturnMarkView {
@@ -17,6 +17,52 @@ export function notReturnMarkInternal(db: DbOrTx, entryId: string): NotReturnMar
   const row = db.select().from(financeNotReturnMarks).where(eq(financeNotReturnMarks.entryId, entryId)).get();
   if (!row || row.revokedAt !== null) return null;
   return { note: row.note, byUserId: row.byUserId, at: row.at };
+}
+
+/**
+ * Die Regel des möglichen Rückläufers (`possibleReturnsWithoutOriginInternal`, Befund 30b/AC) für ein Paar: eine
+ * Auszahlungszeile an denselben Kontakt, nicht in der Buchung der Zuwendung, am Spendentag oder danach und höchstens
+ * so hoch wie sie. Eine Stelle, damit Sperre und Hinweis an der Buchung nie auseinanderlaufen (Plan E9 Task 2).
+ */
+export function paymentMayReturnGift(payment: { entryId: string; entryDate: string; contactId: string | null; amountCents: number }, gift: { entryId: string; entryDate: string; contactId: string; amountCents: number }): boolean {
+  return payment.contactId === gift.contactId && payment.entryId !== gift.entryId && payment.entryDate >= gift.entryDate && -payment.amountCents <= gift.amountCents;
+}
+
+/** Die Arten, deren Zuwendungen eine Bestätigung bekommen können — Mitgliedsbeiträge nur mit der Einstellung. */
+export function certifiableKindsInternal(deps: Deps): string[] {
+  const feesCertifiable = readSetting<boolean>(deps, 'finance.membershipFeesCertifiable');
+  return CERTIFIABLE_INCOME_KINDS.filter((k) => feesCertifiable || k !== 'membershipFee');
+}
+
+/**
+ * Plan E9 Task 2 (Befund 30 b): Könnte diese Buchung eine Rückgabe einer bescheinigbaren Zuwendung sein? Dieselbe
+ * Regel wie die Sperre der Bestätigung (`paymentMayReturnGift`; festgeschrieben, nicht zurückgenommen, mit ausgehender
+ * Geldzeile, Zeile ohne `originLineId`), aber ohne die Kennzeichnung „ist keine Rückgabe“: Die soll an der Buchung
+ * sichtbar bleiben und sich aufheben lassen. Hat der Kontakt nie bescheinigbar gegeben, ist es nie eine Rückgabe.
+ */
+export function mayBeDonationReturnInternal(deps: Deps, entryId: string): boolean {
+  const db = deps.db;
+  const entry = db.select().from(financeEntries).where(eq(financeEntries.id, entryId)).get();
+  if (!entry || entry.status !== 'final' || entry.reversedByEntryId || entry.reversesEntryId) return false;
+  if (!db.select({ id: financeMoneyLines.id }).from(financeMoneyLines).where(and(eq(financeMoneyLines.entryId, entryId), lt(financeMoneyLines.amountCents, 0))).get()) return false;
+  const payments = db
+    .select({ contactId: financeAllocationLines.contactId, amountCents: financeAllocationLines.amountCents })
+    .from(financeAllocationLines)
+    .where(and(eq(financeAllocationLines.entryId, entryId), lt(financeAllocationLines.amountCents, 0), isNull(financeAllocationLines.originLineId)))
+    .all()
+    .filter((p): p is { contactId: string; amountCents: number } => p.contactId !== null);
+  if (payments.length === 0) return false;
+  const gifts = db
+    .select({ entryId: financeEntries.id, entryDate: financeEntries.entryDate, contactId: financeAllocationLines.contactId, amountCents: financeAllocationLines.amountCents })
+    .from(financeAllocationLines)
+    .innerJoin(financeEntries, eq(financeEntries.id, financeAllocationLines.entryId))
+    .innerJoin(financeCategories, eq(financeCategories.id, financeAllocationLines.categoryId))
+    .where(and(
+      inArray(financeAllocationLines.contactId, [...new Set(payments.map((p) => p.contactId))]), gt(financeAllocationLines.amountCents, 0), ne(financeEntries.id, entryId),
+      eq(financeEntries.status, 'final'), isNull(financeEntries.reversedByEntryId), isNull(financeEntries.reversesEntryId), inArray(financeCategories.incomeKind, certifiableKindsInternal(deps)),
+    ))
+    .all();
+  return payments.some((p) => gifts.some((g) => paymentMayReturnGift({ ...p, entryId, entryDate: entry.entryDate }, { ...g, contactId: g.contactId! })));
 }
 
 export const markNotReturnSchema = z

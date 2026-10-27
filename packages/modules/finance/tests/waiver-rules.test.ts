@@ -11,8 +11,8 @@ const MONTHS = { claimMonths: 12, oneOffMonths: 3 };
 
 describe('the shipped waiver deadlines', () => {
   it('are three months for one-off claims and twelve for recurring claims', () => {
-    expect(DATED_SERIES.waiverOneOffMonths).toEqual({ unit: 'months', series: [{ validFrom: '2026-01-01', value: 3 }] });
-    expect(DATED_SERIES.waiverClaimMonths).toEqual({ unit: 'months', series: [{ validFrom: '2026-01-01', value: 12 }] });
+    expect(DATED_SERIES.waiverOneOffMonths).toEqual({ unit: 'months', series: [{ validFrom: '2015-01-01', value: 3 }] });
+    expect(DATED_SERIES.waiverClaimMonths.series.at(-1)).toEqual({ validFrom: '2016-08-24', value: 12 });
   });
 });
 

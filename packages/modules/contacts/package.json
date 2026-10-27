@@ -1,6 +1,6 @@
 {
   "name": "@kompass/module-contacts",
-  "version": "0.3.2",
+  "version": "0.4.0",
   "private": true,
   "type": "module",
   "sideEffects": false,
@@ -15,7 +15,7 @@
   "dependencies": {
     "@kompass/core": "workspace:*",
     "drizzle-orm": "^0.45.3",
-    "zod": "^4.6.5"
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@types/node": "^26.6.4",

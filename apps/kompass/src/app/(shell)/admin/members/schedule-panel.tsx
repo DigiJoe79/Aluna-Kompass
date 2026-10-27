@@ -4,7 +4,6 @@ import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { toast } from 'sonner';
 import { useDateFormat } from '@/components/date-format-provider';
 import { EmptyState } from '@/components/empty-state';
 import { Empty } from '@/components/empty-value';
@@ -220,7 +219,6 @@ function ScheduleDialog({ schedule, prefill, types, today, onClose, onNew }: { s
     const result = await feedback.run(() => saveFeeScheduleAction(input), { retry: () => void save() });
     setPending(false);
     if (result.status !== 'success') return;
-    toast.success(result.message);
     onClose();
     router.refresh();
   };

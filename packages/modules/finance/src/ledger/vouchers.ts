@@ -1,6 +1,6 @@
 import { isoDay, isoNow, newId, notFound, ok, paperDate, readSetting, requirePermission, validate, type CallContext, type DbOrTx, type Deps, type Result } from '@kompass/core';
-import { abortReceive, documents, getDocumentRecord, linkDocumentInternal, listDocuments, readLinkedDocument, receiveGeneratedUpload, type DocumentRecord } from '@kompass/module-dms';
-import { and, eq, gt, inArray } from 'drizzle-orm';
+import { abortReceive, documentLinks, documents, getDocumentRecord, linkDocumentInternal, listDocuments, readLinkedDocument, receiveGeneratedUpload, type DocumentRecord } from '@kompass/module-dms';
+import { and, eq, gt, gte, inArray, lte, ne } from 'drizzle-orm';
 import { z } from 'zod';
 import { financeAudit } from '../audit';
 import { financeConflict, requireHumanChannelFinance } from '../errors';
@@ -42,7 +42,8 @@ export async function uploadVoucher(deps: Deps, ctx: CallContext, input: unknown
   if (!entry) return notFound('financeEntry', v.entryId);
 
   const allowedTypes = readSetting<string[]>(deps, 'finance.voucherTypes');
-  if (!allowedTypes.includes(v.typeKey)) return financeConflict('voucherTypeNotAllowed', { type: v.typeKey });
+  // N2: die hinterlegten Arten mit, damit ein Agent nicht raten muss.
+  if (!allowedTypes.includes(v.typeKey)) return financeConflict('voucherTypeNotAllowed', { type: v.typeKey, allowed: allowedTypes.join(', ') });
 
   // Datum deutsch, nie ISO (release-0.2.7, Befund 20).
   const subject = v.title ?? `Beleg vom ${paperDate(isoDay(v.documentDate))}`;
@@ -138,13 +139,14 @@ export async function revokeVoucher(deps: Deps, ctx: CallContext, input: unknown
   }
 
   return deps.db.transaction((tx: DbOrTx) => {
+    // Ein Zeitpunkt für Widerruf und Ersatz: In der Spur stehen beide nebeneinander (Designer Runde 6, 15c).
+    const now = isoNow(deps.clock);
     let replacementLinkId: string | null = null;
     if (replacementDoc) {
-      const written = writeVoucherLink(tx, deps, ctx, { entryId: link.entryId, documentId: replacementDoc.id, documentNumber: replacementDoc.number ?? '', documentChecksum: replacementDoc.fileChecksum, viaUpload: false });
+      const written = writeVoucherLink(tx, deps, ctx, { entryId: link.entryId, documentId: replacementDoc.id, documentNumber: replacementDoc.number ?? '', documentChecksum: replacementDoc.fileChecksum, viaUpload: false, at: now });
       linkDocumentInternal(tx, deps, { documentId: replacementDoc.id, entityType: 'financeEntry', entityId: link.entryId });
       replacementLinkId = written.linkId;
     }
-    const now = isoNow(deps.clock);
     tx.update(financeEntryDocuments).set({ revokedAt: now, revokedByUserId: ctx.userId, revokeNote: v.note, replacedByLinkId: replacementLinkId }).where(eq(financeEntryDocuments.id, v.linkId)).run();
     financeAudit(tx, deps, ctx, { action: 'finance.entry.documentRevoke', entity: 'financeEntryDocument', id: v.linkId, after: { entryId: link.entryId, documentId: link.documentId, withReplacement: replacementLinkId !== null } });
     return ok({ linkId: v.linkId, replacementLinkId });
@@ -171,9 +173,9 @@ export async function readVoucher(deps: Deps, ctx: CallContext, input: unknown):
  * Zweck-Nachweis einer Einnahmezeile hängt genauso an der Buchung wie ein
  * gewöhnlicher Beleg.
  */
-export function writeVoucherLink(tx: DbOrTx, deps: Deps, ctx: CallContext, input: { entryId: string; documentId: string; documentNumber: string; documentChecksum: string | null; viaUpload: boolean }): VoucherLinkResult {
+export function writeVoucherLink(tx: DbOrTx, deps: Deps, ctx: CallContext, input: { entryId: string; documentId: string; documentNumber: string; documentChecksum: string | null; viaUpload: boolean; at?: string }): VoucherLinkResult {
   const linkId = newId();
-  const now = isoNow(deps.clock);
+  const now = input.at ?? isoNow(deps.clock);
   tx.insert(financeEntryDocuments)
     .values({
       id: linkId, entryId: input.entryId, documentId: input.documentId, documentNumber: input.documentNumber, documentChecksum: input.documentChecksum, documentDeletedAt: null,
@@ -206,7 +208,7 @@ export function attachSettledItemDocumentsInternal(tx: DbOrTx, deps: Deps, ctx: 
 }
 
 /** Ein festgeschriebenes, nicht storniertes Dokument als Beleg an die Buchung — einmal. */
-function attachIssuedDocumentInternal(tx: DbOrTx, deps: Deps, ctx: CallContext, entryId: string, documentId: string): void {
+export function attachIssuedDocumentInternal(tx: DbOrTx, deps: Deps, ctx: CallContext, entryId: string, documentId: string): void {
   const known = tx.select({ id: financeEntryDocuments.id }).from(financeEntryDocuments).where(and(eq(financeEntryDocuments.entryId, entryId), eq(financeEntryDocuments.documentId, documentId))).get();
   if (known) return;
   const doc = tx.select().from(documents).where(eq(documents.id, documentId)).get();
@@ -243,6 +245,42 @@ export interface VoucherWithoutEntry {
 
 const listWithoutEntrySchema = z.object({ limit: z.number().int().min(1).max(200).default(50), offset: z.number().int().min(0).default(0) });
 
+/**
+ * Ein Dokument mit einem dieser Bezüge ist kein Beleg ohne Buchung: an einer Buchung, oder (Rechenschaft C) der
+ * Kontoauszug am Konto.
+ */
+const NOT_A_LOOSE_VOUCHER = new Set(['financeEntry', 'financeAccount']);
+
+/**
+ * Belege ohne Buchung mit Datum im Zeitraum — gelesen ohne Rechte des Aufrufers, rein: Dokumente der genannten Arten,
+ * festgeschrieben und nicht widerrufen, ohne Bezug an Buchung oder Konto. Für den Jahresabschluss (nur die Zahl) und
+ * den Bericht `voucherCheck`, der mit `finance.read` liest und dessen Arten im Bereich `finance` liegen; die Liste für
+ * die Oberfläche liefert `listVouchersWithoutEntry` über die Akte (Prinzip 6).
+ */
+export function vouchersWithoutEntryInternal(db: DbOrTx, typeKeys: readonly string[], range: { from: string; to: string }): { id: string; number: string | null; subject: string; documentDate: string; typeKey: string }[] {
+  if (typeKeys.length === 0) return [];
+  const candidates = db
+    .select({ id: documents.id, number: documents.number, subject: documents.subject, documentDate: documents.documentDate, typeKey: documents.typeKey })
+    .from(documents)
+    .where(and(inArray(documents.typeKey, [...typeKeys]), eq(documents.phase, 'issued'), ne(documents.status, 'voided'), gte(documents.documentDate, range.from), lte(documents.documentDate, range.to)))
+    .all();
+  if (candidates.length === 0) return [];
+  const linked = new Set(
+    db
+      .select({ documentId: documentLinks.documentId })
+      .from(documentLinks)
+      .where(and(inArray(documentLinks.documentId, candidates.map((c) => c.id)), inArray(documentLinks.entityType, [...NOT_A_LOOSE_VOUCHER])))
+      .all()
+      .map((l) => l.documentId),
+  );
+  return candidates.filter((c) => !linked.has(c.id)).sort((a, b) => a.documentDate.localeCompare(b.documentDate) || (a.number ?? '').localeCompare(b.number ?? ''));
+}
+
+/** Wie viele Belege ohne Buchung mit Datum im Zeitraum liegen — nur eine Zahl, für den Jahresabschluss. */
+export function vouchersWithoutEntryCountInternal(deps: Deps, range: { from: string; to: string }): number {
+  return vouchersWithoutEntryInternal(deps.db, readSetting<string[]>(deps, 'finance.voucherTypes'), range).length;
+}
+
 /** Die Seitengröße, mit der die Akte gelesen wird — ihr Höchstwert. */
 const DMS_PAGE = 200;
 
@@ -277,7 +315,7 @@ export async function listVouchersWithoutEntry(deps: Deps, ctx: CallContext, inp
   for (const typeKey of readSetting<string[]>(deps, 'finance.voucherTypes')) {
     const docs = await issuedDocumentsOfType(deps, ctx, typeKey);
     if (!docs.ok) return docs;
-    found.push(...docs.value.filter((d) => !d.links.some((l) => l.entityType === 'financeEntry')));
+    found.push(...docs.value.filter((d) => !d.links.some((l) => NOT_A_LOOSE_VOUCHER.has(l.entityType))));
   }
   found.sort((a, b) => b.createdAt.localeCompare(a.createdAt) || (b.number ?? '').localeCompare(a.number ?? ''));
   const { limit, offset } = parsed.value;

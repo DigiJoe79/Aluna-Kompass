@@ -121,7 +121,8 @@ export function RunsTable({ runs, canDiscard }: { runs: RunRow[]; canDiscard: bo
                       hinter dem Namen (Designer Runde 4 Nachtrag, Frage 2; 078, 214). Einzelstelle, ohne Layout-Test. */}
                   {discarded ? <span className="md:block md:pl-4.5"><MutedMark /></span> : null}
                 </TableCell>
-                <TableCell col="meta" wrap className="tabular-nums text-ink-2">{run.periodFrom && run.periodTo ? t('period', { from: date(run.periodFrom), to: date(run.periodTo) }) : <Empty />}</TableCell>
+                {/* Der Zeitraum ist ein Kennwert und steht einzeilig, wie ihn die Designer-Runden zuletzt sahen (Befund 47). */}
+                <TableCell col="meta" className="tabular-nums text-ink-2">{run.periodFrom && run.periodTo ? t('period', { from: date(run.periodFrom), to: date(run.periodTo) }) : <Empty />}</TableCell>
                 <TableCell data-testid="import-run-format" className="text-muted-ink">{formatLabel(run)}</TableCell>
                 <TableCell className="tabular-nums text-ink-2">
                   {noBalance ? (

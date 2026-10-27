@@ -37,11 +37,14 @@ describe('Seitenbreite über Page', () => {
  * bleiben. Sonst steht sie hier mit Grund: Detail- und Einstellungsseiten mit einer Tabelle als Abschnitt.
  */
 export const WIDE_ALLOWED: Allowlist = {
+  'app/(shell)/finance/vat/page.tsx': 'Vorgang mit der Kennzahlen-Tabelle als Abschnitt; die fünfte Spalte („abgegeben“) gibt es nur bei offener Berichtigung (Board Umsatzsteuer 8b), sonst vier — `standard` wie Board 8a.',
   'app/(shell)/admin/backup/page.tsx': 'Einstellungsseite (PanelNav) mit der Liste der Backups als Abschnitt; `standard` nach Designer Backup 2026-10-23 (1a).',
   'app/(shell)/admin/dms/page.tsx': 'Einstellungsseite (PanelNav), die Tabellen der Arten und Regeln sind Abschnitte (MUSTER § D).',
   'app/(shell)/admin/finance/page.tsx': 'Einstellungsseite (PanelNav), Konten, Kategorien und Zwecke sind Abschnitte (MUSTER § D).',
   'app/(shell)/admin/members/page.tsx': 'Einstellungsseite (PanelNav), Mitgliedsarten und Mahnstufen sind Abschnitte (MUSTER § D, Handoff Mitglieder 7b/7c).',
   'app/(shell)/members/[id]/page.tsx': 'Detail eines Mitglieds (Stammdaten wie Partner), die Beiträge sind eine Nebenliste neben dem Formular (Handoff Mitglieder D1, 3c).',
+  'app/(shell)/finance/deadlines/page.tsx': 'Fristen und Schwellen: drei Abschnitte, Fristen und Wiedervorlagen sind kurze Listen (drei sichtbare Spalten, Zustand und Aktion nur für Vorleser beschriftet); `standard` nach Board Rechenschaft 6a.',
+  'app/(shell)/finance/reports/page.tsx': 'Berichte (drei Spalten, `standard` nach Designer Runde 2); die Karte „Datenexport“ darunter hat vier sichtbare Spalten und den Knopf „Herunterladen“ am Platz `actions` (Board Rechenschaft 13f).',
   'app/(shell)/finance/entries/[id]/page.tsx': 'Detail einer Buchung, die Aufteilungen sind ein Abschnitt der Lesesicht.',
   'app/(shell)/finance/direct-debit/mandates/[id]/page.tsx': 'Mandat (Vorgang in einer Spalte, Handoff 2a § 1.4): die Rückgaben sind eine Nebenliste unter den Angaben.',
   'app/(shell)/finance/direct-debit/pledges/[id]/page.tsx': 'Zusage (Stammdaten wie das Mitglied, Handoff 2a § 1.5): die Raten sind eine Nebenliste neben dem Formular.',

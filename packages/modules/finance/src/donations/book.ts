@@ -10,6 +10,7 @@ import { financeAllocationLines, financeCategories, financeConfirmationLines, fi
 import { inKindDetailsMissing, missingContactFields, returnedCentsInternal } from './check';
 import { organizationParty, type ConfirmationKind } from './confirmations';
 import { noticeValidAtInternal } from './notices';
+import { toCorrectConfirmationsOfCalendarYearInternal } from './to-correct';
 import { SIMPLIFIED_RECEIPT_TEMPLATE_KEY } from './templates/simplified';
 
 /**
@@ -50,9 +51,8 @@ interface BookLine extends Omit<DonationBookRow, 'confirmation' | 'contactName'>
   originLineId: string | null;
 }
 
-/** Die Zeilen des Jahres, sortiert nach Datum, Nummer und Position — ohne Rechteprüfung. */
-function bookLinesInternal(db: DbOrTx, deps: Deps, year: number): { lines: BookLine[]; feesCertifiable: boolean } {
-  const feesCertifiable = readSetting<boolean>(deps, 'finance.membershipFeesCertifiable');
+/** Die Zeilen des Jahres, sortiert nach Datum, Nummer und Position — ohne Rechteprüfung, rein. */
+function bookLinesInternal(db: DbOrTx, year: number, feesCertifiable: boolean): BookLine[] {
   const kinds = CERTIFIABLE_INCOME_KINDS.filter((k) => feesCertifiable || k !== 'membershipFee');
   const lines = db
     .select({
@@ -76,7 +76,33 @@ function bookLinesInternal(db: DbOrTx, deps: Deps, year: number): { lines: BookL
     .filter((r) => r.amountCents !== 0 && r.entryDate.startsWith(`${year}-`))
     .sort((a, b) => a.entryDate.localeCompare(b.entryDate) || (a.entryNumber ?? '').localeCompare(b.entryNumber ?? '') || a.position - b.position)
     .map(({ position: _position, kind, ...rest }) => ({ ...rest, kind: kind as DonationBookKind }));
-  return { lines, feesCertifiable };
+  return lines;
+}
+
+function sumsOf(lines: readonly BookLine[]): DonationBookSums {
+  const sums: DonationBookSums = { donation: 0, membershipFee: 0, inKindDonation: 0, expenseWaiver: 0, total: 0 };
+  for (const line of lines) {
+    sums[line.kind] += line.amountCents;
+    sums.total += line.amountCents;
+  }
+  return sums;
+}
+
+/** Zeilen des Buchs mit Spendernamen und gültiger Bestätigung. */
+function bookRowsInternal(db: DbOrTx, lines: readonly BookLine[]): DonationBookRow[] {
+  const confirmations = validConfirmationsInternal(db, lines.map((l) => l.lineId));
+  const contactIds = [...new Set(lines.map((l) => l.contactId).filter((id): id is string => id !== null))];
+  const names = new Map((contactIds.length === 0 ? [] : db.select().from(contacts).where(inArray(contacts.id, contactIds)).all()).map((c) => [c.id, displayName(c)] as const));
+  return lines.map(({ originLineId: _origin, ...line }) => {
+    const confirmation = confirmations.get(line.lineId);
+    return { ...line, contactName: line.contactId ? (names.get(line.contactId) ?? '') : null, confirmation: confirmation ? { id: confirmation.id, number: confirmation.number, kind: confirmation.kind } : null };
+  });
+}
+
+/** Das ganze Spendenbuch eines Kalenderjahres, ohne Blättern und ohne Rechteprüfung — rein (Bericht `donationBook`). */
+export function donationBookInternal(db: DbOrTx, year: number, feesCertifiable: boolean): DonationBook {
+  const lines = bookLinesInternal(db, year, feesCertifiable);
+  return { rows: bookRowsInternal(db, lines), total: lines.length, sums: sumsOf(lines), membershipFeesCertifiable: feesCertifiable };
 }
 
 /** Je Zeile die gültige Bestätigung (nicht freigegebene Zeile) mit dem bestätigten Betrag. */
@@ -110,26 +136,20 @@ export async function getDonationBook(deps: Deps, ctx: CallContext, input: unkno
   if (!parsed.ok) return parsed;
   const { year, contact, limit, offset } = parsed.value;
 
-  const { lines, feesCertifiable } = bookLinesInternal(deps.db, deps, year);
-  const sums: DonationBookSums = { donation: 0, membershipFee: 0, inKindDonation: 0, expenseWaiver: 0, total: 0 };
-  for (const line of lines) {
-    sums[line.kind] += line.amountCents;
-    sums.total += line.amountCents;
-  }
+  const feesCertifiable = readSetting<boolean>(deps, 'finance.membershipFeesCertifiable');
+  const lines = bookLinesInternal(deps.db, year, feesCertifiable);
   const listed = contact === 'anonymous' ? lines.filter((line) => line.contactId === null) : lines;
-  const page = listed.slice(offset, offset + limit);
-  const confirmations = validConfirmationsInternal(deps.db, page.map((l) => l.lineId));
-  const contactIds = [...new Set(page.map((l) => l.contactId).filter((id): id is string => id !== null))];
-  const names = new Map((contactIds.length === 0 ? [] : deps.db.select().from(contacts).where(inArray(contacts.id, contactIds)).all()).map((c) => [c.id, displayName(c)] as const));
-  const rows = page.map(({ originLineId: _origin, ...line }) => {
-    const confirmation = confirmations.get(line.lineId);
-    return { ...line, contactName: line.contactId ? (names.get(line.contactId) ?? '') : null, confirmation: confirmation ? { id: confirmation.id, number: confirmation.number, kind: confirmation.kind } : null };
-  });
-  return ok({ rows, total: listed.length, sums, membershipFeesCertifiable: feesCertifiable });
+  const rows = bookRowsInternal(deps.db, listed.slice(offset, offset + limit));
+  return ok({ rows, total: listed.length, sums: sumsOf(lines), membershipFeesCertifiable: feesCertifiable });
 }
 
-export type ReconciliationReasonKey = 'belowMinimum' | 'addressMissing' | 'inKindUndescribed' | 'expenseWaiverUnconfirmed' | 'anonymous' | 'other';
-const REASON_ORDER: readonly ReconciliationReasonKey[] = ['belowMinimum', 'addressMissing', 'inKindUndescribed', 'expenseWaiverUnconfirmed', 'anonymous', 'other'];
+/**
+ * `confirmedAboveReturns` (negativ): Bestätigungen über das hinaus, was nach Rückgaben **desselben Jahres** von der
+ * Zuwendung bleibt. `returnOtherYear`: Rückgaben in einem anderen Jahr als die Zuwendung — negativ für eine Rückgabe
+ * dieses Jahres zu einer früheren Zuwendung, positiv für eine spätere Rückgabe, die keine Bestätigung übersteigt.
+ */
+export type ReconciliationReasonKey = 'belowMinimum' | 'addressMissing' | 'inKindUndescribed' | 'expenseWaiverUnconfirmed' | 'anonymous' | 'other' | 'confirmedAboveReturns' | 'returnOtherYear';
+const REASON_ORDER: readonly ReconciliationReasonKey[] = ['belowMinimum', 'addressMissing', 'inKindUndescribed', 'expenseWaiverUnconfirmed', 'anonymous', 'other', 'confirmedAboveReturns', 'returnOtherYear'];
 
 export interface DonationReconciliation {
   year: number;
@@ -137,18 +157,30 @@ export interface DonationReconciliation {
   donationsCents: number;
   /** Summe der gültigen Bestätigungen über Zeilen des Jahres — wie bestätigt. */
   confirmedCents: number;
-  /** `donationsCents − confirmedCents` = Summe der Gründe − `toCorrect.cents`. */
+  /** `donationsCents − confirmedCents` = Summe der Gründe (Designer Runde 8, 272). */
   differenceCents: number;
-  /** Nur Gründe mit Zeilen, in fester Reihenfolge; `count` zählt Zeilen. */
+  /** Nur Gründe mit Zeilen, in fester Reihenfolge; `count` zählt Zeilen. Ihre Summe ist die Differenz. */
   reasons: { key: ReconciliationReasonKey; count: number; cents: number; href: string }[];
-  /** Bestätigungen, die mehr bescheinigen, als nach Rückgaben noch da ist (Prüfstein 6). */
-  toCorrect: { count: number; cents: number; href: string };
+  /**
+   * Bestätigungen des Jahres zu korrigieren, gezählt wie Schritt 7 (N18). `cents`: was sie mehr bescheinigen, als nach
+   * Rückgaben (in jedem Jahr) noch da ist (Prüfstein 6) — kein Teil der Rechnung: Was davon auf Rückgaben dieses Jahres
+   * beruht, steht als `confirmedAboveReturns` unter den Gründen. `withoutAmountCount`: die ohne Überhang (etwa Bescheid ersetzt).
+   */
+  toCorrect: { count: number; cents: number; withoutAmountCount: number; href: string };
   /** Die heute geltende Grenze des vereinfachten Nachweises (`simplifiedReceiptLimit`) — `null`, wenn keine hinterlegt ist. */
   simplifiedReceiptLimitCents: number | null;
 }
 
 const reasonHref = (key: ReconciliationReasonKey, year: number): string =>
-  key === 'anonymous' ? `/finance/donations/book?year=${year}&contact=anonymous` : key === 'addressMissing' || key === 'other' ? `/finance/donations/run?year=${year}` : '/finance/donations?tab=uncertified';
+  key === 'anonymous'
+    ? `/finance/donations/book?year=${year}&contact=anonymous`
+    : key === 'addressMissing' || key === 'other'
+      ? `/finance/donations/run?year=${year}`
+      : key === 'confirmedAboveReturns'
+        ? '/finance/donations?tab=toCorrect'
+        : key === 'returnOtherYear'
+          ? `/finance/donations/book?year=${year}`
+          : '/finance/donations?tab=uncertified';
 
 /**
  * `finance.read`: Zuwendungen gegen gültige Bestätigungen (Annahme 9). Jede
@@ -167,15 +199,29 @@ export async function getDonationReconciliation(deps: Deps, ctx: CallContext, in
   if (denied) return denied;
   const parsed = validate(deps, z.object({ year: yearSchema }), input);
   if (!parsed.ok) return parsed;
-  const { year } = parsed.value;
-  const db = deps.db;
+  return ok(
+    donationReconciliationInternal(deps.db, parsed.value.year, {
+      feesCertifiable: readSetting<boolean>(deps, 'finance.membershipFeesCertifiable'),
+      minCents: readSetting<number>(deps, 'finance.batchMinimumCents'),
+      limitDate: todayIn(deps),
+    }),
+  );
+}
 
-  const { lines } = bookLinesInternal(db, deps, year);
+/**
+ * Die Abstimmung ohne Rechteprüfung, rein: die Einstellungen kommen vom Aufrufer, die Grenze des vereinfachten
+ * Nachweises gilt an `limitDate` (Dienst: heute; Bericht `donationBook`: 31.12. des Jahres).
+ */
+export function donationReconciliationInternal(db: DbOrTx, year: number, settings: { feesCertifiable: boolean; minCents: number; limitDate: string }): DonationReconciliation {
+  const lines = bookLinesInternal(db, year, settings.feesCertifiable);
   const donationsCents = lines.reduce((s, l) => s + l.amountCents, 0);
   const gifts = lines.filter((l) => l.amountCents > 0);
   const giftIds = gifts.map((l) => l.lineId);
   const confirmed = validConfirmationsInternal(db, giftIds);
   const returned = returnedCentsInternal(db, giftIds);
+  // Rückgaben im Buch dieses Jahres je Zuwendung — der Rest von `returned` liegt in einem anderen Jahr.
+  const returnedInYear = new Map<string, number>();
+  for (const l of lines) if (l.amountCents < 0 && l.originLineId) returnedInYear.set(l.originLineId, (returnedInYear.get(l.originLineId) ?? 0) - l.amountCents);
 
   const tally = new Map<ReconciliationReasonKey, { count: number; cents: number }>();
   const add = (key: ReconciliationReasonKey, cents: number, count = 1) => {
@@ -184,6 +230,7 @@ export async function getDonationReconciliation(deps: Deps, ctx: CallContext, in
   };
   let confirmedCents = 0;
   const overConfirmed = new Map<string, number>();
+  let aboveInYear = { count: 0, cents: 0 };
   const open: (BookLine & { netCents: number })[] = [];
   for (const line of gifts) {
     const netCents = line.amountCents - (returned.get(line.lineId) ?? 0);
@@ -193,12 +240,14 @@ export async function getDonationReconciliation(deps: Deps, ctx: CallContext, in
       const delta = netCents - holder.amountCents;
       if (delta < 0) overConfirmed.set(holder.id, (overConfirmed.get(holder.id) ?? 0) - delta);
       else if (delta > 0) add('other', delta);
+      const aboveCents = holder.amountCents - (line.amountCents - (returnedInYear.get(line.lineId) ?? 0));
+      if (aboveCents > 0) aboveInYear = { count: aboveInYear.count + 1, cents: aboveInYear.cents + aboveCents };
       continue;
     }
     if (netCents > 0) open.push({ ...line, netCents });
   }
 
-  const minCents = readSetting<number>(deps, 'finance.batchMinimumCents');
+  const minCents = settings.minCents;
   const openByContact = new Map<string, number>();
   for (const line of open) if (line.contactId) openByContact.set(line.contactId, (openByContact.get(line.contactId) ?? 0) + line.netCents);
   const contactIds = [...openByContact.keys()];
@@ -219,15 +268,29 @@ export async function getDonationReconciliation(deps: Deps, ctx: CallContext, in
   }
 
   const differenceCents = donationsCents - confirmedCents;
-  const toCorrect = { count: overConfirmed.size, cents: [...overConfirmed.values()].reduce((s, c) => s + c, 0), href: '/finance/donations?tab=toCorrect' };
-  // Rückgaben über die Jahresgrenze (Zeile im Vorjahr, Rückgabe in diesem): Was die Zeilen nicht erklären, steht unter „sonstige“.
-  const explained = [...tally.values()].reduce((s, t) => s + t.cents, 0) - toCorrect.cents;
-  if (explained !== differenceCents) add('other', differenceCents - explained, 0);
+  // N18 (Joe 2026-10-27): gezählt wie Schritt 7 des Jahresabschlusses (`to-correct.ts`) — jede Bestätigung mit einem
+  // Grund; der Betrag bleibt der betragswirksame Überhang, die übrigen stehen als „ohne Auswirkung auf den Betrag“.
+  const listed = new Set(toCorrectConfirmationsOfCalendarYearInternal(db, year).map((c) => c.confirmation.id));
+  const all = new Set([...listed, ...overConfirmed.keys()]);
+  const toCorrect = { count: all.size, cents: [...overConfirmed.values()].reduce((s, c) => s + c, 0), withoutAmountCount: [...all].filter((id) => !overConfirmed.has(id)).length, href: '/finance/donations?tab=toCorrect' };
+  // Designer Runde 8, 272: Die Gründe ergeben die Differenz, ohne Füllzeile „Sonstige“. Eine Bestätigung über eine
+  // Rückgabe dieses Jahres hinaus senkt die Differenz (eigene Zeile); eine spätere Rückgabe nicht — sie steht nur in
+  // „zu korrigieren“. Was dann noch fehlt, sind Rückgaben in einem anderen Jahr als die Zuwendung.
+  if (aboveInYear.cents > 0) add('confirmedAboveReturns', -aboveInYear.cents, aboveInYear.count);
+  const explained = [...tally.values()].reduce((s, t) => s + t.cents, 0);
+  if (explained !== differenceCents) {
+    // Gezählt werden die Posten dahinter (Designer Runde 6, 264): Rückgaben dieses Jahres ohne Zuwendung im Jahr und
+    // Zuwendungen mit einer Rückgabe in einem anderen Jahr.
+    const gifted = new Set(giftIds);
+    const strays = lines.filter((l) => l.amountCents < 0 && !(l.originLineId && gifted.has(l.originLineId))).length;
+    const later = gifts.filter((l) => (returned.get(l.lineId) ?? 0) > (returnedInYear.get(l.lineId) ?? 0)).length;
+    add('returnOtherYear', differenceCents - explained, Math.max(strays + later, 1));
+  }
 
   const reasons = REASON_ORDER.filter((key) => tally.has(key)).map((key) => ({ key, ...tally.get(key)!, href: reasonHref(key, year) }));
-  const limitValue = valueAt(db, 'simplifiedReceiptLimit', todayIn(deps));
+  const limitValue = valueAt(db, 'simplifiedReceiptLimit', settings.limitDate);
   const simplifiedReceiptLimitCents = typeof limitValue === 'number' ? limitValue : null;
-  return ok({ year, donationsCents, confirmedCents, differenceCents, reasons, toCorrect, simplifiedReceiptLimitCents });
+  return { year, donationsCents, confirmedCents, differenceCents, reasons, toCorrect, simplifiedReceiptLimitCents };
 }
 
 /**

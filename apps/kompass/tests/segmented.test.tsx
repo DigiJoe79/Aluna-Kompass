@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { useState } from 'react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Segmented } from '@/components/ui/segmented';
 
 afterEach(cleanup);
@@ -68,5 +68,51 @@ describe('Segmented', () => {
   it('Symbol-Optionen nennen ihren Namen auch als title', () => {
     render(<Segmented aria-label="Breite" options={[{ value: 'm', label: <svg aria-hidden />, ariaLabel: 'Telefon' }]} defaultValue="m" />);
     expect(screen.getByRole('radio', { name: 'Telefon' }).getAttribute('title')).toBe('Telefon');
+  });
+});
+
+/**
+ * Designer Runde 8, 17c: Passt die Leiste nicht in die Breite, stehen die Segmente untereinander — sie scrollt nicht
+ * und schneidet nichts ab. jsdom misst nichts; die Breiten setzt der Test, den ResizeObserver ersetzt er.
+ */
+describe('Segmented schmaler als sein Inhalt', () => {
+  let widths = { scroll: 0, client: 0 };
+  let resize: (() => void) | null = null;
+  const proto = HTMLElement.prototype;
+  const original = {
+    scroll: Object.getOwnPropertyDescriptor(proto, 'scrollWidth'),
+    client: Object.getOwnPropertyDescriptor(proto, 'clientWidth'),
+  };
+  beforeEach(() => {
+    Object.defineProperty(proto, 'scrollWidth', { configurable: true, get() { return (this as HTMLElement).dataset.slot === 'segmented' ? widths.scroll : 0; } });
+    Object.defineProperty(proto, 'clientWidth', { configurable: true, get() { return (this as HTMLElement).dataset.slot === 'segmented' ? widths.client : 0; } });
+    vi.stubGlobal('ResizeObserver', class { constructor(cb: () => void) { resize = cb; } observe() {} disconnect() {} });
+  });
+  afterEach(() => {
+    if (original.scroll) Object.defineProperty(proto, 'scrollWidth', original.scroll);
+    if (original.client) Object.defineProperty(proto, 'clientWidth', original.client);
+    vi.unstubAllGlobals();
+    resize = null;
+  });
+
+  it('passt sie, bleibt sie nebeneinander', () => {
+    widths = { scroll: 300, client: 300 };
+    render(<Controlled />);
+    const group = screen.getByRole('radiogroup', { name: 'Art' });
+    expect(group.dataset.stacked).toBeUndefined();
+    expect(group.getAttribute('aria-orientation')).toBe('horizontal');
+  });
+
+  it('zu schmal: untereinander, alle Optionen bleiben wählbar; wird es breit genug, wieder nebeneinander', () => {
+    widths = { scroll: 486, client: 358 };
+    render(<Controlled />);
+    const group = screen.getByRole('radiogroup', { name: 'Art' });
+    expect(group.dataset.stacked).toBe('true');
+    expect(group.getAttribute('aria-orientation')).toBe('vertical');
+    fireEvent.click(screen.getByRole('radio', { name: 'Fahrt' }));
+    expect(screen.getByRole('radio', { name: 'Fahrt' }).getAttribute('aria-checked')).toBe('true');
+    widths = { scroll: 600, client: 600 };
+    act(() => resize?.());
+    expect(group.dataset.stacked).toBeUndefined();
   });
 });

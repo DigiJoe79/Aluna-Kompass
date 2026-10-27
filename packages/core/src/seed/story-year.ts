@@ -1,7 +1,7 @@
 /**
  * Das Stichjahr des Entwicklungs-Seeds (Plan 2026-10-06-seed-kalender).
  *
- * Die Finanzgeschichte des Seeds reicht vom Januar des Vorjahrs bis zum
+ * Die Finanzgeschichte des Seeds reicht vom Januar des ersten abgeschlossenen Jahres (`SEED_CLOSED_YEARS`) bis zum
  * 31. August des Stichjahrs und bucht über die echten Dienste, die keine
  * Zukunft und kein abgeschlossenes Jahr annehmen. Bis 0.2.6 war das Stichjahr
  * „das laufende Jahr“, und der Seed lief nur von Ende August bis Silvester
@@ -14,6 +14,13 @@
  * mit derselben Funktion, ohne die Datenbankschicht zu laden. Seit Plan 2b im Kern,
  * weil auch Kern, Kontakte und Akte im Stichjahr säen; das Finanzmodul re-exportiert.
  */
+
+/**
+ * Wie viele abgeschlossene Geschäftsjahre der Seed vor dem Stichjahr erzählt (Plan 2026-10-26-seed-mehrjahre). Das
+ * erste Geschäftsjahr des Seeds ist `Stichjahr - SEED_CLOSED_YEARS`; ein zweiter Lauf findet sein Stichjahr darüber
+ * wieder (`seedFinance`).
+ */
+export const SEED_CLOSED_YEARS = 3;
 
 /** Der späteste Tag der Geschichte im Stichjahr (`MM-TT`): das Ende des August-Auszugs auf „Importkonto“. */
 export const SEED_STORY_LAST_DAY = '08-31';

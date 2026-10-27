@@ -132,22 +132,30 @@ function DialogContent({
   )
 }
 
+/**
+ * Kopf des Dialogs. Rechts hält er 40 px Abstand zum × (Designer Runde 7, 253): Das × sitzt 12 px vom Rand und ist
+ * 32 px breit; mit dem Polster von 20 px sind das 64 px (`pr-16`).
+ */
 function DialogHeader({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="dialog-header"
-      className={cn("flex flex-col gap-2 group-data-[layout=fixed-footer]/dialog:flex-none group-data-[layout=fixed-footer]/dialog:border-b group-data-[layout=fixed-footer]/dialog:border-line group-data-[layout=fixed-footer]/dialog:px-5 group-data-[layout=fixed-footer]/dialog:pt-4 group-data-[layout=fixed-footer]/dialog:pb-3 group-data-[layout=fixed-footer]/dialog:pr-12", className)}
+      className={cn("flex flex-col gap-2 pr-16 group-data-[layout=fixed-footer]/dialog:flex-none group-data-[layout=fixed-footer]/dialog:border-b group-data-[layout=fixed-footer]/dialog:border-line group-data-[layout=fixed-footer]/dialog:px-5 group-data-[layout=fixed-footer]/dialog:pt-4 group-data-[layout=fixed-footer]/dialog:pb-3 group-data-[layout=fixed-footer]/dialog:pr-16", className)}
       {...props}
     />
   )
 }
 
-/** Die scrollende Mitte eines Dialogs mit `layout="fixed-footer"`. */
+/**
+ * Die Mitte eines Dialogs. Mit `layout="fixed-footer"` scrollt sie und trägt den Einzug selbst, weil der Dialog dann
+ * kein Polster hat; sonst polstert der Dialog (`p-5`), und ein zweiter Einzug rückte die Felder gegenüber Titel und
+ * Einleitung um 20 px ein (Designer Runde 5: 268–271, 285, 290; bündig wie der Zähldialog 287).
+ */
 function DialogBody({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="dialog-body"
-      className={cn("min-h-0 flex-1 overflow-auto px-5 py-4", className)}
+      className={cn("min-h-0 flex-1 overflow-auto px-5 py-4 group-data-[layout=default]/dialog:overflow-visible group-data-[layout=default]/dialog:px-0", className)}
       {...props}
     />
   )

@@ -2,13 +2,24 @@
 
 import { guardAction } from '@/lib/action-guard';
 import { guardConstraint, listUserNamesWithPermission, todayIn } from '@kompass/core';
-import { attachDocument, bookEntry, deleteDraft, finalizeEntry, finalizeReviewed, listEntries, markNotReturn, requestAllocationCorrection, reverseEntry, revokeVoucher, saveDraft, setReviewed, uploadVoucher, type EntryLinesInput, type SettlementWarning } from '@kompass/module-finance';
+import { attachDocument, bookEntry, deleteDraft, finalizeEntry, finalizeReviewed, listEntries, markNotReturn, requestAllocationCorrection, reverseEntry, revokeVoucher, saveDraft, setReviewed, uploadVoucher, type EntryLinesInput, type EntryView, type SettlementWarning } from '@kompass/module-finance';
 import { receiveGeneratedUpload } from '@kompass/module-dms';
 import { getTranslations } from 'next-intl/server';
 import { revalidatePath } from 'next/cache';
 import { toActionState, type ActionState } from '@/lib/actions';
 import { formatEuro } from '@/lib/finance/amount';
 import { requireSession } from '@/lib/request-context';
+
+/** N11 a: der Hinweis zu Kennzeichen, die der Buchungstag nicht mehr anbietet — über alle festgeschriebenen Buchungen. */
+function taxCodeNotOfferedHint(entries: readonly Pick<EntryView, 'taxCodeNotOffered'>[], t: Awaited<ReturnType<typeof getTranslations>>): string {
+  const codes = [...new Set(entries.flatMap((e) => (e.taxCodeNotOffered ?? []).map((n) => n.taxCode)))];
+  return codes.length > 0 ? ` ${t('finance.entryForm.toast.taxCodeNotOffered', { codes: codes.map((c) => t(`finance.splitRow.taxCode.${c}`)).join('“, „') })}` : '';
+}
+
+/** N20: der Hinweis zu Mitteln an Partner ohne Zahlung an Partner — einmal, auch über mehrere Buchungen. */
+function partnerPaymentMissingHint(entries: readonly Pick<EntryView, 'notices'>[], t: Awaited<ReturnType<typeof getTranslations>>): string {
+  return entries.some((e) => e.notices.includes('partnerPaymentMissing')) ? ` ${t('finance.entryForm.toast.partnerPaymentMissing')}` : '';
+}
 
 /** Speichert (oder ersetzt) den Entwurf. Erfolg trägt `id` und `expectedVersion` in `data`, fürs Weiterarbeiten ohne Neuladen. */
 export async function saveDraftAction(input: EntryLinesInput): Promise<ActionState> {
@@ -61,7 +72,11 @@ export async function finalizeAction(input: EntryLinesInput, acknowledgedWarning
       .join('');
     // N2: Rückgabe auf einer Spenden-Kategorie ohne Bezug — ein Hinweis, keine Sperre.
     const returnHint = result.value.notices.includes('returnWithoutOrigin') ? ` ${t('finance.entryForm.toast.returnWithoutOrigin')}` : '';
-    return toActionState(result, t, `${t('finance.entryForm.toast.finalized', { number: result.value.number ?? '' })}${alert}${exceeded}${returnHint}`);
+    // N11 a: ein Kennzeichen vom Entwurf, das der Buchungstag nicht mehr anbietet — ein Hinweis, keine Sperre.
+    const taxCodeHint = taxCodeNotOfferedHint([result.value], t);
+    // N20: Mittel an Partner ohne Zahlung an Partner — ein Hinweis mit dem Weg, keine Sperre.
+    const partnerHint = partnerPaymentMissingHint([result.value], t);
+    return toActionState(result, t, `${t('finance.entryForm.toast.finalized', { number: result.value.number ?? '' })}${alert}${exceeded}${returnHint}${taxCodeHint}${partnerHint}`);
   });
 }
 
@@ -131,7 +146,9 @@ export async function finalizeReviewedAction(ids: string[]): Promise<ActionState
     const numbers = result.value.entries.map((e) => e.number).filter((n): n is string => !!n);
     // Plan N2 Task 2: Entwürfe mit offener Warnung bleiben Entwurf — die Meldung sagt es.
     const held = result.value.held.length > 0 ? ` ${t('finance.journal.toast.held', { count: result.value.held.length })}` : '';
-    return toActionState(result, t, `${t('finance.journal.toast.finalized', { numbers: numbers.join(', ') })}${held}`);
+    const notOffered = taxCodeNotOfferedHint(result.value.entries, t);
+    const partner = partnerPaymentMissingHint(result.value.entries, t);
+    return toActionState(result, t, `${t('finance.journal.toast.finalized', { numbers: numbers.join(', ') })}${held}${notOffered}${partner}`);
   });
 }
 
@@ -155,7 +172,9 @@ export async function finalizeAllReviewedAction(): Promise<ActionState> {
     const numbers = result.value.entries.map((e) => e.number).filter((n): n is string => !!n);
     // Plan N2 Task 2: Entwürfe mit offener Warnung bleiben Entwurf — die Meldung sagt es.
     const held = result.value.held.length > 0 ? ` ${t('finance.journal.toast.held', { count: result.value.held.length })}` : '';
-    return toActionState(result, t, `${t('finance.journal.toast.finalized', { numbers: numbers.join(', ') })}${held}`);
+    const notOffered = taxCodeNotOfferedHint(result.value.entries, t);
+    const partner = partnerPaymentMissingHint(result.value.entries, t);
+    return toActionState(result, t, `${t('finance.journal.toast.finalized', { numbers: numbers.join(', ') })}${held}${notOffered}${partner}`);
   });
 }
 
@@ -164,6 +183,9 @@ export interface CorrectionChanges {
   projectId?: string | null;
   purposeId?: string | null;
   abroad?: boolean;
+  /** E6a Task 11c: innerhalb `none`/§ 13b/Erwerb an Ausgaben; der Dienst prüft. */
+  taxCode?: 'none' | 'rc13bEu' | 'rc13bOther' | 'icAcquisition' | string;
+  serviceDate?: string | null;
 }
 
 /** Zuordnung ändern (offenes Jahr: sofort; abgeschlossenes: wartet auf Freigabe — nennt dann, wer freigeben kann). */
@@ -173,6 +195,8 @@ export async function requestCorrectionAction(lineId: string, changes: Correctio
     const { deps, ctx, user } = await requireSession();
     const result = await requestAllocationCorrection(deps, ctx, { lineId, changes, note, proofDocumentId, acknowledgeSection153, purposeReason });
     revalidatePath('/finance/entries');
+    // Eine Korrektur in einem abgegebenen Zeitraum macht eine Berichtigung fällig (E6a).
+    revalidatePath('/finance/deadlines');
     if (!result.ok) return toActionState(result, t);
     if (result.value.applied) return toActionState(result, t, t('finance.entryView.correct.toast.applied'));
     const approvers = listUserNamesWithPermission(deps, 'finance.approve').filter((name) => name !== user.name);

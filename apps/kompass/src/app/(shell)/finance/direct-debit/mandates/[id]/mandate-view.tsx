@@ -5,7 +5,6 @@ import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useRef, useState } from 'react';
-import { toast } from 'sonner';
 import { useDateFormat } from '@/components/date-format-provider';
 import { ReceiptDrop } from '@/components/finance/receipt-drop';
 import { FixedValue } from '@/components/fixed-value';
@@ -288,7 +287,6 @@ function SignDialog({ mandateId, file, today, onClose }: { mandateId: string; fi
     const result = await feedback.run(() => fileSignedMandateAction(formData), { retry: () => void save() });
     setPending(false);
     if (result.status !== 'success') return;
-    toast.success(result.message);
     onClose();
     router.refresh();
   };
@@ -333,7 +331,6 @@ function DetailsDialog({ mode, mandate, today, onClose }: { mode: 'correct' | 'a
     );
     setPending(false);
     if (result.status !== 'success') return;
-    toast.success(result.message);
     onClose();
     router.refresh();
   };
@@ -381,7 +378,6 @@ function EndDialog({ mandateId, today, finalFocus, onClose }: { mandateId: strin
     const result = await feedback.run(() => endMandateAction({ mandateId, endedOn, reason }), { retry: () => void save() });
     setPending(false);
     if (result.status !== 'success') return;
-    toast.success(result.message);
     onClose();
     router.refresh();
   };

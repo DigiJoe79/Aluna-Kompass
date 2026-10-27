@@ -156,7 +156,10 @@ test.describe('contacts', () => {
   });
 
   test('das Protokoll zeigt den Namen live aus dem Kontakt, gespeichert ist nur die Art der Änderung', async ({ page }) => {
-    await page.goto('/admin/audit?action=contacts.create');
+    // Über die Kennung des Kontakts: Die Liste blättert nach 50 Einträgen, ältere Anlagen stehen sonst auf Seite 2.
+    await page.goto('/contacts?text=Sandberg');
+    const id = (await page.getByRole('link', { name: /Sandberg/ }).first().getAttribute('href'))!.split('/').pop()!;
+    await page.goto(`/admin/audit?action=contacts.create&text=${id}`);
     const row = page.getByRole('table').getByRole('row').filter({ hasText: 'Sandberg' });
     await expect(row).toHaveCount(1);
     await expect(row).toContainText('Kontakt angelegt');

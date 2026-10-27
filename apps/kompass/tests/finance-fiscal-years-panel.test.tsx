@@ -16,7 +16,6 @@ const year = (designation: string, status: 'open' | 'closed') => ({
   startsOn: `${designation}-01-01`,
   endsOn: `${designation}-12-31`,
   status,
-  taxReturnFiledOn: null,
   isShortYear: false,
 });
 

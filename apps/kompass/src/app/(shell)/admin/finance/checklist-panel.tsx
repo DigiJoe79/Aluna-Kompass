@@ -16,7 +16,7 @@ import { panelHref } from '@/components/panel-nav';
 export interface ChecklistStep {
   /** Ohne diesen Schritt geht es auch: Marke „Optional“ mit Erklärung (11-1 B33). */
   required?: boolean;
-  key: 'fiscalYear' | 'account' | 'roles' | 'categories' | 'tax' | 'importFormat' | 'notice' | 'machineProcedure' | 'waiverBasis' | 'boardRemuneration' | 'boardMembers' | 'documentBases' | 'directDebit';
+  key: 'fiscalYear' | 'account' | 'roles' | 'categories' | 'tax' | 'vat' | 'importFormat' | 'notice' | 'machineProcedure' | 'waiverBasis' | 'boardRemuneration' | 'boardMembers' | 'documentBases' | 'directDebit';
   done: boolean;
   blocked: boolean;
   detail: Record<string, string | number>;
@@ -31,6 +31,8 @@ const STEP_HREF: Record<ChecklistStep['key'], string | null> = {
   roles: '/admin/roles',
   categories: panelHref('/admin/finance', 'categories'),
   tax: panelHref('/admin/finance', 'tax'),
+  // E6a Task 11b: der Reiter „Umsatzsteuer“.
+  vat: panelHref('/admin/finance', 'vat'),
   // F4b: der Assistent — sein erster Schritt rät zu CAMT, das sich beim ersten Import von selbst setzt.
   importFormat: '/finance/imports/format',
   // F6a: die Seite der Bescheide (Task 8).
@@ -88,10 +90,18 @@ export function ChecklistPanel({ steps, complete }: { steps: ChecklistStep[]; co
     return typeof d.validFrom === 'string' ? t('detail.boardRemunerationYes', { date: fmt.date(d.validFrom) }) : undefined;
   };
 
+  // Board Umsatzsteuer 1b C: offen der Vorschlag, erledigt der Stand von heute.
+  const vatDetail = (step: ChecklistStep): string | undefined => {
+    if (!step.done) return step.required ? t('detail.vatSuggested') : undefined;
+    if (step.detail.obligations === 'section18_4aLegalPerson') return t('detail.vatNotEntrepreneur');
+    if (typeof step.detail.obligations !== 'string') return undefined;
+    return t('detail.vatEntrepreneur', { since: typeof step.detail.entrepreneurSince === 'string' ? fmt.date(step.detail.entrepreneurSince) : 'none', period: String(step.detail.advancePeriod ?? 'quarter') });
+  };
+
   const items: RequirementListItem[] = steps.map((step) => {
     const canSelf = step.canSelf;
     const blockedText = step.blocked ? t(`blocked.${step.key}`) : undefined;
-    const detail = step.key === 'account' && typeof step.detail.accounts === 'number' ? t('detail.account', { accounts: step.detail.accounts, withoutOpening: step.detail.withoutOpening ?? 0 }) : step.key === 'roles' && step.detail.rolesWithoutUser ? t('detail.rolesWithoutUser', { names: step.detail.rolesWithoutUser }) : step.key === 'roles' && step.detail.usersWithoutContact ? t('detail.usersWithoutContact', { count: step.detail.usersWithoutContact }) : step.key === 'importFormat' && typeof step.detail.missing === 'number' && step.detail.missing > 0 ? t('detail.importFormat', { missing: step.detail.missing }) : step.key === 'notice' && typeof step.detail.validUntil === 'string' ? t('detail.notice', { validUntil: fmt.date(step.detail.validUntil) }) : step.key === 'machineProcedure' && typeof step.detail.missing === 'string' && step.detail.missing !== '' ? t('detail.machineProcedure', { missing: step.detail.missing.split(',').map((key) => t(`machineMissing.${key}`)).join(', ') }) : step.key === 'documentBases' && typeof step.detail.missing === 'string' && step.detail.missing !== '' ? t('detail.documentBases', { missing: step.detail.missing.split(',').join(', ') }) : step.key === 'boardRemuneration' ? boardDetail(step.detail) : step.key === 'directDebit' && typeof step.detail.missing === 'string' ? t('detail.directDebitMissing', { missing: step.detail.missing.split(',').map((key) => t(`sepaMissing.${key}`)).join(', ') }) : step.key === 'directDebit' && step.detail.permission ? t('detail.directDebitRight') : undefined;
+    const detail = step.key === 'account' && typeof step.detail.accounts === 'number' ? t('detail.account', { accounts: step.detail.accounts, withoutOpening: step.detail.withoutOpening ?? 0 }) : step.key === 'roles' && step.detail.rolesWithoutUser ? t('detail.rolesWithoutUser', { names: step.detail.rolesWithoutUser }) : step.key === 'roles' && step.detail.usersWithoutContact ? t('detail.usersWithoutContact', { count: step.detail.usersWithoutContact }) : step.key === 'importFormat' && typeof step.detail.missing === 'number' && step.detail.missing > 0 ? t('detail.importFormat', { missing: step.detail.missing }) : step.key === 'notice' && typeof step.detail.validUntil === 'string' ? t('detail.notice', { validUntil: fmt.date(step.detail.validUntil) }) : step.key === 'machineProcedure' && typeof step.detail.missing === 'string' && step.detail.missing !== '' ? t('detail.machineProcedure', { missing: step.detail.missing.split(',').map((key) => t(`machineMissing.${key}`)).join(', ') }) : step.key === 'documentBases' && typeof step.detail.missing === 'string' && step.detail.missing !== '' ? t('detail.documentBases', { missing: step.detail.missing.split(',').join(', ') }) : step.key === 'boardRemuneration' ? boardDetail(step.detail) : step.key === 'vat' ? vatDetail(step) : step.key === 'directDebit' && typeof step.detail.missing === 'string' ? t('detail.directDebitMissing', { missing: step.detail.missing.split(',').map((key) => t(`sepaMissing.${key}`)).join(', ') }) : step.key === 'directDebit' && step.detail.permission ? t('detail.directDebitRight') : undefined;
 
     const extra =
       step.key === 'tax' && !step.done && canSelf ? (

@@ -12,7 +12,7 @@ describe('taxOf', () => {
 
   it('Prüfstein „Leistung aus dem Ausland“: 100 € netto nach § 13b — 19 € geschuldet, auch als Kleinunternehmer', () => {
     for (const taxation of ['smallBusiness', 'regular'] as const) {
-      expect(taxOf({ ...base, amountCents: -10000, taxCode: 'rc13b', taxation })).toMatchObject({ reverseChargeTaxCents: 1900, outputTaxCents: 0, netCents: -10000 });
+      for (const taxCode of ['rc13bEu', 'rc13bOther'] as const) expect(taxOf({ ...base, amountCents: -10000, taxCode, taxation })).toMatchObject({ reverseChargeTaxCents: 1900, outputTaxCents: 0, netCents: -10000 });
     }
     expect(taxOf({ ...base, amountCents: -10000, taxCode: 'icAcquisition', rateKind: 'reduced', taxation: 'smallBusiness' }).reverseChargeTaxCents).toBe(700);
   });
@@ -26,7 +26,7 @@ describe('taxOf', () => {
   });
 
   it('reverse charge under regular taxation is owed and deductible at once', () => {
-    expect(taxOf({ ...base, amountCents: -10000, taxCode: 'rc13b', taxation: 'regular', inputTaxDeductible: 'yes' })).toMatchObject({ reverseChargeTaxCents: 1900, inputTaxCents: 1900 });
+    for (const taxCode of ['rc13bEu', 'rc13bOther'] as const) expect(taxOf({ ...base, amountCents: -10000, taxCode, taxation: 'regular', inputTaxDeductible: 'yes' })).toMatchObject({ reverseChargeTaxCents: 1900, inputTaxCents: 1900 });
   });
 
   it('exempt and none carry no tax; rounding is to the cent, half up', () => {

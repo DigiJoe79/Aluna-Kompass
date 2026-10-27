@@ -351,8 +351,9 @@ body:has(#help-panel) table:has([data-col="title"]) > tfoot > tr > [data-col="am
     height: auto;
     padding: 10px 12px 10px 16px;
   }
-  /* Keine Zebra-Streifen in der Kartenliste; Hover und Auswahl bleiben (Artboard). */
-  table:has([data-col="title"]) > tbody > tr:nth-child(even):not(:hover):not([data-state="selected"]) { background: transparent; }
+  /* Keine Zebra-Streifen in der Kartenliste; Hover und Auswahl bleiben (Artboard). Gruppenzeilen behalten ihre Fläche
+     `surface-2`, auch an gerader Stelle (Designer Runde 6, 270). */
+  table:has([data-col="title"]) > tbody > tr:nth-child(even):not(:hover):not([data-state="selected"]):not([data-group-row]) { background: transparent; }
   /* Tastaturfokus: Ring an der ganzen Zeile — das macht die Fläche des RowLink (`ROW_TARGET`), hier nichts zu tun. */
   table:has([data-col="title"]) > tbody > tr > :is(td, th) {
     padding: 0;
@@ -371,7 +372,17 @@ body:has(#help-panel) table:has([data-col="title"]) > tfoot > tr > [data-col="am
     grid-column: m1 / right; grid-row: 1;
     font-size: var(--text-body); line-height: var(--text-body--line-height);
     white-space: normal; overflow-wrap: anywhere; padding-right: 8px;
-    display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden;
+    display: block;
+  }
+  /* Kartenzeile (Designer Runde 4 Rechenschaft 13a, Joe 2026-10-24): Titel und erste Unterzeile brechen um; gekürzt wird
+     erst ab der dritten Zeile der Titelzelle — die zweite und jede weitere Unterzeile einzeilig mit „…“. Vorher kappte
+     `line-clamp: 2` die ganze Zelle, eine Frage endete bei „Alle…“. Unterzeilen sind die Kinder nach dem ersten (dem
+     Titel), ohne Marken am Namen und Text nur für Vorleser; gekürzt wird nur eine kurze Zeile (`span` ohne Link oder
+     Knopf) — ein Satz (`p`, etwa der Hinweis zur Unabhängigkeit eines Prüfers), ein Hinweis, ein Link oder ein Knopf
+     bricht um. Wer Bild und Text in einen Behälter legt (Tiere,
+     Mediathek, Vorschläge), hat nur ein Kind und kürzt nicht. */
+  table:has([data-col="title"]) > tbody > tr > [data-col="title"]:not([data-truncate]) > span:nth-child(n+2 of :not(:first-child, [data-slot="status-badge"], .sr-only)):not(:has(a, button)) {
+    display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
   /* Eine kürzende Titelspalte (Joe 11.5) bricht am Telefon um, statt zu kürzen (Designer 005: Arbeit nie abschneiden). */
   table:has([data-col="title"]) > tbody > tr > [data-col="title"][data-truncate] {
@@ -380,6 +391,11 @@ body:has(#help-panel) table:has([data-col="title"]) > tfoot > tr > [data-col="am
   /* Text mit Unterzeilen (Journal: Verweise, Konto): Am Telefon bricht auch der Text in seiner Zeile um. Die Anzeige
      (`block`, `hidden`) bleibt bei der Aufrufstelle. */
   table:has([data-col="title"]) > tbody > tr > [data-col="title"][data-truncate] > span { white-space: normal; overflow: visible; text-overflow: clip; }
+  /* Nummern brechen nie um, auch nicht am Bindestrich (Designer Runde 8, 17d; MUSTER § G): Kennungen in Mono — Buchung,
+     Beleg, Bericht, Fassung — stehen in Titel und meta einzeilig, auch wenn die Titelzelle sonst überall umbrechen darf.
+     Steht eine Marke daneben, rutscht sie in die nächste Zeile. Kein Layout-Test (Optik, MUSTER „Ein Befund ist kein
+     Test“). */
+  table:has([data-col="title"]) > tbody > tr > :is([data-col="title"], [data-col="meta"]) .font-mono { white-space: nowrap; overflow-wrap: normal; }
   /* Marke, Betrag, Haken und Menü kürzen nie: Titel und meta geben Platz ab. */
   table:has([data-col="title"]) > tbody > tr > :is([data-col="status"], [data-col="amount"], [data-col="select"], [data-col="actions"]) { min-width: max-content; }
   table:has([data-col="title"]) > tbody > tr > [data-col="status"] { grid-column: right; grid-row: 1; justify-self: end; }
@@ -437,6 +453,14 @@ body:has(#help-panel) table:has([data-col="title"]) > tfoot > tr > [data-col="am
 /* Unter dem Inhalt so viel Abstand, wie die klebende Speicherleiste hoch ist (Runde 3, 189): Ein fokussiertes oder
    angesprungenes Feld rollt über die Leiste, statt unter ihr zu verschwinden. Nur wo die Leiste klebt (`stickybar`).
    Kein Layout-Test (Einzelstelle, Laufzeit zählt). */
+/* Eine umbrechende meta-Spalte (Text statt Kennwert: „Wofür“, „Entscheidung“) hält am Desktop rund 220 px, damit eine
+   kürzende Titelspalte sie nicht auf drei Zeilen drückt (Designer Runde 5, 262/263) — über die Rolle, nicht je Liste.
+   Nur neben einer kürzenden Titelspalte: Ohne sie gibt es nichts, was die Spalte zusammendrückt, und die Mindestbreite
+   schob Listen in schmalen Karten über den Rand (Auszüge, Bankverbindungen; Befund 47). Kein Layout-Test (Optik). */
+@media (min-width: 768px) {
+  table:has(> tbody > tr > [data-col="title"][data-truncate]) > tbody > tr > [data-col="meta"][data-wrap] { min-width: min(13.75rem, 25cqw); }
+}
+
 @media (min-width: 640px) and (min-height: 600px) {
   /* An `main`, nicht an `html`: Gescrollt wird der Inhaltsbereich der Shell (Designer 2026-10-22). */
   main:has([data-slot="form-action-bar"][data-placement="page"]) { scroll-padding-bottom: 5.5rem; }

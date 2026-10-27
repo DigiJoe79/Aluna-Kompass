@@ -21,12 +21,17 @@ export interface ForeignPartnerPaymentEntry {
   basis: string;
   totalCents: number;
   approvedAt: string | null;
+  /** Rechenschaft D2: Vermögensausstattung (§ 58 Nr. 3 AO) — der Schlüssel fehlt ohne (Hash der Berichte bleibt). */
+  assetEndowment?: true;
 }
 export interface ForeignLineEntry {
   entryId: string;
   entryNumber: string | null;
   entryDate: string;
   amountCents: number;
+  /** Text der Buchung und Kontakt der Zeile — für den Auslandsbericht (Designer Runde 8, 271). */
+  text?: string;
+  contactId?: string | null;
 }
 export interface ForeignActivityView {
   partnerPayments: ForeignPartnerPaymentEntry[];
@@ -60,18 +65,18 @@ export function foreignActivityInternal(db: DbOrTx, range: { from: string; to: s
   const partnerPayments: ForeignPartnerPaymentEntry[] = payments.map((p) => {
     const partner = db.select().from(financePartnerProfiles).where(eq(financePartnerProfiles.id, p.partnerId)).get()!;
     const contact = db.select().from(contacts).where(eq(contacts.id, partner.contactId)).get()!;
-    return { paymentId: p.id, number: p.number, partnerName: displayName(contact), basis: p.basis, totalCents: sumPositionCents(positionViewsOf(db, p.id)), approvedAt: p.approvedAt };
+    return { paymentId: p.id, number: p.number, partnerName: displayName(contact), basis: p.basis, totalCents: sumPositionCents(positionViewsOf(db, p.id)), approvedAt: p.approvedAt, ...(p.assetEndowment ? { assetEndowment: true as const } : {}) };
   });
 
   const lines = db
-    .select({ id: financeAllocationLines.id, entryId: financeAllocationLines.entryId, amountCents: financeAllocationLines.amountCents, abroad: financeAllocationLines.abroad, contactId: financeAllocationLines.contactId, entryDate: financeEntries.entryDate, entryNumber: financeEntries.number, status: financeEntries.status })
+    .select({ id: financeAllocationLines.id, entryId: financeAllocationLines.entryId, amountCents: financeAllocationLines.amountCents, abroad: financeAllocationLines.abroad, contactId: financeAllocationLines.contactId, entryDate: financeEntries.entryDate, entryNumber: financeEntries.number, text: financeEntries.text, status: financeEntries.status })
     .from(financeAllocationLines)
     .innerJoin(financeEntries, eq(financeAllocationLines.entryId, financeEntries.id))
     .where(and(eq(financeEntries.status, 'final'), gte(financeEntries.entryDate, range.from), lte(financeEntries.entryDate, range.to)))
     .all()
     .filter((l) => !excluded.has(l.id));
 
-  const otherAbroadLines: ForeignLineEntry[] = lines.filter((l) => l.abroad).map((l) => ({ entryId: l.entryId, entryNumber: l.entryNumber, entryDate: l.entryDate, amountCents: l.amountCents }));
+  const otherAbroadLines: ForeignLineEntry[] = lines.filter((l) => l.abroad).map((l) => ({ entryId: l.entryId, entryNumber: l.entryNumber, entryDate: l.entryDate, amountCents: l.amountCents, text: l.text, contactId: l.contactId }));
 
   const contactIds = [...new Set(lines.filter((l) => !l.abroad && l.contactId).map((l) => l.contactId!))];
   const foreignContactIds = new Set(contactIds.filter((id) => (db.select({ country: contacts.country }).from(contacts).where(eq(contacts.id, id)).get()?.country ?? orgCountry) !== orgCountry));

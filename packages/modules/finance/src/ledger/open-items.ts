@@ -9,6 +9,16 @@ import { financeEntries, financeMoneyLines, financeOpenItems, financeOpenItemSet
 import { requireFinanceRead } from './access';
 import { TAX_CODES } from './codes';
 import { registeredOpenItemOrigins } from './origins';
+import { fiscalYearForInternal, fiscalYearStatusInternal } from './fiscal-years';
+
+/**
+ * Rechenschaft D1 Task 10b (Befund A3): Eine offene Zahlung mit Datum in einem abgeschlossenen Geschäftsjahr änderte
+ * dessen Stand (Kassenbericht, Vermögensübersicht) — abgeschlossen heißt fest. Anlegen und Ändern lehnen ab.
+ */
+function closedYearRefusal(db: DbOrTx, itemDate: string) {
+  const year = fiscalYearForInternal(db, itemDate);
+  return year && fiscalYearStatusInternal(db, year.id) === 'closed' ? financeConflict('fiscalYearClosed', { year: year.designation }) : null;
+}
 
 /** Eine Zeile der Zuordnungsvorlage — die Vorbelegung, mit der `bookFromTransaction` einen offenen Posten begleicht. */
 
@@ -192,6 +202,8 @@ export async function createOpenItem(deps: Deps, ctx: CallContext, input: unknow
   if (!parsed.ok) return parsed;
   const v = parsed.value;
   if (isOwnedOrigin(deps, v.originType)) return financeConflict('openItemOriginOwned');
+  const closed = closedYearRefusal(deps.db, v.itemDate);
+  if (closed) return closed;
   if (v.contactId && !contactExists(deps.db, v.contactId)) return notFound('contact', v.contactId);
   const doc = await checkOptionalDocument(deps, ctx, v.documentId);
   if (!doc.ok) return doc;
@@ -258,6 +270,8 @@ export async function updateOpenItem(deps: Deps, ctx: CallContext, input: unknow
   if (isOwnedOrigin(deps, before.originType) || isOwnedOrigin(deps, v.originType)) return financeConflict('openItemOriginOwned');
   const stale = staleVersion(v.expectedVersion, before.updatedAt);
   if (stale) return stale;
+  const closed = closedYearRefusal(deps.db, before.itemDate) ?? (v.itemDate ? closedYearRefusal(deps.db, v.itemDate) : null);
+  if (closed) return closed;
   if (openItemHasAnySettlementInternal(deps.db, before.id)) return financeConflict('openItemInUse');
   if (v.contactId !== undefined && v.contactId !== null && !contactExists(deps.db, v.contactId)) return notFound('contact', v.contactId);
   const doc = v.documentId !== undefined ? await checkOptionalDocument(deps, ctx, v.documentId) : ok(null);
@@ -340,6 +354,8 @@ export function createOriginOpenItem(tx: DbOrTx, deps: Deps, ctx: CallContext, i
   const parsed = validate(deps, originCreateSchema, input);
   if (!parsed.ok) return parsed;
   const v = parsed.value;
+  const closed = closedYearRefusal(tx, v.itemDate);
+  if (closed) return closed;
   if (!registeredOpenItemOrigins(deps).has(v.originType)) return financeConflict('openItemOriginUnknown');
   if (!contactExists(tx, v.contactId)) return notFound('contact', v.contactId);
   return ok(createOpenItemInternal(tx, deps, ctx, { ...v, kind: 'receivable' }));

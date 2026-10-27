@@ -2,8 +2,9 @@ import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 import { coreModule, defineModule, AI_LABELING_ENABLED_KEY } from '../src';
 import { login } from '../src/auth/login';
-import { dashboardLayouts, rolePermissions, roles, users } from '../src/db/schema';
-import { seedDevelopment } from '../src/seed/seed';
+import { apiTokens, dashboardLayouts, rolePermissions, roles, users } from '../src/db/schema';
+import { resolveApiToken } from '../src/auth/tokens';
+import { SEED_MCP_USERS, seedDevelopment, seedMcpToken } from '../src/seed/seed';
 import { readSetting, writeSettingInternal } from '../src/settings/service';
 import { systemContext } from '../src/testing';
 import { createTestDeps } from '../src/testing';
@@ -20,6 +21,20 @@ describe('seedDevelopment', () => {
     expect(session.ok).toBe(true);
   });
 
+
+  it('gives Anna and Mira a fixed MCP token each — stable test conditions for two MCP servers, idempotent', async () => {
+    const deps = createTestDeps({ env: 'test' });
+    await seedDevelopment(deps);
+    await seedDevelopment(deps);
+    expect(SEED_MCP_USERS).toEqual(['admin@kompass.local', 'mira@kompass.local']);
+    for (const email of SEED_MCP_USERS) {
+      const token = seedMcpToken(deps.env, email);
+      expect(token).toMatch(/^akx_test_seed-/);
+      const user = deps.db.select({ id: users.id }).from(users).where(eq(users.email, email)).get()!;
+      expect(resolveApiToken(deps, token, { ipAddress: null, requestId: 'R' })?.userId).toBe(user.id);
+    }
+    expect(deps.db.select().from(apiTokens).all()).toHaveLength(2);
+  });
 
   it('gives the invented association an address — every confirmation carries it (F6a)', async () => {
     const deps = createTestDeps({ env: 'development' });

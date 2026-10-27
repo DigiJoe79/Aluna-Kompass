@@ -93,3 +93,54 @@ describe('RequirementList kompakt', () => {
     expect(within(open).getByText('fehlt')).toBeTruthy();
   });
 });
+
+/** Freigabe Joe 2026-10-26, Designer Runde 7 16b/16d: Zeilen mit Trennlinie in einer Karte statt Karten in der Karte. */
+describe('RequirementList Zeilen', () => {
+  function rows(items: RequirementListItem[]) {
+    render(
+      <NextIntlClientProvider locale="de" messages={messages} timeZone="Europe/Berlin">
+        <RequirementList variant="rows" items={items} />
+      </NextIntlClientProvider>,
+    );
+  }
+
+  it('eine Liste mit einem Listeneintrag je Punkt, in der gegebenen Reihenfolge', () => {
+    rows([item('a', { href: null }), item('b', { href: null, done: true }), item('c', { href: null })]);
+    const list = screen.getByTestId('requirement-list');
+    expect(list.tagName).toBe('UL');
+    expect(within(list).getAllByRole('listitem').map((li) => li.dataset.testid)).toEqual(['requirement-a', 'requirement-b', 'requirement-c']);
+  });
+
+  it('erledigt: Haken und Wort für Vorleser, offen: Kreis; Zusatz und Aktion stehen in der Zeile', () => {
+    rows([item('d', { done: true, href: null, extra: <a href="/dms/1">STE-1</a> }), item('o', { href: '/ziel', detail: 'fehlt noch' })]);
+    const done = screen.getByTestId('requirement-d');
+    expect(within(done).getByText('Erledigt').className).toContain('sr-only');
+    expect(done.querySelector('svg.lucide-check')).not.toBeNull();
+    expect(within(done).getByRole('link', { name: 'STE-1' })).toBeTruthy();
+    const open = screen.getByTestId('requirement-o');
+    expect(open.querySelector('svg.lucide-circle')).not.toBeNull();
+    expect(within(open).getByText(messages.common.requirements.open)).toBeTruthy();
+    expect(within(open).getByText('fehlt noch', { exact: false })).toBeTruthy();
+    expect(within(open).getByRole('link', { name: 'Erledigen' }).getAttribute('href')).toBe('/ziel');
+  });
+
+  it('wartend (blocked): nennt, worauf, und trägt weder Knopf noch Sprung — auch wenn der Aufrufer einen mitgibt', () => {
+    rows([item('w', { blocked: true, blockedText: 'nach dem Festschreiben', extra: <button type="button">Ablegen …</button> })]);
+    const waiting = screen.getByTestId('requirement-w');
+    expect(waiting.dataset.blocked).toBe('true');
+    expect(within(waiting).getByText('nach dem Festschreiben')).toBeTruthy();
+    expect(within(waiting).queryByRole('button')).toBeNull();
+    expect(within(waiting).queryByRole('link')).toBeNull();
+  });
+
+  // Designer Runde 8, 17a: In den Zeilen heißt gedämpft „noch nicht möglich“ — erledigt steht deshalb voll.
+  it('erledigt steht voll, nur wartend ist gedämpft; wartend trägt den gestrichelten Kreis, offen den leeren', () => {
+    rows([item('d', { done: true, href: null }), item('o', { href: '/ziel' }), item('w', { blocked: true, blockedText: 'nach dem Festschreiben' })]);
+    expect(screen.getByTestId('requirement-d').dataset.muted).toBeUndefined();
+    expect(screen.getByTestId('requirement-o').dataset.muted).toBeUndefined();
+    const waiting = screen.getByTestId('requirement-w');
+    expect(waiting.dataset.muted).toBe('true');
+    expect(waiting.querySelector('svg.lucide-circle-dashed')).not.toBeNull();
+    expect(screen.getByTestId('requirement-o').querySelector('svg.lucide-circle-dashed')).toBeNull();
+  });
+});

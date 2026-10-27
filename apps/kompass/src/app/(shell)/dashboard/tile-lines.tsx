@@ -11,6 +11,7 @@ import { useDateFormat } from '@/components/date-format-provider';
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
 import { completeDueAction } from '../due-actions';
+import { withVatPeriodLabel } from '@/lib/finance/vat-period';
 
 /**
  * Die Zeilen einer Listen-Kachel nach ihrer Art (Briefing Startseite § 4, „Zeilen in Listen“):
@@ -23,7 +24,8 @@ import { completeDueAction } from '../due-actions';
  *   kein Link — das Kästchen ist die einzige Aktion auf der Startseite.
  *
  * Text, Bezug und Zusatz brechen um, statt zu kürzen: Arbeit wird nie abgeschnitten (Designer 005). Ein Wert `…On`
- * ist ein Tag und wird im Satz nach der Einstellung formatiert („seit 17.10.2026“).
+ * ist ein Tag und wird im Satz nach der Einstellung formatiert („seit 17.10.2026“), ein `vatPeriod` ein Zeitraum der
+ * Umsatzsteuer („2. Quartal 2026“).
  */
 export function TileLines({ ns, lines, canComplete, variant }: { ns: string; lines: DashboardLine[]; canComplete: boolean; variant: 'list' | 'due' | 'work' }) {
   const t = useTranslations('dashboard');
@@ -31,8 +33,10 @@ export function TileLines({ ns, lines, canComplete, variant }: { ns: string; lin
   const router = useRouter();
   const [, start] = useTransition();
 
+  const root = useTranslations();
+  // Ein Umsatzsteuer-Zeitraum (`vatPeriod`, E6a) wird lesbar wie in der Fristenliste.
   const valuesOf = (line: DashboardLine) =>
-    Object.fromEntries(Object.entries(line.values ?? {}).map(([key, value]) => [key, key.endsWith('On') && typeof value === 'string' ? fmt.date(value) : value]));
+    withVatPeriodLabel(Object.fromEntries(Object.entries(line.values ?? {}).map(([key, value]) => [key, key.endsWith('On') && typeof value === 'string' ? fmt.date(value) : value])), root);
   const titleOf = (line: DashboardLine) => line.title ?? (line.titleKey ? t(`${ns}.messages.${line.titleKey}`, valuesOf(line)) : '');
 
   if (variant === 'due') {

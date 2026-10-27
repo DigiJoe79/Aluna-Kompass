@@ -68,6 +68,14 @@ gleichmäßig auf oder trägt den verbleibenden Rest in eine gewählte Zeile
 ein — solange oben „Noch … zu verteilen“ steht, ist die Buchung noch nicht
 ausgeglichen.
 
+Für die Anlage Gem trägt eine Zeile zwei Merkmale. Bei einer Zuwendung einer
+anderen Organisation steht das Kästchen **Vermögensausstattung (§ 58 Nr. 3
+AO)**: Ist es gesetzt, fragt Kompass nach dem Geber mit Finanzamt und
+Steuernummer. Eine Erbschaft und eine erhaltene Vermögensausstattung gehen
+dem Vermögen zu. Hat der Erblasser laufenden Aufwand bestimmt oder erlaubt der
+Geber die laufende Verwendung, setzen Sie **Nicht dem Vermögen zuführen** —
+der Grund steht damit fest.
+
 Was ein Zweck bekommen und verwendet hat, zeigt Finanzen → Zwecke; soll
 Geld später den Zweck wechseln, geht das nicht über eine neue Buchung,
 sondern über eine Umwidmung (siehe [Zwecke und zurückgelegtes
@@ -101,6 +109,59 @@ Beleg mehr, sobald die Bankseite einen Kontoumsatz aus einem Auszug trägt
 Eine Bareinnahme oder Barausgabe mit eigener Zuordnung (etwa eine
 Spende oder eine Ausgabe) braucht dagegen weiterhin einen Beleg.
 
+## Umsatzsteuer nach § 13b
+
+Bezieht der Verein eine Leistung von einem Anbieter im Ausland — Werbung,
+Software, Plattformen —, schuldet er die deutsche Umsatzsteuer selbst, auch als
+Kleinunternehmer (§ 13b UStG). In der Auswahl „Umsatzsteuer“ stehen dafür unter
+„Steuer schuldet der Verein“ drei Kennzeichen: „§ 13b, Leistung aus der EU“
+(Kennzahlen 46/47), „§ 13b, übrige“ (84/85), etwa aus dem Vereinigten Königreich
+oder der Schweiz, und „Erwerb“ (innergemeinschaftlicher Erwerb). Zahlungsdienste
+wie PayPal, inländische Anbieter, Flüge und Messe-Eintritte sind keine
+§ 13b-Fälle.
+
+- Mit einem dieser Kennzeichen erscheint in der zweiten Reihe der Zeile das Feld
+  **Leistungsdatum**, bei „§ 13b, übrige“ heißt es **Rechnungsdatum**. Es
+  bestimmt den Zeitraum der Voranmeldung; ohne gilt der Buchungstag, bei Zahlung
+  vor der Leistung die Zahlung. Ein anderes Kennzeichen leert das Feld.
+- Unter der Zeile steht, was der Verein schuldet: Betrag, Satz,
+  Bemessungsgrundlage und das Quartal (bzw. der Monat), in dem die Steuer zählt.
+  Liegen Leistung und Buchung in verschiedenen Zeiträumen, nennt der Satz beide
+  Monate; ein Kleinunternehmer liest dazu „Kein Vorsteuerabzug“. Gerechnet wird
+  mit den Sätzen von heute.
+- Trägt ein Kontakt das Merkmal „Rechnungen mit Umkehr der Steuerschuld
+  (§ 13b)“ (am Kontakt im Abschnitt **Umsatzsteuer**), setzt die Maske das
+  Kennzeichen, sobald der Kontakt an einer Ausgabezeile ohne Kennzeichen gewählt
+  wird; darunter steht „Vorgabe vom Kontakt“. Ein von Hand gewähltes Kennzeichen
+  gilt immer. Die Arbeitsliste verhält sich genauso.
+
+### Prüffrage § 13b
+
+Ist der Verein umsatzsteuerlich Unternehmer, fragt Kompass bei einer Ausgabe
+ohne Kennzeichen über den Aufteilungszeilen **Ist das eine Leistung nach
+§ 13b?**, wenn etwas darauf deutet: Der Beleg trägt den Hinweis
+„Steuerschuldnerschaft des Leistungsempfängers“ oder „Reverse charge“, der
+Anbieter oder die IBAN der Zahlung sitzt im Ausland und es ist keine Steuer
+gesetzt, oder die Rechnung weist ausländische Umsatzsteuer aus bzw. deutsche
+Umsatzsteuer, obwohl der Anbieter im Ausland sitzt. Ein fehlender Hinweis auf der
+Rechnung ändert an der Pflicht nichts. Dieselbe Frage steht in der Arbeitsliste
+über der schmalen Zeile und beim Rechnungsleser unter den erkannten Werten. Sie
+sperrt nichts; „Festschreiben“ bleibt bedienbar.
+
+- **Ja, § 13b** setzt das Kennzeichen an den Ausgabezeilen ohne Kennzeichen — „aus
+  der EU“ oder „übrige“ nach dem Land des Anbieters —, darunter steht „aus der
+  Prüffrage“. Mit dem vorangekreuzten Kästchen **Bei … künftig immer so** setzt
+  Kompass zugleich das Merkmal am Kontakt; jede weitere Ausgabe an ihn bekommt das
+  Kennzeichen dann als Vorgabe.
+- **Nein, weil …** klappt vier Gründe auf: steuerfreie Zahlungsabwicklung, der
+  Anbieter ist inländisch, Ausnahme von § 13b oder Sonstiges (mit Text).
+  „Speichern“ merkt sich das Nein am Kontakt; Kompass fragt dort nicht wieder.
+  Ohne Kontakt schließt die Frage nur für diese Buchung.
+
+Wie es danach weitergeht — Voranmeldung, Jahreserklärung, Berichtigung —, steht
+unter [Fristen und Schwellen](fristen-und-schwellen.md) und
+[Umsatzsteuer-Voranmeldung](umsatzsteuer.md).
+
 ## Bargeld
 
 Bei einer Kasse gibt es keinen Entwurf: Die Buchung wird sofort
@@ -117,6 +178,12 @@ korrigieren. Es gibt zwei Wege:
   Geld im Ausland verwendet wird —, führt **Korrigieren** oben rechts dorthin.
   Die Änderung wirkt im laufenden Geschäftsjahr sofort; in einem bereits
   abgeschlossenen Jahr wartet sie auf die Freigabe einer zweiten Person.
+  Ebenso lassen sich an einer Ausgabe das Kennzeichen zwischen „keine
+  Umsatzsteuer“, den beiden § 13b-Kennzeichen und dem innergemeinschaftlichen
+  Erwerb und das Leistungsdatum ändern („Umsatzsteuer und Leistungsdatum“) —
+  das Netto bleibt dabei gleich. Ist der alte oder neue Zeitraum schon
+  abgegeben, sagt der Dialog vor dem Knopf, dass danach unter Fristen eine
+  berichtigte Voranmeldung steht; gesperrt wird nichts.
 - Betrifft es die **Zahlen** — Betrag, Datum, Konto, Kategorie oder
   Umsatzsteuer —, nehmen Sie die Buchung zurück: **Weitere Aktionen** (⋯) →
   **Zurücknehmen …**. Der Dialog nennt das Datum der Gegenbuchung; sie

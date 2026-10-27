@@ -4,7 +4,6 @@ import type { MemberFeeDetail } from '@kompass/module-members';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { toast } from 'sonner';
 import { useDateFormat } from '@/components/date-format-provider';
 import { AmountField } from '@/components/finance/amount-field';
 import { FixedValue } from '@/components/fixed-value';
@@ -125,7 +124,6 @@ export function MemberForm({ m, types, detail, canManage, canFees, canOpenMandat
     );
     setPending(false);
     if (result.status !== 'success') return;
-    toast.success(result.message);
     discard();
     router.refresh();
   };

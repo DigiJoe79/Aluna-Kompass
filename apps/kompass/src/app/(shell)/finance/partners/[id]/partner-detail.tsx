@@ -23,6 +23,7 @@ import { savePartnerNoticeAction, savePartnerPaymentDraftAction, savePartnerProf
 import { FormField } from '@/components/forms/form-field';
 import { FormActionBar } from '@/components/forms/form-action-bar';
 import { FormCard, FormCardBody } from '@/components/forms/form-card';
+import { TaxDetailsCard } from './tax-details-card';
 import { FormCell, FormGrid } from '@/components/forms/form-grid';
 import { Section } from '@/components/section';
 
@@ -67,6 +68,8 @@ export function PartnerDetail({ partner, notices, payments, registerDocument, ag
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:items-start">
         <ProfileSection partner={partner} documents={{ register: registerDocument, agreement: agreementDocument }} canWrite={canWrite} t={t} tStatus={tStatus} tBasis={tBasis} router={router} />
         <div className="space-y-6">
+          {/* Vermögensausstattung geht nur an steuerbegünstigte oder öffentliche Körperschaften (§ 58 Nr. 3 AO, 15g). */}
+          {partner.status === 'taxExemptBody' || partner.status === 'publicBody' ? <TaxDetailsCard contactId={partner.contactId} details={partner.taxDetails} canWrite={canWrite} /> : null}
           {showNotices ? <NoticesSection partnerId={partner.id} abroad={partner.status === 'foreignBody'} notices={notices} canWrite={canWrite} t={t} router={router} /> : null}
           <section data-testid="partner-payments">
             <Section title={t('payments.title')}

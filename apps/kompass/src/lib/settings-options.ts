@@ -26,6 +26,11 @@ export function countryOptions(locale: string): SettingsOption[] {
   return options.sort((x, y) => x.label.localeCompare(y.label, locale));
 }
 
+/** Der Name eines Ländercodes in `locale` („IE“ → „Irland“); unbekannt bleibt der Code. */
+export function countryName(code: string, locale: string): string {
+  return new Intl.DisplayNames([locale], { type: 'region', fallback: 'code' }).of(code) ?? code;
+}
+
 /** Ein fester Sommertag als Bezug: ICU nennt die allgemeine Zeit („Mitteleuropäische Zeit“) je nach Tag sonst auch
  *  „… Normalzeit“. Nur der Name wird gelesen, kein Datum angezeigt. */
 const ZONE_NAME_REFERENCE = Date.UTC(2000, 6, 1);

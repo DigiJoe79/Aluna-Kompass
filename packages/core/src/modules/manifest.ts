@@ -236,6 +236,11 @@ export interface NavigationItem {
   sectionBreak?: boolean;
   /** Abschnitt der Zweitebene; Beschriftung aus `nav.sections.<section>`. Ohne Abschnitt: kopflos, oben. */
   section?: string;
+  /**
+   * Kommt in einer späteren Fassung (N1, Freigabe Joe 2026-10-24): ein normaler Link, gedämpft mit „später“; das
+   * Ziel ist eine Zustandskarte, die sagt, was kommt.
+   */
+  later?: boolean;
 }
 
 /** Ein Datensatz, der veröffentlicht ist und auf eine Prüfung wartet: Beschriftung und Weg in die Oberfläche. */
@@ -309,6 +314,12 @@ export interface DocumentSlots {
   infoBlock?: string;
   /** „Betreff“ (Brief). */
   subject?: string;
+  /** Bericht: Ausgabestufe aus dem Zustand des Jahres (Basis meldet `"slots": ["stage", …]`). */
+  stage?: 'preliminary' | 'review' | 'final';
+  /** Bericht: Text zur Stufe, vom Produkt — die Basis kennt keinen Inhalt. */
+  stageText?: string;
+  /** Vermerk klein vor der Seitenzahl, etwa „Erzeugt TT.MM.JJJJ, HH:MM · <Kurz-Hash>“. */
+  footerNote?: string;
 }
 
 /** Ein Bild, das der Körper einbindet: Bytes und ihre Prüfsumme (SHA-256, vom Modul berechnet). */

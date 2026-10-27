@@ -19,6 +19,8 @@ export interface RuleRow {
   conditionTexts: string[];
   categoryName: string;
   categoryInactive: boolean;
+  /** Das Kennzeichen der Regel gilt nicht mehr — derselbe Satz wie am Vorschlag (Befund 40, Frage 3), sonst `null`. */
+  taxCodeHint: string | null;
   hitCount: number;
 }
 
@@ -56,7 +58,14 @@ export function RulesTable({ rows, canWrite, options }: { rows: RuleRow[]; canWr
                 )}
               </TableCell>
               <TableCell col="meta" className="py-2.5 text-ink-2">{row.conditionTexts.join(' · ')}</TableCell>
-              <TableCell col="meta" className="py-2.5 text-ink-2">{row.categoryName}</TableCell>
+              <TableCell col="meta" className="py-2.5 text-ink-2">
+                {row.categoryName}
+                {row.taxCodeHint ? (
+                  <p className="text-hint text-muted-ink" data-testid="rule-tax-code-hint">
+                    {row.taxCodeHint}
+                  </p>
+                ) : null}
+              </TableCell>
               {/* Runde 3, 072: Die Marke steht im Zustand, nicht im „Dann“; ohne Marke fällt die Spalte weg (Joe 11.8). */}
               <TableCell col="status" className="py-2.5">
                 {row.categoryInactive ? <StatusBadge tone="error">{t('categoryInactive')}</StatusBadge> : null}

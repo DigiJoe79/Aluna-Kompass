@@ -187,6 +187,11 @@ export function SuggestionCard({
         </Notice>
       ))}
       {suggestion?.hints.includes('foreignIban') ? <p className="text-hint text-muted-ink">{t('suggestion.foreignIban')}</p> : null}
+      {suggestion?.ruleTaxCodeHint ? (
+        <p className="text-hint text-muted-ink" data-testid="suggestion-rule-tax-code">
+          {suggestion.ruleTaxCodeHint}
+        </p>
+      ) : null}
       {suggestion?.hints.includes('originIsDraft') ? (
         <p className="text-hint text-muted-ink" data-testid="suggestion-origin-draft">
           {t('suggestion.originIsDraft')}
@@ -208,7 +213,7 @@ export function SuggestionCard({
           </Link>
         </div>
       ) : canWrite ? (
-        <MiniEntryForm value={mini} onChange={setMini} form={form} extraLineTexts={suggestion?.extraLineTexts ?? []} fieldErrors={fieldErrors} />
+        <MiniEntryForm value={mini} onChange={setMini} form={form} extraLineTexts={suggestion?.extraLineTexts ?? []} fieldErrors={fieldErrors} rawTransactionId={raw.id} />
       ) : (
         <ul className="space-y-1 text-meta text-ink-2">
           {suggestion?.extraLineTexts.map((text) => <li key={text}>{text}</li>)}
@@ -222,7 +227,9 @@ export function SuggestionCard({
 
       {refusal ? (
         <Notice level="refuse" remedies={remediesFor(refusal.code ?? '').map(remedyProps)}>
-          {refusal.detail ?? refusal.message}
+          {/* Ein Feldfehler des Dienstes (etwa ein Kennzeichen außerhalb der Auswahl, Befund 39) hat kein Feld in der
+              schmalen Zeile: Sein Satz steht hier statt der allgemeinen Meldung. */}
+          {refusal.detail ?? Object.values(refusal.fieldErrors)[0] ?? refusal.message}
         </Notice>
       ) : null}
 

@@ -148,18 +148,22 @@ export async function personYearOverview(deps: Deps, ctx: CallContext, input: un
   if (denied) return denied;
   const parsed = validate(deps, personYearOverviewSchema, input);
   if (!parsed.ok) return parsed;
-  const range = yearRange(parsed.value.year);
-  const yearEnd = `${parsed.value.year}-12-31`;
+  return ok(personYearOverviewInternal(deps.db, parsed.value.year));
+}
 
-  const allowances = allowanceSumsByContact(deps.db, range);
-  const reimbursements = reimbursementSumsByContact(deps.db, range);
+/** Die Übersicht eines Kalenderjahres ohne Rechteprüfung, rein — für den Dienst und den Bericht `peopleOverview`. */
+export function personYearOverviewInternal(db: DbOrTx, year: number): { rows: PersonYearRow[]; linesWithoutPersonCount: number } {
+  const range = yearRange(year);
+
+  const allowances = allowanceSumsByContact(db, range);
+  const reimbursements = reimbursementSumsByContact(db, range);
   const contactIds = new Set([...allowances.map((a) => a.contactId), ...reimbursements.reimbursed.keys(), ...reimbursements.waived.keys()]);
-  const allowanceVolunteerCapCents = allowanceCapCents(deps.db, 'volunteer', parsed.value.year);
-  const allowanceTrainerCapCents = allowanceCapCents(deps.db, 'trainer', parsed.value.year);
+  const allowanceVolunteerCapCents = allowanceCapCents(db, 'volunteer', year);
+  const allowanceTrainerCapCents = allowanceCapCents(db, 'trainer', year);
 
   const rows: PersonYearRow[] = [...contactIds].map((contactId) => {
     const a = allowances.find((x) => x.contactId === contactId);
-    const contact = deps.db.select().from(contacts).where(eq(contacts.id, contactId)).get();
+    const contact = db.select().from(contacts).where(eq(contacts.id, contactId)).get();
     const volunteerOver = overCapCents(a?.volunteerCents ?? 0, allowanceVolunteerCapCents);
     const trainerOver = overCapCents(a?.trainerCents ?? 0, allowanceTrainerCapCents);
     return {
@@ -179,7 +183,7 @@ export async function personYearOverview(deps: Deps, ctx: CallContext, input: un
     };
   });
   rows.sort((x, y) => x.contactName.localeCompare(y.contactName, 'de'));
-  return ok({ rows, linesWithoutPersonCount: allowanceLinesWithoutPersonCount(deps.db, range) });
+  return { rows, linesWithoutPersonCount: allowanceLinesWithoutPersonCount(db, range) };
 }
 
 // ── E21 — Zahlungen an Vorstandsmitglieder und nahestehende Personen ───────
@@ -200,19 +204,21 @@ export interface RelatedPartyPaymentRow {
   /** E21 „Art“ (Design-Nachtrag Phase 4): Herkunft der Zahlung und ihre Nummer (`KE-…`, `PZ-…`); `other` zeigt die Kategorie. */
   originKind: RelatedPartyOriginKind;
   originNumber: string | null;
+  /** Pauschale der Kategorie (`none` sonst) — der Kassenbericht zählt Pauschalen als Vergütung. */
+  allowanceKind: 'none' | 'volunteer' | 'trainer';
 }
 
 /** Woher eine Zeile kommt — E21 „Art“ (Design 4f): Auslage, Aufwandsspende, Zahlung an Partner oder sonst die Kategorie. */
 export type RelatedPartyOriginKind = 'expenseClaim' | 'waiver' | 'partnerPayment' | 'other';
 
-interface LineOrigin {
+export interface LineOrigin {
   kind: RelatedPartyOriginKind;
   number: string | null;
   approvedByUserId: string | null;
 }
 
 /** Wer eine Zeile freigegeben hat und woher sie kommt: Antrag → `approvedByUserId`; Zahlung an Partner mit Posten → `approvedByUserId`; nachträglich freigegeben über `paid_lines` → deren `approvedByUserId`; sonst `null` (Annahme 10). */
-function originOfLine(db: DbOrTx, lineId: string, entryId: string): LineOrigin {
+export function originOfLine(db: DbOrTx, lineId: string, entryId: string): LineOrigin {
   // Aufwandsspende: die Buchung selbst ist `claim.entryId`.
   const waiverClaim = db.select({ approvedByUserId: financeExpenseClaims.approvedByUserId, number: financeExpenseClaims.number }).from(financeExpenseClaims).where(eq(financeExpenseClaims.entryId, entryId)).get();
   if (waiverClaim) return { kind: 'waiver', number: waiverClaim.number, approvedByUserId: waiverClaim.approvedByUserId };
@@ -245,6 +251,47 @@ function originOfLine(db: DbOrTx, lineId: string, entryId: string): LineOrigin {
   return { kind: 'other', number: null, approvedByUserId: null };
 }
 
+/**
+ * E21 ohne Rechteprüfung und ohne Einstellungen (Kassenbericht Abschnitt 10, Rechenschaft A2): nahestehende Rollen,
+ * deren Zeitraum `[from, to]` schneidet, × festgeschriebene Ausgabezeilen im Zeitraum der Rolle. `boardBasisFrom`:
+ * ab wann eine Vorstandsvergütung erlaubt ist (`null`: nicht) — nur für `boardAllowanceWithoutBasis`.
+ */
+export function relatedPartyPaymentsInternal(db: DbOrTx, range: { from: string; to: string; boardBasisFrom?: string | null }): RelatedPartyPaymentRow[] {
+  const boardBasisFrom = range.boardBasisFrom ?? null;
+  const roles = db
+    .select()
+    .from(contactRoles)
+    .where(and(inArray(contactRoles.role, ['board-member', 'related-party']), sql`${contactRoles.since} <= ${range.to}`, sql`(${contactRoles.until} is null or ${contactRoles.until} >= ${range.from})`))
+    .all();
+
+  const rows: RelatedPartyPaymentRow[] = [];
+  for (const role of roles) {
+    const from = role.since > range.from ? role.since : range.from;
+    const to = role.until && role.until < range.to ? role.until : range.to;
+    const lines = db
+      .select({ id: financeAllocationLines.id, amountCents: financeAllocationLines.amountCents, entryId: financeAllocationLines.entryId, categoryId: financeAllocationLines.categoryId, entryDate: financeEntries.entryDate, entryNumber: financeEntries.number, allowanceKind: financeCategories.allowanceKind, categoryName: financeCategories.name })
+      .from(financeAllocationLines)
+      .innerJoin(financeEntries, eq(financeAllocationLines.entryId, financeEntries.id))
+      .innerJoin(financeCategories, eq(financeAllocationLines.categoryId, financeCategories.id))
+      .where(and(eq(financeEntries.status, 'final'), eq(financeAllocationLines.contactId, role.contactId), eq(financeCategories.direction, 'expense'), sql`${financeEntries.entryDate} >= ${from} and ${financeEntries.entryDate} <= ${to}`))
+      .all();
+    if (lines.length === 0) continue;
+    const contact = db.select().from(contacts).where(eq(contacts.id, role.contactId)).get();
+    for (const line of lines) {
+      const origin = originOfLine(db, line.id, line.entryId);
+      rows.push({
+        entryId: line.entryId, entryDate: line.entryDate, entryNumber: line.entryNumber, contactId: role.contactId, contactName: contact ? displayName(contact) : role.contactId,
+        role: role.role as 'board-member' | 'related-party', amountCents: Math.abs(line.amountCents), categoryId: line.categoryId, categoryName: line.categoryName,
+        approvedByUserId: origin.approvedByUserId, originKind: origin.kind, originNumber: origin.number,
+        allowanceKind: line.allowanceKind,
+        boardAllowanceWithoutBasis: role.role === 'board-member' && line.allowanceKind !== 'none' && !basisInForceOn(boardBasisFrom, line.entryDate),
+      });
+    }
+  }
+  rows.sort((a, b) => a.entryDate.localeCompare(b.entryDate));
+  return rows;
+}
+
 export const relatedPartyPaymentsSchema = z.object({ fiscalYearId: z.string().min(1) });
 
 /**
@@ -259,38 +306,8 @@ export async function relatedPartyPayments(deps: Deps, ctx: CallContext, input: 
   const year = deps.db.select().from(financeFiscalYears).where(eq(financeFiscalYears.id, parsed.value.fiscalYearId)).get();
   if (!year) return notFound('financeFiscalYear', parsed.value.fiscalYearId);
 
-  const roles = deps.db
-    .select()
-    .from(contactRoles)
-    .where(and(inArray(contactRoles.role, ['board-member', 'related-party']), sql`${contactRoles.since} <= ${year.endsOn}`, sql`(${contactRoles.until} is null or ${contactRoles.until} >= ${year.startsOn})`))
-    .all();
-
   // Befund AK: die Grundlage gilt ab einem Tag — verglichen wird mit dem Zahlungstag, nicht mit heute.
   const boardBasisFrom = readSetting<boolean>(deps, 'finance.boardRemunerationAllowed') ? readSetting<string | null>(deps, 'finance.boardRemunerationValidFrom') : null;
-
-  const rows: RelatedPartyPaymentRow[] = [];
-  for (const role of roles) {
-    const from = role.since > year.startsOn ? role.since : year.startsOn;
-    const to = role.until && role.until < year.endsOn ? role.until : year.endsOn;
-    const lines = deps.db
-      .select({ id: financeAllocationLines.id, amountCents: financeAllocationLines.amountCents, entryId: financeAllocationLines.entryId, categoryId: financeAllocationLines.categoryId, entryDate: financeEntries.entryDate, entryNumber: financeEntries.number, allowanceKind: financeCategories.allowanceKind, categoryName: financeCategories.name })
-      .from(financeAllocationLines)
-      .innerJoin(financeEntries, eq(financeAllocationLines.entryId, financeEntries.id))
-      .innerJoin(financeCategories, eq(financeAllocationLines.categoryId, financeCategories.id))
-      .where(and(eq(financeEntries.status, 'final'), eq(financeAllocationLines.contactId, role.contactId), eq(financeCategories.direction, 'expense'), sql`${financeEntries.entryDate} >= ${from} and ${financeEntries.entryDate} <= ${to}`))
-      .all();
-    if (lines.length === 0) continue;
-    const contact = deps.db.select().from(contacts).where(eq(contacts.id, role.contactId)).get();
-    for (const line of lines) {
-      const origin = originOfLine(deps.db, line.id, line.entryId);
-      rows.push({
-        entryId: line.entryId, entryDate: line.entryDate, entryNumber: line.entryNumber, contactId: role.contactId, contactName: contact ? displayName(contact) : role.contactId,
-        role: role.role as 'board-member' | 'related-party', amountCents: Math.abs(line.amountCents), categoryId: line.categoryId, categoryName: line.categoryName,
-        approvedByUserId: origin.approvedByUserId, originKind: origin.kind, originNumber: origin.number,
-        boardAllowanceWithoutBasis: role.role === 'board-member' && line.allowanceKind !== 'none' && !basisInForceOn(boardBasisFrom, line.entryDate),
-      });
-    }
-  }
-  rows.sort((a, b) => a.entryDate.localeCompare(b.entryDate));
+  const rows = relatedPartyPaymentsInternal(deps.db, { from: year.startsOn, to: year.endsOn, boardBasisFrom });
   return ok({ rows, boardMembersMissing: !boardMembersMaintainedInternal(deps.db, year.startsOn, year.endsOn) });
 }

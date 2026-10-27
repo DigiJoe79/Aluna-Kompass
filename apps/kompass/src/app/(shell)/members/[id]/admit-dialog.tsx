@@ -57,7 +57,6 @@ export function AdmitDialog({ membershipId, name, today, finalFocus, onClose }: 
     const result = await feedback.run(() => admitMemberAction({ membershipId, admittedOn, createFees: createFees && (preview?.charges.length ?? 0) > 0, letter: letter && (preview?.letterPossible ?? false) }), { retry: () => void submit() });
     setPending(false);
     if (result.status !== 'success') return;
-    toast.success(result.message);
     const refused = (result.data as { letterRefused: string | null }).letterRefused;
     if (refused) toast.warning(refused, { duration: Infinity, closeButton: true });
     onClose();

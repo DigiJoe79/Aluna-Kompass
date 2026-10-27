@@ -16,7 +16,6 @@ import { createFirstFiscalYearAction, updateFiscalYearAction } from './actions';
 import { useSavedVersions } from '@/lib/saved-versions';
 import { FormField } from '@/components/forms/form-field';
 import { FormGrid } from '@/components/forms/form-grid';
-import { Empty } from '@/components/empty-value';
 import { RowMenu } from '@/components/row-menu';
 
 export interface FiscalYearRow {
@@ -26,7 +25,6 @@ export interface FiscalYearRow {
   startsOn: string;
   endsOn: string;
   status: 'open' | 'closed';
-  taxReturnFiledOn: string | null;
   /** Befund 15 (Weg 2): Kennzeichen statt Zusatz in der Bezeichnung. */
   isShortYear: boolean;
 }
@@ -57,7 +55,6 @@ export function FiscalYearsPanel({ years }: { years: FiscalYearRow[] }) {
             <TableRow>
               <TableHead col="title">{t('designation')}</TableHead>
               <TableHead col="meta">{t('range')}</TableHead>
-              <TableHead col="meta">{t('taxReturnFiledOn')}</TableHead>
               {/* Zeilenaktionen im ⋯-Menü (Joe 11.8); der Kopf ist nur für Vorleser da (112). */}
               <TableHead col="actions" className="w-11"><span className="sr-only">{tCommon('rowActionsColumn')}</span></TableHead>
             </TableRow>
@@ -77,7 +74,6 @@ export function FiscalYearsPanel({ years }: { years: FiscalYearRow[] }) {
                 <TableCell col="meta" className="text-ink-2">
                   {date(year.startsOn)} – {date(year.endsOn)}
                 </TableCell>
-                <TableCell col="meta" className="text-ink-2">{year.taxReturnFiledOn ? date(year.taxReturnFiledOn) : <Empty />}</TableCell>
                 <TableCell col="actions" className="text-right">
                   <RowMenu name={year.designation} items={[{ key: 'edit', label: tCommon('edit'), onSelect: () => setEditing(versions.latest(year)) }]} />
                 </TableCell>
@@ -149,13 +145,12 @@ function EditYearDialog({ year, onClose, onSaved }: { year: FiscalYearRow; onClo
   const t = useTranslations('finance.admin.fiscalYears');
   const tCommon = useTranslations('common');
   const [designation, setDesignation] = useState(year.designation);
-  const [taxReturnFiledOn, setTaxReturnFiledOn] = useState(year.taxReturnFiledOn ?? '');
   const [pending, setPending] = useState(false);
   const feedback = useActionFeedback();
 
   const submit = async () => {
     setPending(true);
-    const result = await feedback.run(() => updateFiscalYearAction({ id: year.id, expectedVersion: year.expectedVersion, designation, taxReturnFiledOn: taxReturnFiledOn || null }), { retry: () => void submit() });
+    const result = await feedback.run(() => updateFiscalYearAction({ id: year.id, expectedVersion: year.expectedVersion, designation }), { retry: () => void submit() });
     setPending(false);
     if (result.status === 'success') onSaved(result.data);
   };
@@ -167,9 +162,6 @@ function EditYearDialog({ year, onClose, onSaved }: { year: FiscalYearRow; onClo
         <FormGrid>
           <FormField id="fy-designation" label={t('designation')} size="s">
             <Input id="fy-designation" value={designation} onChange={(e) => setDesignation(e.target.value)} />
-          </FormField>
-          <FormField id="fy-tax-return" label={t('taxReturnFiledOn')} size="s">
-            <Input id="fy-tax-return" type="date" value={taxReturnFiledOn} onChange={(e) => setTaxReturnFiledOn(e.target.value)} />
           </FormField>
         </FormGrid>
         <FormActionBar placement="dialog" cancel={onClose} pending={pending} saveLabel={tCommon('save')} onSave={() => void submit()} state={withUnplacedFieldErrors(feedback.state, [])} />

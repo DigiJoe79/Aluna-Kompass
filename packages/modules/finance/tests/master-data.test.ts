@@ -6,6 +6,17 @@ import { FINANCE_MCP_TOOLS } from '../src/mcp-tools';
 import { setupFinance } from './helpers';
 
 describe('master data over one door', () => {
+  it('Rechenschaft C: a category keeps its threshold exclusion, also through the tool schema (M11)', async () => {
+    const { deps, ctx } = setupFinance();
+    const tool = FINANCE_MCP_TOOLS.find((t) => t.name === 'finance_master_data_save')!;
+    const input = { kind: 'category', data: { key: 'x-zuschuss', name: 'Zuschuss', direction: 'income', sphere: 'business', incomeKind: 'publicGrant', thresholdExclusion: 'notPerformance' } };
+    expect(tool.inputSchema.parse(input)).toEqual(input);
+    const created = unwrap(await tool.handler(deps, ctx, input as never)) as { id: string; thresholdExclusion: string; updatedAt: string };
+    expect(created.thresholdExclusion).toBe('notPerformance');
+    const updated = unwrap(await saveMasterData(deps, ctx, { kind: 'category', data: { id: created.id, thresholdExclusion: 'none', expectedVersion: created.updatedAt } })) as { thresholdExclusion: string };
+    expect(updated.thresholdExclusion).toBe('none');
+  });
+
   it('creates, changes, deactivates and deletes by kind — and leaves the permission check to the service behind it', async () => {
     const { deps, ctx } = setupFinance();
     const denied = await saveMasterData(deps, ctxWith(['finance.read']), { kind: 'purpose', data: { name: 'Dach' } });
@@ -37,6 +48,6 @@ describe('master data over one door', () => {
     // F2a fügt eigene Werkzeuge für die Buchung hinzu (tests/mcp-tools.test.ts) — hier bleiben die neun der Stammdaten.
     const masterDataTools = FINANCE_MCP_TOOLS.filter((t) => t.name.startsWith('finance_master_data') || t.name.startsWith('finance_fiscal_year') || t.name === 'finance_purpose_close' || t.name.startsWith('finance_dated_value'));
     for (const tool of masterDataTools) expect(tool.description, tool.name).toMatch(/Requires finance\.(setup|overview|read)/);
-    expect(masterDataTools.map((t) => t.name)).toEqual(['finance_master_data', 'finance_master_data_save', 'finance_master_data_set_active', 'finance_master_data_delete', 'finance_fiscal_year_create_first', 'finance_fiscal_year_update', 'finance_purpose_close', 'finance_dated_value_set', 'finance_dated_value_remove']);
+    expect(masterDataTools.map((t) => t.name)).toEqual(['finance_master_data', 'finance_master_data_save', 'finance_master_data_set_active', 'finance_master_data_delete', 'finance_fiscal_year_create_first', 'finance_fiscal_year_update', 'finance_purpose_close', 'finance_dated_value_set', 'finance_dated_value_remove', 'finance_dated_value_remove_preview']);
   });
 });

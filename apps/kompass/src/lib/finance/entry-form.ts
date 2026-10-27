@@ -1,6 +1,7 @@
 import type { EntryLinesInput } from '@kompass/module-finance';
 import { formatAmount, parseAmount } from './amount';
 import { countChangedValues } from '../form-dirty';
+import { isReverseChargeCode } from './reverse-charge-text';
 
 export type EntryTemplate = 'income' | 'expense' | 'transfer' | 'inKind';
 
@@ -28,7 +29,13 @@ export interface SplitRowState {
   purposeId: string | null;
   abroad: boolean;
   addsToAssets: boolean;
+  assetEndowment?: boolean;
+  addsToAssetsOptOut?: 'testatorDirectedCurrentUse' | 'donorAllowedCurrentUse' | null;
   locked?: boolean;
+  /** E6a Task 11c: Leistungs- bzw. Rechnungsdatum — geht nur bei § 13b/Erwerb an den Dienst. */
+  serviceDate?: string | null;
+  /** Herkunft des Kennzeichens, nur Anzeige (nie gespeichert). */
+  taxCodeOrigin?: 'contact' | 'prompt' | null;
 }
 
 export interface EntryFormState {
@@ -65,6 +72,9 @@ export interface EntryViewLike {
     purposeId?: string | null;
     abroad?: boolean;
     addsToAssets?: boolean;
+    assetEndowment?: boolean;
+    addsToAssetsOptOut?: 'testatorDirectedCurrentUse' | 'donorAllowedCurrentUse' | null;
+    serviceDate?: string | null;
   }[];
 }
 
@@ -200,7 +210,12 @@ export function toServiceInput(state: EntryFormState): { ok: true; input: EntryL
       purposeId: row.purposeId,
       contactId: row.contactId,
       abroad: row.abroad,
-      addsToAssets: row.addsToAssets,
+      // Ohne Angabe nimmt der Dienst die Vorgabe der Art (Erbschaft und Ausstattung: ins Vermögen); mit dem festen Grund
+      // abgewählt, sonst nur, was schon gesetzt war (Rechenschaft D2, 15g).
+      ...(row.addsToAssetsOptOut ? { addsToAssets: false, addsToAssetsOptOut: row.addsToAssetsOptOut } : row.addsToAssets ? { addsToAssets: true } : {}),
+      ...(row.assetEndowment ? { assetEndowment: true } : {}),
+      // Das Leistungsdatum nur bei § 13b/Erwerb (sonst lehnt der Dienst mit `notApplicable` ab).
+      ...(row.serviceDate && isReverseChargeCode(row.taxCode) ? { serviceDate: row.serviceDate } : {}),
     });
   });
 
@@ -238,6 +253,9 @@ export function fromEntryView(view: EntryViewLike): EntryFormState {
     purposeId: line.purposeId ?? null,
     abroad: line.abroad ?? false,
     addsToAssets: line.addsToAssets ?? false,
+    assetEndowment: line.assetEndowment ?? false,
+    addsToAssetsOptOut: line.addsToAssetsOptOut ?? null,
+    serviceDate: line.serviceDate ?? null,
     locked: template === 'inKind' && index === 1,
   }));
 
@@ -253,4 +271,19 @@ export function restInto(state: EntryFormState, rowKey: string): EntryFormState 
   if (remainder === null) return state;
   const neededTyped = state.template === 'expense' ? -remainder : remainder;
   return { ...state, splitRows: state.splitRows.map((r) => (r.key === rowKey ? { ...r, amountText: formatAmount(neededTyped) } : r)) };
+}
+
+/**
+ * E6a Task 11c (Board 3a): Wählt man an einer Ausgabezeile ohne Kennzeichen einen Kontakt mit dem Merkmal „Rechnungen
+ * mit Umkehr der Steuerschuld (§ 13b)“, setzt die Maske das Kennzeichen und merkt sich die Herkunft. Ein gewähltes
+ * Kennzeichen bleibt; an einer Einnahme geschieht nichts.
+ */
+export function withContactReverseCharge<R extends { taxCode?: string; taxCodeOrigin?: 'contact' | 'prompt' | null }>(row: R, isExpense: boolean, reverseCharge: 'eu' | 'other' | null): R {
+  if (!isExpense || !reverseCharge || row.taxCode) return row;
+  return { ...row, taxCode: reverseCharge === 'eu' ? 'rc13bEu' : 'rc13bOther', taxCodeOrigin: 'contact' };
+}
+
+/** Das Kennzeichen kam vom Kontakt, wenn es seinem Merkmal entspricht — für das Laden eines Entwurfs. */
+export function contactOriginOf(taxCode: string | undefined, reverseCharge: 'eu' | 'other' | null): 'contact' | null {
+  return (reverseCharge === 'eu' && taxCode === 'rc13bEu') || (reverseCharge === 'other' && taxCode === 'rc13bOther') ? 'contact' : null;
 }

@@ -9,6 +9,103 @@ die Nummern folgen [Semantic Versioning](https://semver.org/lang/de/). Vor
 1.0.0 kann jede Minor-Fassung Brüche enthalten — was bricht, steht unter
 **Geändert** mit dem, was zu tun ist.
 
+## [0.4.0] - 2026-10-27
+
+Diese Fassung bringt die **Rechenschaftspflichten** des Vereins in Kompass: Berichte, die sich festschreiben lassen,
+den **Jahresabschluss** Schritt für Schritt, die **Kassenprüfung** mit Prüfpaket und Prüfbericht, das Ergebnis der
+Mitgliederversammlung, die **Amtsübergabe** des Schatzmeisters, **Fristen und Schwellen**, die **Steuererklärung** mit
+den Werten für die Anlage Gem und die **Umsatzsteuer** mit Voranmeldung — auch § 13b für Vereine, die kein Unternehmer
+sind. Alles steht unter dem neuen Menüpunkt Finanzen → Rechenschaft. Eine Migration
+(`0011_finance_accountability_0_4_0`, `migrationCount` 12): neue Tabellen für Berichte, Kassenprüfung,
+Jahresabschluss, Übergabe, Erklärungszeiträume und Umsatzsteuer-Abgaben, neue Spalten in den Finanzen. Bestehende
+Daten bleiben; „Steuererklärung abgegeben am“ und das Kennzeichen „Reverse Charge (§ 13b)“ werden umgezogen (siehe
+**Geändert**). **Was bricht:** Die bestehende Rolle *Kassenprüfer* bekommt das neue Recht nicht von selbst, und ohne
+Kontoauszug der Bank zum Stichtag lässt sich kein Bericht festschreiben. Die Handgriffe nach dem Update stehen im
+Betriebshandbuch, „Von 0.3.2 auf 0.4.0“.
+
+### Hinzugefügt
+
+- **Berichte** (Finanzen → Rechenschaft → Berichte): Einnahmen-Überschuss-Rechnung nach Bereichen, Vermögensübersicht,
+  Kassenbericht und Kontenabstimmung; dazu Zweckmittel, Rücklagenspiegel, Projektabrechnung, Auslandsbericht,
+  Spendenbuch mit Abstimmung gegen die Zuwendungsbestätigungen, Personenübersicht (Pauschalen und Verzicht je Person),
+  Belegprüfung, Umsatzsteuer-Summen, Monatsübersicht und Übergabeliste. Jeder Bericht ist vorläufig, solange das Jahr
+  offen ist, zur Prüfung, sobald es abgeschlossen ist, und festgeschrieben als Dokument in der Akte; Prüffassung und
+  festgeschriebene Fassung tragen denselben Hash. Festschreiben braucht die Freigabe des Jahres (Prüfbericht oder
+  Begründung) und je Bankkonto den Kontoauszug zum Stichtag als PDF; die Seite nennt, was noch fehlt. Die Vorschau
+  zeigt die Seiten als Bilder. Was Kompass nicht bucht, steht unter **Sonstiges Vermögen**.
+- **Kassenprüfung**: Prüfer je Jahr, in Kompass oder auf Papier, mit Wahl, Verpflichtung zur Vertraulichkeit und
+  Hinweisen zur Unabhängigkeit; ein Prüfpaket in acht Abschnitten mit Stichproben und Auffälligkeiten, Vermerke mit
+  Antwort und Klärung, Kassenzählung im Beisein der Prüfer, Prüfbericht zum Drucken oder als Vordruck und als Scan am
+  Geschäftsjahr, Nachprüfung nach einem Wiederöffnen. Prüfer sehen nur, was sie tun dürfen; der Zugang endet auf
+  Knopfdruck.
+- **Jahresabschluss**: zwölf Schritte von den Kontoauszügen über Abschließen, Prüfung und Mitgliederversammlung bis
+  zur Steuererklärung; Kompass rechnet je Schritt den Stand und sagt nach einem Wiederöffnen, was zu wiederholen ist.
+  Das Ergebnis der Mitgliederversammlung (Entlastung einzeln oder gesamt, Jahresrechnung genehmigt, Protokoll) steht
+  am Jahr; eine Korrektur nach der Versammlung lässt sich ins Folgejahr übernehmen. Neue Kontaktrolle *Schatzmeister*.
+- **Amtsübergabe** des Schatzmeisters: Zwischenbericht bis zum Übergabetag, Zählung jeder Kasse im Beisein der
+  Nachfolge, Übergabepunkte und Protokoll zum Unterschreiben, Hinweis auf die Registeranmeldung.
+- **Fristen und Schwellen**: berechnete Fristen (Bescheide, Nachweise, Steuererklärung, Umsatzsteuer, Prüferzugang)
+  mit Fristende am nächsten Werktag nach § 108 Abs. 3 AO, eigene Wiedervorlagen und die Schwellen eines Jahres —
+  zeitnahe Mittelverwendung, Freigrenze, Kleinunternehmer, Pauschalen. Dazu die Kachel „Finanzfristen · Schwellen“.
+- **Steuererklärung** je Erklärungszeitraum (ein bis drei Geschäftsjahre): Frist, Ihre Angaben zur Anlage Gem, die
+  Werte wie im Formular mit Herkunft und Lücken, Beilagen, Dokumente bis zum ELSTER-Übertragungsprotokoll, „abgegeben
+  am“ mit festgeschriebener Fassung und der Bescheid. Dazu die Berichte **Werte für die Anlage Gem** und **EÜR für das
+  Finanzamt**; die Werte übertragen Sie selbst in Mein ELSTER. Für die Anlage Gem neu: Vermögensausstattung
+  nach § 58 Nr. 3 AO, Steuerdaten von Empfänger und Geber, Erbschaften ins Vermögen, Einnahmeart „Miete und Pacht“.
+- **Umsatzsteuer-Voranmeldung**: je Zeitraum die Kennzahlen zum Übertragen in ELSTER mit Herkunft, Festschreiben nach
+  Ende des Zeitraums, Abgabe mit Übertragungsprotokoll und Berichtigung, wenn sich danach eine Buchung ändert.
+  Umsatzsteuer-Summen und Jahreserklärung rechnen je Kalenderjahr. Auch ein Verein, der kein Unternehmer ist, kann
+  Steuer nach § 13b schulden (etwa für einen ausländischen Handwerker) oder Erwerbsteuer für Wareneinkäufe aus der EU;
+  Kompass bietet ihm dann nur diese Kennzeichen an.
+- **Prüffrage § 13b** beim Buchen, in der Arbeitsliste und beim Rechnungsleser, wenn Beleg oder Anbieter darauf
+  hindeuten; ein begründetes Nein merkt sich der Kontakt, eine E-Rechnung mit Kennzeichen „AE“ setzt § 13b selbst. Am
+  Kontakt lässt sich „Rechnungen mit Umkehr der Steuerschuld“ als Vorgabe setzen.
+- **Datenexport für eine Außenprüfung** (§ 147 Abs. 6 AO) auf der Seite „Berichte“: die Buchhaltung gewählter Jahre
+  als CSV mit `index.xml` für die Prüfsoftware des Finanzamts, 30 Tage zum Herunterladen, protokolliert. Erzeugen
+  darf, wer Finanzen lesen und die Akte exportieren darf, auch die Kassenprüfer.
+- **Beleg ersetzen** an einer Buchung im abgeschlossenen Jahr: Der alte Beleg wird widerrufen, beide Schritte bleiben
+  im Verlauf.
+- Agenten erreichen Berichte, Kassenprüfung, Jahresabschluss, Steuererklärung, Umsatzsteuer und Datenexport über MCP;
+  Festschreiben und persönliche Erklärungen bleiben dem Menschen, solange der Verein sie nicht für MCP freigibt.
+
+### Geändert
+
+- **Zu tun — Rolle Kassenprüfer:** Bestehende Installationen ergänzen die Rolle unter Einrichtung → Rollen um das
+  Recht „Kassenprüfung“; sonst können Prüfer keine Vermerke und keinen Prüfbericht schreiben.
+- **Zu tun — Kontoauszüge:** Für jedes abgeschlossene Jahr, dessen Berichte festgeschrieben werden sollen, je
+  Bankkonto den Auszug zum Stichtag ablegen oder sein Fehlen begründen.
+- **Zu tun — Kategorien und Kontakte:** bei bestehenden Kategorien das Merkmal „Für die Freigrenze“ setzen, die
+  Kontaktrolle *Schatzmeister* mit Zeitraum eintragen. Die neuen Kategorien („Miet- und Pachteinnahmen“,
+  „Mitgliederbetreuung“, „Zuwendungen an Mitglieder“) und die § 13b-Hinweise an Kategorien kommen nur in neue
+  Installationen.
+- **Umsatzsteuer-Einstellung:** Die Frage „Unternehmer oder USt-IdNr.?“ unter „Steuerliches“ wird zur Einstellung mit
+  Stichtag im neuen Reiter **Umsatzsteuer** der Finanz-Einrichtung; ein bisheriges „Ja“ gilt ab 2000. USt-IdNr.,
+  Voranmeldungszeitraum und Bundesland des Finanzamts tragen Sie dort nach.
+- **§ 13b geteilt:** „Reverse Charge (§ 13b)“ wird zu „Leistung aus dem EU-Ausland“ und „übrige Leistungen“. Das
+  Update ordnet Buchungszeilen nach dem Land des Kontakts bzw. der IBAN zu; Kategorien mit dieser Vorgabe und
+  Importregeln ohne Kontakt stehen danach auf „EU-Ausland“ — bitte prüfen.
+- **„Steuererklärung abgegeben am“** steht nicht mehr am Geschäftsjahr: Das Update legt je Jahr mit diesem Datum einen
+  einjährigen Erklärungszeitraum an (Frist 31.07. des Folgejahres).
+- Im abgeschlossenen Jahr lässt sich ein Beleg nicht mehr entfernen, nur ersetzen. Offene Zahlungen mit Datum in einem
+  abgeschlossenen Jahr lehnt Kompass ab, auch im Beitragslauf.
+- Personenbezogene Finanzdaten werden erst zur Löschung fällig, wenn das Jahr veranlagt ist (§ 147 Abs. 3 S. 5 AO),
+  ohne Bescheid spätestens nach dem siebten Folgejahr.
+- Neu mitgeliefert ist die Dokument-Basis `a4-quer-plain-slim` für Berichte im Querformat. Wer `a4-plain-slim` durch
+  eine eigene Fassung ersetzt, zeichnet dort die Slots `stage`, `stageText` und `footerNote` und trägt sie in
+  `bases.json` ein — sonst fehlt auf dem Papier, ob ein Bericht vorläufig ist (Betrieb → Dokument-Basisvorlagen).
+
+### Behoben
+
+- Der Höchstbetrag der freien Rücklage (§ 62 Abs. 1 Nr. 3 AO) stand für Jahre vor 2026 auf 0,00 und rechnet jetzt das
+  genaue Drittel.
+- Gesetzliche Werte mit Stichtag (Pauschalen, Grenzen der AO, Kilometerpauschale, Verzichtsfristen) galten erst ab
+  2026; für frühere Jahre gilt jetzt der damalige Stand.
+- Agenten bekamen bei fehlendem Recht oder unbekanntem Eintrag einen Rohwert statt eines Satzes.
+
+### Sicherheit
+
+- zod auf 4.6.7 (CVE-2023-54404).
+
 ## [0.3.2] - 2026-10-23
 
 Diese Fassung macht das **Backup** zu etwas, um das man sich nicht mehr kümmern muss: Es läuft im Hintergrund mit

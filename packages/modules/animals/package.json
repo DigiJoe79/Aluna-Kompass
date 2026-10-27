@@ -1,6 +1,6 @@
 {
   "name": "@kompass/module-animals",
-  "version": "0.3.2",
+  "version": "0.4.0",
   "private": true,
   "type": "module",
   "exports": {
@@ -15,7 +15,7 @@
     "@kompass/documents": "workspace:*",
     "@kompass/markdown": "workspace:*",
     "drizzle-orm": "^0.45.3",
-    "zod": "^4.6.5"
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@kompass/module-projects": "workspace:*",

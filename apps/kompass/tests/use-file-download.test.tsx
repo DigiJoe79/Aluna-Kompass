@@ -33,6 +33,18 @@ describe('useFileDownload', () => {
     }
   });
 
+  it('sends the method it is given and shows the sentence of a 409 refusal (Kassenprüfung: Druck als POST)', async () => {
+    const fetch = vi.fn(async () => Response.json({ code: 'auditorRequired', message: 'Das dürfen nur die Prüfer.' }, { status: 409 }));
+    vi.stubGlobal('fetch', fetch);
+    const { result } = renderHook(() => useFileDownload(MESSAGES));
+    await act(() => result.current.download('/x', 'x.pdf', { method: 'POST' }));
+    expect(fetch).toHaveBeenCalledWith('/x', { method: 'POST' });
+    expect(result.current.refusal).toMatchObject({ status: 'error', message: 'Das dürfen nur die Prüfer.' });
+    vi.stubGlobal('fetch', vi.fn(async () => new Response('kaputt', { status: 409 })));
+    await act(() => result.current.download('/x', 'x.pdf'));
+    expect(result.current.refusal).toMatchObject({ status: 'error', message: 'ging nicht' });
+  });
+
   it('shows a lasting toast with retry when the server is out of reach', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => { throw new TypeError('offline'); }));
     const { result } = renderHook(() => useFileDownload(MESSAGES));

@@ -7,10 +7,11 @@ import { bookEntry, finalizeEntry } from '../src/ledger/finalize';
 import { createFirstFiscalYear } from '../src/ledger/fiscal-years';
 import { deleteDraft, getEntry, listEntries, saveDraft, type EntryView } from '../src/ledger/entries';
 import { reverseEntry, reverseInternal } from '../src/ledger/reverse';
+import { revokeVoucher, uploadVoucher } from '../src/ledger/vouchers';
 import { installFinance } from '../src/install';
 import type { EntryLock } from '../src/locks';
-import { financeAllocationLines, financeCategories, financeEntries, financeMoneyLines, financePeriodEvents } from '../src/schema';
-import { insertRaw, insertRun, ledgerFixture, setupFinance } from './helpers';
+import { financeAllocationLines, financeCategories, financeEntries, financeEntryDocuments, financeMoneyLines, financePeriodEvents } from '../src/schema';
+import { insertRaw, insertRun, ledgerFixture, pdfBytes, setupFinance } from './helpers';
 
 const err = (r: { ok: boolean; error?: unknown }) => (r.ok ? 'ok' : r.error);
 
@@ -146,6 +147,18 @@ describe('reverseEntry', () => {
     const cashEntry = unwrap(await bookEntry(f.deps, f.ctx, { entryDate: '2026-03-02', text: 'Einzahlung', moneyLines: [{ accountId: f.cash.id, amountCents: 500 }], allocationLines: [{ categoryId: f.donations.id, amountCents: 500 }] }));
     const cashRes = unwrap(await reverseEntry(f.deps, f.ctx, { id: cashEntry.id, withCorrectionDraft: true }));
     expect(cashRes.correctionDraft).toBeNull();
+  });
+
+  it('the correction draft takes over the vouchers of the original that are not revoked (Plan D1d Task 4, Befund MCP 6)', async () => {
+    const f = await ledgerFixture();
+    const entry = await f.finalEntry();
+    const kept = unwrap(await uploadVoucher(f.deps, f.ctx, { entryId: entry.id, bytes: pdfBytes(), typeKey: 'voucher-invoice', documentDate: '2026-03-01' }));
+    const wrong = unwrap(await uploadVoucher(f.deps, f.ctx, { entryId: entry.id, bytes: pdfBytes(), typeKey: 'voucher-invoice', documentDate: '2026-03-01' }));
+    unwrap(await revokeVoucher(f.deps, f.ctx, { linkId: wrong.linkId, note: 'Falscher Beleg' }));
+    const res = unwrap(await reverseEntry(f.deps, f.ctx, { id: entry.id, withCorrectionDraft: true }));
+    const links = f.deps.db.select().from(financeEntryDocuments).where(eq(financeEntryDocuments.entryId, res.correctionDraft!.id)).all();
+    expect(links.map((l) => ({ documentId: l.documentId, revokedAt: l.revokedAt }))).toEqual([{ documentId: kept.documentId, revokedAt: null }]);
+    expect(unwrap(await getEntry(f.deps, f.ctx, { id: res.correctionDraft!.id })).documentation.state).not.toBe('missing');
   });
 
   it('reverses ⇔ reversedBy: the two pointers always agree', async () => {

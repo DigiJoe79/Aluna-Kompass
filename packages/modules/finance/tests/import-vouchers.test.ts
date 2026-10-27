@@ -105,7 +105,7 @@ describe('attachVoucherToTransaction', () => {
     expect(f.deps.db.select().from(financeEntries).all()).toHaveLength(1);
 
     expect(await attachVoucherToTransaction(f.deps, ctxWith(['finance.read'], f.userId), { rawTransactionId: other, bytes: pdfBytes() })).toMatchObject({ ok: false, error: { type: 'forbidden', permission: 'finance.entriesWrite' } });
-    expect(await attachVoucherToTransaction(f.deps, f.ctx, { rawTransactionId: other, bytes: pdfBytes(), typeKey: 'letter' })).toMatchObject({ ok: false, error: { type: 'conflict', code: 'voucherTypeNotAllowed' } });
+    expect(await attachVoucherToTransaction(f.deps, f.ctx, { rawTransactionId: other, bytes: pdfBytes(), typeKey: 'letter' })).toMatchObject({ ok: false, error: { type: 'conflict', code: 'voucherTypeNotAllowed', params: { allowed: expect.stringContaining('voucher-invoice') } } });
     expect(f.deps.db.select().from(financeEntries).all()).toHaveLength(1);
   });
 });

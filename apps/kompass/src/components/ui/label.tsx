@@ -19,7 +19,10 @@ function Label({
       data-slot="label"
       className={cn(
         "flex items-center gap-1.5 text-meta font-semibold select-none group-data-[disabled=true]:pointer-events-none group-data-[disabled=true]:opacity-50 peer-disabled:cursor-not-allowed peer-disabled:opacity-50",
-        className
+        className,
+        // Mit Stern fließt das Label als Text: Bricht es um, steht der Stern direkt hinter dem letzten Wort, nicht
+        // rechts außen neben einem Block (Designer Runde 7, 316/15e).
+        required && "inline"
       )}
       {...props}
     />
@@ -28,10 +31,10 @@ function Label({
   if (!required) return label
 
   return (
-    <span data-slot="label-required" className="flex items-center gap-1.5">
+    <span data-slot="label-required" className="block">
       {label}
       {/* 600 wie das Label (Designer § 14.2): Der Stern ist Geschwister, erbt also nicht. Pflicht für Vorleser: aria-required am Feld. */}
-      <span aria-hidden="true" className="font-semibold text-brand-accent">
+      <span aria-hidden="true" className="ml-1.5 font-semibold text-brand-accent">
         *
       </span>
     </span>

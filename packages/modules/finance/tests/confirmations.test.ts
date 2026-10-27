@@ -264,7 +264,7 @@ describe('Befund E — Rücknahme einer versandten Bestätigung', () => {
     const { line } = await f.donate();
     const confirmation = unwrap(await issueConfirmation(f.deps, f.ctx, { lineIds: [line.id] }));
     unwrap(await attachSignedConfirmation(f.deps, f.ctx, { id: confirmation.id, bytes: pdfBytes(), fileName: 'unterschrieben.pdf' }));
-    unwrap(await recordConfirmationDispatch(f.deps, f.ctx, { id: confirmation.id, sentAt: '2026-03-18', sentVia: 'post' }));
+    unwrap(await recordConfirmationDispatch(f.deps, f.ctx, { id: confirmation.id, sentAt: confirmation.issuedOn, sentVia: 'post' }));
     expect(err(await voidConfirmation(f.deps, f.ctx, { id: confirmation.id, note: 'x', alreadySent: false }))).toMatchObject({ type: 'conflict', code: 'confirmationWasSent' });
     expect(unwrap(await voidConfirmation(f.deps, f.ctx, { id: confirmation.id, note: 'x', alreadySent: true }))).toMatchObject({ state: 'voided', sentBeforeVoid: true });
   });
@@ -301,6 +301,17 @@ describe('Befund E — Rücknahme einer versandten Bestätigung', () => {
 });
 
 describe('dispatch and signed version', () => {
+  it('refuses a dispatch before the day of issue (Nachttest N19)', async () => {
+    const f = await donationFixture();
+    const { line } = await f.donate();
+    const confirmation = unwrap(await issueConfirmation(f.deps, f.ctx, { lineIds: [line.id] }));
+    unwrap(await attachSignedConfirmation(f.deps, f.ctx, { id: confirmation.id, bytes: pdfBytes(), fileName: 'unterschrieben.pdf' }));
+    const before = String(Number(confirmation.issuedOn.slice(8, 10)) - 1).padStart(2, '0');
+    const dayBefore = `${confirmation.issuedOn.slice(0, 8)}${before}`;
+    expect(err(await recordConfirmationDispatch(f.deps, f.ctx, { id: confirmation.id, sentAt: dayBefore, sentVia: 'post' }))).toMatchObject({ type: 'validation', issues: [{ path: 'sentAt', message: 'beforeIssued' }] });
+    unwrap(await recordConfirmationDispatch(f.deps, f.ctx, { id: confirmation.id, sentAt: confirmation.issuedOn, sentVia: 'post' }));
+  });
+
   it('dispatch and signed version are one-time', async () => {
     const f = await donationFixture();
     const { line } = await f.donate();

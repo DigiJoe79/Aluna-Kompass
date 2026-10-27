@@ -6,7 +6,7 @@ import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 import { bookEntry } from '../src/ledger/finalize';
 import {
-  copyPartnerPayment, deletePartnerPaymentDraft, evidenceUsedMultipleTimesInternal, getPartnerPayment, listPartnerPayments, partnerProofDeadlinesInternal,
+  copyPartnerPayment, deletePartnerPaymentDraft, getPartnerPayment, listPartnerPayments, partnerProofDeadlinesInternal,
   rejectPartnerPayment, savePartnerPaymentDraft, submitPartnerPayment,
 } from '../src/allocation/partner-payments';
 import { savePartnerProfile } from '../src/allocation/partners';
@@ -165,16 +165,6 @@ describe('lesen, Fristen, Mehrfachnutzung (F7 Task 3)', () => {
     expect(due).toEqual([{ paymentId: expect.any(String), partnerId, proofDueOn: '2026-02-01', overdue: true }]);
   });
 
-  it('flags a document used as evidence on more than one payment', async () => {
-    const f = await ledgerFixture();
-    const partnerId = insertPartner(f.deps.db, { contactId: f.donor.id });
-    const paymentA = insertPartnerPayment(f.deps.db, partnerId);
-    const paymentB = insertPartnerPayment(f.deps.db, partnerId);
-    insertPartnerEvidence(f.deps.db, paymentA, { documentId: 'DOC-SHARED' });
-    expect(evidenceUsedMultipleTimesInternal(f.deps.db, 'DOC-SHARED')).toBe(false);
-    insertPartnerEvidence(f.deps.db, paymentB, { documentId: 'DOC-SHARED' });
-    expect(evidenceUsedMultipleTimesInternal(f.deps.db, 'DOC-SHARED')).toBe(true);
-  });
 });
 
 describe('Befund AQ — ein nachträglicher Entwurf zeigt die Summe der gewählten Zeilen', () => {

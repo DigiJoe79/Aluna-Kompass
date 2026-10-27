@@ -154,7 +154,6 @@ function EndDialog({ membershipId, name, today, finalFocus, onClose }: { members
     );
     setPending(false);
     if (result.status !== 'success') return;
-    toast.success(result.message);
     onClose();
     router.refresh();
   };

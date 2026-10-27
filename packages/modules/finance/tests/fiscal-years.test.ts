@@ -31,7 +31,7 @@ describe('fiscal years', () => {
     unwrap(await createFirstFiscalYear(deps, ctx, { startsOn: '2026-01-01', endsOn: '2026-12-31' }));
     // Wie ein migriertes Altjahr: die Bezeichnung "2027" ist schon vergeben, obwohl es nicht das jüngste Jahr ist —
     // der unmittelbare Nachfolger des echten Jahres 2026 würde sonst genauso "2027" heißen.
-    deps.db.insert(financeFiscalYears).values({ id: 'FY-MANUAL-2027', startsOn: '2020-01-01', endsOn: '2020-12-31', designation: '2027', taxReturnFiledOn: null, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' }).run();
+    deps.db.insert(financeFiscalYears).values({ id: 'FY-MANUAL-2027', startsOn: '2020-01-01', endsOn: '2020-12-31', designation: '2027', createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' }).run();
     const successor = unwrap(deps.db.transaction((tx) => ensureFiscalYearFor(tx, deps, ctx, '2027-03-01')));
     expect(successor.designation).toBe('2027-2');
   });
@@ -69,7 +69,6 @@ describe('fiscal years', () => {
     unwrap(await updateFiscalYear(deps, ctx, { id: year.id, designation: 'GJ2026' }));
     expect(deps.db.transaction((tx) => [allocateEntryNumber(tx, year.id), allocateEntryNumber(tx, year.id)])).toEqual(['GJ2026-0001', 'GJ2026-0002']);
     expect(err(await updateFiscalYear(deps, ctx, { id: year.id, designation: 'Anders' }))).toMatchObject({ type: 'conflict', code: 'designationLocked' });
-    expect(unwrap(await updateFiscalYear(deps, ctx, { id: year.id, taxReturnFiledOn: '2027-05-31' })).taxReturnFiledOn).toBe('2027-05-31');
   });
 
   it('the status is the latest event', async () => {

@@ -6,10 +6,11 @@ import { z } from 'zod';
 import { financeConflict } from '../../errors';
 import { requireFinanceRead } from '../../ledger/access';
 import { valueAt } from '../../ledger/dated-values';
-import { entryViewInternal, saveDraft, type EntryView } from '../../ledger/entries';
+import { entryViewInternal, saveDraftWithPresets, type EntryView } from '../../ledger/entries';
 import { normalizeIban } from '../../ledger/iban';
 import { activeItemForDocumentInternal, createOpenItem, openItemHasAnySettlementInternal, type OpenItemView } from '../../ledger/open-items';
 import type { TaxCode } from '../../ledger/tax';
+import { EU_MEMBER_STATES } from '../../ledger/codes';
 import { attachDocument } from '../../ledger/vouchers';
 import { normalizeText } from '../../rules-pure';
 import { financeAccounts, financeAllocationLines, financeCategories, financeEntries, financeEntryDocuments, financeMoneyLines, financeOpenItems, financeRawTransactions } from '../../schema';
@@ -67,7 +68,7 @@ export interface StillOpenItem {
 
 type UnreadableCode = Exclude<Extract<InvoiceProposal, { kind: 'unsupported' }>['code'], 'currencyUnsupported' | 'toolsMissing'>;
 
-type LoadedInvoice =
+export type LoadedInvoice =
   | { state: 'none' }
   | { state: 'toolsMissing' }
   | { state: 'unreadable'; code: UnreadableCode }
@@ -103,12 +104,23 @@ async function toolsMissing(deps: Deps, error: unknown): Promise<boolean> {
   return !probe.ok;
 }
 
+/**
+ * Kategorie AE (Umkehr der Steuerschuld): die Rechnung sagt selbst, dass der Verein die Steuer schuldet — das Kennzeichen
+ * § 13b nach dem Land der USt-IdNr. des Ausstellers, EU oder übrige (Joe 2026-10-26, Designer Runde 8, Fachlich 2).
+ */
+function reverseChargeCodeOf(invoice: ParsedInvoice): TaxCode {
+  const prefix = invoice.sellerVatId?.replace(/\s+/g, '').slice(0, 2).toUpperCase() ?? '';
+  const country = prefix === 'EL' ? 'GR' : prefix;
+  return country !== 'DE' && EU_MEMBER_STATES.includes(country) ? 'rc13bEu' : 'rc13bOther';
+}
+
 /** Ein Kennzeichen nur, wenn die Rechnung genau einen Satz nennt (Annahme 3). */
 function taxCodeOf(db: DbOrTx, invoice: ParsedInvoice): { code: TaxCode; ratePercent: number } | null {
   const distinct = new Map(invoice.taxes.map((t) => [`${t.ratePercent}|${t.categoryCode}`, t]));
   if (distinct.size !== 1) return null;
   const { ratePercent, categoryCode } = [...distinct.values()][0]!;
-  if (ratePercent === 0 && (categoryCode === 'E' || categoryCode === 'AE')) return { code: 'none', ratePercent: 0 };
+  if (ratePercent === 0 && categoryCode === 'AE') return { code: reverseChargeCodeOf(invoice), ratePercent: 0 };
+  if (ratePercent === 0 && categoryCode === 'E') return { code: 'none', ratePercent: 0 };
   if (ratePercent === valueAt(db, 'vatStandard', invoice.issueDate)) return { code: 'standard', ratePercent };
   if (ratePercent === valueAt(db, 'vatReduced', invoice.issueDate)) return { code: 'reduced', ratePercent };
   return null;
@@ -123,7 +135,7 @@ function computedTaxCents(grossCents: number, ratePercent: number): number {
 
 function invoiceViewOf(db: DbOrTx, invoice: ParsedInvoice): InvoiceView {
   const tax = taxCodeOf(db, invoice);
-  const taxCentsDifference = tax === null ? null : invoice.taxTotalCents - (tax.code === 'none' ? 0 : computedTaxCents(invoice.grandTotalCents, tax.ratePercent));
+  const taxCentsDifference = tax === null ? null : invoice.taxTotalCents - (tax.ratePercent === 0 ? 0 : computedTaxCents(invoice.grandTotalCents, tax.ratePercent));
   const contactId = invoice.payeeIban ? contactForIbanInternal(db, invoice.payeeIban)?.contactId ?? null : null;
   const contact = contactId ? db.select().from(contacts).where(eq(contacts.id, contactId)).get() : undefined;
   return { ...invoice, taxCode: tax?.code ?? null, taxCentsDifference, contactId, contactName: contact ? displayName(contact) || null : null };
@@ -134,7 +146,7 @@ function invoiceViewOf(db: DbOrTx, invoice: ParsedInvoice): InvoiceView {
  * `deps.textExtraction` holen und den ersten lesbaren Rechnungsanhang
  * parsen. Nur Anhänge mit Rechnungsnamen (Annahme 6); andere bleiben ungelesen.
  */
-async function loadInvoiceInternal(deps: Deps, ctx: CallContext, documentId: string): Promise<Result<LoadedInvoice>> {
+export async function loadInvoiceInternal(deps: Deps, ctx: CallContext, documentId: string): Promise<Result<LoadedInvoice>> {
   const doc = await getDocument(deps, ctx, documentId);
   if (!doc.ok) return doc;
 
@@ -422,7 +434,7 @@ export async function applyInvoiceToDraft(deps: Deps, ctx: CallContext, input: u
     (categoryIds.length > 0 ? deps.db.select({ id: financeCategories.id, defaultTaxCode: financeCategories.defaultTaxCode }).from(financeCategories).where(inArray(financeCategories.id, categoryIds)).all() : []).map((c) => [c.id, c.defaultTaxCode]),
   );
 
-  const saved = await saveDraft(deps, ctx, {
+  const saved = await saveDraftWithPresets(deps, ctx, {
     id: entry.id,
     expectedVersion: entry.updatedAt,
     entryDate: entry.entryDate,
@@ -439,8 +451,10 @@ export async function applyInvoiceToDraft(deps: Deps, ctx: CallContext, input: u
       abroad: l.abroad,
       originLineId: l.originLineId,
       addsToAssets: l.addsToAssets,
+      addsToAssetsOptOut: l.addsToAssetsOptOut,
+      assetEndowment: l.assetEndowment,
     })),
-  });
+  }, invoice.taxCode ? [invoice.taxCode] : []);
   if (!saved.ok) return saved;
 
   const linked = deps.db.select({ id: financeEntryDocuments.id }).from(financeEntryDocuments).where(and(eq(financeEntryDocuments.entryId, entry.id), eq(financeEntryDocuments.documentId, documentId))).get();

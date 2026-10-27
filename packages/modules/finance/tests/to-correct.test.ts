@@ -3,10 +3,12 @@ import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 import { issueConfirmation, listConfirmations, voidConfirmation } from '../src/donations/confirmations';
 import { saveNotice, supersedeNotice, voidNotice } from '../src/donations/notices';
-import { countToCorrectInternal, toCorrectReasonsInternal } from '../src/donations/to-correct';
+import { sectionRowsInternal } from '../src/auditing/sections';
+import { getClosingStatus } from '../src/closing/status';
+import { countToCorrectInternal, toCorrectConfirmationsOfYearInternal, toCorrectReasonsInternal } from '../src/donations/to-correct';
 import { applyCorrectionInternal, requestAllocationCorrection } from '../src/ledger/corrections';
 import { reverseInternal } from '../src/ledger/reverse';
-import { financeConfirmations } from '../src/schema';
+import { financeConfirmations, financeFiscalYears } from '../src/schema';
 import { donationFixture, EXEMPTION, type DonationFixture } from './donation-fixture';
 
 const rowOf = (f: DonationFixture, id: string) => f.deps.db.select().from(financeConfirmations).where(eq(financeConfirmations.id, id)).get()!;
@@ -72,5 +74,36 @@ describe('toCorrectReasonsInternal', () => {
     expect(requested.applied).toBe(false);
     f.deps.db.transaction((tx) => unwrap(applyCorrectionInternal(tx, f.deps, f.secondPerson, requested.correction.id, [])));
     expect(toCorrectReasonsInternal(f.deps.db, rowOf(f, confirmation.id))).toEqual(['contactChanged']);
+  });
+});
+
+describe('toCorrectConfirmationsOfYearInternal', () => {
+  // Befund 0.4.0/32 c: Eine Bestätigung betrifft das Jahr ihrer Zuwendungen, nicht das Jahr ihrer Ausstellung —
+  // Abschluss (Schritt 7) und Kassenprüfung (Abschnitt Spenden) zählen nach derselben Regel.
+  it('counts a confirmation in the year of its donations, for closing step 7 and the audit section alike', async () => {
+    const f = await donationFixture();
+    const [y2025, y2026] = [f.years['2025']!.id, f.years['2026']!.id];
+    const yearRow = (id: string) => f.deps.db.select().from(financeFiscalYears).where(eq(financeFiscalYears.id, id)).get()!;
+    const step7 = async () => unwrap(await getClosingStatus(f.deps, f.ctx, { fiscalYearId: y2025 })).steps.find((s) => s.key === 'confirmations')!;
+    const audit = async (id: string) => (await sectionRowsInternal(f.deps, f.ctx, yearRow(id), 'donations')).find((r) => r.labelParams.kind === 'toCorrect')!.labelParams.count;
+
+    // Zuwendung und Bestätigung im Folgejahr, dann eine Rückbuchung: Das beendete Jahr 2025 bleibt erledigt.
+    const later = await f.donate({ date: '2026-03-05', cents: 4000 });
+    unwrap(await issueConfirmation(f.deps, f.ctx, { lineIds: [later.line.id] }));
+    await f.giveBack(later.line.id, 1000);
+    expect(countToCorrectInternal(f.deps.db)).toBe(1);
+    expect(toCorrectConfirmationsOfYearInternal(f.deps.db, y2025)).toEqual([]);
+    expect(await step7()).toMatchObject({ done: true, facts: { toCorrect: 0 } });
+    expect(await audit(y2025)).toBe(0);
+    expect(await audit(y2026)).toBe(1);
+
+    // Zuwendung 2025, im März 2026 bestätigt (Ausstellung im Folgejahr), dann zurückgebucht: Sie betrifft 2025.
+    const own = await f.donate({ date: '2025-06-01', cents: 2500 });
+    const ownConfirmation = unwrap(await issueConfirmation(f.deps, f.ctx, { lineIds: [own.line.id] }));
+    await f.giveBack(own.line.id, 500);
+    expect(toCorrectConfirmationsOfYearInternal(f.deps.db, y2025).map((c) => c.confirmation.id)).toEqual([ownConfirmation.id]);
+    expect(await step7()).toMatchObject({ done: false, facts: { toCorrect: 1, toCorrectNumbers: [ownConfirmation.documentNumber] } });
+    expect(await audit(y2025)).toBe(1);
+    expect(await audit(y2026)).toBe(1);
   });
 });

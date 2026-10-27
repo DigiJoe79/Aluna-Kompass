@@ -1,6 +1,6 @@
 import type { DbOrTx } from '@kompass/core';
 import { valueAt } from './dated-values';
-import type { TAX_CODES } from './codes';
+import { REVERSE_CHARGE_CODES, type TAX_CODES } from './codes';
 
 export type Taxation = 'smallBusiness' | 'regular';
 export type TaxCode = (typeof TAX_CODES)[number];
@@ -68,7 +68,7 @@ export function taxOf(input: TaxInput): TaxResult {
       }
     }
     // `smallBusiness`: das Kennzeichen dient nur dem Schwellenwächter — keine Steuer, Netto = Zeilenbetrag.
-  } else if (taxCode === 'rc13b' || taxCode === 'icAcquisition') {
+  } else if ((REVERSE_CHARGE_CODES as readonly TaxCode[]).includes(taxCode)) {
     // Brutto = Netto; die Steuer wird in BEIDEN Besteuerungsformen geschuldet (§ 13b Abs. 5 UStG).
     const rate = rates[rateKind];
     reverseChargeTaxCents = taxFromNet(gross, rate);

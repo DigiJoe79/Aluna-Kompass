@@ -29,6 +29,7 @@ type Display = (value: AuditParam, helpers: { label: Label; locale: string; para
 const listOf = (items: string[], locale: string): string => new Intl.ListFormat(locale, { type: 'conjunction' }).format(items);
 
 export const settingLabel: Display = (v, h) => h.label(`settings.fields.${String(v)}`);
+const otherAssetKind: Display = (v, h) => h.label(`finance.otherAssets.kind.${String(v)}`);
 const datedValueLabel: Display = (v, h) => h.label(`finance.admin.datedValues.keys.${String(v)}`);
 export const languageName: Display = (v, h) => {
   try {
@@ -65,6 +66,10 @@ const DISPLAY: Record<string, Record<string, Display>> = {
   'settings.update': { key: settingLabel },
   'finance.datedValue.set': { key: datedValueLabel },
   'finance.datedValue.remove': { key: datedValueLabel },
+  'finance.report.release': { basis: (v, h) => h.label(`finance.reports.releaseBasis.${String(v)}`) },
+  'finance.otherAsset.save': { kind: otherAssetKind },
+  'finance.otherAsset.end': { kind: otherAssetKind },
+  'finance.otherAsset.revalue': { kind: otherAssetKind },
   'locale.add': { code: languageName },
   'locale.remove': { code: languageName },
   'backup.export': { sizeBytes: megabytes },

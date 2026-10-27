@@ -25,7 +25,7 @@ function renderPanel(confirmedAt: string | null = null) {
     <NextIntlClientProvider locale="de" messages={messages} timeZone="Europe/Berlin">
       <DateFormatProvider mode="locale" timeZone="Europe/Berlin">
         <TaxPanel
-          switches={{ isEntrepreneurOrHasVatId: false, membershipFeesCertifiable: false, expenseWaiversEnabled: false, mcpHumanOnlyAllowed: false }}
+          switches={{ membershipFeesCertifiable: false, expenseWaiversEnabled: false, mcpHumanOnlyAllowed: false }}
           limits={{ statementSufficesBelowCents: 30000, cashDonationAlertCents: 100000, roundAmountFromCents: 50000, proofGraceDays: 30 }}
           confirmedAt={confirmedAt}
           waiverBasisText=""

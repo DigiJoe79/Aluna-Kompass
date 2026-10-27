@@ -1,6 +1,6 @@
 {
   "name": "@kompass/mcp",
-  "version": "0.3.2",
+  "version": "0.4.0",
   "private": true,
   "type": "module",
   "exports": {
@@ -13,7 +13,7 @@
   "dependencies": {
     "@kompass/core": "workspace:*",
     "@modelcontextprotocol/server": "^2.3.0",
-    "zod": "^4.6.5"
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@modelcontextprotocol/client": "^2.3.0",

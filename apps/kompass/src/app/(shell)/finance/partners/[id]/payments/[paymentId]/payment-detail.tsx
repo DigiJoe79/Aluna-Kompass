@@ -22,11 +22,12 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
 import { formatAmount, formatEuro, parseAmount } from '@/lib/finance/amount';
 import { cn } from '@/lib/utils';
-import { AMOUNT_EVIDENCE_KINDS, coverageRequired, evidenceCoverage, evidenceKindLabelKey, missingEvidence, type EvidenceKind, type PartnerBasis } from '@/lib/finance/partners';
+import { AMOUNT_EVIDENCE_KINDS, coverageRequired, evidenceCoverage, evidenceKindLabelKey, isGeneratedEvidenceSubject, missingEvidence, type EvidenceKind, type PartnerBasis } from '@/lib/finance/partners';
 import { acknowledgeEvidenceAction, addEvidenceLinkAction, addEvidenceUploadAction, copyPartnerPaymentAction, removeEvidenceAction, updateEvidenceAction } from '../../../actions';
 import { DraftForm, type LineOption } from './draft-form';
 import { FormField } from '@/components/forms/form-field';
 import { Section } from '@/components/section';
+import { FormCard, FormCardBody } from '@/components/forms/form-card';
 
 interface Option { id: string; label: string }
 export interface EvidenceRow {
@@ -36,8 +37,8 @@ export interface EvidenceRow {
   foreignLanguage: boolean;
   explanationDe: string | null;
   coveredCents: number | null;
-  /** Nummer und Betreff, soweit die Akte sie zeigt; `null` ohne Zugriff. */
-  document: { number: string | null; subject: string } | null;
+  /** Nummer, Betreff und Datum auf dem Dokument, soweit die Akte sie zeigt; `null` ohne Zugriff. */
+  document: { number: string | null; subject: string; date?: string } | null;
 }
 export interface PaymentPeople {
   creator: string;
@@ -131,13 +132,14 @@ export function PaymentDetail({
         </p>
         <p className="text-body text-ink-2">{payment.purposeText}</p>
         {payment.retroactive ? <p className="text-hint text-muted-ink">{t('head.retroactive')}</p> : null}
+        {payment.assetEndowment ? <p className="text-hint text-muted-ink">{t('head.assetEndowment')}</p> : null}
         <ul className="space-y-1 border-t border-line pt-2 text-meta" data-testid="payment-positions">
           {payment.positions.map((p) => (
             <li key={p.id} className="flex flex-wrap items-baseline justify-between gap-2">
               <span className="text-ink-2">
                 {p.kind === 'money' ? t('positions.money') : t('positions.goods')}
                 {p.categoryId && categoryLabel.get(p.categoryId) ? ` · ${categoryLabel.get(p.categoryId)}` : ''}
-                {p.kind === 'money' ? ` · ${t('positions.paidFrom')} ${p.purposeId ? purposeLabel.get(p.purposeId) ?? '' : t('positions.freeFunds')}` : ''}
+                {p.kind === 'money' ? ` · ${p.purposeId ? `${t('positions.paidFrom')} ${purposeLabel.get(p.purposeId) ?? ''}` : t('positions.paidFromFreeFunds')}` : ''}
               </span>
               <span className="tabular-nums text-ink">{formatEuro(p.amountCents)}</span>
             </li>
@@ -196,6 +198,7 @@ function kindDone(kind: string, rows: readonly EvidenceRow[]): boolean {
 
 function EvidenceSection({ payment, basis, canWrite, canApprove, evidence, people }: { payment: PartnerPaymentView; basis: PartnerBasis; canWrite: boolean; canApprove: boolean; evidence: EvidenceRow[]; people: PaymentPeople }) {
   const t = useTranslations('finance.partners.payment');
+  const fmt = useDateFormat();
   const router = useRouter();
   const [openKind, setOpenKind] = useState<string | null>(null);
   const [completing, setCompleting] = useState<string | null>(null);
@@ -210,21 +213,22 @@ function EvidenceSection({ payment, basis, canWrite, canApprove, evidence, peopl
   const label = (kind: string) => t(`requiredEvidence.kind.${evidenceKindLabelKey(kind as EvidenceKind, basis)}`);
   const rowsOf = (kind: string) => evidence.filter((e) => e.kind === kind && e.documentId !== null);
 
-  const describe = (kind: string): string | undefined => {
+  // Designer Runde 8, 17b: je Zeile Art, „zusätzlich“ und das Datum auf dem Dokument, rechts die Nummer als Link. Der
+  // Betreff steht nur, wenn er mehr sagt als Art und Datum — beim Hochladen heißt er „‹Art› vom ‹Datum›“.
+  const describe = (kind: string, optional: boolean): string | undefined => {
     const rows = rowsOf(kind);
-    if (rows.length === 0) return undefined;
-    return rows
-      .map((e) =>
-        [
-          // AO (Recheck sha-0170e73): die Nummer steht als Link daneben (bzw. der Betreff, wo keine Nummer ist) — im Text nur einmal nennen.
-          e.document ? (e.document.number ? e.document.subject : null) : t('evidence.documentHidden'),
-          e.foreignLanguage ? (e.explanationDe ? t('evidence.explanationShort', { text: e.explanationDe }) : t('evidence.missingExplanation')) : null,
-          AMOUNT_KINDS.includes(kind) ? (e.coveredCents !== null ? formatEuro(e.coveredCents) : t('evidence.missingAmount')) : null,
-        ]
-          .filter(Boolean)
-          .join(' · '),
-      )
-      .join(' — ');
+    const parts = rows.map((e) =>
+      [
+        // AO (Recheck sha-0170e73): die Nummer steht als Link daneben (bzw. der Betreff, wo keine Nummer ist) — im Text nur einmal nennen.
+        e.document ? (e.document.number && !isGeneratedEvidenceSubject(e.document.subject, kind as EvidenceKind, basis) ? e.document.subject : null) : t('evidence.documentHidden'),
+        e.document?.date ? fmt.date(e.document.date) : null,
+        e.foreignLanguage ? (e.explanationDe ? t('evidence.explanationShort', { text: e.explanationDe }) : t('evidence.missingExplanation')) : null,
+        AMOUNT_KINDS.includes(kind) ? (e.coveredCents !== null ? formatEuro(e.coveredCents) : t('evidence.missingAmount')) : null,
+      ]
+        .filter(Boolean)
+        .join(' · '),
+    );
+    return [optional ? t('evidence.optional') : null, ...parts].filter(Boolean).join(' · ') || undefined;
   };
 
   const remove = async (kind: string) => {
@@ -240,10 +244,10 @@ function EvidenceSection({ payment, basis, canWrite, canApprove, evidence, peopl
     const optional = !required.includes(kind as EvidenceKind);
     return {
       key: kind,
-      title: optional ? `${label(kind)} (${t('evidence.optional')})` : label(kind),
+      title: label(kind),
       done: kindDone(kind, rows),
       blocked: false,
-      detail: describe(kind),
+      detail: describe(kind, optional),
       canSelf: false,
       canDoNames: [],
       canDoText: '',
@@ -255,7 +259,7 @@ function EvidenceSection({ payment, basis, canWrite, canApprove, evidence, peopl
           {/* W (Prüfer Block 2): jeder Nachweis mit Nummer und Link auf das PDF — auch für Leser, soweit die Akte es zeigt. */}
           {rows.map((e) =>
             e.document && e.documentId ? (
-              <a key={e.id} href={`/dms/${e.documentId}/file`} target="_blank" rel="noreferrer" className={cn(e.document.number && 'font-mono', 'text-hint underline underline-offset-2')} data-testid={`evidence-document-${e.id}`}>
+              <a key={e.id} href={`/dms/${e.documentId}/file`} target="_blank" rel="noreferrer" className={cn(e.document.number && 'font-mono whitespace-nowrap', 'text-meta text-link underline-offset-2 hover:underline')} data-testid={`evidence-document-${e.id}`}>
                 {e.document.number ?? e.document.subject}
               </a>
             ) : null,
@@ -306,9 +310,13 @@ function EvidenceSection({ payment, basis, canWrite, canApprove, evidence, peopl
           ? { reason: t('acknowledge.blockedMissing', { coverage: needsCoverage ? 'yes' : 'no' }), byRight: false }
           : null;
 
+  // Designer Runde 8, 17b: eine Karte mit Zeilen statt einer Karte je Nachweis; die Zählung steht im Kopf, der Hinweis zur
+  // Übersetzung als Unterzeile.
   return (
-    <section data-testid="evidence-section">
+    <FormCard as="section" data-testid="evidence-section">
+      <FormCardBody>
       <Section title={t('evidence.title')}
+        intro={t('evidence.foreignHint')}
         actions={
           <>
             <span className="text-meta text-muted-ink">
@@ -326,11 +334,10 @@ function EvidenceSection({ payment, basis, canWrite, canApprove, evidence, peopl
         <div className="space-y-3">
           <RefusalNotice action state={evidenceFb.state} />
           <div data-testid="evidence-requirements">
-            <RequirementList items={items} />
+            <RequirementList variant="rows" items={items} />
           </div>
           {openKind ? <EvidenceForm key={openKind} paymentId={payment.id} kind={openKind} label={label(openKind)} onDone={() => { setOpenKind(null); router.refresh(); }} onCancel={() => setOpenKind(null)} /> : null}
           {completing ? <CompleteForm key={completing} row={evidence.find((e) => e.id === completing)!} onDone={() => { setCompleting(null); router.refresh(); }} onCancel={() => setCompleting(null)} /> : null}
-          <p className="text-hint text-muted-ink">{t('evidence.foreignHint')}</p>
 
           {needsCoverage && coverage.totalCents > 0 ? (
             <div data-testid="evidence-coverage" aria-live="polite">
@@ -372,7 +379,8 @@ function EvidenceSection({ payment, basis, canWrite, canApprove, evidence, peopl
           </div>
         </div>
       </Section>
-    </section>
+      </FormCardBody>
+    </FormCard>
   );
 }
 

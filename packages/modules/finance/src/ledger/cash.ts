@@ -1,11 +1,12 @@
-import { isoDay, isoNow, newId, notFound, ok, paperDate, requirePermission, todayIn, validate, type CallContext, type DbOrTx, type Deps, type Result } from '@kompass/core';
+import { invalid, isoDay, isoNow, newId, notFound, ok, paperDate, requirePermission, todayIn, validate, type CallContext, type DbOrTx, type Deps, type Result } from '@kompass/core';
 import { contacts, displayName, type ContactRow } from '@kompass/module-contacts';
 import { abortIssue, issueGeneratedDocument, readLinkedDocument } from '@kompass/module-dms';
-import { asc, desc, eq } from 'drizzle-orm';
+import { and, asc, desc, eq, lte } from 'drizzle-orm';
 import { z } from 'zod';
 import { financeAudit } from '../audit';
 import { financeConflict, requireHumanChannelFinance } from '../errors';
-import { financeAccounts, financeCashCounts, financeCategories, financeEntries, type FinanceCashCountRow } from '../schema';
+import { financeAccounts, financeAuditAuditors, financeCashCountContactWitnesses, financeCashCountWitnesses, financeCashCounts, financeCategories, financeEntries, type FinanceCashCountRow } from '../schema';
+import { CASH_COUNT_WITNESS_CHECKS } from '../locks';
 import { cashCountTemplate, type CashCountTemplateInput, type CashCountVariant } from './cash-count-template';
 import { entryViewInternal, writeLinesInternal, type EntryView } from './entries';
 import { bookEntry, finalizeInternal } from './finalize';
@@ -69,6 +70,10 @@ const countCashSchema = z.object({
   counterTwoContactId: z.string().min(1),
   note: z.string().trim().min(1).max(500).optional(),
   denominations: z.record(z.string(), z.number().int().min(0)).optional(),
+  /** Rechenschaft D1: Prüfer des gerade geprüften Jahres, in deren Beisein gezählt wurde (Designer 12f). */
+  witnessAuditorIds: z.array(z.string().min(1)).max(5).optional(),
+  /** Rechenschaft C (Amtsübergabe): bis zu zwei Personen aus den Kontakten, in deren Beisein gezählt wurde — nie ein Zähler. */
+  witnessContactIds: z.array(z.string().min(1)).max(2).optional(),
 });
 
 export interface CountCashResult {
@@ -113,6 +118,29 @@ export async function countCash(deps: Deps, ctx: CallContext, input: unknown): P
 
   const counterOneName = displayName(counters.value.one);
   const counterTwoName = displayName(counters.value.two);
+  // Zeugen prüft die Kassenprüfung (`CASH_COUNT_WITNESS_CHECKS`, eingetragen über das Manifest): `ledger/` kennt `auditing/` nicht.
+  const witnessIds = [...new Set(v.witnessAuditorIds ?? [])];
+  if (witnessIds.length > 0) {
+    if (CASH_COUNT_WITNESS_CHECKS.length === 0) return invalid([{ path: 'witnessAuditorIds', message: 'witnessNoAudit' }]);
+    for (const check of CASH_COUNT_WITNESS_CHECKS) {
+      const hit = check(deps.db, v.countedOn, witnessIds);
+      if (hit) return invalid([{ path: 'witnessAuditorIds', message: hit.code }]);
+    }
+  }
+  const witnesses = witnessIds.map((id) => {
+    const contactId = deps.db.select({ contactId: financeAuditAuditors.contactId }).from(financeAuditAuditors).where(eq(financeAuditAuditors.id, id)).get()?.contactId;
+    const contact = contactId ? deps.db.select().from(contacts).where(eq(contacts.id, contactId)).get() : undefined;
+    return { auditorId: id, name: contact ? displayName(contact) : '' };
+  });
+  const contactWitnesses: { contactId: string; name: string }[] = [];
+  for (const id of [...new Set(v.witnessContactIds ?? [])]) {
+    if (id === v.counterOneContactId || id === v.counterTwoContactId) return financeConflict('witnessIsCounter');
+    const contact = deps.db.select().from(contacts).where(eq(contacts.id, id)).get();
+    if (!contact) return notFound('contact', id);
+    if (contact.kind !== 'person') return invalid([{ path: 'witnessContactIds', message: 'notAPerson' }]);
+    contactWitnesses.push({ contactId: id, name: displayName(contact) });
+  }
+  const witnessNames = [...witnesses.map((w) => w.name), ...contactWitnesses.map((w) => w.name)];
   const countId = newId();
   const entryId = kind === 'equal' ? null : newId();
 
@@ -129,6 +157,7 @@ export async function countCash(deps: Deps, ctx: CallContext, input: unknown): P
       denominations: denominationEntries(v.denominations),
       counterOneName,
       counterTwoName,
+      ...(witnessNames.length ? { witnessNames } : {}),
     } satisfies CashCountTemplateInput,
     subject: `Kassenzählung ${account.name} ${paperDate(isoDay(v.countedOn))}`,
     documentDate: v.countedOn,
@@ -171,9 +200,11 @@ export async function countCash(deps: Deps, ctx: CallContext, input: unknown): P
         documentId: doc.id, documentNumber: doc.number, entryId: finalEntry?.id ?? null, createdByUserId: ctx.userId ?? 'system', createdAt: isoNow(deps.clock),
       };
       tx.insert(financeCashCounts).values(row).run();
+      for (const w of witnesses) tx.insert(financeCashCountWitnesses).values({ countId, auditorId: w.auditorId, name: w.name }).run();
+      for (const w of contactWitnesses) tx.insert(financeCashCountContactWitnesses).values({ countId, contactId: w.contactId, name: w.name }).run();
       financeAudit(tx, deps, ctx, {
         action: 'finance.cashCount.record', entity: 'financeCashCount', id: countId,
-        after: { accountId: row.accountId, countedOn: row.countedOn, kind: freshKind, differenceCents: row.differenceCents, documentNumber: row.documentNumber, entryId: row.entryId },
+        after: { accountId: row.accountId, countedOn: row.countedOn, kind: freshKind, differenceCents: row.differenceCents, documentNumber: row.documentNumber, entryId: row.entryId, witnessCount: witnesses.length + contactWitnesses.length },
         params: { documentNumber: doc.number },
       });
       return { count: cashCountView(row), entry: finalEntry, documentNumber: doc.number };
@@ -336,6 +367,12 @@ export async function listCashCounts(deps: Deps, ctx: CallContext, input: unknow
 /** Für `getBalances` (F3b Task 3): die jüngste Zählung eines Kontos, reine Abfrage ohne Rechteprüfung. */
 export function lastCountInternal(db: DbOrTx, accountId: string): { countedOn: string; countedCents: number } | null {
   const row = db.select().from(financeCashCounts).where(eq(financeCashCounts.accountId, accountId)).orderBy(desc(financeCashCounts.countedOn), desc(financeCashCounts.createdAt)).limit(1).get();
+  return row ? { countedOn: row.countedOn, countedCents: row.countedCents } : null;
+}
+
+/** Die jüngste Zählung eines Kontos am oder vor dem Tag — für die Kontenabstimmung zum Stichtag (Rechenschaft A2). */
+export function countAtInternal(db: DbOrTx, accountId: string, date: string): { countedOn: string; countedCents: number } | null {
+  const row = db.select().from(financeCashCounts).where(and(eq(financeCashCounts.accountId, accountId), lte(financeCashCounts.countedOn, date))).orderBy(desc(financeCashCounts.countedOn), desc(financeCashCounts.createdAt)).limit(1).get();
   return row ? { countedOn: row.countedOn, countedCents: row.countedCents } : null;
 }
 

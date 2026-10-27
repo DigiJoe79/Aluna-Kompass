@@ -3,7 +3,6 @@
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { useRef, useState } from 'react';
-import { toast } from 'sonner';
 import { FormActionBar } from '@/components/forms/form-action-bar';
 import { FormField } from '@/components/forms/form-field';
 import { FormGrid } from '@/components/forms/form-grid';
@@ -43,7 +42,6 @@ export function DunningPanel({ levels, snippets, locales }: { levels: DunningLev
   const remove = async (row: DunningLevelRow) => {
     const result = await feedback.run(() => saveMembersSettingsAction({ dunningLevels: asInput(levels.filter((l) => l.key !== row.key)) }, 'dunning'));
     if (result.status !== 'success') return;
-    toast.success(result.message);
     router.refresh();
   };
 
@@ -118,7 +116,6 @@ function LevelDialog({ row, snippets, locales, onClose, onSave, nextKey }: { row
     const result = await feedback.run(() => onSave({ key: row?.key ?? nextKey, name, label: '', daysAfter: Number(days), snippetId: snippetId || null }), { retry: () => void save() });
     setPending(false);
     if (result.status !== 'success') return;
-    toast.success(result.message);
     onClose();
     router.refresh();
   };

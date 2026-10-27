@@ -93,6 +93,7 @@ Paketautors liegt dem Paket bei und steht unter
 | Source Sans 3 | SIL OFL 1.1 | `packages/documents/fonts/LICENSE-source-sans.md` |
 | Source Serif 4 | SIL OFL 1.1 | `packages/documents/fonts/LICENSE-source-serif.md` |
 | IBM Plex Mono | SIL OFL 1.1 | `packages/documents/fonts/LICENSE-ibm-plex-mono.txt` |
+| DTD des GDPdU-Beschreibungsstandards (`gdpdu-01-09-2004.dtd`) | nicht von Apache-2.0 erfasst; unverändert beigelegt, weil der Beschreibungsstandard sie auf jedem Datenträger neben `index.xml` verlangt | Urheber Audicon GmbH (heute Caseware), entwickelt mit der Finanzverwaltung; bezogen aus der Dateisammlung DSFinV-K 2.4 des Bundeszentralamts für Steuern (<https://www.bzst.de>); `packages/modules/finance/assets/` |
 
 ## npm-Abhängigkeiten
 

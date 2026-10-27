@@ -37,6 +37,13 @@ Zahlung. Dazu kommen, wenn vorhanden, der Registernachweis und eine
 Rahmenvereinbarung aus der Akte. Auf breitem Bildschirm stehen die Angaben
 links, Bescheide und Zahlungen rechts.
 
+Bei einer gemeinnützigen Organisation im Inland oder einer öffentlichen Stelle
+stehen rechts die **Steuerdaten**: Finanzamt, Steuernummer und begünstigter
+Zweck. Sie braucht die Anlage Gem, wenn der Verein dem Partner Mittel zur
+**Vermögensausstattung** (§ 58 Nr. 3 AO) gibt; das Kästchen dafür steht an der
+Zahlung, nur bei einer Förderung an einen solchen Partner. Nach dem Einreichen
+ist es fest wie die übrigen Angaben.
+
 Oben rechts im Menü **Weitere Aktionen** (⋯) stehen **Archivieren** und
 **Löschen …**. Löschen geht nur, solange weder Zahlungen noch Bescheide am
 Partner hängen; sonst nennt der Dialog den Grund. Archivieren geht ohne
@@ -86,6 +93,9 @@ wählen Sie **nachträglich** und darunter die gebuchte Zeile. Der Zahlungstag
 ist dann der Tag dieser Buchung. Die Geldpositionen entstehen beim Einreichen
 aus den gewählten Zeilen, mit deren Kategorie und Zweck. Aus der Arbeitsliste
 geht das in einem Schritt, siehe dort („Als Zahlung an Partner erfassen“).
+Bucht jemand Mittel an Partner direkt auf „Förderung von Partnern“ oder „Aufträge
+an Partner“, ohne Zahlung an Partner, schreibt Kompass fest und weist darauf hin:
+Ohne den Vorgang verfolgt es keine Nachweisfrist.
 
 Unten klebt die Fußleiste: **Als Entwurf speichern** und **Zur Freigabe
 geben**.

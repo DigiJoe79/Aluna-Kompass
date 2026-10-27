@@ -1,5 +1,5 @@
 /**
- * Alle elf Rechte, eigene Datei: `manifest.ts` definiert das Modul,
+ * Alle Rechte des Moduls, eigene Datei: `manifest.ts` definiert das Modul,
  * `ledger/setup.ts` baut daraus `getPermissionMatrix` — beide brauchen die
  * Liste, und eine eigene Datei vermeidet einen Ringimport zwischen ihnen.
  *
@@ -14,4 +14,7 @@ export const FINANCE_PERMISSIONS = [
   // L1 (Spec Mitglieder und Lastschrift § 8): Mandate, Zusagen, Einzüge vorbereiten. Kommt nicht an vorhandene Rollen
   // (Backlog 29) — die Einrichtungs-Checkliste nennt es.
   'finance.directDebit',
+  // Rechenschaft D1 (Spec 0.4.0 § D1): Vermerke, Stichproben, Prüfbericht. Bekommt nur die Rolle Kassenprüfer neuer
+  // Installationen; vorhandene Rollen bleiben, wie sie sind (Backlog 29) — Handbuch und Release-Notes nennen es.
+  'finance.audit',
 ] as const;

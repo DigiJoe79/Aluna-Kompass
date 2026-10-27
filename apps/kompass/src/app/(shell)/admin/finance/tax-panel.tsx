@@ -24,7 +24,6 @@ import { useDateFormat } from '@/components/date-format-provider';
 import { Section } from '@/components/section';
 
 export interface TaxSwitches {
-  isEntrepreneurOrHasVatId: boolean;
   membershipFeesCertifiable: boolean;
   expenseWaiversEnabled: boolean;
   mcpHumanOnlyAllowed: boolean;
@@ -38,8 +37,11 @@ export interface TaxLimits {
   proofGraceDays: number;
 }
 
-/** Die drei Steuer-Schalter, die mit der Leiste des Abschnitts gelten; der Agentenschalter steht als letzter Abschnitt in derselben Karte. */
-const TAX_SWITCH_KEYS = ['isEntrepreneurOrHasVatId', 'membershipFeesCertifiable', 'expenseWaiversEnabled'] as const;
+/**
+ * Die Steuer-Schalter, die mit der Leiste des Abschnitts gelten; der Agentenschalter steht als letzter Abschnitt in
+ * derselben Karte. „Umsatzsteuerlich Unternehmer?“ steht seit Plan E6a Task 11b im Reiter „Umsatzsteuer“.
+ */
+const TAX_SWITCH_KEYS = ['membershipFeesCertifiable', 'expenseWaiversEnabled'] as const;
 type TaxSwitchKey = (typeof TAX_SWITCH_KEYS)[number];
 const AGENT_KEY = 'finance.mcpHumanOnlyAllowed';
 
@@ -55,10 +57,18 @@ const LIMIT_IDS: Record<keyof TaxLimits, string> = {
  * Eine Einstellungszeile: Frage links, Bedienelement rechts (Entscheidung zum Inventar, 05.10.2026; K9-Befund 1). Die
  * Zeilen stehen in einer Formularkarte mit Trennlinien.
  */
-function SettingRow({ htmlFor, labelId, label, testId, children }: { htmlFor?: string; labelId?: string; label: string; testId?: string; children: React.ReactNode }) {
+export function SettingRow({ htmlFor, labelId, label, hint, testId, children }: { htmlFor?: string; labelId?: string; label: string; hint?: React.ReactNode; testId?: string; children: React.ReactNode }) {
   return (
     <div className="flex items-center justify-between gap-3 py-2.5" data-testid={testId}>
-      <Label id={labelId} htmlFor={htmlFor} className="text-body font-normal text-ink">{label}</Label>
+      {hint ? (
+        // Plan E6a Task 11b (Board Umsatzsteuer 1a): eine Unterzeile unter der Frage, wo die Zeile ihre Wirkung nennt.
+        <div className="min-w-0">
+          <Label id={labelId} htmlFor={htmlFor} className="text-body font-normal text-ink">{label}</Label>
+          <div className="text-hint text-muted-ink">{hint}</div>
+        </div>
+      ) : (
+        <Label id={labelId} htmlFor={htmlFor} className="text-body font-normal text-ink">{label}</Label>
+      )}
       <div className="flex shrink-0 items-start gap-2">{children}</div>
     </div>
   );

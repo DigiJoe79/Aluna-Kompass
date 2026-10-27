@@ -1,3 +1,4 @@
+import { vatPeriodLabel, type VatPeriodTranslator } from './finance/vat-period';
 import type { ServiceError } from '@kompass/core';
 import { formatEuro, formatIban } from '@kompass/module-finance/format';
 import { formatDate } from './dates';
@@ -37,6 +38,8 @@ function withListValues(values: Record<string, string | number | Date>, t: Trans
   if (typeof values.permissionKeys === 'string') {
     next.permissions = listOf(values.permissionKeys.split(',').map((key) => ((t.has?.(`permissions.keys.${key}.label`) ?? false) ? t(`permissions.keys.${key}.label`) : key)));
   }
+  // E6b: ein Umsatzsteuer-Zeitraum (`'2026-Q2'`) lesbar wie in Fristen und Kachel.
+  if (typeof values.vatPeriod === 'string') next.vatPeriod = vatPeriodLabel(values.vatPeriod, t as unknown as VatPeriodTranslator);
   if (typeof values.matches === 'string') next.matchList = listOf(values.matches.split('\u001f').map((m) => `„${m}“`));
   if (typeof values.holders === 'string') next.holderList = listOf(values.holders.split('\u001f').map((h) => `„${h}“`));
   // `ibans` („DE60…, DE12…“) kommt kompakt (Daten, MCP); im Text in Vierergruppen (MUSTER § IBAN).
@@ -106,6 +109,15 @@ export function conflictMessage(error: ConflictError, t: Translate): string | nu
  * daneben maschinenlesbar, ebenso die Werte des Konflikts als `params` (Beträge in Cent, Daten als YYYY-MM-DD).
  */
 export function localizeError(error: ServiceError, t: Translate): ServiceError {
+  // N21: auch `forbidden` und `notFound` mit Satz wie die Konflikte — für alle Module an dieser Stelle.
+  if (error.type === 'forbidden') {
+    const labelKey = `permissions.keys.${error.permission}.label`;
+    return { ...error, message: (t.has?.(labelKey) ?? false) ? t('errors.forbiddenNamed', { label: t(labelKey), permission: error.permission }) : t('errors.forbidden', { permission: error.permission }) };
+  }
+  if (error.type === 'notFound') {
+    const entityKey = `audit.entities.${error.entity}`;
+    return { ...error, message: t('errors.notFoundNamed', { entity: (t.has?.(entityKey) ?? false) ? t(entityKey) : error.entity, id: error.id }) };
+  }
   if (error.type === 'validation') {
     return { type: 'validation', issues: error.issues.map((issue) => ({ path: issue.path, code: issue.message, message: fieldMessage(issue.message, t, issue.params) })) };
   }
@@ -232,7 +244,8 @@ const FINANCE_CATEGORY_FIELD_CODES = [
 export function fieldMessage(issueMessage: string, t: Translate, params?: Record<string, string | number>): string {
   const lower = issueMessage.toLowerCase();
   if (issueMessage === 'confirmationRequired') return t('site.publish.publishCard.confirm');
-  if (t.has?.(`errors.fields.${issueMessage}`)) return t(`errors.fields.${issueMessage}`, params);
+  // Daten in `params` wie bei Konflikten lesbar (N7: „ab dem …“), MCP behält sie als YYYY-MM-DD in `params`.
+  if (t.has?.(`errors.fields.${issueMessage}`)) return t(`errors.fields.${issueMessage}`, params ? messageValues(params) : params);
   if (
     issueMessage === 'passwordTooShort' ||
     issueMessage === 'unknownPermission' ||

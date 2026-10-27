@@ -42,9 +42,19 @@ const TABLE_OF_UNDELETABLE_ENTITY: Record<string, string> = {
   financeDirectDebitRun: 'finance_direct_debit_runs',
   financeDirectDebitItem: 'finance_direct_debit_items',
   financePrenotification: 'finance_sepa_prenotifications',
+  financeReport: 'finance_reports',
+  financeReportRelease: 'finance_report_releases',
+  financeOtherAsset: 'finance_other_assets',
+  financeAuditBaseline: 'finance_audit_baselines',
+  financeAuditRemark: 'finance_audit_remarks',
+  financeAuditReport: 'finance_audit_reports',
+  financeHandover: 'finance_handovers',
+  financeAssemblyResult: 'finance_assembly_results',
+  financeVatFiling: 'finance_vat_filings',
+  financeTaxPeriod: 'finance_tax_periods',
 };
 /** Tabellen ohne eigene Regel, die A5 trotzdem nannte (Importlauf mit Rohumsätzen und Kandidaten, Positionen, bezahlte Zeilen, Ausgleiche). */
-const EXTRA_LOCKED_TABLES = ['finance_import_runs', 'finance_raw_transactions', 'finance_import_candidates', 'finance_expense_positions', 'finance_partner_paid_lines', 'finance_open_item_settlements'];
+const EXTRA_LOCKED_TABLES = ['finance_import_runs', 'finance_raw_transactions', 'finance_import_candidates', 'finance_expense_positions', 'finance_partner_paid_lines', 'finance_open_item_settlements', 'finance_audit_baseline_entries', 'finance_audit_remark_posts', 'finance_audit_report_results', 'finance_audit_report_deviations', 'finance_audit_report_scans', 'finance_cash_count_witnesses', 'finance_handover_items', 'finance_account_statement_documents', 'finance_account_year_confirmations', 'finance_closing_confirmations', 'finance_audit_carry_overs', 'finance_audit_carry_over_entries', 'finance_cash_count_contact_witnesses', 'finance_assembly_discharges'];
 
 async function fixtures() {
   const f = await ledgerFixture();

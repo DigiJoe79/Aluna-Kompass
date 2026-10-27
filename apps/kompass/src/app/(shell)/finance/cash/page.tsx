@@ -1,5 +1,5 @@
 import { hasPermission, listUserNamesWithPermission, todayIn } from '@kompass/core';
-import { getBalances, listCashCounts, listEntries } from '@kompass/module-finance';
+import { currentAuditYear, getBalances, listCashCounts, listEntries } from '@kompass/module-finance';
 import { getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 import { BlockedState } from '@/components/blocked-state';
@@ -61,6 +61,9 @@ export default async function FinanceCashPage({ searchParams }: { searchParams: 
   ]);
 
   const canFinalize = hasPermission(ctx, 'finance.entriesFinalize');
+  // „Im Beisein von“ (Board 12f): die Prüfer der laufenden Kassenprüfung, nur wenn es welche gibt.
+  const auditYear = canFinalize ? await currentAuditYear(deps, ctx, {}) : null;
+  const witnesses = auditYear?.ok && auditYear.value ? { designation: auditYear.value.designation, auditors: auditYear.value.auditors.map((a) => ({ id: a.id, name: a.contactName })) } : null;
   const names = canFinalize ? [] : listUserNamesWithPermission(deps, 'finance.entriesFinalize');
   // Zählende wählt man aus den Kontakten — ohne contacts.view bleibt das Feld leer (Spec 5.4).
   const canPickContacts = hasPermission(ctx, 'contacts.view');
@@ -94,6 +97,7 @@ export default async function FinanceCashPage({ searchParams }: { searchParams: 
                 account={{ id: selected.accountId, name: selected.name, bookCents: selected.balanceCents }}
                 today={today}
                 canCreateContact={canCreateContact}
+                witnesses={witnesses}
               />
               {bankAccounts.length > 0 ? <MoveDialog key={`move-${selected.accountId}`} cashId={selected.accountId} bankAccounts={bankAccounts.map((a) => ({ id: a.accountId, name: a.name }))} today={today} /> : null}
               <PaidDialog cashId={selected.accountId} />

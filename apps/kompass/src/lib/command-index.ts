@@ -28,7 +28,8 @@ export function buildCommandIndex(input: {
         id: `nav:${item.key}`,
         group: 'navigation',
         label: item.label ?? t(item.labelKey),
-        hint: t(group.labelKey),
+        // N1: ein Eintrag für später sagt das in der Palette statt der Gruppe.
+        hint: item.later ? t('common.muted.later') : t(group.labelKey),
         href: item.href,
         permission: item.permission,
       });
