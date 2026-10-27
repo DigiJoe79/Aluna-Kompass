@@ -8,7 +8,7 @@ import { requireFinanceRead } from '../ledger/access';
 import { checkDatedInternal, fiscalYearsWithStatusInternal } from '../ledger/fiscal-years';
 import { freeReserveInputsAt } from '../ledger/queries';
 import { latestMovementDate, reserveBalanceAt, reserveBalancesAt, reserveIsDissolved } from '../ledger/reserve-balances';
-import { valueAt } from '../ledger/dated-values';
+import { ratioOf, valueAt } from '../ledger/dated-values';
 import { financeFiscalYears, financePurposes, financeReserveMovements, financeReserves, type FinanceReserveMovementRow, type FinanceReserveRow } from '../schema';
 import { nextVersion } from './expenses';
 import { reserveResolutionSubject } from './subjects';
@@ -526,13 +526,14 @@ export async function freeReserveCapOverview(deps: Deps, ctx: CallContext, input
 }
 
 /** Der Höchstbetrag ohne Rechteprüfung — auch für die Warnung beim Zuführen (Befund S). `null` ohne dieses Jahr. */
-function freeReserveCapInternal(db: DbOrTx, fiscalYearId: string): FreeReserveCapView | null {
+export function freeReserveCapInternal(db: DbOrTx, fiscalYearId: string): FreeReserveCapView | null {
   const year = db.select().from(financeFiscalYears).where(eq(financeFiscalYears.id, fiscalYearId)).get();
   if (!year) return null;
   const { assetManagementSurplusCents, otherTimelyFundsCents } = freeReserveInputsAt(db, { from: year.startsOn, to: year.endsOn });
-  const assetSharePercent = (valueAt(db, 'freeReserveAssetShare', year.endsOn) as number | null) ?? 0;
+  const assetShareValue = valueAt(db, 'freeReserveAssetShare', year.endsOn);
+  const assetShare = typeof assetShareValue === 'string' ? ratioOf(assetShareValue) : { numerator: 0, denominator: 1 };
   const otherSharePercent = (valueAt(db, 'freeReserveOtherShare', year.endsOn) as number | null) ?? 0;
-  const capCents = freeReserveCapCents({ assetManagementSurplusCents, otherTimelyFundsCents, assetSharePercent, otherSharePercent });
+  const capCents = freeReserveCapCents({ assetManagementSurplusCents, otherTimelyFundsCents, assetShare, otherSharePercent });
 
   const freeReserveIds = new Set(db.select({ id: financeReserves.id }).from(financeReserves).where(eq(financeReserves.kind, 'free')).all().map((r) => r.id));
   const usedCents = db

@@ -13,12 +13,11 @@ import {
 } from '../src/ledger/corrections';
 import { getEntry } from '../src/ledger/entries';
 import { bookEntry } from '../src/ledger/finalize';
-import { updateFiscalYear } from '../src/ledger/fiscal-years';
 import { createPurpose } from '../src/ledger/purposes';
 import { uploadVoucher } from '../src/ledger/vouchers';
-import { financeAllocationCorrections } from '../src/schema';
+import { financeAllocationCorrections, financeTaxPeriods } from '../src/schema';
 import type { EntryLock } from '../src/locks';
-import { allowHumanOnlyOverMcp, ledgerFixture, pdfBytes } from './helpers';
+import { allowHumanOnlyOverMcp, insertTaxPeriod, ledgerFixture, pdfBytes } from './helpers';
 
 const err = (r: { ok: boolean; error?: unknown }) => (r.ok ? 'ok' : r.error);
 const now = '2026-03-01T10:00:00.000Z';
@@ -114,7 +113,7 @@ describe('allocation correction', () => {
 
   it('after the tax return was filed, changing donor, purpose or the abroad switch wants the § 153 notice acknowledged', async () => {
     const f = await ledgerFixture();
-    unwrap(await updateFiscalYear(f.deps, f.ctx, { id: f.year.id, taxReturnFiledOn: '2027-05-01' }));
+    insertTaxPeriod(f, { firstFiscalYearId: f.year.id, filedOn: '2027-05-01' });
     const entry = await f.finalDonation({ date: '2026-03-05', cents: 5000, contactId: f.wrongDonor.id });
     const line = entry.allocationLines[0]!;
     const requested = await requestAllocationCorrection(f.deps, f.ctx, { lineId: line.id, changes: { contactId: f.rightDonor.id }, note: 'x' });
@@ -125,7 +124,7 @@ describe('allocation correction', () => {
 
   it('changing only the project never raises the § 153 notice', async () => {
     const f = await ledgerFixture();
-    unwrap(await updateFiscalYear(f.deps, f.ctx, { id: f.year.id, taxReturnFiledOn: '2027-05-01' }));
+    insertTaxPeriod(f, { firstFiscalYearId: f.year.id, filedOn: '2027-05-01' });
     const entry = await f.finalDonation({ date: '2026-03-05', cents: 5000, contactId: f.donor.id });
     const line = entry.allocationLines[0]!;
     const project = await seedProject(f.deps, f.userId, 'testprojekt-1');
@@ -247,5 +246,17 @@ describe('allocation correction: Zweck ins Minus', () => {
     const pending = unwrap(await requestAllocationCorrection(f.deps, f.ctx, { lineId: entry.allocationLines[0]!.id, changes: { purposeId: f.abroadPurpose.id }, note: 'x', purposeReason: 'Vorschuss' }));
     expect(pending.applied).toBe(false);
     expect(unwrap(await approveAllocationCorrection(f.deps, f.secondPerson, { id: pending.correction.id })).state).toBe('applied');
+  });
+
+  it('raises § 153 only when the year lies in a filed tax return period (Rechenschaft D2)', async () => {
+    const f = await ledgerFixture();
+    const periodId = insertTaxPeriod(f, { firstFiscalYearId: f.year.id });
+    const entry = await f.finalDonation({ date: '2026-03-05', cents: 5000, contactId: f.wrongDonor.id });
+    const line = entry.allocationLines[0]!;
+    // Offener Zeitraum: nichts abgegeben, kein § 153.
+    expect((await requestAllocationCorrection(f.deps, f.ctx, { lineId: line.id, changes: { contactId: f.rightDonor.id }, note: 'x' })).ok).toBe(true);
+    f.deps.db.update(financeTaxPeriods).set({ filedOn: '2027-05-01' }).where(eq(financeTaxPeriods.id, periodId)).run();
+    const other = await f.finalDonation({ date: '2026-03-06', cents: 5000, contactId: f.wrongDonor.id });
+    expect(err(await requestAllocationCorrection(f.deps, f.ctx, { lineId: other.allocationLines[0]!.id, changes: { contactId: f.rightDonor.id }, note: 'x' }))).toMatchObject({ code: 'section153Unacknowledged' });
   });
 });

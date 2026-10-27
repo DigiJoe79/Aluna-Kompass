@@ -19,17 +19,24 @@ import { Select } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { formatEuro } from '@/lib/finance/amount';
-import { changesOf, correctionPath, selectableLines, type CorrectableLine } from '@/lib/finance/correction';
+import { changesOf, correctionPath, selectableLines, vatCorrectable, type CorrectableLine } from '@/lib/finance/correction';
+import { isReverseChargeCode, type VatLineContext } from '@/lib/finance/reverse-charge-text';
+import { vatPeriodLabel } from '@/lib/finance/vat-period';
+import { vatPeriodOf, vatTaxPointOn } from '@kompass/module-finance/vat-calendar';
+import { useDateFormat } from '@/components/date-format-provider';
+import { Input } from '@/components/ui/input';
 import { VoidForm } from '@/app/(shell)/finance/donations/void-dialog';
 import { requestCorrectionAction, uploadCorrectionProofAction } from '../actions';
 import { useOpenReverse } from './entry-actions';
 import { Section } from '@/components/section';
 
-type PartyGroup = { contact: boolean; project: boolean; purpose: boolean; abroad: boolean };
+type PartyGroup = { contact: boolean; project: boolean; purpose: boolean; abroad: boolean; vat: boolean };
 
 export interface CorrectDialogEntry {
   id: string;
-  allocationLines: Pick<AllocationLineView, 'id' | 'categoryId' | 'amountCents' | 'contactId' | 'projectId' | 'purposeId' | 'abroad' | 'pendingCorrectionId'>[];
+  /** Buchungstag — Zeitraum bei Umsatzsteuer-Korrekturen (E6a Task 11c). */
+  entryDate?: string;
+  allocationLines: (Pick<AllocationLineView, 'id' | 'categoryId' | 'amountCents' | 'contactId' | 'projectId' | 'purposeId' | 'abroad' | 'pendingCorrectionId'> & { taxCode?: string; serviceDate?: string | null })[];
 }
 
 export function CorrectDialog({
@@ -40,6 +47,10 @@ export function CorrectDialog({
   categoryNames,
   confirmations = {},
   canVoidConfirmation = false,
+  quiet = false,
+  filedVatPeriods = {},
+  vatContext,
+  taxCodeOptions,
 }: {
   entry: CorrectDialogEntry;
   purposes: { id: string; name: string }[];
@@ -49,13 +60,29 @@ export function CorrectDialog({
   /** Gültige Bestätigungen je Zuordnungszeile (F6a Task 7) — auf einer solchen Zeile führt der Dialog den Dreischritt. */
   confirmations?: Record<string, { id: string; number: string }>;
   canVoidConfirmation?: boolean;
+  /**
+   * Im abgeschlossenen Jahr (Designer Runde 5, 265; Entscheidung f): „Korrigieren“ legt dort eine wartende Korrektur an
+   * und ist `outline` — auf dieser Seite ist dann der Weg zurück zur Prüfung die Hauptsache.
+   */
+  quiet?: boolean;
+  /** E6a Task 11c: abgegebene Umsatzsteuer-Zeiträume → Tag der letzten Abgabe — für den Hinweis auf die Berichtigung. */
+  filedVatPeriods?: Record<string, string>;
+  /** Zeitraumarten je Jahr, wie in der Buchungsmaske. */
+  vatContext?: VatLineContext;
+  /** Kennzeichen je Zeile, die die Korrektur anbietet — vom Dienst (`correctionTaxCodesInternal`, Befund 40, Frage 2). */
+  taxCodeOptions: Record<string, string[]>;
 }) {
   const t = useTranslations('finance.entryView.correct');
+  const tSplit = useTranslations('finance.splitRow');
+  const tRoot = useTranslations();
+  const fmt = useDateFormat();
   const openReverse = useOpenReverse();
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [pickedLineId, setPickedLineId] = useState<string | null>(null);
-  const [party, setParty] = useState<PartyGroup>({ contact: false, project: false, purpose: false, abroad: false });
+  const [party, setParty] = useState<PartyGroup>({ contact: false, project: false, purpose: false, abroad: false, vat: false });
+  const [taxCode, setTaxCode] = useState<string | null>(null);
+  const [serviceDate, setServiceDate] = useState<string | null | undefined>(undefined);
   const [note, setNote] = useState('');
   const [contact, setContact] = useState<PickedContact | null>(null);
   const [projectId, setProjectId] = useState('');
@@ -86,21 +113,40 @@ export function CorrectDialog({
   // „Weitere Aktionen“ (Spec Seitenkopf § 3.5) — der Dialog kennt nur noch das Umbuchen.
   const path = correctionPath({ allocation: allocationKeys, numbers: [] });
 
+  // E6a Task 11c (Board 4a): Kennzeichen und Leistungsdatum an einer Ausgabe mit erlaubtem Kennzeichen.
+  const vatLine = pickedLine && vatCorrectable(pickedLine as CorrectDialogEntry['allocationLines'][number]) ? (pickedLine as CorrectDialogEntry['allocationLines'][number]) : null;
+  const oldCode = vatLine?.taxCode ?? 'none';
+  const newCode = party.vat && vatLine ? (taxCode ?? oldCode) : oldCode;
+  const oldService = vatLine?.serviceDate ?? null;
+  // Ein anderes Kennzeichen ohne § 13b/Erwerb nimmt das Leistungsdatum mit weg.
+  const newService = !isReverseChargeCode(newCode) ? null : serviceDate === undefined ? oldService : serviceDate;
   const edited = pickedLine
     ? {
         contactId: party.contact ? (contact?.id ?? null) : pickedLine.contactId,
         projectId: party.project ? (projectId || null) : pickedLine.projectId,
         purposeId: party.purpose ? (purposeId || null) : pickedLine.purposeId,
         abroad: party.abroad ? abroad : pickedLine.abroad,
+        ...(party.vat && vatLine ? { taxCode: newCode, serviceDate: newService } : {}),
       }
     : null;
   const changes = pickedLine && edited ? changesOf(pickedLine, edited) : {};
+  const periodOf = (code: string, service: string | null): string | null => {
+    if (!isReverseChargeCode(code) || !entry.entryDate) return null;
+    const point = vatTaxPointOn({ taxCode: code as 'rc13bEu', entryDate: entry.entryDate, serviceDate: service });
+    return vatPeriodOf(point, vatContext?.periodKinds[Number(point.slice(0, 4))] ?? 'quarter').key;
+  };
+  const fieldErrorOf = (path: string): string | undefined => (feedback.state.status === 'error' ? feedback.state.fieldErrors?.[path] : undefined);
+  const vatChanged = changes.taxCode !== undefined || changes.serviceDate !== undefined;
+  const newPeriod = periodOf(newCode, newService);
+  const filedPeriod = vatChanged ? [periodOf(oldCode, oldService), newPeriod].find((p): p is string => p !== null && filedVatPeriods[p] !== undefined) ?? null : null;
   const nothingChanged = path === 'allocation' && Object.keys(changes).length === 0;
 
   const close = () => {
     setOpen(false);
     setPickedLineId(null);
-    setParty({ contact: false, project: false, purpose: false, abroad: false });
+    setParty({ contact: false, project: false, purpose: false, abroad: false, vat: false });
+    setTaxCode(null);
+    setServiceDate(undefined);
     setNote('');
     setContact(null);
     setProjectId('');
@@ -177,7 +223,7 @@ export function CorrectDialog({
 
   return (
     <>
-      <Button type="button" onClick={() => setOpen(true)}>
+      <Button type="button" variant={quiet ? 'outline' : 'default'} onClick={() => setOpen(true)}>
         {t('trigger')}
       </Button>
       <Dialog open={open} onOpenChange={(next) => (next ? setOpen(true) : close())}>
@@ -246,7 +292,7 @@ export function CorrectDialog({
                 {/* Die Haken bilden zusammen eine Diagnose: eine Gruppe über die volle Breite, darin zwei Spalten (Entscheidung zum Inventar). */}
                 <div role="group" aria-labelledby="correct-group-party" className="mt-3">
                   <FormGrid>
-                    {(['contact', 'project', 'purpose', 'abroad'] as const).map((key) => (
+                    {(vatLine ? (['contact', 'project', 'purpose', 'abroad', 'vat'] as const) : (['contact', 'project', 'purpose', 'abroad'] as const)).map((key) => (
                       <FormField
                         key={key}
                         id={`correct-party-${key}`}
@@ -257,7 +303,8 @@ export function CorrectDialog({
                       </FormField>
                     ))}
                     {/* 07-2 B22: „bisher: …“ in einer eigenen Zelle — als Hinweis am Haken verschob er das Raster der Schalter. */}
-                    {pickedLine.contactId ? (
+                    {/* Designer Runde 8, 098: „bisher“ nur zu einem angekreuzten Feld. */}
+                    {pickedLine.contactId && party.contact ? (
                       <FormCell as="p" size="full" className="text-hint text-muted-ink">
                         {t('currentContact', { value: contactNames.get(pickedLine.contactId) ?? '' })}
                       </FormCell>
@@ -278,8 +325,6 @@ export function CorrectDialog({
                     ),
                 })}
               </p>
-
-              {path ? <p className="text-meta font-semibold text-ink">{t('pathAllocation')}</p> : null}
 
               {path === 'allocation' ? (
                 <section className="border-t border-line pt-5">
@@ -315,6 +360,28 @@ export function CorrectDialog({
                           <FormField id="correct-abroad" label={t('party.abroad')} toggle>
                             <Switch id="correct-abroad" checked={abroad} onCheckedChange={(c) => setAbroad(c === true)} />
                           </FormField>
+                        ) : null}
+                        {party.vat && vatLine ? (
+                          <>
+                            <FormField id="correct-tax-code" label={t('vat.taxCode')} hint={t('vat.taxCodeHint')} error={fieldErrorOf('changes.taxCode')}>
+                              <Select id="correct-tax-code" value={newCode} onChange={(e) => { setTaxCode(e.target.value); setServiceDate(undefined); }}>
+                                {(taxCodeOptions[vatLine.id] ?? [oldCode]).map((code) => (
+                                  <option key={code} value={code}>{tSplit(`taxCode.${code}`)}</option>
+                                ))}
+                              </Select>
+                            </FormField>
+                            {isReverseChargeCode(newCode) ? (
+                              <FormField
+                                id="correct-service-date"
+                                label={newCode === 'rc13bOther' ? tSplit('invoiceDate') : tSplit('serviceDate')}
+                                hint={newPeriod ? t('vat.serviceWas', { old: oldService ? fmt.date(oldService) : t('vat.empty'), period: vatPeriodLabel(newPeriod, tRoot) }) : undefined}
+                                error={fieldErrorOf('changes.serviceDate')}
+                                size="s"
+                              >
+                                <Input id="correct-service-date" type="date" value={newService ?? ''} onChange={(e) => setServiceDate(e.target.value || null)} />
+                              </FormField>
+                            ) : null}
+                          </>
                         ) : null}
                         <FormField id="correct-note" label={t('noteLabel')} required size="l">
                           <Textarea id="correct-note" required value={note} onChange={(e) => setNote(e.target.value)} rows={2} />
@@ -369,6 +436,12 @@ export function CorrectDialog({
               ) : null}
 
             </>
+          ) : null}
+
+          {filedPeriod && path === 'allocation' ? (
+            <Notice level="warn" testId="correct-vat-filed">
+              {t('vat.filed', { period: vatPeriodLabel(filedPeriod, tRoot), filedOn: fmt.date(filedVatPeriods[filedPeriod]!) })}
+            </Notice>
           ) : null}
 
           {pickedLine && !lineConfirmation ? (

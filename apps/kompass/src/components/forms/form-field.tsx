@@ -68,6 +68,7 @@ export function FormField({
   // Immer über `wire`, auch ohne Hinweis und Meldung: Wechselte der Baum mit der ersten Meldung, baute React
   // das Feld neu auf, und ein ungesteuertes Feld verlöre die Eingabe (form-field.test.tsx).
   const control = wire(children, id, describedBy, Boolean(error));
+  const checkboxToggle = toggle && !(isValidElement(children) && children.type === Switch);
   return (
     <FormCell size={size} className={cn('flex flex-col gap-1.5', toggle && 'self-end', className)}>
       {toggle ? (
@@ -89,7 +90,9 @@ export function FormField({
           {control}
         </>
       )}
-      {showHint ? <p id={`${id}-hint`} className="text-hint text-muted-ink">{hint}</p> : null}
+      {/* Beim Haken links steht der Hinweis bündig mit dem Label, nicht mit dem Kästchen: 16 px Kästchen + 10 px
+          Abstand (Designer Runde 8, 043). Kein Layout-Test (Pixelmaß). */}
+      {showHint ? <p id={`${id}-hint`} className={cn('text-hint text-muted-ink', checkboxToggle && 'pl-6.5')}>{hint}</p> : null}
       <FieldError id={`${id}-error`} message={error} />
     </FormCell>
   );

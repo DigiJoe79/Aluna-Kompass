@@ -30,8 +30,8 @@ verschwindet aus der Liste:
 4. **Kategorien durchsehen** — ein Knopf „Kategorien durchgesehen“
    bestätigt, dass die mitgelieferten Kategorien passen oder angepasst
    wurden.
-5. **Steuerliches bestätigen** — ist der Verein Unternehmer oder hat eine
-   Umsatzsteuer-Identifikationsnummer, sind Mitgliedsbeiträge
+5. **Steuerliches bestätigen** — ist der Verein umsatzsteuerlich Unternehmer
+   (die Antwort gilt ab dem Tag, an dem Sie sie speichern), sind Mitgliedsbeiträge
    bescheinigungsfähig, werden Aufwandsspenden angeboten. Ein Knopf
    „Vorgaben übernehmen“ — in der Checkliste und auf der Seite
    „Steuerliches“ neben „Noch nicht bestätigt.“ — setzt die mitgelieferten
@@ -121,7 +121,9 @@ bleibt die Liste der Zahlungen an Vorstandsmitglieder in der
 
 Ein eigener Schalter im Abschnitt „Agent“ der Karte „Einordnung des Vereins“
 entscheidet, ob ein Agent Buchungen festschreiben, freigeben, Bestätigungen
-ausstellen und Mandate, Lastschriftdateien und Einzüge bearbeiten darf. Er
+ausstellen, Mandate, Lastschriftdateien und Einzüge bearbeiten und die
+Schritte der [Kassenprüfung](kassenpruefung.md) gehen darf — Stichproben,
+Vermerke, Prüfbericht und „Zugang beenden“. Er
 gilt wie die Fragen darüber erst mit „Speichern“ und lässt sich nur hier am
 Bildschirm ändern — nie über einen Agenten selbst. Voreingestellt ist: nein.
 Ein Agent darf ohne diesen Schalter Buchungen anlegen und vorbereiten, aber
@@ -135,3 +137,48 @@ und Ergebnis — ohne Namen und ohne Einzelbeträge. Mit dem Recht „Finanzen
 einrichten“ lässt er sich ändern: Zielbetrag, ein Standard-Zweck für
 Spenden an dieses Projekt, ob das Geld im Ausland verwendet wird, und ob
 der Spendenstand auf der Webseite erscheinen soll.
+
+## Umsatzsteuer
+
+Die Umsatzsteuer-Lage des Vereins steht im Reiter **Umsatzsteuer** der
+Finanz-Einrichtung. Alle Werte gelten gemeinsam ab einem Tag: Oben steht
+„Gilt ab“, darunter die Fragen, unten die Leiste — „Speichern“ legt einen neuen
+Stand an, und nur die geänderten Werte gehen mit.
+
+- **Unternehmer im Sinne des Umsatzsteuergesetzes?** Ja oder Nein, ohne
+  Vorauswahl, solange nichts entschieden ist. Hat der Verein im laufenden Jahr
+  oder im Vorjahr Einnahmen im Zweckbetrieb oder wirtschaftlichen
+  Geschäftsbetrieb gebucht, schlägt Kompass über der Karte „Ja“ vor und nennt
+  Kategorien und Betrag; gesetzt wird nichts von selbst. Ein Kleinunternehmer,
+  der „Nein“ antwortet, sieht danach nur noch einen Satz: keine eigenen Umsätze
+  mit Umsatzsteuer, aber Steuer für Leistungen ausländischer Anbieter nach § 13b
+  und für Wareneinkäufe aus der EU über 12.500 € im Jahr. Hat der Verein eine
+  USt-IdNr., bleibt ihr Feld stehen — mit ihr schuldet er auch für
+  Dienstleistungen aus der EU die Steuer. Mehr unter
+  [Umsatzsteuer](umsatzsteuer.md).
+- **Besteuerung** zeigt Kleinunternehmer oder Regelbesteuerung mit dem Tag, seit
+  dem sie gilt; geändert wird sie unter **Sätze und Grenzen**.
+- **USt-IdNr.** mit Prüfziffer. Ein Unternehmer ohne Nummer bekommt den Rat,
+  eine zu beantragen (Werbung aus dem EU-Ausland); wer sie gegenüber
+  Warenlieferanten aus der EU verwendet, verzichtet auf die Erwerbsschwelle
+  (§ 1a Abs. 4 UStG).
+- **Voranmeldungszeitraum**: Automatisch (nach der Steuer des Vorjahrs, die
+  Zeile sagt, was gerade gilt), Quartal oder Monat. Bei Regelbesteuerung
+  darunter **Vom Finanzamt befreit** — dann keine Voranmeldungen, die
+  Jahreserklärung bleibt.
+- **Dauerfristverlängerung**: Mit Bescheid ist die Frist der 10. des zweiten
+  Folgemonats; bei monatlicher Abgabe verlangt das Finanzamt dafür eine
+  Sondervorauszahlung.
+- **Bundesland des Finanzamts** (optional): Fällt eine Frist auf einen
+  Feiertag des Landes, gilt der nächste Werktag; ohne Angabe nur die
+  bundesweiten Feiertage.
+
+Unter der Karte stehen die **Stände** mit ihrem Tag, der geltende eingeschlossen;
+ein Wert, den ein Stand nicht einträgt, steht so da, wie er ab dem Tag gilt. Über ⋯
+„Entfernen …“ verschwindet ein Stand, danach gilt wieder der vorige — auch für
+die Fristen und die festgeschriebenen Buchungen der Tage, für die er galt; wie
+viele das sind, nennt die Rückfrage. Der Schritt „Umsatzsteuer“ der Checkliste ist Pflicht, solange
+Kompass „Unternehmer: ja“ vorschlägt, und erledigt, sobald einmal gespeichert
+ist; dann fasst er den Stand zusammen. Ein Agent liest mit
+`finance_vat_settings`, speichert mit `finance_setup_vat` und entfernt einen
+Stand mit `finance_setup_vat_remove`.

@@ -25,7 +25,7 @@ describe('installFinance — roles', () => {
     ]);
     expect(rolePermissions(deps, 'finance:approver')).toEqual(['contacts.view', 'finance.approve', 'finance.expensesSubmit', 'finance.overview', 'finance.read', 'projects.view']);
     expect(rolePermissions(deps, 'finance:clerk')).toEqual(['finance.expensesSubmit']);
-    expect(rolePermissions(deps, 'finance:auditor')).toEqual(['documents.export', 'finance.overview', 'finance.read']);
+    expect(rolePermissions(deps, 'finance:auditor')).toEqual(['documents.export', 'finance.audit', 'finance.overview', 'finance.read']);
     expect(rolePermissions(deps, 'finance:agent')).toEqual(['contacts.view', 'finance.entriesWrite', 'finance.overview', 'finance.read', 'projects.view']);
   });
 
@@ -46,11 +46,22 @@ describe('installFinance — roles', () => {
   });
 });
 
+describe('installFinance — Kassenprüfer (Rechenschaft D1)', () => {
+  it('never adds finance.audit to an auditor role delivered before (Backlog 29)', () => {
+    const { deps } = setupFinance();
+    run(deps);
+    const role = deps.db.select().from(schema.roles).where(eq(schema.roles.originKey, 'finance:auditor')).get()!;
+    deps.db.delete(schema.rolePermissions).where(eq(schema.rolePermissions.permissionKey, 'finance.audit')).run();
+    run(deps);
+    expect(deps.db.select().from(schema.rolePermissions).where(eq(schema.rolePermissions.roleId, role.id)).all().map((r) => r.permissionKey).sort()).toEqual(['documents.export', 'finance.overview', 'finance.read']);
+  });
+});
+
 describe('installFinance — start plan', () => {
   it('delivers the start plan once — a category the association deleted never comes back', async () => {
     const { deps, ctx } = setupFinance();
     run(deps);
-    expect(unwrap(await listCategories(deps, ctx, { includeInactive: true }))).toHaveLength(37);
+    expect(unwrap(await listCategories(deps, ctx, { includeInactive: true }))).toHaveLength(40);
     const fees = unwrap(await listCategories(deps, ctx, {})).find((c) => c.key === 'bank-fees')!;
     unwrap(await deleteCategory(deps, ctx, { id: fees.id }));
     run(deps);
@@ -146,6 +157,15 @@ describe('installFinance — partner evidence document type (F7)', () => {
     const { deps } = setupFinance();
     run(deps);
     expect(documentTypeFor(deps.db, 'finance-partner-evidence')).toMatchObject({ prefix: 'PNW', protectionArea: 'finance', retentionClass: 'statutory10Y', ownerModule: 'finance', defaultDirection: 'incoming' });
+  });
+});
+
+describe('installFinance — report document types (Rechenschaft A1)', () => {
+  it('provisions the report document types', () => {
+    const { deps } = setupFinance();
+    run(deps);
+    expect(documentTypeFor(deps.db, 'finance-report')).toMatchObject({ prefix: 'FBR', label: 'Finanzbericht', protectionArea: 'finance', retentionClass: 'statutory10Y', ownerModule: 'finance', defaultDirection: 'outgoing' });
+    expect(documentTypeFor(deps.db, 'finance-report-personal')).toMatchObject({ prefix: 'FBP', label: 'Finanzbericht mit Personenbezug', protectionArea: 'finance', retentionClass: 'statutory10Y', ownerModule: 'finance', defaultDirection: 'outgoing' });
   });
 });
 

@@ -67,12 +67,12 @@ test.describe('users', () => {
   });
 
   test('verknüpft ein Konto mit einem Kontakt und löst die Verknüpfung wieder', async ({ page }) => {
-    // Peter Lang ist im Seed schon verknüpft, Mira Klein nicht.
+    // Peter Lang ist im Seed schon verknüpft, Jonas Feld nicht (Mira Klein seit D1a als Kassenprüferin auch).
     await expect(page.getByRole('row', { name: /Peter Lang/ }).getByRole('link', { name: 'Peter Lang' })).toBeVisible();
-    const row = page.getByRole('row', { name: /Mira Klein/ });
+    const row = page.getByRole('row', { name: /Jonas Feld/ });
     // Runde 3, 155: Verknüpfen und Lösen stehen im Zeilenmenü, die Spalte zeigt den Namen oder „—“.
     await expect(row.getByRole('link', { name: 'Tomas Leitner' })).toHaveCount(0);
-    await row.getByRole('button', { name: 'Aktionen für Mira Klein' }).click();
+    await row.getByRole('button', { name: 'Aktionen für Jonas Feld' }).click();
     await page.getByRole('menuitem', { name: 'Mit Kontakt verknüpfen …' }).click();
     const dialog = page.getByRole('dialog');
     // Getippt statt nur geöffnet (F7 Task 7): die ungefilterte Liste zeigt nur die ersten 20 Kontakte —
@@ -82,17 +82,17 @@ test.describe('users', () => {
     await expect(option).toBeVisible();
     await option.click();
     await dialog.getByRole('button', { name: 'Verknüpfen' }).click();
-    await expect(page.getByRole('row', { name: /Mira Klein/ }).getByRole('link', { name: 'Tomas Leitner' })).toBeVisible();
-    await page.getByRole('row', { name: /Mira Klein/ }).getByRole('button', { name: 'Aktionen für Mira Klein' }).click();
+    await expect(page.getByRole('row', { name: /Jonas Feld/ }).getByRole('link', { name: 'Tomas Leitner' })).toBeVisible();
+    await page.getByRole('row', { name: /Jonas Feld/ }).getByRole('button', { name: 'Aktionen für Jonas Feld' }).click();
     await page.getByRole('menuitem', { name: 'Verknüpfung lösen' }).click();
-    await expect(page.getByRole('row', { name: /Mira Klein/ }).getByRole('link', { name: 'Tomas Leitner' })).toHaveCount(0);
+    await expect(page.getByRole('row', { name: /Jonas Feld/ }).getByRole('link', { name: 'Tomas Leitner' })).toHaveCount(0);
   });
 
   test('Kontakt-Picker: ohne Suchbegriff sagt er, dass es mehr gibt; der ganze Name trifft (Befund 39)', async ({ page, baseURL }) => {
     const client = await mcpClient(page, baseURL);
     for (let i = 1; i <= 21; i++) await callTool(client, 'contacts_create', { kind: 'person', lastName: `Füllkontakt ${i}` });
     await page.goto('/admin/users');
-    await page.getByRole('row', { name: /Mira Klein/ }).getByRole('button', { name: 'Aktionen für Mira Klein' }).click();
+    await page.getByRole('row', { name: /Jonas Feld/ }).getByRole('button', { name: 'Aktionen für Jonas Feld' }).click();
     await page.getByRole('menuitem', { name: 'Mit Kontakt verknüpfen …' }).click();
     const dialog = page.getByRole('dialog');
     const picker = dialog.getByRole('combobox', { name: 'Kontakt wählen' });

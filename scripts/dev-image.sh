@@ -78,7 +78,12 @@ case "${1:-up}" in
     # füllt ihn mit den Entwicklungsdaten — derselbe Weg wie die E2E-Tests.
     # Braucht einen Container, den dieses Skript gestartet hat (Token).
     curl -fsS -X POST -H "x-e2e-token: $token" "http://127.0.0.1:$port/__e2e/reset?mode=seeded" >/dev/null
-    echo "Seed-Daten eingespielt: http://localhost:$port  (admin@kompass.local)"
+    # Persönliche Schritte (humanOnly) über MCP freigeben — nur in dieser stehenden Umgebung, damit die
+    # festen Seed-Schlüssel (Anna, Mira) jeden Ablauf über MCP durchspielen können. Der Seed selbst und
+    # die E2E-Läufe lassen den Schalter aus; im Betrieb setzt ihn nur ein Mensch in der Oberfläche.
+    curl -fsS -X POST -H "x-e2e-token: $token" -H 'Content-Type: application/json' \
+      -d '{"key":"finance.mcpHumanOnlyAllowed","value":true}' "http://127.0.0.1:$port/__e2e/setting" >/dev/null
+    echo "Seed-Daten eingespielt: http://localhost:$port  (admin@kompass.local; MCP-Schlüssel siehe packages/core/src/seed/seed.ts, persönliche Schritte über MCP freigegeben)"
     ;;
   *)
     echo "Aufruf: pnpm dev:image [up|down|reset|seed]" >&2

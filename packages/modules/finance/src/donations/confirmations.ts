@@ -493,6 +493,8 @@ export async function recordConfirmationDispatch(deps: Deps, ctx: CallContext, i
   const loaded = loadValid(deps.db, v.id);
   if (!loaded.ok) return loaded;
   if (loaded.value.sentAt) return financeConflict('confirmationAlreadySent');
+  // Nachttest N19: versandt wird frühestens am Tag der Ausstellung.
+  if (v.sentAt < loaded.value.issuedOn) return invalid([{ path: 'sentAt', message: 'beforeIssued' }]);
   // Befund F: mit Unterschriftsfeld erst nach der unterschriebenen Fassung — dieselbe Regel wie im Serienlauf.
   if (!loaded.value.machine && !loaded.value.signedDocumentId) return financeConflict('confirmationSignedMissing');
 
@@ -669,7 +671,15 @@ export async function listUncertifiedDonations(deps: Deps, ctx: CallContext, inp
   const parsed = validate(deps, uncertifiedSchema, input ?? {});
   if (!parsed.ok) return parsed;
   const f = parsed.value;
+  const groups = uncertifiedDonationsInternal(deps, { year: f.year, minCents: f.minCents });
+  return ok({ groups: groups.slice(f.offset, f.offset + f.limit), total: groups.length });
+}
 
+/**
+ * Der Kern von `listUncertifiedDonations`, ohne Rechteprüfung: alle Gruppen, wahlweise je Kalenderjahr oder Zeitraum
+ * (Rechenschaft C Schritt 7, Geschäftsjahr).
+ */
+export function uncertifiedDonationsInternal(deps: Deps, f: { year?: number | undefined; range?: { from: string; to: string }; minCents?: number | undefined }): UncertifiedGroup[] {
   const feesCertifiable = readSetting<boolean>(deps, 'finance.membershipFeesCertifiable');
   const kinds = CERTIFIABLE_INCOME_KINDS.filter((k) => feesCertifiable || k !== 'membershipFee');
   let rows = deps.db
@@ -681,6 +691,7 @@ export async function listUncertifiedDonations(deps: Deps, ctx: CallContext, inp
     .all()
     .filter((r) => r.amountCents > 0 && r.contactId !== null);
   if (f.year) rows = rows.filter((r) => r.entryDate.startsWith(`${f.year}-`));
+  if (f.range) rows = rows.filter((r) => r.entryDate >= f.range!.from && r.entryDate <= f.range!.to);
   const lineIds = rows.map((r) => r.lineId);
   const open = openConfirmationsForLinesInternal(deps.db, lineIds);
   const returned = returnedCentsInternal(deps.db, lineIds);
@@ -706,12 +717,11 @@ export async function listUncertifiedDonations(deps: Deps, ctx: CallContext, inp
     byContact.set(r.contactId!, list);
   }
   const contactRows = byContact.size === 0 ? [] : deps.db.select().from(contacts).where(inArray(contacts.id, [...byContact.keys()])).all();
-  const groups = contactRows
+  return contactRows
     .map((contact) => {
       const lines = byContact.get(contact.id)!.sort((a, b) => a.entryDate.localeCompare(b.entryDate) || (a.entryNumber ?? '').localeCompare(b.entryNumber ?? ''));
       return { contactId: contact.id, contactName: displayName(contact), contactComplete: missingContactFields(contact).length === 0, lines, sumCents: sumNet(lines) };
     })
     .filter((g) => f.minCents === undefined || g.sumCents >= f.minCents)
     .sort((a, b) => a.contactName.localeCompare(b.contactName, 'de'));
-  return ok({ groups: groups.slice(f.offset, f.offset + f.limit), total: groups.length });
 }

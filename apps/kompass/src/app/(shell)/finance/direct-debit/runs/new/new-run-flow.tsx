@@ -5,7 +5,6 @@ import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { toast } from 'sonner';
 import { useDateFormat } from '@/components/date-format-provider';
 import { EmptyState } from '@/components/empty-state';
 import { FormActionBar } from '@/components/forms/form-action-bar';
@@ -71,7 +70,6 @@ export function NewRunFlow({ days, accounts, defaultAccountId, canCreate }: { da
     const result = await createFb.run(() => createRunAction({ collectionDate: preview.collectionDate, accountId: preview.accountId }), { retry: () => void create() });
     setCreating(false);
     if (result.status !== 'success') return;
-    toast.success(result.message);
     router.push(`/finance/direct-debit/runs/${(result.data as { id: string }).id}`);
   };
 
@@ -163,7 +161,6 @@ function PreviewGroups({ preview, onMoveTo }: { preview: DirectDebitPreview; onM
   const notice = async (item: DirectDebitPreviewItem) => {
     const result = await feedback.run(() => issueNoticeAction({ mandateId: item.mandateId, dueOn: item.coverOn, amountCents: item.amountCents }), { retry: () => void notice(item) });
     if (result.status !== 'success') return;
-    toast.success(result.message);
     setIssued((prev) => new Set(prev).add(keyOf(item)));
   };
 

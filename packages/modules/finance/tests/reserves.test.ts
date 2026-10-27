@@ -12,7 +12,7 @@ import { bookEntry } from '../src/ledger/finalize';
 import { incomeStatement } from '../src/ledger/queries';
 import { FINANCE_PERMISSIONS } from '../src/manifest';
 import { ULID_PATTERN } from '../src/allocation/subjects';
-import { financeAllocationLines, financeEntries, financeReserveMovements, financeReserves } from '../src/schema';
+import { financeAllocationLines, financeCategories, financeEntries, financeReserveMovements, financeReserves } from '../src/schema';
 import { insertDocument, ledgerFixture, pdfBytes } from './helpers';
 import { jpegBytes } from './expense-fixture';
 
@@ -273,13 +273,30 @@ describe('freeReserveCap (F8b Task 2, Annahme 4, § 62 Abs. 1 Nr. 3 AO — Nähe
     expect(used.usedCents).toBe(1000);
   });
 
-  it('treats a negative surplus of asset management as zero, and reads 33 percent — not a third', async () => {
+  it('treats a negative surplus of asset management as zero, and reads an exact third', async () => {
     const f = await ledgerFixture();
-    unwrap(await setDatedValue(f.deps, f.ctx, { key: 'freeReserveAssetShare', validFrom: '2026-01-01', value: 50 }));
+    unwrap(await setDatedValue(f.deps, f.ctx, { key: 'freeReserveAssetShare', validFrom: '2026-01-01', value: '1/2' }));
     unwrap(await bookEntryDonation(f));
     const cap = unwrap(await freeReserveCap(f.deps, f.ctx, { fiscalYearId: f.year.id }));
     expect(cap.assetManagementSurplusCents).toBe(0);
     expect(cap.capCents).toBe(Math.floor((cap.otherTimelyFundsCents * 10) / 100));
+
+    // Überschuss der Vermögensverwaltung 100 € → ein Drittel ist 33,33 € (⌊10000/3⌋), nicht 33 €.
+    const g = await ledgerFixture();
+    const interest = g.deps.db.select().from(financeCategories).where(eq(financeCategories.key, 'interest')).get()!;
+    unwrap(await bookEntry(g.deps, g.ctx, { entryDate: '2026-03-01', text: 'Zinsen', moneyLines: [{ accountId: g.bank.id, amountCents: 10000 }], allocationLines: [{ categoryId: interest.id, amountCents: 10000 }] }));
+    const third = unwrap(await freeReserveCap(g.deps, g.ctx, { fiscalYearId: g.year.id }));
+    expect(third.assetManagementSurplusCents).toBe(10000);
+    expect(third.capCents).toBe(3333);
+  });
+
+  it('rechnet auch für Jahre vor 2026: ein Drittel und 10 % gelten seit 2000 (Designer Runde 7, 262)', async () => {
+    const f = await ledgerFixture({ years: ['2025', '2026'] });
+    const y2025 = f.years['2025']!.id;
+    unwrap(await bookEntry(f.deps, f.ctx, { entryDate: '2025-06-01', text: 'Spende', moneyLines: [{ accountId: f.bank.id, amountCents: 59850 }], allocationLines: [{ categoryId: f.donations.id, amountCents: 59850 }] }));
+    const cap = unwrap(await freeReserveCap(f.deps, f.ctx, { fiscalYearId: y2025 }));
+    expect(cap.otherTimelyFundsCents).toBe(59850);
+    expect(cap.capCents).toBe(5985);
   });
 });
 

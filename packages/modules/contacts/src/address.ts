@@ -34,11 +34,14 @@ export const displayName = (c: PostalAddressInput): string => (c.kind === 'organ
  *                      Ist sie gesetzt, führt sie den Block an und die Anschrift
  *                      stammt aus ihr, soweit der Kontakt selbst keine hat.
  * @param homeCountry   Land des Vereins. Ein abweichendes Land wird genannt.
+ * @param countryName   Name zum Ländercode; ohne steht der Code (die Vorschau am Kontakt nennt den Namen, Designer
+ *                      Runde 8, 043).
  */
 export function formatPostalAddress(
   contact: PostalAddressInput,
   organisation?: PostalAddressInput | null,
   homeCountry?: string,
+  countryName?: (code: string) => string,
 ): string {
   const lines: string[] = [];
 
@@ -67,7 +70,7 @@ export function formatPostalAddress(
   lines.push([clean(source.postalCode), clean(source.city)].filter(Boolean).join(' '));
 
   const country = clean(source.country);
-  if (country && homeCountry && country !== homeCountry) lines.push(country);
+  if (country && homeCountry && country !== homeCountry) lines.push(countryName ? countryName(country) : country);
 
   return lines.filter(Boolean).join('\n');
 }

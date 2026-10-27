@@ -11,7 +11,9 @@ import {
   dissolvePurpose,
   fulfillPurpose,
   removeDatedValue,
+  removeVatSettings,
   saveSepaSettings,
+  saveVatSettings,
   reopenPurpose,
   setAccountActive,
   setBoardRemuneration,
@@ -20,6 +22,7 @@ import {
   setExpenseWaiverBasisText,
   setFinanceLimit,
   setFinanceSwitch,
+  setReportSettings,
   setPurposeActive,
   updateAccount,
   updateCategory,
@@ -77,6 +80,43 @@ export async function setFinanceSwitchesAction(entries: { key: string; value: bo
     }
     revalidateFinanceAdmin();
     return { status: 'success', message: t('finance.admin.tax.switchesSaved') };
+  });
+}
+
+/**
+ * Plan E6a Task 11b: die Leiste des Reiters „Umsatzsteuer“ — ein neuer Stand ab `validFrom` mit den geänderten Werten
+ * (`saveVatSettings`); Feldfehler gehen an die Zeilen.
+ */
+export async function saveVatSettingsAction(input: {
+  validFrom: string;
+  vatEntrepreneur?: boolean;
+  vatId?: string;
+  vatAdvancePeriod?: 'auto' | 'quarter' | 'month';
+  vatAdvanceExempt?: boolean;
+  vatPermanentExtension?: boolean;
+  taxOfficeState?: string;
+}): Promise<ActionState> {
+  return guardAction('(shell)/admin/finance/actions.ts#saveVatSettingsAction', async () => {
+    const t = await getTranslations();
+    const { deps, ctx } = await requireSession();
+    const result = await saveVatSettings(deps, ctx, input);
+    revalidateFinanceAdmin();
+    revalidatePath('/finance/deadlines');
+    if (!result.ok) return toActionState(result, t);
+    return toActionState(result, t, t('finance.admin.vat.saved'));
+  });
+}
+
+/** Plan E6a Task 11b: einen früheren Stand entfernen (`removeVatSettings`); danach gilt wieder der vorige. */
+export async function removeVatSettingsAction(validFrom: string): Promise<ActionState> {
+  return guardAction('(shell)/admin/finance/actions.ts#removeVatSettingsAction', async () => {
+    const t = await getTranslations();
+    const { deps, ctx } = await requireSession();
+    const result = await removeVatSettings(deps, ctx, { validFrom });
+    revalidateFinanceAdmin();
+    revalidatePath('/finance/deadlines');
+    if (!result.ok) return toActionState(result, t);
+    return toActionState(result, t, t('finance.admin.vat.history.removed'));
   });
 }
 
@@ -171,6 +211,7 @@ export interface CategoryInput {
   inputTaxDeductible?: string;
   countsTowardTurnover?: boolean;
   isAssetSale?: boolean;
+  thresholdExclusion?: 'none' | 'notPerformance' | 'taxRefund';
   externalAccountNumber?: string | null;
   isActive?: boolean;
 }
@@ -217,7 +258,7 @@ export async function createFirstFiscalYearAction(input: FiscalYearInput): Promi
   });
 }
 
-export async function updateFiscalYearAction(input: { id: string; expectedVersion: string; designation?: string; taxReturnFiledOn?: string | null }): Promise<ActionState> {
+export async function updateFiscalYearAction(input: { id: string; expectedVersion: string; designation?: string }): Promise<ActionState> {
   return guardAction('(shell)/admin/finance/actions.ts#updateFiscalYearAction', async () => {
     const t = await getTranslations();
     const { deps, ctx } = await requireSession();
@@ -303,5 +344,16 @@ export async function saveSepaSettingsAction(input: unknown): Promise<ActionStat
     revalidateFinanceAdmin();
     revalidatePath('/finance/direct-debit');
     return toActionState(result, t, t('finance.admin.directDebit.saved'));
+  });
+}
+
+/** Panel „Berichte“ (Plan A3 Task 6b): Satzungsfundstelle und Unterschriftszeile des Kassenberichts in einem Dienst. */
+export async function setReportSettingsAction(input: { statuteReference: string; cashReportSignature: boolean; treasurerIsStatutoryBoard?: boolean | null }): Promise<ActionState> {
+  return guardAction('(shell)/admin/finance/actions.ts#setReportSettingsAction', async () => {
+    const t = await getTranslations();
+    const { deps, ctx } = await requireSession();
+    const result = await setReportSettings(deps, ctx, input);
+    revalidateFinanceAdmin();
+    return toActionState(result, t, t('finance.admin.reports.saved'));
   });
 }

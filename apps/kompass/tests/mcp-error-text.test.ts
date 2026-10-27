@@ -1,6 +1,6 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import path from 'node:path';
-import { assignRole, conflict, constraintFailure, coreModule, createApiToken, createRole, invalid, setRolePermissions, unwrap, VALIDATION_MESSAGE_CODES, writeSettingInternal } from '@kompass/core';
+import { assignRole, conflict, constraintFailure, coreModule, createApiToken, createRole, forbidden, invalid, notFound, setRolePermissions, unwrap, VALIDATION_MESSAGE_CODES, writeSettingInternal } from '@kompass/core';
 import { createTestDeps, ctxWith, insertUser, systemContext } from '@kompass/core/testing';
 import { coreMcpTools, createKompassMcpHandler, toCallToolResult } from '@kompass/mcp';
 import { contactsModule } from '@kompass/module-contacts';
@@ -46,7 +46,7 @@ async function callError(client: Client, name: string, args: Record<string, unkn
   expect(res.isError).toBe(true);
   return (JSON.parse((res.content as { text: string }[])[0]!.text) as { error: McpError }).error;
 }
-const mcpError = (failure: ReturnType<typeof conflict>) =>
+const mcpError = (failure: ReturnType<typeof conflict>): McpError & { permission?: string; entity?: string; id?: string } =>
   (JSON.parse((toCallToolResult(failure, mcpErrorTranslator(createTestDeps())).content[0] as { text: string }).text) as { error: McpError }).error;
 
 describe('Sperren des Kerns über MCP als Satz (MB)', () => {
@@ -126,6 +126,26 @@ describe('Sperren des Kerns über MCP als Satz (MB)', () => {
 
   it('ein Konflikt ohne Übersetzung behält die Meldung des Dienstes', () => {
     expect(mcpError(conflict('somethingUnknown', 'Dienst sagt etwas'))).toMatchObject({ code: 'somethingUnknown', message: 'Dienst sagt etwas' });
+  });
+});
+
+// N21 (MCP-Nachttest 0.4.0): `forbidden` und `notFound` kamen über MCP ohne Satz, `conflict` mit — eine Stelle für alle
+// Module. Die Struktur (Recht, Entität, ID) bleibt maschinenlesbar daneben; ein unbekannter Schlüssel steht roh im Satz.
+describe('forbidden und notFound über MCP als Satz (N21)', () => {
+  it('nennt das fehlende Recht mit Namen und Schlüssel', () => {
+    const error = mcpError(forbidden('finance.read'));
+    expect(error).toMatchObject({ type: 'forbidden', permission: 'finance.read' });
+    expect(error.message).toContain(t('permissions.keys.finance.read.label'));
+    expect(error.message).toContain('finance.read');
+    expect(mcpError(forbidden('unknown.key')).message).toContain('unknown.key');
+  });
+
+  it('nennt Art und ID dessen, was es nicht gibt', () => {
+    const error = mcpError(notFound('financeEntry', '01ABC'));
+    expect(error).toMatchObject({ type: 'notFound', entity: 'financeEntry', id: '01ABC' });
+    expect(error.message).toContain(t('audit.entities.financeEntry'));
+    expect(error.message).toContain('01ABC');
+    expect(mcpError(notFound('somethingElse', 'X1')).message).toContain('somethingElse');
   });
 });
 

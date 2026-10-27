@@ -1,6 +1,7 @@
 import { unwrap, writeSettingInternal, type CallContext } from '@kompass/core';
 import { ctxWith, systemContext } from '@kompass/core/testing';
-import { cancelOpenItem, categoryIdByKeyInternal, financeOpenItems, setCategoryActive } from '@kompass/module-finance';
+import { cancelOpenItem, categoryIdByKeyInternal, createFirstFiscalYear, FINANCE_PERMISSIONS, financeOpenItems, financePeriodEvents, setCategoryActive } from '@kompass/module-finance';
+import { newId } from '@kompass/core';
 import { describe, expect, it } from 'vitest';
 import { continueFeeRun, getFeeRun, listFeeRuns, previewFeeRun, startFeeRun } from '../src/fee-run';
 import { admitMember, recordApplication } from '../src/memberships';
@@ -34,6 +35,15 @@ async function runAll(deps: MembersDeps, ctx: CallContext, year = 2027) {
 const items = (deps: MembersDeps) => deps.db.select().from(financeOpenItems).all();
 
 describe('fee run', () => {
+  it('Rechenschaft D1 Task 10b: creates nothing in a closed fiscal year and counts the charges as skipped', async () => {
+    const { deps, ctx } = await fiveMembers();
+    const year = unwrap(await createFirstFiscalYear(deps, { ...ctx, permissions: new Set(FINANCE_PERMISSIONS) }, { startsOn: '2027-01-01', endsOn: '2027-12-31' }));
+    deps.db.insert(financePeriodEvents).values({ id: newId(), fiscalYearId: year.id, kind: 'closed', at: NOW, byUserId: 'U', reason: null }).run();
+    const done = await runAll(deps, ctx);
+    expect(done).toMatchObject({ status: 'done', created: 0, skippedYearClosed: 14 });
+    expect(items(deps)).toHaveLength(0);
+  });
+
   it('previews per member: 1 + 1 + 12 to create, honorary exempt, the application not at all', async () => {
     const { deps, ctx, members } = await fiveMembers();
     const preview = unwrap(await previewFeeRun(deps, ctx, { year: 2027 }));

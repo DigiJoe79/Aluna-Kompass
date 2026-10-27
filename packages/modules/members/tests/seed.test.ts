@@ -49,6 +49,7 @@ describe('seedMembers', () => {
 });
 
 describe('seedMembers: fees (Plan M3)', () => {
+  // Mit dem ganzen Finanz-Seed (Vorjahre 2023–2025): lokal 1 s, auf dem CI-Läufer über 5 s — 30 s wie in dessen eigenem Test.
   async function seededWithFinance(now: string) {
     // Mit Mailversand: sonst gibt es im Versand der Läufe keine Mail-Gruppe (Plan U4 Task 2).
     const { deps, userId } = setupMembers(ALL, { now, mail: fakeMailTransport() });
@@ -82,7 +83,7 @@ describe('seedMembers: fees (Plan M3)', () => {
     const run = deps.db.select().from(memberFeeRuns).get()!;
     const dispatch = await runDispatchState(deps, ctx, { runRef: `membersFeeRun:${run.id}` });
     expect(dispatch.ok && dispatch.value.post.some((p) => p.reason === 'manual')).toBe(true);
-  });
+  }, 30_000);
 
   it.each(['2026-09-05T08:00:00.000Z', '2027-03-01T08:00:00.000Z'])('seeds the letters: admissions, a fee notice, a reminder dispatched and a dunning letter not yet (Plan M4, %s)', async (now) => {
     const { deps, ctx } = await seededWithFinance(now);
@@ -94,5 +95,5 @@ describe('seedMembers: fees (Plan M3)', () => {
     expect(notices.some((n) => n.levelKey === 'reminder' && sentAt(n.documentId) !== null)).toBe(true);
     expect(notices.some((n) => n.levelKey === 'dunning' && sentAt(n.documentId) === null)).toBe(true);
     expect(deps.db.select().from(memberRunLetters).all().length).toBeGreaterThan(notices.length - 1);
-  });
+  }, 30_000);
 });

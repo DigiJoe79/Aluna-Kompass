@@ -18,6 +18,17 @@ describe('changesOf', () => {
   });
 });
 
+describe('changesOf mit Umsatzsteuer (E6a Task 11c)', () => {
+  it('passes the code and the service date only when they changed', () => {
+    const line: CorrectableLine = { id: 'l1', contactId: null, projectId: null, purposeId: null, abroad: false, pendingCorrectionId: null, taxCode: 'rc13bEu', serviceDate: null };
+    const same = { contactId: null, projectId: null, purposeId: null, abroad: false };
+    expect(changesOf(line, { ...same, taxCode: 'rc13bEu', serviceDate: null })).toEqual({});
+    expect(changesOf(line, { ...same, taxCode: 'rc13bOther', serviceDate: null })).toEqual({ taxCode: 'rc13bOther' });
+    expect(changesOf(line, { ...same, taxCode: 'rc13bEu', serviceDate: '2026-06-26' })).toEqual({ serviceDate: '2026-06-26' });
+    expect(changesOf(line, same)).toEqual({});
+  });
+});
+
 describe('selectableLines', () => {
   it('leaves lines with a pending correction unselectable', () => {
     const lines: CorrectableLine[] = [

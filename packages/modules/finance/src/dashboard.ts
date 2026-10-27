@@ -21,6 +21,14 @@ import { accountBalancesAt, purposeBalancesAt } from './ledger/queries';
 import { listVouchersWithoutEntry } from './ledger/vouchers';
 import { financeAccounts, financeDirectDebitItems, financeDirectDebitReturns, financeDirectDebitRuns, financeSepaMandates, financeEntries, financeExpenseClaims, financePartnerPayments, financePartnerProfiles, financePurposes, financePurposeTransfers, type FinanceAccountRow } from './schema';
 import { formatEuro } from './format';
+import { auditDoneInternal, auditorsOfYearInternal, currentAuditYearInternal } from './auditing/access';
+import { auditorAccessInternal } from './auditing/auditors';
+import { followUpOpenInternal, lastFiledReportInternal } from './auditing/report';
+import { financeAuditAuditors, financeAuditRemarks, financeFiscalYears } from './schema';
+import { addDaysInternal } from './allocation/partner-proof';
+import { computedDeadlinesInternal, type DeadlineKind } from './closing/deadlines';
+import { thresholdsInternal } from './closing/thresholds';
+import { fiscalYearForInternal } from './ledger/fiscal-years';
 
 /**
  * Die zehn Kacheln der Startseite (F3b Task 6, F4 Task 6, F6a Task 5, Spec 9.7): je genau
@@ -84,6 +92,7 @@ const todoTile: DashboardTile<Record<string, never>> = {
   messageKeys: [
     'reviewedNotFinal', 'withoutVoucher', 'overdueItems', 'rawOpen', 'foreignMoney', 'vouchersWithoutEntry', 'lastStatement', 'noticeExpiring', 'noNotice', 'confirmationsToCorrect',
     'confirmationsNeedSignature', 'expenseClaimsPending', 'negativeBalance', 'partnerPaymentsPending', 'partnerPaymentsWithoutProof', 'partnerPaymentsOverdue', 'purposeTransfersPending', 'evidenceReadyToAcknowledge',
+    'auditQuestionsOpen',
   ],
   async load(deps, ctx) {
     const today = todayIn(deps);
@@ -175,6 +184,12 @@ const todoTile: DashboardTile<Record<string, never>> = {
     const withoutProof = partnerPaymentsWithoutProofInternal(deps, today);
     if (withoutProof.count > 0) lines.push({ titleKey: 'partnerPaymentsWithoutProof', values: { count: withoutProof.count }, trailing: formatEuro(withoutProof.sumCents), href: '/finance/partners' });
     if (withoutProof.overdueCount > 0) lines.push({ titleKey: 'partnerPaymentsOverdue', values: { count: withoutProof.overdueCount }, href: '/finance/partners' });
+
+    // Rechenschaft D1 (Designer Antwort § 4): Fragen der Kassenprüfer, die auf eine Antwort warten — für wer antworten darf.
+    if (hasPermission(ctx, 'finance.entriesWrite')) {
+      const questions = deps.db.select({ id: financeAuditRemarks.id }).from(financeAuditRemarks).where(and(eq(financeAuditRemarks.kind, 'question'), eq(financeAuditRemarks.state, 'open'))).all().length;
+      if (questions > 0) lines.push({ titleKey: 'auditQuestionsOpen', values: { count: questions }, href: '/finance/audit' });
+    }
 
     // Befund 19: Bank- oder Zahlungsdienstkonto stünde negativ — je Konto eine Zeile mit Namen und Betrag.
     for (const { account, balanceCents } of negativeAccountBalancesInternal(deps, today)) {
@@ -559,8 +574,75 @@ const directDebitReturnsTile: DashboardTile<Record<string, never>> = {
   },
 };
 
+/**
+ * Rechenschaft D1, Board 7a: „Kassenprüfung“ für die laufende Prüfung (sonst das jüngste Jahr mit Prüfern) — offene
+ * Fragen, fehlender Bericht, Nachprüfung, nach dem abgelegten Bericht ein offener Prüferzugang; Ruhe „abgeschlossen am“.
+ */
+const auditTile: DashboardTile<Record<string, never>> = {
+  key: 'audit',
+  permission: ['finance.read', 'finance.audit'],
+  kind: 'list',
+  defaultOn: true,
+  options: z.object({}),
+  messageKeys: ['questionsOpen', 'reportMissing', 'followUpOpen', 'accessOpen', 'done'],
+  available(deps) {
+    return Boolean(deps.db.select({ id: financeAuditAuditors.id }).from(financeAuditAuditors).get());
+  },
+  load(deps) {
+    const db = deps.db;
+    const yearId = currentAuditYearInternal(db) ?? db.select({ id: financeAuditAuditors.fiscalYearId }).from(financeAuditAuditors).innerJoin(financeFiscalYears, eq(financeFiscalYears.id, financeAuditAuditors.fiscalYearId)).orderBy(desc(financeFiscalYears.endsOn)).get()?.id ?? null;
+    if (!yearId) return { kind: 'list', lines: [], total: 0, href: '/finance/audit' };
+    const designation = db.select({ d: financeFiscalYears.designation }).from(financeFiscalYears).where(eq(financeFiscalYears.id, yearId)).get()?.d ?? '';
+    const href = `/finance/audit?year=${yearId}`;
+    const lines: DashboardLine[] = [];
+    const questions = db.select({ id: financeAuditRemarks.id }).from(financeAuditRemarks).where(and(eq(financeAuditRemarks.fiscalYearId, yearId), eq(financeAuditRemarks.kind, 'question'), inArray(financeAuditRemarks.state, ['open', 'answered']))).all().length;
+    if (questions > 0) lines.push({ titleKey: 'questionsOpen', values: { count: questions, designation }, href });
+    const filed = lastFiledReportInternal(db, yearId);
+    if (followUpOpenInternal(db, yearId)) lines.push({ titleKey: 'followUpOpen', values: { designation }, href });
+    else if (!filed) lines.push({ titleKey: 'reportMissing', values: { designation }, href });
+    if (auditDoneInternal(db, yearId)) {
+      const open = auditorsOfYearInternal(db, yearId).filter((a) => a.mode === 'kompass' && auditorAccessInternal(db, deps, a.contactId, a.accessEndedAt).hasRole).length;
+      if (open > 0) lines.push({ titleKey: 'accessOpen', values: { count: open, designation }, href });
+      if (lines.length === 0 && filed?.filedAt) lines.push({ titleKey: 'done', values: { designation, filedOn: filed.filedAt.slice(0, 10) }, href });
+    }
+    return { kind: 'list', lines, total: lines.length, href };
+  },
+};
+
+const DEADLINE_KINDS = ['noticeExpiry', 'partnerProof', 'recipientNoticeExpiry', 'confirmationsToCorrect', 'auditorAccess', 'vatAdvanceReturn', 'vatReturn', 'vatAmendment', 'taxReturn'] as const satisfies readonly DeadlineKind[];
+
+/**
+ * Rechenschaft C (Board 7a, Spec § C): „Finanzfristen · Schwellen“ — berechnete Fristen binnen 60 Tagen oder überfällig,
+ * Schwellen des laufenden Jahres, die sich nähern oder überschritten sind; höchstens fünf Zeilen, ohne Namen
+ * (`finance.overview`). In der Vorgabe an (Claude).
+ */
+const deadlinesTile: DashboardTile<Record<string, never>> = {
+  key: 'deadlines',
+  permission: 'finance.overview',
+  kind: 'list',
+  defaultOn: true,
+  options: z.object({}),
+  messageKeys: [...DEADLINE_KINDS, 'thresholdApproaching', 'thresholdExceeded'],
+  load(deps, ctx) {
+    const today = todayIn(deps);
+    const horizon = addDaysInternal(today, 60);
+    const lines: DashboardLine[] = computedDeadlinesInternal(deps, today, false)
+      .filter((d) => d.dueOn === null || d.dueOn <= horizon)
+      .map((d) => ({ titleKey: d.kind, values: { ...(d.dueOn ? { dueOn: d.dueOn } : {}), ...d.params }, href: d.href }));
+    const year = fiscalYearForInternal(deps.db, today);
+    if (year) {
+      for (const t of thresholdsInternal(deps, { ...ctx, permissions: new Set([...ctx.permissions].filter((p) => p !== 'finance.read')) }, year)) {
+        if (t.state === 'approaching' || t.state === 'exceeded') lines.push({ titleKey: t.state === 'exceeded' ? 'thresholdExceeded' : 'thresholdApproaching', values: { threshold: t.key, designation: year.designation }, href: '/finance/deadlines' });
+      }
+    }
+    return { kind: 'list', lines: lines.slice(0, 5), total: lines.length, href: '/finance/deadlines' };
+  },
+};
+
 export const FINANCE_DASHBOARD_TILES: readonly DashboardTile[] = [
   todoTile as DashboardTile,
+  auditTile as DashboardTile,
+  deadlinesTile as DashboardTile,
   withoutVoucherTile as DashboardTile,
   partnerPaymentsWithoutProofTile as DashboardTile,
   staleDraftsTile as DashboardTile,

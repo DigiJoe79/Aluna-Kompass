@@ -3,7 +3,6 @@
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { useRef, useState } from 'react';
-import { toast } from 'sonner';
 import { FormActionBar } from '@/components/forms/form-action-bar';
 import { FormField } from '@/components/forms/form-field';
 import { FormGrid } from '@/components/forms/form-grid';
@@ -34,7 +33,6 @@ export function PledgeActions({ pledgeId, today }: { pledgeId: string; today: st
     const result = await feedback.run(() => (dialog === 'pause' ? pausePledgeAction({ pledgeId, from, until }) : endPledgeAction({ pledgeId, endedOn: from })), { retry: () => void save() });
     setPending(false);
     if (result.status !== 'success') return;
-    toast.success(result.message);
     close();
     router.refresh();
   };

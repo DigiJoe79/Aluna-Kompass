@@ -1,8 +1,8 @@
-import { assignRole, changeOwnPassword, createRole, createUser, getDashboardLayout, getEffectivePermissions, isoDayIn, login, readSetting, schema, SEED_ADMIN_PASSWORD, seedClockAt, seedMoment, setDashboardLayout, setRolePermissions, todayIn, unwrap, type CallContext, type Deps } from '@kompass/core';
-import { addContactRole, contactChannels, contactRoles, contacts, createContact, endContactRole, hasLinkHistoryInternal, linkUserToContact, setContactChannels, updateContact } from '@kompass/module-contacts';
+import { assignRole, changeOwnPassword, createFollowUp, createRole, createUser, resetStartPassword, getDashboardLayout, getEffectivePermissions, isoDay, isoDayIn, login, paperDate, readSetting, schema, SEED_ADMIN_PASSWORD, seedClockAt, seedMoment, setDashboardLayout, setRolePermissions, todayIn, unwrap, waitForJob, type CallContext, type Deps } from '@kompass/core';
+import { addContactRole, contactChannels, contactIdForUserInternal, contactRoles, contacts, createContact, endContactRole, hasLinkHistoryInternal, linkUserToContact, setContactChannels, updateContact } from '@kompass/module-contacts';
 import { documents as dmsDocuments, receiptPdf, receiveDocument, textPdf } from '@kompass/module-dms';
 import { projects } from '@kompass/module-projects';
-import { and, asc, eq } from 'drizzle-orm';
+import { and, asc, eq, gte, isNull, lte } from 'drizzle-orm';
 import { completeFormat, guessCsvFormat, type CsvFormat } from './import/csv';
 import { buildPaymentServiceCsv, buildSecondBankCsv } from './import/csv-fixture';
 import { saveImportProfile } from './import/profiles';
@@ -14,17 +14,41 @@ import { createCategory, setCategoryActive } from './ledger/categories';
 import { requestAllocationCorrection } from './ledger/corrections';
 import { saveDraft, setReviewed } from './ledger/entries';
 import { bookEntry } from './ledger/finalize';
-import { createFirstFiscalYear, ensureFiscalYearFor, fiscalYearStatusInternal, updateFiscalYear } from './ledger/fiscal-years';
+import { createFirstFiscalYear, ensureFiscalYearFor, fiscalYearStatusInternal } from './ledger/fiscal-years';
+import { createTaxPeriod, declarationDueOn, fileTaxPeriodDocument, saveTaxPeriodAnswers, taxPeriodOfYearInternal, updateTaxPeriod, type TaxPeriodDocumentSlot } from './ledger/tax-periods';
 import { cancelOpenItem, createOpenItem } from './ledger/open-items';
 import { markNotReturn, notReturnMarkInternal } from './ledger/not-return';
-import { closeFiscalYear, justifyUndocumentedEntry } from './ledger/period';
+import { closeFiscalYear, justifyUndocumentedEntry, reopenFiscalYear } from './ledger/period';
+import { accountStatementsForYearInternal, confirmAccountForYear, fileAccountStatementDocument } from './ledger/statement-documents';
+import { assemblyOfYearInternal, getAssemblyResult, saveAssemblyResult } from './closing/assembly';
+import { confirmClosingStep } from './closing/confirmations';
+import { carryOverAuditFollowUp } from './closing/carry-over';
+import { carryOverOfYearInternal } from './auditing/carry-over';
+import { recordHandoverInterimReport, startHandover } from './closing/handover';
+import { getClosingStatus } from './closing/status';
+import type { ClosingStepKey } from './closing/types';
 import { setProjectFinance } from './ledger/project-settings';
 import { createPurpose, fulfillPurpose } from './ledger/purposes';
 import { reverseEntry } from './ledger/reverse';
-import { uploadVoucher, revokeVoucher } from './ledger/vouchers';
+import { attachDocument, uploadVoucher, revokeVoucher } from './ledger/vouchers';
 import { setDatedValue } from './ledger/dated-values';
+import { fileVatFilingDocument, recordVatFiling } from './reporting/vat-filing';
+import { vatFormFor } from './reporting/vat-forms';
+import { saveVatSettings } from './ledger/vat-settings';
+import { declineReverseCharge, saveContactTaxDetails } from './allocation/contact-tax-details';
 import { installFinance } from './install';
-import { seedStoryYear } from './seed-calendar';
+import { SEED_CLOSED_YEARS, seedStoryYear } from './seed-calendar';
+import { finalizeFinanceReport } from './reporting/finalize';
+import { dataExportSlot, startDataExport } from './reporting/export/run';
+import { sweepDataExports } from './reporting/export/sweep';
+import { saveAuditor } from './auditing/auditors';
+import { markSectionReviewed, setSample } from './auditing/samples';
+import { answerAuditRemark, createAuditRemark, resolveAuditRemark } from './auditing/remarks';
+import { createAuditReportDraft, currentReportInternal, lastFiledReportInternal, loadReport, markAuditReportReadyToSign, saveAuditReportExamination, saveAuditReportResult } from './auditing/report';
+import { fileAuditReportScan } from './auditing/filing';
+import { printAuditReportBlank } from './auditing/print';
+import { countCash } from './ledger/cash';
+import { saveOtherAsset } from './reporting/other-assets';
 import { seedDirectDebit } from './direct-debit/seed';
 import { checkConfirmable } from './donations/check';
 import { attachSignedConfirmation, issueConfirmation, recordConfirmationDispatch, voidConfirmation } from './donations/confirmations';
@@ -43,7 +67,7 @@ import { freeReserveCap, recordReserveMovement, saveReserve } from './allocation
 import { approvePurposeTransfer, requestPurposeTransfer } from './allocation/transfers';
 import { buildCamt053Bytes } from './import/camt-fixture';
 import { accountBalancesAt } from './ledger/queries';
-import { buildOfficeInvoicePdf, buildVetInvoicePdf } from './import/zugferd-fixture';
+import { buildForeignInvoicePdf, buildOfficeInvoicePdf, buildVetInvoicePdf } from './import/zugferd-fixture';
 import { discardRun } from './import/discard';
 import { importStatement } from './import/runs';
 import {
@@ -53,8 +77,16 @@ import {
   financeCategories,
   financeEntries,
   financeDatedValues,
+  financeVatFilings,
   financeEntryDocuments,
+  financeDataExports,
   financeFiscalYears,
+  financeAuditAuditors,
+  financeAuditRemarks,
+  financeAuditSamples,
+  financeCashCountWitnesses,
+  financeReports,
+  financeOtherAssets,
   financeImportRules,
   financeImportRuns,
   financeMoneyLines,
@@ -71,8 +103,11 @@ import {
   financePurposes,
   financePurposeTransfers,
   financeReserves,
+  financeReserveMovements,
   financeRawTransactions,
   financeSigners,
+  financeCashCounts,
+  financeHandovers,
 } from './schema';
 
 
@@ -168,12 +203,12 @@ function allocationLinesOf(deps: Deps, entryId: string) {
   return deps.db.select().from(financeAllocationLines).where(eq(financeAllocationLines.entryId, entryId)).orderBy(asc(financeAllocationLines.position)).all();
 }
 
-/** Belegt eine Buchung nur, wenn sie noch keinen Beleg trägt — idempotent über `uploadVoucher` hinweg. Ohne `bytes` ein Platzhalter-PDF. */
+/** Belegt eine Buchung nur, wenn sie noch keinen Beleg trägt — idempotent über `uploadVoucher` hinweg. Ohne `bytes` ein Platzhalter-PDF mit Titel und Tag — je Beleg eigener Inhalt, sonst wären alle derselbe Nachweis (266). */
 async function ensureVoucher(deps: Deps, ctx: CallContext, entry: { id: string }, typeKey: string, documentDate: string, title?: string, bytes?: Uint8Array): Promise<{ linkId: string; documentId: string } | null> {
   const existing = deps.db.select().from(financeEntryDocuments).where(eq(financeEntryDocuments.entryId, entry.id)).all();
   if (existing.length > 0) return { linkId: existing[0]!.id, documentId: existing[0]!.documentId ?? '' };
   // Der Beleg entsteht an seinem Tag (Plan 2b, Task 7, 3m).
-  const res = unwrap(await uploadVoucher(on(deps, documentDate), ctx, { entryId: entry.id, bytes: bytes ?? textPdf(['Beleg', '', 'Erfundenes Beispiel für die Entwicklung.']), typeKey, documentDate, title }));
+  const res = unwrap(await uploadVoucher(on(deps, documentDate), ctx, { entryId: entry.id, bytes: bytes ?? textPdf(['Beleg', title ?? '', documentDate, '', 'Erfundenes Beispiel für die Entwicklung.']), typeKey, documentDate, title }));
   return { linkId: res.linkId, documentId: res.documentId };
 }
 
@@ -211,14 +246,15 @@ async function ensureDonors(deps: Deps, ctx: CallContext, since: string): Promis
 }
 
 /**
- * Das Stichjahr dieses Seeds: Gibt es schon ein Geschäftsjahr, ist das erste davon das Vorjahr der Geschichte —
+ * Das Stichjahr dieses Seeds: Gibt es schon ein Geschäftsjahr, ist das erste davon das älteste abgeschlossene Jahr der
+ * Geschichte (`SEED_CLOSED_YEARS` vor dem Stichjahr) —
  * ein zweiter Lauf bleibt so in der Geschichte des ersten, auch wenn der Kalender inzwischen ein neues Stichjahr
  * nennt (sonst stünde sie doppelt da, und der Abschluss fände die Entwürfe des alten Stichjahrs). Ohne
  * Geschäftsjahr gilt der Kalender (`seedStoryYear`).
  */
 function storyYearOf(deps: Deps): number {
   const first = deps.db.select({ startsOn: financeFiscalYears.startsOn }).from(financeFiscalYears).orderBy(asc(financeFiscalYears.startsOn)).limit(1).get();
-  return first ? Number(first.startsOn.slice(0, 4)) + 1 : seedStoryYear(todayIn(deps));
+  return first ? Number(first.startsOn.slice(0, 4)) + SEED_CLOSED_YEARS : seedStoryYear(todayIn(deps));
 }
 
 /**
@@ -233,16 +269,18 @@ export async function seedFinance(deps: Deps, ctx: CallContext): Promise<void> {
   // Damit der Startplan sicher steht, auch wenn ein Aufrufer `installFinance` noch nicht selbst gerufen hat.
   deps.db.transaction((tx) => installFinance(tx, deps, ctx));
 
-  // Die Geschichte spielt im Stichjahr und seinem Vorjahr (`seed-calendar.ts`) — nie in der Zukunft.
+  // Die Geschichte spielt im Stichjahr und den abgeschlossenen Jahren davor (`seed-calendar.ts`) — nie in der Zukunft.
   const storyYear = storyYearOf(deps);
   const previousYear = storyYear - 1;
+  const firstYear = storyYear - SEED_CLOSED_YEARS;
 
   const hasFiscalYear = deps.db.select({ id: financeFiscalYears.id }).from(financeFiscalYears).limit(1).get();
   if (!hasFiscalYear) {
-    unwrap(await createFirstFiscalYear(deps, ctx, { startsOn: `${previousYear}-01-01`, endsOn: `${previousYear}-12-31` }));
-    // `ensureFiscalYearFor` legt nur den unmittelbaren Nachfolger an: erst das Stichjahr, dann — liegt heute
-    // schon im Jahr danach — das laufende. Ein Dienst, der „heute“ bucht, findet so immer sein Geschäftsjahr.
-    for (const day of [`${storyYear}-01-01`, todayIn(deps)]) unwrap(deps.db.transaction((tx) => ensureFiscalYearFor(tx, deps, ctx, day)));
+    unwrap(await createFirstFiscalYear(deps, ctx, { startsOn: `${firstYear}-01-01`, endsOn: `${firstYear}-12-31` }));
+    // `ensureFiscalYearFor` legt nur den unmittelbaren Nachfolger an: Jahr für Jahr bis zum Stichjahr, dann — liegt
+    // heute schon im Jahr danach — das laufende. Ein Dienst, der „heute“ bucht, findet so immer sein Geschäftsjahr.
+    const days = [...Array.from({ length: SEED_CLOSED_YEARS }, (_, i) => `${firstYear + i + 1}-01-01`), todayIn(deps)];
+    for (const day of days) unwrap(deps.db.transaction((tx) => ensureFiscalYearFor(tx, deps, ctx, day)));
   }
 
   await ensureAccount(deps, ctx, 'Vereinskonto', {
@@ -303,22 +341,29 @@ export async function seedFinance(deps: Deps, ctx: CallContext): Promise<void> {
 
   const [donorA, donorB] = await ensureDonors(deps, ctx, `${previousYear}-01-01`);
 
-  await ensureEntry(deps, 'Spende Altjahr', () =>
-    bookEntry(deps, ctx, { entryDate: `${previousYear}-03-10`, text: 'Spende Altjahr', moneyLines: [{ accountId: bank.id, amountCents: 8000 }], allocationLines: [{ categoryId: donationsCat.id, amountCents: 8000 }] }).then(unwrap),
+  // Plan seed-mehrjahre: die abgeschlossenen Jahre vor dem Vorjahr, je mit vollem Jahresabschluss — vor jeder Buchung des
+  // Vorjahres, weil jedes Jahr nur nach seinem Vorgänger schließt. Der Vorstandswechsel steht vorher: Die MV jedes Jahres
+  // entlastet, wer in ihm im Vorstand war.
+  await seedBoardHistory(deps, ctx, storyYear);
+  for (let year = storyYear - SEED_CLOSED_YEARS; year <= storyYear - 2; year++) await seedEarlyYear(deps, ctx, year, storyYear);
+
+  await ensureEntry(deps, 'Spende Sommerfest', () =>
+    bookEntry(on(deps, `${previousYear}-03-10`), ctx, { entryDate: `${previousYear}-03-10`, text: 'Spende Sommerfest', moneyLines: [{ accountId: bank.id, amountCents: 8000 }], allocationLines: [{ categoryId: donationsCat.id, amountCents: 8000 }] }).then(unwrap),
   );
-  await ensureEntry(deps, 'Bankgebühr Altjahr', () =>
-    bookEntry(deps, ctx, { entryDate: `${previousYear}-04-15`, text: 'Bankgebühr Altjahr', moneyLines: [{ accountId: bank.id, amountCents: -450 }], allocationLines: [{ categoryId: bankFeesCat.id, amountCents: -450 }] }).then(unwrap),
+  await ensureEntry(deps, 'Kontoführung April', () =>
+    bookEntry(on(deps, `${previousYear}-04-15`), ctx, { entryDate: `${previousYear}-04-15`, text: 'Kontoführung April', moneyLines: [{ accountId: bank.id, amountCents: -450 }], allocationLines: [{ categoryId: bankFeesCat.id, amountCents: -450 }] }).then(unwrap),
   );
-  await ensureEntry(deps, 'Büromaterial Altjahr', () =>
-    bookEntry(deps, ctx, { entryDate: `${previousYear}-05-20`, text: 'Büromaterial Altjahr', moneyLines: [{ accountId: bank.id, amountCents: -3200 }], allocationLines: [{ categoryId: officeCat.id, amountCents: -3200 }] }).then(unwrap),
+  // Das Wort „Büromaterial“ trägt den Kategorievorschlag der Freigabe (`bySimilarEntry`, E2E finance-approvals).
+  await ensureEntry(deps, 'Büromaterial Mai', () =>
+    bookEntry(on(deps, `${previousYear}-05-20`), ctx, { entryDate: `${previousYear}-05-20`, text: 'Büromaterial Mai', moneyLines: [{ accountId: bank.id, amountCents: -3200 }], allocationLines: [{ categoryId: officeCat.id, amountCents: -3200 }] }).then(unwrap),
   );
 
   // F3a-N Task 1: eine festgeschriebene, geteilte Buchung im Vorjahr — nach dessen Abschluss wartet die
   // Korrektur einer ihrer beiden Zeilen auf Freigabe, die andere bleibt wählbar.
-  await ensureEntry(deps, 'Sponsoring Altjahr', () =>
-    bookEntry(deps, ctx, {
+  await ensureEntry(deps, 'Sponsoring Vereinsfest', () =>
+    bookEntry(on(deps, `${previousYear}-06-01`), ctx, {
       entryDate: `${previousYear}-06-01`,
-      text: 'Sponsoring Altjahr',
+      text: 'Sponsoring Vereinsfest',
       moneyLines: [{ accountId: bank.id, amountCents: 9000 }],
       allocationLines: [
         { categoryId: donationsCat.id, amountCents: 6000 },
@@ -530,11 +575,11 @@ export async function seedFinance(deps: Deps, ctx: CallContext): Promise<void> {
   if (importkonto) await seedWorkList(deps, ctx, importkonto.id, storyYear);
 
   // --- Belege (F2b, Spec 5.2): drei festgeschriebene Buchungen mit hochgeladenem PDF; eine davon
-  // widerrufen und ersetzt; „Spende Altjahr“ bleibt bewusst ohne Beleg (der Rohumsatz allein reicht
+  // widerrufen und ersetzt; „Spende Sommerfest“ bleibt bewusst ohne Beleg (der Rohumsatz allein reicht
   // für Spenden erst mit F4/F5).
-  const bueromaterial = entryByText(deps, 'Büromaterial Altjahr');
+  const bueromaterial = entryByText(deps, 'Büromaterial Mai');
   const fahrtkosten = entryByText(deps, 'Bar-Ausgabe Fahrtkosten');
-  const bankgebuehr = entryByText(deps, 'Bankgebühr Altjahr');
+  const bankgebuehr = entryByText(deps, 'Kontoführung April');
 
   await ensureVoucher(deps, ctx, bueromaterial, 'voucher-invoice', `${previousYear}-05-20`, 'Rechnung Büromaterial');
   const fahrtkostenVoucher = await ensureVoucher(deps, ctx, fahrtkosten, 'voucher-receipt', `${storyYear}-02-20`);
@@ -558,13 +603,16 @@ export async function seedFinance(deps: Deps, ctx: CallContext): Promise<void> {
 
   // --- Offene Posten (F2b, Spec 5.3): außerhalb des Journals — eine Verbindlichkeit offen, eine
   // teilbezahlt, eine Forderung erledigt, ein Posten ohne Zahlung erledigt.
-  const payableOpen = await ensureOpenItem(deps, ctx, `RE-${storyYear}-041`, { kind: 'payable', itemDate: `${storyYear}-01-10`, amountCents: 12000, dueOn: `${storyYear}-02-10` });
-  const payablePartial = await ensureOpenItem(deps, ctx, `RE-${storyYear}-055`, { kind: 'payable', itemDate: `${storyYear}-01-15`, amountCents: 20000, dueOn: `${storyYear}-02-15` });
+  // Jeder offene Posten mit Gegenüber, damit die Übergabeliste es nennt (Designer Runde 7, 268; Befund 23e).
+  const printer = await ensurePartnerContact(deps, ctx, 'Druckerei Beispielfeld GmbH');
+  const applicant = await ensurePartnerContact(deps, ctx, 'Kinderhilfe Regional e.V.');
+  const payableOpen = await ensureOpenItem(deps, ctx, `RE-${storyYear}-041`, { kind: 'payable', itemDate: `${storyYear}-01-10`, amountCents: 12000, dueOn: `${storyYear}-02-10`, contactId: printer });
+  const payablePartial = await ensureOpenItem(deps, ctx, `RE-${storyYear}-055`, { kind: 'payable', itemDate: `${storyYear}-01-15`, amountCents: 20000, dueOn: `${storyYear}-02-15`, contactId: printer });
   const receivableSettled = await ensureOpenItem(deps, ctx, `SP-${storyYear}-003`, { kind: 'receivable', itemDate: `${storyYear}-01-20`, amountCents: 5000, dueOn: `${storyYear}-02-20` });
   const payableCancelled = await ensureOpenItem(deps, ctx, `RE-${storyYear}-060`, { kind: 'payable', itemDate: `${storyYear}-01-25`, amountCents: 3000 });
   // F3b Task 3 (A6): ein Posten mit Herkunft — „Erledigt ohne Zahlung“ bietet er nicht an, er verweist auf
   // seinen Vorgang. `originType` ist erfunden (kein Fachmodul liefert vor F8a/F7 echte Vorgänge).
-  await ensureOpenItem(deps, ctx, `ANT-${storyYear}-014`, { kind: 'payable', itemDate: `${storyYear}-02-01`, amountCents: 4500, dueOn: `${storyYear}-03-01`, originType: 'demoProcess', originId: 'demo-1' });
+  await ensureOpenItem(deps, ctx, `ANT-${storyYear}-014`, { kind: 'payable', itemDate: `${storyYear}-02-01`, amountCents: 4500, dueOn: `${storyYear}-03-01`, contactId: applicant, originType: 'demoProcess', originId: 'demo-1' });
   void payableOpen; // bleibt bewusst unbeglichen — nichts weiter zu tun.
 
   if (payablePartial) {
@@ -621,33 +669,45 @@ export async function seedFinance(deps: Deps, ctx: CallContext): Promise<void> {
 
   const previousFiscalYear = deps.db.select().from(financeFiscalYears).where(eq(financeFiscalYears.designation, String(previousYear))).get();
   if (previousFiscalYear) {
+    // Rechenschaft A2: sonstiges Vermögen vor dem Abschluss — es geht in den Kassenbericht ein, und der Prüfstand beim
+    // Abschluss soll denselben Datenstand tragen wie die spätere Festschreibung (Plan D1d Task 4, Befund MCP 5).
+    await seedOtherAssets(deps, ctx, previousYear);
     const alreadyClosed = fiscalYearStatusInternal(deps.db, previousFiscalYear.id) === 'closed';
     if (!alreadyClosed) {
-      // „Spende Altjahr“ bleibt bewusst ohne Beleg (siehe oben) — der Abschluss verlangt dafür eine Begründung.
-      const spendeAltjahrForJustify = entryByText(deps, 'Spende Altjahr');
-      unwrap(await justifyUndocumentedEntry(deps, ctx, { entryId: spendeAltjahrForJustify.id, note: 'Kleinbetrag bar erhalten, kein Beleg ausgestellt' }));
-      // F3a-N Task 1: „Sponsoring Altjahr“ bleibt ebenfalls ohne Beleg — nur ihre geteilte Zuordnung zählt hier.
-      const sponsoringAltjahrForJustify = entryByText(deps, 'Sponsoring Altjahr');
-      unwrap(await justifyUndocumentedEntry(deps, ctx, { entryId: sponsoringAltjahrForJustify.id, note: 'Sponsoringzusage ohne Rechnung erhalten' }));
-      // F6b Task 9: „Spende Jan Moser Vorjahr“ bleibt ohne Anschrift und ohne Beleg — genau die Zeile, die
+      // „Spende Sommerfest“ bleibt bewusst ohne Beleg (siehe oben) — der Abschluss verlangt dafür eine Begründung.
+      const spendeAltjahrForJustify = entryByText(deps, 'Spende Sommerfest');
+      // Das Vorjahr schließt im Januar des Stichjahres, die Begründungen kurz davor (Designer Runde 5, 1.3 Nr. 1).
+      unwrap(await justifyUndocumentedEntry(on(deps, `${storyYear}-01-08`), ctx, { entryId: spendeAltjahrForJustify.id, note: 'Kleinbetrag bar erhalten, kein Beleg ausgestellt' }));
+      // F3a-N Task 1: „Sponsoring Vereinsfest“ bleibt ebenfalls ohne Beleg — nur ihre geteilte Zuordnung zählt hier.
+      const sponsoringAltjahrForJustify = entryByText(deps, 'Sponsoring Vereinsfest');
+      unwrap(await justifyUndocumentedEntry(on(deps, `${storyYear}-01-08`), ctx, { entryId: sponsoringAltjahrForJustify.id, note: 'Sponsoringzusage ohne Rechnung erhalten' }));
+      // F6b Task 9: „Spende Jan Moser“ bleibt ohne Anschrift und ohne Beleg — genau die Zeile, die
       // der Serienlauf später als „Anschrift fehlt“ überspringt.
-      const janMoserForJustify = entryByText(deps, 'Spende Jan Moser Vorjahr');
-      unwrap(await justifyUndocumentedEntry(deps, ctx, { entryId: janMoserForJustify.id, note: 'Anschrift fehlt noch, Nachweis liegt bei den Unterlagen' }));
-      await seedPreviousYearStatement(deps, ctx, previousYear);
-      unwrap(await closeFiscalYear(deps, ctx, { id: previousFiscalYear.id }));
+      const janMoserForJustify = entryByText(deps, 'Spende Jan Moser');
+      unwrap(await justifyUndocumentedEntry(on(deps, `${storyYear}-01-08`), ctx, { entryId: janMoserForJustify.id, note: 'Anschrift fehlt noch, Nachweis liegt bei den Unterlagen' }));
+      // Rechenschaft B1: eine Zweckkorrektur im Januar des Stichjahres an einer Vorjahresbuchung, solange das Vorjahr
+      // noch offen ist — so tragen Prüfstand und festgeschriebene Berichte des Vorjahres schon den korrigierten Stand.
+      await seedPriorYearPurposeCorrection(deps, ctx, previousYear, storyYear);
+      await seedPriorYearReverseCharge(deps, ctx, previousYear);
+      await seedPreviousYearStatement(on(deps, `${storyYear}-01-05`), ctx, previousYear);
+      // Plan seed-mehrjahre Task 6: die letzte Zuführung vor dem Kauf, bevor das Vorjahr schließt (Zeile 54).
+      await seedReplacementReserveYear(deps, ctx, previousYear, storyYear);
+      // Rechenschaft C Schritt 2: die Kasse am Stichtag gezählt, bevor das Jahr schließt.
+      await seedYearEndCashCount(deps, ctx, previousYear);
+      unwrap(await closeFiscalYear(on(deps, `${storyYear}-01-20`), ctx, { id: previousFiscalYear.id }));
     }
 
-    const spendeAltjahr = entryByText(deps, 'Spende Altjahr');
+    const spendeAltjahr = entryByText(deps, 'Spende Sommerfest');
     const spendeAltjahrLine = firstAllocationLineOf(deps, spendeAltjahr.id);
     await ensureCorrection(deps, spendeAltjahrLine.id, () =>
       requestAllocationCorrection(deps, ctx, { lineId: spendeAltjahrLine.id, changes: { contactId: donorA.id }, note: 'Spenderin nachträglich zugeordnet' }).then(unwrap),
     );
 
-    // F3a-N Task 1: von den zwei Zeilen der „Sponsoring Altjahr“ wartet nur die erste auf Freigabe — die
+    // F3a-N Task 1: von den zwei Zeilen der „Sponsoring Vereinsfest“ wartet nur die erste auf Freigabe — die
     // zweite bleibt im Korrigieren-Dialog wählbar. Nur ein Projektwechsel: er löst nie § 153 aus, egal ob
     // eine Steuererklärung schon als abgegeben gilt (F3a-N Task 2 setzt das am selben Vorjahr).
     if (existingProject) {
-      const sponsoringAltjahr = entryByText(deps, 'Sponsoring Altjahr');
+      const sponsoringAltjahr = entryByText(deps, 'Sponsoring Vereinsfest');
       const sponsoringLines = allocationLinesOf(deps, sponsoringAltjahr.id);
       const sponsoringFirstLine = sponsoringLines[0];
       if (sponsoringFirstLine) {
@@ -661,25 +721,29 @@ export async function seedFinance(deps: Deps, ctx: CallContext): Promise<void> {
       }
     }
 
-    // F3a-N Task 2: die Steuererklärung des Vorjahrs gilt als abgegeben — erst danach, damit die zwei
-    // wartenden Korrekturen oben ohne § 153 entstehen. Von hier an löst jede Partei-, Auslands- oder
-    // Zweckänderung in diesem Jahr die Kenntnisnahme nach § 153 AO aus.
-    const currentPreviousFiscalYear = deps.db.select().from(financeFiscalYears).where(eq(financeFiscalYears.id, previousFiscalYear.id)).get()!;
-    if (!currentPreviousFiscalYear.taxReturnFiledOn) {
-      unwrap(
-        await updateFiscalYear(deps, ctx, {
-          id: previousFiscalYear.id,
-          taxReturnFiledOn: `${storyYear}-05-31`,
-          expectedVersion: currentPreviousFiscalYear.updatedAt,
-        }),
-      );
-    }
+    // Rechenschaft D1 (Spec § D1, Seed): Das abgeschlossene Vorjahr wird geprüft, bevor der Kassenbericht
+    // festgeschrieben wird — Prüfer, Prüfstand, Stichproben, Vermerke, Zählung im Beisein, Bericht abgelegt; die
+    // Ablage gibt das Jahr mit `auditReport` frei (die Freigabe „mündlicher Bericht“ aus A1 entfällt).
+    await grantAuditorRoleToMiraKlein(deps, ctx);
+    // Geprüft im Februar: Zählung am 15., Bericht am 20. abgelegt (1.3 Nr. 1).
+    await seedAudit(on(deps, `${storyYear}-02-20`), ctx, previousFiscalYear.id, previousYear, storyYear);
+
+    // Rechenschaft A2: der Kassenbericht des Vorjahres, festgeschrieben wie in der Oberfläche — mit Freigabe, Probe 0.
+    // Einmal: nach einer Fassung (auch storniert) des Jahres.
+    // Rechenschaft C Schritt 1: ohne Kontoauszug als PDF je Bankkonto schreibt Kompass keinen Bericht fest.
+    await seedStatementPdfs(deps, ctx, previousFiscalYear.id);
+    await seedCashReport(on(deps, `${storyYear}-02-25`), ctx, previousFiscalYear.id);
+    // Rechenschaft C: der Jahresabschluss des Vorjahres bis Schritt 12, dann die Amtsübergabe im Stichjahr. Vorher der
+    // Vorstandswechsel: Bernd Hagedorn war das ganze Vorjahr im Vorstand und gehört in die Entlastung (E2E C2).
+    await seedBoardHistory(deps, ctx, storyYear);
+    await seedClosing(deps, ctx, previousFiscalYear.id, storyYear);
+    await seedHandover(deps, ctx, storyYear);
   }
 
   // F3a: „Mira Klein“ aus dem Kernseed (Rolle „Interne Revision“, kein Finanzrecht) bekommt zusätzlich
-  // die Rolle „Kassenprüfer“ (finance.read, finance.overview — nie entriesFinalize): eine Person, an der
-  // sich zeigt, dass „Korrigieren“ ohne das Recht fehlt. Existiert die Person nicht (isolierte
-  // Modul-Tests, andere Installation), bleibt der Schritt aus — der Kern erfindet keine Nutzer.
+  // die Rolle „Kassenprüfer“ (finance.read, finance.overview, finance.audit — nie entriesFinalize): eine Person, an
+  // der sich zeigt, dass „Korrigieren“ ohne das Recht fehlt. Existiert die Person nicht (isolierte Modul-Tests, andere
+  // Installation), bleibt der Schritt aus — der Kern erfindet keine Nutzer. Ohne Vorjahr hier, sonst schon oben.
   await grantAuditorRoleToMiraKlein(deps, ctx);
 
   // F3a-N Task 2: „Jonas Feld“ (Kernseed-Rolle „Geschäftsstelle“, ohne Finanzrechte) bekommt zusätzlich
@@ -698,9 +762,11 @@ export async function seedFinance(deps: Deps, ctx: CallContext): Promise<void> {
   // F6a (aus Task 9 vorgezogen): Bescheid, maschinelles Verfahren, Bestätigungen in ihren Zuständen.
   await seedDonations(deps, ctx, storyYear);
 
-  // F6b Task 9: der abgeschlossene Serienlauf des Vorjahrs mit Versandvermerk, dazu die Rücklastschrift
-  // einer Spende, die in einer Sammelbestätigung stand (Prüfstein 6).
-  await seedConfirmationRun(deps, ctx, previousYear, storyYear);
+  // F3a-N Task 2, seit D2 über den Erklärungszeitraum (Abgabe im Mai): die Steuererklärung des Vorjahrs gilt als
+  // abgegeben — erst nach den zwei wartenden Korrekturen oben, damit sie ohne § 153 entstehen; von hier an löst jede
+  // Partei-, Auslands- oder Zweckänderung im Vorjahr die Kenntnisnahme nach § 153 AO aus. Nach Bescheid und
+  // Serienlauf, damit die festgeschriebene Fassung deren Stand trägt und nicht gleich veraltet.
+  if (previousFiscalYear) await seedTaxReturn(deps, ctx, previousFiscalYear.id, storyYear);
 
   // F8a Task 7: Anträge in jedem Zustand — nach `seedDonations`, weil der Verzicht den eingeschalteten
   // Aufwandsspenden-Schalter braucht, den `seedDonations` setzt.
@@ -719,6 +785,569 @@ export async function seedFinance(deps: Deps, ctx: CallContext): Promise<void> {
 
   // Plan L1 Task 7: Lastschrift mit Testkennung, Mandaten in jedem Zustand und zwei Zusagen.
   await seedDirectDebit(deps, ctx, storyYear, seedProject(deps)?.id ?? null);
+
+  // Rechenschaft B1: eine Ausgabe nach § 13b und eine Rechnung, deren Beleg an zwei Teilzahlungen hängt.
+  await seedVatObligations(deps, ctx, storyYear);
+  await seedReusedVoucher(deps, ctx, storyYear);
+
+  // Rechenschaft B2: zwei Datenexporte des Vorjahres — einer zum Herunterladen, einer nach 30 Tagen gelöscht.
+  await seedDataExports(deps, ctx, previousYear);
+}
+
+/**
+ * Die Buchungen eines frühen Jahres (Plan seed-mehrjahre): klein, alles bar über die „Barkasse“ — bis zum Konto bei der
+ * Beispielbank (eröffnet zum Vorjahr) lief der Verein bar. So braucht das Jahr keinen Kontoauszug, und die Bankbestände
+ * ab dem Vorjahr bleiben, wie sie sind. Je Jahr erfunden; `late` ist die Buchung, die nach der Prüfung nachkommt.
+ */
+const EARLY_YEAR_ENTRIES: Record<number, { text: string; day: string; cents: number; category: string; purpose?: string; voucher: string; late?: true }[]> = {
+  3: [
+    { text: 'Beiträge bar Jahrestreffen', day: '03-15', cents: 21000, category: 'membership-fees', voucher: 'Liste Beiträge Jahrestreffen' },
+    { text: 'Bewirtung Jahrestreffen', day: '03-15', cents: -2400, category: 'member-care', voucher: 'Kassenbon Bewirtung Jahrestreffen' },
+    { text: 'Druck Einladungen Jahrestreffen', day: '03-20', cents: -1900, category: 'office', voucher: 'Rechnung Druck Einladungen' },
+    { text: 'Sammlung Stadtteilfest', day: '07-02', cents: 6500, category: 'donations', voucher: 'Zählliste Sammlung Stadtteilfest' },
+  ],
+  2: [
+    { text: 'Beiträge bar Mitgliederabend', day: '03-12', cents: 24000, category: 'membership-fees', voucher: 'Liste Beiträge Mitgliederabend' },
+    { text: 'Zutaten Frühlingsmarkt', day: '04-18', cents: -3500, category: 'business-costs', voucher: 'Kassenbon Zutaten Frühlingsmarkt' },
+    { text: 'Kuchenverkauf Frühlingsmarkt', day: '04-20', cents: 12000, category: 'events', voucher: 'Zählliste Kuchenverkauf Frühlingsmarkt' },
+    { text: 'Spende bar Dachsanierung', day: '06-08', cents: 10000, category: 'donations', purpose: 'Dachsanierung Vereinsheim', voucher: 'Quittung Spende Dachsanierung' },
+    { text: 'Versand Jahresbrief', day: '09-15', cents: -2800, category: 'office', voucher: 'Quittung Versand Jahresbrief' },
+    { text: 'Nachbuchung Quittung Dezember', day: '12-29', cents: -1500, category: 'program-costs', voucher: 'Quittung Material Dezember', late: true },
+  ],
+};
+
+/** Ein Beschluss als PDF-Ablage für Rücklagen (wie in `seedMittel`), am Tag des Beschlusses. */
+const reserveMinutes = (title: string, documentDate: string) => ({ bytes: textPdf([title, '', 'Erfundenes Beispiel für die Entwicklung.']), fileName: `${title}.pdf`, documentDate });
+const reserveWriteCtx = (ctx: CallContext): CallContext => ({ ...ctx, permissions: new Set([...ctx.permissions, 'finance.setup', 'finance.entriesWrite', 'finance.read', 'dms.view', 'dms.create']) });
+const reserveNamedInternal = (deps: Deps, name: string) => deps.db.select({ id: financeReserves.id }).from(financeReserves).where(eq(financeReserves.name, name)).get();
+const movementsOf = (deps: Deps, reserveId: string) => deps.db.select().from(financeReserveMovements).where(eq(financeReserveMovements.reserveId, reserveId)).all();
+
+/** Wirtschaftsgut der Wiederbeschaffungsrücklage für Zeile 54 der Anlage Gem (erfunden, Joe F8). */
+const REPLACEMENT_ASSET = { asset: 'Kleintransporter für Vereinsfahrten', expectedCostCents: 2400000, regularDepreciationCents: 400000 } as const;
+/** Zuführung je Jahr vor dem Stichjahr, ältestes zuerst (Joe F8: angespart über die drei Jahre, aufgelöst beim Kauf). */
+const REPLACEMENT_ALLOCATIONS = [10000, 10000, 20000] as const;
+
+/**
+ * „Ersatz Transporter“ (Plan seed-mehrjahre Task 6): angelegt im Januar des ersten Seed-Jahres, je abgeschlossenem Jahr
+ * eine Zuführung im Dezember, bevor das Jahr schließt; aufgelöst wird sie im Stichjahr beim Kauf (`seedMittel`). Je Jahr
+ * einmal.
+ */
+async function seedReplacementReserveYear(deps: Deps, ctx: CallContext, year: number, storyYear: number): Promise<void> {
+  const index = year - (storyYear - SEED_CLOSED_YEARS);
+  const amountCents = REPLACEMENT_ALLOCATIONS[REPLACEMENT_ALLOCATIONS.length - SEED_CLOSED_YEARS + index];
+  if (amountCents === undefined) return;
+  const writeCtx = reserveWriteCtx(ctx);
+  const known = reserveNamedInternal(deps, 'Ersatz Transporter');
+  const reserve = known ?? unwrap(await saveReserve(on(deps, `${year}-01-14`), writeCtx, { kind: 'replacement', name: 'Ersatz Transporter', purposeText: 'Ersatz des Vereinsfahrzeugs', resolutionUpload: reserveMinutes('Protokoll Ersatz Transporter', `${year}-01-14`) }));
+  if (movementsOf(deps, reserve.id).some((m) => m.movementDate.startsWith(String(year)))) return;
+  const day = `${year}-12-15`;
+  unwrap(await recordReserveMovement(on(deps, day), writeCtx, { reserveId: reserve.id, kind: 'allocate', movementDate: day, amountCents, resolutionUpload: reserveMinutes(`Protokoll Zuführung Ersatz Transporter ${year}`, day) }));
+}
+
+/**
+ * Die freie Rücklage entsteht im Jahr vor dem Vorjahr (Joe F2) mit einer Zuführung für dieses Jahr zur Hälfte des
+ * Höchstbetrags — im Stichjahr kommt auf dieselbe Rücklage die Zuführung zu 85 % (`seedMittel`). Einmal.
+ */
+async function seedEarlyFreeReserve(deps: Deps, ctx: CallContext, fiscalYearId: string, year: number): Promise<void> {
+  const writeCtx = reserveWriteCtx(ctx);
+  const known = reserveNamedInternal(deps, 'Freie Rücklage');
+  if (known && movementsOf(deps, known.id).some((m) => m.forFiscalYearId === fiscalYearId)) return;
+  const free = known ?? unwrap(await saveReserve(on(deps, `${year}-11-20`), writeCtx, { kind: 'free', name: 'Freie Rücklage', resolutionUpload: reserveMinutes('Protokoll Freie Rücklage', `${year}-11-20`) }));
+  const cap = unwrap(await freeReserveCap(deps, writeCtx, { fiscalYearId })).capCents;
+  const amountCents = Math.floor(cap / 2);
+  if (amountCents <= 0) return;
+  const day = `${year}-12-20`;
+  unwrap(await recordReserveMovement(on(deps, day), writeCtx, { reserveId: free.id, kind: 'allocate', movementDate: day, amountCents, forFiscalYearId: fiscalYearId, resolutionUpload: reserveMinutes(`Protokoll Zuführung Freie Rücklage ${year}`, day) }));
+}
+
+/** Holger Brandt, erfunden: prüft auf Papier, ohne Vorstandsrolle. */
+async function ensureHolgerBrandt(deps: Deps, ctx: CallContext): Promise<{ id: string }> {
+  const contactCtx: CallContext = { ...ctx, permissions: new Set([...ctx.permissions, 'contacts.manage']) };
+  const known = deps.db.select({ id: contacts.id }).from(contacts).where(and(eq(contacts.firstName, 'Holger'), eq(contacts.lastName, 'Brandt'))).get();
+  return known ?? unwrap(await createContact(deps, contactCtx, { kind: 'person', salutation: 'Herr', firstName: 'Holger', lastName: 'Brandt', street: 'Am Mühlbach 12', postalCode: '12347', city: 'Musterstadt' }));
+}
+
+/** Die Berichte der Gruppe MV eines Jahres, je Bericht nur, solange keine gültige Fassung besteht (nach Wiederöffnen neu). */
+async function finalizeAssemblyReports(deps: Deps, ctx: CallContext, fiscalYearId: string, day: string): Promise<void> {
+  for (const key of ['cashReport', 'incomeStatement', 'assetOverview', 'purposeFunds'] as const) {
+    const valid = deps.db.select({ id: financeReports.id }).from(financeReports).where(and(eq(financeReports.reportKey, key), eq(financeReports.fiscalYearId, fiscalYearId), isNull(financeReports.voidedAt))).get();
+    if (!valid) unwrap(await finalizeFinanceReport(on(deps, day), ctx, { report: key, params: { fiscalYearId } }));
+  }
+}
+
+/**
+ * Ein frühes Jahr mit vollem Jahresabschluss (Joe 2026-10-26, F4): Buchungen bar mit Beleg, Zählung am 31.12.,
+ * Abschluss am 20.01., Prüfung auf Papier durch Holger Brandt (Bericht am 20.02. abgelegt), Berichte der MV am 25.02.
+ * festgeschrieben, MV mit Einzelentlastung am 14.03., übrige Schritte am 20.03. Im Jahr vor dem Vorjahr kommt nach der
+ * MV eine Quittung nach: Wiederöffnen im April, nachbuchen, neu abschließen und die Nachprüfung ins Folgejahr übernehmen
+ * (`carryOverAuditFollowUp`) — so trägt der Kassenbericht des Vorjahres eine übernommene Buchung. Jeder Schritt für sich
+ * idempotent; was einmal geschehen ist, bleibt.
+ */
+async function seedEarlyYear(deps: Deps, ctx: CallContext, year: number, storyYear: number): Promise<void> {
+  const fiscalYear = deps.db.select().from(financeFiscalYears).where(eq(financeFiscalYears.designation, String(year))).get();
+  if (!fiscalYear) return;
+  const next = year + 1;
+  const cash = accountByName(deps, 'Barkasse');
+  const entries = EARLY_YEAR_ENTRIES[storyYear - year] ?? [];
+  const book = async (e: (typeof entries)[number]) => {
+    const date = `${year}-${e.day}`;
+    const purposeId = e.purpose ? purposeByName(deps, e.purpose).id : undefined;
+    await ensureEntry(deps, e.text, () =>
+      bookEntry(on(deps, date), ctx, { entryDate: date, text: e.text, moneyLines: [{ accountId: cash.id, amountCents: e.cents }], allocationLines: [{ categoryId: categoryByKey(deps, e.category).id, amountCents: e.cents, ...(purposeId ? { purposeId } : {}) }] }).then(unwrap),
+    );
+    await ensureVoucher(deps, ctx, entryByText(deps, e.text), 'voucher-receipt', date, e.voucher);
+  };
+
+  if (fiscalYearStatusInternal(deps.db, fiscalYear.id) === 'open' && !carryOverOfYearInternal(deps.db, fiscalYear.id)) {
+    for (const e of entries.filter((x) => !x.late)) await book(e);
+    await seedReplacementReserveYear(deps, ctx, year, storyYear);
+    if (year === storyYear - 2) await seedEarlyFreeReserve(deps, ctx, fiscalYear.id, year);
+    await seedYearEndCashCount(deps, ctx, year);
+    unwrap(await closeFiscalYear(on(deps, `${next}-01-20`), ctx, { id: fiscalYear.id }));
+  }
+
+  if (!lastFiledReportInternal(deps.db, fiscalYear.id)) {
+    const holger = await ensureHolgerBrandt(deps, ctx);
+    if (!deps.db.select({ id: financeAuditAuditors.id }).from(financeAuditAuditors).where(eq(financeAuditAuditors.fiscalYearId, fiscalYear.id)).get()) {
+      unwrap(await saveAuditor(on(deps, `${next}-02-01`), ctx, { fiscalYearId: fiscalYear.id, contactId: holger.id, mode: 'paper', confidential: true, electedOn: `${year}-04-12` }));
+    }
+    const blank = unwrap(await printAuditReportBlank(on(deps, `${next}-02-18`), ctx, { fiscalYearId: fiscalYear.id }));
+    unwrap(await fileAuditReportScan(on(deps, `${next}-02-20`), ctx, { reportId: blank.reportId, bytes: textPdf([`Prüfbericht ${year}`, 'Kassenprüfung auf Papier, unterschrieben', 'Erfundenes Beispiel für die Entwicklung.']), fileName: 'pruefbericht.pdf' }));
+  }
+  await seedStatementPdfs(deps, ctx, fiscalYear.id);
+  await finalizeAssemblyReports(deps, ctx, fiscalYear.id, `${next}-02-25`);
+  await seedClosing(deps, ctx, fiscalYear.id, next);
+
+  // Die Quittung, die nach der MV auftaucht: nur einmal, solange keine Übernahme besteht.
+  const late = entries.find((x) => x.late);
+  if (late && !carryOverOfYearInternal(deps.db, fiscalYear.id)) {
+    const april = `${next}-04-10`;
+    if (fiscalYearStatusInternal(deps.db, fiscalYear.id) === 'closed') unwrap(await reopenFiscalYear(on(deps, april), ctx, { id: fiscalYear.id, note: 'Quittung vom Dezember nach der Mitgliederversammlung gefunden' }));
+    await book(late);
+    unwrap(await closeFiscalYear(on(deps, april), ctx, { id: fiscalYear.id }));
+    unwrap(await carryOverAuditFollowUp(on(deps, april), ctx, { fiscalYearId: fiscalYear.id, note: `Korrektur geht in Prüfpaket und Kassenbericht ${next} und wird der nächsten Mitgliederversammlung berichtet` }));
+    await finalizeAssemblyReports(deps, ctx, fiscalYear.id, april);
+    await seedClosing(deps, ctx, fiscalYear.id, next);
+  }
+}
+
+/**
+ * Rechenschaft B1 (Zweckmittel): Im Vorjahr ein Zuschuss für die Dachsanierung und eine Ausgabe für die Dachrinne ohne
+ * Zweck, beide belegt; im Januar des Stichjahres ordnet eine Korrektur die Ausgabe der Dachsanierung zu. Das Vorjahr
+ * ist da noch offen, die Korrektur gilt sofort — im Bericht „Zweckmittel“ des Stichjahres steht sie unter
+ * „Korrekturen“. Einmal (die Buchungen und die Korrektur je nur einmal).
+ */
+async function seedPriorYearPurposeCorrection(deps: Deps, ctx: CallContext, previousYear: number, storyYear: number): Promise<void> {
+  const bank = accountByName(deps, 'Vereinskonto');
+  const dach = purposeByName(deps, 'Dachsanierung Vereinsheim');
+  const [grant, gutter] = ['Zuschuss Stiftung Dachsanierung', 'Dachrinne Vereinsheim'];
+  await ensureEntry(deps, grant, () =>
+    bookEntry(on(deps, `${previousYear}-10-01`), ctx, { entryDate: `${previousYear}-10-01`, text: grant, moneyLines: [{ accountId: bank.id, amountCents: 20000 }], allocationLines: [{ categoryId: categoryByKey(deps, 'purpose-income').id, amountCents: 20000, purposeId: dach.id }] }).then(unwrap),
+  );
+  await ensureVoucher(deps, ctx, entryByText(deps, grant), 'voucher-own', `${previousYear}-10-01`, 'Bewilligung Zuschuss Dachsanierung');
+  await ensureEntry(deps, gutter, () =>
+    bookEntry(on(deps, `${previousYear}-11-20`), ctx, { entryDate: `${previousYear}-11-20`, text: gutter, moneyLines: [{ accountId: bank.id, amountCents: -5000 }], allocationLines: [{ categoryId: categoryByKey(deps, 'program-costs').id, amountCents: -5000 }] }).then(unwrap),
+  );
+  await ensureVoucher(deps, ctx, entryByText(deps, gutter), 'voucher-invoice', `${previousYear}-11-18`, 'Rechnung Dachrinne');
+  const line = firstAllocationLineOf(deps, entryByText(deps, gutter).id);
+  await ensureCorrection(deps, line.id, () =>
+    requestAllocationCorrection(on(deps, `${storyYear}-01-15`), ctx, { lineId: line.id, changes: { purposeId: dach.id }, note: 'Die Dachrinne gehört zur Dachsanierung' }).then(unwrap),
+  );
+}
+
+/**
+ * Rechenschaft B1 (Umsatzsteuer-Summen, Belegprüfung): ein Software-Abo eines erfundenen Anbieters in der EU nach
+ * § 13b UStG — unter Kleinunternehmerschaft mit dem Hinweis auf die Jahreserklärung — und eine Rechnung der Druckerei,
+ * in zwei Raten bezahlt, deren Beleg an beiden Buchungen hängt (erscheint unter „mehrfach verwendete Nachweise“).
+ */
+/**
+ * E6a (Spec E6 § Seed, ohne die PayPal-Antwort aus E6b): Der Musterverein ist Kleinunternehmer und seit dem Vorjahr
+ * umsatzsteuerlich Unternehmer mit (erfundener, prüfziffergültiger) USt-IdNr. Zwei erfundene Anbieter tragen das
+ * Merkmal § 13b am Kontakt: Werbung aus Irland im Mai (Q2 abgegeben, Kz 46 = 200, Kz 47 = 38,00) und ein Software-Abo aus
+ * dem Vereinigten Königreich im Juli mit Leistungsdatum (Q3 offen). Idempotent: Einstellung, Kontakte, Buchungen und
+ * Abgabe nur, wenn es sie noch nicht gibt.
+ */
+/** Unternehmer mit USt-IdNr. seit dem 01.01. des Vorjahres (E6a), einmal. */
+async function ensureVatSettings(deps: Deps, ctx: CallContext, previousYear: number): Promise<void> {
+  if (!deps.db.select({ key: financeDatedValues.key }).from(financeDatedValues).where(eq(financeDatedValues.key, 'vatEntrepreneur')).get()) {
+    unwrap(await saveVatSettings(on(deps, `${previousYear}-01-02`), ctx, { validFrom: `${previousYear}-01-01`, vatEntrepreneur: true, vatId: 'DE123456788' }));
+  }
+}
+
+/** Ein erfundener Anbieter mit dem Merkmal § 13b am Kontakt, einmal je Name. */
+async function ensureReverseChargeSupplier(deps: Deps, ctx: CallContext, name: string, country: string, reverseCharge: 'eu' | 'other'): Promise<{ id: string }> {
+  const contactCtx: CallContext = { ...ctx, permissions: new Set([...ctx.permissions, 'contacts.manage']) };
+  const known = deps.db.select({ id: contacts.id }).from(contacts).where(eq(contacts.name, name)).get();
+  const contact = known ?? unwrap(await createContact(deps, contactCtx, { kind: 'organization', name, country }));
+  if (!known) unwrap(await saveContactTaxDetails(deps, ctx, { contactId: contact.id, reverseCharge }));
+  return contact;
+}
+
+/**
+ * Joe 2026-10-26: Schon im Vorjahr eine Leistung nach § 13b — Werbung aus Irland im Oktober, die Voranmeldung Q4 im
+ * Januar festgeschrieben und abgegeben, mit abgelegter Fassung wie Q2 (E11: Kennzahlen ab 2025), die Umsatzsteuer-Jahreserklärung des Vorjahres
+ * bleibt offen. So nennt Schritt 12 des Vorjahres „Außerdem die Umsatzsteuer-Jahreserklärung … weil es Umsätze nach
+ * § 13b gibt“ (Motiv 323). Vor dem Jahresauszug und dem Abschluss des Vorjahres, damit Auszug, Berichte und Hashes den
+ * Stand tragen. Einmal.
+ */
+async function seedPriorYearReverseCharge(deps: Deps, ctx: CallContext, previousYear: number): Promise<void> {
+  await ensureVatSettings(deps, ctx, previousYear);
+  const ads = await ensureReverseChargeSupplier(deps, ctx, 'Werbenetz Ireland Ltd.', 'IE', 'eu');
+  const text = 'Werbeanzeigen Herbst';
+  const day = `${previousYear}-10-14`;
+  await ensureEntry(deps, text, () =>
+    bookEntry(on(deps, day), ctx, { entryDate: day, text, moneyLines: [{ accountId: accountByName(deps, 'Vereinskonto').id, amountCents: -15000 }], allocationLines: [{ categoryId: categoryByKey(deps, 'fundraising').id, amountCents: -15000, contactId: ads.id }] }).then(unwrap),
+  );
+  await ensureVoucher(deps, ctx, entryByText(deps, text), 'voucher-invoice', `${previousYear}-10-10`, 'Rechnung Werbenetz Herbst');
+  const q4 = `${previousYear}-Q4`;
+  const filedOn = `${previousYear + 1}-01-09`;
+  // E11 (Befund 34 c): erst festschreiben, dann abgeben — wie Q2 des Stichjahres; vor den Festschreibungen des Vorjahres,
+  // damit deren Stand die Fassung schon kennt. Liegt das Vorjahr vor 2025, kennt Kompass keine Kennzahlen: ohne Fassung.
+  const hasForm = vatFormFor('advance', previousYear) !== null;
+  if (hasForm && !deps.db.select({ id: financeReports.id }).from(financeReports).where(and(eq(financeReports.reportKey, 'vatAdvanceReturn'), eq(financeReports.params, JSON.stringify({ vatPeriod: q4 })))).get()) {
+    unwrap(await finalizeFinanceReport(on(deps, filedOn), ctx, { report: 'vatAdvanceReturn', params: { vatPeriod: q4 } }));
+  }
+  if (!deps.db.select({ id: financeVatFilings.id }).from(financeVatFilings).where(eq(financeVatFilings.period, q4)).get()) {
+    unwrap(await recordVatFiling(on(deps, filedOn), ctx, { period: q4, filedOn }));
+  }
+  const filing = deps.db.select().from(financeVatFilings).where(eq(financeVatFilings.period, q4)).get()!;
+  if (filing.reportId && !filing.filedReturnDocumentId) {
+    unwrap(await fileVatFilingDocument(on(deps, filedOn), ctx, { filingId: filing.id, slot: 'filedReturn', bytes: textPdf(['Umsatzsteuer-Voranmeldung, abgegebene Fassung', `4. Quartal ${previousYear}`, 'Platzhalter für das ELSTER-PDF', 'Erfundenes Beispiel für die Entwicklung.']), fileName: 'voranmeldung.pdf' }));
+  }
+  if (!filing.transmissionProtocolDocumentId) {
+    unwrap(await fileVatFilingDocument(on(deps, filedOn), ctx, { filingId: filing.id, slot: 'transmissionProtocol', bytes: textPdf(['ELSTER-Übertragungsprotokoll', `Umsatzsteuer-Voranmeldung 4. Quartal ${previousYear}`, 'Erfundenes Beispiel für die Entwicklung.']), fileName: 'elster-protokoll.pdf' }));
+  }
+}
+
+async function seedVatObligations(deps: Deps, ctx: CallContext, storyYear: number): Promise<void> {
+  const previousYear = storyYear - 1;
+  await ensureVatSettings(deps, ctx, previousYear);
+  const contactCtx: CallContext = { ...ctx, permissions: new Set([...ctx.permissions, 'contacts.manage']) };
+  const supplier = (name: string, country: string, reverseCharge: 'eu' | 'other') => ensureReverseChargeSupplier(deps, ctx, name, country, reverseCharge);
+  const ads = await supplier('Werbenetz Ireland Ltd.', 'IE', 'eu');
+  const tools = await supplier('Codewerk Tools Ltd.', 'GB', 'other');
+  const bank = accountByName(deps, 'Vereinskonto');
+
+  const may = 'Werbeanzeigen Mai';
+  await ensureEntry(deps, may, () =>
+    bookEntry(on(deps, `${storyYear}-05-12`), ctx, { entryDate: `${storyYear}-05-12`, text: may, moneyLines: [{ accountId: bank.id, amountCents: -20000 }], allocationLines: [{ categoryId: categoryByKey(deps, 'fundraising').id, amountCents: -20000, contactId: ads.id }] }).then(unwrap),
+  );
+  await ensureVoucher(deps, ctx, entryByText(deps, may), 'voucher-invoice', `${storyYear}-05-10`, 'Rechnung Werbenetz Mai');
+  // E6b (Spec § Seed): ein erfundener Zahlungsdienst in Luxemburg mit dem gemerkten Nein „steuerfreie Zahlungsabwicklung“.
+  const zahlfixName = 'Zahlfix Europe S.à r.l.';
+  const zahlfixKnown = deps.db.select({ id: contacts.id }).from(contacts).where(eq(contacts.name, zahlfixName)).get();
+  const zahlfix = zahlfixKnown ?? unwrap(await createContact(deps, contactCtx, { kind: 'organization', name: zahlfixName, country: 'LU' }));
+  const fee = 'Gebühr Zahlungsdienst';
+  await ensureEntry(deps, fee, () =>
+    bookEntry(on(deps, `${storyYear}-07-03`), ctx, { entryDate: `${storyYear}-07-03`, text: fee, moneyLines: [{ accountId: bank.id, amountCents: -490 }], allocationLines: [{ categoryId: categoryByKey(deps, 'payment-fees').id, amountCents: -490, contactId: zahlfix.id, taxCode: 'none' }] }).then(unwrap),
+  );
+  if (!zahlfixKnown) unwrap(await declineReverseCharge(on(deps, `${storyYear}-07-03`), ctx, { contactId: zahlfix.id, reason: 'paymentServices' }));
+  // Designer Runde 8 (Fachlich 1): ein erfundener Anbieter in Österreich ohne Merkmal, ohne gemerktes Nein und ohne
+  // Partnerangaben — an ihm stellt die Buchung die Prüffrage § 13b (Motive 073, 093, 094). „Hilfswerk International“ ist
+  // Partner und wird nicht mehr gefragt.
+  const printerName = 'Druckerei Alpenblick GmbH';
+  if (!deps.db.select({ id: contacts.id }).from(contacts).where(eq(contacts.name, printerName)).get()) unwrap(await createContact(deps, contactCtx, { kind: 'organization', name: printerName, country: 'AT' }));
+
+  // E6b: Q2 erst festgeschrieben (nach Ende des Zeitraums, im offenen Jahr), dann abgegeben — mit Kennzahlen, Fassung
+  // und ELSTER-Protokoll. Gab es die Abgabe schon (Seed vor E6b), verknüpft das Festschreiben sie mit der Fassung.
+  const q2 = `${storyYear}-Q2`;
+  const filedQ2 = on(deps, `${storyYear}-07-08`);
+  // Voranmeldungen nach Kennzahlen kennt Kompass ab 2025 (`vat-forms.ts`): Liegt das Stichjahr davor, bleibt Q2 ohne Fassung.
+  const hasForm = vatFormFor('advance', storyYear) !== null;
+  if (hasForm && !deps.db.select({ id: financeReports.id }).from(financeReports).where(and(eq(financeReports.reportKey, 'vatAdvanceReturn'), eq(financeReports.params, JSON.stringify({ vatPeriod: q2 })))).get()) {
+    unwrap(await finalizeFinanceReport(filedQ2, ctx, { report: 'vatAdvanceReturn', params: { vatPeriod: q2 } }));
+  }
+  if (!deps.db.select({ id: financeVatFilings.id }).from(financeVatFilings).where(eq(financeVatFilings.period, q2)).get()) {
+    unwrap(await recordVatFiling(filedQ2, ctx, { period: q2, filedOn: `${storyYear}-07-08` }));
+  }
+  const filing = deps.db.select().from(financeVatFilings).where(eq(financeVatFilings.period, q2)).get()!;
+  // E9 (Board Umsatzsteuer 8b): Mit festgeschriebener Fassung liegt auch die abgegebene Fassung als PDF ab. Ohne Fassung
+  // (Stichjahr vor 2025) lehnt der Dienst sie ab (`vatFilingNotFinalized`) — dann bleibt sie weg.
+  if (filing.reportId && !filing.filedReturnDocumentId) {
+    unwrap(await fileVatFilingDocument(filedQ2, ctx, { filingId: filing.id, slot: 'filedReturn', bytes: textPdf(['Umsatzsteuer-Voranmeldung, abgegebene Fassung', `2. Quartal ${storyYear}`, 'Platzhalter für das ELSTER-PDF', 'Erfundenes Beispiel für die Entwicklung.']), fileName: 'voranmeldung.pdf' }));
+  }
+  if (!filing.transmissionProtocolDocumentId) {
+    unwrap(await fileVatFilingDocument(filedQ2, ctx, { filingId: filing.id, slot: 'transmissionProtocol', bytes: textPdf(['ELSTER-Übertragungsprotokoll', `Umsatzsteuer-Voranmeldung 2. Quartal ${storyYear}`, 'Erfundenes Beispiel für die Entwicklung.']), fileName: 'elster-protokoll.pdf' }));
+  }
+
+  const abo = 'Software-Abo Codewerk';
+  await ensureEntry(deps, abo, () =>
+    bookEntry(on(deps, `${storyYear}-07-03`), ctx, { entryDate: `${storyYear}-07-03`, text: abo, moneyLines: [{ accountId: bank.id, amountCents: -4900 }], allocationLines: [{ categoryId: categoryByKey(deps, 'office').id, amountCents: -4900, contactId: tools.id, serviceDate: `${storyYear}-07-01` }] }).then(unwrap),
+  );
+  await ensureVoucher(deps, ctx, entryByText(deps, abo), 'voucher-invoice', `${storyYear}-07-01`, 'Rechnung Software-Abo Codewerk');
+}
+
+/** Ein Beleg an zwei Buchungen (Belegprüfung „mehrfach verwendet“, B1). */
+async function seedReusedVoucher(deps: Deps, ctx: CallContext, storyYear: number): Promise<void> {
+  const bank = accountByName(deps, 'Vereinskonto');
+  const program = categoryByKey(deps, 'program-costs');
+  const [first, second] = ['Druckerei Vereinszeitung Rate 1', 'Druckerei Vereinszeitung Rate 2'];
+  await ensureEntry(deps, first, () => bookEntry(deps, ctx, { entryDate: `${storyYear}-05-05`, text: first, moneyLines: [{ accountId: bank.id, amountCents: -12000 }], allocationLines: [{ categoryId: program.id, amountCents: -12000 }] }).then(unwrap));
+  await ensureEntry(deps, second, () => bookEntry(deps, ctx, { entryDate: `${storyYear}-06-05`, text: second, moneyLines: [{ accountId: bank.id, amountCents: -12000 }], allocationLines: [{ categoryId: program.id, amountCents: -12000 }] }).then(unwrap));
+  const invoice = await ensureVoucher(deps, ctx, entryByText(deps, first), 'voucher-invoice', `${storyYear}-05-02`, 'Rechnung Druckerei Vereinszeitung');
+  const secondEntry = entryByText(deps, second);
+  if (invoice && !deps.db.select({ id: financeEntryDocuments.id }).from(financeEntryDocuments).where(eq(financeEntryDocuments.entryId, secondEntry.id)).get()) {
+    unwrap(await attachDocument(on(deps, `${storyYear}-06-05`), { ...ctx, permissions: new Set([...ctx.permissions, 'dms.view']) }, { entryId: secondEntry.id, documentId: invoice.documentId }));
+  }
+}
+
+/**
+ * Rechenschaft D1 — die Kassenprüfung des Vorjahres (Spec § D1, Plan D1a Task 11). Mira Klein (Kernseed, Rolle
+ * Kassenprüfer) prüft in Kompass, mit ihrem eigenen Kontext; Holger Brandt (erfunden, ohne Vorstandsrolle) auf Papier.
+ *
+ * Keine Transaktion um das Ganze: Die Dienste sind asynchron und öffnen ihre eigene (better-sqlite3 kennt keine
+ * asynchrone). Stattdessen setzt jeder Schritt dort fort, wo ein abgebrochener Lauf stehen blieb (Plan D1d Task 4) —
+ * und ist der Bericht abgelegt, bleibt alles, wie es ist.
+ */
+async function seedAudit(deps: Deps, ctx: CallContext, previousFiscalYearId: string, previousYear: number, storyYear: number): Promise<void> {
+  // Liegt ein Bericht ab (auch wenn danach eine Nachprüfung läuft), ist die Prüfung des Seeds getan.
+  if (lastFiledReportInternal(deps.db, previousFiscalYearId)) return;
+  const existingReport = currentReportInternal(deps.db, previousFiscalYearId, 'report');
+  const mira = deps.db.select().from(schema.users).where(eq(schema.users.email, 'mira@kompass.local')).get();
+  const usersCtx: CallContext = { ...ctx, permissions: new Set(deps.registry.permissionKeys) };
+  const contactCtx: CallContext = { ...ctx, permissions: new Set([...ctx.permissions, 'contacts.manage']) };
+  const auditors = () => deps.db.select().from(financeAuditAuditors).where(eq(financeAuditAuditors.fiscalYearId, previousFiscalYearId)).all();
+  const holger = async () => {
+    const known = deps.db.select({ id: contacts.id }).from(contacts).where(and(eq(contacts.firstName, 'Holger'), eq(contacts.lastName, 'Brandt'))).get();
+    return known ?? unwrap(await createContact(deps, contactCtx, { kind: 'person', salutation: 'Herr', firstName: 'Holger', lastName: 'Brandt', street: 'Am Mühlbach 12', postalCode: '12347', city: 'Musterstadt' }));
+  };
+  const scan = () => textPdf([`Prüfbericht ${previousYear}`, 'Platzhalter für den unterschriebenen Scan']);
+  if (!mira) {
+    // Ohne Kernseed (isolierte Modul-Tests) gibt es Mira nicht: Dann prüft Holger Brandt allein auf Papier — Vordruck
+    // drucken, Scan ablegen, wie es die Schatzmeisterin täte.
+    if (!auditors().some((a) => a.mode === 'paper')) unwrap(await saveAuditor(deps, ctx, { fiscalYearId: previousFiscalYearId, contactId: (await holger()).id, mode: 'paper', confidential: true, electedOn: `${previousYear}-04-12` }));
+    const blank = unwrap(await printAuditReportBlank(deps, ctx, { fiscalYearId: previousFiscalYearId }));
+    unwrap(await fileAuditReportScan(deps, ctx, { reportId: blank.reportId, bytes: scan(), fileName: 'pruefbericht.pdf' }));
+    return;
+  }
+  // Für die Abnahme mit Miras Nutzer: dasselbe Passwort wie die Verwaltung, auf dem Weg des Betriebs (wie bei Nadja).
+  if (!mira.lastLoginAt) {
+    const { startPassword } = unwrap(await resetStartPassword(deps, usersCtx, { id: mira.id }));
+    const session = unwrap(await login(deps, { email: mira.email, password: startPassword, ipAddress: null, requestId: ctx.requestId }));
+    unwrap(await changeOwnPassword(deps, { ...ctx, userId: mira.id, permissions: new Set() }, session.sessionId, { currentPassword: startPassword, newPassword: SEED_ADMIN_PASSWORD }));
+  }
+  let miraContactId = contactIdForUserInternal(deps.db, mira.id);
+  if (!miraContactId) {
+    miraContactId = unwrap(await createContact(deps, contactCtx, { kind: 'person', salutation: 'Frau', firstName: 'Mira', lastName: 'Klein', street: 'Lindenallee 7', postalCode: '12346', city: 'Musterstadt' })).id;
+    unwrap(await linkUserToContact(deps, usersCtx, { userId: mira.id, contactId: miraContactId }));
+  }
+  const miraAuditor = auditors().find((a) => a.contactId === miraContactId) ?? unwrap(await saveAuditor(deps, ctx, { fiscalYearId: previousFiscalYearId, contactId: miraContactId, mode: 'kompass', confidential: true, electedOn: `${previousYear}-04-12` }));
+  const paperAuditor = auditors().find((a) => a.mode === 'paper') ?? unwrap(await saveAuditor(deps, ctx, { fiscalYearId: previousFiscalYearId, contactId: (await holger()).id, mode: 'paper', confidential: true, electedOn: `${previousYear}-04-12` }));
+  const paperContactId = paperAuditor.contactId;
+
+  // Ab hier schreibt Mira selbst — mit ihren Rechten, nicht mit denen des Seeds (Prüfung ist eine persönliche Erklärung).
+  const miraCtx: CallContext = { ...ctx, userId: mira.id, permissions: getEffectivePermissions(deps.db, deps.registry, mira.id) };
+  const entries = deps.db.select({ id: financeEntries.id }).from(financeEntries).where(and(eq(financeEntries.fiscalYearId, previousFiscalYearId), eq(financeEntries.status, 'final'))).orderBy(asc(financeEntries.entryDate), asc(financeEntries.number)).all();
+  if (!deps.db.select({ id: financeAuditSamples.id }).from(financeAuditSamples).where(eq(financeAuditSamples.auditorId, miraAuditor.id)).get()) {
+    for (const entry of entries.slice(0, 3)) unwrap(await setSample(deps, miraCtx, { fiscalYearId: previousFiscalYearId, entryId: entry.id, sampled: true }));
+  }
+  // Schon durchgesehen: ein stummer Schritt.
+  for (const section of ['journal', 'reconciliation', 'vouchers'] as const) unwrap(await markSectionReviewed(deps, miraCtx, { fiscalYearId: previousFiscalYearId, section }));
+
+  // Vermerke in allen Zuständen: geklärt, beantwortet, offen, eine Feststellung, eine Frage für den Papier-Prüfer.
+  if (!deps.db.select({ id: financeAuditRemarks.id }).from(financeAuditRemarks).where(eq(financeAuditRemarks.fiscalYearId, previousFiscalYearId)).get()) {
+    const [first, second] = entries;
+    if (first) {
+      const resolved = unwrap(await createAuditRemark(deps, miraCtx, { fiscalYearId: previousFiscalYearId, kind: 'question', targetType: 'entry', targetId: first.id, text: 'Wofür war diese Zahlung? Der Verwendungszweck ist knapp.' }));
+      unwrap(await answerAuditRemark(deps, ctx, { remarkId: resolved.id, text: 'Futter für die Pflegestelle Nord, Rechnung liegt als Beleg bei.' }));
+      unwrap(await resolveAuditRemark(deps, miraCtx, { remarkId: resolved.id }));
+    }
+    if (second) {
+      const answered = unwrap(await createAuditRemark(deps, miraCtx, { fiscalYearId: previousFiscalYearId, kind: 'question', targetType: 'entry', targetId: second.id, text: 'Gibt es zu dieser Buchung eine Quittung?' }));
+      unwrap(await answerAuditRemark(deps, ctx, { remarkId: answered.id, text: 'Die Quittung reiche ich nach.' }));
+    }
+    unwrap(await createAuditRemark(deps, miraCtx, { fiscalYearId: previousFiscalYearId, kind: 'question', targetType: 'report', targetId: 'cashReport', text: 'Warum ist der Bestand der Zählkasse am Jahresende so hoch?' }));
+    unwrap(await createAuditRemark(deps, miraCtx, { fiscalYearId: previousFiscalYearId, kind: 'finding', targetType: 'year', targetId: previousFiscalYearId, text: 'Zwei Buchungen ohne Beleg sind begründet, die Begründung ist knapp.' }));
+    unwrap(await createAuditRemark(deps, miraCtx, { fiscalYearId: previousFiscalYearId, kind: 'question', targetType: 'year', targetId: previousFiscalYearId, text: 'Wurde die Spendendose im Dezember geleert?', onBehalfOfAuditorId: paperAuditor.id }));
+  }
+
+  // Die Zählkasse wird am Prüfungstag im Beisein beider Prüfer gezählt (Designer 12f) — ohne Abweichung.
+  const examDay = `${storyYear}-02-15`;
+  const kasse = accountByName(deps, 'Zählkasse');
+  if (kasse && !deps.db.select({ id: financeCashCountWitnesses.countId }).from(financeCashCountWitnesses).where(eq(financeCashCountWitnesses.auditorId, miraAuditor.id)).get()) {
+    const book = accountBalancesAt(deps.db, examDay).find((b) => b.accountId === kasse.id)?.balanceCents ?? 0;
+    // Am Prüfungstag selbst angelegt, wie jedes Dokument des Seeds an seinem Datum (seed-story.test.ts).
+    unwrap(await countCash(seedClockAt(deps, seedMoment(deps, examDay)), ctx, { accountId: kasse.id, countedOn: examDay, countedCents: book, counterOneContactId: miraContactId, counterTwoContactId: paperContactId, witnessAuditorIds: [miraAuditor.id, paperAuditor.id] }));
+  }
+
+  // Der Bericht: Mira schreibt, gibt zum Unterschreiben frei und legt den Scan ab (Platzhalter-PDF).
+  const report = existingReport ?? loadReport(deps.db, unwrap(await createAuditReportDraft(deps, miraCtx, { fiscalYearId: previousFiscalYearId, kind: 'report' })).id)!;
+  if (report.state === 'draft') {
+    unwrap(await saveAuditReportExamination(deps, miraCtx, { reportId: report.id, dates: [examDay], place: 'Vereinsheim' }));
+    unwrap(await saveAuditReportResult(deps, miraCtx, { reportId: report.id, result: 'withFindings', recommendation: 'discharge' }));
+    unwrap(await markAuditReportReadyToSign(deps, miraCtx, { reportId: report.id }));
+  }
+  unwrap(await fileAuditReportScan(deps, miraCtx, { reportId: report.id, bytes: scan(), fileName: 'pruefbericht.pdf' }));
+}
+
+/** Erfundene Sachwerte und eine erhaltene Kaution im Vorjahr (ein Gegenstand, eine Verpflichtung); einmal je Bezeichnung. */
+async function seedOtherAssets(deps: Deps, ctx: CallContext, previousYear: number): Promise<void> {
+  const entries = [
+    { kind: 'asset', label: 'Transportboxen (12 Stück)', valueCents: 36000, basis: 'Rechnung', recordedFrom: `${previousYear}-03-15` },
+    { kind: 'liability', label: 'Erhaltene Kaution für ein Leihgerät', valueCents: 15000, basis: 'Vertrag', recordedFrom: `${previousYear}-09-01` },
+  ] as const;
+  for (const entry of entries) {
+    if (deps.db.select({ id: financeOtherAssets.id }).from(financeOtherAssets).where(eq(financeOtherAssets.label, entry.label)).get()) continue;
+    unwrap(await saveOtherAsset(deps, ctx, entry));
+  }
+}
+
+/** Je Bankkonto des Vorjahres ohne deckenden Auszug ein Platzhalter-PDF bis zum 31.12., am Tag des Auszugs abgelegt. */
+async function seedStatementPdfs(deps: Deps, ctx: CallContext, previousFiscalYearId: string): Promise<void> {
+  const year = deps.db.select().from(financeFiscalYears).where(eq(financeFiscalYears.id, previousFiscalYearId)).get()!;
+  for (const row of accountStatementsForYearInternal(deps.db, year.id).filter((r) => r.kind === 'bank' && r.needsPdf)) {
+    const bytes = textPdf([`Kontoauszug ${row.name}`, `${paperDate(isoDay(year.startsOn))} bis ${paperDate(isoDay(year.endsOn))}`, 'Erfundenes Beispiel für die Entwicklung.']);
+    unwrap(await fileAccountStatementDocument(on(deps, year.endsOn), ctx, { accountId: row.accountId, periodFrom: year.startsOn, periodTo: year.endsOn, bytes, fileName: 'kontoauszug.pdf' }));
+  }
+}
+
+/** Die Schatzmeisterin des Seeds und ihre Nachfolgerin — erfunden; Schatzmeisterin seit Beginn des Vorjahres. */
+async function seedTreasurers(deps: Deps, ctx: CallContext, storyYear: number): Promise<{ treasurer: string; successor: string }> {
+  const contactCtx: CallContext = { ...ctx, permissions: new Set([...ctx.permissions, 'contacts.manage']) };
+  const person = async (firstName: string, lastName: string): Promise<string> => {
+    const found = deps.db.select({ id: contacts.id }).from(contacts).where(and(eq(contacts.firstName, firstName), eq(contacts.lastName, lastName))).get();
+    return found?.id ?? unwrap(await createContact(deps, contactCtx, { kind: 'person', firstName, lastName })).id;
+  };
+  const treasurer = await person('Tanja', 'Gerber');
+  const successor = await person('Lena', 'Brückner');
+  if (!deps.db.select({ id: contactRoles.id }).from(contactRoles).where(and(eq(contactRoles.contactId, treasurer), eq(contactRoles.role, 'treasurer'))).get()) {
+    unwrap(await addContactRole(deps, contactCtx, { id: treasurer, role: 'treasurer', since: `${storyYear - 1}-01-01` }));
+  }
+  return { treasurer, successor };
+}
+
+/** Je aktiver Kasse eine Zählung am 31.12. des Vorjahres ohne Abweichung (Schritt 2), einmal. */
+async function seedYearEndCashCount(deps: Deps, ctx: CallContext, previousYear: number): Promise<void> {
+  const endsOn = `${previousYear}-12-31`;
+  const { treasurer, successor } = await seedTreasurers(deps, ctx, previousYear + 1);
+  const balances = new Map(accountBalancesAt(deps.db, endsOn).map((b) => [b.accountId, b.balanceCents]));
+  for (const account of deps.db.select().from(financeAccounts).where(and(eq(financeAccounts.kind, 'cash'), eq(financeAccounts.isActive, true))).all()) {
+    if (deps.db.select({ id: financeCashCounts.id }).from(financeCashCounts).where(and(eq(financeCashCounts.accountId, account.id), eq(financeCashCounts.countedOn, endsOn))).get()) continue;
+    unwrap(await countCash(on(deps, endsOn), ctx, { accountId: account.id, countedOn: endsOn, countedCents: Math.max(0, balances.get(account.id) ?? 0), counterOneContactId: treasurer, counterTwoContactId: successor }));
+  }
+}
+
+/** Erfundene Begründungen der Bestätigungen im Jahresabschluss des Seeds. */
+const CLOSING_NOTES: Partial<Record<ClosingStepKey, string | null>> = {
+  statements: null,
+  lists: 'Die Belege ohne Buchung gehören ins Folgejahr; fremdes Geld ist weitergeleitet.',
+  openItems: 'Offene Zahlungen am Stichtag geprüft, im Januar beglichen.',
+  purposes: 'Restmittel der Zwecke gehen ins Folgejahr.',
+  reserves: 'Beschlüsse liegen ab, Zuführungen sind erfasst.',
+  confirmations: 'Spenden ohne Bestätigung: vereinfachter Nachweis oder kein Wunsch der Spender.',
+};
+
+/**
+ * Schritt 12 mit Grund statt Wiederholung des Ergebnisses (Designer Runde 5, 1.3 Nr. 3): Das Jahr liegt mitten im
+ * dreijährigen Erklärungszeitraum, abgegeben wird erst nach dessen Ende. Erfunden.
+ */
+
+/**
+ * Rechenschaft D2, seit Plan seed-mehrjahre über die drei abgeschlossenen Jahre: der Erklärungszeitraum vom ersten
+ * Seed-Jahr bis zum Vorjahr — angefordert im Januar, alle Pflichtangaben (erfunden), die Werte für die Anlage Gem im April
+ * festgeschrieben, im Mai abgegeben mit ELSTER-PDF und Übertragungsprotokoll, noch ohne Bescheid; dazu der offene
+ * Zeitraum des Stichjahres ohne Angaben. Die Satzung wurde im Januar des mittleren Jahres neu gefasst (darauf der
+ * § 60a-Bescheid vom 01.03.), die Beiträge beschloss das Jahrestreffen des ersten Jahres. Persönliches Festschreiben über
+ * den Kanal des Seeds (`ui`). Die Kontoauszüge liegen vorher (sonst `reportStatementsMissing`). Einmal.
+ */
+async function seedTaxReturn(deps: Deps, ctx: CallContext, previousFiscalYearId: string, storyYear: number): Promise<void> {
+  const prev = storyYear - 1;
+  const first = storyYear - SEED_CLOSED_YEARS;
+  // Für die Platzhalter-PDFs: `textPdf` kennt nur Latin-1, also „bis“ statt Halbgeviertstrich.
+  const label = first === prev ? String(prev) : `${first} bis ${prev}`;
+  if (!taxPeriodOfYearInternal(deps.db, previousFiscalYearId)) {
+    await seedStatementPdfs(deps, ctx, previousFiscalYearId);
+    const years = deps.db.select().from(financeFiscalYears).orderBy(asc(financeFiscalYears.startsOn)).all().filter((y) => y.startsOn >= `${first}-01-01` && y.endsOn <= `${prev}-12-31`);
+    const replacementId = reserveNamedInternal(deps, 'Ersatz Transporter')?.id;
+    const jan = on(deps, `${storyYear}-01-12`);
+    const period = unwrap(await createTaxPeriod(jan, ctx, { firstFiscalYearId: years[0]!.id, lastFiscalYearId: previousFiscalYearId, requestedOn: `${storyYear}-01-12`, withTaxAdvisor: false, dueOn: declarationDueOn(prev, false) }));
+    const file = (when: Deps, slot: TaxPeriodDocumentSlot, lines: string[]) => fileTaxPeriodDocument(when, ctx, { id: period.id, slot, bytes: textPdf([...lines, 'Erfundenes Beispiel für die Entwicklung.']), fileName: `${slot}.pdf` }).then(unwrap);
+    await file(jan, 'request', [`Aufforderung zur Abgabe der Steuererklärung ${label}`]);
+    unwrap(
+      await saveTaxPeriodAnswers(on(deps, `${storyYear}-04-15`), ctx, {
+        id: period.id,
+        answers: {
+          churchPurposes: false,
+          charitablePurposes: false,
+          statuteDate: `${storyYear - 2}-01-18`,
+          statuteSubmission: 'onFile',
+          feeResolution: { date: `${first}-03-15` },
+          feeResolutionSubmission: 'onFile',
+          welfare: false,
+          hospital: false,
+          sport: false,
+          gratuitousBenefits: false,
+          withholdingTax50a: false,
+          // Zeile 54: das Wirtschaftsgut der Wiederbeschaffungsrücklage (F8).
+          ...(replacementId ? { replacementAssets: { [replacementId]: { ...REPLACEMENT_ASSET } } } : {}),
+          // Mitglieder am Jahresende, von Hand (F7): drei mehr je Jahr bis 37 im Vorjahr.
+          memberCounts: Object.fromEntries(years.map((y, i) => [y.id, 37 - 3 * (years.length - 1 - i)])),
+        },
+      }),
+    );
+    unwrap(await finalizeFinanceReport(on(deps, `${storyYear}-04-20`), ctx, { report: 'taxReturnGem', params: { taxPeriodId: period.id } }));
+    const may = on(deps, `${storyYear}-05-31`);
+    await file(may, 'filedReturn', [`Körperschaftsteuererklärungen ${label} mit Anlage Gem`, 'Platzhalter für das ELSTER-PDF']);
+    await file(may, 'transmissionProtocol', [`ELSTER-Übertragungsprotokoll ${label}`, 'Platzhalter']);
+    unwrap(await updateTaxPeriod(may, ctx, { id: period.id, filedOn: `${storyYear}-05-31` }));
+  }
+  const storyFiscalYear = deps.db.select().from(financeFiscalYears).where(eq(financeFiscalYears.designation, String(storyYear))).get();
+  if (storyFiscalYear && !taxPeriodOfYearInternal(deps.db, storyFiscalYear.id)) {
+    unwrap(await createTaxPeriod(on(deps, `${storyYear}-06-01`), ctx, { firstFiscalYearId: storyFiscalYear.id, lastFiscalYearId: storyFiscalYear.id, withTaxAdvisor: false, dueOn: declarationDueOn(storyYear, false) }));
+  }
+}
+
+/**
+ * Der Jahresabschluss des Vorjahres bis zum Ende (Rechenschaft C): Bestätigungen, Zahlungsdienst „nicht abstimmbar“,
+ * Ergebnis der MV mit Einzelentlastung, Schritt 12. Persönliche Schritte über den Kanal des Seeds (`ui`). Idempotent:
+ * was schon bestätigt oder gespeichert ist, bleibt.
+ */
+async function seedClosing(deps: Deps, ctx: CallContext, previousFiscalYearId: string, storyYear: number): Promise<void> {
+  await seedTreasurers(deps, ctx, storyYear);
+  // Die Reihenfolge eines Vereinsjahres (Designer Runde 5, 1.3 Nr. 1): Berichte nach der Prüfung im Februar
+  // festgeschrieben, die MV im März, danach die übrigen Bestätigungen.
+  const feb = on(deps, `${storyYear}-02-25`);
+  for (const key of ['incomeStatement', 'assetOverview', 'purposeFunds'] as const) {
+    const finalized = deps.db.select({ id: financeReports.id }).from(financeReports).where(and(eq(financeReports.reportKey, key), eq(financeReports.fiscalYearId, previousFiscalYearId))).get();
+    if (!finalized) unwrap(await finalizeFinanceReport(feb, ctx, { report: key, params: { fiscalYearId: previousFiscalYearId } }));
+  }
+  for (const row of accountStatementsForYearInternal(deps.db, previousFiscalYearId)) {
+    if (row.kind === 'paymentService' && !row.importedBalance && !row.confirmation) unwrap(await confirmAccountForYear(on(deps, `${storyYear}-01-15`), ctx, { fiscalYearId: previousFiscalYearId, accountId: row.accountId, kind: 'notReconcilable' }));
+  }
+  if (!assemblyOfYearInternal(deps.db, previousFiscalYearId)) {
+    const persons = unwrap(await getAssemblyResult(deps, ctx, { fiscalYearId: previousFiscalYearId })).persons;
+    unwrap(await saveAssemblyResult(on(deps, `${storyYear}-03-14`), ctx, { fiscalYearId: previousFiscalYearId, assemblyOn: `${storyYear}-03-14`, accountsApproved: 'yes', dischargeMode: 'individual', discharges: persons.map((p) => ({ contactId: p.contactId, outcome: 'granted' })) }));
+  }
+  const status = unwrap(await getClosingStatus(deps, ctx, { fiscalYearId: previousFiscalYearId }));
+  for (const step of status.steps) {
+    const note = CLOSING_NOTES[step.key];
+    if (step.done || !step.confirmable || step.confirmation || note === undefined) continue;
+    unwrap(await confirmClosingStep(on(deps, `${storyYear}-03-20`), ctx, { fiscalYearId: previousFiscalYearId, step: step.key, ...(note ? { note } : {}) }));
+  }
+}
+
+/**
+ * Im Stichjahr (Rechenschaft C): die Wiedervorlage „Jahresabschluss vor der Mitgliederversammlung“ und eine
+ * Amtsübergabe am 30.06. mit festgehaltenem Zwischenbericht — Zählung, Punkte und Protokoll bleiben offen. Einmal.
+ */
+async function seedHandover(deps: Deps, ctx: CallContext, storyYear: number): Promise<void> {
+  const year = deps.db.select().from(financeFiscalYears).where(eq(financeFiscalYears.designation, String(storyYear))).get();
+  if (!year) return;
+  const followCtx: CallContext = { ...ctx, permissions: new Set([...ctx.permissions, 'followUps.view', 'followUps.manage']) };
+  const title = 'Jahresabschluss vor der Mitgliederversammlung';
+  if (!deps.db.select({ id: schema.followUps.id }).from(schema.followUps).where(and(eq(schema.followUps.entityType, 'financeFiscalYear'), eq(schema.followUps.entityId, year.id), eq(schema.followUps.title, title))).get()) {
+    unwrap(await createFollowUp(deps, followCtx, { entityType: 'financeFiscalYear', entityId: year.id, dueAt: `${storyYear + 1}-02-28`, title }));
+  }
+  if (deps.db.select({ id: financeHandovers.id }).from(financeHandovers).where(eq(financeHandovers.fiscalYearId, year.id)).get()) return;
+  const { treasurer, successor } = await seedTreasurers(deps, ctx, storyYear);
+  const handover = unwrap(await startHandover(deps, ctx, { handoverOn: `${storyYear}-06-30`, fromContactId: treasurer, toContactId: successor }));
+  unwrap(await recordHandoverInterimReport(deps, ctx, { id: handover.id }));
+}
+
+/** Der festgeschriebene Kassenbericht des Vorjahres. */
+async function seedCashReport(deps: Deps, ctx: CallContext, previousFiscalYearId: string): Promise<void> {
+  const finalized = deps.db.select({ id: financeReports.id }).from(financeReports).where(and(eq(financeReports.reportKey, 'cashReport'), eq(financeReports.fiscalYearId, previousFiscalYearId))).get();
+  if (!finalized) unwrap(await finalizeFinanceReport(deps, ctx, { report: 'cashReport', params: { fiscalYearId: previousFiscalYearId } }));
 }
 
 async function grantAuditorRoleToMiraKlein(deps: Deps, ctx: CallContext): Promise<void> {
@@ -834,7 +1463,13 @@ async function seedProjectBookings(deps: Deps, ctx: CallContext, projectId: stri
  */
 async function seedPreviousYearStatement(deps: Deps, ctx: CallContext, previousYear: number): Promise<void> {
   const account = accountByName(deps, 'Vereinskonto');
-  const hasRun = deps.db.select({ id: financeImportRuns.id }).from(financeImportRuns).where(eq(financeImportRuns.accountId, account.id)).limit(1).get();
+  // Je Jahr: ein Auszug des Kontos, der das Jahr berührt (Plan seed-mehrjahre Task 2).
+  const hasRun = deps.db
+    .select({ id: financeImportRuns.id })
+    .from(financeImportRuns)
+    .where(and(eq(financeImportRuns.accountId, account.id), lte(financeImportRuns.periodFrom, `${previousYear}-12-31`), gte(financeImportRuns.periodTo, `${previousYear}-01-01`)))
+    .limit(1)
+    .get();
   if (hasRun || !account.iban) return;
   const closingCents = accountBalancesAt(deps.db, `${previousYear}-12-31`).find((b) => b.accountId === account.id)?.balanceCents ?? 0;
   const bytes = buildCamt053Bytes({ iban: account.iban, from: `${previousYear}-01-01`, to: `${previousYear}-12-31`, openingCents: closingCents, closingCents, stmtId: `JAHR-${previousYear}`, lines: [] });
@@ -951,6 +1586,9 @@ async function seedZugferdInvoices(deps: Deps, ctx: CallContext, storyYear: numb
   const invoices = [
     { subject: `Rechnung TM-${storyYear}-0042 Tierarztpraxis Muster`, filename: `${storyYear}-04-01 Rechnung Tierarztpraxis.pdf`, documentDate: `${storyYear}-04-01`, bytes: () => buildVetInvoicePdf(storyYear) },
     { subject: 'Rechnung BM-7781 Bürobedarf Muster GmbH', filename: `${storyYear}-01-08 Rechnung BM-7781.pdf`, documentDate: `${storyYear}-01-08`, bytes: () => buildOfficeInvoicePdf(storyYear) },
+    // Joe 2026-10-26: ein Anbieter aus den Niederlanden ohne deutsche Steuer (Kategorie AE) — der Rechnungsleser setzt
+    // § 13b als Vorgabe aus der Rechnung, ohne Prüffrage (Designer Runde 8, Fachlich 2).
+    { subject: `Rechnung CW-${storyYear}-118 Cloudwerk B.V.`, filename: `${storyYear}-06-03 Rechnung Cloudwerk.pdf`, documentDate: `${storyYear}-06-03`, bytes: () => buildForeignInvoicePdf(storyYear) },
   ];
   for (const invoice of invoices) {
     const exists = deps.db.select({ id: dmsDocuments.id }).from(dmsDocuments).where(eq(dmsDocuments.subject, invoice.subject)).get();
@@ -1109,7 +1747,7 @@ async function seedProvisionalNoticeDonation(deps: Deps, ctx: CallContext, story
   const greta = await ensureDonationContact(deps, ctx, { kind: 'person', firstName: 'Greta', lastName: 'Sommer' }, { street: 'Lindenallee 23', postalCode: '12343', city: 'Musterstadt' });
   const { text, entryDate, amountCents } = donation;
   await ensureEntry(deps, text, () =>
-    bookEntry(deps, ctx, { entryDate, text, moneyLines: [{ accountId: accountByName(deps, 'Vereinskonto').id, amountCents }], allocationLines: [{ categoryId: categoryByKey(deps, 'donations').id, amountCents, contactId: greta }] }).then(unwrap),
+    bookEntry(on(deps, entryDate), ctx, { entryDate, text, moneyLines: [{ accountId: accountByName(deps, 'Vereinskonto').id, amountCents }], allocationLines: [{ categoryId: categoryByKey(deps, 'donations').id, amountCents, contactId: greta }] }).then(unwrap),
   );
   await ensureVoucher(deps, ctx, entryByText(deps, text), 'voucher-own', entryDate, `Spendeneingang ${text}`);
 }
@@ -1129,7 +1767,10 @@ async function seedNotices(deps: Deps, ctx: CallContext, storyYear: number): Pro
   const donation = provisionalDonation(storyYear);
   const greta = deps.db.select({ id: financeEntries.id }).from(financeEntries).where(eq(financeEntries.text, donation.text)).get();
   if (greta && organizationAddressComplete(deps)) await ensureConfirmation(deps, ctx, incomeLineOf(deps, donation.text).id, donation.issuedOn);
-  unwrap(await saveNotice(deps, ctx, { kind: 'exemptionNotice', ...NOTICE_TAX_OFFICE, noticeDate: `${storyYear - 1}-05-02`, exemptFrom: `${storyYear - 3}-01-01`, assessmentPeriod: `${storyYear - 3}` }));
+  // Der Freistellungsbescheid gilt dem Zeitraum vor den drei Jahren des Seeds: Auf einen Bescheid folgt der nächste
+  // Erklärungszeitraum, die Befreiung wird spätestens alle drei Jahre überprüft (AEAO zu § 59 Nr. 3; Joe F1, Plan
+  // seed-mehrjahre). Bis 0.4.0 stand hier der Veranlagungszeitraum `story-3` — derselbe, den der Zeitraum dann erklärte.
+  unwrap(await saveNotice(deps, ctx, { kind: 'exemptionNotice', ...NOTICE_TAX_OFFICE, noticeDate: `${storyYear - 1}-05-02`, exemptFrom: `${storyYear - 6}-01-01`, assessmentPeriod: `${storyYear - 6}–${storyYear - 4}` }));
   unwrap(await supersedeNotice(deps, ctx, { id: provisional.id, supersededOn: `${storyYear - 1}-05-02` }));
 }
 
@@ -1158,6 +1799,10 @@ async function seedDonations(deps: Deps, ctx: CallContext, storyYear: number): P
   await seedNotices(deps, ctx, storyYear);
   await ensureSigner(deps, ctx, storyYear);
   if (!readSetting<boolean>(deps, 'finance.expenseWaiversEnabled')) unwrap(await setFinanceSwitch(deps, ctx, { key: 'finance.expenseWaiversEnabled', value: true }));
+  // F6b Task 9: der abgeschlossene Serienlauf des Vorjahrs mit Versandvermerk, dazu die Rücklastschrift einer Spende,
+  // die in einer Sammelbestätigung stand (Prüfstein 6). Gleich nach Bescheid, Unterzeichner und Schalter, damit die
+  // Nummern der Bestätigungen den Tagen folgen (N19).
+  await seedConfirmationRun(deps, ctx, storyYear - 1, storyYear);
 
   const erika = await ensureDonationContact(deps, ctx, { kind: 'person', firstName: 'Erika', lastName: 'Beispiel' }, { street: 'Beispielstraße 7', postalCode: '54321', city: 'Beispielstadt' });
   const lukas = await ensureDonationContact(deps, ctx, { kind: 'person', firstName: 'Lukas', lastName: 'Hofmann' }, { street: 'Ulmenweg 12', postalCode: '12345', city: 'Musterstadt' });
@@ -1220,6 +1865,17 @@ async function seedDonations(deps: Deps, ctx: CallContext, storyYear: number): P
   if (!deps.db.select({ id: financeConfirmationLines.id }).from(financeConfirmationLines).where(eq(financeConfirmationLines.lineId, beamer.id)).get()) {
     unwrap(await saveInKindDetails(deps, ctx, { lineId: beamer.id, item: 'Beamer mit Tasche und Fernbedienung', condition: 'gebraucht, zwei Jahre alt, voll funktionsfähig', valuation: 'Preis vergleichbarer gebrauchter Geräte laut Wertnachweis', origin: 'private', proofDocumentId: beamerProof }));
   }
+  // Zurückgenommen mit Rückholspur: per Post versandt, das Original kam zurück. Die Zeile ist danach wieder
+  // bestätigbar und steht unter „Noch nicht bestätigt“.
+  const henrikLine = incomeLineOf(deps, 'Spende Henrik Brandt März');
+  // N19: ausgestellt nach der Spende und vor dem Versand am 27.03. — nicht am Tag des Seeds; vor den Bestätigungen
+  // von heute, damit die Nummern den Tagen folgen.
+  await ensureConfirmation(deps, ctx, henrikLine.id, `${storyYear}-03-25`);
+  const henrikConfirmation = confirmationOfLine(deps, henrikLine.id);
+  if (henrikConfirmation && !henrikConfirmation.voidedAt) {
+    if (!henrikConfirmation.sentAt) unwrap(await recordConfirmationDispatch(deps, ctx, { id: henrikConfirmation.id, sentAt: `${storyYear}-03-27`, sentVia: 'post' }));
+    unwrap(await voidConfirmation(deps, ctx, { id: henrikConfirmation.id, note: 'Betrag doppelt bestätigt', alreadySent: true, originalReturnedOn: `${storyYear}-04-09` }));
+  }
   await ensureConfirmation(deps, ctx, incomeLineOf(deps, 'Spende Erika Beispiel Juni').id);
   await ensureConfirmation(deps, ctx, incomeLineOf(deps, 'Aufwandsspende Fahrtkosten Mai').id);
   await ensureConfirmation(deps, ctx, beamer.id);
@@ -1234,15 +1890,6 @@ async function seedDonations(deps: Deps, ctx: CallContext, storyYear: number): P
     unwrap(await attachSignedConfirmation(deps, ctx, { id: beamerConfirmation.id, bytes: textPdf(['Zuwendungsbestätigung, unterschrieben', '', 'Erfundenes Beispiel für die Entwicklung.']), fileName: 'unterschrieben.pdf' }));
   }
 
-  // Zurückgenommen mit Rückholspur: per Post versandt, das Original kam zurück. Die Zeile ist danach wieder
-  // bestätigbar und steht unter „Noch nicht bestätigt“.
-  const henrikLine = incomeLineOf(deps, 'Spende Henrik Brandt März');
-  await ensureConfirmation(deps, ctx, henrikLine.id);
-  const henrikConfirmation = confirmationOfLine(deps, henrikLine.id);
-  if (henrikConfirmation && !henrikConfirmation.voidedAt) {
-    if (!henrikConfirmation.sentAt) unwrap(await recordConfirmationDispatch(deps, ctx, { id: henrikConfirmation.id, sentAt: `${storyYear}-03-27`, sentVia: 'post' }));
-    unwrap(await voidConfirmation(deps, ctx, { id: henrikConfirmation.id, note: 'Betrag doppelt bestätigt', alreadySent: true, originalReturnedOn: `${storyYear}-04-09` }));
-  }
 }
 
 /**
@@ -1266,42 +1913,42 @@ async function seedRunDonationEntries(deps: Deps, ctx: CallContext, previousYear
   // Bewusst ohne Anschrift — der Serienlauf überspringt diese Zeile mit „Anschrift fehlt“.
   const jan = await ensureDonationContact(deps, ctx, { kind: 'person', firstName: 'Jan', lastName: 'Moser' });
 
-  await ensureEntry(deps, 'Spende Nora Lehmann Vorjahr', () =>
-    bookEntry(deps, ctx, {
+  await ensureEntry(deps, 'Spende Nora Lehmann', () =>
+    bookEntry(on(deps, `${previousYear}-09-10`), ctx, {
       entryDate: `${previousYear}-09-10`,
-      text: 'Spende Nora Lehmann Vorjahr',
+      text: 'Spende Nora Lehmann',
       moneyLines: [{ accountId: bank.id, amountCents: 6000 }],
       allocationLines: [{ categoryId: donations.id, amountCents: 6000, contactId: nora }],
     }).then(unwrap),
   );
-  await ensureVoucher(deps, ctx, entryByText(deps, 'Spende Nora Lehmann Vorjahr'), 'voucher-own', `${previousYear}-09-10`, 'Spendeneingang Nora Lehmann Vorjahr');
+  await ensureVoucher(deps, ctx, entryByText(deps, 'Spende Nora Lehmann'), 'voucher-own', `${previousYear}-09-10`, 'Spendeneingang Nora Lehmann');
 
-  await ensureEntry(deps, 'Spende Paul Winter Vorjahr', () =>
-    bookEntry(deps, ctx, {
+  await ensureEntry(deps, 'Spende Paul Winter', () =>
+    bookEntry(on(deps, `${previousYear}-10-02`), ctx, {
       entryDate: `${previousYear}-10-02`,
-      text: 'Spende Paul Winter Vorjahr',
+      text: 'Spende Paul Winter',
       moneyLines: [{ accountId: bank.id, amountCents: 9000 }],
       // Zwei Zeilen, damit der Serienlauf hier eine Sammelbestätigung ausstellt (eine einzige Zeile ergäbe eine Einzelbestätigung).
       allocationLines: [{ categoryId: donations.id, amountCents: 5000, contactId: paul }, { categoryId: donations.id, amountCents: 4000, contactId: paul }],
     }).then(unwrap),
   );
-  await ensureVoucher(deps, ctx, entryByText(deps, 'Spende Paul Winter Vorjahr'), 'voucher-own', `${previousYear}-10-02`, 'Spendeneingang Paul Winter Vorjahr');
+  await ensureVoucher(deps, ctx, entryByText(deps, 'Spende Paul Winter'), 'voucher-own', `${previousYear}-10-02`, 'Spendeneingang Paul Winter');
 
-  await ensureEntry(deps, 'Aufwandsspende Fahrtkosten Vorjahr', () =>
-    bookEntry(deps, ctx, {
+  await ensureEntry(deps, 'Aufwandsspende Fahrtkosten Sina Krüger', () =>
+    bookEntry(on(deps, `${previousYear}-11-05`), ctx, {
       entryDate: `${previousYear}-11-05`,
-      text: 'Aufwandsspende Fahrtkosten Vorjahr',
+      text: 'Aufwandsspende Fahrtkosten Sina Krüger',
       moneyLines: [],
       allocationLines: [{ categoryId: waivers.id, amountCents: 3200, contactId: sina }, { categoryId: travel.id, amountCents: -3200 }],
     }).then(unwrap),
   );
-  await ensureVoucher(deps, ctx, entryByText(deps, 'Aufwandsspende Fahrtkosten Vorjahr'), 'voucher-own', `${previousYear}-11-05`, 'Verzichtserklärung Fahrtkosten Vorjahr');
+  await ensureVoucher(deps, ctx, entryByText(deps, 'Aufwandsspende Fahrtkosten Sina Krüger'), 'voucher-own', `${previousYear}-11-05`, 'Verzichtserklärung Fahrtkosten Sina Krüger');
 
   // Ohne Anschrift, bewusst ohne Beleg — der Abschluss des Vorjahrs verlangt dafür eine Begründung (siehe `seedFinance`).
-  await ensureEntry(deps, 'Spende Jan Moser Vorjahr', () =>
-    bookEntry(deps, ctx, {
+  await ensureEntry(deps, 'Spende Jan Moser', () =>
+    bookEntry(on(deps, `${previousYear}-11-20`), ctx, {
       entryDate: `${previousYear}-11-20`,
-      text: 'Spende Jan Moser Vorjahr',
+      text: 'Spende Jan Moser',
       moneyLines: [{ accountId: bank.id, amountCents: 4500 }],
       allocationLines: [{ categoryId: donations.id, amountCents: 4500, contactId: jan }],
     }).then(unwrap),
@@ -1321,26 +1968,27 @@ async function seedRunDonationEntries(deps: Deps, ctx: CallContext, previousYear
 async function seedConfirmationRun(deps: Deps, ctx: CallContext, previousYear: number, storyYear: number): Promise<void> {
   if (!organizationAddressComplete(deps)) return;
 
+  // N19: Der Serienlauf des Vorjahrs läuft im Februar des Stichjahrs — nach Gretas Bestätigung vom 10.02. (die Nummern
+  // folgen den Tagen), vor der Rücklastschrift vom 18.02., die Noras Sammelbestätigung „zu korrigieren“ macht, und nicht
+  // am Tag des Seeds.
+  const runDay = `${storyYear}-02-12`;
   let run = deps.db.select().from(financeConfirmationRuns).where(eq(financeConfirmationRuns.year, previousYear)).get();
   if (!run) {
-    const started = unwrap(await startConfirmationRun(deps, ctx, { year: previousYear }));
+    const started = unwrap(await startConfirmationRun(on(deps, runDay), ctx, { year: previousYear }));
     run = deps.db.select().from(financeConfirmationRuns).where(eq(financeConfirmationRuns.id, started.id)).get()!;
   }
   if (!run.finishedAt) {
-    unwrap(await continueConfirmationRun(deps, ctx, { runId: run.id, max: 50 }));
+    unwrap(await continueConfirmationRun(on(deps, runDay), ctx, { runId: run.id, max: 50 }));
     run = deps.db.select().from(financeConfirmationRuns).where(eq(financeConfirmationRuns.id, run.id)).get()!;
   }
-  if (!run.dispatchedAt) {
-    const sentAt = todayIn(deps);
-    unwrap(await dispatchRunConfirmations(deps, ctx, { runId: run.id, sentAt, sentVia: 'post' }));
-  }
+  if (!run.dispatchedAt) unwrap(await dispatchRunConfirmations(on(deps, runDay), ctx, { runId: run.id, sentAt: runDay, sentVia: 'post' }));
 
   // Prüfstein 6: die Rücklastschrift auf Nora Lehmanns maschinell bestätigte Spende.
-  const noraLine = incomeLineOf(deps, 'Spende Nora Lehmann Vorjahr');
-  await ensureEntry(deps, 'Rücklastschrift Nora Lehmann Vorjahr', () =>
+  const noraLine = incomeLineOf(deps, 'Spende Nora Lehmann');
+  await ensureEntry(deps, 'Rücklastschrift Nora Lehmann', () =>
     bookEntry(deps, ctx, {
       entryDate: `${storyYear}-02-18`,
-      text: 'Rücklastschrift Nora Lehmann Vorjahr',
+      text: 'Rücklastschrift Nora Lehmann',
       moneyLines: [{ accountId: accountByName(deps, 'Vereinskonto').id, amountCents: -6000 }],
       allocationLines: [{ categoryId: categoryByKey(deps, 'donations').id, amountCents: -6000, contactId: noraLine.contactId!, originLineId: noraLine.id }],
     }).then(unwrap),
@@ -1409,7 +2057,7 @@ function expenseClaimSeeded(deps: Deps, marker: string): boolean {
 /**
  * F8a Task 7 (Spec 11.3): Anträge in jedem Zustand — Entwurf ohne Beleg,
  * eingereicht mit Beleg und Fahrt (die Büromaterial-Position trifft später
- * den Kategorievorschlag über „Büromaterial Altjahr“, Annahme 8), freigegeben
+ * den Kategorievorschlag über „Büromaterial Mai“, Annahme 8), freigegeben
  * mit offener Zahlung, ausgezahlt, abgelehnt mit Grund, und ein Verzicht
  * (Aufwandsspende) mit Verzichtserklärung und unterschriebener Fassung.
  * „Nadja Vogt“ reicht ein, „Jonas Feld“ (schon `finance.approve`, Task 2)
@@ -1437,7 +2085,8 @@ async function seedExpenseClaims(deps: Deps, ctx: CallContext, storyYear: number
   const officeCat = categoryByKey(deps, 'office');
   const travelCat = categoryByKey(deps, 'travel');
   const bank = accountByName(deps, 'Vereinskonto');
-  const receiptBytes = () => textPdf(['Beleg', '', 'Erfundenes Beispiel für die Entwicklung.']);
+  // Je Beleg ein eigener Inhalt: Gleiche Bytes wären derselbe Nachweis, und die Belegprüfung fände ihn mehrfach (Designer Runde 6, 266).
+  const receiptBytes = (what: string) => textPdf(['Beleg', what, '', 'Erfundenes Beispiel für die Entwicklung.']);
   const IBAN = 'DE93999999990000000001';
 
   // 1) Entwurf ohne Beleg — unvollständig, wie ihn die laufende Sicherung zulässt.
@@ -1467,7 +2116,7 @@ async function seedExpenseClaims(deps: Deps, ctx: CallContext, storyYear: number
     const draft = unwrap(
       await saveExpenseDraft(deps, submitCtx, { waiver: false, iban: IBAN, positions: [{ kind: 'receipt', positionDate: `${storyYear}-06-12`, amountCents: 4200, purpose: 'Getränke für die Versammlung' }] }),
     );
-    unwrap(await uploadExpenseReceipt(on(deps, draft.positions[0]!.positionDate!), submitCtx, { claimId: draft.id, positionId: draft.positions[0]!.id, bytes: receiptBytes(), fileName: 'beleg-getraenke.pdf' }));
+    unwrap(await uploadExpenseReceipt(on(deps, draft.positions[0]!.positionDate!), submitCtx, { claimId: draft.id, positionId: draft.positions[0]!.id, bytes: receiptBytes('beleg-getraenke.pdf'), fileName: 'beleg-getraenke.pdf' }));
     const submitted = unwrap(await submitExpenseClaim(deps, submitCtx, { id: draft.id }));
     unwrap(await approveExpenseClaim(deps, approveCtx, { claimId: submitted.id, positions: [{ positionId: submitted.positions[0]!.id, categoryId: officeCat.id }] }));
   }
@@ -1477,7 +2126,7 @@ async function seedExpenseClaims(deps: Deps, ctx: CallContext, storyYear: number
     const draft = unwrap(
       await saveExpenseDraft(deps, submitCtx, { waiver: false, iban: IBAN, positions: [{ kind: 'receipt', positionDate: `${storyYear}-06-18`, amountCents: 2350, purpose: 'Portokosten Mitgliederbrief' }] }),
     );
-    unwrap(await uploadExpenseReceipt(on(deps, draft.positions[0]!.positionDate!), submitCtx, { claimId: draft.id, positionId: draft.positions[0]!.id, bytes: receiptBytes(), fileName: 'beleg-porto.pdf' }));
+    unwrap(await uploadExpenseReceipt(on(deps, draft.positions[0]!.positionDate!), submitCtx, { claimId: draft.id, positionId: draft.positions[0]!.id, bytes: receiptBytes('beleg-porto.pdf'), fileName: 'beleg-porto.pdf' }));
     const submitted = unwrap(await submitExpenseClaim(deps, submitCtx, { id: draft.id }));
     const approved = unwrap(await approveExpenseClaim(deps, approveCtx, { claimId: submitted.id, positions: [{ positionId: submitted.positions[0]!.id, categoryId: officeCat.id }] }));
     unwrap(
@@ -1495,7 +2144,7 @@ async function seedExpenseClaims(deps: Deps, ctx: CallContext, storyYear: number
     const draft = unwrap(
       await saveExpenseDraft(deps, submitCtx, { waiver: false, iban: IBAN, positions: [{ kind: 'receipt', positionDate: `${storyYear}-06-20`, amountCents: 3500, purpose: 'Blumenstrauß zum Jubiläum' }] }),
     );
-    unwrap(await uploadExpenseReceipt(on(deps, draft.positions[0]!.positionDate!), submitCtx, { claimId: draft.id, positionId: draft.positions[0]!.id, bytes: receiptBytes(), fileName: 'beleg-blumen.pdf' }));
+    unwrap(await uploadExpenseReceipt(on(deps, draft.positions[0]!.positionDate!), submitCtx, { claimId: draft.id, positionId: draft.positions[0]!.id, bytes: receiptBytes('beleg-blumen.pdf'), fileName: 'beleg-blumen.pdf' }));
     const submitted = unwrap(await submitExpenseClaim(deps, submitCtx, { id: draft.id }));
     unwrap(await rejectExpenseClaim(deps, approveCtx, { claimId: submitted.id, note: 'Kein Vereinszweck, bitte privat tragen' }));
   }
@@ -1505,7 +2154,7 @@ async function seedExpenseClaims(deps: Deps, ctx: CallContext, storyYear: number
     const draft = unwrap(
       await saveExpenseDraft(deps, submitCtx, { waiver: true, positions: [{ kind: 'receipt', positionDate: `${storyYear}-07-01`, amountCents: 1600, purpose: 'Fahrtkosten Pflegestelle Juli' }] }),
     );
-    unwrap(await uploadExpenseReceipt(on(deps, draft.positions[0]!.positionDate!), submitCtx, { claimId: draft.id, positionId: draft.positions[0]!.id, bytes: receiptBytes(), fileName: 'beleg-fahrtkosten.pdf' }));
+    unwrap(await uploadExpenseReceipt(on(deps, draft.positions[0]!.positionDate!), submitCtx, { claimId: draft.id, positionId: draft.positions[0]!.id, bytes: receiptBytes('beleg-fahrtkosten.pdf'), fileName: 'beleg-fahrtkosten.pdf' }));
     const submitted = unwrap(await submitExpenseClaim(deps, submitCtx, { id: draft.id }));
     unwrap(await createWaiverDeclaration(on(deps, `${storyYear}-07-10`), approveCtx, { claimId: submitted.id, declaredOn: `${storyYear}-07-10` }));
     unwrap(await attachSignedWaiver(on(deps, `${storyYear}-07-10`), approveCtx, { claimId: submitted.id, bytes: textPdf(['Verzichtserklärung, unterschrieben', '', 'Erfundenes Beispiel für die Entwicklung.']) }));
@@ -1701,39 +2350,50 @@ async function seedMittel(deps: Deps, ctx: CallContext, storyYear: number): Prom
   await ensureEntry(deps, 'Ausgabe Notfallhilfe Winter', () =>
     bookEntry(deps, ctx, { entryDate: `${storyYear}-02-20`, text: 'Ausgabe Notfallhilfe Winter', moneyLines: [{ accountId: bank.id, amountCents: -35000 }], allocationLines: [{ categoryId: programCostsCat.id, amountCents: -35000, purposeId: winter.id }] }).then(unwrap),
   );
-  const hasTransfers = deps.db.select({ id: financePurposeTransfers.id }).from(financePurposeTransfers).limit(1).get();
-  if (!hasTransfers) {
+  // Je Umwidmung und je Rücklage über ihren Grund bzw. Namen gesichert, nicht über „gibt es schon eine“: Frühere Jahre
+  // und Vereinsdaten dürfen eigene haben (Plan seed-mehrjahre Task 2).
+  const transferWith = (reason: string) => deps.db.select({ id: financePurposeTransfers.id }).from(financePurposeTransfers).where(eq(financePurposeTransfers.reason, reason)).get();
+  if (!transferWith('Rest nach Abschluss der Hilfe')) {
     const row = deps.db.select().from(financePurposes).where(eq(financePurposes.id, winter.id)).get();
     if (row && !row.fulfilledAt) unwrap(await fulfillPurpose(deps, ctx, { id: winter.id, expectedVersion: row.updatedAt }));
     const rest = unwrap(
       await requestPurposeTransfer(on(deps, `${storyYear}-03-01`), writeCtx, { fromPurposeId: winter.id, toPurposeId: null, amountCents: 10000, transferDate: `${storyYear}-03-01`, reason: 'Rest nach Abschluss der Hilfe', documentUpload: minutes('Protokoll Umwidmung Notfallhilfe', `${storyYear}-03-01`) }),
     );
     unwrap(await approvePurposeTransfer(deps, approveCtx, { id: rest.id }));
-    // 2) Wartet auf Jonas Feld: aus den freien Mitteln in die Jugendfreizeit, angelegt von der Verwaltung.
+  }
+  // 2) Wartet auf Jonas Feld: aus den freien Mitteln in die Jugendfreizeit, angelegt von der Verwaltung.
+  if (!transferWith('Zusage für die Herbstfahrt')) {
     const youth = purposeByName(deps, 'Jugendfreizeit');
     unwrap(
       await requestPurposeTransfer(deps, writeCtx, { fromPurposeId: null, toPurposeId: youth.id, amountCents: 20000, transferDate: `${storyYear}-03-05`, reason: 'Zusage für die Herbstfahrt', documentUpload: minutes('Protokoll Umwidmung Jugendfreizeit') }),
     );
   }
 
-  // 3) Zurückgelegtes Geld — nur, solange es noch keins gibt.
-  const hasReserves = deps.db.select({ id: financeReserves.id }).from(financeReserves).limit(1).get();
-  if (!hasReserves) {
+  // 3) Zurückgelegtes Geld — je Rücklage nur, solange es sie noch nicht gibt; ihre Bewegungen entstehen mit ihr.
+  const reserveNamed = (name: string) => deps.db.select({ id: financeReserves.id }).from(financeReserves).where(eq(financeReserves.name, name)).get();
+  const d = (monthDay: string) => `${storyYear}-${monthDay}`;
+  if (!reserveNamed('Projektmittel Dach')) {
     const dach = purposeByName(deps, 'Dachsanierung Vereinsheim');
-    const d = (monthDay: string) => `${storyYear}-${monthDay}`;
     const project = unwrap(await saveReserve(on(deps, d('02-09')), writeCtx, { kind: 'projectFunds', name: 'Projektmittel Dach', purposeText: 'Neues Vereinsheimdach', purposeId: dach.id, resolutionUpload: minutes('Protokoll Projektmittel Dach', d('02-09')) }));
     unwrap(await recordReserveMovement(on(deps, d('02-10')), writeCtx, { reserveId: project.id, kind: 'allocate', movementDate: d('02-10'), amountCents: 30000, resolutionUpload: minutes('Protokoll Zuführung Projektmittel Dach', d('02-10')) }));
-
-    const replacement = unwrap(await saveReserve(on(deps, d('01-14')), writeCtx, { kind: 'replacement', name: 'Ersatz Transporter', purposeText: 'Ersatz des Vereinsfahrzeugs', resolutionUpload: minutes('Protokoll Ersatz Transporter', d('01-14')) }));
-    unwrap(await recordReserveMovement(on(deps, d('01-15')), writeCtx, { reserveId: replacement.id, kind: 'allocate', movementDate: d('01-15'), amountCents: 20000, resolutionUpload: minutes('Protokoll Zuführung Ersatz Transporter', d('01-15')) }));
-    unwrap(await recordReserveMovement(on(deps, d('03-20')), writeCtx, { reserveId: replacement.id, kind: 'dissolve', movementDate: d('03-20'), resolutionUpload: minutes('Protokoll Auflösung Ersatz Transporter', d('03-20')) }));
-
-    // Die freie Rücklage nutzt 85 % des Höchstbetrags dieses Jahres — über dem Warnwert (80 %), unter der Grenze.
+  }
+  // Seit Plan seed-mehrjahre angespart in den abgeschlossenen Jahren (`seedReplacementReserveYear`); im Stichjahr gekauft.
+  {
+    const known = reserveNamed('Ersatz Transporter');
+    const replacement = known ?? unwrap(await saveReserve(on(deps, d('01-14')), writeCtx, { kind: 'replacement', name: 'Ersatz Transporter', purposeText: 'Ersatz des Vereinsfahrzeugs', resolutionUpload: minutes('Protokoll Ersatz Transporter', d('01-14')) }));
+    const moves = movementsOf(deps, replacement.id);
+    if (!moves.some((m) => m.kind === 'allocate')) unwrap(await recordReserveMovement(on(deps, d('01-15')), writeCtx, { reserveId: replacement.id, kind: 'allocate', movementDate: d('01-15'), amountCents: 20000, resolutionUpload: minutes('Protokoll Zuführung Ersatz Transporter', d('01-15')) }));
+    if (!moves.some((m) => m.kind === 'dissolve')) unwrap(await recordReserveMovement(on(deps, d('03-20')), writeCtx, { reserveId: replacement.id, kind: 'dissolve', movementDate: d('03-20'), resolutionUpload: minutes('Protokoll Auflösung Ersatz Transporter', d('03-20')) }));
+  }
+  {
+    // Die freie Rücklage nutzt 85 % des Höchstbetrags dieses Jahres — über dem Warnwert (80 %), unter der Grenze. Seit Plan
+    // seed-mehrjahre besteht sie meist schon aus einem früheren Jahr; dann geht die Zuführung auf sie.
     const year = deps.db.select().from(financeFiscalYears).all().find((y) => y.startsOn <= `${storyYear}-03-15` && `${storyYear}-03-15` <= y.endsOn);
-    const free = unwrap(await saveReserve(on(deps, d('03-14')), writeCtx, { kind: 'free', name: 'Freie Rücklage', resolutionUpload: minutes('Protokoll Freie Rücklage', d('03-14')) }));
+    const known = reserveNamed('Freie Rücklage');
+    const free = known ?? unwrap(await saveReserve(on(deps, d('03-14')), writeCtx, { kind: 'free', name: 'Freie Rücklage', resolutionUpload: minutes('Protokoll Freie Rücklage', d('03-14')) }));
     const cap = year ? unwrap(await freeReserveCap(deps, writeCtx, { fiscalYearId: year.id })).capCents : 0;
     const amountCents = Math.floor((cap * 85) / 100);
-    if (year && amountCents > 0) {
+    if (year && amountCents > 0 && !movementsOf(deps, free.id).some((m) => m.forFiscalYearId === year.id)) {
       unwrap(await recordReserveMovement(on(deps, d('03-15')), writeCtx, { reserveId: free.id, kind: 'allocate', movementDate: d('03-15'), amountCents, forFiscalYearId: year.id, resolutionUpload: minutes('Protokoll Zuführung Freie Rücklage', d('03-15')) }));
     }
   }
@@ -1784,4 +2444,26 @@ async function seedBoardHistory(deps: Deps, ctx: CallContext, year: number): Pro
   }
   const clara = find('Clara', 'Neumann');
   if (clara && !onBoard(clara)) unwrap(await addContactRole(deps, contactCtx, { id: clara, role: 'board-member', since: `${year}-04-29` }));
+}
+
+/**
+ * Rechenschaft B2: Datenexporte über das Vorjahr, erzeugt über den echten Lauf mit gestellter Uhr — einer vor fünf
+ * Tagen (Liste, Herunterladen), einer vor 40 Tagen, den das Aufräumen gleich wieder löscht (Zeile mit
+ * `file_deleted_at`, Protokoll `expire`). Bewusst relativ zu heute: Die Frist rechnet von heute. Ohne Datenverzeichnis
+ * (Modultests, Skripte) gibt es keinen Platz für den Lauf; dann still nichts. Idempotent: nichts, wenn es schon Exporte gibt.
+ */
+async function seedDataExports(deps: Deps, ctx: CallContext, previousYear: number): Promise<void> {
+  const dataPath = (deps as Deps & { dataPath?: string }).dataPath;
+  if (!dataPath) return;
+  if (deps.db.select({ id: financeDataExports.id }).from(financeDataExports).limit(1).get()) return;
+  const year = deps.db.select({ id: financeFiscalYears.id }).from(financeFiscalYears).where(eq(financeFiscalYears.designation, String(previousYear))).get();
+  if (!year) return;
+  const slot = dataExportSlot(dataPath);
+  for (const daysAgo of [40, 5]) {
+    const at = new Date(deps.clock.now().getTime() - daysAgo * 86_400_000);
+    const shifted: Deps = { ...deps, clock: { now: () => new Date(at.getTime()) } };
+    const started = unwrap(await startDataExport(shifted, ctx, { fiscalYearIds: [year.id] }));
+    if (started.started) await waitForJob(slot, started.runId);
+  }
+  await sweepDataExports(deps);
 }

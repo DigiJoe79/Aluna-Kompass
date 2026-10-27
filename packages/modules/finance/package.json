@@ -1,6 +1,6 @@
 {
   "name": "@kompass/module-finance",
-  "version": "0.3.2",
+  "version": "0.4.0",
   "private": true,
   "type": "module",
   "exports": {
@@ -8,7 +8,12 @@
     "./csv": "./src/import/csv/index.ts",
     "./format": "./src/format/index.ts",
     "./wording": "./src/donations/templates/wording.ts",
-    "./evidence-rules": "./src/allocation/evidence-rules.ts"
+    "./evidence-rules": "./src/allocation/evidence-rules.ts",
+    "./statement-rules": "./src/ledger/statement-rules.ts",
+    "./gem-forms": "./src/reporting/gem-forms.ts",
+    "./codes": "./src/ledger/codes.ts",
+    "./vat-calendar": "./src/ledger/vat-calendar.ts",
+    "./vat-forms": "./src/reporting/vat-forms.ts"
   },
   "scripts": {
     "test": "vitest run",
@@ -21,7 +26,8 @@
     "@kompass/module-projects": "workspace:*",
     "drizzle-orm": "^0.45.3",
     "fast-xml-parser": "5.11.2",
-    "zod": "^4.6.5"
+    "fflate": "0.8.3",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@types/node": "^26.6.4",

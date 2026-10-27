@@ -4,7 +4,8 @@ import { contacts, createContact, setContactChannels } from '@kompass/module-con
 import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 import { learnContactIbanInternal, linkContactIban } from '../src/import/contact-ibans';
-import { saveImportRule } from '../src/import/rules';
+import { bookFromTransaction } from '../src/import/book';
+import { listImportRules, saveImportRule } from '../src/import/rules';
 import { suggestForTransaction } from '../src/import/suggestions';
 import { createAccount } from '../src/ledger/accounts';
 import { moveCash } from '../src/ledger/cash';
@@ -462,6 +463,33 @@ describe('suggestForTransaction — (4) rules', () => {
     unwrap(await setCategoryActive(f.deps, f.ctx, { id: f.programCosts.id, isActive: false }));
     const rawId = insertRaw(f, insertRun(f, f.bank.id), { accountId: f.bank.id, amountCents: -1990, purpose: 'Büromaterial' });
     expect(await suggest(f, rawId)).toMatchObject({ kind: 'rule', reasons: [{ kind: 'rule', ruleId: rule.id }], problems: ['categoryInactive'] });
+  });
+
+  /**
+   * Plan E15 Task 3 (Befund 40, Frage 3): Eine Regel mit einem Kennzeichen, das die Auswahl nicht (mehr) anbietet — hier
+   * `rc13bEu` beim Verein ohne Unternehmereigenschaft und ohne USt-IdNr. —, bricht das Buchen nicht ab: Das Kennzeichen
+   * fällt weg wie leer, Vorschlag und Regelliste nennen es. Die Regel selbst bleibt unverändert.
+   */
+  it('drops a rule tax code the choice no longer offers, says so, and books without it', async () => {
+    const f = await ledgerFixture();
+    const rule = unwrap(await saveImportRule(f.deps, f.ctx, { name: 'Anzeigen', direction: 'out', textContains: 'anzeigen', categoryId: f.programCosts.id, taxCode: 'rc13bEu' }));
+    const rawId = insertRaw(f, insertRun(f, f.bank.id), { accountId: f.bank.id, amountCents: -5000, purpose: 'Anzeigen Oktober', iban: null });
+    const suggestion = await suggest(f, rawId);
+    expect(suggestion).toMatchObject({ kind: 'rule', hints: ['ruleTaxCodeNotOffered'], reasons: [{ kind: 'rule', ruleId: rule.id, ruleName: 'Anzeigen', droppedTaxCode: 'rc13bEu' }] });
+    expect(suggestion.draft!.allocationLines[0]!.taxCode).toBeUndefined();
+
+    const booked = unwrap(await bookFromTransaction(f.deps, f.ctx, { rawTransactionId: rawId, text: suggestion.draft!.text, allocationLines: suggestion.draft!.allocationLines, reviewed: false }));
+    expect(booked.allocationLines[0]!.taxCode).not.toBe('rc13bEu');
+
+    const listed = unwrap(await listImportRules(f.deps, f.ctx, {})).rules.find((r) => r.id === rule.id)!;
+    expect(listed).toMatchObject({ taxCode: 'rc13bEu', taxCodeNotOffered: true });
+
+    // Gegenprobe: ein angebotenes Kennzeichen bleibt, ohne Hinweis.
+    const offered = unwrap(await saveImportRule(f.deps, f.ctx, { name: 'Handwerk', direction: 'out', textContains: 'handwerk', categoryId: f.programCosts.id, taxCode: 'rc13bOther' }));
+    const other = await suggest(f, insertRaw(f, insertRun(f, f.bank.id), { accountId: f.bank.id, amountCents: -7000, purpose: 'Handwerk Dach', iban: null }));
+    expect(other.hints).toEqual([]);
+    expect(other.draft!.allocationLines[0]!.taxCode).toBe('rc13bOther');
+    expect(unwrap(await listImportRules(f.deps, f.ctx, {})).rules.find((r) => r.id === offered.id)!.taxCodeNotOffered).toBe(false);
   });
 });
 

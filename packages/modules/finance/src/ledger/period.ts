@@ -3,11 +3,13 @@ import { and, desc, eq, gte, isNotNull, isNull, lte } from 'drizzle-orm';
 import { z } from 'zod';
 import { financeAudit } from '../audit';
 import { financeConflict, requireHumanChannelFinance } from '../errors';
-import { financeAccounts, financeAllocationCorrections, financeEntries, financeEntryJustifications, financeFiscalYears, financeImportCandidates, financeImportRuns, financeMoneyLines, financePeriodEvents, financeRawTransactions, type FinanceFiscalYearRow } from '../schema';
+import { financeAccounts, financeAllocationCorrections, financeClosingConfirmations, financeEntries, financeEntryJustifications, financeFiscalYears, financeImportCandidates, financeImportRuns, financeMoneyLines, financePeriodEvents, financeRawTransactions, type FinanceFiscalYearRow } from '../schema';
 import { requireFinanceRead } from './access';
 import { documentationOf } from './entries';
 import { ensureFiscalYearFor, fiscalYearStatusInternal, isShortFiscalYear, type FiscalYearView } from './fiscal-years';
-import { PERIOD_REOPEN_GUARDS, type PeriodReopenGuard } from '../locks';
+import { taxPeriodOfYearInternal, taxReturnFiledForYearInternal } from './tax-periods';
+import { vatFiledPeriodsInRangeInternal, type VatFiledPeriod } from './vat-filings';
+import { PERIOD_CLOSE_HOOKS, PERIOD_REOPEN_GUARDS, type PeriodCloseHook, type PeriodReopenConsequence, type PeriodReopenGuard } from '../locks';
 
 /** Ein Tag nach `iso` — der Startpunkt des Folgejahres, wenn `endsOn` sein letzter Tag ist. */
 function dayAfter(iso: string): string {
@@ -64,7 +66,7 @@ function findPreviousYear(db: DbOrTx, year: FinanceFiscalYearRow): FinanceFiscal
   return earlier[0] ?? null;
 }
 
-function undocumentedEntriesOf(db: DbOrTx, yearId: string): UndocumentedEntryPreview[] {
+export function undocumentedEntriesOf(db: DbOrTx, yearId: string): UndocumentedEntryPreview[] {
   const belowCents = statementSufficesBelowCentsInternal(db);
   const entries = db.select().from(financeEntries).where(and(eq(financeEntries.status, 'final'), eq(financeEntries.fiscalYearId, yearId))).all();
   const result: UndocumentedEntryPreview[] = [];
@@ -97,7 +99,7 @@ function pendingCorrectionsOf(db: DbOrTx, yearId: string): number {
  * Befund 34: Rohumsätze des Jahres, an denen keine festgeschriebene Geldzeile
  * hängt (offen oder nur als Entwurf gebunden), und unentschiedene Kandidaten.
  */
-function openTransactionsInPeriodOf(db: DbOrTx, year: FinanceFiscalYearRow): OpenTransactionPreview[] {
+export function openTransactionsInPeriodOf(db: DbOrTx, year: FinanceFiscalYearRow): OpenTransactionPreview[] {
   const accountName = new Map(db.select({ id: financeAccounts.id, name: financeAccounts.name }).from(financeAccounts).all().map((a) => [a.id, a.name]));
   const raws = db
     .select()
@@ -161,6 +163,11 @@ function accountsWithoutStatementOf(db: DbOrTx, year: FinanceFiscalYearRow): { i
     if (!statement) result.push({ id: account.id, name: account.name });
   }
   return result.sort((a, b) => a.name.localeCompare(b.name, 'de'));
+}
+
+/** Was dem Abschluss im Weg steht, ohne Rechteprüfung — für den Jahresabschluss (`closing/`, Schritte 1, 3 und 8). */
+export function closePreviewInternal(db: DbOrTx, year: FinanceFiscalYearRow, today: string): PeriodClosePreview {
+  return buildPreview(db, year, today);
 }
 
 function buildPreview(db: DbOrTx, year: FinanceFiscalYearRow, today: string): PeriodClosePreview {
@@ -237,6 +244,8 @@ export async function closeFiscalYear(deps: Deps, ctx: CallContext, input: unkno
   if (fiscalYearStatusInternal(deps.db, year.id) === 'closed') return financeConflict('fiscalYearAlreadyClosed', { year: year.designation });
 
   const today = todayIn(deps);
+  // N16: ein Jahr, das noch läuft, zuerst — Entwürfe zu löschen hülfe dann nichts.
+  if (!(today > year.endsOn)) return financeConflict('fiscalYearNotEnded', { year: year.designation });
   const preview = buildPreview(deps.db, year, today);
   if (preview.draftsInPeriod.length > 0) return financeConflict('draftsInPeriod', { count: preview.draftsInPeriod.length });
   const unjustified = preview.undocumented.filter((u) => !u.justified).length;
@@ -244,46 +253,64 @@ export async function closeFiscalYear(deps: Deps, ctx: CallContext, input: unkno
   if (preview.openTransactionsInPeriod.length > 0) return financeConflict('unbookedStatementLines', { count: preview.openTransactionsInPeriod.length });
   if (preview.accountsWithoutStatement.length > 0) return financeConflict('accountsWithoutStatement', { accounts: preview.accountsWithoutStatement.map((a) => a.name).join(', ') });
   if (preview.previousYearOpen) return financeConflict('previousYearOpen');
-  if (!(today > year.endsOn)) return financeConflict('fiscalYearNotEnded', { year: year.designation });
 
-  return deps.db.transaction((tx: DbOrTx) => {
-    const now = isoNow(deps.clock);
-    const eventId = newId();
-    tx.insert(financePeriodEvents).values({ id: eventId, fiscalYearId: year.id, kind: 'closed', at: now, byUserId: ctx.userId ?? 'system', reason: null }).run();
-    const nextYear = ensureFiscalYearFor(tx, deps, ctx, dayAfter(year.endsOn));
-    void nextYear; // fehlschlagen darf hier nicht: der Nachfolger ist immer im gültigen Bereich.
-    financeAudit(tx, deps, ctx, { action: 'finance.period.close', entity: 'financePeriodEvent', id: eventId, after: { fiscalYearId: year.id, kind: 'closed' }, params: { designation: year.designation } });
-    return ok({ ...year, status: 'closed' as const, isShortYear: isShortFiscalYear(year) });
-  });
+  return deps.db.transaction((tx: DbOrTx) => closeInternal(tx, deps, ctx, year));
+}
+
+/**
+ * Das Ereignis „abgeschlossen“ mit Folgejahr und den Haken (`PERIOD_CLOSE_HOOKS`, Prüfstand der Kassenprüfung) — in
+ * einer offenen Transaktion, ohne die Prüfungen von `closeFiscalYear`; `hooks` austauschbar für den Test.
+ */
+export function closeInternal(tx: DbOrTx, deps: Deps, ctx: CallContext, year: FinanceFiscalYearRow, hooks: readonly PeriodCloseHook[] = PERIOD_CLOSE_HOOKS): Result<FiscalYearView> {
+  const now = isoNow(deps.clock);
+  const eventId = newId();
+  tx.insert(financePeriodEvents).values({ id: eventId, fiscalYearId: year.id, kind: 'closed', at: now, byUserId: ctx.userId ?? 'system', reason: null }).run();
+  const nextYear = ensureFiscalYearFor(tx, deps, ctx, dayAfter(year.endsOn));
+  void nextYear; // fehlschlagen darf hier nicht: der Nachfolger ist immer im gültigen Bereich.
+  financeAudit(tx, deps, ctx, { action: 'finance.period.close', entity: 'financePeriodEvent', id: eventId, after: { fiscalYearId: year.id, kind: 'closed' }, params: { designation: year.designation } });
+  for (const hook of hooks) hook.onClose(tx, deps, ctx, year.id);
+  return ok({ ...year, status: 'closed' as const, isShortYear: isShortFiscalYear(year) });
 }
 
 /** Gibt es ein anderes, jüngeres Geschäftsjahr, das abgeschlossen ist? Das Öffnen von `year` zöge dessen Vorträge weg. */
 function laterYearClosedThan(db: DbOrTx, year: FinanceFiscalYearRow): boolean {
-  return db
+  return laterClosedYearOf(db, year) !== null;
+}
+
+/** Das jüngste abgeschlossene spätere Jahr — es ist zuerst wieder zu öffnen (Designer Runde 8, 17f: der Weg dorthin). */
+function laterClosedYearOf(db: DbOrTx, year: FinanceFiscalYearRow): { id: string; designation: string } | null {
+  const later = db
     .select()
     .from(financeFiscalYears)
     .where(gte(financeFiscalYears.startsOn, year.startsOn))
     .all()
-    .filter((y) => y.id !== year.id)
-    .some((y) => fiscalYearStatusInternal(db, y.id) === 'closed');
+    .filter((y) => y.id !== year.id && fiscalYearStatusInternal(db, y.id) === 'closed')
+    .sort((a, b) => b.startsOn.localeCompare(a.startsOn));
+  return later[0] ? { id: later[0].id, designation: later[0].designation } : null;
 }
 
-/** Die Sätze der Wächter, die das Wiederöffnen führen würde — für `previewPeriodReopen` und ihren Test mit eingereichten Wächtern. */
-export function previewReopenInternal(db: DbOrTx, yearId: string, guards: readonly PeriodReopenGuard[] = PERIOD_REOPEN_GUARDS): { consequences: string[] } {
-  return { consequences: guards.map((g) => g.describe(db, yearId)).filter((s): s is string => s !== null) };
+/** Was die Wächter beim Wiederöffnen tun würden, als Code und Parameter — für `previewPeriodReopen` und ihren Test mit eingereichten Wächtern. */
+export function previewReopenInternal(db: DbOrTx, yearId: string, guards: readonly PeriodReopenGuard[] = PERIOD_REOPEN_GUARDS): { consequences: PeriodReopenConsequence[] } {
+  return { consequences: guards.map((g) => g.describe(db, yearId)).filter((c): c is PeriodReopenConsequence => c !== null) };
 }
 
 const reopenPreviewSchema = z.object({ id: z.string().min(1) });
 
 /** `finance.read`. Der Dialog nennt zuerst die leichteren Wege (E7); diese Vorschau steht dahinter. */
-export async function previewPeriodReopen(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<{ consequences: string[]; laterYearClosed: boolean; taxReturnFiledOn: string | null }>> {
+export async function previewPeriodReopen(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<{ consequences: PeriodReopenConsequence[]; laterYearClosed: boolean; laterYear: { id: string; designation: string } | null; taxReturnFiledOn: string | null; taxReturnPeriod: string | null; vatFiled: VatFiledPeriod[] }>> {
   const denied = requireFinanceRead(ctx, 'read');
   if (denied) return denied;
   const parsed = validate(deps, reopenPreviewSchema, input);
   if (!parsed.ok) return parsed;
   const year = loadYear(deps.db, parsed.value.id);
   if (!year) return notFound('financeFiscalYear', parsed.value.id);
-  return ok({ ...previewReopenInternal(deps.db, year.id), laterYearClosed: laterYearClosedThan(deps.db, year), taxReturnFiledOn: year.taxReturnFiledOn });
+  const taxReturnFiledOn = taxReturnFiledForYearInternal(deps.db, year.id);
+  // Befund 34 b: Die Erklärung gilt für den Zeitraum („2023–2025“), nicht für das wiedergeöffnete Jahr.
+  const taxReturnPeriod = taxReturnFiledOn === null ? null : (taxPeriodOfYearInternal(deps.db, year.id)?.label ?? null);
+  const laterYear = laterClosedYearOf(deps.db, year);
+  // N14: auch die abgegebenen Umsatzsteuer-Erklärungen der Zeiträume, die das Jahr berührt (§ 153 AO).
+  const vatFiled = vatFiledPeriodsInRangeInternal(deps.db, year.startsOn, year.endsOn);
+  return ok({ ...previewReopenInternal(deps.db, year.id), laterYearClosed: laterYear !== null, laterYear, taxReturnFiledOn, taxReturnPeriod, vatFiled });
 }
 
 /**
@@ -326,7 +353,7 @@ const previewPeriodSchema = z.object({ id: z.string().min(1), action: z.enum(['c
  * zweier — `action` entscheidet, was dem Abschluss im Weg steht oder was das
  * Wiederöffnen führen würde.
  */
-export async function previewPeriod(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<PeriodClosePreview | { consequences: string[]; laterYearClosed: boolean; taxReturnFiledOn: string | null }>> {
+export async function previewPeriod(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<PeriodClosePreview | { consequences: PeriodReopenConsequence[]; laterYearClosed: boolean; laterYear: { id: string; designation: string } | null; taxReturnFiledOn: string | null; taxReturnPeriod: string | null; vatFiled: VatFiledPeriod[] }>> {
   const parsed = validate(deps, previewPeriodSchema, input);
   if (!parsed.ok) return parsed;
   const { id, action } = parsed.value;

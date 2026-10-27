@@ -1,9 +1,11 @@
-import { isoNow, newId, notFound, ok, requirePermission, validate, type CallContext, type DbOrTx, type Deps, type Result } from '@kompass/core';
+import { isoNow, newId, notFound, ok, requirePermission, todayIn, validate, type CallContext, type DbOrTx, type Deps, type Result } from '@kompass/core';
 import { and, asc, eq, inArray, isNotNull, isNull, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { financeAudit } from '../audit';
 import { requireFinanceRead } from '../ledger/access';
 import { TAX_CODES } from '../ledger/codes';
+import { contactReverseChargeCode } from '../ledger/entries';
+import { taxCodeOptionsInternal } from '../ledger/vat-settings';
 import { isValidIban, normalizeIban } from '../ledger/iban';
 import { financeAccounts, financeAllocationLines, financeCategories, financeImportRules, financeImportRuns, financeMoneyLines, financePurposes, financeRawTransactions, type FinanceImportRuleRow } from '../schema';
 import { ruleMatches, type RuleConditions, type RuleTarget } from '../rules-pure';
@@ -23,6 +25,23 @@ export interface ImportRuleView extends FinanceImportRuleRow {
   hitCount: number;
   /** Davon gebucht (Entwurf oder festgeschrieben) mit einer anderen Kategorie. */
   differentlyBookedCount: number;
+  /**
+   * Das Kennzeichen der Regel bietet die Auswahl heute nicht (mehr) an (`ruleTaxCodeOfferedInternal`) — die Vorschläge
+   * lassen es weg und sagen es (Befund 40, Frage 3). Die Regel selbst bleibt, wie sie ist.
+   */
+  taxCodeNotOffered: boolean;
+}
+
+/**
+ * Ohne Rechteprüfung: Gilt das Kennzeichen einer Regel an einem Tag noch? Dieselbe Regel wie beim Buchen
+ * (`taxCodeProblem` in `ledger/entries.ts`): leer, `none` und die Vorgabe der Kategorie sind keine Wahl; sonst muss es
+ * die Auswahl des Tags (`taxCodeOptionsInternal`) anbieten oder der Kontakt an einer Ausgabe vorgeben (§ 13b).
+ */
+export function ruleTaxCodeOfferedInternal(db: DbOrTx, taxCode: string | null, o: { on: string; categoryId: string; contactId: string | null; expense: boolean }): boolean {
+  if (!taxCode || taxCode === 'none') return true;
+  if ((taxCodeOptionsInternal(db, o.on) as string[]).includes(taxCode)) return true;
+  if (db.select({ code: financeCategories.defaultTaxCode }).from(financeCategories).where(eq(financeCategories.id, o.categoryId)).get()?.code === taxCode) return true;
+  return o.expense && o.contactId !== null && contactReverseChargeCode(db, o.contactId) === taxCode;
 }
 
 /** Leer oder nur Leerraum heißt „keine Bedingung“. */
@@ -149,14 +168,15 @@ function ruleStatsInternal(corpus: RuleCorpus, conditions: RuleConditions, categ
   return { hitCount, differentlyBookedEntryIds: [...differently] };
 }
 
-function ruleViewsInternal(db: DbOrTx, rows: FinanceImportRuleRow[]): ImportRuleView[] {
+function ruleViewsInternal(db: DbOrTx, rows: FinanceImportRuleRow[], today: string): ImportRuleView[] {
   if (rows.length === 0) return [];
   const corpus = ruleCorpusInternal(db);
   const categories = new Map(db.select({ id: financeCategories.id, name: financeCategories.name, isActive: financeCategories.isActive }).from(financeCategories).all().map((c) => [c.id, c] as const));
   return rows.map((row) => {
     const category = categories.get(row.categoryId);
     const stats = ruleStatsInternal(corpus, conditionsOf(row), row.categoryId);
-    return { ...row, categoryName: category?.name ?? '', categoryInactive: !category?.isActive, hitCount: stats.hitCount, differentlyBookedCount: stats.differentlyBookedEntryIds.length };
+    const taxCodeNotOffered = !ruleTaxCodeOfferedInternal(db, row.taxCode, { on: today, categoryId: row.categoryId, contactId: row.contactId, expense: row.direction !== 'in' });
+    return { ...row, categoryName: category?.name ?? '', categoryInactive: !category?.isActive, hitCount: stats.hitCount, differentlyBookedCount: stats.differentlyBookedEntryIds.length, taxCodeNotOffered };
   });
 }
 
@@ -204,7 +224,7 @@ export async function saveImportRule(deps: Deps, ctx: CallContext, input: unknow
     if (before) tx.update(financeImportRules).set(row).where(eq(financeImportRules.id, row.id)).run();
     else tx.insert(financeImportRules).values(row).run();
     financeAudit(tx, deps, ctx, { action: 'finance.importRule.save', entity: 'financeImportRule', id: row.id, before: before ? auditOf(before) : undefined, after: auditOf(row) });
-    return ok(ruleViewsInternal(tx, [row])[0]!);
+    return ok(ruleViewsInternal(tx, [row], todayIn(deps))[0]!);
   });
 }
 
@@ -220,7 +240,7 @@ export async function listImportRules(deps: Deps, ctx: CallContext, input: unkno
     .where(parsed.value.includeInactive ? undefined : eq(financeImportRules.isActive, true))
     .orderBy(asc(financeImportRules.sortOrder), asc(financeImportRules.createdAt))
     .all();
-  return ok({ rules: ruleViewsInternal(deps.db, rows) });
+  return ok({ rules: ruleViewsInternal(deps.db, rows, todayIn(deps)) });
 }
 
 /** Die aktiven Regeln in ihrer Reihenfolge — für die Vorschläge (Task 4). */

@@ -182,7 +182,7 @@ const saveNoticeSchema = z
  * abgelehnt, wenn schon ein endgültiger Bescheid bis zu seinem Datum vorliegt.
  * Das Dokument ist optional; wenn, dann festgeschrieben und lesbar.
  */
-export async function saveNotice(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<NoticeView>> {
+export async function saveNotice(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<NoticeView & { suggestions?: { key: 'noticeToBank' }[] }>> {
   const denied = requirePermission(ctx, 'finance.donationsIssue');
   if (denied) return denied;
   const parsed = validate(deps, saveNoticeSchema, input);
@@ -228,7 +228,9 @@ export async function saveNotice(deps: Deps, ctx: CallContext, input: unknown): 
     if (!synced.ok) return synced;
     const after = tx.select().from(financeNotices).where(eq(financeNotices.id, id)).get()!;
     financeAudit(tx, deps, ctx, { action: 'finance.notice.save', entity: 'financeNotice', id, before: before ? auditFields(before) : undefined, after: auditFields(after), params: { created: !before } });
-    return ok(viewInternal(tx, id, todayIn(deps)));
+    // Joe 2026-10-24: Ein neuer Bescheid geht in Kopie an die Bank (sonst behält sie Kapitalertragsteuer ein, § 44a EStG) —
+    // ein Vorschlag für eine Wiedervorlage, keine berechnete Frist.
+    return ok({ ...viewInternal(tx, id, todayIn(deps)), ...(before ? {} : { suggestions: [{ key: 'noticeToBank' as const }] }) });
   });
 }
 

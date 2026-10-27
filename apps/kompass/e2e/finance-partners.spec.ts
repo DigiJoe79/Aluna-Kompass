@@ -484,11 +484,11 @@ test.describe('finance partners (F7)', () => {
     await expect(list.getByTestId('requirement-invoice')).toContainText('Schulranzen und Hefte für 60 Kinder');
     await expect(page.getByTestId('evidence-coverage')).toHaveCount(0);
     // AL (Recheck sha-0170e73): der abgelegte Nachweis heißt nach seiner Art in Worten, nie mit dem Code — über die Oberfläche wie per MCP.
-    await expect(list.getByTestId('requirement-invoice')).toContainText(/Rechnung oder Abrechnung vom \d{2}\.\d{2}\.\d{4}/);
+    await expect(list.getByTestId('requirement-invoice')).toContainText(/Rechnung oder Abrechnung · \d{2}\.\d{2}\.\d{4}/);
     await expect(list.getByTestId('requirement-invoice')).not.toContainText('invoice');
     await callTool(client, 'finance_partner_evidence_upload', { paymentId: submitted.id, kind: 'report', fileName: 'bericht.pdf', contentBase64: PDF.buffer.toString('base64') });
     await page.reload();
-    await expect(list.getByTestId('requirement-report')).toContainText(/Bericht vom \d{2}\.\d{2}\.\d{4}/);
+    await expect(list.getByTestId('requirement-report')).toContainText(/Bericht · \d{2}\.\d{2}\.\d{4}/);
     // W (Prüfer Block 2): der Nachweis nennt seine Nummer und führt auf das PDF.
     await expect(list.getByTestId('requirement-invoice').getByRole('link')).toHaveAttribute('href', /\/dms\/[0-9A-Z]{26}\/file$/);
     await expect(list.getByTestId('requirement-agreement').getByRole('link', { name: /Vereinbarung Schulmaterial|[A-Z]+-\d{4}-\d+/ })).toBeVisible();

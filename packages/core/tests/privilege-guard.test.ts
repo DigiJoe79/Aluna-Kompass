@@ -19,6 +19,7 @@ const EXEMPT: Record<string, string> = {
   'setup/service.ts:completeSetup': 'das erste Konto; es gibt noch niemanden, dessen Rechte man übersteigen könnte',
   'seed/seed.ts:seedDevelopment': 'Entwicklungsdaten, läuft nie in Produktion',
   'roles/provision.ts:createRoleInternal': 'Grundausstattung eines Moduls; legt Rollenvorschläge an, weist keine Rollen zu',
+  'roles/service.ts:removeRoleInternal': 'entzieht nur, gibt nie mehr Rechte; der rufende Dienst prüft sein engeres Recht (Finanzen: „Zugang beenden“ nur für die Rolle finance:auditor), der letzte Verwalter bleibt geschützt',
 };
 
 interface Write {

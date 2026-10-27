@@ -12,11 +12,11 @@ describe('finance module', () => {
     expect([...(financeModule.dependsOn ?? [])].sort()).toEqual(['contacts', 'dms', 'projects']);
   });
 
-  it('declares all eleven permissions from the start — role proposals are never topped up later', () => {
+  it('declares all permissions from the start — role proposals are never topped up later', () => {
     expect(financeModule.permissions).toEqual([
       'finance.read', 'finance.overview', 'finance.entriesWrite', 'finance.entriesFinalize', 'finance.periodClose',
       'finance.setup', 'finance.expensesSubmit', 'finance.approve', 'finance.donationsIssue', 'finance.reportsFinalize',
-      'finance.directDebit',
+      'finance.directDebit', 'finance.audit',
     ]);
   });
 
@@ -52,7 +52,20 @@ describe('finance module', () => {
       { entityType: 'financePurposeTransfer', readPermission: 'finance.read', receivePermission: 'finance.entriesWrite' },
       { entityType: 'financeMandate', readPermission: 'finance.read', receivePermission: 'finance.directDebit' },
       { entityType: 'financeDirectDebitRun', readPermission: 'finance.read', receivePermission: 'finance.directDebit' },
+      // Rechenschaft A1: die festgeschriebene Fassung eines Berichts, am Bericht und am Geschäftsjahr.
+      { entityType: 'financeReport', readPermission: 'finance.read', receivePermission: 'finance.reportsFinalize' },
+      { entityType: 'financeFiscalYear', readPermission: 'finance.read', receivePermission: 'finance.periodClose' },
+      { entityType: 'financeAuditor', readPermission: 'finance.read', receivePermission: 'finance.periodClose' },
+      { entityType: 'financeAuditReport', readPermission: 'finance.read', receivePermission: 'finance.audit' },
+      { entityType: 'financeAccount', readPermission: 'finance.read', receivePermission: 'finance.entriesWrite' },
+      { entityType: 'financeHandover', readPermission: 'finance.read', receivePermission: 'finance.setup' },
+      { entityType: 'financeTaxPeriod', readPermission: 'finance.read', receivePermission: 'finance.periodClose' },
+      { entityType: 'financeVatFiling', readPermission: 'finance.read', receivePermission: 'finance.periodClose' },
     ]);
+  });
+
+  it('names both slim report bases among its document bases (Rechenschaft A1)', () => {
+    expect(financeModule.documentBases).toEqual(expect.arrayContaining(['a4-plain-slim', 'a4-quer-plain-slim']));
   });
 
   it('registers the cash count template under finance.entriesFinalize', () => {
@@ -60,8 +73,8 @@ describe('finance module', () => {
     expect(template).toMatchObject({ key: 'finance-cash-count', type: 'finance-cash-count', permission: 'finance.entriesFinalize' });
   });
 
-  it('brings five contact roles, none of which holds a contact by itself', () => {
-    expect(financeModule.contactRoles).toEqual(['donor', 'grant-recipient', 'claimant', 'board-member', 'related-party'].map((key) => ({ key, retention: 'none' })));
+  it('brings six contact roles, none of which holds a contact by itself', () => {
+    expect(financeModule.contactRoles).toEqual(['donor', 'grant-recipient', 'claimant', 'board-member', 'related-party', 'treasurer'].map((key) => ({ key, retention: 'none' })));
   });
 
   it('labels a fiscal year for follow-ups and links from the file module', async () => {
@@ -73,10 +86,10 @@ describe('finance module', () => {
     expect(financeModule.recordLabels!(deps, ctx, 'contact', 'x')).toBeNull();
   });
 
-  it('offers a follow-up target for a fiscal year, without a page yet', async () => {
+  it('offers a follow-up target for a fiscal year: its year-end closing', async () => {
     const { deps, ctx } = setupFinance();
     const year = unwrap(await createFirstFiscalYear(deps, ctx, { startsOn: '2026-01-01', endsOn: '2026-12-31' }));
-    expect(financeModule.followUpTargets!(deps, 'financeFiscalYear', year.id)).toEqual({ label: { key: 'finance.records.fiscalYear', params: { designation: '2026' } }, href: null });
+    expect(financeModule.followUpTargets!(deps, 'financeFiscalYear', year.id)).toEqual({ label: { key: 'finance.records.fiscalYear', params: { designation: '2026' } }, href: `/finance/closing?year=${year.id}` });
     expect(financeModule.followUpTargets!(deps, 'financeFiscalYear', 'nope')).toBeNull();
     expect(financeModule.followUpTargets!(deps, 'contact', 'x')).toBeNull();
   });
@@ -90,11 +103,14 @@ describe('finance module', () => {
       financeImportProfile: false, financeImportRule: true, financeContactBankAccount: true,
       financeNotice: false, financeConfirmation: false, financeConfirmationLine: false, financeSigner: false, financeInKindDetails: false,
       financeConfirmationRun: false, financeConfirmationRunItem: false,
-      financeExpenseClaimDraft: true, financeExpenseClaim: false, financeContactWaiverTerms: true,
+      financeExpenseClaimDraft: true, financeExpenseClaim: false, financeContactWaiverTerms: true, financeContactTaxDetails: true,
       financePartnerProfile: true, financePartnerNotice: false, financePartnerPaymentPosition: false, financePartnerPaymentDraft: true, financePartnerPayment: false, financePartnerEvidence: true,
       financeReserve: true, financeReserveMovement: false, financePurposeTransfer: false,
       financeMandate: false, financePledge: false,
       financeDirectDebitRun: false, financeDirectDebitItem: false, financePrenotification: false,
+      financeReport: false, financeReportRelease: false, financeOtherAsset: false,
+      financeAuditAuditor: true, financeAuditBaseline: false, financeAuditSample: true, financeAuditSectionReview: true, financeAuditRemark: false, financeAuditReport: false,
+      financeHandover: false, financeAssemblyResult: false, financeVatFiling: false, financeTaxPeriod: false,
     });
   });
 

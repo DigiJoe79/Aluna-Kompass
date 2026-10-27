@@ -165,9 +165,11 @@ async function seedFees(deps: Deps, ctx: CallContext): Promise<void> {
     if (m) unwrap(await setFeeAgreement(deps, ctx, { membershipId: m.id, validFrom: `${y}-01-01`, paymentMethod: 'transfer', ...values }));
   }
 
-  // Der Beitragslauf des Stichjahres läuft wie im Verein im Dezember davor: Die Posten tragen diesen Anlagetag, und der
+  // Der Beitragslauf des Stichjahres läuft am ersten Tag des Jahres: Die Posten tragen diesen Anlagetag, und der
   // Mahnlauf zählt ab der Fälligkeit — heute angelegt, wären alle Beiträge nachträglich erfasst und noch nicht reif.
-  const runDeps = seedClockAt(deps, seedMoment(deps, `${p}-12-01`));
+  // Nicht im Dezember davor (Rechenschaft D1 Task 10b): Das Vorjahr ist im Seed schon abgeschlossen und nimmt keine
+  // offene Zahlung mehr an; sein festgeschriebener Kassenbericht bliebe sonst nicht beim selben Stand.
+  const runDeps = seedClockAt(deps, seedMoment(deps, `${y}-01-01`));
   const run = unwrap(await startFeeRun(runDeps, ctx, { year: y }));
   for (let view = run; view.status === 'running'; ) view = unwrap(await continueFeeRun(runDeps, ctx, { runId: run.id, max: 50 }));
   // Plan U4 Task 2: Eine Beitragsmitteilung, die per E-Mail ginge, liegt von Hand in der Post-Gruppe („von Hand

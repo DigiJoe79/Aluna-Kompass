@@ -101,6 +101,15 @@ und Backup-Einstellungen des Tests bleiben, wie sie waren.
 Der umgekehrte Weg ist keine gute Idee: Der Test enthält Probierdaten, und die
 gehören nicht in die Aufzeichnung, aus der der Verein Rechenschaft ablegt.
 
+## Rollen nach einem Update
+
+Kompass ändert die Rollen einer Installation nie von selbst. Bringt eine neue
+Fassung ein neues Recht mit, bekommen es nur die Rollenvorschläge neuer
+Installationen; bestehende Rollen ergänzen Sie unter **Einrichtung › Rollen**.
+Mit 0.4.0 betrifft das die Rolle *Kassenprüfer*: Sie braucht das Recht
+*Kassenprüfung*, damit Prüfer Vermerke, Stichproben und den Prüfbericht in
+Kompass schreiben können (siehe [Kassenprüfung](finanzen/kassenpruefung.md)).
+
 ## Update
 
 1. **Backup vor Update:** Kompass sichert sich beim Start selbst, wenn
@@ -296,6 +305,45 @@ Sonst ist nichts von Hand zu tun. Wer sich wundert:
 - **Template-Autoren** können mit den neuen Feldoptionen `size` und `group` die
   Eingabemaske ordnen; ohne sie bekommt jedes Feld eine Breite nach seinem Typ.
 - MCP-Clients sind nicht betroffen.
+
+### Von 0.3.2 auf 0.4.0
+
+Die Fassung 0.4.0 bringt eine Migration mit
+(`0011_finance_accountability_0_4_0`): neue Tabellen und Sperren für die
+Rechenschaft in den Finanzen und Überträge bestehender Werte (Steuererklärung,
+Umsatzsteuer-Einstellung, Kennzeichen § 13b; siehe unten). `/api/health`
+meldet danach `migrationCount: 12`. Ein Backup (Schritt 1) gehört wie immer
+dazu.
+
+Handgriffe nach dem Update (Rechenschaft, Jahresabschluss):
+
+- **Rolle Kassenprüfer:** Unter **Einrichtung › Rollen** der Rolle das neue Recht *Kassenprüfung* geben (siehe
+  „Rollen nach einem Update“); sonst schreiben Prüfer keine Vermerke und keinen Prüfbericht in Kompass.
+- **Kategorien für die Freigrenze:** Unter **Einrichtung › Finanzen › Kategorien** bei bestehenden Kategorien das
+  Merkmal *Für die Freigrenze* setzen — *erstattete Umsatzsteuer* für die USt-Erstattung, *nicht leistungsbezogen* für
+  Zuschüsse, Darlehen oder Versicherungsleistungen im wirtschaftlichen Geschäftsbetrieb. Neue Installationen bringen es
+  bei der USt-Erstattung schon mit.
+- **Schatzmeister pflegen:** Die neue Kontaktrolle *Schatzmeister* mit Zeitraum am Kontakt der Person eintragen. Kompass
+  schlägt sie bei der Amtsübergabe vor und führt sie in der Entlastungsliste der Mitgliederversammlung.
+- **Kontoauszüge als PDF:** Für jedes abgeschlossene Jahr, dessen Berichte noch festgeschrieben werden, je Bankkonto den
+  Auszug zum Stichtag ablegen oder das Fehlen begründen — sonst lehnt das Festschreiben ab.
+- **Steuererklärung:** Wo am Geschäftsjahr „Steuererklärung abgegeben am“ stand, legt das Update je Jahr einen
+  einjährigen Erklärungszeitraum mit diesem Tag und der Frist 31.07. des Folgejahres an; er steht unter
+  **Finanzen › Steuererklärung**. Mehrjährige Zeiträume lassen sich daraus nicht bilden; künftige Zeiträume legen Sie so
+  an, wie das Finanzamt sie anfordert.
+- **Kategorien für die Anlage Gem:** Neue Installationen bringen „Miet- und Pachteinnahmen“, „Mitgliederbetreuung“ und
+  „Zuwendungen an Mitglieder“ mit; bestehende legen sie bei Bedarf unter **Einrichtung › Finanzen › Kategorien** selbst
+  an (Einnahmeart *Miete und Pacht* in der Vermögensverwaltung, die beiden anderen als Ausgaben im ideellen Bereich).
+- **Kennzeichen § 13b:** Das Update teilt „Reverse Charge (§ 13b)“ in „Leistung aus dem EU-Ausland“ und „übrige
+  Leistungen“ — Buchungszeilen nach dem Land des Kontakts oder der IBAN des Kontoumsatzes, Importregeln nach ihrem
+  Kontakt. Kategorien mit dieser Vorgabe und Importregeln ohne Kontakt stehen danach auf „EU-Ausland“; bitte unter
+  **Einrichtung › Finanzen › Kategorien** und den Regeln der Arbeitsliste prüfen.
+- **Umsatzsteuer-Einstellung:** Die Frage „Unternehmer oder USt-IdNr.?“ wird zur datierten Einstellung
+  „umsatzsteuerlich Unternehmer“; ein bisheriges „Ja“ gilt ab 2000. USt-IdNr., Voranmeldungszeitraum und Bundesland des
+  Finanzamts tragen Sie nach (siehe Handbuch „Finanzen einrichten“).
+- **Hinweise zu § 13b im Startplan:** Die Kategorien „Gebühren Zahlungsdienst“, „Software und Internet“ und „Werbung
+  und Spendenaufrufe“ erklären nur in neuen Installationen, wann § 13b gilt; bestehende Kategorien bleiben, wie sie
+  sind.
 
 ### Von 0.3.1 auf 0.3.2
 
@@ -747,7 +795,7 @@ aus den Suchmaschinen: `noindex`, `Disallow: /`, keine Sitemap.
 
 Unter `<daten>/core/document-templates` liegen die Seitenrahmen für erzeugte
 PDFs. Kompass liefert die generischen Basen `a4-plain`, `a4-plain-slim`,
-`a4-mit-briefkopf`, `a4-ohne-briefkopf` und `a4-formular` mit; ein Verein legt hier eigene
+`a4-quer-plain-slim`, `a4-mit-briefkopf`, `a4-ohne-briefkopf` und `a4-formular` mit; ein Verein legt hier eigene
 `.typ`-Dateien ab, um eine zu ergänzen oder zu ersetzen (gleiche Kennung
 gewinnt). `a4-formular` zeichnet Vereinskopf, Fußzeile und — wenn die Vorlage
 eine Anschrift liefert — auf Seite 1 das Anschriftfeld für den Fensterumschlag
@@ -763,6 +811,17 @@ ohne Kennzeichen setzen die Vorlagen Anschrift und Aussteller wie bisher selbst
 in den Text. Daneben optional
 `fonts/` für eigene Schriften und `assets/` für Grafiken, die eine Basis
 einbindet — das Vereinslogo kommt weiter aus Einrichtung → Stammdaten → Darstellung.
+
+Die Finanzberichte erscheinen auf `a4-quer-plain-slim` (quer: Kassenbericht,
+Einnahmen-Überschuss-Rechnung) und `a4-plain-slim` (hoch: Vermögensübersicht,
+Kontenabstimmung). Beide zeichnen die Slots `footerNote` (Erzeugungszeit
+und Kurz-Hash, klein vor der Seitenzahl), `stage` und `stageText` — die
+Ausgabestufe des Berichts: vorläufig quer als Hinweiszeile oben rechts im Kopf,
+hoch als Schrägstempel; zur Prüfung unter dem Titel und im Kopf; festgeschrieben
+nur mit Vermerk, als Hinweiszeile im Kopf. Wer eine der beiden durch eine eigene Fassung ersetzt, trägt in
+`bases.json` die Slots ein, die sie zeichnet
+(`"slots": ["stage", "stageText", "footerNote"]`), und zeichnet sie — sonst
+fehlt auf dem Papier, ob ein Bericht vorläufig ist.
 
 **Ein leeres Verzeichnis ist gültig** — dann gelten die mitgelieferten Basen.
 Auch dies ist eine Vertrauensgrenze: Jede `.typ` läuft beim Rendern als Code im

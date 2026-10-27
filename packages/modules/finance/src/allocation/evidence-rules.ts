@@ -67,6 +67,16 @@ export const EVIDENCE_KIND_NAMES: { de: Record<EvidenceKindLabelKey, string> } &
 };
 
 /**
+ * Ist der Betreff der beim Hochladen erzeugte („‹Art› vom ‹Tag›“, `evidenceSubject`) — gleich in welcher Leitsprache?
+ * Dann sagt er nichts über Art und Tag hinaus, und die Nachweiszeile lässt ihn weg (Designer Runde 8, 17b). Eine Stelle
+ * mit dem Satzmuster, damit die Oberfläche keinen Text nachbaut.
+ */
+export function isGeneratedEvidenceSubject(subject: string, kind: EvidenceKind, basis: PartnerBasis): boolean {
+  const key = evidenceKindLabelKey(kind, basis);
+  return Object.values(EVIDENCE_KIND_NAMES).some((names) => subject.startsWith(`${names[key]} vom `));
+}
+
+/**
  * Betreff eines hochgeladenen Nachweises: Art in Worten und Tag, nie der
  * Name des Partners (Annahme 9). Er wird gespeichert und entsteht deshalb in
  * der Leitsprache der Installation (`locale`), nicht in der des Aufrufers;

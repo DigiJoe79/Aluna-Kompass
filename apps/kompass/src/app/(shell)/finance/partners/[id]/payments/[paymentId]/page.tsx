@@ -65,7 +65,7 @@ export default async function PartnerPaymentPage({ params }: { params: Promise<{
     await Promise.all(
       [...new Set(evidence.map((e) => e.documentId).filter((id): id is string => !!id))].map(async (id) => {
         const record = await getDocumentRecord(deps, ctx, id);
-        return [id, record.ok ? { number: record.value.number, subject: record.value.subject } : null] as const;
+        return [id, record.ok ? { number: record.value.number, subject: record.value.subject, date: record.value.documentDate } : null] as const;
       }),
     ),
   );

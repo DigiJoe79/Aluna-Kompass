@@ -1,6 +1,6 @@
-import { hasPermission, readSetting, todayIn } from '@kompass/core';
+import { hasPermission, todayIn } from '@kompass/core';
 import type { LocalizedText } from '@kompass/core';
-import { getBalances, getRawTransaction, listCategories, listOpenItems, listPurposes, suggestForTransaction, TAX_CODES } from '@kompass/module-finance';
+import { getBalances, getRawTransaction, listCategories, listOpenItems, listPurposes, suggestForTransaction, taxCodeOptionsInternal, vatLineContextInternal } from '@kompass/module-finance';
 import { documentTypeFor, getDocumentRecord } from '@kompass/module-dms';
 import { listProjects } from '@kompass/module-projects';
 import { getTranslations } from 'next-intl/server';
@@ -36,11 +36,12 @@ export default async function NewFinanceEntryPage({ searchParams }: { searchPara
   const accounts = (balancesRes.ok ? balancesRes.value.accounts : []).map((a) => ({ id: a.accountId, name: a.name, kind: a.kind, balanceCents: a.balanceCents }));
   const categories = (categoriesRes.ok ? categoriesRes.value : [])
     .filter((c): c is typeof c & { direction: 'income' | 'expense' } => c.direction === 'income' || c.direction === 'expense')
-    .map((c) => ({ id: c.id, name: c.name, direction: c.direction, sphere: c.sphere ?? 'ideal', explanation: c.explanation || undefined }));
+    .map((c) => ({ id: c.id, name: c.name, direction: c.direction, sphere: c.sphere ?? 'ideal', incomeKind: c.incomeKind ?? null, explanation: c.explanation || undefined }));
   const purposes = (purposesRes.ok ? purposesRes.value : []).map((p) => ({ id: p.id, name: p.name }));
   const leading = deps.locales()[0] ?? 'de';
   const projects = (projectsRes.ok ? projectsRes.value : []).map((p) => ({ id: p.id, name: (p.name as LocalizedText)[leading] || p.slug }));
-  const showTax = readSetting<boolean>(deps, 'finance.isEntrepreneurOrHasVatId');
+  const taxCodes = taxCodeOptionsInternal(deps.db, todayIn(deps));
+  const showTax = taxCodes.length > 0;
   const t = await getTranslations('finance.entryForm');
   const openItems = await settlementOptions(deps, ctx, openItemsRes.ok ? openItemsRes.value : [], (date) => t('settlement.unnamed', { date }));
 
@@ -92,8 +93,9 @@ export default async function NewFinanceEntryPage({ searchParams }: { searchPara
         categories={categories}
         purposes={purposes}
         projects={projects}
-        taxCodeOptions={[...TAX_CODES]}
+        taxCodeOptions={taxCodes}
         showTax={showTax}
+        vatContext={vatLineContextInternal(deps.db, todayIn(deps))}
         canFinalize={hasPermission(ctx, 'finance.entriesFinalize')}
         voucherTypeKey="voucher-own"
         vouchers={[]}

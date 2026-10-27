@@ -78,6 +78,13 @@
       "when": 1792677288187,
       "tag": "0010_media_ai_kind_finance_locks_0_3_1",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "6",
+      "when": 1792967481969,
+      "tag": "0011_finance_accountability_0_4_0",
+      "breakpoints": true
     }
   ]
 }

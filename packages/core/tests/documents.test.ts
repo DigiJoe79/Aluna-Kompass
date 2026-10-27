@@ -71,7 +71,7 @@ describe('documents service', () => {
   it('lists the document bases with their probe result', async () => {
     const { deps, ctx } = setup();
     const bases = unwrap(await listDocumentBases(deps, ctx));
-    expect(bases.map((b) => b.id)).toEqual(['a4-formular', 'a4-mit-briefkopf', 'a4-ohne-briefkopf', 'a4-plain', 'a4-plain-slim']);
+    expect(bases.map((b) => b.id)).toEqual(['a4-formular', 'a4-mit-briefkopf', 'a4-ohne-briefkopf', 'a4-plain', 'a4-plain-slim', 'a4-quer-plain-slim']);
     expect(bases.every((b) => b.ok)).toBe(true);
     expect((await listDocumentBases(deps, ctxWith([]))).ok).toBe(false);
   });

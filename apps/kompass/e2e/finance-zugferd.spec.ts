@@ -1,7 +1,7 @@
 import path from 'node:path';
 import type { Page } from '@playwright/test';
 import { expect, test } from './fixtures';
-import { loginAsAdmin, resetDatabase, setE2ESetting } from './helpers';
+import { loginAsAdmin, resetDatabase, setE2EDatedValue } from './helpers';
 import { story, storyFile, storyPattern } from './story-year';
 
 /**
@@ -91,12 +91,12 @@ test.describe('finance: Rechnungen mit ZUGFeRD', () => {
     await expect(page.getByLabel('Text')).toHaveValue('Bürobedarf Muster GmbH Rechnung BM-7781');
 
     // Die Steuer zeigt die Maske nur, wenn der Verein Unternehmer ist — dafür kurz umschalten.
-    await setE2ESetting(page, 'finance.isEntrepreneurOrHasVatId', true);
+    await setE2EDatedValue(page, 'vatEntrepreneur', '2000-01-01', true);
     try {
       await page.reload();
       await expect(page.getByTestId('finance-allocation-card').getByTestId('split-row').first().getByLabel('Umsatzsteuer')).toHaveValue('standard');
     } finally {
-      await setE2ESetting(page, 'finance.isEntrepreneurOrHasVatId', false);
+      await setE2EDatedValue(page, 'vatEntrepreneur', '2000-01-01');
     }
   });
 

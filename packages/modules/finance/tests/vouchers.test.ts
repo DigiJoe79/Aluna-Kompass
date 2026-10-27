@@ -7,6 +7,7 @@ import { createAccount } from '../src/ledger/accounts';
 import { getEntry, saveDraft } from '../src/ledger/entries';
 import { bookEntry } from '../src/ledger/finalize';
 import { setFinanceLimit } from '../src/ledger/setup';
+import { fileAccountStatementDocument } from '../src/ledger/statement-documents';
 import { attachDocument, listVouchersWithoutEntry, readVoucher, revokeVoucher, uploadVoucher } from '../src/ledger/vouchers';
 import { FINANCE_PERMISSIONS } from '../src/manifest';
 import { financeEntryDocuments, financeMoneyLines, financePeriodEvents } from '../src/schema';
@@ -64,7 +65,8 @@ describe('vouchers', () => {
   it('the document type must be one the association treats as a finance voucher', async () => {
     const f = await ledgerFixture();
     const entry = await f.finalEntry();
-    expect(err(await uploadVoucher(f.deps, f.ctx, { entryId: entry.id, bytes: pdfBytes(), typeKey: 'letter', documentDate: '2026-03-01' }))).toMatchObject({ type: 'conflict', code: 'voucherTypeNotAllowed' });
+    // N2: die Ablehnung nennt die Belegarten, die der Verein hinterlegt hat.
+    expect(err(await uploadVoucher(f.deps, f.ctx, { entryId: entry.id, bytes: pdfBytes(), typeKey: 'letter', documentDate: '2026-03-01' }))).toMatchObject({ type: 'conflict', code: 'voucherTypeNotAllowed', params: { allowed: expect.stringContaining('voucher-invoice') } });
   });
 
   it('is possible on a finalized entry and in a closed year — handing in a voucher is always allowed', async () => {
@@ -305,6 +307,8 @@ describe('listVouchersWithoutEntry', () => {
     const receipt = insertDocument(f, { subject: 'Quittung', typeKey: 'voucher-receipt', createdAt: '2026-03-02T10:00:00.000Z' });
     insertDocument(f, { subject: 'Rechnung widerrufen', voided: true });
     insertDocument(f, { subject: 'Brief', typeKey: 'letter' });
+    // Rechenschaft C: ein Kontoauszug am Konto ist kein Beleg ohne Buchung.
+    unwrap(await fileAccountStatementDocument(f.deps, f.ctx, { accountId: f.bank.id, periodTo: '2026-03-31', bytes: pdfBytes() }));
 
     const res = unwrap(await listVouchersWithoutEntry(f.deps, reader, {}));
     expect(res.total).toBe(2);

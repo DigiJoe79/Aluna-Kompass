@@ -8,6 +8,7 @@ import {
   financeCashCounts,
   financeConfirmations,
   financeContactBankAccounts,
+  financeContactTaxDetails,
   financeContactWaiverTerms,
   financeEntries,
   financeEntryDocuments,
@@ -16,6 +17,9 @@ import {
   financeFiscalYears,
   financeInKindDetails,
   financeNotices,
+  financeCashCountContactWitnesses,
+  financeHandovers,
+  financeAssemblyDischarges,
   financeOpenItems,
   financePartnerEvidence,
   financePartnerNotices,
@@ -212,6 +216,19 @@ function contactHolds(deps: Deps, contactId: string): RetentionHold[] {
   for (const count of counts) {
     const fiscalYearId = fiscalYearForInternal(deps.db, count.countedOn)?.id ?? null;
     holds.push({ label: label('finance.records.cashCount', { number: count.documentNumber }), until: contactHoldUntil(deps, fiscalYearId), entity: 'financeCashCount', id: count.id });
+  }
+
+  // Rechenschaft C (Schlussdurchsicht I3): Zeugin einer Zählung, Von und An einer Amtsübergabe, Person der Entlastung.
+  for (const w of deps.db.select({ countId: financeCashCountContactWitnesses.countId }).from(financeCashCountContactWitnesses).where(eq(financeCashCountContactWitnesses.contactId, contactId)).all()) {
+    const count = deps.db.select().from(financeCashCounts).where(eq(financeCashCounts.id, w.countId)).get();
+    if (count) holds.push({ label: label('finance.records.cashCount', { number: count.documentNumber }), until: contactHoldUntil(deps, fiscalYearForInternal(deps.db, count.countedOn)?.id ?? null), entity: 'financeCashCount', id: count.id });
+  }
+  for (const h of deps.db.select().from(financeHandovers).where(or(eq(financeHandovers.fromContactId, contactId), eq(financeHandovers.toContactId, contactId))).all()) {
+    holds.push({ label: label('finance.records.handover', { date: h.handoverOn }), until: contactHoldUntil(deps, h.fiscalYearId), entity: 'financeHandover', id: h.id });
+  }
+  for (const d of deps.db.select().from(financeAssemblyDischarges).where(eq(financeAssemblyDischarges.contactId, contactId)).all()) {
+    const designation = deps.db.select({ d: financeFiscalYears.designation }).from(financeFiscalYears).where(eq(financeFiscalYears.id, d.fiscalYearId)).get()?.d ?? '';
+    holds.push({ label: label('finance.records.assemblyResult', { designation }), until: contactHoldUntil(deps, d.fiscalYearId), entity: 'financeAssemblyResult', id: d.fiscalYearId });
   }
 
   // F6a: je Bestätigung ein Halter — wie je Buchung, mit dem Anker des Geschäftsjahres des Ausstellungstags.
@@ -564,6 +581,12 @@ export function financeRecordDeleted(tx: DbOrTx, deps: Deps, ctx: CallContext, e
       tx.delete(financeContactWaiverTerms).where(eq(financeContactWaiverTerms.id, terms.id)).run();
       financeAudit(tx, deps, ctx, { action: 'finance.contactWaiverTerms.delete', entity: 'financeContactWaiverTerms', id: terms.id, before: terms });
     }
+    // Rechenschaft D2: Finanzamt und Steuernummer der Körperschaft — der festgeschriebene Bericht trägt seine Abschrift.
+    const taxDetails = tx.select().from(financeContactTaxDetails).where(eq(financeContactTaxDetails.contactId, id)).get();
+    if (taxDetails) {
+      tx.delete(financeContactTaxDetails).where(eq(financeContactTaxDetails.id, taxDetails.id)).run();
+      financeAudit(tx, deps, ctx, { action: 'finance.contactTaxDetails.delete', entity: 'financeContactTaxDetails', id: taxDetails.id });
+    }
     return;
   }
   if (entityType === 'project') {
@@ -598,6 +621,36 @@ function hasImportedTransactionsInYear(db: DbOrTx, year: Pick<FinanceFiscalYearR
  * Task 6, Spec 10.3). Ohne `href` — der Dienst, der anonymisiert, kommt erst
  * nach 0.2.0.
  */
+/**
+ * Ablaufhemmung (§ 147 Abs. 3 S. 5 AO, Rechenschaft C, Joe 2026-10-24): Die Aufbewahrung läuft nicht ab, solange die
+ * Festsetzungsfrist (§§ 169–171 AO) nicht abgelaufen ist — vereinfacht über den Bescheid: Freistellungsbescheid oder
+ * Anlage zum Körperschaftsteuerbescheid, deren Veranlagungszeitraum das Kalenderjahr des Jahresendes enthält (nicht
+ * irrtümlich erfasst). D2 kann auf den Bescheid am Erklärungszeitraum umstellen.
+ */
+export function yearAssessedInternal(db: DbOrTx, endsOn: string): boolean {
+  const year = Number(endsOn.slice(0, 4));
+  return db
+    .select({ kind: financeNotices.kind, assessmentPeriod: financeNotices.assessmentPeriod, voidedAt: financeNotices.voidedAt })
+    .from(financeNotices)
+    .all()
+    .filter((n) => n.voidedAt === null && n.kind !== 'section60a' && n.assessmentPeriod)
+    .some((n) => {
+      const years = [...n.assessmentPeriod!.matchAll(/\d{4}/g)].map((m) => Number(m[0]));
+      if (years.length === 0) return false;
+      return year >= Math.min(...years) && year <= Math.max(...years);
+    });
+}
+
+/**
+ * E6a (C1 1d): Die Hemmung endet mit dem Bescheid oder spätestens nach dem 7. Kalenderjahr nach dem Jahr — Anlauf
+ * höchstens bis zum Ende des dritten Folgejahres (§ 170 Abs. 2 Nr. 1 AO), dann vier Jahre Festsetzungsfrist (§ 169
+ * Abs. 2 S. 1 Nr. 2 AO). Ohne Bescheid würde ein nie veranlagtes Jahr sonst nie fällig (Art. 5 Abs. 1 lit. e DSGVO).
+ * Fristen nach § 171 AO (Einspruch, Außenprüfung) kennt Kompass nicht; die Frage im Entfernen-Dialog bleibt.
+ */
+export function retentionHoldReleasedInternal(db: DbOrTx, endsOn: string, today: string): boolean {
+  return yearAssessedInternal(db, endsOn) || today > `${Number(endsOn.slice(0, 4)) + 7}-12-31`;
+}
+
 export function financeRetentionDue(deps: Deps): DueItem[] {
   const today = todayIn(deps);
   const due: DueItem[] = [];
@@ -607,6 +660,7 @@ export function financeRetentionDue(deps: Deps): DueItem[] {
   if (months10 !== null) {
     for (const year of years) {
       if (fiscalYearStatusInternal(deps.db, year.id) !== 'closed') continue;
+      if (!retentionHoldReleasedInternal(deps.db, year.endsOn, today)) continue;
       const anchor = yearAnchorInternal(deps.db, year.id);
       if (anchor === null) continue;
       const dueSince = retentionEnd(anchor, months10);
@@ -618,6 +672,7 @@ export function financeRetentionDue(deps: Deps): DueItem[] {
   if (months8 !== null) {
     for (const year of years) {
       if (!hasImportedTransactionsInYear(deps.db, year)) continue;
+      if (!retentionHoldReleasedInternal(deps.db, year.endsOn, today)) continue;
       const dueSince = retentionEnd(year.endsOn, months8);
       if (dueSince < today) due.push({ entity: 'financeImportPersonalData', id: year.id, label: label('finance.records.importPersonalData', { year: year.designation }), dueSince });
     }

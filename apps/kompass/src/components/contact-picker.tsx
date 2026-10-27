@@ -116,9 +116,17 @@ export function ContactPicker({
             if (value && next !== pickedLabel(value)) onChange(null);
             setOpen(true);
           }}
-          onFocus={() => setOpen(true)}
+          // Fokus allein öffnet die Liste nicht (Designer Runde 5, 270/271): Ein Dialog setzt den Fokus beim Öffnen ins
+          // Feld, die Liste verdeckte dann die Felder darunter. Sie erscheint beim Tippen, beim Klick ins Feld und mit ↓.
+          onClick={() => setOpen(true)}
+          onKeyDown={(e) => {
+            if (e.key === 'ArrowDown' && !open) setOpen(true);
+          }}
           onBlur={() => setTimeout(() => setOpen(false), 120)}
           placeholder={t('placeholder')}
+          // Passt der Name nicht, kürzt das Feld mit „…“; der volle Name steht im Tooltip (Designer Runde 8, 093/094).
+          className="min-w-0 truncate"
+          title={value ? pickedLabel(value) : undefined}
           wrapperClassName="p-0"
           fieldClassName="h-[var(--field-h)] rounded-md! border-line-strong bg-field"
         />

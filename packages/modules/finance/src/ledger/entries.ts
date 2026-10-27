@@ -1,4 +1,4 @@
-import { expectedVersionField, isoNow, newId, notFound, ok, requirePermission, schema, staleVersion, todayIn, validate, type CallContext, type DbOrTx, type Deps, type Failure, type Result } from '@kompass/core';
+import { expectedVersionField, invalid, isoNow, newId, notFound, ok, requirePermission, schema, staleVersion, todayIn, validate, type CallContext, type DbOrTx, type Deps, type Failure, type Result } from '@kompass/core';
 import { contacts } from '@kompass/module-contacts';
 import { unlinkDocumentInternal } from '@kompass/module-dms';
 import { projects } from '@kompass/module-projects';
@@ -6,17 +6,18 @@ import { and, asc, desc, eq, gte, inArray, isNotNull, isNull, like, lte, or, typ
 import { z } from 'zod';
 import { financeAudit } from '../audit';
 import { financeConflict, requireHumanChannelFinance } from '../errors';
-import { financeAccounts, financeAllocationCorrections, financeAllocationLines, financeCategories, financeDirectDebitItems, financeEntries, financeEntryDocuments, financeEntryJustifications, financeImportRuns, financeInKindDetails, financeMoneyLines, financeOpenItems, financeOpenItemSettlements, financePartnerPaidLines, financePartnerPayments, financePurposes, financeRawTransactions, type FinanceAllocationLineRow, type FinanceEntryRow, type FinanceMoneyLineRow } from '../schema';
+import { financeAccounts, financeAllocationCorrections, financeAllocationLines, financeCategories, financeContactTaxDetails, financeDirectDebitItems, financeEntries, financeEntryDocuments, financeEntryJustifications, financeImportRuns, financeInKindDetails, financeMoneyLines, financeOpenItems, financeOpenItemSettlements, financePartnerPaidLines, financePartnerPayments, financePurposes, financeRawTransactions, type FinanceAllocationLineRow, type FinanceEntryRow, type FinanceMoneyLineRow } from '../schema';
 import { boardAllowanceProblemInternal } from './board';
 import { purposeGoingNegative } from './purpose-negative';
-import { notReturnMarkInternal, type NotReturnMarkView } from './not-return';
+import { mayBeDonationReturnInternal, notReturnMarkInternal, type NotReturnMarkView } from './not-return';
 import { requireFinanceRead } from './access';
-import { TAX_CODES } from './codes';
+import { ADDS_TO_ASSETS_OPT_OUTS, PARTNER_GRANT_CATEGORY_KEYS, REVERSE_CHARGE_CODES, TAX_CODES, type AddsToAssetsOptOut } from './codes';
 import { ensureFiscalYearFor } from './fiscal-years';
 import { projectFinanceInternal } from './project-settings';
 import { accountLedgerInternal } from './queries';
 import { taxContextAt, taxOf, type TaxCode, type TaxResult } from './tax';
 import { settlementWarningsInternal, type SettlementWarning, type SettlementWarningParams } from './settlement-warnings';
+import { taxCodeOptionsInternal } from './vat-settings';
 
 /** Eine Geldzeile erledigt einen offenen Posten ganz oder teilweise (Spec 5.3). */
 export interface MoneyLineSettlementView {
@@ -74,6 +75,12 @@ export interface EntryView extends FinanceEntryRow {
   /** AC: eine Auszahlung, die ausdrücklich keine Rückgabe ist — sperrt die Bestätigungen des Kontakts nicht als möglicher Rückläufer. */
   notReturn: NotReturnMarkView | null;
   /**
+   * Plan E9 Task 2 (Befund 30 b): Die Auszahlung könnte eine Rückgabe einer bescheinigbaren Zuwendung sein und sperrt
+   * deren Bestätigung, bis sie verknüpft oder als „keine Rückgabe“ gekennzeichnet ist (`mayBeDonationReturnInternal`).
+   * Nur `getEntry` setzt das Feld — es braucht die Einstellung zu Mitgliedsbeiträgen.
+   */
+  mayBeReturn?: boolean;
+  /**
    * Befund 20: ein Entwurf mit Datum in der Zukunft warnt, sperrt aber
    * nicht — Festschreiben lehnt das ab (`entryDateInFuture`). Berechnet, nie
    * gespeichert; nur berechnet, wo der Aufrufer ein „heute“ mitgibt
@@ -90,6 +97,8 @@ export interface EntryView extends FinanceEntryRow {
   notices: readonly EntryNotice[];
   /** Befund AI: zu `allowanceExceeded` — wer, welche Pauschale, welches Jahr, wie viel darüber. Nur `finalizeInternal` setzt es. */
   allowanceExceeded?: AllowanceExceededNotice[];
+  /** N11 a: zu `taxCodeNotOffered` — Zeile und Kennzeichen, das der Buchungstag nicht mehr anbietet. Nur `finalizeInternal` setzt es. */
+  taxCodeNotOffered?: TaxCodeNotOfferedNotice[];
 }
 
 /**
@@ -97,7 +106,8 @@ export interface EntryView extends FinanceEntryRow {
  * Bestätigung (`acknowledgedWarnings`) — berechnet an jedem Entwurf, nie gespeichert.
  */
 export type EntryWarning = 'futureDate' | SettlementWarning;
-export type EntryNotice = 'cashDonationAboveAlert' | 'allowanceExceeded' | 'returnWithoutOrigin';
+/** `vatAmendment` (N8): die Buchung ändert einen abgegebenen Umsatzsteuer-Zeitraum — eine Berichtigung ist fällig. */
+export type EntryNotice = 'cashDonationAboveAlert' | 'allowanceExceeded' | 'returnWithoutOrigin' | 'vatAmendment' | 'taxCodeNotOffered' | 'partnerPaymentMissing';
 
 /** Befund AI: eine Person liegt nach dieser Buchung über der Jahresgrenze einer Pauschale — eine Warnung, keine Sperre. */
 export interface AllowanceExceededNotice {
@@ -127,8 +137,13 @@ export interface AllocationLineWrite {
   abroad: boolean;
   originLineId: string | null;
   addsToAssets: boolean;
+  /** Rechenschaft D2: Grund gegen die Zuführung zum Vermögen und erhaltene Vermögensausstattung — fehlen sie, gilt `null`/`false`. */
+  addsToAssetsOptOut?: AddsToAssetsOptOut | null;
+  assetEndowment?: boolean;
   /** Plan L3: der Posten eines Einzugs, den die Zeile bucht. Fehlt beim Storno. */
   directDebitItemId?: string | null;
+  /** E6a: Leistungsdatum an § 13b-/Erwerbszeilen (`REVERSE_CHARGE_CODES`); fehlt es, gilt `null`. */
+  serviceDate?: string | null;
 }
 
 const settlementInputSchema = z.object({
@@ -159,8 +174,14 @@ const allocationLineSchema = z.object({
   abroad: z.boolean().optional(),
   originLineId: z.string().min(1).nullable().optional(),
   addsToAssets: z.boolean().optional(),
+  /** Rechenschaft D2: Pflicht, wenn eine Erbschaft oder erhaltene Vermögensausstattung nicht dem Vermögen zugeführt wird. */
+  addsToAssetsOptOut: z.enum(ADDS_TO_ASSETS_OPT_OUTS).nullable().optional(),
+  /** Rechenschaft D2: erhaltene Vermögensausstattung (§ 58 Nr. 3 AO) — nur bei Zuwendungen anderer Organisationen mit Kontakt. */
+  assetEndowment: z.boolean().optional(),
   /** Plan L3: der Posten eines Einzugs, den diese Zeile bucht (aus dem Vorschlag „Einzug“). */
   directDebitItemId: z.string().min(1).nullable().optional(),
+  /** E6a: Leistungsdatum, beim Drittland das Rechnungsdatum — nur an § 13b-/Erwerbszeilen. */
+  serviceDate: z.iso.date().nullable().optional(),
 });
 
 /** Auch von `bookEntry` (finalize.ts) benutzt — dort ohne `id`/`expectedVersion`. */
@@ -271,7 +292,10 @@ export function writeLinesInternal(tx: DbOrTx, entryId: string, lines: { moneyLi
         abroad: line.abroad,
         originLineId: line.originLineId,
         addsToAssets: line.addsToAssets,
+        addsToAssetsOptOut: line.addsToAssetsOptOut ?? null,
+        assetEndowment: line.assetEndowment ?? false,
         directDebitItemId: line.directDebitItemId ?? null,
+        serviceDate: line.serviceDate ?? null,
       })
       .run();
   });
@@ -560,8 +584,11 @@ function checkRawTransaction(db: DbOrTx, line: { accountId: string; amountCents:
   return null;
 }
 
-/** Prüft, was eine Buchung ansteuert; ansonsten unverändert von `input`. Erst das Festschreiben prüft, ob es auch aktiv ist. */
-function checkReferences(deps: Deps, input: EntryLinesInput): Failure | null {
+/**
+ * Prüft, was eine Buchung ansteuert; ansonsten unverändert von `input`. Erst das Festschreiben prüft, ob es auch aktiv ist.
+ * `presetTaxCodes`: Kennzeichen, die ein aufrufender Dienst als Vorgabe setzt (E-Rechnung, `applyInvoiceToDraft`).
+ */
+function checkReferences(deps: Deps, input: EntryLinesInput, presetTaxCodes: readonly TaxCode[] = []): Failure | null {
   const accounts = accountsById(deps.db, input.moneyLines.map((l) => l.accountId));
   for (const line of input.moneyLines) {
     if (!accounts.has(line.accountId)) return notFound('financeAccount', line.accountId);
@@ -579,6 +606,113 @@ function checkReferences(deps: Deps, input: EntryLinesInput): Failure | null {
     if (line.directDebitItemId && !deps.db.select({ id: financeDirectDebitItems.id }).from(financeDirectDebitItems).where(eq(financeDirectDebitItems.id, line.directDebitItemId)).get()) return notFound('financeDirectDebitItem', line.directDebitItemId);
     if (line.purposeId && !purposeExists(deps.db, line.purposeId)) return notFound('financePurpose', line.purposeId);
   }
+  return gemAttributeProblem(input.allocationLines, categories) ?? taxCodeProblem(deps.db, input, categories, presetTaxCodes) ?? serviceDateProblem(deps.db, input.allocationLines, categories);
+}
+
+/** Die Kennzeichen aus den Zeilenvorlagen der offenen Posten, die die Geldzeilen ausgleichen — dort steht die E-Rechnung. */
+function openItemTemplateTaxCodes(db: DbOrTx, moneyLines: EntryLinesInput['moneyLines']): string[] {
+  const ids = [...new Set(moneyLines.flatMap((l) => (l.settlements ?? []).map((s) => s.openItemId)))];
+  if (ids.length === 0) return [];
+  return db.select({ lineTemplate: financeOpenItems.lineTemplate }).from(financeOpenItems).where(inArray(financeOpenItems.id, ids)).all().flatMap((row) => {
+    if (!row.lineTemplate) return [];
+    try {
+      const parsed: unknown = JSON.parse(row.lineTemplate);
+      return Array.isArray(parsed) ? parsed.flatMap((t: unknown) => (t && typeof t === 'object' && typeof (t as { taxCode?: unknown }).taxCode === 'string' ? [(t as { taxCode: string }).taxCode] : [])) : [];
+    } catch {
+      return [];
+    }
+  });
+}
+
+/**
+ * Befund 39, Frage 4: Ein ausdrücklich gesetztes Kennzeichen muss am Buchungstag zur Auswahl gehören
+ * (`taxCodeOptionsInternal`, dieselbe wie in der Maske) — über Oberfläche und MCP gleich. Keine Wahl und deshalb
+ * erlaubt: `none` und die Vorgabe der Kategorie (dasselbe wie ein leeres Feld); dazu was schon da war oder vorgegeben
+ * ist: ein Kennzeichen, das schon an einer Zeile dieses Entwurfs stand (Bestand), das der Ursprungszeile einer Rückgabe
+ * oder Erstattung, die Vorgabe vom Kontakt (Merkmal § 13b an einer Ausgabe) und die der E-Rechnung (Zeilenvorlage des
+ * ausgeglichenen offenen Postens oder `presetTaxCodes`).
+ */
+function taxCodeProblem(db: DbOrTx, input: EntryLinesInput, categories: ReadonlyMap<string, { defaultTaxCode: string }>, presetTaxCodes: readonly TaxCode[]): Failure | null {
+  const chosen = input.allocationLines.map((l, i) => ({ l, i })).filter(({ l }) => l.taxCode && l.taxCode !== 'none' && l.taxCode !== categories.get(l.categoryId)?.defaultTaxCode);
+  if (chosen.length === 0) return null;
+  const allowed = new Set<string>([...taxCodeOptionsInternal(db, input.entryDate), ...presetTaxCodes, ...openItemTemplateTaxCodes(db, input.moneyLines)]);
+  if (input.id) for (const row of db.select({ taxCode: financeAllocationLines.taxCode }).from(financeAllocationLines).where(eq(financeAllocationLines.entryId, input.id)).all()) allowed.add(row.taxCode);
+  for (const { l, i } of chosen) {
+    const code = l.taxCode!;
+    if (allowed.has(code) || presetByLine(db, l, code)) continue;
+    // N10: `rc13bEu` fehlt nur ohne Unternehmereigenschaft und ohne USt-IdNr. — der eigene Grund (§ 3a Abs. 2 S. 3 UStG).
+    return invalid([{ path: `allocationLines.${i}.taxCode`, message: code === 'rc13bEu' ? 'rc13bEuNeedsVatId' : 'taxCodeNotOffered' }]);
+  }
+  return null;
+}
+
+/** Vorgegeben statt gewählt: die Vorgabe vom Kontakt (Merkmal § 13b an einer Ausgabe) oder das Kennzeichen der Ursprungszeile. */
+function presetByLine(db: DbOrTx, l: { amountCents: number; contactId?: string | null; originLineId?: string | null }, code: string): boolean {
+  if (l.amountCents < 0 && l.contactId && contactReverseChargeCode(db, l.contactId) === code) return true;
+  return !!l.originLineId && db.select({ taxCode: financeAllocationLines.taxCode }).from(financeAllocationLines).where(eq(financeAllocationLines.id, l.originLineId)).get()?.taxCode === code;
+}
+
+/** N11 a: eine Zeile, deren Kennzeichen der Buchungstag nicht anbietet. */
+export interface TaxCodeNotOfferedNotice { lineId: string; taxCode: TaxCode }
+
+/**
+ * Ohne Rechteprüfung, N11 a (Joe 2026-10-27): die Zeilen einer Buchung, deren Kennzeichen die Auswahl des Buchungstags
+ * (`taxCodeOptionsInternal`) nicht anbietet und das weder die Vorgabe der Kategorie noch die vom Kontakt oder der
+ * Ursprungszeile ist — also nur erlaubt war, weil es schon am Entwurf stand (`taxCodeProblem`), etwa weil sich die
+ * Umsatzsteuer-Einstellungen seitdem geändert haben. Für den Hinweis beim Festschreiben, keine Sperre.
+ */
+export function taxCodesNotOfferedInternal(db: DbOrTx, entry: { entryDate: string; allocationLines: readonly { id: string; taxCode: string; categoryId: string; amountCents: number; contactId: string | null; originLineId: string | null }[] }): TaxCodeNotOfferedNotice[] {
+  const coded = entry.allocationLines.filter((l) => l.taxCode !== 'none');
+  if (coded.length === 0) return [];
+  const offered = new Set<string>(taxCodeOptionsInternal(db, entry.entryDate));
+  const defaults = new Map(db.select({ id: financeCategories.id, defaultTaxCode: financeCategories.defaultTaxCode }).from(financeCategories).where(inArray(financeCategories.id, [...new Set(coded.map((l) => l.categoryId))])).all().map((c) => [c.id, c.defaultTaxCode] as const));
+  return coded.filter((l) => !offered.has(l.taxCode) && defaults.get(l.categoryId) !== l.taxCode && !presetByLine(db, l, l.taxCode)).map((l) => ({ lineId: l.id, taxCode: l.taxCode as TaxCode }));
+}
+
+/**
+ * Ohne Rechteprüfung, N20 (Joe 2026-10-27): Fließen mit der Buchung Mittel an Partner ab (Ausgabezeile auf einer
+ * Kategorie der Mittelweitergabe, `PARTNER_GRANT_CATEGORY_KEYS`), ohne dass sie zu einer Zahlung an Partner gehört — kein
+ * beglichener Posten mit Herkunft `financePartnerPayment`, keine Zeile als bezahlte Zeile einer Zahlung? Dann verfolgt
+ * Kompass keinen Verwendungsnachweis (§ 58 Nr. 1 AO). Für den Hinweis beim Festschreiben, keine Sperre.
+ */
+export function partnerPaymentMissingInternal(db: DbOrTx, entryId: string): boolean {
+  const lines = db.select({ id: financeAllocationLines.id, amountCents: financeAllocationLines.amountCents, key: financeCategories.key }).from(financeAllocationLines).innerJoin(financeCategories, eq(financeCategories.id, financeAllocationLines.categoryId)).where(eq(financeAllocationLines.entryId, entryId)).all();
+  const grants = lines.filter((l) => l.amountCents < 0 && l.key !== null && PARTNER_GRANT_CATEGORY_KEYS.includes(l.key));
+  if (grants.length === 0) return false;
+  if (db.select({ id: financePartnerPaidLines.id }).from(financePartnerPaidLines).where(inArray(financePartnerPaidLines.paidLineId, grants.map((l) => l.id))).get()) return false;
+  const moneyLineIds = db.select({ id: financeMoneyLines.id }).from(financeMoneyLines).where(eq(financeMoneyLines.entryId, entryId)).all().map((l) => l.id);
+  if (moneyLineIds.length === 0) return true;
+  const settled = db
+    .select({ originType: financeOpenItems.originType })
+    .from(financeOpenItemSettlements)
+    .innerJoin(financeOpenItems, eq(financeOpenItems.id, financeOpenItemSettlements.openItemId))
+    .where(and(inArray(financeOpenItemSettlements.moneyLineId, moneyLineIds), eq(financeOpenItems.originType, 'financePartnerPayment')))
+    .get();
+  return !settled;
+}
+
+/**
+ * Rechenschaft D2: Erbschaften (§ 62 Abs. 3 Nr. 1 AO) und erhaltene Vermögensausstattungen (§ 58 Nr. 3 AO, § 62 Abs. 3
+ * Nr. 2 AO) gehen nach Vorgabe ins Vermögen. Abgewählt nur mit dem Grund ihrer Art (Recherche 2026-10-25, Frage 3:
+ * AEAO zu § 62 Nr. 16 „können“) — der Grund passt nur zu seiner Art.
+ */
+const OPT_OUT_OF: Record<AddsToAssetsOptOut, 'inheritance' | 'endowment'> = { testatorDirectedCurrentUse: 'inheritance', donorAllowedCurrentUse: 'endowment' };
+
+function addsToAssetsByDefault(incomeKind: string | null, assetEndowment: boolean): boolean {
+  return incomeKind === 'inheritance' || assetEndowment;
+}
+
+function gemAttributeProblem(lines: EntryLinesInput['allocationLines'], categories: ReadonlyMap<string, { incomeKind: string | null; direction: string }>): Failure | null {
+  for (const [i, line] of lines.entries()) {
+    const category = categories.get(line.categoryId)!;
+    const endowment = line.assetEndowment === true;
+    if (endowment && (category.direction !== 'income' || category.incomeKind !== 'bodyGrant' || !line.contactId)) return invalid([{ path: `allocationLines.${i}.assetEndowment`, message: 'notApplicable' }]);
+    const kind = category.incomeKind === 'inheritance' ? 'inheritance' : endowment ? 'endowment' : null;
+    const adds = line.addsToAssets ?? addsToAssetsByDefault(category.incomeKind, endowment);
+    const optOut = line.addsToAssetsOptOut ?? null;
+    if (optOut !== null && (adds || OPT_OUT_OF[optOut] !== kind)) return invalid([{ path: `allocationLines.${i}.addsToAssetsOptOut`, message: 'notApplicable' }]);
+    if (kind !== null && !adds && optOut === null) return invalid([{ path: `allocationLines.${i}.addsToAssetsOptOut`, message: 'required' }]);
+  }
   return null;
 }
 
@@ -586,6 +720,35 @@ function checkReferences(deps: Deps, input: EntryLinesInput): Failure | null {
 function cashLineProblem(deps: Deps, moneyLines: readonly { accountId: string }[]): Failure | null {
   const accounts = accountsById(deps.db, moneyLines.map((l) => l.accountId));
   if ([...accounts.values()].some((a) => a.kind === 'cash')) return financeConflict('cashDraftNotAllowed');
+  return null;
+}
+
+/**
+ * E6a: Merkmal „Rechnungen mit Umkehr der Steuerschuld (§ 13b)“ am Kontakt (`finance_contact_tax_details`, aus der
+ * Tabelle gelesen: `ledger/` kennt `allocation/` nicht) — Vorgabe `rc13bEu`/`rc13bOther` für Ausgaben.
+ */
+export function contactReverseChargeCode(db: DbOrTx, contactId: string): TaxCode | null {
+  const row = db.select({ reverseCharge: financeContactTaxDetails.reverseCharge }).from(financeContactTaxDetails).where(eq(financeContactTaxDetails.contactId, contactId)).get();
+  return row?.reverseCharge === 'eu' ? 'rc13bEu' : row?.reverseCharge === 'other' ? 'rc13bOther' : null;
+}
+
+/** Das Kennzeichen der Zeile: ausdrücklich gesetzt, sonst bei einer Ausgabe vom Kontakt (§ 13b), sonst von der Kategorie. */
+function effectiveTaxCode(db: DbOrTx, line: Pick<EntryLinesInput['allocationLines'][number], 'taxCode' | 'amountCents' | 'contactId'>, category: { defaultTaxCode: string }): TaxCode {
+  if (line.taxCode) return line.taxCode;
+  if (line.amountCents < 0 && line.contactId) {
+    const fromContact = contactReverseChargeCode(db, line.contactId);
+    if (fromContact) return fromContact;
+  }
+  return category.defaultTaxCode as TaxCode;
+}
+
+/** Ein Leistungsdatum nur an Zeilen mit § 13b-/Erwerbskennzeichen (Spec E6 Teil 2). */
+function serviceDateProblem(db: DbOrTx, lines: EntryLinesInput['allocationLines'], categories: ReadonlyMap<string, { defaultTaxCode: string }>): Failure | null {
+  for (const [i, line] of lines.entries()) {
+    if (!line.serviceDate) continue;
+    const code = effectiveTaxCode(db, line, categories.get(line.categoryId)!);
+    if (!(REVERSE_CHARGE_CODES as readonly string[]).includes(code)) return invalid([{ path: `allocationLines.${i}.serviceDate`, message: 'notApplicable' }]);
+  }
   return null;
 }
 
@@ -598,29 +761,37 @@ function resolvedLines(deps: Deps, input: EntryLinesInput): { moneyLines: MoneyL
       return {
         categoryId: l.categoryId,
         amountCents: l.amountCents,
-        taxCode: (l.taxCode ?? category.defaultTaxCode) as TaxCode,
+        taxCode: effectiveTaxCode(deps.db, l, category),
         rateKind: l.rateKind ?? 'standard',
         projectId: l.projectId ?? null,
         purposeId: l.purposeId ?? null,
         contactId: l.contactId ?? null,
         abroad: l.abroad ?? ((l.purposeId ? purposeAbroad(deps.db, l.purposeId) : false) || (l.projectId ? projectAbroad(deps.db, l.projectId) : false)),
         originLineId: l.originLineId ?? null,
-        addsToAssets: l.addsToAssets ?? category.incomeKind === 'inheritance',
+        addsToAssets: l.addsToAssets ?? addsToAssetsByDefault(category.incomeKind, l.assetEndowment === true),
+        addsToAssetsOptOut: l.addsToAssetsOptOut ?? null,
+        assetEndowment: l.assetEndowment ?? false,
         directDebitItemId: l.directDebitItemId ?? null,
+        serviceDate: l.serviceDate ?? null,
       };
     }),
   };
 }
 
 /** Für `bookEntry` (finalize.ts): dieselbe Prüfung und Vorbelegung wie `saveDraft`, ohne die Bargeld-Sperre — Bargeld bucht `bookEntry` gerade deshalb in einem Zug. */
-export function resolveEntryLines(deps: Deps, input: EntryLinesInput): Result<{ moneyLines: MoneyLineWrite[]; allocationLines: AllocationLineWrite[] }> {
-  const problem = checkReferences(deps, input);
+export function resolveEntryLines(deps: Deps, input: EntryLinesInput, presetTaxCodes: readonly TaxCode[] = []): Result<{ moneyLines: MoneyLineWrite[]; allocationLines: AllocationLineWrite[] }> {
+  const problem = checkReferences(deps, input, presetTaxCodes);
   if (problem) return problem;
   return ok(resolvedLines(deps, input));
 }
 
 /** `finance.entriesWrite`: Entwurf anlegen (ohne `id`) oder als Ganzes ersetzen (mit `id`). Ein Entwurf darf unausgeglichen und leer sein. */
 export async function saveDraft(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<EntryView>> {
+  return saveDraftWithPresets(deps, ctx, input, []);
+}
+
+/** `saveDraft` mit Kennzeichen, die der aufrufende Dienst als Vorgabe setzt (E-Rechnung, `applyInvoiceToDraft`). */
+export async function saveDraftWithPresets(deps: Deps, ctx: CallContext, input: unknown, presetTaxCodes: readonly TaxCode[]): Promise<Result<EntryView>> {
   const denied = requirePermission(ctx, 'finance.entriesWrite');
   if (denied) return denied;
   const parsed = validate(deps, entryLinesSchema, input);
@@ -638,7 +809,7 @@ export async function saveDraft(deps: Deps, ctx: CallContext, input: unknown): P
 
   const cashProblem = cashLineProblem(deps, v.moneyLines);
   if (cashProblem) return cashProblem;
-  const resolved = resolveEntryLines(deps, v);
+  const resolved = resolveEntryLines(deps, v, presetTaxCodes);
   if (!resolved.ok) return resolved;
   const lines = resolved.value;
   const boardProblem = boardAllowanceProblemInternal(deps.db, deps, { entryDate: v.entryDate, reason: v.reason, lines: v.allocationLines });
@@ -680,7 +851,7 @@ export async function getEntry(deps: Deps, ctx: CallContext, input: unknown): Pr
   if (!parsed.ok) return parsed;
   const view = entryViewInternal(deps.db, parsed.value.id, todayIn(deps));
   if (!view) return notFound('financeEntry', parsed.value.id);
-  return ok(view);
+  return ok({ ...view, mayBeReturn: mayBeDonationReturnInternal(deps, view.id) });
 }
 
 /**

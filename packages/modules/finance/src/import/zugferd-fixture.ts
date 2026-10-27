@@ -28,6 +28,8 @@ export interface InvoiceFixture {
   dueDate?: string | null;
   /** `null` lässt die Zahlungsempfänger-IBAN weg. */
   iban?: string | null;
+  /** USt-IdNr. des Ausstellers (`SpecifiedTaxRegistration`, `schemeID="VA"`); fehlt sie, steht keine im XML. */
+  sellerVatId?: string;
 }
 
 const escapeXml = (text: string): string => text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -48,7 +50,7 @@ export function buildInvoiceXml(o: InvoiceFixture = {}): string {
   </rsm:ExchangedDocument>
   <rsm:SupplyChainTradeTransaction>
     <ram:ApplicableHeaderTradeAgreement>
-      <ram:SellerTradeParty><ram:Name>${escapeXml(o.seller ?? 'Tierarztpraxis Muster')}</ram:Name></ram:SellerTradeParty>
+      <ram:SellerTradeParty><ram:Name>${escapeXml(o.seller ?? 'Tierarztpraxis Muster')}</ram:Name>${o.sellerVatId ? `<ram:SpecifiedTaxRegistration><ram:ID schemeID="VA">${escapeXml(o.sellerVatId)}</ram:ID></ram:SpecifiedTaxRegistration>` : ''}</ram:SellerTradeParty>
       <ram:BuyerTradeParty><ram:Name>Beispielverein e.V.</ram:Name></ram:BuyerTradeParty>
     </ram:ApplicableHeaderTradeAgreement>
     <ram:ApplicableHeaderTradeDelivery/>
@@ -110,6 +112,28 @@ export function invoiceInYear(fixture: typeof VET_INVOICE | typeof OFFICE_INVOIC
   const shift = (value: string) => value.replace(/^(\D*)2026/, `$1${year}`);
   return { ...fixture, number: shift(fixture.number), issue: shift(fixture.issue), dueDate: shift(fixture.dueDate), taxes: [...fixture.taxes] };
 }
+
+/**
+ * Plan seed-mehrjahre (Joe 2026-10-26): die elektronische Rechnung eines erfundenen Anbieters in den Niederlanden ohne
+ * deutsche Steuer — Kategorie `AE` (Umkehr der Steuerschuld), USt-IdNr. mit `NL`, keine Zahlungs-IBAN. Im Seed ein Beleg
+ * ohne Buchung; der Rechnungsleser stellt daran die Prüffrage § 13b.
+ */
+export const FOREIGN_INVOICE = {
+  number: 'CW-2026-118',
+  issue: '20260603',
+  seller: 'Cloudwerk B.V.',
+  grand: '59.00',
+  taxTotal: '0.00',
+  taxes: [{ rate: '0.00', category: 'AE', basis: '59.00', tax: '0.00' }],
+  dueDate: '20260617',
+  iban: null,
+  sellerVatId: 'NL999999999B01',
+} as const satisfies InvoiceFixture;
+
+export const buildForeignInvoicePdf = (year = 2026): Uint8Array => {
+  const shift = (value: string) => value.replace(/^(\D*)2026/, `$1${year}`);
+  return buildInvoicePdf({ ...FOREIGN_INVOICE, number: shift(FOREIGN_INVOICE.number), issue: shift(FOREIGN_INVOICE.issue), dueDate: shift(FOREIGN_INVOICE.dueDate), taxes: [...FOREIGN_INVOICE.taxes] });
+};
 
 export const buildVetInvoicePdf = (year = 2026): Uint8Array => buildInvoicePdf(invoiceInYear(VET_INVOICE, year));
 export const buildOfficeInvoicePdf = (year = 2026): Uint8Array => buildInvoicePdf(invoiceInYear(OFFICE_INVOICE, year));

@@ -40,7 +40,7 @@ class ToolMissingError extends Error {
  * Attrappe, die die gegebenen Anhänge liefert.
  */
 async function withInvoice(embedded: EmbeddedFile[] | TextExtraction, opts: { typeKey?: string } = {}) {
-  const f = await ledgerFixture();
+  const f = await ledgerFixture({ entrepreneur: true });
   f.deps.textExtraction = Array.isArray(embedded) ? fakeTextExtraction({ embedded }) : embedded;
   const receiver = ctxWith([...FINANCE_PERMISSIONS, 'dms.create', 'dms.view'], f.userId);
   const doc = unwrap(await receiveDocument(f.deps, receiver, { filename: 'rechnung.pdf', typeKey: opts.typeKey ?? 'voucher-invoice', subject: 'Eingangsrechnung', documentDate: '2026-04-01', folder: null, bytes: pdfBytes() }));
@@ -91,6 +91,13 @@ describe('readInvoiceFromDocument', () => {
 
     const exempt = await withInvoice([attachment(invoiceXml({ taxes: [{ rate: '0', category: 'E', basis: '100.00', tax: '0.00' }], grand: '100.00', taxTotal: '0.00' }))]);
     expect(unwrap(await readInvoiceFromDocument(exempt.deps, financeReader(exempt), { documentId: exempt.documentId }))).toMatchObject({ taxCode: 'none', taxCentsDifference: 0 });
+
+    // Joe 2026-10-26 (Designer Runde 8, Fachlich 2): Kategorie AE heißt Umkehr der Steuerschuld — das Kennzeichen § 13b
+    // als Vorgabe nach dem Land der USt-IdNr. des Ausstellers, ohne Prüffrage.
+    const ae = await withInvoice([attachment(invoiceXml({ sellerVatId: 'NL999999999B01', taxes: [{ rate: '0', category: 'AE', basis: '100.00', tax: '0.00' }], grand: '100.00', taxTotal: '0.00' }))]);
+    expect(unwrap(await readInvoiceFromDocument(ae.deps, financeReader(ae), { documentId: ae.documentId }))).toMatchObject({ taxCode: 'rc13bEu', taxCentsDifference: 0 });
+    const aeOther = await withInvoice([attachment(invoiceXml({ sellerVatId: 'CHE123456789', taxes: [{ rate: '0', category: 'AE', basis: '100.00', tax: '0.00' }], grand: '100.00', taxTotal: '0.00' }))]);
+    expect(unwrap(await readInvoiceFromDocument(aeOther.deps, financeReader(aeOther), { documentId: aeOther.documentId }))).toMatchObject({ taxCode: 'rc13bOther' });
 
     const twoRates = await withInvoice([attachment(invoiceXml({ taxes: [{ rate: '19', category: 'S', basis: '100.00', tax: '19.00' }, { rate: '7', category: 'S', basis: '50.00', tax: '3.50' }], grand: '172.50', taxTotal: '22.50' }))]);
     expect(unwrap(await readInvoiceFromDocument(twoRates.deps, financeReader(twoRates), { documentId: twoRates.documentId }))).toMatchObject({ taxCode: null, taxCentsDifference: null });

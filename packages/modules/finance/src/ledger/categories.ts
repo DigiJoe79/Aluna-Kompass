@@ -22,6 +22,8 @@ const categoryBase = z.object({
   inputTaxDeductible: z.enum(INPUT_TAX).default('no'),
   countsTowardTurnover: z.boolean().default(false),
   isAssetSale: z.boolean().default(false),
+  /** Rechenschaft C: was aus den Rechnungen der Freigrenze (§ 64 Abs. 3 AO) bzw. der Einnahmen nach § 55 fällt. */
+  thresholdExclusion: z.enum(['none', 'notPerformance', 'taxRefund']).default('none'),
   externalAccountNumber: z.string().trim().max(12).nullable().optional(),
 });
 type CategoryFields = z.infer<typeof categoryBase>;
@@ -104,6 +106,7 @@ export function createCategoryInternal(tx: DbOrTx, deps: Deps, ctx: CallContext,
     inputTaxDeductible: fields.inputTaxDeductible,
     countsTowardTurnover: fields.countsTowardTurnover,
     isAssetSale: fields.isAssetSale,
+    thresholdExclusion: fields.thresholdExclusion,
     externalAccountNumber: fields.externalAccountNumber ?? null,
     isActive: true,
     createdAt: now,
@@ -149,6 +152,7 @@ export async function updateCategory(deps: Deps, ctx: CallContext, input: unknow
     inputTaxDeductible: merged.inputTaxDeductible,
     countsTowardTurnover: merged.countsTowardTurnover,
     isAssetSale: merged.isAssetSale,
+    thresholdExclusion: merged.thresholdExclusion,
     externalAccountNumber: merged.externalAccountNumber ?? undefined,
   });
   if (!rechecked.ok) return rechecked;

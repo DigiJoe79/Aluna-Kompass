@@ -29,6 +29,7 @@ const SOURCES = ['apps/kompass/src', 'packages'].map((dir) => path.join(REPO, di
 const SKIP_DIRS = new Set(['node_modules', 'tests', 'dist', '.astro', 'drizzle', '.next']);
 
 const DYNAMIC: { prefix: RegExp; where: string }[] = [
+  { prefix: /^finance\.reverseChargePrompt\.trigger\./, where: 'lib/finance/reverse-charge-prompt.ts — `reverseChargeTriggerText` mit dem Übersetzer der Aufrufstelle' },
   { prefix: /^folderTree\.(block|announce)\./, where: 'components/folder-tree/announcements.ts — `block.${reason}` und die Ansagen, mit dem Übersetzer des Baums' },
   { prefix: /^nav\./, where: 'apps/kompass/src/lib/navigation.ts — `nav.${item.key}` aus den Menüeinträgen von Kern und Modulen' },
   { prefix: /^(content|[a-z]+\.common)\.(moduleInactiveTitle|moduleInactiveText|openModules)$/, where: 'components/module-inactive-card.tsx — `getTranslations(namespace)` mit dem Namensraum des Moduls' },
@@ -37,6 +38,9 @@ const DYNAMIC: { prefix: RegExp; where: string }[] = [
   { prefix: /^finance\.taxText\./, where: 'lib/finance/tax-text.ts — `taxTextKey()` liefert den Schlüssel' },
   { prefix: /^site\.publish\.flow\.end\.(success\.title|failed|failedPreview|cancelled|timeout|interrupted|cache)/, where: 'app/(shell)/site/publish/end-text.ts — endTitle/endText mit dem Übersetzer des Namensraums site.publish' },
   { prefix: /^common\.conflict\.(compare|reload)$/, where: 'lib/conflict-remedies.ts — `conflictRemedies()` löst die Auswege mit dem Übersetzer der Leiste auf' },
+  { prefix: /^finance\.reports\.stage\./, where: 'finance/reports/[key]/report-view.tsx — die Stufe des Laufs als `PageHeader status` (`stage.${run.stage}`, N2)' },
+  { prefix: /^finance\.reports\.[A-Za-z]+\.description$/, where: 'finance/reporting/catalog.ts — je Bericht `finance.reports.<key>.description` neben `titleKey` (Board 2a); die Seite „Berichte“ liest ihn mit dem UI-Plan' },
+  { prefix: /^finance\.reopenConsequences\./, where: 'finance/ledger/period.ts — `previewPeriodReopen` liefert `{ code }` der Wächter (reporting/locks.ts); die Oberfläche setzt `finance.reopenConsequences.${code}` (Dialog folgt mit dem UI-Plan)' },
   { prefix: /^finance\.channel\./, where: 'lib/finance/channel.ts — `channelKey()` liefert den Schlüssel' },
   { prefix: /^audit\.actions\./, where: 'lib/audit-actions.ts — `auditActionKey()` macht aus der Aktion des Protokolls den Schlüssel (Punkte → Unterstriche)' },
   { prefix: /^audit\.sentences\./, where: 'lib/audit-sentences.ts — `auditSentenceKey()` macht aus der Aktion des Protokolls den Schlüssel des Satzes (Punkte → Unterstriche)' },

@@ -16,6 +16,7 @@ export const ALLOWED: Allowlist = {
   'components/drop-overlay.tsx': 'Hinweiskarte über einer Ablagefläche, keine Seitenbreite.',
   'components/folder-tree/drag-preview.tsx': 'Ziehbild eines Ordners, keine Seitenbreite.',
   'components/finance/receipt-drop.tsx': 'Dateiname im Ablagefeld, gekürzt mit `truncate`.',
+  'components/pdf-pages.tsx': 'Papier im Hochformat höchstens 820 px breit, linksbündig (Designer Runde 7, 16a B), keine Seitenbreite.',
 };
 
 

@@ -57,7 +57,7 @@ test.describe('finance reserves (F8b)', () => {
     await expect(storyCap).toContainText('Näherung');
     // Runde 3, 123 (Joe): die Rechnung mit den Zahlen des Jahres hinter dem Infoknopf.
     await storyCap.getByTestId('reserve-cap-derivation').click();
-    await expect(storyCap.getByText(/% des Überschusses der Vermögensverwaltung \(.+\s€\)/)).toBeVisible();
+    await expect(storyCap.getByText(/(1\/3|\d+ %) des Überschusses der Vermögensverwaltung \(.+\s€\)/)).toBeVisible();
     const thisYear = associationDay(0).slice(0, 4);
     if (String(STORY_YEAR) === thisYear) {
       await expect(page.getByTestId('reserve-cap')).toHaveCount(1);

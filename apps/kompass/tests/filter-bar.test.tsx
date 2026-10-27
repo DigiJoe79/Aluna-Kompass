@@ -184,6 +184,35 @@ describe('FilterBar', () => {
     expect(select.selectedOptions[0]?.textContent).toBe('Sucht ein Zuhause');
   });
 
+  describe('Telefon: ein einzelner Filter steht offen (Designer Runde 4 Rechenschaft, Joe 2026-10-24)', () => {
+    const phoneHidden = (el: Element) => el.closest('.max-sm\\:hidden') !== null;
+
+    it('genau ein Filter (Rahmen) ohne Suche: das Bedienelement steht auch am Telefon da, kein Knopf „Filter“, kein Sheet', () => {
+      const slot = frameFilter({ key: 'year', label: 'Jahr', value: '2025', options: [{ value: '2025', label: '2025' }], onChange: vi.fn() });
+      show(<FilterBar {...base} filters={[slot]} />);
+      expect(screen.queryByRole('button', { name: /^Filter( \d+)?$/ })).toBeNull();
+      const controls = screen.getAllByRole('combobox', { name: 'Jahr' });
+      expect(controls).toHaveLength(1);
+      expect(phoneHidden(controls[0]!)).toBe(false);
+    });
+
+    it('ein einzelner Filter mit Suche steht ebenso offen, am Telefon in eigener Zeile unter der Suche', () => {
+      const { container } = show(<FilterBar {...base} search={<input data-testid="slot-search" />} filters={[statusSlot('')]} />);
+      expect(screen.queryByRole('button', { name: /^Filter( \d+)?$/ })).toBeNull();
+      const control = screen.getByRole('combobox', { name: 'Status' });
+      expect(phoneHidden(control)).toBe(false);
+      domOrder(container, [screen.getByTestId('slot-search'), control, screen.getByText('6 Hunde')]);
+      // Am Telefon in eigener Zeile unter der Suche — daneben drückte das Select die Suche auf rund 150 px (D1e, I4).
+      expect(control.closest('.max-sm\\:basis-full')).not.toBeNull();
+    });
+
+    it('zwei Filter (auch einer davon unter „Weitere Filter“): am Telefon der Knopf „Filter“ mit Sheet, die Leiste nur ab sm', () => {
+      show(<FilterBar {...base} filters={[statusSlot('')]} more={[checkSlot('agent', 'Agent', false)]} />);
+      expect(screen.getByRole('button', { name: /^Filter$/ })).toBeTruthy();
+      expect(phoneHidden(screen.getByRole('combobox', { name: 'Status' }))).toBe(true);
+    });
+  });
+
   describe('Telefon-Sheet', () => {
     const openSheet = async () => {
       fireEvent.click(screen.getByRole('button', { name: /^Filter( \d+)?$/ }));
@@ -192,7 +221,7 @@ describe('FilterBar', () => {
 
     it('Schließen ohne „Anwenden“ verwirft, erneut geöffnet steht der alte Wert da', async () => {
       const slot = statusSlot('');
-      show(<FilterBar {...base} filters={[slot]} />);
+      show(<FilterBar {...base} filters={[slot, checkSlot('agent', 'Agent', false)]} />);
       let sheet = await openSheet();
       fireEvent.change(within(sheet).getByRole('combobox', { name: 'Status' }), { target: { value: 'home' } });
       fireEvent.click(within(sheet).getByRole('button', { name: 'Schließen' }));
@@ -204,7 +233,7 @@ describe('FilterBar', () => {
 
     it('„Anwenden“ übernimmt den Entwurf und schließt', async () => {
       const slot = statusSlot('');
-      show(<FilterBar {...base} filters={[slot]} />);
+      show(<FilterBar {...base} filters={[slot, checkSlot('agent', 'Agent', false)]} />);
       const sheet = await openSheet();
       fireEvent.change(within(sheet).getByRole('combobox', { name: 'Status' }), { target: { value: 'home' } });
       fireEvent.click(within(sheet).getByRole('button', { name: 'Anwenden' }));
@@ -225,7 +254,7 @@ describe('FilterBar', () => {
 
     it('„Zurücksetzen“ wirkt sofort und schließt', async () => {
       const onReset = vi.fn();
-      show(<FilterBar {...base} onReset={onReset} filters={[statusSlot('home')]} />);
+      show(<FilterBar {...base} onReset={onReset} filters={[statusSlot('home'), checkSlot('agent', 'Agent', false)]} />);
       const sheet = await openSheet();
       fireEvent.click(within(sheet).getByRole('button', { name: 'Zurücksetzen' }));
       expect(onReset).toHaveBeenCalledTimes(1);
@@ -297,7 +326,6 @@ describe('frameFilter (Jahr als Rahmen der Seite: Spendenbuch, Personenübersich
     expect(Array.from(select.options).map((o) => o.textContent)).toEqual(['2025', '2026']);
     expect(select.value).toBe('2026');
     expect(select.className).not.toContain('border-brand');
-    expect(screen.getByRole('button', { name: /^Filter$/ }).className).not.toContain('border-brand');
     expect(screen.queryByRole('button', { name: 'Filter zurücksetzen' })).toBeNull();
     expect(screen.queryByTestId('filter-chips')).toBeNull();
     fireEvent.change(select, { target: { value: '2025' } });

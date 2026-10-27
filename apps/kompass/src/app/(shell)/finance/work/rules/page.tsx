@@ -1,6 +1,6 @@
-import { hasPermission, readSetting, type LocalizedText } from '@kompass/core';
+import { hasPermission, type LocalizedText, todayIn } from '@kompass/core';
 import { displayName, getContact } from '@kompass/module-contacts';
-import { listAccounts, listCategories, listImportRules, listPurposes, TAX_CODES } from '@kompass/module-finance';
+import { listAccounts, listCategories, listImportRules, listPurposes, taxCodeOptionsInternal } from '@kompass/module-finance';
 import { listProjects } from '@kompass/module-projects';
 import { getTranslations } from 'next-intl/server';
 import { EmptyState } from '@/components/empty-state';
@@ -21,6 +21,8 @@ export default async function FinanceRulesPage() {
   const { deps, ctx } = await requireSession();
   if (!hasPermission(ctx, 'finance.read')) return <Page width="full"><ForbiddenCard permission="finance.read" /></Page>;
   const t = await getTranslations('finance.work.pages.rules');
+  const tWork = await getTranslations('finance.work');
+  const tSplit = await getTranslations('finance.splitRow');
   const [rulesRes, accountsRes, categoriesRes, purposesRes, projectsRes] = await Promise.all([
     listImportRules(deps, ctx, { includeInactive: true }),
     listAccounts(deps, ctx, { includeInactive: true }),
@@ -49,9 +51,11 @@ export default async function FinanceRulesPage() {
     conditionTexts: ruleConditionParts({ ...rule, direction: rule.direction as 'in' | 'out' | null }, accountNames).map((part) => t(`parts.${part.key}`, part.values)),
     categoryName: rule.categoryName,
     categoryInactive: rule.categoryInactive,
+    taxCodeHint: rule.taxCodeNotOffered && rule.taxCode ? tWork('suggestion.ruleTaxCodeNotOffered', { rule: rule.name, code: tSplit(`taxCode.${rule.taxCode}`) }) : null,
     hitCount: rule.hitCount,
   }));
 
+  const taxCodes = taxCodeOptionsInternal(deps.db, todayIn(deps));
   return (
     <Page width="full">
       <div className="space-y-4">
@@ -67,8 +71,8 @@ export default async function FinanceRulesPage() {
               categories: categories.filter((c) => c.isActive).map((c) => ({ id: c.id, name: c.name })),
               projects: (projectsRes.ok ? projectsRes.value : []).map((p) => ({ id: p.id, name: (p.name as LocalizedText)[leading] || p.slug })),
               purposes: (purposesRes.ok ? purposesRes.value : []).map((p) => ({ id: p.id, name: p.name })),
-              taxCodeOptions: [...TAX_CODES],
-              showTax: readSetting<boolean>(deps, 'finance.isEntrepreneurOrHasVatId'),
+              taxCodeOptions: taxCodes,
+              showTax: taxCodes.length > 0,
             }}
           />
         )}

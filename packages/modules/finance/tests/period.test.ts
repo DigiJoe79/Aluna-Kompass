@@ -4,13 +4,14 @@ import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 import { getEntry, saveDraft } from '../src/ledger/entries';
 import { bookEntry } from '../src/ledger/finalize';
-import { fiscalYearStatusInternal, updateFiscalYear } from '../src/ledger/fiscal-years';
+import { fiscalYearStatusInternal } from '../src/ledger/fiscal-years';
 import { closeFiscalYear, justifyUndocumentedEntry, previewPeriodClose, previewPeriodReopen, previewReopenInternal, reopenFiscalYear, reopenInternal } from '../src/ledger/period';
 import { attachDocument, uploadVoucher } from '../src/ledger/vouchers';
 import { reverseEntry } from '../src/ledger/reverse';
-import type { PeriodReopenGuard } from '../src/locks';
-import { financeEntryJustifications, financeFiscalYears, financeMoneyLines, financePeriodEvents } from '../src/schema';
-import { allowHumanOnlyOverMcp, ledgerFixture as baseLedgerFixture, pdfBytes } from './helpers';
+import { PERIOD_REOPEN_GUARDS, type PeriodReopenGuard } from '../src/locks';
+import '../src/manifest';
+import { financeClosingConfirmations, financeEntryJustifications, financeFiscalYears, financeMoneyLines, financePeriodEvents, financeTaxPeriods, financeVatFilings } from '../src/schema';
+import { allowHumanOnlyOverMcp, insertTaxPeriod, ledgerFixture as baseLedgerFixture, pdfBytes } from './helpers';
 import { buildCamt053Bytes } from '../src/import/camt-fixture';
 import { importStatement } from '../src/import/runs';
 import { bookFromTransaction } from '../src/import/book';
@@ -108,6 +109,9 @@ describe('closing a fiscal year', () => {
 
   it('a year cannot be closed before it has ended', async () => {
     const f = await ledgerFixture(); // Jahr 2026, „heute“ (TEST_NOW) liegt mittendrin.
+    expect(err(await closeFiscalYear(f.deps, f.ctx, { id: f.year.id }))).toMatchObject({ type: 'conflict', code: 'fiscalYearNotEnded' });
+    // N16 (MCP-Nachttest 0.4.0): Das ist der erste Grund, vor Entwürfen und den übrigen Prüfungen des Abschlusses.
+    unwrap(await saveDraft(f.deps, f.ctx, { entryDate: '2026-03-01', text: 'Entwurf', moneyLines: [{ accountId: f.bank.id, amountCents: 1000 }], allocationLines: [{ categoryId: f.donations.id, amountCents: 1000 }] }));
     expect(err(await closeFiscalYear(f.deps, f.ctx, { id: f.year.id }))).toMatchObject({ type: 'conflict', code: 'fiscalYearNotEnded' });
   });
 
@@ -210,7 +214,7 @@ describe('reopening a fiscal year', () => {
     const yearId = f.years['2025']!.id;
     await closeCleanly(f, yearId);
 
-    const throwingGuard: PeriodReopenGuard = { describe: () => 'wirft', onReopen: () => { throw new Error('boom'); } };
+    const throwingGuard: PeriodReopenGuard = { describe: () => ({ code: 'boom', params: {} }), onReopen: () => { throw new Error('boom'); } };
     expect(() => f.deps.db.transaction((tx) => reopenInternal(tx, f.deps, f.ctx, { id: yearId, note: 'x' }, [throwingGuard]))).toThrow('boom');
     expect(fiscalYearStatusInternal(f.deps.db, yearId)).toBe('closed');
   });
@@ -218,16 +222,52 @@ describe('reopening a fiscal year', () => {
   it('the preview lists what the guards will do, and whether the tax return was filed', async () => {
     const f = await ledgerFixture({ years: ['2025'] });
     const yearId = f.years['2025']!.id;
-    unwrap(await updateFiscalYear(f.deps, f.ctx, { id: yearId, taxReturnFiledOn: '2026-05-01' }));
     await closeCleanly(f, yearId);
 
-    const guard: PeriodReopenGuard = { describe: () => '3 festgeschriebene Berichte werden storniert', onReopen: () => {} };
-    expect(previewReopenInternal(f.deps.db, yearId, [guard]).consequences).toEqual(['3 festgeschriebene Berichte werden storniert']);
+    // Befund 49: ein Wächter nennt Code und Parameter, keinen Satz — den Wortlaut hat die Sprachdatei.
+    const guard: PeriodReopenGuard = { describe: () => ({ code: 'reportsVoided', params: { count: 3 } }), onReopen: () => {} };
+    expect(previewReopenInternal(f.deps.db, yearId, [guard]).consequences).toEqual([{ code: 'reportsVoided', params: { count: 3 } }]);
 
     const preview = unwrap(await previewPeriodReopen(f.deps, f.ctx, { id: yearId }));
-    expect(preview.taxReturnFiledOn).toBe('2026-05-01');
+    expect(preview.taxReturnFiledOn).toBeNull();
     expect(preview.laterYearClosed).toBe(false);
-    expect(preview.consequences).toEqual([]); // PERIOD_REOPEN_GUARDS ist in F2c leer.
+    // Berichte (Rechenschaft A1) haben ihre Wächter eingetragen; ohne festgeschriebene Fassung und Freigabe sagen sie nichts.
+    expect(PERIOD_REOPEN_GUARDS.length).toBeGreaterThan(0);
+    expect(preview.consequences).toEqual([]);
+  });
+
+  it('names the filed return from the period — the same source as step 12 (Rechenschaft D2)', async () => {
+    const f = await ledgerFixture({ years: ['2024', '2025'] });
+    const [y2024, y2025] = [f.years['2024']!.id, f.years['2025']!.id];
+    const periodId = insertTaxPeriod(f, { firstFiscalYearId: y2024, lastFiscalYearId: y2025 });
+    await closeCleanly(f, y2024);
+    await closeCleanly(f, y2025);
+    // Offener Zeitraum: nichts abgegeben, auch nicht für das erste Jahr; Schritt 12 sagt für 2024 „erledigt“, nicht „abgegeben“.
+    expect(unwrap(await previewPeriodReopen(f.deps, f.ctx, { id: y2025 })).taxReturnFiledOn).toBeNull();
+    f.deps.db.update(financeTaxPeriods).set({ filedOn: '2026-05-01' }).where(eq(financeTaxPeriods.id, periodId)).run();
+    expect(unwrap(await previewPeriodReopen(f.deps, f.ctx, { id: y2024 })).taxReturnFiledOn).toBe('2026-05-01');
+    expect(unwrap(await previewPeriodReopen(f.deps, f.ctx, { id: y2025 })).taxReturnFiledOn).toBe('2026-05-01');
+    // Befund 34 b: der Dialog nennt den Zeitraum, nicht das Jahr — die Erklärung gilt für 2024–2025.
+    expect(unwrap(await previewPeriodReopen(f.deps, f.ctx, { id: y2024 })).taxReturnPeriod).toBe('2024–2025');
+    // Eine Bestätigung „nicht fällig“ ist kein Gegenbeweis mehr: Es gibt nur noch eine Quelle.
+    f.deps.db.insert(financeClosingConfirmations).values({ id: 'C12', fiscalYearId: y2025, step: 'taxReturn', note: 'nicht fällig', at: '2026-06-01T10:00:00.000Z', byUserId: f.userId }).run();
+    expect(unwrap(await previewPeriodReopen(f.deps, f.ctx, { id: y2025 })).taxReturnFiledOn).toBe('2026-05-01');
+  });
+
+  // N14 Teil 2 (MCP-Nachttest 0.4.0): Wie die Steuererklärung nennt die Vorschau die abgegebenen Umsatzsteuer-Erklärungen
+  // der Zeiträume, die das Jahr berührt — die letzte Abgabe je Zeitraum; nach dem Wiederöffnen kann gerade dort eine
+  // Berichtigung fällig werden.
+  it('names the filed VAT returns of the periods the year touches', async () => {
+    const f = await ledgerFixture({ years: ['2025', '2026'] });
+    const y2025 = f.years['2025']!.id;
+    await closeCleanly(f, y2025);
+    expect(unwrap(await previewPeriodReopen(f.deps, f.ctx, { id: y2025 })).vatFiled).toEqual([]);
+    const filing = (id: string, period: string, filedOn: string) => ({ id, period, filedOn, at: `${filedOn}T10:00:00.000Z`, byUserId: f.userId });
+    f.deps.db.insert(financeVatFilings).values([filing('V1', '2025-Q4', '2026-01-09'), filing('V2', '2025-Q4', '2026-02-01'), filing('V3', '2025', '2026-07-20'), filing('V4', '2026-Q1', '2026-04-10'), filing('V5', '2024-Q4', '2025-01-10')]).run();
+    expect(unwrap(await previewPeriodReopen(f.deps, f.ctx, { id: y2025 })).vatFiled).toEqual([
+      { period: '2025', kind: 'annual', filedOn: '2026-07-20' },
+      { period: '2025-Q4', kind: 'advance', filedOn: '2026-02-01' },
+    ]);
   });
 
   it('after reopening, entries can be finalized into the year again, and closing it again writes a third event', async () => {

@@ -151,14 +151,24 @@ export async function removeRole(deps: Deps, ctx: CallContext, input: unknown): 
   if (!role) return notFound('role', roleId);
   const escalation = requireControllableUser(deps, ctx, userId);
   if (escalation) return escalation;
-  if (role.isProtected && countActiveProtectedHolders(deps.db, { excludeUserId: userId }) === 0) {
+  return deps.db.transaction((tx) => removeRoleInternal(tx, deps, ctx, { userId, roleId }));
+}
+
+/**
+ * Eine Rolle entziehen, ohne `users.manage` und ohne Eskalationsprüfung — für Module, die eine eigene, engere
+ * Berechtigung prüfen (Finanzen: „Zugang beenden“ des Kassenprüfers, nur die Rolle mit Herkunft `finance:auditor`).
+ * Behält die Prüfung „letzter aktiver Träger der geschützten Rolle“. Protokolliert wie `removeRole`.
+ */
+export function removeRoleInternal(tx: DbOrTx, deps: Deps, ctx: CallContext, input: { userId: string; roleId: string }): Result<void> {
+  const { userId, roleId } = input;
+  const role = loadRole(tx, roleId);
+  if (!role) return notFound('role', roleId);
+  if (role.isProtected && countActiveProtectedHolders(tx, { excludeUserId: userId }) === 0) {
     return conflict('lastAdministrator', 'Mindestens ein aktiver Nutzer muss die geschützte Rolle behalten');
   }
-  return deps.db.transaction((tx) => {
-    tx.delete(userRoles).where(and(eq(userRoles.userId, userId), eq(userRoles.roleId, roleId))).run();
-    recordAudit(tx, deps, ctx, { action: 'users.removeRole', entityType: 'user', entityId: userId, before: { roleId, roleName: role.name }, params: { roleName: role.name, targetUserId: userId } });
-    return ok(undefined);
-  });
+  tx.delete(userRoles).where(and(eq(userRoles.userId, userId), eq(userRoles.roleId, roleId))).run();
+  recordAudit(tx, deps, ctx, { action: 'users.removeRole', entityType: 'user', entityId: userId, before: { roleId, roleName: role.name }, params: { roleName: role.name, targetUserId: userId } });
+  return ok(undefined);
 }
 
 /** Eine Rolle aus Sicht des Aufrufers: `grantable` sagt, ob er sie vergeben darf. */

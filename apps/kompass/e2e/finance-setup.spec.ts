@@ -1,7 +1,8 @@
 import type { Locator, Page } from '@playwright/test';
 import { expect, test } from './fixtures';
 import { associationYear } from './association-day';
-import { resetDatabase, rowAction } from './helpers';
+import { resetDatabase, rowAction, setE2EDatedValue } from './helpers';
+import { nextWorkingDay } from '../../../packages/modules/finance/src/ledger/working-days';
 
 /**
  * F3b Task 5 — Finanzen einrichten (H1–H8). Die ganze Spec läuft auf einer
@@ -557,6 +558,43 @@ test.describe('finance setup', () => {
     await page.reload();
     await expect(page.getByTestId('board-remuneration').getByLabel('Satzungsfundstelle')).toHaveValue('Satzung § 7 Abs. 3');
     await expect(page.getByTestId('board-remuneration').getByLabel('Gilt ab')).toHaveValue(thisYear('01-01'));
+  });
+
+  test('Umsatzsteuer: ein Stand mit Dauerfristverlängerung verschiebt die Voranmeldung, Entfernen holt sie zurück (E6a Task 11d)', async ({ page }) => {
+    // Das Vorjahr: Sein drittes Quartal hat an jedem Kalendertag schon begonnen. Regelbesteuerung → jedes Quartal hat eine Frist.
+    const lastYear = associationYear() - 1;
+    await page.goto('/admin/finance?panel=fiscalYears');
+    await page.getByRole('button', { name: 'Erstes Geschäftsjahr anlegen' }).click();
+    const create = page.getByRole('dialog');
+    await create.getByLabel('Beginnt am').fill(`${lastYear}-01-01`);
+    await create.getByLabel('Endet am').fill(`${lastYear}-12-31`);
+    await create.getByRole('button', { name: 'Speichern' }).click();
+    await expect(create).toBeHidden();
+    await setE2EDatedValue(page, 'taxation', `${lastYear}-01-01`, 'regular');
+
+    const q3 = async (): Promise<string> => {
+      await page.goto('/finance/deadlines');
+      const row = page.getByTestId('deadline-row').filter({ hasText: `Umsatzsteuer-Voranmeldung Q3 ${lastYear}` });
+      await expect(row).toHaveCount(1);
+      return (await row.getByRole('cell').first().textContent()) ?? '';
+    };
+    const asShown = (iso: string) => `${iso.slice(8, 10)}.${iso.slice(5, 7)}.${iso.slice(0, 4)}`;
+    expect(await q3()).toBe(asShown(nextWorkingDay(`${lastYear}-10-10`)));
+
+    await page.goto('/admin/finance?panel=vat');
+    const panel = page.getByTestId('vat-panel');
+    await panel.getByLabel('Gilt ab').fill(`${lastYear}-07-01`);
+    await panel.getByRole('radiogroup', { name: 'Dauerfristverlängerung' }).getByRole('radio', { name: 'Ja' }).click();
+    await panel.getByTestId('vat-settings-save').click();
+    const stand = panel.getByTestId('vat-history-row').filter({ hasText: `01.07.${lastYear}` });
+    await expect(stand).toBeVisible();
+    expect(await q3()).toBe(asShown(nextWorkingDay(`${lastYear}-11-10`)));
+
+    await page.goto('/admin/finance?panel=vat');
+    await rowAction(page, page.getByTestId('vat-history-row').filter({ hasText: `01.07.${lastYear}` }), 'Entfernen …');
+    await page.getByRole('alertdialog').getByRole('button', { name: 'Entfernen' }).click();
+    await expect(page.getByTestId('vat-history-row')).toHaveCount(0);
+    expect(await q3()).toBe(asShown(nextWorkingDay(`${lastYear}-10-10`)));
   });
 
   test('einen Satz ab Stichtag überschreiben und wieder zurücknehmen', async ({ page }) => {

@@ -5,9 +5,12 @@ import { ctxWith } from '@kompass/core/testing';
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
 import { FINANCE_MCP_TOOLS } from '../src/mcp-tools';
+import { REPORT_CATALOG } from '../src/reporting/catalog';
 import { allowHumanOnlyOverMcp, insertRaw, insertRun, ledgerFixture, pdfBytes } from './helpers';
 import { donationFixture, png } from './donation-fixture';
 import { buildCamt053 } from '../src/import/camt-fixture';
+import { setDatedValue } from '../src/ledger/dated-values';
+import { bookEntry } from '../src/ledger/finalize';
 
 describe('finance MCP tools', () => {
   // W2 (Architektur-Review A3): kein Werkzeug nimmt ein freies Objekt — es zeigt das Schema des Dienstes.
@@ -16,6 +19,15 @@ describe('finance MCP tools', () => {
     expect(source).not.toMatch(/z\.record\(\s*z\.string\(\)\s*,\s*z\.unknown\(\)\s*\)/);
   });
 
+
+  // Rechenschaft B1: kein Werkzeug je Bericht — `finance_report` trägt alle; seine Beschreibung nennt jeden verfügbaren
+  // Schlüssel des Katalogs, sonst fände ein Agent ihn nicht.
+  it('names every available report of the catalogue in finance_report', () => {
+    const description = FINANCE_MCP_TOOLS.find((t) => t.name === 'finance_report')!.description;
+    const available = REPORT_CATALOG.filter((d) => d.available).map((d) => d.key);
+    expect(available.length).toBeGreaterThan(4);
+    for (const key of available) expect(description, key).toMatch(new RegExp(`\\b${key}\\b`));
+  });
 
   // M11: `kind` steht auf oberster Ebene als Aufzählung; die Felder je Art stehen eine Ebene tiefer. Das SDK parst die
   // Argumente mit diesem Schema, bevor der Dienst sie sieht — es darf nichts abstreifen und keinen Vorgabewert
@@ -204,12 +216,14 @@ describe('human-only tools, derived from the services', () => {
   }
   /** Ruft die Prüfung auf oberster Ebene des Rumpfs, also unabhängig von der Eingabe. */
   const always = (name: string) => /\n {2}const \w+ = requireHumanChannelFinance\(/.test(bodies.get(name) ?? '');
+  /** Je Funktion die Funktionen, die sie ruft — einmal berechnet; die Suche lief sonst je Werkzeug über alle Rümpfe (unter Last über 5 s). */
+  const callees = new Map([...bodies].map(([name, body]) => [name, [...bodies.keys()].filter((other) => other !== name && body.includes(`${other}(`) && new RegExp(`\\b${other}\\(`).test(body))]));
   const reaches = (name: string, seen = new Set<string>()): boolean => {
     const body = bodies.get(name);
     if (!body || seen.has(name)) return false;
     seen.add(name);
     if (body.includes('requireHumanChannelFinance(')) return true;
-    return [...bodies.keys()].some((other) => other !== name && new RegExp(`\\b${other}\\(`).test(body) && reaches(other, seen));
+    return (callees.get(name) ?? []).some((other) => reaches(other, seen));
   };
   const MARKER = /human only: refused over MCP/i;
   /** Werkzeuge, deren Dienst die Prüfung zwar erreicht, aber nie auslöst — mit Grund. */
@@ -267,3 +281,37 @@ function sampleOf(s: JsonSchema): unknown {
   if (type === 'boolean') return false;
   return null;
 }
+
+// N4 (MCP-Nachttest 0.4.0): Das SDK parst die Argumente mit dem Werkzeugschema, bevor der Dienst sie sieht — ein
+// Berichtsparameter, den das MCP-Schema nicht kennt, kommt nie an. Jeder Schlüssel, den ein Bericht des Katalogs annimmt,
+// steht deshalb im Schema von finance_report, finance_report_finalize und finance_report_versions.
+describe('report params over MCP (N4)', () => {
+  const keysOf = (schema: z.ZodType): string[] => {
+    if (schema instanceof z.ZodObject) return Object.keys(schema.shape);
+    if (schema instanceof z.ZodUnion) return (schema.options as z.ZodType[]).flatMap(keysOf);
+    throw new Error(`Schema ohne bekannte Form: ${schema.constructor.name}`);
+  };
+  const tool = (name: string) => FINANCE_MCP_TOOLS.find((t) => t.name === name)!;
+
+  it('every param of every report passes the MCP schema of the report tools', () => {
+    const keys = [...new Set(REPORT_CATALOG.flatMap((d) => keysOf(d.paramsSchema)))];
+    expect(keys).toContain('vatPeriod');
+    for (const name of ['finance_report', 'finance_report_finalize', 'finance_report_versions']) {
+      const params = ((tool(name).inputSchema as z.ZodObject).shape.params as z.ZodOptional<z.ZodObject>).unwrap();
+      expect(Object.keys(params.shape).sort(), name).toEqual(expect.arrayContaining(keys));
+    }
+  });
+
+  it('reads, finalizes and lists the advance return with vatPeriod through the tool schemas', async () => {
+    const f = await ledgerFixture();
+    f.deps.clock.set('2026-07-08T10:00:00.000Z');
+    unwrap(await setDatedValue(f.deps, f.ctx, { key: 'vatEntrepreneur', validFrom: '2026-01-01', value: true }));
+    unwrap(await bookEntry(f.deps, f.ctx, { entryDate: '2026-05-12', text: 'Buchung', moneyLines: [{ accountId: f.bank.id, amountCents: -20000 }], allocationLines: [{ categoryId: f.programCosts.id, amountCents: -20000, taxCode: 'rc13bEu' }] }));
+    const call = (name: string) => tool(name).handler(f.deps, f.ctx, (tool(name).inputSchema as z.ZodType).parse({ report: 'vatAdvanceReturn', params: { vatPeriod: '2026-Q2' } }));
+    const read = await call('finance_report');
+    expect(read).toMatchObject({ ok: true, value: { stage: 'review' } });
+    expect(await call('finance_report_finalize')).toMatchObject({ ok: true });
+    const versions = await call('finance_report_versions');
+    expect(versions.ok && (versions.value as { versions: unknown[] }).versions.length).toBe(1);
+  });
+});

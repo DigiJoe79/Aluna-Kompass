@@ -79,7 +79,6 @@ export function RunView({ back, run, items, openReturns, returnDays, today, canP
     const result = await fileFb.run(() => buildFileAction(run.id), { retry: () => void buildFile() });
     setBuilding(false);
     if (result.status !== 'success') return;
-    toast.success(result.message);
     router.refresh();
   };
 
@@ -291,7 +290,6 @@ function SubmitDialog({ runId, today, onClose }: { runId: string; today: string;
     const result = await feedback.run(() => markSubmittedAction(runId, day), { retry: () => void save() });
     setPending(false);
     if (result.status !== 'success') return;
-    toast.success(result.message);
     onClose();
     router.refresh();
   };

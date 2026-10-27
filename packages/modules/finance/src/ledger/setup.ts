@@ -11,8 +11,10 @@ import { financeAccounts, financeFiscalYears, financeNotices, financeSigners } f
 import { boardMembersMaintainedInternal } from './board';
 import { machineStatusOf } from './machine-status';
 import { noticeValidAt } from './notice-validity';
+import { vatAdvancePeriodKindInternal } from './vat-periods';
+import { entrepreneurSinceInternal, vatProfileAt, vatSettingsHintsInternal } from './vat-settings';
 
-export type SetupStepKey = 'fiscalYear' | 'account' | 'roles' | 'categories' | 'tax' | 'importFormat' | 'notice' | 'machineProcedure' | 'waiverBasis' | 'boardRemuneration' | 'boardMembers' | 'documentBases' | 'directDebit';
+export type SetupStepKey = 'fiscalYear' | 'account' | 'roles' | 'categories' | 'tax' | 'vat' | 'importFormat' | 'notice' | 'machineProcedure' | 'waiverBasis' | 'boardRemuneration' | 'boardMembers' | 'documentBases' | 'directDebit';
 
 export interface SetupStep {
   key: SetupStepKey;
@@ -51,7 +53,7 @@ const FINANCE_ROLE_ORIGINS: readonly { originKey: string; name: string; optional
  * Muss mit `manifest.ts` übereinstimmen; `tests/setup.test.ts` prüft das
  * gegen das echte Manifest, damit ein Auseinanderlaufen auffällt.
  */
-const FINANCE_NAV_ENTRIES: readonly { key: string; permission: string }[] = [
+const FINANCE_NAV_ENTRIES: readonly { key: string; permission: string | readonly string[] }[] = [
   { key: 'finance.work', permission: 'finance.read' },
   { key: 'finance.workForeign', permission: 'finance.read' },
   { key: 'finance.workVouchers', permission: 'finance.read' },
@@ -76,6 +78,17 @@ const FINANCE_NAV_ENTRIES: readonly { key: string; permission: string }[] = [
   { key: 'finance.purposes', permission: 'finance.overview' },
   { key: 'finance.reserves', permission: 'finance.read' },
   { key: 'finance.people', permission: 'finance.read' },
+  // Rechenschaft C2: Jahresabschluss mit Lesen; Fristen und Schwellen schon mit dem Überblick.
+  { key: 'finance.closing', permission: 'finance.read' },
+  // Rechenschaft D1b: Kassenprüfung mit Lesen oder Prüfen (eine Liste: eines der Rechte genügt).
+  { key: 'finance.audit', permission: ['finance.read', 'finance.audit'] },
+  // Rechenschaft A3: wie `finance.purposes` mit `finance.overview` allein schon sichtbar; D1b auch für Prüfer.
+  { key: 'finance.reports', permission: ['finance.read', 'finance.overview', 'finance.audit'] },
+  { key: 'finance.otherAssets', permission: 'finance.overview' },
+  // Rechenschaft D2: Steuererklärung mit Lesen.
+  { key: 'finance.tax', permission: 'finance.read' },
+  { key: 'finance.deadlines', permission: 'finance.overview' },
+  { key: 'finance.fundUse', permission: 'finance.overview' },
   { key: 'finance.admin', permission: 'finance.setup' },
 ];
 
@@ -153,6 +166,17 @@ function boardRemunerationDecision(deps: Deps): { done: boolean; detail: Record<
   return validFrom ? { done: true, detail: { decision: 'yes', decidedOn, validFrom } } : { done: false, detail: {} };
 }
 
+/** Schritt `vat`: Pflicht bei Vorschlag „Unternehmer“; Zusammenfassung für die Unterzeile. */
+function vatStepOf(db: DbOrTx, today: string): { required: boolean; detail: Record<string, string | number> } {
+  const profile = vatProfileAt(db, today);
+  const kind = vatAdvancePeriodKindInternal(db, Number(today.slice(0, 4)));
+  const since = entrepreneurSinceInternal(db, today);
+  return {
+    required: vatSettingsHintsInternal(db, profile, kind === 'month').some((h) => h.code === 'entrepreneurSuggested'),
+    detail: { ...(since ? { entrepreneurSince: since } : {}), advancePeriod: kind, obligations: profile.obligations },
+  };
+}
+
 /**
  * Der Einrichtungsstand — komplett berechnet, nie gespeichert (Spec 10.5). Nur
  * `categories` und `tax` sind Bestätigungen; ihr Zeitpunkt steht in den
@@ -171,6 +195,8 @@ export async function getSetupStatus(deps: Deps, ctx: CallContext): Promise<Resu
   const roles = rolesStepDetail(deps);
   const categoriesConfirmedAt = readSetting<string | null>(deps, 'finance.setupCategoriesConfirmedAt');
   const taxConfirmedAt = readSetting<string | null>(deps, 'finance.setupTaxConfirmedAt');
+  const vatConfirmedAt = readSetting<string | null>(deps, 'finance.setupVatConfirmedAt');
+  const vat = vatStepOf(deps.db, todayIn(deps));
   // F6a: optional — ohne Bescheid keine Bestätigungen, aber Finanzen lässt sich ohne führen.
   // Die Reihe liest der Schritt direkt: `ledger/` kennt `donations/` nicht (Richtung, Spec 4.1).
   const notice = noticeValidAt(deps.db.select().from(financeNotices).all(), todayIn(deps));
@@ -207,6 +233,18 @@ export async function getSetupStatus(deps: Deps, ctx: CallContext): Promise<Resu
       dependsOn: null,
       blocked: false,
       detail: taxConfirmedAt !== null ? { confirmedAt: taxConfirmedAt } : {},
+      permission: 'finance.setup',
+      canDo: listUserNamesWithPermission(deps, 'finance.setup'),
+    },
+    // E6a: die Einstellung „Umsatzsteuer“ (datierte Werte); erledigt, sobald sie einmal gespeichert ist. Pflicht, solange
+    // Kompass „Unternehmer: ja“ vorschlägt (Board 1b C); erledigt fasst die Unterzeile den Stand von heute zusammen.
+    {
+      key: 'vat',
+      required: vat.required,
+      done: vatConfirmedAt !== null,
+      dependsOn: null,
+      blocked: false,
+      detail: vatConfirmedAt !== null ? vat.detail : {},
       permission: 'finance.setup',
       canDo: listUserNamesWithPermission(deps, 'finance.setup'),
     },
@@ -316,15 +354,16 @@ export async function getSetupStatus(deps: Deps, ctx: CallContext): Promise<Resu
   return ok({ steps, complete: steps.filter((s) => s.required).every((s) => s.done) });
 }
 
-const STEP_SETTING: Record<'categories' | 'tax', string> = {
+const STEP_SETTING: Record<'categories' | 'tax' | 'vat', string> = {
   categories: 'finance.setupCategoriesConfirmedAt',
   tax: 'finance.setupTaxConfirmedAt',
+  vat: 'finance.setupVatConfirmedAt',
 };
 
-const confirmSchema = z.object({ step: z.enum(['categories', 'tax']) });
+const confirmSchema = z.object({ step: z.enum(['categories', 'tax', 'vat']) });
 
 /** Bestätigt einen der beiden Prüf-Schritte — kein Fachdatensatz ändert sich, nur der Zeitpunkt. */
-export async function confirmSetupStep(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<{ step: 'categories' | 'tax'; confirmedAt: string }>> {
+export async function confirmSetupStep(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<{ step: 'categories' | 'tax' | 'vat'; confirmedAt: string }>> {
   const denied = requirePermission(ctx, 'finance.setup');
   if (denied) return denied;
   const parsed = validate(deps, confirmSchema, input);
@@ -344,8 +383,11 @@ export async function confirmSetupStep(deps: Deps, ctx: CallContext, input: unkn
   });
 }
 
-/** Die drei Steuer-Schalter der Einrichtung (H7); `applyTaxDefaults` setzt sie auf ihre ausgelieferte Vorgabe zurück. */
-const TAX_DEFAULT_KEYS = ['finance.isEntrepreneurOrHasVatId', 'finance.membershipFeesCertifiable', 'finance.expenseWaiversEnabled'] as const;
+/**
+ * Die zwei Steuer-Schalter der Einrichtung (H7); `applyTaxDefaults` setzt sie auf ihre ausgelieferte Vorgabe zurück.
+ * „Unternehmer oder USt-IdNr.“ ist seit E6a die datierte Einstellung „Umsatzsteuer“ (`vat-settings.ts`).
+ */
+const TAX_DEFAULT_KEYS = ['finance.membershipFeesCertifiable', 'finance.expenseWaiversEnabled'] as const;
 
 /** Setzt die Steuer-Schalter auf ihre Vorgabe und bestätigt `tax` in einem Zug. */
 export async function applyTaxDefaults(deps: Deps, ctx: CallContext): Promise<Result<{ applied: string[] }>> {
@@ -374,14 +416,14 @@ export async function applyTaxDefaults(deps: Deps, ctx: CallContext): Promise<Re
 }
 
 /**
- * Die vier Schalter der Einrichtung (H7): die drei Steuer-Schalter und
+ * Die drei Schalter der Einrichtung (H7): die zwei Steuer-Schalter und
  * „Darf ein Agent festschreiben und Lastschriften bearbeiten?“ — bewusst über `finance.setup`, nicht über
  * `settings.manage`: Das ist der Hebel der Finanzeinrichtung, nicht der
  * allgemeinen Einstellungen. `finance.mcpHumanOnlyAllowed` bleibt zusätzlich
  * an den Kanal gebunden (`uiOnly`) — hier stets erfüllt, weil der Aufruf aus
  * der Oberfläche kommt, aber zur Sicherheit noch einmal geprüft.
  */
-const FINANCE_SWITCH_KEYS = ['finance.isEntrepreneurOrHasVatId', 'finance.membershipFeesCertifiable', 'finance.expenseWaiversEnabled', 'finance.mcpHumanOnlyAllowed'] as const;
+const FINANCE_SWITCH_KEYS = ['finance.membershipFeesCertifiable', 'finance.expenseWaiversEnabled', 'finance.mcpHumanOnlyAllowed'] as const;
 
 const switchSchema = z.object({ key: z.enum(FINANCE_SWITCH_KEYS), value: z.boolean() });
 
@@ -450,6 +492,32 @@ export async function setExpenseWaiverBasisText(deps: Deps, ctx: CallContext, in
     if (!writtenDate.ok) return writtenDate;
     financeAudit(tx, deps, ctx, { action: 'finance.setup.waiverBasis', entity: 'financeSetup', id: 'finance.expenseWaiverBasisText', after: { key: 'finance.expenseWaiverBasisText', agreedOn } });
     return ok({ text: parsed.value.text, agreedOn });
+  });
+}
+
+const reportSettingsSchema = z.object({ statuteReference: z.string().trim().max(80), cashReportSignature: z.boolean(), treasurerIsStatutoryBoard: z.boolean().nullable().optional() });
+
+/**
+ * Die Einstellungen des Kassenberichts (Rechenschaft A2/A3, Panel „Berichte“): die Satzungsfundstelle im Untertitel
+ * („Kassenteil des Jahresberichts nach …“) und die Unterschriftszeile für den Vorstand. Darstellung, nicht im Hash;
+ * festgeschriebene Fassungen behalten ihren Stand. Ins Protokoll nur der Schlüssel, nie der Wortlaut.
+ */
+export async function setReportSettings(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<{ statuteReference: string; cashReportSignature: boolean; treasurerIsStatutoryBoard?: boolean | null }>> {
+  const denied = requirePermission(ctx, 'finance.setup');
+  if (denied) return denied;
+  const parsed = validate(deps, reportSettingsSchema, input);
+  if (!parsed.ok) return parsed;
+  return deps.db.transaction((tx: DbOrTx) => {
+    const reference = writeSettingInternal(tx, deps, ctx, 'finance.reports.statuteReference', parsed.value.statuteReference, 'finance.setup.setting');
+    if (!reference.ok) return reference;
+    const signature = writeSettingInternal(tx, deps, ctx, 'finance.reports.cashReportSignature', parsed.value.cashReportSignature, 'finance.setup.setting');
+    if (!signature.ok) return signature;
+    // Rechenschaft C: nur, wenn angegeben — die Oberfläche von A3 schickt das Feld noch nicht.
+    if (parsed.value.treasurerIsStatutoryBoard !== undefined) {
+      const board = writeSettingInternal(tx, deps, ctx, 'finance.reports.treasurerIsStatutoryBoard', parsed.value.treasurerIsStatutoryBoard, 'finance.setup.setting');
+      if (!board.ok) return board;
+    }
+    return ok(parsed.value);
   });
 }
 
@@ -538,7 +606,8 @@ export async function getPermissionMatrix(deps: Deps, ctx: CallContext): Promise
           .map((r) => r.key)
           .filter((key): key is (typeof FINANCE_PERMISSIONS)[number] => (FINANCE_PERMISSIONS as readonly string[]).includes(key));
     if (grantedKeys.length === 0) continue;
-    const navigation = FINANCE_NAV_ENTRIES.filter((entry) => grantedKeys.includes(entry.permission as (typeof FINANCE_PERMISSIONS)[number])).map((entry) => entry.key);
+    const granted = (permission: string) => grantedKeys.includes(permission as (typeof FINANCE_PERMISSIONS)[number]);
+    const navigation = FINANCE_NAV_ENTRIES.filter((entry) => (typeof entry.permission === 'string' ? granted(entry.permission) : entry.permission.some(granted))).map((entry) => entry.key);
     const holders = deps.db
       .select({ name: schema.users.name })
       .from(schema.userRoles)

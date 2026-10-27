@@ -90,7 +90,27 @@ describe('getEntryHistory: the trail of a booking, from its own columns', () => 
     const revoked = events.find((e) => e.kind === 'voucherRevoked')!;
     expect(added).toMatchObject({ kind: 'voucherAdded', documentNumber: voucher.documentNumber });
     expect(revoked).toMatchObject({ kind: 'voucherRevoked', documentNumber: voucher.documentNumber });
-    expect(JSON.stringify(events)).not.toContain('Falscher Anhang'); // Widerrufsnotiz steht nie im Verlauf.
+    // Der Grund steht beim Widerruf (Designer Runde 6, 15c) — er begründet ihn, wie die Notiz einer Korrektur.
+    expect(revoked).toMatchObject({ note: 'Falscher Anhang aus Versehen hochgeladen' });
+    expect(added).toMatchObject({ replacement: false });
+  });
+
+  it('tells a replacement as two events at the same moment: revoked with its reason, then linked as replacement', async () => {
+    const f = await ledgerFixture();
+    const entry = await f.finalEntry();
+    const old = unwrap(await uploadVoucher(f.deps, f.ctx, { entryId: entry.id, bytes: pdfBytes(), typeKey: 'voucher-own', documentDate: '2026-03-01' }));
+    const other = await f.finalEntry();
+    const spare = unwrap(await uploadVoucher(f.deps, f.ctx, { entryId: other.id, bytes: pdfBytes(), typeKey: 'voucher-own', documentDate: '2026-03-02' }));
+    f.deps.clock.set(new Date(f.deps.clock.now().getTime() + 3_600_000).toISOString());
+    unwrap(await revokeVoucher(f.deps, f.ctx, { linkId: old.linkId, note: 'Gehört zu einer anderen Buchung', replacementDocumentId: spare.documentId }));
+
+    const { events } = unwrap(await getEntryHistory(f.deps, f.ctx, { id: entry.id }));
+    const last = events.slice(-2);
+    expect(last).toMatchObject([
+      { kind: 'voucherRevoked', documentNumber: old.documentNumber, note: 'Gehört zu einer anderen Buchung' },
+      { kind: 'voucherAdded', documentNumber: spare.documentNumber, replacement: true },
+    ]);
+    expect(last[0]!.at).toBe(last[1]!.at);
   });
 
   it('refuses without finance.read', async () => {

@@ -3,7 +3,6 @@
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { useRef, useState } from 'react';
-import { toast } from 'sonner';
 import { ConfirmDialog } from '@/components/forms/confirm-dialog';
 import { FormActionBar } from '@/components/forms/form-action-bar';
 import { FormField } from '@/components/forms/form-field';
@@ -61,7 +60,6 @@ export function TypesPanel({ types, locales }: { types: MemberTypeRow[]; locales
   const toggle = async (row: MemberTypeRow) => {
     const result = await feedback.run(() => setMemberTypeActiveAction(row.id, !row.active));
     if (result.status !== 'success') return;
-    toast.success(result.message);
     router.refresh();
   };
 
@@ -147,7 +145,6 @@ function TypeDialog({ row, locales, onClose }: { row: MemberTypeRow | null; loca
     );
     setPending(false);
     if (result.status !== 'success') return;
-    toast.success(result.message);
     onClose();
     router.refresh();
   };

@@ -28,6 +28,15 @@ describe('FormActionBar', () => {
     expect(screen.queryByRole('alert')).toBeNull();
   });
 
+  it('im Schritt (surface plain) ist „Speichern“ ohne Änderung gesperrt, mit Änderung frei (Designer Runde 6, 15a)', () => {
+    const onSave = vi.fn();
+    const { rerender } = render(<FormActionBar surface="plain" count={0} onSave={onSave} />, { wrapper });
+    expect((screen.getByRole('button', { name: 'Speichern' }) as HTMLButtonElement).disabled).toBe(true);
+    rerender(<FormActionBar surface="plain" count={2} onSave={onSave} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
+    expect(onSave).toHaveBeenCalledTimes(1);
+  });
+
   it('schickt beim Bearbeiten ohne Änderung nicht ab und sagt „Nichts geändert“', () => {
     const submit = vi.fn((e: Event) => e.preventDefault());
     render(<form onSubmit={submit as never}><input name="a" defaultValue="x" /><FormActionBar /></form>, { wrapper });

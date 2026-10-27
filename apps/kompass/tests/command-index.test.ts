@@ -18,6 +18,10 @@ describe('buildCommandIndex', () => {
     const index = buildCommandIndex({ groups, settingsFields: [], permissions: new Set(['users.manage', 'animals.view']), t });
     expect(index.map((e) => e.id)).toEqual(['nav:users', 'nav:animals.list']);
   });
+  it('marks an entry for later with its hint instead of the group (N1)', () => {
+    const later: NavGroup[] = [{ key: 'finance', labelKey: 'nav.groups.finance', disabled: false, items: [{ key: 'finance.fundUse', href: '/finance/fund-use', icon: 'euro', labelKey: 'nav.finance.fundUse', disabled: false, visible: true, later: true }] }];
+    expect(buildCommandIndex({ groups: later, settingsFields: [], permissions: new Set(), t })[0]).toMatchObject({ id: 'nav:finance.fundUse', hint: 'common.muted.later' });
+  });
   it('adds settings fields as entries pointing at the settings page', () => {
     const index = buildCommandIndex({ groups: [], settingsFields: [{ key: 'organization.taxNumber', tab: 'tax' }], permissions: new Set(['settings.manage']), t });
     expect(index[0]).toMatchObject({ id: 'setting:organization.taxNumber', href: '/admin/settings?tab=tax', group: 'settings' });

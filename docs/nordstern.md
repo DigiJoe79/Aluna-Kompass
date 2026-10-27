@@ -181,9 +181,9 @@ Kontakte dafür lernen müssen — und was die Schritte 4 und 6 genauso brauchen
 Festgeschriebenes wird nie gelöscht; nach Ablauf der Aufbewahrung verschwindet
 der Personenbezug, nicht die Buchung.
 
-**Stand: Alltag steht, Berichte offen.** Schritt 3 der Roadmap (Fassung 0.2.0)
-ist ausgeliefert; die Lastschrift kommt mit Schritt 4 (0.3.0), Jahresabschluss
-und Berichte mit Schritt 5 (0.4.0).
+**Stand: Alltag und Rechenschaft stehen.** Schritt 3 der Roadmap (Fassung 0.2.0),
+die Lastschrift mit Schritt 4 (0.3.0) und Jahresabschluss und Berichte mit
+Schritt 5 (0.4.0) sind ausgeliefert.
 
 ### Mitglieder und Gremien
 
@@ -195,8 +195,9 @@ verlangen.
 
 Spec: noch keine.
 
-**Stand: offen.** Zwei Schritte der Roadmap: Mitgliederstamm und Beiträge in
-Schritt 4 (0.3.0), Gremien in Schritt 6.
+**Stand: Mitglieder stehen, Gremien offen.** Zwei Schritte der Roadmap:
+Mitgliederstamm und Beiträge sind mit Schritt 4 (0.3.0) ausgeliefert, Gremien
+folgen in Schritt 6.
 
 ### Vereinsspezifische Module
 

@@ -17,9 +17,14 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Disclosure } from '@/components/ui/disclosure';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Overline } from '@/components/overline';
 import { formatEuro, parseAmount } from '@/lib/finance/amount';
 import { countResult, DENOMINATIONS_CENTS, sumDenominations } from '@/lib/finance/cash';
 import { countCashAction, emptyDonationBoxAction } from './actions';
+import { countCashForHandoverAction } from '../closing/handover/actions';
+import { FixedValue } from '@/components/fixed-value';
+import { useDateFormat } from '@/components/date-format-provider';
 import { Section } from '@/components/section';
 
 export interface CashAccountOption {
@@ -36,19 +41,41 @@ export interface CashAccountOption {
  * der Aufrufer setzt `key={account.id}`, damit ein Kontowechsel den Dialog neu
  * montiert statt einen veralteten Buchbestand mitzuschleppen.
  */
-export function CountDialog({ account, today, canCreateContact }: { account: CashAccountOption; today: string; canCreateContact: boolean }) {
+export function CountDialog({
+  account,
+  today,
+  canCreateContact,
+  witnesses = null,
+  handover = null,
+}: {
+  account: CashAccountOption;
+  today: string;
+  canCreateContact: boolean;
+  /** Die Prüfer der laufenden Kassenprüfung (Board 12f) — nur, wenn es welche gibt. */
+  witnesses?: { designation: string; auditors: { id: string; name: string }[] } | null;
+  /**
+   * Amtsübergabe (Board 13e, Plan C2 Task 8): Datum fest auf dem Übergabetag, nur Kasse, „Zählt“ vorbelegt mit der
+   * bisherigen Person, die zweite Zählende mit der neuen (Befund 4); wählt man dort jemand anderen, nennt
+   * „Im Beisein von“ die neue; abgeschickt über `countCashForHandover`. Kasse und
+   * Kassenprüfung rufen den Dialog ohne diesen Prop und bleiben, wie sie sind.
+   */
+  handover?: { id: string; handoverOn: string; from: PickedContact; to: PickedContact; triggerLabel: string; /** Primärknopf nur bei genau einer Kasse (14c); sonst `outline` je Zeile. */ primary?: boolean } | null;
+}) {
   const t = useTranslations('finance.cash.count');
+  const fmt = useDateFormat();
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<'cash' | 'box'>('cash');
   const [boxLabel, setBoxLabel] = useState('');
-  const [countedOn, setCountedOn] = useState(today);
+  const [countedOn, setCountedOn] = useState(handover?.handoverOn ?? today);
   const [amountText, setAmountText] = useState('');
   const [useHelper, setUseHelper] = useState(false);
   const [pieces, setPieces] = useState<Record<number, number>>({});
-  const [counterOne, setCounterOne] = useState<PickedContact | null>(null);
-  const [counterTwo, setCounterTwo] = useState<PickedContact | null>(null);
+  const [counterOne, setCounterOne] = useState<PickedContact | null>(handover?.from ?? null);
+  // Amtsübergabe (Befund 4): die neue Person zählt als zweite mit, statt nur im Beisein dabei zu sein.
+  const [counterTwo, setCounterTwo] = useState<PickedContact | null>(handover?.to ?? null);
   const [note, setNote] = useState('');
+  const [witnessIds, setWitnessIds] = useState<string[]>([]);
   const [pending, setPending] = useState(false);
   const [fieldError, setFieldError] = useState<string | null>(null);
   // 07-2 B21 (§ B): Speichern bleibt frei; was fehlt, steht am Feld (die fehlende Notiz bei Fehlbetrag nennt der Dienst).
@@ -65,13 +92,14 @@ export function CountDialog({ account, today, canCreateContact }: { account: Cas
     setOpen(false);
     setMode('cash');
     setBoxLabel('');
-    setCountedOn(today);
+    setCountedOn(handover?.handoverOn ?? today);
     setAmountText('');
     setUseHelper(false);
     setPieces({});
-    setCounterOne(null);
-    setCounterTwo(null);
+    setCounterOne(handover?.from ?? null);
+    setCounterTwo(handover?.to ?? null);
     setNote('');
+    setWitnessIds([]);
     setFieldError(null);
     setMissing({ amount: false, box: false });
     feedback.reset();
@@ -90,7 +118,17 @@ export function CountDialog({ account, today, canCreateContact }: { account: Cas
     setFieldError(null);
     const result = await feedback.run(
       () =>
-      mode === 'cash'
+      handover
+        ? countCashForHandoverAction({
+            id: handover.id,
+            accountId: account.id,
+            countedCents,
+            counterOneContactId: counterOne.id,
+            counterTwoContactId: counterTwo.id,
+            note: note.trim() || undefined,
+            denominations: useHelper ? Object.fromEntries(Object.entries(pieces).filter(([, c]) => c > 0)) : undefined,
+          })
+        : mode === 'cash'
         ? countCashAction({
             accountId: account.id,
             countedOn,
@@ -99,6 +137,7 @@ export function CountDialog({ account, today, canCreateContact }: { account: Cas
             counterTwoContactId: counterTwo.id,
             note: note.trim() || undefined,
             denominations: useHelper ? Object.fromEntries(Object.entries(pieces).filter(([, c]) => c > 0)) : undefined,
+            ...(witnessIds.length > 0 ? { witnessAuditorIds: witnessIds } : {}),
           })
         : emptyDonationBoxAction({
             accountId: account.id,
@@ -120,14 +159,22 @@ export function CountDialog({ account, today, canCreateContact }: { account: Cas
   return (
     <>
       {/* 07-2 B12: Die drei Kassenaktionen sind gleichrangig (`outline`). */}
-      <Button type="button" variant="outline" onClick={() => setOpen(true)}>
-        {t('trigger')}
-      </Button>
+      {handover ? (
+        <Button type="button" variant={handover.primary === false ? 'outline' : 'default'} onClick={() => setOpen(true)} data-testid="handover-count">
+          {handover.triggerLabel}
+        </Button>
+      ) : (
+        <Button type="button" variant="outline" onClick={() => setOpen(true)}>
+          {t('trigger')}
+        </Button>
+      )}
       <Dialog open={open} onOpenChange={(next) => (next ? setOpen(true) : close())}>
         <DialogContent size="lg" className="bg-surface shadow-md">
-          <DialogTitle>{t('trigger')}</DialogTitle>
+          {/* Im Übergabe-Modus steht die Kasse fest: der Titel nennt sie und den Tag (287, 14c). */}
+          <DialogTitle>{handover ? t('handoverTitle', { account: account.name, date: fmt.date(handover.handoverOn) }) : t('trigger')}</DialogTitle>
           <Section title={t('sections.what')}>
             <FormGrid>
+              {handover ? null : (
               <FormCell size="s">
                 <Segmented
                   aria-label={t('modeGroup')}
@@ -136,15 +183,20 @@ export function CountDialog({ account, today, canCreateContact }: { account: Cas
                   onValueChange={setMode}
                 />
               </FormCell>
+              )}
               {mode === 'box' ? (
                 <FormField id="countBoxLabel" label={t('boxLabel')} required error={missing.box ? tFields('required') : undefined}>
                   <Input id="countBoxLabel" value={boxLabel} onChange={(e) => setBoxLabel(e.target.value)} required />
                 </FormField>
               ) : null}
               <FormRowBreak />
-              <FormField id="countedOn" label={t('date')} size="s">
-                <Input id="countedOn" type="date" value={countedOn} max={today} onChange={(e) => setCountedOn(e.target.value)} />
-              </FormField>
+              {handover ? (
+                <FixedValue id="countedOn" label={t('date')} value={fmt.date(handover.handoverOn)} reason={t('handoverDate')} size="s" />
+              ) : (
+                <FormField id="countedOn" label={t('date')} size="s">
+                  <Input id="countedOn" type="date" value={countedOn} max={today} onChange={(e) => setCountedOn(e.target.value)} />
+                </FormField>
+              )}
               {!useHelper ? (
                 <FormField id="countedCents" label={t('countedAmount')} required size="s" error={missing.amount ? tFields('required') : undefined}>
                   <AmountField id="countedCents" name="countedCents" value={amountText} onChange={setAmountText} required />
@@ -193,6 +245,32 @@ export function CountDialog({ account, today, canCreateContact }: { account: Cas
               </FormCell>
             </FormGrid>
             <FieldError id="count-counters-error" message={fieldError ?? undefined} />
+            {handover && counterOne?.id !== handover.to.id && counterTwo?.id !== handover.to.id ? (
+              <div className="mt-4" data-testid="count-handover-witness">
+                <FixedValue id="count-handover-witness" label={t('witnesses')} value={handover.to.name} reason={t('handoverWitness')} size="m" />
+              </div>
+            ) : null}
+            {mode === 'cash' && witnesses && witnesses.auditors.length > 0 ? (
+              // Ein Feld reicht (Board 12f): Kästchen für die Prüfer des Jahres, das gerade geprüft wird — kein eigenes Datum.
+              <fieldset className="mt-4 flex flex-col gap-2" aria-describedby="count-witnesses-hint" data-testid="count-witnesses">
+                <legend>
+                  <Overline as="span" field>
+                    {t('witnesses')}
+                  </Overline>
+                </legend>
+                {witnesses.auditors.map((a) => (
+                  <span key={a.id} className="flex items-center gap-2">
+                    <Checkbox id={`count-witness-${a.id}`} checked={witnessIds.includes(a.id)} onCheckedChange={(on) => setWitnessIds((ids) => (on ? [...ids, a.id] : ids.filter((id) => id !== a.id)))} />
+                    <Label htmlFor={`count-witness-${a.id}`} className="font-normal">
+                      {a.name}
+                    </Label>
+                  </span>
+                ))}
+                <p id="count-witnesses-hint" className="text-hint text-muted-ink">
+                  {t('witnessesHint', { year: witnesses.designation })}
+                </p>
+              </fieldset>
+            ) : null}
           </Section>
 
           {mode === 'cash' && preview ? (

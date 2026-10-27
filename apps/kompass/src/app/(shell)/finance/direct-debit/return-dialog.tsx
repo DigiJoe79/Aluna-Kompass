@@ -70,7 +70,6 @@ export function ReturnDialog({ item, onClose }: { item: OpenReturn; onClose: () 
     const result = await feedback.run(() => resolveReturnAction({ returnId: item.id, resolution, endMandate: resolution === 'recollect' ? false : endMandate }), { retry: () => void save() });
     setPending(false);
     if (result.status !== 'success') return;
-    toast.success(result.message);
     onClose();
     router.refresh();
   };

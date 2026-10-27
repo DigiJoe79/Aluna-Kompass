@@ -19,6 +19,8 @@ export interface NavItem {
   sectionBreak?: boolean;
   /** Abschnitt der Zweitebene; Beschriftung aus `nav.sections.<section>`. Ohne Abschnitt: kopflos, oben. */
   section?: string;
+  /** Kommt später (N1): gedämpfter Link mit „später“. */
+  later?: boolean;
 }
 
 export interface NavGroup {
@@ -118,6 +120,7 @@ export function buildNavigation(input: {
         visible: visible(item.permission),
         sectionBreak: item.sectionBreak ?? false,
         section: item.section,
+        ...(item.later ? { later: true } : {}),
       });
       return {
         key: m.key,

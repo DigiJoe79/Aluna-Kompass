@@ -15,7 +15,8 @@ export type EntryHistoryEvent =
   | { kind: 'created' | 'reviewed' | 'finalized'; at: string; userName: string | null; channel: 'ui' | 'mcp' | 'system' | null }
   | { kind: 'allocationChanged'; at: string; userName: string | null; correctionId: string; state: 'applied' | 'pending' | 'rejected'; before: unknown; after: unknown; note: string }
   | { kind: 'reversed'; at: string; userName: string | null; byEntryId: string; byNumber: string | null }
-  | { kind: 'voucherAdded' | 'voucherRevoked'; at: string; userName: string | null; documentNumber: string };
+  | { kind: 'voucherAdded'; at: string; userName: string | null; documentNumber: string; /** Ersatz für einen widerrufenen Beleg. */ replacement: boolean }
+  | { kind: 'voucherRevoked'; at: string; userName: string | null; documentNumber: string; /** Der Grund des Widerrufs (Pflicht seit Runde 6), `null` bei alten Zeilen. */ note: string | null };
 
 const idSchema = z.object({ id: z.string().min(1) });
 
@@ -59,11 +60,15 @@ export async function getEntryHistory(deps: Deps, ctx: CallContext, input: unkno
     events.push({ kind: 'reversed', at: reversal.finalizedAt!, userName: nameOf(reversal.finalizedByUserId), byEntryId: reversal.id, byNumber: reversal.number });
   }
 
+  // Der Grund eines Widerrufs steht in der Spur wie die Notiz einer Korrektur (Designer Runde 6, 15c); ein Ersatz heißt
+  // so. Widerruf vor Ersatz, wenn beide im selben Augenblick geschahen.
+  const replacements = new Set(voucherLinks.map((v) => v.replacedByLinkId).filter((id): id is string => id !== null));
   for (const v of voucherLinks) {
-    events.push({ kind: 'voucherAdded', at: v.addedAt, userName: nameOf(v.addedByUserId), documentNumber: v.documentNumber });
-    if (v.revokedAt) events.push({ kind: 'voucherRevoked', at: v.revokedAt, userName: nameOf(v.revokedByUserId), documentNumber: v.documentNumber });
+    events.push({ kind: 'voucherAdded', at: v.addedAt, userName: nameOf(v.addedByUserId), documentNumber: v.documentNumber, replacement: replacements.has(v.id) });
+    if (v.revokedAt) events.push({ kind: 'voucherRevoked', at: v.revokedAt, userName: nameOf(v.revokedByUserId), documentNumber: v.documentNumber, note: v.revokeNote });
   }
 
-  events.sort((a, b) => a.at.localeCompare(b.at));
+  const tie = (e: EntryHistoryEvent) => (e.kind === 'voucherRevoked' ? 0 : e.kind === 'voucherAdded' ? 1 : 0);
+  events.sort((a, b) => a.at.localeCompare(b.at) || tie(a) - tie(b));
   return ok({ events });
 }

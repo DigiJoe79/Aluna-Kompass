@@ -3,6 +3,24 @@
 // (dieselben Stile, derselbe Vertrag), aber mit schmalen Rändern und einem
 // kleinen Titel ohne Schmuckabstand. Der Auszug des Änderungsprotokolls
 // erscheint auf ihr.
+//
+// Ausgabestufen (Slots, alle optional — fehlt einer, zeichnet die Basis nichts;
+// derselbe Vertrag wie `a4-quer-plain-slim`, auch bei `preliminary` — kein
+// Schrägstempel mehr, nur die Marke in der Kopfzeile, Designer Runde 7, 268):
+//   `stage`      "preliminary" | "review" | "final"; das Produkt leitet sie aus
+//                dem Zustand des Jahres ab.
+//   `stageText`  der Text dazu, vom Produkt. Die Basis kennt keinen Inhalt.
+//     preliminary → Hinweiszeile mit `stageText` oben rechts in der Kopfzeile
+//                   jeder Seite, wie im Querformat.
+//     review      → Hinweiszeile in der Kopfzeile jeder Seite, damit auch ein
+//                   einzelnes Blatt als Prüffassung kenntlich ist; nicht
+//                   noch einmal unter dem Titel (Designer Runde 6).
+//     final       → mit `stageText` Hinweiszeile in der Kopfzeile wie im
+//                   Querformat (etwa „Ohne schriftlichen Prüfbericht
+//                   festgeschrieben“), ohne nichts.
+//   `footerNote` Vermerk klein vor der Seitenzahl; fehlt er, bleibt der Fuß wie
+//                er war.
+// Alle drei stehen als `slots` in `bases.json` („diese Basis zeichnet sie“).
 // Selbstständig — kein Import. Alle Farben/Schriften aus payload.brand.*
 // (aktives Theme). Kein Vereinsspezifikum.
 
@@ -37,13 +55,28 @@
     fill: (_, y) => if y == 0 { rgb(b.primary) } else { none },
   )
 
+  // Slot `footerNote`: Vermerk des Produkts (Erzeugungszeit und Kurz-Hash eines Berichts), klein vor der Seitenzahl.
+  let footer-note = slots.at("footerNote", default: "")
+  let stage = slots.at("stage", default: "")
+  let stage-text = slots.at("stageText", default: "")
+  let review-note = stage == "review" and stage-text != ""
+  let head-note = stage in ("preliminary", "final") and stage-text != ""
+  let stage-line = text(weight: "semibold", tracking: 0.08em, fill: rgb(b.accent))[#upper(stage-text)]
+
   set page(
     paper: "a4",
     margin: (top: 20mm, bottom: 18mm, left: 15mm, right: 15mm),
     header: context [
       #set text(size: 8pt, fill: rgb(b.muted))
       // Akteneintrag: die Nummer. Ad-hoc-Auszug: kein Nummernkreis, deshalb das Ausgabedatum.
-      #grid(columns: (1fr, auto), [#org("name")], [#if payload.number != "" [#payload.number] else [#payload.issuedDate]])
+      // Hinweis der Stufe (final mit Text) als eigene Spalte rechts; review hängt ihn an den Namen.
+      #grid(
+        columns: if head-note { (1fr, auto, auto) } else { (1fr, auto) },
+        column-gutter: 8mm,
+        [#org("name")#if review-note [ · #stage-line]],
+        ..if head-note { ([#text(size: 9pt)[#stage-line]],) },
+        [#if payload.number != "" [#payload.number] else [#payload.issuedDate]],
+      )
       #line(length: 100%, stroke: 0.5pt + rgb(b.line))
     ],
     footer: context [
@@ -53,7 +86,7 @@
       #grid(
         columns: (1fr, auto),
         [#org("name")#if org("street") != "" [ · #org("street")]#if org("city") != "" [ · #org("postalCode") #org("city")]],
-        [Seite #counter(page).display() von #counter(page).final().first()],
+        [#if footer-note != "" [#text(size: 7pt)[#footer-note]#h(1.2em)]Seite #counter(page).display() von #counter(page).final().first()],
       )
     ],
   )

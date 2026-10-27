@@ -192,7 +192,7 @@ describe('expenseFormStart', () => {
       // `f.ctx` traegt die Finanzrechte nur am Kontext, nicht ueber eine Rolle in der Datenbank — `listUserNamesWithPermission` findet daher niemanden.
       waiverUnavailableNames: [],
       mileageRates: [
-        { validFrom: '2026-01-01', centsPerKm: 30 },
+        { validFrom: '2014-01-01', centsPerKm: 30 },
         { validFrom: '2026-06-01', centsPerKm: 35 },
       ],
       projects: [],

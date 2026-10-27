@@ -11,6 +11,21 @@ export async function resetDatabase(page: Page, mode: 'empty' | 'seeded'): Promi
  * Schaltet den Test-Transport des Servers (`KOMPASS_MAIL_FAKE=1`): „nicht eingerichtet“ (Vorgabe nach jedem Zurücksetzen),
  * Testumgebung mit Umleitung an umleitung@example.org, oder gesperrt. Nie eine echte Verbindung.
  */
+/**
+ * Ein Geschäftsjahr auf Jahresabschluss oder Berichte über `?year=` öffnen, statt der Vorgabe der Seite zu trauen: Die
+ * nimmt das jüngste beendete Jahr, das nicht fertig ist — bis Silvester das Vorjahr des Stichjahrs, nach Neujahr das
+ * Stichjahr selbst (Befund 0.4.0/32 b, `scripts/e2e-kalender.sh`). Gibt die ID des Jahres zurück.
+ */
+export async function openFiscalYear(page: Page, path: '/finance/closing' | '/finance/reports', designation: number): Promise<string> {
+  await page.goto(path);
+  const select = path === '/finance/closing' ? page.getByTestId('closing-year').getByRole('combobox', { name: 'Jahr' }) : page.getByTestId('reports-year').getByRole('combobox', { name: 'Geschäftsjahr' });
+  const id = await select.locator('option').filter({ hasText: new RegExp(`^${designation}$`) }).getAttribute('value');
+  expect(id).toBeTruthy();
+  await page.goto(`${path}?year=${id}`);
+  await expect(select).toHaveValue(id!);
+  return id!;
+}
+
 export async function setMailState(page: Page, state: 'off' | 'redirect' | 'blocked'): Promise<void> {
   const response = await page.request.post('/__e2e/mail', { headers: { 'x-e2e-token': 'e2e-reset' }, data: { state } });
   expect(response.ok()).toBe(true);
@@ -37,6 +52,20 @@ export async function setE2ESetting(page: Page, key: string, value: unknown): Pr
     data: { key, value },
   });
   expect(response.ok()).toBe(true);
+}
+
+/**
+ * Einen datierten Wert des Finanzmoduls ab `validFrom` setzen (`value`) oder die Überschreibung wieder nehmen
+ * (`value: undefined`) — etwa `vatEntrepreneur`, das die Steuerfelder beim Buchen zeigt (E6a).
+ */
+export async function setE2EDatedValue(page: Page, key: string, validFrom: string, value?: unknown): Promise<void> {
+  const response = await page.request.fetch('/__e2e/dated-value', {
+    method: value === undefined ? 'DELETE' : 'POST',
+    headers: { 'x-e2e-token': 'e2e-reset' },
+    data: { key, validFrom, value },
+  });
+  expect(response.ok()).toBe(true);
+  expect((await response.json()).ok).toBe(true);
 }
 
 /**

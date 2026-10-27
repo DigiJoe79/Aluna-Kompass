@@ -15,6 +15,8 @@ export interface CountCashInput {
   counterTwoContactId: string;
   note?: string;
   denominations?: Record<string, number>;
+  /** Prüfer des gerade geprüften Jahres, in deren Beisein gezählt wird (Board 12f). */
+  witnessAuditorIds?: string[];
 }
 
 export async function countCashAction(input: CountCashInput): Promise<ActionState> {

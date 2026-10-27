@@ -1,6 +1,6 @@
 import { recordAudit, type AuditParam, type CallContext, type DbOrTx, type Deps } from '@kompass/core';
 
-export type FinanceEntity = 'financeAccount' | 'financeCategory' | 'financePurpose' | 'financeFiscalYear' | 'financePeriodEvent' | 'financeDatedValue' | 'financeEntry' | 'financeEntryDocument' | 'financeOpenItem' | 'financeAllocationCorrection' | 'financeEntryJustification' | 'financeNotReturnMark' | 'financeProjectSettings' | 'financeCashCount' | 'financeSetup' | 'financeImportRun' | 'financeRawTransaction' | 'financeImportCandidate' | 'financeImportProfile' | 'financeImportRule' | 'financeContactBankAccount' | 'financeNotice' | 'financeConfirmation' | 'financeSigner' | 'financeInKindDetails' | 'financeConfirmationRun' | 'financeConfirmationRunItem' | 'financeExpenseClaim' | 'financeExpensePosition' | 'financeContactWaiverTerms' | 'financePartnerProfile' | 'financePartnerNotice' | 'financePartnerPayment' | 'financePartnerPaymentPosition' | 'financePartnerPaidLine' | 'financePartnerEvidence' | 'financeReserve' | 'financeReserveMovement' | 'financePurposeTransfer' | 'financeMandate' | 'financePledge' | 'financePrenotification' | 'financeDirectDebitRun' | 'financeDirectDebitReturn';
+export type FinanceEntity = 'financeAccount' | 'financeCategory' | 'financePurpose' | 'financeFiscalYear' | 'financePeriodEvent' | 'financeDatedValue' | 'financeEntry' | 'financeEntryDocument' | 'financeOpenItem' | 'financeAllocationCorrection' | 'financeEntryJustification' | 'financeNotReturnMark' | 'financeProjectSettings' | 'financeCashCount' | 'financeSetup' | 'financeImportRun' | 'financeRawTransaction' | 'financeImportCandidate' | 'financeImportProfile' | 'financeImportRule' | 'financeContactBankAccount' | 'financeNotice' | 'financeConfirmation' | 'financeSigner' | 'financeInKindDetails' | 'financeConfirmationRun' | 'financeConfirmationRunItem' | 'financeExpenseClaim' | 'financeExpensePosition' | 'financeContactWaiverTerms' | 'financePartnerProfile' | 'financePartnerNotice' | 'financePartnerPayment' | 'financePartnerPaymentPosition' | 'financePartnerPaidLine' | 'financePartnerEvidence' | 'financeReserve' | 'financeReserveMovement' | 'financePurposeTransfer' | 'financeMandate' | 'financePledge' | 'financePrenotification' | 'financeDirectDebitRun' | 'financeDirectDebitReturn' | 'financeReport' | 'financeReportRelease' | 'financeOtherAsset' | 'financeAuditAuditor' | 'financeAuditBaseline' | 'financeAuditSample' | 'financeAuditSectionReview' | 'financeAuditRemark' | 'financeAuditReport' | 'financeAccountStatementDocument' | 'financeAccountYearConfirmation' | 'financeClosingConfirmation' | 'financeAssemblyResult' | 'financeAuditCarryOver' | 'financeHandover' | 'financeVatReturn' | 'financeVatFiling' | 'financeDataExport' | 'financeTaxPeriod' | 'financeContactTaxDetails';
 
 /**
  * Was vom Finanzmodul ins Änderungsprotokoll darf — je Entität eine Liste, und
@@ -18,10 +18,10 @@ export const AUDIT_FIELDS: Record<FinanceEntity, readonly string[]> = {
   // greift auf jede Zeichenfolge, die „iban“ enthält — auch als Teilstring
   // eines Flags, das selbst keine IBAN trägt.
   financeAccount: ['kind', 'isMain', 'isActive', 'importFormat', 'importProfileId', 'openingBalanceCents', 'openingDate', 'bankDetailsChanged'],
-  financeCategory: ['key', 'direction', 'sphere', 'incomeKind', 'costFunction', 'allowanceKind', 'statementSuffices', 'defaultTaxCode', 'inputTaxDeductible', 'countsTowardTurnover', 'isAssetSale', 'isActive'],
+  financeCategory: ['key', 'direction', 'sphere', 'incomeKind', 'costFunction', 'allowanceKind', 'statementSuffices', 'defaultTaxCode', 'inputTaxDeductible', 'countsTowardTurnover', 'isAssetSale', 'thresholdExclusion', 'isActive'],
   // F8b Annahme 16: `reopenedAt` dazu — nie die Begründung des Wiederöffnens selbst.
   financePurpose: ['projectId', 'targetCents', 'abroad', 'carryForwardCents', 'fulfilledAt', 'dissolvedAt', 'isActive', 'reopenedAt'],
-  financeFiscalYear: ['startsOn', 'endsOn', 'designation', 'taxReturnFiledOn'],
+  financeFiscalYear: ['startsOn', 'endsOn', 'designation'],
   financePeriodEvent: ['fiscalYearId', 'kind', 'guardCount'],
   financeDatedValue: ['key', 'validFrom', 'value'],
   // Nie Text, nie Kontakt-ID (Spec 10.3): `channel`, `reviewed` und `cashWarning`
@@ -32,14 +32,46 @@ export const AUDIT_FIELDS: Record<FinanceEntity, readonly string[]> = {
   // Nie die Zahlungsreferenz, nie die Notiz, nie der Kontakt (Spec 10.3).
   financeOpenItem: ['kind', 'itemDate', 'amountCents', 'dueOn', 'documentId', 'originType', 'originId', 'cancelled'],
   // Nie Kontakt-ID, nie Freitext (Spec 10.3, E18): nur, *dass* sich etwas ändert, nicht *worauf*.
-  financeAllocationCorrection: ['entryId', 'lineId', 'state', 'partyChanged', 'projectChanged', 'purposeChanged', 'abroadChanged', 'withProof', 'section153'],
+  financeAllocationCorrection: ['entryId', 'lineId', 'state', 'partyChanged', 'projectChanged', 'purposeChanged', 'abroadChanged', 'taxCodeChanged', 'serviceDateChanged', 'withProof', 'section153'],
   // Nie die Begründung selbst (Spec 5.4): sie steht am Datensatz, nie im Protokoll.
   financeEntryJustification: ['entryId'],
   // AC: nur, *dass* eine Auszahlung als „keine Rückgabe“ gilt — nie die Begründung.
   financeNotReturnMark: ['entryId', 'notReturn'],
   financeProjectSettings: ['projectId', 'targetCents', 'defaultPurposeId', 'abroad', 'publishDonationStatus'],
   // Nie die Zählenden, nie ihre Erklärung (Spec 10.3, Entschieden 1): nur, *dass* und *wie viel* abweicht.
-  financeCashCount: ['accountId', 'countedOn', 'kind', 'differenceCents', 'documentNumber', 'entryId'],
+  financeCashCount: ['accountId', 'countedOn', 'kind', 'differenceCents', 'documentNumber', 'entryId', 'witnessCount'],
+  financeReport: ['reportKey', 'fiscalYearId', 'dataHash', 'documentNumber', 'voidedAt'],
+  financeReportRelease: ['fiscalYearId', 'basis'],
+  // Rechenschaft A2: nie Bezeichnung, Grundlage oder Grund — frei getippt, sie stehen am Datensatz.
+  financeOtherAsset: ['kind', 'valueCents', 'recordedFrom', 'recordedUntil'],
+  // Rechenschaft D1 — Prüfer je Jahr: nie die Kontakt-ID, nur Art, Tage, Schalter und Dokument-IDs.
+  financeAuditBaseline: ['fiscalYearId', 'kind', 'entryCount'],
+  financeAuditSample: ['entryId', 'auditorId'],
+  // Nie der Text eines Vermerks oder einer Antwort — er steht am Vermerk.
+  financeAuditRemark: ['fiscalYearId', 'kind', 'targetType', 'state', 'onBehalf'],
+  // Nie Ort, „nicht geprüft“, Grund oder abweichende Feststellungen — Freitext am Bericht.
+  financeAuditReport: ['fiscalYearId', 'kind', 'origin', 'state', 'dateCount', 'result', 'recommendation', 'separate', 'auditorId', 'signatureMode', 'scanCount', 'documentId'],
+  financeAuditSectionReview: ['fiscalYearId', 'auditorId', 'section', 'reviewed'],
+  // Rechenschaft C — Kontoauszüge je Konto und Bestätigungen je Jahr und Konto: nie die Begründung (sie steht am Datensatz).
+  financeAccountStatementDocument: ['accountId', 'documentId', 'periodFrom', 'periodTo'],
+  financeAccountYearConfirmation: ['fiscalYearId', 'accountId', 'kind'],
+  // Rechenschaft C — Bestätigung eines Schritts im Jahresabschluss: nie die Begründung.
+  financeClosingConfirmation: ['fiscalYearId', 'step'],
+  // Ergebnis der MV: Modus, Zählung, Tag, Dokument — nie, wer entlastet wurde (Kontakt-IDs am Datensatz).
+  financeAssemblyResult: ['fiscalYearId', 'assemblyOn', 'dischargeMode', 'accountsApproved', 'granted', 'total', 'minutesDocumentId'],
+  // Übernahme der Nachprüfung ins Folgejahr: nie die Begründung.
+  financeAuditCarryOver: ['fiscalYearId', 'targetFiscalYearId', 'entryCount'],
+  // Amtsübergabe: Tag, Zustand, Dokument — nie Von und An (Kontakte am Datensatz).
+  financeHandover: ['fiscalYearId', 'handoverOn', 'state', 'documentId'],
+  // Bis 0.3.x: die Abgabe je Geschäftsjahr (Tabelle entfallen, alte Protokollzeilen bleiben lesbar).
+  financeVatReturn: ['fiscalYearId', 'filedOn'],
+  // E6a: Abgabe je Umsatzsteuer-Zeitraum.
+  financeVatFiling: ['period', 'filedOn', 'amendment'],
+  // Rechenschaft D2 — Erklärungszeitraum: Jahre, Tage, Fassung, Dokumente, Bescheid; nie die Angaben (Freitext, `answersJson`).
+  financeTaxPeriod: ['firstFiscalYearId', 'lastFiscalYearId', 'requestedOn', 'withTaxAdvisor', 'dueOn', 'filedOn', 'filedReportId', 'requestDocumentId', 'filedDocumentId', 'transmissionDocumentId', 'activityReportDocumentId', 'statuteDocumentId', 'noticeId'],
+  // Rechenschaft B2 — Datenexport: Jahre, Größe, Löschzeitpunkt; nie der Inhalt, nie ein Dateiname.
+  financeDataExport: ['fiscalYearIds', 'sizeBytes', 'fileDeletedAt'],
+  financeAuditAuditor: ['fiscalYearId', 'mode', 'confidential', 'electedOn', 'confidentialityDocumentId', 'minutesDocumentId', 'accessEndedAt'],
   // Task 4/5 — nur, *dass* ein Einrichtungsschritt bestätigt oder ein Schalter gesetzt wurde, nie Namen.
   // `key`/`cents` (Nachtrag B): nur Schlüssel und Zahl der Grenze, nie ein Begründungstext.
   financeSetup: ['step', 'confirmedAt', 'applied', 'key', 'cents'],
@@ -74,11 +106,13 @@ export const AUDIT_FIELDS: Record<FinanceEntity, readonly string[]> = {
   financeExpensePosition: ['claimId', 'kind', 'positionDate', 'amountCents', 'tripKm', 'documentId', 'categoryId', 'projectId', 'purposeId'],
   // Nur das Datum der Vereinbarung, nie ihr Wortlaut.
   financeContactWaiverTerms: ['agreedOn'],
+  // Rechenschaft D2: Finanzamt, Steuernummer und Zweck einer Körperschaft — nur, *welche* Angaben es gibt, nie die Angaben.
+  financeContactTaxDetails: ['hasTaxOffice', 'hasTaxNumber', 'hasBeneficiaryPurpose', 'reverseCharge', 'reverseChargeDecline'],
   // F7 — nie die Kontakt-ID, nie eine Notiz (Spec 10.3, Global Constraints).
   financePartnerProfile: ['status', 'usualBasis', 'usualProofMonths', 'isActive'],
   financePartnerNotice: ['partnerId', 'kind', 'noticeDate', 'receivedOn', 'supersededOn', 'voided'],
   // Nie Verwendungszweck, Begründungen (Übersteuerung, Warnungen, Ablehnung) oder Kontakt-ID.
-  financePartnerPayment: ['state', 'number', 'basis', 'basisOverridden', 'retroactive', 'positionCount', 'totalCents', 'proofDueOn', 'submittedAt', 'approvedAt', 'acknowledgedAt', 'openItemId', 'channel', 'copiedFromPaymentId'],
+  financePartnerPayment: ['state', 'number', 'basis', 'basisOverridden', 'assetEndowment', 'retroactive', 'positionCount', 'totalCents', 'proofDueOn', 'submittedAt', 'approvedAt', 'acknowledgedAt', 'openItemId', 'channel', 'copiedFromPaymentId'],
   financePartnerPaymentPosition: ['paymentId', 'kind', 'amountCents', 'categoryId', 'projectId', 'purposeId', 'goodsLineId'],
   financePartnerPaidLine: ['paymentId', 'paidLineId'],
   // Nie die Erläuterung selbst.

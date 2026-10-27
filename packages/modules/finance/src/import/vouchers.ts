@@ -78,7 +78,8 @@ export async function searchVouchersForTransaction(deps: Deps, ctx: CallContext,
     const res = await listDocuments(deps, ctx, { text: query.text, phase: 'issued', limit: 200 });
     if (!res.ok) return res;
     for (const doc of res.value.documents) {
-      if (!voucherTypes.has(doc.typeKey) || doc.status === 'voided') continue;
+      // Ein Kontoauszug am Konto (Rechenschaft C) ist kein Beleg zu einem einzelnen Umsatz.
+      if (!voucherTypes.has(doc.typeKey) || doc.status === 'voided' || doc.links.some((l) => l.entityType === 'financeAccount')) continue;
       const hit = found.get(doc.id) ?? { doc, matchedBy: new Set() };
       hit.matchedBy.add(query.by);
       found.set(doc.id, hit);
@@ -122,7 +123,7 @@ export async function attachVoucherToTransaction(deps: Deps, ctx: CallContext, i
   const voucherTypes = readSetting<string[]>(deps, 'finance.voucherTypes');
   const preferred = raw.amountCents < 0 ? 'voucher-invoice' : 'voucher-receipt';
   const typeKey = v.typeKey ?? (voucherTypes.includes(preferred) ? preferred : 'voucher-own');
-  if (!voucherTypes.includes(typeKey)) return financeConflict('voucherTypeNotAllowed', { type: typeKey });
+  if (!voucherTypes.includes(typeKey)) return financeConflict('voucherTypeNotAllowed', { type: typeKey, allowed: voucherTypes.join(', ') });
 
   let entryId = boundEntryIdInternal(deps.db, raw.id);
   const createdEntry = entryId === null;

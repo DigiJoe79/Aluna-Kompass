@@ -26,7 +26,7 @@ const ROLES = [
   { originKey: 'finance:treasurer', name: 'Schatzmeister', description: 'Führt die Finanzen: bucht, schreibt fest, schließt das Jahr ab, stellt Bestätigungen aus.', permissions: [...F('read', 'overview', 'entriesWrite', 'entriesFinalize', 'periodClose', 'setup', 'expensesSubmit', 'approve', 'donationsIssue', 'reportsFinalize', 'directDebit'), 'dms.view', 'dms.create', 'documents.export', 'contacts.view', 'contacts.manage', 'projects.view', 'followUps.view', 'followUps.manage'] },
   { originKey: 'finance:approver', name: 'Freigeber Finanzen', description: 'Gibt Auslagen, Zahlungen an Partner und Umwidmungen frei – nie die eigenen.', permissions: [...F('overview', 'read', 'approve', 'expensesSubmit'), 'contacts.view', 'projects.view'] },
   { originKey: 'finance:clerk', name: 'Auslagen einreichen', description: 'Reicht eigene Auslagen ein und sieht nur diese.', permissions: F('expensesSubmit') },
-  { originKey: 'finance:auditor', name: 'Kassenprüfer', description: 'Liest alles, ändert nichts, zieht das Prüfpaket.', permissions: [...F('read', 'overview'), 'documents.export'] },
+  { originKey: 'finance:auditor', name: 'Kassenprüfer', description: 'Liest alles, ändert nichts, schreibt Vermerke und den Prüfbericht.', permissions: [...F('read', 'overview', 'audit'), 'documents.export'] },
   { originKey: 'finance:agent', name: 'Finanz-Agent', description: 'Für einen Agenten über MCP: bereitet Buchungen vor. Festschreiben bleibt dem Menschen.', permissions: [...F('read', 'overview', 'entriesWrite'), 'contacts.view', 'projects.view'] },
 ] as const;
 
@@ -67,6 +67,15 @@ export function installFinance(tx: DbOrTx, deps: Deps, ctx: CallContext): void {
   // andere Art das Präfix KZP schon, meldet der Start einen Fehler (Vorarbeiten-Spec § 4).
   ensureDocumentType(tx, deps, ctx, { module: 'finance', key: 'finance-cash-count', label: 'Kassenzählung', prefix: 'KZP', defaultDirection: 'outgoing', retentionClass: 'statutory10Y', owned: true, protectionArea: 'finance' });
 
+  // Rechenschaft A1 — modul-eigen: die festgeschriebene Fassung eines Berichts, mit Personenbezug in eigener Art (Spec § A).
+  ensureDocumentType(tx, deps, ctx, { module: 'finance', key: 'finance-report', label: 'Finanzbericht', prefix: 'FBR', defaultDirection: 'outgoing', retentionClass: 'statutory10Y', owned: true, protectionArea: 'finance' });
+  // Rechenschaft A3 — modul-eigen: der Scan des schriftlichen Prüfberichts, Grundlage der Freigabe (Designer Runde 2, 11b).
+  ensureDocumentType(tx, deps, ctx, { module: 'finance', key: 'finance-audit-report', label: 'Prüfbericht', prefix: 'PBR', defaultDirection: 'incoming', retentionClass: 'statutory10Y', owned: true, protectionArea: 'finance' });
+  // Rechenschaft D1 — modul-eigen: die Vertraulichkeitserklärung eines Kassenprüfers, so lange aufbewahrt wie der
+  // Prüfbericht, zu dem sie gehört.
+  ensureDocumentType(tx, deps, ctx, { module: 'finance', key: 'finance-audit-confidentiality', label: 'Vertraulichkeitserklärung', prefix: 'VTE', defaultDirection: 'incoming', retentionClass: 'statutory10Y', owned: true, protectionArea: 'finance' });
+  ensureDocumentType(tx, deps, ctx, { module: 'finance', key: 'finance-report-personal', label: 'Finanzbericht mit Personenbezug', prefix: 'FBP', defaultDirection: 'outgoing', retentionClass: 'statutory10Y', owned: true, protectionArea: 'finance' });
+
   // F6a — modul-eigen: unser Exemplar der Zuwendungsbestätigung (ein lückenloser Nummernkreis, den nur
   // Finanzen zieht) und die unterschriebene Fassung, die als Eingang zurückkommt. Trägt eine Vereinsart
   // ZWB oder ZWU schon, scheitert der Start, bis der Verein ihr ein anderes Präfix gibt (Befundliste § 5).
@@ -91,6 +100,16 @@ export function installFinance(tx: DbOrTx, deps: Deps, ctx: CallContext): void {
   // L2 — modul-eigen: der Begleitzettel eines Einzugs, Beleg der Sammelbuchung (zehn Jahre wie die Buchung).
   ensureDocumentType(tx, deps, ctx, { module: 'finance', key: 'sepa-run-summary', label: 'Lastschrift-Sammelauftrag', prefix: 'LSS', defaultDirection: 'outgoing', retentionClass: 'statutory10Y', owned: true, protectionArea: 'finance' });
   ensureDocumentType(tx, deps, ctx, { module: 'finance', key: 'sepa-prenotification', label: 'Lastschriftankündigung', prefix: 'LSA', defaultDirection: 'outgoing', retentionClass: 'statutory6Y', owned: false, protectionArea: 'finance' });
+
+  // Rechenschaft C — modul-eigen: das unterschriebene Übergabeprotokoll der Amtsübergabe (zehn Jahre wie die Kasse).
+  ensureDocumentType(tx, deps, ctx, { module: 'finance', key: 'finance-handover-protocol', label: 'Übergabeprotokoll', prefix: 'UGP', defaultDirection: 'incoming', retentionClass: 'statutory10Y', owned: true, protectionArea: 'finance' });
+
+  // Rechenschaft D2 — modul-eigen: Aufforderung, abgegebene Erklärung, ELSTER-Übertragungsprotokoll und Tätigkeitsbericht
+  // am Erklärungszeitraum, eine Art für alle — die Rolle sagt der Platz am Zeitraum (zehn Jahre wie die Bescheide).
+  // E6b — modul-eigen: abgegebene Fassung und ELSTER-Übertragungsprotokoll einer Umsatzsteuer-Anmeldung, an der Abgabe
+  // (zehn Jahre wie die Steuererklärung). Läuft auch für bestehende Installationen beim Start (`installs.ts`).
+  ensureDocumentType(tx, deps, ctx, { module: 'finance', key: 'finance-vat-return', label: 'Umsatzsteuer-Anmeldung', prefix: 'UST', defaultDirection: 'incoming', retentionClass: 'statutory10Y', owned: true, protectionArea: 'finance' });
+  ensureDocumentType(tx, deps, ctx, { module: 'finance', key: 'finance-tax-return', label: 'Steuererklärung', prefix: 'STE', defaultDirection: 'incoming', retentionClass: 'statutory10Y', owned: true, protectionArea: 'finance' });
 
   // F8b — als Vorschlag (nicht modul-eigen): der Beschluss für zurückgelegtes Geld und für eine Umwidmung ist das
   // Protokoll des Vorstands. Kein Schutzbereich (Joe 2026-09-26): jede Person mit dms.view liest ein Protokoll.

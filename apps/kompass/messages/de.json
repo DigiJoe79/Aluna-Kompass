@@ -23,6 +23,11 @@
     }
   },
   "common": {
+    "pdfPages": {
+      "alt": "Seite {page} von {total}: {title}",
+      "open": "PDF öffnen",
+      "openAll": "{total, plural, one {PDF öffnen} other {Alle # Seiten als PDF öffnen}}"
+    },
     "runSteps": {
       "label": "Schritte",
       "state": {
@@ -37,7 +42,11 @@
       "deactivated": "deaktiviert",
       "archived": "archiviert",
       "retired": "stillgelegt",
-      "closed": "abgeschlossen"
+      "closed": "abgeschlossen",
+      "later": "folgt später",
+      "withdrawn": "zurückgenommen",
+      "ended": "beendet",
+      "resolved": "geklärt"
     },
     "leave": {
       "title": "Seite verlassen?",
@@ -102,6 +111,15 @@
     "close": "Schließen",
     "moreActions": "Weitere Aktionen",
     "rowActions": "Aktionen für {name}",
+    "remarkThread": {
+      "answer": "Antworten",
+      "followUp": "Nachfragen",
+      "resolve": "Als geklärt markieren",
+      "answerLabel": "Antwort",
+      "followUpLabel": "Nachfrage",
+      "resolvedCount": "{count, plural, one {# geklärter Vermerk} other {# geklärte Vermerke}}",
+      "postsLabel": "Antworten und Nachfragen"
+    },
     "rowActionsColumn": "Aktionen",
     "undo": "Rückgängig",
     "copy": "Kopieren",
@@ -158,7 +176,8 @@
         "done": "Erfüllt",
         "notApplicable": "Trifft nicht zu"
       },
-      "open": "offen"
+      "open": "offen",
+      "count": "{done} von {total} erledigt"
     },
     "autosave": {
       "idle": "Noch nichts eingegeben.",
@@ -564,8 +583,10 @@
   },
   "errors": {
     "forbidden": "Dafür fehlt Ihrer Rolle das Recht {permission}.",
+    "forbiddenNamed": "Dafür fehlt Ihrer Rolle das Recht „{label}“ ({permission}).",
     "validation": "Bitte prüfen Sie die markierten Felder.",
     "notFound": "Der Eintrag wurde nicht gefunden.",
+    "notFoundNamed": "{entity} {id} gibt es nicht.",
     "unauthorized": "Bitte melden Sie sich erneut an.",
     "databaseConstraint": {
       "reason": "Der Vorgang verstößt gegen eine Regel der Datenbank und wurde abgebrochen. Es wurde nichts gespeichert.",
@@ -635,7 +656,7 @@
       "remedy": "Löschen ist nach Ablauf der Frist möglich; welche Fristen gelten, steht unter „Aufbewahrung“."
     },
     "conflict": {
-      "staleVersion": "Inzwischen wurde dieser Eintrag an anderer Stelle geändert — etwa über einen Agenten oder in einem zweiten Fenster. Gespeichert wurde nichts; Ihre Eingaben stehen noch in der Maske. Kopieren Sie, was Sie behalten wollen, laden Sie die Seite neu und tragen Sie es auf dem aktuellen Stand erneut ein.",
+      "staleVersion": "Der Eintrag wurde inzwischen geändert; gespeichert wurde nichts. Lesen Sie den aktuellen Stand und speichern Sie erneut.",
       "reviewUiOnly": "Die Prüfung bestätigt ein Mensch in der Oberfläche.",
       "noReviewPending": "Für dieses Profil ist keine Prüfung offen.",
       "documentIsDraft": "Das ist noch ein Entwurf.",
@@ -759,6 +780,46 @@
       }
     },
     "fields": {
+      "outsideFiscalYear": "Der Tag liegt nicht im Geschäftsjahr.",
+      "wrongPeriodKind": "Der Zeitraum passt nicht zur Zeitraumart des Jahres (Quartal oder Monat).",
+      "noFiscalYear": "Für den Zeitraum gibt es kein Geschäftsjahr in Kompass.",
+      "notAo52Purpose": "Wählen Sie einen Zweck nach §\u00a052 Abs. 2 AO.",
+      "beforeFirst": "Das letzte Jahr liegt vor dem ersten.",
+      "tooManyYears": "Ein Erklärungszeitraum umfasst höchstens drei Geschäftsjahre.",
+      "documentVoided": "Das Dokument ist storniert.",
+      "documentNotFinal": "Das Dokument ist noch ein Entwurf.",
+      "notApplicable": "Diese Angabe gilt hier nicht.",
+      "beforeRequested": "Der Tag liegt vor der Aufforderung.",
+      "regularImpliesEntrepreneur": "Bei Regelbesteuerung ist der Verein immer Unternehmer.",
+      "regularOnly": "Eine Befreiung von der Voranmeldung gibt es nur bei Regelbesteuerung.",
+      "invalidVatId": "Die USt-IdNr. ist ungültig: DE und neun Ziffern mit Prüfziffer.",
+      "nothingToSave": "Es ist nichts zum Speichern angegeben.",
+      "notCorrectable": "Dieses Kennzeichen lässt sich nur durch Zurücknehmen der Buchung ändern.",
+      "taxCodeNotOffered": "Dieses Kennzeichen passt nicht zur Umsatzsteuer-Lage am Buchungstag. Ohne Unternehmereigenschaft gibt es nur §\u00a013b und den Erwerb.",
+      "rc13bEuNeedsVatId": "§\u00a013b für Leistungen aus der EU gilt beim Verein ohne Unternehmereigenschaft nur mit USt-IdNr. (§\u00a03a Abs. 2 S. 3 UStG). Ohne sie besteuert in der Regel der Anbieter in seinem Land (§\u00a03a Abs. 1 UStG); nur Leistungen im Inland, etwa an einem Grundstück, fallen unter „§\u00a013b, übrige“ (Kennzahl 84/85).",
+      "beforePeriodEnd": "Die Abgabe liegt vor dem Ende des Zeitraums; eintragen lässt sie sich ab dem {opensOn}.",
+      "wrongKind": "Wählen Sie einen Freistellungsbescheid oder eine Anlage zum Körperschaftsteuerbescheid.",
+      "noticeVoided": "Der Bescheid ist als irrtümlich erfasst gekennzeichnet.",
+      "notConsecutive": "Die Geschäftsjahre müssen lückenlos aufeinander folgen.",
+      "notAnItemOfHandover": "Dieser Punkt gehört nicht zu dieser Übergabe.",
+      "notAPerson": "Im Beisein von: nur Personen aus den Kontakten.",
+      "notAfterYearEnd": "Die Mitgliederversammlung liegt nach dem Ende des Geschäftsjahres.",
+      "notBoardOfYear": "Nur Personen, die im Jahr Vorstand oder Schatzmeister waren.",
+      "notMinutes": "Wählen Sie ein Protokoll aus der Akte (festgeschrieben, nicht storniert).",
+      "notConfirmable": "Dieser Schritt wird nicht bestätigt, Kompass rechnet ihn.",
+      "notABankStatement": "Wählen Sie einen Kontoauszug aus der Akte (festgeschrieben, nicht storniert).",
+      "beforePeriodFrom": "Das Ende liegt vor dem Beginn.",
+      "documentOrBytes": "Laden Sie ein PDF hoch oder wählen Sie ein Dokument aus der Akte.",
+      "notAnAuditReport": "Wählen Sie den Scan eines Prüfberichts aus der Akte oder laden Sie ihn hoch.",
+      "witnessNotAuditor": "Im Beisein von: nur Prüfer des Jahres, das gerade geprüft wird.",
+      "notACashCountOfAudit": "Wählen Sie eine Kassenzählung im Beisein der Prüfer nach der Prüffassung.",
+      "witnessNoAudit": "Gerade läuft keine Kassenprüfung; „im Beisein von“ bleibt leer.",
+      "yearFixed": "Das Geschäftsjahr eines Prüfers lässt sich nicht ändern; tragen Sie ihn im anderen Jahr neu ein.",
+      "reportOrYear": "Nennen Sie den Prüfbericht oder das Geschäftsjahr.",
+      "notSeparate": "Den Prüfer nennt nur, wer getrennte Berichte ablegt.",
+      "notAnAuditorOfYear": "Wählen Sie einen Prüfer dieses Geschäftsjahres.",
+      "tooLarge": "Die Datei ist größer als 10 MB.",
+      "notPdf": "Bitte laden Sie ein PDF hoch.",
       "feeExemptType": "Für eine beitragsfreie Art gibt es keine Regel.",
       "duplicateLevelKey": "Jede Mahnstufe nur einmal.",
       "notLower": "Der neue Betrag muss kleiner sein als der bisherige.",
@@ -798,6 +859,9 @@
       "allowanceOnlyForExpense": "Eine Aufwandsart gilt nur für Ausgaben.",
       "inputTaxNotInIdeal": "Vorsteuerabzug gilt nicht im ideellen Bereich.",
       "transitHasNoSphere": "Durchlauf hat keinen steuerlichen Bereich.",
+      "beforeRecordedFrom": "Das Ende liegt vor dem Beginn des Eintrags.",
+      "notAfterRecordedFrom": "Der neue Wert muss nach dem Beginn des Eintrags gelten.",
+      "combineNotAllowed": "Zweckbetrieb und Geschäftsbetrieb lassen sich für dieses Jahr nicht zusammengefasst darstellen.",
       "tooSmall": "Mindestens {minimum}.",
       "mustBeGreater": "Muss größer als {minimum} sein.",
       "tooBig": "Höchstens {maximum}.",
@@ -824,6 +888,7 @@
       "unknownDocumentType": "Diese Dokumentart gibt es nicht oder sie ist nicht aktiv.",
       "notAWaiverClaim": "Diese Auslage ist keine mit Aufwandsverzicht.",
       "inFuture": "Das Datum liegt in der Zukunft.",
+      "beforeIssued": "Das Datum liegt vor dem Ausstellungstag.",
       "notAReceipt": "Diese Position ist kein Beleg.",
       "moneyPositionsAutoGenerated": "Bei einer nachträglichen Zahlung entstehen die Geldpositionen aus der Buchung — bitte keine eigenen angeben.",
       "ownAgreementRequired": "Diese Zahlung braucht eine eigene Vereinbarung, nicht die allgemeine des Partners.",
@@ -1032,8 +1097,18 @@
       "reserves": "Zurückgelegtes Geld",
       "people": "Personen",
       "admin": "Finanzen",
-      "directDebit": "Lastschrift"
+      "directDebit": "Lastschrift",
+      "audit": "Kassenprüfung",
+      "reports": "Berichte",
+      "fundUse": "Mittelverwendung",
+      "otherAssets": "Sonstiges Vermögen",
+      "tax": "Steuererklärung",
+      "vat": "Umsatzsteuer",
+      "closing": "Jahresabschluss",
+      "deadlines": "Fristen und Schwellen"
     },
+    "later": "später",
+    "laterLabel": "{name}, folgt später",
     "sections": {
       "finance": {
         "work": "Arbeit",
@@ -1041,7 +1116,8 @@
         "donations": "Spenden",
         "allocation": "Zweckmittel",
         "expenses": "Auslagen",
-        "parties": "Beteiligte"
+        "parties": "Beteiligte",
+        "accountability": "Rechenschaft"
       }
     },
     "media": "Mediathek",
@@ -1298,6 +1374,34 @@
         }
       },
       "finance": {
+        "deadlines": {
+          "title": "Finanzfristen · Schwellen",
+          "empty": "Keine Frist in 60 Tagen, alle Schwellen ruhig.",
+          "messages": {
+            "noticeExpiry": "Freistellungsbescheid läuft ab am {dueOn}",
+            "partnerProof": "Nachweis zur Zahlung {number} fällig am {dueOn}",
+            "recipientNoticeExpiry": "Bescheid eines Partners läuft ab am {dueOn}",
+            "confirmationsToCorrect": "{count, plural, one {# Zuwendungsbestätigung zu korrigieren} other {# Zuwendungsbestätigungen zu korrigieren}}",
+            "auditorAccess": "{designation}: Prüferzugang nach der Prüfung schließen",
+            "taxReturn": "Steuererklärung {period} bis {dueOn}",
+            "vatAdvanceReturn": "Umsatzsteuer-Voranmeldung {vatPeriod} bis {dueOn}",
+            "vatReturn": "Umsatzsteuer-Jahreserklärung {year} bis {dueOn}",
+            "vatAmendment": "{scope, select, year {Berichtigte Umsatzsteuer-Jahreserklärung {vatPeriod}} other {Berichtigte Voranmeldung {vatPeriod}}}, unverzüglich",
+            "thresholdApproaching": "{designation}: {threshold, select, timelyUse {Zeitnahe Mittelverwendung} business {Freigrenze wirtschaftlicher Geschäftsbetrieb} businessCombined {Vereinfachung Zweckbetriebe} smallBusinessPrevYear {Kleinunternehmer, Vorjahr} smallBusinessCurrent {Kleinunternehmer, laufendes Jahr} allowanceVolunteer {Ehrenamtspauschale} allowanceTrainer {Übungsleiterpauschale} other {Schwelle}} nähert sich der Grenze",
+            "thresholdExceeded": "{designation}: {threshold, select, timelyUse {Zeitnahe Mittelverwendung} business {Freigrenze wirtschaftlicher Geschäftsbetrieb} businessCombined {Vereinfachung Zweckbetriebe} smallBusinessPrevYear {Kleinunternehmer, Vorjahr} smallBusinessCurrent {Kleinunternehmer, laufendes Jahr} allowanceVolunteer {Ehrenamtspauschale} allowanceTrainer {Übungsleiterpauschale} other {Schwelle}} überschritten"
+          }
+        },
+        "audit": {
+          "title": "Kassenprüfung",
+          "empty": "Für kein Jahr sind Prüfer eingetragen.",
+          "messages": {
+            "questionsOpen": "{designation}: {count, plural, one {# Frage offen} other {# Fragen offen}}",
+            "reportMissing": "{designation}: Prüfbericht fehlt",
+            "followUpOpen": "{designation}: Nachprüfung offen",
+            "accessOpen": "{designation}: Prüferzugang noch offen",
+            "done": "{designation}: abgeschlossen am {filedOn}"
+          }
+        },
         "todo": {
           "title": "Finanzen: zu tun",
           "empty": "Nichts zu tun.",
@@ -1319,6 +1423,7 @@
             "partnerPaymentsWithoutProof": "{count, plural, one {# Zahlung an Partner ohne anerkannten Nachweis} other {# Zahlungen an Partner ohne anerkannten Nachweis}}",
             "partnerPaymentsOverdue": "{count, plural, one {# Nachweis einer Zahlung an Partner überfällig} other {# Nachweise von Zahlungen an Partner überfällig}}",
             "evidenceReadyToAcknowledge": "Nachweise bereit zum Anerkennen: {count}",
+            "auditQuestionsOpen": "{count, plural, one {# Frage der Kassenprüfung offen} other {# Fragen der Kassenprüfung offen}}",
             "purposeTransfersPending": "{count, plural, one {# Umwidmung wartet auf Freigabe} other {# Umwidmungen warten auf Freigabe}}"
           }
         },
@@ -1827,6 +1932,10 @@
         "directDebit": {
           "label": "Lastschrift vorbereiten",
           "description": "Lastschrift vorbereiten – Mandate, Zusagen, Einzüge"
+        },
+        "audit": {
+          "label": "Kassenprüfung",
+          "description": "Vermerke schreiben, Stichproben, Prüfbericht"
         }
       }
     }
@@ -1953,7 +2062,7 @@
           "none": "Noch kein Bescheid",
           "exemptionNotice": "Freistellungsbescheid",
           "corporateTaxNoticeAttachment": "Anlage zum Körperschaftsteuerbescheid",
-          "section60a": "Feststellung nach § 60a AO"
+          "section60a": "Feststellung nach §\u00a060a AO"
         }
       },
       "branding": {
@@ -2225,6 +2334,16 @@
     },
     "deletedRecord": "gelöscht",
     "entities": {
+      "financeTaxPeriod": "Erklärungszeitraum",
+      "financeVatReturn": "Umsatzsteuer-Jahreserklärung",
+      "financeVatFiling": "Umsatzsteuer-Abgabe",
+      "financeHandover": "Amtsübergabe",
+      "financeDataExport": "Datenexport",
+      "financeAuditCarryOver": "Übernahme ins Folgejahr",
+      "financeAssemblyResult": "Ergebnis der Mitgliederversammlung",
+      "financeClosingConfirmation": "Bestätigung im Jahresabschluss",
+      "financeAccountStatementDocument": "Kontoauszug",
+      "financeAccountYearConfirmation": "Bestätigung zum Konto",
       "animal": "Hund",
       "animalProposal": "Vorschlag",
       "animalProposalImage": "Bild eines Vorschlags",
@@ -2248,11 +2367,21 @@
       "financeAccount": "Konto",
       "financeAllocationCorrection": "Korrektur",
       "financeCashCount": "Kassenzählung",
+      "financeReport": "Finanzbericht",
+      "financeReportRelease": "Freigabe zum Festschreiben",
+      "financeOtherAsset": "Sonstiges Vermögen",
+      "financeAuditAuditor": "Prüfer",
+      "financeAuditBaseline": "Prüfstand",
+      "financeAuditSample": "Stichprobe",
+      "financeAuditRemark": "Vermerk der Kassenprüfung",
+      "financeAuditReport": "Prüfbericht",
+      "financeAuditSectionReview": "Abschnitt des Prüfpakets",
       "financeCategory": "Kategorie",
       "financeConfirmation": "Zuwendungsbestätigung",
       "financeConfirmationRun": "Serienlauf",
       "financeConfirmationRunItem": "Bestätigung im Serienlauf",
       "financeContactBankAccount": "Bankverbindung des Kontakts",
+      "financeContactTaxDetails": "Steuerdaten einer Körperschaft",
       "financeContactWaiverTerms": "Verzichtsvereinbarung",
       "financeDatedValue": "Stichtagswert",
       "financeEntry": "Buchung",
@@ -2316,6 +2445,35 @@
       "user": "Nutzer"
     },
     "actions": {
+      "finance_taxPeriod_create": "Erklärungszeitraum angelegt",
+      "finance_taxPeriod_update": "Erklärungszeitraum geändert",
+      "finance_taxPeriod_answers": "Angaben zur Anlage Gem gespeichert",
+      "finance_taxPeriod_documentFile": "Dokument zur Steuererklärung abgelegt",
+      "finance_taxPeriod_filed": "Abgabe der Steuererklärung eingetragen",
+      "finance_taxPeriod_noticeLink": "Bescheid zur Steuererklärung verknüpft",
+      "finance_taxPeriod_documentLink": "Dokument zur Steuererklärung zugeordnet",
+      "finance_vatReturn_filed": "Abgabe der Umsatzsteuer-Jahreserklärung eingetragen",
+      "finance_vatFiling_record": "Abgabe zur Umsatzsteuer eingetragen",
+      "finance_vatFiling_update": "Tag der Abgabe zur Umsatzsteuer geändert",
+      "finance_vatFiling_documentFile": "Dokument an der Abgabe zur Umsatzsteuer abgelegt",
+      "finance_vatFiling_documentLink": "Dokument mit der Abgabe zur Umsatzsteuer verknüpft",
+      "finance_handover_start": "Amtsübergabe begonnen",
+      "finance_dataExport_create": "Datenexport erzeugt",
+      "finance_dataExport_download": "Datenexport heruntergeladen",
+      "finance_dataExport_expire": "Datenexport nach Ablauf gelöscht",
+      "finance_handover_update": "Amtsübergabe geändert",
+      "finance_handover_cancel": "Amtsübergabe abgebrochen",
+      "finance_handover_interimReport": "Zwischenbericht der Amtsübergabe festgehalten",
+      "finance_handover_cashCount": "Kasse zur Amtsübergabe gezählt",
+      "finance_handover_items": "Punkte der Amtsübergabe gespeichert",
+      "finance_handover_protocolFile": "Übergabeprotokoll abgelegt",
+      "finance_audit_carryOver": "Nachprüfung durch Übernahme ins Folgejahr geschlossen",
+      "finance_assembly_save": "Ergebnis der Mitgliederversammlung gespeichert",
+      "finance_assembly_minutesFile": "Protokoll der Mitgliederversammlung abgelegt",
+      "finance_closing_confirm": "Schritt des Jahresabschlusses bestätigt",
+      "finance_account_statementFile": "Kontoauszug abgelegt",
+      "finance_account_statementLink": "Kontoauszug zugeordnet",
+      "finance_account_yearConfirm": "Konto für das Geschäftsjahr bestätigt",
       "animals_confirmReview": "Prüfung des Hundes bestätigt",
       "animals_create": "Hund angelegt",
       "animals_delete": "Hund gelöscht",
@@ -2453,6 +2611,10 @@
       "finance_directDebit_cancel": "Einzug verworfen",
       "finance_directDebit_returnResolve": "Rückgabe geklärt",
       "finance_contactWaiverTerms_delete": "Verzichtsvereinbarung gelöscht",
+      "finance_contactTaxDetails_save": "Steuerdaten einer Körperschaft gespeichert",
+      "finance_contactTaxDetails_delete": "Steuerdaten einer Körperschaft gelöscht",
+      "finance_contactTaxDetails_reverseChargeDecline": "Nein zu §\u00a013b am Kontakt gemerkt",
+      "finance_contactTaxDetails_reverseChargeAsk": "Prüffrage §\u00a013b am Kontakt wieder eingeschaltet",
       "finance_contactWaiverTerms_save": "Verzichtsvereinbarung gespeichert",
       "finance_correction_apply": "Korrektur übernommen",
       "finance_correction_reject": "Korrektur abgelehnt",
@@ -2519,6 +2681,35 @@
       "finance_partnerProfile_setActive": "Partner archiviert oder wieder aktiviert",
       "finance_period_close": "Geschäftsjahr abgeschlossen",
       "finance_period_reopen": "Geschäftsjahr wieder geöffnet",
+      "finance_report_finalize": "Bericht festgeschrieben",
+      "finance_report_void": "Bericht zurückgenommen",
+      "finance_report_release": "Berichte zum Festschreiben freigegeben",
+      "finance_report_releaseRevoke": "Freigabe zum Festschreiben widerrufen",
+      "finance_audit_auditor_save": "Prüfer eingetragen oder geändert",
+      "finance_audit_baseline_create": "Prüfstand angelegt",
+      "finance_audit_sample_set": "Stichprobe abgehakt",
+      "finance_audit_remark_create": "Vermerk angelegt",
+      "finance_audit_report_create": "Prüfbericht angelegt",
+      "finance_audit_report_examination": "Prüfbericht: Prüfung gespeichert",
+      "finance_audit_report_result": "Prüfbericht: Ergebnis gespeichert",
+      "finance_audit_report_deviation": "Prüfbericht: abweichende Feststellungen gespeichert",
+      "finance_audit_report_signatures": "Prüfbericht: Unterschriften gespeichert",
+      "finance_audit_report_ready": "Prüfbericht zum Unterschreiben freigegeben",
+      "finance_audit_report_readyRevoke": "Freigabe des Prüfberichts zum Unterschreiben zurückgenommen",
+      "finance_audit_report_print": "Prüfbericht gedruckt",
+      "finance_audit_report_file": "Unterschriebenen Prüfbericht abgelegt",
+      "finance_audit_remark_answer": "Vermerk beantwortet",
+      "finance_audit_remark_followUp": "Zum Vermerk nachgefragt",
+      "finance_audit_remark_resolve": "Vermerk als geklärt markiert",
+      "finance_audit_sample_unset": "Stichprobe zurückgenommen",
+      "finance_audit_section_review": "Abschnitt durchgesehen",
+      "finance_audit_section_unreview": "„Durchgesehen“ zurückgenommen",
+      "finance_audit_auditor_remove": "Prüfer ausgetragen",
+      "finance_audit_auditor_accessEnd": "Zugang des Prüfers beendet",
+      "finance_audit_auditor_confidentiality": "Vertraulichkeitserklärung abgelegt",
+      "finance_otherAsset_save": "Sonstiges Vermögen gespeichert",
+      "finance_otherAsset_end": "Sonstiges Vermögen beendet",
+      "finance_otherAsset_revalue": "Sonstiges Vermögen mit neuem Wert fortgeschrieben",
       "finance_projectSettings_delete": "Finanzangaben zum Projekt gelöscht",
       "finance_projectSettings_set": "Finanzangaben zum Projekt gesetzt",
       "finance_purpose_create": "Zweck angelegt",
@@ -2659,6 +2850,35 @@
     },
     "emptyPeopleHint": "Personen finden Sie über den Filter „Nutzer“.",
     "sentences": {
+      "finance_taxPeriod_create": "Erklärungszeitraum „{first}“ bis „{last}“ mit Frist „{dueOn}“ angelegt",
+      "finance_taxPeriod_update": "Erklärungszeitraum „{period}“ geändert",
+      "finance_taxPeriod_answers": "Angaben zur Anlage Gem für „{period}“ gespeichert",
+      "finance_taxPeriod_documentFile": "Dokument „{documentNumber}“ zur Steuererklärung „{period}“ abgelegt",
+      "finance_taxPeriod_filed": "Abgabe der Steuererklärung „{period}“ am „{filedOn}“ eingetragen",
+      "finance_taxPeriod_noticeLink": "Bescheid zur Steuererklärung „{period}“ verknüpft",
+      "finance_taxPeriod_documentLink": "Dokument „{documentNumber}“ der Steuererklärung „{period}“ zugeordnet",
+      "finance_vatReturn_filed": "Abgabe der Umsatzsteuer-Jahreserklärung zu „{designation}“ am „{filedOn}“ eingetragen",
+      "finance_vatFiling_record": "{amendment, select, true {Berichtigte Abgabe} other {Abgabe}} zur Umsatzsteuer „{period}“ am „{filedOn}“ eingetragen",
+      "finance_vatFiling_update": "Tag der Abgabe zur Umsatzsteuer „{period}“ auf „{filedOn}“ geändert",
+      "finance_vatFiling_documentFile": "{slot, select, filedReturn {Abgegebene Fassung} other {ELSTER-Übertragungsprotokoll}} an der Abgabe zur Umsatzsteuer „{period}“ abgelegt",
+      "finance_vatFiling_documentLink": "{slot, select, filedReturn {Abgegebene Fassung} other {ELSTER-Übertragungsprotokoll}} mit der Abgabe zur Umsatzsteuer „{period}“ verknüpft",
+      "finance_handover_start": "Amtsübergabe zum „{handoverOn}“ begonnen",
+      "finance_dataExport_create": "Datenexport für „{years}“ erzeugt",
+      "finance_dataExport_download": "Datenexport für „{years}“ heruntergeladen",
+      "finance_dataExport_expire": "Datenexport für „{years}“ nach 30 Tagen gelöscht",
+      "finance_handover_update": "Amtsübergabe zum „{handoverOn}“ geändert",
+      "finance_handover_cancel": "Amtsübergabe zum „{handoverOn}“ abgebrochen",
+      "finance_handover_interimReport": "Zwischenbericht „{shortHash}“ der Amtsübergabe zum „{handoverOn}“ festgehalten",
+      "finance_handover_cashCount": "Kasse zur Amtsübergabe zum „{handoverOn}“ gezählt, Protokoll „{documentNumber}“",
+      "finance_handover_items": "Punkte der Amtsübergabe zum „{handoverOn}“ gespeichert, {checked} von {total} erledigt",
+      "finance_handover_protocolFile": "Übergabeprotokoll „{documentNumber}“ zum „{handoverOn}“ abgelegt",
+      "finance_audit_carryOver": "Nachprüfung zu „{designation}“ durch Übernahme ins Folgejahr geschlossen{count, plural, =0 {} one {, eine Buchung} other {, # Buchungen}}",
+      "finance_assembly_save": "Ergebnis der Mitgliederversammlung zu „{designation}“ gespeichert, {dischargeMode, select, individual {Einzelentlastung} other {Gesamtentlastung}}, {granted, plural, =0 {keine Entlastung erteilt} one {eine Entlastung erteilt} other {# Entlastungen erteilt}}{open, plural, =0 {} one {, eine offen} other {, # offen}}",
+      "finance_assembly_minutesFile": "Protokoll „{documentNumber}“ der Mitgliederversammlung zu „{designation}“ abgelegt",
+      "finance_closing_confirm": "Schritt „{step}“ im Jahresabschluss „{designation}“ bestätigt",
+      "finance_account_statementFile": "Kontoauszug „{documentNumber}“ für „{designation}“ abgelegt",
+      "finance_account_statementLink": "Kontoauszug „{documentNumber}“ für „{designation}“ zugeordnet",
+      "finance_account_yearConfirm": "{kind, select, missingJustified {Fehlender Kontoauszug für „{designation}“ begründet} notReconcilable {Konto für „{designation}“ als nicht abstimmbar bestätigt} cashRecomputed {Rückgerechneten Kassenbestand für „{designation}“ bestätigt} other {Saldo für „{designation}“ bestätigt}}",
       "animals_confirmReview": "Prüfung von Hund „{name}“ bestätigt",
       "animals_create": "Hund „{name}“ angelegt",
       "animals_delete": "Hund „{name}“ gelöscht",
@@ -2749,6 +2969,7 @@
       "finance_confirmation_signed": "Unterschriebene Fassung „{signedNumber}“ der Zuwendungsbestätigung „{documentNumber}“ abgelegt",
       "finance_confirmation_void": "Zuwendungsbestätigung „{documentNumber}“ zurückgenommen",
       "finance_contactIban_delete": "{withContact, select, true {IBAN mit dem Kontakt gelöscht} other {IBAN vom Kontakt gelöst}}",
+      "finance_contactTaxDetails_reverseChargeDecline": "Nein zu §\u00a013b am Kontakt mit Grund „{reason, select, paymentServices {Steuerfreie Zahlungsabwicklung} domesticProvider {Der Anbieter ist inländisch} exception13b6 {Ausnahme von §\u00a013b} other {Sonstiges}}“ gemerkt",
       "finance_datedValue_remove": "Wert „{key}“ ab {fromOn} zurückgenommen",
       "finance_datedValue_set": "Wert „{key}“ ab {fromOn} gesetzt",
       "finance_entry_finalize": "Buchung „{number}“ festgeschrieben",
@@ -2782,6 +3003,35 @@
       "finance_partnerProfile_delete": "{withContact, select, true {Partner mit dem Kontakt gelöscht} other {Partner gelöscht}}",
       "finance_period_close": "Geschäftsjahr „{designation}“ abgeschlossen",
       "finance_period_reopen": "Geschäftsjahr „{designation}“ wieder geöffnet",
+      "finance_report_finalize": "Bericht „{documentNumber}“ festgeschrieben",
+      "finance_report_void": "Bericht „{documentNumber}“ zurückgenommen",
+      "finance_report_release": "Berichte für „{designation}“ zum Festschreiben freigegeben, Grundlage „{basis}“",
+      "finance_report_releaseRevoke": "Freigabe zum Festschreiben für „{designation}“ widerrufen",
+      "finance_audit_auditor_save": "{mode, select, paper {Prüfer auf Papier eingetragen oder geändert} other {Prüfer in Kompass eingetragen oder geändert}}",
+      "finance_audit_auditor_remove": "{mode, select, paper {Prüfer auf Papier ausgetragen} other {Prüfer in Kompass ausgetragen}}",
+      "finance_audit_auditor_accessEnd": "Zugang des Prüfers beendet, Rolle Kassenprüfer entzogen",
+      "finance_audit_report_create": "{kind, select, followUp {Nachtrag zum Prüfbericht „{designation}“ angelegt} other {Prüfbericht „{designation}“ angelegt}}",
+      "finance_audit_report_examination": "{kind, select, followUp {Nachtrag „{designation}“: Prüfung gespeichert} other {Prüfbericht „{designation}“: Prüfung gespeichert}}",
+      "finance_audit_report_result": "{kind, select, followUp {Nachtrag „{designation}“: Ergebnis gespeichert} other {Prüfbericht „{designation}“: Ergebnis gespeichert}}",
+      "finance_audit_report_deviation": "{kind, select, followUp {Nachtrag „{designation}“: abweichende Feststellungen gespeichert} other {Prüfbericht „{designation}“: abweichende Feststellungen gespeichert}}",
+      "finance_audit_report_signatures": "{kind, select, followUp {Nachtrag „{designation}“: Unterschriften gespeichert ({mode})} other {Prüfbericht „{designation}“: Unterschriften gespeichert ({mode})}}",
+      "finance_audit_report_ready": "{kind, select, followUp {Nachtrag „{designation}“ zum Unterschreiben freigegeben} other {Prüfbericht „{designation}“ zum Unterschreiben freigegeben}}",
+      "finance_audit_report_readyRevoke": "{kind, select, followUp {Freigabe des Nachtrags „{designation}“ zurückgenommen} other {Freigabe des Prüfberichts „{designation}“ zurückgenommen}}",
+      "finance_audit_report_file": "{kind, select, followUp {Unterschriebenen Nachtrag „{designation}“ abgelegt ({scans} von {expected})} other {Unterschriebenen Prüfbericht „{designation}“ abgelegt ({scans} von {expected})}}",
+      "finance_audit_report_print": "{blank, select, true {Vordruck des Prüfberichts „{designation}“ gedruckt} other {{kind, select, followUp {Nachtrag „{designation}“ gedruckt} other {Prüfbericht „{designation}“ gedruckt}}}}",
+      "finance_audit_remark_create": "{kind, select, finding {Feststellung angelegt} other {Frage angelegt}}",
+      "finance_audit_remark_answer": "{kind, select, finding {Feststellung beantwortet} other {Frage beantwortet}}",
+      "finance_audit_remark_followUp": "{kind, select, finding {Zur Feststellung nachgefragt} other {Zur Frage nachgefragt}}",
+      "finance_audit_remark_resolve": "{kind, select, finding {Feststellung als geklärt markiert} other {Frage als geklärt markiert}}",
+      "finance_audit_sample_set": "Buchung „{number}“ als Stichprobe abgehakt",
+      "finance_audit_sample_unset": "Stichprobe an Buchung „{number}“ zurückgenommen",
+      "finance_audit_section_review": "Abschnitt „{section}“ des Prüfpakets durchgesehen",
+      "finance_audit_section_unreview": "„Durchgesehen“ am Abschnitt „{section}“ zurückgenommen",
+      "finance_audit_baseline_create": "{kind, select, followUp {Prüfstand für die Nachprüfung „{designation}“ angelegt} other {Prüfstand „{designation}“ angelegt}}",
+      "finance_audit_auditor_confidentiality": "Vertraulichkeitserklärung „{documentNumber}“ abgelegt",
+      "finance_otherAsset_save": "{kind} gespeichert",
+      "finance_otherAsset_end": "{kind} beendet",
+      "finance_otherAsset_revalue": "{kind} mit neuem Wert fortgeschrieben",
       "finance_purposeTransfer_approve": "Umwidmung „{number}“ freigegeben",
       "finance_purposeTransfer_documentGone": "Beleg der Umwidmung „{number}“ entfallen",
       "finance_purposeTransfer_reject": "Umwidmung „{number}“ abgelehnt",
@@ -2968,6 +3218,11 @@
         "letter": "Brief",
         "dms-bundle-index": "Inhaltsverzeichnis zum Aktenbündel",
         "finance-cash-count": "Kassenzählprotokoll",
+        "finance-report": "Finanzbericht",
+        "finance-report-personal": "Finanzbericht mit Personenbezug",
+        "finance-audit-report-print": "Prüfbericht zum Unterschreiben",
+        "finance-handover-protocol-print": "Übergabeprotokoll zum Unterschreiben",
+        "finance-audit-folder": "Prüfmappe",
         "finance-confirmation-money": "Zuwendungsbestätigung für Geldzuwendungen",
         "finance-confirmation-in-kind": "Zuwendungsbestätigung für Sachzuwendungen",
         "finance-confirmation-collective": "Sammelbestätigung",
@@ -3003,11 +3258,11 @@
     "settings": {
       "title": "Fristen",
       "statutory10Y": "Gesetzliche Aufbewahrung {duration}",
-      "statutory10YHint": "§ 147 Abs. 1 Nr. 1, 4a AO (z. B. Bücher, Aufzeichnungen, Jahresabschlüsse)",
+      "statutory10YHint": "§\u00a0147 Abs. 1 Nr. 1, 4a AO (z. B. Bücher, Aufzeichnungen, Jahresabschlüsse)",
       "statutory8Y": "Gesetzliche Aufbewahrung {duration}",
-      "statutory8YHint": "§ 147 Abs. 3 AO (Buchungsbelege, seit 2025)",
+      "statutory8YHint": "§\u00a0147 Abs. 3 AO (Buchungsbelege, seit 2025)",
       "statutory6Y": "Gesetzliche Aufbewahrung {duration}",
-      "statutory6YHint": "§ 147 Abs. 1 Nr. 2, 3, 5 AO (z. B. empfangene Handels- und Geschäftsbriefe)",
+      "statutory6YHint": "§\u00a0147 Abs. 1 Nr. 2, 3, 5 AO (z. B. empfangene Handels- und Geschäftsbriefe)",
       "consent": "Einwilligung / berechtigtes Interesse",
       "consentHint": "ohne gesetzliche Grundlage (z. B. Interessenten)",
       "save": "Speichern",
@@ -4392,6 +4647,7 @@
       "more": "Weitere Treffer — bitte suchen."
     },
     "roleNames": {
+      "treasurer": "Schatzmeister",
       "interested": "Interessiert",
       "partner": "Partner",
       "authority": "Behörde",
@@ -5245,6 +5501,968 @@
     }
   },
   "finance": {
+    "closing": {
+      "title": "Jahresabschluss {year}",
+      "titleNoYear": "Jahresabschluss",
+      "noYear": {
+        "title": "Noch kein Geschäftsjahr",
+        "text": "Der Jahresabschluss beginnt, sobald ein Geschäftsjahr angelegt und zu Ende ist."
+      },
+      "yearChoice": "Jahr",
+      "head": {
+        "progress": "{done} von {total} erledigt. Als Nächstes: {next}.",
+        "allDone": "{total} von {total} erledigt.",
+        "notEnded": "Der Jahresabschluss {year} beginnt nach dem {date}.",
+        "openDischarge": "{done} von {total} erledigt. Offen: Entlastung von {persons}.",
+        "openDischargeCollective": "{done} von {total} erledigt. Offen: Entlastung des Vorstands, {outcome}.",
+        "openPerson": "{name}, {outcome}"
+      },
+      "more": {
+        "handover": "Amtsübergabe beginnen …",
+        "reopen": "Jahr wiederöffnen …"
+      },
+      "reopened": "Wiedergeöffnet am {date} von {name}: „{reason}“",
+      "toRepeat": "Zu wiederholen: {steps}.",
+      "handoverLine": "Amtsübergabe am {date} von {from} an {to}",
+      "groups": {
+        "before": "Vor dem Abschluss",
+        "close": "Abschluss",
+        "after": "Prüfung und Vorlage"
+      },
+      "stepsLabel": "Schritte des Jahresabschlusses",
+      "showSteps": "Schritte ansehen",
+    "nextYear": "das Folgejahr",
+      "noRight": "Bestätigen kann, wer das Jahr abschließt.",
+      "noRightClose": "Abschließen kann, wer das Jahr abschließt.",
+      "confirmedBy": "Bestätigt von {name}: „{note}“",
+      "confirmedByNoNote": "Bestätigt von {name} am {date}.",
+      "system": "Kompass",
+      "confirm": "Bestätigen …",
+      "finished": {
+        "audited": "{year} ist geprüft und festgeschrieben.",
+        "notAudited": "{year} ist festgeschrieben.",
+        "assembly": "Die Mitgliederversammlung hat am {date} entlastet.",
+        "taxNotDue": "Eine Steuererklärung ist für {year} nicht fällig.",
+        "taxFiled": "Die Steuererklärung für {period} ist abgegeben, der Bescheid steht aus.",
+        "taxNotice": "Für {period} liegt der Bescheid vom {date} vor.",
+        "taxPartOf": "{period} ist der Erklärungszeitraum; die Erklärung folgt nach {last}.",
+        "taxDue": "Die Steuererklärung für {period} ist bis {date} abzugeben.",
+        "vatFiled": "Die Umsatzsteuer-Jahreserklärung {year} ist am {date} abgegeben."
+      },
+      "steps": {
+        "statements": {
+          "label": "Auszüge und Konten",
+          "next": "Kontoauszüge ablegen"
+        },
+        "cash": {
+          "label": "Kasse gezählt",
+          "next": "Kasse zählen",
+          "nextConfirm": "Kasse bestätigen"
+        },
+        "lists": {
+          "label": "Listen leer",
+          "next": "Listen leeren"
+        },
+        "openItems": {
+          "label": "Offene Zahlungen geklärt",
+          "next": "Offene Zahlungen klären"
+        },
+        "purposes": {
+          "label": "Zwecke",
+          "next": "Zwecke bestätigen"
+        },
+        "reserves": {
+          "label": "Rücklagen",
+          "next": "Rücklagen bestätigen"
+        },
+        "confirmations": {
+          "label": "Zuwendungsbestätigungen",
+          "next": "Zuwendungsbestätigungen ansehen"
+        },
+        "close": {
+          "label": "Jahr abschließen",
+          "next": "Jahr abschließen"
+        },
+        "auditPackage": {
+          "label": "Prüffassungen und Prüfpaket",
+          "next": "Prüfpaket erzeugen"
+        },
+        "auditReport": {
+          "label": "Prüfbericht",
+          "labelFollowUp": "Nachprüfung",
+          "next": "Prüfbericht ablegen und Berichte festschreiben",
+          "nextFollowUp": "Nachprüfung bestätigen",
+          "nextFollowUpChanged": "Nachprüfung klären"
+        },
+        "assembly": {
+          "label": "Mitgliederversammlung",
+          "next": "Ergebnis der Mitgliederversammlung eintragen"
+        },
+        "taxReturn": {
+          "label": "Steuererklärung",
+          "next": "Steuererklärung klären",
+          "nextVat": "Umsatzsteuer-Jahreserklärung {year} abgeben"
+        }
+      },
+      "statements": {
+        "intro": "Legen Sie je Bankkonto den Auszug ab, der den {date} abdeckt. Fehlt einer, können Sie das Jahr trotzdem abschließen; festschreiben können Sie die Berichte erst, wenn er liegt oder Sie das Fehlen begründet haben.",
+        "columns": {
+          "account": "Konto",
+          "state": "Zustand",
+          "menu": "Aktionen"
+        },
+        "kind": {
+          "bank": "Bankkonto",
+          "paymentService": "Zahlungsdienst"
+        },
+        "lies": "Auszug {number} liegt",
+        "liesUntil": "bis {date}",
+        "missing": "Auszug fehlt",
+        "lastUntil": "Letzter Auszug bis {date}",
+        "noneYet": "Noch kein Auszug im Jahr",
+        "balance": "Kontostand {date}: {amount}",
+        "fromImport": "aus dem Import",
+        "noBalance": "Kein Kontostand aus dem Import",
+        "balanceConfirmed": "Kontostand bestätigt",
+        "notReconcilable": "nicht abstimmbar",
+        "confirmedBy": "bestätigt von {name}, {date}",
+        "justified": "Fehlen begründet: {note}",
+        "file": "Auszug ablegen …",
+        "justify": "Fehlen begründen …",
+        "confirmService": "Bestätigen …",
+        "openAccount": "Konto öffnen",
+        "allFiled": "Alle Auszüge des Jahres liegen in der Akte",
+        "allFiledHint": "Auch die vom Jahr dazwischen. Kompass prüft nur den zum Stichtag.",
+        "finish": "Schritt erledigen",
+        "finishBlocked": "Erst ankreuzen, dann erledigen.",
+        "openImports": "{parts}.",
+        "withoutImport": "{count, plural, one {# Konto ohne geladenen Auszug} other {# Konten ohne geladenen Auszug}}",
+        "openTransactions": "{count, plural, one {# Umsatz ohne Buchung} other {# Umsätze ohne Buchung}}",
+        "resultFiled": "{count, plural, one {# Auszug liegt} other {# Auszüge liegen}}",
+        "resultServiceOk": "{count, plural, one {# Zahlungsdienst abgestimmt} other {# Zahlungsdienste abgestimmt}}",
+        "resultServiceNot": "{count, plural, one {# Zahlungsdienst nicht abstimmbar} other {# Zahlungsdienste nicht abstimmbar}}",
+        "resultJustified": "Fehlen begründet: {list}",
+        "resultAll": "Alle Konten abgestimmt.",
+        "openReady": "Alle Auszüge geladen, alle Umsätze gebucht.",
+        "fileDialog": {
+          "title": "Auszug für {account} ablegen",
+          "account": "Konto",
+          "accountReason": "Steht beim Schritt fest.",
+          "file": "Datei",
+          "fromArchive": "Aus der Akte",
+          "chosen": "{name} gewählt",
+          "from": "Von",
+          "to": "Bis",
+          "suggested": "Aus dem PDF gelesen.",
+          "covers": "Deckt den {date} ab. Endsaldo laut Kompass: {amount}.",
+          "notCovers": "Deckt den {date} nicht ab.",
+          "save": "Ablegen",
+          "done": "Auszug {number} abgelegt."
+        },
+        "justifyDialog": {
+          "title": "Fehlen für {account} begründen",
+          "description": "Die Begründung steht im Prüfpaket unter Kontenabstimmung; danach sperrt der fehlende Auszug das Festschreiben nicht mehr.",
+          "note": "Begründung",
+          "save": "Begründen",
+          "done": "Fehlen begründet."
+        },
+        "serviceDialog": {
+          "title": "{account} bestätigen",
+          "description": "Für Zahlungsdienste gibt es keinen Auszug der Bank. Bestätigen Sie den Kontostand zum {date} oder dass er sich nicht abstimmen lässt.",
+          "choice": "Kontostand",
+          "balanceConfirmed": "Kontostand stimmt",
+          "notReconcilable": "nicht abstimmbar",
+          "note": "Begründung",
+          "save": "Bestätigen",
+          "done": "{account} bestätigt."
+        },
+        "resultOne": "{account}: Auszug bis {date} liegt, Endsaldo stimmt.",
+        "resultAllCovered": "{count} Konten: Auszüge bis {date} liegen, Endsalden stimmen."
+      },
+      "auditPackage": {
+        "auditors": "Prüfer eingetragen: {names}.",
+        "inKompass": "{name} (in Kompass)",
+        "onPaper": "{name} (auf Papier)",
+        "noAuditors": "Noch kein Prüfer eingetragen.",
+        "addAuditors": "Prüfer eintragen",
+        "noAccess": "Für {list} fehlt der Zugang zu Kompass.",
+        "toAudit": "Zur Kassenprüfung",
+        "yearOpen": "Prüffassungen und Prüfpaket gibt es, sobald das Jahr abgeschlossen ist.",
+        "skipped": "Keine Kassenprüfung: {reason}",
+        "result": "Prüfpaket vom {date} · Stand",
+        "resultAudited": "Prüfung abgelegt."
+      },
+      "auditReport": {
+        "missing": "Noch kein Prüfbericht abgelegt. Die Prüfer schreiben ihn auf der Seite Kassenprüfung; ohne schriftlichen Bericht geben Sie das Jahr mit einem anderen Grund frei.",
+        "release": "Freigeben …",
+        "assembly": "{done} von {total} Berichten für die Mitgliederversammlung festgeschrieben.",
+        "finalize": "Berichte festschreiben",
+        "statementOne": "Festschreiben können Sie, sobald der Auszug der {account} zum {date} liegt.",
+        "statementMany": "Festschreiben können Sie, sobald die Auszüge von {count} Konten zum {date} liegen.",
+        "toStatements": "Zu Schritt 1",
+        "followUp": {
+          "changed": "Seit der Prüffassung vom {date} geändert: {count, plural, one {# Buchung} other {# Buchungen}}.",
+          "changedNoDate": "Seit der Prüffassung geändert: {count, plural, one {# Buchung} other {# Buchungen}}.",
+          "unchanged": "Seit der Prüfung am {date} hat sich keine Buchung geändert. Der Prüfbericht gilt weiter.",
+          "unchangedNoDate": "Seit der Prüfung hat sich keine Buchung geändert. Der Prüfbericht gilt weiter.",
+          "toPackage": "Im Prüfpaket ansehen",
+          "beforeAssembly": "Erledigt, sobald der unterschriebene Nachtrag der Prüfer abgelegt ist.",
+          "fileAddendum": "Nachtrag ablegen …",
+          "writeOnAudit": "Die Prüfer schreiben den Nachtrag auf der Seite Kassenprüfung.",
+          "choice": "Wie geht es weiter?",
+          "carryOver": "In das Folgejahr übernehmen",
+          "carryOverHint": "Die Korrektur steht in Prüfpaket und Kassenbericht {next} unter „Korrekturen an Vorjahren“.",
+          "addendum": "Nachtrag der Prüfer",
+          "addendumHint": "Wie vor der Mitgliederversammlung: unterschriebener Nachtrag.",
+          "choiceHint": "Wer übernimmt, entscheidet bewusst, dass ein Nachtrag nicht möglich ist."
+        },
+        "result": "Prüfbericht vom {date}; die Berichte für die Mitgliederversammlung sind festgeschrieben.",
+        "resultReleased": "Freigegeben am {date}; die Berichte für die Mitgliederversammlung sind festgeschrieben.",
+        "resultCarryOver": "In {next} übernommen am {date}: „{note}“"
+      },
+      "carryOverDialog": {
+        "title": "Nachprüfung {year} in {next} übernehmen",
+        "description": "Die Korrektur steht in Prüfpaket und Kassenbericht {next} unter „Korrekturen an Vorjahren“ und wird der nächsten Mitgliederversammlung berichtet.",
+        "note": "Begründung",
+        "hint": "Steht im Prüfpaket und an den danach festgeschriebenen Berichten.",
+        "save": "Bestätigen",
+        "done": "In {next} übernommen.",
+        "section153": "Die Steuererklärung für {year} ist schon abgegeben. Ändert die Korrektur steuerlich etwas, ist sie dem Finanzamt anzuzeigen (§\u00a0153 AO)."
+      },
+      "assembly": {
+        "intro": "Tragen Sie ein, was die Mitgliederversammlung beschlossen hat. Das Protokoll können Sie später ablegen.",
+        "yearOpen": "Das Ergebnis der Mitgliederversammlung tragen Sie ein, sobald das Jahr abgeschlossen ist.",
+        "date": "Datum der MV",
+        "minutes": "Protokoll",
+        "minutesNone": "noch nicht abgelegt",
+        "minutesHint": "Aus der Akte oder hochladen.",
+        "minutesAfterSave": "Hochladen geht, sobald das Ergebnis gespeichert ist.",
+        "accounts": "Jahresrechnung genehmigt",
+        "accountsOptions": {
+          "yes": "Ja",
+          "no": "Nein",
+          "notVoted": "Nicht abgestimmt"
+        },
+        "mode": "Entlastung",
+        "modes": {
+          "individual": "Einzeln",
+          "collective": "Gesamt"
+        },
+        "modeHint": "Einzeln ist üblich: Wer betroffen ist, stimmt bei sich selbst nicht mit.",
+        "outcomes": {
+          "granted": "erteilt",
+          "refused": "verweigert",
+          "postponed": "vertagt"
+        },
+        "collective": "Vorstand gesamt",
+        "boardMember": "Vorstandsmitglied",
+        "wholeYear": "ganzes Jahr",
+        "until": "bis {date}",
+        "since": "ab {date}",
+        "between": "{since} bis {until}",
+        "person": "{name} · {office} · {period}",
+        "noPersons": "Für das Jahr sind keine Vorstandsmitglieder in den Kontaktrollen eingetragen.",
+        "open": "Die Entlastung für {names} ist {outcome}. Der Schritt bleibt offen, das sperrt nichts. Tragen Sie das Ergebnis der nächsten MV hier nach.",
+        "openCollective": "Die Entlastung des Vorstands ist {outcome}. Der Schritt bleibt offen, das sperrt nichts. Tragen Sie das Ergebnis der nächsten MV hier nach.",
+        "resultIndividual": "{date}: Vorstand einzeln entlastet ({granted} von {total})",
+        "resultCollective": "{date}: Vorstand gesamt entlastet",
+        "resultApproved": "Jahresrechnung genehmigt",
+        "resultOpen": "{date}: {granted} von {total} entlastet, {rest}.",
+        "resultOpenPerson": "{name} {outcome}",
+        "resultOpenCollective": "{date}: Entlastung des Vorstands {outcome}.",
+        "resultUndecided": "offen",
+        "noRight": "Eintragen kann, wer das Jahr abschließt.",
+        "minutesLink": "Protokoll",
+        "fillIn": "Ergebnis nachtragen",
+        "beforeAuditReport": "Die Versammlung liegt vor dem Prüfbericht vom {date}. Stimmt das Datum?"
+      },
+      "handover": {
+        "title": "Amtsübergabe Schatzmeisteramt",
+        "back": "Jahresabschluss {year}",
+        "head": "Von {from} an {to} am {date}. {done} von {total} erledigt.",
+        "cancelled": "Abgebrochen. Die Übergabe von {from} an {to} am {date} gilt nicht.",
+        "more": {
+          "edit": "Angaben ändern …",
+          "cancel": "Abbrechen …"
+        },
+        "stepsLabel": "Schritte der Amtsübergabe",
+        "steps": {
+          "interim": "Zwischenbericht",
+          "cash": "Kassenzählung am Übergabetag",
+          "protocol": "Übergabeprotokoll"
+        },
+        "interim": {
+          "intro": "Kompass hält den Kassenbericht vom Jahresbeginn bis zum Übergabetag fest, als vorläufige Fassung.",
+          "create": "Erzeugen",
+          "link": "Kassenbericht {from}–{to}",
+          "stamp": "vorläufig · Stand"
+        },
+        "cash": {
+          "intro": "{from} zählt im Beisein von {to}.",
+          "noRight": "Zählen kann, wer Buchungen festschreiben darf.",
+          "noCash": "Keine Kasse mit Bestand am Übergabetag.",
+          "open": "Jede Kasse mit Bestand am Übergabetag zählen, im Beisein der Nachfolge.",
+          "matches": "{name}: {amount}, stimmt mit dem Buchbestand.",
+          "differs": "{name}: gezählt {amount}, Differenz {difference}. Klären Sie die Differenz in der Kasse und zählen Sie neu.",
+          "notCounted": "{name}: noch nicht gezählt, Buchbestand {amount}.",
+          "countBox": "{name} zählen …"
+        },
+        "protocol": {
+          "intro": "Was übergeben wird abhaken, drucken, von beiden unterschreiben, Scan ablegen.",
+          "items": "Was übergeben wird",
+          "itemKeys": {
+            "cash": "Kasse",
+            "records": "Unterlagen",
+            "bankAccess": "Bankzugänge",
+            "paymentServices": "Zahlungsdienste",
+            "kompass": "Kompass"
+          },
+          "itemHints": {
+            "cash": "Bestand laut Zählung",
+            "records": "Belegordner, Kassenbuch, Verträge",
+            "bankAccess": "Vollmacht bei der Bank neu",
+            "paymentServices": "Zugangsdaten übergeben, Passwort geändert",
+            "kompass": "Rolle in Kompass an die neue Person"
+          },
+          "cashAmount": "{amounts} laut Zählung vom {date}",
+          "note": "Notiz",
+          "customLabel": "Punkt",
+          "add": "Weiteren Punkt hinzufügen",
+          "remove": "Punkt entfernen",
+          "print": "Zum Unterschreiben drucken",
+          "saveFirst": "Speichern Sie zuerst, sonst fehlen die letzten Änderungen im Protokoll.",
+          "scan": "Scan ablegen …",
+          "done": "Protokoll vom {date} in der Akte ›",
+          "users": "Nutzerverwaltung",
+          "downloadRefused": {
+            "forbidden": "Das Protokoll darf nur drucken, wer die Finanzen lesen darf.",
+            "notFound": "Die Übergabe gibt es nicht mehr.",
+            "failed": "Das Protokoll ließ sich nicht erzeugen."
+          },
+          "cashBox": "{name} {amount}",
+          "noteAdd": "Notiz hinzufügen",
+          "noteEdit": "Notiz bearbeiten",
+          "noteText": "Notiz: {note}"
+        },
+        "scanDialog": {
+          "title": "Unterschriebenes Protokoll ablegen",
+          "description": "Den Scan des von beiden unterschriebenen Protokolls als PDF. Danach ist die Übergabe abgeschlossen.",
+          "file": "Datei",
+          "chosen": "{name} gewählt",
+          "save": "Ablegen",
+          "done": "Protokoll abgelegt."
+        },
+        "remember": {
+          "title": "Daran denken",
+          "register": "Ist das Schatzmeisteramt Vorstand nach §\u00a026 BGB, muss der Wechsel zum Vereinsregister angemeldet werden.",
+          "statute": "Satzung",
+          "discharge": "{from} wird für die Zeit bis {date} getrennt entlastet. Schritt 11 des Jahresabschlusses führt die Person dann mit diesem Zeitraum auf."
+        },
+        "finished": "Übergeben am {date}, Protokoll unterschrieben{cash}.",
+        "finishedCash": ", {list}",
+        "finishedCashOne": "{name} {amount}",
+        "startDialog": {
+          "title": "Amtsübergabe beginnen",
+          "editTitle": "Angaben ändern",
+          "description": "Kompass führt die Übergabe in drei Schritten: Zwischenbericht, Kassenzählung und Protokoll.",
+          "date": "Übergabetag",
+          "from": "Von",
+          "fromSuggested": "laut Kontaktrolle Schatzmeister",
+          "to": "An",
+          "save": "Beginnen",
+          "saveEdit": "Speichern"
+        },
+        "cancelDialog": {
+          "title": "Amtsübergabe abbrechen",
+          "description": "Die Übergabe bleibt im Protokoll, gilt aber nicht. Zwischenbericht und Zählung bleiben, wie sie sind.",
+          "confirm": "Übergabe abbrechen",
+          "done": "Übergabe abgebrochen."
+        },
+        "showSteps": "Schritte ansehen"
+      },
+      "cash": {
+        "intro": "Kompass braucht den Bestand jeder Kasse am {date}.",
+        "rowCounted": "Gezählt am {date}: {amount}, stimmt mit dem Buchbestand.",
+        "rowCountedDiffers": "Gezählt am {date}: {amount}, Differenz {difference}.",
+        "rowNotCounted": "Noch nicht gezählt.",
+        "reckoned": "Gezählt am {date} ohne Differenz. Zurückgerechnet auf den {end}: {amount} laut Buchungen.",
+        "laterDiffers": "Die Zählung vom {date} weicht um {amount} vom Buchbestand ab. Klären Sie die Differenz in der Kasse und zählen Sie neu.",
+        "resultNone": "Keine Barkasse.",
+        "result": "{name}: gezählt am {date}, {amount}",
+        "resultMatches": "stimmt",
+        "resultDiffers": "Differenz {amount}",
+        "resultReckoned": "{name}: rückgerechnet aus der Zählung vom {date}, {amount}.",
+        "openCounted": "{name}: gezählt am {date}, {amount}.",
+        "openLater": "{name}: gezählt am {date}.",
+        "openNotCounted": "{name}: noch nicht gezählt.",
+        "difference": "Differenz",
+        "toCash": "Zur Kasse ›",
+        "confirmedNote": "Bestätigt: „{note}“",
+        "columns": {
+          "box": "Kasse",
+          "state": "Stand",
+          "action": "Aktion"
+        },
+        "confirmDialog": {
+          "title": "{account} zum {end} bestätigen",
+          "description": "Der Bestand zum {end} gilt dann so, wie Kompass ihn aus der späteren Zählung rückgerechnet hat.",
+          "note": "Begründung",
+          "hint": "Warum wurde nicht am Stichtag gezählt?",
+          "save": "Bestätigen",
+          "done": "{account} bestätigt."
+        }
+      },
+      "lists": {
+        "intro": "Vor dem Abschluss sollen diese Listen leer sein. Belege ohne Buchung und fremdes Geld dürfen mit Begründung bleiben.",
+        "undocumented": "{count, plural, one {# Buchung ohne Beleg} other {# Buchungen ohne Beleg}}",
+        "drafts": "{count, plural, one {# Entwurf} other {# Entwürfe}}",
+        "vouchers": "{count, plural, one {# Beleg ohne Buchung} other {# Belege ohne Buchung}}",
+        "foreign": "{count, plural, one {# Posten fremdes Geld} other {# Posten fremdes Geld}}",
+        "hardFirst": "Buchungen ohne Beleg und Entwürfe müssen erst weg; dann können Sie den Rest bestätigen.",
+        "resultEmpty": "Keine Buchung ohne Beleg, kein Beleg ohne Buchung, keine Entwürfe, kein fremdes Geld offen.",
+        "justified": "{count, plural, one {# Buchung ohne Beleg, begründet.} other {# Buchungen ohne Beleg, alle begründet.}}",
+        "resultLeft": "{parts} bleiben.",
+        "openLeft": "{parts}"
+      },
+      "openItems": {
+        "intro": "Was am {date} noch offen ist, geht ins neue Jahr. Bestätigen Sie, dass das so stimmt.",
+        "receivables": "{count, plural, one {# Forderung} other {# Forderungen}} über {amount}",
+        "payables": "{count, plural, one {# Verbindlichkeit} other {# Verbindlichkeiten}} über {amount}",
+        "link": "Offene Zahlungen ansehen",
+        "resultNone": "Keine offenen Zahlungen.",
+        "result": "{count} offen, ins neue Jahr übernommen.",
+        "openState": "{count, plural, one {# Zahlung offen am {date}.} other {# Zahlungen offen am {date}.}}",
+        "openStateNow": "{count, plural, one {# Zahlung offen.} other {# Zahlungen offen.}}"
+      },
+      "purposes": {
+        "intro": "Zwecke mit Bestand gehen ins neue Jahr. Bestätigen Sie den Stand am {date}.",
+        "closed": "{count, plural, one {# erfüllter Zweck geschlossen} other {# erfüllte Zwecke geschlossen}}",
+        "open": "{count, plural, one {# Zweck mit Bestand} other {# Zwecke mit Bestand}}, zusammen {amount}",
+        "negative": "{count, plural, one {# Zweck im Minus.} other {# Zwecke im Minus.}}",
+        "negativeBlocks": "Bestätigen geht erst, wenn kein Zweck im Minus steht.",
+        "link": "Zwecke ansehen",
+        "resultNone": "Keine Zwecke mit Bestand.",
+        "result": "{closed, plural, =0 {Kein Zweck erfüllt.} one {# erfüllter Zweck geschlossen.} other {# erfüllte Zwecke geschlossen.}} Rest {amount} vorgetragen.",
+        "openState": "{count, plural, one {# Zweck mit Bestand} other {# Zwecke mit Bestand}}, zusammen {amount}."
+      },
+      "reserves": {
+        "intro": "Kompass hat die Rücklagen aus Ihren Beschlüssen berechnet. Bitte bestätigen Sie den Stand am {date}.",
+        "unchanged": "unverändert",
+        "noResolution": "Beschluss fehlt",
+        "link": "Rücklagen ansehen",
+        "resultNone": "Keine Rücklagen.",
+        "result": "{count, plural, one {# Rücklage} other {# Rücklagen}}, Stand am {date} bestätigt.",
+        "openState": "{count, plural, one {# Rücklage am {date}.} other {# Rücklagen am {date}.}}",
+        "openStateNow": "{count, plural, one {# Rücklage.} other {# Rücklagen.}}"
+      },
+      "confirmations": {
+        "summary": "{uncertified, plural, =0 {Keine Zuwendung ohne Bestätigung} one {# Zuwendung ohne Bestätigung} other {# Zuwendungen ohne Bestätigung}}, {toCorrect, plural, =0 {keine Bestätigung zu korrigieren} one {# Bestätigung zu korrigieren} other {# Bestätigungen zu korrigieren}}.",
+        "help": "Eine fehlende Bestätigung ist oft richtig: bis 300 € genügt der Kontoauszug, manche Spender wollen keine, bei Plattformen stellt die Plattform aus. Bestätigen können Sie auch nach dem Abschluss.",
+        "toCorrectNumbers": "{count} zu korrigieren:",
+        "toCorrectLink": "{count} zu korrigieren",
+        "run": "Serienlauf",
+        "resultNone": "Alle Zuwendungen bestätigt.",
+        "result": "{count, plural, one {# Zuwendung ohne Bestätigung} other {# Zuwendungen ohne Bestätigung}}. Sperrt nichts."
+      },
+      "close": {
+        "intro": "Danach ändert niemand mehr Buchungen in {year}. Wiederöffnen geht mit Begründung.",
+        "blockers": "Vor dem Abschluss fehlt noch:",
+        "blocked": "Abschließen geht, sobald die Punkte oben erledigt sind.",
+        "action": "Jahr abschließen …",
+        "result": "Abgeschlossen am {date}.",
+        "items": {
+          "drafts": "{count, plural, one {# Entwurf im Jahr} other {# Entwürfe im Jahr}}",
+          "undocumented": "{count, plural, one {# Buchung ohne Beleg und ohne Begründung} other {# Buchungen ohne Beleg und ohne Begründung}}",
+          "openTransactions": "{count, plural, one {# Umsatz ohne Buchung} other {# Umsätze ohne Buchung}}",
+          "accountsWithoutStatement": "Kein Kontoauszug geladen: {accounts}",
+          "previousYearOpen": "Das Vorjahr ist noch nicht abgeschlossen",
+          "pendingCorrections": "{count, plural, one {# Korrektur wartet auf Freigabe} other {# Korrekturen warten auf Freigabe}}"
+        },
+        "itemAction": "Ansehen",
+        "itemDone": "erledigt",
+        "dialog": {
+          "title": "{year} abschließen",
+          "description": "Danach ändert niemand mehr Buchungen in {year}. Wiederöffnen geht mit Begründung.",
+          "confirm": "Abschließen",
+          "done": "{year} ist abgeschlossen."
+        }
+      },
+      "taxReturn": {
+        "intro": "Nur wenn fällig. Bestätigen Sie, wenn das Finanzamt für {year} keine Erklärung angefordert hat.",
+        "suggestion": "Für {year} ist keine Steuererklärung angefordert.",
+        "result": "Eine Steuererklärung ist für {year} nicht fällig.",
+        "partOf": "Teil des Zeitraums <period></period>. Die Erklärung folgt nach {last}.",
+        "filed": "Für <period></period> abgegeben am {date}, Bescheid steht aus.",
+        "withNotice": "Für <period></period> <notice>Bescheid vom {date} in der Akte ›</notice>",
+        "due": "Erklärung für {period} bis {date}.",
+        "dueWas": "Erklärung für {period} war bis {date} fällig.",
+        "overdue": "überfällig",
+        "toTax": "Zur Steuererklärung",
+        "vatDue": "Außerdem die Umsatzsteuer-Jahreserklärung {year} bis {date}, weil {reason, select, regular {der Verein regelbesteuert ist} other {es Umsätze nach §\u00a013b gibt}}.",
+        "vatFiled": "Außerdem die Umsatzsteuer-Jahreserklärung {year}, abgegeben am {date}.",
+        "toDeadlines": "Zu den Fristen",
+        "rowTax": "Steuererklärung {period}",
+        "rowVat": "Umsatzsteuer-Jahreserklärung {year}",
+        "vatFiledResult": "USt-Jahreserklärung abgegeben am {date}."
+      },
+      "confirmDialog": {
+        "title": "{step} {year} bestätigen",
+        "note": "Begründung",
+        "hint": "Steht im Prüfpaket. Ein Verweis auf den Beschluss hilft den Prüfern.",
+        "save": "Bestätigen",
+        "done": "{step} bestätigt.",
+        "description": {
+          "lists": "Was in den Listen bleibt, steht dann mit Ihrer Begründung im Prüfpaket.",
+          "openItems": "Die offenen Zahlungen gehen so ins neue Jahr und stehen im Kassenbericht.",
+          "purposes": "Der Bestand der Zwecke am {date} geht so ins neue Jahr.",
+          "reserves": "Der Stand der Rücklagen am {date} steht dann im Kassenbericht und im Rücklagenspiegel.",
+          "confirmations": "Die Zuwendungen ohne Bestätigung bleiben so; Bestätigen können Sie sie auch später.",
+          "taxReturn": "Schritt 12 gilt dann als erledigt. Fordert das Finanzamt später eine Erklärung an, tragen Sie sie dort ein.",
+          "statements": "Sie bestätigen, dass alle Auszüge des Jahres in der Akte liegen."
+        },
+        "followUpUnchanged": {
+          "title": "Prüfbericht {year} weiter verwenden",
+          "description": "Der Prüfbericht vom {date} gilt für {year} weiter, die Freigabe zum Festschreiben ebenso."
+        }
+      },
+      "reopenDialog": {
+        "title": "{year} wiederöffnen",
+        "description": "Danach lassen sich Buchungen in {year} wieder ändern. Schritt 8 bis 10 sind dann zu wiederholen.",
+        "consequences": "Was jetzt passiert",
+        "taxFiled": "Die Steuererklärung für {period} ist am {date} abgegeben; eine Änderung kann eine Berichtigung nach §\u00a0153 AO nötig machen.",
+        "vatReturnFiled": "Die Umsatzsteuer-Jahreserklärung {period} ist am {date} abgegeben; eine Änderung kann eine Berichtigung nach §\u00a0153 AO nötig machen.",
+        "vatAdvanceFiled": "Abgegeben sind die Voranmeldungen {periods}; eine Änderung kann eine Berichtigung nach §\u00a0153 AO nötig machen.",
+        "vatAdvanceFiledPeriod": "{period} (am {date})",
+        "laterYearClosed": "Ein späteres Geschäftsjahr ist abgeschlossen. Öffnen Sie zuerst das spätere Jahr wieder.",
+        "laterYearClosedNamed": "Ein späteres Geschäftsjahr ist abgeschlossen. Öffnen Sie zuerst {later} wieder.",
+        "toLaterYear": "Zum Jahresabschluss {later}",
+        "note": "Begründung",
+        "noteHint": "Steht im Protokoll und im Kopf des Jahresabschlusses.",
+        "save": "Wiederöffnen",
+        "done": "{year} ist wieder offen."
+      }
+    },
+    "deadlines": {
+      "title": "Fristen und Schwellen",
+      "headNext": "Nächste Frist: {title} bis {date}.",
+      "headNextUndated": "Offen: {title}.",
+      "headNone": "Keine Frist offen.",
+      "headThresholds": "{count, plural, one {Eine Schwelle nähert sich.} other {# Schwellen nähern sich.}}",
+      "headExceeded": "{count, plural, one {Eine Schwelle ist überschritten.} other {# Schwellen sind überschritten.}}",
+      "computed": {
+        "title": "Fristen",
+        "intro": "Kompass berechnet sie aus Satzung, Einstellungen und Bescheiden. Erledigt verschwinden sie.",
+        "empty": "Keine Frist offen.",
+        "columns": {
+          "date": "Datum",
+          "deadline": "Frist",
+          "subject": "Bezug"
+        },
+        "overdue": "überfällig",
+        "noDate": "ohne Datum",
+        "kinds": {
+          "noticeExpiry": "Neuen Freistellungsbescheid beantragen",
+          "partnerProof": "Nachweis zur Zahlung {number} einholen",
+          "recipientNoticeExpiry": "Bescheid des Partners erneuern",
+          "confirmationsToCorrect": "{count, plural, one {# Zuwendungsbestätigung korrigieren} other {# Zuwendungsbestätigungen korrigieren}}",
+          "auditorAccess": "Zugang der Prüfer {designation} beenden",
+          "taxReturn": "Steuererklärung {period} abgeben",
+          "vatAdvanceReturn": "Umsatzsteuer-Voranmeldung {vatPeriod}",
+          "vatReturn": "Umsatzsteuer-Jahreserklärung {year}",
+          "vatAmendment": "{scope, select, year {Berichtigte Umsatzsteuer-Jahreserklärung {vatPeriod}} other {Berichtigte Voranmeldung {vatPeriod}}}"
+        },
+        "subjects": {
+          "noticeExpiry": "Bescheide",
+          "partnerProof": "Partner",
+          "recipientNoticeExpiry": "Partner",
+          "confirmationsToCorrect": "Bestätigungen",
+          "auditorAccess": "Kassenprüfung {designation}",
+          "taxReturn": "Steuererklärung {period}",
+          "vatAdvanceReturn": "Umsatzsteuer",
+          "vatReturn": "Umsatzsteuer {year}",
+          "vatAmendment": "Umsatzsteuer (§\u00a0153 AO)"
+        },
+        "subjectPartner": "Partner {partner}",
+        "vatFile": "Abgabe eintragen …",
+        "vatFileFrom": "Abgabe ab {date}",
+        "immediately": "unverzüglich",
+        "cause": "{entryNumber} nach der Abgabe {change, select, booked {gebucht} corrected {korrigiert} other {zurückgenommen}}, {changedOn}{more, plural, =0 {} other { und # weitere}}"
+      },
+      "vatDialog": {
+        "title": "Abgabe eintragen · {label}",
+        "titleEdit": "Abgabe bearbeiten · {label}",
+        "description": "Mit dem Tag der Abgabe verschwindet die Frist.",
+        "descriptionEdit": "Tag und Übertragungsprotokoll der letzten Abgabe.",
+        "date": "Abgegeben am",
+        "protocol": "ELSTER-Übertragungsprotokoll",
+        "protocolHint": "Optional. Das PDF kommt in die Akte.",
+        "protocolChosen": "Gewählt: {name}",
+        "save": "Eintragen",
+        "saveEdit": "Speichern",
+        "done": "Abgabe eingetragen."
+      },
+      "followUps": {
+        "title": "Wiedervorlagen",
+        "intro": "Was Sie sich selbst vornehmen. Abgehakt bleibt es 30 Tage gedämpft stehen.",
+        "empty": "Keine Wiedervorlage.",
+        "create": "Wiedervorlage anlegen …",
+        "columns": {
+          "done": "Erledigt",
+          "date": "Fällig am",
+          "title": "Wiedervorlage",
+          "subject": "Bezug"
+        },
+        "overdue": "überfällig",
+        "hidden": "Wiedervorlage an einem Vorgang, den Sie nicht sehen",
+        "done": "erledigt",
+        "check": "{title} als erledigt markieren",
+        "suggestion": "Legen Sie eine Wiedervorlage für den Abschluss {designation} vor der Mitgliederversammlung an.",
+        "suggestionTitle": "Jahresabschluss {designation} vor der Mitgliederversammlung"
+      },
+      "followUpDialog": {
+        "title": "Wiedervorlage anlegen",
+        "name": "Titel",
+        "dueOn": "Fällig am",
+        "subject": "Bezug",
+        "subjectYear": "Geschäftsjahr {designation}",
+      "subjectFixed": "Steht mit dem Vorgang fest.",
+        "save": "Anlegen",
+        "done": "Wiedervorlage angelegt."
+      },
+      "thresholds": {
+        "title": "Schwellen {year}",
+        "intro": "Wie nah der Verein im Jahr an den steuerlichen Grenzen liegt. Die Grenzen gelten je Jahr.",
+        "yearChoice": "Jahr",
+        "noun": {
+          "one": "Schwelle",
+          "other": "Schwellen",
+          "dative": "Schwellen"
+        },
+        "of": "{value} von {limit}",
+        "states": {
+          "approaching": "nähert sich",
+          "exceeded": "überschritten"
+        },
+        "keys": {
+          "timelyUse": "Zeitnahe Mittelverwendung",
+          "business": "Einnahmen wirtschaftlicher Geschäftsbetrieb",
+          "businessCombined": "Vereinfachung Zweckbetriebe",
+          "smallBusinessPrevYear": "Kleinunternehmer, Umsatz im Vorjahr",
+          "smallBusinessCurrent": "Kleinunternehmer, Umsatz im Jahr",
+          "allowanceVolunteer": "Ehrenamtspauschale, höchste je Person",
+          "allowanceTrainer": "Übungsleiterpauschale, höchste je Person",
+          "simplifiedReceipt": "Vereinfachter Zuwendungsnachweis"
+        },
+        "texts": {
+          "timelyUse": "Darüber muss der Verein seine Mittel zeitnah verwenden und nachweisen.",
+          "business": "Darüber wird der wirtschaftliche Geschäftsbetrieb steuerpflichtig.",
+          "businessCombined": "Liegen die Einnahmen aller Betriebe einschließlich Zweckbetriebe nicht über der Grenze und ergibt sich insgesamt ein Gewinn, prüft das Finanzamt die Zweckbetriebe nicht mehr (§\u00a064 Abs. 3 S. 2 AO). Für die Umsatzsteuer bleibt die Zuordnung nötig.",
+          "smallBusinessPrevYear": "Über der Grenze im Vorjahr gilt die Kleinunternehmerregelung nicht mehr.",
+          "smallBusinessCurrent": "Wird die Grenze im laufenden Jahr überschritten, endet die Regelung ab diesem Umsatz.",
+          "allowanceVolunteer": "Die Pauschale gilt je Person und Kalenderjahr, über alle Vereine zusammen; Kompass sieht nur die Zahlungen dieses Vereins.",
+          "allowanceTrainer": "Die Pauschale gilt je Person und Kalenderjahr, über alle Vereine zusammen; Kompass sieht nur die Zahlungen dieses Vereins."
+        },
+        "noObligation": "{value} von {limit}: unter der Schwelle besteht keine Pflicht zur zeitnahen Mittelverwendung.",
+        "notApplicable": "Für dieses Jahr gibt es keine Grenze oder sie gilt nicht (Regelbesteuerung).",
+        "notModelled": "Vor 2025 rechnete die Kleinunternehmerregelung anders; Kompass bildet das nicht ab.",
+        "info": "Bis {limit} je Zuwendung genügt dem Spender der Kontoauszug zusammen mit einem Beleg des Vereins (Zweck, Freistellung, Spende oder Mitgliedsbeitrag; §\u00a050 Abs. 4 EStDV).",
+        "person": "Am nächsten an der Grenze: {name}.",
+        "notes": {
+          "resultPositive": "Insgesamt ergibt sich ein Gewinn.",
+          "resultNotPositive": "Insgesamt ergibt sich kein Gewinn.",
+          "noPreviousYear": "Kein Vorjahr in Kompass: Kompass vergleicht mit dem laufenden Jahr.",
+          "shortYearNotAnnualised": "Das Vorjahr ist ein Rumpfjahr. Seit 2025 zählt der tatsächliche Umsatz, ohne Hochrechnung (§\u00a019 UStG, Abschn. 19.1 UStAE)."
+        }
+      },
+      "headOverdue": "{count, plural, one {# Frist überfällig: {first}.} =2 {# Fristen überfällig: {first} und {second}.} other {# Fristen überfällig: {first}, {second} und {rest} weitere.}}",
+      "headImmediate": "{count, plural, one {Unverzüglich: {first}.} =2 {Unverzüglich: {first} und {second}.} other {Unverzüglich: {first}, {second} und {rest} weitere.}}"
+    },
+    "reopenConsequences": {
+      "reportsVoided": "{count, plural, one {# festgeschriebener Bericht wird zurückgenommen; sein Dokument bleibt lesbar in der Akte.} other {# festgeschriebene Berichte werden zurückgenommen; ihre Dokumente bleiben lesbar in der Akte.}}",
+      "releaseRevoked": "Die Freigabe zum Festschreiben wird widerrufen.",
+      "auditFollowUpNeeded": "Der Prüfbericht ist abgelegt: Die Kassenprüfung steht danach auf „Nachprüfung offen“ und braucht einen unterschriebenen Nachtrag."
+    },
+    "reports": {
+      "dataExport": {
+        "title": "Datenexport für eine Außenprüfung",
+        "intro": "Die Buchhaltung als CSV-Dateien mit Feldbeschreibung und Änderungshistorie, als ZIP. So verlangt es das Finanzamt nach §\u00a0147 Abs. 6 AO.",
+        "start": "Export erzeugen …",
+        "cancel": "Abbrechen",
+        "running": "{years} · läuft",
+        "leave": "Sie können die Seite verlassen; der Export läuft weiter und steht danach in der Liste.",
+        "steps": {
+          "entries": "Buchungen und Zeilen",
+          "masterData": "Konten, Kategorien, Kontakte",
+          "vouchers": "Belegliste",
+          "history": "Änderungshistorie",
+          "package": "Feldbeschreibung und ZIP"
+        },
+        "state": {
+          "failed": "Der letzte Export ist am {date} gescheitert.",
+          "aborted": "Der letzte Export wurde am {date} abgebrochen.",
+          "interrupted": "Der letzte Export wurde am {date} unterbrochen, weil Kompass neu gestartet ist."
+        },
+        "dialog": {
+          "title": "Datenexport erzeugen",
+          "years": "Geschäftsjahre",
+          "closed": "abgeschlossen",
+          "open": "offen, vorläufig",
+          "description": "Enthält Buchungen, Zeilen, Konten, Kategorien, Kontakte mit Finanzbezug und die Liste der Belege. Die Belege selbst stecken im Prüfpaket.",
+          "save": "Erzeugen"
+        },
+        "list": {
+          "label": "Erzeugte Datenexporte",
+          "created": "Erzeugt",
+          "years": "Jahre",
+          "by": "Von",
+          "size": "Größe",
+          "actions": "Aktionen",
+          "download": "Herunterladen",
+          "downloadRow": "Export vom {date} herunterladen",
+          "provisional": "{year} vorläufig",
+          "system": "Kompass",
+          "empty": "Noch kein Export.",
+          "keep": "Ein Export bleibt 30 Tage zum Herunterladen, danach löscht Kompass das ZIP. Im Protokoll steht, wer wann was erzeugt hat."
+        },
+        "downloadRefused": {
+          "forbidden": "Herunterladen darf nur, wer Finanzen lesen und die Akte exportieren darf.",
+          "notFound": "Diesen Export gibt es nicht mehr.",
+          "failed": "Der Export ließ sich nicht herunterladen."
+        }
+      },
+      "incomeStatement": {
+        "title": "Einnahmen-Überschuss-Rechnung",
+        "description": "Einnahmen und Ausgaben je Kategorie und Bereich, mit Vorjahr. Querformat."
+      },
+      "assetOverview": {
+        "title": "Vermögensübersicht",
+        "description": "Geld, offene Zahlungen, Bindungen und sonstiges Vermögen zum Jahresende."
+      },
+      "cashReport": {
+        "title": "Kassenbericht",
+        "description": "Einnahmen, Ausgaben, Bestände und Bindungen des Jahres. Querformat."
+      },
+      "accountReconciliation": {
+        "title": "Kontenabstimmung",
+        "description": "Buchbestand gegen Kontoauszug, Zählprotokoll und Kontostand."
+      },
+      "purposeFunds": {
+        "title": "Zweckmittel",
+        "description": "Zugang, Verwendung und Umwidmung je Zweck."
+      },
+      "projectStatement": {
+        "title": "Projektabrechnung",
+        "description": "Einnahmen, Ausgaben und Belege je Projekt."
+      },
+      "reserveStatement": {
+        "title": "Rücklagenspiegel",
+        "description": "Stand, Zuführung und Auflösung je Rücklage. Querformat."
+      },
+      "foreignActivity": {
+        "title": "Auslandsbericht",
+        "description": "Mittel an Partner im Ausland, mit Nachweisen."
+      },
+      "donationBook": {
+        "title": "Spendenbuch",
+        "description": "Alle Zuwendungen mit Stand der Bestätigung."
+      },
+      "peopleOverview": {
+        "title": "Personenübersicht",
+        "description": "Pauschalen und Erstattungen je Person im Kalenderjahr."
+      },
+      "voucherCheck": {
+        "title": "Belegprüfung",
+        "description": "Buchungen ohne Beleg, Belege ohne Buchung, mehrfach verwendete Nachweise."
+      },
+      "vatSummary": {
+        "title": "Umsatzsteuer-Summen",
+        "description": "Kennzahlen der Umsatzsteuer-Jahreserklärung je Kalenderjahr, mit §\u00a013b."
+      },
+      "vatAdvanceReturn": {
+        "title": "Umsatzsteuer-Voranmeldung",
+        "description": "Werte zum Übertragen in ELSTER je Voranmeldungszeitraum."
+      },
+      "handoverList": {
+        "title": "Übergabeliste",
+        "description": "Was offen ist und an wem es hängt, zu einem Stichtag."
+      },
+      "monthlyOverview": {
+        "title": "Monatsübersicht",
+        "description": "Einnahmen und Ausgaben je Monat und Kategorie."
+      },
+      "taxReturnGem": {
+        "title": "Werte für die Anlage Gem",
+        "description": "Formularwerte, Beilagen und Hinweise für die Steuererklärung."
+      },
+      "taxReturnIncomeStatement": {
+        "title": "EÜR für das Finanzamt",
+        "description": "Einnahmen und Ausgaben je Bereich und Jahr, gegliedert wie das Zusatzblatt der Finanzämter."
+      },
+      "fundsUse": {
+        "title": "Mittelverwendungsrechnung",
+        "description": "Zeitnahe Verwendung der Mittel je Jahr."
+      },
+      "releaseBasis": {
+        "auditReport": "Prüfbericht abgelegt",
+        "noAuditProvided": "Keine Kassenprüfung vorgesehen",
+        "oralReport": "Mündlicher Bericht in der MV",
+        "singleAuditor": "Bericht nur eines Prüfers",
+        "notAudited": "Prüfung nicht erfolgt",
+        "other": "Sonstiges"
+      },
+      "stage": {
+        "preliminary": "vorläufig",
+        "review": "Prüffassung",
+        "final": "festgeschrieben"
+      },
+      "groups": {
+        "assembly": "Mitgliederversammlung",
+        "audit": "Kassenprüfung",
+        "taxOffice": "Finanzamt und Gemeinnützigkeit",
+        "work": "Arbeit"
+      },
+      "list": {
+        "title": "Berichte",
+        "yearChoice": "Geschäftsjahr",
+        "noun": {
+          "one": "Bericht",
+          "other": "Berichte",
+          "dative": "Berichten"
+        },
+        "columns": {
+          "report": "Bericht",
+          "final": "Festgeschrieben"
+        },
+        "finalBy": "{date} · {name}",
+        "finalPrefix": "festgeschrieben",
+        "system": "Kompass",
+        "noYear": "Noch kein Geschäftsjahr",
+        "noYearText": "Berichte rechnen je Geschäftsjahr. Legen Sie das erste unter Einrichtung → Finanzen an."
+      },
+      "header": {
+        "open": "{year} ist noch nicht abgeschlossen. Alle Berichte sind vorläufig.",
+        "notReleased": "{year} ist abgeschlossen. Festschreiben können Sie, sobald das Jahr freigegeben ist.",
+        "releaseNeedsRight": "Freigeben kann, wer das Jahr abschließt.",
+        "released": "{year} ist freigegeben: {reason}. Jeder Bericht ist eine Prüffassung, bis Sie ihn festschreiben.",
+        "locked": "{year} ist freigegeben: {reason}. {done} von {total, plural, one {# Bericht für die Mitgliederversammlung} other {# Berichten für die Mitgliederversammlung}} {done, plural, one {ist} other {sind}} festgeschrieben.",
+        "lockedNote": "Die Freigabe lässt sich nicht mehr ändern. Ein Fehler im Jahr geht über Wiederöffnen.",
+        "releasedStatements": "{year} ist freigegeben: {reason}.",
+        "statementOne": "Festschreiben können Sie, sobald der Auszug der {account} zum {date} liegt.",
+        "statementMany": "Festschreiben können Sie, sobald die Auszüge von {count} Konten zum {date} liegen.",
+        "toClose": "Zu Schritt 8 des Jahresabschlusses",
+        "toStatements": "Zu Schritt 1 des Jahresabschlusses",
+        "by": "Freigegeben von {name} am {date}.",
+        "reason": {
+          "auditReport": "Prüfbericht vom {date}{confirmed, select, none {} other {, Nachprüfung bestätigt am {confirmed}}}",
+          "noAuditProvided": "keine Kassenprüfung vorgesehen",
+          "oralReport": "mündlicher Bericht in der Mitgliederversammlung",
+          "singleAuditor": "Bericht nur eines Prüfers",
+          "notAudited": "Prüfung nicht erfolgt",
+          "other": "sonstiger Grund"
+        },
+        "followUp": "{year} ist abgeschlossen. Festschreiben können Sie, sobald die Nachprüfung bestätigt ist.",
+        "followUpChanged": "{year} ist abgeschlossen. Festschreiben können Sie, sobald die Nachprüfung geklärt ist.",
+        "toAuditReport": "Zu Schritt 10 des Jahresabschlusses",
+        "running": "{year} läuft noch. Alle Berichte sind vorläufig."
+      },
+      "release": {
+        "open": "Freigeben …",
+        "change": "Freigabe ändern …",
+        "title": "{year} freigeben",
+        "description": "Danach können Sie die Berichte für die Mitgliederversammlung festschreiben. Ändern geht, bis der erste festgeschrieben ist.",
+        "basis": "Grund",
+        "bases": {
+          "auditReport": {
+            "label": "Schriftlicher Prüfbericht",
+            "hint": "Unterschriebener Scan, aus der Akte oder hochladen"
+          },
+          "noAuditProvided": {
+            "label": "Keine Kassenprüfung vorgesehen",
+            "hint": "Die Satzung sieht keine vor"
+          },
+          "oralReport": {
+            "label": "Mündlicher Bericht in der Mitgliederversammlung"
+          },
+          "singleAuditor": {
+            "label": "Bericht nur eines Prüfers"
+          },
+          "notAudited": {
+            "label": "Prüfung nicht erfolgt",
+            "hint": "Begründung Pflicht"
+          },
+          "other": {
+            "label": "Sonstiges",
+            "hint": "Begründung Pflicht"
+          }
+        },
+        "scan": "Scan",
+        "scanHint": "Aus der Akte wählen oder hier hochladen.",
+        "scanUploaded": "Abgelegt als {number}.",
+        "note": "Begründung",
+        "noteHint": "Freiwillig. Pflicht bei „Prüfung nicht erfolgt“ und „Sonstiges“.",
+        "consequence": "Ohne schriftlichen Prüfbericht tragen festgeschriebene Berichte im Kopf: „Ohne schriftlichen Prüfbericht festgeschrieben“.",
+        "save": "Freigeben",
+        "done": "{year} ist freigegeben."
+      },
+      "view": {
+        "generated": "erzeugt {date} · Stand {hash}",
+        "version": "Fassung vom {date}, {time} · Stand {hash} · {number}",
+        "purpose": "{group, select, assembly {Für die Mitgliederversammlung} audit {Für die Kassenprüfung} taxOffice {Für Finanzamt und Gemeinnützigkeit} other {Für die laufende Arbeit}}{span, select, calendar {, je Kalenderjahr} period {, je Erklärungszeitraum} other {}}. {orientation, select, landscape {Querformat} other {Hochformat}}.",
+        "running": "{year} läuft noch.",
+        "blocked": {
+          "reportYearOpen": "{year} ist noch nicht abgeschlossen.",
+          "reportNotReleased": "Festschreiben können Sie, sobald {year} freigegeben ist.",
+          "reportProbeFails": "Die Probe geht nicht auf.",
+          "reportStatementsMissing": "{count, plural, one {Festschreiben können Sie, sobald der Auszug der {accounts} zum Stichtag liegt.} other {Festschreiben können Sie, sobald die Auszüge von # Konten zum Stichtag liegen.}}"
+        },
+        "finalize": "Festschreiben",
+        "fileStatement": "Auszug ablegen …",
+        "download": "Herunterladen",
+        "downloadRefused": {
+          "forbidden": "Diesen Bericht dürfen Sie nicht herunterladen.",
+          "notFound": "Diesen Bericht gibt es nicht.",
+          "failed": "Der Bericht ließ sich nicht erzeugen."
+        },
+        "params": {
+          "year": "Geschäftsjahr",
+          "calendarYear": "Kalenderjahr",
+          "combine": "Zweckbetrieb und wirtschaftlichen Geschäftsbetrieb zusammengefasst",
+          "project": "Projekt",
+          "allProjects": "Alle Projekte",
+          "period": "Zeitraum",
+          "date": "Stichtag",
+          "note": "Die Parameter gehören zur Fassung: Wer festschreibt, schreibt sie mit fest."
+        },
+        "warnings": {
+          "businessLoss": "Der wirtschaftliche Geschäftsbetrieb hat einen Verlust. Er muss binnen zwölf Monaten nach Jahresende ausgeglichen werden, Anlaufverluste binnen drei Jahren.",
+          "assetManagementLoss": "Die Vermögensverwaltung hat einen Verlust. Er muss binnen zwölf Monaten nach Jahresende ausgeglichen werden.",
+          "freeReserveCapExceeded": "Die Zuführungen zur freien Rücklage liegen in einem Jahr über dem Höchstbetrag nach §\u00a062 Abs. 1 Nr. 3 AO.",
+          "allowanceExceeded": "Bei mindestens einer Person liegen die Pauschalen über der Grenze des Jahres; der Teil darüber ist steuerpflichtig.",
+          "linesWithoutPerson": "Einige Pauschalen sind ohne Person gebucht und fehlen in der Übersicht. Ordnen Sie sie einer Person zu.",
+          "section18_4a": "Steuer nach §\u00a013b UStG unter Kleinunternehmerschaft: Für das Jahr ist eine Umsatzsteuererklärung abzugeben (§\u00a018 Abs. 4a UStG).",
+          "taxContextMissing": "Für einige Buchungstage sind Besteuerungsform oder Steuersätze nicht hinterlegt; diese Zeilen fehlen in den Summen."
+        },
+        "toDeadlines": "Zu den Fristen",
+        "probe": "Die Probe geht nicht auf: Abweichung {amount}. Festschreiben ist gesperrt, bis die Buchungen stimmen.",
+        "versions": {
+          "title": "Festgeschriebene Fassungen",
+          "columns": {
+            "final": "Festgeschrieben",
+            "by": "Von",
+            "hash": "Stand",
+            "document": "In der Akte"
+          },
+          "empty": "Noch nicht festgeschrieben.",
+          "withdrawn": "zurückgenommen am {date}: {reason}",
+          "withdrawnWithoutReason": "zurückgenommen am {date}"
+        },
+        "confirm": {
+          "title": "{report} festschreiben",
+          "description": "Der Bericht wird mit Stand <mono>{hash}</mono> unveränderlich in der Akte abgelegt. Ändern sich die Zahlen später, entsteht eine neue Fassung; die alte wird zurückgenommen und bleibt lesbar.",
+          "done": "Festgeschrieben als {number}."
+        }
+      }
+    },
     "common": {
       "moduleInactiveTitle": "Modul Finanzen ist nicht aktiv.",
       "moduleInactiveText": "Aktivieren Sie das Modul unter Einrichtung → Module. Vorhandene Daten bleiben erhalten.",
@@ -5287,9 +6505,90 @@
       "text": "festgeschrieben am {date} um {time} von {name} ({channel})",
       "unknownUser": "einer nicht mehr vorhandenen Person"
     },
+    "vat": {
+      "title": "Umsatzsteuer-Voranmeldung {period}",
+      "titlePlain": "Umsatzsteuer-Voranmeldung",
+      "amendmentOpen": "Berichtigung offen",
+      "header": {
+        "purpose": "Werte zum Übertragen in ELSTER. Abgabe und Zahlung bis {date}.",
+        "overdue": "Werte zum Übertragen in ELSTER. Frist {date} verstrichen.",
+        "filed": "Abgegeben am {date}.",
+        "amendment": "Abgegeben am {date}. Eine berichtigte Fassung ist unverzüglich abzugeben.",
+        "notRequired": "Für diesen Zeitraum ist keine Voranmeldung fällig."
+      },
+      "bar": {
+        "label": "Zeitraum",
+        "noun": {
+          "one": "Kennzahl",
+          "other": "Kennzahlen",
+          "dative": "Kennzahlen"
+        }
+      },
+      "amendment": {
+        "cause": "Nach der Abgabe wurde <entry>{entryNumber}</entry> {change, select, booked {gebucht} reversed {zurückgenommen} other {korrigiert}}. Übertragen Sie die berichtigten Werte und setzen Sie in ELSTER Kennzahl 10 auf 1.",
+        "noCause": "Nach der Abgabe haben sich die Werte geändert. Übertragen Sie die berichtigten Werte und setzen Sie in ELSTER Kennzahl 10 auf 1."
+      },
+      "filing": {
+        "title": "Abgabe",
+        "edit": "Bearbeiten …",
+        "dueOn": "Frist",
+        "dueHint": "{kind, select, month {Monat} other {Quartal}}, {extension, select, true {mit Dauerfristverlängerung} other {ohne Dauerfristverlängerung}}",
+        "filedOn": "Abgegeben am",
+        "filedReason": "Noch nicht abgegeben",
+        "filedFrom": "Abgabe ab {date}",
+        "payable": "Zu zahlen",
+        "payableHint": "Kennzahl 83",
+        "surplus": "Überschuss, Kennzahl 83",
+        "afterFinalize": "nach dem Festschreiben",
+        "done": "Erledigt",
+        "documents": {
+          "filedReturn": "Abgegebene Fassung",
+          "transmissionProtocol": "ELSTER-Übertragungsprotokoll",
+          "amended": "Berichtigte Fassung"
+        },
+        "afterFiling": "nach der Abgabe",
+        "immediately": "unverzüglich",
+        "overdue": "überfällig",
+        "amendmentHint": "Berichtigung nach §\u00a0153 AO",
+        "filedVersion": "{first, select, true {erste Fassung} other {letzte Fassung}}",
+        "amendmentPayable": "Kz 83 berichtigt {amended} abzüglich {filed} aus der {first, select, true {ersten Fassung} other {Fassung vom {date}}}",
+        "amendedHint": "Als neue Abgabe im Dialog „Bearbeiten …“ eintragen",
+        "file": "Ablegen …",
+        "documentDialog": {
+          "title": "{slot, select, transmissionProtocol {ELSTER-Übertragungsprotokoll ablegen} other {Abgegebene Fassung ablegen}}",
+          "description": "Das PDF aus ELSTER hochladen oder ein Dokument aus der Akte wählen. Es liegt dann an der Abgabe für {period}."
+        }
+      },
+      "figures": {
+        "title": "Kennzahlen",
+        "columns": {
+          "code": "Kz",
+          "label": "Angabe",
+          "value": "Wert",
+          "filed": "abgegeben",
+          "amended": "berichtigt",
+          "origin": "Herkunft"
+        },
+        "entries": "{count, plural, one {# Buchung} other {# Buchungen}}",
+        "rateOf": "{rate} % von Kz {code}",
+        "taxOf": "zu Kz {code}",
+        "sum": "Summe",
+        "filedMissing": "Diese Abgabe stammt aus der Zeit vor den Kennzahlen; die abgegebenen Werte kennt Kompass nicht.",
+        "empty": "Im Zeitraum gibt es keine Umsätze mit Umsatzsteuer."
+      },
+      "empty": {
+        "title": "Keine Voranmeldung",
+        "text": "Im laufenden und im vorigen Jahr ist keine Umsatzsteuer-Voranmeldung fällig oder abgegeben."
+      }
+    },
+    "vatPeriod": {
+      "quarter": "Q{quarter} {year}",
+      "month": "{month, select, 01 {Januar} 02 {Februar} 03 {März} 04 {April} 05 {Mai} 06 {Juni} 07 {Juli} 08 {August} 09 {September} 10 {Oktober} 11 {November} other {Dezember}} {year}"
+    },
     "taxText": {
       "included": "darin {amount} Umsatzsteuer",
-      "reverseCharge": "Sie schulden {amount} Umsatzsteuer (§ 13b) — auch als Kleinunternehmer"
+      "reverseChargeLine": "Der Verein schuldet {amount} Umsatzsteuer nach §\u00a013b{small, select, true {, auch als Kleinunternehmer} other {}}.",
+      "advanceReturn": "Voranmeldung {period}"
     },
     "amount": {
       "format": "Bitte einen Betrag wie 12,50 eingeben.",
@@ -5315,8 +6614,9 @@
       "pickFromArchive": "Aus der Akte wählen",
       "none": "Noch kein Beleg.",
       "open": "Öffnen",
-      "remove": "Entfernen",
+      "remove": "Entfernen …",
       "replacedBy": "ersetzt durch {number}",
+      "replaceMenu": "Beleg ersetzen …",
       "dragOrPickImage": "Unterschrift als Bild hierher ziehen oder auswählen",
       "isPdf": "Das ist ein PDF. Hier braucht es ein Bild der Unterschrift (PNG oder JPEG).",
       "wrongTypeImage": "Kompass nimmt nur PNG oder JPEG als Bild der Unterschrift.",
@@ -5324,6 +6624,13 @@
       "replace": "Ersetzen"
     },
     "splitRow": {
+      "assetEndowment": "Vermögensausstattung (§\u00a058 Nr. 3 AO)",
+      "assetEndowmentHint": "Mittel, mit denen eine andere steuerbegünstigte Körperschaft den Verein dauerhaft ausstattet. Erscheint in Zeile 69/70 der Anlage Gem.",
+      "notToAssets": "Nicht dem Vermögen zuführen",
+      "notToAssetsReason": {
+        "testatorDirectedCurrentUse": "Der Erblasser hat laufenden Aufwand bestimmt. Den Nachweis legen Sie als Beleg ab.",
+        "donorAllowedCurrentUse": "Der Geber erlaubt die laufende Verwendung. Den Nachweis legen Sie als Beleg ab."
+      },
       "category": "Kategorie",
       "categoryPlaceholder": "Kategorie wählen",
       "amount": "Betrag",
@@ -5337,14 +6644,26 @@
       },
       "tax": "Umsatzsteuer",
       "taxNone": "Keine Angabe",
+      "taxOwedGroup": "Steuer schuldet der Verein",
+      "taxOrigin": {
+        "contact": "Vorgabe vom Kontakt",
+        "prompt": "aus der Prüffrage"
+      },
+      "serviceDate": "Leistungsdatum",
+      "invoiceDate": "Rechnungsdatum",
+      "vatSentence": "Der Verein schuldet {tax} Umsatzsteuer ({rate} % von {base}), {period}.",
+      "vatSentenceSplit": "Der Verein schuldet {tax} Umsatzsteuer ({rate} % von {base}). {kind, select, invoice {Rechnung} other {Leistung}} im {serviceMonth}, gebucht im {entryMonth}: zählt in {period}.",
+      "vatNoInputTax": "Kein Vorsteuerabzug als Kleinunternehmer.",
+      "monthName": "{month, select, 01 {Januar} 02 {Februar} 03 {März} 04 {April} 05 {Mai} 06 {Juni} 07 {Juli} 08 {August} 09 {September} 10 {Oktober} 11 {November} other {Dezember}}",
       "taxCode": {
         "none": "Keine Umsatzsteuer",
         "exemptCounted": "Steuerfrei, zählt zur Kleinunternehmergrenze",
         "exemptNotCounted": "Steuerfrei, zählt nicht zur Kleinunternehmergrenze",
         "reduced": "Ermäßigter Satz",
         "standard": "Regulärer Satz",
-        "rc13b": "Reverse Charge (§ 13b)",
-        "icAcquisition": "Innergemeinschaftlicher Erwerb"
+        "rc13bEu": "§\u00a013b, Leistung aus der EU",
+        "rc13bOther": "§\u00a013b, übrige",
+        "icAcquisition": "Erwerb"
       },
       "contact": "Spender/Empfänger",
       "project": "Projekt",
@@ -5476,6 +6795,14 @@
       }
     },
     "entryForm": {
+      "giverDialog": {
+        "title": "Angaben zum Geber",
+        "description": "Für die Anlage Gem braucht das Finanzamt, wer den Verein ausgestattet hat.",
+        "giver": "Geber",
+        "taxOffice": "Finanzamt",
+        "taxNumber": "Steuernummer",
+        "save": "Übernehmen"
+      },
       "boardAllowanceReason": "Begründung (Pauschale an ein Vorstandsmitglied ohne Grundlage)",
       "boardAllowanceReasonHint": "Diese Buchung trägt eine Begründung für eine Pauschale an ein Vorstandsmitglied ohne bestätigte Grundlage.",
       "purposeNegativeReason": "Begründung (Zweck im Minus)",
@@ -5534,7 +6861,9 @@
         "finalized": "Festgeschrieben: {number}.",
         "cashDonationAboveAlert": "Barspende ab der Schwelle — für die Kassenprüfung.",
         "allowanceExceeded": "{person} liegt damit {amount} über der {allowance} {year}. Der übersteigende Betrag ist nicht steuerfrei; ob der Verein Lohnsteuer oder Sozialversicherung abführen muss, hängt an der Art der Tätigkeit.",
-        "returnWithoutOrigin": "Rückgabe ohne Bezug auf die Spende — bitte mit der Spende verknüpfen."
+        "returnWithoutOrigin": "Rückgabe ohne Bezug auf die Spende — bitte mit der Spende verknüpfen.",
+        "taxCodeNotOffered": "Das Kennzeichen „{codes}“ passt nicht mehr zu den Umsatzsteuer-Einstellungen am Buchungstag. Bitte prüfen Sie die Zeile.",
+        "partnerPaymentMissing": "Mittel an Partner brauchen einen Nachweis der Verwendung (§\u00a058 Nr.\u00a01 AO). Führen Sie die Zahlung als Zahlung an Partner – für die gebuchte Zeile mit „nachträglich“ –, damit Kompass die Nachweisfrist verfolgt."
       },
       "boundLine": "Kontoumsatz vom {date} · {amount}",
       "boundLineNoDate": "Kontoumsatz · {amount}",
@@ -5589,6 +6918,8 @@
           "reversed": "zurückgenommen durch {number}",
           "voucherAdded": "Beleg {number} abgelegt",
           "voucherRevoked": "Beleg {number} widerrufen",
+          "voucherRevokedNote": "Beleg {number} widerrufen: {note}",
+          "voucherReplacement": "Beleg {number} verknüpft (Ersatz)",
           "allocationChanged": {
             "applied": "Zuordnung geändert von {name}",
             "pending": "Zuordnung geändert von {name}, wartet auf Freigabe",
@@ -5605,9 +6936,21 @@
         "revoke": {
           "title": "Beleg widerrufen",
           "description": "Der Beleg wird durchgestrichen und bleibt sichtbar.",
-          "descriptionClosed": "Das Geschäftsjahr ist abgeschlossen — ein Ersatzbeleg ist hier noch nicht vorgesehen.",
           "confirm": "Widerrufen",
           "noteLabel": "Warum wird der Beleg widerrufen?"
+        },
+        "replace": {
+          "title": "Beleg zu Buchung {number} ersetzen",
+          "revoked": "wird widerrufen",
+          "previous": "Bisheriger Beleg",
+          "next": "Neuer Beleg",
+          "description": "{year} ist abgeschlossen. Jede Buchung braucht einen Beleg, deshalb lässt sich ein falscher Beleg hier nicht entfernen, nur ersetzen. Beide Schritte bleiben in der Spur sichtbar.",
+          "fromArchive": "Aus der Akte",
+          "upload": "Hochladen",
+          "pick": "In der Akte suchen",
+          "chosen": "Gewählt: {name}",
+          "confirm": "Ersetzen",
+          "done": "Beleg ersetzt."
         }
       },
       "reverse": {
@@ -5631,10 +6974,17 @@
           "purpose": "Zweck",
           "abroad": "Wird im Ausland verwendet",
           "noProject": "Kein Projekt",
-          "noPurpose": "Kein Zweck"
+          "noPurpose": "Kein Zweck",
+          "vat": "Umsatzsteuer und Leistungsdatum"
         },
-        "pathAllocation": "Das ändert die Zuordnung.",
-        "numbersElsewhere": "Stimmen Betrag, Datum, Konto, Kategorie oder Umsatzsteuer nicht, nehmen Sie die Buchung über <reverse>Zurücknehmen …</reverse> zurück und erfassen sie neu.",
+        "vat": {
+          "taxCode": "Umsatzsteuer",
+          "taxCodeHint": "Nur keine · §\u00a013b EU · §\u00a013b übrige · Erwerb. Betrag und Konto bleiben.",
+          "serviceWas": "war {old} · zählt jetzt in {period}",
+          "empty": "leer",
+          "filed": "Die Voranmeldung {period} ist abgegeben ({filedOn}). Nach der Korrektur steht unter Fristen „Berichtigte Voranmeldung {period}“."
+        },
+        "numbersElsewhere": "Stimmen Betrag, Datum, Konto, Kategorie oder Steuersatz nicht, nehmen Sie die Buchung über <reverse>Zurücknehmen …</reverse> zurück und erfassen sie neu.",
         "currentContact": "Spender/Empfänger bisher: {value}",
         "pickLine": {
           "title": "Welche Aufteilung?",
@@ -5652,7 +7002,7 @@
         },
         "section153": {
           "notice": "Für dieses Geschäftsjahr gilt die Steuererklärung als abgegeben.",
-          "label": "Ich habe zur Kenntnis genommen, dass eine Berichtigung nach § 153 AO nötig sein kann."
+          "label": "Ich habe zur Kenntnis genommen, dass eine Berichtigung nach §\u00a0153 AO nötig sein kann."
         },
         "toast": {
           "applied": "Die Zuordnung wurde sofort geändert.",
@@ -5723,6 +7073,10 @@
         "counterOne": "Erste zählende Person",
         "counterTwo": "Zweite zählende Person",
         "sameCounter": "Bitte zwei unterschiedliche Personen wählen.",
+        "witnesses": "Im Beisein von",
+        "handoverDate": "Steht mit der Amtsübergabe fest.",
+        "handoverWitness": "Die neue Person ist bei der Zählung dabei.",
+        "witnessesHint": "Prüfer für {year}. Der Bestand geht in den Prüfbericht.",
         "countersRequired": "Bitte beide Zählenden wählen.",
         "resultLine": "Buchbestand {book} · gezählt {counted}",
         "kind": {
@@ -5734,7 +7088,8 @@
         "submit": "Zählung speichern",
         "toast": {
           "done": "Zählprotokoll {number} erstellt."
-        }
+        },
+        "handoverTitle": "{account} am {date} zählen"
       },
       "move": {
         "trigger": "Bargeld zur Bank gebracht / abgehoben",
@@ -6072,8 +7427,10 @@
         "fiscalYears": "Geschäftsjahre",
         "datedValues": "Sätze und Grenzen",
         "tax": "Steuerliches",
+        "vat": "Umsatzsteuer",
         "permissions": "Wer darf was",
-        "directDebit": "Lastschrift"
+        "directDebit": "Lastschrift",
+        "reports": "Berichte"
       },
       "checklist": {
         "steps": {
@@ -6082,17 +7439,19 @@
           "roles": "Wer welche Rolle trägt",
           "categories": "Kategorien durchsehen",
           "tax": "Steuerliches bestätigen",
+          "vat": "Umsatzsteuer: Unternehmer, USt-IdNr. und Voranmeldung",
           "importFormat": "Auszugsformat je Bank- und Zahlungsdienstkonto",
           "notice": "Bescheid des Finanzamts erfassen",
           "machineProcedure": "Maschinelles Verfahren einrichten",
           "waiverBasis": "Aufwandsspenden: Anspruchsgrundlage hinterlegt",
           "boardRemuneration": "Vergütung des Vorstands bestätigen",
           "boardMembers": "Vorstand am Kontakt: die Rolle „Vorstand“ an den Kontakten der Vorstandsmitglieder",
-          "documentBases": "Eigene Basis für Formulare",
+          "documentBases": "Eigene Basis für Formulare und Berichte",
           "directDebit": "Lastschrift einrichten"
         },
         "optional": "Optional",
         "optionalNotes": {
+          "vat": "Sonst gilt: kein Unternehmer, Voranmeldung nur bei §\u00a013b.",
           "importFormat": "Bis zum ersten Auszug.",
           "notice": "Ohne Bescheid keine Zuwendungsbestätigungen.",
           "machineProcedure": "Sonst tragen Bestätigungen ein Unterschriftsfeld.",
@@ -6110,13 +7469,16 @@
           "machineProcedure": "wartet auf einen gültigen Bescheid"
         },
         "detail": {
+          "vatSuggested": "Kompass schlägt „Unternehmer: ja“ vor (Einnahmen im Zweckbetrieb oder wirtschaftlichen Geschäftsbetrieb).",
+          "vatNotEntrepreneur": "Keine eigenen Umsätze mit Umsatzsteuer. Steuer kann trotzdem anfallen: für Leistungen ausländischer Anbieter, bei denen der Verein die Steuer schuldet (§\u00a013b UStG), und für Wareneinkäufe aus der EU über 12.500 € im Jahr. Für diese Quartale zeigt Kompass die Voranmeldung.",
+          "vatEntrepreneur": "Unternehmer{since, select, none {} other { seit {since}}}, Voranmeldung je {period, select, month {Monat} other {Quartal}}.",
           "account": "{accounts} Konten, {withoutOpening} ohne Anfangsbestand",
           "rolesWithoutUser": "ohne aktiven Träger: {names}",
           "usersWithoutContact": "{count} Nutzer ohne verknüpften Kontakt",
           "importFormat": "{missing, plural, one {# Konto} other {# Konten}} ohne Auszugsformat — nehmen Sie CAMT, wenn die Bank es anbietet, sonst richten Sie das CSV-Format ein.",
           "notice": "gültig bis {validUntil}",
           "machineProcedure": "es fehlt: {missing}",
-          "documentBases": "Eigene Basis für Formulare fehlt — Bestätigungen erscheinen im Standardkopf ({missing})",
+          "documentBases": "Eigene Basis für Formulare und Berichte fehlt — Bestätigungen und Berichte erscheinen im Standardkopf ({missing})",
           "boardRemunerationNo": "keine Pauschalen vorgesehen (seit {date})",
           "boardRemunerationYes": "Pauschalen vorgesehen, gilt ab {date}",
           "directDebitMissing": "es fehlt: {missing}. Das Recht „Lastschrift vorbereiten“ geben Sie einer Rolle.",
@@ -6204,6 +7566,9 @@
         "inputTaxDeductible": "Vorsteuerabzug",
         "countsTowardTurnover": "Zählt zum Umsatz",
         "isAssetSale": "Verkauf aus dem Vermögen",
+        "thresholdExclusion": "Für die Freigrenze",
+        "thresholdExclusionHint": "Die Freigrenze des wirtschaftlichen Geschäftsbetriebs zählt nur Einnahmen aus Leistungen; Zuschüsse, Darlehen, Versicherungsleistungen und erstattete Steuern zählen nicht mit.",
+        "thresholdExclusions": { "none": "Zählt mit", "notPerformance": "Nicht leistungsbezogen", "taxRefund": "Erstattete Steuer" },
         "externalAccountNumber": "Kontonummer der Buchhaltungssoftware",
         "review": "Kategorien durchgesehen",
         "reviewedAt": "Zuletzt durchgesehen am {date}.",
@@ -6240,6 +7605,7 @@
           "sales": "Verkaufserlös",
           "fees": "Teilnahmegebühr",
           "interest": "Zinsertrag",
+          "rent": "Miete und Pacht",
           "inheritance": "Erbschaft",
           "other": "Sonstige Einnahme"
         },
@@ -6259,7 +7625,8 @@
           "exemptNotCounted": "Steuerfrei, zählt nicht zum Umsatz",
           "reduced": "Ermäßigter Satz",
           "standard": "Regelsatz",
-          "rc13b": "Reverse Charge § 13b",
+          "rc13bEu": "§\u00a013b, Leistung aus dem EU-Ausland (Kz 46/47)",
+          "rc13bOther": "§\u00a013b, übrige Leistungen (Kz 84/85)",
           "icAcquisition": "Innergemeinschaftlicher Erwerb"
         },
         "inputTax": {
@@ -6318,7 +7685,6 @@
         "edit": "Geschäftsjahr ändern",
         "designation": "Bezeichnung",
         "range": "Von – bis",
-        "taxReturnFiledOn": "Steuererklärung abgegeben am",
         "startsOn": "Beginnt am",
         "endsOn": "Endet am",
         "toast": {
@@ -6342,6 +7708,7 @@
         "taxationHint": "Die Besteuerungsform gilt taggenau — eine Änderung wirkt ab dem gewählten Stichtag.",
         "warnAtPercentHint": "Anteil einer Grenze, ab dem sie als „nähert sich“ gilt: Pauschalen je Person, Zielbetrag eines Zwecks, Höchstbetrag der freien Rücklage.",
         "unitPercent": "{value} %",
+        "ratioHint": "Als Bruch, etwa 1/3.",
         "unitCentsPerKm": "{value} / km",
         "unitMonths": "{value, plural, one {# Monat} other {# Monate}}",
         "unitDays": "{value, plural, one {# Tag} other {# Tage}}",
@@ -6352,10 +7719,12 @@
         "keys": {
           "thresholdTimelyUse": "Grenze zeitnahe Mittelverwendung",
           "thresholdBusiness": "Grenze wirtschaftlicher Geschäftsbetrieb",
+          "thresholdAllBusinessCombined": "Grenze Zweckbetriebe und Geschäftsbetrieb zusammen",
           "smallBusinessPrevYear": "Kleinunternehmergrenze Vorjahr",
           "smallBusinessCurrentYear": "Kleinunternehmergrenze laufendes Jahr",
           "allowanceVolunteer": "Ehrenamtspauschale",
           "allowanceTrainer": "Übungsleiterpauschale",
+          "organMemberLiabilityLimit": "Vergütungsgrenze für die Haftung von Organmitgliedern",
           "simplifiedReceiptLimit": "Grenze vereinfachter Beleg",
           "warnAtPercent": "Warnmarke",
           "mileageRate": "Kilometerpauschale",
@@ -6366,7 +7735,13 @@
           "waiverClaimMonths": "Verzichtsfrist regelmäßige Ansprüche",
           "waiverOneOffMonths": "Verzichtsfrist einmalige Ansprüche",
           "lateFinalizeCashDays": "Frist für spät festgeschriebenes Bargeld",
-          "taxation": "Besteuerungsform"
+          "taxation": "Besteuerungsform",
+          "vatEntrepreneur": "Umsatzsteuerlich Unternehmer",
+          "vatId": "Umsatzsteuer-Identifikationsnummer",
+          "vatAdvancePeriod": "Voranmeldungszeitraum",
+          "vatAdvanceExempt": "Befreiung von der Voranmeldung",
+          "vatPermanentExtension": "Dauerfristverlängerung",
+          "taxOfficeState": "Bundesland des Finanzamts"
         },
         "toast": {
           "set": "Wert gesetzt.",
@@ -6383,11 +7758,10 @@
         },
         "notConfirmed": "Noch nicht bestätigt.",
         "switchesSaved": "Schalter gespeichert.",
-        "isEntrepreneurOrHasVatId": "Ist der Verein Unternehmer oder hat eine Umsatzsteuer-Identifikationsnummer?",
         "membershipFeesCertifiable": "Sind Mitgliedsbeiträge bescheinigungsfähig?",
         "expenseWaiversEnabled": "Werden Aufwandsspenden angeboten?",
         "mcpHumanOnlyAllowed": "Darf ein Agent festschreiben und Lastschriften bearbeiten?",
-        "mcpHumanOnlyAllowedHint": "Eingeschaltet darf ein Agent auch festschreiben, freigeben, Bestätigungen ausstellen und Mandate, Lastschriftdateien und Einzüge bearbeiten; ob er das darf, entscheidet der Verein nur hier in Kompass, nicht über einen Agenten.",
+        "mcpHumanOnlyAllowedHint": "Eingeschaltet darf ein Agent auch festschreiben, freigeben, Bestätigungen ausstellen, Mandate, Lastschriftdateien und Einzüge bearbeiten und die Schritte der Kassenprüfung gehen (Stichproben, Vermerke, Prüfbericht, Zugang beenden); ob er das darf, entscheidet der Verein nur hier in Kompass, nicht über einen Agenten.",
         "limits": {
           "statementSufficesBelowCents": "Bis zu welchem Betrag genügt der Kontoauszug als Beleg?",
           "cashDonationAlertCents": "Ab welchem Betrag soll eine Barspende auffallen?",
@@ -6401,7 +7775,7 @@
           "label": "Anspruchsgrundlage für Aufwandsspenden",
           "agreedOnLabel": "Gilt ab",
           "agreedOnHint": "Tag der Vereinbarung oder des Satzungsbeschlusses. Kompass prüft damit, ob der Anspruch vor der Aufwendung vereinbart war.",
-          "hint": "Vereinbarung vom … / Satzung § … — ein Vertrag oder die Satzung. Ein Vorstandsbeschluss ohne Ermächtigung in der Satzung genügt nicht. Kompass kopiert den Text beim Einreichen an jeden Antrag mit Verzicht.",
+          "hint": "Vereinbarung vom … / Satzung §\u00a0… — ein Vertrag oder die Satzung. Ein Vorstandsbeschluss ohne Ermächtigung in der Satzung genügt nicht. Kompass kopiert den Text beim Einreichen an jeden Antrag mit Verzicht.",
           "saved": "Anspruchsgrundlage gespeichert."
         },
         "boardRemuneration": {
@@ -6412,6 +7786,92 @@
           "validFromLabel": "Gilt ab",
           "validFromHint": "Ab diesem Tag trägt die Grundlage Pauschalen an Vorstandsmitglieder; frühere Zahlungen bleiben als „ohne Grundlage“ markiert.",
           "hint": "Ohne „Ja“ mit Satzungsfundstelle warnt die Personenübersicht bei jeder Pauschale an ein Vorstandsmitglied."
+        }
+      },
+      "vat": {
+        "suggestion": "Kompass schlägt „Ja“ vor: {year} gibt es Einnahmen aus Zweckbetrieb oder wirtschaftlichem Geschäftsbetrieb ({names}, {amount}). Wer Leistungen gegen Entgelt erbringt, ist Unternehmer, auch als Kleinunternehmer.",
+        "validFrom": {
+          "label": "Gilt ab",
+          "hint": "Der neue Stand gilt ab diesem Tag. Frühere Stände bleiben für ihre Zeit."
+        },
+        "yesNo": {
+          "yes": "Ja",
+          "no": "Nein"
+        },
+        "entrepreneur": {
+          "label": "Ist der Verein Unternehmer im Sinne des Umsatzsteuergesetzes?"
+        },
+        "notEntrepreneur": "Keine eigenen Umsätze mit Umsatzsteuer. Steuer kann trotzdem anfallen: für Leistungen ausländischer Anbieter, bei denen der Verein die Steuer schuldet (§\u00a013b UStG), und für Wareneinkäufe aus der EU über 12.500 € im Jahr. Für diese Quartale zeigt Kompass die Voranmeldung.",
+        "taxation": {
+          "label": "Besteuerung",
+          "change": "Ändern unter {tab}",
+          "since": "{name} seit {date}",
+          "smallBusiness": "Kleinunternehmer (§\u00a019 UStG)",
+          "regular": "Regelbesteuerung"
+        },
+        "vatId": {
+          "label": "USt-IdNr.",
+          "recommended": "Für Leistungen aus dem EU-Ausland (z. B. Werbung) empfiehlt sich eine USt-IdNr.",
+          "hint": "Wer sie bei EU-Warenlieferanten verwendet, verzichtet auf die Erwerbsschwelle.",
+          "notEntrepreneur": "Mit USt-IdNr. schuldet der Verein auch für Dienstleistungen aus der EU die Steuer (§\u00a03a Abs. 2 S. 3 UStG)."
+        },
+        "advancePeriod": {
+          "label": "Voranmeldungszeitraum",
+          "auto": "Automatisch",
+          "quarter": "Quartal",
+          "month": "Monat",
+          "autoHint": "Automatisch: nach der Steuer des Vorjahrs, zurzeit {kind, select, month {Monat} other {Quartal}}."
+        },
+        "advanceExempt": {
+          "label": "Vom Finanzamt befreit",
+          "hint": "Nur mit Bescheid. Dann keine Voranmeldungen; die Jahreserklärung bleibt."
+        },
+        "permanentExtension": {
+          "label": "Dauerfristverlängerung",
+          "hint": "Mit Bescheid: Die Frist ist der 10. des zweiten Folgemonats.",
+          "specialPrepayment": "Bei monatlicher Abgabe verlangt das Finanzamt dafür eine Sondervorauszahlung (§\u00a047 UStDV)."
+        },
+        "taxOfficeState": {
+          "label": "Bundesland des Finanzamts",
+          "hint": "Optional. Fällt eine Frist auf einen Feiertag, gilt der nächste Werktag.",
+          "none": "Nur bundesweite Feiertage"
+        },
+        "states": {
+          "BW": "Baden-Württemberg",
+          "BY": "Bayern",
+          "BE": "Berlin",
+          "BB": "Brandenburg",
+          "HB": "Bremen",
+          "HH": "Hamburg",
+          "HE": "Hessen",
+          "MV": "Mecklenburg-Vorpommern",
+          "NI": "Niedersachsen",
+          "NW": "Nordrhein-Westfalen",
+          "RP": "Rheinland-Pfalz",
+          "SL": "Saarland",
+          "SN": "Sachsen",
+          "ST": "Sachsen-Anhalt",
+          "SH": "Schleswig-Holstein",
+          "TH": "Thüringen"
+        },
+        "saved": "Umsatzsteuer gespeichert.",
+        "history": {
+          "title": "Stände",
+          "validFrom": "Gilt ab",
+          "entrepreneur": "Unternehmer",
+          "vatId": "USt-IdNr.",
+          "period": "Zeitraum",
+          "extension": "Dauerfrist",
+          "actions": "Aktionen",
+          "yes": "ja",
+          "no": "nein",
+          "name": "Stand ab {date}",
+          "remove": "Entfernen …",
+          "removeTitle": "Stand entfernen",
+          "removeDescription": "Die Werte ab {date} werden entfernt. Danach gilt wieder der vorige Stand, auch für die Fristen.",
+        "removeImpact": "{count, plural, =0 {In der Zeit, für die er gilt, steht keine festgeschriebene Buchung.} one {Das betrifft eine festgeschriebene Buchung: Für sie gilt danach der vorige Stand.} other {Das betrifft # festgeschriebene Buchungen: Für sie gilt danach der vorige Stand.}}",
+          "removeConfirm": "Entfernen",
+          "removed": "Stand entfernt."
         }
       },
       "permissions": {
@@ -6450,6 +7910,19 @@
         "digits": "Stellen",
         "example": "Beispiel: {example}",
         "saved": "Lastschrift-Einstellungen gespeichert."
+      },
+      "reports": {
+        "cashReport": "Kassenbericht",
+        "cashReportIntro": "Wie der Kassenbericht gedruckt wird. Festgeschriebene Fassungen behalten ihren Stand.",
+        "statute": "Satzung",
+        "statuteIntro": "Für die Amtsübergabe: Ist das Schatzmeisteramt Teil des Vorstands nach §\u00a026 BGB, erinnert Kompass an die Anmeldung zum Vereinsregister.",
+        "treasurerIsStatutoryBoard": "Schatzmeister ist Vorstand nach §\u00a026 BGB",
+        "treasurerIsStatutoryBoardHint": "Ohne Angabe nennt Kompass die Anmeldung immer.",
+        "board": { "yes": "Ja", "no": "Nein", "unknown": "Keine Angabe" },
+        "statuteReference": "Satzungsfundstelle des Jahresberichts",
+        "statuteReferenceHint": "Erscheint im Untertitel: „Kassenteil des Jahresberichts nach …“, z. B. „§\u00a09 Nr. 3 der Satzung“.",
+        "cashReportSignature": "Unterschriftszeile für den Vorstand",
+        "saved": "Einstellungen der Berichte gespeichert."
       }
     },
     "csvAssistant": {
@@ -6720,6 +8193,7 @@
           "paidOtherwise": "{count, plural, one {Ein Posten dieses Einzugs war} other {# Posten dieses Einzugs waren}} schon anders bezahlt; die Bank hat {amount} trotzdem eingezogen. Erstatten Sie den Betrag oder veranlassen Sie eine Rückgabe. Das Festschreiben verlangt eine Bestätigung."
         },
         "foreignIban": "Die IBAN ist nicht deutsch. Prüfen Sie, ob es eine Zahlung ins Ausland ist.",
+        "ruleTaxCodeNotOffered": "Regel „{rule}“: Kennzeichen „{code}“ gilt für den Verein nicht mehr.",
         "originIsDraft": "Ursprung noch nicht festgeschrieben: Die zurückgegebene Zahlung ist erst ein Entwurf. Schreiben Sie ihn zuerst fest, dann bezieht sich die Rückgabe auf seine Zeilen.",
         "readOnly": "Übernehmen braucht das Recht „Buchungen vorbereiten“.",
         "summaryLine": "{category}: {amount}"
@@ -7002,6 +8476,8 @@
         "creditNote": "Gutschrift",
         "tax": "Umsatzsteuer",
         "taxLine": "{rate} %: {amount}",
+        "taxLineReverseCharge": "{rate} %, Umkehr der Steuerschuld (AE)",
+        "taxFromInvoice": "Vorgabe aus der Rechnung: {code}. In der Buchung änderbar.",
         "taxDifference": "Weicht um {cents} Cent vom berechneten Wert ab — wird nicht gespeichert.",
         "due": "Fällig am",
         "iban": "IBAN",
@@ -7105,7 +8581,7 @@
       },
       "sentValue": "{date} · {via}",
       "noticeKind": {
-        "section60a": "vorläufige Anerkennung (§ 60a)",
+        "section60a": "vorläufige Anerkennung (§\u00a060a)",
         "exemptionNotice": "Freistellungsbescheid",
         "corporateTaxNoticeAttachment": "Anlage zum Körperschaftsteuerbescheid"
       },
@@ -7402,19 +8878,23 @@
           "assessmentPeriod": "Veranlagungszeitraum",
           "assessmentPeriodHint": "Ein Jahr wie 2023 oder ein Zeitraum wie 2021–2023.",
           "purposesText": "Begünstigte Zwecke im Wortlaut",
-          "purposesHint": "Im Genitiv, ohne „Förderung“ — z. B. „des Tierschutzes (§ 52 Abs. 2 Satz 1 Nr. 14 AO)“. So stehen sie auf jeder Bestätigung.",
-          "purposesTextAccusative": "Begünstigte Zwecke, im Akkusativ (§ 60a)",
-          "purposesTextAccusativeHint": "Dieselben Zwecke im Akkusativ, wie in „Wir fördern nach unserer Satzung …“ — z. B. „den Tierschutz (§ 52 Abs. 2 Satz 1 Nr. 14 AO)“.",
+          "purposesHint": "Im Genitiv, ohne „Förderung“ — z. B. „des Tierschutzes (§\u00a052 Abs. 2 Satz 1 Nr. 14 AO)“. So stehen sie auf jeder Bestätigung.",
+          "purposesTextAccusative": "Begünstigte Zwecke, im Akkusativ (§\u00a060a)",
+          "purposesTextAccusativeHint": "Dieselben Zwecke im Akkusativ, wie in „Wir fördern nach unserer Satzung …“ — z. B. „den Tierschutz (§\u00a052 Abs. 2 Satz 1 Nr. 14 AO)“.",
           "previewTitle": "So stehen die Sätze auf der Bestätigung",
           "section60aQuestion": "Wurde bereits ein Freistellungsbescheid erteilt?",
           "yes": "Ja",
           "no": "Nein",
-          "section60aRefused": "Dann erfassen Sie bitte den Freistellungsbescheid — nach ihm gilt die vorläufige Anerkennung (§ 60a) nicht mehr.",
+          "section60aRefused": "Dann erfassen Sie bitte den Freistellungsbescheid — nach ihm gilt die vorläufige Anerkennung (§\u00a060a) nicht mehr.",
           "switchToExemption": "Freistellungsbescheid erfassen",
           "save": "Speichern",
           "cancel": "Abbrechen",
           "documentTitle": "Dokument zum Bescheid",
           "documentHint": "Reichen Sie den Bescheid als PDF nach — er wird in der Akte abgelegt und mit dem Bescheid verknüpft. Sie können das auch später tun.",
+          "bankHint": "Legen Sie Ihrer Bank eine Kopie des neuen Bescheids vor.",
+          "bankFollowUp": "Wiedervorlage anlegen …",
+          "bankFollowUpTitle": "Kopie des Bescheids der Bank vorlegen",
+          "bankFollowUpTarget": "Bescheid vom {date}",
           "pickFromArchive": "Oder aus der Akte wählen",
           "done": "Fertig"
         },
@@ -7722,9 +9202,11 @@
             "inKindUndescribed": "Sachspende nicht beschrieben",
             "expenseWaiverUnconfirmed": "Aufwandsspende nicht bestätigt",
             "anonymous": "Anonym, ohne Kontakt",
-            "other": "Sonstige"
+            "other": "Sonstige",
+            "confirmedAboveReturns": "Bestätigt über Rückgaben hinaus",
+            "returnOtherYear": "Rückgabe in einem anderen Jahr"
           },
-          "toCorrect": "Zu korrigieren",
+          "toCorrect": "Davon <link>in Bestätigungen zu korrigieren</link>: {count, plural, one {# Bestätigung} other {# Bestätigungen}}, {amount}{without, plural, =0 {} other {; davon ohne Auswirkung auf den Betrag: #}}.",
           "balanced": "Zuwendungen und Bestätigungen stimmen überein."
         },
         "simplified": {
@@ -8043,6 +9525,17 @@
           }
         }
       },
+      "taxDetails": {
+        "title": "Steuerdaten",
+        "intro": "Für Vermögensausstattungen in der Anlage Gem.",
+        "taxOffice": "Finanzamt",
+        "taxNumber": "Steuernummer",
+        "purpose": "Begünstigter Zweck",
+        "purposeHint": "Der Zweck nach §\u00a052 Abs. 2 AO, wie im Freistellungsbescheid der Körperschaft.",
+        "purposeNone": "Kein Zweck gewählt",
+        "purposeNumber": "Nr. {n}",
+        "readOnly": "Ändern darf, wer buchen darf."
+      },
       "payment": {
         "back": "zum Partner",
         "heading": "Zahlung an Partner · {label}",
@@ -8057,6 +9550,8 @@
           }
         },
         "retroactiveWarn": "Nachträgliche Freigabe: Das Geld ist schon überwiesen. Die Freigabe prüft im Nachhinein und trägt dieses Kennzeichen.",
+        "assetEndowment": "Vermögensausstattung (§\u00a058 Nr. 3 AO)",
+        "assetEndowmentHint": "Mittel, die eine andere steuerbegünstigte Körperschaft dauerhaft ausstatten. Erscheint in Zeile 64/65 der Anlage Gem.",
         "proof": {
           "label": "Nachweisfrist",
           "months": "{count, plural, one {# Monat} other {# Monate}} nach Zahlung",
@@ -8086,6 +9581,7 @@
           "category": "Kategorie",
           "project": "Projekt",
           "paidFrom": "Bezahlt aus",
+          "paidFromFreeFunds": "Bezahlt aus freien Mitteln",
           "freeFunds": "freie Mittel",
           "goodsLine": "Ausgabe",
           "remove": "Entfernen"
@@ -8115,7 +9611,8 @@
         "head": {
           "withDue": "{basis} · {amount} · Nachweisfrist {date}",
           "withMonths": "{basis} · {amount} · Nachweisfrist {count, plural, one {# Monat} other {# Monate}} nach der Zahlung",
-          "retroactive": "nachträglich freigegeben — das Geld war schon überwiesen"
+          "retroactive": "Nachträglich freigegeben. Das Geld war schon überwiesen.",
+          "assetEndowment": "Vermögensausstattung (§\u00a058 Nr. 3 AO) — erscheint in Zeile 64/65 der Anlage Gem"
         },
         "acknowledge": {
           "rule": "Anerkennen geht, wenn alle Pflichtarten da sind{coverage, select, yes {, jede fremdsprachige mit deutscher Erläuterung, und der Betrag gedeckt ist} other { und jede fremdsprachige eine deutsche Erläuterung hat}}. Anerkennen kann eine zweite Person mit „Freigeben“ — nie, wer den Vorgang angelegt hat (hier: {creator}).",
@@ -8169,7 +9666,7 @@
           "complete": "ergänzen",
           "completeSave": "Speichern",
           "removeKind": "{kind}: letzten Nachweis entfernen",
-          "foreignHint": "Bei fremdsprachigen Dokumenten ist eine deutsche Erläuterung Pflicht — sie steht am Nachweis, nicht im Dokument.",
+          "foreignHint": "Bei fremdsprachigen Dokumenten ist eine deutsche Erläuterung Pflicht. Sie steht am Nachweis, nicht im Dokument.",
           "coverageLabel": "Belegt",
           "coverageFigure": "{covered} von {total}",
           "coverageRest": "{rest} noch nicht belegt",
@@ -8451,7 +9948,7 @@
       "create": "Geld zurücklegen",
       "cap": {
         "approximation": "Näherung, den genauen Wert nennt Ihre Steuerberatung.",
-        "derivation": "{assetShare} % des Überschusses der Vermögensverwaltung ({asset}) plus {otherShare} % der übrigen zeitnah zu verwendenden Mittel ({other}).",
+        "derivation": "{assetShare} des Überschusses der Vermögensverwaltung ({asset}) plus {otherShare} % der übrigen zeitnah zu verwendenden Mittel ({other}).",
         "derivationInfo": "Rechnung zum Höchstbetrag {year}",
         "label": "Höchstbetrag der freien Rücklage {year}: {cap}",
         "labelProvisional": "Höchstbetrag der freien Rücklage {year} (vorläufig, Jahr nicht abgeschlossen): {cap}",
@@ -8477,10 +9974,10 @@
         "participation": "Beteiligung"
       },
       "kindHints": {
-        "projectFunds": "§ 62 Abs. 1 Nr. 1 AO",
-        "replacement": "§ 62 Abs. 1 Nr. 2 AO",
-        "free": "§ 62 Abs. 1 Nr. 3 AO",
-        "participation": "§ 62 Abs. 1 Nr. 4 AO"
+        "projectFunds": "§\u00a062 Abs. 1 Nr. 1 AO",
+        "replacement": "§\u00a062 Abs. 1 Nr. 2 AO",
+        "free": "§\u00a062 Abs. 1 Nr. 3 AO",
+        "participation": "§\u00a062 Abs. 1 Nr. 4 AO"
       },
       "dissolved": "aufgelöst",
       "movementTrigger": "Vorgang …",
@@ -9042,6 +10539,43 @@
         "endConfirm": "Beenden"
       }
     },
+    "contactVat": {
+      "title": "Umsatzsteuer",
+      "reverseCharge": "Rechnungen mit Umkehr der Steuerschuld (§\u00a013b)",
+      "reverseChargeHint": "Jede Ausgabe an diesen Kontakt bekommt das Kennzeichen als Vorgabe.",
+      "seat": "Anbieter sitzt",
+      "eu": "in der EU",
+      "other": "im Drittland",
+      "decline": "Kompass fragt hier nicht nach §\u00a013b: {reason}. {person}, {date}.",
+      "askAgain": "Wieder fragen"
+    },
+    "reverseChargePrompt": {
+      "question": "Ist das eine Leistung nach §\u00a013b?",
+      "trigger": {
+        "text": "Der Text enthält „{phrase}“ (Seite {page}).",
+        "textInvoice": "Die elektronische Rechnung kennzeichnet die Umkehr der Steuerschuld.",
+        "foreignNoTax": "Der Anbieter sitzt in {country}; weder Steuer noch Kennzeichen sind gesetzt. Dann schuldet der Verein die Umsatzsteuer, auch wenn der Hinweis auf der Rechnung fehlt.",
+        "foreignVat": "Die Rechnung weist Umsatzsteuer aus {country} aus ({rate} %). Die deutsche Steuer ist trotzdem fällig.",
+        "germanVatAbroad": "Ein Anbieter aus {country} weist deutsche Umsatzsteuer aus ({rate} %), aber keine deutsche USt-IdNr. Bitte prüfen; hinterlegt der Verein seine USt-IdNr. beim Anbieter, schuldet er die Steuer nach §\u00a013b.",
+        "unknownCountry": "dem Ausland"
+      },
+      "yes": "Ja, §\u00a013b",
+      "no": "Nein, weil …",
+      "remember": "Mit „Ja“ bei {contact} künftig immer so",
+      "reasonsLabel": "Grund",
+      "reasons": {
+        "paymentServices": "Steuerfreie Zahlungsabwicklung (z. B. Gebühren eines Zahlungsdienstes)",
+        "domesticProvider": "Der Anbieter ist inländisch",
+        "exception13b6": "Ausnahme von §\u00a013b",
+        "other": "Sonstiges"
+      },
+      "otherText": "Welcher Grund?",
+      "otherRequired": "Bitte nennen Sie den Grund.",
+      "rememberNo": "Kompass fragt bei {contact} nicht wieder.",
+      "changeAtContact": "Ändern am Kontakt.",
+      "rememberNoWithoutContact": "Kompass fragt bei dieser Buchung nicht wieder.",
+      "save": "Speichern"
+    },
     "contactIbans": {
       "title": "Bankverbindungen",
       "add": "IBAN hinzufügen …",
@@ -9083,9 +10617,293 @@
       "openMandate": "Mandat ansehen"
     },
     "errors": {
+      "carryOverTargetClosed": {
+        "reason": "Das Folgejahr „{designation}“ ist schon abgeschlossen; eine Übernahme änderte seine festgeschriebenen Berichte.",
+        "remedy": "Öffnen Sie „{designation}“ wieder oder schließen Sie die Nachprüfung mit einem Nachtrag der Prüfer."
+      },
+      "handoverCashCounted": {
+        "reason": "Die Kasse ist zu dieser Übergabe schon gezählt.",
+        "remedy": "Eine zweite Zählung gehört nicht zur Übergabe; zählen Sie bei Bedarf über die Kasse."
+      },
+      "taxPeriodOverlap": {
+        "reason": "Das Geschäftsjahr „{designation}“ gehört schon zum Erklärungszeitraum „{period}“.",
+        "remedy": "Wählen Sie Jahre, die noch in keinem Zeitraum stehen, oder ändern Sie den bestehenden Zeitraum."
+      },
+      "taxReturnNotFinal": {
+        "reason": "Für den Erklärungszeitraum „{period}“ sind die Werte für die Anlage Gem noch nicht festgeschrieben; abgegeben wird eine festgeschriebene Fassung.",
+        "remedy": "Schreiben Sie die Werte für die Anlage Gem fest und tragen Sie dann den Tag der Abgabe ein."
+      },
+      "taxPeriodNotFiled": {
+        "reason": "Die Steuererklärung „{period}“ ist noch nicht als abgegeben eingetragen; ein Bescheid gehört zu einer abgegebenen Erklärung.",
+        "remedy": "Tragen Sie zuerst den Tag der Abgabe ein."
+      },
+      "taxPeriodNoticeLinked": {
+        "reason": "Zur Steuererklärung „{period}“ ist schon ein Bescheid verknüpft; die Abgabe lässt sich darum nicht mehr zurücknehmen.",
+        "remedy": "Stimmt der Tag nicht, tragen Sie den richtigen Tag der Abgabe ein."
+      },
+      "taxPeriodFiled": {
+        "reason": "Die Erklärung „{period}“ ist abgegeben.",
+        "remedy": "Nehmen Sie die Abgabe zurück, um Angaben zu ändern."
+      },
+      "taxPeriodYearsLocked": {
+        "reason": "Zum Erklärungszeitraum „{period}“ gibt es eine festgeschriebene Fassung der Werte für die Anlage Gem; seine Jahre stehen fest.",
+        "remedy": "Ändern Sie nur Tage und Frist. Für andere Jahre legen Sie einen eigenen Zeitraum an."
+      },
+      "vatReturnNotDue": {
+        "reason": "Für {period} ist keine Umsatzsteuer-Jahreserklärung fällig: Der Verein ist nicht regelbesteuert, und es gibt keine Zeilen nach §\u00a013b UStG und keinen innergemeinschaftlichen Erwerb.",
+        "remedy": "Für dieses Jahr ist nichts einzutragen."
+      },
+      "vatAdvanceReturnNotDue": {
+        "reason": "Für {period} ist keine Umsatzsteuer-Voranmeldung fällig, oder der Zeitraum passt nicht zur Zeitraumart des Jahres.",
+        "remedy": "Tragen Sie die Abgabe für einen Zeitraum mit Frist unter „Fristen“ ein."
+      },
+      "vatFilingNotLatest": {
+        "reason": "Für {vatPeriod} gibt es eine spätere Abgabe.",
+        "remedy": "Ändern lässt sich nur die letzte Abgabe eines Zeitraums."
+      },
+      "vatAmendmentNotDue": {
+        "reason": "{vatPeriod} ist schon am {filedOn} als abgegeben eingetragen. Eine Berichtigung ist nicht fällig: Die Kennzahlen des Zeitraums sind seitdem gleich.",
+        "remedy": "Ist der Tag falsch, ändern Sie die eingetragene Abgabe."
+      },
+      "vatFilingNotFinalized": {
+        "reason": "Zur Abgabe für {vatPeriod} gibt es noch keine festgeschriebene Fassung.",
+        "remedy": "Schreiben Sie die Voranmeldung fest; danach lässt sich die abgegebene Fassung ablegen. Das ELSTER-Protokoll geht schon jetzt."
+      },
+      "handoverSamePerson": {
+        "reason": "Wer übergibt, übernimmt nicht zugleich.",
+        "remedy": "Wählen Sie zwei verschiedene Personen."
+      },
+      "handoverOpen": {
+        "reason": "Es läuft schon eine Amtsübergabe.",
+        "remedy": "Schließen Sie sie ab oder brechen Sie sie ab."
+      },
+      "handoverNotOpen": {
+        "reason": "Diese Amtsübergabe ist nicht mehr offen.",
+        "remedy": "Beginnen Sie bei Bedarf eine neue."
+      },
+      "handoverDone": {
+        "reason": "Das Übergabeprotokoll ist schon abgelegt; die Übergabe ist abgeschlossen.",
+        "remedy": "Eine abgeschlossene Übergabe bleibt, wie sie ist."
+      },
+      "handoverInterimRecorded": {
+        "reason": "Der Zwischenbericht ist schon festgehalten; Tag und Personen gehören zu ihm.",
+        "remedy": "Brechen Sie die Übergabe ab und beginnen Sie sie neu."
+      },
+      "handoverInFuture": {
+        "reason": "Der Übergabetag {date} liegt in der Zukunft.",
+        "remedy": "Halten Sie den Zwischenbericht am Übergabetag oder danach fest."
+      },
+      "handoverNoCash": {
+        "reason": "Es gibt keine aktive Barkasse; zu zählen ist nichts.",
+        "remedy": "Der Schritt entfällt."
+      },
+      "handoverStepsOpen": {
+        "reason": "Für das Protokoll fehlen noch der Zwischenbericht oder die Kassenzählung am Übergabetag.",
+        "remedy": "Erledigen Sie zuerst die Schritte der Übergabe."
+      },
+      "witnessIsCounter": {
+        "reason": "Wer zählt, ist nicht zugleich Zeuge.",
+        "remedy": "Wählen Sie als Zeugen eine Person, die nicht zählt."
+      },
+      "assemblyYearOpen": {
+        "reason": "„{designation}“ ist noch nicht abgeschlossen; die Mitgliederversammlung entscheidet über ein abgeschlossenes Jahr.",
+        "remedy": "Schließen Sie das Jahr zuerst ab."
+      },
+      "assemblyNotRecorded": {
+        "reason": "Für „{designation}“ ist noch kein Ergebnis der Mitgliederversammlung eingetragen.",
+        "remedy": "Tragen Sie zuerst das Ergebnis der Mitgliederversammlung ein."
+      },
+      "closingStepNotConfirmable": {
+        "reason": "Schritt {step} lässt sich gerade nicht bestätigen: Entwürfe und unbegründete Buchungen ohne Beleg werden erledigt, nicht bestätigt, und ohne offenen Punkt gibt es nichts zu bestätigen.",
+        "remedy": "Erledigen Sie zuerst, was der Schritt nennt."
+      },
+      "reportStatementsMissing": {
+        "reason": "Für „{designation}“ fehlt der Kontoauszug als PDF: {accounts}.",
+        "remedy": "Legen Sie den Auszug am Konto ab oder begründen Sie im Jahresabschluss, warum er fehlt."
+      },
+      "statementNotForCash": {
+        "reason": "Eine Barkasse hat keinen Kontoauszug der Bank.",
+        "remedy": "Legen Sie für die Kasse das Zählprotokoll ab."
+      },
+      "accountKindMismatch": {
+        "reason": "Diese Bestätigung passt nicht zur Art des Kontos: Saldo und „nicht abstimmbar“ gelten für Zahlungsdienste, die Begründung eines fehlenden Auszugs für Bankkonten.",
+        "remedy": "Wählen Sie die Bestätigung, die zum Konto passt."
+      },
       "humanOnly": {
         "reason": "Dieser Schritt geht über einen Agenten erst, wenn der Verein es freigibt.",
         "remedy": "Einrichtung → Finanzen → Steuerliches → „Darf ein Agent festschreiben und Lastschriften bearbeiten?“ einschalten."
+      },
+      "reportUnknown": {
+        "reason": "Diesen Bericht gibt es nicht.",
+        "remedy": "Wählen Sie einen Bericht aus der Liste unter Finanzen → Berichte."
+      },
+      "reportUnavailable": {
+        "reason": "Dieser Bericht ist noch nicht verfügbar.",
+        "remedy": "Er kommt mit einer späteren Fassung von Kompass."
+      },
+      "reportYearOpen": {
+        "reason": "Das Geschäftsjahr „{designation}“ ist noch offen.",
+        "remedy": "Festschreiben geht erst, wenn das Jahr abgeschlossen ist. Bis dahin ist der Bericht vorläufig."
+      },
+      "reportPeriodOpen": {
+        "reason": "Der Zeitraum „{vatPeriod}“ endet erst am {endsOn}.",
+        "remedy": "Festschreiben geht ab dem Tag nach dem Ende des Zeitraums. Bis dahin sind die Werte vorläufig."
+      },
+      "vatFormMissing": {
+        "reason": "Für {year} kennt Kompass keine Kennzahlen der Umsatzsteuer-Voranmeldung.",
+        "remedy": "Kompass führt Voranmeldungen ab 2025. Ältere Zeiträume tragen Sie direkt in ELSTER ein."
+      },
+      "reportNotReleased": {
+        "reason": "Die Berichte für „{designation}“ sind noch nicht zum Festschreiben freigegeben.",
+        "remedy": "Legen Sie den Prüfbericht ab oder bestätigen Sie, warum es keinen schriftlichen gibt."
+      },
+      "reportNotFinalizable": {
+        "reason": "Dieser Bericht ist eine Arbeitsliste und wird nicht festgeschrieben.",
+        "remedy": "Laden Sie ihn herunter, wenn Sie den Stand aufheben möchten."
+      },
+      "reportAlreadyFinal": {
+        "reason": "Dieser Datenstand ist schon als „{documentNumber}“ festgeschrieben.",
+        "remedy": "Die festgeschriebene Fassung steht in der Akte."
+      },
+      "reportDataChanged": {
+        "reason": "Die Zahlen haben sich während des Festschreibens geändert.",
+        "remedy": "Sehen Sie sich die Vorschau noch einmal an und schreiben Sie dann fest."
+      },
+      "reportBaseUnavailable": {
+        "reason": "Die Basisvorlage „{base}“ für den Bericht ist nicht verfügbar.",
+        "remedy": "Prüfen Sie unter Einrichtung → Dokumentvorlagen, ob die Basis vorhanden ist und die Probe besteht."
+      },
+      "releaseLocked": {
+        "reason": "Die Freigabe für „{designation}“ lässt sich nicht mehr ändern: Mindestens ein Bericht ist auf ihrer Grundlage festgeschrieben.",
+        "remedy": "Ein Fehler im Jahr geht über Wiederöffnen; danach lässt sich neu freigeben."
+      },
+      "auditorNotPerson": {
+        "reason": "Als Prüfer lässt sich nur eine Person eintragen, keine Organisation.",
+        "remedy": "Wählen Sie den Kontakt der Person, die prüft."
+      },
+      "auditorAlreadyListed": {
+        "reason": "Diese Person ist für das Jahr schon als Prüfer eingetragen.",
+        "remedy": "Bearbeiten Sie den vorhandenen Eintrag."
+      },
+      "auditorHasWork": {
+        "reason": "Der Prüfer hat schon Vermerke, Stichproben oder Teile des Prüfberichts hinterlassen und lässt sich nicht mehr austragen.",
+        "remedy": "Beenden Sie stattdessen den Zugang, wenn die Prüfung vorbei ist."
+      },
+      "auditorNotLinked": {
+        "reason": "Der Kontakt des Prüfers ist mit keinem Nutzer verknüpft; es gibt keinen Zugang zu beenden.",
+        "remedy": "Nichts zu tun — ohne Nutzer sieht der Prüfer nichts in Kompass."
+      },
+      "auditorAccessAlreadyEnded": {
+        "reason": "Der Nutzer des Prüfers hat die Rolle Kassenprüfer nicht mehr.",
+        "remedy": "Nichts zu tun — der Zugang ist schon beendet."
+      },
+      "auditorHasWriteRights": {
+        "reason": "Wer in den Finanzen schreibt, bearbeitet den Prüfbericht nicht — das tun die eingetragenen Prüfer.",
+        "remedy": "Bitten Sie die Prüfer des Jahres, den Bericht zu schreiben und zu unterschreiben; den Scan legt danach ab, wer das Jahr abschließen darf."
+      },
+      "auditorRequired": {
+        "reason": "Das dürfen nur die Prüfer, die für „{designation}“ als „prüft in Kompass“ eingetragen sind und selbst nicht in den Finanzen schreiben.",
+        "remedy": "Bitten Sie die Schatzmeisterin, Sie als Prüfer des Jahres einzutragen und Ihren Nutzer mit Ihrem Kontakt zu verknüpfen."
+      },
+      "entryNotInAuditYear": {
+        "reason": "Die Buchung ist keine festgeschriebene Buchung des Geschäftsjahres „{designation}“.",
+        "remedy": "Wählen Sie eine Buchung aus dem Journal des Prüfpakets."
+      },
+      "remarkOnBehalfNotPaper": {
+        "reason": "Im Namen eines anderen lässt sich nur für einen Prüfer auf Papier desselben Jahres eintragen.",
+        "remedy": "Wählen Sie bei „Von“ den Prüfer auf Papier oder sich selbst."
+      },
+      "remarkTargetNotInYear": {
+        "reason": "Der Vermerk muss an etwas aus dem Geschäftsjahr „{designation}“ hängen: einer Buchung, einem Beleg, einem Bericht oder dem Jahr.",
+        "remedy": "Öffnen Sie den Gegenstand über das Prüfpaket des Jahres und schreiben Sie den Vermerk dort."
+      },
+      "remarkResolved": {
+        "reason": "Der Vermerk ist schon als geklärt markiert.",
+        "remedy": "Ergibt sich noch etwas, gehört es in einen neuen Vermerk der Prüfer."
+      },
+      "auditReportYearOpen": {
+        "reason": "Das Geschäftsjahr „{designation}“ ist noch offen; einen Prüfbericht gibt es erst nach dem Abschluss.",
+        "remedy": "Bitten Sie die Schatzmeisterin, das Jahr abzuschließen."
+      },
+      "auditReportExists": {
+        "reason": "Für „{designation}“ gibt es diesen Bericht schon.",
+        "remedy": "Öffnen Sie den vorhandenen Bericht und arbeiten Sie dort weiter."
+      },
+      "auditFollowUpNotOpen": {
+        "reason": "Für „{designation}“ ist keine Nachprüfung offen; einen Nachtrag gibt es erst, wenn das Jahr nach dem abgelegten Bericht wieder geöffnet und erneut abgeschlossen wurde.",
+        "remedy": "Bearbeiten Sie den Prüfbericht des Jahres."
+      },
+      "auditReportReadyToSign": {
+        "reason": "Der Prüfbericht ist zum Unterschreiben freigegeben; sein Text steht fest.",
+        "remedy": "Nehmen Sie die Freigabe zurück, solange noch kein Scan liegt, und ändern Sie dann."
+      },
+      "auditReportNotReadyToSign": {
+        "reason": "Der Prüfbericht ist nicht zum Unterschreiben freigegeben.",
+        "remedy": "Geben Sie ihn zuerst zum Unterschreiben frei."
+      },
+      "auditReportIncomplete": {
+        "reason": "Zum Unterschreiben fehlen noch der Tag der Prüfung oder ein Ergebnis.",
+        "remedy": "Tragen Sie unter „Prüfung“ das Datum und unter „Ergebnis“ das Ergebnis ein; bei getrennten Berichten braucht jeder Prüfer in Kompass sein eigenes."
+      },
+      "auditReportScanFiled": {
+        "reason": "Zum Prüfbericht liegt schon ein unterschriebener Scan; die Freigabe lässt sich nicht mehr zurücknehmen.",
+        "remedy": "Ein Fehler im Jahr geht über Wiederöffnen und einen Nachtrag."
+      },
+      "auditBlankKompassAuditor": {
+        "reason": "Für „{designation}“ prüft jemand in Kompass; den Bericht schreiben die Prüfer dort selbst.",
+        "remedy": "Den Vordruck gibt es nur, wenn alle Prüfer des Jahres auf Papier prüfen."
+      },
+      "auditReportFiled": {
+        "reason": "Der Prüfbericht für „{designation}“ ist schon abgelegt.",
+        "remedy": "Nach einem Wiederöffnen gehört der neue Scan zum Nachtrag."
+      },
+      "auditWorkFixed": {
+        "reason": "Der Prüfbericht für „{designation}“ ist am {filedOn} abgelegt. Stichproben und Durchsicht stehen fest.",
+        "remedy": "Was Ihnen noch auffällt, schreiben Sie als Vermerk."
+      },
+      "auditReportViaAudit": {
+        "reason": "Mit dem schriftlichen Prüfbericht gibt das Ablegen des unterschriebenen Scans das Jahr frei.",
+        "remedy": "Legen Sie den Scan ab (hochladen oder aus der Akte wählen); die Freigabe folgt damit."
+      },
+      "auditPackageNoStorage": {
+        "reason": "Diese Installation hat kein Datenverzeichnis für Hintergrundläufe.",
+        "remedy": "Prüfen Sie DATA_PATH im Betrieb (Betriebshandbuch)."
+      },
+      "auditPackageNoBaseline": {
+        "reason": "Für „{designation}“ gibt es noch keinen Prüfstand.",
+        "remedy": "Schließen Sie das Jahr ab oder tragen Sie einen Prüfer ein; dann entsteht er."
+      },
+      "auditPackageOutdated": {
+        "reason": "Seit diesem Prüfpaket gibt es einen neuen Prüfstand.",
+        "remedy": "Erzeugen Sie das Prüfpaket neu."
+      },
+      "auditPackageFileMissing": {
+        "reason": "Diese Datei hat der letzte Lauf nicht erzeugt.",
+        "remedy": "Sehen Sie im Stand des Laufs nach, warum der Schritt übersprungen wurde, und erzeugen Sie das Prüfpaket neu."
+      },
+      "dataExportNoStorage": {
+        "reason": "Diese Installation hat kein Datenverzeichnis für Hintergrundläufe.",
+        "remedy": "Prüfen Sie DATA_PATH im Betrieb (Betriebshandbuch)."
+      },
+      "dataExportExpired": {
+        "reason": "Dieser Export ist älter als 30 Tage; Kompass hat das ZIP gelöscht.",
+        "remedy": "Erzeugen Sie den Export neu."
+      },
+      "reportGemIncomplete": {
+        "reason": "In den Werten für die Anlage Gem fehlen noch Angaben (offen: {missing}); festgeschrieben wird nur eine vollständige Fassung.",
+        "remedy": "Ergänzen Sie die Angaben unter „Ihre Angaben“ und die Steuerdaten von Empfängern und Gebern, dann schreiben Sie fest."
+      },
+      "gemFormMissing": {
+        "reason": "Für das Veranlagungsjahr {year} kennt Kompass keine Fassung der Anlage Gem; seit 2023 gibt es sie nur in Mein ELSTER.",
+        "remedy": "Wählen Sie einen Erklärungszeitraum, dessen letztes Jahr 2023 oder später endet."
+      },
+      "reportProbeFails": {
+        "reason": "Die Probe des Kassenberichts geht um {differenceCents} nicht auf: Anfangsbestände, Ergebnis und durchlaufende Gelder ergeben nicht die Endbestände.",
+        "remedy": "Das ist ein Fehler in den Daten. Prüfen Sie Anfangsbestände und Buchungen der Konten im Jahr; festschreiben lässt sich der Bericht erst, wenn die Probe aufgeht."
+      },
+      "otherAssetEnded": {
+        "reason": "Dieser Eintrag ist beendet.",
+        "remedy": "Ein beendeter Eintrag bleibt, wie er war. Legen Sie für einen neuen Bestand einen neuen Eintrag an."
       },
       "accountInUse": {
         "reason": "Auf dieses Konto ist bereits gebucht.",
@@ -9205,7 +11023,7 @@
       },
       "voucherTypeNotAllowed": {
         "reason": "Die Art „{type}“ gilt beim Verein nicht als Finanzbeleg.",
-        "remedy": "Wählen Sie eine der hinterlegten Belegarten, oder tragen Sie die Art unter Einrichtung → Finanzen nach."
+        "remedy": "Wählen Sie eine der hinterlegten Belegarten ({allowed}), oder tragen Sie die Art unter Einrichtung → Finanzen nach."
       },
       "documentNotFinal": {
         "reason": "Das Dokument ist noch ein Entwurf.",
@@ -9288,7 +11106,7 @@
         "remedy": "Lassen Sie eine andere Person mit dem Recht „Freigeben“ die Korrektur bestätigen."
       },
       "section153Unacknowledged": {
-        "reason": "Für das Geschäftsjahr ist die Steuererklärung bereits abgegeben — die Änderung berührt § 153 AO.",
+        "reason": "Für das Geschäftsjahr ist die Steuererklärung bereits abgegeben — die Änderung berührt §\u00a0153 AO.",
         "remedy": "Bestätigen Sie den Hinweis, um fortzufahren."
       },
       "correctionNotPending": {
@@ -9493,7 +11311,7 @@
       },
       "freeReserveCapExceeded": {
         "reason": "Die freie Rücklage läge damit {over} über dem Höchstbetrag von {cap} für dieses Jahr.",
-        "remedy": "Begründen Sie die Zuführung — die Begründung steht am Vorgang. Der Höchstbetrag ist eine Näherung nach § 62 Abs. 1 Nr. 3 AO; im Zweifel fragen Sie Ihre Steuerberatung."
+        "remedy": "Begründen Sie die Zuführung — die Begründung steht am Vorgang. Der Höchstbetrag ist eine Näherung nach §\u00a062 Abs. 1 Nr. 3 AO; im Zweifel fragen Sie Ihre Steuerberatung."
       },
       "reserveYearAmbiguous": {
         "reason": "Für diese Zuführung kommen zwei Geschäftsjahre in Frage: {previous} (noch nicht abgeschlossen) und {current}.",
@@ -10118,9 +11936,23 @@
       "recollectNeedsMandate": {
         "reason": "Erneut einziehen braucht ein aktives Mandat.",
         "remedy": "Wählen Sie „zur Überweisung auffordern“ oder „nicht mehr einfordern“, wenn das Mandat endet."
+      },
+      "cashNotRecomputable": {
+        "reason": "Für {account} gibt es keine spätere Zählung ohne Differenz, aus der Kompass den Bestand zum Stichtag rückrechnen kann.",
+        "remedy": "Zählen Sie die Kasse und klären Sie eine Differenz in der Kasse."
+      },
+      "releaseFollowUpOpen": {
+        "reason": "Für „{designation}“ ist die Nachprüfung offen; sie stellt die Freigabe wieder her.",
+        "remedy": "Klären Sie die Nachprüfung im Jahresabschluss, Schritt 10."
+      },
+      "handoverCashNotRequired": {
+        "reason": "Diese Kasse hat am Übergabetag keinen Bestand und muss nicht gezählt werden.",
+        "remedy": "Zählen Sie die Kassen, die die Übergabe nennt."
       }
     },
     "records": {
+      "handover": "Amtsübergabe vom {date}",
+      "assemblyResult": "Ergebnis der Mitgliederversammlung zu {designation}",
       "entry": "Buchung {number}",
       "entryDraft": "Buchungsentwurf {id}",
       "entryDocument": "Beleg (Halter läuft)",
@@ -10143,7 +11975,985 @@
       "mandate": "Mandat {reference}",
       "pledge": "Dauerspenden-Zusage",
       "importPersonalData": "Finanzen {year}: importierte Kontoumsätze",
-      "fiscalYear": "Geschäftsjahr {designation}"
+      "fiscalYear": "Geschäftsjahr {designation}",
+      "taxPeriod": "Erklärungszeitraum {period}",
+      "vatFiling": "Umsatzsteuer-Voranmeldung {period}",
+      "vatAnnualFiling": "Umsatzsteuer-Jahreserklärung {period}"
+    },
+    "audit": {
+      "title": "Kassenprüfung {year}",
+      "titleNoYear": "Kassenprüfung",
+      "yearChoice": "Jahr",
+      "noun": {
+        "one": "Abschnitt",
+        "other": "Abschnitte",
+        "dative": "Abschnitten"
+      },
+      "noYear": {
+        "title": "Noch kein Geschäftsjahr",
+        "text": "Die Kassenprüfung gilt einem abgeschlossenen Geschäftsjahr. Legen Sie unter Einrichtung › Finanzen das erste an."
+      },
+      "notAuditor": {
+        "title": "Sie sind für kein Jahr als Prüfer eingetragen.",
+        "text": "Die Schatzmeisterin trägt Sie für ein Geschäftsjahr ein und verknüpft Ihren Nutzer mit Ihrem Kontakt. Danach sehen Sie hier das Prüfpaket."
+      },
+      "head": {
+        "baseline": "Prüffassung vom {date}",
+        "reviewed": "{reviewed} von {total} Abschnitten durchgesehen",
+        "remarksOpen": "{count, plural, one {# Vermerk nicht geklärt} other {# Vermerke nicht geklärt}}",
+        "report": {
+          "missing": "Prüfbericht fehlt",
+          "draft": "Prüfbericht im Entwurf",
+          "readyToSign": "Prüfbericht zum Unterschreiben freigegeben",
+          "partial": "{filed} von {expected} Scans des Prüfberichts abgelegt"
+        },
+        "followUp": "Nachprüfung offen: Seit der Prüffassung vom {date} geändert: {count, plural, one {# Buchung} other {# Buchungen}}.",
+        "done": "Abgeschlossen am {date}. Der Prüfbericht liegt in der Akte.",
+        "doneConfirmed": "Abgeschlossen am {date}, Nachprüfung bestätigt am {confirmed}. Der Prüfbericht liegt in der Akte.",
+        "yearOpen": "Die Prüfung beginnt, wenn das Jahr abgeschlossen ist.",
+        "noAuditors": "Für {year} ist noch kein Prüfer eingetragen.",
+        "noAuditorsReader": "Für {year} ist noch kein Prüfer eingetragen; das macht die Schatzmeisterin.",
+        "withOthers": "Sie prüfen mit {names}.",
+        "alone": "Sie prüfen allein.",
+        "paperName": "{name} (auf Papier)",
+        "and": "und"
+      },
+      "auditors": {
+        "title": "Prüfer {year}",
+        "add": "Prüfer eintragen …",
+        "empty": "Noch kein Prüfer eingetragen.",
+        "mode": {
+          "kompass": "Prüft in Kompass",
+          "paper": "Prüft auf Papier"
+        },
+        "electedOn": "gewählt in der MV am {date}",
+        "confidential": "auf Vertraulichkeit verpflichtet",
+        "confidentialDocument": "Erklärung zur Vertraulichkeit in der Akte",
+        "notConfidential": "nicht verpflichtet",
+        "lastLogin": "zuletzt da {date}",
+        "neverLoggedIn": "noch nie angemeldet",
+        "accessOpen": "Zugang offen",
+        "accessEnded": "Zugang beendet am {date}",
+        "folder": "Mappe drucken",
+        "folderCreate": "Mappe erzeugen",
+        "packageRunning": "Prüfpaket wird erzeugt …",
+        "boardRole": "Hat {year} eine Vorstandsrolle (seit {since}).",
+        "boardRoleUntil": "Hat {year} eine Vorstandsrolle ({since} bis {until}).",
+        "involved": "{count, plural, one {Empfänger oder Freigeber in einem Vorgang} other {Empfänger oder Freigeber in # Vorgängen}}. Diese sollte {other} prüfen.",
+        "involvedNoOther": "{count, plural, one {Empfänger oder Freigeber in einem Vorgang} other {Empfänger oder Freigeber in # Vorgängen}}. Diese sollte ein anderer Prüfer prüfen.",
+        "involvedLink": "Vorgänge ansehen",
+        "access": {
+          "noUser": "Noch kein Zugang: Der Kontakt ist mit keinem Nutzer verknüpft.",
+          "inactive": "Noch kein Zugang: Der Nutzer ist nicht aktiv.",
+          "noRole": "Noch kein Zugang: Der Nutzer hat die Rolle Kassenprüfer nicht.",
+          "createUser": "Nutzer anlegen",
+          "openUser": "Nutzer aktivieren",
+          "giveRole": "Rolle vergeben",
+          "askAdmin": "Bitten Sie eine Person mit Nutzerverwaltung, den Zugang einzurichten."
+        },
+        "filedNotice": "Der Prüfbericht liegt seit {date}. {names} {count, plural, one {sieht} other {sehen}} die Finanzen noch. Beenden Sie den Zugang nach der Mitgliederversammlung.",
+        "filedNoticeAssembly": "Die MV war am {assembly}; beenden Sie den Zugang der Prüfer.",
+        "menu": {
+          "edit": "Bearbeiten …",
+          "endAccess": "Zugang beenden …",
+          "remove": "Austragen …"
+        },
+        "hasWork": "Der Prüfer hat schon Vermerke, Stichproben oder Teile des Prüfberichts hinterlassen.",
+        "remove": {
+          "title": "{name} austragen",
+          "description": "{name} steht danach nicht mehr als Prüfer für {year} in Kompass. Kontakt und Nutzer bleiben.",
+          "confirm": "Austragen",
+          "done": "{name} ist ausgetragen."
+        },
+        "accessHead": "Zugang"
+      },
+      "auditorDialog": {
+        "titleNew": "Prüfer für {year} eintragen",
+        "titleEdit": "Prüfer bearbeiten",
+        "saveNew": "Eintragen",
+        "saveEdit": "Speichern",
+        "contact": "Kontakt",
+        "mode": "Art",
+        "confidential": "Auf Vertraulichkeit verpflichtet",
+        "declaration": "Erklärung (freiwillig)",
+        "declarationHint": "Aus der Akte wählen oder hochladen.",
+        "declarationLater": "Hochladen geht nach dem Eintragen.",
+        "declarationUploaded": "Hochgeladen als {subject}.",
+        "electedOn": "Gewählt in der MV am",
+        "minutes": "Protokoll",
+        "accessOk": "Verknüpft mit Nutzer {user}, Rolle Kassenprüfer.",
+        "accessOkNoName": "Verknüpft mit einem Nutzer, Rolle Kassenprüfer.",
+        "involvedPreview": "{count, plural, one {Empfänger oder Freigeber in einem Vorgang {year}} other {Empfänger oder Freigeber in # Vorgängen {year}}}. Diese sollte der andere Prüfer prüfen.",
+        "doneNew": "{name} ist als Prüfer für {year} eingetragen.",
+        "doneEdit": "Gespeichert."
+      },
+      "endAccess": {
+        "title": "Zugang von {name} beenden",
+        "description": "{name} sieht danach die Finanzen nicht mehr. Vermerke und Stichproben bleiben.",
+        "confirm": "Zugang beenden",
+        "done": "Zugang von {name} beendet."
+      },
+      "downloadRefused": {
+        "forbidden": "Diese Datei dürfen Sie nicht herunterladen.",
+        "notFound": "Diese Datei gibt es nicht.",
+        "failed": "Die Datei ließ sich nicht erzeugen."
+      },
+      "package": {
+        "title": "Abschnitte",
+        "intro": "Sie sehen alles nur zum Lesen. Gehen Sie die Abschnitte der Reihe nach durch und haken Sie Buchungen ab, die Sie als Stichprobe geprüft haben. Was Ihnen auffällt, schreiben Sie als Vermerk. {treasurer, select, none {Die Antwort kommt hier.} other {{treasurer} antwortet hier.}}",
+        "columns": {
+          "section": "Abschnitt",
+          "progress": "Fortschritt",
+          "state": "Stand"
+        },
+        "numbered": "{n}. {title}",
+        "here": "Hier weiter ›",
+        "reviewed": "durchgesehen",
+        "reviewedBy": "durchgesehen von {names}",
+        "reviewedBefore": "durchgesehen vor der Nachprüfung von {names} am {date}",
+        "notReady": "Das Prüfpaket gibt es, sobald das Jahr abgeschlossen ist.",
+        "progress": {
+          "samples": "{count, plural, one {# Stichprobe} other {# Stichproben}}",
+          "remarks": "{count, plural, one {# Vermerk offen} other {# Vermerke offen}}",
+          "remarksAnswered": "{count, plural, one {# Vermerk beantwortet} other {# Vermerke beantwortet}}",
+          "reconciliationOk": "stimmt",
+          "reconciliationOff": "{count, plural, one {# Konto weicht ab oder ist offen} other {# Konten weichen ab oder sind offen}}",
+          "missing": "{count} ohne Beleg",
+          "own": "{count, plural, one {# Eigenbeleg} other {# Eigenbelege}}",
+          "withoutEntry": "{count, plural, one {# Beleg ohne Buchung} other {# Belege ohne Buchung}}",
+          "revoked": "{count, plural, one {# Verknüpfung zurückgenommen} other {# Verknüpfungen zurückgenommen}}",
+          "vouchersOk": "zu jeder Buchung ein Beleg",
+          "importsOpen": "{count, plural, one {# Umsatz nicht gebucht} other {# Umsätze nicht gebucht}}",
+          "importsOk": "alle Umsätze gebucht",
+          "decisions": "{count, plural, one {# Entscheidung} other {# Entscheidungen}}",
+          "anomalies": "{count, plural, =0 {keine Hinweise} one {# Hinweis} other {# Hinweise}}",
+          "purposes": "{count, plural, one {# Zweck} other {# Zwecke}}",
+          "reserves": "{count, plural, one {# Rücklage} other {# Rücklagen}}",
+          "donations": "{count, plural, one {# Zuwendung} other {# Zuwendungen}}",
+          "partnerPayments": "{count, plural, =0 {keine Zahlungen} one {# Zahlung} other {# Zahlungen}}",
+          "purposesReservesNone": "keine Zwecke, keine Rücklagen"
+        },
+        "run": {
+          "title": "Prüfpaket",
+          "intro": "Prüffassungen, Mappe für Prüfer auf Papier und die Belege des Jahres als ZIP. Kompass erzeugt sie im Hintergrund.",
+          "start": "Prüfpaket erzeugen",
+          "restart": "Neu erzeugen",
+          "cancel": "Abbrechen",
+          "steps": {
+            "reports": "Prüffassungen",
+            "folder": "Mappe",
+            "archive": "Belege"
+          },
+          "files": {
+            "reports": "Prüffassungen",
+            "folder": "Mappe",
+            "archive": "Belege (ZIP)"
+          },
+          "skipped": {
+            "noExportPermission": "Übersprungen: Belege herunterladen darf nur, wer die Akte exportieren darf.",
+            "noDocuments": "Übersprungen: Das Jahr hat keine Belege.",
+            "tooManyEntries": "Übersprungen: mehr als 2.000 Buchungen.",
+            "tooManyDocuments": "Übersprungen: mehr als 500 Belege.",
+            "noReports": "Übersprungen: keine Berichte.",
+            "renderFailed": "Übersprungen: Die Mappe ließ sich nicht erzeugen."
+          },
+          "state": {
+            "success": "Erzeugt am {date}.",
+            "failed": "Gescheitert am {date}.",
+            "aborted": "Abgebrochen am {date}.",
+            "interrupted": "Unterbrochen am {date}.",
+            "outdated": "Seit diesem Paket gibt es eine neue Prüffassung; erzeugen Sie es neu."
+          }
+        }
+      },
+      "sections": {
+        "journal": {
+          "title": "Journal",
+          "question": "Alle Buchungen. Haken Sie ab, was Sie als Stichprobe prüfen.",
+          "description": "Alle Buchungen {year} im Stand der Prüffassung. {sampled} von {total} als Stichprobe geprüft."
+        },
+        "reconciliation": {
+          "title": "Kontenabstimmung",
+          "question": "Stimmen die Kontostände mit den Auszügen?",
+          "description": "Die Kontostände laut Kompass zum Jahresende {year} gegen Auszüge und Kassenzählung, je Konto."
+        },
+        "vouchers": {
+          "title": "Belegprüfung",
+          "question": "Gibt es zu jeder Buchung einen Beleg?",
+          "description": "Buchungen ohne Beleg, Eigenbelege, Belege ohne Buchung und zurückgenommene Verknüpfungen {year}."
+        },
+        "imports": {
+          "title": "Importabgleich",
+          "question": "Ist jeder Umsatz der Bank gebucht?",
+          "description": "Entscheidungen beim Einlesen der Auszüge {year} und Umsätze, die noch nicht gebucht sind."
+        },
+        "anomalies": {
+          "title": "Auffälligkeiten",
+          "question": "Was Kompass ungewöhnlich findet: Zahlungen an Vorstand und Nahestehende, Barauszahlungen, runde Beträge, spät Festgeschriebenes und Ähnliches.",
+          "description": "Hinweise, keine Urteile: Sie entscheiden, was Sie sich ansehen."
+        },
+        "purposesReserves": {
+          "title": "Zweckmittel und Rücklagen",
+          "question": "Wurde zweckgebundenes Geld für den Zweck ausgegeben?",
+          "description": "Zweckgebundenes Geld und Rücklagen {year}: Vortrag, Zugang, Verwendung und Stand am Jahresende."
+        },
+        "donations": {
+          "title": "Spenden",
+          "question": "Passen Spendenbuch und Bestätigungen zusammen?",
+          "description": "Zuwendungen {year} und der Stand ihrer Bestätigungen."
+        },
+        "partnerPayments": {
+          "title": "Zahlungen an Partner",
+          "question": "Zahlungen an Partner im Ausland und ihre Nachweise.",
+          "description": "Freigegebene Zahlungen an Partner {year} und der Stand ihrer Nachweise."
+        }
+      },
+      "section": {
+        "back": "Kassenprüfung {year}",
+        "noun": {
+          "one": "Zeile",
+          "other": "Zeilen",
+          "dative": "Zeilen"
+        },
+        "search": "Suchen",
+        "searchPlaceholder": "Text, Nummer oder Betrag",
+        "searchPlaceholderShort": "Text, Nummer …",
+        "sample": "Stichprobe",
+        "sampleOptions": {
+          "sampled": "abgehakt",
+          "open": "nicht abgehakt",
+          "recheck": "erneut prüfen"
+        },
+        "account": "Konto",
+        "empty": {
+          "title": "Nichts in diesem Abschnitt",
+          "text": "Für {year} gibt es hier keine Zeilen."
+        },
+        "filteredNoun": "Keine Zeile",
+        "sampleLabel": "Als Stichprobe geprüft: {name}",
+        "recheck": "erneut prüfen",
+        "remarksOpen": "{count, plural, one {Vermerk offen} other {# Vermerke offen}}",
+        "remarksAnswered": "{count, plural, one {Vermerk beantwortet} other {# beantwortet}}",
+        "reviewed": "Abschnitt durchgesehen",
+        "reviewedByMe": "Von Ihnen durchgesehen am {date}.",
+        "reviewedByOthers": "Durchgesehen von {names}.",
+        "reviewedBefore": "Durchgesehen vor der Nachprüfung von {names} am {date}.",
+        "unreview": "Durchsicht zurücknehmen",
+        "fixed": "Prüfbericht abgelegt am {date}. Stichproben und Durchsicht stehen fest.",
+        "next": "Weiter mit {n}. {title}",
+        "columns": {
+          "number": "Nummer",
+          "date": "Datum",
+          "text": "Text",
+          "purpose": "Wofür",
+          "amount": "Betrag",
+          "state": "Stand",
+          "account": "Konto",
+          "book": "Laut Kompass",
+          "against": "Gegenwert",
+          "reconciliation": "Abgleich",
+          "reason": "Befund",
+          "transaction": "Umsatz",
+          "decision": "Entscheidung",
+          "name": "Name",
+          "carryForward": "Vortrag",
+          "inflow": "Zugang",
+          "used": "Verwendung",
+          "closing": "Stand am Jahresende",
+          "donations": "Was",
+          "count": "Anzahl",
+          "partner": "Partner",
+          "proof": "Nachweis",
+          "hint": "Hinweis"
+        },
+        "entryState": {
+          "reversed": "zurückgenommen",
+          "reversal": "nimmt eine Buchung zurück"
+        },
+        "reconciliationState": {
+          "matches": "stimmt",
+          "differs": "weicht ab",
+          "noStatement": "kein Auszug",
+          "noCount": "keine Zählung",
+          "notReconcilable": "nicht abzugleichen"
+        },
+        "againstSource": {
+          "statement": "Auszug vom {date}",
+          "count": "Zählung vom {date}",
+          "enteredBalance": "eingetragener Endsaldo vom {date}",
+          "none": "kein Gegenwert"
+        },
+        "voucherReason": {
+          "missing": "Ohne Beleg",
+          "missingJustified": "Ohne Beleg, begründet",
+          "own": "Eigenbeleg",
+          "withoutEntry": "Beleg ohne Buchung",
+          "revoked": "Verknüpfung zurückgenommen"
+        },
+        "importKind": {
+          "open": "nicht gebucht",
+          "same": "als dieselbe Buchung erkannt",
+          "own": "als eigene Buchung entschieden"
+        },
+        "purposeKind": {
+          "purpose": "Zweck",
+          "reserve": "Rücklage"
+        },
+        "donationKind": {
+          "total": "Zuwendungen insgesamt",
+          "withoutConfirmation": "ohne Bestätigung",
+          "toCorrect": "Bestätigungen zu korrigieren"
+        },
+        "proofState": {
+          "acknowledged": "bestätigt",
+          "open": "offen bis {date}",
+          "openNoDate": "offen",
+          "overdue": "überfällig seit {date}"
+        },
+        "anomalyKind": {
+          "priorYearCarryOver": "Korrekturen an Vorjahren",
+          "relatedParty": "Zahlungen an Vorstand und Nahestehende",
+          "cashPayout": "Barauszahlungen",
+          "roundAmount": "Runde Beträge",
+          "cashDonation": "Barspenden",
+          "reversal": "Rücknahmen",
+          "correction": "Zuordnungskorrekturen",
+          "lateFinalized": "Spät festgeschrieben",
+          "cashShortfall": "Kassenfehlbeträge",
+          "cashNegative": "Kasse im Minus",
+          "partnerPaymentReason": "Zahlungen an Partner mit Begründung",
+          "evidenceReused": "Mehrfach verwendete Nachweise",
+          "reopened": "Wiederöffnungen",
+          "userLink": "Verknüpfungen von Nutzern",
+          "finalizedByAgent": "Von einem Agenten festgeschrieben"
+        },
+        "anomaly": {
+          "priorYearCarryOver": "Nach dem Abschluss von {year} {change, select, new {gebucht} reversed {zurückgenommen} other {geändert}}.",
+          "relatedParty": "{name} ({role})",
+          "cashPayout": "Auszahlung aus der Kasse",
+          "roundAmount": "Ausgabe mit rundem Betrag",
+          "cashDonation": "Spende in bar",
+          "reversal": "nimmt {number} zurück",
+          "correction": "Korrektur der Zuordnung, Buchung aus {year}",
+          "correction153": "Korrektur nach §\u00a0153 AO, Buchung aus {year}",
+          "lateFinalized": "festgeschrieben am {date}, {days} Tage nach dem Buchungsdatum",
+          "cashShortfall": "Fehlbetrag bei der Zählung {number}",
+          "cashNegative": "{account} im Minus vom {from} bis {until}",
+          "cashNegativeOpen": "{account} im Minus seit {from}",
+          "partnerPaymentReason": "Zahlung {number}: {reasons}",
+          "evidenceReused": "Derselbe Nachweis an {uses}",
+          "reopened": "Jahr wieder geöffnet von {name}",
+          "userLink": "Nutzer {name} mit einem Kontakt verknüpft oder gelöst",
+          "userLinkSelf": "Nutzer {name} hat sich selbst mit einem Kontakt verknüpft",
+          "finalizedByAgent": "über einen Agenten festgeschrieben"
+        },
+        "partnerReason": {
+          "retroactive": "nachträglich freigegeben",
+          "basisOverride": "Grundlage übersteuert",
+          "notice": "trotz Bescheid",
+          "overdue": "trotz überfälliger Nachweise",
+          "purposeNegative": "Zweck im Minus"
+        },
+        "changedOnly": "Nur seit der Prüffassung geänderte"
+      },
+      "remarks": {
+        "title": "Vermerke",
+        "yearTitle": "Vermerke zum Jahr",
+        "write": "Vermerk schreiben …",
+        "writeYear": "Vermerk zum Jahr …",
+        "kind": {
+          "question": "Frage",
+          "finding": "Feststellung"
+        },
+        "state": {
+          "open": "offen",
+          "answered": "beantwortet",
+          "resolved": "geklärt"
+        },
+        "byline": "{name} · {date}",
+        "onBehalf": "{name}, eingetragen von {by}",
+        "target": {
+          "entry": "Buchung {number}",
+          "document": "Beleg {number}",
+          "report": "{report}",
+          "year": "Jahr {year}",
+          "documentPlain": "Beleg"
+        },
+        "targetLine": "An: {target}",
+        "columns": {
+          "remark": "Vermerk",
+          "target": "An",
+          "from": "Von",
+          "state": "Zustand"
+        },
+        "filterState": "Zustand",
+        "noun": {
+          "one": "Vermerk",
+          "other": "Vermerke",
+          "dative": "Vermerken"
+        },
+        "empty": "Noch keine Vermerke.",
+        "filteredNoun": "Kein Vermerk",
+        "sample": "Als Stichprobe geprüft",
+        "sampleHint": "nur für Prüfer sichtbar",
+        "done": "Vermerk gespeichert.",
+        "enteredBy": "eingetragen von {by}"
+      },
+      "remarkDialog": {
+        "title": "Vermerk schreiben",
+        "target": "An",
+        "kind": "Art",
+        "kindHint": {
+          "question": "Eine Frage beantwortet die Schatzmeisterin.",
+          "questionTo": "Eine Frage beantwortet {name}.",
+          "finding": "Eine Feststellung kommt in den Prüfbericht."
+        },
+        "text": "Text",
+        "from": "Von",
+        "fromSelf": "{name} (Sie)",
+        "fromPaper": "{name} (prüft auf Papier)",
+        "fromHint": "Steht im Vermerk als „{name}, eingetragen von {me}“.",
+        "save": "Speichern",
+        "targetReason": "Der Vermerk hängt an der Stelle, an der Sie ihn schreiben."
+      },
+      "report": {
+        "title": "Prüfbericht {year}",
+        "titleFollowUp": "Nachtrag zum Prüfbericht {year}",
+        "back": "Kassenprüfung {year}",
+        "state": {
+          "draft": "Entwurf",
+          "readyToSign": "zum Unterschreiben",
+          "filed": "abgelegt"
+        },
+        "lead": {
+          "draftEditor": "Kompass hat den Entwurf geschrieben. Ergänzen Sie, was fehlt, und geben Sie ihn zum Drucken frei.",
+          "draft": "Die Prüfer schreiben den Entwurf; Kompass setzt ein, was feststeht.",
+          "readyToSign": "Freigegeben zum Unterschreiben am {date}. Drucken, unterschreiben lassen, den Scan ablegen.",
+          "filed": "Abgelegt am {date}.",
+          "blank": "Vordruck: Beide prüfen auf Papier; Kompass hat eingesetzt, was feststeht.",
+          "filedScan": "Der unterschriebene Bericht liegt in der Akte."
+        },
+        "details": "Angaben ansehen",
+        "missing": {
+          "title": "Noch kein Prüfbericht",
+          "text": "Für {year} gibt es noch keinen Entwurf.",
+          "textEditor": "Legen Sie den Entwurf an; Kompass setzt Gegenstand, Umfang, Feststellungen und offene Fragen ein.",
+          "create": "Entwurf anlegen"
+        },
+        "ready": {
+          "open": "Zum Unterschreiben freigeben …",
+          "title": "Zum Unterschreiben freigeben",
+          "description": "Danach bleibt der Text stehen; Ändern geht mit „Freigabe zurücknehmen“, bis der Scan liegt.",
+          "unsaved": "Ungespeicherte Änderungen in {cards} gehen verloren.",
+          "confirm": "Freigeben",
+          "done": "Zum Unterschreiben freigegeben."
+        },
+        "revoke": "Freigabe zurücknehmen",
+        "revokeDone": "Freigabe zurückgenommen.",
+        "preview": "Druckansicht",
+        "print": "Drucken",
+        "subject": {
+          "title": "Gegenstand · von Kompass",
+          "reason": "Das setzt Kompass ein; es aktualisiert sich bis zur Freigabe.",
+          "organization": "Verein",
+          "year": "Geprüftes Jahr",
+          "yearValue": "{from} bis {to}",
+          "baseline": "Prüffassung",
+          "baselineValue": "vom {date}",
+          "reports": "Geprüfte Berichte",
+          "scope": "Umfang",
+          "scopeValue": "Stichproben: {sampled} von {total} Buchungen. Durchgesehen: {reviewed} von {sections} Abschnitten.",
+          "cash": "Kassenbestand",
+          "cashValue": "{amount} am {date}",
+          "cashWitnesses": "{amount} am {date}, gezählt im Beisein von {names}",
+          "protocol": "Zählprotokoll",
+          "changed": "Geändert seit der Prüffassung",
+          "changedValue": "{count, plural, one {# Buchung} other {# Buchungen}}"
+        },
+        "exam": {
+          "title": "Prüfung · von den Prüfern",
+          "dates": "Geprüft am",
+          "addDate": "Weiteren Tag hinzufügen",
+          "removeDate": "Entfernen",
+          "removeDateOf": "Tag {n} entfernen",
+          "place": "Ort",
+          "notTested": "Nicht geprüft",
+          "notTestedHint": "Leer lassen, wenn alles geprüft ist. Im Druck steht dann „Keine Einschränkungen“.",
+          "cashCount": "Kassenzählung",
+          "cashCountOption": "{amount} am {date}",
+          "noneNotTested": "Keine Einschränkungen"
+        },
+        "lastChanged": "Zuletzt geändert von {name}, {date}",
+        "findings": {
+          "title": "Feststellungen und offene Fragen · aus den Vermerken",
+          "open": "Nicht abschließend geklärt:",
+          "link": "Vermerk",
+          "none": "Keine Feststellungen und keine offenen Fragen.",
+          "hint": "Ändern geht nur am Vermerk. Geklärte Fragen stehen nicht im Bericht."
+        },
+        "result": {
+          "title": "Ergebnis",
+          "titleOf": "Ergebnis · {name}",
+          "result": "Ergebnis",
+          "clean": "Ohne Beanstandung",
+          "withFindings": "Mit Feststellungen",
+          "suggest": {
+            "withFindings": "Kompass schlägt „Mit Feststellungen“ vor, weil es eine Feststellung gibt.",
+            "clean": "Kompass schlägt „Ohne Beanstandung“ vor, weil es keine Feststellung gibt."
+          },
+          "recommendation": "Empfehlung zur Entlastung",
+          "discharge": "Empfehlen",
+          "noDischarge": "Nicht empfehlen",
+          "none": "Keine Angabe",
+          "deviation": "Abweichende Feststellungen · {name}",
+          "deviationHint": "Nur Sie.",
+          "deviationHintPaper": "Nur Sie. Für {names} druckt Kompass leere Zeilen.",
+          "paperEmpty": "Prüft auf Papier: Ergebnis und Empfehlung stehen im Druck als leere Kästchen.",
+          "openRemarks": "{count, plural, one {Ein Vermerk ist} other {# Vermerke sind}} noch nicht geklärt. „Ohne Beanstandung“ bleibt Ihre Entscheidung."
+        },
+        "signatures": {
+          "title": "Unterschriften",
+          "mode": "Wer unterschreibt",
+          "modes": {
+            "both": {
+              "label": "Beide unterschreiben einen Bericht",
+              "hint": "Der übliche Weg"
+            },
+            "one": {
+              "label": "Einer unterschreibt",
+              "hint": "Der andere ist verhindert oder unterschreibt nicht; der Grund steht im Druck"
+            },
+            "separate": {
+              "label": "Jeder unterschreibt einen eigenen Bericht",
+              "hint": "Zwei Seiten, je mit den eigenen abweichenden Feststellungen"
+            }
+          },
+          "signers": "Unterschreiben",
+          "nonSigner": "Unterschreibt nicht",
+          "nonSignerPick": "Bitte wählen",
+          "reason": "Grund"
+        },
+        "createDone": "Entwurf angelegt.",
+        "revokeDescription": "Danach lässt sich der Text wieder bearbeiten. Ein schon gedruckter Bericht gilt dann nicht mehr; drucken Sie nach dem Ändern neu."
+      },
+      "reportSection": {
+        "title": "Prüfbericht",
+        "intro": "Kompass schreibt den Entwurf aus Stichproben, Feststellungen und offenen Fragen. Gedruckt unterschreiben die Prüfer von Hand; der Scan des unterschriebenen Berichts wird hier abgelegt.",
+        "cashOpen": "Kasse am Prüfungstag noch nicht gezählt",
+        "cashDone": "Kasse am Prüfungstag gezählt",
+        "cashAction": "Kasse zählen",
+        "cashAsk": "Bitten Sie {names}, die Kasse in Ihrem Beisein zu zählen.",
+        "or": "oder",
+        "remarksDone": "Alle Vermerke geklärt",
+        "remarksOpen": "{count, plural, one {# Vermerk noch nicht geklärt} other {# Vermerke noch nicht geklärt}}",
+        "sectionsDone": "Alle Abschnitte durchgesehen",
+        "sectionsOpen": "{reviewed} von {total} Abschnitten durchgesehen",
+        "done": "erledigt",
+        "line": {
+          "report": "Prüfbericht",
+          "followUp": "Nachtrag",
+          "writes": "{names} {count, plural, one {schreibt} other {schreiben}} den Entwurf",
+          "lastEdited": "zuletzt {date}",
+          "printed": "Entwurf gedruckt am {date}",
+          "ready": "Zum Unterschreiben freigegeben am {date}",
+          "partial": "{filed} von {expected} Scans abgelegt",
+          "filed": "Abgelegt am {date}",
+          "open": "Entwurf öffnen",
+          "view": "Bericht öffnen",
+          "document": "Scan {number} in der Akte",
+          "documentPlain": "Scan in der Akte"
+        },
+        "scan": "Scan ablegen …",
+        "onlyPaper": "Niemand prüft in Kompass. Drucken Sie den Vordruck; Kompass setzt ein, was feststeht.",
+        "blank": "Vordruck drucken",
+        "followUpHint": "Nachprüfung offen: Der Nachtrag ist derselbe Weg wie der Bericht.",
+        "followUpCreate": "Nachtrag öffnen",
+        "draftHint": "Noch kein Prüfbericht: Kompass schreibt den Entwurf aus Stichproben, Feststellungen und offenen Fragen.",
+        "draftCreate": "Prüfbericht schreiben"
+      },
+      "scanDialog": {
+        "title": "Unterschriebenen Bericht ablegen",
+        "description": "Laden Sie den Scan hoch oder wählen Sie ihn aus der Akte. Mit dem Scan ist die Kassenprüfung abgeschlossen.",
+        "auditor": "Bericht von",
+        "auditorPick": "Bitte wählen",
+        "document": "Scan aus der Akte",
+        "uploadHint": "Oder hier ablegen: ein PDF bis 10 MB.",
+        "save": "Ablegen",
+        "done": "Scan abgelegt."
+      }
+    },
+    "fundUse": {
+      "title": "Mittelverwendungsrechnung",
+      "text": "Sie zeigt, ob der Verein seine Mittel zeitnah und für die Satzungszwecke verwendet hat, getrennt nach Jahren. Kompass rechnet sie in einer der nächsten Fassungen aus denselben Buchungen wie den Kassenbericht.",
+      "detail": "Bis dahin zeigen <purposes>Zweckmittel</purposes> und <reserves>Rücklagenspiegel</reserves> den größten Teil davon.",
+      "toReports": "Zu den Berichten"
+    },
+    "tax": {
+      "title": "Steuererklärung",
+      "done": "erledigt",
+      "empty": {
+        "title": "Noch kein Erklärungszeitraum",
+        "text": "Das Finanzamt fordert die Erklärung für ein bis drei Geschäftsjahre an. Legen Sie den Zeitraum aus der Aufforderung an; Kompass trägt dann die Werte zusammen und setzt die Frist.",
+        "create": "Erklärungszeitraum anlegen …"
+      },
+      "header": {
+        "title": "Steuererklärung {period}",
+        "purpose": "Anlage Gem, Werte zum Übertragen in ELSTER.",
+        "missing": "{count, plural, one {# Angabe fehlt.} other {# Angaben fehlen.}}",
+        "due": "Abgabe bis {date}.",
+        "filed": "Abgegeben am {date}.",
+        "blocked": {
+          "missing": "{count, plural, one {Festschreiben können Sie, sobald die fehlende Angabe eingetragen ist.} other {Festschreiben können Sie, sobald die # fehlenden Angaben eingetragen sind.}}"
+        },
+        "newPeriod": "Neuer Erklärungszeitraum …",
+        "editPeriod": "Zeitraum bearbeiten …"
+      },
+      "bar": {
+        "label": "Zeitraum",
+        "open": "{period}, offen, Frist {date}",
+        "filed": "{period}, abgegeben {date}",
+        "assessed": "{period}, Bescheid {date}",
+        "noun": {
+          "one": "Zeile",
+          "other": "Zeilen",
+          "dative": "Zeilen"
+        }
+      },
+      "periodDialog": {
+        "createTitle": "Erklärungszeitraum anlegen",
+        "editTitle": "Zeitraum {period} bearbeiten",
+        "first": "Von",
+        "last": "Bis",
+        "yearsHint": "Höchstens drei Jahre. Kompass schlägt das Jahr nach dem letzten Zeitraum vor.",
+        "noYears": "Für die Jahre nach {period} ist noch kein Geschäftsjahr angelegt.",
+        "choose": "Bitte wählen",
+        "yearsLocked": "Fest, seit eine Fassung der Werte festgeschrieben ist.",
+        "requestedOn": "Angefordert am",
+        "request": "Aufforderung",
+        "requestHint": "Das Schreiben des Finanzamts aus der Akte wählen oder als PDF hochladen.",
+        "requestFile": "Wird beim Speichern abgelegt: {name}",
+        "requestFiled": "In der Akte: {number}",
+        "advisor": "Mit Steuerberatung",
+        "yes": "Ja",
+        "no": "Nein",
+        "dueOn": "Frist",
+        "dueHint": "Vorschlag: 31.07. des Folgejahres, mit Steuerberatung Ende Februar des zweiten Folgejahres. Steht in der Aufforderung eine andere Frist, tragen Sie diese ein.",
+        "create": "Anlegen",
+        "save": "Speichern"
+      },
+      "filing": {
+        "retracted": "Die abgegebene Fassung vom {date} ist zurückgenommen (Wiederöffnen am {reopened}). Ändern sich die Werte, prüfen Sie eine Berichtigung nach §\u00a0153 AO.",
+        "differences": "Unterschiede ansehen",
+        "afterFinalize": "nach dem Festschreiben",
+        "title": "Abgabe",
+        "edit": "Bearbeiten …",
+        "file": "Ablegen …",
+        "requestedOn": "Angefordert am",
+        "requestDocument": "Schreiben des Finanzamts in der Akte ({number})",
+        "requestNone": "Ohne Schreiben in der Akte",
+        "dueOn": "Frist",
+        "filedOn": "Abgegeben am",
+        "filedReason": "Nach dem Festschreiben",
+        "followUp": "Wiedervorlage anlegen",
+        "followUpTarget": "Steuererklärung {period}",
+        "documents": {
+          "filedReturn": {
+            "title": "Abgegebene Fassung",
+            "detail": "Das PDF aus ELSTER, wie es abging"
+          },
+          "transmissionProtocol": {
+            "title": "ELSTER-Übertragungsprotokoll",
+            "detail": "Die Bestätigung der Übermittlung"
+          },
+          "notice": {
+            "title": "Bescheid",
+            "blocked": "nach Abgabe",
+            "detail": "Kommt nach der Abgabe; Hinweise daraus als Wiedervorlage",
+            "dated": "Bescheid vom {date}",
+            "open": "Bescheid öffnen"
+          }
+        },
+        "dialog": {
+          "title": "Abgabe {period}",
+          "requestedOn": "Angefordert am",
+          "dueOn": "Frist",
+          "filedOn": "Abgegeben am",
+          "filedHint": "Abgegeben wird eine festgeschriebene Fassung der Werte. Ohne Tag gilt die Erklärung als nicht abgegeben.",
+          "save": "Speichern"
+        }
+      },
+      "documentDialog": {
+        "title": {
+          "request": "Aufforderung ablegen",
+          "filedReturn": "Abgegebene Fassung ablegen",
+          "transmissionProtocol": "Übertragungsprotokoll ablegen",
+          "activityReport": "Tätigkeitsbericht ablegen",
+          "statute": "Satzung ablegen"
+        },
+        "description": "Ein PDF hochladen oder ein Dokument aus der Akte wählen. Es liegt dann am Zeitraum und seinem letzten Geschäftsjahr.",
+        "document": "Aus der Akte",
+        "uploadHint": "Oder ein PDF hierher ziehen, bis 10 MB.",
+        "save": "Zuordnen"
+      },
+      "answers": {
+        "title": "Ihre Angaben",
+        "intro": "Was Kompass nicht aus den Buchungen kennt.",
+        "lineLabel": "Zeile {line} · {label}",
+        "yes": "Ja",
+        "no": "Nein",
+        "choose": "Bitte wählen",
+        "submission": {
+          "onFile": "Liegt dem Finanzamt vor",
+          "willSubmit": "Wird gesondert übermittelt"
+        },
+        "noFeeResolution": "Kein gesonderter Beschluss",
+        "readOnly": "Ändern dürfen, wer Jahre abschließen darf.",
+        "filedReason": "Die Erklärung ist abgegeben. Nehmen Sie die Abgabe zurück, um Angaben zu ändern.",
+        "giftReason": "Zuwendungsgrund",
+        "giftAmount": "Betrag",
+        "giftEntry": "Eintrag {n}",
+        "giftRemove": "Entfernen",
+        "giftAdd": "Weiteren Eintrag hinzufügen",
+        "replacementGroup": "{name} · Rücklage nach Nr. 2",
+        "participationGroup": "{name} · Rücklage nach Nr. 4",
+        "asset": "Wirtschaftsgut",
+        "expectedCost": "Voraussichtliche Anschaffungskosten",
+        "regularDepreciation": "Reguläre AfA",
+        "company": "Gesellschaft",
+        "taxOffice": "Finanzamt",
+        "taxNumber": "Steuernummer",
+        "membersGroup": "Mitglieder für die EÜR fürs Finanzamt",
+        "members": "Mitglieder am {date}",
+        "membersFrom": "aus der Mitgliederverwaltung, Stand {date}",
+        "membersFromToday": "aus der Mitgliederverwaltung, Stand heute",
+        "membersChanged": "geändert, Mitgliederverwaltung: {count}",
+        "membersTake": "Übernehmen",
+        "membersReason": "Angabe für die EÜR fürs Finanzamt"
+      },
+      "values": {
+        "title": "Werte der Anlage Gem",
+        "intro": "Wie im Formular, zum Übertragen in ELSTER. Die Herkunft führt zu den Buchungen dahinter.",
+        "columns": {
+          "line": "Zeile",
+          "label": "Angabe",
+          "status": "Zustand",
+          "origin": "Herkunft"
+        },
+        "lastYearOnly": "Nur für {year}, das letzte Jahr des Zeitraums",
+        "range": "{from}–{to}",
+        "yes": "ja",
+        "no": "nein",
+        "yesInElster": "ja, in ELSTER eintragen",
+        "inElster": "in ELSTER eintragen",
+        "choice": {
+          "onFile": "liegt dem Finanzamt vor",
+          "willSubmit": "wird gesondert übermittelt",
+          "none": "kein gesonderter Beschluss"
+        },
+        "missing": "fehlt",
+        "purposeNumbers": "Nr. {numbers}",
+        "none": "keine",
+        "entries": "{count, plural, one {# Eintrag} other {# Einträge}}",
+        "businessCombined": "{names} (zusammengefasst, §\u00a064 Abs. 2 AO)",
+        "businessSums": "Einnahmen {income} · Ausgaben {expense} · Überschuss rechts",
+        "replacementSums": "Anschaffungskosten {cost} · reguläre AfA {afa} · Zuführung {allocated} · Auflösung {dissolved} · kumuliert {balance}",
+        "taxOffice": "Finanzamt",
+        "taxNumber": "Steuernummer",
+        "purpose": "begünstigter Zweck",
+        "partyRecipient": "Angaben zum Empfänger …",
+        "partyGiver": "Angaben zum Geber …",
+        "parts": {
+          "toggle": "Zusammensetzung",
+          "excluded": "(nicht enthalten)",
+          "income": "Einnahmen",
+          "inKind": "Sachspenden",
+          "expenseWaiver": "Aufwandsspenden",
+          "addsToAssets": "Zuführungen zum Vermögen",
+          "returns": "Rückzahlungen",
+          "assetSales": "Anlagenverkäufe",
+          "taxRefunds": "Erstattete Steuern",
+          "transit": "Durchlaufende Gelder",
+          "note": "Durchlaufende Posten, Fremdgeld und Umbuchungen zwischen eigenen Konten sind nicht enthalten. Darlehen sind nicht enthalten."
+        },
+        "origin": {
+          "lines": {
+            "business": "Buchungen im wirtschaftlichen Geschäftsbetrieb",
+            "purposeOperation": "Buchungen im Zweckbetrieb",
+            "addsToAssets": "Buchungen mit Zuführung zum Vermögen",
+            "endowmentsReceived": "Buchungen mit Vermögensausstattung"
+          },
+          "report": "Bericht",
+          "answer": "Ihre Angabe",
+          "notice": "Freistellungsbescheid",
+          "reserves": "Zurückgelegtes Geld",
+          "partnerPayments": "Zahlungen an Partner"
+        }
+      },
+      "hints": {
+        "title": "Hinweise",
+        "kst1FullyExempt": "KSt 1: „vollumfänglich befreit“ ankreuzen. Die Einnahmen der steuerpflichtigen wirtschaftlichen Geschäftsbetriebe liegen {count, plural, one {} other {in allen Jahren }}nicht über der Freigrenze des §\u00a064 Abs. 3 AO.",
+        "businessOverLimit": "{year}: Die Einnahmen der steuerpflichtigen wirtschaftlichen Geschäftsbetriebe ({amount}) liegen über der Freigrenze von {limit} (§\u00a064 Abs. 3 AO, AEAO zu §\u00a064 Nr. 18).",
+        "annexes": {
+          "gk": "{needed, select, yes {Anlage GK: nötig} other {Anlage GK: nicht nötig}}",
+          "zve": "{needed, select, yes {Anlage ZVE: nötig} other {Anlage ZVE: nicht nötig}}",
+          "gewSt": "{needed, select, yes {Gewerbesteuererklärung: nötig} other {Gewerbesteuererklärung: nicht nötig}}"
+        },
+        "businessYear": "Wirtschaftlicher Geschäftsbetrieb {year}",
+        "revenueYear": "Gesamteinnahmen {year}",
+        "limit": {
+          "figure": "{value} von {limit}",
+          "near": "nähert sich",
+          "exceeded": "überschritten",
+          "reached": "erreicht"
+        },
+        "vatReturnRequired": "{year} gibt es Umsätze nach §\u00a013b UStG oder einen innergemeinschaftlichen Erwerb. Eine Umsatzsteuer-Jahreserklärung ist bis {date} abzugeben.",
+        "toDeadlines": "Zu den Fristen",
+        "noVatReturnSmallBusiness": "Als Kleinunternehmer (§\u00a019 UStG) gibt der Verein keine Umsatzsteuer-Jahreserklärung ab.",
+        "timelyUseAlways": "{year}: Die Mittel sind zeitnah zu verwenden (§\u00a055 Abs. 1 Nr. 5 AO).",
+        "timelyUseRequired": "{year}: Die Gesamteinnahmen ({amount}) liegen über {limit}; die Mittel sind zeitnah zu verwenden (§\u00a055 Abs. 1 Nr. 5 AO).",
+        "timelyUseNot": "{year}: Die Gesamteinnahmen ({amount}) liegen nicht über {limit}; die zeitnahe Mittelverwendung gilt für dieses Jahr nicht.",
+        "gratuitousCandidates": "In den Kategorien „Mitgliederbetreuung“ und „Zuwendungen an Mitglieder“ stehen {count, plural, one {# Buchung} other {# Buchungen}} über {amount}. Prüfen Sie die Angabe in Zeile 74.",
+        "businessCombined": "Mehrere steuerpflichtige wirtschaftliche Geschäftsbetriebe gelten als einer (§\u00a064 Abs. 2 AO); Zeile 11 nennt sie in einem Eintrag. Gemeinkosten gehören nur mit sachlichem Aufteilungsschlüssel hinein.",
+        "spheresMergeable": "Die Einnahmen aller wirtschaftlichen Geschäftsbetriebe einschließlich Zweckbetriebe liegen nicht über der Grenze, und insgesamt entstand ein Gewinn: Ertragsteuerlich prüft das Finanzamt die Zweckbetriebe nicht mehr (§\u00a064 Abs. 3 S. 2 AO).",
+        "endowmentNotToAssets": "Zeile 70 nennt {count, plural, one {eine Vermögensausstattung} other {# Vermögensausstattungen}}, die nicht dem Vermögen zugeführt {count, plural, one {wurde} other {wurden}}. Das geht nur, wenn der Geber die laufende Verwendung erlaubt.",
+        "revenueDefinition": "Gesamteinnahmen nach dem Einnahmenbegriff des AEAO zu §\u00a055 Nr. 30. Aufwandsspenden sind enthalten; manche Praxisquellen rechnen sie nicht ein. Darlehen sind keine Einnahmen.",
+        "unverifiedLines": "{note}. Vergleichen Sie die Zeilen 50 bis 70 vor der Abgabe mit Mein ELSTER.",
+        "formAssumed": "Der Vordruck {year} ist noch nicht erschienen; Kompass nimmt den Aufbau von 2025 an."
+      },
+      "attachments": {
+        "title": "Beilagen",
+        "intro": "Was mit der Erklärung ans Finanzamt geht.",
+        "open": "Zum Bericht",
+        "toAssembly": "Zur Mitgliederversammlung",
+        "missing": "Fehlt noch",
+        "statuteDetail": "Wird gesondert übermittelt",
+        "stage": {
+          "preliminary": "Vorläufig",
+          "review": "Prüffassung",
+          "final": "Festgeschrieben"
+        },
+        "keys": {
+          "taxReturnIncomeStatement": "EÜR für das Finanzamt {year}",
+          "assetOverview": "Vermögensübersicht {year}",
+          "reserveStatement": "Rücklagenspiegel {year}",
+          "foreignActivity": "Auslandsbericht {year}",
+          "peopleOverview": "Personenübersicht {year}",
+          "activityReport": "Tätigkeitsbericht {year}",
+          "assemblyMinutes": "Protokoll der Mitgliederversammlung {year}",
+          "statute": "Satzung"
+        }
+      },
+      "partyDialog": {
+        "title": {
+          "recipient": "Angaben zum Empfänger",
+          "giver": "Angaben zum Geber"
+        },
+        "description": "Für die Anlage Gem braucht das Finanzamt Finanzamt, Steuernummer und begünstigten Zweck der Körperschaft. Sie stehen am Kontakt und gelten auch im Partnerprofil.",
+        "party": {
+          "recipient": "Empfänger",
+          "giver": "Geber"
+        },
+        "partyReason": "Aus der Buchung bzw. Zahlung",
+        "taxOffice": "Finanzamt",
+        "taxNumber": "Steuernummer",
+        "purpose": "Begünstigter Zweck",
+        "purposeHint": "Der Zweck nach §\u00a052 Abs. 2 AO, wie im Freistellungsbescheid der Körperschaft.",
+        "purposeNone": "Kein Zweck gewählt",
+        "purposeNumber": "Nr. {n}",
+        "save": "Speichern"
+      },
+      "toast": {
+        "created": "Erklärungszeitraum angelegt.",
+        "saved": "Gespeichert.",
+        "answersSaved": "Angaben gespeichert.",
+        "filed": "Abgelegt.",
+        "noticeLinked": "Bescheid verknüpft.",
+        "taxDetailsSaved": "Steuerdaten gespeichert."
+      }
+    },
+    "otherAssets": {
+      "kind": {
+        "asset": "Vermögensgegenstand",
+        "liability": "Verpflichtung"
+      },
+      "periodRange": "{from}\u00a0– {to}",
+      "title": "Sonstiges Vermögen",
+      "intro": "Werte, die nicht auf einem Konto stehen. Ein Bericht zeigt die Einträge, die an seinem Stichtag gelten.",
+      "create": "Eintrag anlegen",
+      "date": "Stand am",
+      "noun": {
+        "one": "Eintrag",
+        "other": "Einträge",
+        "dative": "Einträgen"
+      },
+      "groups": {
+        "asset": "Vermögensgegenstände",
+        "liability": "Verpflichtungen"
+      },
+      "columns": {
+        "label": "Bezeichnung",
+        "since": "Seit",
+        "value": "Wert",
+        "period": "Zeitraum",
+        "actions": "Aktionen"
+      },
+      "ended": "Beendet",
+      "noneAtDate": "Am {date} gilt kein Eintrag.",
+      "menu": {
+        "edit": "Bearbeiten …",
+        "revalue": "Neuer Wert ab …",
+        "end": "Beenden …",
+        "view": "Ansehen",
+        "document": "Beleg öffnen"
+      },
+      "empty": {
+        "title": "Noch nichts eingetragen",
+        "text": "Berichte schreiben dann „Sachwerte nicht erfasst“. Tragen Sie ein, was der Verein besitzt oder schuldet, ohne dass es auf einem Konto steht."
+      },
+      "dialog": {
+        "createTitle": "Eintrag anlegen",
+        "editTitle": "Eintrag bearbeiten",
+        "kind": "Art",
+        "kinds": {
+          "asset": "Vermögensgegenstand",
+          "liability": "Verpflichtung"
+        },
+        "kindHint": "Zum Beispiel Inventar, Fahrzeug, Kaution, gewährtes Darlehen.",
+        "label": "Bezeichnung",
+        "value": "Wert",
+        "from": "Seit",
+        "basis": "Grundlage",
+        "basisHint": "Woher der Wert kommt: Rechnung, Schätzung, Vertrag.",
+        "document": "Beleg",
+        "editNote": "Festgeschriebene Berichte behalten ihren Stand.",
+        "create": "Anlegen",
+        "save": "Speichern",
+        "saved": "Gespeichert."
+      },
+      "revalue": {
+        "title": "Neuer Wert für {label}",
+        "description": "Der bisherige Wert gilt bis zum Vortag, der neue ab diesem Tag.",
+        "from": "Ab",
+        "before": "Bisher {value} seit {since}.",
+        "beforeUntil": "Bisher {value} seit {since}, gilt bis {end}.",
+        "save": "Speichern",
+        "done": "Neuer Wert gespeichert."
+      },
+      "end": {
+        "title": "{label} beenden",
+        "description": "Festgeschriebene Berichte behalten ihren Stand.",
+        "until": "Bis",
+        "untilHint": "Der letzte Tag, an dem er dem Verein gehörte.",
+        "reason": "Grund",
+        "save": "Beenden",
+        "done": "Beendet."
+      },
+      "view": {
+        "period": "Zeitraum",
+        "reason": "Grund",
+        "reasonNone": "Kein Grund angegeben.",
+        "fixed": "Ein beendeter Eintrag bleibt, wie er war."
+      }
     }
   },
   "members": {

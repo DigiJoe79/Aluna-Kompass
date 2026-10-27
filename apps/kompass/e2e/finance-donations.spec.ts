@@ -420,7 +420,7 @@ test.describe('finance donations', () => {
 /**
  * F6a Task 8 — Oberfläche C3 „Bescheide“ und das maschinelle Verfahren. Der
  * Seed bringt den Freistellungsbescheid des Finanzamts Musterstadt vom
- * 02.05.2025, den § 60a-Bescheid vom 01.03.2024, den er ersetzt, und Jonas Feld als vollständigen Unterzeichner (seit 01.01.2025,
+ * 02.05.2025 (Veranlagungszeitraum 2020–2022, befreit ab 01.01.2020), den § 60a-Bescheid vom 01.03.2024, den er ersetzt, und Jonas Feld als vollständigen Unterzeichner (seit 01.01.2025,
  * mit Faksimile und Anzeige).
  */
 const isoDay = (offsetDays = 0) => associationDay(offsetDays);
@@ -444,7 +444,7 @@ test.describe('finance donation notices', () => {
     // Bei Bescheiden ist „gültig“ die Auskunft, die man sucht, und steht als Marke (Joe 11.7, Ausnahme von Stufe 2 Nr. 6a).
     await expect(seededExemption(page).getByTestId('notice-state')).toHaveText('gültig');
     await expect(seededExemption(page)).toContainText(`02.05.${STORY_YEAR + 4}`); // Bescheid vom 02.05. des Vorjahrs, gültig fünf Jahre
-    await expect(seededExemption(page).getByTestId('notice-exempt-from')).toHaveText(story('01.01.2023'));
+    await expect(seededExemption(page).getByTestId('notice-exempt-from')).toHaveText(`01.01.${STORY_YEAR - 6}`); // Veranlagungszeitraum vor den drei Jahren des Seeds (Joe F1); `story` verschiebt erst ab 2022
     // K9-Befund 8: sechs Spalten — Befreiung ab und gültig bis stehen zusammen unter „Gilt“, der Veranlagungszeitraum darunter.
     await expect(page.getByRole('table', { name: 'Bescheide des Finanzamts' }).getByRole('columnheader', { name: 'Gilt' })).toBeVisible();
     await expect(page.getByRole('table', { name: 'Bescheide des Finanzamts' }).getByRole('columnheader')).toHaveCount(6);
@@ -516,7 +516,7 @@ test.describe('finance donation notices', () => {
     await page.goto('/finance/donations/notices');
     await page.getByRole('button', { name: 'Bescheid erfassen' }).click();
     const dialog = page.getByRole('dialog');
-    await dialog.getByLabel('Art des Bescheids').selectOption({ label: 'vorläufige Anerkennung (§ 60a)' });
+    await dialog.getByLabel('Art des Bescheids').selectOption({ label: 'vorläufige Anerkennung (§\u00a060a)' });
     await dialog.getByRole('radiogroup', { name: 'Wurde bereits ein Freistellungsbescheid erteilt?' }).getByRole('radio', { name: 'Nein' }).check();
     await dialog.getByLabel('Finanzamt').fill('Finanzamt Beispielstadt');
     await dialog.getByLabel('Steuernummer').fill('22/333/44444');
@@ -542,7 +542,7 @@ test.describe('finance donation notices', () => {
     await page.goto('/finance/donations/notices');
     await page.getByRole('button', { name: 'Bescheid erfassen' }).click();
     const dialog = page.getByRole('dialog');
-    await dialog.getByLabel('Art des Bescheids').selectOption({ label: 'vorläufige Anerkennung (§ 60a)' });
+    await dialog.getByLabel('Art des Bescheids').selectOption({ label: 'vorläufige Anerkennung (§\u00a060a)' });
     await expect(dialog.getByLabel('Veranlagungszeitraum')).toHaveCount(0);
     const question = dialog.getByRole('radiogroup', { name: 'Wurde bereits ein Freistellungsbescheid erteilt?' });
     await question.getByRole('radio', { name: 'Ja' }).check();

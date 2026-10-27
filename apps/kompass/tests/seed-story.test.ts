@@ -2,7 +2,7 @@ import { coreModule, login, schema, SEED_ADMIN_PASSWORD, seedDevelopment, unwrap
 import { createTestDeps, ctxWith } from '@kompass/core/testing';
 import { animalPhotos, animals } from '@kompass/module-animals';
 import { documents, listDocuments } from '@kompass/module-dms';
-import { getProjectFinance } from '@kompass/module-finance';
+import { financeReports, getProjectFinance, runFinanceReport } from '@kompass/module-finance';
 import { projects } from '@kompass/module-projects';
 import { describe, expect, it } from 'vitest';
 import { installedModules } from '@/modules';
@@ -26,8 +26,9 @@ describe('Entwicklungsdaten als Vereinsalltag', () => {
     // Akte (Review Focus 3): oben nur die benannten Ausnahmen des Finanz-Seeds (Task 7, 3m), dann die Tagespost der
     // Akte in ihrer Reihenfolge, danach nichts mehr, das nicht an seinem Datum liegt.
     const list = unwrap(await listDocuments(deps, all, { limit: 200 })).documents;
-    // Die Briefe der Mitglieder (Plan M4) entstehen wie die Bestätigungen am Tag des Seeds.
-    const isException = (d: (typeof list)[number]) => ['finance-confirmation', 'finance-confirmation-signed', 'finance-partner-evidence'].includes(d.typeKey) || d.typeKey.startsWith('member-') || d.subject.includes('Jugendfreizeit');
+    // Die Briefe der Mitglieder (Plan M4), der festgeschriebene Kassenbericht des Vorjahres (Rechenschaft A2) und der
+    // abgelegte Prüfbericht (D1) entstehen wie die Bestätigungen am Tag des Seeds.
+    const isException = (d: (typeof list)[number]) => ['finance-confirmation', 'finance-confirmation-signed', 'finance-partner-evidence', 'finance-report', 'finance-audit-report'].includes(d.typeKey) || d.typeKey.startsWith('member-') || d.subject.includes('Jugendfreizeit');
     const rest = list.filter((d) => !isException(d));
     expect(rest.slice(0, 4).map((d) => d.subject)).toEqual([
       'Winterhilfe: Bitte um Unterstützung',
@@ -38,8 +39,11 @@ describe('Entwicklungsdaten als Vereinsalltag', () => {
     const firstRest = list.indexOf(rest[0]!);
     expect(list.slice(0, firstRest).every(isException)).toBe(true);
     // 8 Zuwendungsbestätigungen (eine davon die § 60a-Bestätigung mit eigenem Ausstellungsdatum), 1 unterschriebene,
-    // 1 Beschluss zur wartenden Umwidmung, 2 Nachweise — beim Planen als 11 gezählt (Ausführung 2026-10-06).
-    expect(list.slice(0, firstRest).filter((d) => !d.typeKey.startsWith('member-')).length).toBeLessThanOrEqual(12);
+    // 1 Beschluss zur wartenden Umwidmung, 2 Nachweise — beim Planen als 11 gezählt (Ausführung 2026-10-06); dazu
+    // 1 festgeschriebener Kassenbericht, 1 abgelegter Prüfbericht; Rechenschaft C: dazu Ergebnisrechnung und
+    // Vermögensübersicht des Vorjahres (Schritt 10 verlangt alle Berichte der MV festgeschrieben); Rechenschaft B1: dazu
+    // die Zweckmittel des Vorjahres.
+    expect(list.slice(0, firstRest).filter((d) => !d.typeKey.startsWith('member-')).length).toBeLessThanOrEqual(17);
     // Plan 1: kein Betreff trägt eine ULID.
     expect(deps.db.select({ subject: documents.subject }).from(documents).all().filter((d) => ULID.test(d.subject))).toEqual([]);
 
@@ -52,6 +56,11 @@ describe('Entwicklungsdaten als Vereinsalltag', () => {
     const finance = unwrap(await getProjectFinance(deps, all, { projectId: winter.id }));
     expect(finance.result.incomeCents).toBeGreaterThan(0);
     expect(finance.result.expenseCents).toBeGreaterThan(0);
+
+    // Rechenschaft D1 Task 10b (Befund A3): Kein späterer Modul-Seed ändert das abgeschlossene Vorjahr — der
+    // festgeschriebene Kassenbericht bleibt beim Datenstand seiner Fassung.
+    const cash = deps.db.select().from(financeReports).all().find((r) => r.reportKey === 'cashReport' && r.voidedAt === null)!;
+    expect(unwrap(await runFinanceReport(deps, all, { report: 'cashReport', params: JSON.parse(cash.params) })).stage).toBe('final');
 
     // Telefon „Auslage einreichen“: Nadja Vogt meldet sich mit dem Entwicklungs-Passwort an.
     const session = await login(deps, { email: 'nadja@kompass.local', password: SEED_ADMIN_PASSWORD, ipAddress: null, requestId: 'R' });

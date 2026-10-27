@@ -10,9 +10,10 @@ export type UnauthorizedReason = 'invalidCredentials' | 'locked' | 'inactive' | 
 export type ConflictReason = { code: string; messageKey: string; params?: Record<string, string | number>; amounts?: string[] };
 
 export type ServiceError =
-  | { type: 'forbidden'; permission: string }
+  /** `message`: nur übersetzt (MCP, N21) — der Satz zum fehlenden Recht bzw. zum fehlenden Datensatz; die Felder bleiben. */
+  | { type: 'forbidden'; permission: string; message?: string }
   | { type: 'validation'; issues: ValidationIssue[] }
-  | { type: 'notFound'; entity: string; id: string }
+  | { type: 'notFound'; entity: string; id: string; message?: string }
   | {
       type: 'conflict';
       code: string;

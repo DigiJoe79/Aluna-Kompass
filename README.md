@@ -6,7 +6,7 @@ Vereinsverwaltung für gemeinnützige Vereine — eine Anwendung für Webseite, 
 
 ## Worum es geht
 
-Ein gemeinnütziger Verein schuldet Rechenschaft: dem Finanzamt, dem Registergericht, dem Transparenzregister, den Mitgliedern und Spendern. Kompass ist der Ort, an dem jeder Vorgang genau einmal entsteht und bleibt — und aus dem alles erzeugt wird, was der Verein nach außen geben muss: Briefe, Protokolle, Zuwendungsbestätigungen, die öffentliche Webseite, ab 0.4.0 auch Jahresabschluss und Kassenprüfungsunterlagen.
+Ein gemeinnütziger Verein schuldet Rechenschaft: dem Finanzamt, dem Registergericht, dem Transparenzregister, den Mitgliedern und Spendern. Kompass ist der Ort, an dem jeder Vorgang genau einmal entsteht und bleibt — und aus dem alles erzeugt wird, was der Verein nach außen geben muss: Briefe, Protokolle, Zuwendungsbestätigungen, die öffentliche Webseite, Jahresabschluss, Kassenprüfungsunterlagen und die Werte für die Steuererklärung.
 
 Der Grundsatz dahinter: **ein Vorgang, eine Quelle.** Nichts wird abgetippt, kopiert oder nachträglich einsortiert. Jede Änderung steht im Änderungsprotokoll; Rechenschaftsrelevantes wird storniert, nie gelöscht.
 
@@ -87,7 +87,28 @@ Kontoauszüge kommen als CAMT oder CSV herein, Belege aus der Akte, Rechnungen m
   </tr>
 </table>
 
-Jahresabschluss und Berichte folgen mit 0.4.0. Nicht vorgesehen sind Bilanzierung und die Übermittlung ans Finanzamt.
+Am Ende des Jahres führt der **Jahresabschluss** in zwölf Schritten von den Kontoauszügen über die Kassenprüfung und die Mitgliederversammlung bis zur Steuererklärung. Die Kassenprüfer arbeiten in Kompass mit eigenem Zugang: Prüfpaket mit Stichproben, Vermerke mit Antwort, Kassenzählung, Prüfbericht. Die Berichte — Einnahmen-Überschuss-Rechnung, Vermögensübersicht, Kassenbericht, Zweckmittel, Rücklagenspiegel, Spendenbuch und weitere — sind vorläufig, solange das Jahr offen ist, und werden danach als Dokument festgeschrieben. Für die Steuererklärung stehen die Werte der Anlage Gem bereit, für die Umsatzsteuer die Voranmeldung — auch für Vereine, die kein Unternehmer sind und nur nach § 13b Steuer schulden.
+
+<table>
+  <tr>
+    <td><img src="docs/screenshots/desktop/fin-jahresabschluss.png" width="420" alt="Der Jahresabschluss 2025: elf von zwölf Schritten erledigt, als Nächstes die Umsatzsteuer-Jahreserklärung" /></td>
+    <td><img src="docs/screenshots/desktop/fin-kassenpruefung.png" width="420" alt="Die Kassenprüfung eines Jahres: Prüfer in Kompass und auf Papier, die Abschnitte des Prüfpakets mit Fortschritt" /></td>
+  </tr>
+  <tr>
+    <td>Jahresabschluss</td>
+    <td>Kassenprüfung</td>
+  </tr>
+  <tr>
+    <td><img src="docs/screenshots/desktop/fin-berichte.png" width="420" alt="Die Berichte eines Jahres mit festgeschriebenen Fassungen" /></td>
+    <td><img src="docs/screenshots/desktop/fin-umsatzsteuer.png" width="420" alt="Eine abgegebene Umsatzsteuer-Voranmeldung mit Kennzahlen und Übertragungsprotokoll" /></td>
+  </tr>
+  <tr>
+    <td>Berichte zum Festschreiben</td>
+    <td>Umsatzsteuer-Voranmeldung</td>
+  </tr>
+</table>
+
+Nicht vorgesehen sind Bilanzierung und die Übermittlung ans Finanzamt: Die Werte überträgt der Verein selbst in Mein ELSTER.
 
 ### Mitglieder und Lastschrift
 
@@ -208,12 +229,12 @@ Kompass läuft auch auf dem Telefon: die Startseite, ein Kontakt, ein Tierprofil
 | **Fundament** | Nutzer, Rollen und Rechte, Einstellungen statt Konstanten, Themes mit hellem und dunklem Modus, Änderungsprotokoll, Aufbewahrung und Löschfristen, nächtliches und geprüftes Backup mit Einspielen aus der Liste, Modul-System, Dokument-Pipeline mit Basis-Vorlagen, Mediathek mit Ordnern |
 | **Webseite** | Pflege in Kompass, Bau mit Astro aus dem Template des Vereins, Prüfung auf Sperrwörter und Übersetzungslücken, Vorschau mit Vergleich zur Live-Seite, Publish per rsync auf einen gewöhnlichen Webspace |
 | **Kontakte und Akte** | Kontakte mit Rollen über die Zeit und berechneter Aufbewahrungsfrist. Die Akte für ein- und ausgehende Post: Entwurf, Festschreiben, Nummer, Storno statt Löschen, Ordnerbaum, Bezüge, Antworten und Folgeschreiben, Wiedervorlage, Volltext mit Texterkennung, Versand per E-Mail mit Ausgang |
-| **Finanzen** | Bankkonten und Kassen, Kontoauszüge (CAMT, CSV), Belege mit ZUGFeRD, Buchen und Festschreiben, Zuwendungsbestätigungen nach amtlichem Muster mit Serienlauf und Spendenbuch, maschinelle Bestätigungen, Auslagen mit Freigabe durch eine zweite Person, Aufwandsspenden, Zahlungen an Partner mit Nachweisen, Zwecke und Rücklagen, Pauschalen je Person. Für Vereine mit Einnahmen-Überschuss-Rechnung |
+| **Finanzen** | Bankkonten und Kassen, Kontoauszüge (CAMT, CSV), Belege mit ZUGFeRD, Buchen und Festschreiben, Zuwendungsbestätigungen nach amtlichem Muster mit Serienlauf und Spendenbuch, maschinelle Bestätigungen, Auslagen mit Freigabe durch eine zweite Person, Aufwandsspenden, Zahlungen an Partner mit Nachweisen, Zwecke und Rücklagen, Pauschalen je Person. Jahresabschluss, Kassenprüfung mit Prüferzugang, festschreibbare Berichte, Fristen und Schwellen, Werte für Steuererklärung und Anlage Gem, Umsatzsteuer-Voranmeldung, Amtsübergabe, Datenexport für die Außenprüfung. Für Vereine mit Einnahmen-Überschuss-Rechnung |
 | **Mitglieder und Lastschrift** | Anträge, Aufnahme mit Nummer, Austritt mit Kündigungsfrist, Mitgliedsarten, Beitragsordnung mit Ständen, Beitrags- und Mahnlauf mit Versand per E-Mail oder Post, Stundung und Erlass, CSV-Liste und Bescheinigung über die Mitgliederzahl. SEPA-Lastschrift für Beiträge und Dauerspenden: Mandate mit Formular und Unterschrift, Einzug mit Vorschau und Datei für die Bank, Gutschrift und Rückgaben über die Arbeitsliste |
 | **Projekte, Tiere** | Vereinsspezifische Module mit ihrem öffentlichen Teil für die Webseite; Projekte haben dazu ihren Finanzabschnitt, Tierprofile eine Prüfung vor der Veröffentlichung |
 | **MCP** | Alle Dienste der Oberfläche für KI-Assistenten, mit denselben Rechten und demselben Protokoll |
 
-Was als Nächstes kommt — Jahresabschluss und Berichte der Finanzen, Gremien, das Tiermodul in seiner Vollstufe — und warum in dieser Reihenfolge, steht in [`docs/nordstern.md`](docs/nordstern.md). Dort steht auch, was Kompass **nicht** ist: kein Newsletter, kein Mailprogramm, kein Kalender, kein Aufgabenmanager, keine Finanzbuchhaltung für Bilanzierer und keine Übermittlung ans Finanzamt, kein Webseiten-Baukasten, kein Multi-Tenant.
+Was als Nächstes kommt — Gremien, das Tiermodul in seiner Vollstufe — und warum in dieser Reihenfolge, steht in [`docs/nordstern.md`](docs/nordstern.md). Dort steht auch, was Kompass **nicht** ist: kein Newsletter, kein Mailprogramm, kein Kalender, kein Aufgabenmanager, keine Finanzbuchhaltung für Bilanzierer und keine Übermittlung ans Finanzamt, kein Webseiten-Baukasten, kein Multi-Tenant.
 
 ## Betrieb
 

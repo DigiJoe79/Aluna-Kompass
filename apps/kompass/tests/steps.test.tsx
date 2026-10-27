@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { NextIntlClientProvider } from 'next-intl';
 import type { ReactElement } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -95,6 +95,78 @@ describe('Steps (kompakt)', () => {
     const items = within(screen.getByRole('list', { name: 'Schritte' })).getAllByRole('listitem');
     expect(items[0]!.textContent).toContain('14.10.2026');
     expect(within(items[1]!).getByRole('link', { name: 'PDF öffnen' })).toBeTruthy();
+  });
+});
+
+describe('Steps (kompakt, in Gruppen — Board 3a/3c, Freigabe Joe 2026-10-24)', () => {
+  const TWELVE = Array.from({ length: 12 }, (_, i) => ({ key: `s${i + 1}`, label: `Schritt ${i + 1}` }));
+  const GROUPS = [
+    { label: 'Vor dem Abschluss', keys: TWELVE.slice(0, 7).map((s) => s.key) },
+    { label: 'Abschluss', keys: ['s8'] },
+    { label: 'Prüfung und Vorlage', keys: TWELVE.slice(8).map((s) => s.key) },
+  ];
+
+  it('drei Gruppen mit Etikett, je Gruppe eine Liste mit durchgehenden Nummern (start)', () => {
+    show(<Steps density="compact" groups={GROUPS} steps={stepsFrom(TWELVE, 's6')} />);
+    const lists = screen.getAllByRole('list');
+    expect(lists.map((l) => l.getAttribute('aria-label'))).toEqual(['Vor dem Abschluss', 'Abschluss', 'Prüfung und Vorlage']);
+    expect(lists.map((l) => l.getAttribute('start') ?? '1')).toEqual(['1', '8', '9']);
+    expect(lists.map((l) => within(l).getAllByRole('listitem').length)).toEqual([7, 1, 4]);
+    // Die Nummer im Kreis zählt über die Gruppen weiter: „9“ steht am ersten Schritt der dritten Gruppe.
+    expect(within(lists[2]!).getAllByRole('listitem')[0]!.textContent).toContain('9');
+    for (const label of ['Vor dem Abschluss', 'Abschluss', 'Prüfung und Vorlage']) expect(screen.getByText(label)).toBeTruthy();
+  });
+
+  it('Board 3a: die Gruppen stehen in einer Karte; ohne Gruppen gibt es keine', () => {
+    show(<Steps density="compact" groups={GROUPS} steps={stepsFrom(TWELVE, 's6')} testId="closing" />);
+    const card = screen.getByTestId('closing-card');
+    expect(within(card).getAllByRole('list')).toHaveLength(3);
+    expect(within(card).getAllByRole('listitem')).toHaveLength(12);
+    cleanup();
+    show(<Steps density="compact" steps={stepsFrom(TWELVE.slice(0, 3), 's2')} testId="plain" />);
+    expect(screen.queryByTestId('plain-card')).toBeNull();
+  });
+
+  it('Antwort 2 Runde 6: `card` ohne Gruppen — dieselbe Karte mit Zeilen, ohne Overline; ohne `card` keine Karte', () => {
+    show(<Steps density="compact" card label="Übergabe" steps={stepsFrom(TWELVE.slice(0, 3), 's2')} testId="handover" />);
+    const card = screen.getByTestId('handover-card');
+    const lists = within(card).getAllByRole('list');
+    expect(lists).toHaveLength(1);
+    expect(lists[0]!.getAttribute('aria-label')).toBe('Übergabe');
+    expect(within(card).getAllByRole('listitem')).toHaveLength(3);
+    expect(screen.queryByText('Übergabe')).toBeNull(); // kein Etikett über der Liste
+    cleanup();
+    show(<Steps density="compact" steps={stepsFrom(TWELVE.slice(0, 3), 's2')} testId="plain" />);
+    expect(screen.queryByTestId('plain-card')).toBeNull();
+  });
+
+  it('höchstens ein aktiver Schritt über alle Gruppen', () => {
+    const steps = stepsFrom(TWELVE, 's2').map((s) => (s.key === 's10' ? { ...s, state: 'active' as const } : s));
+    expect(() => show(<Steps density="compact" groups={GROUPS} steps={steps} />)).toThrow(/at most one active step/);
+  });
+
+  it('Anker: jedes Listenelement trägt id="step-<key>"', () => {
+    const { container } = show(<Steps density="compact" groups={GROUPS} steps={stepsFrom(TWELVE, 's8')} />);
+    const target = container.querySelector('#step-s8');
+    expect(target?.tagName).toBe('LI');
+    expect(target?.getAttribute('aria-current')).toBe('step');
+  });
+
+  it('alle erledigt mit collapsedWhenDone: „Fertig.“ als status, Liste zu, der Knopf klappt mit aria-expanded auf', () => {
+    show(<Steps density="compact" groups={GROUPS} steps={stepsFrom(TWELVE, null)} done="2025 ist geprüft." collapsedWhenDone={{ label: 'Schritte ansehen' }} />);
+    expect(screen.getAllByRole('status').some((el) => el.textContent?.includes('Fertig.') && el.textContent.includes('2025 ist geprüft.'))).toBe(true);
+    expect(screen.queryAllByRole('list')).toHaveLength(0);
+    const toggle = screen.getByRole('button', { name: 'Schritte ansehen' });
+    expect(toggle.getAttribute('aria-expanded')).toBe('false');
+    fireEvent.click(toggle);
+    expect(toggle.getAttribute('aria-expanded')).toBe('true');
+    expect(screen.getAllByRole('list')).toHaveLength(3);
+  });
+
+  it('nicht alle erledigt: collapsedWhenDone ändert nichts', () => {
+    show(<Steps density="compact" groups={GROUPS} steps={stepsFrom(TWELVE, 's12')} collapsedWhenDone={{ label: 'Schritte ansehen' }} />);
+    expect(screen.queryByRole('button', { name: 'Schritte ansehen' })).toBeNull();
+    expect(screen.getAllByRole('list')).toHaveLength(3);
   });
 });
 

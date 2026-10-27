@@ -6,17 +6,18 @@ import { issueConfirmation, listUncertifiedDonations } from '../src/donations/co
 import { markNotReturn } from '../src/ledger/not-return';
 import { getEntry, saveDraft } from '../src/ledger/entries';
 import { bookEntry } from '../src/ledger/finalize';
+import { createContact } from '@kompass/module-contacts';
 import { donationFixture, err, type DonationFixture } from './donation-fixture';
 
 const check = (r: { checks: ConfirmationCheck[] }, key: ConfirmationCheckKey): ConfirmationCheck => r.checks.find((c) => c.key === key)!;
 
 /** Eine festgeschriebene Auszahlung an Erika ohne `originLineId` — so, wie eine PayPal-Rückzahlung ohne Verknüpfung gebucht wird. */
-async function payOut(f: DonationFixture, o: { cents: number; date?: string; categoryKey?: string }) {
+async function payOut(f: DonationFixture, o: { cents: number; date?: string; categoryKey?: string; contactId?: string }) {
   return unwrap(
     await bookEntry(f.deps, f.ctx, {
       entryDate: o.date ?? '2026-03-12', text: 'Auszahlung an Erika',
       moneyLines: [{ accountId: f.bank.id, amountCents: -o.cents }],
-      allocationLines: [{ categoryId: f.categoryByKey(o.categoryKey ?? 'donations').id, amountCents: -o.cents, contactId: f.erika.id }],
+      allocationLines: [{ categoryId: f.categoryByKey(o.categoryKey ?? 'donations').id, amountCents: -o.cents, contactId: o.contactId ?? f.erika.id }],
     }),
   );
 }
@@ -142,5 +143,34 @@ describe('N4: the checks name every blocking entry', () => {
       },
       remedy: { href: `/finance/entries/${a.id}`, labelKey: 'openEntry' },
     });
+  });
+});
+
+/**
+ * Plan E9 Task 2 (Befund 30 b): „Rückgabe einer Spende?“ steht nur an einer Auszahlung, die nach derselben Regel eine
+ * Bestätigung sperren könnte — nicht an jeder Auszahlung mit Kontakt (Lieferant ohne Spenden).
+ */
+describe('mayBeReturn at the entry', () => {
+  it('is false for a payment to a contact who never gave, true for a donor after the gift', async () => {
+    const f = await donationFixture();
+    const supplier = unwrap(await createContact(f.deps, f.manage, { kind: 'organization', name: 'Druckerei Beispiel' }));
+    const invoice = await payOut(f, { cents: 4000, categoryKey: 'program-costs', contactId: supplier.id });
+    expect(unwrap(await getEntry(f.deps, f.ctx, { id: invoice.id })).mayBeReturn).toBe(false);
+
+    await f.donate({ cents: 20000 });
+    const refund = await payOut(f, { cents: 4000, categoryKey: 'program-costs' });
+    expect(unwrap(await getEntry(f.deps, f.ctx, { id: refund.id })).mayBeReturn).toBe(true);
+  });
+
+  it('follows the rule of the block: not before the gift, not above it — and stays true once marked', async () => {
+    const f = await donationFixture();
+    const before = await payOut(f, { cents: 1000, date: '2026-03-01', categoryKey: 'program-costs' });
+    await f.donate({ cents: 20000 });
+    const above = await payOut(f, { cents: 30000, categoryKey: 'program-costs' });
+    expect(unwrap(await getEntry(f.deps, f.ctx, { id: before.id })).mayBeReturn).toBe(false);
+    expect(unwrap(await getEntry(f.deps, f.ctx, { id: above.id })).mayBeReturn).toBe(false);
+    const marked = await payOut(f, { cents: 4000, categoryKey: 'program-costs' });
+    unwrap(await markNotReturn(f.deps, f.ctx, { entryId: marked.id, notReturn: true, note: 'Erstattung' }));
+    expect(unwrap(await getEntry(f.deps, f.ctx, { id: marked.id })).mayBeReturn).toBe(true);
   });
 });

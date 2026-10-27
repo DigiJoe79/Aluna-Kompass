@@ -1,5 +1,5 @@
 import type { DbOrTx } from '@kompass/core';
-import { eq, inArray } from 'drizzle-orm';
+import { and, eq, gte, inArray, lte, type SQL } from 'drizzle-orm';
 import { financeAllocationLines, financeConfirmationLines, financeConfirmations, financeEntries, financeNotices, type FinanceConfirmationRow } from '../schema';
 import { returnedCentsInternal } from './check';
 
@@ -51,6 +51,37 @@ export function toCorrectConfirmationsInternal(db: DbOrTx): { confirmation: Fina
     .all()
     .map((confirmation) => ({ confirmation, reasons: toCorrectReasonsInternal(db, confirmation) }))
     .filter((c) => c.reasons.length > 0);
+}
+
+/**
+ * Die zu korrigierenden Bestätigungen, die ein Geschäftsjahr betreffen: mit mindestens einer Zuwendung des Jahres —
+ * nicht nach dem Ausstellungstag, denn eine Bestätigung vom Februar gehört zu den Spenden des Vorjahres. Eine Stelle
+ * für Abschluss (Schritt 7) und Kassenprüfung (Abschnitt Spenden); so öffnet eine spätere Bestätigung kein beendetes Jahr.
+ */
+export function toCorrectConfirmationsOfYearInternal(db: DbOrTx, fiscalYearId: string): { confirmation: FinanceConfirmationRow; reasons: ToCorrectReason[] }[] {
+  return toCorrectWithLinesWhere(db, eq(financeEntries.fiscalYearId, fiscalYearId));
+}
+
+/**
+ * Wie `toCorrectConfirmationsOfYearInternal`, für das Kalenderjahr des Spendenbuchs (N18): mit mindestens einer
+ * Zuwendung, gebucht im Kalenderjahr. Bei einem Geschäftsjahr gleich dem Kalenderjahr dieselben wie in Schritt 7.
+ */
+export function toCorrectConfirmationsOfCalendarYearInternal(db: DbOrTx, year: number): { confirmation: FinanceConfirmationRow; reasons: ToCorrectReason[] }[] {
+  return toCorrectWithLinesWhere(db, and(gte(financeEntries.entryDate, `${year}-01-01`), lte(financeEntries.entryDate, `${year}-12-31`))!);
+}
+
+function toCorrectWithLinesWhere(db: DbOrTx, where: SQL): { confirmation: FinanceConfirmationRow; reasons: ToCorrectReason[] }[] {
+  const ofYear = new Set(
+    db
+      .select({ id: financeConfirmationLines.confirmationId })
+      .from(financeConfirmationLines)
+      .innerJoin(financeAllocationLines, eq(financeAllocationLines.id, financeConfirmationLines.lineId))
+      .innerJoin(financeEntries, eq(financeEntries.id, financeAllocationLines.entryId))
+      .where(where)
+      .all()
+      .map((r) => r.id),
+  );
+  return toCorrectConfirmationsInternal(db).filter((c) => ofYear.has(c.confirmation.id));
 }
 
 export function countToCorrectInternal(db: DbOrTx): number {

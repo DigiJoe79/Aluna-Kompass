@@ -1,11 +1,12 @@
 import { hasPermission, isModuleEnabled, readLocales, readSetting, requirePermission, todayIn, userNamesFor } from '@kompass/core';
-import { listContactIbans } from '@kompass/module-finance';
+import { getContactTaxDetails, listContactIbans, vatProfileAt } from '@kompass/module-finance';
 import { listMemberTypes, membershipForContact } from '@kompass/module-members';
 import { dateFormatOf } from '@/lib/date-format';
 import { nameOrEmpty } from '@/lib/name-or-empty';
 import { statusTone } from '@/components/status-badge';
 import { contactRetention, contactRoleDefinitions, displayName, formatPostalAddress, getContact } from '@kompass/module-contacts';
-import { getTranslations } from 'next-intl/server';
+import { getLocale, getTranslations } from 'next-intl/server';
+import { countryName } from '@/lib/settings-options';
 import { notFound } from 'next/navigation';
 import { ForbiddenCard } from '@/components/forbidden-card';
 import { Page } from '@/components/page';
@@ -22,6 +23,7 @@ import { Overline } from '@/components/overline';
 import Link from 'next/link';
 import { PeoplePanel } from './people-panel';
 import { BankAccountsPanel, type BankAccountItem } from './bank-accounts-panel';
+import { ContactVatPanel, type ContactVatDecline } from './vat-panel';
 
 export default async function ContactDetailPage(props: { params: Promise<{ id: string }> }) {
   const { id } = await props.params;
@@ -29,6 +31,7 @@ export default async function ContactDetailPage(props: { params: Promise<{ id: s
   if (requirePermission(ctx, 'contacts.view')) return <Page width="standard"><ForbiddenCard permission="contacts.view" /></Page>;
 
   const t = await getTranslations('contacts');
+  const uiLocale = await getLocale();
   const c = await getTranslations('common');
   const nav = await getTranslations('nav');
 
@@ -70,11 +73,20 @@ export default async function ContactDetailPage(props: { params: Promise<{ id: s
 
   // Bankverbindungen (Nachtrag MCP-Test § 3, Plan U4 Task 3): nur mit dem Modul Finanzen und `finance.read`.
   let bankAccounts: BankAccountItem[] | null = null;
+  // Umsatzsteuer (E6a Task 11c, Board 2a A): dazu nur, wenn der Verein heute Unternehmer ist.
+  let vat: { reverseCharge: 'eu' | 'other' | null; decline: ContactVatDecline | null } | null = null;
   if (isModuleEnabled(deps, 'finance') && hasPermission(ctx, 'finance.read')) {
     const listed = await listContactIbans(deps, ctx, { contactId: contact.id });
     if (listed.ok) {
       const names = userNamesFor(deps, listed.value.items.map((i) => i.createdByUserId));
       bankAccounts = listed.value.items.map((i) => ({ id: i.id, iban: i.iban, source: i.source, learnedFromEntryDate: i.learnedFromEntryDate, createdAt: i.createdAt, createdByName: names.get(i.createdByUserId) ?? null, coHolders: i.coHolders }));
+    }
+    if (vatProfileAt(deps.db, todayIn(deps)).entrepreneur) {
+      const details = await getContactTaxDetails(deps, ctx, { contactId: contact.id });
+      if (details.ok) {
+        const d = details.value?.reverseChargeDecline ?? null;
+        vat = { reverseCharge: details.value?.reverseCharge ?? null, decline: d ? { reason: d.reason, text: d.text, on: d.on, byName: userNamesFor(deps, [d.byUserId]).get(d.byUserId) ?? null } : null };
+      }
     }
   }
 
@@ -131,7 +143,7 @@ export default async function ContactDetailPage(props: { params: Promise<{ id: s
           <Overline className="mb-2">{t('preview')}</Overline>
           {/* Die Anschrift als Text, ohne Rahmen und Codefläche: keine Karte in der Karte (§ E, 04 B12). */}
           <p data-testid="postal-address" className="whitespace-pre-line text-body text-ink">
-            {formatPostalAddress(contact, contact.belongsTo, organizationCountry)}
+            {formatPostalAddress(contact, contact.belongsTo, organizationCountry, (code) => countryName(code, uiLocale))}
           </p>
           {/* Ohne eigene Anschrift gilt die der Organisation (Nachtrag Ansprechpersonen § 3, 23d). */}
           {usesOrgAddress ? <p className="mt-1 text-hint text-muted-ink">{t('address.ofOrg')}</p> : null}
@@ -177,6 +189,8 @@ export default async function ContactDetailPage(props: { params: Promise<{ id: s
         />
 
         {bankAccounts ? <BankAccountsPanel contactId={contact.id} contactName={displayName(contact)} items={bankAccounts} canEdit={hasPermission(ctx, 'finance.entriesWrite')} /> : null}
+
+        {vat ? <ContactVatPanel key={`${vat.reverseCharge}-${vat.decline?.on ?? ''}-${vat.decline?.reason ?? ''}`} contactId={contact.id} entrepreneur reverseCharge={vat.reverseCharge} decline={vat.decline} canEdit={hasPermission(ctx, 'finance.entriesWrite')} /> : null}
 
         <RelatedDocuments deps={deps} ctx={ctx} entityType="contact" entityId={contact.id} />
 

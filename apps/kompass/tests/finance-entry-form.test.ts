@@ -211,3 +211,29 @@ describe('countEntryChanges', () => {
     expect(countEntryChanges(loaded, { ...loaded, id: 'E1', expectedVersion: 'v1', reasonKind: 'purpose' })).toBe(0);
   });
 });
+
+describe('Merkmale der Anlage Gem (Rechenschaft D2, 15g)', () => {
+  const income = (rows: EntryFormState['splitRows']) => {
+    const state = emptyForm('income', '2026-03-01');
+    return { ...state, text: 'Eingang', moneyRows: [{ ...state.moneyRows[0]!, accountId: 'bank', amountText: '500,00' }], splitRows: rows };
+  };
+  const row = (over: Partial<EntryFormState['splitRows'][number]>) => ({ key: 's1', categoryId: 'c', amountText: '500,00', contactId: 'k1', projectId: null, purposeId: null, abroad: false, addsToAssets: false, ...over });
+
+  it('leaves the addition to assets to the service unless a fixed reason unticks it', () => {
+    const plain = toServiceInput(income([row({})]));
+    if (!plain.ok) throw new Error('expected ok');
+    // Ohne Angabe nimmt der Dienst die Vorgabe der Art: Eine Erbschaft geht ins Vermögen.
+    expect(plain.input.allocationLines[0]).not.toHaveProperty('addsToAssets');
+    const optOut = toServiceInput(income([row({ addsToAssetsOptOut: 'testatorDirectedCurrentUse' })]));
+    if (!optOut.ok) throw new Error('expected ok');
+    expect(optOut.input.allocationLines[0]).toMatchObject({ addsToAssets: false, addsToAssetsOptOut: 'testatorDirectedCurrentUse' });
+    const kept = toServiceInput(income([row({ addsToAssets: true, assetEndowment: true })]));
+    if (!kept.ok) throw new Error('expected ok');
+    expect(kept.input.allocationLines[0]).toMatchObject({ addsToAssets: true, assetEndowment: true });
+  });
+
+  it('round-trips both marks through fromEntryView', () => {
+    const view = fromEntryView({ id: 'e1', entryDate: '2026-03-01', text: 'Ausstattung', moneyLines: [{ accountId: 'bank', amountCents: 50000 }], allocationLines: [{ categoryId: 'c', amountCents: 50000, contactId: 'k1', assetEndowment: true, addsToAssets: false, addsToAssetsOptOut: 'donorAllowedCurrentUse' }] });
+    expect(view.splitRows[0]).toMatchObject({ assetEndowment: true, addsToAssetsOptOut: 'donorAllowedCurrentUse' });
+  });
+});

@@ -9,8 +9,9 @@ import { bookEntry } from '../src/ledger/finalize';
 import { createFirstFiscalYear, ensureFiscalYearFor, type FiscalYearView } from '../src/ledger/fiscal-years';
 import { createPurpose } from '../src/ledger/purposes';
 import { installFinance } from '../src/install';
+import { saveVatSettings } from '../src/ledger/vat-settings';
 import { FINANCE_PERMISSIONS, financeModule } from '../src/manifest';
-import { financeCategories, financeFiscalYears, financeImportRuns, financePeriodEvents, financeRawTransactions, type FinanceCategoryRow, type FinanceFiscalYearRow } from '../src/schema';
+import { financeCategories, financeFiscalYears, financeImportRuns, financePeriodEvents, financeRawTransactions, financeTaxPeriods, type FinanceCategoryRow, type FinanceFiscalYearRow } from '../src/schema';
 
 /** Ein minimales, gültiges PDF — wie in den Tests der Akte (`packages/modules/dms/tests/helpers.ts`). */
 export function pdfBytes(): Uint8Array {
@@ -45,7 +46,12 @@ export function allowHumanOnlyOverMcp(deps: ReturnType<typeof setupFinance>['dep
  * `ensureFiscalYearFor` (nur der unmittelbare Nachfolger entsteht von
  * selbst) — abrufbar über `years['2026']` usw.
  */
-export async function ledgerFixture(opts: { years?: readonly string[]; extraModules?: readonly ModuleManifest[] } = {}) {
+/**
+ * `entrepreneur`: Der Verein ist ab dem ersten Jahr Unternehmer (Kleinunternehmer, solange keine Regelbesteuerung gilt) —
+ * für Tests mit § 13b Abs. 1 oder eigenen Steuersätzen; ohne ist er es nicht und bekommt nur `rc13bOther` und
+ * `icAcquisition` (Befund 39, Frage 4).
+ */
+export async function ledgerFixture(opts: { years?: readonly string[]; extraModules?: readonly ModuleManifest[]; entrepreneur?: boolean } = {}) {
   const { deps, ctx, userId } = setupFinance(FINANCE_PERMISSIONS, opts.extraModules);
   deps.db.transaction((tx) => installFinance(tx, deps, systemContext()));
 
@@ -68,6 +74,7 @@ export async function ledgerFixture(opts: { years?: readonly string[]; extraModu
     years[y] = created.value;
   }
   const year = firstYear;
+  if (opts.entrepreneur) unwrap(await saveVatSettings(deps, ctx, { validFrom: `${first}-01-01`, vatEntrepreneur: true }));
 
   const donations = categoryByKey('donations');
   const fees = categoryByKey('payment-fees');
@@ -102,13 +109,13 @@ export async function ledgerFixture(opts: { years?: readonly string[]; extraModu
 type LedgerFixture = Awaited<ReturnType<typeof ledgerFixture>>;
 
 /** Ein fertig geladener Auszug (F5-Tests) — direkt eingefügt, ohne Datei; `discarded` verwirft ihn. */
-export function insertRun(f: Pick<LedgerFixture, 'deps' | 'userId'>, accountId: string, opts: { discarded?: boolean; closingCents?: number | null; periodTo?: string | null } = {}): string {
+export function insertRun(f: Pick<LedgerFixture, 'deps' | 'userId'>, accountId: string, opts: { discarded?: boolean; closingCents?: number | null; periodTo?: string | null; periodFrom?: string; startedAt?: string } = {}): string {
   const id = newId();
   f.deps.db
     .insert(financeImportRuns)
     .values({
-      id, accountId, format: 'camt053', fileName: 'auszug.xml', fileSha256: id.padEnd(64, '0'), fileKey: null, periodFrom: '2026-01-01', periodTo: opts.periodTo === undefined ? '2026-12-31' : opts.periodTo,
-      closingCents: opts.closingCents ?? null, startedAt: '2026-03-01T09:00:00.000Z', finishedAt: '2026-03-01T09:01:00.000Z', createdByUserId: f.userId, createdChannel: 'ui',
+      id, accountId, format: 'camt053', fileName: 'auszug.xml', fileSha256: id.padEnd(64, '0'), fileKey: null, periodFrom: opts.periodFrom ?? '2026-01-01', periodTo: opts.periodTo === undefined ? '2026-12-31' : opts.periodTo,
+      closingCents: opts.closingCents ?? null, startedAt: opts.startedAt ?? '2026-03-01T09:00:00.000Z', finishedAt: opts.startedAt ?? '2026-03-01T09:01:00.000Z', createdByUserId: f.userId, createdChannel: 'ui',
       ...(opts.discarded ? { discardedAt: '2026-03-02T00:00:00.000Z', discardedByUserId: f.userId, discardNote: 'falsch' } : {}),
     })
     .run();
@@ -151,5 +158,18 @@ export function insertDocument(f: Pick<LedgerFixture, 'deps'>, o: { subject: str
     })
     .run();
   if (o.linkedEntryId) f.deps.db.insert(documentLinks).values({ id: newId(), documentId: id, entityType: 'financeEntry', entityId: o.linkedEntryId, role: 'about', createdAt: DOCUMENT_TIME }).run();
+  return id;
+}
+
+/**
+ * Rechenschaft D2: ein Erklärungszeitraum direkt eingefügt — wie ihn der Übertrag aus „Steuererklärung abgegeben am“
+ * anlegt (ohne festgeschriebene Fassung). Für Tests, die nur „abgegeben am“ brauchen (§ 153, Wiederöffnen).
+ */
+export function insertTaxPeriod(f: Pick<LedgerFixture, 'deps'>, o: { firstFiscalYearId: string; lastFiscalYearId?: string; filedOn?: string | null; dueOn?: string }): string {
+  const id = newId();
+  f.deps.db
+    .insert(financeTaxPeriods)
+    .values({ id, firstFiscalYearId: o.firstFiscalYearId, lastFiscalYearId: o.lastFiscalYearId ?? o.firstFiscalYearId, dueOn: o.dueOn ?? '2099-07-31', filedOn: o.filedOn ?? null, createdAt: DOCUMENT_TIME, createdByUserId: 'system', updatedAt: DOCUMENT_TIME })
+    .run();
   return id;
 }

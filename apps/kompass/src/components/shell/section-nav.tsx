@@ -41,13 +41,16 @@ export function SectionNav({ sections, activeHref, variant, onClose }: SectionNa
                 <Link
                   href={item.href}
                   aria-current={isActive ? 'page' : undefined}
+                  // N1 (Freigabe Joe 2026-10-24): „später“ ist ein normaler Link, gedämpft, mit Zusatz rechts.
+                  aria-label={item.later ? t('nav.laterLabel', { name: item.label ?? t(item.labelKey) }) : undefined}
                   onClick={() => onClose?.()}
                   className={cn(
-                    'flex h-8 items-center rounded-md px-2.5 text-body',
-                    isActive ? 'bg-selected font-semibold text-selected-ink' : 'text-ink-2 hover:bg-hover hover:text-ink',
+                    'flex h-8 items-center gap-2 rounded-md px-2.5 text-body',
+                    isActive ? 'bg-selected font-semibold text-selected-ink' : item.later ? 'text-muted-ink hover:bg-hover' : 'text-ink-2 hover:bg-hover hover:text-ink',
                   )}
                 >
                   <span className="truncate">{item.label ?? t(item.labelKey)}</span>
+                  {item.later ? <span className="ml-auto shrink-0 text-hint">{t('nav.later')}</span> : null}
                 </Link>
               </div>
             );

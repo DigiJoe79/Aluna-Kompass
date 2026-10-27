@@ -67,6 +67,8 @@ const labelledTypes = (deps: SeededDeps, m: ModuleManifest, types: Iterable<stri
 const NAME_WITHOUT_PERMISSION: Record<string, string> = {
   financeFiscalYear: 'Die Bezeichnung des Geschäftsjahrs („2025“) ist keine Vereinsinterna; finance/ledger/record-labels.ts gibt sie bewusst mit.',
   financePeriodEvent: 'Beschriftet sich als sein Geschäftsjahr, siehe financeFiscalYear.',
+  financeTaxPeriod: 'Beschriftet sich mit den Bezeichnungen seiner Geschäftsjahre („2023–2025“), siehe financeFiscalYear.',
+  financeVatFiling: 'Beschriftet sich mit ihrem Umsatzsteuer-Zeitraum („2026-Q2“), wie financeTaxPeriod mit seinen Jahren.',
 };
 
 const labelText = (label: RecordLabelInput['label']) => (typeof label === 'string' ? label : '');
@@ -278,8 +280,19 @@ const STALE_NOT_PROBED: Record<string, string> = {
   finance_expense_approve: 'Verlangt Positionen; Finanzen prüfen ihren Ladestand selbst (P4).',
   finance_partner_payment_draft_save: 'Verlangt Positionen; Finanzen prüfen ihren Ladestand selbst (P4).',
   finance_reserve_save: 'Verlangt Art und Name; Finanzen prüfen ihren Ladestand selbst (P4).',
+  finance_audit_auditor_save: 'Verlangt Jahr, Kontakt und Art; Finanzen prüfen ihren Ladestand selbst (auditing-auditors.test.ts).',
   finance_reserve_set_active: 'Verlangt den Schalter; Finanzen prüfen ihren Ladestand selbst (P4).',
   finance_reserve_carry_forward: 'Verlangt Betrag und Tag; Finanzen prüfen ihren Ladestand selbst (P4).',
+  finance_other_asset_save: 'Verlangt Art, Bezeichnung, Wert, Grundlage und Beginn; Finanzen prüfen ihren Ladestand selbst (other-assets.test.ts).',
+  finance_audit_report_examination_save: 'Verlangt reportId statt id; Finanzen prüfen ihren Ladestand je Karte selbst (auditing-report.test.ts, auditing-mcp-tools.test.ts).',
+  finance_audit_report_result_save: 'Verlangt reportId statt id; Finanzen prüfen ihren Ladestand je Karte selbst (auditing-report.test.ts, auditing-mcp-tools.test.ts).',
+  finance_audit_report_deviation_save: 'Verlangt reportId statt id; Finanzen prüfen ihren Ladestand je Karte selbst (auditing-report.test.ts, auditing-mcp-tools.test.ts).',
+  finance_audit_report_signatures_save: 'Verlangt reportId statt id; Finanzen prüfen ihren Ladestand je Karte selbst (auditing-report.test.ts, auditing-mcp-tools.test.ts).',
+  finance_handover_update: 'Verlangt id; offene Übergabe ohne Zwischenbericht — Finanzen prüfen ihren Ladestand selbst (closing-handover.test.ts).',
+  finance_handover_items_save: 'Verlangt id und Punkte; Finanzen prüfen ihren Ladestand selbst (closing-handover.test.ts).',
+  finance_assembly_result_save: 'Verlangt fiscalYearId statt id, Tag und Art der Entlastung; Finanzen prüfen ihren Ladestand selbst (closing-assembly.test.ts).',
+  finance_tax_period_answers_save: 'Verlangt die Angaben; Finanzen prüfen ihren Ladestand selbst (tax-periods.test.ts).',
+  finance_tax_period_notice_link: 'Verlangt den Bescheid; Finanzen prüfen ihren Ladestand selbst (tax-periods-filing.test.ts).',
 };
 
 const takesVersion = (tool: McpToolDefinition) => {

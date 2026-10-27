@@ -2,7 +2,7 @@ import { purposeGoingNegative, purposeNegativeProblemInternal } from '../ledger/
 import { expectedVersionField, hasPermission, invalid, isoNow, newId, notFound, ok, readSetting, requirePermission, staleVersion, todayIn, validate, type CallContext, type DbOrTx, type Deps, type Failure, type Result, type ValidationIssue } from '@kompass/core';
 import { contacts, displayName } from '@kompass/module-contacts';
 import { documentLinks, linkDocumentInternal } from '@kompass/module-dms';
-import { and, desc, eq } from 'drizzle-orm';
+import { and, desc, eq, inArray } from 'drizzle-orm';
 import { z } from 'zod';
 import { financeAudit } from '../audit';
 import { financeConflict } from '../errors';
@@ -87,7 +87,34 @@ export interface PartnerPaymentView extends FinancePartnerPaymentRow {
    * `finance_partner_proof_deadlines`.
    */
   readyToAcknowledge: boolean;
+  /**
+   * Rechenschaft D2, nur Hinweise: `endowmentPassedOn` — eine Vermögensausstattung aus einem Zweck, dem selbst eine
+   * Vermögensausstattung zufloss; Mittel und Erträge daraus dürfen nicht erneut nach § 58 Nr. 3 AO weitergegeben werden
+   * (S. 3). Keine Sperre.
+   */
+  hints: PartnerPaymentHint[];
   version: string;
+}
+
+export type PartnerPaymentHint = 'endowmentPassedOn';
+
+/** Zweck mit erhaltener Vermögensausstattung (festgeschriebene Einnahmezeile mit `assetEndowment`). */
+function hintsOf(db: DbOrTx, row: FinancePartnerPaymentRow, positions: readonly PositionView[]): PartnerPaymentHint[] {
+  if (!row.assetEndowment) return [];
+  const purposeIds = [...new Set(positions.map((p) => p.purposeId).filter((id): id is string => !!id))];
+  if (purposeIds.length === 0) return [];
+  const received = db
+    .select({ id: financeAllocationLines.id })
+    .from(financeAllocationLines)
+    .innerJoin(financeEntries, eq(financeEntries.id, financeAllocationLines.entryId))
+    .where(and(eq(financeEntries.status, 'final'), eq(financeAllocationLines.assetEndowment, true), inArray(financeAllocationLines.purposeId, purposeIds)))
+    .get();
+  return received ? ['endowmentPassedOn'] : [];
+}
+
+/** Vermögensausstattung (§ 58 Nr. 3 AO) geht nur an eine steuerbegünstigte Körperschaft oder eine juristische Person des öffentlichen Rechts, als Förderung. */
+export function assetEndowmentAllowed(basis: string, partnerStatus: string): boolean {
+  return basis === 'transfer58' && (partnerStatus === 'taxExemptBody' || partnerStatus === 'publicBody');
 }
 
 /** Mit Rechteprüfung: ohne „Freigeben“ ist für niemanden etwas bereit. */
@@ -113,6 +140,7 @@ function toView(deps: Deps, ctx: CallContext, db: DbOrTx, row: FinancePartnerPay
     activeStep: activeStepOf(db, row),
     requiredEvidenceKinds: requiredEvidenceKindsFor(partner, row, positions),
     readyToAcknowledge: readyToAcknowledgeFor(db, ctx, row),
+    hints: hintsOf(db, row, positions),
     effectiveProofMonths: row.proofMonths ?? partner.usualProofMonths,
     reasonsNeeded: reasonsNeededOf(deps, db, partner, row),
     paidOn: paidOnOf(db, row),
@@ -176,6 +204,8 @@ export const draftBaseSchema = z.object({
     proofMonths: z.number().int().min(1).max(60).nullable().optional(),
     positions: z.array(positionInputSchema).max(100),
     paidLineIds: z.array(z.string().min(1)).max(100).optional(),
+    /** Rechenschaft D2: Mittel zur Vermögensausstattung (§ 58 Nr. 3 AO) — nur `transfer58` an eine steuerbegünstigte oder öffentliche Körperschaft. */
+    assetEndowment: z.boolean().optional(),
   });
 
 /** N5: Welche Position welche Angaben braucht, prüft der Dienst — das Werkzeug zeigt `draftBaseSchema`. */
@@ -269,6 +299,7 @@ export async function savePartnerPaymentDraft(deps: Deps, ctx: CallContext, inpu
   const contact = deps.db.select().from(contacts).where(eq(contacts.id, partner.contactId)).get()!;
   const allowed = checkBasisAllowed(v.basis, partner.status, contact.kind);
   if (allowed) return allowed;
+  if (v.assetEndowment && !assetEndowmentAllowed(v.basis, partner.status)) return invalid([{ path: 'assetEndowment', message: 'notApplicable' }]);
   // Die Begründung einer übersteuerten Art verlangt erst das Einreichen: laufend gesichert wird auch ein halber Stand.
 
   for (const p of v.positions) {
@@ -291,7 +322,7 @@ export async function savePartnerPaymentDraft(deps: Deps, ctx: CallContext, inpu
     const paymentId = before?.id ?? newId();
     const fields = {
       partnerId, basis: v.basis as PartnerBasis, basisOverridden: v.basis !== partner.usualBasis, basisOverrideReason: v.basisOverrideReason ?? null,
-      purposeText: v.purposeText ?? '', agreementDocumentId: v.agreementDocumentId ?? null, retroactive: v.retroactive, proofMonths: v.proofMonths ?? null, updatedAt: now,
+      purposeText: v.purposeText ?? '', agreementDocumentId: v.agreementDocumentId ?? null, retroactive: v.retroactive, proofMonths: v.proofMonths ?? null, assetEndowment: v.assetEndowment ?? false, updatedAt: now,
     };
     if (before) tx.update(financePartnerPayments).set(fields).where(eq(financePartnerPayments.id, paymentId)).run();
     else tx.insert(financePartnerPayments).values({ id: paymentId, state: 'draft', createdByUserId: ctx.userId ?? 'system', createdAt: now, ...fields }).run();
@@ -315,7 +346,7 @@ export async function savePartnerPaymentDraft(deps: Deps, ctx: CallContext, inpu
     const totalCents = paymentTotalCents(after, positions, paidLineViewsOf(tx, paymentId));
     financeAudit(tx, deps, ctx, {
       action: 'finance.partnerPayment.saveDraft', entity: 'financePartnerPayment', id: paymentId,
-      after: { state: 'draft', basis: after.basis, basisOverridden: after.basisOverridden, retroactive: after.retroactive, proofMonths: after.proofMonths, positionCount: positions.length, totalCents },
+      after: { state: 'draft', basis: after.basis, basisOverridden: after.basisOverridden, retroactive: after.retroactive, proofMonths: after.proofMonths, assetEndowment: after.assetEndowment, positionCount: positions.length, totalCents },
     });
     return ok(toView(deps, ctx, tx, after));
   });
@@ -471,7 +502,7 @@ export async function copyPartnerPayment(deps: Deps, ctx: CallContext, input: un
     const id = newId();
     tx.insert(financePartnerPayments).values({
       id, partnerId: source.partnerId, basis: source.basis, basisOverridden: source.basisOverridden, basisOverrideReason: source.basisOverrideReason,
-      purposeText: source.purposeText, agreementDocumentId: source.agreementDocumentId, retroactive: source.retroactive, proofMonths: source.proofMonths, state: 'draft',
+      purposeText: source.purposeText, agreementDocumentId: source.agreementDocumentId, retroactive: source.retroactive, proofMonths: source.proofMonths, assetEndowment: source.assetEndowment, state: 'draft',
       copiedFromPaymentId: source.id, createdByUserId: ctx.userId ?? 'system', createdAt: now, updatedAt: now,
     }).run();
     if (source.agreementDocumentId) linkDocumentInternal(tx, deps, { documentId: source.agreementDocumentId, entityType: 'financePartnerPayment', entityId: id });
@@ -553,12 +584,6 @@ export async function partnerProofDeadlines(deps: Deps, ctx: CallContext, input:
   const graceDays = readSetting<number>(deps, 'finance.proofGraceDays');
   const ready = new Set(hasPermission(ctx, 'finance.approve') ? paymentsReadyToAcknowledgeInternal(deps.db, ctx.userId ?? null).map((r) => r.id) : []);
   return ok(partnerProofDeadlinesInternal(deps.db, todayIn(deps), graceDays).map((d) => ({ ...d, readyToAcknowledge: ready.has(d.paymentId) })));
-}
-
-/** Annahme 9: ob ein Dokument an mehr als einem Vorgang als Nachweis hängt. */
-export function evidenceUsedMultipleTimesInternal(db: DbOrTx, documentId: string): boolean {
-  const rows = db.select({ paymentId: financePartnerEvidence.paymentId }).from(financePartnerEvidence).where(eq(financePartnerEvidence.documentId, documentId)).all();
-  return new Set(rows.map((r) => r.paymentId)).size > 1;
 }
 
 export { paymentProofSatisfied };

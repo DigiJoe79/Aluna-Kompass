@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useState, useTransition } from 'react';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import type { EntryLinesInput, SettlementWarning } from '@kompass/module-finance';
@@ -12,6 +12,7 @@ import { BalanceIndicator } from '@/components/finance/balance-indicator';
 import { ReceiptDrop } from '@/components/finance/receipt-drop';
 import { ReceiptList, type ReceiptListItem } from '@/components/finance/receipt-list';
 import { SplitRow, type SplitRowCategoryOption, type SplitRowOption } from '@/components/finance/split-row';
+import { GiverDialog } from './giver-dialog';
 import { ConfirmDialog } from '@/components/forms/confirm-dialog';
 import { FormActionBar } from '@/components/forms/form-action-bar';
 import { FormErrorSummary } from '@/components/forms/form-error-summary';
@@ -25,7 +26,12 @@ import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
 import type { ActionState } from '@/lib/actions';
 import { formatAmount, formatEuro, parseAmount } from '@/lib/finance/amount';
-import { applyTemplate, countEntryChanges, remainderCents, restInto, toServiceInput, type EntryFormState, type EntryTemplate, type MoneyRow } from '@/lib/finance/entry-form';
+import { applyTemplate, countEntryChanges, remainderCents, restInto, toServiceInput, withContactReverseCharge, type EntryFormState, type EntryTemplate, type MoneyRow } from '@/lib/finance/entry-form';
+import type { VatLineContext } from '@/lib/finance/reverse-charge-text';
+import { checkReverseChargeAction, contactReverseChargeAction, declineReverseChargeAction, saveContactTaxDetailsAction } from '../tax/actions';
+import { ReverseChargePrompt } from '@/components/finance/reverse-charge-prompt';
+import { applyReverseChargeYes, reverseChargeCheckInput, reverseChargeTriggerText } from '@/lib/finance/reverse-charge-prompt';
+import { useReverseChargePrompt, type ReverseChargeActions } from '@/lib/finance/use-reverse-charge-check';
 import { RefusalNotice } from '@/components/forms/refusal-notice';
 import { runAction as guarded, toastNetwork, toastRefusal } from '@/lib/feedback';
 import { remediesFor, type RemedyAction } from '@/lib/finance/remedies';
@@ -55,6 +61,8 @@ export interface EntryFormProps {
   projects: SplitRowOption[];
   taxCodeOptions: string[];
   showTax: boolean;
+  /** E6a Task 11c: für den Satz zur Steuer bei § 13b/Erwerb (`vatLineContextInternal`). */
+  vatContext?: VatLineContext;
   canFinalize: boolean;
   voucherTypeKey: string;
   vouchers: ReceiptListItem[];
@@ -76,6 +84,7 @@ export interface PendingVoucher {
 }
 
 const TEMPLATES: EntryTemplate[] = ['income', 'expense', 'transfer', 'inKind'];
+const REVERSE_CHARGE_ACTIONS: ReverseChargeActions = { check: checkReverseChargeAction, decline: declineReverseChargeAction, mark: saveContactTaxDetailsAction };
 
 /**
  * Die offenen Zahlungen, die zur Richtung einer Geldzeile passen und noch
@@ -188,7 +197,7 @@ const REASON_CODES = new Set(['boardAllowanceNeedsReason', 'purposeGoesNegative'
 /** Plan N2 Task 2: Ablehnungen, die eine Bestätigung im Festschreiben-Dialog aufheben kann. */
 const WARNING_CODES: Record<string, SettlementWarning> = { inSubmittedRunNotAcknowledged: 'inSubmittedRun', overpaidNotAcknowledged: 'overpaid', overpaidByCollectionNotAcknowledged: 'overpaid' };
 
-export function EntryForm({ initial, accounts, categories, purposes, projects, taxCodeOptions, showTax, canFinalize, voucherTypeKey, vouchers: initialVouchers, openItems, returnTo = '/finance/entries', pendingVoucher: initialPending = null, today }: EntryFormProps) {
+export function EntryForm({ initial, accounts, categories, purposes, projects, taxCodeOptions, showTax, vatContext, canFinalize, voucherTypeKey, vouchers: initialVouchers, openItems, returnTo = '/finance/entries', pendingVoucher: initialPending = null, today }: EntryFormProps) {
   const t = useTranslations('finance.entryForm');
   // `remediesFor` liefert vollqualifizierte Schlüssel (`finance.remedy.*`) — ein eigener Übersetzer ohne Namensraum.
   const tRoot = useTranslations();
@@ -198,6 +207,8 @@ export function EntryForm({ initial, accounts, categories, purposes, projects, t
   const [state, setState] = useState<EntryFormState>(initial);
   // Der zuletzt gesicherte Stand: beim Laden, nach dem automatischen Entwurf für einen Beleg wieder neu.
   const [saved, setSaved] = useState<EntryFormState>(initial);
+  // „Angaben zum Geber“ (15g B): öffnet, sobald an einem Eingang die Vermögensausstattung angekreuzt wird.
+  const [giverRow, setGiverRow] = useState<{ key: string; contact: { id: string; name: string } | null } | null>(null);
   const [entryId, setEntryId] = useState<string | undefined>(initial.id);
   const [vouchers, setVouchers] = useState<ReceiptListItem[]>(initialVouchers);
   const [confirmFinalize, setConfirmFinalize] = useState(false);
@@ -332,7 +343,7 @@ export function EntryForm({ initial, accounts, categories, purposes, projects, t
       }
       if (result.message) toast.warning(result.message);
       const data = result.data as { linkId: string; documentId: string; documentNumber: string };
-      setVouchers((prev) => [...prev, { linkId: data.linkId, documentNumber: data.documentNumber, title: file.name, typeLabel: t('voucherType'), date: state.entryDate, viewHref: `/finance/entries/${id}/voucher/${data.documentId}`, revoked: false }]);
+      setVouchers((prev) => [...prev, { linkId: data.linkId, documentNumber: data.documentNumber, title: file.name, typeLabel: t('voucherType'), date: state.entryDate, viewHref: `/finance/entries/${id}/voucher/${data.documentId}`, documentId: data.documentId, revoked: false }]);
     }
   };
 
@@ -346,6 +357,16 @@ export function EntryForm({ initial, accounts, categories, purposes, projects, t
       else setVoucherRefusal(result);
     } else if (result.status === 'success') router.refresh();
   };
+
+  // Prüffrage § 13b (E6b Task 4, Board 7a): fragt bei jeder Änderung von Kontakt, Beleg, Betrag oder Kennzeichen.
+  const tPrompt = useTranslations('finance.reverseChargePrompt');
+  const locale = useLocale();
+  const promptDocumentId = pendingVoucher?.documentId ?? vouchers.find((v) => !v.revoked && v.documentId)?.documentId ?? null;
+  const promptInput = showTax && state.template === 'expense' ? reverseChargeCheckInput(state.splitRows, { expense: true, documentId: promptDocumentId, rawTransactionId: state.moneyRows.find((r) => r.rawTransactionId)?.rawTransactionId ?? null }) : null;
+  const reverseCharge = useReverseChargePrompt(promptInput, REVERSE_CHARGE_ACTIONS, {
+    networkMessage: tRoot('common.network'),
+    onYes: (prompt) => setState((s) => ({ ...s, splitRows: applyReverseChargeYes(s.splitRows, prompt) })),
+  });
 
   const purposeReason = actionState.status === 'error' ? actionState.code === 'purposeGoesNegative' || (actionState.code !== 'boardAllowanceNeedsReason' && state.reasonKind === 'purpose') : state.reasonKind === 'purpose';
   return (
@@ -457,6 +478,17 @@ export function EntryForm({ initial, accounts, categories, purposes, projects, t
         <section data-testid="finance-allocation-card" className="rounded-md border border-line bg-surface p-4">
           <Section title={t('allocationCard')}>
             <div className="space-y-3">
+              <RefusalNotice action state={reverseCharge.refusal} />
+              {reverseCharge.prompt ? (
+                <ReverseChargePrompt
+                  trigger={reverseCharge.prompt.trigger}
+                  triggerText={reverseChargeTriggerText(tPrompt, reverseCharge.prompt, locale)}
+                  contact={reverseCharge.prompt.contact}
+                  pending={reverseCharge.pending}
+                  onYes={(o) => void reverseCharge.yes(o)}
+                  onNo={(reason, text) => void reverseCharge.no(reason, text)}
+                />
+              ) : null}
               {state.splitRows.map((row, index) => {
                 const withoutRow = { ...state, splitRows: state.splitRows.filter((r) => r.key !== row.key) };
                 const restForRow = remainderCents(withoutRow);
@@ -465,14 +497,30 @@ export function EntryForm({ initial, accounts, categories, purposes, projects, t
                     key={row.key}
                     position={index + 1}
                     value={row}
-                    onChange={(next) =>
+                    reverseChargeAsked={reverseCharge.prompt !== null}
+                    onChange={(next) => {
+                      if (next.assetEndowment && !row.assetEndowment && state.template === 'income') setGiverRow({ key: row.key, contact: next.contactId ? { id: next.contactId, name: next.contactName ?? '' } : null });
                       setState((s) => {
                         const updated = { ...s, splitRows: s.splitRows.map((r) => (r.key === row.key ? next : r)) };
                         // Sachspende: die zweite Zeile folgt der ersten mit dem negierten Betrag — `applyTemplate`
                         // zieht die Kopplung bei jeder Änderung nach (Kommentar in `entry-form.ts`).
                         return s.template === 'inKind' ? applyTemplate(updated, 'inKind') : updated;
-                      })
-                    }
+                      });
+                      // E6a Task 11c: ein Kontakt mit dem Merkmal § 13b gibt das Kennzeichen einer Ausgabezeile ohne vor.
+                      if (showTax && next.contactId && next.contactId !== row.contactId && !next.taxCode) {
+                        const contactId = next.contactId;
+                        void contactReverseChargeAction(contactId).then((reverseCharge) => {
+                          setState((s) => ({
+                            ...s,
+                            splitRows: s.splitRows.map((r) => {
+                              if (r.key !== row.key || r.contactId !== contactId) return r;
+                              const direction = categories.find((c) => c.id === r.categoryId)?.direction;
+                              return withContactReverseCharge(r, direction ? direction === 'expense' : s.template === 'expense', reverseCharge);
+                            }),
+                          }));
+                        });
+                      }
+                    }}
                     onRemove={() => setState((s) => ({ ...s, splitRows: s.splitRows.filter((r) => r.key !== row.key) }))}
                     onDuplicate={() => setState((s) => ({ ...s, splitRows: [...s.splitRows, { ...row, key: randomKey('split') }] }))}
                     onRestHere={() => setState((s) => restInto(s, row.key))}
@@ -495,7 +543,10 @@ export function EntryForm({ initial, accounts, categories, purposes, projects, t
                     projects={projects}
                     taxCodeOptions={taxCodeOptions}
                     showTax={showTax}
-                    errors={{ categoryId: fieldErrors[`splitRows.${index}.categoryId`], amountText: fieldErrors[`splitRows.${index}.amountText`] }}
+                    vatContext={vatContext}
+                    entryDate={state.entryDate}
+                    defaultDirection={state.template === 'expense' ? 'expense' : state.template === 'income' ? 'income' : undefined}
+                    errors={{ categoryId: fieldErrors[`splitRows.${index}.categoryId`], amountText: fieldErrors[`splitRows.${index}.amountText`], serviceDate: actionState.status === 'error' ? actionState.fieldErrors?.[`allocationLines.${index}.serviceDate`] : undefined, taxCode: actionState.status === 'error' ? actionState.fieldErrors?.[`allocationLines.${index}.taxCode`] : undefined }}
                   />
                 );
               })}
@@ -621,6 +672,16 @@ export function EntryForm({ initial, accounts, categories, purposes, projects, t
           return result;
         }}
       />
+      {giverRow ? (
+        <GiverDialog
+          contact={giverRow.contact}
+          onClose={() => setGiverRow(null)}
+          onDone={(contact) => {
+            setState((s) => ({ ...s, splitRows: s.splitRows.map((r) => (r.key === giverRow.key ? { ...r, contactId: contact.id, contactName: contact.name } : r)) }));
+            setGiverRow(null);
+          }}
+        />
+      ) : null}
     </form>
   );
 }

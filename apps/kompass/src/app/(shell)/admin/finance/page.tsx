@@ -1,12 +1,14 @@
-import { hasPermission, isModuleEnabled, readSetting } from '@kompass/core';
+import { hasPermission, isModuleEnabled, readSetting, todayIn } from '@kompass/core';
 import {
   getPermissionMatrix,
   getSetupStatus,
+  getVatSettings,
   listAccounts,
   listCategories,
   listDatedValues,
   listFiscalYears,
   listPurposes,
+  VAT_DATED_KEYS,
 } from '@kompass/module-finance';
 import { getTranslations } from 'next-intl/server';
 import { ForbiddenCard } from '@/components/forbidden-card';
@@ -18,14 +20,16 @@ import { requireSession } from '@/lib/request-context';
 import { AccountsPanel } from './accounts-panel';
 import { CategoriesPanel } from './categories-panel';
 import { ChecklistPanel } from './checklist-panel';
-import { DatedValuesPanel } from './dated-values-panel';
+import { DatedValuesPanel, type DatedValueListEntry } from './dated-values-panel';
 import { DirectDebitPanel } from './direct-debit-panel';
 import { FiscalYearsPanel } from './fiscal-years-panel';
 import { PermissionsPanel } from './permissions-panel';
 import { PurposesPanel } from './purposes-panel';
+import { ReportsPanel } from './reports-panel';
 import { TaxPanel } from './tax-panel';
+import { VatPanel } from './vat-panel';
 
-const PANELS = ['checklist', 'accounts', 'categories', 'purposes', 'fiscalYears', 'datedValues', 'tax', 'directDebit', 'permissions'] as const;
+const PANELS = ['checklist', 'accounts', 'categories', 'purposes', 'fiscalYears', 'datedValues', 'tax', 'vat', 'directDebit', 'reports', 'permissions'] as const;
 
 export default async function AdminFinancePage({ searchParams }: { searchParams: Promise<{ panel?: string }> }) {
   const { deps, ctx } = await requireSession();
@@ -70,12 +74,14 @@ export default async function AdminFinancePage({ searchParams }: { searchParams:
     content = yearsRes.ok ? <FiscalYearsPanel years={yearsRes.value.map((y) => ({ ...y, expectedVersion: y.updatedAt }))} /> : null;
   } else if (panel === 'datedValues') {
     const valuesRes = await listDatedValues(deps, ctx);
-    content = valuesRes.ok ? <DatedValuesPanel entries={valuesRes.value} /> : null;
+    // E6a: Die Einstellung „Umsatzsteuer“ steht im eigenen Reiter `vat` (Task 11b), nicht in dieser Tafel: Ihre Werte
+    // gelten gemeinsam ab einem Tag und haben eigene Einheiten (Ja/Nein, USt-IdNr., Bundesland).
+    const vatKeys: readonly string[] = VAT_DATED_KEYS;
+    content = valuesRes.ok ? <DatedValuesPanel entries={valuesRes.value.filter((v) => !vatKeys.includes(v.key)) as DatedValueListEntry[]} /> : null;
   } else if (panel === 'tax') {
     content = (
       <TaxPanel
         switches={{
-          isEntrepreneurOrHasVatId: readSetting<boolean>(deps, 'finance.isEntrepreneurOrHasVatId'),
           membershipFeesCertifiable: readSetting<boolean>(deps, 'finance.membershipFeesCertifiable'),
           expenseWaiversEnabled: readSetting<boolean>(deps, 'finance.expenseWaiversEnabled'),
           mcpHumanOnlyAllowed: readSetting<boolean>(deps, 'finance.mcpHumanOnlyAllowed'),
@@ -97,6 +103,9 @@ export default async function AdminFinancePage({ searchParams }: { searchParams:
         }}
       />
     );
+  } else if (panel === 'vat') {
+    const vatRes = await getVatSettings(deps, ctx, {});
+    content = vatRes.ok ? <VatPanel view={vatRes.value} today={todayIn(deps)} canEdit={hasPermission(ctx, 'finance.setup')} /> : null;
   } else if (panel === 'directDebit') {
     const accountsRes = await listAccounts(deps, ctx, {});
     const format = readSetting<{ prefix: string; digits: number }>(deps, 'finance.sepa.mandateReferenceFormat');
@@ -119,6 +128,8 @@ export default async function AdminFinancePage({ searchParams }: { searchParams:
         organizationName={readSetting<string>(deps, 'organization.name')}
       />
     ) : null;
+  } else if (panel === 'reports') {
+    content = <ReportsPanel values={{ statuteReference: readSetting<string>(deps, 'finance.reports.statuteReference'), cashReportSignature: readSetting<boolean>(deps, 'finance.reports.cashReportSignature'), treasurerIsStatutoryBoard: readSetting<boolean | null>(deps, 'finance.reports.treasurerIsStatutoryBoard') }} />;
   } else if (panel === 'permissions') {
     const matrixRes = await getPermissionMatrix(deps, ctx);
     content = matrixRes.ok ? <PermissionsPanel activities={matrixRes.value.activities} roles={matrixRes.value.roles} /> : null;

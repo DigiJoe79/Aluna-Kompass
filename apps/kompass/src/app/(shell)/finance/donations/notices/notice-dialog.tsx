@@ -40,7 +40,18 @@ export type SavedNotice = Pick<NoticeView, 'id' | 'kind' | 'taxOffice' | 'taxNum
  * Freistellungsbescheid erteilt wurde; dann gilt jener, und § 60a wird nicht
  * gespeichert. Mit `attachTo` öffnet er gleich im zweiten Schritt.
  */
-export function NoticeDialog({ open, onOpenChange, canPickDocument, attachTo }: { open: boolean; onOpenChange: (open: boolean) => void; canPickDocument: boolean; attachTo?: SavedNotice }) {
+export function NoticeDialog({ open, onOpenChange, canPickDocument, attachTo, onFollowUp, preset, onSaved }: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  canPickDocument: boolean;
+  attachTo?: SavedNotice;
+  /** Antwort Joe 2026-10-24: nach dem Speichern eines neuen Bescheids „Kopie der Bank vorlegen“ als vorbelegte Wiedervorlage. */
+  onFollowUp?: (notice: SavedNotice) => void;
+  /** Steuererklärung (Rechenschaft D2, 10b): Veranlagungszeitraum vorbelegt, nur die Arten, die zu einer Erklärung gehören. */
+  preset?: { assessmentPeriod?: string; kinds?: readonly NoticeKind[] };
+  /** Nach dem ersten Speichern, bevor das Dokument folgt — die Steuererklärung verknüpft den Bescheid mit dem Zeitraum. */
+  onSaved?: (notice: SavedNotice) => void;
+}) {
   const t = useTranslations('finance.donations.notices.dialog');
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -49,27 +60,36 @@ export function NoticeDialog({ open, onOpenChange, canPickDocument, attachTo }: 
         <DialogHeader>
           <DialogTitle>{attachTo ? t('documentTitle') : t('title')}</DialogTitle>
         </DialogHeader>
-        {open ? <NoticeSteps key={attachTo?.id ?? 'new'} canPickDocument={canPickDocument} attachTo={attachTo} onClose={() => onOpenChange(false)} /> : null}
+        {open ? <NoticeSteps key={attachTo?.id ?? 'new'} canPickDocument={canPickDocument} attachTo={attachTo} onClose={() => onOpenChange(false)} onFollowUp={onFollowUp} preset={preset} onSavedOnce={onSaved} /> : null}
       </DialogContent>
     </Dialog>
   );
 }
 
-function NoticeSteps({ canPickDocument, attachTo, onClose }: { canPickDocument: boolean; attachTo?: SavedNotice; onClose: () => void }) {
+function NoticeSteps({ canPickDocument, attachTo, onClose, onFollowUp, preset, onSavedOnce }: { canPickDocument: boolean; attachTo?: SavedNotice; onClose: () => void; onFollowUp?: (notice: SavedNotice) => void; preset?: { assessmentPeriod?: string; kinds?: readonly NoticeKind[] }; onSavedOnce?: (notice: SavedNotice) => void }) {
   const [saved, setSaved] = useState<SavedNotice | null>(attachTo ?? null);
-  return saved ? <DocumentStep notice={saved} canPickDocument={canPickDocument} onChanged={setSaved} onClose={onClose} /> : <FormStep onSaved={setSaved} onCancel={onClose} />;
+  // Der Dienst schlägt beim ersten Speichern eines Bescheids „Kopie der Bank vorlegen“ vor (`suggestions`).
+  const [bankHint, setBankHint] = useState(false);
+  const onSaved = (notice: SavedNotice & { suggestions?: { key: string }[] }) => {
+    setBankHint(Boolean(notice.suggestions?.some((s) => s.key === 'noticeToBank')));
+    setSaved(notice);
+    onSavedOnce?.(notice);
+  };
+  const followUp = bankHint && onFollowUp && saved ? () => { onClose(); onFollowUp(saved); } : undefined;
+  return saved ? <DocumentStep notice={saved} canPickDocument={canPickDocument} onChanged={setSaved} onClose={onClose} onFollowUp={followUp} /> : <FormStep onSaved={onSaved} onCancel={onClose} preset={preset} />;
 }
 
-function FormStep({ onSaved, onCancel }: { onSaved: (notice: SavedNotice) => void; onCancel: () => void }) {
+function FormStep({ onSaved, onCancel, preset }: { onSaved: (notice: SavedNotice) => void; onCancel: () => void; preset?: { assessmentPeriod?: string; kinds?: readonly NoticeKind[] } }) {
   const t = useTranslations('finance.donations.notices.dialog');
   const tk = useTranslations('finance.donations.noticeKind');
   const router = useRouter();
-  const [kind, setKind] = useState<NoticeKind>('exemptionNotice');
+  const kinds = preset?.kinds ?? KINDS;
+  const [kind, setKind] = useState<NoticeKind>(kinds[0] ?? 'exemptionNotice');
   const [taxOffice, setTaxOffice] = useState('');
   const [taxNumber, setTaxNumber] = useState('');
   const [noticeDate, setNoticeDate] = useState('');
   const [exemptFrom, setExemptFrom] = useState('');
-  const [assessmentPeriod, setAssessmentPeriod] = useState('');
+  const [assessmentPeriod, setAssessmentPeriod] = useState(preset?.assessmentPeriod ?? '');
   const [purposesText, setPurposesText] = useState('');
   const [purposesTextAccusative, setPurposesTextAccusative] = useState('');
   const [hadExemption, setHadExemption] = useState<'yes' | 'no' | null>(null);
@@ -110,7 +130,7 @@ function FormStep({ onSaved, onCancel }: { onSaved: (notice: SavedNotice) => voi
           <FormGrid>
             <FormField id="notice-kind" label={t('kind')} required>
               <Select id="notice-kind" value={kind} onChange={(e) => { setKind(e.target.value as NoticeKind); setHadExemption(null); feedback.reset(); }}>
-                {KINDS.map((k) => <option key={k} value={k}>{tk(k)}</option>)}
+                {kinds.map((k) => <option key={k} value={k}>{tk(k)}</option>)}
               </Select>
             </FormField>
             {provisional ? (
@@ -194,7 +214,7 @@ function FormStep({ onSaved, onCancel }: { onSaved: (notice: SavedNotice) => voi
   );
 }
 
-function DocumentStep({ notice, canPickDocument, onChanged, onClose }: { notice: SavedNotice; canPickDocument: boolean; onChanged: (notice: SavedNotice) => void; onClose: () => void }) {
+function DocumentStep({ notice, canPickDocument, onChanged, onClose, onFollowUp }: { notice: SavedNotice; canPickDocument: boolean; onChanged: (notice: SavedNotice) => void; onClose: () => void; onFollowUp?: () => void }) {
   const t = useTranslations('finance.donations.notices.dialog');
   const router = useRouter();
   const [pending, setPending] = useState(false);
@@ -230,6 +250,18 @@ function DocumentStep({ notice, canPickDocument, onChanged, onClose }: { notice:
   return (
     <div className="flex min-h-0 flex-1 flex-col" data-testid="notice-document-step">
       <DialogBody className="space-y-4">
+        {onFollowUp ? (
+          <div data-testid="notice-bank-hint">
+            <Notice level="hint">
+              <span className="flex flex-col items-start gap-2">
+                {t('bankHint')}
+                <Button type="button" variant="outline" size="sm" onClick={onFollowUp} data-testid="notice-bank-follow-up">
+                  {t('bankFollowUp')}
+                </Button>
+              </span>
+            </Notice>
+          </div>
+        ) : null}
         {notice.documentId ? (
           <p className="text-body text-ink" data-testid="notice-document-number">
             <span className="font-mono font-semibold">{notice.documentNumber}</span>

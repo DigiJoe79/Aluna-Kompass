@@ -79,8 +79,12 @@ export const PACKAGES_ALLOWED: CountedAllowlist = {
   'packages/modules/dms/src/seed-pdf.ts': { count: 1, reason: '`xrefAt` ist ein Byte-Versatz im PDF, kein Datum.' },
   'packages/modules/finance/src/allocation/approvals.ts': { count: 1, reason: 'Rechnen: ISO-Tag zum Zeitpunkt.' },
   'packages/modules/finance/src/allocation/partner-proof.ts': { count: 1, reason: 'Rechnen: ISO-Tag zum Zeitpunkt.' },
+  'packages/modules/finance/src/reporting/other-assets.ts': { count: 1, reason: 'Rechnen: Vortag eines ISO-Tags (`dayBefore`).' },
   'packages/modules/finance/src/allocation/templates/shared.ts': { count: 1, reason: 'Wortlaut der Verzichtserklärung; das Datum kommt schon als `paperDate`.' },
   'packages/modules/finance/src/dashboard.ts': { count: 1, reason: 'Rechnen: Tage zwischen zwei ISO-Tagen.' },
+  'packages/modules/finance/src/auditing/anomalies.ts': { count: 4, reason: 'Rechnen: ISO-Tag zum Zeitpunkt (Grenzen des Geschäftsjahres, Tag danach).' },
+  'packages/modules/finance/src/auditing/sections.ts': { count: 1, reason: 'Rechnen: ISO-Tag zum Zeitpunkt (Grenzen des Geschäftsjahres).' },
+  'packages/modules/finance/src/reporting/reports/tax-return-gem.ts': { count: 1, reason: 'Rechnen: ISO-Tag zum Zeitpunkt (Ende des Erklärungszeitraums für die Freigabe einer Zahlung).' },
   'packages/modules/finance/src/direct-debit/runs.ts': { count: 1, reason: 'Dateiname der Bankdatei beim Herunterladen, ISO sortiert richtig.' },
   'packages/modules/finance/src/direct-debit/seed.ts': { count: 1, reason: 'Dateiname des erfundenen Kontoauszugs (Plan L3), ISO sortiert richtig.' },
   'packages/modules/finance/src/donations/templates/shared.ts': { count: 1, reason: '`placeDate` ist schon „Ort, paperDate“.' },
@@ -90,7 +94,8 @@ export const PACKAGES_ALLOWED: CountedAllowlist = {
   'packages/modules/finance/src/import/runs.ts': { count: 1, reason: 'Abgleichschlüssel einer Umsatzzeile.' },
   'packages/modules/finance/src/import/zugferd-fixture.ts': { count: 1, reason: 'XML-Beispielrechnung; ISO ist das Format des Standards.' },
   'packages/modules/finance/src/ledger/notice-validity.ts': { count: 1, reason: 'Rechnen: ISO-Tag zusammensetzen.' },
-  'packages/modules/finance/src/seed.ts': { count: 2, reason: 'Dateinamen der erfundenen Belege, ISO sortiert richtig.' },
+  'packages/modules/finance/src/ledger/vat-periods.ts': { count: 1, reason: 'Fingerabdruck der Zeilen eines Umsatzsteuer-Zeitraums (Hash-Eingabe), keine Anzeige.' },
+  'packages/modules/finance/src/seed.ts': { count: 3, reason: 'Dateinamen der erfundenen Belege, ISO sortiert richtig; Buchungstag der frühen Jahre aus Jahr und Monat-Tag (Rechnen, Plan seed-mehrjahre).' },
 };
 
 /** Ausnahmen nur mit echtem Grund (Dateiname, Kennung). Bei Einführung leer: Die Probesuche fand nur Fehler. */

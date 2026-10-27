@@ -27,7 +27,7 @@ export function ConfirmDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
   title: string;
-  description: string;
+  description: ReactNode;
   confirmLabel: string;
   destructive?: boolean;
   confirmDisabled?: boolean;

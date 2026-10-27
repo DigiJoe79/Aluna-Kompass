@@ -14,7 +14,7 @@ afterEach(cleanup);
 describe('CapDerivation', () => {
   it('zeigt die Näherung und auf Knopfdruck die Rechnung mit den Zahlen', () => {
     const t = createTranslator({ locale: 'de', messages, namespace: 'finance.reserves.cap' });
-    const derivation = t('derivation', { assetShare: 33, asset: '3.000,00 €', otherShare: 10, other: '12.000,00 €' });
+    const derivation = t('derivation', { assetShare: '1/3', asset: '3.000,00 €', otherShare: 10, other: '12.000,00 €' });
     render(
       <NextIntlClientProvider locale="de" messages={messages} timeZone="Europe/Berlin">
         <CapDerivation year="2026" derivation={derivation} />
@@ -23,10 +23,10 @@ describe('CapDerivation', () => {
     expect(screen.getByText('Näherung, den genauen Wert nennt Ihre Steuerberatung.')).toBeTruthy();
     const button = screen.getByRole('button', { name: 'Rechnung zum Höchstbetrag 2026' });
     expect(button.getAttribute('aria-expanded')).toBe('false');
-    expect((screen.getByText(/33 % des Überschusses/) as HTMLElement).hidden).toBe(true);
+    expect((screen.getByText(/1\/3 des Überschusses/) as HTMLElement).hidden).toBe(true);
     fireEvent.click(button);
     expect(button.getAttribute('aria-expanded')).toBe('true');
-    const text = screen.getByText(/33 % des Überschusses/) as HTMLElement;
+    const text = screen.getByText(/1\/3 des Überschusses/) as HTMLElement;
     expect(text.hidden).toBe(false);
     expect(text.textContent).toContain('3.000,00 €');
     expect(text.textContent).toContain('10 % der übrigen');

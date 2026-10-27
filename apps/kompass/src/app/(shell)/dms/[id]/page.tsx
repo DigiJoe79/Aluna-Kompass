@@ -120,7 +120,8 @@ export default async function DocumentDetailPage(props: {
     doc.phase === 'issued' &&
     doc.status !== 'voided' &&
     readSetting<string[]>(deps, 'finance.voucherTypes').includes(doc.typeKey) &&
-    !doc.links.some((link) => link.entityType === 'financeEntry');
+    // Ein Kontoauszug am Konto (Rechenschaft C) ist kein loser Beleg.
+    !doc.links.some((link) => link.entityType === 'financeEntry' || link.entityType === 'financeAccount');
   const tWork = await getTranslations('finance.work');
 
   // „Aus der Rechnung“ (Finanzen F5b): nur an Finanzbelegen und nur mit `finance.read` — der Dienst prüft das Recht

@@ -1,17 +1,23 @@
 import { isoNow, newId, notFound, ok, requirePermission, todayIn, validate, type CallContext, type DbOrTx, type Deps, type Result } from '@kompass/core';
-import { eq } from 'drizzle-orm';
+import { and, eq, isNull } from 'drizzle-orm';
 import { z } from 'zod';
 import { financeAudit } from '../audit';
 import { financeConflict, lockConflict, requireHumanChannelFinance } from '../errors';
 import { ENTRY_LOCKS, type EntryLock } from '../locks';
-import { financeAccounts, financeEntries, financeMoneyLines, type FinanceAccountRow } from '../schema';
+import { financeAccounts, financeEntries, financeEntryDocuments, financeMoneyLines, type FinanceAccountRow } from '../schema';
 import { firstNegativeCashDay } from './cash-check';
 import { entryViewInternal, writeLinesInternal, type AllocationLineWrite, type EntryView, type MoneyLineWrite } from './entries';
 import { abortFinalize, finalizeInternal, FinalizeAborted } from './finalize';
 import { fiscalYearStatusInternal } from './fiscal-years';
+import { REVERSE_CHARGE_CODES } from './codes';
 import type { TaxCode } from './tax';
+import { vatTaxPointOn } from './vat-periods';
+import { attachIssuedDocumentInternal } from './vouchers';
 
-/** Die negierten Zeilen des Originals — nie Rohumsatz, nie `originLineId` des Storno selbst. */
+/**
+ * Die negierten Zeilen des Originals — nie Rohumsatz, nie `originLineId` des Storno selbst. E6a: Eine § 13b-/Erwerbszeile
+ * trägt als Leistungsdatum den Entstehungstag des Originals; so berichtigt das Storno den ursprünglichen Zeitraum.
+ */
 function negatedLines(original: EntryView): { moneyLines: MoneyLineWrite[]; allocationLines: AllocationLineWrite[] } {
   return {
     moneyLines: original.moneyLines.map((l) => ({ accountId: l.accountId, amountCents: -l.amountCents })),
@@ -26,6 +32,9 @@ function negatedLines(original: EntryView): { moneyLines: MoneyLineWrite[]; allo
       abroad: l.abroad,
       originLineId: null,
       addsToAssets: l.addsToAssets,
+      addsToAssetsOptOut: l.addsToAssetsOptOut,
+      assetEndowment: l.assetEndowment,
+      serviceDate: (REVERSE_CHARGE_CODES as readonly string[]).includes(l.taxCode) ? vatTaxPointOn({ taxCode: l.taxCode as TaxCode, entryDate: original.entryDate, serviceDate: l.serviceDate }) : null,
     })),
   };
 }
@@ -52,6 +61,9 @@ function originalLines(original: EntryView): { moneyLines: MoneyLineWrite[]; all
       abroad: l.abroad,
       originLineId: l.originLineId,
       addsToAssets: l.addsToAssets,
+      addsToAssetsOptOut: l.addsToAssetsOptOut,
+      assetEndowment: l.assetEndowment,
+      serviceDate: l.serviceDate,
     })),
   };
 }
@@ -140,6 +152,10 @@ export function reverseInternal(
       .values({ id: draftId, number: null, entryDate: original.entryDate, text: original.text, status: 'draft', correctionOfEntryId: original.id, createdByUserId: ctx.userId ?? 'system', createdChannel: ctx.channel, createdAt: draftNow, updatedAt: draftNow })
       .run();
     writeLinesInternal(tx, draftId, originalLines(original));
+    // Meist bleibt der Beleg derselbe (falscher Text, falsche Kategorie): Der Entwurf übernimmt die nicht widerrufenen
+    // Belege des Originals (Befund MCP 6); ein storniertes Dokument bleibt weg.
+    const vouchers = tx.select({ documentId: financeEntryDocuments.documentId }).from(financeEntryDocuments).where(and(eq(financeEntryDocuments.entryId, original.id), isNull(financeEntryDocuments.revokedAt))).all();
+    for (const v of vouchers) if (v.documentId) attachIssuedDocumentInternal(tx, deps, ctx, draftId, v.documentId);
     correctionDraft = entryViewInternal(tx, draftId);
   }
 
@@ -151,7 +167,8 @@ export function reverseInternal(
     params: { number: original.number, reversalNumber: reversal.number },
   });
 
-  return ok({ reversal: entryViewInternal(tx, reversalId)!, correctionDraft });
+  // N8: die Hinweise des Festschreibens (etwa `vatAmendment`) gehen mit.
+  return ok({ reversal: { ...entryViewInternal(tx, reversalId)!, notices: reversal.notices }, correctionDraft });
 }
 
 const reverseSchema = z.object({ id: z.string().min(1), cashWarningReason: z.string().trim().min(1).max(500).optional(), withCorrectionDraft: z.boolean().optional() });

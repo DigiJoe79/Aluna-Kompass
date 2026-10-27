@@ -11,7 +11,7 @@ import {
 } from '../schema';
 import { contactChannels, contacts, displayName } from '@kompass/module-contacts';
 import { contactForIbanInternal, contactsForIbanInternal } from './contact-ibans';
-import { activeImportRulesInternal } from './rules';
+import { activeImportRulesInternal, ruleTaxCodeOfferedInternal } from './rules';
 import { daysApart, findPair, isCashKeyword } from './suggest/pair';
 import { findByReference } from './suggest/reference';
 import { findRunsForCredit } from './suggest/direct-debit';
@@ -39,6 +39,8 @@ export interface SuggestionReason {
   entryId?: string;
   ruleId?: string;
   ruleName?: string;
+  /** Bei `rule`: das Kennzeichen der Regel, das die Auswahl nicht (mehr) anbietet — der Vorschlag lässt es weg (Befund 40, Frage 3). */
+  droppedTaxCode?: string;
   openItemId?: string;
   paymentReference?: string | null;
   contactId?: string;
@@ -103,8 +105,11 @@ export interface SuggestionView {
     overpaid?: { amountCents: number };
     paidOtherwise?: { count: number; amountCents: number; items: { directDebitItemId: string; openItemId: string; amountCents: number }[] };
   };
-  /** `originIsDraft` (Befund 37): die zurückgegebene Zahlung ist noch nicht festgeschrieben. */
-  hints: ('foreignIban' | 'originIsDraft')[];
+  /**
+   * `originIsDraft` (Befund 37): die zurückgegebene Zahlung ist noch nicht festgeschrieben. `ruleTaxCodeNotOffered`
+   * (Befund 40, Frage 3): das Kennzeichen der Regel gilt nicht mehr — es steht als `droppedTaxCode` am Grund `rule`.
+   */
+  hints: ('foreignIban' | 'originIsDraft' | 'ruleTaxCodeNotOffered')[];
 }
 
 /** Die Kategorie einer Gebührenzeile beim Paar (Startplan). */
@@ -845,11 +850,14 @@ function proposeBaseInternal(deps: Deps, data: SuggestionData, raw: FinanceRawTr
   const rule = data.rules.find((r) => ruleMatches(r, raw));
   if (rule) {
     const lineContact = rule.contactId ?? contactId;
-    const reasons: SuggestionReason[] = [{ kind: 'rule', ruleId: rule.id, ruleName: rule.name }];
+    // Ein Kennzeichen, das die Auswahl nicht (mehr) anbietet, fällt weg wie leer, statt das Buchen abzulehnen (taxCodeNotOffered).
+    const offered = ruleTaxCodeOfferedInternal(deps.db, rule.taxCode, { on: raw.bookingDate, categoryId: rule.categoryId, contactId: lineContact ?? null, expense: raw.amountCents < 0 });
+    const reasons: SuggestionReason[] = [{ kind: 'rule', ruleId: rule.id, ruleName: rule.name, ...(offered ? {} : { droppedTaxCode: rule.taxCode! }) }];
     if (!rule.contactId && contactId) reasons.push({ kind: byParty?.kind ?? 'contactIban', contactId });
     return {
       kind: 'rule', confidence: 'sure', reasons,
-      draft: draftOf([rawLine(raw)], [allocation({ categoryId: rule.categoryId, amountCents: raw.amountCents, taxCode: rule.taxCode, projectId: rule.projectId, purposeId: rule.purposeId, contactId: lineContact })], rule.entryText ?? defaultText(raw)),
+      draft: draftOf([rawLine(raw)], [allocation({ categoryId: rule.categoryId, amountCents: raw.amountCents, taxCode: offered ? rule.taxCode : null, projectId: rule.projectId, purposeId: rule.purposeId, contactId: lineContact })], rule.entryText ?? defaultText(raw)),
+      ...(offered ? {} : { extraHints: ['ruleTaxCodeNotOffered' as const] }),
     };
   }
 

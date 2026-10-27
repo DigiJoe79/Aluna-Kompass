@@ -151,6 +151,13 @@ Treffern; dort lassen sie sich bearbeiten und löschen. Eine Regel, deren
 Kategorie inzwischen stillgelegt ist, ist dort als „Kategorie stillgelegt“
 markiert.
 
+Nennt eine Regel ein Steuerkennzeichen, das für den Verein nicht mehr gilt —
+etwa § 13b für eine Leistung aus der EU, seit er kein Unternehmer mehr ist —,
+lässt der Vorschlag es weg, als wäre das Feld leer, und das Buchen geht
+trotzdem. Am Vorschlag und unter „Regeln“ steht dann ein Hinweis mit dem Namen
+der Regel und dem Kennzeichen. Die Regel selbst ändert Kompass nicht;
+passen Sie sie an, wenn das Kennzeichen nicht wiederkommt.
+
 ## Gehört nicht dem Verein
 
 Manchmal läuft Geld nur durch den Verein: eine Sammelbestellung für eine

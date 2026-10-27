@@ -16,7 +16,11 @@ test.describe('follow-ups', () => {
     await page.goto('/');
     await tile.getByRole('checkbox', { name: 'Antwort abwarten erledigen' }).click();
     await expect(tile.getByText('Antwort abwarten')).toBeHidden();
-    await expect(tile.getByText('Nichts fällig.')).toBeVisible();
+    // Nicht „Nichts fällig.“: Ab dem 01.03. ist auch die Wiedervorlage „Jahresabschluss vor der Mitgliederversammlung“
+    // des Finanz-Seeds fällig (28.02. nach dem Stichjahr, `scripts/e2e-kalender.sh`). Abgehakt bleibt abgehakt.
+    await page.reload();
+    await expect(tile.getByRole('heading', { name: 'Fällig' })).toBeVisible();
+    await expect(tile.getByText('Antwort abwarten')).toBeHidden();
   });
 
   test('„nur meine“ ist eine Option der Kachel und bleibt gespeichert', async ({ page }) => {

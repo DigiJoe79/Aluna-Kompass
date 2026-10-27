@@ -10,7 +10,7 @@ export type FiscalYearStatus = 'open' | 'closed';
 /** Befund 15 (Entscheidung Joe, Weg 2): `isShortYear` ist das Kennzeichen „Rumpfjahr“ — nie Teil der Bezeichnung. */
 export type FiscalYearView = FinanceFiscalYearRow & { status: FiscalYearStatus; isShortYear: boolean };
 
-const dayAfter = (iso: string): string => { const d = new Date(`${iso}T00:00:00.000Z`); d.setUTCDate(d.getUTCDate() + 1); return d.toISOString().slice(0, 10); };
+export const dayAfter = (iso: string): string => { const d = new Date(`${iso}T00:00:00.000Z`); d.setUTCDate(d.getUTCDate() + 1); return d.toISOString().slice(0, 10); };
 /** Zwölf Monate ab `start`, letzter Tag eingeschlossen: 2027-07-01 → 2028-06-30. */
 const yearEnd = (start: string): string => { const d = new Date(`${start}T00:00:00.000Z`); d.setUTCFullYear(d.getUTCFullYear() + 1); d.setUTCDate(d.getUTCDate() - 1); return d.toISOString().slice(0, 10); };
 
@@ -53,7 +53,7 @@ export function ensureFiscalYearFor(tx: DbOrTx, deps: Deps, ctx: CallContext, da
   const now = isoNow(deps.clock);
   let designation = startsOn.slice(0, 4);
   if (tx.select({ id: financeFiscalYears.id }).from(financeFiscalYears).where(eq(financeFiscalYears.designation, designation)).get()) designation = `${designation}-2`;
-  const row: FinanceFiscalYearRow = { id: newId(), startsOn, endsOn, designation, taxReturnFiledOn: null, createdAt: now, updatedAt: now };
+  const row: FinanceFiscalYearRow = { id: newId(), startsOn, endsOn, designation, createdAt: now, updatedAt: now };
   tx.insert(financeFiscalYears).values(row).run();
   financeAudit(tx, deps, ctx, { action: 'finance.fiscalYear.autoCreate', entity: 'financeFiscalYear', id: row.id, after: row, params: { designation: row.designation } });
   return ok(row);
@@ -113,7 +113,7 @@ export async function createFirstFiscalYear(deps: Deps, ctx: CallContext, input:
 
   return deps.db.transaction((tx: DbOrTx) => {
     const now = isoNow(deps.clock);
-    const row: FinanceFiscalYearRow = { id: newId(), startsOn: parsed.value.startsOn, endsOn: parsed.value.endsOn, designation: designationOf(parsed.value.startsOn), taxReturnFiledOn: null, createdAt: now, updatedAt: now };
+    const row: FinanceFiscalYearRow = { id: newId(), startsOn: parsed.value.startsOn, endsOn: parsed.value.endsOn, designation: designationOf(parsed.value.startsOn), createdAt: now, updatedAt: now };
     tx.insert(financeFiscalYears).values(row).run();
     financeAudit(tx, deps, ctx, { action: 'finance.fiscalYear.create', entity: 'financeFiscalYear', id: row.id, after: row, params: { designation: row.designation } });
     return ok({ ...row, status: 'open' as const, isShortYear: isShortFiscalYear(row) });
@@ -123,7 +123,6 @@ export async function createFirstFiscalYear(deps: Deps, ctx: CallContext, input:
 const updateSchema = z.object({
   id: z.string().min(1),
   designation: z.string().regex(DESIGNATION).optional(),
-  taxReturnFiledOn: z.string().date().nullable().optional(),
   expectedVersion: expectedVersionField,
 });
 
@@ -143,7 +142,6 @@ export async function updateFiscalYear(deps: Deps, ctx: CallContext, input: unkn
     const after: FinanceFiscalYearRow = {
       ...before,
       designation: parsed.value.designation ?? before.designation,
-      taxReturnFiledOn: parsed.value.taxReturnFiledOn === undefined ? before.taxReturnFiledOn : parsed.value.taxReturnFiledOn,
       updatedAt: isoNow(deps.clock),
     };
     tx.update(financeFiscalYears).set(after).where(eq(financeFiscalYears.id, before.id)).run();

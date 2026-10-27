@@ -89,6 +89,8 @@ describe('confirmationRunDispatchState (Handoff 2b E3, Schritt „Ergebnis“)',
 
     // „Versand vermerken …“ an der Post-Zeile.
     const postDoc = queued.post[0]!.documentId;
+    // Nachttest N19: nicht vor dem Tag der Ausstellung (der Lauf stellt am 20.03. aus).
+    expect(err(await markRunPostConfirmations(f.deps, ctx, { runId, sentAt: '2026-03-19', documentIds: [postDoc] }))).toMatchObject({ type: 'validation', issues: [{ path: 'sentAt', message: 'beforeIssued' }] });
     expect(unwrap(await markRunPostConfirmations(f.deps, ctx, { runId, sentAt: '2026-03-20', documentIds: [postDoc] }))).toEqual({ count: 1 });
     const marked = unwrap(await confirmationRunDispatchState(f.deps, ctx, { runId }));
     expect(marked.post[0]!.dispatched).toBe(true);

@@ -43,14 +43,20 @@ interface DraftState {
   paidLineIds: string[];
   /** `null`: die übliche Frist des Partners. */
   proofMonths: number | null;
+  /** Vermögensausstattung nach § 58 Nr. 3 AO (Zeile 64/65 der Anlage Gem). */
+  assetEndowment: boolean;
 }
+
+/** Wie der Dienst (`assetEndowmentAllowed`): nur Weitergabe nach § 58 Nr. 1 AO an eine steuerbegünstigte oder öffentliche Körperschaft. */
+export const endowmentAllowed = (basis: string, status: string) => basis === 'transfer58' && (status === 'taxExemptBody' || status === 'publicBody');
 
 let seq = 0;
 const newKey = () => `p${Date.now().toString(36)}${(seq++).toString(36)}`;
 const PROOF_MONTHS = Array.from({ length: 24 }, (_, i) => i + 1);
 
-function payloadOf(paymentId: string, partnerId: string, usualBasis: string | null, d: DraftState) {
+function payloadOf(paymentId: string, partnerId: string, usualBasis: string | null, d: DraftState, partnerStatus: string) {
   return {
+    assetEndowment: d.assetEndowment && endowmentAllowed(d.basis, partnerStatus),
     id: paymentId,
     expectedVersion: d.version,
     partnerId,
@@ -114,14 +120,14 @@ export function DraftForm({
 
   const save = useCallback(
     async (current: DraftState): Promise<SaveOutcome<DraftState>> => {
-      const state: ActionState = await savePartnerPaymentDraftAction(payloadOf(payment.id, payment.partnerId, partner.usualBasis, current));
+      const state: ActionState = await savePartnerPaymentDraftAction(payloadOf(payment.id, payment.partnerId, partner.usualBasis, current, partner.status));
       if (state.status !== 'success') return { kind: 'failed', detail: state.status === 'error' ? state.message : '' };
       const view = state.data as PartnerPaymentView;
       // Vorab gemeldet: eine Warnung erscheint, sobald der Dienst sie kennt; eine schon gezeigte bleibt stehen, bis eingereicht ist.
       setReasonNeeds((prev) => ({ notice: prev.notice || view.reasonsNeeded.notice, overdue: prev.overdue || view.reasonsNeeded.overdue, purpose: view.reasonsNeeded.purpose }));
       return { kind: 'saved', at: view.version, apply: (latest) => ({ ...latest, version: view.version }) };
     },
-    [payment.id, payment.partnerId, partner.usualBasis],
+    [payment.id, payment.partnerId, partner.usualBasis, partner.status],
   );
 
   const initial: DraftState = {
@@ -134,6 +140,7 @@ export function DraftForm({
     positions: payment.positions.map((p) => ({ key: newKey(), kind: p.kind, amountText: p.kind === 'money' ? formatAmount(p.amountCents) : '', categoryId: p.categoryId ?? '', purposeId: p.purposeId ?? '', projectId: p.projectId ?? '', goodsLineId: p.goodsLineId ?? '', note: p.note ?? '' })),
     paidLineIds: payment.paidLines.map((l) => l.paidLineId),
     proofMonths: payment.proofMonths,
+    assetEndowment: payment.assetEndowment,
   };
   const { value: d, state: saveState, pending, update, flush, markDirty } = useAutosave<DraftState>({ initial, initialState: { kind: 'saved', at: payment.version }, save });
 
@@ -237,6 +244,12 @@ export function DraftForm({
 
       <div className="space-y-2">
         <FormGrid>
+          {endowmentAllowed(d.basis, partner.status) ? (
+            // Board 15g: Kästchen mit Hilfezeile; nach dem Einreichen fest wie die übrigen Felder.
+            <FormField id="payment-asset-endowment" label={t('assetEndowment')} hint={t('assetEndowmentHint')} toggle size="full">
+              <Checkbox id="payment-asset-endowment" checked={d.assetEndowment} disabled={!canWrite} onCheckedChange={(on) => set({ assetEndowment: on === true })} data-testid="payment-asset-endowment" />
+            </FormField>
+          ) : null}
           {d.basis === 'agent57' || partner.status === 'foreignBody' || d.agreementDocument ? (
             <FormCell size="m">
               <DocumentPicker id="payment-agreement-doc" name="agreementDocumentId" label={t(`agreementDocumentFor.${d.basis}`)} value={d.agreementDocument} onChange={(doc) => set({ agreementDocument: doc })} required={d.basis === 'agent57' || partner.status === 'foreignBody'} />

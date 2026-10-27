@@ -1,4 +1,4 @@
-import { Check, CircleDashed } from 'lucide-react';
+import { Check, Circle, CircleDashed } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import type { ReactNode } from 'react';
@@ -8,6 +8,7 @@ import { Disclosure } from '@/components/ui/disclosure';
 import { groupOpenFirst, type RequirementGroup } from '@/lib/requirement-groups';
 import { buttonVariants } from '@/components/ui/button';
 import { Overline } from '@/components/overline';
+import { cn } from '@/lib/utils';
 
 export interface RequirementListItem {
   key: string;
@@ -52,9 +53,10 @@ export interface RequirementListItem {
  * „Fehlt noch“ voll, „Bitte ansehen“ als Warnkästen, „Erfüllt · n“ und
  * „Trifft nicht zu · n“ eingeklappt. Leere Gruppen fehlen.
  */
-export function RequirementList({ items, grouping, variant }: { items: RequirementListItem[]; grouping?: 'open-first'; variant?: 'compact' }) {
+export function RequirementList({ items, grouping, variant }: { items: RequirementListItem[]; grouping?: 'open-first'; variant?: 'compact' | 'rows' }) {
   if (grouping === 'open-first') return <GroupedRequirementList items={items} />;
   if (variant === 'compact') return <CompactRequirementList items={items} />;
+  if (variant === 'rows') return <RowsRequirementList items={items} />;
   return (
     <ul className="space-y-2" data-testid="requirement-list">
       {items.map((item) => (
@@ -142,6 +144,72 @@ function CompactRequirementList({ items }: { items: RequirementListItem[] }) {
           {item.detail ? <span className={item.done ? 'text-meta text-ink-2' : 'text-meta text-warning'}>{item.detail}</span> : null}
         </li>
       ))}
+    </ul>
+  );
+}
+
+/**
+ * `variant="rows"` — Freigabe Joe 2026-10-26, Designer Runde 7 16b/16d (Board Umsatzsteuer 8a/8b): Zeilen mit
+ * Trennlinie (`line-2`) in der Karte des Aufrufers statt Karten in der Karte — Dokumente der Abgabe, Beilagen. Je Zeile
+ * Symbol (Haken bzw. Kreis wie MUSTER § F), Titel in normalem Gewicht, `detail` mit „·“ dahinter, rechts `extra` bzw.
+ * der Sprung-Knopf. Wartend (`blocked`) ist die ganze Zeile gedämpft, rechts steht `blockedText` und kein Knopf — auch
+ * wenn der Aufrufer `extra` mitgibt (16b: „Ablegen gibt es erst nach dem Festschreiben“). `optional` gilt hier nicht.
+ *
+ * Erledigt steht **voll** (Designer Runde 8, 17a): Haken in `success`, Titel in `ink`, `detail` (das Datum) in `muted`,
+ * rechts die Nummer als Link. In dieser Variante heißt gedämpft schon „noch nicht möglich“; gedämpft erledigt sähe aus
+ * wie wartend. Die Regel „erledigt = gedämpft“ gilt weiter für die Karten-Variante (MUSTER § F).
+ */
+function RowsRequirementList({ items }: { items: RequirementListItem[] }) {
+  const t = useTranslations('common.requirements');
+  return (
+    <ul className="border-t border-line-2" data-testid="requirement-list">
+      {items.map((item) => {
+        const action = !item.done && !item.blocked && item.canSelf && item.href ? <ActionLink item={{ ...item, href: item.href }} /> : null;
+        // Gedämpft ist nur, was noch nicht möglich ist (17a); erledigt steht voll.
+        const muted = item.blocked && !item.done;
+        return (
+          <li
+            key={item.key}
+            data-testid={`requirement-${item.key}`}
+            data-done={item.done}
+            data-blocked={item.blocked}
+            data-muted={muted || undefined}
+            // `relative`: Bezugsrahmen des `sr-only` wie in `OpenRow`. Am Telefon bricht die rechte Seite unter den Titel.
+            className={cn('relative flex flex-wrap items-center gap-x-2.5 gap-y-1.5 border-b border-line-2 py-2.5 last:border-b-0', muted && 'text-muted-ink')}
+          >
+            {item.done ? (
+              <>
+                <Check className="size-4 shrink-0 text-success" aria-hidden />
+                <span className="sr-only">{item.doneLabel}</span>
+              </>
+            ) : (
+              <>
+                {/* 17a: offen ein leerer Kreis, noch nicht möglich gestrichelt. Der Kreis steht in `muted` statt im Rahmenton
+                    des Boards (`line-strong`), weil ein Zustandszeichen 3:1 zur Fläche braucht. */}
+                {item.blocked ? <CircleDashed className="size-4 shrink-0 text-muted-ink" aria-hidden /> : <Circle className="size-4 shrink-0 text-muted-ink" aria-hidden />}
+                <span className="sr-only">{t('open')}</span>
+              </>
+            )}
+            <span className="min-w-0 flex-1">
+              <span className={muted ? 'text-muted-ink' : 'text-ink'}>{item.title}</span>
+              {item.detail ? <span className="text-muted-ink"> · {item.detail}</span> : null}
+              {!item.done && !item.blocked && !item.canSelf && item.canDoNames.length > 0 ? (
+                <span className="block text-hint text-muted-ink" data-testid={`requirement-${item.key}-candoo`}>
+                  {item.canDoText}
+                </span>
+              ) : null}
+            </span>
+            {item.blocked ? (
+              item.blockedText ? <span className="text-meta">{item.blockedText}</span> : null
+            ) : item.extra || action ? (
+              <span className="flex shrink-0 flex-wrap items-center gap-2">
+                {item.extra}
+                {action}
+              </span>
+            ) : null}
+          </li>
+        );
+      })}
     </ul>
   );
 }

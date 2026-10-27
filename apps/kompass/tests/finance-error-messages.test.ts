@@ -29,7 +29,7 @@ const mcpText = (failure: Failure) => {
   return (JSON.parse((res.content[0] as { text: string }).text) as { error: { message: string } }).error.message;
 };
 
-const DATA_ONLY_PARAMS: Partial<Record<FinanceErrorCode, string[]>> = { openItemExistsForDocument: ['openItemId', 'reference'], ibanHasMandate: ['mandateId'] };
+const DATA_ONLY_PARAMS: Partial<Record<FinanceErrorCode, string[]>> = { openItemExistsForDocument: ['openItemId', 'reference'], ibanHasMandate: ['mandateId'], reportStatementsMissing: ['count'] };
 
 describe('Finanzfehler aus der Sprachdatei (A6)', () => {
   it('jeder Code hat Grund und Abhilfe in de.json, und de.json kennt keinen anderen', () => {

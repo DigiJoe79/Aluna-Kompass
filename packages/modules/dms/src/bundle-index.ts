@@ -1,4 +1,4 @@
-import type { DocumentTemplate } from '@kompass/core';
+import { csvDocument, type DocumentTemplate } from '@kompass/core';
 import { z } from 'zod';
 
 export type BundleEntryState = 'ok' | 'voided' | 'altered' | 'missing' | 'protected' | 'noAccess';
@@ -30,17 +30,9 @@ export const BUNDLE_STATE_LABELS: Record<BundleEntryState, string> = {
 
 const HEADER = ['Nummer', 'Datum', 'Art', 'Betreff', 'SHA-256', 'Status', 'Datei'];
 
-/** Semikolon und BOM: So öffnet es ein deutsches Excel ohne Importdialog. */
-function csvField(value: string | null): string {
-  if (value === null || value === '') return '';
-  // Ein Betreff ist fremder Text (Eingangspost): Was mit = + - @ beginnt, führte eine Tabellenkalkulation als Formel aus.
-  const safe = /^[=+\-@\t\r]/.test(value) ? `'${value}` : value;
-  return /[;"\r\n']/.test(safe) || safe !== value ? `"${safe.replace(/"/g, '""')}"` : safe;
-}
-
+/** Semikolon und BOM: So öffnet es ein deutsches Excel ohne Importdialog (`csvDocument` im Kern). */
 export function bundleCsv(entries: readonly BundleEntry[]): string {
-  const rows = entries.map((e) => [e.number, e.documentDate, e.typeLabel, e.subject, e.checksum, BUNDLE_STATE_LABELS[e.state], e.fileName].map(csvField).join(';'));
-  return `﻿${[HEADER.join(';'), ...rows].join('\r\n')}\r\n`;
+  return csvDocument(HEADER, entries.map((e) => [e.number, e.documentDate, e.typeLabel, e.subject, e.checksum, BUNDLE_STATE_LABELS[e.state], e.fileName]));
 }
 
 const cell = (value: string | null): string => (value ?? '').replace(/\|/g, '\\|').replace(/\s*[\r\n]+\s*/g, ' ');

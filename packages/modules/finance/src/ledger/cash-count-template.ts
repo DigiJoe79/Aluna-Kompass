@@ -15,6 +15,8 @@ const cashCountVariantSchema = z.object({
   denominations: z.array(denominationSchema).nullable(),
   counterOneName: z.string().min(1),
   counterTwoName: z.string().min(1),
+  /** Rechenschaft D1: „im Beisein von“ — Prüfer des gerade geprüften Jahres; Rechenschaft C: dazu Kontakte (Amtsübergabe). */
+  witnessNames: z.array(z.string().min(1)).optional(),
 });
 
 /** AG: Die Leerung einer Spendendose ist keine Kassenzählung — kein Buchbestand, keine Differenz, sondern Inhalt und Buchung als Spende. */
@@ -76,6 +78,7 @@ function body(data: CashCountVariant): string {
     `| Gezählt | ${data.countedAmount} |`,
     `| ${DIFFERENCE_ROW_LABEL[data.kind]} | ${data.differenceAmount} |`,
   ];
+  if (data.witnessNames && data.witnessNames.length > 0) lines.push(`| Im Beisein von | ${data.witnessNames.join(', ')} |`);
   if (data.denominations && data.denominations.length > 0) {
     lines.push('', '**Stückelung**', '', '| Nennwert | Stück |', '|---|---|');
     for (const d of data.denominations) lines.push(`| ${formatDenominationLabel(d.cents)} | ${d.count} |`);

@@ -1,7 +1,7 @@
-import { hasPermission, listUserNamesWithPermission, type LocalizedText, readSetting } from '@kompass/core';
+import { hasPermission, listUserNamesWithPermission, type LocalizedText, readSetting, todayIn } from '@kompass/core';
 import { displayName, getContact } from '@kompass/module-contacts';
 import { documentTypeFor } from '@kompass/module-dms';
-import { getWorkCounts, listAccounts, listCategories, listForeignMoney, listPartners, listPurposes, listWorkItems, readInvoiceFromDocument, returnCodeInfo, suggestForTransaction, TAX_CODES, type SuggestionReason, type SuggestionView } from '@kompass/module-finance';
+import { getWorkCounts, listAccounts, listCategories, listForeignMoney, listPartners, listPurposes, listWorkItems, readInvoiceFromDocument, returnCodeInfo, suggestForTransaction, taxCodeOptionsInternal, type SuggestionReason, type SuggestionView, vatLineContextInternal } from '@kompass/module-finance';
 import { listProjects } from '@kompass/module-projects';
 import { getTranslations } from 'next-intl/server';
 import Link from 'next/link';
@@ -139,7 +139,8 @@ export default async function FinanceWorkPage({ searchParams }: { searchParams: 
     const partnersRes = canWrite ? await listPartners(deps, ctx, {}) : null;
     const partnerOptions = (partnersRes?.ok ? partnersRes.value : []).map((p) => ({ id: p.id, contactId: p.contactId, name: p.contactName, usualBasis: p.usualBasis }));
     const projectOptions = (projectsRes.ok ? projectsRes.value : []).map((p) => ({ id: p.id, name: (p.name as LocalizedText)[leading] || p.slug }));
-    const showTax = readSetting<boolean>(deps, 'finance.isEntrepreneurOrHasVatId');
+    const taxCodes = taxCodeOptionsInternal(deps.db, todayIn(deps));
+    const showTax = taxCodes.length > 0;
     body = (
       <WorkTransactions
         footer={pager}
@@ -155,18 +156,19 @@ export default async function FinanceWorkPage({ searchParams }: { searchParams: 
         form={{
           categories: allCategories
             .filter((c): c is typeof c & { direction: 'income' | 'expense' } => c.isActive && (c.direction === 'income' || c.direction === 'expense'))
-            .map((c) => ({ id: c.id, name: c.name, direction: c.direction, sphere: c.sphere ?? 'ideal', explanation: c.explanation || undefined })),
+            .map((c) => ({ id: c.id, name: c.name, direction: c.direction, sphere: c.sphere ?? 'ideal', incomeKind: c.incomeKind ?? null, explanation: c.explanation || undefined })),
           categoryNames: Object.fromEntries(allCategories.map((c) => [c.id, c.name])),
           purposes: purposeOptions,
           projects: projectOptions,
-          taxCodeOptions: [...TAX_CODES],
+          taxCodeOptions: taxCodes,
           showTax,
+          vatContext: vatLineContextInternal(deps.db, todayIn(deps)),
           rule: {
             accounts: filterAccounts,
             categories: allCategories.filter((c) => c.isActive).map((c) => ({ id: c.id, name: c.name })),
             projects: projectOptions,
             purposes: purposeOptions,
-            taxCodeOptions: [...TAX_CODES],
+            taxCodeOptions: taxCodes,
             showTax,
           },
           voucherTypes: readSetting<string[]>(deps, 'finance.voucherTypes').map((key) => ({ key, label: nameOrEmpty(documentTypeFor(deps.db, key)?.label, key) })),
@@ -275,6 +277,7 @@ async function describeSuggestion(
   const contact = (id?: string) => (id ? (contactNames.get(id) ?? t('reasons.hiddenContact')) : t('reasons.hiddenContact'));
   const account = (id?: string) => (id ? (accountName.get(id) ?? '') : '');
   const linkDate = formatDateOrDash(fmtDate, suggestion.linkEntry?.entryDate);
+  const droppedRule = suggestion.hints.includes('ruleTaxCodeNotOffered') ? suggestion.reasons.find((r) => r.kind === 'rule') : undefined;
   const reasonText = (r: SuggestionReason): string => {
     switch (r.kind) {
       case 'linkEntry':
@@ -352,6 +355,7 @@ async function describeSuggestion(
       ...(suggestion.problemParams.paidOtherwise ? { paidOtherwise: { count: suggestion.problemParams.paidOtherwise.count, amount: formatEuro(suggestion.problemParams.paidOtherwise.amountCents) } } : {}),
     },
     hints: suggestion.hints,
+    ruleTaxCodeHint: droppedRule?.droppedTaxCode ? t('suggestion.ruleTaxCodeNotOffered', { rule: droppedRule.ruleName ?? '', code: tAll(`finance.splitRow.taxCode.${droppedRule.droppedTaxCode}`) }) : null,
     extraLineTexts: extraLines,
   };
 }

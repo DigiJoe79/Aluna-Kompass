@@ -4,4 +4,4 @@
  * im Stichjahr säen. Diese Datei hält die Importe des Finanzmoduls stabil.
  * Wer die Funktion ohne Datenbankschicht braucht (E2E), lädt die Kern-Datei per Pfad.
  */
-export { SEED_STORY_LAST_DAY, seedStoryYear } from '@kompass/core';
+export { SEED_CLOSED_YEARS, SEED_STORY_LAST_DAY, seedStoryYear } from '@kompass/core';

@@ -49,6 +49,11 @@ export const financeCategories = sqliteTable(
     inputTaxDeductible: text('input_tax_deductible', { enum: ['no', 'yes', 'partial'] }).notNull().default('no'),
     countsTowardTurnover: integer('counts_toward_turnover', { mode: 'boolean' }).notNull().default(false),
     isAssetSale: integer('is_asset_sale', { mode: 'boolean' }).notNull().default(false),
+    /**
+     * Rechenschaft C (Spec § C, AEAO zu § 64 Nr. 17): „Für die Freigrenze“ — `notPerformance` (Zuschüsse, Darlehen,
+     * Versicherungsleistungen) zählt nicht zu § 64 Abs. 3, `taxRefund` (erstattete USt) weder dort noch zu § 55.
+     */
+    thresholdExclusion: text('threshold_exclusion', { enum: ['none', 'notPerformance', 'taxRefund'] }).notNull().default('none'),
     externalAccountNumber: text('external_account_number'),
     isActive: integer('is_active', { mode: 'boolean' }).notNull().default(true),
     createdAt: text('created_at').notNull(),
@@ -95,7 +100,6 @@ export const financeFiscalYears = sqliteTable(
     endsOn: text('ends_on').notNull(),
     /** Steht in jeder Buchungsnummer — ab der ersten vergebenen Nummer unveränderlich. */
     designation: text('designation').notNull(),
-    taxReturnFiledOn: text('tax_return_filed_on'),
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),
   },
@@ -210,8 +214,13 @@ export const financeAllocationLines = sqliteTable(
     categoryId: text('category_id').notNull().references(() => financeCategories.id),
     amountCents: integer('amount_cents').notNull(),
     taxCode: text('tax_code').notNull().default('none'),
-    /** Nur bei `rc13b` und `icAcquisition` von Bedeutung: voller (Vorgabe) oder ermäßigter Satz. */
+    /** Nur bei `rc13bEu`, `rc13bOther` und `icAcquisition` von Bedeutung: voller (Vorgabe) oder ermäßigter Satz. */
     rateKind: text('rate_kind', { enum: ['standard', 'reduced'] }).notNull().default('standard'),
+    /**
+     * E6a: Leistungsdatum (beim Drittland das Rechnungsdatum), nur an § 13b-/Erwerbszeilen. Es bestimmt mit dem
+     * Buchungstag die Entstehung der Steuer (`vatTaxPointOn`). Nach dem Festschreiben änderbar über die Zuordnungskorrektur.
+     */
+    serviceDate: text('service_date'),
     /** Kein Fremdschlüssel: Projekte gehören einem anderen Modul. */
     projectId: text('project_id'),
     purposeId: text('purpose_id').references(() => financePurposes.id),
@@ -222,6 +231,10 @@ export const financeAllocationLines = sqliteTable(
     originLineId: text('origin_line_id'),
     /** „Zuführung zum Vermögen“ (§ 62 Abs. 3 AO) — bei Erbschaften vorbelegt. */
     addsToAssets: integer('adds_to_assets', { mode: 'boolean' }).notNull().default(false),
+    /** Rechenschaft D2: Grund, warum eine Erbschaft oder erhaltene Vermögensausstattung nicht dem Vermögen zugeführt wird (`ADDS_TO_ASSETS_OPT_OUTS`). */
+    addsToAssetsOptOut: text('adds_to_assets_opt_out', { enum: ['testatorDirectedCurrentUse', 'donorAllowedCurrentUse'] }),
+    /** Rechenschaft D2: erhaltene Vermögensausstattung (§ 58 Nr. 3 AO) — nur bei Zuwendungen anderer Organisationen mit Kontakt (Anlage Gem Zeile 69/70). */
+    assetEndowment: integer('asset_endowment', { mode: 'boolean' }).notNull().default(false),
     /**
      * Plan L3: der Posten eines Einzugs, den diese Zeile bucht (Beitrag oder Rate) — so ist eine Rate „gebucht“, ein
      * Einzug gebucht, und eine Rückgabe nimmt genau diese Zeile zurück. Kein Fremdschlüssel wie bei `projectId`.
@@ -1070,6 +1083,8 @@ export const financePartnerPayments = sqliteTable(
     rejectedAt: text('rejected_at'),
     rejectNote: text('reject_note'),
     copiedFromPaymentId: text('copied_from_payment_id').references((): AnySQLiteColumn => financePartnerPayments.id),
+    /** Rechenschaft D2: Mittel zur Vermögensausstattung (§ 58 Nr. 3 AO) — nur `transfer58` an steuerbegünstigte oder öffentliche Körperschaften; ab dem Einreichen fest. */
+    assetEndowment: integer('asset_endowment', { mode: 'boolean' }).notNull().default(false),
     createdByUserId: text('created_by_user_id').notNull(),
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),
@@ -1524,3 +1539,604 @@ export const financeSepaPrenotifications = sqliteTable(
   (t) => [index('finance_sepa_prenotifications_mandate_idx').on(t.mandateId)],
 );
 export type FinanceSepaPrenotificationRow = typeof financeSepaPrenotifications.$inferSelect;
+
+// ── Rechenschaft A1: festgeschriebene Berichte (Spec Rechenschaft 0.4.0 § A) ──
+
+/**
+ * Eine festgeschriebene Fassung eines Berichts. Kein Summenwert (Prinzip 5): nur der Bericht, seine Parameter
+ * (kanonisches JSON), der Daten-Hash und das Dokument der Akte. Stornieren setzt `voided_at` — beim Wiederöffnen
+ * eines Jahres oder wenn eine neue Fassung mit anderem Datenstand sie ersetzt (`replaced_by_report_id`); das
+ * Dokument bleibt lesbar.
+ */
+export const financeReports = sqliteTable(
+  'finance_reports',
+  {
+    id: text('id').primaryKey(),
+    reportKey: text('report_key').notNull(),
+    /** `ReportParams` als kanonisches JSON (`canonicalJson`) — gleiche Parameter, gleicher Text. */
+    params: text('params').notNull(),
+    /** Das jüngste betroffene Geschäftsjahr. */
+    fiscalYearId: text('fiscal_year_id').notNull().references(() => financeFiscalYears.id),
+    dataHash: text('data_hash').notNull(),
+    documentId: text('document_id').notNull(),
+    documentNumber: text('document_number').notNull(),
+    /** Grundlage der Freigabe des Jahres beim Festschreiben, `null` ohne (Gruppe Finanzamt). */
+    releaseBasis: text('release_basis', { enum: ['auditReport', 'noAuditProvided', 'oralReport', 'singleAuditor', 'notAudited', 'other'] }),
+    finalizedAt: text('finalized_at').notNull(),
+    finalizedByUserId: text('finalized_by_user_id').notNull(),
+    voidedAt: text('voided_at'),
+    /** Begründung des Stornos — nie im Änderungsprotokoll. */
+    voidReason: text('void_reason'),
+    replacedByReportId: text('replaced_by_report_id').references((): AnySQLiteColumn => financeReports.id),
+  },
+  (t) => [index('finance_reports_year_idx').on(t.fiscalYearId), index('finance_reports_key_params_idx').on(t.reportKey, t.params)],
+);
+export type FinanceReportRow = typeof financeReports.$inferSelect;
+
+/**
+ * Die Freigabe der Berichte eines Jahres zum Festschreiben (Spec § A „Festschreiben erst nach der Kassenprüfung“):
+ * der abgelegte Prüfbericht (D1) oder eine bestätigte Begründung. Je Jahr eine Zeile; Wiederöffnen widerruft sie
+ * (`revoked_at`), eine neue Freigabe setzt die Zeile neu. Die Geschichte steht im Änderungsprotokoll.
+ */
+export const financeReportReleases = sqliteTable('finance_report_releases', {
+  fiscalYearId: text('fiscal_year_id').primaryKey().references(() => financeFiscalYears.id),
+  basis: text('basis', { enum: ['auditReport', 'noAuditProvided', 'oralReport', 'singleAuditor', 'notAudited', 'other'] }).notNull(),
+  /** Freitext zur Begründung (Pflicht bei `other`) — nie im Änderungsprotokoll. */
+  note: text('note'),
+  documentId: text('document_id'),
+  at: text('at').notNull(),
+  byUserId: text('by_user_id').notNull(),
+  revokedAt: text('revoked_at'),
+  revokedByUserId: text('revoked_by_user_id'),
+});
+export type FinanceReportReleaseRow = typeof financeReportReleases.$inferSelect;
+
+/**
+ * Rechenschaft A2 (Spec 0.4.0 § Kernberichte, Designer Runde 2 11d–11h): sonstige Vermögensgegenstände und
+ * Verpflichtungen von Hand — Sachwerte, Inventar, Darlehen, Kautionen —, bis es ein Anlagenverzeichnis gibt.
+ * Gültig von `recorded_from` bis einschließlich `recorded_until` („der letzte Tag, an dem er dem Verein gehörte“).
+ * „Neuer Wert ab …“ beendet den Eintrag am Vortag und legt einen Nachfolger an (`replaced_by_id`); der Vorgänger
+ * eines Eintrags wird darüber rückwärts gelesen. Bezeichnung, Grundlage und Grund sind frei getippt — sie stehen hier,
+ * nie im Änderungsprotokoll. Nie gelöscht.
+ */
+export const financeOtherAssets = sqliteTable(
+  'finance_other_assets',
+  {
+    id: text('id').primaryKey(),
+    kind: text('kind', { enum: ['asset', 'liability'] }).notNull(),
+    label: text('label').notNull(),
+    valueCents: integer('value_cents').notNull(),
+    basis: text('basis').notNull(),
+    recordedFrom: text('recorded_from').notNull(),
+    recordedUntil: text('recorded_until'),
+    endReason: text('end_reason'),
+    replacedById: text('replaced_by_id'),
+    documentId: text('document_id'),
+    createdAt: text('created_at').notNull(),
+    updatedAt: text('updated_at').notNull(),
+  },
+  (t) => [index('finance_other_assets_from_idx').on(t.recordedFrom), index('finance_other_assets_replaced_by_idx').on(t.replacedById)],
+);
+export type FinanceOtherAssetRow = typeof financeOtherAssets.$inferSelect;
+
+/**
+ * Rechenschaft D1 (Spec 0.4.0 § D1 „Prüfer je Jahr“): wer das Geschäftsjahr prüft — ein Kontakt je Zeile, „in Kompass“
+ * (verknüpfter Nutzer mit Prüferrolle) oder „auf Papier“. Wahl, Protokoll und Vertraulichkeit sind Einträge, keine
+ * Organverwaltung. `access_ended_*`: wann jemand den Zugang beendet hat (die Rolle entzogen, Designer 12h). Ausgetragen
+ * wird nur, solange keine Arbeit daran hängt; dann verschwindet die Zeile (Protokoll `finance.audit.auditor.remove`).
+ */
+export const financeAuditAuditors = sqliteTable(
+  'finance_audit_auditors',
+  {
+    id: text('id').primaryKey(),
+    fiscalYearId: text('fiscal_year_id').notNull().references(() => financeFiscalYears.id),
+    /** Kein Fremdschlüssel: Kontakte gehören einem anderen Modul; das Protokoll nennt nie diese ID. */
+    contactId: text('contact_id').notNull(),
+    mode: text('mode', { enum: ['kompass', 'paper'] }).notNull(),
+    confidential: integer('confidential', { mode: 'boolean' }).notNull().default(false),
+    confidentialityDocumentId: text('confidentiality_document_id'),
+    electedOn: text('elected_on'),
+    minutesDocumentId: text('minutes_document_id'),
+    accessEndedAt: text('access_ended_at'),
+    accessEndedByUserId: text('access_ended_by_user_id'),
+    createdAt: text('created_at').notNull(),
+    updatedAt: text('updated_at').notNull(),
+  },
+  (t) => [uniqueIndex('finance_audit_auditors_year_contact_idx').on(t.fiscalYearId, t.contactId)],
+);
+export type FinanceAuditAuditorRow = typeof financeAuditAuditors.$inferSelect;
+
+/**
+ * Rechenschaft D1 „Prüfstand“: was beim Abschluss geprüft wird — Zeitpunkt, je Bericht der Gruppen MV und Prüfung
+ * Parameter und voller Daten-Hash (`report_refs`, JSON), und je festgeschriebener Buchung des Jahres ein Fingerabdruck
+ * (`finance_audit_baseline_entries`). Keine Summen. `initial` beim ersten Abschluss, `followUp` nach einem Wiederöffnen,
+ * wenn ein Bericht auf dem letzten Stand schon abgelegt war. Unveränderlich, nie gelöscht (Trigger).
+ */
+export const financeAuditBaselines = sqliteTable(
+  'finance_audit_baselines',
+  {
+    id: text('id').primaryKey(),
+    fiscalYearId: text('fiscal_year_id').notNull().references(() => financeFiscalYears.id),
+    kind: text('kind', { enum: ['initial', 'followUp'] }).notNull(),
+    reportRefs: text('report_refs').notNull(),
+    createdAt: text('created_at').notNull(),
+  },
+  (t) => [index('finance_audit_baselines_year_idx').on(t.fiscalYearId, t.createdAt)],
+);
+export type FinanceAuditBaselineRow = typeof financeAuditBaselines.$inferSelect;
+
+export const financeAuditBaselineEntries = sqliteTable(
+  'finance_audit_baseline_entries',
+  {
+    baselineId: text('baseline_id').notNull().references(() => financeAuditBaselines.id),
+    entryId: text('entry_id').notNull().references(() => financeEntries.id),
+    fingerprint: text('fingerprint').notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.baselineId, t.entryId] })],
+);
+
+/**
+ * Rechenschaft D1 „Stichproben“ (Designer N4): je Prüfer und Buchung ein Haken mit dem Fingerabdruck beim Abhaken —
+ * weicht er heute ab, steht die Stichprobe auf „erneut prüfen“. Abhaken nimmt sie weg (protokolliert).
+ */
+export const financeAuditSamples = sqliteTable(
+  'finance_audit_samples',
+  {
+    id: text('id').primaryKey(),
+    fiscalYearId: text('fiscal_year_id').notNull().references(() => financeFiscalYears.id),
+    auditorId: text('auditor_id').notNull().references(() => financeAuditAuditors.id),
+    entryId: text('entry_id').notNull().references(() => financeEntries.id),
+    fingerprint: text('fingerprint').notNull(),
+    at: text('at').notNull(),
+  },
+  (t) => [uniqueIndex('finance_audit_samples_auditor_entry_idx').on(t.auditorId, t.entryId), index('finance_audit_samples_year_idx').on(t.fiscalYearId)],
+);
+export type FinanceAuditSampleRow = typeof financeAuditSamples.$inferSelect;
+
+/** „Abschnitt durchgesehen“ je Prüfer und Abschnitt (Designer Runde 1 4b). */
+export const financeAuditSectionReviews = sqliteTable(
+  'finance_audit_section_reviews',
+  {
+    fiscalYearId: text('fiscal_year_id').notNull().references(() => financeFiscalYears.id),
+    auditorId: text('auditor_id').notNull().references(() => financeAuditAuditors.id),
+    section: text('section', { enum: ['journal', 'reconciliation', 'vouchers', 'imports', 'anomalies', 'purposesReserves', 'donations', 'partnerPayments'] }).notNull(),
+    at: text('at').notNull(),
+    /**
+     * Plan D1e Task 0: SHA-256 über die Zeilen des Abschnitts zur Zeit der Durchsicht (kanonisch, Buchungen mit ihrem
+     * Fingerabdruck). `null` bei Durchsichten von vor dieser Spalte — für sie gilt die Regel aus D1d.
+     */
+    rowsHash: text('rows_hash'),
+  },
+  (t) => [uniqueIndex('finance_audit_section_reviews_idx').on(t.fiscalYearId, t.auditorId, t.section)],
+);
+
+/**
+ * Rechenschaft D1 „Vermerk“: Frage oder Feststellung eines Prüfers an einer Buchung, einem Beleg, einem Bericht
+ * (`target_id` = Katalogschlüssel) oder am Jahr. Für einen Papier-Prüfer trägt ein Kompass-Prüfer ein
+ * (`author_auditor_id` ≠ Prüfer des Nutzers). Text frei — hier, nie im Protokoll. Nie gelöscht (Trigger).
+ */
+export const financeAuditRemarks = sqliteTable(
+  'finance_audit_remarks',
+  {
+    id: text('id').primaryKey(),
+    fiscalYearId: text('fiscal_year_id').notNull().references(() => financeFiscalYears.id),
+    kind: text('kind', { enum: ['question', 'finding'] }).notNull(),
+    targetType: text('target_type', { enum: ['entry', 'document', 'report', 'year'] }).notNull(),
+    targetId: text('target_id').notNull(),
+    text: text('text').notNull(),
+    authorAuditorId: text('author_auditor_id').notNull().references(() => financeAuditAuditors.id),
+    enteredByUserId: text('entered_by_user_id').notNull(),
+    state: text('state', { enum: ['open', 'answered', 'resolved'] }).notNull().default('open'),
+    createdAt: text('created_at').notNull(),
+    updatedAt: text('updated_at').notNull(),
+  },
+  (t) => [index('finance_audit_remarks_year_idx').on(t.fiscalYearId, t.state), index('finance_audit_remarks_target_idx').on(t.targetType, t.targetId)],
+);
+export type FinanceAuditRemarkRow = typeof financeAuditRemarks.$inferSelect;
+
+/** Antworten (Schatzmeisterin) und Nachfragen (Prüfer) zu einem Vermerk, in ihrer Folge. Unveränderlich. */
+export const financeAuditRemarkPosts = sqliteTable(
+  'finance_audit_remark_posts',
+  {
+    id: text('id').primaryKey(),
+    remarkId: text('remark_id').notNull().references(() => financeAuditRemarks.id),
+    kind: text('kind', { enum: ['answer', 'followUp'] }).notNull(),
+    byUserId: text('by_user_id').notNull(),
+    text: text('text').notNull(),
+    at: text('at').notNull(),
+  },
+  (t) => [index('finance_audit_remark_posts_remark_idx').on(t.remarkId, t.at)],
+);
+
+/**
+ * Rechenschaft D1 „Prüfbericht“ (Designer Runde 3 12d–12g): der Bericht der Prüfer (`report`) oder ein Nachtrag nach
+ * dem Wiederöffnen (`followUp`), am Prüfstand. `origin: blank` ist der Vordruck für Papier-Prüfer. Karten speichern
+ * einzeln mit eigenem Stand (`…_updated_at`). Freitexte (Ort, „nicht geprüft“, Grund) stehen hier, nie im Protokoll.
+ */
+export const financeAuditReports = sqliteTable(
+  'finance_audit_reports',
+  {
+    id: text('id').primaryKey(),
+    fiscalYearId: text('fiscal_year_id').notNull().references(() => financeFiscalYears.id),
+    kind: text('kind', { enum: ['report', 'followUp'] }).notNull(),
+    origin: text('origin', { enum: ['kompass', 'blank'] }).notNull(),
+    baselineId: text('baseline_id').notNull().references(() => financeAuditBaselines.id),
+    state: text('state', { enum: ['draft', 'readyToSign', 'filed'] }).notNull().default('draft'),
+    /** JSON-Liste ISO-Tage. */
+    examDates: text('exam_dates').notNull().default('[]'),
+    examPlace: text('exam_place'),
+    examNotTested: text('exam_not_tested'),
+    /** Die gewählte Kassenzählung „im Beisein von“ (Designer 12f: „im Gegenstand kann man zwischen ihnen wechseln“). */
+    examCashCountId: text('exam_cash_count_id'),
+    examUpdatedAt: text('exam_updated_at'),
+    examUpdatedByUserId: text('exam_updated_by_user_id'),
+    signatureMode: text('signature_mode', { enum: ['both', 'one', 'separate'] }).notNull().default('both'),
+    nonSignerAuditorId: text('non_signer_auditor_id'),
+    nonSignerReason: text('non_signer_reason'),
+    signaturesUpdatedAt: text('signatures_updated_at'),
+    signaturesUpdatedByUserId: text('signatures_updated_by_user_id'),
+    readyAt: text('ready_at'),
+    readyByUserId: text('ready_by_user_id'),
+    filedAt: text('filed_at'),
+    lastPrintedAt: text('last_printed_at'),
+    /** Gegenstand ab „zum Unterschreiben freigeben“ (JSON, Spec § D1 „Prüfstand“): steht fest, bis die Freigabe zurückgeht. */
+    subjectSnapshot: text('subject_snapshot'),
+    createdAt: text('created_at').notNull(),
+  },
+  (t) => [index('finance_audit_reports_year_idx').on(t.fiscalYearId, t.createdAt)],
+);
+export type FinanceAuditReportRow = typeof financeAuditReports.$inferSelect;
+
+/** Ergebnis und Empfehlung: gemeinsam (`auditor_id` leer) oder je Prüfer bei getrennten Berichten. */
+export const financeAuditReportResults = sqliteTable(
+  'finance_audit_report_results',
+  {
+    id: text('id').primaryKey(),
+    reportId: text('report_id').notNull().references(() => financeAuditReports.id),
+    auditorId: text('auditor_id').references(() => financeAuditAuditors.id),
+    result: text('result', { enum: ['clean', 'withFindings'] }),
+    recommendation: text('recommendation', { enum: ['discharge', 'noDischarge', 'none'] }).notNull().default('none'),
+    updatedAt: text('updated_at').notNull(),
+    updatedByUserId: text('updated_by_user_id').notNull(),
+  },
+  // Eindeutig je Bericht und Prüfer, „gemeinsam“ (leer) eingeschlossen: Ausdrucks-Index in der Migration `…_locks`.
+  (t) => [index('finance_audit_report_results_report_idx').on(t.reportId)],
+);
+export type FinanceAuditReportResultRow = typeof financeAuditReportResults.$inferSelect;
+
+/** „Abweichende Feststellungen · <Name>“ — je Prüfer nur das eigene Feld. */
+export const financeAuditReportDeviations = sqliteTable(
+  'finance_audit_report_deviations',
+  {
+    reportId: text('report_id').notNull().references(() => financeAuditReports.id),
+    auditorId: text('auditor_id').notNull().references(() => financeAuditAuditors.id),
+    text: text('text').notNull(),
+    updatedAt: text('updated_at').notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.reportId, t.auditorId] })],
+);
+
+/** Der abgelegte Scan (Task 7): einer je Bericht, bei getrennten Berichten einer je Prüfer. */
+export const financeAuditReportScans = sqliteTable(
+  'finance_audit_report_scans',
+  {
+    id: text('id').primaryKey(),
+    reportId: text('report_id').notNull().references(() => financeAuditReports.id),
+    auditorId: text('auditor_id').references(() => financeAuditAuditors.id),
+    documentId: text('document_id').notNull(),
+    filedAt: text('filed_at').notNull(),
+    filedByUserId: text('filed_by_user_id').notNull(),
+  },
+  // Eindeutig je Bericht und Prüfer (leer bei einem Bericht): Ausdrucks-Index in der Migration `…_locks`.
+  (t) => [index('finance_audit_report_scans_report_idx').on(t.reportId)],
+);
+
+/**
+ * Rechenschaft D1 „im Beisein von“ (Designer 12f): welche Prüfer des gerade geprüften Jahres bei einer Kassenzählung
+ * dabei waren, mit dem Namen von damals (wie die Zählenden). Unveränderlich, nie gelöscht (Trigger).
+ */
+export const financeCashCountWitnesses = sqliteTable(
+  'finance_cash_count_witnesses',
+  {
+    countId: text('count_id').notNull().references(() => financeCashCounts.id),
+    auditorId: text('auditor_id').notNull().references(() => financeAuditAuditors.id),
+    /** Name des Kontakts bei der Zählung — Papier, nie im Protokoll. */
+    name: text('name').notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.countId, t.auditorId] }), index('finance_cash_count_witnesses_auditor_idx').on(t.auditorId)],
+);
+
+/**
+ * Rechenschaft C Schritt 1 (Spec § C): der Kontoauszug der Bank als PDF in der Akte, je Konto mit dem Zeitraum, den
+ * er abdeckt. Nur anhängen (Trigger): Ein falscher Auszug wird in der Akte storniert und zählt dann nicht mehr.
+ */
+export const financeAccountStatementDocuments = sqliteTable(
+  'finance_account_statement_documents',
+  {
+    id: text('id').primaryKey(),
+    accountId: text('account_id').notNull().references(() => financeAccounts.id),
+    documentId: text('document_id').notNull(),
+    periodFrom: text('period_from'),
+    periodTo: text('period_to').notNull(),
+    createdAt: text('created_at').notNull(),
+    createdByUserId: text('created_by_user_id').notNull(),
+  },
+  (t) => [index('finance_account_statement_documents_account_idx').on(t.accountId, t.periodTo)],
+);
+
+/**
+ * Rechenschaft C Schritt 1: je Jahr und Konto eine Bestätigung — Saldo bestätigt oder „nicht abstimmbar“ (Zahlungsdienst),
+ * fehlender Auszug begründet (Bankkonto); Schritt 2: Bestand rückgerechnet (Kasse, E2). Nur anhängen (Trigger); es gilt
+ * die jüngste.
+ */
+export const financeAccountYearConfirmations = sqliteTable(
+  'finance_account_year_confirmations',
+  {
+    id: text('id').primaryKey(),
+    fiscalYearId: text('fiscal_year_id').notNull().references(() => financeFiscalYears.id),
+    accountId: text('account_id').notNull().references(() => financeAccounts.id),
+    kind: text('kind', { enum: ['balanceConfirmed', 'notReconcilable', 'missingJustified', 'cashRecomputed'] }).notNull(),
+    note: text('note'),
+    at: text('at').notNull(),
+    byUserId: text('by_user_id').notNull(),
+  },
+  (t) => [index('finance_account_year_confirmations_year_idx').on(t.fiscalYearId, t.accountId)],
+);
+
+/**
+ * Rechenschaft C (Finanz-Spec § 9.6): die Bestätigung eines Schritts im Jahresabschluss — Nutzer, Zeit, Begründung als
+ * Tatsache. Nur anhängen (Trigger); es gilt die jüngste je Jahr und Schritt.
+ */
+export const financeClosingConfirmations = sqliteTable(
+  'finance_closing_confirmations',
+  {
+    id: text('id').primaryKey(),
+    fiscalYearId: text('fiscal_year_id').notNull().references(() => financeFiscalYears.id),
+    step: text('step').notNull(),
+    note: text('note'),
+    at: text('at').notNull(),
+    byUserId: text('by_user_id').notNull(),
+  },
+  (t) => [index('finance_closing_confirmations_year_idx').on(t.fiscalYearId, t.step)],
+);
+
+/**
+ * Rechenschaft C Schritt 11 (Spec § C): das Ergebnis der Mitgliederversammlung zu einem Geschäftsjahr — ein Datensatz
+ * je Jahr; ein Nachtrag aus einer späteren MV ändert ihn, die Geschichte steht im Protokoll.
+ */
+export const financeAssemblyResults = sqliteTable('finance_assembly_results', {
+  fiscalYearId: text('fiscal_year_id').primaryKey().references(() => financeFiscalYears.id),
+  assemblyOn: text('assembly_on').notNull(),
+  minutesDocumentId: text('minutes_document_id'),
+  accountsApproved: text('accounts_approved', { enum: ['yes', 'no', 'notVoted'] }),
+  dischargeMode: text('discharge_mode', { enum: ['individual', 'collective'] }).notNull(),
+  collectiveOutcome: text('collective_outcome', { enum: ['granted', 'refused', 'postponed'] }),
+  updatedAt: text('updated_at').notNull(),
+  updatedByUserId: text('updated_by_user_id').notNull(),
+});
+
+/** Die Entlastung je Person bei Einzelentlastung; `decided_on` ist der Tag der MV, die das Ergebnis dieser Person zuletzt änderte. */
+export const financeAssemblyDischarges = sqliteTable(
+  'finance_assembly_discharges',
+  {
+    fiscalYearId: text('fiscal_year_id').notNull().references(() => financeFiscalYears.id),
+    contactId: text('contact_id').notNull(),
+    outcome: text('outcome', { enum: ['granted', 'refused', 'postponed'] }),
+    decidedOn: text('decided_on'),
+    updatedAt: text('updated_at').notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.fiscalYearId, t.contactId] })],
+);
+
+/**
+ * Rechenschaft C / D1 (Spec § D1 „Wiederöffnen nach der Prüfung“, nach der MV): Die Nachprüfung wird geschlossen,
+ * indem die Korrektur in Prüfpaket und Kassenbericht des Folgejahres geht und der nächsten MV berichtet wird. Gilt
+ * nur dem Prüfstand, auf dem sie steht. Nur anhängen (Trigger).
+ */
+export const financeAuditCarryOvers = sqliteTable(
+  'finance_audit_carry_overs',
+  {
+    id: text('id').primaryKey(),
+    fiscalYearId: text('fiscal_year_id').notNull().references(() => financeFiscalYears.id),
+    baselineId: text('baseline_id').notNull().references(() => financeAuditBaselines.id),
+    targetFiscalYearId: text('target_fiscal_year_id').notNull().references(() => financeFiscalYears.id),
+    note: text('note').notNull(),
+    at: text('at').notNull(),
+    byUserId: text('by_user_id').notNull(),
+  },
+  (t) => [index('finance_audit_carry_overs_year_idx').on(t.fiscalYearId), index('finance_audit_carry_overs_target_idx').on(t.targetFiscalYearId)],
+);
+
+export type FinanceAuditCarryOverRow = typeof financeAuditCarryOvers.$inferSelect;
+
+/** Je übernommener Buchung eine Zeile: neu (nicht im Prüfstand), zurückgenommen oder geändert. */
+export const financeAuditCarryOverEntries = sqliteTable(
+  'finance_audit_carry_over_entries',
+  {
+    carryOverId: text('carry_over_id').notNull().references(() => financeAuditCarryOvers.id),
+    entryId: text('entry_id').notNull().references(() => financeEntries.id),
+    entryNumber: text('entry_number').notNull(),
+    change: text('change', { enum: ['new', 'reversed', 'changed'] }).notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.carryOverId, t.entryId] })],
+);
+
+/**
+ * Rechenschaft C (Amtsübergabe): Kontakte, in deren Beisein gezählt wurde (die neue Schatzmeisterin), mit dem Namen
+ * von damals — neben den Prüfer-Zeugen. Unveränderlich, nie gelöscht (Trigger).
+ */
+export const financeCashCountContactWitnesses = sqliteTable(
+  'finance_cash_count_contact_witnesses',
+  {
+    countId: text('count_id').notNull().references(() => financeCashCounts.id),
+    contactId: text('contact_id').notNull(),
+    name: text('name').notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.countId, t.contactId] })],
+);
+
+/**
+ * Rechenschaft C (Spec § C, Finanz-Spec § 9.6): die Amtsübergabe des Schatzmeisters — Zwischenbericht (Parameter und
+ * Hash, keine Ablage), Kassenzählung am Übergabetag, Übergabepunkte, das unterschriebene Protokoll. Nie gelöscht
+ * (Trigger); abgebrochen ist ein Zustand.
+ */
+export const financeHandovers = sqliteTable(
+  'finance_handovers',
+  {
+    id: text('id').primaryKey(),
+    fiscalYearId: text('fiscal_year_id').notNull().references(() => financeFiscalYears.id),
+    fromContactId: text('from_contact_id').notNull(),
+    toContactId: text('to_contact_id').notNull(),
+    handoverOn: text('handover_on').notNull(),
+    state: text('state', { enum: ['open', 'done', 'cancelled'] }).notNull(),
+    interimParams: text('interim_params'),
+    interimHash: text('interim_hash'),
+    interimAt: text('interim_at'),
+    /** Altdaten (C1): eine Zählung je Übergabe. Seit E2 ungenutzt — die Sicht leitet je Kasse aus `financeCashCounts` ab (14c). */
+    cashCountId: text('cash_count_id'),
+    protocolDocumentId: text('protocol_document_id'),
+    createdAt: text('created_at').notNull(),
+    updatedAt: text('updated_at').notNull(),
+  },
+  (t) => [index('finance_handovers_year_idx').on(t.fiscalYearId)],
+);
+export type FinanceHandoverRow = typeof financeHandovers.$inferSelect;
+
+/** Die Punkte der Übergabe (Finanz-Spec § 9.6): Standardpunkte beim Beginnen, eigene dazu. */
+export const financeHandoverItems = sqliteTable(
+  'finance_handover_items',
+  {
+    id: text('id').primaryKey(),
+    handoverId: text('handover_id').notNull().references(() => financeHandovers.id),
+    key: text('key', { enum: ['cash', 'records', 'bankAccess', 'paymentServices', 'kompass', 'custom'] }).notNull(),
+    label: text('label'),
+    note: text('note'),
+    checked: integer('checked', { mode: 'boolean' }).notNull().default(false),
+    position: integer('position').notNull(),
+  },
+  (t) => [index('finance_handover_items_handover_idx').on(t.handoverId)],
+);
+
+
+/**
+ * E6a: die Abgabe einer Umsatzsteuer-Voranmeldung (`period` `'YYYY-Qn'` oder `'YYYY-MM'`) oder Jahreserklärung
+ * (`'YYYY'`). Eine zweite Abgabe desselben Zeitraums ist die berichtigte Anmeldung (`amendment`). `linesDigest` ist der
+ * Fingerabdruck der Zeilen des Zeitraums bei der Abgabe (`vatPeriodDigestInternal`); weicht der heutige ab, ist eine
+ * Berichtigung fällig. Übertragene Abgaben ohne Fingerabdruck melden nie eine. Kein Löschen, kein Ändern.
+ */
+export const financeVatFilings = sqliteTable(
+  'finance_vat_filings',
+  {
+    id: text('id').primaryKey(),
+    period: text('period').notNull(),
+    filedOn: text('filed_on').notNull(),
+    amendment: integer('amendment', { mode: 'boolean' }).notNull().default(false),
+    linesDigest: text('lines_digest'),
+    /** Die Teile, aus denen `linesDigest` entstand (JSON-Liste, `vatPeriodPartsInternal`) — Ursache einer Berichtigung. */
+    linesSnapshot: text('lines_snapshot'),
+    /** E6b: Abbild der Kennzahlen bei der Abgabe (JSON, Cent je Quelle `VatFigureSource`) — die Spalte „abgegeben“ der Berichtigung. */
+    figures: text('figures'),
+    /** E6b: die festgeschriebene Fassung des Berichts mit dem Datenstand der Abgabe, sonst `null`. */
+    reportId: text('report_id'),
+    /** E6b: Ablage an der Abgabe — abgegebene Fassung (nur mit `report_id`) und ELSTER-Übertragungsprotokoll. */
+    filedReturnDocumentId: text('filed_return_document_id'),
+    transmissionProtocolDocumentId: text('transmission_protocol_document_id'),
+    at: text('at').notNull(),
+    byUserId: text('by_user_id').notNull(),
+  },
+  (t) => [index('finance_vat_filings_period_idx').on(t.period)],
+);
+export type FinanceVatFilingRow = typeof financeVatFilings.$inferSelect;
+
+/**
+ * Rechenschaft B2: ein erzeugter Datenexport für eine Außenprüfung (§ 147 Abs. 6 AO). Metadaten, nie Inhalte: Das ZIP
+ * liegt in den Dateien des Moduls und wird nach 30 Tagen gelöscht (`reporting/export/sweep.ts`); die Zeile bleibt mit
+ * `file_deleted_at`, damit das Protokoll auf etwas zeigt. „Bis“ wird berechnet (`dataExportExpiresAt`), nie gespeichert.
+ */
+export const financeDataExports = sqliteTable(
+  'finance_data_exports',
+  {
+    id: text('id').primaryKey(),
+    /** JSON-Liste der Geschäftsjahr-IDs. */
+    fiscalYearIds: text('fiscal_year_ids').notNull(),
+    /** „2024, 2025“ — Bezeichnungen beim Erzeugen. */
+    designations: text('designations').notNull(),
+    /** Offene Jahre beim Erzeugen („2026“) oder leer. */
+    provisional: text('provisional').notNull().default(''),
+    fileName: text('file_name').notNull(),
+    sizeBytes: integer('size_bytes').notNull(),
+    /** SHA-256 des ZIP. */
+    checksum: text('checksum').notNull(),
+    createdAt: text('created_at').notNull(),
+    createdByUserId: text('created_by_user_id'),
+    channel: text('channel', { enum: ['ui', 'mcp'] }).notNull(),
+    fileDeletedAt: text('file_deleted_at'),
+  },
+  (t) => [index('finance_data_exports_created_idx').on(t.createdAt)],
+);
+export type FinanceDataExportRow = typeof financeDataExports.$inferSelect;
+
+/**
+ * Rechenschaft D2 (Spec § D2): der Erklärungszeitraum der Steuererklärung — ein bis drei aufeinander folgende
+ * Geschäftsjahre (`first`…`last`), mit Aufforderung, Frist, Abgabe, der abgegebenen festgeschriebenen Fassung des
+ * Berichts `taxReturnGem`, den Dokumenten je Platz und dem Bescheid. `answers_json` hält die „Angaben von Ihnen“
+ * der Anlage Gem (`gemAnswersSchema`) — Freitext, nie im Protokoll. Ersetzt „Steuererklärung abgegeben am“ am
+ * Geschäftsjahr. Nie gelöscht (Trigger `finance_tax_periods_no_delete`).
+ */
+export const financeTaxPeriods = sqliteTable(
+  'finance_tax_periods',
+  {
+    id: text('id').primaryKey(),
+    firstFiscalYearId: text('first_fiscal_year_id').notNull().references(() => financeFiscalYears.id),
+    lastFiscalYearId: text('last_fiscal_year_id').notNull().references(() => financeFiscalYears.id),
+    requestedOn: text('requested_on'),
+    withTaxAdvisor: integer('with_tax_advisor', { mode: 'boolean' }).notNull().default(false),
+    dueOn: text('due_on').notNull(),
+    filedOn: text('filed_on'),
+    filedReportId: text('filed_report_id').references(() => financeReports.id),
+    /** Dokumente der Akte je Platz — kein Fremdschlüssel, die Akte gehört einem anderen Modul. */
+    requestDocumentId: text('request_document_id'),
+    filedDocumentId: text('filed_document_id'),
+    transmissionDocumentId: text('transmission_document_id'),
+    activityReportDocumentId: text('activity_report_document_id'),
+    /** Die Satzung, wenn sie gesondert übermittelt wird (Zeile 6, Befund 18b). */
+    statuteDocumentId: text('statute_document_id'),
+    noticeId: text('notice_id').references(() => financeNotices.id),
+    answersJson: text('answers_json').notNull().default('{}'),
+    createdAt: text('created_at').notNull(),
+    createdByUserId: text('created_by_user_id').notNull(),
+    updatedAt: text('updated_at').notNull(),
+  },
+  (t) => [index('finance_tax_periods_first_idx').on(t.firstFiscalYearId), index('finance_tax_periods_last_idx').on(t.lastFiscalYearId)],
+);
+export type FinanceTaxPeriodRow = typeof financeTaxPeriods.$inferSelect;
+
+/**
+ * Rechenschaft D2 (Spec § D2): Finanzamt, Steuernummer und begünstigter Zweck einer Körperschaft, an die Kompass eine
+ * Vermögensausstattung gibt oder von der es eine erhält (Anlage Gem Zeilen 65 und 70) — eine Zeile je Kontakt für
+ * Empfänger und Geber; das Partnerprofil zeigt und pflegt die seines Kontakts. Eine eigene ID statt der Kontakt-ID als
+ * Schlüssel, weil die ID ins Änderungsprotokoll geht und dort nie eine Kontakt-ID stehen darf (wie
+ * `finance_contact_waiver_terms`). Arbeitsmaterial: Der Bericht trägt beim Festschreiben seine eigene Abschrift; geht
+ * mit dem Kontakt.
+ */
+export const financeContactTaxDetails = sqliteTable(
+  'finance_contact_tax_details',
+  {
+    id: text('id').primaryKey(),
+    contactId: text('contact_id').notNull(),
+    taxOffice: text('tax_office'),
+    taxNumber: text('tax_number'),
+    beneficiaryPurpose: text('beneficiary_purpose'),
+    /** E6a: „Rechnungen mit Umkehr der Steuerschuld (§ 13b)“ — Vorgabe `rc13bEu`/`rc13bOther` für jede Ausgabe an den Kontakt. */
+    reverseCharge: text('reverse_charge', { enum: ['eu', 'other'] }),
+    /** E6b: gemerktes „Nein, weil …“ der Prüffrage § 13b — Grund, Freitext nur bei `other`, Tag und Person. Schließt `reverse_charge` aus. */
+    reverseChargeDeclineReason: text('reverse_charge_decline_reason', { enum: ['paymentServices', 'domesticProvider', 'exception13b6', 'other'] }),
+    reverseChargeDeclineText: text('reverse_charge_decline_text'),
+    reverseChargeDeclineOn: text('reverse_charge_decline_on'),
+    reverseChargeDeclineByUserId: text('reverse_charge_decline_by_user_id'),
+    updatedAt: text('updated_at').notNull(),
+    updatedByUserId: text('updated_by_user_id').notNull(),
+  },
+  (t) => [uniqueIndex('finance_contact_tax_details_contact_idx').on(t.contactId)],
+);
+export type FinanceContactTaxDetailsRow = typeof financeContactTaxDetails.$inferSelect;

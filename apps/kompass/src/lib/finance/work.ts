@@ -1,6 +1,7 @@
 import type { EntryLinesInput, SuggestionDraft } from '@kompass/module-finance';
 import { formatAmount, parseAmount } from './amount';
 import { emptyForm, fromEntryView, type EntryFormState, type SplitRowState } from './entry-form';
+import { isReverseChargeCode } from './reverse-charge-text';
 
 /**
  * Die Arbeitsliste (F5 Task 7, HANDOFF § 12.5): Adresse, Auswahl und die
@@ -95,6 +96,9 @@ export function miniFormFromSuggestion(raw: WorkRaw, draft: SuggestionDraft | nu
         projectId: line.projectId ?? null,
         purposeId: line.purposeId ?? null,
         abroad: line.abroad ?? false,
+        assetEndowment: line.assetEndowment ?? false,
+        addsToAssetsOptOut: line.addsToAssetsOptOut ?? null,
+        serviceDate: line.serviceDate ?? null,
       }),
     ),
   };
@@ -145,6 +149,10 @@ export function miniFormToBookInput(state: MiniFormState, rawTransactionId: stri
       projectId: r.projectId,
       purposeId: r.purposeId,
       abroad: r.abroad,
+      // Merkmale der Anlage Gem wie in der Buchungsmaske (`entry-form.ts`): ohne Angabe die Vorgabe der Art.
+      ...(r.addsToAssetsOptOut ? { addsToAssets: false, addsToAssetsOptOut: r.addsToAssetsOptOut } : {}),
+      ...(r.assetEndowment ? { assetEndowment: true } : {}),
+      ...(r.serviceDate && isReverseChargeCode(r.taxCode) ? { serviceDate: r.serviceDate } : {}),
     });
   });
   if (Object.keys(fieldErrors).length > 0) return { ok: false, fieldErrors };

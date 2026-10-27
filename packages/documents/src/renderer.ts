@@ -10,6 +10,10 @@ const PACKAGE_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '
 
 const LOGO_EXT: Record<string, string> = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/svg+xml': 'svg' };
 
+
+/** Geschütztes Leerzeichen nach „§“ in jedem PDF (Typst: `~`). */
+export const KEEP_SECTION_SIGN = '#show "§ ": [§~]';
+
 export interface RenderDocumentOptions {
   baseId: string;
   /** Alle auflösbaren Basen — die gewählte plus jene, die sie per `#import` braucht. */
@@ -82,7 +86,9 @@ export function createTypstRenderer(opts: { binary?: string; fontsDir?: string }
         await writeFile(path.join(job, 'data.json'), JSON.stringify({ ...payload, logoFile }));
         await writeFile(
           path.join(job, 'entry.typ'),
-          `#import "bases/${baseId}.typ": base\n#import "body.typ": content\n#let payload = json("/data.json")\n#show: base.with(payload, payload.slots)\n#content\n`,
+          // „§ 13b“ bricht nie um (Designer Runde 8, Vorweg 1): eine Show-Regel für jedes PDF, vor der Basis, damit sie auch
+          // Kopf und Fuß der Basis erfasst. „§§ 51“ trifft sie über das zweite „§“.
+          `${KEEP_SECTION_SIGN}\n#import "bases/${baseId}.typ": base\n#import "body.typ": content\n#let payload = json("/data.json")\n#show: base.with(payload, payload.slots)\n#content\n`,
         );
         await compileTypst({
           binary: bin(),

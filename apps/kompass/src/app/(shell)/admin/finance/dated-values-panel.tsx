@@ -21,7 +21,7 @@ import { RowMenu } from '@/components/row-menu';
 
 export interface DatedValueListEntry {
   key: string;
-  unit: 'cents' | 'percent' | 'centsPerKm' | 'months' | 'days' | 'taxation';
+  unit: 'cents' | 'percent' | 'ratio' | 'centsPerKm' | 'months' | 'days' | 'taxation';
   entries: { validFrom: string; value: number | string; source: 'shipped' | 'override' }[];
 }
 
@@ -29,6 +29,7 @@ const display = (unit: DatedValueListEntry['unit'], value: number | string, t: (
   if (unit === 'taxation') return t(`taxation.${String(value)}`);
   if (unit === 'cents') return formatEuro(Number(value));
   if (unit === 'percent') return t('unitPercent', { value });
+  if (unit === 'ratio') return String(value);
   if (unit === 'centsPerKm') return t('unitCentsPerKm', { value: formatEuro(Number(value)) });
   if (unit === 'months') return t('unitMonths', { value });
   return t('unitDays', { value });
@@ -127,6 +128,7 @@ function DatedValueDialog({ entry, onClose, onSaved }: { entry: DatedValueListEn
   const [validFrom, setValidFrom] = useState('');
   const [amountText, setAmountText] = useState('');
   const [numberValue, setNumberValue] = useState('');
+  const [ratioText, setRatioText] = useState('');
   const [taxation, setTaxation] = useState<'smallBusiness' | 'regular'>('smallBusiness');
   const [pending, setPending] = useState(false);
   const feedback = useActionFeedback();
@@ -134,7 +136,7 @@ function DatedValueDialog({ entry, onClose, onSaved }: { entry: DatedValueListEn
   const submit = async () => {
     setPending(true);
     const value: number | string =
-      entry.unit === 'taxation' ? taxation : entry.unit === 'cents' ? (parseAmount(amountText) ?? 0) : Number(numberValue);
+      entry.unit === 'taxation' ? taxation : entry.unit === 'ratio' ? ratioText.replace(/\s+/g, '') : entry.unit === 'cents' ? (parseAmount(amountText) ?? 0) : Number(numberValue);
     const result = await feedback.run(() => setDatedValueAction(entry.key, validFrom, value), { retry: () => void submit() });
     setPending(false);
     if (result.status === 'success') onSaved();
@@ -154,6 +156,10 @@ function DatedValueDialog({ entry, onClose, onSaved }: { entry: DatedValueListEn
                   <option value="smallBusiness">{t('taxation.smallBusiness')}</option>
                   <option value="regular">{t('taxation.regular')}</option>
                 </Select>
+              </FormField>
+            ) : entry.unit === 'ratio' ? (
+              <FormField id="dv-ratio" label={t('value')} hint={t('ratioHint')} required size="s">
+                <Input id="dv-ratio" value={ratioText} onChange={(e) => setRatioText(e.target.value)} placeholder="1/3" required />
               </FormField>
             ) : entry.unit === 'cents' ? (
               <FormField id="dv-amount" label={t('value')} required size="s">

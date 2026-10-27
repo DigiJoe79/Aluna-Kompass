@@ -45,7 +45,8 @@ export interface FeeRunPreview {
   /** Lastschrift-Zahler, deren erster Einzug näher liegt als die Frist der Ankündigung (`finance.sepa.preNotificationDays`). */
   prenotificationLate: { membershipId: string; memberNumber: string; firstDueOn: string }[];
 }
-export type FeeRunView = FeeRunRow & { pending: number; created: number; noticesIssued: number };
+/** `skippedYearClosed`: Beiträge, deren offene Zahlung in einem abgeschlossenen Geschäftsjahr läge (Rechenschaft D1 Task 10b). */
+export type FeeRunView = FeeRunRow & { pending: number; created: number; skippedYearClosed: number; noticesIssued: number };
 
 /** Ob eine Mitgliedschaft im Jahr Beiträge tragen kann: aufgenommen, begonnen bis Jahresende, nicht vor Jahresbeginn beendet. */
 export function chargeableIn(row: MembershipRow, year: number): boolean {
@@ -108,6 +109,12 @@ export function createOpenItemForChargeInternal(tx: DbOrTx, deps: Deps, ctx: Cal
     paymentReference: feePaymentReference(charge.periodStart, charge.periodEnd, membership.memberNumber!),
     lineTemplate: [{ categoryId, amountCents: charge.amountCents, contactId: membership.contactId }],
   });
+  // Rechenschaft D1 Task 10b: Ein abgeschlossenes Geschäftsjahr nimmt keine offene Zahlung mehr an — der Beitrag wird
+  // im Lauf als „übersprungen: Jahr abgeschlossen“ gezählt, statt den ganzen Lauf abzubrechen.
+  if (!created.ok && created.error.type === 'conflict' && created.error.code === 'fiscalYearClosed') {
+    tx.update(memberFeeCharges).set({ state: 'skipped', skipReason: 'fiscalYearClosed' }).where(eq(memberFeeCharges.id, charge.id)).run();
+    return;
+  }
   if (!created.ok) throw new MembersAborted(created);
   tx.update(memberFeeCharges).set({ state: 'created', openItemId: created.value.id }).where(eq(memberFeeCharges.id, charge.id)).run();
 }
@@ -147,9 +154,9 @@ const sortByNumber = (rows: MembershipRow[]) => [...rows].sort((a, b) => (a.memb
 const feeRunRef = (runId: string) => `membersFeeRun:${runId}`;
 
 function runView(db: DbOrTx, run: FeeRunRow): FeeRunView {
-  const rows = db.select({ state: memberFeeCharges.state }).from(memberFeeCharges).where(eq(memberFeeCharges.runId, run.id)).all();
+  const rows = db.select({ state: memberFeeCharges.state, skipReason: memberFeeCharges.skipReason }).from(memberFeeCharges).where(eq(memberFeeCharges.runId, run.id)).all();
   const noticesIssued = db.select({ id: memberRunLetters.id }).from(memberRunLetters).where(eq(memberRunLetters.runRef, feeRunRef(run.id))).all().length;
-  return { ...run, pending: rows.filter((r) => r.state === 'pending').length, created: rows.filter((r) => r.state === 'created').length, noticesIssued };
+  return { ...run, pending: rows.filter((r) => r.state === 'pending').length, created: rows.filter((r) => r.state === 'created').length, skippedYearClosed: rows.filter((r) => r.state === 'skipped' && r.skipReason === 'fiscalYearClosed').length, noticesIssued };
 }
 
 /** Zahlt die Mitgliedschaft die Beiträge ab `on` per Lastschrift (mit Mandat)? */

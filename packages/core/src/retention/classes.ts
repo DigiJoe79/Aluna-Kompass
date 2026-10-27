@@ -9,7 +9,7 @@ export const RETENTION_CLASSES: readonly RetentionClass[] = ['permanent', 'statu
 
 /**
  * Vorgabelängen in Monaten.
- * - `statutory10Y`: Belege, Zuwendungsbestätigungen, Jahresabschluss (§ 147 AO).
+ * - `statutory10Y`: Bücher, Aufzeichnungen, Abschlüsse (§ 147 Abs. 1 Nr. 1 AO); Doppel der Zuwendungsbestätigungen (zur sicheren Seite).
  * - `statutory8Y`: Buchungsbelege (§ 147 Abs. 3 AO in der Fassung des BEG IV).
  * - `statutory6Y`: empfangene und abgesandte Geschäftsbriefe (§ 147 Abs. 3 AO).
  * - `consent`: ohne gesetzliche Grundlage — der Interessent, aus dem nichts wurde.

@@ -1,12 +1,17 @@
 'use client';
 
 import type { InvoiceProposal, InvoiceView } from '@kompass/module-finance';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState, useTransition, type ReactNode } from 'react';
 import { toast } from 'sonner';
 import { attachInvoiceToEntryAction, createOpenItemFromInvoiceAction } from '@/app/(shell)/finance/work/actions';
+import { checkReverseChargeAction, declineReverseChargeAction, saveContactTaxDetailsAction } from '@/app/(shell)/finance/tax/actions';
+import { RefusalNotice } from '@/components/forms/refusal-notice';
+import { reverseChargeTriggerText } from '@/lib/finance/reverse-charge-prompt';
+import { useReverseChargePrompt, type ReverseChargeActions } from '@/lib/finance/use-reverse-charge-check';
+import { ReverseChargePrompt } from './reverse-charge-prompt';
 import { ContactPicker, type PickedContact } from '@/components/contact-picker';
 import { useDateFormat } from '@/components/date-format-provider';
 import { Notice } from '@/components/notice';
@@ -60,6 +65,7 @@ export function InvoiceCard({ documentId, proposal, canWrite, canCreateContact }
       ) : (
         <>
           <InvoiceFacts invoice={proposal.invoice} />
+          {canWrite ? <InvoiceReverseCharge documentId={documentId} invoice={proposal.invoice} /> : null}
           {proposal.kind === 'paid' ? (
             <div className="space-y-2 border-t border-line pt-3">
               <p className="font-semibold text-ink">{t('paid', { date: date(proposal.bookingDate) })}</p>
@@ -112,8 +118,39 @@ function UnsupportedNotice({ code }: { code: Extract<InvoiceProposal, { kind: 'u
 }
 
 /** Die Angaben der Rechnung — gelesen, nie gespeichert. */
+const REVERSE_CHARGE_ACTIONS: ReverseChargeActions = { check: checkReverseChargeAction, decline: declineReverseChargeAction, mark: saveContactTaxDetailsAction };
+
+/**
+ * Prüffrage § 13b unter den erkannten Werten (E6b Task 4, Board 7b B). Hier gibt es noch keine Buchungszeile: „Ja“
+ * setzt mit „künftig immer so“ das Merkmal am Kontakt, das der späteren Buchung das Kennzeichen vorgibt; „Nein“ merkt
+ * der Dienst je Kontakt.
+ */
+function InvoiceReverseCharge({ documentId, invoice }: { documentId: string; invoice: InvoiceView }) {
+  const tRoot = useTranslations();
+  const tPrompt = useTranslations('finance.reverseChargePrompt');
+  const locale = useLocale();
+  const input = { contactId: invoice.contactId, documentId, rawTransactionId: null, lines: [{ amountCents: -Math.abs(invoice.grandTotalCents), taxCode: null }] };
+  const reverseCharge = useReverseChargePrompt(input, REVERSE_CHARGE_ACTIONS, { networkMessage: tRoot('common.network'), onYes: () => undefined });
+  return (
+    <>
+      <RefusalNotice action state={reverseCharge.refusal} />
+      {reverseCharge.prompt ? (
+        <ReverseChargePrompt
+          trigger={reverseCharge.prompt.trigger}
+          triggerText={reverseChargeTriggerText(tPrompt, reverseCharge.prompt, locale)}
+          contact={reverseCharge.prompt.contact}
+          pending={reverseCharge.pending}
+          onYes={(o) => void reverseCharge.yes(o)}
+          onNo={(reason, text) => void reverseCharge.no(reason, text)}
+        />
+      ) : null}
+    </>
+  );
+}
+
 function InvoiceFacts({ invoice }: { invoice: InvoiceView }) {
   const t = useTranslations('finance.work.invoice');
+  const tSplit = useTranslations('finance.splitRow');
   const { date } = useDateFormat();
   const rows: [string, ReactNode][] = [
     [t('seller'), invoice.sellerName],
@@ -133,10 +170,17 @@ function InvoiceFacts({ invoice }: { invoice: InvoiceView }) {
       <span key="tax" className="space-y-0.5">
         {invoice.taxes.map((tax) => (
           <span key={`${tax.ratePercent}-${tax.categoryCode}`} className="block tabular-nums">
-            {t('taxLine', { rate: rateText(tax.ratePercent), amount: formatEuro(tax.taxCents) })}
+            {/* Designer Runde 8, 074: Kennzeichen AE heißt in Worten, statt „0 %: 0,00 €“ das Kennzeichen zu verschweigen. */}
+            {tax.categoryCode === 'AE' ? t('taxLineReverseCharge', { rate: rateText(tax.ratePercent) }) : t('taxLine', { rate: rateText(tax.ratePercent), amount: formatEuro(tax.taxCents) })}
           </span>
         ))}
         {invoice.taxCentsDifference ? <span className="block text-hint text-muted-ink">{t('taxDifference', { cents: Math.abs(invoice.taxCentsDifference) })}</span> : null}
+        {/* Kategorie AE: Kompass setzt § 13b als Vorgabe und fragt nicht (Joe, Designer Runde 8, Fachlich 2). */}
+        {invoice.taxCode === 'rc13bEu' || invoice.taxCode === 'rc13bOther' ? (
+          <span className="block text-hint text-muted-ink" data-testid="invoice-tax-default">
+            {t('taxFromInvoice', { code: tSplit(`taxCode.${invoice.taxCode}`) })}
+          </span>
+        ) : null}
       </span>,
     ]);
   }

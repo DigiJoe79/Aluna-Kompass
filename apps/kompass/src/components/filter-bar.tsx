@@ -162,7 +162,9 @@ export function checkFilter(o: { key: string; label: string; value: boolean; onC
  * gesetzt ist; die Zählzeile rückt dann in die Chip-Zeile.
  *
  * Unter 640 px: Suche über die volle Breite, alle Filter hinter „Filter (n)“ im Sheet von unten, Zählzeile in
- * eigener Zeile. Drei Regeln für das Sheet:
+ * eigener Zeile. Ein einzelner Filter (ohne `more`) steht dort offen, ohne Knopf und Sheet, und wirkt sofort; mit Suche
+ * in eigener Zeile darunter.
+ * Drei Regeln für das Sheet:
  *   1. Filter im Sheet wirken erst mit „Anwenden“ (am Rechner sofort).
  *   2. Schließen ohne „Anwenden“ (✕, Escape, Wischen) verwirft den Entwurf.
  *   3. „Zurücksetzen“ wirkt sofort und schließt.
@@ -188,7 +190,11 @@ export function FilterBar({
   filters: readonly FilterSlot[];
   more?: readonly FilterSlot[];
   hidden?: readonly FilterSlot[];
-  count: { shown: number; total: number; noun: CountNoun };
+  /**
+   * Ohne `count` keine Zählzeile — nur, wo die Zahl schon an anderer Stelle steht (Jahresabschluss: „12 von 12
+   * erledigt“, Designer Runde 7, 294–306); „Filter zurücksetzen“ steht dann allein.
+   */
+  count?: { shown: number; total: number; noun: CountNoun };
   onReset: () => void;
   onApply?: (values: Record<string, string>) => void;
   sort?: ReactNode;
@@ -200,6 +206,9 @@ export function FilterBar({
   const [draft, setDraft] = useState<Record<string, string>>({});
 
   const sheetSlots = [...filters, ...more];
+  // Ein einzelner Filter steht am Telefon offen da, ohne Knopf und Sheet (Designer Runde 4 Rechenschaft, Joe 2026-10-24):
+  // Sonst bräuchte man zwei Tipps, um das Jahr zu sehen.
+  const single = filters.length === 1 && more.length === 0;
   const activeMore = more.filter((slot) => slot.active).length;
   const activeAll = [...filters, ...more, ...hidden].filter((slot) => slot.active).length;
   const filtered = activeAll > 0 || Boolean(searchActive);
@@ -212,14 +221,16 @@ export function FilterBar({
   ];
   const showChips = (more.length > 0 || hidden.some((slot) => slot.active)) && chips.length > 0;
 
-  const noun = count.total === 1 ? count.noun.one : filtered ? (count.noun.dative ?? count.noun.other) : count.noun.other;
-  const countText = filtered ? t('countFiltered', { shown: count.shown, total: count.total, noun }) : t('count', { total: count.total, noun });
+  const noun = !count ? '' : count.total === 1 ? count.noun.one : filtered ? (count.noun.dative ?? count.noun.other) : count.noun.other;
+  const countText = !count ? null : filtered ? t('countFiltered', { shown: count.shown, total: count.total, noun }) : t('count', { total: count.total, noun });
 
   const countGroup = (
     <div className="ml-auto flex items-center gap-3 whitespace-nowrap max-sm:order-last max-sm:basis-full max-sm:justify-between">
-      <span aria-live="polite" className="text-meta text-muted-ink tabular-nums">
-        {countText}
-      </span>
+      {countText !== null ? (
+        <span aria-live="polite" className="text-meta text-muted-ink tabular-nums">
+          {countText}
+        </span>
+      ) : null}
       {filtered ? (
         <Button type="button" variant="link" onClick={onReset} className="h-auto px-0 text-meta font-normal underline">
           {t('reset')}
@@ -247,7 +258,8 @@ export function FilterBar({
     <div data-testid={testId} className="flex flex-col gap-2">
       <div className="flex flex-wrap items-center gap-2.5">
         {search ? <div className="max-sm:min-w-0 max-sm:flex-1">{search}</div> : null}
-        <div className="contents max-sm:hidden">
+        {/* Ein einzelner Filter neben der Suche steht am Telefon in eigener Zeile: Daneben bliebe der Suche zu wenig Platz. */}
+        <div className={cn('contents', !single && 'max-sm:hidden', single && search && 'max-sm:flex max-sm:basis-full max-sm:flex-wrap max-sm:gap-2.5')}>
           {filters.map((slot) => (
             <Fragment key={slot.key}>{slot.control}</Fragment>
           ))}
@@ -269,7 +281,7 @@ export function FilterBar({
             </Popover.Root>
           ) : null}
         </div>
-        {sheetSlots.length > 0 ? (
+        {sheetSlots.length > 0 && !single ? (
           <Sheet open={sheetOpen} onOpenChange={openSheet}>
             <Button type="button" variant="outline" onClick={() => openSheet(true)} className={cn('sm:hidden', activeAll > 0 && 'border-brand')}>
               {t('filters')}{' '}

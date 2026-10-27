@@ -19,6 +19,7 @@ const PURE: Record<string, string> = {
   'ledger/amount-in-words.ts': 'Betrag in Worten für die Zuwendungsbestätigung.',
   'ledger/notice-validity.ts': 'Gültigkeit eines Freistellungsbescheids.',
   'ledger/machine-status.ts': 'Stand des maschinellen Verfahrens.',
+  'ledger/working-days.ts': 'Feiertage und nächster Werktag für Steuerfristen (§ 108 Abs. 3 AO).',
 };
 
 /** Dateien in einem reinen Ordner, die bewusst nicht rein sind — mit Grund. */

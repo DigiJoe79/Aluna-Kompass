@@ -91,6 +91,21 @@ diesem Kontakt zu, Gebuchtes bleibt, wie es ist. Läuft ein gültiges Mandat
 über die IBAN, lässt sie sich weder entfernen noch umhängen — der Weg führt
 zum Mandat.
 
+## Umsatzsteuer
+
+Ist der Verein umsatzsteuerlich Unternehmer, steht unter den Bankverbindungen
+der Abschnitt **Umsatzsteuer** (mit dem Recht „Finanzen lesen“). Das Kästchen
+**Rechnungen mit Umkehr der Steuerschuld (§ 13b)** gibt jeder Ausgabe an
+diesen Kontakt das Kennzeichen als Vorgabe; darunter wählen Sie, ob der
+Anbieter **in der EU** („§ 13b, Leistung aus der EU“) oder **im Drittland**
+(„§ 13b, übrige“) sitzt. Ändern darf, wer Kontakte in Buchungen zuordnen darf;
+ohne Kästchen gibt es keine Vorgabe.
+
+Hat jemand die Prüffrage § 13b beim Buchen mit „Nein, weil …“ beantwortet, steht
+hier ein Satz mit Grund, Person und Tag, etwa „Kompass fragt hier nicht nach
+§ 13b: steuerfreie Zahlungsabwicklung“. **Wieder fragen** löscht dieses Nein; das
+Merkmal bleibt, wie es ist. Wer das Kästchen setzt, löscht das Nein ebenfalls.
+
 ## Aufbewahrung
 
 Personenbezogene Daten dürfen nicht länger bleiben, als es einen Grund gibt.

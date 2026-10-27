@@ -12,18 +12,20 @@ export interface FreeReserveCapInput {
   assetManagementSurplusCents: number;
   /** Bruttoeinnahmen des ideellen Bereichs ohne Zuwendungen zum Vermögen, plus positive Überschüsse aus Zweckbetrieb und Geschäftsbetrieb. */
   otherTimelyFundsCents: number;
-  /** Anteil der Vermögensverwaltung in Prozent (Reihe `freeReserveAssetShare`, Vorgabe 33). */
-  assetSharePercent: number;
+  /** Anteil der Vermögensverwaltung als genauer Bruch (Reihe `freeReserveAssetShare`, Vorgabe 1/3). */
+  assetShare: { numerator: number; denominator: number };
   /** Anteil der übrigen Mittel in Prozent (Reihe `freeReserveOtherShare`, Vorgabe 10). */
   otherSharePercent: number;
 }
 
 /**
- * ⌊max(0, Überschuss Vermögensverwaltung) × Anteil⌋ + ⌊übrige zeitnah zu
- * verwendende Mittel × Anteil⌋ — ganzzahlig in Cent.
+ * ⌊max(0, Überschuss Vermögensverwaltung) × Zähler / Nenner⌋ + ⌊übrige zeitnah
+ * zu verwendende Mittel × Anteil⌋ — ganzzahlig in Cent; ein Drittel rechnet
+ * ⌊x/3⌋, nicht ⌊x·33/100⌋.
  */
 export function freeReserveCapCents(input: FreeReserveCapInput): number {
-  const assetPart = Math.floor((Math.max(0, input.assetManagementSurplusCents) * input.assetSharePercent) / 100);
+  const { numerator, denominator } = input.assetShare;
+  const assetPart = denominator > 0 ? Math.floor((Math.max(0, input.assetManagementSurplusCents) * numerator) / denominator) : 0;
   const otherPart = Math.floor((Math.max(0, input.otherTimelyFundsCents) * input.otherSharePercent) / 100);
   return assetPart + otherPart;
 }

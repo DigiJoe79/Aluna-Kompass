@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { coverageRequired, EVIDENCE_KINDS, evidenceCoverage, evidenceKindLabelKey, evidenceSubject, EVIDENCE_KIND_NAMES, missingEvidence, normalizeEvidenceKind, paymentProofSatisfied, proofDueDate, requiredEvidenceKinds } from '../src/allocation/evidence-rules';
+import { coverageRequired, EVIDENCE_KINDS, evidenceCoverage, evidenceKindLabelKey, evidenceSubject, EVIDENCE_KIND_NAMES, isGeneratedEvidenceSubject, missingEvidence, normalizeEvidenceKind, paymentProofSatisfied, proofDueDate, requiredEvidenceKinds } from '../src/allocation/evidence-rules';
 
 describe('evidence-rules — pure required-evidence and coverage math (F7 Task 1)', () => {
   it('Spec 14.4 (Entscheidung 4): Auftrag — Auftrag je Vorhaben, Zahlungsnachweis, Abrechnung mit Belegen, Bericht; bei jedem Status', () => {
@@ -97,5 +97,13 @@ describe('evidenceSubject — Betreff eines abgelegten Nachweises (AL, Recheck s
   it('eine Leitsprache ohne eigene Tabelle fällt auf Deutsch zurück', () => {
     expect(evidenceSubject('paymentProof', 'transfer58', '28.09.2026', 'en')).toBe(evidenceSubject('paymentProof', 'transfer58', '28.09.2026', 'de'));
     expect(Object.keys(EVIDENCE_KIND_NAMES.de).sort()).toEqual(['agreement', 'agreementAgent57', 'invoice', 'paymentProof', 'recipientReceipt', 'report', 'settlement']);
+  });
+});
+
+describe('isGeneratedEvidenceSubject — der beim Hochladen erzeugte Betreff sagt nichts über Art und Tag hinaus (Designer Runde 8, 17b)', () => {
+  it('erkennt den erzeugten Betreff, nicht einen verknüpften', () => {
+    expect(isGeneratedEvidenceSubject(evidenceSubject('paymentProof', 'transfer58', '12.03.2026', 'de'), 'paymentProof', 'transfer58')).toBe(true);
+    expect(isGeneratedEvidenceSubject('Vereinbarung Schulmaterial', 'agreement', 'transfer58')).toBe(false);
+    expect(isGeneratedEvidenceSubject(evidenceSubject('report', 'transfer58', '12.03.2026', 'de'), 'paymentProof', 'transfer58')).toBe(false);
   });
 });
