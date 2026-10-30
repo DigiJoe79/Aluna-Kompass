@@ -1,4 +1,4 @@
-import { dueUntil, holdsFor, retentionEnd, retentionMonths, todayIn, type Deps, type DueItem, type RetentionHoldInput } from '@kompass/core';
+import { contactRoleManager, dueUntil, holdsFor, retentionEnd, retentionMonths, todayIn, type Deps, type DueItem, type RetentionHoldInput } from '@kompass/core';
 import { and, eq, isNull } from 'drizzle-orm';
 import { displayName } from './address';
 import { contactRoleDefinitions } from './roles';
@@ -34,21 +34,21 @@ export function contactsRetentionHolds(deps: Deps, entityType: string, id: strin
   // Austritt, Spec § 3.2) — die Grundfrist hielte den Kontakt sonst länger, als die DSGVO-Regel des Moduls erlaubt.
   const unheld = rows.filter((row) => {
     const definition = definitions.get(row.role);
-    return definition?.retention === 'none' && definition.managedBy === undefined;
+    return definition?.retention === 'none' && contactRoleManager(deps, definition) === null;
   });
   if (unheld.length > 0) {
     const months = retentionMonths(deps, 'consent');
     const contact = deps.db.select({ createdAt: contacts.createdAt }).from(contacts).where(eq(contacts.id, id)).get();
     if (months !== null && contact) {
       const from = [contact.createdAt, ...unheld.map((row) => row.until).filter((u): u is string => u !== null)].sort().at(-1)!;
-      holds.push({ label: 'Grundfrist (Rollen ohne eigene Frist)', until: retentionEnd(from, months), entity: 'contact', id });
+      holds.push({ label: { key: 'contacts.records.baseRetention' }, until: retentionEnd(from, months), entity: 'contact', id });
     }
   }
 
   // Eine offene Verknüpfung mit einem Nutzerkonto hält dauerhaft: Ein Fachmodul
   // fände sonst zu einem Konto keine Person mehr. Wer löschen will, löst sie erst.
   const open = deps.db.select({ id: contactUserLinks.id }).from(contactUserLinks).where(and(eq(contactUserLinks.contactId, id), isNull(contactUserLinks.unlinkedAt))).get();
-  if (open) holds.push({ label: 'Verknüpfung mit einem Nutzerkonto (dauerhaft, bis sie gelöst wird)', until: null, entity: 'contactUserLink', id: open.id });
+  if (open) holds.push({ label: { key: 'contacts.records.userLinkHold' }, until: null, entity: 'contactUserLink', id: open.id });
   return holds;
 }
 

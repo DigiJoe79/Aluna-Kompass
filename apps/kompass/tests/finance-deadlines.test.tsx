@@ -5,6 +5,7 @@ import { NextIntlClientProvider } from 'next-intl';
 import type { ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import messages from '../messages/de.json';
+import { formatEuro } from '@/lib/finance/amount';
 
 const toastRefusal = vi.fn();
 vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: vi.fn(), replace: vi.fn() }), usePathname: () => '/finance/deadlines', useSearchParams: () => new URLSearchParams() }));
@@ -144,6 +145,30 @@ describe('Umsatzsteuer-Fristen (Plan E6a Task 6)', () => {
     expect(vatPeriodLabel('2026-Q2', t)).toBe('quarter:2/2026');
     expect(vatPeriodLabel('2026-05', t)).toBe('month:05/2026');
     expect(vatPeriodLabel('2026', t)).toBe('2026');
+  });
+});
+
+describe('Verwendungsfrist (Plan U2 Task 5)', () => {
+  const USE = D({ key: 'timelyUse:fy:y24', kind: 'timelyUse', dueOn: '2026-12-31', params: { origin: '2024', restCents: 340_000 }, href: '/finance/fund-use?year=y26' });
+  const LAPSED = D({ key: 'timelyUseLapsed:fy:y23', kind: 'timelyUseLapsed', dueOn: null, params: { origin: '2023', lapsedIn: '2025' }, href: '/finance/fund-use?year=y25' });
+
+  it('a backlog shows the rest under its title, which links to the year; overdue carries the mark', () => {
+    wrap(<DeadlineList deadlines={[{ ...USE, overdue: true }]} canFileVat={false} canRead today="2027-01-10" />);
+    const row = screen.getByTestId('deadline-row');
+    expect(within(row).getByRole('link').getAttribute('href')).toBe('/finance/fund-use?year=y26');
+    expect(within(row).getByTestId('deadline-rest').textContent).toContain(formatEuro(340_000));
+    expect(within(row).getByText(m('finance.deadlines.computed.overdue'))).toBeTruthy();
+  });
+
+  it('a lapsed note stands without date and mark, and the head does not name it (Review Focus 4)', () => {
+    wrap(<DeadlineList deadlines={[LAPSED]} canFileVat={false} canRead today="2026-03-01" />);
+    const row = screen.getByTestId('deadline-row');
+    expect(row.textContent).toContain(m('finance.deadlines.computed.noDate'));
+    expect(within(row).queryByText(m('finance.deadlines.computed.overdue'))).toBeNull();
+    expect(within(row).queryByTestId('deadline-rest')).toBeNull();
+    cleanup();
+    wrap(<DeadlinesHeader deadlines={[LAPSED]} approaching={0} exceeded={0} />);
+    expect(screen.getByTestId('deadlines-head').textContent).toBe(m('finance.deadlines.headNone'));
   });
 });
 

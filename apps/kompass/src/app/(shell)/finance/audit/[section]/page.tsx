@@ -1,5 +1,6 @@
 import { hasPermission, userNamesFor } from '@kompass/core';
-import { getAuditSection, getAuditStatus, listAccounts, listAuditors, type AuditSectionRow } from '@kompass/module-finance';
+import { getDocumentRecord } from '@kompass/module-dms';
+import { getAuditSection, getAuditStatus, listAccounts, listAuditRemarks, listAuditors, type AuditSectionRow } from '@kompass/module-finance';
 import { getTranslations } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 import { EmptyState } from '@/components/empty-state';
@@ -8,9 +9,11 @@ import { Page } from '@/components/page';
 import { PageHeader } from '@/components/page-header';
 import { AUDIT_SECTION_ORDER, isAuditSection, SECTION_PAGE_SIZE } from '@/lib/finance/audit-sections';
 import { resolveAuditYear } from '@/lib/finance/audit-year';
+import { RESOLUTION_REMARKS_ANCHOR, remarkViews } from '@/lib/finance/audit-remarks';
 import { requireSession } from '@/lib/request-context';
+import { RemarksCard } from '../remarks-card';
 import { ReviewBar } from './review-bar';
-import { SectionTable } from './section-table';
+import { SectionTable, type ResolutionExtras } from './section-table';
 
 /** Nutzer-IDs, die in den Werten der Auffälligkeiten stehen (Wiederöffnung, Verknüpfung). */
 const userIdsOf = (rows: AuditSectionRow[]) => rows.flatMap((r) => [r.labelParams.byUserId, r.labelParams.userId]).filter((v): v is string => typeof v === 'string' && v.length > 0);
@@ -35,6 +38,8 @@ export default async function AuditSectionPage({ params, searchParams }: { param
   const statusRes = await getAuditStatus(deps, ctx, { fiscalYearId: year.id });
   if (!statusRes.ok) return <Page width="full"><ForbiddenCard permission="finance.read" /></Page>;
   const status = statusRes.value;
+  // Abschnitt 9 gibt es nur mit Gremien (G-30).
+  if (!status.sections.includes(section)) notFound();
   if (status.yearStatus !== 'closed' || !status.baseline) {
     return (
       <Page width="full" header={<PageHeader title={title} back={back} />}>
@@ -69,7 +74,30 @@ export default async function AuditSectionPage({ params, searchParams }: { param
   const accounts = accountsRes?.ok ? accountsRes.value.map((a) => ({ id: a.id, name: a.name })) : [];
   const userNames = Object.fromEntries(userNamesFor(deps, userIdsOf(listed.value.rows)));
 
-  const nextSection = AUDIT_SECTION_ORDER[n] ?? null;
+  const nextSection = status.sections[status.sections.indexOf(section) + 1] ?? null;
+  const nextN = nextSection ? AUDIT_SECTION_ORDER.indexOf(nextSection) + 1 : 0;
+
+  // Abschnitt 9 (G-30): Protokoll über den Bezug der Prüfung (`finance.audit`), sonst über die Akte, wenn lesbar;
+  // „Vermerk …“ für Prüfer des Jahres; die Vermerke zu Beschlüssen stehen unter der Liste.
+  let resolution: ResolutionExtras | undefined;
+  let resolutionRemarks: Awaited<ReturnType<typeof remarkViews>>['items'] = [];
+  if (section === 'resolutions') {
+    const minutesHrefs: Record<string, string | null> = {};
+    for (const r of listed.value.rows) {
+      const minutesId = typeof r.labelParams.minutesDocumentId === 'string' ? r.labelParams.minutesDocumentId : null;
+      if (!r.resolutionId || !minutesId) continue;
+      minutesHrefs[r.resolutionId] = hasPermission(ctx, 'finance.audit')
+        ? `/finance/audit/year/${encodeURIComponent(year.id)}/resolutions/${encodeURIComponent(r.resolutionId)}/minutes`
+        : (await getDocumentRecord(deps, ctx, minutesId)).ok
+          ? `/dms/${minutesId}`
+          : null;
+    }
+    const me = myAuditorId ? nameOf(myAuditorId) : '';
+    const paperAuditors = auditors.filter((a) => a.mode === 'paper').map((a) => ({ id: a.id, name: a.contactName }));
+    resolution = { minutesHrefs, writer: myAuditorId ? { fiscalYearId: year.id, me, paperAuditors, treasurerName: auditorsRes.ok ? auditorsRes.value.treasurerName : null } : null };
+    const remarks = await listAuditRemarks(deps, ctx, { fiscalYearId: year.id, targetType: 'resolution' });
+    if (remarks.ok) resolutionRemarks = (await remarkViews(deps, ctx, remarks.value.remarks, { auditors, fiscalYearId: year.id, designation: year.designation, here: { type: 'year', id: year.id } })).items;
+  }
   const description =
     section === 'journal'
       ? t('sections.journal.description', { year: year.designation, sampled: status.samples.sampledEntries, total: status.samples.totalEntries })
@@ -91,6 +119,7 @@ export default async function AuditSectionPage({ params, searchParams }: { param
           offset={offset}
           userNames={userNames}
           fixed={status.workFixedSince !== null}
+          resolution={resolution}
         />
         <ReviewBar
           yearId={year.id}
@@ -100,8 +129,13 @@ export default async function AuditSectionPage({ params, searchParams }: { param
           others={others}
           reviewedBefore={reviewedBefore}
           fixedSince={status.workFixedSince}
-          next={nextSection ? { section: nextSection, n: n + 1, title: t(`sections.${nextSection}.title`) } : null}
+          next={nextSection ? { section: nextSection, n: nextN, title: t(`sections.${nextSection}.title`) } : null}
         />
+        {resolutionRemarks.length > 0 ? (
+          <div id={RESOLUTION_REMARKS_ANCHOR}>
+            <RemarksCard audit={{ items: resolutionRemarks, writer: null, canAnswer: hasPermission(ctx, 'finance.entriesWrite'), canAudit: myAuditorId !== null }} withWriter={false} />
+          </div>
+        ) : null}
       </div>
     </Page>
   );

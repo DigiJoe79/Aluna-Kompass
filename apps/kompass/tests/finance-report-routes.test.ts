@@ -44,14 +44,15 @@ describe('Vorschau eines Berichts', () => {
     expect(download.headers.get('content-disposition')).toBe('attachment; filename="kassenbericht-2025-pruefung.pdf"');
   });
 
-  it('refuses: no session 401, module off 404, no right 403, unknown or unavailable report 404, refusal 409', async () => {
+  it('refuses: no session 401, module off 404, no right 403, unknown report 404, refusal 409', async () => {
     state.session = null;
     expect((await preview('cashReport', `year=${y2025}`)).status).toBe(401);
     state.session = { ctx: ctxWith([], f.userId) };
     expect((await preview('cashReport', `year=${y2025}`)).status).toBe(403);
     state.session = { ctx: f.ctx };
     expect((await preview('nope', `year=${y2025}`)).status).toBe(404);
-    expect((await preview('fundsUse', `year=${y2025}`)).status).toBe(404);
+    // Seit M2 ist die Mittelverwendungsrechnung verfügbar; einen nicht verfügbaren Bericht prüft reporting-service.test.ts im Modul.
+    expect((await preview('fundsUse', `year=${y2025}`)).status).toBe(200);
     const refused = await preview('incomeStatement', `year=${y2025}&combine=1`);
     expect(refused.status).toBe(409);
     expect(await refused.json()).toMatchObject({ code: expect.any(String), message: expect.any(String) });
@@ -87,7 +88,7 @@ describe('Seitenbild eines Berichts (PdfPages)', () => {
     expect((await pageImage('incomeStatement', '1', `year=${y2025}&scale=7`)).status).toBe(404);
   });
 
-  it('has the rights of the PDF: no session 401, no right 403, unknown or unavailable report 404', async () => {
+  it('has the rights of the PDF: no session 401, no right 403, unknown report 404', async () => {
     state.session = null;
     expect((await pageImage('cashReport', '1', `year=${y2025}`)).status).toBe(401);
     state.session = { ctx: ctxWith([], f.userId) };
@@ -97,7 +98,8 @@ describe('Seitenbild eines Berichts (PdfPages)', () => {
     expect((await pageImage('donationBook', '1', `year=${y2025}`)).status).toBe(403);
     state.session = { ctx: f.ctx };
     expect((await pageImage('nope', '1', `year=${y2025}`)).status).toBe(404);
-    expect((await pageImage('fundsUse', '1', `year=${y2025}`)).status).toBe(404);
+    // Seit M2 verfügbar (Querformat).
+    expect((await pageImage('fundsUse', '1', `year=${y2025}`)).status).toBe(200);
   });
 });
 

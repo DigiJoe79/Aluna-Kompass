@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getDeps, runtimeEnv } from '@/lib/deps';
-import { setSetting } from '@kompass/core';
+import { writeSettingInternal } from '@kompass/core';
 
 export async function POST(request: Request): Promise<Response> {
   if (runtimeEnv().env !== 'test' || request.headers.get('x-e2e-token') !== process.env.E2E_RESET_TOKEN) {
@@ -16,6 +16,8 @@ export async function POST(request: Request): Promise<Response> {
     ipAddress: null,
     requestId: 'E2E',
   } as const;
-  const result = await setSetting(deps, ctx, { key, value });
+  // Wie ein Fachdienst intern, nicht über `setSetting`: Die Suite stellt auch Einstellungen, die ein Modul führt
+  // (`managedBy`, etwa `finance.mcpHumanOnlyAllowed`), als Ausgangslage ein. Testumgebung und Token wie oben.
+  const result = deps.db.transaction((tx) => writeSettingInternal(tx, deps, ctx, key, value));
   return NextResponse.json({ ok: result.ok });
 }

@@ -89,6 +89,8 @@ const mirror = (a: Active, force = false) => {
 /** Laufverzeichnisse tragen dieses Präfix; nur sie räumt ein Neustart ab (andere `kompass-site-*` gehören parallelen Prüfungen). */
 export const SITE_JOB_TMP_PREFIX = 'kompass-sitejob-';
 export const workRoot = (env: SiteEnv): string => env.workDir ?? tmpdir();
+/** Präfix der Bauverzeichnisse, die `buildSite` unter `stageRoot` (für die Läufe: `cacheDir`) anlegt. */
+export const BUILD_STAGE_PREFIX = 'out-';
 
 /**
  * Der Speicher ist die Quelle: Eine Riegeldatei ohne Lauf im Speicher — aus
@@ -130,6 +132,16 @@ function settleForeignLock(env: SiteEnv): void {
   }
   for (const n of names) {
     if (n.startsWith(SITE_JOB_TMP_PREFIX)) rmSync(path.join(workRoot(env), n), { recursive: true, force: true, maxRetries: 3 });
+  }
+  // Das Bauverzeichnis von Astro liegt im Cache (`build.ts`, `out-*`); ein Absturz mitten im Bau ließ es dort stehen.
+  let cached: string[] = [];
+  try {
+    cached = readdirSync(env.cacheDir);
+  } catch {
+    // kein Cache, nichts zu räumen
+  }
+  for (const n of cached) {
+    if (n.startsWith(BUILD_STAGE_PREFIX)) rmSync(path.join(env.cacheDir, n), { recursive: true, force: true, maxRetries: 3 });
   }
 }
 

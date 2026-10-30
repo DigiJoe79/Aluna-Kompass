@@ -19,10 +19,12 @@ import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import type { ActionState } from '@/lib/actions';
-import { formatAmount, formatEuro, parseAmount } from '@/lib/finance/amount';
+import { formatAmount, formatEuro, readAmount } from '@/lib/finance/amount';
+import { FieldError } from '@/components/forms/field-error';
 import { evidenceKindLabelKey, proofDueDate, requiredEvidenceKinds, type PartnerBasis } from '@/lib/finance/partners';
 import { savePartnerPaymentDraftAction, submitPartnerPaymentAction } from '../../../actions';
 import { FormField } from '@/components/forms/form-field';
+import { FixedValue } from '@/components/fixed-value';
 import { FormCell, FormGrid } from '@/components/forms/form-grid';
 import { Overline } from '@/components/overline';
 import { Section } from '@/components/section';
@@ -54,6 +56,18 @@ let seq = 0;
 const newKey = () => `p${Date.now().toString(36)}${(seq++).toString(36)}`;
 const PROOF_MONTHS = Array.from({ length: 24 }, (_, i) => i + 1);
 
+/** Ein Geldbetrag der Position: leer (und 0) fehlt im Entwurf; unlesbar fehlt nur im laufend gesicherten Entwurf — vor
+ *  „Als Entwurf speichern“ und „Zur Freigabe geben“ hält `unreadablePositions` an (App-B7). */
+function positionCents(text: string): number | undefined {
+  const read = readAmount(text, { required: false });
+  return read.ok && read.cents ? read.cents : undefined;
+}
+
+/** Die Geldpositionen mit unlesbarem Betrag (Schlüssel). */
+function unreadablePositions(d: DraftState): string[] {
+  return d.retroactive ? [] : d.positions.filter((p) => p.kind === 'money' && !readAmount(p.amountText, { required: false }).ok).map((p) => p.key);
+}
+
 function payloadOf(paymentId: string, partnerId: string, usualBasis: string | null, d: DraftState, partnerStatus: string) {
   return {
     assetEndowment: d.assetEndowment && endowmentAllowed(d.basis, partnerStatus),
@@ -68,7 +82,7 @@ function payloadOf(paymentId: string, partnerId: string, usualBasis: string | nu
     proofMonths: d.proofMonths,
     positions: d.retroactive
       ? []
-      : d.positions.map((p) => ({ kind: p.kind, amountCents: p.kind === 'money' ? (parseAmount(p.amountText) ?? 0) || undefined : undefined, categoryId: p.categoryId || undefined, purposeId: p.kind === 'money' ? p.purposeId || null : undefined, projectId: p.projectId || undefined, goodsLineId: p.kind === 'goods' ? p.goodsLineId || undefined : undefined, note: p.note || undefined })),
+      : d.positions.map((p) => ({ kind: p.kind, amountCents: p.kind === 'money' ? positionCents(p.amountText) : undefined, categoryId: p.categoryId || undefined, purposeId: p.kind === 'money' ? p.purposeId || null : undefined, projectId: p.projectId || undefined, goodsLineId: p.kind === 'goods' ? p.goodsLineId || undefined : undefined, note: p.note || undefined })),
     paidLineIds: d.retroactive ? d.paidLineIds : [],
   };
 }
@@ -117,6 +131,14 @@ export function DraftForm({
   const [overdueReason, setOverdueReason] = useState('');
   const [busy, setBusy] = useState(false);
   const [refusal, setRefusal] = useState<ActionState | null>(null);
+  const [badAmounts, setBadAmounts] = useState<string[]>([]);
+  const tAmount = useTranslations('finance.amount');
+  /** Hält an, wenn ein Betrag unlesbar ist, und zeigt es an der Position. */
+  const amountsReadable = () => {
+    const bad = unreadablePositions(d);
+    setBadAmounts(bad);
+    return bad.length === 0;
+  };
 
   const save = useCallback(
     async (current: DraftState): Promise<SaveOutcome<DraftState>> => {
@@ -157,12 +179,14 @@ export function DraftForm({
   const lineOptions = [...paidLineOptions, ...chosenLines.filter((l) => !paidLineOptions.some((o) => o.id === l.id))];
 
   const keepDraft = async () => {
+    if (!amountsReadable()) return;
     markDirty();
     const saved = await flush();
     if (saved) router.push(`/finance/partners/${payment.partnerId}`);
   };
 
   const submit = async () => {
+    if (!amountsReadable()) return;
     setBusy(true);
     setRefusal(null);
     try {
@@ -255,6 +279,10 @@ export function DraftForm({
               <DocumentPicker id="payment-agreement-doc" name="agreementDocumentId" label={t(`agreementDocumentFor.${d.basis}`)} value={d.agreementDocument} onChange={(doc) => set({ agreementDocument: doc })} required={d.basis === 'agent57' || partner.status === 'foreignBody'} />
             </FormCell>
           ) : null}
+          {/* G7: Beschluss in Gremien, gesetzt über einen Agenten; ohne Gremien oder ohne Verweis kein Feld. */}
+          {payment.resolution ? (
+            <FixedValue id="payment-resolution" label={t('resolution')} value={payment.resolution.label} href={payment.resolution.href ?? undefined} reason={t('resolutionFixed')} testId="payment-resolution" />
+          ) : null}
           <FormCell size="s" data-testid="payment-proof">
             <FormField id="payment-proof-months" label={t('proof.label')} hint={d.proofMonths === null ? t('proof.fromUsual', { count: partner.usualProofMonths }) : t('proof.own', { count: partner.usualProofMonths })}>
               <div className="flex flex-wrap items-center gap-3">
@@ -335,7 +363,10 @@ export function DraftForm({
                   <Overline as="span" className="sm:col-span-4">{p.kind === 'money' ? t('positions.money') : t('positions.goods')}</Overline>
                   {p.kind === 'money' ? (
                     <>
-                      <Input aria-label={t('positions.amount')} inputMode="decimal" className="text-right tabular-nums" value={p.amountText} disabled={!canWrite} onChange={(e) => setPosition(p.key, { amountText: e.target.value })} placeholder={t('positions.amount')} />
+                      <div>
+                        <Input aria-label={t('positions.amount')} inputMode="decimal" className="text-right tabular-nums" value={p.amountText} disabled={!canWrite} aria-invalid={badAmounts.includes(p.key) || undefined} aria-describedby={badAmounts.includes(p.key) ? `position-${p.key}-amount-error` : undefined} onChange={(e) => { setPosition(p.key, { amountText: e.target.value }); setBadAmounts((prev) => prev.filter((k) => k !== p.key)); }} placeholder={t('positions.amount')} />
+                        <FieldError id={`position-${p.key}-amount-error`} message={badAmounts.includes(p.key) ? tAmount('format') : undefined} />
+                      </div>
                       <Select aria-label={t('positions.category')} value={p.categoryId} disabled={!canWrite} onChange={(e) => setPosition(p.key, { categoryId: e.target.value })}>
                         <option value="">{t('positions.category')}</option>
                         {categories.map((c) => (

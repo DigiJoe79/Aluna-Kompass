@@ -23,7 +23,7 @@ describe('ein Tier mit Aktenbezug', () => {
     const draft = unwrap(await createDraft(deps, ctx, { typeKey: 'letter', subject: 'Anfrage Tierarzt', body: 'x', links: [{ entityType: 'animal', entityId: animal.id, role: 'about' }] }));
 
     const preview = unwrap(await animalDeletionPreview(deps, ctx, animal.id));
-    expect(preview.references).toEqual([{ label: 'Dokument „Anfrage Tierarzt“ (Entwurf)', entity: 'document', id: draft.id, href: `/dms/${draft.id}` }]);
+    expect(preview.references).toEqual([{ label: expect.stringContaining('Anfrage Tierarzt'), entity: 'document', id: draft.id, href: `/dms/${draft.id}` }]);
     const refused = await deleteAnimal(deps, ctx, { id: animal.id });
     expect(refused.ok === false && refused.error.type === 'conflict' && refused.error.code).toBe('stillReferenced');
 

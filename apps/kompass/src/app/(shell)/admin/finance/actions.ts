@@ -64,8 +64,7 @@ export async function applyTaxDefaultsAction(): Promise<ActionState> {
 
 /**
  * Runde 3, 172: die Leiste der Schalter — ein Dienst (`setFinanceSwitch`) je geändertem Schalter, in der Reihenfolge
- * der Seite; die erste Ablehnung hält an und steht an der Leiste. Seit Plan U4 Task 1 geht der Agentenschalter
- * (`finance.mcpHumanOnlyAllowed`, `uiOnly`) als letzter mit.
+ * der Seite; die erste Ablehnung hält an und steht an der Leiste.
  */
 export async function setFinanceSwitchesAction(entries: { key: string; value: boolean }[]): Promise<ActionState> {
   return guardAction('(shell)/admin/finance/actions.ts#setFinanceSwitchesAction', async () => {
@@ -205,6 +204,7 @@ export interface CategoryInput {
   sphere?: 'ideal' | 'assetManagement' | 'purposeOperation' | 'business';
   incomeKind?: string;
   costFunction?: string;
+  donationPlatform?: 'confirmsItself' | 'handlesOnly' | null;
   allowanceKind?: string;
   statementSuffices?: boolean;
   defaultTaxCode?: string;
@@ -348,7 +348,7 @@ export async function saveSepaSettingsAction(input: unknown): Promise<ActionStat
 }
 
 /** Panel „Berichte“ (Plan A3 Task 6b): Satzungsfundstelle und Unterschriftszeile des Kassenberichts in einem Dienst. */
-export async function setReportSettingsAction(input: { statuteReference: string; cashReportSignature: boolean; treasurerIsStatutoryBoard?: boolean | null }): Promise<ActionState> {
+export async function setReportSettingsAction(input: { statuteReference: string; cashReportSignature: boolean; treasurerIsStatutoryBoard?: boolean | null; assemblyApprovesAccounts?: boolean }): Promise<ActionState> {
   return guardAction('(shell)/admin/finance/actions.ts#setReportSettingsAction', async () => {
     const t = await getTranslations();
     const { deps, ctx } = await requireSession();

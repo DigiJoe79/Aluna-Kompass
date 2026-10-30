@@ -2,6 +2,7 @@ import { invalid, notFound, paperDate, type DbOrTx, type Failure } from '@kompas
 import { documents } from '@kompass/module-dms';
 import { asc, inArray } from 'drizzle-orm';
 import { z } from 'zod';
+import type { ReserveKind } from '../../allocation/reserve-rules';
 import { freeReserveCapInternal } from '../../allocation/reserves';
 import { reserveBalanceAt } from '../../ledger/reserve-balances';
 import { financeReserveMovements, financeReserves } from '../../schema';
@@ -10,13 +11,14 @@ import type { ReportDefinition, ReportParams, ReportRenderContext } from '../typ
 import { amountCell, heading, paragraph, previousYearInternal, reportYearInternal, strongCell, table, textCell, yearRowInternal, type ReportYear } from './common';
 
 /**
- * Rücklagenspiegel (Finanz-Spec § 9.2, Rechenschaft B1 Task 4): je Rücklage Art nach § 62 Abs. 1 Nr. 1–4 AO, Zweck und
+ * Rücklagenspiegel (Finanz-Spec § 9.2, Rechenschaft B1 Task 4): je Rücklage Art nach § 62 Abs. 1 Nr. 1–4 AO (oder im
+ * wGB/in der Vermögensverwaltung, AEAO zu § 55 Nr. 3 und Nr. 28 — M1), Zweck und
  * je Jahr Anfang, Zuführung, Verwendung, Auflösung und Ende; darunter die Vorgänge mit Bezugsjahr und Beschluss
  * (§ 62 Abs. 2 AO) und je Jahr der Höchstbetrag der freien Rücklage. Ein bis drei aufeinanderfolgende Jahre — die
  * Oberfläche bietet eines, über MCP mehrere (Entscheidung 8 des Plans). Querformat.
  */
 
-export type ReserveKind = 'projectFunds' | 'replacement' | 'free' | 'participation';
+export type { ReserveKind };
 
 export interface ReserveStatementYear {
   fiscalYearId: string;
@@ -114,11 +116,13 @@ export function computeReserveStatementReport(db: DbOrTx, params: ReportParams):
 // ── Papier ─────────────────────────────────────────────────────────────────
 
 /** Art nach § 62 Abs. 1 AO — dieselben Wörter wie die Oberfläche (`finance.reserves.kinds`). */
-const KIND_TEXT: Record<ReserveKind, string> = {
+export const KIND_TEXT: Record<ReserveKind, string> = {
   projectFunds: 'Projekt- und Betriebsmittel (§ 62 Abs. 1 Nr. 1 AO)',
   replacement: 'Wiederbeschaffung (§ 62 Abs. 1 Nr. 2 AO)',
   free: 'freie Rücklage (§ 62 Abs. 1 Nr. 3 AO)',
   participation: 'Beteiligung (§ 62 Abs. 1 Nr. 4 AO)',
+  business: 'Rücklage im wirtschaftlichen Geschäftsbetrieb (AEAO zu § 55 Nr. 3 und Nr. 28; keine Rücklage nach § 62 AO)',
+  assetManagement: 'Rücklage in der Vermögensverwaltung (AEAO zu § 55 Nr. 3 und Nr. 28; keine Rücklage nach § 62 AO)',
 };
 const MOVEMENT_TEXT: Record<ReserveStatementMovement['kind'], string> = { allocate: 'Zuführung', withdraw: 'Verwendung', dissolve: 'Auflösung' };
 
@@ -129,20 +133,24 @@ export function reserveStatementTypst(data: ReserveStatementReport, ctx: ReportR
   for (const r of data.reserves) {
     // „in €“ im Abschnittstitel wie im Kassenbericht (Designer Runde 8, 269/270), nicht schwebend über der Tabelle; die
     // Köpfe rechtsbündig wie die Werte (Abnahme B1).
-    parts.push(heading(2, `${ctx.labels[`reserve.${r.reserveId}`] ?? r.reserveId}, in €`));
+    // Überschrift, Art und Jahrestabelle (höchstens drei Zeilen) als ein Block, der nicht umbricht: Die Überschrift steht
+    // nie allein am Seitenende (Bildabnahme 0.4.5 O-4). Ohne Layout-Test.
     const purpose = r.purposeId ? ` · Zweck: ${ctx.labels[`purpose.${r.purposeId}`] ?? r.purposeId}` : '';
-    parts.push(paragraph(`${KIND_TEXT[r.kind]}${purpose}`));
-    parts.push(
+    const head = [
+      heading(2, `${ctx.labels[`reserve.${r.reserveId}`] ?? r.reserveId}, in €`),
+      paragraph(`${KIND_TEXT[r.kind]}${purpose}`),
       table(
         '(1fr, 32mm, 32mm, 32mm, 32mm, 32mm)',
         ['Jahr', 'Anfang', 'Zuführung', 'Verwendung', 'Auflösung', 'Ende'],
         r.perYear.map((y) => [textCell(designation.get(y.fiscalYearId) ?? ''), amountCell(y.openingCents), amountCell(y.allocatedCents), amountCell(y.withdrawnCents), amountCell(y.dissolvedCents), amountCell(y.closingCents)]),
         { rightHeads: [1, 2, 3, 4, 5] },
       ),
-    );
+    ];
+    parts.push(`#block(breakable: false)[\n${head.join('\n\n')}\n]`);
     if (r.movements.length > 0) {
-      // „für Jahr“ nur bei der freien Rücklage: Nur dort gibt es Nachholung (Designer Runde 8, 269/270).
-      const forYear = r.kind === 'free';
+      // „für Jahr“ bei der freien Rücklage (Nachholung, Designer Runde 8, 269/270) und bei jeder Rücklage mit einer
+      // nachträglichen Bildung für ein früheres Jahr (§ 62 Abs. 2 AO, M1).
+      const forYear = r.kind === 'free' || r.movements.some((m) => m.forFiscalYearId !== null);
       parts.push(
         table(
           forYear ? '(26mm, 1fr, 32mm, 30mm, 40mm, 30mm)' : '(26mm, 1fr, 32mm, 40mm, 30mm)',

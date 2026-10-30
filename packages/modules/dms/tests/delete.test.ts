@@ -114,8 +114,8 @@ describe('deleteDocument', () => {
     const { deps, ctx } = setupWithProbe();
     const doc = await expiredDocument(deps, ctx, 'gehalten');
     const held = await deleteDocument(deps, ctx, { id: doc.id });
-    const message = (r: typeof held) => (!r.ok && r.error.type === 'conflict' ? r.error.message : '');
-    // Der Halter mit seinem Namen, die Frist im eingestellten Datumsformat.
+    // K2: Satz aus der Sprachdatei; der Dienst liefert den Halter mit seinem Namen und die Frist im eingestellten Datumsformat.
+    const message = (r: typeof held) => (!r.ok && r.error.type === 'conflict' ? JSON.stringify(r.error.params) : '');
     expect(message(held)).toContain('Buchung 2026-0042');
     expect(message(held)).toContain('31.12.2099');
     deps.db.transaction((tx) => writeSettingInternal(tx, deps, ctx, 'ui.dateFormat', 'iso'));

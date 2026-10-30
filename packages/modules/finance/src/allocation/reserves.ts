@@ -3,16 +3,18 @@ import { abortReceive, documentTypeFor, getDocumentRecord, linkDocumentInternal,
 import { and, eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { financeAudit } from '../audit';
+import { resolutionIdProblem, resolutionReferenceInternal, type ResolutionReference } from '../resolution-ref';
 import { financeConflict, requireHumanChannelFinance } from '../errors';
 import { requireFinanceRead } from '../ledger/access';
-import { checkDatedInternal, fiscalYearsWithStatusInternal } from '../ledger/fiscal-years';
+import { checkDatedInternal, fiscalYearForInternal, fiscalYearStatusInternal, fiscalYearsWithStatusInternal } from '../ledger/fiscal-years';
 import { freeReserveInputsAt } from '../ledger/queries';
 import { latestMovementDate, reserveBalanceAt, reserveBalancesAt, reserveIsDissolved } from '../ledger/reserve-balances';
 import { ratioOf, valueAt } from '../ledger/dated-values';
 import { financeFiscalYears, financePurposes, financeReserveMovements, financeReserves, type FinanceReserveMovementRow, type FinanceReserveRow } from '../schema';
 import { nextVersion } from './expenses';
 import { reserveResolutionSubject } from './subjects';
-import { freeReserveCapCents, freeReserveYears } from './reserve-rules';
+import { addYearsToDay } from './funds-use-rules';
+import { freeReserveCapCents, freeReserveYears, OPERATION_RESERVE_KINDS, RESERVE_KINDS } from './reserve-rules';
 
 /**
  * Zurückgelegtes Geld (F8b Task 2, Spec 8.3, Annahme 1–4): Stammsatz,
@@ -31,10 +33,28 @@ function load(db: DbOrTx, id: string): FinanceReserveRow | null {
 export interface ReserveView extends FinanceReserveRow {
   balanceCents: number;
   isDissolved: boolean;
+  /** F-B2 (0.4.5): Die Art ist fest — die Rücklage hat Vorgänge, oder ihr Vortrag liegt in einem abgeschlossenen Jahr. */
+  kindLocked: boolean;
+  /** G7: der Beschluss in Gremien mit Beschriftung und Link — `null` ohne `resolutionId` oder ohne Gremien. */
+  resolution: ResolutionReference | null;
 }
 
-function toView(db: DbOrTx, row: FinanceReserveRow, date: string): ReserveView {
-  return { ...row, balanceCents: reserveBalanceAt(row, db.select().from(financeReserveMovements).where(eq(financeReserveMovements.reserveId, row.id)).all(), date), isDissolved: reserveIsDissolved(db, row.id) };
+function toView(deps: Deps, ctx: CallContext, db: DbOrTx, row: FinanceReserveRow, date: string): ReserveView {
+  const movements = db.select().from(financeReserveMovements).where(eq(financeReserveMovements.reserveId, row.id)).all();
+  return {
+    ...row,
+    balanceCents: reserveBalanceAt(row, movements, date),
+    isDissolved: reserveIsDissolved(db, row.id),
+    kindLocked: movements.length > 0 || carryForwardInClosedYear(db, row.carryForwardDate),
+    resolution: resolutionReferenceInternal(deps, ctx, row.resolutionId),
+  };
+}
+
+/** Ob ein Vortragstag in einem abgeschlossenen Geschäftsjahr liegt — dann gehört der Vortrag zu dessen festgeschriebenem Stand. */
+function carryForwardInClosedYear(db: DbOrTx, carryForwardDate: string | null): boolean {
+  if (!carryForwardDate) return false;
+  const year = fiscalYearForInternal(db, carryForwardDate);
+  return !!year && fiscalYearStatusInternal(db, year.id) === 'closed';
 }
 
 /** Ob die Dokumentart „Protokoll“ stillgelegt ist — mit den Namen, die sie wieder einschalten können. */
@@ -54,7 +74,7 @@ export async function checkPickedDocument(deps: Deps, ctx: CallContext, document
   return null;
 }
 
-const auditFields = (row: FinanceReserveRow) => ({ kind: row.kind, purposeId: row.purposeId, carryForwardCents: row.carryForwardCents, carryForwardDate: row.carryForwardDate, isActive: row.isActive });
+const auditFields = (row: FinanceReserveRow) => ({ kind: row.kind, purposeId: row.purposeId, carryForwardCents: row.carryForwardCents, carryForwardDate: row.carryForwardDate, isActive: row.isActive, resolutionId: row.resolutionId });
 
 export const uploadInputSchema = z.object({
   bytes: z.custom<Uint8Array>((val) => val instanceof Uint8Array, { message: 'invalidBytes' }),
@@ -65,7 +85,7 @@ export const uploadInputSchema = z.object({
 export const saveReserveSchema = z.object({
   id: z.string().min(1).optional(),
   expectedVersion: expectedVersionField,
-  kind: z.enum(['projectFunds', 'replacement', 'free', 'participation']),
+  kind: z.enum(RESERVE_KINDS),
   name: z.string().trim().min(1).max(120),
   purposeText: z.string().trim().max(2000).nullable().optional(),
   purposeId: z.string().min(1).nullable().optional(),
@@ -75,6 +95,8 @@ export const saveReserveSchema = z.object({
   /** Nur beim Anlegen gelesen — Pflicht (Annahme 1); genau eines von beiden: ein vorhandenes, festgeschriebenes Dokument der Akte, oder ein PDF, im Namen des zurückgelegten Geldes hochgeladen. */
   resolutionDocumentId: z.string().min(1).optional(),
   resolutionUpload: uploadInputSchema.optional(),
+  /** G7: der Beschluss in Gremien; erfüllt die Pflicht allein, darf neben einem Dokument stehen. `null` nimmt ihn weg. */
+  resolutionId: z.string().min(1).nullable().optional(),
 });
 
 /** `finance.setup`: Stammsatz anlegen oder ändern (Annahme 1). Der Beschluss ist beim Anlegen Pflicht — per Picker oder Upload; danach wird er über `linkResolution`/`uploadResolution` ersetzt oder ergänzt. */
@@ -92,19 +114,34 @@ export async function saveReserve(deps: Deps, ctx: CallContext, input: unknown):
     if (stale) return stale;
   }
   if ((v.kind === 'projectFunds' || v.kind === 'replacement') && !v.purposeText?.trim()) return financeConflict('reservePurposeTextRequired');
+  // M1 (Prüfung L-7): Eine Rücklage im wGB oder in der Vermögensverwaltung muss wirtschaftlich begründet sein — die
+  // Begründung steht in `purposeText`, nie im Protokoll.
+  if (OPERATION_RESERVE_KINDS.includes(v.kind) && !v.purposeText?.trim()) return financeConflict('reserveReasonRequired');
   const carryForwardFields = [v.carryForwardCents ?? null, v.carryForwardDate ?? null];
   const anyCarryForward = carryForwardFields.some((f) => f !== null);
   const allCarryForward = carryForwardFields.every((f) => f !== null);
   if (anyCarryForward !== allCarryForward) return financeConflict('reserveCarryForwardIncomplete');
   // Teil C Task 2: Ein Vortrag kommt nur zusammen mit seinem Beschluss (`recordReserveCarryForward`) — hier darf er unverändert mitreisen oder gelöscht werden.
   if (allCarryForward && (v.carryForwardCents !== (before?.carryForwardCents ?? null) || v.carryForwardDate !== (before?.carryForwardDate ?? null))) return financeConflict('reserveCarryForwardOwnStep');
+  // F-B2 (0.4.5): Art und Vortrag gehen in den Anfangsbestand und die Aufstellung abgeschlossener Jahre ein. Mit Vorgängen
+  // oder einem Vortrag in einem abgeschlossenen Jahr bleiben sie, wie sie sind — sonst änderte sich ein festgeschriebener
+  // Bericht, und ein auf null gesetzter Vortrag machte die Rücklage löschbar. Wiedergeöffnet ist beides wieder frei.
+  if (before) {
+    const hasMovement = !!deps.db.select({ id: financeReserveMovements.id }).from(financeReserveMovements).where(eq(financeReserveMovements.reserveId, before.id)).get();
+    const locked = hasMovement || carryForwardInClosedYear(deps.db, before.carryForwardDate);
+    if (locked && v.kind !== before.kind) return financeConflict('reserveKindLocked');
+    if (locked && before.carryForwardCents !== null && !allCarryForward) return financeConflict('reserveCarryForwardLocked');
+  }
   if (v.purposeId && !deps.db.select({ id: financePurposes.id }).from(financePurposes).where(eq(financePurposes.id, v.purposeId)).get()) return notFound('financePurpose', v.purposeId);
+  const unknownResolution = resolutionIdProblem(deps, ctx, v.resolutionId, 'reserve');
+  if (unknownResolution) return unknownResolution;
 
-  const fields = { kind: v.kind, name: v.name, purposeText: v.purposeText ?? null, purposeId: v.purposeId ?? null, carryForwardCents: v.carryForwardCents ?? null, carryForwardDate: v.carryForwardDate ?? null, isActive: v.isActive };
+  const resolutionId = v.resolutionId === undefined ? (before?.resolutionId ?? null) : v.resolutionId;
+  const fields = { kind: v.kind, name: v.name, purposeText: v.purposeText ?? null, purposeId: v.purposeId ?? null, carryForwardCents: v.carryForwardCents ?? null, carryForwardDate: v.carryForwardDate ?? null, isActive: v.isActive, resolutionId };
 
   if (!before) {
     if (v.resolutionDocumentId && v.resolutionUpload) return invalid([{ path: 'resolutionUpload', message: 'pickOrUploadNotBoth' }]);
-    if (!v.resolutionDocumentId && !v.resolutionUpload) return financeConflict('reserveResolutionRequired');
+    if (!v.resolutionDocumentId && !v.resolutionUpload && !resolutionId) return financeConflict('reserveResolutionRequired');
     const typeProblem = minutesTypeProblem(deps);
     if (typeProblem) return typeProblem;
 
@@ -127,11 +164,13 @@ export async function saveReserve(deps: Deps, ctx: CallContext, input: unknown):
         },
       });
       if (!result.ok) return result;
-      return ok(toView(deps.db, result.value.after!, todayIn(deps)));
+      return ok(toView(deps, ctx, deps.db, result.value.after!, todayIn(deps)));
     }
 
-    const docProblem = await checkPickedDocument(deps, ctx, v.resolutionDocumentId!);
-    if (docProblem) return docProblem;
+    if (v.resolutionDocumentId) {
+      const docProblem = await checkPickedDocument(deps, ctx, v.resolutionDocumentId);
+      if (docProblem) return docProblem;
+    }
   }
 
   return deps.db.transaction((tx: DbOrTx) => {
@@ -140,17 +179,18 @@ export async function saveReserve(deps: Deps, ctx: CallContext, input: unknown):
     if (before) {
       tx.update(financeReserves).set({ ...fields, updatedAt: now }).where(eq(financeReserves.id, id)).run();
     } else {
-      tx.insert(financeReserves).values({ id, ...fields, updatedAt: now, carryForwardDocumentId: null, resolutionDocumentId: v.resolutionDocumentId!, createdByUserId: ctx.userId ?? 'system', createdAt: now }).run();
-      linkDocumentInternal(tx, deps, { documentId: v.resolutionDocumentId!, entityType: 'financeReserve', entityId: id });
+      tx.insert(financeReserves).values({ id, ...fields, updatedAt: now, carryForwardDocumentId: null, resolutionDocumentId: v.resolutionDocumentId ?? null, createdByUserId: ctx.userId ?? 'system', createdAt: now }).run();
+      if (v.resolutionDocumentId) linkDocumentInternal(tx, deps, { documentId: v.resolutionDocumentId, entityType: 'financeReserve', entityId: id });
     }
     const after = tx.select().from(financeReserves).where(eq(financeReserves.id, id)).get()!;
     financeAudit(tx, deps, ctx, { action: 'finance.reserve.save', entity: 'financeReserve', id, before: before ? auditFields(before) : undefined, after: auditFields(after), params: { created: !before } });
-    return ok(toView(tx, after, todayIn(deps)));
+    return ok(toView(deps, ctx, tx, after, todayIn(deps)));
   });
 }
 
 export const targetFieldSchema = z.object({ id: z.string().min(1), field: z.enum(['resolution', 'carryForward']) });
-export const linkResolutionSchema = targetFieldSchema.extend({ documentId: z.string().min(1) });
+/** `field: 'resolutionId'` (G7) verknüpft einen Beschluss in Gremien (`resolutionId`), die anderen ein Dokument (`documentId`). */
+export const linkResolutionSchema = z.object({ id: z.string().min(1), field: z.enum(['resolution', 'carryForward', 'resolutionId']), documentId: z.string().min(1).optional(), resolutionId: z.string().min(1).optional() });
 
 /** `finance.entriesWrite`: ein vorhandenes, festgeschriebenes Dokument der Akte als Beschluss (oder Vortragsbeschluss) verknüpfen — auch nach dem Anlegen. */
 export async function linkResolution(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<ReserveView>> {
@@ -160,17 +200,26 @@ export async function linkResolution(deps: Deps, ctx: CallContext, input: unknow
   if (!parsed.ok) return parsed;
   const before = load(deps.db, parsed.value.id);
   if (!before) return notFound('financeReserve', parsed.value.id);
-  const docProblem = await checkPickedDocument(deps, ctx, parsed.value.documentId);
-  if (docProblem) return docProblem;
+  const { field, documentId, resolutionId } = parsed.value;
+  // Welches Feld Pflicht ist, hängt an `field` — das prüft der Dienst, nicht das Werkzeugschema (N5).
+  if (field === 'resolutionId' && !resolutionId) return invalid([{ path: 'resolutionId', message: 'required' }]);
+  if (field !== 'resolutionId' && !documentId) return invalid([{ path: 'documentId', message: 'required' }]);
+  if (field === 'resolutionId') {
+    const unknown = resolutionIdProblem(deps, ctx, resolutionId, 'reserve');
+    if (unknown) return unknown;
+  } else {
+    const docProblem = await checkPickedDocument(deps, ctx, documentId!);
+    if (docProblem) return docProblem;
+  }
 
   return deps.db.transaction((tx: DbOrTx) => {
     const now = isoNow(deps.clock);
-    const column = parsed.value.field === 'resolution' ? { resolutionDocumentId: parsed.value.documentId } : { carryForwardDocumentId: parsed.value.documentId };
+    const column = field === 'resolutionId' ? { resolutionId: resolutionId! } : field === 'resolution' ? { resolutionDocumentId: documentId! } : { carryForwardDocumentId: documentId! };
     tx.update(financeReserves).set({ ...column, updatedAt: now }).where(eq(financeReserves.id, before.id)).run();
-    linkDocumentInternal(tx, deps, { documentId: parsed.value.documentId, entityType: 'financeReserve', entityId: before.id });
+    if (field !== 'resolutionId') linkDocumentInternal(tx, deps, { documentId: documentId!, entityType: 'financeReserve', entityId: before.id });
     const after = tx.select().from(financeReserves).where(eq(financeReserves.id, before.id)).get()!;
     financeAudit(tx, deps, ctx, { action: 'finance.reserve.linkResolution', entity: 'financeReserve', id: before.id, before: auditFields(before), after: auditFields(after) });
-    return ok(toView(tx, after, todayIn(deps)));
+    return ok(toView(deps, ctx, tx, after, todayIn(deps)));
   });
 }
 
@@ -214,7 +263,7 @@ export async function uploadResolution(deps: Deps, ctx: CallContext, input: unkn
     },
   });
   if (!result.ok) return result;
-  return ok(toView(deps.db, result.value.after!, todayIn(deps)));
+  return ok(toView(deps, ctx, deps.db, result.value.after!, todayIn(deps)));
 }
 
 export const recordCarryForwardSchema = z.object({
@@ -246,6 +295,9 @@ export async function recordReserveCarryForward(deps: Deps, ctx: CallContext, in
   if (stale) return stale;
   if (v.documentId && v.upload) return invalid([{ path: 'upload', message: 'pickOrUploadNotBoth' }]);
   if (!v.documentId && !v.upload && !before.carryForwardDocumentId) return financeConflict('reserveCarryForwardIncomplete');
+  // F-B2 (0.4.5): Ein Vortrag in einem abgeschlossenen Jahr — vorher oder nachher — ändert sich nur nach dem Wiederöffnen.
+  const carryForwardChanges = v.carryForwardCents !== before.carryForwardCents || v.carryForwardDate !== before.carryForwardDate;
+  if (carryForwardChanges && (carryForwardInClosedYear(deps.db, before.carryForwardDate) || carryForwardInClosedYear(deps.db, v.carryForwardDate))) return financeConflict('reserveCarryForwardLocked');
 
   const write = (tx: DbOrTx, documentId: string | null) => {
     // Eine neue Fassung auch bei stehender Uhr — sonst ginge ein veralteter zweiter Aufruf durch.
@@ -270,7 +322,7 @@ export async function recordReserveCarryForward(deps: Deps, ctx: CallContext, in
       afterReceive: (tx: DbOrTx, doc: ReceivedDocument) => write(tx, doc.id),
     });
     if (!result.ok) return result;
-    return ok(toView(deps.db, result.value.after!, todayIn(deps)));
+    return ok(toView(deps, ctx, deps.db, result.value.after!, todayIn(deps)));
   }
 
   if (v.documentId) {
@@ -280,7 +332,7 @@ export async function recordReserveCarryForward(deps: Deps, ctx: CallContext, in
   return deps.db.transaction((tx: DbOrTx) => {
     const after = write(tx, v.documentId ?? null);
     if (v.documentId) linkDocumentInternal(tx, deps, { documentId: v.documentId, entityType: 'financeReserve', entityId: before.id });
-    return ok(toView(tx, after, todayIn(deps)));
+    return ok(toView(deps, ctx, tx, after, todayIn(deps)));
   });
 }
 
@@ -301,7 +353,7 @@ export async function setReserveActive(deps: Deps, ctx: CallContext, input: unkn
     tx.update(financeReserves).set({ isActive: parsed.value.isActive, updatedAt: now }).where(eq(financeReserves.id, before.id)).run();
     const after = tx.select().from(financeReserves).where(eq(financeReserves.id, before.id)).get()!;
     financeAudit(tx, deps, ctx, { action: 'finance.reserve.setActive', entity: 'financeReserve', id: before.id, before: auditFields(before), after: auditFields(after), params: { active: after.isActive } });
-    return ok(toView(tx, after, todayIn(deps)));
+    return ok(toView(deps, ctx, tx, after, todayIn(deps)));
   });
 }
 
@@ -334,7 +386,7 @@ export async function listReserves(deps: Deps, ctx: CallContext, input?: unknown
   if (!parsed.ok) return parsed;
   const rows = deps.db.select().from(financeReserves).orderBy(financeReserves.name).all().filter((r) => parsed.value.includeInactive || r.isActive);
   const date = todayIn(deps);
-  return ok(rows.map((r) => toView(deps.db, r, date)));
+  return ok(rows.map((r) => toView(deps, ctx, deps.db, r, date)));
 }
 
 // ── Vorgänge (Annahme 2) ────────────────────────────────────────────────────
@@ -386,12 +438,33 @@ function insertMovement(tx: DbOrTx, deps: Deps, ctx: CallContext, reserve: Finan
   // Jahr nur, wenn am Vorgangstag genau eines in Frage kommt (`freeReserveYears`); ist das Vorjahr noch offen, lehnt
   // er ab und nennt beide. Dieselbe Regel für Oberfläche und MCP — die Oberfläche schickt das Jahr immer mit.
   let forFiscalYearId: string | null = null;
+  // F-B1 (0.4.5): Ein angegebenes Jahr muss am Vorgangstag zählen — sonst änderte ein Vorgang den Höchstbetrag eines
+  // abgeschlossenen (oder fremden) Jahres, und dessen festgeschriebener Bericht fiele auf „Prüfung“ zurück.
   if (v.kind === 'allocate' && reserve.kind === 'free') {
-    if (v.forFiscalYearId) forFiscalYearId = v.forFiscalYearId;
-    else {
-      const inQuestion = freeReserveYears(fiscalYearsWithStatusInternal(tx), v.movementDate).years;
+    const inQuestion = freeReserveYears(fiscalYearsWithStatusInternal(tx), v.movementDate).years;
+    if (v.forFiscalYearId) {
+      if (!inQuestion.some((y) => y.id === v.forFiscalYearId)) {
+        const named = tx.select({ designation: financeFiscalYears.designation }).from(financeFiscalYears).where(eq(financeFiscalYears.id, v.forFiscalYearId)).get();
+        return financeConflict('reserveYearNotAllowed', { year: named?.designation ?? v.forFiscalYearId });
+      }
+      forFiscalYearId = v.forFiscalYearId;
+    } else {
       if (inQuestion.length > 1) return financeConflict('reserveYearAmbiguous', { previous: inQuestion[0]!.designation, current: inQuestion[1]!.designation });
       forFiscalYearId = yearCheck.value.id;
+    }
+  } else if (v.kind === 'allocate' && v.forFiscalYearId) {
+    const origin = tx.select().from(financeFiscalYears).where(eq(financeFiscalYears.id, v.forFiscalYearId)).get();
+    if (!origin) return notFound('financeFiscalYear', v.forFiscalYearId);
+    // M1 (Prüfung L-3): Rücklagen im wGB und in der Vermögensverwaltung kennen kein Bezugsjahr.
+    if (OPERATION_RESERVE_KINDS.includes(reserve.kind)) return financeConflict('reserveYearNotAllowed', { year: origin.designation });
+    // Nachträgliche Bildung einer § 62-Rücklage aus Mitteln eines früheren Jahres bis zum Ende des zweiten Folgejahres
+    // (§ 62 Abs. 2 S. 1 AO mit § 55 Abs. 1 Nr. 5 S. 3 AO). Das eigene Jahr ist kein Bezugsjahr (gespeichert als null),
+    // ein späteres Jahr auch nicht.
+    if (origin.id !== yearCheck.value.id) {
+      if (origin.endsOn >= yearCheck.value.startsOn) return financeConflict('reserveYearNotAllowed', { year: origin.designation });
+      const until = addYearsToDay(origin.endsOn, 2);
+      if (v.movementDate > until) return financeConflict('reserveLateFormationTooLate', { year: origin.designation, until });
+      forFiscalYearId = origin.id;
     }
   }
   const overrun = forFiscalYearId ? capOverrun(tx, reserve, v, forFiscalYearId) : null;

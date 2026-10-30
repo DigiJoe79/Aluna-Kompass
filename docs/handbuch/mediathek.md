@@ -83,7 +83,8 @@ Kompass, dass es sich nicht mehr zurücknehmen lässt.
 
 „Hochladen“ oben rechts nimmt eine Datei: Bilder (PNG, JPEG, WebP, SVG) und
 PDFs. Sie landet im geöffneten Ordner; bei „Alle Dateien“ und „Ohne Ordner“
-liegt sie danach ohne Ordner.
+liegt sie danach ohne Ordner. Ein SVG, das Skripte, eingebettete Webseiten oder
+Links mit anderen Adressen als Webadressen enthält, nimmt Kompass nicht an.
 
 Mehrere Dateien ziehen Sie aus dem Dateimanager in die Mediathek. Lassen Sie
 sie auf einem Ordner im Baum los, landen sie in diesem Ordner, auf „Ohne

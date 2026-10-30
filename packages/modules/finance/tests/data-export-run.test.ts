@@ -119,6 +119,15 @@ describe('Datenexport als Lauf', () => {
     expect(await startDataExport(bare.f.deps, bare.ctx, { fiscalYearIds: [bare.y2025] })).toMatchObject({ ok: false, error: { code: 'dataExportNoStorage' } });
   });
 
+  it('names the file with the day of the export in the association\'s zone (F-B3)', async () => {
+    const { f, ctx, slot, y2025 } = await setup();
+    f.deps.clock.set('2026-12-31T23:30:00.000Z');
+    const started = unwrap(await startDataExport(f.deps, ctx, { fiscalYearIds: [y2025] }));
+    await waitForJob(slot, runIdOf(started));
+    const row = f.deps.db.select().from(financeDataExports).all()[0]!;
+    expect(unwrap(await readDataExportFile(f.deps, ctx, { exportId: row.id })).filename).toBe('Datenexport-2025-01.01.2027.zip');
+  });
+
   it('lists exports with their end, hands out the file once recorded, refuses after 30 days', async () => {
     const { f, ctx, slot, y2025 } = await setup();
     const started = unwrap(await startDataExport(f.deps, ctx, { fiscalYearIds: [y2025] }));

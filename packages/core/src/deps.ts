@@ -54,4 +54,9 @@ export interface Deps {
    */
   backupPath?: string | null;
   backupMountWarning?: BackupMountWarning;
+  /**
+   * Betriebsparameter `KOMPASS_PUBLIC_URL`: die Adresse, unter der Menschen diese Installation aufrufen, ohne `/` am
+   * Ende — für Links in Mails (Wiedervorlage). Ohne Angabe nennt die Mail den Weg in Kompass statt eines Links.
+   */
+  publicUrl?: string | null;
 }

@@ -28,4 +28,13 @@ describe('setReportSettings', () => {
     unwrap(await setReportSettings(deps, ctx, { statuteReference: '', cashReportSignature: false }));
     expect(readSetting(deps, 'finance.reports.treasurerIsStatutoryBoard')).toBe(false);
   });
+
+  it('J2: stores whether the general assembly approves the annual accounts, keeps it when not sent', async () => {
+    const { deps, ctx } = setupFinance();
+    expect(readSetting(deps, 'finance.reports.assemblyApprovesAccounts')).toBe(false);
+    unwrap(await setReportSettings(deps, ctx, { statuteReference: '', cashReportSignature: false, assemblyApprovesAccounts: true }));
+    expect(readSetting(deps, 'finance.reports.assemblyApprovesAccounts')).toBe(true);
+    unwrap(await setReportSettings(deps, ctx, { statuteReference: '', cashReportSignature: false }));
+    expect(readSetting(deps, 'finance.reports.assemblyApprovesAccounts')).toBe(true);
+  });
 });

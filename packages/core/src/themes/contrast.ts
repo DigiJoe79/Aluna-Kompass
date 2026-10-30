@@ -63,6 +63,8 @@ export const CONTRAST_PAIRS: readonly ContrastPair[] = [
   { fg: 'color-drop-ink', bg: 'color-drop-bg', minimum: 4.5 },
   { fg: 'color-drop-ring', bg: 'surface', minimum: 3 },
   { fg: 'color-drop-blocked-ring', bg: 'surface', minimum: 3 },
+  // Rückfall-Fläche „laut Gesetz: …“ im Regelwerk (Board Gremien Phase 2 5c, HANDOFF2 Dunkel).
+  { fg: 'muted', bg: 'surface-2', minimum: 4.5 },
   // Trenner (Tabellenzeilen, Führungslinien im Ordnerbaum): im Dunkeln ≥ 1,6:1 zur Fläche (Designer 2026-10-16). Hell
   // bleibt er bewusst leise.
   { fg: 'line-2', bg: 'surface', minimum: 1.6, modes: ['dark'] },

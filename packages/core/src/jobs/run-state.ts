@@ -178,6 +178,14 @@ function settleForeignLock(slot: JobSlot): void {
   }
 }
 
+/**
+ * Die Schlüssel aller Läufe, die in diesem Prozess gerade arbeiten — gleich welcher Art. Das Einspielen eines Backups
+ * fragt hier, ob es einem Lauf (Datenexport, Prüfpaket …) die Datenbank unter den Händen wegzöge.
+ */
+export function activeJobSlotKeys(): string[] {
+  return [...runs().keys()];
+}
+
 export function runningJob(slot: JobSlot): JobRun | null {
   const active = runs().get(slot.key);
   if (active) return structuredClone(active.run);

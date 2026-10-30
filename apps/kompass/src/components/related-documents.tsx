@@ -21,7 +21,7 @@ export async function RelatedDocuments({
 }: {
   deps: Deps;
   ctx: CallContext;
-  entityType: 'contact' | 'animal' | 'project' | 'membership';
+  entityType: 'contact' | 'animal' | 'project' | 'membership' | 'governanceMeeting' | 'governanceResolution' | 'governanceCircular';
   entityId: string;
 }) {
   if (!isModuleEnabled(deps, 'dms') || requireDmsGate(deps, ctx)) return null;

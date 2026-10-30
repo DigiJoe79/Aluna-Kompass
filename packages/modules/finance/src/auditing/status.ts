@@ -11,7 +11,7 @@ import { changedSinceInternal, latestBaselineInternal, referenceBaselineInternal
 import { openRemarksByTargetInternal } from './remarks';
 import { currentReportInternal, followUpConfirmedAtInternal, followUpConfirmedUnchangedInternal, followUpOpenInternal, reportViewInternal } from './report';
 import { sampleCountInternal } from './samples';
-import { previousReviewsInternal, sectionReviewStatesInternal } from './sections';
+import { activeAuditSectionsInternal, previousReviewsInternal, sectionReviewStatesInternal } from './sections';
 import { AUDIT_SECTIONS, type AuditStatus } from './types';
 
 /**
@@ -29,8 +29,10 @@ export function auditStatusInternal(deps: Deps, ctx: CallContext, fiscalYearId: 
   const reference = referenceBaselineId ? db.select({ createdAt: financeAuditBaselines.createdAt, kind: financeAuditBaselines.kind }).from(financeAuditBaselines).where(eq(financeAuditBaselines.id, referenceBaselineId)).get() : null;
   const cashCounts = reference ? cashCountsAfterInternal(db, fiscalYearId, reference) : [];
   const open = auditors.filter((a) => a.mode === 'kompass').filter((a) => auditorAccessInternal(db, deps, a.contactId, a.accessEndedAt).hasRole).length;
+  const year = db.select().from(financeFiscalYears).where(eq(financeFiscalYears.id, fiscalYearId)).get();
   return {
     fiscalYearId,
+    sections: year ? activeAuditSectionsInternal(deps, year) : AUDIT_SECTIONS.filter((s) => s !== 'resolutions'),
     yearStatus: fiscalYearStatusInternal(db, fiscalYearId),
     baseline: latest ? { id: latest.id, createdAt: latest.createdAt, kind: latest.kind } : null,
     referenceBaselineId,

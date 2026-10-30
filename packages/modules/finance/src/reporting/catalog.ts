@@ -1,8 +1,9 @@
-import { z } from 'zod';
 import { accountReconciliationReport } from './reports/account-reconciliation';
+import { annualAccountsReport } from './reports/annual-accounts';
 import { assetOverviewReport } from './reports/asset-overview';
 import { cashReportDefinition } from './reports/cash-report';
 import { donationBookReport } from './reports/donation-book';
+import { fundsUseReport } from './reports/funds-use';
 import { foreignActivityReportDefinition } from './reports/foreign-activity';
 import { handoverListReport } from './reports/handover-list';
 import { incomeStatementReport } from './reports/income-statement';
@@ -16,30 +17,10 @@ import { taxReturnIncomeStatementReport } from './reports/tax-return-income-stat
 import { vatAdvanceReturnReport } from './reports/vat-advance-return';
 import { vatSummaryReport } from './reports/vat-summary';
 import { voucherCheckReport } from './reports/voucher-check';
-import type { ReportDefinition, ReportParams } from './types';
-
-const yearParams: z.ZodType<ReportParams> = z.object({ fiscalYearId: z.string().min(1) });
-
-/**
- * Mittelverwendungsrechnung — kommt mit 0.4.5 (Spec § „Mittelverwendungsrechnung“); bis dahin ausgegraut im
- * Katalog. Der Verteiler lehnt jeden Aufruf mit `reportUnavailable` ab, darum rechnet `compute` nie.
- */
-const fundsUse: ReportDefinition<null> = {
-  key: 'fundsUse',
-  group: 'taxOffice',
-  personal: false,
-  available: false,
-  orientation: 'landscape',
-  paramsSchema: yearParams,
-  years: (_db, params) => (params.fiscalYearId ? [params.fiscalYearId] : []),
-  compute: () => null,
-  toTypst: () => '',
-  titleKey: 'finance.reports.fundsUse.title',
-  paperTitle: 'Mittelverwendungsrechnung',
-};
+import type { ReportDefinition } from './types';
 
 /** Der Katalog (Spec § A „Mechanik“). Statisch; A2 trägt die Kernberichte ein, B1 die übrigen. */
-const catalog: ReportDefinition[] = [incomeStatementReport as ReportDefinition, assetOverviewReport as ReportDefinition, cashReportDefinition as ReportDefinition, accountReconciliationReport as ReportDefinition, purposeFundsReport as ReportDefinition, projectStatementReport as ReportDefinition, reserveStatementReport as ReportDefinition, foreignActivityReportDefinition as ReportDefinition, donationBookReport as ReportDefinition, peopleOverviewReport as ReportDefinition, voucherCheckReport as ReportDefinition, vatSummaryReport as ReportDefinition, vatAdvanceReturnReport as ReportDefinition, handoverListReport as ReportDefinition, monthlyOverviewReport as ReportDefinition, taxReturnGemReport as ReportDefinition, taxReturnIncomeStatementReport as ReportDefinition, fundsUse as ReportDefinition];
+const catalog: ReportDefinition[] = [incomeStatementReport as ReportDefinition, assetOverviewReport as ReportDefinition, cashReportDefinition as ReportDefinition, accountReconciliationReport as ReportDefinition, purposeFundsReport as ReportDefinition, projectStatementReport as ReportDefinition, reserveStatementReport as ReportDefinition, foreignActivityReportDefinition as ReportDefinition, donationBookReport as ReportDefinition, peopleOverviewReport as ReportDefinition, voucherCheckReport as ReportDefinition, vatSummaryReport as ReportDefinition, vatAdvanceReturnReport as ReportDefinition, handoverListReport as ReportDefinition, monthlyOverviewReport as ReportDefinition, taxReturnGemReport as ReportDefinition, taxReturnIncomeStatementReport as ReportDefinition, annualAccountsReport as ReportDefinition, fundsUseReport as ReportDefinition];
 
 export const REPORT_CATALOG: readonly ReportDefinition[] = catalog;
 

@@ -21,6 +21,17 @@ function captureRender(f: Awaited<ReturnType<typeof auditFixture>>['f']) {
 }
 
 describe('Prüfbericht drucken', () => {
+  it('the baseline day is the day in the association\'s zone (F-B3)', async () => {
+    const { f, y2025, mira } = await auditFixture({ close: false });
+    // Abschluss um 0:30 Uhr am 01.01. — die Prüffassung entsteht beim Abschluss.
+    f.deps.clock.set('2026-12-31T23:30:00.000Z');
+    f.closeYear(y2025);
+    const calls = captureRender(f);
+    const draft = unwrap(await createAuditReportDraft(f.deps, mira.ctx, { fiscalYearId: y2025, kind: 'report' }));
+    unwrap(await printAuditReport(f.deps, mira.ctx, { reportId: draft.id }));
+    expect(String(calls[0]!.slots.footerNote)).toMatch(/^Prüfstand vom 01\.01\.2027 · /);
+  });
+
   it('prints the draft with ENTWURF, ready without; sections, signature lines, short hash; audited; no document', async () => {
     const { f, y2025, mira, paperAuditor } = await auditFixture();
     const calls = captureRender(f);

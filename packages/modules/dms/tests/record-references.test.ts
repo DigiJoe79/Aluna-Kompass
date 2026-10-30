@@ -13,14 +13,14 @@ describe('dmsRecordReferences', () => {
   it('meldet ein festgeschriebenes Dokument mit Nummer und Link', async () => {
     const { deps, ctx } = setupWithTypes();
     const doc = unwrap(await receiveDocument(deps, ctx, { filename: 'v.pdf', bytes: pdfBytes(), typeKey: 'contract', subject: 'Schutzvertrag', documentDate: '2026-03-14', links: [{ entityType: 'animal', entityId: 'A1', role: 'about' }] }));
-    expect(dmsRecordReferences(deps, 'animal', 'A1')).toEqual([{ label: `Dokument ${doc.number}`, entity: 'document', id: doc.id, href: `/dms/${doc.id}` }]);
+    expect(dmsRecordReferences(deps, 'animal', 'A1')).toEqual([{ label: { key: 'dms.records.document', params: { label: doc.number! } }, entity: 'document', id: doc.id, href: `/dms/${doc.id}` }]);
     expect(dmsRecordReferences(deps, 'project', 'A1')).toEqual([]);
   });
 
   it('meldet auch einen Entwurf — anders als dmsRetentionHolds', async () => {
     const { deps, ctx } = setupWithTypes();
     const draft = unwrap(await createDraft(deps, ctx, { typeKey: 'letter', subject: 'Anfrage Tierarzt', body: 'x', links: [{ entityType: 'animal', entityId: 'A2', role: 'about' }] }));
-    expect(dmsRecordReferences(deps, 'animal', 'A2')).toEqual([{ label: 'Dokument „Anfrage Tierarzt“ (Entwurf)', entity: 'document', id: draft.id, href: `/dms/${draft.id}` }]);
+    expect(dmsRecordReferences(deps, 'animal', 'A2')).toEqual([{ label: { key: 'dms.records.draftSubject', params: { subject: 'Anfrage Tierarzt' } }, entity: 'document', id: draft.id, href: `/dms/${draft.id}` }]);
   });
 
   it('nennt ein Dokument mit zwei Rollen nur einmal und nichts mehr nach dem Lösen der Bezüge', async () => {

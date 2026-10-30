@@ -1,6 +1,6 @@
 import { hasPermission, todayIn } from '@kompass/core';
 import { getDocumentRecord } from '@kompass/module-dms';
-import { freeReserveCapOverview, listFiscalYears, listPurposes, listReserves, valueAt, type FreeReserveCapYearView } from '@kompass/module-finance';
+import { freeReserveCapOverview, listPurposes, listReserves, valueAt, type FreeReserveCapYearView } from '@kompass/module-finance';
 import { getTranslations } from 'next-intl/server';
 import type { ReactNode } from 'react';
 import { LimitProgress, limitState } from '@/components/finance/limit-progress';
@@ -30,11 +30,9 @@ export default async function ReservesPage() {
   // Stillgelegtes sieht, wer es wieder aktivieren kann (Befund 40).
   const reservesRes = await listReserves(deps, ctx, { includeInactive: canSetup });
   const purposesRes = await listPurposes(deps, ctx, {});
-  const yearsRes = await listFiscalYears(deps, ctx);
   const capRes = await freeReserveCapOverview(deps, ctx, {});
   const purposes = purposesRes.ok ? purposesRes.value.map((p) => ({ id: p.id, name: p.name })) : [];
   const purposeName = new Map(purposes.map((p) => [p.id, p.name]));
-  const years = yearsRes.ok ? yearsRes.value : [];
   const capYears = capRes.ok ? capRes.value.years : [];
   const defaultFiscalYearId = capRes.ok ? capRes.value.defaultFiscalYearId : null;
   const warnAtPercent = (valueAt(deps.db, 'warnAtPercent', today) as number | null) ?? 80;
@@ -55,11 +53,13 @@ export default async function ReservesPage() {
       purposeText: r.purposeText,
       purposeLabel: (r.purposeId ? purposeName.get(r.purposeId) : null) ?? r.purposeText ?? null,
       resolution: await document(r.resolutionDocumentId),
+      resolutionRef: r.resolution,
       carryForwardCents: r.carryForwardCents,
       carryForwardDate: r.carryForwardDate,
       carryForwardDocument: await document(r.carryForwardDocumentId),
       isActive: r.isActive,
       isDissolved: r.isDissolved,
+      kindLocked: r.kindLocked,
       updatedAt: r.updatedAt,
     })),
   );
@@ -112,7 +112,7 @@ export default async function ReservesPage() {
         <ReserveTable
           rows={rows}
           purposes={purposes}
-          fiscalYears={years.map((y) => ({ id: y.id, designation: y.designation }))}
+          fiscalYears={capYears.map((y) => ({ id: y.fiscalYearId, designation: y.designation }))}
           defaultFiscalYearId={defaultFiscalYearId}
           today={today}
           canWrite={hasPermission(ctx, 'finance.entriesWrite')}

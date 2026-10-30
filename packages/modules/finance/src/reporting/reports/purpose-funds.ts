@@ -3,7 +3,8 @@ import { and, asc, eq, gte, lt, lte, sql } from 'drizzle-orm';
 import { purposeBalancesAt } from '../../ledger/queries';
 import { financeAllocationCorrections, financeAllocationLines, financeEntries, financePurposes } from '../../schema';
 import { dayBefore } from '../other-assets';
-import type { ReportDefinition, ReportLinesFilter, ReportParams, ReportRenderContext } from '../types';
+import type { ReportComputeEnv, ReportDefinition, ReportLinesFilter, ReportParams, ReportRenderContext } from '../types';
+import { reportTimeZone, TIME_ZONE_SETTING, zonedDayOf, zonedDayRange } from '../../zoned-days';
 import { amountCell, checkYearOrDate, paragraph, reportYearInternal, strongAmountCell, strongCell, table, textCell, yearParamsSchema, type ReportYear } from './common';
 
 /**
@@ -37,11 +38,12 @@ export interface PurposeFundsReport {
   totals: PurposeFundsTotals;
 }
 
-/** Tag eines Zeitstempels (`2026-03-01T…` → `2026-03-01`); Tage bleiben, wie sie sind. */
-const dayOf = (value: string | null): string | null => (value === null ? null : value.slice(0, 10));
+/** Tag eines Zeitstempels in der Zone des Vereins (F-B3); Tage bleiben, wie sie sind. */
+const dayOf = (value: string | null, timeZone: string): string | null => (value === null ? null : zonedDayOf(value, timeZone));
 
 /** Wirkung der im Jahr angewandten Korrekturen an Zeilen von Buchungen vor dem Jahr, je Zweck (+ Ziel, − Herkunft). */
-function priorLineCorrectionsInternal(db: DbOrTx, year: ReportYear): Map<string, number> {
+function priorLineCorrectionsInternal(db: DbOrTx, year: ReportYear, timeZone: string): Map<string, number> {
+  const range = zonedDayRange(year.startsOn, year.endsOn, timeZone);
   const rows = db
     .select({ before: financeAllocationCorrections.before, after: financeAllocationCorrections.after, amountCents: financeAllocationLines.amountCents })
     .from(financeAllocationCorrections)
@@ -51,8 +53,8 @@ function priorLineCorrectionsInternal(db: DbOrTx, year: ReportYear): Map<string,
       and(
         eq(financeAllocationCorrections.state, 'applied'),
         lt(financeEntries.entryDate, year.startsOn),
-        gte(sql`substr(${financeAllocationCorrections.approvedAt}, 1, 10)`, year.startsOn),
-        lte(sql`substr(${financeAllocationCorrections.approvedAt}, 1, 10)`, year.endsOn),
+        gte(financeAllocationCorrections.approvedAt, range.start),
+        lt(financeAllocationCorrections.approvedAt, range.end),
       ),
     )
     .all();
@@ -70,11 +72,12 @@ function priorLineCorrectionsInternal(db: DbOrTx, year: ReportYear): Map<string,
   return effect;
 }
 
-export function computePurposeFundsReport(db: DbOrTx, params: ReportParams): PurposeFundsReport {
+export function computePurposeFundsReport(db: DbOrTx, params: ReportParams, env?: ReportComputeEnv): PurposeFundsReport {
+  const timeZone = reportTimeZone(env);
   const year = reportYearInternal(db, params.fiscalYearId!);
   const opening = new Map(purposeBalancesAt(db, dayBefore(year.startsOn)).map((b) => [b.purposeId, b]));
   const closing = new Map(purposeBalancesAt(db, year.endsOn).map((b) => [b.purposeId, b]));
-  const corrections = priorLineCorrectionsInternal(db, year);
+  const corrections = priorLineCorrectionsInternal(db, year, timeZone);
 
   const purposes = db
     .select()
@@ -84,15 +87,15 @@ export function computePurposeFundsReport(db: DbOrTx, params: ReportParams): Pur
     .flatMap((p): PurposeFundsRow[] => {
       const a = opening.get(p.id)!;
       const e = closing.get(p.id)!;
-      const dissolvedOn = dayOf(p.dissolvedAt);
+      const dissolvedOn = dayOf(p.dissolvedAt, timeZone);
       if (dissolvedOn !== null && dissolvedOn < year.startsOn && a.balanceCents === 0 && e.balanceCents === 0) return [];
       // Ein Zweck, den es am Jahresende noch nicht gab, gehört nicht in den Bericht dieses Jahres — sonst änderte jeder
       // neue Zweck den Hash eines freigegebenen Jahres (Designer Runde 6, 260). Mit Bewegung im Jahr (eine Korrektur
       // ordnet eine alte Zeile zu) steht er.
-      const createdOn = dayOf(p.createdAt)!;
+      const createdOn = dayOf(p.createdAt, timeZone)!;
       const moved = e.inflowCents !== a.inflowCents || e.outflowCents !== a.outflowCents || e.transfersInCents !== a.transfersInCents || e.transfersOutCents !== a.transfersOutCents || e.balanceCents !== 0 || a.balanceCents !== 0 || (corrections.get(p.id) ?? 0) !== 0;
       if (createdOn > year.endsOn && !moved) return [];
-      const fulfilledOn = dayOf(p.fulfilledAt);
+      const fulfilledOn = dayOf(p.fulfilledAt, timeZone);
       const state: PurposeFundsRow['state'] = dissolvedOn !== null && dissolvedOn <= year.endsOn ? 'dissolved' : fulfilledOn !== null && fulfilledOn <= year.endsOn ? 'fulfilled' : 'open';
       const correctionsCents = corrections.get(p.id) ?? 0;
       // Ein Vortrag, der erst im Jahr gilt (Startbestand eines Zwecks bei Einführung), zählt zum Vortrag, nicht zum Zugang.
@@ -188,6 +191,7 @@ export const purposeFundsReport: ReportDefinition<PurposeFundsReport> = {
   checkParams: checkYearOrDate,
   years: (_db, params) => (params.fiscalYearId ? [params.fiscalYearId] : []),
   compute: computePurposeFundsReport,
+  settingKeys: [TIME_ZONE_SETTING],
   toTypst: purposeFundsTypst,
   titleKey: 'finance.reports.purposeFunds.title',
   paperTitle: 'Zweckmittel',

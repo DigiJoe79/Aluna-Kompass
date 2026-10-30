@@ -2,7 +2,7 @@ import type { McpToolDefinition } from '@kompass/core';
 import { z } from 'zod';
 import {
   addContactRole, contactChannelsSchema, contactListSchema, contactRetention,
-  contactRoleAddSchema, contactRoleEndSchema, contactStatusSchema, contactUpdateSchema, createContact,
+  contactRoleAddSchema, contactRoleEndSchema, contactRoleUpdateSchema, updateContactRole, contactStatusSchema, contactUpdateSchema, createContact,
   endContactRole, getContact, listContacts, listDueContacts, setContactChannels, setContactStatus, updateContact,
 } from './service';
 import { linkUserToContact, listUserLinkChanges, unlinkUser, userIdSchema, userLinkRangeSchema, userLinkSchema } from './user-links';
@@ -25,8 +25,9 @@ export const CONTACTS_MCP_TOOLS: McpToolDefinition[] = [
   t('contacts_create', 'Create a person or an organisation. deliveryPreference: auto (letters by e-mail when the contact has an e-mail address, else by post; the default) or post (always by post). Requires contacts.manage.', contactCreateMcpSchema, (deps, ctx, args) => createContact(deps, ctx, args), createContact),
   t('contacts_update', 'Update a contact; deliveryPreference sets how letters reach it (auto or post). Requires contacts.manage. Pass expectedVersion (the updatedAt you last read) to be rejected with staleVersion instead of overwriting a change made in between.', contactUpdateSchema, (deps, ctx, args) => updateContact(deps, ctx, args), updateContact),
   t('contacts_set_channels', 'Replace the communication channels of a contact. Requires contacts.manage.', contactChannelsSchema, (deps, ctx, args) => setContactChannels(deps, ctx, args), setContactChannels),
-  t('contacts_add_role', 'Start a role for a contact. Requires contacts.manage.', contactRoleAddSchema, (deps, ctx, args) => addContactRole(deps, ctx, args), addContactRole),
-  t('contacts_end_role', 'End a role of a contact without deleting it. Requires contacts.manage.', contactRoleEndSchema, (deps, ctx, args) => endContactRole(deps, ctx, args), endContactRole),
+  t('contacts_add_role', 'Start a role for a contact. For roles that can represent the association (board-member), representsAssociation records that the person represents it under section 26 BGB; the note holds the office. A role another module manages is refused with roleManagedByModule: member (Mitglieder) and auditor (Gremien) always, board-member and treasurer while Gremien is on. Requires contacts.manage.', contactRoleAddSchema, (deps, ctx, args) => addContactRole(deps, ctx, args), addContactRole),
+  t('contacts_update_role', 'Change the note — for the board-member role the office, e.g. treasurer — and, for roles that can represent the association, whether the person represents it under section 26 BGB. Refused with roleManagedByModule for a row the managing module carries (a term in Gremien); a board-member or treasurer row from before Gremien stays changeable. Requires contacts.manage.', contactRoleUpdateSchema, (deps, ctx, args) => updateContactRole(deps, ctx, args), updateContactRole),
+  t('contacts_end_role', 'End a role of a contact without deleting it. Refused with roleManagedByModule for a row the managing module carries (a term in Gremien); a board-member or treasurer row from before Gremien stays endable. Requires contacts.manage.', contactRoleEndSchema, (deps, ctx, args) => endContactRole(deps, ctx, args), endContactRole),
   t('contacts_set_status', 'Archive or reactivate a contact. Requires contacts.manage.', contactStatusSchema, (deps, ctx, args) => setContactStatus(deps, ctx, args), setContactStatus),
   t('contacts_due', 'List contacts whose retention has run out and that are due for deletion. Requires contacts.manage.', z.object({}), (deps, ctx) => listDueContacts(deps, ctx), listDueContacts),
   t('contacts_link_user', 'Link a user account to the contact that is the same person. History is kept: a link is ended, never deleted. You may set your own link once; any later change to your own account needs a second person. Requires users.manage.', userLinkSchema, (deps, ctx, args) => linkUserToContact(deps, ctx, args), linkUserToContact),

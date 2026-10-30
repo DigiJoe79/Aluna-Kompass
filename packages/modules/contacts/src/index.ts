@@ -4,6 +4,7 @@ export * from './managed-roles';
 export * from './manifest';
 export * from './mcp-tools';
 export * from './retention';
+export * from './role-rows';
 export * from './roles';
 export * from './schema';
 export * from './seed';

@@ -1,4 +1,5 @@
-import type { Deps } from '@kompass/core';
+import { timeZoneOf, type Deps } from '@kompass/core';
+import { zonedDayOf } from '../zoned-days';
 import { and, desc, eq, gte, lte } from 'drizzle-orm';
 import { toCorrectConfirmationsOfYearInternal } from '../donations/to-correct';
 import { uncertifiedDonationsInternal } from '../donations/confirmations';
@@ -87,7 +88,9 @@ function purposesStep(c: StepContext): StepResult {
   const db = c.deps.db;
   const balances = purposeBalancesAt(db, c.year.endsOn);
   const open = balances.filter((b) => b.state === 'open' && b.balanceCents > 0);
-  const inYear = (at: string | null) => at !== null && at.slice(0, 10) >= c.year.startsOn && at.slice(0, 10) <= c.year.endsOn;
+  // F-B3 (0.4.5): der Tag in der Zone des Vereins, nicht der UTC-Tag.
+  const timeZone = timeZoneOf(c.deps);
+  const inYear = (at: string | null) => at !== null && zonedDayOf(at, timeZone) >= c.year.startsOn && zonedDayOf(at, timeZone) <= c.year.endsOn;
   const closedInYear = db
     .select({ fulfilledAt: financePurposes.fulfilledAt, dissolvedAt: financePurposes.dissolvedAt })
     .from(financePurposes)

@@ -20,6 +20,7 @@ import {
   financeCashCountContactWitnesses,
   financeHandovers,
   financeAssemblyDischarges,
+  financeAuditAuditors,
   financeOpenItems,
   financePartnerEvidence,
   financePartnerNotices,
@@ -34,6 +35,7 @@ import {
   financeRawTransactions,
   financeReserveMovements,
   financeReserves,
+  financeFundsUseOpenings,
   financePledges,
   financeSepaMandates,
   type FinanceEntryRow,
@@ -42,6 +44,7 @@ import {
   type FinancePartnerPaymentRow,
   type FinancePurposeTransferRow,
   type FinanceReserveRow,
+  financeNameConsents,
 } from '../schema';
 import { fiscalYearForInternal, fiscalYearStatusInternal } from './fiscal-years';
 import { noticeValidUntil } from './notice-validity';
@@ -226,6 +229,11 @@ function contactHolds(deps: Deps, contactId: string): RetentionHold[] {
   for (const h of deps.db.select().from(financeHandovers).where(or(eq(financeHandovers.fromContactId, contactId), eq(financeHandovers.toContactId, contactId))).all()) {
     holds.push({ label: label('finance.records.handover', { date: h.handoverOn }), until: contactHoldUntil(deps, h.fiscalYearId), entity: 'financeHandover', id: h.id });
   }
+  // I-D (0.4.5): Kassenprüfer — auch ohne Konto. Prüfbericht und Prüferansicht nennen ihn, solange das Jahr aufbewahrt wird.
+  for (const a of deps.db.select({ id: financeAuditAuditors.id, fiscalYearId: financeAuditAuditors.fiscalYearId }).from(financeAuditAuditors).where(eq(financeAuditAuditors.contactId, contactId)).all()) {
+    const designation = deps.db.select({ d: financeFiscalYears.designation }).from(financeFiscalYears).where(eq(financeFiscalYears.id, a.fiscalYearId)).get()?.d ?? '';
+    holds.push({ label: label('finance.records.auditor', { designation }), until: contactHoldUntil(deps, a.fiscalYearId), entity: 'financeAuditAuditor', id: a.id });
+  }
   for (const d of deps.db.select().from(financeAssemblyDischarges).where(eq(financeAssemblyDischarges.contactId, contactId)).all()) {
     const designation = deps.db.select({ d: financeFiscalYears.designation }).from(financeFiscalYears).where(eq(financeFiscalYears.id, d.fiscalYearId)).get()?.d ?? '';
     holds.push({ label: label('finance.records.assemblyResult', { designation }), until: contactHoldUntil(deps, d.fiscalYearId), entity: 'financeAssemblyResult', id: d.fiscalYearId });
@@ -340,6 +348,11 @@ function documentHolds(deps: Deps, documentId: string): RetentionHold[] {
   for (const reserve of reservesByDoc) holds.push({ label: reserveLabel(reserve), until: null, entity: 'financeReserve', id: reserve.id });
   const movements = deps.db.select().from(financeReserveMovements).where(eq(financeReserveMovements.resolutionDocumentId, documentId)).all();
   for (const movement of movements) holds.push({ label: reserveLabel({ id: movement.reserveId }), until: null, entity: 'financeReserveMovement', id: movement.id });
+
+  // M1: der Beleg eines Anfangsvortrags der Mittelverwendung — dauerhaft, der Vortrag wird nie gelöscht.
+  for (const opening of deps.db.select().from(financeFundsUseOpenings).where(eq(financeFundsUseOpenings.documentId, documentId)).all()) {
+    holds.push({ label: label('finance.records.fundsUseOpening', { designation: opening.designation }), until: null, entity: 'financeFundsUseOpening', id: opening.id });
+  }
 
   // F8b: der Beschluss einer Umwidmung — dauerhaft, sie wird nie gelöscht.
   const transfers = deps.db.select().from(financePurposeTransfers).where(eq(financePurposeTransfers.documentId, documentId)).all();
@@ -538,6 +551,11 @@ export function financeRecordDeleted(tx: DbOrTx, deps: Deps, ctx: CallContext, e
       tx.update(financePurposeTransfers).set({ documentId: null }).where(eq(financePurposeTransfers.id, transfer.id)).run();
       financeAudit(tx, deps, ctx, { action: 'finance.purposeTransfer.documentGone', entity: 'financePurposeTransfer', id: transfer.id, after: { state: transfer.state, number: transfer.number }, params: { number: transfer.number } });
     }
+    // M1: Der Anfangsvortrag bleibt mit Betrag und Jahr; nur die Dokument-ID verschwindet.
+    for (const opening of tx.select().from(financeFundsUseOpenings).where(eq(financeFundsUseOpenings.documentId, id)).all()) {
+      tx.update(financeFundsUseOpenings).set({ documentId: null }).where(eq(financeFundsUseOpenings.id, opening.id)).run();
+      financeAudit(tx, deps, ctx, { action: 'finance.fundsUseOpening.documentGone', entity: 'financeFundsUseOpening', id: opening.id, after: { offset: opening.offset, amountCents: opening.amountCents }, params: {} });
+    }
     return;
   }
   if (entityType === 'contact') {
@@ -580,6 +598,12 @@ export function financeRecordDeleted(tx: DbOrTx, deps: Deps, ctx: CallContext, e
     if (terms) {
       tx.delete(financeContactWaiverTerms).where(eq(financeContactWaiverTerms.id, terms.id)).run();
       financeAudit(tx, deps, ctx, { action: 'finance.contactWaiverTerms.delete', entity: 'financeContactWaiverTerms', id: terms.id, before: terms });
+    }
+    // Jahresrechnung (0.4.5): Der Verlauf der Einwilligung geht mit dem Kontakt (der Trigger lässt das erst zu, wenn
+    // der Kontakt fort ist); festgeschriebene Jahresrechnungen tragen keinen Namen in den Daten.
+    for (const consent of tx.select().from(financeNameConsents).where(eq(financeNameConsents.contactId, id)).all()) {
+      tx.delete(financeNameConsents).where(eq(financeNameConsents.id, consent.id)).run();
+      financeAudit(tx, deps, ctx, { action: 'finance.nameConsent.delete', entity: 'financeNameConsent', id: consent.id, before: { kind: consent.kind, on: consent.on, fromYear: consent.fromYear } });
     }
     // Rechenschaft D2: Finanzamt und Steuernummer der Körperschaft — der festgeschriebene Bericht trägt seine Abschrift.
     const taxDetails = tx.select().from(financeContactTaxDetails).where(eq(financeContactTaxDetails.contactId, id)).get();

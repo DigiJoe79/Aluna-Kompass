@@ -77,4 +77,15 @@ describe('pollTextStatus', () => {
     await vi.advanceTimersByTimeAsync(60_000);
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
+  it('reicht jeden gelesenen Stand an onTick, auch den letzten, vor onDone (App-B4)', async () => {
+    fetchMock
+      .mockResolvedValueOnce(json(200, { state: 'running', n: 1 }))
+      .mockRejectedValueOnce(new Error('offline'))
+      .mockResolvedValue(json(200, { state: 'success', n: 2 }));
+    const seen: unknown[] = [];
+    const onDone = vi.fn(() => seen.push('done'));
+    pollTextStatus({ url: '/x', onDone, isPending: (b) => b.state === 'running', onTick: (b) => seen.push(b.n) });
+    await vi.advanceTimersByTimeAsync(60_000);
+    expect(seen).toEqual([1, 2, 'done']);
+  });
 });

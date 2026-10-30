@@ -1,4 +1,4 @@
-import { DEFAULT_TIME_ZONE, isoDayInZone, type IsoDay } from './dates';
+import { DEFAULT_TIME_ZONE, isoDayInZone, zonedDayStartIsoInZone, type IsoDay } from './dates';
 import type { Deps } from './deps';
 import { readSetting } from './settings/service';
 
@@ -28,6 +28,14 @@ export function timeZoneOf(deps: Pick<Deps, 'db' | 'registry'>): string {
  */
 export function isoDayIn(deps: Pick<Deps, 'db' | 'registry'>, instant: Date | number): IsoDay {
   return isoDayInZone(instant, timeZoneOf(deps));
+}
+
+/**
+ * 00:00 des Tages `day` in der Zeitzone des Vereins, als UTC-Zeitstempel. F-B3 (0.4.5): Zeitstempel (`createdAt`,
+ * `approvedAt` …) gehören über diese Grenzen zu einem Tag oder Geschäftsjahr — `[start(day), start(Tag danach))`.
+ */
+export function zonedDayStartIso(deps: Pick<Deps, 'db' | 'registry'>, day: IsoDay): string {
+  return zonedDayStartIsoInZone(day, timeZoneOf(deps));
 }
 
 /** „Heute“ im Sinne des Vereins: der Kalendertag von `deps.clock.now()` in seiner Zeitzone. */

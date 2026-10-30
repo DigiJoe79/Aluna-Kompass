@@ -2,6 +2,7 @@
 
 import type { AssemblyPerson, AssemblyResultView, DischargeOutcome } from '@kompass/module-finance';
 import { useTranslations } from 'next-intl';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { DocumentPicker } from '@/app/(shell)/dms/document-picker';
@@ -159,6 +160,12 @@ export function AssemblyStep({ step, status, canConfirm, data, onSaved }: Closin
       <FormCardBody>
         <div className="flex flex-col gap-4">
           <p className="text-meta text-ink-2">{t('intro')}</p>
+          {/* V-8: Gremien führte das Ergebnis und ist ausgeschaltet — es gilt wieder von Hand; keine Sperre, nur der Hinweis. */}
+          {step.facts.formerlyManaged ? (
+            <div data-testid="closing-assembly-formerly-managed">
+              <Notice level="hint">{t('formerlyManaged', { label: step.facts.formerlyManaged.label })}</Notice>
+            </div>
+          ) : null}
           <FormGrid>
             <FormField id="closing-assembly-date" label={t('date')} required error={fieldErrors.assemblyOn} size="s">
               <Input id="closing-assembly-date" type="date" value={v.assemblyOn} disabled={!canConfirm} onChange={(e) => setV({ ...v, assemblyOn: e.target.value })} />
@@ -181,12 +188,28 @@ export function AssemblyStep({ step, status, canConfirm, data, onSaved }: Closin
             <Segmented
               className="self-start"
               aria-labelledby="closing-assembly-accounts"
+              aria-describedby="closing-assembly-accounts-hint"
               value={v.accountsApproved ?? undefined}
               onValueChange={(accountsApproved) => setV({ ...v, accountsApproved })}
               disabled={!canConfirm}
               options={(['yes', 'no', 'notVoted'] as const).map((o) => ({ value: o, label: t(`accountsOptions.${o}`) }))}
               testId="closing-assembly-accounts"
             />
+            {/* Schritt 11 verweist auf beide Berichte (Spec Teil J): „Jahresrechnung genehmigt“ meint die MV, der Bericht heißt auch so. */}
+            <p id="closing-assembly-accounts-hint" className="text-hint text-muted-ink">
+              {t.rich('accountsHint', {
+                cash: (chunks) => (
+                  <Link href={`/finance/reports/cashReport?year=${encodeURIComponent(status.fiscalYearId)}`} className="text-link underline-offset-2 hover:underline">
+                    {chunks}
+                  </Link>
+                ),
+                annual: (chunks) => (
+                  <Link href={`/finance/reports/annualAccounts?year=${encodeURIComponent(status.fiscalYearId)}`} className="text-link underline-offset-2 hover:underline">
+                    {chunks}
+                  </Link>
+                ),
+              })}
+            </p>
           </div>
           <div className="flex flex-col gap-1.5">
             <Label id="closing-assembly-mode">{t('mode')}</Label>

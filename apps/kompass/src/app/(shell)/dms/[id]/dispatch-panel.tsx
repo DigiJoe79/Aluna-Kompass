@@ -26,6 +26,7 @@ import { pollTextStatus } from '@/lib/poll-text-status';
 import { resendDocumentMailAction } from '../actions';
 import { MailSendDialog } from './mail-send-dialog';
 import { panelHref } from '@/components/panel-nav';
+import { mailFailureReason } from '../mail-failure-reason';
 
 /**
  * Der Versandvermerk steht neben dem Dokument, nicht darin: Er ändert nichts
@@ -90,6 +91,7 @@ export function DispatchPanel({
 
   const ts = useTranslations('dms.send');
   const tState = useTranslations('dispatchStep.state');
+  const tCode = useTranslations('dms.mailErrorCodes');
   const router = useRouter();
   const [sending, setSending] = useState(false);
   const [resending, setResending] = useState<OutboxListItem | null>(null);
@@ -167,7 +169,7 @@ export function DispatchPanel({
                       {entry.status === 'failed' ? (
                         <div>
                           <dt className="text-muted-ink">{ts('reason')}</dt>
-                          <dd className="text-ink">{[entry.lastErrorText, entry.lastErrorCode ? `(${entry.lastErrorCode})` : null].filter(Boolean).join(' ')}</dd>
+                          <dd className="text-ink">{mailFailureReason(tCode, entry.lastErrorCode, entry.lastErrorText)}</dd>
                         </div>
                       ) : (
                         <div>
@@ -193,7 +195,7 @@ export function DispatchPanel({
                 {entry === latest && entry.status === 'failed' ? (
                   <div className="flex flex-col items-start gap-2">
                     <div className="flex flex-wrap gap-2">
-                      {canSend ? <Button type="button" variant="outline" size="sm" onClick={() => void resend(entry)} data-testid="dispatch-resend">{ts('resend')}</Button> : null}
+                      {canSend ? <Button type="button" variant="outline" size="sm" disabled={resendFb.pending} aria-busy={resendFb.pending || undefined} onClick={() => void resend(entry)} data-testid="dispatch-resend">{ts('resend')}</Button> : null}
                       {markButton}
                     </div>
                     <Link href={`/contacts/${entry.contactId}`} className="text-meta font-semibold text-ink underline-offset-2 hover:underline">{ts('fixAddress')}</Link>

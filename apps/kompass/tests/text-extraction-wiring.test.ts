@@ -24,6 +24,7 @@ describe('Texterkennung ist verpackt', () => {
       pdftotext: 'poppler-utils',
       pdftoppm: 'poppler-utils',
       pdfdetach: 'poppler-utils',
+      pdfinfo: 'poppler-utils',
       pdfunite: 'poppler-utils',
       tesseract: 'tesseract-ocr',
     };
@@ -34,7 +35,7 @@ describe('Texterkennung ist verpackt', () => {
         .flatMap((f) => [...read(`${srcDir}/${f}`).matchAll(/'(pdf[a-z]+|tesseract)'/g)].map((m) => m[1]!)),
     );
 
-    expect([...called].sort()).toEqual(['pdfdetach', 'pdftoppm', 'pdftotext', 'pdfunite', 'tesseract']);
+    expect([...called].sort()).toEqual(['pdfdetach', 'pdfinfo', 'pdftoppm', 'pdftotext', 'pdfunite', 'tesseract']);
     const dockerfile = read('Dockerfile');
     const ci = read('.github/workflows/ci.yml');
     for (const bin of called) {

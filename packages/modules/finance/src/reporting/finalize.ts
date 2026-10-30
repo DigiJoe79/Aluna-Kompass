@@ -1,5 +1,5 @@
 import { formatTime, isoNow, nameOrEmpty, newId, notFound, ok, paperDate, readSetting, schema as coreSchema, requirePermission, timeZoneOf, todayIn, validate, buildContext, type CallContext, type DbOrTx, type Deps, type Failure, type Result } from '@kompass/core';
-import { abortIssue, issueGeneratedDocument, readLinkedDocument, voidDocumentInternal } from '@kompass/module-dms';
+import { abortIssue, documentRelations, issueGeneratedDocument, readLinkedDocument, voidDocumentInternal } from '@kompass/module-dms';
 import { and, desc, eq, isNotNull, isNull } from 'drizzle-orm';
 import { projects } from '@kompass/module-projects';
 import { z } from 'zod';
@@ -11,11 +11,11 @@ import { fiscalYearStatusInternal } from '../ledger/fiscal-years';
 import { financeAccounts, financeCategories, financeFiscalYears, financeOtherAssets, financePurposes, financeReportReleases, financeReports, financeReserves } from '../schema';
 import { canonicalJson } from './hash';
 import { reportDefinition } from './catalog';
-import { resolveReportInternal, runReportInternal } from './service';
+import { reportCopiesInternal, resolveReportInternal, runReportInternal } from './service';
 import { linkVatFilingReportInternal } from './vat-filing';
 import { finalizeBlockInternal, GROUPS_NEEDING_RELEASE, releaseChangeableInternal, releaseOfYearInternal, reportYearsInternal } from './stage';
 import { buildReportDocument, REPORT_PERSONAL_TEMPLATE_KEY, REPORT_TEMPLATE_KEY, STAGE_TEXT, type ReportTemplateInput } from './template';
-import { RELEASE_BASES, type ReleaseBasis, type ReportDefinition, type ReportFinalizeBlock, type ReportParams, type ReportRenderContext, type ReportRun, type ReportStage } from './types';
+import { RELEASE_BASES, REPORT_CONFIRMATION_REASONS, type ReleaseBasis, type RenderOptions, type ReportDefinition, type ReportFinalizeBlock, type ReportParams, type ReportRenderContext, type ReportRun, type ReportStage } from './types';
 
 /** Einstellungen, die das Papier braucht, als Beschriftung `setting.<name>` (Darstellung, nicht im Hash). */
 const PAPER_SETTINGS = { statuteReference: 'finance.reports.statuteReference', cashReportSignature: 'finance.reports.cashReportSignature' } as const;
@@ -23,7 +23,8 @@ const PAPER_SETTINGS = { statuteReference: 'finance.reports.statuteReference', c
 export function renderContextInternal(deps: Deps): ReportRenderContext {
   const db = deps.db;
   const leading = deps.locales()[0] ?? 'de';
-  const settings = Object.entries(PAPER_SETTINGS).map(([name, key]) => [`setting.${name}`, String(readSetting<string | boolean>(deps, key))] as const);
+  // F-B3: die Zone des Vereins für Tage aus Zeitstempeln auf dem Papier — Darstellung, die Zeitstempel selbst stehen im Hash.
+  const settings = [...Object.entries(PAPER_SETTINGS).map(([name, key]) => [`setting.${name}`, String(readSetting<string | boolean>(deps, key))] as const), ['setting.timeZone', timeZoneOf(deps)] as const];
   return {
     categoryNames: Object.fromEntries(db.select({ id: financeCategories.id, name: financeCategories.name }).from(financeCategories).all().map((c) => [c.id, c.name])),
     accountNames: Object.fromEntries(db.select({ id: financeAccounts.id, name: financeAccounts.name }).from(financeAccounts).all().map((a) => [a.id, a.name])),
@@ -50,11 +51,16 @@ function subtitleOf(years: { designation: string }[], params: ReportParams, lead
 
 /**
  * Der Hinweis zur Stufe auf dem Papier; festgeschrieben nur, wenn die Freigabe kein Prüfbericht ist — oder ein Hinweis
- * des Jahres gilt (`FINAL_STAGE_NOTES`, Übernahme ins Folgejahr), der vor `finalizedAt` entstand.
+ * des Jahres gilt (`FINAL_STAGE_NOTES`, Übernahme ins Folgejahr), der vor `finalizedAt` entstand. Berichte für die
+ * Öffentlichkeit (`public`) tragen festgeschrieben keinen Vermerk.
  */
 function stageTextOf(db: DbOrTx, def: ReportDefinition, stage: ReportStage, released: ReleaseBasis | null, years: readonly { id: string }[], finalizedAt: string | null): string {
   if (stage === 'preliminary') return STAGE_TEXT.preliminary;
   if (stage === 'review') return def.group === 'assembly' ? STAGE_TEXT.reviewAssembly : STAGE_TEXT.review;
+  // Die Jahresrechnung (`public`) ist die Fassung für Mitglieder und Öffentlichkeit: kein Prüfvermerk im Kopf — weder die
+  // Übernahme ins Folgejahr noch „ohne schriftlichen Prüfbericht“; F9 nennt die Prüfung mit festem Text je Begründung
+  // (Bildabnahme 0.4.5 F-1, Abnahme B1 Nachzug 2). Gilt auch für ihre abgezeichnete und Webfassung (derselbe Weg).
+  if (def.group === 'public') return '';
   const notes = finalizedAt === null ? [] : years.flatMap((y) => FINAL_STAGE_NOTES.map((note) => note(db, y.id))).filter((n): n is { text: string; since: string } => n !== null && n.since <= finalizedAt).map((n) => n.text);
   if (notes.length > 0) return [...new Set(notes)].join(' · ');
   return GROUPS_NEEDING_RELEASE.includes(def.group) && released !== null && released !== 'auditReport' ? STAGE_TEXT.finalWithoutAuditReport : '';
@@ -70,9 +76,14 @@ function footerNoteOf(deps: Deps, shortHash: string): string {
   return `Erzeugt ${paperDate(todayIn(deps))}, ${formatTime(isoNow(deps.clock), timeZoneOf(deps))} · ${shortHash}`;
 }
 
-function documentInputInternal(deps: Deps, def: ReportDefinition, run: ReportRun, stage: ReportStage, finalizedAt: string | null = stage === 'final' ? finalizedAtOf(deps.db, def, run) : null): ReportTemplateInput {
+/**
+ * Was das Papier braucht: Titel, Untertitel, Körper, Stufe. Async, weil ein Bericht außerhalb des Hashs vorbereiten
+ * kann (`prepareRender`, Jahresrechnung: Namensnennung zum Tag `opts.at`, Erläuterung als Typst, Anhang von J2).
+ */
+export async function documentInputInternal(deps: Deps, def: ReportDefinition, run: ReportRun, stage: ReportStage, finalizedAt: string | null = stage === 'final' ? finalizedAtOf(deps.db, def, run) : null, opts: RenderOptions = {}): Promise<ReportTemplateInput> {
   const years = reportYearsInternal(deps.db, def, run.params);
-  const ctx = renderContextInternal(deps);
+  const extra = def.prepareRender ? await def.prepareRender(deps, run.data, opts) : undefined;
+  const ctx = { ...renderContextInternal(deps), ...(extra ? { extra } : {}) };
   return {
     title: def.paperTitle,
     subtitle: subtitleOf(years, run.params, def.paperSubtitle?.(ctx), def.paperPeriod?.(run.data)),
@@ -100,7 +111,7 @@ export async function previewFinanceReport(deps: Deps, ctx: CallContext, input: 
   if (!resolved.ok) return resolved;
   const { def, params } = resolved.value;
   const run = runReportInternal(deps, deps.db, def, params);
-  const built = buildReportDocument(documentInputInternal(deps, def, run, run.stage));
+  const built = buildReportDocument(await documentInputInternal(deps, def, run, run.stage));
   const templateKey = def.personal ? REPORT_PERSONAL_TEMPLATE_KEY : REPORT_TEMPLATE_KEY;
   const baseId = readSetting<Record<string, string>>(deps, 'documents.bases')[templateKey] ?? built.base;
   if (!deps.documents.base(baseId)) return financeConflict('reportBaseUnavailable', { base: baseId });
@@ -110,6 +121,16 @@ export async function previewFinanceReport(deps: Deps, ctx: CallContext, input: 
 }
 
 // ── Festschreiben ───────────────────────────────────────────────────────────
+
+/** Neben Bericht und Parametern: die Bestätigung, wenn der Bericht eine verlangt (`confirmToFinalize`). Sonstiges braucht Text. */
+const finalizeExtraSchema = z.object({
+  confirmation: z
+    .object({ reason: z.enum(REPORT_CONFIRMATION_REASONS), note: z.string().trim().max(500).optional() })
+    .superRefine((v, c) => {
+      if (v.reason === 'other' && !v.note) c.addIssue({ code: 'custom', path: ['note'], message: 'required' });
+    })
+    .optional(),
+});
 
 /** Die Sperre als Ablehnung (Quelle: `finalizeBlockInternal`, dieselbe Prüfung wie am Lauf). */
 function finalizeBlockerInternal(db: DbOrTx, def: ReportDefinition, params: ReportParams, hash: string, data: unknown, today: string) {
@@ -134,6 +155,13 @@ export async function finalizeFinanceReport(deps: Deps, ctx: CallContext, input:
   const resolved = resolveReportInternal(deps, ctx, input);
   if (!resolved.ok) return resolved;
   const { def, params } = resolved.value;
+  // Die Bestätigung zählt nur bei Berichten, die eine verlangen können; sonst wird sie übergangen.
+  let confirmation_: z.infer<typeof finalizeExtraSchema>['confirmation'];
+  if (def.confirmToFinalize) {
+    const extraInput = validate(deps, finalizeExtraSchema, input);
+    if (!extraInput.ok) return extraInput;
+    confirmation_ = extraInput.value.confirmation;
+  }
   const run = runReportInternal(deps, deps.db, def, params);
   const blocked = finalizeBlockerInternal(deps.db, def, params, run.hash, run.data, todayIn(deps));
   if (blocked) return blocked;
@@ -142,7 +170,12 @@ export async function finalizeFinanceReport(deps: Deps, ctx: CallContext, input:
   const latest = years.at(-1)!;
   const reportId = newId();
   const paramsText = canonicalJson(params);
-  const documentInput = documentInputInternal(deps, def, run, 'final', isoNow(deps.clock));
+  // Planreview J1: eine verlangte Bestätigung (Vergütung ohne Grundlage) mit Begründung — keine Sperre.
+  const need = def.confirmToFinalize?.(run.data) ?? null;
+  const confirmation = need ? (confirmation_ ?? null) : null;
+  if (need && !confirmation) return (financeConflict as (code: string, params: Record<string, string | number>) => Failure)(need.code, need.params);
+  const finalizeConfirmation = need && confirmation ? canonicalJson({ code: need.code, reason: confirmation.reason, note: confirmation.note ?? null }) : null;
+  const documentInput = await documentInputInternal(deps, def, run, 'final', isoNow(deps.clock));
 
   const issued = await issueGeneratedDocument(deps, ctx, {
     templateKey: def.personal ? REPORT_PERSONAL_TEMPLATE_KEY : REPORT_TEMPLATE_KEY,
@@ -160,9 +193,9 @@ export async function finalizeFinanceReport(deps: Deps, ctx: CallContext, input:
       if (again) return abortIssue(again);
       const now = isoNow(deps.clock);
       tx.insert(financeReports)
-        .values({ id: reportId, reportKey: def.key, params: paramsText, fiscalYearId: latest.id, dataHash: run.hash, documentId: doc.id, documentNumber: doc.number, releaseBasis: GROUPS_NEEDING_RELEASE.includes(def.group) ? (releaseOfYearInternal(tx, latest.id)?.basis ?? null) : null, finalizedAt: now, finalizedByUserId: ctx.userId ?? 'system', voidedAt: null, voidReason: null, replacedByReportId: null })
+        .values({ id: reportId, reportKey: def.key, params: paramsText, fiscalYearId: latest.id, dataHash: run.hash, documentId: doc.id, documentNumber: doc.number, releaseBasis: GROUPS_NEEDING_RELEASE.includes(def.group) ? (releaseOfYearInternal(tx, latest.id)?.basis ?? null) : null, finalizedAt: now, finalizedByUserId: ctx.userId ?? 'system', voidedAt: null, voidReason: null, replacedByReportId: null, finalizeConfirmation })
         .run();
-      financeAudit(tx, deps, ctx, { action: 'finance.report.finalize', entity: 'financeReport', id: reportId, after: { reportKey: def.key, fiscalYearId: latest.id, dataHash: run.hash, documentNumber: doc.number }, params: { reportKey: def.key, documentNumber: doc.number } });
+      financeAudit(tx, deps, ctx, { action: 'finance.report.finalize', entity: 'financeReport', id: reportId, after: { reportKey: def.key, fiscalYearId: latest.id, dataHash: run.hash, documentNumber: doc.number }, params: { reportKey: def.key, documentNumber: doc.number, confirmation: confirmation?.reason ?? null } });
       // Die ältere Fassung derselben Parameter (anderer Datenstand) wird ersetzt: storniert mit Verweis, lesbar.
       const older = tx.select().from(financeReports).where(and(eq(financeReports.reportKey, def.key), eq(financeReports.params, paramsText), isNull(financeReports.voidedAt))).all().filter((r) => r.id !== reportId);
       for (const old of older) voidReportInternal(tx, deps, ctx, old.id, `Ersetzt durch ${doc.number}`, reportId);
@@ -191,6 +224,12 @@ export function voidReportInternal(tx: DbOrTx, deps: Deps, ctx: CallContext, rep
   const voided = voidDocumentInternal(tx, deps, ctx, { id: row.documentId, reason });
   // Ein schon storniertes Dokument (von Hand in der Akte) hält das Storno der Fassung nicht auf.
   if (!voided.ok && voided.error.type !== 'conflict') throw new Error(`Bericht ${row.documentNumber}: Dokument nicht stornierbar`);
+  // J2 (Abnahme): Was an der Fassung hängt — abgezeichnete Fassung, unterschriebener Scan, Webfassungen (Bezug
+  // `signedCopyOf`) —, bleibt nicht als ausgestellt stehen: dasselbe Storno mit demselben Grund.
+  for (const copy of tx.select({ id: documentRelations.documentId }).from(documentRelations).where(and(eq(documentRelations.relatedDocumentId, row.documentId), eq(documentRelations.kind, 'signedCopyOf'))).all()) {
+    const done = voidDocumentInternal(tx, deps, ctx, { id: copy.id, reason });
+    if (!done.ok && done.error.type !== 'conflict') throw new Error(`Bericht ${row.documentNumber}: Abschrift nicht stornierbar`);
+  }
   financeAudit(tx, deps, ctx, { action: 'finance.report.void', entity: 'financeReport', id: reportId, before: { voidedAt: null }, after: { voidedAt: now }, params: { reportKey: row.reportKey, documentNumber: row.documentNumber } });
 }
 
@@ -250,7 +289,7 @@ export async function releaseReportsForFinalizing(deps: Deps, ctx: CallContext, 
   });
 }
 
-const reportDocumentSchema = z.object({ reportId: z.string().min(1) });
+const reportDocumentSchema = z.object({ reportId: z.string().min(1), documentId: z.string().min(1).optional() });
 
 /**
  * Die Datei einer festgeschriebenen Fassung, auch zurückgenommen — sie bleibt Beweismittel (Spec § A). Über den
@@ -266,7 +305,10 @@ export async function readFinanceReportDocument(deps: Deps, ctx: CallContext, in
   if (!row) return notFound('financeReport', parsed.value.reportId);
   const denied = requireFinanceRead(ctx, reportDefinition(row.reportKey)?.personal ? 'read' : 'overview');
   if (denied) return denied;
-  const file = await readLinkedDocument(deps, ctx, { documentId: row.documentId, entityType: 'financeReport', entityId: row.id });
+  // Mit `documentId` eine weitere Fassung desselben Berichts (abgezeichnet, Webfassung) — nie ein anderes Dokument.
+  const documentId = parsed.value.documentId ?? row.documentId;
+  if (documentId !== row.documentId && !reportCopiesInternal(deps.db, row.id).some((c) => c.documentId === documentId)) return notFound('document', documentId);
+  const file = await readLinkedDocument(deps, ctx, { documentId, entityType: 'financeReport', entityId: row.id });
   if (!file.ok) return file;
   return ok({ bytes: file.value.bytes, filename: file.value.filename });
 }

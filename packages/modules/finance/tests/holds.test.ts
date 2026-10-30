@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { newId, holdsFor, schema, unwrap, writeSettingInternal } from '@kompass/core';
 import { ctxWith, systemContext } from '@kompass/core/testing';
-import { deleteContact } from '@kompass/module-contacts';
+import { createContact, deleteContact } from '@kompass/module-contacts';
 import { deleteDocument, documentTypes, documents } from '@kompass/module-dms';
 import { createProject, deleteProject } from '@kompass/module-projects';
 import { eq } from 'drizzle-orm';
@@ -22,7 +22,7 @@ import { createPurpose } from '../src/ledger/purposes';
 import { revokeVoucher, uploadVoucher } from '../src/ledger/vouchers';
 import { FINANCE_PERMISSIONS } from '../src/manifest';
 import {
-  financeAllocationCorrections, financeAllocationLines, financeCashCounts, financeConfirmations, financeContactBankAccounts, financeContactWaiverTerms, financeEntryDocuments, financeExpenseClaims,
+  financeAllocationCorrections, financeAllocationLines, financeAuditAuditors, financeCashCounts, financeConfirmations, financeContactBankAccounts, financeContactWaiverTerms, financeEntryDocuments, financeExpenseClaims,
   financeExpensePositions, financeInKindDetails, financeNotices, financePartnerEvidence, financePartnerPaymentPositions, financePartnerPayments, financePartnerProfiles, financeProjectSettings,
   financePurposeTransfers, financeReserveMovements, financeReserves,
 } from '../src/schema';
@@ -165,6 +165,18 @@ describe('what finance holds, and until when', () => {
     expect(result.ok).toBe(false);
     // Die haltenden Einträge stehen als Werte, der Satz kommt aus der Sprachdatei (Backlog 55).
     if (!result.ok) expect((result.error as { params?: { holders?: string } }).params?.holders).toContain(`Buchung ${entry.number}`);
+  });
+
+  it('I-D: an auditor without an account holds the contact as long as the year is kept — deleting it is refused', async () => {
+    const f = await ledgerFixture({ years: ['2025'] });
+    const auditor = unwrap(await createContact(f.deps, ctxWith(['contacts.manage'], f.userId), { kind: 'person', firstName: 'Paula', lastName: 'Prüferin' }));
+    const now = '2026-02-01T10:00:00.000Z';
+    f.deps.db.insert(financeAuditAuditors).values({ id: newId(), fiscalYearId: f.years['2025']!.id, contactId: auditor.id, mode: 'paper', createdAt: now, updatedAt: now }).run();
+    f.closeYear(f.years['2025']!.id);
+    const holds = financeRetentionHolds(f.deps, 'contact', auditor.id);
+    expect(holds).toEqual([{ label: { key: 'finance.records.auditor', params: { designation: '2025' } }, until: '2035-12-31', entity: 'financeAuditAuditor', id: expect.any(String) }]);
+    const result = await deleteContact(f.deps, ctxWith(['contacts.manage'], f.userId), { id: auditor.id });
+    expect(result.ok).toBe(false);
   });
 
   it('answers nothing for entity types it does not know, and never throws', async () => {

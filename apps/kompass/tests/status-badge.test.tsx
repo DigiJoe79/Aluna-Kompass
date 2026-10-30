@@ -15,3 +15,12 @@ describe('StatusBadge testId', () => {
     expect(renderToStaticMarkup(<StatusBadge tone="neutral" testId="y">x</StatusBadge>)).toMatch(/^<span[^>]*data-testid="y"/);
   });
 });
+
+describe('Gremien in STATUS_TONES (N6)', () => {
+  it('festgeschrieben is the normal state of a meeting in lists; a Zwischenverfügung is an error', async () => {
+    const { isNormalInList, statusTone } = await import('@/components/status-badge');
+    expect(isNormalInList('meeting', 'signed')).toBe(true);
+    expect(isNormalInList('meeting', 'recorded')).toBe(false);
+    expect(statusTone('registration', 'interimOrder')).toBe('error');
+  });
+});

@@ -1,6 +1,5 @@
 'use server';
 
-import { setSetting } from '@kompass/core';
 import { deleteMemberType, saveFeeSchedule, saveMembersSettings, saveMemberType, setMemberTypeActive, setNextMemberNumber } from '@kompass/module-members';
 import { getTranslations } from 'next-intl/server';
 import { revalidatePath } from 'next/cache';
@@ -54,23 +53,12 @@ export async function saveFeeScheduleAction(input: unknown): Promise<ActionState
   });
 }
 
-/**
- * Speichert die Einstellungen eines Panels. Plan U4 Task 1: Mit `agent` (nur wenn geändert) geht der Agentenschalter
- * mit — erst, wenn die Felder gespeichert sind, und über `setSetting`, das `settings.manage` und den Kanal prüft (die
- * Einstellung ist `uiOnly`) und das Protokoll schreibt.
- */
-export async function saveMembersSettingsAction(input: unknown, message: 'numbers' | 'dunning', agent?: boolean): Promise<ActionState> {
+/** Speichert die Einstellungen eines Panels. */
+export async function saveMembersSettingsAction(input: unknown, message: 'numbers' | 'dunning'): Promise<ActionState> {
   return guardAction('(shell)/admin/members/actions.ts#saveMembersSettingsAction', async () => {
     const t = await getTranslations();
     const { deps, ctx } = await requireSession();
     const result = await saveMembersSettings(deps, ctx, input);
-    if (result.ok && agent !== undefined) {
-      const switched = await setSetting(deps, ctx, { key: 'members.mcpHumanOnlyAllowed', value: agent });
-      if (!switched.ok) {
-        revalidate();
-        return toActionState(switched, t);
-      }
-    }
     revalidate();
     return toActionState(result, t, t(message === 'numbers' ? 'members.admin.numbers.saved' : 'members.admin.dunning.saved'));
   });

@@ -166,6 +166,20 @@ describe('Bericht taxReturnGem — Werte für die Anlage Gem (Rechenschaft D2 Ta
     expect(y('2025') && cat('inheritances')).toBeTruthy();
   });
 
+  it('lines 50 to 59 ignore operation reserves (M1 Task 2, Prüfung L-7)', async () => {
+    const { f, period, data } = await setup();
+    const minutes = insertDocument(f, { subject: 'Protokoll', typeKey: 'minutes' });
+    const withDms = ctxWith([...FINANCE_PERMISSIONS, 'dms.view'], f.userId);
+    const project = unwrap(await saveReserve(f.deps, withDms, { kind: 'projectFunds', name: 'Neues Gehege', purposeText: 'Bau eines Geheges', resolutionDocumentId: minutes }));
+    unwrap(await recordReserveMovement(f.deps, withDms, { reserveId: project.id, kind: 'allocate', movementDate: '2025-06-01', amountCents: 200_000, resolutionDocumentId: minutes }));
+    const p = await period('2025', '2026');
+    const reserveLines = (d: TaxReturnGemReport) => d.lines.filter((l) => Number(l.line) >= 50 && Number(l.line) <= 59).map((l) => ({ line: l.line, value: l.value }));
+    const withoutOperation = reserveLines(await data(p.id));
+    const business = unwrap(await saveReserve(f.deps, withDms, { kind: 'business', name: 'Rücklage Vereinsfest', purposeText: 'Ersatz der Kühltheke', resolutionDocumentId: minutes }));
+    unwrap(await recordReserveMovement(f.deps, withDms, { reserveId: business.id, kind: 'allocate', movementDate: '2025-07-15', amountCents: 25_000, resolutionDocumentId: minutes }));
+    expect(reserveLines(await data(p.id))).toEqual(withoutOperation);
+  });
+
   it('counts missing answers and blocks finalizing', async () => {
     const { f, y, period, run, line } = await setup();
     const p = await period('2023', '2025');

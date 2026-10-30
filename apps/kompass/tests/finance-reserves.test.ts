@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import messages from '../messages/de.json';
+import { RESERVE_KINDS as MODULE_KINDS } from '@kompass/module-finance';
 import { reserveBalanceAfter, RESERVE_KINDS, reserveSaveBlocker } from '@/lib/finance/reserves';
 
 describe('reserve dialog arithmetic (F8b Task 6b, Design 4d)', () => {
@@ -13,8 +14,9 @@ describe('reserve dialog arithmetic (F8b Task 6b, Design 4d)', () => {
     expect(reserveBalanceAfter(10000, 'allocate', null)).toBe(10000);
   });
 
-  it('lists the four kinds in the order of the design', () => {
-    expect(RESERVE_KINDS).toEqual(['projectFunds', 'replacement', 'free', 'participation']);
+  it('offers the kinds of the module in its order — the two operation reserves last (Plan U2 Task 6)', () => {
+    expect(RESERVE_KINDS).toEqual(MODULE_KINDS);
+    expect(RESERVE_KINDS.slice(-2)).toEqual(['business', 'assetManagement']);
   });
 });
 

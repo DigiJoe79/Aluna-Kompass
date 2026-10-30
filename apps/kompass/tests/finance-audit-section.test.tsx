@@ -139,7 +139,8 @@ describe('PackageRunCard (Plan D1d Task 2)', () => {
     try {
       wrap(<PackageRunCard yearId="y25" initial={idle} />);
       fireEvent.click(screen.getByTestId('package-run-start'));
-      await waitFor(() => expect(refresh).toHaveBeenCalled());
+      // Die erste Abfrage kommt nach einer Sekunde (`pollTextStatus`, App-B4).
+      await waitFor(() => expect(refresh).toHaveBeenCalled(), { timeout: 3000 });
     } finally {
       vi.unstubAllGlobals();
     }
@@ -153,5 +154,54 @@ describe('PackageRunCard (Plan D1d Task 2)', () => {
     cleanup();
     wrap(<PackageRunCard yearId="y25" initial={{ ...done, state: 'running', cancellable: true, files: [] }} />);
     expect(screen.queryByRole('button', { name: m('finance.audit.package.run.cancel') })).toBeNull();
+  });
+});
+
+describe('Abschnitt 9 „Beschlüsse“ (G-30, Designer 2026-10-29)', () => {
+  const resolution = (id: string, labelParams: Record<string, string | number | boolean | null>, over: Partial<AuditSectionRow> = {}): AuditSectionRow => ({
+    key: `resolution:${id}`, kind: 'resolution', resolutionId: id, date: '2025-03-14', amountCents: typeof labelParams.amountCents === 'number' ? labelParams.amountCents : null,
+    labelParams: { number: `B-2025-00${id}`, outcome: 'adopted', organ: 'Mitgliederversammlung', viaCircular: false, minutesDocumentId: null, minutesNumber: null, ...labelParams }, remarksOpen: 0, ...over,
+  });
+  const writer = { fiscalYearId: 'y25', me: 'Mira Klein', paperAuditors: [], treasurerName: null };
+  const props = { ...tableProps, section: 'resolutions' as const };
+  const cells = (row: HTMLElement) => Object.fromEntries(within(row).getAllByRole('cell').map((c, i) => [i, c]));
+
+  it('one row per resolution: the details in fixed order with missing ones left out, rejected as a mark, the minutes as a link into the viewer', () => {
+    wrap(
+      <SectionTable
+        {...props}
+        rows={[
+          resolution('1', { resolutionKind: 'reserve', amountCents: 500000, reserveType: 'nr1', reserveAction: 'create', minutesDocumentId: 'D1', minutesNumber: 'PRT-2025-012' }),
+          resolution('2', { resolutionKind: 'remuneration', amountCents: 84000, remunerationMode: 'flat', validFrom: '2025-01-01', outcome: 'rejected', viaCircular: true }),
+        ]}
+        resolution={{ minutesHrefs: { '1': '/finance/audit/year/y25/resolutions/1/minutes' }, writer: null }}
+      />,
+    );
+    const [first, second] = screen.getAllByRole('row').slice(1);
+    // Angaben: Betrag zuerst, „Bildung“ fällt weg; ohne Organe kein leerer Platz in der Kette.
+    expect(within(first!).getByText((t) => t.startsWith('5.000,00') && t.split(' · ').length === 2)).toBeTruthy();
+    expect(within(second!).getByText((t) => t.includes('840,00') && t.split(' · ').length === 2)).toBeTruthy();
+    // Kein Link auf den Beschluss; das Protokoll öffnet in einem neuen Fenster.
+    const minutes = within(first!).getByRole('link');
+    expect(minutes.getAttribute('href')).toBe('/finance/audit/year/y25/resolutions/1/minutes');
+    expect(minutes.getAttribute('target')).toBe('_blank');
+    expect(within(second!).queryByRole('link')).toBeNull();
+    // „angenommen“ ohne Marke, „abgelehnt“ als Marke in der Statusspalte.
+    const status = (row: HTMLElement) => Object.values(cells(row)).find((c) => c.getAttribute('data-col') === 'status')!;
+    expect(status(first!).textContent).toBe('');
+    expect(status(second!).textContent).toBe(m('finance.audit.section.resolution.outcome.rejected'));
+  });
+
+  it('the auditor writes a remark at the row; once one is there, its state stands instead', () => {
+    wrap(<SectionTable {...props} rows={[resolution('1', { resolutionKind: 'accounts', fiscalYear: '2025' }), resolution('2', { resolutionKind: 'accounts', fiscalYear: '2025' }, { remarksOpen: 1 })]} resolution={{ minutesHrefs: {}, writer }} />);
+    const [first, second] = screen.getAllByRole('row').slice(1);
+    expect(within(first!).getByTestId('remark-write')).toBeTruthy();
+    expect(within(second!).queryByTestId('remark-write')).toBeNull();
+    expect(within(second!).getByText(/Vermerk offen/)).toBeTruthy();
+  });
+
+  it('summary: count and rejected ones for the progress column', () => {
+    expect(summarizeSection('resolutions', [resolution('1', { resolutionKind: 'accounts' }), resolution('2', { resolutionKind: 'discharge', outcome: 'rejected' })], { samples: 0 }).counts).toEqual({ total: 2, rejected: 1 });
+    expect(summarizeSection('resolutions', [], { samples: 0 }).counts).toEqual({ total: 0, rejected: 0 });
   });
 });

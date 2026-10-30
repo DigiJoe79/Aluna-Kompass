@@ -1,11 +1,11 @@
-import { unwrap } from '@kompass/core';
-import { ctxWith } from '@kompass/core/testing';
+import { readSetting, unwrap } from '@kompass/core';
+import { auditEntry, ctxWith } from '@kompass/core/testing';
 import { addContactRole } from '@kompass/module-contacts';
 import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 import { saveDraft } from '../src/ledger/entries';
 import { bookEntry, finalizeEntry } from '../src/ledger/finalize';
-import { setBoardRemuneration } from '../src/ledger/setup';
+import { applyBoardRemunerationInternal, setBoardRemuneration } from '../src/ledger/setup';
 import { financeCategories } from '../src/schema';
 import { expenseFixture, type ExpenseFixture } from './expense-fixture';
 
@@ -54,3 +54,33 @@ describe('allowance to a board member without basis (AH)', () => {
     expect(err(await bookEntry(f.deps, f.ctx, f.allowance({ date: '2026-01-15' })))).toMatchObject({ type: 'conflict', code: 'boardAllowanceNeedsReason' });
   });
 });
+
+describe('board remuneration from a resolution (G7)', () => {
+  it('applyBoardRemunerationInternal writes the six settings and audits the resolution, not the text', async () => {
+    const f = await boardFixture();
+    f.deps.db.transaction((tx) => applyBoardRemunerationInternal(tx, f.deps, f.ctx, { allowed: true, basisText: 'Satzung § 12', validFrom: '2026-02-01', documentId: null, decidedOn: '2026-01-20', resolutionId: 'R1' }));
+    expect(['Allowed', 'BasisText', 'DocumentId', 'ValidFrom', 'DecidedOn', 'ResolutionId'].map((k) => readSetting(f.deps, `finance.boardRemuneration${k}`))).toEqual([true, 'Satzung § 12', null, '2026-02-01', '2026-01-20', 'R1']);
+    const entry = auditEntry(f.deps, 'finance.setup.boardRemuneration');
+    expect(JSON.parse(entry.params!)).toEqual({ resolutionId: 'R1' });
+    expect(entry.after).not.toContain('Satzung');
+    // Ohne Modul, das den Beschluss kennt (Gremien aus), bleibt die Vergütung von Hand pflegbar.
+    expect((await setBoardRemuneration(f.deps, f.ctx, { allowed: false, basisText: '' })).ok).toBe(true);
+    expect(readSetting(f.deps, 'finance.boardRemunerationResolutionId')).toBe('');
+  });
+
+  it('W-3: a later resolution keeps the earliest day of the continuous allowance; a payment in between keeps its basis', async () => {
+    const f = await boardFixture();
+    f.deps.db.transaction((tx) => applyBoardRemunerationInternal(tx, f.deps, f.ctx, { allowed: true, basisText: 'Satzung § 12', validFrom: '2026-02-01', documentId: null, decidedOn: '2026-01-20', resolutionId: 'R1' }));
+    f.deps.db.transaction((tx) => applyBoardRemunerationInternal(tx, f.deps, f.ctx, { allowed: true, basisText: 'Satzung § 12', validFrom: '2027-01-01', documentId: null, decidedOn: '2026-10-29', resolutionId: 'R2' }));
+    expect([readSetting(f.deps, 'finance.boardRemunerationValidFrom'), readSetting(f.deps, 'finance.boardRemunerationResolutionId')]).toEqual(['2026-02-01', 'R2']);
+    expect(err(await bookEntry(f.deps, f.ctx, f.allowance({ date: '2026-06-01' })))).toBe('ok');
+  });
+
+  it('W-3: without an earlier allowance the resolution sets its own day', async () => {
+    const f = await boardFixture();
+    unwrap(await setBoardRemuneration(f.deps, f.ctx, { allowed: false, basisText: '' }));
+    f.deps.db.transaction((tx) => applyBoardRemunerationInternal(tx, f.deps, f.ctx, { allowed: true, basisText: 'Satzung § 12', validFrom: '2027-01-01', documentId: null, decidedOn: '2026-10-29', resolutionId: 'R2' }));
+    expect(readSetting(f.deps, 'finance.boardRemunerationValidFrom')).toBe('2027-01-01');
+  });
+});
+

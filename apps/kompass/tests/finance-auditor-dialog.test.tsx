@@ -60,6 +60,42 @@ describe('AuditorDialog (Board 12b)', () => {
   });
 });
 
+describe('Vorschläge aus Gremien (G7 Task 5, Freigabe Joe 2026-10-29)', () => {
+  const candidate = { contactId: 'c9', name: 'Ilse Wahl', electedOn: '2025-03-20', minutesDocument: { id: 'd9', number: 'P-7', subject: 'Protokoll MV', phase: 'issued' as const }, source: { label: 'Beschluss B-2025-004', href: '/governance/resolutions/r1' } };
+
+  it('shows no proposals without candidates and never when editing', () => {
+    wrap(<AuditorDialog open onOpenChange={() => undefined} year={year} auditor={null} canCreateContact candidates={[]} />);
+    expect(screen.queryByRole('heading', { name: m('finance.audit.auditorDialog.candidates') })).toBeNull();
+    cleanup();
+    actions.previewAuditorAction.mockResolvedValue(preview());
+    wrap(<AuditorDialog open onOpenChange={() => undefined} year={year} auditor={existing} canCreateContact={false} candidates={[candidate]} />);
+    expect(screen.queryByRole('radio', { name: /Ilse Wahl/ })).toBeNull();
+    expect(screen.queryByRole('heading', { name: m('finance.audit.auditorDialog.candidates') })).toBeNull();
+  });
+
+  it('picking a proposal fills contact, date and minutes, each marked with its origin until changed', async () => {
+    actions.previewAuditorAction.mockResolvedValue(preview());
+    actions.saveAuditorAction.mockResolvedValue({ status: 'error', message: 'x', fieldErrors: {} });
+    wrap(<AuditorDialog open onOpenChange={() => undefined} year={year} auditor={null} canCreateContact candidates={[candidate]} />);
+    expect(screen.getByRole('heading', { name: m('finance.audit.auditorDialog.candidates') })).toBeTruthy();
+    fireEvent.click(screen.getByRole('radio', { name: /Ilse Wahl/ }));
+    const [contact, minutes] = screen.getAllByRole('combobox') as [HTMLInputElement, HTMLInputElement];
+    const elected = document.getElementById('auditor-elected') as HTMLInputElement;
+    await waitFor(() => expect(contact.value).toContain('Ilse Wahl'));
+    expect(elected.value).toBe('2025-03-20');
+    expect(minutes.value).toContain('P-7');
+    // Je Feld eine Herkunftszeile, die den Beschluss nennt; Modus und Vertraulichkeit wählt man selbst.
+    const origin = m('finance.audit.auditorDialog.candidateOrigin').replace('{source}', 'Beschluss B-2025-004');
+    expect(screen.getAllByText(origin)).toHaveLength(3);
+    expect(screen.getByRole('checkbox', { name: m('finance.audit.auditorDialog.confidential') }).getAttribute('aria-checked')).toBe('false');
+    // Das Datum ändern nimmt dessen Herkunft weg, die anderen bleiben.
+    fireEvent.change(elected, { target: { value: '2025-03-21' } });
+    expect(screen.getAllByText(origin)).toHaveLength(2);
+    fireEvent.click(screen.getByRole('button', { name: m('finance.audit.auditorDialog.saveNew') }));
+    await waitFor(() => expect(actions.saveAuditorAction).toHaveBeenCalledWith(expect.objectContaining({ contactId: 'c9', electedOn: '2025-03-21', minutesDocumentId: 'd9', mode: 'kompass', confidential: false })));
+  });
+});
+
 describe('Erklärung hochladen, dann speichern (Schlussdurchsicht D1b, I3)', () => {
   it('saves against the version the upload left, not the one the dialog opened with', async () => {
     actions.previewAuditorAction.mockResolvedValue(preview());

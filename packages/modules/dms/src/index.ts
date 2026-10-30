@@ -14,6 +14,7 @@ export * from './linked';
 export { fillMailPlaceholders, mailBodyFor, mailBodySnippetFor, type MailBodyDocument, type MailBodyRecipient } from './mail/body';
 export * from './mail/outbox';
 export { mailSettingsSchema, saveMailSettings } from './mail/settings';
+export { ocrLanguagesSchema, setOcrLanguages } from './ocr-languages';
 export { MAIL_MAX_ATTEMPTS, processOutbox, purgeOutboxAddresses, sanitizeServerText, startMailSender, type MailSender } from './mail/sender';
 export * from './manifest';
 export * from './mcp-tools';
@@ -21,7 +22,7 @@ export { addNote, deleteNote, deleteNotesFor, noteAddSchema, noteIdSchema } from
 export * from './owned';
 export * from './provision';
 export * from './record-references';
-export { deleteRelationsFor, relateDocuments, relateSchema, unrelateDocuments, unrelateSchema } from './relations';
+export { deleteRelationsFor, insertRelation, relateDocuments, relateSchema, unrelateDocuments, unrelateSchema } from './relations';
 export type { DocumentRelationView } from './relations';
 export * from './retention';
 export * from './schema';

@@ -87,6 +87,17 @@ describe('Bericht purposeFunds (Rechenschaft B1 Task 2)', () => {
     expect(computePurposeFundsReport(f.deps.db, { fiscalYearId: y2025 })).toEqual(before);
   });
 
+  it('F-B3: a purpose created on 01.01. at 00:30 Berlin time belongs to the new year, one at 23:30 on 31.12. to the old', async () => {
+    const { f, y2025 } = await twoPurposes();
+    const newYear = unwrap(await createPurpose(f.deps, f.ctx, { name: 'Neujahr 00:30' }));
+    const newYearsEve = unwrap(await createPurpose(f.deps, f.ctx, { name: 'Silvester 23:30' }));
+    f.deps.db.update(financePurposes).set({ createdAt: '2025-12-31T23:30:00.000Z' }).where(eq(financePurposes.id, newYear.id)).run();
+    f.deps.db.update(financePurposes).set({ createdAt: '2025-12-31T22:30:00.000Z' }).where(eq(financePurposes.id, newYearsEve.id)).run();
+    const ids = computePurposeFundsReport(f.deps.db, { fiscalYearId: y2025 }).purposes.map((r) => r.purposeId);
+    expect(ids).not.toContain(newYear.id);
+    expect(ids).toContain(newYearsEve.id);
+  });
+
   it('names lines for inflow and use per purpose', async () => {
     const { f, a, y2026 } = await twoPurposes();
     const data = computePurposeFundsReport(f.deps.db, { fiscalYearId: y2026 });

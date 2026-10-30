@@ -10,7 +10,7 @@ Festschreiben der Berichte freigegeben.
 
 Unter **Finanzen › Rechenschaft › Kassenprüfung** steht je Geschäftsjahr eine
 Übersicht; das Jahr wählen Sie oben. Der Satz unter dem Titel sagt den Stand:
-die Prüffassung, wie viele der acht Abschnitte durchgesehen sind, offene
+die Prüffassung, wie viele der acht Abschnitte (mit Gremien neun) durchgesehen sind, offene
 Vermerke und ob der Prüfbericht fehlt — oder „Abgeschlossen am …“ bzw.
 „Nachprüfung offen“. Darunter stehen:
 
@@ -18,7 +18,7 @@ Vermerke und ob der Prüfbericht fehlt — oder „Abgeschlossen am …“ bzw.
   Verpflichtung, Hinweise zu Zugang und Unabhängigkeit, „zuletzt da …“ bzw. für
   Papier-Prüfer „Mappe drucken“. Eintragen, Bearbeiten, Zugang beenden und
   Austragen über „Prüfer eintragen …“ und das Menü ⋯ der Zeile.
-- **Prüfpaket**: die acht Abschnitte mit ihrer Frage und dem Fortschritt. Jeder
+- **Prüfpaket**: die acht Abschnitte (mit Gremien neun) mit ihrer Frage und dem Fortschritt. Jeder
   Abschnitt öffnet eine eigene Seite mit Suche, Filtern und den Zeilen bis zur
   Buchung; unten „Abschnitt durchgesehen“ und „Weiter mit …“.
 - **Vermerke**: alle Vermerke des Jahres mit Filter „Zustand“; die Zeile führt
@@ -49,6 +49,14 @@ Unabhängigkeit stehen unter der Person, ohne zu sperren: eine Vorstandsrolle im
 Jahr, und Buchungen, an denen die Person steht oder die sie freigegeben hat —
 diese sollte der andere Prüfer prüfen.
 
+Mit **Gremien** schlägt Kompass beim Eintragen die Kassenprüfer vor, die dort
+für den Prüfzeitraum im Amt sind: Über dem Kontakt steht „Gewählt in Gremien“
+mit Name, Tag der Wahl und Beschluss (über einen Agenten:
+`finance_audit_auditor_candidates`). Ein Klick füllt Kontakt, Wahltag und
+Protokoll; darunter steht grau, aus welchem Beschluss der Wert kommt, bis Sie
+ihn ändern. Eingetragen ist damit noch niemand: Art und Vertraulichkeit wählen
+Sie selbst.
+
 Austragen geht, solange ein Prüfer nichts hinterlassen hat (Vermerke,
 Stichproben, Teile des Berichts). Pflegen dürfen das, wer das Jahr abschließt
 (*Geschäftsjahr abschließen*).
@@ -65,7 +73,7 @@ Prüfer.
 Das **Prüfpaket** erzeugt der Vorstand im Hintergrund (Recht *Geschäftsjahr abschließen*); die
 Prüfer sehen den Stand und laden die Dateien herunter. Es enthält die
 Prüffassungen der Berichte als ein PDF, die **Prüfmappe** für Papier-Prüfer
-(Deckblatt mit Kurz-Hash, Inhalt, die acht Abschnitte, das Journal mit einer
+(Deckblatt mit Kurz-Hash, Inhalt, die Abschnitte, das Journal mit einer
 Spalte „✓ / Anmerkung“ und zwei Bögen für Fragen) und den Aktenexport der
 Belege des Jahres. Nach einem neuen Prüfstand ist das alte Paket veraltet.
 
@@ -107,8 +115,25 @@ Vermerke und Stichproben bleiben. Bei Wiederwahl vergeben Sie die Rolle neu.
 Sie sehen die Finanzen aller Jahre lesend, ändern aber nichts. Das Prüfpaket
 führt in der Reihenfolge der Prüfung durch acht Abschnitte: Journal,
 Kontenabstimmung, Belegprüfung, Importabgleich, Auffälligkeiten, Zweckmittel und
-Rücklagen, Spenden, Zahlungen an Partner. Jeden Abschnitt markieren Sie am
+Rücklagen, Spenden, Zahlungen an Partner. Ist das Modul Gremien eingeschaltet,
+kommt als neunter **Beschlüsse** dazu. Jeden Abschnitt markieren Sie am
 Ende als „durchgesehen“.
+
+**Beschlüsse** zeigt die festgeschriebenen Beschlüsse mit Wirkung auf die Kasse:
+Entlastung, Kassenbericht, Vergütung von Ämtern, Regel für Aufwendungsersatz,
+Rücklage und Beitragsordnung — angenommene und abgelehnte. Ein Beschluss steht
+im Prüfjahr, wenn er in ihm gefasst wurde oder in ihm wirkt: Entlastung,
+Kassenbericht und Rücklage über ihr Geschäftsjahr, Vergütung, Aufwendungsersatz
+und Beitragsordnung ab „gilt ab“ bis zur nächsten Regel derselben Art. Je Zeile
+stehen Nummer, Tag, Art, die Angaben (Betrag, Geschäftsjahr, Person, „gilt ab“ —
+nie der Antragstext), Organ, Ergebnis (eine Marke nur bei „abgelehnt“; sind alle angenommen, fehlt die
+Spalte) und das Protokoll. Das Protokoll öffnen Sie
+über seine Nummer; als Prüferin brauchen Sie dafür kein Leserecht in den Gremien
+und sehen sonst kein Dokument der Gremien. Ein Umlauf hat kein Protokoll. Es gibt
+keine Stichprobe; „Vermerk schreiben …“ in der Spalte „Stand“ schreibt einen
+Vermerk an den Beschluss, die Vermerke stehen unter der Liste.
+
+![Abschnitt 9 der Kassenprüfung aus Sicht der Prüferin: die finanzwirksamen Beschlüsse des Jahres mit Art, Angaben, Organ und Protokoll](../bilder/finanzen/kassenpruefung-beschluesse.png)
 
 **Stichproben** haken Sie im Abschnitt Journal (oder an der Buchung, Zeile
 „Als Stichprobe geprüft“) ab; das Kästchen speichert sofort. Ändert sich eine Buchung danach
@@ -168,9 +193,9 @@ zurücknehmen, den Scan und die Vertraulichkeitserklärung ablegen und „Zugang
 beenden“. Ein Agent bekommt dafür die Antwort, dass der Schritt erst geht, wenn
 der Verein es freigibt — und es geschieht nichts.
 
-Freigeben lässt es sich nur am Bildschirm: Einrichtung → Finanzen →
-Steuerliches → „Darf ein Agent festschreiben und Lastschriften bearbeiten?“
-einschalten (siehe [Finanzen einrichten](einrichten.md)). Der Schalter gilt
+Freigeben lässt es sich nur am Bildschirm: Verwaltung → Agenten → „Darf ein
+Agent festschreiben und Lastschriften bearbeiten?“ einschalten (siehe
+[Agenten](../einstellungen/agenten.md)). Der Schalter gilt
 für alle persönlichen Schritte der Finanzen gleich, nicht nur für die
 Kassenprüfung. Auch mit Schalter gelten dieselben Regeln wie am Bildschirm:
 Den Bericht bearbeiten nur Prüfer des Jahres, nie die Schatzmeisterin, und

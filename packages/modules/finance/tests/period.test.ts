@@ -175,6 +175,20 @@ describe('justification bookkeeping', () => {
     const row = f.deps.db.select().from(financeEntryJustifications).where(eq(financeEntryJustifications.entryId, entry.id)).get();
     expect(row?.note).toBe('Bar bezahlt, kein Beleg erhalten');
   });
+
+  it('F-B4: refuses to change a justification in a closed year — after reopening it may change again', async () => {
+    const f = await ledgerFixture({ years: ['2025'] });
+    const entry = unwrap(await bookEntry(f.deps, f.ctx, { entryDate: '2025-06-01', text: 'Bar-Ausgabe', moneyLines: [{ accountId: f.bank.id, amountCents: -1500 }], allocationLines: [{ categoryId: f.programCosts.id, amountCents: -1500 }] }));
+    unwrap(await justifyUndocumentedEntry(f.deps, f.ctx, { entryId: entry.id, note: 'Bar bezahlt, kein Beleg erhalten' }));
+    f.closeYear(f.years['2025']!.id);
+    const refused = await justifyUndocumentedEntry(f.deps, f.ctx, { entryId: entry.id, note: 'Anderer Text' });
+    expect(err(refused)).toMatchObject({ type: 'conflict', code: 'fiscalYearClosed', params: { year: '2025' } });
+    expect(f.deps.db.select().from(financeEntryJustifications).where(eq(financeEntryJustifications.entryId, entry.id)).get()?.note).toBe('Bar bezahlt, kein Beleg erhalten');
+
+    unwrap(await reopenFiscalYear(f.deps, f.ctx, { id: f.years['2025']!.id, note: 'Begründung präzisieren' }));
+    unwrap(await justifyUndocumentedEntry(f.deps, f.ctx, { entryId: entry.id, note: 'Anderer Text' }));
+    expect(f.deps.db.select().from(financeEntryJustifications).where(eq(financeEntryJustifications.entryId, entry.id)).get()?.note).toBe('Anderer Text');
+  });
 });
 
 /** Ein Jahr ohne eigene Buchungen abschließen: keine Entwürfe, nichts Unbelegtes. */

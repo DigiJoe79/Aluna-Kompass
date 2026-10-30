@@ -165,6 +165,21 @@ test.describe('finance reserves (F8b)', () => {
     await expect(page.getByRole('menuitem', { name: 'Bearbeiten' })).toBeVisible();
   });
 
+  test('Rücklage im wirtschaftlichen Geschäftsbetrieb braucht eine Begründung', async ({ page }) => {
+    await page.goto('/finance/reserves');
+    await page.getByTestId('reserve-create').click();
+    const form = page.getByTestId('reserve-form');
+    await form.getByLabel('Art').selectOption({ label: 'Rücklage im wirtschaftlichen Geschäftsbetrieb' });
+    await form.locator('#reserve-name').fill('Ersatz Kühltheke E2E');
+    await page.getByTestId('reserve-resolution-upload').getByTestId('voucher-file-input').setInputFiles({ name: 'beschluss.pdf', mimeType: 'application/pdf', buffer: PDF.buffer });
+    await expect(page.getByTestId('reserve-form-save')).toBeDisabled();
+    await form.locator('#reserve-reason').fill('Für den Ersatz der Kühltheke im Vereinscafé.');
+    await page.getByTestId('reserve-form-save').click();
+    const row = page.getByTestId('reserve-row').filter({ hasText: 'Ersatz Kühltheke E2E' });
+    await expect(row).toBeVisible();
+    await expect(row).toContainText('Rücklage im wirtschaftlichen Geschäftsbetrieb');
+  });
+
   test('Segment im Vorgang-Dialog folgt den Pfeiltasten', async ({ page }) => {
     await page.goto('/finance/reserves');
     const row = page.getByTestId('reserve-row').filter({ hasText: 'Projektmittel Dach' });

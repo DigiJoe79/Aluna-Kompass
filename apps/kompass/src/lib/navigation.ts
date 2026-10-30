@@ -30,6 +30,8 @@ export interface NavGroup {
   items: NavItem[];
   /** Symbol des Moduls in der Schiene (`moduleIcon` des Manifests); fehlt bei `admin`/`config`. */
   icon?: string;
+  /** Arbeitsflächen ohne Zweitebene (`workspaceRoutes` des Manifests, N1). */
+  workspaceRoutes?: readonly string[];
 }
 
 /**
@@ -39,6 +41,7 @@ export interface NavGroup {
 const CORE_ADMIN: { key: string; href: string; icon: string; permission?: PermissionSpec }[] = [
   { key: 'users', href: '/admin/users', icon: 'users', permission: 'users.manage' },
   { key: 'roles', href: '/admin/roles', icon: 'shield', permission: 'roles.manage' },
+  { key: 'agents', href: '/admin/agents', icon: 'settings', permission: 'settings.manage' },
   { key: 'audit', href: '/admin/audit', icon: 'clock', permission: 'audit.view' },
   { key: 'retention', href: '/admin/retention', icon: 'hourglass', permission: 'retention.view' },
   { key: 'backup', href: '/admin/backup', icon: 'database', permission: 'backup.export' },
@@ -128,6 +131,7 @@ export function buildNavigation(input: {
         disabled: false,
         items: mergeExtras(m.navigation ?? [], input.extraItems?.[m.key] ?? []).map(toItem),
         icon: m.moduleIcon,
+        ...(m.workspaceRoutes?.length ? { workspaceRoutes: m.workspaceRoutes } : {}),
       };
     });
   // Die Mediathek ist kein Verwaltungspunkt, den man einmal einstellt, sondern
@@ -157,6 +161,18 @@ export interface Location {
 /** Ein `href` passt an der Segmentgrenze: `/dms` trifft `/dms` und `/dms/x`, nicht `/dmsx`. */
 export function matches(href: string, pathname: string): boolean {
   return pathname === href || pathname.startsWith(`${href}/`);
+}
+
+/**
+ * Wie `matches`, dazu passt ein Segment `*` auf genau ein Segment: Das Muster der Arbeitsfläche Mitlauf trifft
+ * `/governance/meetings/<id>/live`, nicht `/governance/meetings/<id>`.
+ */
+export function matchesPattern(pattern: string, pathname: string): boolean {
+  if (!pattern.includes('*')) return matches(pattern, pathname);
+  const want = pattern.split('/');
+  const have = pathname.split('/');
+  if (have.length < want.length) return false;
+  return want.every((segment, i) => segment === '*' ? have[i] !== '' : segment === have[i]);
 }
 
 /**
@@ -257,6 +273,8 @@ function sectionsByGroup(group: NavGroup): NavSection[] {
 export function sectionsFor(groups: NavGroup[], pathname: string): NavSection[] {
   const hit = locate(groups, pathname);
   if (!hit) return [];
+  // Arbeitsfläche (N1): Die Zweitebene entfällt, die Schiene bleibt.
+  if (hit.group.workspaceRoutes?.some((pattern) => matchesPattern(pattern, pathname))) return [];
   const sections: NavSection[] =
     hit.area === 'settings'
       ? ['admin', 'config']

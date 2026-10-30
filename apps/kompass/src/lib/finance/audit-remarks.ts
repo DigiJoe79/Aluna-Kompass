@@ -1,13 +1,15 @@
 import 'server-only';
 import { userNamesFor, type AppDeps, type CallContext } from '@kompass/core';
 import { getDocumentRecord } from '@kompass/module-dms';
-import { getEntry, type AuditorView, type AuditRemarkView } from '@kompass/module-finance';
+import { getAuditSection, getEntry, type AuditorView, type AuditRemarkView } from '@kompass/module-finance';
 import { getTranslations } from 'next-intl/server';
 import type { RemarkThreadItem } from '@/components/remark-thread';
 import { dateFormatOf } from '@/lib/date-format';
 
 /** Anker des Verlaufs „Vermerke zum Jahr“ auf der Übersicht. */
 export const YEAR_REMARKS_ANCHOR = 'vermerke-jahr';
+/** Anker des Verlaufs „Vermerke zu Beschlüssen“ auf Abschnitt 9 (G-30). */
+export const RESOLUTION_REMARKS_ANCHOR = 'vermerke-beschluesse';
 
 /** Ein Vermerk als Zeile der Liste auf der Übersicht (Board 4a: Vermerk · An · Von · Zustand). */
 export interface RemarkListRow {
@@ -54,6 +56,12 @@ export async function remarkViews(deps: AppDeps, ctx: CallContext, remarks: read
     const record = await getDocumentRecord(deps, ctx, id);
     if (record.ok && record.value.number) documents.set(id, record.value.number);
   }
+  // Beschlüsse (Abschnitt 9, G-30): Nummer aus dem Abschnitt, der Link führt dorthin (Designer 2026-10-29).
+  const resolutionNumbers = new Map<string, string>();
+  if (remarks.some((r) => r.target.type === 'resolution')) {
+    const section = await getAuditSection(deps, ctx, { fiscalYearId: opts.fiscalYearId, section: 'resolutions', limit: 200 });
+    for (const row of section.ok ? section.value.rows : []) if (row.resolutionId) resolutionNumbers.set(row.resolutionId, String(row.labelParams.number ?? ''));
+  }
   const target = (r: AuditRemarkView): { label: string; href: string | null } => {
     switch (r.target.type) {
       case 'entry':
@@ -66,6 +74,8 @@ export async function remarkViews(deps: AppDeps, ctx: CallContext, remarks: read
         return { label: t('target.report', { report: tReports.has(`${r.target.id}.title`) ? tReports(`${r.target.id}.title`) : r.target.id }), href: `/finance/reports/${r.target.id}?year=${year}` };
       case 'year':
         return { label: t('target.year', { year: opts.designation }), href: `/finance/audit?year=${year}#${YEAR_REMARKS_ANCHOR}` };
+      case 'resolution':
+        return { label: t('target.resolution', { number: resolutionNumbers.get(r.target.id) ?? '' }), href: `/finance/audit/resolutions?year=${year}#${RESOLUTION_REMARKS_ANCHOR}` };
     }
   };
   const author = (r: AuditRemarkView) => {

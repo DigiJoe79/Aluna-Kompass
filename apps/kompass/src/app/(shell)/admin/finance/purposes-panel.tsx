@@ -14,7 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { RowButton, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { formatAmount, formatEuro, parseAmount } from '@/lib/finance/amount';
+import { formatAmount, formatEuro, readAmounts, type AmountError } from '@/lib/finance/amount';
 import { savePurposeAction, setPurposeStateAction, type PurposeInput } from './actions';
 import { useSavedVersions } from '@/lib/saved-versions';
 import { FormField } from '@/components/forms/form-field';
@@ -179,18 +179,27 @@ function PurposeDialog({ purpose, onClose, onSaved }: { purpose: PurposeRow | nu
   const [carryForwardText, setCarryForwardText] = useState(purpose?.carryForwardCents !== null && purpose?.carryForwardCents !== undefined ? formatAmount(purpose.carryForwardCents) : '');
   const [carryForwardDate, setCarryForwardDate] = useState(purpose?.carryForwardDate ?? '');
   const [pending, setPending] = useState(false);
+  // Ziel und Vortrag sind optional: leer heißt „kein Betrag“, unlesbar steht am Feld (App-B6).
+  const [amountErrors, setAmountErrors] = useState<Partial<Record<'target' | 'carryForward', AmountError>>>({});
+  const tAmount = useTranslations('finance.amount');
   const feedback = useActionFeedback();
 
   const submit = async () => {
+    const amounts = readAmounts({ target: { text: targetText, required: false }, carryForward: { text: carryForwardText, required: false } });
+    if (!amounts.ok) {
+      setAmountErrors(amounts.errors);
+      return;
+    }
+    setAmountErrors({});
     setPending(true);
     const input: PurposeInput = {
       id: purpose?.id,
       expectedVersion: purpose?.expectedVersion,
       name,
       description,
-      targetCents: targetText.trim() === '' ? null : parseAmount(targetText),
+      targetCents: amounts.cents.target,
       abroad,
-      carryForwardCents: carryForwardText.trim() === '' ? null : parseAmount(carryForwardText),
+      carryForwardCents: amounts.cents.carryForward,
       carryForwardDate: carryForwardDate || null,
     };
     const result = await feedback.run(() => savePurposeAction(input), { retry: () => void submit() });
@@ -207,7 +216,7 @@ function PurposeDialog({ purpose, onClose, onSaved }: { purpose: PurposeRow | nu
             <FormField id="purpose-name" label={t('columns.name')} required>
               <Input id="purpose-name" value={name} onChange={(e) => setName(e.target.value)} required />
             </FormField>
-            <FormField id="purpose-target" label={t('columns.target')} size="s">
+            <FormField id="purpose-target" label={t('columns.target')} size="s" error={amountErrors.target ? tAmount(amountErrors.target) : undefined}>
               <Input id="purpose-target" value={targetText} onChange={(e) => setTargetText(e.target.value)} placeholder="0,00" />
             </FormField>
             <FormField id="purpose-description" label={t('description')} size="l">
@@ -220,7 +229,7 @@ function PurposeDialog({ purpose, onClose, onSaved }: { purpose: PurposeRow | nu
         </Section>
         <Section title={t('sections.carryForward')}>
           <FormGrid>
-            <FormField id="purpose-carry-forward" label={t('carryForward')} size="s">
+            <FormField id="purpose-carry-forward" label={t('carryForward')} size="s" error={amountErrors.carryForward ? tAmount(amountErrors.carryForward) : undefined}>
               <Input id="purpose-carry-forward" value={carryForwardText} onChange={(e) => setCarryForwardText(e.target.value)} placeholder="0,00" />
             </FormField>
             <FormField id="purpose-carry-forward-date" label={t('carryForwardDate')} size="s">

@@ -73,9 +73,10 @@ describe('Sperren des Kerns über MCP als Satz (MB)', () => {
   });
 
   it('die Sperre der Mitglieder und der Akte nennt Menüpfad und Schalter, nicht „hier in Kompass“ (M31)', () => {
-    for (const key of ['members.mcpHumanOnlyAllowed', 'dms.mcpHumanOnlyAllowed']) {
+    // G-23: auch Gremien.
+    for (const key of ['members.mcpHumanOnlyAllowed', 'dms.mcpHumanOnlyAllowed', 'governance.mcpHumanOnlyAllowed']) {
       const message = (mcpError(conflict('humanOnly', key)) as { message: string }).message;
-      expect(message).toContain('Einrichtung →');
+      expect(message).toContain('Verwaltung → Agenten');
       expect(message).toContain('„Darf ein Agent');
       expect(message).not.toContain('hier in Kompass');
     }

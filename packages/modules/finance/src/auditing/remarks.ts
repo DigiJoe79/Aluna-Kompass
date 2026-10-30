@@ -6,6 +6,7 @@ import { financeAudit } from '../audit';
 import { financeConflict, requireHumanChannelFinance } from '../errors';
 import { reportDefinition } from '../reporting/catalog';
 import { financeAuditAuditors, financeAuditRemarkPosts, financeAuditRemarks, financeEntries, financeEntryDocuments, financeFiscalYears, type FinanceAuditRemarkRow } from '../schema';
+import { auditResolutionsOf } from '../sources';
 import { requireAuditorOfYear, requireAuditRead } from './access';
 import type { AuditRemarkView } from './types';
 
@@ -29,7 +30,7 @@ export function remarksOfYearInternal(db: DbOrTx, fiscalYearId: string): Finance
   return db.select().from(financeAuditRemarks).where(eq(financeAuditRemarks.fiscalYearId, fiscalYearId)).orderBy(asc(financeAuditRemarks.createdAt), asc(financeAuditRemarks.id)).all();
 }
 
-/** Nicht geklärte Vermerke je Ziel (`entry:<id>`, `document:<id>`, `report:<key>`, `year:<id>`). */
+/** Nicht geklärte Vermerke je Ziel (`entry:<id>`, `document:<id>`, `report:<key>`, `year:<id>`, `resolution:<id>`). */
 export function openRemarksByTargetInternal(db: DbOrTx, fiscalYearId: string): Map<string, number> {
   return new Map([...remarkStatesByTargetInternal(db, fiscalYearId)].map(([key, s]) => [key, s.open + s.answered]));
 }
@@ -55,9 +56,17 @@ export function entryRemarksInternal(db: DbOrTx, entryId: string): AuditRemarkVi
   return db.select().from(financeAuditRemarks).where(and(eq(financeAuditRemarks.targetType, 'entry'), eq(financeAuditRemarks.targetId, entryId))).orderBy(asc(financeAuditRemarks.createdAt)).all().map((r) => remarkViewInternal(db, r));
 }
 
-/** Gehört das Ziel zum Jahr? Buchung des Jahres; Dokument am Jahr oder an einer seiner Buchungen; Bericht im Katalog; das Jahr selbst. */
-function targetBelongsToYear(db: DbOrTx, fiscalYearId: string, type: 'entry' | 'document' | 'report' | 'year', id: string): boolean {
+/**
+ * Gehört das Ziel zum Jahr? Buchung des Jahres; Dokument am Jahr oder an einer seiner Buchungen; Bericht im Katalog; das
+ * Jahr selbst; ein Beschluss aus Abschnitt 9 des Jahres (G-30).
+ */
+function targetBelongsToYear(deps: Deps, fiscalYearId: string, type: RemarkTargetType, id: string): boolean {
+  const db: DbOrTx = deps.db;
   if (type === 'year') return id === fiscalYearId;
+  if (type === 'resolution') {
+    const year = db.select().from(financeFiscalYears).where(eq(financeFiscalYears.id, fiscalYearId)).get();
+    return Boolean(year && (auditResolutionsOf(deps, db, year) ?? []).some((r) => r.id === id));
+  }
   if (type === 'report') return Boolean(reportDefinition(id)?.available);
   if (type === 'entry') {
     const entry = db.select({ fiscalYearId: financeEntries.fiscalYearId, status: financeEntries.status }).from(financeEntries).where(eq(financeEntries.id, id)).get();
@@ -71,11 +80,13 @@ function targetBelongsToYear(db: DbOrTx, fiscalYearId: string, type: 'entry' | '
 }
 
 const remarkText = z.string().trim().min(1).max(2000);
+const REMARK_TARGETS = ['entry', 'document', 'report', 'year', 'resolution'] as const;
+type RemarkTargetType = (typeof REMARK_TARGETS)[number];
 
 const listSchema = z.object({
   fiscalYearId: z.string().min(1),
   state: z.enum(['open', 'answered', 'resolved']).optional(),
-  targetType: z.enum(['entry', 'document', 'report', 'year']).optional(),
+  targetType: z.enum(REMARK_TARGETS).optional(),
   targetId: z.string().min(1).optional(),
 });
 
@@ -102,7 +113,7 @@ export async function listAuditRemarks(deps: Deps, ctx: CallContext, input: unkn
 const createSchema = z.object({
   fiscalYearId: z.string().min(1),
   kind: z.enum(['question', 'finding']),
-  targetType: z.enum(['entry', 'document', 'report', 'year']),
+  targetType: z.enum(REMARK_TARGETS),
   targetId: z.string().min(1),
   text: remarkText,
   /** Für einen Papier-Prüfer desselben Jahres („von <Kontakt>, eingetragen von <Prüfer>“). */
@@ -126,7 +137,7 @@ export async function createAuditRemark(deps: Deps, ctx: CallContext, input: unk
     if (!paper || paper.fiscalYearId !== v.fiscalYearId || paper.mode !== 'paper') return financeConflict('remarkOnBehalfNotPaper');
     author = paper.id;
   }
-  if (!targetBelongsToYear(deps.db, v.fiscalYearId, v.targetType, v.targetId)) return financeConflict('remarkTargetNotInYear', { designation: checked.year.designation });
+  if (!targetBelongsToYear(deps, v.fiscalYearId, v.targetType, v.targetId)) return financeConflict('remarkTargetNotInYear', { designation: checked.year.designation });
   return deps.db.transaction((tx: DbOrTx) => {
     const id = newId();
     const now = isoNow(deps.clock);

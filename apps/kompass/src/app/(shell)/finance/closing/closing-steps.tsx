@@ -6,6 +6,8 @@ import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { useState, type ReactNode } from 'react';
 import { useDateFormat } from '@/components/date-format-provider';
+import { FixedValue } from '@/components/fixed-value';
+import { FormCell, FormGrid } from '@/components/forms/form-grid';
 import { Notice } from '@/components/notice';
 import { Steps, type Step } from '@/components/steps';
 import { CloseYearDialog } from './close-dialog';
@@ -20,6 +22,7 @@ import { AuditPackageStep } from './steps/audit-package';
 import { AuditReportStep } from './steps/audit-report';
 import { CashStep } from './steps/cash';
 import { CloseStep } from './steps/close';
+import { FundsUseStep } from './steps/funds-use';
 import { ConfirmationsStep } from './steps/confirmations';
 import { ListsStep } from './steps/lists';
 import { OpenItemsStep } from './steps/open-items';
@@ -31,7 +34,7 @@ import { TaxReturnStep } from './steps/tax-return';
 const GROUPS = ['before', 'close', 'after'] as const;
 
 /**
- * Die zwölf Schritte (Board 3a–3c): wiedergeöffnet als `Notice warn` über den Schritten, darunter je Amtsübergabe des
+ * Die zwölf Schritte, über der Grenze dreizehn (Board 3a–3c; Schritt 13 Mittelverwendung, Plan U2): wiedergeöffnet als `Notice warn` über den Schritten, darunter je Amtsübergabe des
  * Jahres eine Zeile, dann `Steps compact` in drei Gruppen. Nur der Schritt `next` ist aktiv und trägt seinen Körper;
  * vor dem Jahresende ist keiner aktiv. Alle erledigt: „Fertig.“ mit Ergebnis, die Schritte zugeklappt.
  */
@@ -44,6 +47,7 @@ export function ClosingSteps({
   assembly = { persons: [], minutes: null },
   today = '',
   canFileVat = false,
+  canFinalize = false,
 }: {
   status: ClosingStatus;
   names: Readonly<Record<string, string>>;
@@ -58,6 +62,8 @@ export function ClosingSteps({
   /** Heute im Verein und `finance.periodClose`: „Abgabe eintragen …“ in Schritt 12 (Designer Runde 8, 17e). */
   today?: string;
   canFileVat?: boolean;
+  /** `finance.reportsFinalize`: „Festschreiben …“ in Schritt 13 (Mittelverwendung, Plan U2). */
+  canFinalize?: boolean;
 }) {
   const t = useTranslations('finance.closing');
   const fmt = useDateFormat();
@@ -82,12 +88,15 @@ export function ClosingSteps({
     if (factsAre(step, 'auditReport')) return <AuditReportStep step={step} {...common} nextDesignation={nextDesignation ?? t('nextYear')} />;
     if (factsAre(step, 'assembly')) return <AssemblyStep step={step} {...common} data={assembly} />;
     if (factsAre(step, 'taxReturn')) return <TaxReturnStep step={step} {...common} today={today} canFileVat={canFileVat} />;
+    if (factsAre(step, 'fundsUse')) return <FundsUseStep step={step} {...common} canFinalize={canFinalize} />;
     return null;
   };
 
   const steps: Step[] = status.steps.map((s) => {
     // Schritt 11 mit gespeichertem Ergebnis (verweigert, vertagt) ist nie aktiv: Er trägt seinen Satz und den Link
     // „Ergebnis nachtragen“, das Formular erst auf Klick (Board 14b). Nur der aktive Schritt hat einen Körper.
+    // Führt Gremien das Ergebnis (G7), ist Schritt 11 nie aktiv und hat kein Formular: darunter steht, wo es geführt wird.
+    const managed = s.facts.key === 'assembly' ? (s.facts.result?.managed ?? null) : null;
     const parked = status.ended && !s.done && s.facts.key === 'assembly' && s.facts.result !== null;
     const active = status.ended && s.key === status.next && !parked;
     return {
@@ -98,7 +107,7 @@ export function ClosingSteps({
       // seines Körpers. Schritt 11 offen mit Ergebnis: der Satz als Unterzeile.
       // Schritt 12 aktiv, die Steuererklärung schon erledigt (Befund 34 a): oben ihr Ergebnis, im Körper nur die USt.
       detail: s.done || parked || (active && s.key === 'assembly') || (active && taxReturnSettled(s)) || (!active && s.group === 'before') ? detail(s) : undefined,
-      below: active ? body(s) : parked && factsAre(s, 'assembly') ? <ParkedAssembly step={s} status={status} canConfirm={canConfirm} data={assembly} /> : undefined,
+      below: managed ? <ManagedAssembly managed={managed} refusedAfterGranted={s.facts.key === 'assembly' && !!s.facts.result?.warnings.includes('dischargeRefusedAfterGranted')} /> : active ? body(s) : parked && factsAre(s, 'assembly') ? <ParkedAssembly step={s} status={status} canConfirm={canConfirm} data={assembly} /> : undefined,
     };
   });
   const groups = GROUPS.map((g) => ({ label: t(`groups.${g}`), keys: status.steps.filter((s) => s.group === g).map((s) => s.key) }));
@@ -148,6 +157,21 @@ export function ClosingSteps({
       ) : null}
       {status.me.canClose ? <CloseYearDialog open={closing} onOpenChange={setClosing} fiscalYearId={status.fiscalYearId} year={status.designation} /> : null}
     </div>
+  );
+}
+
+/** Schritt 11, wenn Gremien das Ergebnis führt (G7, Spec Gremien § 8.1): ein fester Wert mit Link zur Sitzung, kein Formular. */
+function ManagedAssembly({ managed, refusedAfterGranted }: { managed: { label: string; href: string }; refusedAfterGranted: boolean }) {
+  const ta = useTranslations('finance.closing.assembly');
+  return (
+    <FormGrid>
+      <FixedValue id="closing-assembly-managed" label={ta('managed.label')} value={managed.label} href={managed.href} reason={ta('managed.reason')} size="l" testId="closing-assembly-managed" />
+      {refusedAfterGranted ? (
+        <FormCell size="full">
+          <Notice level="warn">{ta('managed.refusedAfterGranted')}</Notice>
+        </FormCell>
+      ) : null}
+    </FormGrid>
   );
 }
 

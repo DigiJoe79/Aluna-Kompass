@@ -29,6 +29,15 @@ Wiederbeschaffung und die Gesellschaft einer Beteiligungsrücklage. Dazu die Zah
 der Mitglieder am Ende jedes Jahres für die EÜR fürs Finanzamt — ist die
 Mitgliederverwaltung eingeschaltet, steht dort ihr Wert vor.
 
+Mit **Gremien** steht unter „Satzung in der Fassung vom“ ein Vorschlag: das
+jüngste Beschlussdatum des Stands, der am Ende des Zeitraums gilt — nicht der Tag
+der Eintragung —, mit dem Stand als Link. Das Feld bleibt leer, bis Sie
+**Übernehmen** wählen; erst dann ist es eine Änderung, gespeichert mit
+**Speichern**. Ein gespeicherter Tag bleibt; weicht er ab, nennt der Hinweis den
+Tag aus Gremien.
+**Satzung aus Gremien verknüpfen** legt den Wortlaut des Stands als Beilage
+„Satzung“ an den Zeitraum.
+
 Fehlt eine Pflichtangabe, steht in der Tabelle „fehlt“, und die Werte lassen sich
 nicht festschreiben.
 

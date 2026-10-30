@@ -38,19 +38,19 @@ export const DMS_SETTINGS: SettingDefinition[] = [
    * `deu`, `eng`, `osd`, ein Entwicklungsrechner mit `tesseract-lang` meldet
    * über 160. Geprüft wird deshalb gegen `probe()`, nicht gegen eine Liste.
    */
-  { key: 'dms.ocrLanguages', schema: z.string().regex(/^[a-z]{3}(\+[a-z]{3})*$/), default: 'deu+eng' },
+  { key: 'dms.ocrLanguages', schema: z.string().regex(/^[a-z]{3}(\+[a-z]{3})*$/), default: 'deu+eng', managedBy: 'dms' },
   /** Die Wege, die ein Versandvermerk kennt (Entscheidung 34). */
   { key: 'dms.dispatchChannels', schema: dispatchChannelsSchema, default: DEFAULT_DISPATCH_CHANNELS },
   /**
    * Absender der E-Mails (Spec PDF per E-Mail § 3). Die Adresse muss zum
    * Mailserver passen; Kompass prüft das nicht. Ohne Adresse wird nicht gesendet.
    */
-  { key: 'dms.mail.fromAddress', schema: z.email().nullable(), default: null },
+  { key: 'dms.mail.fromAddress', schema: z.email().nullable(), default: null, managedBy: 'dms' },
   /** `null` = Vereinsname (`organization.name`). */
-  { key: 'dms.mail.fromName', schema: z.string().trim().min(1).max(120).nullable(), default: null },
-  { key: 'dms.mail.replyTo', schema: z.email().nullable(), default: null },
+  { key: 'dms.mail.fromName', schema: z.string().trim().min(1).max(120).nullable(), default: null, managedBy: 'dms' },
+  { key: 'dms.mail.replyTo', schema: z.email().nullable(), default: null, managedBy: 'dms' },
   /** Schutz gegen die Grenzen des Providers: Der Sender verlangsamt, er sperrt nichts. */
-  { key: 'dms.mail.ratePerMinute', schema: z.number().int().min(1).max(120), default: 20 },
+  { key: 'dms.mail.ratePerMinute', schema: z.number().int().min(1).max(120), default: 20, managedBy: 'dms' },
   /** Begleittext je Dokumentart: Schlüssel der Art → ID eines Textbausteins. */
   { key: 'dms.mail.bodySnippetByType', schema: z.record(z.string(), z.string()), default: {} },
   /** Der Baustein der Grundausstattung; die Einrichtung setzt ihn. */

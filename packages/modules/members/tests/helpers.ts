@@ -1,4 +1,4 @@
-import { coreModule, schema, unwrap, writeSettingInternal, type CallContext, type MailTransport } from '@kompass/core';
+import { coreModule, schema, unwrap, writeSettingInternal, type CallContext, type MailTransport, type ModuleManifest } from '@kompass/core';
 import { createTestDeps, ctxWith, insertUser, systemContext } from '@kompass/core/testing';
 import { contactsModule, createContact, setContactChannels } from '@kompass/module-contacts';
 import { dmsModule } from '@kompass/module-dms';
@@ -12,9 +12,10 @@ import { memberTypes } from '../src/schema';
 export const MEMBERS_PERMISSIONS = ['members.read', 'members.manage', 'members.fees'] as const;
 
 /** Mitglieder eingeschaltet samt Abhängigkeiten, Grundausstattung angelegt. `now` setzt die Uhr (Vorgabe `TEST_NOW`, 2026). */
-export function setupMembers(permissions: readonly string[] = MEMBERS_PERMISSIONS, opts: { now?: string; mail?: MailTransport } = {}) {
-  const deps = createTestDeps({ manifests: [coreModule, contactsModule, dmsModule, projectsModule, financeModule, membersModule], ...(opts.now ? { now: opts.now } : {}), ...(opts.mail ? { mail: opts.mail } : {}) });
-  deps.db.transaction((tx) => writeSettingInternal(tx, deps, systemContext(), 'modules.enabled', ['contacts', 'dms', 'projects', 'finance', 'members']));
+export function setupMembers(permissions: readonly string[] = MEMBERS_PERMISSIONS, opts: { now?: string; mail?: MailTransport; extraModules?: ModuleManifest[] } = {}) {
+  const extra = opts.extraModules ?? [];
+  const deps = createTestDeps({ manifests: [coreModule, contactsModule, dmsModule, projectsModule, financeModule, membersModule, ...extra], ...(opts.now ? { now: opts.now } : {}), ...(opts.mail ? { mail: opts.mail } : {}) });
+  deps.db.transaction((tx) => writeSettingInternal(tx, deps, systemContext(), 'modules.enabled', ['contacts', 'dms', 'projects', 'finance', 'members', ...extra.map((m) => m.key)]));
   deps.db.transaction((tx) => installMembers(tx, deps, systemContext()));
   const userId = insertUser(deps, { name: 'Test', email: 'test@kompass.local' });
   return { deps, ctx: ctxWith(permissions, userId), userId };

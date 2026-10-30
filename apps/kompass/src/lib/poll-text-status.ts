@@ -12,6 +12,8 @@
  * - Netzfehler, Zeitüberschreitung, 5xx: weiter mit Abstand, nach `maxFailures`
  *   Fehlern in Folge Ende.
  *
+ * - `onTick`: jeder gelesene Stand, auch der letzte (vor `onDone`) — für Karten, die den Fortschritt zeigen.
+ *
  * Gibt eine Funktion zurück, die die Kette beendet (Unmount).
  */
 export function pollTextStatus(options: {
@@ -22,6 +24,7 @@ export function pollTextStatus(options: {
   timeoutMs?: number;
   /** Ob der Stand noch läuft; Vorgabe: Texterkennung (`textStatus` pending/running). Auch für den Mailversand. */
   isPending?: (body: Record<string, unknown>) => boolean;
+  onTick?: (body: Record<string, unknown>) => void;
 }): () => void {
   const { url, onDone, onUnauthorized, maxFailures = 5, timeoutMs = 10_000 } = options;
   const isPending = options.isPending ?? ((b) => b.textStatus === 'pending' || b.textStatus === 'running');
@@ -50,6 +53,7 @@ export function pollTextStatus(options: {
     if (response && (response.status === 403 || response.status === 404)) return;
     if (body) {
       failures = 0;
+      options.onTick?.(body);
       if (!isPending(body)) return onDone();
     } else if (++failures >= maxFailures) {
       return;

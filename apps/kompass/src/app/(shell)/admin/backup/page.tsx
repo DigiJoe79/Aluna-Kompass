@@ -94,7 +94,6 @@ export default async function BackupPage({ searchParams }: { searchParams: Promi
                 weekly: readSetting<number>(deps, 'backup.ring.weekly'),
                 monthly: readSetting<number>(deps, 'backup.ring.monthly'),
                 maxAgeDays: readSetting<number>(deps, 'backup.maxAgeDays'),
-                agentAllowed: readSetting<boolean>(deps, 'backup.mcpHumanOnlyAllowed'),
               }}
               referenceBytes={o.storage?.referenceBytes ?? null}
               mailAvailable={o.mailAvailable}

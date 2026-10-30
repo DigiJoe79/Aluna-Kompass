@@ -1,9 +1,10 @@
-import { writeSettingInternal } from '@kompass/core';
+import { createFollowUp, notifyRecordDeleted, schema, unwrap, writeSettingInternal } from '@kompass/core';
+import { EXAMPLE_DOCUMENT_TYPES, createDraft, documentLinks, documents, documentTypes, linkDocumentInternal } from '@kompass/module-dms';
 import { ctxWith, systemContext } from '@kompass/core/testing';
 import { contactRoles } from '@kompass/module-contacts';
 import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
-import { admitMember, changeMemberType, endMembership, getMembership, listMemberships, membershipForContact, recordApplication, recordResignation, rejectApplication, revokeEnd } from '../src/memberships';
+import { admitMember, changeMemberType, deleteMembership, endMembership, getMembership, listMemberships, membershipForContact, recordApplication, recordResignation, rejectApplication, revokeEnd } from '../src/memberships';
 import { formatMemberNumber } from '../src/numbers';
 import { memberMemberships, memberTypePeriods, memberTypes } from '../src/schema';
 import { setMemberTypeActive, setNextMemberNumber } from '../src/types';
@@ -291,5 +292,36 @@ describe('the stored row', () => {
     const m = await admitted(deps, ctx);
     const row = deps.db.select().from(memberMemberships).where(eq(memberMemberships.id, m.id)).get()!;
     expect(Object.keys(row)).not.toContain('status');
+  });
+});
+
+// I-del: Löschen räumt, was an der Mitgliedschaft hing — Wiedervorlagen (Freitext-Titel) und Bezüge der Akte.
+describe('deleteMembership cleans up', () => {
+  async function withFollowUpAndDraft() {
+    const { deps, ctx } = setupMembers();
+    for (const [index, type] of EXAMPLE_DOCUMENT_TYPES.entries()) deps.db.insert(documentTypes).values({ ...type, sortOrder: index }).run();
+    const app = await applied(deps, ctx);
+    const helper = ctxWith(['followUps.manage', 'dms.view', 'dms.create']);
+    unwrap(await createFollowUp(deps, asMcp(helper), { entityType: 'membership', entityId: app.id, dueAt: '2026-10-01', title: 'Frau Beispiel anrufen' }));
+    // Bezüge auf `membership` setzt nur das Modul selbst (reservierter Typ) — wie es seine Briefe anhängt.
+    const draft = unwrap(await createDraft(deps, helper, { typeKey: 'letter', subject: 'Rückfrage zum Antrag', body: 'Text' }));
+    deps.db.transaction((tx) => linkDocumentInternal(tx, deps, { documentId: draft.id, entityType: 'membership', entityId: app.id }));
+    return { deps, ctx, app, draft };
+  }
+  const followUpsOn = (deps: MembersDeps, id: string) => deps.db.select().from(schema.followUps).where(eq(schema.followUps.entityId, id)).all();
+
+  it('removes follow-ups and resolves the documents of a deleted membership', async () => {
+    const { deps, ctx, app, draft } = await withFollowUpAndDraft();
+    unwrap(await deleteMembership(deps, ctx, { membershipId: app.id }));
+    expect(followUpsOn(deps, app.id)).toEqual([]);
+    expect(deps.db.select().from(documentLinks).where(eq(documentLinks.entityId, app.id)).all()).toEqual([]);
+    expect(deps.db.select().from(documents).where(eq(documents.id, draft.id)).get()).toBeUndefined();
+  });
+
+  it('does the same when the membership goes with its contact', async () => {
+    const { deps, app } = await withFollowUpAndDraft();
+    deps.db.transaction((tx) => notifyRecordDeleted(tx, deps, systemContext(), 'contact', app.contactId));
+    expect(deps.db.select().from(memberMemberships).where(eq(memberMemberships.id, app.id)).get()).toBeUndefined();
+    expect(followUpsOn(deps, app.id)).toEqual([]);
   });
 });

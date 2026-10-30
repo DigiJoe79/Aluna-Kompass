@@ -1,4 +1,4 @@
-import { recordAudit, todayIn, type CallContext, type DbOrTx, type Deps, type DueItemInput, type LabelRef, type RetentionHoldInput } from '@kompass/core';
+import { deleteFollowUpsFor, notifyRecordDeleted, recordAudit, todayIn, type CallContext, type DbOrTx, type Deps, type DueItemInput, type LabelRef, type RetentionHoldInput } from '@kompass/core';
 import { financeOpenItems, openCentsInternal } from '@kompass/module-finance';
 import { documentLinks } from '@kompass/module-dms';
 import { and, eq, inArray, isNotNull, or } from 'drizzle-orm';
@@ -83,7 +83,10 @@ export function deleteMembershipInternal(tx: DbOrTx, deps: Deps, ctx: CallContex
   tx.delete(memberRunLetters).where(eq(memberRunLetters.membershipId, row.id)).run();
   tx.delete(memberDunningNotices).where(eq(memberDunningNotices.membershipId, row.id)).run();
   tx.delete(memberMemberships).where(eq(memberMemberships.id, row.id)).run();
-  recordAudit(tx, deps, ctx, { action: 'members.membership.delete', entityType: 'membership', entityId: row.id, before: { memberNumber: row.memberNumber, endsOn: row.endsOn, rejectedOn: row.rejectedOn }, params: { memberNumber: row.memberNumber } });
+  // I-del: Wiedervorlagen tragen Freitext; die Akte löst ihre Bezüge selbst (`recordDeleted`), eingetragene Briefe bleiben.
+  const followUps = deleteFollowUpsFor(tx, 'membership', row.id);
+  recordAudit(tx, deps, ctx, { action: 'members.membership.delete', entityType: 'membership', entityId: row.id, before: { memberNumber: row.memberNumber, endsOn: row.endsOn, rejectedOn: row.rejectedOn, removed: { followUps } }, params: { memberNumber: row.memberNumber } });
+  notifyRecordDeleted(tx, deps, ctx, 'membership', row.id);
 }
 
 /** Ein Kontakt wurde gelöscht: seine Mitgliedschaften gehen mit (Spec § 3.2). */

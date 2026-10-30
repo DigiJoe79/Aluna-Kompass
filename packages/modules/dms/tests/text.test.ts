@@ -8,7 +8,7 @@ import { countDocumentText } from '../src/index-store';
 import { dmsModule } from '../src/manifest';
 import { documents } from '../src/schema';
 import { deleteDocument } from '../src/service';
-import { extractDocumentText, reindexAllDocuments } from '../src/text';
+import { extractDocumentText, reindexAllDocuments, reindexDocument } from '../src/text';
 import { seedTypes } from './helpers';
 
 const pdf = () => new Uint8Array(Buffer.from('%PDF-1.4\n%fake\n', 'latin1'));
@@ -199,6 +199,45 @@ describe('extractDocumentText', () => {
     expect(countDocumentText(deps, documentId)).toBe(0);
   });
 
+  // I-B: Das Lesen dauert; wer währenddessen löscht, darf danach keinen verwaisten Suchtext finden.
+  it('schreibt keinen Text, wenn das Dokument während des Lesens gelöscht wurde', async () => {
+    let deps!: Deps;
+    const slow: TextExtraction = {
+      ...fakeTextExtraction(),
+      extract: async () => {
+        const deleted = await deleteDocument(deps, ctxWith(['dms.manage']), { id: documentId });
+        if (!deleted.ok) throw new Error('Löschen im Test fehlgeschlagen');
+        return [{ page: 1, text: 'verwaist', source: 'layer' as const }];
+      },
+    };
+    const built = await withDocument(slow, '2005-06-01');
+    deps = built.deps;
+    const documentId = built.documentId;
+
+    const result = await extractDocumentText(deps, ctxWith(['dms.manage']), { documentId });
+    expect(result.ok ? null : result.error.type).toBe('notFound');
+    expect(countDocumentText(deps, documentId)).toBe(0);
+    expect(auditFor(deps, 'document.textExtracted')).toHaveLength(0);
+  });
+
+  it('verwirft das Ergebnis, wenn das Dokument währenddessen neu in die Schlange kam', async () => {
+    let deps!: Deps;
+    const slow: TextExtraction = {
+      ...fakeTextExtraction(),
+      extract: async () => {
+        await reindexAllDocuments(deps, ctxWith(['dms.manage']));
+        return [{ page: 1, text: 'veraltet', source: 'layer' as const }];
+      },
+    };
+    const built = await withDocument(slow);
+    deps = built.deps;
+
+    const result = await extractDocumentText(deps, ctxWith(['dms.manage']), { documentId: built.documentId });
+    expect(result.ok ? null : (result.error as { code?: string }).code).toBe('textExtractionSuperseded');
+    expect(countDocumentText(deps, built.documentId)).toBe(0);
+    expect(deps.db.select().from(documents).where(eq(documents.id, built.documentId)).get()!.textStatus).toBe('pending');
+  });
+
   it('stellt alle Dokumente mit Datei wieder in die Schlange', async () => {
     const { deps, documentId } = await withDocument();
     await extractDocumentText(deps, ctxWith(['dms.manage']), { documentId });
@@ -215,6 +254,24 @@ describe('extractDocumentText', () => {
     const entry = auditEntry(deps, 'document.reindexRequested');
     expect(entry).toMatchObject({ entityType: 'document', entityId: 'all', before: null });
     expect(JSON.parse(entry.after!)).toEqual({ queued: 1 });
+  });
+
+  it('stellt ein einzelnes Dokument wieder in die Schlange, auch nach aufgebrauchten Versuchen', async () => {
+    const { deps, documentId } = await withDocument();
+    deps.db.update(documents).set({ textStatus: 'failed', textAttempts: 3, textError: 'x' }).where(eq(documents.id, documentId)).run();
+
+    const result = await reindexDocument(deps, ctxWith(['dms.manage']), { documentId });
+
+    expect(result).toMatchObject({ ok: true, value: { queued: 1 } });
+    expect(deps.db.select().from(documents).where(eq(documents.id, documentId)).get()).toMatchObject({ textStatus: 'pending', textAttempts: 0, textError: null });
+    expect(auditEntry(deps, 'document.reindexRequested')).toMatchObject({ entityType: 'document', entityId: documentId });
+  });
+
+  it('einzelnes Dokument: verweigert ohne dms.manage, unbekannte oder fehlende Id wird abgelehnt', async () => {
+    const { deps, documentId } = await withDocument();
+    expect(await reindexDocument(deps, ctxWith(['dms.view']), { documentId })).toMatchObject({ ok: false, error: { type: 'forbidden' } });
+    expect(await reindexDocument(deps, ctxWith(['dms.manage']), { documentId: 'gibt-es-nicht' })).toMatchObject({ ok: false, error: { type: 'notFound' } });
+    expect(await reindexDocument(deps, ctxWith(['dms.manage']), {})).toMatchObject({ ok: false, error: { type: 'validation' } });
   });
 
   it('verweigert das Neu-Lesen ohne dms.manage', async () => {

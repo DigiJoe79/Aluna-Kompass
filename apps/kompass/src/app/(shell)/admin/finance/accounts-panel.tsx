@@ -15,7 +15,7 @@ import { Dialog, DialogBody, DialogContent, DialogHeader, DialogTitle } from '@/
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { RowButton, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { formatAmount, parseAmount } from '@/lib/finance/amount';
+import { formatAmount, readAmount } from '@/lib/finance/amount';
 import { checkIban, type IbanCheckResult } from '@/lib/finance/iban-check';
 import { saveAccountAction, setAccountActiveAction, type AccountInput } from './actions';
 import { useSavedVersions } from '@/lib/saved-versions';
@@ -126,14 +126,24 @@ function AccountDialog({ account, canPickDocument, onClose, onSaved }: { account
   const [isMain, setIsMain] = useState(account?.isMain ?? false);
   const [document, setDocument] = useState<PickedDocument | null>(null);
   const [pending, setPending] = useState(false);
+  const [openingInvalid, setOpeningInvalid] = useState(false);
+  const tAmount = useTranslations('finance.amount');
   const feedback = useActionFeedback();
 
   const ibanCheck = checkIban(iban);
   const ibanIssue = kind === 'bank' && ibanCheck.state !== 'empty' && ibanCheck.state !== 'valid' ? ibanCheck.state : null;
-  const openingCents = openingText.trim() === '' ? null : parseAmount(openingText);
-  const openingMismatch = (openingCents !== null && !openingDate) || (openingDate !== '' && openingCents === null);
+  // Anfangsbestand optional; ein unlesbarer zählt als eingetragen und steht beim Speichern am Feld, statt still „kein
+  // Anfangsbestand“ zu werden (App-B7f). Betrag und Tag gehören zusammen.
+  const opening = readAmount(openingText, { required: false });
+  const openingFilled = openingText.trim() !== '';
+  const openingMismatch = (openingFilled && !openingDate) || (openingDate !== '' && !openingFilled);
 
   const submit = async () => {
+    if (!opening.ok) {
+      setOpeningInvalid(true);
+      return;
+    }
+    setOpeningInvalid(false);
     setPending(true);
     const input: AccountInput = {
       id: account?.id,
@@ -143,7 +153,7 @@ function AccountDialog({ account, canPickDocument, onClose, onSaved }: { account
       iban: iban.trim() || null,
       bic: bic.trim() || null,
       bankName: bankName.trim() || null,
-      openingBalanceCents: openingCents,
+      openingBalanceCents: opening.cents,
       openingDate: openingDate || null,
       isMain,
       documentId: document?.id ?? null,
@@ -230,8 +240,8 @@ function AccountDialog({ account, canPickDocument, onClose, onSaved }: { account
           ) : null}
           <Section title={t('dialog.sections.opening')}>
             <FormGrid>
-              <FormField id="account-opening" label={t('dialog.openingBalance')} size="s">
-                <Input id="account-opening" value={openingText} onChange={(e) => setOpeningText(e.target.value)} placeholder="0,00" />
+              <FormField id="account-opening" label={t('dialog.openingBalance')} size="s" error={openingInvalid ? tAmount('format') : undefined}>
+                <Input id="account-opening" value={openingText} onChange={(e) => { setOpeningText(e.target.value); setOpeningInvalid(false); }} placeholder="0,00" />
               </FormField>
               <FormField id="account-opening-date" label={t('dialog.openingDate')} size="s">
                 <Input id="account-opening-date" type="date" value={openingDate} onChange={(e) => setOpeningDate(e.target.value)} />

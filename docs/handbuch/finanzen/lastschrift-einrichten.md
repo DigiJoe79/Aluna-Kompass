@@ -39,6 +39,6 @@ weiter; es wird als Bankgebühr gebucht.
 Mandate, Zusagen und Einzüge bereitet vor, wer das Recht **Lastschrift vorbereiten** (`finance.directDebit`) hat. Das
 Recht kommt an keine vorhandene Rolle von selbst; geben Sie es unter **Verwaltung → Rollen** der Rolle, die die Kasse
 führt. Datei erzeugen, ein Mandat aktiv setzen und einen Einzug als eingereicht markieren darf ein Agent nur, wenn der
-Verein es unter **Einrichtung → Finanzen** mit „Darf ein Agent festschreiben und Lastschriften bearbeiten?“ freigibt
-(siehe [Finanzen einrichten](einrichten.md#darf-ein-agent-festschreiben-und-lastschriften-bearbeiten)); in der Vorgabe
+Verein es unter **Verwaltung → Agenten** mit „Darf ein Agent festschreiben und Lastschriften bearbeiten?“ freigibt
+(siehe [Agenten](../einstellungen/agenten.md)); in der Vorgabe
 ist das aus. Die Datei für die Bank gibt Kompass nie an einen Agenten heraus.

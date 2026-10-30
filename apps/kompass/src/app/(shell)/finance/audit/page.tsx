@@ -1,8 +1,9 @@
 import { hasPermission } from '@kompass/core';
 import { getDocumentRecord } from '@kompass/module-dms';
-import { auditPackageRunStatus, getAssemblyResult, getAuditReport, getAuditSection, getAuditStatus, listAuditRemarks, listAuditors, type AuditReportView, type AuditSection, type AuditSectionRow } from '@kompass/module-finance';
+import { auditorCandidates, auditPackageRunStatus, getAssemblyResult, getAuditReport, getAuditSection, getAuditStatus, listAuditRemarks, listAuditors, type AuditReportView, type AuditSection, type AuditSectionRow } from '@kompass/module-finance';
 import { getTranslations } from 'next-intl/server';
 import type { PickedDocument } from '@/app/(shell)/dms/search-action';
+import type { AuditorCandidateView } from './auditor-dialog';
 import { EmptyState } from '@/components/empty-state';
 import { ForbiddenCard } from '@/components/forbidden-card';
 import { Page } from '@/components/page';
@@ -10,7 +11,6 @@ import { PageHeader } from '@/components/page-header';
 import { auditHead } from '@/lib/finance/audit-overview';
 import { auditPackageView } from '@/lib/finance/audit-package-view';
 import { summarizeSection, type SectionSummary } from '@/lib/finance/audit-package';
-import { AUDIT_SECTION_ORDER } from '@/lib/finance/audit-sections';
 import { resolveAuditYear } from '@/lib/finance/audit-year';
 import { financeLandingPath } from '@/lib/finance/landing';
 import { remarkViews } from '@/lib/finance/audit-remarks';
@@ -82,7 +82,7 @@ export default async function AuditPage({ searchParams }: { searchParams: Promis
     };
     const names = new Map(auditors.map((a) => [a.id, a.contactName]));
     const followUp = status.followUpOpen || status.report?.kind === 'followUp';
-    for (const section of AUDIT_SECTION_ORDER) {
+    for (const section of status.sections) {
       const summary = section === 'journal' ? { ...summarizeSection('journal', [], { samples: status.samples.sampledEntries }), remarksOpen: onEntries.open, remarksAnswered: onEntries.answered } : summarizeSection(section, await readAll(section), { samples: 0 });
       const reviewers = status.sectionsReviewed.find((r) => r.section === section)?.auditorIds ?? [];
       // „durchgesehen vor der Nachprüfung“ nur, wenn es eine Nachprüfung gibt (Befund 7).
@@ -127,7 +127,7 @@ export default async function AuditPage({ searchParams }: { searchParams: Promis
     cash: { done: status.cashCount !== null, keepers: status.cashKeepers },
     remarksOpen: status.remarksUnresolved,
     reviewed: status.sectionsReviewed.length,
-    total: AUDIT_SECTION_ORDER.length,
+    total: status.sections.length,
     lines,
     scanTarget,
     scanAuditors,
@@ -149,16 +149,27 @@ export default async function AuditPage({ searchParams }: { searchParams: Promis
       documents[id] = record.ok ? { id, number: record.value.number, subject: record.value.subject, phase: 'issued' } : { id, number: null, subject: t('auditorDialog.declaration'), phase: 'issued' };
     }
   }
+  // In Gremien gewählte Kassenprüfer als Vorschlag für „Prüfer eintragen“ (G7); ohne Gremien leer.
+  const candidates: AuditorCandidateView[] = [];
+  if (canManage) {
+    const found = await auditorCandidates(deps, ctx, { fiscalYearId: year.id });
+    for (const c of found.ok ? found.value : []) {
+      const record = c.minutesDocumentId ? await getDocumentRecord(deps, ctx, c.minutesDocumentId) : null;
+      const minutesDocument = record?.ok && c.minutesDocumentId ? { id: c.minutesDocumentId, number: record.value.number, subject: record.value.subject, phase: 'issued' as const } : null;
+      candidates.push({ contactId: c.contactId, name: c.name, electedOn: c.electedOn, minutesDocument, source: c.source });
+    }
+  }
 
   return (
     <Page width="standard" header={<AuditHeader designation={year.designation} head={head} auditorView={auditorView} canManage={canManage} yearRemark={yearRemark} />}>
       <div className="flex flex-col gap-4">
-        <AuditYearBar years={[...years].sort((a, b) => b.endsOn.localeCompare(a.endsOn)).map((y) => ({ id: y.id, designation: y.designation }))} yearId={year.id} sections={AUDIT_SECTION_ORDER.length} />
+        <AuditYearBar years={[...years].sort((a, b) => b.endsOn.localeCompare(a.endsOn)).map((y) => ({ id: y.id, designation: y.designation }))} yearId={year.id} sections={status.sections.length} />
         {auditorView ? null : (
           <AuditorsSection
             year={{ id: year.id, designation: year.designation, closed: status.yearStatus === 'closed' }}
             auditors={auditors}
             documents={documents}
+            candidates={candidates}
             canManage={canManage}
             canManageUsers={hasPermission(ctx, 'users.manage')}
             canCreateContact={hasPermission(ctx, 'contacts.manage')}

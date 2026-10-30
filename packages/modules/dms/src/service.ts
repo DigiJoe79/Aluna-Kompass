@@ -1,5 +1,5 @@
 import { and, asc, count, desc, eq, inArray, isNull, like, or, sql, type SQL } from 'drizzle-orm';
-import { yearIn, blockingHolds, messageDate, conflict, deleteFollowUpsFor, findModuleRecordReferences, invalid, isoNow, linkedAccess, localizedConflict, newId, normalizeExpectedFolder, notFound, notifyRecordDeleted, ok, parseFolderPath, recordAudit, requirePermission, reservedLinkTypes, retentionEnd, retentionMonths, schema, todayIn, validate, withinSubtree, type CallContext, type DbOrTx, type Deps, type Failure, type FollowUpRecord, type Result } from '@kompass/core';
+import { yearIn, blockingHolds, recordHeldConflict, stillReferencedConflict, messageDate, conflict, deleteFollowUpsFor, findModuleRecordReferences, invalid, isoNow, linkedAccess, localizedConflict, newId, normalizeExpectedFolder, notFound, notifyRecordDeleted, ok, parseFolderPath, recordAudit, requirePermission, reservedLinkTypes, retentionEnd, retentionMonths, schema, todayIn, validate, withinSubtree, type CallContext, type DbOrTx, type Deps, type Failure, type FollowUpRecord, type Result } from '@kompass/core';
 import { z } from 'zod';
 import { canReadType, isProtectedType, readableTypeFilter, requireAreaAccess, requireDmsGate, requireReadable } from './access';
 import { auditDocumentRef } from './audit-ref';
@@ -363,7 +363,8 @@ const linkedDocumentSchema = z.object({ documentId: z.string().min(1), entityTyp
 /**
  * Der Bezug als Berechtigung: genau dieses Dokument, für den, der den Vorgang
  * lesen darf — die Helferin ihren Auslagenbeleg, der Kassenprüfer den Beschluss
- * zur Rücklage. Kein Weg in die Akte. Recht **und** Bezug prüft dieser Dienst;
+ * zur Rücklage, die Kassenprüferin das Protokoll eines finanzwirksamen Beschlusses (berechneter Bezug,
+ * `documentsOf`). Kein Weg in die Akte. Recht **und** Bezug prüft dieser Dienst;
  * dem aufrufenden Modul bleibt nur die Frage, ob der Vorgang dem Aufrufer
  * gehört („eigener Antrag“).
  */
@@ -378,8 +379,11 @@ export async function readLinkedDocument(deps: Deps, ctx: CallContext, input: un
   const denied = requirePermission(ctx, access.readPermission);
   if (denied) return denied;
 
-  const link = deps.db.select({ id: documentLinks.id }).from(documentLinks).where(and(eq(documentLinks.documentId, documentId), eq(documentLinks.entityType, entityType), eq(documentLinks.entityId, entityId))).get();
-  if (!link) return unknown;
+  // Ein berechneter Bezug (G7) nennt die Dokumente des Vorgangs selbst; sonst zählt die gespeicherte Verknüpfung.
+  const linked = access.documentsOf
+    ? access.documentsOf(deps, entityId).includes(documentId)
+    : Boolean(deps.db.select({ id: documentLinks.id }).from(documentLinks).where(and(eq(documentLinks.documentId, documentId), eq(documentLinks.entityType, entityType), eq(documentLinks.entityId, entityId))).get());
+  if (!linked) return unknown;
   const row = deps.db.select().from(documents).where(eq(documents.id, documentId)).get();
   if (!row || !row.fileName) return unknown;
 
@@ -729,9 +733,9 @@ export async function deleteDocument(
   // Ein Modul lässt seinen Verweis mit seinem Halter enden; sonst wäre ein
   // Beleg nie löschbar.
   const holds = blockingHolds(deps, 'document', doc.id);
-  if (holds.length > 0) return conflict('recordHeld', `Noch gehalten von: ${holds.map((h) => `${h.label}${h.until ? ` (bis ${messageDate(deps, h.until)})` : ' (dauerhaft)'}`).join('; ')}`);
+  if (holds.length > 0) return recordHeldConflict(deps, holds);
   const references = findModuleRecordReferences(deps, 'document', doc.id);
-  if (references.length > 0) return conflict('stillReferenced', `Es zeigt noch darauf: ${references.map((r) => r.label).join('; ')}`);
+  if (references.length > 0) return stillReferencedConflict(references);
 
   deps.db.transaction((tx: DbOrTx) => {
     // Was mit dem Dokument verschwindet, steht im Protokoll — als Zahl, nicht

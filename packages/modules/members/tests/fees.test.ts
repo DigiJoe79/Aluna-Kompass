@@ -1,6 +1,7 @@
-import { unwrap, type CallContext } from '@kompass/core';
-import { ctxWith } from '@kompass/core/testing';
-import { financeOpenItems } from '@kompass/module-finance';
+import { unwrap, writeSettingInternal, type CallContext } from '@kompass/core';
+import { ctxWith, systemContext } from '@kompass/core/testing';
+import { createAccount, FINANCE_PERMISSIONS, financeDirectDebitItems, financeDirectDebitRuns, financeOpenItems, prepareMandate } from '@kompass/module-finance';
+import { MEMBERS_MCP_TOOLS } from '../src/mcp-tools';
 import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 import { continueFeeRun, startFeeRun } from '../src/fee-run';
@@ -130,6 +131,38 @@ describe('deferCharge and waiveCharge', () => {
     expect(fail(await deferCharge(deps, ctxWith(['members.read']), { chargeId, dueOn: '2027-06-30' }))).toMatchObject({ type: 'forbidden' });
     expect(fail(await deferCharge(deps, ctx, { chargeId, dueOn: 'später' }))).toMatchObject({ type: 'validation' });
     expect(fail(await waiveCharge(deps, ctx, { chargeId: 'nope' }))).toMatchObject({ type: 'notFound' });
+  });
+});
+
+describe('waiving a fee in a direct debit (Plan R1, M3)', () => {
+  /** Der Beitrag von b in einem Einzug zum 01.03.2027 mit dem Zustand `status`. */
+  async function inRun(status: 'draft' | 'fileCreated' | 'submitted') {
+    const env = await withFees();
+    const { deps, ctx, b, chargeOf } = env;
+    const fin: CallContext = { ...ctx, permissions: new Set([...ctx.permissions, ...FINANCE_PERMISSIONS]) };
+    const account = unwrap(await createAccount(deps, fin, { name: 'Vereinskonto', kind: 'bank', iban: 'DE23999999990000202051', isMain: true }));
+    const mandate = unwrap(await prepareMandate(deps, fin, { contactId: b.contactId, debtorName: 'Erika Beispiel', iban: 'DE44999999990532013000' }));
+    const at = '2027-02-01T10:00:00.000Z';
+    deps.db.insert(financeDirectDebitRuns).values({ id: 'R1', collectionDate: '2027-03-01', accountId: account.id, status, messageId: 'R1', createdByUserId: 'U1', createdAt: at, updatedAt: at }).run();
+    deps.db.insert(financeDirectDebitItems).values({ id: 'I1', runId: 'R1', mandateId: mandate.id, source: 'openItem', sourceId: chargeOf(b.id).openItemId!, amountCents: 1200, endToEndId: 'R1-1', remittance: 'Beitrag', createdAt: at }).run();
+    return { ...env, chargeId: chargeOf(b.id).id };
+  }
+
+  it('refused once the file is created or the run submitted, also over MCP', async () => {
+    for (const status of ['fileCreated', 'submitted'] as const) {
+      const { deps, ctx, chargeId } = await inRun(status);
+      expect(fail(await waiveCharge(deps, ctx, { chargeId })), status).toMatchObject({ type: 'conflict', code: 'openItemInDirectDebit', params: { runId: 'R1' } });
+      deps.db.transaction((tx) => writeSettingInternal(tx, deps, systemContext(), 'members.mcpHumanOnlyAllowed', true));
+      const tool = MEMBERS_MCP_TOOLS.find((t) => t.name === 'members_fee_waive')!;
+      expect(await tool.handler(deps, asMcp(ctx), { chargeId }), status).toMatchObject({ ok: false, error: { code: 'openItemInDirectDebit' } });
+    }
+  });
+
+  it('in a draft it goes through; deferring stays allowed in a run with a file', async () => {
+    const draft = await inRun('draft');
+    expect(unwrap(await waiveCharge(draft.deps, draft.ctx, { chargeId: draft.chargeId }))).toMatchObject({ state: 'waived' });
+    const file = await inRun('fileCreated');
+    expect(unwrap(await deferCharge(file.deps, file.ctx, { chargeId: file.chargeId, dueOn: '2027-06-30' }))).toMatchObject({ deferredTo: '2027-06-30' });
   });
 });
 

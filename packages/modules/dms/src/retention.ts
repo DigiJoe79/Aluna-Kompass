@@ -1,4 +1,4 @@
-import { holdsFor, retentionEnd, retentionMonths, todayIn, type Deps, type DueItem, type RetentionHold } from '@kompass/core';
+import { holdsFor, retentionEnd, retentionMonths, todayIn, type Deps, type DueItemInput, type RetentionHoldInput } from '@kompass/core';
 import { and, eq } from 'drizzle-orm';
 import { documentTypeFor } from './catalog';
 import { documentLinks, documents } from './schema';
@@ -7,14 +7,14 @@ import { documentLinks, documents } from './schema';
  * Für entityType === 'contact', 'animal', jede verknüpfte Entität:
  * jedes verknüpfte, festgeschriebene Dokument hält sie.
  */
-export function dmsRetentionHolds(deps: Deps, entityType: string, id: string): RetentionHold[] {
+export function dmsRetentionHolds(deps: Deps, entityType: string, id: string): RetentionHoldInput[] {
   const links = deps.db
     .select()
     .from(documentLinks)
     .where(and(eq(documentLinks.entityType, entityType), eq(documentLinks.entityId, id)))
     .all();
 
-  const holds: RetentionHold[] = [];
+  const holds: RetentionHoldInput[] = [];
 
   for (const link of links) {
     const doc = deps.db.select().from(documents).where(eq(documents.id, link.documentId)).get();
@@ -32,7 +32,7 @@ export function dmsRetentionHolds(deps: Deps, entityType: string, id: string): R
     }
 
     holds.push({
-      label: `Dokument ${doc.number ?? doc.subject}`,
+      label: { key: 'dms.records.document', params: { label: doc.number ?? doc.subject } },
       until,
       entity: 'document',
       id: doc.id,
@@ -46,10 +46,10 @@ export function dmsRetentionHolds(deps: Deps, entityType: string, id: string): R
  * Festgeschriebene Dokumente, deren eigene Frist abgelaufen ist — und die kein Halter eines Moduls länger hält
  * (Mitglieder: der Aufnahmeantrag bleibt, solange die Mitgliedschaft aufbewahrt wird, Spec Mitglieder § 3.2).
  */
-export function dmsRetentionDue(deps: Deps): DueItem[] {
+export function dmsRetentionDue(deps: Deps): DueItemInput[] {
   const today = todayIn(deps);
   const docs = deps.db.select().from(documents).where(eq(documents.phase, 'issued')).all();
-  const due: DueItem[] = [];
+  const due: DueItemInput[] = [];
 
   for (const doc of docs) {
     const docType = documentTypeFor(deps.db, doc.typeKey);
@@ -67,7 +67,7 @@ export function dmsRetentionDue(deps: Deps): DueItem[] {
       due.push({
         entity: 'document',
         id: doc.id,
-        label: `Dokument ${doc.number ?? doc.subject}`,
+        label: { key: 'dms.records.document', params: { label: doc.number ?? doc.subject } },
         dueSince: until,
         href: `/dms/${doc.id}`,
       });

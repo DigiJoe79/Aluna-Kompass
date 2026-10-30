@@ -48,4 +48,4 @@ Danach steht „Fertig.“ mit Tag, Protokoll und Kassenbestand.
 Die Übergabe lässt sich über einen Agenten lesen und vorbereiten (Werkzeuge
 `finance_handover_*`). Die Kassenzählung ist ein persönlicher Schritt und geht
 über einen Agenten nur mit dem Schalter „Darf ein Agent festschreiben und
-Lastschriften bearbeiten?“; Drucken und Scan ablegen bleiben am Bildschirm.
+Lastschriften bearbeiten?“ unter [Verwaltung → Agenten](../einstellungen/agenten.md); Drucken und Scan ablegen bleiben am Bildschirm.

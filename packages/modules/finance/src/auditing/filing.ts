@@ -3,7 +3,7 @@ import { abortReceive, documents, linkDocumentInternal, receiveGeneratedUpload }
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { financeAudit } from '../audit';
-import { financeConflict, requireHumanChannelFinance } from '../errors';
+import { financeConflict, requireHumanChannelFinance, uploadLimitProblem } from '../errors';
 import { fiscalYearStatusInternal } from '../ledger/fiscal-years';
 import { AUDIT_REPORT_TYPE_KEY, releaseReportsInternal } from '../reporting/finalize';
 import { releaseChangeableInternal, releaseOfYearInternal } from '../reporting/stage';
@@ -114,6 +114,8 @@ export async function fileAuditReportScan(deps: Deps, ctx: CallContext, input: u
   if (humanOnly) return humanOnly;
   const parsed = validate(deps, scanSchema, input);
   if (!parsed.ok) return parsed;
+  const tooLarge = uploadLimitProblem(deps, parsed.value.bytes);
+  if (tooLarge) return tooLarge;
   const v = parsed.value;
   if (v.bytes.length > AUDIT_SCAN_MAX_BYTES) return invalid([{ path: 'bytes', message: 'tooLarge' }]);
   if (!isPdf(v.bytes)) return invalid([{ path: 'bytes', message: 'notPdf' }]);

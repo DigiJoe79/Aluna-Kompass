@@ -7,6 +7,7 @@ import { animalsModule } from '@kompass/module-animals';
 import { contactsModule } from '@kompass/module-contacts';
 import { dmsModule } from '@kompass/module-dms';
 import { financeModule } from '@kompass/module-finance';
+import { governanceModule } from '@kompass/module-governance';
 import { membersModule } from '@kompass/module-members';
 import { projectsModule } from '@kompass/module-projects';
 import { siteModule, siteTemplateDir } from '@kompass/module-site';
@@ -44,7 +45,7 @@ export async function devReset(opts: DevResetOptions) {
   if (opts.env !== 'development') {
     throw new Error(`dev:reset runs only in the development environment, not in ${opts.env}`);
   }
-  await resetDataPath(opts.dataPath, [coreModule, siteModule, projectsModule, animalsModule, contactsModule, dmsModule, financeModule, membersModule]);
+  await resetDataPath(opts.dataPath, [coreModule, siteModule, projectsModule, animalsModule, contactsModule, dmsModule, financeModule, membersModule, governanceModule]);
 
   // Dasselbe Skript, das der Entrypoint im Container fährt: Basis-Template
   // hinein, wenn keins da ist, und die Modulauflösung setzen. Ohne diesen
@@ -56,7 +57,7 @@ export async function devReset(opts: DevResetOptions) {
   const deps = createDeps({
     dataPath: opts.dataPath,
     env: opts.env,
-    modules: [siteModule, projectsModule, animalsModule, contactsModule, dmsModule, financeModule, membersModule],
+    modules: [siteModule, projectsModule, animalsModule, contactsModule, dmsModule, financeModule, membersModule, governanceModule],
     coreTemplates: coreDocumentTemplates(),
     documents: createDocumentEngine(),
   });

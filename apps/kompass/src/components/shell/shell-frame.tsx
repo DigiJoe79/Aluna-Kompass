@@ -7,7 +7,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
 import { activeRailKey, buildRail, crumbsFor, locate, sectionsFor, type NavGroup } from '@/lib/navigation';
 import { CommandPalette } from './command-palette';
-import { HelpAsideContext, HelpPanel } from './help-panel';
+import { HelpAsideProvider, HelpPanel } from './help-panel';
 import { Rail } from './rail';
 import { SectionNav } from './section-nav';
 import { Topbar } from './topbar';
@@ -147,7 +147,7 @@ export function ShellFrame({ organization, logoUrl, groups, build, version, user
               Ohne ihn bezogen sie sich auf das Dokument und verlängerten es unter dem Scrollbereich, so weit sie im Inhalt
               standen (Startseite, Journal, Backup, Konten; gemessen über alle Seiten 2026-10-20). */}
           <main className="relative min-h-0 flex-1 overflow-auto p-(--shell-pad) [--shell-pad:--spacing(6)] [scrollbar-gutter:stable]">
-            <HelpAsideContext.Provider value={aside}>{children}</HelpAsideContext.Provider>
+            <HelpAsideProvider aside={aside}>{children}</HelpAsideProvider>
           </main>
           {/* Nach `main` im DOM: Tab-Reihenfolge Kopfleiste → Inhalt → Hilfe (Notiz „Öffnen, Schließen, Fokus“). */}
           <HelpPanel mode="aside" open={aside} onClose={closeHelp} pathname={pathname} />

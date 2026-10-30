@@ -38,8 +38,7 @@ verschwindet aus der Liste:
    Standardwerte in einem Zug; wer abweicht, ändert die einzelnen Felder
    danach von Hand. Jeder Abschnitt der Seite hat eine eigene
    Speicherleiste: Die Antworten auf die Fragen gelten erst mit
-   „Speichern“, auch der Schalter „Darf ein Agent festschreiben und
-   Lastschriften bearbeiten?“ am Ende der Karte „Einordnung des Vereins“.
+   „Speichern“.
    Aufwandsspenden sind in der Vorgabe aus: Ein Verein, der sie anbietet,
    schaltet sie bewusst ein. Erst dann erscheint das Feld
    „Anspruchsgrundlage für Aufwandsspenden“ — ein Vertrag oder die Satzung,
@@ -109,6 +108,12 @@ Checkliste bleibt offen.
   Personenübersicht warnt danach nur noch bei Pauschalen, die vor diesem Tag
   gezahlt wurden.
 
+Mit **Gremien** setzt ein angenommener, festgeschriebener Beschluss über die
+Vergütung den Punkt: Fundstelle, „Gilt ab“, Tag und Protokoll kommen aus dem
+Beschluss, der Punkt steht als fester Wert mit Link zum Beschluss und lässt sich
+hier nicht mehr ändern — ein neuer Beschluss ändert ihn. Ist Gremien aus,
+entscheiden Sie wieder hier.
+
 ## Vorstand am Kontakt
 
 Der optionale Schritt **Vorstand am Kontakt** bleibt offen, solange kein
@@ -119,13 +124,13 @@ bleibt die Liste der Zahlungen an Vorstandsmitglieder in der
 
 ## Darf ein Agent festschreiben und Lastschriften bearbeiten?
 
-Ein eigener Schalter im Abschnitt „Agent“ der Karte „Einordnung des Vereins“
+Ein eigener Schalter unter [Verwaltung → Agenten](../einstellungen/agenten.md)
 entscheidet, ob ein Agent Buchungen festschreiben, freigeben, Bestätigungen
 ausstellen, Mandate, Lastschriftdateien und Einzüge bearbeiten und die
 Schritte der [Kassenprüfung](kassenpruefung.md) gehen darf — Stichproben,
 Vermerke, Prüfbericht und „Zugang beenden“. Er
-gilt wie die Fragen darüber erst mit „Speichern“ und lässt sich nur hier am
-Bildschirm ändern — nie über einen Agenten selbst. Voreingestellt ist: nein.
+gilt erst mit „Speichern“ und lässt sich nur am Bildschirm ändern — nie über
+einen Agenten selbst. Voreingestellt ist: nein.
 Ein Agent darf ohne diesen Schalter Buchungen anlegen und vorbereiten, aber
 nie festschreiben; das bleibt einem Menschen vorbehalten.
 

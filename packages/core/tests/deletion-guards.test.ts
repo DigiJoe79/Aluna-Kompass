@@ -56,20 +56,21 @@ describe('buildDeletionPreview and deletionConflict', () => {
     expect(code(deletionConflict(deps, preview))).toBe('stillPublished');
   });
 
-  it('nennt den Halter mit Frist hinter dem Doppelpunkt — das Datum wie die Anzeige (K10)', () => {
+  // K2: der Satz kommt aus der Sprachdatei; der Dienst liefert Schlüssel, Halter und Frist — das Datum wie die Anzeige (K10).
+  it('nennt Halter und Frist als Werte des Satzes', () => {
     const deps = setup();
     const failure = deletionConflict(deps, buildDeletionPreview(deps, subject('A-RUNNING')));
     expect(code(failure)).toBe('recordHeld');
-    expect(failure!.error.type === 'conflict' && failure!.error.message).toBe('Noch gehalten von: Vertrag V-1 (bis 31.12.2036)');
+    expect(failure!.error).toMatchObject({ messageKey: 'errors.recordHeld', params: { permanent: 'no', untilText: '31.12.2036', holders: 'Vertrag V-1' } });
     const permanent = deletionConflict(deps, buildDeletionPreview(deps, subject('A-PERMANENT')));
-    expect(permanent!.error.type === 'conflict' && permanent!.error.message).toBe('Noch gehalten von: Satzung (dauerhaft)');
+    expect(permanent!.error).toMatchObject({ messageKey: 'errors.recordHeld', params: { permanent: 'yes', holders: 'Satzung' } });
   });
 
   it('folgt ui.dateFormat = iso', () => {
     const deps = setup();
     deps.db.transaction((tx) => writeSettingInternal(tx, deps, ctxWith(['settings.manage']), 'ui.dateFormat', 'iso'));
     const failure = deletionConflict(deps, buildDeletionPreview(deps, subject('A-RUNNING')));
-    expect(failure!.error.type === 'conflict' && failure!.error.message).toBe('Noch gehalten von: Vertrag V-1 (bis 2036-12-31)');
+    expect(failure!.error).toMatchObject({ params: { untilText: '2036-12-31' } });
   });
 
   it('nennt den Verweis', () => {
@@ -78,7 +79,7 @@ describe('buildDeletionPreview and deletionConflict', () => {
     expect(preview.references).toHaveLength(1);
     const failure = deletionConflict(deps, preview);
     expect(code(failure)).toBe('stillReferenced');
-    expect(failure!.error.type === 'conflict' && failure!.error.message).toBe('Es zeigt noch darauf: Dokument „Entwurf“');
+    expect(failure!.error).toMatchObject({ messageKey: 'errors.stillReferenced', params: { references: 'Dokument „Entwurf“' } });
   });
 
   it('lässt einen abgelaufenen Halter durch', () => {

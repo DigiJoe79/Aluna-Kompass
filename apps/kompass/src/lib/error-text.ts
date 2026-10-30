@@ -31,7 +31,7 @@ const listOf = (items: string[]): string => new Intl.ListFormat('de', { type: 'c
 /**
  * Backlog 55: `permissionKeys` („users.manage,finance.read“) wird zu `permissions` („Nutzer verwalten und Finanzen
  * lesen“), `matches` und `holders` (getrennt durch U+001F, damit ein Komma nichts zerschneidet) zu `matchList` und
- * `holderList`, jeder Eintrag in „…“; `ibans` wird gruppiert.
+ * `holderList`, jeder Eintrag in „…“, `references` zu `referenceList` (ohne Anführungszeichen); `ibans` wird gruppiert.
  */
 function withListValues(values: Record<string, string | number | Date>, t: Translate): Record<string, string | number | Date> {
   const next = { ...values };
@@ -42,6 +42,8 @@ function withListValues(values: Record<string, string | number | Date>, t: Trans
   if (typeof values.vatPeriod === 'string') next.vatPeriod = vatPeriodLabel(values.vatPeriod, t as unknown as VatPeriodTranslator);
   if (typeof values.matches === 'string') next.matchList = listOf(values.matches.split('\u001f').map((m) => `„${m}“`));
   if (typeof values.holders === 'string') next.holderList = listOf(values.holders.split('\u001f').map((h) => `„${h}“`));
+  // K2: Verweise tragen ihre Anführungszeichen schon in der Bezeichnung („Dokument „…“ (Entwurf)“) — ohne zweite.
+  if (typeof values.references === 'string') next.referenceList = listOf(values.references.split('\u001f'));
   // `ibans` („DE60…, DE12…“) kommt kompakt (Daten, MCP); im Text in Vierergruppen (MUSTER § IBAN).
   if (typeof values.ibans === 'string') next.ibans = values.ibans.split(', ').map(formatIban).join(', ');
   return next;
@@ -90,7 +92,8 @@ export function conflictMessage(error: ConflictError, t: Translate): string | nu
     const key = `errors.humanOnlyFor.${error.message.split('.')[0]}`;
     return (t.has?.(key) ?? false) ? t(key) : t('errors.humanOnly');
   }
-  if (error.code === 'settingManaged') return t('errors.settingManaged', { module: error.message });
+  // V-10: der Name des Moduls, nicht sein Schlüssel.
+  if (error.code === 'settingManaged') return t('errors.settingManaged', { module: (t.has?.(`modules.names.${error.message}`) ?? false) ? t(`modules.names.${error.message}`) : error.message });
   if (error.code === 'settingUiOnly') return t('errors.settingUiOnly');
   if (error.code === 'moduleRefusesDisable') {
     const key = `modules.cannotDisable.${error.message}`;
@@ -200,6 +203,7 @@ const KNOWN_CONFLICTS = new Set([
   'linkTypeReserved',
   'slugTaken',
   'textExtractionGaveUp',
+  'textExtractionSuperseded',
   'noReviewPending',
 ]);
 
@@ -209,8 +213,6 @@ const CONFLICTS_WITH_DETAIL = new Set([
   'publishFailed',
   'mediaAssetInUse',
   'folderNotEmpty',
-  'recordHeld',
-  'stillReferenced',
   'templateUnreadable',
   'localeMissing',
   'seedAssetsMissing',

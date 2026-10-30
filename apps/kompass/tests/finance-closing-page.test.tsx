@@ -37,14 +37,17 @@ const FACTS: { [K in ClosingStepKey]: Extract<ClosingStepFacts, { key: K }> } = 
   close: { key: 'close', closedAt: null, preview: { draftsInPeriod: [], undocumented: [], openTransactionsInPeriod: [], accountsWithoutStatement: [], previousYearOpen: false, pendingCorrections: 0, canClose: true } },
   auditPackage: { key: 'auditPackage', auditors: [], packageRun: 'none', skippedBy: null, package: null },
   auditReport: { key: 'auditReport', release: null, filedAt: null, followUpOpen: false, changedEntries: 0, baselineAt: null, afterAssembly: false, followUpReportId: null, followUpReadyToSign: false, assemblyReports: { done: 0, total: 3 }, statementsMissing: [], carryOver: null },
-  assembly: { key: 'assembly', result: null, pending: [] },
+  assembly: { key: 'assembly', result: null, pending: [], formerlyManaged: null },
   taxReturn: { key: 'taxReturn', vat: null, period: null },
+  fundsUse: { key: 'fundsUse', revenueCents: 12_000_000, limitCents: 10_000_000, stage: 'review', finalVersion: null, shortHash: '7c1e09a', finalizeBlock: null },
 };
+/** Die zwölf festen Schritte; Schritt 13 (Mittelverwendung) nur über der Grenze, sein Körper kommt mit U2. */
+const TWELVE = CLOSING_STEPS.filter((key) => key !== 'fundsUse');
 const CONFIRMABLE = new Set(['statements', 'lists', 'openItems', 'purposes', 'reserves', 'confirmations', 'taxReturn']);
 
 function status(over: { done?: number; next?: ClosingStepKey | null; ended?: boolean; yearStatus?: 'open' | 'closed'; me?: Partial<ClosingStatus['me']>; facts?: Partial<typeof FACTS>; reopened?: ClosingStatus['reopened']; toRepeat?: ClosingStepKey[]; handovers?: ClosingStatus['handovers']; confirmations?: Partial<Record<ClosingStepKey, ClosingStepView['confirmation']>>; confirmable?: Partial<Record<ClosingStepKey, boolean>> } = {}): ClosingStatus {
   const done = over.done ?? 5;
-  const steps: ClosingStepView[] = CLOSING_STEPS.map((key, i) => ({
+  const steps: ClosingStepView[] = TWELVE.map((key, i) => ({
     key,
     number: i + 1,
     group: i < 7 ? 'before' : i === 7 ? 'close' : 'after',
@@ -61,7 +64,7 @@ function status(over: { done?: number; next?: ClosingStepKey | null; ended?: boo
     ended: over.ended ?? true,
     yearStatus: over.yearStatus ?? 'open',
     doneCount: done,
-    next: over.next !== undefined ? over.next : (CLOSING_STEPS[done] ?? null),
+    next: over.next !== undefined ? over.next : (TWELVE[done] ?? null),
     reopened: over.reopened ?? null,
     toRepeat: over.toRepeat ?? [],
     handovers: over.handovers ?? [],
@@ -288,7 +291,7 @@ describe('Schritte', () => {
     wrap(<ClosingSteps status={status({ done: 5 })} names={NAMES} />);
     const lists = screen.getAllByRole('list').filter((l) => l.tagName === 'OL');
     expect(lists.map((l) => within(l).getAllByRole('listitem').filter((li) => li.id.startsWith('step-')).length)).toEqual([7, 1, 4]);
-    const states = CLOSING_STEPS.map((k) => document.getElementById(`step-${k}`)!.getAttribute('data-state'));
+    const states = TWELVE.map((k) => document.getElementById(`step-${k}`)!.getAttribute('data-state'));
     expect(states).toEqual(['done', 'done', 'done', 'done', 'done', 'active', 'todo', 'todo', 'todo', 'todo', 'todo', 'todo']);
     // Erledigt: Kasse mit Betrag als Ergebnis.
     expect(document.getElementById('step-cash')!.textContent).toContain('214,30');
@@ -302,7 +305,7 @@ describe('Schritte', () => {
     const detail = (key: string) => screen.queryByTestId(`closing-steps-${key}-detail`);
     wrap(<ClosingSteps status={status({ done: 0, ended: false })} names={NAMES} />);
     for (const key of BEFORE) expect(detail(key)?.textContent, key).toBeTruthy();
-    for (const key of CLOSING_STEPS.slice(7)) expect(detail(key), key).toBeNull();
+    for (const key of TWELVE.slice(7)) expect(detail(key), key).toBeNull();
     cleanup();
     wrap(<ClosingSteps status={status({ done: 7 })} names={NAMES} />);
     for (const key of BEFORE) expect(detail(key)?.textContent, key).toBeTruthy();

@@ -12,6 +12,7 @@ const env: RuntimeEnv = {
   documentTemplatesDir: null,
   handbookDir: null,
   skipUpdateBackup: false,
+  publicUrl: null,
 };
 const sidecar = { name: 'kompass-backup-production-20261023-030000-preUpdate', kind: 'preUpdate' } as BackupSidecar;
 const NOW = new Date('2026-10-23T03:00:00.000Z');

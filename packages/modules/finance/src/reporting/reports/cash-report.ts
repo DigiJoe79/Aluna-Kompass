@@ -7,7 +7,8 @@ import { accountBalancesAt, assetOverviewAt, purposeBalancesAt, type AccountKind
 import { reserveBalanceAt } from '../../ledger/reserve-balances';
 import { financeAccounts, financeAllocationCorrections, financeAuditCarryOverEntries, financeAuditCarryOvers, financeAllocationLines, financeCategories, financeEntries, financeFiscalYears, financeReserveMovements, financeReserves } from '../../schema';
 import { dayBefore } from '../other-assets';
-import type { ReportDefinition, ReportParams, ReportRenderContext } from '../types';
+import type { ReportComputeEnv, ReportDefinition, ReportParams, ReportRenderContext } from '../types';
+import { reportTimeZone, TIME_ZONE_SETTING, zonedDayOf, zonedDayRange } from '../../zoned-days';
 import { otherAssetsBlockInternal, type OtherAssetsBlock } from './asset-overview';
 import { checkYearOrDate, reportAccountIdsInternal, reportYearInternal, type ReportYear } from './common';
 import { computeIncomeStatementReport, type IncomeStatementReport } from './income-statement';
@@ -149,19 +150,21 @@ function organPaymentsOf(db: DbOrTx, year: ReportYear) {
 }
 
 /** Abschnitt 11: im Jahr angewandte Zuordnungskorrekturen an Buchungen früherer Geschäftsjahre. */
-function priorYearCorrectionsOf(db: DbOrTx, year: ReportYear): CashReport['priorYearCorrections'] {
+function priorYearCorrectionsOf(db: DbOrTx, year: ReportYear, timeZone: string): CashReport['priorYearCorrections'] {
+  const range = zonedDayRange(year.startsOn, year.endsOn, timeZone);
   return db
     .select({ entryId: financeEntries.id, entryNumber: financeEntries.number, designation: financeFiscalYears.designation, approvedAt: financeAllocationCorrections.approvedAt })
     .from(financeAllocationCorrections)
     .innerJoin(financeEntries, eq(financeEntries.id, financeAllocationCorrections.entryId))
     .innerJoin(financeFiscalYears, eq(financeFiscalYears.id, financeEntries.fiscalYearId))
-    .where(and(eq(financeAllocationCorrections.state, 'applied'), lt(financeFiscalYears.endsOn, year.startsOn), gte(sql`substr(${financeAllocationCorrections.approvedAt}, 1, 10)`, year.startsOn), lte(sql`substr(${financeAllocationCorrections.approvedAt}, 1, 10)`, year.endsOn)))
+    .where(and(eq(financeAllocationCorrections.state, 'applied'), lt(financeFiscalYears.endsOn, year.startsOn), gte(financeAllocationCorrections.approvedAt, range.start), lt(financeAllocationCorrections.approvedAt, range.end)))
     .all()
-    .map((r) => ({ entryId: r.entryId, entryNumber: r.entryNumber ?? '', fiscalYearDesignation: r.designation, appliedOn: r.approvedAt!.slice(0, 10) }))
+    .map((r) => ({ entryId: r.entryId, entryNumber: r.entryNumber ?? '', fiscalYearDesignation: r.designation, appliedOn: zonedDayOf(r.approvedAt!, timeZone) }))
     .sort((a, b) => a.appliedOn.localeCompare(b.appliedOn) || a.entryNumber.localeCompare(b.entryNumber));
 }
 
-export function computeCashReport(db: DbOrTx, params: ReportParams): CashReport {
+export function computeCashReport(db: DbOrTx, params: ReportParams, env?: ReportComputeEnv): CashReport {
+  const timeZone = reportTimeZone(env);
   const full = reportYearInternal(db, params.fiscalYearId!);
   // Rechenschaft C (Amtsübergabe): Zwischenbericht vom Jahresbeginn bis `date` — das Jahr endet für die Rechnung dort.
   const year = params.date ? { ...full, endsOn: params.date } : full;
@@ -190,7 +193,7 @@ export function computeCashReport(db: DbOrTx, params: ReportParams): CashReport 
     openItems: { receivablesCents: overview.receivablesCents, payablesCents: overview.payablesCents },
     otherAssets: otherAssetsBlockInternal(db, year.endsOn),
     ...organPaymentsOf(db, year),
-    priorYearCorrections: priorYearCorrectionsOf(db, year),
+    priorYearCorrections: priorYearCorrectionsOf(db, year, timeZone),
     ...withCarryOvers(priorYearCarryOversOf(db, year)),
     ...(params.date ? { interimUntil: params.date } : {}),
   };
@@ -224,6 +227,7 @@ export const cashReportDefinition: ReportDefinition<CashReport> = {
   checkParams: checkYearAndInterimDate,
   years: (_db, params) => (params.fiscalYearId ? [params.fiscalYearId] : []),
   compute: computeCashReport,
+  settingKeys: [TIME_ZONE_SETTING],
   toTypst: cashReportTypst,
   titleKey: 'finance.reports.cashReport.title',
   paperTitle: 'Kassenbericht',

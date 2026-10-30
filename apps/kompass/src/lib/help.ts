@@ -1,5 +1,5 @@
 import type { HelpEntry, ModuleManifest } from '@kompass/core';
-import { matches } from './navigation';
+import { matches, matchesPattern } from './navigation';
 
 /**
  * Die Hilfe der Kernseiten. Wie `CORE_ADMIN` in der Navigation: Der Kern
@@ -18,6 +18,7 @@ export const CORE_HELP: HelpEntry[] = [
   { href: '/admin/locales', doc: 'einstellungen/sprachen' },
   { href: '/admin/themes', doc: 'einstellungen/themes' },
   { href: '/admin/modules', doc: 'einstellungen/module' },
+  { href: '/admin/agents', doc: 'einstellungen/agenten' },
   { href: '/admin/documents', doc: 'einstellungen/dokumente' },
 ];
 
@@ -31,7 +32,7 @@ export function helpDocFor(entries: HelpEntry[], pathname: string): string | nul
   if (matches('/help', pathname)) return null;
   let best: HelpEntry | null = null;
   for (const entry of entries) {
-    if (!matches(entry.href, pathname)) continue;
+    if (!matchesPattern(entry.href, pathname)) continue;
     if (entry.href === '/' && pathname !== '/') continue;
     if (!best || entry.href.length > best.href.length) best = entry;
   }

@@ -27,9 +27,11 @@ const rootVersion = (JSON.parse(readFileSync(path.join(__dirname, '../../../pack
  * `0009_members_direct_debit_0_3_0` die zusammengelegte der Fassung 0.3.0 (Mitglieder, Lastschrift, Versand per E-Mail),
  * `0010_media_ai_kind_finance_locks_0_3_1` die zusammengelegte der Fassung 0.3.1 (Bildkennzeichnung, Trigger an
  * gesperrten Finanzspalten; 0.3.2 brachte keine), `0011_finance_accountability_0_4_0` die zusammengelegte der
- * Fassung 0.4.0 (Rechenschaftspflichten: Berichte, Kassenprüfung, Abschluss, Erklärungszeiträume, USt-Abgaben).
+ * Fassung 0.4.0 (Rechenschaftspflichten: Berichte, Kassenprüfung, Abschluss, Erklärungszeiträume, USt-Abgaben),
+ * `0012_governance_annual_accounts_0_5_0` die zusammengelegte der Fassung 0.5.0 (Gremien; dazu die nie einzeln
+ * ausgelieferte 0.4.5 mit Jahresrechnung und Mittelverwendung, samt ihren Triggern).
  */
-const RELEASED = ['0000_init.sql', '0001_dashboard_layouts.sql', '0002_document_former_numbers.sql', '0003_finance.sql', '0004_finance_0_2_1.sql', '0005_animals_review.sql', '0006_audit_params.sql', '0007_animal_proposals_site_manifest.sql', '0008_image_crops.sql', '0009_members_direct_debit_0_3_0.sql', '0010_media_ai_kind_finance_locks_0_3_1.sql', '0011_finance_accountability_0_4_0.sql'];
+const RELEASED = ['0000_init.sql', '0001_dashboard_layouts.sql', '0002_document_former_numbers.sql', '0003_finance.sql', '0004_finance_0_2_1.sql', '0005_animals_review.sql', '0006_audit_params.sql', '0007_animal_proposals_site_manifest.sql', '0008_image_crops.sql', '0009_members_direct_debit_0_3_0.sql', '0010_media_ai_kind_finance_locks_0_3_1.sql', '0011_finance_accountability_0_4_0.sql', '0012_governance_annual_accounts_0_5_0.sql'];
 
 /**
  * Was eine Produktion schon ausgeführt hat, bleibt Byte für Byte, wie es war:

@@ -80,6 +80,25 @@ test.describe('finance audit (Rechenschaft D1b)', () => {
     await expect(witnesses.getByRole('checkbox', { name: 'Mira Klein' })).toBeVisible();
   });
 
+  // G-30: Die Prüferin liest die finanzwirksamen Beschlüsse ohne Recht in den Gremien und öffnet nur deren Protokolle.
+  test('Prüferin: Abschnitt 9 Beschlüsse — Protokoll öffnen, Vermerk an einem Beschluss', async ({ page }) => {
+    await loginAs(page, MIRA.email, MIRA.password);
+    await page.goto('/finance/audit');
+    await page.getByTestId('package-resolutions').getByRole('link', { name: /9\. Beschlüsse/ }).first().click();
+    await expect(page).toHaveURL(/\/finance\/audit\/resolutions\?year=/);
+    const row = page.locator('tbody tr').filter({ hasText: 'Kassenbericht genehmigt' }).first();
+    const href = await row.getByRole('link', { name: /^Protokoll / }).getAttribute('href');
+    const pdf = await page.request.get(href!);
+    expect(pdf.status()).toBe(200);
+    expect(pdf.headers()['content-type']).toContain('application/pdf');
+    await row.getByTestId('remark-write').click();
+    const dialog = page.getByTestId('remark-dialog');
+    await dialog.getByLabel('Text').fill('Bitte die Belege zur Genehmigung zeigen.');
+    await dialog.getByRole('button', { name: 'Speichern' }).click();
+    await expect(dialog).toBeHidden();
+    await expect(page.getByTestId('audit-remarks-card')).toContainText('Bitte die Belege zur Genehmigung zeigen.');
+  });
+
   test('zuletzt: Zugang von Mira Klein beenden — danach sieht sie die Finanzen nicht mehr', async ({ page }) => {
     await loginAsAdmin(page);
     await page.goto('/finance/audit');

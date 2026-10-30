@@ -20,12 +20,12 @@ afterEach(() => {
   vi.mocked(setBoardRemunerationAction).mockClear();
 });
 
-function renderPanel(board: { allowed: boolean; basisText: string; validFrom: string | null; decidedOn: string | null }) {
+function renderPanel(board: { allowed: boolean; basisText: string; validFrom: string | null; decidedOn: string | null; managed?: { label: string; href: string | null } | null }) {
   render(
     <NextIntlClientProvider locale="de" messages={messages} timeZone="Europe/Berlin">
       <DateFormatProvider mode="locale" timeZone="Europe/Berlin">
         <TaxPanel
-          switches={{ membershipFeesCertifiable: false, expenseWaiversEnabled: false, mcpHumanOnlyAllowed: false }}
+          switches={{ membershipFeesCertifiable: false, expenseWaiversEnabled: false }}
           limits={{ statementSufficesBelowCents: 30000, cashDonationAlertCents: 100000, roundAmountFromCents: 50000, proofGraceDays: 30 }}
           confirmedAt={null}
           waiverBasisText=""
@@ -76,5 +76,17 @@ describe('TaxPanel Vergütung des Vorstands', () => {
     renderPanel({ allowed: false, basisText: '', validFrom: null, decidedOn: null });
     expect(screen.getByRole('heading', { name: 'Einordnung des Vereins' })).toBeTruthy();
     expect(screen.queryByRole('heading', { name: 'Schalter' })).toBeNull();
+  });
+});
+
+describe('Vergütung aus einem Beschluss der Gremien (G7)', () => {
+  it('zeigt feste Werte mit dem Beschluss als Link statt der Frage, ohne Speicherleiste', () => {
+    const card = renderPanel({ allowed: true, basisText: '§ 12 Abs. 2 der Satzung', validFrom: '2026-10-01', decidedOn: '2026-09-05', managed: { label: 'Beschluss B-2026-001', href: '/governance/resolutions/R1' } });
+    expect(within(card).queryByRole('radiogroup')).toBeNull();
+    expect(within(card).queryByTestId('board-remuneration-save')).toBeNull();
+    expect(within(card).getAllByTestId('managed-field').length).toBeGreaterThan(0);
+    expect(within(card).getByRole('link', { name: 'Beschluss B-2026-001' }).getAttribute('href')).toBe('/governance/resolutions/R1');
+    expect(card.textContent).toContain('§ 12 Abs. 2 der Satzung');
+    expect(card.textContent).toContain('01.10.2026');
   });
 });

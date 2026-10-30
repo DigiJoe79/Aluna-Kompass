@@ -87,7 +87,9 @@ Kontoauszüge kommen als CAMT oder CSV herein, Belege aus der Akte, Rechnungen m
   </tr>
 </table>
 
-Am Ende des Jahres führt der **Jahresabschluss** in zwölf Schritten von den Kontoauszügen über die Kassenprüfung und die Mitgliederversammlung bis zur Steuererklärung. Die Kassenprüfer arbeiten in Kompass mit eigenem Zugang: Prüfpaket mit Stichproben, Vermerke mit Antwort, Kassenzählung, Prüfbericht. Die Berichte — Einnahmen-Überschuss-Rechnung, Vermögensübersicht, Kassenbericht, Zweckmittel, Rücklagenspiegel, Spendenbuch und weitere — sind vorläufig, solange das Jahr offen ist, und werden danach als Dokument festgeschrieben. Für die Steuererklärung stehen die Werte der Anlage Gem bereit, für die Umsatzsteuer die Voranmeldung — auch für Vereine, die kein Unternehmer sind und nur nach § 13b Steuer schulden.
+Am Ende des Jahres führt der **Jahresabschluss** in zwölf Schritten von den Kontoauszügen über die Kassenprüfung und die Mitgliederversammlung bis zur Steuererklärung; liegen die Einnahmen über der Grenze für die zeitnahe Mittelverwendung, kommt als dreizehnter Schritt die Mittelverwendung dazu. Die Kassenprüfer arbeiten in Kompass mit eigenem Zugang: Prüfpaket mit Stichproben, Vermerke mit Antwort, Kassenzählung, Prüfbericht. Die Berichte — Einnahmen-Überschuss-Rechnung, Vermögensübersicht, Kassenbericht, Zweckmittel, Rücklagenspiegel, Spendenbuch und weitere — sind vorläufig, solange das Jahr offen ist, und werden danach als Dokument festgeschrieben. Für die Steuererklärung stehen die Werte der Anlage Gem bereit, für die Umsatzsteuer die Voranmeldung — auch für Vereine, die kein Unternehmer sind und nur nach § 13b Steuer schulden.
+
+Für Mitglieder, Spender und Öffentlichkeit gibt es die **Jahresrechnung**: Mittelherkunft, Mittelverwendung mit Vermögen und die großen Zuwender, festgeschrieben, von einem vertretungsberechtigten Vorstandsmitglied abgezeichnet und auf Wunsch auf der Webseite bereitgestellt. Die **Mittelverwendungsrechnung** zeigt je Zuflussjahr, ob die Mittel binnen zwei Jahren für die Satzungszwecke verwendet sind, mit Vortrag, Vermögensabgleich und Rücklagen — Nachweis, wo die zeitnahe Verwendung geboten ist, sonst freiwillig.
 
 <table>
   <tr>
@@ -105,6 +107,14 @@ Am Ende des Jahres führt der **Jahresabschluss** in zwölf Schritten von den Ko
   <tr>
     <td>Berichte zum Festschreiben</td>
     <td>Umsatzsteuer-Voranmeldung</td>
+  </tr>
+  <tr>
+    <td><img src="docs/screenshots/desktop/fin-jahresrechnung.png" width="420" alt="Die Jahresrechnung eines abgeschlossenen Jahres: festgeschrieben, abgezeichnet und auf der Webseite bereitgestellt, daneben die Seiten des Berichts" /></td>
+    <td><img src="docs/screenshots/desktop/fin-mittelverwendung.png" width="420" alt="Die Mittelverwendung eines Jahres unter der Grenze: Kopfsatz zur Grenze und Teil A des Berichts" /></td>
+  </tr>
+  <tr>
+    <td>Jahresrechnung für die Öffentlichkeit</td>
+    <td>Mittelverwendung</td>
   </tr>
 </table>
 
@@ -126,6 +136,33 @@ Wer per Lastschrift zahlt, bekommt ein SEPA-Mandat mit vorausgefülltem Formular
     <td>Mitgliederliste</td>
     <td>Ein Mitglied mit Beiträgen und Briefen</td>
     <td>Einzug per SEPA-Lastschrift</td>
+  </tr>
+</table>
+
+### Gremien — Sitzungen, Beschlüsse, Satzung
+
+Gremien führt die Organe des Vereins mit ihren Ämtern und Amtszeiten, die Sitzungen von Mitgliederversammlung, Vorstand und weiteren Organen, die Beschlüsse und die Satzung. Eine Sitzung läuft in fünf Schritten: Tagesordnung vorbereiten, einladen — die Mitgliederversammlung im Serienlauf mit einem Brief je Mitglied, per E-Mail oder als PDF zum Drucken —, die Sitzung, Protokoll und Festschreiben. In der Sitzung schreibt die Protokollführung im **Mitlauf** mit: Anwesenheit, Beschlussfähigkeit, Abstimmungen mit der nötigen Mehrheit und ihrer Fundstelle, Wahlen mit Stichwahl und Annahme — ohne Speichern-Knopf, auch bei wackliger Verbindung. Daraus entsteht der Entwurf des Protokolls; ist die unterschriebene Fassung abgelegt und die Sitzung festgeschrieben, tragen die Beschlüsse ihre Nummer und die Gewählten ihre Amtszeit. Beschlüsse ohne Sitzung laufen als Umlauf: Kompass verschickt nichts, hält aber fest, wer wie geantwortet hat, und rechnet, ob der Beschluss zustande kam.
+
+Die Satzung besteht aus Ständen mit Wortlaut und einem Regelwerk, aus dem Kompass Fristen, Beschlussfähigkeit und Mehrheiten rechnet; wo die Satzung schweigt, gilt das Gesetz. Ändert eine Sitzung den Vorstand oder die Satzung, stellt Kompass die Anmeldung zum Vereinsregister mit ihren Unterlagen zusammen, verfolgt sie über Notar, Einreichung und Eintragung und fragt nach, ob eine Meldung zum Transparenzregister nötig ist. Eingereicht wird beim Notar, nicht aus Kompass.
+
+Mit den Finanzen ist Gremien verbunden: Die festgeschriebene Mitgliederversammlung liefert Entlastung und Genehmigung der Jahresrechnung an den Jahresabschluss, die vertretenden Ämter bestimmen, wer die Jahresrechnung abzeichnet, die gewählten Kassenprüfer stehen beim Eintragen der Prüfer zur Auswahl, und die Kassenprüfung bekommt die Beschlüsse mit Wirkung auf die Kasse als eigenen Abschnitt. Die Rollen Vorstandsmitglied, Schatzmeister und Kassenprüfung am Kontakt folgen aus den Ämtern.
+
+<table>
+  <tr>
+    <td><img src="docs/screenshots/desktop/gremien-uebersicht.png" width="420" alt="Die Übersicht der Gremien: je Organ die Ämter mit ihren Plätzen, rechts die nächste Sitzung und die Fristen" /></td>
+    <td><img src="docs/screenshots/desktop/gremien-mitlauf.png" width="420" alt="Der Mitlauf einer Vorstandssitzung mit Lageleiste, Tagesordnung und einer gezählten Abstimmung" /></td>
+  </tr>
+  <tr>
+    <td>Organe, Ämter und Fristen</td>
+    <td>Mitlauf in der Sitzung</td>
+  </tr>
+  <tr>
+    <td><img src="docs/screenshots/desktop/gremien-beschluesse.png" width="420" alt="Die Beschlussliste aller Organe mit Nummer, Tag und Gegenstand" /></td>
+    <td><img src="docs/screenshots/desktop/gremien-satzung.png" width="420" alt="Das Regelwerk eines Satzungsstands je Organ mit Fundstellen, grau, was laut Gesetz gilt" /></td>
+  </tr>
+  <tr>
+    <td>Beschlüsse mit Nummer</td>
+    <td>Satzung mit Regelwerk</td>
   </tr>
 </table>
 
@@ -207,7 +244,7 @@ Rechte vergibt man je Rolle, Rollennamen sind frei — „Schatzmeisterin“, �
 
 ### KI-Assistenten über MCP
 
-Was die Oberfläche kann, kann auch ein KI-Assistent über das [Model Context Protocol](https://modelcontextprotocol.io) — dieselben Dienste, dieselben Rechte, dasselbe Protokoll. Ein Token wirkt mit den Rechten der Person, die es erstellt hat; jeder Vorgang steht mit dem Kanal „MCP“ und dem Namen des Tokens im Änderungsprotokoll. Drei Dinge bewusst nicht: Dateien abrufen (auch keine Backups herunterladen), API-Token verwalten, das eigene Passwort ändern. Das Einspielen eines Backups sowie in den Finanzen Festschreiben, Freigeben und Ausstellen bleiben Menschen vorbehalten, solange der Verein es nicht ausdrücklich erlaubt. Ein Test hält die Liste vollständig.
+Was die Oberfläche kann, kann auch ein KI-Assistent über das [Model Context Protocol](https://modelcontextprotocol.io) — dieselben Dienste, dieselben Rechte, dasselbe Protokoll. Ein Token wirkt mit den Rechten der Person, die es erstellt hat; jeder Vorgang steht mit dem Kanal „MCP“ und dem Namen des Tokens im Änderungsprotokoll. Drei Dinge bewusst nicht: Dateien abrufen (auch keine Backups herunterladen), API-Token verwalten, das eigene Passwort ändern. Das Einspielen eines Backups, in den Finanzen Festschreiben, Freigeben und Ausstellen, in den Gremien Einladen und Festschreiben bleiben Menschen vorbehalten, solange der Verein es nicht unter Verwaltung → Agenten ausdrücklich erlaubt. Ein Test hält die Liste vollständig.
 
 ### Unterwegs
 
@@ -229,12 +266,13 @@ Kompass läuft auch auf dem Telefon: die Startseite, ein Kontakt, ein Tierprofil
 | **Fundament** | Nutzer, Rollen und Rechte, Einstellungen statt Konstanten, Themes mit hellem und dunklem Modus, Änderungsprotokoll, Aufbewahrung und Löschfristen, nächtliches und geprüftes Backup mit Einspielen aus der Liste, Modul-System, Dokument-Pipeline mit Basis-Vorlagen, Mediathek mit Ordnern |
 | **Webseite** | Pflege in Kompass, Bau mit Astro aus dem Template des Vereins, Prüfung auf Sperrwörter und Übersetzungslücken, Vorschau mit Vergleich zur Live-Seite, Publish per rsync auf einen gewöhnlichen Webspace |
 | **Kontakte und Akte** | Kontakte mit Rollen über die Zeit und berechneter Aufbewahrungsfrist. Die Akte für ein- und ausgehende Post: Entwurf, Festschreiben, Nummer, Storno statt Löschen, Ordnerbaum, Bezüge, Antworten und Folgeschreiben, Wiedervorlage, Volltext mit Texterkennung, Versand per E-Mail mit Ausgang |
-| **Finanzen** | Bankkonten und Kassen, Kontoauszüge (CAMT, CSV), Belege mit ZUGFeRD, Buchen und Festschreiben, Zuwendungsbestätigungen nach amtlichem Muster mit Serienlauf und Spendenbuch, maschinelle Bestätigungen, Auslagen mit Freigabe durch eine zweite Person, Aufwandsspenden, Zahlungen an Partner mit Nachweisen, Zwecke und Rücklagen, Pauschalen je Person. Jahresabschluss, Kassenprüfung mit Prüferzugang, festschreibbare Berichte, Fristen und Schwellen, Werte für Steuererklärung und Anlage Gem, Umsatzsteuer-Voranmeldung, Amtsübergabe, Datenexport für die Außenprüfung. Für Vereine mit Einnahmen-Überschuss-Rechnung |
+| **Finanzen** | Bankkonten und Kassen, Kontoauszüge (CAMT, CSV), Belege mit ZUGFeRD, Buchen und Festschreiben, Zuwendungsbestätigungen nach amtlichem Muster mit Serienlauf und Spendenbuch, maschinelle Bestätigungen, Auslagen mit Freigabe durch eine zweite Person, Aufwandsspenden, Zahlungen an Partner mit Nachweisen, Zwecke und Rücklagen, Pauschalen je Person. Jahresabschluss, Kassenprüfung mit Prüferzugang, festschreibbare Berichte, Jahresrechnung für die Öffentlichkeit, Mittelverwendungsrechnung, Fristen und Schwellen, Werte für Steuererklärung und Anlage Gem, Umsatzsteuer-Voranmeldung, Amtsübergabe, Datenexport für die Außenprüfung. Für Vereine mit Einnahmen-Überschuss-Rechnung |
 | **Mitglieder und Lastschrift** | Anträge, Aufnahme mit Nummer, Austritt mit Kündigungsfrist, Mitgliedsarten, Beitragsordnung mit Ständen, Beitrags- und Mahnlauf mit Versand per E-Mail oder Post, Stundung und Erlass, CSV-Liste und Bescheinigung über die Mitgliederzahl. SEPA-Lastschrift für Beiträge und Dauerspenden: Mandate mit Formular und Unterschrift, Einzug mit Vorschau und Datei für die Bank, Gutschrift und Rückgaben über die Arbeitsliste |
+| **Gremien** | Organe und Ämter mit Amtszeiten, Sitzungen mit Tagesordnung, Anträgen und Einladung im Serienlauf, Mitlauf mit Anwesenheit, Beschlussfähigkeit, Abstimmungen und Wahlen, Protokoll und Festschreiben, Beschlüsse mit Nummer, Umlaufbeschlüsse, Satzung in Ständen mit Regelwerk, Anmeldung zum Vereinsregister und Transparenzregister. Liefert Entlastung, Vertretung und Kassenprüfer an die Finanzen |
 | **Projekte, Tiere** | Vereinsspezifische Module mit ihrem öffentlichen Teil für die Webseite; Projekte haben dazu ihren Finanzabschnitt, Tierprofile eine Prüfung vor der Veröffentlichung |
 | **MCP** | Alle Dienste der Oberfläche für KI-Assistenten, mit denselben Rechten und demselben Protokoll |
 
-Was als Nächstes kommt — Gremien, das Tiermodul in seiner Vollstufe — und warum in dieser Reihenfolge, steht in [`docs/nordstern.md`](docs/nordstern.md). Dort steht auch, was Kompass **nicht** ist: kein Newsletter, kein Mailprogramm, kein Kalender, kein Aufgabenmanager, keine Finanzbuchhaltung für Bilanzierer und keine Übermittlung ans Finanzamt, kein Webseiten-Baukasten, kein Multi-Tenant.
+Was als Nächstes kommt — nach den Gremien das Tiermodul in seiner Vollstufe, mit dem ganzen Weg eines Tieres von der Aufnahme über Transport und medizinische Akte bis zur Vermittlung — und warum in dieser Reihenfolge, steht in [`docs/nordstern.md`](docs/nordstern.md). Dort steht auch, was Kompass **nicht** ist: kein Newsletter, kein Mailprogramm, kein Kalender, kein Aufgabenmanager, keine Finanzbuchhaltung für Bilanzierer und keine Übermittlung ans Finanzamt, kein Webseiten-Baukasten, kein Multi-Tenant.
 
 ## Betrieb
 

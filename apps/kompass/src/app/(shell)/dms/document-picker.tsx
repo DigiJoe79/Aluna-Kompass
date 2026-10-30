@@ -1,6 +1,7 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
+import { cn } from '@/lib/utils';
 import { useEffect, useRef, useState } from 'react';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { searchDocumentsAction, type PickedDocument } from './search-action';
@@ -19,6 +20,7 @@ export function DocumentPicker({
   onChange,
   exceptId,
   required,
+  suggested,
 }: {
   id: string;
   name: string;
@@ -27,6 +29,8 @@ export function DocumentPicker({
   onChange: (doc: PickedDocument | null) => void;
   exceptId?: string;
   required?: boolean;
+  /** Vorbelegt aus einem Vorschlag (MUSTER § E): Rahmen im Token `agent`; die Herkunft steht darunter (`SuggestionFlag`). */
+  suggested?: boolean;
 }) {
   const t = useTranslations('dms.picker');
   const labelOf = (doc: PickedDocument) => (doc.number ? `${doc.number} · ${doc.subject}` : doc.subject);
@@ -36,6 +40,11 @@ export function DocumentPicker({
   /** Nichts Anklickbares, bis die Suche geantwortet hat — wie im Kontakt-Suchfeld. */
   const [loaded, setLoaded] = useState(false);
   const latest = useRef(0);
+  // Das verzögerte Schließen nach dem Verlassen des Felds; beim Entfernen weggeräumt, sonst setzt es danach noch Zustand.
+  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => {
+    if (closeTimer.current) clearTimeout(closeTimer.current);
+  }, []);
 
   useEffect(() => {
     setQuery(value ? labelOf(value) : '');
@@ -83,10 +92,12 @@ export function DocumentPicker({
             setOpen(true);
           }}
           onFocus={() => setOpen(true)}
-          onBlur={() => setTimeout(() => setOpen(false), 120)}
+          onBlur={() => {
+            closeTimer.current = setTimeout(() => setOpen(false), 120);
+          }}
           placeholder={t('placeholder')}
           wrapperClassName="p-0"
-          fieldClassName="h-[var(--field-h)] rounded-md! border-line-strong bg-field"
+          fieldClassName={cn('h-[var(--field-h)] rounded-md! bg-field', suggested ? 'border-agent' : 'border-line-strong')}
         />
         {open ? (
           // Wie im Kontakt-Suchfeld: Das Drücken darf dem Feld den Fokus nicht

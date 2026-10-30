@@ -68,7 +68,7 @@ describe('SETTINGS_TABS', () => {
       ['name', ['name:m', 'legalForm:m']],
       ['address', ['street:m', 'postalCode:s', 'city:s']],
       ['locale', ['country:s', 'timeZone:s', 'foundedYear:s']],
-      ['register', ['registerCourt:m', 'registerNumber:s']],
+      ['register', ['registerCourt:m', 'registerNumber:s', 'registeredOn:s']],
       ['contact', ['email:m', 'phone:s', 'website:m']],
     ]);
   });

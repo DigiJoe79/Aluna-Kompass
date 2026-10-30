@@ -1,3 +1,4 @@
+import { timeZoneOf } from '@kompass/core';
 import { contacts, displayName } from '@kompass/module-contacts';
 import { eq, inArray } from 'drizzle-orm';
 import { auditDoneInternal, auditorsOfYearInternal } from '../auditing/access';
@@ -10,10 +11,12 @@ import { fiscalYearStatusInternal } from '../ledger/fiscal-years';
 import { missingStatementPdfsInternal } from '../ledger/statement-documents';
 import { taxPeriodOfYearInternal } from '../ledger/tax-periods';
 import { REPORT_CATALOG } from '../reporting/catalog';
+import { fundsUseReport } from '../reporting/reports/funds-use';
 import { runReportInternal } from '../reporting/service';
 import { releaseOfYearInternal } from '../reporting/stage';
 import { financeAuditBaselines, financeFiscalYears, financeNotices } from '../schema';
 import { assemblyOfYearInternal, assemblyPersonsInternal } from './assembly';
+import { formerlyGovernedAssemblyOf } from '../sources';
 import type { StepContext, StepResult } from './steps-before';
 import { vatPeriodViewsInternal } from '../ledger/vat-filings';
 
@@ -73,7 +76,7 @@ function auditReportStep(c: StepContext): StepResult {
     followUpOpen,
     changedEntries: followUpOpen && reference ? changedSinceInternal(db, c.year.id, reference).length : 0,
     baselineAt,
-    afterAssembly: assemblyOfYearInternal(db, c.year.id) !== null,
+    afterAssembly: assemblyOfYearInternal(c.deps, db, c.year.id, timeZoneOf(c.deps)) !== null,
     followUpReportId: openFollowUp?.id ?? null,
     followUpReadyToSign: openFollowUp?.state === 'readyToSign',
     assemblyReports,
@@ -87,10 +90,13 @@ function auditReportStep(c: StepContext): StepResult {
 
 /** Mit Ergebnis: die nicht erteilten Entlastungen mit Namen, für den Kopf „Offen: Entlastung von …, vertagt.“ (14b). */
 function assemblyStep(c: StepContext): StepResult {
-  const result = assemblyOfYearInternal(c.deps.db, c.year.id);
+  const result = assemblyOfYearInternal(c.deps, c.deps.db, c.year.id, timeZoneOf(c.deps));
   const names = result && result.dischargeMode === 'individual' ? new Map(assemblyPersonsInternal(c.deps.db, c.year).map((p) => [p.contactId, p.name])) : new Map<string, string>();
+  // Aus einer Quelle (Gremien) kann jemand entlastet werden, der hier keine Rolle im Jahr hat: Name aus dem Kontakt.
+  const missing = result ? result.discharges.map((d) => d.contactId).filter((id) => !names.has(id)) : [];
+  if (missing.length > 0) for (const c2 of c.deps.db.select().from(contacts).where(inArray(contacts.id, missing)).all()) names.set(c2.id, displayName(c2));
   const pending = result ? result.discharges.filter((d) => d.outcome !== 'granted').map((d) => ({ name: names.get(d.contactId) ?? '', outcome: d.outcome })) : [];
-  return { done: result?.complete ?? false, confirmable: false, facts: { key: 'assembly', result, pending } };
+  return { done: result?.complete ?? false, confirmable: false, facts: { key: 'assembly', result, pending, formerlyManaged: formerlyGovernedAssemblyOf(c.deps, c.deps.db, c.year) } };
 }
 
 /**
@@ -129,9 +135,22 @@ function taxReturnStep(c: StepContext): StepResult {
   return { done: (period.filedOn !== null || !lastYear) && vatSettled, confirmable: false, facts };
 }
 
-export const STEPS_AFTER: Record<'auditPackage' | 'auditReport' | 'assembly' | 'taxReturn', (c: StepContext) => StepResult> = {
+/**
+ * Schritt 13 (M2, Spec 0.4.5 Teil M): die Mittelverwendungsrechnung des Jahres festschreiben — erledigt mit der Stufe
+ * `final`, nicht bestätigbar. Ob er überhaupt erscheint, entscheidet `closingStatusInternal` (nur über der Grenze);
+ * er hängt nicht an den Schritten 9–12 (Gruppe `taxOffice`, nur abgeschlossenes Jahr).
+ */
+function fundsUseStep(c: StepContext): StepResult {
+  const run = runReportInternal(c.deps, c.deps.db, fundsUseReport, { fiscalYearId: c.year.id });
+  const head = run.data.head;
+  const finalVersion = run.finalVersion ? { documentNumber: run.finalVersion.documentNumber, finalizedAt: run.finalVersion.finalizedAt } : null;
+  return { done: run.stage === 'final', confirmable: false, facts: { key: 'fundsUse', revenueCents: head.revenueCents, limitCents: head.limitCents, stage: run.stage, finalVersion, shortHash: run.shortHash, finalizeBlock: run.finalizeBlock } };
+}
+
+export const STEPS_AFTER: Record<'auditPackage' | 'auditReport' | 'assembly' | 'taxReturn' | 'fundsUse', (c: StepContext) => StepResult> = {
   auditPackage: auditPackageStep,
   auditReport: auditReportStep,
   assembly: assemblyStep,
   taxReturn: taxReturnStep,
+  fundsUse: fundsUseStep,
 };

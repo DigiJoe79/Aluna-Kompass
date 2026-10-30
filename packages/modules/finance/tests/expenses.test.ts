@@ -160,7 +160,8 @@ describe('uploadExpenseReceipt', () => {
     const big = new Uint8Array(DOCUMENT_MAX_BYTES + 1);
     big.set(f.pdf());
     const tooLarge = await uploadExpenseReceipt(f.deps, f.hanna.ctx, { claimId: draft.id, positionId, bytes: big, fileName: 'scan.pdf' });
-    expect(err(tooLarge)).toMatchObject({ code: 'expenseFileTooLarge', params: { file: 'scan.pdf', limit: '10 MB' } });
+    // K3 (0.4.5): die eingestellte Grenze (Vorgabe 5 MB) gilt auch hier.
+    expect(err(tooLarge)).toMatchObject({ code: 'expenseFileTooLarge', params: { file: 'scan.pdf', limit: '5 MB' } });
     expect(f.deps.db.select().from(documents).all()).toHaveLength(2);
 
     // Eine Fahrt hat keinen Beleg, ein fremder Antrag nimmt keinen an.

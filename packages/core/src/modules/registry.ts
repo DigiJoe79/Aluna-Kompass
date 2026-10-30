@@ -52,6 +52,16 @@ export function createRegistry(
     }
   }
 
+  const managerOf = new Map<string, string>();
+  for (const manifest of manifests) for (const role of manifest.contactRoles ?? []) if (role.managedBy !== undefined) managerOf.set(role.key, role.managedBy);
+  for (const manifest of manifests) {
+    for (const role of manifest.managesContactRoles ?? []) {
+      const other = managerOf.get(role);
+      if (other !== undefined) throw new Error(`roleManagedTwice: ${role} (modules ${other}, ${manifest.key})`);
+      managerOf.set(role, manifest.key);
+    }
+  }
+
   const documentTemplates = new Map<string, DocumentTemplate>();
   const addTemplate = (t: DocumentTemplate) => {
     if (documentTemplates.has(t.key)) throw new Error(`duplicate document template: ${t.key}`);

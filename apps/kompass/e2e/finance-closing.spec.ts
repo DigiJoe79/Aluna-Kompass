@@ -4,6 +4,7 @@ import { callTool, mcpClient } from './expense-helpers';
 import { loginAsAdmin, openFiscalYear, resetDatabase, setE2ESetting } from './helpers';
 import { associationDay } from './association-day';
 import { STORY_YEAR } from './story-year';
+import { SEED_CLOSED_YEARS } from '../../../packages/core/src/seed/story-year';
 
 /**
  * Rechenschaft C2 — Jahresabschluss, Amtsübergabe, Fristen und Schwellen in der Oberfläche. Seed (C1 Task 12): Der
@@ -73,7 +74,9 @@ test.describe('finance closing (Rechenschaft C2)', () => {
   });
 
   test('Schritt 11: eine Person vertagt — „Ergebnis nachtragen“, Speichern geht, der Schritt bleibt offen und nennt die Vertagung', async ({ page, baseURL }) => {
-    const yearId = await openPreviousYear(page);
+    // Das erste Seed-Jahr: Sein Ergebnis führen die Finanzen. Das des Vor- und Vorvorjahrs führt seit G7 Gremien aus der
+    // festgeschriebenen MV, dort wird Speichern von Hand abgelehnt (`assemblyManagedByGovernance`).
+    const yearId = await openFiscalYear(page, '/finance/closing', STORY_YEAR - SEED_CLOSED_YEARS);
     // Ausgangslage über das Werkzeug: das Ergebnis der MV ohne Entscheidungen, damit Schritt 11 offen ist.
     await setE2ESetting(page, 'finance.mcpHumanOnlyAllowed', true);
     const client = await mcpClient(page, baseURL);

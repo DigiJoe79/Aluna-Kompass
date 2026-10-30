@@ -1,7 +1,7 @@
 import path from 'node:path';
 import { test as base, expect } from '@playwright/test';
 import type { Page } from '@playwright/test';
-import { startServer, warmUp, workerEnvironment, type RunningServer, type ServerKind } from './servers';
+import { oneServerFailureEndsRun, startServer, warmUp, workerEnvironment, type RunningServer, type ServerKind } from './servers';
 
 const ROOT = path.resolve(import.meta.dirname, '..');
 
@@ -67,8 +67,11 @@ export const test = base.extend<Record<never, never>, { serverKind: ServerKind; 
       process.env.E2E_SITE_TARGET = w.siteTarget;
       if (w.env.DATA_PATH) process.env.E2E_DATA_PATH = w.env.DATA_PATH;
       else delete process.env.E2E_DATA_PATH;
-      const server = await startServer(w, { root: ROOT, image: process.env.E2E_IMAGE });
-      await warmUp(server.url, path.join(ROOT, 'src', 'app'));
+      const server = await oneServerFailureEndsRun(path.join(ROOT, 'e2e', '.tmp', `server-gescheitert-${process.env.E2E_RUN_ID}`), async () => {
+        const started = await startServer(w, { root: ROOT, image: process.env.E2E_IMAGE });
+        await warmUp(started.url, path.join(ROOT, 'src', 'app'));
+        return started;
+      });
       await use(server);
       await server.stop();
     },

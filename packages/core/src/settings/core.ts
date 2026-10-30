@@ -25,6 +25,8 @@ const organization: SettingDefinition[] = [
   { key: 'organization.foundedYear', schema: z.union([z.literal(''), z.string().regex(/^(1[89]|20|21)\d{2}$/)]), default: '' },
   { key: 'organization.registerCourt', schema: shortText, default: '' },
   { key: 'organization.registerNumber', schema: shortText, default: '' },
+  // Tag der Ersteintragung ins Vereinsregister; mit Gremien schreibt ihn die erste eingetragene Registeranmeldung.
+  { key: 'organization.registeredOn', schema: isoDateOrEmpty, default: '' },
   // Ist das Finanzmodul eingeschaltet, führt die Reihe der Bescheide diese vier Werte (E22, F6a) —
   // in den Vereinsdaten sind sie dann nur noch lesbar.
   { key: 'organization.taxNumber', schema: shortText, default: '', managedBy: 'finance' },
@@ -95,7 +97,7 @@ const backup: SettingDefinition[] = [
   { key: 'backup.ring.daily', schema: z.number().int().min(1).max(60), default: 7 },
   { key: 'backup.ring.weekly', schema: z.number().int().min(0).max(52), default: 4 },
   { key: 'backup.ring.monthly', schema: z.number().int().min(0).max(120), default: 12 },
-  // Darf ein Agent einspielen? Nur über die Oberfläche (`AgentSwitchSection` kommt mit der Designer-Seite).
+  // Darf ein Agent einspielen? Nur über die Oberfläche (Verwaltung → Agenten).
   { key: 'backup.mcpHumanOnlyAllowed', schema: z.boolean(), default: false, uiOnly: true },
 ];
 

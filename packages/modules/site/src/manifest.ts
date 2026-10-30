@@ -5,6 +5,7 @@ import { SITE_MCP_TOOLS } from './mcp-tools';
 import { siteRecordLabels } from './record-labels';
 import { siteMediaReferences } from './references';
 import { SITE_SETTINGS } from './settings';
+import { publishedLiveSinceInternal } from './live-since';
 import { activeTemplate } from './service';
 import { siteSetTranslations, siteTranslatables } from './translations';
 import { seedSiteDevelopment, seedSitePublishedState } from './dev-seed';
@@ -63,6 +64,8 @@ export const siteModule: ModuleManifest = defineModule({
     const last = lastSuccessfulPublish(deps, deps.env);
     return last ? (last.finishedAt ?? last.startedAt) : null;
   },
+  // Seit wann eine Zeile einer Sicht unverändert online ist — für Fachmodule („Auf der Webseite seit …“), ohne dass sie die Webseite kennen.
+  publishedLiveSince: publishedLiveSinceInternal,
   // Die Sprachen des eingelesenen Templates: Ohne sie filtert der Export Inhalte stillschweigend weg.
   requiredLocales: (deps) => activeTemplate(deps)?.schema.locales ?? [],
   // Format und Breite der Bildstellen der Modul-Sichten aus dem eingelesenen Template (Spec Ausschnitt für alle Bilder § 2).

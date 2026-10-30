@@ -14,5 +14,6 @@ export async function GET(request: Request, ctx: { params: Promise<{ reportId: s
   const deps = getDeps();
   if (!isModuleEnabled(deps, 'finance')) return new Response(null, { status: 404 });
   const { reportId, n } = await ctx.params;
-  return pageImageResponse(request, n, (page, scale) => versionPageImage(deps, session.ctx, reportId, page, scale));
+  const documentId = new URL(request.url).searchParams.get('document') ?? undefined;
+  return pageImageResponse(request, n, (page, scale) => versionPageImage(deps, session.ctx, reportId, page, scale, documentId));
 }

@@ -22,7 +22,7 @@ test.describe('app shell', () => {
     const apple = await page.request.get(await page.locator('link[rel="apple-touch-icon"]').getAttribute('href') ?? '');
     expect(apple.headers()['content-type']).toBe('image/png');
     const rail = page.getByRole('navigation', { name: 'Hauptnavigation' });
-    await expect(rail.getByRole('link')).toHaveText(['Startseite', 'Webseite', 'Projekte', 'Tiere', 'Kontakte', 'Mitglieder', 'Akte', 'Finanzen', 'Mediathek', 'System']);
+    await expect(rail.getByRole('link')).toHaveText(['Startseite', 'Webseite', 'Projekte', 'Tiere', 'Kontakte', 'Mitglieder', 'Akte', 'Finanzen', 'Gremien', 'Mediathek', 'System']);
     // Seiten stehen nicht in der Schiene — weder aus Verwaltung noch aus einem Modul.
     await expect(rail.getByRole('link', { name: 'Nutzer' })).toHaveCount(0);
     await expect(rail.getByRole('link', { name: 'Hunde' })).toHaveCount(0);

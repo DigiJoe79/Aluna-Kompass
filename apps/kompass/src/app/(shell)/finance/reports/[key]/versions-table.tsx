@@ -14,6 +14,8 @@ export interface VersionRow {
   documentNumber: string;
   voidedAt: string | null;
   voidReason: string | null;
+  /** Jahresrechnung: Webfassungen dieser Fassung (nach einem Widerruf der Einwilligung) — je eine eigene Zeile (Bildabnahme 0.4.5 F-3). */
+  webCopies?: { documentId: string; documentNumber: string; on: string }[];
 }
 
 /**
@@ -48,7 +50,7 @@ export function VersionsTable({ versions, canOpen }: { versions: VersionRow[]; c
           <TableBody>
             {versions.map((v) => {
               const when = fmt.dateTime(v.finalizedAt);
-              return (
+              return [
                 <TableRow key={v.reportId} muted={v.voidedAt ? tMuted('withdrawn') : undefined}>
                   <TableCell col="title" mutedMark="inline">
                     {canOpen ? <RowLink href={`/finance/reports/versions/${v.reportId}/file`}>{when}</RowLink> : <span>{when}</span>}
@@ -66,8 +68,27 @@ export function VersionsTable({ versions, canOpen }: { versions: VersionRow[]; c
                   <TableCell col="meta" selectable>
                     {v.documentNumber}
                   </TableCell>
-                </TableRow>
-              );
+                </TableRow>,
+                ...(v.webCopies ?? []).map((c) => {
+                  const label = t('webCopy', { date: fmt.date(c.on) });
+                  return (
+                    <TableRow key={c.documentId} muted={v.voidedAt ? tMuted('withdrawn') : undefined}>
+                      <TableCell col="title" mutedMark="inline">
+                        {canOpen ? <RowLink href={`/finance/reports/versions/${v.reportId}/file?document=${encodeURIComponent(c.documentId)}`}>{label}</RowLink> : <span>{label}</span>}
+                        <MutedMark />
+                      </TableCell>
+                      {/* Die Webfassung entsteht von selbst beim Widerruf, nicht durch eine Person, die festschreibt. */}
+                      <TableCell col="meta" />
+                      <TableCell col="meta">
+                        <KeyLine>{v.shortHash}</KeyLine>
+                      </TableCell>
+                      <TableCell col="meta" selectable>
+                        {c.documentNumber}
+                      </TableCell>
+                    </TableRow>
+                  );
+                }),
+              ];
             })}
           </TableBody>
         </Table>

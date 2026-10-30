@@ -1,5 +1,5 @@
 import { execFileSync, spawn, type ChildProcess } from 'node:child_process';
-import { mkdirSync, readdirSync, statSync, utimesSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, utimesSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 
 /**
@@ -154,6 +154,21 @@ export async function ensurePortFree(url: string): Promise<void> {
   }
   if (occupied) {
     throw new Error(`Auf ${url} läuft schon ein Server — ein Rest aus einem abgebrochenen Lauf oder eine andere Instanz. Beenden, dann neu starten.`);
+  }
+}
+
+/**
+ * Kommt ein Server nicht hoch, endet der ganze Lauf: Die anderen Worker scheitern sofort mit demselben Grund, statt je
+ * Fall bis zur Zeitgrenze zu warten (29.10.: eine alte Worker-DB, 7,5 h Lauf). `marker` gilt für genau einen Lauf.
+ */
+export async function oneServerFailureEndsRun<T>(marker: string, start: () => Promise<T>): Promise<T> {
+  if (existsSync(marker)) throw new Error(`Lauf abgebrochen, ein Server kam nicht hoch:\n${readFileSync(marker, 'utf8')}`);
+  try {
+    return await start();
+  } catch (error) {
+    mkdirSync(path.dirname(marker), { recursive: true });
+    writeFileSync(marker, String(error));
+    throw error;
   }
 }
 

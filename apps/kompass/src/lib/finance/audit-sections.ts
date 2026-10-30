@@ -1,10 +1,11 @@
 import type { AuditSection } from '@kompass/module-finance';
 
 /**
- * Die acht Abschnitte des Prüfpakets in Prüferreihenfolge, für Client-Komponenten (das Modul selbst gehört nicht ins
- * Bündel des Browsers). Der Typ hält die Liste vollständig: Fehlt ein Abschnitt, schlägt `Missing` fehl.
+ * Die Abschnitte des Prüfpakets in Prüferreihenfolge, für Client-Komponenten (das Modul selbst gehört nicht ins
+ * Bündel des Browsers). Der Typ hält die Liste vollständig: Fehlt ein Abschnitt, schlägt `Missing` fehl. Welche ein Jahr
+ * hat (acht, mit Gremien neun — `resolutions`, G-30), sagt `AuditStatus.sections`; die Nummer bleibt die Stelle hier.
  */
-export const AUDIT_SECTION_ORDER = ['journal', 'reconciliation', 'vouchers', 'imports', 'anomalies', 'purposesReserves', 'donations', 'partnerPayments'] as const satisfies readonly AuditSection[];
+export const AUDIT_SECTION_ORDER = ['journal', 'reconciliation', 'vouchers', 'imports', 'anomalies', 'purposesReserves', 'donations', 'partnerPayments', 'resolutions'] as const satisfies readonly AuditSection[];
 type Missing = Exclude<AuditSection, (typeof AUDIT_SECTION_ORDER)[number]>;
 const complete: Missing extends never ? true : never = true;
 void complete;

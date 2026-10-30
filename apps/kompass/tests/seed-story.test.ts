@@ -26,9 +26,11 @@ describe('Entwicklungsdaten als Vereinsalltag', () => {
     // Akte (Review Focus 3): oben nur die benannten Ausnahmen des Finanz-Seeds (Task 7, 3m), dann die Tagespost der
     // Akte in ihrer Reihenfolge, danach nichts mehr, das nicht an seinem Datum liegt.
     const list = unwrap(await listDocuments(deps, all, { limit: 200 })).documents;
-    // Die Briefe der Mitglieder (Plan M4), der festgeschriebene Kassenbericht des Vorjahres (Rechenschaft A2) und der
-    // abgelegte Prüfbericht (D1) entstehen wie die Bestätigungen am Tag des Seeds.
-    const isException = (d: (typeof list)[number]) => ['finance-confirmation', 'finance-confirmation-signed', 'finance-partner-evidence', 'finance-report', 'finance-audit-report'].includes(d.typeKey) || d.typeKey.startsWith('member-') || d.subject.includes('Jugendfreizeit');
+    // Die Briefe der Mitglieder (Plan M4), die Einladung zur ordentlichen Versammlung in 30 Tagen (Gremien G2, der Lauf
+    // stellt heute aus), der festgeschriebene Kassenbericht des Vorjahres (Rechenschaft A2) und der abgelegte
+    // Prüfbericht (D1) entstehen wie die Bestätigungen am Tag des Seeds.
+    const isLetterOfSeedDay = (d: (typeof list)[number]) => d.typeKey.startsWith('member-') || d.typeKey.startsWith('governance-invitation');
+    const isException = (d: (typeof list)[number]) => ['finance-confirmation', 'finance-confirmation-signed', 'finance-partner-evidence', 'finance-report', 'finance-audit-report'].includes(d.typeKey) || isLetterOfSeedDay(d) || d.subject.includes('Jugendfreizeit');
     const rest = list.filter((d) => !isException(d));
     expect(rest.slice(0, 4).map((d) => d.subject)).toEqual([
       'Winterhilfe: Bitte um Unterstützung',
@@ -43,7 +45,7 @@ describe('Entwicklungsdaten als Vereinsalltag', () => {
     // 1 festgeschriebener Kassenbericht, 1 abgelegter Prüfbericht; Rechenschaft C: dazu Ergebnisrechnung und
     // Vermögensübersicht des Vorjahres (Schritt 10 verlangt alle Berichte der MV festgeschrieben); Rechenschaft B1: dazu
     // die Zweckmittel des Vorjahres.
-    expect(list.slice(0, firstRest).filter((d) => !d.typeKey.startsWith('member-')).length).toBeLessThanOrEqual(17);
+    expect(list.slice(0, firstRest).filter((d) => !isLetterOfSeedDay(d)).length).toBeLessThanOrEqual(17);
     // Plan 1: kein Betreff trägt eine ULID.
     expect(deps.db.select({ subject: documents.subject }).from(documents).all().filter((d) => ULID.test(d.subject))).toEqual([]);
 

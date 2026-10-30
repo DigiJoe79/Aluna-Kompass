@@ -52,3 +52,14 @@ describe('Checkliste: Vergütung des Vorstands (Joe 11.9)', () => {
     expect(getByText('keine Pauschalen vorgesehen (seit 15.06.2026)')).toBeTruthy();
   });
 });
+
+describe('Checkliste: Vorstand am Kontakt, solange ein Modul die Rolle führt (V-10)', () => {
+  it('zeigt auf das führende Modul statt auf die Kontakte', () => {
+    const { getByRole } = render(
+      <NextIntlClientProvider locale="de" messages={messages} timeZone="Europe/Berlin">
+        <ChecklistPanel steps={[{ key: 'boardMembers', required: false, done: false, blocked: false, detail: { managedBy: 'governance' }, canDo: [], canSelf: true }]} complete={false} />
+      </NextIntlClientProvider>,
+    );
+    expect(getByRole('link', { name: messages.finance.admin.checklist.open }).getAttribute('href')).toBe('/governance');
+  });
+});

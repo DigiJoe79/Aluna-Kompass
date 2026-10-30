@@ -378,3 +378,51 @@ describe('setRunClosingBalance ("Kontostand nachtragen")', () => {
     expect(JSON.parse(entry.after as string)).toEqual({ openingCents: 100000, closingCents: 103000 });
   });
 });
+
+describe('F-B6 (0.4.5): Dubletten über die Formatgrenze CSV ↔ CAMT', () => {
+  const CSV_HEADER = 'Buchungstag;Name;IBAN;Verwendungszweck;Betrag';
+  const CSV_ROWS = ['02.03.2026;Erika Beispiel;DE23999999990000202051;Spende;50,00', '05.03.2026;Druckerei Muster;DE12999999990000112233;Flyer;-20,00'];
+  const csvBytes = () => new TextEncoder().encode([CSV_HEADER, ...CSV_ROWS].join('\n'));
+  const camtBytes = () =>
+    buildCamt053Bytes({
+      iban: VEREIN_IBAN, from: '2026-03-01', to: '2026-03-31', openingCents: 100000, stmtId: 'MAERZ-2026',
+      lines: [
+        { amountCents: 5000, bookingDate: '2026-03-02', counterpartyName: 'Erika Beispiel', counterpartyIban: 'DE23999999990000202051', purpose: 'Spende', bankReference: 'REF-1' },
+        { amountCents: -2000, bookingDate: '2026-03-05', counterpartyName: 'Druckerei Muster', counterpartyIban: 'DE12999999990000112233', purpose: 'Flyer', bankReference: 'REF-2' },
+        { amountCents: 700, bookingDate: '2026-03-20', counterpartyName: 'Neu Person', counterpartyIban: 'DE23999999990000202051', purpose: 'Neu', bankReference: 'REF-3' },
+      ],
+    });
+
+  async function fixture() {
+    const f = await importFixture();
+    unwrap(await saveImportProfile(f.deps, f.ctx, { accountId: f.account.id, name: 'Hausbank CSV', format: csvFormatSchema.parse({
+      encoding: 'utf-8', delimiter: ';', headerRow: 0, headerSignature: headerSignature(CSV_HEADER.split(';')), dateFormat: 'DD.MM.YYYY', decimalSeparator: ',',
+      columns: { bookingDate: 'Buchungstag', valueDate: null, amount: 'Betrag', debit: null, credit: null, debitCreditIndicator: null, counterpartyName: 'Name', counterpartyIban: 'IBAN', purpose: 'Verwendungszweck', reference: null, fee: null, balance: null, currency: null, pending: null },
+      invertSign: false,
+    }) }));
+    return f;
+  }
+  const raws = (f: Awaited<ReturnType<typeof fixture>>) => f.deps.db.select().from(financeRawTransactions).where(eq(financeRawTransactions.accountId, f.account.id)).all();
+
+  it('CSV without reference, then CAMT with reference: overlapping lines are held as candidates, not imported twice', async () => {
+    const f = await fixture();
+    unwrap(await importStatement(f.deps, f.ctx, { accountId: f.account.id, fileName: 'maerz.csv', bytes: csvBytes() }));
+    expect(raws(f)).toHaveLength(2);
+    const camt = unwrap(await importStatement(f.deps, f.ctx, { accountId: f.account.id, fileName: 'maerz.xml', bytes: camtBytes(), confirmFormatChange: true }));
+    expect(camt.runs[0]!.counts).toMatchObject({ new: 1, held: 2 });
+    expect(raws(f)).toHaveLength(3);
+    expect(f.deps.db.select().from(financeImportCandidates).all()).toHaveLength(2);
+  });
+
+  it('CAMT with reference, then CSV without reference: the known lines are not imported again', async () => {
+    const f = await fixture();
+    const csvSetting = f.deps.db.select({ importFormat: financeAccounts.importFormat, importProfileId: financeAccounts.importProfileId }).from(financeAccounts).where(eq(financeAccounts.id, f.account.id)).get()!;
+    unwrap(await importStatement(f.deps, f.ctx, { accountId: f.account.id, fileName: 'maerz.xml', bytes: camtBytes(), confirmFormatChange: true }));
+    expect(raws(f)).toHaveLength(3);
+    // Zurück zum gespeicherten CSV-Format, wie nach einem zweiten Formatwechsel.
+    f.deps.db.update(financeAccounts).set(csvSetting).where(eq(financeAccounts.id, f.account.id)).run();
+    const csv = unwrap(await importStatement(f.deps, f.ctx, { accountId: f.account.id, fileName: 'maerz.csv', bytes: csvBytes(), confirmFormatChange: true }));
+    expect(csv.runs[0]!.counts.new).toBe(0);
+    expect(raws(f)).toHaveLength(3);
+  });
+});

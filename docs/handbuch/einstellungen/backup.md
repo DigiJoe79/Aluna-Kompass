@@ -111,8 +111,8 @@ Warnung für diesen Tag. Ist der Mailversand der Akte eingerichtet, bekommen
 die Verantwortlichen bei Problemen eine Mail; sonst sind Fehler nur hier und
 auf der Startseite sichtbar.
 
-Zuletzt: „Darf ein Agent ein Backup einspielen?“ Backups erstellen und die
-Liste lesen darf ein Agent immer; einspielen nur, wenn Sie es hier erlauben.
+Backups erstellen und die Liste lesen darf ein Agent immer; einspielen nur, wenn Sie es unter
+[Verwaltung → Agenten](agenten.md) mit „Darf ein Agent ein Backup einspielen?“ erlauben.
 
 Legen Sie regelmäßig eine Kopie der Backups außerhalb des Geräts ab. Ein
 Backup auf demselben Gerät schützt vor einem Fehler in Kompass, nicht vor

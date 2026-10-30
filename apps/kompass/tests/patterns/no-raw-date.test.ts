@@ -37,9 +37,11 @@ const RAW_DATE_INTERPOLATION = /\$\{\s*(?:\w+\??\.)*(?:\w*(?:On|Date|At|Until)|u
  * Teil 3 — Pakete: „heute“ nie als UTC-Tag. Die ersten zehn Zeichen eines Zeitstempels sind der UTC-Tag —
  * zwischen Mitternacht und ein bzw. zwei Uhr deutscher Zeit noch gestern; ein Brief von 0:30 Uhr trüge den
  * Vortag (K10-Review R2, 2026-10-07). „Heute“ ist `todayIn(deps)`, ein Zeitpunkt wird über `isoDayIn` zum Tag.
- * Rechnen mit einem Tag (`d.toISOString().slice(0, 10)` nach `setUTCDate`) trifft das Muster nicht.
+ * Rechnen mit einem Tag (`d.toISOString().slice(0, 10)` nach `setUTCDate`) trifft das Muster nicht. Dasselbe gilt für
+ * jeden gespeicherten Zeitstempel (`filedAt`, `createdAt`, `iso`): sein Tag kommt über `isoDayIn` bzw. in Berichten
+ * über `zonedDayOf` (F-B3, 0.4.5 — zehn Anzeige-Stellen in den Finanzen zeigten am 01.01. um 0:30 Uhr den 31.12.).
  */
-const RAW_TODAY = /(?:\bisoNow\([^)]*\)|(?<![\w.])now|\bnew Date\(\)\.toISOString\(\)|\.now\(\)\.toISOString\(\))\.slice\(0, ?10\)/;
+const RAW_TODAY = /(?:\bisoNow\([^)]*\)|(?<![\w.])now|\bnew Date\(\)\.toISOString\(\)|\.now\(\)\.toISOString\(\)|\b\w+At[!?]?|(?<![\w.])iso)\.slice\(0, ?10\)/;
 
 /** Drizzle-Vorlagen setzen Spalten ein, keine Texte. */
 const SQL_TEMPLATE = /\bsql(?:<[^>]*>)?`/;
@@ -69,6 +71,7 @@ function intlDateCallLines(source: string): number[] {
 export const UI_ALLOWED: CountedAllowlist = {
   'app/(shell)/dms/actions.ts': { count: 1, reason: 'Zeitstempel `savedAt` im Aktionszustand, keine Anzeige.' },
   'app/(shell)/dms/[id]/follow-ups-panel.tsx': { count: 1, reason: 'Rechnen: „in einer Woche“ als ISO-Vorgabewert.' },
+  'app/(shell)/finance/reports/[key]/annual-accounts/request-signature-dialog.tsx': { count: 1, reason: 'Rechnen: „Fällig am“ in einer Woche als ISO-Vorgabewert wie im Wiedervorlage-Dialog der Akte.' },
 };
 
 export const PACKAGES_ALLOWED: CountedAllowlist = {
@@ -82,9 +85,8 @@ export const PACKAGES_ALLOWED: CountedAllowlist = {
   'packages/modules/finance/src/reporting/other-assets.ts': { count: 1, reason: 'Rechnen: Vortag eines ISO-Tags (`dayBefore`).' },
   'packages/modules/finance/src/allocation/templates/shared.ts': { count: 1, reason: 'Wortlaut der Verzichtserklärung; das Datum kommt schon als `paperDate`.' },
   'packages/modules/finance/src/dashboard.ts': { count: 1, reason: 'Rechnen: Tage zwischen zwei ISO-Tagen.' },
-  'packages/modules/finance/src/auditing/anomalies.ts': { count: 4, reason: 'Rechnen: ISO-Tag zum Zeitpunkt (Grenzen des Geschäftsjahres, Tag danach).' },
-  'packages/modules/finance/src/auditing/sections.ts': { count: 1, reason: 'Rechnen: ISO-Tag zum Zeitpunkt (Grenzen des Geschäftsjahres).' },
-  'packages/modules/finance/src/reporting/reports/tax-return-gem.ts': { count: 1, reason: 'Rechnen: ISO-Tag zum Zeitpunkt (Ende des Erklärungszeitraums für die Freigabe einer Zahlung).' },
+  'packages/modules/finance/src/auditing/anomalies.ts': { count: 2, reason: 'Rechnen: Tag danach und Ende des Folgemonats auf ISO-Tagen.' },
+  'packages/modules/finance/src/zoned-days.ts': { count: 1, reason: 'Rechnen: Tag nach einem ISO-Tag für die Grenze eines Zeitraums in der Vereinszone (F-B3).' },
   'packages/modules/finance/src/direct-debit/runs.ts': { count: 1, reason: 'Dateiname der Bankdatei beim Herunterladen, ISO sortiert richtig.' },
   'packages/modules/finance/src/direct-debit/seed.ts': { count: 1, reason: 'Dateiname des erfundenen Kontoauszugs (Plan L3), ISO sortiert richtig.' },
   'packages/modules/finance/src/donations/templates/shared.ts': { count: 1, reason: '`placeDate` ist schon „Ort, paperDate“.' },
@@ -96,6 +98,10 @@ export const PACKAGES_ALLOWED: CountedAllowlist = {
   'packages/modules/finance/src/ledger/notice-validity.ts': { count: 1, reason: 'Rechnen: ISO-Tag zusammensetzen.' },
   'packages/modules/finance/src/ledger/vat-periods.ts': { count: 1, reason: 'Fingerabdruck der Zeilen eines Umsatzsteuer-Zeitraums (Hash-Eingabe), keine Anzeige.' },
   'packages/modules/finance/src/seed.ts': { count: 3, reason: 'Dateinamen der erfundenen Belege, ISO sortiert richtig; Buchungstag der frühen Jahre aus Jahr und Monat-Tag (Rechnen, Plan seed-mehrjahre).' },
+  'packages/modules/governance/src/minutes/attachments.ts': { count: 2, reason: 'Rechnen: Sortierschlüssel aus ISO-Tag und Zeitstempel (jüngste Mitgliedschaft, Wahlen in Abstimmungsfolge).' },
+  'packages/modules/governance/src/minutes/print.ts': { count: 1, reason: 'Dateiname des Protokoll-Entwurfs, ISO sortiert richtig.' },
+  'packages/modules/governance/src/seal/member-proposals.ts': { count: 1, reason: 'Rechnen: Sortierschlüssel aus Sitzungstag und Beginn.' },
+  'packages/modules/governance/src/statutes.ts': { count: 2, reason: 'Rechnen: Sortierschlüssel aus Eintragungs- und Beschlusstag der Satzungsstände.' },
 };
 
 /** Ausnahmen nur mit echtem Grund (Dateiname, Kennung). Bei Einführung leer: Die Probesuche fand nur Fehler. */
@@ -128,10 +134,10 @@ describe('Heuristik des Wächters', () => {
       expect(RAW_DATE_INTERPOLATION.test(miss), miss).toBe(false);
   });
 
-  it('Teil 3 trifft „heute“ als UTC-Tag, nicht das Rechnen mit einem Tag', () => {
-    for (const hit of ['documentDate ?? now.slice(0, 10)', 'isoNow(deps.clock).slice(0, 10)', 'new Date().toISOString().slice(0, 10)', 'deps.clock.now().toISOString().slice(0,10)'])
+  it('Teil 3 trifft „heute“ und Zeitstempel als UTC-Tag, nicht das Rechnen mit einem Tag', () => {
+    for (const hit of ['documentDate ?? now.slice(0, 10)', 'isoNow(deps.clock).slice(0, 10)', 'new Date().toISOString().slice(0, 10)', 'deps.clock.now().toISOString().slice(0,10)', 'filedOn: filed.filedAt.slice(0, 10)', 'row.approvedAt!.slice(0, 10)', 'paperDate(iso.slice(0, 10) as never)'])
       expect(RAW_TODAY.test(hit), hit).toBe(true);
-    for (const miss of ['todayIn(deps)', 'd.toISOString().slice(0, 10)', 'snow.slice(0, 10)', 'rows.slice(0, 10)', 'nowIso.slice(0, 10)'])
+    for (const miss of ['todayIn(deps)', 'd.toISOString().slice(0, 10)', 'snow.slice(0, 10)', 'rows.slice(0, 10)', 'nowIso.slice(0, 10)', 'isoDayIn(deps, Date.parse(filed.filedAt))', 'String(value).slice(0, 10)', 'dataRows.slice(0, 10)'])
       expect(RAW_TODAY.test(miss), miss).toBe(false);
   });
 

@@ -16,6 +16,7 @@ import { RowLink, Table, TableBody, TableCell, TableGroupRow, TableHead, TableHe
 import { formatEuro } from '@/lib/finance/amount';
 import { SECTION_PAGE_SIZE } from '@/lib/finance/audit-sections';
 import { useUrlFilters } from '@/lib/use-url-filters';
+import { RemarkWriter, type RemarkWriterProps } from '../remark-writer';
 import { SampleCheckbox } from './sample-checkbox';
 
 /** Abschnitte, deren Zeilen Buchungen sind — dort gibt es Stichproben. */
@@ -23,7 +24,13 @@ const WITH_SAMPLES: readonly AuditSection[] = ['journal', 'vouchers', 'anomalies
 
 type Filters = { text: string; sample: string; account: string; ids: string };
 
-type Column = { key: string; role?: 'title' | 'meta' | 'amount'; head: string; wrap?: boolean; cell: (r: AuditSectionRow) => ReactNode };
+type Column = { key: string; role?: 'title' | 'meta' | 'amount' | 'status'; head: string; wrap?: boolean; cell: (r: AuditSectionRow) => ReactNode };
+
+/** Abschnitt 9 (G-30): Link je Protokoll (`null`: Nummer ohne Link) und „Vermerk …“ für Prüfer des Jahres. */
+export interface ResolutionExtras {
+  minutesHrefs: Record<string, string | null>;
+  writer: Omit<RemarkWriterProps, 'target'> | null;
+}
 
 /**
  * Eine Liste des Prüfpakets (Board 4b): je Abschnitt eigene Spalten aus den Werten des Dienstes (`kind`,
@@ -44,6 +51,7 @@ export function SectionTable({
   offset,
   userNames = {},
   fixed = false,
+  resolution,
 }: {
   yearId: string;
   designation: string;
@@ -59,10 +67,12 @@ export function SectionTable({
   userNames?: Record<string, string>;
   /** Prüfbericht abgelegt: Stichproben stehen fest (274/279). */
   fixed?: boolean;
+  resolution?: ResolutionExtras;
 }) {
   const t = useTranslations('finance.audit.section');
   const tRoles = useTranslations('contacts.roleNames');
   const tKind = useTranslations('finance.accounts.kind');
+  const tRemarks = useTranslations('finance.audit.remarks');
   const fmt = useDateFormat();
   const router = useRouter();
   const pathname = usePathname();
@@ -168,13 +178,46 @@ export function SectionTable({
         return { text: t(`donationKind.${str(r, 'kind')}`) };
       case 'partnerPayments':
         return { text: str(r, 'partnerName') };
+      case 'resolutions':
+        return { text: t(`resolution.kind.${str(r, 'resolutionKind')}`) };
     }
+  };
+
+  /**
+   * Die Angaben eines Beschlusses (Designer 2026-10-29): Werte mit „ · “ in fester Reihenfolge je Art, Betrag zuerst;
+   * eine fehlende Angabe fällt samt Trenner weg.
+   */
+  const factsOf = (r: AuditSectionRow): string => {
+    const amount = typeof p(r, 'amountCents') === 'number' ? formatEuro(p(r, 'amountCents') as number) : null;
+    const validFrom = str(r, 'validFrom') ? t('resolution.validFrom', { date: day(str(r, 'validFrom')) ?? '' }) : null;
+    const fiscalYear = str(r, 'fiscalYear') ? t('resolution.fiscalYear', { year: str(r, 'fiscalYear') }) : null;
+    const parts = ((): (string | null)[] => {
+      switch (str(r, 'resolutionKind')) {
+        case 'discharge':
+          return [fiscalYear, p(r, 'collective') === true ? t('resolution.collective') : str(r, 'persons') || null];
+        case 'accounts':
+          return [fiscalYear];
+        case 'remuneration':
+          return [amount ? t(str(r, 'remunerationMode') === 'activity' ? 'resolution.amountPerActivity' : 'resolution.amountPerYear', { amount }) : null, str(r, 'organs') || null, validFrom];
+        case 'expenseRule':
+          return [str(r, 'expenseBasis') ? t(`resolution.expenseBasis.${str(r, 'expenseBasis')}`) : null, validFrom];
+        case 'reserve': {
+          const action = str(r, 'reserveAction');
+          return [amount, str(r, 'reserveType') ? t(`resolution.reserveType.${str(r, 'reserveType')}`) : null, action && action !== 'create' ? t(`resolution.reserveAction.${action}`) : null];
+        }
+        case 'feeSchedule':
+          return [validFrom];
+        default:
+          return [];
+      }
+    })();
+    return parts.filter((v): v is string => Boolean(v)).join(' · ');
   };
 
   const title: Column = {
     key: 'title',
     role: 'title',
-    head: { journal: t('columns.text'), reconciliation: t('columns.account'), vouchers: t('columns.reason'), imports: t('columns.transaction'), anomalies: t('columns.hint'), purposesReserves: t('columns.name'), donations: t('columns.donations'), partnerPayments: t('columns.partner') }[section],
+    head: { journal: t('columns.text'), reconciliation: t('columns.account'), vouchers: t('columns.reason'), imports: t('columns.transaction'), anomalies: t('columns.hint'), purposesReserves: t('columns.name'), donations: t('columns.donations'), partnerPayments: t('columns.partner'), resolutions: t('columns.kind') }[section],
     cell: (r) => {
       const { text, sub } = titleOf(r);
       const href = r.entryId ? `/finance/entries/${r.entryId}?from=audit&section=${section}&year=${encodeURIComponent(yearId)}` : r.documentId ? `/dms/${r.documentId}` : null;
@@ -233,8 +276,52 @@ export function SectionTable({
             },
           },
         ];
+      case 'resolutions':
+        // Designer 2026-10-29: Nummer · Datum · Art · Angaben · Organ · Ergebnis · Protokoll · Stand. Am Telefon Art und
+        // Ergebnis oben, darunter Nummer · Datum · Organ, die Angaben, dann Protokoll und Stand.
+        return [
+          number,
+          date,
+          title,
+          { key: 'facts', role: 'meta', wrap: true, head: t('columns.facts'), cell: (r) => factsOf(r) || <Empty /> },
+          { key: 'organ', role: 'meta', head: t('columns.organ'), cell: (r) => (p(r, 'viaCircular') === true ? t('resolution.circular') : str(r, 'organ') || <Empty />) },
+          {
+            key: 'outcome',
+            role: 'status',
+            head: t('columns.outcome'),
+            // „angenommen“ ist der Normalzustand ohne Marke, „abgelehnt“ `neutral` — wie in der Beschlussliste (MUSTER § F).
+            cell: (r) => (str(r, 'outcome') === 'rejected' ? <StatusBadge tone={statusTone('resolution', 'rejected')} dot>{t('resolution.outcome.rejected')}</StatusBadge> : null),
+          },
+          {
+            key: 'minutes',
+            role: 'meta',
+            wrap: true,
+            head: t('columns.minutes'),
+            cell: (r) => {
+              const minutes = str(r, 'minutesNumber');
+              if (!minutes) return <Empty />;
+              const href = r.resolutionId ? (resolution?.minutesHrefs[r.resolutionId] ?? null) : null;
+              // Nummer als Link in den Dokumentbetrachter, wie „Öffnen“ bei Belegen; kein Link auf den Beschluss selbst.
+              return href ? (
+                <a href={href} target="_blank" rel="noreferrer" className="whitespace-nowrap font-mono text-meta text-link underline-offset-2 hover:underline" aria-label={t('resolution.minutesLink', { number: minutes })}>
+                  {minutes}
+                </a>
+              ) : (
+                <span className="whitespace-nowrap">{minutes}</span>
+              );
+            },
+          },
+          { key: 'stand', role: 'meta', wrap: true, head: t('columns.state'), cell: (r) => remarkState(r) ?? (resolution?.writer && r.resolutionId ? <RemarkWriter {...resolution.writer} target={{ type: 'resolution', id: r.resolutionId, label: tRemarks('target.resolution', { number: str(r, 'number') }) }} /> : null) },
+        ];
     }
   })();
+
+  /** Die Marke trägt den Zustand des Vermerks (Designer Runde 7, 274/275): offen vor beantwortet. */
+  function remarkState(r: AuditSectionRow): ReactNode {
+    if (r.remarksOpen > 0) return <StatusBadge tone={statusTone('remark', 'open')} dot>{t('remarksOpen', { count: r.remarksOpen })}</StatusBadge>;
+    if ((r.remarksAnswered ?? 0) > 0) return <StatusBadge tone={statusTone('remark', 'answered')} dot>{t('remarksAnswered', { count: r.remarksAnswered ?? 0 })}</StatusBadge>;
+    return null;
+  }
 
   const statusCell = (r: AuditSectionRow) => (
     <div className="flex flex-wrap justify-end gap-1.5">
@@ -243,20 +330,13 @@ export function SectionTable({
           {t('recheck')}
         </StatusBadge>
       ) : null}
-      {/* Die Marke trägt den Zustand des Vermerks (Designer Runde 7, 274/275): offen vor beantwortet. */}
-      {r.remarksOpen > 0 ? (
-        <StatusBadge tone={statusTone('remark', 'open')} dot>
-          {t('remarksOpen', { count: r.remarksOpen })}
-        </StatusBadge>
-      ) : (r.remarksAnswered ?? 0) > 0 ? (
-        <StatusBadge tone={statusTone('remark', 'answered')} dot>
-          {t('remarksAnswered', { count: r.remarksAnswered ?? 0 })}
-        </StatusBadge>
-      ) : null}
+      {remarkState(r)}
     </div>
   );
+  // Abschnitt 9 trägt Ergebnis und Stand als eigene Spalten (Designer 2026-10-29), die übrigen die Statusspalte am Ende.
+  const trailingStatus = section !== 'resolutions';
 
-  const width = columns.length + 1 + (samples ? 1 : 0);
+  const width = columns.length + (trailingStatus ? 1 : 0) + (samples ? 1 : 0);
   const row = (r: AuditSectionRow) => (
     <TableRow key={r.key}>
       {samples ? (
@@ -269,7 +349,7 @@ export function SectionTable({
           {c.cell(r)}
         </TableCell>
       ))}
-      <TableCell col="status">{statusCell(r)}</TableCell>
+      {trailingStatus ? <TableCell col="status">{statusCell(r)}</TableCell> : null}
     </TableRow>
   );
 
@@ -295,7 +375,7 @@ export function SectionTable({
       {rows.length === 0 && filtered ? (
         <EmptyState filtered={{ noun: t('filteredNoun'), onReset: reset }} />
       ) : rows.length === 0 ? (
-        <EmptyState title={t('empty.title')} text={t('empty.text', { year: designation })} />
+        <EmptyState title={t('empty.title')} text={section === 'resolutions' ? t('empty.resolutions', { year: designation }) : t('empty.text', { year: designation })} />
       ) : (
         <div className="overflow-hidden rounded-md border border-line bg-surface">
           <Table>
@@ -313,7 +393,7 @@ export function SectionTable({
                     </TableHead>
                   ),
                 )}
-                <TableHead col="status">{t('columns.state')}</TableHead>
+                {trailingStatus ? <TableHead col="status">{t('columns.state')}</TableHead> : null}
               </TableRow>
             </TableHeader>
             <TableBody>

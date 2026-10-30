@@ -11,6 +11,8 @@ export type FiscalYearStatus = 'open' | 'closed';
 export type FiscalYearView = FinanceFiscalYearRow & { status: FiscalYearStatus; isShortYear: boolean };
 
 export const dayAfter = (iso: string): string => { const d = new Date(`${iso}T00:00:00.000Z`); d.setUTCDate(d.getUTCDate() + 1); return d.toISOString().slice(0, 10); };
+/** Der Vortag eines ISO-Tages — etwa das Ende des Jahres vor dem ersten Geschäftsjahr (Anfangsvortrag, M1). */
+export const dayBefore = (iso: string): string => { const d = new Date(`${iso}T00:00:00.000Z`); d.setUTCDate(d.getUTCDate() - 1); return d.toISOString().slice(0, 10); };
 /** Zwölf Monate ab `start`, letzter Tag eingeschlossen: 2027-07-01 → 2028-06-30. */
 const yearEnd = (start: string): string => { const d = new Date(`${start}T00:00:00.000Z`); d.setUTCFullYear(d.getUTCFullYear() + 1); d.setUTCDate(d.getUTCDate() - 1); return d.toISOString().slice(0, 10); };
 

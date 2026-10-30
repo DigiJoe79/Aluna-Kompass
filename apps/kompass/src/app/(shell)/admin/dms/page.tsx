@@ -100,7 +100,6 @@ export default async function AdminDmsPage({ searchParams }: { searchParams: Pro
           defaultSnippetId={readSetting<string | null>(deps, 'dms.mail.defaultBodySnippetId')}
           canManageSettings={canManageSettings}
           canSend={hasPermission(ctx, 'dms.send')}
-          agentAllowed={readSetting<boolean>(deps, 'dms.mcpHumanOnlyAllowed') === true}
         />
       </div>
     );

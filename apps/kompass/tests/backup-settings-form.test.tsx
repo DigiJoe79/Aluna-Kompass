@@ -15,7 +15,7 @@ const Intl = ({ children }: { children: ReactNode }) => (
     {children}
   </NextIntlClientProvider>
 );
-const VALUES = { enabled: false, time: '03:00', daily: 7, weekly: 4, monthly: 12, maxAgeDays: 30, agentAllowed: false };
+const VALUES = { enabled: false, time: '03:00', daily: 7, weekly: 4, monthly: 12, maxAgeDays: 30 };
 const MB = 1024 * 1024;
 const show = (canManage = true) => render(<BackupSettingsForm values={VALUES} referenceBytes={641 * MB} mailAvailable canManage={canManage} />, { wrapper: Intl });
 
@@ -54,10 +54,5 @@ describe('BackupSettingsForm', () => {
     const { container } = show(false);
     expect(container.querySelector('[data-slot="form-action-bar"]')).toBeNull();
     expect((screen.getByLabelText(messages.backup.settings.schedule.time) as HTMLInputElement).disabled).toBe(true);
-  });
-
-  it('Agentenschalter als Abschnitt', () => {
-    const { container } = show();
-    expect(container.querySelector('input[name="backup.mcpHumanOnlyAllowed"]') ?? screen.getByRole('switch', { name: messages.backup.settings.agent.label })).toBeTruthy();
   });
 });

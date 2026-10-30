@@ -1,9 +1,10 @@
 import {
-  buildContext, EMPTY, hasPermission, launchJob, requirePermission, localizedConflict, newId, notFound, ok, paperDate, prepare, readJobResult, readSetting, requestJobCancel, runningJob, runStep, validate,
+  buildContext, EMPTY, hasPermission, launchJob, requirePermission, localizedConflict, newId, notFound, ok, paperDate, prepare, readJobResult, readSetting, requestJobCancel, runningJob, runStep, timeZoneOf, validate,
   type CallContext, type DbOrTx, type Deps, type JobHandle, type JobRecord, type JobRun, type JobSlot, type JobStart, type Result,
 } from '@kompass/core';
 import { contacts, displayName } from '@kompass/module-contacts';
 import { exportBundle } from '@kompass/module-dms';
+import { zonedDayOf } from '../zoned-days';
 import { and, eq, inArray, isNotNull } from 'drizzle-orm';
 import { mkdirSync, readFileSync, rmSync } from 'node:fs';
 import path from 'node:path';
@@ -12,13 +13,14 @@ import { financeConflict } from '../errors';
 import { fiscalYearStatusInternal } from '../ledger/fiscal-years';
 import { formatAmount } from '../format/amount';
 import { REPORT_CATALOG } from '../reporting/catalog';
+import { fundsUseAppliesInternal } from '../reporting/funds-use-inputs';
 import { previewFinanceReport } from '../reporting/finalize';
 import { financeEntries, financeEntryDocuments, financeFiscalYears, type FinanceFiscalYearRow } from '../schema';
 import { auditorsOfYearInternal, requireAuditRead } from './access';
 import { baselineShortHashInternal, latestBaselineInternal } from './baseline';
 import { AUDIT_FOLDER_TEMPLATE_KEY, type AuditFolderInput } from './folder-template';
-import { sectionRowsInternal, type AuditSectionRow } from './sections';
-import { AUDIT_SECTIONS, type AuditSection } from './types';
+import { activeAuditSectionsInternal, sectionRowsInternal, type AuditSectionRow } from './sections';
+import type { AuditSection } from './types';
 
 /**
  * Prüfmappe, Prüffassungen und Aktenexport als Lauf (Spec § D1 „Prüfstand“, Kern-Lauf-Mechanik `core/src/jobs/`):
@@ -53,14 +55,17 @@ export function auditPackageSlot(dataPath: string, fiscalYearId: string): JobSlo
 
 const storeName = (fiscalYearId: string, file: AuditPackageFile) => `audit-package-${fiscalYearId.toLowerCase()}-${file}.${file === 'archive' ? 'zip' : 'pdf'}`;
 
-const day = (iso: string) => paperDate(iso.slice(0, 10) as never);
+/** Tage bleiben, Zeitstempel (Prüffassung) gehören über die Zone des Vereins zu einem Tag (F-B3). */
+const day = (value: string, timeZone: string) => paperDate(zonedDayOf(value, timeZone) as never);
 
 // ── Mappe ───────────────────────────────────────────────────────────────────
 
 const SECTION_TITLE: Record<AuditSection, string> = {
   journal: 'Journal', reconciliation: 'Kontenabstimmung', vouchers: 'Belegprüfung', imports: 'Importabgleich', anomalies: 'Auffälligkeiten',
-  purposesReserves: 'Zweckmittel und Rücklagen', donations: 'Spenden', partnerPayments: 'Zahlungen an Partner',
+  purposesReserves: 'Zweckmittel und Rücklagen', donations: 'Spenden', partnerPayments: 'Zahlungen an Partner', resolutions: 'Beschlüsse',
 };
+const RESOLUTION_KIND: Record<string, string> = { discharge: 'Entlastung', accounts: 'Kassenbericht genehmigt', remuneration: 'Vergütung von Ämtern', expenseRule: 'Regel für Aufwendungsersatz', reserve: 'Rücklage', feeSchedule: 'Beitragsordnung' };
+const RESOLUTION_OUTCOME: Record<string, string> = { adopted: 'angenommen', rejected: 'abgelehnt' };
 const VOUCHER_REASON: Record<string, string> = { missing: 'ohne Beleg', missingJustified: 'ohne Beleg, begründet', own: 'Eigenbeleg', withoutEntry: 'Beleg ohne Buchung', revoked: 'Verknüpfung widerrufen' };
 const ANOMALY_TITLE: Record<string, string> = {
   relatedParty: 'Zahlung an Organmitglied oder Nahestehende', cashPayout: 'Barauszahlung', roundAmount: 'Runder Betrag', cashDonation: 'Barspende ab Schwelle', reversal: 'Storno',
@@ -73,9 +78,9 @@ const PROOF_STATE: Record<string, string> = { acknowledged: 'anerkannt', overdue
 const s = (v: unknown) => (v === null || v === undefined ? '' : String(v));
 const amount = (cents: number | null | undefined) => (cents === null || cents === undefined ? '' : formatAmount(cents));
 
-function sectionTable(section: AuditSection, rows: AuditSectionRow[]): AuditFolderInput['sections'][number] {
+function sectionTable(section: AuditSection, rows: AuditSectionRow[], timeZone: string): AuditFolderInput['sections'][number] {
   const p = (r: AuditSectionRow) => r.labelParams;
-  const date = (r: AuditSectionRow) => (r.date ? day(r.date) : '');
+  const date = (r: AuditSectionRow) => (r.date ? day(r.date, timeZone) : '');
   switch (section) {
     case 'journal': return { title: SECTION_TITLE[section], checkColumn: true, columns: ['Datum', 'Nr.', 'Text', 'Zweck / Kategorie', 'Konto', 'Betrag'], rows: rows.map((r) => [date(r), s(p(r).number), s(p(r).text), s(p(r).purposeOrCategory), s(p(r).accountName), amount(r.amountCents)]) };
     case 'reconciliation': return { title: SECTION_TITLE[section], checkColumn: false, columns: ['Konto', 'Buchbestand', 'Gegenprobe', 'Stand'], rows: rows.map((r) => [s(p(r).accountName), amount(p(r).bookCents as number), amount(p(r).againstCents as number | null), s(p(r).state)]) };
@@ -85,6 +90,7 @@ function sectionTable(section: AuditSection, rows: AuditSectionRow[]): AuditFold
     case 'purposesReserves': return { title: SECTION_TITLE[section], checkColumn: false, columns: ['Name', 'Vortrag', 'Zugang', 'Verwendet', 'Ende'], rows: rows.map((r) => [s(p(r).name), amount(p(r).carryForwardCents as number), amount(p(r).inflowCents as number), amount(p(r).usedCents as number), amount(p(r).closingCents as number)]) };
     case 'donations': return { title: SECTION_TITLE[section], checkColumn: false, columns: ['', 'Anzahl', 'Summe'], rows: rows.map((r) => [DONATION_KIND[s(p(r).kind)] ?? s(p(r).kind), s(p(r).count), amount(r.amountCents)]) };
     case 'partnerPayments': return { title: SECTION_TITLE[section], checkColumn: true, columns: ['Datum', 'Nr.', 'Partner', 'Nachweis'], rows: rows.map((r) => [date(r), s(p(r).number), s(p(r).partnerName), PROOF_STATE[s(p(r).proofState)] ?? s(p(r).proofState)]) };
+    case 'resolutions': return { title: SECTION_TITLE[section], checkColumn: false, columns: ['Datum', 'Nr.', 'Art', 'Betrag', 'Organ', 'Ergebnis', 'Protokoll'], rows: rows.map((r) => [date(r), s(p(r).number), RESOLUTION_KIND[s(p(r).resolutionKind)] ?? s(p(r).resolutionKind), amount(r.amountCents), p(r).viaCircular === true ? 'Umlauf' : s(p(r).organ), RESOLUTION_OUTCOME[s(p(r).outcome)] ?? s(p(r).outcome), s(p(r).minutesNumber) || EMPTY]) };
   }
 }
 
@@ -95,23 +101,37 @@ async function folderInputInternal(deps: Deps, ctx: CallContext, year: FinanceFi
     return `${c ? displayName(c) : ''}${a.mode === 'paper' ? ' (auf Papier)' : ''}`;
   });
   const hash = baselineShortHashInternal(db, baselineId);
+  const timeZone = timeZoneOf(deps);
   const sections: AuditFolderInput['sections'] = [];
-  for (const section of AUDIT_SECTIONS) sections.push(sectionTable(section, await sectionRowsInternal(deps, ctx, year, section)));
+  for (const section of activeAuditSectionsInternal(deps, year)) sections.push(sectionTable(section, await sectionRowsInternal(deps, ctx, year, section), timeZone));
   return {
     title: `Kassenprüfung ${year.designation}`,
     cover: [
       { label: 'Verein', value: String(readSetting<string>(deps, 'organization.name') ?? '') },
-      { label: 'Geschäftsjahr', value: `${year.designation} (${day(year.startsOn)}–${day(year.endsOn)})` },
+      { label: 'Geschäftsjahr', value: `${year.designation} (${day(year.startsOn, timeZone)}–${day(year.endsOn, timeZone)})` },
       { label: 'Prüfer', value: auditors.join(', ') || EMPTY },
-      { label: 'Stand', value: `Prüffassung vom ${day(createdAt)}` },
+      { label: 'Stand', value: `Prüffassung vom ${day(createdAt, timeZone)}` },
       { label: 'Kurz-Hash', value: hash },
     ],
     sections,
-    footerNote: `Prüfstand vom ${day(createdAt)} · ${hash}`,
+    footerNote: `Prüfstand vom ${day(createdAt, timeZone)} · ${hash}`,
   };
 }
 
 // ── Lauf ────────────────────────────────────────────────────────────────────
+
+/**
+ * Die Prüffassungen des Pakets: die verfügbaren Berichte der Gruppen MV und Kassenprüfung mit den Parametern des
+ * Jahres, dazu am Ende die Mittelverwendungsrechnung, wenn die Einnahmen des Jahres über der Grenze liegen (M2, Spec
+ * 0.4.5 Teil M) — darunter ist sie freiwillig und kommt nicht ins Paket.
+ */
+export function auditPackageReportKeysInternal(db: DbOrTx, fiscalYearId: string): string[] {
+  const params = { fiscalYearId };
+  const keys = REPORT_CATALOG.filter((d) => d.available && (d.group === 'assembly' || d.group === 'audit') && d.paramsSchema.safeParse(params).success).map((d) => d.key as string);
+  const fundsUse = REPORT_CATALOG.find((d) => d.key === 'fundsUse');
+  if (fundsUse?.available && fundsUseAppliesInternal(db, fiscalYearId)) keys.push('fundsUse');
+  return keys;
+}
 
 async function produce(deps: Deps, ctx: CallContext, year: FinanceFiscalYearRow, baselineId: string, createdAt: string, slot: JobSlot, h: JobHandle): Promise<Result<AuditPackageResult>> {
   const store = deps.files('finance');
@@ -119,13 +139,13 @@ async function produce(deps: Deps, ctx: CallContext, year: FinanceFiscalYearRow,
   const skipped: AuditPackageResult['skipped'] = {};
 
   await runStep(h, 'reports', LIMIT, async (c) => {
-    const defs = REPORT_CATALOG.filter((d) => d.available && (d.group === 'assembly' || d.group === 'audit') && d.paramsSchema.safeParse({ fiscalYearId: year.id }).success);
+    const keys = auditPackageReportKeysInternal(deps.db, year.id);
     const pdfs: Uint8Array[] = [];
-    for (const [i, def] of defs.entries()) {
+    for (const [i, key] of keys.entries()) {
       c.signal.throwIfAborted();
-      const preview = await previewFinanceReport(deps, ctx, { report: def.key, params: { fiscalYearId: year.id } });
+      const preview = await previewFinanceReport(deps, ctx, { report: key, params: { fiscalYearId: year.id } });
       if (preview.ok) pdfs.push(preview.value.bytes);
-      c.progress(i + 1, defs.length);
+      c.progress(i + 1, keys.length);
     }
     if (pdfs.length === 0) return void (skipped.reports = 'noReports');
     const merged = pdfs.length === 1 ? pdfs[0]! : await deps.pdf.merge(pdfs);

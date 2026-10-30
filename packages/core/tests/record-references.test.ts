@@ -21,7 +21,7 @@ describe('findRecordReferences', () => {
     unwrap(await completeFollowUp(deps, ctx, { id: done.id }));
 
     const refs = findRecordReferences(deps, 'animal', 'A1');
-    expect(refs).toEqual([{ label: 'Wiedervorlage „Impfpass nachfragen“', entity: 'followUp', id: open.id }]);
+    expect(refs).toEqual([{ label: 'deletion.references.followUp Impfpass nachfragen', entity: 'followUp', id: open.id }]);
     expect(findRecordReferences(deps, 'animal', 'A2')).toEqual([]);
     expect(findRecordReferences(deps, 'project', 'A1')).toEqual([]);
   });

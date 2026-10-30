@@ -29,7 +29,7 @@ describe('hooks and protected document types', () => {
     ]);
     expect(everything).not.toContain(SUBJECT);
     expect(everything).toContain('GEH-');
-    expect(dmsRecordReferences(deps, 'animal', 'A1').map((r) => r.label)).toContain('Entwurf (geschützt)');
+    expect(dmsRecordReferences(deps, 'animal', 'A1').map((r) => r.label)).toContainEqual({ key: 'dms.records.protectedDraft' });
     expect(dmsFollowUpTargets(deps, 'document', draft.id)!.label).toBe('Entwurf (geschützt)');
   });
 

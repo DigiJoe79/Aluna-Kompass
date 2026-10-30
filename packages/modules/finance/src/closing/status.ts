@@ -2,6 +2,7 @@ import { hasPermission, notFound, ok, todayIn, validate, type CallContext, type 
 import { and, desc, eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { requireFinanceRead } from '../ledger/access';
+import { fundsUseAppliesInternal } from '../reporting/funds-use-inputs';
 import { fiscalYearStatusInternal } from '../ledger/fiscal-years';
 import { financeClosingConfirmations, financeFiscalYears, financePeriodEvents, type FinanceFiscalYearRow } from '../schema';
 import { handoversOfYearInternal } from './handover';
@@ -24,19 +25,21 @@ export function closingStepInternal(deps: Deps, year: FinanceFiscalYearRow, key:
   return compute(ctx);
 }
 
-/** Wiedergeöffnet: das jüngste Ereignis `reopened` — bis 8, 9 und 10 wieder erledigt sind. */
-const TO_REPEAT: readonly ClosingStepKey[] = ['close', 'auditPackage', 'auditReport'];
+/** Wiedergeöffnet: das jüngste Ereignis `reopened` — bis 8, 9 und 10 (und 13, wenn gezeigt) wieder erledigt sind. */
+const TO_REPEAT: readonly ClosingStepKey[] = ['close', 'auditPackage', 'auditReport', 'fundsUse'];
 
 export function closingStatusInternal(deps: Deps, ctx: CallContext, year: FinanceFiscalYearRow): ClosingStatus {
   const confirmations = closingConfirmationsInternal(deps.db, year.id);
-  const steps: ClosingStepView[] = CLOSING_STEPS.map((key, index) => {
+  // Schritt 13 nur über der Grenze (Spec 0.4.5 Teil M, Entscheidung 4); die Nummern 1–12 bleiben.
+  const shown = CLOSING_STEPS.map((key, index) => ({ key, number: index + 1 })).filter((s) => s.key !== 'fundsUse' || fundsUseAppliesInternal(deps.db, year.id));
+  const steps: ClosingStepView[] = shown.map(({ key, number }) => {
     const result = closingStepInternal(deps, year, key, confirmations);
     // Eine Bestätigung zählt nur für einen bestätigbaren Schritt; die von Schritt 2 aus E1 nicht mehr (Board 14a).
     const confirmable = (CONFIRMABLE_STEPS as readonly string[]).includes(key);
-    return { key, number: index + 1, group: groupOf(key), done: result.done, confirmable: result.confirmable && confirmable, confirmation: confirmable ? (confirmations.get(key) ?? null) : null, facts: result.facts };
+    return { key, number, group: groupOf(key), done: result.done, confirmable: result.confirmable && confirmable, confirmation: confirmable ? (confirmations.get(key) ?? null) : null, facts: result.facts };
   });
   const reopenedEvent = deps.db.select().from(financePeriodEvents).where(and(eq(financePeriodEvents.fiscalYearId, year.id), eq(financePeriodEvents.kind, 'reopened'))).orderBy(desc(financePeriodEvents.at)).get();
-  const open = TO_REPEAT.filter((key) => !steps.find((s) => s.key === key)!.done);
+  const open = TO_REPEAT.filter((key) => steps.some((s) => s.key === key && !s.done));
   const reopened = reopenedEvent && open.length > 0 ? { at: reopenedEvent.at, byUserId: reopenedEvent.byUserId, reason: reopenedEvent.reason ?? '' } : null;
   return {
     fiscalYearId: year.id,
@@ -69,7 +72,7 @@ function nextStep(steps: ClosingStepView[]): ClosingStepKey | null {
 
 const statusSchema = z.object({ fiscalYearId: z.string().min(1) });
 
-/** `finance.read`: der Stand des Jahresabschlusses — zwölf Schritte, was erledigt ist, was als Nächstes kommt. */
+/** `finance.read`: der Stand des Jahresabschlusses — zwölf Schritte (über der Grenze 13), was erledigt ist, was als Nächstes kommt. */
 export async function getClosingStatus(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<ClosingStatus>> {
   const denied = requireFinanceRead(ctx, 'read');
   if (denied) return denied;

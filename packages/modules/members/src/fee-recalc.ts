@@ -1,9 +1,10 @@
 import { newId, notFound, ok, recordAudit, requirePermission, validate, type CallContext, type DbOrTx, type Deps, type Result } from '@kompass/core';
-import { cancelOriginOpenItem, categoryIdByKeyInternal, expiredRunIdsInternal, financeOpenItems, openCentsInternal, openItemInSubmittedRunInternal } from '@kompass/module-finance';
+import { cancelOriginOpenItem, categoryIdByKeyInternal, expiredRunIdsInternal, financeOpenItems, openCentsInternal, openItemInDirectDebitInternal, openItemInSubmittedRunInternal } from '@kompass/module-finance';
 import { and, eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { MembersAborted, membersConflict } from './errors';
-import type { ComputedCharge } from './fee-calc';
+import { splitAroundKept, type ComputedCharge } from './fee-calc';
+import { effectiveFee } from './fee-agreement';
 import { computeChargesFor, FEE_CATEGORY_KEY, FEE_ORIGIN, insertChargeInternal } from './fee-run';
 import { planPaymentMethodSyncInternal, type TransferKept } from './payment-method';
 import { FEE_INTERVALS, FEE_MAX_CENTS, FEE_REDUCTIONS, memberFeeAgreements, memberFeeCharges, memberMemberships, memberTypePeriods, PAYMENT_METHODS, type FeeChargeRow, type MembershipRow } from './schema';
@@ -24,21 +25,23 @@ export interface RecalculationPlan {
 
 /**
  * Ob ein Beitrag ersetzt werden darf: vorgemerkt im Lauf, oder angelegt mit offenem, nicht stornierten Posten ohne
- * zählenden Ausgleich, nicht gestundet und nicht in einem Einzug, der bei der Bank eingereicht ist (Plan L2).
+ * zählenden Ausgleich, nicht gestundet und nicht in einem Einzug, der bei der Bank eingereicht ist (Plan L2) oder
+ * dessen Datei schon erzeugt ist (Plan R1, M3: er bleibt wie eingereicht). Fällt er dort ganz weg (`stillDue` falsch:
+ * Austritt, beitragsfrei), gilt er als zu ersetzen — dann lehnt das Stornieren mit `openItemInDirectDebit` ab und der
+ * Mensch nimmt ihn erst aus dem Einzug, statt dass er ohne Grund eingezogen wird.
  */
-function replaceable(db: DbOrTx, charge: FeeChargeRow): boolean {
+function replaceable(db: DbOrTx, deps: Deps, charge: FeeChargeRow, stillDue: boolean): boolean {
   if (charge.state === 'pending') return true;
   if (charge.state !== 'created' || !charge.openItemId || charge.deferredTo !== null) return false;
   const item = db.select({ cancelledAt: financeOpenItems.cancelledAt }).from(financeOpenItems).where(eq(financeOpenItems.id, charge.openItemId)).get();
   if (!item || item.cancelledAt !== null) return false;
   if (openItemInSubmittedRunInternal(db, charge.openItemId)) return false;
+  if (openItemInDirectDebitInternal(deps, db, charge.openItemId)?.status === 'fileCreated') return !stillDue;
   return openCentsInternal(db, charge.openItemId) === charge.amountCents;
 }
 
 const isWaived = (db: DbOrTx, charge: FeeChargeRow): boolean =>
   !!charge.openItemId && db.select({ cancelledAt: financeOpenItems.cancelledAt }).from(financeOpenItems).where(eq(financeOpenItems.id, charge.openItemId)).get()?.cancelledAt != null;
-
-const overlaps = (a: { periodStart: string; periodEnd: string }, b: { periodStart: string; periodEnd: string }) => a.periodStart <= b.periodEnd && b.periodStart <= a.periodEnd;
 
 /** Plant die Neuberechnung für jedes Jahr mit Beiträgen ab dem Jahr von `from` — ohne zu schreiben. */
 export function planRecalculationInternal(db: DbOrTx, deps: Deps, membership: MembershipRow, from: string): RecalculationPlan {
@@ -55,13 +58,17 @@ export function planRecalculationInternal(db: DbOrTx, deps: Deps, membership: Me
       const match = computed.find((c) => c.periodStart === charge.periodStart);
       const unchanged = match && match.periodEnd === charge.periodEnd && match.amountCents === charge.amountCents && match.dueOn === charge.dueOn;
       if (unchanged || isWaived(db, charge)) kept.push(charge);
-      else if (replaceable(db, charge)) plan.replace.push(charge);
+      else if (replaceable(db, deps, charge, computed.some((c) => c.periodStart <= charge.periodEnd && charge.periodStart <= c.periodEnd))) plan.replace.push(charge);
       else {
         kept.push(charge);
         plan.keep.push(charge);
       }
     }
-    plan.add.push(...computed.filter((c) => !kept.some((k) => overlaps(k, c))));
+    // M2: Ein neuer Zeitraum, der in einen behaltenen hineinragt, gilt für die Monate, die keiner deckt (anteilig) — statt ganz zu entfallen.
+    for (const c of computed) {
+      const fee = effectiveFee(db, membership.id, c.periodStart);
+      plan.add.push(...splitAroundKept(c, kept, 'none' in fee || fee.exempt ? null : { amountCents: fee.amountCents, interval: fee.interval }));
+    }
   }
   return plan;
 }

@@ -54,6 +54,16 @@ describe('Bericht foreignActivity (Rechenschaft B1 Task 5)', () => {
     expect(data.totalCents).toBe(12500);
   });
 
+  it('the approval day on paper is the day in the association\'s zone, without touching the data (F-B3)', async () => {
+    const { f } = await abroad();
+    const run = unwrap(await runFinanceReport(f.deps, f.ctx, { report: 'foreignActivity', params: { fiscalYearId: f.year.id } }));
+    const data = run.data as ReturnType<typeof foreignActivityReportDefinition.compute>;
+    const edge = { ...data, partnerPayments: data.partnerPayments.map((g) => ({ ...g, payments: g.payments.map((p) => ({ ...p, approvedAt: '2026-12-31T23:30:00.000Z' })) })) };
+    const body = foreignActivityReportDefinition.toTypst(edge, { categoryNames: {}, accountNames: {}, labels: { 'setting.timeZone': 'Europe/Berlin' } });
+    expect(body).toContain('01.01.2027');
+    expect(body).not.toContain('31.12.2026');
+  });
+
   it('does not follow the seat of a contact: the country of the organisation leaves the data as it is', async () => {
     const { f } = await abroad();
     const de = unwrap(await runFinanceReport(f.deps, f.ctx, { report: 'foreignActivity', params: { fiscalYearId: f.year.id } }));

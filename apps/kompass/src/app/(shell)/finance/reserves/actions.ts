@@ -1,7 +1,7 @@
 'use server';
 
 import { guardAction } from '@/lib/action-guard';
-import { deleteReserve, linkResolution, recordReserveCarryForward, recordReserveMovement, saveReserve, setReserveActive, uploadResolution } from '@kompass/module-finance';
+import { deleteReserve, linkResolution, recordReserveCarryForward, recordReserveMovement, saveReserve, setReserveActive, uploadResolution, type ReserveKind } from '@kompass/module-finance';
 import { getTranslations } from 'next-intl/server';
 import { revalidatePath } from 'next/cache';
 import { actionState } from '@/lib/action-state';
@@ -26,7 +26,7 @@ async function uploadFailed(): Promise<ActionState> {
 }
 
 export interface ReserveFormInput {
-  kind: 'projectFunds' | 'replacement' | 'free' | 'participation';
+  kind: ReserveKind;
   name: string;
   purposeText: string | null;
   purposeId: string | null;

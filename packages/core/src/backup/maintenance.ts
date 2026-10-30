@@ -12,8 +12,8 @@ export interface MaintenanceMarker {
   /** Lesbare Kennung des Laufs (`restore-<JJJJMMTT-HHmm>`), die Wartungsseite zeigt sie bei `rollbackFailed`. */
   runId: string;
   since: string;
-  /** `prepare`: noch nichts ersetzt · `replace`: Bestand liegt in `aside` · `migrate`: neuer Bestand steht · `done`: eingespielt, nur noch Aufräumen · `rollbackFailed`: Zurücklegen gescheitert. */
-  phase: 'prepare' | 'replace' | 'migrate' | 'done' | 'rollbackFailed';
+  /** `safeguard`: Sichern und Prüfen, noch nichts ersetzt · `prepare`: noch nichts ersetzt · `replace`: Bestand liegt in `aside` · `migrate`: neuer Bestand steht · `done`: eingespielt, nur noch Aufräumen · `rollbackFailed`: Zurücklegen gescheitert. */
+  phase: 'safeguard' | 'prepare' | 'replace' | 'migrate' | 'done' | 'rollbackFailed';
   /** Die Rücklage `.before-import-*` unter `DATA_PATH`, sobald es eine gibt. */
   aside: string | null;
   backupName: string;

@@ -4,7 +4,7 @@ import { FILED_TAX_PERIOD, STORY_YEAR } from './story-year';
 
 /**
  * Rechenschaft D2 — Seite „Steuererklärung“. Seed: die drei abgeschlossenen Jahre sind ein Zeitraum (`FILED_TAX_PERIOD`),
- * im Mai abgegeben, ohne Bescheid; das Stichjahr ein offener Zeitraum ohne Angaben.
+ * im Mai abgegeben, ohne Bescheid; das Stichjahr ein offener Zeitraum ohne Angaben — das Satzungsdatum schlägt Gremien als Hinweis vor.
  */
 const missingIn = async (page: import('@playwright/test').Page) => Number((await page.locator('[data-slot="page-header-title"]').locator('..').textContent())?.match(/(\d+) Angaben? fehl/)?.[1] ?? 0);
 
@@ -24,6 +24,9 @@ test.describe('finance tax return (Rechenschaft D2)', () => {
     await page.getByTestId('answer-churchPurposes-no').click();
     await page.getByTestId('answer-charitablePurposes-no').click();
     await page.getByTestId('answer-gratuitousBenefits-no').click();
+    // Das Satzungsdatum aus Gremien steht nur als Hinweis daneben (G7) — das Feld bleibt leer, gespeichert wird es nicht.
+    await expect(page.locator('#answer-statuteDate')).toHaveValue('');
+    await expect(page.getByTestId('answer-statuteDate-take')).toBeVisible();
     await page.getByTestId('tax-answers-save').click();
     await expect(page.getByTestId('gem-missing')).toHaveCount(before - 3);
     await page.reload();

@@ -52,11 +52,18 @@ export function backgroundStarted(): boolean {
 }
 
 export function startBackgroundWork(
-  opts: { runtime?: string; onStart?: () => TextWorker | void | unknown } = {},
+  opts: { runtime?: string; ready?: () => unknown; onStart?: () => TextWorker | void | unknown } = {},
 ): void {
   const runtime = opts.runtime ?? process.env.NEXT_RUNTIME ?? 'nodejs';
   if (runtime !== 'nodejs') return;
   if (state.started) return;
+  // Ohne Datenbank (gescheiterte Migration) hat kein Dienst etwas zu tun: Sie wiederholten den Fehler nur endlos.
+  try {
+    opts.ready?.();
+  } catch (error) {
+    console.error('[kompass] Hintergrunddienste nicht gestartet: %s', String(error));
+    return;
+  }
   state.started = true;
   if (opts.onStart) state.start = opts.onStart;
   const returned = opts.onStart?.();

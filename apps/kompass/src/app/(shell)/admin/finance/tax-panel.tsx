@@ -1,9 +1,11 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import { FieldError } from '@/components/forms/field-error';
+import { ManagedField } from '@/components/managed-field';
 import { FormCard, FormCardBody } from '@/components/forms/form-card';
 import { FormActionBar } from '@/components/forms/form-action-bar';
 import { FormField } from '@/components/forms/form-field';
@@ -18,7 +20,6 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Textarea } from '@/components/ui/textarea';
 import { withUnplacedFieldErrors } from '@/lib/feedback';
 import { formatAmount, parseAmount } from '@/lib/finance/amount';
-import { AgentSwitchSection, agentSwitchChange } from '../agent-switch-section';
 import { applyTaxDefaultsAction, setBoardRemunerationAction, setExpenseWaiverBasisAction, setFinanceLimitsAction, setFinanceSwitchesAction } from './actions';
 import { useDateFormat } from '@/components/date-format-provider';
 import { Section } from '@/components/section';
@@ -26,7 +27,6 @@ import { Section } from '@/components/section';
 export interface TaxSwitches {
   membershipFeesCertifiable: boolean;
   expenseWaiversEnabled: boolean;
-  mcpHumanOnlyAllowed: boolean;
 }
 
 export interface TaxLimits {
@@ -38,12 +38,11 @@ export interface TaxLimits {
 }
 
 /**
- * Die Steuer-Schalter, die mit der Leiste des Abschnitts gelten; der Agentenschalter steht als letzter Abschnitt in
- * derselben Karte. „Umsatzsteuerlich Unternehmer?“ steht seit Plan E6a Task 11b im Reiter „Umsatzsteuer“.
+ * Die Steuer-Schalter, die mit der Leiste des Abschnitts gelten. „Umsatzsteuerlich Unternehmer?“ steht seit Plan E6a
+ * Task 11b im Reiter „Umsatzsteuer“; der Agentenschalter seit der Seite „Agenten“ (2026-10-29) unter Verwaltung → Agenten.
  */
 const TAX_SWITCH_KEYS = ['membershipFeesCertifiable', 'expenseWaiversEnabled'] as const;
 type TaxSwitchKey = (typeof TAX_SWITCH_KEYS)[number];
-const AGENT_KEY = 'finance.mcpHumanOnlyAllowed';
 
 const AMOUNT_LIMIT_KEYS = ['statementSufficesBelowCents', 'cashDonationAlertCents', 'roundAmountFromCents'] as const;
 const LIMIT_IDS: Record<keyof TaxLimits, string> = {
@@ -75,23 +74,19 @@ export function SettingRow({ htmlFor, labelId, label, hint, testId, children }: 
 }
 
 /**
- * Runde 3, 172 (Joe 2026-10-17): Die drei Steuer-Schalter gelten erst mit „Speichern“ in der Leiste des Abschnitts —
+ * Runde 3, 172 (Joe 2026-10-17): Die Steuer-Schalter gelten erst mit „Speichern“ in der Leiste des Abschnitts —
  * deshalb Ja/Nein wie die Frage nach den Pauschalen, kein Schalter (der speichert sofort, Joe 05.10.2026). Die Leiste
- * ruft einen Dienst (`setFinanceSwitch`) für jeden geänderten Schalter. Plan U4 Task 1 (Nachtrag MCP-Test § 1): Der
- * Agentenschalter ist der letzte Abschnitt dieser Karte (`AgentSwitchSection`) und geht mit derselben Leiste.
+ * ruft einen Dienst (`setFinanceSwitch`) für jeden geänderten Schalter.
  */
 function SwitchesForm({ switches }: { switches: TaxSwitches }) {
   const t = useTranslations('finance.admin.tax');
   const router = useRouter();
-  const form = useRef<HTMLFormElement>(null);
   const initial = Object.fromEntries(TAX_SWITCH_KEYS.map((k) => [k, switches[k]])) as Record<TaxSwitchKey, boolean>;
   const [values, setValues] = useState(initial);
-  const [agent, setAgent] = useState(switches.mcpHumanOnlyAllowed);
   const [pending, setPending] = useState(false);
   const feedback = useActionFeedback();
   const changedKeys = TAX_SWITCH_KEYS.filter((k) => values[k] !== initial[k]);
-  const agentChanged = agent !== switches.mcpHumanOnlyAllowed;
-  const entries = [...changedKeys.map((k) => ({ key: `finance.${k}`, value: values[k] })), ...(agentChanged ? [{ key: AGENT_KEY, value: agent }] : [])];
+  const entries = changedKeys.map((k) => ({ key: `finance.${k}`, value: values[k] }));
   const save = async () => {
     if (entries.length === 0) return;
     setPending(true);
@@ -102,15 +97,10 @@ function SwitchesForm({ switches }: { switches: TaxSwitches }) {
   return (
     <FormCard
       as="form"
-      ref={form}
       data-testid="tax-switches"
       onSubmit={(e: React.FormEvent) => {
         e.preventDefault();
         void save();
-      }}
-      onChange={(e: React.FormEvent) => {
-        const next = agentSwitchChange(e, AGENT_KEY);
-        if (next !== null) setAgent(next);
       }}
     >
       <FormCardBody className="pt-2.5">
@@ -128,7 +118,6 @@ function SwitchesForm({ switches }: { switches: TaxSwitches }) {
             </SettingRow>
           ))}
         </div>
-        <AgentSwitchSection name={AGENT_KEY} label={t('mcpHumanOnlyAllowed')} hint={t('mcpHumanOnlyAllowedHint')} checked={switches.mcpHumanOnlyAllowed} disabled={pending} />
       </FormCardBody>
       <FormActionBar
         count={entries.length}
@@ -137,8 +126,6 @@ function SwitchesForm({ switches }: { switches: TaxSwitches }) {
         state={feedback.state}
         onDiscard={() => {
           setValues(initial);
-          setAgent(switches.mcpHumanOnlyAllowed);
-          form.current?.reset();
           feedback.reset();
         }}
         onSave={() => void save()}
@@ -278,6 +265,36 @@ export interface BoardRemunerationState {
   validFrom: string | null;
   /** Joe 11.9: Tag der Entscheidung; ohne ihn ist die Frage offen und hat keine Vorauswahl. */
   decidedOn: string | null;
+  /** G7: der festgeschriebene Beschluss der Gremien, der die Vergütung führt — dann feste Werte statt der Frage. */
+  managed?: { label: string; href: string | null } | null;
+}
+
+const BOARD_MANAGED_HINT_ID = 'tax-board-remuneration-managed';
+
+/**
+ * G7 (Spec Gremien § 8.1): Führt ein Beschluss der Gremien die Vergütung, stehen Antwort, Fundstelle und „Gilt ab“ als
+ * `ManagedField`; der Satz darüber nennt den Beschluss mit Link (MUSTER § E, geführte Einstellungen). Keine Leiste.
+ */
+function ManagedBoardRemuneration({ allowed, basisText, validFrom, managed }: BoardRemunerationState & { managed: { label: string; href: string | null } }) {
+  const t = useTranslations('finance.admin.tax');
+  const fmt = useDateFormat();
+  return (
+    <FormCard data-testid="board-remuneration">
+      <FormCardBody>
+        <p id={BOARD_MANAGED_HINT_ID} className="mb-4 text-meta text-ink-2">
+          {t.rich('boardRemuneration.managed', {
+            label: managed.label,
+            link: (chunks) => (managed.href ? <Link href={managed.href} className="text-link underline underline-offset-2">{chunks}</Link> : chunks),
+          })}
+        </p>
+        <FormGrid>
+          <ManagedField id="tax-board-remuneration-answer" label={t('boardRemuneration.question')} value={t(`boardRemuneration.${allowed ? 'yes' : 'no'}`)} describedBy={BOARD_MANAGED_HINT_ID} size="l" />
+          {allowed ? <ManagedField id="tax-board-remuneration-basis" label={t('boardRemuneration.basisLabel')} value={basisText} describedBy={BOARD_MANAGED_HINT_ID} size="l" /> : null}
+          {allowed ? <ManagedField id="tax-board-remuneration-valid-from" label={t('boardRemuneration.validFromLabel')} value={validFrom ? fmt.date(validFrom) : ''} describedBy={BOARD_MANAGED_HINT_ID} size="s" /> : null}
+        </FormGrid>
+      </FormCardBody>
+    </FormCard>
+  );
 }
 
 /**
@@ -354,8 +371,7 @@ function BoardRemunerationForm({ allowed, basisText, validFrom, decidedOn }: Boa
 
 /**
  * H7 — Steuerliches. Runde 3, 172 (Joe 2026-10-17): je Abschnitt eine Speicherleiste mit einem Dienst — Schalter,
- * Anspruchsgrundlage, Pauschalen, Grenzen. Der Agentenschalter steht seit Plan U4 Task 1 als letzter Abschnitt in der
- * Karte der Schalter und gilt wie sie erst mit „Speichern“.
+ * Anspruchsgrundlage, Pauschalen, Grenzen.
  */
 export function TaxPanel({
   switches,
@@ -388,7 +404,7 @@ export function TaxPanel({
   };
 
   // Die Formulare tragen den gespeicherten Stand im `key`: Nach dem Speichern und `router.refresh()` beginnen sie neu.
-  const switchesKey = [...TAX_SWITCH_KEYS, 'mcpHumanOnlyAllowed' as const].map((k) => String(switches[k])).join('-');
+  const switchesKey = TAX_SWITCH_KEYS.map((k) => String(switches[k])).join('-');
   const limitsKey = Object.values(limits).join('-');
 
   return (
@@ -412,7 +428,11 @@ export function TaxPanel({
           </Section>
         ) : null}
         <Section title={t('sections.boardRemuneration')}>
-          <BoardRemunerationForm key={`${boardRemuneration.allowed}-${boardRemuneration.basisText}-${boardRemuneration.validFrom}-${boardRemuneration.decidedOn}`} {...boardRemuneration} />
+          {boardRemuneration.managed ? (
+            <ManagedBoardRemuneration {...boardRemuneration} managed={boardRemuneration.managed} />
+          ) : (
+            <BoardRemunerationForm key={`${boardRemuneration.allowed}-${boardRemuneration.basisText}-${boardRemuneration.validFrom}-${boardRemuneration.decidedOn}`} {...boardRemuneration} />
+          )}
         </Section>
         <Section title={t('sections.limits')}>
           <LimitsForm key={limitsKey} limits={limits} />

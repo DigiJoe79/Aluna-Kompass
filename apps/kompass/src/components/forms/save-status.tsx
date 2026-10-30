@@ -12,14 +12,15 @@ export type { SaveState } from '@/lib/autosave';
  * „Zwischenstand gespeichert · 21:14“, „Wird gespeichert …“ oder, ohne Netz,
  * der Satz, dass die Eingaben auf dem Gerät bleiben. `aria-live="polite"`,
  * damit ein Vorleser den Stand mitbekommt, ohne unterbrochen zu werden.
- * `data-pending` sagt, ob noch etwas Getipptes auf die nächste Sicherung wartet.
+ * `data-pending` sagt, ob noch etwas Getipptes auf die nächste Sicherung wartet. `quietWhenIdle`: Vor der ersten
+ * Sicherung steht nichts da — für Seiten, die schon Gespeichertes zeigen (Mitlauf), wo „Noch nichts eingegeben.“ falsch wäre.
  */
-export function SaveStatus({ state, pending }: { state: SaveState; pending: boolean }) {
+export function SaveStatus({ state, pending, quietWhenIdle = false }: { state: SaveState; pending: boolean; quietWhenIdle?: boolean }) {
   const t = useTranslations('common.autosave');
   // Uhrzeit in der Zeitzone des Vereins (`useDateFormat().time`, fest HH:mm) — dieselbe auf Server und Client.
   const { time } = useDateFormat();
   const text =
-    state.kind === 'saving' ? t('saving') : state.kind === 'saved' ? t('saved', { time: time(state.at) }) : state.kind === 'offline' ? t('offline') : state.kind === 'failed' ? t('failed', { detail: state.detail }) : t('idle');
+    state.kind === 'saving' ? t('saving') : state.kind === 'saved' ? t('saved', { time: time(state.at) }) : state.kind === 'offline' ? t('offline') : state.kind === 'failed' ? t('failed', { detail: state.detail }) : quietWhenIdle ? '' : t('idle');
   return (
     <p data-testid="save-status" data-pending={pending} role="status" aria-live="polite" className={cn('text-hint', state.kind === 'offline' || state.kind === 'failed' ? 'text-warning' : 'text-muted-ink')}>
       {text}

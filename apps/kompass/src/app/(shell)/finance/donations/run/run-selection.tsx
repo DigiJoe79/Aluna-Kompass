@@ -15,7 +15,7 @@ import { AmountField } from '@/components/finance/amount-field';
 import { Notice } from '@/components/notice';
 import { Button } from '@/components/ui/button';
 import { Select } from '@/components/ui/select';
-import { formatAmount, formatEuro, parseAmount } from '@/lib/finance/amount';
+import { formatAmount, formatEuro, readAmount } from '@/lib/finance/amount';
 import { numberRangeText, openRunSummary, runIssueCount, runQueryString } from '@/lib/finance/run';
 import { previewConfirmationRunAction, startConfirmationRunAction } from './actions';
 import { PreviewGroups } from './preview-groups';
@@ -54,9 +54,15 @@ export function RunSelection(props: RunSelectionProps) {
   const [starting, setStarting] = useState(false);
   const previewFb = useActionFeedback();
   const startFb = useActionFeedback();
+  // Mindestbetrag optional; unlesbar rechnet die Vorschau nicht still ohne Grenze, sondern bleibt beim letzten Stand und
+  // zeigt den Fehler am Feld (App-B7) — ausgestellt wird immer, was die Vorschau zeigt.
+  const [minInvalid, setMinInvalid] = useState(false);
 
   const recompute = async (next: { year: string; min: string; excluded: PickedContact[] }) => {
-    const minCents = next.min.trim() ? parseAmount(next.min) : null;
+    const read = readAmount(next.min, { required: false });
+    setMinInvalid(!read.ok);
+    if (!read.ok) return;
+    const minCents = read.cents;
     const input = {
       year: Number(next.year),
       ...(minCents !== null && minCents >= 0 ? { minCents } : {}),
@@ -162,7 +168,7 @@ export function RunSelection(props: RunSelectionProps) {
           </Select>
         </FormField>
         <FormField id="run-min" label={t('selection.minimum')}>
-          <AmountField id="run-min" name="min" value={min} onChange={setMin} />
+          <AmountField id="run-min" name="min" value={min} onChange={setMin} invalid={minInvalid} />
         </FormField>
         {/* Breite wie das Suchfeld der Filterleisten in den Listen (Entscheidung zum Inventar). */}
         <div className="w-[220px]">

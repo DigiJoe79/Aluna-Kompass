@@ -45,6 +45,8 @@ export function summarizeSection(section: AuditSection, rows: readonly AuditSect
         return { count: Number(rows.find((r) => param(r, 'kind') === 'total')?.labelParams.count ?? 0) };
       case 'partnerPayments':
         return { total: rows.length };
+      case 'resolutions':
+        return { total: rows.length, rejected: count(rows, (r) => param(r, 'outcome') === 'rejected') };
     }
   })();
   return { counts, remarksOpen };

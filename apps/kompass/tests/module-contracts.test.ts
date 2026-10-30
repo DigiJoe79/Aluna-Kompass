@@ -283,6 +283,7 @@ const STALE_NOT_PROBED: Record<string, string> = {
   finance_audit_auditor_save: 'Verlangt Jahr, Kontakt und Art; Finanzen prüfen ihren Ladestand selbst (auditing-auditors.test.ts).',
   finance_reserve_set_active: 'Verlangt den Schalter; Finanzen prüfen ihren Ladestand selbst (P4).',
   finance_reserve_carry_forward: 'Verlangt Betrag und Tag; Finanzen prüfen ihren Ladestand selbst (P4).',
+  finance_funds_use_opening_save: 'Verlangt Jahr, Jahresende und Beträge; Finanzen prüfen ihren Ladestand selbst (funds-use-openings.test.ts).',
   finance_other_asset_save: 'Verlangt Art, Bezeichnung, Wert, Grundlage und Beginn; Finanzen prüfen ihren Ladestand selbst (other-assets.test.ts).',
   finance_audit_report_examination_save: 'Verlangt reportId statt id; Finanzen prüfen ihren Ladestand je Karte selbst (auditing-report.test.ts, auditing-mcp-tools.test.ts).',
   finance_audit_report_result_save: 'Verlangt reportId statt id; Finanzen prüfen ihren Ladestand je Karte selbst (auditing-report.test.ts, auditing-mcp-tools.test.ts).',
@@ -293,6 +294,7 @@ const STALE_NOT_PROBED: Record<string, string> = {
   finance_assembly_result_save: 'Verlangt fiscalYearId statt id, Tag und Art der Entlastung; Finanzen prüfen ihren Ladestand selbst (closing-assembly.test.ts).',
   finance_tax_period_answers_save: 'Verlangt die Angaben; Finanzen prüfen ihren Ladestand selbst (tax-periods.test.ts).',
   finance_tax_period_notice_link: 'Verlangt den Bescheid; Finanzen prüfen ihren Ladestand selbst (tax-periods-filing.test.ts).',
+  finance_annual_accounts_explanation_save: 'Verlangt fiscalYearId statt id und den Text; Finanzen prüfen ihren Ladestand selbst (annual-accounts-notes.test.ts).',
 };
 
 const takesVersion = (tool: McpToolDefinition) => {

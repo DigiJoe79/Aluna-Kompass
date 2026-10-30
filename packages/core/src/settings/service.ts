@@ -106,7 +106,8 @@ export function writeSettingInternal(
  * Die Einstellungen, die gerade ein eingeschaltetes Modul führt (`managedBy`),
  * als Schlüssel → Modul. Dieselbe Bedingung, unter der `setSetting` mit
  * `settingManaged` ablehnt — die Vereinsdaten zeigen diese Felder deshalb nur
- * lesbar.
+ * lesbar. Darunter stehen auch eigene Werte der Module (`finance.sepa.*`); die
+ * Vereinsdaten zeigen nur ihre eigenen Felder und übergehen sie.
  */
 export function managedSettings(deps: Deps): Record<string, string> {
   const enabled = readSetting<string[]>(deps, 'modules.enabled');

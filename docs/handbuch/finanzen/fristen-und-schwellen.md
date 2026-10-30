@@ -10,7 +10,8 @@ Kompass **berechnet** sie aus Einstellungen und Bescheiden: Ablauf des
 Freistellungsbescheids, Nachweise von Partnern im Ausland (überfällig erst nach
 der Kulanzfrist unter Einrichtung → Finanzen → Steuerliches), Bescheide der
 Partner, Bestätigungen zu korrigieren, offener Zugang der Prüfer, die
-Steuererklärung je Erklärungszeitraum und die Umsatzsteuer (unten).
+Steuererklärung je Erklärungszeitraum, die Umsatzsteuer (unten) und die
+Verwendungsfrist je Rückstand der Mittelverwendung.
 Berechnete Fristen haben kein Kästchen: Sie verschwinden, sobald erledigt ist,
 worauf sie zeigen. Überfällige tragen „überfällig“.
 
@@ -49,6 +50,18 @@ Dialog das ELSTER-Übertragungsprotokoll als PDF in die Akte. Daneben führt
 mit den Werten nach Kennzahlen, bei der Jahreserklärung **Zu den Summen** auf den
 Bericht „Umsatzsteuer-Summen“ des Jahres.
 
+## Mittelverwendung
+
+Liegen die Einnahmen eines Jahres über der Grenze für die zeitnahe
+Mittelverwendung, steht je Rückstand „Mittel aus 2024 bis 31.12.2026
+verwenden“ — fällig zum Ende des übernächsten Jahres nach dem Zufluss. Die Frist
+verschwindet, sobald die Ausgabe festgeschrieben ist. Ein laufendes Jahr, das bisher
+nicht über der Grenze liegt, ändert daran nichts. Erst wenn ein Jahr nicht über
+der Grenze **abgeschlossen** ist, entfallen die Rückstände (AEAO zu § 55
+Nr. 31); dann steht je Rückstand einmal ohne Datum „Verwendungsfrist für Mittel
+aus 2024 entfallen“, bis ein späteres Jahr abgeschlossen ist. Unter der Grenze
+entsteht keine Frist. Mehr unter [Mittelverwendung](mittelverwendung.md).
+
 ## Wiedervorlagen
 
 Was Sie sich selbst vornehmen: „Wiedervorlage anlegen …“ mit Titel, Datum und
@@ -64,7 +77,8 @@ Je Geschäftsjahr (oben wählbar) mit Balken, ab dem eingestellten Anteil
 ockerfarben:
 
 - **Zeitnahe Mittelverwendung** (§ 55 Abs. 1 Nr. 5 AO): Einnahmen bis 45.000 €
-  (ab 2021) bzw. 100.000 € (ab 2026) — darunter keine Pflicht.
+  (ab 2021) bzw. 100.000 € (ab 2026) — darunter keine Pflicht (siehe
+  [Mittelverwendung](mittelverwendung.md)).
 - **Freigrenze wirtschaftlicher Geschäftsbetrieb** (§ 64 Abs. 3 AO): 35.000 €
   ab 2007, 45.000 € ab 2020, 50.000 € ab 2026. Sie zählt nur Einnahmen aus
   Leistungen (AEAO zu § 64 Nr. 17); was nicht mitzählt (Zuschüsse, Darlehen,

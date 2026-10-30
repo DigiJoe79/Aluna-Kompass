@@ -43,11 +43,11 @@ export const MEMBERS_SETTINGS: readonly SettingDefinition[] = [
   { key: 'members.numberFormat', schema: numberFormatSchema, default: { prefix: '', digits: 4 } },
   // Geschäftsjahr heißt hier Kalenderjahr: Das Geschäftsjahr der Finanzen braucht die Kündigungsfrist nicht, Vereine
   // mit abweichendem Jahr sind die Ausnahme (Plan M1, Task 1).
-  { key: 'members.resignationNotice', schema: resignationNoticeSchema, default: { months: 3, at: 'fiscalYearEnd' } },
+  { key: 'members.resignationNotice', schema: resignationNoticeSchema, default: { months: 3, at: 'fiscalYearEnd' }, managedBy: 'members' },
   // Beitrag im Eintrittsjahr (Entscheid Joe 2026-10-18); gelesen ab M3.
-  { key: 'members.joinYearRule', schema: z.enum(['full', 'proRataMonths', 'nextYear']), default: 'full' },
+  { key: 'members.joinYearRule', schema: z.enum(['full', 'proRataMonths', 'nextYear']), default: 'full', managedBy: 'members' },
   // Zahlungsziel in Mahnung und Zahlungsaufforderung: „Bitte überweisen Sie … bis zum …“ (Plan M4, Handoff 2.6).
-  { key: 'members.paymentTermDays', schema: z.number().int().min(1).max(90), default: 14 },
+  { key: 'members.paymentTermDays', schema: z.number().int().min(1).max(90), default: 14, managedBy: 'members' },
   // Mahnstufen (Spec § 4.5); die Einrichtung legt die Textbausteine an und trägt sie ein.
-  { key: 'members.dunningLevels', schema: dunningLevelsSchema, default: DEFAULT_DUNNING_LEVELS },
+  { key: 'members.dunningLevels', schema: dunningLevelsSchema, default: DEFAULT_DUNNING_LEVELS, managedBy: 'members' },
 ];

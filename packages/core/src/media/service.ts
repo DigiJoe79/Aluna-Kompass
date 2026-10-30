@@ -16,6 +16,7 @@ import { conflict, invalid, notFound, ok, unauthorized, type Result } from '../r
 import { folderExists, mediaKindCondition, withinSubtree } from './folders';
 import { ensurePreview, hasPreview, previewFilename, readImageMeta, renderPreview } from './preview';
 import { findMediaReferences, findMediaReferencesFor } from './references';
+import { svgContainsActiveContent } from './svg-filter';
 import type { AiKind } from './ai-labeling';
 import { IMAGE_VARIANTS, variantFilename, type ImageVariant } from './variants';
 
@@ -61,7 +62,7 @@ async function prepare(input: StoreMediaInput, trustDeclaredPdf: boolean = false
   if (input.bytes.byteLength > MEDIA_MAX_BYTES) return invalid([{ path: 'bytes', message: 'fileTooLarge' }]);
   const mimeType = await detectMimeType(input, trustDeclaredPdf);
   if (!mimeType) return invalid([{ path: 'bytes', message: 'unsupportedMediaType' }]);
-  if (mimeType === 'image/svg+xml' && /<script|on[a-z]+\s*=|javascript:/i.test(new TextDecoder().decode(input.bytes))) {
+  if (mimeType === 'image/svg+xml' && svgContainsActiveContent(input.bytes)) {
     return invalid([{ path: 'bytes', message: 'svgContainsScript' }]);
   }
   let width: number | null = null;

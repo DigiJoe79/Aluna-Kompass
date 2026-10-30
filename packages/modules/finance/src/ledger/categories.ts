@@ -5,7 +5,7 @@ import { financeAudit } from '../audit';
 import { financeConflict } from '../errors';
 import { financeAllocationLines, financeCategories, financeExpensePositions, financeImportRules, type FinanceCategoryRow } from '../schema';
 import { requireMasterDataRead } from './access';
-import { ALLOWANCE_KINDS, CERTIFIABLE_INCOME_KINDS, COST_FUNCTIONS, DIRECTIONS, INCOME_KINDS, INPUT_TAX, SPHERES, TAX_CODES } from './codes';
+import { ALLOWANCE_KINDS, CERTIFIABLE_INCOME_KINDS, COST_FUNCTIONS, DIRECTIONS, DONATION_PLATFORMS, INCOME_KINDS, INPUT_TAX, SPHERES, TAX_CODES } from './codes';
 
 /** Plain fields, ohne die Regeltabelle — Grundlage für Erstellung, Update und Startplan. */
 const categoryBase = z.object({
@@ -25,11 +25,17 @@ const categoryBase = z.object({
   /** Rechenschaft C: was aus den Rechnungen der Freigrenze (§ 64 Abs. 3 AO) bzw. der Einnahmen nach § 55 fällt. */
   thresholdExclusion: z.enum(['none', 'notPerformance', 'taxRefund']).default('none'),
   externalAccountNumber: z.string().trim().max(12).nullable().optional(),
+  /** Jahresrechnung (0.4.5): Spendenplattform — nur an Einnahmen, `confirmsItself` ⇒ `bodyGrant`, `handlesOnly` ⇒ `donation`. */
+  donationPlatform: z.enum(DONATION_PLATFORMS).nullable().optional(),
 });
 type CategoryFields = z.infer<typeof categoryBase>;
 
 /** Regeltabelle Spec 5.1 — jede Zeile ein eigener Validierungsschlüssel. */
 function checkCategory(v: CategoryFields, c: z.RefinementCtx): void {
+  if (v.donationPlatform) {
+    const fits = v.direction === 'income' && v.incomeKind === (v.donationPlatform === 'confirmsItself' ? 'bodyGrant' : 'donation');
+    if (!fits) c.addIssue({ code: 'custom', path: ['donationPlatform'], message: 'donationPlatformKindMismatch' });
+  }
   if (v.direction === 'transit') {
     if (v.sphere !== undefined || v.incomeKind !== undefined || v.costFunction !== undefined) {
       c.addIssue({ code: 'custom', path: ['sphere'], message: 'transitHasNoSphere' });
@@ -108,6 +114,7 @@ export function createCategoryInternal(tx: DbOrTx, deps: Deps, ctx: CallContext,
     isAssetSale: fields.isAssetSale,
     thresholdExclusion: fields.thresholdExclusion,
     externalAccountNumber: fields.externalAccountNumber ?? null,
+    donationPlatform: fields.donationPlatform ?? null,
     isActive: true,
     createdAt: now,
     updatedAt: now,
@@ -137,7 +144,7 @@ export async function updateCategory(deps: Deps, ctx: CallContext, input: unknow
   const stale = staleVersion(expectedVersion, before.updatedAt);
   if (stale) return stale;
 
-  const merged = { ...before, ...Object.fromEntries(Object.entries(changes).filter(([, val]) => val !== undefined)) };
+  const merged: FinanceCategoryRow = { ...before, ...Object.fromEntries(Object.entries(changes).filter(([, val]) => val !== undefined)) };
   const rechecked = validate(deps, categoryFieldsSchema, {
     key: before.key,
     name: merged.name,
@@ -154,6 +161,7 @@ export async function updateCategory(deps: Deps, ctx: CallContext, input: unknow
     isAssetSale: merged.isAssetSale,
     thresholdExclusion: merged.thresholdExclusion,
     externalAccountNumber: merged.externalAccountNumber ?? undefined,
+    donationPlatform: merged.donationPlatform,
   });
   if (!rechecked.ok) return rechecked;
 

@@ -9,6 +9,7 @@ import { continueFeeRun, startFeeRun } from '../src/fee-run';
 import { saveFeeSchedule } from '../src/fee-schedule';
 import { admitMember, changeMemberType, endMembership, recordResignation, revokeEnd } from '../src/memberships';
 import { memberFeeCharges } from '../src/schema';
+import { MEMBERS_MCP_TOOLS } from '../src/mcp-tools';
 import { auditOf, payOpenItem, person, setupFees, type MembersDeps } from './helpers';
 
 const NOW = '2027-02-10T08:00:00.000Z';
@@ -86,8 +87,8 @@ describe('recalculation on type change', () => {
     expect(auditOf(deps, 'members.fees.recalculate')).toEqual([]);
   });
 
-  it('a second half in a direct debit submitted to the bank stays; in a run not yet submitted it is replaced (Plan L2)', async () => {
-    for (const status of ['submitted', 'draft'] as const) {
+  it('a second half in a direct debit submitted to the bank or with a file stays; in a draft it is replaced (Plan L2, R1)', async () => {
+    for (const status of ['submitted', 'fileCreated', 'draft'] as const) {
       const { deps, ctx, types, m } = await halfYearly();
       const openItemId = live(deps, m.id)[1]!.openItemId!;
       const fin: CallContext = { ...ctx, permissions: new Set([...ctx.permissions, ...FINANCE_PERMISSIONS]) };
@@ -99,9 +100,57 @@ describe('recalculation on type change', () => {
       unwrap(await changeMemberType(deps, ctx, { membershipId: m.id, typeId: types.supporting, validFrom: '2027-07-01' }));
       expect(live(deps, m.id).map((c) => [c.start, c.amount]), status).toEqual([
         ['2027-01-01', 600],
-        ['2027-07-01', status === 'submitted' ? 600 : 3000],
+        ['2027-07-01', status === 'draft' ? 3000 : 600],
       ]);
     }
+  });
+});
+
+describe('recalculation on a change of rhythm (Plan R1, M2)', () => {
+  const after = (deps: MembersDeps, id: string) => live(deps, id).filter((c) => c.start >= '2027-07-01').map((c) => [c.start, c.amount]);
+  const toRegular = (env: Awaited<ReturnType<typeof supportingMonthly>>) => ({ membershipId: env.m.id, typeId: env.types.regular, validFrom: '2027-07-01' });
+
+  it('monthly to yearly from 1 July with July paid: a new fee 1 August to 31 December with 5/12 of the yearly amount', async () => {
+    const env = await supportingMonthly();
+    const july = live(env.deps, env.m.id).find((c) => c.start === '2027-07-01')!;
+    await payOpenItem(env.deps, july.openItemId!, 1000, '2027-02-05');
+    const preview = unwrap(await MEMBERS_MCP_TOOLS.find((t) => t.name === 'members_fee_recalc_preview')!.handler(env.deps, env.ctx, { membershipId: env.m.id, from: '2027-07-01', change: { kind: 'type', typeId: env.types.regular } })) as { add: { periodStart: string; periodEnd: string; amountCents: number }[] };
+    expect(preview.add.map((c) => [c.periodStart, c.periodEnd, c.amountCents])).toEqual([['2027-08-01', '2027-12-31', 500]]);
+    unwrap(await changeMemberType(env.deps, env.ctx, toRegular(env)));
+    expect(after(env.deps, env.m.id)).toEqual([
+      ['2027-07-01', 1000],
+      ['2027-08-01', 500],
+    ]);
+    expect(live(env.deps, env.m.id).find((c) => c.start === '2027-08-01')).toMatchObject({ cancelled: false });
+  });
+
+  it('with July unpaid, July is replaced and the new period runs from 1 July', async () => {
+    const env = await supportingMonthly();
+    unwrap(await changeMemberType(env.deps, env.ctx, toRegular(env)));
+    expect(after(env.deps, env.m.id)).toEqual([['2027-07-01', 600]]);
+  });
+});
+
+describe('recalculation with a fee in a run with a file (Plan R1)', () => {
+  async function halfYearlyFor() {
+    const env = await setupFees({ now: NOW });
+    unwrap(await saveFeeSchedule(env.deps, env.ctx, { id: env.schedule.id, validFrom: '2027-01-01', rules: [{ typeId: env.types.regular, amountCents: 600, interval: 'halfYearly', allowedIntervals: ['halfYearly'] }] }));
+    const m = await member(env.deps, env.ctx, env.types.regular);
+    await runYear(env.deps, env.ctx);
+    return { ...env, m };
+  }
+
+  it('a second half in a run with a file that no longer falls due (end) refuses the change (Plan R1, Review I1)', async () => {
+    const { deps, ctx, m } = await halfYearlyFor();
+    const openItemId = live(deps, m.id)[1]!.openItemId!;
+    const fin: CallContext = { ...ctx, permissions: new Set([...ctx.permissions, ...FINANCE_PERMISSIONS]) };
+    const account = unwrap(await createAccount(deps, fin, { name: 'Vereinskonto', kind: 'bank', iban: 'DE23999999990000202051', isMain: true }));
+    const mandate = unwrap(await prepareMandate(deps, fin, { contactId: m.contactId, debtorName: 'Erika Beispiel', iban: 'DE44999999990532013000' }));
+    const at = '2027-02-01T10:00:00.000Z';
+    deps.db.insert(financeDirectDebitRuns).values({ id: 'R-F', collectionDate: '2027-07-01', accountId: account.id, status: 'fileCreated', messageId: 'R-F', createdByUserId: 'U1', createdAt: at, updatedAt: at }).run();
+    deps.db.insert(financeDirectDebitItems).values({ id: 'I-F', runId: 'R-F', mandateId: mandate.id, source: 'openItem', sourceId: openItemId, amountCents: 600, endToEndId: 'R-F-1', remittance: 'Beitrag', createdAt: at }).run();
+    expect(fail(await endMembership(deps, ctx, { membershipId: m.id, endsOn: '2027-06-30', reason: 'other' }))).toMatchObject({ type: 'conflict', code: 'openItemInDirectDebit', params: { runId: 'R-F' } });
+    expect(live(deps, m.id).map((c) => [c.start, c.cancelled])).toEqual([['2027-01-01', false], ['2027-07-01', false]]);
   });
 });
 

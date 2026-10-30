@@ -93,7 +93,7 @@ describe('Merkmale für die Anlage Gem (Rechenschaft D2 Task 3)', () => {
     expect(`${entry.before}${entry.after}${entry.entityId}`).not.toMatch(/Musterstadt|99\/999|Tierschutz/);
     expect(entry.entityId).not.toBe(org.id);
     const partner = unwrap(await savePartnerProfile(f.deps, f.ctx, { contactId: org.id, status: 'publicBody' }));
-    expect(unwrap(await getPartner(f.deps, f.ctx, { id: partner.id }))!.taxDetails).toEqual({ taxOffice: 'Finanzamt Musterstadt', taxNumber: '99/999/99999', beneficiaryPurpose: '14', reverseCharge: null, reverseChargeDecline: null });
+    expect(unwrap(await getPartner(f.deps, f.ctx, { id: partner.id }))!.taxDetails).toEqual({ taxOffice: 'Finanzamt Musterstadt', taxNumber: '99/999/99999', beneficiaryPurpose: '14', reverseCharge: null, reverseChargeDecline: null, legalEntity: null });
     expect(code(await saveContactTaxDetails(f.deps, ctxWith(['finance.read'], f.userId), { contactId: org.id, taxOffice: 'x' }))).toBe('forbidden');
     expect(code(await getContactTaxDetails(f.deps, ctxWith(['finance.overview'], f.userId), { contactId: org.id }))).toBe('forbidden');
     expect(code(await saveContactTaxDetails(f.deps, f.ctx, { contactId: 'NOPE', taxOffice: 'x' }))).toBe('notFound');

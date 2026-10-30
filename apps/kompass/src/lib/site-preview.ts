@@ -1,4 +1,5 @@
 import path from 'node:path';
+import { APP_CONTENT_SECURITY_POLICY } from './app-csp';
 
 /**
  * Der Pfad einer Vorschaudatei aus den Segmenten der Adresse — oder `null`,
@@ -45,4 +46,35 @@ export function rewritePreviewHtml(html: string, prefix: string = PREFIX): strin
       // Adressen landeten unter `/site/preview/site/preview/`.
       .replace('<head>', `<head><base href="${prefix}">`)
   );
+}
+
+const TYPES: Record<string, string> = {
+  '.html': 'text/html; charset=utf-8',
+  '.css': 'text/css',
+  '.js': 'text/javascript',
+  '.webp': 'image/webp',
+  '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.svg': 'image/svg+xml',
+  '.pdf': 'application/pdf',
+  '.woff2': 'font/woff2',
+  '.xml': 'application/xml',
+  '.txt': 'text/plain',
+};
+
+/**
+ * Kopfzeilen einer Vorschau-Antwort. HTML ist die Webseite selbst: Sie bekommt
+ * den CSP der Anwendung (ihre Skripte laufen, gerahmt nur von Kompass). Alles
+ * andere — Bilder, SVG, PDF, Stile — bekommt `sandbox` wie `app/media/[id]`:
+ * Ein SVG aus der Mediathek, direkt aufgerufen, liefe sonst im Ursprung der
+ * Anwendung. Stile und Skripte, die eine Seite einbindet, bleiben davon
+ * unberührt; die Sandbox wirkt nur, wenn die Datei selbst das Dokument ist.
+ */
+export function previewResponseHeaders(ext: string): Record<string, string> {
+  return {
+    'content-type': TYPES[ext] ?? 'application/octet-stream',
+    'cache-control': 'no-store',
+    'x-content-type-options': 'nosniff',
+    'content-security-policy': ext === '.html' ? APP_CONTENT_SECURITY_POLICY : 'sandbox',
+  };
 }

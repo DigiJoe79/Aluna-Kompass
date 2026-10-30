@@ -15,8 +15,8 @@ import { cashCountsAfterInternal } from './cash-witnesses';
 import { baselineReportRefs, changedSinceInternal, ensureBaselineInternal, latestBaselineInternal, referenceBaselineInternal } from './baseline';
 import { remarkViewInternal, remarksOfYearInternal } from './remarks';
 import { sampleCountInternal } from './samples';
-import { sectionReviewStatesInternal } from './sections';
-import { AUDIT_SECTIONS, type AuditCashCount, type AuditMode, type AuditRemarkView } from './types';
+import { activeAuditSectionsInternal, sectionReviewStatesInternal } from './sections';
+import { type AuditCashCount, type AuditMode, type AuditRemarkView } from './types';
 
 /**
  * Der Prüfbericht (Spec § D1 Schritt 5–6, Designer Runde 3 12d–12g): Entwurf in vier Blöcken — Gegenstand (von
@@ -174,7 +174,7 @@ function liveSubjectInternal(deps: Deps, row: FinanceAuditReportRow): AuditRepor
     baseline: { id: baseline.id, createdAt: baseline.createdAt, kind: baseline.kind },
     reports: baselineReportRefs(baseline).map((r) => ({ key: r.key, shortHash: r.hash.slice(0, 8) })),
     samples: sampleCountInternal(db, row.fiscalYearId),
-    sectionsReviewed: { reviewed: reviewed.size, total: AUDIT_SECTIONS.length },
+    sectionsReviewed: { reviewed: reviewed.size, total: activeAuditSectionsInternal(deps, year).length },
     cash,
     changedEntryIds: row.kind === 'followUp' && filedBefore ? changedSinceInternal(db, row.fiscalYearId, filedBefore.baselineId) : [],
   };

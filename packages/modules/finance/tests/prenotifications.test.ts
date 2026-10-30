@@ -101,6 +101,19 @@ describe('issuePrenotification', () => {
     expect(audit.map((a) => [a.action, a.params])).toEqual([['finance.prenotification.issue', JSON.stringify({ reference: 'MND-000001', count: 2 })]]);
   });
 
+  it('a second call with the same plan returns the letter already issued, no second document (App-B1); a voided one does not count', async () => {
+    const f = await setup();
+    const plan = [{ dueOn: '2026-10-01', amountCents: 1500 }];
+    const first = unwrap(await issuePrenotification(f.deps, f.ctx, { mandateId: f.mandate.id, plan }));
+    expect(unwrap(await issuePrenotification(f.deps, f.ctx, { mandateId: f.mandate.id, plan }))).toEqual(first);
+    expect(f.deps.db.select().from(financeSepaPrenotifications).all()).toHaveLength(1);
+    expect(f.deps.db.select().from(documents).where(eq(documents.typeKey, 'sepa-prenotification')).all()).toHaveLength(1);
+    // Ein anderer Betrag ist eine neue Ankündigung.
+    expect(unwrap(await issuePrenotification(f.deps, f.ctx, { mandateId: f.mandate.id, plan: [{ dueOn: '2026-10-01', amountCents: 1800 }] })).documentId).not.toBe(first.documentId);
+    f.deps.db.update(documents).set({ status: 'voided' }).where(eq(documents.id, first.documentId)).run();
+    expect(unwrap(await issuePrenotification(f.deps, f.ctx, { mandateId: f.mandate.id, plan })).documentId).not.toBe(first.documentId);
+  });
+
   it('names per row the day of the debit as „Einzug am“ and, when given, what for (R11); the remittance is kept in the plan', async () => {
     const plan = [{ dueOn: '2026-10-01', amountCents: 1200, remittance: 'Beitrag 2026 Mitglied 0002' }, { dueOn: '2026-10-01', amountCents: 1200 }];
     const body = prenotificationPlanBody({ greeting: 'Guten Tag,', creditorName: 'Musterverein e.V.', plan, iban: IBAN, reference: 'MND-000001', creditorId: 'DE98ZZZ09999999999' });

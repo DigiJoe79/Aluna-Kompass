@@ -10,6 +10,7 @@ import {
   reportDefinition,
   suggestedDueOn,
   taxPeriodDefaults,
+  taxPeriodStatute,
   type GemLineValue,
   type TaxReturnGemReport,
 } from '@kompass/module-finance';
@@ -80,6 +81,7 @@ export default async function TaxPage({ searchParams }: { searchParams: Promise<
     return value?.kind === 'list' ? value.rows.map((r) => ({ id: String(r.reserveId), name: names.reserves[String(r.reserveId)] ?? '' })) : [];
   };
   const periodYears = years.filter((y) => view.period.fiscalYearIds.includes(y.id));
+  const statuteRes = await taxPeriodStatute(deps, ctx, { taxPeriodId: view.period.id });
   const lastYear = periodYears.at(-1) ?? null;
 
   return (
@@ -111,6 +113,8 @@ export default async function TaxPage({ searchParams }: { searchParams: Promise<
           canEdit={view.me.canEdit}
           filed={view.period.filedOn !== null}
           today={todayIn(deps)}
+          statuteSuggestion={statuteRes.ok ? statuteRes.value : null}
+          statuteLinked={!!view.period.documents.statute}
         />
         <GemValuesTable data={data} names={names} originHrefs={await originHrefs(deps, ctx, data)} canWriteEntries={me.canWriteEntries} />
         <GemHints hints={data.hints} />

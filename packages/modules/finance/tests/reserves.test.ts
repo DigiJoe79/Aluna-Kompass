@@ -1,17 +1,19 @@
-import { unwrap } from '@kompass/core';
+import { defineModule, isModuleEnabled, unwrap } from '@kompass/core';
 import { schema } from '@kompass/core';
 import { ctxWith } from '@kompass/core/testing';
 import { documents, documentTypes } from '@kompass/module-dms';
 import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
-import { deleteReserve, freeReserveCap, freeReserveCapOverview, linkResolution, listReserves, recordReserveCarryForward, recordReserveMovement, saveReserve, setReserveActive, uploadResolution } from '../src/allocation/reserves';
+import { deleteReserve, freeReserveCap, freeReserveCapInternal, freeReserveCapOverview, linkResolution, listReserves, recordReserveCarryForward, recordReserveMovement, saveReserve, setReserveActive, uploadResolution } from '../src/allocation/reserves';
 import { requestPurposeTransfer } from '../src/allocation/transfers';
+import { registerResolutionFactsSource, type ResolutionFacts } from '../src/sources';
 import { setDatedValue } from '../src/ledger/dated-values';
 import { reopenFiscalYear } from '../src/ledger/period';
 import { bookEntry } from '../src/ledger/finalize';
 import { incomeStatement } from '../src/ledger/queries';
 import { FINANCE_PERMISSIONS } from '../src/manifest';
 import { ULID_PATTERN } from '../src/allocation/subjects';
+import { RESERVE_KINDS } from '../src/allocation/reserve-rules';
 import { financeAllocationLines, financeCategories, financeEntries, financeReserveMovements, financeReserves } from '../src/schema';
 import { insertDocument, ledgerFixture, pdfBytes } from './helpers';
 import { jpegBytes } from './expense-fixture';
@@ -367,6 +369,32 @@ describe('freeReserveCapOverview (Befund 4, Fassung 0.2.7)', () => {
     const later = unwrap(await recordReserveMovement(f.deps, withDms(f), { ...allocate, movementDate: '2027-02-12' }));
     expect(later.forFiscalYearId).toBe(f.years['2027']!.id);
   });
+
+  it('F-B1: refuses an allocation for a year that does not count on the movement date — closed previous year, foreign year', async () => {
+    const f = await ledgerFixture({ years: ['2026', '2027'] });
+    f.deps.clock.set('2027-02-12T10:00:00.000Z');
+    const docId = insertDocument(f, { subject: 'Protokoll', typeKey: 'minutes' });
+    const reserve = unwrap(await saveReserve(f.deps, withDms(f), { kind: 'free', name: 'Freie Rücklage', resolutionDocumentId: docId }));
+    const allocate = { reserveId: reserve.id, kind: 'allocate', amountCents: 100, capReason: 'Test: ohne Einnahmen ist der Höchstbetrag 0', resolutionDocumentId: docId };
+
+    // Fremdes Jahr: am 01.05.2026 zählt nur 2026, nicht 2027.
+    const foreign = await recordReserveMovement(f.deps, withDms(f), { ...allocate, movementDate: '2026-05-01', forFiscalYearId: f.years['2027']!.id });
+    expect(err(foreign)).toMatchObject({ type: 'conflict', code: 'reserveYearNotAllowed', params: { year: '2027' } });
+
+    // Zulässiges Vorjahr, solange es offen ist.
+    const allowed = unwrap(await recordReserveMovement(f.deps, withDms(f), { ...allocate, movementDate: '2027-02-10', forFiscalYearId: f.years['2026']!.id }));
+    expect(allowed.forFiscalYearId).toBe(f.years['2026']!.id);
+
+    // Abgeschlossenes Vorjahr: kein Vorgang mehr für dessen Höchstbetrag.
+    f.closeYear(f.years['2026']!.id);
+    const closed = await recordReserveMovement(f.deps, withDms(f), { ...allocate, movementDate: '2027-02-11', forFiscalYearId: f.years['2026']!.id });
+    expect(err(closed)).toMatchObject({ type: 'conflict', code: 'reserveYearNotAllowed', params: { year: '2026' } });
+    expect(f.deps.db.select().from(financeReserveMovements).all()).toHaveLength(1);
+
+    // Wiedergeöffnet zählt das Vorjahr wieder.
+    unwrap(await reopenFiscalYear(f.deps, f.ctx, { id: f.years['2026']!.id, note: 'Zuführung nachgetragen' }));
+    unwrap(await recordReserveMovement(f.deps, withDms(f), { ...allocate, movementDate: '2027-02-11', forFiscalYearId: f.years['2026']!.id }));
+  });
 });
 
 describe('Befund S: freie Rücklage über dem Höchstbetrag (Teil C Task 2c)', () => {
@@ -461,5 +489,166 @@ describe('Befund 6 (0.2.7): ein abgelehnter Vorgang lässt keinen hochgeladenen 
     expect(err(await recordReserveCarryForward(f.deps, withDms(f), { id: reserve.id, expectedVersion: '2000-01-01T00:00:00.000Z', carryForwardCents: 100, carryForwardDate: '2026-01-01', upload: upload() }))).toMatchObject({ type: 'conflict' });
     expect(err(await requestPurposeTransfer(f.deps, withDms(f), { fromPurposeId: f.abroadPurpose.id, toPurposeId: null, amountCents: 1000, transferDate: '2026-12-31', reason: 'Umschichtung', documentUpload: upload() }))).toMatchObject({ code: 'transferDateInFuture' });
     expect(trace(f)).toEqual(before);
+  });
+});
+
+describe('F-B2 (0.4.5): Art und Vortrag einer Rücklage mit Vorgängen oder Vortrag im abgeschlossenen Jahr', () => {
+  const setup = async () => {
+    const f = await ledgerFixture({ years: ['2026', '2027'] });
+    f.deps.clock.set('2027-03-01T10:00:00.000Z');
+    const docId = insertDocument(f, { subject: 'Protokoll', typeKey: 'minutes' });
+    const reserve = unwrap(await saveReserve(f.deps, withDms(f), { kind: 'replacement', name: 'Ersatz Transporter', purposeText: 'Neuer Transporter', resolutionDocumentId: docId }));
+    return { f, docId, reserve };
+  };
+  const edit = (r: { id: string; updatedAt: string; name: string; purposeText: string | null; carryForwardCents: number | null; carryForwardDate: string | null }, patch: Record<string, unknown>) => ({
+    id: r.id, expectedVersion: r.updatedAt, kind: 'replacement', name: r.name, purposeText: r.purposeText, carryForwardCents: r.carryForwardCents, carryForwardDate: r.carryForwardDate, ...patch,
+  });
+
+  it('locks the kind once the reserve has a movement — the name stays editable', async () => {
+    const { f, docId, reserve } = await setup();
+    unwrap(await recordReserveMovement(f.deps, withDms(f), { reserveId: reserve.id, kind: 'allocate', movementDate: '2027-02-01', amountCents: 5000, resolutionDocumentId: docId }));
+    const current = unwrap(await listReserves(f.deps, f.ctx, {})).find((r) => r.id === reserve.id)!;
+    expect(current.kindLocked).toBe(true);
+    expect(err(await saveReserve(f.deps, withDms(f), edit(current, { kind: 'free', purposeText: null })))).toMatchObject({ type: 'conflict', code: 'reserveKindLocked' });
+    expect(unwrap(await saveReserve(f.deps, withDms(f), edit(current, { name: 'Ersatz Bus' }))).name).toBe('Ersatz Bus');
+  });
+
+  it('locks kind and carry-forward when the carry-forward lies in a closed year — clearing it to delete fails, too', async () => {
+    const { f, docId, reserve } = await setup();
+    const carried = unwrap(await recordReserveCarryForward(f.deps, withDms(f), { id: reserve.id, expectedVersion: reserve.updatedAt, carryForwardCents: 1000, carryForwardDate: '2026-01-01', documentId: docId }));
+    f.closeYear(f.years['2026']!.id);
+    expect(err(await saveReserve(f.deps, withDms(f), edit(carried, { kind: 'free', purposeText: null })))).toMatchObject({ type: 'conflict', code: 'reserveKindLocked' });
+    expect(err(await saveReserve(f.deps, withDms(f), edit(carried, { carryForwardCents: null, carryForwardDate: null })))).toMatchObject({ type: 'conflict', code: 'reserveCarryForwardLocked' });
+    expect(err(await recordReserveCarryForward(f.deps, withDms(f), { id: carried.id, expectedVersion: carried.updatedAt, carryForwardCents: 2000, carryForwardDate: '2026-01-01' }))).toMatchObject({ type: 'conflict', code: 'reserveCarryForwardLocked' });
+    expect(err(await deleteReserve(f.deps, f.ctx, { id: carried.id }))).toMatchObject({ code: 'reserveInUse' });
+    expect(f.deps.db.select().from(financeReserves).where(eq(financeReserves.id, carried.id)).get()).toMatchObject({ kind: 'replacement', carryForwardCents: 1000 });
+
+    // Wiedergeöffnet ist alles wieder frei.
+    unwrap(await reopenFiscalYear(f.deps, f.ctx, { id: f.years['2026']!.id, note: 'Vortrag korrigieren' }));
+    const cleared = unwrap(await saveReserve(f.deps, withDms(f), edit(carried, { carryForwardCents: null, carryForwardDate: null })));
+    expect(cleared.carryForwardCents).toBeNull();
+    unwrap(await saveReserve(f.deps, withDms(f), edit(cleared, { kind: 'free', purposeText: null })));
+  });
+
+  it('leaves kind and carry-forward free without movements and without a carry-forward in a closed year', async () => {
+    const { f, docId, reserve } = await setup();
+    const carried = unwrap(await recordReserveCarryForward(f.deps, withDms(f), { id: reserve.id, expectedVersion: reserve.updatedAt, carryForwardCents: 1000, carryForwardDate: '2027-01-01', documentId: docId }));
+    f.closeYear(f.years['2026']!.id);
+    expect(unwrap(await listReserves(f.deps, f.ctx, {})).find((r) => r.id === reserve.id)!.kindLocked).toBe(false);
+    const changed = unwrap(await recordReserveCarryForward(f.deps, withDms(f), { id: carried.id, expectedVersion: carried.updatedAt, carryForwardCents: 1500, carryForwardDate: '2027-01-01' }));
+    const kindChanged = unwrap(await saveReserve(f.deps, withDms(f), { ...edit(changed, { kind: 'free', purposeText: null }) }));
+    expect(kindChanged.kind).toBe('free');
+    const cleared = unwrap(await saveReserve(f.deps, withDms(f), { ...edit(kindChanged, { kind: 'free', purposeText: null, carryForwardCents: null, carryForwardDate: null }) }));
+    expect(cleared.carryForwardCents).toBeNull();
+  });
+});
+
+describe('M1 Task 2: Rücklagen im wGB und in der Vermögensverwaltung, nachträgliche Bildung (§ 62 Abs. 2 AO)', () => {
+  it('the schema knows exactly the reserve kinds of the rules', () => {
+    expect(financeReserves.kind.enumValues).toEqual([...RESERVE_KINDS]);
+  });
+
+  it('business and asset management reserves need a reason', async () => {
+    const f = await ledgerFixture();
+    const resolutionUpload = { bytes: pdfBytes(), fileName: 'beschluss.pdf' };
+    const missing = await saveReserve(f.deps, f.ctx, { kind: 'business', name: 'Rücklage Kühltheke', resolutionUpload });
+    expect(err(missing)).toMatchObject({ type: 'conflict', code: 'reserveReasonRequired' });
+    const saved = unwrap(await saveReserve(f.deps, f.ctx, { kind: 'business', name: 'Rücklage Kühltheke', purposeText: 'Ersatz der Kühltheke', resolutionUpload }));
+    expect(saved.kind).toBe('business');
+    const audit = f.deps.db.select().from(schema.auditLog).all().filter((a) => a.action === 'finance.reserve.save');
+    expect(audit).toHaveLength(1);
+    expect(JSON.parse(audit[0]!.after as string)).toMatchObject({ kind: 'business' });
+    const vv = await saveReserve(f.deps, f.ctx, { kind: 'assetManagement', name: 'Rücklage Vermietung', purposeText: '  ', resolutionUpload });
+    expect(err(vv)).toMatchObject({ code: 'reserveReasonRequired' });
+  });
+
+  it('operation reserves stay outside the free reserve cap', async () => {
+    const f = await ledgerFixture();
+    const docId = insertDocument(f, { subject: 'Protokoll', typeKey: 'minutes' });
+    unwrap(await bookEntryDonation(f));
+    const before = freeReserveCapInternal(f.deps.db, f.year.id)!.usedCents;
+    const reserve = unwrap(await saveReserve(f.deps, withDms(f), { kind: 'assetManagement', name: 'Rücklage Vermietung', purposeText: 'Renovierung', resolutionDocumentId: docId }));
+    unwrap(await recordReserveMovement(f.deps, withDms(f), { reserveId: reserve.id, kind: 'allocate', movementDate: '2026-03-05', amountCents: 25_000, resolutionDocumentId: docId }));
+    expect(freeReserveCapInternal(f.deps.db, f.year.id)!.usedCents).toBe(before);
+  });
+
+  it('late formation for a § 62 reserve', async () => {
+    const f = await ledgerFixture({ years: ['2023', '2024', '2025', '2026'] });
+    const docId = insertDocument(f, { subject: 'Protokoll', typeKey: 'minutes' });
+    const project = unwrap(await saveReserve(f.deps, withDms(f), { kind: 'projectFunds', name: 'Neues Gehege', purposeText: 'Bau eines Geheges', resolutionDocumentId: docId }));
+    const allocate = { reserveId: project.id, kind: 'allocate', movementDate: '2026-03-01', amountCents: 1_000, resolutionDocumentId: docId };
+    const late = unwrap(await recordReserveMovement(f.deps, withDms(f), { ...allocate, forFiscalYearId: f.years['2024']!.id }));
+    expect(late.forFiscalYearId).toBe(f.years['2024']!.id);
+    const tooLate = await recordReserveMovement(f.deps, withDms(f), { ...allocate, forFiscalYearId: f.years['2023']!.id });
+    expect(err(tooLate)).toMatchObject({ type: 'conflict', code: 'reserveLateFormationTooLate', params: { year: '2023', until: '2025-12-31' } });
+    const ownYear = unwrap(await recordReserveMovement(f.deps, withDms(f), { ...allocate, forFiscalYearId: f.years['2026']!.id }));
+    expect(ownYear.forFiscalYearId).toBeNull();
+    const without = unwrap(await recordReserveMovement(f.deps, withDms(f), allocate));
+    expect(without.forFiscalYearId).toBeNull();
+    const business = unwrap(await saveReserve(f.deps, withDms(f), { kind: 'business', name: 'Rücklage Vereinsfest', purposeText: 'Ersatz der Kühltheke', resolutionDocumentId: docId }));
+    const refused = await recordReserveMovement(f.deps, withDms(f), { ...allocate, reserveId: business.id, forFiscalYearId: f.years['2025']!.id });
+    expect(err(refused)).toMatchObject({ type: 'conflict', code: 'reserveYearNotAllowed', params: { year: '2025' } });
+    // Ein späteres Jahr als das des Vorgangstags ist kein Bezugsjahr.
+    const f2 = await ledgerFixture({ years: ['2026', '2027'] });
+    const doc2 = insertDocument(f2, { subject: 'Protokoll', typeKey: 'minutes' });
+    const p2 = unwrap(await saveReserve(f2.deps, withDms(f2), { kind: 'replacement', name: 'Transporter', purposeText: 'Ersatz', resolutionDocumentId: doc2 }));
+    const future = await recordReserveMovement(f2.deps, withDms(f2), { reserveId: p2.id, kind: 'allocate', movementDate: '2026-03-01', amountCents: 1_000, resolutionDocumentId: doc2, forFiscalYearId: f2.years['2027']!.id });
+    expect(err(future)).toMatchObject({ type: 'conflict', code: 'reserveYearNotAllowed', params: { year: '2027' } });
+  });
+});
+
+/**
+ * Ein Modul, das Beschlüsse beschriftet wie Gremien (`recordLabels`), dazu ihre Eckdaten über die Quelle (V-3):
+ * `R1` Rücklage, festgeschrieben, angenommen; `R2` Rücklage, nicht festgeschrieben; `R3` Entlastung; `R4` abgelehnt.
+ */
+const FACTS: Record<string, ResolutionFacts> = {
+  R1: { kind: 'reserve', final: true, outcome: 'adopted', decidedOn: '2026-03-14' },
+  R2: { kind: 'reserve', final: false, outcome: 'adopted', decidedOn: '2026-07-15' },
+  R3: { kind: 'discharge', final: true, outcome: 'adopted', decidedOn: '2026-03-14' },
+  R4: { kind: 'reserve', final: true, outcome: 'rejected', decidedOn: '2026-03-14' },
+};
+registerResolutionFactsSource((deps, _db, id) => (isModuleEnabled(deps, 'governance') ? (FACTS[id] ?? null) : null));
+const resolutionsLike = defineModule({
+  key: 'governance',
+  version: '1',
+  permissions: ['governance.read'],
+  recordLabels: (_deps, _ctx, entityType, id) => (entityType !== 'governanceResolution' ? null : FACTS[id] ? { label: `Beschluss ${id}`, href: `/governance/resolutions/${id}`, state: 'ok' } : { label: '', href: null, state: 'missing' }),
+});
+
+describe('reserve resolution from Gremien (G7)', () => {
+  it('a resolution alone satisfies the duty; an unknown one is refused', async () => {
+    const f = await ledgerFixture({ extraModules: [resolutionsLike] });
+    const created = unwrap(await saveReserve(f.deps, withDms(f), { kind: 'free', name: 'Freie Rücklage', resolutionId: 'R1' }));
+    expect(created).toMatchObject({ resolutionId: 'R1', resolutionDocumentId: null, resolution: { label: 'Beschluss R1', href: '/governance/resolutions/R1' } });
+    expect(err(await saveReserve(f.deps, withDms(f), { kind: 'free', name: 'Andere', resolutionId: 'R9' }))).toMatchObject({ type: 'validation', issues: [{ path: 'resolutionId', message: 'resolutionUnknown' }] });
+  });
+
+  it('linkResolution sets the resolution on an existing reserve', async () => {
+    const f = await ledgerFixture({ extraModules: [resolutionsLike] });
+    const docId = insertDocument(f, { subject: 'Beschluss' });
+    const created = unwrap(await saveReserve(f.deps, withDms(f), { kind: 'free', name: 'Freie Rücklage', resolutionDocumentId: docId }));
+    expect(unwrap(await linkResolution(f.deps, withDms(f), { id: created.id, field: 'resolutionId', resolutionId: 'R1' }))).toMatchObject({ resolutionId: 'R1', resolutionDocumentId: docId });
+    // V-7: welcher Beschluss verknüpft wurde, steht im Protokoll.
+    const linked = f.deps.db.select().from(schema.auditLog).all().filter((a) => a.action === 'finance.reserve.linkResolution').at(-1)!;
+    expect([JSON.parse(linked.before!).resolutionId, JSON.parse(linked.after!).resolutionId]).toEqual([null, 'R1']);
+    expect(err(await linkResolution(f.deps, withDms(f), { id: created.id, field: 'resolutionId', resolutionId: 'R9' }))).toMatchObject({ type: 'validation' });
+  });
+
+  it('V-3: only a sealed, adopted resolution of kind reserve', async () => {
+    const f = await ledgerFixture({ extraModules: [resolutionsLike] });
+    const issue = async (resolutionId: string) => err(await saveReserve(f.deps, withDms(f), { kind: 'free', name: `Rücklage ${resolutionId}`, resolutionId }));
+    expect(await issue('R2')).toMatchObject({ type: 'validation', issues: [{ path: 'resolutionId', message: 'resolutionNotFinal' }] });
+    expect(await issue('R4')).toMatchObject({ type: 'validation', issues: [{ path: 'resolutionId', message: 'resolutionNotFinal' }] });
+    expect(await issue('R3')).toMatchObject({ type: 'validation', issues: [{ path: 'resolutionId', message: 'resolutionWrongKind', params: { expected: 'reserve' } }] });
+    const docId = insertDocument(f, { subject: 'Beschluss' });
+    const created = unwrap(await saveReserve(f.deps, withDms(f), { kind: 'free', name: 'Freie Rücklage', resolutionDocumentId: docId }));
+    expect(err(await linkResolution(f.deps, withDms(f), { id: created.id, field: 'resolutionId', resolutionId: 'R3' }))).toMatchObject({ issues: [{ message: 'resolutionWrongKind', params: { expected: 'reserve' } }] });
+  });
+
+  it('without Gremien a resolution id is unknown, the document still works', async () => {
+    const f = await ledgerFixture();
+    expect(err(await saveReserve(f.deps, withDms(f), { kind: 'free', name: 'Freie Rücklage', resolutionId: 'R1' }))).toMatchObject({ type: 'validation', issues: [{ path: 'resolutionId', message: 'resolutionUnknown' }] });
+    const docId = insertDocument(f, { subject: 'Beschluss' });
+    expect(unwrap(await saveReserve(f.deps, withDms(f), { kind: 'free', name: 'Freie Rücklage', resolutionDocumentId: docId }))).toMatchObject({ resolutionId: null, resolution: null });
   });
 });

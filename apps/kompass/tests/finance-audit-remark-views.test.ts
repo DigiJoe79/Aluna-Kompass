@@ -1,5 +1,5 @@
 import { unwrap } from '@kompass/core';
-import { createAuditRemark, listAuditRemarks, listAuditors } from '@kompass/module-finance';
+import { createAuditRemark, listAuditRemarks, listAuditors, registerAuditResolutionSource } from '@kompass/module-finance';
 import { createTranslator } from 'next-intl';
 import { describe, expect, it, vi } from 'vitest';
 import messages from '../messages/de.json';
@@ -22,5 +22,17 @@ describe('remarkViews: Ziel eines Vermerks zum Jahr', () => {
     const { rows } = await remarkViews(a.f.deps as never, a.f.ctx, remarks, { auditors, fiscalYearId: a.y2025, designation: '2025' });
     expect(rows[0]!.targetHref).toBe(`/finance/audit?year=${encodeURIComponent(a.y2025)}#vermerke-jahr`);
     expect(rows[0]!.inPageHref).toBe('#vermerke-jahr');
+  });
+});
+
+describe('remarkViews: Ziel eines Vermerks an einem Beschluss (G-30)', () => {
+  it('names the resolution by its number and leads to section 9', async () => {
+    registerAuditResolutionSource(() => [{ id: 'R1', number: 'B-2025-003', decidedOn: '2025-03-14', kind: 'reserve', outcome: 'adopted', organ: 'Mitgliederversammlung', viaCircular: false, minutesDocumentId: null, facts: {} }]);
+    const a = await auditFixture();
+    unwrap(await createAuditRemark(a.f.deps, a.mira.ctx, { fiscalYearId: a.y2025, kind: 'question', targetType: 'resolution', targetId: 'R1', text: 'Wofür?' }));
+    const remarks = unwrap(await listAuditRemarks(a.f.deps, a.f.ctx, { fiscalYearId: a.y2025 })).remarks;
+    const { rows } = await remarkViews(a.f.deps as never, a.f.ctx, remarks, { auditors: [], fiscalYearId: a.y2025, designation: '2025' });
+    expect(rows[0]!.targetLabel).toContain('B-2025-003');
+    expect(rows[0]!.targetHref).toBe(`/finance/audit/resolutions?year=${encodeURIComponent(a.y2025)}#vermerke-beschluesse`);
   });
 });

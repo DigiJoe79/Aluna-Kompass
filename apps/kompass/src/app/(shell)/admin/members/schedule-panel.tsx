@@ -34,12 +34,16 @@ export interface ScheduleRule {
   interval: Interval;
   minimum: boolean;
   allowedIntervals: Interval[];
+  admissionFeeCents: number | null;
 }
 export interface ScheduleView {
   id: string;
   validFrom: string;
   resolvedOn: string | null;
   resolutionDocument: { id: string; number: string | null } | null;
+  /** G7: der Beschluss in Gremien, beschriftet über `resolveRecordLabel` — ohne Leserecht ohne Link. */
+  resolutionRef?: { label: string; href: string | null } | null;
+  note: string | null;
   rules: ScheduleRule[];
   locked: boolean;
 }
@@ -54,7 +58,8 @@ export interface ScheduleType {
  * Beitragsordnung mit Ständen (Handoff Mitglieder D3, 7a): je Stand ein Abschnitt „Gilt seit …“ mit Beschluss und einer
  * Tabelle Art · Betrag · Rhythmus · Mindestbetrag. Oben der geltende Stand, ein künftiger mit Marke „kommt“, frühere
  * eingeklappt. „Neuen Stand anlegen …“ öffnet einen Dialog `lg`, vorbelegt mit dem letzten Stand; ein Stand mit
- * angelegten Beiträgen ist fest — die Ablehnung bietet „Neuen Stand anlegen“.
+ * angelegten Beiträgen ist fest — die Ablehnung bietet „Neuen Stand anlegen“; an ihm lässt sich nur der Beschluss
+ * nachtragen (Backlog 97).
  */
 export function SchedulePanel({ schedules, types, today }: { schedules: ScheduleView[]; types: ScheduleType[]; today: string }) {
   const t = useTranslations('members.admin.schedule');
@@ -112,7 +117,7 @@ export function SchedulePanel({ schedules, types, today }: { schedules: Schedule
   };
 
   const resolution = (s: ScheduleView) =>
-    s.resolvedOn || s.resolutionDocument ? (
+    s.resolvedOn || s.resolutionDocument || s.resolutionRef ? (
       <span className="flex flex-wrap items-baseline gap-x-1">
         {s.resolvedOn ? t('resolved', { date: date(s.resolvedOn) }) : null}
         {s.resolutionDocument ? (
@@ -121,8 +126,18 @@ export function SchedulePanel({ schedules, types, today }: { schedules: Schedule
             <Link href={`/dms/${s.resolutionDocument.id}`} className="text-link underline-offset-2 hover:underline">{s.resolutionDocument.number ?? t('document')}</Link>
           </>
         ) : null}
+        {s.resolutionRef ? (
+          <>
+            {s.resolvedOn || s.resolutionDocument ? ' · ' : null}
+            {s.resolutionRef.href ? <Link href={s.resolutionRef.href} className="text-link underline-offset-2 hover:underline">{s.resolutionRef.label}</Link> : s.resolutionRef.label}
+          </>
+        ) : null}
       </span>
     ) : undefined;
+
+  const editButton = (s: ScheduleView) => (
+    <Button type="button" variant="outline" size="sm" onClick={() => setEditing(s)}>{t('edit')}</Button>
+  );
 
   const newButton = (
     <Button type="button" variant="outline" size="sm" onClick={() => setEditing('new')} data-testid="schedule-new">
@@ -142,7 +157,18 @@ export function SchedulePanel({ schedules, types, today }: { schedules: Schedule
   return (
     <div className="space-y-6" data-testid="schedule-panel">
       {current ? (
-        <Section title={t('current', { date: date(current.validFrom) })} intro={resolution(current)} actions={future.length === 0 ? newButton : undefined}>
+        <Section
+          title={t('current', { date: date(current.validFrom) })}
+          intro={resolution(current)}
+          actions={
+            current.locked || future.length === 0 ? (
+              <span className="flex flex-wrap items-center gap-2">
+                {current.locked ? editButton(current) : null}
+                {future.length === 0 ? newButton : null}
+              </span>
+            ) : undefined
+          }
+        >
           {table(current)}
         </Section>
       ) : null}
@@ -154,7 +180,7 @@ export function SchedulePanel({ schedules, types, today }: { schedules: Schedule
           actions={
             <span className="flex flex-wrap items-center gap-2">
               {comingBadge}
-              <Button type="button" variant="outline" size="sm" onClick={() => setEditing(s)}>{t('edit')}</Button>
+              {editButton(s)}
               {i === future.length - 1 ? newButton : null}
             </span>
           }
@@ -166,7 +192,7 @@ export function SchedulePanel({ schedules, types, today }: { schedules: Schedule
         <Disclosure label={t('earlier')} count={earlier.length}>
           <div className="space-y-6">
             {earlier.map((s) => (
-              <Section key={s.id} title={t('current', { date: date(s.validFrom) })} intro={resolution(s)}>
+              <Section key={s.id} title={t('current', { date: date(s.validFrom) })} intro={resolution(s)} actions={s.locked ? editButton(s) : undefined}>
                 {table(s)}
               </Section>
             ))}
@@ -193,13 +219,18 @@ function ScheduleDialog({ schedule, prefill, types, today, onClose, onNew }: { s
   const router = useRouter();
   const [validFrom, setValidFrom] = useState(schedule?.validFrom ?? `${Number(today.slice(0, 4)) + 1}-01-01`);
   const [resolvedOn, setResolvedOn] = useState(schedule?.resolvedOn ?? '');
+  // Ein fester Stand: Tag und Regeln bleiben, wie sie sind; nur der Beschluss lässt sich nachtragen (Backlog 97).
+  const fixed = schedule?.locked ?? false;
+  const draft = (r: ScheduleRule): RuleDraft => ({ typeId: r.typeId, amount: formatAmount(r.amountCents), interval: r.interval, minimum: r.minimum, allowedIntervals: r.allowedIntervals });
   const [rules, setRules] = useState<RuleDraft[]>(
-    types
-      .filter((ty) => ty.active && !ty.feeExempt)
-      .map((ty) => {
-        const rule = prefill?.rules.find((r) => r.typeId === ty.id);
-        return { typeId: ty.id, amount: rule ? formatAmount(rule.amountCents) : '', interval: rule?.interval ?? 'yearly', minimum: rule?.minimum ?? false, allowedIntervals: rule?.allowedIntervals ?? [rule?.interval ?? 'yearly'] };
-      }),
+    fixed && schedule
+      ? schedule.rules.map(draft)
+      : types
+          .filter((ty) => ty.active && !ty.feeExempt)
+          .map((ty) => {
+            const rule = prefill?.rules.find((r) => r.typeId === ty.id);
+            return rule ? draft(rule) : { typeId: ty.id, amount: '', interval: 'yearly', minimum: false, allowedIntervals: ['yearly'] };
+          }),
   );
   const [pending, setPending] = useState(false);
   const feedback = useActionFeedback();
@@ -212,9 +243,13 @@ function ScheduleDialog({ schedule, prefill, types, today, onClose, onNew }: { s
       validFrom,
       resolvedOn: resolvedOn || null,
       resolutionDocumentId: schedule?.resolutionDocument?.id ?? null,
-      rules: rules
-        .filter((r) => r.amount.trim() !== '')
-        .map((r) => ({ typeId: r.typeId, amountCents: parseAmount(r.amount) ?? -1, interval: r.interval, minimum: r.minimum, allowedIntervals: r.allowedIntervals.includes(r.interval) ? r.allowedIntervals : [r.interval] })),
+      note: schedule?.note ?? null,
+      rules:
+        fixed && schedule
+          ? schedule.rules
+          : rules
+              .filter((r) => r.amount.trim() !== '')
+              .map((r) => ({ typeId: r.typeId, amountCents: parseAmount(r.amount) ?? -1, interval: r.interval, minimum: r.minimum, allowedIntervals: r.allowedIntervals.includes(r.interval) ? r.allowedIntervals : [r.interval] })),
     };
     const result = await feedback.run(() => saveFeeScheduleAction(input), { retry: () => void save() });
     setPending(false);
@@ -233,12 +268,12 @@ function ScheduleDialog({ schedule, prefill, types, today, onClose, onNew }: { s
       <DialogContent size="lg" layout="fixed-footer">
         <DialogHeader>
           <DialogTitle>{schedule ? t('dialogEdit') : t('dialogNew')}</DialogTitle>
-          <DialogDescription>{t('dialogText')}</DialogDescription>
+          <DialogDescription>{fixed ? t('dialogLocked') : t('dialogText')}</DialogDescription>
         </DialogHeader>
         <DialogBody className="space-y-4">
           <FormGrid>
             <FormField id="schedule-valid-from" label={t('validFrom')} required size="s">
-              <Input id="schedule-valid-from" type="date" value={validFrom} onChange={(e) => setValidFrom(e.target.value)} />
+              <Input id="schedule-valid-from" type="date" value={validFrom} disabled={fixed} onChange={(e) => setValidFrom(e.target.value)} />
             </FormField>
             <FormField id="schedule-resolved-on" label={t('resolvedOn')} size="s">
               <Input id="schedule-resolved-on" type="date" value={resolvedOn} onChange={(e) => setResolvedOn(e.target.value)} />
@@ -259,17 +294,17 @@ function ScheduleDialog({ schedule, prefill, types, today, onClose, onNew }: { s
                   <TableRow key={r.typeId} data-testid="schedule-rule">
                     <TableCell col="title">{typeLabel(r.typeId)}</TableCell>
                     <TableCell col="amount">
-                      <AmountField id={`rule-amount-${r.typeId}`} name={`amount-${r.typeId}`} value={r.amount} onChange={(amount) => set(r.typeId, { amount })} />
+                      <AmountField id={`rule-amount-${r.typeId}`} name={`amount-${r.typeId}`} value={r.amount} disabled={fixed} onChange={(amount) => set(r.typeId, { amount })} />
                     </TableCell>
                     <TableCell col="meta">
-                      <Select id={`rule-interval-${r.typeId}`} aria-label={`${t('columns.interval')} ${typeLabel(r.typeId)}`} value={r.interval} onChange={(e) => set(r.typeId, { interval: e.target.value as Interval })}>
+                      <Select id={`rule-interval-${r.typeId}`} aria-label={`${t('columns.interval')} ${typeLabel(r.typeId)}`} value={r.interval} disabled={fixed} onChange={(e) => set(r.typeId, { interval: e.target.value as Interval })}>
                         {INTERVALS.map((i) => (
                           <option key={i} value={i}>{ti(i)}</option>
                         ))}
                       </Select>
                     </TableCell>
                     <TableCell col="meta">
-                      <Checkbox aria-label={`${t('isMinimum')} ${typeLabel(r.typeId)}`} checked={r.minimum} onCheckedChange={(on) => set(r.typeId, { minimum: on === true })} />
+                      <Checkbox aria-label={`${t('isMinimum')} ${typeLabel(r.typeId)}`} checked={r.minimum} disabled={fixed} onCheckedChange={(on) => set(r.typeId, { minimum: on === true })} />
                     </TableCell>
                   </TableRow>
                 ))}

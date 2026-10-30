@@ -1,4 +1,4 @@
-import { hasPermission, isModuleEnabled, readLocales, readSetting, requirePermission, todayIn } from '@kompass/core';
+import { hasPermission, isModuleEnabled, readLocales, requirePermission, todayIn } from '@kompass/core';
 import { getDocumentRecord, listSnippets } from '@kompass/module-dms';
 import { countMembersAt, getMembersSettings, listFeeSchedules, listMemberTypes } from '@kompass/module-members';
 import { getTranslations } from 'next-intl/server';
@@ -50,7 +50,7 @@ export default async function AdminMembersPage({ searchParams }: { searchParams:
     );
     content = (
       <SchedulePanel
-        schedules={list.map((s, i) => ({ id: s.id, validFrom: s.validFrom, resolvedOn: s.resolvedOn, resolutionDocument: documents[i] ?? null, rules: s.rules.map((r) => ({ typeId: r.typeId, amountCents: r.amountCents, interval: r.interval, minimum: r.minimum, allowedIntervals: r.allowedIntervals })), locked: s.locked }))}
+        schedules={list.map((s, i) => ({ id: s.id, validFrom: s.validFrom, resolvedOn: s.resolvedOn, resolutionDocument: documents[i] ?? null, resolutionRef: s.resolution, note: s.note, rules: s.rules.map((r) => ({ typeId: r.typeId, amountCents: r.amountCents, interval: r.interval, minimum: r.minimum, allowedIntervals: r.allowedIntervals, admissionFeeCents: r.admissionFeeCents })), locked: s.locked }))}
         types={typeRows.map((ty) => ({ id: ty.id, label: label(ty), feeExempt: ty.feeExempt, active: ty.active }))}
         today={today}
       />
@@ -71,7 +71,6 @@ export default async function AdminMembersPage({ searchParams }: { searchParams:
       content = (
         <NumbersPanel
           values={{ nextNumber: s.nextNumber, noticeMonths: s.resignationNotice.months, noticeAt: s.resignationNotice.at, paymentTermDays: s.paymentTermDays, joinYearRule: s.joinYearRule }}
-          agent={{ allowed: readSetting<boolean>(deps, 'members.mcpHumanOnlyAllowed') === true, canChange: hasPermission(ctx, 'settings.manage') }}
         />
       );
     }

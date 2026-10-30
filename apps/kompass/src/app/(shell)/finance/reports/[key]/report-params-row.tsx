@@ -16,9 +16,9 @@ import { DATE_REPORTS, PERIOD_REPORTS, reportQuery } from '@/lib/finance/report-
  * Parameter als eine `FormGrid`-Zeile über dem Rahmen (Board 2b): das Jahr, bei der EÜR und wo § 64 Abs. 3 AO es
  * zulässt die zusammengefasste Darstellung, bei der Projektabrechnung das Projekt (nur mit `projects.view` mehr als
  * „Alle Projekte“), bei Berichten je Kalenderjahr (`yearKind`) das Kalenderjahr, bei der Übergabeliste statt des Jahres der Stichtag (Rechenschaft B1), bei den Steuerberichten und beim Rücklagenspiegel über einen Zeitraum (`periodId`, Befund 18 d) der Erklärungszeitraum (D2, 15i). Jede Änderung schreibt die
- * Adresse und erzeugt neu; die Parameter gehören zur Fassung.
+ * Adresse (`basePath`, Vorgabe `/finance/reports/<key>`) und erzeugt neu; die Parameter gehören zur Fassung.
  */
-export function ReportParamsRow({ reportKey, params, years, yearKind, combineAllowed, projects = [], periods = [], periodId, fixed = false, withNote = true }: { reportKey: string; params: ReportParams; years: { id: string; designation: string; calendarYear?: string }[]; yearKind?: 'calendar'; combineAllowed: boolean; projects?: { id: string; name: string }[]; periods?: { id: string; label: string }[]; periodId?: string; fixed?: boolean; withNote?: boolean }) {
+export function ReportParamsRow({ reportKey, params, years, yearKind, combineAllowed, projects = [], periods = [], periodId, fixed = false, withNote = true, basePath }: { reportKey: string; params: ReportParams; years: { id: string; designation: string; calendarYear?: string }[]; yearKind?: 'calendar'; combineAllowed: boolean; projects?: { id: string; name: string }[]; periods?: { id: string; label: string }[]; periodId?: string; fixed?: boolean; withNote?: boolean; basePath?: string }) {
   const t = useTranslations('finance.reports.view.params');
   const fmt = useDateFormat();
   const router = useRouter();
@@ -35,7 +35,7 @@ export function ReportParamsRow({ reportKey, params, years, yearKind, combineAll
     return <p className="text-body" data-testid="report-params-fixed">{parts.join(' · ')}</p>;
   }
   // Ein anderes Jahr beginnt ohne „zusammengefasst“: Ob § 64 Abs. 3 AO es zulässt, entscheidet jedes Jahr neu.
-  const go = (next: ReportParams) => startNavigation(() => router.replace(`/finance/reports/${reportKey}?${reportQuery(next)}`));
+  const go = (next: ReportParams) => startNavigation(() => router.replace(`${basePath ?? `/finance/reports/${reportKey}`}?${reportQuery(next)}`));
   const showCombine = reportKey === 'incomeStatement' && combineAllowed;
   const byDate = DATE_REPORTS.includes(reportKey);
   return (

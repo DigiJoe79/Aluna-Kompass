@@ -43,3 +43,35 @@ describe('Kategorie: Für die Freigrenze', () => {
     expect(await within(dialog).findByText('Ungültige Auswahl.')).toBeTruthy();
   });
 });
+
+describe('Kategorie: Spendenplattform (Spec Teil J, St-L-9)', () => {
+  const field = (dialog: HTMLElement) => within(dialog).queryByLabelText(m('finance.admin.categories.donationPlatform'));
+  it('nur bei Einnahmen; die Wahl geht mit, leer als null', async () => {
+    saveCategoryAction.mockResolvedValue({ status: 'success' });
+    let dialog = open();
+    fireEvent.change(field(dialog)!, { target: { value: 'confirmsItself' } });
+    fireEvent.click(within(dialog).getByRole('button', { name: m('common.save') }));
+    await waitFor(() => expect(saveCategoryAction).toHaveBeenLastCalledWith(expect.objectContaining({ id: 'k1', donationPlatform: 'confirmsItself' })));
+    cleanup();
+    dialog = open();
+    fireEvent.click(within(dialog).getByRole('button', { name: m('common.save') }));
+    await waitFor(() => expect(saveCategoryAction).toHaveBeenLastCalledWith(expect.objectContaining({ id: 'k1', donationPlatform: null })));
+    cleanup();
+    render(
+      <NextIntlClientProvider locale="de" messages={messages} timeZone="Europe/Berlin">
+        <CategoriesPanel categories={[{ ...ROW, direction: 'expense' as const, incomeKind: null, costFunction: 'administration' }]} confirmedAt={null} />
+      </NextIntlClientProvider>,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Betriebszuschuss' }));
+    expect(field(screen.getByRole('dialog'))).toBeNull();
+  });
+
+  it('der Feldfehler steht am Feld und klappt „Erweitert“ auf', async () => {
+    saveCategoryAction.mockResolvedValue({ status: 'error', message: 'x', fieldErrors: { donationPlatform: 'Passt nicht zur Art der Einnahme.' } });
+    const dialog = open();
+    fireEvent.click(within(dialog).getByRole('button', { name: m('common.save') }));
+    expect(await within(dialog).findByText('Passt nicht zur Art der Einnahme.')).toBeTruthy();
+    expect(within(dialog).getByRole('region', { name: m('finance.admin.categories.advanced') }).querySelector('details')!.open).toBe(true);
+    expect(field(dialog)!.getAttribute('aria-invalid')).toBe('true');
+  });
+});

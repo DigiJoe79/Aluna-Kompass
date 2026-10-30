@@ -97,6 +97,15 @@ Bucht jemand Mittel an Partner direkt auf „Förderung von Partnern“ oder „
 an Partner“, ohne Zahlung an Partner, schreibt Kompass fest und weist darauf hin:
 Ohne den Vorgang verfolgt es keine Nachweisfrist.
 
+**Beschluss:** Mit **Gremien** kann eine Zahlung auf den Beschluss verweisen,
+der sie trägt — etwa die Zusage des Vorstands an ein Partnerprojekt. Der Verweis
+wird über einen Agenten gesetzt (`finance_partner_payment_draft_save` mit
+`resolutionId`) und steht danach an der Zahlung mit Nummer und Link zum
+Beschluss; der Beschluss nennt umgekehrt die Zahlung unter „Verwendet in“.
+Kompass nimmt nur einen angenommenen, festgeschriebenen Beschluss, und keinen
+über Entlastung, Jahresrechnung, Wahl oder Abberufung. Ohne Gremien gibt es das
+Feld nicht.
+
 Unten klebt die Fußleiste: **Als Entwurf speichern** und **Zur Freigabe
 geben**.
 

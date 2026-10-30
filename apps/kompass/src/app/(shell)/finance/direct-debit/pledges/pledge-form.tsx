@@ -20,7 +20,7 @@ import { Input } from '@/components/ui/input';
 import { Segmented } from '@/components/ui/segmented';
 import { Select } from '@/components/ui/select';
 import { withUnplacedFieldErrors } from '@/lib/feedback';
-import { formatAmount, parseAmount } from '@/lib/finance/amount';
+import { formatAmount, readAmount, type AmountError } from '@/lib/finance/amount';
 import { savePledgeAction } from '../actions';
 
 type Interval = 'monthly' | 'quarterly' | 'halfYearly' | 'yearly';
@@ -48,11 +48,14 @@ export interface PledgeFormValues {
  */
 export function PledgeForm({ initial, bindings, canEdit }: { initial: PledgeFormValues; bindings: { value: string; label: string }[]; canEdit: boolean }) {
   const t = useTranslations('finance.directDebit.pledge');
+  const tAmount = useTranslations('finance.amount');
   const ts = useTranslations('finance.directDebit.states');
   const router = useRouter();
   const create = !initial.id;
   const [contact, setContact] = useState(initial.contact);
   const [amount, setAmount] = useState(initial.amountCents === null ? '' : formatAmount(initial.amountCents));
+  // Der Betrag ist Pflicht: leer oder unlesbar steht am Feld, statt als 0 € an den Dienst zu gehen (App-B7).
+  const [amountError, setAmountError] = useState<AmountError | null>(null);
   const [interval, setInterval] = useState<Interval>(initial.interval);
   const [firstDueOn, setFirstDueOn] = useState(initial.firstDueOn);
   const [lastDueOn, setLastDueOn] = useState(initial.lastDueOn);
@@ -89,13 +92,19 @@ export function PledgeForm({ initial, bindings, canEdit }: { initial: PledgeForm
   };
 
   const save = async () => {
+    const read = readAmount(amount, { required: true });
+    if (!read.ok) {
+      setAmountError(read.error);
+      return;
+    }
+    setAmountError(null);
     setPending(true);
     const result = await feedback.run(
       () =>
         savePledgeAction({
           ...(initial.id ? { id: initial.id } : {}),
           contactId: contact?.id ?? '',
-          amountCents: parseAmount(amount) ?? 0,
+          amountCents: read.cents ?? 0,
           interval,
           firstDueOn,
           lastDueOn: lastDueOn || null,
@@ -133,7 +142,7 @@ export function PledgeForm({ initial, bindings, canEdit }: { initial: PledgeForm
               />
             )}
             <FormField id="pledge-amount" label={t('amount')} required size="s" error={errors.amountCents}>
-              <AmountField id="pledge-amount" name="amount" value={amount} onChange={setAmount} />
+              <AmountField id="pledge-amount" name="amount" value={amount} onChange={(v) => { setAmount(v); setAmountError(null); }} invalid={amountError !== null} errorText={amountError === 'missing' ? tAmount('missing') : undefined} />
             </FormField>
             <FormField id="pledge-interval" label={t('interval')} required size="s" error={errors.interval}>
               <Select id="pledge-interval" value={interval} onChange={(e) => setInterval(e.target.value as Interval)}>

@@ -10,6 +10,7 @@ import { requireFinanceRead } from './access';
 import { TAX_CODES } from './codes';
 import { registeredOpenItemOrigins } from './origins';
 import { fiscalYearForInternal, fiscalYearStatusInternal } from './fiscal-years';
+import { expiredRunIdsInternal, unreturnedRunItemsInternal } from '../direct-debit/run-items';
 
 /**
  * Rechenschaft D1 Task 10b (Befund A3): Eine offene Zahlung mit Datum in einem abgeschlossenen Geschäftsjahr änderte
@@ -384,12 +385,30 @@ export function rescheduleOriginOpenItem(tx: DbOrTx, deps: Deps, ctx: CallContex
   return ok(openItemViewOf(tx, after));
 }
 
+/**
+ * M3: Der Einzug, in dem ein offener Posten steckt — nicht verworfen, nicht verfallen, Posten nicht herausgenommen und
+ * ohne Rückgabe. Bei mehreren der am weitesten fortgeschrittene (eingereicht vor Datei vor Entwurf). `null`, wenn keiner.
+ */
+export function openItemInDirectDebitInternal(deps: Deps, db: DbOrTx, openItemId: string): { runId: string; status: 'draft' | 'fileCreated' | 'submitted' } | null {
+  const rank = { draft: 0, fileCreated: 1, submitted: 2 } as const;
+  const rows = unreturnedRunItemsInternal(db, { source: 'openItem', sourceId: openItemId, statuses: ['draft', 'fileCreated', 'submitted'], excludeRunIds: expiredRunIdsInternal(deps, db) });
+  const best = rows.map((r) => ({ runId: r.item.runId, status: r.status as keyof typeof rank })).sort((a, b) => rank[b.status] - rank[a.status])[0];
+  return best ?? null;
+}
+
+/** M3: Steckt der Posten in einem Einzug mit erzeugter Datei (oder eingereicht), ändert ihn kein Erlass. Im Entwurf frei. */
+function inDirectDebitRefusal(deps: Deps, db: DbOrTx, openItemId: string) {
+  const run = openItemInDirectDebitInternal(deps, db, openItemId);
+  return run && run.status !== 'draft' ? financeConflict('openItemInDirectDebit', { runId: run.runId, status: run.status }) : null;
+}
+
 const originCancelSchema = z.object({ openItemId: z.string().min(1), originType: z.string().min(1), note: z.string().trim().min(1).max(500).nullable() });
 
 /**
  * Interne API (wie `createOriginOpenItem`, ohne eigene Rechteprüfung): einen eigenen Posten ohne Zahlung erledigen —
  * nur, solange keine festgeschriebene, nicht zurückgenommene Zahlung daran hängt. Ein bloßer Entwurf hindert nicht;
- * er scheitert beim Festschreiben an `openItemCancelled`. Protokolliert wie `cancelOpenItem`.
+ * er scheitert beim Festschreiben an `openItemCancelled`. Steckt der Posten in einem Einzug mit erzeugter Datei oder
+ * eingereicht, abgelehnt (`openItemInDirectDebit`, M3). Protokolliert wie `cancelOpenItem`.
  */
 export function cancelOriginOpenItem(tx: DbOrTx, deps: Deps, ctx: CallContext, input: z.infer<typeof originCancelSchema>): Result<OpenItemView> {
   const parsed = validate(deps, originCancelSchema, input);
@@ -397,6 +416,8 @@ export function cancelOriginOpenItem(tx: DbOrTx, deps: Deps, ctx: CallContext, i
   const before = ownOriginItem(tx, parsed.value.openItemId, parsed.value.originType);
   if (!before.ok) return before;
   if (settledCentsFor(tx, before.value.id) > 0) return financeConflict('openItemHasPayments');
+  const inRun = inDirectDebitRefusal(deps, tx, before.value.id);
+  if (inRun) return inRun;
   const now = isoNow(deps.clock);
   const after: FinanceOpenItemRow = { ...before.value, cancelledAt: now, cancelledByUserId: ctx.userId, cancelNote: parsed.value.note, updatedAt: now };
   tx.update(financeOpenItems).set(after).where(eq(financeOpenItems.id, after.id)).run();
@@ -419,6 +440,8 @@ export function reduceOriginOpenItem(tx: DbOrTx, deps: Deps, ctx: CallContext, i
   const { amountCents } = parsed.value;
   if (amountCents >= before.value.amountCents) return invalid([{ path: 'amountCents', message: 'notLower' }]);
   if (amountCents < settledCentsFor(tx, before.value.id)) return financeConflict('openItemBelowSettled');
+  const inRun = inDirectDebitRefusal(deps, tx, before.value.id);
+  if (inRun) return inRun;
   const after: FinanceOpenItemRow = { ...before.value, amountCents, updatedAt: isoNow(deps.clock) };
   tx.update(financeOpenItems).set({ amountCents, updatedAt: after.updatedAt }).where(eq(financeOpenItems.id, after.id)).run();
   financeAudit(tx, deps, ctx, { action: 'finance.openItem.reduce', entity: 'financeOpenItem', id: after.id, before: { amountCents: before.value.amountCents }, after: { amountCents }, params: { amountCents } });

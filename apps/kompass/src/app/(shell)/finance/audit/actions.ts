@@ -162,7 +162,7 @@ export async function unmarkReviewedAction(fiscalYearId: string, section: AuditS
 export interface RemarkInput {
   fiscalYearId: string;
   kind: 'question' | 'finding';
-  targetType: 'entry' | 'document' | 'report' | 'year';
+  targetType: 'entry' | 'document' | 'report' | 'year' | 'resolution';
   targetId: string;
   text: string;
   onBehalfOfAuditorId?: string;

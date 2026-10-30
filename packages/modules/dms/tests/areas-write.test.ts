@@ -93,6 +93,7 @@ describe('write services and protected document types', () => {
       seedDms: 'seed-Haken',
       extractDocumentText: 'gibt keinen Inhalt aus; der Text-Worker könnte geschützte Dokumente sonst nie indizieren',
       reindexAllDocuments: 'läuft über manageableTypeFilter (VP3a)',
+      reindexDocument: 'prüft das Bereichsrecht mit requireAreaAccess',
       createDocumentType: 'Katalog', updateDocumentType: 'Katalog, V14 in Task 5', createDocumentFolder: 'Katalog', deleteDocumentFolder: 'Katalog, achtet geschützte Dokumente (VP3a)',
       moveDocumentFolder: 'Katalog, schreibt nur den Pfad um; geschützte Dokumente ziehen mit (Spec 6.3), das Protokoll zählt nur',
       deleteDocumentType: 'Katalog, verlangt schon keine Dokumente — geschützt oder nicht (Task 4)',
@@ -102,6 +103,7 @@ describe('write services and protected document types', () => {
       switchToPost: 'Versand: verlangt dms.send, prüft das Bereichsrecht des Dokuments jeder Sendung',
       sendTestMail: 'Versand: berührt kein Dokument',
       saveMailSettings: 'Einstellungen: berührt kein Dokument',
+      setOcrLanguages: 'Einstellung: berührt kein Dokument',
       createDocumentRule: 'Katalog', updateDocumentRule: 'Katalog', deleteDocumentRule: 'Katalog', createSnippet: 'Katalog', updateSnippet: 'Katalog', deleteSnippet: 'Katalog',
     };
     const services = Object.entries(dms).filter(([, v]) => typeof v === 'function' && /^(async\s+)?function\s*\w*\s*\(\s*deps\s*,\s*ctx\b/.test(String(v))).map(([name]) => name);

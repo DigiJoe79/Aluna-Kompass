@@ -1,6 +1,6 @@
 'use server';
 
-import { cancelDataExport, fileAuditReportFromDocument, fileAuditReportScan, finalizeFinanceReport, releaseReportsForFinalizing, startDataExport, type ReleaseBasis, type ReportParams } from '@kompass/module-finance';
+import { cancelDataExport, fileAuditReportFromDocument, fileAuditReportScan, finalizeFinanceReport, releaseReportsForFinalizing, startDataExport, type ReleaseBasis, type ReportConfirmationReason, type ReportParams } from '@kompass/module-finance';
 import { getTranslations } from 'next-intl/server';
 import { revalidatePath } from 'next/cache';
 import { guardAction } from '@/lib/action-guard';
@@ -50,12 +50,15 @@ export async function uploadAuditReportAction(formData: FormData): Promise<Actio
   });
 }
 
+/** Die Begründung, wenn der Bericht beim Festschreiben eine verlangt (Jahresrechnung: Vergütung ohne Grundlage). */
+export type FinalizeConfirmation = { reason: ReportConfirmationReason; note: string | null };
+
 /** Festschreiben (Board 2b): dieselben Parameter wie Seite und Vorschau, damit der Hash derselbe ist. */
-export async function finalizeReportAction(report: string, params: ReportParams): Promise<ActionState> {
+export async function finalizeReportAction(report: string, params: ReportParams, confirmation?: FinalizeConfirmation): Promise<ActionState> {
   return guardAction('(shell)/finance/reports/actions.ts#finalizeReportAction', async () => {
     const t = await getTranslations();
     const { deps, ctx } = await requireSession();
-    const result = await finalizeFinanceReport(deps, ctx, { report, params });
+    const result = await finalizeFinanceReport(deps, ctx, { report, params, ...(confirmation ? { confirmation: { reason: confirmation.reason, ...(confirmation.note ? { note: confirmation.note } : {}) } } : {}) });
     revalidate();
     return toActionState(result, t, result.ok ? t('finance.reports.view.confirm.done', { number: result.value.documentNumber }) : undefined);
   });

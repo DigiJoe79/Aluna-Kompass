@@ -6,6 +6,7 @@ import { useEffect, useState, type RefObject } from 'react';
 import { toast } from 'sonner';
 import { DocumentPicker } from '@/app/(shell)/dms/document-picker';
 import type { PickedDocument } from '@/app/(shell)/dms/search-action';
+import { ChoiceCards } from '@/components/choice-cards';
 import { ContactPicker, type PickedContact } from '@/components/contact-picker';
 import { useDateFormat } from '@/components/date-format-provider';
 import { ReceiptDrop } from '@/components/finance/receipt-drop';
@@ -16,12 +17,14 @@ import { FormGrid } from '@/components/forms/form-grid';
 import { RefusalNotice } from '@/components/forms/refusal-notice';
 import { useActionFeedback } from '@/components/forms/use-action-feedback';
 import { Notice } from '@/components/notice';
+import { Section } from '@/components/section';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogBody, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Segmented } from '@/components/ui/segmented';
 import { withUnplacedFieldErrors } from '@/lib/feedback';
+import { SuggestionFlag } from '@/app/(shell)/dms/receive/suggestion-flag';
 import { previewAuditorAction, saveAuditorAction, uploadConfidentialityAction, type AuditorPreview } from './actions';
 import { accessGap } from './auditor-hints';
 
@@ -36,11 +39,27 @@ export interface AuditorDialogValue {
   minutesDocument: PickedDocument | null;
 }
 
+/** Ein in Gremien gewählter Kassenprüfer als Vorschlag (`auditorCandidates`), das Protokoll schon aufgelöst. */
+export interface AuditorCandidateView {
+  contactId: string;
+  name: string;
+  electedOn: string | null;
+  minutesDocument: PickedDocument | null;
+  source: { label: string; href: string };
+}
+
+type Suggested = { contact: boolean; electedOn: boolean; minutes: boolean };
+const NONE: Suggested = { contact: false, electedOn: false, minutes: false };
+
 /**
  * „Prüfer für <Jahr> eintragen“ bzw. „Prüfer bearbeiten“ (Board 12b, Dialog `md`). Die Hinweise zur Unabhängigkeit
  * erscheinen, sobald der Kontakt gewählt ist, als Text unter dem Feld; Zugang und Rolle prüft Kompass bei „in Kompass“
  * sofort und sagt das Ergebnis unter der Auswahl. Die Erklärung lädt man erst am gespeicherten Eintrag hoch — sie hängt
  * am Prüfer.
+ *
+ * Beim Neuanlegen stehen die in Gremien gewählten Kassenprüfer darüber (G7, Freigabe Joe 2026-10-29): Die Wahl füllt
+ * Kontakt, „gewählt am“ und Protokoll; diese tragen das Muster „Vorbelegt aus einem Vorschlag“ (MUSTER § E), bis man sie
+ * ändert. Modus und Vertraulichkeit wählt man selbst.
  */
 export function AuditorDialog({
   open,
@@ -48,6 +67,7 @@ export function AuditorDialog({
   year,
   auditor,
   canCreateContact,
+  candidates = [],
   finalFocus,
 }: {
   open: boolean;
@@ -55,6 +75,8 @@ export function AuditorDialog({
   year: { id: string; designation: string };
   auditor: AuditorDialogValue | null;
   canCreateContact: boolean;
+  /** Vorschläge aus Gremien; nur beim Neuanlegen gezeigt. */
+  candidates?: readonly AuditorCandidateView[];
   finalFocus?: RefObject<HTMLElement | null>;
 }) {
   const t = useTranslations('finance.audit');
@@ -67,6 +89,8 @@ export function AuditorDialog({
   const [electedOn, setElectedOn] = useState(auditor?.electedOn ?? '');
   const [minutes, setMinutes] = useState<PickedDocument | null>(auditor?.minutesDocument ?? null);
   const [preview, setPreview] = useState<AuditorPreview | null>(null);
+  const [picked, setPicked] = useState<AuditorCandidateView | null>(null);
+  const [suggested, setSuggested] = useState<Suggested>(NONE);
   const [pending, setPending] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploaded, setUploaded] = useState<string | null>(null);
@@ -84,6 +108,8 @@ export function AuditorDialog({
     setDeclaration(auditor?.confidentialityDocument ?? null);
     setElectedOn(auditor?.electedOn ?? '');
     setMinutes(auditor?.minutesDocument ?? null);
+    setPicked(null);
+    setSuggested(NONE);
     setUploaded(null);
     setVersion(auditor?.version ?? '');
     feedback.reset();
@@ -106,6 +132,18 @@ export function AuditorDialog({
       cancelled = true;
     };
   }, [open, contactId, mode, year.id]);
+
+  const pick = (contactId: string) => {
+    const candidate = candidates.find((c) => c.contactId === contactId);
+    if (!candidate) return;
+    setPicked(candidate);
+    setContact({ id: candidate.contactId, name: candidate.name });
+    setElectedOn(candidate.electedOn ?? '');
+    setMinutes(candidate.minutesDocument);
+    setSuggested({ contact: true, electedOn: candidate.electedOn !== null, minutes: candidate.minutesDocument !== null });
+  };
+  const origin = picked ? t('auditorDialog.candidateOrigin', { source: picked.source.label }) : undefined;
+  const showCandidates = !auditor && candidates.length > 0;
 
   const fieldErrors = feedback.state.status === 'error' ? feedback.state.fieldErrors : {};
 
@@ -166,8 +204,38 @@ export function AuditorDialog({
         </DialogHeader>
         <DialogBody>
           <div className="flex flex-col gap-4">
+            {showCandidates ? (
+              <Section title={t('auditorDialog.candidates')}>
+                <ChoiceCards
+                  mode="choice"
+                  name="auditor-candidate"
+                  value={picked?.contactId}
+                  onSelect={pick}
+                  options={candidates.map((c) => ({
+                    value: c.contactId,
+                    label: c.name,
+                    description: c.electedOn ? t('auditorDialog.candidateElected', { date: fmt.date(c.electedOn), source: c.source.label }) : c.source.label,
+                  }))}
+                />
+              </Section>
+            ) : null}
             <div className="flex flex-col gap-1.5">
-              <ContactPicker id="auditor-contact" name="contactId" label={t('auditorDialog.contact')} value={contact} onChange={setContact} required canCreate={canCreateContact} kind="person" />
+              <ContactPicker
+                id="auditor-contact"
+                name="contactId"
+                label={t('auditorDialog.contact')}
+                value={contact}
+                onChange={(next) => {
+                  setContact(next);
+                  setSuggested((s) => ({ ...s, contact: false }));
+                  if (picked && next?.id !== picked.contactId) setPicked(null);
+                }}
+                required
+                canCreate={canCreateContact}
+                kind="person"
+                suggested={suggested.contact}
+                hint={suggested.contact ? origin : undefined}
+              />
               {independence.length > 0 ? (
                 <p className="text-hint text-muted-ink" data-testid="auditor-independence">
                   {independence.join(' ')}
@@ -211,12 +279,32 @@ export function AuditorDialog({
               </div>
             ) : null}
             <FormGrid>
-              <FormField id="auditor-elected" label={t('auditorDialog.electedOn')} size="s" error={fieldErrors.electedOn}>
-                <Input id="auditor-elected" type="date" value={electedOn} onChange={(e) => setElectedOn(e.target.value)} />
+              <FormField id="auditor-elected" label={t('auditorDialog.electedOn')} size="s" error={fieldErrors.electedOn} hint={suggested.electedOn ? origin : undefined}>
+                <Input
+                  id="auditor-elected"
+                  type="date"
+                  value={electedOn}
+                  onChange={(e) => {
+                    setElectedOn(e.target.value);
+                    setSuggested((s) => ({ ...s, electedOn: false }));
+                  }}
+                  className={suggested.electedOn ? 'border-agent' : undefined}
+                />
               </FormField>
             </FormGrid>
             <div className="flex flex-col gap-1.5">
-              <DocumentPicker id="auditor-minutes" name="minutesDocumentId" label={t('auditorDialog.minutes')} value={minutes} onChange={setMinutes} />
+              <DocumentPicker
+                id="auditor-minutes"
+                name="minutesDocumentId"
+                label={t('auditorDialog.minutes')}
+                value={minutes}
+                onChange={(next) => {
+                  setMinutes(next);
+                  setSuggested((s) => ({ ...s, minutes: false }));
+                }}
+                suggested={suggested.minutes}
+              />
+              {suggested.minutes ? <SuggestionFlag text={origin} /> : null}
               <FieldError id="auditor-minutes-error" message={fieldErrors.minutesDocumentId} />
             </div>
           </div>

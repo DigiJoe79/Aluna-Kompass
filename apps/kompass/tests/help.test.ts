@@ -36,3 +36,21 @@ describe('helpDocFor', () => {
     expect(helpDocFor(entries, '/help')).toBeNull();
   });
 });
+
+describe('helpDocFor with a pattern (Plan U1 Task 3)', () => {
+  const governance = defineModule({
+    key: 'governance',
+    version: '0.1.0',
+    permissions: ['governance.read'],
+    help: [
+      { href: '/governance/meetings/*/live', doc: 'gremien/mitlauf' },
+      { href: '/governance/meetings', doc: 'gremien/sitzungen' },
+    ],
+  });
+  const entries = helpEntries([coreModule, governance], new Set(['core', 'governance']));
+
+  it('the live route wins for the workspace, not for the meeting itself', () => {
+    expect(helpDocFor(entries, '/governance/meetings/01J/live')).toBe('gremien/mitlauf');
+    expect(helpDocFor(entries, '/governance/meetings/01J')).toBe('gremien/sitzungen');
+  });
+});

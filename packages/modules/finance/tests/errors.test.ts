@@ -8,7 +8,7 @@ const files = (dir: string): string[] => readdirSync(dir).flatMap((n) => { const
 
 describe('finance errors', () => {
   it('every error names the parameters its text needs, each with its kind (A6: the text is in the language file)', () => {
-    for (const [code, params] of Object.entries(FINANCE_ERRORS)) for (const kind of Object.values(params)) expect(['text', 'date', 'cents', 'count', 'evidenceKind'], code).toContain(kind);
+    for (const [code, params] of Object.entries(FINANCE_ERRORS)) for (const kind of Object.values(params)) expect(['text', 'date', 'cents', 'count', 'evidenceKind', 'runStatus'], code).toContain(kind);
   });
 
   it('nimmt einen Betrag nur als Zahl in Cent, Datum und Text nur als Text (Befund 4, 0.2.12)', () => {

@@ -7,7 +7,8 @@ import { read, relative, sourceFiles, matchingLines } from './source';
  * (docs/MUSTER.md § B und § G); jede war ein eigener Ort, an dem das Telefon, der Dialogrand oder die
  * Live-Region anders ausfiel.
  */
-const ALLOWED = new Set(['components/forms/form-action-bar.tsx', 'components/selection-bar.tsx']);
+// „Weiter“ klebt am Telefon unten, links daneben „A“ für die Anwesenheit (Board Gremien 1h, N1, Freigabe Joe 2026-10-28).
+const ALLOWED = new Set(['components/forms/form-action-bar.tsx', 'components/selection-bar.tsx', 'app/(shell)/governance/meetings/[id]/live/live-workspace.tsx']);
 // `bottom-0` oder ein berechneter Wert (`bottom-[…]`, die Speicherleiste sitzt klebend bündig am Rand, Designer 2026-10-22).
 const STICKY_BOTTOM = /\bsticky\b[^"'`]*\bbottom-(0\b|\[)|\bbottom-(0\b|\[)[^"'`]*\bsticky\b/;
 

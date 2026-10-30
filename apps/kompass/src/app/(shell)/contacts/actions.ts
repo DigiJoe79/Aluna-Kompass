@@ -1,7 +1,7 @@
 'use server';
 
 import { guardAction } from '@/lib/action-guard';
-import { addContactRole, createContact, deleteContact, displayName, endContactRole, setContactChannels, updateContact } from '@kompass/module-contacts';
+import { addContactRole, createContact, deleteContact, displayName, endContactRole, setContactChannels, updateContact, updateContactRole } from '@kompass/module-contacts';
 import { getTranslations } from 'next-intl/server';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
@@ -92,13 +92,25 @@ export async function updateContactAction(_prev: ActionState, formData: FormData
   });
 }
 
-export async function addContactRoleAction(id: string, role: string, since: string): Promise<ActionState> {
+/** Rolle hinzufügen; bei Rollen mit Vertretung (Vorstandsmitglied) mit Amt und „vertritt nach § 26 BGB“ (Designer 2b). */
+export async function addContactRoleAction(id: string, role: string, since: string, extra?: { note: string | null; representsAssociation: boolean }): Promise<ActionState> {
   return guardAction('(shell)/contacts/actions.ts#addContactRoleAction', async () => {
     const t = await getTranslations();
     const { deps, ctx } = await requireSession();
-    const result = await addContactRole(deps, ctx, { id, role, since });
+    const result = await addContactRole(deps, ctx, { id, role, since, ...(extra ?? {}) });
     revalidatePath(`/contacts/${id}`);
     return toActionState(result, t, t('contacts.toast.roleAdded'));
+  });
+}
+
+/** Amt und „vertritt nach § 26 BGB“ einer laufenden Rolle ändern (`updateContactRole`). */
+export async function updateContactRoleAction(id: string, roleId: string, input: { note: string | null; representsAssociation: boolean }): Promise<ActionState> {
+  return guardAction('(shell)/contacts/actions.ts#updateContactRoleAction', async () => {
+    const t = await getTranslations();
+    const { deps, ctx } = await requireSession();
+    const result = await updateContactRole(deps, ctx, { roleId, ...input });
+    revalidatePath(`/contacts/${id}`);
+    return toActionState(result, t, t('contacts.toast.roleUpdated'));
   });
 }
 

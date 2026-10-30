@@ -1,5 +1,4 @@
 import type { AuditStatus } from '@kompass/module-finance';
-import { AUDIT_SECTION_ORDER } from './audit-sections';
 
 /**
  * Die Übersicht der Kassenprüfung als Logik (Plan D1b Task 3): welches Jahr sie zeigt und welcher Stand im Kopf steht.
@@ -47,7 +46,7 @@ export function auditHead(status: AuditStatus, auditorCount: number, opts: { ref
     kind: 'running',
     since: status.baseline?.createdAt ?? null,
     reviewed: status.sectionsReviewed.length,
-    total: AUDIT_SECTION_ORDER.length,
+    total: status.sections.length,
     remarksOpen: status.remarksUnresolved,
     report: stand,
     scans: { filed: report?.scansFiled ?? 0, expected: report?.scansExpected ?? 1 },

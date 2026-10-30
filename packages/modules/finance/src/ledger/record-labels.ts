@@ -2,7 +2,7 @@ import { resolveRecordLabel, type CallContext, type Deps, type RecordLabelInput 
 import { eq } from 'drizzle-orm';
 import { requireFinanceRead, requireMasterDataRead } from './access';
 import { taxPeriodInternal } from './tax-periods';
-import { financeAccounts, financeCategories, financeConfirmations, financeEntries, financeFiscalYears, financePartnerProfiles, financePeriodEvents, financeDirectDebitRuns, financePurposes, financeReserves, financeSepaMandates, financeVatFilings } from '../schema';
+import { financeAccounts, financeCategories, financeConfirmations, financeEntries, financeFiscalYears, financePartnerProfiles, financePeriodEvents, financeDirectDebitRuns, financePurposes, financeReserves, financeFundsUseOpenings, financeSepaMandates, financeVatFilings } from '../schema';
 
 const missing: RecordLabelInput = { label: '', href: null, state: 'missing' };
 const forbiddenLabel: RecordLabelInput = { label: '', href: null, state: 'forbidden' };
@@ -13,6 +13,8 @@ const NAMES: Record<string, { master: boolean; read: (deps: Deps, id: string) =>
   financeCategory: { master: true, read: (deps, id) => deps.db.select({ name: financeCategories.name }).from(financeCategories).where(eq(financeCategories.id, id)).get()?.name },
   financePurpose: { master: true, read: (deps, id) => deps.db.select({ name: financePurposes.name }).from(financePurposes).where(eq(financePurposes.id, id)).get()?.name },
   financeReserve: { master: true, read: (deps, id) => deps.db.select({ name: financeReserves.name }).from(financeReserves).where(eq(financeReserves.id, id)).get()?.name },
+  // M1: der Anfangsvortrag heißt nach seinem Entstehungsjahr.
+  financeFundsUseOpening: { master: true, read: (deps, id) => deps.db.select({ designation: financeFundsUseOpenings.designation }).from(financeFundsUseOpenings).where(eq(financeFundsUseOpenings.id, id)).get()?.designation },
   // Ein Entwurf hat keine Nummer: dann nur die Art.
   financeEntry: { master: false, read: (deps, id) => { const row = deps.db.select({ number: financeEntries.number }).from(financeEntries).where(eq(financeEntries.id, id)).get(); return row ? (row.number ?? '') : undefined; } },
   financeConfirmation: { master: false, read: (deps, id) => deps.db.select({ number: financeConfirmations.documentNumber }).from(financeConfirmations).where(eq(financeConfirmations.id, id)).get()?.number },

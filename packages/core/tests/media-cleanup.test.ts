@@ -25,7 +25,7 @@ describe('deleteUnreferencedMedia', () => {
     const { deps, ctx, free, logo } = await setup();
     const result = unwrap(await deleteUnreferencedMedia(deps, ctx, [free.id, logo.id, free.id, 'MISSING']));
     expect(result.deletedMedia).toEqual([free.id]);
-    expect(result.keptMedia).toEqual([{ id: logo.id, filename: logo.filename, usedBy: ['Logo des Vereins'] }]);
+    expect(result.keptMedia).toEqual([{ id: logo.id, filename: logo.filename, usedBy: ['media.references.logo'] }]);
     expect(await deps.media.exists(free.filename)).toBe(false);
     expect(await deps.media.exists(previewFilename(free.filename))).toBe(false);
     expect(await deps.media.exists(logo.filename)).toBe(true);
@@ -46,7 +46,7 @@ describe('describeMediaUsage', () => {
     const { deps, free, logo } = await setup();
     expect(describeMediaUsage(deps, [free.id, logo.id, 'MISSING'], { entity: 'animal', id: 'A1' })).toEqual([
       { id: free.id, filename: free.filename, usedElsewhere: [] },
-      { id: logo.id, filename: logo.filename, usedElsewhere: ['Logo des Vereins'] },
+      { id: logo.id, filename: logo.filename, usedElsewhere: ['media.references.logo'] },
     ]);
     expect(describeMediaUsage(deps, [logo.id], { entity: 'setting', id: 'branding.logoAssetId' })).toEqual([
       { id: logo.id, filename: logo.filename, usedElsewhere: [] },

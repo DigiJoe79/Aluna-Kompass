@@ -64,6 +64,9 @@ describe('run state', () => {
     const e = env();
     mkdirSync(path.join(e.workDir, 'kompass-sitejob-site-abc'));
     mkdirSync(path.join(e.workDir, 'kompass-site-check-xyz')); // laufende Exportprüfung: bleibt
+    // Bauverzeichnis von Astro im Cache (`build.ts`), nach einem Absturz liegen geblieben (N4); der Bild-Cache bleibt.
+    mkdirSync(path.join(e.cacheDir, 'out-a1b2c3'));
+    mkdirSync(path.join(e.cacheDir, 'images'));
     writeFileSync(
       path.join(e.cacheDir, 'running-job.json'),
       JSON.stringify({
@@ -91,6 +94,7 @@ describe('run state', () => {
     });
     expect(existsSync(path.join(e.cacheDir, 'running-job.json'))).toBe(false);
     expect(readdirSync(e.workDir)).toEqual(['kompass-site-check-xyz']);
+    expect(readdirSync(e.cacheDir).sort()).toEqual(['images', 'preview-result.json']);
   });
 
 });

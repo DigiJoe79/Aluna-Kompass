@@ -1,5 +1,6 @@
 import { csvDocument, paperDate } from '@kompass/core';
 import { GDPDU_DTD_FILE } from './gdpdu-dtd';
+import { zonedDayOf } from '../../zoned-days';
 import type { ExportColumn, ExportScope, ExportTable } from './tables';
 
 /**
@@ -9,7 +10,8 @@ import type { ExportColumn, ExportScope, ExportTable } from './tables';
  */
 
 const xml = (value: string) => value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-const day = (iso: string) => paperDate(iso.slice(0, 10) as never);
+/** Ein Tag oder Zeitstempel als Tag auf Papier, Zeitstempel in der Zone des Vereins (F-B3). */
+const day = (value: string, scope: ExportScope) => paperDate(zonedDayOf(value, scope.timeZone) as never);
 
 const TYPE_LABEL: Record<ExportColumn['type'], string> = { text: 'Text', amount: 'Betrag', day: 'Datum', timestamp: 'Zeitpunkt', bool: 'Schalter', integer: 'Zahl' };
 
@@ -42,14 +44,14 @@ export const designationsOf = (scope: ExportScope, open?: boolean) =>
 export function gdpduIndexXml(tables: readonly ExportTable[], meta: { supplier: string; location: string; createdAt: string; scope: ExportScope }): string {
   const { from, to } = period(meta.scope);
   const provisional = designationsOf(meta.scope, true);
-  const comment = `Datenexport nach § 147 Abs. 6 AO, erzeugt am ${day(meta.createdAt)}, Geschäftsjahre ${designationsOf(meta.scope)}${provisional ? `; vorläufig: ${provisional}` : ''}`;
+  const comment = `Datenexport nach § 147 Abs. 6 AO, erzeugt am ${day(meta.createdAt, meta.scope)}, Geschäftsjahre ${designationsOf(meta.scope)}${provisional ? `; vorläufig: ${provisional}` : ''}`;
   const table = (t: ExportTable) =>
     [
       '    <Table>',
       `      <URL>${xml(t.file)}</URL>`,
       `      <Name>${xml(t.title)}</Name>`,
       `      <Description>${xml(t.description)}</Description>`,
-      `      <Validity><Range><From>${day(from)}</From><To>${day(to)}</To></Range><Format>DD.MM.YYYY</Format></Validity>`,
+      `      <Validity><Range><From>${day(from, meta.scope)}</From><To>${day(to, meta.scope)}</To></Range><Format>DD.MM.YYYY</Format></Validity>`,
       '      <UTF8/>',
       '      <DecimalSymbol>,</DecimalSymbol>',
       '      <DigitGroupingSymbol>.</DigitGroupingSymbol>',
@@ -89,7 +91,7 @@ export function readmeText(meta: { createdAt: string; scope: ExportScope }, tabl
   const lines = [
     'Datenexport für eine Außenprüfung (§ 147 Abs. 6 AO)',
     '',
-    `Erzeugt am ${day(meta.createdAt)} mit Kompass.`,
+    `Erzeugt am ${day(meta.createdAt, meta.scope)} mit Kompass.`,
     closed ? `Abgeschlossene Geschäftsjahre: ${closed}.` : null,
     provisional ? `Vorläufig (Geschäftsjahr noch offen, Buchungen können noch hinzukommen): ${provisional}.` : null,
     '',

@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import type { NextConfig } from 'next';
 import createNextIntlPlugin from 'next-intl/plugin';
+import { APP_CONTENT_SECURITY_POLICY } from './src/lib/app-csp';
 
 const withNextIntl = createNextIntlPlugin();
 
@@ -26,6 +27,7 @@ const nextConfig: NextConfig = {
     '@kompass/module-contacts',
     '@kompass/module-dms',
     '@kompass/module-finance',
+    '@kompass/module-governance',
     '@kompass/module-members',
     '@kompass/module-projects',
     '@kompass/markdown',
@@ -37,7 +39,13 @@ const nextConfig: NextConfig = {
   // Finanzen, deren Uploads (mehrere Dateien bis je 10 MB bzw.
   // `finance.uploadLimitMb`) über Server Actions gehen und deren Body Next
   // puffert. Eine kleinere Zahl gehört in eine eigene Messung.
-  experimental: { serverActions: { bodySizeLimit: '512mb' } },
+  experimental: {
+    serverActions: { bodySizeLimit: '512mb' },
+    // E2E-Worker (eigenes `NEXT_DIST_DIR`) ohne Turbopack-Dateicache: Startet die Fixture einen Server nach einem
+    // Fehlschlag im selben Verzeichnis neu, brach Turbopack mit „stale reference … task is missing in memory or
+    // persistent storage“ ab (Kalenderlauf 29.10., Befund 13). Der erste Start ist ohnehin kalt (`e2e:cold`).
+    ...(process.env.NEXT_DIST_DIR ? { turbopackFileSystemCacheForDev: false } : {}),
+  },
   // Next blockiert im Entwicklungsmodus Anfragen an /_next/* von anderen
   // Ursprüngen als dem Starthost. Der Browser löst localhost je nach System
   // auf 127.0.0.1 auf, und dann trifft genau das den eigenen Rechner.
@@ -77,20 +85,18 @@ const nextConfig: NextConfig = {
       ],
     },
     {
-      // Ueberall ausser auf den drei Routen, die hochgeladene Dateien
+      // Ueberall ausser auf den Routen, die hochgeladene oder gebaute Dateien
       // ausliefern: Die setzen `content-security-policy: sandbox` selbst, und
       // eine Kopfzeile von hier gewinnt gegen die der Route. Ein globaler CSP
       // naehme ihnen die Sandbox — also genau den Schutz davor, dass ein
-      // hochgeladenes SVG im Ursprung der Anwendung laeuft. Die E2E-Suite
-      // haelt das fest (`media.spec.ts`), `tests/security-headers.test.ts`
-      // ebenso.
-      source: '/((?!media/|help-bilder/).*)',
-      headers: [
-        {
-          key: 'Content-Security-Policy',
-          value: ["frame-ancestors 'self'", "object-src 'none'", "base-uri 'none'", "form-action 'self'"].join('; '),
-        },
-      ],
+      // hochgeladenes SVG im Ursprung der Anwendung laeuft. Die beiden
+      // Vorschauen der Webseite (`/site/preview/`, `/animals/proposal-preview/`)
+      // liefern HTML und Bilder unter demselben Praefix; sie setzen je Antwort
+      // selbst diesen CSP fuer HTML und `sandbox` fuer alles andere
+      // (`src/lib/site-preview.ts`). Die E2E-Suite haelt das fest
+      // (`media.spec.ts`), `tests/security-headers.test.ts` ebenso.
+      source: '/((?!media/|help-bilder/|site/preview/|animals/proposal-preview/).*)',
+      headers: [{ key: 'Content-Security-Policy', value: APP_CONTENT_SECURITY_POLICY }],
     },
   ],
   output: 'standalone',

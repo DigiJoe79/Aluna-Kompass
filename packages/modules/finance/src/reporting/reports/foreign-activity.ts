@@ -1,4 +1,4 @@
-import { paperDate, type DbOrTx } from '@kompass/core';
+import { DEFAULT_TIME_ZONE, paperDate, type DbOrTx } from '@kompass/core';
 import { contacts, displayName } from '@kompass/module-contacts';
 import { eq } from 'drizzle-orm';
 import { coverageRequired, evidenceCoverage, missingEvidence, paymentProofSatisfied, requiredEvidenceKinds } from '../../allocation/evidence-rules';
@@ -6,7 +6,8 @@ import { foreignActivityInternal, type ForeignLineEntry, type ForeignPartnerPaym
 import { positionViewsOf, sumPositionCents } from '../../allocation/partner-proof';
 import { openCentsInternal } from '../../ledger/open-items';
 import { financePartnerEvidence, financePartnerPayments, financePartnerProfiles } from '../../schema';
-import type { ReportDefinition, ReportParams } from '../types';
+import type { ReportComputeEnv, ReportDefinition, ReportParams, ReportRenderContext } from '../types';
+import { reportTimeZone, TIME_ZONE_SETTING, zonedDayOf } from '../../zoned-days';
 import { amountCell, checkYearOrDate, heading, paragraph, reportYearInternal, strongAmountCell, strongCell, table, textCell, yearParamsSchema, type ReportYear } from './common';
 
 /**
@@ -54,10 +55,10 @@ function proofOf(db: DbOrTx, paymentId: string): { proofComplete: boolean; evide
   return { proofComplete: complete, evidenceCount: evidence.length };
 }
 
-export function computeForeignActivityReport(db: DbOrTx, params: ReportParams): ForeignActivityReport {
+export function computeForeignActivityReport(db: DbOrTx, params: ReportParams, env?: ReportComputeEnv): ForeignActivityReport {
   const year = reportYearInternal(db, params.fiscalYearId!);
   // Das Land des Vereins zählt hier nicht mehr: Der Bericht folgt dem Merkmal, nicht dem Sitz.
-  const view = foreignActivityInternal(db, { from: year.startsOn, to: year.endsOn }, 'DE');
+  const view = foreignActivityInternal(db, { from: year.startsOn, to: year.endsOn }, 'DE', reportTimeZone(env));
   // Rechenschaft D2: Vermögensausstattungen (§ 58 Nr. 3 AO) als eigene Grundlage neben § 58 Nr. 1 und § 57.
   const groupOf = (p: ForeignPartnerPaymentEntry) => (p.assetEndowment ? 'endowment58' : p.basis);
   const bases = [...new Set(view.partnerPayments.map(groupOf))].sort();
@@ -94,12 +95,14 @@ function linesTable(lines: ForeignActivityLine[]): string {
 const FOREIGN_EMPTY = 'Im Geschäftsjahr gibt es keine freigegebenen Zahlungen an Partner.';
 const foreignEmpty = (data: ForeignActivityReport): string | null => (data.partnerPayments.length === 0 && data.abroadLines.length === 0 ? FOREIGN_EMPTY : null);
 
-export function foreignActivityTypst(data: ForeignActivityReport): string {
+export function foreignActivityTypst(data: ForeignActivityReport, ctx?: ReportRenderContext): string {
+  // F-B3: Die Freigabe ist ein Zeitstempel; auf dem Papier steht ihr Tag in der Zone des Vereins (nicht im Hash).
+  const timeZone = ctx?.labels['setting.timeZone'] ?? DEFAULT_TIME_ZONE;
   const parts: string[] = [heading(2, 'Zahlungen an Partner')];
   if (data.partnerPayments.length === 0) parts.push(paragraph(FOREIGN_EMPTY));
   for (const g of data.partnerPayments) {
     parts.push(heading(3, BASIS_TEXT[g.basis] ?? g.basis));
-    const rows = g.payments.map((p) => [textCell(p.approvedAt ? paperDate(p.approvedAt.slice(0, 10) as never) : ''), textCell(p.number ?? ''), textCell(p.partnerName), amountCell(p.totalCents), textCell(`${p.evidenceCount}${p.proofComplete ? ', vollständig' : ', offen'}`)]);
+    const rows = g.payments.map((p) => [textCell(p.approvedAt ? paperDate(zonedDayOf(p.approvedAt, timeZone) as never) : ''), textCell(p.number ?? ''), textCell(p.partnerName), amountCell(p.totalCents), textCell(`${p.evidenceCount}${p.proofComplete ? ', vollständig' : ', offen'}`)]);
     rows.push([strongCell('Summe'), textCell(''), textCell(''), strongAmountCell(g.totalCents), textCell('')]);
     parts.push(table('(24mm, 28mm, 1fr, 28mm, 30mm)', ['Freigabe', 'Nr.', 'Partner', 'in €', 'Nachweise'], rows));
   }
@@ -117,6 +120,7 @@ export const foreignActivityReportDefinition: ReportDefinition<ForeignActivityRe
   checkParams: checkYearOrDate,
   years: (_db, params) => (params.fiscalYearId ? [params.fiscalYearId] : []),
   compute: computeForeignActivityReport,
+  settingKeys: [TIME_ZONE_SETTING],
   toTypst: foreignActivityTypst,
   empty: foreignEmpty,
   titleKey: 'finance.reports.foreignActivity.title',

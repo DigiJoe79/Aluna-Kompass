@@ -2,7 +2,7 @@
 
 import { useDateFormat } from '@/components/date-format-provider';
 import { useTranslations } from 'next-intl';
-import { useActionState, useEffect, useState, useTransition } from 'react';
+import { useActionState, useEffect, useRef, useState, useTransition } from 'react';
 import { FormActionBar } from '@/components/forms/form-action-bar';
 import { RefusalNotice } from '@/components/forms/refusal-notice';
 import { useActionFeedback } from '@/components/forms/use-action-feedback';
@@ -14,7 +14,8 @@ import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { idleState } from '@/lib/actions';
 import { cn } from '@/lib/utils';
-import { completeFollowUpAction, createFollowUpAction, reopenFollowUpAction } from '../actions';
+import { completeFollowUpAction, createFollowUpAction, followUpMailStateAction, reopenFollowUpAction } from '../actions';
+import { Notice } from '@/components/notice';
 import { ActionForm } from '@/components/forms/action-form';
 import { FormField } from '@/components/forms/form-field';
 import { FormGrid } from '@/components/forms/form-grid';
@@ -55,6 +56,29 @@ export function FollowUpsPanel({
   // Abhaken steht in den Zeilen der Liste: Die Ablehnung steht über der Liste.
   const toggleFb = useActionFeedback();
   const errors = state.status === 'error' ? state.fieldErrors : {};
+
+  // Zuständig gesteuert (Rückmeldung Frage 2): Nach jeder Wahl fragt der Dialog, ob eine Mail ankommt; eine spätere Wahl
+  // gilt, auch wenn die Antwort auf eine frühere später eintrifft (Zähler).
+  const [assignee, setAssignee] = useState('');
+  const [mailState, setMailState] = useState<'ready' | 'notNeeded' | 'noAddress' | 'unavailable' | null>(null);
+  const asked = useRef(0);
+  const chooseAssignee = (userId: string) => {
+    setAssignee(userId);
+    setMailState(null);
+    const ticket = ++asked.current;
+    if (!userId) return;
+    void followUpMailStateAction(userId).then((result) => {
+      if (ticket === asked.current) setMailState(result);
+    });
+  };
+  const assigneeName = users.find((u) => u.id === assignee)?.name ?? '';
+
+  useEffect(() => {
+    if (!open) return;
+    asked.current++;
+    setAssignee('');
+    setMailState(null);
+  }, [open]);
 
   useEffect(() => {
     if (state.status === 'success') setOpen(false);
@@ -150,7 +174,7 @@ export function FollowUpsPanel({
                     <Input id="followUpTitle" name="title" required />
                   </FormField>
                   <FormField id="assigneeUserId" label={t('assignee')}>
-                    <Select id="assigneeUserId" name="assigneeUserId" defaultValue="">
+                    <Select id="assigneeUserId" name="assigneeUserId" value={assignee} onChange={(e) => chooseAssignee(e.target.value)}>
                       {/* `null` heißt: niemand Bestimmtes zuständig — nicht „alle“ (03 B37, Joe 2026-10-16). */}
                       <option value="">{t('unassigned')}</option>
                       {users.map((user) => (
@@ -161,6 +185,11 @@ export function FollowUpsPanel({
                     </Select>
                   </FormField>
                 </FormGrid>
+                {mailState === 'noAddress' || mailState === 'unavailable' ? (
+                  <div className="mt-3" data-testid="follow-up-mail-hint">
+                    <Notice level="hint">{mailState === 'noAddress' ? t('mailNoAddress', { name: assigneeName }) : t('mailUnavailable')}</Notice>
+                  </div>
+                ) : null}
               </div>
 
               <FormActionBar placement="dialog" mode="create" cancel={() => setOpen(false)} saveLabel={t('submit')} state={state} />

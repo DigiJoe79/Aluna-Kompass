@@ -1,8 +1,9 @@
-import { enabledManifests, isoNow, newId, notFound, ok, requirePermission, todayIn, validate, type CallContext, type DbOrTx, type Deps, type Failure, type Result } from '@kompass/core';
+import { enabledManifests, isoNow, timeZoneOf, newId, notFound, ok, requirePermission, todayIn, validate, type CallContext, type DbOrTx, type Deps, type Failure, type Result } from '@kompass/core';
 import { and, desc, eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { financeAudit } from '../audit';
 import { financeConflict, requireHumanChannelFinance } from '../errors';
+import { zonedDayOf } from '../zoned-days';
 import { requireFinanceRead } from '../ledger/access';
 import {
   DIRECT_DEBIT_RETURN_RESOLUTIONS,
@@ -78,7 +79,8 @@ export interface DirectDebitReturnView {
   createdAt: string;
 }
 
-export function returnViewInternal(db: DbOrTx, row: FinanceDirectDebitReturnRow): DirectDebitReturnView {
+/** `timeZone`: ohne Bankzeile ist der Tag der Rückgabe der Tag des Datensatzes in der Zone des Vereins (F-B3). */
+export function returnViewInternal(db: DbOrTx, row: FinanceDirectDebitReturnRow, timeZone: string): DirectDebitReturnView {
   const item = db.select().from(financeDirectDebitItems).where(eq(financeDirectDebitItems.id, row.itemId)).get()!;
   const run = db.select({ collectionDate: financeDirectDebitRuns.collectionDate }).from(financeDirectDebitRuns).where(eq(financeDirectDebitRuns.id, item.runId)).get()!;
   const mandate = mandateRowInternal(db, item.mandateId)!;
@@ -95,7 +97,7 @@ export function returnViewInternal(db: DbOrTx, row: FinanceDirectDebitReturnRow)
     debtorName: mandate.debtorName,
     amountCents: item.amountCents,
     rawTransactionId: row.rawTransactionId,
-    returnedOn: db.select({ day: financeRawTransactions.bookingDate }).from(financeRawTransactions).where(eq(financeRawTransactions.id, row.rawTransactionId)).get()?.day ?? row.createdAt.slice(0, 10),
+    returnedOn: db.select({ day: financeRawTransactions.bookingDate }).from(financeRawTransactions).where(eq(financeRawTransactions.id, row.rawTransactionId)).get()?.day ?? zonedDayOf(row.createdAt, timeZone),
     entryId: row.entryId,
     returnCode: row.returnCode,
     suggestEndMandate: row.returnCode ? returnCodeInfo(row.returnCode).suggestEndMandate : false,
@@ -196,7 +198,7 @@ export async function resolveDirectDebitReturn(deps: Deps, ctx: CallContext, inp
         after: { status: 'resolved', resolution: v.resolution, mandateEnded: endMandate },
         params: { resolution: v.resolution, returnCode: row.returnCode },
       });
-      return ok(returnViewInternal(tx, tx.select().from(financeDirectDebitReturns).where(eq(financeDirectDebitReturns.id, row.id)).get()!));
+      return ok(returnViewInternal(tx, tx.select().from(financeDirectDebitReturns).where(eq(financeDirectDebitReturns.id, row.id)).get()!, timeZoneOf(deps)));
     });
   } catch (error) {
     if (error instanceof ResolveAborted) return error.failure;
@@ -225,5 +227,5 @@ export async function listDirectDebitReturns(deps: Deps, ctx: CallContext, input
     .orderBy(desc(financeDirectDebitReturns.createdAt), desc(financeDirectDebitReturns.id))
     .all()
     .map((r) => r.row);
-  return ok({ items: rows.slice(v.offset, v.offset + v.limit).map((r) => returnViewInternal(deps.db, r)), total: rows.length });
+  return ok({ items: rows.slice(v.offset, v.offset + v.limit).map((r) => returnViewInternal(deps.db, r, timeZoneOf(deps))), total: rows.length });
 }

@@ -2,6 +2,7 @@
 
 import { Info } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useId, useState, type ReactNode } from 'react';
 import { toast } from 'sonner';
@@ -31,11 +32,14 @@ export interface ReserveRow extends MovementReserve {
   purposeText: string | null;
   purposeLabel: string | null;
   resolution: ReserveDocument | null;
+  /** G7: der Beschluss in Gremien, beschriftet über `resolveRecordLabel` — ohne Leserecht ohne Link. */
+  resolutionRef: { label: string; href: string | null } | null;
   carryForwardCents: number | null;
   carryForwardDate: string | null;
   carryForwardDocument: ReserveDocument | null;
   isActive: boolean;
   isDissolved: boolean;
+  kindLocked: boolean;
   updatedAt: string;
 }
 
@@ -230,7 +234,18 @@ export function ReserveTable({
                   <TableCell col="meta" className="px-3 align-top text-ink-2">{row.purposeLabel ?? <Empty />}</TableCell>
                   {/* Nummer · Datum (09 B38) darf umbrechen: mit Betreff trieb der Betreff die Tabelle auf einer standard-Seite ins waagerechte Scrollen (K9-Befund 8). */}
                   <TableCell col="meta" className="whitespace-normal px-3 align-top">
-                    <DocumentLabel document={row.resolution} testId="reserve-resolution" subject={false} />
+                    {row.resolution || !row.resolutionRef ? <DocumentLabel document={row.resolution} testId="reserve-resolution" subject={false} /> : null}
+                    {row.resolutionRef ? (
+                      <span className="block text-meta" data-testid="reserve-resolution-ref">
+                        {row.resolutionRef.href ? (
+                          <Link href={row.resolutionRef.href} className="underline-offset-2 hover:underline">
+                            {row.resolutionRef.label}
+                          </Link>
+                        ) : (
+                          <span className="text-ink-2">{row.resolutionRef.label}</span>
+                        )}
+                      </span>
+                    ) : null}
                   </TableCell>
                   <TableCell col="amount" className="px-3 text-right align-top font-semibold tabular-nums" data-testid="reserve-balance">
                     {formatEuro(row.balanceCents)}

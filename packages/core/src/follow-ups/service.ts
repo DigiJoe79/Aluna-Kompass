@@ -12,8 +12,11 @@ import { conflict, notFound, ok, type Result } from '../result';
 import { validate } from '../validate';
 
 import { resolveRecordLabel } from '../modules/record-hooks';
+import { notifyFollowUpAssignee, type FollowUpNotice } from './notify';
 
 export type FollowUpRecord = typeof followUps.$inferSelect & { titleHidden: boolean };
+/** Was `createFollowUp` liefert: die Wiedervorlage und was aus der Mail an die zugewiesene Person wurde. */
+export type FollowUpCreated = FollowUpRecord & { notice: FollowUpNotice };
 
 function toRecord(row: typeof followUps.$inferSelect): FollowUpRecord {
   return { ...row, titleHidden: false };
@@ -63,9 +66,10 @@ function load(db: DbOrTx, id: string): FollowUpRecord | null {
 /**
  * Der Kern prüft die Entität nicht — er kennt sie nicht. Wer eine Wiedervorlage
  * anlegt, hat vorher geprüft, dass es den Vorgang gibt und dass er ihn sehen
- * darf (in der Akte: `createDocumentFollowUp`).
+ * darf (in der Akte: `createDocumentFollowUp`). Nach der Transaktion bekommt eine andere zugewiesene Person eine Mail
+ * (`notifyFollowUpAssignee`); das Ergebnis steht in `notice`, die Wiedervorlage bleibt in jedem Fall gespeichert.
  */
-export async function createFollowUp(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<FollowUpRecord>> {
+export async function createFollowUp(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<FollowUpCreated>> {
   const denied = requirePermission(ctx, 'followUps.manage');
   if (denied) return denied;
   const parsed = validate(deps, followUpCreateSchema, input);
@@ -78,7 +82,7 @@ export async function createFollowUp(deps: Deps, ctx: CallContext, input: unknow
   }
 
   const n = auditName(deps, ctx, v);
-  return deps.db.transaction((tx) => {
+  const created = deps.db.transaction((tx) => {
     const id = newId();
     const now = isoNow(deps.clock);
     tx.insert(followUps)
@@ -104,8 +108,9 @@ export async function createFollowUp(deps: Deps, ctx: CallContext, input: unknow
       after: redacted(record, n.redact),
       params: { ...n.params, dueOn: v.dueAt },
     });
-    return ok(record);
+    return record;
   });
+  return ok({ ...created, notice: await notifyFollowUpAssignee(deps, ctx, created) });
 }
 
 export async function completeFollowUp(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<FollowUpRecord>> {

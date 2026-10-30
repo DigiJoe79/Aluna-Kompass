@@ -9,6 +9,12 @@ export const INCOME_KINDS = ['donation', 'membershipFee', 'inKindDonation', 'exp
 /** Bescheinigungsfähig — und nur in der Sphäre `ideal` zulässig. */
 export const CERTIFIABLE_INCOME_KINDS = ['donation', 'membershipFee', 'inKindDonation', 'expenseWaiver'] as const;
 export const COST_FUNCTIONS = ['program', 'administration', 'fundraising'] as const;
+/**
+ * Jahresrechnung (0.4.5, St-L-9): Einnahmen über eine Spendenplattform — `confirmsItself` (die Plattform bestätigt
+ * selbst; `bodyGrant`), `handlesOnly` (wickelt nur ab; Spende an den Verein, `donation`).
+ */
+export const DONATION_PLATFORMS = ['confirmsItself', 'handlesOnly'] as const;
+export type DonationPlatform = (typeof DONATION_PLATFORMS)[number];
 export const ALLOWANCE_KINDS = ['none', 'volunteer', 'trainer'] as const;
 /**
  * Steuerkennzeichen der Zuordnungszeile. § 13b UStG ist getrennt nach Leistungen aus dem übrigen EU-Gebiet (§ 13b Abs. 1,
@@ -46,3 +52,6 @@ export const INPUT_TAX = ['no', 'yes', 'partial'] as const;
  */
 export const ADDS_TO_ASSETS_OPT_OUTS = ['testatorDirectedCurrentUse', 'donorAllowedCurrentUse'] as const;
 export type AddsToAssetsOptOut = (typeof ADDS_TO_ASSETS_OPT_OUTS)[number];
+
+/** Grenze der Erläuterung zur Jahresrechnung in Zeichen (Spec Teil J) — hier, damit auch der Zähler im Browser sie kennt. */
+export const ANNUAL_ACCOUNTS_EXPLANATION_MAX = 4000;

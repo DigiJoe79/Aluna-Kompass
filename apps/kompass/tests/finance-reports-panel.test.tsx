@@ -14,7 +14,7 @@ const m = (path: string) => path.split('.').reduce<unknown>((n, k) => (n as Reco
 const panel = () =>
   render(
     <NextIntlClientProvider locale="de" messages={messages} timeZone="Europe/Berlin">
-      <ReportsPanel values={{ statuteReference: '', cashReportSignature: false, treasurerIsStatutoryBoard: null }} />
+      <ReportsPanel values={{ statuteReference: '', cashReportSignature: false, treasurerIsStatutoryBoard: null, assemblyApprovesAccounts: false }} />
     </NextIntlClientProvider>,
   );
 
@@ -26,7 +26,7 @@ describe('ReportsPanel (Plan A3 Task 6b)', () => {
     const toggle = screen.getByRole('switch', { name: m('finance.admin.reports.cashReportSignature') });
     fireEvent.click(toggle);
     fireEvent.click(screen.getByTestId('reports-settings-save'));
-    await waitFor(() => expect(setReportSettingsAction).toHaveBeenCalledWith({ statuteReference: '§ 9 Nr. 3 der Satzung', cashReportSignature: true, treasurerIsStatutoryBoard: null }));
+    await waitFor(() => expect(setReportSettingsAction).toHaveBeenCalledWith({ statuteReference: '§ 9 Nr. 3 der Satzung', cashReportSignature: true, treasurerIsStatutoryBoard: null, assemblyApprovesAccounts: false }));
   });
 
   it('Satzungsangabe § 26 BGB (Amtsübergabe): Ja · Nein · Keine Angabe, Vorgabe ohne Angabe', async () => {
@@ -38,6 +38,14 @@ describe('ReportsPanel (Plan A3 Task 6b)', () => {
     expect(board).toBeTruthy();
     fireEvent.click(screen.getByTestId('reports-settings-save'));
     await waitFor(() => expect(setReportSettingsAction).toHaveBeenCalledWith(expect.objectContaining({ treasurerIsStatutoryBoard: true })));
+  });
+
+  it('„Die MV genehmigt die Jahresrechnung“ zählt als Änderung und geht mit', async () => {
+    setReportSettingsAction.mockResolvedValue({ status: 'success' });
+    panel();
+    fireEvent.click(screen.getByRole('switch', { name: m('finance.admin.reports.assemblyApprovesAccounts') }));
+    fireEvent.click(screen.getByTestId('reports-settings-save'));
+    await waitFor(() => expect(setReportSettingsAction).toHaveBeenCalledWith(expect.objectContaining({ assemblyApprovesAccounts: true })));
   });
 
   it('puts the field error at the field', async () => {

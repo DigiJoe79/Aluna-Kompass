@@ -54,4 +54,10 @@ describe('das Handbuch', () => {
     }
     expect(missing).toEqual([]);
   });
+
+  it('hat eine Seite Mittelverwendung, auf die die Hilfe der Seite zeigt (M2)', () => {
+    const help = installedModules.flatMap((m) => m.help ?? []).find((h) => h.href === '/finance/fund-use');
+    expect(help?.doc).toBe('finanzen/mittelverwendung');
+    expect(indexed.map((p) => p.doc)).toContain('finanzen/mittelverwendung');
+  });
 });

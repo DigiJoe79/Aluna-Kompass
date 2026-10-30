@@ -1,16 +1,33 @@
-import { readdirSync } from 'node:fs';
+import { mkdtempSync, readdirSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { installedModuleKeys, parseVerifyArgs, scopeFromPaths, specProject, testMatchFor } from '../e2e/projects';
+import { oneServerFailureEndsRun } from '../e2e/servers';
 import { installedModules } from '@/modules';
 
 const ROOT = path.resolve(import.meta.dirname, '..');
+
+describe('oneServerFailureEndsRun', () => {
+  it('nach dem ersten Fehlschlag startet kein Worker mehr einen Server und nennt den Grund', async () => {
+    const marker = path.join(mkdtempSync(path.join(tmpdir(), 'e2e-')), 'lauf');
+    let starts = 0;
+    await expect(oneServerFailureEndsRun(marker, async () => { starts += 1; throw new Error('503 Migration'); })).rejects.toThrow('503 Migration');
+    await expect(oneServerFailureEndsRun(marker, async () => { starts += 1; return 'server'; })).rejects.toThrow(/Lauf abgebrochen.*503 Migration/s);
+    expect(starts).toBe(1);
+  });
+
+  it('ohne Fehlschlag liefert es den Server', async () => {
+    const marker = path.join(mkdtempSync(path.join(tmpdir(), 'e2e-')), 'lauf');
+    await expect(oneServerFailureEndsRun(marker, async () => 'server')).resolves.toBe('server');
+  });
+});
 const modules = installedModuleKeys(ROOT);
 const specs = readdirSync(path.join(ROOT, 'e2e')).filter((name) => name.endsWith('.spec.ts'));
 
 describe('installedModuleKeys', () => {
   it('liest die Module aus packages/modules', () => {
-    expect(modules).toEqual(['animals', 'contacts', 'dms', 'finance', 'members', 'projects', 'site']);
+    expect(modules).toEqual(['animals', 'contacts', 'dms', 'finance', 'governance', 'members', 'projects', 'site']);
   });
 });
 

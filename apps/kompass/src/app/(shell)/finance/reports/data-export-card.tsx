@@ -2,7 +2,7 @@
 
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useDateFormat } from '@/components/date-format-provider';
 import { RefusalNotice } from '@/components/forms/refusal-notice';
 import { useActionFeedback } from '@/components/forms/use-action-feedback';
@@ -13,12 +13,12 @@ import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableEmpty, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import type { DataExportRunView } from '@/lib/finance/data-export-view';
 import { formatSize } from '@/lib/format-size';
+import { pollTextStatus } from '@/lib/poll-text-status';
 import { useFileDownload } from '@/lib/use-file-download';
 import { cancelDataExportAction } from './actions';
 import { DataExportDialog, type DataExportYear } from './data-export-dialog';
 
 const STEPS = ['entries', 'masterData', 'vouchers', 'history', 'package'] as const;
-const POLL_MS = 1500;
 
 export interface DataExportRow {
   id: string;
@@ -60,28 +60,26 @@ export function DataExportCard({ initial, rows, years }: { initial: DataExportRu
   const opener = useRef<HTMLButtonElement>(null);
   const feedback = useActionFeedback();
   const file = useFileDownload({ forbidden: t('downloadRefused.forbidden'), notFound: t('downloadRefused.notFound'), failed: t('downloadRefused.failed') });
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const poll = useCallback(async () => {
-    const res = await fetch('/finance/data-export/status', { cache: 'no-store' }).catch(() => null);
-    if (res?.ok) {
-      const next = (await res.json()) as DataExportRunView;
-      setView(next);
-      if (next.state === 'running') timer.current = setTimeout(() => void poll(), POLL_MS);
-      else router.refresh();
-    }
-  }, [router]);
+  // Abgefragt wird, solange ein Lauf läuft oder gerade angestoßen wurde (App-B4): über `pollTextStatus`, das nach einem
+  // fehlgeschlagenen Abruf mit Abstand weiterfragt und nach dem Verlassen der Seite nichts mehr plant.
+  // Jeder Anstoß (Start, Abbrechen) beginnt eine neue Kette, auch wenn die vorige aufgegeben hat.
+  const [watch, setWatch] = useState(initial.state === 'running' ? 1 : 0);
+  const poll = () => setWatch((n) => n + 1);
 
   useEffect(() => {
-    if (initial.state === 'running') timer.current = setTimeout(() => void poll(), POLL_MS);
-    return () => {
-      if (timer.current) clearTimeout(timer.current);
-    };
-  }, [initial.state, poll]);
+    if (watch === 0) return;
+    return pollTextStatus({
+      url: '/finance/data-export/status',
+      isPending: (body) => body.state === 'running',
+      onTick: (body) => setView(body as unknown as DataExportRunView),
+      onDone: () => router.refresh(),
+      onUnauthorized: () => router.refresh(),
+    });
+  }, [watch, router]);
 
   const cancel = async () => {
     const result = await feedback.run(() => cancelDataExportAction(), { retry: () => void cancel() });
-    if (result.status === 'success') void poll();
+    if (result.status === 'success') poll();
   };
 
   const running = view.state === 'running';
@@ -157,7 +155,7 @@ export function DataExportCard({ initial, rows, years }: { initial: DataExportRu
       </Table>
       <RefusalNotice state={file.refusal} />
       <p className="text-meta text-muted-ink">{t('list.keep')}</p>
-      <DataExportDialog open={dialogOpen} onOpenChange={setDialogOpen} years={years} finalFocus={opener} onStarted={() => void poll()} />
+      <DataExportDialog open={dialogOpen} onOpenChange={setDialogOpen} years={years} finalFocus={opener} onStarted={poll} />
     </div>
   );
 }

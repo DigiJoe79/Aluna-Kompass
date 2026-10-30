@@ -9,6 +9,7 @@ import { type Allowlist, matchingLines, read, relative, sourceFiles, allowlistHy
 const FIXED = /max-w-\[[\d.]+(px|ch|rem|em)\]/;
 
 export const ALLOWED: Allowlist = {
+  'app/(shell)/governance/meetings/[id]/live/live-workspace.tsx': 'Arbeitsfläche Mitlauf (N1, Board Gremien 1a): Spalte des aktuellen Punkts höchstens 820 px, Freigabe Joe 2026-10-28.',
   'app/(shell)/help/[[...doc]]/page.tsx': 'Lesetext Handbuch: 72 Zeichen je Zeile (Entscheidung zum Inventar, 05.10.2026).',
   'app/(shell)/dms/new/draft-preview.tsx': 'Papiermaß der Briefvorschau (A4 im Maßstab), keine Seitenbreite.',
   'components/empty-state.tsx': 'Textblock des leeren Zustands, wie `max-w-prose` (Entscheidung zum Inventar).',

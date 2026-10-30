@@ -51,12 +51,12 @@ describe('siteMediaReferences', () => {
     unwrap(await createEntry(deps, ctx, { collection: 'news', slug: 'markt', data: { title: { de: 'Markt' }, image: b.id } }));
 
     const all = siteMediaReferences(deps, new Set([a.id, b.id]));
-    expect(all.filter((h) => h.assetId === b.id).map((h) => h.label)).toEqual(['Eintrag „Markt“ in „News“']);
+    expect(all.filter((h) => h.assetId === b.id).map((h) => h.label)).toEqual([{ key: 'site.references.entry', params: { title: 'Markt', collection: 'News' } }]);
     const hits = all.filter((h) => h.assetId === a.id);
-    expect(hits.map((h) => h.label).sort()).toEqual(['Eintrag „Fest“ in „News“', 'Variable „Titelbild“']);
+    expect(hits.map((h) => h.label)).toEqual(expect.arrayContaining([{ key: 'site.references.entry', params: { title: 'Fest', collection: 'News' } }, { key: 'site.references.variable', params: { name: 'Titelbild' } }]));
     // Ohne Beschriftung im Template: „—“, nie der Schlüssel der Variable (Namen statt Schlüssel, 0.2.12).
     unwrap(await setValues(deps, ctx, { values: { stageImage: b.id } }));
-    expect(siteMediaReferences(deps, new Set([b.id])).filter((h) => h.entity === 'siteValue').map((h) => h.label)).toEqual(['Variable „\u2014“']);
+    expect(siteMediaReferences(deps, new Set([b.id])).filter((h) => h.entity === 'siteValue').map((h) => h.label)).toEqual([{ key: 'site.references.variable', params: { name: '\u2014' } }]);
     const variable = hits.find((h) => h.entity === 'siteValue')!;
     expect(variable.href).toBe('/site/variables');
     const entry = hits.find((h) => h.entity === 'siteEntry')!;
@@ -86,10 +86,12 @@ export default defineTemplate({
     unwrap(await createEntry(deps, ctx, { collection: 'team', data: { name: 'Rita Beispiel', photo: a.id } }));
     unwrap(await createEntry(deps, ctx, { collection: 'notes', data: { title: 'Schlichter Titel', image: a.id } }));
     unwrap(await setValues(deps, ctx, { values: { logo: a.id } }));
-    expect(siteMediaReferences(deps, new Set([a.id])).map((h) => h.label).sort()).toEqual([
-      'Eintrag „Rita Beispiel“ in „Team“',
-      'Eintrag „Schlichter Titel“ in „Notizen“',
-      'Variable „\u2014“',
-    ]);
+    expect(siteMediaReferences(deps, new Set([a.id])).map((h) => h.label)).toEqual(
+      expect.arrayContaining([
+        { key: 'site.references.entry', params: { title: 'Rita Beispiel', collection: 'Team' } },
+        { key: 'site.references.entry', params: { title: 'Schlichter Titel', collection: 'Notizen' } },
+        { key: 'site.references.variable', params: { name: '\u2014' } },
+      ]),
+    );
   });
 });

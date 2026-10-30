@@ -24,3 +24,5 @@ export { issueMemberLetter, LETTER_PERMISSION, MEMBER_LETTER_KINDS, memberLetter
 export { issueMemberCountCertificate, memberCountCertificateSchema } from './letters/count';
 export { markRunPostDispatched, moveRunLetters, runDispatchState, runMarkPostSchema, runMoveSchema, runPrintPdf, runRefSchema, sendRunMails, type OutboxState, type RunDispatchState } from './run-dispatch';
 export * from './dunning';
+// Gremien (Plan G2 Task 5): Empfänger und Anschrift eines Briefs je Mitglied für den Einladungslauf.
+export { letterRecipientOf, recipientFacts } from './letters/issue';

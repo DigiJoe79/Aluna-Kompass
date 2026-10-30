@@ -12,7 +12,7 @@ import { withTestReports } from '../src/reporting/catalog';
 import { finalizeFinanceReport, releaseReportsForFinalizing, renderContextInternal } from '../src/reporting/finalize';
 import { cashReportDefinition, computeCashReport, type CashReport } from '../src/reporting/reports/cash-report';
 import { cashReportTypst } from '../src/reporting/reports/cash-report-typst';
-import { financeAllocationLines, financeCategories } from '../src/schema';
+import { financeAllocationCorrections, financeAllocationLines, financeCategories } from '../src/schema';
 import { ledgerFixture } from './helpers';
 import { testReport } from './reporting-fixture';
 
@@ -123,6 +123,18 @@ describe('Bericht cashReport (Rechenschaft A2 Task 4)', () => {
     expect(cashReportTypst(data, renderContextInternal(f.deps))).toContain('Korrekturen an Vorjahren');
     // Im Jahr der Buchung selbst ist es keine Korrektur an einem Vorjahr.
     expect(computeCashReport(f.deps.db, { fiscalYearId: f.years['2025']!.id }).priorYearCorrections).toEqual([]);
+  });
+
+  it('F-B3: a correction applied on 01.01. at 00:30 Berlin time belongs to the new year', async () => {
+    const f = await ledgerFixture({ years: ['2024', '2025', '2026'] });
+    const entry = await book(f, { date: '2024-06-01', key: 'donations', cents: 3000, contactId: f.wrongDonor.id });
+    const line = f.deps.db.select().from(financeAllocationLines).where(eq(financeAllocationLines.entryId, entry.id)).get()!;
+    unwrap(await requestAllocationCorrection(f.deps, f.ctx, { lineId: line.id, changes: { contactId: f.rightDonor.id }, note: 'Falsch zugeordnet' }));
+    f.deps.db.update(financeAllocationCorrections).set({ approvedAt: '2025-12-31T23:30:00.000Z' }).run();
+    expect(computeCashReport(f.deps.db, { fiscalYearId: f.years['2025']!.id }).priorYearCorrections).toEqual([]);
+    expect(computeCashReport(f.deps.db, { fiscalYearId: f.years['2026']!.id }).priorYearCorrections).toEqual([{ entryId: entry.id, entryNumber: entry.number, fiscalYearDesignation: '2024', appliedOn: '2026-01-01' }]);
+    f.deps.db.update(financeAllocationCorrections).set({ approvedAt: '2025-12-31T22:30:00.000Z' }).run();
+    expect(computeCashReport(f.deps.db, { fiscalYearId: f.years['2025']!.id }).priorYearCorrections).toEqual([{ entryId: entry.id, entryNumber: entry.number, fiscalYearDesignation: '2024', appliedOn: '2025-12-31' }]);
   });
 
   it('folds small categories beyond 22 rows', async () => {

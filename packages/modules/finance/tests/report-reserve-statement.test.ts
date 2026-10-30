@@ -72,3 +72,24 @@ describe('Bericht reserveStatement (Rechenschaft B1 Task 4)', () => {
     expect(unwrap(await runFinanceReport(f.deps, f.ctx, three)).stage).toBe('review');
   });
 });
+
+describe('Rücklagen im wGB und in der Vermögensverwaltung im Rücklagenspiegel (M1 Task 2)', () => {
+  it('shows operation reserves with their own wording', async () => {
+    const f = await ledgerFixture();
+    const vv = unwrap(await saveReserve(f.deps, f.ctx, { kind: 'assetManagement', name: 'Rücklage Vermietung', purposeText: 'Renovierung des vermieteten Raums', resolutionUpload: upload('2026-06-28') }));
+    unwrap(await recordReserveMovement(f.deps, f.ctx, { reserveId: vv.id, kind: 'allocate', movementDate: '2026-06-30', amountCents: 40_000, resolutionUpload: upload('2026-06-28') }));
+    const data = computeReserveStatementReport(f.deps.db, { fiscalYearId: f.year.id });
+    expect(data.reserves.find((r) => r.reserveId === vv.id)!.kind).toBe('assetManagement');
+    const body = reserveStatementTypst(data, renderContextInternal(f.deps));
+    expect(body).toContain('keine Rücklage nach § 62 AO');
+    expect(body).toContain('Rücklage in der Vermögensverwaltung (AEAO zu § 55 Nr. 3 und Nr. 28');
+  });
+
+  it('shows the reference year column when a § 62 reserve was formed late', async () => {
+    const f = await ledgerFixture({ years: ['2025', '2026'] });
+    const project = unwrap(await saveReserve(f.deps, f.ctx, { kind: 'projectFunds', name: 'Neues Gehege', purposeText: 'Bau', resolutionUpload: upload('2026-01-28') }));
+    unwrap(await recordReserveMovement(f.deps, f.ctx, { reserveId: project.id, kind: 'allocate', movementDate: '2026-02-01', amountCents: 1_000, forFiscalYearId: f.years['2025']!.id, resolutionUpload: upload('2026-01-30') }));
+    const body = reserveStatementTypst(computeReserveStatementReport(f.deps.db, { fiscalYearId: f.years['2026']!.id }), renderContextInternal(f.deps));
+    expect(body).toContain('für Jahr');
+  });
+});

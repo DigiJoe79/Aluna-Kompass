@@ -6,7 +6,7 @@ import { and, asc, desc, eq, isNotNull, isNull } from 'drizzle-orm';
 import { z } from 'zod';
 import { basisInForceOn } from './basis-rules';
 import { financeAudit } from '../audit';
-import { financeConflict } from '../errors';
+import { financeConflict, uploadLimitProblem } from '../errors';
 import { valueAt } from '../ledger/dated-values';
 import { DATED_SERIES } from '../ledger/dated-series';
 import { isValidIban, maskIban, normalizeIban } from '../ledger/iban';
@@ -340,6 +340,8 @@ export async function uploadExpenseReceipt(deps: Deps, ctx: CallContext, input: 
   if (denied) return denied;
   const parsed = validate(deps, receiptSchema, input);
   if (!parsed.ok) return parsed;
+  const tooLarge = uploadLimitProblem(deps, parsed.value.bytes, parsed.value.fileName);
+  if (tooLarge) return tooLarge;
   const v = parsed.value;
   const loaded = loadOwnClaim(deps, ctx, v.claimId);
   if (!loaded.ok) return loaded;

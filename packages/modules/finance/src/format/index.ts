@@ -3,6 +3,7 @@
  * Browser nutzbar (`@kompass/module-finance/format`). Zieht kein `@kompass/core` und keine Datenbank.
  */
 export * from './amount';
+export * from './percent';
 export * from './iban';
 export * from './tax-purposes';
 export * from './section-sign';

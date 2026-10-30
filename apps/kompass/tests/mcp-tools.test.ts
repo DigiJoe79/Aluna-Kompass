@@ -4,6 +4,7 @@ import * as contactsPkg from '@kompass/module-contacts';
 import * as dmsPkg from '@kompass/module-dms';
 import * as financePkg from '@kompass/module-finance';
 import * as membersPkg from '@kompass/module-members';
+import * as governancePkg from '@kompass/module-governance';
 import * as projectsPkg from '@kompass/module-projects';
 import * as corePkg from '@kompass/core';
 import * as sitePkg from '@kompass/module-site';
@@ -229,6 +230,9 @@ const WITHOUT_TOOL: Record<string, string> = {
   'core.getMediaPreview': 'media_get mit variant: preview ruft es; das Werkzeug nennt getMediaAsset, den Weg zum Original.',
   'core.getMediaAssetInfo': 'Datensatz und Fundstellen ohne Bytes für den Dialog „Bildkennzeichnung“; ein Agent liest dasselbe mit media_list (Art, Verwendungen).',
   'core.storeMediaInternal': 'Innenleben; media_upload ist der Weg von außen.',
+  'finance.resolutionReferenceInternal': 'Beschriftung eines Beschlusses der Gremien für Rücklage und Beitragsordnung; die Ansichten (finance_reserves_list, members_fee_schedules_list) tragen sie als resolution.',
+  'finance.resolutionIdProblem': 'Prüfhilfe für resolutionId; finance_reserve_save und members_fee_schedule_save melden resolutionUnknown.',
+  'finance.boardRemunerationResolutionInternal': 'Lesehilfe der Steuerseite (G7): den Beschluss nennt settings_get (finance.boardRemunerationResolutionId), die Sperre meldet finance_setup_board_remuneration.',
   'core.countUnfiledMediaAssets': 'Ein Zähler für „Ohne Ordner“ in der Mediathek; media_list mit folder: null liefert dieselbe Menge.',
   'core.storeMediaAssetDetailed': 'Dieselbe Ablage wie media_upload, mit mehr Rückgabe für die Oberfläche.',
   'core.changeOwnPassword': 'Das eigene Passwort ändert man dort, wo man sich anmeldet. Ein API-Token, das Passwörter setzen darf, wäre ein zweiter Anmeldeweg.',
@@ -237,9 +241,12 @@ const WITHOUT_TOOL: Record<string, string> = {
   'core.listApiTokens': 'Ebenso: Die Liste der eigenen Token gehört zur Kontoverwaltung.',
   'core.listDueFollowUps': 'followups_list_due ruft listDueFollowUpsWithTargets — dieselbe Liste, dazu wohin jede Wiedervorlage zeigt.',
   'core.deleteUnreferencedMedia': 'Innenleben der Löschfunktionen; erreichbar über deren Schalter deleteOrphanedMedia, ruft sich nicht selbst über MCP.',
+  'core.listAgentSwitches': 'Liest die Schalter der Seite Verwaltung → Agenten; ein Agent liest dieselben Werte mit settings_list und settings_get.',
+  'core.setAgentSwitches': 'Die Erlaubnis für Agenten setzt nur ein Mensch am Bildschirm (uiOnly, Spec Seite „Agenten“ 2026-10-29); ein Werkzeug dafür würde immer abgelehnt.',
   'core.requireHumanChannel': 'Prüft den Aufrufkanal; Helfer für Dienste, kein eigener Vorgang.',
   'core.resolveRecordLabel': 'Hakenverteiler für Datensatzbeschriftungen, kein eigener Dienst.',
   'core.withTarget': 'Reichert Wiedervorlagen mit Zielbeschriftung an; Innenleben von listDueFollowUpsWithTargets.',
+  'core.notifyFollowUpAssignee': 'Mail an die zugewiesene Person; Innenleben von followups_create (createFollowUp) und der Dienste, die Wiedervorlagen anlegen.',
 
   // Rechenschaft D1 — Kassenprüfung: Druck und Downloads bleiben in der Oberfläche; die Schreibschritte haben Werkzeuge (D1c).
   'finance.printAuditReport': 'Liefert Bytes; ein Agent liest den Bericht mit finance_audit_report.',
@@ -274,6 +281,7 @@ const WITHOUT_TOOL: Record<string, string> = {
   'finance.readVoucher': 'Liefert Bytes, über die Seiten des Moduls (ab F3).',
   'finance.uploadResolution': 'Upload-Dienst hinter der Oberfläche (F8b, Global Constraints); ein vorhandenes Dokument verknüpft finance_reserve_resolution_link.',
   'finance.readCashCountProtocol': 'Liefert Bytes, über die Seiten des Moduls (F3b Task 2, Muster readVoucher).',
+  'finance.readAuditResolutionMinutes': 'Liefert Bytes, über die Seiten des Moduls (G-30, Muster readVoucher): das Protokoll eines Beschlusses aus Abschnitt 9 der Kassenprüfung.',
   'finance.directDebitFileStream': 'Liefert die Datei für die Bank (pain.008 und CSV) mit der IBAN jedes Zahlers — sie gehört nie in den Modellkontext; nur der Route Handler der Einzugsseite liest sie, über MCP lehnt der Dienst ab (Plan L2, Spec § 8).',
   'finance.readFacsimile': 'Liefert die Bytes einer Unterschrift — sie gehören nie in den Modellkontext; nur der Route Handler der Bescheid-Seite liest sie (F6a, Annahme 8).',
   'finance.previewFinanceReport': 'Liefert Bytes; Agenten lesen die Daten über finance_report',
@@ -281,6 +289,8 @@ const WITHOUT_TOOL: Record<string, string> = {
   'finance.previewConfirmation': 'Liefert Bytes (Vorschau-PDF mit ENTWURF) für den Ausstellen-Dialog; ein Agent liest die Prüfliste über finance_confirmation_check (F6a).',
   'finance.readConfirmationCopy': 'Liefert Bytes (unser Exemplar), über den Route Handler der Spenden-Seite (F6a, Muster readCashCountProtocol).',
   'members.runPrintPdf': 'Liefert Bytes (die Post-Briefe eines Laufs als ein PDF) für den Druck am Bildschirm; ein Agent liest den Versand-Schritt über members_run_dispatch_state (Plan M4 Task 3).',
+  'governance.printMinutesDraft': 'Liefert Bytes (Protokollentwurf zum Unterschreiben); ein Agent liest den Entwurf über governance_minutes_text (Plan G4 Task 2).',
+  'governance.printInvitationPdf': 'Liefert Bytes (die Post-Briefe eines Einladungslaufs als ein PDF) für den Druck am Bildschirm; ein Agent liest den Versand über governance_invitation_dispatch_state (Plan G2 Task 6).',
   'finance.readRunBundle': 'Liefert Bytes (Sammel-PDF eines Serienlaufs), über den Route Handler der Serienlauf-Seite; ein Agent liest den Lauf über finance_confirmation_run_get (F6b Task 4).',
   'finance.readSimplifiedReceipt': 'Liefert Bytes (Vordruck des vereinfachten Nachweises ohne Personenbezug), über den Route Handler des Spendenbuchs (F6b Task 5, Muster readRunBundle).',
   'finance.readExpenseReceipt': 'Liefert Bytes (Beleg eines Antrags), über den Route Handler der Auslagen-Seite; die Eigentümerin liest ihre eigenen ohne finance.read, geprüft im Dienst (F8a Task 2, Review Focus 1).',
@@ -333,6 +343,7 @@ describe('every service has a tool', () => {
     ['dms', dmsPkg],
     ['finance', financePkg],
     ['members', membersPkg],
+    ['governance', governancePkg],
     ['projects', projectsPkg],
     ['core', corePkg],
   ];

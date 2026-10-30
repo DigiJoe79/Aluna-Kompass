@@ -17,8 +17,8 @@ const all = texts(messages, '');
 const nav = messages.nav;
 /** Einträge der Unternavigation je Abschnitt (`CORE_ADMIN`, `CORE_CONFIG` und `adminNavigation` der Module). */
 const pages: Record<string, string[]> = {
-  [nav.groups.admin]: [nav.users, nav.roles, nav.audit, nav.retention, nav.backup],
-  [nav.groups.config]: [nav.settings, nav.locales, nav.themes, nav.modules, nav.documents, nav.finance.admin, nav.animals.admin, nav.site.admin, nav.dms.admin, nav.members.admin],
+  [nav.groups.admin]: [nav.users, nav.roles, nav.agents, nav.audit, nav.retention, nav.backup],
+  [nav.groups.config]: [nav.settings, nav.locales, nav.themes, nav.modules, nav.documents, nav.finance.admin, nav.animals.admin, nav.site.admin, nav.dms.admin, nav.members.admin, nav.governance.admin],
 };
 
 describe('Wegangaben in Hinweistexten', () => {

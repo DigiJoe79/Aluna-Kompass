@@ -54,7 +54,7 @@ describe('deleteProject', () => {
     const linked = unwrap(await createProject(deps, manage, { ...base, slug: 'verwiesen' }));
     const heldResult = await deleteProject(deps, manage, { id: held.id });
     expect(code(heldResult)).toBe('recordHeld');
-    expect(heldResult.ok === false && heldResult.error.type === 'conflict' && heldResult.error.message).toContain('ZB-2026-0003 (dauerhaft)');
+    expect(heldResult.ok === false && heldResult.error).toMatchObject({ params: { permanent: 'yes', holders: expect.stringContaining('ZB-2026-0003') } });
     expect(code(await deleteProject(deps, manage, { id: linked.id }))).toBe('stillReferenced');
     expect(unwrap(await projectDeletionPreview(deps, manage, linked.id))).toMatchObject({ deletable: false, references: [{ entity: 'followUp', id: 'F1' }] });
     expect(deps.db.select().from(projects).all()).toHaveLength(2);

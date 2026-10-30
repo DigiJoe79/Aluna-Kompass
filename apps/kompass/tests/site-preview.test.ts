@@ -1,6 +1,7 @@
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { resolvePreviewFile, rewritePreviewHtml } from '@/lib/site-preview';
+import { previewResponseHeaders, resolvePreviewFile, rewritePreviewHtml } from '@/lib/site-preview';
+import config from '../next.config';
 
 describe('resolvePreviewFile', () => {
   const root = path.resolve('/cache/site-preview');
@@ -48,5 +49,28 @@ describe('rewritePreviewHtml with another prefix (Vorschau einer Prüfung)', () 
     expect(html).toContain('src="/animals/proposal-preview/k1/images/a.webp"');
     expect(html).toContain('srcset="/animals/proposal-preview/k1/images/a-480.webp 480w, /animals/proposal-preview/k1/images/a-960.webp 960w"');
     expect(html).toContain('<base href="/animals/proposal-preview/k1/">');
+  });
+});
+
+/**
+ * Die Vorschau liefert gebaute Dateien im Ursprung der Anwendung aus. Ein SVG
+ * darunter ist ein Dokument: ohne Sandbox liefe ein Skript darin mit den Rechten
+ * der angemeldeten Person. HTML dagegen ist die Webseite selbst — ihre Skripte
+ * (Menü, Filter) müssen laufen, und sie bekommt den CSP der Anwendung.
+ */
+describe('previewResponseHeaders', () => {
+  it.each(['.svg', '.webp', '.png', '.pdf', '.xml', '.unbekannt'])('sandboxes %s', (ext) => {
+    const h = previewResponseHeaders(ext);
+    expect(h['content-security-policy']).toBe('sandbox');
+    expect(h['x-content-type-options']).toBe('nosniff');
+  });
+
+  it('serves html with the policy of the application instead of a sandbox', async () => {
+    const h = previewResponseHeaders('.html');
+    const regeln = await config.headers!();
+    const global = regeln.flatMap((r) => r.headers).find((x) => x.key === 'Content-Security-Policy');
+    expect(h['content-security-policy']).toBe(global?.value);
+    expect(h['content-security-policy']).not.toContain('sandbox');
+    expect(h['content-type']).toContain('text/html');
   });
 });

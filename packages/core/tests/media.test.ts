@@ -93,6 +93,8 @@ describe('media service', () => {
 
   it('filters by folder, kind and query, sorts, and reports references', async () => {
     const deps = createTestDeps({ now: '2026-09-13T10:00:00.000Z' });
+    // Die Suche geht über die aufgelöste Verwendung (K2) — wie in der App mit einem Übersetzer.
+    deps.labels = (key) => (key === 'media.references.logo' ? 'Logo des Vereins' : key);
     const ctx = ctxWith(['media.upload', 'settings.manage'], insertUser(deps, {}));
     const { createMediaFolder } = await import('../src/media/folders');
     const { setSetting } = await import('../src/settings/service');

@@ -19,8 +19,12 @@ export interface ReportListRow {
   periodId?: string | null;
 }
 
-/** Wohin eine Zeile führt: Jahr, Stichtag oder — bei den Steuerberichten — der Zeitraum; die Werte der Anlage Gem auf die Seite „Steuererklärung“. */
+/**
+ * Wohin eine Zeile führt: Jahr, Stichtag oder — bei den Steuerberichten — der Zeitraum; die Werte der Anlage Gem auf die
+ * Seite „Steuererklärung“, die Mittelverwendungsrechnung auf ihre eigene Seite (Plan U2, Muster Anlage Gem).
+ */
 export function reportRowHref(row: Pick<ReportListRow, 'key' | 'periodId'>, yearId: string): string {
+  if (row.key === 'fundsUse') return `/finance/fund-use?year=${encodeURIComponent(yearId)}`;
   if (PERIOD_REPORTS.includes(row.key)) {
     if (!row.periodId) return '/finance/tax';
     const period = encodeURIComponent(row.periodId);
@@ -29,13 +33,16 @@ export function reportRowHref(row: Pick<ReportListRow, 'key' | 'periodId'>, year
   return DATE_REPORTS.includes(row.key) ? `/finance/reports/${row.key}` : `/finance/reports/${row.key}?year=${encodeURIComponent(yearId)}`;
 }
 
-/** Die Gruppen in der Folge des Jahres (Spec § „Seite Berichte“, Board 2a). */
-const GROUPS: readonly ReportGroup[] = ['assembly', 'audit', 'taxOffice', 'work'];
+/**
+ * Die Gruppen in der Folge des Jahres (Spec § „Seite Berichte“, Board 2a). „Öffentlichkeit“ direkt nach der
+ * Mitgliederversammlung (Plan U1): Leser der Jahresrechnung sind Mitglieder wie bei der MV, die Gruppe verlangt dieselbe Freigabe.
+ */
+const GROUPS: readonly ReportGroup[] = ['assembly', 'public', 'audit', 'taxOffice', 'work'];
 
 /**
  * Katalog der Berichte (Board 2a, Designer Runde 2): Gruppen als `TableGroupRow`, je Bericht Titel mit Unterzeile und
  * „Festgeschrieben“ als Text. Keine Stufen-Marke — die Stufe folgt aus dem Jahr und steht einmal im Kopf —, keine
- * Zeilenaktionen. Was noch nicht verfügbar ist (Mittelverwendung), ist eine gedämpfte Zeile ohne Link.
+ * Zeilenaktionen. Was noch nicht verfügbar ist (ein künftiger Bericht), ist eine gedämpfte Zeile ohne Link.
  */
 export function ReportList({ rows, years, yearId }: { rows: ReportListRow[]; years: { id: string; designation: string }[]; yearId: string }) {
   const t = useTranslations('finance.reports');

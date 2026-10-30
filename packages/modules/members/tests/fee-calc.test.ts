@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { computeCharges, type ComputeChargesInput } from '../src/fee-calc';
+import { computeCharges, splitAroundKept, type ComputeChargesInput } from '../src/fee-calc';
 import type { FeeInterval } from '../src/schema';
 
 // Plan M3, Task 3: welche Beiträge in einem Jahr anfallen — rein, ohne Datenbank.
@@ -88,5 +88,20 @@ describe('computeCharges', () => {
       ['2027-07-01', '2027-09-30'],
       ['2027-10-01', '2027-12-31'],
     ]);
+  });
+});
+
+describe('splitAroundKept (Plan R1, M2)', () => {
+  const year = { periodStart: '2027-07-01', periodEnd: '2027-12-31', amountCents: 600, dueOn: '2027-07-01' };
+  const rate = { amountCents: 1200, interval: 'yearly' as const };
+  it('keeps the months no kept fee covers, each piece pro rata and due at its start', () => {
+    expect(splitAroundKept(year, [], rate)).toEqual([year]);
+    expect(splitAroundKept(year, [{ periodStart: '2027-07-01', periodEnd: '2027-07-31' }], rate)).toEqual([{ periodStart: '2027-08-01', periodEnd: '2027-12-31', amountCents: 500, dueOn: '2027-08-01' }]);
+    expect(splitAroundKept(year, [{ periodStart: '2027-08-01', periodEnd: '2027-08-31' }], rate)).toEqual([
+      { periodStart: '2027-07-01', periodEnd: '2027-07-31', amountCents: 100, dueOn: '2027-07-01' },
+      { periodStart: '2027-09-01', periodEnd: '2027-12-31', amountCents: 400, dueOn: '2027-09-01' },
+    ]);
+    expect(splitAroundKept(year, [{ periodStart: '2027-01-01', periodEnd: '2027-12-31' }], rate)).toEqual([]);
+    expect(splitAroundKept(year, [{ periodStart: '2027-07-01', periodEnd: '2027-07-31' }], null)).toEqual([]);
   });
 });

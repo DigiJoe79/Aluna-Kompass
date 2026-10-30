@@ -21,6 +21,7 @@ COPY packages/modules/animals/package.json packages/modules/animals/
 COPY packages/modules/contacts/package.json packages/modules/contacts/
 COPY packages/modules/dms/package.json packages/modules/dms/
 COPY packages/modules/finance/package.json packages/modules/finance/
+COPY packages/modules/governance/package.json packages/modules/governance/
 COPY packages/modules/members/package.json packages/modules/members/
 COPY packages/modules/projects/package.json packages/modules/projects/
 COPY packages/modules/site/package.json packages/modules/site/

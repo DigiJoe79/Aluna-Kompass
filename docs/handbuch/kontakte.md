@@ -70,6 +70,20 @@ Rollen sind keine freien Schlagwörter, und das hat einen Grund: An der Rolle
 hängt die Aufbewahrungsfrist. Eine Frist, die an einem selbst getippten Wort
 hinge, wäre keine.
 
+Bei der Rolle **Vorstandsmitglied** (aus dem Finanzmodul) steht das **Amt**,
+etwa „Schatzmeisterin“, und das Merkmal **„vertritt nach § 26 BGB“**. Es
+unterscheidet den vertretungsberechtigten Vorstand von Beisitzern; nur so
+gekennzeichnete Personen können die Jahresrechnung abzeichnen — in Kompass nur,
+wenn ihr Konto mit dem Kontakt verknüpft ist, sonst als unterschriebener Scan.
+Andere Rollen kennen das Merkmal nicht.
+
+Ist **Gremien** eingeschaltet, führt es die Rollen **Vorstandsmitglied** und
+**Schatzmeister**: Sie folgen den Ämtern, Amt und „vertritt nach § 26 BGB“
+kommen aus dem Amt, und von Hand lassen sie sich weder anlegen noch ändern
+noch beenden — die Ablehnung nennt Gremien. Rollen von vor Gremien ordnen Sie
+unter Einrichtung → Gremien einem Amt zu. Ohne Gremien pflegen Sie beide
+Rollen wie jede andere.
+
 ## Bankverbindungen
 
 Mit dem Recht „Finanzen lesen“ zeigt ein Kontakt seine **Bankverbindungen**:
@@ -105,6 +119,27 @@ Hat jemand die Prüffrage § 13b beim Buchen mit „Nein, weil …“ beantworte
 hier ein Satz mit Grund, Person und Tag, etwa „Kompass fragt hier nicht nach
 § 13b: steuerfreie Zahlungsabwicklung“. **Wieder fragen** löscht dieses Nein; das
 Merkmal bleibt, wie es ist. Wer das Kästchen setzt, löscht das Nein ebenfalls.
+
+## Jahresrechnung
+
+In den Finanzangaben zum Kontakt (mit dem Recht „Finanzen lesen“) stehen zwei
+Angaben für die Großzuwendungen der Jahresrechnung (F8):
+
+- **Juristische Person** — nur bei Organisationen: ja, nein oder unbekannt.
+  „Unbekannt“ wirkt wie „nein“. Nur eine juristische Person erscheint ohne
+  Einwilligung mit Namen; ein Einzelunternehmen oder eine GbR trägt oft einen
+  Personennamen und gilt darum nicht als juristische Person.
+- **Einwilligung zur Namensnennung** — als Verlauf, nie überschrieben:
+  „erteilt am … für die Jahresrechnungen ab {Jahr}“ und „widerrufen am …“, je
+  mit einem Schreiben oder einer E-Mail aus der Akte. Sie umfasst Name und
+  Betrag bzw. Bandbreite in der veröffentlichten Jahresrechnung; der Kontakt
+  kann sie jederzeit widerrufen. Ändern darf, wer Kontakte in Buchungen
+  zuordnen darf.
+
+Ein Widerruf ändert keine festgeschriebene Jahresrechnung. Ist die Person in
+einer auf der Webseite publizierten Jahresrechnung genannt, erzeugt Kompass
+eine Webfassung ohne ihren Namen und legt die Wiedervorlage „Webseite neu
+publizieren“ an (siehe [Berichte](finanzen/berichte.md)).
 
 ## Aufbewahrung
 

@@ -2,7 +2,9 @@ import { unwrap } from '@kompass/core';
 import { auditEntry } from '@kompass/core/testing';
 import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
+import { auditorCandidates } from '../src/auditing/auditor-candidates';
 import { removeAuditor } from '../src/auditing/auditors';
+import { registerAuditorCandidateSource } from '../src/sources';
 import { baselinesOfYearInternal } from '../src/auditing/baseline';
 import { fileAuditReportScan } from '../src/auditing/filing';
 import { printAuditReportBlank } from '../src/auditing/print';
@@ -63,7 +65,7 @@ describe('Scan ablegen', () => {
     const { f, y2025, mira, linkedUser } = await setup();
     const draft = unwrap(await createAuditReportDraft(f.deps, mira.ctx, { fiscalYearId: y2025, kind: 'report' }));
     expect(code(await fileAuditReportScan(f.deps, f.ctx, { reportId: draft.id, bytes: pdfBytes() }))).toBe('auditReportNotReadyToSign');
-    expect(code(await fileAuditReportScan(f.deps, f.ctx, { reportId: draft.id, bytes: new Uint8Array(10 * 1024 * 1024 + 1) }))).toBe('validation');
+    expect(code(await fileAuditReportScan(f.deps, f.ctx, { reportId: draft.id, bytes: new Uint8Array(10 * 1024 * 1024 + 1) }))).toBe('statementTooLarge');
     expect(code(await fileAuditReportScan(f.deps, f.ctx, { reportId: draft.id, bytes: new TextEncoder().encode('kein pdf') }))).toBe('validation');
     const outsider = await linkedUser('Fremd');
     expect(code(await fileAuditReportScan(f.deps, outsider.ctx, { reportId: draft.id, bytes: pdfBytes() }))).toBe('auditorRequired');
@@ -156,5 +158,16 @@ describe('Nur Papier-Prüfer', () => {
     const filed = unwrap(await fileAuditReportScan(f.deps, f.ctx, { fiscalYearId: y2025, bytes: pdfBytes() }));
     expect(filed.report).toMatchObject({ id: blank.reportId, state: 'filed' });
     expect(releaseOfYearInternal(f.deps.db, y2025)!.basis).toBe('auditReport');
+  });
+});
+
+describe('V-9: no auditor suggestions once the report of the year is filed', () => {
+  it('the source still names someone, but after filing the list is empty', async () => {
+    const { f, y2025, mira, ready } = await setup();
+    registerAuditorCandidateSource((_deps, _db, year) => (year.id === y2025 ? [{ contactId: f.wrongDonor.id, name: 'Gewählt', electedOn: '2025-03-20', minutesDocumentId: null, source: { label: 'Beschluss', href: '/governance/resolutions/R1' } }] : []));
+    expect(unwrap(await auditorCandidates(f.deps, f.ctx, { fiscalYearId: y2025 }))).toHaveLength(1);
+    const report = await ready();
+    unwrap(await fileAuditReportScan(f.deps, mira.ctx, { reportId: report.id, bytes: pdfBytes() }));
+    expect(unwrap(await auditorCandidates(f.deps, f.ctx, { fiscalYearId: y2025 }))).toEqual([]);
   });
 });

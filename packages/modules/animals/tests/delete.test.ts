@@ -78,10 +78,11 @@ describe('deleteAnimal', () => {
     const linked = unwrap(await createAnimal(deps, manage, { ...base, name: 'Verwiesen' }));
     const heldResult = await deleteAnimal(deps, manage, { id: held.id });
     expect(code(heldResult)).toBe('recordHeld');
-    expect(heldResult.ok === false && heldResult.error.type === 'conflict' && heldResult.error.message).toContain('Schutzvertrag SV-2026-0007 (bis 31.12.2036)');
+    // K2: Satz aus der Sprachdatei — der Dienst liefert Halter und Frist als Werte.
+    expect(heldResult.ok === false && heldResult.error).toMatchObject({ params: { holders: expect.stringContaining('SV-2026-0007'), untilText: '31.12.2036' } });
     const linkedResult = await deleteAnimal(deps, manage, { id: linked.id });
     expect(code(linkedResult)).toBe('stillReferenced');
-    expect(linkedResult.ok === false && linkedResult.error.type === 'conflict' && linkedResult.error.message).toContain('Anfrage Tierarzt');
+    expect(linkedResult.ok === false && linkedResult.error).toMatchObject({ params: { references: expect.stringContaining('Anfrage Tierarzt') } });
     expect(deps.db.select().from(animals).all()).toHaveLength(2);
   });
 
@@ -98,12 +99,12 @@ describe('deleteAnimal', () => {
     expect(preview.deletable).toBe(true);
     expect(preview.media).toEqual([
       { id: own.id, filename: own.filename, usedElsewhere: [] },
-      { id: shared.id, filename: shared.filename, usedElsewhere: ['Tier „Luna“'] },
+      { id: shared.id, filename: shared.filename, usedElsewhere: [expect.stringContaining('Luna')] },
     ]);
 
     const cleanup = unwrap(await deleteAnimal(deps, manage, { id: rocky.id, deleteOrphanedMedia: true }));
     expect(cleanup.deletedMedia).toEqual([own.id]);
-    expect(cleanup.keptMedia).toEqual([{ id: shared.id, filename: shared.filename, usedBy: ['Tier „Luna“'] }]);
+    expect(cleanup.keptMedia).toEqual([{ id: shared.id, filename: shared.filename, usedBy: [expect.stringContaining('Luna')] }]);
     expect(await deps.media.exists(own.filename)).toBe(false);
     expect(await deps.media.exists(shared.filename)).toBe(true);
     expect(auditEntry(deps, 'media.delete')).toMatchObject({ entityId: own.id });

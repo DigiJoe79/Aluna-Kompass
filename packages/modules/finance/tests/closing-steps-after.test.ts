@@ -9,6 +9,7 @@ import { confirmClosingStep } from '../src/closing/confirmations';
 import { getClosingStatus } from '../src/closing/status';
 import type { ClosingStatus, ClosingStepKey } from '../src/closing/types';
 import { setAccountActive } from '../src/ledger/accounts';
+import { fileAccountStatementDocument } from '../src/ledger/statement-documents';
 import { bookEntry } from '../src/ledger/finalize';
 import { closeInternal, reopenInternal } from '../src/ledger/period';
 import { REPORT_CATALOG } from '../src/reporting/catalog';
@@ -51,6 +52,16 @@ async function setup() {
 }
 
 describe('Jahresabschluss — Schritte 9 bis 12', () => {
+  it('compares the assembly with the filing day in the association\'s zone (F-B3)', async () => {
+    const t = await setup();
+    t.close();
+    t.f.deps.clock.set('2026-02-19T23:30:00.000Z');
+    await t.fileReport();
+    t.f.deps.clock.set('2026-04-01T10:00:00.000Z');
+    const saved = unwrap(await saveAssemblyResult(t.f.deps, t.f.ctx, { fiscalYearId: t.y2025, assemblyOn: '2026-02-19', dischargeMode: 'collective', collectiveOutcome: 'granted' }));
+    expect(saved.warnings).toEqual(['assemblyBeforeAuditReport']);
+  });
+
   it('warns when the assembly lies before the filed audit report, and saves anyway (Entscheidung c)', async () => {
     const t = await setup();
     t.close();
@@ -228,5 +239,67 @@ describe('Schritt 12 nennt die Umsatzsteuer-Jahreserklärung (Plan E6a Task 6)',
     const f = await ledgerFixture({ years: ['2026'] });
     unwrap(await setDatedValue(f.deps, f.ctx, { key: 'taxation', validFrom: '2026-01-01', value: 'regular' }));
     expect(await vatFact(f, f.year.id)).toMatchObject({ calendarYear: 2026, reason: 'regular' });
+  });
+});
+
+describe('Schritt 13 Mittelverwendung festschreiben — nur über der Grenze (M2 Task 1)', () => {
+  async function setup13(cents: number) {
+    const f = await ledgerFixture({ years: ['2024', '2025'] });
+    const y2025 = f.years['2025']!.id;
+    unwrap(await bookEntry(f.deps, f.ctx, { entryDate: '2025-03-01', text: 'Spende', moneyLines: [{ accountId: f.bank.id, amountCents: cents }], allocationLines: [{ categoryId: f.donations.id, amountCents: cents }] }));
+    const status = async () => unwrap(await getClosingStatus(f.deps, f.ctx, { fiscalYearId: y2025 }));
+    const reopen = () => {
+      f.deps.clock.advance(60_000);
+      unwrap(f.deps.db.transaction((tx) => reopenInternal(tx, f.deps, f.ctx, { id: y2025, note: 'Fehlbuchung' })));
+    };
+    return { f, y2025, status, reopen };
+  }
+
+  it('step 13 appears only above the limit', async () => {
+    const at = await setup13(4_500_000);
+    const atLimit = await at.status();
+    expect(atLimit.steps.map((s) => s.key)).not.toContain('fundsUse');
+    expect(atLimit.steps).toHaveLength(12);
+    const above = await setup13(4_500_001);
+    const s = await above.status();
+    expect(s.steps).toHaveLength(13);
+    const last = s.steps.at(-1)!;
+    expect(last).toMatchObject({ key: 'fundsUse', number: 13, group: 'after', confirmable: false, done: false, confirmation: null });
+    expect(last.facts).toMatchObject({ key: 'fundsUse', revenueCents: 4_500_001, limitCents: 4_500_000, stage: 'preliminary', finalVersion: null, shortHash: expect.stringMatching(/^[0-9a-f]{7,}$/) });
+  });
+
+  it('done once the report is final; reopening puts it back to repeat', async () => {
+    const t = await setup13(5_000_000);
+    t.f.closeYear(t.f.years['2024']!.id);
+    t.f.closeYear(t.y2025);
+    // Der Schritt kennt die Sperre des Festschreibens vorher (U2-Nachzug): hier fehlt der Auszug zum Stichtag.
+    expect((await t.status()).steps.at(-1)).toMatchObject({ key: 'fundsUse', done: false, facts: { stage: 'review', finalizeBlock: { code: 'reportStatementsMissing' } } });
+    // Ohne Freigabe der Kassenprüfung (Gruppe Finanzamt); der Auszug zum Stichtag liegt.
+    unwrap(await fileAccountStatementDocument(t.f.deps, t.f.ctx, { accountId: t.f.bank.id, periodTo: '2025-12-31', bytes: pdfBytes() }));
+    expect((await t.status()).steps.at(-1)).toMatchObject({ facts: { finalizeBlock: null } });
+    const done = unwrap(await finalizeFinanceReport(t.f.deps, t.f.ctx, { report: 'fundsUse', params: { fiscalYearId: t.y2025 } }));
+    const s = await t.status();
+    const step13 = s.steps.at(-1)!;
+    expect(step13).toMatchObject({ key: 'fundsUse', done: true, facts: { stage: 'final', finalVersion: { documentNumber: done.documentNumber } } });
+    t.reopen();
+    const after = await t.status();
+    expect(after.toRepeat).toContain('fundsUse');
+    expect(after.steps.find((x) => x.key === 'fundsUse')!.done).toBe(false);
+  });
+
+  it('reopening lists an open step 13 to repeat', async () => {
+    const t = await setup13(5_000_000);
+    t.f.closeYear(t.f.years['2024']!.id);
+    t.f.closeYear(t.y2025);
+    t.reopen();
+    const s = await t.status();
+    expect(s.toRepeat).toContain('fundsUse');
+    expect(s.steps.find((x) => x.key === 'fundsUse')!.done).toBe(false);
+  });
+
+  it('step 13 is not confirmable', async () => {
+    const t = await setup13(5_000_000);
+    const r = await confirmClosingStep(t.f.deps, t.f.ctx, { fiscalYearId: t.y2025, step: 'fundsUse', note: 'erledigt' });
+    expect(r.ok ? 'ok' : r.error.type).toBe('validation');
   });
 });

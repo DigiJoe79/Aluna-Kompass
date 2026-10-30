@@ -1,4 +1,5 @@
-import type { DbOrTx } from '@kompass/core';
+import { DEFAULT_TIME_ZONE, type DbOrTx } from '@kompass/core';
+import { zonedDayOf } from '../zoned-days';
 import { documents } from '@kompass/module-dms';
 import { and, eq, inArray, isNotNull, isNull, ne } from 'drizzle-orm';
 import { financeEntries, financeEntryDocuments, financeExpenseClaims, financeExpensePositions, financePartnerEvidence, financePartnerPayments } from '../schema';
@@ -30,7 +31,7 @@ export interface ReusedEvidenceGroup {
 
 type Use = ReusedEvidenceUse & { checksum: string | null; operation: string };
 
-const dayOf = (value: string): string => value.slice(0, 10);
+const dayOf = (value: string, timeZone: string): string => zonedDayOf(value, timeZone);
 
 /** Die Akten-Dokumente der Verwendungen (Nummer, Prüfsumme). */
 function documentsOf(db: DbOrTx, ids: readonly (string | null)[]): Map<string, { number: string | null; fileChecksum: string | null }> {
@@ -62,7 +63,7 @@ function voucherUses(db: DbOrTx): Use[] {
   });
 }
 
-function partnerEvidenceUses(db: DbOrTx): Use[] {
+function partnerEvidenceUses(db: DbOrTx, timeZone: string): Use[] {
   const rows = db
     .select({ paymentId: financePartnerEvidence.paymentId, documentId: financePartnerEvidence.documentId, addedAt: financePartnerEvidence.addedAt, number: financePartnerPayments.number })
     .from(financePartnerEvidence)
@@ -72,11 +73,11 @@ function partnerEvidenceUses(db: DbOrTx): Use[] {
   const docs = documentsOf(db, rows.map((r) => r.documentId));
   return rows.map((r) => {
     const d = docs.get(r.documentId!);
-    return { kind: 'partnerEvidence', refId: r.paymentId, refNumber: r.number, date: dayOf(r.addedAt), documentId: r.documentId, documentNumber: d?.number ?? null, checksum: d?.fileChecksum ?? null, operation: r.paymentId };
+    return { kind: 'partnerEvidence', refId: r.paymentId, refNumber: r.number, date: dayOf(r.addedAt, timeZone), documentId: r.documentId, documentNumber: d?.number ?? null, checksum: d?.fileChecksum ?? null, operation: r.paymentId };
   });
 }
 
-function expenseReceiptUses(db: DbOrTx): Use[] {
+function expenseReceiptUses(db: DbOrTx, timeZone: string): Use[] {
   const rows = db
     .select({ claimId: financeExpensePositions.claimId, documentId: financeExpensePositions.documentId, documentNumber: financeExpensePositions.documentNumber, positionDate: financeExpensePositions.positionDate, submittedAt: financeExpenseClaims.submittedAt, createdAt: financeExpenseClaims.createdAt, number: financeExpenseClaims.number })
     .from(financeExpensePositions)
@@ -86,13 +87,14 @@ function expenseReceiptUses(db: DbOrTx): Use[] {
   const docs = documentsOf(db, rows.map((r) => r.documentId));
   return rows.map((r) => {
     const d = docs.get(r.documentId!);
-    return { kind: 'expenseReceipt', refId: r.claimId, refNumber: r.number, date: r.positionDate ?? dayOf(r.submittedAt ?? r.createdAt), documentId: r.documentId, documentNumber: r.documentNumber ?? d?.number ?? null, checksum: d?.fileChecksum ?? null, operation: r.claimId };
+    return { kind: 'expenseReceipt', refId: r.claimId, refNumber: r.number, date: r.positionDate ?? dayOf(r.submittedAt ?? r.createdAt, timeZone), documentId: r.documentId, documentNumber: r.documentNumber ?? d?.number ?? null, checksum: d?.fileChecksum ?? null, operation: r.claimId };
   });
 }
 
-export function reusedEvidenceInternal(db: DbOrTx, range: { from: string; to: string }): ReusedEvidenceGroup[] {
+/** `timeZone`: die Zone des Vereins (F-B3) — Zeitstempel werden zu ihrem Tag dort. */
+export function reusedEvidenceInternal(db: DbOrTx, range: { from: string; to: string }, timeZone: string = DEFAULT_TIME_ZONE): ReusedEvidenceGroup[] {
   const groups = new Map<string, Use[]>();
-  for (const use of [...voucherUses(db), ...partnerEvidenceUses(db), ...expenseReceiptUses(db)]) {
+  for (const use of [...voucherUses(db), ...partnerEvidenceUses(db, timeZone), ...expenseReceiptUses(db, timeZone)]) {
     const identity = use.checksum ? `sha:${use.checksum}` : use.documentId ? `doc:${use.documentId}` : null;
     if (!identity) continue;
     const key = `${use.kind}:${identity}`;

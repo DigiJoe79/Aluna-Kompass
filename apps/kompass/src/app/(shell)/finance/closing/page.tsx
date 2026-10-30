@@ -85,7 +85,7 @@ export default async function ClosingPage({ searchParams }: { searchParams: Prom
     <Page width="task" header={<ClosingHeader status={status} reopen={reopen} handoverStart={{ today: todayIn(deps), canCreateContact: hasPermission(ctx, 'contacts.manage') }} />}>
       <div className="flex flex-col gap-4">
         <ClosingYearBar years={[...years].sort((a, b) => b.endsOn.localeCompare(a.endsOn)).map((y) => ({ id: y.id, designation: y.designation }))} yearId={status.fiscalYearId} steps={status.steps.length} />
-        <ClosingSteps status={status} names={names} canWrite={hasPermission(ctx, 'finance.entriesWrite')} packageRun={packageRun} nextDesignation={nextDesignation} assembly={assembly} today={todayIn(deps)} canFileVat={hasPermission(ctx, 'finance.periodClose')} />
+        <ClosingSteps status={status} names={names} canWrite={hasPermission(ctx, 'finance.entriesWrite')} packageRun={packageRun} nextDesignation={nextDesignation} assembly={assembly} today={todayIn(deps)} canFileVat={hasPermission(ctx, 'finance.periodClose')} canFinalize={hasPermission(ctx, 'finance.reportsFinalize')} />
       </div>
     </Page>
   );

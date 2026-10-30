@@ -67,11 +67,12 @@ describe('Bezeichnungen von Haltern und Datensätzen (K2, Rest von Befund 49)', 
     expect(panel).toMatch(/areaLabel = [^\n]*nameOrEmpty\(/);
   });
 
+  // K2 (0.4.5): auch die Fundstellen der Mediathek und die Verweise des Löschdialogs (`*.references.*`).
   it('jeder Schlüssel, den ein Modul nennt, steht in der Sprachdatei', () => {
     const keys = new Set<string>();
     const sources = [...readdirSync(MODULES).map((m) => path.join(MODULES, m, 'src')), path.join(ROOT, 'packages/core/src')];
     for (const file of sources.flatMap(files).filter((f) => f.endsWith('.ts'))) {
-      for (const match of readFileSync(file, 'utf8').matchAll(/'([a-z]+\.records\.[A-Za-z.]+)'/g)) keys.add(match[1]!);
+      for (const match of readFileSync(file, 'utf8').matchAll(/'([a-z]+\.(?:records|references)\.[A-Za-z.]+)'/g)) keys.add(match[1]!);
     }
     expect(keys.size).toBeGreaterThan(0);
     expect([...keys].filter((key) => !has(key))).toEqual([]);

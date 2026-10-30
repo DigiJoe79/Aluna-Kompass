@@ -133,6 +133,8 @@ export {
   confirmSetupStep,
   getPermissionMatrix,
   getSetupStatus,
+  applyBoardRemunerationInternal,
+  boardRemunerationResolutionInternal,
   setBoardRemuneration,
   setExpenseWaiverBasisText,
   setFinanceLimit,
@@ -231,6 +233,8 @@ export {
   suggestedDueOn,
   TAX_PERIOD_DOCUMENT_SLOTS,
   taxPeriodDefaults,
+  taxPeriodStatute,
+  type TaxStatuteSuggestion,
   taxPeriodInternal,
   taxPeriodOfYearInternal,
   taxReturnFiledForYearInternal,
@@ -240,20 +244,42 @@ export {
   type TaxPeriodView,
 } from './ledger/tax-periods';
 export { REVERSE_CHARGE_DECLINE_REASONS, type ReverseChargeDeclineReason } from './ledger/codes';
-export { clearReverseChargeDecline, contactTaxDetailsInternal, declineReverseCharge, getContactTaxDetails, saveContactTaxDetails, type ContactTaxDetails, type ReverseChargeDecline } from './allocation/contact-tax-details';
+export { clearReverseChargeDecline, contactTaxDetailsInternal, declineReverseCharge, getContactTaxDetails, saveContactTaxDetails, type ContactFinanceDetails, type ContactTaxDetails, type ReverseChargeDecline } from './allocation/contact-tax-details';
+export { nameConsentHistoryInternal, nameConsentValidInternal, recordNameConsent, recordNameConsentSchema, type NameConsentEntry } from './allocation/name-consents';
+export { representativeOfUserInternal, representativesInternal, type Representative } from './ledger/representatives';
+export { ANNUAL_ACCOUNTS_EXPLANATION_MAX, annualAccountsExplanationInternal, getAnnualAccountsExplanation, saveAnnualAccountsExplanation, type AnnualAccountsExplanationView } from './reporting/annual-accounts-notes';
+export { DONATION_PLATFORMS, type DonationPlatform } from './ledger/codes';
+export { registerNameConsentRevokedHook, type NameConsentRevokedHook } from './locks';
 export { ADDS_TO_ASSETS_OPT_OUTS, type AddsToAssetsOptOut } from './ledger/codes';
 export { getTaxReturn, type TaxReturnView } from './reporting/tax-return';
+export { annualAccountsReport, computeAnnualAccounts, type AnnualAccounts, type Amount as AnnualAccountsAmount } from './reporting/reports/annual-accounts';
+export { ANNUAL_ACCOUNTS_PAPER_NAMES } from './reporting/reports/annual-accounts-typst';
+export { INCOME_ROWS, type IncomeRow } from './reporting/reports/annual-accounts-rows';
+// M1 — Mittelverwendungsrechnung (Bericht `fundsUse`, freigeschaltet mit M2).
+export { computeFundsUseReport, fundsUseReport, type FundsUseReport, type FundsUseReportOpening } from './reporting/reports/funds-use';
+export { fundsUseAppliesInternal, fundsUseChainInternal, fundsUseYearInputInternal } from './reporting/funds-use-inputs';
+export { annualAccountsNamingInternal } from './reporting/annual-accounts-naming';
+export { annualAccountsDonorEffect, getAnnualAccountsState, type AnnualAccountsRowState, type AnnualAccountsState } from './closing/annual-accounts-state';
+export { publishAnnualAccounts, withdrawAnnualAccounts, type AnnualAccountsPublicationView } from './closing/annual-accounts-publish';
+export { publishedAnnualAccounts } from './closing/annual-accounts-view';
+export { attachSignedAnnualAccountsScan, requestAnnualAccountsSignature, signAnnualAccounts, signatureViewInternal, type AnnualAccountsSignatureView } from './closing/annual-accounts-sign';
+export { endowmentAtInternal } from './ledger/endowment';
 export type { TaxIncomePost, TaxIncomeStatementSphere, TaxIncomeStatementYear, TaxReturnIncomeStatementReport } from './reporting/reports/tax-return-income-statement';
 export type { GemAttachment, GemAttachmentKey, GemHint, GemLineValue, GemOrigin, GemValue, TaxReturnGemReport } from './reporting/reports/tax-return-gem';
 export { assessmentYearOf, GEM_FORMS, GEM_SECTION_TITLES, GEM_UNVERIFIED_NOTE, gemFormFor, type GemForm, type GemLine, type GemLineKind, type GemSection, type GemSource } from './reporting/gem-forms';
 export { cancelHandover, countCashForHandover, fileHandoverProtocol, getHandover, handoverDefaults, listHandovers, printHandoverProtocol, recordHandoverInterimReport, saveHandoverItems, startHandover, updateHandover, type HandoverItemKey, type HandoverView } from './closing/handover';
 export { carriedIntoYearInternal, carryOverForBaselineInternal, carryOverOfYearInternal, recordCarryOverInternal, type CarryOverChange } from './auditing/carry-over';
+export { registerAssemblyResultSource, registerAuditorCandidateSource, registerResolutionFactsSource, registerStatuteSource, resolutionFactsOf, type ResolutionFacts, type ResolutionFactsSource, type AssemblyResultSource, type AuditorCandidate, type AuditorCandidateSource, type GovernedAssembly, type StatuteSource, type StatuteSuggestion , AUDIT_RESOLUTION_KINDS, registerAuditResolutionSource, type AuditResolution, type AuditResolutionKind, type AuditResolutionSource } from './sources';
+export { auditorCandidates } from './auditing/auditor-candidates';
+export { resolutionIdProblem, resolutionReferenceInternal, type ResolutionReference } from './resolution-ref';
 export { assemblyOfYearInternal, fileAssemblyMinutes, getAssemblyResult, saveAssemblyResult, type AssemblyPerson } from './closing/assembly';
+// Gremien liest die zu Entlastenden (Plan G3 Task 5).
+export { assemblyPersonsInternal } from './closing/assembly';
 export { accountStatementsForYearInternal, confirmAccountForYear, fileAccountStatementDocument, linkAccountStatementDocument, missingStatementPdfsInternal, suggestStatementPeriod, STATEMENT_MAX_BYTES, type AccountYearConfirmationKind, type AccountYearStatementRow } from './ledger/statement-documents';
 export { financeRecordDeleted, financeRecordReferences, financeRetentionDue, financeRetentionHolds, yearAnchorInternal } from './ledger/holds';
 export { getEntryHistory, type EntryHistoryEvent } from './ledger/history';
 export { getProjectFinance, projectFinanceInternal, setProjectFinance, type ProjectFinanceSettings } from './ledger/project-settings';
-export { cancelOpenItem, cancelOriginOpenItem, countingPaymentsInternal, createOpenItem, createOriginOpenItem, draftSettlementCentsInternal, listOpenItems, listOpenItemSettlements, openCentsInternal, openItemHasAnySettlementInternal, openItemsAtInternal, overdueOpenItemsInternal, reduceOriginOpenItem, rescheduleOriginOpenItem, saveOpenItem, updateOpenItem, type OpenItemSettlementView, type OpenItemView, type OriginOpenItemInput } from './ledger/open-items';
+export { cancelOpenItem, cancelOriginOpenItem, countingPaymentsInternal, createOpenItem, createOriginOpenItem, draftSettlementCentsInternal, listOpenItems, listOpenItemSettlements, openCentsInternal, openItemHasAnySettlementInternal, openItemsAtInternal, overdueOpenItemsInternal, openItemInDirectDebitInternal, reduceOriginOpenItem, rescheduleOriginOpenItem, saveOpenItem, updateOpenItem, type OpenItemSettlementView, type OpenItemView, type OriginOpenItemInput } from './ledger/open-items';
 export { applyCorrectionInternal, approveAllocationCorrection, correctionTaxCodesInternal, decideAllocationCorrection, listAllocationCorrections, rejectAllocationCorrection, requestAllocationCorrection, type CorrectionView } from './ledger/corrections';
 
 // F8a — Auslagen: einreichen, freigeben, Verzicht (allocation/).
@@ -315,7 +341,7 @@ export { coverageRequired, evidenceCoverage, missingEvidence, paymentProofSatisf
 export { foreignActivity, foreignActivityInternal, type ForeignActivityView, type ForeignLineEntry, type ForeignPartnerPaymentEntry } from './allocation/foreign';
 
 // F8b — zurückgelegtes Geld (allocation/).
-export { freeReserveCapCents, freeReserveYears, type FreeReserveCapInput, type FreeReserveYear, type FreeReserveYearInput, type FreeReserveYears } from './allocation/reserve-rules';
+export { freeReserveCapCents, freeReserveYears, OPERATION_RESERVE_KINDS, RESERVE_KINDS, SECTION_62_RESERVE_KINDS, type ReserveKind, type FreeReserveCapInput, type FreeReserveYear, type FreeReserveYearInput, type FreeReserveYears } from './allocation/reserve-rules';
 export {
   deleteReserve,
   freeReserveCap,
@@ -333,6 +359,21 @@ export {
   type ReserveMovementView,
   type ReserveView,
 } from './allocation/reserves';
+// M1 — Mittelverwendung: Anfangsvortrag und reine Fortschreibung (allocation/).
+export { fundsUseOpeningsInternal, listFundsUseOpenings, saveFundsUseOpening, saveFundsUseOpeningSchema, type FundsUseOpeningsOverview, type FundsUseOpeningView } from './allocation/funds-use-openings';
+export {
+  addYearsToDay,
+  fundsUseChain,
+  fundsUseObligation,
+  fundsUseOpeningEffects,
+  type FundsUseBucket,
+  type FundsUseBucketState,
+  type FundsUseOpeningEffect,
+  type FundsUseOpeningInput,
+  type FundsUseYearInput,
+  type FundsUseYearResult,
+  type FundsUseZeroReason,
+} from './allocation/funds-use-rules';
 export {
   approvePurposeTransfer,
   getPurposeTransfer,
@@ -507,17 +548,19 @@ export { canonicalJson, reportHash } from './reporting/hash';
 export { releaseOfYearInternal, reportStageInternal } from './reporting/stage';
 export { listFinanceReports, listFinanceReportVersions, runFinanceReport } from './reporting/service';
 export { endOtherAsset, listOtherAssets, otherAssetsAtInternal, revalueOtherAsset, saveOtherAsset, type OtherAssetView } from './reporting/other-assets';
-export { financeOtherAssets, financeReports, type FinanceOtherAssetRow } from './schema';
+export { financeOtherAssets, financeReports, financeReportSignatures, financeAnnualAccountsPublications, type FinanceOtherAssetRow, type FinanceReportSignatureRow, type FinanceAnnualAccountsPublicationRow } from './schema';
 export { financeLinesSchema, listFinanceLines, type FinanceLineView } from './reporting/lines';
 export { AUDIT_REPORT_TYPE_KEY, finalizeFinanceReport, previewFinanceReport, readFinanceReportDocument, releaseReportsForFinalizing, releaseReportsInternal } from './reporting/finalize';
 export { reportPersonalTemplate, reportTemplate, REPORT_PERSONAL_TEMPLATE_KEY, REPORT_TEMPLATE_KEY, STAGE_TEXT } from './reporting/template';
-export { RELEASE_BASES, type ReleaseBasis, type ReportDefinition, type ReportFinalVersion, type ReportFinalizeBlock, type ReportGroup, type ReportKey, type ReportLinesFilter, type ReportListItem, type ReportParams, type ReportRelease, type ReportRenderContext, type ReportRun, type ReportStage, type ReportVersionView } from './reporting/types';
+export { RELEASE_BASES, REPORT_CONFIRMATION_REASONS, type AnnualAccountsAnnex, type RenderOptions, type ReportConfirmationNeed, type ReportConfirmationReason, type ReleaseBasis, type ReportDefinition, type ReportFinalVersion, type ReportFinalizeBlock, type ReportGroup, type ReportKey, type ReportLinesFilter, type ReportListItem, type ReportParams, type ReportRelease, type ReportRenderContext, type ReportRun, type ReportStage, type ReportVersionView } from './reporting/types';
 // Rechenschaft D1 — Kassenprüfung (Spec 0.4.0 § D1). Innenleben (`auditing/access.ts`) bleibt draußen.
 export { AUDIT_CONFIDENTIALITY_TYPE_KEY, currentAuditYear, endAuditorAccess, fileConfidentialityDeclaration, listAuditors, listMyAuditYears, previewAuditor, removeAuditor, saveAuditor } from './auditing/auditors';
 export { getEntryAuditState, markSectionReviewed, setSample, unmarkSectionReviewed } from './auditing/samples';
 export { AUDIT_MODES, AUDIT_SECTIONS, type AuditMode, type AuditorAccess, type AuditorIndependence, type AuditorView, type AuditSection } from './auditing/types';
 export { financeAuditAuditors, type FinanceAuditAuditorRow } from './schema';
+export { financePartnerPayments, financeReserveMovements, financeReserves } from './schema';
 export { getAuditSection, type AuditSampleState, type AuditSectionFilter, type AuditSectionRow } from './auditing/sections';
+export { readAuditResolutionMinutes } from './auditing/resolutions';
 export { ANOMALY_KINDS, type AnomalyKind } from './auditing/anomalies';
 export { getAuditStatus } from './auditing/status';
 export { createAuditReportDraft, getAuditReport, markAuditReportReadyToSign, revokeAuditReportReadyToSign, saveAuditReportDeviation, saveAuditReportExamination, saveAuditReportResult, saveAuditReportSignatures, type AuditReportKind, type AuditReportState, type AuditReportView, type SignatureMode } from './auditing/report';
@@ -536,3 +579,5 @@ export { checkReverseCharge, countryOfVatId, decideReverseChargePrompt, findReve
 export { euroBase, VAT_FIGURE_GROUP_TITLES, VAT_FORMS, vatFormFor, type VatFigure, type VatFigureGroup, type VatFigureSource, type VatForm, type VatFormKind } from './reporting/vat-forms';
 export { computeVatAdvanceReturn, VAT_FIGURE_SOURCES, vatAdvanceReturnReport, vatFigureText, vatFigureValuesInternal, vatFiguresFor, vatPeriodPaperLabel, type VatAdvanceReturnData, type VatFigureValue } from './reporting/reports/vat-advance-return';
 export { section19TurnoverInternal } from './ledger/turnover';
+// Gremien (Plan G2 Task 3): Prüfbericht und seine Scans als Anlage am Tagesordnungspunkt.
+export { lastFiledReportInternal, scansOfInternal } from './auditing/report';

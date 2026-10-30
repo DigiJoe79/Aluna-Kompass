@@ -23,6 +23,8 @@ interface Holder {
   exitHooked?: boolean;
   /** Der fertig geseedete Datenpfad als Kopiervorlage; siehe `resetDeps`. */
   seedSnapshot?: { dir: string; forDataPath: string };
+  /** Ob die Temp-Verzeichnisse der Ablagen schon geräumt sind — nur beim ersten Öffnen (`sweepTemp`). */
+  sweptTemp?: boolean;
 }
 
 const holder: Holder = ((globalThis as unknown as { __kompass?: Holder }).__kompass ??= {
@@ -71,7 +73,11 @@ function openDeps(): AppDeps {
     pdf: createPdfTools(),
     // Außerhalb von Prod nur mit Umleitung, sonst `blocked` — die Regel sitzt im Transport.
     mail: createMailTransport(readMailEnv()),
+    publicUrl: env.publicUrl,
+    // Ein Öffnen im Reset-Fenster nahm dem laufenden Seed `dms/.tmp` weg (ENOENT, 29.10.).
+    sweepTemp: !holder.sweptTemp,
   });
+  holder.sweptTemp = true;
   // K2: Bezeichnungen der Module kommen als Schlüssel der Sprachdatei — übersetzt für Oberfläche und MCP gleich.
   deps.labels = labelTranslator(deps);
   return deps;

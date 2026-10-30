@@ -121,6 +121,8 @@ export function useStepDetail(status: ClosingStatus, names: Readonly<Record<stri
         // Mit Erklärungszeitraum steht der Satz samt Link unten (`taxReturnDetail`); ohne: „nicht fällig“, bestätigt.
         // E6a (Board Umsatzsteuer 6a): ist die USt-Jahreserklärung eingetragen, wird die Unterzeile länger.
         return f.period ? null : [t('taxReturn.result', { year: status.designation }), vatFiledResult(f)].filter(Boolean).join(' ');
+      case 'fundsUse':
+        return f.finalVersion ? t('fundsUse.result', { date: fmt.date(f.finalVersion.finalizedAt), number: f.finalVersion.documentNumber }) : null;
       default:
         return null;
     }

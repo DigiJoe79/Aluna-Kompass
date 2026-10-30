@@ -221,4 +221,27 @@ test.describe('contacts', () => {
     await expect(confirm).toBeHidden();
     await expect(box.getByTestId('bank-account-row').filter({ hasText: 'DE59 9999 9999 0000 7777 77' })).toHaveCount(0);
   });
+
+  test('Einwilligung zur Namensnennung erfassen und widerrufen', async ({ page }) => {
+    await page.goto('/contacts');
+    await page.getByRole('searchbox', { name: 'Suchen' }).fill('Paul Winter');
+    await page.getByRole('row', { name: /Paul Winter/ }).getByRole('link').first().click();
+    const card = page.getByTestId('contact-annual-accounts');
+    await expect(card.getByText('Keine Einwilligung.')).toBeVisible();
+
+    await card.getByRole('button', { name: 'Einwilligung erfassen …' }).click();
+    const grant = page.getByRole('dialog');
+    await grant.getByRole('button', { name: 'Speichern' }).click();
+    await expect(grant).toBeHidden();
+    await expect(card).toContainText('Erteilt am');
+
+    await card.getByRole('button', { name: 'Widerruf erfassen …' }).click();
+    const revoke = page.getByRole('dialog');
+    await revoke.getByRole('button', { name: 'Speichern' }).click();
+    await expect(revoke).toBeHidden();
+    await expect(card).toContainText('Widerrufen am');
+    const history = card.getByRole('region', { name: 'Verlauf' });
+    await history.getByText('Verlauf · 1').click();
+    await expect(history).toContainText('Erteilt am');
+  });
 });

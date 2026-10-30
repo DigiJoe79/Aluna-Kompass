@@ -4,7 +4,7 @@ import { abortIssue, abortReceive, issueGeneratedDocument, readLinkedDocument, r
 import { and, desc, eq, inArray, isNull } from 'drizzle-orm';
 import { z } from 'zod';
 import { financeAudit } from '../audit';
-import { financeConflict, requireHumanChannelFinance } from '../errors';
+import { financeConflict, requireHumanChannelFinance, uploadLimitProblem } from '../errors';
 import { requireFinanceRead } from '../ledger/access';
 import { CERTIFIABLE_INCOME_KINDS } from '../ledger/codes';
 import {
@@ -550,6 +550,8 @@ export async function attachSignedConfirmation(deps: Deps, ctx: CallContext, inp
   if (denied) return denied;
   const parsed = validate(deps, signedSchema, input);
   if (!parsed.ok) return parsed;
+  const tooLarge = uploadLimitProblem(deps, parsed.value.bytes);
+  if (tooLarge) return tooLarge;
   const v = parsed.value;
   const loaded = loadValid(deps.db, v.id);
   if (!loaded.ok) return loaded;

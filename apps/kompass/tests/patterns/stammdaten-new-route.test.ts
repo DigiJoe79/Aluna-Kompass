@@ -19,6 +19,8 @@ const SHELL = path.join(SRC, 'app/(shell)');
 export const EXCEPTIONS: Allowlist = {
   contacts:
     'Kontakte sind noch Lesesicht mit Bearbeiten-Dialog und Anlegen im Dialog; die Umstellung auf das Stammdatenmuster ist zurückgestellt (Entscheidung des Maintainers, 2026-10-04).',
+  'governance/statutes': 'Satzungsstände sind Vorgänge (MUSTER § C): „Stand anlegen“ legt den Entwurf auf Basis des gültigen Stands an und öffnet ihn zum Bearbeiten (Plan U2, Board 5a).',
+  'governance/resolutions': 'Beschlüsse entstehen nur beim Festschreiben einer Sitzung oder eines Umlaufs (Spec § 5.4, § 5.6), nie von Hand.',
   'animals/proposals': 'Vorschläge kommen über den Eingang (Agent, Abgleich), keiner wird von Hand angelegt; die Liste verweist zum Anlegen auf /animals/new.',
 };
 

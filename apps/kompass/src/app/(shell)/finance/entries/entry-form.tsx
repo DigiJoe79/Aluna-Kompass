@@ -203,7 +203,9 @@ export function EntryForm({ initial, accounts, categories, purposes, projects, t
   const tRoot = useTranslations();
   const { date } = useDateFormat();
   const router = useRouter();
-  const [, startTransition] = useTransition();
+  // App-B3: Solange gespeichert wird, sind „Als Entwurf speichern“ und „… als geprüft markieren“ gesperrt — sonst legt ein
+  // zweiter Klick bei einer neuen Buchung einen zweiten Entwurf an.
+  const [saving, startTransition] = useTransition();
   const [state, setState] = useState<EntryFormState>(initial);
   // Der zuletzt gesicherte Stand: beim Laden, nach dem automatischen Entwurf für einen Beleg wieder neu.
   const [saved, setSaved] = useState<EntryFormState>(initial);
@@ -272,12 +274,23 @@ export function EntryForm({ initial, accounts, categories, purposes, projects, t
     }
   };
 
+  // Ein Netzfehler wirft nicht in die Transition (sonst Fehlergrenze, Eingaben weg), sondern geht wie bei `ensureSavedId`
+  // in einen Toast mit „Erneut versuchen“; die Maske bleibt stehen.
+  const afterSettled = async (result: ActionState, redirectTo: 'journal' | 'entry', retry: () => void) => {
+    if (result.status === 'error' && result.kind === 'network') {
+      toastNetwork(result, tRoot('common.retry'), retry);
+      return;
+    }
+    await afterSuccess(result, redirectTo);
+  };
+
   const runAction = (run: (input: EntryLinesInput) => Promise<ActionState>) => {
     if (!validation.ok) {
       setActionState({ status: 'error', message: t('toast.fieldsInvalid'), fieldErrors: validation.fieldErrors });
       return;
     }
-    startTransition(async () => afterSuccess(await run(validation.input), 'journal'));
+    const input = validation.input;
+    startTransition(async () => afterSettled(await guarded(() => run(input), tRoot('common.network')), 'journal', () => runAction(run)));
   };
 
   // Diese Maske kennt nur ihre eigenen zwei Ausweg-Aktionen — `focusAccount`/`confirmFormatChange`
@@ -298,7 +311,7 @@ export function EntryForm({ initial, accounts, categories, purposes, projects, t
       return;
     }
     // „führt restInto aus und schickt erneut ab“ (Plan) — derselbe Weg wie „Festschreiben“.
-    startTransition(async () => afterSuccess(await finalizeAction(nextValidation.input), 'entry'));
+    startTransition(async () => afterSettled(await guarded(() => finalizeAction(nextValidation.input), tRoot('common.network')), 'entry', () => applyRemedy(action)));
   };
 
   const ensureSavedId = async (): Promise<string | null> => {
@@ -622,10 +635,10 @@ export function EntryForm({ initial, accounts, categories, purposes, projects, t
         extraActions={
           !isCash ? (
             <>
-              <Button type="button" variant="outline" onClick={() => runAction((input) => saveDraftAction(input))}>
+              <Button type="button" variant="outline" disabled={saving} aria-busy={saving || undefined} onClick={() => runAction((input) => saveDraftAction(input))}>
                 {t('actions.saveDraft')}
               </Button>
-              <Button type="button" variant="outline" onClick={() => runAction((input) => saveReviewedAction(input))}>
+              <Button type="button" variant="outline" disabled={saving} aria-busy={saving || undefined} onClick={() => runAction((input) => saveReviewedAction(input))}>
                 {t('actions.saveReviewed')}
               </Button>
             </>

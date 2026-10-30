@@ -33,7 +33,7 @@ import { marksOf } from './pledges';
 import { coveringEntriesInternal } from './prenotifications';
 import { pledgeRates } from './rates';
 import { bookedItemLinesInternal, pledgeBookedLinesInternal, runStatusInternal } from './booking';
-import { activeRunItemsInternal, expiredRunIdsInternal, openItemReturnStateInternal, pledgeRunSourcesInternal, returnsByItemInternal, unreturnedRunItemsInternal } from './run-items';
+import { activeRunItemsInternal, expiredRunIdsInternal, OPEN_RUN_STATUSES, openItemReturnStateInternal, pledgeRunSourcesInternal, returnsByItemInternal, unreturnedRunItemsInternal } from './run-items';
 import { sepaAccountInternal } from './settings';
 
 // ── Fenster ─────────────────────────────────────────────────────────────────
@@ -545,7 +545,7 @@ export async function removeRunItem(deps: Deps, ctx: CallContext, input: unknown
     financeAudit(tx, deps, ctx, { action: 'finance.directDebit.removeItem', entity: 'financeDirectDebitRun', id: run.id, after: { itemId: item.id, status: run.status === 'fileCreated' ? 'draft' : run.status }, params: { collectionOn: run.collectionDate } });
     return ok(runViewInternal(tx, deps, runRowInternal(tx, run.id)!));
   });
-  if (run.status === 'fileCreated') await deleteRunFilesInternal(deps, run.id);
+  if (run.status === 'fileCreated') await deleteRunFilesInternal(deps, run.fileName);
   return result;
 }
 
@@ -594,8 +594,15 @@ export const DIRECT_DEBIT_FILE_KINDS = ['xml', 'csv'] as const;
 export const directDebitFileSchema = z.object({ runId: z.string().min(1) });
 export const directDebitFileStreamSchema = z.object({ runId: z.string().min(1), kind: z.enum(DIRECT_DEBIT_FILE_KINDS) });
 
-/** Schlüssel im Dateispeicher der Finanzen — flach, weil der Speicher keine Unterordner kennt. */
-export const runFileKey = (runId: string, kind: (typeof DIRECT_DEBIT_FILE_KINDS)[number]) => `direct-debit-${runId.toLowerCase()}.${kind}`;
+/**
+ * Schlüssel im Dateispeicher der Finanzen — flach, weil der Speicher keine Unterordner kennt. N2: je Anlauf ein eigener
+ * Name (`attempt`), damit ein verlorener Anlauf in einem zweiten Tab nur seine eigenen Dateien löscht; ohne `attempt`
+ * der Name aus der Zeit davor.
+ */
+export const runFileKey = (runId: string, kind: (typeof DIRECT_DEBIT_FILE_KINDS)[number], attempt?: string) => `direct-debit-${runId.toLowerCase()}${attempt ? `-${attempt.toLowerCase()}` : ''}.${kind}`;
+
+/** Der Schlüssel einer Art zu dem, den der Einzug als `fileName` trägt (immer der der XML). */
+const runFileKeyOf = (fileName: string, kind: (typeof DIRECT_DEBIT_FILE_KINDS)[number]) => fileName.replace(/\.xml$/, `.${kind}`);
 
 /** Gründe am stornierten Begleitzettel (stehen am Dokument, nicht im Protokoll). Deutsch wie die Vorlage. */
 const SUMMARY_VOID_DISCARDED = 'Einzug verworfen';
@@ -611,8 +618,9 @@ function voidSummaryInternal(tx: DbOrTx, deps: Deps, ctx: CallContext, run: Fina
   if (!voided.ok && !(voided.error.type === 'conflict' && voided.error.code === 'documentAlreadyVoided')) throw new Error(`summary ${run.summaryDocumentId} of run ${run.id} not voided: ${JSON.stringify(voided.error)}`);
 }
 
-async function deleteRunFilesInternal(deps: Deps, runId: string): Promise<void> {
-  for (const kind of DIRECT_DEBIT_FILE_KINDS) await deps.files('finance').delete(runFileKey(runId, kind));
+async function deleteRunFilesInternal(deps: Deps, fileName: string | null): Promise<void> {
+  if (!fileName) return;
+  for (const kind of DIRECT_DEBIT_FILE_KINDS) await deps.files('finance').delete(runFileKeyOf(fileName, kind));
 }
 
 /** Prüft die Posten vor der Datei erneut: Mandat noch aktiv, offener Posten noch so offen wie angelegt (Review Focus 3). */
@@ -641,6 +649,23 @@ function checkItemsInternal(db: DbOrTx, run: FinanceDirectDebitRunRow, items: Fi
       const open = db.select({ cancelledAt: financeOpenItems.cancelledAt }).from(financeOpenItems).where(eq(financeOpenItems.id, item.sourceId)).get();
       if (!open || open.cancelledAt !== null || openCentsInternal(db, item.sourceId) < item.amountCents) return financeConflict('runItemChanged', { reference: mandate.reference });
     }
+  }
+  return null;
+}
+
+/**
+ * M1: Vor „eingereicht“ die Posten noch einmal prüfen wie vor der Datei — und dazu, ob ein Posten inzwischen in einem
+ * anderen, nicht verfallenen Einzug steckt (ein verfallener Einzug gibt seine Posten frei, ein neuer kann sie tragen;
+ * ebenso ein Posten mit Rückgabe, der nach „erneut einziehen“ in einem neuen Einzug steckt).
+ * Jede Änderung seit der Datei heißt `runItemsChanged`: Der Einzug ist dann nicht mehr der, den die Datei beschreibt.
+ */
+function itemsChangedSinceFileInternal(deps: Deps, db: DbOrTx, run: FinanceDirectDebitRunRow, items: FinanceDirectDebitItemRow[]) {
+  const expired = expiredRunIdsInternal(deps, db);
+  for (const item of items) {
+    const elsewhere = unreturnedRunItemsInternal(db, { source: item.source, sourceId: item.sourceId, statuses: OPEN_RUN_STATUSES, excludeRunIds: expired }).some(
+      (r) => r.item.runId !== run.id && (item.source !== 'pledge' || r.item.installmentOn === item.installmentOn),
+    );
+    if (elsewhere || checkItemsInternal(db, run, [item])) return financeConflict('runItemsChanged', { reference: mandateRowInternal(db, item.mandateId)!.reference });
   }
   return null;
 }
@@ -704,9 +729,10 @@ export async function buildDirectDebitFile(deps: Deps, ctx: CallContext, input: 
   const csv = buildLastschriftCsv(rows.map(({ item, mandate }) => ({ creditorIban: account.value.iban!, creditorId, debtorName: mandate.debtorName, debtorIban: mandate.iban, debtorBic: mandate.bic, amountCents: item.amountCents, remittance: item.remittance, mandateReference: mandate.reference, signedOn: mandate.signedOn!, sequence: mandate.sequence })));
 
   const store = deps.files('finance');
-  await deleteRunFilesInternal(deps, run.id); // ein früherer, abgebrochener Anlauf
-  await store.write(runFileKey(run.id, 'xml'), new TextEncoder().encode(xml));
-  await store.write(runFileKey(run.id, 'csv'), csv);
+  // N2: Dateien dieses Anlaufs unter eigenem Namen — ein zweiter Tab überschreibt sie nicht und löscht nur seine.
+  const fileName = runFileKey(run.id, 'xml', newId());
+  await store.write(fileName, new TextEncoder().encode(xml));
+  await store.write(runFileKeyOf(fileName, 'csv'), csv);
 
   const count = items.length;
   const sumCents = items.reduce((total, i) => total + i.amountCents, 0);
@@ -730,7 +756,7 @@ export async function buildDirectDebitFile(deps: Deps, ctx: CallContext, input: 
       const current = runRowInternal(tx, run.id)!;
       if (current.status !== 'draft') abortIssue(current.status === 'fileCreated' ? financeConflict('runFileCreated') : runLockedConflict(current));
       tx.update(financeDirectDebitRuns)
-        .set({ status: 'fileCreated', fileName: runFileKey(run.id, 'xml'), fileCreatedAt: now, fileCreatedByUserId: ctx.userId ?? 'system', fileMandates: Object.fromEntries(rows.map(({ mandate }) => [mandate.id, mandateVersion(mandate)])), summaryDocumentId: doc.id, updatedAt: now })
+        .set({ status: 'fileCreated', fileName, fileCreatedAt: now, fileCreatedByUserId: ctx.userId ?? 'system', fileMandates: Object.fromEntries(rows.map(({ mandate }) => [mandate.id, mandateVersion(mandate)])), summaryDocumentId: doc.id, updatedAt: now })
         .where(eq(financeDirectDebitRuns.id, run.id))
         .run();
       financeAudit(tx, deps, ctx, { action: 'finance.directDebit.file', entity: 'financeDirectDebitRun', id: run.id, after: { collectionDate: run.collectionDate, status: 'fileCreated', count, sumCents, summaryDocumentId: doc.id }, params: { collectionOn: run.collectionDate, count } });
@@ -738,9 +764,11 @@ export async function buildDirectDebitFile(deps: Deps, ctx: CallContext, input: 
     },
   });
   if (!issued.ok) {
-    await deleteRunFilesInternal(deps, run.id);
+    await deleteRunFilesInternal(deps, fileName);
     return issued;
   }
+  // Eine veraltete Datei (M15) ist ersetzt: ihre Dateien gehen.
+  if (run.fileName && run.fileName !== fileName) await deleteRunFilesInternal(deps, run.fileName);
   return ok(runViewInternal(deps.db, deps, runRowInternal(deps.db, run.id)!));
 }
 
@@ -758,8 +786,8 @@ export async function directDebitFileStream(deps: Deps, ctx: CallContext, input:
   if (!parsed.ok) return parsed;
   const run = runRowInternal(deps.db, parsed.value.runId);
   if (!run) return notFound('financeDirectDebitRun', parsed.value.runId);
-  const key = runFileKey(run.id, parsed.value.kind);
-  if (!run.fileName || run.status === 'cancelled' || !(await deps.files('finance').exists(key))) return financeConflict('runFileMissing');
+  const key = run.fileName ? runFileKeyOf(run.fileName, parsed.value.kind) : null;
+  if (!key || run.status === 'cancelled' || !(await deps.files('finance').exists(key))) return financeConflict('runFileMissing');
   const bytes = new Uint8Array(await deps.files('finance').read(key));
   return ok({ bytes, fileName: `Lastschrift-${run.collectionDate}.${parsed.value.kind}`, mimeType: MIME[parsed.value.kind] });
 }
@@ -793,7 +821,8 @@ async function runForStep(deps: Deps, ctx: CallContext, schema: z.ZodType<{ runI
 /**
  * Als eingereicht markieren (humanOnly; Spec § 7.4 Schritt 4): Der Mensch hat die Datei bei der Bank hochgeladen und
  * freigegeben. Nur nach der Datei und nur im Einreichfenster (`submitTooEarly`, `submitTooLate`). Je Mandat zählt der Einzug als letzter (verlängert die 36 Monate), und ein
- * Änderungshinweis, den der Einzug trägt, ist quittiert. Ab hier werden die Beiträge nicht mehr neu berechnet.
+ * Änderungshinweis, den der Einzug trägt, ist quittiert. Ab hier werden die Beiträge nicht mehr neu berechnet. Hat sich
+ * seit der Datei ein Posten geändert (anderer Einzug, storniert, Mandat beendet), abgelehnt: `runItemsChanged` (M1).
  */
 export async function markDirectDebitRunSubmitted(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<DirectDebitRunView>> {
   const found = await runForStep(deps, ctx, directDebitSubmitSchema, input);
@@ -812,6 +841,8 @@ export async function markDirectDebitRunSubmitted(deps: Deps, ctx: CallContext, 
   return deps.db.transaction((tx: DbOrTx) => {
     const now = isoNow(deps.clock);
     const items = runItemsInternal(tx, run.id).filter((i) => i.removedAt === null);
+    const changed = itemsChangedSinceFileInternal(deps, tx, run, items);
+    if (changed) return changed;
     for (const [mandateId, amendment] of amendmentsByMandate(items)) {
       const mandate = mandateRowInternal(tx, mandateId)!;
       const lastCollectedOn = mandate.lastCollectedOn && mandate.lastCollectedOn > run.collectionDate ? mandate.lastCollectedOn : run.collectionDate;
@@ -868,6 +899,6 @@ export async function cancelDirectDebitRun(deps: Deps, ctx: CallContext, input: 
     financeAudit(tx, deps, ctx, { action: 'finance.directDebit.cancel', entity: 'financeDirectDebitRun', id: run.id, after: { status: 'cancelled' }, params: { collectionOn: run.collectionDate } });
     return ok(runViewInternal(tx, deps, runRowInternal(tx, run.id)!));
   });
-  await deleteRunFilesInternal(deps, run.id);
+  await deleteRunFilesInternal(deps, run.fileName);
   return result;
 }

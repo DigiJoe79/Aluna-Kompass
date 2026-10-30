@@ -11,10 +11,11 @@ import { noticeExpiryInternal } from '../donations/notices';
 import { financeConflict } from '../errors';
 import { requireFinanceRead } from '../ledger/access';
 import { fiscalYearStatusInternal } from '../ledger/fiscal-years';
+import { fundsUseChainInternal } from '../reporting/funds-use-inputs';
 import { taxPeriodsInternal } from '../ledger/tax-periods';
 import { vatPeriodViewsInternal } from '../ledger/vat-filings';
 import { vatFilingOpensOn } from '../ledger/vat-calendar';
-import { financeAllocationLines, financeEntries, financeFiscalYears, financePartnerNotices, financePartnerPayments, financePartnerProfiles } from '../schema';
+import { financeAllocationLines, financeEntries, financeFiscalYears, financePartnerNotices, financePartnerPayments, financePartnerProfiles, type FinanceFiscalYearRow } from '../schema';
 import { assemblyOfYearInternal } from './assembly';
 
 /**
@@ -22,7 +23,7 @@ import { assemblyOfYearInternal } from './assembly';
  * Häkchen, mit Link, sie verschwinden, wenn erledigt — und die **Wiedervorlagen** an Finanz-Entitäten. Vorschläge für
  * Wiedervorlagen setzt der Mensch selbst (kein geplantes MV-Datum, Joe 2026-10-24).
  */
-export type DeadlineKind = 'noticeExpiry' | 'partnerProof' | 'recipientNoticeExpiry' | 'confirmationsToCorrect' | 'auditorAccess' | 'vatAdvanceReturn' | 'vatReturn' | 'vatAmendment' | 'taxReturn';
+export type DeadlineKind = 'noticeExpiry' | 'partnerProof' | 'recipientNoticeExpiry' | 'confirmationsToCorrect' | 'auditorAccess' | 'vatAdvanceReturn' | 'vatReturn' | 'vatAmendment' | 'taxReturn' | 'timelyUse' | 'timelyUseLapsed';
 export interface DeadlineView {
   key: string;
   kind: DeadlineKind;
@@ -99,7 +100,7 @@ export function computedDeadlinesInternal(deps: Deps, today: string, withNames: 
     // Prüferzugang offen nach abgelegtem Bericht: bis zur MV schließen (Schritt 11).
     if (lastFiledReportInternal(db, year.id)) {
       const open = auditorsOfYearInternal(db, year.id).filter((a) => a.mode === 'kompass' && a.accessEndedAt === null).length;
-      if (open > 0) push({ key: `auditorAccess:${year.id}`, kind: 'auditorAccess', dueOn: assemblyOfYearInternal(db, year.id)?.assemblyOn ?? null, params: { designation: year.designation, count: open }, href: `/finance/audit?year=${year.id}` });
+      if (open > 0) push({ key: `auditorAccess:${year.id}`, kind: 'auditorAccess', dueOn: assemblyOfYearInternal(deps, db, year.id, timeZoneOf(deps))?.assemblyOn ?? null, params: { designation: year.designation, count: open }, href: `/finance/audit?year=${year.id}` });
     }
   }
 
@@ -128,7 +129,34 @@ export function computedDeadlinesInternal(deps: Deps, today: string, withNames: 
     if (period.filedOn === null) push({ key: `taxReturn:${period.id}`, kind: 'taxReturn', dueOn: period.dueOn, params: { period: period.label }, href: `/finance/tax?period=${period.id}` });
   }
 
+  for (const d of timelyUseDeadlinesInternal(db, years, today)) push(d);
+
   return out.sort(deadlineOrder);
+}
+
+/**
+ * M2 (Spec 0.4.5 Teil M, Entscheidung 4, Prüfung F-4): je Verwendungsrückstand aus einem Jahr über der Grenze eine Frist
+ * bis zum Ende des übernächsten Jahres; sie verschwindet mit dem Verbrauch, ohne Häkchen. Ein noch offenes Jahr nicht
+ * über der Grenze streicht nichts — erst sein Abschluss; danach steht der Rückstand einmal als Vermerk „entfallen“ da,
+ * bis ein späteres Jahr abgeschlossen ist. Unter der Grenze entsteht keine Frist (`originRequired`).
+ */
+function timelyUseDeadlinesInternal(db: DbOrTx, years: readonly FinanceFiscalYearRow[], today: string): Omit<DeadlineView, 'overdue'>[] {
+  if (years.length === 0) return [];
+  const closed = new Set(years.filter((y) => fiscalYearStatusInternal(db, y.id) === 'closed').map((y) => y.id));
+  const current = years.find((y) => y.startsOn <= today && y.endsOn >= today) ?? years.at(-1)!;
+  const lastClosed = [...years].reverse().find((y) => closed.has(y.id)) ?? null;
+  const until = lastClosed && lastClosed.endsOn > current.endsOn ? lastClosed : current;
+  const chain = fundsUseChainInternal(db, until.id, { lapses: (id) => closed.has(id) });
+  const resultOf = (id: string) => chain.find((r) => r.fiscalYearId === id);
+  const backlogs = (id: string) => (resultOf(id)?.buckets ?? []).filter((b) => b.originKey !== `fy:${id}` && b.originRequired && b.restCents > 0);
+  const out: Omit<DeadlineView, 'overdue'>[] = [];
+  if (!resultOf(current.id)?.lapsedAtEnd) {
+    for (const b of backlogs(current.id)) out.push({ key: `timelyUse:${b.originKey}`, kind: 'timelyUse', dueOn: b.dueBy, params: { origin: b.originDesignation, restCents: b.restCents }, href: `/finance/fund-use?year=${current.id}` });
+  }
+  if (lastClosed && resultOf(lastClosed.id)?.lapsedAtEnd) {
+    for (const b of backlogs(lastClosed.id)) out.push({ key: `timelyUseLapsed:${b.originKey}`, kind: 'timelyUseLapsed', dueOn: null, params: { origin: b.originDesignation, lapsedIn: lastClosed.designation }, href: `/finance/fund-use?year=${lastClosed.id}` });
+  }
+  return out;
 }
 
 /**

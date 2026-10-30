@@ -1,6 +1,6 @@
 import { notFound, type DbOrTx, type Failure } from '@kompass/core';
 import { contacts, displayName } from '@kompass/module-contacts';
-import { and, asc, desc, eq, gte, inArray, isNull, lte } from 'drizzle-orm';
+import { and, asc, desc, eq, gte, inArray, isNull, lt, lte } from 'drizzle-orm';
 import { z } from 'zod';
 import { contactTaxDetailsInternal } from '../../allocation/contact-tax-details';
 import { foreignActivityInternal } from '../../allocation/foreign';
@@ -17,6 +17,7 @@ import { assessmentYearOf, gemFormFor, type GemLine } from '../gem-forms';
 import { annualRevenueForGemInternal, operationsResultInternal, operationsRevenueInternal, type AnnualRevenue } from '../revenue';
 import { ao52PurposeOf } from '../../format/tax-purposes';
 import type { ReportComputeEnv, ReportDefinition, ReportLinesFilter, ReportParams } from '../types';
+import { reportTimeZone, TIME_ZONE_SETTING, zonedDayRange } from '../../zoned-days';
 import { reportYearInternal, type ReportYear } from './common';
 import { taxReturnGemTypst } from './tax-return-gem-typst';
 
@@ -115,6 +116,8 @@ interface Context {
   answers: GemAnswers;
   formYear: number;
   limitCents: number;
+  /** Die Zone des Vereins: Freigaben (Zeitstempel) zählen nach ihrem Tag dort (F-B3). */
+  timeZone: string;
 }
 
 const inPeriod = (c: Context) => ({ from: c.first.startsOn, to: c.last.endsOn });
@@ -161,7 +164,7 @@ function endowmentsGiven(c: Context): Row[] {
   return c.db
     .select()
     .from(financePartnerPayments)
-    .where(and(eq(financePartnerPayments.state, 'approved'), eq(financePartnerPayments.assetEndowment, true), gte(financePartnerPayments.approvedAt, c.first.startsOn), lte(financePartnerPayments.approvedAt, `${c.last.endsOn}T23:59:59.999Z`)))
+    .where(and(eq(financePartnerPayments.state, 'approved'), eq(financePartnerPayments.assetEndowment, true), gte(financePartnerPayments.approvedAt, zonedDayRange(c.first.startsOn, c.last.endsOn, c.timeZone).start), lt(financePartnerPayments.approvedAt, zonedDayRange(c.first.startsOn, c.last.endsOn, c.timeZone).end)))
     .orderBy(asc(financePartnerPayments.approvedAt), asc(financePartnerPayments.id))
     .all()
     .map((p) => {
@@ -203,7 +206,7 @@ export function computeTaxReturnGemReport(db: DbOrTx, params: ReportParams, env:
   const last = years.at(-1)!;
   const formYear = assessmentYearOf(last.endsOn);
   const form = gemFormFor(formYear)!;
-  const c: Context = { db, taxPeriodId: period.id, years, first, last, answers: period.answers, formYear, limitCents: form.line10LimitCents };
+  const c: Context = { db, taxPeriodId: period.id, years, first, last, answers: period.answers, formYear, limitCents: form.line10LimitCents, timeZone: reportTimeZone(env) };
   const incomeReport: GemOrigin = { kind: 'report', report: 'taxReturnIncomeStatement', params: { taxPeriodId: period.id } };
   const reserveReport: GemOrigin = { kind: 'report', report: 'reserveStatement', params: { fiscalYearIds: period.fiscalYearIds } };
 
@@ -321,7 +324,7 @@ function attachmentsOf(c: Context, env: ReportComputeEnv, yearIds: string[], wit
   for (const y of c.years) out.push({ key: 'assetOverview', params: { fiscalYearId: y.id }, fiscalYearId: y.id });
   if (withReserves) out.push({ key: 'reserveStatement', params: { fiscalYearIds: yearIds } });
   for (const y of c.years) {
-    const foreign = foreignActivityInternal(c.db, { from: y.startsOn, to: y.endsOn }, country);
+    const foreign = foreignActivityInternal(c.db, { from: y.startsOn, to: y.endsOn }, country, c.timeZone);
     // Beilage nur, wenn der Auslandsbericht Inhalt hat — nach Merkmal, nicht nach dem Sitz eines Kontakts (Designer Runde 8, 271).
     if (foreign.partnerPayments.length + foreign.otherAbroadLines.length > 0) out.push({ key: 'foreignActivity', params: { fiscalYearId: y.id }, fiscalYearId: y.id });
   }
@@ -417,7 +420,7 @@ export const taxReturnGemReport: ReportDefinition<TaxReturnGemReport> = {
   checkParams: checkTaxPeriodParams,
   years: yearsOfTaxPeriod,
   paramsForYear: taxPeriodParamsForYear,
-  settingKeys: [COUNTRY_KEY],
+  settingKeys: [COUNTRY_KEY, TIME_ZONE_SETTING],
   compute: computeTaxReturnGemReport,
   toTypst: taxReturnGemTypst,
   titleKey: 'finance.reports.taxReturnGem.title',

@@ -6,7 +6,7 @@ import { financeConflict, requireHumanChannelFinance } from '../errors';
 import { financeAccounts, financeAllocationCorrections, financeClosingConfirmations, financeEntries, financeEntryJustifications, financeFiscalYears, financeImportCandidates, financeImportRuns, financeMoneyLines, financePeriodEvents, financeRawTransactions, type FinanceFiscalYearRow } from '../schema';
 import { requireFinanceRead } from './access';
 import { documentationOf } from './entries';
-import { ensureFiscalYearFor, fiscalYearStatusInternal, isShortFiscalYear, type FiscalYearView } from './fiscal-years';
+import { ensureFiscalYearFor, fiscalYearForInternal, fiscalYearStatusInternal, isShortFiscalYear, type FiscalYearView } from './fiscal-years';
 import { taxPeriodOfYearInternal, taxReturnFiledForYearInternal } from './tax-periods';
 import { vatFiledPeriodsInRangeInternal, type VatFiledPeriod } from './vat-filings';
 import { PERIOD_CLOSE_HOOKS, PERIOD_REOPEN_GUARDS, type PeriodCloseHook, type PeriodReopenConsequence, type PeriodReopenGuard } from '../locks';
@@ -212,6 +212,10 @@ export async function justifyUndocumentedEntry(deps: Deps, ctx: CallContext, inp
   const entry = deps.db.select().from(financeEntries).where(eq(financeEntries.id, parsed.value.entryId)).get();
   if (!entry) return notFound('financeEntry', parsed.value.entryId);
   if (entry.status !== 'final') return financeConflict('entryNotFinal');
+  // F-B4 (0.4.5): Die Begründung gehört zum Stand des Jahres (Belegprüfung im Prüfpaket). Im abgeschlossenen Jahr ist sie
+  // fest — überschrieben wäre der alte Text weg, denn er steht bewusst nicht im Protokoll. Erst wiederöffnen.
+  const year = fiscalYearForInternal(deps.db, entry.entryDate);
+  if (year && fiscalYearStatusInternal(deps.db, year.id) === 'closed') return financeConflict('fiscalYearClosed', { year: year.designation });
 
   return deps.db.transaction((tx: DbOrTx) => {
     const now = isoNow(deps.clock);
@@ -290,8 +294,8 @@ function laterClosedYearOf(db: DbOrTx, year: FinanceFiscalYearRow): { id: string
 }
 
 /** Was die Wächter beim Wiederöffnen tun würden, als Code und Parameter — für `previewPeriodReopen` und ihren Test mit eingereichten Wächtern. */
-export function previewReopenInternal(db: DbOrTx, yearId: string, guards: readonly PeriodReopenGuard[] = PERIOD_REOPEN_GUARDS): { consequences: PeriodReopenConsequence[] } {
-  return { consequences: guards.map((g) => g.describe(db, yearId)).filter((c): c is PeriodReopenConsequence => c !== null) };
+export function previewReopenInternal(db: DbOrTx, yearId: string, guards: readonly PeriodReopenGuard[] = PERIOD_REOPEN_GUARDS, deps?: Deps): { consequences: PeriodReopenConsequence[] } {
+  return { consequences: guards.map((g) => g.describe(db, yearId, deps)).filter((c): c is PeriodReopenConsequence => c !== null) };
 }
 
 const reopenPreviewSchema = z.object({ id: z.string().min(1) });
@@ -310,7 +314,7 @@ export async function previewPeriodReopen(deps: Deps, ctx: CallContext, input: u
   const laterYear = laterClosedYearOf(deps.db, year);
   // N14: auch die abgegebenen Umsatzsteuer-Erklärungen der Zeiträume, die das Jahr berührt (§ 153 AO).
   const vatFiled = vatFiledPeriodsInRangeInternal(deps.db, year.startsOn, year.endsOn);
-  return ok({ ...previewReopenInternal(deps.db, year.id), laterYearClosed: laterYear !== null, laterYear, taxReturnFiledOn, taxReturnPeriod, vatFiled });
+  return ok({ ...previewReopenInternal(deps.db, year.id, PERIOD_REOPEN_GUARDS, deps), laterYearClosed: laterYear !== null, laterYear, taxReturnFiledOn, taxReturnPeriod, vatFiled });
 }
 
 /**

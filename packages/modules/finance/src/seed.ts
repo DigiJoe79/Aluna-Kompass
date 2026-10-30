@@ -1,5 +1,5 @@
-import { assignRole, changeOwnPassword, createFollowUp, createRole, createUser, resetStartPassword, getDashboardLayout, getEffectivePermissions, isoDay, isoDayIn, login, paperDate, readSetting, schema, SEED_ADMIN_PASSWORD, seedClockAt, seedMoment, setDashboardLayout, setRolePermissions, todayIn, unwrap, waitForJob, type CallContext, type Deps } from '@kompass/core';
-import { addContactRole, contactChannels, contactIdForUserInternal, contactRoles, contacts, createContact, endContactRole, hasLinkHistoryInternal, linkUserToContact, setContactChannels, updateContact } from '@kompass/module-contacts';
+import { assignRole, isModuleEnabled, timeZoneOf, changeOwnPassword, createFollowUp, createRole, createUser, resetStartPassword, getDashboardLayout, getEffectivePermissions, isoDay, isoDayIn, login, paperDate, readSetting, schema, SEED_ADMIN_PASSWORD, seedClockAt, seedMoment, setDashboardLayout, setRolePermissions, todayIn, unwrap, waitForJob, type CallContext, type Deps } from '@kompass/core';
+import { addContactRole, contactChannels, contactIdForUserInternal, contactRoles, contacts, createContact, endContactRole, endRoleRowInternal, hasLinkHistoryInternal, linkUserToContact, setContactChannels, startRoleRowInternal, updateContact } from '@kompass/module-contacts';
 import { documents as dmsDocuments, receiptPdf, receiveDocument, textPdf } from '@kompass/module-dms';
 import { projects } from '@kompass/module-projects';
 import { and, asc, eq, gte, isNull, lte } from 'drizzle-orm';
@@ -10,7 +10,7 @@ import { linkContactIban } from './import/contact-ibans';
 import { saveImportRule } from './import/rules';
 import { markTransactionForeign } from './import/transit';
 import { createAccount, setAccountActive } from './ledger/accounts';
-import { createCategory, setCategoryActive } from './ledger/categories';
+import { createCategory, setCategoryActive, updateCategory } from './ledger/categories';
 import { requestAllocationCorrection } from './ledger/corrections';
 import { saveDraft, setReviewed } from './ledger/entries';
 import { bookEntry } from './ledger/finalize';
@@ -31,14 +31,18 @@ import { setProjectFinance } from './ledger/project-settings';
 import { createPurpose, fulfillPurpose } from './ledger/purposes';
 import { reverseEntry } from './ledger/reverse';
 import { attachDocument, uploadVoucher, revokeVoucher } from './ledger/vouchers';
-import { setDatedValue } from './ledger/dated-values';
+import { setDatedValue, valueAt } from './ledger/dated-values';
 import { fileVatFilingDocument, recordVatFiling } from './reporting/vat-filing';
 import { vatFormFor } from './reporting/vat-forms';
 import { saveVatSettings } from './ledger/vat-settings';
-import { declineReverseCharge, saveContactTaxDetails } from './allocation/contact-tax-details';
+import { contactTaxDetailsInternal, declineReverseCharge, saveContactTaxDetails } from './allocation/contact-tax-details';
+import { nameConsentHistoryInternal, recordNameConsent } from './allocation/name-consents';
+import { annualAccountsExplanationInternal, saveAnnualAccountsExplanation } from './reporting/annual-accounts-notes';
 import { installFinance } from './install';
 import { SEED_CLOSED_YEARS, seedStoryYear } from './seed-calendar';
 import { finalizeFinanceReport } from './reporting/finalize';
+import { publicationsOfYearInternal, publishAnnualAccounts } from './closing/annual-accounts-publish';
+import { signAnnualAccounts, signatureRowInternal } from './closing/annual-accounts-sign';
 import { dataExportSlot, startDataExport } from './reporting/export/run';
 import { sweepDataExports } from './reporting/export/sweep';
 import { saveAuditor } from './auditing/auditors';
@@ -64,6 +68,7 @@ import { savePartnerNotice, savePartnerProfile } from './allocation/partners';
 import { copyPartnerPayment, rejectPartnerPayment, savePartnerPaymentDraft, submitPartnerPayment } from './allocation/partner-payments';
 import { addEvidenceUpload, acknowledgeEvidence } from './allocation/evidence';
 import { freeReserveCap, recordReserveMovement, saveReserve } from './allocation/reserves';
+import { saveFundsUseOpening } from './allocation/funds-use-openings';
 import { approvePurposeTransfer, requestPurposeTransfer } from './allocation/transfers';
 import { buildCamt053Bytes } from './import/camt-fixture';
 import { accountBalancesAt } from './ledger/queries';
@@ -104,6 +109,7 @@ import {
   financePurposeTransfers,
   financeReserves,
   financeReserveMovements,
+  financeFundsUseOpenings,
   financeRawTransactions,
   financeSigners,
   financeCashCounts,
@@ -371,6 +377,10 @@ export async function seedFinance(deps: Deps, ctx: CallContext): Promise<void> {
       ],
     }).then(unwrap),
   );
+
+  // Jahresrechnung (J1 Task 8): eine Stiftung (juristische Person) mit mehr als 10 % der Einnahmen des Vorjahres — nur
+  // solange das Vorjahr offen ist; danach ändert der Seed das Vorjahr nicht mehr.
+  await seedLargeGrant(deps, ctx, previousYear);
 
   await ensureEntry(deps, 'Spende mit Zweck', () =>
     bookEntry(deps, ctx, {
@@ -733,10 +743,14 @@ export async function seedFinance(deps: Deps, ctx: CallContext): Promise<void> {
     // Rechenschaft C Schritt 1: ohne Kontoauszug als PDF je Bankkonto schreibt Kompass keinen Bericht fest.
     await seedStatementPdfs(deps, ctx, previousFiscalYear.id);
     await seedCashReport(on(deps, `${storyYear}-02-25`), ctx, previousFiscalYear.id);
+    // Jahresrechnung (J1 Task 8): Erläuterungen, Einwilligung, juristische Person, festgeschrieben nach dem Kassenbericht.
+    await seedAnnualAccounts(deps, ctx, previousFiscalYear.id, previousYear, storyYear);
     // Rechenschaft C: der Jahresabschluss des Vorjahres bis Schritt 12, dann die Amtsübergabe im Stichjahr. Vorher der
     // Vorstandswechsel: Bernd Hagedorn war das ganze Vorjahr im Vorstand und gehört in die Entlastung (E2E C2).
     await seedBoardHistory(deps, ctx, storyYear);
     await seedClosing(deps, ctx, previousFiscalYear.id, storyYear);
+    // Jahresrechnung (J2): abgezeichnet am 27.02., nach dem MV-Ergebnis (14.03.) am 15.03. für die Webseite bereitgestellt.
+    await seedAnnualAccountsPublication(deps, ctx, previousFiscalYear.id, storyYear);
     await seedHandover(deps, ctx, storyYear);
   }
 
@@ -779,6 +793,8 @@ export async function seedFinance(deps: Deps, ctx: CallContext): Promise<void> {
   // F8b Task 7: Rücklagen, Umwidmungen, Pauschalen an Vorstand und Nahestehende — nach
   // `grantApproverRoleToJonasFeld`, weil Jonas Feld die Umwidmung freigibt.
   await seedMittel(deps, ctx, storyYear);
+  // M1: je eine Rücklage im wGB und in der Vermögensverwaltung (AEAO zu § 55 Nr. 3 und Nr. 28).
+  await seedOperationReserves(deps, ctx, storyYear);
 
   // Spec 2026-10-06 § 4: Clara Neumann kommt bei der Mitgliederversammlung in den Vorstand, Bernd Hagedorn geht.
   await seedBoardHistory(deps, ctx, storyYear);
@@ -832,6 +848,50 @@ const REPLACEMENT_ALLOCATIONS = [10000, 10000, 20000] as const;
  * eine Zuführung im Dezember, bevor das Jahr schließt; aufgelöst wird sie im Stichjahr beim Kauf (`seedMittel`). Je Jahr
  * einmal.
  */
+/**
+ * M1: Anfangsvortrag der Mittelverwendung (erfunden, kalenderfest): aus dem Jahr vor dem ersten Seed-Jahr über der
+ * damaligen Grenze 3.000 € noch zu verwenden; aus dem Jahr davor 1.500 € — unter der Grenze, wirkt also mit 0
+ * (AEAO zu § 55 Nr. 31). Ein Beleg für beide. Nur solange das erste Jahr offen ist und noch kein Vortrag besteht.
+ */
+async function seedFundsUseOpenings(deps: Deps, ctx: CallContext, firstYear: number): Promise<void> {
+  const first = deps.db.select().from(financeFiscalYears).where(eq(financeFiscalYears.designation, String(firstYear))).get();
+  if (!first || fiscalYearStatusInternal(deps.db, first.id) !== 'open') return;
+  if (deps.db.select({ id: financeFundsUseOpenings.id }).from(financeFundsUseOpenings).get()) return;
+  const writeCtx: CallContext = { ...ctx, permissions: new Set([...ctx.permissions, 'finance.setup', 'dms.view', 'dms.create']) };
+  const limit = (endsOn: string) => (valueAt(deps.db, 'thresholdTimelyUse', endsOn) as number | null) ?? null;
+  const day = `${firstYear}-03-01`;
+  const o1End = `${firstYear - 1}-12-31`;
+  const o1Limit = limit(o1End);
+  const newer = unwrap(
+    await saveFundsUseOpening(on(deps, day), writeCtx, {
+      offset: 1,
+      designation: String(firstYear - 1),
+      endsOn: o1End,
+      revenueCents: o1Limit === null ? 5_000_000 : o1Limit + 700_000,
+      amountCents: 300_000,
+      upload: { bytes: textPdf([`Mittelverwendungsrechnung ${firstYear - 1} (Steuerberatung)`, '', 'Erfundenes Beispiel für die Entwicklung.']), fileName: `Mittelverwendungsrechnung ${firstYear - 1}.pdf`, documentDate: day },
+    }),
+  );
+  const o2End = `${firstYear - 2}-12-31`;
+  const o2Limit = limit(o2End);
+  unwrap(await saveFundsUseOpening(on(deps, day), writeCtx, { offset: 2, designation: String(firstYear - 2), endsOn: o2End, revenueCents: o2Limit === null ? 5_000_000 : o2Limit - 500_000, amountCents: 150_000, documentId: newer.documentId! }));
+}
+
+/** M1: Rücklagen im wGB und in der Vermögensverwaltung im Stichjahr (erfunden), je einmal nach Name. */
+async function seedOperationReserves(deps: Deps, ctx: CallContext, storyYear: number): Promise<void> {
+  const writeCtx = reserveWriteCtx(ctx);
+  const plans = [
+    { kind: 'assetManagement', name: 'Rücklage Vermietung', reason: 'Renovierung des vermieteten Raums', day: `${storyYear}-06-30`, amountCents: 40_000 },
+    { kind: 'business', name: 'Rücklage Vereinsfest', reason: 'Ersatz der Kühltheke für den Verkauf', day: `${storyYear}-07-15`, amountCents: 25_000 },
+  ] as const;
+  for (const p of plans) {
+    if (reserveNamedInternal(deps, p.name)) continue;
+    const resolutionDay = `${p.day.slice(0, 8)}01`;
+    const reserve = unwrap(await saveReserve(on(deps, resolutionDay), writeCtx, { kind: p.kind, name: p.name, purposeText: p.reason, resolutionUpload: reserveMinutes(`Protokoll ${p.name}`, resolutionDay) }));
+    unwrap(await recordReserveMovement(on(deps, p.day), writeCtx, { reserveId: reserve.id, kind: 'allocate', movementDate: p.day, amountCents: p.amountCents, resolutionUpload: reserveMinutes(`Protokoll Zuführung ${p.name}`, p.day) }));
+  }
+}
+
 async function seedReplacementReserveYear(deps: Deps, ctx: CallContext, year: number, storyYear: number): Promise<void> {
   const index = year - (storyYear - SEED_CLOSED_YEARS);
   const amountCents = REPLACEMENT_ALLOCATIONS[REPLACEMENT_ALLOCATIONS.length - SEED_CLOSED_YEARS + index];
@@ -902,6 +962,8 @@ async function seedEarlyYear(deps: Deps, ctx: CallContext, year: number, storyYe
     for (const e of entries.filter((x) => !x.late)) await book(e);
     await seedReplacementReserveYear(deps, ctx, year, storyYear);
     if (year === storyYear - 2) await seedEarlyFreeReserve(deps, ctx, fiscalYear.id, year);
+    // M1: Anfangsvortrag der Mittelverwendung nur im ersten Seed-Jahr, solange es offen ist.
+    if (year === storyYear - SEED_CLOSED_YEARS) await seedFundsUseOpenings(deps, ctx, year);
     await seedYearEndCashCount(deps, ctx, year);
     unwrap(await closeFiscalYear(on(deps, `${next}-01-20`), ctx, { id: fiscalYear.id }));
   }
@@ -916,6 +978,8 @@ async function seedEarlyYear(deps: Deps, ctx: CallContext, year: number, storyYe
   }
   await seedStatementPdfs(deps, ctx, fiscalYear.id);
   await finalizeAssemblyReports(deps, ctx, fiscalYear.id, `${next}-02-25`);
+  // Jahresrechnung (J2): im ersten Seed-Jahr vor der MV veröffentlicht, wegen der Frist der ITZ.
+  if (year === storyYear - SEED_CLOSED_YEARS) await seedEarlyAnnualAccounts(deps, ctx, fiscalYear.id, year, next);
   await seedClosing(deps, ctx, fiscalYear.id, next);
 
   // Die Quittung, die nach der MV auftaucht: nur einmal, solange keine Übernahme besteht.
@@ -1115,7 +1179,7 @@ async function seedAudit(deps: Deps, ctx: CallContext, previousFiscalYearId: str
   if (!mira) {
     // Ohne Kernseed (isolierte Modul-Tests) gibt es Mira nicht: Dann prüft Holger Brandt allein auf Papier — Vordruck
     // drucken, Scan ablegen, wie es die Schatzmeisterin täte.
-    if (!auditors().some((a) => a.mode === 'paper')) unwrap(await saveAuditor(deps, ctx, { fiscalYearId: previousFiscalYearId, contactId: (await holger()).id, mode: 'paper', confidential: true, electedOn: `${previousYear}-04-12` }));
+    if (!auditors().some((a) => a.mode === 'paper')) unwrap(await saveAuditor(deps, ctx, { fiscalYearId: previousFiscalYearId, contactId: (await holger()).id, mode: 'paper', confidential: true, electedOn: `${previousYear}-03-20` }));
     const blank = unwrap(await printAuditReportBlank(deps, ctx, { fiscalYearId: previousFiscalYearId }));
     unwrap(await fileAuditReportScan(deps, ctx, { reportId: blank.reportId, bytes: scan(), fileName: 'pruefbericht.pdf' }));
     return;
@@ -1131,8 +1195,8 @@ async function seedAudit(deps: Deps, ctx: CallContext, previousFiscalYearId: str
     miraContactId = unwrap(await createContact(deps, contactCtx, { kind: 'person', salutation: 'Frau', firstName: 'Mira', lastName: 'Klein', street: 'Lindenallee 7', postalCode: '12346', city: 'Musterstadt' })).id;
     unwrap(await linkUserToContact(deps, usersCtx, { userId: mira.id, contactId: miraContactId }));
   }
-  const miraAuditor = auditors().find((a) => a.contactId === miraContactId) ?? unwrap(await saveAuditor(deps, ctx, { fiscalYearId: previousFiscalYearId, contactId: miraContactId, mode: 'kompass', confidential: true, electedOn: `${previousYear}-04-12` }));
-  const paperAuditor = auditors().find((a) => a.mode === 'paper') ?? unwrap(await saveAuditor(deps, ctx, { fiscalYearId: previousFiscalYearId, contactId: (await holger()).id, mode: 'paper', confidential: true, electedOn: `${previousYear}-04-12` }));
+  const miraAuditor = auditors().find((a) => a.contactId === miraContactId) ?? unwrap(await saveAuditor(deps, ctx, { fiscalYearId: previousFiscalYearId, contactId: miraContactId, mode: 'kompass', confidential: true, electedOn: `${previousYear}-03-20` }));
+  const paperAuditor = auditors().find((a) => a.mode === 'paper') ?? unwrap(await saveAuditor(deps, ctx, { fiscalYearId: previousFiscalYearId, contactId: (await holger()).id, mode: 'paper', confidential: true, electedOn: `${previousYear}-03-20` }));
   const paperContactId = paperAuditor.contactId;
 
   // Ab hier schreibt Mira selbst — mit ihren Rechten, nicht mit denen des Seeds (Prüfung ist eine persönliche Erklärung).
@@ -1211,7 +1275,7 @@ async function seedTreasurers(deps: Deps, ctx: CallContext, storyYear: number): 
   const treasurer = await person('Tanja', 'Gerber');
   const successor = await person('Lena', 'Brückner');
   if (!deps.db.select({ id: contactRoles.id }).from(contactRoles).where(and(eq(contactRoles.contactId, treasurer), eq(contactRoles.role, 'treasurer'))).get()) {
-    unwrap(await addContactRole(deps, contactCtx, { id: treasurer, role: 'treasurer', since: `${storyYear - 1}-01-01` }));
+    seedRoleRow(deps, contactCtx, { contactId: treasurer, role: 'treasurer', since: `${storyYear - 1}-01-01` });
   }
   return { treasurer, successor };
 }
@@ -1269,7 +1333,8 @@ async function seedTaxReturn(deps: Deps, ctx: CallContext, previousFiscalYearId:
         answers: {
           churchPurposes: false,
           charitablePurposes: false,
-          statuteDate: `${storyYear - 2}-01-18`,
+          // Der zum Ende des Zeitraums gültige Stand: die Satzungsänderung der ao. Versammlung im Vorjahr (Gremien, V-2).
+          statuteDate: `${storyYear - 1}-03-20`,
           statuteSubmission: 'onFile',
           feeResolution: { date: `${first}-03-15` },
           feeResolutionSubmission: 'onFile',
@@ -1314,7 +1379,7 @@ async function seedClosing(deps: Deps, ctx: CallContext, previousFiscalYearId: s
   for (const row of accountStatementsForYearInternal(deps.db, previousFiscalYearId)) {
     if (row.kind === 'paymentService' && !row.importedBalance && !row.confirmation) unwrap(await confirmAccountForYear(on(deps, `${storyYear}-01-15`), ctx, { fiscalYearId: previousFiscalYearId, accountId: row.accountId, kind: 'notReconcilable' }));
   }
-  if (!assemblyOfYearInternal(deps.db, previousFiscalYearId)) {
+  if (!assemblyOfYearInternal(deps, deps.db, previousFiscalYearId, timeZoneOf(deps))) {
     const persons = unwrap(await getAssemblyResult(deps, ctx, { fiscalYearId: previousFiscalYearId })).persons;
     unwrap(await saveAssemblyResult(on(deps, `${storyYear}-03-14`), ctx, { fiscalYearId: previousFiscalYearId, assemblyOn: `${storyYear}-03-14`, accountsApproved: 'yes', dischargeMode: 'individual', discharges: persons.map((p) => ({ contactId: p.contactId, outcome: 'granted' })) }));
   }
@@ -1453,6 +1518,15 @@ async function seedProjectBookings(deps: Deps, ctx: CallContext, projectId: stri
       { text: 'Fleecedecken 5 St.', cents: 2500 },
     ],
   }));
+  // Die Winterhilfe begann im Dezember des Vorjahres: Futter und Decken an einem publizierten Projekt. So überwiegt in der
+  // Jahresrechnung des Vorjahres die Satzungsarbeit, und Werbung (die Anzeigen aus Irland) und Verwaltung bleiben klein —
+  // ohne Hinweis „Posten über 25 %“ (Bilder 0.5.0). Gebucht, solange das Vorjahr noch offen ist.
+  const startDate = `${year - 1}-12-04`;
+  const start = 'Futter und Decken Winterhilfe';
+  await ensureEntry(deps, start, () =>
+    bookEntry(on(deps, startDate), ctx, { entryDate: startDate, text: start, moneyLines: [{ accountId: bank.id, amountCents: -58000 }], allocationLines: [{ categoryId: categoryByKey(deps, 'program-costs').id, amountCents: -58000, projectId }] }).then(unwrap),
+  );
+  await ensureVoucher(deps, ctx, entryByText(deps, start), 'voucher-invoice', startDate, 'Rechnung Futter und Decken Winterhilfe');
 }
 
 /**
@@ -2405,7 +2479,8 @@ async function seedMittel(deps: Deps, ctx: CallContext, storyYear: number): Prom
   };
   const helga = await person('Helga', 'Sommer');
   if (!deps.db.select({ id: contactRoles.id }).from(contactRoles).where(and(eq(contactRoles.contactId, helga), eq(contactRoles.role, 'board-member'))).get()) {
-    unwrap(await addContactRole(deps, contactCtx, { id: helga, role: 'board-member', since: `${storyYear}-01-01` }));
+    // Jahresrechnung (J1 Task 8): eine Beisitzerin, die den Verein nicht nach § 26 BGB vertritt.
+    seedRoleRow(deps, contactCtx, { contactId: helga, role: 'board-member', since: `${storyYear}-01-01`, note: 'Beisitzerin', representsAssociation: false });
   }
   const volunteerCat = categoryByKey(deps, 'volunteer-allowance');
   await ensureEntry(deps, 'Ehrenamtspauschale Vorstand', () =>
@@ -2437,13 +2512,148 @@ async function seedBoardHistory(deps: Deps, ctx: CallContext, year: number): Pro
   const find = (firstName: string, lastName: string) => deps.db.select({ id: contacts.id }).from(contacts).where(and(eq(contacts.firstName, firstName), eq(contacts.lastName, lastName))).get()?.id ?? null;
   const onBoard = (contactId: string) => !!deps.db.select({ id: contactRoles.id }).from(contactRoles).where(and(eq(contactRoles.contactId, contactId), eq(contactRoles.role, 'board-member'))).get();
   const bernd = find('Bernd', 'Hagedorn');
-  if (bernd && !onBoard(bernd)) {
-    const added = unwrap(await addContactRole(deps, contactCtx, { id: bernd, role: 'board-member', since: `${year - 3}-04-01` }));
-    const open = added.roles.find((r) => r.role === 'board-member' && r.until === null);
-    if (open) unwrap(await endContactRole(deps, contactCtx, { roleId: open.id, until: `${year}-04-28` }));
-  }
+  // Jahresrechnung (J1 Task 8): Amt und „vertritt nach § 26 BGB“ — beide vertreten den Verein.
+  if (bernd && !onBoard(bernd)) seedRoleRow(deps, contactCtx, { contactId: bernd, role: 'board-member', since: `${year - 3}-04-01`, until: `${year}-04-28`, note: 'Vorsitzender', representsAssociation: true });
   const clara = find('Clara', 'Neumann');
-  if (clara && !onBoard(clara)) unwrap(await addContactRole(deps, contactCtx, { id: clara, role: 'board-member', since: `${year}-04-29` }));
+  if (clara && !onBoard(clara)) seedRoleRow(deps, contactCtx, { contactId: clara, role: 'board-member', since: `${year}-04-29`, note: 'Vorsitzende', representsAssociation: true });
+}
+
+/**
+ * Eine Vorstandsrolle, wie sie vor den Gremien von Hand bestand. Direkt als Zeile über die Kontakte: Solange Gremien
+ * eingeschaltet ist, führt es `board-member` und `treasurer`, und `addContactRole` lehnt sie ab (Spec Gremien § 3.4) —
+ * der Seed bildet hier den Bestand von vorher ab.
+ */
+function seedRoleRow(deps: Deps, ctx: CallContext, input: { contactId: string; role: string; since: string; until?: string; note?: string; representsAssociation?: boolean }): void {
+  deps.db.transaction((tx) => {
+    const rowId = startRoleRowInternal(tx, deps, ctx, { contactId: input.contactId, role: input.role, since: input.since, note: input.note ?? null, representsAssociation: input.representsAssociation ?? false });
+    if (input.until) endRoleRowInternal(tx, deps, ctx, { rowId, until: input.until });
+  });
+}
+
+/** Erfundene Erläuterungen der Jahresrechnung je abgeschlossenem Jahr (kurzes Markdown). */
+const ANNUAL_ACCOUNTS_EXPLANATION = (year: number) =>
+  `Das Jahr ${year} war geprägt von der **Arbeit der Ehrenamtlichen** und einer treuen Gemeinschaft von Spenderinnen und Spendern.\n\n- Die Verwaltung erledigt der Vorstand ehrenamtlich; bezahlte Stellen gibt es nicht.\n- Größere Ausgaben stimmt der Vorstand vorher ab.`;
+
+/**
+ * Jahresrechnung (J1 Task 8): eine Zuwendung der „Stiftung Musterhilfe“ im Vorjahr — über 10 % der Einnahmen, damit F8
+ * mit Greta Sommer (Einwilligung) und Paul Winter (ohne) drei Großzuwendungen zeigt. Nur in einem offenen Vorjahr.
+ */
+async function seedLargeGrant(deps: Deps, ctx: CallContext, previousYear: number): Promise<void> {
+  const text = 'Zuwendung Stiftung Musterhilfe';
+  const year = deps.db.select().from(financeFiscalYears).where(eq(financeFiscalYears.designation, String(previousYear))).get();
+  if (!year || fiscalYearStatusInternal(deps.db, year.id) !== 'open') return;
+  const stiftung = await ensureDonationContact(deps, ctx, { kind: 'organization', name: 'Stiftung Musterhilfe' }, { street: 'Stiftungsplatz 1', postalCode: '12344', city: 'Musterstadt' });
+  const date = `${previousYear}-09-15`;
+  await ensureEntry(deps, text, () =>
+    bookEntry(on(deps, date), ctx, { entryDate: date, text, moneyLines: [{ accountId: accountByName(deps, 'Vereinskonto').id, amountCents: 15000 }], allocationLines: [{ categoryId: categoryByKey(deps, 'body-grants').id, amountCents: 15000, contactId: stiftung }] }).then(unwrap),
+  );
+  await ensureVoucher(deps, ctx, entryByText(deps, text), 'voucher-receipt', date, 'Bewilligungsschreiben Stiftung Musterhilfe');
+}
+
+/**
+ * Jahresrechnung (J1 Task 8): Erläuterungen aller abgeschlossenen Jahre, die Stiftung als juristische Person, Greta
+ * Sommers Einwilligung ab dem Vorjahr, das Plattform-Merkmal (auch an älteren Entwicklungsdaten) und die
+ * festgeschriebene Jahresrechnung des Vorjahres am Tag des Kassenberichts. Veröffentlichung und Abzeichnung folgen (J2).
+ */
+async function seedAnnualAccounts(deps: Deps, ctx: CallContext, previousFiscalYearId: string, previousYear: number, storyYear: number): Promise<void> {
+  const platformCategory = categoryByKey(deps, 'platform-payouts');
+  if (platformCategory.donationPlatform === null && platformCategory.incomeKind === 'bodyGrant') unwrap(await updateCategory(deps, ctx, { id: platformCategory.id, donationPlatform: 'confirmsItself' }));
+  for (const year of deps.db.select().from(financeFiscalYears).all()) {
+    if (fiscalYearStatusInternal(deps.db, year.id) !== 'closed' || annualAccountsExplanationInternal(deps.db, year.id)) continue;
+    if (deps.db.select({ id: financeReports.id }).from(financeReports).where(and(eq(financeReports.reportKey, 'annualAccounts'), eq(financeReports.fiscalYearId, year.id), isNull(financeReports.voidedAt))).get()) continue;
+    unwrap(await saveAnnualAccountsExplanation(on(deps, `${storyYear}-02-21`), ctx, { fiscalYearId: year.id, text: ANNUAL_ACCOUNTS_EXPLANATION(Number(year.endsOn.slice(0, 4))) }));
+  }
+  const stiftung = deps.db.select({ id: contacts.id }).from(contacts).where(eq(contacts.name, 'Stiftung Musterhilfe')).get();
+  if (stiftung && contactTaxDetailsInternal(deps.db, stiftung.id)?.legalEntity !== 'yes') unwrap(await saveContactTaxDetails(deps, ctx, { contactId: stiftung.id, legalEntity: 'yes' }));
+  const greta = deps.db.select({ id: contacts.id }).from(contacts).where(and(eq(contacts.firstName, 'Greta'), eq(contacts.lastName, 'Sommer'))).get();
+  if (greta && nameConsentHistoryInternal(deps.db, greta.id).length === 0) unwrap(await recordNameConsent(on(deps, `${storyYear}-01-10`), ctx, { kind: 'granted', contactId: greta.id, on: `${storyYear}-01-10`, fromYear: previousYear }));
+  const finalized = deps.db.select({ id: financeReports.id }).from(financeReports).where(and(eq(financeReports.reportKey, 'annualAccounts'), eq(financeReports.fiscalYearId, previousFiscalYearId))).get();
+  if (!finalized) unwrap(await finalizeFinanceReport(on(deps, `${storyYear}-02-25`), ctx, { report: 'annualAccounts', params: { fiscalYearId: previousFiscalYearId } }));
+}
+
+/**
+ * Jahresrechnung (J2, Planreview): ein zweites vertretungsberechtigtes Vorstandsmitglied mit eigenem Konto und
+ * Mailadresse — Thomas Wendt, erfunden, stellvertretender Vorsitzender seit Beginn der Seed-Geschichte. So geht „Um
+ * Abzeichnung bitten“ an eine andere Person als die Verwaltung, und er zeichnet selbst ab. Rolle „Freigeber Finanzen“
+ * (Leserecht für die Finanzen); Passwort wie die Verwaltung, auf dem Weg des Betriebs (wie bei Nadja). Idempotent.
+ */
+async function ensureThomasWendt(deps: Deps, ctx: CallContext, storyYear: number): Promise<{ userId: string; contactId: string }> {
+  const usersCtx: CallContext = { ...ctx, permissions: new Set(deps.registry.permissionKeys) };
+  const contactCtx: CallContext = { ...ctx, permissions: new Set([...ctx.permissions, 'contacts.manage']) };
+  let user = deps.db.select({ id: schema.users.id }).from(schema.users).where(eq(schema.users.email, 'thomas@kompass.local')).get();
+  if (!user) {
+    const role = deps.db.select({ id: schema.roles.id }).from(schema.roles).where(eq(schema.roles.name, 'Freigeber Finanzen')).get();
+    const created = unwrap(await createUser(deps, usersCtx, { name: 'Thomas Wendt', email: 'thomas@kompass.local', roleIds: role ? [role.id] : [] }));
+    user = { id: created.user.id };
+    const session = unwrap(await login(deps, { email: 'thomas@kompass.local', password: created.startPassword, ipAddress: null, requestId: ctx.requestId }));
+    unwrap(await changeOwnPassword(deps, { ...ctx, userId: user.id, permissions: new Set() }, session.sessionId, { currentPassword: created.startPassword, newPassword: SEED_ADMIN_PASSWORD }));
+  }
+  // Abnahme J2, Punkt 4: Die Startseite zeigt „Fällig“ nur mit `followUps.view` (Kachelrecht) — eine erfundene
+  // Beispielrolle „Wiedervorlagen“ gibt sie ihm, damit „Bitte → Fällig → Abzeichnen“ zeigbar ist.
+  let followUpRole = deps.db.select({ id: schema.roles.id }).from(schema.roles).where(eq(schema.roles.name, 'Wiedervorlagen')).get();
+  if (!followUpRole) {
+    followUpRole = { id: unwrap(await createRole(deps, usersCtx, { name: 'Wiedervorlagen', description: 'Fällige Wiedervorlagen sehen und abhaken' })).id };
+    unwrap(await setRolePermissions(deps, usersCtx, { roleId: followUpRole.id, permissionKeys: ['followUps.view', 'followUps.manage'] }));
+  }
+  if (!deps.db.select({ userId: schema.userRoles.userId }).from(schema.userRoles).where(and(eq(schema.userRoles.userId, user.id), eq(schema.userRoles.roleId, followUpRole.id))).get()) {
+    unwrap(await assignRole(deps, usersCtx, { userId: user.id, roleId: followUpRole.id }));
+  }
+  let contactId = contactIdForUserInternal(deps.db, user.id);
+  if (!contactId) {
+    const known = deps.db.select({ id: contacts.id }).from(contacts).where(and(eq(contacts.firstName, 'Thomas'), eq(contacts.lastName, 'Wendt'))).get();
+    contactId = known?.id ?? unwrap(await createContact(deps, contactCtx, { kind: 'person', salutation: 'Herr', firstName: 'Thomas', lastName: 'Wendt', street: 'Birkenweg 9', postalCode: '12345', city: 'Musterstadt' })).id;
+    if (!hasLinkHistoryInternal(deps.db, user.id)) unwrap(await linkUserToContact(deps, usersCtx, { userId: user.id, contactId }));
+  }
+  if (!deps.db.select({ id: contactRoles.id }).from(contactRoles).where(and(eq(contactRoles.contactId, contactId), eq(contactRoles.role, 'board-member'))).get()) {
+    // Seit der Gründungsversammlung (Gremien, V-2: eine Vereinsgeschichte).
+    seedRoleRow(deps, contactCtx, { contactId, role: 'board-member', since: `${storyYear - SEED_CLOSED_YEARS}-02-10`, note: 'Stellvertretender Vorsitzender', representsAssociation: true });
+  }
+  return { userId: user.id, contactId };
+}
+
+/** Der Aufrufkontext von Thomas Wendt — als Mensch in der Oberfläche, mit dem Leserecht seiner Rolle. */
+const thomasCtx = (deps: Deps, ctx: CallContext, userId: string): CallContext => ({ ...ctx, userId, channel: 'ui', permissions: getEffectivePermissions(deps.db, deps.registry, userId) });
+/** Veröffentlichen verlangt auch `site.publish` — der Seed handelt als Verwaltung. */
+const publishCtx = (ctx: CallContext): CallContext => ({ ...ctx, permissions: new Set([...ctx.permissions, 'finance.reportsFinalize', 'site.publish']) });
+
+function annualAccountsOfYear(deps: Deps, fiscalYearId: string) {
+  return deps.db.select({ id: financeReports.id }).from(financeReports).where(and(eq(financeReports.reportKey, 'annualAccounts'), eq(financeReports.fiscalYearId, fiscalYearId), isNull(financeReports.voidedAt))).get() ?? null;
+}
+
+/**
+ * Jahresrechnung (J2): im ersten Seed-Jahr — Erläuterung, festgeschrieben am 25.02. des Folgejahres, von Thomas Wendt am
+ * 27.02. abgezeichnet und am 01.03. vor der MV für die Webseite bereitgestellt (Grund: Frist der ITZ). Ohne
+ * Webseiten-Modul bleibt es bei der Abzeichnung. Idempotent.
+ */
+async function seedEarlyAnnualAccounts(deps: Deps, ctx: CallContext, fiscalYearId: string, year: number, next: number): Promise<void> {
+  const thomas = await ensureThomasWendt(deps, ctx, next - 1 + SEED_CLOSED_YEARS);
+  if (!annualAccountsExplanationInternal(deps.db, fiscalYearId) && !annualAccountsOfYear(deps, fiscalYearId)) {
+    unwrap(await saveAnnualAccountsExplanation(on(deps, `${next}-02-21`), ctx, { fiscalYearId, text: ANNUAL_ACCOUNTS_EXPLANATION(year) }));
+  }
+  if (!deps.db.select({ id: financeReports.id }).from(financeReports).where(and(eq(financeReports.reportKey, 'annualAccounts'), eq(financeReports.fiscalYearId, fiscalYearId))).get()) {
+    unwrap(await finalizeFinanceReport(on(deps, `${next}-02-25`), ctx, { report: 'annualAccounts', params: { fiscalYearId } }));
+  }
+  const report = annualAccountsOfYear(deps, fiscalYearId);
+  if (!report) return;
+  if (!signatureRowInternal(deps.db, report.id)) unwrap(await signAnnualAccounts(on(deps, `${next}-02-27`), thomasCtx(deps, ctx, thomas.userId), { reportId: report.id }));
+  if (isModuleEnabled(deps, 'site') && publicationsOfYearInternal(deps.db, fiscalYearId).length === 0) {
+    unwrap(await publishAnnualAccounts(on(deps, `${next}-03-01`), publishCtx(ctx), { reportId: report.id, earlyReason: 'itzDeadline' }));
+  }
+}
+
+/**
+ * Jahresrechnung (J2): die festgeschriebene Jahresrechnung des Vorjahres — von Thomas Wendt am 27.02. abgezeichnet, nach
+ * dem eingetragenen MV-Ergebnis am 15.03. ohne Grund für die Webseite bereitgestellt. Der Widerruf einer Einwilligung
+ * kommt nicht vor (Greta Sommer bleibt genannt); die Webfassung zeigt der Test. Idempotent.
+ */
+async function seedAnnualAccountsPublication(deps: Deps, ctx: CallContext, previousFiscalYearId: string, storyYear: number): Promise<void> {
+  const report = annualAccountsOfYear(deps, previousFiscalYearId);
+  if (!report) return;
+  const thomas = await ensureThomasWendt(deps, ctx, storyYear);
+  if (!signatureRowInternal(deps.db, report.id)) unwrap(await signAnnualAccounts(on(deps, `${storyYear}-02-27`), thomasCtx(deps, ctx, thomas.userId), { reportId: report.id }));
+  if (isModuleEnabled(deps, 'site') && publicationsOfYearInternal(deps.db, previousFiscalYearId).length === 0) {
+    unwrap(await publishAnnualAccounts(on(deps, `${storyYear}-03-15`), publishCtx(ctx), { reportId: report.id }));
+  }
 }
 
 /**

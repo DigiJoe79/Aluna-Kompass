@@ -4,8 +4,8 @@ import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 import { getMandate } from '../src/direct-debit/mandates';
 import { getPledge } from '../src/direct-debit/pledges';
-import { listDirectDebitReturns, resolveDirectDebitReturn } from '../src/direct-debit/returns';
-import { createDirectDebitRun, getDirectDebitRun, listDirectDebitRuns, previewDirectDebitRun } from '../src/direct-debit/runs';
+import { listDirectDebitReturns, resolveDirectDebitReturn, returnViewInternal } from '../src/direct-debit/returns';
+import { buildDirectDebitFile, createDirectDebitRun, getDirectDebitRun, listDirectDebitRuns, markDirectDebitRunSubmitted, previewDirectDebitRun } from '../src/direct-debit/runs';
 import { openCentsInternal } from '../src/ledger/open-items';
 import { bookEntry } from '../src/ledger/finalize';
 import { financeAccounts, financeDirectDebitReturns, financeOpenItems, financePledgeRateMarks, financeSepaMandates } from '../src/schema';
@@ -34,6 +34,14 @@ async function scene() {
   return { ...f, later, caseOf, resolve, included, late, rate };
 }
 
+describe('returnViewInternal (F-B3)', () => {
+  it('without its bank line the return day is the day of the record in the association\'s zone', async () => {
+    const f = await scene();
+    const row = { ...f.caseOf('openItem'), rawTransactionId: 'GONE', createdAt: '2026-12-31T23:30:00.000Z' };
+    expect(returnViewInternal(f.deps.db, row, 'Europe/Berlin').returnedOn).toBe('2027-01-01');
+  });
+});
+
 describe('resolveDirectDebitReturn — a fee', () => {
   it('before it is resolved, Kompass never collects again on its own', async () => {
     const f = await scene();
@@ -56,6 +64,15 @@ describe('resolveDirectDebitReturn — a fee', () => {
     expect(await f.included()).toEqual(['openItem']);
     const audit = f.deps.db.select().from(schema.auditLog).where(eq(schema.auditLog.action, 'finance.directDebit.returnResolve')).all();
     expect(audit.map((a) => JSON.parse(a.params!))).toEqual([{ resolution: 'recollect', returnCode: 'AM04' }]);
+  });
+
+  it('recollect: the new run with the returned item can be marked submitted (Plan R1, M1 — the returned run does not bind it)', async () => {
+    const f = await scene();
+    unwrap(await f.resolve('openItem', 'recollect'));
+    f.announce(f.a.mandateId, [{ dueOn: '2026-11-16', amountCents: 5000 }], '2026-11-01');
+    const again = unwrap(await createDirectDebitRun(f.later, f.ctx, { collectionDate: '2026-11-16' }));
+    unwrap(await buildDirectDebitFile(f.later, f.ctx, { runId: again.id }));
+    expect(unwrap(await markDirectDebitRunSubmitted(f.later, f.ctx, { runId: again.id, submittedOn: '2026-11-10' }))).toMatchObject({ status: 'submitted' });
   });
 
   it('requestTransfer: the item stays open, but is no longer collected', async () => {

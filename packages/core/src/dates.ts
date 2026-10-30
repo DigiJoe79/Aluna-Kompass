@@ -56,6 +56,28 @@ export function isoDayInZone(instant: Date | number, timeZone: string): IsoDay {
   return `${part('year')}-${part('month')}-${part('day')}` as IsoDay;
 }
 
+/** Minuten, um die die Uhr in `timeZone` zum Zeitpunkt `instant` vor UTC geht. */
+function zoneOffsetMinutes(instant: number, timeZone: string): number {
+  const parts = new Intl.DateTimeFormat('en-US', { timeZone, hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' }).formatToParts(instant);
+  const part = (type: string) => Number(parts.find((p) => p.type === type)!.value);
+  const local = Date.UTC(part('year'), part('month') - 1, part('day'), part('hour'), part('minute'), part('second'));
+  return Math.round((local - Math.floor(instant / 1000) * 1000) / 60000);
+}
+
+/**
+ * Der Beginn (00:00) des Tages `day` in `timeZone`, als UTC-Zeitstempel (`toISOString`). Die Gegenrichtung zu
+ * `isoDayInZone`: Wer Zeitstempel einem Tag oder Geschäftsjahr zuordnet, vergleicht mit diesen Grenzen (`>=`/`<`),
+ * nicht mit den ersten zehn Zeichen. Rechnet die Verschiebung am gesuchten Zeitpunkt selbst — auch am Tag der Zeitumstellung.
+ */
+export function zonedDayStartIsoInZone(day: IsoDay, timeZone: string): string {
+  const [y, m, d] = day.split('-').map(Number) as [number, number, number];
+  const utcMidnight = Date.UTC(y, m - 1, d);
+  let instant = utcMidnight - zoneOffsetMinutes(utcMidnight, timeZone) * 60000;
+  const corrected = utcMidnight - zoneOffsetMinutes(instant, timeZone) * 60000;
+  if (corrected !== instant) instant = corrected;
+  return new Date(instant).toISOString();
+}
+
 /**
  * Ein ISO-Datum (`2026-09-12`) oder ein ISO-Zeitstempel als Datum. Ein reiner Tag bleibt, wie er ist;
  * ein Zeitstempel wird zum Tag in `timeZone`, der Zone des Vereins (`timeZoneOf`, auf der Oberfläche

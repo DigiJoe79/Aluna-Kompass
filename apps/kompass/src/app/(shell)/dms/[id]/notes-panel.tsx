@@ -3,7 +3,8 @@
 import { useDateFormat } from '@/components/date-format-provider';
 import { Trash2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { useActionState, useEffect, useRef, useState } from 'react';
+import { useActionState, useState } from 'react';
+import { ActionForm } from '@/components/forms/action-form';
 import { ConfirmDialog } from '@/components/forms/confirm-dialog';
 import { SubmitButton } from '@/components/forms/submit-button';
 import { Button } from '@/components/ui/button';
@@ -40,11 +41,8 @@ export function NotesPanel({
   const fmt = useDateFormat();
   const [state, action] = useActionState(addNoteAction.bind(null, documentId), idleState);
   const [deleting, setDeleting] = useState<string | null>(null);
-  const formRef = useRef<HTMLFormElement>(null);
-
-  useEffect(() => {
-    if (state.status === 'success') formRef.current?.reset();
-  }, [state]);
+  // `ActionForm` statt `<form action>` (App-B5): Nach einer Ablehnung bleibt die Notiz stehen, nach dem Speichern leert
+  // es das Feld selbst.
 
   return (
     <section data-testid="notes-panel" className="mt-6 rounded-md border border-line bg-surface p-5 shadow-xs">
@@ -80,7 +78,7 @@ export function NotesPanel({
         )}
 
         {canEdit ? (
-          <form ref={formRef} action={action} className="mt-4 space-y-2">
+          <ActionForm action={action} state={state} className="mt-4 space-y-2">
             <Textarea name="body" aria-label={t('add')} rows={3} required />
             {state.status === 'error' ? (
               <p role="alert" className="text-meta text-error">
@@ -88,7 +86,7 @@ export function NotesPanel({
               </p>
             ) : null}
             <SubmitButton size="sm">{t('submit')}</SubmitButton>
-          </form>
+          </ActionForm>
         ) : null}
 
         <ConfirmDialog

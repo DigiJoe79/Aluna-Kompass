@@ -20,7 +20,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import type { ActionState } from '@/lib/actions';
-import { formatEuro, parseAmount } from '@/lib/finance/amount';
+import { formatEuro, readAmount } from '@/lib/finance/amount';
 import { takeCsvHandoff, type CsvHandoff } from '@/lib/finance/csv-handoff';
 import {
   assistantFileKey,
@@ -99,6 +99,8 @@ export function CsvAssistant({ accounts, initialAccountId, canLoad, reselect = f
   const [file, setFile] = useState<LoadedFile | null>(null);
   const [state, setState] = useState<AssistantState | null>(null);
   const [balanceText, setBalanceText] = useState('');
+  const [balanceInvalid, setBalanceInvalid] = useState(false);
+  const tAmount = useTranslations('finance.amount');
   const [pendingLoad, setPendingLoad] = useState<boolean | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -148,9 +150,13 @@ export function CsvAssistant({ accounts, initialAccountId, canLoad, reselect = f
 
   const save = async (load: boolean, confirmFormatChange: boolean): Promise<ActionState> => {
     if (!account || !file || !state || !built?.ok) return { status: 'error', message: '', fieldErrors: {} };
+    // Endsaldo optional; unlesbar steht er am Feld, statt still ohne Saldoprüfung einzulesen (App-B7).
+    const balance = readAmount(balanceText, { required: false });
+    setBalanceInvalid(!balance.ok);
+    if (!balance.ok) return { status: 'error', message: '', fieldErrors: {} };
     setBusy(true);
     setError(null);
-    const closingBalanceCents = balanceText.trim() !== '' ? (parseAmount(balanceText) ?? undefined) : undefined;
+    const closingBalanceCents = balance.cents ?? undefined;
     let result: ActionState;
     try {
       const formData = new FormData();
@@ -368,8 +374,8 @@ export function CsvAssistant({ accounts, initialAccountId, canLoad, reselect = f
                 <Input id="csv-name" value={state.name} onChange={(e) => update({ name: e.target.value })} />
               </FormField>
               {!hasBalanceColumn && read?.ok ? (
-                <FormField id="csv-balance" label={t('probe.balanceLabel', { date: date(read.statement.to) })} size="s">
-                  <Input id="csv-balance" unit="€" inputMode="decimal" value={balanceText} onChange={(e) => setBalanceText(e.target.value)} />
+                <FormField id="csv-balance" label={t('probe.balanceLabel', { date: date(read.statement.to) })} size="s" error={balanceInvalid ? tAmount('format') : undefined}>
+                  <Input id="csv-balance" unit="€" inputMode="decimal" value={balanceText} onChange={(e) => { setBalanceText(e.target.value); setBalanceInvalid(false); }} />
                 </FormField>
               ) : null}
             </FormGrid>

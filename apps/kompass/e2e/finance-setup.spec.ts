@@ -474,18 +474,6 @@ test.describe('finance setup', () => {
     await expect(row.getByText(`Rumpfjahr (15.03.${year}–31.12.${year})`)).toBeVisible();
   });
 
-  test('der Agentenschalter ist aus und gilt erst mit „Speichern“ der Schalter-Karte (Plan U4)', async ({ page }) => {
-    await page.goto('/admin/finance?panel=tax');
-    const card = page.getByTestId('tax-switches');
-    const agent = card.getByRole('switch', { name: 'Darf ein Agent festschreiben und Lastschriften bearbeiten?' });
-    await expect(agent).not.toBeChecked();
-    await agent.click();
-    await card.getByRole('button', { name: 'Verwerfen' }).click();
-    await expect(agent).not.toBeChecked();
-    await page.reload();
-    await expect(page.getByTestId('tax-switches').getByRole('switch', { name: 'Darf ein Agent festschreiben und Lastschriften bearbeiten?' })).not.toBeChecked();
-  });
-
   test('die Anspruchsgrundlage für Aufwandsspenden steht nur bei eingeschaltetem Schalter und hakt den Schritt der Checkliste ab', async ({ page }) => {
     await page.goto('/admin/finance?panel=tax');
     const panel = page.getByTestId('tax-panel');

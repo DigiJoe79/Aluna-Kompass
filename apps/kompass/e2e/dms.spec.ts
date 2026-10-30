@@ -1206,25 +1206,18 @@ test.describe('dms', () => {
     await expect(page.getByTestId('outbox-row')).toHaveCount(3);
   });
 
-  /**
-   * Handoff 2b E5 (22a): Absender speichern; die Verbindung steht als fester Wert mit der Umleitung. Plan U4 Task 1:
-   * Der Agentenschalter ist der letzte Abschnitt der Karte und geht mit „Speichern“.
-   */
-  test('Einstellungen › Versand: E-Mail-Absender und Agentenschalter speichern', async ({ page }) => {
+  /** Handoff 2b E5 (22a): Absender speichern; die Verbindung steht als fester Wert mit der Umleitung. */
+  test('Einstellungen › Versand: E-Mail-Absender speichern', async ({ page }) => {
     await setMailState(page, 'redirect');
     await login(page);
     await page.goto('/admin/dms?panel=channels');
     const box = page.getByTestId('mail-settings');
     await expect(box.getByTestId('mail-connection')).toContainText('Umleitung an umleitung@example.org');
     await box.getByLabel('Absender-Name').fill('Musterverein Versand');
-    const agent = box.getByRole('switch', { name: 'Darf ein Agent Dokumente per E-Mail senden?' });
-    await expect(agent).not.toBeChecked();
-    await agent.click();
     await box.getByRole('button', { name: 'Speichern' }).click();
     await expect(page.getByText('E-Mail-Einstellungen gespeichert.')).toBeVisible();
     await page.reload();
     await expect(page.getByTestId('mail-settings').getByLabel('Absender-Name')).toHaveValue('Musterverein Versand');
-    await expect(page.getByTestId('mail-settings').getByRole('switch', { name: 'Darf ein Agent Dokumente per E-Mail senden?' })).toBeChecked();
   });
 
   test('legt eine Wiedervorlage an und hakt sie ab', async ({ page }) => {

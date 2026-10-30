@@ -55,6 +55,7 @@ const FUTURE_ALLOWED: Readonly<Record<string, string>> = {
   'member_fee_charges.due_on': 'Fälligkeit eines Beitrags, wie die des offenen Postens.',
   'member_fee_charges.deferred_to': 'Gestundet bis: eine Frist.',
   'finance_pledges.paused_until': 'Eine Zusage ruht bis zu einem Tag, der nach heute liegen darf (Plan L1).',
+  'governance_meetings.held_on': 'Geplante Sitzung, liegt gewollt nach heute.',
 };
 
 /**

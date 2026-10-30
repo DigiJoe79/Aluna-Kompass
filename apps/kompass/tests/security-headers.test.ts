@@ -35,7 +35,16 @@ const kopfzeilen = async (pfad = '/dms'): Promise<Record<string, string>> => {
  * Sandbox, ohne dass es auffiele. Deshalb gilt der CSP hier ueberall ausser
  * dort; die uebrigen Kopfzeilen kollidieren nicht und bleiben global.
  */
-const AUSGELIEFERTE_DATEIEN = ['/media/01ABC', '/media/01ABC/preview', '/help-bilder/einstieg/oberflaeche.png'];
+const AUSGELIEFERTE_DATEIEN = [
+  '/media/01ABC',
+  '/media/01ABC/preview',
+  '/help-bilder/einstieg/oberflaeche.png',
+  // Die gebaute Webseite: Die Vorschau-Routen setzen den CSP je Antwort selbst —
+  // für HTML den der Anwendung, für alles andere `sandbox` (`lib/site-preview.ts`).
+  '/site/preview/images/logo-0123456789ab.svg',
+  '/site/preview/',
+  '/animals/proposal-preview/k1/images/a.svg',
+];
 
 const cspFuer = async (pfad: string): Promise<string | undefined> =>
   (await kopfzeilen(pfad))['content-security-policy'];

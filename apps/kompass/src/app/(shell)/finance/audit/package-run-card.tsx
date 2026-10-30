@@ -2,7 +2,7 @@
 
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useDateFormat } from '@/components/date-format-provider';
 import { RefusalNotice } from '@/components/forms/refusal-notice';
 import { useActionFeedback } from '@/components/forms/use-action-feedback';
@@ -10,12 +10,12 @@ import { RunSteps, type RunStep } from '@/components/run-steps';
 import { SectionHeading } from '@/components/section';
 import { Button } from '@/components/ui/button';
 import type { AuditPackageView } from '@/lib/finance/audit-package-view';
+import { pollTextStatus } from '@/lib/poll-text-status';
 import { useFileDownload } from '@/lib/use-file-download';
 import { cancelPackageRunAction, startPackageRunAction } from './actions';
 
 const STEPS = ['reports', 'folder', 'archive'] as const;
 const FILES = ['reports', 'folder', 'archive'] as const;
-const POLL_MS = 1500;
 
 /** Die Schritte des Laufs für `RunSteps`; ein übersprungener Schritt nennt seinen Grund. */
 export function packageRunSteps(view: AuditPackageView, t: (key: string) => string): RunStep[] {
@@ -45,34 +45,31 @@ export function PackageRunCard({ yearId, initial, variant = 'card' }: { yearId: 
   const [view, setView] = useState(initial);
   const feedback = useActionFeedback();
   const file = useFileDownload({ forbidden: tAudit('downloadRefused.forbidden'), notFound: tAudit('downloadRefused.notFound'), failed: tAudit('downloadRefused.failed') });
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const router = useRouter();
-
-  const poll = useCallback(async () => {
-    const res = await fetch(`/finance/audit/year/${encodeURIComponent(yearId)}/package/status`, { cache: 'no-store' }).catch(() => null);
-    if (res?.ok) {
-      const next = (await res.json()) as AuditPackageView;
-      setView(next);
-      if (next.state === 'running') timer.current = setTimeout(() => void poll(), POLL_MS);
-      // Nach dem Ende des Laufs stehen neue Dateien im Abschnitt „Prüfer“ und im Stand der Seite (Plan D1d Task 2).
-      else router.refresh();
-    }
-  }, [yearId, router]);
+  // Abgefragt wird über `pollTextStatus` (App-B4): Ein fehlgeschlagener Abruf beendet die Kette nicht, nach dem Verlassen
+  // der Seite plant sie nichts mehr. Jeder Anstoß (Erzeugen, Abbrechen) beginnt eine neue Kette.
+  const [watch, setWatch] = useState(initial.state === 'running' ? 1 : 0);
+  const poll = () => setWatch((n) => n + 1);
 
   useEffect(() => {
-    if (initial.state === 'running') timer.current = setTimeout(() => void poll(), POLL_MS);
-    return () => {
-      if (timer.current) clearTimeout(timer.current);
-    };
-  }, [initial.state, poll]);
+    if (watch === 0) return;
+    return pollTextStatus({
+      url: `/finance/audit/year/${encodeURIComponent(yearId)}/package/status`,
+      isPending: (body) => body.state === 'running',
+      onTick: (body) => setView(body as unknown as AuditPackageView),
+      // Nach dem Ende des Laufs stehen neue Dateien im Abschnitt „Prüfer“ und im Stand der Seite (Plan D1d Task 2).
+      onDone: () => router.refresh(),
+      onUnauthorized: () => router.refresh(),
+    });
+  }, [watch, yearId, router]);
 
   const start = async () => {
     const result = await feedback.run(() => startPackageRunAction(yearId), { retry: () => void start() });
-    if (result.status === 'success') void poll();
+    if (result.status === 'success') poll();
   };
   const cancel = async () => {
     const result = await feedback.run(() => cancelPackageRunAction(yearId), { retry: () => void cancel() });
-    if (result.status === 'success') void poll();
+    if (result.status === 'success') poll();
   };
 
   const running = view.state === 'running';
@@ -85,7 +82,7 @@ export function PackageRunCard({ yearId, initial, variant = 'card' }: { yearId: 
       {t('cancel')}
     </Button>
   ) : (
-    <Button type="button" variant={variant === 'step' ? 'default' : 'outline'} size={variant === 'step' ? 'default' : 'sm'} onClick={() => void start()} data-testid="package-run-start">
+    <Button type="button" variant={variant === 'step' ? 'default' : 'outline'} size={variant === 'step' ? 'default' : 'sm'} disabled={feedback.pending} aria-busy={feedback.pending || undefined} onClick={() => void start()} data-testid="package-run-start">
       {view.state === 'idle' ? t('start') : t('restart')}
     </Button>
   );

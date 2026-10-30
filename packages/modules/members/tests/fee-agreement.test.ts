@@ -30,6 +30,54 @@ async function withSchedule() {
   return { deps, ctx };
 }
 
+describe('an agreed rhythm converts the rule amount (Plan R1, M4)', () => {
+  async function withRules(rules: { key: string; amountCents: number; interval: 'yearly' | 'monthly'; minimum?: boolean }[]) {
+    const { deps, ctx } = setupMembers();
+    unwrap(await saveFeeSchedule(deps, ctx, { validFrom: '2026-01-01', rules: rules.map((r) => ({ typeId: typeId(deps, r.key), amountCents: r.amountCents, interval: r.interval, minimum: r.minimum ?? false, allowedIntervals: ['yearly', 'monthly'] })) }));
+    return { deps, ctx };
+  }
+
+  it('rule 120 € yearly, agreed monthly without amount → 10 € a month; rule 10 € monthly, agreed yearly → 120 €', async () => {
+    const { deps, ctx } = await withRules([
+      { key: 'regular', amountCents: 12000, interval: 'yearly' },
+      { key: 'supporting', amountCents: 1000, interval: 'monthly' },
+    ]);
+    const yearly = await member(deps, ctx, 'regular');
+    unwrap(await setFeeAgreement(deps, ctx, { membershipId: yearly.id, validFrom: '2026-01-01', interval: 'monthly', paymentMethod: 'transfer', reduction: 'none' }));
+    expect(effectiveFee(deps.db, yearly.id, '2026-03-01')).toMatchObject({ amountCents: 1000, interval: 'monthly' });
+    const monthly = await member(deps, ctx, 'supporting');
+    unwrap(await setFeeAgreement(deps, ctx, { membershipId: monthly.id, validFrom: '2026-01-01', interval: 'yearly', paymentMethod: 'transfer', reduction: 'none' }));
+    expect(effectiveFee(deps.db, monthly.id, '2026-03-01')).toMatchObject({ amountCents: 12000, interval: 'yearly' });
+  });
+
+  it('the minimum compares on the same basis: 120 € a year minimum, 9 € a month refused, 10 € a month accepted', async () => {
+    const { deps, ctx } = await withRules([{ key: 'supporting', amountCents: 12000, interval: 'yearly', minimum: true }]);
+    const m = await member(deps, ctx, 'supporting');
+    const agreed = (amountCents: number) => setFeeAgreement(deps, ctx, { membershipId: m.id, validFrom: '2026-01-01', amountCents, interval: 'monthly', paymentMethod: 'transfer', reduction: 'none' });
+    expect(fail(await agreed(900))).toMatchObject({ code: 'feeBelowMinimum', params: { minimumCents: 12000 } });
+    expect((await agreed(1000)).ok).toBe(true);
+  });
+
+  it('the minimum compares in the agreed rhythm: exactly the converted rule amount passes, a cent below is refused (Nachlauf R1)', async () => {
+    const { deps, ctx } = await withRules([
+      { key: 'supporting', amountCents: 10000, interval: 'yearly', minimum: true },
+      { key: 'regular', amountCents: 1000, interval: 'monthly', minimum: true },
+    ]);
+    const cases = [
+      { type: 'supporting', interval: 'monthly' as const, amountCents: 833, ok: true },
+      { type: 'supporting', interval: 'monthly' as const, amountCents: 832, ok: false },
+      { type: 'regular', interval: 'yearly' as const, amountCents: 12000, ok: true },
+      { type: 'regular', interval: 'yearly' as const, amountCents: 11999, ok: false },
+    ];
+    for (const c of cases) {
+      const m = await member(deps, ctx, c.type);
+      const res = await setFeeAgreement(deps, ctx, { membershipId: m.id, validFrom: '2026-01-01', amountCents: c.amountCents, interval: c.interval, paymentMethod: 'transfer', reduction: 'none' });
+      if (c.ok) expect(res.ok, `${c.type} ${c.amountCents}`).toBe(true);
+      else expect(fail(res), `${c.type} ${c.amountCents}`).toMatchObject({ code: 'feeBelowMinimum' });
+    }
+  });
+});
+
 describe('setFeeAgreement', () => {
   it('a supporting member below the minimum is refused, unless reduced', async () => {
     const { deps, ctx } = await withSchedule();
@@ -49,8 +97,8 @@ describe('setFeeAgreement', () => {
     const { deps, ctx } = await withSchedule();
     const m = await member(deps, ctx, 'supporting');
     unwrap(await setFeeAgreement(deps, ctx, { membershipId: m.id, validFrom: '2026-01-01', amountCents: 2000, paymentMethod: 'transfer', reduction: 'none' }));
-    unwrap(await setFeeAgreement(deps, ctx, { membershipId: m.id, validFrom: '2026-01-01', amountCents: 2500, interval: 'yearly', paymentMethod: 'transfer', reduction: 'none' }));
-    expect(deps.db.select().from(memberFeeAgreements).all().map((a) => a.amountCents)).toEqual([2500]);
+    unwrap(await setFeeAgreement(deps, ctx, { membershipId: m.id, validFrom: '2026-01-01', amountCents: 25000, interval: 'yearly', paymentMethod: 'transfer', reduction: 'none' }));
+    expect(deps.db.select().from(memberFeeAgreements).all().map((a) => a.amountCents)).toEqual([25000]);
     expect(auditOf(deps, 'members.feeAgreement.set').map((e) => e.params)).toEqual([
       { memberNumber: m.memberNumber, validFrom: '2026-01-01' },
       { memberNumber: m.memberNumber, validFrom: '2026-01-01' },

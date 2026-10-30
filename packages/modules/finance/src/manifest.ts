@@ -21,7 +21,7 @@ import { auditReportPrintTemplate } from './auditing/report-template';
 import { auditFolderTemplate } from './auditing/folder-template';
 import { financeRecordDeleted, financeRecordReferences, financeRetentionDue, financeRetentionHolds } from './ledger/holds';
 import { installFinance } from './install';
-import { registerCashCountWitnessChecks, registerCloseHooks, registerEntryLocks, registerFinalStageNotes, registerReleaseAuditSources, registerReleaseFollowUpChecks, registerReopenGuards } from './locks';
+import { registerCashCountWitnessChecks, registerCloseHooks, registerEntryLocks, registerFinalStageNotes, registerReleaseAuditSources, registerReleaseFollowUpChecks, registerNameConsentRevokedHook, registerReopenGuards } from './locks';
 import { carryOverStageNote } from './auditing/carry-over';
 import { followUpStateInternal, releaseAuditFactsInternal } from './auditing/report';
 import { registerAssemblyPersonSource } from './closing/assembly';
@@ -36,7 +36,12 @@ import { FINANCE_MCP_TOOLS } from './mcp-tools';
 import { FINANCE_PERMISSIONS } from './permissions';
 import { seedFinance } from './seed';
 import { sweepDataExports } from './reporting/export/sweep';
-import { financeEntries, financeFiscalYears } from './schema';
+import { financeEntries, financeFiscalYears, financeReports } from './schema';
+import { reportDefinition } from './reporting/catalog';
+import { annualAccountsPublishedFile, publishedAnnualAccounts } from './closing/annual-accounts-view';
+import { annualAccountsReopenGuard, refreshAnnualAccountsWebVersionsInternal } from './closing/annual-accounts-publish';
+import { AUDIT_RESOLUTION_LINK } from './auditing/resolutions';
+import { auditResolutionMinutesInternal } from './auditing/sections';
 
 export { FINANCE_PERMISSIONS } from './permissions';
 
@@ -46,7 +51,11 @@ registerEntryLocks([confirmationEntryLock, confirmationContactLock]);
 // F7 Task 4 (Spec 8.1, Annahme 15): eine nachträglich zugeordnete Zeile, oder die zahlende Buchung nach dem Anerkennen.
 registerEntryLocks([partnerPaidLineEntryLock, partnerPaidLineContactLock, partnerPayingEntryLock]);
 // Rechenschaft A1 (Spec § A): Wiederöffnen storniert festgeschriebene Berichte des Jahres und widerruft die Freigabe.
-registerReopenGuards([reportsReopenGuard, releaseReopenGuard]);
+registerReopenGuards([reportsReopenGuard, releaseReopenGuard, annualAccountsReopenGuard]);
+// J2: Widerruf einer Einwilligung — Webfassung der veröffentlichten Jahresrechnung.
+registerNameConsentRevokedHook(async (deps, ctx, contactId) => {
+  await refreshAnnualAccountsWebVersionsInternal(deps, ctx, contactId);
+});
 // Rechenschaft D1 (Spec § D1 „Prüfstand“): Abschließen legt den Prüfstand der Kassenprüfung an.
 registerCloseHooks([auditBaselineCloseHook]);
 registerReopenGuards([auditFollowUpReopenGuard]);
@@ -67,34 +76,34 @@ registerAssemblyPersonSource(handoverAssemblyPersons);
  */
 const FINANCE_SETTINGS: readonly SettingDefinition[] = [
   // E10: Ein Agent darf humanOnly-Dienste erst freigeschaltet über MCP nutzen — und das nur ein Mensch am Bildschirm.
-  { key: 'finance.mcpHumanOnlyAllowed', schema: z.boolean(), default: false, uiOnly: true },
-  { key: 'finance.membershipFeesCertifiable', schema: z.boolean(), default: true },
-  { key: 'finance.expenseWaiversEnabled', schema: z.boolean(), default: false },
+  { key: 'finance.mcpHumanOnlyAllowed', schema: z.boolean(), default: false, uiOnly: true, managedBy: 'finance' },
+  { key: 'finance.membershipFeesCertifiable', schema: z.boolean(), default: true, managedBy: 'finance' },
+  { key: 'finance.expenseWaiversEnabled', schema: z.boolean(), default: false, managedBy: 'finance' },
   // F8a (Spec 8.2): Anspruchsgrundlage der Aufwandsspenden — ein Vertrag oder die Satzung (BMF 25.11.2014). Leer, bis der
   // Verein sie hinterlegt; je Person überschreibbar (`finance_contact_waiver_terms`).
-  { key: 'finance.expenseWaiverBasisText', schema: z.string().max(500), default: '', auditValue: 'redact' },
+  { key: 'finance.expenseWaiverBasisText', schema: z.string().max(500), default: '', auditValue: 'redact', managedBy: 'finance' },
   /** Befund J: seit wann die Grundlage des Vereins gilt — Maßstab für „Anspruch vorab vereinbart“. Ein Datum ist kein Wortlaut, darum nicht geschwärzt. */
-  { key: 'finance.expenseWaiverBasisAgreedOn', schema: z.string().date().nullable(), default: null },
-  { key: 'finance.proofGraceDays', schema: z.number().int().min(0).max(365), default: 30 },
-  { key: 'finance.statementSufficesBelowCents', schema: z.number().int().min(0), default: 0 },
-  { key: 'finance.cashDonationAlertCents', schema: z.number().int().min(0), default: 100000 },
-  { key: 'finance.roundAmountFromCents', schema: z.number().int().min(0), default: 50000 },
+  { key: 'finance.expenseWaiverBasisAgreedOn', schema: z.string().date().nullable(), default: null, managedBy: 'finance' },
+  { key: 'finance.proofGraceDays', schema: z.number().int().min(0).max(365), default: 30, managedBy: 'finance' },
+  { key: 'finance.statementSufficesBelowCents', schema: z.number().int().min(0), default: 0, managedBy: 'finance' },
+  { key: 'finance.cashDonationAlertCents', schema: z.number().int().min(0), default: 100000, managedBy: 'finance' },
+  { key: 'finance.roundAmountFromCents', schema: z.number().int().min(0), default: 50000, managedBy: 'finance' },
   { key: 'finance.batchMinimumCents', schema: z.number().int().min(0), default: 0 },
   { key: 'finance.noticeExpiryWarnMonths', schema: z.number().int().min(1).max(24), default: 6 },
   // Rechenschaft A2 — Kassenbericht: Satzungsfundstelle im Untertitel („Kassenteil des Jahresberichts nach …“) und eine
   // Unterschriftszeile auf Wunsch. Darstellung des Papiers, nicht Teil des Datenstands.
-  { key: 'finance.reports.statuteReference', schema: z.string().max(80), default: '' },
-  { key: 'finance.reports.cashReportSignature', schema: z.boolean(), default: false },
+  { key: 'finance.reports.statuteReference', schema: z.string().max(80), default: '', managedBy: 'finance' },
+  { key: 'finance.reports.cashReportSignature', schema: z.boolean(), default: false, managedBy: 'finance' },
   // Rechenschaft C: Ist der Schatzmeister Vorstand nach § 26 BGB? Steuert den Hinweis auf § 67 BGB im Übergabeprotokoll; `null` = nicht angegeben (Hinweis steht).
-  { key: 'finance.reports.treasurerIsStatutoryBoard', schema: z.boolean().nullable(), default: null },
+  { key: 'finance.reports.treasurerIsStatutoryBoard', schema: z.boolean().nullable(), default: null, managedBy: 'finance' },
   { key: 'finance.uploadLimitMb', schema: z.number().int().min(1).max(10), default: 5 },
   { key: 'finance.lastStatementWarnDays', schema: z.number().int().min(1).max(365), default: 35 },
   { key: 'finance.voucherTypes', schema: z.array(z.string()), default: ['voucher-own', 'voucher-invoice', 'voucher-receipt', 'bank-statement'] },
   // Task 4 (Einrichtungsstand): Zeitpunkt der Bestätigung, keine Freigabe — daher normale Einstellungen, kein `uiOnly`.
-  { key: 'finance.setupCategoriesConfirmedAt', schema: z.string().nullable(), default: null },
-  { key: 'finance.setupTaxConfirmedAt', schema: z.string().nullable(), default: null },
+  { key: 'finance.setupCategoriesConfirmedAt', schema: z.string().nullable(), default: null, managedBy: 'finance' },
+  { key: 'finance.setupTaxConfirmedAt', schema: z.string().nullable(), default: null, managedBy: 'finance' },
   // E6a: Zeitpunkt, zu dem die Einstellung „Umsatzsteuer“ zuletzt gespeichert wurde (Einrichtungsschritt `vat`).
-  { key: 'finance.setupVatConfirmedAt', schema: z.string().nullable(), default: null },
+  { key: 'finance.setupVatConfirmedAt', schema: z.string().nullable(), default: null, managedBy: 'finance' },
   // F5 — Vorschläge der Arbeitsliste (Spec 6.4): Paar-Erkennung, Gebührentoleranz, Fenster für „passt zu einer Buchung“, Bar-Kennung.
   { key: 'finance.pairMatchDays', schema: z.number().int().min(0).max(30), default: 3 },
   { key: 'finance.pairFeeToleranceCents', schema: z.number().int().min(0), default: 500 },
@@ -104,13 +113,17 @@ const FINANCE_SETTINGS: readonly SettingDefinition[] = [
   // Namen und Beschlüsse tragen, und das Protokoll ist unlöschbar. Listen wie `cashKeywords` und `voucherTypes` sind
   // Schlüssel bzw. Suchwörter, keine Vereinbarungen.
   // F8b — Einrichtungspunkt „Vergütung des Vorstands“ (Annahme 10): ohne ihn warnt jede Pauschale an ein Vorstandsmitglied.
-  { key: 'finance.boardRemunerationAllowed', schema: z.boolean(), default: false },
-  { key: 'finance.boardRemunerationBasisText', schema: z.string().max(500), default: '', auditValue: 'redact' },
-  { key: 'finance.boardRemunerationDocumentId', schema: z.string().nullable(), default: null },
+  { key: 'finance.boardRemunerationAllowed', schema: z.boolean(), default: false, managedBy: 'finance' },
+  { key: 'finance.boardRemunerationBasisText', schema: z.string().max(500), default: '', auditValue: 'redact', managedBy: 'finance' },
+  { key: 'finance.boardRemunerationDocumentId', schema: z.string().nullable(), default: null, managedBy: 'finance' },
   /** Befund AK: ab wann die Grundlage gilt — die Markierung „ohne Grundlage“ vergleicht mit dem Zahlungstag. */
-  { key: 'finance.boardRemunerationValidFrom', schema: z.string().date().nullable(), default: null },
+  { key: 'finance.boardRemunerationValidFrom', schema: z.string().date().nullable(), default: null, managedBy: 'finance' },
   /** Joe 11.9: der Tag der Entscheidung, ob ja oder nein — ohne ihn gilt der Schritt als offen (Bestand eingeschlossen). */
-  { key: 'finance.boardRemunerationDecidedOn', schema: z.string().date().nullable(), default: null },
+  { key: 'finance.boardRemunerationDecidedOn', schema: z.string().date().nullable(), default: null, managedBy: 'finance' },
+  /** G7: der festgeschriebene Beschluss, aus dem die Vergütung kommt (Gremien) — gesetzt, ist sie von Hand gesperrt, solange er sich auflösen lässt. */
+  { key: 'finance.boardRemunerationResolutionId', schema: z.string(), default: '', managedBy: 'finance' },
+  /** Jahresrechnung (0.4.5, J2): Die Satzung lässt die MV die Jahresrechnung genehmigen — veröffentlichen erst nach ihrem Beschluss. */
+  { key: 'finance.reports.assemblyApprovesAccounts', schema: z.boolean(), default: false, managedBy: 'finance' },
   // L1 — Lastschrift: Gläubiger-Daten, Fristen, Format der Mandatsreferenz (Spec Mitglieder und Lastschrift § 7.1).
   ...SEPA_SETTINGS,
 ];
@@ -165,7 +178,7 @@ export const financeModule: ModuleManifest = defineModule({
     { href: '/finance/deadlines', doc: 'finanzen/fristen-und-schwellen' },
     { href: '/finance/audit', doc: 'finanzen/kassenpruefung' },
     { href: '/finance/reports', doc: 'finanzen/berichte' },
-    { href: '/finance/fund-use', doc: 'finanzen/berichte' },
+    { href: '/finance/fund-use', doc: 'finanzen/mittelverwendung' },
     { href: '/finance/other-assets', doc: 'finanzen/berichte' },
     { href: '/finance/tax', doc: 'finanzen/steuererklaerung' },
     { href: '/finance/vat', doc: 'finanzen/umsatzsteuer' },
@@ -212,7 +225,7 @@ export const financeModule: ModuleManifest = defineModule({
     { key: 'finance.tax', href: '/finance/tax', icon: 'euro', group: 'finance', section: 'finance.accountability', permission: 'finance.read' },
     VAT_NAV,
     { key: 'finance.deadlines', href: '/finance/deadlines', icon: 'euro', group: 'finance', section: 'finance.accountability', permission: ['finance.read', 'finance.overview'] },
-    { key: 'finance.fundUse', href: '/finance/fund-use', icon: 'euro', group: 'finance', section: 'finance.accountability', permission: ['finance.read', 'finance.overview'], later: true },
+    { key: 'finance.fundUse', href: '/finance/fund-use', icon: 'euro', group: 'finance', section: 'finance.accountability', permission: ['finance.read', 'finance.overview'] },
   ],
   navigationFor: (deps) => [
     ...(readSetting<boolean>(deps, 'finance.sepa.enabled') ? [{ ...DIRECT_DEBIT_NAV, permission: ['finance.read', 'finance.directDebit'] }] : []),
@@ -248,6 +261,8 @@ export const financeModule: ModuleManifest = defineModule({
     { entityType: 'financeReport', readPermission: 'finance.read', receivePermission: 'finance.reportsFinalize' },
     // Rechenschaft A3: der Scan des Prüfberichts am Geschäftsjahr — abgelegt, wer das Jahr abschließt.
     { entityType: 'financeFiscalYear', readPermission: 'finance.read', receivePermission: 'finance.periodClose' },
+    // M1: der Beleg des Anfangsvortrags der Mittelverwendung — abgelegt, wer die Finanzen einrichtet.
+    { entityType: 'financeFundsUseOpening', readPermission: 'finance.read', receivePermission: 'finance.setup' },
     // Rechenschaft D1: die Vertraulichkeitserklärung am Prüfer — abgelegt, wer die Prüfer pflegt.
     { entityType: 'financeAuditor', readPermission: 'finance.read', receivePermission: 'finance.periodClose' },
     // Rechenschaft D1: der unterschriebene Scan am Prüfbericht — ablegen dürfen auch die Prüfer (der Dienst prüft „Bearbeiter“).
@@ -258,6 +273,9 @@ export const financeModule: ModuleManifest = defineModule({
     { entityType: 'financeHandover', readPermission: 'finance.read', receivePermission: 'finance.setup' },
     // Rechenschaft D2: Aufforderung, abgegebene Erklärung, Übertragungsprotokoll und Tätigkeitsbericht am Erklärungszeitraum.
     { entityType: 'financeTaxPeriod', readPermission: 'finance.read', receivePermission: 'finance.periodClose' },
+    // G-30: die Protokolle der finanzwirksamen Beschlüsse in Abschnitt 9 der Kassenprüfung — berechnet je Geschäftsjahr
+    // aus der Quelle (Gremien), nie gespeichert; nur lesen, nur mit `finance.audit`.
+    { entityType: AUDIT_RESOLUTION_LINK, readPermission: 'finance.audit', documentsOf: (deps, fiscalYearId) => auditResolutionMinutesInternal(deps, fiscalYearId) },
     // E6b: abgegebene Fassung und ELSTER-Übertragungsprotokoll an der Abgabe einer Umsatzsteuer-Anmeldung.
     { entityType: 'financeVatFiling', readPermission: 'finance.read', receivePermission: 'finance.periodClose' },
   ],
@@ -273,7 +291,7 @@ export const financeModule: ModuleManifest = defineModule({
    */
   contactRoles: [
     { key: 'donor', retention: 'none' }, { key: 'grant-recipient', retention: 'none' }, { key: 'claimant', retention: 'none' },
-    { key: 'board-member', retention: 'none' }, { key: 'related-party', retention: 'none' },
+    { key: 'board-member', retention: 'none', representation: true }, { key: 'related-party', retention: 'none' },
     // Rechenschaft C: wer die Kasse führt — Vorschlag „Von“ der Amtsübergabe, Person der Entlastung.
     { key: 'treasurer', retention: 'none' },
   ],
@@ -356,6 +374,19 @@ export const financeModule: ModuleManifest = defineModule({
     'finance.contactTaxDetails.delete': { params: [] },
     'finance.contactTaxDetails.reverseChargeDecline': { params: ['reason'] },
     'finance.contactTaxDetails.reverseChargeAsk': { params: [] },
+    // Jahresrechnung (0.4.5) — Einwilligung zur Namensnennung: das Jahr, nie der Kontakt.
+    'finance.nameConsent.grant': { params: ['fromYear'] },
+    'finance.nameConsent.revoke': { params: [] },
+    'finance.nameConsent.delete': { params: [] },
+    // Jahresrechnung (0.4.5) — Erläuterung: Jahr und Länge, nie der Text.
+    'finance.annualAccounts.explanationSave': { params: ['designation', 'length'] },
+    // J2: Weg und Nummern, nie die Person (Kontakt-ID) — sie steht an der Zeile der Abzeichnung.
+    'finance.annualAccounts.sign': { params: ['documentNumber', 'via', 'scanNumber'] },
+    'finance.annualAccounts.signatureRequest': { params: ['documentNumber'] },
+    // `earlyKind`: der Grund vor der MV als Code (`earlyReason`), nie die Notiz (Freitext).
+    'finance.annualAccounts.publish': { params: ['designation', 'documentNumber', 'early', 'earlyKind', 'corrected'] },
+    'finance.annualAccounts.withdraw': { params: ['designation', 'documentNumber'] },
+    'finance.annualAccounts.webVersion': { params: ['designation', 'documentNumber'] },
     'finance.correction.apply': { params: ['taxCode', 'serviceOn'] },
     'finance.correction.reject': { params: [] },
     'finance.correction.request': { params: ['taxCode', 'serviceOn'] },
@@ -385,6 +416,8 @@ export const financeModule: ModuleManifest = defineModule({
     'finance.fiscalYear.autoCreate': { params: ['designation'] },
     'finance.fiscalYear.create': { params: ['designation'] },
     'finance.fiscalYear.update': { params: ['designation'] },
+    'finance.fundsUseOpening.documentGone': { params: [] },
+    'finance.fundsUseOpening.save': { params: ['offset', 'created'] },
     'finance.import.candidateDecide': { params: ['decision'] },
     'finance.import.discard': { params: [] },
     'finance.import.fail': { params: ['failureCode'] },
@@ -444,7 +477,8 @@ export const financeModule: ModuleManifest = defineModule({
     'finance.partnerProfile.setActive': { params: ['active'] },
     'finance.period.close': { params: ['designation'] },
     'finance.period.reopen': { params: ['designation'] },
-    'finance.report.finalize': { params: ['reportKey', 'documentNumber'] },
+    // `confirmation`: Begründung einer verlangten Bestätigung als Code (Planreview J1), nie der Freitext.
+    'finance.report.finalize': { params: ['reportKey', 'documentNumber', 'confirmation'] },
     'finance.report.void': { params: ['reportKey', 'documentNumber'] },
     'finance.report.release': { params: ['designation', 'basis'] },
     'finance.report.releaseRevoke': { params: ['designation'] },
@@ -497,7 +531,7 @@ export const financeModule: ModuleManifest = defineModule({
     'finance.reserveMovement.documentGone': { params: [] },
     'finance.reserveMovement.record': { params: [] },
     'finance.setup.applyTaxDefaults': { params: [] },
-    'finance.setup.boardRemuneration': { params: [] },
+    'finance.setup.boardRemuneration': { params: ['resolutionId'] },
     'finance.setup.confirm': { params: ['step'] },
     'finance.setup.documentTypeProtectionArea': { params: [] },
     'finance.setup.limit': { params: ['key'] },
@@ -596,6 +630,20 @@ export const financeModule: ModuleManifest = defineModule({
       reason: 'Ein eingereichter Antrag wird nie gelöscht — freigegeben, abgelehnt oder offen, er ist der Nachweis der Erstattung. Nach Ablauf der Frist wird der Personenbezug entfernt; Nummer, Datum und Betrag bleiben.',
     },
     { entity: 'financeContactTaxDetails', deletable: true, reason: 'Arbeitsmaterial: Finanzamt, Steuernummer und Zweck einer Körperschaft; ein festgeschriebener Bericht trägt seine eigene Abschrift.', guard: 'keiner; geht mit dem Kontakt', auditAction: 'finance.contactTaxDetails.delete' },
+    {
+      entity: 'financeAnnualAccountsNote',
+      deletable: true,
+      reason: 'Arbeitsmaterial vor dem Festschreiben; die festgeschriebene Jahresrechnung trägt den Text in ihrem Datenstand.',
+      guard: 'nur solange keine nicht stornierte Jahresrechnung des Jahres besteht; leerer Text löscht',
+      auditAction: 'finance.annualAccounts.explanationSave',
+    },
+    {
+      entity: 'financeNameConsent',
+      deletable: false,
+      reason: 'Nachweis der Einwilligung (Art. 7 Abs. 1 DSGVO); Verlauf statt Überschreiben. Geht mit dem Kontakt, wenn dieser nach seiner Frist gelöscht wird.',
+    },
+    { entity: 'financeReportSignature', deletable: false, reason: 'Nachweis, wer welche Fassung der Jahresrechnung wann abgezeichnet hat; nur anhängen.' },
+    { entity: 'financeAnnualAccountsPublication', deletable: false, reason: 'Nachweis, welche Fassung der Jahresrechnung wann auf der Webseite stand; Zurücknehmen statt Löschen.' },
     { entity: 'financeContactWaiverTerms', deletable: true, reason: 'Arbeitsmaterial: Der Antrag trägt seine eigene Abschrift der Anspruchsgrundlage.', guard: 'keiner; geht mit dem Kontakt', auditAction: 'finance.contactWaiverTerms.delete' },
     // F7 — Partner, Zahlungen an Partner, Nachweise (Spec 10.3, Annahme 15).
     { entity: 'financePartnerProfile', deletable: true, reason: 'Arbeitsmaterial ohne eigenen Nachweis, solange kein Vorgang und kein Bescheid daran hängt.', guard: 'nur ohne Vorgänge und ohne Bescheide', auditAction: 'finance.partnerProfile.delete' },
@@ -611,6 +659,8 @@ export const financeModule: ModuleManifest = defineModule({
     // F8b — zurückgelegtes Geld, Zweck ändern (Umwidmung) (Spec 10.3, Annahme 14).
     { entity: 'financeReserve', deletable: true, reason: 'Arbeitsmaterial, solange kein Vorgang und kein Vortrag daran hängt.', guard: 'nur ohne Vorgänge und ohne Vortrag; sonst stilllegen', auditAction: 'finance.reserve.delete' },
     { entity: 'financeReserveMovement', deletable: false, reason: 'Ein Vorgang an zurückgelegtem Geld ist mit dem Beschluss die Rechenschaft, warum ein Bestand entstand oder wegging — er wird nie gelöscht.' },
+    // M1 — Anfangsvortrag der Mittelverwendung.
+    { entity: 'financeFundsUseOpening', deletable: false, reason: 'Teil der Mittelverwendungsrechnung des ersten Jahres; geändert wird nur nach dem Wiederöffnen.' },
     {
       entity: 'financePurposeTransfer',
       deletable: false,
@@ -655,6 +705,13 @@ export const financeModule: ModuleManifest = defineModule({
       const period = taxPeriodInternal(deps.db, id);
       return period ? { label: { key: 'finance.records.taxPeriod', params: { period: period.label } }, href: `/finance/tax?period=${id}` } : null;
     }
+    if (entityType === 'financeReport') {
+      // J2: die Bitte um Abzeichnung führt auf den Bericht des Jahres.
+      const report = deps.db.select({ reportKey: financeReports.reportKey, fiscalYearId: financeReports.fiscalYearId, documentNumber: financeReports.documentNumber }).from(financeReports).where(eq(financeReports.id, id)).get();
+      if (!report) return null;
+      const title = reportDefinition(report.reportKey)?.paperTitle ?? report.reportKey;
+      return { label: { key: 'finance.records.report', params: { title, number: report.documentNumber } }, href: `/finance/reports/${report.reportKey}?year=${report.fiscalYearId}` };
+    }
     if (entityType !== 'financeFiscalYear') return null;
     const year = deps.db.select({ designation: financeFiscalYears.designation }).from(financeFiscalYears).where(eq(financeFiscalYears.id, id)).get();
     if (!year) return null;
@@ -662,4 +719,7 @@ export const financeModule: ModuleManifest = defineModule({
     return { label: { key: 'finance.records.fiscalYear', params: { designation: year.designation } }, href: `/finance/closing?year=${id}` };
   },
   recordLabels: financeRecordLabels,
+  // J2: die veröffentlichte Jahresrechnung für Vorlagen (`uses: ['finance']`) und ihre PDF-Datei für den Export.
+  publishedViews: [publishedAnnualAccounts],
+  publishedFile: annualAccountsPublishedFile,
 });

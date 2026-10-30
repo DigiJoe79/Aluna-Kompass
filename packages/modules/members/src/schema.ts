@@ -103,6 +103,8 @@ export const memberFeeSchedules = sqliteTable(
     validFrom: text('valid_from').notNull(),
     resolvedOn: text('resolved_on'),
     resolutionDocumentId: text('resolution_document_id'),
+    /** G7: der Beschluss in Gremien (`governanceResolution`), geprüft über `resolveRecordLabel`. */
+    resolutionId: text('resolution_id'),
     note: text('note'),
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),

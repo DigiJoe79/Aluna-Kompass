@@ -54,6 +54,11 @@ export const financeCategories = sqliteTable(
      * Versicherungsleistungen) zählt nicht zu § 64 Abs. 3, `taxRefund` (erstattete USt) weder dort noch zu § 55.
      */
     thresholdExclusion: text('threshold_exclusion', { enum: ['none', 'notPerformance', 'taxRefund'] }).notNull().default('none'),
+    /**
+     * Jahresrechnung (0.4.5, St-L-9): Einnahmen über eine Spendenplattform — `confirmsItself` (die Plattform bestätigt
+     * selbst, `bodyGrant`) bzw. `handlesOnly` (wickelt nur ab, `donation`). Öffentlich unter Geldspenden mit Unterzeile.
+     */
+    donationPlatform: text('donation_platform', { enum: ['confirmsItself', 'handlesOnly'] }),
     externalAccountNumber: text('external_account_number'),
     isActive: integer('is_active', { mode: 'boolean' }).notNull().default(true),
     createdAt: text('created_at').notNull(),
@@ -1085,6 +1090,8 @@ export const financePartnerPayments = sqliteTable(
     copiedFromPaymentId: text('copied_from_payment_id').references((): AnySQLiteColumn => financePartnerPayments.id),
     /** Rechenschaft D2: Mittel zur Vermögensausstattung (§ 58 Nr. 3 AO) — nur `transfer58` an steuerbegünstigte oder öffentliche Körperschaften; ab dem Einreichen fest. */
     assetEndowment: integer('asset_endowment', { mode: 'boolean' }).notNull().default(false),
+    /** G7: Beschluss eines anderen Moduls (Gremien, `governanceResolution`), der die Zahlung trägt; ohne Fremdschlüssel. */
+    resolutionId: text('resolution_id'),
     createdByUserId: text('created_by_user_id').notNull(),
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),
@@ -1170,12 +1177,15 @@ export const financeReserves = sqliteTable(
   'finance_reserves',
   {
     id: text('id').primaryKey(),
-    kind: text('kind', { enum: ['projectFunds', 'replacement', 'free', 'participation'] }).notNull(),
+    // Dieselbe Liste wie `RESERVE_KINDS` (`allocation/reserve-rules.ts`; der neutrale Boden importiert keinen Bereich, ein Test vergleicht beide).
+    kind: text('kind', { enum: ['projectFunds', 'replacement', 'free', 'participation', 'business', 'assetManagement'] }).notNull(),
     name: text('name').notNull(),
-    /** Pflicht bei `projectFunds`/`replacement` (Dienst) — der Verwendungszweck im Wortlaut, nie im Protokoll. */
+    /** Pflicht bei `projectFunds`/`replacement` (Dienst) — der Verwendungszweck im Wortlaut, nie im Protokoll; bei `business`/`assetManagement` die Begründung (wofür im Betrieb, M1). */
     purposeText: text('purpose_text'),
     purposeId: text('purpose_id').references(() => financePurposes.id),
     resolutionDocumentId: text('resolution_document_id'),
+    /** G7: der Beschluss in Gremien (`governanceResolution`), neben oder statt des Dokuments; geprüft über `resolveRecordLabel`. */
+    resolutionId: text('resolution_id'),
     carryForwardCents: integer('carry_forward_cents'),
     carryForwardDate: text('carry_forward_date'),
     carryForwardDocumentId: text('carry_forward_document_id'),
@@ -1192,7 +1202,9 @@ export type FinanceReserveRow = typeof financeReserves.$inferSelect;
  * Ein Vorgang an zurückgelegtem Geld (F8b Annahme 2) — unveränderlich, nie
  * gelöscht. `forFiscalYearId` nur bei `allocate` in einer freien Rücklage:
  * das Geschäftsjahr, für das zugeführt wird (§ 62 Abs. 2 AO, der Beschluss
- * kommt oft erst im Folgejahr). `resolutionDocumentId` ist beim Anlegen
+ * kommt oft erst im Folgejahr); bei `projectFunds`/`replacement`/`participation`
+ * nur für eine nachträgliche Bildung aus Mitteln eines früheren Jahres (bis Ende
+ * des zweiten Folgejahres, M1) — sonst null. `resolutionDocumentId` ist beim Anlegen
  * Pflicht (Dienst), die Spalte bleibt nullable für den Grabstein. Bewegt nie
  * ein Bankkonto oder eine Kasse und erscheint nie in der EÜR.
  */
@@ -1216,6 +1228,31 @@ export const financeReserveMovements = sqliteTable(
   (t) => [index('finance_reserve_movements_reserve_idx').on(t.reserveId, t.movementDate), index('finance_reserve_movements_year_idx').on(t.forFiscalYearId)],
 );
 export type FinanceReserveMovementRow = typeof financeReserveMovements.$inferSelect;
+
+/**
+ * Anfangsvortrag der Mittelverwendung je Entstehungsjahr (M1, Spec 0.4.5 Teil M, Prüfung L-4): was aus den zwei Jahren
+ * vor dem ersten Kompass-Jahr noch zeitnah zu verwenden war, mit der Einnahmensumme jenes Jahres (Kompass prüft die
+ * damalige Grenze). Nie gelöscht (Trigger); geändert nur, solange das erste Geschäftsjahr offen ist. `documentId` ist im
+ * Dienst Pflicht, die Spalte bleibt nullable für den Grabstein nach Ablauf der Dokumentfrist.
+ */
+export const financeFundsUseOpenings = sqliteTable(
+  'finance_funds_use_openings',
+  {
+    id: text('id').primaryKey(),
+    /** 1 = Jahr vor dem ersten Kompass-Jahr, 2 = das davor. */
+    offset: integer('offset').notNull(),
+    designation: text('designation').notNull(),
+    endsOn: text('ends_on').notNull(),
+    revenueCents: integer('revenue_cents').notNull(),
+    amountCents: integer('amount_cents').notNull(),
+    documentId: text('document_id'),
+    createdByUserId: text('created_by_user_id').notNull(),
+    createdAt: text('created_at').notNull(),
+    updatedAt: text('updated_at').notNull(),
+  },
+  (t) => [uniqueIndex('finance_funds_use_openings_offset_idx').on(t.offset)],
+);
+export type FinanceFundsUseOpeningRow = typeof financeFundsUseOpenings.$inferSelect;
 
 /**
  * Zweck ändern (Umwidmung, F8b Annahme 5) — ohne Entwurf: entsteht direkt als
@@ -1568,6 +1605,12 @@ export const financeReports = sqliteTable(
     /** Begründung des Stornos — nie im Änderungsprotokoll. */
     voidReason: text('void_reason'),
     replacedByReportId: text('replaced_by_report_id').references((): AnySQLiteColumn => financeReports.id),
+    /**
+     * Jahresrechnung (0.4.5, Planreview J1): eine beim Festschreiben verlangte Bestätigung als JSON
+     * (`{ code, reason, note }`, z. B. Vergütung an den Vorstand ohne Grundlage) — unveränderlich, nie im PDF; der
+     * Freitext nie im Protokoll.
+     */
+    finalizeConfirmation: text('finalize_confirmation'),
   },
   (t) => [index('finance_reports_year_idx').on(t.fiscalYearId), index('finance_reports_key_params_idx').on(t.reportKey, t.params)],
 );
@@ -1699,7 +1742,7 @@ export const financeAuditSectionReviews = sqliteTable(
   {
     fiscalYearId: text('fiscal_year_id').notNull().references(() => financeFiscalYears.id),
     auditorId: text('auditor_id').notNull().references(() => financeAuditAuditors.id),
-    section: text('section', { enum: ['journal', 'reconciliation', 'vouchers', 'imports', 'anomalies', 'purposesReserves', 'donations', 'partnerPayments'] }).notNull(),
+    section: text('section', { enum: ['journal', 'reconciliation', 'vouchers', 'imports', 'anomalies', 'purposesReserves', 'donations', 'partnerPayments', 'resolutions'] }).notNull(),
     at: text('at').notNull(),
     /**
      * Plan D1e Task 0: SHA-256 über die Zeilen des Abschnitts zur Zeit der Durchsicht (kanonisch, Buchungen mit ihrem
@@ -1721,7 +1764,7 @@ export const financeAuditRemarks = sqliteTable(
     id: text('id').primaryKey(),
     fiscalYearId: text('fiscal_year_id').notNull().references(() => financeFiscalYears.id),
     kind: text('kind', { enum: ['question', 'finding'] }).notNull(),
-    targetType: text('target_type', { enum: ['entry', 'document', 'report', 'year'] }).notNull(),
+    targetType: text('target_type', { enum: ['entry', 'document', 'report', 'year', 'resolution'] }).notNull(),
     targetId: text('target_id').notNull(),
     text: text('text').notNull(),
     authorAuditorId: text('author_auditor_id').notNull().references(() => financeAuditAuditors.id),
@@ -2134,9 +2177,112 @@ export const financeContactTaxDetails = sqliteTable(
     reverseChargeDeclineText: text('reverse_charge_decline_text'),
     reverseChargeDeclineOn: text('reverse_charge_decline_on'),
     reverseChargeDeclineByUserId: text('reverse_charge_decline_by_user_id'),
+    /** Jahresrechnung (0.4.5, Ve-F-3): juristische Person ja/nein, `null` = unbekannt (wirkt wie nein). Nur bei Organisationen. */
+    legalEntity: text('legal_entity', { enum: ['yes', 'no'] }),
     updatedAt: text('updated_at').notNull(),
     updatedByUserId: text('updated_by_user_id').notNull(),
   },
   (t) => [uniqueIndex('finance_contact_tax_details_contact_idx').on(t.contactId)],
 );
 export type FinanceContactTaxDetailsRow = typeof financeContactTaxDetails.$inferSelect;
+
+/**
+ * Jahresrechnung (0.4.5, Ve-L-6, Art. 7 Abs. 1 DSGVO): Einwilligung zur Namensnennung als **Verlauf** — „erteilt am …
+ * für die Jahresrechnungen ab {Jahr}“ und „widerrufen am …“. Nur anhängen (Trigger); geht mit dem Kontakt, wenn dieser
+ * nach seiner Frist gelöscht wird. Die eigene ID geht ins Protokoll, nie die Kontakt-ID.
+ */
+export const financeNameConsents = sqliteTable(
+  'finance_name_consents',
+  {
+    id: text('id').primaryKey(),
+    contactId: text('contact_id').notNull(),
+    kind: text('kind', { enum: ['granted', 'revoked'] }).notNull(),
+    on: text('on').notNull(),
+    /** Nur bei `granted`: ab welchem Geschäftsjahr die Einwilligung gilt. */
+    fromYear: integer('from_year'),
+    documentId: text('document_id'),
+    createdAt: text('created_at').notNull(),
+    createdByUserId: text('created_by_user_id').notNull(),
+  },
+  (t) => [index('finance_name_consents_contact_idx').on(t.contactId, t.on)],
+);
+export type FinanceNameConsentRow = typeof financeNameConsents.$inferSelect;
+
+/**
+ * Jahresrechnung (0.4.5): Erläuterungstext des Vereins je Geschäftsjahr (Markdown, höchstens 4.000 Zeichen). Änderbar
+ * bis zum Festschreiben, Teil des Daten-Hashs; Arbeitsmaterial davor.
+ */
+export const financeAnnualAccountsNotes = sqliteTable('finance_annual_accounts_notes', {
+  fiscalYearId: text('fiscal_year_id').primaryKey().references(() => financeFiscalYears.id),
+  text: text('text').notNull(),
+  updatedAt: text('updated_at').notNull(),
+  updatedByUserId: text('updated_by_user_id').notNull(),
+});
+export type FinanceAnnualAccountsNoteRow = typeof financeAnnualAccountsNotes.$inferSelect;
+
+/**
+ * Jahresrechnung (0.4.5, J2): die Abzeichnung einer festgeschriebenen Fassung durch ein vertretungsberechtigtes
+ * Vorstandsmitglied — über sein Konto oder als Scan. Je Fassung höchstens eine; nur anhängen (Trigger). Name und Amt
+ * zum Tag festgehalten; das Protokoll nennt nie die Person, nur Weg und Nummern. `documentId` ist die erzeugte,
+ * abgezeichnete Fassung (nie der Scan, der eine Unterschrift als Bild trägt), `namedContactIds` die Zuwender, die F8
+ * dieser Fassung mit Namen nennt (JSON-Liste).
+ */
+export const financeReportSignatures = sqliteTable('finance_report_signatures', {
+  id: text('id').primaryKey(),
+  reportId: text('report_id')
+    .notNull()
+    .unique()
+    .references(() => financeReports.id),
+  contactId: text('contact_id').notNull(),
+  signerName: text('signer_name').notNull(),
+  signerOffice: text('signer_office'),
+  via: text('via', { enum: ['account', 'scan'] }).notNull(),
+  /** Nur beim Weg `account`: das Konto, das abgezeichnet hat. */
+  signerUserId: text('signer_user_id'),
+  signedOn: text('signed_on').notNull(),
+  documentId: text('document_id').notNull(),
+  documentNumber: text('document_number').notNull(),
+  scanDocumentId: text('scan_document_id'),
+  namedContactIds: text('named_contact_ids').notNull(),
+  createdAt: text('created_at').notNull(),
+  createdByUserId: text('created_by_user_id').notNull(),
+});
+export type FinanceReportSignatureRow = typeof financeReportSignatures.$inferSelect;
+
+/**
+ * Jahresrechnung (0.4.5, J2): die Veröffentlichung einer abgezeichneten Fassung über die Sicht `annualAccounts`. Je
+ * Fassung höchstens eine laufende (partieller Unique-Index); Zurücknehmen setzt `withdrawn_*` einmal, eine Webfassung
+ * nach Widerruf einer Einwilligung setzt `web_*` neu. Sonst unveränderlich, nie gelöscht (Trigger). `earlyNote` ist
+ * Freitext und steht nie im Protokoll.
+ */
+export const financeAnnualAccountsPublications = sqliteTable(
+  'finance_annual_accounts_publications',
+  {
+    id: text('id').primaryKey(),
+    reportId: text('report_id')
+      .notNull()
+      .references(() => financeReports.id),
+    fiscalYearId: text('fiscal_year_id')
+      .notNull()
+      .references(() => financeFiscalYears.id),
+    publishedAt: text('published_at').notNull(),
+    publishedByUserId: text('published_by_user_id').notNull(),
+    /** Vor dem MV-Ergebnis: warum (ITZ-Frist, Bitte eines Förderers, Sonstiges mit `earlyNote`). */
+    earlyReason: text('early_reason', { enum: ['itzDeadline', 'funderRequest', 'other'] }),
+    earlyNote: text('early_note'),
+    /** Es gab für das Jahr schon eine Veröffentlichung: berichtigte Fassung (Ve-L-3). */
+    corrected: integer('corrected', { mode: 'boolean' }).notNull().default(false),
+    /** `finalizedAt` der zuletzt veröffentlichten früheren Fassung des Jahres. */
+    replacesFinalizedAt: text('replaces_finalized_at'),
+    webDocumentId: text('web_document_id'),
+    webDocumentNumber: text('web_document_number'),
+    webVersionOn: text('web_version_on'),
+    withdrawnAt: text('withdrawn_at'),
+    withdrawnByUserId: text('withdrawn_by_user_id'),
+    withdrawnCause: text('withdrawn_cause', { enum: ['manual', 'voided', 'renderFailed'] }),
+    /** Seit wann sie beim Zurücknehmen auf der Webseite stand; leer: nur bereitgestellt, nie ausgeliefert (Bildabnahme 0.4.5 F-2). */
+    withdrawnLiveSince: text('withdrawn_live_since'),
+  },
+  (t) => [index('finance_annual_accounts_publications_year_idx').on(t.fiscalYearId), uniqueIndex('finance_annual_accounts_publications_live_idx').on(t.reportId).where(sql`${t.withdrawnAt} is null`)],
+);
+export type FinanceAnnualAccountsPublicationRow = typeof financeAnnualAccountsPublications.$inferSelect;

@@ -10,6 +10,7 @@ import { type Allowlist, matchingLines, read, relative, sourceFiles, allowlistHy
 // Zwei Gruppen von Ausnahmen (Plan K8/K9 T6), damit sichtbar bleibt, welche aus welchem Grund besteht. Eine neue
 // kommt mit Grund in die passende Gruppe; passt sie in keine, ist sie vermutlich keine Ausnahme.
 export const ALLOWED: Allowlist = {
+  'components/governance/vote-tally.tsx': 'Zählfelder der Ergebnis-Karte am Telefon 2 × 2 (N3, Board Gremien 1h, Freigabe Joe 2026-10-28); ab `sm` nebeneinander — kein Formularraster.',
   // — Werkzeug-Layout: Arbeitsflächen und Zeilen-Editoren mit eigenem Raster; ihre Felder stehen trotzdem im FormGrid.
   'app/(shell)/admin/roles/role-editor.tsx':
     'Werkzeug-Layout: Rollenliste neben dem Detail und die Rechte-Matrix als Tabellenraster; die Felder im Detailkopf stehen im FormGrid (Inventar § 3 A).',

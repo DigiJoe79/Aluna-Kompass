@@ -12,9 +12,9 @@ import { listBackups } from '../src/backup/sidecar';
 import { fixedClock } from '../src/clock';
 import type { CallContext } from '../src/context';
 import { apiTokens, auditLog, sessions, users } from '../src/db/schema';
-import { waitForJob, type JobRecord, type JobStart } from '../src/jobs';
+import { launchJob, requestJobCancel, waitForJob, type JobRecord, type JobStart } from '../src/jobs';
 import type { ModuleManifest } from '../src/modules/manifest';
-import { unwrap, type Result } from '../src/result';
+import { ok, unwrap, type Result } from '../src/result';
 import { seedDevelopment } from '../src/seed/seed';
 import { isSetupRequired } from '../src/setup/service';
 import { coreModule } from '../src/core-module';
@@ -231,6 +231,44 @@ describe('startRestore', { timeout: 60_000 }, () => {
     registerRestoreHooks(hooks('siteJobRunning'));
     expect(await startRestore(deps, ctx, { name: a, confirmation: 'test' })).toMatchObject({ ok: false, error: { type: 'conflict', code: 'restoreBlocked', params: { reason: 'siteJobRunning' } } });
     expect(listBackups(bp)).toHaveLength(1);
+    deps.close();
+  });
+
+  /**
+   * Befundliste 0.4.0, I-E: Der Merker kam erst nach der Sicherung „Vor Einspielen“. Was in deren Minuten geschrieben
+   * wurde, fehlte im Backup und ging mit dem Austausch verloren. Jetzt steht er vom Start an (Phase `safeguard`), und
+   * ein Abbruch vor dem Austausch nimmt ihn wieder weg.
+   */
+  it('setzt den Wartungsmerker vor der Sicherung und nimmt ihn bei einem Abbruch davor wieder weg', async () => {
+    const { deps, ctx, clock, bp } = await setup();
+    const a = await createdBackup(deps, ctx);
+    clock.advance(60_000);
+    const start = unwrap(await startRestore(deps, ctx, { name: a, confirmation: 'test' }));
+    if (!start.started) throw new Error('busy');
+    expect(readMaintenance(bp)).toMatchObject({ phase: 'safeguard', runId: start.runId, aside: null });
+    expect(requestJobCancel(backupJobSlot(bp), start.runId)).toBe(true);
+    const rec = (await waitForJob(backupJobSlot(bp), start.runId))!;
+    expect(rec.status).toBe('aborted');
+    expect(isMaintenanceActive(bp)).toBe(false);
+    deps.close();
+  });
+
+  /** Befundliste 0.4.0, N3: Ein Lauf im Hintergrund (Datenexport, Prüfpaket) schriebe über `close()`/`reopen()` weiter. */
+  it('verweigert mit restoreBlocked, solange ein anderer Lauf im Hintergrund arbeitet', async () => {
+    const { deps, ctx, bp } = await setup();
+    const a = await createdBackup(deps, ctx);
+    const dir = tmp();
+    let release!: () => void;
+    const held = new Promise<void>((r) => (release = r));
+    const other = launchJob({ key: `test-export:${dir}`, dir, workDir: dir, tmpPrefix: 'work-' }, deps.clock, { kind: 'dataExport', steps: ['write'], source: 'ui', userId: ctx.userId, apiTokenId: null, runId: 'export-1' }, async () => {
+      await held;
+      return ok(null);
+    });
+    if ('busy' in other) throw new Error('busy');
+    expect(await startRestore(deps, ctx, { name: a, confirmation: 'test' })).toMatchObject({ ok: false, error: { type: 'conflict', code: 'restoreBlocked', params: { reason: 'jobRunning' } } });
+    expect(listBackups(bp)).toHaveLength(1);
+    release();
+    await other.done;
     deps.close();
   });
 

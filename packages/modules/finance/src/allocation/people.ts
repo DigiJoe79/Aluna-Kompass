@@ -189,6 +189,8 @@ export function personYearOverviewInternal(db: DbOrTx, year: number): { rows: Pe
 // ── E21 — Zahlungen an Vorstandsmitglieder und nahestehende Personen ───────
 
 export interface RelatedPartyPaymentRow {
+  /** Mit Vorzeichen: Zahlung positiv, Rückbuchung oder Erstattung an den Verein negativ (Jahresrechnung F7 saldiert). */
+  paidCents: number;
   entryId: string;
   entryDate: string;
   entryNumber: string | null;
@@ -281,7 +283,7 @@ export function relatedPartyPaymentsInternal(db: DbOrTx, range: { from: string; 
       const origin = originOfLine(db, line.id, line.entryId);
       rows.push({
         entryId: line.entryId, entryDate: line.entryDate, entryNumber: line.entryNumber, contactId: role.contactId, contactName: contact ? displayName(contact) : role.contactId,
-        role: role.role as 'board-member' | 'related-party', amountCents: Math.abs(line.amountCents), categoryId: line.categoryId, categoryName: line.categoryName,
+        role: role.role as 'board-member' | 'related-party', amountCents: Math.abs(line.amountCents), paidCents: -line.amountCents, categoryId: line.categoryId, categoryName: line.categoryName,
         approvedByUserId: origin.approvedByUserId, originKind: origin.kind, originNumber: origin.number,
         allowanceKind: line.allowanceKind,
         boardAllowanceWithoutBasis: role.role === 'board-member' && line.allowanceKind !== 'none' && !basisInForceOn(boardBasisFrom, line.entryDate),

@@ -11,6 +11,7 @@ import {
   financeAccounts, financeAllocationCorrections, financeEntries, financeExpenseClaims, financeExpensePositions, financeMoneyLines, financeNotices, financeOpenItems, financePartnerPayments, financePartnerProfiles, financePurposeTransfers,
 } from '../../schema';
 import type { ReportComputeEnv, ReportDefinition, ReportParams, ReportRenderContext } from '../types';
+import { reportTimeZone, TIME_ZONE_SETTING, zonedDayOf } from '../../zoned-days';
 import { amountCell, heading, paragraph, table, textCell } from './common';
 
 /**
@@ -54,11 +55,13 @@ function checkParams(db: DbOrTx, params: ReportParams): Failure | null {
   return fiscalYearForInternal(db, params.date!) ? null : notFound('financeFiscalYear', params.date!);
 }
 
-const dayOf = (value: string | null): string | null => (value === null ? null : value.slice(0, 10));
 const item = (kind: HandoverItemKind, refId: string, o: Partial<Omit<HandoverItem, 'kind' | 'refId'>> = {}): HandoverItem => ({ kind, refId, refNumber: null, date: null, dueOn: null, overdue: false, amountCents: null, contactName: null, ...o });
 
 export function computeHandoverListReport(db: DbOrTx, params: ReportParams, env: ReportComputeEnv): HandoverListReport {
   const date = params.date!;
+  // F-B3 (0.4.5): Tag eines Zeitstempels in der Zone des Vereins.
+  const timeZone = reportTimeZone(env);
+  const dayOf = (value: string | null): string | null => (value === null ? null : zonedDayOf(value, timeZone));
   const graceDays = typeof env.settings[GRACE_KEY] === 'number' ? (env.settings[GRACE_KEY] as number) : 0;
   const contactNames = new Map<string, string>();
   const nameOf = (contactId: string | null | undefined): string | null => {
@@ -192,7 +195,7 @@ export const handoverListReport: ReportDefinition<HandoverListReport> = {
     const row = params.date ? fiscalYearForInternal(db, params.date) : null;
     return row ? [row.id] : [];
   },
-  settingKeys: [GRACE_KEY],
+  settingKeys: [GRACE_KEY, TIME_ZONE_SETTING],
   compute: computeHandoverListReport,
   toTypst: handoverListTypst,
   titleKey: 'finance.reports.handoverList.title',

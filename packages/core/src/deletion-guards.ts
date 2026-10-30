@@ -2,11 +2,11 @@ import { and, eq, isNull } from 'drizzle-orm';
 import { followUps } from './db/schema';
 import type { Deps } from './deps';
 import { describeMediaUsage, type MediaUsage } from './media/service';
-import type { RecordReference, RetentionHold } from './modules/manifest';
+import type { RecordReference, RecordReferenceInput, RetentionHold } from './modules/manifest';
 import { messageDate } from './message-date';
 import { withResolvedLabel } from './modules/record-hooks';
 import { CORE_MODULE_KEY, enabledManifests } from './modules/service';
-import { conflict, type Failure } from './result';
+import { conflict, localizedConflict, type Failure } from './result';
 import { holdsFor } from './retention/service';
 import { todayIn } from './today';
 
@@ -15,13 +15,13 @@ import { todayIn } from './today';
  * sein Ziel nicht, also kann eine an jedem Datensatz hängen. Erledigte zählen
  * nicht — sie sind Geschichte und vertragen ein verschwundenes Ziel.
  */
-export function coreRecordReferences(deps: Deps, entityType: string, id: string): RecordReference[] {
+export function coreRecordReferences(deps: Deps, entityType: string, id: string): RecordReferenceInput[] {
   return deps.db
     .select({ id: followUps.id, title: followUps.title })
     .from(followUps)
     .where(and(eq(followUps.entityType, entityType), eq(followUps.entityId, id), isNull(followUps.doneAt)))
     .all()
-    .map((f) => ({ label: `Wiedervorlage „${f.title}“`, entity: 'followUp', id: f.id }));
+    .map((f) => ({ label: { key: 'deletion.references.followUp', params: { title: f.title } }, entity: 'followUp', id: f.id }));
 }
 
 /**
@@ -75,12 +75,26 @@ export function buildDeletionPreview(deps: Deps, subject: { entityType: string; 
   return { isPublished: subject.isPublished, holds, references, media, deletable: !subject.isPublished && holds.length === 0 && references.length === 0 };
 }
 
-/** Der Konflikt zu einer Vorschau, oder `null`, wenn gelöscht werden darf. Detail hinter dem ersten Doppelpunkt; Fristen wie die Anzeige (`messageDate`). */
+/**
+ * K2: „noch gehalten“ als Satz der Sprachdatei — die Halter als Liste (getrennt durch U+001F), dazu das späteste Ende
+ * oder „dauerhaft“, Datum wie die Anzeige (`messageDate`). Wie `retentionHoldActive` beim Kontakt.
+ */
+export function recordHeldConflict(deps: Pick<Deps, 'db' | 'registry'>, holds: readonly RetentionHold[]): Failure {
+  const holders = holds.map((h) => h.label).join('\u001f');
+  const permanent = holds.some((h) => h.until === null);
+  const until = permanent ? null : holds.map((h) => h.until!).sort().at(-1)!;
+  return localizedConflict('recordHeld', 'errors.recordHeld', until === null ? { permanent: 'yes', holders } : { permanent: 'no', untilText: messageDate(deps, until), holders });
+}
+
+/** K2: „es zeigt noch darauf“ als Satz der Sprachdatei, die Verweise als Liste (getrennt durch U+001F). */
+export function stillReferencedConflict(references: readonly RecordReference[]): Failure {
+  return localizedConflict('stillReferenced', 'errors.stillReferenced', { references: references.map((r) => r.label).join('\u001f') });
+}
+
+/** Der Konflikt zu einer Vorschau, oder `null`, wenn gelöscht werden darf. */
 export function deletionConflict(deps: Pick<Deps, 'db' | 'registry'>, preview: DeletionPreview): Failure | null {
   if (preview.isPublished) return conflict('stillPublished', 'Der Datensatz ist veröffentlicht. Ziehen Sie ihn erst zurück.');
-  if (preview.holds.length > 0) {
-    return conflict('recordHeld', `Noch gehalten von: ${preview.holds.map((h) => `${h.label}${h.until ? ` (bis ${messageDate(deps, h.until)})` : ' (dauerhaft)'}`).join('; ')}`);
-  }
-  if (preview.references.length > 0) return conflict('stillReferenced', `Es zeigt noch darauf: ${preview.references.map((r) => r.label).join('; ')}`);
+  if (preview.holds.length > 0) return recordHeldConflict(deps, preview.holds);
+  if (preview.references.length > 0) return stillReferencedConflict(preview.references);
   return null;
 }

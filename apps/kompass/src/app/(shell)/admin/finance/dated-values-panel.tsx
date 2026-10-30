@@ -13,7 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
-import { formatAmount, formatEuro, parseAmount } from '@/lib/finance/amount';
+import { formatAmount, formatEuro, readAmount, type AmountError } from '@/lib/finance/amount';
 import { removeDatedValueAction, setDatedValueAction } from './actions';
 import { FormField } from '@/components/forms/form-field';
 import { FormGrid } from '@/components/forms/form-grid';
@@ -131,12 +131,21 @@ function DatedValueDialog({ entry, onClose, onSaved }: { entry: DatedValueListEn
   const [ratioText, setRatioText] = useState('');
   const [taxation, setTaxation] = useState<'smallBusiness' | 'regular'>('smallBusiness');
   const [pending, setPending] = useState(false);
+  // Der Betrag ist Pflicht: Leer oder unlesbar überschrieb bis 0.4.0 die Freigrenze ab dem Tag mit 0 € (App-B7c).
+  const [amountError, setAmountError] = useState<AmountError | null>(null);
+  const tAmount = useTranslations('finance.amount');
   const feedback = useActionFeedback();
 
   const submit = async () => {
+    const amount = entry.unit === 'cents' ? readAmount(amountText, { required: true }) : null;
+    if (amount && !amount.ok) {
+      setAmountError(amount.error);
+      return;
+    }
+    setAmountError(null);
     setPending(true);
     const value: number | string =
-      entry.unit === 'taxation' ? taxation : entry.unit === 'ratio' ? ratioText.replace(/\s+/g, '') : entry.unit === 'cents' ? (parseAmount(amountText) ?? 0) : Number(numberValue);
+      entry.unit === 'taxation' ? taxation : entry.unit === 'ratio' ? ratioText.replace(/\s+/g, '') : amount?.ok && amount.cents !== null ? amount.cents : Number(numberValue);
     const result = await feedback.run(() => setDatedValueAction(entry.key, validFrom, value), { retry: () => void submit() });
     setPending(false);
     if (result.status === 'success') onSaved();
@@ -162,8 +171,8 @@ function DatedValueDialog({ entry, onClose, onSaved }: { entry: DatedValueListEn
                 <Input id="dv-ratio" value={ratioText} onChange={(e) => setRatioText(e.target.value)} placeholder="1/3" required />
               </FormField>
             ) : entry.unit === 'cents' ? (
-              <FormField id="dv-amount" label={t('value')} required size="s">
-                <Input id="dv-amount" value={amountText} onChange={(e) => setAmountText(e.target.value)} placeholder={formatAmount(0)} required />
+              <FormField id="dv-amount" label={t('value')} required size="s" error={amountError ? tAmount(amountError) : undefined}>
+                <Input id="dv-amount" value={amountText} onChange={(e) => { setAmountText(e.target.value); setAmountError(null); }} placeholder={formatAmount(0)} required />
               </FormField>
             ) : (
               <FormField id="dv-number" label={t('value')} required size="s">

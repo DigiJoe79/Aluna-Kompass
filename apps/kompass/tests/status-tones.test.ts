@@ -13,8 +13,14 @@ describe('STATUS_TONES', () => {
     expect(entries.filter((e) => e.tone === 'accent').map((e) => `${e.kind}.${e.status}`)).toEqual([]);
   });
 
-  it('„abgelehnt“ ist überall error (Kleinpunkt 3)', () => {
-    expect(entries.filter((e) => e.status === 'rejected' && e.tone !== 'error').map((e) => e.kind)).toEqual([]);
+  /** Arten, deren „abgelehnt“ das Ergebnis einer Abstimmung ist, nicht die Zurückweisung durch eine Stelle — `neutral` (MUSTER § F, Joe 2026-10-28). */
+  const OUTCOME_KINDS: Record<string, string> = {
+    resolution: 'Beschluss abgelehnt ist ein Ergebnis der Versammlung (N6, Designer Phase 1 D4, Freigabe Joe 2026-10-28)',
+    agendaMotion: 'Antrag nicht aufgenommen ist ein Ergebnis der Versammlung (N6, Designer Phase 1 D4, Freigabe Joe 2026-10-28)',
+  };
+
+  it('„abgelehnt“ als Zurückweisung ist error (Kleinpunkt 3), als Ergebnis einer Abstimmung neutral (MUSTER § F)', () => {
+    expect(entries.filter((e) => e.status === 'rejected' && e.tone !== 'error' && !(e.kind in OUTCOME_KINDS)).map((e) => e.kind)).toEqual([]);
   });
 
   it('ein Normalzustand ohne Marke ist nie Fehler oder offene Arbeit (6a)', () => {

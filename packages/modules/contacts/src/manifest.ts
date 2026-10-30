@@ -37,6 +37,8 @@ export const contactsModule: ModuleManifest = defineModule({
     /** `role`: Schlüssel der Kontaktrolle aus `contactRoles`. */
     'contacts.addRole': { params: ['role'] },
     'contacts.endRole': { params: ['role'] },
+    /** Notiz (Amt) und „vertritt nach § 26 BGB“ geändert — die Notiz nie, nur das Merkmal. */
+    'contacts.updateRole': { params: ['role', 'representsAssociation'] },
     'contacts.delete': { params: [] },
     'contacts.userLink.create': { params: ['targetUserId', 'contactId'] },
     'contacts.userLink.end': { params: ['targetUserId', 'contactId'] },

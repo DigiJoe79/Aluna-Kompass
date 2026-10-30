@@ -4,18 +4,8 @@ import { readFile, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { optionalSession } from '@/lib/request-context';
 import { siteEnv } from '@/lib/site-env';
-import { resolvePreviewFile, rewritePreviewHtml } from '@/lib/site-preview';
+import { previewResponseHeaders, resolvePreviewFile, rewritePreviewHtml } from '@/lib/site-preview';
 
-const TYPES: Record<string, string> = {
-  '.html': 'text/html; charset=utf-8',
-  '.css': 'text/css',
-  '.js': 'text/javascript',
-  '.webp': 'image/webp',
-  '.png': 'image/png',
-  '.jpg': 'image/jpeg',
-  '.svg': 'image/svg+xml',
-  '.woff2': 'font/woff2',
-};
 const KEY = /^[A-Za-z0-9_-]{1,80}$/;
 
 /**
@@ -38,5 +28,5 @@ export async function GET(_request: Request, ctx: { params: Promise<{ key: strin
   if (!bytes) return new Response(null, { status: 404 });
   const ext = path.extname(target);
   const content: BodyInit = ext === '.html' ? rewritePreviewHtml(bytes.toString('utf8'), `/animals/proposal-preview/${key}/`) : bytes;
-  return new Response(content, { headers: { 'content-type': TYPES[ext] ?? 'application/octet-stream', 'cache-control': 'no-store', 'x-content-type-options': 'nosniff' } });
+  return new Response(content, { headers: previewResponseHeaders(ext) });
 }

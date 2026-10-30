@@ -1,8 +1,9 @@
-import { buildContext, EMPTY, hasPermission, isoNow, notFound, ok, paperDate, prepare, readSetting, requirePermission, validate, type CallContext, type DbOrTx, type Deps, type Result } from '@kompass/core';
+import { buildContext, EMPTY, hasPermission, isoNow, timeZoneOf, notFound, ok, paperDate, prepare, readSetting, requirePermission, validate, type CallContext, type DbOrTx, type Deps, type Result } from '@kompass/core';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { financeAudit } from '../audit';
 import { formatAmount } from '../format/amount';
+import { zonedDayOf } from '../zoned-days';
 import { financeConflict } from '../errors';
 import { reportDefinition } from '../reporting/catalog';
 import { financeAuditReportDeviations, financeAuditReports, financeFiscalYears, financeEntries } from '../schema';
@@ -17,10 +18,11 @@ import { AUDIT_REPORT_PRINT_TEMPLATE_KEY, type AuditReportPrintInput } from './r
  * Liefert Bytes: kein MCP-Werkzeug.
  */
 
-const day = (iso: string) => paperDate(iso.slice(0, 10) as never);
-
 export function printInputInternal(deps: Deps, view: AuditReportView, blank: boolean): AuditReportPrintInput {
   const db: DbOrTx = deps.db;
+  // Tage bleiben, Zeitstempel (Prüffassung) gehören über die Zone des Vereins zu einem Tag (F-B3).
+  const timeZone = timeZoneOf(deps);
+  const day = (value: string) => paperDate(zonedDayOf(value, timeZone) as never);
   const auditorRows = new Map(auditorsOfYearInternal(db, view.fiscalYearId).map((a) => [a.id, a]));
   const nameOf = (id: string) => view.auditors.find((a) => a.id === id)?.contactName ?? '';
   const subject: AuditReportPrintInput['subject'] = [

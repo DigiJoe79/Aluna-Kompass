@@ -100,8 +100,10 @@ describe('nach Ablage des Prüfberichts (Designer Runde 7, 274/279)', () => {
     unwrap(await saveAuditReportExamination(f.deps, mira.ctx, { reportId: draft.id, dates: ['2026-02-18'] }));
     unwrap(await saveAuditReportResult(f.deps, mira.ctx, { reportId: draft.id, result: 'clean' }));
     unwrap(await markAuditReportReadyToSign(f.deps, mira.ctx, { reportId: draft.id }));
+    // F-B3: abgelegt um 0:30 Uhr am 01.01. — die Meldung nennt den Tag des Vereins, nicht den UTC-Tag.
+    f.deps.clock.set('2026-12-31T23:30:00.000Z');
     unwrap(await fileAuditReportScan(f.deps, mira.ctx, { reportId: draft.id, bytes: pdfBytes() }));
-    expect(code(await setSample(f.deps, mira.ctx, { fiscalYearId: y2025, entryId: one.id, sampled: false }))).toBe('auditWorkFixed');
+    expect(await setSample(f.deps, mira.ctx, { fiscalYearId: y2025, entryId: one.id, sampled: false })).toMatchObject({ ok: false, error: { code: 'auditWorkFixed', params: { filedOn: '2027-01-01' } } });
     expect(code(await markSectionReviewed(f.deps, mira.ctx, { fiscalYearId: y2025, section: 'vouchers' }))).toBe('auditWorkFixed');
     expect(code(await unmarkSectionReviewed(f.deps, mira.ctx, { fiscalYearId: y2025, section: 'vouchers' }))).toBe('auditWorkFixed');
     allowHumanOnlyOverMcp(f.deps);

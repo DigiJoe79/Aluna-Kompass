@@ -90,7 +90,8 @@ describe('finance MCP tools', () => {
     // Vorgabe finance.uploadLimitMb = 5 MB; 6 MB Rohdaten (roh, vor Base64) liegen darüber.
     const big = Buffer.alloc(6 * 1024 * 1024, 65).toString('base64');
     const res = await tool.handler(f.deps, f.ctx, { entryId: entry.id, contentBase64: big, typeKey: 'voucher-invoice', documentDate: '2026-03-01' });
-    expect(res).toMatchObject({ ok: false, error: { type: 'validation' } });
+    // K3 (0.4.5): die Grenze prüft der Dienst — dieselbe Ablehnung wie auf der Oberfläche.
+    expect(res).toMatchObject({ ok: false, error: { type: 'conflict', code: 'statementTooLarge' } });
   });
 
   it('the work list tools: an argument-less tool takes (deps, ctx), the counts take an account', async () => {
@@ -111,7 +112,7 @@ describe('finance MCP tools', () => {
     const rawId = insertRaw(f, insertRun(f, f.bank.id), { accountId: f.bank.id, amountCents: -1990 });
     expect(await tool.handler(f.deps, f.ctx, { rawTransactionId: rawId, contentBase64: 'kein base64!' })).toMatchObject({ ok: false, error: { type: 'validation' } });
     const big = Buffer.alloc(6 * 1024 * 1024, 65).toString('base64');
-    expect(await tool.handler(f.deps, f.ctx, { rawTransactionId: rawId, contentBase64: big })).toMatchObject({ ok: false, error: { type: 'validation' } });
+    expect(await tool.handler(f.deps, f.ctx, { rawTransactionId: rawId, contentBase64: big })).toMatchObject({ ok: false, error: { type: 'conflict', code: 'statementTooLarge' } });
     const res = unwrap(await tool.handler(f.deps, f.ctx, { rawTransactionId: rawId, contentBase64: Buffer.from(pdfBytes()).toString('base64') }));
     expect(res).toMatchObject({ createdEntry: true });
   });
@@ -141,7 +142,7 @@ describe('finance MCP tools', () => {
       const attach = tool('finance_notice_attach_document');
       expect(await attach.handler(f.deps, f.ctx, { id: 'x', contentBase64: 'kein base64!' })).toMatchObject({ ok: false, error: { type: 'validation' } });
       const big = Buffer.alloc(6 * 1024 * 1024, 65).toString('base64');
-      expect(await attach.handler(f.deps, f.ctx, { id: 'x', contentBase64: big })).toMatchObject({ ok: false, error: { type: 'validation' } });
+      expect(await attach.handler(f.deps, f.ctx, { id: 'x', contentBase64: big })).toMatchObject({ ok: false, error: { type: 'conflict', code: 'statementTooLarge' } });
       expect(await attach.handler(f.deps, f.ctx, { id: 'nope', contentBase64: Buffer.from(pdfBytes()).toString('base64') })).toMatchObject({ ok: false, error: { type: 'notFound' } });
     });
 
@@ -150,7 +151,7 @@ describe('finance MCP tools', () => {
       const attach = tool('finance_confirmation_attach_signed');
       expect(await attach.handler(f.deps, f.ctx, { id: 'x', contentBase64: 'kein base64!' })).toMatchObject({ ok: false, error: { type: 'validation' } });
       const big = Buffer.alloc(6 * 1024 * 1024, 65).toString('base64');
-      expect(await attach.handler(f.deps, f.ctx, { id: 'x', contentBase64: big })).toMatchObject({ ok: false, error: { type: 'validation' } });
+      expect(await attach.handler(f.deps, f.ctx, { id: 'x', contentBase64: big })).toMatchObject({ ok: false, error: { type: 'conflict', code: 'statementTooLarge' } });
       expect(await attach.handler(f.deps, f.ctx, { id: 'nope', contentBase64: Buffer.from(pdfBytes()).toString('base64') })).toMatchObject({ ok: false, error: { type: 'notFound' } });
     });
   });

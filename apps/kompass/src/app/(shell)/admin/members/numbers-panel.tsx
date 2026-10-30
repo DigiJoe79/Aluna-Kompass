@@ -2,7 +2,7 @@
 
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import { FormActionBar } from '@/components/forms/form-action-bar';
 import { FormCard, FormCardBody } from '@/components/forms/form-card';
 import { FormField } from '@/components/forms/form-field';
@@ -12,10 +12,7 @@ import { Section } from '@/components/section';
 import { Input } from '@/components/ui/input';
 import { Segmented } from '@/components/ui/segmented';
 import type { ActionState } from '@/lib/actions';
-import { AgentSwitchSection, agentSwitchChange } from '../agent-switch-section';
 import { saveMembersSettingsAction, setNextMemberNumberAction } from './actions';
-
-const AGENT_KEY = 'members.mcpHumanOnlyAllowed';
 
 type Anchor = 'fiscalYearEnd' | 'quarterEnd' | 'monthEnd' | 'any';
 type JoinYear = 'full' | 'proRataMonths' | 'nextYear';
@@ -29,21 +26,15 @@ export interface NumbersValues {
 
 /**
  * Nummern und Fristen (Handoff Mitglieder 2.6, Nachtrag Phase 2 § 0): nächste Nummer, Kündigungsfrist mit Stichtag,
- * Zahlungsziel in Briefen und Beitrag im Eintrittsjahr. Eine Formularkarte, gespeichert über die Leiste. Als letzter
- * Abschnitt der Agentenschalter (`AgentSwitchSection`, Plan U4 Task 1), der mit dem Formular gespeichert wird; ändern
- * darf ihn nur, wer `settings.manage` hat — der Dienst prüft.
+ * Zahlungsziel in Briefen und Beitrag im Eintrittsjahr. Eine Formularkarte, gespeichert über die Leiste.
  */
-export function NumbersPanel({ values, agent }: { values: NumbersValues; agent: { allowed: boolean; canChange: boolean } }) {
+export function NumbersPanel({ values }: { values: NumbersValues }) {
   const t = useTranslations('members.admin.numbers');
-  const tAgent = useTranslations('members.admin.agent');
   const router = useRouter();
-  const form = useRef<HTMLFormElement>(null);
   const [v, setV] = useState(values);
-  const [agentAllowed, setAgentAllowed] = useState(agent.allowed);
   const [pending, setPending] = useState(false);
   const feedback = useActionFeedback();
-  const agentChanged = agentAllowed !== agent.allowed;
-  const changed = (Object.keys(values) as (keyof NumbersValues)[]).filter((k) => String(v[k]) !== String(values[k])).length + (agentChanged ? 1 : 0);
+  const changed = (Object.keys(values) as (keyof NumbersValues)[]).filter((k) => String(v[k]) !== String(values[k])).length;
 
   const save = async () => {
     setPending(true);
@@ -52,7 +43,7 @@ export function NumbersPanel({ values, agent }: { values: NumbersValues; agent: 
         const next = await setNextMemberNumberAction(Number(v.nextNumber));
         if (next.status !== 'success') return next;
       }
-      return saveMembersSettingsAction({ resignationNotice: { months: Number(v.noticeMonths), at: v.noticeAt }, paymentTermDays: Number(v.paymentTermDays), joinYearRule: v.joinYearRule }, 'numbers', agentChanged ? agentAllowed : undefined);
+      return saveMembersSettingsAction({ resignationNotice: { months: Number(v.noticeMonths), at: v.noticeAt }, paymentTermDays: Number(v.paymentTermDays), joinYearRule: v.joinYearRule }, 'numbers');
     }, { retry: () => void save() });
     setPending(false);
     if (result.status !== 'success') return;
@@ -62,13 +53,8 @@ export function NumbersPanel({ values, agent }: { values: NumbersValues; agent: 
   return (
     <FormCard
       as="form"
-      ref={form}
       data-testid="numbers-panel"
       onSubmit={(e: React.FormEvent) => { e.preventDefault(); void save(); }}
-      onChange={(e: React.FormEvent) => {
-        const next = agentSwitchChange(e, AGENT_KEY);
-        if (next !== null) setAgentAllowed(next);
-      }}
     >
       <FormCardBody>
         <Section title={t('title')}>
@@ -90,16 +76,11 @@ export function NumbersPanel({ values, agent }: { values: NumbersValues; agent: 
             </FormField>
           </FormGrid>
         </Section>
-        <AgentSwitchSection name={AGENT_KEY} label={tAgent('label')} hint={tAgent('hint')} checked={agent.allowed} disabled={!agent.canChange || pending} />
       </FormCardBody>
       <FormActionBar
         count={changed}
         onSave={() => void save()}
-        onDiscard={() => {
-          setV(values);
-          setAgentAllowed(agent.allowed);
-          form.current?.reset();
-        }}
+        onDiscard={() => setV(values)}
         pending={pending}
         state={feedback.state}
         saveTestId="numbers-save"

@@ -67,7 +67,10 @@ export const contactRoles = sqliteTable(
     role: text('role').notNull(),
     since: text('since').notNull(),
     until: text('until'),
+    /** Bei der Rolle Vorstandsmitglied das Amt (z. B. „Schatzmeisterin“). */
     note: text('note'),
+    /** „vertritt nach § 26 BGB“ — nur bei Rollen, deren Definition `representation` trägt (0.4.5, Ve-L-5). */
+    representsAssociation: integer('represents_association', { mode: 'boolean' }).notNull().default(false),
   },
   (t) => [index('contact_roles_contact_idx').on(t.contactId), index('contact_roles_role_idx').on(t.role)],
 );

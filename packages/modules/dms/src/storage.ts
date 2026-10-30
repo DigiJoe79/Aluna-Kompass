@@ -38,11 +38,14 @@ async function isPdf(bytes: Uint8Array): Promise<boolean> {
  * Empfänger sind zwei Vorgänge, und der eine darf nicht verschwinden, wenn der
  * andere gelöscht wird.
  */
+/** Der Name der Datei eines Dokuments in der Ablage der Akte. */
+export const documentFileName = (documentId: string): string => `${documentId.toLowerCase()}.pdf`;
+
 export async function storeDocumentFile(deps: Deps, documentId: string, bytes: Uint8Array): Promise<Result<StoredFile>> {
   if (bytes.byteLength > DOCUMENT_MAX_BYTES) return invalid([{ path: 'file', message: 'fileTooLarge' }]);
   if (!(await isPdf(bytes))) return invalid([{ path: 'file', message: 'notAPdf' }]);
 
-  const fileName = `${documentId.toLowerCase()}.pdf`;
+  const fileName = documentFileName(documentId);
   await deps.files(DMS_MODULE_KEY).write(fileName, bytes);
 
   return ok({

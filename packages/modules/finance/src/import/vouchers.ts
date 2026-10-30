@@ -2,7 +2,7 @@ import { ok, readSetting, requirePermission, validate, type CallContext, type De
 import { listDocuments, type DocumentRecord } from '@kompass/module-dms';
 import { inArray } from 'drizzle-orm';
 import { z } from 'zod';
-import { financeConflict } from '../errors';
+import { financeConflict, uploadLimitProblem } from '../errors';
 import { requireFinanceRead } from '../ledger/access';
 import { deleteDraft, entryViewInternal } from '../ledger/entries';
 import { uploadVoucher, type VoucherLinkResult } from '../ledger/vouchers';
@@ -115,6 +115,8 @@ export async function attachVoucherToTransaction(deps: Deps, ctx: CallContext, i
   if (denied) return denied;
   const parsed = validate(deps, attachSchema, input);
   if (!parsed.ok) return parsed;
+  const tooLarge = uploadLimitProblem(deps, parsed.value.bytes);
+  if (tooLarge) return tooLarge;
   const v = parsed.value;
   const loaded = usableRawInternal(deps.db, v.rawTransactionId);
   if (!loaded.ok) return loaded;

@@ -71,6 +71,20 @@ export const STATUS_TONES = {
   auditReport: { draft: 'neutral', readyToSign: 'info', filed: 'final' },
   /** Stichprobe (N4, Freigabe Joe 2026-10-24): die Buchung hat sich seit dem Abhaken geändert. */
   sample: { recheck: 'warning' },
+  /** Sitzung (N6, Freigabe Joe 2026-10-28, Designer Phase 1 D4): protokolliert ist Arbeit (Unterschrift, Festschreiben). */
+  meeting: { planned: 'neutral', inviteDue: 'warning', invited: 'info', running: 'info', recorded: 'warning', signed: 'final', cancelled: 'neutral' },
+  /** Satzungsstand (N6): beschlossen heißt „Eintragung offen“; gültig trägt eine Marke (es gibt genau einen). */
+  statute: { draft: 'neutral', resolved: 'warning', valid: 'success', superseded: 'neutral' },
+  /** Beschluss (N6): gegen die Zählung ist eine zweite Marke `info`. */
+  resolution: { adopted: 'success', elected: 'success', notElected: 'neutral', rejected: 'neutral', postponed: 'info', withdrawn: 'neutral', overridden: 'info' },
+  /** Registeranmeldung (N6): `error` nur, wo eine Stelle außerhalb zurückweist (Zwischenverfügung). */
+  registration: { due: 'warning', atNotary: 'info', submitted: 'info', interimOrder: 'error', registered: 'final' },
+  /** Umlaufbeschluss (N6; U2 prüft die Schlüssel gegen den Dienst). */
+  circular: { running: 'info', overdue: 'warning', failed: 'neutral', passed: 'success' },
+  /** Antrag zur Tagesordnung (N6): nach Frist ist Arbeit, nie eine Abweisung. */
+  agendaMotion: { late: 'warning', rejected: 'neutral', admitted: 'neutral' },
+  /** Platz eines Amts (Board Phase 2 4a): Marke nur bei Anstehendem — endet, unbesetzt, unvereinbar. */
+  seat: { termEnding: 'warning', electionDue: 'warning', vacant: 'warning', incompatible: 'warning' },
 } as const satisfies Record<string, Record<string, BadgeTone>>;
 
 export type StatusKind = keyof typeof STATUS_TONES;
@@ -114,6 +128,14 @@ const NORMAL_IN_LIST: { [K in StatusKind]?: readonly (keyof (typeof STATUS_TONES
   outbox: ['sent'],
   backupCheck: ['verified'],
   // Kein `remark`: Geklärt steht mit Marke in der Spalte „Zustand“ (Designer Runde 7, 272/273).
+  meeting: ['signed'],
+  // Abgelöste Stände sind eine gedämpfte Zeile mit Marke am Namen (Plan U2), nicht die Statusspalte.
+  statute: ['superseded'],
+  resolution: ['adopted'],
+  registration: ['registered'],
+  circular: ['passed'],
+  agendaMotion: ['admitted'],
+  // Kein `statute`: „gültig“ ist der eine Stand, den man sucht (Designer Phase 1 D4).
 };
 
 export function isNormalInList<K extends StatusKind>(kind: K, status: keyof (typeof STATUS_TONES)[K]): boolean {
@@ -141,7 +163,7 @@ type Mark = { dot?: boolean; icon?: never } | { dot?: never; icon?: LucideIcon }
 export function StatusBadge({ tone, dot, icon: Icon, children, className, testId, stamp }: { tone: BadgeTone; children: React.ReactNode; className?: string; testId?: string; stamp?: boolean } & Mark) {
   const shape = stamp ? 'rounded-md border-2 border-current px-3 py-1.5 text-section shadow-sm' : 'rounded-sm px-2 py-0.5 text-hint';
   return (
-    <span data-slot="status-badge" data-testid={testId} className={cn('inline-flex items-center gap-1.5', shape, 'font-semibold', TONES[tone], className)}>
+    <span data-slot="status-badge" data-tone={tone} data-testid={testId} className={cn('inline-flex items-center gap-1.5', shape, 'font-semibold', TONES[tone], className)}>
       {dot ? <span className="size-[7px] rounded-full bg-current" aria-hidden /> : null}
       {Icon ? <Icon className="size-3 shrink-0" aria-hidden /> : null}
       {children}

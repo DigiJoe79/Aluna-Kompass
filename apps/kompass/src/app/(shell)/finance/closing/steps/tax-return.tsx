@@ -13,6 +13,12 @@ import { taxReturnSettled, taxReturnStateOf } from '../step-detail';
 import { ConfirmRow } from './confirm-row';
 
 /**
+ * „Abgabe eintragen …“ und „Zu den Fristen“ ohne Zeilenliste: am Telefon wie die Knöpfe einer Zeile (Regel Runde 7, 307;
+ * `RequirementList`) über die volle Breite in Feldhöhe, der Link darunter (Bildabnahme 0.4.5 O-1). Ohne Layout-Test.
+ */
+const VAT_ACTIONS = 'flex flex-wrap items-center gap-3 max-sm:[&_[data-slot=button]]:h-[var(--field-h)] max-sm:[&_[data-slot=button]]:basis-full';
+
+/**
  * Schritt 12 (Board 15h). Ohne Erklärungszeitraum wie in C: „Nur wenn fällig.“ und „Bestätigen …“ mit dem Vorschlag
  * „keine Erklärung angefordert“, daneben „Zur Steuererklärung“ — dort legt man einen Zeitraum an. Das letzte Jahr eines
  * offenen Zeitraums: „Erklärung für … bis …“ mit „Zur Steuererklärung“ (`outline`, die Erklärung ist nicht die
@@ -58,7 +64,7 @@ export function TaxReturnStep({ step, status, canConfirm, onConfirm, today = '',
       <div className="flex flex-col gap-2.5" data-testid="closing-body-taxReturn">
         {vatLine}
         {vatOpen ? (
-          <div className="flex flex-wrap items-center gap-3">
+          <div className={VAT_ACTIONS}>
             {vatFile}
             {toDeadlines}
           </div>
@@ -143,7 +149,7 @@ export function TaxReturnStep({ step, status, canConfirm, onConfirm, today = '',
       <p className="text-meta text-ink-2">{t('intro', { year: status.designation })}</p>
       {vatLine}
       {vatOpen ? (
-        <div className="flex flex-wrap items-center gap-3">
+        <div className={VAT_ACTIONS}>
           {vatFile}
           {toDeadlines}
         </div>

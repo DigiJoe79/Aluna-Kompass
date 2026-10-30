@@ -1,6 +1,6 @@
 'use server';
 
-import { checkReverseCharge, clearReverseChargeDecline, declineReverseCharge, type ReverseChargeDeclineReason, type ReverseChargePromptView, createTaxPeriod, fileTaxPeriodDocument, getContactTaxDetails, linkTaxPeriodDocument, linkTaxPeriodNotice, saveContactTaxDetails, saveTaxPeriodAnswers, updateTaxPeriod, type GemAnswers, type TaxPeriodDocumentSlot } from '@kompass/module-finance';
+import { checkReverseCharge, clearReverseChargeDecline, declineReverseCharge, type ReverseChargeDeclineReason, type ReverseChargePromptView, createTaxPeriod, fileTaxPeriodDocument, getContactTaxDetails, linkTaxPeriodDocument, linkTaxPeriodNotice, recordNameConsent, saveContactTaxDetails, saveTaxPeriodAnswers, updateTaxPeriod, type GemAnswers, type TaxPeriodDocumentSlot } from '@kompass/module-finance';
 import { getTranslations } from 'next-intl/server';
 import { revalidatePath } from 'next/cache';
 import { guardAction } from '@/lib/action-guard';
@@ -90,7 +90,7 @@ export async function linkTaxPeriodNoticeAction(input: { id: string; noticeId: s
 }
 
 /** Steuerdaten von Empfänger oder Geber einer Vermögensausstattung (Zeilen 65, 70). */
-export async function saveContactTaxDetailsAction(input: { contactId: string; taxOffice?: string; taxNumber?: string; beneficiaryPurpose?: string; reverseCharge?: 'eu' | 'other' | null }): Promise<ActionState> {
+export async function saveContactTaxDetailsAction(input: { contactId: string; taxOffice?: string; taxNumber?: string; beneficiaryPurpose?: string; reverseCharge?: 'eu' | 'other' | null; legalEntity?: 'yes' | 'no' | null }): Promise<ActionState> {
   return guardAction('(shell)/finance/tax/actions.ts#saveContactTaxDetailsAction', async () => {
     const t = await getTranslations();
     const { deps, ctx } = await requireSession();
@@ -98,6 +98,20 @@ export async function saveContactTaxDetailsAction(input: { contactId: string; ta
     revalidate();
     revalidatePath('/finance/partners', 'layout');
     return toActionState(result, t, t('finance.tax.toast.taxDetailsSaved'));
+  });
+}
+
+/**
+ * Jahresrechnung (U1 Task 7): Einwilligung zur Namensnennung erteilen oder widerrufen — ein neuer Eintrag im Verlauf
+ * (`recordNameConsent`); nach einem Widerruf erneuert der Dienst die Webfassungen.
+ */
+export async function recordNameConsentAction(input: { contactId: string; kind: 'granted' | 'revoked'; on: string; fromYear?: number; documentId?: string | null }): Promise<ActionState> {
+  return guardAction('(shell)/finance/tax/actions.ts#recordNameConsentAction', async () => {
+    const t = await getTranslations();
+    const { deps, ctx } = await requireSession();
+    const result = await recordNameConsent(deps, ctx, input);
+    revalidatePath(`/contacts/${input.contactId}`);
+    return toActionState(result, t, t(input.kind === 'granted' ? 'finance.contactAnnualAccounts.dialog.grantDone' : 'finance.contactAnnualAccounts.dialog.revokeDone'));
   });
 }
 

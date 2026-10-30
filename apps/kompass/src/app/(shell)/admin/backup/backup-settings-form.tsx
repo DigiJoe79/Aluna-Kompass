@@ -16,7 +16,6 @@ import type { ActionState } from '@/lib/actions';
 import { ringHint } from '@/lib/backup-view';
 import { withUnplacedFieldErrors } from '@/lib/feedback';
 import { formatSize } from '@/lib/format-size';
-import { AgentSwitchSection } from '../agent-switch-section';
 import { saveSettingsAction } from '../settings/actions';
 import { ScheduleSwitch } from './schedule-switch';
 
@@ -27,9 +26,8 @@ const KEYS = {
   weekly: 'backup.ring.weekly',
   monthly: 'backup.ring.monthly',
   maxAgeDays: 'backup.maxAgeDays',
-  agentAllowed: 'backup.mcpHumanOnlyAllowed',
 } as const;
-type Values = { enabled: boolean; time: string; daily: number; weekly: number; monthly: number; maxAgeDays: number; agentAllowed: boolean };
+type Values = { enabled: boolean; time: string; daily: number; weekly: number; monthly: number; maxAgeDays: number };
 type RingKey = 'daily' | 'weekly' | 'monthly';
 /** Grenzen wie die Schemas der Einstellungen (`packages/core/src/settings/core.ts`). */
 const RING: { key: RingKey; min: number; max: number }[] = [
@@ -52,13 +50,12 @@ function read(form: FormData, values: Values): Values {
     weekly: int(KEYS.weekly, values.weekly),
     monthly: int(KEYS.monthly, values.monthly),
     maxAgeDays: int(KEYS.maxAgeDays, values.maxAgeDays),
-    agentAllowed: form.get(KEYS.agentAllowed) === 'on',
   };
 }
 
 /**
  * Reiter „Einstellungen“ der Backup-Seite (Board 1d): eine Karte mit „Automatisch sichern“ (Zeitplan, Uhrzeit, Ring
- * mit Hinweis), „Frist“ und dem Agentenschalter als letztem Abschnitt, darunter die Speicherleiste. Gespeichert wird
+ * mit Hinweis), „Frist“, darunter die Speicherleiste. Gespeichert wird
  * nur, was sich geändert hat, in einem Aufruf. Ohne `settings.manage` nur zu lesen, ohne Leiste.
  */
 export function BackupSettingsForm({ values, referenceBytes, mailAvailable, canManage }: { values: Values; referenceBytes: number | null; mailAvailable: boolean; canManage: boolean }) {
@@ -136,7 +133,6 @@ export function BackupSettingsForm({ values, referenceBytes, mailAvailable, canM
               </FormField>
             </FormGrid>
           </Section>
-          <AgentSwitchSection name={KEYS.agentAllowed} label={t('agent.label')} hint={t('agent.hint')} checked={values.agentAllowed} disabled={!canManage} />
         </div>
         {canManage ? <FormActionBar baseline={saves} state={withUnplacedFieldErrors(state, PLACED)} /> : null}
       </ActionForm>

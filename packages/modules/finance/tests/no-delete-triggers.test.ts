@@ -14,6 +14,9 @@ import { insertRaw, insertRun, ledgerFixture } from './helpers';
  * nicht nur im Dienst. Jede Regel steht hier mit ihrer Tabelle; eine neue Regel ohne Eintrag bricht den Wächter.
  */
 const TABLE_OF_UNDELETABLE_ENTITY: Record<string, string> = {
+  financeNameConsent: 'finance_name_consents',
+  financeReportSignature: 'finance_report_signatures',
+  financeAnnualAccountsPublication: 'finance_annual_accounts_publications',
   financeImportProfile: 'finance_import_profiles',
   financeFiscalYear: 'finance_fiscal_years',
   financePeriodEvent: 'finance_period_events',
@@ -36,6 +39,7 @@ const TABLE_OF_UNDELETABLE_ENTITY: Record<string, string> = {
   financePartnerPaymentPosition: 'finance_partner_payment_positions',
   financePartnerPayment: 'finance_partner_payments',
   financeReserveMovement: 'finance_reserve_movements',
+  financeFundsUseOpening: 'finance_funds_use_openings',
   financePurposeTransfer: 'finance_purpose_transfers',
   financeMandate: 'finance_sepa_mandates',
   financePledge: 'finance_pledges',

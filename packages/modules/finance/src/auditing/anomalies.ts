@@ -1,4 +1,5 @@
-import { readSetting, type DbOrTx, type Deps } from '@kompass/core';
+import { readSetting, timeZoneOf, type DbOrTx, type Deps } from '@kompass/core';
+import { zonedDayOf, zonedDayRange } from '../zoned-days';
 import { userLinkChangesInternal } from '@kompass/module-contacts';
 import { and, asc, eq, gte, inArray, isNotNull, lt, lte } from 'drizzle-orm';
 import { relatedPartyPaymentsInternal } from '../allocation/people';
@@ -23,7 +24,6 @@ export const ANOMALY_KINDS = [
 ] as const;
 export type AnomalyKind = (typeof ANOMALY_KINDS)[number];
 
-const dayOf = (iso: string) => iso.slice(0, 10);
 
 function dayAfter(day: string): string {
   const d = new Date(`${day}T00:00:00.000Z`);
@@ -48,6 +48,10 @@ const row = (kind: AnomalyKind, key: string, entry: Pick<FinanceEntryRow, 'id' |
 });
 
 export function anomalyRowsInternal(deps: Deps, year: FinanceFiscalYearRow): AuditSectionRow[] {
+  // F-B3 (0.4.5): Zeitstempel zählen nach ihrem Tag in der Zone des Vereins, das Jahr über dessen Grenzen.
+  const timeZone = timeZoneOf(deps);
+  const dayOf = (iso: string) => zonedDayOf(iso, timeZone);
+  const inYear = zonedDayRange(year.startsOn, year.endsOn, timeZone);
   const db: DbOrTx = deps.db;
   const entries = db.select().from(financeEntries).where(and(eq(financeEntries.fiscalYearId, year.id), eq(financeEntries.status, 'final'))).orderBy(asc(financeEntries.entryDate), asc(financeEntries.number)).all();
   const entryById = new Map(entries.map((e) => [e.id, e]));
@@ -85,7 +89,7 @@ export function anomalyRowsInternal(deps: Deps, year: FinanceFiscalYearRow): Aud
   for (const e of entries) if (e.reversesEntryId) out.reversal.push(row('reversal', e.id, e, money.filter((m) => m.entryId === e.id).reduce((s, m) => s + m.amountCents, 0), { reversedNumber: db.select({ number: financeEntries.number }).from(financeEntries).where(eq(financeEntries.id, e.reversesEntryId)).get()?.number ?? '' }));
 
   // Zuordnungskorrekturen, im Jahr angewandt — auch an früheren Jahren.
-  const corrections = db.select().from(financeAllocationCorrections).where(and(eq(financeAllocationCorrections.state, 'applied'), gte(financeAllocationCorrections.approvedAt, `${year.startsOn}T00:00:00.000Z`), lte(financeAllocationCorrections.approvedAt, `${year.endsOn}T23:59:59.999Z`))).all();
+  const corrections = db.select().from(financeAllocationCorrections).where(and(eq(financeAllocationCorrections.state, 'applied'), gte(financeAllocationCorrections.approvedAt, inYear.start), lt(financeAllocationCorrections.approvedAt, inYear.end))).all();
   for (const c of corrections) {
     const entry = db.select().from(financeEntries).where(eq(financeEntries.id, c.entryId)).get()!;
     const designation = entry.fiscalYearId ? (db.select({ d: financeFiscalYears.designation }).from(financeFiscalYears).where(eq(financeFiscalYears.id, entry.fiscalYearId)).get()?.d ?? '') : '';
@@ -126,13 +130,13 @@ export function anomalyRowsInternal(deps: Deps, year: FinanceFiscalYearRow): Aud
   }
 
   // Partnerzahlungen mit Begründung oder nachträglicher Freigabe.
-  const payments = db.select().from(financePartnerPayments).where(and(isNotNull(financePartnerPayments.approvedAt), gte(financePartnerPayments.approvedAt, `${year.startsOn}T00:00:00.000Z`), lte(financePartnerPayments.approvedAt, `${year.endsOn}T23:59:59.999Z`))).all();
+  const payments = db.select().from(financePartnerPayments).where(and(isNotNull(financePartnerPayments.approvedAt), gte(financePartnerPayments.approvedAt, inYear.start), lt(financePartnerPayments.approvedAt, inYear.end))).all();
   for (const p of payments) {
     const reasons = [p.retroactive && 'retroactive', p.basisOverrideReason && 'basisOverride', p.noticeReason && 'notice', p.overdueReason && 'overdue', p.purposeNegativeReason && 'purposeNegative'].filter((r): r is string => Boolean(r));
     if (reasons.length) out.partnerPaymentReason.push(row('partnerPaymentReason', p.id, null, null, { paymentNumber: p.number ?? '', reasons: reasons.join(',') }, dayOf(p.approvedAt!)));
   }
   // Mehrfach verwendete Nachweise (Rechenschaft B1 Task 8): dieselbe Rechnung wie die Belegprüfung, je Gruppe eine Zeile.
-  for (const group of reusedEvidenceInternal(db, { from: year.startsOn, to: year.endsOn })) {
+  for (const group of reusedEvidenceInternal(db, { from: year.startsOn, to: year.endsOn }, timeZone)) {
     const first = group.uses.find((u) => u.date >= year.startsOn && u.date <= year.endsOn) ?? group.uses[0]!;
     const documentId = group.uses.find((u) => u.documentId)?.documentId;
     out.evidenceReused.push({ ...row('evidenceReused', group.key, null, null, { number: first.documentNumber ?? '', uses: group.uses.map((u) => u.refNumber ?? '').filter(Boolean).join(', ') }, first.date), ...(documentId ? { documentId } : {}) });

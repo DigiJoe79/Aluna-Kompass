@@ -154,6 +154,8 @@ function PreviewGroups({ preview, onMoveTo }: { preview: DirectDebitPreview; onM
   const tp = useTranslations('finance.directDebit.preview');
   const tl = useTranslations('finance.directDebit.list');
   const { date } = useDateFormat();
+  // Eine Rückmeldung für die ganze Liste: Solange eine Ankündigung läuft, sind alle Knöpfe „Ankündigung erzeugen“
+  // gesperrt (App-B1) — bewusst mitgesperrt, weil die Ablehnung über der Liste steht und nur eine zugleich zeigt.
   const feedback = useActionFeedback();
   const [issued, setIssued] = useState<Set<string>>(new Set());
   const keyOf = (item: DirectDebitPreviewItem) => `${item.source}-${item.sourceId}-${item.installmentOn ?? ''}`;
@@ -205,7 +207,7 @@ function PreviewGroups({ preview, onMoveTo }: { preview: DirectDebitPreview; onM
                       issued.has(keyOf(item)) ? (
                         <span className="text-hint text-ink-2">{tp('noticeDone')}</span>
                       ) : (
-                        <Button type="button" variant="outline" size="sm" onClick={() => void notice(item)}>{tp('createNotice')}</Button>
+                        <Button type="button" variant="outline" size="sm" disabled={feedback.pending} aria-busy={feedback.pending || undefined} onClick={() => void notice(item)}>{tp('createNotice')}</Button>
                       )
                     ) : null}
                     {group.key === 'inOtherRun' ? <span className="text-hint text-ink-2">{tp('inOtherRunHint')}</span> : null}

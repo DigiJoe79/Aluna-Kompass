@@ -2,6 +2,7 @@ import { csvField, paperDate, schema as coreSchema, type DbOrTx } from '@kompass
 import { contacts, displayName } from '@kompass/module-contacts';
 import { projects } from '@kompass/module-projects';
 import { and, asc, between, eq, inArray, isNotNull, isNull } from 'drizzle-orm';
+import { zonedDayOf } from '../../zoned-days';
 import {
   financeAccounts, financeAllocationCorrections, financeAllocationLines, financeCategories, financeEntries, financeEntryDocuments, financeImportRuns, financeMoneyLines,
   financePeriodEvents, financePurposes, financeRawTransactions, type FinanceAllocationCorrectionRow,
@@ -24,6 +25,8 @@ export interface ExportScope {
   fiscalYears: ExportScopeYear[];
   /** Leitsprache der Installation — für Projektnamen. */
   locale?: string;
+  /** Zeitzone des Vereins: Zeitstempel gehören über sie zu einem Tag und Geschäftsjahr (F-B3). */
+  timeZone: string;
 }
 export type DataExportStep = 'entries' | 'masterData' | 'vouchers' | 'history' | 'package';
 export type ExportRow = readonly (string | null)[];
@@ -104,7 +107,8 @@ function correctionsInScope(db: DbOrTx, scope: ExportScope): FinanceAllocationCo
   const entryIds = new Set(db.select({ id: financeEntries.id }).from(financeEntries).where(inScope(scope)).all().map((e) => e.id));
   return db.select().from(financeAllocationCorrections).orderBy(asc(financeAllocationCorrections.requestedAt)).all().filter((c) => {
     if (entryIds.has(c.entryId)) return true;
-    const decided = decidedAt(c)?.slice(0, 10);
+    const at = decidedAt(c);
+    const decided = at ? zonedDayOf(at, scope.timeZone) : undefined;
     return decided !== undefined && scope.fiscalYears.some((y) => decided >= y.startsOn && decided <= y.endsOn);
   });
 }

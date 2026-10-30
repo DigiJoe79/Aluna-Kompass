@@ -1,4 +1,4 @@
-import type { DbOrTx, Failure } from '@kompass/core';
+import type { DbOrTx, Deps, Failure } from '@kompass/core';
 import type { z } from 'zod';
 
 /**
@@ -9,8 +9,8 @@ import type { z } from 'zod';
 
 /** Katalogschlüssel, z. B. `incomeStatement`. */
 export type ReportKey = string;
-/** Gruppe der Seite „Berichte“: Mitgliederversammlung, Kassenprüfung, Finanzamt und Gemeinnützigkeit, Arbeit. */
-export type ReportGroup = 'assembly' | 'audit' | 'taxOffice' | 'work';
+/** Gruppe der Seite „Berichte“: Mitgliederversammlung, Kassenprüfung, Finanzamt und Gemeinnützigkeit, Arbeit, Öffentlichkeit. */
+export type ReportGroup = 'assembly' | 'audit' | 'taxOffice' | 'work' | 'public';
 /** Aus dem Zustand abgeleitet, nie gewählt: Jahr offen → `preliminary`, abgeschlossen → `review`, festgeschrieben → `final`. */
 export type ReportStage = 'preliminary' | 'review' | 'final';
 export type ReportParams = {
@@ -64,7 +64,37 @@ export interface ReportRenderContext {
    * (Leitsprache), `user.<id>` (Anzeigename), `otherAsset.<id>`, und Einstellungen des Papiers als `setting.<name>`.
    */
   labels: Record<string, string>;
+  /** Was `prepareRender` außerhalb des Hashs beisteuert (Jahresrechnung: Namensnennung, Erläuterung als Typst, Anhang). */
+  extra?: Record<string, unknown>;
 }
+
+/**
+ * Was die Jahresrechnung beim Rendern über die Daten hinaus zeigt — außerhalb des Hashs (J2 füllt es: Abzeichnung,
+ * Vorlage an die MV, Webfassung, berichtigte Fassung). J1 rendert ohne.
+ */
+export interface AnnualAccountsAnnex {
+  signature?: { name: string; office: string | null; signedOn: string; via: 'account' | 'scan'; scanNumber: string | null };
+  assemblyOn?: string | null;
+  webVersionOn?: string | null;
+  replacesFinalizedOn?: string | null;
+  /** Kontakt-IDs, deren Zeile in F8 anonymisiert wird (Webfassung nach Widerruf). */
+  anonymize?: readonly string[];
+}
+
+/** Optionen des Renderns: Tag, zu dem die Namensnennung gilt (Vorgabe heute), und der Anhang der Jahresrechnung. */
+export interface RenderOptions {
+  at?: string;
+  annex?: AnnualAccountsAnnex;
+}
+
+/** Was ein Bericht vor dem Festschreiben bestätigt haben will (Planreview J1: Vergütung ohne Grundlage) — keine Sperre. */
+export interface ReportConfirmationNeed {
+  code: 'annualAccountsRemunerationWithoutBasis';
+  params: Record<string, string | number>;
+}
+/** Begründungen der Bestätigung: Rückforderung eingeleitet, Grundlage liegt vor (in Kompass nicht erfasst), Sonstiges mit Text. */
+export const REPORT_CONFIRMATION_REASONS = ['recoveryInitiated', 'basisNotRecorded', 'other'] as const;
+export type ReportConfirmationReason = (typeof REPORT_CONFIRMATION_REASONS)[number];
 
 export interface ReportDefinition<D = unknown> {
   key: ReportKey;
@@ -132,7 +162,27 @@ export interface ReportDefinition<D = unknown> {
    * Optional: warum dieser Datenstand nicht festgeschrieben werden darf, obwohl der Bericht gezeigt wird (Kassenbericht:
    * die Probe geht nicht auf). `code` ist ein Fehlercode des Moduls (`FINANCE_ERRORS`).
    */
-  finalizeBlock?(data: D): { code: 'reportProbeFails'; params: { differenceCents: number } } | { code: 'reportGemIncomplete'; params: { missing: number } } | null;
+  finalizeBlock?(data: D): ReportFinalizeBlock | null;
+  /**
+   * Optional (Planreview J1): was das Festschreiben bestätigt haben will — mit Begründung festschreibbar
+   * (`confirmation` am Aufruf), ohne abgelehnt mit `code`. Keine Sperre.
+   */
+  confirmToFinalize?(data: D): ReportConfirmationNeed | null;
+  /**
+   * Optional: asynchrone Vorbereitung des Renderns außerhalb des Hashs (Jahresrechnung: wer genannt wird, die
+   * Erläuterung als Typst). Landet in `ReportRenderContext.extra`.
+   */
+  prepareRender?(deps: Deps, data: D, opts: RenderOptions): Promise<Record<string, unknown>>;
+  /**
+   * Optional: die Daten für einen Leser ohne `finance.read` (Jahresrechnung F8: Unbenannte nur mit Bandbreite). Nur
+   * die Ausgabe von `finance_report`; Hash und Stufe rechnen über die vollen Daten.
+   */
+  redactWithoutRead?(deps: Deps, data: D): D;
+  /**
+   * Optional: Ergänzung der Daten in der Ausgabe von `finance_report`, die vom Zustand außerhalb des Hashs abhängt
+   * (Jahresrechnung: Hinweis „übrige Satzungsarbeit“ nach den publizierten Projekten). Hash und Stufe rechnen ohne.
+   */
+  decorateOutput?(deps: Deps, data: D): D;
   /** Optional: je Summe des Berichts die Filter für `finance_lines_list`. */
   linesFilter?(data: D, params: ReportParams): Record<string, ReportLinesFilter>;
   /**
@@ -155,6 +205,8 @@ export interface ReportRun<D = unknown> {
    * wie beim Festschreiben. `code` ist ein Fehlercode des Moduls; die Oberfläche zeigt danach Satz und Knopf.
    */
   finalizeBlock: ReportFinalizeBlock | null;
+  /** Was das Festschreiben bestätigt haben will, oder `null` (`ReportDefinition.confirmToFinalize`). */
+  confirmation: ReportConfirmationNeed | null;
   /** `false` bei Arbeitslisten, die nie festgeschrieben werden (`ReportDefinition.finalizable`). */
   finalizable: boolean;
   /** Je Summe Anzahl und Filter der Zeilen, sofern die Definition `linesFilter` liefert. */
@@ -175,10 +227,24 @@ export interface ReportFinalVersion {
   documentId: string;
   documentNumber: string;
   shortHash: string;
+  /**
+   * Jahresrechnung: die abgezeichnete Fassung, sobald es sie gibt — sie zeigen Seite, Bilder und Herunterladen, weil sie
+   * publiziert wird (Bildabnahme 0.4.5 F-3); sonst `null`.
+   */
+  signedCopy: { documentId: string; documentNumber: string } | null;
+}
+
+/** Weitere Dokumente einer Fassung mit demselben Datenstand (Jahresrechnung): abgezeichnet, Webfassung. */
+export interface ReportVersionCopy {
+  kind: 'signed' | 'web';
+  documentId: string;
+  documentNumber: string;
+  /** Tag der Abzeichnung bzw. der Webfassung. */
+  on: string;
 }
 
 export interface ReportFinalizeBlock {
-  code: 'reportNotFinalizable' | 'reportYearOpen' | 'reportPeriodOpen' | 'reportNotReleased' | 'reportStatementsMissing' | 'reportProbeFails' | 'reportAlreadyFinal' | 'reportGemIncomplete';
+  code: 'reportNotFinalizable' | 'reportYearOpen' | 'reportPeriodOpen' | 'reportNotReleased' | 'reportStatementsMissing' | 'reportProbeFails' | 'reportAlreadyFinal' | 'reportGemIncomplete' | 'annualAccountsCashReportMissing';
   params: Record<string, string | number>;
 }
 
@@ -204,6 +270,8 @@ export interface ReportVersionView {
   voidedAt: string | null;
   voidReason: string | null;
   replacedByReportId: string | null;
+  /** Abgezeichnete Fassung und Webfassungen (nur Jahresrechnung), sonst leer. */
+  copies: ReportVersionCopy[];
 }
 
 export interface ReportListItem {

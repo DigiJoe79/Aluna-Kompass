@@ -1,9 +1,9 @@
-import { ok, readSetting, todayIn, validate, type CallContext, type DbOrTx, type Deps, type Result } from '@kompass/core';
+import { hasPermission, ok, readSetting, todayIn, validate, type CallContext, type DbOrTx, type Deps, type Result } from '@kompass/core';
 import { and, desc, eq, isNull } from 'drizzle-orm';
 import { z } from 'zod';
 import { financeConflict } from '../errors';
 import { requireFinanceRead } from '../ledger/access';
-import { financeReports } from '../schema';
+import { financeAnnualAccountsPublications, financeReports, financeReportSignatures } from '../schema';
 import { REPORT_CATALOG, reportDefinition } from './catalog';
 import { reportHash } from './hash';
 import { countFinanceLinesInternal } from './lines';
@@ -11,7 +11,7 @@ import { canonicalJson } from './hash';
 import { missingStatementPdfsInternal } from '../ledger/statement-documents';
 import { releaseAuditInternal, releaseFollowUpInternal, type ReleaseAuditFacts } from '../locks';
 import { finalizeBlockInternal, releaseChangeableInternal, releaseOfYearInternal, reportStageInternal, reportYearsInternal } from './stage';
-import type { ReportComputeEnv, ReportDefinition, ReportFinalVersion, ReportListItem, ReportParams, ReportRelease, ReportRun, ReportVersionView } from './types';
+import type { ReportComputeEnv, ReportDefinition, ReportFinalVersion, ReportListItem, ReportParams, ReportRelease, ReportRun, ReportVersionCopy, ReportVersionView } from './types';
 
 /**
  * Der Verteiler (Spec § A „Mechanik“, Finanz-Spec § 9.1): ein Dienst für alle Berichte des Katalogs. Rechte nach
@@ -56,7 +56,8 @@ export function runReportInternal<D>(deps: Deps, db: DbOrTx, def: ReportDefiniti
   const released = latest ? (releaseOfYearInternal(db, latest.id)?.basis ?? null) : null;
   const finalizeBlock = finalizeBlockInternal(db, def as ReportDefinition, params, hash, data, today);
   const finalVersion = stage === 'final' ? finalVersionInternal(db, def.key, params, hash) : null;
-  return { report: def.key, params, stage, hash, shortHash, data, released, finalizeBlock, finalizable: def.finalizable !== false, empty: def.empty?.(data) ?? null, finalVersion };
+  const confirmation = def.confirmToFinalize?.(data) ?? null;
+  return { report: def.key, params, stage, hash, shortHash, data, released, finalizeBlock, confirmation, finalizable: def.finalizable !== false, empty: def.empty?.(data) ?? null, finalVersion };
 }
 
 /** Die nicht zurückgenommene Fassung mit Bericht, Parametern und Datenstand — die Quelle der Stufe `final`. */
@@ -66,14 +67,35 @@ export function finalVersionInternal(db: DbOrTx, key: string, params: ReportPara
     .from(financeReports)
     .where(and(eq(financeReports.reportKey, key), eq(financeReports.params, canonicalJson(params)), eq(financeReports.dataHash, hash), isNull(financeReports.voidedAt)))
     .get();
-  return row ? { reportId: row.id, finalizedAt: row.finalizedAt, documentId: row.documentId, documentNumber: row.documentNumber, shortHash: row.dataHash.slice(0, 8) } : null;
+  if (!row) return null;
+  const signed = reportCopiesInternal(db, row.id).find((c) => c.kind === 'signed');
+  return { reportId: row.id, finalizedAt: row.finalizedAt, documentId: row.documentId, documentNumber: row.documentNumber, shortHash: row.dataHash.slice(0, 8), signedCopy: signed ? { documentId: signed.documentId, documentNumber: signed.documentNumber } : null };
+}
+
+/**
+ * Die weiteren Dokumente einer Fassung (Jahresrechnung, Bildabnahme 0.4.5 F-3): die abgezeichnete Fassung und jede
+ * Webfassung ihrer Veröffentlichungen, in dieser Folge. Andere Berichte haben keine.
+ */
+export function reportCopiesInternal(db: DbOrTx, reportId: string): ReportVersionCopy[] {
+  const signed = db.select().from(financeReportSignatures).where(eq(financeReportSignatures.reportId, reportId)).get();
+  if (!signed) return [];
+  const web = db
+    .select({ documentId: financeAnnualAccountsPublications.webDocumentId, documentNumber: financeAnnualAccountsPublications.webDocumentNumber, on: financeAnnualAccountsPublications.webVersionOn })
+    .from(financeAnnualAccountsPublications)
+    .where(eq(financeAnnualAccountsPublications.reportId, reportId))
+    .orderBy(financeAnnualAccountsPublications.publishedAt, financeAnnualAccountsPublications.id)
+    .all()
+    .flatMap((p): ReportVersionCopy[] => (p.documentId && p.documentNumber && p.on ? [{ kind: 'web', documentId: p.documentId, documentNumber: p.documentNumber, on: p.on }] : []));
+  return [{ kind: 'signed', documentId: signed.documentId, documentNumber: signed.documentNumber, on: signed.signedOn }, ...web];
 }
 
 export async function runFinanceReport(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<ReportRun>> {
   const resolved = resolveReportInternal(deps, ctx, input);
   if (!resolved.ok) return resolved;
   const { def, params } = resolved.value;
-  const run = runReportInternal(deps, deps.db, def, params);
+  const computed = runReportInternal(deps, deps.db, def, params);
+  const full = def.decorateOutput ? { ...computed, data: def.decorateOutput(deps, computed.data) } : computed;
+  const run = def.redactWithoutRead && !hasPermission(ctx, 'finance.read') ? { ...full, data: def.redactWithoutRead(deps, full.data) } : full;
   // Je Summe Anzahl und Filter für `finance_lines_list` — keine ID-Listen (Finanz-Spec § 9.1).
   const filters = def.linesFilter?.(run.data, params);
   if (!filters) return ok(run);
@@ -136,7 +158,7 @@ export async function listFinanceReportVersions(deps: Deps, ctx: CallContext, in
     .all()
     .map((r): ReportVersionView => ({
       reportId: r.id, finalizedAt: r.finalizedAt, byUserId: r.finalizedByUserId, shortHash: r.dataHash.slice(0, 8), documentId: r.documentId, documentNumber: r.documentNumber,
-      releaseBasis: r.releaseBasis, voidedAt: r.voidedAt, voidReason: fullReader ? r.voidReason : null, replacedByReportId: r.replacedByReportId,
+      releaseBasis: r.releaseBasis, voidedAt: r.voidedAt, voidReason: fullReader ? r.voidReason : null, replacedByReportId: r.replacedByReportId, copies: reportCopiesInternal(deps.db, r.id),
     }));
   return ok({ versions });
 }

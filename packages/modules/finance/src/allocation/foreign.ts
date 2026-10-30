@@ -1,6 +1,7 @@
-import { readSetting, validate, type CallContext, type DbOrTx, type Deps, type Result } from '@kompass/core';
+import { readSetting, timeZoneOf, validate, type CallContext, type DbOrTx, type Deps, type Result } from '@kompass/core';
 import { contacts, displayName } from '@kompass/module-contacts';
-import { and, eq, gte, inArray, isNotNull, lte } from 'drizzle-orm';
+import { and, eq, gte, inArray, isNotNull, lt, lte } from 'drizzle-orm';
+import { zonedDayRange } from '../zoned-days';
 import { z } from 'zod';
 import { requireFinanceRead } from '../ledger/access';
 import { positionViewsOf, sumPositionCents } from './partner-payments';
@@ -58,10 +59,12 @@ function partnerPaymentLineIdsInternal(db: DbOrTx): Set<string> {
 }
 
 /** Reine Abfrage, ohne Rechteprüfung — für den Dienst und die Kachel. `orgCountry`: `organization.country` (Vorgabe `DE`). */
-export function foreignActivityInternal(db: DbOrTx, range: { from: string; to: string }, orgCountry: string): ForeignActivityView {
+/** `timeZone`: Freigaben (Zeitstempel) zählen nach ihrem Tag in der Zone des Vereins (F-B3). */
+export function foreignActivityInternal(db: DbOrTx, range: { from: string; to: string }, orgCountry: string, timeZone: string): ForeignActivityView {
+  const approved = zonedDayRange(range.from, range.to, timeZone);
   const excluded = partnerPaymentLineIdsInternal(db);
 
-  const payments = db.select().from(financePartnerPayments).where(and(eq(financePartnerPayments.state, 'approved'), isNotNull(financePartnerPayments.approvedAt), gte(financePartnerPayments.approvedAt, range.from), lte(financePartnerPayments.approvedAt, `${range.to}T23:59:59.999Z`))).all();
+  const payments = db.select().from(financePartnerPayments).where(and(eq(financePartnerPayments.state, 'approved'), isNotNull(financePartnerPayments.approvedAt), gte(financePartnerPayments.approvedAt, approved.start), lt(financePartnerPayments.approvedAt, approved.end))).all();
   const partnerPayments: ForeignPartnerPaymentEntry[] = payments.map((p) => {
     const partner = db.select().from(financePartnerProfiles).where(eq(financePartnerProfiles.id, p.partnerId)).get()!;
     const contact = db.select().from(contacts).where(eq(contacts.id, partner.contactId)).get()!;
@@ -94,5 +97,5 @@ export async function foreignActivity(deps: Deps, ctx: CallContext, input: unkno
   const parsed = validate(deps, rangeSchema, input);
   if (!parsed.ok) return parsed;
   const orgCountry = readSetting<string>(deps, 'organization.country');
-  return { ok: true, value: foreignActivityInternal(deps.db, parsed.value, orgCountry) };
+  return { ok: true, value: foreignActivityInternal(deps.db, parsed.value, orgCountry, timeZoneOf(deps)) };
 }

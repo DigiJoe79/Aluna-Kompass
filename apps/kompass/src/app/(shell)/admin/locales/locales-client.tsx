@@ -2,7 +2,8 @@
 
 import type { LocaleRemovalPreview } from '@kompass/core';
 import { useLocale, useTranslations } from 'next-intl';
-import { useActionState, useEffect, useRef, useState, useMemo } from 'react';
+import { useActionState, useEffect, useState, useMemo } from 'react';
+import { ActionForm } from '@/components/forms/action-form';
 import { toast } from 'sonner';
 import { ConfirmDialog } from '@/components/forms/confirm-dialog';
 import { useLanguageName } from '@/components/forms/localized-field';
@@ -26,7 +27,6 @@ export function LocalesClient({ locales }: { locales: string[] }) {
   const uiLocale = useLocale();
   const suggestions = useMemo(() => languageOptions(uiLocale, locales), [uiLocale, locales]);
   const [state, action] = useActionState(addLocaleAction, idleState);
-  const formRef = useRef<HTMLFormElement>(null);
   // `useMemo`, weil `errors` sonst bei jedem Render ein neues Objekt waere und
   // der Effekt unten damit bei jedem Render feuerte statt nur bei einer
   // Zustandsaenderung — der Toast erschiene mehrfach.
@@ -40,8 +40,8 @@ export function LocalesClient({ locales }: { locales: string[] }) {
 
   useEffect(() => {
     if (state.status === 'success') {
+      // Das Feld leert `ActionForm` nach dem Speichern selbst; nach einer Ablehnung bleibt der Code stehen (App-B5).
       toast.success(state.message ?? '');
-      formRef.current?.reset();
     }
   }, [state]);
 
@@ -101,7 +101,7 @@ export function LocalesClient({ locales }: { locales: string[] }) {
       <div className="rounded-lg border border-line bg-surface p-5">
         <Section title={t('add')}>
         <RefusalNotice state={state} />
-        <form ref={formRef} action={action} className="mt-3">
+        <ActionForm action={action} state={state} className="mt-3">
           <FormGrid>
             {/* Vorschläge mit Namen (`Intl.DisplayNames`), ein freier Code bleibt möglich; der Knopf steht in der Zeile
                 des Felds, nicht unter dem Hinweis (Runde 3, 180). */}
@@ -127,7 +127,7 @@ export function LocalesClient({ locales }: { locales: string[] }) {
               ))}
             </datalist>
           </FormGrid>
-        </form>
+        </ActionForm>
         </Section>
       </div>
 

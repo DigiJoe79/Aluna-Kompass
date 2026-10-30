@@ -3,7 +3,7 @@
 import type { ReportFinalVersion, ReportFinalizeBlock, ReportGroup, ReportParams, ReportStage } from '@kompass/module-finance';
 import { Download } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { useDateFormat } from '@/components/date-format-provider';
 import { RefusalNotice } from '@/components/forms/refusal-notice';
 import { KeyLine } from '@/components/key-line';
@@ -21,9 +21,23 @@ import { useFileDownload } from '@/lib/use-file-download';
 import Link from 'next/link';
 import { StatementDialog, type StatementAccount } from '../../closing/statement-dialog';
 import { ReleaseDialog } from '../release-dialog';
-import { FinalizeDialog } from './finalize-dialog';
+import { FinalizeDialog, type FinalizeConsequences } from './finalize-dialog';
 import { ReportParamsRow } from './report-params-row';
 import { VersionsTable, type VersionRow } from './versions-table';
+
+/**
+ * Was nur die Jahresrechnung zusätzlich zeigt (Designer 1a–1f), fertig gerendert von der Seite: die Karte unter dem
+ * Kopf, „Auf einen Blick“ (nur am Telefon), die Hinweise über und „Zur Kontrolle“ unter der Vorschau.
+ */
+export interface AnnualAccountsBlock {
+  notices: ReactNode;
+  card: ReactNode;
+  glance: ReactNode;
+  control: ReactNode;
+}
+
+/** `path` mit den nicht leeren Teilen als Abfrage. */
+const withQuery = (path: string, parts: string[]) => (parts.some(Boolean) ? `${path}?${parts.filter(Boolean).join('&')}` : path);
 
 /**
  * Ein Bericht (Board 2b, 9a, Designer Runde 2 11c): Kopf mit Stufe (`PageHeader status`, N2), Zweck und `KeyLine` mit
@@ -37,7 +51,8 @@ export function ReportView(props: {
   orientation: 'portrait' | 'landscape';
   /** Seiten des PDF für `PdfPages`; `null`, wenn die Vorschau nicht entstand (dann nur „PDF öffnen“). */
   pageCount: number | null;
-  back: { href: string; label: string };
+  /** Ohne `back` eine Seite in der Navigation (Mittelverwendung, MUSTER § Seitenrahmen). */
+  back?: { href: string; label: string };
   stage: ReportStage;
   shortHash: string;
   generatedAt: string;
@@ -79,6 +94,20 @@ export function ReportView(props: {
   group: ReportGroup;
   /** Das Jahr läuft noch (heute vor seinem Ende): nur „{year} läuft noch.“, ohne Link (Designer Runde 7, 249). */
   running?: boolean;
+  /** Jahresrechnung: Karte, Hinweise, „Auf einen Blick“ und „Zur Kontrolle“ (Plan U1). */
+  annualAccounts?: AnnualAccountsBlock;
+  /** Berichtigte Fassung: festgeschrieben am Tag der ersetzten Fassung — die Fassungszeile endet mit „berichtigt, ersetzt die vom …“ (Board 1c C). */
+  replacesFinalizedAt?: string | null;
+  /** Jahresrechnung: Folgen des Festschreibens (fehlende Erläuterung, Vergütung ohne Grundlage). */
+  finalizeConsequences?: FinalizeConsequences;
+  /** Eigener Kopfsatz statt des Zwecksatzes (Mittelverwendung, Plan U2); der Satz zur Sperre bleibt dahinter. */
+  purpose?: ReactNode;
+  /** Eigene Warnungen an der Stelle der Hinweise (Mittelverwendung, Plan U2). */
+  notices?: ReactNode;
+  /** Aktionen am Datensatz als letztes im Kopf (`RecordActions`, Mittelverwendung: Anfangsvortrag). */
+  headerActions?: ReactNode;
+  /** Adresse der Seite für die Parameter; Vorgabe `/finance/reports/<key>` (Mittelverwendung: `/finance/fund-use`). */
+  basePath?: string;
 }) {
   const { reportKey, title, stage, shortHash, finalizeBlock: block, params, year } = props;
   const t = useTranslations('finance.reports');
@@ -92,10 +121,13 @@ export function ReportView(props: {
   const query = reportQuery(params, { periodId: props.periodId });
   // Festgeschrieben: die Datei der Fassung aus der Akte, nie ein neu erzeugtes PDF (Designer Runde 7, 16a C).
   const version = stage === 'final' ? (props.finalVersion ?? null) : null;
-  const previewUrl = version ? `/finance/reports/versions/${encodeURIComponent(version.reportId)}/file` : `/finance/reports/${reportKey}/preview?${query}`;
+  // Jahresrechnung nach der Abzeichnung: die abgezeichnete Fassung, die publiziert wird (Bildabnahme 0.4.5 F-3).
+  const signedCopy = version?.signedCopy ?? null;
+  const documentQuery = signedCopy ? `document=${encodeURIComponent(signedCopy.documentId)}` : '';
+  const previewUrl = version ? withQuery(`/finance/reports/versions/${encodeURIComponent(version.reportId)}/file`, [documentQuery]) : `/finance/reports/${reportKey}/preview?${query}`;
   const downloadUrl = version ? previewUrl : `${previewUrl}&download=1`;
   const pageSrc = version
-    ? (page: number, scale: 1 | 2) => `/finance/reports/versions/${encodeURIComponent(version.reportId)}/page/${page}${scale === 2 ? '?scale=2' : ''}`
+    ? (page: number, scale: 1 | 2) => withQuery(`/finance/reports/versions/${encodeURIComponent(version.reportId)}/page/${page}`, [documentQuery, scale === 2 ? 'scale=2' : ''])
     : (page: number, scale: 1 | 2) => `/finance/reports/${reportKey}/page/${page}?${[query, scale === 2 ? 'scale=2' : ''].filter(Boolean).join('&')}`;
   const finalizable = props.finalizable !== false;
 
@@ -106,6 +138,8 @@ export function ReportView(props: {
   const statementInstead = block?.code === 'reportStatementsMissing' && props.statementAccount ? props.statementAccount : null;
   // Schritt 8 beginnt erst nach dem Jahresende: im laufenden Jahr kein Link (249).
   const closingStep = block?.code === 'reportStatementsMissing' && !statementInstead ? 'statements' : block?.code === 'reportYearOpen' && !running ? 'close' : null;
+  // Die Jahresrechnung verweist auf den Kassenbericht (Spec Teil J, Ve-L-2): ohne ihn der Weg dorthin.
+  const toCashReport = block?.code === 'annualAccountsCashReportMissing';
   const finalizeShown = stage !== 'final' && props.canFinalize && (block === null || block.code === 'reportProbeFails');
 
   const actions = statementInstead ? (
@@ -139,7 +173,7 @@ export function ReportView(props: {
         description={
           <>
             <span className="block">
-              {t('view.purpose', { group: props.group, span: props.yearKind === 'calendar' ? 'calendar' : PERIOD_REPORTS.includes(reportKey) ? 'period' : 'none', orientation: props.orientation })}
+              {props.purpose ?? t('view.purpose', { group: props.group, span: props.yearKind === 'calendar' ? 'calendar' : PERIOD_REPORTS.includes(reportKey) ? 'period' : 'none', orientation: props.orientation })}
               {blockedSentence ? ` ${blockedSentence}` : ''}
             </span>
             {closingStep && props.closingLink ? (
@@ -147,17 +181,37 @@ export function ReportView(props: {
                 {t(closingStep === 'close' ? 'header.toClose' : 'header.toStatements')}
               </Link>
             ) : null}
-            <KeyLine className="mt-1">{version ? t('view.version', { date: fmt.date(version.finalizedAt), time: fmt.time(version.finalizedAt), hash: version.shortHash, number: version.documentNumber }) : t('view.generated', { date: fmt.dateTime(props.generatedAt), hash: shortHash })}</KeyLine>
+            {toCashReport ? (
+              <Link href={`/finance/reports/cashReport?year=${encodeURIComponent(year.id)}`} className="mt-1 block text-meta text-link underline-offset-2 hover:underline" data-testid="report-to-cash-report">
+                {t('header.toCashReport')}
+              </Link>
+            ) : null}
+            <KeyLine className="mt-1">
+              {version ? t('view.version', { date: fmt.date(version.finalizedAt), time: fmt.time(version.finalizedAt), hash: version.shortHash, number: version.documentNumber }) : t('view.generated', { date: fmt.dateTime(props.generatedAt), hash: shortHash })}
+              {signedCopy ? t('view.signedShown', { number: signedCopy.documentNumber }) : null}
+              {version && props.replacesFinalizedAt ? t('view.corrected', { date: fmt.date(props.replacesFinalizedAt) }) : null}
+            </KeyLine>
           </>
         }
         more={[
           { key: 'download', label: t('view.download'), icon: <Download className="size-4" aria-hidden />, disabled: busy, onSelect: () => void download(downloadUrl, `${reportKey}.pdf`), testId: 'report-download' },
           ...(props.audit?.writer ? [{ key: 'remark', label: tAudit('write'), onSelect: () => setRemarking(true), testId: 'report-remark' }] : []),
         ]}
-        actions={actions}
+        actions={
+          props.headerActions ? (
+            <>
+              {actions}
+              {props.headerActions}
+            </>
+          ) : (
+            actions
+          )
+        }
       />
       <div className="flex flex-col gap-4">
-        <ReportParamsRow reportKey={reportKey} params={params} years={props.years} yearKind={props.yearKind} combineAllowed={props.combineAllowed} projects={props.projects} periods={props.periods} periodId={props.periodId} fixed={version !== null} withNote={finalizable} />
+        {props.annualAccounts?.card}
+        {props.annualAccounts?.glance}
+        <ReportParamsRow reportKey={reportKey} params={params} years={props.years} yearKind={props.yearKind} combineAllowed={props.combineAllowed} projects={props.projects} periods={props.periods} periodId={props.periodId} fixed={version !== null} withNote={finalizable} basePath={props.basePath} />
         {props.warnings.map((w) => (
           <Notice key={w} level="warn">
             {t(`view.warnings.${w}`)}
@@ -173,16 +227,19 @@ export function ReportView(props: {
             ) : null}
           </Notice>
         ))}
+        {props.annualAccounts?.notices}
+        {props.notices}
         {props.probeDifferenceCents ? <Notice level="warn">{t('view.probe', { amount: formatEuro(props.probeDifferenceCents) })}</Notice> : null}
         <RefusalNotice action state={refusal} />
         {/* Die Seiten als Bilder statt des Browser-Betrachters (Designer Runde 6, Punkt 4); Querformat braucht die Breite (2b). */}
         <PdfPages title={title} pageCount={props.pageCount} pageSrc={pageSrc} pdfHref={previewUrl} orientation={props.orientation} empty={props.empty ?? null} />
+        {props.annualAccounts?.control}
         {/* Eine Arbeitsliste hat keine Fassungen (Joe 2026-10-25). */}
         {!finalizable ? null : <VersionsTable versions={props.versions} canOpen={props.canOpenVersions} />}
         {props.audit ? <RemarksCard audit={props.audit} withWriter={false} framed={false} /> : null}
       </div>
       {props.audit?.writer ? <RemarkDialog open={remarking} onOpenChange={setRemarking} {...props.audit.writer} /> : null}
-      {finalizeShown ? <FinalizeDialog open={finalizing} onOpenChange={setFinalizing} reportKey={reportKey} params={params} shortHash={shortHash} title={title} /> : null}
+      {finalizeShown ? <FinalizeDialog open={finalizing} onOpenChange={setFinalizing} reportKey={reportKey} params={params} shortHash={shortHash} title={title} consequences={props.finalizeConsequences} /> : null}
       {statementInstead ? <StatementDialog open={filing} onOpenChange={setFiling} fiscalYearId={year.id} endsOn={props.endsOn ?? ''} account={statementInstead} /> : null}
       {releaseInstead ? <ReleaseDialog open={releasing} onOpenChange={setReleasing} year={year} current={null} /> : null}
     </>

@@ -5,7 +5,7 @@ import { loginAsAdmin, openFiscalYear, resetDatabase } from './helpers';
 import { STORY_YEAR } from './story-year';
 
 /**
- * Rechenschaft A3 — Berichte, Festschreiben, sonstiges Vermögen, Mittelverwendung (später). Seed: das Vorjahr ist
+ * Rechenschaft A3 — Berichte, Festschreiben, sonstiges Vermögen, Mittelverwendung (seit 0.4.5 eigene Seite). Seed: das Vorjahr ist
  * abgeschlossen, geprüft und mit dem abgelegten Prüfbericht freigegeben (D1), sein Kassenbericht festgeschrieben (A1/A2).
  */
 test.describe('finance reports (Rechenschaft A3)', () => {
@@ -87,6 +87,8 @@ test.describe('finance reports (Rechenschaft A3)', () => {
   });
 
   test('Projektabrechnung mit Projektwahl und Übergabeliste zum Stichtag (Rechenschaft B1)', async ({ page }) => {
+    // Drei Seitenwechsel und zwei PDF-Läufe: allein ~13 s, unter voller Last riss er die 30 s (Kalenderlauf 2027-01-02).
+    test.setTimeout(90_000);
     const pdf = async () => {
       const src = await page.getByRole('link', { name: 'PDF öffnen' }).getAttribute('href');
       const response = await page.request.get(src!);
@@ -138,11 +140,21 @@ test.describe('finance reports (Rechenschaft A3)', () => {
     expect(zip.headers()['content-type']).toBe('application/zip');
   });
 
-  test('Mittelverwendung steht gedämpft mit „später“ und führt zu den Berichten', async ({ page }) => {
+  test('Mittelverwendung öffnet die Rechnung des Jahres', async ({ page }) => {
     await page.goto('/finance/reports');
-    await page.getByRole('link', { name: 'Mittelverwendung, folgt später' }).click();
-    await expect(page.getByRole('heading', { level: 1, name: 'Mittelverwendungsrechnung' })).toBeVisible();
-    await page.getByRole('link', { name: 'Zu den Berichten' }).click();
-    await expect(page.getByRole('heading', { level: 1, name: 'Berichte' })).toBeVisible();
+    await page.getByRole('link', { name: 'Mittelverwendung', exact: true }).click();
+    await expect(page.getByRole('heading', { level: 1, name: /^Mittelverwendung \d{4}/ })).toBeVisible();
+    await expect(page.locator('[data-slot="page-header-title"]')).toContainText(/vorläufig|Prüffassung|festgeschrieben/);
+    const sheet = page.getByRole('img', { name: /^Seite 1 von \d+:/ });
+    // Das Seitenbild rendert Typst; unter voller Last reichen die üblichen 5 s nicht (Kalenderlauf 29.10.).
+    await expect.poll(() => sheet.evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth > 0), { timeout: 20_000 }).toBe(true);
+
+    // Aus der Berichtsliste des Vorjahres dieselbe Seite mit dem Vorjahr; die alte Adresse des Berichts leitet dorthin um.
+    const id = await openFiscalYear(page, '/finance/reports', STORY_YEAR - 1);
+    await page.getByRole('link', { name: 'Mittelverwendungsrechnung' }).click();
+    await expect(page).toHaveURL(new RegExp(`/finance/fund-use\\?year=${id}$`));
+    await expect(page.getByRole('heading', { level: 1, name: `Mittelverwendung ${STORY_YEAR - 1}` })).toBeVisible();
+    await page.goto(`/finance/reports/fundsUse?year=${id}`);
+    await expect(page).toHaveURL(new RegExp(`/finance/fund-use\\?year=${id}$`));
   });
 });

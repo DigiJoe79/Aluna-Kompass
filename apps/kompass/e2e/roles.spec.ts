@@ -10,7 +10,8 @@ test.describe('roles', () => {
 
   test('lists roles with counts and shows the protected role locked', async ({ page }) => {
     const list = page.getByRole('list', { name: 'Rollen' });
-    await expect(list.getByRole('listitem')).toHaveCount(12);
+    // 12 bis 0.4.0, dazu die zwei Rollen der Gremien und die Beispielrolle „Wiedervorlagen“ aus dem Finanz-Seed (J2, Thomas Wendt).
+    await expect(list.getByRole('listitem')).toHaveCount(15);
     await expect(list.getByRole('listitem', { name: /Administration/ })).toContainText('Alle Rechte');
     await list.getByRole('button', { name: /Administration/ }).click();
     // Rechtegruppen sind zugeklappt, teilweise gesetzte offen (Runde 3, 158).

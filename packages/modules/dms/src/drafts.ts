@@ -28,7 +28,7 @@ import { refuseModuleOwned } from './owned';
 import { responseSubject } from './response-subject';
 import { resolveRecipient } from './recipients';
 import { documentLinks, documents, type DocumentRow, type DocumentTypeRow } from './schema';
-import { storeDocumentFile } from './storage';
+import { removeDocumentFile, storeDocumentFile, documentFileName } from './storage';
 import { allocateDocumentNumber, getDocumentRecord, peekDocumentNumber, refuseReservedLinks, resolveFolder, toRecord, type DocumentRecord } from './service';
 import { removeDocumentText } from './index-store';
 import { deleteNotesFor } from './notes';
@@ -270,26 +270,30 @@ export async function deleteDraft(deps: Deps, ctx: CallContext, input: unknown):
     return conflict('documentIsFiled', `Dokument ${row.number ?? row.id} ist bereits festgeschrieben`);
   }
 
-  deps.db.transaction((tx: DbOrTx) => {
-    const removed = {
-      relations: deleteRelationsFor(tx, row.id),
-      notes: deleteNotesFor(tx, row.id),
-      followUps: deleteFollowUpsFor(tx, 'document', row.id),
-    };
-    tx.delete(documentLinks).where(eq(documentLinks.documentId, row.id)).run();
-    tx.delete(documents).where(eq(documents.id, row.id)).run();
-
-    const ref = auditDocumentRef(tx, row);
-    recordAudit(tx, deps, ctx, {
-      action: 'dms.draft.delete',
-      entityType: 'documentDraft',
-      entityId: row.id,
-      before: { typeKey: row.typeKey, removed },
-    });
-  });
-
-  removeDocumentText(deps, row.id);
+  deps.db.transaction((tx: DbOrTx) => deleteDraftInternal(tx, deps, ctx, row));
   return ok(null);
+}
+
+/**
+ * Löscht einen Entwurf samt Bezügen, Notizen, Wiedervorlagen und Suchtext, protokolliert — in der Transaktion des
+ * Aufrufers. Rechte und Phase prüft der Aufrufer.
+ */
+export function deleteDraftInternal(tx: DbOrTx, deps: Deps, ctx: CallContext, row: DocumentRow): void {
+  const removed = {
+    relations: deleteRelationsFor(tx, row.id),
+    notes: deleteNotesFor(tx, row.id),
+    followUps: deleteFollowUpsFor(tx, 'document', row.id),
+  };
+  tx.delete(documentLinks).where(eq(documentLinks.documentId, row.id)).run();
+  tx.delete(documents).where(eq(documents.id, row.id)).run();
+  recordAudit(tx, deps, ctx, {
+    action: 'dms.draft.delete',
+    entityType: 'documentDraft',
+    entityId: row.id,
+    before: { typeKey: row.typeKey, removed },
+  });
+  // Dieselbe Verbindung: Der Suchtext geht mit der Transaktion oder gar nicht.
+  removeDocumentText(deps, row.id);
 }
 
 export async function previewDraft(
@@ -341,6 +345,18 @@ export async function previewDraft(
   return ok({ bytes, filename, mimeType: 'application/pdf', pages });
 }
 
+/**
+ * Löscht die Datei eines noch nicht festgeschriebenen Dokuments. Liest die Phase
+ * unmittelbar vor dem Löschen — false, wenn das Dokument inzwischen festgeschrieben
+ * ist; dessen Datei wird nie gelöscht.
+ */
+async function discardUnfiledFile(deps: Deps, id: string): Promise<boolean> {
+  const current = deps.db.select({ phase: documents.phase }).from(documents).where(eq(documents.id, id)).get();
+  if (current?.phase !== 'draft') return false;
+  await removeDocumentFile(deps, documentFileName(id));
+  return true;
+}
+
 export async function fileDocument(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<DocumentRecord>> {
   const denied = requirePermission(ctx, 'dms.file');
   if (denied) return denied;
@@ -383,8 +399,13 @@ export async function fileDocument(deps: Deps, ctx: CallContext, input: unknown)
     const context = await buildContext(deps, ctx, expected, row.documentDate);
     const { bytes } = await deps.documents.render({ baseId, bodyTypst, slots: built.slots, context });
 
-    // Die Datei trägt den Namen des Dokuments; ein zweiter Anlauf überschreibt
-    // sie, es bleibt nichts liegen.
+    // Die Datei trägt den Namen des Dokuments, und die Ablage überschreibt nie
+    // (`files/store.ts`). Was unter dem Namen liegt — ein früherer Anlauf, ein
+    // abgebrochenes Festschreiben —, gehört zu keinem festgeschriebenen Dokument
+    // und muss vorher weg; sonst trüge das Dokument dessen Nummer und eine
+    // Prüfsumme, die nicht passt. Ist der Entwurf inzwischen festgeschrieben
+    // (zweiter Aufruf), bleibt die Datei, und die Transaktion lehnt unten ab.
+    if (!(await discardUnfiledFile(deps, row.id))) return conflict('documentIsFiled', `Dokument ${row.number ?? row.id} ist bereits festgeschrieben`);
     const stored = await storeDocumentFile(deps, row.id, bytes);
     if (!stored.ok) return stored;
 
@@ -392,6 +413,8 @@ export async function fileDocument(deps: Deps, ctx: CallContext, input: unknown)
     let outcome: Result<DocumentRecord> | null = null;
     try {
       outcome = deps.db.transaction((tx: DbOrTx) => {
+        const current = tx.select({ phase: documents.phase }).from(documents).where(eq(documents.id, row.id)).get();
+        if (current?.phase !== 'draft') return conflict('documentIsFiled', `Dokument ${row.number ?? row.id} ist bereits festgeschrieben`);
         const number = allocateDocumentNumber(tx, docType.prefix, year);
         if (number !== expected) throw new NumberMovedOn();
         const now = isoNow(deps.clock);

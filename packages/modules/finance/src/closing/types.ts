@@ -1,19 +1,21 @@
 import type { AuditMode } from '../auditing/types';
 import type { PeriodClosePreview } from '../ledger/period';
 import type { AccountYearStatementRow } from '../ledger/statement-documents';
-import type { ReleaseBasis, ReportRelease } from '../reporting/types';
+import type { ReleaseBasis, ReportFinalizeBlock, ReportRelease, ReportStage } from '../reporting/types';
 
 /**
  * Rechenschaft C (Spec § C, Finanz-Spec § 9.6): der geführte Jahresabschluss in zwölf festen Schritten — kein
  * Aufgabenmanager. Je Schritt ein berechnetes Ergebnis und, wo vorgesehen, eine Bestätigung als Tatsache.
+ * Schritt 13 `fundsUse` (Spec 0.4.5 Teil M) steht nur in Jahren mit Einnahmen über der Grenze für die zeitnahe
+ * Mittelverwendung (`fundsUseAppliesInternal`); darunter gibt es ihn nicht (Entscheidung 4).
  */
-export const CLOSING_STEPS = ['statements', 'cash', 'lists', 'openItems', 'purposes', 'reserves', 'confirmations', 'close', 'auditPackage', 'auditReport', 'assembly', 'taxReturn'] as const;
+export const CLOSING_STEPS = ['statements', 'cash', 'lists', 'openItems', 'purposes', 'reserves', 'confirmations', 'close', 'auditPackage', 'auditReport', 'assembly', 'taxReturn', 'fundsUse'] as const;
 /** Die Nummer eines Schritts ist sein Index + 1. */
 export type ClosingStepKey = (typeof CLOSING_STEPS)[number];
 /** Schritt 2 bestätigt man je Kasse (`confirmAccountForYear`, `cashRecomputed`), nicht als Ganzes (Board 14a). */
 export const CONFIRMABLE_STEPS = ['statements', 'lists', 'openItems', 'purposes', 'reserves', 'confirmations', 'auditReport', 'taxReturn'] as const;
 export type ConfirmableStepKey = (typeof CONFIRMABLE_STEPS)[number];
-/** 1–7 vor dem Abschluss · 8 der Abschluss · 9–12 danach. */
+/** 1–7 vor dem Abschluss · 8 der Abschluss · 9–13 danach. */
 export type ClosingGroup = 'before' | 'close' | 'after';
 
 export interface ClosingConfirmation {
@@ -25,13 +27,16 @@ export interface ClosingConfirmation {
 export type DischargeOutcome = 'granted' | 'refused' | 'postponed';
 
 /** `assemblyBeforeAuditReport`: Die MV liegt vor dem abgelegten Prüfbericht — ein Hinweis, keine Sperre (E2, Entscheidung c). */
-export type AssemblyWarning = 'assemblyBeforeAuditReport';
+/** `dischargeRefusedAfterGranted`: eine spätere Versammlung verweigerte eine schon erteilte Entlastung (Gremien, W-2) — die erteilte gilt. */
+export type AssemblyWarning = 'assemblyBeforeAuditReport' | 'dischargeRefusedAfterGranted';
 
 /** Ergebnis der Mitgliederversammlung zu einem Jahr (Schritt 11) — `closing/assembly.ts`. */
 export interface AssemblyResultView {
   fiscalYearId: string;
   assemblyOn: string;
   minutesDocumentId: string | null;
+  /** Nur aus einer Quelle (Gremien, W-15): die Protokolle aller Sitzungen, deren Entscheidung gilt. */
+  minutesDocumentIds?: string[];
   accountsApproved: 'yes' | 'no' | 'notVoted' | null;
   dischargeMode: 'individual' | 'collective';
   collectiveOutcome: DischargeOutcome | null;
@@ -44,7 +49,10 @@ export interface AssemblyResultView {
   complete: boolean;
   version: string;
   updatedAt: string;
-  updatedByUserId: string;
+  /** `null`, wenn das Ergebnis aus einer Quelle kommt (Gremien): Dort steht, wer festgeschrieben hat. */
+  updatedByUserId: string | null;
+  /** Gesetzt, wenn ein anderes Modul das Ergebnis führt (G7): Schritt 11 zeigt es dann nur an, Speichern lehnt ab. */
+  managed: { module: string; meetingId: string; label: string; href: string } | null;
 }
 
 /** Eine Amtsübergabe in der Übersicht — `closing/handover.ts`. */
@@ -94,7 +102,8 @@ export type ClosingStepFacts =
       carryOver: { at: string; note: string; targetDesignation: string } | null;
     }
   /** `pending`: einzeln nicht erteilte Entlastungen mit Namen (gesamt leer, dann sagt es `collectiveOutcome`). */
-  | { key: 'assembly'; result: AssemblyResultView | null; pending: { name: string; outcome: DischargeOutcome | null }[] }
+  /** `formerlyManaged`: Gremien führte das Ergebnis, ist aber ausgeschaltet — es gilt wieder von Hand (V-8). */
+  | { key: 'assembly'; result: AssemblyResultView | null; pending: { name: string; outcome: DischargeOutcome | null }[]; formerlyManaged: { label: string } | null }
   /**
    * Rechenschaft D2: der Erklärungszeitraum mit dem Jahr, oder `null`. `lastYear`: das Jahr ist das letzte des
    * Zeitraums — nur dann wartet Schritt 12 auf die Abgabe.
@@ -105,7 +114,12 @@ export type ClosingStepFacts =
       period: { id: string; label: string; dueOn: string; filedOn: string | null; lastYear: boolean; last: string; overdue: boolean; notice: { noticeOn: string; documentId: string | null } | null } | null;
       /** E6a: die USt-Jahreserklärung des Kalenderjahres, dessen 31.12. im Geschäftsjahr liegt, wenn sie Pflicht ist — nur genannt. */
       vat: { calendarYear: number; dueOn: string; filedOn: string | null; reason: 'regular' | 'section18_4a'; overdue: boolean } | null;
-    };
+    }
+  /**
+   * Schritt 13 (M2): Einnahmen wie Anlage Gem Zeile 9 und die Grenze (`null` = keine Freigrenze); erledigt, wenn die
+   * Mittelverwendungsrechnung des Jahres festgeschrieben ist (Stufe `final`).
+   */
+  | { key: 'fundsUse'; revenueCents: number; limitCents: number | null; stage: ReportStage; finalVersion: { documentNumber: string; finalizedAt: string } | null; /** Stand des Berichts für „Festschreiben …“ im Schritt (U2). */ shortHash: string; /** Warum Festschreiben gerade nicht geht (wie `finance_report`), sonst `null`. */ finalizeBlock: ReportFinalizeBlock | null };
 
 export interface ClosingStepView<F = ClosingStepFacts> {
   key: ClosingStepKey;

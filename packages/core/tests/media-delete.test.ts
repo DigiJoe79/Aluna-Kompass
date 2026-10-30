@@ -54,7 +54,7 @@ describe('deleteMediaAsset', () => {
     expect(res.error.type).toBe('conflict');
     if (res.error.type !== 'conflict') throw new Error('unexpected');
     expect(res.error.code).toBe('mediaAssetInUse');
-    expect(res.error.message).toContain('Logo des Vereins');
+    expect(res.error.message).toContain('media.references.logo');
     expect(await deps.media.exists(asset.filename)).toBe(true); // nichts angefasst
   });
 });

@@ -1,5 +1,5 @@
-import { hasPermission, isoNow, todayIn, userNamesFor, type LocalizedText } from '@kompass/core';
-import { accountStatementsForYearInternal, listFinanceReportVersions, listFiscalYears, listTaxPeriods, reportDefinition, runFinanceReport } from '@kompass/module-finance';
+import { hasPermission, isoNow, readSetting, todayIn, userNamesFor, type LocalizedText } from '@kompass/core';
+import { accountStatementsForYearInternal, getAnnualAccountsExplanation, getAnnualAccountsState, INCOME_ROWS, listFinanceReportVersions, listFiscalYears, listTaxPeriods, reportDefinition, runFinanceReport, type AnnualAccounts, type AnnualAccountsState } from '@kompass/module-finance';
 import { listProjects } from '@kompass/module-projects';
 import { getTranslations } from 'next-intl/server';
 import { notFound, redirect } from 'next/navigation';
@@ -10,17 +10,27 @@ import { choosePeriod } from '../../tax/types';
 import { loadReportAudit } from '@/lib/finance/entry-audit';
 import { reportPageCount, versionPageCount } from '@/lib/finance/report-pages';
 import { requireSession } from '@/lib/request-context';
-import { ReportView } from './report-view';
+import { nameOrEmpty } from '@/lib/name-or-empty';
+import { AnnualAccountsNotices } from './annual-accounts/screen-notices';
+import { ControlValues } from './annual-accounts/control-values';
+import { AtAGlance } from './annual-accounts/at-a-glance';
+import { PublicationCard } from './annual-accounts/publication-card';
+import { ReportView, type AnnualAccountsBlock } from './report-view';
 
 /**
  * Ein Bericht als Detailseite (Board 2b, Designer Runde 2 11c). Der Kopf mit Rückweg entsteht in `ReportView` (der
  * Download braucht den Client); `back={…}` steht hier, wo der Wächter `back-navigation` ihn liest. Unbekannter oder
- * noch nicht verfügbarer Bericht (Mittelverwendung) → `not-found`.
+ * noch nicht verfügbarer Bericht → `not-found`. Die Mittelverwendungsrechnung hat ihre eigene Seite (Plan U2): Die Adresse
+ * hier leitet mit dem Jahr dorthin um; Vorschau und Seitenbilder unter `/finance/reports/fundsUse/…` bleiben.
  */
 export default async function ReportPage({ params, searchParams }: { params: Promise<{ key: string }>; searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const { key } = await params;
   const def = reportDefinition(key);
   if (!def || !def.available) notFound();
+  if (key === 'fundsUse') {
+    const year = (await searchParams).year;
+    redirect(typeof year === 'string' ? `/finance/fund-use?year=${encodeURIComponent(year)}` : '/finance/fund-use');
+  }
   const { deps, ctx } = await requireSession();
   const canRead = hasPermission(ctx, 'finance.read');
   if (!canRead && (def.personal || !hasPermission(ctx, 'finance.overview'))) return <Page width="standard"><ForbiddenCard permission={def.personal ? 'finance.read' : 'finance.overview'} /></Page>;
@@ -67,8 +77,25 @@ export default async function ReportPage({ params, searchParams }: { params: Pro
   const data = run.value.data as { warnings?: string[]; probe?: { differenceCents: number }; combineAllowed?: boolean };
   // Festgeschrieben: die Seiten der Fassung aus der Akte (Designer Runde 7, 16a C); ohne Inhalt keine Blätter (16a D).
   const finalVersion = run.value.finalVersion;
-  const pages = run.value.empty ? null : finalVersion ? await versionPageCount(deps, ctx, finalVersion.reportId) : await reportPageCount(deps, ctx, key, reportParams);
+  // Jahresrechnung nach der Abzeichnung: die abgezeichnete Fassung, die publiziert wird (Bildabnahme 0.4.5 F-3).
+  const pages = run.value.empty ? null : finalVersion ? await versionPageCount(deps, ctx, finalVersion.reportId, finalVersion.signedCopy?.documentId) : await reportPageCount(deps, ctx, key, reportParams);
   const projects = key === 'projectStatement' ? await projectChoices(deps, ctx, reportParams, run.value.data) : [];
+  // Jahresrechnung: Zustand von Erläuterung, Abzeichnung und Webseite, dazu die Bildschirmwerte (Plan U1).
+  const stateRes = key === 'annualAccounts' ? await getAnnualAccountsState(deps, ctx, { fiscalYearId: year.id }) : null;
+  const annualState: AnnualAccountsState | null = stateRes?.ok ? stateRes.value : null;
+  const noteRes = annualState ? await getAnnualAccountsExplanation(deps, ctx, { fiscalYearId: year.id }) : null;
+  const explanation = noteRes?.ok ? { text: noteRes.value.text, updatedAt: noteRes.value.updatedAt } : { text: '', updatedAt: null };
+  let annualAccounts: AnnualAccountsBlock | undefined;
+  if (key === 'annualAccounts') {
+    const aa = run.value.data as AnnualAccounts;
+    const labels = await annualAccountsLabels(deps, ctx, aa);
+    annualAccounts = {
+      notices: <AnnualAccountsNotices screen={aa.screen} labels={labels} fiscalYearId={year.id} />,
+      card: annualState ? <PublicationCard state={annualState} me={{ userId: ctx.userId ?? '', canFinalize: hasPermission(ctx, 'finance.reportsFinalize'), canPublish: annualState.website.mayPublish }} names={requesterNames(deps, annualState)} explanation={explanation} organizationName={readSetting<string>(deps, 'organization.name') ?? ''} today={todayIn(deps)} /> : null,
+      glance: <AtAGlance glance={aa.glance} endsOn={year.endsOn} />,
+      control: <ControlValues screen={aa.screen} remunerationWithoutBasis={aa.remunerationWithoutBasis} year={{ id: year.id, designation: year.designation }} />,
+    };
+  }
 
   return (
     // Querformat braucht die Breite des Rahmens (Designer 2b: `full`); ein Hochformat in voller Breite wäre höher als
@@ -106,7 +133,10 @@ export default async function ReportPage({ params, searchParams }: { params: Pro
         projects={projects}
         periods={periods.map((p) => ({ id: p.id, label: p.label }))}
         periodId={bySpan ? period?.id : undefined}
-        versions={versions.map((v) => ({ reportId: v.reportId, finalizedAt: v.finalizedAt, byName: names.get(v.byUserId) ?? t('list.system'), shortHash: v.shortHash, documentNumber: v.documentNumber, voidedAt: v.voidedAt, voidReason: v.voidReason }))}
+        annualAccounts={annualAccounts}
+        finalizeConsequences={key === 'annualAccounts' ? { explanationMissing: (run.value.data as AnnualAccounts).notes.explanation === null, remunerationWithoutBasis: (run.value.data as AnnualAccounts).remunerationWithoutBasis } : undefined}
+        replacesFinalizedAt={annualState?.finalVersion?.corrected?.replacesFinalizedAt ?? null}
+        versions={versions.map((v) => ({ reportId: v.reportId, finalizedAt: v.finalizedAt, byName: names.get(v.byUserId) ?? t('list.system'), shortHash: v.shortHash, documentNumber: v.documentNumber, voidedAt: v.voidedAt, voidReason: v.voidReason, webCopies: v.copies.filter((c) => c.kind === 'web') }))}
       />
     </Page>
   );
@@ -125,4 +155,31 @@ async function projectChoices(deps: Awaited<ReturnType<typeof requireSession>>['
   const leading = deps.locales()[0] ?? 'de';
   const names = new Map(named.value.map((p) => [p.id, (p.name as LocalizedText)[leading] || p.slug]));
   return ids.filter((id) => names.has(id)).map((id) => ({ id, name: names.get(id)! }));
+}
+
+/**
+ * Namen der Posten der Hinweise „über 25 %“ (Plan U1): Einnahmezeilen, Werbung, Verwaltung, übrige Satzungsarbeit
+ * und Projekte mit ihrem Namen in der Leitsprache — auch nicht veröffentlichte, die Bildschirmansicht ist intern. Ohne
+ * `projects.view` steht „Projekt“ ohne Namen.
+ */
+async function annualAccountsLabels(deps: Awaited<ReturnType<typeof requireSession>>['deps'], ctx: Awaited<ReturnType<typeof requireSession>>['ctx'], data: AnnualAccounts): Promise<Record<string, string>> {
+  const tLabels = await getTranslations('finance.reports.annualAccounts.labels');
+  const labels: Record<string, string> = { fundraising: tLabels('fundraising'), administration: tLabels('administration'), 'project:none': tLabels('projectNone') };
+  for (const row of INCOME_ROWS) labels[row] = tLabels(row);
+  const projectKeys = data.screen.over25.filter((o) => o.key.startsWith('project:') && o.key !== 'project:none');
+  if (projectKeys.length === 0) return labels;
+  const named = hasPermission(ctx, 'projects.view') ? await listProjects(deps, ctx) : null;
+  const leading = deps.locales()[0] ?? 'de';
+  const names = new Map(named?.ok ? named.value.map((p) => [p.id, (p.name as LocalizedText)[leading] ?? '']) : []);
+  for (const o of projectKeys) {
+    const id = o.key.slice('project:'.length);
+    labels[o.key] = names.has(id) ? nameOrEmpty(names.get(id), id) : tLabels('project');
+  }
+  return labels;
+}
+
+/** Wer um Abzeichnung gebeten hat, mit Namen (Board 1f „… bittet Sie darum“). */
+function requesterNames(deps: Awaited<ReturnType<typeof requireSession>>['deps'], state: AnnualAccountsState): Record<string, string> {
+  const id = state.signature.request?.requestedByUserId;
+  return id ? Object.fromEntries(userNamesFor(deps, [id])) : {};
 }

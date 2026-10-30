@@ -1,4 +1,4 @@
-import { notFound, ok, requirePermission, validate, type CallContext, type DbOrTx, type Deps, type Result } from '@kompass/core';
+import { notFound, ok, timeZoneOf, requirePermission, validate, type CallContext, type DbOrTx, type Deps, type Result } from '@kompass/core';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { financeAudit } from '../audit';
@@ -34,7 +34,7 @@ export async function carryOverAuditFollowUp(deps: Deps, ctx: CallContext, input
   if (!year) return notFound('financeFiscalYear', v.fiscalYearId);
   if (!followUpOpenInternal(deps.db, year.id)) return financeConflict('auditFollowUpNotOpen', { designation: year.designation });
   if (fiscalYearStatusInternal(deps.db, year.id) !== 'closed') return financeConflict('auditReportYearOpen', { designation: year.designation });
-  if (!assemblyOfYearInternal(deps.db, year.id)) return financeConflict('assemblyNotRecorded', { designation: year.designation });
+  if (!assemblyOfYearInternal(deps, deps.db, year.id, timeZoneOf(deps))) return financeConflict('assemblyNotRecorded', { designation: year.designation });
   const filed = lastFiledReportInternal(deps.db, year.id)!;
   const scan = scansOfInternal(deps.db, filed.id)[0];
 

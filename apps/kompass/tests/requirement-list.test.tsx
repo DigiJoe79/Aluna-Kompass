@@ -96,10 +96,10 @@ describe('RequirementList kompakt', () => {
 
 /** Freigabe Joe 2026-10-26, Designer Runde 7 16b/16d: Zeilen mit Trennlinie in einer Karte statt Karten in der Karte. */
 describe('RequirementList Zeilen', () => {
-  function rows(items: RequirementListItem[]) {
+  function rows(items: RequirementListItem[], openFirstOnPhone?: boolean) {
     render(
       <NextIntlClientProvider locale="de" messages={messages} timeZone="Europe/Berlin">
-        <RequirementList variant="rows" items={items} />
+        <RequirementList variant="rows" items={items} openFirstOnPhone={openFirstOnPhone} />
       </NextIntlClientProvider>,
     );
   }
@@ -142,5 +142,15 @@ describe('RequirementList Zeilen', () => {
     expect(waiting.dataset.muted).toBe('true');
     expect(waiting.querySelector('svg.lucide-circle-dashed')).not.toBeNull();
     expect(screen.getByTestId('requirement-o').querySelector('svg.lucide-circle-dashed')).toBeNull();
+  });
+
+  // Designer Jahresrechnung Frage 5, Regel Runde 7 (307): Am Telefon steht die erste offene Zeile zuerst — nur auf Wunsch.
+  it('openFirstOnPhone marks the first open row, never a waiting or done one; without the prop none', () => {
+    rows([item('d', { done: true, href: null }), item('w', { blocked: true, blockedText: 'nach dem Festschreiben' }), item('o', { href: '/ziel' }), item('p', { href: '/ziel' })], true);
+    const marked = screen.getAllByRole('listitem').filter((li) => li.dataset.firstOnPhone !== undefined);
+    expect(marked.map((li) => li.dataset.testid)).toEqual(['requirement-o']);
+    cleanup();
+    rows([item('d', { done: true, href: null }), item('o', { href: '/ziel' })]);
+    expect(screen.getAllByRole('listitem').some((li) => li.dataset.firstOnPhone !== undefined)).toBe(false);
   });
 });

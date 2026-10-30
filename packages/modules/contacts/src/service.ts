@@ -1,4 +1,4 @@
-import { conflict, expectedVersionField, isoNow, localizedConflict, newId, notFound, notifyRecordDeleted, ok, recordAudit, requirePermission, staleVersion, todayIn, validate, type CallContext, type DbOrTx, type Deps, type Result } from '@kompass/core';
+import { conflict, expectedVersionField, invalid, isoNow, localizedConflict, newId, notFound, notifyRecordDeleted, ok, recordAudit, requirePermission, staleVersion, todayIn, validate, type CallContext, type ContactRoleDefinition, type DbOrTx, type Deps, type Failure, type Result } from '@kompass/core';
 import { and, asc, count, desc, eq, inArray, isNull, like, or, sql, type SQL, type SQLWrapper } from 'drizzle-orm';
 import { z } from 'zod';
 import { displayName } from './address';
@@ -344,7 +344,22 @@ export const contactRoleAddSchema = z.object({
   role: z.string().min(1),
   since: z.iso.date(),
   note: z.string().trim().max(500).nullable().optional(),
+  /** „vertritt nach § 26 BGB“ — nur bei Rollen mit `representation` (Ve-L-5). */
+  representsAssociation: z.boolean().optional(),
 });
+
+/** Notiz (bei Vorstandsmitgliedern das Amt) und „vertritt nach § 26 BGB“ einer Rolle ändern; Weggelassenes bleibt. */
+export const contactRoleUpdateSchema = z.object({
+  roleId: z.string().min(1),
+  note: z.string().trim().max(500).nullable().optional(),
+  representsAssociation: z.boolean().optional(),
+});
+
+/** Das Merkmal „vertritt nach § 26 BGB“ nimmt nur eine Rolle an, deren Definition es erlaubt. */
+function representationRefusal(definition: ContactRoleDefinition | undefined, value: boolean | undefined): Failure | null {
+  if (value !== true || definition?.representation === true) return null;
+  return invalid([{ path: 'representsAssociation', message: 'representationNotAllowed' }]);
+}
 
 export const contactRoleEndSchema = z.object({ roleId: z.string().min(1), until: z.iso.date() });
 
@@ -358,17 +373,53 @@ export async function addContactRole(deps: Deps, ctx: CallContext, input: unknow
   if (!known.has(parsed.value.role)) {
     return validate(deps, z.object({ role: z.enum([...known.keys()] as [string, ...string[]]) }), { role: parsed.value.role }) as Result<ContactRecord>;
   }
-  const managed = managedRoleRefusal(known.get(parsed.value.role)!);
+  const managed = managedRoleRefusal(deps, known.get(parsed.value.role)!);
   if (managed) return managed;
+  const notRepresenting = representationRefusal(known.get(parsed.value.role), parsed.value.representsAssociation);
+  if (notRepresenting) return notRepresenting;
   const contact = loadContact(deps.db, parsed.value.id);
   if (!contact) return notFound('contact', parsed.value.id);
   if (contact.roles.some((r) => r.role === parsed.value.role && r.until === null)) {
     return conflict('roleAlreadyRunning', `Die Rolle „${parsed.value.role}“ läuft bereits`);
   }
   return deps.db.transaction((tx: DbOrTx) => {
-    tx.insert(contactRoles).values({ id: newId(), contactId: contact.id, role: parsed.value.role, since: parsed.value.since, until: null, note: parsed.value.note ?? null }).run();
+    tx.insert(contactRoles).values({ id: newId(), contactId: contact.id, role: parsed.value.role, since: parsed.value.since, until: null, note: parsed.value.note ?? null, representsAssociation: parsed.value.representsAssociation ?? false }).run();
     const after = loadContact(tx, contact.id)!;
     recordAudit(tx, deps, ctx, { action: 'contacts.addRole', entityType: 'contact', entityId: after.id, after: { role: parsed.value.role, since: parsed.value.since }, params: { role: parsed.value.role } });
+    return ok(after);
+  });
+}
+
+/**
+ * Ändert Notiz und „vertritt nach § 26 BGB“ einer Rolle. Geführte Rollen lehnt es ab wie `endContactRole`. Das
+ * Protokoll trägt Rolle und Merkmal, nie die Notiz (Freitext).
+ */
+export async function updateContactRole(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<ContactRecord>> {
+  const denied = requirePermission(ctx, 'contacts.manage');
+  if (denied) return denied;
+  const parsed = validate(deps, contactRoleUpdateSchema, input);
+  if (!parsed.ok) return parsed;
+  const row = deps.db.select().from(contactRoles).where(eq(contactRoles.id, parsed.value.roleId)).get();
+  if (!row) return notFound('contactRole', parsed.value.roleId);
+  const definition = contactRoleDefinitions(deps).get(row.role);
+  const managed = definition ? managedRoleRefusal(deps, definition, row.id) : null;
+  if (managed) return managed;
+  const notRepresenting = representationRefusal(definition, parsed.value.representsAssociation);
+  if (notRepresenting) return notRepresenting;
+  const note = parsed.value.note === undefined ? row.note : parsed.value.note;
+  const representsAssociation = parsed.value.representsAssociation ?? row.representsAssociation;
+  return deps.db.transaction((tx: DbOrTx) => {
+    tx.update(contactRoles).set({ note, representsAssociation }).where(eq(contactRoles.id, row.id)).run();
+    const after = loadContact(tx, row.contactId)!;
+    const changedFields = [...(note !== row.note ? ['note'] : []), ...(representsAssociation !== row.representsAssociation ? ['representsAssociation'] : [])];
+    recordAudit(tx, deps, ctx, {
+      action: 'contacts.updateRole',
+      entityType: 'contact',
+      entityId: after.id,
+      before: { role: row.role, representsAssociation: row.representsAssociation },
+      after: { role: row.role, representsAssociation, changedFields },
+      params: { role: row.role, representsAssociation },
+    });
     return ok(after);
   });
 }
@@ -382,7 +433,7 @@ export async function endContactRole(deps: Deps, ctx: CallContext, input: unknow
   const row = deps.db.select().from(contactRoles).where(eq(contactRoles.id, parsed.value.roleId)).get();
   if (!row) return notFound('contactRole', parsed.value.roleId);
   const definition = contactRoleDefinitions(deps).get(row.role);
-  const managed = definition ? managedRoleRefusal(definition) : null;
+  const managed = definition ? managedRoleRefusal(deps, definition, row.id) : null;
   if (managed) return managed;
   return deps.db.transaction((tx: DbOrTx) => {
     tx.update(contactRoles).set({ until: parsed.value.until }).where(eq(contactRoles.id, row.id)).run();

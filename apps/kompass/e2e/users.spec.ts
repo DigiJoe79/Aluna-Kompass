@@ -11,24 +11,25 @@ test.describe('users', () => {
 
   test('lists seeded users with roles and status', async ({ page }) => {
     const table = page.getByRole('table');
-    // Kopf + 5 Kernseed-Personen + Nadja Vogt (F8a Task 7, Rolle „Auslagen einreichen“) + die Beispielquelle der Tiervorschläge (0.2.10).
-    await expect(table.getByRole('row')).toHaveCount(8);
+    // Kopf + 5 Kernseed-Personen + Nadja Vogt (F8a Task 7, Rolle „Auslagen einreichen“) + die Beispielquelle der Tiervorschläge (0.2.10)
+    // + Thomas Wendt (J2, stellvertretender Vorsitzender, zeichnet die Jahresrechnung ab).
+    await expect(table.getByRole('row')).toHaveCount(9);
     const jonas = table.getByRole('row', { name: /Jonas Feld/ });
     await expect(jonas).toContainText('Geschäftsstelle');
     await expect(jonas).not.toContainText(/deaktiviert|Erstlogin offen/); // Normalzustand ohne Marke in Listen (Designer Stufe 2 Nr. 6a).
-    await expect(page.getByText('7 Nutzer', { exact: true })).toBeVisible();
+    await expect(page.getByText('8 Nutzer', { exact: true })).toBeVisible();
   });
 
   test('die Zählzeile zählt Treffer; ohne Treffer setzt „Filter zurücksetzen“ die Liste zurück', async ({ page }) => {
     const search = page.getByRole('searchbox', { name: 'Suchen' });
     await search.fill('Jonas');
-    await expect(page.getByText('1 von 7 Nutzern')).toBeVisible();
+    await expect(page.getByText('1 von 8 Nutzern')).toBeVisible();
     await search.fill('zzz');
-    await expect(page.getByText('0 von 7 Nutzern')).toBeVisible();
+    await expect(page.getByText('0 von 8 Nutzern')).toBeVisible();
     await expect(page.locator('[data-slot="empty-state"][data-filtered]')).toBeVisible();
     await page.getByRole('button', { name: 'Filter zurücksetzen' }).last().click();
     await expect(search).toHaveValue('');
-    await expect(page.getByText('7 Nutzer', { exact: true })).toBeVisible();
+    await expect(page.getByText('8 Nutzer', { exact: true })).toBeVisible();
   });
 
   /** Spec Filterleisten § 3: Auch Nutzer halten Suche und „Nur aktive“ in der Adresse — Neu laden behält beides. */
@@ -39,7 +40,7 @@ test.describe('users', () => {
     await page.reload();
     await expect(page.getByRole('searchbox', { name: 'Suchen' })).toHaveValue('Jonas');
     await expect(page.getByRole('checkbox', { name: 'Nur aktive' })).toBeChecked();
-    await expect(page.getByText('1 von 7 Nutzern')).toBeVisible();
+    await expect(page.getByText('1 von 8 Nutzern')).toBeVisible();
   });
 
   test('creates a user, shows the start password once and marks first login pending', async ({ page, context }) => {

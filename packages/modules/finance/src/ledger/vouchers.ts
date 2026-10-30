@@ -3,7 +3,7 @@ import { abortReceive, documentLinks, documents, getDocumentRecord, linkDocument
 import { and, eq, gt, gte, inArray, lte, ne } from 'drizzle-orm';
 import { z } from 'zod';
 import { financeAudit } from '../audit';
-import { financeConflict, requireHumanChannelFinance } from '../errors';
+import { financeConflict, requireHumanChannelFinance, uploadLimitProblem } from '../errors';
 import { financeAllocationLines, financeDirectDebitItems, financeDirectDebitRuns, financeEntryDocuments, financeFiscalYears, financeMoneyLines, financeOpenItems, financeOpenItemSettlements } from '../schema';
 import { requireFinanceRead } from './access';
 import { entryViewInternal } from './entries';
@@ -36,6 +36,8 @@ export async function uploadVoucher(deps: Deps, ctx: CallContext, input: unknown
   if (denied) return denied;
   const parsed = validate(deps, uploadVoucherSchema, input);
   if (!parsed.ok) return parsed;
+  const tooLarge = uploadLimitProblem(deps, parsed.value.bytes);
+  if (tooLarge) return tooLarge;
   const v = parsed.value;
 
   const entry = entryViewInternal(deps.db, v.entryId);

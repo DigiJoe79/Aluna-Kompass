@@ -3,6 +3,7 @@ import path from 'node:path';
 import { ChildTimeoutError, runChild } from './child';
 import { copyTree } from './copy';
 import { removeQuietly } from './step';
+import { BUILD_STAGE_PREFIX } from './run-state';
 
 // eslint-disable-next-line no-control-regex
 const ANSI = /\u001B\[[0-9;]*[a-zA-Z]/g;
@@ -71,7 +72,7 @@ export async function buildSite(opts: {
   // davon landet unter /data und im Backup (B13).
   const stageRoot = path.resolve(opts.stageRoot);
   await mkdir(stageRoot, { recursive: true });
-  const stage = await mkdtemp(path.join(stageRoot, 'out-'));
+  const stage = await mkdtemp(path.join(stageRoot, BUILD_STAGE_PREFIX));
   try {
     const result = await runAstro(astroBin, siteDir, stage, contentDir, stageRoot, opts);
     await mkdir(outDir, { recursive: true });

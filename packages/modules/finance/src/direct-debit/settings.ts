@@ -30,18 +30,18 @@ export const mandateReferenceFormatSchema = z.object({
  * `creditorName` leer = Vereinsname.
  */
 export const SEPA_SETTINGS: readonly SettingDefinition[] = [
-  { key: 'finance.sepa.enabled', schema: z.boolean(), default: false },
-  { key: 'finance.sepa.creditorId', schema: creditorIdSchema.nullable(), default: null },
-  { key: 'finance.sepa.creditorName', schema: z.string().trim().min(1).max(70).nullable(), default: null },
-  { key: 'finance.sepa.accountId', schema: z.string().min(1).nullable(), default: null },
+  { key: 'finance.sepa.enabled', schema: z.boolean(), default: false, managedBy: 'finance' },
+  { key: 'finance.sepa.creditorId', schema: creditorIdSchema.nullable(), default: null, managedBy: 'finance' },
+  { key: 'finance.sepa.creditorName', schema: z.string().trim().min(1).max(70).nullable(), default: null, managedBy: 'finance' },
+  { key: 'finance.sepa.accountId', schema: z.string().min(1).nullable(), default: null, managedBy: 'finance' },
   /** Bank: Einreichung spätestens n Bankarbeitstage vor Fälligkeit (Recherche: Beispiel einer Volksbank „2 Geschäftstage“). */
-  { key: 'finance.sepa.leadBusinessDays', schema: z.number().int().min(1).max(10), default: 2 },
+  { key: 'finance.sepa.leadBusinessDays', schema: z.number().int().min(1).max(10), default: 2, managedBy: 'finance' },
   /** Bank: Einreichung frühestens n Kalendertage vor Fälligkeit — begrenzt den Tag der Einreichung, nicht den Fälligkeitstag. */
-  { key: 'finance.sepa.maxLeadDays', schema: z.number().int().min(1).max(60), default: 14 },
+  { key: 'finance.sepa.maxLeadDays', schema: z.number().int().min(1).max(60), default: 14, managedBy: 'finance' },
   /** Vorabankündigung mindestens n Kalendertage vor dem Einzug. */
-  { key: 'finance.sepa.preNotificationDays', schema: z.number().int().min(1).max(30), default: 14 },
-  { key: 'finance.sepa.batchBooking', schema: z.boolean(), default: true },
-  { key: 'finance.sepa.mandateReferenceFormat', schema: mandateReferenceFormatSchema, default: { prefix: 'MND-', digits: 6 } },
+  { key: 'finance.sepa.preNotificationDays', schema: z.number().int().min(1).max(30), default: 14, managedBy: 'finance' },
+  { key: 'finance.sepa.batchBooking', schema: z.boolean(), default: true, managedBy: 'finance' },
+  { key: 'finance.sepa.mandateReferenceFormat', schema: mandateReferenceFormatSchema, default: { prefix: 'MND-', digits: 6 }, managedBy: 'finance' },
 ];
 
 export type SepaSetupGap = 'creditorId' | 'account' | 'accountIban';

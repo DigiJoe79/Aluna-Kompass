@@ -25,6 +25,8 @@ const LOG = 'Protokollausgabe/Pfad aus dem Webseitenbau — technischer Text, Ze
 const SHORTCUT = 'Tastenkürzel (MUSTER § Schrift).';
 
 export const ALLOWED: CountedAllowlist = {
+  'app/(shell)/governance/register/[id]/requirements-card.tsx': { count: 1, reason: 'Dokumentnummer der Unterlage als Link, wie die Nummern in der Prüfliste des Protokolls (RequirementList rows, MUSTER § F).' },
+  'app/(shell)/governance/resolutions/resolution-list.tsx': { count: 1, reason: 'Beschlussnummer B-2026-003 im Nummern-Span wie Belegnummern (MUSTER Schrift, Plan U2 Task 12).' },
   'app/error.tsx': { count: 2, reason: STATUS },
   'app/(shell)/error.tsx': { count: 2, reason: STATUS },
   'app/setup/setup-form.tsx': { count: 1, reason: LOCALE },
@@ -60,6 +62,7 @@ export const ALLOWED: CountedAllowlist = {
   'app/(shell)/dms/[id]/page.tsx': { count: 1, reason: NUMBER },
   'app/(shell)/dms/document-list.tsx': { count: 1, reason: NUMBER },
   'app/(shell)/finance/reports/[key]/finalize-dialog.tsx': { count: 1, reason: 'Stand (Kurz-Hash) eines Berichts im Satz des Dialogs — Kennung (Designer Runde 7, 245).' },
+  'app/(shell)/finance/reports/[key]/annual-accounts/sign-dialog.tsx': { count: 1, reason: 'Stand (Kurz-Hash) der Jahresrechnung im Kopf des Abzeichnen-Dialogs — Kennung wie beim Festschreiben (Designer Jahresrechnung 1d).' },
   'app/(shell)/dms/receive/number-hint.tsx': { count: 1, reason: NUMBER },
   'app/(shell)/dms/receive/file-dropzone.tsx': { count: 1, reason: 'Dateiart (`PDF`) als Kürzel im Dateisymbol.' },
   'components/drop-overlay.tsx': { count: 1, reason: 'Dateiart (`PDF`) als Kürzel im Dateisymbol.' },
@@ -84,8 +87,10 @@ export const ALLOWED: CountedAllowlist = {
   'app/(shell)/finance/cash/page.tsx': { count: 1, reason: `${NUMBER} Letzte Kassenbewegungen wie das Journal (07-2 B14).` },
   'app/(shell)/finance/entries/journal.tsx': { count: 1, reason: NUMBER },
   'app/(shell)/finance/closing/step-detail.tsx': { count: 1, reason: 'Kurz-Hash des Prüfpakets in Schritt 9 (Designer Runde 5, 14d): eine Kennung wie auf der Berichtsseite.' },
+  'app/(shell)/governance/meetings/[id]/board-invitation.tsx': { count: 1, reason: NUMBER },
+  'app/(shell)/governance/meetings/[id]/minutes-step.tsx': { count: 1, reason: NUMBER },
   'app/(shell)/finance/closing/handover/handover-view.tsx': { count: 1, reason: 'Kurz-Hash des Zwischenberichts im Satz (Designer Runde 5, 286): eine Kennung wie auf der Berichtsseite.' },
-  'app/(shell)/finance/audit/[section]/section-table.tsx': { count: 1, reason: `${NUMBER} Spalte „Nummer“ der Listen des Prüfpakets wie im Journal.` },
+  'app/(shell)/finance/audit/[section]/section-table.tsx': { count: 2, reason: `${NUMBER} Spalte „Nummer“ der Listen des Prüfpakets wie im Journal; in Abschnitt 9 auch die Protokollnummer (Designer 2026-10-29).` },
   'app/(shell)/finance/expenses/claims-list.tsx': { count: 1, reason: NUMBER },
   'app/(shell)/finance/expenses/new/expense-form.tsx': { count: 1, reason: IBAN },
   'app/(shell)/finance/imports/format/csv-assistant.tsx': { count: 1, reason: IBAN },

@@ -360,20 +360,32 @@ function importLines(tx: DbOrTx, deps: Deps, args: { runId: string; accountId: s
       continue;
     }
 
+    const coreKey = `${line.bookingDate}|${line.amountCents}|${line.counterpartyIban ?? ''}|${normalizePurpose(line.purpose)}`;
+    const ordinal = ordinals.get(coreKey) ?? 0;
+    ordinals.set(coreKey, ordinal + 1);
+    const key = dedupKey(line, ordinal);
+
     if (line.bankReference) {
       const known = tx.select({ id: financeRawTransactions.id }).from(financeRawTransactions).where(and(eq(financeRawTransactions.accountId, accountId), eq(financeRawTransactions.bankReference, line.bankReference))).get();
       if (known) {
         counters.countKnown += 1;
         continue;
       }
-      insertRaw(line, dedupKey(line, 0));
+      // F-B6 (0.4.5): Kam dieselbe Bewegung schon ohne Referenz (CSV) herein, trifft die Referenz nichts. Dann zählt der
+      // Dublettenschlüssel gegen Rohumsätze ohne Referenz — ein Treffer wird zurückgehalten, nie still verworfen.
+      const withoutReference = tx
+        .select({ id: financeRawTransactions.id, runId: financeRawTransactions.runId })
+        .from(financeRawTransactions)
+        .where(and(eq(financeRawTransactions.accountId, accountId), eq(financeRawTransactions.dedupKey, key), isNull(financeRawTransactions.bankReference)))
+        .all()
+        .find((match) => tx.select({ discardedAt: financeImportRuns.discardedAt }).from(financeImportRuns).where(eq(financeImportRuns.id, match.runId)).get()?.discardedAt === null);
+      if (withoutReference) {
+        insertCandidate(line, key, withoutReference.id);
+        continue;
+      }
+      insertRaw(line, key);
       continue;
     }
-
-    const coreKey = `${line.bookingDate}|${line.amountCents}|${line.counterpartyIban ?? ''}|${normalizePurpose(line.purpose)}`;
-    const ordinal = ordinals.get(coreKey) ?? 0;
-    ordinals.set(coreKey, ordinal + 1);
-    const key = dedupKey(line, ordinal);
 
     const exactMatches = tx
       .select({ id: financeRawTransactions.id, runId: financeRawTransactions.runId })

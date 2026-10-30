@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { RowLink, Table, TableBody, TableCell, TableEmpty, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { VatDialog } from './vat-dialog';
 import { vatPeriodLabel, withVatPeriodLabel } from '@/lib/finance/vat-period';
+import { formatEuro } from '@/lib/finance/amount';
 
 /** Titel einer berechneten Frist, mit Namen nur, wenn der Dienst sie mitgibt (`finance.read`). */
 export function useDeadlineTitle(): (d: DeadlineView) => string {
@@ -73,6 +74,12 @@ export function DeadlineList({ deadlines, canFileVat, canRead, today }: { deadli
                     {d.overdue ? <StatusBadge tone="warning" dot>{t('overdue')}</StatusBadge> : null}
                   </span>
                   {because ? <span className="block text-meta text-muted-ink" data-testid="deadline-cause">{because}</span> : null}
+                  {/* Verwendungsfrist (Plan U2): der Rest unter dem Titel, an der Stelle des Auslösers. */}
+                  {d.kind === 'timelyUse' && typeof d.params.restCents === 'number' ? (
+                    <span className="block text-meta text-muted-ink" data-testid="deadline-rest">
+                      {t('timelyUseRest', { amount: formatEuro(d.params.restCents) })}
+                    </span>
+                  ) : null}
                 </TableCell>
                 <TableCell col="status" />
                 <TableCell col="meta" wrap data-testid="deadline-subject">
@@ -105,7 +112,8 @@ export function DeadlineList({ deadlines, canFileVat, canRead, today }: { deadli
 /**
  * Kopf (Board 6a, 295): zuerst, was unverzüglich ist (Berichtigung nach § 153 AO, Befund 30 d), dann die überfälligen —
  * „Unverzüglich: …. 2 Fristen überfällig: … und ….“ —, sonst „Nächste Frist: … bis ….“ oder „Keine Frist offen.“ Eine
- * Aufzählung nennt höchstens zwei und endet sonst mit „und n weitere“.
+ * Aufzählung nennt höchstens zwei und endet sonst mit „und n weitere“. Ein Vermerk „Verwendungsfrist entfallen“
+ * (`timelyUseLapsed`) ist keine Frist: Er zählt weder als nächste noch als undatierte (Plan U2, Review Focus 4).
  */
 export function DeadlinesHeader({ deadlines, approaching, exceeded }: { deadlines: readonly DeadlineView[]; approaching: number; exceeded: number }) {
   const td = useTranslations('finance.deadlines');
@@ -114,7 +122,7 @@ export function DeadlinesHeader({ deadlines, approaching, exceeded }: { deadline
   const immediate = deadlines.filter((d) => d.kind === 'vatAmendment');
   const overdue = deadlines.filter((d) => d.overdue && d.kind !== 'vatAmendment');
   const next = deadlines.find((d) => d.dueOn !== null) ?? null;
-  const undated = deadlines.find((d) => d.dueOn === null && d.kind !== 'vatAmendment') ?? null;
+  const undated = deadlines.find((d) => d.dueOn === null && d.kind !== 'vatAmendment' && d.kind !== 'timelyUseLapsed') ?? null;
   // Höchstens zwei mit Namen, dann die Zahl (Designer Runde 8, Abweichung 4): „… und 1 weitere.“ statt „und …“.
   const listed = (list: readonly DeadlineView[]) => ({ count: list.length, first: title(list[0]!), second: list[1] ? title(list[1]) : '', rest: Math.max(0, list.length - 2) });
   const parts = [

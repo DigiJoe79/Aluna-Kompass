@@ -18,7 +18,7 @@ const rows = [
   { key: 'incomeStatement', group: 'taxOffice' as const, available: true, finalLabel: '21.02.2026 · Anna Berger' },
   { key: 'cashReport', group: 'assembly' as const, available: true, finalLabel: null },
   { key: 'accountReconciliation', group: 'audit' as const, available: true, finalLabel: null },
-  { key: 'fundsUse', group: 'taxOffice' as const, available: false, finalLabel: null },
+  { key: 'fundsUse', group: 'taxOffice' as const, available: true, finalLabel: null },
 ];
 const years = [{ id: 'y25', designation: '2025' }, { id: 'y26', designation: '2026' }];
 
@@ -29,6 +29,13 @@ describe('ReportList (Board 2a)', () => {
     expect(groups).toEqual([m('finance.reports.groups.assembly'), m('finance.reports.groups.audit'), m('finance.reports.groups.taxOffice')]);
     const link = screen.getByRole('link', { name: m('finance.reports.cashReport.title') });
     expect(link.getAttribute('href')).toBe('/finance/reports/cashReport?year=y25');
+  });
+
+  it('public group lists the annual accounts right after the assembly', () => {
+    wrap(<ReportList rows={[...rows, { key: 'annualAccounts', group: 'public' as const, available: true, finalLabel: null }]} years={years} yearId="y25" />);
+    const groups = screen.getAllByTestId('report-group').map((g) => g.textContent);
+    expect(groups.slice(0, 2)).toEqual([m('finance.reports.groups.assembly'), m('finance.reports.groups.public')]);
+    expect(screen.getByRole('link', { name: m('finance.reports.annualAccounts.title') }).getAttribute('href')).toBe('/finance/reports/annualAccounts?year=y25');
   });
 
   it('links the tax reports by the period of the year, the Anlage Gem to the tax return page (15i)', () => {
@@ -49,11 +56,20 @@ describe('ReportList (Board 2a)', () => {
     for (const stage of ['preliminary', 'review', 'final']) expect(badges).not.toContain(m(`finance.reports.stage.${stage}`));
   });
 
-  it('greys out the fund use report without a link', () => {
+  it('links the fund use report to its own page with the year, without a muted mark (Plan U2 Task 1)', () => {
     wrap(<ReportList rows={rows} years={years} yearId="y25" />);
-    expect(screen.queryByRole('link', { name: new RegExp(m('finance.reports.fundsUse.title')) })).toBeNull();
+    const link = screen.getByRole('link', { name: m('finance.reports.fundsUse.title') });
+    expect(link.getAttribute('href')).toBe('/finance/fund-use?year=y25');
+    expect(link.closest('tr')!.hasAttribute('data-muted')).toBe(false);
+    expect(reportRowHref({ key: 'fundsUse' }, 'y 1')).toBe('/finance/fund-use?year=y%201');
+  });
+
+  it('greys out a report that is not available yet, without a link', () => {
+    const later = [{ key: 'cashReport', group: 'assembly' as const, available: false, finalLabel: null }];
+    wrap(<ReportList rows={later} years={years} yearId="y25" />);
+    expect(screen.queryByRole('link')).toBeNull();
     const muted = document.querySelector('tr[data-muted]')!;
-    expect(muted.textContent).toContain(m('finance.reports.fundsUse.title'));
+    expect(muted.textContent).toContain(m('finance.reports.cashReport.title'));
     expect(muted.textContent).toContain(m('common.muted.later'));
   });
 

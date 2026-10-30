@@ -21,6 +21,8 @@ export interface ReportSettingsValues {
   cashReportSignature: boolean;
   /** Satzung: Schatzmeister ist Vorstand nach § 26 BGB (Amtsübergabe, Hinweis Registeranmeldung) — `null`: keine Angabe. */
   treasurerIsStatutoryBoard: boolean | null;
+  /** Die Satzung lässt die MV die Jahresrechnung genehmigen: publiziert wird erst danach (Spec Teil J, Ve-L-1). */
+  assemblyApprovesAccounts: boolean;
 }
 
 type Board = 'yes' | 'no' | 'unknown';
@@ -43,7 +45,7 @@ export function ReportsPanel({ values }: { values: ReportSettingsValues }) {
 
   const save = async () => {
     setPending(true);
-    const result = await feedback.run(() => setReportSettingsAction({ statuteReference: v.statuteReference, cashReportSignature: v.cashReportSignature, treasurerIsStatutoryBoard: v.treasurerIsStatutoryBoard }), { retry: () => void save() });
+    const result = await feedback.run(() => setReportSettingsAction({ statuteReference: v.statuteReference, cashReportSignature: v.cashReportSignature, treasurerIsStatutoryBoard: v.treasurerIsStatutoryBoard, assemblyApprovesAccounts: v.assemblyApprovesAccounts }), { retry: () => void save() });
     setPending(false);
     if (result.status !== 'success') return;
     router.refresh();
@@ -72,6 +74,7 @@ export function ReportsPanel({ values }: { values: ReportSettingsValues }) {
           </FormGrid>
         </Section>
         <Section title={t('statute')} intro={t('statuteIntro')}>
+          <div className="flex flex-col gap-4">
           <div className="flex flex-col gap-1.5">
             <Label id="reports-board-label">{t('treasurerIsStatutoryBoard')}</Label>
             <Segmented
@@ -82,6 +85,12 @@ export function ReportsPanel({ values }: { values: ReportSettingsValues }) {
               testId="reports-board"
             />
             <p className="text-hint text-muted-ink">{t('treasurerIsStatutoryBoardHint')}</p>
+          </div>
+          <FormGrid>
+            <FormField id="reports-assembly-approves" label={t('assemblyApprovesAccounts')} hint={t('assemblyApprovesAccountsHint')} toggle size="full">
+              <Switch id="reports-assembly-approves" checked={v.assemblyApprovesAccounts} onCheckedChange={(on) => setV({ ...v, assemblyApprovesAccounts: on })} />
+            </FormField>
+          </FormGrid>
           </div>
         </Section>
       </FormCardBody>

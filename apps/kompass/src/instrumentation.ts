@@ -43,6 +43,7 @@ export async function register(): Promise<void> {
       afterRestore: resetMcpHandler,
     });
     startBackgroundWork({
+      ready: getDeps,
       onStart: () => {
         const worker = startTextWorker(getDeps);
         // Aufräumen der Module (Haken `housekeeping`) hängt nicht an der Akte, läuft aber im selben Takt an und hält mit an.

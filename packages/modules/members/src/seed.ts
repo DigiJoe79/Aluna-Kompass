@@ -147,7 +147,7 @@ async function seedFees(deps: Deps, ctx: CallContext): Promise<void> {
     { typeId: regular, amountCents: 3000, interval: 'yearly', minimum: false, allowedIntervals: ['yearly'] },
     { typeId: supporting, amountCents: 500, interval: 'monthly', minimum: true, allowedIntervals: ['monthly', 'yearly'] },
   ] }));
-  unwrap(await saveFeeSchedule(deps, ctx, { validFrom: `${y}-01-01`, resolvedOn: `${p}-11-20`, note: 'Beschluss der Mitgliederversammlung', rules: [
+  unwrap(await saveFeeSchedule(deps, ctx, { validFrom: `${y}-01-01`, resolvedOn: `${p}-06-05`, note: 'Beschluss der Mitgliederversammlung', rules: [
     { typeId: regular, amountCents: 3600, interval: 'yearly', minimum: false, allowedIntervals: ['yearly', 'halfYearly'] },
     { typeId: supporting, amountCents: 500, interval: 'monthly', minimum: true, allowedIntervals: ['monthly', 'yearly'] },
   ] }));

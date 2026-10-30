@@ -212,3 +212,99 @@ describe('Komponenten schreiben keinen Oberflächentext', () => {
     expect(offendersIn('actions.ts', probe)).toEqual([expect.stringContaining('message: "Fehlt"'), expect.stringContaining('name: "Pflicht"')]);
   });
 });
+
+/**
+ * K2 (Review 0.4.0): Die Haken der Pakete liefern Bezeichnungen, die in Mediathek („verwendet in“), Löschdialogen und
+ * Halteliste erscheinen — als `LabelRef` (`{ key, params }`), aufgelöst über `deps.labels`. Der Wächter oben sah nur
+ * `apps/kompass/src`; zehn deutsche Literale standen deshalb in `packages/**\/src`. Gesucht wird hier enger als oben,
+ * weil die Pakete viel Text tragen, der nie in die Oberfläche geht: Felder `label`, `title`, `reason` mit einem
+ * deutschen Literal — ein Umlaut oder ein großgeschriebenes Wort mit Leerzeichen danach, auch als Teil eines
+ * Template-Literals.
+ */
+const PACKAGES = path.resolve(import.meta.dirname, '../../../packages');
+const HAKEN_FELDER = new Set(['label', 'title', 'reason']);
+const DEUTSCH = /[äöüÄÖÜß]|(^|[\s„(])\p{Lu}\p{Ll}+ /u;
+
+/** Ganze Dateien, deren Text nicht in die Oberfläche geht — je mit Grund. */
+const PAKET_AUSNAHMEN = new Map<string, string>([
+  ['core/src/testing/index.ts', 'Testhelfer, erfundene Daten'],
+  ['modules/finance/src/seed.ts', 'Seed: erfundene Entwicklungsdaten'],
+  ['modules/dms/src/seed.ts', 'Seed: erfundene Entwicklungsdaten'],
+  ['modules/animals/src/proposals/seed.ts', 'Seed: erfundene Entwicklungsdaten'],
+  ['modules/governance/src/seed.ts', 'Seed: erfundene Entwicklungsdaten'],
+  ['modules/finance/src/install.ts', 'Grundausstattung (Dokumentarten) als Nutzdaten aus dem Code (Prinzip 7, zweite Ausnahme)'],
+  ['modules/members/src/install.ts', 'Grundausstattung (Dokumentarten) als Nutzdaten aus dem Code (Prinzip 7, zweite Ausnahme)'],
+  ['modules/governance/src/install.ts', 'Grundausstattung (Dokumentarten) als Nutzdaten aus dem Code (Prinzip 7, zweite Ausnahme)'],
+  ['modules/dms/src/install.ts', 'Grundausstattung (Versandwege) als Nutzdaten aus dem Code (Prinzip 7, zweite Ausnahme)'],
+  ['modules/dms/src/catalog.ts', 'Grundausstattung (Dokumentarten) als Nutzdaten aus dem Code (Prinzip 7, zweite Ausnahme)'],
+  ['modules/finance/src/reporting/gem-forms.ts', 'Wortlaut des amtlichen Vordrucks Anlage Gem (Prinzip 7, erste Ausnahme)'],
+  ['modules/finance/src/reporting/vat-forms.ts', 'Wortlaut des amtlichen Vordrucks zur Umsatzsteuer (Prinzip 7, erste Ausnahme)'],
+  ['modules/finance/src/reporting/reports/tax-return-gem-typst.ts', 'Typst-Vorlage der Steuererklärung (PDF-Inhalt)'],
+  ['modules/finance/src/reporting/export/tables.ts', 'Inhalt des Datenexports (Dateibeschreibungen im Paket, wie ein PDF)'],
+  ['modules/finance/src/auditing/print.ts', 'Typst-Vorlage der Prüfmappe (PDF-Inhalt)'],
+  ['modules/finance/src/auditing/package-run.ts', 'Deckblatt der Prüfmappe (PDF-Inhalt)'],
+  ['modules/finance/src/closing/handover.ts', 'Typst-Vorlage des Übergabeprotokolls (PDF-Inhalt)'],
+  ['modules/finance/src/ledger/cash-count-template.ts', 'Typst-Vorlage der Kassenzählung (PDF-Inhalt)'],
+  ['modules/members/src/letters/shared.ts', 'Typst-Vorlage der Mitgliederbriefe (PDF-Inhalt)'],
+  ['modules/members/src/letters/count-certificate.ts', 'Typst-Vorlage der Mitgliederbescheinigung (PDF-Inhalt)'],
+  ['documents/src/bases.ts', 'Typst-Basis der Dokumente (PDF-Inhalt)'],
+  ['modules/finance/src/closing/annual-accounts-view.ts', 'Sicht annualAccounts: Titel der Jahresrechnung wie auf dem PDF (Papiertitel, Plan J2 Task 5), kein Text der Oberfläche'],
+]);
+
+/**
+ * Eine Löschregel (`deletionRules`, erkannt an `deletable`) begründet für Entwickler und Prüfer, nicht für die
+ * Oberfläche — sie ist die maßgebliche Aufstellung nach AGENTS.md Prinzip 3.
+ */
+const inLoeschregel = (node: ts.PropertyAssignment): boolean =>
+  ts.isObjectLiteralExpression(node.parent) && node.parent.properties.some((p) => ts.isPropertyAssignment(p) && p.name.getText() === 'deletable');
+
+function hakenLiterale(file: string, source: string): string[] {
+  const src = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true, file.endsWith('.tsx') ? ts.ScriptKind.TSX : ts.ScriptKind.TS);
+  const found: string[] = [];
+  const besuche = (node: ts.Node): void => {
+    if (ts.isPropertyAssignment(node) && HAKEN_FELDER.has(node.name.getText()) && !inLoeschregel(node)) {
+      const init = node.initializer;
+      const teile = ts.isStringLiteral(init) || ts.isNoSubstitutionTemplateLiteral(init) ? [init.text] : ts.isTemplateExpression(init) ? [init.head.text, ...init.templateSpans.map((s) => s.literal.text)] : [];
+      if (teile.some((t) => DEUTSCH.test(t))) found.push(`${src.getLineAndCharacterOfPosition(node.getStart()).line + 1}: ${node.getText().slice(0, 80)}`);
+    }
+    ts.forEachChild(node, besuche);
+  };
+  besuche(src);
+  return found;
+}
+
+const paketQuellen = (): string[] =>
+  readdirSync(PACKAGES, { recursive: true, encoding: 'utf8' })
+    .filter((rel) => /(^|\/)src\//.test(rel) && /\.tsx?$/.test(rel) && !rel.includes('node_modules'))
+    .map((rel) => rel.split(path.sep).join('/'));
+
+describe('Pakete liefern Haken-Bezeichnungen über die Sprachdatei', () => {
+  it('schreiben kein deutsches Literal in label, title oder reason', () => {
+    const offenders = paketQuellen()
+      .filter((rel) => !PAKET_AUSNAHMEN.has(rel))
+      .flatMap((rel) => hakenLiterale(rel, readFileSync(path.join(PACKAGES, rel), 'utf8')).map((t) => `${rel}:${t}`));
+    expect(offenders).toEqual([]);
+  });
+
+  it('führt keine Ausnahme für eine Datei, die es nicht mehr braucht', () => {
+    const stale = [...PAKET_AUSNAHMEN.keys()].filter((rel) => {
+      try {
+        return hakenLiterale(rel, readFileSync(path.join(PACKAGES, rel), 'utf8')).length === 0;
+      } catch {
+        return true;
+      }
+    });
+    expect(stale).toEqual([]);
+  });
+
+  it('findet ein Literal, auch im Template, und lässt Löschregeln und Schlüssel stehen', () => {
+    const probe = [
+      "const a = { label: 'Logo des Vereins' };",
+      'const b = { label: `Tier „${name}“` };',
+      "const c = { entity: 'x', deletable: true, reason: 'Arbeitsmaterial der Stammdaten.' };",
+      "const d = { label: { key: 'media.usage.logo' } };",
+      "const e = { title: 'logo' };",
+    ].join('\n');
+    expect(hakenLiterale('probe.ts', probe)).toEqual([expect.stringMatching(/^1: label: 'Logo/), expect.stringMatching(/^2: label: `Tier/)]);
+  });
+});

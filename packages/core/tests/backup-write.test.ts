@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { createReadStream, existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, unlinkSync, writeFileSync } from 'node:fs';
+import { createReadStream, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, unlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { pipeline } from 'node:stream/promises';
@@ -12,6 +12,7 @@ import { login } from '../src/auth/login';
 import { BACKUP_WORK_PREFIX } from '../src/backup/paths';
 import { backupSourceOf, createBackupArchive } from '../src/backup/write';
 import { users } from '../src/db/schema';
+import { FILE_STORE_TEMP_DIR } from '../src/files/store';
 import { storeMediaAsset } from '../src/media/service';
 import { unwrap } from '../src/result';
 import { seedDevelopment } from '../src/seed/seed';
@@ -114,6 +115,19 @@ describe('writeBackupArchive', { timeout: 20_000 }, () => {
     expect(out.manifest.files.some((f) => f.path === victimRel)).toBe(false);
     const entries = await listTarEntries(archivePath);
     expect(entries.filter((e) => e.name !== 'manifest.json')).toEqual(out.manifest.files.map((f) => ({ name: f.path, size: f.size })));
+    deps.close();
+  });
+
+  /** Halbe Dateien eines abgebrochenen Schreibens (`files/store.ts`) gehören nicht ins Backup. */
+  it('lässt die Temp-Verzeichnisse der Dateiablagen aus', async () => {
+    const { deps, backupDir } = await setup();
+    const temp = path.join(deps.dataPath, 'core', 'media', FILE_STORE_TEMP_DIR);
+    mkdirSync(temp, { recursive: true });
+    writeFileSync(path.join(temp, '01HALB'), 'halb');
+    const archivePath = path.join(backupDir, 'temp.tar');
+    const out = await createBackupArchive(backupSourceOf(deps), { archivePath, workDir: backupDir, createdAt: deps.clock.now().toISOString() });
+    expect(out.manifest.files.some((f) => f.path.includes(`/${FILE_STORE_TEMP_DIR}/`))).toBe(false);
+    expect(out.manifest.files.some((f) => f.path.startsWith('data/core/media/'))).toBe(true);
     deps.close();
   });
 

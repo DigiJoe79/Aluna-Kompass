@@ -31,6 +31,10 @@ Welche Kacheln Sie sehen können, hängt an Ihren Rechten. Heute gibt es:
 
 - **Fällig** — offene Wiedervorlagen bis zu einem einstellbaren Zeitraum,
   überfällige zuerst und markiert. Das Häkchen erledigt die Wiedervorlage.
+  Weist jemand Ihnen eine Wiedervorlage zu, bekommt Ihr Konto eine kurze Mail
+  mit Datum und Link — nicht, wenn Sie sie sich selbst zuweisen. Ohne
+  eingerichteten Mailversand oder ohne gültige Adresse am Konto bleibt es bei
+  der Wiedervorlage.
   „Nur meine“ zeigt, wofür Sie eingetragen sind. Siehe
   [Bezüge und Wiedervorlage](akte/bezuege-und-wiedervorlage.md).
 - **Eingangskorb** — eingegangene Post, die noch nicht einsortiert ist, die

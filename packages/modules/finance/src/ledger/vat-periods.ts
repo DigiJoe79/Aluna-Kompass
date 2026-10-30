@@ -1,13 +1,14 @@
 import { createHash } from 'node:crypto';
 import type { DbOrTx } from '@kompass/core';
 import { and, asc, eq, gte, lte, ne, or } from 'drizzle-orm';
-import { financeAllocationLines, financeCategories, financeDatedValues, financeEntries, financeFiscalYears } from '../schema';
+import { financeAllocationLines, financeDatedValues, financeEntries, financeFiscalYears } from '../schema';
 import { REVERSE_CHARGE_CODES } from './codes';
 import { DATED_SERIES } from './dated-series';
 import { valueAt } from './dated-values';
-import { taxContextAt, taxOf, type TaxCode } from './tax';
+import { taxContextAt, type TaxCode } from './tax';
 import { declarationDueOn, taxPeriodOfYearInternal } from './tax-periods';
 import { parseVatPeriod, vatPeriodOf, vatTaxPointOn, type VatPeriodKind, type VatPeriodRange } from './vat-calendar';
+import { vatFigureValuesInternal } from './vat-figures';
 import { vatProfileAt } from './vat-settings';
 import { nextWorkingDay, type FederalState } from './working-days';
 
@@ -93,24 +94,20 @@ const reverseChargeBase = (amounts: VatPeriodAmounts) => REVERSE_CHARGE_CODES.so
  */
 const MONTHLY_ABOVE_CENTS = 900_000;
 
-function taxOfYearInternal(db: DbOrTx, calendarYear: number): number {
-  const lines = vatPeriodLinesInternal(db, { from: `${calendarYear}-01-01`, to: `${calendarYear}-12-31` });
-  const deductible = new Map(db.select({ id: financeCategories.id, inputTaxDeductible: financeCategories.inputTaxDeductible }).from(financeCategories).all().map((c) => [c.id, c.inputTaxDeductible] as const));
-  let total = 0;
-  for (const line of lines) {
-    const context = taxContextAt(db, line.entryDate);
-    if (!context) continue;
-    const tax = taxOf({ amountCents: line.amountCents, taxCode: line.taxCode, rateKind: line.rateKind, taxation: context.taxation, inputTaxDeductible: deductible.get(line.categoryId) ?? 'no', rates: context.rates });
-    total += tax.outputTaxCents + tax.reverseChargeTaxCents - tax.inputTaxCents;
-  }
-  return total;
+/**
+ * Die Zahllast des Kalenderjahres, wie die Voranmeldung sie rechnet (F-B5, 0.4.5): `result` aus
+ * `vatFigureValuesInternal` — Richtung nach Kategorie (Erstattungen mindern), § 13b-Gutschriften negativ, Satz am
+ * Entstehungstag.
+ */
+function payableTaxOfYearInternal(db: DbOrTx, calendarYear: number): number {
+  return vatFigureValuesInternal(db, { from: `${calendarYear}-01-01`, to: `${calendarYear}-12-31` }).find((v) => v.source === 'result')!.cents;
 }
 
 /** Ohne Rechteprüfung: Quartal oder Monat im Kalenderjahr — die Einstellung am 01.01., bei „automatisch“ nach der Vorjahressteuer. */
 export function vatAdvancePeriodKindInternal(db: DbOrTx, calendarYear: number): VatPeriodKind {
   const setting = vatProfileAt(db, `${calendarYear}-01-01`).advancePeriod;
   if (setting !== 'auto') return setting;
-  return taxOfYearInternal(db, calendarYear - 1) > MONTHLY_ABOVE_CENTS ? 'month' : 'quarter';
+  return payableTaxOfYearInternal(db, calendarYear - 1) > MONTHLY_ABOVE_CENTS ? 'month' : 'quarter';
 }
 
 /** Der Beginn des ersten Geschäftsjahres in Kompass, oder `null`. */

@@ -25,7 +25,7 @@ function renderPanel(confirmedAt: string | null = null) {
     <NextIntlClientProvider locale="de" messages={messages} timeZone="Europe/Berlin">
       <DateFormatProvider mode="locale" timeZone="Europe/Berlin">
         <TaxPanel
-          switches={{ membershipFeesCertifiable: false, expenseWaiversEnabled: false, mcpHumanOnlyAllowed: false }}
+          switches={{ membershipFeesCertifiable: false, expenseWaiversEnabled: false }}
           limits={{ statementSufficesBelowCents: 30000, cashDonationAlertCents: 100000, roundAmountFromCents: 50000, proofGraceDays: 30 }}
           confirmedAt={confirmedAt}
           waiverBasisText=""
@@ -73,9 +73,7 @@ describe('TaxPanel Steuerliches', () => {
     expect(screen.queryByRole('button', { name: 'Vorgaben übernehmen' })).toBeNull();
   });
 
-  it('der Agentenschalter bleibt ein Schalter, „Gilt ab“ statt „Gilt seit“', () => {
-    renderPanel();
-    expect(within(screen.getByTestId('tax-switches')).getByRole('switch', { name: 'Darf ein Agent festschreiben und Lastschriften bearbeiten?' })).toBeTruthy();
+  it('„Gilt ab“ statt „Gilt seit“', () => {
     expect(JSON.stringify(messages.finance.admin.tax)).not.toContain('Gilt seit');
   });
 });

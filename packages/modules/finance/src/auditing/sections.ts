@@ -1,7 +1,7 @@
-import { hasPermission, notFound, ok, readSetting, validate, type CallContext, type DbOrTx, type Deps, type Result } from '@kompass/core';
+import { hasPermission, notFound, ok, readSetting, timeZoneOf, validate, type CallContext, type DbOrTx, type Deps, type Result } from '@kompass/core';
 import { contacts, displayName } from '@kompass/module-contacts';
 import { documents } from '@kompass/module-dms';
-import { and, asc, eq, gte, inArray, isNotNull, isNull, lte } from 'drizzle-orm';
+import { and, asc, eq, gte, inArray, isNotNull, isNull, lt, lte } from 'drizzle-orm';
 import { createHash } from 'node:crypto';
 import { z } from 'zod';
 import { canonicalJson } from '../reporting/hash';
@@ -22,7 +22,9 @@ import { remarkStatesByTargetInternal } from './remarks';
 import { sampleStateInternal, samplesByEntryInternal, sectionReviewsInternal } from './samples';
 import { anomalyRowsInternal } from './anomalies';
 import { baselinesOfYearInternal, changedBetweenBaselinesInternal, entryFingerprintInternal } from './baseline';
+import { auditResolutionsOf } from '../sources';
 import { AUDIT_SECTIONS, type AuditSection } from './types';
+import { zonedDayOf, zonedDayRange } from '../zoned-days';
 
 /**
  * Das Prüfpaket als Abschnitte (Spec § D1 Schritt 2, Finanz-Spec § 9.4, Designer Runde 1 4b): je Abschnitt eine Liste,
@@ -48,6 +50,8 @@ export interface AuditSectionRow {
   remarksOpen: number;
   /** Beantwortete, noch nicht geklärte Vermerke an der Zeile — die Marke trägt den Zustand (274/275). */
   remarksAnswered?: number;
+  /** Abschnitt 9 (G-30): der Beschluss der Zeile, Ziel ihrer Vermerke. */
+  resolutionId?: string;
 }
 
 const loadYear = (db: DbOrTx, id: string): FinanceFiscalYearRow | null => db.select().from(financeFiscalYears).where(eq(financeFiscalYears.id, id)).get() ?? null;
@@ -96,7 +100,7 @@ function reconciliationRows(db: DbOrTx, year: FinanceFiscalYearRow): AuditSectio
 // ── Belege ──────────────────────────────────────────────────────────────────
 
 /** Die Zeilen der Belegprüfung, die an Buchungen hängen (fehlend, Eigenbeleg, widerrufen) — ohne Akte, ohne Recht des Aufrufers. */
-function voucherEntryRows(db: DbOrTx, year: FinanceFiscalYearRow): AuditSectionRow[] {
+function voucherEntryRows(db: DbOrTx, year: FinanceFiscalYearRow, timeZone: string): AuditSectionRow[] {
   const rows: AuditSectionRow[] = [];
   const entryOf = (id: string) => db.select({ id: financeEntries.id, number: financeEntries.number, entryDate: financeEntries.entryDate }).from(financeEntries).where(eq(financeEntries.id, id)).get();
   for (const u of undocumentedEntriesOf(db, year.id)) {
@@ -113,13 +117,13 @@ function voucherEntryRows(db: DbOrTx, year: FinanceFiscalYearRow): AuditSectionR
     .all();
   for (const l of links) {
     if (l.revokedAt === null && l.typeKey === 'voucher-own') rows.push({ key: `own:${l.id}`, kind: 'voucher', entryId: l.entryId, ...(l.documentId ? { documentId: l.documentId } : {}), date: l.entryDate, amountCents: null, labelParams: { reason: 'own', number: l.entryNumber ?? '', subject: l.documentNumber }, remarksOpen: 0 });
-    if (l.revokedAt !== null && l.revokedAt.slice(0, 10) >= year.startsOn) rows.push({ key: `revoked:${l.id}`, kind: 'voucher', entryId: l.entryId, ...(l.documentId ? { documentId: l.documentId } : {}), date: l.revokedAt.slice(0, 10), amountCents: null, labelParams: { reason: 'revoked', number: l.entryNumber ?? '', subject: l.documentNumber }, remarksOpen: 0 });
+    if (l.revokedAt !== null && zonedDayOf(l.revokedAt, timeZone) >= year.startsOn) rows.push({ key: `revoked:${l.id}`, kind: 'voucher', entryId: l.entryId, ...(l.documentId ? { documentId: l.documentId } : {}), date: zonedDayOf(l.revokedAt, timeZone), amountCents: null, labelParams: { reason: 'revoked', number: l.entryNumber ?? '', subject: l.documentNumber }, remarksOpen: 0 });
   }
   return rows;
 }
 
 async function voucherRows(deps: Deps, ctx: CallContext, year: FinanceFiscalYearRow): Promise<AuditSectionRow[]> {
-  const rows = voucherEntryRows(deps.db, year);
+  const rows = voucherEntryRows(deps.db, year, timeZoneOf(deps));
   // Belege ohne Buchung liest die Akte mit dem Recht des Aufrufers (Prinzip 6) — ohne `finance.read` bleiben sie weg.
   if (hasPermission(ctx, 'finance.read')) {
     for (let offset = 0; ; offset += 200) {
@@ -188,19 +192,61 @@ function donationRows(deps: Deps, year: FinanceFiscalYearRow): AuditSectionRow[]
 
 // ── Zahlungen an Partner ────────────────────────────────────────────────────
 
-function partnerPaymentRows(db: DbOrTx, year: FinanceFiscalYearRow): AuditSectionRow[] {
+function partnerPaymentRows(db: DbOrTx, year: FinanceFiscalYearRow, timeZone: string): AuditSectionRow[] {
+  const inYear = zonedDayRange(year.startsOn, year.endsOn, timeZone);
   const payments = db
     .select({ p: financePartnerPayments, contactId: financePartnerProfiles.contactId })
     .from(financePartnerPayments)
     .innerJoin(financePartnerProfiles, eq(financePartnerProfiles.id, financePartnerPayments.partnerId))
-    .where(and(eq(financePartnerPayments.state, 'approved'), gte(financePartnerPayments.approvedAt, `${year.startsOn}T00:00:00.000Z`), lte(financePartnerPayments.approvedAt, `${year.endsOn}T23:59:59.999Z`)))
+    .where(and(eq(financePartnerPayments.state, 'approved'), gte(financePartnerPayments.approvedAt, inYear.start), lt(financePartnerPayments.approvedAt, inYear.end)))
     .orderBy(asc(financePartnerPayments.approvedAt))
     .all();
   return payments.map(({ p, contactId }) => {
     const contact = db.select().from(contacts).where(eq(contacts.id, contactId)).get();
     const proofState = p.acknowledgedAt ? 'acknowledged' : p.proofDueOn && p.proofDueOn < year.endsOn ? 'overdue' : 'open';
-    return { key: `partnerPayment:${p.id}`, kind: 'partnerPayment', date: p.approvedAt!.slice(0, 10), amountCents: null, labelParams: { number: p.number ?? '', partnerName: contact ? displayName(contact) : '', proofState, proofDueOn: p.proofDueOn }, remarksOpen: 0 };
+    return { key: `partnerPayment:${p.id}`, kind: 'partnerPayment', date: zonedDayOf(p.approvedAt!, timeZone), amountCents: null, labelParams: { number: p.number ?? '', partnerName: contact ? displayName(contact) : '', proofState, proofDueOn: p.proofDueOn }, remarksOpen: 0 };
   });
+}
+
+// ── Beschlüsse (G-30) ───────────────────────────────────────────────────────
+
+/**
+ * Die finanzwirksamen, festgeschriebenen Beschlüsse des Prüfjahres aus einer registrierten Quelle (Gremien): nach
+ * Datum, mit Codes und Werten, das Protokoll mit seiner Nummer (die Nummer eines Dokuments darf man kennen, V12).
+ */
+function resolutionRows(deps: Deps, year: FinanceFiscalYearRow): AuditSectionRow[] {
+  const found = auditResolutionsOf(deps, deps.db, year) ?? [];
+  const ids = [...new Set(found.flatMap((r) => (r.minutesDocumentId ? [r.minutesDocumentId] : [])))];
+  const numbers = new Map(ids.length > 0 ? deps.db.select({ id: documents.id, number: documents.number }).from(documents).where(inArray(documents.id, ids)).all().map((d) => [d.id, d.number]) : []);
+  return [...found]
+    .sort((a, b) => a.decidedOn.localeCompare(b.decidedOn) || a.number.localeCompare(b.number))
+    .map((r) => ({
+      key: `resolution:${r.id}`, kind: 'resolution', resolutionId: r.id, date: r.decidedOn, amountCents: r.facts.amountCents ?? null,
+      labelParams: {
+        number: r.number, resolutionKind: r.kind, outcome: r.outcome, organ: r.organ, viaCircular: r.viaCircular,
+        minutesDocumentId: r.minutesDocumentId, minutesNumber: r.minutesDocumentId ? (numbers.get(r.minutesDocumentId) ?? null) : null,
+        ...Object.fromEntries(Object.entries(r.facts).filter(([, v]) => v !== undefined)),
+      },
+      remarksOpen: 0,
+    }));
+}
+
+/** Gibt es Abschnitt 9 für das Jahr? Nur, wenn eine Quelle registriert und ihr Modul eingeschaltet ist. */
+export function resolutionsSectionActiveInternal(deps: Deps, year: FinanceFiscalYearRow): boolean {
+  return auditResolutionsOf(deps, deps.db, year) !== null;
+}
+
+/** Die Abschnitte des Jahres in Prüferreihenfolge: acht, mit Gremien neun. */
+export function activeAuditSectionsInternal(deps: Deps, year: FinanceFiscalYearRow): AuditSection[] {
+  const withResolutions = resolutionsSectionActiveInternal(deps, year);
+  return AUDIT_SECTIONS.filter((s) => s !== 'resolutions' || withResolutions);
+}
+
+/** Die Protokolle der Beschlüsse in Abschnitt 9 — der berechnete Bezug, unter dem die Akte sie der Prüferin gibt. */
+export function auditResolutionMinutesInternal(deps: Deps, fiscalYearId: string): string[] {
+  const year = loadYear(deps.db, fiscalYearId);
+  if (!year) return [];
+  return (auditResolutionsOf(deps, deps.db, year) ?? []).flatMap((r) => (r.minutesDocumentId ? [r.minutesDocumentId] : []));
 }
 
 // ── Verteiler ───────────────────────────────────────────────────────────────
@@ -215,7 +261,8 @@ export async function sectionRowsInternal(deps: Deps, ctx: CallContext, year: Fi
     case 'anomalies': return anomalyRowsInternal(deps, year);
     case 'purposesReserves': return purposeReserveRows(deps.db, year);
     case 'donations': return donationRows(deps, year);
-    case 'partnerPayments': return partnerPaymentRows(deps.db, year);
+    case 'partnerPayments': return partnerPaymentRows(deps.db, year, timeZoneOf(deps));
+    case 'resolutions': return resolutionRows(deps, year);
   }
 }
 
@@ -227,12 +274,13 @@ function sectionRowsSyncInternal(deps: Deps, year: FinanceFiscalYearRow, section
   switch (section) {
     case 'journal': return journalRows(deps.db, year);
     case 'reconciliation': return reconciliationRows(deps.db, year);
-    case 'vouchers': return voucherEntryRows(deps.db, year);
+    case 'vouchers': return voucherEntryRows(deps.db, year, timeZoneOf(deps));
     case 'imports': return importRows(deps.db, year);
     case 'anomalies': return anomalyRowsInternal(deps, year);
     case 'purposesReserves': return purposeReserveRows(deps.db, year);
     case 'donations': return donationRows(deps, year);
-    case 'partnerPayments': return partnerPaymentRows(deps.db, year);
+    case 'partnerPayments': return partnerPaymentRows(deps.db, year, timeZoneOf(deps));
+    case 'resolutions': return resolutionRows(deps, year);
   }
 }
 
@@ -242,7 +290,7 @@ export function sectionEntryIdsInternal(deps: Deps, year: FinanceFiscalYearRow, 
 }
 
 /** Beschriftungen der Zeilen, die nur Namen sind — nicht Teil des Fingerabdrucks. */
-const NAME_PARAMS = new Set(['accountName', 'purposeOrCategory', 'name', 'partnerName', 'contactName']);
+const NAME_PARAMS = new Set(['accountName', 'purposeOrCategory', 'name', 'partnerName', 'contactName', 'organ', 'organs', 'persons']);
 
 /**
  * Fingerabdruck eines Abschnitts (Plan D1e Task 0): SHA-256 über seine Zeilen in kanonischer Form, eine Zeile mit
@@ -326,7 +374,7 @@ export function decorateRowsInternal(db: DbOrTx, ctx: CallContext, fiscalYearId:
   const byAll = samplesByEntryInternal(db, fiscalYearId);
   const remarks = remarkStatesByTargetInternal(db, fiscalYearId);
   return rows.map((r) => {
-    const at = [r.entryId ? remarks.get(`entry:${r.entryId}`) : undefined, r.documentId ? remarks.get(`document:${r.documentId}`) : undefined];
+    const at = [r.entryId ? remarks.get(`entry:${r.entryId}`) : undefined, r.documentId ? remarks.get(`document:${r.documentId}`) : undefined, r.resolutionId ? remarks.get(`resolution:${r.resolutionId}`) : undefined];
     const counts = { remarksOpen: at.reduce((n, s) => n + (s?.open ?? 0), 0), remarksAnswered: at.reduce((n, s) => n + (s?.answered ?? 0), 0) };
     return r.entryId ? { ...r, sample: sampleStateInternal(db, me?.id ?? null, r.entryId), samplesByAll: byAll.get(r.entryId) ?? 0, ...counts } : { ...r, ...counts };
   });
@@ -402,6 +450,7 @@ export async function getAuditSection(deps: Deps, ctx: CallContext, input: unkno
   const v = parsed.value;
   const year = loadYear(deps.db, v.fiscalYearId);
   if (!year) return notFound('financeFiscalYear', v.fiscalYearId);
+  if (!activeAuditSectionsInternal(deps, year).includes(v.section)) return notFound('financeAuditSection', v.section);
   const rows = filterRowsInternal(deps.db, decorateRowsInternal(deps.db, ctx, year.id, await sectionRowsInternal(deps, ctx, year, v.section)), v);
   return ok({ rows: rows.slice(v.offset, v.offset + v.limit), total: rows.length, ...reviewedByInternal(deps, year.id, v.section) });
 }

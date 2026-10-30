@@ -21,9 +21,11 @@ describe('findMediaReferences', () => {
 
     unwrap(await setSetting(deps, ctx, { key: 'branding.logoAssetId', value: logo.id }));
 
+    // K2: Der Haken liefert einen Schlüssel; aufgelöst wird über `deps.labels` (die App belegt ihn mit der Sprachdatei).
+    deps.labels = (key) => `übersetzt:${key}`;
     const hits = findMediaReferences(deps, logo.id);
     expect(hits.map((h) => h.entity)).toEqual(['setting']);
-    expect(hits.find((h) => h.entity === 'setting')!.label).toBe('Logo des Vereins');
+    expect(hits.find((h) => h.entity === 'setting')!.label).toBe('übersetzt:media.references.logo');
     expect(hits[0]!.href).toBe('/admin/settings');
     expect(findMediaReferences(deps, other.id)).toEqual([]);
   });

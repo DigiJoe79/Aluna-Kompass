@@ -9,7 +9,7 @@ import { isoNow } from '../clock';
 import { systemContext, type CallContext } from '../context';
 import { apiTokens, auditLog, sessions, users } from '../db/schema';
 import type { AppEnv } from '../deps';
-import { JobAbortedError, launchJob, readJobResult, runningJob, runStep, type JobHandle, type JobSource, type JobStart } from '../jobs';
+import { activeJobSlotKeys, JobAbortedError, launchJob, readJobResult, runningJob, runStep, type JobHandle, type JobSource, type JobStart } from '../jobs';
 import { lastPublishedAt } from '../modules/published';
 import { requireHumanChannel } from '../permissions/human';
 import { requirePermission } from '../permissions/check';
@@ -25,7 +25,7 @@ import { produceBackup, produceVerification, pruneBackupRing } from './create';
 import { restoreHooks } from './hooks';
 import { BACKUP_JOB_STEPS, BACKUP_LIMITS, backupJobSlot } from './jobs';
 import { clearMaintenance, readMaintenance, writeMaintenance, type MaintenanceMarker } from './maintenance';
-import type { BackupCounts } from './manifest';
+import type { BackupCounts, BackupManifest } from './manifest';
 import { BACKUP_WORK_PREFIX } from './paths';
 import { backupFiles, listBackups, type BackupListItem } from './sidecar';
 
@@ -127,7 +127,7 @@ function launchRestore(deps: AppDeps, ctx: CallContext, bp: string, item: Backup
     backupJobSlot(bp),
     deps.clock,
     { kind: 'restore', steps: BACKUP_JOB_STEPS.restore, source: sourceOf(ctx), userId: ctx.userId, apiTokenId: ctx.apiTokenId, runId, meta },
-    (h) => produceRestore(deps, ctx, { name: item.name, setup }, h),
+    (h) => produceRestore(deps, ctx, { name: item.name, setup, backupCreatedAt: meta.backupCreatedAt }, h),
   );
   if ('busy' in started) return ok({ started: false, running: started.busy });
   started.done.catch(() => undefined); // launchJob protokolliert den Fehler und schreibt ihn ins Ergebnis
@@ -136,7 +136,7 @@ function launchRestore(deps: AppDeps, ctx: CallContext, bp: string, item: Backup
 
 /**
  * Spielt ein Backup aus der Liste ein, im Hintergrund. Nur ein Mensch (`humanOnly`), Bestätigung durch den
- * Umgebungsnamen; ein laufender Webseiten-Lauf lehnt ab (`restoreBlocked`). Läuft schon ein Backup-Lauf, meldet er
+ * Umgebungsnamen; ein laufender Webseiten-Lauf oder ein anderer Lauf im Hintergrund lehnt ab (`restoreBlocked`). Läuft schon ein Backup-Lauf, meldet er
  * ihn. „Einspielen gestartet“ steht im alten Bestand und damit im Backup „Vor Einspielen“.
  */
 export async function startRestore(deps: AppDeps, ctx: CallContext, input: unknown): Promise<Result<JobStart>> {
@@ -152,12 +152,22 @@ export async function startRestore(deps: AppDeps, ctx: CallContext, input: unkno
   const bp = deps.backupPath;
   const item = findItem(bp, name);
   if (!item) return notFound('backup', name);
-  const reason = restoreHooks().busyReason();
+  const reason = restoreHooks().busyReason() ?? otherJobReason(bp);
   if (reason) return localizedConflict('restoreBlocked', 'backup.errors.restoreBlocked', { reason });
   const running = runningJob(backupJobSlot(bp));
   if (running) return ok({ started: false, running });
   deps.db.transaction((tx) => recordAudit(tx, deps, ctx, { action: 'backup.restoreStart', entityType: 'backup', entityId: name, params: { createdAt: createdAtOf(item) } }));
   return launchRestore(deps, ctx, bp, item, false);
+}
+
+/**
+ * Ein anderer Lauf im Hintergrund (Datenexport, Prüfpaket …) hält eigene Verbindungen und schreibt über `close()` und
+ * `reopen()` hinweg weiter — nach dem Austausch in den neuen Bestand. Läufe des Backups selbst meldet `startRestore`
+ * gesondert.
+ */
+function otherJobReason(bp: string): string | null {
+  const own = backupJobSlot(bp).key;
+  return activeJobSlotKeys().some((key) => key !== own) ? 'jobRunning' : null;
 }
 
 /** Ersteinrichtung aus einem Backup: ohne Anmeldung, ohne Sicherung, nur solange die Installation leer ist. */
@@ -175,13 +185,31 @@ function putAsideBack(dataPath: string, aside: string): void {
   for (const entry of readdirSync(aside)) renameSync(path.join(aside, entry), path.join(dataPath, entry));
 }
 
-async function produceRestore(deps: AppDeps, ctx: CallContext, opts: { name: string; setup: boolean }, h: JobHandle): Promise<Result<RestoreResult>> {
+async function produceRestore(deps: AppDeps, ctx: CallContext, opts: { name: string; setup: boolean; backupCreatedAt: string }, h: JobHandle): Promise<Result<RestoreResult>> {
   const bp = deps.backupPath!;
-  const dp = deps.dataPath;
   const { name, setup } = opts;
   const runId = h.run.runId;
   const files = backupFiles(bp, name)!;
 
+  // Der Wartungsmerker steht ab hier: Was nach dem Start geschrieben würde, fehlte im Backup „Vor Einspielen“ und ginge
+  // mit dem Austausch verloren (Befundliste 0.4.0, I-E). Der Proxy sperrt Anfragen, `getDeps` hält MCP und Uploads an.
+  // Endet der Lauf vor dem Austausch (Abbruch, Prüfung gescheitert), nimmt `finally` ihn wieder weg.
+  let marker: MaintenanceMarker = { runId, since: isoNow(deps.clock), phase: 'safeguard', aside: null, backupName: name, backupCreatedAt: opts.backupCreatedAt, contact: null };
+  writeMaintenance(bp, marker);
+  let exchanging = false;
+  try {
+    const prepared = await safeguardAndVerify(deps, ctx, { name, setup }, h);
+    if (!prepared.ok) return prepared;
+    exchanging = true;
+    marker = { ...marker, phase: 'prepare', backupCreatedAt: prepared.value.manifest.createdAt };
+    return await exchange(deps, ctx, { name, setup, files, manifest: prepared.value.manifest, marker }, h);
+  } finally {
+    if (!exchanging) clearMaintenance(bp);
+  }
+}
+
+async function safeguardAndVerify(deps: AppDeps, ctx: CallContext, opts: { name: string; setup: boolean }, h: JobHandle): Promise<Result<{ manifest: BackupManifest }>> {
+  const { name, setup } = opts;
   // 1. Stand sichern — das Backup „Vor Einspielen“ ist der Weg zurück.
   if (setup) h.skip('safeguard');
   else {
@@ -204,12 +232,25 @@ async function produceRestore(deps: AppDeps, ctx: CallContext, opts: { name: str
   if (manifest.migrationCount > deps.migrationCount) return invalid([{ path: 'archive', message: 'backupNewerThanApp' }]);
   // Ohne Nutzer bliebe die Installation unbenutzbar und zugleich dauerhaft offen.
   if (setup && manifest.counts.users === 0) return invalid([{ path: 'archive', message: 'backupWithoutUsers' }]);
+  return ok({ manifest });
+}
+
+async function exchange(
+  deps: AppDeps,
+  ctx: CallContext,
+  opts: { name: string; setup: boolean; files: NonNullable<ReturnType<typeof backupFiles>>; manifest: BackupManifest; marker: MaintenanceMarker },
+  h: JobHandle,
+): Promise<Result<RestoreResult>> {
+  const bp = deps.backupPath!;
+  const dp = deps.dataPath;
+  const { name, setup, files, manifest } = opts;
+  const runId = h.run.runId;
   const backupCreatedAt = manifest.createdAt;
 
   // 3.–5. Ab hier kein Abbruch mehr; Wartung an, Hintergrund angehalten.
   h.setCancellable(false);
   const hooks = restoreHooks();
-  let marker: MaintenanceMarker = { runId, since: isoNow(deps.clock), phase: 'prepare', aside: null, backupName: name, backupCreatedAt, contact: null };
+  let marker: MaintenanceMarker = opts.marker;
   writeMaintenance(bp, marker);
   const work = path.join(bp, `${BACKUP_WORK_PREFIX}${runId}-restore`);
   let closed = false;

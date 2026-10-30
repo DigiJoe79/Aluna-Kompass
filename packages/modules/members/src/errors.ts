@@ -44,6 +44,8 @@ export const MEMBERS_ERRORS = {
   resignationExists: ['endsOn'],
   runLetterQueued: [],
   dunningRunDone: [],
+  // Plan R1 (N7): Der Lauf hat der Mitgliedschaft schon einen Brief ausgestellt — nur intern, der Abschnitt zählt ihn als erledigt.
+  runLetterExists: [],
 } as const satisfies Record<string, readonly string[]>;
 export type MembersErrorCode = keyof typeof MEMBERS_ERRORS;
 

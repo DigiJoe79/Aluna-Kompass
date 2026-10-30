@@ -3,7 +3,7 @@ import { abortReceive, DOCUMENT_MAX_BYTES, documents, getDocumentRecord, linkDoc
 import { eq, inArray } from 'drizzle-orm';
 import { z } from 'zod';
 import { financeAudit } from '../audit';
-import { financeConflict, requireHumanChannelFinance } from '../errors';
+import { financeConflict, requireHumanChannelFinance, uploadLimitProblem } from '../errors';
 import { requireFinanceRead } from '../ledger/access';
 import { openCentsInternal } from '../ledger/open-items';
 import { AMOUNT_EVIDENCE_KINDS, coverageRequired, EVIDENCE_KINDS, evidenceCoverage, evidenceKindLabelKey, evidenceSubject, missingEvidence, normalizeEvidenceKind, paymentProofSatisfied, requiredEvidenceKinds, type EvidenceRow, type PartnerBasis } from './evidence-rules';
@@ -83,6 +83,8 @@ export async function addEvidenceUpload(deps: Deps, ctx: CallContext, input: unk
   if (denied) return denied;
   const parsed = validate(deps, uploadSchema, input);
   if (!parsed.ok) return parsed;
+  const tooLarge = uploadLimitProblem(deps, parsed.value.bytes, parsed.value.fileName);
+  if (tooLarge) return tooLarge;
   const v = parsed.value;
   const p = payment(deps.db, v.paymentId);
   if (!p) return notFound('financePartnerPayment', v.paymentId);

@@ -38,6 +38,8 @@ export interface CategoryRow {
   sphere: 'ideal' | 'assetManagement' | 'purposeOperation' | 'business' | null;
   incomeKind: string | null;
   costFunction: string | null;
+  /** Spendenplattform (Spec Teil J, St-L-9): bestätigt selbst bzw. wickelt nur ab; nur an Einnahmen. */
+  donationPlatform?: 'confirmsItself' | 'handlesOnly' | null;
   allowanceKind: string;
   statementSuffices: boolean;
   defaultTaxCode: string;
@@ -53,6 +55,7 @@ export interface CategoryRow {
 const SPHERES = ['ideal', 'assetManagement', 'purposeOperation', 'business'] as const;
 const INCOME_KINDS = ['donation', 'membershipFee', 'inKindDonation', 'expenseWaiver', 'bodyGrant', 'publicGrant', 'courtFine', 'sponsoring', 'sales', 'fees', 'interest', 'inheritance', 'other'] as const;
 const COST_FUNCTIONS = ['program', 'administration', 'fundraising'] as const;
+const DONATION_PLATFORMS = ['confirmsItself', 'handlesOnly'] as const;
 const ALLOWANCE_KINDS = ['none', 'volunteer', 'trainer'] as const;
 const INPUT_TAX = ['no', 'yes', 'partial'] as const;
 const THRESHOLD_EXCLUSIONS = ['none', 'notPerformance', 'taxRefund'] as const;
@@ -194,6 +197,7 @@ function CategoryDialog({ category, onClose, onSaved }: { category: CategoryRow 
   const [isActive, setIsActive] = useState(category?.isActive ?? true);
   const [incomeKind, setIncomeKind] = useState(category?.incomeKind ?? '');
   const [costFunction, setCostFunction] = useState(category?.costFunction ?? '');
+  const [donationPlatform, setDonationPlatform] = useState<'' | (typeof DONATION_PLATFORMS)[number]>(category?.donationPlatform ?? '');
   const [allowanceKind, setAllowanceKind] = useState(category?.allowanceKind ?? 'none');
   const [inputTaxDeductible, setInputTaxDeductible] = useState(category?.inputTaxDeductible ?? 'no');
   const [countsTowardTurnover, setCountsTowardTurnover] = useState(category?.countsTowardTurnover ?? false);
@@ -216,6 +220,7 @@ function CategoryDialog({ category, onClose, onSaved }: { category: CategoryRow 
       sphere: direction === 'transit' ? undefined : (sphere || undefined),
       incomeKind: direction === 'income' ? incomeKind || undefined : undefined,
       costFunction: direction === 'expense' ? costFunction || undefined : undefined,
+      ...(direction === 'income' ? { donationPlatform: donationPlatform || null } : {}),
       allowanceKind,
       statementSuffices,
       defaultTaxCode,
@@ -295,7 +300,7 @@ function CategoryDialog({ category, onClose, onSaved }: { category: CategoryRow 
             </FormGrid>
           </Section>
           <div className="mt-5">
-            <Disclosure label={t('advanced')} defaultOpen={fieldErrors.incomeKind !== undefined || fieldErrors.costFunction !== undefined}>
+            <Disclosure label={t('advanced')} defaultOpen={fieldErrors.incomeKind !== undefined || fieldErrors.costFunction !== undefined || fieldErrors.donationPlatform !== undefined}>
               <div className="pt-1">
                 <FormGrid>
                   {direction === 'income' ? (
@@ -305,6 +310,18 @@ function CategoryDialog({ category, onClose, onSaved }: { category: CategoryRow 
                         {INCOME_KINDS.map((k) => (
                           <option key={k} value={k}>
                             {t(`incomeKinds.${k}`)}
+                          </option>
+                        ))}
+                      </Select>
+                    </FormField>
+                  ) : null}
+                  {direction === 'income' ? (
+                    <FormField id="cat-donation-platform" label={t('donationPlatform')} hint={t('donationPlatformHint')} error={fieldErrors.donationPlatform}>
+                      <Select id="cat-donation-platform" value={donationPlatform} onChange={(e) => setDonationPlatform(e.target.value as typeof donationPlatform)} aria-invalid={!!fieldErrors.donationPlatform}>
+                        <option value="">{t('donationPlatformNone')}</option>
+                        {DONATION_PLATFORMS.map((p) => (
+                          <option key={p} value={p}>
+                            {t(`donationPlatforms.${p}`)}
                           </option>
                         ))}
                       </Select>
@@ -363,7 +380,7 @@ function CategoryDialog({ category, onClose, onSaved }: { category: CategoryRow 
             </Disclosure>
           </div>
         </DialogBody>
-        <FormActionBar placement="dialog" cancel={onClose} pending={pending} saveDisabled={!name || (!category && !key)} saveLabel={tCommon('save')} onSave={() => void submit()} state={withUnplacedFieldErrors(feedback.state, ['sphere', 'incomeKind', 'costFunction', 'thresholdExclusion'])} />
+        <FormActionBar placement="dialog" cancel={onClose} pending={pending} saveDisabled={!name || (!category && !key)} saveLabel={tCommon('save')} onSave={() => void submit()} state={withUnplacedFieldErrors(feedback.state, ['sphere', 'incomeKind', 'costFunction', 'donationPlatform', 'thresholdExclusion'])} />
       </DialogContent>
     </Dialog>
   );

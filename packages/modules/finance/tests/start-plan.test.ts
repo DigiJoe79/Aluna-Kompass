@@ -25,4 +25,12 @@ describe('start plan', () => {
     expect(by['trainer-allowance']).toMatchObject({ allowanceKind: 'trainer', costFunction: 'program' });
     expect(by['sales']).toMatchObject({ sphere: 'business', incomeKind: 'sales', countsTowardTurnover: true, defaultTaxCode: 'standard' });
   });
+
+  it('ordnet nach DZI zu: Zahlungsdienstgebühren als Verwaltung, Webseite als Werbung, Plattform bestätigt selbst', () => {
+    const by = Object.fromEntries(START_PLAN.map((c) => [c.key, c]));
+    expect(by['payment-fees']).toMatchObject({ costFunction: 'administration' });
+    expect(by['website-pr']).toMatchObject({ direction: 'expense', sphere: 'ideal', costFunction: 'fundraising' });
+    expect(START_PLAN.findIndex((c) => c.key === 'website-pr')).toBe(START_PLAN.findIndex((c) => c.key === 'it') + 1);
+    expect(by['platform-payouts']).toMatchObject({ incomeKind: 'bodyGrant', donationPlatform: 'confirmsItself' });
+  });
 });

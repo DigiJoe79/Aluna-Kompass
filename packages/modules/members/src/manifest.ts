@@ -1,4 +1,5 @@
 import { defineModule, type ModuleManifest } from '@kompass/core';
+import { memberMemberships } from './schema';
 import { MEMBERS_DASHBOARD_TILES } from './dashboard';
 import { membersDirectDebitSources } from './direct-debit-source';
 import { membersDirectDebitWaive } from './fees';
@@ -112,6 +113,9 @@ export const membersModule: ModuleManifest = defineModule({
   retentionHolds: membersRetentionHolds,
   retentionDue: membersRetentionDue,
   recordDeleted: membersRecordDeleted,
+  // I-A: Ausgeschaltet schwiege das Modul als Halter und bei `recordDeleted` — jede Mitgliedschaft (auch beendet oder
+  // abgelehnt) trägt Personenbezug und eine Frist, deshalb bleibt es an, solange es eine gibt.
+  canDisable: (deps) => (deps.db.select({ id: memberMemberships.id }).from(memberMemberships).limit(1).get() ? 'hasMemberships' : null),
   recordLabels: membersRecordLabels,
   translatables: membersTranslatables,
   setTranslations: membersSetTranslations,

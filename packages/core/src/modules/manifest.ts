@@ -1,3 +1,4 @@
+import type { PublishedFileSource } from '../published/files';
 import type { SystemMailHook } from '../system-mail';
 import type { z } from 'zod';
 import { validateAuditActions, type AuditActionDef } from '../audit/actions';
@@ -44,7 +45,13 @@ export interface SettingDefinition<T = unknown> {
   default: T;
   /** Nur vom System schreibbar (Import, Export); im Admin lesbar, nicht editierbar. */
   systemOnly?: boolean;
-  /** Ist dieses Modul eingeschaltet, führt es den Wert: `setSetting` lehnt ab, nur `writeSettingInternal` schreibt. */
+  /**
+   * Ist dieses Modul eingeschaltet, führt es den Wert: `setSetting` (auch `settings_set`) lehnt mit `settingManaged`
+   * ab, nur `writeSettingInternal` schreibt. Zwei Fälle: ein Kern-Wert, den ein Modul übernimmt (`organization.iban` →
+   * `finance`), und ein eigener Wert des Moduls, den einer seiner Dienste mit eigenen Prüfungen schreibt
+   * (`finance.sepa.accountId` → `finance`, Befundliste 0.4.0 K1). `apps/kompass/tests/module-settings-owned.test.ts`
+   * hält die Liste vollständig.
+   */
   managedBy?: string;
   /** Nur über die Kanäle `ui` und `system` änderbar, nie über `mcp`. */
   uiOnly?: boolean;
@@ -141,6 +148,8 @@ export interface ImagePlaceDeclaration {
 export interface AssetMediaReference extends MediaReference {
   assetId: string;
 }
+/** Was der Haken `mediaReferences` liefert: dieselbe Form, die Bezeichnung als Schlüssel der Sprachdatei (K2). */
+export type AssetMediaReferenceInput = WithLabelRef<AssetMediaReference>;
 
 /** Eine Stelle, die auf einen fremden Datensatz zeigt. Form wie `MediaReference`. */
 export interface RecordReference {
@@ -220,6 +229,11 @@ export interface ContactRoleDefinition {
    * von Eintritt bis Ende der Mitgliedschaft). Von Hand lehnen die Dienste der Kontakte sie ab.
    */
   managedBy?: string;
+  /**
+   * Die Rolle kann den Verein vertreten (§ 26 BGB): An ihr lässt sich „vertritt nach § 26 BGB“ festhalten
+   * (`contact_roles.represents_association`); bei anderen Rollen lehnen die Dienste der Kontakte das Merkmal ab.
+   */
+  representation?: true;
 }
 
 export interface NavigationItem {
@@ -275,6 +289,12 @@ export interface LinkedDocumentAccess {
   readPermission: string;
   /** Fehlt es, legt das Modul zu diesem Vorgang nichts ab. */
   receivePermission?: string;
+  /**
+   * Der Bezug berechnet statt gespeichert (G7, Kassenprüfung): die Dokumente, die zu dem Vorgang `entityId` gehören —
+   * synchron, nur lesend, ohne Rechteprüfung. Dann prüft die Akte Recht und Zugehörigkeit gegen diese Liste statt gegen
+   * eine Verknüpfung; ablegen lässt sich unter einem berechneten Bezug nichts (kein `receivePermission`).
+   */
+  documentsOf?: (deps: Deps, entityId: string) => readonly string[];
 }
 
 export interface DocumentRenderContext {
@@ -405,6 +425,11 @@ export interface ModuleManifest {
   /** Hilfe je Route des Moduls. Längster `href` gewinnt. */
   help?: readonly HelpEntry[];
   /**
+   * Arbeitsflächen ohne Bereichsnavigation (N1 Gremien, Freigabe Joe 2026-10-28): Routenmuster, auf denen die Schale die
+   * Zweitebene weglässt — die Schiene bleibt. Ein Segment aus einem Stern passt auf genau ein Segment (Mitlauf einer Sitzung).
+   */
+  workspaceRoutes?: readonly string[];
+  /**
    * Die Verwaltungsfläche des Moduls — Stammdaten, die ein Admin pflegt. Die
    * Schale entscheidet, wo sie erscheint; das Modul sagt nur, dass es eine hat.
    * Ohne diese Deklaration müsste der Kern für jedes künftige Modul mit
@@ -430,7 +455,7 @@ export interface ModuleManifest {
    *  „Verwendet in“ der Mediathek. Gefragt wird für viele Assets auf einmal:
    *  Jedes Modul antwortet mit wenigen Abfragen für die ganze Menge, nicht mit
    *  einer je Asset (1546 Dateien kosteten auf dem NAS 7 s, Befund 0.2.4/10). */
-  mediaReferences?: (deps: Deps, assetIds: ReadonlySet<string>) => readonly AssetMediaReference[];
+  mediaReferences?: (deps: Deps, assetIds: ReadonlySet<string>) => readonly AssetMediaReferenceInput[];
   /** Wo dieses Modul auf einen fremden Datensatz zeigt — synchron, nur lesend,
    *  ohne Rechteprüfung. Befragt vor dem Löschen des Datensatzes. Anders als
    *  `retentionHolds` fragt der Haken nicht nach Fristen: Jeder Verweis zählt. */
@@ -516,6 +541,18 @@ export interface ModuleManifest {
    */
   lastPublishedAt?: (deps: Deps) => string | null;
   /**
+   * Eine Datei, die dieses Modul der Webseite liefert: Eine Sicht des Moduls nennt die ID unter einem Schlüssel auf
+   * `…AssetId`, der Export holt die Datei hierüber (`resolvePublishedFile`). Das Modul erkennt seine IDs am Präfix und
+   * liefert nur Dateien, die es selbst als öffentlich führt; sonst `null`. Synchron, nur lesend.
+   */
+  publishedFile?: (deps: Deps, id: string) => PublishedFileSource | null;
+  /**
+   * Seit wann die Zeile `views.<view>:<href>` mit ihrem heutigen Stand auf der Webseite steht (ISO-Zeitpunkt), sonst
+   * `null`. Richtung Modul → Webseite: Das Webseiten-Modul beantwortet es aus seinen Publish-Läufen, ein Fachmodul
+   * fragt über `publishedItemLiveSince`, ohne die Webseite zu kennen.
+   */
+  publishedLiveSince?: (deps: Deps, view: string, href: string) => string | null;
+  /**
    * Beschriftung und Link für eine Entität dieses Moduls, an der eine
    * Wiedervorlage hängt. Richtung Kern → Modul, wie `retentionHolds`: Der Kern
    * fragt nach einem Namen für etwas, das das Modul besitzt. `null` heißt:
@@ -547,6 +584,18 @@ export interface ModuleManifest {
   setTranslations?: (deps: Deps, ctx: CallContext, input: TranslationWrite) => Promise<Result<unknown>> | null;
   /** Kontaktrollen, die dieses Modul beisteuert. */
   contactRoles?: readonly ContactRoleDefinition[];
+  /**
+   * Kontaktrollen, die ein **anderes** Modul definiert und dieses Modul führt, solange es eingeschaltet ist (Gremien
+   * führt `board-member` und `treasurer` der Finanzen). Ausgeschaltet bleibt die Rolle von Hand pflegbar.
+   * `contactRoleManager` wertet es aus; die Registry lehnt eine Rolle ab, die zwei Module führen (`roleManagedTwice`).
+   */
+  managesContactRoles?: readonly string[];
+  /**
+   * Führt das Modul nur einen Teil der Zeilen seiner `managesContactRoles`? Dann meldet es hier, ob diese Zeile ihm
+   * gehört (Gremien: die Zeilen, die eine Amtszeit trägt). Fehlt der Haken, gehören ihm alle Zeilen. Neu anlegen von
+   * Hand bleibt so oder so gesperrt; `contactRoleRowManager` wertet es aus.
+   */
+  ownsContactRoleRow?: (deps: Deps, rowId: string) => boolean;
   /**
    * Darf dieses Modul gerade ausgeschaltet werden? Ein ausgeschaltetes Modul
    * schweigt als Halter — wer festgeschriebene Vorgänge führt, lehnt deshalb
@@ -662,6 +711,11 @@ export function defineModule(manifest: ModuleManifest): ModuleManifest {
     if (role.retention !== 'none' && !RETENTION_CLASSES.includes(role.retention)) throw new Error(`invalid contact role retention class: ${role.retention}`);
     if (role.managedBy !== undefined && !MODULE_KEY.test(role.managedBy)) throw new Error(`invalid contact role manager: ${role.managedBy}`);
   }
+  if (manifest.managesContactRoles !== undefined) {
+    if (manifest.managesContactRoles.length === 0) throw new Error(`empty managesContactRoles: ${manifest.key}`);
+    if (new Set(manifest.managesContactRoles).size !== manifest.managesContactRoles.length) throw new Error(`duplicate managesContactRoles: ${manifest.key}`);
+    for (const key of manifest.managesContactRoles) if (!ROLE_KEY.test(key)) throw new Error(`invalid managed contact role key: ${key}`);
+  }
   const seenTiles = new Set<string>();
   for (const tile of manifest.dashboardTiles ?? []) {
     if (!TILE_KEY.test(tile.key)) throw new Error(`invalid dashboard tile key: ${tile.key}`);
@@ -683,6 +737,7 @@ export function defineModule(manifest: ModuleManifest): ModuleManifest {
     for (const permission of [access.readPermission, access.receivePermission]) {
       if (permission && !manifest.permissions.includes(permission)) throw new Error(`linked document access ${manifest.key}/${access.entityType} names a foreign permission: ${permission}`);
     }
+    if (access.documentsOf && access.receivePermission) throw new Error(`linked document access ${manifest.key}/${access.entityType} is computed and cannot receive`);
   }
   const seenPlaces = new Set<string>();
   for (const place of manifest.imagePlaces ?? []) {

@@ -37,6 +37,10 @@ describe('Seitenbreite über Page', () => {
  * bleiben. Sonst steht sie hier mit Grund: Detail- und Einstellungsseiten mit einer Tabelle als Abschnitt.
  */
 export const WIDE_ALLOWED: Allowlist = {
+  'app/(shell)/admin/governance/page.tsx': 'Einstellungsseite (PanelNav), die Rollenübernahme ist eine Tabelle als Abschnitt (MUSTER § D).',
+  'app/(shell)/governance/circulars/[id]/page.tsx': 'Umlauf (Vorgang, Board 7a): die Antworten sind ein Abschnitt unter dem Antrag; die fünfte Spalte trägt „Antwort eintragen …“ und das Zeilenmenü.',
+  'app/(shell)/governance/page.tsx': 'Übersicht Gremien, Board Phase 2 4a: je Organ eine Karte mit der Platztabelle (Aktionen-Spalte nur für Vorleser) neben der 320-px-Spalte „Nächste Sitzung“ und „Fristen“.',
+  'app/(shell)/governance/organs/[id]/page.tsx': 'Organ (Stammdaten, Board 4b): Ämter und Amtsinhaber sind Nebenlisten unter dem Formular; die fünfte Spalte ist das Zeilenmenü.',
   'app/(shell)/finance/vat/page.tsx': 'Vorgang mit der Kennzahlen-Tabelle als Abschnitt; die fünfte Spalte („abgegeben“) gibt es nur bei offener Berichtigung (Board Umsatzsteuer 8b), sonst vier — `standard` wie Board 8a.',
   'app/(shell)/admin/backup/page.tsx': 'Einstellungsseite (PanelNav) mit der Liste der Backups als Abschnitt; `standard` nach Designer Backup 2026-10-23 (1a).',
   'app/(shell)/admin/dms/page.tsx': 'Einstellungsseite (PanelNav), die Tabellen der Arten und Regeln sind Abschnitte (MUSTER § D).',
@@ -49,6 +53,8 @@ export const WIDE_ALLOWED: Allowlist = {
   'app/(shell)/finance/direct-debit/mandates/[id]/page.tsx': 'Mandat (Vorgang in einer Spalte, Handoff 2a § 1.4): die Rückgaben sind eine Nebenliste unter den Angaben.',
   'app/(shell)/finance/direct-debit/pledges/[id]/page.tsx': 'Zusage (Stammdaten wie das Mitglied, Handoff 2a § 1.5): die Raten sind eine Nebenliste neben dem Formular.',
   'app/(shell)/finance/direct-debit/runs/[id]/page.tsx': 'Einzug (Vorgang, Handoff 2a § 1.3): die Posten mit Summe sind ein Abschnitt unter den Schritten.',
+  'app/(shell)/governance/meetings/[id]/invitation/page.tsx': 'Einladungslauf (wie der Mahnlauf, `standard`): die Vorschau der Empfänger ist ein Abschnitt unter den Schritten; die Spalte „Hinweis“ trägt nur „Anschrift fehlt“.',
+  'app/(shell)/governance/meetings/[id]/page.tsx': 'Sitzung (Vorgang, Board Gremien 2a): die Tagesordnung ist ein Abschnitt unter den Schritten, fünfte Spalte nur für Vorleser (Aktionen).',
 };
 
 /** Die meisten Spaltenköpfe (`TableHead`, `SortableHead`) eines `TableHeader` in diesen Dateien. */

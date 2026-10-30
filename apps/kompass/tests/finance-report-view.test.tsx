@@ -188,6 +188,22 @@ describe('ReportView: Parameter, Hinweise, Rahmen', () => {
 describe('ReportView: Fassungen und Festschreiben', () => {
   const version = (over: Partial<Props['versions'][number]> = {}): Props['versions'][number] => ({ reportId: 'r1', finalizedAt: '2026-02-10T17:30:00.000Z', byName: 'Anna Berger', shortHash: '3e90b4d2', documentNumber: 'FBR-2026-0001', voidedAt: null, voidReason: null, ...over });
 
+  it('after signing the annual accounts shows and downloads the signed version; a web version is a row of its own (Bildabnahme 0.4.5 F-3)', () => {
+    const finalVersion = { reportId: 'r1', finalizedAt: '2026-02-10T17:30:00.000Z', documentId: 'd1', documentNumber: 'FBR-2026-009', shortHash: '3e90b4d2', signedCopy: { documentId: 'd2', documentNumber: 'FBR-2026-010' } };
+    view({ reportKey: 'annualAccounts', stage: 'final', finalVersion, versions: [version({ documentNumber: 'FBR-2026-009', webCopies: [{ documentId: 'd3', documentNumber: 'FBR-2026-011', on: '2026-09-05' }] })] });
+    const sheets = screen.getAllByRole('img');
+    expect(sheets[0]!.getAttribute('src')).toBe('/finance/reports/versions/r1/page/1?document=d2');
+    expect(sheets[0]!.getAttribute('srcset')).toContain('/finance/reports/versions/r1/page/1?document=d2&scale=2 2x');
+    expect(screen.getByRole('link', { name: m('common.pdfPages.open') }).getAttribute('href')).toBe('/finance/reports/versions/r1/file?document=d2');
+    expect(document.querySelector('.font-mono')!.textContent).toContain('FBR-2026-010');
+    const rows = document.querySelectorAll('tbody tr');
+    expect(rows).toHaveLength(2);
+    expect(within(rows[0] as HTMLElement).getByRole('link').getAttribute('href')).toBe('/finance/reports/versions/r1/file');
+    expect(rows[1]!.textContent).toContain('Webfassung vom 05.09.2026');
+    expect(rows[1]!.textContent).toContain('FBR-2026-011');
+    expect(within(rows[1] as HTMLElement).getByRole('link').getAttribute('href')).toBe('/finance/reports/versions/r1/file?document=d3');
+  });
+
   it('lists versions, the withdrawn ones greyed with their reason; empty says so', () => {
     view({ versions: [version({ reportId: 'r2' }), version({ voidedAt: '2026-02-12T09:00:00.000Z', voidReason: 'Ersetzt durch FBR-2026-0002' })] });
     const muted = document.querySelector('tr[data-muted]')!;

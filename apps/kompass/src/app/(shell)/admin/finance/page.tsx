@@ -1,5 +1,6 @@
 import { hasPermission, isModuleEnabled, readSetting, todayIn } from '@kompass/core';
 import {
+  boardRemunerationResolutionInternal,
   getPermissionMatrix,
   getSetupStatus,
   getVatSettings,
@@ -84,7 +85,6 @@ export default async function AdminFinancePage({ searchParams }: { searchParams:
         switches={{
           membershipFeesCertifiable: readSetting<boolean>(deps, 'finance.membershipFeesCertifiable'),
           expenseWaiversEnabled: readSetting<boolean>(deps, 'finance.expenseWaiversEnabled'),
-          mcpHumanOnlyAllowed: readSetting<boolean>(deps, 'finance.mcpHumanOnlyAllowed'),
         }}
         limits={{
           statementSufficesBelowCents: readSetting<number>(deps, 'finance.statementSufficesBelowCents'),
@@ -100,6 +100,7 @@ export default async function AdminFinancePage({ searchParams }: { searchParams:
           basisText: readSetting<string>(deps, 'finance.boardRemunerationBasisText'),
           validFrom: readSetting<string | null>(deps, 'finance.boardRemunerationValidFrom'),
           decidedOn: readSetting<string | null>(deps, 'finance.boardRemunerationDecidedOn'),
+          managed: boardRemunerationResolutionInternal(deps, ctx),
         }}
       />
     );
@@ -129,7 +130,7 @@ export default async function AdminFinancePage({ searchParams }: { searchParams:
       />
     ) : null;
   } else if (panel === 'reports') {
-    content = <ReportsPanel values={{ statuteReference: readSetting<string>(deps, 'finance.reports.statuteReference'), cashReportSignature: readSetting<boolean>(deps, 'finance.reports.cashReportSignature'), treasurerIsStatutoryBoard: readSetting<boolean | null>(deps, 'finance.reports.treasurerIsStatutoryBoard') }} />;
+    content = <ReportsPanel values={{ statuteReference: readSetting<string>(deps, 'finance.reports.statuteReference'), cashReportSignature: readSetting<boolean>(deps, 'finance.reports.cashReportSignature'), treasurerIsStatutoryBoard: readSetting<boolean | null>(deps, 'finance.reports.treasurerIsStatutoryBoard'), assemblyApprovesAccounts: readSetting<boolean>(deps, 'finance.reports.assemblyApprovesAccounts') === true }} />;
   } else if (panel === 'permissions') {
     const matrixRes = await getPermissionMatrix(deps, ctx);
     content = matrixRes.ok ? <PermissionsPanel activities={matrixRes.value.activities} roles={matrixRes.value.roles} /> : null;

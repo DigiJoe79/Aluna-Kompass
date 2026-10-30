@@ -161,6 +161,18 @@ describe('Briefe per E-Mail einreihen', () => {
     expect(!pending.ok && pending.error.type === 'conflict' && pending.error.code).toBe('mailNotResendable');
   });
 
+  it('lehnt erneutes Senden ab, solange zum selben Dokument und Empfänger schon eine Sendung wartet (App-B2)', async () => {
+    const { deps, ctx } = setup();
+    const doc = await letterTo(deps, ctx, await contactWith(deps, ctx, 'Mail', 'zwei@example.org'));
+    unwrap(await sendDocuments(deps, ctx, { documentIds: [doc] }));
+    const [first] = outbox(deps);
+    deps.db.update(dmsMailOutbox).set({ status: 'failed', attempts: 3, lastErrorCode: 'rejected' }).where(eq(dmsMailOutbox.id, first!.id)).run();
+    unwrap(await resendDocumentEmail(deps, ctx, { outboxId: first!.id }));
+    const twice = await resendDocumentEmail(deps, ctx, { outboxId: first!.id });
+    expect(!twice.ok && twice.error.type === 'conflict' && twice.error.code).toBe('alreadyQueued');
+    expect(outbox(deps)).toHaveLength(2);
+  });
+
   it('stellt auf Post um und reiht danach nicht wieder ein', async () => {
     const { deps, ctx } = setup();
     const doc = await letterTo(deps, ctx, await contactWith(deps, ctx, 'Mail', 'kim.mail@example.org'));

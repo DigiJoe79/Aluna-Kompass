@@ -1,4 +1,4 @@
-import { expectedVersionField, invalid, isoNow, notFound, ok, requirePermission, staleVersion, todayIn, validate, type CallContext, type DbOrTx, type Deps, type Result } from '@kompass/core';
+import { expectedVersionField, invalid, isoNow, notFound, ok, requirePermission, staleVersion, timeZoneOf, todayIn, validate, type CallContext, type DbOrTx, type Deps, type Result } from '@kompass/core';
 import { contactRoles, contacts, displayName } from '@kompass/module-contacts';
 import { getDocumentRecord, receiveGeneratedUpload } from '@kompass/module-dms';
 import { and, desc, eq, inArray, isNull, lte, or, gte } from 'drizzle-orm';
@@ -8,6 +8,8 @@ import { financeConflict, requireHumanChannelFinance } from '../errors';
 import { requireFinanceRead } from '../ledger/access';
 import { fiscalYearStatusInternal } from '../ledger/fiscal-years';
 import { financeAssemblyDischarges, financeAssemblyResults, financeAuditReports, financeFiscalYears, type FinanceFiscalYearRow } from '../schema';
+import { formerlyGovernedAssemblyOf, governedAssemblyOf } from '../sources';
+import { zonedDayOf } from '../zoned-days';
 import type { AssemblyResultView, AssemblyWarning, DischargeOutcome } from './types';
 
 export type { AssemblyResultView, DischargeOutcome } from './types';
@@ -81,51 +83,65 @@ function loadYear(db: DbOrTx, id: string): FinanceFiscalYearRow | null {
   return db.select().from(financeFiscalYears).where(eq(financeFiscalYears.id, id)).get() ?? null;
 }
 
-/** Das Ergebnis eines Jahres mit Zählung, ohne Rechteprüfung — `null` ohne Eintrag. */
-export function assemblyOfYearInternal(db: DbOrTx, fiscalYearId: string): AssemblyResultView | null {
-  const row = db.select().from(financeAssemblyResults).where(eq(financeAssemblyResults.fiscalYearId, fiscalYearId)).get();
+type AssemblyCore = Pick<AssemblyResultView, 'assemblyOn' | 'minutesDocumentId' | 'minutesDocumentIds' | 'accountsApproved' | 'dischargeMode' | 'collectiveOutcome' | 'discharges' | 'version' | 'updatedAt' | 'updatedByUserId' | 'managed'> & { sourceWarnings?: AssemblyWarning[] };
+
+/**
+ * Das Ergebnis eines Jahres mit Zählung, ohne Rechteprüfung — `null` ohne Eintrag. Zuerst die registrierte Quelle
+ * (Gremien, G7): Liefert sie etwas, gilt das, egal in welcher Reihenfolge Abschluss und MV liegen; die Tabellen der
+ * Finanzen bleiben dann unberührt (Anti-Ziel 1 der Spec Gremien). Sonst das von Hand gespeicherte Ergebnis.
+ * `timeZone`: der Prüfbericht ist ein Zeitstempel — verglichen wird sein Tag in der Zone des Vereins (F-B3).
+ */
+export function assemblyOfYearInternal(deps: Deps, db: DbOrTx, fiscalYearId: string, timeZone: string): AssemblyResultView | null {
   const year = loadYear(db, fiscalYearId);
-  if (!row || !year) return null;
+  if (!year) return null;
+  const governed = governedAssemblyOf(deps, db, year);
+  if (governed) {
+    const { source, warnings: sourceWarnings, ...rest } = governed;
+    return withCounts(db, fiscalYearId, timeZone, { ...rest, sourceWarnings, version: year.updatedAt, updatedAt: year.updatedAt, updatedByUserId: null, managed: source });
+  }
+  const row = db.select().from(financeAssemblyResults).where(eq(financeAssemblyResults.fiscalYearId, fiscalYearId)).get();
+  if (!row) return null;
   const stored = new Map(db.select().from(financeAssemblyDischarges).where(eq(financeAssemblyDischarges.fiscalYearId, fiscalYearId)).all().map((d) => [d.contactId, d]));
   const individual = row.dischargeMode === 'individual';
   const discharges = individual ? assemblyPersonsInternal(db, year).map((p) => ({ contactId: p.contactId, outcome: stored.get(p.contactId)?.outcome ?? null, decidedOn: stored.get(p.contactId)?.decidedOn ?? null })) : [];
-  const granted = individual ? discharges.filter((d) => d.outcome === 'granted').length : row.collectiveOutcome === 'granted' ? 1 : 0;
-  const total = individual ? discharges.length : 1;
-  // Hinweis, keine Sperre (Entscheidung c): Liegt die MV vor dem abgelegten Prüfbericht, stimmt meist das Datum nicht.
-  // Verglichen wird mit dem Bericht, nicht mit einem Nachtrag — der folgt bei einer Nachprüfung der MV.
-  const report = db.select({ filedAt: financeAuditReports.filedAt }).from(financeAuditReports).where(and(eq(financeAuditReports.fiscalYearId, fiscalYearId), eq(financeAuditReports.kind, 'report'), eq(financeAuditReports.state, 'filed'))).orderBy(desc(financeAuditReports.filedAt)).get();
-  const auditReportFiledAt = report?.filedAt ?? null;
-  const warnings: AssemblyWarning[] = auditReportFiledAt && row.assemblyOn < auditReportFiledAt.slice(0, 10) ? ['assemblyBeforeAuditReport'] : [];
-  return {
-    fiscalYearId,
+  return withCounts(db, fiscalYearId, timeZone, {
     assemblyOn: row.assemblyOn,
     minutesDocumentId: row.minutesDocumentId,
     accountsApproved: row.accountsApproved,
     dischargeMode: row.dischargeMode,
     collectiveOutcome: row.collectiveOutcome,
     discharges,
-    warnings,
-    auditReportFiledAt,
-    granted,
-    total,
-    complete: total > 0 && granted === total,
     version: row.updatedAt,
     updatedAt: row.updatedAt,
     updatedByUserId: row.updatedByUserId,
-  };
+    managed: null,
+  });
+}
+
+function withCounts(db: DbOrTx, fiscalYearId: string, timeZone: string, { sourceWarnings = [], ...core }: AssemblyCore): AssemblyResultView {
+  const individual = core.dischargeMode === 'individual';
+  const granted = individual ? core.discharges.filter((d) => d.outcome === 'granted').length : core.collectiveOutcome === 'granted' ? 1 : 0;
+  const total = individual ? core.discharges.length : 1;
+  // Hinweis, keine Sperre (Entscheidung c): Liegt die MV vor dem abgelegten Prüfbericht, stimmt meist das Datum nicht.
+  // Verglichen wird mit dem Bericht, nicht mit einem Nachtrag — der folgt bei einer Nachprüfung der MV.
+  const report = db.select({ filedAt: financeAuditReports.filedAt }).from(financeAuditReports).where(and(eq(financeAuditReports.fiscalYearId, fiscalYearId), eq(financeAuditReports.kind, 'report'), eq(financeAuditReports.state, 'filed'))).orderBy(desc(financeAuditReports.filedAt)).get();
+  const auditReportFiledAt = report?.filedAt ?? null;
+  const warnings: AssemblyWarning[] = auditReportFiledAt && core.assemblyOn < zonedDayOf(auditReportFiledAt, timeZone) ? ['assemblyBeforeAuditReport'] : [];
+  warnings.push(...sourceWarnings);
+  return { fiscalYearId, ...core, warnings, auditReportFiledAt, granted, total, complete: total > 0 && granted === total };
 }
 
 const yearSchema = z.object({ fiscalYearId: z.string().min(1) });
 
 /** `finance.read`: das Ergebnis der MV zum Jahr und die Personen, über deren Entlastung sie entscheidet. */
-export async function getAssemblyResult(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<{ result: AssemblyResultView | null; persons: AssemblyPerson[] }>> {
+export async function getAssemblyResult(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<{ result: AssemblyResultView | null; persons: AssemblyPerson[]; formerlyManaged: { label: string } | null }>> {
   const denied = requireFinanceRead(ctx, 'read');
   if (denied) return denied;
   const parsed = validate(deps, yearSchema, input);
   if (!parsed.ok) return parsed;
   const year = loadYear(deps.db, parsed.value.fiscalYearId);
   if (!year) return notFound('financeFiscalYear', parsed.value.fiscalYearId);
-  return ok({ result: assemblyOfYearInternal(deps.db, year.id), persons: assemblyPersonsInternal(deps.db, year) });
+  return ok({ result: assemblyOfYearInternal(deps, deps.db, year.id, timeZoneOf(deps)), persons: assemblyPersonsInternal(deps.db, year), formerlyManaged: formerlyGovernedAssemblyOf(deps, deps.db, year) });
 }
 
 const outcome = z.enum(['granted', 'refused', 'postponed']);
@@ -156,6 +172,9 @@ export async function saveAssemblyResult(deps: Deps, ctx: CallContext, input: un
   const v = parsed.value;
   const year = loadYear(deps.db, v.fiscalYearId);
   if (!year) return notFound('financeFiscalYear', v.fiscalYearId);
+  // Führt Gremien das Ergebnis, ändert es sich nur dort — auch im offenen Jahr (G7, vor der Prüfung „abgeschlossen“).
+  const governed = governedAssemblyOf(deps, deps.db, year);
+  if (governed) return financeConflict('assemblyManagedByGovernance', { label: governed.source.label });
   if (fiscalYearStatusInternal(deps.db, year.id) !== 'closed') return financeConflict('assemblyYearOpen', { designation: year.designation });
   if (v.assemblyOn <= year.endsOn) return invalid([{ path: 'assemblyOn', message: 'notAfterYearEnd' }]);
   if (v.assemblyOn > todayIn(deps)) return invalid([{ path: 'assemblyOn', message: 'inFuture' }]);
@@ -173,6 +192,10 @@ export async function saveAssemblyResult(deps: Deps, ctx: CallContext, input: un
     const stale = staleVersion(v.expectedVersion, before.updatedAt);
     if (stale) return stale;
   }
+
+  // Was vorher galt, für das Protokoll beim Überschreiben (V-7).
+  const was = before ? assemblyOfYearInternal(deps, deps.db, year.id, timeZoneOf(deps)) : null;
+  const auditView = (r: AssemblyResultView) => ({ fiscalYearId: year.id, assemblyOn: r.assemblyOn, dischargeMode: r.dischargeMode, accountsApproved: r.accountsApproved, granted: r.granted, total: r.total, minutesDocumentId: r.minutesDocumentId });
 
   return deps.db.transaction((tx: DbOrTx) => {
     const now = isoNow(deps.clock);
@@ -193,9 +216,9 @@ export async function saveAssemblyResult(deps: Deps, ctx: CallContext, input: un
       if (known) tx.update(financeAssemblyDischarges).set({ outcome: d.outcome, decidedOn, updatedAt: now }).where(and(eq(financeAssemblyDischarges.fiscalYearId, year.id), eq(financeAssemblyDischarges.contactId, d.contactId))).run();
       else tx.insert(financeAssemblyDischarges).values({ fiscalYearId: year.id, contactId: d.contactId, outcome: d.outcome, decidedOn, updatedAt: now }).run();
     }
-    const view = assemblyOfYearInternal(tx, year.id)!;
+    const view = assemblyOfYearInternal(deps, tx, year.id, timeZoneOf(deps))!;
     const open = view.dischargeMode === 'individual' ? view.discharges.filter((d) => d.outcome === null).length : view.collectiveOutcome === null ? 1 : 0;
-    financeAudit(tx, deps, ctx, { action: 'finance.assembly.save', entity: 'financeAssemblyResult', id: year.id, after: { fiscalYearId: year.id, assemblyOn: v.assemblyOn, dischargeMode: v.dischargeMode, accountsApproved: fields.accountsApproved, granted: view.granted, total: view.total }, params: { designation: year.designation, dischargeMode: v.dischargeMode, granted: view.granted, open } });
+    financeAudit(tx, deps, ctx, { action: 'finance.assembly.save', entity: 'financeAssemblyResult', id: year.id, ...(was ? { before: auditView(was) } : {}), after: auditView(view), params: { designation: year.designation, dischargeMode: v.dischargeMode, granted: view.granted, open } });
     return ok(view);
   });
 }
@@ -222,8 +245,10 @@ export async function fileAssemblyMinutes(deps: Deps, ctx: CallContext, input: u
   if (!isPdf(v.bytes)) return invalid([{ path: 'bytes', message: 'notPdf' }]);
   const year = loadYear(deps.db, v.fiscalYearId);
   if (!year) return notFound('financeFiscalYear', v.fiscalYearId);
-  const result = assemblyOfYearInternal(deps.db, year.id);
+  const result = assemblyOfYearInternal(deps, deps.db, year.id, timeZoneOf(deps));
   if (!result) return financeConflict('assemblyNotRecorded', { designation: year.designation });
+  // Führt Gremien das Ergebnis, gehört das Protokoll zur Sitzung dort (G7).
+  if (result.managed) return financeConflict('assemblyManagedByGovernance', { label: result.managed.label });
   const filed = await receiveGeneratedUpload(deps, ctx, {
     bytes: v.bytes,
     typeKey: 'minutes',
@@ -233,7 +258,7 @@ export async function fileAssemblyMinutes(deps: Deps, ctx: CallContext, input: u
     afterReceive: (tx, doc) => {
       tx.update(financeAssemblyResults).set({ minutesDocumentId: doc.id, updatedAt: isoNow(deps.clock), updatedByUserId: ctx.userId ?? 'system' }).where(eq(financeAssemblyResults.fiscalYearId, year.id)).run();
       financeAudit(tx, deps, ctx, { action: 'finance.assembly.minutesFile', entity: 'financeAssemblyResult', id: year.id, after: { fiscalYearId: year.id, minutesDocumentId: doc.id }, params: { designation: year.designation, documentNumber: doc.number ?? '' } });
-      return assemblyOfYearInternal(tx, year.id)!;
+      return assemblyOfYearInternal(deps, tx, year.id, timeZoneOf(deps))!;
     },
   });
   if (!filed.ok) return filed;

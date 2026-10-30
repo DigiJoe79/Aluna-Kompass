@@ -144,6 +144,23 @@ das Modul sie veröffentlicht — ein Tier mit Profil und Fotos, ein Projekt mit
 Beschreibung und Verweis. Nicht mehr: Was ein Modul nicht freigibt, kommt
 nicht an.
 
+**Jahresrechnung.** Mit `uses: ['finance']` bekommt das Template die Sicht
+`annualAccounts`: je auf der Webseite bereitgestellter Jahresrechnung eine
+Zeile, neuestes Jahr zuerst.
+
+| Feld | Inhalt |
+|---|---|
+| `year` | Bezeichnung des Geschäftsjahres, etwa `2026` |
+| `title` | „Jahresrechnung {Jahr}“, wie auf dem PDF |
+| `finalizedOn` | Tag der Festschreibung (`JJJJ-MM-TT`) |
+| `pdfAssetId` | das PDF; unter `assets` mit `mimeType` `application/pdf` und Dateinamen, die Datei liegt neben den Bildern |
+| `corrected` | `true` bei einer berichtigten Fassung |
+| `replacesFinalizedOn` | bei einer berichtigten Fassung der Tag der ersetzten, sonst `null` |
+| `webVersionOn` | Tag der Webfassung nach dem Widerruf einer Einwilligung, sonst `null` |
+
+Das Template setzt den Link selbst, etwa „Jahresbericht 2026 (PDF)“ auf einer
+Seite zur Transparenz. Namen oder Beträge stehen nicht in der Sicht, nur im PDF.
+
 ## Das Template ändern
 
 Ein Template lebt. Wenn Sie Felder ändern, gleicht Kompass beim nächsten

@@ -19,7 +19,7 @@ import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useFileDownload } from '@/lib/use-file-download';
 import { removeAuditorAction, startPackageRunAction } from './actions';
-import { AuditorDialog, type AuditorDialogValue } from './auditor-dialog';
+import { AuditorDialog, type AuditorCandidateView, type AuditorDialogValue } from './auditor-dialog';
 import { joinNames } from './audit-header';
 import { accessGap } from './auditor-hints';
 import { EndAccessDialog } from './end-access-dialog';
@@ -37,6 +37,7 @@ export function AuditorsSection({
   year,
   auditors,
   documents,
+  candidates = [],
   canManage,
   canManageUsers,
   canCreateContact,
@@ -49,6 +50,8 @@ export function AuditorsSection({
   auditors: AuditorView[];
   /** Erklärung und Protokoll für den Dialog, aufgelöst mit dem Recht des Aufrufers. */
   documents: Record<string, PickedDocument>;
+  /** In Gremien gewählte Kassenprüfer als Vorschlag beim Eintragen (G7); ohne Gremien leer. */
+  candidates?: readonly AuditorCandidateView[];
   canManage: boolean;
   canManageUsers: boolean;
   canCreateContact: boolean;
@@ -174,7 +177,7 @@ export function AuditorsSection({
       if (packageRunning) return <span className="text-meta text-muted-ink">{t('auditors.packageRunning')}</span>;
       // Ein Papier-Prüfer braucht nur die Mappe: derselbe Lauf, benannt nach dem, was er bekommt (Designer Runde 4).
       return (
-        <Button type="button" variant="outline" size="sm" onClick={() => void startPackage()}>
+        <Button type="button" variant="outline" size="sm" disabled={start.pending} aria-busy={start.pending || undefined} onClick={() => void startPackage()}>
           {t('auditors.folderCreate')}
         </Button>
       );
@@ -270,7 +273,7 @@ export function AuditorsSection({
       </FormCardBody>
       {canManage ? (
         <>
-          <AuditorDialog open={editing !== null} onOpenChange={(open) => (open ? null : setEditing(null))} year={year} auditor={editing === 'new' ? null : editing} canCreateContact={canCreateContact} finalFocus={returnTo} />
+          <AuditorDialog open={editing !== null} onOpenChange={(open) => (open ? null : setEditing(null))} year={year} auditor={editing === 'new' ? null : editing} canCreateContact={canCreateContact} candidates={candidates} finalFocus={returnTo} />
           {ending ? <EndAccessDialog open onOpenChange={(open) => (open ? null : setEnding(null))} auditor={{ id: ending.id, name: ending.contactName }} finalFocus={returnTo} /> : null}
           {removing ? (
             <ConfirmDialog

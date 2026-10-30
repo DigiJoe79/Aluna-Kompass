@@ -8,7 +8,7 @@ import type Database from 'better-sqlite3';
 import { openDatabase, runMigrations } from './db/client';
 import type { AppEnv, Deps } from './deps';
 import { noopDocumentEngine, type DocumentEngine } from './documents/engine';
-import { createFileStore, type FileStore } from './files/store';
+import { createFileStore, sweepFileStoreTemp, type FileStore } from './files/store';
 import type { DocumentTemplate, ModuleManifest } from './modules/manifest';
 import { createRegistry } from './modules/registry';
 import { readLocales } from './i18n/locales';
@@ -47,6 +47,8 @@ export interface CreateDepsOptions {
   pdf?: PdfTools;
   /** Ohne Angabe ist Mailversand nicht eingerichtet (`off`). */
   mail?: MailTransport;
+  /** `KOMPASS_PUBLIC_URL` — Adresse der Installation für Links in Mails; ohne Angabe keine Links. */
+  publicUrl?: string | null;
   clock?: Clock;
   /**
    * Grundausstattung der eingeschalteten Module beim Öffnen nachliefern
@@ -54,6 +56,12 @@ export interface CreateDepsOptions {
    * betroffen; Skripte, die eine halbfertige Datenbank öffnen, schalten es ab.
    */
   runInstalls?: boolean;
+  /**
+   * Temp-Verzeichnisse der Ablagen beim Öffnen räumen (Vorgabe: ja). Nur das
+   * erste Öffnen im Prozess darf es: Ein zweites (E2E-Reset) nähme einem
+   * laufenden Schreiben die Temp-Datei weg.
+   */
+  sweepTemp?: boolean;
 }
 
 export type AppDeps = Deps & {
@@ -132,11 +140,14 @@ export function createDeps(opts: CreateDepsOptions): AppDeps {
       .map((manifest) => {
         const dir = path.join(opts.dataPath, manifest.key);
         ensureWritableDir(dir);
+        // Reste eines Absturzes mitten im Schreiben (`files/store.ts`): beim Start, nie während des Betriebs.
+        if (opts.sweepTemp !== false) sweepFileStoreTemp(dir);
         return [manifest.key, createFileStore(dir)] as const;
       }),
   );
   const mediaDir = mediaPathIn(opts.dataPath);
   ensureWritableDir(mediaDir);
+  if (opts.sweepTemp !== false) sweepFileStoreTemp(mediaDir);
   const deps: AppDeps = {
     db: handle.db,
     sqlite: handle.sqlite,
@@ -153,6 +164,7 @@ export function createDeps(opts: CreateDepsOptions): AppDeps {
     textExtraction: opts.textExtraction ?? noopTextExtraction,
     pdf: opts.pdf ?? noopPdfTools,
     mail: opts.mail ?? noopMailTransport,
+    publicUrl: opts.publicUrl ?? null,
     locales: () => readLocales(deps),
     dataPath: opts.dataPath,
     databasePath,
@@ -190,6 +202,8 @@ const envSchema = z.object({
   KOMPASS_HANDBOOK_DIR: z.string().min(1).optional(),
   /** Ausweg: einmal ohne Backup vor Update starten (Spec Backup § Backup vor Update). */
   KOMPASS_SKIP_UPDATE_BACKUP: z.enum(['0', '1']).optional(),
+  /** Adresse, unter der Menschen Kompass aufrufen (Links in Mails), etwa `https://kompass.example.org`. */
+  KOMPASS_PUBLIC_URL: z.url({ protocol: /^https?$/ }).optional(),
 });
 
 export interface RuntimeEnv {
@@ -207,6 +221,8 @@ export interface RuntimeEnv {
   handbookDir: string | null;
   /** `KOMPASS_SKIP_UPDATE_BACKUP=1`: Start ohne Backup vor Update. */
   skipUpdateBackup: boolean;
+  /** `KOMPASS_PUBLIC_URL` ohne `/` am Ende; `null` ohne Angabe. */
+  publicUrl: string | null;
 }
 
 export function readEnv(source: Record<string, string | undefined> = process.env): RuntimeEnv {
@@ -226,5 +242,6 @@ export function readEnv(source: Record<string, string | undefined> = process.env
     documentTemplatesDir: v.KOMPASS_DOCUMENT_TEMPLATES_DIR ?? null,
     handbookDir: v.KOMPASS_HANDBOOK_DIR ?? null,
     skipUpdateBackup: v.KOMPASS_SKIP_UPDATE_BACKUP === '1',
+    publicUrl: v.KOMPASS_PUBLIC_URL ? v.KOMPASS_PUBLIC_URL.replace(/\/+$/, '') : null,
   };
 }

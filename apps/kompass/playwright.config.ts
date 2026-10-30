@@ -21,6 +21,9 @@ const projects = [KERN, ...modules].map((name) => ({ name, testMatch: testMatchF
  * jeweiligen Server, deshalb stören sich die Worker nicht. `fullyParallel`
  * bleibt aus: Verteilt werden Dateien, nicht Fälle.
  */
+// Einmal je Lauf: Die Konfiguration lädt zuerst der Hauptprozess, die Worker erben die Variable.
+process.env.E2E_RUN_ID ??= String(Date.now());
+
 export default defineConfig<{ serverKind: ServerKind }>({
   testDir: './e2e',
   projects,

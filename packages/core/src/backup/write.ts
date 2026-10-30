@@ -11,6 +11,7 @@ import type { AppEnv } from '../deps';
 import { newId } from '../ids';
 import { enabledManifests } from '../modules/service';
 import { BACKUP_FORMAT, type BackupCounts, type BackupManifest } from './manifest';
+import { FILE_STORE_TEMP_DIR } from '../files/store';
 import { BACKUP_WORK_PREFIX } from './paths';
 
 /** Wo die Datenbank im Archiv liegt — dasselbe Layout wie unter `dataPath`. */
@@ -74,7 +75,8 @@ interface PlannedFile {
 
 /**
  * Alles unter `dataPath`, außer: Punkt-Einträge der obersten Ebene (Rückfahrkarten eines Imports, Betriebsgeschiebe —
- * sonst trüge jedes Backup den Bestand des vorigen), `core/db` (die Datenbank kommt aus der Kopie) und WAL-Reste.
+ * sonst trüge jedes Backup den Bestand des vorigen), `core/db` (die Datenbank kommt aus der Kopie), WAL-Reste und die
+ * Temp-Verzeichnisse der Dateiablagen (werdende Dateien, `files/store.ts`).
  */
 async function collectFiles(dataPath: string): Promise<PlannedFile[]> {
   const files: PlannedFile[] = [];
@@ -90,7 +92,7 @@ async function collectFiles(dataPath: string): Promise<PlannedFile[]> {
       if (rel === '' && entry.name.startsWith('.')) continue;
       const childRel = rel === '' ? entry.name : path.join(rel, entry.name);
       if (entry.isDirectory()) {
-        if (childRel === DB_DIR) continue;
+        if (childRel === DB_DIR || entry.name === FILE_STORE_TEMP_DIR) continue;
         await walk(childRel);
       } else if (entry.isFile()) {
         if (/\.db-(wal|shm)$/.test(entry.name)) continue;

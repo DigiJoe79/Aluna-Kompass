@@ -1,6 +1,6 @@
 import { recordAudit, type AuditParam, type CallContext, type DbOrTx, type Deps } from '@kompass/core';
 
-export type FinanceEntity = 'financeAccount' | 'financeCategory' | 'financePurpose' | 'financeFiscalYear' | 'financePeriodEvent' | 'financeDatedValue' | 'financeEntry' | 'financeEntryDocument' | 'financeOpenItem' | 'financeAllocationCorrection' | 'financeEntryJustification' | 'financeNotReturnMark' | 'financeProjectSettings' | 'financeCashCount' | 'financeSetup' | 'financeImportRun' | 'financeRawTransaction' | 'financeImportCandidate' | 'financeImportProfile' | 'financeImportRule' | 'financeContactBankAccount' | 'financeNotice' | 'financeConfirmation' | 'financeSigner' | 'financeInKindDetails' | 'financeConfirmationRun' | 'financeConfirmationRunItem' | 'financeExpenseClaim' | 'financeExpensePosition' | 'financeContactWaiverTerms' | 'financePartnerProfile' | 'financePartnerNotice' | 'financePartnerPayment' | 'financePartnerPaymentPosition' | 'financePartnerPaidLine' | 'financePartnerEvidence' | 'financeReserve' | 'financeReserveMovement' | 'financePurposeTransfer' | 'financeMandate' | 'financePledge' | 'financePrenotification' | 'financeDirectDebitRun' | 'financeDirectDebitReturn' | 'financeReport' | 'financeReportRelease' | 'financeOtherAsset' | 'financeAuditAuditor' | 'financeAuditBaseline' | 'financeAuditSample' | 'financeAuditSectionReview' | 'financeAuditRemark' | 'financeAuditReport' | 'financeAccountStatementDocument' | 'financeAccountYearConfirmation' | 'financeClosingConfirmation' | 'financeAssemblyResult' | 'financeAuditCarryOver' | 'financeHandover' | 'financeVatReturn' | 'financeVatFiling' | 'financeDataExport' | 'financeTaxPeriod' | 'financeContactTaxDetails';
+export type FinanceEntity = 'financeAccount' | 'financeCategory' | 'financePurpose' | 'financeFiscalYear' | 'financePeriodEvent' | 'financeDatedValue' | 'financeEntry' | 'financeEntryDocument' | 'financeOpenItem' | 'financeAllocationCorrection' | 'financeEntryJustification' | 'financeNotReturnMark' | 'financeProjectSettings' | 'financeCashCount' | 'financeSetup' | 'financeImportRun' | 'financeRawTransaction' | 'financeImportCandidate' | 'financeImportProfile' | 'financeImportRule' | 'financeContactBankAccount' | 'financeNotice' | 'financeConfirmation' | 'financeSigner' | 'financeInKindDetails' | 'financeConfirmationRun' | 'financeConfirmationRunItem' | 'financeExpenseClaim' | 'financeExpensePosition' | 'financeContactWaiverTerms' | 'financePartnerProfile' | 'financePartnerNotice' | 'financePartnerPayment' | 'financePartnerPaymentPosition' | 'financePartnerPaidLine' | 'financePartnerEvidence' | 'financeReserve' | 'financeReserveMovement' | 'financePurposeTransfer' | 'financeMandate' | 'financePledge' | 'financePrenotification' | 'financeDirectDebitRun' | 'financeDirectDebitReturn' | 'financeReport' | 'financeReportRelease' | 'financeOtherAsset' | 'financeAuditAuditor' | 'financeAuditBaseline' | 'financeAuditSample' | 'financeAuditSectionReview' | 'financeAuditRemark' | 'financeAuditReport' | 'financeAccountStatementDocument' | 'financeAccountYearConfirmation' | 'financeClosingConfirmation' | 'financeAssemblyResult' | 'financeAuditCarryOver' | 'financeHandover' | 'financeVatReturn' | 'financeVatFiling' | 'financeDataExport' | 'financeTaxPeriod' | 'financeContactTaxDetails' | 'financeNameConsent' | 'financeAnnualAccountsNote' | 'financeReportSignature' | 'financeAnnualAccountsPublication' | 'financeFundsUseOpening';
 
 /**
  * Was vom Finanzmodul ins Änderungsprotokoll darf — je Entität eine Liste, und
@@ -18,7 +18,7 @@ export const AUDIT_FIELDS: Record<FinanceEntity, readonly string[]> = {
   // greift auf jede Zeichenfolge, die „iban“ enthält — auch als Teilstring
   // eines Flags, das selbst keine IBAN trägt.
   financeAccount: ['kind', 'isMain', 'isActive', 'importFormat', 'importProfileId', 'openingBalanceCents', 'openingDate', 'bankDetailsChanged'],
-  financeCategory: ['key', 'direction', 'sphere', 'incomeKind', 'costFunction', 'allowanceKind', 'statementSuffices', 'defaultTaxCode', 'inputTaxDeductible', 'countsTowardTurnover', 'isAssetSale', 'thresholdExclusion', 'isActive'],
+  financeCategory: ['key', 'direction', 'sphere', 'incomeKind', 'costFunction', 'allowanceKind', 'statementSuffices', 'defaultTaxCode', 'inputTaxDeductible', 'countsTowardTurnover', 'isAssetSale', 'thresholdExclusion', 'donationPlatform', 'isActive'],
   // F8b Annahme 16: `reopenedAt` dazu — nie die Begründung des Wiederöffnens selbst.
   financePurpose: ['projectId', 'targetCents', 'abroad', 'carryForwardCents', 'fulfilledAt', 'dissolvedAt', 'isActive', 'reopenedAt'],
   financeFiscalYear: ['startsOn', 'endsOn', 'designation'],
@@ -107,19 +107,28 @@ export const AUDIT_FIELDS: Record<FinanceEntity, readonly string[]> = {
   // Nur das Datum der Vereinbarung, nie ihr Wortlaut.
   financeContactWaiverTerms: ['agreedOn'],
   // Rechenschaft D2: Finanzamt, Steuernummer und Zweck einer Körperschaft — nur, *welche* Angaben es gibt, nie die Angaben.
-  financeContactTaxDetails: ['hasTaxOffice', 'hasTaxNumber', 'hasBeneficiaryPurpose', 'reverseCharge', 'reverseChargeDecline'],
+  financeContactTaxDetails: ['hasTaxOffice', 'hasTaxNumber', 'hasBeneficiaryPurpose', 'reverseCharge', 'reverseChargeDecline', 'legalEntity'],
+  // Jahresrechnung (0.4.5): Art, Tag und Jahr der Einwilligung — nie der Kontakt, nie das Dokument.
+  financeNameConsent: ['kind', 'on', 'fromYear', 'withDocument'],
+  financeReportSignature: ['reportId', 'via', 'signedOn', 'documentNumber', 'signerUserId', 'scanDocumentNumber'],
+  financeAnnualAccountsPublication: ['reportId', 'fiscalYearId', 'earlyKind', 'corrected', 'webDocumentNumber', 'webVersionOn', 'withdrawnAt', 'withdrawnCause'],
+  // Nur die Länge der Erläuterung, nie der Text.
+  financeAnnualAccountsNote: ['fiscalYearId', 'length'],
   // F7 — nie die Kontakt-ID, nie eine Notiz (Spec 10.3, Global Constraints).
   financePartnerProfile: ['status', 'usualBasis', 'usualProofMonths', 'isActive'],
   financePartnerNotice: ['partnerId', 'kind', 'noticeDate', 'receivedOn', 'supersededOn', 'voided'],
   // Nie Verwendungszweck, Begründungen (Übersteuerung, Warnungen, Ablehnung) oder Kontakt-ID.
-  financePartnerPayment: ['state', 'number', 'basis', 'basisOverridden', 'assetEndowment', 'retroactive', 'positionCount', 'totalCents', 'proofDueOn', 'submittedAt', 'approvedAt', 'acknowledgedAt', 'openItemId', 'channel', 'copiedFromPaymentId'],
+  financePartnerPayment: ['state', 'number', 'basis', 'basisOverridden', 'assetEndowment', 'retroactive', 'positionCount', 'totalCents', 'proofDueOn', 'submittedAt', 'approvedAt', 'acknowledgedAt', 'openItemId', 'channel', 'copiedFromPaymentId', 'resolutionId'],
   financePartnerPaymentPosition: ['paymentId', 'kind', 'amountCents', 'categoryId', 'projectId', 'purposeId', 'goodsLineId'],
   financePartnerPaidLine: ['paymentId', 'paidLineId'],
   // Nie die Erläuterung selbst.
   financePartnerEvidence: ['paymentId', 'kind', 'foreignLanguage', 'coveredCents', 'documentId'],
   // F8b — nie Zweckname, Verwendungszweck oder Notiz (Annahme 16).
-  financeReserve: ['kind', 'purposeId', 'carryForwardCents', 'carryForwardDate', 'isActive'],
+  // `resolutionId`: welcher Beschluss in Gremien verknüpft oder entfernt wurde (V-7).
+  financeReserve: ['kind', 'purposeId', 'carryForwardCents', 'carryForwardDate', 'isActive', 'resolutionId'],
   financeReserveMovement: ['reserveId', 'kind', 'movementDate', 'amountCents', 'forFiscalYearId'],
+  // M1: Anfangsvortrag der Mittelverwendung — Jahr und Beträge, nie ein Belegtitel.
+  financeFundsUseOpening: ['offset', 'endsOn', 'revenueCents', 'amountCents'],
   // Nie Begründung oder Ablehnungsgrund (Spec 10.3).
   financePurposeTransfer: ['state', 'number', 'fromPurposeId', 'toPurposeId', 'amountCents', 'transferDate', 'approvedAt', 'rejected', 'channel'],
   // L1 — das Mandat nennt seine Referenz, nie Kontoinhaber, IBAN oder BIC. `endCause` und `changedField` sind Codes.

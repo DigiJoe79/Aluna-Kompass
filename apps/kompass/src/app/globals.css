@@ -466,6 +466,11 @@ body:has(#help-panel) table:has([data-col="title"]) > tfoot > tr > [data-col="am
   main:has([data-slot="form-action-bar"][data-placement="page"]) { scroll-padding-bottom: 5.5rem; }
 }
 
+/* Über dem Inhalt so viel Abstand, wie die klebende Lageleiste des Mitlaufs hoch ist (Bilder 0.5.0): Ein fokussiertes
+   oder angesprungenes Feld — etwa unter „Feststellungen“ — rollt unter die Leiste, statt von ihr verdeckt zu werden.
+   Wie `scroll-padding-bottom` der Speicherleiste oben. Kein Layout-Test (Einzelstelle, Laufzeit zählt). */
+main:has([data-testid="quorum-strip"]) { scroll-padding-top: 4.5rem; }
+
 /* Seitenkopf am Telefon (Runde 3, Kleinpunkt 2; 031, 062): ⋯ „Weitere Aktionen“ steht rechts in der Titelzeile, der Titel
    bricht davor um; steht sonst nichts in den Aktionen, bleibt keine leere Zeile. Kein Layout-Test (Einzelstelle). */
 @media (max-width: 639.98px) {

@@ -11,7 +11,7 @@ import { withUnplacedFieldErrors } from '@/lib/feedback';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select } from '@/components/ui/select';
-import { formatAmount, parseAmount } from '@/lib/finance/amount';
+import { formatAmount, readAmount, type AmountError } from '@/lib/finance/amount';
 import { setProjectFinanceAction } from './finance-actions';
 import { FormField } from '@/components/forms/form-field';
 import { FormCell, FormGrid } from '@/components/forms/form-grid';
@@ -32,13 +32,21 @@ export function FinanceSectionEditor({ projectId, initial, purposes }: { project
   const [abroad, setAbroad] = useState(initial.abroad);
   const [publishDonationStatus, setPublishDonationStatus] = useState(initial.publishDonationStatus);
   const [pending, setPending] = useState(false);
+  // Spendenziel optional: leer löscht es, unlesbar steht am Feld statt still „kein Ziel“ (App-B6).
+  const [targetError, setTargetError] = useState<AmountError | null>(null);
   const feedback = useActionFeedback();
 
   const submit = async () => {
+    const target = readAmount(targetText, { required: false });
+    if (!target.ok) {
+      setTargetError(target.error);
+      return;
+    }
+    setTargetError(null);
     setPending(true);
     const result = await feedback.run(() => setProjectFinanceAction({
       projectId,
-      targetCents: targetText.trim() === '' ? null : parseAmount(targetText),
+      targetCents: target.cents,
       defaultPurposeId: defaultPurposeId === '' ? null : defaultPurposeId,
       abroad,
       publishDonationStatus,
@@ -60,7 +68,7 @@ export function FinanceSectionEditor({ projectId, initial, purposes }: { project
             <DialogTitle>{t('title')}</DialogTitle>
             <FormGrid>
               <FormField id="project-finance-target" label={t('target')} size="s">
-                <AmountField id="project-finance-target" name="target" value={targetText} onChange={setTargetText} />
+                <AmountField id="project-finance-target" name="target" value={targetText} onChange={(v) => { setTargetText(v); setTargetError(null); }} invalid={targetError !== null} />
               </FormField>
               <FormField id="project-finance-purpose" label={t('purpose')} size="m">
                 <Select id="project-finance-purpose" value={defaultPurposeId} onChange={(e) => setDefaultPurposeId(e.target.value)}>

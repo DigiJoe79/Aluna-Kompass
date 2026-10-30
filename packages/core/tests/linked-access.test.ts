@@ -13,6 +13,11 @@ describe('linkedDocumentAccess', () => {
     expect(() => defineModule({ key: 'm', version: '0', permissions: ['m.read'], linkedDocumentAccess: [{ entityType: 'mThing', readPermission: 'other.read' }] })).toThrow(/foreign permission: other.read/);
   });
 
+  it('a computed link (documentsOf) cannot receive documents', () => {
+    expect(() => defineModule({ key: 'm', version: '0', permissions: ['m.read'], linkedDocumentAccess: [{ entityType: 'mThing', readPermission: 'm.read', receivePermission: 'm.read', documentsOf: () => [] }] })).toThrow(/computed and cannot receive/);
+    expect(() => defineModule({ key: 'm', version: '0', permissions: ['m.read'], linkedDocumentAccess: [{ entityType: 'mThing', readPermission: 'm.read', documentsOf: () => [] }] })).not.toThrow();
+  });
+
   it('is unique per entity type across modules', () => {
     const twin = defineModule({ key: 'twin', version: '0', permissions: ['twin.read'], linkedDocumentAccess: [{ entityType: 'probeThing', readPermission: 'twin.read' }] });
     expect(() => createRegistry([coreModule, probe, twin])).toThrow(/duplicate linked document type: probeThing/);

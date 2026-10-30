@@ -18,7 +18,7 @@ describe('dmsRetentionHolds', () => {
     if (!doc.ok) throw new Error('setup');
     const holds = dmsRetentionHolds(deps, 'contact', 'c-1');
     expect(holds).toHaveLength(1);
-    expect(holds[0]!.label).toContain(doc.value.number as string);
+    expect(holds[0]!.label).toEqual({ key: 'dms.records.document', params: { label: doc.value.number } });
     expect(holds[0]!.until).toBe('2036-12-31'); // 10 Jahre ab Ablauf des Kalenderjahres 2026
   });
 

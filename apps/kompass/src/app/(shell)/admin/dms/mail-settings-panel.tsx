@@ -2,7 +2,7 @@
 
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import { FixedValue } from '@/components/fixed-value';
 import { FormActionBar } from '@/components/forms/form-action-bar';
 import { FormCard, FormCardBody } from '@/components/forms/form-card';
@@ -18,10 +18,7 @@ import { Dialog, DialogBody, DialogContent, DialogDescription, DialogHeader, Dia
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { AgentSwitchSection, agentSwitchChange } from '../agent-switch-section';
 import { saveMailSettingsAction, sendTestMailAction, setMailBodySnippetAction } from './actions';
-
-const AGENT_KEY = 'dms.mcpHumanOnlyAllowed';
 
 export interface MailSettingsProps {
   mail: { kind: 'off' | 'ready' | 'redirect' | 'blocked'; host: string | null; redirectTo: string | null };
@@ -32,25 +29,18 @@ export interface MailSettingsProps {
   defaultSnippetId: string | null;
   canManageSettings: boolean;
   canSend: boolean;
-  /** `dms.mcpHumanOnlyAllowed` — der Agentenschalter, letzter Abschnitt der Karte „Absender“ (Plan U4 Task 1). */
-  agentAllowed: boolean;
 }
 
 /**
  * Einstellungen › Akte › Versand › E-Mail (Handoff 2b E5, 22a/22b): unter der Tabelle der Versandwege ein Abschnitt
  * „E-Mail“ mit „Testmail an mich senden“, eine Formularkarte „Absender“ (Verbindung als fester Wert, Adresse und Name
  * Pflicht, Antwortadresse, Höchstens je Minute) und die Tabelle Begleittext je Dokumentart. Testumgebung als `warn`,
- * nicht eingerichtet als `hint` über dem Formular, die Felder dann gesperrt. Letzter Abschnitt der Karte ist der
- * Agentenschalter (`AgentSwitchSection`), der mit der Karte gespeichert wird (Nachtrag MCP-Test § 1).
+ * nicht eingerichtet als `hint` über dem Formular, die Felder dann gesperrt.
  */
-export function MailSettingsPanel({ mail, values, types, snippets, byType, defaultSnippetId, canManageSettings, canSend, agentAllowed }: MailSettingsProps) {
+export function MailSettingsPanel({ mail, values, types, snippets, byType, defaultSnippetId, canManageSettings, canSend }: MailSettingsProps) {
   const t = useTranslations('dms.admin.mail');
-  const tAgent = useTranslations('dms.admin.agent');
   const router = useRouter();
-  const formRef = useRef<HTMLFormElement>(null);
   const [form, setForm] = useState(values);
-  const [agent, setAgent] = useState(agentAllowed);
-  const agentChanged = agent !== agentAllowed;
   const [pending, setPending] = useState(false);
   const saveFb = useActionFeedback();
   const testFb = useActionFeedback();
@@ -58,12 +48,12 @@ export function MailSettingsPanel({ mail, values, types, snippets, byType, defau
   const [choosing, setChoosing] = useState<{ key: string; label: string } | null>(null);
   const off = mail.kind === 'off';
   const locked = off || !canManageSettings;
-  const changed = (Object.keys(values) as (keyof typeof values)[]).filter((k) => String(form[k]) !== String(values[k])).length + (agentChanged ? 1 : 0);
+  const changed = (Object.keys(values) as (keyof typeof values)[]).filter((k) => String(form[k]) !== String(values[k])).length;
 
   const save = async () => {
     setPending(true);
     const result = await saveFb.run(
-      () => saveMailSettingsAction({ fromAddress: form.fromAddress.trim(), fromName: form.fromName.trim(), replyTo: form.replyTo.trim() || null, ratePerMinute: Number(form.ratePerMinute) }, agentChanged ? agent : undefined),
+      () => saveMailSettingsAction({ fromAddress: form.fromAddress.trim(), fromName: form.fromName.trim(), replyTo: form.replyTo.trim() || null, ratePerMinute: Number(form.ratePerMinute) }),
       { retry: () => void save() },
     );
     setPending(false);
@@ -100,14 +90,9 @@ export function MailSettingsPanel({ mail, values, types, snippets, byType, defau
           {off ? <Notice level="hint" title={t('offTitle')}>{t('offText')}</Notice> : null}
           <FormCard
             as="form"
-            ref={formRef}
             onSubmit={(e: React.FormEvent) => {
               e.preventDefault();
               if (!locked) void save();
-            }}
-            onChange={(e: React.FormEvent) => {
-              const next = agentSwitchChange(e, AGENT_KEY);
-              if (next !== null) setAgent(next);
             }}
           >
             <FormCardBody>
@@ -128,18 +113,13 @@ export function MailSettingsPanel({ mail, values, types, snippets, byType, defau
                   </FormField>
                 </FormGrid>
               </Section>
-              <AgentSwitchSection name={AGENT_KEY} label={tAgent('label')} hint={tAgent('hint')} checked={agentAllowed} disabled={locked || pending} />
             </FormCardBody>
             {locked ? null : (
               <FormActionBar
                 onSave={() => void save()}
                 pending={pending}
                 count={changed}
-                onDiscard={() => {
-                  setForm(values);
-                  setAgent(agentAllowed);
-                  formRef.current?.reset();
-                }}
+                onDiscard={() => setForm(values)}
                 state={saveFb.state}
                 testId="mail-settings-footer"
               />

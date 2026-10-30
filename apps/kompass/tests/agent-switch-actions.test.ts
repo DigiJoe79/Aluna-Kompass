@@ -13,21 +13,13 @@ vi.mock('@/lib/request-context', () => ({ requireSession: async () => session.va
 vi.mock('next/cache', () => ({ revalidatePath: () => {} }));
 vi.mock('next-intl/server', () => ({ getTranslations: async () => createTranslator({ locale: 'de', messages, timeZone: 'Europe/Berlin' }) }));
 
-const { saveMailSettingsAction } = await import('@/app/(shell)/admin/dms/actions');
-const { setFinanceSwitchesAction } = await import('@/app/(shell)/admin/finance/actions');
-const { saveMembersSettingsAction } = await import('@/app/(shell)/admin/members/actions');
-
-/** Der Schlüssel im letzten Protokolleintrag der Aktion — die Einstellung, die sie zuletzt geschrieben hat. */
-function lastAuditKey(deps: Deps, action: string): string | undefined {
-  const params = auditEntry(deps, action).params as unknown;
-  return (typeof params === 'string' ? (JSON.parse(params) as { key?: string }) : (params as { key?: string } | null))?.key;
-}
+const { saveAgentSwitchesAction } = await import('@/app/(shell)/admin/agents/actions');
 
 /**
- * Plan U4 Task 1 (Nachtrag MCP-Test § 1): Die Server Action eines Panels speichert den Agentenschalter mit den übrigen
- * Feldern und schreibt das Protokoll. Der Schalter bleibt `uiOnly` — der Weg über die Oberfläche ist der einzige.
+ * Seite Verwaltung → Agenten (Spec 2026-10-29): Die Server Action speichert die geänderten Schalter über den
+ * Kerndienst — auch den, den die Finanzen führen (`managedBy`) — und schreibt je Schalter das Protokoll.
  */
-describe('Agentenschalter: speichern mit dem Formular', () => {
+describe('Agentenschalter: speichern auf der Seite Agenten', () => {
   let deps: Deps;
   beforeEach(() => {
     deps = createTestDeps({ manifests: [coreModule, contactsModule, dmsModule, financeModule, membersModule] });
@@ -35,39 +27,25 @@ describe('Agentenschalter: speichern mit dem Formular', () => {
     session.value = { deps, ctx: ctxWith([...deps.registry.permissionKeys]) };
   });
 
-  it('Mitglieder: die Fristen und der Schalter in einer Aktion, mit Protokoll', async () => {
-    const result = await saveMembersSettingsAction({ resignationNotice: { months: 3, at: 'fiscalYearEnd' }, paymentTermDays: 21, joinYearRule: 'full' }, 'numbers', true);
-    expect(result.status).toBe('success');
-    expect(readSetting(deps, 'members.paymentTermDays')).toBe(21);
-    expect(readSetting(deps, 'members.mcpHumanOnlyAllowed')).toBe(true);
-    expect(lastAuditKey(deps, 'settings.update')).toBe('members.mcpHumanOnlyAllowed');
-  });
-
-  it('Mitglieder: lehnt der Dienst die Felder ab, bleibt der Schalter, wie er war', async () => {
-    const result = await saveMembersSettingsAction({ resignationNotice: { months: 3, at: 'fiscalYearEnd' }, paymentTermDays: 0, joinYearRule: 'full' }, 'numbers', true);
-    expect(result.status).toBe('error');
-    expect(readSetting(deps, 'members.mcpHumanOnlyAllowed')).toBe(false);
-  });
-
-  it('Mitglieder: ohne `settings.manage` lehnt die Aktion den Schalter ab', async () => {
-    session.value = { deps, ctx: ctxWith(['members.read', 'members.fees']) };
-    const result = await saveMembersSettingsAction({ resignationNotice: { months: 3, at: 'fiscalYearEnd' }, paymentTermDays: 14, joinYearRule: 'full' }, 'numbers', true);
-    expect(result.status).toBe('error');
-    expect(readSetting(deps, 'members.mcpHumanOnlyAllowed')).toBe(false);
-  });
-
-  it('Akte: Absender und Schalter in einer Aktion, mit Protokoll', async () => {
-    const result = await saveMailSettingsAction({ fromAddress: 'post@example.org', fromName: 'Beispielverein', replyTo: null, ratePerMinute: 20 }, true);
-    expect(result.status).toBe('success');
-    expect(readSetting(deps, 'dms.mail.fromAddress')).toBe('post@example.org');
-    expect(readSetting(deps, 'dms.mcpHumanOnlyAllowed')).toBe(true);
-    expect(lastAuditKey(deps, 'settings.update')).toBe('dms.mcpHumanOnlyAllowed');
-  });
-
-  it('Finanzen: der Schalter geht mit den Steuer-Schaltern, mit Protokoll', async () => {
-    const result = await setFinanceSwitchesAction([{ key: 'finance.membershipFeesCertifiable', value: true }, { key: 'finance.mcpHumanOnlyAllowed', value: true }]);
+  it('schreibt Schalter mehrerer Module, auch den geführten der Finanzen, mit Protokoll', async () => {
+    const result = await saveAgentSwitchesAction({ 'finance.mcpHumanOnlyAllowed': true, 'members.mcpHumanOnlyAllowed': true });
     expect(result.status).toBe('success');
     expect(readSetting(deps, 'finance.mcpHumanOnlyAllowed')).toBe(true);
-    expect(lastAuditKey(deps, 'finance.setup.switch')).toBe('finance.mcpHumanOnlyAllowed');
+    expect(readSetting(deps, 'members.mcpHumanOnlyAllowed')).toBe(true);
+    expect(auditEntry(deps, 'settings.update').entityId).toBe('members.mcpHumanOnlyAllowed');
+  });
+
+  it('ohne `settings.manage` lehnt die Aktion ab und schreibt nichts', async () => {
+    session.value = { deps, ctx: ctxWith(['finance.setup', 'members.read']) };
+    const result = await saveAgentSwitchesAction({ 'finance.mcpHumanOnlyAllowed': true });
+    expect(result.status).toBe('error');
+    expect(readSetting(deps, 'finance.mcpHumanOnlyAllowed')).toBe(false);
+  });
+
+  it('ein Schalter eines ausgeschalteten Moduls wird abgelehnt', async () => {
+    deps.db.transaction((tx) => writeSettingInternal(tx, deps, systemContext(), 'modules.enabled', ['contacts', 'finance']));
+    const result = await saveAgentSwitchesAction({ 'dms.mcpHumanOnlyAllowed': true });
+    expect(result.status).toBe('error');
+    expect(readSetting(deps, 'dms.mcpHumanOnlyAllowed')).toBe(false);
   });
 });

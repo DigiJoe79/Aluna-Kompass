@@ -15,6 +15,7 @@ import {
   reindexAllDocuments,
   updateDocumentRule,
   updateDocumentType,
+  setOcrLanguages,
 } from '@kompass/module-dms';
 import { getTranslations } from 'next-intl/server';
 import { revalidatePath } from 'next/cache';
@@ -139,7 +140,9 @@ export async function updateDocumentRuleAction(id: string, _prev: ActionState, f
     const thenTypeKey = orNull(formData.get('thenTypeKey'));
     const thenFolder = orNull(formData.get('thenFolder'));
     const isActive = formData.get('isActive') === 'on' || formData.get('isActive') === 'true';
-    const sortOrder = Number(formData.get('sortOrder') ?? 0);
+    // Die Maske hat kein Feld für die Reihenfolge: Ohne Feld bleibt sie, wie sie ist (App-B8) — sonst setzte jedes
+    // Bearbeiten eine per Agent gesetzte Reihenfolge auf 0, und die Einsortierung änderte sich.
+    const sortOrder = formData.has('sortOrder') ? Number(formData.get('sortOrder')) : undefined;
 
     const result = await updateDocumentRule(deps, ctx, {
       id,
@@ -191,32 +194,8 @@ export async function updateOcrLanguagesAction(languages: string): Promise<Actio
     const t = await getTranslations();
     const { deps, ctx } = await requireSession();
 
-    const probe = await deps.textExtraction.probe();
-    if (!probe.ok) {
-      return {
-        status: 'error',
-        message: t('dms.text.unavailableHint'),
-        fieldErrors: {},
-      };
-    }
-
-    const list = languages.split('+').map((s) => s.trim()).filter(Boolean);
-    if (list.length === 0) {
-      return {
-        status: 'error',
-        message: t('errors.fields.required'),
-        fieldErrors: { languages: t('errors.fields.required') },
-      };
-    }
-
-    for (const lang of list) {
-      if (!probe.languages.includes(lang)) {
-        const missing = t('dms.admin.textPanel.languageMissing', { lang });
-        return { status: 'error', message: missing, fieldErrors: { languages: missing } };
-      }
-    }
-
-    const result = await setSetting(deps, ctx, { key: 'dms.ocrLanguages', value: list.join('+') });
+    // Der Abgleich mit den installierten Sprachen steht im Dienst (K1b), dieselbe Prüfung wie über MCP.
+    const result = await setOcrLanguages(deps, ctx, { languages });
     if (!result.ok) {
       return toActionState(result, t);
     }
@@ -279,23 +258,12 @@ export async function saveDispatchChannelsAction(channels: { key: string; label:
   });
 }
 
-/** Absender der Mails in einem Zug (Handoff 2b E5) — `settings.manage`. */
-/**
- * Die Karte „Absender“ unter Versand. Plan U4 Task 1 (M36): Mit `agent` (nur wenn geändert) geht der Agentenschalter
- * mit — erst nach den Absenderfeldern, über `setSetting`, das Recht und Kanal prüft (`uiOnly`) und protokolliert.
- */
-export async function saveMailSettingsAction(input: { fromAddress: string; fromName: string; replyTo: string | null; ratePerMinute: number }, agent?: boolean): Promise<ActionState> {
+/** Absender der Mails in einem Zug (Handoff 2b E5) — `settings.manage`; die Karte „Absender“ unter Versand. */
+export async function saveMailSettingsAction(input: { fromAddress: string; fromName: string; replyTo: string | null; ratePerMinute: number }): Promise<ActionState> {
   return guardAction('(shell)/admin/dms/actions.ts#saveMailSettingsAction', async () => {
     const t = await getTranslations();
     const { deps, ctx } = await requireSession();
     const result = await saveMailSettings(deps, ctx, input);
-    if (result.ok && agent !== undefined) {
-      const switched = await setSetting(deps, ctx, { key: 'dms.mcpHumanOnlyAllowed', value: agent });
-      if (!switched.ok) {
-        revalidatePath('/admin/dms');
-        return toActionState(switched, t);
-      }
-    }
     revalidatePath('/admin/dms');
     return toActionState(result, t, t('dms.admin.mail.saved'));
   });

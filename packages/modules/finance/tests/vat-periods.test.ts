@@ -10,7 +10,7 @@ import { createFirstFiscalYear } from '../src/ledger/fiscal-years';
 import { reverseEntry } from '../src/ledger/reverse';
 import { createTaxPeriod } from '../src/ledger/tax-periods';
 import { saveVatSettings } from '../src/ledger/vat-settings';
-import { parseVatPeriod, vatAdvancePeriodsInternal, vatPeriodDigestInternal, vatPeriodOf, vatReturnDueOnInternal, vatReturnRequiredInternal, vatTaxPointOn } from '../src/ledger/vat-periods';
+import { parseVatPeriod, vatAdvancePeriodKindInternal, vatAdvancePeriodsInternal, vatPeriodDigestInternal, vatPeriodOf, vatReturnDueOnInternal, vatReturnRequiredInternal, vatTaxPointOn } from '../src/ledger/vat-periods';
 import { financeCategories } from '../src/schema';
 import { ledgerFixture, setupFinance } from './helpers';
 
@@ -83,6 +83,36 @@ describe('VAT periods', () => {
     const periods = byKey(vatAdvancePeriodsInternal(f.deps.db, 2026, '2026-10-25'));
     expect(periods['2026-Q2']!.dueOn).toBe('2026-08-10');
     expect(periods['2026-Q3']!.dueOn).toBe('2026-11-10');
+  });
+
+  describe('F-B5 (0.4.5): the 9,000 € threshold uses the payable tax of the advance return', () => {
+    const regular = async () => {
+      const f = await fixture();
+      unwrap(await setDatedValue(f.deps, f.ctx, { key: 'taxation', validFrom: '2025-01-01', value: 'regular' }));
+      return f;
+    };
+
+    it('a refund of income lowers the tax', async () => {
+      const f = await regular();
+      await book(f, { date: '2025-03-01', cents: 6545000, taxCode: 'standard' }); // 1.045.000 Steuer
+      await book(f, { date: '2025-04-01', cents: -1190000, taxCode: 'standard', category: 'sales' }); // Erstattung: −190.000
+      expect(vatAdvancePeriodKindInternal(f.deps.db, 2026)).toBe('quarter');
+    });
+
+    it('a § 13b credit note lowers the tax', async () => {
+      const f = await regular();
+      await book(f, { date: '2025-03-01', cents: -5000000, taxCode: 'rc13bOther' }); // 950.000 § 13b-Steuer
+      await book(f, { date: '2025-04-01', cents: 1000000, taxCode: 'rc13bOther' }); // Gutschrift: −190.000
+      expect(vatAdvancePeriodKindInternal(f.deps.db, 2026)).toBe('quarter');
+    });
+
+    it('takes the rate at the tax point, not at the entry date', async () => {
+      const f = await regular();
+      unwrap(await setDatedValue(f.deps, f.ctx, { key: 'vatStandard', validFrom: '2025-06-01', value: 25 }));
+      // Leistung im Mai (19 %), gebucht im Juni (25 %): 4.500.000 × 19 % = 855.000, nicht 1.125.000.
+      await book(f, { date: '2025-06-10', cents: -4500000, taxCode: 'rc13bOther', serviceDate: '2025-05-20' });
+      expect(vatAdvancePeriodKindInternal(f.deps.db, 2026)).toBe('quarter');
+    });
   });
 
   it('switches to months above 9,000 € tax in the previous year', async () => {

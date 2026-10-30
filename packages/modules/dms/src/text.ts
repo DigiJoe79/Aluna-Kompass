@@ -10,11 +10,12 @@ import {
   type CallContext,
   type DbOrTx,
   type Deps,
+  type Failure,
   type Result,
 } from '@kompass/core';
 import { and, count, eq, isNotNull, isNull, ne, or } from 'drizzle-orm';
 import { z } from 'zod';
-import { manageableTypeFilter, readableTypeFilter, requireDmsGate, requireReadable } from './access';
+import { manageableTypeFilter, readableTypeFilter, requireAreaAccess, requireDmsGate, requireReadable } from './access';
 import { documents } from './schema';
 import { readDocumentFile } from './storage';
 import { readDocumentText, replaceDocumentText } from './index-store';
@@ -92,6 +93,8 @@ export async function extractDocumentText(
     const gaveUp = attempts >= MAX_ATTEMPTS;
 
     return deps.db.transaction((tx: DbOrTx) => {
+      const stale = superseded(tx, documentId);
+      if (stale) return stale;
       tx.update(documents)
         .set({ textStatus: gaveUp ? 'failed' : 'pending', textAttempts: attempts, textError: message })
         .where(eq(documents.id, documentId))
@@ -116,17 +119,17 @@ export async function extractDocumentText(
     });
   }
 
-  // Erst der Index, dann der Zustand: Bricht das Schreiben ab, bleibt das
-  // Dokument auf `running` und wird beim naechsten Start neu genommen. Andersrum
-  // stuende `done` an einem Dokument, das nicht auffindbar ist.
-  replaceDocumentText(
-    deps,
-    documentId,
-    pages.map((p) => ({ page: p.page, text: p.text })),
-  );
-
+  // Index und Zustand in einer Transaktion (I-B): Während des Lesens kann das Dokument gelöscht oder neu in die
+  // Schlange gestellt worden sein — dann wird verworfen, sonst bliebe verwaister Suchtext stehen.
   const now = isoNow(deps.clock);
   return deps.db.transaction((tx: DbOrTx) => {
+    const stale = superseded(tx, documentId);
+    if (stale) return stale;
+    replaceDocumentText(
+      deps,
+      documentId,
+      pages.map((p) => ({ page: p.page, text: p.text })),
+    );
     tx.update(documents)
       .set({ textStatus: 'done', textAttempts: 0, textError: null, textExtractedAt: now })
       .where(eq(documents.id, documentId))
@@ -145,10 +148,39 @@ export async function extractDocumentText(
   });
 }
 
+/** Nach dem Lesen: gibt es das Dokument noch, und steht es noch auf `running`? Sonst die Ablehnung. */
+function superseded(tx: DbOrTx, documentId: string): Failure | null {
+  const current = tx.select({ textStatus: documents.textStatus }).from(documents).where(eq(documents.id, documentId)).get();
+  if (!current) return notFound('document', documentId);
+  if (current.textStatus !== 'running') return conflict('textExtractionSuperseded', 'Das Dokument wurde während des Lesens neu eingereiht');
+  return null;
+}
+
 /** Die eingestellten Sprachen, als Tesseract-Kürzel. */
 export function ocrLanguages(deps: Deps): string[] {
   const raw = readSetting(deps, 'dms.ocrLanguages') ?? 'deu+eng';
   return String(raw).split('+').map((l) => l.trim()).filter(Boolean);
+}
+
+/** Ein Dokument noch einmal lesen, auch nach aufgebrauchten Versuchen. Wie `reindexAllDocuments` liest der Worker. */
+export async function reindexDocument(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<{ queued: number }>> {
+  const denied = requirePermission(ctx, 'dms.manage');
+  if (denied) return denied;
+  const parsed = validate(deps, extractTextSchema, input);
+  if (!parsed.ok) return parsed;
+  const { documentId } = parsed.value;
+
+  const row = deps.db.select().from(documents).where(eq(documents.id, documentId)).get();
+  if (!row) return notFound('document', documentId);
+  const area = requireAreaAccess(deps, ctx, row);
+  if (area) return area;
+  if (!row.fileName) return conflict('documentHasNoFile', 'Dokument hat keine Datei');
+
+  return deps.db.transaction((tx: DbOrTx) => {
+    tx.update(documents).set({ textStatus: 'pending', textAttempts: 0, textError: null }).where(eq(documents.id, documentId)).run();
+    recordAudit(tx, deps, ctx, { action: 'document.reindexRequested', entityType: 'document', entityId: documentId, after: { queued: 1 }, params: { count: 1 } });
+    return ok({ queued: 1 });
+  });
 }
 
 /**

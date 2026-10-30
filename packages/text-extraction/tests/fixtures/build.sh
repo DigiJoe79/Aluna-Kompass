@@ -4,12 +4,14 @@
 #
 # brief-digital.pdf — mit Textebene, der Schnellpfad muss ihn ohne OCR lesen.
 # brief-scan.pdf    — dieselbe Seite als Bild, erzwingt den OCR-Rückfall.
+# scan-gross.pdf    — derselbe Scan auf übergroßer Seite wie ein iOS-Scan (OCR-Auflösung).
 set -eu
 cd "$(dirname "$0")"
 
 typst compile brief.typ brief-digital.pdf
 pdftoppm -png -r 200 -singlefile brief-digital.pdf brief-page
 typst compile scan.typ brief-scan.pdf
+typst compile scan-gross.typ scan-gross.pdf
 rm -f brief-page.png
 
 # Gegenprobe: Der Scan darf keine Textebene haben.

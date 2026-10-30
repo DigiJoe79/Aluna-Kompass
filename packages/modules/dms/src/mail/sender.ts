@@ -33,7 +33,12 @@ function senderContext(entry: Pick<DmsMailOutboxRow, 'queuedByUserId'>): CallCon
   return { ...systemContext(), userId: entry.queuedByUserId };
 }
 
-/** Hängende Sendungen eines abgestürzten Prozesses: ein Versuch mehr, zurück in die Schlange. */
+/**
+ * Hängende Sendungen eines abgestürzten Prozesses. Zwischen der Annahme durch den Server und dem Vermerk `sent` kann der
+ * Prozess sterben — dann ist die Mail draußen, steht aber noch in `sending`. Ein neuer Versuch schickte sie ein zweites
+ * Mal (Befundliste 0.4.0, N5). Deshalb `failed` mit Grund `interrupted`: Ob sie ankam, ist unklar; „Erneut senden“
+ * entscheidet ein Mensch.
+ */
 function recoverStale(deps: Deps, now: string): void {
   const stale = deps.db
     .select()
@@ -41,20 +46,17 @@ function recoverStale(deps: Deps, now: string): void {
     .where(and(eq(dmsMailOutbox.status, 'sending'), lt(dmsMailOutbox.sendingSince, msBefore(now, STALE_SENDING_MS))))
     .all();
   for (const entry of stale) {
-    const attempts = entry.attempts + 1;
-    if (attempts >= MAIL_MAX_ATTEMPTS) {
-      deps.db.transaction((tx: DbOrTx) => markFailed(tx, deps, entry, attempts, 'other', null));
-      continue;
-    }
-    deps.db
-      .update(dmsMailOutbox)
-      .set({ status: 'queued', attempts, sendingSince: null, nextAttemptAt: null })
-      .where(and(eq(dmsMailOutbox.id, entry.id), eq(dmsMailOutbox.status, 'sending')))
-      .run();
+    deps.db.transaction((tx: DbOrTx) => {
+      const still = tx.select({ status: dmsMailOutbox.status }).from(dmsMailOutbox).where(eq(dmsMailOutbox.id, entry.id)).get();
+      if (still?.status === 'sending') markFailed(tx, deps, entry, entry.attempts + 1, 'interrupted', null);
+    });
   }
 }
 
-function markFailed(tx: DbOrTx, deps: Deps, entry: DmsMailOutboxRow, attempts: number, code: MailErrorCode, text: string | null): void {
+/** Was im Ausgangskorb als Grund steht: die Fehlerart des Transports oder `interrupted` (Absturz mitten im Senden). */
+export type OutboxErrorCode = MailErrorCode | 'interrupted';
+
+function markFailed(tx: DbOrTx, deps: Deps, entry: DmsMailOutboxRow, attempts: number, code: OutboxErrorCode, text: string | null): void {
   tx.update(dmsMailOutbox)
     .set({ status: 'failed', attempts, sendingSince: null, nextAttemptAt: null, lastErrorCode: code, lastErrorText: text })
     .where(eq(dmsMailOutbox.id, entry.id))

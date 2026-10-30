@@ -20,9 +20,23 @@ describe('foreignActivityInternal (F7 Task 5, Annahme 14)', () => {
     const approved = unwrap(await approvePartnerPayment(f.deps, f.secondPerson, { id: submitted.id, expectedVersion: submitted.version }));
     unwrap(await bookEntry(f.deps, f.ctx, { entryDate: '2026-03-10', text: `Förderung ${approved.number}`, moneyLines: [{ accountId: f.bank.id, amountCents: -6000, settlements: [{ openItemId: approved.openItemId!, amountCents: 6000 }] }], allocationLines: [{ categoryId: f.programCosts.id, amountCents: -6000, abroad: true }] }));
 
-    const view = foreignActivityInternal(f.deps.db, { from: '2026-01-01', to: '2026-12-31' }, 'DE');
+    const view = foreignActivityInternal(f.deps.db, { from: '2026-01-01', to: '2026-12-31' }, 'DE', 'Europe/Berlin');
     expect(view.partnerPayments).toEqual([{ paymentId: approved.id, number: approved.number, partnerName: 'Auslandsbericht e.V.', basis: 'transfer58', totalCents: 6000, approvedAt: approved.approvedAt }]);
     expect(view.otherAbroadLines).toEqual([]);
+  });
+
+  it('F-B3 (0.4.5): an approval on 01.01. at 00:30 Berlin time belongs to the new year, not the old one', async () => {
+    const f = await ledgerFixture();
+    const org = unwrap(await createContact(f.deps, { ...f.ctx, permissions: new Set(['contacts.manage']) }, { kind: 'organization', name: 'Auslandsbericht e.V.' }));
+    const partner = unwrap(await savePartnerProfile(f.deps, f.ctx, { contactId: org.id, status: 'foreignBody', usualBasis: 'transfer58' }));
+    const agreement = insertDocument(f, { subject: 'Vereinbarung', typeKey: 'voucher-invoice' });
+    const draft = unwrap(await savePartnerPaymentDraft(f.deps, f.ctx, { partnerId: partner.id, basis: 'transfer58', purposeText: 'Förderung', agreementDocumentId: agreement, retroactive: false, positions: [{ kind: 'money', amountCents: 6000, categoryId: f.programCosts.id }] }));
+    const submitted = unwrap(await submitPartnerPayment(f.deps, f.ctx, { id: draft.id, expectedVersion: draft.version }));
+    f.deps.clock.set('2025-12-31T23:30:00.000Z');
+    const approved = unwrap(await approvePartnerPayment(f.deps, f.secondPerson, { id: submitted.id, expectedVersion: submitted.version }));
+    expect(approved.approvedAt).toBe('2025-12-31T23:30:00.000Z');
+    expect(foreignActivityInternal(f.deps.db, { from: '2025-01-01', to: '2025-12-31' }, 'DE', 'Europe/Berlin').partnerPayments).toEqual([]);
+    expect(foreignActivityInternal(f.deps.db, { from: '2026-01-01', to: '2026-12-31' }, 'DE', 'Europe/Berlin').partnerPayments.map((p) => p.paymentId)).toEqual([approved.id]);
   });
 
   it('lists other lines with abroad, and other lines to a contact abroad, without either overlapping', async () => {
@@ -31,7 +45,7 @@ describe('foreignActivityInternal (F7 Task 5, Annahme 14)', () => {
     f.deps.db.update(contacts).set({ country: 'AT' }).where(eq(contacts.id, f.donor.id)).run();
     const contactEntry = unwrap(await bookEntry(f.deps, f.ctx, { entryDate: '2026-04-02', text: 'Zahlung', moneyLines: [{ accountId: f.bank.id, amountCents: -1500 }], allocationLines: [{ categoryId: f.programCosts.id, amountCents: -1500, contactId: f.donor.id }] }));
 
-    const view = foreignActivityInternal(f.deps.db, { from: '2026-01-01', to: '2026-12-31' }, 'DE');
+    const view = foreignActivityInternal(f.deps.db, { from: '2026-01-01', to: '2026-12-31' }, 'DE', 'Europe/Berlin');
     expect(view.otherAbroadLines.map((l) => l.entryId)).toEqual([abroadEntry.id]);
     expect(view.otherForeignContactLines.map((l) => l.entryId)).toEqual([contactEntry.id]);
   });

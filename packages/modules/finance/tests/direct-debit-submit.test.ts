@@ -2,7 +2,8 @@ import { fixedClock, schema, unwrap } from '@kompass/core';
 import { ctxWith } from '@kompass/core/testing';
 import { eq, like } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
-import { amendMandate, getMandate } from '../src/direct-debit/mandates';
+import { amendMandate, endMandate, getMandate } from '../src/direct-debit/mandates';
+import { cancelOpenItem } from '../src/ledger/open-items';
 import { buildDirectDebitFile, cancelDirectDebitRun, createDirectDebitRun, getDirectDebitRun, markDirectDebitRunSubmitted, previewDirectDebitRun, removeRunItem, resetDirectDebitRunSubmitted, runFileKey } from '../src/direct-debit/runs';
 import { financeSepaMandates } from '../src/schema';
 import { directDebitFixture, IBANS } from './direct-debit-fixture';
@@ -69,6 +70,38 @@ describe('markDirectDebitRunSubmitted', () => {
     unwrap(await buildDirectDebitFile(f.deps, f.ctx, { runId: f.run.id }));
     unwrap(await markDirectDebitRunSubmitted(f.deps, f.ctx, { runId: f.run.id, submittedOn: '2026-10-20' }));
     expect(fail(await removeRunItem(f.deps, f.ctx, { itemId: f.run.items[0]!.id }))).toMatchObject({ code: 'runSubmitted' });
+  });
+});
+
+describe('markDirectDebitRunSubmitted checks the items again (M1)', () => {
+  const later = (f: { deps: Parameters<typeof markDirectDebitRunSubmitted>[0] }) => ({ ...f.deps, clock: fixedClock('2026-11-15T08:00:00.000Z') });
+
+  it('an expired run whose items sit in a new run cannot be marked; the new one can', async () => {
+    const f = await scene();
+    unwrap(await buildDirectDebitFile(f.deps, f.ctx, { runId: f.run.id }));
+    const now = later(f);
+    f.announce(f.a.mandateId, [{ dueOn: '2026-11-20', amountCents: 1200 }], '2026-11-01');
+    const b = unwrap(await createDirectDebitRun(now, f.ctx, { collectionDate: '2026-11-20' }));
+    expect(b.items.map((i) => i.sourceId)).toEqual([f.item]);
+    expect(fail(await markDirectDebitRunSubmitted(now, f.ctx, { runId: f.run.id, submittedOn: '2026-10-27' }))).toMatchObject({ type: 'conflict', code: 'runItemsChanged', params: { reference: f.a.reference } });
+    unwrap(await buildDirectDebitFile(now, f.ctx, { runId: b.id }));
+    expect(unwrap(await markDirectDebitRunSubmitted(now, f.ctx, { runId: b.id, submittedOn: '2026-11-15' }))).toMatchObject({ status: 'submitted' });
+    expect(fail(await markDirectDebitRunSubmitted(now, f.ctx, { runId: f.run.id, submittedOn: '2026-10-27' }))).toMatchObject({ code: 'runItemsChanged' });
+  });
+
+  it('a mandate ended after the file refuses the marking', async () => {
+    const f = await scene();
+    unwrap(await buildDirectDebitFile(f.deps, f.ctx, { runId: f.run.id }));
+    const now = later(f);
+    unwrap(await endMandate(now, f.ctx, { mandateId: f.a.mandateId, endedOn: '2026-10-29', reason: 'debtor' }));
+    expect(fail(await markDirectDebitRunSubmitted(now, f.ctx, { runId: f.run.id, submittedOn: '2026-10-27' }))).toMatchObject({ code: 'runItemsChanged', params: { reference: f.a.reference } });
+  });
+
+  it('an item cancelled after the file refuses the marking', async () => {
+    const f = await scene();
+    unwrap(await buildDirectDebitFile(f.deps, f.ctx, { runId: f.run.id }));
+    unwrap(await cancelOpenItem(f.deps, f.ctx, { id: f.item, note: 'Irrtum' }));
+    expect(fail(await markDirectDebitRunSubmitted(f.deps, f.ctx, { runId: f.run.id, submittedOn: '2026-10-20' }))).toMatchObject({ code: 'runItemsChanged', params: { reference: f.a.reference } });
   });
 });
 

@@ -1,6 +1,6 @@
 import { invalid, isoNow, newId, notFound, ok, readLocales, readSetting, recordAudit, requireHumanChannel, requirePermission, todayIn, validate, type CallContext, type DbOrTx, type Deps, type Result } from '@kompass/core';
 import { contacts, displayName } from '@kompass/module-contacts';
-import { documents, documentSnippets } from '@kompass/module-dms';
+import { abortIssue, documents, documentSnippets } from '@kompass/module-dms';
 import {
   activeRunItemsInternal,
   draftSettlementCentsInternal,
@@ -26,7 +26,7 @@ import { mandateForChargeInternal } from './payment-method';
 import { issueMemberLetterInternal } from './letters/issue';
 import { addDays } from './letters/shared';
 import { dispatchMap, reachedLevel } from './dunning-levels';
-import { recordRunLetterInternal } from './run-dispatch';
+import { mergeRefused, recordRunLetterInternal } from './run-dispatch';
 import { runListSchema } from './fee-run';
 
 export { dunningLevelsOfCharges, reachedLevel } from './dunning-levels';
@@ -304,9 +304,9 @@ export async function continueDunningRun(deps: Deps, ctx: CallContext, input: un
   if (!run) return notFound('memberDunningRun', parsed.value.runId);
   if (run.status !== 'running') return membersConflict('dunningRunDone');
   const levels = readSetting<DunningLevel[]>(deps, 'members.dunningLevels');
-  const refused = [...run.refused];
+  const refused: DunningRunRow['refused'] = [];
   const done = issuedInRun(deps.db, run.id);
-  const pending = () => previewInternal(deps, run.asOf).ready.filter((c) => !done.has(letterKey(c)) && !refused.some((r) => r.membershipId === c.membershipId));
+  const pending = () => previewInternal(deps, run.asOf).ready.filter((c) => !done.has(letterKey(c)) && ![...run.refused, ...refused].some((r) => r.membershipId === c.membershipId));
   for (const candidate of pending().slice(0, parsed.value.max)) {
     const level = levels.find((l) => l.key === candidate.levelKey)!;
     const snippet = level.snippetId ? deps.db.select().from(documentSnippets).where(eq(documentSnippets.id, level.snippetId)).get() : undefined;
@@ -316,17 +316,23 @@ export async function continueDunningRun(deps: Deps, ctx: CallContext, input: un
       { kind: 'reminder', membershipId: candidate.membershipId, data: { levelName: candidate.levelName, levelText: snippet?.isActive ? snippet.body : null, chargeIds: candidate.chargeIds, returnedOn: candidate.returnedOn } },
       {
         afterIssue: (tx, doc, contactId) => {
+          // N7: Ein zweiter Abschnitt desselben Laufs (Neu laden, zweiter Tab) verwirft seine Mahnung still — je Mitglied und Stufe ein Brief.
+          if (issuedInRun(tx, run.id).has(letterKey(candidate))) abortIssue(membersConflict('runLetterExists'));
           tx.insert(memberDunningNotices).values({ id: newId(), membershipId: candidate.membershipId, levelKey: candidate.levelKey, documentId: doc.id, chargeIds: candidate.chargeIds, runId: run.id, issuedOn: run.asOf }).run();
           recordRunLetterInternal(tx, deps, { runRef: runRefOf(run.id), membershipId: candidate.membershipId, documentId: doc.id, contactId });
         },
       },
     );
-    if (issued.ok) done.add(letterKey(candidate));
+    if (issued.ok || ('code' in issued.error && issued.error.code === 'runLetterExists')) done.add(letterKey(candidate));
     else refused.push({ membershipId: candidate.membershipId, code: 'code' in issued.error && typeof issued.error.code === 'string' ? issued.error.code : issued.error.type });
   }
-  const finished = pending().length === 0;
   return deps.db.transaction((tx: DbOrTx) => {
-    const current: DunningRunRow = { ...run, refused, ...(finished ? { status: 'done' as const, finishedAt: isoNow(deps.clock) } : {}) };
+    // N7: Der Stand von jetzt, nicht der vor dem Ausstellen — ein anderer Abschnitt kann inzwischen geschrieben haben.
+    const stored = tx.select().from(memberDunningRuns).where(eq(memberDunningRuns.id, run.id)).get()!;
+    if (stored.status !== 'running') return ok(runView(tx, stored));
+    const merged = mergeRefused(stored.refused, refused);
+    const finished = previewInternal(deps, run.asOf).ready.filter((c) => !issuedInRun(tx, run.id).has(letterKey(c)) && !merged.some((r) => r.membershipId === c.membershipId)).length === 0;
+    const current: DunningRunRow = { ...stored, refused: merged, ...(finished ? { status: 'done' as const, finishedAt: isoNow(deps.clock) } : {}) };
     tx.update(memberDunningRuns).set({ refused: current.refused, status: current.status, finishedAt: current.finishedAt }).where(eq(memberDunningRuns.id, run.id)).run();
     const view = runView(tx, current);
     if (finished) recordAudit(tx, deps, ctx, { action: 'members.dunningRun.finish', entityType: 'memberDunningRun', entityId: run.id, after: { issued: view.issued, refused: refused.length }, params: { asOfOn: run.asOf, count: view.issued } });

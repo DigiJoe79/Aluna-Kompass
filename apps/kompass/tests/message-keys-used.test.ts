@@ -29,6 +29,8 @@ const SOURCES = ['apps/kompass/src', 'packages'].map((dir) => path.join(REPO, di
 const SKIP_DIRS = new Set(['node_modules', 'tests', 'dist', '.astro', 'drizzle', '.next']);
 
 const DYNAMIC: { prefix: RegExp; where: string }[] = [
+  { prefix: /^governance\.rules\.(groups|words)\./, where: 'lib/governance/rule-text.ts — `ruleText()` setzt Regeln in Worten aus Werten des Regelwerks zusammen (`forms.${form}`, `tie.${tie}` …); `rules-form.tsx` nennt die Gruppe `groups.${group}`' },
+  { prefix: /^governance\.majority\.(simple|fraction|comparison|fractions|base|asNo)/, where: 'lib/governance/majority-text.ts — `majorityText()` setzt die Mehrheit mit dem Übersetzer der Aufrufstelle (`governance.majority`) aus Bruch, Vergleich und Bezugsgröße' },
   { prefix: /^finance\.reverseChargePrompt\.trigger\./, where: 'lib/finance/reverse-charge-prompt.ts — `reverseChargeTriggerText` mit dem Übersetzer der Aufrufstelle' },
   { prefix: /^folderTree\.(block|announce)\./, where: 'components/folder-tree/announcements.ts — `block.${reason}` und die Ansagen, mit dem Übersetzer des Baums' },
   { prefix: /^nav\./, where: 'apps/kompass/src/lib/navigation.ts — `nav.${item.key}` aus den Menüeinträgen von Kern und Modulen' },

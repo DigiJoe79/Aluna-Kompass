@@ -5,9 +5,13 @@
 export type AuditMode = 'kompass' | 'paper';
 export const AUDIT_MODES = ['kompass', 'paper'] as const satisfies readonly AuditMode[];
 
-/** Die acht Abschnitte des Prüfpakets in Prüferreihenfolge (Finanz-Spec § 9.4). */
-export type AuditSection = 'journal' | 'reconciliation' | 'vouchers' | 'imports' | 'anomalies' | 'purposesReserves' | 'donations' | 'partnerPayments';
-export const AUDIT_SECTIONS = ['journal', 'reconciliation', 'vouchers', 'imports', 'anomalies', 'purposesReserves', 'donations', 'partnerPayments'] as const satisfies readonly AuditSection[];
+/**
+ * Die Abschnitte des Prüfpakets in Prüferreihenfolge (Finanz-Spec § 9.4). Der neunte, `resolutions` (G-30), gibt es nur,
+ * wenn ein Modul die finanzwirksamen Beschlüsse liefert (Gremien eingeschaltet) — welche gelten, sagt
+ * `activeAuditSectionsInternal` bzw. `AuditStatus.sections`.
+ */
+export type AuditSection = 'journal' | 'reconciliation' | 'vouchers' | 'imports' | 'anomalies' | 'purposesReserves' | 'donations' | 'partnerPayments' | 'resolutions';
+export const AUDIT_SECTIONS = ['journal', 'reconciliation', 'vouchers', 'imports', 'anomalies', 'purposesReserves', 'donations', 'partnerPayments', 'resolutions'] as const satisfies readonly AuditSection[];
 
 export interface AuditorAccess {
   userId: string | null;
@@ -48,6 +52,8 @@ export interface AuditCashCount { countId: string; countedOn: string; countedCen
 
 export interface AuditStatus {
   fiscalYearId: string;
+  /** Die Abschnitte dieses Jahres in Prüferreihenfolge: acht, mit Gremien neun (G-30). */
+  sections: AuditSection[];
   yearStatus: 'open' | 'closed';
   /** Der jüngste Prüfstand des Jahres. */
   baseline: { id: string; createdAt: string; kind: 'initial' | 'followUp' } | null;
@@ -87,7 +93,8 @@ export interface AuditRemarkView {
   id: string;
   kind: 'question' | 'finding';
   /** `report`: `id` ist der Katalogschlüssel des Berichts (Parameter `{ fiscalYearId }`). */
-  target: { type: 'entry' | 'document' | 'report' | 'year'; id: string };
+  /** `resolution`: ein Beschluss aus Abschnitt 9 (G-30), `id` ist seine Kennung. */
+  target: { type: 'entry' | 'document' | 'report' | 'year' | 'resolution'; id: string };
   text: string;
   authorAuditorId: string;
   enteredByUserId: string;

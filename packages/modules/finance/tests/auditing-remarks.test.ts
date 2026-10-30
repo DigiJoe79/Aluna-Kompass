@@ -51,7 +51,9 @@ describe('Vermerke', () => {
     expect(code(await make({ targetType: 'document', targetId: voucher.documentId }))).toBe('ok');
     expect(code(await make({ targetType: 'document', targetId: 'fremd' }))).toBe('remarkTargetNotInYear');
     expect(code(await make({ targetType: 'report', targetId: 'cashReport' }))).toBe('ok');
-    expect(code(await make({ targetType: 'report', targetId: 'fundsUse' }))).toBe('remarkTargetNotInYear');
+    // Seit M2 ist die Mittelverwendungsrechnung verfügbar (im Paket über der Grenze); abgelehnt wird ein unbekannter Bericht.
+    expect(code(await make({ targetType: 'report', targetId: 'fundsUse' }))).toBe('ok');
+    expect(code(await make({ targetType: 'report', targetId: 'nope' }))).toBe('remarkTargetNotInYear');
     expect(code(await make({ targetType: 'year', targetId: y2025 }))).toBe('ok');
     expect(code(await make({ text: '' }))).toBe('validation');
     expect(code(await make({ text: 'x'.repeat(2001) }))).toBe('validation');

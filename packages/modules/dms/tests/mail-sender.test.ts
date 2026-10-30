@@ -105,7 +105,12 @@ describe('Sender des Ausgangskorbs', () => {
     expect(mail.sent).toHaveLength(4);
   });
 
-  it('stale sending is retried once', async () => {
+  /**
+   * Befundliste 0.4.0, N5: Starb der Prozess zwischen der Annahme durch den Server und dem Vermerk `sent`, ging die
+   * Mail nach zehn Minuten ein zweites Mal hinaus. Ob sie angekommen ist, weiß niemand — also kein neuer Versuch,
+   * sondern `failed` mit Grund `interrupted`; „Erneut senden“ entscheidet ein Mensch.
+   */
+  it('stale sending becomes failed with reason interrupted instead of being sent again', async () => {
     const { deps, ctx, mail } = setup();
     await queuedLetter(deps, ctx);
     const [row] = rows(deps);
@@ -115,9 +120,12 @@ describe('Sender des Ausgangskorbs', () => {
     expect(await processOutbox(deps)).toEqual({ sent: 0, failed: 0, waiting: 0 });
     expect(rows(deps)[0]!.status).toBe('sending');
     deps.clock.advance(2 * MINUTE);
-    expect(await processOutbox(deps)).toEqual({ sent: 1, failed: 0, waiting: 0 });
-    expect(rows(deps)[0]).toMatchObject({ status: 'sent', attempts: 2 });
-    expect(mail.sent).toHaveLength(1);
+    await processOutbox(deps);
+    deps.clock.advance(10 * MINUTE);
+    await processOutbox(deps);
+    expect(rows(deps)[0]).toMatchObject({ status: 'failed', lastErrorCode: 'interrupted', sendingSince: null });
+    expect(mail.sent).toHaveLength(0);
+    expect(JSON.parse(auditEntry(deps, 'dms.mail.failed')!.params!)).toMatchObject({ code: 'interrupted' });
   });
 
   it('sendet nie zweimal gleichzeitig', async () => {

@@ -81,8 +81,11 @@ describe('runFinanceReport and listFinanceReports (Rechenschaft A1 Task 4)', () 
   it('refuses unknown and unavailable reports', async () => {
     const f = await ledgerFixture();
     expect(err(await runFinanceReport(f.deps, f.ctx, { report: 'nope', params: { fiscalYearId: f.year.id } }))).toMatchObject({ code: 'reportUnknown' });
-    expect(err(await runFinanceReport(f.deps, f.ctx, { report: 'fundsUse', params: { fiscalYearId: f.year.id } }))).toMatchObject({ code: 'reportUnavailable' });
     expect(err(await runFinanceReport(f.deps, f.ctx, { report: '' }))).toMatchObject({ type: 'validation' });
+    // Seit M2 ist jeder Bericht des Katalogs verfügbar; die Ablehnung prüft ein nicht verfügbarer Testbericht.
+    await withTestReports([testReport({ key: 'testLater', available: false })], async () => {
+      expect(err(await runFinanceReport(f.deps, f.ctx, { report: 'testLater', params: { fiscalYearId: f.year.id } }))).toMatchObject({ code: 'reportUnavailable' });
+    });
     await withTestReports([testReport()], async () => {
       expect(err(await runFinanceReport(f.deps, f.ctx, { report: 'testAssembly', params: {} }))).toMatchObject({ type: 'validation' });
     });
@@ -102,10 +105,14 @@ describe('runFinanceReport and listFinanceReports (Rechenschaft A1 Task 4)', () 
     });
   });
 
-  it('lists the catalogue with fundsUse greyed out', async () => {
+  it('lists the catalogue; an unavailable report is greyed out without a stage', async () => {
     const f = await ledgerFixture();
     const { reports } = unwrap(await listFinanceReports(f.deps, f.ctx, { fiscalYearId: f.year.id }));
-    expect(reports.find((r) => r.key === 'fundsUse')).toMatchObject({ key: 'fundsUse', available: false, group: 'taxOffice', stage: null, lastFinal: [] });
+    // M2: die Mittelverwendungsrechnung ist verfügbar.
+    expect(reports.find((r) => r.key === 'fundsUse')).toMatchObject({ key: 'fundsUse', available: true, group: 'taxOffice', stage: 'preliminary', lastFinal: [] });
+    await withTestReports([testReport({ key: 'testLater', available: false })], async () => {
+      expect(unwrap(await listFinanceReports(f.deps, f.ctx, { fiscalYearId: f.year.id })).reports.find((r) => r.key === 'testLater')).toMatchObject({ available: false, stage: null, lastFinal: [] });
+    });
     await withTestReports([testReport()], async () => {
       expect(unwrap(await listFinanceReports(f.deps, f.ctx, { fiscalYearId: f.year.id })).reports.find((r) => r.key === 'testAssembly')).toMatchObject({ stage: 'preliminary', lastFinal: [] });
     });

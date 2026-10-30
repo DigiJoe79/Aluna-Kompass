@@ -1,6 +1,6 @@
 import {
-  launchJob, localizedConflict, newId, notFound, ok, paperDate, readJobResult, readSetting, requestJobCancel, requirePermission, runningJob, runStep, validate, csvField,
-  type CallContext, type Deps, type Failure, type JobHandle, type JobRecord, type JobRun, type JobSlot, type JobStart, type Result,
+  isoDayIn, launchJob, localizedConflict, newId, notFound, ok, paperDate, readJobResult, readSetting, requestJobCancel, requirePermission, runningJob, runStep, validate, csvField,
+  timeZoneOf, type CallContext, type Deps, type Failure, type JobHandle, type JobRecord, type JobRun, type JobSlot, type JobStart, type Result,
 } from '@kompass/core';
 import { and, desc, eq, inArray, isNotNull, isNull } from 'drizzle-orm';
 import { Zip, ZipPassThrough } from 'fflate';
@@ -196,6 +196,7 @@ export async function startDataExport(deps: Deps, ctx: CallContext, input: unkno
   const scope: ExportScope = {
     fiscalYears: years.sort((a, b) => a.startsOn.localeCompare(b.startsOn)).map((y) => ({ id: y.id, designation: y.designation, startsOn: y.startsOn, endsOn: y.endsOn, open: fiscalYearStatusInternal(deps.db, y.id) !== 'closed' })),
     locale: deps.locales()[0] ?? 'de',
+    timeZone: timeZoneOf(deps),
   };
   const exportId = newId();
   const plan: ExportPlan = { exportId, fileName: storeName(exportId), scope, designations: designationsOf(scope), provisional: designationsOf(scope, true) };
@@ -278,6 +279,6 @@ export async function readDataExportFile(deps: Deps, ctx: CallContext, input: un
   const bytes = await deps.files('finance').read(row.fileName);
   deps.db.transaction((tx) => financeAudit(tx, deps, ctx, { action: 'finance.dataExport.download', entity: 'financeDataExport', id: row.id, params: { years: row.designations } }));
   const years = row.designations.split(', ').join('-');
-  return ok({ bytes, filename: `Datenexport-${years}${row.provisional ? '-vorlaeufig' : ''}-${paperDate(row.createdAt.slice(0, 10) as never)}.zip` });
+  return ok({ bytes, filename: `Datenexport-${years}${row.provisional ? '-vorlaeufig' : ''}-${paperDate(isoDayIn(deps, Date.parse(row.createdAt)))}.zip` });
 }
 

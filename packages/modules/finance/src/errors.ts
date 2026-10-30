@@ -1,4 +1,4 @@
-import { localizedConflict, requireHumanChannel, type CallContext, type Deps, type Failure } from '@kompass/core';
+import { localizedConflict, readSetting, requireHumanChannel, type CallContext, type Deps, type Failure } from '@kompass/core';
 
 /**
  * Die Fehlerbilder des Moduls (Finanz-Spec 5.4: „Fehlerbilder sind `Result`-Werte mit Grund **und** Abhilfe“) —
@@ -26,6 +26,25 @@ export const FINANCE_ERRORS = {
   reportBaseUnavailable: { base: 'text' },
   // Rechenschaft A3 — die Freigabe ändert sich nicht mehr, sobald ein Bericht auf ihr beruht (Designer Runde 2, 11a).
   releaseLocked: { designation: 'text' },
+  // Jahresrechnung (0.4.5) — Finanzangaben zum Kontakt.
+  legalEntityOnlyOrganizations: {},
+  nameConsentNotGranted: {},
+  annualAccountsExplanationLocked: { designation: 'text' },
+  annualAccountsCashReportMissing: { designation: 'text' },
+  annualAccountsRemunerationWithoutBasis: { count: 'count' },
+  // Jahresrechnung (0.4.5, J2) — Abzeichnen.
+  annualAccountsNotFinal: {},
+  annualAccountsAlreadySigned: { documentNumber: 'text' },
+  annualAccountsNotRepresentative: {},
+  annualAccountsSignerWithoutAccount: {},
+  annualAccountsSignNotForAgents: {},
+  // Jahresrechnung (0.4.5, J2) — Veröffentlichen.
+  annualAccountsNotSigned: {},
+  annualAccountsAlreadyPublished: {},
+  annualAccountsNotPublished: {},
+  annualAccountsEarlyReasonRequired: {},
+  annualAccountsAssemblyPending: {},
+  siteModuleDisabled: {},
   // Rechenschaft D1 — Kassenprüfung (Spec 0.4.0 § D1).
   auditorNotPerson: {},
   auditorAlreadyListed: {},
@@ -93,6 +112,9 @@ export const FINANCE_ERRORS = {
   reportGemIncomplete: { missing: 'count' },
   assemblyYearOpen: { designation: 'text' },
   assemblyNotRecorded: { designation: 'text' },
+  // G7: Gremien führt das Ergebnis der Versammlung (festgeschriebene Sitzung).
+  assemblyManagedByGovernance: { label: 'text' },
+  boardRemunerationManagedByGovernance: { label: 'text' },
   // Rechenschaft A2 — sonstiges Vermögen: ein beendeter Eintrag bleibt, wie er war.
   otherAssetEnded: {},
   // Kassenbericht: Anfang + Ergebnis + Veränderung durchlaufend ≠ Ende — ein Datenfehler, der Bericht zeigt ihn.
@@ -126,6 +148,9 @@ export const FINANCE_ERRORS = {
   freeReserveCapExceeded: { cap: 'cents', over: 'cents' },
   // Befund 4 (0.2.7): Zuführung zur freien Rücklage ohne Jahr, solange das Vorjahr offen ist — kein stilles Raten.
   reserveYearAmbiguous: { previous: 'text', current: 'text' },
+  reserveYearNotAllowed: { year: 'text' },
+  // M1: nachträgliche Bildung einer § 62-Rücklage nur bis Ende des zweiten Folgejahres (§ 62 Abs. 2 AO).
+  reserveLateFormationTooLate: { year: 'text', until: 'date' },
   accountInactive: { account: 'text' },
   categoryInactive: { category: 'text' },
   fiscalYearClosed: { year: 'text' },
@@ -149,6 +174,8 @@ export const FINANCE_ERRORS = {
   openItemInUse: {},
   openItemHasPayments: {},
   openItemBelowSettled: {},
+  // Plan R1 (M3): Erlass eines Postens, der in einem Einzug mit erzeugter Datei steckt; der Satz je Status (Nachlauf R1).
+  openItemInDirectDebit: { runId: 'text', status: 'runStatus' },
   openItemHasOrigin: {},
   // Plan M2: Posten mit der Herkunft eines anderen Moduls entstehen, verschieben und erledigen sich nur über dessen Vorgang.
   openItemOriginOwned: {},
@@ -331,12 +358,20 @@ export const FINANCE_ERRORS = {
   // F8b — zurückgelegtes Geld (Rücklagen), Zweck ändern (Umwidmung), Personenübersicht (Spec 8.3, 8.4, 10.1).
   reserveResolutionRequired: {},
   reservePurposeTextRequired: {},
+  // M1: Rücklage im wGB/in der Vermögensverwaltung braucht eine Begründung (Prüfung L-7).
+  reserveReasonRequired: {},
+  // M1: Anfangsvortrag der Mittelverwendung (Prüfung L-4).
+  fundsUseOpeningLocked: { designation: 'text' },
+  fundsUseOpeningPreviousMissing: {},
+  fundsUseOpeningDocumentRequired: {},
   reserveInsufficient: { date: 'date', name: 'text', available: 'cents', amount: 'cents' },
   reserveDissolved: {},
   reserveMovementOutOfOrder: { date: 'date' },
   reserveInUse: {},
   reserveCarryForwardIncomplete: {},
   reserveCarryForwardOwnStep: {},
+  reserveKindLocked: {},
+  reserveCarryForwardLocked: {},
   movementDateInFuture: { date: 'date', today: 'date' },
   transferSamePurpose: {},
   transferNoPurposes: {},
@@ -378,6 +413,8 @@ export const FINANCE_ERRORS = {
   // Plan N1: Mandat nach der Datei geändert (M15); Mandat beenden während eines eingereichten Einzugs (M28).
   runFileOutdated: { reference: 'text' },
   mandateInSubmittedRun: { date: 'date', earliest: 'date' },
+  // Plan R1 (M1): seit der Datei hat sich ein Posten geändert — beim Markieren als eingereicht.
+  runItemsChanged: { reference: 'text' },
   // Einreichfenster der Bank (Nacharbeit L2): frühestens maxLeadDays, spätestens leadBusinessDays vor Fälligkeit.
   submitTooEarly: { date: 'date', collectionOn: 'date' },
   submitTooLate: { date: 'date', collectionOn: 'date' },
@@ -396,11 +433,12 @@ export const FINANCE_ERRORS = {
 /**
  * `evidenceKind`: der Schlüssel einer Nachweisart (P, Prüfer Block 2) — die Sprachdatei nennt ihn per ICU-`select` in Worten.
  * `count`: eine Anzahl oder Positionsnummer, als Zahl wie bisher (MCP `params`), im Satz schlicht (Befund 4, 0.2.12).
+ * `runStatus`: der Status eines Lastschrift-Einzugs (`fileCreated`, `submitted`) — die Sprachdatei wählt per ICU-`select`.
  */
-export type FinanceErrorParamKind = 'text' | 'date' | 'cents' | 'count' | 'evidenceKind';
+export type FinanceErrorParamKind = 'text' | 'date' | 'cents' | 'count' | 'evidenceKind' | 'runStatus';
 export type FinanceErrorCode = keyof typeof FINANCE_ERRORS;
 /** Der Wert je Art (Befund 4, 0.2.12): ein Betrag nur als Zahl in Cent — als Text käme er roh („1250“) in den Satz. */
-type ParamValue<Kind> = Kind extends 'cents' | 'count' ? number : Kind extends 'date' | 'text' | 'evidenceKind' ? string : never;
+type ParamValue<Kind> = Kind extends 'cents' | 'count' ? number : Kind extends 'date' | 'text' | 'evidenceKind' | 'runStatus' ? string : never;
 type ParamsOf<C extends FinanceErrorCode> = { [K in keyof (typeof FINANCE_ERRORS)[C]]: ParamValue<(typeof FINANCE_ERRORS)[C][K]> };
 
 /** Die Codes, mit denen eine Sperre an einer Buchung antwortet (`EntryLock`, Befund 49). */
@@ -432,4 +470,16 @@ export function financeConflict<C extends FinanceErrorCode>(code: C, ...params: 
 export function requireHumanChannelFinance(deps: Deps, ctx: CallContext): Failure | null {
   const denied = requireHumanChannel(deps, ctx, 'finance.mcpHumanOnlyAllowed');
   return denied ? financeConflict('humanOnly') : null;
+}
+
+/**
+ * K3 (0.4.5): Eine hochgeladene Datei über `finance.uploadLimitMb` — der Dienst lehnt ab, nicht erst der MCP-Adapter,
+ * damit Oberfläche und MCP dieselbe Grenze haben. Derselbe Code wie beim Kontoauszug (`statementTooLarge`); wo der
+ * Dienst die Datei schon bisher beim Namen nennt (Auslagen, Nachweise — mehrere Dateien in einer Maske), mit
+ * `expenseFileTooLarge` und dem Dateinamen.
+ */
+export function uploadLimitProblem(deps: Deps, bytes: Uint8Array, fileName?: string): Failure | null {
+  const limitMb = readSetting<number>(deps, 'finance.uploadLimitMb');
+  if (bytes.byteLength <= limitMb * 1024 * 1024) return null;
+  return fileName === undefined ? financeConflict('statementTooLarge', { limit: String(limitMb) }) : financeConflict('expenseFileTooLarge', { file: fileName, limit: `${limitMb} MB` });
 }

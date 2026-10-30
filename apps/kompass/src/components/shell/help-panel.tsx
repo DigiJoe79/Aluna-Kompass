@@ -2,16 +2,53 @@
 
 import { ExternalLink, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { createContext, useContext, useEffect, useRef, useState } from 'react';
+import { createContext, useContext, useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { EmptyState } from '@/components/empty-state';
 import { Notice } from '@/components/notice';
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
 
 type Answer = { doc: string; title: string; href: string; leadHtml: string } | { doc: null; indexHtml: string };
 
-/** Die Hilfe steht als Nebenspalte neben der Seite (ab `lg`). Seitenpanels klappen dann ein (Entwurf E4, „Eine Nebenspalte“). */
-export const HelpAsideContext = createContext(false);
-export const useHelpAside = () => useContext(HelpAsideContext);
+/**
+ * Die Hilfe steht als Nebenspalte neben der Seite (ab `lg`). Seitenpanels klappen dann ein (Entwurf E4, „Eine Nebenspalte“).
+ *
+ * Der Stand lebt in einem Store, der Context hält nur den Store und ändert sich nie — wie `SiteJobProvider` (0.2.5). Ein
+ * wechselnder Context-Wert über der Seite erreicht noch nicht hydrierte Suspense-Grenzen, React rendert sie im Client
+ * neu, und im Image blieb der gestreamte Teil (`<div hidden id="S:0">`) als zweite Kopie stehen: nach dem Neuladen mit
+ * offener Hilfe zwei Seitenpanels „Bestände“ (help.spec.ts:50, 29.10.).
+ */
+interface HelpAsideStore {
+  subscribe(listener: () => void): () => void;
+  get(): boolean;
+}
+const NO_ASIDE: HelpAsideStore = { subscribe: () => () => {}, get: () => false };
+export const HelpAsideContext = createContext<HelpAsideStore>(NO_ASIDE);
+const serverAside = () => false;
+export function useHelpAside(): boolean {
+  const store = useContext(HelpAsideContext);
+  return useSyncExternalStore(store.subscribe, store.get, serverAside);
+}
+
+export function HelpAsideProvider({ aside, children }: { aside: boolean; children: ReactNode }) {
+  const [store] = useState<HelpAsideStore & { set(next: boolean): void }>(() => {
+    let current = aside;
+    const listeners = new Set<() => void>();
+    return {
+      subscribe: (listener) => {
+        listeners.add(listener);
+        return () => listeners.delete(listener);
+      },
+      get: () => current,
+      set: (next) => {
+        if (next === current) return;
+        current = next;
+        for (const listener of listeners) listener();
+      },
+    };
+  });
+  useEffect(() => store.set(aside), [store, aside]);
+  return <HelpAsideContext.Provider value={store}>{children}</HelpAsideContext.Provider>;
+}
 
 /** Lädt die Hilfe zur Seite; folgt weichen Navigationen. `retry` lädt neu. */
 function useHelp(open: boolean, pathname: string) {

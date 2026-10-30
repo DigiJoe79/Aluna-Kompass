@@ -1,5 +1,5 @@
-import { documentBaseGaps, getEffectivePermissions, isoNow, listUserNamesWithPermission, ok, readSetting, requireAnyPermission, requirePermission, schema, todayIn, validate, writeSettingInternal, type CallContext, type DbOrTx, type Deps, type Result } from '@kompass/core';
-import { contactIdForUserInternal } from '@kompass/module-contacts';
+import { contactRoleManager, documentBaseGaps, enabledManifests, getEffectivePermissions, isoNow, listUserNamesWithPermission, ok, readSetting, requireAnyPermission, resolveRecordLabel, requirePermission, schema, todayIn, validate, writeSettingInternal, type CallContext, type DbOrTx, type Deps, type Result } from '@kompass/core';
+import { contactIdForUserInternal, contactRoleDefinitions } from '@kompass/module-contacts';
 import { getDocumentRecord } from '@kompass/module-dms';
 import { and, eq } from 'drizzle-orm';
 import { z } from 'zod';
@@ -311,15 +311,20 @@ export async function getSetupStatus(deps: Deps, ctx: CallContext): Promise<Resu
   // Befund T: optional — ohne Kontakt mit der Rolle „Vorstand“ bleibt die Liste der Zahlungen an Vorstandsmitglieder leer.
   // Nur die Kontaktrolle zählt (Amt ≠ Nutzerrolle), nie eine Ableitung aus Finanzrechten.
   const today = todayIn(deps);
+  // V-10: Führt ein Modul die Rolle (Gremien), zeigt der Schritt dorthin — mit dessen Recht `‹modul›.manage`, wenn es eines hat.
+  const boardDefinition = contactRoleDefinitions(deps).get('board-member');
+  const boardManager = boardDefinition ? contactRoleManager(deps, boardDefinition) : null;
+  const managerPermission = boardManager ? `${boardManager}.manage` : null;
+  const boardPermission = managerPermission && enabledManifests(deps).some((m) => m.key === boardManager && m.permissions.includes(managerPermission)) ? managerPermission : 'contacts.manage';
   steps.push({
     key: 'boardMembers',
     required: false,
     done: boardMembersMaintainedInternal(deps.db, today, today),
     dependsOn: null,
     blocked: false,
-    detail: {},
-    permission: 'contacts.manage',
-    canDo: listUserNamesWithPermission(deps, 'contacts.manage'),
+    detail: boardManager ? { managedBy: boardManager } : {},
+    permission: boardPermission,
+    canDo: listUserNamesWithPermission(deps, boardPermission),
   });
   // L1 Task 1: optional — erfüllt, solange die Lastschrift aus ist; sonst Gläubiger-ID und Konto mit IBAN. Das Recht
   // `finance.directDebit` kommt an keine vorhandene Rolle (Backlog 29), darum nennt der Schritt es.
@@ -495,14 +500,14 @@ export async function setExpenseWaiverBasisText(deps: Deps, ctx: CallContext, in
   });
 }
 
-const reportSettingsSchema = z.object({ statuteReference: z.string().trim().max(80), cashReportSignature: z.boolean(), treasurerIsStatutoryBoard: z.boolean().nullable().optional() });
+const reportSettingsSchema = z.object({ statuteReference: z.string().trim().max(80), cashReportSignature: z.boolean(), treasurerIsStatutoryBoard: z.boolean().nullable().optional(), assemblyApprovesAccounts: z.boolean().optional() });
 
 /**
  * Die Einstellungen des Kassenberichts (Rechenschaft A2/A3, Panel „Berichte“): die Satzungsfundstelle im Untertitel
  * („Kassenteil des Jahresberichts nach …“) und die Unterschriftszeile für den Vorstand. Darstellung, nicht im Hash;
  * festgeschriebene Fassungen behalten ihren Stand. Ins Protokoll nur der Schlüssel, nie der Wortlaut.
  */
-export async function setReportSettings(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<{ statuteReference: string; cashReportSignature: boolean; treasurerIsStatutoryBoard?: boolean | null }>> {
+export async function setReportSettings(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<{ statuteReference: string; cashReportSignature: boolean; treasurerIsStatutoryBoard?: boolean | null; assemblyApprovesAccounts?: boolean }>> {
   const denied = requirePermission(ctx, 'finance.setup');
   if (denied) return denied;
   const parsed = validate(deps, reportSettingsSchema, input);
@@ -516,6 +521,11 @@ export async function setReportSettings(deps: Deps, ctx: CallContext, input: unk
     if (parsed.value.treasurerIsStatutoryBoard !== undefined) {
       const board = writeSettingInternal(tx, deps, ctx, 'finance.reports.treasurerIsStatutoryBoard', parsed.value.treasurerIsStatutoryBoard, 'finance.setup.setting');
       if (!board.ok) return board;
+    }
+    // Jahresrechnung (J2): Genehmigt die MV nach der Satzung die Jahresrechnung, wird sie erst nach dem Beschluss publiziert.
+    if (parsed.value.assemblyApprovesAccounts !== undefined) {
+      const approves = writeSettingInternal(tx, deps, ctx, 'finance.reports.assemblyApprovesAccounts', parsed.value.assemblyApprovesAccounts, 'finance.setup.setting');
+      if (!approves.ok) return approves;
     }
     return ok(parsed.value);
   });
@@ -542,6 +552,8 @@ export async function setBoardRemuneration(deps: Deps, ctx: CallContext, input: 
   if (denied) return denied;
   const parsed = validate(deps, boardRemunerationSchema, input);
   if (!parsed.ok) return parsed;
+  const managed = boardRemunerationResolutionInternal(deps, ctx);
+  if (managed) return financeConflict('boardRemunerationManagedByGovernance', { label: managed.label });
   if (parsed.value.documentId) {
     const doc = await getDocumentRecord(deps, ctx, parsed.value.documentId);
     if (!doc.ok) return doc;
@@ -563,9 +575,48 @@ export async function setBoardRemuneration(deps: Deps, ctx: CallContext, input: 
     const decidedOn = todayIn(deps);
     const w5 = writeSettingInternal(tx, deps, ctx, 'finance.boardRemunerationDecidedOn', decidedOn, 'finance.setup.setting');
     if (!w5.ok) return w5;
-    financeAudit(tx, deps, ctx, { action: 'finance.setup.boardRemuneration', entity: 'financeSetup', id: 'finance.boardRemunerationAllowed', after: { step: 'boardRemuneration', confirmedAt: isoNow(deps.clock), applied: parsed.value.allowed, validFrom } });
+    // Von Hand entschieden: Ein früher geführter Beschluss (Gremien inzwischen aus) gilt nicht mehr.
+    const w6 = writeSettingInternal(tx, deps, ctx, 'finance.boardRemunerationResolutionId', '', 'finance.setup.setting');
+    if (!w6.ok) return w6;
+    financeAudit(tx, deps, ctx, { action: 'finance.setup.boardRemuneration', entity: 'financeSetup', id: 'finance.boardRemunerationAllowed', after: { step: 'boardRemuneration', confirmedAt: isoNow(deps.clock), applied: parsed.value.allowed, validFrom }, params: { resolutionId: null } });
     return ok({ allowed: parsed.value.allowed, basisText: parsed.value.basisText, validFrom, documentId, decidedOn });
   });
+}
+
+/**
+ * Der Beschluss, der die Vergütung führt (G7): gesetzt **und** von einem eingeschalteten Modul beschriftet
+ * (`resolveRecordLabel`, Gremien). Ohne Gremien `null` — dann ist die Vergütung wieder von Hand pflegbar.
+ */
+export function boardRemunerationResolutionInternal(deps: Deps, ctx: CallContext): { resolutionId: string; label: string; href: string | null } | null {
+  const resolutionId = readSetting<string>(deps, 'finance.boardRemunerationResolutionId');
+  if (!resolutionId) return null;
+  const label = resolveRecordLabel(deps, ctx, 'governanceResolution', resolutionId);
+  return label ? { resolutionId, label: label.label, href: label.href } : null;
+}
+
+/**
+ * G7: Ein festgeschriebener Beschluss über die Vergütung (Gremien) setzt den Einrichtungspunkt — in der Transaktion des
+ * Festschreibens, ohne Rechteprüfung (die hat der Dienst des Moduls gemacht). Schreibt die fünf Einstellungen und den
+ * Beschluss; ins Protokoll der Beschluss, nie der Wortlaut.
+ */
+export function applyBoardRemunerationInternal(tx: DbOrTx, deps: Deps, ctx: CallContext, input: { allowed: true; basisText: string; validFrom: string; documentId: string | null; decidedOn: string; resolutionId: string }): void {
+  // W-3: Folgt der Beschluss auf eine schon erlaubte Vergütung, bleibt der früheste Tag der durchgehenden Erlaubnis —
+  // sonst verlören Zahlungen zwischen altem und neuem „gilt ab“ ihre Grundlage.
+  const before = readSetting<boolean>(deps, 'finance.boardRemunerationAllowed') ? readSetting<string | null>(deps, 'finance.boardRemunerationValidFrom') : null;
+  const validFrom = before && before < input.validFrom ? before : input.validFrom;
+  const writes: [string, unknown][] = [
+    ['finance.boardRemunerationAllowed', input.allowed],
+    ['finance.boardRemunerationBasisText', input.basisText.slice(0, 500)],
+    ['finance.boardRemunerationDocumentId', input.documentId],
+    ['finance.boardRemunerationValidFrom', validFrom],
+    ['finance.boardRemunerationDecidedOn', input.decidedOn],
+    ['finance.boardRemunerationResolutionId', input.resolutionId],
+  ];
+  for (const [key, value] of writes) {
+    const written = writeSettingInternal(tx, deps, ctx, key, value, 'finance.setup.setting');
+    if (!written.ok) throw new Error(`applyBoardRemunerationInternal: ${key} refused`);
+  }
+  financeAudit(tx, deps, ctx, { action: 'finance.setup.boardRemuneration', entity: 'financeSetup', id: 'finance.boardRemunerationAllowed', after: { step: 'boardRemuneration', confirmedAt: isoNow(deps.clock), applied: true, validFrom }, params: { resolutionId: input.resolutionId } });
 }
 
 export interface PermissionMatrixActivity {

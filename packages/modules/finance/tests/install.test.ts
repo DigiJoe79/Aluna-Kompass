@@ -61,7 +61,7 @@ describe('installFinance — start plan', () => {
   it('delivers the start plan once — a category the association deleted never comes back', async () => {
     const { deps, ctx } = setupFinance();
     run(deps);
-    expect(unwrap(await listCategories(deps, ctx, { includeInactive: true }))).toHaveLength(40);
+    expect(unwrap(await listCategories(deps, ctx, { includeInactive: true }))).toHaveLength(41);
     const fees = unwrap(await listCategories(deps, ctx, {})).find((c) => c.key === 'bank-fees')!;
     unwrap(await deleteCategory(deps, ctx, { id: fees.id }));
     run(deps);

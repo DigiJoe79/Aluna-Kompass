@@ -16,6 +16,7 @@ import { StatusBadge, isNormalInList, statusTone } from '@/components/status-bad
 import { RowLink, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useUrlFilters } from '@/lib/use-url-filters';
 import { resendDocumentMailAction } from './actions';
+import { mailFailureReason } from './mail-failure-reason';
 
 const STATES = ['queued', 'sending', 'sent', 'failed', 'blocked', 'withdrawn'] as const;
 const PERIODS = ['30', '90', '365'] as const;
@@ -29,6 +30,7 @@ type Filters = { state: string; period: string };
 export function OutboxList({ rows, total, unfiltered, offset, pageSize, canSend }: { rows: OutboxListItem[]; total: number; unfiltered: number; offset: number; pageSize: number; canSend: boolean }) {
   const t = useTranslations('dms.outbox');
   const tState = useTranslations('dispatchStep.state');
+  const tCode = useTranslations('dms.mailErrorCodes');
   const { dateTime } = useDateFormat();
   const router = useRouter();
   const pathname = usePathname();
@@ -93,7 +95,7 @@ export function OutboxList({ rows, total, unfiltered, offset, pageSize, canSend 
                         <StatusBadge tone={statusTone('outbox', row.status)} dot>{tState(row.status)}</StatusBadge>
                         {/* Am Telefon nur die Marke (21b); der Grund steht am Dokument. */}
                         {row.status === 'failed' && (row.lastErrorText || row.lastErrorCode) ? (
-                          <span className="text-hint text-muted-ink max-md:hidden">{[row.lastErrorText, row.lastErrorCode ? `(${row.lastErrorCode})` : null].filter(Boolean).join(' ')}</span>
+                          <span className="text-hint text-muted-ink max-md:hidden">{mailFailureReason(tCode, row.lastErrorCode, row.lastErrorText)}</span>
                         ) : null}
                       </span>
                     )}

@@ -1,8 +1,9 @@
-import { chmodSync, existsSync, mkdirSync, mkdtempSync, rmSync } from 'node:fs';
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { createDeps } from '../src/app';
+import { FILE_STORE_TEMP_DIR } from '../src/files/store';
 import { defineModule } from '../src/modules/manifest';
 
 const dirs: string[] = [];
@@ -33,6 +34,31 @@ describe('createDeps prüft die Dateiablagen beim Start (N10)', () => {
     const deps = createDeps({ dataPath: dir, env: 'test', modules: [storing] });
     expect(existsSync(path.join(dir, 'ablage'))).toBe(true);
     expect(existsSync(path.join(dir, 'core', 'media'))).toBe(true);
+    deps.close();
+  });
+
+  /** Was ein Absturz mitten im Schreiben in den Temp-Verzeichnissen liegen ließ, räumt der Start weg (N1). */
+  it('räumt beim Start die Temp-Verzeichnisse der Ablagen', () => {
+    const dir = tempDir();
+    const storing = defineModule({ key: 'ablage', version: '0.0.1', permissions: [], files: true });
+    for (const store of [path.join(dir, 'ablage'), path.join(dir, 'core', 'media')]) {
+      mkdirSync(path.join(store, FILE_STORE_TEMP_DIR), { recursive: true });
+      writeFileSync(path.join(store, FILE_STORE_TEMP_DIR, '01REST'), 'halb');
+    }
+    const deps = createDeps({ dataPath: dir, env: 'test', modules: [storing] });
+    expect(existsSync(path.join(dir, 'ablage', FILE_STORE_TEMP_DIR, '01REST'))).toBe(false);
+    expect(existsSync(path.join(dir, 'core', 'media', FILE_STORE_TEMP_DIR, '01REST'))).toBe(false);
+    deps.close();
+  });
+
+  /** Ein zweites Öffnen im laufenden Prozess (E2E-Reset) darf einem laufenden Schreiben die Temp-Datei nicht wegnehmen. */
+  it('räumt nicht, wenn sweepTemp aus ist', () => {
+    const dir = tempDir();
+    const storing = defineModule({ key: 'ablage', version: '0.0.1', permissions: [], files: true });
+    mkdirSync(path.join(dir, 'ablage', FILE_STORE_TEMP_DIR), { recursive: true });
+    writeFileSync(path.join(dir, 'ablage', FILE_STORE_TEMP_DIR, '01LAUFEND'), 'halb');
+    const deps = createDeps({ dataPath: dir, env: 'test', modules: [storing], sweepTemp: false });
+    expect(existsSync(path.join(dir, 'ablage', FILE_STORE_TEMP_DIR, '01LAUFEND'))).toBe(true);
     deps.close();
   });
 

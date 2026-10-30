@@ -61,6 +61,17 @@ describe('readLinkedDocument', () => {
     expect(code(await readLinkedDocument(deps, reader, { documentId: doc.id, entityType: 'probeThing', entityId: 'T2' }))).toBe('notFound');
     expect(code(await readLinkedDocument(deps, reader, { documentId: doc.id, entityType: 'contact', entityId: 'C1' }))).toBe('notFound');
   });
+
+  it('a computed link: the module names the documents of the record, the Akte checks permission and membership — nothing is stored', async () => {
+    const { deps, ctx } = setupWithProbe();
+    const doc = await fileFixture(deps, ctx);
+    const subject = deps.db.select().from(documents).where(eq(documents.id, doc.id)).get()!.subject;
+    const reader = ctxWith(['probe.read']);
+    expect(code(await readLinkedDocument(deps, reader, { documentId: doc.id, entityType: 'probeComputed', entityId: subject }))).toBe('ok');
+    expect(code(await readLinkedDocument(deps, reader, { documentId: doc.id, entityType: 'probeComputed', entityId: 'other' }))).toBe('notFound');
+    expect(code(await readLinkedDocument(deps, ctxWith(['dms.view']), { documentId: doc.id, entityType: 'probeComputed', entityId: subject }))).toBe('forbidden');
+    expect(deps.db.select().from(documentLinks).where(eq(documentLinks.entityType, 'probeComputed')).all()).toHaveLength(0);
+  });
 });
 
 describe('receiveGeneratedUpload', () => {

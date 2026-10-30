@@ -6,7 +6,8 @@ import { dmsModule } from '../src/manifest';
 import { EXAMPLE_DOCUMENT_TYPES } from '../src/catalog';
 import { receiveDocument } from '../src/incoming';
 import { ensureDocumentType } from '../src/provision';
-import { documentTypes } from '../src/schema';
+import { eq } from 'drizzle-orm';
+import { documents, documentTypes } from '../src/schema';
 
 /** `deps` und `ctx` mit installiertem dms-Modul und dem Startsatz an Dokumentarten. */
 export const ALL_DMS = ['dms.view', 'dms.create', 'dms.file', 'dms.void', 'dms.deleteDraft', 'dms.manage'];
@@ -51,7 +52,11 @@ export const probeModule = defineModule({
   key: 'probe',
   version: '0.0.0',
   permissions: ['probe.read', 'probe.issue'],
-  linkedDocumentAccess: [{ entityType: 'probeThing', readPermission: 'probe.read', receivePermission: 'probe.issue' }],
+  linkedDocumentAccess: [
+    { entityType: 'probeThing', readPermission: 'probe.read', receivePermission: 'probe.issue' },
+    // Bezug berechnet (G7): zum Vorgang gehören die Dokumente, deren Betreff seine Kennung ist.
+    { entityType: 'probeComputed', readPermission: 'probe.read', documentsOf: (deps, entityId) => deps.db.select({ id: documents.id }).from(documents).where(eq(documents.subject, entityId)).all().map((d) => d.id) },
+  ],
   documentAreas: [{ key: 'probe', permission: 'probe.read' }],
   documentTemplates: [
     {

@@ -1,10 +1,10 @@
 // @vitest-environment jsdom
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { NextIntlClientProvider } from 'next-intl';
-import type { ReactElement } from 'react';
+import { type ReactElement, useContext } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import messages from '../messages/de.json';
-import { HelpPanel } from '@/components/shell/help-panel';
+import { HelpAsideContext, HelpAsideProvider, HelpPanel, useHelpAside } from '@/components/shell/help-panel';
 
 /** E4 „Hilfe neben der Seite“ (Designer 2026-10-17, Notiz `entwuerfe/E4-hilfe-panel.md`). */
 const show = (ui: ReactElement) =>
@@ -59,5 +59,37 @@ describe('HelpPanel als Nebenspalte (ab lg)', () => {
     expect((await screen.findByRole('alert')).textContent).toContain('Die Hilfe konnte nicht geladen werden.');
     await act(async () => fireEvent.click(screen.getByRole('button', { name: 'Erneut versuchen' })));
     expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('HelpAsideProvider', () => {
+  /**
+   * Der Context-Wert über der Seite bleibt derselbe, auch wenn die Hilfe auf- und zugeht. Ein wechselnder Wert erreicht
+   * noch nicht hydrierte Suspense-Grenzen; im Image blieb dann der gestreamte Teil (`<div hidden id="S:0">`) als zweites
+   * Seitenpanel „Bestände“ im DOM — nach dem Neuladen mit offener Hilfe (help.spec.ts:50, 29.10.).
+   */
+  it('hält den Context-Wert stabil, der Verbraucher sieht trotzdem den Wechsel', () => {
+    const values: unknown[] = [];
+    function Probe() {
+      values.push(useContext(HelpAsideContext));
+      return null;
+    }
+    function Consumer() {
+      return <p data-testid="aside">{useHelpAside() ? 'daneben' : 'zu'}</p>;
+    }
+    const tree = (aside: boolean) => (
+      <HelpAsideProvider aside={aside}>
+        <Probe />
+        <Consumer />
+      </HelpAsideProvider>
+    );
+    const { rerender } = render(tree(false));
+    expect(screen.getByTestId('aside').textContent).toBe('zu');
+    act(() => rerender(tree(true)));
+    expect(screen.getByTestId('aside').textContent).toBe('daneben');
+    act(() => rerender(tree(false)));
+    expect(screen.getByTestId('aside').textContent).toBe('zu');
+    expect(values.length).toBeGreaterThan(1);
+    expect(new Set(values).size).toBe(1);
   });
 });

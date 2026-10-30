@@ -10,6 +10,8 @@ import { fieldDescriptionCsv, gdpduIndexXml, readmeText } from '../src/reporting
 import { GDPDU_DTD, GDPDU_DTD_SHA256 } from '../src/reporting/export/gdpdu-dtd';
 import { EXPORT_TABLES, exportCell, exportLine, type ExportScope } from '../src/reporting/export/tables';
 import { csvDocument } from '@kompass/core';
+import { eq } from 'drizzle-orm';
+import { financeAllocationCorrections, financeAllocationLines } from '../src/schema';
 import { insertRaw, insertRun, ledgerFixture } from './helpers';
 
 async function setup() {
@@ -29,6 +31,7 @@ async function setup() {
       { id: y('2025').id, designation: '2025', startsOn: '2025-01-01', endsOn: '2025-12-31', open: false },
       { id: y('2026').id, designation: '2026', startsOn: '2026-01-01', endsOn: '2026-12-31', open: true },
     ],
+    timeZone: 'Europe/Berlin',
   };
   return { f, scope, expense, donation, other, draft, raw };
 }
@@ -103,6 +106,16 @@ describe('Dateien des Datenexports', () => {
     expect(indexXml).toContain('<!DOCTYPE DataSet SYSTEM "gdpdu-01-09-2004.dtd">');
     const description = fieldDescriptionCsv(EXPORT_TABLES).split('\r\n').filter(Boolean);
     expect(description).toHaveLength(1 + EXPORT_TABLES.reduce((n, t) => n + t.columns.length, 0));
+  });
+
+  it('days from timestamps in the association\'s zone: creation day, corrections decided at 0:30 on 01.01. (F-B3)', async () => {
+    const { f, scope, other } = await setup();
+    expect(gdpduIndexXml(EXPORT_TABLES, { supplier: 'Verein', location: 'Musterstadt', createdAt: '2026-12-31T23:30:00.000Z', scope })).toContain('01.01.2027');
+    expect(readmeText({ createdAt: '2026-12-31T23:30:00.000Z', scope }, EXPORT_TABLES)).toContain('01.01.2027');
+    // Eine Korrektur an einer Buchung von 2024 (nicht gewählt), entschieden am 01.01.2025 um 0:30 Uhr: gehört zu 2025.
+    const line = f.deps.db.select().from(financeAllocationLines).where(eq(financeAllocationLines.entryId, other.id)).get()!;
+    f.deps.db.insert(financeAllocationCorrections).values({ id: 'K1', lineId: line.id, entryId: other.id, state: 'applied', before: '{}', after: '{}', note: '', requestedByUserId: f.userId, requestedAt: '2024-12-31T23:00:00.000Z', approvedByUserId: f.userId, approvedAt: '2024-12-31T23:30:00.000Z' }).run();
+    expect(rowsOf(f.deps.db, scope, 'zuordnungskorrekturen.csv').map((r) => r[0])).toEqual(['K1']);
   });
 
   it('names an open year as provisional', async () => {

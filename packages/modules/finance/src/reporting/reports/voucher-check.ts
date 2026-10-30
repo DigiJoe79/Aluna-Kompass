@@ -5,6 +5,7 @@ import { vouchersWithoutEntryInternal } from '../../ledger/vouchers';
 import { financeEntries, financeEntryJustifications, financeMoneyLines } from '../../schema';
 import { reusedEvidenceInternal, type ReusedEvidenceGroup, type ReusedEvidenceUse } from '../reused-evidence';
 import type { ReportComputeEnv, ReportDefinition, ReportParams, ReportRenderContext } from '../types';
+import { reportTimeZone, TIME_ZONE_SETTING } from '../../zoned-days';
 import { amountCell, checkYearOrDate, heading, paragraph, reportYearInternal, strongCell, table, textCell, yearParamsSchema, type ReportYear } from './common';
 
 /**
@@ -38,7 +39,7 @@ export function computeVoucherCheckReport(db: DbOrTx, params: ReportParams, env:
     .sort((a, b) => a.entryDate.localeCompare(b.entryDate) || (a.entryNumber ?? '').localeCompare(b.entryNumber ?? ''));
   const typeKeys = Array.isArray(env.settings[VOUCHER_TYPES_KEY]) ? (env.settings[VOUCHER_TYPES_KEY] as string[]) : [];
   const vouchersWithoutEntry = vouchersWithoutEntryInternal(db, typeKeys, { from: year.startsOn, to: year.endsOn }).map((d) => ({ documentId: d.id, number: d.number, documentDate: d.documentDate, typeKey: d.typeKey, subject: d.subject }));
-  return { year, withoutVoucher, vouchersWithoutEntry, reusedEvidence: reusedEvidenceInternal(db, { from: year.startsOn, to: year.endsOn }) };
+  return { year, withoutVoucher, vouchersWithoutEntry, reusedEvidence: reusedEvidenceInternal(db, { from: year.startsOn, to: year.endsOn }, reportTimeZone(env)) };
 }
 
 // ── Papier ─────────────────────────────────────────────────────────────────
@@ -83,7 +84,7 @@ export const voucherCheckReport: ReportDefinition<VoucherCheckReport> = {
   paramsSchema: yearParamsSchema,
   checkParams: checkYearOrDate,
   years: (_db, params) => (params.fiscalYearId ? [params.fiscalYearId] : []),
-  settingKeys: [VOUCHER_TYPES_KEY],
+  settingKeys: [VOUCHER_TYPES_KEY, TIME_ZONE_SETTING],
   compute: computeVoucherCheckReport,
   toTypst: voucherCheckTypst,
   titleKey: 'finance.reports.voucherCheck.title',

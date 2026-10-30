@@ -9,6 +9,110 @@ die Nummern folgen [Semantic Versioning](https://semver.org/lang/de/). Vor
 1.0.0 kann jede Minor-Fassung Brüche enthalten — was bricht, steht unter
 **Geändert** mit dem, was zu tun ist.
 
+## [0.5.0] - 2026-10-30
+
+Diese Fassung bringt das Modul **Gremien**: Organe und Ämter, Sitzungen von der Einladung über den Mitlauf bis zum
+festgeschriebenen Protokoll, Beschlüsse, Umläufe, die Satzung mit Regelwerk und die Registeranmeldung — dazu
+**Jahresrechnung** und **Mittelverwendung** aus der nie einzeln erschienenen Fassung 0.4.5 und in der Kassenprüfung
+den Abschnitt 9 „Beschlüsse“. Eine Migration (`0012_governance_annual_accounts_0_5_0`, `migrationCount` 13). Gremien
+ist nach dem Update aus; eingeschaltet führt es die Kontaktrollen *Vorstandsmitglied* und *Schatzmeister* aus den
+Ämtern, von Hand lassen sie sich dann nicht mehr anlegen. Die Schalter „Darf ein Agent …?“ stehen jetzt gesammelt unter
+**Verwaltung → Agenten**, gesetzte Werte bleiben. Die Handgriffe nach dem Update stehen im Betriebshandbuch, „Von 0.4.0
+auf 0.5.0“.
+
+### Hinzugefügt
+
+- **Gremien: Sitzungen und Mitlauf** (neuer Bereich Gremien): Sitzungen der
+  Mitgliederversammlung und des Vorstands vorbereiten, Tagesordnung und
+  Anträge, Einladung als Serienlauf per E-Mail und Post, in der Versammlung
+  mitlaufen — Anwesenheit, einstimmige Beschlüsse mit einem Tastendruck,
+  Auszählen mit errechnetem Ja, Wahlen mit Stichwahl, Entlastung —,
+  Protokollentwurf, unterschriebene Fassung ablegen und festschreiben; die
+  Ämter, Entlastung und Satzungsstände folgen daraus. Ein Agent darf
+  vorbereiten; Einladen und Festschreiben bleiben einem Menschen, bis der
+  Verein es unter Verwaltung → Agenten erlaubt. Dazu die Übersicht der
+  Organe mit Ämtern und freien Plätzen, die Satzung mit Ständen und einem
+  Regelwerk, das Fristen und Mehrheiten rechnet (fehlt eine Regel, gilt das
+  Gesetz), die Beschlussliste mit Filter „steuerlich bedeutsam“,
+  Umlaufbeschlüsse des Vorstands, die Registeranmeldung mit Prüfliste und
+  Fragen zum Transparenzregister und auf der Startseite die Fristen der
+  Gremien. Einladungen nennen die nötige Mehrheit mit Fundstelle und legen
+  geänderte Satzungsabsätze als Anlage bei; ein festgeschriebenes Protokoll
+  lässt sich berichtigen.
+- **Gremien und die übrigen Bereiche** greifen ineinander, solange Gremien eingeschaltet ist: Die Rollen
+  Vorstandsmitglied und Schatzmeister folgen den Ämtern (von Hand nicht mehr änderbar), ein vertretendes Amt setzt
+  „vertritt nach § 26 BGB“; Schritt 11 des Jahresabschlusses zeigt das Ergebnis der festgeschriebenen
+  Mitgliederversammlung (Entlastung, Genehmigung der Jahresrechnung) statt eines Formulars; die Vergütung des Vorstands
+  folgt einem festgeschriebenen Beschluss; Rücklage, Beitragsordnung und Zahlung an Partner können auf einen Beschluss verweisen; die
+  Steuererklärung schlägt das Satzungsdatum vor; der Dialog „Prüfer eintragen“ schlägt die gewählten Kassenprüfer vor; die Übersicht
+  der Gremien warnt, wenn Regelwerk und Finanzen bei der Genehmigung der Jahresrechnung auseinanderlaufen; die
+  Kassenprüfung bekommt den Abschnitt „9. Beschlüsse“ mit den Beschlüssen, die auf die Kasse wirken, und die Prüferin
+  öffnet deren Protokolle, ohne Gremien lesen zu dürfen. Ohne Gremien bleibt alles von Hand wie bisher.
+- Bei der Rolle Vorstandsmitglied lässt sich festhalten, wer den Verein nach § 26 BGB vertritt; nur diese Personen
+  können die Jahresrechnung abzeichnen.
+- In den Finanzangaben zum Kontakt lassen sich „juristische Person“ (bei Organisationen) und die Einwilligung zur
+  Namensnennung in der Jahresrechnung mit Verlauf festhalten.
+- Die Kategorie ‚Webseite und Öffentlichkeitsarbeit‘ (Werbung) kommt dazu; neue Installationen ordnen
+  Zahlungsdienstgebühren der Verwaltung zu. Bestehende Kategorien prüfen: siehe Betrieb, „Von 0.4.0 auf 0.5.0“.
+- Neuer Bericht ‚Jahresrechnung‘: Mittelherkunft und -verwendung, Vermögen, Projekte, Kennzahlen und Großzuwendungen
+  für Mitglieder und Öffentlichkeit, mit Vorjahr; festschreibbar nach Kassenprüfung und Kassenbericht.
+- Wer eine Wiedervorlage für eine andere Person anlegt, schickt ihr eine kurze Mail mit Link (Adresse der Installation
+  über `KOMPASS_PUBLIC_URL`).
+- Beim Zuweisen einer Wiedervorlage sagt Kompass vorher, wenn die Person keine Mail bekommt (keine gültige Adresse oder
+  kein Mailversand).
+- Ein vertretungsberechtigtes Vorstandsmitglied zeichnet die festgeschriebene Jahresrechnung selbst ab (in Kompass oder als
+  unterschriebener Scan); um die Abzeichnung lässt sich per Wiedervorlage mit Mail bitten.
+- Die abgezeichnete Jahresrechnung lässt sich als PDF für die Webseite bereitstellen (Sicht ‚annualAccounts‘ für
+  Vorlagen); sie erscheint mit dem nächsten Publizieren und zählt bis dahin als Änderung.
+- Widerruft eine Person ihre Einwilligung, liefert die Webseite eine Fassung ohne ihren Namen (gleiche Zahlen); das
+  festgeschriebene Exemplar bleibt unverändert.
+- Mittelverwendungsrechnung als Bericht: zeitnahe Verwendung je Zuflussjahr mit Frist, Vermögensabgleich und Rücklagen;
+  über 100.000 € Einnahmen als Schritt im Jahresabschluss, im Prüfpaket und unter Fristen und Schwellen.
+- Zwei neue Rücklagenarten: im wirtschaftlichen Geschäftsbetrieb und in der Vermögensverwaltung, jeweils mit
+  Begründung; Rücklagen nach § 62 AO lassen sich für ein Vorjahr nachträglich bilden.
+- Anfangsvortrag der Mittelverwendung für Vereine, die mit Vorjahren zu Kompass kommen.
+- **Verwaltung → Agenten:** Die Schalter „Darf ein Agent …?“ aller eingeschalteten Bereiche — Backup, Akte, Finanzen,
+  Mitglieder, Gremien — stehen jetzt auf einer Seite statt am Ende von fünf Einstellungsformularen. Die gesetzten Werte
+  bleiben, wie sie sind.
+- Agenten können ein einzelnes Dokument neu erkennen lassen (`dms_reindex_document`), auch nach aufgebrauchten Versuchen.
+- Agenten können eine nachgetragene Sitzung bis zum Festschreiben berichtigen, auch die Einladung (`governance_meeting_backfill_correct`).
+
+### Behoben
+
+- **Texterkennung bei Handy-Scans.** Scans aus der Scan-Funktion des iPhones
+  blieben in der Akte ohne Text („Texterkennung gescheitert“), weil jede Seite
+  in riesiger Auflösung aufbereitet wurde und das Zeitlimit riss. Kompass
+  begrenzt die Auflösung jetzt nach der Seitengröße und erkennt solche Seiten
+  in wenigen Sekunden. Bereits gescheiterte Dokumente lassen sich in der Akte
+  neu erkennen lassen.
+- Ein abgelaufener Lastschrift-Einzug lässt sich nicht mehr als eingereicht markieren, wenn seine Beiträge inzwischen
+  in einem neuen Einzug stecken.
+- Ein Beitrag, der schon in einer erzeugten Lastschrift-Datei steckt, lässt sich nicht mehr erlassen, ohne ihn vorher
+  aus dem Einzug zu nehmen.
+- Beitrags- und Mahnläufe erzeugen keine doppelten Briefe mehr, wenn die Seite während des Laufs neu geladen wird.
+- Beim Wechsel des Zahlungsrhythmus mitten im Jahr gehen nach einem schon bezahlten Monat keine Beiträge mehr verloren.
+- Wer beim Kontoauszug-Import von CSV auf CAMT wechselt, bekommt überlappende Umsätze nicht mehr doppelt.
+- Die eingestellte Upload-Grenze für Belege gilt jetzt auch beim Hochladen in der Oberfläche.
+- Ein Doppelklick auf „Ankündigung erzeugen“, „Erneut senden“ oder „Als Entwurf speichern“ in der Buchungsmaske
+  stellt nichts mehr doppelt aus; ein Verbindungsabbruch beim Speichern einer Buchung lässt die Eingaben stehen.
+- Ein unlesbarer oder fehlender Betrag wird nicht mehr still als „kein Betrag“ oder 0 € gespeichert, sondern am Feld
+  gemeldet.
+- Prüfpaket und Datenexport bleiben nach einem kurzen Verbindungsabbruch nicht mehr dauerhaft bei „läuft“ stehen.
+- Eine Notiz an einem Dokument und eine neue Sprache bleiben nach einer Ablehnung im Feld stehen.
+- Wer eine Einsortierregel der Akte bearbeitet, setzt ihre Reihenfolge nicht mehr auf den Anfang zurück.
+- Hochgeladene SVG-Grafiken werden strenger geprüft, und die Webseiten-Vorschau liefert Bilder abgeschottet aus.
+- Ein Dokument, das beim Ausstellen gleichzeitig mit einem anderen eine Nummer bekam, gilt nicht mehr fälschlich als
+  verändert.
+- Während eine Sicherung eingespielt wird, gehen keine Änderungen mehr verloren, die in den ersten Minuten noch gemacht
+  wurden.
+- Das Mitglieder-Modul lässt sich nicht mehr ausschalten, solange es Mitgliedschaften führt — auch beendete, deren
+  Aufbewahrung noch läuft; sonst blieben ihre Daten beim Löschen eines Kontakts ungeschützt zurück.
+- Wird ein Kontakt gelöscht, löst die Akte ihre Verknüpfungen auf ihn und löscht Entwürfe, die an nichts anderem mehr
+  hängen; eingetragene Dokumente bleiben.
+- Beim Löschen einer Mitgliedschaft gehen ihre Wiedervorlagen mit, und die Akte löst ihre Verknüpfungen auf sie.
+- Ein Dokument, das gelöscht wird, während Kompass seinen Text liest, hinterlässt keinen Suchtext mehr.
+- An eine Beitragsordnung, nach der schon Beiträge angelegt sind, lässt sich der Beschluss nachträglich anhängen.
+
 ## [0.4.0] - 2026-10-27
 
 Diese Fassung bringt die **Rechenschaftspflichten** des Vereins in Kompass: Berichte, die sich festschreiben lassen,

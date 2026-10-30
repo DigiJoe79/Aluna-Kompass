@@ -1,7 +1,10 @@
-import { newId, schema, unwrap } from '@kompass/core';
+import { newId, schema, unwrap, type Result } from '@kompass/core';
 import { auditEntry, ctxWith } from '@kompass/core/testing';
 import { describe, expect, it } from 'vitest';
-import { deadlineOrder, listFinanceDeadlines } from '../src/closing/deadlines';
+import { deadlineOrder, listFinanceDeadlines, type FinanceDeadlines } from '../src/closing/deadlines';
+import { FINANCE_MCP_TOOLS } from '../src/mcp-tools';
+import { saveFundsUseOpening } from '../src/allocation/funds-use-openings';
+import type { FundsUseReport } from '../src/reporting/reports/funds-use';
 import { recordVatFiling } from '../src/reporting/vat-filing';
 import { setDatedValue } from '../src/ledger/dated-values';
 import { saveNotice } from '../src/donations/notices';
@@ -142,5 +145,111 @@ describe('Umsatzsteuer-Fristen (Plan E6a Task 6)', () => {
     f.deps.clock.set('2026-10-25T10:00:00.000Z');
     unwrap(await setDatedValue(f.deps, f.ctx, { key: 'taxation', validFrom: '2026-01-01', value: 'regular' }));
     expect((await vat(f)).map(([key]) => key)).toEqual(['vatAdvanceReturn:2026-Q1', 'vatAdvanceReturn:2026-Q2', 'vatAdvanceReturn:2026-Q3', 'vatAdvanceReturn:2026-Q4', 'vatReturn:2026']);
+  });
+});
+
+describe('Verwendungsfrist je Rückstand (M2 Task 3)', () => {
+  async function setup() {
+    const f = await ledgerFixture({ years: ['2024', '2025', '2026'] });
+    const y = (d: string) => f.years[d]!.id;
+    const book = (date: string, cents: number) =>
+      bookEntry(f.deps, f.ctx, cents > 0
+        ? { entryDate: date, text: 'Spende', moneyLines: [{ accountId: f.bank.id, amountCents: cents }], allocationLines: [{ categoryId: f.donations.id, amountCents: cents }] }
+        : { entryDate: date, text: 'Projektkosten', moneyLines: [{ accountId: f.bank.id, amountCents: cents }], allocationLines: [{ categoryId: f.programCosts.id, amountCents: cents }] }).then(unwrap);
+    const timely = async () => unwrap(await listFinanceDeadlines(f.deps, f.ctx, {})).computed.filter((d) => d.kind === 'timelyUse' || d.kind === 'timelyUseLapsed');
+    return { f, y, book, timely };
+  }
+
+  it('a backlog from a year above the limit becomes a deadline', async () => {
+    const { f, y, book, timely } = await setup();
+    await book('2024-03-01', 5_000_000);
+    await book('2024-04-01', -4_900_000);
+    f.closeYear(y('2024'));
+    expect(await timely()).toEqual([{ key: `timelyUse:fy:${y('2024')}`, kind: 'timelyUse', dueOn: '2026-12-31', overdue: false, params: { origin: '2024', restCents: 100_000 }, href: `/finance/fund-use?year=${y('2026')}` }]);
+  });
+
+  it('it disappears when the money is used', async () => {
+    const { f, y, book, timely } = await setup();
+    await book('2024-03-01', 5_000_000);
+    await book('2024-04-01', -4_900_000);
+    f.closeYear(y('2024'));
+    await book('2026-03-01', -100_000);
+    expect(await timely()).toEqual([]);
+  });
+
+  it('an open year below the limit keeps the deadline; closing it leaves a note', async () => {
+    const { f, y, book, timely } = await setup();
+    await book('2024-03-01', 5_000_000);
+    await book('2024-04-01', -4_900_000);
+    f.closeYear(y('2024'));
+    await book('2025-03-01', 1_000);
+    expect((await timely()).map((d) => d.kind)).toEqual(['timelyUse']);
+    f.closeYear(y('2025'));
+    expect(await timely()).toEqual([{ key: `timelyUseLapsed:fy:${y('2024')}`, kind: 'timelyUseLapsed', dueOn: null, overdue: false, params: { origin: '2024', lapsedIn: '2025' }, href: `/finance/fund-use?year=${y('2025')}` }]);
+    f.deps.clock.set('2027-02-01T10:00:00.000Z');
+    f.closeYear(y('2026'));
+    expect(await timely()).toEqual([]);
+  });
+
+  it('no deadline below the limit', async () => {
+    const { f, y, book, timely } = await setup();
+    await book('2024-03-01', 4_500_000);
+    f.closeYear(y('2024'));
+    expect(await timely()).toEqual([]);
+  });
+
+  it('overdue after the due day', async () => {
+    const { f, y, book, timely } = await setup();
+    await book('2024-03-01', 5_000_000);
+    await book('2024-04-01', -4_900_000);
+    await book('2025-03-01', 5_000_000);
+    await book('2026-03-01', 10_000_001);
+    for (const d of ['2024', '2025']) f.closeYear(y(d));
+    f.deps.clock.set('2027-01-15T10:00:00.000Z');
+    const due = (await timely()).find((d) => d.params.origin === '2024')!;
+    expect(due).toMatchObject({ kind: 'timelyUse', dueOn: '2026-12-31', overdue: true, params: { restCents: 100_000 } });
+  });
+
+  it('finance_deadlines carries the same entries', async () => {
+    const { f, y, book } = await setup();
+    await book('2024-03-01', 5_000_000);
+    await book('2024-04-01', -4_900_000);
+    f.closeYear(y('2024'));
+    const tool = FINANCE_MCP_TOOLS.find((t) => t.name === 'finance_deadlines')!;
+    const viaMcp = unwrap((await tool.handler(f.deps, f.ctx, {})) as Result<FinanceDeadlines>);
+    expect(viaMcp.computed).toEqual(unwrap(await listFinanceDeadlines(f.deps, f.ctx, {})).computed);
+    expect(viaMcp.computed.map((d) => d.kind)).toContain('timelyUse');
+  });
+
+  it('finance_report and finance_deadlines say the same for an open year not above the limit (M2, Abnahme)', async () => {
+    const { f, y, book } = await setup();
+    await book('2024-03-01', 5_000_000);
+    await book('2024-04-01', -4_900_000);
+    f.closeYear(y('2024'));
+    await book('2025-03-01', 1_000);
+    const tool = (name: string) => FINANCE_MCP_TOOLS.find((t) => t.name === name)!;
+    const deadlines = unwrap((await tool('finance_deadlines').handler(f.deps, f.ctx, {})) as Result<FinanceDeadlines>).computed.filter((d) => d.kind === 'timelyUse');
+    const fromDeadlines = deadlines.map((d) => ({ origin: d.params.origin, restCents: d.params.restCents, dueOn: d.dueOn }));
+    expect(fromDeadlines).toEqual([{ origin: '2024', restCents: 100_000, dueOn: '2026-12-31' }]);
+    const run = unwrap((await tool('finance_report').handler(f.deps, f.ctx, { report: 'fundsUse', params: { fiscalYearId: y('2026') } })) as Result<{ data: FundsUseReport }>);
+    const fromReport = run.data.partA.buckets.filter((b) => b.originKey !== `fy:${y('2026')}` && b.originRequired && b.restCents > 0 && b.state !== 'lapsed').map((b) => ({ origin: b.originDesignation, restCents: b.restCents, dueOn: b.dueBy }));
+    expect(fromReport).toEqual(fromDeadlines);
+  });
+
+  it('a backlog from an opening gets its deadline and lapses after a closed year not above the limit', async () => {
+    const { f, y, book, timely } = await setup();
+    f.deps.clock.set('2025-06-01T10:00:00.000Z');
+    unwrap(await saveFundsUseOpening(f.deps, f.ctx, { offset: 1, designation: '2023', endsOn: '2023-12-31', revenueCents: 5_200_000, amountCents: 300_000, upload: { bytes: pdfBytes(), fileName: 'mvr-2023.pdf', documentDate: '2024-02-01' } }));
+    expect(await timely()).toEqual([{ key: 'timelyUse:opening:1', kind: 'timelyUse', dueOn: '2025-12-31', overdue: false, params: { origin: '2023', restCents: 300_000 }, href: `/finance/fund-use?year=${y('2025')}` }]);
+    await book('2024-03-01', 1_000);
+    f.closeYear(y('2024'));
+    expect(await timely()).toEqual([{ key: 'timelyUseLapsed:opening:1', kind: 'timelyUseLapsed', dueOn: null, overdue: false, params: { origin: '2023', lapsedIn: '2024' }, href: `/finance/fund-use?year=${y('2024')}` }]);
+  });
+
+  it('an opening from a year not above the limit brings no deadline', async () => {
+    const { f, timely } = await setup();
+    f.deps.clock.set('2025-06-01T10:00:00.000Z');
+    unwrap(await saveFundsUseOpening(f.deps, f.ctx, { offset: 1, designation: '2023', endsOn: '2023-12-31', revenueCents: 4_500_000, amountCents: 300_000, upload: { bytes: pdfBytes(), fileName: 'mvr-2023.pdf', documentDate: '2024-02-01' } }));
+    expect(await timely()).toEqual([]);
   });
 });

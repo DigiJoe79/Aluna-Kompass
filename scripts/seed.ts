@@ -8,6 +8,7 @@ import { projectsModule } from '@kompass/module-projects';
 import { contactsModule } from '@kompass/module-contacts';
 import { dmsModule } from '@kompass/module-dms';
 import { financeModule } from '@kompass/module-finance';
+import { governanceModule } from '@kompass/module-governance';
 import { membersModule } from '@kompass/module-members';
 import { siteModule } from '@kompass/module-site';
 
@@ -38,7 +39,7 @@ export async function seedWithModules(opts: SeedOptions): Promise<{ adminEmail: 
   const deps = createDeps({
     dataPath: opts.dataPath,
     env: opts.env,
-    modules: [siteModule, projectsModule, animalsModule, contactsModule, dmsModule, financeModule, membersModule],
+    modules: [siteModule, projectsModule, animalsModule, contactsModule, dmsModule, financeModule, membersModule, governanceModule],
     coreTemplates: coreDocumentTemplates(),
     documents: createDocumentEngine(),
   });

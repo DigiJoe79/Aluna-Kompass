@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { financeAudit } from '../audit';
 import { financeConflict } from '../errors';
 import { financeFiscalYears, financeNotices, financeReports, financeTaxPeriods, type FinanceFiscalYearRow, type FinanceTaxPeriodRow } from '../schema';
+import { statuteSuggestionOf } from '../sources';
 import { requireFinanceRead } from './access';
 import { dayAfter } from './fiscal-years';
 import { nextWorkingDay, type FederalState } from './working-days';
@@ -258,7 +259,15 @@ export async function listTaxPeriods(deps: Deps, ctx: CallContext, input: unknow
  * jüngste beendete Jahr; Bis ist Von + 2, soweit die Jahre schon angelegt sind; dazu beide Fristen zum Ende von Bis.
  * `null`, wenn es kein solches Jahr gibt.
  */
-export async function taxPeriodDefaults(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<{ firstFiscalYearId: string; lastFiscalYearId: string; dueOn: string; dueOnWithAdvisor: string } | null>> {
+/** G7: das Satzungsdatum, wie die Antwort `statuteDate` es vorbelegt — aus Gremien, mit Dokument und Quelle. */
+export type TaxStatuteSuggestion = { date: string; documentId: string | null; source: { label: string; href: string } };
+
+function statuteAt(deps: Deps, on: string): TaxStatuteSuggestion | null {
+  const found = statuteSuggestionOf(deps, deps.db, on);
+  return found ? { date: found.statuteDate, documentId: found.documentId, source: found.source } : null;
+}
+
+export async function taxPeriodDefaults(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<{ firstFiscalYearId: string; lastFiscalYearId: string; dueOn: string; dueOnWithAdvisor: string; statute: TaxStatuteSuggestion | null } | null>> {
   const denied = requireFinanceRead(ctx, 'read');
   if (denied) return denied;
   const parsed = validate(deps, z.object({}).strict(), input ?? {});
@@ -281,7 +290,23 @@ export async function taxPeriodDefaults(deps: Deps, ctx: CallContext, input: unk
     if (!next) break;
     last = next;
   }
-  return ok({ firstFiscalYearId: year.id, lastFiscalYearId: last.id, dueOn: suggestedDueOn(last.endsOn, false), dueOnWithAdvisor: suggestedDueOn(last.endsOn, true) });
+  return ok({ firstFiscalYearId: year.id, lastFiscalYearId: last.id, dueOn: suggestedDueOn(last.endsOn, false), dueOnWithAdvisor: suggestedDueOn(last.endsOn, true), statute: statuteAt(deps, last.endsOn) });
+}
+
+/**
+ * `finance.read` (G7, Spec Gremien § 8.1): Vorschlag für „Satzung in der Fassung vom“ eines Erklärungszeitraums — das
+ * jüngste Beschlussdatum des Stands, der am Ende des Zeitraums gilt, samt Wortlaut als Dokument. Nur ein Vorschlag:
+ * gespeichert wird mit `saveTaxPeriodAnswers`, verknüpft mit `linkTaxPeriodDocument`. Ohne Gremien `null`.
+ */
+export async function taxPeriodStatute(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<TaxStatuteSuggestion | null>> {
+  const denied = requireFinanceRead(ctx, 'read');
+  if (denied) return denied;
+  const parsed = validate(deps, z.object({ taxPeriodId: z.string().min(1) }), input);
+  if (!parsed.ok) return parsed;
+  const row = loadRow(deps.db, parsed.value.taxPeriodId);
+  if (!row) return notFound('financeTaxPeriod', parsed.value.taxPeriodId);
+  const last = deps.db.select().from(financeFiscalYears).where(eq(financeFiscalYears.id, row.lastFiscalYearId)).get()!;
+  return ok(statuteAt(deps, last.endsOn));
 }
 
 const createSchema = z.object({

@@ -1,6 +1,6 @@
 'use client';
 
-import { Clock, Contact, Database, Droplet, Euro, File, FileText, Folder, Globe, Grid2x2, Home, Hourglass, Image, LayoutTemplate, Languages, List, PawPrint, Settings, Shield, SlidersHorizontal, Upload, Users, type LucideIcon } from 'lucide-react';
+import { Clock, Contact, Database, Droplet, Euro, File, FileText, Folder, Globe, Grid2x2, Home, Hourglass, Image, Landmark, LayoutTemplate, Languages, List, PawPrint, Settings, Shield, SlidersHorizontal, Upload, Users, type LucideIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import type { RailEntry } from '@/lib/navigation';
@@ -34,6 +34,8 @@ export const ICONS: Record<string, LucideIcon> = {
   hourglass: Hourglass,
   globe: Globe,
   settings: Settings,
+  // Gremien (N7, Freigabe Joe 2026-10-28, Designer Phase 1).
+  landmark: Landmark,
 };
 
 export interface RailProps {

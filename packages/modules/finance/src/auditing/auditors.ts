@@ -6,7 +6,7 @@ import { z } from 'zod';
 import { checkPickedDocument } from '../allocation/reserves';
 import { originOfLine } from '../allocation/people';
 import { financeAudit } from '../audit';
-import { financeConflict, requireHumanChannelFinance } from '../errors';
+import { financeConflict, requireHumanChannelFinance, uploadLimitProblem } from '../errors';
 import { fiscalYearStatusInternal } from '../ledger/fiscal-years';
 import { financeAllocationLines, financeAuditAuditors, financeEntries, financeFiscalYears, type FinanceAuditAuditorRow, type FinanceFiscalYearRow } from '../schema';
 import { auditorsFrozenInternal, auditorWorkInternal, auditorsOfYearInternal, currentAuditYearInternal, requireAuditRead } from './access';
@@ -256,6 +256,8 @@ export async function fileConfidentialityDeclaration(deps: Deps, ctx: CallContex
   if (humanOnly) return humanOnly;
   const parsed = validate(deps, confidentialitySchema, input);
   if (!parsed.ok) return parsed;
+  const tooLarge = uploadLimitProblem(deps, parsed.value.bytes);
+  if (tooLarge) return tooLarge;
   const row = loadAuditor(deps.db, parsed.value.auditorId);
   if (!row) return notFound('financeAuditAuditor', parsed.value.auditorId);
   const year = loadYear(deps.db, row.fiscalYearId)!;

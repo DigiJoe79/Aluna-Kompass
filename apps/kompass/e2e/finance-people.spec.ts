@@ -16,8 +16,8 @@ async function category(client: Client, key: string): Promise<{ id: string }> {
 /**
  * F8b Task 6b — Finanzen → Personen (D4, Annahme 9, 10): Karte mit
  * Zustandswort gegen die Grenze; E21 mit „freigegeben von“; Warnwort bei
- * einer Pauschale an ein Vorstandsmitglied ohne bestätigten Einrichtungspunkt
- * — und keines mehr, sobald er bestätigt ist.
+ * einer Pauschale an ein Vorstandsmitglied ohne erlaubte Grundlage — und
+ * keines mehr, sobald sie bestätigt ist (von Hand, also ohne Gremien).
  */
 test.describe('finance people (F8b)', () => {
   test.beforeEach(async ({ page }) => {
@@ -25,10 +25,14 @@ test.describe('finance people (F8b)', () => {
     await loginAsAdmin(page);
   });
 
-  test('Karte mit Zustandswort, E21 mit Freigeber, Warnung ohne Einrichtungspunkt, keine nach Bestätigung', async ({ page, baseURL }) => {
+  test('Karte mit Zustandswort, E21 mit Freigeber, Warnung ohne Grundlage, keine nach Bestätigung', async ({ page, baseURL }) => {
     await setE2ESetting(page, 'finance.mcpHumanOnlyAllowed', true); // Buchen und Freigeben per Werkzeug sind humanOnly — hier nur für die Ausgangslage.
     await linkOwnContact(page); // Anna Berger ↔ Tomas Leitner: der Antrag hat dann einen Kontakt.
     const admin = await mcpClient(page, baseURL);
+    // Ein Verein ohne Gremien (G7): Solange Gremien an ist, führt es die Vorstandsrolle und die Vergütung (im Seed per
+    // Beschluss erlaubt) — ausgeschaltet pflegen die Finanzen beides von Hand. Ausgangslage: keine erlaubte Vergütung.
+    await callTool(admin, 'modules_set_enabled', { key: 'governance', enabled: false });
+    await callTool(admin, 'finance_setup_board_remuneration', { allowed: false, basisText: '' });
     const tomas = (await callTool<{ contacts: { id: string }[] }>(admin, 'contacts_list', { text: 'Leitner' })).contacts[0]!;
     await callTool(admin, 'contacts_add_role', { id: tomas.id, role: 'board-member', since: `${year()}-01-01` });
 

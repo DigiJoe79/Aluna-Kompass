@@ -111,16 +111,19 @@ async function filedPageImage(stem: string, source: Result<{ bytes: Uint8Array }
   return ok({ png, pageCount: pdfPageCount(pdf) });
 }
 
-/** Seitenzahl der festgeschriebenen Fassung `reportId` — Rechte wie ihr Dokument (`readFinanceReportDocument`). */
-export async function versionPageCount(deps: Deps, ctx: CallContext, reportId: string): Promise<Result<number | null>> {
-  const file = await readFinanceReportDocument(deps, ctx, { reportId });
+/**
+ * Seitenzahl der festgeschriebenen Fassung `reportId` — Rechte wie ihr Dokument (`readFinanceReportDocument`); mit
+ * `documentId` eine weitere Fassung desselben Berichts (abgezeichnet, Webfassung).
+ */
+export async function versionPageCount(deps: Deps, ctx: CallContext, reportId: string, documentId?: string): Promise<Result<number | null>> {
+  const file = await readFinanceReportDocument(deps, ctx, { reportId, ...(documentId ? { documentId } : {}) });
   if (!file.ok) return file;
   return ok(pdfPageCount(file.value.bytes));
 }
 
-/** Seite `page` der festgeschriebenen Fassung `reportId` als PNG. */
-export async function versionPageImage(deps: Deps, ctx: CallContext, reportId: string, page: number, scale: string): Promise<Result<{ png: Uint8Array; pageCount: number | null }>> {
-  return filedPageImage(`version-${reportId}`, await readFinanceReportDocument(deps, ctx, { reportId }), page, scale);
+/** Seite `page` der festgeschriebenen Fassung `reportId` (oder ihrer weiteren Fassung `documentId`) als PNG. */
+export async function versionPageImage(deps: Deps, ctx: CallContext, reportId: string, page: number, scale: string, documentId?: string): Promise<Result<{ png: Uint8Array; pageCount: number | null }>> {
+  return filedPageImage(documentId ? `version-${reportId}-${documentId}` : `version-${reportId}`, await readFinanceReportDocument(deps, ctx, { reportId, ...(documentId ? { documentId } : {}) }), page, scale);
 }
 
 /** Seitenzahl eines Dokuments der Akte (Scan des Prüfberichts) — Rechte wie das Dokument (`getDocument`). */

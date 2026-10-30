@@ -2,6 +2,7 @@
 
 import type { PartnerPaymentView, PartnerView } from '@kompass/module-finance';
 import { useTranslations } from 'next-intl';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { RefusalNotice } from '@/components/forms/refusal-notice';
@@ -20,7 +21,7 @@ import { RequirementList, type RequirementListItem } from '@/components/requirem
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
-import { formatAmount, formatEuro, parseAmount } from '@/lib/finance/amount';
+import { formatAmount, formatEuro, readAmount, type AmountError } from '@/lib/finance/amount';
 import { cn } from '@/lib/utils';
 import { AMOUNT_EVIDENCE_KINDS, coverageRequired, evidenceCoverage, evidenceKindLabelKey, isGeneratedEvidenceSubject, missingEvidence, type EvidenceKind, type PartnerBasis } from '@/lib/finance/partners';
 import { acknowledgeEvidenceAction, addEvidenceLinkAction, addEvidenceUploadAction, copyPartnerPaymentAction, removeEvidenceAction, updateEvidenceAction } from '../../../actions';
@@ -133,6 +134,15 @@ export function PaymentDetail({
         <p className="text-body text-ink-2">{payment.purposeText}</p>
         {payment.retroactive ? <p className="text-hint text-muted-ink">{t('head.retroactive')}</p> : null}
         {payment.assetEndowment ? <p className="text-hint text-muted-ink">{t('head.assetEndowment')}</p> : null}
+        {/* G7: der Beschluss in Gremien, der die Zahlung trägt — Beschriftung und Link wie an der Rücklage; ohne Gremien nichts. */}
+        {payment.resolution ? (
+          <p className="text-meta text-ink-2" data-testid="payment-resolution">
+            {t.rich('head.resolution', {
+              label: payment.resolution.label,
+              link: (chunks) => (payment.resolution?.href ? <Link href={payment.resolution.href} className="text-link underline-offset-2 hover:underline">{chunks}</Link> : chunks),
+            })}
+          </p>
+        ) : null}
         <ul className="space-y-1 border-t border-line pt-2 text-meta" data-testid="payment-positions">
           {payment.positions.map((p) => (
             <li key={p.id} className="flex flex-wrap items-baseline justify-between gap-2">
@@ -394,12 +404,21 @@ function EvidenceForm({ paymentId, kind, label, onDone, onCancel }: { paymentId:
   const [explanationDe, setExplanationDe] = useState('');
   const [amountText, setAmountText] = useState('');
   const [pending, setPending] = useState(false);
+  // Der gedeckte Betrag ist bei diesen Arten Pflicht (`evidenceAmountMissing`): leer oder unlesbar steht am Feld (App-B7).
+  const [amountError, setAmountError] = useState<AmountError | null>(null);
+  const tAmount = useTranslations('finance.amount');
   const feedback = useActionFeedback();
   const withAmount = AMOUNT_KINDS.includes(kind);
 
   const save = async () => {
+    const amount = withAmount ? readAmount(amountText, { required: true }) : null;
+    if (amount && !amount.ok) {
+      setAmountError(amount.error);
+      return;
+    }
+    setAmountError(null);
     setPending(true);
-    const coveredCents = withAmount ? parseAmount(amountText) : null;
+    const coveredCents = amount?.ok ? amount.cents : null;
     let call: (() => Promise<ActionState>) | null = null;
     if (file) {
       const formData = new FormData();
@@ -442,7 +461,7 @@ function EvidenceForm({ paymentId, kind, label, onDone, onCancel }: { paymentId:
       ) : null}
       {withAmount ? (
         <FormField id={`evidence-amount-${kind}`} label={t('evidence.coveredAmount')} required>
-          <AmountField id={`evidence-amount-${kind}`} name="coveredAmount" value={amountText} onChange={setAmountText} required />
+          <AmountField id={`evidence-amount-${kind}`} name="coveredAmount" value={amountText} onChange={(v) => { setAmountText(v); setAmountError(null); }} required invalid={amountError !== null} errorText={amountError === 'missing' ? tAmount('missing') : undefined} />
         </FormField>
       ) : null}
       <RefusalNotice state={feedback.state} />
@@ -464,9 +483,18 @@ function CompleteForm({ row, onDone, onCancel }: { row: EvidenceRow; onDone: () 
   const [explanationDe, setExplanationDe] = useState(row.explanationDe ?? '');
   const [amountText, setAmountText] = useState(row.coveredCents !== null ? formatAmount(row.coveredCents) : '');
   const withAmount = AMOUNT_KINDS.includes(row.kind);
+  // Ein unlesbarer Betrag löschte bis 0.4.0 still den gedeckten Betrag (App-B7); Pflicht wie beim Hochladen.
+  const [amountError, setAmountError] = useState<AmountError | null>(null);
+  const tAmount = useTranslations('finance.amount');
   const feedback = useActionFeedback();
   const save = async () => {
-    const result = await feedback.run(() => updateEvidenceAction({ id: row.id, ...(row.foreignLanguage ? { explanationDe } : {}), ...(withAmount ? { coveredCents: parseAmount(amountText) } : {}) }), { retry: () => void save() });
+    const amount = withAmount ? readAmount(amountText, { required: true }) : null;
+    if (amount && !amount.ok) {
+      setAmountError(amount.error);
+      return;
+    }
+    setAmountError(null);
+    const result = await feedback.run(() => updateEvidenceAction({ id: row.id, ...(row.foreignLanguage ? { explanationDe } : {}), ...(amount?.ok ? { coveredCents: amount.cents } : {}) }), { retry: () => void save() });
     if (result.status === 'success') onDone();
   };
   return (
@@ -478,7 +506,7 @@ function CompleteForm({ row, onDone, onCancel }: { row: EvidenceRow; onDone: () 
       ) : null}
       {withAmount ? (
         <FormField id="evidence-complete-amount" label={t('evidence.coveredAmount')} required>
-          <AmountField id="evidence-complete-amount" name="coveredAmount" value={amountText} onChange={setAmountText} required />
+          <AmountField id="evidence-complete-amount" name="coveredAmount" value={amountText} onChange={(v) => { setAmountText(v); setAmountError(null); }} required invalid={amountError !== null} errorText={amountError === 'missing' ? tAmount('missing') : undefined} />
         </FormField>
       ) : null}
       <RefusalNotice state={feedback.state} />

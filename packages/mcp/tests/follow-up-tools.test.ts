@@ -11,7 +11,7 @@ const tool = (name: string) => {
 
 describe('followups_* tools', () => {
   it('sind registriert und nennen ihren Service', () => {
-    for (const name of ['followups_list_due', 'followups_list', 'followups_create', 'followups_complete', 'followups_reopen', 'followups_delete']) {
+    for (const name of ['followups_list_due', 'followups_list', 'followups_create', 'followups_mail_state', 'followups_complete', 'followups_reopen', 'followups_delete']) {
       expect(tool(name).service, name).toBeTypeOf('function');
       expect(tool(name).description).toMatch(/followUps\.(view|manage)/);
     }

@@ -5,6 +5,18 @@
     "titleDevelopment": "DEV · Aluna Kompass"
   },
   "admin": {
+    "agents": {
+      "title": "Agenten",
+      "description": "Welche Schritte ein Agent gehen darf, die sonst einem Menschen am Bildschirm vorbehalten sind – je eingeschaltetes Modul ein Schalter.",
+      "saved": "Schalter für Agenten gespeichert.",
+      "switches": {
+        "backup": { "title": "Backup", "label": "Darf ein Agent ein Backup einspielen?", "hint": "Backups erstellen und die Liste lesen darf ein Agent immer. Einspielen bleibt sonst einem Menschen unter Verwaltung → Backup vorbehalten." },
+        "dms": { "title": "Akte", "label": "Darf ein Agent Dokumente per E-Mail senden?", "hint": "Eingeschaltet darf ein Agent Dokumente der Akte und die Briefe eines Laufs per E-Mail senden; ob er das darf, entscheidet der Verein nur hier in Kompass, nicht über einen Agenten." },
+        "finance": { "title": "Finanzen", "label": "Darf ein Agent festschreiben und Lastschriften bearbeiten?", "hint": "Eingeschaltet darf ein Agent auch festschreiben, freigeben, Bestätigungen ausstellen, Mandate, Lastschriftdateien und Einzüge bearbeiten und die Schritte der Kassenprüfung gehen (Stichproben, Vermerke, Prüfbericht, Zugang beenden); ob er das darf, entscheidet der Verein nur hier in Kompass, nicht über einen Agenten." },
+        "members": { "title": "Mitglieder", "label": "Darf ein Agent Mitglieder aufnehmen, Läufe starten und Briefe ausstellen?", "hint": "Eingeschaltet darf ein Agent auch aufnehmen, ablehnen, Beitrags- und Mahnläufe starten, Briefe ausstellen, stunden und erlassen; ob er das darf, entscheidet der Verein nur hier in Kompass, nicht über einen Agenten." },
+        "governance": { "title": "Gremien", "label": "Darf ein Agent einladen, festschreiben und Satzungsstände eintragen?", "hint": "Ein Mensch entscheidet weiter, wer im Amt ist: Kompass zeigt jede Änderung im Änderungsprotokoll mit dem Kanal Agent." }
+      }
+    },
     "locales": {
       "title": "Sprachen",
       "description": "Verwalten Sie die Sprachen, in denen Inhalte für Webseite und Dokumente gepflegt werden.",
@@ -185,9 +197,6 @@
       "saved": "Zwischenstand gespeichert · {time}",
       "offline": "Nicht gespeichert – keine Verbindung. Ihre Eingaben bleiben auf diesem Gerät, bis die Verbindung wieder da ist.",
       "failed": "Nicht gespeichert: {detail}"
-    },
-    "agentSwitch": {
-      "title": "Agent"
     }
   },
   "folderTree": {
@@ -432,6 +441,9 @@
     "confirmDeleteBody": "Die Datei wird entfernt. Der Löschvorgang steht im Änderungsprotokoll.",
     "deleted": "Datei gelöscht.",
     "inUseRefusal": "Die Datei wird noch verwendet: {places}. Entfernen Sie sie dort, dann lässt sie sich löschen.",
+    "references": {
+      "logo": "Logo des Vereins"
+    },
     "deleteItem": "Löschen …",
     "root": "Alle Dateien",
     "uploadButton": "Hochladen",
@@ -626,8 +638,9 @@
     },
     "humanOnly": "Das geht nur hier in Kompass, nicht über einen Agenten.",
     "humanOnlyFor": {
-      "members": "Das geht über einen Agenten erst, wenn der Verein es freigibt: Einrichtung → Mitglieder → Nummern und Fristen → „Darf ein Agent Mitglieder aufnehmen, Läufe starten und Briefe ausstellen?“ einschalten.",
-      "dms": "Das geht über einen Agenten erst, wenn der Verein es freigibt: Einrichtung → Akte → Versand → „Darf ein Agent Dokumente per E-Mail senden?“ einschalten."
+      "members": "Das geht über einen Agenten erst, wenn der Verein es freigibt: Verwaltung → Agenten → „Darf ein Agent Mitglieder aufnehmen, Läufe starten und Briefe ausstellen?“ einschalten.",
+      "dms": "Das geht über einen Agenten erst, wenn der Verein es freigibt: Verwaltung → Agenten → „Darf ein Agent Dokumente per E-Mail senden?“ einschalten.",
+      "governance": "Das geht über einen Agenten erst, wenn der Verein es freigibt: Verwaltung → Agenten → „Darf ein Agent einladen, festschreiben und Satzungsstände eintragen?“ einschalten."
     },
     "settingManaged": "Diese Einstellung wird im Modul „{module}“ geführt und dort geändert.",
     "settingUiOnly": "Diese Einstellung lässt sich nur in der Oberfläche ändern.",
@@ -650,6 +663,14 @@
     "roleManagedByModule": {
       "reason": "Diese Rolle führt das Modul „{modules}“.",
       "remedy": "Ändern Sie sie dort."
+    },
+    "recordHeld": {
+      "reason": "{permanent, select, yes {Der Datensatz wird dauerhaft gehalten} other {Der Datensatz wird noch bis {untilText} gehalten}}, von {holderList}.",
+      "remedy": "Löschen ist erst möglich, wenn nichts mehr ihn hält."
+    },
+    "stillReferenced": {
+      "reason": "Es zeigt noch etwas darauf: {referenceList}.",
+      "remedy": "Lösen Sie erst den Bezug."
     },
     "retentionHoldActive": {
       "reason": "{permanent, select, yes {Der Kontakt wird dauerhaft aufbewahrt} other {Der Kontakt wird noch bis {untilText} aufbewahrt}}, gehalten von {holderList}.",
@@ -699,8 +720,6 @@
       "ownLinkNeedsSecondPerson": "Die eigene Verknüpfung ändert nur eine zweite Person mit dem Recht, Nutzer zu verwalten.",
       "retentionUnknown": "Für diesen Kontakt ist keine Frist nachgewiesen.",
       "stillPublished": "Das ist noch publiziert. Ziehen Sie es erst zurück, dann lässt es sich löschen.",
-      "recordHeld": "Noch gehalten von: {detail}",
-      "stillReferenced": "Es zeigt noch etwas darauf: {detail}. Lösen Sie erst den Bezug.",
       "belongsToNotAnOrganization": "Ein Kontakt kann nur einer Organisation zugeordnet werden.",
       "multiplePrimaryChannels": "Es kann nur ein Hauptkontaktweg festgelegt werden.",
       "roleAlreadyRunning": "Diese Rolle ist für diesen Kontakt bereits aktiv.",
@@ -747,7 +766,8 @@
       "linkTypeReserved": "Diesen Bezug verwaltet ein anderes Modul; setzen oder lösen lässt er sich nur dort.",
       "retentionRunning": "{detail}.",
       "slugTaken": "Diesen URL-Teil hat schon ein anderes Projekt. Wählen Sie einen anderen.",
-      "textExtractionGaveUp": "Kompass hat den Text dieses Dokuments mehrmals vergeblich zu lesen versucht und versucht es nicht weiter. Das PDF ist vermutlich beschädigt oder enthält nur Bilder ohne lesbaren Text."
+      "textExtractionGaveUp": "Kompass hat den Text dieses Dokuments mehrmals vergeblich zu lesen versucht und versucht es nicht weiter. Das PDF ist vermutlich beschädigt oder enthält nur Bilder ohne lesbaren Text.",
+      "textExtractionSuperseded": "Das Dokument wurde während des Lesens neu eingereiht. Kompass liest es gleich noch einmal."
     },
     "site": {
       "previewOutdated": {
@@ -895,7 +915,12 @@
       "noteRequired": "Begründen Sie, warum diese Zahlung keine Rückgabe einer Spende ist.",
       "usualBasisRequired": "Pflichtfeld.",
       "idOrContactId": "Geben Sie den Partner oder den Kontakt an.",
+      "resolutionUnknown": "Diesen Beschluss kennt Kompass nicht — Gremien ist aus, oder die Angabe stimmt nicht.",
+      "resolutionNotFinal": "Verweisen Sie auf einen angenommenen, festgeschriebenen Beschluss.",
+      "resolutionWrongKind": "Dieser Beschluss ist von einer anderen Art — wählen Sie {expected, select, reserve {einen Beschluss über die Rücklage} feeSchedule {einen Beschluss über die Beitragsordnung} partnerPayment {einen Beschluss, der die Zahlung trägt, nicht über Entlastung, Jahresrechnung, Wahl oder Abberufung} other {einen Beschluss über diesen Vorgang}}.",
       "pickOrUploadNotBoth": "Wählen Sie ein vorhandenes Dokument oder laden Sie eines hoch, nicht beides.",
+      "endsOnMismatch": "Das Jahresende passt nicht zum Jahr vor dem ersten Kompass-Jahr.",
+      "amountAboveRevenue": "Der Vortrag kann nicht höher sein als die Einnahmen des Jahres.",
       "waiverBasisMissing": "Für den Aufwandsverzicht fehlt die Grundlage.",
       "noValueAt": "Für dieses Datum ist kein Wert hinterlegt.",
       "lineWithoutContact": "Mindestens eine Zuwendung ist keinem Kontakt zugeordnet.",
@@ -921,6 +946,7 @@
       "invalidIban": "Diese IBAN ist ungültig.",
       "invalidBic": "Diese BIC ist ungültig.",
       "invalidCreditorId": "Diese Gläubiger-Identifikationsnummer ist ungültig.",
+      "invalidOcrLanguages": "Bitte geben Sie Sprachkürzel aus drei Buchstaben an, mit + verbunden (etwa deu+eng).",
       "invalidCharacters": "Erlaubt sind Buchstaben ohne Umlaute, Ziffern, Leerzeichen und + ? / - : ( ) . , '",
       "beforeSigned": "Das Datum liegt vor der Unterschrift des Mandats.",
       "beforeFirstDue": "Das Datum liegt vor der ersten Rate.",
@@ -962,9 +988,53 @@
       "photoRefAmbiguous": "Ein Foto ist entweder ein bereitgestelltes Bild oder ein Foto des Hundes, nicht beides.",
       "emptyProposal": "Eine Änderung braucht mindestens einen Wert oder Fotos.",
       "notAnimalPhoto": "Das ist kein Foto dieses Hundes.",
+      "donationPlatformKindMismatch": "Eine Plattform, die selbst bestätigt, gehört zu „Zuschuss einer Körperschaft“, eine, die nur abwickelt, zu „Spende“ — und nur an Einnahmen.",
       "mediaNotAllowed": "Ein neuer Hund hat noch keine Fotos in Kompass.",
       "notProposed": "Dieses Feld steht nicht im Vorschlag.",
-      "unknownAccount": "Dieses Konto gibt es nicht oder es ist stillgelegt."
+      "representationNotAllowed": "Diese Rolle kann den Verein nicht vertreten.",
+      "unknownAccount": "Dieses Konto gibt es nicht oder es ist stillgelegt.",
+      "onlyElection": "Ämter gibt es nur bei einem Tagesordnungspunkt „Wahl“.",
+      "addedDuringMeeting": "Dieser Punkt kam in der Sitzung hinzu und bleibt im Protokoll.",
+      "agendaOrderIncomplete": "Nennen Sie jeden Punkt der Tagesordnung genau einmal.",
+      "onlyAssembly": "Ein Verlangen nach einer Versammlung gibt es nur für die Mitgliederversammlung.",
+      "onlyGuest": "Eine Bezeichnung gibt es nur für Gäste.",
+      "guestWithoutVote": "Gäste haben kein Stimmrecht.",
+      "alreadyPresent": "Die Person ist schon anwesend.",
+      "beforeDeparture": "Die Ankunft liegt vor dem letzten Gehen.",
+      "notPresent": "Die Person ist gerade nicht anwesend.",
+      "beforeArrival": "Das Gehen liegt vor der Ankunft.",
+      "beforeMeeting": "Das Datum liegt vor dem Tag der Sitzung.",
+      "votingExceedsPresent": "Es können nicht mehr Stimmberechtigte als Anwesende sein.",
+      "beforeRequest": "Das Datum liegt vor der Aufforderung zur Stimmabgabe.",
+      "outcomeReasonRequired": "Begründen Sie, warum Sie vom Vorschlag abweichen.",
+      "notElection": "Dieser Tagesordnungspunkt ist keine Wahl.",
+      "notOnAgenda": "Dieses Amt steht nicht bei diesem Tagesordnungspunkt.",
+      "votesExceedVoters": "Es sind mehr Stimmen angegeben, als Stimmberechtigte anwesend sind.",
+      "notCandidate": "Die Person stand in dieser Wahl nicht zur Wahl.",
+      "notElected": "Die Person wurde in dieser Wahl nicht gewählt; nur Gewählte nehmen die Wahl an oder lehnen sie ab.",
+      "otherMeeting": "Dieser Punkt gehört zu einer anderen Sitzung.",
+      "kindNotForOrgan": "Diese Art der Sitzung passt nicht zum Organ.",
+      "onlyOther": "Neu anlegen lassen sich nur weitere Organe; Mitgliederversammlung und Vorstand gibt es schon.",
+      "beforeSubmitted": "Das Datum liegt vor der Einreichung beim Registergericht.",
+      "idOrTermId": "Nennen Sie je Anlass genau eines: den gespeicherten Anlass, die Amtszeit oder den Satzungsstand.",
+      "beforeNotarized": "Die Einreichung liegt vor der Beglaubigung.",
+      "beforeOrder": "Das Datum liegt vor der Zwischenverfügung.",
+      "unknownInterimOrder": "Diese Zwischenverfügung gibt es nicht.",
+      "alreadyResolved": "Diese Zwischenverfügung ist schon behoben.",
+      "purposeRequired": "Rücklagen nach Nr. 1 und 2 brauchen einen konkreten Zweck.",
+      "recipientRequired": "Wählen Sie genau ein Organ oder ein Amt.",
+      "noDetails": "Diese Art des Beschlusses hat keine weiteren Angaben.",
+      "fractionAboveOne": "Der Zähler darf nicht größer als der Nenner sein.",
+      "meetingOrCircular": "Wählen Sie entweder eine Sitzung oder einen Umlaufbeschluss.",
+      "afterRegistration": "Der Beschluss liegt nach der Eintragung dieses Satzungsstands.",
+      "reasonRequired": "Dieser Satzungsstand ist eingetragen oder abgelöst. Nennen Sie den Grund, warum sich sein Regelwerk ändert.",
+      "statuteRegistered": "Dieser Satzungsstand ist eingetragen; seine Beschlüsse bleiben, wie sie sind.",
+      "linkedResolutionKept": "Ein verknüpfter Beschluss bleibt am Satzungsstand stehen.",
+      "notStatuteResolution": "Verknüpfen lässt sich nur eine Satzungs- oder Zweckänderung der Mitgliederversammlung zu diesem Stand.",
+      "beforeResolution": "Die Eintragung liegt vor dem Beschluss.",
+      "duplicateRows": "Jede Kontaktrolle nur einmal.",
+      "rowsDiffer": "Die Rollen einer Person im selben Amt müssen am selben Tag enden.",
+      "wordingOnlyForStatute": "Geänderte Absätze stehen nur an einer Satzungs- oder Zweckänderung."
     },
     "pages": {
       "forbidden": {
@@ -1026,6 +1096,15 @@
     }
   },
   "nav": {
+    "governance": {
+      "meetings": "Sitzungen",
+      "admin": "Gremien",
+      "overview": "Übersicht",
+      "resolutions": "Beschlüsse",
+      "circulars": "Umlaufbeschlüsse",
+      "statutes": "Satzung",
+      "register": "Register"
+    },
     "aria": "Hauptnavigation",
     "home": "Startseite",
     "profile": "Profil",
@@ -1033,6 +1112,7 @@
     "sectionAria": "Unternavigation",
     "help": "Handbuch",
     "groups": {
+      "governance": "Gremien",
       "admin": "Verwaltung",
       "config": "Einrichtung",
       "finance": "Finanzen",
@@ -1049,6 +1129,7 @@
     "roles": "Rollen",
     "settings": "Stammdaten",
     "locales": "Sprachen",
+    "agents": "Agenten",
     "themes": "Erscheinungsbild",
     "modules": "Module",
     "audit": "Änderungsprotokoll",
@@ -1384,6 +1465,8 @@
             "confirmationsToCorrect": "{count, plural, one {# Zuwendungsbestätigung zu korrigieren} other {# Zuwendungsbestätigungen zu korrigieren}}",
             "auditorAccess": "{designation}: Prüferzugang nach der Prüfung schließen",
             "taxReturn": "Steuererklärung {period} bis {dueOn}",
+            "timelyUse": "Mittel aus {origin} bis {dueOn} verwenden",
+            "timelyUseLapsed": "Verwendungsfrist für Mittel aus {origin} entfallen ({lapsedIn} nicht über der Grenze)",
             "vatAdvanceReturn": "Umsatzsteuer-Voranmeldung {vatPeriod} bis {dueOn}",
             "vatReturn": "Umsatzsteuer-Jahreserklärung {year} bis {dueOn}",
             "vatAmendment": "{scope, select, year {Berichtigte Umsatzsteuer-Jahreserklärung {vatPeriod}} other {Berichtigte Voranmeldung {vatPeriod}}}, unverzüglich",
@@ -1594,6 +1677,39 @@
             "current": "Stand vom {date}. Keine Änderungen seither."
           }
         }
+      },
+      "governance": {
+        "deadlines": {
+          "title": "Gremien: Fristen",
+          "empty": "Nichts fällig.",
+          "messages": {
+            "ordinaryMeetingMissing": "Ordentliche Mitgliederversammlung {year} noch nicht angesetzt",
+            "inviteBy": "Einladung zur Sitzung am {heldOn} absenden",
+            "motionsBy": "Anträge zur Sitzung am {heldOn} gehen bis zu diesem Tag ein",
+            "termEnding": "Amtszeit {office} endet am {endsOn}",
+            "electionDue": "Amt {office} ist ersatzweise besetzt: Nachwahl in der nächsten Mitgliederversammlung",
+            "seatVacant": "Amt {office} ist nicht besetzt",
+            "boardLeaderless": "Kein vertretungsberechtigtes Vorstandsamt besetzt",
+            "minutesUnsigned": "Protokoll der Sitzung am {heldOn} ist noch nicht festgeschrieben",
+            "mandate": "Auftrag aus Beschluss {number} fällig",
+            "registerDue": "Registeranmeldung ({occasion, select, initial {Ersteintragung} statute {Satzungsänderung} boardChange {Vorstandswechsel} representation {Vertretungsregel} dissolution {Auflösung} other {Anlass}} vom {occurredOn}) fällig{hint, select, coerciveFine { — das Registergericht kann Zwangsgeld festsetzen, ein nicht unverzüglich angemeldeter Vorstandswechsel löst eine Meldung zum Transparenzregister aus ({norms})} other {}}",
+            "interimOrder": "Zwischenverfügung vom {on} beantworten",
+            "dissolutionNotice": "Auflösung vom {decidedOn} dem Finanzamt und der Gemeinde mitteilen (§\u00a0137 AO)",
+            "transparencyReport": "Meldung an das Transparenzregister nötig ({norm})",
+            "taxPreSubmission": "Satzungsentwurf zur Sitzung am {heldOn} dem Finanzamt zur Vorabprüfung vorlegen",
+            "taxNoticeRequest": "Satzung eingetragen am {registeredOn}: beim Finanzamt einreichen und neuen Bescheid anfordern (§\u00a060a Abs. 4 AO)",
+            "circularDue": "Umlauf: Antworten bis"
+          }
+        },
+        "ordinaryMeeting": {
+          "title": "Ordentliche Mitgliederversammlung",
+          "empty": "",
+          "action": "Sitzung anlegen",
+          "messages": {
+            "missing": "Ordentliche Mitgliederversammlung {year} noch nicht angesetzt. Einmal im Kalenderjahr{reference, select, none {} other { ({reference})}}.",
+            "fine": "Für {year} angesetzt."
+          }
+        }
       }
     }
   },
@@ -1725,7 +1841,8 @@
       "contacts": "Kontakte",
       "site": "Webseite",
       "dms": "Akte",
-      "projects": "Projekte"
+      "projects": "Projekte",
+      "governance": "Gremien"
     },
     "keys": {
       "users": {
@@ -1937,6 +2054,20 @@
           "label": "Kassenprüfung",
           "description": "Vermerke schreiben, Stichproben, Prüfbericht"
         }
+      },
+      "governance": {
+        "read": {
+          "label": "Gremien lesen",
+          "description": "Organe, Ämter, Amtsinhaber und Satzungsstände lesen, auch die geschützten Dokumente der Gremien."
+        },
+        "manage": {
+          "label": "Gremien führen",
+          "description": "Organe, Ämter, Amtsinhaber und Satzungsstände samt Regelwerk pflegen."
+        },
+        "record": {
+          "label": "Protokoll führen",
+          "description": "Eine Sitzung beginnen und beenden, Anwesenheit, Feststellungen, Beschlüsse und Wahlen im Mitlauf erfassen."
+        }
       }
     }
   },
@@ -1971,6 +2102,7 @@
         "foundedYear": "Gründungsjahr",
         "registerCourt": "Registergericht",
         "registerNumber": "Registernummer",
+        "registeredOn": "Tag der Ersteintragung",
         "email": "Kontakt-E-Mail",
         "phone": "Telefon",
         "website": "Webseite",
@@ -2255,7 +2387,8 @@
       "projects": "Projekte",
       "site": "Webseite",
       "contacts": "Kontakte",
-      "dms": "Dokumentenmanagement"
+      "dms": "Dokumentenmanagement",
+      "governance": "Gremien"
     },
     "descriptions": {
       "core": "Anmeldung, Rollen, Stammdaten, Änderungsprotokoll, Dokumente und Backup.",
@@ -2265,7 +2398,8 @@
       "site": "Inhalte der Webseite und ihr Aufbau als statische Seiten.",
       "projects": "Projekte des Vereins und ihre Darstellung auf der Webseite.",
       "contacts": "Personen und Organisationen, mit denen der Verein zu tun hat.",
-      "dms": "Posteingang, Schriftverkehr, Ablage und Wiedervorlagen."
+      "dms": "Posteingang, Schriftverkehr, Ablage und Wiedervorlagen.",
+      "governance": "Organe, Ämter, Satzung und Sitzungen."
     },
     "notes": {
       "finance": "Voraussetzung für Zuwendungsbestätigungen."
@@ -2276,7 +2410,8 @@
     },
     "cannotDisable": {
       "generic": "Dieses Modul lässt sich nicht ausschalten, solange es Vorgänge führt.",
-      "hasFinalRecords": "Dieses Modul führt festgeschriebene Vorgänge. Ausgeschaltet würde es nichts mehr festhalten, was daran hängt — deshalb bleibt es an."
+      "hasFinalRecords": "Dieses Modul führt festgeschriebene Vorgänge. Ausgeschaltet würde es nichts mehr festhalten, was daran hängt — deshalb bleibt es an.",
+      "hasMemberships": "Dieses Modul führt Mitgliedschaften, auch beendete, deren Aufbewahrung noch läuft. Ausgeschaltet würde es sie nicht mehr festhalten — deshalb bleibt es an, bis die letzte gelöscht ist."
     }
   },
   "audit": {
@@ -2382,6 +2517,10 @@
       "financeConfirmationRunItem": "Bestätigung im Serienlauf",
       "financeContactBankAccount": "Bankverbindung des Kontakts",
       "financeContactTaxDetails": "Steuerdaten einer Körperschaft",
+      "financeNameConsent": "Einwilligung zur Namensnennung",
+      "financeAnnualAccountsNote": "Erläuterung der Jahresrechnung",
+      "financeReportSignature": "Abzeichnung der Jahresrechnung",
+      "financeAnnualAccountsPublication": "Jahresrechnung auf der Webseite",
       "financeContactWaiverTerms": "Verzichtsvereinbarung",
       "financeDatedValue": "Stichtagswert",
       "financeEntry": "Buchung",
@@ -2416,6 +2555,7 @@
       "financeRawTransaction": "Kontoumsatz",
       "financeReserve": "Rücklage",
       "financeReserveMovement": "Rücklagenbewegung",
+      "financeFundsUseOpening": "Anfangsvortrag Mittelverwendung",
       "financeSetup": "Einrichtung der Finanzen",
       "financeSigner": "Unterzeichnende Person",
       "followUp": "Wiedervorlage",
@@ -2442,7 +2582,21 @@
       "sitePublish": "Publizieren der Webseite",
       "siteTemplate": "Vorlage der Webseite",
       "siteValues": "Inhalte der Webseite",
-      "user": "Nutzer"
+      "user": "Nutzer",
+      "governanceOrgan": "Organ",
+      "governanceOffice": "Amt",
+      "governanceTerm": "Amtsinhaberschaft",
+      "governanceStatute": "Satzungsstand",
+      "governanceMeeting": "Sitzung",
+      "governanceAgendaItem": "Tagesordnungspunkt",
+      "governanceMotion": "Antrag zur Tagesordnung",
+      "governanceAssemblyRequest": "Verlangen einer Mitgliederversammlung",
+      "governanceInvitationRun": "Einladungslauf",
+      "governanceAttendance": "Anwesenheit",
+      "governanceResolution": "Beschluss",
+      "governanceCircular": "Umlaufbeschluss",
+      "governanceRegisterOccasion": "Anlass zur Registeranmeldung",
+      "governanceRegisterFiling": "Registeranmeldung"
     },
     "actions": {
       "finance_taxPeriod_create": "Erklärungszeitraum angelegt",
@@ -2515,6 +2669,7 @@
       "contacts_create": "Kontakt angelegt",
       "contacts_delete": "Kontakt gelöscht",
       "contacts_endRole": "Rolle des Kontakts beendet",
+      "contacts_updateRole": "Rolle des Kontakts geändert (Amt, Vertretung)",
       "contacts_setChannels": "Kontakt geändert (Kommunikationswege)",
       "contacts_setStatus": "Kontakt archiviert oder wieder aktiviert",
       "contacts_update": "Kontakt geändert",
@@ -2615,6 +2770,15 @@
       "finance_contactTaxDetails_delete": "Steuerdaten einer Körperschaft gelöscht",
       "finance_contactTaxDetails_reverseChargeDecline": "Nein zu §\u00a013b am Kontakt gemerkt",
       "finance_contactTaxDetails_reverseChargeAsk": "Prüffrage §\u00a013b am Kontakt wieder eingeschaltet",
+      "finance_nameConsent_grant": "Einwilligung zur Namensnennung erteilt",
+      "finance_nameConsent_revoke": "Einwilligung zur Namensnennung widerrufen",
+      "finance_nameConsent_delete": "Einwilligung zur Namensnennung mit dem Kontakt gelöscht",
+      "finance_annualAccounts_explanationSave": "Erläuterung der Jahresrechnung gespeichert",
+      "finance_annualAccounts_sign": "Jahresrechnung abgezeichnet",
+      "finance_annualAccounts_signatureRequest": "Um Abzeichnung der Jahresrechnung gebeten",
+      "finance_annualAccounts_publish": "Jahresrechnung für die Webseite bereitgestellt",
+      "finance_annualAccounts_withdraw": "Jahresrechnung von der Webseite genommen",
+      "finance_annualAccounts_webVersion": "Webfassung der Jahresrechnung erzeugt",
       "finance_contactWaiverTerms_save": "Verzichtsvereinbarung gespeichert",
       "finance_correction_apply": "Korrektur übernommen",
       "finance_correction_reject": "Korrektur abgelehnt",
@@ -2645,6 +2809,8 @@
       "finance_fiscalYear_autoCreate": "Geschäftsjahr automatisch angelegt",
       "finance_fiscalYear_create": "Geschäftsjahr angelegt",
       "finance_fiscalYear_update": "Geschäftsjahr geändert",
+      "finance_fundsUseOpening_save": "Anfangsvortrag Mittelverwendung gespeichert",
+      "finance_fundsUseOpening_documentGone": "Beleg des Anfangsvortrags nach Fristablauf entfernt",
       "finance_import_candidateDecide": "Mögliche doppelte Zahlung im Auszug entschieden",
       "finance_import_discard": "Auszug verworfen",
       "finance_import_fail": "Laden des Auszugs fehlgeschlagen",
@@ -2842,7 +3008,90 @@
       "finance_notice": "Einstellung zum Bescheid gesetzt",
       "settings_financeMainAccount": "Bankverbindung des Vereins aus dem Hauptkonto übernommen",
       "modules_enable": "Modul eingeschaltet",
-      "members_setting_set": "Einstellung der Mitglieder geändert"
+      "members_setting_set": "Einstellung der Mitglieder geändert",
+      "governance_install_organs": "Organe und Ämter bei der Einrichtung vorgeschlagen",
+      "governance_organ_create": "Organ angelegt",
+      "governance_organ_update": "Organ geändert",
+      "governance_organ_activate": "Organ wieder aktiviert",
+      "governance_organ_deactivate": "Organ archiviert",
+      "governance_office_create": "Amt angelegt",
+      "governance_office_update": "Amt geändert",
+      "governance_office_activate": "Amt wieder aktiviert",
+      "governance_office_deactivate": "Amt archiviert",
+      "governance_term_start": "Amtsinhaberschaft begonnen",
+      "governance_term_end": "Amtsinhaberschaft beendet",
+      "governance_term_adopt": "Kontaktrollen als Amtsinhaberschaft übernommen",
+      "governance_statute_create": "Satzungsentwurf angelegt",
+      "governance_statute_update": "Satzungsstand geändert",
+      "governance_statute_rulesAmend": "Regelwerk eines eingetragenen Satzungsstands geändert",
+      "governance_statute_register": "Eintragung eines Satzungsstands vermerkt",
+      "governance_statute_delete": "Satzungsentwurf gelöscht",
+      "governance_meeting_create": "Sitzung angelegt",
+      "governance_meeting_update": "Sitzung geändert",
+      "governance_meeting_delete": "Sitzung gelöscht",
+      "governance_meeting_cancel": "Sitzung abgesagt",
+      "governance_agenda_save": "Tagesordnungspunkt gespeichert",
+      "governance_agenda_remove": "Tagesordnungspunkt entfernt",
+      "governance_agenda_reorder": "Tagesordnung neu geordnet",
+      "governance_agenda_propose": "Tagesordnung vorgeschlagen",
+      "governance_agenda_note": "Notiz zum Tagesordnungspunkt gespeichert",
+      "governance_motion_save": "Antrag zur Tagesordnung gespeichert",
+      "governance_motion_contactRemoved": "Antrag ohne gelöschten Kontakt weitergeführt",
+      "governance_assemblyRequest_save": "Verlangen einer Mitgliederversammlung gespeichert",
+      "governance_invitationRun_start": "Einladungslauf gestartet",
+      "governance_invitationRun_continue": "Einladungslauf fortgesetzt",
+      "governance_invitation_letter": "Einladungsschreiben ausgestellt",
+      "governance_invitation_mail": "Einladungsschreiben per E-Mail eingereiht",
+      "governance_invitation_markPost": "Postversand von Einladungsschreiben vermerkt",
+      "governance_invitation_toPost": "Einladungsschreiben auf Post umgestellt",
+      "governance_invitation_toEmail": "Einladungsschreiben zurück auf E-Mail gestellt",
+      "governance_boardInvitation_issue": "Einladung zur Sitzung ausgestellt",
+      "governance_boardInvitation_mail": "Einladung zur Sitzung per E-Mail eingereiht",
+      "governance_invitation_note": "Einladung ohne Dokument vermerkt",
+      "governance_meeting_start": "Sitzung begonnen",
+      "governance_meeting_takeOver": "Protokollführung übernommen",
+      "governance_meeting_end": "Sitzung beendet",
+      "governance_meeting_reopen": "Mitlauf wieder geöffnet",
+      "governance_attendance_prefill": "Anwesenheitsliste vorbelegt",
+      "governance_attendance_save": "Anwesenheit erfasst",
+      "governance_attendance_arrive": "Kommen vermerkt",
+      "governance_attendance_leave": "Gehen vermerkt",
+      "governance_attendance_contactRemoved": "Kontakt aus der Anwesenheit entfernt",
+      "governance_findings_save": "Feststellungen zur Sitzung gespeichert",
+      "governance_resolution_save": "Beschluss erfasst",
+      "governance_resolution_decide": "Beschlussergebnis festgestellt",
+      "governance_election_round": "Wahlgang erfasst",
+      "governance_election_accept": "Annahme der Wahl erfasst",
+      "governance_election_declarationDropped": "Erklärung zur Wahl entfallen (nach dem korrigierten Wahlgang nicht mehr gewählt)",
+      "governance_circular_create": "Umlaufbeschluss erfasst",
+      "governance_circular_response": "Antwort zum Umlaufbeschluss erfasst",
+      "governance_circular_decide": "Ergebnis des Umlaufbeschlusses festgestellt",
+      "governance_circular_contactRemoved": "Kontakt aus einem Umlaufbeschluss entfernt",
+      "governance_minutes_attendanceList": "Anwesenheitsliste ausgestellt",
+      "governance_minutes_registerData": "Angaben für die Registeranmeldung ausgestellt",
+      "governance_minutes_file": "Unterschriebenes Protokoll abgelegt",
+      "governance_minutes_attach": "Vorhandenes Dokument als Protokoll verknüpft",
+      "governance_minutes_replace": "Unterschriebenes Protokoll vor dem Festschreiben ersetzt",
+      "governance_term_link": "Amtsinhaberschaft mit Wahlbeschluss abgeglichen",
+      "governance_statute_resolve": "Beschluss am Satzungsstand eingetragen",
+      "governance_registerOccasion_record": "Anlass zur Registeranmeldung festgehalten",
+      "governance_registerOccasion_withdraw": "Anlass zur Registeranmeldung entfallen",
+      "governance_resolution_number": "Beschlussnummer vergeben",
+      "governance_meeting_seal": "Sitzung festgeschrieben",
+      "governance_circular_seal": "Umlaufbeschluss festgeschrieben",
+      "governance_meeting_backfill": "Abgeschlossene Sitzung nachgetragen",
+      "governance_meeting_backfillCorrect": "Nachgetragene Sitzung berichtigt",
+      "governance_minutes_correct": "Protokoll berichtigt",
+      "governance_register_create": "Registeranmeldung angelegt",
+      "governance_register_addOccasions": "Anlässe in die Registeranmeldung aufgenommen",
+      "governance_register_update": "Registeranmeldung geändert",
+      "governance_register_interimOrder": "Zwischenverfügung vermerkt",
+      "governance_register_interimResolved": "Zwischenverfügung als behoben vermerkt",
+      "governance_register_documents": "Unterlagen der Registeranmeldung gesetzt",
+      "governance_register_transparency": "Prüffragen zum Transparenzregister beantwortet",
+      "governance_register_complete": "Registeranmeldung als eingetragen vermerkt",
+      "governance_register_dissolution": "Vermerke zur Auflösung geändert",
+      "governance_register_notaryRemoved": "Notar einer Registeranmeldung entfernt"
     },
     "fields": {
       "email": "E-Mail-Adresse",
@@ -2913,6 +3162,7 @@
       "backup_prune": "{count, plural, one {# Backup} other {# Backups}} vom Ring entfernt",
       "backup_cancel": "Lauf „{jobKind}“ abgebrochen",
       "contacts_setStatus": "Kontakt {archived, select, true {archiviert} other {wieder aktiviert}}",
+      "contacts_updateRole": "{representsAssociation, select, true {Rolle des Kontakts geändert, vertritt nach §\u00a026 BGB} other {Rolle des Kontakts geändert, vertritt nicht nach §\u00a026 BGB}}",
       "contacts_update": "{scope, select, name {Name des Kontakts geändert} address {Anschrift des Kontakts geändert} delivery {Zustellweg des Kontakts geändert} other {Kontakt geändert}}",
       "contacts_userLink_create": "Kontakt {contact} mit Nutzer verknüpft",
       "contacts_userLink_end": "Verknüpfung von Kontakt {contact} mit Nutzer gelöst",
@@ -2923,7 +3173,7 @@
       "dms_dispatch_clear": "Versand von Dokument „{number}“ zurückgenommen",
       "dms_mail_queue": "Dokument „{documentNumber}“ zum Versand per E-Mail eingereiht",
       "dms_mail_sent": "Dokument „{documentNumber}“ per E-Mail gesendet",
-      "dms_mail_failed": "E-Mail mit Dokument „{documentNumber}“ {code, select, auth {wegen abgelehnter Anmeldung} connection {mangels Verbindung} rejected {wegen Ablehnung durch den Server} tls {mangels gesicherter Verbindung} other {}} nicht zugestellt",
+      "dms_mail_failed": "{code, select, interrupted {Versand der E-Mail mit Dokument „{documentNumber}“ unterbrochen, Zustellung unklar} other {E-Mail mit Dokument „{documentNumber}“ {code, select, auth {wegen abgelehnter Anmeldung} connection {mangels Verbindung} rejected {wegen Ablehnung durch den Server} tls {mangels gesicherter Verbindung} other {}} nicht zugestellt}}",
       "dms_mail_resend": "Dokument „{documentNumber}“ erneut per E-Mail eingereiht",
       "dms_mail_toPost": "Dokument „{documentNumber}“ auf Post umgestellt",
       "dms_mail_toEmail": "Dokument „{documentNumber}“ zurück auf E-Mail gestellt",
@@ -2969,6 +3219,13 @@
       "finance_confirmation_signed": "Unterschriebene Fassung „{signedNumber}“ der Zuwendungsbestätigung „{documentNumber}“ abgelegt",
       "finance_confirmation_void": "Zuwendungsbestätigung „{documentNumber}“ zurückgenommen",
       "finance_contactIban_delete": "{withContact, select, true {IBAN mit dem Kontakt gelöscht} other {IBAN vom Kontakt gelöst}}",
+      "finance_nameConsent_grant": "Einwilligung zur Namensnennung erteilt, für die Jahresrechnungen ab {fromYear}",
+      "finance_annualAccounts_explanationSave": "{length, plural, =0 {Erläuterung der Jahresrechnung {designation} entfernt} other {Erläuterung der Jahresrechnung {designation} gespeichert ({length} Zeichen)}}",
+      "finance_annualAccounts_sign": "{via, select, scan {Jahresrechnung „{documentNumber}“ abgezeichnet (unterschriebenes Exemplar „{scanNumber}“ abgelegt)} other {Jahresrechnung „{documentNumber}“ in Kompass abgezeichnet}}",
+      "finance_annualAccounts_signatureRequest": "Um Abzeichnung der Jahresrechnung „{documentNumber}“ gebeten",
+      "finance_annualAccounts_publish": "{corrected, select, true {Berichtigte Jahresrechnung {designation} („{documentNumber}“) für die Webseite bereitgestellt} other {{early, select, true {Jahresrechnung {designation} („{documentNumber}“) vor der Mitgliederversammlung für die Webseite bereitgestellt (Grund: {earlyKind, select, itzDeadline {Frist der Initiative Transparente Zivilgesellschaft} funderRequest {Bitte eines Förderers} other {Sonstiges}})} other {Jahresrechnung {designation} („{documentNumber}“) für die Webseite bereitgestellt}}}}",
+      "finance_annualAccounts_withdraw": "Jahresrechnung {designation} („{documentNumber}“) von der Webseite genommen",
+      "finance_annualAccounts_webVersion": "Webfassung „{documentNumber}“ der Jahresrechnung {designation} nach Widerruf einer Einwilligung erzeugt",
       "finance_contactTaxDetails_reverseChargeDecline": "Nein zu §\u00a013b am Kontakt mit Grund „{reason, select, paymentServices {Steuerfreie Zahlungsabwicklung} domesticProvider {Der Anbieter ist inländisch} exception13b6 {Ausnahme von §\u00a013b} other {Sonstiges}}“ gemerkt",
       "finance_datedValue_remove": "Wert „{key}“ ab {fromOn} zurückgenommen",
       "finance_datedValue_set": "Wert „{key}“ ab {fromOn} gesetzt",
@@ -2990,6 +3247,7 @@
       "finance_fiscalYear_autoCreate": "Geschäftsjahr „{designation}“ als Nachfolger angelegt",
       "finance_fiscalYear_create": "Geschäftsjahr „{designation}“ angelegt",
       "finance_fiscalYear_update": "Geschäftsjahr „{designation}“ geändert",
+      "finance_fundsUseOpening_save": "Anfangsvortrag Mittelverwendung für das {offset, select, 1 {Vorjahr} other {Vorvorjahr}} gespeichert",
       "finance_import_candidateDecide": "{decision, select, same {Zahlung im Auszug als dieselbe erkannt und nicht übernommen} own {Zahlung im Auszug als eigene Zahlung übernommen} other {Mögliche doppelte Zahlung im Auszug entschieden}}",
       "finance_inKindDetails_save": "Angaben zur Sachzuwendung {created, select, true {erfasst} other {geändert}}",
       "finance_notice_document": "Dokument „{documentNumber}“ zum Bescheid hinterlegt",
@@ -3116,7 +3374,58 @@
       "users_deactivate": "Nutzer {targetUser} deaktiviert",
       "users_removeRole": "Rolle „{roleName}“ von {targetUser} entzogen",
       "users_resetStartPassword": "Startpasswort für {targetUser} neu vergeben",
-      "users_update": "Nutzer {targetUser} geändert"
+      "users_update": "Nutzer {targetUser} geändert",
+      "governance_term_start": "Kontakt {contact} ab {since} ins Amt gesetzt ({origin, select, backfilled {nachgetragen} appointed {berufen} substitute {ersatzweise bestellt} courtAppointed {gerichtlich bestellt} elected {gewählt} other {{origin}}})",
+      "governance_term_end": "Amt von Kontakt {contact} zum {until} beendet ({reason, select, resigned {Rücktritt} dismissed {Abberufung} died {Tod} expired {Ablauf der Amtszeit} successor {Nachfolge} other {sonstiger Grund}})",
+      "governance_term_adopt": "{count, plural, one {Eine Rollenzeile} other {# Rollenzeilen}} als Amtsinhaberschaft übernommen",
+      "governance_statute_update": "Satzungsstand geändert: {fields}",
+      "governance_statute_rulesAmend": "Regelwerk eines eingetragenen oder abgelösten Satzungsstands geändert: {fields}; {affected, plural, =0 {kein festgeschriebener Beschluss wird anders bewertet} one {ein festgeschriebener Beschluss wird anders bewertet} other {# festgeschriebene Beschlüsse werden anders bewertet}}",
+      "governance_statute_register": "Satzungsstand als am {registeredOn} eingetragen vermerkt",
+      "governance_meeting_create": "Sitzung am {heldOn} angelegt",
+      "governance_meeting_update": "Sitzung am {heldOn} geändert: {fields}",
+      "governance_meeting_delete": "Geplante Sitzung am {heldOn} gelöscht",
+      "governance_meeting_cancel": "Sitzung am {heldOn} zum {cancelledOn} abgesagt",
+      "governance_agenda_save": "Tagesordnungspunkt {position} gespeichert",
+      "governance_agenda_reorder": "{count, plural, one {Einen Tagesordnungspunkt} other {# Tagesordnungspunkte}} neu geordnet",
+      "governance_agenda_propose": "Tagesordnung mit {count, plural, one {einem Punkt} other {# Punkten}} vorgeschlagen",
+      "governance_agenda_note": "Notiz zu Tagesordnungspunkt {position} gespeichert",
+      "governance_motion_save": "Antrag vom {receivedOn} gespeichert{late, select, true { (nach Frist)} other {}}",
+      "governance_assemblyRequest_save": "Verlangen vom {receivedOn} mit {supporters} Unterstützenden gespeichert{reached, select, true { (Quorum erreicht)} other { (Quorum nicht erreicht)}}",
+      "governance_invitationRun_start": "{kind, select, invitation {Einladung} supplement {Nachtrag zur Einladung} cancellation {Absage} other {Lauf}} als {documentNumber} ausgestellt, Lauf gestartet",
+      "governance_invitationRun_continue": "{issued, plural, one {Ein Schreiben} other {# Schreiben}} ausgestellt, {refused, plural, =0 {keines abgelehnt} one {eines abgelehnt} other {# abgelehnt}}",
+      "governance_invitation_letter": "Schreiben {documentNumber} ausgestellt",
+      "governance_invitation_mail": "{count, plural, one {Ein Einladungsschreiben} other {# Einladungsschreiben}} per E-Mail eingereiht",
+      "governance_invitation_markPost": "Postversand von {count, plural, one {einem Schreiben} other {# Schreiben}} am {sentOn} vermerkt",
+      "governance_invitation_toPost": "{count, plural, one {Ein Schreiben} other {# Schreiben}} auf Post umgestellt",
+      "governance_invitation_toEmail": "{count, plural, one {Ein Schreiben} other {# Schreiben}} zurück auf E-Mail gestellt",
+      "governance_boardInvitation_issue": "Einladung {documentNumber} zur Sitzung am {heldOn} ausgestellt",
+      "governance_boardInvitation_mail": "Einladung an {count, plural, one {eine Person} other {# Personen}} per E-Mail eingereiht",
+      "governance_invitation_note": "Einladung am {invitedOn} vermerkt",
+      "governance_minutes_attendanceList": "Anwesenheitsliste {documentNumber} ausgestellt",
+      "governance_minutes_registerData": "Angaben für die Registeranmeldung {documentNumber} ausgestellt ({count, plural, one {eine Person} other {# Personen}})",
+      "governance_minutes_file": "Unterschriebenes Protokoll {documentNumber} als Fassung {version} abgelegt",
+      "governance_minutes_attach": "Dokument {documentNumber} als unterschriebenes Protokoll verknüpft",
+      "governance_minutes_replace": "Fassung {version} des unterschriebenen Protokolls ({documentNumber}) vor dem Festschreiben ersetzt und storniert",
+      "governance_term_link": "Amtsinhaberschaft von Kontakt {contact} mit der Wahl abgeglichen (angenommen am {acceptedOn})",
+      "governance_statute_resolve": "Beschluss vom {on} am Satzungsstand eingetragen",
+      "governance_registerOccasion_record": "Anlass zur Registeranmeldung zum {occurredOn} festgehalten ({kind, select, initial {Ersteintragung} statute {Satzungsänderung} boardChange {Vorstandswechsel} representation {Vertretungsregel} dissolution {Auflösung} other {anderer Anlass}})",
+      "governance_registerOccasion_withdraw": "Anlass zur Registeranmeldung zum {occurredOn} entfallen ({kind, select, initial {Ersteintragung} statute {Satzungsänderung} boardChange {Vorstandswechsel} representation {Vertretungsregel} dissolution {Auflösung} other {anderer Anlass}})",
+      "governance_resolution_number": "Beschluss {number} nummeriert",
+      "governance_meeting_seal": "Sitzung am {heldOn} festgeschrieben: {resolutions, plural, one {ein Beschluss} other {# Beschlüsse}}, {terms, plural, one {eine Amtsinhaberschaft} other {# Amtsinhaberschaften}}",
+      "governance_circular_seal": "Umlaufbeschluss {number} festgeschrieben",
+      "governance_meeting_backfill": "Sitzung am {heldOn} nachgetragen ({present} Anwesende, {voting} stimmberechtigt)",
+      "governance_meeting_backfillCorrect": "Nachgetragene Sitzung am {heldOn} berichtigt: {fields}",
+      "governance_minutes_correct": "Protokoll berichtigt: {documentNumber} ist Fassung {version}",
+      "governance_register_create": "Registeranmeldung mit {occasions, plural, one {einem Anlass} other {# Anlässen}} angelegt",
+      "governance_register_addOccasions": "{count, plural, one {Ein Anlass} other {# Anlässe}} in die Registeranmeldung aufgenommen",
+      "governance_register_update": "Registeranmeldung geändert: {fields}",
+      "governance_register_interimOrder": "Zwischenverfügung vom {on} vermerkt{deadline, select, none {} other {, Frist {deadline}}}",
+      "governance_register_interimResolved": "Zwischenverfügung am {resolvedOn} behoben",
+      "governance_register_documents": "Unterlagen der Registeranmeldung ({key, select, resolutionCopy {Beschlussabschrift} statuteText {Satzungswortlaut} invitation {Einladung} attendanceList {Anwesenheitsliste} registerData {Angaben für die Registeranmeldung} taxNotice {Bescheid des Finanzamts} other {Unterlage}}): {count, plural, =0 {wieder berechnet} one {ein Dokument} other {# Dokumente}}",
+      "governance_register_transparency": "Prüffragen zum Transparenzregister am {checkedOn} beantwortet: {result, select, noReportNeeded {keine Meldung nötig} reportNeeded {Meldung nötig} notApplicable {nicht betroffen} other {noch offen}}",
+      "governance_register_complete": "Registeranmeldung am {registeredOn} eingetragen: {occasions, plural, one {ein Anlass} other {# Anlässe}}, {statutes, plural, =0 {kein Satzungsstand} one {ein Satzungsstand} other {# Satzungsstände}}",
+      "governance_register_dissolution": "Vermerke zur Auflösung geändert: {fields}",
+      "governance_register_notaryRemoved": "Kontakt des Notars gelöscht; die Registeranmeldung bleibt ohne Bezug"
     },
     "emptyFilteredNoun": "Kein Eintrag",
     "parts": {
@@ -3238,7 +3547,14 @@
         "member-reminder": "Beitragsmahnung",
         "member-payment-request": "Zahlungsaufforderung nach Rückgabe",
         "member-fee-notice": "Beitragsmitteilung",
-        "member-count-certificate": "Bescheinigung über die Mitgliederzahl"
+        "member-count-certificate": "Bescheinigung über die Mitgliederzahl",
+        "governance-invitation": "Einladung zur Sitzung",
+        "governance-invitation-letter": "Einladungsschreiben je Mitglied",
+        "governance-cancellation-letter": "Absageschreiben je Mitglied",
+        "governance-minutes-print": "Protokollentwurf der Mitgliederversammlung",
+        "governance-board-minutes-print": "Protokollentwurf einer Vorstandssitzung",
+        "governance-attendance-list": "Anwesenheitsliste",
+        "governance-register-data": "Angaben für die Registeranmeldung"
       }
     }
   },
@@ -3289,7 +3605,7 @@
       "backupLastVerified": { "reason": "Das ist das neueste geprüfte Backup; ohne es gäbe es keinen sicheren Stand.", "remedy": "Erstellen Sie zuerst ein neueres Backup." },
       "backupVerifyFailed": { "reason": "Das Backup hat die Prüfung nicht bestanden: {reason, select, backupFormatUnsupported {unbekanntes Format} backupUnreadable {Archiv nicht lesbar} backupFileMissing {eine Datei fehlt im Archiv} backupFileSizeMismatch {eine Datei im Archiv hat die falsche Größe} backupCorrupt {die Datenbank im Archiv ist beschädigt} backupChecksumMismatch {die Prüfsumme weicht ab} other {{reason}}}.", "remedy": "Erstellen Sie ein neues Backup; bleibt es dabei, prüfen Sie den Datenträger des Backup-Verzeichnisses." },
       "backupTooLarge": { "reason": "Die Datei ist größer als {gb} GB; so groß wird kein Kompass-Backup.", "remedy": "Prüfen Sie, ob Sie die richtige Datei gewählt haben." },
-      "restoreBlocked": { "reason": "Gerade läuft {reason, select, siteJobRunning {ein Lauf der Webseite (Vorschau, Publizieren oder Verbindungsprüfung)} other {{reason}}}; währenddessen lässt sich kein Backup einspielen.", "remedy": "Warten Sie, bis er fertig ist, und starten Sie das Einspielen dann erneut." },
+      "restoreBlocked": { "reason": "Gerade läuft {reason, select, siteJobRunning {ein Lauf der Webseite (Vorschau, Publizieren oder Verbindungsprüfung)} jobRunning {ein anderer Lauf im Hintergrund, etwa ein Datenexport oder ein Prüfpaket} other {{reason}}}; währenddessen lässt sich kein Backup einspielen.", "remedy": "Warten Sie, bis er fertig ist, und starten Sie das Einspielen dann erneut." },
       "restoreSafeguardFailed": { "reason": "Das Backup „Vor Einspielen“ ließ sich nicht anlegen; ohne Weg zurück spielt Kompass nichts ein.", "remedy": "Sehen Sie in der Liste nach dem Grund (Speicherplatz, Verzeichnis) und versuchen Sie es dann erneut." },
       "restoreFailed": { "reason": "Das Einspielen ist {step, select, replace {beim Ersetzen des Bestands} migrate {beim Anpassen der Datenbank} finish {beim Abschluss} other {}} gescheitert. Kompass hat den Stand davor zurückgelegt, es ist nichts verloren.", "remedy": "Prüfen Sie das Backup erneut; bleibt es dabei, wenden Sie sich mit dem Protokoll des Servers an die Technik." },
       "restoreRollbackFailed": { "reason": "Das Einspielen ist gescheitert, und der Stand davor ließ sich nicht zurücklegen. Er liegt unverändert unter {aside}.", "remedy": "Kompass bleibt in Wartung, bis die Technik den Stand zurückgelegt hat (Betriebshandbuch, Abschnitt Backups)." }
@@ -3366,10 +3682,6 @@
         "label": "Warnen, wenn das letzte geprüfte Backup älter ist als",
         "unit": "Tage",
         "hint": "Die Startseite meldet das Backup als veraltet, sobald diese Zahl von Tagen überschritten ist."
-      },
-      "agent": {
-        "label": "Darf ein Agent ein Backup einspielen?",
-        "hint": "Backups erstellen und die Liste lesen darf ein Agent immer. Einspielen bleibt sonst einem Menschen auf dieser Seite vorbehalten."
       }
     },
     "run": {
@@ -3628,7 +3940,8 @@
       "openModules": "Module öffnen"
     },
     "records": {
-      "forbidden": "Projekt (kein Zugriff)"
+      "forbidden": "Projekt (kein Zugriff)",
+      "mediaUsage": "Projekt „{name}“"
     }
   },
   "animals": {
@@ -3798,7 +4111,8 @@
     },
     "records": {
       "forbidden": "Tier (kein Zugriff)",
-      "proposal": "Vorschlag zu „{name}“"
+      "proposal": "Vorschlag zu „{name}“",
+      "mediaUsage": "Tier „{name}“"
     },
     "admin": {
       "title": "Tiere",
@@ -4129,6 +4443,10 @@
     }
   },
   "site": {
+    "references": {
+      "variable": "Variable „{name}“",
+      "entry": "Eintrag „{title}“ in „{collection}“"
+    },
     "admin": {
       "title": "Webseite",
       "description": "Vorlage der Webseite, Verbindung zum Webspace, Cache und gesperrte Begriffe.",
@@ -4657,7 +4975,8 @@
       "claimant": "Antragsteller (Auslagen)",
       "board-member": "Vorstandsmitglied",
       "related-party": "Nahestehende Person",
-      "member": "Mitglied"
+      "member": "Mitglied",
+      "auditor": "Kassenprüfung"
     },
     "title": "Kontakte",
     "description": "Personen und Organisationen, ihre Rollen und Kommunikationswege.",
@@ -4693,7 +5012,8 @@
       "updated": "Kontakt gespeichert",
       "roleAdded": "Rolle hinzugefügt",
       "roleEnded": "Rolle beendet",
-      "channelsSaved": "Kommunikationswege gespeichert"
+      "channelsSaved": "Kommunikationswege gespeichert",
+      "roleUpdated": "Rolle gespeichert"
     },
     "columns": {
       "name": "Name",
@@ -4734,7 +5054,14 @@
       "end": "Beenden",
       "open": "Öffnen",
       "memberSummary": "Nr. {number} · {type} · seit {date}",
-      "applicationSummary": "Antrag vom {date} · {type}"
+      "applicationSummary": "Antrag vom {date} · {type}",
+      "office": "Amt",
+      "officeHint": "Steht so in der Abzeichnung der Jahresrechnung.",
+      "represents": "vertritt nach §\u00a026 BGB",
+      "representsHint": "Nur wer den Verein vertritt, kann die Jahresrechnung abzeichnen.",
+      "edit": "Bearbeiten …",
+      "editTitle": "Rolle bearbeiten",
+      "fixed": "Steht mit der Rolle fest; ändern über Beenden und neu hinzufügen."
     },
     "channels": {
       "title": "Kommunikationswege",
@@ -4779,7 +5106,9 @@
       "openModules": "Module öffnen"
     },
     "records": {
-      "forbidden": "Kontakt (kein Zugriff)"
+      "forbidden": "Kontakt (kein Zugriff)",
+      "baseRetention": "Grundfrist (Rollen ohne eigene Frist)",
+      "userLinkHold": "Verknüpfung mit einem Nutzerkonto (dauerhaft, bis sie gelöst wird)"
     },
     "searchPlaceholder": "Name, Ort, E-Mail oder Telefon",
     "searchPlaceholderShort": "Name, E-Mail …",
@@ -4797,6 +5126,9 @@
     "blockedHint": "Lösen Sie erst den Bezug in der Akte oder haken Sie die Wiedervorlage ab.",
     "heldUntil": "{label} — gehalten bis {date}",
     "heldPermanently": "{label} — dauerhaft gehalten",
+    "references": {
+      "followUp": "Wiedervorlage „{title}“"
+    },
     "confirm": "Der Inhalt wird entfernt. Der Löschvorgang steht im Änderungsprotokoll.",
     "withMedia": "{count, plural, one {Das eine Foto, das nur hier verwendet wird, mitlöschen} other {Die # Fotos, die nur hier verwendet werden, mitlöschen}}",
     "sharedMedia": "Bleibt in der Mediathek, weil auch verwendet bei {places}:",
@@ -4804,6 +5136,9 @@
     "deletedWithMedia": "{count, plural, =0 {Gelöscht.} one {Gelöscht, samt einem Foto.} other {Gelöscht, samt # Fotos.}}"
   },
   "dms": {
+    "mailErrorCodes": {
+      "interrupted": "Versand unterbrochen — ob die Mail angekommen ist, ist unklar. Bitte prüfen und bei Bedarf erneut senden."
+    },
     "outbox": {
       "title": "Ausgang",
       "desc": "Briefe, die per E-Mail hinausgehen. Das Dokument bleibt das PDF in der Akte.",
@@ -4993,7 +5328,8 @@
     "folderGoneAll": "Den Ordner „{name}“ gibt es nicht mehr, vielleicht wurde er verschoben oder umbenannt. Sie sehen alle Dokumente.",
     "areas": {
       "finance": "Finanzen",
-      "members": "Mitglieder"
+      "members": "Mitglieder",
+      "governance": "Gremien"
     },
     "number": {
       "pending": "Die Nummer <mono>{number}</mono> wird beim Ablegen gezogen. Wählen Sie später eine andere Art, bekommt das Dokument eine neue Nummer, und die bisherige bleibt vermerkt.",
@@ -5130,7 +5466,9 @@
       "complete": "{title} erledigen",
       "reopen": "{title} wieder öffnen",
       "doneLabel": "Erledigt",
-      "overdue": "überfällig"
+      "overdue": "überfällig",
+      "mailNoAddress": "{name} hat keine gültige Mailadresse und bekommt keine Mail; die Wiedervorlage steht auf der Startseite unter „Fällig“.",
+      "mailUnavailable": "Kompass kann gerade keine Mails schicken; die Wiedervorlage steht auf der Startseite unter „Fällig“."
     },
     "notes": {
       "title": "Notizen",
@@ -5226,6 +5564,14 @@
         "reason": "{state, select, blocked {Testumgebung ohne Umleitung: Die Mail darf nicht hinaus.} other {Der E-Mail-Versand ist nicht eingerichtet.}}",
         "remedy": "{state, select, blocked {Die Umleitung wird bei der Installation festgelegt. Bis dahin geht der Brief per Post.} other {Der Mailserver wird bei der Installation festgelegt. Bis dahin geht der Brief per Post.}}"
       },
+      "ocrUnavailable": {
+        "reason": "Die Texterkennung ist in dieser Umgebung nicht verfügbar.",
+        "remedy": "Die Werkzeuge dafür werden bei der Installation eingerichtet. Bis dahin lassen sich keine Sprachen wählen."
+      },
+      "ocrLanguageMissing": {
+        "reason": "Die Sprache {lang} ist in dieser Umgebung nicht installiert.",
+        "remedy": "Wählen Sie eine installierte Sprache oder lassen Sie die Sprache bei der Installation ergänzen."
+      },
       "mailNoSender": {
         "reason": "Es ist keine Absender-Adresse für E-Mails hinterlegt.",
         "remedy": "Tragen Sie unter Einrichtung → Akte eine Absender-Adresse für E-Mails ein."
@@ -5233,6 +5579,10 @@
       "noUserEmail": {
         "reason": "An Ihrem Nutzerkonto ist keine E-Mail-Adresse hinterlegt.",
         "remedy": "Tragen Sie in Ihrem Profil eine E-Mail-Adresse ein."
+      },
+      "alreadyQueued": {
+        "reason": "Diese Mail wartet schon auf den Versand.",
+        "remedy": "Warten Sie ab, bis sie gesendet oder als nicht zugestellt gemeldet ist."
       },
       "mailNotResendable": {
         "reason": "Diese E-Mail ist noch unterwegs oder wurde auf Post umgestellt.",
@@ -5270,7 +5620,8 @@
       "linked": "Bezug angelegt",
       "unlinked": "Bezug entfernt",
       "related": "Dokumentbezug angelegt",
-      "unrelated": "Dokumentbezug entfernt"
+      "unrelated": "Dokumentbezug entfernt",
+      "followUpCreatedMail": "Wiedervorlage angelegt, Mail an {name} geschickt."
     },
     "admin": {
       "mail": {
@@ -5316,10 +5667,6 @@
       },
       "title": "Akte",
       "tabsLabel": "Bereiche der Akte",
-      "agent": {
-        "label": "Darf ein Agent Dokumente per E-Mail senden?",
-        "hint": "Eingeschaltet darf ein Agent Dokumente der Akte und die Briefe eines Laufs per E-Mail senden; ob er das darf, entscheidet der Verein nur hier in Kompass, nicht über einen Agenten."
-      },
       "panels": {
         "types": "Arten",
         "rules": "Regeln",
@@ -5450,7 +5797,6 @@
         "reindex": "Alles neu lesen",
         "queued": "{count} Dokumente wurden zum Neu-Lesen vorgemerkt.",
         "open": "{count} warten noch",
-        "languageMissing": "{lang} ist in dieser Umgebung nicht installiert.",
         "addLanguage": "Sprache auswählen…"
       },
       "toast": {
@@ -5497,7 +5843,9 @@
     "records": {
       "protected": "{number}, geschützt",
       "protectedDraft": "Entwurf (geschützt)",
-      "draft": "Entwurf {id}"
+      "draft": "Entwurf {id}",
+      "document": "Dokument {label}",
+      "draftSubject": "Dokument „{subject}“ (Entwurf)"
     }
   },
   "finance": {
@@ -5602,6 +5950,10 @@
           "label": "Steuererklärung",
           "next": "Steuererklärung klären",
           "nextVat": "Umsatzsteuer-Jahreserklärung {year} abgeben"
+        },
+        "fundsUse": {
+          "label": "Mittelverwendung festschreiben",
+          "next": "Mittelverwendungsrechnung festschreiben"
         }
       },
       "statements": {
@@ -5774,7 +6126,14 @@
         "noRight": "Eintragen kann, wer das Jahr abschließt.",
         "minutesLink": "Protokoll",
         "fillIn": "Ergebnis nachtragen",
-        "beforeAuditReport": "Die Versammlung liegt vor dem Prüfbericht vom {date}. Stimmt das Datum?"
+        "managed": {
+          "label": "Geführt in",
+          "reason": "Das Ergebnis kommt aus der festgeschriebenen Sitzung in Gremien und lässt sich nur dort ändern.",
+          "refusedAfterGranted": "Eine spätere Versammlung hat eine schon erteilte Entlastung verweigert. Die erteilte Entlastung gilt weiter; prüfen Sie den Beschluss."
+        },
+        "beforeAuditReport": "Die Versammlung liegt vor dem Prüfbericht vom {date}. Stimmt das Datum?",
+        "formerlyManaged": "Das Ergebnis wurde bisher von Gremien aus der Sitzung „{label}“ geführt. Gremien ist ausgeschaltet — tragen Sie es hier von Hand ein.",
+        "accountsHint": "Gemeint ist die Genehmigung durch die Mitgliederversammlung. Vorgelegt werden der <cash>Kassenbericht</cash> und die <annual>Jahresrechnung</annual>."
       },
       "handover": {
         "title": "Amtsübergabe Schatzmeisteramt",
@@ -6025,6 +6384,12 @@
           "description": "Der Prüfbericht vom {date} gilt für {year} weiter, die Freigabe zum Festschreiben ebenso."
         }
       },
+      "fundsUse": {
+        "sentence": "Einnahmen {year}: {revenue}{noLimit, select, yes {; für dieses Jahr gibt es keine Freigrenze} other {, über der Grenze von {limit}}}. Die Mittelverwendungsrechnung ist Pflicht; Stufe: {stage}.",
+        "toPage": "Zur Mittelverwendung",
+        "finalize": "Festschreiben …",
+        "result": "Festgeschrieben am {date} ({number})."
+      },
       "reopenDialog": {
         "title": "{year} wiederöffnen",
         "description": "Danach lassen sich Buchungen in {year} wieder ändern. Schritt 8 bis 10 sind dann zu wiederholen.",
@@ -6069,7 +6434,9 @@
           "taxReturn": "Steuererklärung {period} abgeben",
           "vatAdvanceReturn": "Umsatzsteuer-Voranmeldung {vatPeriod}",
           "vatReturn": "Umsatzsteuer-Jahreserklärung {year}",
-          "vatAmendment": "{scope, select, year {Berichtigte Umsatzsteuer-Jahreserklärung {vatPeriod}} other {Berichtigte Voranmeldung {vatPeriod}}}"
+          "vatAmendment": "{scope, select, year {Berichtigte Umsatzsteuer-Jahreserklärung {vatPeriod}} other {Berichtigte Voranmeldung {vatPeriod}}}",
+          "timelyUse": "Mittel aus {origin} verwenden",
+          "timelyUseLapsed": "Verwendungsfrist für Mittel aus {origin} entfallen, AEAO zu §\u00a055 Nr.\u00a031"
         },
         "subjects": {
           "noticeExpiry": "Bescheide",
@@ -6080,13 +6447,16 @@
           "taxReturn": "Steuererklärung {period}",
           "vatAdvanceReturn": "Umsatzsteuer",
           "vatReturn": "Umsatzsteuer {year}",
-          "vatAmendment": "Umsatzsteuer (§\u00a0153 AO)"
+          "vatAmendment": "Umsatzsteuer (§\u00a0153 AO)",
+          "timelyUse": "Mittelverwendung",
+          "timelyUseLapsed": "Mittelverwendung {lapsedIn}"
         },
         "subjectPartner": "Partner {partner}",
         "vatFile": "Abgabe eintragen …",
         "vatFileFrom": "Abgabe ab {date}",
         "immediately": "unverzüglich",
-        "cause": "{entryNumber} nach der Abgabe {change, select, booked {gebucht} corrected {korrigiert} other {zurückgenommen}}, {changedOn}{more, plural, =0 {} other { und # weitere}}"
+        "cause": "{entryNumber} nach der Abgabe {change, select, booked {gebucht} corrected {korrigiert} other {zurückgenommen}}, {changedOn}{more, plural, =0 {} other { und # weitere}}",
+        "timelyUseRest": "{amount} noch zu verwenden"
       },
       "vatDialog": {
         "title": "Abgabe eintragen · {label}",
@@ -6180,6 +6550,8 @@
     "reopenConsequences": {
       "reportsVoided": "{count, plural, one {# festgeschriebener Bericht wird zurückgenommen; sein Dokument bleibt lesbar in der Akte.} other {# festgeschriebene Berichte werden zurückgenommen; ihre Dokumente bleiben lesbar in der Akte.}}",
       "releaseRevoked": "Die Freigabe zum Festschreiben wird widerrufen.",
+      "annualAccountsWithdrawn": "Die Jahresrechnung {designation} verschwindet mit dem nächsten Publizieren von der Webseite; eine Wiedervorlage „Webseite neu publizieren“ wird angelegt.",
+      "annualAccountsProvisionRetracted": "Die Bereitstellung der Jahresrechnung {designation} für die Webseite wird zurückgenommen; auf der Webseite stand sie noch nicht.",
       "auditFollowUpNeeded": "Der Prüfbericht ist abgelegt: Die Kassenprüfung steht danach auf „Nachprüfung offen“ und braucht einen unterschriebenen Nachtrag."
     },
     "reports": {
@@ -6298,9 +6670,179 @@
         "title": "EÜR für das Finanzamt",
         "description": "Einnahmen und Ausgaben je Bereich und Jahr, gegliedert wie das Zusatzblatt der Finanzämter."
       },
+      "annualAccounts": {
+        "title": "Jahresrechnung",
+        "description": "Finanzteil des Jahresberichts für Mitglieder und Öffentlichkeit: Mittelherkunft und -verwendung, Vermögen, Projekte, Kennzahlen, Großzuwendungen. Hochformat.",
+        "over25": "„{item}“ sind {percent} aller {section, select, income {Einnahmen} other {Ausgaben}}. Ein Posten über 25 % sollte unterteilt werden, damit Leser sehen, {section, select, income {woher das Geld kommt} other {wofür das Geld ausgegeben wurde}}.",
+        "toCategories": "Zu den Kategorien",
+        "operationsLoss": "Verlust {sphere, select, business {im wirtschaftlichen Geschäftsbetrieb} other {in der Vermögensverwaltung}}: Er wird mit der Jahresrechnung öffentlich ablesbar. Mögliche Mittelfehlverwendung prüfen.",
+        "toIncomeStatement": "Zur EÜR",
+        "labels": {
+          "cashDonations": "Geldspenden",
+          "inKindDonations": "Sachspenden",
+          "bequests": "Nachlässe",
+          "membershipFees": "Mitgliedsbeiträge",
+          "publicGrants": "Zuwendungen der öffentlichen Hand",
+          "otherOrganizations": "Zuwendungen anderer Organisationen",
+          "courtFines": "Geldauflagen",
+          "revenue": "Umsatzerlöse",
+          "assetManagement": "Vermögensverwaltung",
+          "other": "Sonstiges",
+          "fundraising": "Werbung",
+          "administration": "Verwaltung",
+          "projectNone": "übrige Satzungsarbeit",
+          "project": "Projekt"
+        },
+        "control": {
+          "title": "Zur Kontrolle",
+          "intro": "nur am Bildschirm, nicht im PDF",
+          "costRatio": "Kostenquote, steuerlich (Werbung und Verwaltung zu Einnahmen, AEAO zu §\u00a055 Nr.\u00a019)",
+          "reconciliation": "Einnahmen laut Jahresrechnung zu Steuererklärung",
+          "reconciliationParts": "{income} abzüglich Anlagenverkäufe {assetSales} und Steuererstattungen {taxRefunds} · Anlage Gem Zeile 9: {line9}",
+          "toTaxReturn": "Steuererklärung {year}",
+          "matches": "stimmt",
+          "difference": "Differenz {amount}",
+          "remuneration": "Zahlungen an den Vorstand ohne Grundlage",
+          "remunerationCount": "{count, plural, one {# Zahlung} other {# Zahlungen}}"
+        },
+        "card": {
+          "title": "Abzeichnen und publizieren",
+          "done": "erledigt",
+          "rows": {
+            "explanation": "Erläuterung",
+            "signature": "Abzeichnung",
+            "website": "Webseite"
+          },
+          "detail": {
+            "explanationEmpty": "Ein kurzer Text zum Jahr für Leser ohne Buchhaltung, bis 4.000 Zeichen.",
+            "explanationLength": "{count} Zeichen",
+            "explanationLocked": "{count} Zeichen, festgeschrieben mit der Fassung",
+            "explanationNone": "ohne Erläuterung festgeschrieben",
+            "notSigned": "Noch nicht abgezeichnet.",
+            "requested": "Noch nicht abgezeichnet. {name} gebeten am {date}.",
+            "requestedYou": "{name} bittet Sie darum, seit {date}.",
+            "notSignedCorrected": "Die berichtigte Fassung ist noch nicht abgezeichnet.",
+            "signed": "{name}{hasOffice, select, yes {, {office}} other {}}, am {date}",
+            "signedScan": "{name}{hasOffice, select, yes {, {office}} other {}}, am {date} (Scan, {number})",
+            "notPublished": "nicht publiziert",
+            "provided": "Bereitgestellt am {date}. Sichtbar mit dem nächsten Publizieren der Webseite.",
+            "live": "auf der Webseite seit {date}",
+            "withdrawnVoided": "Von der Webseite genommen am {date} (Fassung zurückgenommen). Nach der Abzeichnung der neuen Fassung wieder publizieren.",
+            "withdrawnManual": "Von der Webseite genommen am {date}.",
+            "withdrawnRenderFailed": "Von der Webseite genommen am {date}: Die Fassung ohne den widerrufenen Namen ließ sich nicht erzeugen.",
+            "retractedVoided": "Bereitstellung zurückgenommen am {date} (Fassung zurückgenommen).",
+            "retractedManual": "Bereitstellung zurückgenommen am {date}.",
+            "retractedRenderFailed": "Bereitstellung zurückgenommen am {date}: Die Fassung ohne den widerrufenen Namen ließ sich nicht erzeugen."
+          },
+          "muted": {
+            "afterFinalize": "nach dem Festschreiben",
+            "afterSignature": "nach der Abzeichnung"
+          },
+          "canDo": "Abzeichnen kann ein Vorstandsmitglied, das den Verein vertritt.",
+          "actions": {
+            "write": "Schreiben …",
+            "edit": "Bearbeiten …",
+            "view": "Ansehen",
+            "sign": "Abzeichnen …",
+            "request": "Um Abzeichnung bitten …",
+            "scan": "Unterschriebenen Scan ablegen …",
+            "publish": "Auf der Webseite publizieren",
+            "goToSite": "Zur Webseite",
+            "withdraw": "Von der Webseite nehmen …",
+            "retract": "Bereitstellung zurücknehmen …"
+          }
+        },
+        "glance": {
+          "title": "Auf einen Blick",
+          "income": "Einnahmen",
+          "expense": "Ausgaben",
+          "result": "Ergebnis",
+          "assets": "Vermögen am {date}"
+        },
+        "explanation": {
+          "title": "Erläuterung {year}",
+          "description": "Steht in Abschnitt F9 der Jahresrechnung. Bis zum Festschreiben änderbar.",
+          "label": "Erläuterung",
+          "counter": "{count, number} von {max, number} Zeichen",
+          "close": "Schließen",
+          "saved": "Erläuterung gespeichert."
+        },
+        "sign": {
+          "title": "Jahresrechnung {year} abzeichnen",
+          "description": "Fassung vom {date} · Stand <mono>{hash}</mono>",
+          "name": "Name",
+          "office": "Amt",
+          "representation": "Vertretung",
+          "represents": "vertritt nach §\u00a026 BGB",
+          "fromRole": "aus der Rolle Vorstandsmitglied",
+          "statement": "Ich zeichne die Jahresrechnung {year} des {organization} in dieser Fassung ab.",
+          "inPdf": "Im PDF steht danach: „Abgezeichnet von {name}{hasOffice, select, yes {, {office}} other {}}, am {date}.“ Zurücknehmen kann die Abzeichnung nur, wer das Jahr wiederöffnet.",
+          "submit": "Abzeichnen",
+          "done": "Jahresrechnung abgezeichnet."
+        },
+        "request": {
+          "title": "Um Abzeichnung bitten",
+          "description": "Die Person findet die Bitte auf der Startseite unter „Fällig“ und bekommt eine Mail mit dem Link auf die Jahresrechnung.",
+          "assignee": "Zuständig",
+          "dueAt": "Fällig am",
+          "followUp": "Wiedervorlage",
+          "followUpValue": "Jahresrechnung {year} abzeichnen",
+          "reference": "Bezug",
+          "referenceValue": "{number} · Jahresrechnung {year}",
+          "fixed": "Steht mit der Bitte fest.",
+          "noAddress": "{name} hat keine gültige Mailadresse. Die Bitte steht nur auf der Startseite unter „Fällig“.",
+          "unavailable": "Kompass kann gerade keine Mails schicken. Die Bitte steht nur auf der Startseite unter „Fällig“.",
+          "noAccount": "{name} hat kein Konto in Kompass. Unterschriebenen Scan ablegen.",
+          "submit": "Wiedervorlage anlegen",
+          "done": "Wiedervorlage angelegt.",
+          "doneMail": "Wiedervorlage angelegt, Mail an {name} geschickt."
+        },
+        "scan": {
+          "title": "Unterschriebenen Scan ablegen",
+          "signer": "Unterschrieben von",
+          "signedOn": "Unterschrieben am",
+          "file": "Scan",
+          "hint": "Der Scan bleibt in der Akte. Auf die Webseite kommt nur die erzeugte Fassung mit der Zeile „Abgezeichnet von …“.",
+          "chosen": "Gewählt: {name}",
+          "submit": "Ablegen",
+          "done": "Scan abgelegt, Jahresrechnung abgezeichnet."
+        },
+        "publish": {
+          "title": "Vor der Mitgliederversammlung publizieren",
+          "description": "Die Mitgliederversammlung hat die Jahresrechnung {year} noch nicht entgegengenommen. Sichtbar wird sie mit dem nächsten Publizieren der Webseite.",
+          "reason": "Grund",
+          "reasons": {
+            "itzDeadline": {
+              "label": "Frist der Initiative Transparente Zivilgesellschaft",
+              "hint": "Der Bericht muss bis 30.06. öffentlich sein"
+            },
+            "funderRequest": {
+              "label": "Ein Förderer verlangt den publizierten Bericht"
+            },
+            "other": {
+              "label": "Sonstiges"
+            }
+          },
+          "note": "Begründung",
+          "submit": "Publizieren",
+          "done": "Bereitgestellt. Sichtbar mit dem nächsten Publizieren der Webseite."
+        },
+        "withdraw": {
+          "title": "Von der Webseite nehmen",
+          "description": "Die Jahresrechnung {year} verschwindet mit dem nächsten Publizieren der Webseite.",
+          "confirm": "Von der Webseite nehmen",
+          "done": "Von der Webseite genommen. Das gilt mit dem nächsten Publizieren der Webseite."
+        },
+        "retract": {
+          "title": "Bereitstellung zurücknehmen",
+          "description": "Die Jahresrechnung {year} ist nur bereitgestellt; mit dem nächsten Publizieren erscheint sie nicht.",
+          "confirm": "Bereitstellung zurücknehmen",
+          "done": "Bereitstellung zurückgenommen."
+        }
+      },
       "fundsUse": {
         "title": "Mittelverwendungsrechnung",
-        "description": "Zeitnahe Verwendung der Mittel je Jahr."
+        "description": "Zeitnahe Verwendung je Zuflussjahr, Vermögensabgleich, Rücklagen. Querformat."
       },
       "releaseBasis": {
         "auditReport": "Prüfbericht abgelegt",
@@ -6319,7 +6861,8 @@
         "assembly": "Mitgliederversammlung",
         "audit": "Kassenprüfung",
         "taxOffice": "Finanzamt und Gemeinnützigkeit",
-        "work": "Arbeit"
+        "work": "Arbeit",
+        "public": "Öffentlichkeit"
       },
       "list": {
         "title": "Berichte",
@@ -6363,7 +6906,8 @@
         "followUp": "{year} ist abgeschlossen. Festschreiben können Sie, sobald die Nachprüfung bestätigt ist.",
         "followUpChanged": "{year} ist abgeschlossen. Festschreiben können Sie, sobald die Nachprüfung geklärt ist.",
         "toAuditReport": "Zu Schritt 10 des Jahresabschlusses",
-        "running": "{year} läuft noch. Alle Berichte sind vorläufig."
+        "running": "{year} läuft noch. Alle Berichte sind vorläufig.",
+        "toCashReport": "Zum Kassenbericht"
       },
       "release": {
         "open": "Freigeben …",
@@ -6407,13 +6951,15 @@
       "view": {
         "generated": "erzeugt {date} · Stand {hash}",
         "version": "Fassung vom {date}, {time} · Stand {hash} · {number}",
-        "purpose": "{group, select, assembly {Für die Mitgliederversammlung} audit {Für die Kassenprüfung} taxOffice {Für Finanzamt und Gemeinnützigkeit} other {Für die laufende Arbeit}}{span, select, calendar {, je Kalenderjahr} period {, je Erklärungszeitraum} other {}}. {orientation, select, landscape {Querformat} other {Hochformat}}.",
+        "signedShown": " · abgezeichnet {number}",
+        "purpose": "{group, select, assembly {Für die Mitgliederversammlung} audit {Für die Kassenprüfung} taxOffice {Für Finanzamt und Gemeinnützigkeit} public {Für Mitglieder und Öffentlichkeit} other {Für die laufende Arbeit}}{span, select, calendar {, je Kalenderjahr} period {, je Erklärungszeitraum} other {}}. {orientation, select, landscape {Querformat} other {Hochformat}}.",
         "running": "{year} läuft noch.",
         "blocked": {
           "reportYearOpen": "{year} ist noch nicht abgeschlossen.",
           "reportNotReleased": "Festschreiben können Sie, sobald {year} freigegeben ist.",
           "reportProbeFails": "Die Probe geht nicht auf.",
-          "reportStatementsMissing": "{count, plural, one {Festschreiben können Sie, sobald der Auszug der {accounts} zum Stichtag liegt.} other {Festschreiben können Sie, sobald die Auszüge von # Konten zum Stichtag liegen.}}"
+          "reportStatementsMissing": "{count, plural, one {Festschreiben können Sie, sobald der Auszug der {accounts} zum Stichtag liegt.} other {Festschreiben können Sie, sobald die Auszüge von # Konten zum Stichtag liegen.}}",
+          "annualAccountsCashReportMissing": "Erst den Kassenbericht {year} festschreiben; die Jahresrechnung verweist auf ihn."
         },
         "finalize": "Festschreiben",
         "fileStatement": "Auszug ablegen …",
@@ -6454,13 +7000,24 @@
           },
           "empty": "Noch nicht festgeschrieben.",
           "withdrawn": "zurückgenommen am {date}: {reason}",
-          "withdrawnWithoutReason": "zurückgenommen am {date}"
+          "withdrawnWithoutReason": "zurückgenommen am {date}",
+          "webCopy": "Webfassung vom {date}"
         },
         "confirm": {
           "title": "{report} festschreiben",
           "description": "Der Bericht wird mit Stand <mono>{hash}</mono> unveränderlich in der Akte abgelegt. Ändern sich die Zahlen später, entsteht eine neue Fassung; die alte wird zurückgenommen und bleibt lesbar.",
-          "done": "Festgeschrieben als {number}."
-        }
+          "done": "Festgeschrieben als {number}.",
+          "explanationMissing": "Die Jahresrechnung erscheint ohne Erläuterung.",
+          "remuneration": "{count, plural, one {Eine Zahlung} other {# Zahlungen}} an Vorstandsmitglieder ohne Grundlage in der Satzung (AEAO zu §\u00a055 Nr.\u00a025). Festschreiben nur mit Begründung.",
+          "reason": "Begründung",
+          "reasons": {
+            "recoveryInitiated": "Rückforderung eingeleitet",
+            "basisNotRecorded": "Grundlage liegt vor, in Kompass nicht erfasst",
+            "other": "Sonstiges"
+          },
+          "note": "Erläuterung zu „Sonstiges“"
+        },
+        "corrected": " · berichtigt, ersetzt die vom {date}"
       }
     },
     "common": {
@@ -6592,6 +7149,7 @@
     },
     "amount": {
       "format": "Bitte einen Betrag wie 12,50 eingeben.",
+      "missing": "Betrag fehlt.",
       "exceeds": "Der Teilbetrag übersteigt den Betrag des Kontos.",
       "directionGroup": "Richtung",
       "direction": {
@@ -7480,6 +8038,7 @@
           "machineProcedure": "es fehlt: {missing}",
           "documentBases": "Eigene Basis für Formulare und Berichte fehlt — Bestätigungen und Berichte erscheinen im Standardkopf ({missing})",
           "boardRemunerationNo": "keine Pauschalen vorgesehen (seit {date})",
+          "boardMembersManaged": "Die Rolle „Vorstand“ folgt den Ämtern im Modul „{module}“.",
           "boardRemunerationYes": "Pauschalen vorgesehen, gilt ab {date}",
           "directDebitMissing": "es fehlt: {missing}. Das Recht „Lastschrift vorbereiten“ geben Sie einer Rolle.",
           "directDebitRight": "Das Recht „Lastschrift vorbereiten“ geben Sie einer Rolle."
@@ -7640,7 +8199,14 @@
         },
         "searchPlaceholder": "Name oder Schlüssel",
         "nounOne": "Kategorie",
-        "nounOther": "Kategorien"
+        "nounOther": "Kategorien",
+        "donationPlatform": "Spendenplattform",
+        "donationPlatformNone": "Keine Spendenplattform",
+        "donationPlatforms": {
+          "confirmsItself": "bestätigt selbst",
+          "handlesOnly": "wickelt nur ab"
+        },
+        "donationPlatformHint": "Auszahlungen erscheinen in der Jahresrechnung unter Geldspenden, „davon über Spendenplattformen“. „bestätigt selbst“ verlangt die Art „Zuschuss einer Körperschaft“, „wickelt nur ab“ die Art „Spende“."
       },
       "purposes": {
         "create": "Zweck anlegen",
@@ -7760,8 +8326,6 @@
         "switchesSaved": "Schalter gespeichert.",
         "membershipFeesCertifiable": "Sind Mitgliedsbeiträge bescheinigungsfähig?",
         "expenseWaiversEnabled": "Werden Aufwandsspenden angeboten?",
-        "mcpHumanOnlyAllowed": "Darf ein Agent festschreiben und Lastschriften bearbeiten?",
-        "mcpHumanOnlyAllowedHint": "Eingeschaltet darf ein Agent auch festschreiben, freigeben, Bestätigungen ausstellen, Mandate, Lastschriftdateien und Einzüge bearbeiten und die Schritte der Kassenprüfung gehen (Stichproben, Vermerke, Prüfbericht, Zugang beenden); ob er das darf, entscheidet der Verein nur hier in Kompass, nicht über einen Agenten.",
         "limits": {
           "statementSufficesBelowCents": "Bis zu welchem Betrag genügt der Kontoauszug als Beleg?",
           "cashDonationAlertCents": "Ab welchem Betrag soll eine Barspende auffallen?",
@@ -7785,7 +8349,8 @@
           "basisLabel": "Satzungsfundstelle",
           "validFromLabel": "Gilt ab",
           "validFromHint": "Ab diesem Tag trägt die Grundlage Pauschalen an Vorstandsmitglieder; frühere Zahlungen bleiben als „ohne Grundlage“ markiert.",
-          "hint": "Ohne „Ja“ mit Satzungsfundstelle warnt die Personenübersicht bei jeder Pauschale an ein Vorstandsmitglied."
+          "hint": "Ohne „Ja“ mit Satzungsfundstelle warnt die Personenübersicht bei jeder Pauschale an ein Vorstandsmitglied.",
+          "managed": "Geführt in Gremien: <link>{label}</link>."
         }
       },
       "vat": {
@@ -7922,7 +8487,9 @@
         "statuteReference": "Satzungsfundstelle des Jahresberichts",
         "statuteReferenceHint": "Erscheint im Untertitel: „Kassenteil des Jahresberichts nach …“, z. B. „§\u00a09 Nr. 3 der Satzung“.",
         "cashReportSignature": "Unterschriftszeile für den Vorstand",
-        "saved": "Einstellungen der Berichte gespeichert."
+        "saved": "Einstellungen der Berichte gespeichert.",
+        "assemblyApprovesAccounts": "Die Mitgliederversammlung genehmigt die Jahresrechnung",
+        "assemblyApprovesAccountsHint": "Aus, wenn die Satzung die Jahresrechnung nur entgegennehmen lässt. An: Publizieren auf der Webseite erst nach der Genehmigung."
       }
     },
     "csvAssistant": {
@@ -9552,6 +10119,8 @@
         "retroactiveWarn": "Nachträgliche Freigabe: Das Geld ist schon überwiesen. Die Freigabe prüft im Nachhinein und trägt dieses Kennzeichen.",
         "assetEndowment": "Vermögensausstattung (§\u00a058 Nr. 3 AO)",
         "assetEndowmentHint": "Mittel, die eine andere steuerbegünstigte Körperschaft dauerhaft ausstatten. Erscheint in Zeile 64/65 der Anlage Gem.",
+        "resolution": "Beschluss",
+        "resolutionFixed": "Verweis auf einen Beschluss in Gremien; setzen oder entfernen über einen Agenten.",
         "proof": {
           "label": "Nachweisfrist",
           "months": "{count, plural, one {# Monat} other {# Monate}} nach Zahlung",
@@ -9612,7 +10181,8 @@
           "withDue": "{basis} · {amount} · Nachweisfrist {date}",
           "withMonths": "{basis} · {amount} · Nachweisfrist {count, plural, one {# Monat} other {# Monate}} nach der Zahlung",
           "retroactive": "Nachträglich freigegeben. Das Geld war schon überwiesen.",
-          "assetEndowment": "Vermögensausstattung (§\u00a058 Nr. 3 AO) — erscheint in Zeile 64/65 der Anlage Gem"
+          "assetEndowment": "Vermögensausstattung (§\u00a058 Nr. 3 AO) — erscheint in Zeile 64/65 der Anlage Gem",
+          "resolution": "Beschluss: <link>{label}</link>"
         },
         "acknowledge": {
           "rule": "Anerkennen geht, wenn alle Pflichtarten da sind{coverage, select, yes {, jede fremdsprachige mit deutscher Erläuterung, und der Betrag gedeckt ist} other { und jede fremdsprachige eine deutsche Erläuterung hat}}. Anerkennen kann eine zweite Person mit „Freigeben“ — nie, wer den Vorgang angelegt hat (hier: {creator}).",
@@ -9971,13 +10541,17 @@
         "projectFunds": "Projekt- und Betriebsmittel",
         "replacement": "Wiederbeschaffung",
         "free": "freie Rücklage",
-        "participation": "Beteiligung"
+        "participation": "Beteiligung",
+        "business": "Rücklage im wirtschaftlichen Geschäftsbetrieb",
+        "assetManagement": "Rücklage in der Vermögensverwaltung"
       },
       "kindHints": {
         "projectFunds": "§\u00a062 Abs. 1 Nr. 1 AO",
         "replacement": "§\u00a062 Abs. 1 Nr. 2 AO",
         "free": "§\u00a062 Abs. 1 Nr. 3 AO",
-        "participation": "§\u00a062 Abs. 1 Nr. 4 AO"
+        "participation": "§\u00a062 Abs. 1 Nr. 4 AO",
+        "business": "AEAO zu §\u00a055 Nr. 3 und Nr. 28",
+        "assetManagement": "AEAO zu §\u00a055 Nr. 3 und Nr. 28"
       },
       "dissolved": "aufgelöst",
       "movementTrigger": "Vorgang …",
@@ -10016,6 +10590,11 @@
         "name": "Bezeichnung",
         "purposeText": "Wofür",
         "purposeTextHint": "Pflicht bei Projekt- und Betriebsmitteln und bei Wiederbeschaffung.",
+        "reason": "Begründung",
+        "reasonHint": {
+          "business": "Schreiben Sie, wofür im Betrieb das Geld zurückgelegt wird, etwa für den Ersatz eines Geräts.",
+          "assetManagement": "Schreiben Sie, wofür in der Vermögensverwaltung das Geld zurückgelegt wird, etwa für die Renovierung eines vermieteten Raums."
+        },
         "purpose": "Zweck (optional)",
         "noPurpose": "ohne Zweck",
         "save": "Anlegen",
@@ -10713,6 +11292,14 @@
         "reason": "Für „{designation}“ ist noch kein Ergebnis der Mitgliederversammlung eingetragen.",
         "remedy": "Tragen Sie zuerst das Ergebnis der Mitgliederversammlung ein."
       },
+      "assemblyManagedByGovernance": {
+        "reason": "Das Ergebnis der Mitgliederversammlung führt das Modul Gremien aus der festgeschriebenen Sitzung „{label}“.",
+        "remedy": "Die Sitzung ist festgeschrieben: Ändern lässt sich das Ergebnis nur über eine Berichtigung des Protokolls in Gremien."
+      },
+      "boardRemunerationManagedByGovernance": {
+        "reason": "Die Vergütung des Vorstands folgt dem festgeschriebenen Beschluss „{label}“ in Gremien.",
+        "remedy": "Ändern Sie sie durch einen neuen Beschluss in Gremien."
+      },
       "closingStepNotConfirmable": {
         "reason": "Schritt {step} lässt sich gerade nicht bestätigen: Entwürfe und unbegründete Buchungen ohne Beleg werden erledigt, nicht bestätigt, und ohne offenen Punkt gibt es nichts zu bestätigen.",
         "remedy": "Erledigen Sie zuerst, was der Schritt nennt."
@@ -10731,7 +11318,7 @@
       },
       "humanOnly": {
         "reason": "Dieser Schritt geht über einen Agenten erst, wenn der Verein es freigibt.",
-        "remedy": "Einrichtung → Finanzen → Steuerliches → „Darf ein Agent festschreiben und Lastschriften bearbeiten?“ einschalten."
+        "remedy": "Verwaltung → Agenten → „Darf ein Agent festschreiben und Lastschriften bearbeiten?“ einschalten."
       },
       "reportUnknown": {
         "reason": "Diesen Bericht gibt es nicht.",
@@ -10776,6 +11363,70 @@
       "releaseLocked": {
         "reason": "Die Freigabe für „{designation}“ lässt sich nicht mehr ändern: Mindestens ein Bericht ist auf ihrer Grundlage festgeschrieben.",
         "remedy": "Ein Fehler im Jahr geht über Wiederöffnen; danach lässt sich neu freigeben."
+      },
+      "legalEntityOnlyOrganizations": {
+        "reason": "Nur eine Organisation kann eine juristische Person sein.",
+        "remedy": "Lassen Sie das Merkmal bei einer Person auf „unbekannt“."
+      },
+      "nameConsentNotGranted": {
+        "reason": "An diesem Tag gilt keine Einwilligung zur Namensnennung, die sich widerrufen ließe.",
+        "remedy": "Prüfen Sie den Tag oder den Verlauf der Einwilligung."
+      },
+      "annualAccountsExplanationLocked": {
+        "reason": "Die Jahresrechnung {designation} ist festgeschrieben; die Erläuterung ändert sich erst nach dem Wiederöffnen des Jahres.",
+        "remedy": "Öffnen Sie das Jahr wieder, wenn die Erläuterung falsch ist."
+      },
+      "annualAccountsCashReportMissing": {
+        "reason": "Erst den Kassenbericht {designation} festschreiben; die Jahresrechnung verweist auf ihn.",
+        "remedy": "Schreiben Sie den Kassenbericht des Jahres fest, dann die Jahresrechnung."
+      },
+      "annualAccountsRemunerationWithoutBasis": {
+        "reason": "An {count} Vorstandsmitglied(er) ist per Saldo eine Pauschale ohne Grundlage in der Satzung gezahlt (AEAO zu §\u00a055 Nr. 25).",
+        "remedy": "Grundlage unter Einrichtung prüfen oder Buchung zurücknehmen — oder beim Festschreiben mit Begründung bestätigen."
+      },
+      "annualAccountsNotFinal": {
+        "reason": "Diese Fassung der Jahresrechnung ist zurückgenommen.",
+        "remedy": "Schreiben Sie die Jahresrechnung neu fest und nehmen Sie die neue Fassung."
+      },
+      "annualAccountsAlreadySigned": {
+        "reason": "Die Jahresrechnung ist schon abgezeichnet ({documentNumber}).",
+        "remedy": "Laden Sie die Seite neu; eine Fassung wird nur einmal abgezeichnet."
+      },
+      "annualAccountsNotRepresentative": {
+        "reason": "Abzeichnen kann nur, wer als Vorstandsmitglied den Verein nach §\u00a026 BGB vertritt und mit seinem Konto verknüpft ist.",
+        "remedy": "Prüfen Sie beim Kontakt die Rolle Vorstandsmitglied („vertritt nach §\u00a026 BGB“) und die Verknüpfung mit dem Konto."
+      },
+      "annualAccountsSignerWithoutAccount": {
+        "reason": "Die Person hat kein Konto in Kompass.",
+        "remedy": "Unterschriebenen Scan ablegen."
+      },
+      "annualAccountsSignNotForAgents": {
+        "reason": "Die Jahresrechnung zeichnet die Person selbst ab, nicht ein Agent.",
+        "remedy": "Melden Sie sich in Kompass an und zeichnen Sie dort ab, oder legen Sie den unterschriebenen Scan ab."
+      },
+      "annualAccountsNotSigned": {
+        "reason": "Die Jahresrechnung ist noch nicht abgezeichnet.",
+        "remedy": "Lassen Sie sie von einem vertretungsberechtigten Vorstandsmitglied abzeichnen, dann bereitstellen."
+      },
+      "annualAccountsAlreadyPublished": {
+        "reason": "Diese Fassung der Jahresrechnung ist schon für die Webseite bereitgestellt.",
+        "remedy": "Laden Sie die Seite neu. Sichtbar wird sie mit dem nächsten Publizieren der Webseite."
+      },
+      "annualAccountsNotPublished": {
+        "reason": "Diese Fassung der Jahresrechnung ist nicht für die Webseite bereitgestellt.",
+        "remedy": "Laden Sie die Seite neu."
+      },
+      "annualAccountsEarlyReasonRequired": {
+        "reason": "Das Ergebnis der Mitgliederversammlung ist noch nicht eingetragen.",
+        "remedy": "Nennen Sie den Grund, die Jahresrechnung vorher zu publizieren, oder tragen Sie erst das Ergebnis der Mitgliederversammlung ein."
+      },
+      "annualAccountsAssemblyPending": {
+        "reason": "Die Satzung lässt die Mitgliederversammlung die Jahresrechnung genehmigen; publizieren erst nach ihrem Beschluss.",
+        "remedy": "Tragen Sie im Jahresabschluss das Ergebnis der Mitgliederversammlung mit „Jahresrechnung genehmigt“ ein."
+      },
+      "siteModuleDisabled": {
+        "reason": "Das Modul Webseite ist ausgeschaltet.",
+        "remedy": "Schalten Sie es unter Einrichtung → Module ein, um die Jahresrechnung zu publizieren."
       },
       "auditorNotPerson": {
         "reason": "Als Prüfer lässt sich nur eine Person eintragen, keine Organisation.",
@@ -11069,6 +11720,10 @@
         "reason": "Auf diesen Posten ist schon mehr gezahlt als der neue Betrag.",
         "remedy": "Kürzen Sie höchstens bis auf den bezahlten Betrag."
       },
+      "openItemInDirectDebit": {
+        "reason": "{status, select, submitted {Der Einzug ist bei der Bank eingereicht; der Beitrag lässt sich nicht mehr erlassen.} other {Der Beitrag steckt in einem Lastschrift-Einzug mit erzeugter Datei.}}",
+        "remedy": "{status, select, submitted {Am Tag der Einreichung können Sie den Einzug als nicht eingereicht zurücksetzen und den Beitrag herausnehmen; später erst, wenn die Bank den Beitrag zurückgegeben hat.} other {Nehmen Sie ihn erst aus dem Einzug oder brechen Sie den Einzug ab.}}"
+      },
       "openItemHasOrigin": {
         "reason": "Dieser Posten hat eine Herkunft.",
         "remedy": "Er wird über seinen Vorgang erledigt."
@@ -11312,6 +11967,14 @@
       "freeReserveCapExceeded": {
         "reason": "Die freie Rücklage läge damit {over} über dem Höchstbetrag von {cap} für dieses Jahr.",
         "remedy": "Begründen Sie die Zuführung — die Begründung steht am Vorgang. Der Höchstbetrag ist eine Näherung nach §\u00a062 Abs. 1 Nr. 3 AO; im Zweifel fragen Sie Ihre Steuerberatung."
+      },
+      "reserveYearNotAllowed": {
+        "reason": "Für das Geschäftsjahr {year} kann keine Zuführung mehr gebucht werden.",
+        "remedy": "Eine Zuführung zählt für das Jahr ihres Vorgangstags oder für das Vorjahr, solange es nicht abgeschlossen ist. Ist {year} abgeschlossen und soll die Zuführung doch dafür zählen, öffnen Sie das Jahr vorher wieder."
+      },
+      "reserveLateFormationTooLate": {
+        "reason": "Mittel aus {year} lassen sich nur bis {until} einer Rücklage zuführen (§\u00a062 Abs. 2 AO).",
+        "remedy": "Wählen Sie ein späteres Bezugsjahr oder erfassen Sie die Zuführung ohne Bezugsjahr."
       },
       "reserveYearAmbiguous": {
         "reason": "Für diese Zuführung kommen zwei Geschäftsjahre in Frage: {previous} (noch nicht abgeschlossen) und {current}.",
@@ -11723,7 +12386,23 @@
       },
       "reserveResolutionRequired": {
         "reason": "Für dieses zurückgelegte Geld fehlt der Beschluss.",
-        "remedy": "Verknüpfen Sie ein Protokoll aus der Akte, oder laden Sie eines hoch."
+        "remedy": "Verknüpfen Sie ein Protokoll aus der Akte, laden Sie eines hoch, oder verweisen Sie auf einen festgeschriebenen Beschluss in Gremien."
+      },
+      "reserveReasonRequired": {
+        "reason": "Eine Rücklage im wirtschaftlichen Geschäftsbetrieb oder in der Vermögensverwaltung braucht eine Begründung.",
+        "remedy": "Schreiben Sie, wofür im Betrieb das Geld zurückgelegt wird, etwa für den Ersatz eines Geräts."
+      },
+      "fundsUseOpeningLocked": {
+        "reason": "Das erste Geschäftsjahr {designation} ist abgeschlossen; der Anfangsvortrag gehört zu seinem Stand.",
+        "remedy": "Öffnen Sie {designation} wieder, um den Anfangsvortrag zu ändern."
+      },
+      "fundsUseOpeningPreviousMissing": {
+        "reason": "Ob ein Vortrag aus dem vorletzten Jahr vor Kompass noch gilt, hängt an den Einnahmen des letzten Jahres davor.",
+        "remedy": "Erfassen Sie zuerst das Jahr direkt vor dem ersten Kompass-Jahr, auch mit 0\u00a0€."
+      },
+      "fundsUseOpeningDocumentRequired": {
+        "reason": "Ein Anfangsvortrag braucht einen Beleg.",
+        "remedy": "Wählen Sie ein Dokument der Akte oder laden Sie ein PDF hoch."
       },
       "reservePurposeTextRequired": {
         "reason": "Bei dieser Art ist der Verwendungszweck Pflicht.",
@@ -11748,6 +12427,14 @@
       "reserveCarryForwardIncomplete": {
         "reason": "Ein Vortrag braucht Betrag, Datum und Beschluss zusammen.",
         "remedy": "Tragen Sie alle drei ein, oder lassen Sie alle drei leer."
+      },
+      "reserveKindLocked": {
+        "reason": "Die Art einer Rücklage mit Vorgängen oder mit einem Vortrag in einem abgeschlossenen Jahr lässt sich nicht mehr ändern.",
+        "remedy": "Legen Sie für die andere Art eine neue Rücklage an. Liegt nur der Vortrag in einem abgeschlossenen Jahr, öffnen Sie das Jahr vorher wieder."
+      },
+      "reserveCarryForwardLocked": {
+        "reason": "Der Vortrag lässt sich nicht mehr ändern oder entfernen: Er liegt in einem abgeschlossenen Jahr, oder die Rücklage hat schon Vorgänge.",
+        "remedy": "Liegt der Vortrag in einem abgeschlossenen Jahr, öffnen Sie das Jahr vorher wieder."
       },
       "reserveCarryForwardOwnStep": {
         "reason": "Einen Vortrag erfassen Sie zusammen mit seinem Beschluss in einem eigenen Schritt.",
@@ -11905,6 +12592,10 @@
         "reason": "Das Mandat {reference} hat sich geändert, nachdem die Datei erzeugt wurde; sie trägt noch die alten Angaben.",
         "remedy": "Erzeugen Sie die Datei neu und reichen Sie die neue bei der Bank ein."
       },
+      "runItemsChanged": {
+        "reason": "Seit der Datei hat sich ein Posten zum Mandat {reference} geändert (in einem anderen Einzug, erlassen oder Mandat beendet).",
+        "remedy": "Brechen Sie den Einzug ab und legen Sie ihn neu an."
+      },
       "mandateInSubmittedRun": {
         "reason": "Der Einzug zum {date} ist bei der Bank eingereicht.",
         "remedy": "Beenden Sie das Mandat frühestens zum {earliest} — dem Tag nach dem Einzug — oder nach der Gutschrift."
@@ -11953,6 +12644,7 @@
     "records": {
       "handover": "Amtsübergabe vom {date}",
       "assemblyResult": "Ergebnis der Mitgliederversammlung zu {designation}",
+      "auditor": "Kassenprüfer im Geschäftsjahr {designation}",
       "entry": "Buchung {number}",
       "entryDraft": "Buchungsentwurf {id}",
       "entryDocument": "Beleg (Halter läuft)",
@@ -11965,6 +12657,7 @@
       "claim": "Antrag {number}",
       "claimDraft": "Auslage (Entwurf) {id}",
       "reserve": "Zurückgelegtes Geld {id}",
+      "fundsUseOpening": "Anfangsvortrag Mittelverwendung {designation}",
       "transfer": "Umwidmung {number}",
       "partnerPayment": "Vorgang {number}",
       "partnerPaymentDraft": "Zahlung an Partner (Entwurf) {id}",
@@ -11976,6 +12669,7 @@
       "pledge": "Dauerspenden-Zusage",
       "importPersonalData": "Finanzen {year}: importierte Kontoumsätze",
       "fiscalYear": "Geschäftsjahr {designation}",
+      "report": "{title} {number}",
       "taxPeriod": "Erklärungszeitraum {period}",
       "vatFiling": "Umsatzsteuer-Voranmeldung {period}",
       "vatAnnualFiling": "Umsatzsteuer-Jahreserklärung {period}"
@@ -12081,6 +12775,9 @@
         "declarationUploaded": "Hochgeladen als {subject}.",
         "electedOn": "Gewählt in der MV am",
         "minutes": "Protokoll",
+        "candidates": "Gewählt in Gremien",
+        "candidateElected": "gewählt am {date} · {source}",
+        "candidateOrigin": "Gremien: {source}",
         "accessOk": "Verknüpft mit Nutzer {user}, Rolle Kassenprüfer.",
         "accessOkNoName": "Verknüpft mit einem Nutzer, Rolle Kassenprüfer.",
         "involvedPreview": "{count, plural, one {Empfänger oder Freigeber in einem Vorgang {year}} other {Empfänger oder Freigeber in # Vorgängen {year}}}. Diese sollte der andere Prüfer prüfen.",
@@ -12131,7 +12828,9 @@
           "reserves": "{count, plural, one {# Rücklage} other {# Rücklagen}}",
           "donations": "{count, plural, one {# Zuwendung} other {# Zuwendungen}}",
           "partnerPayments": "{count, plural, =0 {keine Zahlungen} one {# Zahlung} other {# Zahlungen}}",
-          "purposesReservesNone": "keine Zwecke, keine Rücklagen"
+          "purposesReservesNone": "keine Zwecke, keine Rücklagen",
+          "resolutions": "{count, plural, =0 {keine Beschlüsse} one {# Beschluss} other {# Beschlüsse}}",
+          "resolutionsRejected": "{count} abgelehnt"
         },
         "run": {
           "title": "Prüfpaket",
@@ -12206,6 +12905,11 @@
           "title": "Zahlungen an Partner",
           "question": "Zahlungen an Partner im Ausland und ihre Nachweise.",
           "description": "Freigegebene Zahlungen an Partner {year} und der Stand ihrer Nachweise."
+        },
+        "resolutions": {
+          "title": "Beschlüsse",
+          "question": "Beschlüsse mit Wirkung auf die Kasse: Entlastung, Kassenbericht, Vergütung, Auslagen, Rücklagen, Beiträge.",
+          "description": "Beschlüsse mit Wirkung auf die Kasse {year}, gefasst oder wirksam im Jahr."
         }
       },
       "section": {
@@ -12227,7 +12931,8 @@
         "account": "Konto",
         "empty": {
           "title": "Nichts in diesem Abschnitt",
-          "text": "Für {year} gibt es hier keine Zeilen."
+          "text": "Für {year} gibt es hier keine Zeilen.",
+          "resolutions": "Im Jahr {year} wurden keine solchen Beschlüsse gefasst."
         },
         "filteredNoun": "Keine Zeile",
         "sampleLabel": "Als Stichprobe geprüft: {name}",
@@ -12264,7 +12969,12 @@
           "count": "Anzahl",
           "partner": "Partner",
           "proof": "Nachweis",
-          "hint": "Hinweis"
+          "hint": "Hinweis",
+          "kind": "Art",
+          "facts": "Angaben",
+          "organ": "Organ",
+          "outcome": "Ergebnis",
+          "minutes": "Protokoll"
         },
         "entryState": {
           "reversed": "zurückgenommen",
@@ -12354,7 +13064,42 @@
           "overdue": "trotz überfälliger Nachweise",
           "purposeNegative": "Zweck im Minus"
         },
-        "changedOnly": "Nur seit der Prüffassung geänderte"
+        "changedOnly": "Nur seit der Prüffassung geänderte",
+        "resolution": {
+          "kind": {
+            "discharge": "Entlastung",
+            "accounts": "Kassenbericht genehmigt",
+            "remuneration": "Vergütung von Ämtern",
+            "expenseRule": "Regel für Aufwendungsersatz",
+            "reserve": "Rücklage",
+            "feeSchedule": "Beitragsordnung"
+          },
+          "outcome": {
+            "rejected": "abgelehnt"
+          },
+          "circular": "Umlauf",
+          "fiscalYear": "Geschäftsjahr {year}",
+          "collective": "Vorstand gesamt",
+          "amountPerYear": "{amount} im Jahr",
+          "amountPerActivity": "{amount} je Tätigkeit",
+          "validFrom": "gilt ab {date}",
+          "expenseBasis": {
+            "statute": "nach Satzung",
+            "contract": "nach Vertrag",
+            "boardResolution": "nach Vorstandsbeschluss"
+          },
+          "reserveType": {
+            "nr1": "§ 62 Abs. 1 Nr. 1 AO",
+            "nr2": "§ 62 Abs. 1 Nr. 2 AO",
+            "nr3": "§ 62 Abs. 1 Nr. 3 AO",
+            "nr4": "§ 62 Abs. 1 Nr. 4 AO"
+          },
+          "reserveAction": {
+            "withdraw": "Entnahme",
+            "dissolve": "Auflösung"
+          },
+          "minutesLink": "Protokoll {number}"
+        }
       },
       "remarks": {
         "title": "Vermerke",
@@ -12377,7 +13122,8 @@
           "document": "Beleg {number}",
           "report": "{report}",
           "year": "Jahr {year}",
-          "documentPlain": "Beleg"
+          "documentPlain": "Beleg",
+          "resolution": "Beschluss {number}"
         },
         "targetLine": "An: {target}",
         "columns": {
@@ -12583,10 +13329,55 @@
       }
     },
     "fundUse": {
-      "title": "Mittelverwendungsrechnung",
-      "text": "Sie zeigt, ob der Verein seine Mittel zeitnah und für die Satzungszwecke verwendet hat, getrennt nach Jahren. Kompass rechnet sie in einer der nächsten Fassungen aus denselben Buchungen wie den Kassenbericht.",
-      "detail": "Bis dahin zeigen <purposes>Zweckmittel</purposes> und <reserves>Rücklagenspiegel</reserves> den größten Teil davon.",
-      "toReports": "Zu den Berichten"
+      "title": "Mittelverwendung {year}",
+      "head": {
+        "voluntary": "Einnahmen {year}: {revenue}. Nicht über der Grenze von {limit} gilt die Pflicht zur zeitnahen Verwendung nicht; die Rechnung ist freiwillig.",
+        "required": "Einnahmen {year}: {revenue}. Über der Grenze von {limit} sind die Mittel bis zum Ende des übernächsten Jahres zu verwenden.",
+        "noLimit": "Einnahmen {year}: {revenue}. Für dieses Jahr gibt es keine Freigrenze; die Mittel sind bis zum Ende des übernächsten Jahres zu verwenden.",
+        "assetSales": "Davon nicht in den Einnahmen der Grenze: Anlagenverkäufe {amount}."
+      },
+      "notices": {
+        "deadlineMissed": "{amount} aus {origin} sind nicht bis {date} verwendet.",
+        "loss": "Verlust {sphere, select, business {im wirtschaftlichen Geschäftsbetrieb} other {in der Vermögensverwaltung}} {year}: {amount}. Er darf nicht aus Mitteln für die Satzungszwecke gedeckt werden.",
+        "endowmentWithOverhang": "Es gibt Vermögen nach § 62 Abs. 3 AO; ob ein Überhang daraus vorfinanziert werden durfte, ist zu prüfen.",
+        "toDeadlines": "Zu den Fristen",
+        "toIncomeStatement": "Zur EÜR"
+      },
+      "openings": {
+        "add": "Anfangsvortrag erfassen …",
+        "addMore": "Weiteren Vortrag erfassen …",
+        "edit": "Bearbeiten …",
+        "title": "Anfangsvortrag",
+        "intro": "Mittel aus den Jahren vor Kompass, die noch zu verwenden waren. Geht in Teil A als Vortrag ein.",
+        "row": "aus {designation} noch zu verwenden",
+        "revenue": "Einnahmen {designation}: {amount}",
+        "dueBy": "zu verwenden bis {date}",
+        "document": "Beleg {number}",
+        "zero": {
+          "belowLimit": "wirkt nicht: {designation} lag nicht über der Grenze von {limit}",
+          "followedByYearBelowLimit": "wirkt nicht: das Jahr danach lag nicht über der Grenze"
+        },
+        "dialog": {
+          "title": "Anfangsvortrag erfassen",
+          "editTitle": "Anfangsvortrag bearbeiten",
+          "description": "Kompass prüft die damalige Grenze: Lag das Jahr nicht über ihr, wirkt der Vortrag nicht.",
+          "year": "Jahr",
+          "offset1": "Jahr vor dem ersten Kompass-Jahr",
+          "offset2": "Das Jahr davor",
+          "yearReason": "Ein Anfangsvortrag gilt für die zwei Jahre vor dem ersten Kompass-Jahr {year}, zuerst für das letzte davon.",
+          "designation": "Bezeichnung",
+          "endsOn": "Jahresende",
+          "revenue": "Einnahmen jenes Jahres",
+          "revenueHint": "wie Anlage Gem Zeile 9",
+          "amount": "Noch zu verwenden",
+          "document": "Beleg",
+          "documentPick": "Beleg auswählen",
+          "documentKept": "Ohne neuen Beleg bleibt der vorhandene.",
+          "documentMissing": "Zuerst einen Beleg wählen oder hochladen.",
+          "save": "Speichern",
+          "saved": "Anfangsvortrag gespeichert."
+        }
+      }
     },
     "tax": {
       "title": "Steuererklärung",
@@ -12728,7 +13519,12 @@
         "membersFromToday": "aus der Mitgliederverwaltung, Stand heute",
         "membersChanged": "geändert, Mitgliederverwaltung: {count}",
         "membersTake": "Übernehmen",
-        "membersReason": "Angabe für die EÜR fürs Finanzamt"
+        "membersReason": "Angabe für die EÜR fürs Finanzamt",
+        "statuteFrom": "aus Gremien: <link>{label}</link>",
+        "statuteOffer": "Aus Gremien: {date} (<link>{label}</link>)",
+        "statuteDiffers": "Gremien nennt {date} (<link>{label}</link>)",
+        "statuteTake": "Übernehmen",
+        "statuteLink": "Satzung aus Gremien verknüpfen"
       },
       "values": {
         "title": "Werte der Anlage Gem",
@@ -12954,6 +13750,36 @@
         "reasonNone": "Kein Grund angegeben.",
         "fixed": "Ein beendeter Eintrag bleibt, wie er war."
       }
+    },
+    "contactAnnualAccounts": {
+      "title": "Jahresrechnung",
+      "legalEntity": "Juristische Person",
+      "yes": "ja",
+      "no": "nein",
+      "unknown": "unbekannt",
+      "legalEntityNamed": "Wird ohne Einwilligung mit Namen genannt, wenn die Zuwendungen 10 % der Einnahmen übersteigen.",
+      "legalEntityEffect": "{year}: {amount}, {percent}.",
+      "naming": "Namensnennung",
+      "granted": "Erteilt am {date} für die Jahresrechnungen ab {year}",
+      "revoked": "Widerrufen am {date}",
+      "none": "Keine Einwilligung.",
+      "grant": "Einwilligung erfassen …",
+      "revoke": "Widerruf erfassen …",
+      "effectNamed": "{year}: {amount}, {percent} der Einnahmen. Wird mit Namen genannt.",
+      "effectUnnamed": "{year}: {amount}, {percent} der Einnahmen. Wird ohne Namen genannt.",
+      "history": "Verlauf",
+      "dialog": {
+        "grantTitle": "Einwilligung erfassen",
+        "revokeTitle": "Widerruf erfassen",
+        "grantDescription": "{kind, select, organization {Die Organisation} other {Die Person}} willigt ein, dass die publizierte Jahresrechnung und die Webseite ihren Namen mit dem Betrag bzw. der Bandbreite ihrer Zuwendungen nennen. Sie kann jederzeit widerrufen; ab dem Widerruf nennt Kompass sie nicht mehr.",
+        "revokeDescription": "Ab dem Widerruf nennt Kompass {kind, select, organization {die Organisation} other {die Person}} nicht mehr. Publizierte Jahresrechnungen bekommen eine Fassung für die Webseite ohne ihren Namen; das festgeschriebene Exemplar in der Akte bleibt.",
+        "grantedOn": "Erteilt am",
+        "fromYear": "Für die Jahresrechnungen ab",
+        "revokedOn": "Widerrufen am",
+        "document": "Schreiben oder E-Mail",
+        "grantDone": "Einwilligung erfasst.",
+        "revokeDone": "Widerruf erfasst."
+      }
     }
   },
   "members": {
@@ -12996,6 +13822,7 @@
       "runLetterVoided": { "reason": "Dieser Brief ist storniert.", "remedy": "Ein stornierter Brief geht nicht hinaus; wählen Sie nur die übrigen Briefe." },
       "runRestVoided": { "reason": "Die übrigen Briefe dieses Laufs sind storniert oder tragen schon einen Versandvermerk.", "remedy": "Hier ist nichts mehr zu vermerken." },
       "runPostGroupEmpty": { "reason": "Die Post-Gruppe ist leer.", "remedy": "Briefe der Mail-Gruppe wählen Sie einzeln, um sie als gedruckt zu vermerken." },
+      "runLetterExists": { "reason": "Dieser Lauf hat für das Mitglied schon einen Brief ausgestellt.", "remedy": "Laden Sie die Seite neu; der Lauf zeigt den vorhandenen Brief." },
       "runLetterQueued": { "reason": "Dieser Brief steht schon im Postausgang und geht per E-Mail.", "remedy": "Wollen Sie ihn drucken, nehmen Sie ihn zuerst mit „Per Post schicken“ aus dem Postausgang." },
       "dunningRunRunning": { "reason": "Ein Mahnlauf ist noch nicht abgeschlossen.", "remedy": "Setzen Sie ihn fort, bevor Sie einen neuen starten." },
       "dunningRunNothingReady": { "reason": "Kein Beitrag ist reif für eine Mahnstufe.", "remedy": "Prüfen Sie die übersprungenen Mitglieder in der Vorschau." },
@@ -13459,10 +14286,6 @@
       "title": "Mitglieder",
       "description": "Mitgliedsarten, die Beitragsordnung mit ihren Ständen, Mahnstufen sowie Nummern und Fristen.",
       "tabsLabel": "Bereiche der Einstellungen",
-      "agent": {
-        "label": "Darf ein Agent Mitglieder aufnehmen, Läufe starten und Briefe ausstellen?",
-        "hint": "Eingeschaltet darf ein Agent auch aufnehmen, ablehnen, Beitrags- und Mahnläufe starten, Briefe ausstellen, stunden und erlassen; ob er das darf, entscheidet der Verein nur hier in Kompass, nicht über einen Agenten."
-      },
       "tabs": {
         "types": "Mitgliedsarten",
         "feeSchedule": "Beitragsordnung",
@@ -13508,7 +14331,7 @@
         "resolved": "Beschlossen am {date}",
         "document": "Beschluss",
         "earlier": "Frühere Stände",
-        "locked": "Ein Stand, nach dem schon Beiträge angelegt sind, bleibt fest. Für eine Änderung legen Sie einen neuen Stand an.",
+        "locked": "Ein Stand, nach dem schon Beiträge angelegt sind, bleibt fest; nur den Beschluss können Sie nachtragen. Für eine Änderung der Beträge legen Sie einen neuen Stand an.",
         "empty": "Noch keine Beitragsordnung.",
         "emptyText": "Legen Sie den ersten Stand an: je Mitgliedsart Betrag und Rhythmus.",
         "columns": {
@@ -13521,6 +14344,7 @@
         "dialogNew": "Neuen Stand anlegen",
         "dialogEdit": "Stand bearbeiten",
         "dialogText": "Vorbelegt mit dem letzten Stand. Ein Stand gilt ab seinem Tag bis zum nächsten.",
+        "dialogLocked": "Nach diesem Stand sind schon Beiträge angelegt. Tag und Beträge bleiben fest; den Beschlusstag können Sie nachtragen.",
         "validFrom": "Gilt ab",
         "resolvedOn": "Beschlossen am",
         "isMinimum": "Mindestbetrag",
@@ -13624,5 +14448,1863 @@
     "redirect": "Testumgebung: Die Mails gehen an {to}, nicht an die Kontakte.",
     "blocked": "Testumgebung ohne Umleitung: Die Mails bleiben im Ausgang.",
     "off": "Der E-Mail-Versand ist nicht eingerichtet; alle Briefe gehen per Post."
+  },
+  "governance": {
+    "admin": {
+      "title": "Gremien",
+      "deadlines": "Fristen",
+      "lead": "Vorlauf „Einladung bis …“",
+      "leadHint": "Tage vor dem letzten Tag der Einladung, ab denen eine geplante Sitzung die Marke trägt.",
+      "registerOverdue": "Registeranmeldung überfällig nach",
+      "registerOverdueHint": "Tage nach dem Beschluss. § 67 BGB verlangt eine unverzügliche Anmeldung.",
+      "taxNotice": "Neuen Bescheid nach § 60a AO anfordern binnen",
+      "taxNoticeHint": "Tage nach der Eintragung einer Satzungsänderung, die die Gemeinnützigkeit berührt.",
+      "days": {
+        "one": "Tag",
+        "other": "Tage"
+      },
+      "noRight": "Ändern darf, wer Einstellungen verwalten darf.",
+      "saved": "Einstellungen gespeichert.",
+      "tabsLabel": "Bereiche der Einstellungen Gremien",
+      "tabs": {
+        "deadlines": "Fristen",
+        "roles": "Rollenübernahme"
+      },
+      "warnFromDay": "Warnung „ordentliche MV fehlt“ ab Tag",
+      "warnFromMonth": "Monat",
+      "warnFromHint": "Gilt nur, wenn die Satzung eine ordentliche Versammlung im Jahr verlangt.",
+      "months": {
+        "1": "Januar",
+        "2": "Februar",
+        "3": "März",
+        "4": "April",
+        "5": "Mai",
+        "6": "Juni",
+        "7": "Juli",
+        "8": "August",
+        "9": "September",
+        "10": "Oktober",
+        "11": "November",
+        "12": "Dezember"
+      },
+      "roles": {
+        "title": "Rollenübernahme",
+        "intro": "Kontaktrollen von vor Kompass einem Amt zuordnen. Danach führt Gremien sie.",
+        "emptyTitle": "Keine Rollen zu übernehmen.",
+        "emptyText": "Alle Rollen Vorstandsmitglied, Schatzmeister und Kassenprüfung gehören schon zu einem Amt.",
+        "columns": {
+          "person": "Person",
+          "role": "Rolle",
+          "note": "Notiz",
+          "period": "Seit – bis",
+          "office": "Amt"
+        },
+        "period": "{since} – {until, select, none {} other {{until}}}",
+        "officeFor": "Amt für {name}",
+        "skip": "Nicht übernehmen",
+        "adopt": "Übernehmen",
+        "adopted": "Übernommen."
+      }
+    },
+    "seal": {
+      "intro": "Was dabei entsteht:",
+      "open": "Offen aus dem Mitlauf: {list}",
+      "button": "Festschreiben …",
+      "dialog": {
+        "title": "Sitzung festschreiben",
+        "description": "Danach nur noch mit Berichtigung.",
+        "confirm": "Festschreiben"
+      },
+      "done": "Festgeschrieben.",
+      "pending": "Nach der Ablage der unterschriebenen Fassung.",
+      "blockers": {
+        "minutesMissing": "Erst die unterschriebene Fassung ablegen.",
+        "outcomeMissing": "Ein Beschluss hat noch keine Feststellung. Öffnen Sie den Mitlauf wieder, solange keine Fassung abgelegt ist.",
+        "reasonMissing": "Eine Feststellung gegen die Zählung hat noch keine Begründung.",
+        "officeFull": "Ein Amt hätte mehr Inhaber als Plätze. Beenden Sie zuerst eine laufende Amtszeit.",
+        "meetingInFuture": "Der Sitzungstag liegt nach heute. Festschreiben lässt sich erst ab diesem Tag.",
+        "statuteResolutionInvalid": "Ein angenommener Satzungs- oder Zweckbeschluss nennt einen eingetragenen Stand oder ist nicht von der Mitgliederversammlung gefasst.",
+        "meetingSealed": "Die Sitzung ist schon festgeschrieben."
+      },
+      "warnings": {
+        "attendanceListMissing": "Das Protokoll nennt die Anwesenheitsliste als Anlage, ausgestellt ist aber keine. Stellen Sie sie im Schritt „Protokoll“ aus."
+      },
+      "consequences": {
+        "numberResolution": "{count, plural, one {# Beschluss erhält die Nummer {from}.} other {# Beschlüsse erhalten die Nummern {from} bis {to}.}}",
+        "startTerm": "{name} hat das Amt {office} ab {date}.",
+        "linkTerm": "{name} bleibt im Amt {office}; die Wahl gehört zur laufenden Amtszeit.",
+        "endPredecessor": "{name} scheidet am {date} aus dem Amt {office} aus.",
+        "endTerm": "{name} wird am {date} aus dem Amt {office} abberufen.",
+        "statuteResolved": "Der Satzungsstand ist am {date} beschlossen; die Eintragung ist offen.",
+        "registerOccasion": "Registeranmeldung fällig: {occasion} vom {date}.",
+        "followUp": "Wiedervorlage „{title}“ am {date}.",
+        "followUpNoDeadline": "Keine Wiedervorlage: Der Auftrag hat keine Frist.",
+        "followUpUnassigned": "Wiedervorlage „{title}“ am {date}, ohne Zuständige: Beim Amt oder Organ ist niemand mit Benutzerkonto verknüpft.",
+        "financeReference": "Die Finanzen lesen den Beschluss ({kind}).",
+        "financeReferenceWrite": "Die Finanzen übernehmen den Beschluss als Vergütung des Vorstands ({kind}).",
+        "memberProposal": "Bei den Mitgliedern zu erledigen: {proposal}.",
+        "occasions": {
+          "initial": "Ersteintragung",
+          "statute": "Satzungsänderung",
+          "boardChange": "Vorstandswechsel",
+          "representation": "Vertretungsregel",
+          "dissolution": "Auflösung"
+        },
+        "proposals": {
+          "endMembership": "Mitgliedschaft beenden",
+          "changeType": "Mitgliedsart ändern",
+          "createMembership": "Mitgliedschaft anlegen"
+        }
+      }
+    },
+    "minutes": {
+      "detail": "Entwurf drucken, unterschreiben lassen, Scan ablegen.",
+      "draft": "Entwurf",
+      "draftDetail": "Ende {time}",
+      "pdf": "PDF",
+      "signed": "Unterschrieben",
+      "attendanceList": "Anwesenheitsliste",
+      "registerData": "Angaben für die Registeranmeldung",
+      "issue": "Ausstellen",
+      "issued": "Ausgestellt.",
+      "filed": "Unterschriebene Fassung abgelegt.",
+      "outcomeMissing": "TOP {n}: Feststellung fehlt",
+      "reasonMissing": "TOP {n}: Begründung fehlt",
+      "acceptanceOpen": "TOP {n}: Annahme von {name} offen",
+      "acceptLater": "Annahme erfassen …",
+      "reopen": "Mitlauf wieder öffnen …",
+      "reopenAfterFiled": "Nach der Ablage nur noch mit Berichtigung — oder vor dem Festschreiben die Fassung ersetzen.",
+      "replace": "Fassung ersetzen …",
+      "replaced": "Fassung ersetzt; das Dokument ist in der Akte storniert.",
+      "replaceDialog": {
+        "title": "Fassung ersetzen",
+        "description": "Die abgelegte Fassung wird in der Akte storniert, nicht gelöscht. Danach können Sie den Mitlauf wieder öffnen oder die richtige Fassung ablegen.",
+        "reason": "Grund",
+        "confirm": "Ersetzen"
+      },
+      "acceptDialog": {
+        "title": "Annahme erfassen",
+        "description": "Wer bei der Wahl nicht anwesend war, nimmt später an; der Tag zählt für den Beginn der Amtszeit.",
+        "on": "Tag",
+        "answer": "Erklärung",
+        "accept": "Nimmt an",
+        "decline": "Lehnt ab",
+        "confirm": "Speichern"
+      },
+      "reopenDialog": {
+        "title": "Mitlauf wieder öffnen",
+        "description": "Die Sitzung läuft wieder, und wer öffnet, führt das Protokoll. Der Entwurf entsteht beim nächsten Ende neu.",
+        "confirm": "Wieder öffnen"
+      }
+    },
+    "live": {
+      "detailWarnings": {
+        "statuteRegistered": "Dieser Satzungsstand ist schon eingetragen. Eine Änderung braucht einen neuen Entwurf; so lässt sich der Beschluss nicht festschreiben.",
+        "statuteNotAssembly": "Über Satzung und Zweck beschließt die Mitgliederversammlung (§\u00a033 BGB). So lässt sich der Beschluss nicht festschreiben.",
+        "remunerationWithoutStatute": "Eine Vergütung braucht eine Grundlage in der Satzung.",
+        "remunerationWrongOrgan": "Über diese Vergütung beschließt nach der Satzung ein anderes Organ.",
+        "expenseRuleRetroactive": "Die Regel gilt rückwirkend.",
+        "exclusionChecklistOpen": "Beim Ausschluss fehlen Schritte des Verfahrens.",
+        "detailsMissing": "Der Beschluss nennt nicht, wen oder was er betrifft. Beim Festschreiben wirkt er deshalb nichts."
+      },
+      "floor": {
+        "choose": "Bitte wählen",
+        "open": "Antrag aus der Versammlung …",
+        "title": "Antrag aus der Versammlung",
+        "description": "Der Antrag kommt hinter den aktuellen Punkt; zuerst stimmt die Versammlung über die Aufnahme ab.",
+        "by": "Gestellt von",
+        "text": "Antrag",
+        "kind": "Art",
+        "submit": "Antrag aufnehmen"
+      },
+      "mandate": {
+        "recipient": "Empfänger",
+        "choose": "Bitte wählen",
+        "organ": "{name} (Organ)",
+        "dueOn": "Fällig am",
+        "task": "Aufgabe",
+        "missing": "Ohne Empfänger und Fälligkeit entsteht beim Festschreiben keine Wiedervorlage."
+      },
+      "lateMotion": {
+        "head": "Aufnahme in die Tagesordnung",
+        "rule": "Erforderlich {majority} · {source}",
+        "kind": "Art",
+        "notAnnounced": "Nicht in der Einladung angekündigt. Ein Beschluss darüber ist nur wirksam, wenn die Satzung Dringlichkeitsanträge zulässt.",
+        "notAnnouncedStrict": "Nicht in der Einladung angekündigt. Eine {kind} ist so nicht wirksam ({source})."
+      },
+      "discharge": {
+        "alreadyDischarged": "Für dieses Geschäftsjahr schon in einer früheren Versammlung entlastet.",
+        "mode": "Abstimmung",
+        "modes": {
+          "collective": "gemeinsam",
+          "individual": "einzeln"
+        },
+        "modeFixed": "{mode} abgestimmt",
+        "modeFixedReason": "Festgelegt mit der ersten Abstimmung.",
+        "notVoting": "Stimmen nicht mit: {names}",
+        "change": "Ändern …",
+        "dialog": {
+          "title": "Wer stimmt nicht mit?",
+          "description": "Wer entlastet wird, stimmt nicht mit (§ 34 BGB); bei gemeinsamer Abstimmung alle Betroffenen.",
+          "confirm": "Speichern"
+        },
+        "label": "Entlastung {label}: {name}",
+        "labelCollective": "Entlastung {names}",
+        "noYear": "Am Punkt ist kein Geschäftsjahr eingetragen. Ohne Geschäftsjahr kennt Kompass die Betroffenen nicht.",
+        "toMeeting": "Zur Sitzung",
+        "nobody": "Für das Geschäftsjahr sind keine Betroffenen bekannt."
+      },
+      "election": {
+        "head": "Wahl {office}",
+        "representative": "Vertritt nach § 26 BGB",
+        "term": "Amtszeit {months} Monate",
+        "untilSuccessor": "bis zur Neuwahl im Amt",
+        "rule": "Erforderlich {majority} · {source}",
+        "addCandidate": "Kandidat eintragen",
+        "choose": "Bitte wählen",
+        "other": "Andere Person",
+        "unanimous": "Einstimmig gewählt",
+        "round": "Wahlgang {n}",
+        "runoffRound": "Stichwahl",
+        "votesFor": "Stimmen für {name}",
+        "abstain": "Enthaltung",
+        "invalid": "Ungültig",
+        "sum": "Summe {sum} von {voters} Stimmberechtigten.",
+        "reached": "Gewählt: {names} (nötig {needed}).",
+        "notReached": "Keine Mehrheit (nötig {needed}).",
+        "runoff": "Stichwahl anlegen",
+        "acceptQuestion": "Nimmt {name} die Wahl an?",
+        "accept": "Nimmt an",
+        "decline": "Lehnt ab",
+        "absent": "Nicht anwesend, Erklärung folgt",
+        "accepted": "{name} hat die Wahl am {date} angenommen.",
+        "declined": "{name} hat die Wahl abgelehnt.",
+        "pending": "Die Erklärung von {name} folgt; Schritt „Protokoll“ führt sie als offen.",
+        "keyAccept": "Taste J",
+        "warnings": {
+          "incompatible": "Die Person hat ein Amt, das sich mit diesem nicht verträgt.",
+          "seatsExceeded": "Mehr Gewählte als Plätze im Amt."
+        },
+        "noOffice": "Am Punkt ist kein Amt eingetragen. Wählen Sie es in der Sitzung unter „Bearbeiten“."
+      },
+      "scope": "bei TOP {n}",
+      "end": {
+        "title": "Mitlauf beenden",
+        "description": "Danach steht der Protokollentwurf bereit. Bis eine unterschriebene Fassung abgelegt ist, lässt sich der Mitlauf wieder öffnen.",
+        "endedAt": "Ende",
+        "open": "{count, plural, one {# Punkt ist} other {# Punkte sind}} noch ohne Feststellung. Das hält nicht auf; Schritt „Protokoll“ führt sie als offen.",
+        "waiting": "Noch nicht alles gespeichert. Kompass sendet nach; versuchen Sie es gleich noch einmal.",
+        "confirm": "Mitlauf beenden"
+      },
+      "findings": {
+        "title": "Feststellungen",
+        "chair": "Leitung",
+        "minuteTaker": "Protokollführung",
+        "chairBy": "bestimmt durch",
+        "chairByOptions": {
+          "statute": "Satzung",
+          "elected": "gewählt",
+          "consent": "Einverständnis"
+        },
+        "invitationProper": "Ordnungsgemäß eingeladen",
+        "quorate": "Beschlussfähig",
+        "agendaApproved": "Tagesordnung genehmigt",
+        "yes": "ja",
+        "no": "nein",
+        "choose": "Bitte wählen",
+        "suggested": "Vorschlag: {value}",
+        "against": "Die Feststellung weicht vom Vorschlag ab. Die Begründung kommt ins Protokoll.",
+        "reason": "Begründung"
+      },
+      "attendance": {
+        "title": "Anwesenheit",
+        "head": "{voting} stimmberechtigt anwesend, {gone} gegangen, {guests, plural, =0 {keine Gäste} one {# Gast} other {# Gäste}}. Mitglieder laut Stand {date}: {total}.",
+        "search": "Name",
+        "searchShort": "Name",
+        "arrive": "Kommt",
+        "leave": "Geht",
+        "return": "Kommt zurück",
+        "here": "{role} · da seit {time}",
+        "gone": "{role} · gegangen {time}",
+        "away": "{role} · nicht da",
+        "roles": {
+          "member": "Mitglied",
+          "officeHolder": "Amt",
+          "guest": "Gast",
+          "founder": "Gründungsmitglied"
+        },
+        "withTime": "Mit Uhrzeit eintragen …",
+        "timeDialog": {
+          "title": "Mit Uhrzeit eintragen",
+          "description": "Kommen oder Gehen mit einer anderen Uhrzeit als jetzt. Eine eingetragene Uhrzeit bleibt.",
+          "time": "Uhrzeit"
+        },
+        "addGuest": "Gast eintragen",
+        "guestDialog": {
+          "title": "Gast eintragen",
+          "description": "Gäste stimmen nicht mit; sie stehen in der Anwesenheitsliste.",
+          "label": "Name oder Funktion",
+          "confirm": "Eintragen"
+        },
+        "addFounder": "Person eintragen",
+        "founderDialog": {
+          "title": "Person eintragen",
+          "description": "Wer die Satzung unterschreibt und den Verein gründet.",
+          "person": "Person",
+          "confirm": "Eintragen"
+        },
+        "foot": "Speichert sofort. Die Anwesenheitsliste als PDF gibt es im Schritt „Protokoll“."
+      },
+      "recount": "neu errechnet, {name} ist gegangen",
+      "marks": {
+        "reasonMissing": "Begründung fehlt",
+        "againstCount": "gegen die Zählung"
+      },
+      "summary": {
+        "unanimous": "einstimmig",
+        "adopted": "angenommen",
+        "rejected": "abgelehnt",
+        "postponed": "vertagt",
+        "withdrawn": "zurückgezogen",
+        "noted": "zur Kenntnis",
+        "elected": "{name}, angenommen",
+        "counted": "ausgezählt",
+        "lateMotion": "Antrag nach Frist"
+      },
+      "empty": {
+        "titleMissing": "Geben Sie dem Punkt einen Titel.",
+        "dialogText": "Der Punkt kommt ans Ende der Tagesordnung und gilt als in der Sitzung ergänzt.",
+        "text": "Diese Sitzung hat noch keine Tagesordnung. Punkte können Sie auch jetzt anlegen.",
+        "create": "Punkt anlegen",
+        "dialogTitle": "Punkt anlegen",
+        "title": "Titel",
+        "kind": "Art"
+      },
+      "writer": {
+        "other": "Eine andere Person führt das Protokoll. Sie sehen den Stand lesend.",
+        "takeOver": "Protokollführung übernehmen"
+      },
+      "nav": {
+        "back": "TOP {n}",
+        "next": "Weiter zu TOP {n}"
+      },
+      "item": {
+        "overline": "{kind} · TOP {n}",
+        "proposal": "Antrag",
+        "note": "Notiz fürs Protokoll",
+        "notAnnounced": "Nicht in der Einladung angekündigt. Ein Beschluss darüber ist nur wirksam, wenn die Satzung Dringlichkeitsanträge zulässt.",
+        "notAnnouncedStrict": "Nicht in der Einladung angekündigt. Eine {kind} ist so nicht wirksam ({source})."
+      },
+      "blocked": {
+        "step": "Sitzung",
+        "title": "Der Mitlauf ist nicht offen",
+        "text": "Die Sitzung läuft gerade nicht. Begonnen wird sie im Schritt „Sitzung“.",
+        "toMeeting": "Zur Sitzung"
+      },
+      "title": "Mitlauf",
+      "strip": {
+        "region": "Lage der Sitzung",
+        "voting": "{count} stimmberechtigt",
+        "guests": "{count, plural, one {# Gast} other {# Gäste}}",
+        "scoped": "{count} stimmberechtigt {scope} · {present} anwesend",
+        "attendance": "Anwesenheit",
+        "quorumMet": "beschlussfähig ab {required}",
+        "quorumExact": "beschlussfähig, genau {required}",
+        "quorumNotMet": "nicht beschlussfähig, ab {required}",
+        "noQuorum": "ohne Quorum",
+        "end": "Mitlauf beenden …"
+      },
+      "tally": {
+        "unanimous": {
+          "adopted": "Einstimmig angenommen",
+          "elected": "Einstimmig gewählt",
+          "discharged": "Einstimmig entlastet"
+        },
+        "count": "Auszählen",
+        "more": "Anderes Ergebnis",
+        "postponed": "Vertagt",
+        "withdrawn": "Zurückgezogen",
+        "unanimousDone": "{label} · {yes} Ja · {time}",
+        "closedDone": "{label} · {time}",
+        "change": "Ändern",
+        "fields": {
+          "no": "Nein",
+          "abstain": "Enthaltung",
+          "invalid": "Ungültig",
+          "yes": "Ja"
+        },
+        "computed": "errechnet · {voters} − {no} − {abstain} − {invalid}",
+        "selfCount": "Selbst zählen",
+        "selfHint": "Bei dieser Beschlussart zählt Kompass Ja nicht aus der Anwesenheit: Wer schweigt, stimmte sonst mit Ja.",
+        "backUnanimous": "Doch einstimmig",
+        "required": "Erforderlich {majority} · {source}",
+        "cast": "Abgegeben {cast} (Ja und Nein; Enthaltungen und ungültige zählen nicht)",
+        "reached": "Erreicht: {yes} Ja, nötig {needed}.",
+        "notReached": "Nicht erreicht: {yes} Ja, nötig {needed}.",
+        "tieChair": "Stimmengleichheit: Die Leitung entscheidet.",
+        "knife": "Mit einer Ja-Stimme weniger wäre der Antrag abgelehnt.",
+        "tooMany": "Mehr Stimmen als Stimmberechtigte ({voters}).",
+        "decide": "Die Leitung stellt fest",
+        "outcomes": {
+          "adopted": "angenommen",
+          "rejected": "abgelehnt"
+        },
+        "suggested": "vorgeschlagen nach der Zählung",
+        "against": "Die Feststellung weicht von der Zählung ab. Kompass trägt sie so ein. Die Begründung kommt ins Protokoll.",
+        "reason": "Begründung",
+        "inMinutes": "Im Protokoll: „{text}“",
+        "values": "{no} Nein · {abstain} Enthaltung · {invalid} ungültig · {yes} Ja",
+        "keyUnanimous": "Taste E",
+        "keyCount": "Taste Z"
+      },
+      "jump": {
+        "label": "Tagesordnung",
+        "hint": "Alt ↑ ↓ wechselt den Punkt",
+        "of": "TOP {n} von {total}",
+        "prev": "Voriger Punkt",
+        "next": "Nächster Punkt",
+        "choose": "Punkt wählen",
+        "done": "erledigt"
+      }
+    },
+    "invite": {
+      "deadline": "Einladungsfrist {days, plural, one {# Tag} other {# Tage}} ({source}): spätestens am {date} absenden.",
+      "deadlineNone": "Das Regelwerk kennt keine Einladungsfrist. Angemessen sind mindestens zwei Wochen, also bis {date}.",
+      "prepare": "Einladung vorbereiten",
+      "running": "Die Briefe werden ausgestellt.",
+      "done": "{count, plural, one {# Brief} other {# Briefe}} am {date}, Frist gewahrt.",
+      "doneShort": "{count, plural, one {# Brief} other {# Briefe}} am {date}, Frist unterschritten.",
+      "doneNoDeadline": "{count, plural, one {# Brief} other {# Briefe}} am {date}.",
+      "earlier": "{kind} am {date}: {count, plural, one {# Brief} other {# Briefe}}",
+      "runKinds": {
+        "invitation": "Einladung",
+        "supplement": "Nachtrag",
+        "cancellation": "Absage"
+      },
+      "board": {
+        "issue": "Einladung ausstellen",
+        "send": "Per E-Mail senden",
+        "note": "Einladung vermerken …",
+        "issued": "Einladung ausgestellt.",
+        "sent": "{mail} per E-Mail, {post} ohne Adresse.",
+        "noted": "Einladung vermerkt.",
+        "doneDocument": "Ausgestellt am {date}.",
+        "doneNote": "Eingeladen am {date}: {note}",
+        "noteDialog": {
+          "title": "Einladung vermerken",
+          "description": "Für eine Einladung, die nicht über Kompass hinausging, etwa per Messenger.",
+          "invitedOn": "Eingeladen am",
+          "note": "Vermerk",
+          "confirm": "Speichern"
+        }
+      },
+      "run": {
+        "titles": {
+          "invitation": "Einladung",
+          "supplement": "Nachtrag zur Einladung",
+          "cancellation": "Absage"
+        },
+        "steps": {
+          "label": "Schritte des Laufs",
+          "preview": "Vorschau",
+          "issue": "Ausstellen",
+          "dispatch": "Versand"
+        },
+        "counts": "{letters, plural, one {# Brief} other {# Briefe}} · {mail} per E-Mail · {post} per Post",
+        "columns": {
+          "member": "Mitglied",
+          "number": "Nr.",
+          "channel": "Weg",
+          "voting": "Stimmrecht",
+          "note": "Hinweis"
+        },
+        "channel": {
+          "email": "E-Mail",
+          "post": "Post"
+        },
+        "voting": {
+          "yes": "ja",
+          "no": "nein"
+        },
+        "addressMissing": "Anschrift fehlt",
+        "warnings": {
+          "noticeShort": "Die Einladungsfrist ist schon unterschritten. Kompass schreibt das in den Protokollentwurf.",
+          "noticeBelowLawHint": "Weniger als zwei Wochen bis zur Sitzung. Die Rechtsprechung verlangt eine angemessene Frist.",
+          "motionsByPassed": "Die Antragsfrist, die der Brief nennt, ist schon vorbei. Anträge sind damit nur noch als Dringlichkeitsanträge möglich."
+        },
+        "start": {
+          "invitation": "Einladungen ausstellen",
+          "supplement": "Nachträge ausstellen",
+          "cancellation": "Absagen ausstellen"
+        },
+        "humanOnly": "Ausstellen geht nur hier in Kompass, nicht über einen Agenten.",
+        "noRight": "Ausstellen darf, wer Gremien verwaltet.",
+        "empty": "Am heutigen Tag gibt es keine Mitglieder, an die ein Brief ginge."
+      }
+    },
+    "motions": {
+      "title": "Anträge zur Tagesordnung",
+      "deadline": "Frist: {days, plural, one {# Tag} other {# Tage}} vor der Sitzung, bis {date}.",
+      "deadlineNone": "Das Regelwerk kennt keine Antragsfrist.",
+      "by": "{name} · eingegangen {date}",
+      "byUnknown": "eingegangen {date}",
+      "admittedAs": "aufgenommen als TOP {number}",
+      "withdrawnOn": "zurückgezogen am {date}",
+      "admit": "Aufnehmen …",
+      "record": "Antrag erfassen …",
+      "empty": "Noch keine Anträge.",
+      "menu": {
+        "edit": "Bearbeiten",
+        "withdraw": "Zurückgezogen …"
+      },
+      "dialog": {
+        "createTitle": "Antrag erfassen",
+        "editTitle": "Antrag bearbeiten",
+        "submittedBy": "Gestellt von",
+        "receivedOn": "Eingang am",
+        "text": "Text",
+        "document": "Dokument"
+      },
+      "withdrawDialog": {
+        "title": "Antrag zurückgezogen",
+        "description": "Der Antrag bleibt mit dem Tag der Rücknahme sichtbar.",
+        "on": "Zurückgezogen am",
+        "confirm": "Speichern"
+      }
+    },
+    "agenda": {
+      "title": "Tagesordnung",
+      "create": "Punkt anlegen",
+      "invitedNotice": "Die Einladung ist unterwegs. Was Sie jetzt ändern, müssen Sie den Mitgliedern nachreichen.",
+      "supplement": "Nachtrag ausstellen …",
+      "columns": {
+        "number": "Nr.",
+        "item": "Punkt",
+        "kind": "Art",
+        "attachments": "Anlagen",
+        "actions": "Aktionen"
+      },
+      "empty": "Noch keine Punkte. Schlagen Sie eine Tagesordnung vor oder legen Sie Punkte an.",
+      "menu": {
+        "edit": "Bearbeiten",
+        "up": "Nach oben",
+        "down": "Nach unten",
+        "remove": "Entfernen"
+      },
+      "warnings": {
+        "cashReportMissing": "Kein festgeschriebener Kassenbericht für das Geschäftsjahr.",
+        "auditReportMissing": "Kein abgelegter Prüfbericht für das Geschäftsjahr.",
+        "changedAfterInvitation": "Nach der Einladung geändert.",
+        "notAnnounced": "Nicht in der Einladung angekündigt."
+      },
+      "removeDialog": {
+        "title": "Punkt entfernen",
+        "description": "Der Punkt verschwindet aus der Tagesordnung, die übrigen rücken nach.",
+        "confirm": "Entfernen"
+      },
+      "dialog": {
+        "createTitle": "Punkt anlegen",
+        "editTitle": "Punkt bearbeiten",
+        "title": "Titel",
+        "kind": "Art",
+        "proposal": "Antrag",
+        "proposalHint": "Steht in der Einladung und im Mitlauf über dem Ergebnis.",
+        "office": "Amt",
+        "fiscalYear": "Geschäftsjahr",
+        "statute": "Satzungsstand",
+        "choose": "Bitte wählen",
+        "majority": "Mehrheit",
+        "attachments": "Anlagen",
+        "attachment": "Anlage hinzufügen",
+        "removeAttachment": "Anlage {label} entfernen",
+        "wording": "Geänderte Absätze",
+        "wordingHint": "Steht als Anlage in der Einladung, zwei Spalten. Kompass vergleicht keine Wortlaute.",
+        "wordingLabel": "Absatz",
+        "wordingLabelPlaceholder": "§\u00a05 Abs. 2",
+        "wordingBefore": "Bisheriger Wortlaut",
+        "wordingAfter": "Neuer Wortlaut",
+        "wordingRemove": "Absatz {label} entfernen",
+        "wordingAdd": "Absatz anlegen"
+      }
+    },
+    "meeting": {
+      "head": "{kind}, {form}. {date}, {time}{place}. {done} von 5 erledigt.",
+      "headCancelled": "Abgesagt am {date}. Grund: {reason}",
+      "stepsLabel": "Schritte der Sitzung",
+      "showSteps": "Schritte ansehen",
+      "finished": "Festgeschrieben am {date}.",
+      "steps": {
+        "prepare": "Vorbereiten",
+        "invite": "Einladen",
+        "meeting": "Sitzung",
+        "minutes": "Protokoll",
+        "seal": "Festschreiben"
+      },
+      "prepareDetail": "{count, plural, one {# Punkt} other {# Punkte}}, Regelwerk aus der Satzung vom {date}.",
+      "prepareDetailLaw": "{count, plural, one {# Punkt} other {# Punkte}}, Regelwerk nach Gesetz.",
+      "proposeAgenda": "Tagesordnung vorschlagen",
+      "warnings": {
+        "formNotAllowed": "Diese Form der Sitzung sieht die Satzung nicht vor.",
+        "remoteNoteMissing": "Für die Teilnahme aus der Ferne fehlt der Hinweis, wie man sich zuschaltet.",
+        "repeatWithoutRule": "Die Satzung regelt keine Wiederholungsversammlung; es gilt das Gesetz.",
+        "startedOtherDay": "Der Mitlauf wurde an einem anderen Tag begonnen als dem Sitzungstag.",
+        "beforeMemberRecords": "Die Sitzung liegt vor der ersten Mitgliedschaft, die Kompass führt. Wer damals stimmberechtigt war, kennt Kompass nicht — die Zahlen stammen aus dem Protokoll.",
+        "noticeShort": "Mindestens eine Einladung ist nach der Einladungsfrist zugegangen. Kompass schreibt das in den Protokollentwurf.",
+        "minuteTakerAbsent": "Die Protokollführung ist nicht als anwesend erfasst.",
+        "findingAgainstCount": "Eine Feststellung zu Beginn weicht vom Vorschlag von Kompass ab.",
+        "reasonMissing": "Einer Feststellung gegen den Vorschlag fehlt die Begründung; festschreiben lässt sich die Sitzung erst mit ihr."
+      },
+      "invitePending": "Einladung an die Mitglieder, mit Tagesordnung und Frist.",
+      "minutesPending": "Nach der Sitzung: Entwurf drucken, unterschreiben, Scan ablegen.",
+      "sealPending": "Danach entstehen Beschlussnummern, Ämter und Fristen.",
+      "meetingTodo": "Am {date} um {time}.",
+      "start": "Sitzung beginnen",
+      "openLive": "Mitlauf öffnen",
+      "meetingDone": "Sitzung {date}, {from}–{to}. {voting} stimmberechtigt, {guests, plural, =0 {keine Gäste} one {# Gast} other {# Gäste}}, {items, plural, one {# Punkt} other {# Punkte}}.",
+      "more": {
+        "edit": "Angaben ändern …",
+        "cancel": "Absagen …",
+        "delete": "Löschen …",
+        "correct": "Berichtigen …"
+      },
+      "editTitle": "Angaben ändern",
+      "cancelDialog": {
+        "title": "Sitzung absagen",
+        "description": "Die Sitzung bleibt mit dem Grund in der Liste. Sind Einladungen hinausgegangen, stellen Sie danach Absageschreiben aus.",
+        "on": "Abgesagt am",
+        "reason": "Grund",
+        "confirm": "Absagen",
+        "done": "Sitzung abgesagt.",
+        "letters": "Absageschreiben ausstellen"
+      },
+      "deleteDialog": {
+        "title": "Sitzung löschen",
+        "description": "Die geplante Sitzung und ihre Tagesordnung verschwinden. Das Änderungsprotokoll behält, dass sie gelöscht wurde.",
+        "confirm": "Löschen"
+      },
+      "correctDialog": {
+        "title": "Protokoll berichtigen",
+        "description": "Eine neue unterschriebene Fassung ersetzt die bisherige; die bisherige bleibt in der Akte. Folgen wie Amtszeiten werden nicht zurückgedreht. Unterschreiben müssen dieselben Personen.",
+        "reason": "Grund der Berichtigung",
+        "save": "Berichtigen",
+        "done": "Protokoll berichtigt."
+      }
+    },
+    "majority": {
+      "simple": "einfache Mehrheit der {base}",
+      "fraction": "{comparison} {fraction} der {base}",
+      "comparison": {
+        "atLeast": "mindestens",
+        "moreThan": "mehr als"
+      },
+      "fractions": {
+        "n1d2": "die Hälfte",
+        "n2d3": "zwei Drittel",
+        "n3d4": "drei Viertel",
+        "n9d10": "neun Zehntel",
+        "other": "{num}/{den}"
+      },
+      "base": {
+        "cast": "abgegebenen Stimmen",
+        "present": "stimmberechtigten Anwesenden",
+        "all": "Stimmberechtigten"
+      },
+      "asNo": "{text}, Enthaltungen zählen als Nein",
+      "sourceStatute": "laut Satzung",
+      "sourceLaw": "laut Gesetz: {norm}"
+    },
+    "agendaKinds": {
+      "simple": "Beschluss",
+      "agenda": "Aufnahme in die Tagesordnung",
+      "minutesApproval": "Genehmigung des Protokolls",
+      "statute": "Satzungsänderung",
+      "purpose": "Zweckänderung",
+      "dissolution": "Auflösung",
+      "election": "Wahl",
+      "dismissal": "Abberufung",
+      "discharge": "Entlastung",
+      "accounts": "Kassenbericht",
+      "feeSchedule": "Beitragsordnung",
+      "exclusion": "Ausschluss",
+      "honoraryMember": "Ehrenmitgliedschaft",
+      "mandate": "Auftrag",
+      "reserve": "Rücklage",
+      "remuneration": "Vergütung",
+      "expenseRule": "Aufwendungsersatz",
+      "report": "Bericht",
+      "discussion": "Aussprache",
+      "other": "Sonstiges"
+    },
+    "head": {
+      "section": "Sitzung",
+      "organ": "Organ",
+      "organFixed": "Festgelegt beim Anlegen.",
+      "kind": "Art",
+      "repeatOf": "Wiederholung von",
+      "repeatOfNone": "Bitte wählen",
+      "heldOn": "Datum",
+      "startsAt": "Uhrzeit",
+      "form": "Form",
+      "place": "Ort",
+      "access": "Zugang",
+      "accessHint": "Link oder Einwahl; steht nur in der Einladung, nicht im Protokoll.",
+      "remoteNote": "Hinweis zur elektronischen Teilnahme",
+      "remoteNoteHint": "Wie die Mitglieder ihre Rechte elektronisch ausüben (§ 32 Abs. 2 BGB); steht in der Einladung.",
+      "chair": "Vorgesehene Leitung",
+      "minuteTaker": "Vorgesehene Protokollführung",
+      "contactsFixed": "Ändern darf, wer Kontakte lesen darf.",
+      "createTitle": "Sitzung anlegen",
+      "saved": "Gespeichert."
+    },
+    "meetings": {
+      "title": {
+        "ordinary": "{organ} {year}",
+        "extraordinary": "Außerordentliche {organ} am {date}",
+        "repeat": "{organ} am {date} (Wiederholung)",
+        "founding": "Gründungsversammlung am {date}",
+        "board": "{organ} am {date}"
+      },
+      "listTitle": "Sitzungen",
+      "create": "Sitzung anlegen",
+      "noun": {
+        "one": "Sitzung",
+        "other": "Sitzungen",
+        "dative": "Sitzungen"
+      },
+      "filterOrgan": "Organ",
+      "filterYear": "Jahr",
+      "filterState": "Zustand",
+      "columns": {
+        "date": "Datum",
+        "meeting": "Sitzung",
+        "organ": "Organ",
+        "state": "Zustand"
+      },
+      "empty": {
+        "title": "Noch keine Sitzung",
+        "text": "Legen Sie die nächste Sitzung an — mit Tagesordnung, Einladung und Mitlauf.",
+        "filteredNoun": "Keine Sitzung"
+      },
+      "kinds": {
+        "ordinary": "Ordentliche Versammlung",
+        "extraordinary": "Außerordentliche Versammlung",
+        "repeat": "Wiederholungsversammlung",
+        "founding": "Gründungsversammlung",
+        "board": "Sitzung"
+      },
+      "forms": {
+        "inPerson": "Präsenz",
+        "hybrid": "hybrid",
+        "virtual": "online"
+      }
+    },
+    "states": {
+      "meeting": {
+        "planned": "geplant",
+        "inviteDue": "Einladung bis {date}",
+        "invited": "eingeladen",
+        "running": "läuft",
+        "recorded": "protokolliert",
+        "signed": "festgeschrieben",
+        "cancelled": "abgesagt"
+      },
+      "statute": {
+        "draft": "Entwurf",
+        "resolved": "Eintragung offen",
+        "valid": "gültig",
+        "superseded": "abgelöst"
+      },
+      "agendaMotion": {
+        "late": "nach Frist"
+      },
+      "registration": {
+        "due": "fällig",
+        "atNotary": "beim Notar",
+        "submitted": "eingereicht",
+        "interimOrder": "Zwischenverfügung",
+        "registered": "eingetragen"
+      },
+      "resolution": {
+        "adopted": "angenommen",
+        "rejected": "abgelehnt",
+        "postponed": "vertagt",
+        "withdrawn": "zurückgezogen",
+        "elected": "gewählt",
+        "notElected": "nicht gewählt",
+        "overridden": "gegen die Zählung"
+      },
+      "circular": {
+        "running": "läuft bis {date}",
+        "overdue": "Frist abgelaufen",
+        "failed": "kommt nicht zustande",
+        "passed": "zustande gekommen"
+      }
+    },
+    "common": {
+      "moduleInactiveTitle": "Modul Gremien ist nicht aktiv.",
+      "moduleInactiveText": "Aktivieren Sie das Modul unter Einrichtung → Module. Vorhandene Daten bleiben erhalten.",
+      "openModules": "Module öffnen"
+    },
+    "errors": {
+      "organRequired": {
+        "reason": "Mitgliederversammlung und Vorstand gibt es in jedem Verein; sie lassen sich nicht archivieren.",
+        "remedy": "Benennen Sie das Organ um, wenn der Name nicht passt."
+      },
+      "officeOccupied": {
+        "reason": "Das Amt hat noch eine laufende oder künftige Amtsinhaberschaft.",
+        "remedy": "Beenden Sie zuerst die Amtsinhaberschaft."
+      },
+      "officeFull": {
+        "reason": "Das Amt hat {seats, plural, one {einen Platz} other {# Plätze}}, und in diesem Zeitraum sind schon alle besetzt.",
+        "remedy": "Beenden Sie zuerst die Amtsinhaberschaft der Vorgängerin oder des Vorgängers, spätestens am Tag vor dem Beginn."
+      },
+      "roleRowAdopted": {
+        "reason": "Diese Kontaktrolle gehört schon zu einer Amtsinhaberschaft.",
+        "remedy": "Wählen Sie nur Rollen, die noch keinem Amt zugeordnet sind."
+      },
+      "statuteNotResolved": {
+        "reason": "Der Satzungsstand hat noch keinen Beschluss.",
+        "remedy": "Tragen Sie zuerst den Beschluss ein, der den Stand ergibt."
+      },
+      "statuteNotDraft": {
+        "reason": "Der Satzungsstand ist beschlossen und bleibt deshalb erhalten.",
+        "remedy": "Löschen lässt sich nur ein Entwurf ohne Beschluss."
+      },
+      "foundingExists": {
+        "reason": "Es gibt schon eine Gründungsversammlung.",
+        "remedy": "Legen Sie eine ordentliche oder außerordentliche Versammlung an."
+      },
+      "meetingNotDeletable": {
+        "reason": "Die Sitzung ist eingeladen, abgesagt oder hat Anträge oder Dokumente; sie bleibt deshalb erhalten.",
+        "remedy": "Sagen Sie die Sitzung ab, statt sie zu löschen."
+      },
+      "meetingStarted": {
+        "reason": "Die Sitzung hat schon begonnen.",
+        "remedy": "Ändern Sie die Angaben im Protokoll der Sitzung."
+      },
+      "meetingNotBackfilled": {
+        "reason": "Diese Sitzung ist nicht nachgetragen oder schon festgeschrieben.",
+        "remedy": "Ändern Sie geplante Sitzungen im Kopf, festgeschriebene nur über eine Berichtigung des Protokolls."
+      },
+      "meetingCancelled": {
+        "reason": "Die Sitzung ist abgesagt.",
+        "remedy": "Legen Sie eine neue Sitzung an."
+      },
+      "agendaNotEmpty": {
+        "reason": "Die Sitzung hat schon eine Tagesordnung.",
+        "remedy": "Ergänzen Sie einzelne Punkte, statt einen neuen Vorschlag anzulegen."
+      },
+      "runNotForOrgan": {
+        "reason": "Diese Art der Einladung passt nicht zum Organ der Sitzung.",
+        "remedy": "Laden Sie die Mitgliederversammlung über den Einladungslauf ein, andere Organe über die einfache Einladung oder einen Vermerk."
+      },
+      "invitationExists": {
+        "reason": "Zu dieser Sitzung gibt es schon eine Einladung.",
+        "remedy": "Ergänzen Sie die Tagesordnung und schicken Sie einen Nachtrag."
+      },
+      "invitationNotDone": {
+        "reason": "Die Einladung zu dieser Sitzung ist noch nicht vollständig ausgestellt.",
+        "remedy": "Setzen Sie zuerst den Einladungslauf fort."
+      },
+      "cancellationWithoutLetters": {
+        "reason": "Absageschreiben gibt es nur für eine abgesagte Sitzung, zu der Einladungen ausgestellt wurden.",
+        "remedy": "Sagen Sie die Sitzung zuerst ab."
+      },
+      "invitationRunDone": {
+        "reason": "Der Lauf ist schon abgeschlossen.",
+        "remedy": "Versenden Sie die ausgestellten Schreiben im Schritt Versand."
+      },
+      "invitationMissing": {
+        "reason": "Zu dieser Sitzung ist noch keine Einladung ausgestellt.",
+        "remedy": "Stellen Sie zuerst die Einladung aus."
+      },
+      "runNothingToPrint": {
+        "reason": "Kein Schreiben dieses Laufs geht per Post.",
+        "remedy": "Drucken ist nur für die Post-Gruppe nötig."
+      },
+      "runLetterQueued": {
+        "reason": "Ein gewähltes Schreiben wartet schon im Ausgang auf den Versand per E-Mail.",
+        "remedy": "Stellen Sie es zuerst auf Post um."
+      },
+      "runNothingToDispatch": {
+        "reason": "Alle Schreiben dieses Laufs sind schon versandt oder vermerkt.",
+        "remedy": "Es ist nichts mehr zu tun."
+      },
+      "meetingNotStartable": {
+        "reason": "Die Sitzung läuft schon, ist beendet oder abgesagt.",
+        "remedy": "Beginnen lässt sich nur eine geplante oder eingeladene Sitzung."
+      },
+      "meetingNotRunning": {
+        "reason": "Die Sitzung läuft nicht.",
+        "remedy": "Beginnen Sie die Sitzung oder öffnen Sie den Mitlauf wieder."
+      },
+      "meetingNotRecorded": {
+        "reason": "Die Sitzung ist nicht beendet.",
+        "remedy": "Wieder öffnen lässt sich nur eine beendete Sitzung."
+      },
+      "notWriter": {
+        "reason": "Das Protokoll führt gerade eine andere Person.",
+        "remedy": "Übernehmen Sie die Protokollführung, wenn Sie weiterschreiben sollen."
+      },
+      "attendanceNotEmpty": {
+        "reason": "Die Anwesenheitsliste ist schon angelegt.",
+        "remedy": "Tragen Sie fehlende Personen einzeln nach."
+      },
+      "circularSealed": {
+        "reason": "Der Umlaufbeschluss ist festgeschrieben.",
+        "remedy": "Eine Änderung ist nur noch über eine Berichtigung möglich."
+      },
+      "registerDataEmpty": {
+        "reason": "In dieser Sitzung wurde niemand in ein vertretungsberechtigtes Amt gewählt, der die Wahl angenommen hat.",
+        "remedy": "Die Angaben für die Registeranmeldung gibt es erst mit einer solchen Wahl."
+      },
+      "minutesFiled": {
+        "reason": "Das unterschriebene Protokoll ist schon abgelegt.",
+        "remedy": "Vor dem Festschreiben lässt sich die Fassung mit Grund ersetzen (Protokoll → ⋯ → Fassung ersetzen); danach ändert nur eine Berichtigung des Protokolls etwas."
+      },
+      "minutesMissing": {
+        "reason": "Es ist noch kein unterschriebenes Protokoll abgelegt.",
+        "remedy": "Legen Sie den Scan des unterschriebenen Protokolls ab oder verknüpfen Sie ein vorhandenes Dokument."
+      },
+      "statuteResolutionInvalid": {
+        "reason": "Ein angenommener Satzungs- oder Zweckbeschluss nennt einen schon eingetragenen Satzungsstand oder ist nicht von der Mitgliederversammlung gefasst (§\u00a033 BGB).",
+        "remedy": "Nennen Sie in den Angaben einen Entwurf, solange noch keine Fassung abgelegt ist, oder stellen Sie den Beschluss als einfachen Beschluss fest."
+      },
+      "meetingInFuture": {
+        "reason": "Die Sitzung ist auf den {heldOn} datiert, das liegt nach heute.",
+        "remedy": "Festschreiben lässt sie sich erst ab dem Sitzungstag. Stimmt das Datum nicht, korrigieren Sie es in den Angaben der Sitzung."
+      },
+      "meetingSealed": {
+        "reason": "Die Sitzung ist festgeschrieben.",
+        "remedy": "Eine Änderung ist nur noch über eine Berichtigung des Protokolls möglich."
+      },
+      "meetingNotSealed": {
+        "reason": "Die Sitzung ist noch nicht festgeschrieben.",
+        "remedy": "Bis zum Festschreiben ersetzen Sie das Protokoll nicht, sondern korrigieren den Mitlauf."
+      },
+      "outcomeMissing": {
+        "reason": "Mindestens ein Beschluss hat noch kein festgestelltes Ergebnis.",
+        "remedy": "Stellen Sie das Ergebnis jedes Beschlusses fest (angenommen, abgelehnt, vertagt, zurückgezogen)."
+      },
+      "reasonMissing": {
+        "reason": "Mindestens ein Beschluss ist gegen die Zählung festgestellt, und die Begründung fehlt.",
+        "remedy": "Öffnen Sie den Mitlauf wieder und tragen Sie die Begründung der Leitung nach."
+      },
+      "occasionFiled": {
+        "reason": "Der Anlass gehört schon zu einer Registeranmeldung.",
+        "remedy": "Nehmen Sie nur offene Anlässe auf; ein Anlass wird genau einmal angemeldet."
+      },
+      "filingRegistered": {
+        "reason": "Die Registeranmeldung ist schon eingetragen.",
+        "remedy": "Eine eingetragene Anmeldung bleibt, wie sie ist; legen Sie für eine weitere Änderung eine neue Anmeldung an."
+      },
+      "filingNotSubmitted": {
+        "reason": "Die Registeranmeldung ist noch nicht eingereicht.",
+        "remedy": "Vermerken Sie zuerst den Tag der Einreichung beim Registergericht."
+      },
+      "filingNotDissolution": {
+        "reason": "Die Registeranmeldung enthält keine Auflösung.",
+        "remedy": "Vermerke zur Auflösung gehören an die Anmeldung mit dem Anlass Auflösung."
+      }
+    },
+    "retention": {
+      "termLabel": "Amtsinhaberschaft {office}"
+    },
+    "records": {
+      "statute": "Satzung vom {date}",
+      "statuteDraft": "Satzungsentwurf",
+      "forbidden": "Gremien (kein Zugriff)",
+      "meeting": "{organ}: {kind, select, founding {Gründungsversammlung} ordinary {ordentliche Versammlung} extraordinary {außerordentliche Versammlung} repeat {Wiederholungsversammlung} other {Sitzung}} am {date}",
+      "meetingDocument": "Sitzung am {date}",
+      "assemblyRequestDocument": "Verlangen einer Versammlung vom {date}",
+      "resolution": "Beschluss {number}",
+      "resolutionOn": "Beschluss vom {date}",
+      "circular": "Umlaufbeschluss vom {date}",
+      "registerFiling": "Registeranmeldung vom {date}",
+      "registerFilingDocument": "Registeranmeldung vom {date}"
+    },
+    "transparency": {
+      "questions": {
+        "notFiledPromptly": "Wurde der Vorstandswechsel nicht unverzüglich zum Vereinsregister angemeldet?",
+        "foreignBoardMember": "Hat ein neues Vorstandsmitglied seinen Wohnsitz im Ausland oder nicht nur die deutsche Staatsangehörigkeit?",
+        "earlierOwnReport": "Hat der Verein früher selbst an das Transparenzregister gemeldet (dann übernimmt das Register nicht mehr aus dem Vereinsregister)?",
+        "controlOtherwise": "Hält jemand mehr als 25 % der Stimmrechte oder übt auf andere Weise Kontrolle über den Verein aus?"
+      }
+    },
+    "dissolution": {
+      "hints": {
+        "notice": "Die Auflösung ist binnen eines Monats dem Finanzamt und der Gemeinde mitzuteilen.",
+        "liquidators": "Die Auflösung und die Liquidatoren sind zum Vereinsregister anzumelden.",
+        "assetLock": "Das Vermögen bleibt gebunden: Es fällt an den in der Satzung bestimmten Anfallberechtigten.",
+        "blockingYear": "Das Vermögen darf erst ein Jahr nach der Bekanntmachung der Auflösung ausgeantwortet werden (Sperrjahr)."
+      }
+    },
+    "fraction": {
+      "comparison": "Vergleich",
+      "atLeast": "mindestens",
+      "moreThan": "mehr als",
+      "numerator": "Zähler",
+      "denominator": "Nenner",
+      "base": "Bezugsgröße",
+      "aboveOne": "Der Zähler ist größer als der Nenner.",
+      "example": "{label}: {needed}.",
+      "exampleYes": "{label}: {needed} Ja."
+    },
+    "representation": {
+      "single": "einzeln",
+      "two": "zu zweit",
+      "all": "alle gemeinsam",
+      "majority": "Mehrheit der Vorstandsmitglieder"
+    },
+    "overview": {
+      "rolesDiverge": "{count, plural, one {Eine Kontaktrolle} other {# Kontaktrollen}} für Vorstand, Kasse oder Kassenprüfung {count, plural, one {trägt} other {tragen}} kein Amt in Gremien — Rolle und Amt laufen dort auseinander.",
+      "rolesDivergeLink": "Bestehende Rollen übernehmen",
+      "accountsApproval": {
+        "statuteYes": "Laut Regelwerk genehmigt die Mitgliederversammlung die Jahresrechnung, die Finanzen stellen sie aber ohne diesen Beschluss bereit.",
+        "statuteNo": "Die Finanzen warten mit der Jahresrechnung auf die Genehmigung der Mitgliederversammlung, das Regelwerk sieht diesen Beschluss aber nicht vor.",
+        "resolutionYes": "Die Mitgliederversammlung hat die Jahresrechnung mit festgeschriebenem Beschluss genehmigt, die Finanzen stellen sie aber ohne diesen Beschluss bereit.",
+        "link": "Berichte in den Finanzen einstellen"
+      },
+      "title": "Gremien",
+      "description": "{organs, plural, one {# Organ} other {# Organe}}, {vacant, plural, =0 {kein Platz} one {# Platz} other {# Plätze}} unbesetzt.",
+      "statuteBefore": "Regelwerk aus der Satzung vom",
+      "statuteDate": "{date}",
+      "createMeeting": "Sitzung anlegen",
+      "createOrgan": "Organ anlegen",
+      "boardLead": "vertritt nach §\u00a026 BGB {rule}",
+      "assemblyLead": "{voting} stimmberechtigte Mitglieder{last, select, none {} other { · zuletzt am {last}}}",
+      "otherLead": "{holders, plural, one {# Amtsinhaber} other {# Amtsinhaber}}",
+      "noOffices": "Noch kein Amt.",
+      "next": "Nächste Sitzung",
+      "noNext": "Keine Sitzung angesetzt.",
+      "at": "{time} Uhr",
+      "deadlines": "Fristen",
+      "noDeadlines": "Nichts fällig.",
+      "vacant": "unbesetzt",
+      "until": "bis {date}",
+      "untilSuccessor": "bis zur Neuwahl",
+      "seat": "Besetzen …",
+      "columns": {
+        "office": "Amt",
+        "holder": "Inhaber",
+        "until": "Bis",
+        "state": "Zustand",
+        "actions": "Aktionen"
+      },
+      "marks": {
+        "termEnding": "endet {date}",
+        "electionDue": "Nachwahl fällig",
+        "vacant": "unbesetzt",
+        "incompatible": "unvereinbar"
+      }
+    },
+    "organ": {
+      "createTitle": "Organ anlegen",
+      "description": "Organ des Vereins. {filled} von {seats} Plätzen besetzt.",
+      "section": "Organ",
+      "name": "Name",
+      "kind": "Art",
+      "kinds": {
+        "assembly": "Mitgliederversammlung",
+        "board": "Vorstand nach §\u00a026 BGB",
+        "other": "anderes Organ"
+      },
+      "kindFixed": "Festgelegt beim Anlegen.",
+      "representation": "Vertretung",
+      "representationFixed": "Steht im Regelwerk der Satzung.",
+      "saved": "Organ gespeichert.",
+      "archived": "archiviert",
+      "activated": "Organ wieder aktiv.",
+      "archiveMenu": "Archivieren …",
+      "archive": "Archivieren",
+      "activate": "Wieder aktivieren",
+      "archiveTitle": "Organ archivieren?",
+      "activateTitle": "Organ wieder aktivieren?",
+      "archiveDescription": "Das Organ verschwindet aus der Übersicht. Seine Sitzungen und Beschlüsse bleiben.",
+      "activateDescription": "Das Organ steht wieder in der Übersicht.",
+      "requiredReason": "Mitgliederversammlung und Vorstand gibt es in jedem Verein; sie lassen sich nicht archivieren.",
+      "offices": "Ämter",
+      "noOffices": "Noch kein Amt. Legen Sie eines mit „Amt anlegen“ an.",
+      "holders": "Amtsinhaber",
+      "holdersIntro": "Frühere Inhaber gedämpft. Neue Einträge entstehen beim Festschreiben einer Sitzung.",
+      "noHolders": "Noch niemand im Amt.",
+      "represents": "vertritt",
+      "edit": "Bearbeiten",
+      "endTerm": "Amtszeit beenden …",
+      "former": "früher",
+      "period": "{since} – {until, select, none {} other {{until}}}",
+      "columns": {
+        "office": "Amt",
+        "seats": "Plätze",
+        "representative": "§\u00a026 BGB",
+        "term": "Amtszeit",
+        "person": "Person",
+        "period": "Von – bis",
+        "origin": "Herkunft",
+        "actions": "Aktionen"
+      },
+      "origins": {
+        "elected": "gewählt in {meeting}, TOP {item}",
+        "substitute": "ersatzweise bestellt durch den Vorstand",
+        "appointed": "berufen",
+        "courtAppointed": "gerichtlich bestellt",
+        "backfilled": "nachgetragen",
+        "backfilledProof": "nachgetragen, Nachweis:",
+        "document": "Dokument"
+      }
+    },
+    "office": {
+      "create": "Amt anlegen",
+      "createTitle": "Amt anlegen",
+      "editTitle": "Amt bearbeiten",
+      "name": "Name",
+      "seats": "Plätze",
+      "termMonths": "Amtszeit",
+      "termMonthsHint": "Leer: unbefristet (laut Gesetz).",
+      "month": "Monat",
+      "months": "Monate",
+      "termMonthsValue": "{n} Monate",
+      "unlimited": "unbefristet",
+      "untilSuccessorShort": "bis zur Neuwahl",
+      "function": "Funktion",
+      "functionHint": "Bestimmt die Kontaktrolle: Vorstandsämter werden Vorstandsmitglied, die Kasse dazu Schatzmeisteramt, die Kassenprüfung Kassenprüfung.",
+      "functions": {
+        "chair": "Vorsitz",
+        "treasurer": "Schatzmeisteramt",
+        "board": "Vorstandsamt",
+        "auditor": "Kassenprüfung",
+        "none": "Keine Funktion"
+      },
+      "representative": "Vertritt nach §\u00a026 BGB",
+      "untilSuccessor": "Bis zur Neuwahl im Amt",
+      "incompatible": "Nicht zusammen mit",
+      "archive": "Archivieren",
+      "activate": "Wieder aktivieren",
+      "saved": "Amt gespeichert.",
+      "archived": "Amt archiviert.",
+      "activated": "Amt wieder aktiv."
+    },
+    "seat": {
+      "title": "{office} besetzen",
+      "person": "Person",
+      "personNoRight": "Eine Person wählen darf, wer Kontakte sehen darf.",
+      "origin": "Herkunft",
+      "origins": {
+        "substitute": "ersatzweise bestellt",
+        "appointed": "berufen",
+        "backfilled": "nachgetragen",
+        "courtAppointed": "gerichtlich bestellt"
+      },
+      "since": "Seit",
+      "proof": "Nachweis",
+      "note": "Notiz",
+      "save": "Besetzen",
+      "saved": "Amt besetzt.",
+      "savedWithHints": "Gespeichert. Bitte beachten Sie die Hinweise.",
+      "close": "Schließen",
+      "warnings": {
+        "incompatible": "Die Person hat ein Amt, das nicht zusammen mit diesem geführt werden soll.",
+        "substitutionWithoutStatute": "Die Satzung sieht keine Ersatzbestellung durch den Vorstand vor (§§\u00a027, 40 BGB)."
+      }
+    },
+    "termEnd": {
+      "title": "Amtszeit beenden: {name}, {office}",
+      "until": "Bis",
+      "reason": "Grund",
+      "reasons": {
+        "resigned": "Rücktritt",
+        "dismissed": "Abberufung",
+        "died": "Tod",
+        "expired": "Amtszeit abgelaufen",
+        "successor": "Nachfolge",
+        "other": "anderer Grund"
+      },
+      "receivedOn": "Zugegangen am",
+      "receivedOnHint": "Die Niederlegung wirkt mit Zugang bei einem anderen Vorstandsmitglied (§\u00a026 Abs. 2 S. 2 BGB).",
+      "resignationDocumentMissing": "Ohne Dokument ist der Rücktritt nicht belegt. Legen Sie die Erklärung in die Akte und wählen Sie sie als Nachweis.",
+      "proof": "Nachweis",
+      "save": "Amtszeit beenden",
+      "saved": "Amtszeit beendet."
+    },
+    "statutes": {
+      "title": "Satzung",
+      "create": "Stand anlegen",
+      "leadValid": "Gültig ist die Fassung vom {date}.",
+      "leadFiled": "Die Änderung vom {date} ist zur Eintragung angemeldet.",
+      "leadOpen": "Die Änderung vom {date} ist beschlossen, die Eintragung ist offen.",
+      "emptyTitle": "Noch kein Stand.",
+      "emptyText": "Legen Sie die geltende Satzung als ersten Stand an.",
+      "version": "Fassung vom {date}",
+      "draft": "Entwurf",
+      "columns": {
+        "version": "Fassung",
+        "resolved": "Beschlossen",
+        "registered": "Eingetragen",
+        "tax": "Finanzamt",
+        "state": "Zustand"
+      },
+      "tax": {
+        "noObjection": "keine Einwände, {date}",
+        "newNotice": "neuer Bescheid, {date}",
+        "notAffected": "berührt nicht",
+        "open": "offen"
+      }
+    },
+    "statute": {
+      "edit": "Bearbeiten",
+      "editTitle": "Stand bearbeiten",
+      "saved": "Stand gespeichert.",
+      "registered": "Eintragung vermerkt.",
+      "deleted": "Entwurf gelöscht.",
+      "registerMenu": "Eintragung vermerken …",
+      "registerTitle": "Eintragung vermerken",
+      "registerDescription": "Der Stand gilt ab dem Tag der Eintragung im Vereinsregister.",
+      "registerConfirm": "Eintragung vermerken",
+      "registeredOn": "Eingetragen am",
+      "deleteMenu": "Löschen …",
+      "deleteTitle": "Entwurf löschen?",
+      "deleteDescription": "Der Entwurf verschwindet mit seinem Regelwerk. Beschlossene Stände lassen sich nicht löschen.",
+      "deleteConfirm": "Löschen",
+      "resolvedIn": "beschlossen in {meeting}",
+      "resolvedOn": "beschlossen am {date}",
+      "registeredOnText": "eingetragen am {date}",
+      "validSince": "Gilt seitdem.",
+      "text": "Wortlaut",
+      "textDocument": "Dokument mit dem Wortlaut",
+      "noDocumentRight": "Ein Dokument wählen darf, wer die Akte sehen darf.",
+      "download": "Herunterladen",
+      "noText": "Kein Wortlaut abgelegt.",
+      "resolutionAndRegistration": "Beschluss und Eintragung",
+      "resolution": "Beschluss",
+      "resolutionFixed": "Aus dem Festschreiben der Sitzung.",
+      "resolvedOnField": "Beschlossen am",
+      "resolvedOnHint": "Nur für Stände vor Kompass. Sonst schreibt das Festschreiben der Sitzung den Beschluss ein.",
+      "item": "TOP {n}",
+      "filing": "Anmeldung",
+      "version": "Fassung",
+      "note": "Bezeichnung",
+      "tax": "Bewertung durch das Finanzamt",
+      "taxQuestion": "Berührt die Änderung die Gemeinnützigkeit (§§\u00a051–61 AO: Zwecke, Selbstlosigkeit, Vermögensbindung)?",
+      "tri": {
+        "yes": "ja",
+        "no": "nein",
+        "open": "offen"
+      },
+      "open": "offen",
+      "submitted": "Vorgelegt",
+      "submittedOn": "Vorgelegt am",
+      "submission": "Vorlage",
+      "answer": "Antwort",
+      "answerDocument": "Antwort des Finanzamts",
+      "answers": {
+        "none": "Noch keine",
+        "notRelevant": "keine Einwände",
+        "newNotice": "neuer Bescheid"
+      },
+      "document": "Dokument",
+      "warnings": {
+        "taxReviewOpen": "Die Bewertung durch das Finanzamt ist offen.",
+        "newNoticeMissing": "Die Satzung ist eingetragen, der neue Bescheid nach §\u00a060a AO fehlt.",
+        "basedOnUnregistered": "Dieser Entwurf baut auf einem beschlossenen Stand auf, der noch nicht eingetragen ist.",
+        "omitsUnregistered": "Ein älterer beschlossener Stand ist nie eingetragen worden, und seine Änderungen fehlen in diesem Stand. Er bleibt als offener Registeranlass stehen."
+      },
+      "founding": "Gründung",
+      "signatures": "Unterschriften",
+      "establishedOn": "Errichtet am",
+      "rules": "Regelwerk",
+      "rulesIntro": "Was Kompass für Fristen und Mehrheiten rechnet. Grau: nichts eingetragen, es gilt das Gesetz.",
+      "editRules": "Regelwerk bearbeiten",
+      "byLaw": "laut Gesetz: {text}"
+    },
+    "rules": {
+      "groups": {
+        "convening": "Einberufung",
+        "quorum": "Beschlussfähigkeit",
+        "majorities": "Mehrheiten",
+        "elections": "Wahlen",
+        "chairAndMinutes": "Leitung und Protokoll",
+        "membershipAndOffices": "Mitgliedschaft und Ämter"
+      },
+      "labels": {
+        "convenedBy": "Einberufung durch",
+        "notice": "Einladungsfrist",
+        "agendaWithInvitation": "Tagesordnung mit der Einladung",
+        "motionDeadline": "Anträge zur Tagesordnung",
+        "lateMotion": "Dringlichkeitsanträge",
+        "announceRequired": "Nur mit Ankündigung",
+        "formsAllowed": "Formen der Sitzung",
+        "ordinaryMeetingYearly": "Ordentliche Versammlung jährlich",
+        "repeatMeeting": "Wiederholungsversammlung",
+        "minorityRequest": "Minderheitenverlangen",
+        "quorum": "Beschlussfähigkeit",
+        "majority": "{kind}",
+        "tie": "Stimmengleichheit",
+        "election": "Wahlen",
+        "chairOrder": "Leitung",
+        "minutesSignedBy": "Protokoll unterschreiben",
+        "circular": "Umlaufbeschluss",
+        "officeRequiresMembership": "Amt setzt Mitgliedschaft voraus",
+        "substitution": "Ersatzbestellung durch den Vorstand",
+        "representation": "Vertretung",
+        "remuneration": "Vergütung",
+        "exclusionNotice": "Frist der Ausschlussgründe"
+      },
+      "words": {
+        "yes": "ja",
+        "no": "nein",
+        "none": "keine Regel",
+        "convenedByBoard": "der Vorstand",
+        "noticeNone": "keine Frist (angemessen)",
+        "noticeDays": "{n} Tage vor der Sitzung{form, select, none {} other {, in {form}}}",
+        "forms": {
+          "textForm": "Textform",
+          "letter": "Brief",
+          "publication": "Bekanntmachung"
+        },
+        "noticeShould": "soll",
+        "noticeFrom": {
+          "sent": "ab Absendung",
+          "received": "ab Zugang"
+        },
+        "transit": "Post {post} Tage, E-Mail {email} Tag",
+        "noDeadline": "keine Frist",
+        "days": "{n} Tage",
+        "lateMotionNone": "nur angekündigte Gegenstände",
+        "announceAll": "alle Gegenstände",
+        "announceNone": "keine",
+        "meetingForms": {
+          "inPerson": "Präsenz",
+          "hybrid": "hybrid",
+          "virtual": "online"
+        },
+        "repeat": "binnen {n} Tagen",
+        "repeatNoQuorum": "binnen {n} Tagen, ohne Rücksicht auf die Zahl der Erschienenen beschlussfähig",
+        "repeatNone": "nicht vorgesehen",
+        "minority": "{num}/{den} der Mitglieder",
+        "quorumNone": "ohne Mindestzahl",
+        "quorumAbsolute": "mindestens {n} Anwesende",
+        "quorumFraction": "{comparison} {num}/{den} {base}",
+        "quorumBase": {
+          "allMembers": "aller Mitglieder",
+          "votingMembers": "aller stimmberechtigten Mitglieder",
+          "organMembers": "aller Mitglieder des Organs",
+          "board": "aller Vorstandsmitglieder"
+        },
+        "tie": {
+          "rejected": "abgelehnt",
+          "chairDecides": "Leitung entscheidet"
+        },
+        "round": "{n}. Wahlgang: {rule}",
+        "runoff": "sonst Stichwahl",
+        "notRegulated": "nicht geregelt",
+        "signers": {
+          "chair": "Leitung",
+          "minuteTaker": "Protokollführung"
+        },
+        "circularNotAllowed": "nicht zulässig",
+        "circularAll": "alle müssen zustimmen",
+        "representation": {
+          "single": "einzeln",
+          "two": "zu zweit",
+          "all": "alle gemeinsam",
+          "majority": "Mehrheit der Vorstandsmitglieder"
+        },
+        "remuneration": "Vergütung nach {reference}",
+        "unpaid": "unentgeltlich"
+      }
+    },
+    "rulesEdit": {
+      "title": "Regelwerk bearbeiten",
+      "description": "Gilt für Sitzungen ab dem {date}. Was Sie hier ändern, rechnet Kompass auch in laufenden Vorgängen neu.",
+      "descriptionDraft": "Gilt, sobald der Stand beschlossen ist.",
+      "own": "Eigene Regel eintragen",
+      "toLaw": "Auf Gesetz zurücksetzen",
+      "reference": "Fundstelle: {rule}",
+      "referencePlaceholder": "laut Satzung",
+      "lockedTitle": "{count, plural, =0 {Dieser Stand ist eingetragen} one {Die Änderung bewertet einen festgeschriebenen Beschluss anders} other {Die Änderung bewertet # festgeschriebene Beschlüsse anders}}",
+      "lockedText": "Beschlüsse unter diesem Regelwerk haben gewirkt. Kompass bewertet sie nach dem Regelwerk, wie es hier steht; nennen Sie, warum es sich ändert. Der Grund steht im Änderungsprotokoll.",
+      "affectedLine": "{number}: {before} → {after}",
+      "judged": "{majority}, {reached, select, true {erreicht} false {nicht erreicht} other {offen}}",
+      "reasonLabel": "Grund der Änderung",
+      "abstentionsAsNo": "Enthaltungen zählen als Nein-Stimmen",
+      "bases": {
+        "cast": "der abgegebenen Stimmen",
+        "presentVoting": "der stimmberechtigten Anwesenden",
+        "allVoting": "aller stimmberechtigten Mitglieder",
+        "allMembers": "aller Mitglieder",
+        "organMembers": "aller Mitglieder des Organs",
+        "board": "aller Vorstandsmitglieder"
+      },
+      "samples": {
+        "cast": "Bei {n} abgegebenen Stimmen",
+        "presentVoting": "Bei {n} stimmberechtigten Anwesenden",
+        "allVoting": "Bei {n} stimmberechtigten Mitgliedern",
+        "allMembers": "Bei {n} Mitgliedern",
+        "organMembers": "Bei {n} Mitgliedern des Organs"
+      },
+      "daysBefore": "Tage vor der Sitzung",
+      "days": "Tage",
+      "form": "Form",
+      "formNone": "Form offen",
+      "strictness": "Verbindlichkeit",
+      "must": "muss",
+      "should": "soll",
+      "noticeFrom": "Fristbeginn",
+      "transitPost": "Laufzeit Post",
+      "transitPostUnit": "Tage Post",
+      "transitEmail": "Laufzeit E-Mail",
+      "transitEmailUnit": "Tage E-Mail",
+      "lateAll": "Alle Gegenstände müssen angekündigt sein (laut Gesetz).",
+      "lateExcept": "Nicht für: {kinds}.",
+      "convenedHint": "Leer: der Vorstand (laut Gesetz).",
+      "ordinaryHint": "Ab dem Stichtag unter Einrichtung → Gremien warnt die Startseite, wenn keine angesetzt ist.",
+      "repeatWithin": "binnen",
+      "repeatDays": "Frist der Wiederholung",
+      "repeatNoQuorum": "ohne Rücksicht auf die Zahl der Erschienenen beschlussfähig",
+      "quorumKind": "Art der Beschlussfähigkeit",
+      "quorumFraction": "Bruchteil",
+      "quorumAbsolute": "Mindestzahl",
+      "present": "Anwesende",
+      "round": "{n}. Wahlgang",
+      "removeRound": "{n}. Wahlgang entfernen",
+      "addRound": "Wahlgang anlegen",
+      "runoff": "Sonst Stichwahl zwischen den zwei mit den meisten Stimmen",
+      "chairPosition": "Leitung an Stelle {n}",
+      "noOffice": "Kein Amt",
+      "signersHint": "Bestimmt die Unterschriftszeilen im Protokoll.",
+      "circularMajority": "Mehrheit",
+      "representationText": "Wortlaut der Vertretungsregel",
+      "representationHint": "Eine Änderung ist zur Eintragung anzumelden.",
+      "paid": "Vergütung zulässig",
+      "remunerationReference": "Fundstelle der Vergütung",
+      "remunerationBy": "Beschließt"
+    },
+    "resolutions": {
+      "title": "Beschlüsse",
+      "description": "Alle Beschlüsse aller Organe, aus Sitzungen und Umläufen.",
+      "emptyTitle": "Noch keine Beschlüsse.",
+      "emptyText": "Sie entstehen beim Festschreiben einer Sitzung oder aus einem Umlauf.",
+      "filterOrgan": "Organ",
+      "filterKind": "Art",
+      "filterYear": "Jahr",
+      "filterTax": "Nur steuerlich bedeutsam",
+      "noun": {
+        "one": "Beschluss",
+        "other": "Beschlüsse",
+        "dative": "Beschlüssen"
+      },
+      "filteredNoun": "Kein Beschluss",
+      "columns": {
+        "number": "Nr.",
+        "date": "Datum",
+        "organ": "Organ",
+        "subject": "Gegenstand",
+        "tax": "§\u00a0AO",
+        "outcome": "Ergebnis"
+      },
+      "assemblyShort": "MV",
+      "election": "Wahl {office}: {names}",
+      "nobodyElected": "noch niemand angenommen",
+      "runoff": "Stichwahl",
+      "noNumber": "ohne Nummer",
+      "taxMark": "§\u00a0AO",
+      "taxFootnote": "„§\u00a0AO“: steuerlich bedeutsam (Rücklage, Satzung, Zweck, Vergütung, Aufwendungsersatz, Auflösung). Diese Beschlüsse braucht die Steuererklärung."
+    },
+    "resolution": {
+      "back": "Beschlüsse",
+      "ofAssembly": "der Mitgliederversammlung",
+      "ofBoard": "des Vorstands",
+      "ofOrgan": "des Organs „{name}“",
+      "on": "vom {date}",
+      "unanimous": "Einstimmig angenommen.",
+      "electionRound": "Wahlgang {n}",
+      "electionRunoff": "Stichwahl",
+      "electionCandidate": "{name}: {votes, plural, one {# Stimme} other {# Stimmen}}",
+      "electionRest": "{no} Nein, {abstain, plural, one {# Enthaltung} other {# Enthaltungen}}, {invalid} ungültig",
+      "electionNeeded": "nötig {n}",
+      "electionUnanimous": "{name} einstimmig gewählt",
+      "electionElected": "Gewählt",
+      "electionNobody": "Niemand gewählt",
+      "electionDeclaration": "Erklärung",
+      "electionAccepted": "{name} hat am {date} angenommen",
+      "electionDeclined": "{name} hat am {date} abgelehnt",
+      "electionOpen": "{name} hat sich noch nicht erklärt",
+      "againstCount": "Festgestellt entgegen der Zählung; das macht den Beschluss nicht wirksam.",
+      "outcomes": {
+        "adopted": "angenommen",
+        "rejected": "abgelehnt",
+        "postponed": "vertagt",
+        "withdrawn": "zurückgezogen"
+      },
+      "text": "Wortlaut",
+      "result": "Ergebnis",
+      "counted": "Gezählt",
+      "votes": "{yes} Ja, {no} Nein, {abstain, plural, one {# Enthaltung} other {# Enthaltungen}}, {mode, select, computed {errechnet} other {selbst gezählt}}",
+      "required": "Erforderlich",
+      "neededYes": "{n} Ja",
+      "decided": "Festgestellt",
+      "by": "durch {name}",
+      "reason": "Begründung",
+      "excluded": "Ausgeschlossen",
+      "exclusionReasons": {
+        "discharge": "Entlastung",
+        "legalTransaction": "Rechtsgeschäft",
+        "litigation": "Rechtsstreit",
+        "remuneration": "Vergütung",
+        "exclusion": "Ausschluss",
+        "other": "anderer Grund"
+      },
+      "details": "Angaben",
+      "reference": "verknüpft",
+      "references": "Verweise",
+      "statute": "Satzungsstand",
+      "filings": "Registeranmeldung",
+      "minutes": "Protokoll",
+      "minutesSigned": "{number} unterschrieben am {date}",
+      "toMeeting": "Zur Sitzung",
+      "toCircular": "Zum Umlauf",
+      "followUps": "Wiedervorlagen",
+      "followUpLine": "{title} bis {date}{done, select, yes { (erledigt)} other {}}",
+      "usedBy": "Verwendet in",
+      "usedByReserve": "Rücklage „{name}“",
+      "usedByFeeSchedule": "Beitragsordnung ab {date}",
+      "usedByPartnerPayment": "Partnerzahlung {number}",
+      "usedByPartnerPaymentUnnumbered": "Partnerzahlung (noch ohne Nummer)",
+      "tax": "Steuerlich",
+      "taxHint": "Satzungsänderung: dem Finanzamt nach der Eintragung mitteilen.",
+      "followUpMenu": "Auftrag anlegen …",
+      "followUpTitle": "Auftrag anlegen",
+      "followUpTask": "Titel",
+      "followUpDue": "Fällig am",
+      "followUpAssignee": "Zuständig",
+      "followUpNobody": "Niemand bestimmt",
+      "followUpSave": "Auftrag anlegen",
+      "followUpSaved": "Auftrag angelegt."
+    },
+    "details": {
+      "choose": "Bitte wählen",
+      "statuteReference": "Fundstelle in der Satzung",
+      "decidedBy": "Beschließt",
+      "offices": "Ämter",
+      "mode": "Art",
+      "modes": {
+        "flat": "Pauschale",
+        "activity": "nach Tätigkeit"
+      },
+      "amount": "Höhe",
+      "validFrom": "Gültig ab",
+      "remunerationWithoutStatute": "Ohne Satzungsgrundlage ist eine Vergütung unzulässig (§\u00a027 Abs. 3 S. 2, §\u00a040 BGB; §\u00a055 AO). Auch die Ehrenamtspauschale ist nur eine Steuerbefreiung.",
+      "remunerationWrongOrgan": "Nach der Satzung beschließt ein anderes Organ über diese Vergütung (§\u00a027 Abs. 3 S. 2, §\u00a040 BGB).",
+      "basis": "Grundlage",
+      "bases": {
+        "statute": "Satzung",
+        "contract": "Vertrag",
+        "boardResolution": "Vorstandsbeschluss"
+      },
+      "rule": "Regel",
+      "expenseRuleRetroactive": "Der Anspruch muss vor der Tätigkeit begründet sein (BMF 25.11.2014).",
+      "reserveType": "Art der Rücklage",
+      "reserveTypes": {
+        "nr1": "§\u00a062 Abs. 1 Nr. 1 AO",
+        "nr2": "§\u00a062 Abs. 1 Nr. 2 AO",
+        "nr3": "§\u00a062 Abs. 1 Nr. 3 AO",
+        "nr4": "§\u00a062 Abs. 1 Nr. 4 AO"
+      },
+      "purpose": "Zweck",
+      "fiscalYear": "Geschäftsjahr",
+      "movement": "Bewegung",
+      "movements": {
+        "create": "Bildung",
+        "withdraw": "Entnahme",
+        "dissolve": "Auflösung"
+      },
+      "member": "Mitglied",
+      "memberNoRight": "Ein Mitglied wählen darf, wer Mitglieder lesen darf.",
+      "memberType": "Künftige Mitgliedsart",
+      "term": "Abberufen wird",
+      "termOption": "{name} — {office}",
+      "statuteGround": "Grund in der Satzung",
+      "reasonsSentOn": "Gründe mitgeteilt am",
+      "hearingOn": "Anhörung am",
+      "noticeReceivedOn": "Mitteilung zugegangen am",
+      "reasonsDocument": "Begründung",
+      "reasonsHint": "Die Gründe stehen nicht im Protokoll, sondern in einem Dokument im Bereich Mitglieder.",
+      "labels": {
+        "statuteReference": "Fundstelle",
+        "decidedByOrganId": "Beschließt",
+        "officeIds": "Ämter",
+        "mode": "Art",
+        "amountCents": "Betrag",
+        "validFrom": "Gültig ab",
+        "basis": "Grundlage",
+        "rule": "Regel",
+        "type": "Art",
+        "purpose": "Zweck",
+        "fiscalYearId": "Geschäftsjahr",
+        "action": "Bewegung",
+        "membershipId": "Mitglied",
+        "statuteGround": "Grund in der Satzung",
+        "reasonsSentOn": "Gründe mitgeteilt am",
+        "hearingOn": "Anhörung am",
+        "reasonsDocumentId": "Begründung",
+        "noticeReceivedOn": "Mitteilung zugegangen am"
+      },
+      "values": {
+        "mode": {
+          "flat": "Pauschale",
+          "activity": "nach Tätigkeit"
+        },
+        "basis": {
+          "statute": "Satzung",
+          "contract": "Vertrag",
+          "boardResolution": "Vorstandsbeschluss"
+        },
+        "type": {
+          "nr1": "Nr. 1",
+          "nr2": "Nr. 2",
+          "nr3": "Nr. 3",
+          "nr4": "Nr. 4"
+        },
+        "action": {
+          "create": "Bildung",
+          "withdraw": "Entnahme",
+          "dissolve": "Auflösung"
+        }
+      }
+    },
+    "circulars": {
+      "title": "Umlaufbeschlüsse",
+      "create": "Umlauf anlegen",
+      "emptyTitle": "Noch kein Umlauf.",
+      "emptyText": "Kompass verschickt keine Anfrage; Sie halten fest, wer wie geantwortet hat.",
+      "filterOrgan": "Organ",
+      "filterYear": "Jahr",
+      "noun": {
+        "one": "Umlauf",
+        "other": "Umläufe",
+        "dative": "Umläufen"
+      },
+      "filteredNoun": "Kein Umlauf",
+      "columns": {
+        "subject": "Gegenstand",
+        "organ": "Organ",
+        "requested": "Angefragt",
+        "deadline": "Frist",
+        "state": "Zustand"
+      }
+    },
+    "circular": {
+      "back": "Umlaufbeschlüsse",
+      "created": "Umlauf angelegt.",
+      "responseSaved": "Antwort eingetragen.",
+      "sealed": "Eingetragen als {number}.",
+      "request": "Antrag",
+      "organ": "Organ",
+      "kind": "Beschlussart",
+      "text": "Antrag",
+      "requestedOn": "Angefragt am",
+      "deadline": "Antworten bis",
+      "channel": "Weg",
+      "channels": {
+        "email": "E-Mail",
+        "messenger": "Messenger",
+        "letter": "Brief"
+      },
+      "details": "Angaben",
+      "ofBoard": "des Vorstands",
+      "ofOrgan": "des Organs „{name}“",
+      "description": "Umlauf {organ} per {channel}, gestartet am {requested}. Antworten bis {deadline}.",
+      "consentAll": "Zustimmung aller",
+      "notAllowed": "Die Satzung lässt für dieses Organ keinen Umlauf zu.",
+      "answerAfterDeadline": "Mindestens eine Antwort kam nach der Frist. Sie zählt in der Auswertung; ob sie gilt, entscheidet die Feststellung.",
+    "excludedAnswered": "Geantwortet hat auch, wen der Beschluss selbst betrifft (etwa die Inhaberin eines vergüteten Amts). Nach §\u00a034 BGB hat sie kein Stimmrecht; ihre Antwort zählt in der Auswertung, ob sie gilt, entscheidet die Feststellung.",
+      "sealedAs": "eingetragen als {number}",
+      "toResolution": "Zum Beschluss",
+      "reachedOn": "Zustande gekommen am {date}",
+      "decide": "Beschluss eintragen",
+      "decideImpossible": "Ergebnis feststellen …",
+      "impossible": "Der Umlauf kann nicht mehr zustande kommen.",
+      "missing": "Fehlt noch {n, plural, one {# Zustimmung} other {# Zustimmungen}}.",
+      "tally": "Zustande kommt der Beschluss mit {needed} von {total} Mitgliedern ({rule}, {reference}). Bisher {yes} Zustimmungen, {no} Ablehnungen, {open} offen.",
+      "noAnswerNoConsent": "Wer nicht antwortet, stimmt nicht zu.",
+      "responses": "Antworten",
+      "columns": {
+        "member": "Mitglied",
+        "answer": "Antwort",
+        "on": "Tag",
+        "proof": "Nachweis",
+        "actions": "Aktionen"
+      },
+      "answerWords": {
+        "yes": "✓ stimmt zu",
+        "no": "✗ lehnt ab",
+        "abstain": "enthält sich",
+        "none": "keine Antwort"
+      },
+      "answers": {
+        "yes": "stimmt zu",
+        "no": "lehnt ab",
+        "abstain": "enthält sich",
+        "none": "keine Antwort"
+      },
+      "deletedContact": "gelöschter Kontakt",
+      "document": "Dokument",
+      "answerButton": "Antwort eintragen …",
+      "edit": "Bearbeiten",
+      "responseTitle": "Antwort eintragen: {name}",
+      "answer": "Antwort",
+      "answeredOn": "Tag",
+      "proof": "Nachweis",
+      "note": "Vermerk",
+      "notePlaceholder": "per Messenger, Bildschirmfoto",
+      "responseSave": "Speichern",
+      "decideTitle": "Beschluss eintragen",
+      "decidedOn": "Festgestellt am",
+      "decidedBy": "Durch",
+      "outcome": "Ergebnis",
+      "adopted": "angenommen",
+      "rejected": "abgelehnt",
+      "reason": "Begründung",
+      "againstEvaluation": "Die Feststellung weicht von der Auswertung ab. Eine Feststellung entgegen der Zählung macht den Beschluss nicht wirksam."
+    },
+    "register": {
+      "title": "Register",
+      "create": "Anmeldung anlegen",
+      "lead": "Vereinsregister {number}, {court}. Eingereicht wird über den Notar.",
+      "leadNone": "Noch nicht eingetragen. Eingereicht wird über den Notar.",
+      "openOccasions": "Offene Anlässe",
+      "emptyTitle": "Noch keine Anmeldung.",
+      "emptyText": "Ändert eine Sitzung Vorstand oder Satzung, steht der Anlass hier zum Anmelden bereit.",
+      "occasions": {
+        "initial": "Ersteintragung",
+        "statute": "Satzungsänderung",
+        "boardChange": "Vorstandswechsel",
+        "representation": "Vertretungsregel",
+        "dissolution": "Auflösung"
+      },
+      "and": " und ",
+      "columns": {
+        "occasion": "Anlass",
+        "created": "Angelegt",
+        "notary": "Notar",
+        "state": "Zustand"
+      },
+      "createdShort": "angelegt {date}",
+      "registeredShort": "eingetragen {date}",
+      "created": "Anmeldung angelegt.",
+      "saved": "Gespeichert.",
+      "completed": "Eintragung vermerkt.",
+      "occasionsSection": "Anlässe",
+      "noOpenOccasions": "Kein offener Anlass.",
+      "note": "Notiz",
+      "forMeeting": "Anmeldung zur {meeting}.",
+      "progress": "{n} von 4 erledigt.",
+      "interimMenu": "Zwischenverfügung erfassen …",
+      "steps": {
+        "label": "Schritte der Anmeldung",
+        "labels": {
+          "compile": "Zusammenstellen",
+          "notary": "Beim Notar",
+          "submitted": "Eingereicht",
+          "registered": "Eingetragen"
+        },
+        "compileActive": "{met} von {required} Pflichtunterlagen.",
+        "compileDone": "Erledigt mit der Beglaubigung am {date}.",
+        "compileMet": "Alle Pflichtunterlagen beisammen.",
+        "notaryDone": "Beglaubigt am {date}, {notary}.",
+        "submittedDone": "Am {date} eingereicht.",
+        "registeredDone": "Eingetragen am {date}.",
+        "notaryAction": "Beglaubigung vermerken …",
+        "submittedAction": "Einreichung vermerken …",
+        "registeredAction": "Eintragung vermerken …",
+        "interimTitle": "Zwischenverfügung vom {date}.",
+        "interimDeadline": "Frist zur Behebung: {date}.",
+        "interimNoDeadline": "Keine Frist genannt.",
+        "interimView": "Zwischenverfügung ansehen",
+        "renotarize": "Neue Unterschrift beim Notar …",
+        "resolveInterim": "Als erledigt vermerken …",
+        "transparencyOpen": "Fragen zum Transparenzregister sind offen.",
+        "statuteOmitsUnregistered": "Der Satzungsstand dieser Anmeldung enthält die Änderungen eines älteren beschlossenen Stands nicht, der nie eingetragen wurde. Jener bleibt als offener Registeranlass stehen.",
+        "overdueByAttached": "Überfällig seit dem {date}: Mit dieser Anmeldung wird ein älterer beschlossener Satzungsstand mit eingetragen, auf dem der neue aufbaut. Sein Anlass ist schon länger fällig und kam deshalb automatisch dazu.",
+        "notarizationMissing": "Eingereicht ohne Tag der Beglaubigung. Die Anmeldung zum Vereinsregister braucht eine öffentlich beglaubigte Erklärung (§\u00a077 BGB).",
+        "done": "Eingetragen am {date}."
+      },
+      "requirements": {
+        "section": "Unterlagen",
+        "intro": "Pflicht nach §§\u00a067, 71 BGB; empfohlen, weil Gerichte sie oft nachfordern.",
+        "title": "{name} · {level, select, required {Pflicht} other {empfohlen}}",
+        "keys": {
+          "resolutionCopy": "Abschrift des Beschlusses",
+          "statuteText": "Wortlaut der Satzung",
+          "invitation": "Einladung",
+          "attendanceList": "Anwesenheitsliste",
+          "registerData": "Angaben für die Registeranmeldung",
+          "taxNotice": "Freistellungsbescheid"
+        },
+        "attach": "Beifügen",
+        "done": "beigefügt",
+        "issueAtMeeting": "An der Sitzung ausstellen"
+      },
+      "transparency": {
+        "title": "Transparenzregister",
+        "intro": "Kompass meldet nichts. Es fragt nach und hält fest, was Sie getan haben.",
+        "q1": "Wurde der Wechsel unverzüglich zum Vereinsregister angemeldet?",
+        "q1Reasons": {
+          "submittedInTime": "Eingereicht am {date}, innerhalb von {n} Tagen nach dem Wechsel.",
+          "notInTime": "Nicht innerhalb von {n} Tagen eingereicht.",
+          "openUntil": "Bis {date} rechtzeitig."
+        },
+        "questions": {
+          "foreignBoardMember": "Wohnt ein Vorstandsmitglied im Ausland oder hat es eine andere als die deutsche Staatsangehörigkeit (auch zusätzlich)?",
+          "earlierOwnReport": "Hat der Verein früher selbst etwas an das Transparenzregister gemeldet?",
+          "controlOtherwise": "Hat jemand mehr als 25\u00a0% der Stimmrechte oder bestimmt den Verein auf andere Weise?"
+        },
+        "values": {
+          "yes": "ja",
+          "no": "nein",
+          "open": "noch offen"
+        },
+        "noReport": "Keine Meldung nötig",
+        "noReportText": "Das Register übernimmt den Vorstand aus dem Vereinsregister.",
+        "reportNeeded": "Meldung an das Transparenzregister nötig (§\u00a020a Abs. 2 GwG). Legen Sie die Bestätigung der Meldung hier ab.",
+        "confirm": "Bestätigung ablegen …"
+      },
+      "dialogs": {
+        "titles": {
+          "notary": "Beglaubigung vermerken",
+          "renotarize": "Neue Unterschrift beim Notar",
+          "submitted": "Einreichung vermerken",
+          "resolveInterim": "Zwischenverfügung erledigt",
+          "interim": "Zwischenverfügung erfassen",
+          "complete": "Eintragung vermerken",
+          "confirmation": "Bestätigung ablegen"
+        },
+        "saves": {
+          "notary": "Vermerken",
+          "renotarize": "Vermerken",
+          "submitted": "Vermerken",
+          "resolveInterim": "Vermerken",
+          "interim": "Erfassen",
+          "complete": "Eintragung vermerken",
+          "confirmation": "Ablegen"
+        },
+        "notary": "Notar",
+        "notarizedOn": "Beglaubigt am",
+        "submittedOn": "Eingereicht am",
+        "resolvedOn": "Erledigt am",
+        "interimOn": "Zwischenverfügung vom",
+        "deadline": "Frist",
+        "interimDocument": "Zwischenverfügung",
+        "registeredOn": "Eingetragen am",
+        "court": "Registergericht",
+        "number": "Registernummer",
+        "extract": "Registerauszug",
+        "completeHint": "Setzt das Eintragungsdatum der Satzungsstände und zieht Registergericht und Nummer im Vereinsstamm nach.",
+        "renotarizeHint": "Vermerkt die neue Beglaubigung und erledigt die Zwischenverfügung.",
+        "attachTitle": "{title} beifügen",
+        "attach": "Beifügen",
+        "confirmation": "Bestätigung der Meldung"
+      }
+    }
   }
 }

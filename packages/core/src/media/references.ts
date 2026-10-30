@@ -1,5 +1,6 @@
 import type { Deps } from '../deps';
-import type { AssetMediaReference, MediaReference } from '../modules/manifest';
+import type { AssetMediaReferenceInput, MediaReference } from '../modules/manifest';
+import { withResolvedLabel } from '../modules/record-hooks';
 import { enabledManifests } from '../modules/service';
 import { readSetting } from '../settings/service';
 
@@ -8,10 +9,10 @@ import { readSetting } from '../settings/service';
  * lebten hier, bis die Akte ins Modul `dms` zog — das Modul beantwortet sie
  * seither über seinen eigenen `mediaReferences`-Haken.
  */
-export function coreMediaReferences(deps: Deps, assetIds: ReadonlySet<string>): AssetMediaReference[] {
+export function coreMediaReferences(deps: Deps, assetIds: ReadonlySet<string>): AssetMediaReferenceInput[] {
   const logo = readSetting<string | null>(deps, 'branding.logoAssetId');
   if (!logo || !assetIds.has(logo)) return [];
-  return [{ assetId: logo, label: 'Logo des Vereins', entity: 'setting', id: 'branding.logoAssetId', href: '/admin/settings' }];
+  return [{ assetId: logo, label: { key: 'media.references.logo' }, entity: 'setting', id: 'branding.logoAssetId', href: '/admin/settings' }];
 }
 
 /**
@@ -26,7 +27,7 @@ export function findMediaReferencesFor(deps: Deps, assetIds: Iterable<string>): 
   const found = new Map<string, MediaReference[]>([...ids].map((id) => [id, []]));
   if (ids.size === 0) return found;
   for (const manifest of enabledManifests(deps)) {
-    for (const { assetId, ...reference } of manifest.mediaReferences?.(deps, ids) ?? []) found.get(assetId)?.push(reference);
+    for (const { assetId, ...reference } of manifest.mediaReferences?.(deps, ids) ?? []) found.get(assetId)?.push(withResolvedLabel(deps, reference));
   }
   return found;
 }

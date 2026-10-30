@@ -1,6 +1,6 @@
 {
   "name": "@kompass/module-finance",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "private": true,
   "type": "module",
   "exports": {
@@ -9,6 +9,7 @@
     "./format": "./src/format/index.ts",
     "./wording": "./src/donations/templates/wording.ts",
     "./evidence-rules": "./src/allocation/evidence-rules.ts",
+    "./reserve-rules": "./src/allocation/reserve-rules.ts",
     "./statement-rules": "./src/ledger/statement-rules.ts",
     "./gem-forms": "./src/reporting/gem-forms.ts",
     "./codes": "./src/ledger/codes.ts",
@@ -21,6 +22,7 @@
   },
   "dependencies": {
     "@kompass/core": "workspace:*",
+    "@kompass/markdown": "workspace:*",
     "@kompass/module-contacts": "workspace:*",
     "@kompass/module-dms": "workspace:*",
     "@kompass/module-projects": "workspace:*",

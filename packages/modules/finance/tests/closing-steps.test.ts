@@ -39,7 +39,8 @@ describe('Jahresabschluss — Stand der Schritte 1 bis 8', () => {
   it('numbers and groups the twelve steps and points at the first open one', async () => {
     const t = await setup();
     const s = await t.status();
-    expect(s.steps.map((x) => x.key)).toEqual([...CLOSING_STEPS]);
+    // Schritt 13 (Mittelverwendung) nur über der Grenze — hier nicht (M2).
+    expect(s.steps.map((x) => x.key)).toEqual(CLOSING_STEPS.filter((k) => k !== 'fundsUse'));
     expect(s.steps.map((x) => x.number)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
     expect(s.steps.map((x) => x.group)).toEqual(['before', 'before', 'before', 'before', 'before', 'before', 'before', 'close', 'after', 'after', 'after', 'after']);
     expect(s).toMatchObject({ fiscalYearId: t.y2025, designation: '2025', ended: true, yearStatus: 'open', reopened: null, toRepeat: [], handovers: [], me: { canConfirm: true, canClose: true, canHandover: true, canCount: true, canRunConfirmations: true } });
@@ -223,6 +224,19 @@ describe('Jahresabschluss — Stand der Schritte 1 bis 8', () => {
     expect(fields(await t.confirm('openItems'))).toEqual(['note:required']);
     unwrap(await t.confirm('openItems', 'Forderung im Januar bezahlt'));
     expect(t.step(await t.status(), 'openItems').done).toBe(true);
+  });
+
+  it('F-B3: counts a purpose closed in the year by the association time zone, not the UTC day', async () => {
+    const t = await setup();
+    const { createPurpose } = await import('../src/ledger/purposes');
+    const { financePurposes } = await import('../src/schema');
+    const late = unwrap(await createPurpose(t.f.deps, t.f.ctx, { name: 'Silvester 23:30' }));
+    const early = unwrap(await createPurpose(t.f.deps, t.f.ctx, { name: 'Neujahr 00:30' }));
+    // 31.12. 22:30 UTC = 23:30 Berlin (noch 2025); 31.12. 23:30 UTC = 01.01. 00:30 Berlin (schon 2026).
+    t.f.deps.db.update(financePurposes).set({ createdAt: '2025-01-02T10:00:00.000Z', dissolvedAt: '2025-12-31T22:30:00.000Z' }).where(eq(financePurposes.id, late.id)).run();
+    t.f.deps.db.update(financePurposes).set({ createdAt: '2025-01-02T10:00:00.000Z', dissolvedAt: '2025-12-31T23:30:00.000Z' }).where(eq(financePurposes.id, early.id)).run();
+    expect(t.step(await t.status(), 'purposes')).toMatchObject({ facts: { closedInYear: 1 } });
+    expect(t.step(await t.status(t.y2026), 'purposes')).toMatchObject({ facts: { closedInYear: 1 } });
   });
 
   it('purposes: none below zero, and the open ones with money confirmed', async () => {

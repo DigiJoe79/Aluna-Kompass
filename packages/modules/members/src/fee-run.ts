@@ -11,7 +11,8 @@ import { feePaymentReference } from './fee-period';
 import { catchAborted, MembersAborted, membersConflict } from './errors';
 import { FEE_RUN_NOTICES, memberFeeCharges, memberFeeRuns, memberMemberships, memberRunLetters, type FeeChargeRow, type FeeRunRow, type MembershipRow } from './schema';
 import { issueMemberLetterInternal } from './letters/issue';
-import { recordRunLetterInternal } from './run-dispatch';
+import { abortIssue } from '@kompass/module-dms';
+import { mergeRefused, recordRunLetterInternal, runLetterExistsInternal } from './run-dispatch';
 import { addDays } from './letters/shared';
 
 const HUMAN_ONLY_SETTING = 'members.mcpHumanOnlyAllowed';
@@ -256,19 +257,27 @@ export async function continueFeeRun(deps: Deps, ctx: CallContext, input: unknow
   if (!charged.ok) return charged;
   if (charged.value > 0) return ok(runView(deps.db, run));
 
-  const refused = [...run.noticeRefused];
+  const refused: FeeRunRow['noticeRefused'] = [];
   for (const membershipId of noticesDue(deps.db, run).slice(0, parsed.value.max)) {
     const issued = await issueMemberLetterInternal(deps, ctx, { kind: 'feeNotice', membershipId, data: { year: run.year } }, {
-      afterIssue: (tx, doc, contactId) => recordRunLetterInternal(tx, deps, { runRef: feeRunRef(run.id), membershipId, documentId: doc.id, contactId }),
+      afterIssue: (tx, doc, contactId) => {
+        // N7: Ein zweiter Abschnitt desselben Laufs (Neu laden, zweiter Tab) verwirft seinen Brief still.
+        if (runLetterExistsInternal(tx, feeRunRef(run.id), membershipId)) abortIssue(membersConflict('runLetterExists'));
+        recordRunLetterInternal(tx, deps, { runRef: feeRunRef(run.id), membershipId, documentId: doc.id, contactId });
+      },
       // R5: Die gesonderte Ankündigung an einen fremden Kontoinhaber geht mit demselben Lauf hinaus, nach dessen Zustellweg.
       afterHolderNotice: (tx, documentId, holderContactId) => recordRunLetterInternal(tx, deps, { runRef: feeRunRef(run.id), membershipId, documentId, contactId: holderContactId }),
     });
+    if (!issued.ok && 'code' in issued.error && issued.error.code === 'runLetterExists') continue;
     if (!issued.ok) refused.push({ membershipId, code: 'code' in issued.error && typeof issued.error.code === 'string' ? issued.error.code : issued.error.type });
     // Backlog 78: Die Mitteilung ging hinaus, die Ankündigung an den Kontoinhaber nicht (etwa ohne Finanzrechte) — festhalten statt still.
     else if (issued.value.prenotification && 'refused' in issued.value.prenotification) refused.push({ membershipId, code: issued.value.prenotification.refused, letter: 'prenotification' });
   }
   return deps.db.transaction((tx: DbOrTx) => {
-    let current: FeeRunRow = { ...run, noticeRefused: refused };
+    // N7: Der Stand von jetzt, nicht der vor dem Ausstellen — ein anderer Abschnitt kann inzwischen geschrieben haben.
+    const stored = tx.select().from(memberFeeRuns).where(eq(memberFeeRuns.id, run.id)).get()!;
+    let current: FeeRunRow = { ...stored, noticeRefused: mergeRefused(stored.noticeRefused, refused) };
+    if (stored.status !== 'running') return ok(runView(tx, stored));
     if (noticesDue(tx, current).length === 0) current = { ...current, status: 'done', finishedAt: isoNow(deps.clock) };
     tx.update(memberFeeRuns).set({ noticeRefused: current.noticeRefused, status: current.status, finishedAt: current.finishedAt }).where(eq(memberFeeRuns.id, run.id)).run();
     if (current.status === 'done') {

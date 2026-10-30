@@ -11,7 +11,7 @@ import { Select } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import type { ActionState } from '@/lib/actions';
 import { withUnplacedFieldErrors } from '@/lib/feedback';
-import { RESERVE_KINDS, type ReserveKind } from '@/lib/finance/reserves';
+import { OPERATION_RESERVE_KINDS, RESERVE_KINDS, type ReserveKind } from '@/lib/finance/reserves';
 import { saveReserveAction, saveReserveUploadAction, updateReserveAction } from './actions';
 import { ResolutionField } from './resolution-field';
 import { FormField } from '@/components/forms/form-field';
@@ -28,6 +28,8 @@ export interface ReserveInitial {
   carryForwardDate: string | null;
   isActive: boolean;
   updatedAt: string;
+  /** F-B2: Vorgänge oder Vortrag im abgeschlossenen Jahr — der Dienst lehnt eine andere Art ab, das Feld ist gesperrt. */
+  kindLocked?: boolean;
 }
 
 /**
@@ -35,6 +37,10 @@ export interface ReserveInitial {
  * ein Zweck, Beschluss Pflicht. Mit `initial` derselbe Dialog als
  * „Bearbeiten“ (Befund 40) — der Beschluss wird dann über „Beschluss
  * ersetzen“ getauscht, nicht hier.
+ *
+ * Rücklagen im wirtschaftlichen Geschäftsbetrieb und in der Vermögensverwaltung (Plan U2, Designer Frage 4): Das Feld
+ * „wofür“ heißt dort „Begründung“, ist Pflicht und steht unter dem Beschluss; beim Bearbeiten (ohne Beschluss im Dialog)
+ * an der Stelle des Feldes. Der Dienst lehnt ohne Begründung ab (`reserveReasonRequired`).
  */
 export function ReserveForm({ purposes, initial, onClose, onSaved }: { purposes: { id: string; name: string }[]; initial?: ReserveInitial; onClose: () => void; onSaved: () => void }) {
   const t = useTranslations('finance.reserves');
@@ -47,7 +53,8 @@ export function ReserveForm({ purposes, initial, onClose, onSaved }: { purposes:
   const [pending, setPending] = useState(false);
   const feedback = useActionFeedback();
 
-  const needsText = kind === 'projectFunds' || kind === 'replacement';
+  const operation = OPERATION_RESERVE_KINDS.includes(kind);
+  const needsText = kind === 'projectFunds' || kind === 'replacement' || operation;
   const canSave = name.trim() !== '' && (!needsText || purposeText.trim() !== '') && (!!initial || !!document !== !!file);
 
   const submit = async () => {
@@ -84,8 +91,10 @@ export function ReserveForm({ purposes, initial, onClose, onSaved }: { purposes:
         <DialogTitle>{initial ? t('form.editTitle', { name: initial.name }) : t('form.title')}</DialogTitle>
         <div data-testid="reserve-form">
           <FormGrid>
-            <FormField id="reserve-kind" label={t('form.kind')}>
-              <Select id="reserve-kind" value={kind} onChange={(e) => setKind(e.target.value as ReserveKind)}>
+            {/* Die Arten sind lang („Rücklage im wirtschaftlichen Geschäftsbetrieb“): volle Breite, und wo es doch nicht
+                passt (Telefon), endet der Text mit „…“ statt mitten im Buchstaben (Bildabnahme 0.4.5 O-3). Ohne Layout-Test. */}
+            <FormField id="reserve-kind" label={t('form.kind')} size="l">
+              <Select id="reserve-kind" className="truncate" value={kind} disabled={initial?.kindLocked} onChange={(e) => setKind(e.target.value as ReserveKind)}>
                 {RESERVE_KINDS.map((k) => (
                   <option key={k} value={k}>
                     {t(`kinds.${k}`)}
@@ -96,9 +105,17 @@ export function ReserveForm({ purposes, initial, onClose, onSaved }: { purposes:
             <FormField id="reserve-name" label={t('form.name')} required>
               <Input id="reserve-name" value={name} onChange={(e) => setName(e.target.value)} />
             </FormField>
-            <FormField id="reserve-purpose-text" label={t('form.purposeText')} required={needsText} hint={t('form.purposeTextHint')} size="l">
-              <Textarea id="reserve-purpose-text" rows={2} value={purposeText} onChange={(e) => setPurposeText(e.target.value)} />
-            </FormField>
+            {operation ? (
+              initial ? (
+                <FormField id="reserve-reason" label={t('form.reason')} required hint={kind === 'assetManagement' ? t('form.reasonHint.assetManagement') : t('form.reasonHint.business')} size="l">
+                <Textarea id="reserve-reason" rows={2} value={purposeText} onChange={(e) => setPurposeText(e.target.value)} />
+              </FormField>
+              ) : null
+            ) : (
+              <FormField id="reserve-purpose-text" label={t('form.purposeText')} required={needsText} hint={t('form.purposeTextHint')} size="l">
+                <Textarea id="reserve-purpose-text" rows={2} value={purposeText} onChange={(e) => setPurposeText(e.target.value)} />
+              </FormField>
+            )}
             <FormField id="reserve-purpose" label={t('form.purpose')}>
               <Select id="reserve-purpose" value={purposeId} onChange={(e) => setPurposeId(e.target.value)}>
                 <option value="">{t('form.noPurpose')}</option>
@@ -114,6 +131,11 @@ export function ReserveForm({ purposes, initial, onClose, onSaved }: { purposes:
                 <ResolutionField id="reserve-resolution" document={document} onDocument={setDocument} onFile={setFile} />
               </FormCell>
             )}
+            {operation && !initial ? (
+              <FormField id="reserve-reason" label={t('form.reason')} required hint={kind === 'assetManagement' ? t('form.reasonHint.assetManagement') : t('form.reasonHint.business')} size="l">
+                <Textarea id="reserve-reason" rows={2} value={purposeText} onChange={(e) => setPurposeText(e.target.value)} />
+              </FormField>
+            ) : null}
           </FormGrid>
         </div>
         <FormActionBar placement="dialog" cancel={onClose} pending={pending} saveDisabled={!canSave} saveLabel={initial ? t('form.update') : t('form.save')} saveTestId="reserve-form-save" onSave={() => void submit()} state={withUnplacedFieldErrors(feedback.state, [])} />

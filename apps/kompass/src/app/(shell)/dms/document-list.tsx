@@ -312,21 +312,25 @@ export function DocumentList({ documents, currentFolder, total, unfiltered, read
                     {/* Silbentrennung statt Bruch mitten im Wort (Runde 3, 018; `lang="de"` am Dokument). */}
                     <TableCell col="title" className="min-w-[160px] whitespace-normal wrap-break-word hyphens-auto max-[1100px]:min-w-[140px]">
                       <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                        <RowLink href={`/dms/${doc.id}`} className="text-ink hover:text-link">
-                          {doc.subject}
-                        </RowLink>
+                        {/* Betreff und Punkt „Texterkennung ausstehend“ fließen zusammen: Der Punkt steht am Ende der letzten
+                            Betreffzeile, nicht allein in einer eigenen (Bilder 0.5.0; Einzelstelle, ohne Layout-Test). */}
+                        <span className="min-w-0">
+                          <RowLink href={`/dms/${doc.id}`} className="text-ink hover:text-link">
+                            {doc.subject}
+                          </RowLink>
+                          {doc.textStatus && doc.textStatus !== 'done' ? (
+                            <span
+                              title={t('textPending')}
+                              className="ml-2 inline-block h-1.5 w-1.5 rounded-full bg-warning align-middle"
+                              aria-label={t('textPending')}
+                            />
+                          ) : null}
+                        </span>
                         {doc.openFollowUp ? (
                           // Neutral statt Info-Blau: Blau ist die Linkfarbe und unterscheidet hier nichts (03 C43).
                           <StatusBadge tone={doc.openFollowUp.dueAt < today ? 'warning' : 'neutral'}>
                             {t('followUpBadge', { date: fmt.date(doc.openFollowUp.dueAt) })}
                           </StatusBadge>
-                        ) : null}
-                        {doc.textStatus && doc.textStatus !== 'done' ? (
-                          <span
-                            title={t('textPending')}
-                            className="inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-warning"
-                            aria-label={t('textPending')}
-                          />
                         ) : null}
                       </div>
                     </TableCell>

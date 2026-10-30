@@ -1,4 +1,4 @@
-import { newId, unwrap, type CallContext } from '@kompass/core';
+import { newId, schema, unwrap, type CallContext } from '@kompass/core';
 import { auditEntry, ctxWith, systemContext } from '@kompass/core/testing';
 import { contactRoles, createContact } from '@kompass/module-contacts';
 import { documents } from '@kompass/module-dms';
@@ -65,7 +65,11 @@ describe('Ergebnis der Mitgliederversammlung (Rechenschaft C Schritt 11)', () =>
     const later = unwrap(await save({ assemblyOn: '2026-06-20', expectedVersion: first.version, discharges: [{ contactId: anna.id, outcome: 'granted' }, { contactId: bert.id, outcome: 'granted' }, { contactId: carl.id, outcome: 'granted' }] }));
     expect(later.discharges.map((d) => d.decidedOn)).toEqual(['2026-03-14', '2026-06-20', '2026-06-20']);
     expect(later).toMatchObject({ granted: 3, total: 3, complete: true });
-    expect(assemblyOfYearInternal(f.deps.db, y2025)?.complete).toBe(true);
+    // V-7: das Protokoll nennt beim Überschreiben, was vorher galt; die erste Speicherung hat kein `before`.
+    const saves = f.deps.db.select().from(schema.auditLog).all().filter((a) => a.action === 'finance.assembly.save');
+    expect(saves[0]!.before).toBeNull();
+    expect(JSON.parse(saves.at(-1)!.before!)).toEqual({ fiscalYearId: y2025, assemblyOn: '2026-03-14', dischargeMode: 'individual', accountsApproved: 'yes', granted: 1, total: 3, minutesDocumentId: null });
+    expect(assemblyOfYearInternal(f.deps, f.deps.db, y2025, 'Europe/Berlin')?.complete).toBe(true);
   });
 
   it('a collective discharge is complete only when granted', async () => {

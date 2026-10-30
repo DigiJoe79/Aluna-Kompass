@@ -53,10 +53,10 @@ export interface RequirementListItem {
  * „Fehlt noch“ voll, „Bitte ansehen“ als Warnkästen, „Erfüllt · n“ und
  * „Trifft nicht zu · n“ eingeklappt. Leere Gruppen fehlen.
  */
-export function RequirementList({ items, grouping, variant }: { items: RequirementListItem[]; grouping?: 'open-first'; variant?: 'compact' | 'rows' }) {
+export function RequirementList({ items, grouping, variant, openFirstOnPhone }: { items: RequirementListItem[]; grouping?: 'open-first'; variant?: 'compact' | 'rows'; /** Nur `rows`: am Telefon steht die erste offene Zeile zuerst (Designer Jahresrechnung, Frage 5). */ openFirstOnPhone?: boolean }) {
   if (grouping === 'open-first') return <GroupedRequirementList items={items} />;
   if (variant === 'compact') return <CompactRequirementList items={items} />;
-  if (variant === 'rows') return <RowsRequirementList items={items} />;
+  if (variant === 'rows') return <RowsRequirementList items={items} openFirstOnPhone={openFirstOnPhone === true} />;
   return (
     <ul className="space-y-2" data-testid="requirement-list">
       {items.map((item) => (
@@ -158,11 +158,16 @@ function CompactRequirementList({ items }: { items: RequirementListItem[] }) {
  * Erledigt steht **voll** (Designer Runde 8, 17a): Haken in `success`, Titel in `ink`, `detail` (das Datum) in `muted`,
  * rechts die Nummer als Link. In dieser Variante heißt gedämpft schon „noch nicht möglich“; gedämpft erledigt sähe aus
  * wie wartend. Die Regel „erledigt = gedämpft“ gilt weiter für die Karten-Variante (MUSTER § F).
+ *
+ * Am Telefon (Regel Runde 7, 307; Designer Jahresrechnung, Frage 5) steht die rechte Seite einer Zeile unter dem Titel
+ * in voller Breite, ihre Knöpfe (nicht das ⋯) in Feldhöhe über die Breite. `openFirstOnPhone` stellt dort die erste
+ * offene, nicht wartende Zeile an den Anfang (`order-first`); am Rechner bleibt die Folge.
  */
-function RowsRequirementList({ items }: { items: RequirementListItem[] }) {
+function RowsRequirementList({ items, openFirstOnPhone }: { items: RequirementListItem[]; openFirstOnPhone: boolean }) {
   const t = useTranslations('common.requirements');
+  const firstOpen = openFirstOnPhone ? items.find((i) => !i.done && !i.blocked)?.key : undefined;
   return (
-    <ul className="border-t border-line-2" data-testid="requirement-list">
+    <ul className={cn('border-t border-line-2', firstOpen && 'max-sm:flex max-sm:flex-col')} data-testid="requirement-list">
       {items.map((item) => {
         const action = !item.done && !item.blocked && item.canSelf && item.href ? <ActionLink item={{ ...item, href: item.href }} /> : null;
         // Gedämpft ist nur, was noch nicht möglich ist (17a); erledigt steht voll.
@@ -174,8 +179,9 @@ function RowsRequirementList({ items }: { items: RequirementListItem[] }) {
             data-done={item.done}
             data-blocked={item.blocked}
             data-muted={muted || undefined}
+            data-first-on-phone={item.key === firstOpen || undefined}
             // `relative`: Bezugsrahmen des `sr-only` wie in `OpenRow`. Am Telefon bricht die rechte Seite unter den Titel.
-            className={cn('relative flex flex-wrap items-center gap-x-2.5 gap-y-1.5 border-b border-line-2 py-2.5 last:border-b-0', muted && 'text-muted-ink')}
+            className={cn('relative flex flex-wrap items-center gap-x-2.5 gap-y-1.5 border-b border-line-2 py-2.5 last:border-b-0', muted && 'text-muted-ink', item.key === firstOpen && 'max-sm:order-first max-sm:border-b')}
           >
             {item.done ? (
               <>
@@ -202,7 +208,8 @@ function RowsRequirementList({ items }: { items: RequirementListItem[] }) {
             {item.blocked ? (
               item.blockedText ? <span className="text-meta">{item.blockedText}</span> : null
             ) : item.extra || action ? (
-              <span className="flex shrink-0 flex-wrap items-center gap-2">
+              // Am Telefon unter dem Titel in voller Breite, Knöpfe in Feldhöhe über die Breite; ⋯ (`aria-haspopup`) bleibt klein.
+              <span className="flex shrink-0 flex-wrap items-center gap-2 max-sm:basis-full max-sm:flex-nowrap max-sm:[&_[data-slot=button]:not([aria-haspopup])]:h-[var(--field-h)] max-sm:[&_[data-slot=button]:not([aria-haspopup])]:flex-1">
                 {item.extra}
                 {action}
               </span>
@@ -216,7 +223,7 @@ function RowsRequirementList({ items }: { items: RequirementListItem[] }) {
 
 function ActionLink({ item }: { item: RequirementListItem & { href: string } }) {
   return (
-    <Link href={item.href} className={buttonVariants({ variant: 'outline', size: 'sm' })}>
+    <Link href={item.href} data-slot="button" className={buttonVariants({ variant: 'outline', size: 'sm' })}>
       {item.actionLabel}
     </Link>
   );

@@ -17,7 +17,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Segmented } from '@/components/ui/segmented';
 import { Select } from '@/components/ui/select';
-import { formatEuro, parseAmount } from '@/lib/finance/amount';
+import { formatEuro, readAmount } from '@/lib/finance/amount';
 import { withUnplacedFieldErrors } from '@/lib/feedback';
 import { createMemberAction } from '../actions';
 
@@ -41,6 +41,7 @@ export function ruleOn(schedules: readonly ScheduleOption[], typeId: string, day
  */
 export function MemberCreateForm({ types, schedules, initialContact, today }: { types: { id: string; name: string; exempt: boolean }[]; schedules: ScheduleOption[]; initialContact: PickedContact | null; today: string }) {
   const t = useTranslations('members.form');
+  const tAmount = useTranslations('finance.amount');
   const ti = useTranslations('members.interval');
   const tp = useTranslations('members.payment');
   const c = useTranslations('common');
@@ -51,6 +52,8 @@ export function MemberCreateForm({ types, schedules, initialContact, today }: { 
   const [admittedOn, setAdmittedOn] = useState('');
   const [override, setOverride] = useState(false);
   const [amount, setAmount] = useState('');
+  // Abweichender Beitrag ist Pflicht, sobald gewählt: leer oder unlesbar steht am Feld, statt still auf die Beitragsordnung zu fallen.
+  const [amountError, setAmountError] = useState<'missing' | 'format' | null>(null);
   const [reduction, setReduction] = useState<'none' | 'reduced'>('none');
   const [payment, setPayment] = useState<'transfer' | 'directDebit'>('transfer');
   const [iban, setIban] = useState('');
@@ -62,8 +65,14 @@ export function MemberCreateForm({ types, schedules, initialContact, today }: { 
   const rule = type && !type.exempt ? ruleOn(schedules, typeId, admittedOn || appliedOn) : null;
 
   const save = async () => {
+    const read = override && rule ? readAmount(amount, { required: true }) : null;
+    if (read && !read.ok) {
+      setAmountError(read.error);
+      return;
+    }
+    setAmountError(null);
+    const amountCents = read?.cents ?? null;
     setPending(true);
-    const amountCents = override && rule ? parseAmount(amount) : null;
     await feedback.run(
       () =>
         createMemberAction({
@@ -125,7 +134,7 @@ export function MemberCreateForm({ types, schedules, initialContact, today }: { 
             ) : override ? (
               <>
                 <FormField id="member-amount" label={t('amount', { interval: ti(rule.interval) })} required size="s" error={errors.amountCents}>
-                  <AmountField id="member-amount" name="amount" value={amount} onChange={setAmount} />
+                  <AmountField id="member-amount" name="amount" value={amount} onChange={(v) => { setAmount(v); setAmountError(null); }} invalid={amountError !== null} errorText={amountError === 'missing' ? tAmount('missing') : undefined} />
                 </FormField>
                 <FormField id="member-reduction" label={t('reduction')} hint={t('reductionHint')}>
                   <Select id="member-reduction" value={reduction} onChange={(e) => setReduction(e.target.value as 'none' | 'reduced')}>

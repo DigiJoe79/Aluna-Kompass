@@ -94,3 +94,29 @@ export function computeCharges(input: ComputeChargesInput): ComputedCharge[] {
   }
   return out;
 }
+
+/**
+ * Plan R1 (M2): Ein neu berechneter Zeitraum, der sich mit behaltenen Beiträgen (bezahlt, gestundet, eingereicht)
+ * überschneidet, zerfällt in die Monate davor und danach, die keiner deckt — je Stück anteilig nach derselben Regel wie
+ * beim Wechsel mitten im Zeitraum (`rate`: Betrag und Rhythmus am Zeitraumbeginn), fällig an seinem Beginn. Ohne
+ * Überschneidung unverändert; ganz gedeckt oder ohne Satz: nichts.
+ */
+export function splitAroundKept(c: ComputedCharge, kept: readonly { periodStart: string; periodEnd: string }[], rate: { amountCents: number; interval: FeeInterval } | null): ComputedCharge[] {
+  const overlapping = kept.filter((k) => k.periodStart <= c.periodEnd && c.periodStart <= k.periodEnd);
+  if (overlapping.length === 0) return [c];
+  if (c.skip || !rate) return [];
+  const covered = (day: string) => overlapping.some((k) => k.periodStart <= day && day <= k.periodEnd);
+  const pieces: string[][] = [];
+  let piece: string[] = [];
+  for (let y = Number(c.periodStart.slice(0, 4)), m = Number(c.periodStart.slice(5, 7)); monthStart(y, m) <= c.periodEnd; m === 12 ? ((y += 1), (m = 1)) : (m += 1)) {
+    if (covered(monthStart(y, m))) {
+      if (piece.length > 0) pieces.push(piece);
+      piece = [];
+    } else piece.push(monthStart(y, m));
+  }
+  if (piece.length > 0) pieces.push(piece);
+  return pieces.map((months) => {
+    const [y, m] = months.at(-1)!.split('-').map(Number) as [number, number];
+    return { periodStart: months[0]!, periodEnd: monthEnd(y, m), amountCents: Math.round((rate.amountCents * months.length) / INTERVAL_MONTHS[rate.interval]), dueOn: months[0]! };
+  });
+}

@@ -41,7 +41,7 @@ describe('Unternavigation Finanzen', () => {
     expect(accountability(['finance.overview'])).toContain('/finance/deadlines');
   });
 
-  it('„Rechenschaft“: Berichte und Mittelverwendung (später) für Lesende mit und ohne Namen (Spec § Navigation, N1)', () => {
+  it('„Rechenschaft“: Berichte und Mittelverwendung für Lesende mit und ohne Namen — Mittelverwendung seit 0.4.5 aktiv (Spec § Navigation, N1; Plan U2)', () => {
     const items = buildNavigation({ manifests: [coreModule, financeModule], enabledKeys: new Set(['core', 'finance']), permissions: new Set(['finance.overview']) })
       .flatMap((g) => g.items)
       .filter((i) => i.section === 'finance.accountability');
@@ -53,7 +53,7 @@ describe('Unternavigation Finanzen', () => {
       ['/finance/tax', 'finance.read', false, false],
       ['/finance/vat', [], false, false],
       ['/finance/deadlines', ['finance.read', 'finance.overview'], false, true],
-      ['/finance/fund-use', ['finance.read', 'finance.overview'], true, true],
+      ['/finance/fund-use', ['finance.read', 'finance.overview'], false, true],
     ]);
   });
 

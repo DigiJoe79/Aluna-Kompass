@@ -1,4 +1,4 @@
-import { isoNow, newId, notFound, ok, requirePermission, validate, type CallContext, type DbOrTx, type Deps, type Result } from '@kompass/core';
+import { isoDayIn, isoNow, newId, notFound, ok, requirePermission, validate, type CallContext, type DbOrTx, type Deps, type Result } from '@kompass/core';
 import { and, eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { financeAudit } from '../audit';
@@ -7,7 +7,7 @@ import { financeAuditSamples, financeAuditSectionReviews, financeEntries } from 
 import { auditorOfInternal, auditWorkFixedSinceInternal, requireAuditorOfYear, requireAuditRead } from './access';
 import { entryRemarksInternal } from './remarks';
 import { entryFingerprintInternal } from './baseline';
-import { sectionReviewStatesInternal, sectionRowsHashInternal, type AuditSampleState } from './sections';
+import { activeAuditSectionsInternal, sectionReviewStatesInternal, sectionRowsHashInternal, type AuditSampleState } from './sections';
 import { AUDIT_SECTIONS, type AuditRemarkView } from './types';
 
 /**
@@ -100,7 +100,7 @@ export async function setSample(deps: Deps, ctx: CallContext, input: unknown): P
 /** Nach Ablage des Prüfberichts stehen Stichproben und Durchsicht fest (Designer Runde 7, 274/279); Vermerke nicht. */
 function workFixed(deps: Deps, year: { id: string; designation: string }) {
   const since = auditWorkFixedSinceInternal(deps.db, year.id);
-  return since ? financeConflict('auditWorkFixed', { designation: year.designation, filedOn: since.slice(0, 10) }) : null;
+  return since ? financeConflict('auditWorkFixed', { designation: year.designation, filedOn: isoDayIn(deps, Date.parse(since)) }) : null;
 }
 
 const reviewSchema = z.object({ fiscalYearId: z.string().min(1), section: z.enum(AUDIT_SECTIONS) });
@@ -115,6 +115,8 @@ async function setReviewed(deps: Deps, ctx: CallContext, input: unknown, reviewe
   const v = parsed.value;
   const checked = requireAuditorOfYear(deps, ctx, v.fiscalYearId);
   if ('failure' in checked) return checked.failure;
+  // Abschnitt 9 gibt es nur mit Gremien (G-30).
+  if (!activeAuditSectionsInternal(deps, checked.year).includes(v.section)) return notFound('financeAuditSection', v.section);
   const fixed = workFixed(deps, checked.year);
   if (fixed) return fixed;
   return deps.db.transaction((tx: DbOrTx) => {

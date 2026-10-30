@@ -1,8 +1,9 @@
 'use client';
 
-import type { GemAnswers } from '@kompass/module-finance';
+import type { GemAnswers, TaxStatuteSuggestion } from '@kompass/module-finance';
 import { gemFormFor, type GemLine } from '@kompass/module-finance/gem-forms';
 import { useTranslations } from 'next-intl';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Fragment, useState, type ReactNode } from 'react';
 import { CountField } from '@/components/count-field';
@@ -14,6 +15,7 @@ import { FormActionBar } from '@/components/forms/form-action-bar';
 import { FormCard, FormCardBody } from '@/components/forms/form-card';
 import { FormField } from '@/components/forms/form-field';
 import { FormCell, FormGrid, FormRowBreak } from '@/components/forms/form-grid';
+import { RefusalNotice } from '@/components/forms/refusal-notice';
 import { useActionFeedback } from '@/components/forms/use-action-feedback';
 import { Notice } from '@/components/notice';
 import { Overline } from '@/components/overline';
@@ -24,9 +26,9 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Segmented } from '@/components/ui/segmented';
 import { Select } from '@/components/ui/select';
-import { formatAmount, formatEuro, parseAmount } from '@/lib/finance/amount';
+import { formatAmount, formatEuro, readAmount, type AmountError } from '@/lib/finance/amount';
 import { withUnplacedFieldErrors } from '@/lib/feedback';
-import { saveTaxPeriodAnswersAction } from './actions';
+import { linkTaxPeriodDocumentAction, saveTaxPeriodAnswersAction } from './actions';
 import type { TaxYear } from './types';
 
 type YesNoField = 'churchPurposes' | 'charitablePurposes' | 'welfare' | 'hospital' | 'sport' | 'gratuitousBenefits' | 'withholdingTax50a';
@@ -51,6 +53,8 @@ const answerField = (line: GemLine): keyof GemAnswers | null => (typeof line.sou
 
 function draftOf(answers: GemAnswers, years: readonly TaxYear[], suggestions: Record<string, number> | null): Draft {
   return {
+    // Das Satzungsdatum aus Gremien wird nicht vorbelegt (Joe 29.10.): Es stünde als ungespeicherte Änderung da, und
+    // das Verlassen der Seite fragte nach. Es steht als Hinweis daneben, erst „Übernehmen“ setzt es.
     answers,
     replacement: Object.fromEntries(Object.entries(answers.replacementAssets ?? {}).map(([id, a]) => [id, { asset: a.asset, expectedCost: a.expectedCostCents === undefined ? '' : formatAmount(a.expectedCostCents), regularDepreciation: a.regularDepreciationCents === undefined ? '' : formatAmount(a.regularDepreciationCents) }])),
     participations: { ...(answers.participations ?? {}) },
@@ -67,7 +71,11 @@ function answersOf(d: Draft, replacementIds: readonly string[], participationIds
   delete out.participations;
   delete out.gratuitousBenefitList;
   delete out.memberCounts;
-  const cents = (text: string) => (text.trim() ? (parseAmount(text) ?? undefined) : undefined);
+  // Unlesbares fehlt hier nur für Zähler und Vergleich; gespeichert wird es nie — `amountErrorsOf` hält `save` an.
+  const cents = (text: string) => {
+    const read = readAmount(text, { required: false });
+    return read.ok && read.cents !== null ? read.cents : undefined;
+  };
   const replacement = Object.fromEntries(
     Object.entries(d.replacement)
       .filter(([id, r]) => replacementIds.includes(id) || r.asset.trim())
@@ -77,11 +85,29 @@ function answersOf(d: Draft, replacementIds: readonly string[], participationIds
   if (Object.keys(replacement).length > 0) out.replacementAssets = replacement;
   const participations = Object.fromEntries(Object.entries(d.participations).filter(([id, p]) => participationIds.includes(id) || p.company.trim()).filter(([, p]) => p.company.trim() || p.taxOffice.trim() || p.taxNumber.trim()));
   if (Object.keys(participations).length > 0) out.participations = participations;
-  if (d.answers.gratuitousBenefits === true) out.gratuitousBenefitList = d.gifts.map((g) => ({ reason: g.reason, amountCents: parseAmount(g.amount) ?? 0 }));
+  if (d.answers.gratuitousBenefits === true) out.gratuitousBenefitList = d.gifts.map((g) => ({ reason: g.reason, amountCents: cents(g.amount) ?? 0 }));
   const members = Object.fromEntries(Object.entries(d.members).filter(([, v]) => v.trim() !== '').map(([id, v]) => [id, Number(v)]));
   if (Object.keys(members).length > 0) out.memberCounts = members;
   for (const key of Object.keys(out) as (keyof GemAnswers)[]) if (out[key] === undefined) delete out[key];
   return out;
+}
+
+/**
+ * Die Betragsfelder, die so nicht gespeichert werden (App-B6/B7): Kosten und AfA einer Wiederbeschaffungsrücklage sind
+ * optional (leer fehlt), der Betrag einer unentgeltlichen Zuwendung (Zeile 75) ist Pflicht. Schlüssel ist die Feld-ID.
+ */
+function amountErrorsOf(d: Draft): Record<string, AmountError> {
+  const errors: Record<string, AmountError> = {};
+  const check = (id: string, text: string, required: boolean) => {
+    const read = readAmount(text, { required });
+    if (!read.ok) errors[id] = read.error;
+  };
+  for (const [id, r] of Object.entries(d.replacement)) {
+    check(`answer-cost-${id}`, r.expectedCost, false);
+    check(`answer-afa-${id}`, r.regularDepreciation, false);
+  }
+  if (d.answers.gratuitousBenefits === true) for (const g of d.gifts) check(`answer-gift-${g.key}-amount`, g.amount, true);
+  return errors;
 }
 
 /** Je Schlüssel geändert oder nicht — der Zähler der Speicherleiste. */
@@ -107,6 +133,8 @@ export function AnswersCard({
   canEdit,
   filed = false,
   today,
+  statuteSuggestion = null,
+  statuteLinked = false,
 }: {
   period: { id: string; version: string; answers: GemAnswers };
   formYear: number;
@@ -120,6 +148,10 @@ export function AnswersCard({
   filed?: boolean;
   /** Heute in der Zone des Vereins: Bis zum Jahresende steht die Mitgliederzahl „Stand heute“ (316). */
   today?: string;
+  /** G7: „Satzung in der Fassung vom“ aus Gremien (`taxPeriodStatute`); `null` ohne Gremien. */
+  statuteSuggestion?: TaxStatuteSuggestion | null;
+  /** Die Satzung liegt schon als Beilage am Zeitraum — dann kein „Satzung aus Gremien verknüpfen“. */
+  statuteLinked?: boolean;
 }) {
   const t = useTranslations('finance.tax.answers');
   const editable = canEdit && !filed;
@@ -134,8 +166,12 @@ export function AnswersCard({
   const participationIds = participationReserves.map((r) => r.id);
   const initialDraft = draftOf(period.answers, years, memberSuggestions);
   const [baseline, setBaseline] = useState(() => answersOf(initialDraft, replacementIds, participationIds));
+  const statuteLink = useActionFeedback();
   const [d, setD] = useState<Draft>(initialDraft);
   const [pending, setPending] = useState(false);
+  const [amountErrors, setAmountErrors] = useState<Record<string, AmountError>>({});
+  const tAmount = useTranslations('finance.amount');
+  const amountError = (id: string) => (amountErrors[id] === 'missing' ? tAmount('missing') : undefined);
   const feedback = useActionFeedback();
   const current = answersOf(d, replacementIds, participationIds);
   const changed = changedCount(current, baseline);
@@ -143,6 +179,9 @@ export function AnswersCard({
   const set = (patch: Partial<GemAnswers>) => setD((s) => ({ ...s, answers: { ...s.answers, ...patch } }));
 
   const save = async () => {
+    const errors = amountErrorsOf(d);
+    setAmountErrors(errors);
+    if (Object.keys(errors).length > 0) return;
     setPending(true);
     const result = await feedback.run(() => saveTaxPeriodAnswersAction({ id: period.id, answers: current, expectedVersion: period.version }), { retry: () => void save() });
     setPending(false);
@@ -195,10 +234,53 @@ export function AnswersCard({
       );
     }
     if (field === 'statuteDate') {
+      // Übernommen, aber noch nicht gespeichert: der Rahmen des Vorschlags (MUSTER § E), bis gespeichert oder geändert.
+      const taken = !!statuteSuggestion && a.statuteDate === statuteSuggestion.date && baseline.statuteDate !== statuteSuggestion.date;
+      const input = <Input id={id} type="date" value={a.statuteDate ?? ''} onChange={(e) => set({ statuteDate: e.target.value || undefined })} className={taken ? 'border-agent' : undefined} />;
+      if (!statuteSuggestion) {
+        return (
+          <FormField key={field} id={id} label={label(line)} required={line.required} size="m">
+            {input}
+          </FormField>
+        );
+      }
+      // G7: der Vorschlag als Hinweis mit Herkunft, grau unter dem Feld; „Übernehmen“, solange das Feld etwas anderes sagt.
+      const source = (chunks: ReactNode) => <Link href={statuteSuggestion.source.href} className="text-link underline-offset-2 hover:underline">{chunks}</Link>;
+      const differs = a.statuteDate !== statuteSuggestion.date;
+      const hintValues = { date: fmt.date(statuteSuggestion.date), label: statuteSuggestion.source.label, link: source };
+      const docId = statuteSuggestion.documentId;
       return (
-        <FormField key={field} id={id} label={label(line)} required={line.required} size="m">
-          <Input id={id} type="date" value={a.statuteDate ?? ''} onChange={(e) => set({ statuteDate: e.target.value || undefined })} />
-        </FormField>
+        <FormCell key={field} size="m" className="flex flex-col gap-1.5">
+          <FormField id={id} label={label(line)} required={line.required} size="m">
+            {input}
+          </FormField>
+          <span className="text-hint text-muted-ink" data-testid="answer-statuteDate-source">
+            {!differs ? t.rich('statuteFrom', hintValues) : a.statuteDate ? t.rich('statuteDiffers', hintValues) : t.rich('statuteOffer', hintValues)}
+            {differs ? (
+              <>
+                {' '}
+                <Button type="button" variant="link" className="h-auto p-0 text-hint font-normal" data-testid="answer-statuteDate-take" onClick={() => set({ statuteDate: statuteSuggestion.date })}>
+                  {t('statuteTake')}
+                </Button>
+              </>
+            ) : null}
+          </span>
+          {docId && !statuteLinked ? (
+            <Button
+              type="button"
+              variant="link"
+              className="h-auto w-fit p-0 text-hint font-normal"
+              data-testid="answer-statuteDate-link"
+              onClick={async () => {
+                const result = await statuteLink.run(() => linkTaxPeriodDocumentAction({ id: period.id, slot: 'statute', documentId: docId }));
+                if (result.status === 'success') router.refresh();
+              }}
+            >
+              {t('statuteLink')}
+            </Button>
+          ) : null}
+          <RefusalNotice state={statuteLink.state} />
+        </FormCell>
       );
     }
     if (field === 'feeResolution') {
@@ -241,7 +323,7 @@ export function AnswersCard({
                 </FormField>
                 <FormField id={`answer-gift-${g.key}-amount`} label={t('giftAmount')} required size="s">
                   <span className="flex items-center gap-2">
-                    <AmountField id={`answer-gift-${g.key}-amount`} name={`gift-${i}`} value={g.amount} onChange={(v) => setD((s) => ({ ...s, gifts: s.gifts.map((x) => (x.key === g.key ? { ...x, amount: v } : x)) }))} required />
+                    <AmountField id={`answer-gift-${g.key}-amount`} name={`gift-${i}`} value={g.amount} onChange={(v) => setD((s) => ({ ...s, gifts: s.gifts.map((x) => (x.key === g.key ? { ...x, amount: v } : x)) }))} required invalid={`answer-gift-${g.key}-amount` in amountErrors} errorText={amountError(`answer-gift-${g.key}-amount`)} />
                     <RowMenu name={g.reason || t('giftEntry', { n: i + 1 })} items={[{ key: 'remove', label: t('giftRemove'), onSelect: () => setD((s) => ({ ...s, gifts: s.gifts.filter((x) => x.key !== g.key) })) }]} />
                   </span>
                 </FormField>
@@ -282,10 +364,10 @@ export function AnswersCard({
                   </FormField>
                   <FormRowBreak />
                   <FormField id={`answer-cost-${r.id}`} label={t('expectedCost')} size="s">
-                    <AmountField id={`answer-cost-${r.id}`} name={`cost-${r.id}`} value={v.expectedCost} onChange={(x) => put({ expectedCost: x })} />
+                    <AmountField id={`answer-cost-${r.id}`} name={`cost-${r.id}`} value={v.expectedCost} onChange={(x) => put({ expectedCost: x })} invalid={`answer-cost-${r.id}` in amountErrors} />
                   </FormField>
                   <FormField id={`answer-afa-${r.id}`} label={t('regularDepreciation')} size="s">
-                    <AmountField id={`answer-afa-${r.id}`} name={`afa-${r.id}`} value={v.regularDepreciation} onChange={(x) => put({ regularDepreciation: x })} />
+                    <AmountField id={`answer-afa-${r.id}`} name={`afa-${r.id}`} value={v.regularDepreciation} onChange={(x) => put({ regularDepreciation: x })} invalid={`answer-afa-${r.id}` in amountErrors} />
                   </FormField>
                 </>
               ) : (

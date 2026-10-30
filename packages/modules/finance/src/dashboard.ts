@@ -603,13 +603,13 @@ const auditTile: DashboardTile<Record<string, never>> = {
     if (auditDoneInternal(db, yearId)) {
       const open = auditorsOfYearInternal(db, yearId).filter((a) => a.mode === 'kompass' && auditorAccessInternal(db, deps, a.contactId, a.accessEndedAt).hasRole).length;
       if (open > 0) lines.push({ titleKey: 'accessOpen', values: { count: open, designation }, href });
-      if (lines.length === 0 && filed?.filedAt) lines.push({ titleKey: 'done', values: { designation, filedOn: filed.filedAt.slice(0, 10) }, href });
+      if (lines.length === 0 && filed?.filedAt) lines.push({ titleKey: 'done', values: { designation, filedOn: isoDayIn(deps, Date.parse(filed.filedAt)) }, href });
     }
     return { kind: 'list', lines, total: lines.length, href };
   },
 };
 
-const DEADLINE_KINDS = ['noticeExpiry', 'partnerProof', 'recipientNoticeExpiry', 'confirmationsToCorrect', 'auditorAccess', 'vatAdvanceReturn', 'vatReturn', 'vatAmendment', 'taxReturn'] as const satisfies readonly DeadlineKind[];
+const DEADLINE_KINDS = ['noticeExpiry', 'partnerProof', 'recipientNoticeExpiry', 'confirmationsToCorrect', 'auditorAccess', 'vatAdvanceReturn', 'vatReturn', 'vatAmendment', 'taxReturn', 'timelyUse', 'timelyUseLapsed'] as const satisfies readonly DeadlineKind[];
 
 /**
  * Rechenschaft C (Board 7a, Spec § C): „Finanzfristen · Schwellen“ — berechnete Fristen binnen 60 Tagen oder überfällig,

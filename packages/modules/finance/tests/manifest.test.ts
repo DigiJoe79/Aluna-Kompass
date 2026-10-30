@@ -55,11 +55,14 @@ describe('finance module', () => {
       // Rechenschaft A1: die festgeschriebene Fassung eines Berichts, am Bericht und am Geschäftsjahr.
       { entityType: 'financeReport', readPermission: 'finance.read', receivePermission: 'finance.reportsFinalize' },
       { entityType: 'financeFiscalYear', readPermission: 'finance.read', receivePermission: 'finance.periodClose' },
+      { entityType: 'financeFundsUseOpening', readPermission: 'finance.read', receivePermission: 'finance.setup' },
       { entityType: 'financeAuditor', readPermission: 'finance.read', receivePermission: 'finance.periodClose' },
       { entityType: 'financeAuditReport', readPermission: 'finance.read', receivePermission: 'finance.audit' },
       { entityType: 'financeAccount', readPermission: 'finance.read', receivePermission: 'finance.entriesWrite' },
       { entityType: 'financeHandover', readPermission: 'finance.read', receivePermission: 'finance.setup' },
       { entityType: 'financeTaxPeriod', readPermission: 'finance.read', receivePermission: 'finance.periodClose' },
+      // G-30: berechneter Bezug — die Protokolle der Beschlüsse in Abschnitt 9, nur lesen.
+      { entityType: 'financeAuditResolutions', readPermission: 'finance.audit', documentsOf: expect.any(Function) },
       { entityType: 'financeVatFiling', readPermission: 'finance.read', receivePermission: 'finance.periodClose' },
     ]);
   });
@@ -74,7 +77,7 @@ describe('finance module', () => {
   });
 
   it('brings six contact roles, none of which holds a contact by itself', () => {
-    expect(financeModule.contactRoles).toEqual(['donor', 'grant-recipient', 'claimant', 'board-member', 'related-party', 'treasurer'].map((key) => ({ key, retention: 'none' })));
+    expect(financeModule.contactRoles).toEqual(['donor', 'grant-recipient', 'claimant', 'board-member', 'related-party', 'treasurer'].map((key) => (key === 'board-member' ? { key, retention: 'none', representation: true } : { key, retention: 'none' })));
   });
 
   it('labels a fiscal year for follow-ups and links from the file module', async () => {
@@ -97,7 +100,7 @@ describe('finance module', () => {
   it('states for every entity whether it can be deleted, and never lets the history go', () => {
     const rules = Object.fromEntries((financeModule.deletionRules ?? []).map((r) => [r.entity, r.deletable]));
     expect(rules).toEqual({
-      financeAccount: true, financeCategory: true, financePurpose: true, financeDatedValue: true, financeFiscalYear: false, financePeriodEvent: false,
+      financeAccount: true, financeCategory: true, financePurpose: true, financeDatedValue: true, financeFiscalYear: false, financePeriodEvent: false, financeFundsUseOpening: false,
       financeEntryDraft: true, financeEntry: false, financeOpenItem: false, financeAllocationCorrection: false, financeEntryDocument: false, financeEntryJustification: false, financeNotReturnMark: false,
       financeProjectSettings: true, financeYearPersonalData: true, financeImportPersonalData: true, financeCashCount: false,
       financeImportProfile: false, financeImportRule: true, financeContactBankAccount: true,
@@ -106,7 +109,7 @@ describe('finance module', () => {
       financeExpenseClaimDraft: true, financeExpenseClaim: false, financeContactWaiverTerms: true, financeContactTaxDetails: true,
       financePartnerProfile: true, financePartnerNotice: false, financePartnerPaymentPosition: false, financePartnerPaymentDraft: true, financePartnerPayment: false, financePartnerEvidence: true,
       financeReserve: true, financeReserveMovement: false, financePurposeTransfer: false,
-      financeMandate: false, financePledge: false,
+      financeMandate: false, financePledge: false, financeNameConsent: false, financeAnnualAccountsNote: true, financeReportSignature: false, financeAnnualAccountsPublication: false,
       financeDirectDebitRun: false, financeDirectDebitItem: false, financePrenotification: false,
       financeReport: false, financeReportRelease: false, financeOtherAsset: false,
       financeAuditAuditor: true, financeAuditBaseline: false, financeAuditSample: true, financeAuditSectionReview: true, financeAuditRemark: false, financeAuditReport: false,

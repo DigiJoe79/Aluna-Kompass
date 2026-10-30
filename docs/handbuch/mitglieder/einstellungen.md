@@ -14,7 +14,12 @@ der Betrag ein Mindestbetrag ist. Oben steht der geltende Stand, ein künftiger 
 eingeklappt. **Neuen Stand anlegen …** belegt die Eingabe mit dem letzten Stand vor; tragen Sie den Tag ein, ab dem er
 gilt, und den Tag des Beschlusses.
 
-Ein Stand, nach dem schon Beiträge angelegt sind, bleibt fest. Für eine Änderung legen Sie einen neuen Stand an.
+Ein Stand, nach dem schon Beiträge angelegt sind, bleibt fest: Tag und Beträge lassen sich nicht mehr ändern, den
+Beschlusstag tragen Sie über **Bearbeiten …** nach. Für eine Änderung der Beträge legen Sie einen neuen Stand an.
+
+Den Beschluss selbst hängen Sie als Dokument der Akte an. Mit **Gremien** kann ein Stand auf den Beschluss dort
+verweisen (über einen Agenten: `members_fee_schedule_save` mit `resolutionId`); er steht dann mit Link neben dem
+Beschlusstag.
 
 ## Mahnstufen
 
@@ -39,7 +44,6 @@ Stundung beginnt die Zählung für diesen Beitrag neu: Mahnungen vor der neuen F
 
 ## Agent
 
-Unter „Nummern und Fristen“ steht als letzter Abschnitt der Schalter **„Darf ein Agent Mitglieder aufnehmen, Läufe
-starten und Briefe ausstellen?“**; er gilt wie die Felder darüber erst mit „Speichern“. Ausgeschaltet (Vorgabe) gehen Aufnahme, Ablehnung, Beitrags- und Mahnlauf, Briefe, Stundung und Erlass
-nur hier in Kompass; ein Agent darf Anträge erfassen, Daten pflegen und Vorschauen lesen. Den Schalter ändert, wer die
-Vereinseinstellungen verwalten darf, und nur in der Oberfläche; jede Änderung steht im Protokoll.
+Unter [Verwaltung → Agenten](../einstellungen/agenten.md) steht der Schalter **„Darf ein Agent Mitglieder aufnehmen,
+Läufe starten und Briefe ausstellen?“**. Ausgeschaltet (Vorgabe) gehen Aufnahme, Ablehnung, Beitrags- und Mahnlauf,
+Briefe, Stundung und Erlass nur hier in Kompass; ein Agent darf Anträge erfassen, Daten pflegen und Vorschauen lesen.

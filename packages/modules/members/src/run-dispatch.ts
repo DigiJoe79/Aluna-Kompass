@@ -62,6 +62,22 @@ export function recordRunLetterInternal(tx: DbOrTx, deps: Deps, input: { runRef:
   tx.insert(memberRunLetters).values({ id: newId(), ...input, createdAt: isoNow(deps.clock) }).run();
 }
 
+/**
+ * Plan R1 (N7): Hat der Lauf der Mitgliedschaft schon einen Brief ausgestellt (auch einen stornierten — ein Lauf stellt
+ * nie zweimal aus)? In `afterIssue` geprüft, in der Transaktion des Ausstellens: Zwei Abschnitte desselben Laufs
+ * (Neu laden, zweiter Tab) rechnen dieselbe Liste, aber nur der erste schreibt.
+ */
+export function runLetterExistsInternal(db: DbOrTx, runRef: string, membershipId: string): boolean {
+  return !!db.select({ id: memberRunLetters.id }).from(memberRunLetters).where(and(eq(memberRunLetters.runRef, runRef), eq(memberRunLetters.membershipId, membershipId))).get();
+}
+
+/** Plan R1 (N7): Ablehnungen eines Laufs zusammenführen — der Stand in der Datenbank plus die eigenen, ohne Doppel. */
+export function mergeRefused<T extends { membershipId: string; code: string; letter?: string }>(stored: readonly T[], own: readonly T[]): T[] {
+  const key = (r: T) => `${r.membershipId}|${r.code}|${r.letter ?? ''}`;
+  const seen = new Set(stored.map(key));
+  return [...stored, ...own.filter((r) => !seen.has(key(r)) && seen.add(key(r)))];
+}
+
 /** Die Briefe eines Laufs in der Reihenfolge der Mitgliedsnummern, ohne stornierte Dokumente. */
 function runLetters(db: DbOrTx, runRef: string) {
   return allRunLetters(db, runRef).filter((r) => r.status !== 'voided');

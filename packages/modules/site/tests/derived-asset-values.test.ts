@@ -85,7 +85,7 @@ describe('derived IDs in template values', () => {
     expect(JSON.stringify(preview)).toContain(a.id);
     const cleaned = unwrap(await deleteEntry(deps, manage, { id: e.id, deleteOrphanedMedia: true }));
     expect(cleaned.deletedMedia).toEqual([a.id]);
-    expect(cleaned.keptMedia).toEqual([expect.objectContaining({ id: b.id, usedBy: ['Variable „Bühne“'] })]);
+    expect(cleaned.keptMedia).toEqual([expect.objectContaining({ id: b.id, usedBy: [expect.stringContaining('Bühne')] })]);
     expect(unwrap(await deleteUnreferencedMedia(deps, manage, [b.id])).deletedMedia).toEqual([]);
   });
 

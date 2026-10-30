@@ -5,6 +5,7 @@ import { and, desc, eq, lte } from 'drizzle-orm';
 import { z } from 'zod';
 import { catchAborted, membersConflict } from './errors';
 import { recalculateChargesInternal } from './fee-recalc';
+import { INTERVAL_MONTHS } from './fee-period';
 import { feeRuleAt, feeScheduleAt } from './fee-schedule';
 import { periodAt } from './memberships';
 import { syncPaymentMethodsInternal, type TransferKept } from './payment-method';
@@ -71,9 +72,13 @@ export function typeAt(db: DbOrTx, membershipId: string, on: string): { typeId: 
   return type ? { typeId: type.id, exempt: type.feeExempt } : null;
 }
 
+/** Plan R1 (M4): ein Betrag von einem Rhythmus auf einen anderen umgerechnet (kaufmännisch gerundet). */
+export const convertInterval = (amountCents: number, from: FeeInterval, to: FeeInterval) => (from === to ? amountCents : Math.round((amountCents * INTERVAL_MONTHS[to]) / INTERVAL_MONTHS[from]));
+
 /**
  * Der Beitrag am Tag (intern): Art beitragsfrei oder Vereinbarung „erlassen“ → `exempt`; sonst Betrag und Rhythmus aus
- * der Vereinbarung, wo sie welche nennt, im Übrigen aus der Regel des geltenden Stands.
+ * der Vereinbarung, wo sie welche nennt, im Übrigen aus der Regel des geltenden Stands. Nennt die Vereinbarung nur einen
+ * anderen Rhythmus, wird der Regelbetrag auf ihn umgerechnet (M4: 120 € jährlich → 10 € monatlich).
  */
 export function effectiveFee(db: DbOrTx, membershipId: string, on: string): EffectiveFee {
   const type = typeAt(db, membershipId, on);
@@ -84,7 +89,9 @@ export function effectiveFee(db: DbOrTx, membershipId: string, on: string): Effe
   if (!feeScheduleAt(db, on)) return { none: 'noSchedule' };
   if (!rule && (agreement?.amountCents == null || agreement.interval == null)) return { none: 'noRule' };
   const fromAgreement = agreement !== null && (agreement.amountCents !== null || agreement.interval !== null);
-  return { amountCents: agreement?.amountCents ?? rule!.amountCents, interval: agreement?.interval ?? rule!.interval, paymentMethod, exempt: false, source: fromAgreement ? 'agreement' : 'schedule' };
+  const interval = agreement?.interval ?? rule!.interval;
+  const amountCents = agreement?.amountCents ?? convertInterval(rule!.amountCents, rule!.interval, interval);
+  return { amountCents, interval, paymentMethod, exempt: false, source: fromAgreement ? 'agreement' : 'schedule' };
 }
 
 /**
@@ -132,7 +139,10 @@ export function checkAgreementInternal(db: DbOrTx, deps: Deps, membership: { id:
   const type = typeAt(db, membership.id, v.validFrom);
   const rule = type ? feeRuleAt(db, type.typeId, v.validFrom) : null;
   if (rule) {
-    if (rule.minimum && v.amountCents != null && v.amountCents < rule.amountCents && v.reduction !== 'reduced') return membersConflict('feeBelowMinimum', { minimumCents: rule.amountCents }, ['minimumCents']);
+    // M4, Nachlauf R1: Verglichen wird im Rhythmus der Vereinbarung mit dem umgerechneten Regelbetrag — genau dem Betrag,
+    // den `effectiveFee` ohne Vereinbarung ansetzt. So ist er nie wegen der Rundung zu wenig (8,33 €/Monat bei 100 €/Jahr).
+    const minimumInAgreedInterval = convertInterval(rule.amountCents, rule.interval, v.interval ?? rule.interval);
+    if (rule.minimum && v.amountCents != null && v.amountCents < minimumInAgreedInterval && v.reduction !== 'reduced') return membersConflict('feeBelowMinimum', { minimumCents: rule.amountCents }, ['minimumCents']);
     if (v.interval != null && !rule.allowedIntervals.includes(v.interval)) return membersConflict('intervalNotAllowed');
   }
   return { mandateId, payerContactId };

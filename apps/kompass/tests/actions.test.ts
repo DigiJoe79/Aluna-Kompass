@@ -28,10 +28,13 @@ describe('toActionState', () => {
     expect(getMsg(conflict('documentIsDraft', 'x'))).toBe('errors.conflict.documentIsDraft');
     expect(getMsg(conflict('weird', 'Detail'))).toBe('errors.conflict.default:{"detail":"Detail"}');
     expect(getMsg(conflict('stillPublished', 'Der Datensatz ist veröffentlicht. Ziehen Sie ihn erst zurück.'))).toBe('errors.conflict.stillPublished');
-    expect(getMsg(conflict('recordHeld', 'Noch gehalten von: Vertrag V-1 (bis 2036-12-31)'))).toBe('errors.conflict.recordHeld:{"detail":"Vertrag V-1 (bis 2036-12-31)"}');
-    expect(getMsg(conflict('stillReferenced', 'Es zeigt noch darauf: Dokument X'))).toBe('errors.conflict.stillReferenced:{"detail":"Dokument X"}');
+    expect(getMsg(conflict('mediaAssetInUse', 'Wird verwendet: Tier X'))).toBe('errors.conflict.mediaAssetInUse:{"detail":"Tier X"}');
     expect(getMsg(conflict('humanOnly', 'demo.mcpHumanOnlyAllowed'))).toBe('errors.humanOnly');
     expect(getMsg(conflict('settingManaged', 'finance'))).toBe('errors.settingManaged:{"module":"finance"}');
+    // V-10: mit Sprachdatei der Name des Moduls, nicht sein Schlüssel.
+    const tNames = Object.assign((key: string, values?: Record<string, unknown>) => (key === 'modules.names.finance' ? 'Finanzen' : values ? `${key}:${JSON.stringify(values)}` : key), { has: (key: string) => key === 'modules.names.finance' });
+    const named = toActionState(conflict('settingManaged', 'finance'), tNames);
+    expect(named.status === 'error' ? named.message : null).toBe('errors.settingManaged:{"module":"Finanzen"}');
     expect(getMsg(conflict('settingUiOnly', 'host.allowRobots'))).toBe('errors.settingUiOnly');
     expect(getMsg(conflict('moduleRefusesDisable', 'hasFinalRecords'))).toBe('modules.cannotDisable.generic');
     const tWithHas = Object.assign(
@@ -46,8 +49,8 @@ describe('toActionState', () => {
   });
 
   it('passes conflict code and raw detail through toActionState', () => {
-    const withColon = toActionState(conflict('recordHeld', 'Noch gehalten von: Vertrag V-1 (bis 2036-12-31)'), t);
-    expect(withColon).toMatchObject({ status: 'error', code: 'recordHeld', detail: 'Vertrag V-1 (bis 2036-12-31)' });
+    const withColon = toActionState(conflict('mediaAssetInUse', 'Wird verwendet: Tier X'), t);
+    expect(withColon).toMatchObject({ status: 'error', code: 'mediaAssetInUse', detail: 'Tier X' });
     const withoutColon = toActionState(conflict('cashWouldGoNegative', 'Das Barkonto Kasse waere im Minus. Pruefen Sie Datum und Betrag.'), t);
     expect(withoutColon).toMatchObject({ status: 'error', code: 'cashWouldGoNegative', detail: 'Das Barkonto Kasse waere im Minus. Pruefen Sie Datum und Betrag.' });
     // Bestehende Faelle bleiben grün: code/detail nur bei conflict.

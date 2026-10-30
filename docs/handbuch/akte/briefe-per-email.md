@@ -22,9 +22,7 @@ Die Karte **Versand** am Brief nennt den Zustellweg: „Noch nicht versandt.
 zeigt Empfänger, Betreff, den Begleittext, wie er hinausgeht, und den
 Anhang. Hat der Kontakt keine Adresse oder will er Post, nennt der Dialog
 den Grund und den Ausweg. Senden kann nur ein Mensch in Kompass, kein Agent — es sei denn, der Verein schaltet unter
-Einrichtung → Akte → Versand „Darf ein Agent Dokumente per E-Mail senden?“ ein (letzter Abschnitt der Karte „Absender“,
-gilt mit „Speichern“). Den Schalter ändert, wer die Vereinseinstellungen verwalten darf, nur in der Oberfläche und mit
-Eintrag im Protokoll.
+[Verwaltung → Agenten](../einstellungen/agenten.md) „Darf ein Agent Dokumente per E-Mail senden?“ ein.
 
 Die Mail geht im Hintergrund hinaus, höchstens so viele je Minute, wie unter
 [Einstellungen › Akte › Versand](../einstellungen/akte-einrichten.md)

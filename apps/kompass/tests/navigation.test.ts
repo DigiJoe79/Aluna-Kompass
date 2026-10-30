@@ -1,8 +1,9 @@
 import { coreModule, defineModule, type HandbookChapter, type ModuleManifest } from '@kompass/core';
 import { dmsModule } from '@kompass/module-dms';
+import { governanceModule } from '@kompass/module-governance';
 import { siteModule } from '@kompass/module-site';
 import { describe, expect, it } from 'vitest';
-import { activeRailKey, buildNavigation, buildRail, crumbsFor, locate, sectionsFor, type NavGroup, type NavItem } from '@/lib/navigation';
+import { activeRailKey, buildNavigation, buildRail, crumbsFor, locate, matchesPattern, sectionsFor, type NavGroup, type NavItem } from '@/lib/navigation';
 
 const finance = defineModule({
   key: 'finance',
@@ -46,7 +47,7 @@ describe('buildNavigation', () => {
     const groups = buildNavigation({ manifests: [coreModule], enabledKeys: new Set(['core']), permissions: new Set(['users.manage', 'audit.view']) });
     const admin = groups.find((g) => g.key === 'admin')!;
     const config = groups.find((g) => g.key === 'config')!;
-    expect(admin.items.map((i) => i.key)).toEqual(['users', 'roles', 'audit', 'retention', 'backup']);
+    expect(admin.items.map((i) => i.key)).toEqual(['users', 'roles', 'agents', 'audit', 'retention', 'backup']);
     expect(config.items.map((i) => i.key)).toEqual(['settings', 'locales', 'themes', 'modules', 'documents']);
     expect(admin.items.filter((i) => i.visible).map((i) => i.key)).toEqual(['users', 'audit']);
   });
@@ -451,5 +452,45 @@ describe('crumbsFor', () => {
       { label: 'Mediathek', current: true },
     ]);
     expect(crumbsFor(FIXTURE, '/help/gibt-es-nicht', th, chapters)).toEqual([{ label: 'Hilfe', current: true }]);
+  });
+});
+
+describe('Gremien (Plan U1 Task 3, N1/N7)', () => {
+  const governance = defineModule({
+    key: 'governance',
+    version: '0.1.0',
+    permissions: ['governance.read'],
+    moduleIcon: 'landmark',
+    navigation: [{ key: 'governance.meetings', href: '/governance/meetings', icon: 'landmark', group: 'governance', permission: 'governance.read' }],
+    workspaceRoutes: ['/governance/meetings/*/live'],
+  });
+  const second = { governance: [{ key: 'governance.other', href: '/governance/other', icon: 'landmark', group: 'governance', permission: 'governance.read' }] };
+  const build = () => buildNavigation({ manifests: [coreModule, finance, governance], enabledKeys: new Set(['core', 'finance', 'governance']), permissions: new Set(['finance.view', 'governance.read']), extraItems: second });
+
+  it('places Gremien with its landmark symbol right after Finanzen', () => {
+    const rail = buildRail(build());
+    expect(rail.map((e) => e.key).slice(0, 3)).toEqual(['home', 'finance', 'governance']);
+    expect(rail.find((e) => e.key === 'governance')!.icon).toBe('landmark');
+  });
+
+  it('a workspace route has no area navigation; the list keeps it (Gegenprobe with two entries)', () => {
+    const groups = build();
+    expect(sectionsFor(groups, '/governance/meetings').flatMap((s) => s.items.map((i) => i.key))).toEqual(['governance.meetings', 'governance.other']);
+    expect(sectionsFor(groups, '/governance/meetings/01J/live')).toEqual([]);
+    expect(sectionsFor(groups, '/governance/meetings/01J')).not.toEqual([]);
+  });
+
+  it('matchesPattern: * matches exactly one segment', () => {
+    expect(matchesPattern('/a/*/live', '/a/1/live')).toBe(true);
+    expect(matchesPattern('/a/*/live', '/a/1/2/live')).toBe(false);
+    expect(matchesPattern('/a/*/live', '/a/1/livex')).toBe(false);
+    expect(matchesPattern('/a', '/a/b')).toBe(true);
+  });
+});
+
+describe('Gremien: sechs Abschnitte (Plan U2 Task 6)', () => {
+  it('the governance group has six sections in board order', () => {
+    const groups = buildNavigation({ manifests: [coreModule, governanceModule], enabledKeys: new Set(['core', 'governance']), permissions: new Set(['governance.read']) });
+    expect(sectionsFor(groups, '/governance').flatMap((s) => s.items.map((i) => i.href))).toEqual(['/governance', '/governance/meetings', '/governance/resolutions', '/governance/circulars', '/governance/statutes', '/governance/register']);
   });
 });

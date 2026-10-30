@@ -3,7 +3,7 @@ import { abortReceive, documents, getDocumentRecord, linkDocumentInternal, recei
 import { and, eq, gt, inArray, isNotNull, isNull } from 'drizzle-orm';
 import { z } from 'zod';
 import { financeAudit } from '../audit';
-import { financeConflict } from '../errors';
+import { financeConflict, uploadLimitProblem } from '../errors';
 import { requireFinanceRead } from '../ledger/access';
 import { CERTIFIABLE_INCOME_KINDS } from '../ledger/codes';
 import { NOTICE_KINDS, noticeValidAt, noticeValidUntil, type NoticeKind } from '../ledger/notice-validity';
@@ -252,6 +252,8 @@ export async function attachNoticeDocument(deps: Deps, ctx: CallContext, input: 
   if (denied) return denied;
   const parsed = validate(deps, attachSchema, input);
   if (!parsed.ok) return parsed;
+  const tooLarge = uploadLimitProblem(deps, parsed.value.bytes);
+  if (tooLarge) return tooLarge;
   const v = parsed.value;
 
   const before = deps.db.select().from(financeNotices).where(eq(financeNotices.id, v.id)).get();

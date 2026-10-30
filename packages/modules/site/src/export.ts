@@ -14,7 +14,9 @@ import {
   ok,
   readSetting,
   requirePermission,
+  resolvePublishedFile,
   schema as core,
+  type PublishedFileSource,
 } from '@kompass/core';
 import { eq } from 'drizzle-orm';
 import type { FieldSchema } from './types';
@@ -115,6 +117,16 @@ export function mediaAssetSource(deps: Deps, id: string, labeling = aiLabelingEn
     read: () => deps.media.read(row.filename),
     ...(aiKind ? { aiKind } : {}),
   };
+}
+
+/** Eine Datei, die ein Fachmodul der Webseite liefert (Haken `publishedFile`): ohne Maße, ohne KI-Art. */
+function fromPublishedFile(file: PublishedFileSource | null): AssetSource | null {
+  return file ? { id: file.id, filename: file.filename, mimeType: file.mimeType, width: null, height: null, read: file.read } : null;
+}
+
+/** Die Basis einer ID: erst die Mediathek, dann die Dateien der Fachmodule (etwa das PDF einer Jahresrechnung). */
+export function assetSource(deps: Deps, id: string, labeling = aiLabelingEnabled(deps)): AssetSource | null {
+  return mediaAssetSource(deps, id, labeling) ?? fromPublishedFile(resolvePublishedFile(deps, id));
 }
 
 /** Wo ein Treffer zu bearbeiten ist: Variablen haben eine Seite, Sammlungseinträge je eine Maske, Zeilen einer Sicht ihre Adresse (`editLink` der Sicht). Dateinamen tragen keinen Verweis. */
@@ -363,7 +375,7 @@ async function collect(
   const ids = contentAssetIds(template.schema, { variables, collections, views });
   if (out) await mkdir(path.join(out.jobDir, 'assets'), { recursive: true });
   const labeling = aiLabelingEnabled(deps);
-  const assets = await gatherAssets(ids, (id) => mediaAssetSource(deps, id, labeling), out ? path.join(out.jobDir, 'assets') : null, out?.hooks);
+  const assets = await gatherAssets(ids, (id) => assetSource(deps, id, labeling), out ? path.join(out.jobDir, 'assets') : null, out?.hooks);
 
   const contentPayload = { variables, collections, views };
   const json = JSON.stringify(canonical({ variables, collections, views, assets }), null, 2);

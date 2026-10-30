@@ -5,6 +5,7 @@ import { DMS_DASHBOARD_TILES } from './dashboard';
 import { dmsFollowUpTargets } from './follow-ups';
 import { DMS_SETTINGS, installDms } from './install';
 import { DMS_MCP_TOOLS } from './mcp-tools';
+import { dmsRecordDeleted } from './record-deleted';
 import { dmsRecordLabels } from './record-labels';
 import { dmsRecordReferences } from './record-references';
 import { dmsRetentionDue, dmsRetentionHolds } from './retention';
@@ -109,6 +110,7 @@ export const dmsModule: ModuleManifest = defineModule({
   ],
   retentionHolds: dmsRetentionHolds,
   recordReferences: dmsRecordReferences,
+  recordDeleted: dmsRecordDeleted,
   retentionDue: dmsRetentionDue,
   backupCounts: (deps) => ({ documents: deps.db.select({ n: count() }).from(documents).get()?.n ?? 0 }),
   recordLabels: dmsRecordLabels,

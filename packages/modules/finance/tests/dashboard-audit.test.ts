@@ -32,6 +32,15 @@ describe('Kachel Kassenprüfung (Board 7a)', () => {
     expect(keys(await tile('audit').load(f.deps, f.ctx, {}))).toEqual(['questionsOpen']);
   });
 
+  it('„abgeschlossen am“ is the day of the filing in the association\'s zone (F-B3)', async () => {
+    const { f, y2025, miraAuditor } = await auditFixture();
+    unwrap(await removeAuditor(f.deps, f.ctx, { id: miraAuditor.id }));
+    f.deps.clock.set('2026-12-31T23:30:00.000Z');
+    unwrap(await fileAuditReportScan(f.deps, f.ctx, { fiscalYearId: y2025, bytes: pdfBytes() }));
+    const rest = await tile('audit').load(f.deps, f.ctx, {});
+    expect(rest.kind === 'list' && rest.lines).toEqual([expect.objectContaining({ titleKey: 'done', values: { designation: '2025', filedOn: '2027-01-01' } })]);
+  });
+
   it('shows „abgeschlossen am“ at rest and nothing without auditors', async () => {
     const { f, y2025, miraAuditor, paperAuditor } = await auditFixture();
     unwrap(await removeAuditor(f.deps, f.ctx, { id: miraAuditor.id }));

@@ -18,9 +18,9 @@ import { withUnplacedFieldErrors } from '@/lib/feedback';
 import { createRemarkAction } from './actions';
 
 export interface RemarkTarget {
-  type: 'entry' | 'document' | 'report' | 'year';
+  type: 'entry' | 'document' | 'report' | 'year' | 'resolution';
   id: string;
-  /** „2025-0141 · Barausgabe Sommerfest“, „Kassenbericht“, „Jahr 2025“. */
+  /** „2025-0141 · Barausgabe Sommerfest“, „Kassenbericht“, „Jahr 2025“, „Beschluss B-2026-003“. */
   label: string;
 }
 

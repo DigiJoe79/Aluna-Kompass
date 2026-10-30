@@ -5,9 +5,13 @@
  */
 export type ReserveMovementKind = 'allocate' | 'withdraw' | 'dissolve';
 
-/** Reihenfolge der Arten wie im Design: Projekt- und Betriebsmittel · Wiederbeschaffung · freie Rücklage · Beteiligung. */
-export const RESERVE_KINDS = ['projectFunds', 'replacement', 'free', 'participation'] as const;
-export type ReserveKind = (typeof RESERVE_KINDS)[number];
+/**
+ * Die Arten der Auswahl im Formular in der Reihenfolge der Moduldefinition: Projekt- und Betriebsmittel ·
+ * Wiederbeschaffung · freie Rücklage · Beteiligung · im wirtschaftlichen Geschäftsbetrieb · in der Vermögensverwaltung
+ * (Plan U2, Briefing „in der vorhandenen Auswahl“). Eine Liste, kein zweiter Typ — über den importfreien Unterpfad,
+ * damit das Client-Formular nicht den ganzen Dienst lädt.
+ */
+export { OPERATION_RESERVE_KINDS, RESERVE_KINDS, type ReserveKind } from '@kompass/module-finance/reserve-rules';
 
 export function reserveBalanceAfter(balanceCents: number, kind: ReserveMovementKind, amountCents: number | null): number {
   if (kind === 'dissolve') return 0;

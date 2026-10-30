@@ -193,9 +193,11 @@ Protokoll, Vorstandssitzungen und Beschlüsse, Ehrenamt als Rolle. Am Ende:
 Tätigkeitsbericht und alles, was Registergericht und Transparenzregister
 verlangen.
 
-Spec: noch keine.
+Spec: Gremien `2026-10-28-gremien-0-5-0` (Fassung 0.5.0). Ehrenamt,
+Tätigkeitsbericht und das Verzeichnis der Verarbeitungstätigkeiten bekommen je
+eine eigene Spec.
 
-**Stand: Mitglieder stehen, Gremien offen.** Zwei Schritte der Roadmap:
+**Stand: Mitglieder stehen, Gremien in Arbeit (0.5.0).** Zwei Schritte der Roadmap:
 Mitgliederstamm und Beiträge sind mit Schritt 4 (0.3.0) ausgeliefert, Gremien
 folgen in Schritt 6.
 
@@ -434,20 +436,26 @@ mit dem ersten echten Prüfpaket.
 
 ### Schritt 6: Gremien
 
-Eigene Spec, eigenes Brainstorming. Was heute feststeht:
+**Fassung 0.5.0.** Spec `2026-10-28-gremien-0-5-0` (Brainstorming und
+Rechtsprüfung am 2026-10-28). Was feststeht:
 
-- Die Kontaktrollen für Organmitglieder und Nahestehende, die Finanzen für
-  seine Prüfliste mitbringt, gehen an die Gremien über. Entlastung und
-  Prüfbericht hängen am Geschäftsjahr.
-- Das Gremien-Modul meldet den Schutzbereich für Vorstands- und
-  Mitgliedersachen an (Protokolle, Aufnahmeanträge, Ausschlussverfahren); die
-  Nutzer-Kontakt-Verknüpfung aus den Vorarbeiten trägt Mitglieder mit Zugang.
-- Satzung mit Ständen, ab der Gründungsfassung.
-- Mitgliederversammlung: Einladung mit Frist, Anwesenheit, Protokoll.
-  Vorstandssitzungen und Beschlüsse.
-- Ehrenamt als Kontaktrolle, dazu, was ein Helfer außer der Rolle braucht.
-- Rechenschaft: Protokolle, Tätigkeitsbericht, Meldungen an Registergericht
-  und Transparenzregister, Verzeichnis der Verarbeitungstätigkeiten.
+- Organe und Ämter mit Amtszeiten; Gremien ist die Quelle, die Kontaktrollen
+  für Organmitglieder (aus Finanzen) folgen den Ämtern. Entlastung und
+  Kassenbericht-Genehmigung stehen je Geschäftsjahr in Gremien, Finanzen
+  liest sie.
+- Satzung mit Ständen ab der Gründungsfassung; an jedem Stand hängt das
+  Regelwerk (Fristen, Quoren, Mehrheiten, Unterschriften), wo die Satzung
+  schweigt, gilt das BGB.
+- Sitzungen als Vorgang: Einladung mit Frist, Anwesenheit, Beschlüsse,
+  Wahlen, Protokoll — Kompass läuft in der Versammlung mit, rechnet vor und
+  warnt, sperrt aber nie. Umlaufbeschlüsse des Vorstands.
+- Schutzbereich für Vorstandssachen (Vorstandsprotokolle, Einladungen,
+  Anwesenheitslisten); MV-Protokolle bleiben offen. Kein Zugang für alle
+  Mitglieder — Kompass bedienen, die Funktionen und Aufgaben erfüllen.
+- Rechenschaft: Protokolle, Registeranmeldung als Vorgang mit Prüffrage zum
+  Transparenzregister, Weg zum Finanzamt bei Satzungsänderung und Auflösung.
+- Nicht in diesem Schritt (je eigene Spec): Ehrenamt, Tätigkeitsbericht,
+  Verzeichnis der Verarbeitungstätigkeiten.
 
 Erster Fall sind die Unterlagen, die es bei Aluna schon gibt: Gründungssatzung,
 die erste Mitgliederversammlung mit Satzungsänderung (2026), die

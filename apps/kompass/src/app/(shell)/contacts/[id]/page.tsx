@@ -1,5 +1,5 @@
-import { hasPermission, isModuleEnabled, readLocales, readSetting, requirePermission, todayIn, userNamesFor } from '@kompass/core';
-import { getContactTaxDetails, listContactIbans, vatProfileAt } from '@kompass/module-finance';
+import { contactRoleManager, contactRoleRowManager, hasPermission, isModuleEnabled, readLocales, readSetting, requirePermission, todayIn, userNamesFor } from '@kompass/core';
+import { annualAccountsDonorEffect, getContactTaxDetails, listContactIbans, vatProfileAt, type NameConsentEntry } from '@kompass/module-finance';
 import { listMemberTypes, membershipForContact } from '@kompass/module-members';
 import { dateFormatOf } from '@/lib/date-format';
 import { nameOrEmpty } from '@/lib/name-or-empty';
@@ -23,6 +23,7 @@ import { Overline } from '@/components/overline';
 import Link from 'next/link';
 import { PeoplePanel } from './people-panel';
 import { BankAccountsPanel, type BankAccountItem } from './bank-accounts-panel';
+import { AnnualAccountsPanel } from './annual-accounts-panel';
 import { ContactVatPanel, type ContactVatDecline } from './vat-panel';
 
 export default async function ContactDetailPage(props: { params: Promise<{ id: string }> }) {
@@ -44,8 +45,14 @@ export default async function ContactDetailPage(props: { params: Promise<{ id: s
   const retention = retentionResult.value;
 
   const organizationCountry = (await readSetting<string>(deps, 'organization.country')) ?? undefined;
-  const roleDefs = [...contactRoleDefinitions(deps).values()].map((d) => ({ key: d.key, retention: d.retention, managed: d.managedBy !== undefined }));
+  const roleDefs = [...contactRoleDefinitions(deps).values()].map((d) => ({ key: d.key, retention: d.retention, managed: contactRoleManager(deps, d) !== null, ...(d.representation ? { representation: true as const } : {}) }));
   const canManage = hasPermission(ctx, 'contacts.manage');
+  // Je Zeile: Gremien führt nur die Zeilen einer Amtszeit, ältere bleiben von Hand beendbar (V-1).
+  const definitions = contactRoleDefinitions(deps);
+  const roleRows = contact.roles.map((r) => {
+    const d = definitions.get(r.role);
+    return { ...r, managed: d ? contactRoleRowManager(deps, d, r.id) !== null : false };
+  });
 
   // Mitgliedschaft als Zeile in „Rollen“ (Handoff Mitglieder D4): nur mit Modul und Recht; ohne Mitgliedschaft keine Zeile.
   const membersOn = isModuleEnabled(deps, 'members') && hasPermission(ctx, 'members.read');
@@ -75,14 +82,18 @@ export default async function ContactDetailPage(props: { params: Promise<{ id: s
   let bankAccounts: BankAccountItem[] | null = null;
   // Umsatzsteuer (E6a Task 11c, Board 2a A): dazu nur, wenn der Verein heute Unternehmer ist.
   let vat: { reverseCharge: 'eu' | 'other' | null; decline: ContactVatDecline | null } | null = null;
+  let annual: { legalEntity: 'yes' | 'no' | null; consents: NameConsentEntry[]; effect: { designation: string; amountCents: number; sharePermille: number; named: boolean } | null } | null = null;
   if (isModuleEnabled(deps, 'finance') && hasPermission(ctx, 'finance.read')) {
     const listed = await listContactIbans(deps, ctx, { contactId: contact.id });
     if (listed.ok) {
       const names = userNamesFor(deps, listed.value.items.map((i) => i.createdByUserId));
       bankAccounts = listed.value.items.map((i) => ({ id: i.id, iban: i.iban, source: i.source, learnedFromEntryDate: i.learnedFromEntryDate, createdAt: i.createdAt, createdByName: names.get(i.createdByUserId) ?? null, coHolders: i.coHolders }));
     }
+    const details = await getContactTaxDetails(deps, ctx, { contactId: contact.id });
+    // Jahresrechnung (U1 Task 7, Designer 2a): juristische Person, Einwilligung und ihre Folge fürs letzte Jahr.
+    const effect = await annualAccountsDonorEffect(deps, ctx, { contactId: contact.id });
+    annual = { legalEntity: details.ok ? (details.value?.legalEntity ?? null) : null, consents: details.ok ? (details.value?.nameConsents ?? []) : [], effect: effect.ok ? effect.value : null };
     if (vatProfileAt(deps.db, todayIn(deps)).entrepreneur) {
-      const details = await getContactTaxDetails(deps, ctx, { contactId: contact.id });
       if (details.ok) {
         const d = details.value?.reverseChargeDecline ?? null;
         vat = { reverseCharge: details.value?.reverseCharge ?? null, decline: d ? { reason: d.reason, text: d.text, on: d.on, byName: userNamesFor(deps, [d.byUserId]).get(d.byUserId) ?? null } : null };
@@ -181,7 +192,7 @@ export default async function ContactDetailPage(props: { params: Promise<{ id: s
         <RolesPanel
           contactId={contact.id}
           contactName={displayName(contact)}
-          roles={contact.roles}
+          roles={roleRows}
           roleDefinitions={roleDefs}
           canManage={canManage}
           today={todayIn(deps)}
@@ -191,6 +202,20 @@ export default async function ContactDetailPage(props: { params: Promise<{ id: s
         {bankAccounts ? <BankAccountsPanel contactId={contact.id} contactName={displayName(contact)} items={bankAccounts} canEdit={hasPermission(ctx, 'finance.entriesWrite')} /> : null}
 
         {vat ? <ContactVatPanel key={`${vat.reverseCharge}-${vat.decline?.on ?? ''}-${vat.decline?.reason ?? ''}`} contactId={contact.id} entrepreneur reverseCharge={vat.reverseCharge} decline={vat.decline} canEdit={hasPermission(ctx, 'finance.entriesWrite')} /> : null}
+
+        {annual ? (
+          <AnnualAccountsPanel
+            key={`${annual.legalEntity}-${annual.consents.length}`}
+            contactId={contact.id}
+            contactKind={contact.kind}
+            legalEntity={annual.legalEntity}
+            consents={annual.consents}
+            effect={annual.effect}
+            canEdit={hasPermission(ctx, 'finance.entriesWrite')}
+            today={todayIn(deps)}
+            lastClosedYear={annual.effect ? parseInt(annual.effect.designation, 10) : parseInt(todayIn(deps), 10) - 1}
+          />
+        ) : null}
 
         <RelatedDocuments deps={deps} ctx={ctx} entityType="contact" entityId={contact.id} />
 

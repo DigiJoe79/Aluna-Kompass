@@ -60,14 +60,14 @@ describe('Erklärungszeitraum (Rechenschaft D2 Task 2)', () => {
   it('suggests the next period of three years, as far as they exist, and its deadline (Joe 2026-10-25)', async () => {
     const { f, y2023, y2024, y2025, y2026 } = await setup();
     // Ohne Zeitraum: Von das jüngste beendete Jahr, Bis zwei weiter, soweit angelegt (2027 gibt es nicht).
-    expect(unwrap(await taxPeriodDefaults(f.deps, f.ctx, {}))).toEqual({ firstFiscalYearId: y2025, lastFiscalYearId: y2026, dueOn: '2027-08-02', dueOnWithAdvisor: '2028-02-29' });
+    expect(unwrap(await taxPeriodDefaults(f.deps, f.ctx, {}))).toEqual({ firstFiscalYearId: y2025, lastFiscalYearId: y2026, dueOn: '2027-08-02', dueOnWithAdvisor: '2028-02-29', statute: null });
     unwrap(await createTaxPeriod(f.deps, f.ctx, { firstFiscalYearId: y2023, lastFiscalYearId: y2023, withTaxAdvisor: false, dueOn: '2024-07-31' }));
     // Nach einem Zeitraum: Von das Jahr danach, Bis = Von + 2.
-    expect(unwrap(await taxPeriodDefaults(f.deps, f.ctx, {}))).toEqual({ firstFiscalYearId: y2024, lastFiscalYearId: y2026, dueOn: '2027-08-02', dueOnWithAdvisor: '2028-02-29' });
+    expect(unwrap(await taxPeriodDefaults(f.deps, f.ctx, {}))).toEqual({ firstFiscalYearId: y2024, lastFiscalYearId: y2026, dueOn: '2027-08-02', dueOnWithAdvisor: '2028-02-29', statute: null });
     const g = await setup();
     unwrap(await createTaxPeriod(g.f.deps, g.f.ctx, { firstFiscalYearId: g.y2023, lastFiscalYearId: g.y2025, withTaxAdvisor: false, dueOn: '2026-07-31' }));
     void y2025;
-    expect(unwrap(await taxPeriodDefaults(g.f.deps, g.f.ctx, {}))).toEqual({ firstFiscalYearId: g.y2026, lastFiscalYearId: g.y2026, dueOn: '2027-08-02', dueOnWithAdvisor: '2028-02-29' });
+    expect(unwrap(await taxPeriodDefaults(g.f.deps, g.f.ctx, {}))).toEqual({ firstFiscalYearId: g.y2026, lastFiscalYearId: g.y2026, dueOn: '2027-08-02', dueOnWithAdvisor: '2028-02-29', statute: null });
     // Ohne Folgejahr nach dem letzten Zeitraum kein Vorschlag — nie ein Jahr, das schon in einem Zeitraum steht (Befund 23d).
     unwrap(await createTaxPeriod(g.f.deps, g.f.ctx, { firstFiscalYearId: g.y2026, lastFiscalYearId: g.y2026, withTaxAdvisor: false, dueOn: '2027-07-31' }));
     expect(unwrap(await taxPeriodDefaults(g.f.deps, g.f.ctx, {}))).toBeNull();

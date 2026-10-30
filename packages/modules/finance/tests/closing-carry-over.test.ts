@@ -129,6 +129,17 @@ describe('Nachprüfung nach der MV — Übernahme ins Folgejahr', () => {
     expect(t.stageTextOfLastFinalize()).toBe('Nach der Prüfung geändert, berichtet in 2026');
   });
 
+  it('the annual accounts (for members and the public) carry no audit note in their head (Bildabnahme 0.4.5 F-1)', async () => {
+    const t = await setup();
+    const { f, y2025 } = t;
+    unwrap(await carryOverAuditFollowUp(f.deps, f.ctx, { fiscalYearId: y2025, note: 'Prüfer nicht mehr im Amt' }));
+    unwrap(await finalizeFinanceReport(f.deps, f.ctx, { report: 'cashReport', params: { fiscalYearId: y2025 } }));
+    expect(t.stageTextOfLastFinalize()).toBe('Nach der Prüfung geändert, berichtet in 2026');
+    unwrap(await finalizeFinanceReport(f.deps, f.ctx, { report: 'annualAccounts', params: { fiscalYearId: y2025 } }));
+    expect(t.renders.at(-1)!.title).toBe('Jahresrechnung');
+    expect(t.stageTextOfLastFinalize() ?? '').toBe('');
+  });
+
   it('the cash report of the next year lists the carried-over entries; without one the key and the hash stay', async () => {
     const t = await setup();
     const { f, y2025, y2026 } = t;

@@ -277,6 +277,6 @@ markiert sie als geprüft oder löscht sie.
 Prüfen und Festschreiben bleiben einem Menschen am Bildschirm vorbehalten:
 Nur ein Mensch drückt Enter. Das ist die Voreinstellung; ändern lässt sie
 sich nur mit dem Schalter „Darf ein Agent festschreiben und Lastschriften
-bearbeiten?“ unter [Finanzen einrichten](einrichten.md), und der Schalter selbst lässt sich nur am
+bearbeiten?“ unter [Verwaltung → Agenten](../einstellungen/agenten.md), und der Schalter selbst lässt sich nur am
 Bildschirm umlegen, nie über einen Agenten. Was es für den Datenschutz bedeutet, wenn ein Agent
 Bankdaten liest, steht unter [Kontoauszug laden](kontoauszug-laden.md).

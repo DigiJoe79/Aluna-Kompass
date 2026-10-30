@@ -1,5 +1,6 @@
 import { invalid, isoNow, newId, notFound, ok, recordAudit, requirePermission, validate, type CallContext, type DbOrTx, type Deps, type Result, type ValidationIssue } from '@kompass/core';
 import { and, desc, eq, gte, inArray, lt, lte } from 'drizzle-orm';
+import { resolutionFactsOf, resolutionIdProblem, resolutionReferenceInternal, type ResolutionReference } from '@kompass/module-finance';
 import { z } from 'zod';
 import { membersConflict } from './errors';
 import { FEE_INTERVALS, FEE_MAX_CENTS, memberFeeCharges, memberFeeRules, memberFeeSchedules, memberTypes, type FeeInterval, type FeeRuleRow, type FeeScheduleRow } from './schema';
@@ -24,6 +25,8 @@ export const feeScheduleSaveSchema = z.object({
   validFrom: day,
   resolvedOn: day.nullable().optional(),
   resolutionDocumentId: id.nullable().optional(),
+  /** G7: der Beschluss in Gremien (`governanceResolution`); unbekannt oder ohne Gremien `resolutionUnknown`. */
+  resolutionId: id.nullable().optional(),
   note: z.string().trim().max(2000).nullable().optional(),
   rules: z.array(feeRuleSchema).max(50),
 });
@@ -31,7 +34,10 @@ export const feeScheduleListSchema = z.object({});
 export const feeScheduleDeleteSchema = z.object({ id });
 
 export type FeeRuleView = Omit<FeeRuleRow, 'allowedIntervals'> & { allowedIntervals: FeeInterval[] };
-export type FeeScheduleView = FeeScheduleRow & { rules: FeeRuleView[]; locked: boolean; lockedCount: number };
+/** Hinweis am Stand: `resolvedOn` weicht vom Tag des verknüpften Beschlusses ab (V-3). */
+export type FeeScheduleWarning = { code: 'resolvedOnDiffers'; params: { resolvedOn: string; decidedOn: string } };
+/** `resolution`: Beschriftung und Link des Beschlusses in Gremien — `null` ohne `resolutionId` oder ohne Gremien. */
+export type FeeScheduleView = FeeScheduleRow & { rules: FeeRuleView[]; locked: boolean; lockedCount: number; resolution: ResolutionReference | null; warnings: FeeScheduleWarning[] };
 
 export const ruleView = (row: FeeRuleRow): FeeRuleView => ({ ...row, allowedIntervals: JSON.parse(row.allowedIntervals) as FeeInterval[] });
 
@@ -48,10 +54,12 @@ function chargesCreatedFrom(db: DbOrTx, scheduleId: string): number {
     .all().length;
 }
 
-function scheduleView(db: DbOrTx, row: FeeScheduleRow): FeeScheduleView {
+function scheduleView(deps: Deps, ctx: CallContext, db: DbOrTx, row: FeeScheduleRow): FeeScheduleView {
   const rules = db.select().from(memberFeeRules).where(eq(memberFeeRules.scheduleId, row.id)).all().map(ruleView);
   const lockedCount = chargesCreatedFrom(db, row.id);
-  return { ...row, rules, locked: lockedCount > 0, lockedCount };
+  const decidedOn = row.resolutionId ? resolutionFactsOf(deps, db, row.resolutionId)?.decidedOn : undefined;
+  const warnings: FeeScheduleWarning[] = decidedOn && row.resolvedOn && row.resolvedOn !== decidedOn ? [{ code: 'resolvedOnDiffers', params: { resolvedOn: row.resolvedOn, decidedOn } }] : [];
+  return { ...row, rules, locked: lockedCount > 0, lockedCount, resolution: resolutionReferenceInternal(deps, ctx, row.resolutionId), warnings };
 }
 
 /** Die Stände der Beitragsordnung, neuester zuerst, mit ihren Regeln und ob sie fest sind. */
@@ -60,7 +68,37 @@ export async function listFeeSchedules(deps: Deps, ctx: CallContext, input: unkn
   if (denied) return denied;
   const parsed = validate(deps, feeScheduleListSchema, input ?? {});
   if (!parsed.ok) return parsed;
-  return ok(deps.db.select().from(memberFeeSchedules).orderBy(desc(memberFeeSchedules.validFrom)).all().map((row) => scheduleView(deps.db, row)));
+  return ok(deps.db.select().from(memberFeeSchedules).orderBy(desc(memberFeeSchedules.validFrom)).all().map((row) => scheduleView(deps, ctx, deps.db, row)));
+}
+
+type FeeRuleInput = z.infer<typeof feeRuleSchema>;
+
+/** Eine Regel in vergleichbarer Form: alle Felder von `ruleView`, erlaubte Rhythmen ohne Reihenfolge. */
+const ruleKey = (r: { typeId: string; amountCents: number; interval: FeeInterval; minimum: boolean; allowedIntervals?: FeeInterval[] | null; admissionFeeCents?: number | null }) =>
+  JSON.stringify([r.typeId, r.amountCents, r.interval, r.minimum, [...(r.allowedIntervals ?? [r.interval])].sort(), r.admissionFeeCents ?? null]);
+
+/** Gleiche Regeln je Mitgliedsart, unabhängig von der Reihenfolge. */
+function sameRules(stored: FeeRuleView[], input: FeeRuleInput[]): boolean {
+  if (stored.length !== input.length) return false;
+  const keys = new Set(stored.map(ruleKey));
+  return input.every((r) => keys.has(ruleKey(r)));
+}
+
+/** Trägt an einem festen Stand nur Beschluss, Beschlusstag und Notiz nach — die Regeln bleiben, wie sie sind. */
+function updateResolution(deps: Deps, ctx: CallContext, before: FeeScheduleRow, v: z.infer<typeof feeScheduleSaveSchema>): Result<FeeScheduleView> {
+  return deps.db.transaction((tx: DbOrTx) => {
+    const fields = { resolvedOn: v.resolvedOn ?? null, resolutionDocumentId: v.resolutionDocumentId ?? null, resolutionId: v.resolutionId === undefined ? before.resolutionId : v.resolutionId, note: v.note ?? null };
+    tx.update(memberFeeSchedules).set({ ...fields, updatedAt: isoNow(deps.clock) }).where(eq(memberFeeSchedules.id, before.id)).run();
+    recordAudit(tx, deps, ctx, {
+      action: 'members.feeSchedule.update',
+      entityType: 'memberFeeSchedule',
+      entityId: before.id,
+      before: { resolvedOn: before.resolvedOn, resolutionDocumentId: before.resolutionDocumentId, resolutionId: before.resolutionId, note: before.note },
+      after: fields,
+      params: { validFrom: before.validFrom },
+    });
+    return ok(scheduleView(deps, ctx, tx, tx.select().from(memberFeeSchedules).where(eq(memberFeeSchedules.id, before.id)).get()!));
+  });
 }
 
 /** Legt einen Stand an oder ändert ihn samt Regeln. Für eine beitragsfreie Art gibt es keine Regel. */
@@ -84,12 +122,19 @@ export async function saveFeeSchedule(deps: Deps, ctx: CallContext, input: unkno
     if (r.allowedIntervals && !r.allowedIntervals.includes(r.interval)) issues.push({ path: `rules.${i}.allowedIntervals`, message: 'intervalNotAllowed' });
   });
   if (issues.length > 0) return invalid(issues);
+  const unknownResolution = resolutionIdProblem(deps, ctx, v.resolutionId, 'feeSchedule');
+  if (unknownResolution) return unknownResolution;
 
   const before = v.id ? deps.db.select().from(memberFeeSchedules).where(eq(memberFeeSchedules.id, v.id)).get() : undefined;
   if (v.id && !before) return notFound('memberFeeSchedule', v.id);
   if (before) {
     const count = chargesCreatedFrom(deps.db, before.id);
-    if (count > 0) return membersConflict('feeScheduleLocked', { count });
+    if (count > 0) {
+      // Fest ist, was gerechnet hat: Tag und Regeln. Beschluss, Beschlusstag und Notiz lassen sich nachtragen (Backlog 97).
+      const beforeRules = deps.db.select().from(memberFeeRules).where(eq(memberFeeRules.scheduleId, before.id)).all().map(ruleView);
+      if (v.validFrom !== before.validFrom || !sameRules(beforeRules, v.rules)) return membersConflict('feeScheduleLocked', { count });
+      return updateResolution(deps, ctx, before, v);
+    }
   }
   const taken = deps.db.select({ id: memberFeeSchedules.id }).from(memberFeeSchedules).where(eq(memberFeeSchedules.validFrom, v.validFrom)).get();
   if (taken && taken.id !== v.id) return membersConflict('feeScheduleDateTaken', { validFrom: v.validFrom });
@@ -101,7 +146,7 @@ export async function saveFeeSchedule(deps: Deps, ctx: CallContext, input: unkno
 
   return deps.db.transaction((tx: DbOrTx) => {
     const now = isoNow(deps.clock);
-    const fields = { validFrom: v.validFrom, resolvedOn: v.resolvedOn ?? null, resolutionDocumentId: v.resolutionDocumentId ?? null, note: v.note ?? null, updatedAt: now };
+    const fields = { validFrom: v.validFrom, resolvedOn: v.resolvedOn ?? null, resolutionDocumentId: v.resolutionDocumentId ?? null, resolutionId: v.resolutionId === undefined ? (before?.resolutionId ?? null) : v.resolutionId, note: v.note ?? null, updatedAt: now };
     const scheduleId = before?.id ?? newId();
     const beforeRules = before ? tx.select().from(memberFeeRules).where(eq(memberFeeRules.scheduleId, before.id)).all().map(ruleView) : [];
     if (before) {
@@ -118,7 +163,7 @@ export async function saveFeeSchedule(deps: Deps, ctx: CallContext, input: unkno
     const after = { ...fields, rules: v.rules };
     if (before) recordAudit(tx, deps, ctx, { action: 'members.feeSchedule.update', entityType: 'memberFeeSchedule', entityId: scheduleId, before: { ...before, rules: beforeRules }, after, params: { validFrom: v.validFrom } });
     else recordAudit(tx, deps, ctx, { action: 'members.feeSchedule.create', entityType: 'memberFeeSchedule', entityId: scheduleId, after, params: { validFrom: v.validFrom } });
-    return ok(scheduleView(tx, tx.select().from(memberFeeSchedules).where(eq(memberFeeSchedules.id, scheduleId)).get()!));
+    return ok(scheduleView(deps, ctx, tx, tx.select().from(memberFeeSchedules).where(eq(memberFeeSchedules.id, scheduleId)).get()!));
   });
 }
 

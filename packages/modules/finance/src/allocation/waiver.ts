@@ -4,7 +4,7 @@ import { abortIssue, abortReceive, issueGeneratedDocument, receiveGeneratedUploa
 import { and, eq, isNull } from 'drizzle-orm';
 import { z } from 'zod';
 import { financeAudit } from '../audit';
-import { financeConflict } from '../errors';
+import { financeConflict, uploadLimitProblem } from '../errors';
 import { valueAt } from '../ledger/dated-values';
 import { freeFundsAtInternal } from '../ledger/overview';
 import { financeContactWaiverTerms, financeExpenseClaims, type FinanceContactWaiverTermsRow, type FinanceExpenseClaimRow, type FinanceExpensePositionRow } from '../schema';
@@ -183,6 +183,8 @@ export async function attachSignedWaiver(deps: Deps, ctx: CallContext, input: un
   if (!mayUseWaiver(ctx)) return forbidden('finance.approve');
   const parsed = validate(deps, signedSchema, input);
   if (!parsed.ok) return parsed;
+  const tooLarge = uploadLimitProblem(deps, parsed.value.bytes);
+  if (tooLarge) return tooLarge;
   const loaded = loadForWaiver(deps, ctx, parsed.value.claimId);
   if (!loaded.ok) return loaded;
   const claim = loaded.value;

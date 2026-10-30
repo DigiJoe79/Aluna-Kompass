@@ -3,6 +3,7 @@ import { count, gt } from 'drizzle-orm';
 import { z } from 'zod';
 import { readSiteEnv } from './pipeline/env';
 import { runningSiteJob } from './pipeline/run-state';
+import { computePendingChanges } from './pending';
 import { templateNeedsReview } from './review';
 import { siteEntries, siteValues } from './schema';
 import { lastPublish, lastSuccessfulPublish } from './services/publishes';
@@ -34,9 +35,15 @@ const siteTile: DashboardTile<Record<string, never>> = {
     if (last && last.status === 'aborted') return { kind: 'status', tone: 'warning', messageKey: 'lastAborted', href };
     const success = lastSuccessfulPublish(deps, deps.env);
     if (!success) return { kind: 'status', tone: 'info', messageKey: 'never', href };
-    const entries = deps.db.select({ n: count() }).from(siteEntries).where(gt(siteEntries.updatedAt, success.startedAt)).get()?.n ?? 0;
-    const values = deps.db.select({ n: count() }).from(siteValues).where(gt(siteValues.updatedAt, success.startedAt)).get()?.n ?? 0;
-    const changed = entries + values;
+    // Dieselbe Quelle wie „Änderungen seit dem letzten Publizieren“: der öffentliche Stand gegen den des letzten Publish —
+    // mit den veröffentlichten Sichten der Module (etwa eine bereitgestellte Jahresrechnung, Spec 0.4.5 § Bausteine).
+    // Ohne festgehaltenen Stand (Publish vor 0.2.10) oder wenn er sich nicht lesen ließ, zählen wie bisher die
+    // Einträge und Variablen, die jünger sind als der Publish.
+    const pending = computePendingChanges(deps);
+    const changed =
+      pending && pending.since !== null
+        ? pending.count
+        : (deps.db.select({ n: count() }).from(siteEntries).where(gt(siteEntries.updatedAt, success.startedAt)).get()?.n ?? 0) + (deps.db.select({ n: count() }).from(siteValues).where(gt(siteValues.updatedAt, success.startedAt)).get()?.n ?? 0);
     if (changed > 0) return { kind: 'status', tone: 'info', messageKey: 'changed', values: { count: changed }, href };
     return { kind: 'status', tone: 'neutral', messageKey: 'current', values: { date: success.startedAt }, href };
   },

@@ -4,7 +4,7 @@ import { abortIssue, documentLinks, documents, issueGeneratedDocument, receiveGe
 import { and, desc, eq, ne } from 'drizzle-orm';
 import { z } from 'zod';
 import { financeAudit } from '../audit';
-import { financeConflict, requireHumanChannelFinance } from '../errors';
+import { financeConflict, requireHumanChannelFinance, uploadLimitProblem } from '../errors';
 import { postalAddressLines } from '../typst-pure';
 import { activateMandate, DIRECT_DEBIT_PERMISSION, MANDATE_ENTITY, mandateRowInternal, mandateState, type MandateView } from './mandates';
 import { MANDATE_DOCUMENT_TYPE, MANDATE_FORM_TEMPLATE_KEY, MANDATE_TITLE, type MandateFormInput } from './templates/mandate-form';
@@ -92,6 +92,8 @@ export async function fileSignedMandate(deps: Deps, ctx: CallContext, input: unk
   if (human) return human;
   const parsed = validate(deps, mandateSignedSchema, input);
   if (!parsed.ok) return parsed;
+  const tooLarge = uploadLimitProblem(deps, parsed.value.bytes);
+  if (tooLarge) return tooLarge;
   const v = parsed.value;
   if (v.signedOn > todayIn(deps)) return invalid([{ path: 'signedOn', message: 'inFuture' }]);
   const row = mandateRowInternal(deps.db, v.mandateId);

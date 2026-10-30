@@ -1,6 +1,7 @@
 import { setSetting, unwrap } from '@kompass/core';
 import { ctxWith } from '@kompass/core/testing';
 import { describe, expect, it } from 'vitest';
+import { setFinanceSwitch } from '../src/ledger/setup';
 import { financeModule } from '../src/manifest';
 import { setupFinance } from './helpers';
 
@@ -10,7 +11,11 @@ describe('finance settings', () => {
     const viaMcp = { ...ctxWith(['settings.manage']), channel: 'mcp' as const };
     const res = await setSetting(deps, viaMcp, { key: 'finance.mcpHumanOnlyAllowed', value: true });
     expect(res.ok).toBe(false);
-    expect(unwrap(await setSetting(deps, { ...ctxWith(['settings.manage']), channel: 'ui' as const }, { key: 'finance.mcpHumanOnlyAllowed', value: true }))).toBeTruthy();
+    // Geführt von Finanzen (K1): Auch am Bildschirm nicht über die allgemeinen Einstellungen, sondern über den Schalter
+    // der Finanzeinrichtung (`finance.setup`).
+    const viaSettings = await setSetting(deps, { ...ctxWith(['settings.manage']), channel: 'ui' as const }, { key: 'finance.mcpHumanOnlyAllowed', value: true });
+    expect(viaSettings.ok ? null : viaSettings.error).toEqual({ type: 'conflict', code: 'settingManaged', message: 'finance' });
+    expect(unwrap(await setFinanceSwitch(deps, { ...ctxWith(['finance.setup']), channel: 'ui' as const }, { key: 'finance.mcpHumanOnlyAllowed', value: true }))).toEqual({ key: 'finance.mcpHumanOnlyAllowed', value: true });
   });
 
   it('offers expense waivers only after the association switches them on (Spec E13)', () => {

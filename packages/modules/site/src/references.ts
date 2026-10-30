@@ -1,4 +1,4 @@
-import { nameOrEmpty, type AssetMediaReference, type Deps } from '@kompass/core';
+import { nameOrEmpty, type AssetMediaReferenceInput, type Deps } from '@kompass/core';
 import { assetValuesIn, assetValuesOf, type AssetValue } from './asset-values';
 import { entryLabel } from './entry-label';
 import { widgetOf } from './field-schema';
@@ -25,16 +25,16 @@ function perAsset(values: readonly AssetValue[], assetIds: ReadonlySet<string>):
  * Wo Assets in Template-Variablen oder Sammlungseinträgen stecken — Template, Werte und Einträge je einmal gelesen.
  * Gemeldet wird die Basis, auch für eine abgeleitete ID mit Ausschnitt und in Listen (Spec Ausschnitt § 3).
  */
-export function siteMediaReferences(deps: Deps, assetIds: ReadonlySet<string>): AssetMediaReference[] {
+export function siteMediaReferences(deps: Deps, assetIds: ReadonlySet<string>): AssetMediaReferenceInput[] {
   const template = activeTemplate(deps);
   if (!template) return [];
-  const refs: AssetMediaReference[] = [];
+  const refs: AssetMediaReferenceInput[] = [];
   const leading = deps.locales()[0] ?? 'de';
 
   const values = readValues(deps);
   for (const [key, field] of Object.entries(template.schema.variables)) {
     for (const [assetId, cropped] of perAsset(assetValuesOf(field, values[key], key), assetIds)) {
-      refs.push({ assetId, label: `Variable „${nameOrEmpty(field.label)}“`, entity: 'siteValue', id: key, href: '/site/variables', cropped });
+      refs.push({ assetId, label: { key: 'site.references.variable', params: { name: nameOrEmpty(field.label) } }, entity: 'siteValue', id: key, href: '/site/variables', cropped });
     }
   }
 
@@ -46,7 +46,7 @@ export function siteMediaReferences(deps: Deps, assetIds: ReadonlySet<string>): 
     if (hits.size === 0) continue;
     const title = entryLabel(col, row, leading);
     for (const [assetId, cropped] of hits) {
-      refs.push({ assetId, label: `Eintrag „${title}“ in „${col.label}“`, entity: 'siteEntry', id: row.id, href: `/site/c/${row.collection}/${row.id}`, cropped });
+      refs.push({ assetId, label: { key: 'site.references.entry', params: { title, collection: col.label } }, entity: 'siteEntry', id: row.id, href: `/site/c/${row.collection}/${row.id}`, cropped });
     }
   }
   return refs;

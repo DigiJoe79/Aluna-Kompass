@@ -23,6 +23,9 @@ import { listReserves, saveReserve } from '../src/allocation/reserves';
 import { textPdf } from '@kompass/module-dms';
 import { declarationDueOn, listTaxPeriods, type TaxPeriodView } from '../src/ledger/tax-periods';
 import { seedFinance } from '../src/seed';
+import { listFundsUseOpenings } from '../src/allocation/funds-use-openings';
+import { reserveBalancesAt } from '../src/ledger/reserve-balances';
+import { fundsUseReport } from '../src/reporting/reports/funds-use';
 import { listFinanceDeadlines } from '../src/closing/deadlines';
 import { listVatPeriods } from '../src/ledger/vat-filings';
 import { getContactTaxDetails } from '../src/allocation/contact-tax-details';
@@ -247,6 +250,28 @@ describe('seedFinance', () => {
     expect(book.reconciliation.toCorrect.count).toBe(toCorrectConfirmationsOfYearInternal(f.deps.db, year).length);
   });
 
+  it('M1: seeds the openings of the funds use statement and one reserve each in the business operation and in asset management', async () => {
+    const story = seedStoryYear(todayIn(f.deps));
+    const first = String(story - SEED_CLOSED_YEARS);
+    const overview = unwrap(await listFundsUseOpenings(f.deps, f.ctx, {}));
+    expect(overview.openings.map((o) => o.offset)).toEqual([1, 2]);
+    expect(overview.openings[0]).toMatchObject({ designation: String(story - SEED_CLOSED_YEARS - 1), amountCents: 300_000, effectiveCents: 300_000 });
+    expect(overview.openings[1]).toMatchObject({ effectiveCents: 0, zeroReason: 'belowLimit' });
+    const firstYear = rows<{ id: string }>(`select id from finance_fiscal_years where designation = '${first}'`)[0]!;
+    const report = fundsUseReport.compute(f.deps.db, { fiscalYearId: firstYear.id }, { settings: {} });
+    expect(report.partA.buckets[0]).toMatchObject({ originKey: 'opening:1', openingCents: 300_000 });
+    expect(report.partA.lapsedAtEnd).toBe(true);
+    const reserves = rows<{ id: string; kind: string; name: string }>(`select id, kind, name from finance_reserves where kind in ('business', 'assetManagement')`);
+    expect(reserves.map((r) => r.kind).sort()).toEqual(['assetManagement', 'business']);
+    const balances = reserveBalancesAt(f.deps.db, `${story}-08-31`);
+    expect(balances.find((b) => b.reserveId === reserves.find((r) => r.kind === 'business')!.id)!.balanceCents).toBe(25_000);
+    expect(balances.find((b) => b.reserveId === reserves.find((r) => r.kind === 'assetManagement')!.id)!.balanceCents).toBe(40_000);
+    const counts = () => rows<{ n: number }>(`select (select count(*) from finance_funds_use_openings) + (select count(*) from finance_reserves) + (select count(*) from finance_reserve_movements) as n`)[0]!.n;
+    const before = counts();
+    await seedFinance(f.deps, f.ctx);
+    expect(counts()).toBe(before);
+  }, 30_000);
+
   // Zuletzt: läuft den Seed ein zweites Mal (idempotent).
   it('releases the closed seed year for finalizing', async () => {
     const previous = String(seedStoryYear(todayIn(f.deps)) - 1);
@@ -348,10 +373,10 @@ describe('seedFinance', () => {
     const otherAssets = () => rows<{ kind: string; label: string }>(`select kind, label from finance_other_assets order by label`);
     const finals = () => rows<{ report_key: string; voided_at: string | null; data_hash: string }>(`select r.report_key, r.voided_at, r.data_hash from finance_reports r join finance_fiscal_years y on y.id = r.fiscal_year_id where y.designation = '${previous}'`);
     expect(otherAssets().map((a) => a.kind).sort()).toEqual(['asset', 'liability']);
-    // Rechenschaft C Schritt 10: alle Berichte der Gruppe MV sind festgeschrieben; D2: dazu die Werte für die Anlage Gem.
+    // Rechenschaft C Schritt 10: alle Berichte der Gruppe MV sind festgeschrieben; D2: dazu die Werte für die Anlage Gem; J1: dazu die Jahresrechnung.
     // E11: dazu die Voranmeldung Q4 des Vorjahres, sobald Kompass deren Kennzahlen kennt (ab 2025).
     const advance = Number(previous) >= 2025 ? ['vatAdvanceReturn'] : [];
-    expect(finals().map((r) => r.report_key).sort()).toEqual(['assetOverview', 'cashReport', 'incomeStatement', 'purposeFunds', 'taxReturnGem', ...advance]);
+    expect(finals().map((r) => r.report_key).sort()).toEqual(['annualAccounts', 'assetOverview', 'cashReport', 'incomeStatement', 'purposeFunds', 'taxReturnGem', ...advance]);
     expect(finals().every((r) => r.voided_at === null)).toBe(true);
     const year = rows<{ id: string }>(`select id from finance_fiscal_years where designation = '${previous}'`)[0]!.id;
     const run = unwrap(await runFinanceReport(f.deps, f.ctx, { report: 'cashReport', params: { fiscalYearId: year } }));
@@ -360,7 +385,7 @@ describe('seedFinance', () => {
     expect((run.data as CashReport).otherAssets.recorded).toBe(true);
     await seedFinance(f.deps, f.ctx);
     expect(otherAssets()).toHaveLength(2);
-    expect(finals()).toHaveLength(5 + advance.length);
+    expect(finals()).toHaveLength(6 + advance.length);
   });
 
   it('seeds data for every remaining report (Rechenschaft B1)', async () => {
@@ -550,7 +575,7 @@ describe('seedFinance without the core seed', () => {
     unwrap(await saveReserve(deps, ctx, { kind: 'projectFunds', name: 'Vorhandene Rücklage', purposeText: 'Schon da', resolutionUpload: { bytes: pdf, fileName: 'vorhanden.pdf' } }));
     await seedFinance(deps, ctx);
     const names = unwrap(await listReserves(deps, ctx, { includeInactive: true })).map((r) => r.name).sort();
-    expect(names).toEqual(['Ersatz Transporter', 'Freie Rücklage', 'Projektmittel Dach', 'Vorhandene Rücklage']);
+    expect(names).toEqual(['Ersatz Transporter', 'Freie Rücklage', 'Projektmittel Dach', 'Rücklage Vereinsfest', 'Rücklage Vermietung', 'Vorhandene Rücklage']);
     const reasons = deps.sqlite.prepare('select reason from finance_purpose_transfers order by reason').all() as { reason: string }[];
     expect(reasons.map((r) => r.reason)).toEqual(['Rest nach Abschluss der Hilfe', 'Zusage für die Herbstfahrt']);
   }, 30_000);

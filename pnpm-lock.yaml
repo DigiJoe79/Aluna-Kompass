@@ -35,6 +35,9 @@ importers:
       '@kompass/module-finance':
         specifier: workspace:*
         version: link:packages/modules/finance
+      '@kompass/module-governance':
+        specifier: workspace:*
+        version: link:packages/modules/governance
       '@kompass/module-members':
         specifier: workspace:*
         version: link:packages/modules/members
@@ -92,6 +95,9 @@ importers:
       '@kompass/module-finance':
         specifier: workspace:*
         version: link:../../packages/modules/finance
+      '@kompass/module-governance':
+        specifier: workspace:*
+        version: link:../../packages/modules/governance
       '@kompass/module-members':
         specifier: workspace:*
         version: link:../../packages/modules/members
@@ -469,6 +475,9 @@ importers:
       '@kompass/core':
         specifier: workspace:*
         version: link:../../core
+      '@kompass/markdown':
+        specifier: workspace:*
+        version: link:../../markdown
       '@kompass/module-contacts':
         specifier: workspace:*
         version: link:../contacts
@@ -491,6 +500,43 @@ importers:
         specifier: ^4.6.7
         version: 4.6.7
     devDependencies:
+      '@types/node':
+        specifier: ^26.6.4
+        version: 26.6.4
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
+      vitest:
+        specifier: ^5.0.3
+        version: 5.0.3(@types/node@26.6.4)(jsdom@30.1.1)(vite@8.3.4(@types/node@26.6.4)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.0))
+
+  packages/modules/governance:
+    dependencies:
+      '@kompass/core':
+        specifier: workspace:*
+        version: link:../../core
+      '@kompass/module-contacts':
+        specifier: workspace:*
+        version: link:../contacts
+      '@kompass/module-dms':
+        specifier: workspace:*
+        version: link:../dms
+      '@kompass/module-finance':
+        specifier: workspace:*
+        version: link:../finance
+      '@kompass/module-members':
+        specifier: workspace:*
+        version: link:../members
+      drizzle-orm:
+        specifier: ^0.45.3
+        version: 0.45.3(@types/better-sqlite3@9.6.0)(better-sqlite3@13.0.3)
+      zod:
+        specifier: ^4.6.7
+        version: 4.6.7
+    devDependencies:
+      '@kompass/module-projects':
+        specifier: workspace:*
+        version: link:../projects
       '@types/node':
         specifier: ^26.6.4
         version: 26.6.4

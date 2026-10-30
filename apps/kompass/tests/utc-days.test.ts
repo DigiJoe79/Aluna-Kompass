@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { DEFAULT_TIME_ZONE } from '@kompass/core';
 import { describe, expect, it } from 'vitest';
@@ -20,6 +20,7 @@ const ROOT = path.resolve(import.meta.dirname, '../../..');
 const ALLOWED: Record<string, string> = {
   // Kalenderrechnung auf einem ISO-Datum: der Tag entsteht aus `T00:00:00.000Z`, kein Zeitpunkt ist beteiligt.
   'packages/modules/finance/src/ledger/fiscal-years.ts': 'dayAfter/yearEnd auf ISO-Daten',
+  'packages/modules/finance/src/zoned-days.ts': 'Tag nach einem ISO-Tag (Grenze eines Zeitraums in der Vereinszone, F-B3)',
   'packages/modules/finance/src/ledger/period.ts': 'dayAfter auf ISO-Datum',
   'packages/modules/finance/src/auditing/anomalies.ts': 'dayAfter und Ende des Folgemonats auf ISO-Daten (Auffälligkeiten des Prüfpakets)',
   'packages/modules/finance/src/allocation/partner-proof.ts': 'addDaysInternal auf ISO-Datum',
@@ -58,6 +59,7 @@ describe('W6: kein UTC-Tag als „heute“', () => {
     // Ausnahmen, je mit Grund: Kalenderrechnung auf einem ISO-Datum, das schon der Vereinstag ist.
     const allowedInApp: Record<string, string> = {
       'apps/kompass/src/app/(shell)/dms/[id]/follow-ups-panel.tsx': 'inOneWeek rechnet auf dem mitgegebenen `today`',
+      'apps/kompass/src/app/(shell)/finance/reports/[key]/annual-accounts/request-signature-dialog.tsx': 'plusDays rechnet „Fällig am“ auf dem mitgegebenen `today`',
       'apps/kompass/src/lib/finance/notices.ts': 'dayBefore auf ISO-Datum',
     };
     const hits = grep(String.raw`toISOString\(\)\.slice\(0, ?10\)`, 'apps/kompass/src').filter((line) => !allowedInApp[line.split(':')[0]!]);
@@ -86,13 +88,18 @@ describe('W6: kein UTC-Tag als „heute“', () => {
 });
 
 describe('W6-Wächter sieht auch neue Dateien (Teil C Task 2d)', () => {
+  // Die Probe liegt in einem eigenen, ungetrackten Ordner, nicht in `packages/*/src`: Andere Wächter lesen die Quellen
+  // parallel, und eine Datei, die zwischen Auflisten und Lesen verschwand, ließ `audit-actions.test.ts` mit ENOENT
+  // scheitern (verify 30.10.).
   it('findet einen Verstoß in einer noch nicht getrackten Datei', () => {
-    const probe = path.join(ROOT, 'packages/core/src', `utc-probe-${process.pid}.ts`);
+    const dir = path.join(ROOT, `.utc-probe-${process.pid}`);
+    const probe = path.join(dir, 'probe.ts');
+    mkdirSync(dir, { recursive: true });
     writeFileSync(probe, 'export const probe = () => new Date().toISOString().slice(0, 10);\n');
     try {
-      expect(grep(String.raw`toISOString\(\)\.slice\(0, ?10\)`, 'packages/core/src').some((line) => line.startsWith(path.relative(ROOT, probe)))).toBe(true);
+      expect(grep(String.raw`toISOString\(\)\.slice\(0, ?10\)`, path.relative(ROOT, dir)).some((line) => line.startsWith(path.relative(ROOT, probe)))).toBe(true);
     } finally {
-      rmSync(probe, { force: true });
+      rmSync(dir, { recursive: true, force: true });
     }
   });
 });

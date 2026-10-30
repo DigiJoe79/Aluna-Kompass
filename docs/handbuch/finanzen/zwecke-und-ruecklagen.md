@@ -48,6 +48,11 @@ eigenes Formular, auch am Telefon in einer Spalte; neben jedem Zweck steht
 sein Bestand. Die Leiste mit **Zur Freigabe geben** bleibt am unteren Rand
 stehen. Fehlt noch etwas, sagt die Meldung darüber, was.
 
+Mit **Gremien** kann eine Rücklage statt oder neben dem Dokument auf einen
+Beschluss verweisen (über einen Agenten: `finance_reserve_save` bzw.
+`finance_reserve_resolution_link` mit `resolutionId`); die Spalte Beschluss
+verlinkt ihn dann.
+
 Ein Dokument ist Pflicht: Ziehen Sie den Beschluss als PDF auf die Fläche
 oder wählen Sie ihn über **Aus der Akte wählen**; ein hochgeladenes PDF wird
 als Protokoll abgelegt. Ein erfüllter oder
@@ -69,6 +74,11 @@ Beschluss und Bestand. Die Arten heißen in Kompass:
 - **Wiederbeschaffung** — für den Ersatz von Anschaffungen.
 - **freie Rücklage** — ohne bestimmten Zweck, bis zu einem Höchstbetrag.
 - **Beteiligung** — um Anteile an einer Gesellschaft zu erhalten.
+- **Rücklage im wirtschaftlichen Geschäftsbetrieb** und **Rücklage in der
+  Vermögensverwaltung** — für Vorhaben dort (AEAO zu § 55 Nr. 3 und 28). Sie
+  sind keine Rücklagen nach § 62 AO: Sie zählen weder zur Anlage Gem noch zum
+  Höchstbetrag der freien Rücklage und verlangen eine Begründung, wofür im
+  Betrieb.
 
 Die Paragraphen der Abgabenordnung zeigt der Infoknopf neben der Art — per
 Klick, Tippen oder Tastatur. In der Spalte Beschluss stehen Nummer, Betreff
@@ -97,6 +107,14 @@ Folgejahr. Kompass lehnt Vorgänge ab, die mehr entnehmen, als am Tag da ist,
 die vor dem letzten Vorgang liegen, in einem abgeschlossenen Geschäftsjahr,
 ohne Geschäftsjahr oder nach heute. Nach dem Auflösen sind keine weiteren
 Vorgänge möglich.
+
+Eine Rücklage nach § 62 AO lässt sich auch **nachträglich** aus den Mitteln
+eines Vorjahres bilden (§ 62 Abs. 2 AO), bis zum Ende des übernächsten Jahres
+danach: Die Zuführung nennt dann das Vorjahr als Geschäftsjahr, aus dessen
+Mitteln sie gebildet wird. Sie wirkt in der Mittelverwendungsrechnung des
+Jahres, in dem sie beschlossen wird; die Rücklagen im wGB und in der
+Vermögensverwaltung kennen kein solches Bezugsjahr (siehe
+[Mittelverwendung](mittelverwendung.md)).
 
 Eine Rücklage, die an einen Zweck gebunden ist, zählt bei den freien Mitteln
 nur mit dem Teil, der über den Bestand des Zwecks hinausgeht — so wird

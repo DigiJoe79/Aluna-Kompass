@@ -1,7 +1,7 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
 import { CreateContactDialog } from '@/app/(shell)/contacts/contact-form';
 import { searchContactsAction } from '@/app/(shell)/contacts/search-action';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
@@ -21,6 +21,33 @@ export interface PickedContact {
 /** Was im gewählten Feld steht: der Name, bei einer Person mit Organisation „Name · Organisation“. */
 const pickedLabel = (contact: PickedContact | null) => (contact ? (contact.organization ? `${contact.name} · ${contact.organization}` : contact.name) : '');
 
+const LIST_MAX = 256;
+const LIST_MIN = 160;
+const LIST_GAP = 4;
+const VIEW_MARGIN = 8;
+
+/**
+ * Die Liste liegt fest am Fenster, weil die Formularkarte mit `overflow-clip` eine absolute Liste am Kartenrand
+ * abschneidet (0.5.0 Nr. 30); `fixed` entkommt dem Clip, ohne den Baum zu verlassen, Fokus und Schließen bleiben. Reicht
+ * der Platz unten nicht, öffnet sie nach oben. In einem Dialog bleibt sie absolut: Dort clippt nichts, und sein
+ * `transform` wäre der Bezug für `fixed`.
+ */
+function listPlace(field: Element): CSSProperties | null {
+  if (field.closest('[role="dialog"]')) return null;
+  const box = field.getBoundingClientRect();
+  const below = window.innerHeight - box.bottom - LIST_GAP - VIEW_MARGIN;
+  const above = box.top - LIST_GAP - VIEW_MARGIN;
+  const up = below < LIST_MIN && above > below;
+  return {
+    position: 'fixed',
+    left: box.left,
+    right: 'auto',
+    width: box.width,
+    maxHeight: Math.min(LIST_MAX, up ? above : below),
+    ...(up ? { top: 'auto', bottom: window.innerHeight - box.top + LIST_GAP, marginTop: 0 } : { top: box.bottom + LIST_GAP, marginTop: 0 }),
+  };
+}
+
 /**
  * Ein Suchfeld statt einer Auswahlliste über die ersten 200 Kontakte. Die ID
  * reist in einem versteckten Feld mit, damit die Formulare unverändert per
@@ -37,6 +64,8 @@ export function ContactPicker({
   canCreate,
   hint,
   kind,
+  role,
+  suggested,
 }: {
   id: string;
   name: string;
@@ -48,6 +77,10 @@ export function ContactPicker({
   hint?: string;
   /** Nur Personen oder nur Organisationen anbieten (z. B. Zählende an der Barkasse). */
   kind?: 'person' | 'organization';
+  /** Nur Kontakte mit dieser Rolle anbieten (z. B. Mitglieder für die Leitung einer Sitzung). */
+  role?: string;
+  /** Vorbelegt aus einem Vorschlag (MUSTER § E): Rahmen im Token `agent`, die Herkunft steht im `hint`. */
+  suggested?: boolean;
 }) {
   const t = useTranslations('contacts.picker');
   const [query, setQuery] = useState(pickedLabel(value));
@@ -64,6 +97,11 @@ export function ContactPicker({
   const [loaded, setLoaded] = useState(false);
   const latest = useRef(0);
   const hiddenRef = useHiddenInputEvent(value?.id ?? '');
+  // Das verzögerte Schließen nach dem Verlassen des Felds; beim Entfernen weggeräumt, sonst setzt es danach noch Zustand.
+  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => {
+    if (closeTimer.current) clearTimeout(closeTimer.current);
+  }, []);
 
   useEffect(() => {
     setQuery(pickedLabel(value));
@@ -75,14 +113,30 @@ export function ContactPicker({
     setLoaded(false);
     const run = ++latest.current;
     const handle = setTimeout(async () => {
-      const found = await searchContactsAction(query, kind);
+      const found = await searchContactsAction(query, kind, role);
       if (run !== latest.current) return;
       setOptions(found.contacts);
       setMore(found.more);
       setLoaded(true);
     }, 150);
     return () => clearTimeout(handle);
-  }, [query, open, kind]);
+  }, [query, open, kind, role]);
+
+  const rootRef = useRef<HTMLDivElement>(null);
+  const [place, setPlace] = useState<CSSProperties | null>(null);
+  useLayoutEffect(() => {
+    if (!open) return;
+    const field = rootRef.current?.querySelector('[data-slot="command-input"]')?.parentElement;
+    if (!field) return;
+    const update = () => setPlace(listPlace(field));
+    update();
+    window.addEventListener('scroll', update, true);
+    window.addEventListener('resize', update);
+    return () => {
+      window.removeEventListener('scroll', update, true);
+      window.removeEventListener('resize', update);
+    };
+  }, [open]);
 
   const pick = (contact: PickedContact | null) => {
     onChange(contact);
@@ -95,7 +149,7 @@ export function ContactPicker({
     // Statusfeld (`sr-only`) hinter dem Feld macht dieses zum „nicht letzten“ — es saß 6 px höher als Nachbarfelder.
     // `relative`: Halt für das absolut positionierte Statusfeld unten, damit es das Dokument nicht verlängert (Arbeitsliste,
     // 2026-10-20). Am Wurzelelement statt in einem eigenen Behälter: Ein Behälter im Fluss bekäme wieder ein `gap`.
-    <div className="relative flex flex-col gap-1.5">
+    <div ref={rootRef} className="relative flex flex-col gap-1.5">
       <Label htmlFor={id} required={required}>
         {label}
       </Label>
@@ -122,13 +176,15 @@ export function ContactPicker({
           onKeyDown={(e) => {
             if (e.key === 'ArrowDown' && !open) setOpen(true);
           }}
-          onBlur={() => setTimeout(() => setOpen(false), 120)}
+          onBlur={() => {
+            closeTimer.current = setTimeout(() => setOpen(false), 120);
+          }}
           placeholder={t('placeholder')}
           // Passt der Name nicht, kürzt das Feld mit „…“; der volle Name steht im Tooltip (Designer Runde 8, 093/094).
           className="min-w-0 truncate"
           title={value ? pickedLabel(value) : undefined}
           wrapperClassName="p-0"
-          fieldClassName="h-[var(--field-h)] rounded-md! border-line-strong bg-field"
+          fieldClassName={cn('h-[var(--field-h)] rounded-md! bg-field', suggested ? 'border-agent' : 'border-line-strong')}
         />
         {open ? (
           // `preventDefault` beim Drücken: Sonst verliert das Feld den Fokus,
@@ -136,7 +192,8 @@ export function ContactPicker({
           // trifft ins Leere — Enter ging, die Maus nicht (Befund 2026-09-12).
           <CommandList
             onMouseDown={(e) => e.preventDefault()}
-            className={cn('absolute left-0 right-0 top-full z-20 mt-1 max-h-64 rounded-md border border-line bg-surface shadow-md')}
+            style={place ?? undefined}
+            className={cn('absolute left-0 right-0 top-full z-50 mt-1 max-h-64 rounded-md border border-line bg-surface shadow-md')}
           >
             {!loaded ? (
               <div role="presentation" aria-hidden className="px-3 py-2 text-meta text-muted-ink">

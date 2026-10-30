@@ -1,4 +1,4 @@
-import { createFollowUp, notFound, requirePermission, validate, type CallContext, type Deps, type FollowUpRecord, type FollowUpTarget, type Result } from '@kompass/core';
+import { createFollowUp, notFound, requirePermission, validate, type CallContext, type Deps, type FollowUpCreated, type FollowUpTarget, type Result } from '@kompass/core';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { isProtectedType, requireAreaAccess } from './access';
@@ -17,7 +17,7 @@ export const documentFollowUpSchema = z.object({
  * leisten kann: Gibt es das Dokument, und darf der Aufrufer in der Akte
  * schreiben. Danach gilt das Recht des Kerns.
  */
-export async function createDocumentFollowUp(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<FollowUpRecord>> {
+export async function createDocumentFollowUp(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<FollowUpCreated>> {
   const denied = requirePermission(ctx, 'dms.create');
   if (denied) return denied;
   const parsed = validate(deps, documentFollowUpSchema, input);

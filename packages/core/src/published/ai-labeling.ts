@@ -28,5 +28,5 @@ export const publishedAiLabeling = definePublishedView({
     if (!aiLabelingEnabled(deps)) return [];
     return [readAiLabelingTexts(deps)];
   },
-  editLink: () => ({ href: '/admin/settings', title: 'Bildkennzeichnung' }),
+  editLink: () => ({ href: '/admin/settings', title: { key: 'media.labeling.title' } }),
 });

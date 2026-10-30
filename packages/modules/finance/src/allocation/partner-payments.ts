@@ -6,6 +6,7 @@ import { and, desc, eq, inArray } from 'drizzle-orm';
 import { z } from 'zod';
 import { financeAudit } from '../audit';
 import { financeConflict } from '../errors';
+import { PARTNER_PAYMENT_RESOLUTION, resolutionIdProblem, resolutionReferenceInternal, type ResolutionReference } from '../resolution-ref';
 import { requireFinanceRead } from '../ledger/access';
 import { checkBasisAllowed, partnerNoticeValidAtInternal } from './partners';
 import { activeStepOf, goodsLineInfo, paidLinesOf, paymentsReadyToAcknowledgeInternal, readyForUserInternal, paidLineViewsOf, paidOnOf, partnerProofDeadlinesInternal, positionsOf, positionViewsOf, proofDueOnOf, paymentTotalCents, sumPositionCents, type ActiveStep, type PaidLineView, type PositionView } from './partner-proof';
@@ -93,6 +94,8 @@ export interface PartnerPaymentView extends FinancePartnerPaymentRow {
    * (S. 3). Keine Sperre.
    */
   hints: PartnerPaymentHint[];
+  /** G7: der Beschluss hinter `resolutionId` mit Beschriftung und Link; `null` ohne Verweis oder ohne Gremien. */
+  resolution: ResolutionReference | null;
   version: string;
 }
 
@@ -146,6 +149,7 @@ function toView(deps: Deps, ctx: CallContext, db: DbOrTx, row: FinancePartnerPay
     paidOn: paidOnOf(db, row),
     // Task 6c: ab dem Zahlungstag berechnet, nie der gespeicherte Wert.
     proofDueOn: proofDueOnOf(db, row, partner.usualProofMonths),
+    resolution: resolutionReferenceInternal(deps, ctx, row.resolutionId),
     version: row.updatedAt,
   };
 }
@@ -206,6 +210,11 @@ export const draftBaseSchema = z.object({
     paidLineIds: z.array(z.string().min(1)).max(100).optional(),
     /** Rechenschaft D2: Mittel zur Vermögensausstattung (§ 58 Nr. 3 AO) — nur `transfer58` an eine steuerbegünstigte oder öffentliche Körperschaft. */
     assetEndowment: z.boolean().optional(),
+    /**
+     * G7: Beschluss in Gremien, der die Zahlung trägt (festgeschrieben, angenommen; nicht Entlastung, Jahresrechnung, Wahl,
+     * Abberufung). Weggelassen bleibt der gespeicherte, `null` nimmt ihn weg.
+     */
+    resolutionId: z.string().min(1).nullable().optional(),
   });
 
 /** N5: Welche Position welche Angaben braucht, prüft der Dienst — das Werkzeug zeigt `draftBaseSchema`. */
@@ -300,6 +309,9 @@ export async function savePartnerPaymentDraft(deps: Deps, ctx: CallContext, inpu
   const allowed = checkBasisAllowed(v.basis, partner.status, contact.kind);
   if (allowed) return allowed;
   if (v.assetEndowment && !assetEndowmentAllowed(v.basis, partner.status)) return invalid([{ path: 'assetEndowment', message: 'notApplicable' }]);
+  const resolutionProblem = resolutionIdProblem(deps, ctx, v.resolutionId, PARTNER_PAYMENT_RESOLUTION);
+  if (resolutionProblem) return resolutionProblem;
+  const resolutionId = v.resolutionId === undefined ? (before?.resolutionId ?? null) : v.resolutionId;
   // Die Begründung einer übersteuerten Art verlangt erst das Einreichen: laufend gesichert wird auch ein halber Stand.
 
   for (const p of v.positions) {
@@ -322,7 +334,7 @@ export async function savePartnerPaymentDraft(deps: Deps, ctx: CallContext, inpu
     const paymentId = before?.id ?? newId();
     const fields = {
       partnerId, basis: v.basis as PartnerBasis, basisOverridden: v.basis !== partner.usualBasis, basisOverrideReason: v.basisOverrideReason ?? null,
-      purposeText: v.purposeText ?? '', agreementDocumentId: v.agreementDocumentId ?? null, retroactive: v.retroactive, proofMonths: v.proofMonths ?? null, assetEndowment: v.assetEndowment ?? false, updatedAt: now,
+      purposeText: v.purposeText ?? '', agreementDocumentId: v.agreementDocumentId ?? null, retroactive: v.retroactive, proofMonths: v.proofMonths ?? null, assetEndowment: v.assetEndowment ?? false, resolutionId, updatedAt: now,
     };
     if (before) tx.update(financePartnerPayments).set(fields).where(eq(financePartnerPayments.id, paymentId)).run();
     else tx.insert(financePartnerPayments).values({ id: paymentId, state: 'draft', createdByUserId: ctx.userId ?? 'system', createdAt: now, ...fields }).run();
@@ -346,7 +358,7 @@ export async function savePartnerPaymentDraft(deps: Deps, ctx: CallContext, inpu
     const totalCents = paymentTotalCents(after, positions, paidLineViewsOf(tx, paymentId));
     financeAudit(tx, deps, ctx, {
       action: 'finance.partnerPayment.saveDraft', entity: 'financePartnerPayment', id: paymentId,
-      after: { state: 'draft', basis: after.basis, basisOverridden: after.basisOverridden, retroactive: after.retroactive, proofMonths: after.proofMonths, assetEndowment: after.assetEndowment, positionCount: positions.length, totalCents },
+      after: { state: 'draft', basis: after.basis, basisOverridden: after.basisOverridden, retroactive: after.retroactive, proofMonths: after.proofMonths, assetEndowment: after.assetEndowment, resolutionId: after.resolutionId, positionCount: positions.length, totalCents },
     });
     return ok(toView(deps, ctx, tx, after));
   });
@@ -502,7 +514,7 @@ export async function copyPartnerPayment(deps: Deps, ctx: CallContext, input: un
     const id = newId();
     tx.insert(financePartnerPayments).values({
       id, partnerId: source.partnerId, basis: source.basis, basisOverridden: source.basisOverridden, basisOverrideReason: source.basisOverrideReason,
-      purposeText: source.purposeText, agreementDocumentId: source.agreementDocumentId, retroactive: source.retroactive, proofMonths: source.proofMonths, assetEndowment: source.assetEndowment, state: 'draft',
+      purposeText: source.purposeText, agreementDocumentId: source.agreementDocumentId, retroactive: source.retroactive, proofMonths: source.proofMonths, assetEndowment: source.assetEndowment, resolutionId: source.resolutionId, state: 'draft',
       copiedFromPaymentId: source.id, createdByUserId: ctx.userId ?? 'system', createdAt: now, updatedAt: now,
     }).run();
     if (source.agreementDocumentId) linkDocumentInternal(tx, deps, { documentId: source.agreementDocumentId, entityType: 'financePartnerPayment', entityId: id });

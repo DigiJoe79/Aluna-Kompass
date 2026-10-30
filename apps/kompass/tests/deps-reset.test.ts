@@ -116,6 +116,27 @@ describe('resetDeps', () => {
   });
 });
 
+describe('Temp-Verzeichnisse der Ablagen', () => {
+  /**
+   * 29.10.: Eine Anfrage im Reset-Fenster öffnete per `getDeps()` neue Deps, und
+   * deren Aufräumen beim Start nahm dem laufenden Seed `dms/.tmp` weg — der
+   * Reset scheiterte mit ENOENT und 500. Geräumt wird nur beim ersten Öffnen.
+   */
+  it('räumt nur beim ersten Öffnen im Prozess', async () => {
+    const { mkdir, writeFile, access } = await import('node:fs/promises');
+    const { getDeps } = await import('@/lib/deps');
+
+    getDeps();
+    const temp = path.join(dataPath, 'dms', '.tmp');
+    await mkdir(temp, { recursive: true });
+    await writeFile(path.join(temp, '01LAUFEND'), 'halb');
+    clearHolder();
+    getDeps();
+
+    await expect(access(path.join(temp, '01LAUFEND'))).resolves.toBeUndefined();
+  });
+});
+
 describe('während ein Reset läuft', () => {
   it('bekommt eine Anfrage Deps statt einer Ausnahme', async () => {
     const { getDeps, resetDeps } = await import('@/lib/deps');

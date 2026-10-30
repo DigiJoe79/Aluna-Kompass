@@ -29,7 +29,7 @@ const mcpText = (failure: Failure) => {
   return (JSON.parse((res.content[0] as { text: string }).text) as { error: { message: string } }).error.message;
 };
 
-const DATA_ONLY_PARAMS: Partial<Record<FinanceErrorCode, string[]>> = { openItemExistsForDocument: ['openItemId', 'reference'], ibanHasMandate: ['mandateId'], reportStatementsMissing: ['count'] };
+const DATA_ONLY_PARAMS: Partial<Record<FinanceErrorCode, string[]>> = { openItemExistsForDocument: ['openItemId', 'reference'], ibanHasMandate: ['mandateId'], reportStatementsMissing: ['count'], openItemInDirectDebit: ['runId'] };
 
 describe('Finanzfehler aus der Sprachdatei (A6)', () => {
   it('jeder Code hat Grund und Abhilfe in de.json, und de.json kennt keinen anderen', () => {
@@ -47,7 +47,7 @@ describe('Finanzfehler aus der Sprachdatei (A6)', () => {
     expect(code).not.toMatch(/[äöüÄÖÜß„“]/);
     const literals = [...code.matchAll(/'([^'\n]*)'/g)].map((m) => m[1]!);
     expect(literals.filter((l) => / \S+ /.test(l))).toEqual([]);
-    for (const [c, params] of Object.entries(FINANCE_ERRORS)) for (const kind of Object.values(params)) expect(['text', 'date', 'cents', 'count', 'evidenceKind'], c).toContain(kind);
+    for (const [c, params] of Object.entries(FINANCE_ERRORS)) for (const kind of Object.values(params)) expect(['text', 'date', 'cents', 'count', 'evidenceKind', 'runStatus'], c).toContain(kind);
   });
 
   it('die Platzhalter in de.json sind genau die Parameter des Codes, Datum und Betrag schlicht', () => {
@@ -63,7 +63,7 @@ describe('Finanzfehler aus der Sprachdatei (A6)', () => {
       for (const [name, kind] of Object.entries(params).filter(([k]) => !dataOnly.includes(k))) {
         const format = used.get(name);
         // Datum und Betrag kommen fertig aus `messageValues` (MUSTER § Datum/Beträge, Stufe 1): schlichte Platzhalter, kein ICU-Skelett.
-        const expected = kind === 'evidenceKind' ? 'select' : '';
+        const expected = kind === 'evidenceKind' || kind === 'runStatus' ? 'select' : '';
         if (format !== undefined && format !== expected) wrong.push(`${code}.${name}: „${format}“ statt „${expected}“`);
       }
     }
@@ -82,7 +82,7 @@ describe('Finanzfehler aus der Sprachdatei (A6)', () => {
     }
     expect(uiText(financeConflict('humanOnly'))).toBe(`${texts.humanOnly!.reason} ${texts.humanOnly!.remedy}`);
     // Befund 13 (Spec 10.2): Grund und Abhilfe statt des rohen Einstellungsschlüssels.
-    expect(mcpText(financeConflict('humanOnly'))).toMatch(/über einen Agenten erst, wenn der Verein es freigibt.*Einrichtung → Finanzen → Steuerliches.*Darf ein Agent festschreiben und Lastschriften bearbeiten\?/);
+    expect(mcpText(financeConflict('humanOnly'))).toMatch(/über einen Agenten erst, wenn der Verein es freigibt.*Verwaltung → Agenten.*Darf ein Agent festschreiben und Lastschriften bearbeiten\?/);
     // R12: ohne „hier in Kompass“; die Beschriftung des Schalters nennt seit U4, was er außer dem Festschreiben freigibt.
     expect(mcpText(financeConflict('humanOnly'))).not.toContain('hier in Kompass');
   });
@@ -98,6 +98,15 @@ describe('Finanzfehler aus der Sprachdatei (A6)', () => {
     // Ein Datum bleibt derselbe Kalendertag, auch wenn der Verein weit westlich sitzt.
     const west = createTranslator({ locale: 'de', messages, timeZone: 'America/Los_Angeles' }) as unknown as typeof t;
     expect(toActionState(financeConflict('noNoticeValidAt', { date: '2026-03-10' }), west)).toMatchObject({ message: expect.stringContaining('10.03.2026') });
+  });
+
+  it('openItemInDirectDebit nennt je Status nur einen Ausweg, den es gibt (Nachlauf R1)', () => {
+    const fileCreated = uiText(financeConflict('openItemInDirectDebit', { runId: 'R1', status: 'fileCreated' }))!;
+    const submitted = uiText(financeConflict('openItemInDirectDebit', { runId: 'R1', status: 'submitted' }))!;
+    for (const text of [fileCreated, submitted]) expect(text).not.toMatch(/[{}]|R1/);
+    expect(submitted).not.toBe(fileCreated);
+    // Ein eingereichter Einzug lässt sich in Kompass nicht abbrechen und kein Posten mehr herausnehmen (runSubmitted).
+    expect(submitted).not.toMatch(/brechen|aus dem Einzug/);
   });
 
   // Betrag und Datum gibt ein Dienst roh weiter; formatiert wird beim Übersetzen (Befund 38).

@@ -1,6 +1,6 @@
 {
   "name": "@kompass/app",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -31,6 +31,7 @@
     "@kompass/module-contacts": "workspace:*",
     "@kompass/module-dms": "workspace:*",
     "@kompass/module-finance": "workspace:*",
+    "@kompass/module-governance": "workspace:*",
     "@kompass/module-members": "workspace:*",
     "@kompass/module-projects": "workspace:*",
     "@kompass/module-site": "workspace:*",

@@ -37,7 +37,7 @@ import {
   voidDocument,
   type Suggestion,
 } from '@kompass/module-dms';
-import { completeFollowUp, reopenFollowUp } from '@kompass/core';
+import { completeFollowUp, followUpMailState, reopenFollowUp, userNamesFor, type FollowUpMailState } from '@kompass/core';
 import { getTranslations } from 'next-intl/server';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
@@ -514,8 +514,20 @@ export async function createFollowUpAction(id: string, _prev: ActionState, formD
     revalidatePath(`/dms/${id}`);
     revalidatePath('/dms');
     revalidatePath('/');
-    return toActionState(result, t, t('dms.toast.followUpCreated'));
+    // Ging eine Mail an die zuständige Person, sagt der Erfolg das (Rückmeldung Frage 2).
+    const mailed = result.ok && result.value.notice.mail === 'sent' && result.value.assigneeUserId ? userNamesFor(deps, [result.value.assigneeUserId]).get(result.value.assigneeUserId) : undefined;
+    return toActionState(result, t, mailed ? t('dms.toast.followUpCreatedMail', { name: mailed }) : t('dms.toast.followUpCreated'));
   });
+}
+
+/**
+ * Ob eine Zuweisung an diese Person eine Mail auslöst (`followUpMailState`) — der Dialog „Wiedervorlage anlegen“ zeigt
+ * vor dem Speichern einen Hinweis, wenn nicht. Ohne Recht `null`.
+ */
+export async function followUpMailStateAction(assigneeUserId: string): Promise<FollowUpMailState | null> {
+  const { deps, ctx } = await requireSession();
+  const result = await followUpMailState(deps, ctx, { assigneeUserId });
+  return result.ok ? result.value.state : null;
 }
 
 export async function completeFollowUpAction(id: string, followUpId: string): Promise<ActionState> {

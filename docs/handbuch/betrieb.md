@@ -306,6 +306,83 @@ Sonst ist nichts von Hand zu tun. Wer sich wundert:
   Eingabemaske ordnen; ohne sie bekommt jedes Feld eine Breite nach seinem Typ.
 - MCP-Clients sind nicht betroffen.
 
+### Von 0.4.0 auf 0.5.0
+
+Die Fassung 0.5.0 bringt eine Migration mit
+(`0012_governance_annual_accounts_0_5_0`): die Tabellen der Gremien, der
+Jahresrechnung und der Mittelverwendung samt ihren Sperren. `/api/health`
+meldet danach `migrationCount: 13`. Ein Backup (Schritt 1) gehört wie immer
+dazu.
+
+**Gremien einschalten und übernehmen.** Der Bereich Gremien ist nach dem
+Update aus. Unter **Einrichtung → Module** einschalten, dann den Rollen, die
+Sitzungen vorbereiten und protokollieren, die Rechte der Gremien geben (siehe
+„Rollen nach einem Update“). Danach unter **Gremien** Organe und Ämter anlegen,
+die Satzung mit ihrem eingetragenen Stand erfassen. Alte Sitzungen brauchen Sie
+für den Start nicht; siehe „Vergangene Sitzungen nachtragen“ im Kapitel Sitzungen.
+Bestehende Kontaktrollen *Vorstandsmitglied* und *Schatzmeister*
+ordnet „Bestehende Rollen übernehmen“ einem Amt zu, statt sie doppelt anzulegen.
+Solange Gremien eingeschaltet ist, führt es diese beiden Rollen: von Hand lassen
+sie sich nicht mehr anlegen, Altzeilen ohne Amt aber weiter beenden.
+
+**Schalter für Agenten an einer Stelle.** Die Schalter „Darf ein Agent …?“
+stehen jetzt unter **Verwaltung → Agenten** statt in den Einstellungen von
+Backup, Akte, Finanzen und Mitgliedern. Gesetzte Werte bleiben.
+
+**Festgeschriebene Berichte können auf „Prüfung“ zurückfallen.** Kompass ordnet
+Zeitpunkte jetzt nach der Zeitzone des Vereins einem Tag und Geschäftsjahr zu,
+nicht mehr nach der Weltzeit (UTC). Betroffen ist nur, was zwischen Mitternacht
+und 1 Uhr (Sommerzeit: 2 Uhr) geschah. Ein festgeschriebener **Kassenbericht**
+(Korrektur an einem Vorjahr, in diesem Zeitfenster angewandt) oder eine
+**Belegprüfung** (mehrfach verwendeter Nachweis, in diesem Zeitfenster
+hinzugefügt oder eingereicht) zeigt dann einen anderen Tag und fällt auf
+„Prüfung“ zurück; die **Zweckmittel-Aufstellung** nur, wenn ein Zweck in der
+Neujahrsnacht angelegt, erfüllt oder aufgelöst wurde. Nach dem Update unter
+Finanzen → Rechenschaft → Berichte die Stufe der festgeschriebenen Berichte
+ansehen und einen zurückgefallenen Bericht neu festschreiben.
+
+**Voranmeldungszeitraum bei „automatisch“.** Ob Kompass monatliche oder
+vierteljährliche Umsatzsteuer-Voranmeldungen erwartet, rechnet es jetzt mit der
+Zahllast des Vorjahres, wie die Voranmeldung sie ausweist (Erstattungen und
+§ 13b-Gutschriften mindern, Steuersatz am Entstehungstag). Lag das Vorjahr knapp
+über 9.000 €, kann ein Jahr von Monaten auf Quartale wechseln — dann gehören
+festgeschriebene Voranmeldungen dieses Jahres nicht mehr zu den erwarteten
+Zeiträumen. Wer den Voranmeldungszeitraum im Reiter Umsatzsteuer der Finanz-Einrichtung fest eingestellt
+hat, ist nicht betroffen.
+
+**Kategorien nach DZI prüfen.** Der neue Bericht Jahresrechnung teilt die
+Ausgaben nach der Kostenart der Kategorie in Programm, Werbung und Verwaltung.
+Das Update bringt die Kategorie „Webseite und Öffentlichkeitsarbeit“
+(**Werbung**) mit; neue Installationen ordnen außerdem Zahlungsdienstgebühren
+der **Verwaltung** zu. Bestehende Kategorien ändert das Update nicht. Danach
+unter Einrichtung → Finanzen → Kategorien prüfen: „Gebühren Zahlungsdienst“ auf
+Verwaltung, Ausgaben für Webseite und Öffentlichkeitsarbeit künftig auf die neue
+Kategorie, und an „Auszahlung Spendenplattform“ das Merkmal Spendenplattform
+(„bestätigt selbst“).
+
+**Adresse der Installation.** Neue Umgebungsvariable `KOMPASS_PUBLIC_URL`: Mit
+ihr tragen Mails zu zugewiesenen Wiedervorlagen einen Link (siehe
+„E-Mail-Versand einrichten“). Nach dem Eintragen in die Umgebungsdatei den
+Container neu erzeugen, nicht nur neu starten.
+
+**Jahresrechnung abzeichnen und publizieren.** Abzeichnen kann ein
+Vorstandsmitglied mit „vertritt nach § 26 BGB“ an seiner Rolle, in Kompass nur
+mit verknüpftem Konto und dem Recht „Finanzen lesen“. Geben Sie der Rolle Ihres
+Vorstands `finance.read` und verknüpfen Sie die Konten der Vorstände mit ihren
+Kontakten; sonst bleibt der Weg über den unterschriebenen Scan. Neu ist die
+Einstellung „Die MV genehmigt die Jahresrechnung“ der Berichte (Vorgabe aus) —
+nach der Satzung setzen. Templates können
+die bereitgestellte Jahresrechnung über die Sicht `annualAccounts` zeigen
+(`uses: ['finance']`, siehe [Template schreiben](webseite/template-schreiben.md)).
+
+**Mittelverwendungsrechnung.** Kommt ein Verein mit Vorjahren zu Kompass und
+lag über der Grenze, den Anfangsvortrag erfassen, solange das erste Kompass-Jahr
+offen ist (siehe [Mittelverwendung](finanzen/mittelverwendung.md)). Schon
+abgeschlossene Jahre mit Einnahmen über der Grenze bekommen nach dem Update
+einen offenen Schritt 13 „Mittelverwendung festschreiben“. Ohne Jahreswahl
+zeigt der Jahresabschluss das jüngste beendete Jahr, das nicht fertig ist — das
+kann dann ein solches älteres Jahr sein, bis seine Rechnung festgeschrieben ist.
+
 ### Von 0.3.2 auf 0.4.0
 
 Die Fassung 0.4.0 bringt eine Migration mit
@@ -675,8 +752,11 @@ Warnung aber dauerhaft auf Startseite und Backup-Seite, bis der Mount ergänzt
 ist (Erstinstallation, Schritt 4).
 
 **Einspielen.** Aus der Liste oder nach dem Hochladen einer Datei. Vorher legt
-Kompass ein Backup „Vor Einspielen“ an und prüft das gewählte. Währenddessen
-zeigt jede Anfrage die Wartungsseite, Agenten bekommen 503. API-Tokens und
+Kompass ein Backup „Vor Einspielen“ an und prüft das gewählte. Schon ab dem
+Start zeigt jede Anfrage die Wartungsseite, Agenten bekommen 503 — so fehlt
+im Backup „Vor Einspielen“ nichts. Läuft gerade ein Lauf der Webseite oder ein
+anderer Lauf im Hintergrund (etwa ein Datenexport), lehnt Kompass das
+Einspielen ab. API-Tokens und
 Backup-Einstellungen dieser Installation bleiben erhalten, alle Sitzungen
 enden. Die veröffentlichte Webseite, verschickte Mails und eingereichte
 Lastschriftdateien gehen nicht zurück. Scheitert das Einspielen, legt Kompass
@@ -871,8 +951,8 @@ eine Mail an die eigene Adresse und zeigt, ob alles stimmt.
 versenden“ (`dms.send`). Bestehende Rollen bekommen es nicht von selbst;
 geben Sie es unter Verwaltung → Rollen der Rolle, die Briefe verschickt.
 Agenten bereiten den Versand vor; senden dürfen sie erst, wenn der Verein
-unter Einrichtung → Akte → Versand „Darf ein Agent Dokumente per E-Mail
-senden?“ einschaltet.
+unter Verwaltung → Agenten „Darf ein Agent Dokumente per E-Mail senden?“
+einschaltet.
 
 **Ablauf.** Kompass reiht Briefe in einen Ausgang ein und sendet im
 Hintergrund, höchstens so viele je Minute, wie die Einstellung sagt (Vorgabe
@@ -887,3 +967,17 @@ Adresse und keinen Namen. Die Empfängeradresse steht im Ausgang und wird 90
 Tage nach dem Versand dort entfernt. Mit dem Anbieter des Postfachs braucht
 der Verein einen Vertrag zur Auftragsverarbeitung, und seine
 Datenschutzhinweise sollten den Versand per E-Mail nennen.
+
+**Mail bei einer zugewiesenen Wiedervorlage.** Wer eine Wiedervorlage einer
+anderen Person zuweist, schickt ihr über denselben Weg eine kurze Mail: wer sie
+zugewiesen hat, wann sie fällig ist und woran sie hängt. Den Link setzt Kompass
+aus der Adresse der Installation zusammen:
+
+| Variable | Bedeutung |
+|---|---|
+| `KOMPASS_PUBLIC_URL` | Adresse, unter der die Menschen im Verein Kompass aufrufen, etwa `https://kompass.example.org` (ohne `/` am Ende). Fehlt sie, nennt die Mail statt eines Links den Weg „Startseite → Fällig“. |
+
+Die Mail geht nur an aktive Konten mit gültiger Adresse und nie an die Person,
+die die Wiedervorlage selbst anlegt. Darf die Person den Vorgang nicht lesen,
+nennt die Mail keinen Titel. Ohne Absender unter Einrichtung → Akte geht keine
+Mail; die Wiedervorlage entsteht trotzdem.

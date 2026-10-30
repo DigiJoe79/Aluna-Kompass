@@ -13,7 +13,7 @@ export const START_PLAN: readonly CategorySeed[] = [
   { key: 'membership-fees', name: 'Mitglieds- und Förderbeiträge', direction: 'income', sphere: 'ideal', incomeKind: 'membershipFee', statementSuffices: true },
   { key: 'in-kind-donations', name: 'Sachspenden', direction: 'income', sphere: 'ideal', incomeKind: 'inKindDonation' },
   { key: 'expense-waivers', name: 'Aufwandsspenden', direction: 'income', sphere: 'ideal', incomeKind: 'expenseWaiver' },
-  { key: 'platform-payouts', name: 'Auszahlung Spendenplattform', explanation: 'Die Plattform stellt die Bestätigungen aus.', direction: 'income', sphere: 'ideal', incomeKind: 'bodyGrant', statementSuffices: true },
+  { key: 'platform-payouts', name: 'Auszahlung Spendenplattform', explanation: 'Die Plattform stellt die Bestätigungen aus.', direction: 'income', sphere: 'ideal', incomeKind: 'bodyGrant', statementSuffices: true, donationPlatform: 'confirmsItself' },
   { key: 'body-grants', name: 'Zuwendungen anderer Organisationen', direction: 'income', sphere: 'ideal', incomeKind: 'bodyGrant' },
   { key: 'public-grants', name: 'Zuschüsse', direction: 'income', sphere: 'ideal', incomeKind: 'publicGrant' },
   { key: 'court-fines', name: 'Geldauflagen', direction: 'income', sphere: 'ideal', incomeKind: 'courtFine', statementSuffices: true },
@@ -28,10 +28,12 @@ export const START_PLAN: readonly CategorySeed[] = [
   { key: 'trainer-allowance', name: 'Übungsleiterpauschalen', direction: 'expense', sphere: 'ideal', costFunction: 'program', allowanceKind: 'trainer' },
   { key: 'office', name: 'Büro, Porto, Telefon', direction: 'expense', sphere: 'ideal', costFunction: 'administration' },
   { key: 'it', name: 'Software und Internet', explanation: 'Rechnung eines Anbieters aus dem Ausland ohne deutsche Umsatzsteuer? Dann ist es meist ein Fall des § 13b.', direction: 'expense', sphere: 'ideal', costFunction: 'administration' },
+  // Jahresrechnung (0.4.5, DZI-Zuordnung): Werbung und Öffentlichkeitsarbeit getrennt von „Software und Internet“ (Verwaltung).
+  { key: 'website-pr', name: 'Webseite und Öffentlichkeitsarbeit', direction: 'expense', sphere: 'ideal', costFunction: 'fundraising' },
   { key: 'insurance-fees', name: 'Versicherungen, Beiträge, Gebühren', direction: 'expense', sphere: 'ideal', costFunction: 'administration' },
   { key: 'legal', name: 'Notar, Register, Beratung', direction: 'expense', sphere: 'ideal', costFunction: 'administration' },
   { key: 'bank-fees', name: 'Bankgebühren', direction: 'expense', sphere: 'ideal', costFunction: 'administration', statementSuffices: true },
-  { key: 'payment-fees', name: 'Gebühren Zahlungsdienst', explanation: 'Gebühren von Zahlungsdiensten sind meist steuerfrei (§ 4 Nr. 8 d UStG), kein § 13b. Zusatzdienste auf derselben Rechnung können § 13b sein.', direction: 'expense', sphere: 'ideal', costFunction: 'fundraising', statementSuffices: true },
+  { key: 'payment-fees', name: 'Gebühren Zahlungsdienst', explanation: 'Gebühren von Zahlungsdiensten sind meist steuerfrei (§ 4 Nr. 8 d UStG), kein § 13b. Zusatzdienste auf derselben Rechnung können § 13b sein.', direction: 'expense', sphere: 'ideal', costFunction: 'administration', statementSuffices: true },
   // Rechenschaft D2: Hinweis-Kategorien für Zeile 74 der Anlage Gem (unentgeltliche Zuwendungen außerhalb des Satzungszwecks).
   { key: 'member-care', name: 'Mitgliederbetreuung', direction: 'expense', sphere: 'ideal', costFunction: 'administration' },
   { key: 'member-gifts', name: 'Zuwendungen an Mitglieder', explanation: 'Geschenke und Feiern für Mitglieder; Hinweis für Zeile 74 der Anlage Gem.', direction: 'expense', sphere: 'ideal', costFunction: 'administration' },

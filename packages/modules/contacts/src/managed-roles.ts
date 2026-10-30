@@ -1,15 +1,17 @@
-import { localizedConflict, newId, recordAudit, type CallContext, type ContactRoleDefinition, type DbOrTx, type Deps, type Failure } from '@kompass/core';
+import { contactRoleManager, contactRoleRowManager, localizedConflict, newId, recordAudit, type CallContext, type ContactRoleDefinition, type DbOrTx, type Deps, type Failure } from '@kompass/core';
 import { and, desc, eq } from 'drizzle-orm';
 import { contactRoles } from './schema';
 
 /**
- * Eine Rolle, die ein Modul führt (`ContactRoleDefinition.managedBy`), setzt und beendet nur dieses Modul — von Hand
+ * Eine Rolle, die ein Modul führt (`contactRoleManager`: `managedBy` oder ein eingeschaltetes Modul mit `managesContactRoles`), setzt und beendet nur dieses Modul — von Hand
  * lehnen `addContactRole` und `endContactRole` sie ab und nennen das Modul (über `moduleKeys`, die Meldung schreibt
- * daraus den Namen).
+ * daraus den Namen). Mit `rowId` (Ändern, Beenden) zählt nur, ob das Modul diese Zeile führt.
  */
-export function managedRoleRefusal(definition: ContactRoleDefinition): Failure | null {
-  if (definition.managedBy === undefined) return null;
-  return localizedConflict('roleManagedByModule', 'errors.roleManagedByModule', { moduleKeys: definition.managedBy });
+export function managedRoleRefusal(deps: Deps, definition: ContactRoleDefinition, rowId?: string): Failure | null {
+  // Mit Zeile: nur die Zeilen, die das führende Modul als seine meldet (V-1: Zeilen von vor Gremien bleiben von Hand).
+  const manager = rowId === undefined ? contactRoleManager(deps, definition) : contactRoleRowManager(deps, definition, rowId);
+  if (manager === null) return null;
+  return localizedConflict('roleManagedByModule', 'errors.roleManagedByModule', { moduleKeys: manager });
 }
 
 /**

@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { NextIntlClientProvider } from 'next-intl';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { DataExportCard, type DataExportRow } from '@/app/(shell)/finance/reports/data-export-card';
@@ -77,5 +77,40 @@ describe('Datenexport auf der Seite Berichte', () => {
     cleanup();
     show(IDLE_DATA_EXPORT, []);
     expect(screen.getByText('Noch kein Export.')).toBeTruthy();
+  });
+});
+
+describe('Datenexport: Stand abfragen (App-B4)', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+  });
+
+  it('ein fehlgeschlagener Abruf beendet das Abfragen nicht: danach erscheint der fertige Stand', async () => {
+    vi.useFakeTimers();
+    const done: DataExportRunView = { ...RUNNING, state: 'success', cancellable: false, finishedAt: '2026-10-20T09:00:00.000Z' };
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockRejectedValueOnce(new Error('offline')).mockResolvedValue(new Response(JSON.stringify(done), { status: 200 }));
+    show(RUNNING);
+    expect(screen.getByTestId('data-export-run')).toBeTruthy();
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(20_000);
+    });
+    expect(fetchMock.mock.calls.length).toBeGreaterThanOrEqual(2);
+    expect(screen.queryByTestId('data-export-run')).toBeNull();
+  });
+
+  it('nach dem Verlassen der Seite plant ein laufender Abruf keinen neuen', async () => {
+    vi.useFakeTimers();
+    let answer!: (r: Response) => void;
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(() => new Promise<Response>((res) => (answer = res)));
+    const { unmount } = show(RUNNING);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5_000);
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    unmount();
+    answer(new Response(JSON.stringify(RUNNING), { status: 200 }));
+    await vi.advanceTimersByTimeAsync(60_000);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });

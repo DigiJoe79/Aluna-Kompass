@@ -18,7 +18,8 @@ Die Schritte stehen in drei Gruppen:
   7 Zuwendungsbestätigungen
 - **Abschluss:** 8 Jahr abschließen
 - **Prüfung und Vorlage:** 9 Prüffassungen und Prüfpaket · 10 Prüfbericht ·
-  11 Mitgliederversammlung · 12 Steuererklärung
+  11 Mitgliederversammlung · 12 Steuererklärung · nur über der Grenze für die
+  zeitnahe Mittelverwendung: 13 Mittelverwendung festschreiben
 
 Ein erledigter Schritt zeigt sein Ergebnis in einer Zeile. Nur der nächste
 offene Schritt ist aktiv und trägt Text und Handlung. Sind alle zwölf erledigt,
@@ -71,11 +72,20 @@ während die Prüfung noch läuft, ist es die Prüffassung; sie trägt dann
 „wird der MV nach Abschluss der Prüfung festgeschrieben vorgelegt“.
 
 **11 Mitgliederversammlung.** Ein Formular im Schritt: Datum der MV, das
-Protokoll (gleich oder später), „Jahresrechnung genehmigt“ und die Entlastung,
+Protokoll (gleich oder später), „Jahresrechnung genehmigt“ (die Genehmigung nach der
+Satzung, gestützt auf Kassenbericht und den Bericht **Jahresrechnung**) und die Entlastung,
 einzeln oder gesamt. Bei der Einzelentlastung steht jedes Vorstandsmitglied des
 Jahres mit Amt und Zeitraum da, ohne Vorauswahl. Ist eine Entlastung verweigert
 oder vertagt, bleibt der Schritt offen — das sperrt nichts; tragen Sie das
 Ergebnis der nächsten MV nach.
+
+Ist **Gremien** eingeschaltet und gibt es zum Geschäftsjahr eine festgeschriebene
+Mitgliederversammlung mit Entlastung oder Genehmigung der Jahresrechnung, steht
+statt des Formulars „Geführt in“ mit einem Link zur Sitzung; das Ergebnis kommt
+von dort und lässt sich hier weder speichern noch ein Protokoll ablegen. Je
+Person gilt der jüngste Entlastungsbeschluss — vertagt in der ersten, erteilt
+in der Wiederholungsversammlung zählt die Erteilung mit ihrem Tag. Das gilt,
+sobald das Jahr angezeigt wird, auch wenn die MV vor dem Abschluss liegt.
 
 **12 Steuererklärung.** Gehört das Jahr zu einem Erklärungszeitraum, folgt der
 Schritt dessen Abgabe (siehe [Steuererklärung](steuererklaerung.md)): Ein Jahr,
@@ -94,6 +104,12 @@ bestätigt ist: Oben steht dann deren Ergebnis, darunter nur noch, was fehlt.
 Ist sie eingetragen, nennen der erledigte Schritt und „Fertig.“ auch ihren Tag
 (siehe [Fristen und Schwellen](fristen-und-schwellen.md)).
 
+**13 Mittelverwendung festschreiben.** Den Schritt gibt es nur, wenn die
+Einnahmen des Jahres über der Grenze für die zeitnahe Mittelverwendung liegen
+(100.000 €, bis 2025 45.000 €, vor 2021 immer); dann zählt der Kopf „von 13“. Er ist erledigt,
+sobald die Mittelverwendungsrechnung des Jahres festgeschrieben ist, und hängt
+nicht an den Schritten 9 bis 12 (siehe [Mittelverwendung](mittelverwendung.md)).
+
 ## Entlastung in der Mitgliederversammlung
 
 Die Einzelentlastung ist üblich: Nach verbreiteter Auffassung stimmt, wer
@@ -111,7 +127,7 @@ Steuererklärung und die abgegebenen Umsatzsteuer-Erklärungen der Zeiträume de
 Jahres, für die eine Änderung eine Berichtigung nach § 153 AO nötig machen kann,
 und verlangt eine Begründung.
 Danach steht oben „Wiedergeöffnet am … von …“ mit den Schritten, die zu
-wiederholen sind: 8, 9 und 10.
+wiederholen sind: 8, 9 und 10, über der Grenze auch 13.
 
 Lag der Prüfbericht schon, heißt Schritt 10 danach **Nachprüfung** und nennt die
 geänderten Buchungen. Vor der Mitgliederversammlung gibt es einen Weg: den
@@ -129,4 +145,4 @@ Einen Agenten können Sie den Stand lesen lassen (Werkzeuge
 wiederöffnen, das Ergebnis der MV speichern und in das Folgejahr übernehmen
 sind persönliche Schritte: Über einen Agenten gehen sie nur, wenn der Verein
 den Schalter „Darf ein Agent festschreiben und Lastschriften bearbeiten?“ unter
-Einrichtung → Finanzen → Steuerliches eingeschaltet hat.
+[Verwaltung → Agenten](../einstellungen/agenten.md) eingeschaltet hat.

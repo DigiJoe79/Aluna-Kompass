@@ -40,6 +40,7 @@ export const SETTINGS_TABS: SettingsTab[] = [
       { key: 'organization.foundedYear', kind: 'text', size: 's', section: 'locale' },
       { key: 'organization.registerCourt', kind: 'text', size: 'm', section: 'register' },
       { key: 'organization.registerNumber', kind: 'text', size: 's', section: 'register', hintKey: 'registerNumberHint' },
+      { key: 'organization.registeredOn', kind: 'date', size: 's', section: 'register' },
       { key: 'organization.email', kind: 'text', size: 'm', section: 'contact' },
       { key: 'organization.phone', kind: 'text', size: 's', section: 'contact' },
       { key: 'organization.website', kind: 'text', size: 'm', section: 'contact' },

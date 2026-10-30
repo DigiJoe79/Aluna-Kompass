@@ -64,7 +64,8 @@ export function coveringEntriesInternal(deps: Pick<Deps, 'db' | 'registry'>, man
  * Betrag je Einzug, über die Akte festgeschrieben (Entwurf, dann festschreiben — dafür braucht es `dms.create` und
  * `dms.file`), verknüpft mit Mandat und Kontakt; dazu die Zeile, die festhält, welche Einzüge er abdeckt. Protokoll:
  * Referenz und Zahl der Einzüge. Ein Tag am Wochenende oder Feiertag wird zum nächsten Bankarbeitstag, und der Brief
- * nennt diesen; ein Tag vor heute plus Frist der Vorabankündigung ist zu spät (`prenotificationTooLate`, E1).
+ * nennt diesen; ein Tag vor heute plus Frist der Vorabankündigung ist zu spät (`prenotificationTooLate`, E1). Gibt es
+ * zum Mandat schon eine festgeschriebene, nicht stornierte Ankündigung mit genau diesem Plan, kommt sie zurück (App-B1).
  */
 export async function issuePrenotification(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<{ id: string; documentId: string; number: string }>> {
   const denied = requirePermission(ctx, DIRECT_DEBIT_PERMISSION);
@@ -85,6 +86,9 @@ export async function issuePrenotification(deps: Deps, ctx: CallContext, input: 
   if (state === 'expired') return financeConflict('mandateNotUsable', { reference: mandate.reference });
   const creditorId = readSetting<string | null>(deps, 'finance.sepa.creditorId');
   if (!creditorId) return financeConflict('sepaCreditorIdMissing');
+  // App-B1: Ein zweiter Klick mit demselben Plan bekommt den schon ausgestellten Brief, kein zweites Dokument mit Nummer.
+  const same = issuedSamePlanInternal(deps.db, mandate.id, plan);
+  if (same) return ok(same);
   const contact = deps.db.select().from(contacts).where(eq(contacts.id, mandate.contactId)).get();
   const body = prenotificationPlanBody({ greeting: contact ? greetingFor(contact) : 'Guten Tag,', creditorName: creditorNameInternal(deps), plan, iban: mandate.iban, reference: mandate.reference, creditorId });
   const draft = await createDraft(deps, ctx, { typeKey: PRENOTIFICATION_DOCUMENT_TYPE, subject: prenotificationSubject(mandate.reference), body, links: [{ entityType: 'contact', entityId: mandate.contactId, role: 'recipient' }] });
@@ -98,6 +102,21 @@ export async function issuePrenotification(deps: Deps, ctx: CallContext, input: 
     return rowId;
   });
   return ok({ id, documentId: filed.value.id, number: filed.value.number ?? '' });
+}
+
+const planKey = (plan: readonly PrenotificationPlanEntry[]) => JSON.stringify(plan.map((e) => [e.dueOn, e.amountCents, e.remittance ?? null]));
+
+/** Die festgeschriebene, nicht stornierte Ankündigung zum Mandat mit genau diesem Plan (Tage, Beträge, Zwecke), sonst `null`. */
+function issuedSamePlanInternal(db: DbOrTx, mandateId: string, plan: readonly PrenotificationPlanEntry[]): { id: string; documentId: string; number: string } | null {
+  const key = planKey(plan);
+  const row = db
+    .select({ id: financeSepaPrenotifications.id, documentId: financeSepaPrenotifications.documentId, plan: financeSepaPrenotifications.plan, number: documents.number })
+    .from(financeSepaPrenotifications)
+    .innerJoin(documents, eq(documents.id, financeSepaPrenotifications.documentId))
+    .where(and(eq(financeSepaPrenotifications.mandateId, mandateId), eq(documents.phase, 'issued'), ne(documents.status, 'voided')))
+    .all()
+    .find((r) => planKey(r.plan) === key);
+  return row ? { id: row.id, documentId: row.documentId, number: row.number ?? '' } : null;
 }
 
 /**

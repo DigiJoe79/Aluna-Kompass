@@ -285,6 +285,9 @@ function resendEntry(tx: DbOrTx, deps: Deps, ctx: CallContext, entry: DmsMailOut
   if (entry.status !== 'failed' && entry.status !== 'sent') return dmsConflict('mailNotResendable', { status: entry.status });
   const row = tx.select().from(documents).where(eq(documents.id, entry.documentId)).get();
   if (!row) return notFound('document', entry.documentId);
+  // App-B2: Wartet zum selben Dokument und Empfänger schon eine Sendung, entsteht keine zweite (Doppelklick).
+  const waiting = tx.select({ id: dmsMailOutbox.id }).from(dmsMailOutbox).where(and(eq(dmsMailOutbox.documentId, entry.documentId), eq(dmsMailOutbox.contactId, entry.contactId), inArray(dmsMailOutbox.status, ['queued', 'sending']))).get();
+  if (waiting) return dmsConflict('alreadyQueued');
   const plan = planPair(tx, deps, row, entry.contactId);
   if (plan.channel === 'post') return dmsConflict('mailRecipientPost', { reason: plan.reason });
   const id = insertEntry(tx, deps, ctx, row, entry.contactId, plan.address, entry.runRef);

@@ -14,7 +14,7 @@ import { Textarea } from '@/components/ui/textarea';
 import type { ActionState } from '@/lib/actions';
 import { formatAmount, formatEuro, parseAmount } from '@/lib/finance/amount';
 import { withUnplacedFieldErrors } from '@/lib/feedback';
-import { reserveBalanceAfter, reserveSaveBlocker, type ReserveMovementKind } from '@/lib/finance/reserves';
+import { reserveBalanceAfter, reserveSaveBlocker, type ReserveKind, type ReserveMovementKind } from '@/lib/finance/reserves';
 import { recordReserveMovementAction, recordReserveMovementUploadAction } from './actions';
 import { ResolutionField } from './resolution-field';
 import { FormField } from '@/components/forms/form-field';
@@ -23,7 +23,7 @@ import { FormCell, FormGrid, FormRowBreak } from '@/components/forms/form-grid';
 export interface MovementReserve {
   id: string;
   name: string;
-  kind: 'projectFunds' | 'replacement' | 'free' | 'participation';
+  kind: ReserveKind;
   balanceCents: number;
 }
 

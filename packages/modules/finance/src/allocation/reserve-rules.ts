@@ -7,6 +7,19 @@
  * ist Sache von `LimitProgress` (Annahme 17).
  */
 
+// ── Arten zurückgelegten Geldes (M1 Task 2) ──
+
+/**
+ * Die Arten: vier nach § 62 Abs. 1 Nr. 1–4 AO und zwei außerhalb von § 62 — Rücklagen im wirtschaftlichen
+ * Geschäftsbetrieb und in der Vermögensverwaltung (AEAO zu § 55 Nr. 3 und Nr. 28). Die zwei liegen außerhalb der
+ * Höchstbetragsrechnung der freien Rücklage und der Zeilen 50–59 der Anlage Gem; die Mittelverwendungsrechnung zieht
+ * sie in Teil B ab.
+ */
+export const RESERVE_KINDS = ['projectFunds', 'replacement', 'free', 'participation', 'business', 'assetManagement'] as const;
+export type ReserveKind = (typeof RESERVE_KINDS)[number];
+export const SECTION_62_RESERVE_KINDS: readonly ReserveKind[] = ['projectFunds', 'replacement', 'free', 'participation'];
+export const OPERATION_RESERVE_KINDS: readonly ReserveKind[] = ['business', 'assetManagement'];
+
 export interface FreeReserveCapInput {
   /** Überschuss der Vermögensverwaltung im Jahr — ein Minus zählt als 0. */
   assetManagementSurplusCents: number;

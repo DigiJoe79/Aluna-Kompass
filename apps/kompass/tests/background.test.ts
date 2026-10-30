@@ -62,6 +62,19 @@ describe('startBackgroundWork', () => {
   });
 });
 
+describe('startBackgroundWork ohne Datenbank', () => {
+  it('lässt keinen Dienst an, wenn `ready` wirft, und kann später doch noch starten', () => {
+    resetBackgroundForTests();
+    let starts = 0;
+    const onStart = () => { starts += 1; };
+    startBackgroundWork({ runtime: 'nodejs', ready: () => { throw new Error('Migration gescheitert'); }, onStart });
+    expect([starts, backgroundStarted()]).toEqual([0, false]);
+    startBackgroundWork({ runtime: 'nodejs', ready: () => undefined, onStart });
+    expect([starts, backgroundStarted()]).toEqual([1, true]);
+    resetBackgroundForTests();
+  });
+});
+
 describe('kickMailSender', () => {
   it('stößt den angemeldeten Sender an und schweigt ohne ihn', async () => {
     resetBackgroundForTests();

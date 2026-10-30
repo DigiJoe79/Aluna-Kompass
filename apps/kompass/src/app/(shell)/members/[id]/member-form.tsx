@@ -19,7 +19,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Segmented } from '@/components/ui/segmented';
 import { Select } from '@/components/ui/select';
-import { formatAmount, formatEuro, parseAmount } from '@/lib/finance/amount';
+import { formatAmount, formatEuro, readAmount } from '@/lib/finance/amount';
 import { withUnplacedFieldErrors } from '@/lib/feedback';
 import { previewRecalculationAction, saveMemberAction } from '../actions';
 
@@ -55,6 +55,7 @@ export interface MemberFormData {
 export function MemberForm({ m, types, detail, canManage, canFees, canOpenMandate = false, today }: { m: MemberFormData; types: { id: string; name: string; exempt: boolean }[]; detail: MemberFeeDetail; canManage: boolean; canFees: boolean; canOpenMandate?: boolean; today: string }) {
   const t = useTranslations('members.detail');
   const tf = useTranslations('members.form');
+  const tAmount = useTranslations('finance.amount');
   const ti = useTranslations('members.interval');
   const tp = useTranslations('members.payment');
   const tm = useTranslations('members.mandateState');
@@ -67,6 +68,8 @@ export function MemberForm({ m, types, detail, canManage, canFees, canOpenMandat
   const [typeFrom, setTypeFrom] = useState(today);
   const [override, setOverride] = useState(false);
   const [amount, setAmount] = useState('');
+  // Abweichender Beitrag ist Pflicht, sobald gewählt: leer oder unlesbar steht am Feld, statt still auf die Beitragsordnung zu fallen.
+  const [amountError, setAmountError] = useState<'missing' | 'format' | null>(null);
   const [reduction, setReduction] = useState<'none' | 'reduced'>(detail.reduction === 'reduced' ? 'reduced' : 'none');
   const [payment, setPayment] = useState(detail.paymentMethod);
   const [iban, setIban] = useState('');
@@ -79,7 +82,9 @@ export function MemberForm({ m, types, detail, canManage, canFees, canOpenMandat
   const typeChanged = running && typeId !== m.typeId;
   const feeChanged = override || payment !== detail.paymentMethod;
   const changed = Number(typeChanged) + Number(override) + Number(payment !== detail.paymentMethod);
-  const amountCents = override ? parseAmount(amount) : null;
+  const amountRead = override ? readAmount(amount, { required: true }) : null;
+  // Die Vorschau rechnet nur mit einem lesbaren Betrag; gespeichert wird ein unlesbarer nie (`save`).
+  const amountCents = amountRead?.ok ? amountRead.cents : null;
   const needsMandate = payment === 'directDebit' && (!detail.mandate || detail.mandate.state === 'ended' || detail.mandate.state === 'expired');
 
   // Vor dem Speichern (Spec § 3.3): was mit den angelegten Beiträgen geschähe. Nur für eine laufende Mitgliedschaft.
@@ -105,6 +110,7 @@ export function MemberForm({ m, types, detail, canManage, canFees, canOpenMandat
   const discard = () => {
     setTypeId(m.typeId);
     setOverride(false);
+    setAmountError(null);
     setAmount('');
     setPayment(detail.paymentMethod);
     setIban('');
@@ -112,6 +118,11 @@ export function MemberForm({ m, types, detail, canManage, canFees, canOpenMandat
   };
 
   const save = async () => {
+    if (amountRead && !amountRead.ok) {
+      setAmountError(amountRead.error);
+      return;
+    }
+    setAmountError(null);
     setPending(true);
     const result = await feedback.run(
       () =>
@@ -179,7 +190,7 @@ export function MemberForm({ m, types, detail, canManage, canFees, canOpenMandat
             {override && fee.kind === 'fee' ? (
               <>
                 <FormField id="member-amount" label={tf('amount', { interval: ti(fee.interval) })} required size="s" error={errors.amountCents}>
-                  <AmountField id="member-amount" name="amount" value={amount} onChange={setAmount} />
+                  <AmountField id="member-amount" name="amount" value={amount} onChange={(v) => { setAmount(v); setAmountError(null); }} invalid={amountError !== null} errorText={amountError === 'missing' ? tAmount('missing') : undefined} />
                 </FormField>
                 <FormField id="member-reduction" label={tf('reduction')} hint={tf('reductionHint')}>
                   <Select id="member-reduction" value={reduction} onChange={(e) => setReduction(e.target.value as 'none' | 'reduced')}>

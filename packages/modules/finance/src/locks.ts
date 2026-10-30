@@ -20,7 +20,7 @@ export type EntryLock = (db: DbOrTx, entryId: string) => { scope: 'entry' | 'con
  * kein Satz. `null`, wenn der Wächter für dieses Jahr nichts zu tun hat.
  */
 export interface PeriodReopenConsequence { code: string; params: Record<string, string | number> }
-export interface PeriodReopenGuard { describe(db: DbOrTx, yearId: string): PeriodReopenConsequence | null; onReopen(tx: DbOrTx, deps: Deps, ctx: CallContext, yearId: string, reason: string): void }
+export interface PeriodReopenGuard { /** `deps` nur für Fragen an andere Module (Webseite: steht die Fassung online?). */ describe(db: DbOrTx, yearId: string, deps?: Deps): PeriodReopenConsequence | null; onReopen(tx: DbOrTx, deps: Deps, ctx: CallContext, yearId: string, reason: string): void }
 
 /**
  * Rechenschaft D1: Was beim Abschluss eines Jahres in derselben Transaktion mitläuft (Prüfstand der Kassenprüfung).
@@ -48,6 +48,25 @@ export function registerEntryLocks(locks: readonly EntryLock[]): void {
 /** Trägt Wächter in `PERIOD_REOPEN_GUARDS` ein — jeden höchstens einmal (wie `registerEntryLocks`). */
 export function registerReopenGuards(guards: readonly PeriodReopenGuard[]): void {
   for (const guard of guards) if (!reopenGuards.includes(guard)) reopenGuards.push(guard);
+}
+
+/**
+ * Jahresrechnung (0.4.5, Ve-F-2): Was nach dem Widerruf einer Einwilligung zur Namensnennung geschieht — außerhalb der
+ * Transaktion des Widerrufs (J2: Webfassung, Wiedervorlage „Webseite neu veröffentlichen“). J1 legt nur die Liste an.
+ */
+export type NameConsentRevokedHook = (deps: Deps, ctx: CallContext, contactId: string) => void | Promise<void>;
+const nameConsentRevokedHooks: NameConsentRevokedHook[] = [];
+export const NAME_CONSENT_REVOKED_HOOKS: readonly NameConsentRevokedHook[] = nameConsentRevokedHooks;
+
+/** Trägt einen Haken in `NAME_CONSENT_REVOKED_HOOKS` ein — jeden höchstens einmal (wie `registerReopenGuards`). */
+export function registerNameConsentRevokedHook(hook: NameConsentRevokedHook): void {
+  if (!nameConsentRevokedHooks.includes(hook)) nameConsentRevokedHooks.push(hook);
+}
+
+/** Nur für Tests: einen Haken wieder austragen. */
+export function unregisterNameConsentRevokedHook(hook: NameConsentRevokedHook): void {
+  const at = nameConsentRevokedHooks.indexOf(hook);
+  if (at >= 0) nameConsentRevokedHooks.splice(at, 1);
 }
 
 const closeHooks: PeriodCloseHook[] = [];

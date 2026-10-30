@@ -37,6 +37,9 @@ export function useProgressText() {
           return n('count') > 0 ? [tp('donations', { count: n('count') })] : [];
         case 'partnerPayments':
           return [tp('partnerPayments', { count: n('total') })];
+        case 'resolutions':
+          // „4 Beschlüsse · 1 abgelehnt“, leer „keine Beschlüsse“ (Designer 2026-10-29).
+          return [tp('resolutions', { count: n('total') }), ...(n('rejected') > 0 ? [tp('resolutionsRejected', { count: n('rejected') })] : [])];
       }
     })();
     if (s.remarksOpen > 0) parts.push(tp('remarks', { count: s.remarksOpen }));

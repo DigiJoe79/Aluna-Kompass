@@ -84,8 +84,10 @@ describe('readEnv', () => {
   const base = { APP_ENV: 'production', DATA_PATH: '/data', PORT: '3000', SESSION_SECRET: 'x'.repeat(32) };
 
   it('parses a complete environment', () => {
-    expect(readEnv(base)).toEqual({ env: 'production', dataPath: '/data', backupPath: './backups', inImage: false, port: 3000, sessionSecret: 'x'.repeat(32), documentTemplatesDir: null, handbookDir: null, skipUpdateBackup: false });
+    expect(readEnv(base)).toEqual({ env: 'production', dataPath: '/data', backupPath: './backups', inImage: false, port: 3000, sessionSecret: 'x'.repeat(32), documentTemplatesDir: null, handbookDir: null, skipUpdateBackup: false, publicUrl: null });
     expect(readEnv({ ...base, KOMPASS_SKIP_UPDATE_BACKUP: '1' }).skipUpdateBackup).toBe(true);
+    expect(readEnv({ ...base, KOMPASS_PUBLIC_URL: 'https://kompass.example.org/' }).publicUrl).toBe('https://kompass.example.org');
+    expect(() => readEnv({ ...base, KOMPASS_PUBLIC_URL: 'kompass.example.org' })).toThrow(/KOMPASS_PUBLIC_URL/);
   });
 
   it('defaults to development with local paths when only the secret is set', () => {

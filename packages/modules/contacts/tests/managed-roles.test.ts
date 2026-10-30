@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { endManagedRoleInternal, startManagedRoleInternal } from '../src/managed-roles';
 import { contactsModule } from '../src/manifest';
 import { contactRoles } from '../src/schema';
-import { addContactRole, createContact, endContactRole } from '../src/service';
+import { addContactRole, createContact, endContactRole, updateContactRole } from '../src/service';
 
 /** Ein Modul, das die Rolle `member` selbst führt (Spec Mitglieder § 3.2), daneben eine ungeführte `none`-Rolle. */
 const membersLike = defineModule({
@@ -105,5 +105,64 @@ describe('a contact role managed by a module', () => {
     deps.db.transaction((tx) => startManagedRoleInternal(tx, deps, ctx, { contactId: contact.id, role: 'member', since: '2020-01-01' }));
     unwrap(await addContactRole(deps, ctx, { id: contact.id, role: 'donor', since: '2020-01-01' }));
     expect(holdsFor(deps, 'contact', contact.id).map((h) => h.entity)).toEqual(['contact']);
+  });
+});
+
+/** Gremien-artig: führt `board-member`, das ein anderes Modul definiert, solange es eingeschaltet ist (Spec Gremien § 3.4). */
+const definesBoard = defineModule({ key: 'finance', version: '1', permissions: ['finance.view'], dependsOn: ['contacts'], contactRoles: [{ key: 'board-member', retention: 'none' }] });
+/** Zeilen, die das Gremien-artige Modul als seine meldet (wie Gremien die Zeilen einer Amtszeit). */
+const ownedRows = new Set<string>();
+const governanceLike = defineModule({ key: 'governance', version: '1', permissions: ['governance.read'], dependsOn: ['contacts'], managesContactRoles: ['board-member'], ownsContactRoleRow: (_deps, rowId) => ownedRows.has(rowId) });
+
+function setupBoard(enabled: string[]) {
+  const deps = createTestDeps({ manifests: [coreModule, contactsModule, definesBoard, governanceLike] });
+  deps.db.transaction((tx) => writeSettingInternal(tx, deps, ctxWith(['settings.manage']), 'modules.enabled', enabled));
+  return { deps, ctx: ctxWith(['contacts.view', 'contacts.manage']) };
+}
+
+describe('a contact role managed by another module while it is enabled', () => {
+  it('cannot be added by hand while the managing module is on, and can again once it is off', async () => {
+    const { deps, ctx } = setupBoard(['contacts', 'finance', 'governance']);
+    const contact = unwrap(await createContact(deps, ctx, person));
+    const res = await addContactRole(deps, ctx, { id: contact.id, role: 'board-member', since: '2026-01-01' });
+    expect(res.ok ? null : res.error).toMatchObject({ type: 'conflict', code: 'roleManagedByModule', params: { moduleKeys: 'governance' } });
+    deps.db.transaction((tx) => writeSettingInternal(tx, deps, ctxWith(['settings.manage']), 'modules.enabled', ['contacts', 'finance']));
+    expect((await addContactRole(deps, ctx, { id: contact.id, role: 'board-member', since: '2026-01-01' })).ok).toBe(true);
+  });
+
+  it('cannot be ended or changed by hand while the managing module is on and owns the row', async () => {
+    const { deps, ctx } = setupBoard(['contacts', 'finance', 'governance']);
+    const contact = unwrap(await createContact(deps, ctx, person));
+    deps.db.transaction((tx) => startManagedRoleInternal(tx, deps, ctx, { contactId: contact.id, role: 'board-member', since: '2026-01-01' }));
+    const rowId = roleRows(deps, contact.id)[0]!.id;
+    ownedRows.add(rowId);
+    const res = await endContactRole(deps, ctx, { roleId: rowId, until: '2026-06-30' });
+    expect(res.ok ? null : res.error).toMatchObject({ code: 'roleManagedByModule' });
+    const upd = await updateContactRole(deps, ctx, { roleId: rowId, note: 'Kasse' });
+    expect(upd.ok ? null : upd.error).toMatchObject({ code: 'roleManagedByModule' });
+  });
+
+  it('V-1: a row from before the managing module (it does not own it) can still be ended and changed by hand', async () => {
+    const { deps, ctx } = setupBoard(['contacts', 'finance']);
+    const contact = unwrap(await createContact(deps, ctx, person));
+    unwrap(await addContactRole(deps, ctx, { id: contact.id, role: 'board-member', since: '2023-01-01', note: 'Vorsitz' }));
+    deps.db.transaction((tx) => writeSettingInternal(tx, deps, ctxWith(['settings.manage']), 'modules.enabled', ['contacts', 'finance', 'governance']));
+    const rowId = roleRows(deps, contact.id)[0]!.id;
+    unwrap(await updateContactRole(deps, ctx, { roleId: rowId, note: 'Beisitz' }));
+    unwrap(await endContactRole(deps, ctx, { roleId: rowId, until: '2026-06-30' }));
+    expect(roleRows(deps, contact.id)[0]).toMatchObject({ until: '2026-06-30', note: 'Beisitz' });
+    const again = await addContactRole(deps, ctx, { id: contact.id, role: 'board-member', since: '2026-07-01' });
+    expect(again.ok ? null : again.error).toMatchObject({ code: 'roleManagedByModule' });
+  });
+
+  it('does not bring the base period while managed; without the managing module it does, as before', async () => {
+    const on = setupBoard(['contacts', 'finance', 'governance']);
+    const a = unwrap(await createContact(on.deps, on.ctx, person));
+    on.deps.db.transaction((tx) => startManagedRoleInternal(tx, on.deps, on.ctx, { contactId: a.id, role: 'board-member', since: '2020-01-01' }));
+    expect(holdsFor(on.deps, 'contact', a.id)).toEqual([]);
+    const off = setupBoard(['contacts', 'finance']);
+    const b = unwrap(await createContact(off.deps, off.ctx, person));
+    unwrap(await addContactRole(off.deps, off.ctx, { id: b.id, role: 'board-member', since: '2020-01-01' }));
+    expect(holdsFor(off.deps, 'contact', b.id).map((h) => h.entity)).toEqual(['contact']);
   });
 });

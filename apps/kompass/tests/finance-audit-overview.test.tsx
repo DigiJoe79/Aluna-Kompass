@@ -26,7 +26,7 @@ const m = (path: string) => path.split('.').reduce<unknown>((n, k) => (n as Reco
 const wrap = (node: React.ReactNode) => render(<NextIntlClientProvider locale="de" messages={messages} timeZone="Europe/Berlin">{node}</NextIntlClientProvider>);
 
 const status = (over: Partial<AuditStatus> = {}): AuditStatus => ({
-  fiscalYearId: 'y25', yearStatus: 'closed', baseline: { id: 'b1', createdAt: '2026-02-02T10:00:00.000Z', kind: 'initial' }, referenceBaselineId: 'b1', changedEntryIds: [],
+  fiscalYearId: 'y25', sections: ['journal', 'reconciliation', 'vouchers', 'imports', 'anomalies', 'purposesReserves', 'donations', 'partnerPayments'], yearStatus: 'closed', baseline: { id: 'b1', createdAt: '2026-02-02T10:00:00.000Z', kind: 'initial' }, referenceBaselineId: 'b1', changedEntryIds: [],
   sectionsReviewed: [], sectionsReviewedBefore: [], samples: { sampledEntries: 0, totalEntries: 0 }, remarksUnresolved: 0, report: null, followUpOpen: false, followUpConfirmedAt: null, workFixedSince: null, auditorsWithOpenAccess: 0, cashCount: null, cashCounts: [], cashKeepers: [], packageRun: null,
   me: { auditorId: null, canEditReport: false }, ...over,
 });

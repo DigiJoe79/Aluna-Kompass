@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { createServer } from 'node:http';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -28,6 +29,18 @@ describe('workerEnvironment', () => {
   it('legt Build-Verzeichnisse unter .next ab, damit e2e:cold sie mit leert', () => {
     const w = workerEnvironment('dev', 2, root);
     expect(w.env.NEXT_DIST_DIR).toMatch(/^\.next[\\/]/);
+  });
+
+  /**
+   * Eine Worker-DB aus einem älteren Stand überlebte e2e:cold, der Migrator übersprang danach die Migrationen des
+   * Merges und der Server blieb die Nacht über mit 503 stehen (29.10., Befund 11). Kalt heißt: auch die Daten.
+   */
+  it('e2e:cold leert neben .next auch die Datenpfade der Worker', () => {
+    const w = workerEnvironment('dev', 1, root);
+    const tmp = path.relative(path.join(root, '../..'), path.dirname(path.dirname(w.env.DATA_PATH!)));
+    const script = (JSON.parse(readFileSync(path.join(import.meta.dirname, '../../../package.json'), 'utf8')) as { scripts: Record<string, string> }).scripts['e2e:cold'];
+    expect(script).toContain('apps/kompass/.next');
+    expect(script).toContain(tmp);
   });
 
   it('schaltet für die Dev-Server den Next-Indikator ab, der sonst unten rechts Klicks abfängt (K9-Befund 14)', () => {

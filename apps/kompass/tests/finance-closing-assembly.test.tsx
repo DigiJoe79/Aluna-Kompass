@@ -28,8 +28,8 @@ const PERSONS = [
   { contactId: 'c1', name: 'Petra Wagner', office: 'Vorsitzende', since: null, until: null },
   { contactId: 'c2', name: 'Jonas Krüger', office: null, since: null, until: '2025-06-30' },
 ];
-const view = (result: AssemblyResultView | null, done = false): ClosingStepView<{ key: 'assembly'; result: AssemblyResultView | null; pending: { name: string; outcome: 'granted' | 'refused' | 'postponed' | null }[] }> => ({ key: 'assembly', number: 11, group: 'after', done, confirmable: false, confirmation: null, facts: { key: 'assembly', result, pending: result && !result.complete ? [{ name: 'Jonas Krüger', outcome: 'postponed' }] : [] } });
-const RESULT = (over: Partial<AssemblyResultView> = {}): AssemblyResultView => ({ fiscalYearId: 'y25', assemblyOn: '2026-03-14', warnings: [], auditReportFiledAt: null, minutesDocumentId: null, accountsApproved: 'yes', dischargeMode: 'individual', collectiveOutcome: null, discharges: [{ contactId: 'c1', outcome: 'granted', decidedOn: '2026-03-14' }, { contactId: 'c2', outcome: 'postponed', decidedOn: '2026-03-14' }], granted: 1, total: 2, complete: false, version: 'v1', updatedAt: 'v1', updatedByUserId: 'u1', ...over });
+const view = (result: AssemblyResultView | null, done = false, formerlyManaged: { label: string } | null = null): ClosingStepView<{ key: 'assembly'; result: AssemblyResultView | null; pending: { name: string; outcome: 'granted' | 'refused' | 'postponed' | null }[]; formerlyManaged: { label: string } | null }> => ({ key: 'assembly', number: 11, group: 'after', done, confirmable: false, confirmation: null, facts: { key: 'assembly', result, pending: result && !result.complete ? [{ name: 'Jonas Krüger', outcome: 'postponed' }] : [], formerlyManaged } });
+const RESULT = (over: Partial<AssemblyResultView> = {}): AssemblyResultView => ({ fiscalYearId: 'y25', assemblyOn: '2026-03-14', warnings: [], auditReportFiledAt: null, minutesDocumentId: null, accountsApproved: 'yes', dischargeMode: 'individual', collectiveOutcome: null, discharges: [{ contactId: 'c1', outcome: 'granted', decidedOn: '2026-03-14' }, { contactId: 'c2', outcome: 'postponed', decidedOn: '2026-03-14' }], granted: 1, total: 2, complete: false, version: 'v1', updatedAt: 'v1', updatedByUserId: 'u1', managed: null, ...over });
 const step = (result: AssemblyResultView | null = null) => <AssemblyStep step={view(result)} status={STATUS} canConfirm onConfirm={() => undefined} data={{ persons: PERSONS, minutes: null }} />;
 
 describe('Schritt 11', () => {
@@ -53,6 +53,15 @@ describe('Schritt 11', () => {
     fireEvent.click(screen.getByTestId('closing-assembly-save'));
     await waitFor(() => expect(saveAssemblyAction).toHaveBeenCalled());
     expect(vi.mocked(saveAssemblyAction).mock.calls[0]![0]).toMatchObject({ assemblyOn: '2026-03-14', dischargeMode: 'individual', discharges: [{ contactId: 'c1', outcome: null }, { contactId: 'c2', outcome: 'postponed' }] });
+  });
+
+  it('V-8: Gremien führte das Ergebnis und ist aus — ein Hinweis mit der Sitzung, das Formular gilt wieder', () => {
+    wrap(<AssemblyStep step={view(null, false, { label: 'Mitgliederversammlung am 14.03.2026' })} status={STATUS} canConfirm onConfirm={() => undefined} data={{ persons: PERSONS, minutes: null }} />);
+    expect(screen.getByTestId('closing-assembly-formerly-managed').textContent).toContain('Mitgliederversammlung am 14.03.2026');
+    expect(screen.getByTestId('closing-assembly-save')).toBeTruthy();
+    cleanup();
+    wrap(step());
+    expect(screen.queryByTestId('closing-assembly-formerly-managed')).toBeNull();
   });
 
   it('MV vor dem Prüfbericht (Entscheidung c): Hinweis unter dem Datum, Speichern bleibt', () => {
@@ -122,6 +131,21 @@ describe('Schritt 11', () => {
     expect(head).toContain(m('finance.closing.assembly.outcomes.postponed'));
   });
 
+  it('G7: führt Gremien das Ergebnis, steht statt „Ergebnis nachtragen“ ein fester Wert mit Link zur Sitzung — offen wie erledigt', () => {
+    const managed = { module: 'governance', meetingId: 'M1', label: 'Mitgliederversammlung 14.03.2026', href: '/governance/meetings/M1' };
+    const parked = { ...STATUS, doneCount: 10, next: 'assembly', steps: [view(RESULT({ managed, updatedByUserId: null }))] } as unknown as ClosingStatus;
+    wrap(<ClosingSteps status={parked} names={{}} assembly={{ persons: PERSONS, minutes: null }} />);
+    const item = document.getElementById('step-assembly')!;
+    expect(within(item).queryByRole('button', { name: m('finance.closing.assembly.fillIn') })).toBeNull();
+    expect(within(item).queryByTestId('closing-body-assembly')).toBeNull();
+    const fixed = within(item).getByTestId('closing-assembly-managed');
+    expect(within(fixed).getByRole('link', { name: managed.label }).getAttribute('href')).toBe('/governance/meetings/M1');
+    cleanup();
+    const done = { ...STATUS, next: 'taxReturn', steps: [view(RESULT({ managed, updatedByUserId: null, discharges: [{ contactId: 'c1', outcome: 'granted', decidedOn: '2026-03-14' }], granted: 1, total: 1, complete: true }), true)] } as unknown as ClosingStatus;
+    wrap(<ClosingSteps status={done} names={{}} assembly={{ persons: PERSONS, minutes: null }} />);
+    expect(within(document.getElementById('step-assembly')!).getByTestId('closing-assembly-managed')).toBeTruthy();
+  });
+
   it('ohne Recht: kein Formular, keine Ablage des Protokolls, nur der Satz, wer eintragen kann', () => {
     wrap(<AssemblyStep step={view(RESULT())} status={STATUS} canConfirm={false} onConfirm={() => undefined} data={{ persons: PERSONS, minutes: null }} />);
     const body = screen.getByTestId('closing-body-assembly');
@@ -142,5 +166,12 @@ describe('Schritt 11', () => {
     wrap(<ClosingSteps status={done} names={{}} />);
     expect(document.getElementById('step-assembly')!.textContent).toContain('14.03.2026');
     expect(document.getElementById('step-assembly')!.textContent).toContain('2');
+  });
+
+  it('Schritt 11 verweist auf Kassenbericht und Jahresrechnung des Jahres (Spec Teil J)', () => {
+    wrap(step());
+    const hint = document.getElementById(screen.getByTestId('closing-assembly-accounts').getAttribute('aria-describedby') ?? '')!;
+    const links = within(hint).getAllByRole('link').map((a) => a.getAttribute('href'));
+    expect(links).toEqual(['/finance/reports/cashReport?year=y25', '/finance/reports/annualAccounts?year=y25']);
   });
 });

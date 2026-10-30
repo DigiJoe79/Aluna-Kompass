@@ -112,7 +112,13 @@ export async function issueGeneratedDocument<T = undefined>(deps: Deps, ctx: Cal
           return ok({ document: toRecord(deps, ctx, row, tx), after });
         });
       } catch (error) {
-        if (error instanceof NumberMovedOn) continue; // der nächste Anlauf überschreibt die Datei
+        if (error instanceof NumberMovedOn) {
+          // Die Ablage überschreibt nie (`files/store.ts`): Die Datei dieses nicht
+          // festgeschriebenen Anlaufs muss weg, sonst bliebe ihre alte Nummer stehen.
+          await cleanUp();
+          fileName = null;
+          continue;
+        }
         throw error;
       }
     }

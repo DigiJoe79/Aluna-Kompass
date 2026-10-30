@@ -46,7 +46,7 @@ export function releaseOfYearInternal(db: DbOrTx, fiscalYearId: string): ReportR
 }
 
 /** Berichte für MV, Prüfung und Arbeit werden erst nach der Kassenprüfung festgeschrieben; die fürs Finanzamt nicht (Spec § A). */
-export const GROUPS_NEEDING_RELEASE: readonly ReportGroup[] = ['assembly', 'audit', 'work'];
+export const GROUPS_NEEDING_RELEASE: readonly ReportGroup[] = ['assembly', 'audit', 'work', 'public'];
 
 /**
  * Die Freigabe eines Jahres lässt sich nicht mehr ändern, sobald ein nicht zurückgenommener Bericht auf ihr beruht

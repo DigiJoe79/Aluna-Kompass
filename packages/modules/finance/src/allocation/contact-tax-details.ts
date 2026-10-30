@@ -6,6 +6,8 @@ import { financeAudit } from '../audit';
 import { requireFinanceRead } from '../ledger/access';
 import { financeContactTaxDetails, type FinanceContactTaxDetailsRow } from '../schema';
 import { AO52_VALUES } from '../format/tax-purposes';
+import { financeConflict } from '../errors';
+import { nameConsentHistoryInternal, type NameConsentEntry } from './name-consents';
 import { CONTACT_REVERSE_CHARGE, REVERSE_CHARGE_DECLINE_REASONS, type ContactReverseCharge, type ReverseChargeDeclineReason } from '../ledger/codes';
 
 /**
@@ -23,6 +25,8 @@ export interface ContactTaxDetails {
   reverseCharge: ContactReverseCharge | null;
   /** E6b: gemerktes „Nein, weil …“ der Prüffrage § 13b; schließt `reverseCharge` aus. */
   reverseChargeDecline: ReverseChargeDecline | null;
+  /** Jahresrechnung (0.4.5, Ve-F-3): juristische Person — nur bei Organisationen; `null` = unbekannt, wirkt wie nein. */
+  legalEntity: 'yes' | 'no' | null;
 }
 
 /** E6b: Grund, Freitext (nur bei `other`), Tag und Person des gemerkten Nein. Der Freitext steht nur hier, nie im Protokoll. */
@@ -39,7 +43,7 @@ function declineOf(row: FinanceContactTaxDetailsRow): ReverseChargeDecline | nul
 }
 
 function detailsOfRow(row: FinanceContactTaxDetailsRow): ContactTaxDetails {
-  return { taxOffice: row.taxOffice, taxNumber: row.taxNumber, beneficiaryPurpose: row.beneficiaryPurpose, reverseCharge: row.reverseCharge, reverseChargeDecline: declineOf(row) };
+  return { taxOffice: row.taxOffice, taxNumber: row.taxNumber, beneficiaryPurpose: row.beneficiaryPurpose, reverseCharge: row.reverseCharge, reverseChargeDecline: declineOf(row), legalEntity: row.legalEntity };
 }
 
 const NO_DECLINE = { reverseChargeDeclineReason: null, reverseChargeDeclineText: null, reverseChargeDeclineOn: null, reverseChargeDeclineByUserId: null } as const;
@@ -52,14 +56,25 @@ export function contactTaxDetailsInternal(db: DbOrTx, contactId: string): Contac
 
 const getSchema = z.object({ contactId: z.string().min(1) });
 
-/** `finance.read`: die Steuerdaten eines Kontakts, oder `null`. */
-export async function getContactTaxDetails(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<(ContactTaxDetails & { contactId: string }) | null>> {
+/** Die Finanzangaben zum Kontakt mit Kontaktart und Verlauf der Einwilligung zur Namensnennung (Jahresrechnung). */
+export type ContactFinanceDetails = ContactTaxDetails & { contactId: string; contactKind: 'person' | 'organization'; nameConsents: NameConsentEntry[] };
+
+/**
+ * `finance.read`: die Finanzangaben eines Kontakts, oder `null`, wenn es weder Steuerangaben noch eine Einwilligung
+ * gibt (oder den Kontakt nicht).
+ */
+export async function getContactTaxDetails(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<ContactFinanceDetails | null>> {
   const denied = requireFinanceRead(ctx, 'read');
   if (denied) return denied;
   const parsed = validate(deps, getSchema, input);
   if (!parsed.ok) return parsed;
-  const details = contactTaxDetailsInternal(deps.db, parsed.value.contactId);
-  return ok(details ? { contactId: parsed.value.contactId, ...details } : null);
+  const { contactId } = parsed.value;
+  const contact = deps.db.select({ kind: contacts.kind }).from(contacts).where(eq(contacts.id, contactId)).get();
+  const details = contactTaxDetailsInternal(deps.db, contactId);
+  const nameConsents = nameConsentHistoryInternal(deps.db, contactId);
+  if (!contact || (!details && nameConsents.length === 0)) return ok(null);
+  const empty: ContactTaxDetails = { taxOffice: null, taxNumber: null, beneficiaryPurpose: null, reverseCharge: null, reverseChargeDecline: null, legalEntity: null };
+  return ok({ contactId, ...(details ?? empty), contactKind: contact.kind, nameConsents });
 }
 
 /** Leer heißt „keine Angabe“: Ein leerer Text wird `null`. */
@@ -72,7 +87,7 @@ const purposeField = z
   .optional()
   .transform((v) => (v === undefined ? undefined : v === null || v === '' ? null : v))
   .refine((v) => v === undefined || v === null || AO52_VALUES.includes(v), { message: 'notAo52Purpose' });
-const saveSchema = z.object({ contactId: z.string().min(1), taxOffice: field, taxNumber: field, beneficiaryPurpose: purposeField, reverseCharge: z.enum(CONTACT_REVERSE_CHARGE).nullable().optional() });
+const saveSchema = z.object({ contactId: z.string().min(1), taxOffice: field, taxNumber: field, beneficiaryPurpose: purposeField, reverseCharge: z.enum(CONTACT_REVERSE_CHARGE).nullable().optional(), legalEntity: z.enum(['yes', 'no']).nullable().optional() });
 
 /** `finance.entriesWrite`: Steuerdaten eines Kontakts anlegen oder ändern; nicht genannte Felder bleiben. */
 export async function saveContactTaxDetails(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<FinanceContactTaxDetailsRow>> {
@@ -81,7 +96,10 @@ export async function saveContactTaxDetails(deps: Deps, ctx: CallContext, input:
   const parsed = validate(deps, saveSchema, input);
   if (!parsed.ok) return parsed;
   const v = parsed.value;
-  if (!deps.db.select({ id: contacts.id }).from(contacts).where(eq(contacts.id, v.contactId)).get()) return notFound('contact', v.contactId);
+  const contact = deps.db.select({ id: contacts.id, kind: contacts.kind }).from(contacts).where(eq(contacts.id, v.contactId)).get();
+  if (!contact) return notFound('contact', v.contactId);
+  // Ve-F-3: Eine natürliche Person ist nie juristische Person; „unbekannt“ (`null`) darf jeder Kontakt tragen.
+  if (contact.kind === 'person' && v.legalEntity !== undefined && v.legalEntity !== null) return financeConflict('legalEntityOnlyOrganizations');
   return deps.db.transaction((tx: DbOrTx) => {
     const before = tx.select().from(financeContactTaxDetails).where(eq(financeContactTaxDetails.contactId, v.contactId)).get();
     const fields = {
@@ -89,6 +107,7 @@ export async function saveContactTaxDetails(deps: Deps, ctx: CallContext, input:
       taxNumber: v.taxNumber === undefined ? (before?.taxNumber ?? null) : v.taxNumber,
       beneficiaryPurpose: v.beneficiaryPurpose === undefined ? (before?.beneficiaryPurpose ?? null) : v.beneficiaryPurpose,
       reverseCharge: v.reverseCharge === undefined ? (before?.reverseCharge ?? null) : v.reverseCharge,
+      legalEntity: v.legalEntity === undefined ? (before?.legalEntity ?? null) : v.legalEntity,
       updatedAt: isoNow(deps.clock),
       updatedByUserId: ctx.userId ?? 'system',
     };
@@ -98,7 +117,7 @@ export async function saveContactTaxDetails(deps: Deps, ctx: CallContext, input:
     if (before) tx.update(financeContactTaxDetails).set(row).where(eq(financeContactTaxDetails.id, id)).run();
     else tx.insert(financeContactTaxDetails).values({ id, contactId: v.contactId, ...row }).run();
     // Das Merkmal § 13b ist ein Code, kein Personenbezug; der Kontakt selbst steht nie im Protokoll.
-    const flags = (r: Pick<FinanceContactTaxDetailsRow, 'taxOffice' | 'taxNumber' | 'beneficiaryPurpose' | 'reverseCharge'>) => ({ hasTaxOffice: r.taxOffice !== null, hasTaxNumber: r.taxNumber !== null, hasBeneficiaryPurpose: r.beneficiaryPurpose !== null, reverseCharge: r.reverseCharge });
+    const flags = (r: Pick<FinanceContactTaxDetailsRow, 'taxOffice' | 'taxNumber' | 'beneficiaryPurpose' | 'reverseCharge' | 'legalEntity'>) => ({ hasTaxOffice: r.taxOffice !== null, hasTaxNumber: r.taxNumber !== null, hasBeneficiaryPurpose: r.beneficiaryPurpose !== null, reverseCharge: r.reverseCharge, legalEntity: r.legalEntity });
     financeAudit(tx, deps, ctx, { action: 'finance.contactTaxDetails.save', entity: 'financeContactTaxDetails', id, before: before ? flags(before) : undefined, after: flags(fields) });
     return ok(tx.select().from(financeContactTaxDetails).where(eq(financeContactTaxDetails.id, id)).get()!);
   });
@@ -172,7 +191,7 @@ export async function clearReverseChargeDecline(deps: Deps, ctx: CallContext, in
   if (!deps.db.select({ id: contacts.id }).from(contacts).where(eq(contacts.id, contactId)).get()) return notFound('contact', contactId);
   return deps.db.transaction((tx: DbOrTx) => {
     const before = tx.select().from(financeContactTaxDetails).where(eq(financeContactTaxDetails.contactId, contactId)).get();
-    if (!before) return ok({ contactId, taxOffice: null, taxNumber: null, beneficiaryPurpose: null, reverseCharge: null, reverseChargeDecline: null });
+    if (!before) return ok({ contactId, taxOffice: null, taxNumber: null, beneficiaryPurpose: null, reverseCharge: null, reverseChargeDecline: null, legalEntity: null });
     if (before.reverseChargeDeclineReason === null) return ok(viewOf(before));
     tx.update(financeContactTaxDetails).set({ ...NO_DECLINE, updatedAt: isoNow(deps.clock), updatedByUserId: ctx.userId ?? 'system' }).where(eq(financeContactTaxDetails.id, before.id)).run();
     financeAudit(tx, deps, ctx, { action: 'finance.contactTaxDetails.reverseChargeAsk', entity: 'financeContactTaxDetails', id: before.id, before: { reverseChargeDecline: before.reverseChargeDeclineReason }, after: { reverseChargeDecline: null }, params: {} });
