@@ -20,7 +20,7 @@ import { deferCharge, listFees, waiveCharge } from '../src/fees';
 import { continueFeeRun, startFeeRun } from '../src/fee-run';
 import { admitMember } from '../src/memberships';
 import { markRunPostDispatched } from '../src/run-dispatch';
-import { memberDunningNotices, memberFeeCharges } from '../src/schema';
+import { memberDunningNotices, memberDunningRuns, memberFeeCharges } from '../src/schema';
 import { addressedPerson, asMcp, auditOf, enteredOn, MEMBERS_PERMISSIONS, payOpenItem, setupFees, type MembersDeps } from './helpers';
 
 const fail = <T>(res: { ok: boolean; error?: T }) => (res.ok ? null : res.error);
@@ -248,6 +248,14 @@ describe('Mahnlauf', () => {
     expect(fail(await continueDunningRun(deps, ctx, { runId: run.id }))).toMatchObject({ type: 'conflict', code: 'dunningRunDone' });
     expect(auditOf(deps, 'members.dunningRun.start').at(-1)!.params).toEqual({ asOfOn: '2026-01-20', count: 1 });
     expect(auditOf(deps, 'members.dunningRun.finish').at(-1)!.params).toEqual({ asOfOn: '2026-01-20', count: 1 });
+  });
+
+  it('the closing audit counts the refusals of the whole run, not only those of the last section', async () => {
+    const { deps, ctx } = await setup();
+    const run = unwrap(await startDunningRun(deps, ctx, { asOf: '2026-01-20' }));
+    deps.db.update(memberDunningRuns).set({ refused: [{ membershipId: 'EARLIER', code: 'earlierSection' }] }).where(eq(memberDunningRuns.id, run.id)).run();
+    expect(unwrap(await continueDunningRun(deps, ctx, { runId: run.id, max: 50 }))).toMatchObject({ status: 'done', issued: 1 });
+    expect(auditOf(deps, 'members.dunningRun.finish').at(-1)!.after).toContain('"refused":1');
   });
 
   it('runs only up to today; the preview may look ahead (R1)', async () => {

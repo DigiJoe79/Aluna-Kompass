@@ -21,8 +21,6 @@ describe('conflictBody', () => {
     expect(empty).toEqual({ code: 'bundleEmpty', message: t('errors.conflict.bundleEmpty') });
     expect(empty.message).not.toBe('Diensttext');
 
-    const detail = 'Die Auswahl umfasst 900 Dokumente.';
-    expect(conflictBody({ type: 'conflict', code: 'bundleTooLarge', message: detail }, t)).toEqual({ code: 'bundleTooLarge', message: t('errors.conflict.bundleTooLarge', { detail }) });
   });
 
   it('falls back to the general sentence for a code without one', () => {

@@ -19,7 +19,7 @@ const page = (over: Partial<ProfilePage> = {}): ProfilePage => ({
   continued: 'Weiter online.',
   ...over,
 });
-const input = (pages: ProfilePage[]): ProfileInput => ({ frame: { aspect: [4, 5], focusX: 50, focusY: 40 }, pages });
+const input = (pages: ProfilePage[]): ProfileInput => ({ headerLabel: 'Hundeprofil', frame: { aspect: [4, 5], focusX: 50, focusY: 40 }, pages });
 const ctx = { number: '', issuedAt: '2026-10-05T12:00:00.000Z', issuedDay: isoDay('2026-10-05'), organization: {}, theme: {} as never, logo: null };
 
 describe('animalProfileTemplate', () => {
@@ -37,6 +37,8 @@ describe('animalProfileTemplate', () => {
     expect(body.match(/#pagebreak\(\)/g)).toHaveLength(1);
     // Ein Titel zeichnete auf Seite 1 einen Block über das erste Tier (Spec § 6).
     expect(built.slots.title).toBeUndefined();
+    // Backlog 60: oben rechts die Beschriftung des Profils, kein Ausgabedatum.
+    expect(built.slots).toMatchObject({ hideDate: true, headerLabel: 'Hundeprofil' });
   });
 
   it('hands every photo over as an image with a path the body uses', () => {

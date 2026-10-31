@@ -172,6 +172,7 @@ export function AnswersCard({
   const [amountErrors, setAmountErrors] = useState<Record<string, AmountError>>({});
   const tAmount = useTranslations('finance.amount');
   const amountError = (id: string) => (amountErrors[id] === 'missing' ? tAmount('missing') : undefined);
+  const clearAmountError = (id: string) => setAmountErrors(({ [id]: _typed, ...rest }) => rest);
   const feedback = useActionFeedback();
   const current = answersOf(d, replacementIds, participationIds);
   const changed = changedCount(current, baseline);
@@ -323,7 +324,7 @@ export function AnswersCard({
                 </FormField>
                 <FormField id={`answer-gift-${g.key}-amount`} label={t('giftAmount')} required size="s">
                   <span className="flex items-center gap-2">
-                    <AmountField id={`answer-gift-${g.key}-amount`} name={`gift-${i}`} value={g.amount} onChange={(v) => setD((s) => ({ ...s, gifts: s.gifts.map((x) => (x.key === g.key ? { ...x, amount: v } : x)) }))} required invalid={`answer-gift-${g.key}-amount` in amountErrors} errorText={amountError(`answer-gift-${g.key}-amount`)} />
+                    <AmountField id={`answer-gift-${g.key}-amount`} name={`gift-${i}`} value={g.amount} onChange={(v) => { setD((s) => ({ ...s, gifts: s.gifts.map((x) => (x.key === g.key ? { ...x, amount: v } : x)) })); clearAmountError(`answer-gift-${g.key}-amount`); }} required invalid={`answer-gift-${g.key}-amount` in amountErrors} errorText={amountError(`answer-gift-${g.key}-amount`)} />
                     <RowMenu name={g.reason || t('giftEntry', { n: i + 1 })} items={[{ key: 'remove', label: t('giftRemove'), onSelect: () => setD((s) => ({ ...s, gifts: s.gifts.filter((x) => x.key !== g.key) })) }]} />
                   </span>
                 </FormField>
@@ -364,10 +365,10 @@ export function AnswersCard({
                   </FormField>
                   <FormRowBreak />
                   <FormField id={`answer-cost-${r.id}`} label={t('expectedCost')} size="s">
-                    <AmountField id={`answer-cost-${r.id}`} name={`cost-${r.id}`} value={v.expectedCost} onChange={(x) => put({ expectedCost: x })} invalid={`answer-cost-${r.id}` in amountErrors} />
+                    <AmountField id={`answer-cost-${r.id}`} name={`cost-${r.id}`} value={v.expectedCost} onChange={(x) => { put({ expectedCost: x }); clearAmountError(`answer-cost-${r.id}`); }} invalid={`answer-cost-${r.id}` in amountErrors} />
                   </FormField>
                   <FormField id={`answer-afa-${r.id}`} label={t('regularDepreciation')} size="s">
-                    <AmountField id={`answer-afa-${r.id}`} name={`afa-${r.id}`} value={v.regularDepreciation} onChange={(x) => put({ regularDepreciation: x })} invalid={`answer-afa-${r.id}` in amountErrors} />
+                    <AmountField id={`answer-afa-${r.id}`} name={`afa-${r.id}`} value={v.regularDepreciation} onChange={(x) => { put({ regularDepreciation: x }); clearAmountError(`answer-afa-${r.id}`); }} invalid={`answer-afa-${r.id}` in amountErrors} />
                   </FormField>
                 </>
               ) : (

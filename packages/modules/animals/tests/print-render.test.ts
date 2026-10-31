@@ -37,7 +37,7 @@ const page = (over: Partial<ProfilePage> = {}): ProfilePage => ({
 });
 
 async function pages(list: ProfilePage[]): Promise<number | null> {
-  const input: ProfileInput = { frame: { aspect: [4, 5], focusX: 50, focusY: 40 }, pages: list };
+  const input: ProfileInput = { headerLabel: 'Hundeprofil', frame: { aspect: [4, 5], focusX: 50, focusY: 40 }, pages: list };
   const built = animalProfileTemplate.build(input, ctx);
   const { bytes } = await engine.render({ baseId: PROFILE_BASE, bodyTypst: 'typst' in built.body ? built.body.typst : '', slots: built.slots, context: ctx, images: built.images });
   return pdfPageCount(bytes);

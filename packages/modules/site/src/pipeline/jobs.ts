@@ -531,7 +531,7 @@ async function publishBody(deps: Deps, ctx: CallContext, env: SiteEnv, h: RunHan
         log: JSON.stringify(built.value.exported.violations),
         summary: 'Publish abgebrochen: Sperrworttreffer',
       });
-      return conflict('blockedTermsPresent', `${built.value.exported.violations.length} Sperrworttreffer`);
+      return conflict('blockedTermsPresent', String(built.value.exported.violations.length));
     }
     // Ab hier ein Abbruch ließe die Webseite halb aktualisiert zurück.
     h.setCancellable(false);

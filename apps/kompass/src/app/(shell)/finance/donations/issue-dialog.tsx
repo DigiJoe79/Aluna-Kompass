@@ -40,7 +40,7 @@ type Preview = { state: 'idle' } | { state: 'loading' } | { state: 'ready'; url:
  * Bei einer Sachspende folgt unter der Liste das Formular ihrer Angaben. Aus
  * der Liste „Noch nicht bestätigt“ und aus der Buchungsansicht.
  */
-export function IssueDialog({ lineId, contactName, open, onOpenChange, today, canDescribe }: { lineId: string; /** Im Kopf neben Betrag und Buchungen; die Buchungsansicht kennt ihn nicht einzeln. */ contactName?: string; open: boolean; onOpenChange: (open: boolean) => void; today: string; canDescribe: boolean }) {
+export function IssueDialog({ lineIds, contactName, open, onOpenChange, today, canDescribe }: { /** Eine Zeile oder, als Sammelbestätigung, mehrere; der Dienst wählt die Art daran. */ lineIds: string[]; /** Im Kopf neben Betrag und Buchungen; die Buchungsansicht kennt ihn nicht einzeln. */ contactName?: string; open: boolean; onOpenChange: (open: boolean) => void; today: string; canDescribe: boolean }) {
   const t = useTranslations('finance.donations.issue');
   const tc = useTranslations('finance.donations');
   const { date } = useDateFormat();
@@ -52,8 +52,10 @@ export function IssueDialog({ lineId, contactName, open, onOpenChange, today, ca
   const [pending, setPending] = useState(false);
   const feedback = useActionFeedback();
 
+  // Der Wert, nicht das Feld: Die Aufrufer bauen die Liste bei jedem Rendern neu.
+  const linesKey = lineIds.join(',');
   const load = useCallback(async () => {
-    const result = await loadIssueCheckAction([lineId], issuedOn);
+    const result = await loadIssueCheckAction(linesKey.split(','), issuedOn);
     if (result.status === 'error') {
       setLoadError(result.message);
       return;
@@ -62,7 +64,7 @@ export function IssueDialog({ lineId, contactName, open, onOpenChange, today, ca
       setLoadError(null);
       setLoaded(result.data as Loaded);
     }
-  }, [lineId, issuedOn]);
+  }, [linesKey, issuedOn]);
 
   useEffect(() => {
     if (open) void load();
@@ -78,7 +80,7 @@ export function IssueDialog({ lineId, contactName, open, onOpenChange, today, ca
     let cancelled = false;
     setPreview({ state: 'loading' });
     void (async () => {
-      const response = await fetch('/finance/donations/preview', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ lineIds: [lineId], issuedOn }) });
+      const response = await fetch('/finance/donations/preview', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ lineIds: linesKey.split(','), issuedOn }) });
       if (cancelled) return;
       if (!response.ok) {
         const body = response.status === 409 ? ((await response.json()) as { message?: string }) : null;
@@ -93,7 +95,7 @@ export function IssueDialog({ lineId, contactName, open, onOpenChange, today, ca
       cancelled = true;
       if (url) URL.revokeObjectURL(url);
     };
-  }, [open, ready, lineId, issuedOn, loaded]);
+  }, [open, ready, linesKey, issuedOn, loaded]);
 
   const check = loaded?.check ?? null;
   const allowed = issueAllowed(check) && !pending;
@@ -101,7 +103,7 @@ export function IssueDialog({ lineId, contactName, open, onOpenChange, today, ca
   const submit = async () => {
     if (!check) return;
     setPending(true);
-    const result = await feedback.run(() => issueConfirmationAction({ lineIds: [lineId], issuedOn }), { retry: () => void submit() });
+    const result = await feedback.run(() => issueConfirmationAction({ lineIds: linesKey.split(','), issuedOn }), { retry: () => void submit() });
     setPending(false);
     if (result.status === 'error') {
       void load();
@@ -206,7 +208,7 @@ export function IssueDialog({ lineId, contactName, open, onOpenChange, today, ca
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent size="xl" layout="fixed-footer" className="h-[85vh] bg-surface shadow-md">
         <DialogHeader data-testid="issue-dialog-head">
-          <DialogTitle>{t('title')}</DialogTitle>
+          <DialogTitle>{lineIds.length > 1 ? t('titleCollective') : t('title')}</DialogTitle>
           {check ? (
             <p className="text-meta text-ink-2">
               {contactName ? <span className="font-semibold text-ink">{contactName} · </span> : null}
@@ -244,7 +246,7 @@ export function IssueDialog({ lineId, contactName, open, onOpenChange, today, ca
                   <div className="space-y-4">
                     <RequirementList items={items} grouping="open-first" />
                     {check.kind === 'inKind' ? (
-                      <InKindForm lineId={lineId} valueCents={check.lines[0]?.amountCents ?? 0} details={loaded?.inKindDetails ?? null} canDescribe={canDescribe} onSaved={() => void load()} />
+                      <InKindForm lineId={lineIds[0]!} valueCents={check.lines[0]?.amountCents ?? 0} details={loaded?.inKindDetails ?? null} canDescribe={canDescribe} onSaved={() => void load()} />
                     ) : null}
                   </div>
                 </Section>

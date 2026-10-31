@@ -120,6 +120,27 @@ describe('generic bases render', () => {
     expect(await footer('DE02 9999 9999 0532 0130 00')).toContain('IBAN DE02 9999 9999 0532 0130 00');
   });
 
+  describe.each(['a4-plain', 'a4-plain-slim'])('Kopf von %s (Backlog 60)', (baseId) => {
+    const header = async (number: string, slots: Record<string, unknown>) => pdfText(await renderer.renderDocument({ baseId, bases, bodyTypst: 'Auszug.', payload: { ...payload({ slots: { kind: 'plain', ...slots } }), number, issuedDate: '05.09.2026' } }));
+
+    it('zeigt ohne Angabe Nummer, sonst das Datum, wie bisher', async () => {
+      expect(await header('ABC-1', {})).toContain('ABC-1');
+      expect(await header('', {})).toContain('05.09.2026');
+    });
+
+    it('hideDate nimmt das Datum, nicht die Nummer', async () => {
+      expect(await header('', { hideDate: true })).not.toContain('05.09.2026');
+      expect(await header('ABC-1', { hideDate: true })).toContain('ABC-1');
+    });
+
+    it('headerLabel steht statt Nummer und Datum', async () => {
+      const text = await header('ABC-1', { hideDate: true, headerLabel: 'Hundeprofil' });
+      expect(text).toContain('Hundeprofil');
+      expect(text).not.toContain('ABC-1');
+      expect(await header('', { headerLabel: 'Hundeprofil' })).not.toContain('05.09.2026');
+    });
+  });
+
   it('a4-plain shows the issue date in the header when a document has no number', async () => {
     const excerpt = (issuedDate: string) =>
       renderer.renderDocument({ baseId: 'a4-plain', bases, bodyTypst: 'Auszug.', payload: { ...payload(), number: '', issuedDate } });

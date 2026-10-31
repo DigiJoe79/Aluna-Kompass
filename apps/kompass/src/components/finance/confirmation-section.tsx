@@ -60,7 +60,7 @@ export function ConfirmationSection({ lines, canIssue, canDescribe, today }: { l
       )}
       {issuing ? (
         <IssueDialog
-          lineId={issuing}
+          lineIds={[issuing]}
           open
           onOpenChange={(next) => {
             if (!next) setIssuing(null);

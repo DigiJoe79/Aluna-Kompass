@@ -1,6 +1,6 @@
 # Nordstern
 
-Stand 2026-10-18. Das Gesamtbild von Aluna Kompass und die Reihenfolge, in der
+Stand 2026-10-31. Das Gesamtbild von Aluna Kompass und die Reihenfolge, in der
 es entsteht. Regeln stehen in `AGENTS.md`, das Was einzelner Vorhaben in
 `docs/intern/specs/`, bewusst zurückgestellte Kleinigkeiten in
 `docs/intern/backlog.md` (beides Arbeitsdokumente, nicht im öffentlichen
@@ -48,8 +48,9 @@ Dokument, nicht die Spec eines Moduls.
 
 - **Kein Newsletter.** Massenversand ist ein eigenes Handwerk mit eigenen
   Pflichten (Einwilligung, Abmeldung, Zustellbarkeit). Dafür gibt es Dienste.
-- **Kein Mailprogramm.** Kompass empfängt keine E-Mails und schreibt keine.
-  Ein Brief entsteht als PDF in der Akte und verlässt Kompass als dieses PDF:
+- **Kein Mailprogramm.** Kompass empfängt keine E-Mails und schreibt keine
+  Korrespondenz per Mail; kurze Hinweise des Systems an Nutzer (Wiedervorlage,
+  Backup) sind keine Post. Ein Brief entsteht als PDF in der Akte und verlässt Kompass als dieses PDF:
   auf Papier oder als Anhang einer E-Mail an den Kontakt, mit Versandvermerk
   (seit 0.3.0). Eine Mail, die in die Akte gehört, wird als PDF gedruckt und
   abgelegt. Das hält die Akte bei einem Dateiformat und Kompass aus dem
@@ -79,10 +80,12 @@ Dokument, nicht die Spec eines Moduls.
 - **Keine Finanzbuchhaltung für Bilanzierer, keine Übermittlung.** Kompass
   führt eine Einnahmen-Überschuss-Rechnung nach deutschem
   Gemeinnützigkeitsrecht. Keine Bilanz, keine Lohnabrechnung, keine
-  Umsatzsteuer-Voranmeldung, keine Übermittlung an ELSTER — Kompass liefert
-  die Zahlen, ein Mensch reicht sie ein. Keine direkte Bankanbindung:
-  Kontoumsätze kommen als Datei, weil eine Bankschnittstelle im eigenen Netz
-  ein Betriebs- und Zulassungsrisiko wäre. Keine ausgehenden E-Rechnungen.
+  Übermittlung an ELSTER — Kompass liefert die Zahlen, auch die der
+  Umsatzsteuer-Voranmeldung (seit 0.4.0), ein Mensch reicht sie ein. Bis auf
+  Weiteres keine direkte Bankanbindung: Kontoumsätze kommen als Datei, weil
+  eine Bankschnittstelle im eigenen Netz ein Betriebs- und Zulassungsrisiko
+  ist. Ob ein Abruf über FinTS kommt, ist offen (Abschnitt 5, seine
+  Voraussetzungen stehen im Backlog). Keine ausgehenden E-Rechnungen.
   Wer darüber hinauswächst, übergibt per Export an eine Finanzbuchhaltung.
 - **Kein Multi-Tenant.** Eine Installation je Verein. Kein Mandantenfeld,
   keine geteilte Datenbank.
@@ -114,8 +117,8 @@ auf der jeder sieht, was für ihn ansteht. Jedes Modul steuert seine Kacheln
 über das Manifest bei, der Kern speichert die Anordnung je Nutzer. Entschieden
 am 2026-09-17, vor Finanzen, damit Finanzen seine Kacheln gleich mitbringt.
 
-**Stand: steht.** Offen im Backlog: Backup-Upload über einen Route Handler.
-Mit den Vorarbeiten für Fachmodule (0.2.0) liefert ein Modul seine
+**Stand: steht.** Backups laufen seit 0.3.2 im Hintergrund, nachts geprüft und
+mit Einspielen aus der Liste. Mit den Vorarbeiten für Fachmodule (0.2.0) liefert ein Modul seine
 Grundausstattung bei jedem Start nach, ohne wiederherzustellen, was der Verein
 geändert hat; neue Haken beschriften fremde Datensätze, räumen Anhängsel mit
 und lassen ein Modul sein Ausschalten ablehnen; „nur ein Mensch über die
@@ -142,7 +145,10 @@ Vorstand und Registereintrag stehen nirgends ein zweites Mal.
 und steht unter der eigenen Domain; das frühere CMS ist abgeschaltet. Test
 bleibt der Weg, auf dem Inhalte und Template vorher abgenommen werden.
 Projekte sind seit dem 2026-09-12 ein eigenes Modul; der Kern kennt keine
-Spendenplattform.
+Spendenplattform. Seit 0.2.5 läuft der Publish als gehärteter Lauf mit
+Fortschritt und Abbruch, seit 0.2.11 trägt jedes Bild seinen Ausschnitt je
+Verwendung, seit 0.3.1 kennzeichnet die Seite bearbeitete und mit KI erstellte
+Bilder.
 
 ### Korrespondenz und Akte
 
@@ -158,7 +164,8 @@ Spec: mehrere, siehe `docs/intern/specs/`.
 für Fachmodule (Fassung 0.2.0) kommen Schutzbereiche an der Dokumentart — ein
 Modul meldet einen Bereich mit seinem Recht an, und wer nur dieses Recht hat,
 sieht in der Akte genau diese Dokumente —, das Ausstellen von Dokumenten aus
-Modulen und der Aktenexport.
+Modulen und der Aktenexport. Seit 0.3.0 verlässt ein Brief Kompass auch als
+Anhang einer E-Mail.
 
 ### Finanzen
 
@@ -182,8 +189,10 @@ Festgeschriebenes wird nie gelöscht; nach Ablauf der Aufbewahrung verschwindet
 der Personenbezug, nicht die Buchung.
 
 **Stand: Alltag und Rechenschaft stehen.** Schritt 3 der Roadmap (Fassung 0.2.0),
-die Lastschrift mit Schritt 4 (0.3.0) und Jahresabschluss und Berichte mit
-Schritt 5 (0.4.0) sind ausgeliefert.
+die Lastschrift mit Schritt 4 (0.3.0), Jahresabschluss und Berichte mit
+Schritt 5 (0.4.0) sowie Jahresrechnung und Mittelverwendungsrechnung (0.5.0)
+sind ausgeliefert. Abgeschlossen ist Schritt 5 erst mit dem ersten echten
+Prüfpaket.
 
 ### Mitglieder und Gremien
 
@@ -195,11 +204,11 @@ verlangen.
 
 Spec: Gremien `2026-10-28-gremien-0-5-0` (Fassung 0.5.0). Ehrenamt,
 Tätigkeitsbericht und das Verzeichnis der Verarbeitungstätigkeiten bekommen je
-eine eigene Spec.
+eine eigene Spec; keines davon hat bisher einen Platz in der Roadmap.
 
-**Stand: Mitglieder stehen, Gremien in Arbeit (0.5.0).** Zwei Schritte der Roadmap:
-Mitgliederstamm und Beiträge sind mit Schritt 4 (0.3.0) ausgeliefert, Gremien
-folgen in Schritt 6.
+**Stand: Mitglieder und Gremien stehen.** Mitgliederstamm und Beiträge sind mit
+Schritt 4 (0.3.0) ausgeliefert, Gremien mit Schritt 6 (0.5.0). Offen sind
+Ehrenamt und Tätigkeitsbericht.
 
 ### Vereinsspezifische Module
 
@@ -220,7 +229,9 @@ keine.
 
 **Stand: Profil steht, Vollstufe offen.** Schritt 7 der Roadmap. Seit 0.2.2
 tragen die Profile einen Prüfmerker, die Liste filtert und sortiert auch
-einige hundert Tiere, und geprüft wird am Stück von Profil zu Profil.
+einige hundert Tiere, und geprüft wird am Stück von Profil zu Profil. Seit
+0.2.6 gibt es Profile als PDF, seit 0.2.10 einen Eingang für Vorschläge aus
+fremden Quellen.
 
 ### Betrieb
 
@@ -264,8 +275,8 @@ Nachweis —, ist eine berechnete Liste und keine gespeicherte Wiedervorlage:
 Sie verschwindet erst, wenn der Grund verschwindet, nicht wenn jemand sie
 abhakt.
 Sichtbar wird das auf der Startseite: Jede Säule bringt dort ihre Kacheln
-mit — die Akte den Eingangskorb, Finanzen später die Umsätze ohne Zuordnung,
-Gremien die Einladungsfristen — und der Nutzer wählt, was er sehen will.
+mit — die Akte den Eingangskorb, Finanzen die Arbeitsliste, Gremien die
+Fristen — und der Nutzer wählt, was er sehen will.
 
 ## 4. Roadmap
 
@@ -277,6 +288,10 @@ Was die Reihenfolge trieb: Aluna Tierhilfe e.V. wurde gerade eingetragen. Ab
 dem ersten Tag sollte der Verein in Kompass arbeiten, nichts sollte nachträglich
 einsortiert werden. Deshalb erst die beiden Säulen fertig, die schon standen,
 dann das Geld, dann das, was die Gründung selbst an Vorgängen erzeugt.
+
+Stand 2026-10-31: Die Schritte 1 bis 6 sind ausgeliefert, als Nächstes steht
+Schritt 7. Die Schritte 4 bis 6 nennen unten, ob ihr Fertig-Kriterium schon
+erfüllt ist; ausgeliefert heißt nicht abgeschlossen.
 
 Neu geordnet am 2026-10-18, nach Schritt 3. Die Eintragung ist durch, die
 erste Mitgliederversammlung lief schon (eine Satzungsänderung), und kein
@@ -411,18 +426,20 @@ Schritt 5.
 Eingang — Überweisung oder Lastschrift — daran ausgeglichen ist, und wer
 nicht zahlt, eine Erinnerung aus Kompass bekommt.
 
+**Ausgeliefert am 2026-10-19** mit Fassung 0.3.0. Das Fertig-Kriterium hängt
+am ersten vollen Beitragsjahr im Alltag.
+
 ### Schritt 5: Jahresabschluss und Berichte
 
-**Fassung 0.4.0.** Spec ist die Finanz-Spec (§ 9 Rechenschaft), Pläne F9a
-bis F10b; vor den Plänen wird die Spec gegen den Stand nach 0.2.x
-abgeglichen.
+**Fassung 0.4.0.** Spec `2026-10-24-rechenschaft-0-4-0`, abgeglichen gegen die
+Finanz-Spec (§ 9 Rechenschaft); Jahresrechnung und Mittelverwendungsrechnung
+kamen mit eigener Spec dazu und sind mit 0.5.0 ausgeliefert.
 
 - Rechenschaft: EÜR, Vermögensübersicht, Mittelverwendungsrechnung,
   Kassenbericht, Kassenprüfungsunterlagen.
 - Fristen: Steuererklärung, Freistellungsbescheid. Dazu Schwellenwächter
   (zeitnahe Mittelverwendung, Freigrenze, Kleinunternehmer), ein geführter
   Jahresabschluss, ein Lesezugang für Kassenprüfer und ein Datenexport.
-- Der Spendenstand je Projekt als veröffentlichte Sicht für die Webseite.
 
 Nach den Mitgliedern, weil kein äußerer Termin drängt und die Berichte
 dann die Beitragsforderungen schon kennen. Vor den Gremien, weil die
@@ -434,10 +451,13 @@ nachträgt. Das liegt zwangsläufig nach dem Release: Die Fassung ist
 auslieferbar, wenn ihre Prüfsteine grün sind; der Schritt ist abgeschlossen
 mit dem ersten echten Prüfpaket.
 
+**Ausgeliefert am 2026-10-28** mit Fassung 0.4.0. Das erste echte Prüfpaket
+steht aus.
+
 ### Schritt 6: Gremien
 
 **Fassung 0.5.0.** Spec `2026-10-28-gremien-0-5-0` (Brainstorming und
-Rechtsprüfung am 2026-10-28). Was feststeht:
+Rechtsprüfung am 2026-10-28). Was festgelegt wurde:
 
 - Organe und Ämter mit Amtszeiten; Gremien ist die Quelle, die Kontaktrollen
   für Organmitglieder (aus Finanzen) folgen den Ämtern. Entlastung und
@@ -459,10 +479,13 @@ Rechtsprüfung am 2026-10-28). Was feststeht:
 
 Erster Fall sind die Unterlagen, die es bei Aluna schon gibt: Gründungssatzung,
 die erste Mitgliederversammlung mit Satzungsänderung (2026), die
-Registereintragung. Sie werden nachgetragen, nicht neu geführt.
+Registereintragung. Sie wurden nachgetragen, nicht neu geführt.
 
 **Fertig, wenn:** eine ordentliche Mitgliederversammlung von der Einladung
 über die Entlastung bis zum Protokoll in Kompass geführt wurde.
+
+**Ausgeliefert am 2026-10-30** mit Fassung 0.5.0. Alunas Altbestand steht in
+Prod; die erste in Kompass geführte Versammlung steht aus.
 
 ### Schritt 7: Tiere Vollstufe
 
@@ -527,8 +550,9 @@ die Säulen stehen.
   Tierprofile aus fremden Quellen mit 0.2.10 weitergeführt: Ein Dienst mit
   eigenem Token schlägt neue Tiere, Änderungen und Hinweise nur vor, ein Mensch
   nimmt in einer Inbox an oder lehnt ab, und die Quelle liest die Endfassung
-  zurück; Prüfmerker und Inbox sind Einstellungen des Moduls. Offen bleibt die
-  Akte.
+  zurück; Prüfmerker und Inbox sind Einstellungen des Moduls. Für Gremien gilt
+  seit 0.5.0 dieselbe Sperre wie für Finanzen: Einladen und Festschreiben
+  bleiben Menschen vorbehalten. Offen bleibt die Akte.
 - **Einsortierregeln auf dem Volltext** (Backlog 5), als Teil desselben
   Vorgangs.
 - **Freigabe-Schritt vor dem Festschreiben** (Vier-Augen-Prinzip), als
@@ -539,6 +563,11 @@ die Säulen stehen.
   stehen seit 0.2.0), DATEV-Buchungsstapel, Anlagenverzeichnis, Haushaltsplan,
   Transparenzzahlen für die Webseite, Verwendungsnachweis nach Kostenplan,
   elektronische Zuwendungsmeldung, sobald das Verfahren steht.
+- **Umsatzabruf per FinTS** (Backlog 70): noch nicht entschieden, ob er kommt.
+  Voraussetzung wären HTTPS und eine Produktregistrierung, die PIN liefe nie
+  durch ein Modell.
+- **Spendenstand je Projekt** als veröffentlichte Sicht für die Webseite. Aus
+  Schritt 5 herausgenommen am 2026-10-24.
 - **Mobiler Beleg-Client.** Belege am Telefon scannen und offenen oder neuen
   Vorgängen zuordnen. Gescannt wird auf dem Gerät, Kompass bekommt ein PDF —
   die Grenze „kein Bildeingang" bleibt. Er verschiebt zwei andere Dinge und

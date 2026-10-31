@@ -35,7 +35,7 @@ const IGNORED = ['node_modules/', '/.next/', '/.astro/', 'apps/kompass/data/', '
 
 const search = (dir: string, includes: string[] = CODE): string[] => {
   try {
-    const out = execFileSync('grep', ['-rniE', FORBIDDEN.join('|'), ...includes, dir], { cwd: ROOT, encoding: 'utf8' });
+    const out = execFileSync('grep', ['-rniE', '--exclude-dir=.next', '--exclude-dir=node_modules', FORBIDDEN.join('|'), ...includes, dir], { cwd: ROOT, encoding: 'utf8' });
     return out.split('\n').filter((line) => line.trim() && !IGNORED.some((skip) => line.includes(skip)));
   } catch {
     return []; // grep endet mit Code 1, wenn es nichts findet

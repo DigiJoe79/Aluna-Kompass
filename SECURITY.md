@@ -18,7 +18,7 @@ Der Weg ist GitHubs privater Meldekanal:
 Die Meldung ist nur für dich und die Betreuer des Projekts sichtbar.
 
 Hilfreich in einer Meldung: welche Fassung betroffen ist (die Version steht im
-Fuß der Seitenleiste und unter `/api/health`), was ein Angreifer damit
+Nutzermenü und unter `/api/health`), was ein Angreifer damit
 erreichen kann, und welche Rechte oder welchen Zugang er dafür braucht.
 
 ## Was du erwarten kannst

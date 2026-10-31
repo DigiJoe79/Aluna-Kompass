@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
 import { activeRailKey, buildRail, crumbsFor, locate, sectionsFor, type NavGroup } from '@/lib/navigation';
+import { useScrollMemory } from '@/lib/scroll-memory';
 import { CommandPalette } from './command-palette';
 import { HelpAsideProvider, HelpPanel } from './help-panel';
 import { Rail } from './rail';
@@ -46,6 +47,8 @@ export function ShellFrame({ organization, logoUrl, groups, build, version, user
   const wide = useSyncExternalStore(subscribeWide, () => matchMedia(HELP_ASIDE_QUERY).matches, () => false);
   const helpButton = useRef<HTMLButtonElement>(null);
   const restored = useRef(false);
+  const main = useRef<HTMLElement>(null);
+  useScrollMemory(main);
 
   // Offen oder zu gilt je Sitzung (sessionStorage) — wiederhergestellt nur als Nebenspalte, nie als modales Blatt.
   useEffect(() => {
@@ -146,7 +149,7 @@ export function ShellFrame({ organization, logoUrl, groups, build, version, user
           {/* `relative`: Halt für jedes absolut positionierte Element ohne näheren Vorfahren, vor allem die sr-only-Texte.
               Ohne ihn bezogen sie sich auf das Dokument und verlängerten es unter dem Scrollbereich, so weit sie im Inhalt
               standen (Startseite, Journal, Backup, Konten; gemessen über alle Seiten 2026-10-20). */}
-          <main className="relative min-h-0 flex-1 overflow-auto p-(--shell-pad) [--shell-pad:--spacing(6)] [scrollbar-gutter:stable]">
+          <main ref={main} className="relative min-h-0 flex-1 overflow-auto p-(--shell-pad) [--shell-pad:--spacing(6)] [scrollbar-gutter:stable]">
             <HelpAsideProvider aside={aside}>{children}</HelpAsideProvider>
           </main>
           {/* Nach `main` im DOM: Tab-Reihenfolge Kopfleiste → Inhalt → Hilfe (Notiz „Öffnen, Schließen, Fokus“). */}

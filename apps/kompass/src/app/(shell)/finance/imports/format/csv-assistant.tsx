@@ -150,8 +150,9 @@ export function CsvAssistant({ accounts, initialAccountId, canLoad, reselect = f
 
   const save = async (load: boolean, confirmFormatChange: boolean): Promise<ActionState> => {
     if (!account || !file || !state || !built?.ok) return { status: 'error', message: '', fieldErrors: {} };
-    // Endsaldo optional; unlesbar steht er am Feld, statt still ohne Saldoprüfung einzulesen (App-B7).
-    const balance = readAmount(balanceText, { required: false });
+    // Endsaldo optional; unlesbar steht er am Feld, statt still ohne Saldoprüfung einzulesen (App-B7). Nur fürs Einlesen:
+    // Wer bloß das Format speichert, schickt ihn gar nicht mit.
+    const balance = load ? readAmount(balanceText, { required: false }) : ({ ok: true, cents: null } as const);
     setBalanceInvalid(!balance.ok);
     if (!balance.ok) return { status: 'error', message: '', fieldErrors: {} };
     setBusy(true);

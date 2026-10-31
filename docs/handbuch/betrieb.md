@@ -306,6 +306,26 @@ Sonst ist nichts von Hand zu tun. Wer sich wundert:
   Eingabemaske ordnen; ohne sie bekommt jedes Feld eine Breite nach seinem Typ.
 - MCP-Clients sind nicht betroffen.
 
+### Von 0.5.0 auf 0.5.1
+
+Die Fassung 0.5.1 bringt eine Migration mit
+(`0013_dms_unclassified_labels_0_5_1`): Die Dokumentarten „Unklassifiziert
+(Eingang)“ und „Unklassifiziert (Ausgang)“ heißen danach „Eingang ohne
+Zuordnung“ und „Ausgang ohne Zuordnung“; wer sie selbst umbenannt hat, behält
+seinen Namen. `/api/health` meldet danach `migrationCount: 14`. Ein Backup
+(Schritt 1) gehört wie immer dazu. Handgriffe sind nicht nötig.
+
+- **Eigene Dokument-Basen:** Das Tierprofil-PDF zeigt oben die Beschriftung
+  statt des Datums, dafür bekommen die Basen `a4-plain` und `a4-plain-slim` die
+  Slots `hideDate` und `headerLabel`. Eine eigene Basis mit derselben Kennung
+  zeigt weiter das Datum, bis sie beide auswertet und in `slots` nennt.
+- **Ablehnungen:** Sie stehen jetzt im Wortlaut der Sprachdatei. Wo der Dienst
+  bisher einen Namen oder eine Nummer in den Satz einsetzte, fehlt dieser Wert
+  teils. Abläufe, die Texte von Ablehnungen auswerten, sollten den `code`
+  lesen, nicht den Satz.
+- **Mindestbeitrag:** Geht die Umrechnung in einen anderen Rhythmus nicht auf,
+  gilt der abgerundete Betrag. Bestehende Vereinbarungen ändern sich nicht.
+
 ### Von 0.4.0 auf 0.5.0
 
 Die Fassung 0.5.0 bringt eine Migration mit

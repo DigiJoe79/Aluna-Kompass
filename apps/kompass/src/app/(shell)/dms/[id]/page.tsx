@@ -139,7 +139,7 @@ export default async function DocumentDetailPage(props: {
       header={
         <PageHeader
           title={doc.subject}
-          back={{ href: '/dms', label: nav('dms.list') }}
+          back={{ href: '/dms', label: nav('dms.list'), history: 'origin' }}
           actions={
             <>
               {canMakeEntry ? (

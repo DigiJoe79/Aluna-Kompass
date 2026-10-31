@@ -1,4 +1,4 @@
-import { buildContext, conflict, hasPermission, linkedAccess, ok, prepare, recordAudit, requirePermission, todayIn, validate, type CallContext, type DbOrTx, type Deps, type Result } from '@kompass/core';
+import { buildContext, conflict, hasPermission, linkedAccess, localizedConflict, ok, prepare, recordAudit, requirePermission, todayIn, validate, type CallContext, type DbOrTx, type Deps, type Result } from '@kompass/core';
 import { and, asc, eq, inArray, like, or, sql } from 'drizzle-orm';
 import { Zip, ZipPassThrough } from 'fflate';
 import { once } from 'node:events';
@@ -59,9 +59,9 @@ export function resolveBundle(deps: Deps, ctx: CallContext, selection: BundleSel
   const found = deps.db.select().from(documents).where(where).orderBy(asc(q.order === 'number' ? documents.number : documents.documentDate), asc(documents.number)).all();
 
   if (found.length === 0) return conflict('bundleEmpty', 'Zu dieser Auswahl gibt es kein festgeschriebenes Dokument.');
-  if (found.length > BUNDLE_MAX_DOCUMENTS) return conflict('bundleTooLarge', `Die Auswahl umfasst ${found.length} Dokumente; ein Bündel fasst höchstens ${BUNDLE_MAX_DOCUMENTS}. Wählen Sie einen Unterordner oder ein einzelnes Jahr.`);
+  if (found.length > BUNDLE_MAX_DOCUMENTS) return localizedConflict('bundleTooLarge', 'dms.errors.bundleTooManyDocuments', { count: found.length, max: BUNDLE_MAX_DOCUMENTS });
   const bytes = found.reduce((sum, row) => sum + (row.fileBytes ?? 0), 0);
-  if (bytes > BUNDLE_MAX_BYTES) return conflict('bundleTooLarge', `Die Auswahl umfasst ${Math.ceil(bytes / 1024 / 1024)} MB; ein Bündel fasst höchstens ${BUNDLE_MAX_BYTES / 1024 / 1024} MB. Wählen Sie einen Unterordner oder ein einzelnes Jahr.`);
+  if (bytes > BUNDLE_MAX_BYTES) return localizedConflict('bundleTooLarge', 'dms.errors.bundleTooManyMegabytes', { megabytes: Math.ceil(bytes / 1024 / 1024), max: BUNDLE_MAX_BYTES / 1024 / 1024 });
 
   // Nur Vorgänge, deren Typ angemeldet ist und deren Leserecht der Aufrufer hat.
   const granted = q.linkedAccess.filter((a) => {

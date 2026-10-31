@@ -1,7 +1,11 @@
+import { conflict } from '@kompass/core';
+import { createTranslator } from 'next-intl';
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import path from 'node:path';
 import ts from 'typescript';
 import { describe, expect, it } from 'vitest';
+import { conflictMessage } from '@/lib/error-text';
+import messages from '../messages/de.json';
 
 /**
  * Oberflächentext gehört nach `messages/de.json`, nicht in eine Komponente
@@ -218,12 +222,12 @@ describe('Komponenten schreiben keinen Oberflächentext', () => {
  * Halteliste erscheinen — als `LabelRef` (`{ key, params }`), aufgelöst über `deps.labels`. Der Wächter oben sah nur
  * `apps/kompass/src`; zehn deutsche Literale standen deshalb in `packages/**\/src`. Gesucht wird hier enger als oben,
  * weil die Pakete viel Text tragen, der nie in die Oberfläche geht: Felder `label`, `title`, `reason` mit einem
- * deutschen Literal — ein Umlaut oder ein großgeschriebenes Wort mit Leerzeichen danach, auch als Teil eines
- * Template-Literals.
+ * deutschen Literal — ein Umlaut, ein großgeschriebenes Wort mit Leerzeichen danach oder ein einzelnes großgeschriebenes
+ * Wort als ganzer Wert, auch als Teil eines Template-Literals.
  */
 const PACKAGES = path.resolve(import.meta.dirname, '../../../packages');
 const HAKEN_FELDER = new Set(['label', 'title', 'reason']);
-const DEUTSCH = /[äöüÄÖÜß]|(^|[\s„(])\p{Lu}\p{Ll}+ /u;
+const DEUTSCH = /[äöüÄÖÜß]|(^|[\s„(])\p{Lu}\p{Ll}+ |^\p{Lu}\p{Ll}+$/u;
 
 /** Ganze Dateien, deren Text nicht in die Oberfläche geht — je mit Grund. */
 const PAKET_AUSNAHMEN = new Map<string, string>([
@@ -232,6 +236,7 @@ const PAKET_AUSNAHMEN = new Map<string, string>([
   ['modules/dms/src/seed.ts', 'Seed: erfundene Entwicklungsdaten'],
   ['modules/animals/src/proposals/seed.ts', 'Seed: erfundene Entwicklungsdaten'],
   ['modules/governance/src/seed.ts', 'Seed: erfundene Entwicklungsdaten'],
+  ['modules/projects/src/seed.ts', 'Seed: erfundene Entwicklungsdaten'],
   ['modules/finance/src/install.ts', 'Grundausstattung (Dokumentarten) als Nutzdaten aus dem Code (Prinzip 7, zweite Ausnahme)'],
   ['modules/members/src/install.ts', 'Grundausstattung (Dokumentarten) als Nutzdaten aus dem Code (Prinzip 7, zweite Ausnahme)'],
   ['modules/governance/src/install.ts', 'Grundausstattung (Dokumentarten) als Nutzdaten aus dem Code (Prinzip 7, zweite Ausnahme)'],
@@ -304,7 +309,71 @@ describe('Pakete liefern Haken-Bezeichnungen über die Sprachdatei', () => {
       "const c = { entity: 'x', deletable: true, reason: 'Arbeitsmaterial der Stammdaten.' };",
       "const d = { label: { key: 'media.usage.logo' } };",
       "const e = { title: 'logo' };",
+      "const f = { label: 'Vereinslogo' };",
     ].join('\n');
-    expect(hakenLiterale('probe.ts', probe)).toEqual([expect.stringMatching(/^1: label: 'Logo/), expect.stringMatching(/^2: label: `Tier/)]);
+    expect(hakenLiterale('probe.ts', probe)).toEqual([expect.stringMatching(/^1: label: 'Logo/), expect.stringMatching(/^2: label: `Tier/), expect.stringMatching(/^6: label: 'Vereinslogo/)]);
+  });
+});
+
+/**
+ * Das zweite Argument von `conflict('code', …)` erreicht die Oberfläche (`toActionState`) und MCP, sobald die
+ * Sprachdatei für den Code keinen Satz hat oder ihren Satz nur um `{detail}` legt. Dann darf dort kein deutscher Text
+ * stehen: Er stünde unübersetzt und ungeprüft auf dem Bildschirm (Backlog 99, „Entferne die Datei“ in Du-Form). Ob er
+ * durchkommt, prüft der Wächter an `conflictMessage` selbst, nicht an einer zweiten Liste. Sätze mit Werten gehören in
+ * `localizedConflict` mit Schlüssel, ein `{detail}` trägt nur Daten (Namen, Zahlen, Technik).
+ */
+const SICHTPROBE = 'Sichtprobe des Wächters';
+const uebersetzer = createTranslator({ locale: 'de', messages, timeZone: 'Europe/Berlin' }) as unknown as Parameters<typeof conflictMessage>[1];
+const reichtDurch = (code: string): boolean => (conflictMessage(conflict(code, SICHTPROBE).error as Parameters<typeof conflictMessage>[0], uebersetzer) ?? SICHTPROBE).includes(SICHTPROBE);
+
+/** Code → Grund. Deutsche Diensttexte, die durchkommen dürfen. */
+const KONFLIKT_AUSNAHMEN = new Map<string, string>([
+  ['contactRoleConflict', 'Zwei Module melden dieselbe Kontaktrolle an: Fehler der Module beim Einrichten, trifft niemanden bei der Arbeit.'],
+  ['documentBaseUnavailable', 'Die Basis einer Vorlage fehlt in der Installation: Installationsfehler, der Text nennt die Basis.'],
+  ['documentImageInvalid', 'Eine Vorlage liefert ein Bild, das kein PNG/JPEG ist: Fehler des Moduls.'],
+  ['reviewUiOnly', 'Nur über MCP erreichbar, die Oberfläche bestätigt die Prüfung selbst.'],
+  ['documentTypeNotOwned', 'issue() eines Moduls mit einer freien Art: Fehler des aufrufenden Moduls.'],
+  ['templateWithoutPermission', 'Eine Modulvorlage ohne Recht: Fehler des Moduls.'],
+  ['noLinkedRecord', 'receiveGeneratedUpload ohne angemeldeten Vorgang: Fehler des aufrufenden Moduls.'],
+  ['unknownDocumentArea', 'Die Oberfläche bietet nur angemeldete Schutzbereiche an, ein fremder Wert kommt nur über MCP.'],
+]);
+
+/** Die `conflict`-Aufrufe mit deutschem Literal als zweitem Argument, deren Text sichtbar würde. */
+function sichtbareKonflikte(file: string, source: string): { zeile: number; code: string }[] {
+  const src = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true, file.endsWith('.tsx') ? ts.ScriptKind.TSX : ts.ScriptKind.TS);
+  const found: { zeile: number; code: string }[] = [];
+  const besuche = (node: ts.Node): void => {
+    if (ts.isCallExpression(node) && node.expression.getText() === 'conflict' && node.arguments.length === 2) {
+      const [code, text] = node.arguments as unknown as [ts.Expression, ts.Expression];
+      const teile = ts.isStringLiteral(text) || ts.isNoSubstitutionTemplateLiteral(text) ? [text.text] : ts.isTemplateExpression(text) ? [text.head.text, ...text.templateSpans.map((s) => s.literal.text)] : [];
+      if (ts.isStringLiteralLike(code) && teile.some((t) => DEUTSCH.test(t)) && reichtDurch(code.text)) found.push({ zeile: src.getLineAndCharacterOfPosition(node.getStart()).line + 1, code: code.text });
+    }
+    ts.forEachChild(node, besuche);
+  };
+  besuche(src);
+  return found;
+}
+
+describe('Konflikte zeigen keinen deutschen Diensttext', () => {
+  const treffer = paketQuellen().flatMap((rel) => sichtbareKonflikte(rel, readFileSync(path.join(PACKAGES, rel), 'utf8')).map((k) => ({ rel, ...k })));
+
+  it('kein deutscher Text im zweiten Argument, wo er durchkäme; Ausnahmen mit Grund', () => {
+    expect(treffer.filter((k) => !KONFLIKT_AUSNAHMEN.has(k.code)).map((k) => `${k.rel}:${k.zeile}: ${k.code}`)).toEqual([]);
+  });
+
+  it('führt keine Ausnahme, die es nicht mehr braucht', () => {
+    expect([...KONFLIKT_AUSNAHMEN.keys()].filter((code) => !treffer.some((k) => k.code === code))).toEqual([]);
+  });
+
+  it('Gegenprobe: trifft Text ohne Satz und Text in {detail}, nicht den Text hinter einem Satz der Sprachdatei', () => {
+    const probe = [
+      "const a = conflict('gibtEsNicht', 'Der Vorgang geht nicht');",
+      'const b = conflict(\'gibtEsNicht\', `Dokument ${nummer} ist weg`);',
+      "const c = conflict('seedAssetsMissing', 'Dateien fehlen');",
+      "const d = conflict('documentIsDraft', 'Das ist noch ein Entwurf');",
+      "const e = conflict('seedAssetsMissing', missing.join(', '));",
+      "const f = localizedConflict('gibtEsNicht', 'errors.x');",
+    ].join('\n');
+    expect(sichtbareKonflikte('probe.ts', probe)).toEqual([{ zeile: 1, code: 'gibtEsNicht' }, { zeile: 2, code: 'gibtEsNicht' }, { zeile: 3, code: 'seedAssetsMissing' }]);
   });
 });

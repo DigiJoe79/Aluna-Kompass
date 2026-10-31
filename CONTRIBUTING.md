@@ -6,7 +6,7 @@ Vereine, und es lebt davon, dass Leute es benutzen und sagen, was fehlt.
 ## Der kleinste Beitrag
 
 Ein [Issue](https://github.com/DigiJoe79/Aluna-Kompass/issues) — was du
-erwartet hast, was passiert ist, welche Fassung (steht im Fuß der Seitenleiste
+erwartet hast, was passiert ist, welche Fassung (steht im Nutzermenü
 und unter `/api/health`). Das hilft mehr, als die meisten denken.
 
 **Sicherheitslücken nicht als Issue**, sondern über den privaten Meldeweg in
@@ -29,7 +29,7 @@ pnpm dev          # Entwicklungsserver
 pnpm verify       # vor jedem Push: Typecheck, Lint, Tests, E2E, Image, Container
 ```
 
-`pnpm verify` braucht Docker und läuft rund sieben Minuten. Es ist derselbe
+`pnpm verify` braucht Docker. Es ist derselbe
 Satz Prüfungen wie in der CI — wer ihn lokal grün hat, bekommt online keine
 Überraschung.
 

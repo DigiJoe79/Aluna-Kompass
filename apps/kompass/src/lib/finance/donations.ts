@@ -17,6 +17,22 @@ export function visibleChecks(result: ConfirmationCheckResult): ConfirmationChec
   return result.checks.filter((c) => c.applies);
 }
 
+/**
+ * Die Zeilen einer Sammelbestätigung aus „Noch nicht bestätigt“: alle fähigen Geldzeilen. Keine Sachspende (der Dienst
+ * lehnt die Mischung ab), nichts in der Zukunft, kein möglicher Rückläufer. Eine Sammelbestätigung gilt für ein
+ * Kalenderjahr: Liegen die Zeilen in mehreren, dann das älteste mit mindestens zwei, das nächste folgt danach. Leer, wenn
+ * es keine zwei gibt.
+ */
+export function collectiveLineIds<T extends { lineId: string; entryDate: string; incomeKind: string | null; inFuture?: true; warnings?: readonly string[] }>(lines: readonly T[]): string[] {
+  const able = lines.filter((line) => line.incomeKind !== 'inKindDonation' && !line.inFuture && !line.warnings?.length);
+  const years = [...new Set(able.map((line) => line.entryDate.slice(0, 4)))].sort();
+  for (const year of years) {
+    const ofYear = able.filter((line) => line.entryDate.startsWith(year));
+    if (ofYear.length >= 2) return ofYear.map((line) => line.lineId);
+  }
+  return [];
+}
+
 /** „maschinell erstellt“ oder „mit Unterschriftsfeld“ — aus der Prüfliste, nicht wählbar. */
 export function signatureMode(result: ConfirmationCheckResult): 'machine' | 'signatureField' {
   const signer = result.checks.find((c) => c.key === 'signerValid');

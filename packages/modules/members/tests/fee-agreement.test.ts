@@ -1,7 +1,7 @@
 import { unwrap, type CallContext } from '@kompass/core';
 import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
-import { effectiveFee, setFeeAgreement } from '../src/fee-agreement';
+import { convertInterval, effectiveFee, setFeeAgreement } from '../src/fee-agreement';
 import { saveFeeSchedule } from '../src/fee-schedule';
 import { admitMember } from '../src/memberships';
 import { memberFeeAgreements, memberTypes } from '../src/schema';
@@ -54,8 +54,17 @@ describe('an agreed rhythm converts the rule amount (Plan R1, M4)', () => {
     const { deps, ctx } = await withRules([{ key: 'supporting', amountCents: 12000, interval: 'yearly', minimum: true }]);
     const m = await member(deps, ctx, 'supporting');
     const agreed = (amountCents: number) => setFeeAgreement(deps, ctx, { membershipId: m.id, validFrom: '2026-01-01', amountCents, interval: 'monthly', paymentMethod: 'transfer', reduction: 'none' });
-    expect(fail(await agreed(900))).toMatchObject({ code: 'feeBelowMinimum', params: { minimumCents: 12000 } });
+    expect(fail(await agreed(900))).toMatchObject({ code: 'feeBelowMinimum', params: { minimumCents: 1000 } });
     expect((await agreed(1000)).ok).toBe(true);
+  });
+
+  it('the minimum rounds down when the conversion does not come out: 125 € a year, 10,41 € a month passes, the default stays 10,42 €', async () => {
+    const { deps, ctx } = await withRules([{ key: 'supporting', amountCents: 12500, interval: 'yearly', minimum: true }]);
+    const m = await member(deps, ctx, 'supporting');
+    const agreed = (amountCents: number) => setFeeAgreement(deps, ctx, { membershipId: m.id, validFrom: '2026-01-01', amountCents, interval: 'monthly', paymentMethod: 'transfer', reduction: 'none' });
+    expect(fail(await agreed(1040))).toMatchObject({ code: 'feeBelowMinimum', params: { minimumCents: 1041 } });
+    expect((await agreed(1041)).ok).toBe(true);
+    expect(convertInterval(12500, 'yearly', 'monthly')).toBe(1042);
   });
 
   it('the minimum compares in the agreed rhythm: exactly the converted rule amount passes, a cent below is refused (Nachlauf R1)', async () => {

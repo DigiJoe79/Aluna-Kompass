@@ -288,6 +288,7 @@ Bausteine: `empty-value.tsx`.
 ## Seitenrahmen
 
 - `Page` mit `PageHeader` auf jeder Seite (§ I); `back` für Seiten, die nicht in der Navigation hängen (alles mit Platzhalter oder mit den Endungen `new`, `edit`, `receive` im Pfad) — `tests/back-navigation.test.ts` prüft es.
+- **Rückweg aus der Akte** (Spec 2026-10-31, Freigabe Joe, Backlog 103): Eine Seite, die man von überall erreicht (Dokument), setzt `back.history: 'origin'`: Mit einer Vorseite im Tab heißt der Pfeil „← Zurück“ und geht im Browser-Verlauf zurück; ohne sie steht die Elternseite. Ihre Unterseite (Editor) setzt `'parent'`: Der Pfeil behält den Namen und führt immer zur Elternseite; steht sie im Verlauf davor, geht er zurück, sonst ersetzt er den Eintrag. Er bleibt ein echter Link (`BackLink`), die Rückfrage bei ungespeicherten Änderungen gilt. Ein Redirect aus einem Formular, in das niemand zurückwill, ersetzt den Eintrag (`RedirectType.replace`); bleibt das Formular ein Dialog über der Liste, nicht. Die Stelle in `<main>` merkt sich `useScrollMemory` je Verlaufseintrag; innere Scrollbereiche nicht. E2E `dms-back-navigation.spec.ts`.
 - Die Brotkrume ist `nav` (`aria-label` „Brotkrume“) und endet bei der Liste; `aria-current="page"` trägt sie nur auf der Seite des letzten Segments, auf einer Detailseite ist es ein Link. Genau ein `h1` je Seite: der Titel im `PageHeader` — jede Seite hat einen. Wächter `one-h1.test.ts`; der E2E prüft Liste, Detail und Einstellungen, eine neue Seite ohne `PageHeader`-Titel fiele nur dort auf, wo sie getestet wird.
 - Die Kopfzeile hat höchstens eine primäre Aktion, und zwar die naheliegende Hauptaktion der Seite (Anlegen auf einer Liste, „Bearbeiten“ auf einer Lesesicht, der Export auf der Protokollseite); alle anderen Knöpfe dort sind `outline` und stehen in `PageHeader more` (siehe Telefon). Sie bleibt primär, auch wenn sie gesperrt ist.
 - Fehlendes Recht → `ForbiddenCard`; Schritt nicht erlaubt → `BlockedState`; Modul aus → `ModuleInactiveCard`; Eintrag fehlt oder Adresse unbekannt → `not-found.tsx`. Alle drei Zustände sind **eine Karte**: die Leerzustandskarte als Variante `EmptyState state` (Designer 2026-10-16, Stufe 2 Nr. 13) — Marke (`StatusBadge`), Titel als `h1` der Seite, Text, höchstens zwei Aktionen, die primäre rechts; feste Breite `task`, kein fester Leerraum. Keine eigene Bauart daneben.
@@ -302,7 +303,7 @@ Bausteine: `empty-value.tsx`.
 - **Gleich hohe Karten** (Joe 11.6): Gleichartige Karten in einem festen Raster (Konten, Kassen) sind je Zeile gleich hoch — das Raster streckt. `items-start` nur für frei fließende Spalten (Startseite, Profil).
 - **Telefon (unter 640 px, `max-sm`):** Die Kopfzeile zeigt keinen Vereinsnamen und keine vorderen Brotkrumen — nur den Seitentitel —, die Suche als Lupe ohne Text und Tastenkürzel, das Nutzermenü nur mit Initialen. `PageHeader` stellt Titel und Aktionen untereinander, die Aktionen brechen um (Joe 2026-10-06); ⋯ „Weitere Aktionen“ (`RecordActions`) steht dabei rechts in der Titelzeile, der Titel bricht davor um (Runde 3, Kleinpunkt 2). **Am Telefon bleibt im Kopf nur der Primärknopf** (Runde 3, 018; Joe 2026-10-17): Nebenaktionen stehen nicht frei in `actions`, sondern als Liste in `PageHeader more` (`HeaderAction`: Beschriftung, `href` aus Server-Seiten oder `onSelect` aus Client-Komponenten, optional `icon`, `disabled`, `hidden`). Ab `sm` stehen sie als `outline`-Knöpfe vor `actions`, wie bisher; am Telefon im ⋯ — hat die Seite ein `RecordActions`, verschmelzen beide zu einem ⋯ (Nebenaktionen oben, Linie, dann die Aktionen am Datensatz), sonst trägt der Kopf ein eigenes. `actions` hält nur den Primärknopf, Blätterknöpfe und `RecordActions`. Wächter `header-more.test.ts` (kein `outline`-Knopf in `PageHeader actions`), Test `page-header.test.tsx`.
 
-Bausteine: `page-header.tsx`, `forbidden-card.tsx`, `blocked-state.tsx`, `module-inactive-card.tsx`, `empty-state.tsx`.
+Bausteine: `page-header.tsx`, `back-link.tsx`, `forbidden-card.tsx`, `blocked-state.tsx`, `module-inactive-card.tsx`, `empty-state.tsx`.
 
 ## Protokoll
 
@@ -339,7 +340,7 @@ Ein Wort je Sache (Designer 2026-10-16, Stufe 2 Nr. 10, mit Joes Nachtrag). Gilt
 | „Freigeben kann nur ein Mensch“ | „Freigeben geht nur hier in Kompass, nicht über einen Agenten.“ | Ebenso Festschreiben und Ausstellen. Ohne Recht kommt die eigene Meldung |
 | OK, Ja (Knopf) | Verb der Handlung | „Löschen“, „Ablegen“, nie „OK“ |
 | Neu, Hinzufügen (Anlegen) | „… anlegen“ | „Hinzufügen“ nur, wenn Bestehendes verknüpft wird |
-| Zurück zu X, ← X | „← X“ | Pfeil plus Name der Elternseite, ohne „Zurück zu“ (`PageHeader back` setzt den Pfeil, `label` ist der Name) |
+| Zurück zu X, ← X | „← X“ | Pfeil plus Name der Elternseite, ohne „Zurück zu“ (`PageHeader back` setzt den Pfeil, `label` ist der Name). Ausnahme `back.history: 'origin'`: „← Zurück“ (Seitenrahmen) |
 
 Knopfwörter sind Verben im Infinitiv, ohne Objekt, wenn der Bezug klar ist („Speichern“, nicht „Kontakt speichern“). Ausnahme: Seiten mit mehr als einer Primäraktion.
 

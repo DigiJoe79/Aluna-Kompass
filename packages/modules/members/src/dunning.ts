@@ -335,7 +335,7 @@ export async function continueDunningRun(deps: Deps, ctx: CallContext, input: un
     const current: DunningRunRow = { ...stored, refused: merged, ...(finished ? { status: 'done' as const, finishedAt: isoNow(deps.clock) } : {}) };
     tx.update(memberDunningRuns).set({ refused: current.refused, status: current.status, finishedAt: current.finishedAt }).where(eq(memberDunningRuns.id, run.id)).run();
     const view = runView(tx, current);
-    if (finished) recordAudit(tx, deps, ctx, { action: 'members.dunningRun.finish', entityType: 'memberDunningRun', entityId: run.id, after: { issued: view.issued, refused: refused.length }, params: { asOfOn: run.asOf, count: view.issued } });
+    if (finished) recordAudit(tx, deps, ctx, { action: 'members.dunningRun.finish', entityType: 'memberDunningRun', entityId: run.id, after: { issued: view.issued, refused: merged.length }, params: { asOfOn: run.asOf, count: view.issued } });
     return ok(view);
   });
 }

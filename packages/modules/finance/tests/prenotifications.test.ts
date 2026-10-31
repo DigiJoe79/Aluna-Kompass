@@ -4,7 +4,7 @@ import { createContact } from '@kompass/module-contacts';
 import { deleteDraft, documentLinks, documents, fileDocument } from '@kompass/module-dms';
 import { and, eq, like } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
-import { prepareMandate } from '../src/direct-debit/mandates';
+import { correctMandate, prepareMandate } from '../src/direct-debit/mandates';
 import { savePledge } from '../src/direct-debit/pledges';
 import { issuePrenotification, prenotificationCovers } from '../src/direct-debit/prenotifications';
 import { prenotificationPlanBody } from '../src/direct-debit/templates/prenotification';
@@ -15,6 +15,7 @@ import { insertDocument, setupFinance } from './helpers';
 
 // TEST_NOW: 2026-09-05 — Plan L2 Task 1, Spec § 7.5.
 const IBAN = 'DE44999999990532013000';
+const NEW_IBAN = 'DE23999999990000202051';
 const DMS = ['dms.view', 'dms.create', 'dms.file', 'dms.deleteDraft'];
 const fail = <T>(res: { ok: boolean; error?: T }) => (res.ok ? null : res.error);
 
@@ -112,6 +113,18 @@ describe('issuePrenotification', () => {
     expect(unwrap(await issuePrenotification(f.deps, f.ctx, { mandateId: f.mandate.id, plan: [{ dueOn: '2026-10-01', amountCents: 1800 }] })).documentId).not.toBe(first.documentId);
     f.deps.db.update(documents).set({ status: 'voided' }).where(eq(documents.id, first.documentId)).run();
     expect(unwrap(await issuePrenotification(f.deps, f.ctx, { mandateId: f.mandate.id, plan })).documentId).not.toBe(first.documentId);
+  });
+
+  it('reuses a letter only while it names the current account: a correction before the signature counts, a new name does not', async () => {
+    const f = await setup();
+    const plan = [{ dueOn: '2026-10-01', amountCents: 1500 }];
+    const first = unwrap(await issuePrenotification(f.deps, f.ctx, { mandateId: f.mandate.id, plan }));
+    unwrap(await correctMandate(f.deps, f.ctx, { mandateId: f.mandate.id, debtorName: 'Erika B. Beispiel' }));
+    expect(unwrap(await issuePrenotification(f.deps, f.ctx, { mandateId: f.mandate.id, plan })).documentId).toBe(first.documentId);
+    unwrap(await correctMandate(f.deps, f.ctx, { mandateId: f.mandate.id, iban: NEW_IBAN }));
+    const second = unwrap(await issuePrenotification(f.deps, f.ctx, { mandateId: f.mandate.id, plan }));
+    expect(second.documentId).not.toBe(first.documentId);
+    expect(unwrap(await issuePrenotification(f.deps, f.ctx, { mandateId: f.mandate.id, plan })).documentId).toBe(second.documentId);
   });
 
   it('names per row the day of the debit as „Einzug am“ and, when given, what for (R11); the remittance is kept in the plan', async () => {

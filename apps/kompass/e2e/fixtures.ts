@@ -69,7 +69,7 @@ export const test = base.extend<Record<never, never>, { serverKind: ServerKind; 
       else delete process.env.E2E_DATA_PATH;
       const server = await oneServerFailureEndsRun(path.join(ROOT, 'e2e', '.tmp', `server-gescheitert-${process.env.E2E_RUN_ID}`), async () => {
         const started = await startServer(w, { root: ROOT, image: process.env.E2E_IMAGE });
-        await warmUp(started.url, path.join(ROOT, 'src', 'app'));
+        await warmUp(started.url, path.join(ROOT, 'src', 'app'), console.log, { serverOutput: started.output });
         return started;
       });
       await use(server);

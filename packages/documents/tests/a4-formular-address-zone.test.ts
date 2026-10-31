@@ -67,7 +67,7 @@ const at = (bytes: Uint8Array, word: string) => {
 describe('a4-formular base: optional address zone', () => {
   it('declares the address zone in the manifest', () => {
     expect(bases.get('a4-formular')!.slots).toEqual(['recipient', 'recipientLabel', 'infoBlock']);
-    expect(bases.get('a4-plain')!.slots).toEqual([]);
+    expect(bases.get('a4-plain')!.slots).not.toContain('recipient');
   });
 
   it('draws the address zone only when recipient is set', async () => {

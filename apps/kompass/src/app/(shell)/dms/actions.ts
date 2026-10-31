@@ -40,7 +40,7 @@ import {
 import { completeFollowUp, followUpMailState, reopenFollowUp, userNamesFor, type FollowUpMailState } from '@kompass/core';
 import { getTranslations } from 'next-intl/server';
 import { revalidatePath } from 'next/cache';
-import { redirect } from 'next/navigation';
+import { redirect, RedirectType } from 'next/navigation';
 import { toActionState, type ActionState } from '@/lib/actions';
 import { nameOf } from '@/lib/folder-tree-model';
 import { textWorker } from '@/lib/background';
@@ -92,7 +92,8 @@ export async function createDraftAction(_prev: ActionState, formData: FormData):
     // In den Editor, nicht auf das fertige Dokument: Wer gerade geschrieben hat,
     // ist meist noch nicht fertig — und der erste Blick auf das gesetzte Blatt
     // findet die Tippfehler, die im Formular niemand sieht.
-    redirect(`/dms/${result.value.id}/edit`);
+    // Ersetzt das leere Formular im Verlauf: Zurück führt dorthin, von wo aus man angelegt hat.
+    redirect(`/dms/${result.value.id}/edit`, RedirectType.replace);
   });
 }
 
@@ -305,9 +306,11 @@ export async function receiveDocumentAction(_prev: ActionState, formData: FormDa
     textWorker()?.wake();
 
     revalidatePath('/dms');
+    // Nur auf der eigenen Adresse ersetzt das Ablegen den Eintrag: Über der Liste ist er die Liste selbst, Zurück soll sie wiederfinden.
+    const leaving = formData.get('onReceivePage') ? RedirectType.replace : undefined;
     // Wer in eine geschützte Art ablegt, sieht das Dokument danach nicht mehr —
     // die Detailseite zeigte ihm „kein Zugriff“. Er bekommt die Nummer und die Liste.
-    if (!canReadDocumentType(deps, ctx, result.value.typeKey)) redirect(`/dms?filed=${encodeURIComponent(result.value.number ?? '')}`);
+    if (!canReadDocumentType(deps, ctx, result.value.typeKey)) redirect(`/dms?filed=${encodeURIComponent(result.value.number ?? '')}`, leaving);
     // Aus einer Warteschlange heraus führt kein Weg zum einzelnen Dokument: Die
     // nächste Datei wartet schon, und ein Sprung dorthin verlöre sie.
     if (formData.get('queued')) {
@@ -315,7 +318,7 @@ export async function receiveDocumentAction(_prev: ActionState, formData: FormDa
       const numbers = result.value.duplicateOf.map((d) => d.number ?? d.id).join(', ');
       return numbers ? { status: 'success', message: t('dms.duplicateOfToast', { numbers }) } : { status: 'success' };
     }
-    redirect(`/dms/${result.value.id}`);
+    redirect(`/dms/${result.value.id}`, leaving);
   });
 }
 

@@ -211,19 +211,12 @@ const CONFLICTS_WITH_DETAIL = new Set([
   'blockedTermsPresent',
   'siteBuildFailed',
   'publishFailed',
-  'mediaAssetInUse',
-  'folderNotEmpty',
   'templateUnreadable',
   'localeMissing',
   'seedAssetsMissing',
   'deployCredentialsUnusable',
   'deployCheckFailed',
   'previewFailed',
-  'unknownView',
-  'unknownViewField',
-  'bundleTooLarge',
-  'documentTooManyPages',
-  'retentionRunning',
 ]);
 
 const MEDIA_FIELD_CODES = ['unsupportedMediaType', 'notAPdf', 'fileTooLarge', 'svgContainsScript'];

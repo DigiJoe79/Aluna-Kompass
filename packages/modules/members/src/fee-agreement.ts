@@ -75,6 +75,9 @@ export function typeAt(db: DbOrTx, membershipId: string, on: string): { typeId: 
 /** Plan R1 (M4): ein Betrag von einem Rhythmus auf einen anderen umgerechnet (kaufmännisch gerundet). */
 export const convertInterval = (amountCents: number, from: FeeInterval, to: FeeInterval) => (from === to ? amountCents : Math.round((amountCents * INTERVAL_MONTHS[to]) / INTERVAL_MONTHS[from]));
 
+/** Ein Mindestbetrag im Rhythmus der Vereinbarung: wie `convertInterval`, aber abgerundet. */
+const minimumInInterval = (amountCents: number, from: FeeInterval, to: FeeInterval) => (from === to ? amountCents : Math.floor((amountCents * INTERVAL_MONTHS[to]) / INTERVAL_MONTHS[from]));
+
 /**
  * Der Beitrag am Tag (intern): Art beitragsfrei oder Vereinbarung „erlassen“ → `exempt`; sonst Betrag und Rhythmus aus
  * der Vereinbarung, wo sie welche nennt, im Übrigen aus der Regel des geltenden Stands. Nennt die Vereinbarung nur einen
@@ -139,10 +142,10 @@ export function checkAgreementInternal(db: DbOrTx, deps: Deps, membership: { id:
   const type = typeAt(db, membership.id, v.validFrom);
   const rule = type ? feeRuleAt(db, type.typeId, v.validFrom) : null;
   if (rule) {
-    // M4, Nachlauf R1: Verglichen wird im Rhythmus der Vereinbarung mit dem umgerechneten Regelbetrag — genau dem Betrag,
-    // den `effectiveFee` ohne Vereinbarung ansetzt. So ist er nie wegen der Rundung zu wenig (8,33 €/Monat bei 100 €/Jahr).
-    const minimumInAgreedInterval = convertInterval(rule.amountCents, rule.interval, v.interval ?? rule.interval);
-    if (rule.minimum && v.amountCents != null && v.amountCents < minimumInAgreedInterval && v.reduction !== 'reduced') return membersConflict('feeBelowMinimum', { minimumCents: rule.amountCents }, ['minimumCents']);
+    // M4, Nachlauf R1: Verglichen wird im Rhythmus der Vereinbarung mit dem umgerechneten Regelbetrag, abgerundet: Geht
+    // die Rechnung nicht auf, liegt niemand wegen der Rundung darunter (10,41 €/Monat bei 125 €/Jahr, Joe 2026-10-31).
+    const minimumInAgreedInterval = minimumInInterval(rule.amountCents, rule.interval, v.interval ?? rule.interval);
+    if (rule.minimum && v.amountCents != null && v.amountCents < minimumInAgreedInterval && v.reduction !== 'reduced') return membersConflict('feeBelowMinimum', { minimumCents: minimumInAgreedInterval }, ['minimumCents']);
     if (v.interval != null && !rule.allowedIntervals.includes(v.interval)) return membersConflict('intervalNotAllowed');
   }
   return { mandateId, payerContactId };

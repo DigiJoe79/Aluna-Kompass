@@ -266,7 +266,12 @@ gültige Bestätigung, gruppiert je Spender mit Summe. Fehlt die Anschrift,
 steht an der Gruppe „Anschrift fehlt“ mit dem Link zum Kontakt. Der Filter
 **Ab Betrag** zeigt nur Spender, deren Summe mindestens diesen Betrag erreicht;
 er gilt mit Enter oder beim Verlassen des Felds, **Filter zurücksetzen** hebt ihn
-wieder auf. Eine Zeile mit dem
+wieder auf. Hat ein Spender mindestens zwei ausstellbare Geldspenden in einem
+Jahr, steht in seiner Gruppe **Sammelbestätigung ausstellen**: Der Dialog ist
+derselbe wie beim einzelnen Ausstellen und nimmt alle diese Spenden auf. Sachspenden,
+Spenden mit Datum in der Zukunft und Zeilen mit einem Hinweis zur Rückgabe bleiben
+draußen. Liegen Spenden in mehreren Jahren, kommt zuerst das älteste Jahr dran,
+danach steht der Knopf für das nächste wieder da. Eine Zeile mit dem
 Hinweis „möglicher Rückläufer, Bezug fehlt“ lässt sich nicht bestätigen: Nach
 der Spende ging eine Auszahlung an denselben Kontakt, höchstens so hoch wie
 die Spende und mit keiner Spende verknüpft — etwa eine von Hand gebuchte

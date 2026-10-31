@@ -21,7 +21,8 @@ Die Karte **Versand** am Brief nennt den Zustellweg: „Noch nicht versandt.
 … bekommt Briefe per E-Mail“ (oder „per Post“). „Per E-Mail senden …“
 zeigt Empfänger, Betreff, den Begleittext, wie er hinausgeht, und den
 Anhang. Hat der Kontakt keine Adresse oder will er Post, nennt der Dialog
-den Grund und den Ausweg. Senden kann nur ein Mensch in Kompass, kein Agent — es sei denn, der Verein schaltet unter
+den Grund und den Ausweg. Ist der E-Mail-Versand in der Installation
+ausgeschaltet, sagt die Karte das, und der Knopf fehlt. Senden kann nur ein Mensch in Kompass, kein Agent — es sei denn, der Verein schaltet unter
 [Verwaltung → Agenten](../einstellungen/agenten.md) „Darf ein Agent Dokumente per E-Mail senden?“ ein.
 
 Die Mail geht im Hintergrund hinaus, höchstens so viele je Minute, wie unter

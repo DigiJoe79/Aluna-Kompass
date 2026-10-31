@@ -114,6 +114,8 @@ export function workerCount(env: Record<string, string | undefined>, kind: Serve
 
 export interface RunningServer {
   url: string;
+  /** Die letzten Zeilen der Serverausgabe. */
+  output(): string;
   stop(): Promise<void>;
 }
 
@@ -215,6 +217,7 @@ async function startDev(w: WorkerEnvironment, root: string): Promise<RunningServ
   await waitUntilHealthy(w.url, child, 120_000, output);
   return {
     url: w.url,
+    output,
     async stop() {
       dumpIfWanted(w.url, output);
       if (child.pid === undefined) return;
@@ -289,6 +292,7 @@ async function startContainer(w: WorkerEnvironment, image: string): Promise<Runn
   await waitUntilHealthy(w.url, child, 180_000, output);
   return {
     url: w.url,
+    output,
     async stop() {
       dumpIfWanted(name, output);
       try {
@@ -352,13 +356,28 @@ export function staticRoutes(appDir: string): string[] {
 const CATCH_ALL_MARK = 'NEXT_HTTP_ERROR_FALLBACK;404';
 const CATCH_ALL_PAGE = path.join('(shell)', '[...catchAll]', 'page.tsx');
 
+/** Was `warmUp` von einem Aufruf braucht; eine abgelehnte Zusage heißt, der Server hat gar nicht geantwortet. */
+export interface WarmUpPage {
+  status: number;
+  body: string;
+}
+
 export interface WarmUpOptions {
-  /** Der Rumpf der Antwort, ohne einer Weiterleitung zu folgen. */
-  fetchBody?: (url: string) => Promise<string>;
+  /** Status und Rumpf der Antwort, ohne einer Weiterleitung zu folgen; für die Bereitschaft am Ende mit Weiterleitung. */
+  fetchPage?: (url: string, follow: boolean) => Promise<WarmUpPage>;
   /** Stösst die Routentabelle von `next dev` neu an. */
   rescan?: () => void;
   pauseMs?: number;
+  /** Die letzte Ausgabe des Servers — dort steht eine Panik von Turbopack, oft als einzige Spur. */
+  serverOutput?: () => string;
+  /** So lange darf die Seite am Ende auf sich warten lassen. */
+  readyTimeoutMs?: number;
 }
+
+/** Die Seite, die ohne Anmeldung antwortet und den ganzen Weg durch Next nimmt. `/api/health` beweist das nicht. */
+const READY_ROUTE = '/login';
+const READY_IN_A_ROW = 2;
+const PANIC = /FATAL: An unexpected Turbopack error|task is missing in memory|panicked at/;
 
 /**
  * Wackler `finance-partners.spec.ts:21` (Nachrunde sha-0170e73): `next dev`
@@ -373,7 +392,12 @@ export interface WarmUpOptions {
  * baut die Tabelle neu, und die Route wird erneut geprüft.
  */
 export async function warmUp(baseURL: string, appDir: string, log: (line: string) => void = console.log, opts: WarmUpOptions = {}): Promise<void> {
-  const fetchBody = opts.fetchBody ?? (async (url: string) => (await fetch(url, { redirect: 'manual' })).text());
+  const fetchPage =
+    opts.fetchPage ??
+    (async (url: string, follow: boolean) => {
+      const response = await fetch(url, { redirect: follow ? 'follow' : 'manual' });
+      return { status: response.status, body: await response.text() };
+    });
   const rescan =
     opts.rescan ??
     (() => {
@@ -381,22 +405,61 @@ export async function warmUp(baseURL: string, appDir: string, log: (line: string
       utimesSync(path.join(appDir, CATCH_ALL_PAGE), now, now);
     });
   const pause = opts.pauseMs ?? 500;
+  const wait = async () => {
+    if (pause > 0) await new Promise((resolve) => setTimeout(resolve, pause));
+  };
+  /** Die Antwort auf eine Route; `problem` nennt, was daran nicht stimmt — ein abgerissener Aufruf ist keine leere Seite. */
+  const ask = async (route: string, follow = false): Promise<{ body: string; status: number | null; problem: string | null }> => {
+    try {
+      const page = await fetchPage(`${baseURL}${route}`, follow);
+      return { ...page, problem: page.status >= 500 ? `Status ${page.status}` : null };
+    } catch (error) {
+      return { body: '', status: null, problem: error instanceof Error ? error.message : String(error) };
+    }
+  };
   const routes = staticRoutes(appDir);
   const started = Date.now();
+  const failed: string[] = [];
   // Nacheinander: Ein kalter Server wird von zwanzig gleichzeitigen
   // Übersetzungen nicht schneller.
   for (const route of routes) {
-    const body = await fetchBody(`${baseURL}${route}`).catch(() => '');
-    if (!route.includes('warmup') || !body.includes(CATCH_ALL_MARK)) continue;
+    const first = await ask(route);
+    if (first.problem) {
+      log(`[warmup] ${baseURL}${route}: ${first.problem}`);
+      failed.push(route);
+      continue;
+    }
+    if (!route.includes('warmup') || !first.body.includes(CATCH_ALL_MARK)) continue;
     let attempts = 0;
     let caught = true;
     while (caught && attempts < 20) {
       attempts += 1;
       rescan();
-      if (pause > 0) await new Promise((resolve) => setTimeout(resolve, pause));
-      caught = (await fetchBody(`${baseURL}${route}`).catch(() => '')).includes(CATCH_ALL_MARK);
+      await wait();
+      caught = (await ask(route)).body.includes(CATCH_ALL_MARK);
     }
     log(`[warmup] ${baseURL}${route} landete im Auffänger — Routentabelle ${attempts}× neu angestossen${caught ? ', ohne Erfolg' : ''}`);
   }
+  for (const route of failed) {
+    const again = await ask(route);
+    if (again.problem) log(`[warmup] ${baseURL}${route}: auch im zweiten Anlauf ${again.problem}`);
+  }
+
+  // Backlog 94: Die erste Antwort nach dem Start beweist nichts; nach einer Panik antwortet Turbopack einmal und bricht
+  // beim nächsten Aufruf weg. Fast alle Wackler trafen den ersten Fall nach einem Serverstart.
+  const deadline = Date.now() + (opts.readyTimeoutMs ?? 60_000);
+  let inARow = 0;
+  let last = '';
+  for (;;) {
+    const page = await ask(READY_ROUTE, true);
+    inARow = page.status === 200 ? inARow + 1 : 0;
+    last = page.problem ?? `Status ${page.status}`;
+    if (inARow >= READY_IN_A_ROW || Date.now() >= deadline) break;
+    await wait();
+  }
+  const output = opts.serverOutput?.() ?? '';
+  const panic = output.split('\n').filter((line) => PANIC.test(line));
+  if (panic.length > 0) log(`[warmup] ${baseURL}: Panik im Server: ${panic.join(' | ')}`);
+  if (inARow < READY_IN_A_ROW) throw new Error(`Server auf ${baseURL} liefert ${READY_ROUTE} nicht zweimal in Folge mit 200, zuletzt ${last}:\n${output.slice(-2000)}`);
   log(`[warmup] ${baseURL}: ${routes.length} Routen in ${((Date.now() - started) / 1000).toFixed(1)}s`);
 }

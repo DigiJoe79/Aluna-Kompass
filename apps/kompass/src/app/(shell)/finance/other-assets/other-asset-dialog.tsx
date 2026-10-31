@@ -13,7 +13,7 @@ import { useActionFeedback } from '@/components/forms/use-action-feedback';
 import { Dialog, DialogBody, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Segmented } from '@/components/ui/segmented';
-import { formatAmount, parseAmount } from '@/lib/finance/amount';
+import { formatAmount, readAmount, type AmountError } from '@/lib/finance/amount';
 import { withUnplacedFieldErrors } from '@/lib/feedback';
 import { saveOtherAssetAction } from './actions';
 import type { OtherAssetRow } from './other-asset-list';
@@ -33,6 +33,8 @@ export function OtherAssetDialog({ open, onOpenChange, entry, today }: { open: b
   const [basis, setBasis] = useState('');
   const [document, setDocument] = useState<PickedDocument | null>(null);
   const [pending, setPending] = useState(false);
+  const [amountError, setAmountError] = useState<AmountError | null>(null);
+  const tAmount = useTranslations('finance.amount');
   const feedback = useActionFeedback();
 
   useEffect(() => {
@@ -43,15 +45,19 @@ export function OtherAssetDialog({ open, onOpenChange, entry, today }: { open: b
     setFrom(entry?.recordedFrom ?? today);
     setBasis(entry?.basis ?? '');
     setDocument(entry?.documentId ? { id: entry.documentId, number: entry.documentNumber ?? null, subject: entry.documentSubject ?? '', phase: 'issued' } : null);
+    setAmountError(null);
     feedback.reset();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
   const errors = feedback.state.status === 'error' ? feedback.state.fieldErrors : {};
   const save = async () => {
+    const value = readAmount(valueText, { required: true });
+    setAmountError(value.ok ? null : value.error);
+    if (!value.ok) return;
     setPending(true);
     const result = await feedback.run(
-      () => saveOtherAssetAction({ id: entry?.id, expectedVersion: entry?.updatedAt, kind, label, valueCents: parseAmount(valueText), basis, recordedFrom: from, documentId: document?.id ?? null }),
+      () => saveOtherAssetAction({ id: entry?.id, expectedVersion: entry?.updatedAt, kind, label, valueCents: value.cents, basis, recordedFrom: from, documentId: document?.id ?? null }),
       { retry: () => void save() },
     );
     setPending(false);
@@ -84,8 +90,8 @@ export function OtherAssetDialog({ open, onOpenChange, entry, today }: { open: b
             <FormField id="other-asset-label" label={t('label')} required error={errors.label} size="full">
               <Input id="other-asset-label" value={label} onChange={(e) => setLabel(e.target.value)} />
             </FormField>
-            <FormField id="other-asset-value" label={t('value')} required error={errors.value} size="s">
-              <AmountField id="other-asset-value" name="value" value={valueText} onChange={setValueText} required />
+            <FormField id="other-asset-value" label={t('value')} required error={amountError ? tAmount(amountError) : errors.value} size="s">
+              <AmountField id="other-asset-value" name="value" value={valueText} onChange={(next) => { setValueText(next); setAmountError(null); }} required />
             </FormField>
             <FormField id="other-asset-from" label={t('from')} required error={errors.recordedFrom} size="s">
               <Input id="other-asset-from" type="date" value={from} onChange={(e) => setFrom(e.target.value)} />

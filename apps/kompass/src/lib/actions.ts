@@ -62,7 +62,8 @@ export function toActionState<T>(result: Result<T>, t: Translate, successMessage
       fieldErrors[issue.path] ??= fieldMessage(issue.message, t, issue.params);
     }
   }
-  const conflictFields = result.error.type === 'conflict' ? { code: result.error.code, detail: result.error.messageKey ? conflictText(result.error, t) : rawDetail(result.error.message) } : {};
+  // `detail` ist, was die Oberfläche zeigt: der Satz der Sprachdatei, der rohe Diensttext nur für Codes ohne Satz.
+  const conflictFields = result.error.type === 'conflict' ? { code: result.error.code, detail: result.error.messageKey ? conflictText(result.error, t) : (conflictMessage(result.error, t) ?? rawDetail(result.error.message)) } : {};
   const reasons = result.error.type === 'conflict' ? conflictReasons(result.error, t) : [];
   // Veraltete Version: Der Dienst nennt weder Person noch Uhrzeit — der Satz bleibt allgemein, die Auswege setzt die Leiste (conflict-remedies).
   const stale = result.error.type === 'conflict' && result.error.code === 'staleVersion' ? { title: t('common.refused.title'), detail: t('common.conflict.textPlain') } : {};

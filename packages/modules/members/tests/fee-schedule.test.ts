@@ -1,4 +1,5 @@
-import { defineModule, isModuleEnabled, unwrap } from '@kompass/core';
+import { defineModule, isModuleEnabled, newId, unwrap, type CallContext } from '@kompass/core';
+import { documents } from '@kompass/module-dms';
 import { registerResolutionFactsSource, type ResolutionFacts } from '@kompass/module-finance';
 import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
@@ -16,6 +17,15 @@ function rules(deps: MembersDeps, regularCents: number) {
     { typeId: typeId(deps, 'supporting'), amountCents: 1000, interval: 'monthly' as const, minimum: true, allowedIntervals: ['monthly' as const, 'yearly' as const] },
   ];
 }
+
+/** Ein Dokument der Akte, wie es die Prüfung des Beschlusses sieht. */
+function resolutionDocument(deps: MembersDeps, o: { phase?: 'draft' | 'issued'; status?: 'issued' | 'voided' } = {}) {
+  const id = newId();
+  deps.db.insert(documents).values({ id, phase: o.phase ?? 'issued', status: o.status ?? 'issued', direction: 'incoming', sourceKind: 'uploaded', typeKey: 'member-application', number: `MAN-2026-${id.slice(-4)}`, documentDate: '2025-12-01', createdByUserId: 'U1', createdAt: '2025-12-01T00:00:00.000Z', updatedAt: '2025-12-01T00:00:00.000Z' }).run();
+  return id;
+}
+
+const reading = (ctx: CallContext): CallContext => ({ ...ctx, permissions: new Set([...ctx.permissions, 'dms.view']) });
 
 async function twoSchedules() {
   const { deps, ctx } = setupMembers();
@@ -63,17 +73,32 @@ describe('fee schedules', () => {
     expect(fail(await deleteFeeSchedule(deps, ctx, { id: older.id }))).toMatchObject({ code: 'feeScheduleLocked' });
   });
 
+  it('a new resolution document must exist, be final and not voided; the stored one is not checked again', async () => {
+    const { deps, ctx, newer } = await twoSchedules();
+    const save = (c: CallContext, resolutionDocumentId: string) => saveFeeSchedule(deps, c, { id: newer.id, validFrom: '2026-01-01', resolutionDocumentId, rules: rules(deps, 1500) });
+    expect(fail(await save(reading(ctx), 'NOPE'))).toMatchObject({ type: 'notFound' });
+    expect(fail(await save(reading(ctx), resolutionDocument(deps, { phase: 'draft' })))).toMatchObject({ type: 'conflict', code: 'resolutionDocumentNotFinal' });
+    expect(fail(await save(reading(ctx), resolutionDocument(deps, { status: 'voided' })))).toMatchObject({ type: 'conflict', code: 'resolutionDocumentVoided' });
+    const good = resolutionDocument(deps);
+    const feesOnly: CallContext = { ...ctx, permissions: new Set(['members.fees']) };
+    expect(fail(await save(feesOnly, good))).toMatchObject({ type: 'forbidden' });
+    unwrap(await save(reading(ctx), good));
+    deps.db.update(documents).set({ status: 'voided' }).where(eq(documents.id, good)).run();
+    unwrap(await save(feesOnly, good));
+  });
+
   it('a locked stand takes the resolution afterwards, without touching its rules (Backlog 97)', async () => {
     const { deps, ctx, newer } = await twoSchedules();
     createdCharge(deps, '2026-01-01', newer.id);
     const ruleIdsBefore = deps.db.select().from(memberFeeRules).where(eq(memberFeeRules.scheduleId, newer.id)).all().map((r) => r.id).sort();
-    const saved = unwrap(await saveFeeSchedule(deps, ctx, { id: newer.id, validFrom: '2026-01-01', resolvedOn: '2025-12-01', resolutionDocumentId: 'DOC-1', note: 'Protokoll nachgetragen', rules: rules(deps, 1500) }));
-    expect(saved).toMatchObject({ resolvedOn: '2025-12-01', resolutionDocumentId: 'DOC-1', note: 'Protokoll nachgetragen', locked: true });
+    const docId = resolutionDocument(deps);
+    const saved = unwrap(await saveFeeSchedule(deps, reading(ctx), { id: newer.id, validFrom: '2026-01-01', resolvedOn: '2025-12-01', resolutionDocumentId: docId, note: 'Protokoll nachgetragen', rules: rules(deps, 1500) }));
+    expect(saved).toMatchObject({ resolvedOn: '2025-12-01', resolutionDocumentId: docId, note: 'Protokoll nachgetragen', locked: true });
     expect(deps.db.select().from(memberFeeRules).where(eq(memberFeeRules.scheduleId, newer.id)).all().map((r) => r.id).sort()).toEqual(ruleIdsBefore);
     const entry = auditOf(deps, 'members.feeSchedule.update').at(-1)!;
     expect(entry.params).toEqual({ validFrom: '2026-01-01' });
     expect(JSON.parse(entry.before!)).toEqual({ resolvedOn: null, resolutionDocumentId: null, resolutionId: null, note: 'Beschluss der Versammlung' });
-    expect(JSON.parse(entry.after!)).toEqual({ resolvedOn: '2025-12-01', resolutionDocumentId: 'DOC-1', resolutionId: null, note: 'Protokoll nachgetragen' });
+    expect(JSON.parse(entry.after!)).toEqual({ resolvedOn: '2025-12-01', resolutionDocumentId: docId, resolutionId: null, note: 'Protokoll nachgetragen' });
   });
 
   it('a locked stand: same rules in another order count as unchanged; any other change stays locked', async () => {

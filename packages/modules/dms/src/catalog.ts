@@ -253,7 +253,7 @@ export async function deleteDocumentFolder(
   const readableDoc = deps.db.select({ id: documents.id }).from(documents).where(and(eq(documents.folder, path), manageableTypeFilter(deps, ctx))).get();
   const anyDoc = deps.db.select({ id: documents.id }).from(documents).where(eq(documents.folder, path)).get();
   const hasChild = deps.db.select({ path: documentFolders.path }).from(documentFolders).where(and(ne(documentFolders.path, path), withinSubtree(documentFolders.path, path))).get();
-  if (readableDoc || hasChild) return conflict('folderNotEmpty', `Der Ordner „${path}“ ist nicht leer`);
+  if (readableDoc || hasChild) return localizedConflict('folderNotEmpty', 'errors.folder.notEmpty', { path });
   if (anyDoc) return conflict('folderHasProtectedDocuments', `Der Ordner „${path}“ enthält geschützte Dokumente`);
 
   return deps.db.transaction((tx: DbOrTx) => {

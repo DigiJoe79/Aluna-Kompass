@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useDateFormat } from '@/components/date-format-provider';
 import { RefusalNotice } from '@/components/forms/refusal-notice';
+import { Notice } from '@/components/notice';
 import { useActionFeedback } from '@/components/forms/use-action-feedback';
 import { RunSteps, type RunStep } from '@/components/run-steps';
 import { SectionHeading } from '@/components/section';
@@ -40,6 +41,8 @@ export function packageRunSteps(view: AuditPackageView, t: (key: string) => stri
  */
 export function PackageRunCard({ yearId, initial, variant = 'card' }: { yearId: string; initial: AuditPackageView; /** `step`: im Schritt 9 des Jahresabschlusses ohne Karte, Titel und Satz, „Prüfpaket erzeugen“ primär (14d A). */ variant?: 'card' | 'step' }) {
   const t = useTranslations('finance.audit.package.run');
+  const tCommon = useTranslations('common');
+  const [pollGaveUp, setPollGaveUp] = useState(false);
   const tAudit = useTranslations('finance.audit');
   const fmt = useDateFormat();
   const [view, setView] = useState(initial);
@@ -53,14 +56,19 @@ export function PackageRunCard({ yearId, initial, variant = 'card' }: { yearId: 
 
   useEffect(() => {
     if (watch === 0) return;
-    return pollTextStatus({
+    const stop = pollTextStatus({
       url: `/finance/audit/year/${encodeURIComponent(yearId)}/package/status`,
       isPending: (body) => body.state === 'running',
       onTick: (body) => setView(body as unknown as AuditPackageView),
       // Nach dem Ende des Laufs stehen neue Dateien im Abschnitt „Prüfer“ und im Stand der Seite (Plan D1d Task 2).
       onDone: () => router.refresh(),
       onUnauthorized: () => router.refresh(),
+      onGiveUp: () => setPollGaveUp(true),
     });
+    return () => {
+      stop();
+      setPollGaveUp(false);
+    };
   }, [watch, yearId, router]);
 
   const start = async () => {
@@ -93,6 +101,7 @@ export function PackageRunCard({ yearId, initial, variant = 'card' }: { yearId: 
       <div className="flex flex-col gap-2.5" data-testid="package-run">
         {action ? <div>{action}</div> : null}
         <RefusalNotice action state={feedback.state} />
+        {pollGaveUp ? <Notice level="warn" testId="poll-gave-up">{tCommon('pollGaveUp')}</Notice> : null}
         {showSteps ? <RunSteps steps={packageRunSteps(view, t)} label={t('title')} /> : null}
       </div>
     );
@@ -107,6 +116,7 @@ export function PackageRunCard({ yearId, initial, variant = 'card' }: { yearId: 
         {action}
       </div>
       <RefusalNotice action state={feedback.state} />
+      {pollGaveUp ? <Notice level="warn" testId="poll-gave-up">{tCommon('pollGaveUp')}</Notice> : null}
       {showSteps ? <RunSteps steps={packageRunSteps(view, t)} label={t('title')} /> : null}
       {!running && view.files.length > 0 ? (
         <div className="flex flex-wrap gap-2">

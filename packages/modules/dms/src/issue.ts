@@ -1,4 +1,4 @@
-import { yearIn, buildContext, conflict, documentSnapshot, isoNow, newId, notFound, ok, prepare, recordAudit, type CallContext, type DbOrTx, type Deps, type Failure, type Result } from '@kompass/core';
+import { yearIn, buildContext, conflict, documentSnapshot, isoNow, localizedConflict, newId, notFound, ok, prepare, recordAudit, type CallContext, type DbOrTx, type Deps, type Failure, type Result } from '@kompass/core';
 import { eq } from 'drizzle-orm';
 import { documentTypeFor } from './catalog';
 import { NumberMovedOn } from './drafts';
@@ -80,7 +80,7 @@ export async function issueGeneratedDocument<T = undefined>(deps: Deps, ctx: Cal
       const { bytes, pages } = await deps.documents.render({ baseId, bodyTypst, slots: built.slots, context, images });
       if (input.maxPages !== undefined && pages !== null && pages > input.maxPages) {
         await cleanUp(); // die Datei eines früheren Anlaufs
-        return input.tooManyPages?.(pages) ?? conflict('documentTooManyPages', `Das Dokument hat ${pages} Seiten, erlaubt sind ${input.maxPages}`);
+        return input.tooManyPages?.(pages) ?? localizedConflict('documentTooManyPages', 'dms.errors.documentTooManyPages', { pages, maxPages: input.maxPages });
       }
 
       const stored = await storeDocumentFile(deps, id, bytes);

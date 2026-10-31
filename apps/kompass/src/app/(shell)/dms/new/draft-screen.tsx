@@ -1,6 +1,7 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
+import type { BackMode } from '@/components/back-link';
 import { memo, useCallback, useEffect, useState } from 'react';
 import { PageHeader } from '@/components/page-header';
 import { cn } from '@/lib/utils';
@@ -29,7 +30,7 @@ export function DraftScreen({
 }: DraftFormProps & {
   title: string;
   description: string;
-  back: { href: string; label: string };
+  back: { href: string; label: string; history?: BackMode };
 }) {
   const t = useTranslations('dms');
   const [changed, setChanged] = useState(0);

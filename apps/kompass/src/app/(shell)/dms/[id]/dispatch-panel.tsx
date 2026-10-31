@@ -21,6 +21,7 @@ import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { StatusBadge, statusTone } from '@/components/status-badge';
 import { RefusalNotice } from '@/components/forms/refusal-notice';
+import { Notice } from '@/components/notice';
 import { useActionFeedback } from '@/components/forms/use-action-feedback';
 import { pollTextStatus } from '@/lib/poll-text-status';
 import { resendDocumentMailAction } from '../actions';
@@ -90,6 +91,8 @@ export function DispatchPanel({
   const channelLabel = sentVia ? (channels.find((c) => c.key === sentVia)?.label ?? sentVia) : null;
 
   const ts = useTranslations('dms.send');
+  const tCommon = useTranslations('common');
+  const [pollGaveUp, setPollGaveUp] = useState(false);
   const tState = useTranslations('dispatchStep.state');
   const tCode = useTranslations('dms.mailErrorCodes');
   const router = useRouter();
@@ -103,16 +106,22 @@ export function DispatchPanel({
   const mailedVermerk = sentAt !== null && sentVia === 'email' && sendings.some((s) => s.status === 'sent');
   const firstRecipient = mail?.recipients[0] ?? null;
   const byMail = firstRecipient?.channel === 'email';
+  const mailOff = mail?.mail.kind === 'off';
   const showSendButtons = !sentAt && !sendings.some((s) => s.status === 'queued' || s.status === 'sending' || s.status === 'sent' || s.status === 'failed');
 
   useEffect(() => {
     if (!unterwegs) return;
-    return pollTextStatus({
+    const stop = pollTextStatus({
       url: `/dms/${encodeURIComponent(documentId)}/mail-status`,
       isPending: (body) => body.pending === true,
       onDone: () => router.refresh(),
       onUnauthorized: () => router.refresh(),
+      onGiveUp: () => setPollGaveUp(true),
     });
+    return () => {
+      stop();
+      setPollGaveUp(false);
+    };
   }, [unterwegs, documentId, router]);
 
   const resend = async (entry: OutboxListItem) => {
@@ -122,7 +131,7 @@ export function DispatchPanel({
     router.refresh();
   };
 
-  const mailButton = canSend && mail ? (
+  const mailButton = canSend && mail && !mailOff ? (
     <Button key="mail" type="button" variant="outline" size="sm" onClick={() => setSending(true)} data-testid="dispatch-send-mail">
       {ts('mail')}
     </Button>
@@ -137,6 +146,7 @@ export function DispatchPanel({
     <section data-testid="dispatch-panel" className="rounded-md border border-line bg-surface p-5 shadow-xs">
       <Section title={t('title')}>
         <RefusalNotice action state={resendFb.state} />
+        {pollGaveUp ? <Notice level="warn" testId="poll-gave-up">{tCommon('pollGaveUp')}</Notice> : null}
         {sendings.length > 0 ? (
           <ul className="mb-3 divide-y divide-line-2" data-testid="dispatch-sendings">
             {sendings.map((entry) => (
@@ -224,7 +234,7 @@ export function DispatchPanel({
           </dl>
         ) : sendings.length > 0 ? null : (
           <p className="text-meta text-muted-ink">
-            {firstRecipient?.name ? (byMail ? ts('notSent', { name: firstRecipient.name }) : ts('notSentPost', { name: firstRecipient.name })) : t('none')}
+            {mailOff ? ts('notSentMailOff') : firstRecipient?.name ? (byMail ? ts('notSent', { name: firstRecipient.name }) : ts('notSentPost', { name: firstRecipient.name })) : t('none')}
           </p>
         )}
 

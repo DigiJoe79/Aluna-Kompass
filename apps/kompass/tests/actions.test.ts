@@ -28,7 +28,7 @@ describe('toActionState', () => {
     expect(getMsg(conflict('documentIsDraft', 'x'))).toBe('errors.conflict.documentIsDraft');
     expect(getMsg(conflict('weird', 'Detail'))).toBe('errors.conflict.default:{"detail":"Detail"}');
     expect(getMsg(conflict('stillPublished', 'Der Datensatz ist veröffentlicht. Ziehen Sie ihn erst zurück.'))).toBe('errors.conflict.stillPublished');
-    expect(getMsg(conflict('mediaAssetInUse', 'Wird verwendet: Tier X'))).toBe('errors.conflict.mediaAssetInUse:{"detail":"Tier X"}');
+    expect(getMsg(conflict('seedAssetsMissing', 'Technik: a.png'))).toBe('errors.conflict.seedAssetsMissing:{"detail":"a.png"}');
     expect(getMsg(conflict('humanOnly', 'demo.mcpHumanOnlyAllowed'))).toBe('errors.humanOnly');
     expect(getMsg(conflict('settingManaged', 'finance'))).toBe('errors.settingManaged:{"module":"finance"}');
     // V-10: mit Sprachdatei der Name des Moduls, nicht sein Schlüssel.
@@ -48,9 +48,15 @@ describe('toActionState', () => {
     expect(getMsg(unauthorized('locked'))).toBe('errors.unauthorized');
   });
 
+  it('shows the sentence of the language file as detail, not the text of the service', () => {
+    // `RefusalNotice` zeigt `detail ?? message`: Der Diensttext stand bis 0.5.1 vor dem Satz der Sprachdatei.
+    expect(toActionState(conflict('documentIsDraft', 'Dokument 12: Entwurf'), t)).toMatchObject({ code: 'documentIsDraft', detail: 'errors.conflict.documentIsDraft' });
+    expect(toActionState(conflict('weird', 'Etwas: Detail'), t)).toMatchObject({ code: 'weird', detail: 'Detail' });
+  });
+
   it('passes conflict code and raw detail through toActionState', () => {
-    const withColon = toActionState(conflict('mediaAssetInUse', 'Wird verwendet: Tier X'), t);
-    expect(withColon).toMatchObject({ status: 'error', code: 'mediaAssetInUse', detail: 'Tier X' });
+    const withColon = toActionState(conflict('weird', 'Wird verwendet: Tier X'), t);
+    expect(withColon).toMatchObject({ status: 'error', code: 'weird', detail: 'Tier X' });
     const withoutColon = toActionState(conflict('cashWouldGoNegative', 'Das Barkonto Kasse waere im Minus. Pruefen Sie Datum und Betrag.'), t);
     expect(withoutColon).toMatchObject({ status: 'error', code: 'cashWouldGoNegative', detail: 'Das Barkonto Kasse waere im Minus. Pruefen Sie Datum und Betrag.' });
     // Bestehende Faelle bleiben grün: code/detail nur bei conflict.

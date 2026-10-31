@@ -107,6 +107,22 @@ describe('Sonstiges Vermögen: Dialoge (Board 11f, 11g)', () => {
     expect(within(await screen.findByRole('dialog')).getByText(m('finance.otherAssets.dialog.editNote'))).toBeTruthy();
   });
 
+  it('sends no unreadable or missing value: the error stands at the field and goes with typing', async () => {
+    list();
+    fireEvent.click(menuOf('Pavillon für Feste'));
+    fireEvent.click(await screen.findByRole('menuitem', { name: m('finance.otherAssets.menu.revalue') }));
+    const dialog = await screen.findByRole('dialog');
+    const value = within(dialog).getByLabelText(new RegExp(`^${m('finance.otherAssets.dialog.value')}`));
+    const save = within(dialog).getByRole('button', { name: m('finance.otherAssets.revalue.save') });
+    fireEvent.click(save);
+    expect(await within(dialog).findByText(m('finance.amount.missing'))).toBeTruthy();
+    fireEvent.change(value, { target: { value: '12,3x' } });
+    expect(within(dialog).queryByText(m('finance.amount.missing'))).toBeNull();
+    fireEvent.click(save);
+    expect(await within(dialog).findByText(m('finance.amount.format'))).toBeTruthy();
+    expect(revalueOtherAssetAction).not.toHaveBeenCalled();
+  });
+
   it('new value from a day and end with a last day', async () => {
     revalueOtherAssetAction.mockResolvedValue({ status: 'success' });
     list();

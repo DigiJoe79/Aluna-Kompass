@@ -137,6 +137,10 @@ Aufbewahrung mit Frist und Grund, der Volltext, die Bezüge zu Kontakt, Tier
 oder Projekt, die [Bezüge zu anderen Dokumenten](bezuege-und-wiedervorlage.md)
 und unter der Vorschau das Notizjournal.
 
+Der Pfeil oben führt dorthin zurück, woher Sie gekommen sind: zum Kontakt, zur
+Sitzung oder in die Liste mit denselben Filtern. Haben Sie das Dokument direkt
+über einen Link geöffnet, führt er zur Akte.
+
 **Notizen** sind Arbeitsmaterial neben dem Dokument, nie Teil davon: „Frau
 Sommer hat telefonisch nachgefragt“. Jede Notiz trägt Name und Zeit; sie
 wird angefügt, nicht geändert. Löschen darf, wer sie geschrieben hat, oder

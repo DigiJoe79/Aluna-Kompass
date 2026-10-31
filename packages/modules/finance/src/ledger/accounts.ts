@@ -30,7 +30,8 @@ function check(v: Pick<Fields, 'kind' | 'iban' | 'openingBalanceCents' | 'openin
 }
 
 export const accountCreateSchema = base.superRefine(check);
-export const accountUpdateSchema = base.partial().extend({ id: z.string().min(1), expectedVersion: expectedVersionField });
+// removeDefault: Zod 4 wendet `.default()` auch hinter `.partial()` an; ein Teil-Update setzte sonst weggelassene Felder zurück.
+export const accountUpdateSchema = base.extend({ isMain: base.shape.isMain.removeDefault() }).partial().extend({ id: z.string().min(1), expectedVersion: expectedVersionField });
 
 export type AccountView = FinanceAccountRow;
 

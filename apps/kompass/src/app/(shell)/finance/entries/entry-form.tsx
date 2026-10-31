@@ -645,7 +645,7 @@ export function EntryForm({ initial, accounts, categories, purposes, projects, t
           ) : null
         }
         saveLabel={t('actions.finalize')}
-        saveDisabled={!canFinalize}
+        saveDisabled={!canFinalize || saving}
       />
 
       <ConfirmDialog

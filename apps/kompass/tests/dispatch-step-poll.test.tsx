@@ -6,7 +6,9 @@ import { DispatchStep, type DispatchMailRow } from '@/components/dispatch-step';
 import messages from '../messages/de.json';
 
 const refresh = vi.fn();
-vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh }) }));
+// Wie der echte Router gleichbleibend: Die Abfragekette hängt an ihm und finge sonst nach jedem Rendern neu an.
+const router = { refresh };
+vi.mock('next/navigation', () => ({ useRouter: () => router }));
 
 const fetchMock = vi.fn(async () => new Response(JSON.stringify({ pending: false }), { status: 200 }));
 
@@ -40,6 +42,15 @@ describe('DispatchStep fragt den Ausgang nur, solange etwas läuft', () => {
     await act(async () => { await vi.advanceTimersByTimeAsync(1500); });
     expect(fetchMock).toHaveBeenCalledWith('/dms/run-mail-status?runRef=membersFeeRun%3AR1', expect.objectContaining({ cache: 'no-store' }));
     expect(refresh).toHaveBeenCalledTimes(1);
+  });
+
+  it('sagt es, wenn die Abfrage aufgibt, statt weiter „wartet“ zu zeigen', async () => {
+    fetchMock.mockImplementation(async () => new Response(null, { status: 500 }));
+    const shown = step('queued');
+    expect(shown.queryByTestId('poll-gave-up')).toBeNull();
+    await act(async () => { await vi.advanceTimersByTimeAsync(60_000); });
+    expect(shown.getByTestId('poll-gave-up').getAttribute('role')).toBe('status');
+    fetchMock.mockImplementation(async () => new Response(JSON.stringify({ pending: false }), { status: 200 }));
   });
 
   it('fragt nicht, wenn alles gesendet, nicht zugestellt oder noch nicht eingereiht ist', async () => {

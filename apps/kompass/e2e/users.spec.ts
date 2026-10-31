@@ -131,7 +131,7 @@ test.describe('users', () => {
     await page.getByRole('menuitem', { name: 'Deaktivieren' }).click();
     await page.getByRole('alertdialog').getByRole('button', { name: 'Deaktivieren' }).click();
     // Die Ablehnung bleibt im Dialog stehen.
-    await expect(page.getByRole('alertdialog').getByRole('alert')).toContainText('Der letzte aktive Administrator kann nicht deaktiviert werden');
+    await expect(page.getByRole('alertdialog').getByRole('alert')).toContainText('Mindestens ein aktiver Nutzer muss die Rolle „Administration“ behalten.');
   });
 
   test('is forbidden for a role without users.manage', async ({ page }) => {

@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl';
 import { useActionState, useEffect, useState, useMemo } from 'react';
 import { toast } from 'sonner';
 import { FormField } from '@/components/forms/form-field';
+import { ActionForm } from '@/components/forms/action-form';
 import { FormCard, FormCardBody } from '@/components/forms/form-card';
 import { FormActionBar } from '@/components/forms/form-action-bar';
 import { SchemaForm, withBlanks } from '@/components/schema-form';
@@ -73,7 +74,8 @@ export function EntryForm({
   }, [state]);
 
   return (
-    <FormCard as="form" action={action}>
+    <FormCard>
+      <ActionForm action={action} state={state}>
       <input type="hidden" name="collection" value={collection} />
       {entry ? <input type="hidden" name="id" value={entry.id} /> : null}
       {entry ? <input type="hidden" name="expectedVersion" value={version} /> : null}
@@ -102,6 +104,7 @@ export function EntryForm({
         onDiscard={discard}
         state={state}
       />
+      </ActionForm>
     </FormCard>
   );
 }

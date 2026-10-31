@@ -12,7 +12,7 @@ import { newId } from '../ids';
 import { requirePermission } from '../permissions/check';
 import { zodIssues } from '../validate';
 import type { MediaReference } from '../modules/manifest';
-import { conflict, invalid, notFound, ok, unauthorized, type Result } from '../result';
+import { conflict, invalid, localizedConflict, notFound, ok, unauthorized, type Result } from '../result';
 import { folderExists, mediaKindCondition, withinSubtree } from './folders';
 import { ensurePreview, hasPreview, previewFilename, readImageMeta, renderPreview } from './preview';
 import { findMediaReferences, findMediaReferencesFor } from './references';
@@ -269,7 +269,7 @@ export async function deleteMediaAsset(deps: Deps, ctx: CallContext, input: unkn
 
   const refs = findMediaReferences(deps, record.id);
   if (refs.length > 0) {
-    return conflict('mediaAssetInUse', `Wird verwendet bei: ${refs.map((r) => r.label).join(', ')}. Entferne die Datei dort zuerst.`);
+    return localizedConflict('mediaAssetInUse', 'errors.media.assetInUse', { usedBy: refs.map((r) => r.label).join(', ') });
   }
 
   deps.db.transaction((tx) => {

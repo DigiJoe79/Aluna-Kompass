@@ -5,7 +5,7 @@ import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 import { createDraft } from '../src/drafts';
 import { linkDocumentInternal } from '../src/linked';
-import { documentMailDraft, listOutbox, previewSend, resendDocumentEmail, sendDocuments, sendTestMail, switchToPost } from '../src/mail/outbox';
+import { documentMailDraft, listOutbox, previewSend, resendDocumentEmail, retryFailedEmails, sendDocuments, sendTestMail, switchToPost } from '../src/mail/outbox';
 import { dmsModule } from '../src/manifest';
 import { dmsMailOutbox, documents } from '../src/schema';
 import { ALL_DMS, fileFixture, seedTypes } from './helpers';
@@ -171,6 +171,23 @@ describe('Briefe per E-Mail einreihen', () => {
     const twice = await resendDocumentEmail(deps, ctx, { outboxId: first!.id });
     expect(!twice.ok && twice.error.type === 'conflict' && twice.error.code).toBe('alreadyQueued');
     expect(outbox(deps)).toHaveLength(2);
+  });
+
+  it('reiht zu zwei gescheiterten Zeilen desselben Empfängers nur eine neue Sendung ein', async () => {
+    const { deps, ctx } = setup();
+    const doc = await letterTo(deps, ctx, await contactWith(deps, ctx, 'Mail', 'zwei@example.org'));
+    const other = await letterTo(deps, ctx, await contactWith(deps, ctx, 'Anders', 'drei@example.org'));
+    unwrap(await sendDocuments(deps, ctx, { documentIds: [doc, other] }));
+    const fail = () => deps.db.update(dmsMailOutbox).set({ status: 'failed', attempts: 3, lastErrorCode: 'rejected' }).where(eq(dmsMailOutbox.status, 'queued')).run();
+    fail();
+    const [first] = outbox(deps).filter((r) => r.documentId === doc);
+    unwrap(await resendDocumentEmail(deps, ctx, { outboxId: first!.id }));
+    fail();
+    const failed = outbox(deps);
+    expect(failed).toHaveLength(3);
+    const { queued } = unwrap(await retryFailedEmails(deps, ctx, { outboxIds: failed.map((r) => r.id) }));
+    expect(queued).toHaveLength(2);
+    expect(outbox(deps).filter((r) => r.status === 'queued').map((r) => r.documentId).sort()).toEqual([doc, other].sort());
   });
 
   it('stellt auf Post um und reiht danach nicht wieder ein', async () => {

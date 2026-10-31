@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import type { ReactElement, ReactNode } from 'react';
+import { BackLink, type BackMode } from '@/components/back-link';
 import { type HeaderAction, HeaderMore } from '@/components/record-actions';
 import { buttonVariants } from '@/components/ui/button';
 
@@ -29,7 +30,8 @@ export function PageHeader({
    * `RecordActions` der Seite, sonst einem eigenen. So bleibt am Telefon im Kopf nur der Primärknopf.
    */
   more?: readonly HeaderAction[];
-  back?: { href: string; label: string };
+  /** `history`: für Seiten, die man von überall erreicht, und ihre Unterseiten (`BackLink`). */
+  back?: { href: string; label: string; history?: BackMode };
   /**
    * Zustand des Datensatzes (archiviert, inaktiv) — nur eine `StatusBadge` (Freigabe Designer 2026-10-08, Wächter
    * `record-action-placement`). Rechts neben dem `h1` auf der Grundlinie, 10 px Abstand, am Telefon darunter; nicht
@@ -39,7 +41,9 @@ export function PageHeader({
 }) {
   return (
     <div className="mb-5">
-      {back ? (
+      {back?.history ? (
+        <BackLink href={back.href} label={back.label} mode={back.history} />
+      ) : back ? (
         <Link
           href={back.href}
           className={`${buttonVariants({ variant: 'ghost', size: 'sm' })} -ml-2 mb-1`}

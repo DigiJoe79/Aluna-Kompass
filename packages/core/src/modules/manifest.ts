@@ -338,6 +338,10 @@ export interface DocumentSlots {
   stage?: 'preliminary' | 'review' | 'final';
   /** Bericht: Text zur Stufe, vom Produkt — die Basis kennt keinen Inhalt. */
   stageText?: string;
+  /** Kopf ohne Ausgabedatum (Basen `a4-plain`, `a4-plain-slim`). Die Nummer bleibt. */
+  hideDate?: boolean;
+  /** Beschriftung oben rechts statt Nummer und Datum (dieselben Basen). */
+  headerLabel?: string;
   /** Vermerk klein vor der Seitenzahl, etwa „Erzeugt TT.MM.JJJJ, HH:MM · <Kurz-Hash>“. */
   footerNote?: string;
 }

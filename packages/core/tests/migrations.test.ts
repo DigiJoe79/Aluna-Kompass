@@ -29,9 +29,10 @@ const rootVersion = (JSON.parse(readFileSync(path.join(__dirname, '../../../pack
  * gesperrten Finanzspalten; 0.3.2 brachte keine), `0011_finance_accountability_0_4_0` die zusammengelegte der
  * Fassung 0.4.0 (Rechenschaftspflichten: Berichte, Kassenprüfung, Abschluss, Erklärungszeiträume, USt-Abgaben),
  * `0012_governance_annual_accounts_0_5_0` die zusammengelegte der Fassung 0.5.0 (Gremien; dazu die nie einzeln
- * ausgelieferte 0.4.5 mit Jahresrechnung und Mittelverwendung, samt ihren Triggern).
+ * ausgelieferte 0.4.5 mit Jahresrechnung und Mittelverwendung, samt ihren Triggern),
+ * `0013_dms_unclassified_labels_0_5_1` die eine der Fassung 0.5.1 (nur Daten: Backlog 63).
  */
-const RELEASED = ['0000_init.sql', '0001_dashboard_layouts.sql', '0002_document_former_numbers.sql', '0003_finance.sql', '0004_finance_0_2_1.sql', '0005_animals_review.sql', '0006_audit_params.sql', '0007_animal_proposals_site_manifest.sql', '0008_image_crops.sql', '0009_members_direct_debit_0_3_0.sql', '0010_media_ai_kind_finance_locks_0_3_1.sql', '0011_finance_accountability_0_4_0.sql', '0012_governance_annual_accounts_0_5_0.sql'];
+const RELEASED = ['0000_init.sql', '0001_dashboard_layouts.sql', '0002_document_former_numbers.sql', '0003_finance.sql', '0004_finance_0_2_1.sql', '0005_animals_review.sql', '0006_audit_params.sql', '0007_animal_proposals_site_manifest.sql', '0008_image_crops.sql', '0009_members_direct_debit_0_3_0.sql', '0010_media_ai_kind_finance_locks_0_3_1.sql', '0011_finance_accountability_0_4_0.sql', '0012_governance_annual_accounts_0_5_0.sql', '0013_dms_unclassified_labels_0_5_1.sql'];
 
 /**
  * Was eine Produktion schon ausgeführt hat, bleibt Byte für Byte, wie es war:
@@ -57,6 +58,8 @@ const SHIPPED_HASHES: Record<string, string> = {
   '0009_members_direct_debit_0_3_0.sql': 'e094c020544cf97ba8c8642b3b7b5ea691c4e32266f3233f2531399dca2991d6',
   // Seit dem Release der Fassung 0.3.1 (0.3.2 ohne Migration).
   '0010_media_ai_kind_finance_locks_0_3_1.sql': '1d193e4dfae91ce53378f18c358a6e73870049ccb84531b94c82073f2758338e',
+  // Seit dem Release der Fassung 0.5.1.
+  '0013_dms_unclassified_labels_0_5_1.sql': '9b945cf4dcb16bfb7b60377e0db9bb78ae1ca3cad7e3c9041be98afa324314ec',
 };
 
 /**
@@ -103,6 +106,23 @@ const journal = JSON.parse(readFileSync(path.join(MIGRATIONS_DIR, 'meta/_journal
  * sagt es vorher. Er durchsucht alle Dateien, nicht nur die erste, weil eine
  * zusammengelegte Migration die Stücke eines Moduls an beliebiger Stelle trägt.
  */
+describe('Daten-Migration 0.5.1 (Backlog 63)', () => {
+  it('benennt die Startarten nur um, wenn der Verein sie nicht selbst benannt hat', () => {
+    const db = new Database(':memory:');
+    db.exec('CREATE TABLE document_types (key text PRIMARY KEY, label text NOT NULL)');
+    const add = db.prepare('INSERT INTO document_types VALUES (?, ?)');
+    add.run('unclassified-in', 'Unklassifiziert (Eingang)');
+    add.run('unclassified-out', 'Post raus');
+    add.run('letter', 'Unklassifiziert (Ausgang)');
+    db.exec(readFileSync(path.join(MIGRATIONS_DIR, '0013_dms_unclassified_labels_0_5_1.sql'), 'utf8'));
+    const labels = Object.fromEntries((db.prepare('SELECT key, label FROM document_types').all() as { key: string; label: string }[]).map((r) => [r.key, r.label]));
+    expect(labels).toEqual({ 'unclassified-in': 'Eingang ohne Zuordnung', 'unclassified-out': 'Post raus', letter: 'Unklassifiziert (Ausgang)' });
+    db.prepare("UPDATE document_types SET label = 'Unklassifiziert (Ausgang)' WHERE key = 'unclassified-out'").run();
+    db.exec(readFileSync(path.join(MIGRATIONS_DIR, '0013_dms_unclassified_labels_0_5_1.sql'), 'utf8'));
+    expect((db.prepare("SELECT label FROM document_types WHERE key = 'unclassified-out'").get() as { label: string }).label).toBe('Ausgang ohne Zuordnung');
+  });
+});
+
 describe('hand-written SQL survives', () => {
   it('keeps at most one active open item per document as a partial unique index', () => {
     expect(allSql).toMatch(/CREATE UNIQUE INDEX `finance_open_items_document_active_idx`[^;]*WHERE[^;]*cancelled_at/);

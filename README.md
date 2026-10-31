@@ -294,7 +294,7 @@ Prüfen, bevor etwas gepusht wird:
 ```bash
 pnpm typecheck
 pnpm test
-pnpm verify        # Typecheck, alle Tests, E2E kalt, Image-Build, E2E gegen das Image (~15 min, braucht Docker)
+pnpm verify        # Typecheck, alle Tests, E2E kalt, Image-Build, E2E gegen das Image (braucht Docker)
 ```
 
 Aufbau des Repos:
@@ -302,14 +302,14 @@ Aufbau des Repos:
 ```
 apps/kompass/          Next.js-Anwendung: Oberfläche, MCP-Endpunkt, E2E-Tests
 packages/core/         Kern: Dienste, Datenbank, Rechte, Änderungsprotokoll, Modul-System
-packages/modules/      Fachmodule: animals, contacts, dms, finance, members, projects, site
+packages/modules/      Fachmodule: animals, contacts, dms, finance, governance, members, projects, site
 packages/documents/    Dokument-Pipeline (Markdown → Typst → PDF)
 packages/markdown/     Markdown für Dokumente, Webseite und Handbuch (Rendern, Bereinigen, Typst)
 packages/text-extraction/ Texterkennung und eingebettete Dateien aus PDFs (OCR, ZUGFeRD)
 packages/mcp/          MCP-Server über den Kerndiensten
 packages/site-template/ Vertrag zwischen Kompass und einem Webseiten-Template
 templates/verein-basis/ Mitgeliefertes Basis-Template für die Vereinsseite
-docs/                  Nordstern, Betrieb, Backlog, Hilfeseiten
+docs/                  Nordstern, Muster der Oberfläche, Handbuch mit Betrieb
 ```
 
 Regeln, Prinzipien und alle Befehle: [`AGENTS.md`](AGENTS.md). Die neun Prinzipien dort — generischer Kern, Konfiguration statt Konstanten, nichts Rechenschaftsrelevantes wird gelöscht, ein Weg zu den Daten, TDD ab der ersten Zeile — gelten für jeden Beitrag.
@@ -317,7 +317,7 @@ Regeln, Prinzipien und alle Befehle: [`AGENTS.md`](AGENTS.md). Die neun Prinzipi
 ## Fragen, Fehler und Sicherheit
 
 - **Fragen und Fehler** gehören in ein [Issue](https://github.com/DigiJoe79/Aluna-Kompass/issues).
-  Hilfreich: welche Fassung (Fuß der Seitenleiste oder `/api/health`) und was du erwartet hast.
+  Hilfreich: welche Fassung (Nutzermenü oder `/api/health`) und was du erwartet hast.
 - **Sicherheitslücken** bitte **nicht** als Issue, sondern über den privaten
   Meldekanal — der Weg steht in [`SECURITY.md`](SECURITY.md).
 - **Quellcode der mitgelieferten Fremdsoftware** (GPL/LGPL): ein Issue genügt.

@@ -11,6 +11,7 @@ import { AmountField } from '@/components/finance/amount-field';
 import { StatusBadge } from '@/components/status-badge';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { formatAmount, formatEuro, parseAmount } from '@/lib/finance/amount';
+import { collectiveLineIds } from '@/lib/finance/donations';
 import { IssueDialog } from './issue-dialog';
 
 export interface UncertifiedGroupRow {
@@ -25,7 +26,8 @@ export interface UncertifiedGroupRow {
  * „Noch nicht bestätigt“ (C1): Zuwendungen ohne gültige Bestätigung, je
  * Person, mit dem Filter „Spenden ab ‹Betrag› ohne Bestätigung“ (gegen die
  * Summe je Person). Fehlt die Anschrift, steht in der Zeile „Anschrift ergänzen“ statt „Ausstellen“ (203);
- * „Ausstellen“ je Zeile öffnet den Dialog — nur mit `finance.donationsIssue`.
+ * „Ausstellen“ je Zeile öffnet den Dialog — nur mit `finance.donationsIssue`. Ab zwei fähigen Geldzeilen steht im Kopf
+ * der Gruppe „Sammelbestätigung ausstellen“ für alle (Backlog 28, ohne Zeilenauswahl: Joe 2026-10-31).
  */
 export function UncertifiedList({
   groups,
@@ -48,7 +50,7 @@ export function UncertifiedList({
   const { date } = useDateFormat();
   const router = useRouter();
   const [min, setMin] = useState(minCents !== null ? formatAmount(minCents) : '');
-  const [issuing, setIssuing] = useState<string | null>(null);
+  const [issuing, setIssuing] = useState<string[] | null>(null);
 
   const [, startNavigation] = useTransition();
   // Der Betrag gilt bei Enter oder beim Verlassen des Felds — kein Knopf „Anwenden“ (Spec Filterleisten § 4).
@@ -121,6 +123,9 @@ export function UncertifiedList({
                 <div className="flex items-center gap-3">
                   {/* 14 B9: Eine Summe nur bei mehreren Zeilen — bei einer stünde derselbe Betrag zweimal. */}
                   {group.lines.length > 1 ? <span className="tabular-nums text-ink-2">{t('sum', { amount: formatEuro(group.sumCents) })}</span> : null}
+                  {canIssue && group.contactComplete && collectiveLineIds(group.lines).length > 0 ? (
+                    <Button type="button" size="sm" variant="outline" onClick={() => setIssuing(collectiveLineIds(group.lines))}>{t('issueCollective')}</Button>
+                  ) : null}
                 </div>
               </div>
               <ul className="mt-2 divide-y divide-line-2 text-meta">
@@ -148,7 +153,7 @@ export function UncertifiedList({
                           {t('completeAddress')}
                         </Link>
                       ) : canIssue ? (
-                        <Button type="button" size="sm" variant="outline" onClick={() => setIssuing(line.lineId)}>{t('issue')}</Button>
+                        <Button type="button" size="sm" variant="outline" onClick={() => setIssuing([line.lineId])}>{t('issue')}</Button>
                       ) : null}
                     </span>
                   </li>
@@ -161,8 +166,8 @@ export function UncertifiedList({
 
       {issuing ? (
         <IssueDialog
-          lineId={issuing}
-          contactName={groups.find((g) => g.lines.some((line) => line.lineId === issuing))?.contactName}
+          lineIds={issuing}
+          contactName={groups.find((g) => g.lines.some((line) => line.lineId === issuing[0]))?.contactName}
           open
           onOpenChange={(next) => {
             if (!next) setIssuing(null);

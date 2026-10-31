@@ -119,7 +119,7 @@ export async function exportAnimalProfiles(deps: Deps, ctx: CallContext, input: 
   const pages: ProfilePage[] = [];
   for (const animal of animals) pages.push(await profilePage(deps, animal, locale, labels, urlTemplate));
 
-  const profileInput: ProfileInput = { frame: { aspect: [w, h], focusX: frame.focusX, focusY: frame.focusY }, pages };
+  const profileInput: ProfileInput = { headerLabel: labels.title, frame: { aspect: [w, h], focusX: frame.focusX, focusY: frame.focusY }, pages };
   const exported = await exportDocument(deps, ctx, { templateKey: PROFILE_TEMPLATE_KEY, input: profileInput });
   if (!exported.ok) return exported;
   return ok({ ...exported.value, filename: profileFilename(animals.map((a) => a.name), labels.title, todayIn(deps)) });

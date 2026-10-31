@@ -1,4 +1,5 @@
-import { invalid, isoNow, newId, notFound, ok, recordAudit, requirePermission, validate, type CallContext, type DbOrTx, type Deps, type Result, type ValidationIssue } from '@kompass/core';
+import { invalid, isoNow, newId, notFound, ok, recordAudit, requirePermission, validate, type CallContext, type DbOrTx, type Deps, type Failure, type Result, type ValidationIssue } from '@kompass/core';
+import { getDocumentRecord } from '@kompass/module-dms';
 import { and, desc, eq, gte, inArray, lt, lte } from 'drizzle-orm';
 import { resolutionFactsOf, resolutionIdProblem, resolutionReferenceInternal, type ResolutionReference } from '@kompass/module-finance';
 import { z } from 'zod';
@@ -84,6 +85,19 @@ function sameRules(stored: FeeRuleView[], input: FeeRuleInput[]): boolean {
   return input.every((r) => keys.has(ruleKey(r)));
 }
 
+/**
+ * Ein neu gesetztes Beschluss-Dokument muss festgeschrieben, nicht storniert und für den Aufrufer lesbar sein. Das
+ * gespeicherte bleibt ungeprüft: Die Maske schickt es bei jedem Speichern mit, auch wenn der Aufrufer es nicht lesen darf.
+ */
+async function resolutionDocumentProblem(deps: Deps, ctx: CallContext, documentId: string | null | undefined, stored: string | null | undefined): Promise<Failure | null> {
+  if (!documentId || documentId === stored) return null;
+  const record = await getDocumentRecord(deps, ctx, documentId);
+  if (!record.ok) return record;
+  if (record.value.phase !== 'issued') return membersConflict('resolutionDocumentNotFinal');
+  if (record.value.status === 'voided') return membersConflict('resolutionDocumentVoided');
+  return null;
+}
+
 /** Trägt an einem festen Stand nur Beschluss, Beschlusstag und Notiz nach — die Regeln bleiben, wie sie sind. */
 function updateResolution(deps: Deps, ctx: CallContext, before: FeeScheduleRow, v: z.infer<typeof feeScheduleSaveSchema>): Result<FeeScheduleView> {
   return deps.db.transaction((tx: DbOrTx) => {
@@ -127,6 +141,8 @@ export async function saveFeeSchedule(deps: Deps, ctx: CallContext, input: unkno
 
   const before = v.id ? deps.db.select().from(memberFeeSchedules).where(eq(memberFeeSchedules.id, v.id)).get() : undefined;
   if (v.id && !before) return notFound('memberFeeSchedule', v.id);
+  const documentProblem = await resolutionDocumentProblem(deps, ctx, v.resolutionDocumentId, before?.resolutionDocumentId);
+  if (documentProblem) return documentProblem;
   if (before) {
     const count = chargesCreatedFrom(deps.db, before.id);
     if (count > 0) {

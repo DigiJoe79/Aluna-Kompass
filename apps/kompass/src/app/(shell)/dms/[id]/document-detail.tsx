@@ -6,7 +6,7 @@ import { useDateFormat } from '@/components/date-format-provider';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useEffect, useTransition, type ReactNode } from 'react';
+import { useEffect, useState, useTransition, type ReactNode } from 'react';
 import { RefusalNotice } from '@/components/forms/refusal-notice';
 import { useActionFeedback } from '@/components/forms/use-action-feedback';
 import { StatusBadge, statusTone } from '@/components/status-badge';
@@ -112,6 +112,8 @@ export function DocumentDetail({
   mail,
 }: DocumentDetailProps) {
   const t = useTranslations('dms');
+  const tCommon = useTranslations('common');
+  const [pollGaveUp, setPollGaveUp] = useState(false);
   const fmt = useDateFormat();
   const router = useRouter();
 
@@ -124,15 +126,21 @@ export function DocumentDetail({
   // ändert sich `doc.textStatus` und der Effekt startet die Kette neu.
   useEffect(() => {
     if (doc.textStatus !== 'pending' && doc.textStatus !== 'running') return;
-    return pollTextStatus({
+    const stop = pollTextStatus({
       url: `/dms/${encodeURIComponent(doc.id)}/text-status`,
       onDone: () => router.refresh(),
       onUnauthorized: () => router.refresh(),
+      onGiveUp: () => setPollGaveUp(true),
     });
+    return () => {
+      stop();
+      setPollGaveUp(false);
+    };
   }, [doc.textStatus, doc.id, router]);
 
   return (
     <div className="space-y-6">
+      {pollGaveUp ? <Notice level="warn" testId="poll-gave-up">{tCommon('pollGaveUp')}</Notice> : null}
       {/* Action bar */}
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-line bg-surface p-4">
         <div className="flex items-center gap-3">

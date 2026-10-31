@@ -18,6 +18,8 @@ export const MEMBERS_ERRORS = {
   feeScheduleLocked: ['count'],
   feeScheduleDateTaken: ['validFrom'],
   feeScheduleLast: [],
+  resolutionDocumentNotFinal: [],
+  resolutionDocumentVoided: [],
   feeBelowMinimum: ['minimumCents'],
   intervalNotAllowed: [],
   feeRunRunning: ['year'],

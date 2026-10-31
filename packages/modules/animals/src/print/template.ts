@@ -35,6 +35,8 @@ export const profilePageSchema = z.object({
 export type ProfilePage = z.infer<typeof profilePageSchema>;
 
 export const profileInputSchema = z.object({
+  /** Oben rechts auf jeder Seite, statt des Ausgabedatums (Backlog 60). */
+  headerLabel: z.string().min(1),
   frame: z.object({
     aspect: z.tuple([z.number().int().positive(), z.number().int().positive()]),
     focusX: z.number().int().min(0).max(100),
@@ -87,6 +89,6 @@ export const animalProfileTemplate: DocumentTemplate<ProfileInput> = {
   build: (data) => {
     const images: Record<string, DocumentImage> = {};
     const pages = data.pages.map((page, i) => pageCall(page, i, data.frame, images));
-    return { slots: { kind: 'plain' }, body: { typst: `${PROFILE_LIB}\n${pages.join('\n#pagebreak()\n')}\n` }, images };
+    return { slots: { kind: 'plain', hideDate: true, headerLabel: data.headerLabel }, body: { typst: `${PROFILE_LIB}\n${pages.join('\n#pagebreak()\n')}\n` }, images };
   },
 };

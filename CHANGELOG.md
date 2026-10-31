@@ -9,6 +9,59 @@ die Nummern folgen [Semantic Versioning](https://semver.org/lang/de/). Vor
 1.0.0 kann jede Minor-Fassung Brüche enthalten — was bricht, steht unter
 **Geändert** mit dem, was zu tun ist.
 
+## [0.5.1] - 2026-10-31
+
+Eine Wartungsfassung: Sie behebt vor allem Fehler aus dem Alltag, in Beitragsordnung, Lastschrift, Buchung und Ablehnungstexten.
+Neu sind der Rückweg aus der Akte und die Sammelbestätigung aus „Noch nicht bestätigt“. Eine Migration
+(`0013_dms_unclassified_labels_0_5_1`, `migrationCount` 14) benennt zwei Dokumentarten um, selbst vergebene Namen bleiben. Nichts
+bricht, Handgriffe sind nicht nötig. Ablehnungen nennen jetzt den Satz der Sprachdatei; wo der Dienst bisher einen Namen oder eine
+Nummer einsetzte, fehlt dieser Wert teils. Mehr im Betriebshandbuch, „Von 0.5.0 auf 0.5.1“.
+
+### Geändert
+
+- **Sammelbestätigung aus „Noch nicht bestätigt“:** Hat ein Spender mehrere ausstellbare Geldspenden in einem Jahr, stellt
+  ein Knopf in seiner Gruppe die Sammelbestätigung über alle aus. Bisher ging das nur einzeln oder im Jahreslauf.
+- **Dokumentarten der Grundausstattung:** „Unklassifiziert (Eingang)“ und „Unklassifiziert (Ausgang)“ heißen jetzt „Eingang
+  ohne Zuordnung“ und „Ausgang ohne Zuordnung“. Eine Migration benennt sie um; selbst vergebene Namen bleiben.
+- **Tierprofil als PDF:** Oben rechts steht jetzt die Beschriftung des Profils statt des Ausgabedatums.
+- **Zurück aus der Akte:** Der Pfeil im Dokument führt jetzt dorthin, woher man kam, etwa zum Kontakt, zur Sitzung oder in die
+  gefilterte Liste, und heißt „Zurück“. Ohne Vorseite, etwa nach einem Direktlink, führt er wie bisher zur Akte.
+- **Stelle auf der Seite:** Beim Zurückgehen kommt man wieder an dieselbe Stelle der Seite. Das gilt für die Zurück-Taste des
+  Browsers in der ganzen Oberfläche.
+
+### Behoben
+
+- **Stammdaten der Finanzen:** Wer Konto, Kategorie oder Zweck per Agent nur in einem Feld änderte, setzte andere Felder
+  still zurück, etwa „Hauptkonto“ oder „Auszug genügt“. Jetzt bleibt stehen, was nicht genannt wird. Die Oberfläche war
+  nicht betroffen.
+- **Akte, Versand:** Ist der E-Mail-Versand ausgeschaltet, sagt das Dokument das jetzt, statt zu behaupten, die Person
+  bekäme Briefe per Post, und zeigt keinen Knopf „Per E-Mail senden …“ mehr. Betrifft Installationen ohne Mailserver.
+- **Zahlung an Partner:** Ein unlesbarer Betrag wurde beim laufenden Sichern still als „kein Betrag“ gespeichert. Jetzt bleibt
+  der Stand ungesichert, und die Maske sagt das am Feld und in der Leiste.
+- **Lastschrift, Ankündigung:** Nach einer neuen IBAN gab die Ankündigung mit gleichem Plan den alten Brief mit dem alten Konto
+  zurück. Jetzt entsteht ein neuer Brief.
+- **Lastschrift, Korrektur vor der Unterschrift:** Auch nach einer korrigierten IBAN an einem noch nicht unterschriebenen Mandat
+  entsteht jetzt ein neuer Brief.
+- **Mahnlauf, Protokoll:** Der Abschlusseintrag zählte nur die Ablehnungen des letzten Abschnitts. Jetzt zählt er den ganzen Lauf.
+- **Mindestbeitrag, Rundung:** Geht die Umrechnung nicht auf, gilt der abgerundete Betrag: Bei 125 € im Jahr reichen jetzt 10,41 € im
+  Monat statt 10,42 €.
+- **Beitragsordnung per Agent:** Ein Beschluss-Dokument muss jetzt in der Akte stehen, festgeschrieben und nicht storniert sein.
+- **Akte, Versand per Agent:** Gescheiterte E-Mails erneut zu senden brach ganz ab, wenn zwei Zeilen dasselbe Dokument an
+  denselben Empfänger betrafen. Jetzt geht je Dokument und Empfänger eine neue Sendung raus.
+- **Mindestbeitrag:** Die Ablehnung nannte bei einem anderen Rhythmus den Mindestbetrag der Regel, etwa 120 € bei monatlicher
+  Zahlung. Jetzt nennt sie den Betrag im vereinbarten Rhythmus, hier 10 €.
+- **Laufende Vorgänge:** Bei Texterkennung, E-Mail-Versand, Datenexport und Prüfpaket stand nach mehreren gescheiterten
+  Abfragen weiter „läuft“. Jetzt sagt die Seite, dass der Stand veraltet sein kann, und bittet, neu zu laden.
+- **Betragsfelder in den Finanzen:** Sonstiges Vermögen und Saldo-Nachtrag nennen jetzt, ob der Betrag fehlt oder unlesbar ist.
+  Der Anfangsbestand eines Kontos sagt das sofort, nicht erst mit dem Tag. Das Format eines CSV-Imports lässt sich trotz
+  unlesbarem Endsaldo speichern. Bei Zwecken und Steuerangaben verschwindet der Hinweis beim Tippen.
+- **Ablehnungen:** Viele Ablehnungen zeigten den internen Text des Dienstes statt des Satzes aus der Sprachdatei, teils mit
+  Technik und einmal in Du-Form. Jetzt steht überall der geprüfte Satz in Sie-Form, mit Ausweg.
+- **Webseite, Einträge und Variablen:** Nach einer Ablehnung beim Speichern sprangen Auswahlfelder sichtbar auf die erste
+  Option. Jetzt bleiben sie stehen.
+- **Beitragsordnung:** Wer einen künftigen Stand bearbeitete oder einen neuen anlegte, verlor still die Aufnahmegebühr und die
+  Regeln deaktivierter Mitgliedsarten. Beides bleibt jetzt erhalten.
+
 ## [0.5.0] - 2026-10-30
 
 Diese Fassung bringt das Modul **Gremien**: Organe und Ämter, Sitzungen von der Einladung über den Mitlauf bis zum

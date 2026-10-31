@@ -166,10 +166,10 @@ describe('warmUp (Auffänger statt Seite)', () => {
     let rescans = 0;
     const lines: string[] = [];
     await warmUp('http://w', appDir, (line) => lines.push(line), {
-      fetchBody: async (url) => {
+      fetchPage: async (url) => {
         const route = url.replace('http://w', '');
         fetched.push(route);
-        return answers.get(route)?.shift() ?? PAGE;
+        return { status: 200, body: answers.get(route)?.shift() ?? PAGE };
       },
       rescan: () => {
         rescans += 1;
@@ -183,7 +183,58 @@ describe('warmUp (Auffänger statt Seite)', () => {
 
   it('eine statische Route und ein echtes 404 zählen nicht als Auffänger', async () => {
     let rescans = 0;
-    await warmUp('http://w', appDir, () => {}, { fetchBody: async () => PAGE, rescan: () => { rescans += 1; }, pauseMs: 0 });
+    await warmUp('http://w', appDir, () => {}, { fetchPage: async () => ({ status: 200, body: PAGE }), rescan: () => { rescans += 1; }, pauseMs: 0 });
     expect(rescans).toBe(0);
+  });
+
+  it('schluckt keinen Fehler: Eine gescheiterte Route steht im Protokoll und wird einmal nachgeholt', async () => {
+    const lines: string[] = [];
+    const tries = new Map<string, number>();
+    await warmUp('http://w', appDir, (line) => lines.push(line), {
+      fetchPage: async (url) => {
+        const route = url.replace('http://w', '');
+        const n = (tries.get(route) ?? 0) + 1;
+        tries.set(route, n);
+        if (route === '/finance/entries' && n === 1) throw new Error('ECONNRESET');
+        if (route === '/members' && n === 1) return { status: 500, body: 'kaputt' };
+        return { status: 200, body: PAGE };
+      },
+      pauseMs: 0,
+    });
+    expect(lines.filter((l) => l.includes('/finance/entries') && l.includes('ECONNRESET'))).toHaveLength(1);
+    expect(lines.filter((l) => l.includes('/members') && l.includes('500'))).toHaveLength(1);
+    expect(tries.get('/finance/entries')).toBe(2);
+    expect(tries.get('/members')).toBe(2);
+  });
+
+  it('wartet am Ende, bis eine echte Seite zweimal in Folge 200 liefert', async () => {
+    const answers = [500, 200, 503, 200, 200, 200];
+    let asked = 0;
+    await warmUp('http://w', appDir, () => {}, {
+      fetchPage: async (url) => {
+        if (!url.endsWith('/login')) return { status: 200, body: PAGE };
+        asked += 1;
+        return { status: answers.shift() ?? 200, body: PAGE };
+      },
+      pauseMs: 0,
+    });
+    // /login gehört auch zu den Routen: eine Antwort im Durchgang, fünf am Ende.
+    expect(asked).toBe(5);
+  });
+
+  it('gibt nach der Frist auf und nennt die Ausgabe des Servers, statt den ersten Test scheitern zu lassen', async () => {
+    await expect(
+      warmUp('http://w', appDir, () => {}, { fetchPage: async () => ({ status: 500, body: '' }), serverOutput: () => 'letzte Zeile des Servers', pauseMs: 0, readyTimeoutMs: 0 }),
+    ).rejects.toThrow(/letzte Zeile des Servers/);
+  });
+
+  it('macht eine Panik von Turbopack sichtbar, auch wenn die Seiten danach wieder antworten', async () => {
+    const lines: string[] = [];
+    await warmUp('http://w', appDir, (line) => lines.push(line), {
+      fetchPage: async () => ({ status: 200, body: PAGE }),
+      serverOutput: () => 'ok\nFATAL: An unexpected Turbopack error occurred\ntask is missing in memory or persistent storage\nok',
+      pauseMs: 0,
+    });
+    expect(lines.filter((l) => l.includes('Panik') && l.includes('task is missing'))).toHaveLength(1);
   });
 });

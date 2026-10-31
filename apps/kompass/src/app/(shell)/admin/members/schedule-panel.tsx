@@ -211,6 +211,8 @@ interface RuleDraft {
   interval: Interval;
   minimum: boolean;
   allowedIntervals: Interval[];
+  /** Zeigt der Dialog nicht, muss aber mitlaufen — sonst fiele sie beim Speichern weg. */
+  admissionFeeCents: number | null;
 }
 
 function ScheduleDialog({ schedule, prefill, types, today, onClose, onNew }: { schedule: ScheduleView | null; prefill: ScheduleView | null; types: ScheduleType[]; today: string; onClose: () => void; onNew: () => void }) {
@@ -221,7 +223,7 @@ function ScheduleDialog({ schedule, prefill, types, today, onClose, onNew }: { s
   const [resolvedOn, setResolvedOn] = useState(schedule?.resolvedOn ?? '');
   // Ein fester Stand: Tag und Regeln bleiben, wie sie sind; nur der Beschluss lässt sich nachtragen (Backlog 97).
   const fixed = schedule?.locked ?? false;
-  const draft = (r: ScheduleRule): RuleDraft => ({ typeId: r.typeId, amount: formatAmount(r.amountCents), interval: r.interval, minimum: r.minimum, allowedIntervals: r.allowedIntervals });
+  const draft = (r: ScheduleRule): RuleDraft => ({ typeId: r.typeId, amount: formatAmount(r.amountCents), interval: r.interval, minimum: r.minimum, allowedIntervals: r.allowedIntervals, admissionFeeCents: r.admissionFeeCents });
   const [rules, setRules] = useState<RuleDraft[]>(
     fixed && schedule
       ? schedule.rules.map(draft)
@@ -229,9 +231,15 @@ function ScheduleDialog({ schedule, prefill, types, today, onClose, onNew }: { s
           .filter((ty) => ty.active && !ty.feeExempt)
           .map((ty) => {
             const rule = prefill?.rules.find((r) => r.typeId === ty.id);
-            return rule ? draft(rule) : { typeId: ty.id, amount: '', interval: 'yearly', minimum: false, allowedIntervals: ['yearly'] };
+            return rule ? draft(rule) : { typeId: ty.id, amount: '', interval: 'yearly', minimum: false, allowedIntervals: ['yearly'], admissionFeeCents: null };
           }),
   );
+  // Regeln der Arten ohne Zeile im Dialog (inaktiv) gelten für deren Mitglieder weiter, beim Bearbeiten wie beim neuen
+  // Stand. Nur eine inzwischen beitragsfreie Art fällt weg: Für sie lehnt der Dienst jede Regel ab.
+  const hiddenRules = (prefill?.rules ?? []).filter((r) => {
+    const type = types.find((ty) => ty.id === r.typeId);
+    return type && !type.active && !type.feeExempt;
+  });
   const [pending, setPending] = useState(false);
   const feedback = useActionFeedback();
   const set = (typeId: string, patch: Partial<RuleDraft>) => setRules(rules.map((r) => (r.typeId === typeId ? { ...r, ...patch } : r)));
@@ -247,9 +255,12 @@ function ScheduleDialog({ schedule, prefill, types, today, onClose, onNew }: { s
       rules:
         fixed && schedule
           ? schedule.rules
-          : rules
-              .filter((r) => r.amount.trim() !== '')
-              .map((r) => ({ typeId: r.typeId, amountCents: parseAmount(r.amount) ?? -1, interval: r.interval, minimum: r.minimum, allowedIntervals: r.allowedIntervals.includes(r.interval) ? r.allowedIntervals : [r.interval] })),
+          : [
+              ...rules
+                .filter((r) => r.amount.trim() !== '')
+                .map((r) => ({ typeId: r.typeId, amountCents: parseAmount(r.amount) ?? -1, interval: r.interval, minimum: r.minimum, allowedIntervals: r.allowedIntervals.includes(r.interval) ? r.allowedIntervals : [r.interval], admissionFeeCents: r.admissionFeeCents })),
+              ...hiddenRules,
+            ],
     };
     const result = await feedback.run(() => saveFeeScheduleAction(input), { retry: () => void save() });
     setPending(false);

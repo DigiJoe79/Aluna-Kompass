@@ -7,10 +7,12 @@
  *
  * - Stand nicht mehr pending/running: `onDone` genau einmal, Ende.
  * - 401: `onUnauthorized` einmal (die Seite erneuert sich, die Anmeldung der
- *   Anwendung übernimmt), Ende. 403/404: Ende ohne Erneuerung — das Dokument ist
- *   weg oder nicht mehr lesbar, es gibt nichts abzufragen.
+ *   Anwendung übernimmt), Ende. 403/404: `onGiveUp`, Ende ohne Erneuerung — das
+ *   Dokument ist weg oder nicht mehr lesbar, es gibt nichts abzufragen.
  * - Netzfehler, Zeitüberschreitung, 5xx: weiter mit Abstand, nach `maxFailures`
- *   Fehlern in Folge Ende.
+ *   Fehlern in Folge `onGiveUp`, Ende.
+ *
+ * `onGiveUp` ist Pflicht: Die Karte zeigt sonst weiter „läuft“, obwohl niemand mehr fragt.
  *
  * - `onTick`: jeder gelesene Stand, auch der letzte (vor `onDone`) — für Karten, die den Fortschritt zeigen.
  *
@@ -20,13 +22,14 @@ export function pollTextStatus(options: {
   url: string;
   onDone: () => void;
   onUnauthorized?: () => void;
+  onGiveUp: () => void;
   maxFailures?: number;
   timeoutMs?: number;
   /** Ob der Stand noch läuft; Vorgabe: Texterkennung (`textStatus` pending/running). Auch für den Mailversand. */
   isPending?: (body: Record<string, unknown>) => boolean;
   onTick?: (body: Record<string, unknown>) => void;
 }): () => void {
-  const { url, onDone, onUnauthorized, maxFailures = 5, timeoutMs = 10_000 } = options;
+  const { url, onDone, onUnauthorized, onGiveUp, maxFailures = 5, timeoutMs = 10_000 } = options;
   const isPending = options.isPending ?? ((b) => b.textStatus === 'pending' || b.textStatus === 'running');
   let active = true;
   let delay = 1000;
@@ -50,13 +53,13 @@ export function pollTextStatus(options: {
     }
     if (!active) return;
     if (response && response.status === 401) return onUnauthorized?.();
-    if (response && (response.status === 403 || response.status === 404)) return;
+    if (response && (response.status === 403 || response.status === 404)) return onGiveUp();
     if (body) {
       failures = 0;
       options.onTick?.(body);
       if (!isPending(body)) return onDone();
     } else if (++failures >= maxFailures) {
-      return;
+      return onGiveUp();
     }
     delay = Math.min(delay * 2, 5000);
     timer = setTimeout(() => void poll(), delay);

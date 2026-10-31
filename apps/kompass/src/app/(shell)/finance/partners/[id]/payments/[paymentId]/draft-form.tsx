@@ -56,8 +56,8 @@ let seq = 0;
 const newKey = () => `p${Date.now().toString(36)}${(seq++).toString(36)}`;
 const PROOF_MONTHS = Array.from({ length: 24 }, (_, i) => i + 1);
 
-/** Ein Geldbetrag der Position: leer (und 0) fehlt im Entwurf; unlesbar fehlt nur im laufend gesicherten Entwurf — vor
- *  „Als Entwurf speichern“ und „Zur Freigabe geben“ hält `unreadablePositions` an (App-B7). */
+/** Ein Geldbetrag der Position: leer (und 0) fehlt im Entwurf. Unlesbar kommt hier nicht an: Vor jedem Sichern, auch dem
+ *  laufenden, hält `unreadablePositions` an — sonst stünde der Entwurf am Server ohne den Betrag (App-B7). */
 function positionCents(text: string): number | undefined {
   const read = readAmount(text, { required: false });
   return read.ok && read.cents ? read.cents : undefined;
@@ -142,6 +142,11 @@ export function DraftForm({
 
   const save = useCallback(
     async (current: DraftState): Promise<SaveOutcome<DraftState>> => {
+      const unreadable = unreadablePositions(current);
+      if (unreadable.length > 0) {
+        setBadAmounts(unreadable);
+        return { kind: 'failed', detail: tAmount('format') };
+      }
       const state: ActionState = await savePartnerPaymentDraftAction(payloadOf(payment.id, payment.partnerId, partner.usualBasis, current, partner.status));
       if (state.status !== 'success') return { kind: 'failed', detail: state.status === 'error' ? state.message : '' };
       const view = state.data as PartnerPaymentView;
@@ -149,7 +154,7 @@ export function DraftForm({
       setReasonNeeds((prev) => ({ notice: prev.notice || view.reasonsNeeded.notice, overdue: prev.overdue || view.reasonsNeeded.overdue, purpose: view.reasonsNeeded.purpose }));
       return { kind: 'saved', at: view.version, apply: (latest) => ({ ...latest, version: view.version }) };
     },
-    [payment.id, payment.partnerId, partner.usualBasis, partner.status],
+    [payment.id, payment.partnerId, partner.usualBasis, partner.status, tAmount],
   );
 
   const initial: DraftState = {

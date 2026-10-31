@@ -5,6 +5,7 @@ import { and, eq, lte, ne } from 'drizzle-orm';
 import { z } from 'zod';
 import { financeAudit } from '../audit';
 import { financeConflict } from '../errors';
+import { maskIban } from '../format/iban';
 import { financeSepaPrenotifications, type PrenotificationPlanEntry } from '../schema';
 import { addBusinessDays, addCalendarDays, isTargetBusinessDay } from './business-days';
 import { creditorNameInternal } from './forms';
@@ -65,7 +66,8 @@ export function coveringEntriesInternal(deps: Pick<Deps, 'db' | 'registry'>, man
  * `dms.file`), verknüpft mit Mandat und Kontakt; dazu die Zeile, die festhält, welche Einzüge er abdeckt. Protokoll:
  * Referenz und Zahl der Einzüge. Ein Tag am Wochenende oder Feiertag wird zum nächsten Bankarbeitstag, und der Brief
  * nennt diesen; ein Tag vor heute plus Frist der Vorabankündigung ist zu spät (`prenotificationTooLate`, E1). Gibt es
- * zum Mandat schon eine festgeschriebene, nicht stornierte Ankündigung mit genau diesem Plan, kommt sie zurück (App-B1).
+ * zum Mandat schon eine festgeschriebene, nicht stornierte Ankündigung mit genau diesem Plan, kommt sie zurück (App-B1) —
+ * außer die IBAN hat sich seit ihr geändert: Der Brief nennt das Konto, also braucht es dann einen neuen.
  */
 export async function issuePrenotification(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<{ id: string; documentId: string; number: string }>> {
   const denied = requirePermission(ctx, DIRECT_DEBIT_PERMISSION);
@@ -87,7 +89,7 @@ export async function issuePrenotification(deps: Deps, ctx: CallContext, input: 
   const creditorId = readSetting<string | null>(deps, 'finance.sepa.creditorId');
   if (!creditorId) return financeConflict('sepaCreditorIdMissing');
   // App-B1: Ein zweiter Klick mit demselben Plan bekommt den schon ausgestellten Brief, kein zweites Dokument mit Nummer.
-  const same = issuedSamePlanInternal(deps.db, mandate.id, plan);
+  const same = issuedSamePlanInternal(deps.db, mandate, plan);
   if (same) return ok(same);
   const contact = deps.db.select().from(contacts).where(eq(contacts.id, mandate.contactId)).get();
   const body = prenotificationPlanBody({ greeting: contact ? greetingFor(contact) : 'Guten Tag,', creditorName: creditorNameInternal(deps), plan, iban: mandate.iban, reference: mandate.reference, creditorId });
@@ -106,16 +108,26 @@ export async function issuePrenotification(deps: Deps, ctx: CallContext, input: 
 
 const planKey = (plan: readonly PrenotificationPlanEntry[]) => JSON.stringify(plan.map((e) => [e.dueOn, e.amountCents, e.remittance ?? null]));
 
-/** Die festgeschriebene, nicht stornierte Ankündigung zum Mandat mit genau diesem Plan (Tage, Beträge, Zwecke), sonst `null`. */
-function issuedSamePlanInternal(db: DbOrTx, mandateId: string, plan: readonly PrenotificationPlanEntry[]): { id: string; documentId: string; number: string } | null {
+/** Nennt der festgeschriebene Brief dieses Konto? Ein Brief ohne lesbaren Text gilt als veraltet: Lieber ein Brief mehr als einer mit dem alten Konto. */
+function namesIban(inputSnapshot: string | null, iban: string): boolean {
+  const body = inputSnapshot ? (JSON.parse(inputSnapshot) as { input?: { body?: string } }).input?.body : undefined;
+  return body?.includes(maskIban(iban)) ?? false;
+}
+
+/**
+ * Die festgeschriebene, nicht stornierte Ankündigung zum Mandat mit genau diesem Plan (Tage, Beträge, Zwecke), die noch
+ * die geltende IBAN nennt, sonst `null`. Gelesen wird der Brief selbst: Eine Korrektur vor der Unterschrift schreibt
+ * keine Zeile in `financeSepaMandateChanges`.
+ */
+function issuedSamePlanInternal(db: DbOrTx, mandate: { id: string; iban: string }, plan: readonly PrenotificationPlanEntry[]): { id: string; documentId: string; number: string } | null {
   const key = planKey(plan);
   const row = db
-    .select({ id: financeSepaPrenotifications.id, documentId: financeSepaPrenotifications.documentId, plan: financeSepaPrenotifications.plan, number: documents.number })
+    .select({ id: financeSepaPrenotifications.id, documentId: financeSepaPrenotifications.documentId, plan: financeSepaPrenotifications.plan, number: documents.number, inputSnapshot: documents.inputSnapshot })
     .from(financeSepaPrenotifications)
     .innerJoin(documents, eq(documents.id, financeSepaPrenotifications.documentId))
-    .where(and(eq(financeSepaPrenotifications.mandateId, mandateId), eq(documents.phase, 'issued'), ne(documents.status, 'voided')))
+    .where(and(eq(financeSepaPrenotifications.mandateId, mandate.id), eq(documents.phase, 'issued'), ne(documents.status, 'voided')))
     .all()
-    .find((r) => planKey(r.plan) === key);
+    .find((r) => planKey(r.plan) === key && namesIban(r.inputSnapshot, mandate.iban));
   return row ? { id: row.id, documentId: row.documentId, number: row.number ?? '' } : null;
 }
 

@@ -1,6 +1,7 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
+import { usePathname } from 'next/navigation';
 import type { ActionState } from '@/lib/actions';
 import { useActionState, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
@@ -68,6 +69,7 @@ export function ReceiveForm({
   onCancel?: () => void;
 }) {
   const t = useTranslations('dms');
+  const pathname = usePathname();
   const [state, formAction] = useActionState(receiveDocumentAction, idleState);
 
   const [documentDate, setDocumentDate] = useState('');
@@ -181,6 +183,7 @@ export function ReceiveForm({
     // die Datei zurück.
     <ActionForm action={formAction} state={state} className="flex min-h-0 flex-1 flex-col">
       {queued ? <input type="hidden" name="queued" value="1" /> : null}
+      {pathname === '/dms/receive' ? <input type="hidden" name="onReceivePage" value="1" /> : null}
       {/* Der Körper scrollt, Kopf und Fußleiste bleiben stehen (`layout="fixed-footer"` am Dialog). */}
       <DialogBody>
         {/* Beim Ziehen lässt sich nicht verlässlich prüfen, was ein PDF ist; nach dem Loslassen wird jede Datei genannt (Artboard 2f). */}

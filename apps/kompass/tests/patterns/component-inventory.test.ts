@@ -42,6 +42,7 @@ const neu = (section: Section, approval: string): Entry => [section, approval];
 
 const INVENTORY: Readonly<Record<string, Entry>> = {
   'auth-card.tsx': bestand('Seitenrahmen'),
+  'back-link.tsx': neu('Seitenrahmen', 'Spec Rückweg aus der Akte (Backlog 103), Freigabe Joe 2026-10-31'),
   'before-after.tsx': bestand('A'),
   'blocked-state.tsx': bestand('Seitenrahmen'),
   'choice-cards.tsx': bestand('E'),

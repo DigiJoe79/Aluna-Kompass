@@ -21,41 +21,49 @@ describe('pollTextStatus', () => {
       .mockResolvedValueOnce(json(200, { textStatus: 'running' }))
       .mockResolvedValue(json(200, { textStatus: 'done' }));
     const onDone = vi.fn();
-    pollTextStatus({ url: '/x', onDone });
+    const onGiveUp = vi.fn();
+    pollTextStatus({ url: '/x', onDone, onGiveUp });
     await vi.advanceTimersByTimeAsync(60_000);
     expect(onDone).toHaveBeenCalledTimes(1);
+    expect(onGiveUp).not.toHaveBeenCalled();
     expect(fetchMock).toHaveBeenCalledTimes(3);
   });
 
-  it('hört bei 404 und 403 auf, ohne zu erneuern', async () => {
+  it('hört bei 404 und 403 auf, ohne zu erneuern, und meldet das Aufgeben', async () => {
     for (const status of [404, 403]) {
       fetchMock.mockReset().mockResolvedValue(json(status));
       const onDone = vi.fn();
       const onUnauthorized = vi.fn();
-      pollTextStatus({ url: '/x', onDone, onUnauthorized });
+      const onGiveUp = vi.fn();
+      pollTextStatus({ url: '/x', onDone, onUnauthorized, onGiveUp });
       await vi.advanceTimersByTimeAsync(60_000);
       expect(fetchMock).toHaveBeenCalledTimes(1);
       expect(onDone).not.toHaveBeenCalled();
       expect(onUnauthorized).not.toHaveBeenCalled();
+      expect(onGiveUp).toHaveBeenCalledTimes(1);
     }
   });
 
   it('hört bei 401 auf und meldet es einmal', async () => {
     fetchMock.mockResolvedValue(json(401));
     const onUnauthorized = vi.fn();
-    pollTextStatus({ url: '/x', onDone: vi.fn(), onUnauthorized });
+    const onGiveUp = vi.fn();
+    pollTextStatus({ url: '/x', onDone: vi.fn(), onUnauthorized, onGiveUp });
     await vi.advanceTimersByTimeAsync(60_000);
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(onUnauthorized).toHaveBeenCalledTimes(1);
+    expect(onGiveUp).not.toHaveBeenCalled();
   });
 
-  it('hört nach fünf Fehlern in Folge auf (Netz und 5xx)', async () => {
+  it('hört nach fünf Fehlern in Folge auf (Netz und 5xx) und meldet das Aufgeben einmal', async () => {
     fetchMock.mockRejectedValueOnce(new Error('net')).mockResolvedValueOnce(json(500)).mockRejectedValue(new Error('net'));
     const onDone = vi.fn();
-    pollTextStatus({ url: '/x', onDone });
+    const onGiveUp = vi.fn();
+    pollTextStatus({ url: '/x', onDone, onGiveUp });
     await vi.advanceTimersByTimeAsync(120_000);
     expect(fetchMock).toHaveBeenCalledTimes(5);
     expect(onDone).not.toHaveBeenCalled();
+    expect(onGiveUp).toHaveBeenCalledTimes(1);
   });
 
   it('bricht eine hängende Abfrage nach der Frist ab und zählt sie als Fehler', async () => {
@@ -63,14 +71,14 @@ describe('pollTextStatus', () => {
       (_url: string, init: RequestInit) =>
         new Promise((_resolve, reject) => init.signal?.addEventListener('abort', () => reject(new Error('abort')))),
     );
-    pollTextStatus({ url: '/x', onDone: vi.fn(), maxFailures: 2, timeoutMs: 10_000 });
+    pollTextStatus({ url: '/x', onDone: vi.fn(), onGiveUp: vi.fn(), maxFailures: 2, timeoutMs: 10_000 });
     await vi.advanceTimersByTimeAsync(120_000);
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
   it('ruft nach dem Beenden nichts mehr auf und ruft nie zwei Abfragen zugleich', async () => {
     fetchMock.mockResolvedValue(json(200, { textStatus: 'pending' }));
-    const stop = pollTextStatus({ url: '/x', onDone: vi.fn() });
+    const stop = pollTextStatus({ url: '/x', onDone: vi.fn(), onGiveUp: vi.fn() });
     await vi.advanceTimersByTimeAsync(1000);
     expect(fetchMock).toHaveBeenCalledTimes(1);
     stop();
@@ -84,7 +92,7 @@ describe('pollTextStatus', () => {
       .mockResolvedValue(json(200, { state: 'success', n: 2 }));
     const seen: unknown[] = [];
     const onDone = vi.fn(() => seen.push('done'));
-    pollTextStatus({ url: '/x', onDone, isPending: (b) => b.state === 'running', onTick: (b) => seen.push(b.n) });
+    pollTextStatus({ url: '/x', onDone, onGiveUp: vi.fn(), isPending: (b) => b.state === 'running', onTick: (b) => seen.push(b.n) });
     await vi.advanceTimersByTimeAsync(60_000);
     expect(seen).toEqual([1, 2, 'done']);
   });

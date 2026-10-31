@@ -169,7 +169,7 @@ export async function loadTemplate(dir: string): Promise<Result<LoadedTemplate>>
     // ihn nicht auflösen wollen.
     loaded = (await import(/* webpackIgnore: true */ `${pathToFileURL(file).href}?t=${Date.now()}`)).default;
   } catch (error) {
-    return conflict('templateUnreadable', error instanceof Error ? error.message.slice(0, 500) : 'Unbekannter Fehler');
+    return conflict('templateUnreadable', (error instanceof Error ? error.message : String(error)).slice(0, 500));
   }
   if (!isDefinition(loaded)) return conflict('templateInvalid', `${TEMPLATE_FILE} exportiert keine Template-Deklaration`);
   return ok({ definition: loaded, schema: toSchema(loaded), checksum: checksumOf(source) });

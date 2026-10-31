@@ -33,13 +33,16 @@
     fill: (_, y) => if y == 0 { rgb(b.primary) } else { none },
   )
 
+  // Kopf rechts: `headerLabel` (Beschriftung statt Nummer und Datum), sonst die Nummer, ohne Nummer das Ausgabedatum,
+  // das `hideDate` weglässt.
+  let head-right = if slots.at("headerLabel", default: "") != "" { slots.headerLabel } else if payload.number != "" { payload.number } else if slots.at("hideDate", default: false) { "" } else { payload.issuedDate }
+
   set page(
     paper: "a4",
     margin: (top: 26mm, bottom: 24mm, left: 22mm, right: 20mm),
     header: context [
       #set text(size: 8pt, fill: rgb(b.muted))
-      // Akteneintrag: die Nummer. Ad-hoc-Auszug: kein Nummernkreis, deshalb das Ausgabedatum.
-      #grid(columns: (1fr, auto), [#org("name")], [#if payload.number != "" [#payload.number] else [#payload.issuedDate]])
+      #grid(columns: (1fr, auto), [#org("name")], [#head-right])
       #line(length: 100%, stroke: 0.5pt + rgb(b.line))
     ],
     footer: context [

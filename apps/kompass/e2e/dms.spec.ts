@@ -1163,7 +1163,7 @@ test.describe('dms', () => {
     await expect(panel).toContainText('E-Mail');
     await panel.getByRole('button', { name: 'Vermerk entfernen' }).click();
     await page.getByRole('button', { name: 'Entfernen', exact: true }).click();
-    await expect(panel).toContainText('Noch nicht versandt. Amtsgericht Musterstadt bekommt Briefe per Post.');
+    await expect(panel).toContainText('Noch nicht versandt.');
     await expect(panel.getByRole('button').first()).toHaveText('Versand vermerken …');
     expect(warnings.filter((w) => w.includes('Base UI'))).toEqual([]);
   });

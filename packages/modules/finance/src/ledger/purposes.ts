@@ -26,7 +26,8 @@ function check(v: Pick<Fields, 'carryForwardCents' | 'carryForwardDate'>, c: z.R
 }
 
 export const purposeCreateSchema = base.superRefine(check);
-export const purposeUpdateSchema = base.partial().extend({ id: z.string().min(1), expectedVersion: expectedVersionField });
+// removeDefault: Zod 4 wendet `.default()` auch hinter `.partial()` an; ein Teil-Update setzte sonst weggelassene Felder zurück.
+export const purposeUpdateSchema = base.extend({ abroad: base.shape.abroad.removeDefault() }).partial().extend({ id: z.string().min(1), expectedVersion: expectedVersionField });
 
 /** Wie `FinancePurposeRow`, nur dass die Liste Freitext und Bezug ohne `finance.read` auf `null` setzt (Designer-README 4c). */
 export type PurposeView = Omit<FinancePurposeRow, 'description' | 'referenceNote'> & { description: string | null; referenceNote: string | null };

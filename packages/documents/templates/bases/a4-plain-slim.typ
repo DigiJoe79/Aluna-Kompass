@@ -20,7 +20,9 @@
 //                   festgeschrieben“), ohne nichts.
 //   `footerNote` Vermerk klein vor der Seitenzahl; fehlt er, bleibt der Fuß wie
 //                er war.
-// Alle drei stehen als `slots` in `bases.json` („diese Basis zeichnet sie“).
+// Kopf (Slots, optional): `hideDate` lässt das Ausgabedatum weg, `headerLabel`
+// steht rechts statt Nummer und Datum.
+// Alle stehen als `slots` in `bases.json` („diese Basis zeichnet sie“).
 // Selbstständig — kein Import. Alle Farben/Schriften aus payload.brand.*
 // (aktives Theme). Kein Vereinsspezifikum.
 
@@ -63,19 +65,22 @@
   let head-note = stage in ("preliminary", "final") and stage-text != ""
   let stage-line = text(weight: "semibold", tracking: 0.08em, fill: rgb(b.accent))[#upper(stage-text)]
 
+  // Kopf rechts: `headerLabel` (Beschriftung statt Nummer und Datum), sonst die Nummer, ohne Nummer das Ausgabedatum,
+  // das `hideDate` weglässt.
+  let head-right = if slots.at("headerLabel", default: "") != "" { slots.headerLabel } else if payload.number != "" { payload.number } else if slots.at("hideDate", default: false) { "" } else { payload.issuedDate }
+
   set page(
     paper: "a4",
     margin: (top: 20mm, bottom: 18mm, left: 15mm, right: 15mm),
     header: context [
       #set text(size: 8pt, fill: rgb(b.muted))
-      // Akteneintrag: die Nummer. Ad-hoc-Auszug: kein Nummernkreis, deshalb das Ausgabedatum.
       // Hinweis der Stufe (final mit Text) als eigene Spalte rechts; review hängt ihn an den Namen.
       #grid(
         columns: if head-note { (1fr, auto, auto) } else { (1fr, auto) },
         column-gutter: 8mm,
         [#org("name")#if review-note [ · #stage-line]],
         ..if head-note { ([#text(size: 9pt)[#stage-line]],) },
-        [#if payload.number != "" [#payload.number] else [#payload.issuedDate]],
+        [#head-right],
       )
       #line(length: 100%, stroke: 0.5pt + rgb(b.line))
     ],

@@ -134,7 +134,7 @@ export function PhotoReview({ rows, state, onChange, sourceName, max, readOnly, 
   const proposedPrimary = rows.find((row) => row.proposedPrimary && state.selected[row.key]);
   const currentPrimary = rows.find((row) => row.currentPrimary && state.selected[row.key]);
   const name = (row: ReviewPhotoRow) => photoName(t, rows, row, sourceName);
-  // Die Wahl zeigt beide Titelbilder im Format der Stelle, darunter den Namen (Backlog 79, Wunsch Joe 2026-10-20).
+  // Die Wahl zeigt beide Titelbilder im Format der Stelle, darunter den Namen (Wunsch Joe 2026-10-20).
   const preview = (row: ReviewPhotoRow) => {
     const crop = cropOf(row, state);
     return (

@@ -39,6 +39,23 @@ describe('master data over one door', () => {
     expect(unwrap(await readMasterData(deps, ctx, { kind: 'category', includeInactive: true }))).toHaveLength(before);
   });
 
+  // Backlog 101: zod 4 wendet `.default()` auch nach `.partial()` an, ein Teil-Update setzte so weggelassene Felder zurück.
+  it('a partial update leaves omitted fields alone, for accounts, categories and purposes', async () => {
+    const { deps, ctx } = setupFinance();
+    const save = async (kind: string, data: Record<string, unknown>) => unwrap(await saveMasterData(deps, ctx, { kind, data })) as Record<string, unknown> & { id: string; updatedAt: string };
+    const rename = (kind: string, row: { id: string; updatedAt: string }) => save(kind, { id: row.id, name: 'Neu', expectedVersion: row.updatedAt });
+
+    const account = await save('account', { name: 'Giro', kind: 'bank', iban: 'DE44999999990532013000', isMain: true });
+    expect((await rename('account', account)).isMain).toBe(true);
+
+    const purpose = await save('purpose', { name: 'Ausland', abroad: true });
+    expect((await rename('purpose', purpose)).abroad).toBe(true);
+
+    const fields = { explanation: 'Bleibt', allowanceKind: 'volunteer', statementSuffices: true, defaultTaxCode: 'reduced', inputTaxDeductible: 'yes', countsTowardTurnover: true, isAssetSale: true, thresholdExclusion: 'taxRefund' };
+    const category = await save('category', { key: 'x-teil', name: 'Teil', direction: 'expense', sphere: 'business', costFunction: 'program', ...fields });
+    expect(await rename('category', category)).toMatchObject(fields);
+  });
+
   it('refuses a kind it does not know', async () => {
     const { deps, ctx } = setupFinance();
     expect((await readMasterData(deps, ctx, { kind: 'entry' })).ok).toBe(false);

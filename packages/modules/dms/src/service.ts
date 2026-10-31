@@ -714,18 +714,18 @@ export async function deleteDocument(
   if (!docType) return notFound('documentType', doc.typeKey);
 
   if (docType.retentionClass === 'permanent') {
-    return conflict('retentionRunning', `Dokument ${doc.number ?? doc.id} unterliegt dauerhafter Aufbewahrung`);
+    return localizedConflict('retentionRunning', 'dms.errors.retentionPermanent', { number: doc.number ?? doc.id });
   }
 
   const months = retentionMonths(deps, docType.retentionClass);
   if (months === null) {
-    return conflict('retentionRunning', `Aufbewahrungsfrist für ${doc.number ?? doc.id} ist nicht konfiguriert`);
+    return localizedConflict('retentionRunning', 'dms.errors.retentionNotConfigured', { number: doc.number ?? doc.id });
   }
 
   const until = retentionEnd(doc.documentDate, months);
   const today = todayIn(deps);
   if (until >= today) {
-    return conflict('retentionRunning', `Aufbewahrungsfrist für Dokument ${doc.number ?? doc.id} läuft noch bis ${messageDate(deps, until)}`);
+    return localizedConflict('retentionRunning', 'dms.errors.retentionRunning', { number: doc.number ?? doc.id, untilText: messageDate(deps, until) });
   }
 
   // Die Frist der Dokumentart ist nur die eigene. Ein Modul kann länger halten

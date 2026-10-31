@@ -348,7 +348,9 @@ export async function retryFailedEmails(deps: Deps, ctx: CallContext, input: unk
   try {
     return deps.db.transaction((tx: DbOrTx) => {
       const queued: string[] = [];
-      for (const entry of loaded.value) {
+      // Je Dokument und Empfänger eine neue Sendung: Zwei gescheiterte Zeilen desselben Paars sind ein Versand, kein zweiter.
+      const pairs = new Map(loaded.value.map((entry) => [`${entry.documentId}:${entry.contactId}`, entry]));
+      for (const entry of pairs.values()) {
         const result = resendEntry(tx, deps, ctx, entry);
         if (!result.ok) throw new RetryAbort(result);
         queued.push(result.value.id);

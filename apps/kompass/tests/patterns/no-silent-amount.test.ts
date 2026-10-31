@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { allowlistHygiene, checkCountedAllowlist, type CountedAllowlist, isProductSource, lineHits, sourceFiles, SRC } from './source';
+import { allowlistHygiene, checkCountedAllowlist, type CountedAllowlist, type Hit, isProductSource, read, relative, sourceFiles, SRC } from './source';
 
 /**
  * Ein Betrag wird nicht still zu „kein Betrag“ oder 0 (Code-Review 0.4.0, App-B6/B7): `parseAmount` liefert für leer
@@ -13,8 +13,12 @@ const SILENT = [
   /\bparseAmount\((?:[^()]|\([^()]*\))*\)\s*\?\?/g,
   // leer ? null : parseAmount(…)
   /\?\s*null\s*:\s*parseAmount\(/g,
-  // bedingung ? parseAmount(…) : null
-  /\?\s*parseAmount\((?:[^()]|\([^()]*\))*\)\s*:\s*null\b/g,
+  // parseAmount(…) || …
+  /\bparseAmount\((?:[^()]|\([^()]*\))*\)\s*\|\|/g,
+  // leer ? undefined : parseAmount(…)
+  /\?\s*undefined\s*:\s*parseAmount\(/g,
+  // bedingung ? parseAmount(…) : null oder undefined
+  /\?\s*parseAmount\((?:[^()]|\([^()]*\))*\)\s*:\s*(?:null|undefined)\b/g,
 ];
 
 export function silentAmountCount(line: string): number {
@@ -37,6 +41,11 @@ describe('Heuristik', () => {
     for (const hit of [
       'amountCents: parseAmount(amount) ?? 0,',
       "unit === 'cents' ? (parseAmount(amountText) ?? 0) : 1",
+      'amountCents: parseAmount(amount) || 0,',
+      "cents: text ? parseAmount(text) : undefined",
+      "cents: text === '' ? undefined : parseAmount(text)",
+      'cents: parseAmount(\n  amount,\n) ?? 0',
+      'cents: text\n  ? parseAmount(text)\n  : null',
       "targetCents: targetText.trim() === '' ? null : parseAmount(targetText),",
       'const amountCents = override ? parseAmount(amount) : null;',
       'cents: parseAmount(x.trim()) ?? undefined',
@@ -51,7 +60,8 @@ describe('Heuristik', () => {
 
 describe('Beträge aus Masken nicht still zu null oder 0', () => {
   const files = sourceFiles(`${SRC}/app`).filter(isProductSource);
-  const hits = lineHits(files, silentAmountCount);
+  // Je Datei über den ganzen Text, nicht je Zeile: Ein Rückfall steht auch über einen Zeilenumbruch hinweg.
+  const hits: Hit[] = files.flatMap((file) => Array.from({ length: silentAmountCount(read(file)) }, () => ({ where: relative(file), file: relative(file) })));
 
   it('kein parseAmount mit stillem Rückfall; Ausnahmen mit Grund', () => {
     expect(checkCountedAllowlist(hits, ALLOWED).unexpected).toEqual([]);

@@ -83,7 +83,7 @@ function provisionMailBody(tx: DbOrTx, deps: Deps, ctx: CallContext, locale: str
  * ersten Sekunde gehören die Arten dem Verein, der sie umbenennen darf.
  */
 const LABELS: Record<string, { incoming: string; outgoing: string }> = {
-  de: { incoming: 'Unklassifiziert (Eingang)', outgoing: 'Unklassifiziert (Ausgang)' },
+  de: { incoming: 'Eingang ohne Zuordnung', outgoing: 'Ausgang ohne Zuordnung' },
   en: { incoming: 'Unclassified (incoming)', outgoing: 'Unclassified (outgoing)' },
 };
 

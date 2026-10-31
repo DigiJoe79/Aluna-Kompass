@@ -73,7 +73,7 @@ describe('deleteDocument', () => {
     const doc = unwrap(await receiveDocument(deps, ctx, { filename: 'neu.pdf', bytes: pdfBytes(), typeKey: 'invoice', subject: 'Neu', documentDate: '2026-01-01' }));
     const result = await deleteDocument(deps, ctx, { id: doc.id });
     // Das Ende der Frist im Datumsformat der Anzeige, nicht als ISO-Wert.
-    expect(!result.ok && result.error.type === 'conflict' && result.error.message).toMatch(/\b\d{2}\.\d{2}\.\d{4}\b/);
+    expect(!result.ok && result.error.type === 'conflict' && result.error.params?.untilText).toMatch(/\b\d{2}\.\d{2}\.\d{4}\b/);
   });
 
   it('sagt den anderen Modulen, dass das Dokument weg ist', async () => {

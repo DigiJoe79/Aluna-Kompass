@@ -192,7 +192,7 @@ export async function deleteMediaFolder(deps: Deps, ctx: CallContext, input: unk
   if (!folderExists(deps, path)) return notFound('mediaFolder', path);
   const hasAsset = !!deps.db.select({ id: mediaAssets.id }).from(mediaAssets).where(eq(mediaAssets.folder, path)).get();
   const hasChild = !!deps.db.select({ path: mediaFolders.path }).from(mediaFolders).where(and(ne(mediaFolders.path, path), withinSubtree(mediaFolders.path, path))).get();
-  if (hasAsset || hasChild) return conflict('folderNotEmpty', `Der Ordner „${path}“ ist nicht leer`);
+  if (hasAsset || hasChild) return localizedConflict('folderNotEmpty', 'errors.folder.notEmpty', { path });
 
   deps.db.transaction((tx) => {
     tx.delete(mediaFolders).where(eq(mediaFolders.path, path)).run();

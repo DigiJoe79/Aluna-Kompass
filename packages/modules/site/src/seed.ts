@@ -163,7 +163,7 @@ export async function applySeed(deps: Deps, ctx: CallContext, opts: { confirm: b
       missing.push(a.filename);
     }
   }
-  if (missing.length > 0) return conflict('seedAssetsMissing', `Dateien fehlen unter seed/assets/: ${missing.join(', ')}`);
+  if (missing.length > 0) return conflict('seedAssetsMissing', missing.join(', '));
 
   const report: SeedReport = {
     applied: false,

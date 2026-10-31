@@ -44,7 +44,7 @@ export default async function EditDraftPage(props: { params: Promise<{ id: strin
       <DraftScreen
         title={t('editDraft')}
         description={t('editDraftDescription')}
-        back={{ href: `/dms/${id}`, label: t('backToDocument') }}
+        back={{ href: `/dms/${id}`, label: t('backToDocument'), history: 'parent' }}
         types={types.map((type) => ({ key: type.key, label: type.label }))}
         folders={folders}
         canCreateContact={hasPermission(ctx, 'contacts.manage')}

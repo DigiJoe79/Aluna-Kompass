@@ -63,8 +63,19 @@ function checkCategory(v: CategoryFields, c: z.RefinementCtx): void {
 
 export const categoryFieldsSchema = categoryBase.superRefine(checkCategory);
 
+// removeDefault: Zod 4 wendet `.default()` auch hinter `.partial()` an; ein Teil-Update setzte sonst weggelassene Felder zurück.
 export const categoryUpdateSchema = categoryBase
   .omit({ key: true })
+  .extend({
+    explanation: categoryBase.shape.explanation.removeDefault(),
+    allowanceKind: categoryBase.shape.allowanceKind.removeDefault(),
+    statementSuffices: categoryBase.shape.statementSuffices.removeDefault(),
+    defaultTaxCode: categoryBase.shape.defaultTaxCode.removeDefault(),
+    inputTaxDeductible: categoryBase.shape.inputTaxDeductible.removeDefault(),
+    countsTowardTurnover: categoryBase.shape.countsTowardTurnover.removeDefault(),
+    isAssetSale: categoryBase.shape.isAssetSale.removeDefault(),
+    thresholdExclusion: categoryBase.shape.thresholdExclusion.removeDefault(),
+  })
   .partial()
   .extend({ id: z.string().min(1), expectedVersion: expectedVersionField })
   .strict();

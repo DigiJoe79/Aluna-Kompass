@@ -35,6 +35,7 @@
     }
   },
   "common": {
+    "back": "Zurück",
     "pdfPages": {
       "alt": "Seite {page} von {total}: {title}",
       "open": "PDF öffnen",
@@ -150,6 +151,7 @@
     "nothingChanged": "Nichts geändert",
     "retry": "Erneut versuchen",
     "network": "Die Verbindung zum Server ist abgebrochen. Ihre Eingaben stehen noch da.",
+    "pollGaveUp": "Der aktuelle Stand lässt sich gerade nicht abfragen. Was hier steht, kann veraltet sein. Laden Sie die Seite neu.",
     "conflict": {
       "textPlain": "Der Eintrag wurde inzwischen geändert. Ihre Eingaben stehen noch in der Maske.",
       "compare": "Ihre Änderungen neben den neuen Stand legen",
@@ -621,6 +623,7 @@
       "remedy": "Ändern Sie zuerst die Vorlage der Webseite oder schalten Sie das Modul aus."
     },
     "folder": {
+      "notEmpty": { "reason": "Der Ordner „{path}“ ist nicht leer.", "remedy": "Verschieben oder löschen Sie zuerst seinen Inhalt." },
       "sameLocation": { "reason": "Der Ordner liegt schon hier.", "remedy": "Wählen Sie ein anderes Ziel." },
       "insideItself": { "reason": "Ein Ordner kann nicht in sich selbst liegen.", "remedy": "Wählen Sie einen Ordner außerhalb dieses Ordners." },
       "tooDeep": { "reason": "Danach hätte ein Ordner mehr als 8 Ebenen.", "remedy": "Wählen Sie ein Ziel weiter oben." },
@@ -631,6 +634,7 @@
       "movedInBetween": { "reason": "Inzwischen wurde es an anderer Stelle verschoben.", "remedy": "Laden Sie die Seite neu und verschieben Sie es von dort." }
     },
     "media": {
+      "assetInUse": { "reason": "Die Datei wird noch verwendet: {usedBy}.", "remedy": "Entfernen Sie sie dort zuerst." },
       "aiLabelingDisabled": {
         "reason": "Die Bildkennzeichnung ist ausgeschaltet.",
         "remedy": "Einschalten unter Einrichtung → Stammdaten → Medien."
@@ -709,8 +713,6 @@
       "tooManyLocales": "Höchstens zehn Sprachen können eingerichtet werden.",
       "lastLocale": "Die letzte verbleibende Sprache kann nicht entfernt werden.",
       "unknownLocale": "Diese Sprache ist nicht eingerichtet.",
-      "mediaAssetInUse": "{detail}",
-      "folderNotEmpty": "{detail}",
       "folderExists": "Ein Ordner mit diesem Namen existiert bereits.",
       "folderParentMissing": "Der übergeordnete Ordner fehlt.",
       "folderNotFound": "Der Zielordner existiert nicht.",
@@ -723,8 +725,6 @@
       "belongsToNotAnOrganization": "Ein Kontakt kann nur einer Organisation zugeordnet werden.",
       "multiplePrimaryChannels": "Es kann nur ein Hauptkontaktweg festgelegt werden.",
       "roleAlreadyRunning": "Diese Rolle ist für diesen Kontakt bereits aktiv.",
-      "unknownView": "Die Vorlage der Webseite verweist auf eine Sicht, die es nicht gibt: {detail}",
-      "unknownViewField": "Die Vorlage der Webseite nennt ein Feld, das die Sicht nicht hat: {detail}",
       "default": "Der Vorgang ist nicht möglich: {detail}",
       "notIncoming": "Nur eingehende Post lässt sich nachträglich umklassifizieren — die Nummer eines ausgehenden Dokuments steht im verschickten PDF.",
       "documentVoided": "Das Dokument ist storniert und lässt sich nicht mehr ändern.",
@@ -748,13 +748,11 @@
       "viewNotInTemplate": "Die Vorlage der Webseite nutzt diese Sicht nicht.",
       "animalNotAdopted": "Eine Erfolgsgeschichte gibt es nur für vermittelte Tiere. Setzen Sie den Status zuerst auf „Vermittelt“.",
       "bundleEmpty": "In dieser Auswahl liegt kein festgeschriebenes Dokument. Wählen Sie einen anderen Ordner oder ein anderes Jahr.",
-      "bundleTooLarge": "{detail}",
       "documentAlreadyVoided": "Das Dokument ist bereits storniert.",
       "documentAltered": "Die Datei dieses Dokuments wurde außerhalb von Kompass verändert und wird deshalb nicht ausgeliefert. Wenden Sie sich an die Administration; der Vorfall steht im Änderungsprotokoll.",
       "documentHasNoFile": "Dieses Dokument hat keine Datei, aus der sich Text lesen ließe.",
       "documentIsFiled": "Das Dokument ist schon festgeschrieben und lässt sich nicht mehr ändern. Laden Sie die Seite neu.",
       "documentNumberContention": "Die Nummer ließ sich gerade nicht vergeben, weil zur selben Zeit ein anderes Dokument abgelegt wurde. Versuchen Sie es noch einmal.",
-      "documentTooManyPages": "{detail}. Kürzen Sie den Inhalt und erzeugen Sie das Dokument erneut.",
       "documentTypeExists": "Eine Dokumentart mit diesem Schlüssel gibt es schon. Wählen Sie einen anderen Schlüssel.",
       "documentTypeHasDocuments": "Zu dieser Dokumentart gibt es schon Dokumente, deshalb lässt sie sich nicht löschen. Schalten Sie sie stattdessen ab.",
       "documentTypeInUse": "Zu dieser Dokumentart gibt es schon Dokumente. Ihr Präfix steht in deren Nummern und bleibt deshalb, wie es ist.",
@@ -764,12 +762,13 @@
       "documentTypeProvisioned": "Diese Dokumentart hat ein Modul vorgeschlagen; sie bleibt deshalb bestehen. Schalten Sie sie ab, wenn sie nicht erscheinen soll.",
       "folderHasProtectedDocuments": "Im Ordner liegen Dokumente, die Sie nicht sehen dürfen; deshalb lässt er sich nicht löschen. Bitten Sie jemanden mit dem passenden Recht darum.",
       "linkTypeReserved": "Diesen Bezug verwaltet ein anderes Modul; setzen oder lösen lässt er sich nur dort.",
-      "retentionRunning": "{detail}.",
       "slugTaken": "Diesen URL-Teil hat schon ein anderes Projekt. Wählen Sie einen anderen.",
       "textExtractionGaveUp": "Kompass hat den Text dieses Dokuments mehrmals vergeblich zu lesen versucht und versucht es nicht weiter. Das PDF ist vermutlich beschädigt oder enthält nur Bilder ohne lesbaren Text.",
       "textExtractionSuperseded": "Das Dokument wurde während des Lesens neu eingereiht. Kompass liest es gleich noch einmal."
     },
     "site": {
+      "unknownView": { "reason": "Die Variable „{field}“ der Vorlage verweist auf die Sicht „{view}“, die weder der Kern noch ein eingeschaltetes Modul liefert.", "remedy": "Schalten Sie das Modul ein oder ändern Sie die Vorlage." },
+      "unknownViewField": { "reason": "Die Variable „{field}“ der Vorlage nennt das Feld „{name}“, das die Sicht „{view}“ nicht hat.", "remedy": "Ändern Sie die Vorlage." },
       "previewOutdated": {
         "reason": "Seit der Vorschau hat sich der Inhalt der Webseite geändert (Vorschau {expected}, jetzt {actual}).",
         "remedy": "Bauen Sie die Vorschau neu, sehen Sie sie an und publizieren Sie dann."
@@ -5183,6 +5182,7 @@
       "fixAddress": "E-Mail-Adresse korrigieren",
       "notSent": "Noch nicht versandt. {name} bekommt Briefe per E-Mail.",
       "notSentPost": "Noch nicht versandt. {name} bekommt Briefe per Post.",
+      "notSentMailOff": "Noch nicht versandt. Der E-Mail-Versand ist in dieser Installation ausgeschaltet, der Brief geht per Post.",
       "pendingNote": "Der Vermerk entsteht, sobald die Mail draußen ist.",
       "mailTo": "Per E-Mail an",
       "triggered": "Ausgelöst",
@@ -5580,6 +5580,12 @@
         "reason": "An Ihrem Nutzerkonto ist keine E-Mail-Adresse hinterlegt.",
         "remedy": "Tragen Sie in Ihrem Profil eine E-Mail-Adresse ein."
       },
+      "bundleTooManyDocuments": { "reason": "Die Auswahl umfasst {count} Dokumente, ein Bündel fasst höchstens {max}.", "remedy": "Wählen Sie einen Unterordner oder ein einzelnes Jahr." },
+      "bundleTooManyMegabytes": { "reason": "Die Auswahl umfasst {megabytes} MB, ein Bündel fasst höchstens {max} MB.", "remedy": "Wählen Sie einen Unterordner oder ein einzelnes Jahr." },
+      "documentTooManyPages": { "reason": "Das Dokument hat {pages} Seiten, erlaubt sind {maxPages}.", "remedy": "Kürzen Sie den Inhalt und erzeugen Sie das Dokument erneut." },
+      "retentionPermanent": { "reason": "Dokument {number} unterliegt dauerhafter Aufbewahrung.", "remedy": "Es bleibt in der Akte; stornieren lässt es sich weiterhin." },
+      "retentionNotConfigured": { "reason": "Für Dokument {number} ist keine Aufbewahrungsfrist eingestellt.", "remedy": "Legen Sie die Frist für diese Aufbewahrungsklasse fest." },
+      "retentionRunning": { "reason": "Die Aufbewahrungsfrist für Dokument {number} läuft noch bis {untilText}.", "remedy": "Danach lässt es sich löschen." },
       "alreadyQueued": {
         "reason": "Diese Mail wartet schon auf den Versand.",
         "remedy": "Warten Sie ab, bis sie gesendet oder als nicht zugestellt gemeldet ist."
@@ -9245,6 +9251,7 @@
       },
       "issue": {
         "title": "Zuwendungsbestätigung ausstellen",
+        "titleCollective": "Sammelbestätigung ausstellen",
         "loading": "Die Voraussetzungen werden geprüft …",
         "requirements": "Voraussetzungen",
         "done": "erfüllt",
@@ -9352,6 +9359,7 @@
         "addressMissing": "Anschrift fehlt",
         "completeAddress": "Anschrift ergänzen",
         "issue": "Ausstellen",
+        "issueCollective": "Sammelbestätigung ausstellen",
         "inFuture": "Datum liegt in der Zukunft",
         "possibleReturnWithoutOrigin": "möglicher Rückläufer, Bezug fehlt",
         "returnDraftPending": "Rückgabe liegt als Entwurf vor",
@@ -13806,6 +13814,8 @@
       "feeScheduleLocked": { "reason": "Nach diesem Stand {count, plural, one {ist schon ein Beitrag} other {sind schon # Beiträge}} angelegt.", "remedy": "Legen Sie einen neuen Stand an." },
       "feeScheduleDateTaken": { "reason": "Ab {validFrom} gilt schon ein Stand der Beitragsordnung.", "remedy": "Ändern Sie diesen Stand oder wählen Sie einen anderen Tag." },
       "feeScheduleLast": { "reason": "Das ist der einzige Stand der Beitragsordnung.", "remedy": "Ändern Sie ihn, statt ihn zu löschen." },
+      "resolutionDocumentNotFinal": { "reason": "Das Beschluss-Dokument ist noch ein Entwurf.", "remedy": "Schreiben Sie es in der Akte fest oder wählen Sie ein festgeschriebenes Dokument." },
+      "resolutionDocumentVoided": { "reason": "Das Beschluss-Dokument ist storniert.", "remedy": "Wählen Sie ein gültiges Dokument der Akte." },
       "feeBelowMinimum": { "reason": "Der Beitrag liegt unter dem Mindestbetrag von {minimumCents}.", "remedy": "Wählen Sie mindestens den Mindestbetrag oder vermerken Sie eine Ermäßigung." },
       "intervalNotAllowed": { "reason": "Diesen Rhythmus sieht die Beitragsordnung für die Art nicht vor.", "remedy": "Wählen Sie einen der erlaubten Rhythmen." },
       "feeRunRunning": { "reason": "Für {year} läuft schon ein Beitragslauf.", "remedy": "Setzen Sie den laufenden fort." },

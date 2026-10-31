@@ -1,4 +1,4 @@
-import { conflict, ok, type Deps, type PublishedView, type Result } from '@kompass/core';
+import { localizedConflict, ok, type Deps, type PublishedView, type Result } from '@kompass/core';
 import type { z } from 'zod';
 import type { FieldSchema, TemplateSchema } from './types';
 
@@ -132,12 +132,12 @@ export function checkReferenceFields(deps: Deps, schema: TemplateSchema): Result
     if (!meta) continue;
     const found = findView(deps, schema.uses, meta.view);
     if (!found) {
-      return conflict('unknownView', `Die Variable „${field}“ verweist auf die Sicht „${meta.view}“, die weder der Kern noch ein Modul aus uses liefert`);
+      return localizedConflict('unknownView', 'errors.site.unknownView', { field, view: meta.view });
     }
     const shape = ((found.view.schema as unknown as z.ZodObject<z.ZodRawShape>).shape ?? {}) as Record<string, unknown>;
     for (const name of [meta.key, meta.labelField, ...Object.keys(meta.where ?? {})]) {
       if (!(name in shape)) {
-        return conflict('unknownViewField', `Die Variable „${field}“ nennt das Feld „${name}“, das die Sicht „${meta.view}“ nicht hat`);
+        return localizedConflict('unknownViewField', 'errors.site.unknownViewField', { field, name, view: meta.view });
       }
     }
   }

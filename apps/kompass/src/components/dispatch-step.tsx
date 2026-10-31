@@ -96,6 +96,8 @@ export function DispatchStep({
   onMove: (documentIds: string[], to: 'post' | 'email') => Promise<ActionState>;
 }) {
   const t = useTranslations('dispatchStep');
+  const tCommon = useTranslations('common');
+  const [pollGaveUp, setPollGaveUp] = useState(false);
   const { date } = useDateFormat();
   const router = useRouter();
   const feedback = useActionFeedback();
@@ -115,12 +117,17 @@ export function DispatchStep({
   const running = mail.some((m) => m.state === 'queued' || m.state === 'sending');
   useEffect(() => {
     if (!running) return;
-    return pollTextStatus({
+    const stop = pollTextStatus({
       url: `/dms/run-mail-status?runRef=${encodeURIComponent(runRef)}`,
       isPending: (body) => body.pending === true,
       onDone: () => router.refresh(),
       onUnauthorized: () => router.refresh(),
+      onGiveUp: () => setPollGaveUp(true),
     });
+    return () => {
+      stop();
+      setPollGaveUp(false);
+    };
   }, [running, runRef, router]);
   const counted = (count: number) => (countLabel ? countLabel(count) : t('count', { count }));
   // Was nicht hinausging (nicht zugestellt, gesperrt) und noch keinen Vermerk trägt: Ausweg „Per Post schicken“.
@@ -134,6 +141,7 @@ export function DispatchStep({
     <div className="space-y-4" data-testid="dispatch-step">
       {mailState.kind === 'redirect' && mailState.redirectTo ? <Notice level="warn">{t('redirect', { to: mailState.redirectTo })}</Notice> : null}
       {mailState.kind === 'blocked' ? <Notice level="warn">{t('blocked')}</Notice> : null}
+      {pollGaveUp ? <Notice level="warn" testId="poll-gave-up">{tCommon('pollGaveUp')}</Notice> : null}
       <RefusalNotice action state={feedback.state} />
 
       {mail.length > 0 ? (

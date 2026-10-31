@@ -66,6 +66,47 @@ describe('SchedulePanel, fester Stand', () => {
   });
 });
 
+/** Der Dialog zeigt nur aktive Arten und keine Aufnahmegebühr; was er nicht zeigt, darf beim Speichern nicht verloren gehen. */
+describe('SchedulePanel, was der Dialog nicht zeigt', () => {
+  const futureStand = { ...lockedStand, id: 'S2', validFrom: '2027-01-01', locked: false, resolutionDocument: null };
+  const open = (name: string, schedules = [futureStand]) => {
+    render(
+      <NextIntlClientProvider locale="de" messages={messages} timeZone="Europe/Berlin">
+        <SchedulePanel schedules={schedules} types={types} today="2026-09-05" />
+      </NextIntlClientProvider>,
+    );
+    fireEvent.click(within(screen.getByTestId('schedule-panel')).getByRole('button', { name }));
+    return screen.getByRole('dialog');
+  };
+  const savedRules = async (dialog: HTMLElement) => {
+    fireEvent.click(within(dialog).getByRole('button', { name: messages.common.save }));
+    await waitFor(() => expect(saveFeeScheduleAction).toHaveBeenCalledTimes(1));
+    return (saveFeeScheduleAction.mock.calls[0]![0] as { rules: { typeId: string; amountCents: number; admissionFeeCents?: number | null }[] }).rules;
+  };
+
+  it('behält beim Bearbeiten Aufnahmegebühr und Regeln inaktiver Arten', async () => {
+    const dialog = open(messages.members.admin.schedule.edit);
+    fireEvent.change(within(dialog).getByRole('textbox'), { target: { value: '70,00' } });
+    expect(await savedRules(dialog)).toEqual([{ ...lockedStand.rules[0]!, amountCents: 7000 }, lockedStand.rules[1]!]);
+  });
+
+  it('übernimmt beim neuen Stand beides aus dem Stand, der vorbelegt', async () => {
+    const dialog = open(messages.members.admin.schedule.newScale);
+    fireEvent.change(within(dialog).getByLabelText(messages.members.admin.schedule.validFrom), { target: { value: '2028-01-01' } });
+    expect(await savedRules(dialog)).toEqual(lockedStand.rules);
+  });
+
+  it('sendet keine Regel für eine inzwischen beitragsfreie Art, die der Dienst ablehnen würde', async () => {
+    render(
+      <NextIntlClientProvider locale="de" messages={messages} timeZone="Europe/Berlin">
+        <SchedulePanel schedules={[futureStand]} types={[types[0]!, { ...types[1]!, feeExempt: true }]} today="2026-09-05" />
+      </NextIntlClientProvider>,
+    );
+    fireEvent.click(within(screen.getByTestId('schedule-panel')).getByRole('button', { name: messages.members.admin.schedule.edit }));
+    expect((await savedRules(screen.getByRole('dialog'))).map((r) => r.typeId)).toEqual(['T1']);
+  });
+});
+
 /** G7: Ein Stand verweist auf einen Beschluss der Gremien — Beschriftung und Link neben dem Beschlusstag. */
 describe('SchedulePanel, Beschluss aus Gremien', () => {
   it('zeigt den Beschluss als Link', () => {

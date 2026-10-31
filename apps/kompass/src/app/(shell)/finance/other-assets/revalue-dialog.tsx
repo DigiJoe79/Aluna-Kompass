@@ -11,7 +11,7 @@ import { FormGrid } from '@/components/forms/form-grid';
 import { useActionFeedback } from '@/components/forms/use-action-feedback';
 import { Dialog, DialogBody, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { formatEuro, parseAmount } from '@/lib/finance/amount';
+import { formatEuro, readAmount, type AmountError } from '@/lib/finance/amount';
 import { withUnplacedFieldErrors } from '@/lib/feedback';
 import { revalueOtherAssetAction } from './actions';
 import type { OtherAssetRow } from './other-asset-list';
@@ -42,13 +42,18 @@ export function RevalueDialog({ entry, onClose }: { entry: OtherAssetRow; onClos
   const [valueText, setValueText] = useState('');
   const [basis, setBasis] = useState('');
   const [pending, setPending] = useState(false);
+  const [amountError, setAmountError] = useState<AmountError | null>(null);
+  const tAmount = useTranslations('finance.amount');
   const feedback = useActionFeedback();
   useEffect(() => feedback.reset(), [entry.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const errors = feedback.state.status === 'error' ? feedback.state.fieldErrors : {};
   const save = async () => {
+    const value = readAmount(valueText, { required: true });
+    setAmountError(value.ok ? null : value.error);
+    if (!value.ok) return;
     setPending(true);
-    const result = await feedback.run(() => revalueOtherAssetAction({ id: entry.id, from, valueCents: parseAmount(valueText), basis }), { retry: () => void save() });
+    const result = await feedback.run(() => revalueOtherAssetAction({ id: entry.id, from, valueCents: value.cents, basis }), { retry: () => void save() });
     setPending(false);
     if (result.status !== 'success') return;
     onClose();
@@ -67,8 +72,8 @@ export function RevalueDialog({ entry, onClose }: { entry: OtherAssetRow; onClos
             <FormField id="revalue-from" label={t('revalue.from')} required error={errors.from} size="m">
               <Input id="revalue-from" type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
             </FormField>
-            <FormField id="revalue-value" label={t('dialog.value')} required error={errors.value} size="m">
-              <AmountField id="revalue-value" name="value" value={valueText} onChange={setValueText} required />
+            <FormField id="revalue-value" label={t('dialog.value')} required error={amountError ? tAmount(amountError) : errors.value} size="m">
+              <AmountField id="revalue-value" name="value" value={valueText} onChange={(next) => { setValueText(next); setAmountError(null); }} required />
             </FormField>
             <FormField id="revalue-basis" label={t('dialog.basis')} hint={t('dialog.basisHint')} required error={errors.basis} size="full">
               <Input id="revalue-basis" value={basis} onChange={(e) => setBasis(e.target.value)} />

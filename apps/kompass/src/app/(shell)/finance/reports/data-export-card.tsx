@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import { useDateFormat } from '@/components/date-format-provider';
 import { RefusalNotice } from '@/components/forms/refusal-notice';
+import { Notice } from '@/components/notice';
 import { useActionFeedback } from '@/components/forms/use-action-feedback';
 import { RunSteps, type RunStep } from '@/components/run-steps';
 import { SectionHeading } from '@/components/section';
@@ -53,6 +54,8 @@ export function dataExportSteps(view: DataExportRunView, t: (key: string) => str
  */
 export function DataExportCard({ initial, rows, years }: { initial: DataExportRunView; rows: readonly DataExportRow[]; years: readonly DataExportYear[] }) {
   const t = useTranslations('finance.reports.dataExport');
+  const tCommon = useTranslations('common');
+  const [pollGaveUp, setPollGaveUp] = useState(false);
   const fmt = useDateFormat();
   const router = useRouter();
   const [view, setView] = useState(initial);
@@ -68,13 +71,18 @@ export function DataExportCard({ initial, rows, years }: { initial: DataExportRu
 
   useEffect(() => {
     if (watch === 0) return;
-    return pollTextStatus({
+    const stop = pollTextStatus({
       url: '/finance/data-export/status',
       isPending: (body) => body.state === 'running',
       onTick: (body) => setView(body as unknown as DataExportRunView),
       onDone: () => router.refresh(),
       onUnauthorized: () => router.refresh(),
+      onGiveUp: () => setPollGaveUp(true),
     });
+    return () => {
+      stop();
+      setPollGaveUp(false);
+    };
   }, [watch, router]);
 
   const cancel = async () => {
@@ -107,6 +115,7 @@ export function DataExportCard({ initial, rows, years }: { initial: DataExportRu
         )}
       </div>
       <RefusalNotice action state={feedback.state} />
+      {pollGaveUp ? <Notice level="warn" testId="poll-gave-up">{tCommon('pollGaveUp')}</Notice> : null}
       {running ? (
         <div className="flex flex-col gap-2" data-testid="data-export-run">
           <p className="text-body text-ink">{t('running', { years: view.designations ?? '' })}</p>

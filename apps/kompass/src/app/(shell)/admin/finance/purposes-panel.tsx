@@ -217,7 +217,7 @@ function PurposeDialog({ purpose, onClose, onSaved }: { purpose: PurposeRow | nu
               <Input id="purpose-name" value={name} onChange={(e) => setName(e.target.value)} required />
             </FormField>
             <FormField id="purpose-target" label={t('columns.target')} size="s" error={amountErrors.target ? tAmount(amountErrors.target) : undefined}>
-              <Input id="purpose-target" value={targetText} onChange={(e) => setTargetText(e.target.value)} placeholder="0,00" />
+              <Input id="purpose-target" value={targetText} onChange={(e) => { setTargetText(e.target.value); setAmountErrors((errors) => ({ ...errors, target: undefined })); }} placeholder="0,00" />
             </FormField>
             <FormField id="purpose-description" label={t('description')} size="l">
               <Textarea id="purpose-description" rows={2} value={description} onChange={(e) => setDescription(e.target.value)} />
@@ -230,7 +230,7 @@ function PurposeDialog({ purpose, onClose, onSaved }: { purpose: PurposeRow | nu
         <Section title={t('sections.carryForward')}>
           <FormGrid>
             <FormField id="purpose-carry-forward" label={t('carryForward')} size="s" error={amountErrors.carryForward ? tAmount(amountErrors.carryForward) : undefined}>
-              <Input id="purpose-carry-forward" value={carryForwardText} onChange={(e) => setCarryForwardText(e.target.value)} placeholder="0,00" />
+              <Input id="purpose-carry-forward" value={carryForwardText} onChange={(e) => { setCarryForwardText(e.target.value); setAmountErrors((errors) => ({ ...errors, carryForward: undefined })); }} placeholder="0,00" />
             </FormField>
             <FormField id="purpose-carry-forward-date" label={t('carryForwardDate')} size="s">
               <Input id="purpose-carry-forward-date" type="date" value={carryForwardDate} onChange={(e) => setCarryForwardDate(e.target.value)} />
