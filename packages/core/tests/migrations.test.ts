@@ -30,9 +30,11 @@ const rootVersion = (JSON.parse(readFileSync(path.join(__dirname, '../../../pack
  * Fassung 0.4.0 (Rechenschaftspflichten: Berichte, Kassenprüfung, Abschluss, Erklärungszeiträume, USt-Abgaben),
  * `0012_governance_annual_accounts_0_5_0` die zusammengelegte der Fassung 0.5.0 (Gremien; dazu die nie einzeln
  * ausgelieferte 0.4.5 mit Jahresrechnung und Mittelverwendung, samt ihren Triggern),
- * `0013_dms_unclassified_labels_0_5_1` die eine der Fassung 0.5.1 (nur Daten: Backlog 63).
+ * `0013_dms_unclassified_labels_0_5_1` die eine der Fassung 0.5.1 (nur Daten: Backlog 63),
+ * `0014_finance_0_5_2` die zusammengelegte der Fassung 0.5.2 (Dublettenschlüssel, Berichtigung der Steuererklärung,
+ * Zahlung zuordnen).
  */
-const RELEASED = ['0000_init.sql', '0001_dashboard_layouts.sql', '0002_document_former_numbers.sql', '0003_finance.sql', '0004_finance_0_2_1.sql', '0005_animals_review.sql', '0006_audit_params.sql', '0007_animal_proposals_site_manifest.sql', '0008_image_crops.sql', '0009_members_direct_debit_0_3_0.sql', '0010_media_ai_kind_finance_locks_0_3_1.sql', '0011_finance_accountability_0_4_0.sql', '0012_governance_annual_accounts_0_5_0.sql', '0013_dms_unclassified_labels_0_5_1.sql'];
+const RELEASED = ['0000_init.sql', '0001_dashboard_layouts.sql', '0002_document_former_numbers.sql', '0003_finance.sql', '0004_finance_0_2_1.sql', '0005_animals_review.sql', '0006_audit_params.sql', '0007_animal_proposals_site_manifest.sql', '0008_image_crops.sql', '0009_members_direct_debit_0_3_0.sql', '0010_media_ai_kind_finance_locks_0_3_1.sql', '0011_finance_accountability_0_4_0.sql', '0012_governance_annual_accounts_0_5_0.sql', '0013_dms_unclassified_labels_0_5_1.sql', '0014_finance_0_5_2.sql'];
 
 /**
  * Was eine Produktion schon ausgeführt hat, bleibt Byte für Byte, wie es war:
@@ -60,6 +62,8 @@ const SHIPPED_HASHES: Record<string, string> = {
   '0010_media_ai_kind_finance_locks_0_3_1.sql': '1d193e4dfae91ce53378f18c358a6e73870049ccb84531b94c82073f2758338e',
   // Seit dem Release der Fassung 0.5.1.
   '0013_dms_unclassified_labels_0_5_1.sql': '9b945cf4dcb16bfb7b60377e0db9bb78ae1ca3cad7e3c9041be98afa324314ec',
+  // Seit dem Release der Fassung 0.5.2.
+  '0014_finance_0_5_2.sql': 'acf1190cff863fac9f9a940a923e00ee7bc7c2b07bb9c1d444da0ec0906543ad',
 };
 
 /**
