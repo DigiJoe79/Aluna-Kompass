@@ -12,6 +12,7 @@ import { financeConflict } from '../errors';
 import { requireFinanceRead } from '../ledger/access';
 import { fiscalYearStatusInternal } from '../ledger/fiscal-years';
 import { fundsUseChainInternal } from '../reporting/funds-use-inputs';
+import { taxCauseText, taxReviewStateInternal } from '../reporting/tax-figures';
 import { taxPeriodsInternal } from '../ledger/tax-periods';
 import { vatPeriodViewsInternal } from '../ledger/vat-filings';
 import { vatFilingOpensOn } from '../ledger/vat-calendar';
@@ -23,7 +24,7 @@ import { assemblyOfYearInternal } from './assembly';
  * Häkchen, mit Link, sie verschwinden, wenn erledigt — und die **Wiedervorlagen** an Finanz-Entitäten. Vorschläge für
  * Wiedervorlagen setzt der Mensch selbst (kein geplantes MV-Datum, Joe 2026-10-24).
  */
-export type DeadlineKind = 'noticeExpiry' | 'partnerProof' | 'recipientNoticeExpiry' | 'confirmationsToCorrect' | 'auditorAccess' | 'vatAdvanceReturn' | 'vatReturn' | 'vatAmendment' | 'taxReturn' | 'timelyUse' | 'timelyUseLapsed';
+export type DeadlineKind = 'noticeExpiry' | 'partnerProof' | 'recipientNoticeExpiry' | 'confirmationsToCorrect' | 'auditorAccess' | 'vatAdvanceReturn' | 'vatReturn' | 'vatAmendment' | 'taxReturnAmendment' | 'taxReturn' | 'timelyUse' | 'timelyUseLapsed';
 export interface DeadlineView {
   key: string;
   kind: DeadlineKind;
@@ -125,8 +126,15 @@ export function computedDeadlinesInternal(deps: Deps, today: string, withNames: 
   }
 
   // Rechenschaft D2: die Abgabefrist je offenem Erklärungszeitraum; sie verschwindet mit „abgegeben am“.
+  // B9 (Spec 0.5.2 § 4.4): nach der Abgabe der Prüfanlass — ohne Datum (unverzüglich, § 153 Abs. 1 AO), bis berichtigt
+  // oder ohne Berichtigung geschlossen; mit Anzeige deren Tag. Die Werte von heute nur für abgegebene Zeiträume.
   for (const period of taxPeriodsInternal(db)) {
-    if (period.filedOn === null) push({ key: `taxReturn:${period.id}`, kind: 'taxReturn', dueOn: period.dueOn, params: { period: period.label }, href: `/finance/tax?period=${period.id}` });
+    if (period.filedOn === null) {
+      push({ key: `taxReturn:${period.id}`, kind: 'taxReturn', dueOn: period.dueOn, params: { period: period.label }, href: `/finance/tax?period=${period.id}` });
+      continue;
+    }
+    const review = taxReviewStateInternal(deps, db, period.id);
+    if (review.reviewDue) push({ key: `taxReturnAmendment:${period.id}`, kind: 'taxReturnAmendment', dueOn: null, params: { period: period.label, lines: taxCauseText(review.cause), ...(review.notifiedOn ? { notifiedOn: review.notifiedOn } : {}) }, href: `/finance/tax?period=${period.id}` });
   }
 
   for (const d of timelyUseDeadlinesInternal(db, years, today)) push(d);
@@ -159,12 +167,15 @@ function timelyUseDeadlinesInternal(db: DbOrTx, years: readonly FinanceFiscalYea
   return out;
 }
 
+/** Die Fristen „unverzüglich“ (§ 153 AO): Berichtigung der Umsatzsteuer und Prüfanlass der Steuererklärung (B9). */
+export const IMMEDIATE_DEADLINE_KINDS: readonly DeadlineKind[] = ['vatAmendment', 'taxReturnAmendment'];
+
 /**
- * Reihenfolge der Fristen (295): die Berichtigung einer Umsatzsteuer-Anmeldung (unverzüglich) ganz oben (Board
- * Umsatzsteuer 5a), dann überfällige, dann nach Tag, „ohne Datum“ zuletzt — auf Bildschirm und über MCP.
+ * Reihenfolge der Fristen (295): die Berichtigungen (unverzüglich) ganz oben (Board Umsatzsteuer 5a, B9), dann
+ * überfällige, dann nach Tag, „ohne Datum“ zuletzt — auf Bildschirm und über MCP.
  */
 export function deadlineOrder(a: { dueOn: string | null; overdue: boolean; kind?: string }, b: { dueOn: string | null; overdue: boolean; kind?: string }): number {
-  const urgent = (d: { kind?: string }) => d.kind === 'vatAmendment';
+  const urgent = (d: { kind?: string }) => (IMMEDIATE_DEADLINE_KINDS as readonly (string | undefined)[]).includes(d.kind);
   if (urgent(a) !== urgent(b)) return urgent(a) ? -1 : 1;
   if (a.overdue !== b.overdue) return a.overdue ? -1 : 1;
   if (a.dueOn === null || b.dueOn === null) return a.dueOn === b.dueOn ? 0 : a.dueOn === null ? 1 : -1;

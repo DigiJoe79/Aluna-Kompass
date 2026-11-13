@@ -1,6 +1,5 @@
 'use client';
 
-import type { TaxPeriodDocumentSlot } from '@kompass/module-finance';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -16,6 +15,7 @@ import { Dialog, DialogBody, DialogContent, DialogDescription, DialogHeader, Dia
 import type { ActionState } from '@/lib/actions';
 import { withUnplacedFieldErrors } from '@/lib/feedback';
 import { fileTaxPeriodDocumentAction, linkTaxPeriodDocumentAction } from './actions';
+import type { FilingSlot } from './review-state';
 
 /**
  * „Ablegen …“ an einem Dokument einer Abgabe (Board 10b; Muster „Scan ablegen …“, 12e, Dialog `md`): ein PDF
@@ -98,9 +98,14 @@ export function FilingDocumentDialog({ open, onOpenChange, title, description, u
   );
 }
 
-/** „Ablegen …“ an einem Dokument des Zeitraums der Steuererklärung: Art „Steuererklärung“ am Zeitraum und seinem letzten Geschäftsjahr. */
-export function TaxDocumentDialog({ open, onOpenChange, periodId, slot, canPickDocument }: { open: boolean; onOpenChange: (open: boolean) => void; periodId: string; slot: TaxPeriodDocumentSlot; canPickDocument: boolean }) {
+/**
+ * „Ablegen …“ an einem Dokument des Zeitraums der Steuererklärung: Art „Steuererklärung“ am Zeitraum und seinem letzten
+ * Geschäftsjahr — mit `target` an der letzten Berichtigung oder als Schreiben der Anzeige (B9).
+ */
+export function TaxDocumentDialog({ open, onOpenChange, periodId, slot: placement, canPickDocument }: { open: boolean; onOpenChange: (open: boolean) => void; periodId: string; slot: FilingSlot; canPickDocument: boolean }) {
   const t = useTranslations('finance.tax.documentDialog');
+  const slot = placement.slot;
+  const target = placement.target === 'amendment' ? { target: 'amendment' as const, amendmentId: placement.amendmentId } : placement.target === 'notice' ? { target: 'notice' as const } : {};
   return (
     <FilingDocumentDialog
       open={open}
@@ -110,9 +115,10 @@ export function TaxDocumentDialog({ open, onOpenChange, periodId, slot, canPickD
       upload={(formData) => {
         formData.append('id', periodId);
         formData.append('slot', slot);
+        for (const [key, value] of Object.entries(target)) formData.append(key, value);
         return fileTaxPeriodDocumentAction(formData);
       }}
-      link={(documentId) => linkTaxPeriodDocumentAction({ id: periodId, slot, documentId })}
+      link={(documentId) => linkTaxPeriodDocumentAction({ id: periodId, slot, documentId, ...target })}
       canPickDocument={canPickDocument}
       testId="tax-document-dialog"
     />

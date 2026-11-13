@@ -1,7 +1,7 @@
-import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const session = vi.hoisted(() => ({ value: null as unknown }));
 const root = vi.hoisted(() => ({ dir: '' }));
@@ -18,6 +18,7 @@ describe('proposal preview route', () => {
     writeFileSync(path.join(out, 'hunde', 'lotte', 'index.html'), '<head><img src="/images/a.webp"></head>');
     session.value = { ctx: { userId: 'u', permissions: new Set(['animals.manage']) } };
   });
+  afterEach(() => rmSync(root.dir, { recursive: true, force: true }));
 
   it('answers 401 without a session and 403 without animals.manage', async () => {
     session.value = null;

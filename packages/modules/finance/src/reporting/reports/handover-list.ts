@@ -6,9 +6,12 @@ import { partnerProofDeadlinesInternal, positionViewsOf, sumPositionCents } from
 import { countOpenRawTransactionsInternal } from '../../import/queries';
 import { fiscalYearForInternal } from '../../ledger/fiscal-years';
 import { noticeValidAt } from '../../ledger/notice-validity';
+import { TAX_FIGURES_SETTING_KEYS, taxReviewStateInternal } from '../tax-figures';
+import { taxPeriodsInternal } from '../../ledger/tax-periods';
+import { vatPeriodViewsInternal } from '../../ledger/vat-filings';
 import { openItemsAtInternal } from '../../ledger/open-items';
 import {
-  financeAccounts, financeAllocationCorrections, financeEntries, financeExpenseClaims, financeExpensePositions, financeMoneyLines, financeNotices, financeOpenItems, financePartnerPayments, financePartnerProfiles, financePurposeTransfers,
+  financeAccounts, financeAllocationCorrections, financeEntries, financeExpenseClaims, financeFiscalYears, financeExpensePositions, financeMoneyLines, financeNotices, financeOpenItems, financePartnerPayments, financePartnerProfiles, financePurposeTransfers,
 } from '../../schema';
 import type { ReportComputeEnv, ReportDefinition, ReportParams, ReportRenderContext } from '../types';
 import { reportTimeZone, TIME_ZONE_SETTING, zonedDayOf } from '../../zoned-days';
@@ -18,11 +21,12 @@ import { amountCell, heading, paragraph, table, textCell } from './common';
  * Übergabeliste (Finanz-Spec § 9.2, Rechenschaft B1 Task 10): was offen ist und an wem es hängt, zu einem Stichtag —
  * für die Amtsübergabe. Vorgänge, die jemand angelegt oder eingereicht hat (Entwurf, Auslage, Zahlung an Partner,
  * Umwidmung, Korrektur), stehen bei dieser Person; offene Zahlungen, Nachweisfristen, offene Umsätze und die Gültigkeit
- * des Freistellungsbescheids beim Verein (Entscheidung 7 des Plans). Der Bestand ist der heutige; der Stichtag bestimmt
+ * des Freistellungsbescheids beim Verein (Entscheidung 7 des Plans); dort auch offene Berichtigungen der Steuererklärung
+ * (Prüfanlass) und der Umsatzsteuer, nach derselben Regel wie die Frist (B9, F4) — so erfährt der Nachfolger davon. Der Bestand ist der heutige; der Stichtag bestimmt
  * Fälligkeit, „überfällig“ und die Gültigkeit des Bescheids. Mit Personenbezug.
  */
 
-export type HandoverItemKind = 'draftEntry' | 'expenseClaim' | 'partnerPayment' | 'purposeTransfer' | 'correction' | 'openItem' | 'partnerProof' | 'openTransactions' | 'noticeValidity';
+export type HandoverItemKind = 'draftEntry' | 'expenseClaim' | 'partnerPayment' | 'purposeTransfer' | 'correction' | 'openItem' | 'partnerProof' | 'openTransactions' | 'noticeValidity' | 'taxReturnAmendment' | 'vatAmendment';
 
 export interface HandoverItem {
   kind: HandoverItemKind;
@@ -39,6 +43,8 @@ export interface HandoverItem {
   overdueCount?: number;
   /** Nur bei `draftEntry`: der Buchungstext des Entwurfs (Designer Runde 7, 268). */
   text?: string | null;
+  /** Nur bei `taxReturnAmendment`: der Tag der Anzeige an das Finanzamt, sonst `null` (B9). */
+  notifiedOn?: string | null;
 }
 
 export interface HandoverListReport {
@@ -47,7 +53,7 @@ export interface HandoverListReport {
 }
 
 const GRACE_KEY = 'finance.proofGraceDays';
-const KIND_ORDER: readonly HandoverItemKind[] = ['draftEntry', 'expenseClaim', 'partnerPayment', 'purposeTransfer', 'correction', 'openItem', 'partnerProof', 'openTransactions', 'noticeValidity'];
+const KIND_ORDER: readonly HandoverItemKind[] = ['draftEntry', 'expenseClaim', 'partnerPayment', 'purposeTransfer', 'correction', 'taxReturnAmendment', 'vatAmendment', 'openItem', 'partnerProof', 'openTransactions', 'noticeValidity'];
 
 const paramsSchema: z.ZodType<ReportParams> = z.object({ date: z.iso.date() }).strict();
 
@@ -132,6 +138,21 @@ export function computeHandoverListReport(db: DbOrTx, params: ReportParams, env:
   const valid = noticeValidAt(db.select().from(financeNotices).all(), date);
   add(null, valid ? item('noticeValidity', valid.notice.id, { date: valid.notice.noticeDate, dueOn: valid.validUntil }) : item('noticeValidity', '', { overdue: true }));
 
+  // B9 (F4): offene Prüfanlässe der Steuererklärung (Zeitraum, letzte Abgabe, Anzeige) und offene Berichtigungen der
+  // Umsatzsteuer (Zeitraum, letzte Abgabe) — dieselbe Regel wie die Frist; `date` ist der Tag der letzten Abgabe.
+  for (const period of taxPeriodsInternal(db)) {
+    if (period.filedOn === null) continue;
+    const review = taxReviewStateInternal(env, db, period.id);
+    if (review.reviewDue) add(null, item('taxReturnAmendment', period.id, { refNumber: period.label, date: review.lastFiledOn, notifiedOn: review.notifiedOn }));
+  }
+  const years = db.select({ startsOn: financeFiscalYears.startsOn }).from(financeFiscalYears).all().map((y) => Number(y.startsOn.slice(0, 4)));
+  if (years.length > 0) {
+    for (let y = Math.min(...years); y <= Number(date.slice(0, 4)); y++) {
+      const { advance, annual } = vatPeriodViewsInternal(db, y, date, timeZone);
+      for (const p of [...advance, annual]) if (p.amendmentDue) add(null, item('vatAmendment', p.key, { refNumber: p.key, date: p.filings.at(-1)?.filedOn ?? null }));
+    }
+  }
+
   const order = (a: HandoverItem, b: HandoverItem) => KIND_ORDER.indexOf(a.kind) - KIND_ORDER.indexOf(b.kind) || (a.date ?? a.dueOn ?? '').localeCompare(b.date ?? b.dueOn ?? '') || a.refId.localeCompare(b.refId);
   const people = [...byUser.keys()].filter((k): k is string => k !== null).sort();
   return {
@@ -152,6 +173,8 @@ const KIND_TEXT: Record<HandoverItemKind, string> = {
   partnerProof: 'Nachweis eines Partners',
   openTransactions: 'offene Kontoumsätze',
   noticeValidity: 'Freistellungsbescheid gültig bis',
+  taxReturnAmendment: 'Steuererklärung prüfen und berichtigen (§ 153 AO)',
+  vatAmendment: 'Umsatzsteuer berichtigen (§ 153 AO)',
 };
 
 const day = (value: string | null) => (value ? paperDate(value as never) : '');
@@ -169,7 +192,7 @@ export function handoverListTypst(data: HandoverListReport, ctx: ReportRenderCon
         '(1fr, 28mm, 22mm, 22mm, 26mm)',
         ['Art', 'Nr.', 'Datum', 'fällig', 'in €'],
         g.items.map((i) => {
-          const what = i.kind === 'openTransactions' ? `${KIND_TEXT[i.kind]}: ${i.count ?? 0} (${ctx.accountNames[i.refId] ?? ''})` : i.kind === 'noticeValidity' && !i.dueOn ? 'kein gültiger Freistellungsbescheid' : [KIND_TEXT[i.kind], i.contactName, i.text, i.kind === 'openItem' && i.count ? ratesText(i.count, i.overdueCount ?? 0) : null].filter(Boolean).join(' · ');
+          const what = i.kind === 'openTransactions' ? `${KIND_TEXT[i.kind]}: ${i.count ?? 0} (${ctx.accountNames[i.refId] ?? ''})` : i.kind === 'noticeValidity' && !i.dueOn ? 'kein gültiger Freistellungsbescheid' : [KIND_TEXT[i.kind], i.contactName, i.text, i.kind === 'openItem' && i.count ? ratesText(i.count, i.overdueCount ?? 0) : null, i.notifiedOn ? `angezeigt am ${day(i.notifiedOn)}` : null].filter(Boolean).join(' · ');
           // Zusammengefasste Raten: das früheste Fälligkeitsdatum, überfällig steht schon im Text.
           const due = i.kind === 'openItem' && i.count ? day(i.dueOn) : i.overdue && i.dueOn ? `${day(i.dueOn)} (überfällig)` : day(i.dueOn);
           return [textCell(what), textCell(i.refNumber ?? ''), textCell(day(i.date)), textCell(due), i.amountCents === null ? `table.cell(align: right)${textCell(EMPTY)}` : amountCell(i.amountCents)];
@@ -195,7 +218,8 @@ export const handoverListReport: ReportDefinition<HandoverListReport> = {
     const row = params.date ? fiscalYearForInternal(db, params.date) : null;
     return row ? [row.id] : [];
   },
-  settingKeys: [GRACE_KEY, TIME_ZONE_SETTING],
+  // B9: dazu die Einstellungen der Berichte, aus denen der Prüfanlass der Steuererklärung rechnet.
+  settingKeys: [...new Set([GRACE_KEY, TIME_ZONE_SETTING, ...TAX_FIGURES_SETTING_KEYS])],
   compute: computeHandoverListReport,
   toTypst: handoverListTypst,
   titleKey: 'finance.reports.handoverList.title',

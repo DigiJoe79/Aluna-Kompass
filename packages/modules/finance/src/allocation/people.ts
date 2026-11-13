@@ -7,6 +7,7 @@ import { boardMembersMaintainedInternal } from '../ledger/board';
 import { requireFinanceRead } from '../ledger/access';
 import { financeAllocationLines, financeCategories, financeEntries, financeExpenseClaims, financeFiscalYears, financeMoneyLines, financeOpenItemSettlements, financeOpenItems, financePartnerPaidLines, financePartnerPayments } from '../schema';
 import { basisInForceOn } from './basis-rules';
+import { liveSettlementCondition } from '../ledger/settlement-live';
 
 /**
  * Personenübersicht (F8b Task 4, Spec 8.2, Annahme 9, 10): Pauschalen und
@@ -79,7 +80,7 @@ function reimbursementSumsByContact(db: DbOrTx, range: { from: string; to: strin
     .from(financeOpenItemSettlements)
     .innerJoin(financeMoneyLines, eq(financeOpenItemSettlements.moneyLineId, financeMoneyLines.id))
     .innerJoin(financeOpenItems, eq(financeOpenItemSettlements.openItemId, financeOpenItems.id))
-    .where(eq(financeOpenItems.originType, 'financeExpenseClaim'))
+    .where(and(eq(financeOpenItems.originType, 'financeExpenseClaim'), liveSettlementCondition()))
     .all();
   const claimsOfEntry = new Map<string, string[]>();
   for (const r of settling) if (r.claimId) claimsOfEntry.set(r.entryId, [...(claimsOfEntry.get(r.entryId) ?? []), r.claimId]);
@@ -230,7 +231,7 @@ export function originOfLine(db: DbOrTx, lineId: string, entryId: string): LineO
     const settlement = db
       .select({ openItemId: financeOpenItemSettlements.openItemId })
       .from(financeOpenItemSettlements)
-      .where(inArray(financeOpenItemSettlements.moneyLineId, moneyLines.map((m) => m.id)))
+      .where(and(inArray(financeOpenItemSettlements.moneyLineId, moneyLines.map((m) => m.id)), liveSettlementCondition()))
       .get();
     if (settlement) {
       const item = db.select().from(financeOpenItems).where(eq(financeOpenItems.id, settlement.openItemId)).get();

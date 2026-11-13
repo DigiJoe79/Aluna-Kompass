@@ -58,9 +58,7 @@ function bankText(raw: WorkRaw): string {
   return (text || raw.bookingDate).slice(0, 300);
 }
 
-export interface MiniFormRow extends SplitRowState {
-  contactName?: string | null;
-}
+export type MiniFormRow = SplitRowState;
 
 export interface MiniFormState {
   entryDate: string;
@@ -73,7 +71,7 @@ export interface MiniFormState {
 }
 
 const row = (index: number, fields: Partial<MiniFormRow>): MiniFormRow => ({
-  key: `mini-${index + 1}`, categoryId: '', amountText: '', contactId: null, projectId: null, purposeId: null, abroad: false, addsToAssets: false, ...fields,
+  key: `mini-${index + 1}`, categoryId: '', amountText: '', contactId: null, projectId: null, purposeId: null, abroad: null, addsToAssets: false, ...fields,
 });
 
 export function miniFormFromSuggestion(raw: WorkRaw, draft: SuggestionDraft | null, contactNames: ReadonlyMap<string, string>): MiniFormState {
@@ -95,7 +93,7 @@ export function miniFormFromSuggestion(raw: WorkRaw, draft: SuggestionDraft | nu
         contactName: line.contactId ? (contactNames.get(line.contactId) ?? null) : null,
         projectId: line.projectId ?? null,
         purposeId: line.purposeId ?? null,
-        abroad: line.abroad ?? false,
+        abroad: line.abroad ?? null,
         assetEndowment: line.assetEndowment ?? false,
         addsToAssetsOptOut: line.addsToAssetsOptOut ?? null,
         serviceDate: line.serviceDate ?? null,
@@ -148,7 +146,8 @@ export function miniFormToBookInput(state: MiniFormState, rawTransactionId: stri
       contactId: r.contactId,
       projectId: r.projectId,
       purposeId: r.purposeId,
-      abroad: r.abroad,
+      // Ohne Wert belegt der Dienst „Im Ausland verwendet“ vor (Befund B2, 0.5.2).
+      ...(typeof r.abroad === 'boolean' ? { abroad: r.abroad } : {}),
       // Merkmale der Anlage Gem wie in der Buchungsmaske (`entry-form.ts`): ohne Angabe die Vorgabe der Art.
       ...(r.addsToAssetsOptOut ? { addsToAssets: false, addsToAssetsOptOut: r.addsToAssetsOptOut } : {}),
       ...(r.assetEndowment ? { assetEndowment: true } : {}),
@@ -167,11 +166,11 @@ export function miniFormToBookInput(state: MiniFormState, rawTransactionId: stri
 /**
  * `?raw=` der vollen Maske („Ändern“ aus der Arbeitsliste): Konto, Betrag,
  * Richtung und Bindung aus dem Kontoumsatz, Text und Aufteilung aus dem
- * Vorschlag. Ohne Vorschlag eine Zeile mit dem ganzen Betrag.
+ * Vorschlag. Ohne Vorschlag eine Zeile mit dem ganzen Betrag. `contactNames` wie bei `fromEntryView`.
  */
-export function formFromTransaction(raw: WorkRaw, draft: SuggestionDraft | null): EntryFormState {
+export function formFromTransaction(raw: WorkRaw, draft: SuggestionDraft | null, contactNames: ReadonlyMap<string, string> = new Map()): EntryFormState {
   if (draft) {
-    const form = fromEntryView({ id: '', entryDate: draft.entryDate, text: draft.text, moneyLines: draft.moneyLines, allocationLines: draft.allocationLines.map((l) => ({ ...l, taxCode: l.taxCode ?? undefined })) });
+    const form = fromEntryView({ id: '', entryDate: draft.entryDate, text: draft.text, moneyLines: draft.moneyLines, allocationLines: draft.allocationLines.map((l) => ({ ...l, taxCode: l.taxCode ?? undefined })) }, contactNames);
     return {
       ...form,
       id: undefined,

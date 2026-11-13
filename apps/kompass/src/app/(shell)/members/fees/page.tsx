@@ -95,6 +95,7 @@ export default async function FeesPage({ searchParams }: { searchParams: Promise
         types={types.ok ? types.value.map((ty) => ({ id: ty.id, name: nameOrEmpty(ty.name[leading], ty.key) })) : []}
         levels={levels}
         canFees={canFees}
+        canAssign={hasPermission(ctx, 'finance.entriesWrite') && hasPermission(ctx, 'finance.read')}
         today={today}
       />
     </Page>

@@ -15,6 +15,7 @@ import { FormGrid } from '@/components/forms/form-grid';
 import { ListPager } from '@/components/list-pager';
 import { Overline } from '@/components/overline';
 import { RowMenu } from '@/components/row-menu';
+import { AssignPaymentDialog } from '@/app/(shell)/finance/open-items/assign-payment-dialog';
 import { SearchField } from '@/components/search-field';
 import { StatusBadge, isNormalInList, statusTone } from '@/components/status-badge';
 import { Input } from '@/components/ui/input';
@@ -40,6 +41,8 @@ export interface FeeListProps {
   types: { id: string; name: string }[];
   levels: { key: string; name: string; last: boolean }[];
   canFees: boolean;
+  /** `finance.entriesWrite` und `finance.read`: „Zahlung zuordnen …“ an der Zeile (Spec Zahlung zuordnen § Bausteine). */
+  canAssign?: boolean;
   today: string;
 }
 
@@ -48,8 +51,10 @@ export interface FeeListProps {
  * Spendenbuch), Summenkasten Soll · Bezahlt · Offen · Davon gemahnt, eine Zeile je Beitrag mit Unterzeile, wenn der
  * Rhythmus mehrere Zeiträume hat; Summe im Tabellenfuß. Stunden und Erlassen im Zeilenmenü, nur mit `members.fees`.
  */
-export function FeeList({ year, years, rows, total, unfiltered, offset, pageSize, totals, exempt, types, levels, canFees, today }: FeeListProps) {
+export function FeeList({ year, years, rows, total, unfiltered, offset, pageSize, totals, exempt, types, levels, canFees, canAssign = false, today }: FeeListProps) {
   const t = useTranslations('members.fees');
+  const ta = useTranslations('finance.openItems.assign');
+  const [assign, setAssign] = useState<FeeView | null>(null);
   const { date } = useDateFormat();
   const router = useRouter();
   const pathname = usePathname();
@@ -165,6 +170,7 @@ export function FeeList({ year, years, rows, total, unfiltered, offset, pageSize
                           <RowMenu
                             name={`${f.name} ${f.period}`}
                             items={[
+                              { key: 'assign', label: ta('trigger'), testId: 'fee-assign', onSelect: () => setAssign(f), disabledReason: !f.openItemId ? ta('menuDisabled.pending') : !canAssign ? ta('menuDisabled.noRight') : undefined },
                               { key: 'defer', label: t('row.defer'), onSelect: () => { setDeferOn(f.dueOn > today ? f.dueOn : today); setDefer(f); } },
                               { key: 'waive', label: t('row.waive'), onSelect: () => setWaive(f) },
                             ]}
@@ -229,6 +235,22 @@ export function FeeList({ year, years, rows, total, unfiltered, offset, pageSize
           </FormField>
         </FormGrid>
       </ConfirmDialog>
+      {assign?.openItemId ? (
+        <AssignPaymentDialog
+          openItemIds={[assign.openItemId]}
+          open
+          onOpenChange={(o) => {
+            if (!o) {
+              setAssign(null);
+              router.refresh();
+            }
+          }}
+          today={today}
+          onAssigned={(r) => {
+            if (r.unfoundedNotice) router.push(`/members/${assign.membershipId}?item=${r.openItemId}`);
+          }}
+        />
+      ) : null}
       <ConfirmDialog
         open={waive !== null}
         onOpenChange={(open) => (open ? undefined : setWaive(null))}

@@ -350,6 +350,14 @@ export type FinanceOpenItemRow = typeof financeOpenItems.$inferSelect;
  * Geldzeile einer Rückgabe einen festgeschriebenen Ausgleich ganz oder teilweise zurück: Die Richtung steht im
  * Verweis, nicht im Vorzeichen, und sein Betrag zählt vom Ausgeglichenen ab — der offene Rest wird berechnet, nie
  * gespeichert (`settledCentsFor`).
+ *
+ * B10 (0.5.2): Eine **nachträgliche Zuordnung** ist ein Ausgleich, der erst nach dem Festschreiben an eine Geldzeile
+ * kommt (`assignedAt` gesetzt); ein Ausgleich aus dem Buchen hat `assignedAt` leer. Aufgehoben wird sie mit
+ * `releasedAt`, einmal gesetzt, nie wieder leer; die Zeile bleibt als Spur stehen. **Lebend** ist ein Ausgleich mit
+ * `releasedAt` leer an einer festgeschriebenen, nicht zurückgenommenen Buchung (`liveSettlementCondition` in
+ * `ledger/open-items.ts`, Wächter `tests/live-settlements.test.ts`). Die Trigger lassen an einer festen Geldzeile nur
+ * das Einfügen einer Zuordnung und ihr einmaliges Aufheben zu. Gelöscht wird nichts im Betrieb: Die Zuordnung teilt
+ * Aufbewahrung und das spätere Entfernen des Personenbezugs mit der Buchung, an der sie hängt (§ 147 AO, 10 Jahre).
  */
 export const financeOpenItemSettlements = sqliteTable(
   'finance_open_item_settlements',
@@ -359,9 +367,14 @@ export const financeOpenItemSettlements = sqliteTable(
     openItemId: text('open_item_id').notNull().references(() => financeOpenItems.id),
     amountCents: integer('amount_cents').notNull(),
     reversesSettlementId: text('reverses_settlement_id'),
+    assignedAt: text('assigned_at'),
+    assignedByUserId: text('assigned_by_user_id'),
+    releasedAt: text('released_at'),
+    releasedByUserId: text('released_by_user_id'),
   },
   (t) => [
-    uniqueIndex('finance_open_item_settlements_pair_idx').on(t.moneyLineId, t.openItemId),
+    // B10: Dasselbe Paar lässt sich nach dem Aufheben neu zuordnen; die aufgehobene Zeile bleibt stehen.
+    uniqueIndex('finance_open_item_settlements_pair_idx').on(t.moneyLineId, t.openItemId).where(sql`released_at is null`),
     index('finance_open_item_settlements_item_idx').on(t.openItemId),
     index('finance_open_item_settlements_reverses_idx').on(t.reversesSettlementId),
   ],
@@ -2146,6 +2159,12 @@ export const financeTaxPeriods = sqliteTable(
     statuteDocumentId: text('statute_document_id'),
     noticeId: text('notice_id').references(() => financeNotices.id),
     answersJson: text('answers_json').notNull().default('{}'),
+    /**
+     * B9 (0.5.2): das Abbild der Werte bei der ersten Abgabe (`reporting/tax-figures.ts`, JSON) — Maßstab des Prüfanlasses
+     * nach § 153 AO, bis eine Berichtigung oder Prüfung ihn ablöst. `null` bei Abgaben vor 0.5.2: Dann meldet Kompass
+     * nie einen Prüfanlass.
+     */
+    filedFigures: text('filed_figures'),
     createdAt: text('created_at').notNull(),
     createdByUserId: text('created_by_user_id').notNull(),
     updatedAt: text('updated_at').notNull(),
@@ -2153,6 +2172,54 @@ export const financeTaxPeriods = sqliteTable(
   (t) => [index('finance_tax_periods_first_idx').on(t.firstFiscalYearId), index('finance_tax_periods_last_idx').on(t.lastFiscalYearId)],
 );
 export type FinanceTaxPeriodRow = typeof financeTaxPeriods.$inferSelect;
+
+/**
+ * B9 (Spec 0.5.2 § 4.3): die berichtigte Steuererklärung als zweite Abgabe eines Erklärungszeitraums — Tag, Abbild der
+ * Werte, die festgeschriebene Fassung von `taxReturnGem` mit dem Datenstand der Berichtigung und die Ablage.
+ * `by_user_id` ist, wer einträgt, nicht wer abgegeben hat. Kein Löschen; ändern lassen sich nur der Tag und die Fächer
+ * (Trigger `finance_tax_amendments_no_*`).
+ */
+export const financeTaxAmendments = sqliteTable(
+  'finance_tax_amendments',
+  {
+    id: text('id').primaryKey(),
+    taxPeriodId: text('tax_period_id').notNull().references(() => financeTaxPeriods.id),
+    filedOn: text('filed_on').notNull(),
+    figures: text('figures').notNull(),
+    reportId: text('report_id').notNull().references(() => financeReports.id),
+    filedReturnDocumentId: text('filed_return_document_id'),
+    transmissionProtocolDocumentId: text('transmission_protocol_document_id'),
+    at: text('at').notNull(),
+    byUserId: text('by_user_id').notNull(),
+  },
+  (t) => [index('finance_tax_amendments_period_idx').on(t.taxPeriodId)],
+);
+export type FinanceTaxAmendmentRow = typeof financeTaxAmendments.$inferSelect;
+
+/**
+ * B9 (Spec 0.5.2 § 4.3): eine Prüfung zum Prüfanlass einer abgegebenen Steuererklärung.
+ * - `noAmendment`: ohne Berichtigung geschlossen — Tag (heute), Abbild als neuer Maßstab, Begründung (Freitext, nie
+ *   im Protokoll), optional ein Beleg aus der Akte; ganz unveränderlich.
+ * - `notified`: die Anzeige an das Finanzamt — Tag der Anzeige und das Schreiben im Fach `document_id`; kein Abbild,
+ *   schließt nichts. Ändern lassen sich nur Tag und Fach.
+ * Kein Löschen (Trigger `finance_tax_amendment_checks_no_*`).
+ */
+export const financeTaxAmendmentChecks = sqliteTable(
+  'finance_tax_amendment_checks',
+  {
+    id: text('id').primaryKey(),
+    taxPeriodId: text('tax_period_id').notNull().references(() => financeTaxPeriods.id),
+    kind: text('kind', { enum: ['noAmendment', 'notified'] }).notNull(),
+    checkedOn: text('checked_on').notNull(),
+    figures: text('figures'),
+    reason: text('reason'),
+    documentId: text('document_id'),
+    at: text('at').notNull(),
+    byUserId: text('by_user_id').notNull(),
+  },
+  (t) => [index('finance_tax_amendment_checks_period_idx').on(t.taxPeriodId)],
+);
+export type FinanceTaxAmendmentCheckRow = typeof financeTaxAmendmentChecks.$inferSelect;
 
 /**
  * Rechenschaft D2 (Spec § D2): Finanzamt, Steuernummer und begünstigter Zweck einer Körperschaft, an die Kompass eine

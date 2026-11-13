@@ -105,6 +105,33 @@ test.describe('members', () => {
     await expect(page.locator('[data-testid^="run-group-"]').first()).toBeVisible();
   });
 
+  /** Spec Zahlung zuordnen § 7.6: Mahnlauf → „Zuordnen …“ → das Mitglied fällt aus der Gruppe. */
+  test('Mahnlauf: gebuchte Zahlung zuordnen, das Mitglied fällt aus „Zahlung könnte passen“', async ({ page }) => {
+    await page.goto('/members/fees/dunning');
+    await page.getByRole('button', { name: 'Vorschau zeigen' }).click();
+    const group = page.getByTestId('run-group-paymentMayMatch');
+    const row = group.getByTestId('run-item').filter({ hasText: 'Mara Lenz' });
+    await row.getByTestId('dunning-assign').click();
+    const dialog = page.getByTestId('assign-payment-dialog');
+    await dialog.getByTestId('assign-payment-save').click();
+    await expect(dialog).toBeHidden();
+    await expect(page.getByTestId('run-group-paymentMayMatch').getByTestId('run-item').filter({ hasText: 'Mara Lenz' })).toHaveCount(0);
+  });
+
+  /** Spec Zahlung zuordnen § 3.4a: nach dem Zuordnen der Hinweis auf die unbegründete Mahnung, „Vermerk an den Mahnbrief“ legt die Notiz an. */
+  test('unbegründete Mahnung: Hinweis nach dem Zuordnen, Vermerk an den Mahnbrief', async ({ page }) => {
+    // Die Erinnerung ist eben verschickt, die nächste Stufe noch nicht reif: Der Weg geht über die Beitragszeile.
+    await page.goto(`/members/fees?year=${STORY_YEAR}`);
+    await page.getByTestId('fee-row').filter({ hasText: 'Fritz Albrecht' }).getByRole('button', { name: /Fritz Albrecht/ }).click();
+    await page.getByTestId('fee-assign').click();
+    await page.getByTestId('assign-payment-dialog').getByTestId('assign-payment-save').click();
+    // Es gibt einen Hinweis: Das Seitenfenster des Postens öffnet sich auf der Seite des Mitglieds.
+    const notice = page.getByTestId('unfounded-notice');
+    await expect(notice).toBeVisible();
+    await notice.getByTestId('unfounded-note').click();
+    await expect(notice.getByTestId('unfounded-note')).toHaveCount(0);
+  });
+
   /** Task 6: Einstellungen — einen neuen Stand der Beitragsordnung anlegen. */
   test('Einstellungen: neuen Stand der Beitragsordnung anlegen', async ({ page }) => {
     await page.goto('/admin/members?panel=feeSchedule');

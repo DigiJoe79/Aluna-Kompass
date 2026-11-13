@@ -139,6 +139,21 @@ describe('Umsatzsteuer-Fristen (Plan E6a Task 6)', () => {
     expect(screen.queryByTestId('deadline-cause')).toBeNull();
   });
 
+  it('Prüfanlass der Steuererklärung wie die Berichtigung der USt: unverzüglich, Unterzeile mit Stellen bzw. Anzeige, ohne Zeilenaktion (B9)', () => {
+    const review = D({ key: 'taxReturnAmendment:p1', kind: 'taxReturnAmendment', dueOn: null, params: { period: '2025', lines: 'Zeile 9 (2025), Beilage EÜR 2025' }, href: '/finance/tax?period=p1' });
+    const notified = D({ ...review, key: 'taxReturnAmendment:p2', params: { period: '2024', lines: 'Zeile 21', notifiedOn: '2026-09-01' } });
+    wrap(<DeadlineList deadlines={[review, notified]} canFileVat canRead today="2026-10-25" />);
+    const rows = screen.getAllByTestId('deadline-row');
+    expect(within(rows[0]!).getByText(m('finance.deadlines.computed.immediately'))).toBeTruthy();
+    expect(within(rows[0]!).getByTestId('deadline-cause').textContent).toBe('Zeile 9 (2025), Beilage EÜR 2025');
+    expect(within(rows[1]!).getByTestId('deadline-cause').textContent).toContain('01.09.2026');
+    for (const row of rows) expect(within(row).queryAllByRole('button')).toHaveLength(0);
+    cleanup();
+    wrap(<DeadlinesHeader deadlines={[review]} approaching={0} exceeded={0} />);
+    expect(screen.getByTestId('deadlines-head').textContent).toContain('2025');
+    expect(screen.getByTestId('deadlines-head').textContent).not.toContain(m('finance.deadlines.headNone'));
+  });
+
   it('macht den Zeitraum lesbar: Quartal, Monat, Jahr', async () => {
     const { vatPeriodLabel } = await import('@/lib/finance/vat-period');
     const t = (key: string, v: Record<string, string>) => `${key.split('.').at(-1)}:${Object.values(v).join('/')}`;

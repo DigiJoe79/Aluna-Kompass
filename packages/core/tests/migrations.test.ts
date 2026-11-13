@@ -123,6 +123,32 @@ describe('Daten-Migration 0.5.1 (Backlog 63)', () => {
   });
 });
 
+describe('Daten-Migration 0.5.2 (B6)', () => {
+  it('nimmt „#own“ vom Dublettenschlüssel und lässt den Rohumsatz danach so gesperrt wie vorher', () => {
+    const db = new Database(':memory:');
+    const columns = ['id', 'run_id', 'account_id', 'booking_date', 'value_date', 'amount_cents', 'counterparty_name', 'counterparty_iban', 'counterparty_email', 'purpose', 'bank_reference', 'end_to_end_id', 'return_code', 'mandate_reference', 'creditor_id', 'related_reference', 'dedup_key', 'line_index', 'created_at'];
+    db.exec(`CREATE TABLE finance_raw_transactions (${columns.join(', ')})`);
+    db.exec(`CREATE TRIGGER finance_raw_transactions_no_update BEFORE UPDATE OF ${columns.join(', ')} ON finance_raw_transactions BEGIN SELECT RAISE(ABORT, 'a raw transaction is a permanent record'); END`);
+    db.exec('CREATE TABLE finance_tax_periods (id)'); // die Migration ergänzt ihn um das Abbild (B9)
+    // Die Migration ergänzt die Ausgleiche um die Zuordnung und ersetzt Index und Trigger (B10).
+    db.exec('CREATE TABLE finance_open_item_settlements (id, money_line_id, open_item_id, amount_cents, reverses_settlement_id)');
+    db.exec('CREATE UNIQUE INDEX finance_open_item_settlements_pair_idx ON finance_open_item_settlements (money_line_id, open_item_id)');
+    db.exec('CREATE TRIGGER finance_open_item_settlements_final_no_insert BEFORE INSERT ON finance_open_item_settlements BEGIN SELECT 1; END');
+    db.exec('CREATE TRIGGER finance_open_item_settlements_final_no_update BEFORE UPDATE ON finance_open_item_settlements BEGIN SELECT 1; END');
+    const add = db.prepare('INSERT INTO finance_raw_transactions (id, dedup_key) VALUES (?, ?)');
+    add.run('own', '2026-10-20|1200|DE02999999990000000001|beitrag2026mitglied0002|0#own');
+    add.run('plain', '2026-10-20|1200|DE30999999990000000002|kundennr.:0004|0');
+    add.run('inside', 'a#ownb|0');
+
+    db.exec(readFileSync(path.join(MIGRATIONS_DIR, '0014_finance_0_5_2.sql'), 'utf8'));
+
+    const keys = Object.fromEntries((db.prepare('SELECT id, dedup_key FROM finance_raw_transactions').all() as { id: string; dedup_key: string }[]).map((r) => [r.id, r.dedup_key]));
+    expect(keys).toEqual({ own: '2026-10-20|1200|DE02999999990000000001|beitrag2026mitglied0002|0', plain: '2026-10-20|1200|DE30999999990000000002|kundennr.:0004|0', inside: 'a#ownb|0' });
+    expect(() => db.prepare("UPDATE finance_raw_transactions SET dedup_key = 'x' WHERE id = 'own'").run()).toThrow('a raw transaction is a permanent record');
+    expect(lastTrigger('finance_raw_transactions_no_update')).toContain('mandate_reference, creditor_id, related_reference, dedup_key, line_index, created_at ON finance_raw_transactions');
+  });
+});
+
 describe('hand-written SQL survives', () => {
   it('keeps at most one active open item per document as a partial unique index', () => {
     expect(allSql).toMatch(/CREATE UNIQUE INDEX `finance_open_items_document_active_idx`[^;]*WHERE[^;]*cancelled_at/);
@@ -542,6 +568,96 @@ describe('migration 0011 (0.4.0), aus 0054–0056 (E6a: Abgabe je Umsatzsteuer-Z
     expect(() => db.prepare('DELETE FROM finance_vat_filings').run()).toThrow(/permanent/);
     // Seit der alten 0060 (E6b) bleibt der Tag der Abgabe änderbar; Zeitraum und Berichtigung stehen fest.
     expect(() => db.prepare(`UPDATE finance_vat_filings SET period = '2024'`).run()).toThrow(/permanent/);
+    db.close();
+  });
+});
+
+describe('Berichtigung und Prüfung der Steuererklärung (0.5.2, B9)', () => {
+  it('keeps amendments and checks permanent; only the day, the slots and a notice move', () => {
+    for (const name of ['finance_tax_amendments_no_delete', 'finance_tax_amendments_no_update', 'finance_tax_amendment_checks_no_delete', 'finance_tax_amendment_checks_no_update']) {
+      expect(allSql, name).toContain(`CREATE TRIGGER ${name} `);
+    }
+    const db = new Database(':memory:');
+    applyMigrationsUpTo(db, files.at(-1)!);
+    db.pragma('foreign_keys = OFF');
+    db.exec(`INSERT INTO finance_tax_amendments (id, tax_period_id, filed_on, figures, report_id, filed_return_document_id, transmission_protocol_document_id, at, by_user_id) VALUES ('A', 'P', '2026-05-01', '{}', 'R', NULL, NULL, 't', 'u');
+      INSERT INTO finance_tax_amendment_checks (id, tax_period_id, kind, checked_on, figures, reason, document_id, at, by_user_id) VALUES ('N', 'P', 'notified', '2026-05-01', NULL, NULL, NULL, 't', 'u'), ('C', 'P', 'noAmendment', '2026-05-02', '{}', 'r', NULL, 't', 'u');`);
+    db.exec(`UPDATE finance_tax_amendments SET filed_on = '2026-05-03', filed_return_document_id = 'D', transmission_protocol_document_id = 'E' WHERE id = 'A'`);
+    expect(() => db.exec(`UPDATE finance_tax_amendments SET figures = '{"x":1}' WHERE id = 'A'`)).toThrow(/permanent/);
+    expect(() => db.exec(`DELETE FROM finance_tax_amendments`)).toThrow(/permanent/);
+    db.exec(`UPDATE finance_tax_amendment_checks SET checked_on = '2026-05-03', document_id = 'D' WHERE id = 'N'`);
+    expect(() => db.exec(`UPDATE finance_tax_amendment_checks SET checked_on = '2026-05-03' WHERE id = 'C'`)).toThrow(/permanent/);
+    expect(() => db.exec(`UPDATE finance_tax_amendment_checks SET kind = 'noAmendment' WHERE id = 'N'`)).toThrow(/permanent/);
+    expect(() => db.exec(`DELETE FROM finance_tax_amendment_checks`)).toThrow(/permanent/);
+    db.close();
+  });
+});
+
+/** Legt eine Zeile an und füllt jede Pflichtspalte ohne Vorgabe, die der Test nicht nennt, mit einem Platzhalter. */
+const insertRow = (db: Database.Database, table: string, values: Record<string, string | number | null>) => {
+  const cols = db.prepare(`PRAGMA table_info(${table})`).all() as { name: string; type: string; notnull: number; dflt_value: unknown; pk: number }[];
+  const row: Record<string, string | number | null> = {};
+  for (const c of cols) {
+    if (c.name in values) row[c.name] = values[c.name]!;
+    else if (c.notnull && c.dflt_value === null) row[c.name] = /INT/i.test(c.type) ? 0 : 'x';
+  }
+  const names = Object.keys(row);
+  db.prepare(`INSERT INTO ${table} (${names.join(', ')}) VALUES (${names.map((n) => `@${n}`).join(', ')})`).run(row);
+};
+
+describe('Zahlung zuordnen (0.5.2, B10)', () => {
+  /** Eine festgeschriebene Buchung mit einer Geldzeile `M` und einem Ausgleich `S0` aus dem Buchen; Posten `P` und `Q`. */
+  const finalEntryDb = () => {
+    const db = new Database(':memory:');
+    applyMigrationsUpTo(db, files.at(-1)!);
+    db.pragma('foreign_keys = OFF');
+    insertRow(db, 'finance_entries', { id: 'E', status: 'draft', reverses_entry_id: null });
+    insertRow(db, 'finance_money_lines', { id: 'M', entry_id: 'E', amount_cents: 12000 });
+    insertRow(db, 'finance_open_item_settlements', { id: 'S0', money_line_id: 'M', open_item_id: 'Q', amount_cents: 1000, reverses_settlement_id: null });
+    db.exec(`UPDATE finance_entries SET status = 'final' WHERE id = 'E'`);
+    return db;
+  };
+  const settle = (db: Database.Database, values: Record<string, string | number | null>) =>
+    insertRow(db, 'finance_open_item_settlements', { money_line_id: 'M', open_item_id: 'P', amount_cents: 6000, reverses_settlement_id: null, ...values });
+
+  it('takes a later assignment at a finalized line, and nothing else', () => {
+    const db = finalEntryDb();
+    expect(() => settle(db, { id: 'S1' })).toThrow(/immutable/);
+    expect(() => settle(db, { id: 'S1', assigned_at: 't', reverses_settlement_id: 'S0' })).toThrow(/immutable/);
+    settle(db, { id: 'S1', assigned_at: 't', assigned_by_user_id: 'u' });
+    db.close();
+  });
+
+  it('releases an assignment once; amount, item, line and the assignment itself stay', () => {
+    const db = finalEntryDb();
+    settle(db, { id: 'S1', assigned_at: 't', assigned_by_user_id: 'u' });
+    for (const set of [`amount_cents = 1`, `open_item_id = 'Z'`, `money_line_id = 'Z'`, `assigned_at = 't2'`]) {
+      expect(() => db.exec(`UPDATE finance_open_item_settlements SET ${set} WHERE id = 'S1'`), set).toThrow();
+    }
+    expect(() => db.exec(`UPDATE finance_open_item_settlements SET released_at = 't' WHERE id = 'S0'`)).toThrow();
+    db.exec(`UPDATE finance_open_item_settlements SET released_at = 't', released_by_user_id = 'u' WHERE id = 'S1'`);
+    expect(() => db.exec(`UPDATE finance_open_item_settlements SET released_at = 't3' WHERE id = 'S1'`)).toThrow();
+    expect(() => db.exec(`DELETE FROM finance_open_item_settlements WHERE id = 'S1'`)).toThrow(/immutable/);
+    db.close();
+  });
+
+  it('lets the same pair be assigned again only after the release', () => {
+    const db = finalEntryDb();
+    settle(db, { id: 'S1', assigned_at: 't' });
+    expect(() => settle(db, { id: 'S2', assigned_at: 't' })).toThrow(/UNIQUE/);
+    db.exec(`UPDATE finance_open_item_settlements SET released_at = 't', released_by_user_id = 'u' WHERE id = 'S1'`);
+    settle(db, { id: 'S2', assigned_at: 't' });
+    db.close();
+  });
+
+  it('keeps even a draft settlement from being released twice or rewritten after release', () => {
+    const db = new Database(':memory:');
+    applyMigrationsUpTo(db, files.at(-1)!);
+    db.pragma('foreign_keys = OFF');
+    insertRow(db, 'finance_entries', { id: 'E', status: 'draft' });
+    insertRow(db, 'finance_money_lines', { id: 'M', entry_id: 'E', amount_cents: 100 });
+    settle(db, { id: 'S1', released_at: 't' });
+    expect(() => db.exec(`UPDATE finance_open_item_settlements SET released_at = 't2' WHERE id = 'S1'`)).toThrow();
     db.close();
   });
 });

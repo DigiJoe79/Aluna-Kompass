@@ -5,7 +5,8 @@ import { filterMemberships } from '../src/memberships';
 import { listFees } from '../src/fees';
 import { memberDunningNotices, memberFeeAgreements, memberFeeRuns, memberFeeSchedules, memberMemberships, memberRunLetters, memberTypePeriods } from '../src/schema';
 import { documents } from '@kompass/module-dms';
-import { financeSepaMandates, seedFinance } from '@kompass/module-finance';
+import { assignablePaymentsInternal, assignPaymentToOpenItem, financeOpenItemSettlements, financeSepaMandates, listOpenItemSettlements, seedFinance } from '@kompass/module-finance';
+import { previewDunningRun, unfoundedNoticesInternal } from '../src/dunning';
 import { eq } from 'drizzle-orm';
 import { runDispatchState } from '../src/run-dispatch';
 import { seedMembers } from '../src/seed';
@@ -95,5 +96,43 @@ describe('seedMembers: fees (Plan M3)', () => {
     expect(notices.some((n) => n.levelKey === 'reminder' && sentAt(n.documentId) !== null)).toBe(true);
     expect(notices.some((n) => n.levelKey === 'dunning' && sentAt(n.documentId) === null)).toBe(true);
     expect(deps.db.select().from(memberRunLetters).all().length).toBeGreaterThan(notices.length - 1);
+  }, 30_000);
+});
+
+// Spec Zahlung zuordnen § 8: die acht Fälle, je über die Dienste geprüft.
+describe('seedMembers: payments to assign (B10)', () => {
+  it.each(['2026-09-05T08:00:00.000Z', '2027-03-01T08:00:00.000Z'])('seeds a candidate, a hint, a blocked donation, a guardian, an assignment, a partial, a released one and an unfounded reminder (%s)', async (now) => {
+    const { deps, userId } = setupMembers(ALL, { now, mail: fakeMailTransport() });
+    const ctx = ctxWith([...deps.registry.permissionKeys], userId);
+    await seedFinance(deps, ctx);
+    await seedMembers(deps, ctx);
+    const y = seedStoryYear(now.slice(0, 10));
+    const fees = await listFees(deps, ctx, { year: y, limit: 200 });
+    const fee = (name: string) => (fees.ok ? fees.value.items : []).find((f) => f.name.includes(name))!;
+    const candidatesOf = (name: string) => assignablePaymentsInternal(deps, deps.db, fee(name).openItemId!);
+
+    const early = candidatesOf('Lenz');
+    expect(early.some((c) => c.blockedBy === null && c.amountFits && c.purposeHint === null)).toBe(true);
+    expect(early.some((c) => c.purposeHint?.kind === 'otherYear')).toBe(true);
+    expect(early.some((c) => c.blockedBy === 'assignCategoryMismatch')).toBe(true);
+    const preview = await previewDunningRun(deps, ctx, { asOf: `${y}-08-31` });
+    expect(preview.ok && preview.value.paymentMayMatch.some((p) => p.name.includes('Lenz') && p.bookedPayments.length > 0)).toBe(true);
+
+    const minor = candidatesOf('Lotta');
+    expect(minor.some((c) => c.viaGuardian && c.blockedBy === null)).toBe(true);
+    expect(minor.some((c) => c.viaGuardian && c.blockedBy === 'assignCategoryMismatch')).toBe(true);
+
+    expect(fee('Seidel')).toMatchObject({ state: 'paid' });
+    const assigned = await listOpenItemSettlements(deps, ctx, { openItemId: fee('Seidel').openItemId! });
+    expect(assigned.ok && assigned.value.some((s) => s.assignedAt !== null && s.unassignable)).toBe(true);
+    expect(fee('Krüger')).toMatchObject({ state: 'partlyPaid' });
+    expect(fee('Marquardt').state).toBe('open');
+    expect(deps.db.select().from(financeOpenItemSettlements).where(eq(financeOpenItemSettlements.openItemId, fee('Marquardt').openItemId!)).all().some((s) => s.releasedAt !== null)).toBe(true);
+
+    // Nach dem Zuordnen der freien Zahlung von Fritz Albrecht war seine verschickte Erinnerung unbegründet.
+    const fritz = candidatesOf('Albrecht').find((c) => c.blockedBy === null)!;
+    expect(unfoundedNoticesInternal(deps, deps.db, fee('Albrecht').chargeId)).toEqual([]);
+    expect((await assignPaymentToOpenItem(deps, ctx, { openItemId: fee('Albrecht').openItemId!, moneyLineId: fritz.moneyLineId })).ok).toBe(true);
+    expect(unfoundedNoticesInternal(deps, deps.db, fee('Albrecht').chargeId)).toHaveLength(1);
   }, 30_000);
 });

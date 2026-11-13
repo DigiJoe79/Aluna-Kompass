@@ -6,7 +6,8 @@ import { listFinanceDeadlines } from '../src/closing/deadlines';
 import { getClosingStatus } from '../src/closing/status';
 import { saveNotice, voidNotice } from '../src/donations/notices';
 import { FINANCE_MCP_TOOLS } from '../src/mcp-tools';
-import { createTaxPeriod, linkTaxPeriodNotice, listTaxPeriods, saveTaxPeriodAnswers, updateTaxPeriod } from '../src/ledger/tax-periods';
+import { listTaxPeriods, updateTaxPeriod } from '../src/reporting/tax-amendments';
+import { createTaxPeriod, linkTaxPeriodNotice, saveTaxPeriodAnswers } from '../src/ledger/tax-periods';
 import { finalizeFinanceReport } from '../src/reporting/finalize';
 import { recordVatFiling } from '../src/reporting/vat-filing';
 import { bookEntry } from '../src/ledger/finalize';
@@ -45,25 +46,25 @@ describe('Abgabe der Steuererklärung und Bescheid (Rechenschaft D2 Task 7)', ()
     expect(back).toMatchObject({ filedOn: null, filedReportId: null, state: 'open' });
   });
 
-  it('locks the answers while the return is filed, over the screen and MCP alike (Befund 18c)', async () => {
+  it('changes the answers after filing only with acknowledgement, over the screen and MCP alike (B9, F1)', async () => {
     const { f, y, later } = await setup();
     const period = unwrap(await createTaxPeriod(f.deps, f.ctx, { firstFiscalYearId: y('2025'), lastFiscalYearId: y('2025'), withTaxAdvisor: false, dueOn: '2026-07-31' }));
+    // Vor der Abgabe ändert sich nichts: keine Bestätigung nötig.
     unwrap(await saveTaxPeriodAnswers(f.deps, f.ctx, { id: period.id, answers: COMPLETE }));
     f.closeYear(y('2025'));
     unwrap(await finalizeFinanceReport(f.deps, f.ctx, { report: 'taxReturnGem', params: { taxPeriodId: period.id } }));
     later();
     unwrap(await updateTaxPeriod(f.deps, f.ctx, { id: period.id, filedOn: '2026-05-31' }));
     const changed = { ...COMPLETE, memberCounts: { [y('2025')]: 12 } };
-    expect(err(await saveTaxPeriodAnswers(f.deps, f.ctx, { id: period.id, answers: changed }))).toMatchObject({ code: 'taxPeriodFiled', params: { period: '2025' } });
+    expect(err(await saveTaxPeriodAnswers(f.deps, f.ctx, { id: period.id, answers: changed }))).toMatchObject({ code: 'taxPeriodFiledUnacknowledged', params: { period: '2025' } });
     const tool = FINANCE_MCP_TOOLS.find((t) => t.name === 'finance_tax_period_answers_save')!;
-    expect(err(await tool.handler(f.deps, { ...f.ctx, channel: 'mcp' }, { id: period.id, answers: changed }))).toMatchObject({ code: 'taxPeriodFiled' });
-    // Die festgeschriebene Fassung bleibt die abgegebene.
+    expect(err(await tool.handler(f.deps, { ...f.ctx, channel: 'mcp' }, { id: period.id, answers: changed }))).toMatchObject({ code: 'taxPeriodFiledUnacknowledged' });
     const [listed] = unwrap(await listTaxPeriods(f.deps, f.ctx, {}));
     expect(listed!.answers.memberCounts).toBeUndefined();
     later();
-    unwrap(await updateTaxPeriod(f.deps, f.ctx, { id: period.id, filedOn: null }));
-    later();
-    expect(unwrap(await saveTaxPeriodAnswers(f.deps, f.ctx, { id: period.id, answers: changed })).answers.memberCounts).toEqual({ [y('2025')]: 12 });
+    expect(unwrap(await saveTaxPeriodAnswers(f.deps, f.ctx, { id: period.id, answers: changed, acknowledgeFiled: true })).answers.memberCounts).toEqual({ [y('2025')]: 12 });
+    // Die Angabe ändert die EÜR für das Finanzamt: Prüfanlass.
+    expect(unwrap(await listTaxPeriods(f.deps, f.ctx, {}))[0]).toMatchObject({ reviewDue: true, reviewCause: [{ kind: 'attachment', report: 'taxReturnIncomeStatement', year: '2025' }] });
   });
 
   it('links the notice after filing', async () => {
@@ -229,5 +230,72 @@ describe('Abgegeben, Fassung zurückgenommen (Designer Runde 7, 318)', () => {
     unwrap(f.deps.db.transaction((tx) => closeInternal(tx, f.deps, f.ctx, row)));
     unwrap(await finalizeFinanceReport(f.deps, f.ctx, { report: 'taxReturnGem', params: { taxPeriodId: period.id } }));
     expect(unwrap(await getTaxReturn(f.deps, f.ctx, { taxPeriodId: period.id })).retracted).toBeNull();
+  });
+});
+
+describe('Prüfanlass nach der Abgabe (B9, Spec 0.5.2 § 4.2)', () => {
+  async function filed() {
+    const { f, y, later } = await setup();
+    const { reopenInternal, closeInternal } = await import('../src/ledger/period');
+    const { financeFiscalYears } = await import('../src/schema');
+    const { eq } = await import('drizzle-orm');
+    const book = (date: string, cents: number) => bookEntry(f.deps, f.ctx, { entryDate: date, text: 'Spende', moneyLines: [{ accountId: f.cash.id, amountCents: cents }], allocationLines: [{ categoryId: f.donations.id, amountCents: cents }] }).then(unwrap);
+    await book('2025-03-01', 100_000);
+    const period = unwrap(await createTaxPeriod(f.deps, f.ctx, { firstFiscalYearId: y('2025'), lastFiscalYearId: y('2025'), withTaxAdvisor: false, dueOn: '2026-07-31' }));
+    unwrap(await saveTaxPeriodAnswers(f.deps, f.ctx, { id: period.id, answers: COMPLETE }));
+    f.closeYear(y('2025'));
+    unwrap(await finalizeFinanceReport(f.deps, f.ctx, { report: 'taxReturnGem', params: { taxPeriodId: period.id } }));
+    later();
+    unwrap(await updateTaxPeriod(f.deps, f.ctx, { id: period.id, filedOn: '2026-05-31' }));
+    const reopen = () => {
+      later();
+      unwrap(f.deps.db.transaction((tx) => reopenInternal(tx, f.deps, f.ctx, { id: y('2025'), note: 'Nachbuchung' })));
+    };
+    const close = async () => {
+      later();
+      const row = f.deps.db.select().from(financeFiscalYears).where(eq(financeFiscalYears.id, y('2025'))).get()!;
+      unwrap(f.deps.db.transaction((tx) => closeInternal(tx, f.deps, f.ctx, row)));
+      unwrap(await finalizeFinanceReport(f.deps, f.ctx, { report: 'taxReturnGem', params: { taxPeriodId: period.id } }));
+    };
+    const view = async () => unwrap(await listTaxPeriods(f.deps, f.ctx, {})).find((p) => p.id === period.id)!;
+    return { f, y, later, book, period, reopen, close, view };
+  }
+
+  it('N24: reopening, closing and finalizing again without a change of values brings no review', async () => {
+    const { reopen, close, view } = await filed();
+    expect(await view()).toMatchObject({ reviewDue: false, reviewCause: [], filedFiguresMissing: false, notifiedOn: null, amendments: [], checks: [] });
+    reopen();
+    expect(await view()).toMatchObject({ reviewDue: false, filedReportVoided: true });
+    await close();
+    expect(await view()).toMatchObject({ reviewDue: false, filedOn: '2026-05-31' });
+  });
+
+  it('a booking after reopening that changes line 9 opens a review at once; taking it back closes it again', async () => {
+    const { book, reopen, view } = await filed();
+    reopen();
+    await book('2025-06-01', 50_000);
+    expect(await view()).toMatchObject({ reviewDue: true, reviewCause: expect.arrayContaining([{ kind: 'line', line: '9', year: '2025' }, { kind: 'attachment', report: 'taxReturnIncomeStatement', year: '2025' }]) });
+    await book('2025-06-02', -50_000);
+    expect(await view()).toMatchObject({ reviewDue: false, reviewCause: [] });
+  });
+
+  it('a new day of the first filing keeps its figures; without figures (before 0.5.2) never a review', async () => {
+    const { f, later, book, period, reopen, view } = await filed();
+    reopen();
+    await book('2025-06-01', 50_000);
+    later();
+    expect(unwrap(await updateTaxPeriod(f.deps, f.ctx, { id: period.id, filedOn: '2026-06-01' }))).toMatchObject({ filedOn: '2026-06-01', reviewDue: true });
+    const { financeTaxPeriods } = await import('../src/schema');
+    const { eq } = await import('drizzle-orm');
+    f.deps.db.update(financeTaxPeriods).set({ filedFigures: null }).where(eq(financeTaxPeriods.id, period.id)).run();
+    expect(await view()).toMatchObject({ reviewDue: false, filedFiguresMissing: true });
+  });
+
+  it('refuses to take back the filing once an amendment or a check exists (taxPeriodAmended)', async () => {
+    const { f, later, period } = await filed();
+    const { financeTaxAmendmentChecks } = await import('../src/schema');
+    f.deps.db.insert(financeTaxAmendmentChecks).values({ id: 'C1', taxPeriodId: period.id, kind: 'notified', checkedOn: '2026-06-01', figures: null, reason: null, documentId: null, at: '2026-09-05T10:00:00.000Z', byUserId: f.userId }).run();
+    later();
+    expect(err(await updateTaxPeriod(f.deps, f.ctx, { id: period.id, filedOn: null }))).toMatchObject({ code: 'taxPeriodAmended', params: { period: '2025' } });
   });
 });

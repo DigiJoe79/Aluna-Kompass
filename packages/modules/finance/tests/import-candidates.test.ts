@@ -10,7 +10,7 @@ import { createAccount } from '../src/ledger/accounts';
 import { bookEntry } from '../src/ledger/finalize';
 import { createFirstFiscalYear } from '../src/ledger/fiscal-years';
 import { installFinance } from '../src/install';
-import { financeCategories, financeImportCandidates, financeImportRuns } from '../src/schema';
+import { financeCategories, financeImportCandidates, financeImportRuns, financeRawTransactions } from '../src/schema';
 import { setupFinance } from './helpers';
 
 const FIXTURES = path.resolve(import.meta.dirname, 'fixtures/camt');
@@ -95,5 +95,32 @@ describe('decideCandidate', () => {
     const f = await candidateFixture();
     const denied = await decideCandidate(f.deps, ctxWith(['finance.read']), { id: f.candidateId, decision: 'same' });
     expect(denied.ok ? null : denied.error).toEqual({ type: 'forbidden', permission: 'finance.entriesWrite' });
+  });
+});
+
+/** B6 (0.5.2): Dieselbe Datei geht nur einmal; ein neu abgerufener Auszug desselben Zeitraums trägt eine andere Nachrichtenkennung. */
+const reissued = (name: string, msgId: string) => new TextEncoder().encode(new TextDecoder().decode(bytes(name)).replace(/<MsgId>[^<]*<\/MsgId>/, `<MsgId>${msgId}</MsgId>`));
+
+describe('a line taken over as "own" in a later statement (B6, 0.5.2)', () => {
+  it('counts as known when the payer labelled it differently (candidate by purpose)', async () => {
+    const { deps, ctx } = setupFinance();
+    deps.db.transaction((tx) => installFinance(tx, deps, systemContext()));
+    const account = unwrap(await createAccount(deps, ctx, { name: 'Vereinskonto', kind: 'bank', iban: VEREIN_IBAN, isMain: true }));
+    unwrap(await importStatement(deps, ctx, { accountId: account.id, fileName: 'juni.xml', bytes: bytes('ohne-referenz.xml') }));
+    unwrap(await importStatement(deps, ctx, { accountId: account.id, fileName: 'juni-beitrag.xml', bytes: bytes('abweichender-zweck.xml') }));
+    const candidate = deps.db.select().from(financeImportCandidates).all()[0]!;
+    unwrap(await decideCandidate(deps, ctx, { id: candidate.id, decision: 'own' }));
+
+    const later = unwrap(await importStatement(deps, ctx, { accountId: account.id, fileName: 'juni-beitrag-2.xml', bytes: reissued('abweichender-zweck.xml', 'MSG-NEU-1') }));
+    expect(later.runs[0]).toMatchObject({ counts: { new: 0, known: 1, held: 0 } });
+  });
+
+  it('counts as known when it looked exactly like an older payment (candidate by key)', async () => {
+    const f = await candidateFixture();
+    unwrap(await decideCandidate(f.deps, f.ctx, { id: f.candidateId, decision: 'own' }));
+
+    const later = unwrap(await importStatement(f.deps, f.ctx, { accountId: f.account.id, fileName: 'september-2.xml', bytes: reissued('ohne-referenz-nicht-ueberlappend.xml', 'MSG-NEU-2') }));
+    expect(later.runs[0]).toMatchObject({ counts: { new: 0, known: 1, held: 0 } });
+    expect(f.deps.db.select().from(financeRawTransactions).all()).toHaveLength(2);
   });
 });

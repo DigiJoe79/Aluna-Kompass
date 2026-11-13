@@ -9,7 +9,9 @@ import { story, storyFile } from './story-year';
  * dem eigens gesäten Konto „Importkonto“: Dort warten nach dem Seed zwei
  * offene Kontoumsätze — „Bueromaterial“ (Regel „Büromaterial“, sicher) und
  * „Zuschuss“ (passt zum Entwurf „Zuschuss“ ohne Kontoumsatz, Vorschlag 0) —,
- * und ein Agent hat „Spende April“ über MCP als Entwurf vorbereitet.
+ * und ein Agent hat „Spende April“ über MCP als Entwurf vorbereitet. Dazu
+ * steht das fremde Geld für den Nachbarverein als ungeprüfter Entwurf im
+ * selben Reiter (seit 0.5.2 jeder ungeprüfte Entwurf mit Kontoumsatz).
  */
 test.describe('finance work list', () => {
   test.beforeEach(async ({ page }) => {
@@ -51,7 +53,7 @@ test.describe('finance work list', () => {
     for (const name of ['Zuzuordnen', 'Unsicher', 'Vom Agenten vorbereitet', 'Geprüft, nicht festgeschrieben', 'Fällig']) {
       await expect(page.getByRole('navigation', { name: 'Reiter der Arbeitsliste' }).getByRole('link', { name: new RegExp(name) })).toBeVisible();
     }
-    await expect(page.getByTestId('work-tab-agent')).toHaveText(/^Vom Agenten vorbereitet\s*1$/);
+    await expect(page.getByTestId('work-tab-agent')).toHaveText(/^Vom Agenten vorbereitet\s*2$/);
     await expect(page.getByRole('navigation', { name: 'Reiter der Arbeitsliste' }).getByRole('link', { name: /Zuzuordnen/ })).toHaveAttribute('aria-current', 'page');
     await expect(page.getByText(/zurückgehaltene Zeilen? warte/)).toBeVisible();
 
@@ -170,7 +172,7 @@ test.describe('finance work list', () => {
     await expect(page).toHaveURL(/\/finance\/work/);
   });
 
-  test('der Reiter „Vom Agenten vorbereitet“ zeigt den MCP-Entwurf mit Geprüft-Knopf', async ({ page }) => {
+  test('der Reiter „Vom Agenten vorbereitet“ zeigt die ungeprüften Entwürfe mit Geprüft-Knopf', async ({ page }) => {
     await loginAsAdmin(page);
     await page.goto('/finance/work?tab=agent');
     const row = page.getByTestId('work-entry').filter({ hasText: 'Spende April' });
@@ -178,6 +180,9 @@ test.describe('finance work list', () => {
     await expect(row.getByText('vom Agenten vorbereitet')).toBeVisible();
     await row.getByRole('button', { name: 'Geprüft' }).click();
     await expect(page.getByTestId('work-entry').filter({ hasText: 'Spende April' })).toHaveCount(0);
+    // Der am Bildschirm ungeprüft gebuchte Entwurf (fremdes Geld) steht im selben Reiter.
+    await page.getByTestId('work-entry').filter({ hasText: 'Nachbarverein Beispielstadt' }).getByRole('button', { name: 'Geprüft' }).click();
+    await expect(page.getByTestId('work-entry')).toHaveCount(0);
     // Bei null keine Marke (K10 Charge 2, Spec § 3.7.6).
     await expect(page.getByTestId('work-tab-agent')).toHaveText('Vom Agenten vorbereitet');
   });

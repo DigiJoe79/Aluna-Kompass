@@ -1,10 +1,21 @@
-import { mkdtempSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { moduleMcpTools } from '@kompass/core';
 import { createTestDeps, ctxWith, insertUser } from '@kompass/core/testing';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { sitePublishes } from '../src/schema';
+
+// Jeder Temp-Ordner dieser Datei wird nach dem Fall wieder gelöscht.
+const tempDirs: string[] = [];
+const tempDir = (prefix: string): string => {
+  const d = mkdtempSync(path.join(tmpdir(), prefix));
+  tempDirs.push(d);
+  return d;
+};
+afterEach(() => {
+  for (const d of tempDirs.splice(0)) rmSync(d, { recursive: true, force: true });
+});
 
 const fake = vi.hoisted(() => ({ env: null as unknown }));
 vi.mock('../src/pipeline/env', async (orig) => ({ ...(await orig<object>()), readSiteEnv: () => fake.env }));
@@ -40,7 +51,7 @@ const base = { runId: 'R1', startedAt: '2026-10-02T08:00:00.000Z', finishedAt: '
 
 describe('MCP answers stay under 10000 characters', () => {
   it('for every read tool of the site module with default arguments', async () => {
-    const d = mkdtempSync(path.join(tmpdir(), 'mcp-size-'));
+    const d = tempDir('mcp-size-');
     fake.env = { publicUrl: null, staging: true, deploy: null, templateDir: d, cacheDir: d, previewDir: d };
     const write = (kind: string, result: object) => writeFileSync(path.join(d, `${kind}-result.json`), JSON.stringify({ kind, ...base, result }));
     write('preview', { ...common, previewDir: '/x' });

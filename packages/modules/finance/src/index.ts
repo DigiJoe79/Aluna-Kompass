@@ -227,7 +227,6 @@ export {
   gemAnswersSchema,
   linkTaxPeriodDocument,
   linkTaxPeriodNotice,
-  listTaxPeriods,
   declarationDueOn,
   saveTaxPeriodAnswers,
   suggestedDueOn,
@@ -238,11 +237,17 @@ export {
   taxPeriodInternal,
   taxPeriodOfYearInternal,
   taxReturnFiledForYearInternal,
-  updateTaxPeriod,
   type GemAnswers,
   type TaxPeriodDocumentSlot,
   type TaxPeriodView,
+  type TaxPeriodRecordView,
+  type TaxAmendmentView,
+  type TaxAmendmentCheckView,
+  TAX_AMENDMENT_DOCUMENT_SLOTS,
+  type TaxAmendmentDocumentSlot,
 } from './ledger/tax-periods';
+export { closeTaxAmendmentReview, listTaxPeriods, recordTaxAmendment, recordTaxAmendmentNotice, taxPeriodViewInternal, taxPeriodViewsInternal, updateTaxAmendment, updateTaxPeriod } from './reporting/tax-amendments';
+export { taxFiguresDiffer, taxReviewStateInternal, type TaxFigureCause, type TaxFiguresAttachment } from './reporting/tax-figures';
 export { REVERSE_CHARGE_DECLINE_REASONS, type ReverseChargeDeclineReason } from './ledger/codes';
 export { clearReverseChargeDecline, contactTaxDetailsInternal, declineReverseCharge, getContactTaxDetails, saveContactTaxDetails, type ContactFinanceDetails, type ContactTaxDetails, type ReverseChargeDecline } from './allocation/contact-tax-details';
 export { nameConsentHistoryInternal, nameConsentValidInternal, recordNameConsent, recordNameConsentSchema, type NameConsentEntry } from './allocation/name-consents';
@@ -279,7 +284,8 @@ export { accountStatementsForYearInternal, confirmAccountForYear, fileAccountSta
 export { financeRecordDeleted, financeRecordReferences, financeRetentionDue, financeRetentionHolds, yearAnchorInternal } from './ledger/holds';
 export { getEntryHistory, type EntryHistoryEvent } from './ledger/history';
 export { getProjectFinance, projectFinanceInternal, setProjectFinance, type ProjectFinanceSettings } from './ledger/project-settings';
-export { cancelOpenItem, cancelOriginOpenItem, countingPaymentsInternal, createOpenItem, createOriginOpenItem, draftSettlementCentsInternal, listOpenItems, listOpenItemSettlements, openCentsInternal, openItemHasAnySettlementInternal, openItemsAtInternal, overdueOpenItemsInternal, openItemInDirectDebitInternal, reduceOriginOpenItem, rescheduleOriginOpenItem, saveOpenItem, updateOpenItem, type OpenItemSettlementView, type OpenItemView, type OriginOpenItemInput } from './ledger/open-items';
+export { cancelOpenItem, cancelOriginOpenItem, countingPaymentsInternal, createOpenItem, createOriginOpenItem, draftSettlementCentsInternal, getOpenItem, liveSettlementCondition, listOpenItems, listOpenItemSettlements, openCentsInternal, openItemHasAnySettlementInternal, openItemsAtInternal, openItemViewInternal, overdueOpenItemsInternal, openItemInDirectDebitInternal, reduceOriginOpenItem, rescheduleOriginOpenItem, saveOpenItem, updateOpenItem, type OpenItemSettlementView, type OpenItemView, type OriginOpenItemInput } from './ledger/open-items';
+export { assignablePaymentsInternal, assignPaymentToOpenItem, assignRefusalInternal, listAssignablePayments, unassignPaymentFromOpenItem, type AssignableCandidate } from './ledger/assign-payment';
 export { applyCorrectionInternal, approveAllocationCorrection, correctionTaxCodesInternal, decideAllocationCorrection, listAllocationCorrections, rejectAllocationCorrection, requestAllocationCorrection, type CorrectionView } from './ledger/corrections';
 
 // F8a — Auslagen: einreichen, freigeben, Verzicht (allocation/).

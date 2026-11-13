@@ -113,6 +113,22 @@ describe('listWorkItems', () => {
     expect(unwrap(await listWorkItems(f.deps, f.ctx, { tab: 'due' })).items).toEqual([expect.objectContaining({ type: 'openItem', openItem: expect.objectContaining({ id: f.overdue.id, kind: 'payable', dueOn: '2026-08-31', openCents: 5000 }) })]);
   });
 
+  /**
+   * Befund B1 (0.5.2): Ein ungeprüfter Entwurf mit gebundenem Kontoumsatz stand in keinem Reiter, wenn er über die
+   * Oberfläche entstand (der Umsatz ist gebunden, also nicht unter „Zuordnen“). Der Reiter fragt nicht mehr nach dem Kanal.
+   */
+  it('lists every unreviewed draft that binds a transaction on the agent tab, whatever its channel', async () => {
+    const f = await workFixture();
+    const uiRaw = insertRaw(f, f.run, { accountId: f.bank.id, amountCents: 3100, purpose: 'Spende Mai', date: '2026-03-08' });
+    const uiDraft = unwrap(await saveDraft(f.deps, f.ctx, { entryDate: '2026-03-08', text: 'Spende UI', moneyLines: [{ accountId: f.bank.id, amountCents: 3100, rawTransactionId: uiRaw }], allocationLines: [{ categoryId: f.donations.id, amountCents: 3100 }] }));
+    // Geprüft, dann über MCP geändert: Der Prüfvermerk fällt weg, der Entwurf muss sichtbar bleiben.
+    unwrap(await setReviewed(f.deps, f.ctx, { id: uiDraft.id, reviewed: true }));
+    unwrap(await saveDraft(f.deps, { ...f.ctx, channel: 'mcp' }, { id: uiDraft.id, entryDate: '2026-03-08', text: 'Spende UI, geändert', moneyLines: [{ accountId: f.bank.id, amountCents: 3100, rawTransactionId: uiRaw }], allocationLines: [{ categoryId: f.donations.id, amountCents: 3100 }] }));
+    const agent = unwrap(await listWorkItems(f.deps, f.ctx, { tab: 'agent' }));
+    expect(agent.items.map((i) => (i.type === 'entry' ? i.entry.id : null))).toEqual([f.agentDraft.id, uiDraft.id]);
+    expect(unwrap(await getWorkCounts(f.deps, f.ctx)).agent).toBe(2);
+  });
+
   it('needs finance.read and a known tab', async () => {
     const f = await workFixture();
     expect(await listWorkItems(f.deps, ctxWith(['finance.overview']), { tab: 'open' })).toMatchObject({ ok: false, error: { type: 'forbidden', permission: 'finance.read' } });

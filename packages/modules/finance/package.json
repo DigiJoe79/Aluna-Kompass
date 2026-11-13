@@ -1,6 +1,6 @@
 {
   "name": "@kompass/module-finance",
-  "version": "0.5.1",
+  "version": "0.5.2",
   "private": true,
   "type": "module",
   "exports": {
@@ -26,8 +26,8 @@
     "@kompass/module-contacts": "workspace:*",
     "@kompass/module-dms": "workspace:*",
     "@kompass/module-projects": "workspace:*",
-    "drizzle-orm": "^0.45.3",
-    "fast-xml-parser": "5.11.2",
+    "drizzle-orm": "^0.45.4",
+    "fast-xml-parser": "5.12.0",
     "fflate": "0.8.3",
     "zod": "^4.6.7"
   },

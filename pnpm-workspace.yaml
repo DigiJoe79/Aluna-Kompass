@@ -38,4 +38,6 @@ trustPolicyIgnoreAfter: 43200
 # Transform-API ist zwischen den Fassungen stabil; `db:generate` prueft es.
 overrides:
   '@esbuild-kit/core-utils>esbuild': ^0.25.0
+  # GHSA-g3hv-75wg-m249: eslint und typescript-eslint verlangen minimatch 10.x, behoben erst in 11.0.1. Nur Lint-Kette.
+  'minimatch@>=7 <11.0.1': ^11.0.1
 

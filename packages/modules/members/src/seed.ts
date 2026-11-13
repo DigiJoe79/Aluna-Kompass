@@ -1,8 +1,8 @@
 import { newId, readSetting, SEED_STORY_LAST_DAY, seedClockAt, seedMoment, seedStoryYear, todayIn, unwrap, type CallContext, type Deps } from '@kompass/core';
 import { contacts, createContact, setContactChannels } from '@kompass/module-contacts';
 import { documentSnippets } from '@kompass/module-dms';
-import { bookEntry, categoryIdByKeyInternal, financeAccounts, financeFiscalYears } from '@kompass/module-finance';
-import { and, eq, lte, gte } from 'drizzle-orm';
+import { assignPaymentToOpenItem, bookEntry, buildCamt053Bytes, categoryIdByKeyInternal, financeAccounts, financeFiscalYears, financeImportRuns, financeRawTransactions, importStatement, listOpenItemSettlements, unassignPaymentFromOpenItem } from '@kompass/module-finance';
+import { and, eq, gte, isNull, lte } from 'drizzle-orm';
 import { continueDunningRun, startDunningRun } from './dunning';
 import { setFeeAgreement } from './fee-agreement';
 import { issueMemberLetterInternal } from './letters/issue';
@@ -18,6 +18,8 @@ import { memberDunningNotices, memberFeeCharges, memberFeeRuns, memberFeeSchedul
 type Address = { street: string; postalCode: string; city: string };
 type Person = ({ kind: 'person'; firstName: string; lastName: string } | { kind: 'organization'; name: string }) & Partial<Address>;
 const at = (street: string): Address => ({ street, postalCode: '12345', city: 'Beispielstadt' });
+/** Die Mitglieder der Zuordnungsfälle wohnen im Nachbarort — eine Suche nach „Beispiel“ trifft sonst zu viele Kontakte. */
+const atVillage = (street: string): Address => ({ street, postalCode: '12346', city: 'Musterdorf' });
 
 interface ExampleMembership {
   contact: Person;
@@ -31,6 +33,8 @@ interface ExampleMembership {
   rejectedOn?: string;
   resignNoticeOn?: string;
   end?: { endsOn: string; reason: 'death' | 'exclusion' | 'struckOff' | 'other' };
+  /** Minderjährig: Geburtsdatum und eine Erziehungsberechtigte (eigener Kontakt, kein Mitglied). */
+  minor?: { birthDate: string; guardian: Person };
 }
 
 /**
@@ -55,6 +59,13 @@ function examples(y: number): ExampleMembership[] {
     { contact: { kind: 'person', firstName: 'Nora', lastName: 'Quandt', ...at('Wiesengrund 15') }, type: 'regular', appliedOn: `${y}-05-02`, rejectedOn: `${y}-05-20` },
     { contact: { kind: 'person', firstName: 'Karl', lastName: 'Ehrlinger', ...at('Talstraße 30') }, type: 'regular', appliedOn: `${p}-01-20`, admittedOn: `${p}-02-01`, resignNoticeOn: `${y}-08-15` },
     { contact: { kind: 'person', firstName: 'Ida', lastName: 'Wolkenstein', ...at('Ulmenweg 6') }, type: 'regular', admittedOn: `${p}-01-15`, joinedOn: `${p}-01-01`, end: { endsOn: `${y}-01-09`, reason: 'death' } },
+    // Spec Zahlung zuordnen § 8: Mitglieder, deren Zahlungen zugeordnet werden (`seedPaymentsToAssign`).
+    { contact: { kind: 'person', firstName: 'Mara', lastName: 'Lenz', ...atVillage('Rosenhang 5') }, type: 'regular', appliedOn: `${y}-02-01`, admittedOn: `${y}-03-01` },
+    { contact: { kind: 'person', firstName: 'Bruno', lastName: 'Seidel', ...atVillage('Am Anger 8') }, type: 'regular', appliedOn: `${p}-03-10`, admittedOn: `${p}-04-01` },
+    { contact: { kind: 'person', firstName: 'Wanda', lastName: 'Krüger', ...atVillage('Quellenweg 11') }, type: 'regular', appliedOn: `${p}-03-10`, admittedOn: `${p}-04-01` },
+    { contact: { kind: 'person', firstName: 'Theo', lastName: 'Marquardt', ...atVillage('Weidenstraße 2') }, type: 'regular', appliedOn: `${p}-03-10`, admittedOn: `${p}-04-01` },
+    { contact: { kind: 'person', firstName: 'Fritz', lastName: 'Albrecht', ...atVillage('Brunnengasse 14') }, type: 'regular', appliedOn: `${p}-04-20`, admittedOn: `${p}-05-01` },
+    { contact: { kind: 'person', firstName: 'Lotta', lastName: 'Brandt', ...atVillage('Sonnenweg 3') }, type: 'regular', appliedOn: `${p}-08-01`, admittedOn: `${p}-09-01`, minor: { birthDate: `${y - 12}-05-01`, guardian: { kind: 'person', firstName: 'Sabine', lastName: 'Brandt', ...atVillage('Sonnenweg 3') } } },
   ];
 }
 
@@ -86,6 +97,14 @@ async function seedDunning(deps: Deps, ctx: CallContext): Promise<void> {
     view = next.value;
   }
   await markRunPostDispatched(deps, ctx, { runRef: `membersDunningRun:${run.value.id}`, sentAt: today });
+  // Spec Zahlung zuordnen § 8: Fritz Albrecht hatte schon gezahlt, als seine Erinnerung hinausging — die Buchung kommt
+  // erst nach dem Lauf in den Bestand, frei; nach dem Zuordnen zeigt sein Beitrag den Hinweis auf die unbegründete Mahnung.
+  const fritz = membershipOf(deps, 'Albrecht');
+  const fritzBank = deps.db.select().from(financeAccounts).where(eq(financeAccounts.isMain, true)).get();
+  const fritzCharge = fritz ? deps.db.select().from(memberFeeCharges).where(and(eq(memberFeeCharges.membershipId, fritz.id), eq(memberFeeCharges.state, 'created'))).all().find((c) => c.periodStart.startsWith(String(seedStoryYear(today)))) : undefined;
+  if (fritz && fritzBank && fritzCharge && deps.db.select().from(memberDunningNotices).where(eq(memberDunningNotices.membershipId, fritz.id)).get()) {
+    await freePayment(deps, ctx, fritzBank, { entryDate: `${seedStoryYear(today)}-08-25`, amountCents: fritzCharge.amountCents, contactId: fritz.contactId });
+  }
   const first = deps.db.select().from(memberDunningNotices).where(eq(memberDunningNotices.runId, run.value.id)).get();
   const level = readSetting<DunningLevel[]>(deps, 'members.dunningLevels')[1];
   if (!first || !level) return;
@@ -108,8 +127,9 @@ async function seedMemberships(deps: Deps, ctx: CallContext): Promise<void> {
     if (m.email) unwrap(await setContactChannels(deps, ctx, { id: contactId, channels: [{ kind: 'email', value: m.email, isPrimary: true }] }));
     const type = typeId(m.type)!;
     let membershipId: string;
+    const minor = m.minor ? { birthDate: m.minor.birthDate, guardianContactId: unwrap(await createContact(deps, ctx, m.minor.guardian)).id } : {};
     if (m.appliedOn) {
-      membershipId = unwrap(await recordApplication(deps, ctx, { contactId, typeId: type, appliedOn: m.appliedOn })).id;
+      membershipId = unwrap(await recordApplication(deps, ctx, { contactId, typeId: type, appliedOn: m.appliedOn, ...minor })).id;
       if (m.rejectedOn) unwrap(await rejectApplication(deps, ctx, { membershipId, rejectedOn: m.rejectedOn }));
       if (m.admittedOn) unwrap(await admitMember(deps, ctx, { membershipId, admittedOn: m.admittedOn, ...(m.joinedOn ? { joinedOn: m.joinedOn } : {}) }));
     } else {
@@ -123,8 +143,14 @@ async function seedMemberships(deps: Deps, ctx: CallContext): Promise<void> {
 
 /** Die Mitgliedschaft eines Beispiel-Kontakts (Nachname bzw. Name der Organisation). */
 function membershipOf(deps: Deps, name: string) {
-  const contact = deps.db.select().from(contacts).all().find((c) => c.lastName === name || c.name === name);
-  return contact ? deps.db.select().from(memberMemberships).where(eq(memberMemberships.contactId, contact.id)).get() : undefined;
+  // Gleichnamige Kontakte (die Erziehungsberechtigte trägt den Nachnamen des Kindes): der mit Mitgliedschaft.
+  return deps.db
+    .select()
+    .from(contacts)
+    .all()
+    .filter((c) => c.lastName === name || c.name === name)
+    .map((c) => deps.db.select().from(memberMemberships).where(eq(memberMemberships.contactId, c.id)).get())
+    .find((m) => m !== undefined);
 }
 
 /**
@@ -210,4 +236,65 @@ async function seedFees(deps: Deps, ctx: CallContext): Promise<void> {
   await pay(`${y}-03-02`, [{ charge: charge('Brenner', `${y}-01-01`) }]);
   await pay(`${y}-02-05`, [{ charge: charge('Ehrlinger', `${y}-01-01`), amountCents: 1800 }]); // teilweise
   await pay(`${y}-06-30`, ['01', '02', '03', '04', '05', '06'].map((month) => ({ charge: charge('Lindholm', `${y}-${month}-01`) })));
+  await seedPaymentsToAssign(deps, ctx, y, bank, (name) => (membershipOf(deps, name) ? deps.db.select().from(memberFeeCharges).where(and(eq(memberFeeCharges.membershipId, membershipOf(deps, name)!.id), eq(memberFeeCharges.state, 'created'))).all().find((c) => c.periodStart.startsWith(String(y))) : undefined));
+}
+
+/** Eine festgeschriebene Einnahme mit Kontakt, ohne Ausgleich; mit `purpose` über einen Kontoumsatz des Hauptkontos. Liefert die Geldzeile. */
+async function freePayment(deps: Deps, ctx: CallContext, bank: { id: string; iban: string | null }, o: { entryDate: string; amountCents: number; contactId: string; categoryKey?: string; purpose?: string }): Promise<string> {
+  const categoryId = categoryIdByKeyInternal(deps.db, o.categoryKey ?? 'membership-fees')!;
+  let rawTransactionId: string | undefined;
+  if (o.purpose && bank.iban) {
+    // Der Auszug schließt an den letzten des Kontos an: Ein anderer Anfangsbestand stünde als Lücke da.
+    const previous = deps.db.select().from(financeImportRuns).where(and(eq(financeImportRuns.accountId, bank.id), isNull(financeImportRuns.discardedAt))).all().sort((a, b) => (a.periodTo ?? '').localeCompare(b.periodTo ?? '')).at(-1);
+    const openingCents = previous?.closingCents ?? 0;
+    const imported = unwrap(
+      await importStatement(seedClockAt(deps, seedMoment(deps, o.entryDate, '10:00')), ctx, {
+        accountId: bank.id,
+        fileName: `kontoauszug-${o.entryDate}.xml`,
+        bytes: buildCamt053Bytes({ iban: bank.iban, from: o.entryDate, to: o.entryDate, openingCents, lines: [{ bookingDate: o.entryDate, amountCents: o.amountCents, counterpartyName: 'Mara Lenz', counterpartyIban: 'DE02999999990000300009', purpose: o.purpose, bankReference: `MB-${o.entryDate}` }] }),
+      }),
+    );
+    rawTransactionId = deps.db.select({ id: financeRawTransactions.id }).from(financeRawTransactions).where(eq(financeRawTransactions.runId, imported.runs[0]!.id)).get()?.id;
+  }
+  const entry = unwrap(await bookEntry(deps, ctx, { entryDate: o.entryDate, text: o.categoryKey === 'donations' ? 'Spende' : 'Mitgliedsbeitrag', moneyLines: [{ accountId: bank.id, amountCents: o.amountCents, ...(rawTransactionId ? { rawTransactionId } : {}) }], allocationLines: [{ categoryId, amountCents: o.amountCents, contactId: o.contactId }] }));
+  return entry.moneyLines[0]!.id;
+}
+
+/**
+ * Spec Zahlung zuordnen § 8, kalenderfest im Stichjahr: Mara Lenz zahlte im Februar, bevor im März ihr Beitrag
+ * entstand (freier Kandidat, dazu eine Spende als gesperrter Kandidat und eine Zahlung mit Verwendungszweck auf das
+ * Folgejahr); Bruno Seidel mit nachträglicher Zuordnung, Wanda Krüger mit Teilbetrag, Theo Marquardt mit aufgehobener
+ * Zuordnung; für Lotta Brandt (minderjährig) zahlt die Erziehungsberechtigte, die auch gespendet hat. Fritz Albrecht
+ * zahlt erst nach dem Mahnlauf — siehe `seedDunning`.
+ */
+async function seedPaymentsToAssign(deps: Deps, ctx: CallContext, y: number, bank: { id: string; iban: string | null }, chargeOf: (name: string) => FeeChargeRow | undefined): Promise<void> {
+  const contactOf = (name: string) => deps.db.select().from(contacts).all().find((c) => c.lastName === name && c.kind === 'person' && deps.db.select().from(memberMemberships).where(eq(memberMemberships.contactId, c.id)).get())?.id;
+  const mara = chargeOf('Lenz');
+  const maraContact = contactOf('Lenz');
+  if (mara && maraContact) {
+    await freePayment(deps, ctx, bank, { entryDate: `${y}-02-14`, amountCents: mara.amountCents, contactId: maraContact });
+    await freePayment(deps, ctx, bank, { entryDate: `${y}-01-10`, amountCents: 2500, contactId: maraContact, categoryKey: 'donations' });
+    await freePayment(deps, ctx, bank, { entryDate: `${y}-06-03`, amountCents: mara.amountCents, contactId: maraContact, purpose: `Beitrag ${y + 1}` });
+  }
+  const assign = async (name: string, entryDate: string, amountCents?: number) => {
+    const charge = chargeOf(name);
+    const contactId = contactOf(name);
+    if (!charge?.openItemId || !contactId) return null;
+    const moneyLineId = await freePayment(deps, ctx, bank, { entryDate, amountCents: amountCents ?? charge.amountCents, contactId });
+    unwrap(await assignPaymentToOpenItem(deps, ctx, { openItemId: charge.openItemId, moneyLineId }));
+    return charge.openItemId;
+  };
+  await assign('Seidel', `${y}-01-25`);
+  await assign('Krüger', `${y}-02-20`, 1800);
+  const theo = await assign('Marquardt', `${y}-01-30`);
+  if (theo) {
+    const settlement = unwrap(await listOpenItemSettlements(deps, ctx, { openItemId: theo })).find((s) => s.unassignable);
+    if (settlement) unwrap(await unassignPaymentFromOpenItem(deps, ctx, { settlementId: settlement.settlementId }));
+  }
+  const lotta = membershipOf(deps, 'Brandt');
+  if (lotta?.guardianContactId) {
+    const fee = chargeOf('Brandt');
+    if (fee) await freePayment(deps, ctx, bank, { entryDate: `${y}-03-05`, amountCents: fee.amountCents, contactId: lotta.guardianContactId });
+    await freePayment(deps, ctx, bank, { entryDate: `${y}-03-05`, amountCents: 2000, contactId: lotta.guardianContactId, categoryKey: 'donations' });
+  }
 }

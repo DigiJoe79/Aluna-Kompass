@@ -1,6 +1,6 @@
 'use server';
 
-import { checkReverseCharge, clearReverseChargeDecline, declineReverseCharge, type ReverseChargeDeclineReason, type ReverseChargePromptView, createTaxPeriod, fileTaxPeriodDocument, getContactTaxDetails, linkTaxPeriodDocument, linkTaxPeriodNotice, recordNameConsent, saveContactTaxDetails, saveTaxPeriodAnswers, updateTaxPeriod, type GemAnswers, type TaxPeriodDocumentSlot } from '@kompass/module-finance';
+import { checkReverseCharge, clearReverseChargeDecline, closeTaxAmendmentReview, declineReverseCharge, recordTaxAmendment, recordTaxAmendmentNotice, updateTaxAmendment, type ReverseChargeDeclineReason, type ReverseChargePromptView, createTaxPeriod, fileTaxPeriodDocument, getContactTaxDetails, linkTaxPeriodDocument, linkTaxPeriodNotice, recordNameConsent, saveContactTaxDetails, saveTaxPeriodAnswers, updateTaxPeriod, type GemAnswers, type TaxPeriodDocumentSlot } from '@kompass/module-finance';
 import { getTranslations } from 'next-intl/server';
 import { revalidatePath } from 'next/cache';
 import { guardAction } from '@/lib/action-guard';
@@ -43,7 +43,7 @@ export async function saveTaxPeriodAction(input: TaxPeriodInput): Promise<Action
   });
 }
 
-export async function saveTaxPeriodAnswersAction(input: { id: string; answers: GemAnswers; expectedVersion?: string }): Promise<ActionState> {
+export async function saveTaxPeriodAnswersAction(input: { id: string; answers: GemAnswers; expectedVersion?: string; acknowledgeFiled?: boolean }): Promise<ActionState> {
   return guardAction('(shell)/finance/tax/actions.ts#saveTaxPeriodAnswersAction', async () => {
     const t = await getTranslations();
     const { deps, ctx } = await requireSession();
@@ -63,19 +63,61 @@ export async function fileTaxPeriodDocumentAction(formData: FormData): Promise<A
     const { deps, ctx } = await requireSession();
     const file = formData.get('file');
     if (!(file instanceof File) || file.size === 0) return { status: 'error', message: t('common.uploadFailed'), fieldErrors: {} };
-    const result = await fileTaxPeriodDocument(deps, ctx, { id: String(formData.get('id') ?? ''), slot: String(formData.get('slot') ?? '') as TaxPeriodDocumentSlot, bytes: new Uint8Array(await file.arrayBuffer()), fileName: file.name });
+    const target = formData.get('target');
+    const amendmentId = formData.get('amendmentId');
+    const result = await fileTaxPeriodDocument(deps, ctx, {
+      id: String(formData.get('id') ?? ''),
+      slot: String(formData.get('slot') ?? '') as TaxPeriodDocumentSlot,
+      ...(typeof target === 'string' && target ? { target } : {}),
+      ...(typeof amendmentId === 'string' && amendmentId ? { amendmentId } : {}),
+      bytes: new Uint8Array(await file.arrayBuffer()),
+      fileName: file.name,
+    });
     revalidate();
     return toActionState(result, t, t('finance.tax.toast.filed'));
   });
 }
 
-export async function linkTaxPeriodDocumentAction(input: { id: string; slot: TaxPeriodDocumentSlot; documentId: string }): Promise<ActionState> {
+export async function linkTaxPeriodDocumentAction(input: { id: string; slot: TaxPeriodDocumentSlot | 'notice'; documentId: string; target?: 'period' | 'amendment' | 'notice'; amendmentId?: string }): Promise<ActionState> {
   return guardAction('(shell)/finance/tax/actions.ts#linkTaxPeriodDocumentAction', async () => {
     const t = await getTranslations();
     const { deps, ctx } = await requireSession();
     const result = await linkTaxPeriodDocument(deps, ctx, input);
     revalidate();
     return toActionState(result, t, t('finance.tax.toast.filed'));
+  });
+}
+
+/** B9: die Berichtigung als zweite Abgabe eintragen bzw. den Tag der letzten ändern (Spec 0.5.2 § 4.3). */
+export async function saveTaxAmendmentAction(input: { taxPeriodId: string; amendmentId?: string; filedOn: string }): Promise<ActionState> {
+  return guardAction('(shell)/finance/tax/actions.ts#saveTaxAmendmentAction', async () => {
+    const t = await getTranslations();
+    const { deps, ctx } = await requireSession();
+    const result = input.amendmentId ? await updateTaxAmendment(deps, ctx, { amendmentId: input.amendmentId, filedOn: input.filedOn }) : await recordTaxAmendment(deps, ctx, { taxPeriodId: input.taxPeriodId, filedOn: input.filedOn });
+    revalidate();
+    return toActionState(result, t, t(input.amendmentId ? 'finance.tax.toast.saved' : 'finance.tax.toast.amendmentRecorded'));
+  });
+}
+
+/** B9: den offenen Prüfanlass ohne Berichtigung schließen — nur ein Mensch (der Dienst prüft den Kanal). */
+export async function closeTaxAmendmentReviewAction(input: { taxPeriodId: string; reason: string; documentId?: string }): Promise<ActionState> {
+  return guardAction('(shell)/finance/tax/actions.ts#closeTaxAmendmentReviewAction', async () => {
+    const t = await getTranslations();
+    const { deps, ctx } = await requireSession();
+    const result = await closeTaxAmendmentReview(deps, ctx, input);
+    revalidate();
+    return toActionState(result, t, t('finance.tax.toast.reviewClosed'));
+  });
+}
+
+/** B9: den Tag der Anzeige an das Finanzamt zum offenen Prüfanlass eintragen oder ändern. */
+export async function recordTaxAmendmentNoticeAction(input: { taxPeriodId: string; notifiedOn: string }): Promise<ActionState> {
+  return guardAction('(shell)/finance/tax/actions.ts#recordTaxAmendmentNoticeAction', async () => {
+    const t = await getTranslations();
+    const { deps, ctx } = await requireSession();
+    const result = await recordTaxAmendmentNotice(deps, ctx, input);
+    revalidate();
+    return toActionState(result, t, t('finance.tax.toast.noticeRecorded'));
   });
 }
 

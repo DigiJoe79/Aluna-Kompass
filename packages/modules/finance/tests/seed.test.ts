@@ -21,7 +21,8 @@ import { openItemsAtInternal } from '../src/ledger/open-items';
 import { listPurposes } from '../src/ledger/purposes';
 import { listReserves, saveReserve } from '../src/allocation/reserves';
 import { textPdf } from '@kompass/module-dms';
-import { declarationDueOn, listTaxPeriods, type TaxPeriodView } from '../src/ledger/tax-periods';
+import { listTaxPeriods } from '../src/reporting/tax-amendments';
+import { declarationDueOn, type TaxPeriodView } from '../src/ledger/tax-periods';
 import { seedFinance } from '../src/seed';
 import { listFundsUseOpenings } from '../src/allocation/funds-use-openings';
 import { reserveBalancesAt } from '../src/ledger/reserve-balances';
@@ -337,6 +338,10 @@ describe('seedFinance', () => {
     expect(line9.value!.perYear!.map((y) => y.line)).toHaveLength(SEED_CLOSED_YEARS);
     expect(line9.value!.perYear!.every((y) => y.cents > 0)).toBe(true);
     expect(open).toMatchObject({ dueOn: declarationDueOn(story, false), filedOn: null, answers: {}, state: 'open' });
+    // B9 (F3): nach der Abgabe die Mitgliederzahl des Vorjahres korrigiert, angezeigt und berichtigt — kein Anlass offen.
+    expect(filed).toMatchObject({ reviewDue: false, notifiedOn: null, filedFiguresMissing: false, amendments: [{ filedOn: `${story}-07-20`, cause: [{ kind: 'attachment', report: 'taxReturnIncomeStatement', year: String(story - 1) }] }], checks: [{ kind: 'notified', checkedOn: `${story}-07-10` }] });
+    expect(Object.keys(filed.amendments[0]!.documents).sort()).toEqual(['filedReturn', 'transmissionProtocol']);
+    expect(filed.checks[0]!.document).not.toBeNull();
     // Die beiden wartenden Korrekturen am Vorjahr entstanden vor der Abgabe — ohne § 153.
     expect(rows<{ section153: number }>(`select section_153 as section153 from finance_allocation_corrections where state = 'pending'`).map((r) => r.section153)).toEqual([0, 0]);
   });

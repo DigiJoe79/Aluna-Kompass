@@ -1,8 +1,9 @@
 import type { DbOrTx, Failure } from '@kompass/core';
-import { eq, inArray } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 import { financeConflict } from '../errors';
 import { financeExpenseClaims, financeMoneyLines, financeOpenItems, financeOpenItemSettlements, financePartnerPayments, financePurposes } from '../schema';
 import { purposeBalancesAt } from './queries';
+import { liveSettlementCondition } from './settlement-live';
 
 /** Weit genug in der Zukunft, dass jede festgeschriebene Zeile und jeder Vortrag zählt. */
 const ALL_DAYS = '9999-12-31';
@@ -60,6 +61,6 @@ export function inheritedPurposeReasonOfOpenItemsInternal(db: DbOrTx, openItemId
 export function inheritedPurposeReasonOfEntryInternal(db: DbOrTx, entryId: string): string | null {
   const moneyLineIds = db.select({ id: financeMoneyLines.id }).from(financeMoneyLines).where(eq(financeMoneyLines.entryId, entryId)).all().map((r) => r.id);
   if (moneyLineIds.length === 0) return null;
-  const openItemIds = db.select({ id: financeOpenItemSettlements.openItemId }).from(financeOpenItemSettlements).where(inArray(financeOpenItemSettlements.moneyLineId, moneyLineIds)).all().map((r) => r.id);
+  const openItemIds = db.select({ id: financeOpenItemSettlements.openItemId }).from(financeOpenItemSettlements).where(and(inArray(financeOpenItemSettlements.moneyLineId, moneyLineIds), liveSettlementCondition())).all().map((r) => r.id);
   return inheritedPurposeReasonOfOpenItemsInternal(db, openItemIds);
 }

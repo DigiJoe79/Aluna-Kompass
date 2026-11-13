@@ -576,8 +576,7 @@ test.describe('finance', () => {
 
   test('den Zweck einer Spende ändern verlangt ein Dokument; mit PDF geht es durch', async ({ page }) => {
     await loginAsAdmin(page);
-    await page.goto('/finance/entries');
-    await page.locator('tr', { hasText: 'Spende mit Zweck' }).click();
+    await openEntry(page, 'Spende mit Zweck');
     await page.getByRole('button', { name: 'Korrigieren' }).click();
     await page.getByRole('checkbox', { name: 'Zweck' }).check();
     await page.getByRole('combobox', { name: 'Zweck' }).selectOption({ label: 'Flutlicht' });
@@ -590,8 +589,7 @@ test.describe('finance', () => {
 
   test('ohne Dokument bleibt der Dialog offen, nennt die Umwidmung, und die Eingaben stehen noch da', async ({ page }) => {
     await loginAsAdmin(page);
-    await page.goto('/finance/entries');
-    await page.locator('tr', { hasText: 'Spende mit Zweck' }).click();
+    await openEntry(page, 'Spende mit Zweck');
     await page.getByRole('button', { name: 'Korrigieren' }).click();
     await page.getByRole('checkbox', { name: 'Zweck' }).check();
     await page.getByRole('combobox', { name: 'Zweck' }).selectOption({ label: 'Flutlicht' });
@@ -1196,6 +1194,32 @@ const PNG = Buffer.from(
 function samplePdf(): Buffer {
   return Buffer.from('%PDF-1.4\n1 0 obj<</Type/Catalog>>endobj\ntrailer<</Root 1 0 R>>\n%%EOF\n');
 }
+
+test.describe('finance: Zahlung zuordnen (B10)', () => {
+  test.beforeEach(async ({ page }) => {
+    await resetDatabase(page, 'seeded');
+    await loginAsAdmin(page);
+  });
+
+  /** Spec Zahlung zuordnen § 7.6: Posten → „Zahlung zuordnen …“ → Zahlung wählen → erledigt → „Rückgängig“ hebt auf. */
+  test('am offenen Posten eine gebuchte Zahlung zuordnen und über „Rückgängig“ wieder aufheben', async ({ page }) => {
+    await page.goto('/finance/open-items?tab=receivable');
+    await page.getByRole('link', { name: 'Mara Lenz' }).first().click();
+    const sheet = page.getByRole('dialog').filter({ hasText: 'Mara Lenz' });
+    await sheet.getByTestId('open-item-assign-trigger').click();
+    const dialog = page.getByTestId('assign-payment-dialog');
+    await expect(dialog.getByTestId('assign-candidate').first()).toBeVisible();
+    // Vorgewählt ist die passende Zahlung ohne Hinweis; die Spende steht gesperrt da.
+    await expect(dialog.getByRole('radio', { checked: true })).toHaveCount(1);
+    await expect(dialog.getByTestId('assign-blocked-reason')).toBeVisible();
+    await dialog.getByTestId('assign-payment-save').click();
+    await expect(dialog).toBeHidden();
+    await expect(page.getByTestId('settled-by-row')).toHaveCount(1);
+    await page.getByRole('button', { name: 'Rückgängig' }).click();
+    await expect(page.getByTestId('settled-by-row')).toHaveCount(0);
+    await expect(page.getByTestId('open-item-assign-trigger')).toBeVisible();
+  });
+});
 
 test.describe('finance: Ausgleich eines Rechnungspostens (Befund AA)', () => {
   test.beforeEach(async ({ page }) => {

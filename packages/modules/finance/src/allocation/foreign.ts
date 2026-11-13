@@ -5,12 +5,13 @@ import { zonedDayRange } from '../zoned-days';
 import { z } from 'zod';
 import { requireFinanceRead } from '../ledger/access';
 import { positionViewsOf, sumPositionCents } from './partner-payments';
-import { financeAllocationLines, financeEntries, financeMoneyLines, financeOpenItems, financeOpenItemSettlements, financePartnerPaidLines, financePartnerPayments, financePartnerProfiles } from '../schema';
+import { financeAllocationLines, financeCategories, financeEntries, financeMoneyLines, financeOpenItems, financeOpenItemSettlements, financePartnerPaidLines, financePartnerPayments, financePartnerProfiles } from '../schema';
+import { liveSettlementCondition } from '../ledger/settlement-live';
 
 /**
  * Auslandsabfrage (F7 Task 5, Annahme 14, für den künftigen Auslandsbericht
  * F9b): drei getrennte Gruppen — Zahlungen an Partner nach Art, sonstige
- * Zeilen mit `abroad`, sonstige Zeilen an Kontakte im Ausland. Zeilen, die
+ * Ausgaben-Zeilen mit `abroad`, sonstige Zeilen an Kontakte im Ausland. Zeilen, die
  * schon zu einer Zahlung an Partner gehören (Paid-Lines, oder Zeilen der
  * Buchung, die einen aus ihr entstandenen Posten beglichen hat), erscheinen
  * nur in der ersten Gruppe.
@@ -51,7 +52,7 @@ function partnerPaymentLineIdsInternal(db: DbOrTx): Set<string> {
           .select({ entryId: financeMoneyLines.entryId })
           .from(financeOpenItemSettlements)
           .innerJoin(financeMoneyLines, eq(financeMoneyLines.id, financeOpenItemSettlements.moneyLineId))
-          .where(inArray(financeOpenItemSettlements.openItemId, partnerItemIds))
+          .where(and(inArray(financeOpenItemSettlements.openItemId, partnerItemIds), liveSettlementCondition()))
           .all()
           .map((r) => r.entryId);
   const settlingLineIds = settlingEntryIds.length === 0 ? [] : db.select({ id: financeAllocationLines.id }).from(financeAllocationLines).where(inArray(financeAllocationLines.entryId, settlingEntryIds)).all().map((r) => r.id);
@@ -72,18 +73,23 @@ export function foreignActivityInternal(db: DbOrTx, range: { from: string; to: s
   });
 
   const lines = db
-    .select({ id: financeAllocationLines.id, entryId: financeAllocationLines.entryId, amountCents: financeAllocationLines.amountCents, abroad: financeAllocationLines.abroad, contactId: financeAllocationLines.contactId, entryDate: financeEntries.entryDate, entryNumber: financeEntries.number, text: financeEntries.text, status: financeEntries.status })
+    .select({ id: financeAllocationLines.id, entryId: financeAllocationLines.entryId, amountCents: financeAllocationLines.amountCents, abroad: financeAllocationLines.abroad, contactId: financeAllocationLines.contactId, entryDate: financeEntries.entryDate, entryNumber: financeEntries.number, text: financeEntries.text, status: financeEntries.status, direction: financeCategories.direction })
     .from(financeAllocationLines)
     .innerJoin(financeEntries, eq(financeAllocationLines.entryId, financeEntries.id))
+    .innerJoin(financeCategories, eq(financeAllocationLines.categoryId, financeCategories.id))
     .where(and(eq(financeEntries.status, 'final'), gte(financeEntries.entryDate, range.from), lte(financeEntries.entryDate, range.to)))
     .all()
     .filter((l) => !excluded.has(l.id));
 
-  const otherAbroadLines: ForeignLineEntry[] = lines.filter((l) => l.abroad).map((l) => ({ entryId: l.entryId, entryNumber: l.entryNumber, entryDate: l.entryDate, amountCents: l.amountCents, text: l.text, contactId: l.contactId }));
+  const usedAbroad = (l: (typeof lines)[number]) => l.abroad && l.direction === 'expense';
+  // Nur Ausgaben sind „im Ausland verwendet“; ein Storno ist eine Ausgaben-Zeile mit umgekehrtem Vorzeichen und gleicht
+  // sie aus (Befund B2, 0.5.2). Eine Einnahme mit dem Kennzeichen zählt hier nicht.
+  const otherAbroadLines: ForeignLineEntry[] = lines.filter(usedAbroad).map((l) => ({ entryId: l.entryId, entryNumber: l.entryNumber, entryDate: l.entryDate, amountCents: l.amountCents, text: l.text, contactId: l.contactId }));
 
-  const contactIds = [...new Set(lines.filter((l) => !l.abroad && l.contactId).map((l) => l.contactId!))];
+  // Was schon unter „im Ausland verwendet“ steht, nicht noch einmal; eine Einnahme mit dem Kennzeichen gehört hierher.
+  const contactIds = [...new Set(lines.filter((l) => !usedAbroad(l) && l.contactId).map((l) => l.contactId!))];
   const foreignContactIds = new Set(contactIds.filter((id) => (db.select({ country: contacts.country }).from(contacts).where(eq(contacts.id, id)).get()?.country ?? orgCountry) !== orgCountry));
-  const otherForeignContactLines: ForeignLineEntry[] = lines.filter((l) => !l.abroad && l.contactId && foreignContactIds.has(l.contactId)).map((l) => ({ entryId: l.entryId, entryNumber: l.entryNumber, entryDate: l.entryDate, amountCents: l.amountCents }));
+  const otherForeignContactLines: ForeignLineEntry[] = lines.filter((l) => !usedAbroad(l) && l.contactId && foreignContactIds.has(l.contactId)).map((l) => ({ entryId: l.entryId, entryNumber: l.entryNumber, entryDate: l.entryDate, amountCents: l.amountCents }));
 
   return { partnerPayments, otherAbroadLines, otherForeignContactLines };
 }

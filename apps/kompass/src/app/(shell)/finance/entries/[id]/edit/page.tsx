@@ -12,7 +12,7 @@ import { readAllPages } from '@/lib/read-all-pages';
 import { requireSession } from '@/lib/request-context';
 import { contactOriginOf, fromEntryView } from '@/lib/finance/entry-form';
 import { isReverseChargeCode } from '@/lib/finance/reverse-charge-text';
-import { settlementOptions } from '@/lib/finance/open-item-options';
+import { contactNamesOf, settlementOptions } from '@/lib/finance/open-item-options';
 import { voucherDetails } from '@/lib/finance/voucher-details';
 import { EntryForm } from '../../entry-form';
 
@@ -61,7 +61,8 @@ export default async function EditFinanceEntryPage({ params }: { params: Promise
   }));
 
   // E6a Task 11c: Entspricht das Kennzeichen dem Merkmal § 13b des Kontakts, steht „Vorgabe vom Kontakt“ darunter.
-  const loaded = fromEntryView(entry);
+  // Befund B3 (0.5.2): Ohne Namen stünde ein gespeicherter Spender oder Empfänger leer im Feld.
+  const loaded = fromEntryView(entry, await contactNamesOf(deps, ctx, entry.allocationLines.map((l) => l.contactId)));
   const reverseChargeOf = new Map<string, 'eu' | 'other' | null>();
   for (const contactId of new Set(loaded.splitRows.filter((r) => r.contactId && isReverseChargeCode(r.taxCode)).map((r) => r.contactId!))) {
     const details = await getContactTaxDetails(deps, ctx, { contactId });

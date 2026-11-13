@@ -2,7 +2,7 @@ import { resolveRecordLabel, type CallContext, type Deps, type RecordLabelInput 
 import { eq } from 'drizzle-orm';
 import { requireFinanceRead, requireMasterDataRead } from './access';
 import { taxPeriodInternal } from './tax-periods';
-import { financeAccounts, financeCategories, financeConfirmations, financeEntries, financeFiscalYears, financePartnerProfiles, financePeriodEvents, financeDirectDebitRuns, financePurposes, financeReserves, financeFundsUseOpenings, financeSepaMandates, financeVatFilings } from '../schema';
+import { financeAccounts, financeCategories, financeConfirmations, financeEntries, financeFiscalYears, financePartnerProfiles, financePeriodEvents, financeDirectDebitRuns, financePurposes, financeReserves, financeFundsUseOpenings, financeSepaMandates, financeTaxAmendmentChecks, financeTaxAmendments, financeVatFilings } from '../schema';
 
 const missing: RecordLabelInput = { label: '', href: null, state: 'missing' };
 const forbiddenLabel: RecordLabelInput = { label: '', href: null, state: 'forbidden' };
@@ -40,6 +40,14 @@ export function financeRecordLabels(deps: Deps, ctx: CallContext, entityType: st
     const period = taxPeriodInternal(deps.db, id);
     if (!period) return missing;
     return { label: { key: 'finance.records.taxPeriod', params: { period: period.label } }, name: period.label, href: null, state: requireFinanceRead(ctx, 'overview') ? 'forbidden' : 'ok' };
+  }
+  if (entityType === 'financeTaxAmendment' || entityType === 'financeTaxAmendmentCheck') {
+    // B9: Berichtigung und Prüfung heißen nach ihrem Zeitraum („2023–2025“).
+    const table = entityType === 'financeTaxAmendment' ? financeTaxAmendments : financeTaxAmendmentChecks;
+    const periodId = deps.db.select({ taxPeriodId: table.taxPeriodId }).from(table).where(eq(table.id, id)).get()?.taxPeriodId;
+    const period = periodId ? taxPeriodInternal(deps.db, periodId) : null;
+    if (!period) return missing;
+    return { label: { key: entityType === 'financeTaxAmendment' ? 'finance.records.taxAmendment' : 'finance.records.taxAmendmentCheck', params: { period: period.label } }, name: period.label, href: null, state: requireFinanceRead(ctx, 'overview') ? 'forbidden' : 'ok' };
   }
   if (entityType === 'financeVatFiling') {
     // E6b: die Abgabe heißt nach ihrem Zeitraum („2026-Q2“) — er verrät nichts.

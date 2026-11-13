@@ -800,6 +800,8 @@
     },
     "fields": {
       "outsideFiscalYear": "Der Tag liegt nicht im Geschäftsjahr.",
+      "beforeLastFiling": "Der Tag liegt vor der letzten Abgabe am {lastFiledOn}.",
+      "wrongTarget": "Dieses Fach gibt es an dieser Stelle nicht.",
       "wrongPeriodKind": "Der Zeitraum passt nicht zur Zeitraumart des Jahres (Quartal oder Monat).",
       "noFiscalYear": "Für den Zeitraum gibt es kein Geschäftsjahr in Kompass.",
       "notAo52Purpose": "Wählen Sie einen Zweck nach §\u00a052 Abs. 2 AO.",
@@ -1469,6 +1471,7 @@
             "vatAdvanceReturn": "Umsatzsteuer-Voranmeldung {vatPeriod} bis {dueOn}",
             "vatReturn": "Umsatzsteuer-Jahreserklärung {year} bis {dueOn}",
             "vatAmendment": "{scope, select, year {Berichtigte Umsatzsteuer-Jahreserklärung {vatPeriod}} other {Berichtigte Voranmeldung {vatPeriod}}}, unverzüglich",
+            "taxReturnAmendment": "Steuererklärung {period} prüfen und berichtigen (§\u00a0153 AO), unverzüglich",
             "thresholdApproaching": "{designation}: {threshold, select, timelyUse {Zeitnahe Mittelverwendung} business {Freigrenze wirtschaftlicher Geschäftsbetrieb} businessCombined {Vereinfachung Zweckbetriebe} smallBusinessPrevYear {Kleinunternehmer, Vorjahr} smallBusinessCurrent {Kleinunternehmer, laufendes Jahr} allowanceVolunteer {Ehrenamtspauschale} allowanceTrainer {Übungsleiterpauschale} other {Schwelle}} nähert sich der Grenze",
             "thresholdExceeded": "{designation}: {threshold, select, timelyUse {Zeitnahe Mittelverwendung} business {Freigrenze wirtschaftlicher Geschäftsbetrieb} businessCombined {Vereinfachung Zweckbetriebe} smallBusinessPrevYear {Kleinunternehmer, Vorjahr} smallBusinessCurrent {Kleinunternehmer, laufendes Jahr} allowanceVolunteer {Ehrenamtspauschale} allowanceTrainer {Übungsleiterpauschale} other {Schwelle}} überschritten"
           }
@@ -2469,6 +2472,8 @@
     "deletedRecord": "gelöscht",
     "entities": {
       "financeTaxPeriod": "Erklärungszeitraum",
+      "financeTaxAmendment": "Berichtigung der Steuererklärung",
+      "financeTaxAmendmentCheck": "Prüfung der Steuererklärung",
       "financeVatReturn": "Umsatzsteuer-Jahreserklärung",
       "financeVatFiling": "Umsatzsteuer-Abgabe",
       "financeHandover": "Amtsübergabe",
@@ -2533,9 +2538,11 @@
       "financeImportRule": "Zuordnungsregel",
       "financeImportRun": "Auszug",
       "financeInKindDetails": "Angaben zur Sachzuwendung",
+      "financeMoneyLine": "Zahlung der Buchung",
       "financeNotReturnMark": "Kennzeichnung „keine Rückgabe“",
       "financeNotice": "Bescheid",
       "financeOpenItem": "Offene Zahlung",
+      "financeOpenItemSettlement": "Zuordnung der Zahlung",
       "financePartnerEvidence": "Nachweis des Partners",
       "financePartnerNotice": "Anerkennung des Partners",
       "financePartnerPaidLine": "Bezahlter Posten",
@@ -2605,6 +2612,10 @@
       "finance_taxPeriod_filed": "Abgabe der Steuererklärung eingetragen",
       "finance_taxPeriod_noticeLink": "Bescheid zur Steuererklärung verknüpft",
       "finance_taxPeriod_documentLink": "Dokument zur Steuererklärung zugeordnet",
+      "finance_taxAmendment_record": "Berichtigung der Steuererklärung eingetragen",
+      "finance_taxAmendment_update": "Tag der Berichtigung der Steuererklärung geändert",
+      "finance_taxAmendment_closeWithoutAmendment": "Prüfanlass der Steuererklärung ohne Berichtigung geschlossen",
+      "finance_taxAmendment_notified": "Anzeige an das Finanzamt eingetragen",
       "finance_vatReturn_filed": "Abgabe der Umsatzsteuer-Jahreserklärung eingetragen",
       "finance_vatFiling_record": "Abgabe zur Umsatzsteuer eingetragen",
       "finance_vatFiling_update": "Tag der Abgabe zur Umsatzsteuer geändert",
@@ -2828,6 +2839,8 @@
       "finance_openItem_reschedule": "Fälligkeit der offenen Zahlung verschoben",
       "finance_openItem_reduce": "Offene Zahlung gekürzt, Rest erlassen",
       "finance_openItem_update": "Offene Zahlung geändert",
+      "finance_openItem_assignPayment": "Zahlung einer offenen Zahlung zugeordnet",
+      "finance_openItem_unassignPayment": "Zuordnung einer Zahlung aufgehoben",
       "finance_partnerEvidence_add": "Nachweis des Partners angelegt",
       "finance_partnerEvidence_documentGone": "Nachweis des Partners entfallen",
       "finance_partnerEvidence_remove": "Nachweis des Partners entfernt",
@@ -3105,6 +3118,10 @@
       "finance_taxPeriod_filed": "Abgabe der Steuererklärung „{period}“ am „{filedOn}“ eingetragen",
       "finance_taxPeriod_noticeLink": "Bescheid zur Steuererklärung „{period}“ verknüpft",
       "finance_taxPeriod_documentLink": "Dokument „{documentNumber}“ der Steuererklärung „{period}“ zugeordnet",
+      "finance_taxAmendment_record": "Berichtigung der Steuererklärung „{period}“ am „{filedOn}“ eingetragen",
+      "finance_taxAmendment_update": "Tag der Berichtigung der Steuererklärung „{period}“ auf „{filedOn}“ geändert",
+      "finance_taxAmendment_closeWithoutAmendment": "Prüfanlass der Steuererklärung „{period}“ am „{checkedOn}“ ohne Berichtigung geschlossen{withDocument, select, true {, mit Beleg} other {}}",
+      "finance_taxAmendment_notified": "Anzeige an das Finanzamt zur Steuererklärung „{period}“ vom „{checkedOn}“ eingetragen",
       "finance_vatReturn_filed": "Abgabe der Umsatzsteuer-Jahreserklärung zu „{designation}“ am „{filedOn}“ eingetragen",
       "finance_vatFiling_record": "{amendment, select, true {Berichtigte Abgabe} other {Abgabe}} zur Umsatzsteuer „{period}“ am „{filedOn}“ eingetragen",
       "finance_vatFiling_update": "Tag der Abgabe zur Umsatzsteuer „{period}“ auf „{filedOn}“ geändert",
@@ -3233,6 +3250,8 @@
       "finance_entry_notReturn": "{notReturn, select, true {Buchung „{number}“ als „keine Rückgabe“ gekennzeichnet} other {Kennzeichnung „keine Rückgabe“ an Buchung „{number}“ aufgehoben}}",
       "finance_entry_rawLink": "Kontoumsatz mit Buchung „{number}“ verknüpft",
       "finance_entry_reverse": "Buchung „{number}“ durch „{reversalNumber}“ zurückgenommen",
+      "finance_openItem_assignPayment": "Zahlung „{entryNumber}“ über {amountCents} zugeordnet",
+      "finance_openItem_unassignPayment": "Zuordnung der Zahlung „{entryNumber}“ über {amountCents} aufgehoben",
       "finance_entry_review": "{reviewed, select, true {Buchungsentwurf geprüft} other {Prüfung des Buchungsentwurfs zurückgenommen}}",
       "finance_expenseClaim_approve": "{waiver, select, true {Auslage „{number}“ als Aufwandsspende freigegeben} other {Auslage „{number}“ freigegeben}}",
       "finance_expenseClaim_copy": "Auslage „{sourceNumber}“ als neuer Entwurf kopiert",
@@ -6441,6 +6460,7 @@
           "vatAdvanceReturn": "Umsatzsteuer-Voranmeldung {vatPeriod}",
           "vatReturn": "Umsatzsteuer-Jahreserklärung {year}",
           "vatAmendment": "{scope, select, year {Berichtigte Umsatzsteuer-Jahreserklärung {vatPeriod}} other {Berichtigte Voranmeldung {vatPeriod}}}",
+          "taxReturnAmendment": "Steuererklärung {period} prüfen und berichtigen (§\u00a0153 AO)",
           "timelyUse": "Mittel aus {origin} verwenden",
           "timelyUseLapsed": "Verwendungsfrist für Mittel aus {origin} entfallen, AEAO zu §\u00a055 Nr.\u00a031"
         },
@@ -6454,6 +6474,7 @@
           "vatAdvanceReturn": "Umsatzsteuer",
           "vatReturn": "Umsatzsteuer {year}",
           "vatAmendment": "Umsatzsteuer (§\u00a0153 AO)",
+          "taxReturnAmendment": "Steuererklärung {period}",
           "timelyUse": "Mittelverwendung",
           "timelyUseLapsed": "Mittelverwendung {lapsedIn}"
         },
@@ -6461,6 +6482,7 @@
         "vatFile": "Abgabe eintragen …",
         "vatFileFrom": "Abgabe ab {date}",
         "immediately": "unverzüglich",
+        "notified": "angezeigt am {date}, Berichtigung folgt",
         "cause": "{entryNumber} nach der Abgabe {change, select, booked {gebucht} corrected {korrigiert} other {zurückgenommen}}, {changedOn}{more, plural, =0 {} other { und # weitere}}",
         "timelyUseRest": "{amount} noch zu verwenden"
       },
@@ -7468,7 +7490,9 @@
       "related": {
         "title": "Hängt zusammen mit",
         "unnamedItem": "offene Zahlung",
-        "settlement": "{amount} beglichen · Rest {rest}"
+        "settlement": "{amount} beglichen · Rest {rest}",
+        "assignedBy": "zugeordnet am {date} von {person}",
+        "assignedReleased": "zugeordnet am {assignedOn} · aufgehoben am {releasedOn}"
       },
       "history": {
         "title": "Verlauf",
@@ -7933,6 +7957,80 @@
         "origin": "Gehört zu {reference}, <link>dort ändern</link>.",
         "originNoLink": "Gehört zu {reference} und wird dort geändert.",
         "originUnnamed": "einem eigenen Vorgang"
+      },
+      "assign": {
+        "trigger": "Zahlung zuordnen …",
+        "title": "Zahlung zuordnen",
+        "fromDunning": "{name} · {number} · aus dem Mahnlauf",
+        "save": "Zuordnen",
+        "footNote": "Die Buchung bleibt, wie sie ist.",
+        "footNoteDunning": "Danach bleibt {fee} im Mahnlauf.",
+        "head": {
+          "contact": "Kontakt",
+          "reference": "Zahlungsreferenz",
+          "open": "Offen",
+          "openOf": "{open} von {amount}",
+          "dueOn": "Fällig am"
+        },
+        "choose": {
+          "label": "Für welchen Beitrag?",
+          "option": "{reference} · {amount}",
+          "optionMeta": "fällig {dueOn}",
+          "hint": "Ohne Angabe des Mitglieds gilt die Zahlung zuerst für den ältesten fälligen Beitrag."
+        },
+        "listTitle": "Zahlungen von {name}",
+        "listTitleGuardians": "Zahlungen von {name} und ihren Erziehungsberechtigten",
+        "columns": {
+          "pick": "Wahl",
+          "category": "Kategorie · Buchung",
+          "free": "Frei",
+          "date": "Buchungstag",
+          "number": "Nummer · Konto"
+        },
+        "purpose": "Verwendungszweck: „{purpose}“",
+        "viaGuardian": "von {name}, Erziehungsberechtigte",
+        "partlyAssigned": "{free} von {line} frei · {assigned}",
+        "assignedTo": "{amount} bei {reference}{name, select, none {} other { ({name})}}",
+        "hint": {
+          "otherYear": "Der Verwendungszweck nennt {year}. Welchen Beitrag die Zahlung tilgt, bestimmt das Mitglied.",
+          "otherItem": "Der Verwendungszweck nennt {reference}. Welchen Beitrag die Zahlung tilgt, bestimmt das Mitglied."
+        },
+        "blocked": {
+          "fiscalYearClosed": "Liegt im abgeschlossenen Geschäftsjahr {year}.",
+          "rebook": "Zurücknehmen und neu buchen …",
+          "reopen": "Geschäftsjahr wiederöffnen …"
+        },
+        "amount": {
+          "label": "Betrag zuordnen",
+          "help": "Vorbelegt mit dem Kleineren aus offenem Rest ({open}) und dem freien Betrag der Zahlung ({free}). Kleiner machen für einen Teilbetrag.",
+          "partial": "Danach bleiben am Beitrag {rest} offen; er steht auf „teilweise bezahlt“ und bleibt mit {rest} mahnbar.",
+          "over": "An der Zahlung bleiben danach {rest} frei. Zurückzahlen, als Vorauszahlung oder nach Absprache als Spende: Das entscheidet der Verein, Kompass nicht.",
+          "tooHigh": "Höchstens {max}: das Kleinere aus offenem Rest und freiem Betrag der Zahlung."
+        },
+        "empty": {
+          "title": "Keine gebuchte Zahlung von {name}",
+          "text": "Hier stehen festgeschriebene Einnahmen dieses Kontakts mit freiem Betrag. Ist das Geld noch nicht gebucht, geht es über „Jetzt buchen“."
+        },
+        "draft": "An diesem Beitrag hängt schon eine Zahlung als Entwurf ({amount}). Wird der Entwurf später festgeschrieben, ist der Beitrag überzahlt; das Festschreiben warnt dann.",
+        "toast": {
+          "assigned": "Zahlung {number} zugeordnet.",
+          "unassigned": "Zuordnung von {number} aufgehoben."
+        },
+        "assignedOn": "zugeordnet am {date}",
+        "unassign": "Zuordnung aufheben",
+        "toEntry": "Zur Buchung",
+        "hasReturn": "Zur Zahlung ist eine Rückgabe gebucht.",
+        "unfounded": {
+          "text": "Die Mahnung vom {sentOn} war unbegründet: Die Zahlung war schon am {paidOn} eingegangen.",
+          "correction": "Richtigstellung schreiben …",
+          "note": "Vermerk an den Mahnbrief",
+          "noteBody": "Zahlung war schon eingegangen am {paidOn}.",
+          "noted": "Vermerk am Mahnbrief steht seit {date}."
+        },
+        "menuDisabled": {
+          "pending": "Erst nach dem Beitragslauf: Der Beitrag ist noch vorgemerkt.",
+          "noRight": "Nur mit dem Recht, Buchungen zu schreiben."
+        }
       },
       "settleWithoutPayment": {
         "trigger": "Erledigt ohne Zahlung",
@@ -8768,6 +8866,8 @@
         "foreignIban": "Die IBAN ist nicht deutsch. Prüfen Sie, ob es eine Zahlung ins Ausland ist.",
         "ruleTaxCodeNotOffered": "Regel „{rule}“: Kennzeichen „{code}“ gilt für den Verein nicht mehr.",
         "originIsDraft": "Ursprung noch nicht festgeschrieben: Die zurückgegebene Zahlung ist erst ein Entwurf. Schreiben Sie ihn zuerst fest, dann bezieht sich die Rückgabe auf seine Zeilen.",
+        "feePaymentUnbooked": "Die Zahlung zu dieser Gebühr ist noch nicht gebucht. Buchen Sie sie zuerst, dann übernimmt die Gebühr ihr Projekt und ihren Zweck.",
+        "feePaymentMixed": "Die Zahlung zu dieser Gebühr ist auf verschiedene Projekte oder Zwecke verteilt. Wählen Sie Projekt und Zweck der Gebühr selbst.",
         "readOnly": "Übernehmen braucht das Recht „Buchungen vorbereiten“.",
         "summaryLine": "{category}: {amount}"
       },
@@ -9777,7 +9877,8 @@
             "inKindUndescribed": "Sachspende nicht beschrieben",
             "expenseWaiverUnconfirmed": "Aufwandsspende nicht bestätigt",
             "anonymous": "Anonym, ohne Kontakt",
-            "other": "Sonstige",
+            "other": "Noch nicht bestätigt",
+            "underConfirmed": "Weniger bestätigt als gespendet",
             "confirmedAboveReturns": "Bestätigt über Rückgaben hinaus",
             "returnOtherYear": "Rückgabe in einem anderen Jahr"
           },
@@ -11228,9 +11329,29 @@
         "reason": "Zur Steuererklärung „{period}“ ist schon ein Bescheid verknüpft; die Abgabe lässt sich darum nicht mehr zurücknehmen.",
         "remedy": "Stimmt der Tag nicht, tragen Sie den richtigen Tag der Abgabe ein."
       },
-      "taxPeriodFiled": {
-        "reason": "Die Erklärung „{period}“ ist abgegeben.",
-        "remedy": "Nehmen Sie die Abgabe zurück, um Angaben zu ändern."
+      "taxPeriodFiledUnacknowledged": {
+        "reason": "Die Erklärung „{period}“ ist abgegeben. Ändert die Angabe einen Wert, meldet Kompass einen Prüfanlass (§\u00a0153 AO).",
+        "remedy": "Bestätigen Sie die Änderung nach der Abgabe."
+      },
+      "taxPeriodAmended": {
+        "reason": "Zur Steuererklärung „{period}“ ist schon eine Berichtigung oder Prüfung eingetragen; die erste Abgabe lässt sich darum nicht mehr zurücknehmen.",
+        "remedy": "Stimmt der Tag nicht, tragen Sie den richtigen Tag der ersten Abgabe ein."
+      },
+      "taxAmendmentNotDue": {
+        "reason": "Die Werte der Steuererklärung „{period}“ sind seit der letzten Abgabe am {filedOn} unverändert; eine Berichtigung ist nicht fällig.",
+        "remedy": "Stimmt der Tag der letzten Abgabe nicht, ändern Sie ihn dort."
+      },
+      "taxAmendmentNotLatest": {
+        "reason": "Zur Steuererklärung „{period}“ ist eine spätere Berichtigung eingetragen.",
+        "remedy": "Ändern Sie den Tag der letzten Berichtigung."
+      },
+      "taxAmendmentCheckNotOpen": {
+        "reason": "Zur Steuererklärung „{period}“ ist kein Prüfanlass offen: Die Werte entsprechen der letzten Abgabe oder Prüfung.",
+        "remedy": "Ein Prüfanlass entsteht erst, wenn sich ein Wert ändert."
+      },
+      "taxAmendmentNoNotice": {
+        "reason": "Zum laufenden Prüfanlass der Steuererklärung „{period}“ ist keine Anzeige eingetragen.",
+        "remedy": "Tragen Sie zuerst den Tag der Anzeige ein."
       },
       "taxPeriodYearsLocked": {
         "reason": "Zum Erklärungszeitraum „{period}“ gibt es eine festgeschriebene Fassung der Werte für die Anlage Gem; seine Jahre stehen fest.",
@@ -11731,6 +11852,50 @@
       "openItemInDirectDebit": {
         "reason": "{status, select, submitted {Der Einzug ist bei der Bank eingereicht; der Beitrag lässt sich nicht mehr erlassen.} other {Der Beitrag steckt in einem Lastschrift-Einzug mit erzeugter Datei.}}",
         "remedy": "{status, select, submitted {Am Tag der Einreichung können Sie den Einzug als nicht eingereicht zurücksetzen und den Beitrag herausnehmen; später erst, wenn die Bank den Beitrag zurückgegeben hat.} other {Nehmen Sie ihn erst aus dem Einzug oder brechen Sie den Einzug ab.}}"
+      },
+      "openItemNotOpen": {
+        "reason": "Der Posten ist schon ganz ausgeglichen.",
+        "remedy": "Gehört eine seiner Zahlungen zu einem anderen Posten, heben Sie hier zuerst die Zuordnung auf."
+      },
+      "assignEntryNotFinal": {
+        "reason": "Zuordnen lässt sich nur eine festgeschriebene Einnahme, die nicht zurückgenommen ist und selbst keine Gegenbuchung ist.",
+        "remedy": "Schreiben Sie den Entwurf fest oder setzen Sie dort „begleicht offene Zahlung“."
+      },
+      "assignContactMismatch": {
+        "reason": "Die Zahlung kommt nicht vom Kontakt des Postens.",
+        "remedy": "Auch die Zahlung eines Dritten tilgt den Beitrag (§\u00a0267 BGB): Überweisen Sie nicht zurück, sondern nehmen Sie die Buchung zurück und buchen Sie sie mit dem Kontakt des Postens neu."
+      },
+      "assignCategoryMismatch": {
+        "reason": "Als Spende gebucht: Die Kategorie passt nicht zum Beitrag.",
+        "remedy": "Neu buchen als Beitrag nur, wenn die Spende falsch erfasst wurde oder das Mitglied in Textform zustimmt (Zustimmung als Beleg anhängen). Eine ausgestellte Spendenbestätigung vorher zurücknehmen."
+      },
+      "assignCategoryNotTemplate": {
+        "reason": "Die Kategorie der Zahlung passt nicht zur Vorlage des Postens.",
+        "remedy": "Nehmen Sie die Buchung zurück und buchen Sie sie mit der passenden Kategorie neu."
+      },
+      "assignPaymentConfirmed": {
+        "reason": "Die Zahlung steht in einer gültigen Zuwendungsbestätigung als Spende.",
+        "remedy": "Nehmen Sie die Bestätigung zuerst zurück (Original zurückfordern, Finanzamt informieren). Neu buchen als Beitrag danach nur, wenn die Spende falsch erfasst wurde oder das Mitglied in Textform zustimmt."
+      },
+      "assignInDirectDebit": {
+        "reason": "{status, select, submitted {Der Posten steckt in einem eingereichten Lastschrift-Einzug.} other {Der Posten steckt in einem Lastschrift-Einzug mit erzeugter Datei.}}",
+        "remedy": "{status, select, submitted {Warten Sie den Einzug ab; seine Zahlung gleicht den Posten aus.} other {Nehmen Sie den Posten aus dem Einzug oder brechen Sie den Einzug ab.}}"
+      },
+      "assignExceedsOpen": {
+        "reason": "Der Betrag ist größer als der offene Rest des Postens ({open}).",
+        "remedy": "Ordnen Sie höchstens den offenen Rest zu."
+      },
+      "assignExceedsLine": {
+        "reason": "Der Betrag ist größer als der freie Rest der Zahlung ({free}).",
+        "remedy": "Ordnen Sie höchstens den freien Rest zu; der übrige Betrag steckt schon in anderen Posten."
+      },
+      "settlementNotAssigned": {
+        "reason": "Dieser Ausgleich entstand beim Buchen und gehört zur Buchung.",
+        "remedy": "Ist er falsch, nehmen Sie die Buchung zurück und buchen Sie sie neu."
+      },
+      "assignmentHasReturn": {
+        "reason": "Zur Zahlung ist eine Rückgabe gebucht.",
+        "remedy": "Die Rückgabe zeigt auf diese Zuordnung; sie bleibt deshalb stehen. Der Posten ist durch die Rückgabe wieder offen."
       },
       "openItemHasOrigin": {
         "reason": "Dieser Posten hat eine Herkunft.",
@@ -12679,6 +12844,8 @@
       "fiscalYear": "Geschäftsjahr {designation}",
       "report": "{title} {number}",
       "taxPeriod": "Erklärungszeitraum {period}",
+      "taxAmendment": "Berichtigung der Steuererklärung {period}",
+      "taxAmendmentCheck": "Prüfung der Steuererklärung {period}",
       "vatFiling": "Umsatzsteuer-Voranmeldung {period}",
       "vatAnnualFiling": "Umsatzsteuer-Jahreserklärung {period}"
     },
@@ -13401,6 +13568,7 @@
         "missing": "{count, plural, one {# Angabe fehlt.} other {# Angaben fehlen.}}",
         "due": "Abgabe bis {date}.",
         "filed": "Abgegeben am {date}.",
+        "filedChanged": "Abgegeben am {date}, Werte seither geändert.",
         "blocked": {
           "missing": "{count, plural, one {Festschreiben können Sie, sobald die fehlende Angabe eingetragen ist.} other {Festschreiben können Sie, sobald die # fehlenden Angaben eingetragen sind.}}"
         },
@@ -13453,6 +13621,16 @@
         "dueOn": "Frist",
         "filedOn": "Abgegeben am",
         "filedReason": "Nach dem Festschreiben",
+        "amendedOn": "Berichtigt am",
+        "amendedReason": "Die Dokumente unten gehören zur Berichtigung",
+        "checkedOn": "Geprüft am",
+        "checkedReason": "Ohne Berichtigung, von {name}: {reason}",
+        "checkedDocument": "Beleg {number}",
+        "notifiedOn": "Angezeigt am",
+        "notifiedReason": "Berichtigung folgt",
+        "amend": "Berichtigung eintragen …",
+        "notify": "Anzeige eintragen …",
+        "closeReview": "Ohne Berichtigung schließen …",
         "followUp": "Wiedervorlage anlegen",
         "followUpTarget": "Steuererklärung {period}",
         "documents": {
@@ -13470,6 +13648,10 @@
             "detail": "Kommt nach der Abgabe; Hinweise daraus als Wiedervorlage",
             "dated": "Bescheid vom {date}",
             "open": "Bescheid öffnen"
+          },
+          "noticeLetter": {
+            "title": "Anzeige an das Finanzamt",
+            "detail": "Das Schreiben oder die Nachricht aus Mein ELSTER"
           }
         },
         "dialog": {
@@ -13478,12 +13660,45 @@
           "dueOn": "Frist",
           "filedOn": "Abgegeben am",
           "filedHint": "Abgegeben wird eine festgeschriebene Fassung der Werte. Ohne Tag gilt die Erklärung als nicht abgegeben.",
+          "titleAmendment": "Berichtigung {period}",
+          "amendmentOn": "Berichtigung abgegeben am",
+          "amendmentHint": "Die berichtigte Erklärung braucht eine festgeschriebene Fassung mit den Werten von heute. Der erste Tag der Abgabe bleibt stehen.",
           "save": "Speichern"
         }
+      },
+      "review": {
+        "due": "Die Werte haben sich seit der Abgabe geändert: {causes}.",
+        "dueText": "Wenn es dadurch zu einer Steuerverkürzung kommen kann, ist das unverzüglich anzuzeigen und zu berichtigen. Ob das so ist, entscheidet der Vorstand.",
+        "elster": "In Mein ELSTER übermitteln Sie die Erklärung vollständig neu und teilen dem Finanzamt mit, dass es eine Berichtigung nach §\u00a0153 AO ist und welche Zeilen sich geändert haben. Geänderte Beilagen gehen über die Belegnachreichung. Ist schon ein Bescheid ergangen, gilt derselbe Weg; die Berichtigung wirkt dann zugleich als Antrag auf Änderung.",
+        "board": "Die Berichtigung schuldet der Vorstand nach §\u00a026 BGB. Wer die Frist sieht und nicht dazugehört, informiert ihn sofort.",
+        "unchanged": "Die abgegebene Fassung ist zurückgenommen. Die Werte der Anlage Gem und der Beilagen aus Kompass sind unverändert, deshalb meldet Kompass keine Berichtigung. Andere Beilagen oder Umstände außerhalb der Werte prüfen Sie selbst (§\u00a0153 AO).",
+        "unknown": "Die abgegebene Fassung ist zurückgenommen. Die Werte dieser Abgabe kennt Kompass nicht, weil sie vor dem Abgleich abgegeben wurde. Ob sich Werte, Beilagen oder Umstände geändert haben, prüfen Sie selbst (§\u00a0153 AO).",
+        "cause": {
+          "line": "Zeile {line}",
+          "lineYear": "Zeile {line} ({year})",
+          "taxReturnIncomeStatement": "Beilage EÜR {year}",
+          "assetOverview": "Vermögensübersicht {year}",
+          "reserveStatement": "Rücklagenspiegel {year}"
+        }
+      },
+      "closeDialog": {
+        "title": "Ohne Berichtigung schließen · {period}",
+        "description": "Sie halten fest, dass die Änderung zu keiner Steuerverkürzung führen kann. Begründung, Name und Tag stehen am Erklärungszeitraum, die Prüfung auch im Kassenbericht. Ändert sich danach ein Wert, meldet Kompass einen neuen Prüfanlass.",
+        "reason": "Begründung",
+        "reasonHint": "Warum keine Verkürzung möglich ist",
+        "document": "Beleg aus der Akte",
+        "save": "Schließen"
+      },
+      "noticeDialog": {
+        "title": "Anzeige eintragen · {period}",
+        "description": "Der Tag, an dem Sie dem Finanzamt die Änderung angezeigt haben. Die Frist bleibt offen, bis die Berichtigung eingetragen ist; das Schreiben legen Sie danach in der Zeile „Anzeige an das Finanzamt“ ab.",
+        "notifiedOn": "Angezeigt am",
+        "save": "Speichern"
       },
       "documentDialog": {
         "title": {
           "request": "Aufforderung ablegen",
+          "notice": "Anzeige an das Finanzamt ablegen",
           "filedReturn": "Abgegebene Fassung ablegen",
           "transmissionProtocol": "Übertragungsprotokoll ablegen",
           "activityReport": "Tätigkeitsbericht ablegen",
@@ -13507,7 +13722,11 @@
         },
         "noFeeResolution": "Kein gesonderter Beschluss",
         "readOnly": "Ändern dürfen, wer Jahre abschließen darf.",
-        "filedReason": "Die Erklärung ist abgegeben. Nehmen Sie die Abgabe zurück, um Angaben zu ändern.",
+        "filedConfirm": {
+          "title": "Angaben nach der Abgabe ändern?",
+          "description": "Die Erklärung ist abgegeben. Ändert die Angabe einen Wert, meldet Kompass einen Prüfanlass (§\u00a0153 AO).",
+          "confirm": "Speichern"
+        },
         "giftReason": "Zuwendungsgrund",
         "giftAmount": "Betrag",
         "giftEntry": "Eintrag {n}",
@@ -13672,7 +13891,10 @@
         "answersSaved": "Angaben gespeichert.",
         "filed": "Abgelegt.",
         "noticeLinked": "Bescheid verknüpft.",
-        "taxDetailsSaved": "Steuerdaten gespeichert."
+        "taxDetailsSaved": "Steuerdaten gespeichert.",
+        "amendmentRecorded": "Berichtigung eingetragen.",
+        "reviewClosed": "Prüfanlass geschlossen.",
+        "noticeRecorded": "Anzeige eingetragen."
       }
     },
     "otherAssets": {
@@ -14235,8 +14457,10 @@
       },
       "groupLetters": "{count, plural, one {# Brief} other {# Briefe}}",
       "groupMembers": "{count, plural, one {# Mitglied} other {# Mitglieder}}",
-      "matchHint": "Ein Umsatz ohne Zuordnung könnte die Zahlung sein.",
+      "matchHint": "Eine Zahlung könnte passen (noch nicht gebucht)",
+      "matchHintBooked": "Eine gebuchte Zahlung könnte passen · {count, plural, one {# Beitrag reif} other {# Beiträge reif}}",
       "assign": "Zuordnen",
+      "assignBooked": "Zuordnen …",
       "openMember": "Mitglied öffnen",
       "skip": {
         "lastLevelReached": "Letzte Stufe erreicht, weiter nur von Hand",
@@ -14354,9 +14578,10 @@
         "dialogNew": "Neuen Stand anlegen",
         "dialogEdit": "Stand bearbeiten",
         "dialogText": "Vorbelegt mit dem letzten Stand. Ein Stand gilt ab seinem Tag bis zum nächsten.",
-        "dialogLocked": "Nach diesem Stand sind schon Beiträge angelegt. Tag und Beträge bleiben fest; den Beschlusstag können Sie nachtragen.",
+        "dialogLocked": "Nach diesem Stand sind schon Beiträge angelegt. Tag und Beträge bleiben fest; den Beschluss können Sie nachtragen.",
         "validFrom": "Gilt ab",
         "resolvedOn": "Beschlossen am",
+        "resolutionDocument": "Beschluss in der Akte",
         "isMinimum": "Mindestbetrag",
         "saved": "Stand gespeichert.",
         "remedyNew": "Neuen Stand anlegen"

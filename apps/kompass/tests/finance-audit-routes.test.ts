@@ -7,6 +7,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { createTranslator } from 'next-intl';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { reportPagesCacheDir } from '@/lib/finance/report-pages';
 import { auditFixture } from '../../../packages/modules/finance/tests/auditing-fixture';
 
 const state = vi.hoisted(() => ({ session: null as unknown, deps: null as unknown }));
@@ -136,6 +137,7 @@ describe('Prüfbericht abgelegt: der Scan als Seiten (Designer Runde 7, 16e)', (
 
   it('renders the pages of the filed scan with the rights of the document', async () => {
     vi.stubEnv('DATA_PATH', `/tmp/kompass-report-pages-test-${process.pid}-${Math.random()}`);
+    dirs.push(reportPagesCacheDir());
     const { saveAuditReportExamination, saveAuditReportResult, markAuditReportReadyToSign, fileAuditReportScan } = await import('@kompass/module-finance');
     const { readFileSync } = await import('node:fs');
     const draft = unwrap(await createAuditReportDraft(a.f.deps, a.mira.ctx, { fiscalYearId: a.y2025, kind: 'report' }));

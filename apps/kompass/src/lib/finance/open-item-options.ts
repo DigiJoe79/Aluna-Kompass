@@ -3,24 +3,27 @@ import { displayName, getContact } from '@kompass/module-contacts';
 import type { OpenItemView } from '@kompass/module-finance';
 import type { SettlementOption } from './settlement';
 
+/** Namen zu Kontakt-IDs (`getContact` + `displayName`); was der Aufrufer nicht sehen darf oder was fehlt, bleibt weg. */
+export async function contactNamesOf(deps: Deps, ctx: CallContext, ids: Iterable<string | null | undefined>): Promise<Map<string, string>> {
+  const names = new Map<string, string>();
+  const wanted = new Set<string>();
+  for (const id of ids) if (id) wanted.add(id);
+  await Promise.all(
+    [...wanted].map(async (id) => {
+      const res = await getContact(deps, ctx, id);
+      if (res.ok) names.set(id, displayName(res.value));
+    }),
+  );
+  return names;
+}
+
 /**
  * Die offenen Posten als Auswahl „begleicht offene Zahlung“ der Buchungsmaske: Referenz, Kontakt mit Namen (wie die
  * Liste der offenen Zahlungen, `getContact` + `displayName`) und die Vorlage für „Wofür?“ — der Kontakt einer
  * Vorlagenzeile fällt wie in `linesFromTemplate` auf den des Postens zurück.
  */
 export async function settlementOptions(deps: Deps, ctx: CallContext, items: readonly OpenItemView[], unnamed: (itemDate: string) => string): Promise<SettlementOption[]> {
-  const ids = new Set<string>();
-  for (const item of items) {
-    if (item.contactId) ids.add(item.contactId);
-    for (const line of item.lineTemplate ?? []) if (line.contactId) ids.add(line.contactId);
-  }
-  const names = new Map<string, string>();
-  await Promise.all(
-    [...ids].map(async (id) => {
-      const res = await getContact(deps, ctx, id);
-      if (res.ok) names.set(id, displayName(res.value));
-    }),
-  );
+  const names = await contactNamesOf(deps, ctx, items.flatMap((item) => [item.contactId, ...(item.lineTemplate ?? []).map((line) => line.contactId)]));
   return items.map((item) => ({
     id: item.id,
     kind: item.kind as 'receivable' | 'payable',

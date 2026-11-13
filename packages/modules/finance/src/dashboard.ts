@@ -609,7 +609,7 @@ const auditTile: DashboardTile<Record<string, never>> = {
   },
 };
 
-const DEADLINE_KINDS = ['noticeExpiry', 'partnerProof', 'recipientNoticeExpiry', 'confirmationsToCorrect', 'auditorAccess', 'vatAdvanceReturn', 'vatReturn', 'vatAmendment', 'taxReturn', 'timelyUse', 'timelyUseLapsed'] as const satisfies readonly DeadlineKind[];
+const DEADLINE_KINDS = ['noticeExpiry', 'partnerProof', 'recipientNoticeExpiry', 'confirmationsToCorrect', 'auditorAccess', 'vatAdvanceReturn', 'vatReturn', 'vatAmendment', 'taxReturnAmendment', 'taxReturn', 'timelyUse', 'timelyUseLapsed'] as const satisfies readonly DeadlineKind[];
 
 /**
  * Rechenschaft C (Board 7a, Spec § C): „Finanzfristen · Schwellen“ — berechnete Fristen binnen 60 Tagen oder überfällig,

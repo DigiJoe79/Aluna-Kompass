@@ -230,9 +230,13 @@ darf; die übrigen auch, wer nur die Übersicht sehen darf.
   sich auch für zwei oder drei aufeinanderfolgende Jahre abrufen.
 - **Auslandsbericht** (hoch, Finanzamt, mit Personenbezug): Zahlungen an Partner
   getrennt nach Förderung und Auftrag, je Zahlung mit der Zahl der Nachweise und
-  ob sie vollständig sind; dazu sonstige Buchungen mit Auslandsbezug und
-  Buchungen an Kontakte im Ausland. Was „Ausland“ ist, folgt dem Land des Vereins
-  unter Einrichtung → Verein.
+  ob sie vollständig sind; dazu sonstige Ausgaben mit dem Merkmal „Wird im
+  Ausland verwendet“. Eine Einnahme steht dort nie, auch mit dem Merkmal; ein
+  Storno einer solchen Ausgabe steht mit umgekehrtem Vorzeichen daneben und
+  gleicht sie aus. Wo ein Kontakt sitzt, zählt für den Bericht nicht; die
+  Buchungen an Kontakte im Ausland liefert nur die Auslandsabfrage über einen
+  Agenten. Was „Ausland“ ist, folgt dem Land des Vereins unter Einrichtung →
+  Verein.
 - **Spendenbuch** (hoch, Finanzamt, mit Personenbezug): alle Zuwendungen mit
   Datum, Nummer, Zuwendenden (oder „anonym“), Art, Zweck, Betrag und
   Bestätigung, Summen je Art, darunter die Abstimmung mit den Bestätigungen nach

@@ -21,6 +21,10 @@ export function useDeadlineTitle(): (d: DeadlineView) => string {
   return (d) => t(`kinds.${d.kind}`, withVatPeriodLabel(d.params, root));
 }
 
+/** „unverzüglich“ (§ 153 AO): Berichtigung der Umsatzsteuer und Prüfanlass der Steuererklärung (B9) — wie `IMMEDIATE_DEADLINE_KINDS` im Modul. */
+const IMMEDIATE_KINDS: readonly DeadlineView['kind'][] = ['vatAmendment', 'taxReturnAmendment'];
+const immediately = (d: DeadlineView) => IMMEDIATE_KINDS.includes(d.kind);
+
 /** E6a: Zeilen mit „Abgabe eintragen …“ — Voranmeldung, Jahreserklärung und Berichtigung der Umsatzsteuer. */
 const VAT_FILING_KINDS: readonly DeadlineView['kind'][] = ['vatAdvanceReturn', 'vatReturn', 'vatAmendment'];
 
@@ -30,7 +34,9 @@ const VAT_FILING_KINDS: readonly DeadlineView['kind'][] = ['vatAdvanceReturn', '
  * Jahreserklärung und Berichtigung (mit `finance.periodClose`) — seit E6a Task 11d (Board Umsatzsteuer 5a) in der
  * Bezugsspalte, keine eigene Aktionsspalte. Der Weg zur Voranmeldung bzw. zu den Summen ist nur der Titel; der Bezug ist Text
  * (Designer Runde 8, Vorweg 3: kein zweiter Link zum selben Ziel). Die Berichtigung hat kein Datum:
- * „unverzüglich“ in `warning`, und eine Unterzeile nennt den Auslöser, wenn der Dienst ihn kennt.
+ * „unverzüglich“ in `warning`, und eine Unterzeile nennt den Auslöser, wenn der Dienst ihn kennt. Der Prüfanlass der
+ * Steuererklärung (B9) steht ebenso, die Unterzeile nennt die geänderten Stellen bzw. „angezeigt am …, Berichtigung
+ * folgt“; keine Zeilenaktion (wie `taxReturn`).
  */
 export function DeadlineList({ deadlines, canFileVat, canRead, today }: { deadlines: readonly DeadlineView[]; canFileVat: boolean; /** `finance.read`: ohne das Recht führt der Link auf eine ForbiddenCard, also Text. */ canRead: boolean; today: string }) {
   const t = useTranslations('finance.deadlines.computed');
@@ -39,10 +45,12 @@ export function DeadlineList({ deadlines, canFileVat, canRead, today }: { deadli
   const [vat, setVat] = useState<DeadlineView | null>(null);
   const root = useTranslations();
   const subject = (d: DeadlineView) => (typeof d.params.partner === 'string' ? t('subjectPartner', { partner: d.params.partner }) : t(`subjects.${d.kind}`, withVatPeriodLabel(d.params, root)));
-  const cause = (d: DeadlineView): string | null =>
-    d.kind === 'vatAmendment' && typeof d.params.entryNumber === 'string' && typeof d.params.changedOn === 'string'
+  const cause = (d: DeadlineView): string | null => {
+    if (d.kind === 'taxReturnAmendment') return typeof d.params.notifiedOn === 'string' ? t('notified', { date: fmt.date(d.params.notifiedOn) }) : typeof d.params.lines === 'string' && d.params.lines ? d.params.lines : null;
+    return d.kind === 'vatAmendment' && typeof d.params.entryNumber === 'string' && typeof d.params.changedOn === 'string'
       ? t('cause', { entryNumber: d.params.entryNumber, change: String(d.params.change ?? 'corrected'), changedOn: fmt.date(d.params.changedOn), more: Number(d.params.more ?? 0) })
       : null;
+  };
   const vatPeriod = (d: DeadlineView) => d.key.slice(d.key.indexOf(':') + 1);
   return (
     <Section title={t('title')} intro={t('intro')}>
@@ -65,7 +73,7 @@ export function DeadlineList({ deadlines, canFileVat, canRead, today }: { deadli
             const because = cause(d);
             return (
               <TableRow key={d.key} data-testid="deadline-row" data-kind={d.kind}>
-                <TableCell col="meta">{d.dueOn ? fmt.date(d.dueOn) : d.kind === 'vatAmendment' ? <span className="font-semibold text-warning">{t('immediately')}</span> : t('noDate')}</TableCell>
+                <TableCell col="meta">{d.dueOn ? fmt.date(d.dueOn) : immediately(d) ? <span className="font-semibold text-warning">{t('immediately')}</span> : t('noDate')}</TableCell>
                 {/* Die Marke steht direkt hinter dem Text, 8 px (295, wie „folgt später“ in 2a); die Statusspalte bleibt
                     leer und fällt damit weg. */}
                 <TableCell col="title">
@@ -119,10 +127,10 @@ export function DeadlinesHeader({ deadlines, approaching, exceeded }: { deadline
   const td = useTranslations('finance.deadlines');
   const fmt = useDateFormat();
   const title = useDeadlineTitle();
-  const immediate = deadlines.filter((d) => d.kind === 'vatAmendment');
-  const overdue = deadlines.filter((d) => d.overdue && d.kind !== 'vatAmendment');
+  const immediate = deadlines.filter(immediately);
+  const overdue = deadlines.filter((d) => d.overdue && !immediately(d));
   const next = deadlines.find((d) => d.dueOn !== null) ?? null;
-  const undated = deadlines.find((d) => d.dueOn === null && d.kind !== 'vatAmendment' && d.kind !== 'timelyUseLapsed') ?? null;
+  const undated = deadlines.find((d) => d.dueOn === null && !immediately(d) && d.kind !== 'timelyUseLapsed') ?? null;
   // Höchstens zwei mit Namen, dann die Zahl (Designer Runde 8, Abweichung 4): „… und 1 weitere.“ statt „und …“.
   const listed = (list: readonly DeadlineView[]) => ({ count: list.length, first: title(list[0]!), second: list[1] ? title(list[1]) : '', rest: Math.max(0, list.length - 2) });
   const parts = [

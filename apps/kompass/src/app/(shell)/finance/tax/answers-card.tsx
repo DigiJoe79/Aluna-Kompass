@@ -10,14 +10,13 @@ import { CountField } from '@/components/count-field';
 import { useDateFormat } from '@/components/date-format-provider';
 import { AmountField } from '@/components/finance/amount-field';
 import { FixedValue } from '@/components/fixed-value';
-import { TIGHT } from '../audit/report/subject-block';
+import { ConfirmDialog } from '@/components/forms/confirm-dialog';
 import { FormActionBar } from '@/components/forms/form-action-bar';
 import { FormCard, FormCardBody } from '@/components/forms/form-card';
 import { FormField } from '@/components/forms/form-field';
 import { FormCell, FormGrid, FormRowBreak } from '@/components/forms/form-grid';
 import { RefusalNotice } from '@/components/forms/refusal-notice';
 import { useActionFeedback } from '@/components/forms/use-action-feedback';
-import { Notice } from '@/components/notice';
 import { Overline } from '@/components/overline';
 import { RowMenu } from '@/components/row-menu';
 import { Section } from '@/components/section';
@@ -120,8 +119,9 @@ function changedCount(a: GemAnswers, b: GemAnswers): number {
  * „Ihre Angaben“ (Board 5a, 15e): nur, was Kompass nicht aus den Buchungen kennt, in einer `FormCard` mit `FormGrid`.
  * Ja/Nein als `Segmented`, Tage als Datumsfeld, Auswahl als `Select`; je Rücklage eine Untergruppe mit ihrem Namen als
  * Overline; Zeile 75 als wiederholbare Liste wie die Übergabepunkte (14c); die Mitglieder am Jahresende je Jahr,
- * vorbelegt aus der Mitgliederverwaltung. Ohne `finance.periodClose` steht alles als Text, ebenso nach der Abgabe
- * (Befund 18 c) — dann mit dem Grund über der Karte; der Dienst lehnt dort ab (`taxPeriodFiled`).
+ * vorbelegt aus der Mitgliederverwaltung. Ohne `finance.periodClose` steht alles als Text. Nach der Abgabe bleiben die
+ * Angaben änderbar (B9, F1): Vor dem Speichern fragt ein `ConfirmDialog` nach, und erst dann geht `acknowledgeFiled` mit
+ * — eine Änderung, die einen Wert ändert, meldet einen Prüfanlass (§ 153 AO).
  */
 export function AnswersCard({
   period,
@@ -144,7 +144,7 @@ export function AnswersCard({
   /** Mitglieder am Ende je Jahr laut Mitgliederverwaltung; `null`, wenn sie aus ist oder nicht gelesen werden darf. */
   memberSuggestions: Record<string, number> | null;
   canEdit: boolean;
-  /** Die Erklärung ist abgegeben: Die Angaben stehen fest, bis die Abgabe zurückgenommen ist. */
+  /** Die Erklärung ist abgegeben: Speichern fragt vorher nach (B9). */
   filed?: boolean;
   /** Heute in der Zone des Vereins: Bis zum Jahresende steht die Mitgliederzahl „Stand heute“ (316). */
   today?: string;
@@ -154,10 +154,10 @@ export function AnswersCard({
   statuteLinked?: boolean;
 }) {
   const t = useTranslations('finance.tax.answers');
-  const editable = canEdit && !filed;
-  const readOnlyReason = filed ? t('filedReason') : t('readOnly');
-  // Abgegeben: der Grund steht einmal als Hinweis über der Karte, die Felder als dichte Wertliste (Designer Runde 7, 318).
-  const fixedProps = filed ? { describedBy: 'tax-answers-filed-text', className: TIGHT } : { reason: readOnlyReason };
+  const editable = canEdit;
+  const readOnlyReason = t('readOnly');
+  const fixedProps = { reason: readOnlyReason };
+  const [confirming, setConfirming] = useState(false);
   const fmt = useDateFormat();
   const router = useRouter();
   const form = gemFormFor(formYear);
@@ -183,12 +183,22 @@ export function AnswersCard({
     const errors = amountErrorsOf(d);
     setAmountErrors(errors);
     if (Object.keys(errors).length > 0) return;
+    // Abgegeben: erst die Rückfrage; sie schickt die Bestätigung mit (`saveAcknowledged`).
+    if (filed) return setConfirming(true);
     setPending(true);
     const result = await feedback.run(() => saveTaxPeriodAnswersAction({ id: period.id, answers: current, expectedVersion: period.version }), { retry: () => void save() });
     setPending(false);
     if (result.status !== 'success') return;
     setBaseline(current);
     router.refresh();
+  };
+  const saveAcknowledged = async () => {
+    const result = await saveTaxPeriodAnswersAction({ id: period.id, answers: current, expectedVersion: period.version, acknowledgeFiled: true });
+    if (result.status === 'success') {
+      setBaseline(current);
+      router.refresh();
+    }
+    return result;
   };
 
   const label = (line: GemLine) => t('lineLabel', { line: line.line, label: line.label });
@@ -417,7 +427,7 @@ export function AnswersCard({
           const value = d.members[y.id] ?? '';
           const suggestion = memberSuggestions?.[y.id];
           const label = t('members', { date: fmt.date(y.endsOn) });
-          if (!editable) return <FixedValue key={y.id} id={id} label={label} value={value || null} {...(filed ? fixedProps : { reason: t('membersReason') })} size="s" />;
+          if (!editable) return <FixedValue key={y.id} id={id} label={label} value={value || null} reason={t('membersReason')} size="s" />;
           const differs = suggestion !== undefined && value !== String(suggestion);
           return (
             <FormCell key={y.id} size="s" className="flex flex-col gap-1.5">
@@ -454,18 +464,7 @@ export function AnswersCard({
     </FormCardBody>
   );
 
-  if (!editable) {
-    const card = <FormCard as="section" data-testid="tax-answers">{body}</FormCard>;
-    if (!filed) return card;
-    return (
-      <div className="flex flex-col gap-2">
-        <Notice level="hint" testId="tax-answers-filed">
-          <span id="tax-answers-filed-text">{readOnlyReason}</span>
-        </Notice>
-        {card}
-      </div>
-    );
-  }
+  if (!editable) return <FormCard as="section" data-testid="tax-answers">{body}</FormCard>;
   return (
     <FormCard
       as="form"
@@ -477,6 +476,7 @@ export function AnswersCard({
     >
       {body}
       <FormActionBar count={changed} onSave={() => void save()} onDiscard={() => setD(initialDraft)} pending={pending} state={withUnplacedFieldErrors(feedback.state, [])} saveTestId="tax-answers-save" />
+      {filed ? <ConfirmDialog open={confirming} onOpenChange={setConfirming} title={t('filedConfirm.title')} description={t('filedConfirm.description')} confirmLabel={t('filedConfirm.confirm')} action={saveAcknowledged} /> : null}
     </FormCard>
   );
 }

@@ -46,7 +46,8 @@ export interface SplitRowValue {
   contactName?: string | null;
   projectId: string | null;
   purposeId: string | null;
-  abroad: boolean;
+  /** `null`: der Dienst belegt vor (Befund B2, 0.5.2) — siehe `SplitRowState.abroad`. */
+  abroad: boolean | null;
   addsToAssets: boolean;
   /** Vermögensausstattung nach § 58 Nr. 3 AO von einer anderen Körperschaft (nur bei `bodyGrant`). */
   assetEndowment?: boolean;
@@ -274,7 +275,8 @@ export function SplitRow({
             name={`${value.key}-project`}
             value={value.projectId ?? ''}
             disabled={value.locked}
-            onChange={(e) => set({ projectId: e.target.value || null })}
+            // Ein anderes Projekt: „Im Ausland verwendet“ belegt der Dienst neu vor (Befund B2, 0.5.2).
+            onChange={(e) => set({ projectId: e.target.value || null, abroad: null })}
           >
             <option value="">{t('noProject')}</option>
             {projects.map((p) => (
@@ -295,7 +297,7 @@ export function SplitRow({
                 id={`${value.key}-purpose`}
                 name={`${value.key}-purpose`}
                 value={value.purposeId ?? ''}
-                onChange={(e) => set({ purposeId: e.target.value || null })}
+                onChange={(e) => set({ purposeId: e.target.value || null, abroad: null })}
               >
                 <option value="">{t('noPurpose')}</option>
                 {purposes.map((p) => (
@@ -310,7 +312,7 @@ export function SplitRow({
             </FormField>
           ) : null}
           <FormField id={`${value.key}-abroad`} label={t('abroad')} toggle size="s">
-            <Switch id={`${value.key}-abroad`} checked={value.abroad} onCheckedChange={(checked) => set({ abroad: checked === true })} />
+            <Switch id={`${value.key}-abroad`} checked={value.abroad === true} onCheckedChange={(checked) => set({ abroad: checked === true })} />
           </FormField>
           {allowsAddsToAssets ? (
             <FormField id={`${value.key}-adds-to-assets`} label={t('addsToAssets')} toggle size="s">

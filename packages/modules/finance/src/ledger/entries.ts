@@ -6,7 +6,7 @@ import { and, asc, desc, eq, gte, inArray, isNotNull, isNull, like, lte, or, typ
 import { z } from 'zod';
 import { financeAudit } from '../audit';
 import { financeConflict, requireHumanChannelFinance } from '../errors';
-import { financeAccounts, financeAllocationCorrections, financeAllocationLines, financeCategories, financeContactTaxDetails, financeDirectDebitItems, financeEntries, financeEntryDocuments, financeEntryJustifications, financeImportRuns, financeInKindDetails, financeMoneyLines, financeOpenItems, financeOpenItemSettlements, financePartnerPaidLines, financePartnerPayments, financePurposes, financeRawTransactions, type FinanceAllocationLineRow, type FinanceEntryRow, type FinanceMoneyLineRow } from '../schema';
+import { financeAccounts, financeAllocationCorrections, financeAllocationLines, financeCategories, financeContactTaxDetails, financeDirectDebitItems, financeEntries, financeEntryDocuments, financeEntryJustifications, financeImportRuns, financeInKindDetails, financeMoneyLines, financeOpenItems, financeOpenItemSettlements, financePartnerPaidLines, financePartnerPayments, financePurposes, financeRawTransactions, type FinanceAllocationLineRow, type FinanceEntryRow, type FinanceMoneyLineRow, type FinanceOpenItemSettlementRow } from '../schema';
 import { boardAllowanceProblemInternal } from './board';
 import { purposeGoingNegative } from './purpose-negative';
 import { mayBeDonationReturnInternal, notReturnMarkInternal, type NotReturnMarkView } from './not-return';
@@ -18,6 +18,7 @@ import { accountLedgerInternal } from './queries';
 import { taxContextAt, taxOf, type TaxCode, type TaxResult } from './tax';
 import { settlementWarningsInternal, type SettlementWarning, type SettlementWarningParams } from './settlement-warnings';
 import { taxCodeOptionsInternal } from './vat-settings';
+import { liveSettlementCondition } from './settlement-live';
 
 /** Eine Geldzeile erledigt einen offenen Posten ganz oder teilweise (Spec 5.3). */
 export interface MoneyLineSettlementView {
@@ -26,8 +27,17 @@ export interface MoneyLineSettlementView {
   amountCents: number;
   /** Rück-Ausgleich (Spec Mitglieder und Lastschrift § 6.2): der Ausgleich, den diese Zeile zurücknimmt. */
   reversesSettlementId: string | null;
+  /** Spec Zahlung zuordnen: nachträglich zugeordnet am und von (beim Buchen entstanden: beide `null`). */
+  assignedAt: string | null;
+  assignedByUserId: string | null;
+  /** Aufgehoben am — nur in `releasedSettlements` gesetzt. */
+  releasedAt: string | null;
 }
-export type MoneyLineView = FinanceMoneyLineRow & { settlements: MoneyLineSettlementView[] };
+/**
+ * `settlements` sind die lebenden Ausgleiche der Geldzeile — nur sie zählen. `releasedSettlements` sind aufgehobene
+ * Zuordnungen, die als Spur stehen bleiben (Design 4c); gezählt wird aus ihnen nichts.
+ */
+export type MoneyLineView = FinanceMoneyLineRow & { settlements: MoneyLineSettlementView[]; releasedSettlements: MoneyLineSettlementView[] };
 export type AllocationLineView = FinanceAllocationLineRow & {
   /** Nach den Werten des Buchungstags berechnet — nie gespeichert. `null`, wenn dafür kein Satz hinterlegt ist. */
   tax: TaxResult | null;
@@ -367,7 +377,7 @@ export function documentationOf(db: DbOrTx, entryId: string, settings: { stateme
   // F7 Task 4 (Annahme 12): eine Zahlung aus einem Posten mit Herkunft Zahlung an Partner oder Antrag —
   // die Belege liegen am Vorgang.
   if (moneyLines.length > 0) {
-    const settlementRows = db.select({ openItemId: financeOpenItemSettlements.openItemId }).from(financeOpenItemSettlements).where(inArray(financeOpenItemSettlements.moneyLineId, moneyLines.map((l) => l.id))).all();
+    const settlementRows = db.select({ openItemId: financeOpenItemSettlements.openItemId }).from(financeOpenItemSettlements).where(and(inArray(financeOpenItemSettlements.moneyLineId, moneyLines.map((l) => l.id)), liveSettlementCondition())).all();
     if (settlementRows.length > 0) {
       const items = db.select({ id: financeOpenItems.id, originType: financeOpenItems.originType, originId: financeOpenItems.originId }).from(financeOpenItems).where(inArray(financeOpenItems.id, settlementRows.map((s) => s.openItemId))).all();
       const origin = items.find((i) => (i.originType === 'financePartnerPayment' || i.originType === 'financeExpenseClaim') && i.originId);
@@ -405,12 +415,19 @@ export function documentationOf(db: DbOrTx, entryId: string, settings: { stateme
   return { state: 'statementSuffices', warnExpenseAboveLimit: warn };
 }
 
+/** Die aufgehobenen Zuordnungen der Geldzeilen — die Spur der Buchung (Design 4c), bewusst ohne Bedingung des lebenden Ausgleichs. */
+function releasedSettlementsOf(db: DbOrTx, moneyLineIds: string[]): FinanceOpenItemSettlementRow[] {
+  return db.select().from(financeOpenItemSettlements).where(and(inArray(financeOpenItemSettlements.moneyLineId, moneyLineIds), isNotNull(financeOpenItemSettlements.releasedAt))).orderBy(asc(financeOpenItemSettlements.releasedAt)).all();
+}
+
 export function entryViewInternal(db: DbOrTx, id: string, today?: string): EntryView | null {
   const row = db.select().from(financeEntries).where(eq(financeEntries.id, id)).get();
   if (!row) return null;
   const moneyLineRows = db.select().from(financeMoneyLines).where(eq(financeMoneyLines.entryId, id)).orderBy(asc(financeMoneyLines.position)).all();
-  const settlementRows = moneyLineRows.length > 0 ? db.select().from(financeOpenItemSettlements).where(inArray(financeOpenItemSettlements.moneyLineId, moneyLineRows.map((l) => l.id))).all() : [];
-  const moneyLines: MoneyLineView[] = moneyLineRows.map((l) => ({ ...l, settlements: settlementRows.filter((s) => s.moneyLineId === l.id).map((s) => ({ id: s.id, openItemId: s.openItemId, amountCents: s.amountCents, reversesSettlementId: s.reversesSettlementId })) }));
+  const settlementRows = moneyLineRows.length > 0 ? db.select().from(financeOpenItemSettlements).where(and(inArray(financeOpenItemSettlements.moneyLineId, moneyLineRows.map((l) => l.id)), liveSettlementCondition())).all() : [];
+  const releasedRows = moneyLineRows.length > 0 ? releasedSettlementsOf(db, moneyLineRows.map((l) => l.id)) : [];
+  const settlementView = (s: FinanceOpenItemSettlementRow): MoneyLineSettlementView => ({ id: s.id, openItemId: s.openItemId, amountCents: s.amountCents, reversesSettlementId: s.reversesSettlementId, assignedAt: s.assignedAt, assignedByUserId: s.assignedByUserId, releasedAt: s.releasedAt });
+  const moneyLines: MoneyLineView[] = moneyLineRows.map((l) => ({ ...l, settlements: settlementRows.filter((s) => s.moneyLineId === l.id).map(settlementView), releasedSettlements: releasedRows.filter((s) => s.moneyLineId === l.id).map(settlementView) }));
   const allocationLineRows = db.select().from(financeAllocationLines).where(eq(financeAllocationLines.entryId, id)).orderBy(asc(financeAllocationLines.position)).all();
   const moneySum = moneyLines.reduce((s, l) => s + l.amountCents, 0);
   const allocationSum = allocationLineRows.reduce((s, l) => s + l.amountCents, 0);
@@ -547,7 +564,7 @@ export function checkReversal(db: DbOrTx, settlement: { openItemId: string; amou
     .from(financeOpenItemSettlements)
     .innerJoin(financeMoneyLines, eq(financeOpenItemSettlements.moneyLineId, financeMoneyLines.id))
     .innerJoin(financeEntries, eq(financeMoneyLines.entryId, financeEntries.id))
-    .where(eq(financeOpenItemSettlements.id, settlement.reversesSettlementId))
+    .where(and(eq(financeOpenItemSettlements.id, settlement.reversesSettlementId), liveSettlementCondition()))
     .get();
   if (!target || target.openItemId !== settlement.openItemId || target.reversesSettlementId !== null || target.status !== 'final' || target.reversedByEntryId !== null) return financeConflict('reversalTargetInvalid');
   const earlier = db
@@ -555,7 +572,7 @@ export function checkReversal(db: DbOrTx, settlement: { openItemId: string; amou
     .from(financeOpenItemSettlements)
     .innerJoin(financeMoneyLines, eq(financeOpenItemSettlements.moneyLineId, financeMoneyLines.id))
     .innerJoin(financeEntries, eq(financeMoneyLines.entryId, financeEntries.id))
-    .where(eq(financeOpenItemSettlements.reversesSettlementId, settlement.reversesSettlementId))
+    .where(and(eq(financeOpenItemSettlements.reversesSettlementId, settlement.reversesSettlementId), liveSettlementCondition()))
     .all()
     .filter((r) => r.reversedByEntryId === null && r.entryId !== ownEntryId)
     .reduce((s, r) => s + r.amountCents, 0);
@@ -686,7 +703,7 @@ export function partnerPaymentMissingInternal(db: DbOrTx, entryId: string): bool
     .select({ originType: financeOpenItems.originType })
     .from(financeOpenItemSettlements)
     .innerJoin(financeOpenItems, eq(financeOpenItems.id, financeOpenItemSettlements.openItemId))
-    .where(and(inArray(financeOpenItemSettlements.moneyLineId, moneyLineIds), eq(financeOpenItems.originType, 'financePartnerPayment')))
+    .where(and(inArray(financeOpenItemSettlements.moneyLineId, moneyLineIds), eq(financeOpenItems.originType, 'financePartnerPayment'), liveSettlementCondition()))
     .get();
   return !settled;
 }
@@ -766,7 +783,9 @@ function resolvedLines(deps: Deps, input: EntryLinesInput): { moneyLines: MoneyL
         projectId: l.projectId ?? null,
         purposeId: l.purposeId ?? null,
         contactId: l.contactId ?? null,
-        abroad: l.abroad ?? ((l.purposeId ? purposeAbroad(deps.db, l.purposeId) : false) || (l.projectId ? projectAbroad(deps.db, l.projectId) : false)),
+        // „Im Ausland verwendet“ heißt Mittelverwendung: Vorbelegt wird nur eine Ausgabe, nach der Kategorie, nie nach
+        // dem Vorzeichen — sonst verlöre ein Storno das Kennzeichen (Befund B2, 0.5.2). Ein gesetzter Wert bleibt.
+        abroad: l.abroad ?? (category.direction === 'expense' && ((l.purposeId ? purposeAbroad(deps.db, l.purposeId) : false) || (l.projectId ? projectAbroad(deps.db, l.projectId) : false))),
         originLineId: l.originLineId ?? null,
         addsToAssets: l.addsToAssets ?? addsToAssetsByDefault(category.incomeKind, l.assetEndowment === true),
         addsToAssetsOptOut: l.addsToAssetsOptOut ?? null,

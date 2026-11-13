@@ -6,6 +6,7 @@ import { Page } from '@/components/page';
 import { requireSession } from '@/lib/request-context';
 import { openItemState, openItemsStateFilter } from '@/lib/finance/open-item-state';
 import { readAllPages } from '@/lib/read-all-pages';
+import { unfoundedNoticesOf } from '@/lib/members/unfounded';
 import { DetailSheet } from './detail-sheet';
 import { OpenItemsList, type OpenItemRow } from './list';
 
@@ -124,6 +125,7 @@ export default async function FinanceOpenItemsPage({ searchParams }: { searchPar
           today={today}
           iban={contactIban}
           epcPayload={epcPayload}
+          unfoundedNotices={selected.originType === 'memberFeeCharge' && selected.originId && hasPermission(ctx, 'members.read') ? unfoundedNoticesOf(deps, selected.originId) : []}
         />
       ) : null}
     </Page>

@@ -1,12 +1,23 @@
-import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { siteModule } from '../src/manifest';
 import { coreModule, unwrap, writeSettingInternal, type CallContext } from '@kompass/core';
 import { auditEntry, createTestDeps, ctxWith, insertUser } from '@kompass/core/testing';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 import { siteTemplateState } from '../src/schema';
 import { settleTemplateAfterImport, templateNeedsReview } from '../src/review';
+
+// Jeder Temp-Ordner dieser Datei wird nach dem Fall wieder gelöscht.
+const tempDirs: string[] = [];
+const tempDir = (prefix: string): string => {
+  const d = mkdtempSync(path.join(tmpdir(), prefix));
+  tempDirs.push(d);
+  return d;
+};
+afterEach(() => {
+  for (const d of tempDirs.splice(0)) rmSync(d, { recursive: true, force: true });
+});
 
 /**
  * Ein Backup-Import ersetzt das ganze Datenvolume — und das Template liegt
@@ -74,7 +85,7 @@ describe('settling a template after an import', () => {
       writeFileSync(path.join(dir, name), inhalt);
     }
   };
-  const tmp = () => mkdtempSync(path.join(tmpdir(), 'kompass-review-'));
+  const tmp = () => tempDir('kompass-review-');
 
   const nachImport = () => {
     const { deps, ctx } = setup();

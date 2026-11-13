@@ -27,7 +27,7 @@ async function abroad() {
   const first = await pay('transfer58', 6000);
   const second = await pay('transfer58', 4000);
   const third = await pay('agent57', 2500);
-  unwrap(await bookEntry(f.deps, f.ctx, { entryDate: '2026-04-01', text: 'Spende Ausland', moneyLines: [{ accountId: f.bank.id, amountCents: 5000 }], allocationLines: [{ categoryId: f.donations.id, amountCents: 5000, abroad: true }] }));
+  unwrap(await bookEntry(f.deps, f.ctx, { entryDate: '2026-04-01', text: 'Hilfe Ausland', moneyLines: [{ accountId: f.bank.id, amountCents: -5000 }], allocationLines: [{ categoryId: f.programCosts.id, amountCents: -5000, abroad: true }] }));
   f.deps.db.update(contacts).set({ country: 'AT' }).where(eq(contacts.id, f.donor.id)).run();
   unwrap(await bookEntry(f.deps, f.ctx, { entryDate: '2026-04-02', text: 'Zahlung', moneyLines: [{ accountId: f.bank.id, amountCents: -1500 }], allocationLines: [{ categoryId: f.programCosts.id, amountCents: -1500, contactId: f.donor.id }] }));
   return { f, first, second, third };
@@ -43,10 +43,10 @@ describe('Bericht foreignActivity (Rechenschaft B1 Task 5)', () => {
     // Joe 2026-10-26 (Designer Runde 8, Fachlich 3): nach dem Merkmal „Wird im Ausland verwendet“, nicht nach dem Sitz —
     // die Zahlung an den Kontakt in Österreich steht nicht im Bericht. Je Zeile Datum, Nr., Kontakt, Text, Betrag.
     expect(data.abroadLines.map((l) => l.entryId)).toEqual(service.otherAbroadLines.map((l) => l.entryId));
-    expect(data.abroadLines).toEqual([expect.objectContaining({ entryDate: '2026-04-01', text: 'Spende Ausland', contactName: null, amountCents: 5000 })]);
+    expect(data.abroadLines).toEqual([expect.objectContaining({ entryDate: '2026-04-01', text: 'Hilfe Ausland', contactName: null, amountCents: -5000 })]);
     expect(JSON.stringify(data)).not.toContain('otherForeignContactLines');
     const body = foreignActivityReportDefinition.toTypst(data, { categoryNames: {}, accountNames: {}, labels: {} });
-    expect(body).toContain('Spende Ausland');
+    expect(body).toContain('Hilfe Ausland');
     expect(body).not.toContain('Kontakte im Ausland');
     expect(data.partnerPayments.map((g) => [g.basis, g.totalCents])).toEqual([['agent57', 2500], ['transfer58', 10000]]);
     expect(data.partnerPayments.find((g) => g.basis === 'transfer58')!.payments.map((p) => p.paymentId).sort()).toEqual([first.id, second.id].sort());

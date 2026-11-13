@@ -39,6 +39,11 @@ Danach steht „Fertig.“ mit Tag, Protokoll und Kassenbestand.
   Änderung, etwa des Wahlprotokolls. Ob das so ist, tragen Sie unter
   Einrichtung → Finanzen → Berichte → „Satzung“ ein; ohne Angabe nennt Kompass
   den Hinweis immer.
+- Die Übergabeliste (unter „Berichte“) nennt beim Verein auch offene
+  Prüfanlässe der [Steuererklärung](steuererklaerung.md) und fällige
+  Berichtigungen der Umsatzsteuer, mit dem Tag der letzten Abgabe und einer
+  Anzeige. So erfährt die neue Person davon; die bisherige gibt weiter, was sie
+  weiß (§§ 666, 667 BGB).
 - Entlastet die Mitgliederversammlung, sollte sie es für beide getrennt tun: die
   bisherige Person bis zum Übergabetag, die neue ab dem Tag danach. Schritt 11
   des Jahresabschlusses führt sie mit diesem Zeitraum auf.

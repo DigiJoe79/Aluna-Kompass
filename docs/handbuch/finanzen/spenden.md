@@ -343,8 +343,13 @@ zusammen.
 Darunter steht die **Abstimmung**: Zuwendungen minus gültige Bestätigungen
 ergibt eine Differenz, die Kompass nach Gründen aufschlüsselt — unter dem
 Mindestbetrag, Anschrift fehlt, Sachspende nicht beschrieben, Aufwandsspende
-nicht bestätigt, anonym oder sonstige. Jeder Grund verlinkt dorthin, wo sich
-etwas ergänzen lässt, meist in den Serienlauf. Bescheinigt eine Bestätigung
+nicht bestätigt, anonym, noch nicht bestätigt (bescheinigungsfähig, aber noch
+ohne Bestätigung) oder weniger bestätigt als gespendet (eine Bestätigung
+bescheinigt weniger, als die Zuwendung nach Rückgaben wert ist — sie wird
+korrigiert, nicht neu ausgestellt, der Link führt zu „Zu korrigieren“). Jeder
+Grund verlinkt dorthin, wo sich etwas ergänzen lässt, meist in den Serienlauf.
+Festgeschriebene Spendenbücher früherer Fassungen nennen den Grund „noch nicht
+bestätigt“ noch „Sonstige“. Bescheinigt eine Bestätigung
 mehr, als nach Rückgaben noch übrig ist — etwa nach einer Rücklastschrift —,
 steht der Überhang gesondert als „zu korrigieren“, mit Link zum gleichnamigen
 Reiter bei den Bestätigungen. Gezählt werden dort alle Bestätigungen des Jahres,

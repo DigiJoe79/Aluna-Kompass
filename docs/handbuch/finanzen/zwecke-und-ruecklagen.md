@@ -12,7 +12,8 @@ Unter Finanzen → Zwecke steht je Zweck, was er bekommen und verwendet hat:
 Vortrag, Zugänge, Verwendung, **Umwidmungen** und daraus der **Bestand**. Das
 Ziel zeigt ein Balken mit „Bestand von Ziel“; ist es erreicht, steht dort
 „erreicht“. Ein Zweck, dessen Geld im Ausland verwendet wird, trägt am Namen
-das Kennzeichen **Ausland**. Zwei Kennzeichen verlangen Aufmerksamkeit:
+das Kennzeichen **Ausland**; Ausgaben aus ihm gelten dann als im Ausland
+verwendet, Einnahmen nicht. Zwei Kennzeichen verlangen Aufmerksamkeit:
 
 - **im Minus** — der Zweck hat mehr verwendet, als er bekommen hat. Wer eine
   Buchung festschreibt, eine Zahlung an Partner einreicht oder freigibt oder

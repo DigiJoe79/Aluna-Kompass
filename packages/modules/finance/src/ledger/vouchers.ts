@@ -8,6 +8,7 @@ import { financeAllocationLines, financeDirectDebitItems, financeDirectDebitRuns
 import { requireFinanceRead } from './access';
 import { entryViewInternal } from './entries';
 import { fiscalYearStatusInternal } from './fiscal-years';
+import { liveSettlementCondition } from './settlement-live';
 
 export interface VoucherLinkResult {
   linkId: string;
@@ -202,7 +203,7 @@ const ORIGIN_TYPES_WITH_OWN_VOUCHERS = new Set(['financePartnerPayment', 'financ
 export function attachSettledItemDocumentsInternal(tx: DbOrTx, deps: Deps, ctx: CallContext, entryId: string): void {
   const moneyLineIds = tx.select({ id: financeMoneyLines.id }).from(financeMoneyLines).where(eq(financeMoneyLines.entryId, entryId)).all().map((l) => l.id);
   if (moneyLineIds.length === 0) return;
-  const itemIds = [...new Set(tx.select({ openItemId: financeOpenItemSettlements.openItemId }).from(financeOpenItemSettlements).where(inArray(financeOpenItemSettlements.moneyLineId, moneyLineIds)).all().map((s) => s.openItemId))];
+  const itemIds = [...new Set(tx.select({ openItemId: financeOpenItemSettlements.openItemId }).from(financeOpenItemSettlements).where(and(inArray(financeOpenItemSettlements.moneyLineId, moneyLineIds), liveSettlementCondition())).all().map((s) => s.openItemId))];
   if (itemIds.length === 0) return;
   const items = tx.select({ documentId: financeOpenItems.documentId, originType: financeOpenItems.originType }).from(financeOpenItems).where(inArray(financeOpenItems.id, itemIds)).all();
   const documentIds = [...new Set(items.filter((i) => i.documentId && !(i.originType && ORIGIN_TYPES_WITH_OWN_VOUCHERS.has(i.originType))).map((i) => i.documentId!))];

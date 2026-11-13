@@ -2,10 +2,10 @@ import { schema, unwrap } from '@kompass/core';
 import { ctxWith } from '@kompass/core/testing';
 import { eq } from 'drizzle-orm';
 import { unzipSync } from 'fflate';
-import { mkdtempSync, readFileSync, readdirSync } from 'node:fs';
+import { mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 import { BUNDLE_MAX_DOCUMENTS, exportBundle, resolveBundle } from '../src/bundle';
 import { createDocumentFolder } from '../src/catalog';
 import { linkDocumentInternal } from '../src/linked';
@@ -13,6 +13,17 @@ import { documents } from '../src/schema';
 import { moveDocument, voidDocument } from '../src/service';
 import { DMS_MODULE_KEY } from '../src/storage';
 import { fileFixture, setupWithArea } from './helpers';
+
+// Jeder Temp-Ordner dieser Datei wird nach dem Fall wieder gelöscht.
+const tempDirs: string[] = [];
+const tempDir = (prefix: string): string => {
+  const d = mkdtempSync(path.join(tmpdir(), prefix));
+  tempDirs.push(d);
+  return d;
+};
+afterEach(() => {
+  for (const d of tempDirs.splice(0)) rmSync(d, { recursive: true, force: true });
+});
 
 const withExport = <T extends { permissions: ReadonlySet<string> }>(ctx: T): T => ({ ...ctx, permissions: new Set([...ctx.permissions, 'documents.export']) });
 const err = (r: { ok: boolean; error?: unknown }) => (r.ok ? 'ok' : r.error);
@@ -90,7 +101,7 @@ describe('resolveBundle', () => {
   });
 });
 
-const workDir = () => mkdtempSync(path.join(tmpdir(), 'kompass-bundle-'));
+const workDir = () => tempDir('kompass-bundle-');
 const open = (archivePath: string) => unzipSync(new Uint8Array(readFileSync(archivePath)));
 const text = (bytes: Uint8Array) => new TextDecoder().decode(bytes);
 

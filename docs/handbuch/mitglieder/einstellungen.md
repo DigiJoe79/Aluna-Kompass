@@ -12,12 +12,12 @@ deaktivieren Sie statt sie zu löschen; sie bleibt dann in der Liste, gedämpft.
 Die Beitragsordnung hat Stände: Jeder gilt ab seinem Tag bis zum nächsten und nennt je Art Betrag, Rhythmus und, ob
 der Betrag ein Mindestbetrag ist. Oben steht der geltende Stand, ein künftiger mit der Marke „kommt“, frühere sind
 eingeklappt. **Neuen Stand anlegen …** belegt die Eingabe mit dem letzten Stand vor; tragen Sie den Tag ein, ab dem er
-gilt, und den Tag des Beschlusses.
+gilt, den Tag des Beschlusses und, wenn er in der Akte liegt, das Dokument unter **Beschluss in der Akte**.
 
 Ein Stand, nach dem schon Beiträge angelegt sind, bleibt fest: Tag und Beträge lassen sich nicht mehr ändern, den
-Beschlusstag tragen Sie über **Bearbeiten …** nach. Für eine Änderung der Beträge legen Sie einen neuen Stand an.
+Beschluss (Tag und Dokument) tragen Sie über **Bearbeiten …** nach. Für eine Änderung der Beträge legen Sie einen neuen Stand an.
 
-Den Beschluss selbst hängen Sie als Dokument der Akte an. Mit **Gremien** kann ein Stand auf den Beschluss dort
+Das Dokument wählen Sie aus der Akte, dafür brauchen Sie das Recht, die Akte zu lesen. Mit **Gremien** kann ein Stand auf den Beschluss dort
 verweisen (über einen Agenten: `members_fee_schedule_save` mit `resolutionId`); er steht dann mit Link neben dem
 Beschlusstag.
 

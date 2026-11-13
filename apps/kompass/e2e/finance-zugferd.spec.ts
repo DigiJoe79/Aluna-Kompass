@@ -173,7 +173,10 @@ test.describe('finance: Rechnungen mit ZUGFeRD', () => {
     await expect(page.getByText('Angaben aus der Rechnung übernommen.')).toBeVisible();
     await expect(option(page, 'Buerobedarf Muster GmbH')).toHaveCount(0);
 
+    // Über die Suche: Seit die Zuordnungsfälle der Mitglieder buchen, steht die Buchung nicht mehr sicher auf Seite 1.
     await page.goto('/finance/entries');
+    await page.getByRole('searchbox', { name: 'Suchen' }).fill('BM-7781');
+    await expect(page).toHaveURL(/[?&]q=/);
     await expect(page.locator('tr', { hasText: 'Bürobedarf Muster GmbH Rechnung BM-7781' })).toBeVisible();
   });
 });

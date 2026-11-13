@@ -50,9 +50,15 @@ export function planRecalculationInternal(db: DbOrTx, deps: Deps, membership: Me
   const all = db.select().from(memberFeeCharges).where(eq(memberFeeCharges.membershipId, membership.id)).all();
   const fromYear = Number(from.slice(0, 4));
   const years = [...new Set(all.map((c) => Number(c.periodStart.slice(0, 4))))].filter((y) => y >= fromYear).sort();
+  // B7b: Der Eintrittszeitraum beginnt am Anfang seines Zeitraums, gilt aber erst ab dem Eintritt. Gezählt wird deshalb
+  // ab dem späteren der beiden Tage — sonst fiele bei einem Wechsel am Eintrittstag der ganze Eintrittszeitraum heraus
+  // (alter ersetzt, neuer nie angelegt). Ein Wechsel nach dem Eintrittstag sieht dieselben Zeiträume wie bisher.
+  const joinedOn = membership.joinedOn;
+  const effectiveStart = (periodStart: string) => (joinedOn && joinedOn > periodStart ? joinedOn : periodStart);
+  const joinMonth = joinedOn ? `${joinedOn.slice(0, 7)}-01` : null;
   for (const year of years) {
-    const computed = computeChargesFor(db, deps, membership, year).filter((c) => !c.skip && c.periodStart >= from);
-    const existing = all.filter((c) => c.state !== 'replaced' && c.state !== 'skipped' && c.periodStart.startsWith(`${year}-`) && c.periodStart >= from).sort((a, b) => a.periodStart.localeCompare(b.periodStart));
+    const computed = computeChargesFor(db, deps, membership, year).filter((c) => !c.skip && effectiveStart(c.periodStart) >= from);
+    const existing = all.filter((c) => c.state !== 'replaced' && c.state !== 'skipped' && c.periodStart.startsWith(`${year}-`) && effectiveStart(c.periodStart) >= from).sort((a, b) => a.periodStart.localeCompare(b.periodStart));
     const kept: FeeChargeRow[] = [];
     for (const charge of existing) {
       const match = computed.find((c) => c.periodStart === charge.periodStart);
@@ -66,8 +72,11 @@ export function planRecalculationInternal(db: DbOrTx, deps: Deps, membership: Me
     }
     // M2: Ein neuer Zeitraum, der in einen behaltenen hineinragt, gilt für die Monate, die keiner deckt (anteilig) — statt ganz zu entfallen.
     for (const c of computed) {
-      const fee = effectiveFee(db, membership.id, c.periodStart);
-      plan.add.push(...splitAroundKept(c, kept, 'none' in fee || fee.exempt ? null : { amountCents: fee.amountCents, interval: fee.interval }));
+      // Zerfällt der Eintrittszeitraum um einen behaltenen Beitrag, zählen nur Monate ab dem Eintritt.
+      const clipped = joinMonth && c.periodStart < joinMonth ? { ...c, periodStart: joinMonth } : c;
+      const fee = effectiveFee(db, membership.id, clipped.periodStart);
+      const pieces = splitAroundKept(clipped, kept, 'none' in fee || fee.exempt ? null : { amountCents: fee.amountCents, interval: fee.interval });
+      plan.add.push(...(pieces.length === 1 && pieces[0] === clipped ? [c] : pieces));
     }
   }
   return plan;

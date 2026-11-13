@@ -11,6 +11,8 @@ import { TAX_CODES } from './codes';
 import { registeredOpenItemOrigins } from './origins';
 import { fiscalYearForInternal, fiscalYearStatusInternal } from './fiscal-years';
 import { expiredRunIdsInternal, unreturnedRunItemsInternal } from '../direct-debit/run-items';
+import { liveSettlementCondition, settlementHasReturnInternal } from './settlement-live';
+export { liveSettlementCondition } from './settlement-live';
 
 /**
  * Rechenschaft D1 Task 10b (Befund A3): Eine offene Zahlung mit Datum in einem abgeschlossenen Geschäftsjahr änderte
@@ -52,7 +54,7 @@ function settledCentsFor(db: DbOrTx, itemId: string, asOf?: string): number {
     .from(financeOpenItemSettlements)
     .innerJoin(financeMoneyLines, eq(financeOpenItemSettlements.moneyLineId, financeMoneyLines.id))
     .innerJoin(financeEntries, eq(financeMoneyLines.entryId, financeEntries.id))
-    .where(eq(financeOpenItemSettlements.openItemId, itemId))
+    .where(and(eq(financeOpenItemSettlements.openItemId, itemId), liveSettlementCondition()))
     .all();
   const live = (r: (typeof rows)[number]) => r.status === 'final' && r.reversedByEntryId === null;
   const liveIds = new Set(rows.filter(live).map((r) => r.id));
@@ -72,7 +74,7 @@ export function draftSettlementCentsInternal(db: DbOrTx, itemId: string): number
     .from(financeOpenItemSettlements)
     .innerJoin(financeMoneyLines, eq(financeOpenItemSettlements.moneyLineId, financeMoneyLines.id))
     .innerJoin(financeEntries, eq(financeMoneyLines.entryId, financeEntries.id))
-    .where(eq(financeOpenItemSettlements.openItemId, itemId))
+    .where(and(eq(financeOpenItemSettlements.openItemId, itemId), liveSettlementCondition()))
     .all();
   return rows.filter((r) => r.status === 'draft' && r.reversesSettlementId === null).reduce((s, r) => s + r.amountCents, 0);
 }
@@ -83,7 +85,7 @@ export function draftSettlementCentsInternal(db: DbOrTx, itemId: string): number
  * prüfen enger — nur Entwürfe vergeben eine Zahlung, `import/suggestions.ts`.)
  */
 export function openItemHasAnySettlementInternal(db: DbOrTx, itemId: string): boolean {
-  return !!db.select({ id: financeOpenItemSettlements.id }).from(financeOpenItemSettlements).where(eq(financeOpenItemSettlements.openItemId, itemId)).get();
+  return !!db.select({ id: financeOpenItemSettlements.id }).from(financeOpenItemSettlements).where(and(eq(financeOpenItemSettlements.openItemId, itemId), liveSettlementCondition())).get();
 }
 
 /** Ob eine festgeschriebene, nicht stornierte Zahlung daran hängt (Storno-Sperre für `cancelOpenItem`). */
@@ -131,6 +133,11 @@ function parsedLineTemplate(raw: string | null): LineTemplateEntry[] | null {
   } catch {
     return null;
   }
+}
+
+/** Die Sicht eines Postens mit berechnetem Rest und Zustand, ohne Rechteprüfung. */
+export function openItemViewInternal(db: DbOrTx, row: FinanceOpenItemRow): OpenItemView {
+  return openItemViewOf(db, row);
 }
 
 function openItemViewOf(db: DbOrTx, row: FinanceOpenItemRow): OpenItemView {
@@ -470,6 +477,16 @@ export async function listOpenItems(deps: Deps, ctx: CallContext, input: unknown
   return ok({ items, total });
 }
 
+/** `finance.read`: ein Posten mit berechnetem Rest und Zustand — für den Dialog „Zahlung zuordnen“. */
+export async function getOpenItem(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<OpenItemView>> {
+  const denied = requireFinanceRead(ctx, 'read');
+  if (denied) return denied;
+  const parsed = validate(deps, z.object({ id: z.string().min(1) }), input);
+  if (!parsed.ok) return parsed;
+  const row = deps.db.select().from(financeOpenItems).where(eq(financeOpenItems.id, parsed.value.id)).get();
+  return row ? ok(openItemViewOf(deps.db, row)) : notFound('financeOpenItem', parsed.value.id);
+}
+
 /** `finance_open_item_save` (Spec 10.2): ein Verteiler statt zweier Werkzeuge — `id` dabei entscheidet. */
 export async function saveOpenItem(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<OpenItemView>> {
   const hasId = typeof input === 'object' && input !== null && typeof (input as Record<string, unknown>).id === 'string';
@@ -477,10 +494,19 @@ export async function saveOpenItem(deps: Deps, ctx: CallContext, input: unknown)
 }
 
 export interface OpenItemSettlementView {
+  /** Der Ausgleich selbst — für „Zuordnung aufheben“. */
+  settlementId: string;
+  /** Die Geldzeile — für „Rückgängig“ nach dem Aufheben (dieselbe Zuordnung neu). */
+  moneyLineId: string;
   entryId: string;
   entryNumber: string | null;
   amountCents: number;
   entryDate: string;
+  /** Spec Zahlung zuordnen: nachträglich zugeordnet am (`null`: beim Buchen entstanden). */
+  assignedAt: string | null;
+  /** Eine nachträgliche Zuordnung ohne Rückgabe lässt sich aufheben. */
+  unassignable: boolean;
+  unassignBlockedBy: 'assignmentHasReturn' | null;
 }
 
 const listSettlementsSchema = z.object({ openItemId: z.string().min(1) });
@@ -506,18 +532,26 @@ export async function listOpenItemSettlements(deps: Deps, ctx: CallContext, inpu
 export function openItemSettlementsInternal(db: DbOrTx, openItemId: string): OpenItemSettlementView[] {
   const rows = db
     .select({
+      settlementId: financeOpenItemSettlements.id, moneyLineId: financeOpenItemSettlements.moneyLineId, assignedAt: financeOpenItemSettlements.assignedAt,
       entryId: financeEntries.id, entryNumber: financeEntries.number, entryDate: financeEntries.entryDate,
       amountCents: financeOpenItemSettlements.amountCents, reversesSettlementId: financeOpenItemSettlements.reversesSettlementId, status: financeEntries.status, reversedByEntryId: financeEntries.reversedByEntryId,
     })
     .from(financeOpenItemSettlements)
     .innerJoin(financeMoneyLines, eq(financeOpenItemSettlements.moneyLineId, financeMoneyLines.id))
     .innerJoin(financeEntries, eq(financeMoneyLines.entryId, financeEntries.id))
-    .where(eq(financeOpenItemSettlements.openItemId, openItemId))
+    .where(and(eq(financeOpenItemSettlements.openItemId, openItemId), liveSettlementCondition()))
     .all();
   return rows
     .filter((r) => r.status === 'final' && r.reversedByEntryId === null)
     // Eine Rückgabe (Rück-Ausgleich, Spec Mitglieder und Lastschrift § 6.2) steht mit negativem Betrag darin — die Summe bleibt die von `settledCentsFor`.
-    .map((r) => ({ entryId: r.entryId, entryNumber: r.entryNumber, amountCents: r.reversesSettlementId === null ? r.amountCents : -r.amountCents, entryDate: r.entryDate }));
+    .map((r) => {
+      const assignment = r.assignedAt !== null && r.reversesSettlementId === null;
+      const hasReturn = assignment && settlementHasReturnInternal(db, r.settlementId);
+      return {
+        settlementId: r.settlementId, moneyLineId: r.moneyLineId, entryId: r.entryId, entryNumber: r.entryNumber, amountCents: r.reversesSettlementId === null ? r.amountCents : -r.amountCents, entryDate: r.entryDate,
+        assignedAt: r.reversesSettlementId === null ? r.assignedAt : null, unassignable: assignment && !hasReturn, unassignBlockedBy: hasReturn ? ('assignmentHasReturn' as const) : null,
+      };
+    });
 }
 
 /**
@@ -532,7 +566,7 @@ export function countingPaymentsInternal(db: DbOrTx, openItemId: string): { entr
     .from(financeOpenItemSettlements)
     .innerJoin(financeMoneyLines, eq(financeOpenItemSettlements.moneyLineId, financeMoneyLines.id))
     .innerJoin(financeEntries, eq(financeMoneyLines.entryId, financeEntries.id))
-    .where(eq(financeOpenItemSettlements.openItemId, openItemId))
+    .where(and(eq(financeOpenItemSettlements.openItemId, openItemId), liveSettlementCondition()))
     .all()
     .filter((r) => r.status === 'final' && r.reversedByEntryId === null);
   return rows

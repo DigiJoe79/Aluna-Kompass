@@ -1,7 +1,8 @@
 import type { DbOrTx } from '@kompass/core';
-import { eq, inArray } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 import type { EntryLock } from '../locks';
 import { financeAllocationLines, financeMoneyLines, financeOpenItems, financeOpenItemSettlements, financePartnerPaidLines, financePartnerPayments, type FinancePartnerPaymentRow } from '../schema';
+import { liveSettlementCondition } from '../ledger/settlement-live';
 
 /**
  * Sperren an einer Buchung durch eine Zahlung an Partner (F7 Task 4, Spec
@@ -47,7 +48,7 @@ export const partnerPaidLineContactLock: EntryLock = (db, entryId) => {
 export const partnerPayingEntryLock: EntryLock = (db, entryId) => {
   const moneyLineIds = db.select({ id: financeMoneyLines.id }).from(financeMoneyLines).where(eq(financeMoneyLines.entryId, entryId)).all().map((l) => l.id);
   if (moneyLineIds.length === 0) return null;
-  const settlements = db.select({ openItemId: financeOpenItemSettlements.openItemId }).from(financeOpenItemSettlements).where(inArray(financeOpenItemSettlements.moneyLineId, moneyLineIds)).all();
+  const settlements = db.select({ openItemId: financeOpenItemSettlements.openItemId }).from(financeOpenItemSettlements).where(and(inArray(financeOpenItemSettlements.moneyLineId, moneyLineIds), liveSettlementCondition())).all();
   for (const settlement of settlements) {
     const item = db.select().from(financeOpenItems).where(eq(financeOpenItems.id, settlement.openItemId)).get();
     if (item?.originType !== 'financePartnerPayment' || !item.originId) continue;

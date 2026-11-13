@@ -152,9 +152,44 @@ describe('fromEntryView: guesses the template', () => {
     expect(state.template).toBe('inKind');
   });
 
+  /** Befund B3 (0.5.2): Ein gespeicherter Kontakt erscheint beim Bearbeiten mit seinem Namen. */
+  it('carries the names of the contacts it is given into the rows', () => {
+    const state = fromEntryView(
+      { id: 'E1', entryDate: '2026-03-01', text: 'Spende', moneyLines: [{ accountId: 'bank', amountCents: 5000 }], allocationLines: [{ categoryId: 'donations', amountCents: 3000, contactId: 'C1' }, { categoryId: 'donations', amountCents: 2000, contactId: 'C2' }, { categoryId: 'fees', amountCents: 0 }] },
+      new Map([['C1', 'Erika Beispiel']]),
+    );
+    expect(state.splitRows.map((r) => [r.contactId, r.contactName])).toEqual([['C1', 'Erika Beispiel'], ['C2', null], [null, null]]);
+  });
+
   it('guesses income when the money sum is not negative', () => {
     const state = fromEntryView({ id: 'E1', entryDate: '2026-03-01', text: 'Spende', moneyLines: [{ accountId: 'bank', amountCents: 5000 }], allocationLines: [{ categoryId: 'donations', amountCents: 5000 }] });
     expect(state.template).toBe('income');
+  });
+});
+
+/** Befund B2 (0.5.2): „Im Ausland verwendet“ belegt der Dienst vor; die Maske schickt nur einen gesetzten Wert. */
+describe('abroad: left to the service unless set', () => {
+  const filled = (abroad: boolean | null): EntryFormState => {
+    const state = emptyForm('expense', '2026-03-01');
+    return { ...state, text: 'Hilfe', moneyRows: [{ ...state.moneyRows[0]!, accountId: 'bank', amountText: '10,00' }], splitRows: [{ key: 's1', categoryId: 'program', amountText: '10,00', contactId: null, projectId: null, purposeId: 'P1', abroad, addsToAssets: false }] };
+  };
+  const sent = (state: EntryFormState) => {
+    const result = toServiceInput(state);
+    if (!result.ok) throw new Error('expected ok');
+    return result.input.allocationLines[0]!;
+  };
+
+  it('leaves abroad empty on a new row and does not send it', () => {
+    expect(applyTemplate(emptyForm('income', '2026-03-01'), 'inKind').splitRows.map((r) => r.abroad)).toEqual([null, null]);
+    expect(sent(filled(null))).not.toHaveProperty('abroad');
+  });
+
+  it('sends a value someone set, false included, and keeps the saved value of a loaded line', () => {
+    expect(sent(filled(true)).abroad).toBe(true);
+    expect(sent(filled(false)).abroad).toBe(false);
+    const loaded = fromEntryView({ id: 'E1', entryDate: '2026-03-01', text: 'x', moneyLines: [{ accountId: 'bank', amountCents: -1000 }], allocationLines: [{ categoryId: 'program', amountCents: -1000, purposeId: 'P1', abroad: false }] });
+    expect(loaded.splitRows[0]!.abroad).toBe(false);
+    expect(fromEntryView({ id: 'E1', entryDate: '2026-03-01', text: 'x', moneyLines: [], allocationLines: [{ categoryId: 'program', amountCents: -1000 }] }).splitRows[0]!.abroad).toBeNull();
   });
 });
 

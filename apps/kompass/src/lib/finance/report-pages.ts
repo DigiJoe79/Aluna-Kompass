@@ -24,13 +24,17 @@ const KEEP_MS = 10 * 60_000;
 /** Dichte je Stufe des `srcset`: 150 dpi füllt die Inhaltsspalte, 300 dpi für doppelte Pixeldichte. */
 export const PAGE_DPI: Readonly<Record<string, number>> = { '1': 150, '2': 300 };
 
-function cacheDir(): string {
+/**
+ * Der Ordner des Zwischenspeichers für den aktuellen Datenpfad. Exportiert für Tests: Wer je Fall einen eigenen
+ * `DATA_PATH` setzt, bekommt je Fall einen eigenen Ordner und muss ihn danach selbst wegräumen.
+ */
+export function reportPagesCacheDir(): string {
   const key = createHash('sha256').update(process.env.DATA_PATH ?? process.cwd()).digest('hex').slice(0, 12);
   return path.join(os.tmpdir(), `kompass-report-pages-${key}`);
 }
 
 async function fresh(name: string): Promise<Uint8Array | null> {
-  const file = path.join(cacheDir(), name);
+  const file = path.join(reportPagesCacheDir(), name);
   const info = await stat(file).catch(() => null);
   return info && Date.now() - info.mtimeMs < KEEP_MS ? new Uint8Array(await readFile(file)) : null;
 }
@@ -44,7 +48,7 @@ async function cached(name: string, produce: () => Promise<Uint8Array>): Promise
 }
 
 async function store(name: string, bytes: Uint8Array): Promise<void> {
-  const dir = cacheDir();
+  const dir = reportPagesCacheDir();
   const file = path.join(dir, name);
   await mkdir(dir, { recursive: true, mode: 0o700 });
   // Erst unter fremdem Namen, dann umbenennen: Ein gleichzeitiger Leser sieht nie eine halbe Datei.

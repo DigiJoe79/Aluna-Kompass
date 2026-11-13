@@ -68,7 +68,7 @@ export default async function DunningRunPage({ searchParams }: { searchParams: P
     }
   } else {
     const preview = asOf ? await previewDunningRun(deps, ctx, { asOf }) : null;
-    body = <DunningRunFlow key={asOf ?? ''} asOf={asOf} today={today} preview={preview?.ok ? preview.value : null} paymentTermDays={readSetting<number>(deps, 'members.paymentTermDays')} levels={levels} canStart={canFees} />;
+    body = <DunningRunFlow key={asOf ?? ''} asOf={asOf} today={today} preview={preview?.ok ? preview.value : null} paymentTermDays={readSetting<number>(deps, 'members.paymentTermDays')} levels={levels} canStart={canFees} canAssign={hasPermission(ctx, 'finance.entriesWrite') && hasPermission(ctx, 'finance.read')} />;
   }
 
   return (

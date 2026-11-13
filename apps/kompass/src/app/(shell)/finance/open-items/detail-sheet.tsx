@@ -17,7 +17,14 @@ import { Sheet, SheetContent, SheetFooter, SheetTitle } from '@/components/ui/sh
 import { formatEuro } from '@/lib/finance/amount';
 import { formatDateOrDash } from '@/lib/finance/dates';
 import { openItemState } from '@/lib/finance/open-item-state';
-import { cancelOpenItemAction } from './actions';
+import { assignPaymentAction, cancelOpenItemAction, unassignPaymentAction } from './actions';
+import { AssignPaymentDialog } from './assign-payment-dialog';
+import { addNoteAction, createResponseDraftAction } from '@/app/(shell)/dms/actions';
+import { Notice } from '@/components/notice';
+import { RefusalNotice } from '@/components/forms/refusal-notice';
+import { useActionFeedback } from '@/components/forms/use-action-feedback';
+import { RowMenu } from '@/components/row-menu';
+import { runAction, toastUndo } from '@/lib/feedback';
 import { ItemDialog, type OpenItemEditable } from './item-dialog';
 import { Overline } from '@/components/overline';
 import { Empty } from '@/components/empty-value';
@@ -56,6 +63,21 @@ export interface SettlementRow {
   entryNumber: string | null;
   amountCents: number;
   entryDate: string;
+  /** Spec Zahlung zuordnen: nur nachträgliche Zuordnungen tragen Tag und Menü (Design 4a). */
+  settlementId?: string;
+  moneyLineId?: string;
+  assignedAt?: string | null;
+  unassignable?: boolean;
+  unassignBlockedBy?: 'assignmentHasReturn' | null;
+}
+
+/** Spec Zahlung zuordnen § 3.4a: eine Mahnung, die nach der Zahlung verschickt wurde. */
+export interface UnfoundedNoticeRow {
+  documentId: string;
+  sentOn: string;
+  paymentDate: string;
+  noted: boolean;
+  notedOn: string | null;
 }
 
 /**
@@ -73,9 +95,11 @@ export function DetailSheet({
   today,
   iban,
   epcPayload,
+  unfoundedNotices = [],
 }: {
   item: OpenItemDetailData;
   settlements: SettlementRow[];
+  unfoundedNotices?: UnfoundedNoticeRow[];
   canWrite: boolean;
   canFinalize: boolean;
   finalizeNames: string[];
@@ -85,7 +109,18 @@ export function DetailSheet({
   epcPayload?: string | null;
 }) {
   const t = useTranslations('finance.openItems');
+  const ta = useTranslations('finance.openItems.assign');
+  const c = useTranslations('common');
   const router = useRouter();
+  const [assignOpen, setAssignOpen] = useState(false);
+  const noteFeedback = useActionFeedback();
+  const unassign = async (s: SettlementRow) => {
+    const result = await runAction(() => unassignPaymentAction(s.settlementId!), c('network'));
+    if (result.status !== 'success') return result;
+    router.refresh();
+    toastUndo(ta('toast.unassigned', { number: s.entryNumber ?? '' }), () => assignPaymentAction({ openItemId: item.id, moneyLineId: s.moneyLineId!, amountCents: s.amountCents }).then((r) => { router.refresh(); return r; }), { undo: c('undo'), network: c('network') });
+    return result;
+  };
   const { date } = useDateFormat();
   const pathname = usePathname();
   const params = useSearchParams();
@@ -122,6 +157,38 @@ export function DetailSheet({
             <SheetTitle>{item.contactLabel ?? item.paymentReference ?? t('detail.unnamed')}</SheetTitle>
             {item.contactLabel && item.paymentReference ? <p className="mt-1 text-meta text-muted-ink">{item.paymentReference}</p> : null}
             <div className="mt-4 space-y-4">
+              <RefusalNotice state={noteFeedback.state} />
+              {unfoundedNotices.map((n) => (
+                <Notice key={n.documentId} level="hint" testId="unfounded-notice">
+                  <p>{ta('unfounded.text', { sentOn: date(n.sentOn), paidOn: date(n.paymentDate) })}</p>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    <Button type="button" variant="outline" size="sm" onClick={() => void noteFeedback.run(() => createResponseDraftAction(n.documentId))}>
+                      {ta('unfounded.correction')}
+                    </Button>
+                    {n.noted ? (
+                      <p className="text-meta text-muted-ink">{ta('unfounded.noted', { date: n.notedOn ? date(n.notedOn) : '' })}</p>
+                    ) : (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        data-testid="unfounded-note"
+                        onClick={() =>
+                          void noteFeedback.run(async () => {
+                            const form = new FormData();
+                            form.set('body', ta('unfounded.noteBody', { paidOn: date(n.paymentDate) }));
+                            const result = await addNoteAction(n.documentId, { status: 'idle' }, form);
+                            if (result.status === 'success') router.refresh();
+                            return result;
+                          })
+                        }
+                      >
+                        {ta('unfounded.note')}
+                      </Button>
+                    )}
+                  </div>
+                </Notice>
+              ))}
               <div>
                 <p className="text-amount font-semibold tabular-nums text-ink">{formatEuro(item.openCents)}</p>
                 {/* 07-2 A2: „von …“ nur bei einer Teilzahlung — sonst stünde derselbe Betrag zweimal da. */}
@@ -157,11 +224,26 @@ export function DetailSheet({
                 ) : (
                   <ul className="mt-1 space-y-1">
                     {settlements.map((s) => (
-                      <li key={s.entryId} className="flex items-center justify-between gap-2 text-meta">
-                        <Link href={`/finance/entries/${s.entryId}`} className="text-link underline">
-                          {s.entryNumber ?? s.entryId}
-                        </Link>
-                        <span className="tabular-nums text-ink-2">{formatEuro(s.amountCents)}</span>
+                      <li key={s.settlementId ?? s.entryId} className="flex items-center justify-between gap-2 text-meta" data-testid="settled-by-row">
+                        <span className="flex flex-col">
+                          <Link href={`/finance/entries/${s.entryId}`} className="text-link underline">
+                            {s.entryNumber ?? s.entryId}
+                          </Link>
+                          {s.assignedAt ? <span className="text-meta text-muted-ink">{ta('assignedOn', { date: date(s.assignedAt) })}</span> : null}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <span className="tabular-nums text-ink-2">{formatEuro(s.amountCents)}</span>
+                          {s.assignedAt && canWrite ? (
+                            <RowMenu
+                              name={s.entryNumber ?? s.entryId}
+                              testId="settled-by-menu"
+                              items={[
+                                { key: 'unassign', label: ta('unassign'), onSelect: () => void noteFeedback.run(() => unassign(s)), disabledReason: s.unassignBlockedBy ? ta('hasReturn') : undefined },
+                                { key: 'entry', label: ta('toEntry'), href: `/finance/entries/${s.entryId}` },
+                              ]}
+                            />
+                          ) : null}
+                        </span>
                       </li>
                     ))}
                   </ul>
@@ -204,6 +286,11 @@ export function DetailSheet({
                     {t('detail.change')}
                   </Button>
                 ) : null}
+                {canWrite && item.kind === 'receivable' && item.cancelledAt === null && item.openCents > 0 ? (
+                  <Button type="button" variant="outline" onClick={() => setAssignOpen(true)} data-testid="open-item-assign-trigger">
+                    {ta('trigger')}
+                  </Button>
+                ) : null}
                 <Link href={bookHref} className={buttonVariants()}>
                   {t('detail.bookNow')}
                 </Link>
@@ -213,6 +300,7 @@ export function DetailSheet({
         </SheetContent>
       </Sheet>
 
+      {assignOpen ? <AssignPaymentDialog openItemIds={[item.id]} open={assignOpen} onOpenChange={setAssignOpen} today={today} onAssigned={() => router.refresh()} /> : null}
       {editOpen ? <ItemDialog open={editOpen} onOpenChange={setEditOpen} item={editable} defaultKind={item.kind} canCreateContact={canCreateContact} today={today} /> : null}
 
       <ConfirmDialog

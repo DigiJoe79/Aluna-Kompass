@@ -73,7 +73,9 @@ export default defineTemplate({
   });
 
   it('reports a missing file, a broken file and a wrong export as conflicts', async () => {
-    const missing = await loadTemplate(mkdtempSync(path.join(tmpdir(), 'kompass-empty-')));
+    const empty = mkdtempSync(path.join(tmpdir(), 'kompass-empty-'));
+    dirs.push(empty);
+    const missing = await loadTemplate(empty);
     expect(missing.ok === false && missing.error.type === 'conflict' && missing.error.code === 'templateMissing').toBe(true);
     const broken = await loadTemplate(await withTemplate('export default {'));
     expect(broken.ok === false && broken.error.type === 'conflict' && broken.error.code === 'templateUnreadable').toBe(true);

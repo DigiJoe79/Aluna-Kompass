@@ -78,6 +78,13 @@ async function runToResult(page: Page): Promise<void> {
   await finished(page, 20_000);
 }
 
+/**
+ * Übersprungen (unter dem Mindestbetrag) und im Nachzügler-Lauf fehlend: vier Spender aus dem Finanz-Seed, dazu sechs
+ * Kontakte aus den Zuordnungsfällen der Mitglieder (Spec Zahlung zuordnen § 8) — ihre Beiträge und Spenden tragen den
+ * Kontakt, weil das Zuordnen ihn braucht.
+ */
+const SKIPPED = 10;
+
 test.describe('finance donation run', () => {
   test.beforeEach(async ({ page }) => {
     await resetDatabase(page, 'seeded');
@@ -155,7 +162,7 @@ test.describe('finance donation run', () => {
     await page.goto(page.url());
     await finished(page, 20_000);
     const result = page.getByTestId('run-result');
-    await expect(result.getByTestId('run-summary')).toHaveText(`${ISSUED} ausgestellt, 4 übersprungen`); // 14 A4
+    await expect(result.getByTestId('run-summary')).toHaveText(`${ISSUED} ausgestellt, ${SKIPPED} übersprungen`); // 14 A4
 
     const [machine] = await Promise.all([page.waitForEvent('download'), result.getByRole('button', { name: `Maschinelle Bestätigungen (PDF) · ${READY}` }).click()]);
     expect(machine.suggestedFilename()).toMatch(/maschinell\.pdf$/);
@@ -271,7 +278,7 @@ test.describe('finance donation run', () => {
     await loginAsAdmin(page);
     await runToResult(page);
     const result = page.getByTestId('run-result');
-    await expect(result.getByTestId('run-missing')).toContainText('4 Spender fehlen noch');
+    await expect(result.getByTestId('run-missing')).toContainText(`${SKIPPED} Spender fehlen noch`);
     await expect(result.getByTestId('run-missing')).toContainText('Tobias Adler');
 
     await result.getByRole('link', { name: 'Nachzügler-Lauf vorbereiten' }).click();
@@ -291,7 +298,7 @@ test.describe('finance donation run', () => {
     await expect(runItem(page, 'Tobias Adler')).toBeVisible();
     await page.getByTestId('run-footer').getByRole('button', { name: '1 Bestätigung ausstellen' }).click();
     await finished(page, 20_000);
-    await expect(page.getByTestId('run-summary')).toHaveText('1 ausgestellt, 3 übersprungen'); // 14 A4
+    await expect(page.getByTestId('run-summary')).toHaveText(`1 ausgestellt, ${SKIPPED - 1} übersprungen`); // 14 A4
     // Dazu der abgeschlossene Serienlauf des Vorjahrs aus dem Seed — eine Zeile, die hier immer mitzählt.
     const rows = page.getByTestId('run-row');
     await expect(rows).toHaveCount(3);
@@ -316,7 +323,7 @@ test.describe('finance donation run', () => {
     await expect(row).toHaveCount(2);
     // 09 B17: Das Jahr in der ersten Spalte öffnet den Lauf.
     await row.filter({ hasNotText: 'Post' }).getByRole('link').first().click();
-    await expect(page.getByTestId('run-summary')).toHaveText(`${ISSUED} ausgestellt, 4 übersprungen`); // 14 A4
+    await expect(page.getByTestId('run-summary')).toHaveText(`${ISSUED} ausgestellt, ${SKIPPED} übersprungen`); // 14 A4
     await expect(page.getByRole('button', { name: `Maschinelle Bestätigungen (PDF) · ${READY}` })).toBeEnabled();
     await expect(page.getByRole('button', { name: 'Versand für alle vermerken' })).toHaveCount(0);
   });

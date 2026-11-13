@@ -65,7 +65,7 @@ export function templateSplitRows(lines: readonly OpenItemTemplateLine[], settle
     contactName: line.contactId ? (line.contactName ?? null) : null,
     projectId: line.projectId ?? null,
     purposeId: line.purposeId ?? null,
-    abroad: line.abroad ?? false,
+    abroad: line.abroad ?? null,
     addsToAssets: false,
   });
   if (records.length === 0) {
@@ -94,6 +94,6 @@ export function withOpenItemTemplate(state: EntryFormState, item: SettlementOpti
   if (rows.length === 0) return state;
   const rest = lineCents - settlementCents;
   const contact = item.lineTemplate.find((l) => l.contactId);
-  const restRow = { key: `split-${item.id}-rest`, categoryId: '', amountText: formatAmount(rest), contactId: contact?.contactId ?? null, contactName: contact?.contactName ?? null, projectId: null, purposeId: null, abroad: false, addsToAssets: false };
+  const restRow = { key: `split-${item.id}-rest`, categoryId: '', amountText: formatAmount(rest), contactId: contact?.contactId ?? null, contactName: contact?.contactName ?? null, projectId: null, purposeId: null, abroad: null, addsToAssets: false };
   return { ...state, splitRows: rest > 0 ? [...rows, restRow] : rows };
 }

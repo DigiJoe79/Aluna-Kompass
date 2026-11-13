@@ -67,6 +67,32 @@ test.describe('finance tax return (Rechenschaft D2)', () => {
     await expect(page.getByText('Hinweise aus dem Bescheid umsetzen')).toBeVisible();
   });
 
+  // B9 (Spec 0.5.2 § 8, Stufe Ablauf): Eine Angabe nach der Abgabe öffnet den Prüfanlass; ohne Berichtigung geschlossen
+  // steht „Geprüft am“ da, und die Frist ist weg.
+  test('Prüfanlass aus einer Angabe nach der Abgabe ohne Berichtigung schließen', async ({ page }) => {
+    await page.goto('/finance/tax');
+    const select = page.getByTestId('tax-period-select');
+    const value = await select.locator('option', { hasText: `${FILED_TAX_PERIOD}, abgegeben` }).getAttribute('value');
+    await select.selectOption(value!);
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText(`Steuererklärung ${FILED_TAX_PERIOD}`);
+    await page.locator('#answer-memberCounts input').last().fill('41');
+    await page.getByTestId('tax-answers-save').click();
+    await page.getByRole('alertdialog').getByRole('button', { name: 'Speichern' }).click();
+    await expect(page.getByTestId('tax-review')).toBeVisible();
+
+    await page.getByTestId('tax-review-close').click();
+    const dialog = page.getByTestId('tax-review-close-dialog');
+    await dialog.getByLabel('Begründung').fill('Nur die Mitgliederzahl in der Beilage, keine Verkürzung möglich.');
+    await dialog.getByTestId('tax-review-close-save').click();
+    await expect(dialog).toBeHidden();
+    await expect(page.getByTestId('tax-checked')).toBeVisible();
+    await expect(page.getByTestId('tax-review')).toHaveCount(0);
+
+    await page.goto('/finance/deadlines');
+    await expect(page.getByTestId('deadline-row').first()).toBeVisible();
+    await expect(page.locator('[data-testid="deadline-row"][data-kind="taxReturnAmendment"]')).toHaveCount(0);
+  });
+
   test('Rücklagenspiegel über den Zeitraum: von der Beilage hin, Zeitraum als Rahmen, festschreiben', async ({ page }) => {
     // Vom offenen Zeitraum des Stichjahres aus (dort bewegen sich Rücklagen), mit dem Weg über `?period=`. Den Rücklagenspiegel
     // des abgegebenen Zeitraums schreibt der Seed bewusst nicht fest — das tut dieser Test.

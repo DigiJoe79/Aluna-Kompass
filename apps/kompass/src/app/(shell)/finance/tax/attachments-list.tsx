@@ -87,7 +87,7 @@ export function AttachmentsList({ attachments, periodId, periodLabel = '', desig
           </div>
         </Section>
       </FormCardBody>
-      {filing ? <TaxDocumentDialog open onOpenChange={(o) => (o ? undefined : setFiling(null))} periodId={periodId} slot={filing} canPickDocument={me.canPickDocument} /> : null}
+      {filing ? <TaxDocumentDialog open onOpenChange={(o) => (o ? undefined : setFiling(null))} periodId={periodId} slot={{ slot: filing }} canPickDocument={me.canPickDocument} /> : null}
     </FormCard>
   );
 }

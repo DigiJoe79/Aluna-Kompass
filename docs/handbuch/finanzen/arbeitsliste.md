@@ -18,8 +18,11 @@ Darunter stehen fünf Reiter, jeder mit der Zahl seiner Einträge:
 - **Zuzuordnen** — Kontoumsätze mit einem sicheren Vorschlag.
 - **Unsicher** — Kontoumsätze, bei denen sich Kompass nicht sicher ist oder
   keinen Vorschlag hat. Hier ordnet man selbst zu.
-- **Vom Agenten vorbereitet** — Entwürfe, die ein KI-Agent zu einem
-  Kontoumsatz angelegt hat (siehe unten).
+- **Vom Agenten vorbereitet** — ungeprüfte Entwürfe, die einen Kontoumsatz
+  binden. Meist hat sie ein KI-Agent angelegt (siehe unten); hier stehen
+  aber auch Entwürfe, die jemand am Bildschirm ungeprüft gespeichert hat,
+  und geprüfte Entwürfe, die danach geändert wurden — eine Änderung nimmt
+  den Prüfvermerk weg.
 - **Geprüft, nicht festgeschrieben** — geprüfte Entwürfe, die noch keine
   Nummer tragen.
 - **Fällig** — offene Zahlungen, deren Fälligkeit verstrichen ist.
@@ -100,7 +103,12 @@ hat; sonst wählen Sie den Kontakt selbst. Welche IBAN zu wem gehört, steht am
 Kontakt unter **Bankverbindungen** (siehe [Kontakte](../kontakte.md)).
 
 Die Gebühr eines Zahlungsdienstes, die der Import als eigenen Umsatz neben
-die Zahlung stellt, schlägt Kompass sicher als „Gebühren Zahlungsdienst“ vor.
+die Zahlung stellt, schlägt Kompass als „Gebühren Zahlungsdienst“ vor. Sie
+folgt dabei ihrer Zahlung: Ist die Zahlung schon gebucht und tragen alle ihre
+Zeilen dasselbe Projekt und denselben Zweck, übernimmt die Gebühr beides, und
+der Vorschlag ist sicher. Ist die Zahlung noch nicht gebucht oder auf
+verschiedene Projekte oder Zwecke verteilt, steht die Gebühr unter „Unsicher“,
+und die Karte sagt, warum. Buchen Sie dann am besten zuerst die Zahlung.
 
 Findet Kompass nichts davon, steht der Umsatz ohne Vorschlag unter
 „Unsicher“. Hat ein Vorschlag ein Problem — etwa eine inzwischen
@@ -272,7 +280,8 @@ Ein KI-Agent kann die Arbeitsliste über die Schnittstelle lesen und zu
 Kontoumsätzen Entwürfe anlegen — mit denselben Vorschlägen, die auch am
 Bildschirm erscheinen. Er legt diese Entwürfe **ungeprüft** vor; sie
 stehen im Reiter „Vom Agenten vorbereitet“. Dort sieht ein Mensch sie an,
-markiert sie als geprüft oder löscht sie.
+markiert sie als geprüft oder löscht sie. Ändert ein Agent einen schon
+geprüften Entwurf, ist er wieder ungeprüft und steht wieder in diesem Reiter.
 
 Prüfen und Festschreiben bleiben einem Menschen am Bildschirm vorbehalten:
 Nur ein Mensch drückt Enter. Das ist die Voreinstellung; ändern lässt sie

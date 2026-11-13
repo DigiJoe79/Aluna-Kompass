@@ -1,11 +1,13 @@
 import { invalid, type DbOrTx, type Failure } from '@kompass/core';
 import { z } from 'zod';
-import { and, eq, gte, lt, lte, sql } from 'drizzle-orm';
+import { and, asc, eq, gte, lt, lte, sql } from 'drizzle-orm';
 import { relatedPartyPaymentsInternal } from '../../allocation/people';
 import { valueAt } from '../../ledger/dated-values';
 import { accountBalancesAt, assetOverviewAt, purposeBalancesAt, type AccountKind } from '../../ledger/queries';
 import { reserveBalanceAt } from '../../ledger/reserve-balances';
-import { financeAccounts, financeAllocationCorrections, financeAuditCarryOverEntries, financeAuditCarryOvers, financeAllocationLines, financeCategories, financeEntries, financeFiscalYears, financeReserveMovements, financeReserves } from '../../schema';
+import { taxCauseText, taxHistoryInternal } from '../tax-figures';
+import { taxPeriodsInternal } from '../../ledger/tax-periods';
+import { financeAccounts, financeAllocationCorrections, financeAuditCarryOverEntries, financeAuditCarryOvers, financeAllocationLines, financeCategories, financeEntries, financeFiscalYears, financePeriodEvents, financeReserveMovements, financeReserves } from '../../schema';
 import { dayBefore } from '../other-assets';
 import type { ReportComputeEnv, ReportDefinition, ReportParams, ReportRenderContext } from '../types';
 import { reportTimeZone, TIME_ZONE_SETTING, zonedDayOf, zonedDayRange } from '../../zoned-days';
@@ -18,7 +20,8 @@ import { cashReportTypst } from './cash-report-typst';
  * Kassenbericht — der Kassenteil des Jahresberichts (Spec Rechenschaft 0.4.0 § Kernberichte, §§ 259, 260 BGB; Board
  * 8a/8b): 1 Bestände am Anfang je Konto · 2 Einnahmen und Ausgaben je Kategorie nach Bereich · 3 Ergebnis · 4
  * durchlaufende Gelder · 5 Bestände am Ende · 6 Probe · 7 Zweckbindungen und Rücklagen · 8 offene Zahlungen · 9
- * sonstiges Vermögen (nachrichtlich) · 10 Zahlungen an Organmitglieder ohne Namen · 11 Korrekturen an Vorjahren.
+ * sonstiges Vermögen (nachrichtlich) · 10 Zahlungen an Organmitglieder ohne Namen · 11 Korrekturen an Vorjahren, dazu die
+ * Berichtigungen und Prüfungen der Steuererklärung (B9).
  * Die Probe rechnet nur über Geld: Anfang + Eröffnungsbestände im Jahr + Ergebnis + Veränderung durchlaufend = Ende.
  * Geht sie nicht auf, zeigt der Bericht die Abweichung, und Festschreiben ist gesperrt. Quer, Gruppe MV.
  */
@@ -49,6 +52,12 @@ export interface CashReport {
   /** Rechenschaft C: Zwischenbericht bis zu diesem Tag (Amtsübergabe); fehlt beim Ganzjahresbericht. */
   interimUntil?: string;
   priorYearCarryOvers?: { entryNumber: string; fiscalYearDesignation: string; change: 'new' | 'reversed' | 'changed' }[];
+  /**
+   * B9 (Spec 0.5.2 § 4.6, Vereinsrecht M3): je Berichtigung und je Prüfung ohne Berichtigung der Steuererklärung ein
+   * Eintrag — Zeitraum, Tag, die geänderten Stellen; `late`, wenn der Tag in einem damals schon abgeschlossenen Jahr lag
+   * („nachgetragen“). Nie Name oder Begründung. Nur mit Wert, damit der Hash eines Jahres ohne Eintrag bleibt.
+   */
+  taxReturnNotes?: { kind: 'amendment' | 'noAmendment'; period: string; on: string; lines: string; late: boolean }[];
 }
 
 /** Aus den Tabellen der Übernahme (`auditing/carry-over.ts` schreibt sie) — `reporting/` liest `auditing/` nicht. */
@@ -163,6 +172,34 @@ function priorYearCorrectionsOf(db: DbOrTx, year: ReportYear, timeZone: string):
     .sort((a, b) => a.appliedOn.localeCompare(b.appliedOn) || a.entryNumber.localeCompare(b.entryNumber));
 }
 
+/** War das Jahr zu diesem Zeitpunkt abgeschlossen? Das jüngste Ereignis bis dahin entscheidet. */
+function closedAt(db: DbOrTx, fiscalYearId: string, at: string): boolean {
+  const events = db.select({ kind: financePeriodEvents.kind, at: financePeriodEvents.at }).from(financePeriodEvents).where(eq(financePeriodEvents.fiscalYearId, fiscalYearId)).all().filter((e) => e.at <= at).sort((a, b) => a.at.localeCompare(b.at));
+  return events.at(-1)?.kind === 'closed';
+}
+
+/**
+ * B9: Berichtigungen und Prüfungen ohne Berichtigung, deren Jahr dieses ist — das Geschäftsjahr ihres Tags; war es beim
+ * Eintragen schon abgeschlossen, das erste danach, das es damals nicht war. So ändert sich kein festgeschriebener
+ * Kassenbericht eines abgeschlossenen Jahres.
+ */
+function taxReturnNotesOf(db: DbOrTx, year: ReportYear): NonNullable<CashReport['taxReturnNotes']> {
+  const years = db.select({ id: financeFiscalYears.id, startsOn: financeFiscalYears.startsOn, endsOn: financeFiscalYears.endsOn }).from(financeFiscalYears).orderBy(asc(financeFiscalYears.startsOn)).all();
+  const out: (NonNullable<CashReport['taxReturnNotes']>[number] & { at: string })[] = [];
+  for (const period of taxPeriodsInternal(db)) {
+    for (const e of taxHistoryInternal(db, period.id)) {
+      if (e.kind !== 'amendment' && e.kind !== 'check') continue;
+      const own = years.find((y) => y.startsOn <= e.day && y.endsOn >= e.day);
+      const target = own && !closedAt(db, own.id, e.at) ? own : years.find((y) => y.startsOn > e.day && !closedAt(db, y.id, e.at));
+      if (target?.id !== year.id) continue;
+      const late = target.id !== own?.id;
+      if (!late && e.day > year.endsOn) continue;
+      out.push({ kind: e.kind === 'amendment' ? 'amendment' : 'noAmendment', period: period.label, on: e.day, lines: taxCauseText(e.cause), late, at: e.at });
+    }
+  }
+  return out.sort((a, b) => a.on.localeCompare(b.on) || a.at.localeCompare(b.at)).map(({ at: _at, ...note }) => note);
+}
+
 export function computeCashReport(db: DbOrTx, params: ReportParams, env?: ReportComputeEnv): CashReport {
   const timeZone = reportTimeZone(env);
   const full = reportYearInternal(db, params.fiscalYearId!);
@@ -195,6 +232,7 @@ export function computeCashReport(db: DbOrTx, params: ReportParams, env?: Report
     ...organPaymentsOf(db, year),
     priorYearCorrections: priorYearCorrectionsOf(db, year, timeZone),
     ...withCarryOvers(priorYearCarryOversOf(db, year)),
+    ...withTaxReturnNotes(taxReturnNotesOf(db, year)),
     ...(params.date ? { interimUntil: params.date } : {}),
   };
 }
@@ -210,6 +248,7 @@ function checkYearAndInterimDate(db: DbOrTx, params: ReportParams): Failure | nu
 }
 
 const withCarryOvers = (rows: NonNullable<CashReport['priorYearCarryOvers']>) => (rows.length > 0 ? { priorYearCarryOvers: rows } : {});
+const withTaxReturnNotes = (rows: NonNullable<CashReport['taxReturnNotes']>) => (rows.length > 0 ? { taxReturnNotes: rows } : {});
 
 /** „Kassenteil des Jahresberichts nach <Fundstelle>, vorgelegt vom Vorstand“ — die Fundstelle ist eine Einstellung. */
 function paperSubtitle(ctx: ReportRenderContext): string {

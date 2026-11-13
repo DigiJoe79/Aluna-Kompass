@@ -87,6 +87,27 @@ describe('kompass mcp handler', () => {
     await client.close();
   });
 
+  it('N23: arguments the tool schema refuses come back as a validation error the translator sees, not as English SDK text; the list keeps the schema', async () => {
+    const deps = createTestDeps();
+    const seen: unknown[] = [];
+    const strict = { name: 'test_period', description: 'test', inputSchema: z.object({ period: z.string().regex(/^\d{4}$/), count: z.number().int().default(1) }), handler: async (_d: unknown, _c: unknown, args: unknown) => { seen.push(args); return { ok: true as const, value: null }; } };
+    const handler = createKompassMcpHandler(deps, { extraTools: [...coreMcpTools, strict], translateError: (error) => ({ ...error, translated: true }) as never });
+    const { token } = await tokenFor(deps, ['audit.view']);
+    const client = await connect((url, init) => handler.fetch(new Request(url, init)), token);
+    const listed = (await client.listTools()).tools.find((t) => t.name === 'test_period')!;
+    expect(listed.inputSchema).toMatchObject({ type: 'object', properties: { period: { type: 'string', pattern: '^\\d{4}$' } }, required: ['period'] });
+    const refused = await client.callTool({ name: 'test_period', arguments: { period: '2026-Q5' } });
+    expect(refused.isError).toBe(true);
+    const text = (refused.content as { text: string }[])[0]!.text;
+    expect(text).not.toMatch(/Input validation error|pattern/);
+    expect(JSON.parse(text)).toEqual({ error: { type: 'validation', issues: [{ path: 'period', message: 'invalid' }], translated: true } });
+    expect(seen).toEqual([]);
+    const passed = await client.callTool({ name: 'test_period', arguments: { period: '2026' } });
+    expect(passed.isError).toBeFalsy();
+    expect(seen).toEqual([{ period: '2026', count: 1 }]);
+    await client.close();
+  });
+
   it('rejects missing or revoked tokens with 401', async () => {
     const deps = createTestDeps();
     const handler = createKompassMcpHandler(deps, { extraTools: coreMcpTools });

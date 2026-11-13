@@ -13,7 +13,7 @@ import { requireSession } from '@/lib/request-context';
 import { formatAmount } from '@/lib/finance/amount';
 import { emptyForm, type EntryFormState, type EntryTemplate } from '@/lib/finance/entry-form';
 import { formFromTransaction } from '@/lib/finance/work';
-import { settlementOptions } from '@/lib/finance/open-item-options';
+import { contactNamesOf, settlementOptions } from '@/lib/finance/open-item-options';
 import { EntryForm, type PendingVoucher } from '../entry-form';
 
 export default async function NewFinanceEntryPage({ searchParams }: { searchParams: Promise<{ template?: string; account?: string; settles?: string; raw?: string; back?: string; voucher?: string }> }) {
@@ -68,7 +68,9 @@ export default async function NewFinanceEntryPage({ searchParams }: { searchPara
   const raw = rawRes?.ok && rawRes.value.state === 'open' ? rawRes.value : null;
   if (raw) {
     const suggestion = await suggestForTransaction(deps, ctx, { rawTransactionId: raw.id });
-    initial = formFromTransaction(raw, suggestion.ok ? suggestion.value.draft : null);
+    const draft = suggestion.ok ? suggestion.value.draft : null;
+    // Befund B3 (0.5.2): Der Kontakt des Vorschlags steht mit Namen im Feld.
+    initial = formFromTransaction(raw, draft, await contactNamesOf(deps, ctx, (draft?.allocationLines ?? []).map((l) => l.contactId)));
   }
   const returnTo = query.back === 'work' ? '/finance/work' : '/finance/entries';
 

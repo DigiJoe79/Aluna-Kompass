@@ -97,6 +97,7 @@ export const PACKAGES_ALLOWED: CountedAllowlist = {
   'packages/modules/finance/src/import/zugferd-fixture.ts': { count: 1, reason: 'XML-Beispielrechnung; ISO ist das Format des Standards.' },
   'packages/modules/finance/src/ledger/notice-validity.ts': { count: 1, reason: 'Rechnen: ISO-Tag zusammensetzen.' },
   'packages/modules/finance/src/ledger/vat-periods.ts': { count: 1, reason: 'Fingerabdruck der Zeilen eines Umsatzsteuer-Zeitraums (Hash-Eingabe), keine Anzeige.' },
+  'packages/modules/members/src/seed.ts': { count: 2, reason: 'Dateiname und Bankreferenz des erfundenen Kontoauszugs der Zuordnungsfälle (Spec Zahlung zuordnen § 8), ISO sortiert richtig.' },
   'packages/modules/finance/src/seed.ts': { count: 3, reason: 'Dateinamen der erfundenen Belege, ISO sortiert richtig; Buchungstag der frühen Jahre aus Jahr und Monat-Tag (Rechnen, Plan seed-mehrjahre).' },
   'packages/modules/governance/src/minutes/attachments.ts': { count: 2, reason: 'Rechnen: Sortierschlüssel aus ISO-Tag und Zeitstempel (jüngste Mitgliedschaft, Wahlen in Abstimmungsfolge).' },
   'packages/modules/governance/src/minutes/print.ts': { count: 1, reason: 'Dateiname des Protokoll-Entwurfs, ISO sortiert richtig.' },

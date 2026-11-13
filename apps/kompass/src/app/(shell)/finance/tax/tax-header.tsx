@@ -59,7 +59,7 @@ export function TaxHeader({
   runningYear = null,
   ...dialog
 }: DialogProps & {
-  period: Pick<TaxPeriodView, 'id' | 'label' | 'dueOn' | 'filedOn' | 'firstFiscalYearId' | 'lastFiscalYearId' | 'requestedOn' | 'withTaxAdvisor' | 'yearsLocked' | 'version' | 'documents'>;
+  period: Pick<TaxPeriodView, 'id' | 'label' | 'dueOn' | 'filedOn' | 'firstFiscalYearId' | 'lastFiscalYearId' | 'requestedOn' | 'withTaxAdvisor' | 'yearsLocked' | 'version' | 'documents' | 'reviewDue'>;
   stage: ReportStage;
   shortHash: string;
   generatedAt: string;
@@ -130,7 +130,7 @@ export function TaxHeader({
           description={
             <>
               <span className="block">
-                {[t('header.purpose'), running ? tReports('view.running', { year: running }) : null, missingCount > 0 ? t('header.missing', { count: missingCount }) : null, period.filedOn ? t('header.filed', { date: fmt.date(period.filedOn) }) : t('header.due', { date: fmt.date(period.dueOn) })].filter(Boolean).join(' ')}
+                {[t('header.purpose'), running ? tReports('view.running', { year: running }) : null, missingCount > 0 ? t('header.missing', { count: missingCount }) : null, period.filedOn ? t(period.reviewDue ? 'header.filedChanged' : 'header.filed', { date: fmt.date(period.filedOn) }) : t('header.due', { date: fmt.date(period.dueOn) })].filter(Boolean).join(' ')}
               </span>
               <KeyLine className="mt-1">{tReports('view.generated', { date: fmt.dateTime(generatedAt), hash: shortHash })}</KeyLine>
             </>

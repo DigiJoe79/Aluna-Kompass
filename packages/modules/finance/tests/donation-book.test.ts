@@ -144,6 +144,23 @@ describe('getDonationReconciliation', () => {
     expect(rec.reasons.reduce((s, r) => s + r.cents, 0)).toBe(rec.differenceCents);
   });
 
+  // Spec Zahlung zuordnen § 3.7 (Teil B): Fall 1 bleibt `other` („Noch nicht bestätigt“), Fall 2 bekommt einen eigenen Grund.
+  it('names a confirmation below the gift after returns as underConfirmed, an unconfirmed gift as other', async () => {
+    const f = await donationFixture({ machine: true });
+    const gift = await f.donate({ date: '2026-01-15', cents: 5000 });
+    const back = await f.giveBack(gift.line.id, 2000, '2026-02-10');
+    unwrap(await issueConfirmation(f.deps, f.ctx, { lineIds: [gift.line.id] }));
+    unwrap(await reverseEntry(f.deps, f.ctx, { id: back.entry.id }));
+    const max = await person(f, 'Max', 'Probe');
+    await f.donate({ date: '2026-02-28', cents: 2500, contactId: max.id });
+    const rec = unwrap(await getDonationReconciliation(f.deps, f.ctx, { year: 2026 }));
+    expect(rec.reasons).toEqual([
+      { key: 'other', count: 1, cents: 2500, href: '/finance/donations/run?year=2026' },
+      { key: 'underConfirmed', count: 1, cents: 2000, href: '/finance/donations?tab=toCorrect' },
+    ]);
+    expect(rec.reasons.reduce((s, r) => s + r.cents, 0)).toBe(rec.differenceCents);
+  });
+
   it('names a return across the year end as its own item, not as „other“ (Designer Runde 6, 264; Runde 8, 272)', async () => {
     const f = await donationFixture({ machine: true });
     const last = await f.donate({ date: '2025-12-20', cents: 6000 });

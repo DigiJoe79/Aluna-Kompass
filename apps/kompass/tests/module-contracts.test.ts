@@ -69,6 +69,8 @@ const NAME_WITHOUT_PERMISSION: Record<string, string> = {
   financePeriodEvent: 'Beschriftet sich als sein Geschäftsjahr, siehe financeFiscalYear.',
   financeTaxPeriod: 'Beschriftet sich mit den Bezeichnungen seiner Geschäftsjahre („2023–2025“), siehe financeFiscalYear.',
   financeVatFiling: 'Beschriftet sich mit ihrem Umsatzsteuer-Zeitraum („2026-Q2“), wie financeTaxPeriod mit seinen Jahren.',
+  financeTaxAmendment: 'B9: Berichtigung und Prüfung heißen nach ihrem Erklärungszeitraum („2023–2025“), wie financeTaxPeriod.',
+  financeTaxAmendmentCheck: 'B9: wie financeTaxAmendment — der Zeitraum verrät nichts.',
 };
 
 const labelText = (label: RecordLabelInput['label']) => (typeof label === 'string' ? label : '');

@@ -45,7 +45,7 @@ export default async function AdminMembersPage({ searchParams }: { searchParams:
       list.map(async (s) => {
         if (!s.resolutionDocumentId) return null;
         const record = hasPermission(ctx, 'dms.view') ? await getDocumentRecord(deps, ctx, s.resolutionDocumentId) : null;
-        return { id: s.resolutionDocumentId, number: record?.ok ? record.value.number : null };
+        return { id: s.resolutionDocumentId, number: record?.ok ? record.value.number : null, ...(record?.ok ? { subject: record.value.subject } : {}) };
       }),
     );
     content = (
@@ -53,6 +53,7 @@ export default async function AdminMembersPage({ searchParams }: { searchParams:
         schedules={list.map((s, i) => ({ id: s.id, validFrom: s.validFrom, resolvedOn: s.resolvedOn, resolutionDocument: documents[i] ?? null, resolutionRef: s.resolution, note: s.note, rules: s.rules.map((r) => ({ typeId: r.typeId, amountCents: r.amountCents, interval: r.interval, minimum: r.minimum, allowedIntervals: r.allowedIntervals, admissionFeeCents: r.admissionFeeCents })), locked: s.locked }))}
         types={typeRows.map((ty) => ({ id: ty.id, label: label(ty), feeExempt: ty.feeExempt, active: ty.active }))}
         today={today}
+        canPickDocument={hasPermission(ctx, 'dms.view')}
       />
     );
   } else {

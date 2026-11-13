@@ -197,6 +197,14 @@ export function SuggestionCard({
           {t('suggestion.originIsDraft')}
         </p>
       ) : null}
+      {/* Befund B4 (0.5.2): Die Gebühr folgt ihrer Zahlung nur, wenn die gebucht ist und einheitlich Projekt und Zweck trägt. */}
+      {(['feePaymentUnbooked', 'feePaymentMixed'] as const).map((hint) =>
+        suggestion?.hints.includes(hint) ? (
+          <p key={hint} className="text-hint text-muted-ink" data-testid="suggestion-fee-payment">
+            {t(`suggestion.${hint}`)}
+          </p>
+        ) : null,
+      )}
       {detail.pendingInvoice && !linkEntry && canWrite ? (
         <div data-testid="pending-invoice">
           <Notice level="hint">{t('invoice.pending', { number: detail.pendingInvoice.number, seller: detail.pendingInvoice.seller })}</Notice>

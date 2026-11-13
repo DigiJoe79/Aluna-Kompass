@@ -53,7 +53,7 @@ describe('settlementCandidates: Suche über Referenz und Kontakt (Befund Joe 202
 describe('templateSplitRows', () => {
   it('eine Zeile bekommt den Ausgleichsbetrag, Kontakt mit Namen', () => {
     expect(templateSplitRows(fee.lineTemplate!, 2500, 'k')).toEqual([
-      { key: 'k-1', categoryId: 'cat-fees', amountText: '25,00', contactId: 'c-ida', contactName: 'Ida Wießner', projectId: null, purposeId: null, abroad: false, addsToAssets: false },
+      { key: 'k-1', categoryId: 'cat-fees', amountText: '25,00', contactId: 'c-ida', contactName: 'Ida Wießner', projectId: null, purposeId: null, abroad: null, addsToAssets: false },
     ]);
   });
 
@@ -65,7 +65,7 @@ describe('templateSplitRows', () => {
 
   it('ohne Kategorie in der Vorlage: eine Zeile mit leerer Kategorie, Kennzeichen und Kontakt', () => {
     expect(templateSplitRows([{ taxCode: 'vat19', contactId: 'c-1', contactName: 'Druckerei' }], 12000, 'k')).toEqual([
-      { key: 'k-1', categoryId: '', amountText: '120,00', taxCode: 'vat19', contactId: 'c-1', contactName: 'Druckerei', projectId: null, purposeId: null, abroad: false, addsToAssets: false },
+      { key: 'k-1', categoryId: '', amountText: '120,00', taxCode: 'vat19', contactId: 'c-1', contactName: 'Druckerei', projectId: null, purposeId: null, abroad: null, addsToAssets: false },
     ]);
   });
 });

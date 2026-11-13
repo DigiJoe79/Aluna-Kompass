@@ -2,7 +2,7 @@ import { defineModule, type ModuleManifest } from '@kompass/core';
 import { memberMemberships } from './schema';
 import { MEMBERS_DASHBOARD_TILES } from './dashboard';
 import { membersDirectDebitSources } from './direct-debit-source';
-import { membersDirectDebitWaive } from './fees';
+import { membersDirectDebitWaive, membersPayerContacts } from './fees';
 import { membersMandateUsages } from './fee-agreement';
 import { installMembers } from './install';
 import { memberLetterTemplates } from './letters/templates';
@@ -49,7 +49,7 @@ export const membersModule: ModuleManifest = defineModule({
   documentTemplates: memberLetterTemplates,
   documentBases: ['a4-mit-briefkopf'],
   // Beiträge sind offene Posten der Finanzen mit dieser Herkunft (Spec § 6.1); Beschriftung über `recordLabels`.
-  openItemOrigins: [{ type: 'memberFeeCharge' }],
+  openItemOrigins: [{ type: 'memberFeeCharge', payerContacts: membersPayerContacts }],
   // Plan L1: Mitgliedschaften mit Zahlweg Lastschrift stehen am Mandat unter „wofür“.
   mandateUsages: membersMandateUsages,
   // Plan L2: offene Beiträge mit Lastschrift kommen so in die Vorschau des Einzugs.

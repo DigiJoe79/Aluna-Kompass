@@ -1,6 +1,7 @@
 import { hasPermission, listUserNamesWithPermission, todayIn, type CallContext, type Deps } from '@kompass/core';
 import { listOpenItems, listOpenItemSettlements } from '@kompass/module-finance';
 import { readAllPages } from '@/lib/read-all-pages';
+import { unfoundedNoticesOf } from '@/lib/members/unfounded';
 import { DetailSheet } from '../../finance/open-items/detail-sheet';
 
 /**
@@ -40,6 +41,7 @@ export async function FeeItemSheet({ deps, ctx, itemId, contactLabel }: { deps: 
       today={todayIn(deps)}
       iban={null}
       epcPayload={null}
+      unfoundedNotices={item.originType === 'memberFeeCharge' && item.originId && hasPermission(ctx, 'members.read') ? unfoundedNoticesOf(deps, item.originId) : []}
     />
   );
 }

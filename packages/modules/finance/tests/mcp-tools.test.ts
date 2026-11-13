@@ -11,6 +11,7 @@ import { donationFixture, png } from './donation-fixture';
 import { buildCamt053 } from '../src/import/camt-fixture';
 import { setDatedValue } from '../src/ledger/dated-values';
 import { bookEntry } from '../src/ledger/finalize';
+import { assignFixture } from './assign-fixture';
 
 describe('finance MCP tools', () => {
   // W2 (Architektur-Review A3): kein Werkzeug nimmt ein freies Objekt — es zeigt das Schema des Dienstes.
@@ -314,5 +315,41 @@ describe('report params over MCP (N4)', () => {
     expect(await call('finance_report_finalize')).toMatchObject({ ok: true });
     const versions = await call('finance_report_versions');
     expect(versions.ok && (versions.value as { versions: unknown[] }).versions.length).toBe(1);
+  });
+});
+
+// Spec Zahlung zuordnen § 5: drei Werkzeuge, ein Agent darf zuordnen und aufheben; das Schema lehnt Unbekanntes ab.
+describe('assigning a booked payment over MCP', () => {
+  const tool = (name: string) => FINANCE_MCP_TOOLS.find((t) => t.name === name)!;
+
+  it('lists the three tools with their permission and the checks', () => {
+    expect(tool('finance_open_item_assignable_payments').description).toMatch(/finance\.read/);
+    for (const name of ['finance_open_item_assign_payment', 'finance_open_item_unassign_payment']) expect(tool(name).description, name).toMatch(/finance\.entriesWrite/);
+    const assign = tool('finance_open_item_assign_payment').description;
+    for (const code of ['assignEntryNotFinal', 'assignContactMismatch', 'assignCategoryMismatch', 'assignPaymentConfirmed', 'assignExceedsOpen', 'assignExceedsLine', 'assignInDirectDebit', 'fiscalYearClosed']) expect(assign, code).toContain(code);
+    expect(tool('finance_open_item_assignable_payments').description).toMatch(/purposeHint.*viaGuardian|viaGuardian.*purposeHint/s);
+    expect(tool('finance_open_item_settlements').description).toMatch(/assignedAt/);
+    expect(tool('finance_open_item_settlements').description).toMatch(/unassignable/);
+  });
+
+  it('lets an agent assign and release', async () => {
+    const f = await assignFixture();
+    const agent = { ...f.ctx, channel: 'mcp' as const };
+    const item = f.feeItem();
+    const pay = await f.pay({ cents: 6000, date: '2026-02-14' });
+    const [candidate] = unwrap(await tool('finance_open_item_assignable_payments').handler(f.deps, agent, { openItemId: item.id })) as { moneyLineId: string }[];
+    expect(candidate!.moneyLineId).toBe(pay.lineId);
+    expect(unwrap(await tool('finance_open_item_assign_payment').handler(f.deps, agent, { openItemId: item.id, moneyLineId: pay.lineId }))).toMatchObject({ state: 'settled' });
+    const [settlement] = unwrap(await tool('finance_open_item_settlements').handler(f.deps, agent, { openItemId: item.id })) as { settlementId: string; unassignable: boolean }[];
+    expect(settlement!.unassignable).toBe(true);
+    expect(unwrap(await tool('finance_open_item_unassign_payment').handler(f.deps, agent, { settlementId: settlement!.settlementId }))).toMatchObject({ state: 'open' });
+  });
+
+  it('the schemas refuse what they do not know', () => {
+    const schema = (name: string) => tool(name).inputSchema as z.ZodType;
+    expect(schema('finance_open_item_assign_payment').safeParse({ openItemId: 'I', moneyLineId: 'M', contactId: 'C' }).success).toBe(false);
+    expect(schema('finance_open_item_assign_payment').safeParse({ openItemId: 'I', moneyLineId: 'M', amountCents: 100 }).success).toBe(true);
+    expect(schema('finance_open_item_unassign_payment').safeParse({ settlementId: 'S', amountCents: 1 }).success).toBe(false);
+    expect(schema('finance_open_item_assignable_payments').safeParse({ openItemId: 'I', all: true }).success).toBe(false);
   });
 });

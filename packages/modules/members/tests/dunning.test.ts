@@ -11,17 +11,23 @@ import {
   financeImportRuns,
   financeRawTransactions,
   financeSepaMandates,
+  assignPaymentToOpenItem,
+  listOpenItemSettlements,
+  unassignPaymentFromOpenItem,
 } from '@kompass/module-finance';
 import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 import { continueDunningRun, getDunningRun, listDunningRuns, previewDunningRun, reachedLevel, startDunningRun } from '../src/dunning';
 import { setFeeAgreement } from '../src/fee-agreement';
 import { deferCharge, listFees, waiveCharge } from '../src/fees';
+import { unfoundedNoticesInternal } from '../src/dunning';
+import { getMemberFeeDetail } from '../src/overview';
+import { addNote } from '@kompass/module-dms';
 import { continueFeeRun, startFeeRun } from '../src/fee-run';
 import { admitMember } from '../src/memberships';
 import { markRunPostDispatched } from '../src/run-dispatch';
 import { memberDunningNotices, memberDunningRuns, memberFeeCharges } from '../src/schema';
-import { addressedPerson, asMcp, auditOf, enteredOn, MEMBERS_PERMISSIONS, payOpenItem, setupFees, type MembersDeps } from './helpers';
+import { addressedPerson, asMcp, auditOf, bookFreePayment, enteredOn, MEMBERS_PERMISSIONS, payOpenItem, setupFees, type MembersDeps } from './helpers';
 
 const fail = <T>(res: { ok: boolean; error?: T }) => (res.ok ? null : res.error);
 const PERMS = [...MEMBERS_PERMISSIONS, 'dms.view', 'dms.create', 'dms.send', ...FINANCE_PERMISSIONS];
@@ -356,5 +362,92 @@ describe('Mahnstufe je Beitrag (Plan N1 E2, M44)', () => {
     const preview = unwrap(await previewDunningRun(f.deps, f.ctx, { asOf: '2026-03-01' }));
     expect(preview.ready.find((c) => c.membershipId === member.id)).toMatchObject({ chargeIds: [january.id] });
     expect(preview.skipped).toContainEqual(expect.objectContaining({ membershipId: member.id, reason: 'directDebit' }));
+  });
+});
+
+// Spec Zahlung zuordnen § 3.4, § 3.4a, § 3.6.
+describe('booked payments in the dunning run', () => {
+  const financeCtx: CallContext = { ...systemContext(), permissions: new Set(FINANCE_PERMISSIONS) };
+
+  it('a free booked fee payment holds the member under paymentMayMatch with bookedPayments, without a time window', async () => {
+    const { deps, ctx, contactId, member, charge } = await setup();
+    const lineId = await bookFreePayment(deps, contactId, 1200, '2026-01-05');
+    deps.clock.set('2026-06-20T08:00:00.000Z');
+    const preview = unwrap(await previewDunningRun(deps, ctx, { asOf: '2026-06-20' }));
+    expect(preview.ready).toEqual([]);
+    expect(preview.paymentMayMatch).toEqual([expect.objectContaining({ membershipId: member.id, rawTransactionIds: [], bookedPayments: [{ openItemId: charge.openItemId, moneyLineId: lineId }] })]);
+  });
+
+  it('after the assignment the fee is paid on the booking day and nothing is ripe; after the release it is back', async () => {
+    const { deps, ctx, contactId, member, charge } = await setup();
+    const lineId = await bookFreePayment(deps, contactId, 1200, '2026-01-05');
+    unwrap(await assignPaymentToOpenItem(deps, financeCtx, { openItemId: charge.openItemId!, moneyLineId: lineId }));
+    expect(unwrap(await listFees(deps, ctx, { year: 2026 })).items[0]).toMatchObject({ state: 'paid', paidOn: '2026-01-05' });
+    const empty = unwrap(await previewDunningRun(deps, ctx, { asOf: '2026-01-20' }));
+    expect([empty.ready, empty.paymentMayMatch]).toEqual([[], []]);
+    const settlement = unwrap(await listOpenItemSettlements(deps, financeCtx, { openItemId: charge.openItemId! }))[0]!;
+    unwrap(await unassignPaymentFromOpenItem(deps, financeCtx, { settlementId: settlement.settlementId }));
+    expect(unwrap(await previewDunningRun(deps, ctx, { asOf: '2026-01-20' })).paymentMayMatch).toEqual([expect.objectContaining({ membershipId: member.id })]);
+  });
+
+  it('a partial assignment lowers the sum of the reminder', async () => {
+    const { deps, ctx, contactId, member, charge } = await setup();
+    const lineId = await bookFreePayment(deps, contactId, 500, '2026-01-05');
+    unwrap(await assignPaymentToOpenItem(deps, financeCtx, { openItemId: charge.openItemId!, moneyLineId: lineId }));
+    expect(unwrap(await listFees(deps, ctx, { year: 2026 })).items[0]).toMatchObject({ state: 'partlyPaid' });
+    expect(unwrap(await previewDunningRun(deps, ctx, { asOf: '2026-01-20' })).ready).toEqual([expect.objectContaining({ membershipId: member.id, sumCents: 700 })]);
+  });
+
+  it('two ripe fees: both items stand in bookedPayments', async () => {
+    const { deps, ctx, types } = await setup();
+    const contactId = await addressedPerson(deps, { lastName: 'Monatsfall' });
+    const member = unwrap(await admitMember(deps, ctx, { contactId, typeId: types.supporting, admittedOn: '2026-01-01' }));
+    enteredOn(deps, '2025-12-01');
+    const lineId = await bookFreePayment(deps, contactId, 2000, '2026-01-05');
+    deps.clock.set('2026-02-20T08:00:00.000Z');
+    const match = unwrap(await previewDunningRun(deps, ctx, { asOf: '2026-02-20' })).paymentMayMatch.find((p) => p.membershipId === member.id)!;
+    const ripe = deps.db.select().from(memberFeeCharges).all().filter((c) => match.chargeIds.includes(c.id));
+    expect(ripe.length).toBeGreaterThanOrEqual(2);
+    expect(match.bookedPayments).toEqual(ripe.map((c) => ({ openItemId: c.openItemId, moneyLineId: lineId })));
+  });
+});
+
+describe('unfoundedNoticesInternal (Spec Zahlung zuordnen § 3.4a)', () => {
+  const financeCtx: CallContext = { ...systemContext(), permissions: new Set(FINANCE_PERMISSIONS) };
+  /** Erinnerung am 20.01., verschickt am 21.01.; die Zahlung kam am `paidOn`. */
+  async function remindedThenAssigned(paidOn: string, opts: { dispatch?: boolean } = {}) {
+    const f = await setup();
+    const runId = await runAt(f.deps, f.ctx, '2026-01-20');
+    f.at('2026-01-21');
+    if (opts.dispatch !== false) unwrap(await markRunPostDispatched(f.deps, f.ctx, { runRef: `membersDunningRun:${runId}`, sentAt: '2026-01-21' }));
+    f.at('2026-02-01');
+    const lineId = await bookFreePayment(f.deps, f.contactId, 1200, paidOn);
+    unwrap(await assignPaymentToOpenItem(f.deps, financeCtx, { openItemId: f.charge.openItemId!, moneyLineId: lineId }));
+    const notice = f.deps.db.select().from(memberDunningNotices).get()!;
+    return { ...f, notice };
+  }
+
+  it('finds a dispatched reminder sent after the payment day', async () => {
+    const { deps, charge, notice, ctx, member } = await remindedThenAssigned('2026-01-10');
+    expect(unfoundedNoticesInternal(deps, deps.db, charge.id)).toEqual([{ documentId: notice.documentId, sentOn: '2026-01-21', paymentDate: '2026-01-10', noted: false, notedOn: null }]);
+    expect(unwrap(await getMemberFeeDetail(deps, ctx, member.id)).unfoundedNotices).toEqual([expect.objectContaining({ chargeId: charge.id, documentId: notice.documentId })]);
+    expect(unwrap(await listFees(deps, ctx, { year: 2026 })).items[0]!.unfoundedNotices).toEqual([expect.objectContaining({ documentId: notice.documentId })]);
+  });
+
+  it('a note naming the payment day marks it noted', async () => {
+    const { deps, ctx, charge, notice } = await remindedThenAssigned('2026-01-10');
+    unwrap(await addNote(deps, ctx, { documentId: notice.documentId, body: 'Zahlung war schon eingegangen am 10.01.2026.' }));
+    expect(unfoundedNoticesInternal(deps, deps.db, charge.id)).toEqual([expect.objectContaining({ noted: true, notedOn: '2026-02-01' })]);
+  });
+
+  it('not for a payment after the dispatch, a reminder never sent, or a released assignment', async () => {
+    const late = await remindedThenAssigned('2026-01-25');
+    expect(unfoundedNoticesInternal(late.deps, late.deps.db, late.charge.id)).toEqual([]);
+    const unsent = await remindedThenAssigned('2026-01-10', { dispatch: false });
+    expect(unfoundedNoticesInternal(unsent.deps, unsent.deps.db, unsent.charge.id)).toEqual([]);
+    const released = await remindedThenAssigned('2026-01-10');
+    const settlement = unwrap(await listOpenItemSettlements(released.deps, financeCtx, { openItemId: released.charge.openItemId! }))[0]!;
+    unwrap(await unassignPaymentFromOpenItem(released.deps, financeCtx, { settlementId: settlement.settlementId }));
+    expect(unfoundedNoticesInternal(released.deps, released.deps.db, released.charge.id)).toEqual([]);
   });
 });

@@ -1,8 +1,10 @@
-import { invalid, isoNow, newId, notFound, ok, readLocales, readSetting, recordAudit, requireHumanChannel, requirePermission, todayIn, validate, type CallContext, type DbOrTx, type Deps, type Result } from '@kompass/core';
+import { invalid, isoDayIn, isoNow, newId, notFound, ok, paperDate, readLocales, readSetting, recordAudit, requireHumanChannel, requirePermission, todayIn, validate, type CallContext, type DbOrTx, type Deps, type Result } from '@kompass/core';
 import { contacts, displayName } from '@kompass/module-contacts';
-import { abortIssue, documents, documentSnippets } from '@kompass/module-dms';
+import { abortIssue, documentNotes, documents, documentSnippets } from '@kompass/module-dms';
 import {
   activeRunItemsInternal,
+  assignablePaymentsInternal,
+  countingPaymentsInternal,
   draftSettlementCentsInternal,
   expiredRunIdsInternal,
   financeContactBankAccounts,
@@ -59,8 +61,16 @@ export interface DunningPreview {
   asOf: string;
   ready: DunningCandidate[];
   /** Ein nicht zugeordneter Eingang könnte die Zahlung sein: Diese Mahnung hält an, nicht der Lauf (Handoff 2.5). */
-  paymentMayMatch: (DunningCandidate & { rawTransactionIds: string[] })[];
+  paymentMayMatch: (DunningCandidate & { rawTransactionIds: string[]; bookedPayments: BookedPaymentMatch[] })[];
   skipped: { membershipId: string; memberNumber: string; name: string; reason: DunningSkipReason }[];
+}
+/**
+ * Spec Zahlung zuordnen § 3.6: eine gebuchte, freie Zahlung, die einem reifen Beitrag zugeordnet werden kann — ohne
+ * Sperre und in der Kategorie des Beitrags, ohne Zeitfenster.
+ */
+export interface BookedPaymentMatch {
+  openItemId: string;
+  moneyLineId: string;
 }
 export type DunningRunView = DunningRunRow & { issued: number };
 /** Ein Lauf mit den Briefen, die zum Stichtag noch ausstehen (für den Fortschritt). */
@@ -220,6 +230,40 @@ function matchingPayments(db: DbOrTx, row: MembershipRow, candidate: DunningCand
     .map((t) => t.id);
 }
 
+/** Spec § 3.6: je reifem Beitrag die gebuchten Kandidaten der Finanzen ohne Sperre und mit passender Kategorie. */
+function bookedPaymentsFor(deps: Deps, db: DbOrTx, candidate: DunningCandidate): BookedPaymentMatch[] {
+  const items = candidate.chargeIds.flatMap((id) => db.select({ openItemId: memberFeeCharges.openItemId }).from(memberFeeCharges).where(eq(memberFeeCharges.id, id)).all().flatMap((r) => (r.openItemId ? [r.openItemId] : [])));
+  return items.flatMap((openItemId) => assignablePaymentsInternal(deps, db, openItemId).filter((c) => c.blockedBy === null && c.categoryFits).map((c) => ({ openItemId, moneyLineId: c.moneyLineId })));
+}
+
+/**
+ * Spec Zahlung zuordnen § 3.4a: Mahnvermerke eines Beitrags, die verschickt wurden, nachdem lebende Zahlungen ihn schon
+ * ganz ausgeglichen hatten — die Mahnung war unbegründet (§ 286 BGB). Gezählt werden nur verschickte Mahnungen (mit
+ * Versandvermerk), wie im Mahnlauf. `paymentDate` ist der Buchungstag, an dem die Zahlungen den Beitrag deckten.
+ * `noted`: Am Mahnbrief steht schon eine Notiz, die diesen Tag nennt (dann entfällt „Vermerk an den Mahnbrief“);
+ * `notedOn` ihr Tag. Reine Abfrage, nie gespeichert.
+ */
+export function unfoundedNoticesInternal(deps: Pick<Deps, 'db' | 'registry'>, db: DbOrTx, chargeId: string): { documentId: string; sentOn: string; paymentDate: string; noted: boolean; notedOn: string | null }[] {
+  const charge = db.select().from(memberFeeCharges).where(eq(memberFeeCharges.id, chargeId)).get();
+  if (!charge?.openItemId) return [];
+  const item = db.select({ amountCents: financeOpenItems.amountCents }).from(financeOpenItems).where(eq(financeOpenItems.id, charge.openItemId)).get();
+  if (!item) return [];
+  let sum = 0;
+  const paidOn = countingPaymentsInternal(db, charge.openItemId)
+    .sort((a, b) => a.entryDate.localeCompare(b.entryDate))
+    .find((p) => (sum += p.amountCents) >= item.amountCents)?.entryDate;
+  if (!paidOn) return [];
+  const notices = db.select().from(memberDunningNotices).where(eq(memberDunningNotices.membershipId, charge.membershipId)).all().filter((n) => n.chargeIds.includes(chargeId));
+  const sent = dispatchMap(db, notices.map((n) => n.documentId));
+  return notices.flatMap((n) => {
+    const sentOn = sent.get(n.documentId)?.slice(0, 10);
+    if (!sentOn || sentOn <= paidOn) return [];
+    const forms = [paidOn, paperDate(paidOn as Parameters<typeof paperDate>[0])];
+    const note = db.select().from(documentNotes).where(eq(documentNotes.documentId, n.documentId)).all().filter((x) => forms.some((f) => x.body.includes(f))).sort((a, b) => a.createdAt.localeCompare(b.createdAt))[0];
+    return [{ documentId: n.documentId, sentOn, paymentDate: paidOn, noted: !!note, notedOn: note ? isoDayIn(deps, new Date(note.createdAt)) : null }];
+  });
+}
+
 function previewInternal(deps: Deps, asOf: string): DunningPreview {
   const db = deps.db;
   const levels = readSetting<DunningLevel[]>(deps, 'members.dunningLevels');
@@ -236,7 +280,8 @@ function previewInternal(deps: Deps, asOf: string): DunningPreview {
     if (assessed.skipped) out.skipped.push({ membershipId: row.id, memberNumber: row.memberNumber ?? '', name, reason: assessed.skipped });
     for (const candidate of assessed.ready) {
       const matches = matchingPayments(db, row, candidate, incoming);
-      if (matches.length > 0) out.paymentMayMatch.push({ ...candidate, rawTransactionIds: matches });
+      const booked = bookedPaymentsFor(deps, db, candidate);
+      if (matches.length > 0 || booked.length > 0) out.paymentMayMatch.push({ ...candidate, rawTransactionIds: matches, bookedPayments: booked });
       else out.ready.push(candidate);
     }
   }

@@ -41,7 +41,7 @@ import { attachDocumentAction, finalizeAction, saveDraftAction, saveReviewedActi
 import { Section } from '@/components/section';
 
 const randomKey = (prefix: string): string => `${prefix}-${Math.random().toString(36).slice(2, 10)}`;
-const emptySplitRow = () => ({ key: randomKey('split'), categoryId: '', amountText: '', contactId: null, projectId: null, purposeId: null, abroad: false, addsToAssets: false });
+const emptySplitRow = () => ({ key: randomKey('split'), categoryId: '', amountText: '', contactId: null, projectId: null, purposeId: null, abroad: null, addsToAssets: false });
 
 export interface EntryFormAccount {
   id: string;

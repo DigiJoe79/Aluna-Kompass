@@ -7,6 +7,16 @@ import messages from '../messages/de.json';
 const saveFeeScheduleAction = vi.fn(async (_input: unknown) => ({ status: 'success' as const, message: 'ok' }));
 vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
 vi.mock('@/app/(shell)/admin/members/actions', () => ({ saveFeeScheduleAction: (input: unknown) => saveFeeScheduleAction(input) }));
+// Die Suche in der Akte ist ein Server-Aufruf; hier steht sie als Knopf, der ein Dokument wählt bzw. die Wahl leert.
+vi.mock('@/app/(shell)/dms/document-picker', () => ({
+  DocumentPicker: ({ label, value, onChange }: { label: string; value: { id: string } | null; onChange: (d: unknown) => void }) => (
+    <div>
+      <span data-testid="picked">{value?.id ?? ''}</span>
+      <button type="button" onClick={() => onChange({ id: 'DOC-2', number: 'PRT-2', subject: 'Protokoll', phase: 'issued' })}>{label}</button>
+      <button type="button" onClick={() => onChange(null)}>leeren</button>
+    </div>
+  ),
+}));
 const { SchedulePanel } = await import('@/app/(shell)/admin/members/schedule-panel');
 afterEach(() => {
   cleanup();
@@ -33,7 +43,7 @@ const lockedStand = {
 const show = () =>
   render(
     <NextIntlClientProvider locale="de" messages={messages} timeZone="Europe/Berlin">
-      <SchedulePanel schedules={[lockedStand]} types={types} today="2026-09-05" />
+      <SchedulePanel schedules={[lockedStand]} types={types} today="2026-09-05" canPickDocument />
     </NextIntlClientProvider>,
   );
 
@@ -63,6 +73,45 @@ describe('SchedulePanel, fester Stand', () => {
       note: 'Gründung',
       rules: lockedStand.rules,
     });
+  });
+});
+
+/** Backlog 99: Der Beschluss als Dokument der Akte lässt sich im Dialog wählen, auch am festen Stand nachtragen. */
+describe('SchedulePanel, Beschluss-Dokument', () => {
+  const saved = async (dialog: HTMLElement) => {
+    fireEvent.click(within(dialog).getByRole('button', { name: messages.common.save }));
+    await waitFor(() => expect(saveFeeScheduleAction).toHaveBeenCalledTimes(1));
+    return (saveFeeScheduleAction.mock.calls[0]![0] as { resolutionDocumentId: string | null }).resolutionDocumentId;
+  };
+  const openLocked = () => {
+    show();
+    fireEvent.click(within(screen.getByTestId('schedule-panel')).getByRole('button', { name: messages.members.admin.schedule.edit }));
+    return screen.getByRole('dialog');
+  };
+
+  it('zeigt das gespeicherte Dokument und speichert ein neu gewähltes', async () => {
+    const dialog = openLocked();
+    expect(within(dialog).getByTestId('picked').textContent).toBe('DOC-1');
+    fireEvent.click(within(dialog).getByRole('button', { name: messages.members.admin.schedule.resolutionDocument }));
+    expect(await saved(dialog)).toBe('DOC-2');
+  });
+
+  it('speichert ohne Dokument, wenn die Wahl geleert wurde', async () => {
+    const dialog = openLocked();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'leeren' }));
+    expect(await saved(dialog)).toBeNull();
+  });
+
+  it('ohne Leserecht auf die Akte kein Wähler, das Dokument bleibt', async () => {
+    render(
+      <NextIntlClientProvider locale="de" messages={messages} timeZone="Europe/Berlin">
+        <SchedulePanel schedules={[lockedStand]} types={types} today="2026-09-05" />
+      </NextIntlClientProvider>,
+    );
+    fireEvent.click(within(screen.getByTestId('schedule-panel')).getByRole('button', { name: messages.members.admin.schedule.edit }));
+    const dialog = screen.getByRole('dialog');
+    expect(within(dialog).queryByTestId('picked')).toBeNull();
+    expect(await saved(dialog)).toBe('DOC-1');
   });
 });
 

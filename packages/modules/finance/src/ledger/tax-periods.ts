@@ -4,7 +4,7 @@ import { and, asc, desc, eq, gte, inArray, isNull, lte } from 'drizzle-orm';
 import { z } from 'zod';
 import { financeAudit } from '../audit';
 import { financeConflict } from '../errors';
-import { financeFiscalYears, financeNotices, financeReports, financeTaxPeriods, type FinanceFiscalYearRow, type FinanceTaxPeriodRow } from '../schema';
+import { financeFiscalYears, financeNotices, financeReports, financeTaxAmendmentChecks, financeTaxAmendments, financeTaxPeriods, type FinanceFiscalYearRow, type FinanceTaxPeriodRow } from '../schema';
 import { statuteSuggestionOf } from '../sources';
 import { requireFinanceRead } from './access';
 import { dayAfter } from './fiscal-years';
@@ -79,7 +79,11 @@ const SLOT_SUBJECT: Record<TaxPeriodDocumentSlot, string> = {
   statute: 'Satzung',
 };
 
-export interface TaxPeriodView {
+/**
+ * Der Zeitraum aus seiner Zeile, ohne Prüfanlass — was Berichte und Fristen lesen. Die Werte von heute rechnet erst
+ * `reporting/tax-amendments.ts` (`TaxPeriodView`), weil die Berichte selbst diesen Zeitraum lesen.
+ */
+export interface TaxPeriodRecordView {
   id: string;
   firstFiscalYearId: string;
   lastFiscalYearId: string;
@@ -101,6 +105,52 @@ export interface TaxPeriodView {
   yearsLocked: boolean;
   state: 'open' | 'filed' | 'assessed';
   version: string;
+}
+
+/** B9: eine geänderte Stelle des Abbilds (`reporting/tax-figures.ts`) — eine Zeile der Anlage Gem (Zeile 9 mit Jahr) oder eine Beilage mit Jahr. */
+export type TaxFiguresAttachment = 'taxReturnIncomeStatement' | 'assetOverview' | 'reserveStatement';
+export type TaxFigureCause = { kind: 'line'; line: string; year?: string } | { kind: 'attachment'; report: TaxFiguresAttachment; year?: string };
+
+/** B9: die Fächer der Ablage an einer Berichtigung — wie an der ersten Abgabe. */
+export const TAX_AMENDMENT_DOCUMENT_SLOTS = ['filedReturn', 'transmissionProtocol'] as const;
+export type TaxAmendmentDocumentSlot = (typeof TAX_AMENDMENT_DOCUMENT_SLOTS)[number];
+
+/** B9: eine Berichtigung — Tag, Fassung, Ablage und die gegenüber dem vorigen Maßstab geänderten Stellen. */
+export interface TaxAmendmentView {
+  id: string;
+  filedOn: string;
+  reportId: string;
+  at: string;
+  documents: Partial<Record<TaxAmendmentDocumentSlot, { documentId: string; documentNumber: string }>>;
+  cause: TaxFigureCause[];
+}
+
+/** B9: eine Prüfung — ohne Berichtigung geschlossen (mit Person und Begründung) oder die Anzeige an das Finanzamt. */
+export interface TaxAmendmentCheckView {
+  id: string;
+  kind: 'noAmendment' | 'notified';
+  checkedOn: string;
+  byUserId: string;
+  reason: string | null;
+  document: { documentId: string; documentNumber: string } | null;
+  at: string;
+  cause: TaxFigureCause[];
+}
+
+/** Der Zeitraum mit Prüfanlass nach § 153 AO (Spec 0.5.2 § 4.2) — was Seite und Agent lesen. */
+export interface TaxPeriodView extends TaxPeriodRecordView {
+  /** Prüfanlass offen: Die Werte weichen heute vom Maßstab ab. */
+  reviewDue: boolean;
+  /** Die geänderten Stellen, nur bei offenem Prüfanlass. */
+  reviewCause: TaxFigureCause[];
+  /** Der Tag der Anzeige zum laufenden Anlass, sonst `null`. */
+  notifiedOn: string | null;
+  /** Abgegeben, aber der Maßstab hat kein Abbild (Abgabe vor 0.5.2): Kompass meldet keinen Prüfanlass. */
+  filedFiguresMissing: boolean;
+  /** Eine Berichtigung ist eintragbar (Werte weichen von der letzten Abgabe ab, oder sie hat kein Abbild). */
+  amendmentAllowed: boolean;
+  amendments: TaxAmendmentView[];
+  checks: TaxAmendmentCheckView[];
 }
 
 
@@ -135,7 +185,7 @@ function parseAnswers(json: string): GemAnswers {
   return parsed.success ? parsed.data : {};
 }
 
-function viewOf(db: DbOrTx, row: FinanceTaxPeriodRow): TaxPeriodView {
+function viewOf(db: DbOrTx, row: FinanceTaxPeriodRow): TaxPeriodRecordView {
   const range = yearsBetween(db, row.firstFiscalYearId, row.lastFiscalYearId)!;
   const docIds = TAX_PERIOD_DOCUMENT_SLOTS.map((slot) => [slot, row[SLOT_COLUMN[slot]]] as const).filter((e): e is readonly [TaxPeriodDocumentSlot, string] => e[1] !== null);
   const numbers = new Map(docIds.length > 0 ? db.select({ id: documents.id, number: documents.number }).from(documents).where(inArray(documents.id, docIds.map(([, id]) => id))).all().map((d) => [d.id, d.number ?? ''] as const) : []);
@@ -169,18 +219,23 @@ function noticeHoldsInternal(db: DbOrTx, noticeId: string | null): boolean {
   return !!notice && notice.voidedAt === null;
 }
 
+/** Ohne Rechteprüfung: die Zeile des Zeitraums, oder `null`. */
+export function taxPeriodRowInternal(db: DbOrTx, id: string): FinanceTaxPeriodRow | null {
+  return loadRow(db, id);
+}
+
 function loadRow(db: DbOrTx, id: string): FinanceTaxPeriodRow | null {
   return db.select().from(financeTaxPeriods).where(eq(financeTaxPeriods.id, id)).get() ?? null;
 }
 
 /** Ohne Rechteprüfung: der Zeitraum, oder `null`. */
-export function taxPeriodInternal(db: DbOrTx, id: string): TaxPeriodView | null {
+export function taxPeriodInternal(db: DbOrTx, id: string): TaxPeriodRecordView | null {
   const row = loadRow(db, id);
   return row ? viewOf(db, row) : null;
 }
 
 /** Ohne Rechteprüfung: alle Zeiträume, neuester zuerst (nach dem Beginn des letzten Jahres). */
-export function taxPeriodsInternal(db: DbOrTx): TaxPeriodView[] {
+export function taxPeriodsInternal(db: DbOrTx): TaxPeriodRecordView[] {
   const starts = new Map(db.select({ id: financeFiscalYears.id, startsOn: financeFiscalYears.startsOn }).from(financeFiscalYears).all().map((y) => [y.id, y.startsOn] as const));
   return db
     .select()
@@ -191,7 +246,7 @@ export function taxPeriodsInternal(db: DbOrTx): TaxPeriodView[] {
 }
 
 /** Ohne Rechteprüfung: der Zeitraum, zu dem das Geschäftsjahr gehört, oder `null`. */
-export function taxPeriodOfYearInternal(db: DbOrTx, fiscalYearId: string): TaxPeriodView | null {
+export function taxPeriodOfYearInternal(db: DbOrTx, fiscalYearId: string): TaxPeriodRecordView | null {
   const year = db.select().from(financeFiscalYears).where(eq(financeFiscalYears.id, fiscalYearId)).get();
   if (!year) return null;
   return taxPeriodsInternal(db).find((p) => p.fiscalYearIds.includes(year.id)) ?? null;
@@ -243,15 +298,6 @@ export function declarationDueOn(calendarYear: number, withTaxAdvisor: boolean, 
 /** Rein: der Vorschlag für die Frist eines Erklärungszeitraums — `declarationDueOn` des Kalenderjahres seines Endes. */
 export function suggestedDueOn(lastEndsOn: string, withTaxAdvisor: boolean, state?: FederalState | null): string {
   return declarationDueOn(Number(lastEndsOn.slice(0, 4)), withTaxAdvisor, state);
-}
-
-/** `finance.read`: alle Erklärungszeiträume, neuester zuerst. */
-export async function listTaxPeriods(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<TaxPeriodView[]>> {
-  const denied = requireFinanceRead(ctx, 'read');
-  if (denied) return denied;
-  const parsed = validate(deps, z.object({}).strict(), input ?? {});
-  if (!parsed.ok) return parsed;
-  return ok(taxPeriodsInternal(deps.db));
 }
 
 /**
@@ -318,7 +364,7 @@ const createSchema = z.object({
 });
 
 /** `finance.periodClose`: einen Erklärungszeitraum aus ein bis drei aufeinander folgenden Geschäftsjahren anlegen. */
-export async function createTaxPeriod(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<TaxPeriodView>> {
+export async function createTaxPeriod(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<TaxPeriodRecordView>> {
   const denied = requirePermission(ctx, 'finance.periodClose');
   if (denied) return denied;
   const parsed = validate(deps, createSchema, input);
@@ -333,7 +379,7 @@ export async function createTaxPeriod(deps: Deps, ctx: CallContext, input: unkno
     const row: FinanceTaxPeriodRow = {
       id: newId(), firstFiscalYearId: range.first.id, lastFiscalYearId: range.last.id, requestedOn: v.requestedOn ?? null, withTaxAdvisor: v.withTaxAdvisor, dueOn: v.dueOn,
       filedOn: null, filedReportId: null, requestDocumentId: null, filedDocumentId: null, transmissionDocumentId: null, activityReportDocumentId: null, statuteDocumentId: null, noticeId: null,
-      answersJson: '{}', createdAt: now, createdByUserId: ctx.userId ?? 'system', updatedAt: now,
+      answersJson: '{}', filedFigures: null, createdAt: now, createdByUserId: ctx.userId ?? 'system', updatedAt: now,
     };
     tx.insert(financeTaxPeriods).values(row).run();
     financeAudit(tx, deps, ctx, { action: 'finance.taxPeriod.create', entity: 'financeTaxPeriod', id: row.id, after: row, params: { first: range.first.designation, last: range.last.designation, dueOn: v.dueOn } });
@@ -358,14 +404,24 @@ function latestFinalVersion(db: DbOrTx, id: string): string | null {
   return db.select({ id: financeReports.id }).from(financeReports).where(and(eq(financeReports.reportKey, 'taxReturnGem'), eq(financeReports.params, paramsOfPeriod(id)), isNull(financeReports.voidedAt))).orderBy(desc(financeReports.finalizedAt), desc(financeReports.id)).get()?.id ?? null;
 }
 
+/** Ohne Rechteprüfung: Hat der Zeitraum eine Berichtigung oder Prüfung (B9)? Dann bleibt die erste Abgabe. */
+export function taxPeriodAmendedInternal(db: DbOrTx, id: string): boolean {
+  return !!db.select({ id: financeTaxAmendments.id }).from(financeTaxAmendments).where(eq(financeTaxAmendments.taxPeriodId, id)).get() || !!db.select({ id: financeTaxAmendmentChecks.id }).from(financeTaxAmendmentChecks).where(eq(financeTaxAmendmentChecks.taxPeriodId, id)).get();
+}
+
 /**
- * `finance.periodClose`: Jahre, Aufforderung, Beratung, Frist und Abgabe ändern. Die Jahre stehen fest, sobald eine
- * Fassung von `taxReturnGem` festgeschrieben ist (`taxPeriodYearsLocked`); Tage und Frist bleiben änderbar. „Abgegeben
- * am“ (nicht in der Zukunft, nicht vor der Aufforderung) verlangt eine festgeschriebene Fassung (`taxReturnNotFinal`) und
- * merkt sich die jüngste; `null` setzt beides zurück. Die Abgabe ist eine Tatsache, keine persönliche Erklärung — kein
+ * Der Dienst `updateTaxPeriod` ohne Prüfanlass — er steht in `reporting/tax-amendments.ts`, weil das Abbild der ersten
+ * Abgabe (`figuresOf`) die Berichte rechnet, die ihrerseits den Zeitraum lesen.
+ *
+ * Jahre, Aufforderung, Beratung, Frist und Abgabe ändern. Die Jahre stehen fest, sobald eine Fassung von `taxReturnGem`
+ * festgeschrieben ist (`taxPeriodYearsLocked`); Tage und Frist bleiben änderbar. Die erste Abgabe („Abgegeben am“, nicht
+ * in der Zukunft, nicht vor der Aufforderung) verlangt eine festgeschriebene Fassung (`taxReturnNotFinal`), merkt sich
+ * die jüngste und hält das Abbild der Werte fest (B9). Danach ändert `filedOn` nur noch den Tag; Fassung und Abbild
+ * bleiben. `null` nimmt die Abgabe zurück — nicht mehr hinter einen Bescheid (`taxPeriodNoticeLinked`) und nicht hinter
+ * eine Berichtigung oder Prüfung (`taxPeriodAmended`). Die Abgabe ist eine Tatsache, keine persönliche Erklärung — kein
  * `humanOnly` (wie die Abgabe der Umsatzsteuer-Jahreserklärung).
  */
-export async function updateTaxPeriod(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<TaxPeriodView>> {
+export async function updateTaxPeriodInternal(deps: Deps, ctx: CallContext, input: unknown, figuresOf: (tx: DbOrTx, id: string) => string | null): Promise<Result<TaxPeriodRecordView>> {
   const denied = requirePermission(ctx, 'finance.periodClose');
   if (denied) return denied;
   const parsed = validate(deps, updateSchema, input);
@@ -389,15 +445,20 @@ export async function updateTaxPeriod(deps: Deps, ctx: CallContext, input: unkno
   const filedOn = v.filedOn;
   const filing = filedOn !== undefined;
   let filedReportId = before.filedReportId;
+  const firstFiling = filedOn !== undefined && filedOn !== null && before.filedOn === null;
   if (filedOn !== undefined && filedOn !== null) {
     if (filedOn > todayIn(deps)) return invalid([{ path: 'filedOn', message: 'inFuture' }]);
     if (requestedOn && filedOn < requestedOn) return invalid([{ path: 'filedOn', message: 'beforeRequested' }]);
-    filedReportId = latestFinalVersion(deps.db, before.id);
-    if (!filedReportId) return financeConflict('taxReturnNotFinal', { period: labelOf(range.first, range.last) });
+    if (firstFiling) {
+      filedReportId = latestFinalVersion(deps.db, before.id);
+      if (!filedReportId) return financeConflict('taxReturnNotFinal', { period: labelOf(range.first, range.last) });
+    }
   }
   // Ein Bescheid gehört zu einer abgegebenen Erklärung: Solange einer verknüpft ist, bleibt die Abgabe (Befund 16 c).
   // Ein stornierter Bescheid sperrt nicht (Befund 17 a); mit der Abgabe fällt dann auch seine Verknüpfung.
   if (filedOn === null && before.filedOn !== null && noticeHoldsInternal(deps.db, before.noticeId)) return financeConflict('taxPeriodNoticeLinked', { period: labelOf(range.first, range.last) });
+  // B9 (N24): Die erste Abgabe bleibt, sobald eine Berichtigung oder Prüfung auf sie folgt.
+  if (filedOn === null && before.filedOn !== null && taxPeriodAmendedInternal(deps.db, before.id)) return financeConflict('taxPeriodAmended', { period: labelOf(range.first, range.last) });
   if (filedOn === null) filedReportId = null;
   const noticeId = filedOn === null ? null : before.noticeId;
   return deps.db.transaction((tx: DbOrTx) => {
@@ -409,6 +470,7 @@ export async function updateTaxPeriod(deps: Deps, ctx: CallContext, input: unkno
       filedOn: filedOn === undefined ? before.filedOn : filedOn,
       filedReportId,
       noticeId,
+      filedFigures: filedOn === null ? null : firstFiling ? figuresOf(tx, before.id) : before.filedFigures,
       withTaxAdvisor: v.withTaxAdvisor ?? before.withTaxAdvisor,
       dueOn: v.dueOn ?? before.dueOn,
       updatedAt: isoNow(deps.clock),
@@ -421,15 +483,16 @@ export async function updateTaxPeriod(deps: Deps, ctx: CallContext, input: unkno
   });
 }
 
-const answersSaveSchema = z.object({ id: z.string().min(1), answers: gemAnswersSchema, expectedVersion: expectedVersionField });
+const answersSaveSchema = z.object({ id: z.string().min(1), answers: gemAnswersSchema, acknowledgeFiled: z.boolean().optional(), expectedVersion: expectedVersionField });
 
 /**
  * `finance.periodClose`: die „Angaben von Ihnen“ speichern — vollständig, sie ersetzen die bisherigen. „Nein“ in Zeile 74
  * verwirft die Liste der Zuwendungen. Angaben zu einer Rücklage, die der Bericht nicht kennt, bleiben stehen; der
- * Bericht übergeht sie. Das Protokoll nennt nur den Zeitraum, nie den Inhalt. Solange die Erklärung abgegeben ist,
- * stehen die Angaben fest (`taxPeriodFiled`, Befund 18 c): Die abgegebene Fassung bliebe sonst nicht die festgeschriebene.
+ * Bericht übergeht sie. Das Protokoll nennt nur den Zeitraum, nie den Inhalt. Nach der Abgabe bleiben die Angaben
+ * änderbar (B9, F1), aber nur mit der Bestätigung `acknowledgeFiled` (`taxPeriodFiledUnacknowledged`, wie
+ * `section153Unacknowledged`): Ändert die Angabe einen Wert, meldet Kompass einen Prüfanlass (§ 153 AO).
  */
-export async function saveTaxPeriodAnswers(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<TaxPeriodView>> {
+export async function saveTaxPeriodAnswers(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<TaxPeriodRecordView>> {
   const denied = requirePermission(ctx, 'finance.periodClose');
   if (denied) return denied;
   const parsed = validate(deps, answersSaveSchema, input);
@@ -439,7 +502,7 @@ export async function saveTaxPeriodAnswers(deps: Deps, ctx: CallContext, input: 
   if (!before) return notFound('financeTaxPeriod', v.id);
   const stale = staleVersion(v.expectedVersion, before.updatedAt);
   if (stale) return stale;
-  if (before.filedOn !== null) return financeConflict('taxPeriodFiled', { period: viewOf(deps.db, before).label });
+  if (before.filedOn !== null && v.acknowledgeFiled !== true) return financeConflict('taxPeriodFiledUnacknowledged', { period: viewOf(deps.db, before).label });
   const answers: GemAnswers = { ...v.answers };
   if (answers.gratuitousBenefits === false) delete answers.gratuitousBenefitList;
   if (answers.feeResolution === 'none') delete answers.feeResolutionSubmission;
@@ -453,22 +516,76 @@ export async function saveTaxPeriodAnswers(deps: Deps, ctx: CallContext, input: 
 
 const DOCUMENT_MAX_BYTES = 10 * 1024 * 1024;
 const isPdf = (bytes: Uint8Array): boolean => bytes.length >= 5 && new TextDecoder().decode(bytes.subarray(0, 5)) === '%PDF-';
-const fileSchema = z.object({ id: z.string().min(1), slot: z.enum(TAX_PERIOD_DOCUMENT_SLOTS), bytes: z.custom<Uint8Array>((val) => val instanceof Uint8Array, { message: 'invalidBytes' }), fileName: z.string().trim().max(300).optional() });
-const linkSchema = z.object({ id: z.string().min(1), slot: z.enum(TAX_PERIOD_DOCUMENT_SLOTS), documentId: z.string().min(1) });
+/** B9: Wohin ein Dokument gehört — an den Zeitraum (erste Abgabe), an eine Berichtigung oder an die Anzeige des laufenden Anlasses. */
+export const TAX_DOCUMENT_TARGETS = ['period', 'amendment', 'notice'] as const;
+export type TaxDocumentTarget = (typeof TAX_DOCUMENT_TARGETS)[number];
+const ALL_SLOTS = [...TAX_PERIOD_DOCUMENT_SLOTS, 'notice'] as const;
+type AnySlot = (typeof ALL_SLOTS)[number];
+const targetFields = { target: z.enum(TAX_DOCUMENT_TARGETS).optional(), amendmentId: z.string().min(1).optional() };
+const fileSchema = z.object({ id: z.string().min(1), slot: z.enum(ALL_SLOTS), bytes: z.custom<Uint8Array>((val) => val instanceof Uint8Array, { message: 'invalidBytes' }), fileName: z.string().trim().max(300).optional(), ...targetFields });
+const linkSchema = z.object({ id: z.string().min(1), slot: z.enum(ALL_SLOTS), documentId: z.string().min(1), ...targetFields });
 
-/** In der Transaktion: Platz setzen, Bezüge auf Zeitraum und letztes Geschäftsjahr, Protokoll. */
-function setSlotInternal(tx: DbOrTx, deps: Deps, ctx: CallContext, row: FinanceTaxPeriodRow, slot: TaxPeriodDocumentSlot, doc: { id: string; number: string }, action: 'finance.taxPeriod.documentFile' | 'finance.taxPeriod.documentLink'): TaxPeriodView {
-  const after: FinanceTaxPeriodRow = { ...row, [SLOT_COLUMN[slot]]: doc.id, updatedAt: isoNow(deps.clock) };
-  tx.update(financeTaxPeriods).set(after).where(eq(financeTaxPeriods.id, row.id)).run();
+const AMENDMENT_SLOT_COLUMN = { filedReturn: 'filedReturnDocumentId', transmissionProtocol: 'transmissionProtocolDocumentId' } as const;
+const AMENDMENT_SUBJECT = { filedReturn: 'Berichtigte Steuererklärung', transmissionProtocol: 'ELSTER-Übertragungsprotokoll der Berichtigung' } as const;
+const NOTICE_SUBJECT = 'Anzeige nach § 153 AO zur Steuererklärung';
+
+/**
+ * Ohne Rechteprüfung (B9): die Anzeige des laufenden Prüfanlasses — eine Anzeige, die nach dem jüngsten Maßstab
+ * (Berichtigung oder Prüfung ohne Berichtigung, sonst die erste Abgabe) eingetragen ist; sonst `null`. Dieselbe Regel
+ * liest `reporting/tax-figures.ts`.
+ */
+export function currentTaxNoticeInternal(db: DbOrTx, taxPeriodId: string) {
+  const lastAmendment = db.select({ at: financeTaxAmendments.at }).from(financeTaxAmendments).where(eq(financeTaxAmendments.taxPeriodId, taxPeriodId)).orderBy(desc(financeTaxAmendments.at)).get()?.at ?? '';
+  const checks = db.select().from(financeTaxAmendmentChecks).where(eq(financeTaxAmendmentChecks.taxPeriodId, taxPeriodId)).orderBy(asc(financeTaxAmendmentChecks.at), asc(financeTaxAmendmentChecks.id)).all();
+  const lastClosed = checks.filter((c) => c.kind === 'noAmendment').at(-1)?.at ?? '';
+  const reference = lastAmendment > lastClosed ? lastAmendment : lastClosed;
+  return checks.filter((c) => c.kind === 'notified' && c.at > reference).at(-1) ?? null;
+}
+
+/** Ziel und Fach passen zusammen; die Berichtigung gehört zum Zeitraum, die Anzeige ist eingetragen. */
+type Placement = { target: 'period'; slot: TaxPeriodDocumentSlot } | { target: 'amendment'; slot: keyof typeof AMENDMENT_SLOT_COLUMN; amendmentId: string } | { target: 'notice'; checkId: string };
+function placementOf(db: DbOrTx, row: FinanceTaxPeriodRow, v: { slot: AnySlot; target?: TaxDocumentTarget; amendmentId?: string }): Result<Placement> {
+  const target = v.target ?? 'period';
+  if (target === 'period') return v.slot === 'notice' ? invalid([{ path: 'slot', message: 'wrongTarget' }]) : ok({ target, slot: v.slot });
+  if (target === 'notice') {
+    if (v.slot !== 'notice') return invalid([{ path: 'slot', message: 'wrongTarget' }]);
+    const notice = currentTaxNoticeInternal(db, row.id);
+    return notice ? ok({ target, checkId: notice.id }) : financeConflict('taxAmendmentNoNotice', { period: viewOf(db, row).label });
+  }
+  if (!v.amendmentId) return invalid([{ path: 'amendmentId', message: 'required' }]);
+  if (v.slot !== 'filedReturn' && v.slot !== 'transmissionProtocol') return invalid([{ path: 'slot', message: 'wrongTarget' }]);
+  const amendment = db.select({ id: financeTaxAmendments.id, taxPeriodId: financeTaxAmendments.taxPeriodId }).from(financeTaxAmendments).where(eq(financeTaxAmendments.id, v.amendmentId)).get();
+  if (!amendment || amendment.taxPeriodId !== row.id) return notFound('financeTaxAmendment', v.amendmentId);
+  return ok({ target, slot: v.slot, amendmentId: amendment.id });
+}
+
+/** In der Transaktion: Platz setzen, Bezüge auf Zeitraum, letztes Geschäftsjahr und Berichtigung bzw. Anzeige, Protokoll. */
+function setSlotInternal(tx: DbOrTx, deps: Deps, ctx: CallContext, row: FinanceTaxPeriodRow, placement: Placement, doc: { id: string; number: string }, action: 'finance.taxPeriod.documentFile' | 'finance.taxPeriod.documentLink'): TaxPeriodRecordView {
+  let after: FinanceTaxPeriodRow = row;
+  if (placement.target === 'period') {
+    after = { ...row, [SLOT_COLUMN[placement.slot]]: doc.id, updatedAt: isoNow(deps.clock) };
+    tx.update(financeTaxPeriods).set(after).where(eq(financeTaxPeriods.id, row.id)).run();
+  } else if (placement.target === 'amendment') {
+    tx.update(financeTaxAmendments).set({ [AMENDMENT_SLOT_COLUMN[placement.slot]]: doc.id }).where(eq(financeTaxAmendments.id, placement.amendmentId)).run();
+    linkDocumentInternal(tx, deps, { documentId: doc.id, entityType: 'financeTaxAmendment', entityId: placement.amendmentId });
+  } else {
+    tx.update(financeTaxAmendmentChecks).set({ documentId: doc.id }).where(eq(financeTaxAmendmentChecks.id, placement.checkId)).run();
+    linkDocumentInternal(tx, deps, { documentId: doc.id, entityType: 'financeTaxAmendmentCheck', entityId: placement.checkId });
+  }
   linkDocumentInternal(tx, deps, { documentId: doc.id, entityType: 'financeTaxPeriod', entityId: row.id });
   linkDocumentInternal(tx, deps, { documentId: doc.id, entityType: 'financeFiscalYear', entityId: row.lastFiscalYearId });
   const view = viewOf(tx, after);
-  financeAudit(tx, deps, ctx, { action, entity: 'financeTaxPeriod', id: row.id, before: row, after, params: { period: view.label, slot, documentNumber: doc.number } });
+  const slot = placement.target === 'notice' ? 'notice' : placement.slot;
+  financeAudit(tx, deps, ctx, { action, entity: 'financeTaxPeriod', id: row.id, ...(placement.target === 'period' ? { before: row, after } : {}), params: { period: view.label, slot, documentNumber: doc.number, target: placement.target } });
   return view;
 }
 
-/** `finance.periodClose`: ein PDF (bis 10 MB) als Art `finance-tax-return` am Zeitraum und seinem letzten Jahr ablegen und auf den Platz setzen. */
-export async function fileTaxPeriodDocument(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<TaxPeriodView>> {
+/**
+ * `finance.periodClose`: ein PDF (bis 10 MB) als Art `finance-tax-return` am Zeitraum und seinem letzten Jahr ablegen und
+ * auf den Platz setzen — mit `target` an eine Berichtigung (`amendmentId`, Fächer `filedReturn`, `transmissionProtocol`)
+ * oder als Anzeigeschreiben an die Anzeige des laufenden Anlasses (Fach `notice`, B9).
+ */
+export async function fileTaxPeriodDocument(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<TaxPeriodRecordView>> {
   const denied = requirePermission(ctx, 'finance.periodClose');
   if (denied) return denied;
   const parsed = validate(deps, fileSchema, input);
@@ -478,21 +595,28 @@ export async function fileTaxPeriodDocument(deps: Deps, ctx: CallContext, input:
   if (!isPdf(v.bytes)) return invalid([{ path: 'bytes', message: 'notPdf' }]);
   const row = loadRow(deps.db, v.id);
   if (!row) return notFound('financeTaxPeriod', v.id);
+  const placement = placementOf(deps.db, row, v);
+  if (!placement.ok) return placement;
   const label = viewOf(deps.db, row).label;
+  const p = placement.value;
+  const subject = p.target === 'period' ? SLOT_SUBJECT[p.slot] : p.target === 'amendment' ? AMENDMENT_SUBJECT[p.slot] : NOTICE_SUBJECT;
+  const links = [{ entityType: 'financeTaxPeriod', entityId: row.id }, { entityType: 'financeFiscalYear', entityId: row.lastFiscalYearId }];
+  if (p.target === 'amendment') links.push({ entityType: 'financeTaxAmendment', entityId: p.amendmentId });
+  if (p.target === 'notice') links.push({ entityType: 'financeTaxAmendmentCheck', entityId: p.checkId });
   const filed = await receiveGeneratedUpload(deps, ctx, {
     bytes: v.bytes,
     typeKey: TAX_RETURN_DOCUMENT_TYPE,
-    subject: `${SLOT_SUBJECT[v.slot]} ${label}`,
-    documentDate: v.slot === 'request' && row.requestedOn ? row.requestedOn : todayIn(deps),
-    links: [{ entityType: 'financeTaxPeriod', entityId: row.id }, { entityType: 'financeFiscalYear', entityId: row.lastFiscalYearId }],
-    afterReceive: (tx, doc) => setSlotInternal(tx, deps, ctx, loadRow(tx, row.id)!, v.slot, { id: doc.id, number: doc.number ?? '' }, 'finance.taxPeriod.documentFile'),
+    subject: `${subject} ${label}`,
+    documentDate: p.target === 'period' && p.slot === 'request' && row.requestedOn ? row.requestedOn : todayIn(deps),
+    links,
+    afterReceive: (tx, doc) => setSlotInternal(tx, deps, ctx, loadRow(tx, row.id)!, p, { id: doc.id, number: doc.number ?? '' }, 'finance.taxPeriod.documentFile'),
   });
   if (!filed.ok) return filed;
   return ok(filed.value.after!);
 }
 
-/** `finance.periodClose`: ein Dokument aus der Akte (ausgestellt, nicht storniert) auf einen Platz des Zeitraums setzen. */
-export async function linkTaxPeriodDocument(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<TaxPeriodView>> {
+/** `finance.periodClose`: ein Dokument aus der Akte (ausgestellt, nicht storniert) auf einen Platz setzen — Ziele wie beim Ablegen. */
+export async function linkTaxPeriodDocument(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<TaxPeriodRecordView>> {
   const denied = requirePermission(ctx, 'finance.periodClose');
   if (denied) return denied;
   const parsed = validate(deps, linkSchema, input);
@@ -500,11 +624,13 @@ export async function linkTaxPeriodDocument(deps: Deps, ctx: CallContext, input:
   const v = parsed.value;
   const row = loadRow(deps.db, v.id);
   if (!row) return notFound('financeTaxPeriod', v.id);
+  const placement = placementOf(deps.db, row, v);
+  if (!placement.ok) return placement;
   const doc = await getDocumentRecord(deps, ctx, v.documentId);
   if (!doc.ok) return doc;
   if (doc.value.status === 'voided') return invalid([{ path: 'documentId', message: 'documentVoided' }]);
   if (doc.value.phase !== 'issued') return invalid([{ path: 'documentId', message: 'documentNotFinal' }]);
-  return deps.db.transaction((tx: DbOrTx) => ok(setSlotInternal(tx, deps, ctx, loadRow(tx, row.id)!, v.slot, { id: doc.value.id, number: doc.value.number ?? '' }, 'finance.taxPeriod.documentLink')));
+  return deps.db.transaction((tx: DbOrTx) => ok(setSlotInternal(tx, deps, ctx, loadRow(tx, row.id)!, placement.value, { id: doc.value.id, number: doc.value.number ?? '' }, 'finance.taxPeriod.documentLink')));
 }
 
 const noticeLinkSchema = z.object({ id: z.string().min(1), noticeId: z.string().min(1), expectedVersion: expectedVersionField });
@@ -514,7 +640,7 @@ const noticeLinkSchema = z.object({ id: z.string().min(1), noticeId: z.string().
  * Bescheide (Freistellungsbescheid oder Anlage zum Körperschaftsteuerbescheid, nicht storniert): Gültigkeit,
  * Ablaufhemmung und Kopie an die Bank laufen dort weiter. Danach ist der Zeitraum „veranlagt“.
  */
-export async function linkTaxPeriodNotice(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<TaxPeriodView>> {
+export async function linkTaxPeriodNotice(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<TaxPeriodRecordView>> {
   const denied = requirePermission(ctx, 'finance.periodClose');
   if (denied) return denied;
   const parsed = validate(deps, noticeLinkSchema, input);

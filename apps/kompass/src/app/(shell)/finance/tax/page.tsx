@@ -1,4 +1,4 @@
-import { hasPermission, isModuleEnabled, isoNow, todayIn, type CallContext, type Deps } from '@kompass/core';
+import { hasPermission, isModuleEnabled, isoNow, todayIn, userNamesFor, type CallContext, type Deps } from '@kompass/core';
 import {
   getTaxReturn,
   listCategories,
@@ -22,7 +22,9 @@ import { readAllPages } from '@/lib/read-all-pages';
 import { requireSession } from '@/lib/request-context';
 import { AnswersCard } from './answers-card';
 import { AttachmentsList } from './attachments-list';
-import { FilingSection, RetractedNotice, type TaxNotice } from './filing-section';
+import { FilingSection, type TaxNotice } from './filing-section';
+import { ReviewNotice } from './review-notice';
+import { reviewNoticeKind } from './review-state';
 import { GemHints, GemValuesTable } from './gem-values-table';
 import { TaxEmpty, TaxHeader, TaxPeriodBar } from './tax-header';
 import { choosePeriod, type DueSuggestions, type TaxMe, type TaxPeriodOption, type TaxYear } from './types';
@@ -83,6 +85,8 @@ export default async function TaxPage({ searchParams }: { searchParams: Promise<
   const periodYears = years.filter((y) => view.period.fiscalYearIds.includes(y.id));
   const statuteRes = await taxPeriodStatute(deps, ctx, { taxPeriodId: view.period.id });
   const lastYear = periodYears.at(-1) ?? null;
+  // B9: über den Werten der Prüfanlass bzw. bei stornierter Fassung, ob Kompass die Werte gleich sieht (§ 6).
+  const reviewKind = reviewNoticeKind(view.period, view.retracted !== null);
 
   return (
     <Page width="full">
@@ -100,8 +104,7 @@ export default async function TaxPage({ searchParams }: { searchParams: Promise<
       />
       <div className="flex flex-col gap-5">
         <TaxPeriodBar periods={options} periodId={view.period.id} lineCount={data.lines.length} />
-        {view.retracted ? <RetractedNotice retracted={view.retracted} periodId={view.period.id} /> : null}
-        <FilingSection period={view.period} notice={taxNotice} me={me} finalized={view.run.stage === 'final'} />
+        <FilingSection period={view.period} notice={taxNotice} me={me} finalized={view.run.stage === 'final'} retracted={view.retracted !== null} userNames={Object.fromEntries(userNamesFor(deps, view.period.checks.map((c) => c.byUserId)))} />
         <AnswersCard
           key={view.period.id}
           period={{ id: view.period.id, version: view.period.version, answers: view.period.answers }}
@@ -116,6 +119,7 @@ export default async function TaxPage({ searchParams }: { searchParams: Promise<
           statuteSuggestion={statuteRes.ok ? statuteRes.value : null}
           statuteLinked={!!view.period.documents.statute}
         />
+        {reviewKind ? <ReviewNotice kind={reviewKind} causes={view.period.reviewCause} periodId={view.period.id} /> : null}
         <GemValuesTable data={data} names={names} originHrefs={await originHrefs(deps, ctx, data)} canWriteEntries={me.canWriteEntries} />
         <GemHints hints={data.hints} />
         <AttachmentsList attachments={view.attachments} periodId={view.period.id} periodLabel={view.period.label} designations={Object.fromEntries(years.map((y) => [y.id, y.designation]))} documents={view.period.documents} me={{ ...me, canEdit: view.me.canEdit }} />

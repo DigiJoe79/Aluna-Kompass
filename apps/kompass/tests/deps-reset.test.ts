@@ -1,3 +1,4 @@
+import { rmSync } from 'node:fs';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -30,13 +31,22 @@ let previous: Record<string, string | undefined>;
  * einziges Mal, ein `delete` auf `globalThis` ginge also an ihm vorbei.
  */
 function clearHolder(): void {
-  const holder = (globalThis as { __kompass?: { deps: { close(): void } | null } }).__kompass;
+  const holder = (
+    globalThis as { __kompass?: { deps: { close(): void } | null; seedSnapshot?: { dir: string } } }
+  ).__kompass;
   try {
     holder?.deps?.close();
   } catch {
     // schon zu
   }
-  if (holder) holder.deps = null;
+  if (!holder) return;
+  holder.deps = null;
+  // Jeder Test hat einen eigenen Datenpfad und damit einen eigenen Schnappschuss
+  // im Temp-Verzeichnis; ohne das blieben je Lauf vier davon liegen.
+  if (holder.seedSnapshot) {
+    rmSync(holder.seedSnapshot.dir, { recursive: true, force: true });
+    holder.seedSnapshot = undefined;
+  }
 }
 
 /**

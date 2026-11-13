@@ -2,6 +2,7 @@
 
 import type { DunningPreview } from '@kompass/module-members';
 import { useTranslations } from 'next-intl';
+import { AssignPaymentDialog } from '@/app/(shell)/finance/open-items/assign-payment-dialog';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
@@ -24,8 +25,9 @@ import { RunSteps } from '../../runs/run-steps';
  * (`warning`, hält nur dieses Mitglied an, Ausweg „Zuordnen“ in die Arbeitsliste), je Stufe die Briefe, „Übersprungen“
  * mit Grund. Ein Brief je Mitglied.
  */
-export function DunningRunFlow({ asOf, today, preview, paymentTermDays, levels, canStart }: { asOf: string | null; today: string; preview: DunningPreview | null; paymentTermDays: number; levels: { key: string; last: boolean }[]; canStart: boolean }) {
+export function DunningRunFlow({ asOf, today, preview, paymentTermDays, levels, canStart, canAssign = false }: { asOf: string | null; today: string; preview: DunningPreview | null; paymentTermDays: number; levels: { key: string; last: boolean }[]; canStart: boolean; /** `finance.entriesWrite`: gebuchte Zahlungen im Dialog zuordnen (Spec Zahlung zuordnen § 3.6). */ canAssign?: boolean }) {
   const t = useTranslations('members.dunningRun');
+  const [assigning, setAssigning] = useState<DunningPreview['paymentMayMatch'][number] | null>(null);
   const { date } = useDateFormat();
   const router = useRouter();
   const [selAsOf, setSelAsOf] = useState(asOf ?? today);
@@ -93,16 +95,37 @@ export function DunningRunFlow({ asOf, today, preview, paymentTermDays, levels, 
               <li key={`${c.membershipId}:${c.levelKey}`} data-testid="run-item" className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 px-4 py-2">
                 <span className="flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-0.5">
                   <span className="font-semibold text-ink">{c.name}</span>
-                  <span className="text-ink-2">{t('matchHint')}</span>
+                  <span className="text-ink-2">{c.bookedPayments.length > 0 ? t('matchHintBooked', { count: new Set(c.bookedPayments.map((b) => b.openItemId)).size }) : t('matchHint')}</span>
                 </span>
                 <span className="flex flex-wrap items-center gap-3">
-                  <Link href="/finance/work" className={buttonVariants({ variant: 'outline', size: 'sm' })}>{t('assign')}</Link>
+                  {c.bookedPayments.length > 0 && canAssign ? (
+                    <Button type="button" variant="outline" size="sm" data-testid="dunning-assign" onClick={() => setAssigning(c)}>{t('assignBooked')}</Button>
+                  ) : (
+                    <Link href="/finance/work" className={buttonVariants({ variant: 'outline', size: 'sm' })}>{t('assign')}</Link>
+                  )}
                   <span className="tabular-nums text-ink">{formatEuro(c.sumCents)}</span>
                 </span>
               </li>
             ))}
           </ul>
         </section>
+      ) : null}
+      {assigning ? (
+        <AssignPaymentDialog
+          openItemIds={[...new Set(assigning.bookedPayments.map((b) => b.openItemId))]}
+          open
+          onOpenChange={(o) => {
+            if (!o) {
+              setAssigning(null);
+              router.refresh();
+            }
+          }}
+          today={today}
+          fromDunning={{ name: assigning.name, number: assigning.memberNumber }}
+          onAssigned={(r) => {
+            if (r.unfoundedNotice) router.push(`/members/${assigning.membershipId}?item=${r.openItemId}`);
+          }}
+        />
       ) : null}
 
       {byLevel.map((group) => (

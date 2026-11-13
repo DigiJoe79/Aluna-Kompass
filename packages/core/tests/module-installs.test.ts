@@ -1,13 +1,24 @@
-import { mkdtempSync } from 'node:fs';
+import { mkdtempSync, rmSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 import { createDeps } from '../src/app';
 import { coreModule } from '../src/core-module';
 import { moduleProvisionErrors, settings } from '../src/db/schema';
 import { defineModule, type ModuleManifest } from '../src/modules/manifest';
 import { installOrder, listOpenInstallErrors, runModuleInstalls } from '../src/modules/installs';
 import { createTestDeps, TEST_NOW } from '../src/testing';
+
+// Jeder Temp-Ordner dieser Datei wird nach dem Fall wieder gelöscht.
+const tempDirs: string[] = [];
+const tempDir = (prefix: string): string => {
+  const d = mkdtempSync(path.join(os.tmpdir(), prefix));
+  tempDirs.push(d);
+  return d;
+};
+afterEach(() => {
+  for (const d of tempDirs.splice(0)) rmSync(d, { recursive: true, force: true });
+});
 
 const mod = (key: string, extra: Partial<ModuleManifest> = {}) => defineModule({ key, version: '0.0.0', permissions: [], ...extra });
 const enable = (deps: ReturnType<typeof createTestDeps>, keys: string[]) =>
@@ -61,7 +72,7 @@ describe('runModuleInstalls', () => {
 });
 
 describe('createDeps', () => {
-  const dir = () => mkdtempSync(path.join(os.tmpdir(), 'kompass-installs-'));
+  const dir = () => tempDir('kompass-installs-');
 
   it('runs the installs on open and on reopen, unless told not to', () => {
     let calls = 0;

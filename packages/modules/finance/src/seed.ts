@@ -15,7 +15,8 @@ import { requestAllocationCorrection } from './ledger/corrections';
 import { saveDraft, setReviewed } from './ledger/entries';
 import { bookEntry } from './ledger/finalize';
 import { createFirstFiscalYear, ensureFiscalYearFor, fiscalYearStatusInternal } from './ledger/fiscal-years';
-import { createTaxPeriod, declarationDueOn, fileTaxPeriodDocument, saveTaxPeriodAnswers, taxPeriodOfYearInternal, updateTaxPeriod, type TaxPeriodDocumentSlot } from './ledger/tax-periods';
+import { createTaxPeriod, declarationDueOn, fileTaxPeriodDocument, saveTaxPeriodAnswers, taxPeriodOfYearInternal, type TaxPeriodDocumentSlot } from './ledger/tax-periods';
+import { recordTaxAmendment, recordTaxAmendmentNotice, taxPeriodViewInternal, updateTaxPeriod } from './reporting/tax-amendments';
 import { cancelOpenItem, createOpenItem } from './ledger/open-items';
 import { markNotReturn, notReturnMarkInternal } from './ledger/not-return';
 import { closeFiscalYear, justifyUndocumentedEntry, reopenFiscalYear } from './ledger/period';
@@ -41,6 +42,8 @@ import { annualAccountsExplanationInternal, saveAnnualAccountsExplanation } from
 import { installFinance } from './install';
 import { SEED_CLOSED_YEARS, seedStoryYear } from './seed-calendar';
 import { finalizeFinanceReport } from './reporting/finalize';
+import { reportDefinition } from './reporting/catalog';
+import { runReportInternal } from './reporting/service';
 import { publicationsOfYearInternal, publishAnnualAccounts } from './closing/annual-accounts-publish';
 import { signAnnualAccounts, signatureRowInternal } from './closing/annual-accounts-sign';
 import { dataExportSlot, startDataExport } from './reporting/export/run';
@@ -1356,9 +1359,36 @@ async function seedTaxReturn(deps: Deps, ctx: CallContext, previousFiscalYearId:
     await file(may, 'transmissionProtocol', [`ELSTER-Übertragungsprotokoll ${label}`, 'Platzhalter']);
     unwrap(await updateTaxPeriod(may, ctx, { id: period.id, filedOn: `${storyYear}-05-31` }));
   }
+  const filed = taxPeriodOfYearInternal(deps.db, previousFiscalYearId);
+  if (filed?.filedOn) await seedTaxReturnAmendment(deps, ctx, filed.id, previousFiscalYearId, storyYear, label);
   const storyFiscalYear = deps.db.select().from(financeFiscalYears).where(eq(financeFiscalYears.designation, String(storyYear))).get();
   if (storyFiscalYear && !taxPeriodOfYearInternal(deps.db, storyFiscalYear.id)) {
     unwrap(await createTaxPeriod(on(deps, `${storyYear}-06-01`), ctx, { firstFiscalYearId: storyFiscalYear.id, lastFiscalYearId: storyFiscalYear.id, withTaxAdvisor: false, dueOn: declarationDueOn(storyYear, false) }));
+  }
+}
+
+/**
+ * B9 (Spec 0.5.2 § 9, F3): der Zustand „berichtigt“ — im Juli des Stichjahres, nach der Amtsübergabe vom 30.06. (deren
+ * Zwischenbericht so unverändert bleibt), stellt sich die Mitgliederzahl des
+ * Vorjahres als falsch heraus (eine mehr), die Angabe wird nach der Abgabe mit Bestätigung korrigiert, der Vorstand zeigt
+ * die Änderung an und reicht die Berichtigung mit Platzhalter-PDFs nach. Die Zahl steht nur in der Beilage „EÜR für das
+ * Finanzamt“, nicht in den Daten von `taxReturnGem`: Die Fassung vom April trägt die Werte von heute weiter und muss nicht
+ * neu festgeschrieben werden. Danach ist kein Prüfanlass offen. Einmal (an der Berichtigung erkannt).
+ */
+async function seedTaxReturnAmendment(deps: Deps, ctx: CallContext, taxPeriodId: string, previousFiscalYearId: string, storyYear: number, label: string): Promise<void> {
+  const period = taxPeriodViewInternal(deps, deps.db, taxPeriodId);
+  if (!period || period.amendments.length > 0) return;
+  const counts = period.answers.memberCounts ?? {};
+  unwrap(await saveTaxPeriodAnswers(on(deps, `${storyYear}-07-06`), ctx, { id: period.id, answers: { ...period.answers, memberCounts: { ...counts, [previousFiscalYearId]: (counts[previousFiscalYearId] ?? 0) + 1 } }, acknowledgeFiled: true }));
+  const gem = runReportInternal(deps, deps.db, reportDefinition('taxReturnGem')!, { taxPeriodId: period.id });
+  if (gem.stage !== 'final') unwrap(await finalizeFinanceReport(on(deps, `${storyYear}-07-08`), ctx, { report: 'taxReturnGem', params: { taxPeriodId: period.id } }));
+  const july10 = on(deps, `${storyYear}-07-10`);
+  unwrap(await recordTaxAmendmentNotice(july10, ctx, { taxPeriodId: period.id, notifiedOn: `${storyYear}-07-10` }));
+  unwrap(await fileTaxPeriodDocument(july10, ctx, { id: period.id, target: 'notice', slot: 'notice', bytes: textPdf([`Anzeige nach Paragraf 153 AO zur Steuererklärung ${label}`, 'Mitgliederzahl des Vorjahres berichtigt', 'Erfundenes Beispiel für die Entwicklung.']), fileName: 'anzeige.pdf' }));
+  const july20 = on(deps, `${storyYear}-07-20`);
+  const amendment = unwrap(await recordTaxAmendment(july20, ctx, { taxPeriodId: period.id, filedOn: `${storyYear}-07-20` }));
+  for (const [slot, lines] of [['filedReturn', [`Berichtigte Körperschaftsteuererklärungen ${label} mit Anlage Gem`, 'Platzhalter für das ELSTER-PDF']], ['transmissionProtocol', [`ELSTER-Übertragungsprotokoll der Berichtigung ${label}`, 'Platzhalter']]] as const) {
+    unwrap(await fileTaxPeriodDocument(july20, ctx, { id: period.id, target: 'amendment', amendmentId: amendment.id, slot, bytes: textPdf([...lines, 'Erfundenes Beispiel für die Entwicklung.']), fileName: `${slot}-berichtigung.pdf` }));
   }
 }
 

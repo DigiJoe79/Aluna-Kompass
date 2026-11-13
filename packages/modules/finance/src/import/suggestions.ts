@@ -21,6 +21,7 @@ import { unreturnedRunItemsInternal } from '../direct-debit/run-items';
 import { findReturnedItem, findReturnOrigin, findReturnOriginsByName } from './suggest/return';
 import { ruleMatches } from '../rules-pure';
 import { paymentServiceHint } from './suggest/text';
+import { liveSettlementCondition } from '../ledger/settlement-live';
 
 /**
  * Vorschläge der Arbeitsliste (F5, Spec 6.4): Jeder offene Kontoumsatz bekommt
@@ -108,8 +109,10 @@ export interface SuggestionView {
   /**
    * `originIsDraft` (Befund 37): die zurückgegebene Zahlung ist noch nicht festgeschrieben. `ruleTaxCodeNotOffered`
    * (Befund 40, Frage 3): das Kennzeichen der Regel gilt nicht mehr — es steht als `droppedTaxCode` am Grund `rule`.
+   * `feePaymentUnbooked` / `feePaymentMixed` (Befund B4, 0.5.2): Die Zahlung zur Gebühr ist noch nicht gebucht, oder
+   * ihre Zeilen tragen verschiedene Projekte oder Zwecke — die Gebühr bekommt keins von beiden vorbelegt.
    */
-  hints: ('foreignIban' | 'originIsDraft' | 'ruleTaxCodeNotOffered')[];
+  hints: ('foreignIban' | 'originIsDraft' | 'ruleTaxCodeNotOffered' | 'feePaymentUnbooked' | 'feePaymentMixed')[];
 }
 
 /** Die Kategorie einer Gebührenzeile beim Paar (Startplan). */
@@ -296,7 +299,7 @@ function draftSettledItemIdsInternal(db: DbOrTx): Set<string> {
       .from(financeOpenItemSettlements)
       .innerJoin(financeMoneyLines, eq(financeMoneyLines.id, financeOpenItemSettlements.moneyLineId))
       .innerJoin(financeEntries, eq(financeEntries.id, financeMoneyLines.entryId))
-      .where(eq(financeEntries.status, 'draft'))
+      .where(and(eq(financeEntries.status, 'draft'), liveSettlementCondition()))
       .all()
       .map((r) => r.id),
   );
@@ -347,6 +350,28 @@ export function defaultText(raw: FinanceRawTransactionRow): string {
 const rawLine = (raw: FinanceRawTransactionRow) => ({ accountId: raw.accountId, amountCents: raw.amountCents, rawTransactionId: raw.id });
 
 type AllocationInput = EntryLinesInput['allocationLines'][number];
+
+/**
+ * Befund B4 (0.5.2, Joe 2026-11-05): Die Gebühr eines Zahlungsdienstes folgt der Bindung ihrer Zahlung. Die Zahlung ist
+ * der Umsatz desselben Kontos mit der Kennung ohne `:fee` (so entstehen beide in `import/csv/read.ts`). Ist er gebucht
+ * (Entwurf oder festgeschrieben) und tragen alle Zuordnungszeilen seiner Buchung dasselbe Projekt und denselben Zweck,
+ * gehen beide mit — auch „keins“. Noch nicht gebucht oder uneinheitlich: ein Hinweis, der Vorschlag ist nicht sicher.
+ * Gibt es keine Zahlung (eine Zeile nur mit Gebühr), bleibt es bei der Kategorie.
+ */
+type FeePlacement = { kind: 'none' } | { kind: 'follow'; projectId: string | null; purposeId: string | null } | { kind: 'hint'; hint: 'feePaymentUnbooked' | 'feePaymentMixed' };
+
+function feePlacementInternal(db: DbOrTx, raw: FinanceRawTransactionRow): FeePlacement {
+  const reference = raw.bankReference!.slice(0, -':fee'.length);
+  if (!reference) return { kind: 'none' };
+  const payment = db.select({ id: financeRawTransactions.id }).from(financeRawTransactions).where(and(eq(financeRawTransactions.accountId, raw.accountId), eq(financeRawTransactions.bankReference, reference))).get();
+  if (!payment) return { kind: 'none' };
+  const bound = db.select({ entryId: financeMoneyLines.entryId }).from(financeMoneyLines).where(and(eq(financeMoneyLines.rawTransactionId, payment.id), isNull(financeMoneyLines.rawReleasedAt))).get();
+  if (!bound) return { kind: 'hint', hint: 'feePaymentUnbooked' };
+  const lines = db.select({ projectId: financeAllocationLines.projectId, purposeId: financeAllocationLines.purposeId }).from(financeAllocationLines).where(eq(financeAllocationLines.entryId, bound.entryId)).all();
+  const first = lines[0];
+  if (!first || lines.some((l) => l.projectId !== first.projectId || l.purposeId !== first.purposeId)) return { kind: 'hint', hint: 'feePaymentMixed' };
+  return { kind: 'follow', projectId: first.projectId, purposeId: first.purposeId };
+}
 
 /** Eine Zuordnungszeile ohne leere Felder — so bleibt die Vorbelegung lesbar. `abroad` (F7 Task 4) nur, wenn die Vorlage es ausdrücklich setzt — sonst leitet `resolveEntryLines` es wie bisher aus Zweck/Projekt ab. */
 function allocation(fields: { categoryId: string; amountCents: number; taxCode?: string | null; projectId?: string | null; purposeId?: string | null; contactId?: string | null; originLineId?: string | null; abroad?: boolean; directDebitItemId?: string | null }): AllocationInput {
@@ -414,14 +439,14 @@ function reversalSettlementsInternal(db: DbOrTx, origin: { id: string; entryId: 
   const line = db.select({ id: financeMoneyLines.id }).from(financeMoneyLines).where(and(eq(financeMoneyLines.entryId, origin.entryId), eq(financeMoneyLines.rawTransactionId, origin.id), isNull(financeMoneyLines.rawReleasedAt))).get();
   if (!line) return [];
   // Plan L3: aus einer Sammelbuchung nur der Ausgleich des einen zurückgegebenen Postens (Review Focus 3).
-  const given = db.select().from(financeOpenItemSettlements).where(and(eq(financeOpenItemSettlements.moneyLineId, line.id), isNull(financeOpenItemSettlements.reversesSettlementId), openItemId ? eq(financeOpenItemSettlements.openItemId, openItemId) : undefined)).orderBy(asc(financeOpenItemSettlements.id)).all();
+  const given = db.select().from(financeOpenItemSettlements).where(and(eq(financeOpenItemSettlements.moneyLineId, line.id), isNull(financeOpenItemSettlements.reversesSettlementId), openItemId ? eq(financeOpenItemSettlements.openItemId, openItemId) : undefined, liveSettlementCondition())).orderBy(asc(financeOpenItemSettlements.id)).all();
   if (given.length === 0) return [];
   const taken = db
     .select({ reversesSettlementId: financeOpenItemSettlements.reversesSettlementId, amountCents: financeOpenItemSettlements.amountCents })
     .from(financeOpenItemSettlements)
     .innerJoin(financeMoneyLines, eq(financeOpenItemSettlements.moneyLineId, financeMoneyLines.id))
     .innerJoin(financeEntries, eq(financeMoneyLines.entryId, financeEntries.id))
-    .where(and(inArray(financeOpenItemSettlements.reversesSettlementId, given.map((g) => g.id)), isNull(financeEntries.reversedByEntryId)))
+    .where(and(inArray(financeOpenItemSettlements.reversesSettlementId, given.map((g) => g.id)), isNull(financeEntries.reversedByEntryId), liveSettlementCondition()))
     .all();
   let rest = returnedCents;
   const out: NonNullable<EntryLinesInput['moneyLines'][number]['settlements']> = [];
@@ -770,9 +795,16 @@ function proposeBaseInternal(deps: Deps, data: SuggestionData, raw: FinanceRawTr
   }
 
   // AB: die Gebührenzeile eines Zahlungsdienstes (Kennung `…:fee` aus dem Import) — Kategorie über ihre Kennung, nie über den Namen.
+  // Befund B4 (0.5.2): Die Gebühr folgt Projekt und Zweck ihrer Zahlung (`feePlacementInternal`).
   if (raw.bankReference?.endsWith(':fee')) {
     const fee = data.categoriesByKey.get(FEE_CATEGORY_KEY);
-    if (fee) return { kind: 'fee', confidence: 'sure', reasons: [{ kind: 'paymentFee' }], draft: draftOf([rawLine(raw)], [allocation({ categoryId: fee.id, amountCents: raw.amountCents })]) };
+    if (fee) {
+      const placement = feePlacementInternal(deps.db, raw);
+      const line = allocation({ categoryId: fee.id, amountCents: raw.amountCents, ...(placement.kind === 'follow' ? { projectId: placement.projectId, purposeId: placement.purposeId } : {}) });
+      const draft = draftOf([rawLine(raw)], [line]);
+      if (placement.kind === 'hint') return { kind: 'fee', confidence: 'unsure', reasons: [{ kind: 'paymentFee' }], draft, extraHints: [placement.hint] };
+      return { kind: 'fee', confidence: 'sure', reasons: [{ kind: 'paymentFee' }], draft };
+    }
   }
 
   // M37: Das Entgelt einer Rücklastschrift als eigene Zeile am Tag einer Rückgabe — Gebühr zur Rückgabe, unsicher.

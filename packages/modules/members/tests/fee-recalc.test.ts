@@ -7,6 +7,7 @@ import { setFeeAgreement } from '../src/fee-agreement';
 import { previewRecalculation } from '../src/fee-recalc';
 import { continueFeeRun, startFeeRun } from '../src/fee-run';
 import { saveFeeSchedule } from '../src/fee-schedule';
+import { saveMembersSettings } from '../src/settings-service';
 import { admitMember, changeMemberType, endMembership, recordResignation, revokeEnd } from '../src/memberships';
 import { memberFeeCharges } from '../src/schema';
 import { MEMBERS_MCP_TOOLS } from '../src/mcp-tools';
@@ -128,6 +129,56 @@ describe('recalculation on a change of rhythm (Plan R1, M2)', () => {
     const env = await supportingMonthly();
     unwrap(await changeMemberType(env.deps, env.ctx, toRegular(env)));
     expect(after(env.deps, env.m.id)).toEqual([['2027-07-01', 600]]);
+  });
+});
+
+/**
+ * B7b (0.5.2, Joe 2026-11-12): Ein Typwechsel am Eintrittstag wirkt wie ein Eintritt mit der neuen Art — der
+ * Eintrittszeitraum folgt der eingestellten Eintrittsjahr-Regel. Maßstab ist ein Mitglied, das am selben Tag gleich mit
+ * der neuen Art eintritt; die Regel steht nicht im Test.
+ */
+describe('a type change on the join day (B7b)', () => {
+  const shape = (deps: MembersDeps, id: string) =>
+    deps.db.select().from(memberFeeCharges).where(eq(memberFeeCharges.membershipId, id)).all().filter((c) => c.state !== 'replaced').map((c) => [c.periodStart, c.periodEnd, c.amountCents, c.dueOn]).sort((a, b) => String(a[0]).localeCompare(String(b[0])));
+  const admit = async (env: Awaited<ReturnType<typeof setupFees>>, typeId: string, joinedOn: string) =>
+    unwrap(await admitMember(env.deps, env.ctx, { contactId: await person(env.deps), typeId, admittedOn: '2027-02-01', joinedOn }));
+
+  for (const rule of ['full', 'proRataMonths'] as const) {
+    for (const joinedOn of ['2027-07-01', '2027-07-15']) {
+      for (const [from, to] of [['supporting', 'regular'], ['regular', 'supporting']] as const) {
+        it(`${from} → ${to} on the join day ${joinedOn} (${rule}) charges as if joined with ${to}`, async () => {
+          const env = await setupFees({ now: NOW });
+          unwrap(await saveMembersSettings(env.deps, env.ctx, { joinYearRule: rule }));
+          const changed = await admit(env, env.types[from], joinedOn);
+          unwrap(await changeMemberType(env.deps, env.ctx, { membershipId: changed.id, typeId: env.types[to], validFrom: joinedOn }));
+          const direct = await admit(env, env.types[to], joinedOn);
+          expect(shape(env.deps, changed.id)).toEqual(shape(env.deps, direct.id));
+        });
+      }
+    }
+  }
+
+  it('with the first month paid no new fee reaches back before the join month', async () => {
+    const env = await setupFees({ now: NOW });
+    const m = await admit(env, env.types.supporting, '2027-07-01');
+    const july = live(env.deps, m.id).find((c) => c.start === '2027-07-01')!;
+    await payOpenItem(env.deps, july.openItemId!, 1000, '2027-02-05');
+    unwrap(await changeMemberType(env.deps, env.ctx, { membershipId: m.id, typeId: env.types.regular, validFrom: '2027-07-01' }));
+    expect(live(env.deps, m.id).map((c) => [c.start, c.amount])).toEqual([
+      ['2027-07-01', 1000],
+      ['2027-08-01', 500],
+    ]);
+  });
+
+  it('a change later than the join day stays as before: from then on, pro rata', async () => {
+    const env = await setupFees({ now: NOW });
+    const m = await admit(env, env.types.supporting, '2027-07-01');
+    unwrap(await changeMemberType(env.deps, env.ctx, { membershipId: m.id, typeId: env.types.regular, validFrom: '2027-09-01' }));
+    expect(shape(env.deps, m.id)).toEqual([
+      ['2027-07-01', '2027-07-31', 1000, '2027-07-01'],
+      ['2027-08-01', '2027-08-31', 1000, '2027-08-01'],
+      ['2027-09-01', '2027-12-31', 400, '2027-09-01'],
+    ]);
   });
 });
 

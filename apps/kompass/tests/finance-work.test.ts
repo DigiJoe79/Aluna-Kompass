@@ -55,8 +55,19 @@ describe('mini form of the work list', () => {
     if (!result.ok) throw new Error('expected ok');
     expect(result.input).toEqual({
       rawTransactionId: 'RAW1', entryDate: '2026-01-10', text: 'Büromaterial', reviewed: true,
-      allocationLines: [{ categoryId: 'office', amountCents: -3500, contactId: 'C1', projectId: null, purposeId: null, abroad: false }],
+      allocationLines: [{ categoryId: 'office', amountCents: -3500, contactId: 'C1', projectId: null, purposeId: null }],
     });
+  });
+
+  /** Befund B2 (0.5.2): Ohne Wert im Vorschlag entscheidet der Dienst über „Im Ausland verwendet“; ein Wert des Vorschlags geht mit. */
+  it('sends abroad only when the suggestion or a person set it', () => {
+    const withAbroad = { ...ruleDraft, allocationLines: [{ ...ruleDraft.allocationLines[0]!, abroad: true }] };
+    const form = miniFormFromSuggestion(expenseRaw, withAbroad, new Map());
+    expect(form.rows[0]!.abroad).toBe(true);
+    const result = miniFormToBookInput(form, expenseRaw.id, withAbroad);
+    if (!result.ok) throw new Error('expected ok');
+    expect(result.input.allocationLines[0]!.abroad).toBe(true);
+    expect(miniFormFromSuggestion(expenseRaw, null, new Map()).rows[0]!.abroad).toBeNull();
   });
 
   it('carries the second money line of a transfer and the settlements of an open item into the booking', () => {
@@ -93,10 +104,11 @@ describe('mini form of the work list', () => {
 
 describe('full entry form from a transaction (?raw=)', () => {
   it('prefills account, amount, direction and the bound transaction from the suggestion', () => {
-    const form = formFromTransaction(expenseRaw, ruleDraft);
+    const form = formFromTransaction(expenseRaw, ruleDraft, new Map([['C1', 'Erika Beispiel']]));
     expect(form).toMatchObject({ id: undefined, entryDate: '2026-01-10', text: 'Büromaterial', template: 'expense' });
     expect(form.moneyRows).toEqual([expect.objectContaining({ accountId: 'bank', amountText: '35,00', direction: 'out', rawTransactionId: 'RAW1', rawBookingDate: '2026-01-10' })]);
-    expect(form.splitRows).toEqual([expect.objectContaining({ categoryId: 'office', amountText: '35,00', contactId: 'C1' })]);
+    // Befund B3 (0.5.2): Der Kontakt steht mit Namen im Feld, nicht leer.
+    expect(form.splitRows).toEqual([expect.objectContaining({ categoryId: 'office', amountText: '35,00', contactId: 'C1', contactName: 'Erika Beispiel' })]);
     const input = toServiceInput(form);
     if (!input.ok) throw new Error('expected ok');
     expect(input.input.moneyLines).toEqual([{ accountId: 'bank', amountCents: -3500, rawTransactionId: 'RAW1', settlements: undefined }]);

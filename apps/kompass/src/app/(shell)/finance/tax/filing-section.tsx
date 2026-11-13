@@ -1,6 +1,6 @@
 'use client';
 
-import type { TaxPeriodDocumentSlot, TaxPeriodView } from '@kompass/module-finance';
+import type { TaxPeriodView } from '@kompass/module-finance';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -19,7 +19,10 @@ import { Button } from '@/components/ui/button';
 import { FollowUpDialog } from '../deadlines/follow-up-dialog';
 import { NoticeDialog } from '../donations/notices/notice-dialog';
 import { linkTaxPeriodNoticeAction } from './actions';
-import { FilingDatesDialog } from './filing-dates-dialog';
+import { FilingDatesDialog, type AmendmentField } from './filing-dates-dialog';
+import { TaxNoticeDialog } from './notice-dialog';
+import { ReviewCloseDialog } from './review-close-dialog';
+import { filingDocumentsOf, type FilingSlot } from './review-state';
 import { TaxDocumentDialog } from './tax-document-dialog';
 import type { TaxMe } from './types';
 
@@ -54,21 +57,48 @@ const linkClass = 'text-meta text-link underline-offset-2 hover:underline';
  * Dateien als Zeilen der `RequirementList` (`variant="rows"`, 16b) mit „Ablegen …“ je Zeile. Der Bescheid wartet auf „Abgegeben am“; „Ablegen …“ öffnet den
  * Bescheid-Dialog der Spenden mit vorbelegtem Veranlagungszeitraum und verknüpft danach. Am Bescheid „Wiedervorlage
  * anlegen“ (Ziel: der Zeitraum). Ohne `finance.periodClose` nur lesen.
+ *
+ * B9 (Spec 0.5.2 § 6): „Abgegeben am“ bleibt der erste Tag, darunter „Berichtigt am“ (letzte Berichtigung, ohne
+ * Person); die Dokumentzeilen gehören zur letzten Abgabe. „Berichtigung eintragen …“ steht in den Aktionen des
+ * Abschnitts, solange eine Berichtigung eintragbar ist und es einen Anlass gibt. Bei offenem Prüfanlass dazu
+ * „Anzeige eintragen …“ (Dialog `sm`) und „Ohne Berichtigung schließen …“ (Dialog `md`); eine Prüfung ohne Berichtigung
+ * steht als „Geprüft am“ mit Person und Begründung, eine Anzeige als „Angezeigt am“ mit der Zeile für das Schreiben.
  */
-export function FilingSection({ period, notice, me, finalized = true }: { period: Pick<TaxPeriodView, 'id' | 'label' | 'requestedOn' | 'dueOn' | 'filedOn' | 'version' | 'documents' | 'state'>; notice: TaxNotice | null; me: TaxMe; /** Festgeschrieben: erst dann lassen sich abgegebene Fassung und Protokoll ablegen (16b). */ finalized?: boolean }) {
+export function FilingSection({
+  period,
+  notice,
+  me,
+  finalized = true,
+  retracted = false,
+  userNames = {},
+}: {
+  period: Pick<TaxPeriodView, 'id' | 'label' | 'requestedOn' | 'dueOn' | 'filedOn' | 'version' | 'documents' | 'state' | 'reviewDue' | 'amendmentAllowed' | 'filedFiguresMissing' | 'amendments' | 'checks' | 'notifiedOn'>;
+  notice: TaxNotice | null;
+  me: TaxMe;
+  /** Festgeschrieben: erst dann lassen sich abgegebene Fassung und Protokoll ablegen (16b). */
+  finalized?: boolean;
+  /** Die abgegebene Fassung ist storniert (Wiederöffnen): Ohne Abbild ist dann eine Berichtigung denkbar. */
+  retracted?: boolean;
+  /** Namen zu den Nutzer-IDs der Prüfungen („geprüft von …“). */
+  userNames?: Record<string, string>;
+}) {
   const t = useTranslations('finance.tax.filing');
   const tr = useTranslations('finance.tax');
   const fmt = useDateFormat();
   const router = useRouter();
-  const [dates, setDates] = useState(false);
-  const [slot, setSlot] = useState<TaxPeriodDocumentSlot | null>(null);
+  const [dates, setDates] = useState<'edit' | 'amend' | null>(null);
+  const [slot, setSlot] = useState<FilingSlot | null>(null);
   const [noticeOpen, setNoticeOpen] = useState(false);
   const [followUp, setFollowUp] = useState(false);
+  const [review, setReview] = useState<'notice' | 'close' | null>(null);
   const link = useActionFeedback();
 
   const request = period.documents.request;
+  const filing = filingDocumentsOf(period);
+  const lastAmendment = period.amendments.at(-1) ?? null;
+  const placeOf = (key: 'filedReturn' | 'transmissionProtocol'): FilingSlot => (filing.target === 'amendment' ? { slot: key, target: 'amendment', amendmentId: filing.amendmentId } : { slot: key });
   const docItem = (key: 'filedReturn' | 'transmissionProtocol'): RequirementListItem => {
-    const doc = period.documents[key];
+    const doc = filing.documents[key];
     // Vor dem Festschreiben gedämpft und ohne Knopf (Designer Runde 7, 16b).
     const waiting = !doc && !finalized;
     return {
@@ -89,13 +119,45 @@ export function FilingSection({ period, notice, me, finalized = true }: { period
           {doc.documentNumber}
         </Link>
       ) : me.canEdit && !waiting ? (
-        <Button type="button" variant="outline" size="sm" onClick={() => setSlot(key)} data-testid={`tax-file-${key}`}>
+        <Button type="button" variant="outline" size="sm" onClick={() => setSlot(placeOf(key))} data-testid={`tax-file-${key}`}>
           {t('file')}
         </Button>
       ) : undefined,
     };
   };
   const filed = period.filedOn !== null;
+  // Eintragbar ist eine Berichtigung, solange die Werte von der letzten Abgabe abweichen; ohne Abbild (vor 0.5.2) erst,
+  // wenn die abgegebene Fassung storniert ist — sonst stünde der Knopf an jeder alten Abgabe.
+  const canAmend = me.canEdit && filed && period.amendmentAllowed && (period.reviewDue || !period.filedFiguresMissing || retracted);
+  // Die letzte Prüfung ohne Berichtigung gilt, solange keine Berichtigung nach ihr kam; die Anzeige des laufenden Anlasses.
+  const lastCheck = period.checks.filter((c) => c.kind === 'noAmendment').at(-1) ?? null;
+  const shownCheck = lastCheck && (!lastAmendment || lastCheck.at > lastAmendment.at) ? lastCheck : null;
+  const notice_ = period.notifiedOn ? (period.checks.filter((c) => c.kind === 'notified').at(-1) ?? null) : null;
+  const noticeLetterItem: RequirementListItem | null = notice_
+    ? {
+        key: 'noticeLetter',
+        title: t('documents.noticeLetter.title'),
+        done: Boolean(notice_.document),
+        blocked: false,
+        detail: notice_.document ? undefined : t('documents.noticeLetter.detail'),
+        canSelf: me.canEdit,
+        canDoNames: [],
+        canDoText: '',
+        href: null,
+        actionLabel: t('file'),
+        doneLabel: tr('done'),
+        extra: notice_.document ? (
+          <Link href={`/dms/${notice_.document.documentId}`} className={linkClass} data-testid="tax-doc-noticeLetter">
+            {notice_.document.documentNumber}
+          </Link>
+        ) : me.canEdit ? (
+          <Button type="button" variant="outline" size="sm" onClick={() => setSlot({ slot: 'notice', target: 'notice' })} data-testid="tax-file-noticeLetter">
+            {t('file')}
+          </Button>
+        ) : undefined,
+      }
+    : null;
+  const amendmentField: AmendmentField | null = dates === 'amend' ? { mode: 'record' } : lastAmendment ? { mode: 'edit', id: lastAmendment.id, filedOn: lastAmendment.filedOn } : null;
   const noticeItem: RequirementListItem = {
     key: 'notice',
     title: t('documents.notice.title'),
@@ -136,9 +198,26 @@ export function FilingSection({ period, notice, me, finalized = true }: { period
           title={t('title')}
           actions={
             me.canEdit ? (
-              <Button type="button" variant="outline" size="sm" onClick={() => setDates(true)} data-testid="tax-filing-edit">
-                {t('edit')}
-              </Button>
+              <span className="flex flex-wrap items-center gap-2">
+                {canAmend ? (
+                  <Button type="button" variant="outline" size="sm" onClick={() => setDates('amend')} data-testid="tax-amend">
+                    {t('amend')}
+                  </Button>
+                ) : null}
+                {period.reviewDue ? (
+                  <>
+                    <Button type="button" variant="outline" size="sm" onClick={() => setReview('notice')} data-testid="tax-notify">
+                      {t('notify')}
+                    </Button>
+                    <Button type="button" variant="outline" size="sm" onClick={() => setReview('close')} data-testid="tax-review-close">
+                      {t('closeReview')}
+                    </Button>
+                  </>
+                ) : null}
+                <Button type="button" variant="outline" size="sm" onClick={() => setDates('edit')} data-testid="tax-filing-edit">
+                  {t('edit')}
+                </Button>
+              </span>
             ) : undefined
           }
         >
@@ -155,15 +234,42 @@ export function FilingSection({ period, notice, me, finalized = true }: { period
               />
               <FixedValue id="tax-due" label={t('dueOn')} value={fmt.date(period.dueOn)} size="s" className={TIGHT} />
               <FixedValue id="tax-filed" label={t('filedOn')} value={period.filedOn ? fmt.date(period.filedOn) : null} reason={period.filedOn ? undefined : t('filedReason')} size="s" testId="tax-filed" className={TIGHT} />
+              {lastAmendment ? <FixedValue id="tax-amended" label={t('amendedOn')} value={fmt.date(lastAmendment.filedOn)} reason={t('amendedReason')} size="s" testId="tax-amended" className={TIGHT} /> : null}
+              {shownCheck ? (
+                <FixedValue
+                  id="tax-checked"
+                  label={t('checkedOn')}
+                  value={fmt.date(shownCheck.checkedOn)}
+                  reason={
+                    <>
+                      {t('checkedReason', { name: userNames[shownCheck.byUserId] ?? '', reason: shownCheck.reason ?? '' })}
+                      {shownCheck.document ? (
+                        <>
+                          {' '}
+                          <Link href={`/dms/${shownCheck.document.documentId}`} className={linkClass}>
+                            {t('checkedDocument', { number: shownCheck.document.documentNumber })}
+                          </Link>
+                        </>
+                      ) : null}
+                    </>
+                  }
+                  size="l"
+                  testId="tax-checked"
+                  className={TIGHT}
+                />
+              ) : null}
+              {period.notifiedOn ? <FixedValue id="tax-notified" label={t('notifiedOn')} value={fmt.date(period.notifiedOn)} reason={t('notifiedReason')} size="s" testId="tax-notified" className={TIGHT} /> : null}
             </FormGrid>
             <RefusalNotice state={link.state} />
-            <RequirementList variant="rows" items={[docItem('filedReturn'), docItem('transmissionProtocol'), noticeItem]} />
+            <RequirementList variant="rows" items={[docItem('filedReturn'), docItem('transmissionProtocol'), ...(noticeLetterItem ? [noticeLetterItem] : []), noticeItem]} />
           </div>
         </Section>
       </FormCardBody>
       {me.canEdit ? (
         <>
-          <FilingDatesDialog open={dates} onOpenChange={setDates} period={period} />
+          <TaxNoticeDialog open={review === 'notice'} onOpenChange={(o) => (o ? undefined : setReview(null))} periodId={period.id} periodLabel={period.label} notifiedOn={period.notifiedOn} />
+          <ReviewCloseDialog open={review === 'close'} onOpenChange={(o) => (o ? undefined : setReview(null))} periodId={period.id} periodLabel={period.label} canPickDocument={me.canPickDocument} />
+          <FilingDatesDialog open={dates !== null} onOpenChange={(o) => (o ? undefined : setDates(null))} period={period} amendment={amendmentField} />
           {slot ? <TaxDocumentDialog open onOpenChange={(o) => (o ? undefined : setSlot(null))} periodId={period.id} slot={slot} canPickDocument={me.canPickDocument} /> : null}
           <NoticeDialog
             open={noticeOpen}

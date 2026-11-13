@@ -107,7 +107,14 @@ export const FINANCE_ERRORS = {
   taxReturnNotFinal: { period: 'text' },
   taxPeriodNotFiled: { period: 'text' },
   taxPeriodNoticeLinked: { period: 'text' },
-  taxPeriodFiled: { period: 'text' },
+  // B9 (F1): Angaben nach der Abgabe nur mit Bestätigung.
+  taxPeriodFiledUnacknowledged: { period: 'text' },
+  // B9 (0.5.2): Berichtigung und Prüfung der Steuererklärung (§ 153 AO).
+  taxPeriodAmended: { period: 'text' },
+  taxAmendmentNotDue: { period: 'text', filedOn: 'date' },
+  taxAmendmentNotLatest: { period: 'text' },
+  taxAmendmentCheckNotOpen: { period: 'text' },
+  taxAmendmentNoNotice: { period: 'text' },
   gemFormMissing: { year: 'text' },
   reportGemIncomplete: { missing: 'count' },
   assemblyYearOpen: { designation: 'text' },
@@ -177,6 +184,18 @@ export const FINANCE_ERRORS = {
   // Plan R1 (M3): Erlass eines Postens, der in einem Einzug mit erzeugter Datei steckt; der Satz je Status (Nachlauf R1).
   openItemInDirectDebit: { runId: 'text', status: 'runStatus' },
   openItemHasOrigin: {},
+  // Spec Zahlung zuordnen (0.5.2, B10) § 3.2: Prüfungen beim nachträglichen Zuordnen einer Zahlung.
+  openItemNotOpen: {},
+  assignEntryNotFinal: {},
+  assignContactMismatch: {},
+  assignCategoryMismatch: {},
+  assignCategoryNotTemplate: {},
+  assignPaymentConfirmed: {},
+  assignInDirectDebit: { runId: 'text', status: 'runStatus' },
+  assignExceedsOpen: { open: 'cents' },
+  assignExceedsLine: { free: 'cents' },
+  settlementNotAssigned: {},
+  assignmentHasReturn: {},
   // Plan M2: Posten mit der Herkunft eines anderen Moduls entstehen, verschieben und erledigen sich nur über dessen Vorgang.
   openItemOriginOwned: {},
   openItemOriginUnknown: {},

@@ -85,7 +85,12 @@ export function BankAccountsPanel({ contactId, contactName, items, canEdit }: { 
               {items.map((item) => (
                 <TableRow key={item.id} data-testid="bank-account-row">
                   <TableCell col="title" selectable>
-                    <span className="font-mono">{formatIban(item.iban)}</span>
+                    {/* B8c (0.5.2): Die Titelspalte bricht um; neben den umbrechenden Spalten „Herkunft“ und „Auch bei“
+                        schrumpfte sie ab `md` auf eine Vierergruppe (gemessen bei 1024 px: 34 px, sechs Zeilen). Ab `md` hält
+                        die IBAN deshalb zusammen wie in der Kontenliste der Einstellungen (dort `meta`, ohne Umbruch);
+                        als Kartenzeile darunter bricht sie weiter nur zwischen den Gruppen (MUSTER § IBAN). Einzelstelle,
+                        kein dauerhafter Layout-Test (Projektregel). */}
+                    <span className="font-mono md:whitespace-nowrap">{formatIban(item.iban)}</span>
                   </TableCell>
                   <TableCell col="meta" wrap className="text-ink-2">{origin(item)}</TableCell>
                   <TableCell col="meta" wrap>

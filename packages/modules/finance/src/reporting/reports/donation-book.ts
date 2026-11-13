@@ -42,7 +42,8 @@ const REASON_TEXT: Record<ReconciliationReasonKey, string> = {
   inKindUndescribed: 'Sachspende nicht beschrieben',
   expenseWaiverUnconfirmed: 'Aufwandsspende nicht bestätigt',
   anonymous: 'Anonym, ohne Kontakt',
-  other: 'Sonstige',
+  other: 'Noch nicht bestätigt',
+  underConfirmed: 'Weniger bestätigt als gespendet',
   confirmedAboveReturns: 'Bestätigt über Rückgaben hinaus',
   returnOtherYear: 'Rückgabe in einem anderen Jahr',
 };

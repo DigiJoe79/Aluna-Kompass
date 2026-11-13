@@ -1,5 +1,6 @@
-import { enabledManifests, guardConstraint, moduleMcpTools, newId, resolveApiToken, type CallContext, type Deps, type McpToolDefinition } from '@kompass/core';
-import { createMcpHandler, McpServer, type AuthInfo } from '@modelcontextprotocol/server';
+import { enabledManifests, guardConstraint, invalid, moduleMcpTools, newId, resolveApiToken, zodIssues, type CallContext, type Deps, type McpToolDefinition } from '@kompass/core';
+import type { z } from 'zod';
+import { createMcpHandler, McpServer, type AuthInfo, type StandardSchemaWithJSON } from '@modelcontextprotocol/server';
 import { toCallToolResult, type ErrorTranslator } from './result';
 
 export interface KompassMcpHandler {
@@ -22,10 +23,24 @@ function unauthorizedResponse(): Response {
   });
 }
 
+/**
+ * N23: Das SDK prüft die Argumente gegen das Werkzeugschema, bevor der Handler läuft, und meldet einen Verstoß als
+ * englischen Text samt Regex. Gelistet wird deshalb das echte Schema (`~standard.jsonSchema` des Zod-Schemas), geprüft
+ * aber hier: Ein Verstoß wird zur Prüfmeldung wie im Dienst (`zodIssues`) und läuft durch dieselbe Übersetzung.
+ */
+function listedOnly(schema: z.ZodType<unknown>): StandardSchemaWithJSON {
+  const std = schema['~standard'];
+  return { '~standard': { version: 1, vendor: 'kompass', jsonSchema: std.jsonSchema, validate: (value: unknown) => ({ value }) } };
+}
+
 function buildServer(deps: Deps, ctx: CallContext, tools: McpToolDefinition[], version: string, translateError?: ErrorTranslator): McpServer {
   const server = new McpServer({ name: 'aluna-kompass', version });
   for (const tool of tools) {
-    server.registerTool(tool.name, { description: tool.description, inputSchema: tool.inputSchema }, async (args: unknown) => toCallToolResult(await guardConstraint(`mcp ${tool.name}`, () => tool.handler(deps, ctx, args)), translateError));
+    server.registerTool(tool.name, { description: tool.description, inputSchema: listedOnly(tool.inputSchema) }, async (args: unknown) => {
+      const parsed = tool.inputSchema.safeParse(args ?? {});
+      if (!parsed.success) return toCallToolResult(invalid(zodIssues(parsed.error)), translateError);
+      return toCallToolResult(await guardConstraint(`mcp ${tool.name}`, () => tool.handler(deps, ctx, parsed.data)), translateError);
+    });
   }
   return server;
 }

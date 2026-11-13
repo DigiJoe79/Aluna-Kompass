@@ -63,7 +63,10 @@ Minus bringen.
 Zahlt eine Spendenplattform gesammelt aus, betrifft eine einzige
 Kontobewegung oft mehrere Spender oder Zwecke. Die Seite „Wofür?“ nimmt
 dafür mehrere Zeilen auf: eine je Spender oder Zweck, dazu bei Bedarf eine
-für die Gebühr des Zahlungsdiensts. Das Zeilenmenü teilt einen Betrag
+für die Gebühr des Zahlungsdiensts. Die Gebühr gehört zum selben Projekt und
+Zweck wie die Spende, ist die Spende keinem zugeordnet, auch die Gebühr nicht;
+stellt der Import sie als eigenen Umsatz daneben, schlägt die
+[Arbeitsliste](arbeitsliste.md) sie so vor. Das Zeilenmenü teilt einen Betrag
 gleichmäßig auf oder trägt den verbleibenden Rest in eine gewählte Zeile
 ein — solange oben „Noch … zu verteilen“ steht, ist die Buchung noch nicht
 ausgeglichen.
@@ -75,6 +78,14 @@ Steuernummer. Eine Erbschaft und eine erhaltene Vermögensausstattung gehen
 dem Vermögen zu. Hat der Erblasser laufenden Aufwand bestimmt oder erlaubt der
 Geber die laufende Verwendung, setzen Sie **Nicht dem Vermögen zuführen** —
 der Grund steht damit fest.
+
+Ob Geld **im Ausland verwendet** wird, übernimmt Kompass beim Speichern aus
+dem Zweck oder dem Projekt der Zeile — aber nur an einer Ausgabe; eine
+Einnahme, etwa eine Spende auf ein Auslandsprojekt, ist nicht im Ausland
+verwendet. Der Schalter „Wird im Ausland verwendet“ an der Zeile zeigt diese
+Vorgabe erst nach dem Speichern; wer ihn vorher umlegt, entscheidet selbst.
+Wählen Sie danach ein anderes Projekt oder einen anderen Zweck, gilt wieder
+die Vorgabe.
 
 Was ein Zweck bekommen und verwendet hat, zeigt Finanzen → Zwecke; soll
 Geld später den Zweck wechseln, geht das nicht über eine neue Buchung,
@@ -228,4 +239,6 @@ ohne Auszug. Kassen und Zahlungsdienste ohne Auszugsformat brauchen keinen.
 Ein Agent über die Schnittstelle darf Buchungen anlegen und vorbereiten,
 aber nicht festschreiben — das bleibt einem Menschen am Bildschirm
 vorbehalten. Eine vom Agenten vorbereitete Buchung trägt im Journal ein
-eigenes Kennzeichen, damit erkennbar bleibt, wer sie angelegt hat.
+eigenes Kennzeichen, damit erkennbar bleibt, wer sie angelegt hat. In der
+[Arbeitsliste](arbeitsliste.md) steht jeder ungeprüfte Entwurf mit
+Kontoumsatz im Reiter „Vom Agenten vorbereitet“, gleich wer ihn angelegt hat.

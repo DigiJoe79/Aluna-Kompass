@@ -278,6 +278,9 @@ export const financeModule: ModuleManifest = defineModule({
     { entityType: AUDIT_RESOLUTION_LINK, readPermission: 'finance.audit', documentsOf: (deps, fiscalYearId) => auditResolutionMinutesInternal(deps, fiscalYearId) },
     // E6b: abgegebene Fassung und ELSTER-Übertragungsprotokoll an der Abgabe einer Umsatzsteuer-Anmeldung.
     { entityType: 'financeVatFiling', readPermission: 'finance.read', receivePermission: 'finance.periodClose' },
+    // B9: abgegebene Fassung und ELSTER-Protokoll an der Berichtigung der Steuererklärung, Beleg und Anzeigeschreiben an der Prüfung.
+    { entityType: 'financeTaxAmendment', readPermission: 'finance.read', receivePermission: 'finance.periodClose' },
+    { entityType: 'financeTaxAmendmentCheck', readPermission: 'finance.read', receivePermission: 'finance.periodClose' },
   ],
   // F6b: der vereinfachte Nachweis — `filed: false`, ein Vordruck auf Abruf.
   documentTemplates: [cashCountTemplate, moneyConfirmationTemplate, inKindConfirmationTemplate, collectiveConfirmationTemplate, simplifiedReceiptTemplate, waiverDeclarationTemplate, mandateFormTemplate, prenotificationTemplate, runSummaryTemplate, reportTemplate, reportPersonalTemplate, auditReportPrintTemplate, auditFolderTemplate, handoverPrintTemplate],
@@ -333,10 +336,15 @@ export const financeModule: ModuleManifest = defineModule({
     'finance.taxPeriod.create': { params: ['first', 'last', 'dueOn'] },
     'finance.taxPeriod.update': { params: ['period'] },
     'finance.taxPeriod.answers': { params: ['period'] },
-    'finance.taxPeriod.documentFile': { params: ['period', 'slot', 'documentNumber'] },
-    'finance.taxPeriod.documentLink': { params: ['period', 'slot', 'documentNumber'] },
+    'finance.taxPeriod.documentFile': { params: ['period', 'slot', 'documentNumber', 'target'] },
+    'finance.taxPeriod.documentLink': { params: ['period', 'slot', 'documentNumber', 'target'] },
     'finance.taxPeriod.filed': { params: ['period', 'filedOn'] },
     'finance.taxPeriod.noticeLink': { params: ['period'] },
+    // B9: Berichtigung und Prüfung der Steuererklärung — nie Begründung, Abbild oder Angaben.
+    'finance.taxAmendment.record': { params: ['period', 'filedOn'] },
+    'finance.taxAmendment.update': { params: ['period', 'filedOn'] },
+    'finance.taxAmendment.closeWithoutAmendment': { params: ['period', 'checkedOn', 'withDocument'] },
+    'finance.taxAmendment.notified': { params: ['period', 'checkedOn'] },
     'finance.handover.start': { params: ['handoverOn'] },
     // Rechenschaft B2 — Datenexport für eine Außenprüfung: Jahre als Bezeichnungen, nie Namen oder Dateinamen.
     'finance.dataExport.create': { params: ['years', 'provisional'] },
@@ -459,6 +467,9 @@ export const financeModule: ModuleManifest = defineModule({
     'finance.openItem.reschedule': { params: [] },
     'finance.openItem.reduce': { params: ['amountCents'] },
     'finance.openItem.update': { params: [] },
+    // Spec Zahlung zuordnen § 5: nur Buchungsnummer und Betrag, nie Name oder Kontakt.
+    'finance.openItem.assignPayment': { params: ['entryNumber', 'amountCents'] },
+    'finance.openItem.unassignPayment': { params: ['entryNumber', 'amountCents'] },
     'finance.partnerEvidence.add': { params: ['paymentNumber', 'way'] },
     'finance.partnerEvidence.documentGone': { params: [] },
     'finance.partnerEvidence.remove': { params: [] },
@@ -603,6 +614,8 @@ export const financeModule: ModuleManifest = defineModule({
     { entity: 'financeAuditAuditor', deletable: true, reason: 'Arbeitsmaterial, solange der Prüfer nichts in der Prüfung hinterlassen hat; wer wann eingetragen und ausgetragen wurde, steht im Änderungsprotokoll.', guard: 'nur ohne Vermerke, Stichproben, durchgesehene Abschnitte und Beiträge zum Prüfbericht', auditAction: 'finance.audit.auditor.remove' },
     { entity: 'financeAssemblyResult', deletable: false, reason: 'Das Ergebnis der Mitgliederversammlung mit den Entlastungen ist ein Beschluss; ein Nachtrag ändert es, gelöscht wird es nie.' },
     { entity: 'financeTaxPeriod', deletable: false, reason: 'Der Erklärungszeitraum hält fest, welche Jahre dem Finanzamt erklärt wurden, wann und mit welcher Fassung; § 153 AO und der Bescheid beziehen sich auf ihn.' },
+    { entity: 'financeTaxAmendment', deletable: false, reason: 'Die berichtigte Steuererklärung ist eine Abgabe an das Finanzamt (§ 153 AO); Tag, Werte und Fassung gehören zur Rechenschaft.' },
+    { entity: 'financeTaxAmendmentCheck', deletable: false, reason: 'Die Prüfung eines Prüfanlasses ohne Berichtigung und die Anzeige an das Finanzamt belegen, dass der Vorstand § 153 AO nachgekommen ist.' },
     { entity: 'financeVatFiling', deletable: false, reason: 'Dass und wann eine Umsatzsteuer-Voranmeldung oder -Jahreserklärung abgegeben wurde, gehört zur Rechenschaft gegenüber dem Finanzamt.' },
     { entity: 'financeHandover', deletable: false, reason: 'Die Amtsübergabe ist die Rechenschaft des bisherigen Schatzmeisters (§§ 666, 667 BGB); eine abgebrochene bleibt als Zustand.' },
     { entity: 'financeReportRelease', deletable: false, reason: 'Die Freigabe zum Festschreiben wird beim Wiederöffnen des Jahres widerrufen, nicht gelöscht; wer sie wann mit welcher Begründung erteilt hat, steht im Änderungsprotokoll.' },

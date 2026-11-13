@@ -1,6 +1,6 @@
 {
   "name": "@kompass/module-members",
-  "version": "0.5.1",
+  "version": "0.5.2",
   "private": true,
   "type": "module",
   "exports": {
@@ -16,7 +16,7 @@
     "@kompass/module-contacts": "workspace:*",
     "@kompass/module-dms": "workspace:*",
     "@kompass/module-finance": "workspace:*",
-    "drizzle-orm": "^0.45.3",
+    "drizzle-orm": "^0.45.4",
     "zod": "^4.6.7"
   },
   "devDependencies": {

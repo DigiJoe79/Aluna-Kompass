@@ -43,8 +43,10 @@ finden Sie unter „Frühere Läufe“.
 Fristen stellen Sie in den Einstellungen ein. Die Vorschau gruppiert:
 
 - **Zahlung könnte passen**: Ein noch nicht zugeordneter Eingang der letzten 30 Tage passt nach Betrag, IBAN oder
-  Name. Dieses Mitglied wird nicht gemahnt, bis der Umsatz in der Arbeitsliste zugeordnet ist; der Lauf geht für die
-  übrigen weiter.
+  Name, oder eine schon gebuchte, freie Zahlung des Mitglieds in der Beitragskategorie (ohne Zeitgrenze). Dieses
+  Mitglied wird nicht gemahnt, bis die Zahlung zugeordnet ist; der Lauf geht für die übrigen weiter. Bei einer gebuchten
+  Zahlung öffnet **Zuordnen …** den Dialog „Zahlung zuordnen“ mit allen reifen Beiträgen des Mitglieds, sonst führt
+  **Zuordnen** in die Arbeitsliste.
 - je Stufe die Briefe,
 - **Übersprungen** mit Grund: letzte Stufe erreicht, vorige Stufe nicht als versandt vermerkt, gestundet,
   Lastschrift ohne Rückgabe oder eine Zahlung, die als Entwurf gebucht, aber noch nicht festgeschrieben ist.
@@ -82,3 +84,24 @@ Dokument — etwa eine Beitragsmitteilung mit falschem Betrag. Eine stornierte M
 stornierte Zahlungsaufforderung hält einen Beitrag nicht mehr auf Überweisung, und ein stornierter Brief eines Laufs
 geht nicht hinaus; der Versandschritt nennt ihn. Ist der Brief schon versandt, schreiben Sie eine Berichtigung als
 neuen Brief.
+
+## Zahlung zuordnen
+
+Zahlte ein Mitglied, bevor sein Beitrag entstand, ordnen Sie die gebuchte Zahlung nachträglich zu: **Zahlung zuordnen …**
+als erster Eintrag im Menü ⋯ der Beitragszeile, im Mahnlauf unter „Zahlung könnte passen“ oder im Seitenfenster des
+Postens. Der Beitrag steht danach auf „bezahlt“ oder „teilweise bezahlt“; „bezahlt am“ ist der Buchungstag der
+Zahlung, nicht der Tag der Zuordnung. Ein Teilbetrag senkt die Mahnsumme, der Rest bleibt mahnbar. Ein Beitrag, der
+im Lauf noch vorgemerkt ist, lässt sich erst nach dem Beitragslauf zuordnen. Die Prüfungen und den Weg bei einer
+falsch als Spende gebuchten Zahlung beschreibt [Konten und offene Zahlungen](../finanzen/konten-und-offene-zahlungen.md).
+
+Für ein minderjähriges Mitglied mit eingetragener Erziehungsberechtigter gilt auch deren Zahlung, solange das Mitglied
+am Buchungstag noch nicht 18 war und das Geburtsdatum eingetragen ist. Eine Spende der Erziehungsberechtigten steht im
+Dialog als gesperrte Zeile mit Grund.
+
+**Unbegründete Mahnung.** Lag die Zahlung schon vor, als eine Mahnung verschickt wurde, war diese unbegründet: Verzug
+trat nicht ein. Nach dem Zuordnen steht dann oben im Seitenfenster des Postens ein Hinweis mit zwei Wegen:
+**Richtigstellung schreiben …** legt einen Antwortbrief auf die Mahnung als Entwurf in der Akte an, den Sie selbst
+formulieren und wie jeden Brief versenden; **Vermerk an den Mahnbrief** schreibt die Notiz „Zahlung war schon
+eingegangen am …“ an das Mahndokument. Kompass verschickt nichts von selbst. Der Mahnbrief bleibt als Spur in der Akte;
+wird die Zuordnung aufgehoben, verschwindet der Hinweis, und die nächste Stufe setzt dort an, wo die Vermerke stehen.
+

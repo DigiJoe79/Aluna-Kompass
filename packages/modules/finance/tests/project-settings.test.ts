@@ -59,18 +59,18 @@ describe('project finance settings', () => {
     expect(err(await setProjectFinance(f.deps, f.ctx, { projectId: project.id, defaultPurposeId: 'nope' }))).toEqual({ type: 'notFound', entity: 'financePurpose', id: 'nope' });
   });
 
-  it('a line inherits abroad from the purpose or from the project, and can still override it', async () => {
+  it('an expense line inherits abroad from the purpose or from the project, and can still override it', async () => {
     const f = await ledgerFixture();
     const projectAbroad = await seedProject(f.deps, f.userId, 'ausland-projekt');
     unwrap(await setProjectFinance(f.deps, f.ctx, { projectId: projectAbroad.id, abroad: true }));
 
-    const fromProject = unwrap(await saveDraft(f.deps, f.ctx, { entryDate: '2026-03-01', text: 'x', moneyLines: [{ accountId: f.bank.id, amountCents: 1000 }], allocationLines: [{ categoryId: f.donations.id, amountCents: 1000, projectId: projectAbroad.id }] }));
+    const fromProject = unwrap(await saveDraft(f.deps, f.ctx, { entryDate: '2026-03-01', text: 'x', moneyLines: [{ accountId: f.bank.id, amountCents: -1000 }], allocationLines: [{ categoryId: f.programCosts.id, amountCents: -1000, projectId: projectAbroad.id }] }));
     expect(fromProject.allocationLines[0]!.abroad).toBe(true);
 
-    const overridden = unwrap(await saveDraft(f.deps, f.ctx, { entryDate: '2026-03-01', text: 'x', moneyLines: [{ accountId: f.bank.id, amountCents: 1000 }], allocationLines: [{ categoryId: f.donations.id, amountCents: 1000, projectId: projectAbroad.id, abroad: false }] }));
+    const overridden = unwrap(await saveDraft(f.deps, f.ctx, { entryDate: '2026-03-01', text: 'x', moneyLines: [{ accountId: f.bank.id, amountCents: -1000 }], allocationLines: [{ categoryId: f.programCosts.id, amountCents: -1000, projectId: projectAbroad.id, abroad: false }] }));
     expect(overridden.allocationLines[0]!.abroad).toBe(false);
 
-    const fromPurpose = unwrap(await saveDraft(f.deps, f.ctx, { entryDate: '2026-03-01', text: 'x', moneyLines: [{ accountId: f.bank.id, amountCents: 1000 }], allocationLines: [{ categoryId: f.donations.id, amountCents: 1000, purposeId: f.abroadPurpose.id }] }));
+    const fromPurpose = unwrap(await saveDraft(f.deps, f.ctx, { entryDate: '2026-03-01', text: 'x', moneyLines: [{ accountId: f.bank.id, amountCents: -1000 }], allocationLines: [{ categoryId: f.programCosts.id, amountCents: -1000, purposeId: f.abroadPurpose.id }] }));
     expect(fromPurpose.allocationLines[0]!.abroad).toBe(true);
   });
 

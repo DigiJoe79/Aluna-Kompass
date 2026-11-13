@@ -138,6 +138,14 @@ Nachtrag nicht möglich ist: Die Korrektur steht in Prüfpaket und Kassenbericht
 des Folgejahres unter „Korrekturen an Vorjahren“, und danach festgeschriebene
 Berichte tragen „Nach der Prüfung geändert, berichtet in …“.
 
+Unter „11 Korrekturen an Vorjahren“ nennt der Kassenbericht auch jede
+Berichtigung der Steuererklärung und jede Prüfung ohne Berichtigung, im Jahr
+ihres Tags — der Abschnitt erscheint dann auch ohne Buchungskorrektur. War das
+Jahr beim Eintragen schon abgeschlossen, steht der Satz im ersten offenen Jahr
+danach, mit „nachgetragen“. Ändert ein Wiederöffnen die Werte einer abgegebenen
+Steuererklärung, meldet die Seite [Steuererklärung](steuererklaerung.md) einen
+Prüfanlass; bleiben die Werte gleich, keinen.
+
 ## Mit einem Agenten
 
 Einen Agenten können Sie den Stand lesen lassen (Werkzeuge

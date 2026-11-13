@@ -93,7 +93,7 @@ export async function linkTransactionAction(rawTransactionId: string, entryId: s
   });
 }
 
-/** Reiter „Vom Agenten vorbereitet“: ein Mensch prüft den Entwurf. */
+/** Reiter „Vom Agenten vorbereitet“ (jeder ungeprüfte Entwurf mit gebundenem Kontoumsatz): ein Mensch prüft den Entwurf. */
 export async function markReviewedAction(id: string): Promise<ActionState> {
   return guardAction('(shell)/finance/work/actions.ts#markReviewedAction', async () => {
     const t = await getTranslations();

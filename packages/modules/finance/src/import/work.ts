@@ -12,8 +12,10 @@ import { openSuggestionsInternal, type SuggestionView } from './suggestions';
  * **Zuzuordnen** (`open`) und **Unsicher** (`unsure`) teilen die offenen
  * Kontoumsätze nach der Sicherheit ihres Vorschlags (Annahme 1: unsicher =
  * `confidence: 'unsure'`, wozu auch „kein Vorschlag“ zählt); **Vom Agenten
- * vorbereitet** (`agent`) sind ungeprüfte MCP-Entwürfe, die einen Kontoumsatz
- * binden (Annahme 11); **Geprüft, nicht festgeschrieben** (`reviewed`) alle
+ * vorbereitet** (`agent`) sind alle ungeprüften Entwürfe, die einen Kontoumsatz
+ * binden, gleich über welchen Kanal sie entstanden (Annahme 11; seit 0.5.2,
+ * weil ein Oberflächen-Entwurf oder ein über MCP geänderter geprüfter Entwurf
+ * sonst in keinem Reiter stand); **Geprüft, nicht festgeschrieben** (`reviewed`) alle
  * geprüften Entwürfe; **Fällig** (`due`) die überfälligen offenen Zahlungen
  * beider Richtungen (Annahme 12). Dubletten-Kandidaten bleiben auf
  * „Hochgeladene Auszüge“ und werden nur gezählt.
@@ -81,12 +83,12 @@ function transactionItemsInternal(deps: Deps, tab: 'open' | 'unsure', accountId?
     .map(({ raw, suggestion }) => ({ type: 'transaction', transaction: rawTransactionViewInternal(deps.db, raw), suggestion: summaryOf(suggestion) }));
 }
 
-/** Entwürfe mit ihren Geldzeilen; `agent` = ungeprüft über MCP mit gebundenem Kontoumsatz, `reviewed` = geprüft. */
+/** Entwürfe mit ihren Geldzeilen; `agent` = ungeprüft mit gebundenem Kontoumsatz (jeder Kanal), `reviewed` = geprüft. */
 function entryItemsInternal(db: DbOrTx, tab: 'agent' | 'reviewed', accountId?: string): WorkItem[] {
   const drafts: FinanceEntryRow[] = db
     .select()
     .from(financeEntries)
-    .where(and(eq(financeEntries.status, 'draft'), tab === 'agent' ? and(eq(financeEntries.createdChannel, 'mcp'), isNull(financeEntries.reviewedAt)) : isNotNull(financeEntries.reviewedAt)))
+    .where(and(eq(financeEntries.status, 'draft'), tab === 'agent' ? isNull(financeEntries.reviewedAt) : isNotNull(financeEntries.reviewedAt)))
     .orderBy(asc(financeEntries.entryDate), asc(financeEntries.createdAt))
     .all();
   if (drafts.length === 0) return [];

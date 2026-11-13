@@ -1,10 +1,21 @@
-import { mkdtempSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { createTestDeps, ctxWith, insertUser } from '@kompass/core/testing';
 import { schema, unwrap } from '@kompass/core';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { sitePublishes } from '../src/schema';
+
+// Jeder Temp-Ordner dieser Datei wird nach dem Fall wieder gelöscht.
+const tempDirs: string[] = [];
+const tempDir = (prefix: string): string => {
+  const d = mkdtempSync(path.join(tmpdir(), prefix));
+  tempDirs.push(d);
+  return d;
+};
+afterEach(() => {
+  for (const d of tempDirs.splice(0)) rmSync(d, { recursive: true, force: true });
+});
 
 const fake = vi.hoisted(() => ({ run: null as unknown }));
 vi.mock('../src/pipeline/run-state', async (orig) => ({ ...(await orig<object>()), runningSiteJob: () => fake.run }));
@@ -12,7 +23,7 @@ const { siteJobOverview, siteJobResult, tailLog, trimPaths } = await import('../
 
 const files = (n: number) => Array.from({ length: n }, (_, i) => `_astro/bilder/hund-${String(i).padStart(4, '0')}-1200.abcdef12.webp`);
 const env = () => {
-  const d = mkdtempSync(path.join(tmpdir(), 'job-view-'));
+  const d = tempDir('job-view-');
   return { publicUrl: null, staging: true, deploy: null, templateDir: d, cacheDir: d, previewDir: d };
 };
 const write = (e: { cacheDir: string }, kind: string, record: object) => writeFileSync(path.join(e.cacheDir, `${kind}-result.json`), JSON.stringify(record));

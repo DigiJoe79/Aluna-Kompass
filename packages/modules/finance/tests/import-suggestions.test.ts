@@ -7,7 +7,9 @@ import { learnContactIbanInternal, linkContactIban } from '../src/import/contact
 import { bookFromTransaction } from '../src/import/book';
 import { listImportRules, saveImportRule } from '../src/import/rules';
 import { suggestForTransaction } from '../src/import/suggestions';
+import { createProject } from '@kompass/module-projects';
 import { createAccount } from '../src/ledger/accounts';
+import { createPurpose } from '../src/ledger/purposes';
 import { moveCash } from '../src/ledger/cash';
 import { setCategoryActive } from '../src/ledger/categories';
 import { saveDraft } from '../src/ledger/entries';
@@ -316,6 +318,44 @@ describe('suggestForTransaction — payment-service fees and donations without i
     // Ein zurückerstatteter Gebührenanteil geht auf dieselbe Kategorie.
     const refundedFee = insertRaw(f, run, { accountId: account.id, amountCents: 160, iban: null, purpose: 'Gebühr: Rückzahlung', bankReference: 'TX9:fee', lineIndex: 2 });
     expect(await suggest(f, refundedFee)).toMatchObject({ kind: 'fee', draft: { allocationLines: [{ categoryId: f.fees.id, amountCents: 160 }] } });
+  });
+
+  /**
+   * Befund B4 (0.5.2, Joe 2026-11-05): Die Gebühr folgt der Bindung ihrer Zahlung (Kennung ohne `:fee`, dasselbe Konto).
+   * Einheitlich Projekt und Zweck: beides, sicher. Zahlung noch nicht gebucht oder uneinheitlich: unsicher, mit Hinweis.
+   */
+  it('lets the fee follow project and purpose of its booked payment; unbooked or mixed is unsure with a hint', async () => {
+    const f = await ledgerFixture();
+    const account = await service(f);
+    const project = unwrap(await createProject(f.deps, ctxWith(['projects.manage'], f.userId), { slug: 'hundehilfe', name: { de: 'Hundehilfe' }, type: 'ongoing' as const, summary: { de: '' }, body: { de: '' } }));
+    const other = unwrap(await createPurpose(f.deps, f.ctx, { name: 'Futter' }));
+    const run = insertRun(f, account.id);
+    const pay = (ref: string, amountCents: number, lineIndex: number) => insertRaw(f, run, { accountId: account.id, amountCents, iban: null, purpose: 'Spende', bankReference: ref, lineIndex });
+    const feeOf = (ref: string, lineIndex: number) => insertRaw(f, run, { accountId: account.id, amountCents: -81, iban: null, purpose: 'Gebühr: Spende', bankReference: `${ref}:fee`, lineIndex });
+    const book = (raw: string, lines: { amountCents: number; projectId?: string; purposeId?: string }[]) =>
+      saveDraft(f.deps, f.ctx, { entryDate: '2026-03-05', text: 'Spende', moneyLines: [{ accountId: account.id, amountCents: lines.reduce((s, l) => s + l.amountCents, 0), rawTransactionId: raw }], allocationLines: lines.map((l) => ({ categoryId: f.donations.id, ...l })) });
+
+    // Einheitlich gebunden: Projekt und Zweck gehen mit, sicher.
+    unwrap(await book(pay('TX1', 2000, 1), [{ amountCents: 1500, projectId: project.id, purposeId: f.abroadPurpose.id }, { amountCents: 500, projectId: project.id, purposeId: f.abroadPurpose.id }]));
+    const sure = await suggest(f, feeOf('TX1', 2));
+    expect(sure).toMatchObject({ kind: 'fee', confidence: 'sure', hints: [], draft: { allocationLines: [{ categoryId: f.fees.id, amountCents: -81, projectId: project.id, purposeId: f.abroadPurpose.id }] } });
+
+    // Gebunden ohne Projekt und Zweck: sicher, ohne beides.
+    unwrap(await book(pay('TX2', 2000, 3), [{ amountCents: 2000 }]));
+    const free = await suggest(f, feeOf('TX2', 4));
+    expect(free).toMatchObject({ kind: 'fee', confidence: 'sure', hints: [] });
+    expect(free.draft!.allocationLines[0]).not.toHaveProperty('projectId');
+    expect(free.draft!.allocationLines[0]).not.toHaveProperty('purposeId');
+
+    // Uneinheitlich: unsicher, ohne Projekt und Zweck, mit Hinweis.
+    unwrap(await book(pay('TX3', 2000, 5), [{ amountCents: 1000, purposeId: f.abroadPurpose.id }, { amountCents: 1000, purposeId: other.id }]));
+    const mixed = await suggest(f, feeOf('TX3', 6));
+    expect(mixed).toMatchObject({ kind: 'fee', confidence: 'unsure', hints: ['feePaymentMixed'], draft: { allocationLines: [{ categoryId: f.fees.id, amountCents: -81 }] } });
+    expect(mixed.draft!.allocationLines[0]).not.toHaveProperty('purposeId');
+
+    // Noch nicht gebucht: unsicher, mit Hinweis.
+    pay('TX4', 2000, 7);
+    expect(await suggest(f, feeOf('TX4', 8))).toMatchObject({ kind: 'fee', confidence: 'unsure', hints: ['feePaymentUnbooked'] });
   });
 
   it('finds the contact of an incoming line without iban by e-mail (sure) or by a unique name (unsure)', async () => {

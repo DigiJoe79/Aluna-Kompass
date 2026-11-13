@@ -41,9 +41,9 @@ Tag aus Gremien.
 Fehlt eine Pflichtangabe, steht in der Tabelle „fehlt“, und die Werte lassen sich
 nicht festschreiben.
 
-Ist die Erklärung abgegeben, stehen die Angaben fest: Die abgegebene Fassung
-soll die festgeschriebene bleiben. Um etwas zu ändern, nehmen Sie die Abgabe
-zurück.
+Die Angaben bleiben auch nach der Abgabe änderbar. Ist die Erklärung abgegeben,
+fragt Kompass vor dem Speichern nach: Ändert die Angabe einen Wert, meldet
+Kompass einen Prüfanlass (§ 153 AO, siehe unten).
 
 ## Werte übertragen
 
@@ -84,9 +84,70 @@ Kommt der Bescheid, legen Sie ihn mit „Ablegen …“ an; er steht dann auch u
 den Bescheiden der Spenden, mit Gültigkeit und Ablauf. Hinweise aus dem Bescheid
 merken Sie sich mit „Wiedervorlage anlegen“.
 
-Ändert sich nach der Abgabe etwas an einem Jahr des Zeitraums, gilt § 153 AO
-auch für den steuerbefreiten Verein: Die Erklärung ist zu berichtigen. Kompass
-nennt das beim Wiederöffnen eines Jahres.
+„Abgegeben am“ bleibt immer der Tag der ersten Abgabe: Nach ihm richten sich
+Frist, Verspätung und Schritt 12 des Jahresabschlusses.
+
+## Berichtigen (§ 153 AO)
+
+Erkennt der Verein nach der Abgabe, dass die Erklärung unrichtig oder
+unvollständig ist und es dadurch zu einer Steuerverkürzung kommen kann, muss er
+das unverzüglich anzeigen und die Erklärung berichtigen — auch als
+steuerbefreiter Verein.
+
+**Prüfanlass.** Mit der Abgabe hält Kompass die Werte der Anlage Gem und die
+Beträge der Beilagen aus Kompass fest (EÜR für das Finanzamt,
+Vermögensübersicht, Rücklagenspiegel). Weichen die Werte heute davon ab, steht
+über den Werten ein Hinweis mit den geänderten Stellen, etwa „Zeile 9 (2025),
+Beilage EÜR 2025“, und unter [Fristen und Schwellen](fristen-und-schwellen.md)
+die Frist „unverzüglich“. Wiederöffnen, neu festschreiben oder eine umbenannte
+Kategorie lösen nichts aus, solange die Werte gleich bleiben. Ob es zu einer
+Verkürzung kommen kann, entscheidet der Vorstand; Kompass sieht nur, dass sich
+Werte geändert haben.
+
+**Was Kompass nicht prüft.** Beilagen von außen (Tätigkeitsbericht, Protokolle,
+Satzung) und Umstände außerhalb der Buchhaltung vergleicht Kompass nicht. Fällt
+die Steuerbefreiung nach der Abgabe weg, etwa durch eine Mittelfehlverwendung
+oder eine Satzung, die gegen die Vermögensbindung verstößt, besteht eine eigene
+Anzeigepflicht (§ 153 Abs. 2 AO). Bei Erklärungen, die vor dieser Fassung
+abgegeben wurden, kennt Kompass die abgegebenen Werte nicht und meldet keinen
+Prüfanlass; eine Berichtigung lässt sich trotzdem eintragen.
+
+**Drei Wege.** Im Abschnitt „Abgabe“ stehen bei offenem Prüfanlass drei Knöpfe:
+
+- **Anzeige eintragen …** — der Tag, an dem Sie dem Finanzamt die Änderung
+  angezeigt haben. Die Anzeige geht formlos; zum Nachweis schriftlich oder als
+  „Sonstige Nachricht“ in Mein ELSTER. Legen Sie das Schreiben danach in der
+  Zeile „Anzeige an das Finanzamt“ in der Akte ab. Die Frist bleibt offen und
+  heißt dann „angezeigt am …, Berichtigung folgt“.
+- **Berichtigung eintragen …** — die berichtigte Erklärung als zweite Abgabe,
+  mit eigenem Tag. Sie braucht eine festgeschriebene Fassung der Werte von heute.
+  In Mein ELSTER übermitteln Sie die Erklärung vollständig neu und teilen dem
+  Finanzamt mit, dass es eine Berichtigung nach § 153 AO ist und welche Zeilen
+  sich geändert haben. Geänderte Beilagen gehen über die Belegnachreichung. Ist
+  schon ein Bescheid ergangen, gilt derselbe Weg; die Berichtigung wirkt dann
+  zugleich als Antrag auf Änderung. Unter „Berichtigt am“ steht der Tag, die
+  Dokumentzeilen gehören dann zur Berichtigung.
+- **Ohne Berichtigung schließen …** — wenn der Vorstand geprüft hat, dass es zu
+  keiner Verkürzung kommen kann. Die Begründung ist Pflicht, ein Beleg aus der
+  Akte (etwa ein Vorstandsbeschluss) optional. Name, Tag und Begründung stehen
+  unter „Geprüft am“. Das ist eine Entscheidung des Vorstands und geht nicht über
+  einen Agenten. Ändert sich danach erneut ein Wert, erscheint ein neuer
+  Prüfanlass; eine Berichtigung bleibt eintragbar.
+
+**Wer handeln muss.** Die Pflicht trifft jedes Mitglied des Vorstands nach § 26
+BGB, sobald es den Fehler kennt. Aufgabenteilung und Gesamtvertretung ändern
+daran nichts. Wer die Berichtigung übermittelt, regelt der Verein; die Pflicht
+wartet nicht auf einen Beschluss. Die Berichtigung schuldet der Vorstand nach
+§ 26 BGB. Wer die Frist sieht und nicht dazugehört, informiert ihn sofort. Wer
+nach dem Ausscheiden einen Fehler in einer Erklärung aus seiner Amtszeit
+bemerkt, sagt es dem amtierenden Vorstand.
+
+**Rechenschaft.** Jede Berichtigung und jede Prüfung ohne Berichtigung steht im
+[Kassenbericht](jahresabschluss.md) des Jahres unter „11 Korrekturen an
+Vorjahren“ — ohne Name und Begründung. Offene Prüfanlässe stehen in der
+Übergabeliste der [Amtsübergabe](amtsuebergabe.md). Eine erteilte Entlastung
+bleibt. Sie deckt nur, was die MV aus den vorgelegten Unterlagen erkennen
+konnte, und berührt die Pflichten gegenüber dem Finanzamt nicht.
 
 ## Außenprüfung und Aufbewahrung
 

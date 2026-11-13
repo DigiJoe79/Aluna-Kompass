@@ -4,6 +4,7 @@ import { cancelOriginOpenItem, countingPaymentsInternal, financeOpenItems, openC
 import { eq, inArray, ne } from 'drizzle-orm';
 import { z } from 'zod';
 import { dunningLevelsSplit } from './dunning-levels';
+import { unfoundedNoticesInternal } from './dunning';
 import { typeAt } from './fee-agreement';
 import { periodLabel } from './fee-period';
 import { chargeableIn, computeChargesFor, FEE_ORIGIN } from './fee-run';
@@ -61,7 +62,10 @@ export interface FeeView extends FeeStateInfo {
   paidOn: string | null;
   /** R16: der Zahlweg am Beitrag (Plan N1 E3). */
   paymentMethod: PaymentMethod;
+  /** Spec Zahlung zuordnen § 3.4a: verschickte Mahnungen nach der Zahlung — berechnet, nie gespeichert. */
+  unfoundedNotices: UnfoundedNotice[];
 }
+export type UnfoundedNotice = ReturnType<typeof unfoundedNoticesInternal>[number];
 
 /** Die Ansichten der lebenden Beiträge (nicht ersetzt, nicht übersprungen) mit wenigen Abfragen. */
 export function feeViewsInternal(db: DbOrTx, deps: Deps, charges: FeeChargeRow[]): FeeView[] {
@@ -96,6 +100,8 @@ export function feeViewsInternal(db: DbOrTx, deps: Deps, charges: FeeChargeRow[]
       dunningLevelBeforeDeferral: null as string | null,
       paidOn: item && settledCents > 0 ? (countingPaymentsInternal(db, item.id).map((p) => p.entryDate).sort().at(-1) ?? null) : null,
       paymentMethod: c.paymentMethod,
+      // Nur ein (teilweise) bezahlter Beitrag kann eine unbegründete Mahnung haben — die Abfrage bleibt so selten.
+      unfoundedNotices: item && settledCents > 0 ? unfoundedNoticesInternal(deps, db, c.id) : [],
     };
   });
   const levels = dunningLevelsSplit(db, deps, views);
@@ -255,4 +261,28 @@ export function membersDirectDebitWaive(tx: DbOrTx, deps: Deps, ctx: CallContext
   if (!found.ok) return found;
   if (found.value.openCents <= 0) return membersConflict('feeChargeNotOpen');
   return waiveChargeInternal(tx, deps, ctx, found.value);
+}
+
+/** Der Tag des 18. Geburtstags (`YYYY-MM-DD`), am 29. Februar im Nicht-Schaltjahr der 1. März. */
+function adultFrom(birthDate: string): string {
+  const year = Number(birthDate.slice(0, 4)) + 18;
+  const monthDay = birthDate.slice(5);
+  const leap = (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
+  return monthDay === '02-29' && !leap ? `${year}-03-01` : `${year}-${monthDay}`;
+}
+
+/**
+ * Haken `payerContacts` der Herkunft `memberFeeCharge` (Spec Zahlung zuordnen § 3.2b): Die Zahlung der eingetragenen
+ * Erziehungsberechtigten tilgt den Beitrag (§ 267 BGB) — aber nur, wenn das Geburtsdatum bekannt ist und der Buchungstag
+ * vor dem 18. Geburtstag liegt. Ohne Geburtsdatum keine Zeitbindung, also keine Erweiterung.
+ */
+export function membersPayerContacts(_deps: Deps, db: DbOrTx, input: { originId: string; paymentDate: string }): string[] {
+  const row = db
+    .select({ guardianContactId: memberMemberships.guardianContactId, birthDate: memberMemberships.birthDate })
+    .from(memberFeeCharges)
+    .innerJoin(memberMemberships, eq(memberFeeCharges.membershipId, memberMemberships.id))
+    .where(eq(memberFeeCharges.id, input.originId))
+    .get();
+  if (!row?.guardianContactId || !row.birthDate) return [];
+  return input.paymentDate < adultFrom(row.birthDate) ? [row.guardianContactId] : [];
 }

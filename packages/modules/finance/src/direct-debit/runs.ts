@@ -763,12 +763,13 @@ export async function buildDirectDebitFile(deps: Deps, ctx: CallContext, input: 
       return null;
     },
   });
+  // Eine veraltete Datei (M15) ist mit dem Zurücksetzen oben verworfen: ihre Dateien gehen, auch wenn dieser Anlauf
+  // verliert — der Gewinner sah schon den Entwurf ohne Datei und kennt sie nicht.
+  if (outdated) await deleteRunFilesInternal(deps, run.fileName);
   if (!issued.ok) {
     await deleteRunFilesInternal(deps, fileName);
     return issued;
   }
-  // Eine veraltete Datei (M15) ist ersetzt: ihre Dateien gehen.
-  if (run.fileName && run.fileName !== fileName) await deleteRunFilesInternal(deps, run.fileName);
   return ok(runViewInternal(deps.db, deps, runRowInternal(deps.db, run.id)!));
 }
 

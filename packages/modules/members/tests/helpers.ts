@@ -93,3 +93,17 @@ export async function payOpenItem(deps: MembersDeps, openItemId: string, amountC
 export function enteredOn(deps: MembersDeps, day: string): void {
   deps.db.update(financeOpenItems).set({ itemDate: day }).run();
 }
+
+/**
+ * Spec Zahlung zuordnen: eine festgeschriebene Beitragszahlung des Kontakts **ohne** Ausgleich — sie wartet auf das
+ * Zuordnen. Liefert die Geldzeile.
+ */
+export async function bookFreePayment(deps: MembersDeps, contactId: string, amountCents: number, entryDate: string): Promise<string> {
+  const ctx: CallContext = { ...systemContext(), permissions: new Set(FINANCE_PERMISSIONS) };
+  const year = entryDate.slice(0, 4);
+  if (!deps.db.select().from(financeFiscalYears).get()) unwrap(await createFirstFiscalYear(deps, ctx, { startsOn: `${year}-01-01`, endsOn: `${year}-12-31` }));
+  const bank = deps.db.select().from(financeAccounts).get() ?? unwrap(await createAccount(deps, ctx, { name: 'Vereinskonto', kind: 'bank', iban: 'DE23999999990000202051', isMain: true }));
+  const categoryId = categoryIdByKeyInternal(deps.db, 'membership-fees')!;
+  const entry = unwrap(await bookEntry(deps, ctx, { entryDate, text: 'Beitrag', moneyLines: [{ accountId: bank.id, amountCents }], allocationLines: [{ categoryId, amountCents, contactId }] }));
+  return entry.moneyLines[0]!.id;
+}

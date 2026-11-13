@@ -21,6 +21,8 @@ import { Disclosure } from '@/components/ui/disclosure';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { DocumentPicker } from '@/app/(shell)/dms/document-picker';
+import type { PickedDocument } from '@/app/(shell)/dms/search-action';
 import type { ActionState } from '@/lib/actions';
 import { formatAmount, formatEuro, parseAmount } from '@/lib/finance/amount';
 import { saveFeeScheduleAction } from './actions';
@@ -40,7 +42,7 @@ export interface ScheduleView {
   id: string;
   validFrom: string;
   resolvedOn: string | null;
-  resolutionDocument: { id: string; number: string | null } | null;
+  resolutionDocument: { id: string; number: string | null; subject?: string } | null;
   /** G7: der Beschluss in Gremien, beschriftet über `resolveRecordLabel` — ohne Leserecht ohne Link. */
   resolutionRef?: { label: string; href: string | null } | null;
   note: string | null;
@@ -59,9 +61,10 @@ export interface ScheduleType {
  * Tabelle Art · Betrag · Rhythmus · Mindestbetrag. Oben der geltende Stand, ein künftiger mit Marke „kommt“, frühere
  * eingeklappt. „Neuen Stand anlegen …“ öffnet einen Dialog `lg`, vorbelegt mit dem letzten Stand; ein Stand mit
  * angelegten Beiträgen ist fest — die Ablehnung bietet „Neuen Stand anlegen“; an ihm lässt sich nur der Beschluss
- * nachtragen (Backlog 97).
+ * nachtragen (Backlog 97), Tag wie Dokument der Akte (Backlog 99) — das Dokument nur mit Leserecht auf die Akte
+ * (`canPickDocument`), sonst bleibt es, wie es ist.
  */
-export function SchedulePanel({ schedules, types, today }: { schedules: ScheduleView[]; types: ScheduleType[]; today: string }) {
+export function SchedulePanel({ schedules, types, today, canPickDocument = false }: { schedules: ScheduleView[]; types: ScheduleType[]; today: string; canPickDocument?: boolean }) {
   const t = useTranslations('members.admin.schedule');
   const ti = useTranslations('members.interval');
   const tt = useTranslations('members.admin.types');
@@ -149,7 +152,7 @@ export function SchedulePanel({ schedules, types, today }: { schedules: Schedule
     return (
       <>
         <EmptyState title={t('empty')} text={t('emptyText')} action={<Button type="button" onClick={() => setEditing('new')} data-testid="schedule-new">{t('newScale')}</Button>} />
-        {editing ? <ScheduleDialog schedule={null} prefill={null} types={types} today={today} onClose={() => setEditing(null)} onNew={() => setEditing('new')} /> : null}
+        {editing ? <ScheduleDialog schedule={null} prefill={null} types={types} today={today} canPickDocument={canPickDocument} onClose={() => setEditing(null)} onNew={() => setEditing('new')} /> : null}
       </>
     );
   }
@@ -200,7 +203,7 @@ export function SchedulePanel({ schedules, types, today }: { schedules: Schedule
         </Disclosure>
       ) : null}
       <p className="text-meta text-muted-ink">{t('locked')}</p>
-      {editing ? <ScheduleDialog schedule={editing === 'new' ? null : editing} prefill={editing === 'new' ? latest : editing} types={types} today={today} onClose={() => setEditing(null)} onNew={() => setEditing('new')} /> : null}
+      {editing ? <ScheduleDialog schedule={editing === 'new' ? null : editing} prefill={editing === 'new' ? latest : editing} types={types} today={today} canPickDocument={canPickDocument} onClose={() => setEditing(null)} onNew={() => setEditing('new')} /> : null}
     </div>
   );
 }
@@ -215,12 +218,14 @@ interface RuleDraft {
   admissionFeeCents: number | null;
 }
 
-function ScheduleDialog({ schedule, prefill, types, today, onClose, onNew }: { schedule: ScheduleView | null; prefill: ScheduleView | null; types: ScheduleType[]; today: string; onClose: () => void; onNew: () => void }) {
+function ScheduleDialog({ schedule, prefill, types, today, canPickDocument, onClose, onNew }: { schedule: ScheduleView | null; prefill: ScheduleView | null; types: ScheduleType[]; today: string; canPickDocument: boolean; onClose: () => void; onNew: () => void }) {
   const t = useTranslations('members.admin.schedule');
   const ti = useTranslations('members.interval');
   const router = useRouter();
   const [validFrom, setValidFrom] = useState(schedule?.validFrom ?? `${Number(today.slice(0, 4)) + 1}-01-01`);
   const [resolvedOn, setResolvedOn] = useState(schedule?.resolvedOn ?? '');
+  const stored = schedule?.resolutionDocument ?? null;
+  const [resolutionDocument, setResolutionDocument] = useState<PickedDocument | null>(stored ? { id: stored.id, number: stored.number, subject: stored.subject ?? '', phase: 'issued' } : null);
   // Ein fester Stand: Tag und Regeln bleiben, wie sie sind; nur der Beschluss lässt sich nachtragen (Backlog 97).
   const fixed = schedule?.locked ?? false;
   const draft = (r: ScheduleRule): RuleDraft => ({ typeId: r.typeId, amount: formatAmount(r.amountCents), interval: r.interval, minimum: r.minimum, allowedIntervals: r.allowedIntervals, admissionFeeCents: r.admissionFeeCents });
@@ -250,7 +255,7 @@ function ScheduleDialog({ schedule, prefill, types, today, onClose, onNew }: { s
       ...(schedule ? { id: schedule.id } : {}),
       validFrom,
       resolvedOn: resolvedOn || null,
-      resolutionDocumentId: schedule?.resolutionDocument?.id ?? null,
+      resolutionDocumentId: resolutionDocument?.id ?? null,
       note: schedule?.note ?? null,
       rules:
         fixed && schedule
@@ -289,6 +294,7 @@ function ScheduleDialog({ schedule, prefill, types, today, onClose, onNew }: { s
             <FormField id="schedule-resolved-on" label={t('resolvedOn')} size="s">
               <Input id="schedule-resolved-on" type="date" value={resolvedOn} onChange={(e) => setResolvedOn(e.target.value)} />
             </FormField>
+            {canPickDocument ? <DocumentPicker id="schedule-resolution-document" name="resolutionDocumentId" label={t('resolutionDocument')} value={resolutionDocument} onChange={setResolutionDocument} /> : null}
           </FormGrid>
           <div className="overflow-hidden rounded-md border border-line">
             <Table>

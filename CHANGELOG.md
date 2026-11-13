@@ -9,6 +9,70 @@ die Nummern folgen [Semantic Versioning](https://semver.org/lang/de/). Vor
 1.0.0 kann jede Minor-Fassung Brüche enthalten — was bricht, steht unter
 **Geändert** mit dem, was zu tun ist.
 
+## [0.5.2] - 2026-11-13
+
+Neu sind zwei Funktionen der Finanzen: die Berichtigung einer schon abgegebenen Steuererklärung (§ 153 AO) und das
+nachträgliche Zuordnen einer gebuchten Zahlung zu einer offenen Forderung. Dazu kommen Fehlerbehebungen aus dem Alltag in
+Kontoauszug, Arbeitsliste, Buchung und Beiträgen. Eine Migration (`0014_finance_0_5_2`, `migrationCount` 15) legt die
+Tabellen der Berichtigung an, ergänzt die Ausgleiche offener Zahlungen und korrigiert den Dublettenschlüssel schon als
+„eigene Zahlung“ übernommener Kontoumsätze. Nichts bricht. Wer einen Auszug wegen dieses Fehlers doppelt eingelesen hat,
+verwirft ihn nach dem Update und liest ihn neu ein. Mehr im Betriebshandbuch, „Von 0.5.1 auf 0.5.2“.
+
+### Neu
+
+- **Steuererklärung berichtigen (§ 153 AO):** Ändern sich nach der Abgabe Werte der Anlage Gem oder der Beilagen aus
+  Kompass, meldet die Seite Steuererklärung einen Prüfanlass mit den geänderten Zeilen, und unter Fristen steht er als
+  „unverzüglich“. Sie tragen die Berichtigung als zweite Abgabe ein, halten die Anzeige an das Finanzamt fest oder
+  schließen den Anlass mit Begründung ohne Berichtigung. Wiederöffnen ohne geänderte Werte meldet nichts mehr; der Tag
+  der ersten Abgabe bleibt stehen. Kassenbericht und Übergabeliste nennen Berichtigungen und offene Anlässe, die
+  Übergabeliste auch fällige Berichtigungen der Umsatzsteuer. Die Angaben zur Anlage Gem lassen sich nach der Abgabe
+  mit Rückfrage ändern.
+- **Zahlung zuordnen:** Eine schon gebuchte Einnahme lässt sich nachträglich einer offenen Forderung zuordnen, ganz
+  oder in Teilen — am Posten, an der Beitragszeile und im Mahnlauf unter „Zahlung könnte passen“. Die Buchung bleibt
+  unverändert, die Zuordnung steht im Protokoll und lässt sich aufheben. Eine als Spende gebuchte Zahlung wird nie zum
+  Beitrag. Bei Minderjährigen zählt die Zahlung der Erziehungsberechtigten bis zum 18. Geburtstag. War eine Mahnung
+  danach unbegründet, bietet das Seitenfenster eine Richtigstellung und einen Vermerk am Mahnbrief an.
+
+### Sicherheit
+
+- Next.js auf 16.4.5 mit sieben Korrekturen, die Kompass nach unserer Prüfung nicht direkt betreffen. Die Erkennung des
+  Dateityps beim Hochladen ist robuster gegen präparierte Dateien, der XML-Leser für Kontoauszüge und E-Rechnungen auf
+  5.12.0 aktualisiert.
+
+### Geändert
+
+- **Spendenbuch:** Der Grund „Sonstige“ in der Abstimmung heißt jetzt „Noch nicht bestätigt“. Bescheinigt eine
+  Bestätigung weniger als die Zuwendung nach Rückgaben, steht das als eigener Grund „Weniger bestätigt als gespendet“
+  mit Link zu „Zu korrigieren“.
+
+- **Beitragsordnung:** Den Beschluss eines Stands wählen Sie jetzt im Dialog aus der Akte, auch an einem festen Stand
+  über **Bearbeiten …**. Bisher ließ sich das Dokument nur über einen Agenten anhängen.
+
+### Behoben
+
+- **Kontakt, Bankverbindungen:** Die IBAN steht auf breiten Bildschirmen wieder in einer Zeile. Neben langen Angaben zu
+  Herkunft und „Auch bei“ brach sie bisher in einzelne Vierergruppen untereinander um.
+- **Mitgliedsart am Eintrittstag wechseln:** Ein Wechsel mit dem Eintrittstag als Datum wirkt jetzt wie ein Eintritt mit
+  der neuen Art; der Beitrag des Eintrittszeitraums folgt der eingestellten Regel fürs Eintrittsjahr. Bisher wurden die
+  Beiträge der alten Art ersetzt und für die neue keiner angelegt.
+- **Agenten (MCP):** Verstößt ein Aufruf gegen das Schema eines Werkzeugs (etwa ein Zeitraum „2026-Q5“), kommt die
+  Meldung jetzt deutsch und je Feld wie jede andere Prüfmeldung. Bisher war es ein englischer Text mit regulärem Ausdruck.
+- **Kontoauszug einlesen:** Eine Zeile, die beim Einlesen zurückgehalten und dann als „eigene Zahlung“ übernommen
+  wurde, erkennt Kompass in einem späteren Auszug desselben Zeitraums wieder. Bisher kam sie dort ein zweites Mal als
+  neuer Kontoumsatz herein. Die Migration richtet schon übernommene Zeilen mit; ein bereits doppelt eingelesener
+  Auszug lässt sich verwerfen und nach dem Update neu einlesen.
+- **Arbeitsliste, „Vom Agenten vorbereitet“:** Der Reiter zeigt jetzt jeden ungeprüften Entwurf, der einen Kontoumsatz
+  bindet, gleich wer ihn angelegt hat. Ein geprüfter Entwurf, den ein Agent danach änderte, oder ein am Bildschirm
+  ungeprüft gespeicherter Entwurf stand bisher in keinem Reiter.
+- **„Wird im Ausland verwendet“:** Kompass übernimmt das Merkmal aus Zweck oder Projekt nur noch an Ausgaben, nie an einer
+  Spende auf ein Auslandsprojekt, und der Auslandsbericht nimmt nur Ausgaben auf. Die Buchungsmaske übernimmt das Merkmal
+  jetzt auch: Bisher bekam eine dort gebuchte Ausgabe auf ein Auslandsprojekt es nie, nur über „Korrigieren“.
+- **Entwurf bearbeiten:** Spender oder Empfänger steht jetzt mit Namen im Feld. Bisher war das Feld leer, obwohl ein Kontakt
+  gespeichert war; ebenso beim „Ändern“ eines Vorschlags aus der Arbeitsliste.
+- **Gebühr eines Zahlungsdienstes:** Der Vorschlag übernimmt jetzt Projekt und Zweck der Zahlung, zu der die Gebühr gehört.
+  Ist die Zahlung noch nicht gebucht oder auf verschiedene Projekte oder Zwecke verteilt, steht die Gebühr unter „Unsicher“
+  mit einem Hinweis. Bisher bekam sie nur die Kategorie.
+
 ## [0.5.1] - 2026-10-31
 
 Eine Wartungsfassung: Sie behebt vor allem Fehler aus dem Alltag, in Beitragsordnung, Lastschrift, Buchung und Ablehnungstexten.

@@ -26,7 +26,7 @@ const years = [
   { id: 'y24', designation: '2024', startsOn: '2024-01-01', endsOn: '2024-12-31' },
   { id: 'y25', designation: '2025', startsOn: '2025-01-01', endsOn: '2025-12-31' },
 ];
-const period = (over: Record<string, unknown> = {}) => ({ id: 'p1', label: '2024–2025', requestedOn: '2026-01-12', dueOn: '2026-07-31', filedOn: null as string | null, version: 'v1', documents: {}, state: 'open' as const, ...over });
+const period = (over: Record<string, unknown> = {}) => ({ id: 'p1', label: '2024–2025', requestedOn: '2026-01-12', dueOn: '2026-07-31', filedOn: null as string | null, version: 'v1', documents: {}, state: 'open' as const, reviewDue: false, filedFiguresMissing: false, amendmentAllowed: false, amendments: [], checks: [], notifiedOn: null, ...over });
 
 /** Ein Bericht im Zuschnitt des Dienstes: Zeile 10 = nein, fehlende Angaben in 2 und 74. */
 const report: TaxReturnGemReport = {
@@ -77,16 +77,7 @@ describe('Seite Steuererklärung (Rechenschaft D2 Task 9)', () => {
     expect(screen.getByTestId('tax-answers-save')).toBeTruthy();
   });
 
-  it('after the filing the answers stand as text with the reason above the card, the member counts too (Befund 18c)', () => {
-    wrap(<AnswersCard period={{ id: 'p1', version: 'v1', answers: { statuteDate: '2022-03-01' } }} formYear={2025} years={years} replacementReserves={[]} participationReserves={[]} memberSuggestions={{ y25: 12 }} canEdit filed />);
-    expect(screen.queryByTestId('tax-answers-save')).toBeNull();
-    expect(screen.getByTestId('tax-answers-filed')).toBeTruthy();
-    expect(screen.queryByRole('spinbutton')).toBeNull();
-    expect(screen.queryByRole('textbox')).toBeNull();
-    cleanup();
-    wrap(<AnswersCard period={{ id: 'p1', version: 'v1', answers: {} }} formYear={2025} years={years} replacementReserves={[]} participationReserves={[]} memberSuggestions={null} canEdit filed={false} />);
-    expect(screen.queryByTestId('tax-answers-filed')).toBeNull();
-  });
+  // B9 (F1) ersetzt Befund 18c: Nach der Abgabe bleiben die Angaben änderbar, mit Rückfrage — tests/finance-tax-answers-filed.test.tsx.
 
   it('shows one “fehlt” per missing line and no lines 11–24 when line 10 is no', () => {
     wrap(<GemValuesTable data={report} names={{ categories: {}, reserves: {} }} originHrefs={{}} canWriteEntries />);

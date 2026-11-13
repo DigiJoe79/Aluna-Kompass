@@ -7,14 +7,13 @@ import {
   createTaxPeriod,
   fileTaxPeriodDocument,
   linkTaxPeriodDocument,
-  listTaxPeriods,
   saveTaxPeriodAnswers,
   declarationDueOn,
   suggestedDueOn,
   taxPeriodDefaults,
   taxPeriodOfYearInternal,
-  updateTaxPeriod,
 } from '../src/ledger/tax-periods';
+import { listTaxPeriods, updateTaxPeriod } from '../src/reporting/tax-amendments';
 import { financeFiscalYears, financeReports } from '../src/schema';
 import { insertDocument, ledgerFixture, pdfBytes } from './helpers';
 
@@ -120,7 +119,7 @@ describe('Erklärungszeitraum (Rechenschaft D2 Task 2)', () => {
     expect(f.deps.db.select().from(documents).where(eq(documents.id, docId)).get()!.typeKey).toBe('finance-tax-return');
     const links = f.deps.db.select().from(documentLinks).where(eq(documentLinks.documentId, docId)).all().map((l) => `${l.entityType}:${l.entityId}`);
     expect(links).toEqual(expect.arrayContaining([`financeTaxPeriod:${period.id}`, `financeFiscalYear:${y2025}`]));
-    expect(JSON.parse(auditEntry(f.deps, 'finance.taxPeriod.documentFile').params!)).toEqual({ period: '2024–2025', slot: 'filedReturn', documentNumber: filed.documents.filedReturn!.documentNumber });
+    expect(JSON.parse(auditEntry(f.deps, 'finance.taxPeriod.documentFile').params!)).toEqual({ period: '2024–2025', slot: 'filedReturn', documentNumber: filed.documents.filedReturn!.documentNumber, target: 'period' });
     expect(fields(await fileTaxPeriodDocument(f.deps, f.ctx, { id: period.id, slot: 'request', bytes: new TextEncoder().encode('kein pdf') }))).toEqual(['bytes:notPdf']);
 
     const voided = insertDocument(f, { subject: 'Alt', typeKey: 'voucher-invoice', voided: true });

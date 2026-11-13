@@ -1,10 +1,11 @@
 import { unwrap, writeSettingInternal } from '@kompass/core';
-import { readFileSync } from 'node:fs';
+import { readFileSync, rmSync } from 'node:fs';
 import path from 'node:path';
 import { ctxWith, fakeDocumentEngine, systemContext } from '@kompass/core/testing';
 import { finalizeFinanceReport, releaseReportsForFinalizing } from '@kompass/module-finance';
 import { createTranslator } from 'next-intl';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { reportPagesCacheDir } from '@/lib/finance/report-pages';
 import { ledgerFixture } from '../../../packages/modules/finance/tests/helpers';
 
 const state = vi.hoisted(() => ({ session: null as unknown, deps: null as unknown }));
@@ -25,6 +26,12 @@ beforeEach(async () => {
   y2025 = f.years['2025']!.id;
   state.deps = f.deps;
   state.session = { ctx: f.ctx };
+});
+
+// Je Fall ein eigener Datenpfad heisst je Fall ein eigener Ordner für die Seitenbilder: wegräumen.
+const cacheDirs: string[] = [];
+afterEach(() => {
+  for (const d of cacheDirs.splice(0)) rmSync(d, { recursive: true, force: true });
 });
 
 const preview = async (key: string, query: string) => (await import('@/app/finance/reports/[key]/preview/route')).GET(new Request(`http://x/finance/reports/${key}/preview?${query}`), { params: Promise.resolve({ key }) });
@@ -66,6 +73,7 @@ describe('Seitenbild eines Berichts (PdfPages)', () => {
   beforeEach(() => {
     // Der Zwischenspeicher hängt am Datenpfad: je Test ein eigener, sonst bediente ein früherer Lauf diesen.
     vi.stubEnv('DATA_PATH', `/tmp/kompass-report-pages-test-${process.pid}-${Math.random()}`);
+    cacheDirs.push(reportPagesCacheDir());
     // Ein echtes PDF statt des Platzhalters der Test-Deps: `pdftoppm` rastert es wirklich.
     Object.assign(f.deps, { documents: fakeDocumentEngine({ render: async () => ({ bytes: new Uint8Array(readFileSync(REAL_PDF)), pages: 1 }) }) });
   });
@@ -120,6 +128,7 @@ describe('Seitenbild einer festgeschriebenen Fassung (Designer Runde 7, 16a C)',
   const versionImage = async (reportId: string, n: string, query = '') => (await import('@/app/finance/reports/versions/[reportId]/page/[n]/route')).GET(new Request(`http://x/finance/reports/versions/${reportId}/page/${n}?${query}`), { params: Promise.resolve({ reportId, n }) });
   beforeEach(() => {
     vi.stubEnv('DATA_PATH', `/tmp/kompass-report-pages-test-${process.pid}-${Math.random()}`);
+    cacheDirs.push(reportPagesCacheDir());
     Object.assign(f.deps, { documents: fakeDocumentEngine({ render: async () => ({ bytes: new Uint8Array(readFileSync(REAL_PDF)), pages: 1 }) }) });
   });
 

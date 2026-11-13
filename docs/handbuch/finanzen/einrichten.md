@@ -141,7 +141,8 @@ Projekt einen eigenen Abschnitt „Finanzen“: Zielbetrag, Einnahmen, Ausgaben
 und Ergebnis — ohne Namen und ohne Einzelbeträge. Mit dem Recht „Finanzen
 einrichten“ lässt er sich ändern: Zielbetrag, ein Standard-Zweck für
 Spenden an dieses Projekt, ob das Geld im Ausland verwendet wird, und ob
-der Spendenstand auf der Webseite erscheinen soll.
+der Spendenstand auf der Webseite erscheinen soll. „Im Ausland verwendet“
+übernehmen nur Ausgaben an das Projekt, keine Einnahmen.
 
 ## Umsatzsteuer
 

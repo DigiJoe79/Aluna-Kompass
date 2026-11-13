@@ -1,4 +1,4 @@
-import { hasPermission, todayIn } from '@kompass/core';
+import { hasPermission, todayIn, userNamesFor } from '@kompass/core';
 import type { LocalizedText } from '@kompass/core';
 import { displayName, getContact } from '@kompass/module-contacts';
 import { CERTIFIABLE_INCOME_KINDS, correctionTaxCodesInternal, getEntry, getEntryHistory, listAccounts, listCategories, listConfirmations, listFiscalYears, listOpenItems, listPurposes, listVatPeriods, vatLineContextInternal } from '@kompass/module-finance';
@@ -91,11 +91,15 @@ export default async function ViewFinanceEntryPage({ params, searchParams }: { p
   const reversed = entry.status === 'final' && entry.reversedByEntryId !== null;
 
   // „Hängt zusammen mit“ (Task 4): jede offene Zahlung, die eine Geldzeile dieser Buchung begleicht.
-  const settlementItemIds = new Set(entry.moneyLines.flatMap((l) => l.settlements.map((s) => s.openItemId)));
+  const settlementItemIds = new Set(entry.moneyLines.flatMap((l) => [...l.settlements, ...l.releasedSettlements].map((s) => s.openItemId)));
   // Alle Posten lesen, nicht die jüngsten 200: Sonst fehlte einem älteren Posten die Beschriftung.
   const openItemsRes = settlementItemIds.size > 0 ? await readAllPages((page) => listOpenItems(deps, ctx, { state: 'all', ...page }), (v) => v.items) : null;
   const openItemById = new Map((openItemsRes?.ok ? openItemsRes.value : []).filter((i) => settlementItemIds.has(i.id)).map((i) => [i.id, i]));
-  const settlements = entry.moneyLines.flatMap((line) => line.settlements.map((s) => ({ settlement: s, item: openItemById.get(s.openItemId) })));
+  // Spec Zahlung zuordnen (Design 4c): nachträgliche Zuordnungen mit Tag und Person, aufgehobene als Spur dahinter.
+  const settlements = entry.moneyLines.flatMap((line) => [...line.settlements, ...line.releasedSettlements].map((s) => ({ settlement: s, item: openItemById.get(s.openItemId) })));
+  const assignedBy = userNamesFor(deps, settlements.map(({ settlement }) => settlement.assignedByUserId));
+  const stampFormat = dateFormatOf(deps);
+  const dayOfStamp = (stamp: string) => stampFormat.date(stamp);
 
   // Abschnitt „Bestätigung“ (F6a Task 7): je bescheinigungsfähiger Zeile die gültige Bestätigung, gelesen über die Liste des Kontakts.
   const incomeKinds = new Map(categories.map((c) => [c.id, c.incomeKind]));
@@ -304,16 +308,25 @@ export default async function ViewFinanceEntryPage({ params, searchParams }: { p
                   <div className="space-y-2">
                     <ul className="space-y-1.5 text-meta">
                       {settlements.map(({ settlement, item }) => (
-                        <li key={settlement.id} className="flex items-center justify-between gap-2 border-b border-line-2 py-1 last:border-0">
-                          {item ? (
-                            <Link href={`/finance/open-items?tab=${item.kind}&item=${item.id}`} className="text-link underline">
-                              {item.paymentReference ?? t('related.unnamedItem')}
-                            </Link>
-                          ) : (
-                            <span className="text-ink-2">{t('related.unnamedItem')}</span>
-                          )}
+                        <li key={settlement.id} data-testid="entry-related-row" data-released={settlement.releasedAt ? '' : undefined} className={`flex items-center justify-between gap-2 border-b border-line-2 py-1 last:border-0 ${settlement.releasedAt ? 'text-muted-ink line-through' : ''}`}>
+                          <span className="flex flex-col">
+                            {item ? (
+                              <Link href={`/finance/open-items?tab=${item.kind}&item=${item.id}`} className={settlement.releasedAt ? 'text-muted-ink' : 'text-link underline'}>
+                                {item.paymentReference ?? t('related.unnamedItem')}
+                              </Link>
+                            ) : (
+                              <span className="text-ink-2">{t('related.unnamedItem')}</span>
+                            )}
+                            {settlement.assignedAt ? (
+                              <span className="text-meta text-muted-ink">
+                                {settlement.releasedAt
+                                  ? t('related.assignedReleased', { assignedOn: dayOfStamp(settlement.assignedAt), releasedOn: dayOfStamp(settlement.releasedAt) })
+                                  : t('related.assignedBy', { date: dayOfStamp(settlement.assignedAt), person: assignedBy.get(settlement.assignedByUserId ?? '') ?? '' })}
+                              </span>
+                            ) : null}
+                          </span>
                           <span className="tabular-nums text-ink-2">
-                            {t('related.settlement', { amount: formatEuro(settlement.amountCents), rest: formatEuro(item?.openCents ?? 0) })}
+                            {settlement.releasedAt ? formatEuro(settlement.amountCents) : t('related.settlement', { amount: formatEuro(settlement.amountCents), rest: formatEuro(item?.openCents ?? 0) })}
                           </span>
                         </li>
                       ))}

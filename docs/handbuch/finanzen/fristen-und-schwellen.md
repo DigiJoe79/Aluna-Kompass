@@ -40,6 +40,13 @@ bundesweiten Feiertage; mit dem Bundesland des Finanzamts auch die des Landes.
   Buchung, ob sie nach der Abgabe gebucht, korrigiert oder zurückgenommen wurde,
   und den Tag; betrifft es mehrere Buchungen, „und n weitere“. Bei Abgaben aus
   der Zeit vor dieser Fassung kennt Kompass den Auslöser nicht.
+- **Steuererklärung prüfen und berichtigen:** Weichen die Werte einer
+  abgegebenen [Steuererklärung](steuererklaerung.md) von der letzten Abgabe oder
+  Prüfung ab, steht „Steuererklärung … prüfen und berichtigen (§ 153 AO)“ ganz
+  oben, in der Datumsspalte „unverzüglich“. Darunter stehen die geänderten Zeilen
+  und Beilagen, nach einer Anzeige „angezeigt am …, Berichtigung folgt“. Die
+  Frist verschwindet mit der Berichtigung oder wenn der Vorstand den Prüfanlass
+  ohne Berichtigung schließt; beides geschieht auf der Seite Steuererklärung.
 
 In der Spalte „Bezug“ jeder dieser Zeilen steht „Abgabe eintragen …“ (mit dem
 Recht, Jahre abzuschließen): Der Dialog „Abgabe eintragen · Q3 2026“ fragt nach

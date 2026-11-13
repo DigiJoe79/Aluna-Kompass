@@ -26,6 +26,7 @@ const SHORTCUT = 'Tastenkürzel (MUSTER § Schrift).';
 
 export const ALLOWED: CountedAllowlist = {
   'app/(shell)/governance/register/[id]/requirements-card.tsx': { count: 1, reason: 'Dokumentnummer der Unterlage als Link, wie die Nummern in der Prüfliste des Protokolls (RequirementList rows, MUSTER § F).' },
+  'app/(shell)/finance/open-items/assign-payment-dialog.tsx': { count: 1, reason: 'Buchungsnummer der Zahlung im Nummern-Span wie im Journal (Spec Zahlung zuordnen § Bausteine: Nummern font-mono nur am Nummern-Span).' },
   'app/(shell)/governance/resolutions/resolution-list.tsx': { count: 1, reason: 'Beschlussnummer B-2026-003 im Nummern-Span wie Belegnummern (MUSTER Schrift, Plan U2 Task 12).' },
   'app/error.tsx': { count: 2, reason: STATUS },
   'app/(shell)/error.tsx': { count: 2, reason: STATUS },

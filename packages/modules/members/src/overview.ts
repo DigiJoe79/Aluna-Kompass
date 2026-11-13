@@ -5,7 +5,8 @@ import { feeScheduleAt } from './fee-schedule';
 import { mandateRowInternal, mandateState, type MandateState } from '@kompass/module-finance';
 import { z } from 'zod';
 import { agreementAt, effectiveFee } from './fee-agreement';
-import { feeViewsInternal, liveCharges } from './fees';
+import { feeViewsInternal, liveCharges, type UnfoundedNotice } from './fees';
+import { unfoundedNoticesInternal } from './dunning';
 import { filterMemberships, type MembershipView } from './memberships';
 import { memberDunningNotices, memberMemberships, PAYMENT_METHODS, type FeeInterval, type FeeReduction, type PaymentMethod } from './schema';
 import type { DunningLevel } from './settings';
@@ -152,6 +153,8 @@ export interface MemberFeeDetail {
   mandate: { id: string; reference: string; state: MandateState } | null;
   /** Offene, überfällige Beiträge und die versandten Stufen (3c); `null` ohne Rückstand. */
   arrears: { openCents: number; charges: { period: string; dueOn: string; openCents: number }[]; steps: { levelName: string; sentOn: string }[]; lastLevel: boolean } | null;
+  /** Spec Zahlung zuordnen § 3.4a: je Beitrag die Mahnungen, die nach der Zahlung verschickt wurden. */
+  unfoundedNotices: (UnfoundedNotice & { chargeId: string })[];
 }
 
 export async function getMemberFeeDetail(deps: Deps, ctx: CallContext, membershipId: string): Promise<Result<MemberFeeDetail>> {
@@ -197,5 +200,8 @@ export async function getMemberFeeDetail(deps: Deps, ctx: CallContext, membershi
     agreementFrom: agreement?.validFrom ?? null,
     mandate: mandateRow ? { id: mandateRow.id, reference: mandateRow.reference, state: mandateState(mandateRow, today) } : null,
     arrears,
+    unfoundedNotices: liveCharges(deps.db)
+      .filter((c) => c.membershipId === row.id)
+      .flatMap((c) => unfoundedNoticesInternal(deps, deps.db, c.id).map((n) => ({ chargeId: c.id, ...n }))),
   });
 }

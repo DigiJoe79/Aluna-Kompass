@@ -1,4 +1,5 @@
 import { paperDate, resolveRecordLabel, type AuditEntry, type AuditParam, type CallContext, type Deps, type IsoDay } from '@kompass/core';
+import { formatEuro } from '@/lib/finance/amount';
 import { dateFormatOf } from '@/lib/date-format';
 
 /** `entityType`, unter dem `contactsRecordLabels` (packages/modules/contacts/src/record-labels.ts) Kontakte auflöst. */
@@ -56,6 +57,8 @@ const seedParts: Display = (_v, h) => {
 };
 const backupKind: Display = (v, h) => h.label(`backup.kinds.${String(v)}`);
 const backupReason: Display = (v, h) => h.label(`backup.reasons.${String(v)}`);
+/** Ein Betrag in Cent wie in der Oberfläche (MUSTER § Beträge). */
+const euro: Display = (v) => (typeof v === 'number' ? formatEuro(v) : null);
 const megabytes: Display = (v, h) => `${new Intl.NumberFormat(h.locale, { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(Number(v) / (1024 * 1024))} MB`;
 
 /**
@@ -80,6 +83,8 @@ const DISPLAY: Record<string, Record<string, Display>> = {
   'backup.cancel': { jobKind: (v, h) => h.label(`backup.jobKinds.${String(v)}`) },
   'backup.upload': { sizeBytes: megabytes },
   'site.values.update': { variables: quotedList },
+  'finance.openItem.assignPayment': { amountCents: euro },
+  'finance.openItem.unassignPayment': { amountCents: euro },
 };
 
 /**

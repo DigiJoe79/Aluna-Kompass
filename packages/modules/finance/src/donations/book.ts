@@ -148,8 +148,14 @@ export async function getDonationBook(deps: Deps, ctx: CallContext, input: unkno
  * Zuwendung bleibt. `returnOtherYear`: Rückgaben in einem anderen Jahr als die Zuwendung — negativ für eine Rückgabe
  * dieses Jahres zu einer früheren Zuwendung, positiv für eine spätere Rückgabe, die keine Bestätigung übersteigt.
  */
-export type ReconciliationReasonKey = 'belowMinimum' | 'addressMissing' | 'inKindUndescribed' | 'expenseWaiverUnconfirmed' | 'anonymous' | 'other' | 'confirmedAboveReturns' | 'returnOtherYear';
-const REASON_ORDER: readonly ReconciliationReasonKey[] = ['belowMinimum', 'addressMissing', 'inKindUndescribed', 'expenseWaiverUnconfirmed', 'anonymous', 'other', 'confirmedAboveReturns', 'returnOtherYear'];
+/**
+ * `other` heißt „Noch nicht bestätigt“ (Spec Zahlung zuordnen § 3.7): bescheinigungsfähig, aber ohne Bestätigung. Der
+ * Schlüssel bleibt, damit festgeschriebene Berichte ihren Datenhash behalten. `underConfirmed` („Weniger bestätigt als
+ * gespendet“): Eine Bestätigung bescheinigt weniger, als die Zuwendung nach Rückgaben wert ist — korrigieren, nicht neu
+ * ausstellen.
+ */
+export type ReconciliationReasonKey = 'belowMinimum' | 'addressMissing' | 'inKindUndescribed' | 'expenseWaiverUnconfirmed' | 'anonymous' | 'other' | 'underConfirmed' | 'confirmedAboveReturns' | 'returnOtherYear';
+const REASON_ORDER: readonly ReconciliationReasonKey[] = ['belowMinimum', 'addressMissing', 'inKindUndescribed', 'expenseWaiverUnconfirmed', 'anonymous', 'other', 'underConfirmed', 'confirmedAboveReturns', 'returnOtherYear'];
 
 export interface DonationReconciliation {
   year: number;
@@ -176,7 +182,7 @@ const reasonHref = (key: ReconciliationReasonKey, year: number): string =>
     ? `/finance/donations/book?year=${year}&contact=anonymous`
     : key === 'addressMissing' || key === 'other'
       ? `/finance/donations/run?year=${year}`
-      : key === 'confirmedAboveReturns'
+      : key === 'confirmedAboveReturns' || key === 'underConfirmed'
         ? '/finance/donations?tab=toCorrect'
         : key === 'returnOtherYear'
           ? `/finance/donations/book?year=${year}`
@@ -188,7 +194,8 @@ const reasonHref = (key: ReconciliationReasonKey, year: number): string =>
  * Bestätigung) bekommt genau einen Grund, in dieser Rangfolge: anonym (ohne
  * Kontakt) · unter dem Mindestbetrag des Serienlaufs (Summe je Kontakt) ·
  * Anschrift fehlt · Sachspende nicht beschrieben · Aufwandsspende nicht
- * bestätigt · sonst „sonstige“ (bescheinigbar, aber nicht bestätigt).
+ * bestätigt · sonst „noch nicht bestätigt“ (`other`: bescheinigbar, aber nicht bestätigt). Bescheinigt eine
+ * Bestätigung weniger, als die Zuwendung nach Rückgaben wert ist, steht der Rest unter `underConfirmed`.
  * Übersteigt eine Bestätigung ihre Zeilen nach Rückgaben, steht der
  * Überhang unter „zu korrigieren“. Trägt zusätzlich die heute geltende
  * Grenze des vereinfachten Nachweises mit — der Knopf im Spendenbuch
@@ -239,7 +246,7 @@ export function donationReconciliationInternal(db: DbOrTx, year: number, setting
       confirmedCents += holder.amountCents;
       const delta = netCents - holder.amountCents;
       if (delta < 0) overConfirmed.set(holder.id, (overConfirmed.get(holder.id) ?? 0) - delta);
-      else if (delta > 0) add('other', delta);
+      else if (delta > 0) add('underConfirmed', delta);
       const aboveCents = holder.amountCents - (line.amountCents - (returnedInYear.get(line.lineId) ?? 0));
       if (aboveCents > 0) aboveInYear = { count: aboveInYear.count + 1, cents: aboveInYear.cents + aboveCents };
       continue;

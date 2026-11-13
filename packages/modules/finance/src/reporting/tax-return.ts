@@ -2,7 +2,8 @@ import { hasPermission, notFound, ok, validate, type CallContext, type Deps, typ
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { requireFinanceRead } from '../ledger/access';
-import { taxPeriodInternal, type TaxPeriodView } from '../ledger/tax-periods';
+import { taxPeriodViewInternal } from './tax-amendments';
+import type { TaxPeriodView } from '../ledger/tax-periods';
 import { financeAssemblyResults, financeReports } from '../schema';
 import { reportDefinition } from './catalog';
 import type { GemAttachmentKey, TaxReturnGemReport } from './reports/tax-return-gem';
@@ -34,7 +35,7 @@ export async function getTaxReturn(deps: Deps, ctx: CallContext, input: unknown)
   if (denied) return denied;
   const parsed = validate(deps, schema, input);
   if (!parsed.ok) return parsed;
-  const period = taxPeriodInternal(deps.db, parsed.value.taxPeriodId);
+  const period = taxPeriodViewInternal(deps, deps.db, parsed.value.taxPeriodId);
   if (!period) return notFound('financeTaxPeriod', parsed.value.taxPeriodId);
   const run = await runFinanceReport(deps, ctx, { report: 'taxReturnGem', params: { taxPeriodId: period.id } });
   if (!run.ok) return run;

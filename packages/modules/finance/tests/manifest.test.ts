@@ -64,6 +64,8 @@ describe('finance module', () => {
       // G-30: berechneter Bezug — die Protokolle der Beschlüsse in Abschnitt 9, nur lesen.
       { entityType: 'financeAuditResolutions', readPermission: 'finance.audit', documentsOf: expect.any(Function) },
       { entityType: 'financeVatFiling', readPermission: 'finance.read', receivePermission: 'finance.periodClose' },
+      { entityType: 'financeTaxAmendment', readPermission: 'finance.read', receivePermission: 'finance.periodClose' },
+      { entityType: 'financeTaxAmendmentCheck', readPermission: 'finance.read', receivePermission: 'finance.periodClose' },
     ]);
   });
 
@@ -113,7 +115,7 @@ describe('finance module', () => {
       financeDirectDebitRun: false, financeDirectDebitItem: false, financePrenotification: false,
       financeReport: false, financeReportRelease: false, financeOtherAsset: false,
       financeAuditAuditor: true, financeAuditBaseline: false, financeAuditSample: true, financeAuditSectionReview: true, financeAuditRemark: false, financeAuditReport: false,
-      financeHandover: false, financeAssemblyResult: false, financeVatFiling: false, financeTaxPeriod: false,
+      financeHandover: false, financeAssemblyResult: false, financeVatFiling: false, financeTaxPeriod: false, financeTaxAmendment: false, financeTaxAmendmentCheck: false,
     });
   });
 

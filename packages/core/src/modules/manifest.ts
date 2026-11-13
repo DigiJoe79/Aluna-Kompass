@@ -128,6 +128,12 @@ export type RecordLabelInput = Omit<RecordLabel, 'label' | 'auditLabel'> & { lab
  */
 export interface OpenItemOriginDefinition {
   type: string;
+  /**
+   * Spec Zahlung zuordnen § 3.2b: weitere Kontakte, deren Zahlung vom Buchungstag `paymentDate` einen Posten dieser
+   * Herkunft (`originId`) tilgen darf — bei den Mitgliedern die Erziehungsberechtigte bis zum 18. Geburtstag. Ohne
+   * Haken zählt nur der Kontakt des Postens. Antwortet nur für die eigene Herkunft; reine Abfrage.
+   */
+  payerContacts?: (deps: Deps, db: DbOrTx, input: { originId: string; paymentDate: string }) => string[];
 }
 
 /** Eine Bildstelle einer Modul-Sicht (`ModuleManifest.imagePlaces`). */

@@ -306,6 +306,22 @@ Sonst ist nichts von Hand zu tun. Wer sich wundert:
   Eingabemaske ordnen; ohne sie bekommt jedes Feld eine Breite nach seinem Typ.
 - MCP-Clients sind nicht betroffen.
 
+### Von 0.5.1 auf 0.5.2
+
+Die Fassung 0.5.2 bringt eine Migration mit (`0014_finance_0_5_2`). Sie legt
+die Tabellen für Berichtigung und Prüfung der Steuererklärung an und ergänzt
+den Erklärungszeitraum um das Abbild der abgegebenen Werte. Eine schon
+abgegebene Erklärung bleibt ohne Abbild, für sie meldet Kompass keinen
+Prüfanlass. Außerdem korrigiert sie den Dublettenschlüssel von Kontoumsätzen,
+die als eigene Zahlung übernommen wurden, damit ein späterer Auszug sie
+wiedererkennt. Dazu bekommen die Ausgleiche offener Zahlungen Spalten für das
+nachträgliche Zuordnen und Aufheben einer Zahlung; vorhandene Ausgleiche
+bleiben unberührt. `/api/health` meldet danach `migrationCount: 15`. Ein
+Backup (Schritt 1) gehört wie immer dazu. Ein Handgriff nur im Einzelfall: Kam
+eine als eigene Zahlung übernommene Zeile mit einem späteren Auszug ein zweites
+Mal herein, verwerfen Sie diesen Auszug (Handbuch „Kontoauszug laden“, Auszug
+verwerfen) und lesen ihn nach dem Update neu ein. Die Zeile wird dann als bekannt erkannt.
+
 ### Von 0.5.0 auf 0.5.1
 
 Die Fassung 0.5.1 bringt eine Migration mit

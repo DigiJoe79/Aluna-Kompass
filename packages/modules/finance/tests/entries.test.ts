@@ -45,8 +45,23 @@ describe('drafts', () => {
 
   it('fills defaults from the category and the purpose', async () => {
     const f = await ledgerFixture();
-    const draft = unwrap(await saveDraft(f.deps, f.ctx, { entryDate: '2026-03-01', text: 'x', moneyLines: [], allocationLines: [{ categoryId: f.donations.id, amountCents: 100, purposeId: f.abroadPurpose.id }] }));
+    const draft = unwrap(await saveDraft(f.deps, f.ctx, { entryDate: '2026-03-01', text: 'x', moneyLines: [], allocationLines: [{ categoryId: f.programCosts.id, amountCents: -100, purposeId: f.abroadPurpose.id }] }));
     expect(draft.allocationLines[0]).toMatchObject({ taxCode: 'none', rateKind: 'standard', abroad: true, addsToAssets: false });
+  });
+
+  /** Befund B2 (0.5.2): „Im Ausland verwendet“ belegt der Dienst nur an Ausgaben vor — nach der Kategorie, nie nach dem Vorzeichen. */
+  it('presets abroad only for an expense category, a reversal included; an explicit value stays', async () => {
+    const f = await ledgerFixture();
+    const lines = (allocationLines: unknown[]) => saveDraft(f.deps, f.ctx, { entryDate: '2026-03-01', text: 'x', moneyLines: [], allocationLines });
+    const draft = unwrap(await lines([
+      { categoryId: f.donations.id, amountCents: 100, purposeId: f.abroadPurpose.id },
+      { categoryId: f.programCosts.id, amountCents: -100, purposeId: f.abroadPurpose.id },
+      // Storno einer Ausgabe: positives Vorzeichen, Ausgaben-Kategorie.
+      { categoryId: f.programCosts.id, amountCents: 100, purposeId: f.abroadPurpose.id },
+      { categoryId: f.donations.id, amountCents: 100, purposeId: f.abroadPurpose.id, abroad: true },
+      { categoryId: f.programCosts.id, amountCents: -100, purposeId: f.abroadPurpose.id, abroad: false },
+    ]));
+    expect(draft.allocationLines.map((l) => l.abroad)).toEqual([false, true, true, true, false]);
   });
 
   it('checks that what it points at exists', async () => {

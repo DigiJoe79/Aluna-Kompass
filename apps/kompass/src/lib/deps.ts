@@ -153,13 +153,20 @@ function retire(deps: AppDeps | null, closeDelayMs: number): void {
  * Wo der Schnappschuss des geseedeten Datenpfads liegt.
  *
  * Im Temp-Verzeichnis, nicht neben `dataPath`: Im Container ist `/data` ein
- * Volume, und ob `node` daneben schreiben darf, hängt vom Wirt ab. Prozess und
- * Datenpfad stehen im Namen, damit sich zwei Server (Worker, Worktrees) nicht
+ * Volume, und ob `node` daneben schreiben darf, hängt vom Wirt ab. Der
+ * Datenpfad steht im Namen, damit sich zwei Server (Worker, Worktrees) nicht
  * gegenseitig die Vorlage überschreiben.
+ *
+ * Die Prozessnummer steht bewusst nicht darin: `closeOnExit` räumt den Ordner
+ * nur bei einem geordneten Ende. Ein abgebrochener Server ließ mit der PID im
+ * Namen jedes Mal einen Ordner von 13 MB zurück (am 03.11. lagen 141 davon im
+ * Temp-Verzeichnis). So überschreibt der nächste Server mit demselben Datenpfad
+ * den alten Ordner, statt einen neuen anzulegen; veraltet ist er dabei nie, weil
+ * jeder Prozess ihn beim ersten geseedeten Reset neu schreibt (`seedFromSnapshot`).
  */
 function seedSnapshotDir(dataPath: string): string {
   const key = createHash('sha256').update(dataPath).digest('hex').slice(0, 12);
-  return path.join(os.tmpdir(), `kompass-seed-${process.pid}-${key}`);
+  return path.join(os.tmpdir(), `kompass-seed-${key}`);
 }
 
 /** Nur für Tests: die Datenbank innerhalb des Schnappschusses. */

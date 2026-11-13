@@ -1,6 +1,6 @@
 {
   "name": "@kompass/module-site",
-  "version": "0.5.1",
+  "version": "0.5.2",
   "private": true,
   "type": "module",
   "exports": {
@@ -14,7 +14,7 @@
   "dependencies": {
     "@kompass/core": "workspace:*",
     "@kompass/site-template": "workspace:*",
-    "drizzle-orm": "^0.45.3",
+    "drizzle-orm": "^0.45.4",
     "sharp": "^0.35.5",
     "zod": "^4.6.7"
   },

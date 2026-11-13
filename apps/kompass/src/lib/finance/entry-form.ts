@@ -25,9 +25,15 @@ export interface SplitRowState {
   taxCode?: string;
   rateKind?: 'standard' | 'reduced';
   contactId: string | null;
+  /** Name zum Kontakt, nur Anzeige im Feld „Spender/Empfänger“ — der Dienst bekommt nur die ID. */
+  contactName?: string | null;
   projectId: string | null;
   purposeId: string | null;
-  abroad: boolean;
+  /**
+   * „Im Ausland verwendet“. `null` = der Dienst entscheidet (Vorbelegung aus Zweck oder Projekt, nur an Ausgaben;
+   * Befund B2, 0.5.2): eine neue Zeile, oder eine, deren Projekt oder Zweck sich geändert hat. Gesendet wird nur ein Wert.
+   */
+  abroad: boolean | null;
   addsToAssets: boolean;
   assetEndowment?: boolean;
   addsToAssetsOptOut?: 'testatorDirectedCurrentUse' | 'donorAllowedCurrentUse' | null;
@@ -78,7 +84,7 @@ export interface EntryViewLike {
   }[];
 }
 
-const emptySplitRow = (key: string): SplitRowState => ({ key, categoryId: '', amountText: '', contactId: null, projectId: null, purposeId: null, abroad: false, addsToAssets: false });
+const emptySplitRow = (key: string): SplitRowState => ({ key, categoryId: '', amountText: '', contactId: null, projectId: null, purposeId: null, abroad: null, addsToAssets: false });
 const emptyMoneyRow = (key: string, direction: 'in' | 'out'): MoneyRow => ({ key, accountId: '', amountText: '', direction, settlements: [] });
 
 /**
@@ -209,7 +215,7 @@ export function toServiceInput(state: EntryFormState): { ok: true; input: EntryL
       projectId: row.projectId,
       purposeId: row.purposeId,
       contactId: row.contactId,
-      abroad: row.abroad,
+      ...(typeof row.abroad === 'boolean' ? { abroad: row.abroad } : {}),
       // Ohne Angabe nimmt der Dienst die Vorgabe der Art (Erbschaft und Ausstattung: ins Vermögen); mit dem festen Grund
       // abgewählt, sonst nur, was schon gesetzt war (Rechenschaft D2, 15g).
       ...(row.addsToAssetsOptOut ? { addsToAssets: false, addsToAssetsOptOut: row.addsToAssetsOptOut } : row.addsToAssets ? { addsToAssets: true } : {}),
@@ -228,8 +234,10 @@ export function toServiceInput(state: EntryFormState): { ok: true; input: EntryL
  * Zum Bearbeiten eines Entwurfs: die Vorlage wird geraten (keine
  * Zuordnungszeilen → `transfer`; keine Geldzeilen → `inKind`; Σ Geld < 0 →
  * `expense`; sonst `income`), die Vorzeichenregel wird umgekehrt.
+ * `contactNames` (ID → Name, vom Server aufgelöst wie in `open-item-options.ts`) füllt das Kontaktfeld; ohne Namen
+ * stünde ein gespeicherter Kontakt leer da (Befund B3, 0.5.2).
  */
-export function fromEntryView(view: EntryViewLike): EntryFormState {
+export function fromEntryView(view: EntryViewLike, contactNames: ReadonlyMap<string, string> = new Map()): EntryFormState {
   const moneySum = view.moneyLines.reduce((sum, line) => sum + line.amountCents, 0);
   const template: EntryTemplate = view.allocationLines.length === 0 ? 'transfer' : view.moneyLines.length === 0 ? 'inKind' : moneySum < 0 ? 'expense' : 'income';
 
@@ -249,9 +257,10 @@ export function fromEntryView(view: EntryViewLike): EntryFormState {
     taxCode: line.taxCode,
     rateKind: line.rateKind,
     contactId: line.contactId ?? null,
+    contactName: line.contactId ? (contactNames.get(line.contactId) ?? null) : null,
     projectId: line.projectId ?? null,
     purposeId: line.purposeId ?? null,
-    abroad: line.abroad ?? false,
+    abroad: line.abroad ?? null,
     addsToAssets: line.addsToAssets ?? false,
     assetEndowment: line.assetEndowment ?? false,
     addsToAssetsOptOut: line.addsToAssetsOptOut ?? null,

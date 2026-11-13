@@ -164,9 +164,20 @@ function organTypst(data: CashReport): string {
 
 const CHANGE_TEXT = { new: 'neu', reversed: 'zurückgenommen', changed: 'geändert' } as const;
 
+/** B9: ein Satz je Berichtigung bzw. Prüfung der Steuererklärung — ohne Name und Begründung (die stehen am Zeitraum). */
+function taxReturnNoteText(n: NonNullable<CashReport['taxReturnNotes']>[number]): string {
+  const changed = n.lines ? `; geändert: ${n.lines}` : '';
+  const late = n.late ? ' (nachgetragen)' : '';
+  return n.kind === 'amendment'
+    ? `Berichtigte Steuererklärung ${n.period} abgegeben am ${day(n.on)}${changed}${late}.`
+    : `Prüfung der Steuererklärung ${n.period} am ${day(n.on)}: keine Berichtigung${changed}; Begründung am Erklärungszeitraum${late}.`;
+}
+
 function correctionsTypst(data: CashReport): string | null {
   const carried = data.priorYearCarryOvers ?? [];
-  if (data.priorYearCorrections.length === 0 && carried.length === 0) return null;
+  const notes = data.taxReturnNotes ?? [];
+  if (data.priorYearCorrections.length === 0 && carried.length === 0 && notes.length === 0) return null;
+  if (data.priorYearCorrections.length === 0 && carried.length === 0) return [heading(3, '11 Korrekturen an Vorjahren'), ...notes.map((n) => paragraph(taxReturnNoteText(n)))].join('\n\n');
   // Designer Runde 8, 253/256: eine Form für beide Arten — Buchung, Geschäftsjahr, was sich geändert hat.
   const rows = [
     ...data.priorYearCorrections.map((c) => [textCell(c.entryNumber), textCell(c.fiscalYearDesignation), textCell(`Zuordnung korrigiert am ${day(c.appliedOn)}`)]),
@@ -175,6 +186,7 @@ function correctionsTypst(data: CashReport): string | null {
   const parts = [heading(3, '11 Korrekturen an Vorjahren'), table('(1fr, 28mm, 62mm)', ['Buchung', 'Geschäftsjahr', 'Änderung'], rows)];
   if (data.priorYearCorrections.length > 0) parts.push(small('Zuordnungen von Buchungen früherer Jahre, die in diesem Jahr korrigiert wurden; Bestände und Ergebnis der Vorjahre bleiben, wie sie vorgelegt wurden.'));
   if (carried.length > 0) parts.push(small('Änderungen an Vorjahren nach deren Mitgliederversammlung: Sie gingen nicht mehr in die Prüfung des Vorjahres und werden mit diesem Bericht vorgelegt.'));
+  for (const n of notes) parts.push(paragraph(taxReturnNoteText(n)));
   return parts.join('\n\n');
 }
 

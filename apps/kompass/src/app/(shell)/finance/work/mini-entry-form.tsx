@@ -21,7 +21,7 @@ import { FormGrid } from '@/components/forms/form-grid';
 
 const REVERSE_CHARGE_ACTIONS: ReverseChargeActions = { check: checkReverseChargeAction, decline: declineReverseChargeAction, mark: saveContactTaxDetailsAction };
 const newKey = (): string => `mini-${Math.random().toString(36).slice(2, 10)}`;
-const emptyRow = (): MiniFormRow => ({ key: newKey(), categoryId: '', amountText: '', contactId: null, projectId: null, purposeId: null, abroad: false, addsToAssets: false });
+const emptyRow = (): MiniFormRow => ({ key: newKey(), categoryId: '', amountText: '', contactId: null, projectId: null, purposeId: null, abroad: null, addsToAssets: false });
 
 /**
  * Die Mini-Maske der Arbeitsliste (HANDOFF § 12.5): Datum, Text, je

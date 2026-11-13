@@ -89,8 +89,10 @@ export async function decideCandidate(deps: Deps, ctx: CallContext, input: unkno
           bookingDate: line.bookingDate, valueDate: line.valueDate, amountCents: line.amountCents,
           counterpartyName: line.counterpartyName, counterpartyIban: line.counterpartyIban, purpose: line.purpose,
           bankReference: line.bankReference, relatedReference: line.relatedReference ?? null, counterpartyEmail: line.counterpartyEmail ?? null, endToEndId: line.endToEndId, returnCode: line.returnCode, mandateReference: line.mandateReference ?? null, creditorId: line.creditorId ?? null,
-          // Ein eigener Schlüssel, nicht der des Kandidaten: der bezog sich auf den vorhandenen Umsatz, nicht auf diesen neuen.
-          dedupKey: `${before.dedupKey}#own`, lineIndex: line.index, createdAt: now,
+          // Der Schlüssel des Kandidaten ist der eigene der Zeile (B6, 0.5.2). Mit einem Zusatz fände ein späterer Auszug
+          // desselben Zeitraums die Zeile nicht wieder und nähme sie ein zweites Mal herein. Gleicht er dem eines älteren
+          // Umsatzes, schadet das nicht: Bekannt ist eine Zeile erst, wenn ein Treffer aus einem überlappenden Lauf stammt.
+          dedupKey: before.dedupKey, lineIndex: line.index, createdAt: now,
         })
         .run();
     }
